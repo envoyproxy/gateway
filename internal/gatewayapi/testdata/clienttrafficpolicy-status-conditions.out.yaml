@@ -566,6 +566,11 @@ xdsIR:
     tcp:
     - address: 0.0.0.0
       externalPort: 53
+      metadata:
+        kind: Gateway
+        name: gateway-2
+        namespace: envoy-gateway
+        sectionName: tcp
       name: envoy-gateway/gateway-2/tcp
       port: 10053
   envoy-gateway/gateway-3:

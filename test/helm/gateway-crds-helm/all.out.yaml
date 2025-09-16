@@ -19246,6 +19246,142 @@ spec:
                           description: Content Type of the response. This will be
                             set in the Content-Type header.
                           type: string
+                        header:
+                          description: |-
+                            Header defines headers to add, set or remove from the response.
+                            This allows the response policy to append, add or override headers
+                            of the final response before it is sent to a downstream client.
+                            Note: Header removal is not supported for responseOverride.
+                          properties:
+                            add:
+                              description: |-
+                                Add adds the given header(s) (name, value) to the request
+                                before the action. It appends to any existing values associated
+                                with the header name.
+
+                                Input:
+                                  GET /foo HTTP/1.1
+                                  my-header: foo
+
+                                Config:
+                                  add:
+                                  - name: "my-header"
+                                    value: "bar,baz"
+
+                                Output:
+                                  GET /foo HTTP/1.1
+                                  my-header: foo,bar,baz
+                              items:
+                                description: HTTPHeader represents an HTTP Header
+                                  name and value as defined by RFC 7230.
+                                properties:
+                                  name:
+                                    description: |-
+                                      Name is the name of the HTTP Header to be matched. Name matching MUST be
+                                      case-insensitive. (See https://tools.ietf.org/html/rfc7230#section-3.2).
+
+                                      If multiple entries specify equivalent header names, the first entry with
+                                      an equivalent name MUST be considered for a match. Subsequent entries
+                                      with an equivalent header name MUST be ignored. Due to the
+                                      case-insensitivity of header names, "foo" and "Foo" are considered
+                                      equivalent.
+                                    maxLength: 256
+                                    minLength: 1
+                                    pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
+                                    type: string
+                                  value:
+                                    description: Value is the value of HTTP Header
+                                      to be matched.
+                                    maxLength: 4096
+                                    minLength: 1
+                                    type: string
+                                required:
+                                - name
+                                - value
+                                type: object
+                              maxItems: 16
+                              type: array
+                              x-kubernetes-list-map-keys:
+                              - name
+                              x-kubernetes-list-type: map
+                            remove:
+                              description: |-
+                                Remove the given header(s) from the HTTP request before the action. The
+                                value of Remove is a list of HTTP header names. Note that the header
+                                names are case-insensitive (see
+                                https://datatracker.ietf.org/doc/html/rfc2616#section-4.2).
+
+                                Input:
+                                  GET /foo HTTP/1.1
+                                  my-header1: foo
+                                  my-header2: bar
+                                  my-header3: baz
+
+                                Config:
+                                  remove: ["my-header1", "my-header3"]
+
+                                Output:
+                                  GET /foo HTTP/1.1
+                                  my-header2: bar
+                              items:
+                                type: string
+                              maxItems: 16
+                              type: array
+                              x-kubernetes-list-type: set
+                            set:
+                              description: |-
+                                Set overwrites the request with the given header (name, value)
+                                before the action.
+
+                                Input:
+                                  GET /foo HTTP/1.1
+                                  my-header: foo
+
+                                Config:
+                                  set:
+                                  - name: "my-header"
+                                    value: "bar"
+
+                                Output:
+                                  GET /foo HTTP/1.1
+                                  my-header: bar
+                              items:
+                                description: HTTPHeader represents an HTTP Header
+                                  name and value as defined by RFC 7230.
+                                properties:
+                                  name:
+                                    description: |-
+                                      Name is the name of the HTTP Header to be matched. Name matching MUST be
+                                      case-insensitive. (See https://tools.ietf.org/html/rfc7230#section-3.2).
+
+                                      If multiple entries specify equivalent header names, the first entry with
+                                      an equivalent name MUST be considered for a match. Subsequent entries
+                                      with an equivalent header name MUST be ignored. Due to the
+                                      case-insensitivity of header names, "foo" and "Foo" are considered
+                                      equivalent.
+                                    maxLength: 256
+                                    minLength: 1
+                                    pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
+                                    type: string
+                                  value:
+                                    description: Value is the value of HTTP Header
+                                      to be matched.
+                                    maxLength: 4096
+                                    minLength: 1
+                                    type: string
+                                required:
+                                - name
+                                - value
+                                type: object
+                              maxItems: 16
+                              type: array
+                              x-kubernetes-list-map-keys:
+                              - name
+                              x-kubernetes-list-type: map
+                          type: object
+                          x-kubernetes-validations:
+                          - message: Remove is not supported for header in CustomResponse
+                            rule: '!has(self.remove) || size(self.remove) == 0'
                         statusCode:
                           description: |-
                             Status Code of the Custom Response
@@ -20146,6 +20282,25 @@ spec:
                           Default: none.
                         pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                         type: string
+                      maxConnectionDuration:
+                        description: |-
+                          MaxConnectionDuration is the maximum amount of time a connection can remain established
+                          (usually via TCP/HTTP Keepalive packets) before being drained and/or closed.
+                          If not specified, there is no limit.
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                        type: string
+                      maxRequestsPerConnection:
+                        description: |-
+                          MaxRequestsPerConnection defines the maximum number of requests allowed over a single connection.
+                          If not specified, there is no limit. Setting this parameter to 1 will effectively disable keep alive.
+                        format: int32
+                        type: integer
+                      maxStreamDuration:
+                        description: |-
+                          MaxStreamDuration is the maximum amount of time to keep alive an http stream. When the limit is reached
+                          the stream will be reset independent of any other timeouts. If not specified, no value is set.
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                        type: string
                       value:
                         description: |-
                           Value of the maximum concurrent connections limit.
@@ -20560,6 +20715,14 @@ spec:
               http1:
                 description: HTTP1 provides HTTP/1 configuration on the listener.
                 properties:
+                  disableSafeMaxConnectionDuration:
+                    description: |-
+                      DisableSafeMaxConnectionDuration controls the close behavior for HTTP/1 connections.
+                      By default, connection closure is delayed until the next request arrives after maxConnectionDuration is exceeded.
+                      It then adds a Connection: close header and gracefully closes the connection after the response completes.
+                      When set to true (disabled), Envoy uses its default drain behavior, closing the connection shortly after maxConnectionDuration elapses.
+                      Has no effect unless maxConnectionDuration is set.
+                    type: boolean
                   enableTrailers:
                     description: EnableTrailers defines if HTTP/1 trailers should
                       be proxied by Envoy.
@@ -39334,7 +39497,7 @@ spec:
                   return a fixed response.
                 properties:
                   body:
-                    description: Body of the Response
+                    description: Body of the direct response.
                     properties:
                       inline:
                         description: Inline contains the value as an inline string.
@@ -39399,9 +39562,141 @@ spec:
                       rule: 'has(self.valueRef) ? self.valueRef.kind == ''ConfigMap''
                         : true'
                   contentType:
-                    description: Content Type of the response. This will be set in
-                      the Content-Type header.
+                    description: Content Type of the direct response. This will be
+                      set in the Content-Type header.
                     type: string
+                  header:
+                    description: Header defines the headers of the direct response.
+                    properties:
+                      add:
+                        description: |-
+                          Add adds the given header(s) (name, value) to the request
+                          before the action. It appends to any existing values associated
+                          with the header name.
+
+                          Input:
+                            GET /foo HTTP/1.1
+                            my-header: foo
+
+                          Config:
+                            add:
+                            - name: "my-header"
+                              value: "bar,baz"
+
+                          Output:
+                            GET /foo HTTP/1.1
+                            my-header: foo,bar,baz
+                        items:
+                          description: HTTPHeader represents an HTTP Header name and
+                            value as defined by RFC 7230.
+                          properties:
+                            name:
+                              description: |-
+                                Name is the name of the HTTP Header to be matched. Name matching MUST be
+                                case-insensitive. (See https://tools.ietf.org/html/rfc7230#section-3.2).
+
+                                If multiple entries specify equivalent header names, the first entry with
+                                an equivalent name MUST be considered for a match. Subsequent entries
+                                with an equivalent header name MUST be ignored. Due to the
+                                case-insensitivity of header names, "foo" and "Foo" are considered
+                                equivalent.
+                              maxLength: 256
+                              minLength: 1
+                              pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
+                              type: string
+                            value:
+                              description: Value is the value of HTTP Header to be
+                                matched.
+                              maxLength: 4096
+                              minLength: 1
+                              type: string
+                          required:
+                          - name
+                          - value
+                          type: object
+                        maxItems: 16
+                        type: array
+                        x-kubernetes-list-map-keys:
+                        - name
+                        x-kubernetes-list-type: map
+                      remove:
+                        description: |-
+                          Remove the given header(s) from the HTTP request before the action. The
+                          value of Remove is a list of HTTP header names. Note that the header
+                          names are case-insensitive (see
+                          https://datatracker.ietf.org/doc/html/rfc2616#section-4.2).
+
+                          Input:
+                            GET /foo HTTP/1.1
+                            my-header1: foo
+                            my-header2: bar
+                            my-header3: baz
+
+                          Config:
+                            remove: ["my-header1", "my-header3"]
+
+                          Output:
+                            GET /foo HTTP/1.1
+                            my-header2: bar
+                        items:
+                          type: string
+                        maxItems: 16
+                        type: array
+                        x-kubernetes-list-type: set
+                      set:
+                        description: |-
+                          Set overwrites the request with the given header (name, value)
+                          before the action.
+
+                          Input:
+                            GET /foo HTTP/1.1
+                            my-header: foo
+
+                          Config:
+                            set:
+                            - name: "my-header"
+                              value: "bar"
+
+                          Output:
+                            GET /foo HTTP/1.1
+                            my-header: bar
+                        items:
+                          description: HTTPHeader represents an HTTP Header name and
+                            value as defined by RFC 7230.
+                          properties:
+                            name:
+                              description: |-
+                                Name is the name of the HTTP Header to be matched. Name matching MUST be
+                                case-insensitive. (See https://tools.ietf.org/html/rfc7230#section-3.2).
+
+                                If multiple entries specify equivalent header names, the first entry with
+                                an equivalent name MUST be considered for a match. Subsequent entries
+                                with an equivalent header name MUST be ignored. Due to the
+                                case-insensitivity of header names, "foo" and "Foo" are considered
+                                equivalent.
+                              maxLength: 256
+                              minLength: 1
+                              pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
+                              type: string
+                            value:
+                              description: Value is the value of HTTP Header to be
+                                matched.
+                              maxLength: 4096
+                              minLength: 1
+                              type: string
+                          required:
+                          - name
+                          - value
+                          type: object
+                        maxItems: 16
+                        type: array
+                        x-kubernetes-list-map-keys:
+                        - name
+                        x-kubernetes-list-type: map
+                    type: object
+                    x-kubernetes-validations:
+                    - message: header.remove is not supported for DirectResponse
+                      rule: '!has(self.remove) || size(self.remove) == 0'
                   statusCode:
                     description: |-
                       Status Code of the HTTP response

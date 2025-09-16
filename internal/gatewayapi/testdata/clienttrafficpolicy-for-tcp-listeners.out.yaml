@@ -216,6 +216,11 @@ xdsIR:
           closeDelay: 10s
           value: 3
       externalPort: 443
+      metadata:
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: tls-1
       name: envoy-gateway/gateway-1/tls-1
       port: 10443
       proxyProtocol: {}
@@ -288,6 +293,11 @@ xdsIR:
           closeDelay: 10s
           value: 3
       externalPort: 8080
+      metadata:
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: tcp-1
       name: envoy-gateway/gateway-1/tcp-1
       port: 8080
       proxyProtocol: {}
