@@ -72,7 +72,7 @@ func (t *Translator) ProcessClientTrafficPolicies(
 			if hasSectionName(&currTarget) {
 				policy, found := handledPolicies[policyName]
 				if !found {
-					policy = currPolicy.DeepCopy()
+					policy = currPolicy
 					handledPolicies[policyName] = policy
 					res = append(res, policy)
 				}
@@ -163,13 +163,13 @@ func (t *Translator) ProcessClientTrafficPolicies(
 	// Policy with no section set (targeting all sections)
 	for _, currPolicy := range clientTrafficPolicies {
 		policyName := utils.NamespacedName(currPolicy)
-		targetRefs := getPolicyTargetRefs(currPolicy.Spec.PolicyTargetReferences, gateways)
+		targetRefs := getPolicyTargetRefs(currPolicy.Spec.PolicyTargetReferences, gateways, currPolicy.Namespace)
 		for _, currTarget := range targetRefs {
 			if !hasSectionName(&currTarget) {
 
 				policy, found := handledPolicies[policyName]
 				if !found {
-					policy = currPolicy.DeepCopy()
+					policy = currPolicy
 					res = append(res, policy)
 					handledPolicies[policyName] = policy
 				}
@@ -957,6 +957,10 @@ func buildConnection(connection *egv1a1.ClientConnection) (*ir.ClientConnection,
 				connection.BufferLimit.String(), math.MaxUint32)
 		}
 		irConnection.BufferLimitBytes = ptr.To(uint32(bufferLimit))
+	}
+
+	if connection.MaxAcceptPerSocketEvent != nil {
+		irConnection.MaxAcceptPerSocketEvent = ptr.To(*connection.MaxAcceptPerSocketEvent)
 	}
 
 	return irConnection, nil

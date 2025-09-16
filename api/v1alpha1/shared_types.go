@@ -231,7 +231,7 @@ type KubernetesContainerSpec struct {
 	// Image specifies the EnvoyProxy container image to be used including a tag, instead of the default image.
 	// This field is mutually exclusive with ImageRepository.
 	//
-	// +kubebuilder:validation:XValidation:rule="self.matches('^[a-zA-Z0-9._/-]+(:[a-zA-Z0-9._-]+)?(@sha256:[a-z0-9]+)?$')",message="Image must include a tag and allowed characters only (e.g., 'repo:tag')."
+	// +kubebuilder:validation:XValidation:rule="self.matches('^[a-zA-Z0-9._-]+(:[0-9]+)?(/[a-zA-Z0-9._/-]+)?(:[a-zA-Z0-9._-]+)?(@sha256:[a-z0-9]+)?$')",message="Image must include a tag and allowed characters only (e.g., 'repo:tag')."
 	// +optional
 	Image *string `json:"image,omitempty"`
 
@@ -516,8 +516,7 @@ type KubernetesHorizontalPodAutoscalerSpec struct {
 
 // HTTPStatus defines the http status code.
 // +kubebuilder:validation:Minimum=100
-// +kubebuilder:validation:Maximum=600
-// +kubebuilder:validation:ExclusiveMaximum=true
+// +kubebuilder:validation:Maximum=599
 type HTTPStatus int
 
 // MergeType defines the type of merge operation

@@ -385,7 +385,7 @@ func irListenerPortName(proto ir.ProtocolType, port int32) string {
 func irRoutePrefix(route RouteContext) string {
 	// add a "/" at the end of the prefix to prevent mismatching routes with the
 	// same prefix. For example, route prefix "/foo/" should not match a route "/foobar".
-	return fmt.Sprintf("%s/%s/%s/", strings.ToLower(string(GetRouteType(route))), route.GetNamespace(), route.GetName())
+	return fmt.Sprintf("%s/%s/%s/", strings.ToLower(string(route.GetRouteType())), route.GetNamespace(), route.GetName())
 }
 
 func irRouteName(route RouteContext, ruleIdx, matchIdx int) string {
@@ -393,7 +393,7 @@ func irRouteName(route RouteContext, ruleIdx, matchIdx int) string {
 }
 
 func irTCPRouteName(route RouteContext) string {
-	return fmt.Sprintf("%s/%s/%s", strings.ToLower(string(GetRouteType(route))), route.GetNamespace(), route.GetName())
+	return fmt.Sprintf("%s/%s/%s", strings.ToLower(string(route.GetRouteType())), route.GetNamespace(), route.GetName())
 }
 
 func irUDPRouteName(route RouteContext) string {
@@ -556,7 +556,7 @@ func selectorFromTargetSelector(selector egv1a1.TargetSelector) labels.Selector 
 	return l
 }
 
-func getPolicyTargetRefs[T client.Object](policy egv1a1.PolicyTargetReferences, potentialTargets []T) []gwapiv1a2.LocalPolicyTargetReferenceWithSectionName {
+func getPolicyTargetRefs[T client.Object](policy egv1a1.PolicyTargetReferences, potentialTargets []T, policyNamespace string) []gwapiv1a2.LocalPolicyTargetReferenceWithSectionName {
 	dedup := sets.New[targetRefWithTimestamp]()
 	for _, currSelector := range policy.TargetSelectors {
 		labelSelector := selectorFromTargetSelector(currSelector)
@@ -564,6 +564,11 @@ func getPolicyTargetRefs[T client.Object](policy egv1a1.PolicyTargetReferences, 
 			gvk := obj.GetObjectKind().GroupVersionKind()
 			if gvk.Kind != string(currSelector.Kind) ||
 				gvk.Group != string(ptr.Deref(currSelector.Group, gwapiv1a2.GroupName)) {
+				continue
+			}
+
+			// Skip objects not in the same namespace as the policy
+			if obj.GetNamespace() != policyNamespace {
 				continue
 			}
 

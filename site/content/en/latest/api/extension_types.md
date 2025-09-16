@@ -3351,7 +3351,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `sameSite` | _string_ |  false  | Strict |  |
+| `sameSite` | _string_ |  false  |  |  |
 
 
 #### OIDCCookieNames
