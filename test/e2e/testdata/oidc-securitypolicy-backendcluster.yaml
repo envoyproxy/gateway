@@ -81,6 +81,23 @@ spec:
       name: "oidctest-secret"
     redirectURL: "http://www.example.com/myapp/oauth2/callback"
     logoutPath: "/myapp/logout"
+    forwardAccessToken: true
+  jwt:
+    providers:
+    - name: keycloak
+      remoteJWKS:
+        uri: http://keycloak.gateway-conformance-infra/realms/master/protocol/openid-connect/certs
+  authorization:  # test jwt claim authorization using the access token retrieved from keycloak
+    defaultAction: Deny
+    rules:
+    - name: "allow"
+      action: Allow
+      principal:
+        jwt:
+          provider: keycloak
+          claims:
+          - name: client_id
+            values: ["oidctest"]
 ---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: Backend
