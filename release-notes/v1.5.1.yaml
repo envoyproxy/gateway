@@ -1,0 +1,31 @@
+date: September 16, 2024
+
+# Changes that are expected to cause an incompatibility with previous versions, such as deletions or modifications to existing APIs.
+breaking changes: |
+
+# Updates addressing vulnerabilities, security flaws, or compliance requirements.
+security updates: |
+
+# New features or capabilities added in this release.
+new features: |
+
+bug fixes: |
+  Fixed %ROUTE_KIND% operator to be lower-cased when used by clusterStatName in EnvoyProxy API.
+  Fixed maxAcceptPerSocketEvent being ignored in ClientTrafficPolicy.
+  Fixed the topologyInjectorDisabled and the local cluster was not defined.
+  Fixed log formatting of improper key-value pairs to avoid DPANIC in controller-runtime logger.
+  Fixed handling of context-related transient errors to prevent incorrect state reconciliation and unintended behavior.
+  Fixed the controller cannot read the EnvoyProxy attached gatewayclass only.
+  Fixed indexer and controller crashing when BackendTrafficPolicy has a redirect response override.
+  Fixed Lua validator log level to be suppressed by default.
+  Fixed ProxyTopologyInjector cache sync race condition that caused injection failures
+  Fixed validation for grpc routes with extension ref filters.
+
+# Enhancements that improve performance.
+performance improvements: |
+
+# Deprecated features or APIs.
+deprecations: |
+
+# Other notable changes not covered by the above sections.
+Other changes: |
