@@ -187,7 +187,9 @@ func isTransientError(err error) bool {
 		kerrors.IsServiceUnavailable(err) ||
 		kerrors.IsStoreReadError(err) ||
 		kerrors.IsInternalError(err) ||
-		kerrors.IsUnexpectedServerError(err)
+		kerrors.IsUnexpectedServerError(err) ||
+		errors.Is(err, context.Canceled) ||
+		errors.Is(err, context.DeadlineExceeded)
 }
 
 // Reconcile handles reconciling all resources in a single call. Any resource event should enqueue the
