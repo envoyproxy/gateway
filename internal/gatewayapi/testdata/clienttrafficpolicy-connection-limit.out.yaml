@@ -9,6 +9,9 @@ clientTrafficPolicies:
     connection:
       connectionLimit:
         closeDelay: 10s
+        maxConnectionDuration: 300s
+        maxRequestsPerConnection: 100
+        maxStreamDuration: 200s
         value: 3
     targetRef:
       group: gateway.networking.k8s.io
@@ -23,6 +26,42 @@ clientTrafficPolicies:
         name: gateway-1
         namespace: envoy-gateway
         sectionName: http-1
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: ClientTrafficPolicy
+  metadata:
+    creationTimestamp: null
+    name: target-gateway-1-section-http-2
+    namespace: envoy-gateway
+  spec:
+    connection:
+      connectionLimit:
+        closeDelay: 10s
+        maxConnectionDuration: 300s
+        maxRequestsPerConnection: 100
+        maxStreamDuration: 200s
+        value: 3
+    http1:
+      disableSafeMaxConnectionDuration: true
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-1
+      sectionName: http-2
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http-2
       conditions:
       - lastTransitionTime: null
         message: Policy has been accepted.
@@ -52,7 +91,7 @@ clientTrafficPolicies:
       conditions:
       - lastTransitionTime: null
         message: There are existing ClientTrafficPolicies that are overriding these
-          sections [http-1]
+          sections [http-1 http-2]
         reason: Overridden
         status: "True"
         type: Overridden
@@ -184,6 +223,9 @@ xdsIR:
       connection:
         limit:
           closeDelay: 10s
+          maxConnectionDuration: 5m0s
+          maxRequestsPerConnection: 100
+          maxStreamDuration: 3m20s
           value: 3
       externalPort: 80
       hostnames:
@@ -200,10 +242,18 @@ xdsIR:
         mergeSlashes: true
       port: 10080
     - address: 0.0.0.0
-      connection: {}
+      connection:
+        limit:
+          closeDelay: 10s
+          maxConnectionDuration: 5m0s
+          maxRequestsPerConnection: 100
+          maxStreamDuration: 3m20s
+          value: 3
       externalPort: 8080
       hostnames:
       - '*'
+      http1:
+        disableSafeMaxConnectionDuration: true
       isHTTP2: false
       metadata:
         kind: Gateway
