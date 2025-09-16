@@ -430,6 +430,18 @@ func (t *Translator) addHCMToXDSListener(
 	var filters []*listenerv3.Filter
 
 	if connection != nil && connection.ConnectionLimit != nil {
+		connLimit := connection.ConnectionLimit
+		if connLimit.MaxConnectionDuration != nil {
+			mgr.CommonHttpProtocolOptions.MaxConnectionDuration = durationpb.New(connLimit.MaxConnectionDuration.Duration)
+			mgr.Http1SafeMaxConnectionDuration = !ptr.Deref(irListener.HTTP1, ir.HTTP1Settings{}).DisableSafeMaxConnectionDuration
+		}
+		if connLimit.MaxRequestsPerConnection != nil {
+			mgr.CommonHttpProtocolOptions.MaxRequestsPerConnection = wrapperspb.UInt32(*connLimit.MaxRequestsPerConnection)
+		}
+		if connLimit.MaxStreamDuration != nil {
+			mgr.CommonHttpProtocolOptions.MaxStreamDuration = durationpb.New(connLimit.MaxStreamDuration.Duration)
+		}
+
 		cl := buildConnectionLimitFilter(statPrefix, connection)
 		if clf, err := toNetworkFilter(networkConnectionLimit, cl); err == nil {
 			filters = append(filters, clf)

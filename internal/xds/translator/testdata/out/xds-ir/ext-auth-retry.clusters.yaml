@@ -8,7 +8,7 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: first-route-dest
+    serviceName: httproute/default/httproute-1/rule/0
   ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
   loadBalancingPolicy:
@@ -19,7 +19,7 @@
           '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
           localityLbConfig:
             localityWeightedLbConfig: {}
-  name: first-route-dest
+  name: httproute/default/httproute-1/rule/0
   perConnectionBufferLimitBytes: 32768
   type: EDS
 - circuitBreakers:
@@ -32,7 +32,7 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: second-route-dest
+    serviceName: httproute/default/httproute-1/rule/1
   ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
   loadBalancingPolicy:
@@ -43,7 +43,7 @@
           '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
           localityLbConfig:
             localityWeightedLbConfig: {}
-  name: second-route-dest
+  name: httproute/default/httproute-1/rule/1
   perConnectionBufferLimitBytes: 32768
   type: EDS
 - circuitBreakers:
@@ -56,7 +56,7 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: third-route-dest
+    serviceName: httproute/default/httproute-2/rule/0
   ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
   loadBalancingPolicy:
@@ -67,7 +67,7 @@
           '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
           localityLbConfig:
             localityWeightedLbConfig: {}
-  name: third-route-dest
+  name: httproute/default/httproute-2/rule/0
   perConnectionBufferLimitBytes: 32768
   type: EDS
 - circuitBreakers:
@@ -80,7 +80,7 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: tls-route-dest
+    serviceName: securitypolicy/default/policy-for-http-route-1/default/grpc-backend
   ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
   loadBalancingPolicy:
@@ -91,9 +91,16 @@
           '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
           localityLbConfig:
             localityWeightedLbConfig: {}
-  name: tls-route-dest
+  name: securitypolicy/default/policy-for-http-route-1/default/grpc-backend
   perConnectionBufferLimitBytes: 32768
   type: EDS
+  typedExtensionProtocolOptions:
+    envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
+      '@type': type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
+      explicitHttpConfig:
+        http2ProtocolOptions:
+          initialConnectionWindowSize: 1048576
+          initialStreamWindowSize: 65536
 - circuitBreakers:
     thresholds:
     - maxRetries: 1024
@@ -104,7 +111,7 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: tcp-route-dest
+    serviceName: securitypolicy/default/policy-for-gateway-1/envoy-gateway/http-backend
   ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
   loadBalancingPolicy:
@@ -115,6 +122,6 @@
           '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
           localityLbConfig:
             localityWeightedLbConfig: {}
-  name: tcp-route-dest
+  name: securitypolicy/default/policy-for-gateway-1/envoy-gateway/http-backend
   perConnectionBufferLimitBytes: 32768
   type: EDS

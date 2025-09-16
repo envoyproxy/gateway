@@ -541,9 +541,10 @@ type BackendWeights struct {
 // HTTP1Settings provides HTTP/1 configuration on the listener.
 // +k8s:deepcopy-gen=true
 type HTTP1Settings struct {
-	EnableTrailers     bool            `json:"enableTrailers,omitempty" yaml:"enableTrailers,omitempty"`
-	PreserveHeaderCase bool            `json:"preserveHeaderCase,omitempty" yaml:"preserveHeaderCase,omitempty"`
-	HTTP10             *HTTP10Settings `json:"http10,omitempty" yaml:"http10,omitempty"`
+	EnableTrailers                   bool            `json:"enableTrailers,omitempty" yaml:"enableTrailers,omitempty"`
+	PreserveHeaderCase               bool            `json:"preserveHeaderCase,omitempty" yaml:"preserveHeaderCase,omitempty"`
+	HTTP10                           *HTTP10Settings `json:"http10,omitempty" yaml:"http10,omitempty"`
+	DisableSafeMaxConnectionDuration bool            `json:"disableSafeMaxConnectionDuration,omitempty" yaml:"disableSafeMaxConnectionDuration,omitempty"`
 }
 
 // HTTP10Settings provides HTTP/1.0 configuration on the listener.
@@ -3040,10 +3041,18 @@ type ConnectionLimit struct {
 	// Value of the maximum concurrent connections limit.
 	// When the limit is reached, incoming connections will be closed after the CloseDelay duration.
 	Value *uint64 `json:"value,omitempty" yaml:"value,omitempty"`
-
 	// CloseDelay defines the delay to use before closing connections that are rejected
 	// once the limit value is reached.
 	CloseDelay *metav1.Duration `json:"closeDelay,omitempty" yaml:"closeDelay,omitempty"`
+	// MaxConnectionDuration is the maximum amount of time a connection can remain established
+	// before being drained and/or closed.
+	MaxConnectionDuration *metav1.Duration `json:"maxConnectionDuration,omitempty" yaml:"maxConnectionDuration,omitempty"`
+	// MaxRequestsPerConnection defines the maximum number of requests allowed over a single connection.
+	// If not specified, there is no limit. Setting this parameter to 1 will effectively disable keep alive.
+	MaxRequestsPerConnection *uint32 `json:"maxRequestsPerConnection,omitempty" yaml:"maxRequestsPerConnection,omitempty"`
+	// MaxStreamDuration is the maximum amount of time to keep alive an http stream. When the limit is reached
+	// the stream will be reset independent of any other timeouts. If not specified, no value is set.
+	MaxStreamDuration *metav1.Duration `json:"maxStreamDuration,omitempty" yaml:"maxStreamDuration,omitempty"`
 }
 
 type ExtProcBodyProcessingMode egv1a1.ExtProcBodyProcessingMode

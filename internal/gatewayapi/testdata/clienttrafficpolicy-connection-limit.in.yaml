@@ -20,11 +20,34 @@ clientTrafficPolicies:
       connectionLimit:
         value: 3
         closeDelay: 10s
+        maxConnectionDuration: 300s
+        maxRequestsPerConnection: 100
+        maxStreamDuration: 200s
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
       sectionName: http-1
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: ClientTrafficPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: target-gateway-1-section-http-2
+  spec:
+    connection:
+      connectionLimit:
+        value: 3
+        closeDelay: 10s
+        maxConnectionDuration: 300s
+        maxRequestsPerConnection: 100
+        maxStreamDuration: 200s
+    http1:
+      disableSafeMaxConnectionDuration: true
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-1
+      sectionName: http-2
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
