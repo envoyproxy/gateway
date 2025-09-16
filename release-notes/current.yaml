@@ -9,6 +9,7 @@ security updates: |
 # New features or capabilities added in this release.
 new features: |
   Added support for mTLS configuration for ExtensionServer.
+  Added support for RetryPolicy in gRPC ExtAuth callouts via SecurityPolicy backend settings fields.
   Added support for late response headers in ClientTrafficPolicy.
   Added max connection/stream duration and max requests per connection to ClientTrafficPolicy.
 
