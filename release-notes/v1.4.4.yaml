@@ -1,8 +1,9 @@
-date: September 15, 2025
+date: September 17, 2025
 
 security updates: |
   Updated the Go module package `xz` to fix CVE-2025-58058.
   Updated the distroless image to resolve glibc CVEs.
+
 bug fixes: |
   Fixed an issue in handling context-related transient errors to prevent incorrect state reconciliation and unintended behavior.
   Fixed an issue where the `exclusiveMaximum` field in the CRD was set incorrectly.
