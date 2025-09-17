@@ -113,7 +113,6 @@ type RemoteJWKS struct {
 	// Duration after which the cached JWKS should be expired. If not specified, default cache duration is 5 minutes.
 
 	// +kubebuilder:default="300s"
-	// +kubebuilder:validation:Format=duration
 	// +optional
 	CacheDuration *gwapiv1.Duration `json:"cacheDuration,omitempty"`
 }
