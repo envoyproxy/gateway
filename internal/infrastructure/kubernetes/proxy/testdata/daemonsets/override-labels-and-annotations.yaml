@@ -257,7 +257,7 @@ spec:
             fieldRef:
               apiVersion: v1
               fieldPath: metadata.annotations['topology.kubernetes.io/zone']
-        image: docker.io/envoyproxy/envoy:distroless-v1.34.4
+        image: docker.io/envoyproxy/envoy:distroless-v1.34.7
         imagePullPolicy: IfNotPresent
         lifecycle:
           preStop:
