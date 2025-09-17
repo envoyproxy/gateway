@@ -1,4 +1,4 @@
-date: September 15, 2025
+date: September 17, 2025
 
 security updates: |
   Updated the Go module package `xz` to fix CVE-2025-58058.
