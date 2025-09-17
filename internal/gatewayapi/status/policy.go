@@ -6,10 +6,7 @@
 package status
 
 import (
-	"cmp"
-	"fmt"
-	"slices"
-	"strings"
+	"sort"
 	"time"
 
 	gocmp "github.com/google/go-cmp/cmp"
@@ -18,10 +15,6 @@ import (
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
-)
-
-const (
-	conditionMessageMaxLength = 32768
 )
 
 type PolicyResolveError struct {
@@ -113,22 +106,31 @@ func TruncatePolicyAncestors(policyStatus *gwapiv1a2.PolicyStatus, controllerNam
 	// we need to truncate policy ancestor status due to the item limit (max 16).
 	// so we are choosing to preserve the 16 most important ancestors.
 	// negative polarity (Conflicted, Overridden...) should be clearly indicated to the user.
-	slices.SortStableFunc(policyStatus.Ancestors, func(a, b gwapiv1a2.PolicyAncestorStatus) int {
-		if r := cmp.Compare(sortRankForPolicyAncestor(a), sortRankForPolicyAncestor(b)); r != 0 {
-			return r
+	sort.Slice(policyStatus.Ancestors, func(i, j int) bool {
+		a, b := policyStatus.Ancestors[i], policyStatus.Ancestors[j]
+		aRank := sortRankForPolicyAncestor(a)
+		bRank := sortRankForPolicyAncestor(b)
+
+		if aRank != bRank {
+			return aRank < bRank
 		}
-		return strings.Compare(string(a.AncestorRef.Name), string(b.AncestorRef.Name))
+		// First compare by namespace, then by name
+		aNamespace := ""
+		if a.AncestorRef.Namespace != nil {
+			aNamespace = string(*a.AncestorRef.Namespace)
+		}
+		bNamespace := ""
+		if b.AncestorRef.Namespace != nil {
+			bNamespace = string(*b.AncestorRef.Namespace)
+		}
+
+		if aNamespace != bNamespace {
+			return aNamespace < bNamespace
+		}
+		return string(a.AncestorRef.Name) < string(b.AncestorRef.Name)
 	})
 
-	aggregated := make([]string, len(policyStatus.Ancestors)-16)
-	for i, ancestor := range policyStatus.Ancestors[16:] {
-		aggregated[i] = string(ancestor.AncestorRef.Name)
-	}
-	aggregatedMessage := fmt.Sprintf("Ancestors have been aggregated because the number of policy ancestors exceeds 16. "+
-		"The aggregated ancestors: %s", strings.Join(aggregated, ", "))
-	if len(aggregatedMessage) > conditionMessageMaxLength {
-		aggregatedMessage = aggregatedMessage[:conditionMessageMaxLength]
-	}
+	aggregatedMessage := "Ancestors have been truncated because the number of policy ancestors exceeds 16."
 
 	policyStatus.Ancestors = policyStatus.Ancestors[:16]
 	SetConditionForPolicyAncestor(policyStatus,
