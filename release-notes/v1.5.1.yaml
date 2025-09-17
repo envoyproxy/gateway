@@ -31,6 +31,8 @@ deprecations: |
 
 # Other notable changes not covered by the above sections.
 Other changes: |
+  Updated Envoy Proxy to v1.35.3
+  Updated Envoy RateLimit to e74a664a
   Updated BackendTrafficPolicy compression configuration validation.
   Improved image validation regex for container images.
   Enhanced targetRef selection for target selectors.
