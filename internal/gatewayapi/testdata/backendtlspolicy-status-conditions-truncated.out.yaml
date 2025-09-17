@@ -179,8 +179,8 @@ backendTLSPolicies:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: 'Ancestors have been aggregated because the number of policy ancestors
-          exceeds 16. The aggregated ancestors: gateway-8, gateway-9'
+        message: Ancestors have been truncated because the number of policy ancestors
+          exceeds 16.
         reason: Aggregated
         status: "True"
         type: Aggregated
@@ -365,8 +365,8 @@ backendTLSPolicies:
         status: "False"
         type: Accepted
       - lastTransitionTime: null
-        message: 'Ancestors have been aggregated because the number of policy ancestors
-          exceeds 16. The aggregated ancestors: gateway-8, gateway-9'
+        message: Ancestors have been truncated because the number of policy ancestors
+          exceeds 16.
         reason: Aggregated
         status: "True"
         type: Aggregated
