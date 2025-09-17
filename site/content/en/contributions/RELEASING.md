@@ -56,7 +56,7 @@ export GITHUB_REMOTE=origin
     ```
 
 8. Create a topic branch for updating the [Envoy proxy image][] and [Envoy Ratelimit image][] to the tag supported by the release.
- Please note that the tags should be updated in both the source code and the Helm chart. Reference [PR #2098][]
+ Please note that the tags should be updated in both the source code and the Helm chart. Reference [PR #5872][]
    for additional details on updating the image tag.
 9. Sign, commit, and push your changes to your fork.
 10. Submit a [Pull Request][] to merge the changes into the `release/v${MAJOR_VERSION}.${MINOR_VERSION}` branch. 
@@ -202,7 +202,7 @@ export GITHUB_REMOTE=origin
 
    9. If upstream has updated the [Envoy proxy image][] or [Envoy Ratelimit image][] tag supported by the release,
    you should also create a topic branch for bumping these tags.
-   Please note that the tags should be updated in both the source code and the Helm chart. Reference [PR #2098][]
+   Please note that the tags should be updated in both the source code and the Helm chart. Reference [PR #5872][]
 
 8. Tag the head of your release branch with the release tag. For example:
 
@@ -280,7 +280,6 @@ export GITHUB_REMOTE=origin
 2. Create a topic branch for adding the release notes.
 
    1. Create the release notes. The release note should only include the changes since the last minor or patch release.
-   1. Create a release announcement. Refer to [PR #635] as an example release announcement.
    1. Update `site/layouts/shortcodes/helm-version.html`, update the short code for `{{- with (strings.HasPrefix $pagePrefix "doc") -}}` to the latest patch version. For example:
 
       ```console
@@ -326,7 +325,7 @@ export GITHUB_REMOTE=origin
    git checkout release/v${MAJOR_VERSION}.${MINOR_VERSION} $GITHUB_REMOTE/release/v${MAJOR_VERSION}.${MINOR_VERSION}
    ```
 
-7. Cherry-pick the release note and release announcement that you created in the previous step to the release branch. The release note will be included in the release artifacts.
+7. Cherry-pick the release note that you created in the previous step to the release branch. The release note will be included in the release artifacts.
    1. Create a topic branch from the release branch.
    2. Cherry-pick the release note and release announcement commit from `main` to the topic branch.
    3. Submit a PR to merge the topic from of your fork into the release branch.
@@ -352,7 +351,7 @@ export GITHUB_REMOTE=origin
 
    9. If upstream has updated the [Envoy proxy image][] or [Envoy Ratelimit image][] tag supported by the release,
    you should also create a topic branch for bumping these tags.
-   Please note that the tags should be updated in both the source code and the Helm chart. Reference [PR #2098][]
+   Please note that the tags should be updated in both the source code and the Helm chart. Reference [PR #5872][]
 
 9. Tag the head of your release branch with the release tag. For example:
 
@@ -414,9 +413,9 @@ It's important that the world knows about the release. Use the following steps t
 [release]: https://github.com/envoyproxy/gateway/releases
 [Generate]: https://docs.github.com/en/repositories/releasing-projects-on-github/automatically-generated-release-notes
 [PR #635]: https://github.com/envoyproxy/gateway/pull/635
-[PR #2098]: https://github.com/envoyproxy/gateway/pull/2098
+[PR #5872]: https://github.com/envoyproxy/gateway/pull/5872
 [PR #1002]: https://github.com/envoyproxy/gateway/pull/1002
 [PR #4666]: https://github.com/envoyproxy/gateway/pull/4666
 [VERSION]: https://github.com/envoyproxy/gateway/blob/main/VERSION
-[Envoy proxy image]: https://hub.docker.com/r/envoyproxy/envoy-distroless
+[Envoy proxy image]: https://hub.docker.com/r/envoyproxy/envoy/tags?name=distroless
 [Envoy Ratelimit image]: https://hub.docker.com/r/envoyproxy/ratelimit
