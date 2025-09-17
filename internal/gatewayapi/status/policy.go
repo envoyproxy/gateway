@@ -17,10 +17,6 @@ import (
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
 
-const (
-	conditionMessageMaxLength = 32768
-)
-
 type PolicyResolveError struct {
 	Reason  gwapiv1a2.PolicyConditionReason
 	Message string
