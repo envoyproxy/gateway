@@ -114,6 +114,19 @@ func TruncatePolicyAncestors(policyStatus *gwapiv1a2.PolicyStatus, controllerNam
 		if aRank != bRank {
 			return aRank < bRank
 		}
+		// First compare by namespace, then by name
+		aNamespace := ""
+		if a.AncestorRef.Namespace != nil {
+			aNamespace = string(*a.AncestorRef.Namespace)
+		}
+		bNamespace := ""
+		if b.AncestorRef.Namespace != nil {
+			bNamespace = string(*b.AncestorRef.Namespace)
+		}
+
+		if aNamespace != bNamespace {
+			return aNamespace < bNamespace
+		}
 		return string(a.AncestorRef.Name) < string(b.AncestorRef.Name)
 	})
 
