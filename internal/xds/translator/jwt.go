@@ -20,7 +20,6 @@ import (
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/emptypb"
 	"k8s.io/utils/ptr"
-	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -151,16 +150,6 @@ func buildJWTAuthn(irListener *ir.HTTPListener) (*jwtauthnv3.JwtAuthentication, 
 					jwksCluster = cluster.name
 				}
 
-				var duration *gwapiv1.Duration
-				if jwks.CacheDuration != nil {
-					duration = jwks.CacheDuration
-				}
-
-				timeDuration, err := time.ParseDuration(string(*duration))
-				if err != nil {
-					return nil, err
-				}
-
 				remote := &jwtauthnv3.JwtProvider_RemoteJwks{
 					RemoteJwks: &jwtauthnv3.RemoteJwks{
 						HttpUri: &corev3.HttpUri{
@@ -171,11 +160,16 @@ func buildJWTAuthn(irListener *ir.HTTPListener) (*jwtauthnv3.JwtAuthentication, 
 							Timeout: durationpb.New(defaultExtServiceRequestTimeout),
 						},
 
-						CacheDuration: durationpb.New(timeDuration),
-						AsyncFetch:    &jwtauthnv3.JwksAsyncFetch{},
+						AsyncFetch: &jwtauthnv3.JwksAsyncFetch{},
 					},
 				}
-
+				if jwks.CacheDuration != nil {
+					cDur, err := time.ParseDuration(string(*jwks.CacheDuration))
+					if err != nil {
+						return nil, err
+					}
+					remote.RemoteJwks.CacheDuration = durationpb.New(cDur)
+				}
 				// Set the retry policy if it exists.
 				if jwks.Traffic != nil && jwks.Traffic.Retry != nil {
 					var rp *corev3.RetryPolicy

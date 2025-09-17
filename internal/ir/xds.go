@@ -1082,17 +1082,6 @@ type RemoteJWKS struct {
 	CacheDuration *gwapiv1.Duration `json:"cacheDuration,omitempty"`
 }
 
-// JwksAsyncFetch is used to Fetch Jwks asynchronously in the main thread before the listener is activated.
-//
-// +k8s:deepcopy-gen=true
-type JwksAsyncFetch struct {
-	// If false, the listener is activated after the initial fetch is completed. The initial fetch result can be either successful or failed.
-	// If true, it is activated without waiting for the initial fetch to complete.
-	FastListener bool `json:"fastListener,omitempty"`
-	// The duration to refetch after a failed fetch.
-	FailedRefetchDuration *metav1.Duration `json:"failedRefetchDuration,omitempty"`
-}
-
 // OIDC defines the schema for authenticating HTTP requests using
 // OpenID Connect (OIDC).
 //
