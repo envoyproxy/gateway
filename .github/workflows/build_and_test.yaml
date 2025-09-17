@@ -331,7 +331,8 @@ jobs:
     - publish
     # We need this to run always to force-fail (and not skip) if any needed
     # job has failed. Otherwise, a skipped job will not fail the workflow.
-    if: always()
+    # For any release branch, we don't run this job, it may blocks the PR from merging.
+    if: ${{ always() && !startsWith(github.ref_name, 'release/v') }}
     steps:
     - run: |
         echo "CI checks completed"
