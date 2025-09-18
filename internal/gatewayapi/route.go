@@ -903,22 +903,12 @@ func filterEGPrefix(in map[string]string) map[string]string {
 		return nil
 	}
 
-	// check if any EG-prefixed annotations exist
-	hasEGAnnotations := false
-	for k := range in {
-		if strings.HasPrefix(k, egPrefix) {
-			hasEGAnnotations = true
-			break
-		}
-	}
-
-	if !hasEGAnnotations {
-		return nil
-	}
-
-	out := make(map[string]string, len(in))
+	var out map[string]string
 	for k, v := range in {
 		if strings.HasPrefix(k, egPrefix) {
+			if out == nil {
+				out = make(map[string]string, len(in))
+			}
 			out[strings.TrimPrefix(k, egPrefix)] = v
 		}
 	}
