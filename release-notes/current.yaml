@@ -8,7 +8,10 @@ security updates: |
 
 # New features or capabilities added in this release.
 new features: |
-  Added support for mTLS configuration for ExtensionServer
+  Added support for mTLS configuration for ExtensionServer.
+  Added support for RetryPolicy in gRPC ExtAuth callouts via SecurityPolicy backend settings fields.
+  Added support for late response headers in ClientTrafficPolicy.
+  Added max connection/stream duration and max requests per connection to ClientTrafficPolicy.
 
 bug fixes: |
   Fixed %ROUTE_KIND% operator to be lower-cased when used by clusterStatName in EnvoyProxy API.
@@ -19,6 +22,9 @@ bug fixes: |
   Fixed the controller cannot read the EnvoyProxy attached gatewayclass only.
   Fixed handling of millisecond-level retry durations and token TTLs in OIDC authn.
   Fixed indexer and controller crashing when BackendTrafficPolicy has a redirect response override.
+  Fixed Lua validator log level to be suppressed by default.
+  Fixed ProxyTopologyInjector cache sync race condition that caused injection failures
+  Fixed validation for grpc routes with extension ref filters.
 
 # Enhancements that improve performance.
 performance improvements: |

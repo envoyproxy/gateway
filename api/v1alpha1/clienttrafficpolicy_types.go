@@ -159,6 +159,11 @@ type HeaderSettings struct {
 	//
 	// +optional
 	EarlyRequestHeaders *HTTPHeaderFilter `json:"earlyRequestHeaders,omitempty"`
+
+	// LateResponseHeaders defines settings for global response header modification.
+	//
+	// +optional
+	LateResponseHeaders *HTTPHeaderFilter `json:"lateResponseHeaders,omitempty"`
 }
 
 // WithUnderscoresAction configures the action to take when an HTTP header with underscores
@@ -331,6 +336,14 @@ type HTTP1Settings struct {
 	// HTTP10 turns on support for HTTP/1.0 and HTTP/0.9 requests.
 	// +optional
 	HTTP10 *HTTP10Settings `json:"http10,omitempty"`
+	// DisableSafeMaxConnectionDuration controls the close behavior for HTTP/1 connections.
+	// By default, connection closure is delayed until the next request arrives after maxConnectionDuration is exceeded.
+	// It then adds a Connection: close header and gracefully closes the connection after the response completes.
+	// When set to true (disabled), Envoy uses its default drain behavior, closing the connection shortly after maxConnectionDuration elapses.
+	// Has no effect unless maxConnectionDuration is set.
+	//
+	// +optional
+	DisableSafeMaxConnectionDuration *bool `json:"disableSafeMaxConnectionDuration,omitempty"`
 }
 
 // HTTP10Settings provides HTTP/1.0 configuration on the listener.

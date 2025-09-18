@@ -109,7 +109,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(resources *resource.Resources
 			if currTarget.Kind != resource.KindGateway {
 				policy, found := handledPolicies[policyName]
 				if !found {
-					policy = currPolicy.DeepCopy()
+					policy = currPolicy
 					handledPolicies[policyName] = policy
 					res = append(res, policy)
 				}
@@ -237,7 +237,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(resources *resource.Resources
 			if currTarget.Kind == resource.KindGateway {
 				policy, found := handledPolicies[policyName]
 				if !found {
-					policy = currPolicy.DeepCopy()
+					policy = currPolicy
 					handledPolicies[policyName] = policy
 					res = append(res, policy)
 				}
@@ -545,7 +545,7 @@ func applyTrafficFeatureToRoute(route RouteContext,
 
 func mergeBackendTrafficPolicy(routePolicy, gwPolicy *egv1a1.BackendTrafficPolicy) (*egv1a1.BackendTrafficPolicy, error) {
 	if routePolicy.Spec.MergeType == nil || gwPolicy == nil {
-		return routePolicy.DeepCopy(), nil
+		return routePolicy, nil
 	}
 
 	return utils.Merge[*egv1a1.BackendTrafficPolicy](gwPolicy, routePolicy, *routePolicy.Spec.MergeType)
@@ -1103,6 +1103,24 @@ func buildResponseOverride(policy *egv1a1.BackendTrafficPolicy, resources *resou
 			response.Body, err = getCustomResponseBody(ro.Response.Body, resources, policy.Namespace)
 			if err != nil {
 				return nil, err
+			}
+
+			rhm := ro.Response.Header
+			if rhm != nil {
+				for h := range rhm.Add {
+					response.AddResponseHeaders = append(response.AddResponseHeaders, ir.AddHeader{
+						Name:   string(rhm.Add[h].Name),
+						Append: true,
+						Value:  []string{rhm.Add[h].Value},
+					})
+				}
+				for h := range rhm.Set {
+					response.AddResponseHeaders = append(response.AddResponseHeaders, ir.AddHeader{
+						Name:   string(rhm.Set[h].Name),
+						Append: false,
+						Value:  []string{rhm.Set[h].Value},
+					})
+				}
 			}
 
 			rules = append(rules, ir.ResponseOverrideRule{

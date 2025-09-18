@@ -60,7 +60,7 @@ func (t *Translator) ProcessHTTPRoutes(httpRoutes []*gwapiv1.HTTPRoute, gateways
 		if h == nil {
 			panic("received nil httproute")
 		}
-		httpRoute := &HTTPRouteContext{HTTPRoute: h.DeepCopy()}
+		httpRoute := &HTTPRouteContext{HTTPRoute: h}
 
 		// Find out if this route attaches to one of our Gateway's listeners,
 		// and if so, get the list of listeners that allow it to attach for each
@@ -87,7 +87,7 @@ func (t *Translator) ProcessGRPCRoutes(grpcRoutes []*gwapiv1.GRPCRoute, gateways
 		if g == nil {
 			panic("received nil grpcroute")
 		}
-		grpcRoute := &GRPCRouteContext{GRPCRoute: g.DeepCopy()}
+		grpcRoute := &GRPCRouteContext{GRPCRoute: g}
 
 		// Find out if this route attaches to one of our Gateway's listeners,
 		// and if so, get the list of listeners that allow it to attach for each
@@ -198,9 +198,11 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 			continue
 		}
 
+		routeRuleMetadata := buildResourceMetadata(httpRoute, rule.Name)
+
 		// The HTTPRouteRule matches are ORed, a rule is matched if any one of its matches is satisfied,
 		// so generate a unique Xds IR HTTPRoute per match.
-		ruleRoutes, err := t.processHTTPRouteRule(httpRoute, ruleIdx, httpFiltersContext, rule)
+		ruleRoutes, err := t.processHTTPRouteRule(httpRoute, ruleIdx, httpFiltersContext, rule, routeRuleMetadata)
 		if err != nil {
 			errs.Add(status.NewRouteStatusError(
 				fmt.Errorf("failed to process route rule %d: %w", ruleIdx, err),
@@ -251,7 +253,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 			}
 			destination := &ir.RouteDestination{
 				Settings: allDs,
-				Metadata: buildResourceMetadata(httpRoute, rule.Name),
+				Metadata: routeRuleMetadata,
 			}
 
 			switch {
@@ -379,15 +381,16 @@ func (t *Translator) processHTTPRouteRule(
 	ruleIdx int,
 	httpFiltersContext *HTTPFiltersContext,
 	rule gwapiv1.HTTPRouteRule,
+	routeRuleMetadata *ir.ResourceMetadata,
 ) ([]*ir.HTTPRoute, status.Error) {
 	var ruleRoutes []*ir.HTTPRoute
 
 	// If no matches are specified, the implementation MUST match every HTTP request.
 	if len(rule.Matches) == 0 {
 		irRoute := &ir.HTTPRoute{
-			Name: irRouteName(httpRoute, ruleIdx, -1),
+			Name:     irRouteName(httpRoute, ruleIdx, -1),
+			Metadata: routeRuleMetadata,
 		}
-		irRoute.Metadata = buildResourceMetadata(httpRoute, rule.Name)
 		processRouteTrafficFeatures(irRoute, rule)
 		applyHTTPFiltersContextToIRRoute(httpFiltersContext, irRoute)
 		ruleRoutes = append(ruleRoutes, irRoute)
@@ -453,8 +456,8 @@ func (t *Translator) processHTTPRouteRule(
 		irRoute := &ir.HTTPRoute{
 			Name:               irRouteName(httpRoute, ruleIdx, matchIdx),
 			SessionPersistence: sessionPersistence,
+			Metadata:           routeRuleMetadata,
 		}
-		irRoute.Metadata = buildResourceMetadata(httpRoute, rule.Name)
 		processRouteTrafficFeatures(irRoute, rule)
 
 		if match.Path != nil {
@@ -896,14 +899,18 @@ func buildResourceMetadata(resource client.Object, sectionName *gwapiv1.SectionN
 }
 
 func filterEGPrefix(in map[string]string) map[string]string {
-	out := map[string]string{}
+	if len(in) == 0 {
+		return nil
+	}
+
+	var out map[string]string
 	for k, v := range in {
 		if strings.HasPrefix(k, egPrefix) {
+			if out == nil {
+				out = make(map[string]string, len(in))
+			}
 			out[strings.TrimPrefix(k, egPrefix)] = v
 		}
-	}
-	if len(out) == 0 {
-		return nil
 	}
 	return out
 }
@@ -916,7 +923,7 @@ func (t *Translator) ProcessTLSRoutes(tlsRoutes []*gwapiv1a2.TLSRoute, gateways 
 		if tls == nil {
 			panic("received nil tlsroute")
 		}
-		tlsRoute := &TLSRouteContext{TLSRoute: tls.DeepCopy()}
+		tlsRoute := &TLSRouteContext{TLSRoute: tls}
 
 		// Find out if this route attaches to one of our Gateway's listeners,
 		// and if so, get the list of listeners that allow it to attach for each
@@ -1060,7 +1067,7 @@ func (t *Translator) ProcessUDPRoutes(udpRoutes []*gwapiv1a2.UDPRoute, gateways 
 		if u == nil {
 			panic("received nil udproute")
 		}
-		udpRoute := &UDPRouteContext{UDPRoute: u.DeepCopy()}
+		udpRoute := &UDPRouteContext{UDPRoute: u}
 
 		// Find out if this route attaches to one of our Gateway's listeners,
 		// and if so, get the list of listeners that allow it to attach for each
@@ -1163,7 +1170,8 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 					Destination: &ir.RouteDestination{
 						Name:     destName,
 						Settings: destSettings,
-						Metadata: buildResourceMetadata(udpRoute, nil),
+						// udpRoute Must have a single rule, so can use index 0.
+						Metadata: buildResourceMetadata(udpRoute, udpRoute.Spec.Rules[0].Name),
 					},
 				}
 				irListener.Route = irRoute
@@ -1208,7 +1216,7 @@ func (t *Translator) ProcessTCPRoutes(tcpRoutes []*gwapiv1a2.TCPRoute, gateways 
 		if tcp == nil {
 			panic("received nil tcproute")
 		}
-		tcpRoute := &TCPRouteContext{TCPRoute: tcp.DeepCopy()}
+		tcpRoute := &TCPRouteContext{TCPRoute: tcp}
 
 		// Find out if this route attaches to one of our Gateway's listeners,
 		// and if so, get the list of listeners that allow it to attach for each
@@ -1310,7 +1318,8 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 					Destination: &ir.RouteDestination{
 						Name:     destName,
 						Settings: destSettings,
-						Metadata: buildResourceMetadata(tcpRoute, nil),
+						// tcpRoute Must have a single rule, so can use index 0.
+						Metadata: buildResourceMetadata(tcpRoute, tcpRoute.Spec.Rules[0].Name),
 					},
 				}
 

@@ -136,7 +136,7 @@ func (t *Translator) ProcessGRPCFilters(parentRef *RouteParentContext,
 		if httpFiltersContext.DirectResponse != nil {
 			break
 		}
-		if err := ValidateGRPCRouteFilter(&filter); err != nil {
+		if err := ValidateGRPCRouteFilter(&filter, t.ExtensionGroupKinds...); err != nil {
 			t.processInvalidHTTPFilter(string(filter.Type), httpFiltersContext, err)
 			break
 		}
@@ -858,8 +858,27 @@ func (t *Translator) processExtensionRefHTTPFilter(extFilter *gwapiv1.LocalObjec
 						}
 						filterContext.AddResponseHeaders = append(filterContext.AddResponseHeaders, newHeader)
 					}
-
 					filterContext.DirectResponse = dr
+
+					// Add response headers from the direct response filter.
+					// Headers must be added to the filter context to get applied to the response.
+					rhm := hrf.Spec.DirectResponse.Header
+					if rhm != nil {
+						for h := range rhm.Add {
+							filterContext.AddResponseHeaders = append(filterContext.AddResponseHeaders, ir.AddHeader{
+								Name:   string(rhm.Add[h].Name),
+								Append: true,
+								Value:  []string{rhm.Add[h].Value},
+							})
+						}
+						for h := range rhm.Set {
+							filterContext.AddResponseHeaders = append(filterContext.AddResponseHeaders, ir.AddHeader{
+								Name:   string(rhm.Set[h].Name),
+								Append: false,
+								Value:  []string{rhm.Set[h].Value},
+							})
+						}
+					}
 				}
 
 				if hrf.Spec.CredentialInjection != nil {
