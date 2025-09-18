@@ -198,9 +198,11 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 			continue
 		}
 
+		routeRuleMetadata := buildResourceMetadata(httpRoute, rule.Name)
+
 		// The HTTPRouteRule matches are ORed, a rule is matched if any one of its matches is satisfied,
 		// so generate a unique Xds IR HTTPRoute per match.
-		ruleRoutes, err := t.processHTTPRouteRule(httpRoute, ruleIdx, httpFiltersContext, rule)
+		ruleRoutes, err := t.processHTTPRouteRule(httpRoute, ruleIdx, httpFiltersContext, rule, routeRuleMetadata)
 		if err != nil {
 			errs.Add(status.NewRouteStatusError(
 				fmt.Errorf("failed to process route rule %d: %w", ruleIdx, err),
@@ -251,7 +253,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 			}
 			destination := &ir.RouteDestination{
 				Settings: allDs,
-				Metadata: buildResourceMetadata(httpRoute, rule.Name),
+				Metadata: routeRuleMetadata,
 			}
 
 			switch {
@@ -379,15 +381,16 @@ func (t *Translator) processHTTPRouteRule(
 	ruleIdx int,
 	httpFiltersContext *HTTPFiltersContext,
 	rule gwapiv1.HTTPRouteRule,
+	routeRuleMetadata *ir.ResourceMetadata,
 ) ([]*ir.HTTPRoute, status.Error) {
 	var ruleRoutes []*ir.HTTPRoute
 
 	// If no matches are specified, the implementation MUST match every HTTP request.
 	if len(rule.Matches) == 0 {
 		irRoute := &ir.HTTPRoute{
-			Name: irRouteName(httpRoute, ruleIdx, -1),
+			Name:     irRouteName(httpRoute, ruleIdx, -1),
+			Metadata: routeRuleMetadata,
 		}
-		irRoute.Metadata = buildResourceMetadata(httpRoute, rule.Name)
 		processRouteTrafficFeatures(irRoute, rule)
 		applyHTTPFiltersContextToIRRoute(httpFiltersContext, irRoute)
 		ruleRoutes = append(ruleRoutes, irRoute)
@@ -453,8 +456,8 @@ func (t *Translator) processHTTPRouteRule(
 		irRoute := &ir.HTTPRoute{
 			Name:               irRouteName(httpRoute, ruleIdx, matchIdx),
 			SessionPersistence: sessionPersistence,
+			Metadata:           routeRuleMetadata,
 		}
-		irRoute.Metadata = buildResourceMetadata(httpRoute, rule.Name)
 		processRouteTrafficFeatures(irRoute, rule)
 
 		if match.Path != nil {
@@ -896,14 +899,28 @@ func buildResourceMetadata(resource client.Object, sectionName *gwapiv1.SectionN
 }
 
 func filterEGPrefix(in map[string]string) map[string]string {
-	out := map[string]string{}
+	if len(in) == 0 {
+		return nil
+	}
+
+	// check if any EG-prefixed annotations exist
+	hasEGAnnotations := false
+	for k := range in {
+		if strings.HasPrefix(k, egPrefix) {
+			hasEGAnnotations = true
+			break
+		}
+	}
+
+	if !hasEGAnnotations {
+		return nil
+	}
+
+	out := make(map[string]string, len(in))
 	for k, v := range in {
 		if strings.HasPrefix(k, egPrefix) {
 			out[strings.TrimPrefix(k, egPrefix)] = v
 		}
-	}
-	if len(out) == 0 {
-		return nil
 	}
 	return out
 }
