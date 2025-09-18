@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# shellcheck disable=SC2207,SC2145,SC2181
+
 REPO=${REPO:-"envoyproxy/gateway"}
 LABEL=${LABEL:-"cherrypick/release-v1.5.1"}
 DRY_RUN=${DRY_RUN:-true}
