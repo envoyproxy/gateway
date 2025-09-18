@@ -45,6 +45,10 @@ func (i *JWTAuthInterceptor) validateKubeJWT(ctx context.Context, token, nodeID 
 		return fmt.Errorf("failed to call TokenReview API to verify service account JWT: %w", err)
 	}
 
+	if tokenReview.Status.Error != "" {
+		return fmt.Errorf("token review found error: %s", tokenReview.Status.Error)
+	}
+
 	if !slices.Contains(tokenReview.Status.User.Groups, "system:serviceaccounts") {
 		return fmt.Errorf("the token is not a service account")
 	}
