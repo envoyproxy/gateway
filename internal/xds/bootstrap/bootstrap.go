@@ -43,8 +43,9 @@ const (
 	EnvoyReadinessPort = 19003
 	EnvoyReadinessPath = "/ready"
 
-	defaultSdsTrustedCAPath   = "/sds/xds-trusted-ca.json"
-	defaultSdsCertificatePath = "/sds/xds-certificate.json"
+	defaultSdsTrustedCAPath        = "/sds/xds-trusted-ca.json"
+	defaultSdsCertificatePath      = "/sds/xds-certificate.json"
+	defaultServiceAccountTokenPath = "/var/run/secrets/token/sa-token"
 
 	defaultServiceClusterName = "local_cluster"
 )
@@ -101,6 +102,8 @@ type bootstrapParameters struct {
 	ServiceClusterName string
 	// TopologyInjectorDisabled controls whether to render the local cluster for use with zone aware routing
 	TopologyInjectorDisabled bool
+	// ServiceAccountTokenPath is the path to the service account token file used for authentication in GatewayNamespaceMode.
+	ServiceAccountTokenPath string
 }
 
 type serverParameters struct {
@@ -149,6 +152,7 @@ type RenderBootstrapConfigOptions struct {
 	MaxHeapSizeBytes         uint64
 	GatewayNamespaceMode     bool
 	TopologyInjectorDisabled bool
+	ServiceAccountTokenPath  string
 }
 
 type SdsConfigPath struct {
@@ -263,6 +267,7 @@ func GetRenderedBootstrapConfig(opts *RenderBootstrapConfigOptions) (string, err
 			PrometheusCompressionLibrary: prometheusCompressionLibrary,
 			OtelMetricSinks:              metricSinks,
 			ServiceClusterName:           defaultServiceClusterName,
+			ServiceAccountTokenPath:      defaultServiceAccountTokenPath,
 		},
 	}
 

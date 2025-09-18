@@ -225,7 +225,8 @@ static_resources:
                   name: jwt-sa-bearer
                   sds_config:
                     path_config_source:
-                      path: /var/run/secrets/token/sa-token
+                      path: {{ .ServiceAccountTokenPath }}
+                    resource_api_version: V3
             overwrite: true
         - name: envoy.extensions.filters.http.upstream_codec.v3.UpstreamCodec
           typed_config:

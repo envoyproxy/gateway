@@ -34,6 +34,9 @@ import (
 )
 
 const (
+	// XdsServiceAccountTokenFilepath is the fully qualified path of the file containing
+	// the service account token used for authentication in GatewayNamespaceMode.
+	XdsServiceAccountTokenFilepath = "/var/run/secrets/token/sa-token"
 	// XdsTLSCertFilepath is the fully qualified path of the file containing Envoy's
 	// xDS server TLS certificate.
 	XdsTLSCertFilepath = "/certs/tls.crt"
@@ -319,6 +322,11 @@ func (r *ResourceRender) ConfigMap(cert string) (*corev1.ConfigMap, error) {
 		common.SdsCAFilename:   common.GetSdsCAConfigMapData(XdsTLSCaFilepath),
 		common.SdsCertFilename: common.GetSdsCertConfigMapData(XdsTLSCertFilepath, XdsTLSKeyFilepath),
 	}
+
+	if r.GatewayNamespaceMode {
+		data[common.SdsServiceAccountTokenFilename] = common.GetSdsServiceAccountTokenConfigMapData(XdsServiceAccountTokenFilepath)
+	}
+
 	if cert != "" {
 		data[XdsTLSCaFileName] = cert
 	}
