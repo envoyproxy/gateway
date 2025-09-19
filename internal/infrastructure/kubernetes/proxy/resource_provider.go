@@ -358,7 +358,7 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 
 	// Get the EnvoyProxy config to configure the deployment.
 	provider := proxyConfig.GetEnvoyProxyProvider()
-	if provider.Type != egv1a1.ProviderTypeKubernetes {
+	if provider.Type != egv1a1.EnvoyProxyProviderTypeKubernetes {
 		return nil, fmt.Errorf("invalid provider type %v for Kubernetes infra manager", provider.Type)
 	}
 	deploymentConfig := provider.GetEnvoyProxyKubeProvider().EnvoyDeployment
@@ -447,7 +447,7 @@ func (r *ResourceRender) DaemonSet() (*appsv1.DaemonSet, error) {
 
 	// Get the EnvoyProxy config to configure the daemonset.
 	provider := proxyConfig.GetEnvoyProxyProvider()
-	if provider.Type != egv1a1.ProviderTypeKubernetes {
+	if provider.Type != egv1a1.EnvoyProxyProviderTypeKubernetes {
 		return nil, fmt.Errorf("invalid provider type %v for Kubernetes infra manager", provider.Type)
 	}
 
@@ -515,7 +515,7 @@ func (r *ResourceRender) DaemonSet() (*appsv1.DaemonSet, error) {
 
 func (r *ResourceRender) pdbConfig() (*egv1a1.KubernetesPodDisruptionBudgetSpec, error) {
 	provider := r.infra.GetProxyConfig().GetEnvoyProxyProvider()
-	if provider.Type != egv1a1.ProviderTypeKubernetes {
+	if provider.Type != egv1a1.EnvoyProxyProviderTypeKubernetes {
 		return nil, fmt.Errorf("invalid provider type %v for Kubernetes infra manager", provider.Type)
 	}
 
@@ -577,7 +577,7 @@ func (r *ResourceRender) PodDisruptionBudget() (*policyv1.PodDisruptionBudget, e
 
 func (r *ResourceRender) HorizontalPodAutoscaler() (*autoscalingv2.HorizontalPodAutoscaler, error) {
 	provider := r.infra.GetProxyConfig().GetEnvoyProxyProvider()
-	if provider.Type != egv1a1.ProviderTypeKubernetes {
+	if provider.Type != egv1a1.EnvoyProxyProviderTypeKubernetes {
 		return nil, fmt.Errorf("invalid provider type %v for Kubernetes infra manager", provider.Type)
 	}
 

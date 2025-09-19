@@ -19,7 +19,7 @@ import (
 // DefaultEnvoyProxyProvider returns a new EnvoyProxyProvider with default settings.
 func DefaultEnvoyProxyProvider() *EnvoyProxyProvider {
 	return &EnvoyProxyProvider{
-		Type: ProviderTypeKubernetes,
+		Type: EnvoyProxyProviderTypeKubernetes,
 	}
 }
 
@@ -42,6 +42,7 @@ func DefaultEnvoyProxyKubeProvider() *EnvoyProxyKubernetesProvider {
 	}
 }
 
+// DefaultEnvoyProxyHpaMetrics returns a default HPA metrics spec for EnvoyProxy.
 func DefaultEnvoyProxyHpaMetrics() []autoscalingv2.MetricSpec {
 	return []autoscalingv2.MetricSpec{
 		{
@@ -74,11 +75,21 @@ func (e *EnvoyProxy) NeedToSwitchPorts() bool {
 	return !*e.Spec.Provider.Kubernetes.UseListenerPortAsContainerPort
 }
 
+// GetEnvoyProxyHostProvider returns the EnvoyProxyHostProvider of EnvoyProxyProvider or
+// a nil EnvoyProxyHostProvider if unspecified. If EnvoyProxyProvider is not of
+// type "Host", a nil EnvoyProxyHostProvider is returned.
+func (r *EnvoyProxyProvider) GetEnvoyProxyHostProvider() *EnvoyProxyHostProvider {
+	if r.Type != EnvoyProxyProviderTypeHost {
+		return nil
+	}
+	return r.Host
+}
+
 // GetEnvoyProxyKubeProvider returns the EnvoyProxyKubernetesProvider of EnvoyProxyProvider or
 // a default EnvoyProxyKubernetesProvider if unspecified. If EnvoyProxyProvider is not of
 // type "Kubernetes", a nil EnvoyProxyKubernetesProvider is returned.
 func (r *EnvoyProxyProvider) GetEnvoyProxyKubeProvider() *EnvoyProxyKubernetesProvider {
-	if r.Type != ProviderTypeKubernetes {
+	if r.Type != EnvoyProxyProviderTypeKubernetes {
 		return nil
 	}
 
@@ -115,6 +126,15 @@ func (r *EnvoyProxyProvider) GetEnvoyProxyKubeProvider() *EnvoyProxyKubernetesPr
 	}
 
 	return r.Kubernetes
+}
+
+// GetEnvoyVersion returns the version of Envoy to use.
+// This method gracefully handles nil pointers.
+func (e *EnvoyProxyHostProvider) GetEnvoyVersion() string {
+	if e == nil || e.EnvoyVersion == nil {
+		return ""
+	}
+	return *e.EnvoyVersion
 }
 
 // DefaultEnvoyProxyLoggingLevel returns envoy proxy  v1alpha1.LogComponentGatewayDefault log level.

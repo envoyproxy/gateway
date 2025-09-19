@@ -8,9 +8,12 @@ package host
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
+	"regexp"
+	"strings"
 
 	func_e "github.com/tetratelabs/func-e"
 	"github.com/tetratelabs/func-e/api"
@@ -80,12 +83,12 @@ func (i *Infra) CreateOrUpdateProxyInfra(ctx context.Context, infra *ir.Infra) e
 	if err != nil {
 		return err
 	}
-	i.runEnvoy(ctx, os.Stdout, proxyName, args)
+	i.runEnvoy(ctx, os.Stdout, i.getEnvoyVersion(proxyConfig), proxyName, args)
 	return nil
 }
 
 // runEnvoy runs the Envoy process with the given arguments and name in a separate goroutine.
-func (i *Infra) runEnvoy(ctx context.Context, out io.Writer, name string, args []string) {
+func (i *Infra) runEnvoy(ctx context.Context, out io.Writer, envoyVersion, name string, args []string) {
 	pCtx, cancel := context.WithCancel(ctx)
 	exit := make(chan struct{}, 1)
 	i.proxyContextMap[name] = &proxyContext{cancel: cancel, exit: exit}
@@ -95,7 +98,7 @@ func (i *Infra) runEnvoy(ctx context.Context, out io.Writer, name string, args [
 		defer func() {
 			exit <- struct{}{}
 		}()
-		err := func_e.Run(pCtx, args, api.HomeDir(i.HomeDir), api.Out(out))
+		err := func_e.Run(pCtx, args, api.HomeDir(i.HomeDir), api.Out(out), api.EnvoyVersion(envoyVersion))
 		if err != nil {
 			i.Logger.Error(err, "failed to run envoy")
 		}
@@ -122,4 +125,44 @@ func (i *Infra) stopEnvoy(proxyName string) {
 		close(pCtx.exit) // Close the channel to avoid leaking.
 		delete(i.proxyContextMap, proxyName)
 	}
+}
+
+// getEnvoyVersion returns the version of Envoy to use.
+func (i *Infra) getEnvoyVersion(proxyConfig *egv1a1.EnvoyProxy) string {
+	// Note these helper functions gracefully handle nil pointer dereferencing, so it's safe to
+	// chain method calls.
+	version := proxyConfig.GetEnvoyProxyProvider().GetEnvoyProxyHostProvider().GetEnvoyVersion()
+	if version == "" {
+		// If the version is not explicitly set, use the default version EG is built with.
+		// This is only populated to a concrete version in release branches.
+		// For `main` it may fail. In that case, we return an empty version and let the func-e library
+		// decide what version to use.
+		// This keeps the old behaviour for backwards compatibility.
+		version, _ = extractSemver(i.defaultEnvoyImage)
+	}
+
+	if version == "" {
+		i.Logger.Info("no explicit Envoy version is set and " +
+			"could not extract a default version from the default Envoy image")
+	}
+
+	return version
+}
+
+// extractSemver takes an image reference like "docker.io/envoyproxy/envoy:distroless-v1.35.0"
+// and returns the semver string, e.g. "1.35.0".
+func extractSemver(image string) (string, error) {
+	// Split to isolate the tag part after the colon
+	parts := strings.Split(image, ":")
+	if len(parts) < 2 {
+		return "", fmt.Errorf("no tag found in default Envoy image reference: %s", image)
+	}
+	tag := parts[len(parts)-1]
+
+	re := regexp.MustCompile(`\d+\.\d+\.\d+`)
+	semver := re.FindString(tag)
+	if semver == "" {
+		return "", fmt.Errorf("no semver found in tag: %s", tag)
+	}
+	return semver, nil
 }
