@@ -751,14 +751,15 @@ func (r *gatewayAPIReconciler) processBackendRefs(ctx context.Context, gwcResour
 				r.log.Error(err, "failed to get EndpointSlices", "namespace", string(*backendRef.Namespace),
 					backendRefKind, string(backendRef.Name))
 			} else {
-				for _, endpointSlice := range endpointSliceList.Items {
-					key := utils.NamespacedName(&endpointSlice).String()
+				for i := range endpointSliceList.Items {
+					endpointSlice := &endpointSliceList.Items[i]
+					key := utils.NamespacedName(endpointSlice).String()
 					if !resourceMappings.allAssociatedEndpointSlices.Has(key) {
 						resourceMappings.allAssociatedEndpointSlices.Insert(key)
 						r.log.Info("added EndpointSlice to resource tree",
 							"namespace", endpointSlice.Namespace,
 							"name", endpointSlice.Name)
-						gwcResource.EndpointSlices = append(gwcResource.EndpointSlices, &endpointSlice)
+						gwcResource.EndpointSlices = append(gwcResource.EndpointSlices, endpointSlice)
 					}
 				}
 			}
@@ -1560,14 +1561,14 @@ func (r *gatewayAPIReconciler) processEnvoyPatchPolicies(ctx context.Context, re
 		return fmt.Errorf("error listing EnvoyPatchPolicies: %w", err)
 	}
 
-	for _, policy := range envoyPatchPolicies.Items {
-		envoyPatchPolicy := policy //nolint:copyloopvar
+	for i := range envoyPatchPolicies.Items {
+		envoyPatchPolicy := &envoyPatchPolicies.Items[i]
 		// Discard Status to reduce memory consumption in watchable
 		// It will be recomputed by the gateway-api layer
 		envoyPatchPolicy.Status = gwapiv1a2.PolicyStatus{}
-		if !resourceMap.allAssociatedEnvoyPatchPolicies.Has(utils.NamespacedName(&envoyPatchPolicy).String()) {
-			resourceMap.allAssociatedEnvoyPatchPolicies.Insert(utils.NamespacedName(&envoyPatchPolicy).String())
-			resourceTree.EnvoyPatchPolicies = append(resourceTree.EnvoyPatchPolicies, &envoyPatchPolicy)
+		if !resourceMap.allAssociatedEnvoyPatchPolicies.Has(utils.NamespacedName(envoyPatchPolicy).String()) {
+			resourceMap.allAssociatedEnvoyPatchPolicies.Insert(utils.NamespacedName(envoyPatchPolicy).String())
+			resourceTree.EnvoyPatchPolicies = append(resourceTree.EnvoyPatchPolicies, envoyPatchPolicy)
 		}
 	}
 	return nil
@@ -1582,14 +1583,14 @@ func (r *gatewayAPIReconciler) processClientTrafficPolicies(
 		return fmt.Errorf("error listing ClientTrafficPolicies: %w", err)
 	}
 
-	for _, policy := range clientTrafficPolicies.Items {
-		clientTrafficPolicy := policy //nolint:copyloopvar
+	for i := range clientTrafficPolicies.Items {
+		clientTrafficPolicy := &clientTrafficPolicies.Items[i]
 		// Discard Status to reduce memory consumption in watchable
 		// It will be recomputed by the gateway-api layer
 		clientTrafficPolicy.Status = gwapiv1a2.PolicyStatus{}
-		if !resourceMap.allAssociatedClientTrafficPolicies.Has(utils.NamespacedName(&clientTrafficPolicy).String()) {
-			resourceMap.allAssociatedClientTrafficPolicies.Insert(utils.NamespacedName(&clientTrafficPolicy).String())
-			resourceTree.ClientTrafficPolicies = append(resourceTree.ClientTrafficPolicies, &clientTrafficPolicy)
+		if !resourceMap.allAssociatedClientTrafficPolicies.Has(utils.NamespacedName(clientTrafficPolicy).String()) {
+			resourceMap.allAssociatedClientTrafficPolicies.Insert(utils.NamespacedName(clientTrafficPolicy).String())
+			resourceTree.ClientTrafficPolicies = append(resourceTree.ClientTrafficPolicies, clientTrafficPolicy)
 		}
 	}
 
@@ -1604,14 +1605,14 @@ func (r *gatewayAPIReconciler) processBackendTrafficPolicies(ctx context.Context
 		return fmt.Errorf("error listing BackendTrafficPolicies: %w", err)
 	}
 
-	for _, policy := range backendTrafficPolicies.Items {
-		backendTrafficPolicy := policy //nolint:copyloopvar
+	for i := range backendTrafficPolicies.Items {
+		backendTrafficPolicy := &backendTrafficPolicies.Items[i]
 		// Discard Status to reduce memory consumption in watchable
 		// It will be recomputed by the gateway-api layer
 		backendTrafficPolicy.Status = gwapiv1a2.PolicyStatus{}
-		if !resourceMap.allAssociatedBackendTrafficPolicies.Has(utils.NamespacedName(&backendTrafficPolicy).String()) {
-			resourceMap.allAssociatedBackendTrafficPolicies.Insert(utils.NamespacedName(&backendTrafficPolicy).String())
-			resourceTree.BackendTrafficPolicies = append(resourceTree.BackendTrafficPolicies, &backendTrafficPolicy)
+		if !resourceMap.allAssociatedBackendTrafficPolicies.Has(utils.NamespacedName(backendTrafficPolicy).String()) {
+			resourceMap.allAssociatedBackendTrafficPolicies.Insert(utils.NamespacedName(backendTrafficPolicy).String())
+			resourceTree.BackendTrafficPolicies = append(resourceTree.BackendTrafficPolicies, backendTrafficPolicy)
 		}
 	}
 	return r.processBtpConfigMapRefs(ctx, resourceTree, resourceMap)
@@ -1626,14 +1627,14 @@ func (r *gatewayAPIReconciler) processSecurityPolicies(
 		return fmt.Errorf("error listing SecurityPolicies: %w", err)
 	}
 
-	for _, policy := range securityPolicies.Items {
-		securityPolicy := policy //nolint:copyloopvar
+	for i := range securityPolicies.Items {
+		securityPolicy := &securityPolicies.Items[i]
 		// Discard Status to reduce memory consumption in watchable
 		// It will be recomputed by the gateway-api layer
 		securityPolicy.Status = gwapiv1a2.PolicyStatus{}
-		if !resourceMap.allAssociatedSecurityPolicies.Has(utils.NamespacedName(&securityPolicy).String()) {
-			resourceMap.allAssociatedSecurityPolicies.Insert(utils.NamespacedName(&securityPolicy).String())
-			resourceTree.SecurityPolicies = append(resourceTree.SecurityPolicies, &securityPolicy)
+		if !resourceMap.allAssociatedSecurityPolicies.Has(utils.NamespacedName(securityPolicy).String()) {
+			resourceMap.allAssociatedSecurityPolicies.Insert(utils.NamespacedName(securityPolicy).String())
+			resourceTree.SecurityPolicies = append(resourceTree.SecurityPolicies, securityPolicy)
 		}
 	}
 
@@ -1650,14 +1651,14 @@ func (r *gatewayAPIReconciler) processBackendTLSPolicies(
 		return fmt.Errorf("error listing BackendTLSPolicies: %w", err)
 	}
 
-	for _, policy := range backendTLSPolicies.Items {
-		backendTLSPolicy := policy //nolint:copyloopvar
+	for i := range backendTLSPolicies.Items {
+		backendTLSPolicy := &backendTLSPolicies.Items[i]
 		// Discard Status to reduce memory consumption in watchable
 		// It will be recomputed by the gateway-api layer
 		backendTLSPolicy.Status = gwapiv1a2.PolicyStatus{}
-		if !resourceMap.allAssociatedBackendTLSPolicies.Has(utils.NamespacedName(&backendTLSPolicy).String()) {
-			resourceMap.allAssociatedBackendTLSPolicies.Insert(utils.NamespacedName(&backendTLSPolicy).String())
-			resourceTree.BackendTLSPolicies = append(resourceTree.BackendTLSPolicies, &backendTLSPolicy)
+		if !resourceMap.allAssociatedBackendTLSPolicies.Has(utils.NamespacedName(backendTLSPolicy).String()) {
+			resourceMap.allAssociatedBackendTLSPolicies.Insert(utils.NamespacedName(backendTLSPolicy).String())
+			resourceTree.BackendTLSPolicies = append(resourceTree.BackendTLSPolicies, backendTLSPolicy)
 		}
 	}
 
@@ -2572,14 +2573,14 @@ func (r *gatewayAPIReconciler) processEnvoyExtensionPolicies(
 		return fmt.Errorf("error listing EnvoyExtensionPolicies: %w", err)
 	}
 
-	for _, policy := range envoyExtensionPolicies.Items {
-		envoyExtensionPolicy := policy //nolint:copyloopvar
+	for i := range envoyExtensionPolicies.Items {
+		envoyExtensionPolicy := &envoyExtensionPolicies.Items[i]
 		// Discard Status to reduce memory consumption in watchable
 		// It will be recomputed by the gateway-api layer
 		envoyExtensionPolicy.Status = gwapiv1a2.PolicyStatus{}
-		if !resourceMap.allAssociatedEnvoyExtensionPolicies.Has(utils.NamespacedName(&envoyExtensionPolicy).String()) {
-			resourceMap.allAssociatedEnvoyExtensionPolicies.Insert(utils.NamespacedName(&envoyExtensionPolicy).String())
-			resourceTree.EnvoyExtensionPolicies = append(resourceTree.EnvoyExtensionPolicies, &envoyExtensionPolicy)
+		if !resourceMap.allAssociatedEnvoyExtensionPolicies.Has(utils.NamespacedName(envoyExtensionPolicy).String()) {
+			resourceMap.allAssociatedEnvoyExtensionPolicies.Insert(utils.NamespacedName(envoyExtensionPolicy).String())
+			resourceTree.EnvoyExtensionPolicies = append(resourceTree.EnvoyExtensionPolicies, envoyExtensionPolicy)
 		}
 	}
 
