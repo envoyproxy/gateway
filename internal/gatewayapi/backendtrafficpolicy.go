@@ -120,11 +120,11 @@ func (t *Translator) ProcessBackendTrafficPolicies(resources *resource.Resources
 					continue
 				}
 
-				// Find the Gateway that the route belongs to and add it to the
-				// gatewayRouteMap and ancestor list, which will be used to check
-				// policy overrides and populate its ancestor status.
+				// Find the first Gateway that the route belongs to and add it to the
+				// gatewayRouteMap. Use single ancestor for memory optimization.
 				parentRefs := GetParentReferences(route)
-				ancestorRefs := make([]gwapiv1a2.ParentReference, 0, len(parentRefs))
+				var ancestorRef gwapiv1a2.ParentReference
+				var hasValidParent bool
 				routeParents := sets.New[types.NamespacedName]()
 				for _, p := range parentRefs {
 					if p.Kind == nil || *p.Kind == resource.KindGateway {
@@ -144,15 +144,18 @@ func (t *Translator) ProcessBackendTrafficPolicies(resources *resource.Resources
 						}
 						gatewayRouteMap[key].Insert(utils.NamespacedName(route).String())
 
-						// Do need a section name since the policy is targeting to a route
-						ancestorRefs = append(ancestorRefs, getAncestorRefForPolicy(gwNN, p.SectionName))
+						// Use first gateway as single ancestor (no section name for memory optimization)
+						if !hasValidParent {
+							ancestorRef = getAncestorRefForPolicy(gwNN, nil)
+							hasValidParent = true
+						}
 					}
 				}
 
 				// Set conditions for resolve error, then skip current xRoute
-				if resolveErr != nil {
-					status.SetResolveErrorForPolicyAncestors(&policy.Status,
-						ancestorRefs,
+				if resolveErr != nil && hasValidParent {
+					status.SetResolveErrorForPolicyAncestor(&policy.Status,
+						ancestorRef,
 						t.GatewayControllerName,
 						policy.Generation,
 						resolveErr,
@@ -163,9 +166,9 @@ func (t *Translator) ProcessBackendTrafficPolicies(resources *resource.Resources
 
 				if policy.Spec.MergeType == nil {
 					// Set conditions for translation error if it got any
-					if err := t.translateBackendTrafficPolicyForRoute(policy, route, xdsIR, resources, nil); err != nil {
-						status.SetTranslationErrorForPolicyAncestors(&policy.Status,
-							ancestorRefs,
+					if err := t.translateBackendTrafficPolicyForRoute(policy, route, xdsIR, resources, nil); err != nil && hasValidParent {
+						status.SetTranslationErrorForPolicyAncestor(&policy.Status,
+							ancestorRef,
 							t.GatewayControllerName,
 							policy.Generation,
 							status.Error2ConditionMsg(err),
@@ -224,7 +227,9 @@ func (t *Translator) ProcessBackendTrafficPolicies(resources *resource.Resources
 				}
 
 				// Set Accepted condition if it is unset
-				status.SetAcceptedForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName, policy.Generation)
+				if hasValidParent {
+					status.SetAcceptedForPolicyAncestor(&policy.Status, ancestorRef, t.GatewayControllerName, policy.Generation)
+				}
 			}
 		}
 	}
@@ -250,15 +255,12 @@ func (t *Translator) ProcessBackendTrafficPolicies(resources *resource.Resources
 
 				// Find its ancestor reference by resolved gateway, even with resolve error
 				gatewayNN := utils.NamespacedName(gateway)
-				ancestorRefs := []gwapiv1a2.ParentReference{
-					// Don't need a section name since the policy is targeting to a gateway
-					getAncestorRefForPolicy(gatewayNN, nil),
-				}
+				ancestorRef := getAncestorRefForPolicy(gatewayNN, nil)
 
 				// Set conditions for resolve error, then skip current gateway
 				if resolveErr != nil {
-					status.SetResolveErrorForPolicyAncestors(&policy.Status,
-						ancestorRefs,
+					status.SetResolveErrorForPolicyAncestor(&policy.Status,
+						ancestorRef,
 						t.GatewayControllerName,
 						policy.Generation,
 						resolveErr,
@@ -269,8 +271,8 @@ func (t *Translator) ProcessBackendTrafficPolicies(resources *resource.Resources
 
 				// Set conditions for translation error if it got any
 				if err := t.translateBackendTrafficPolicyForGateway(policy, currTarget, gateway, xdsIR, resources); err != nil {
-					status.SetTranslationErrorForPolicyAncestors(&policy.Status,
-						ancestorRefs,
+					status.SetTranslationErrorForPolicyAncestor(&policy.Status,
+						ancestorRef,
 						t.GatewayControllerName,
 						policy.Generation,
 						status.Error2ConditionMsg(err),
@@ -278,7 +280,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(resources *resource.Resources
 				}
 
 				// Set Accepted condition if it is unset
-				status.SetAcceptedForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName, policy.Generation)
+				status.SetAcceptedForPolicyAncestor(&policy.Status, ancestorRef, t.GatewayControllerName, policy.Generation)
 
 				// Check if this policy is overridden by other policies targeting at
 				// route level
@@ -288,8 +290,8 @@ func (t *Translator) ProcessBackendTrafficPolicies(resources *resource.Resources
 					gatewayMergedRoutes := mergedRoutes.UnsortedList()
 					sort.Strings(gatewayMergedRoutes)
 
-					status.SetConditionForPolicyAncestors(&policy.Status,
-						ancestorRefs,
+					status.SetConditionForPolicyAncestor(&policy.Status,
+						ancestorRef,
 						t.GatewayControllerName,
 						egv1a1.PolicyConditionMerged,
 						metav1.ConditionTrue,
@@ -312,8 +314,8 @@ func (t *Translator) ProcessBackendTrafficPolicies(resources *resource.Resources
 						continue
 					}
 
-					status.SetConditionForPolicyAncestors(&policy.Status,
-						ancestorRefs,
+					status.SetConditionForPolicyAncestor(&policy.Status,
+						ancestorRef,
 						t.GatewayControllerName,
 						egv1a1.PolicyConditionOverridden,
 						metav1.ConditionTrue,

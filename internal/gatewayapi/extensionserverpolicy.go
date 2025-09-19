@@ -74,10 +74,8 @@ func (t *Translator) ProcessExtensionServerPolicies(policies []unstructured.Unst
 				// Only add a status condition if the policy was added into the IR
 				// Find its ancestor reference by resolved gateway, even with resolve error
 				gatewayNN := utils.NamespacedName(gateway)
-				ancestorRefs := []gwapiv1a2.ParentReference{
-					getAncestorRefForPolicy(gatewayNN, currTarget.SectionName),
-				}
-				status.SetAcceptedForPolicyAncestors(&policyStatus, ancestorRefs, t.GatewayControllerName, policy.GetGeneration())
+				ancestorRef := getAncestorRefForPolicy(gatewayNN, currTarget.SectionName)
+				status.SetAcceptedForPolicyAncestor(&policyStatus, ancestorRef, t.GatewayControllerName, policy.GetGeneration())
 				accepted = true
 			}
 		}

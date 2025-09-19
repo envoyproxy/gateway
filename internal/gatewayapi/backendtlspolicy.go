@@ -150,12 +150,12 @@ func (t *Translator) processBackendTLSPolicy(
 	}
 
 	tlsBundle, err := getBackendTLSBundle(policy, resources)
-	ancestorRefs := getAncestorRefs(policy)
-	ancestorRefs = append(ancestorRefs, parent)
+	// Use single ancestor for memory optimization
+	ancestorRef := parent
 
 	if err != nil {
-		status.SetTranslationErrorForPolicyAncestors(&policy.Status,
-			ancestorRefs,
+		status.SetTranslationErrorForPolicyAncestor(&policy.Status,
+			ancestorRef,
 			t.GatewayControllerName,
 			policy.Generation,
 			status.Error2ConditionMsg(err),
@@ -163,7 +163,7 @@ func (t *Translator) processBackendTLSPolicy(
 		return nil, err
 	}
 
-	status.SetAcceptedForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName, policy.Generation)
+	status.SetAcceptedForPolicyAncestor(&policy.Status, ancestorRef, t.GatewayControllerName, policy.Generation)
 	return tlsBundle, nil
 }
 

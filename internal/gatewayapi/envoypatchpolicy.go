@@ -23,23 +23,21 @@ func (t *Translator) ProcessEnvoyPatchPolicies(envoyPatchPolicies []*egv1a1.Envo
 
 	for _, policy := range envoyPatchPolicies {
 		var (
-			policy       = policy
-			ancestorRefs []gwapiv1a2.ParentReference
-			resolveErr   *status.PolicyResolveError
-			targetKind   string
-			irKey        string
+			policy      = policy
+			ancestorRef gwapiv1a2.ParentReference
+			resolveErr  *status.PolicyResolveError
+			targetKind  string
+			irKey       string
 		)
 
 		if t.MergeGateways {
 			targetKind = resource.KindGatewayClass
 			irKey = string(t.GatewayClassName)
 
-			ancestorRefs = []gwapiv1a2.ParentReference{
-				{
-					Group: GroupPtr(gwapiv1.GroupName),
-					Kind:  KindPtr(targetKind),
-					Name:  policy.Spec.TargetRef.Name,
-				},
+			ancestorRef = gwapiv1a2.ParentReference{
+				Group: GroupPtr(gwapiv1.GroupName),
+				Kind:  KindPtr(targetKind),
+				Name:  policy.Spec.TargetRef.Name,
 			}
 		} else {
 			targetKind = resource.KindGateway
@@ -50,9 +48,7 @@ func (t *Translator) ProcessEnvoyPatchPolicies(envoyPatchPolicies []*egv1a1.Envo
 			// It must exist since the gateways have already been processed
 			irKey = irStringKey(gatewayNN.Namespace, gatewayNN.Name)
 
-			ancestorRefs = []gwapiv1a2.ParentReference{
-				getAncestorRefForPolicy(gatewayNN, nil),
-			}
+			ancestorRef = getAncestorRefForPolicy(gatewayNN, nil)
 		}
 
 		gwXdsIR, ok := xdsIR[irKey]
@@ -75,8 +71,8 @@ func (t *Translator) ProcessEnvoyPatchPolicies(envoyPatchPolicies []*egv1a1.Envo
 				Reason:  egv1a1.PolicyReasonDisabled,
 				Message: "EnvoyPatchPolicy is disabled in the EnvoyGateway configuration",
 			}
-			status.SetResolveErrorForPolicyAncestors(&policy.Status,
-				ancestorRefs,
+			status.SetResolveErrorForPolicyAncestor(&policy.Status,
+				ancestorRef,
 				t.GatewayControllerName,
 				policy.Generation,
 				resolveErr,
@@ -94,8 +90,8 @@ func (t *Translator) ProcessEnvoyPatchPolicies(envoyPatchPolicies []*egv1a1.Envo
 				Reason:  gwapiv1a2.PolicyReasonInvalid,
 				Message: message,
 			}
-			status.SetResolveErrorForPolicyAncestors(&policy.Status,
-				ancestorRefs,
+			status.SetResolveErrorForPolicyAncestor(&policy.Status,
+				ancestorRef,
 				t.GatewayControllerName,
 				policy.Generation,
 				resolveErr,
@@ -119,6 +115,6 @@ func (t *Translator) ProcessEnvoyPatchPolicies(envoyPatchPolicies []*egv1a1.Envo
 		}
 
 		// Set Accepted=True
-		status.SetAcceptedForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName, policy.Generation)
+		status.SetAcceptedForPolicyAncestor(&policy.Status, ancestorRef, t.GatewayControllerName, policy.Generation)
 	}
 }

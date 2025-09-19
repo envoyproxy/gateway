@@ -215,9 +215,9 @@ func (t *Translator) processEEPolicyForRoute(
 	}
 
 	// Set conditions for resolve error, then skip current xroute
-	if resolveErr != nil {
-		status.SetResolveErrorForPolicyAncestors(&policy.Status,
-			ancestorRefs,
+	if resolveErr != nil && len(ancestorRefs) > 0 {
+		status.SetResolveErrorForPolicyAncestor(&policy.Status,
+			ancestorRefs[0],
 			t.GatewayControllerName,
 			policy.Generation,
 			resolveErr,
@@ -226,9 +226,9 @@ func (t *Translator) processEEPolicyForRoute(
 	}
 
 	// Set conditions for translation error if it got any
-	if err := t.translateEnvoyExtensionPolicyForRoute(policy, targetedRoute, currTarget, xdsIR, resources); err != nil {
-		status.SetTranslationErrorForPolicyAncestors(&policy.Status,
-			ancestorRefs,
+	if err := t.translateEnvoyExtensionPolicyForRoute(policy, targetedRoute, currTarget, xdsIR, resources); err != nil && len(ancestorRefs) > 0 {
+		status.SetTranslationErrorForPolicyAncestor(&policy.Status,
+			ancestorRefs[0],
 			t.GatewayControllerName,
 			policy.Generation,
 			status.Error2ConditionMsg(err),
@@ -236,7 +236,9 @@ func (t *Translator) processEEPolicyForRoute(
 	}
 
 	// Set Accepted condition if it is unset
-	status.SetAcceptedForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName, policy.Generation)
+	if len(ancestorRefs) > 0 {
+		status.SetAcceptedForPolicyAncestor(&policy.Status, ancestorRefs[0], t.GatewayControllerName, policy.Generation)
+	}
 
 	// Check if this policy is overridden by other policies targeting at route rule levels
 	key := policyTargetRouteKey{
@@ -246,15 +248,17 @@ func (t *Translator) processEEPolicyForRoute(
 	}
 	overriddenTargetsMessage := getOverriddenTargetsMessageForRoute(routeMap[key], currTarget.SectionName)
 	if overriddenTargetsMessage != "" {
-		status.SetConditionForPolicyAncestors(&policy.Status,
-			ancestorRefs,
-			t.GatewayControllerName,
-			egv1a1.PolicyConditionOverridden,
-			metav1.ConditionTrue,
-			egv1a1.PolicyReasonOverridden,
-			"This policy is being overridden by other envoyExtensionPolicies for "+overriddenTargetsMessage,
-			policy.Generation,
-		)
+		if len(ancestorRefs) > 0 {
+			status.SetConditionForPolicyAncestor(&policy.Status,
+				ancestorRefs[0],
+				t.GatewayControllerName,
+				egv1a1.PolicyConditionOverridden,
+				metav1.ConditionTrue,
+				egv1a1.PolicyReasonOverridden,
+				"This policy is being overridden by other envoyExtensionPolicies for "+overriddenTargetsMessage,
+				policy.Generation,
+			)
+		}
 	}
 }
 
@@ -282,14 +286,12 @@ func (t *Translator) processEEPolicyForGateway(
 
 	// Find its ancestor reference by resolved gateway, even with resolve error
 	gatewayNN := utils.NamespacedName(targetedGateway)
-	ancestorRefs := []gwapiv1a2.ParentReference{
-		getAncestorRefForPolicy(gatewayNN, currTarget.SectionName),
-	}
+	ancestorRef := getAncestorRefForPolicy(gatewayNN, currTarget.SectionName)
 
 	// Set conditions for resolve error, then skip current gateway
 	if resolveErr != nil {
-		status.SetResolveErrorForPolicyAncestors(&policy.Status,
-			ancestorRefs,
+		status.SetResolveErrorForPolicyAncestor(&policy.Status,
+			ancestorRef,
 			t.GatewayControllerName,
 			policy.Generation,
 			resolveErr,
@@ -300,8 +302,8 @@ func (t *Translator) processEEPolicyForGateway(
 
 	// Set conditions for translation error if it got any
 	if err := t.translateEnvoyExtensionPolicyForGateway(policy, currTarget, targetedGateway, xdsIR, resources); err != nil {
-		status.SetTranslationErrorForPolicyAncestors(&policy.Status,
-			ancestorRefs,
+		status.SetTranslationErrorForPolicyAncestor(&policy.Status,
+			ancestorRef,
 			t.GatewayControllerName,
 			policy.Generation,
 			status.Error2ConditionMsg(err),
@@ -309,14 +311,14 @@ func (t *Translator) processEEPolicyForGateway(
 	}
 
 	// Set Accepted condition if it is unset
-	status.SetAcceptedForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName, policy.Generation)
+	status.SetAcceptedForPolicyAncestor(&policy.Status, ancestorRef, t.GatewayControllerName, policy.Generation)
 
 	// Check if this policy is overridden by other policies targeting at route rule, route and listener levels
 	overriddenTargetsMessage := getOverriddenTargetsMessageForGateway(
 		gatewayMap[gatewayNN], gatewayRouteMap[gatewayNN.String()], currTarget.SectionName)
 	if overriddenTargetsMessage != "" {
-		status.SetConditionForPolicyAncestors(&policy.Status,
-			ancestorRefs,
+		status.SetConditionForPolicyAncestor(&policy.Status,
+			ancestorRef,
 			t.GatewayControllerName,
 			egv1a1.PolicyConditionOverridden,
 			metav1.ConditionTrue,
