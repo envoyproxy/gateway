@@ -9,8 +9,6 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/envoyproxy/gateway/api/v1alpha1/validation"
-	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
 	"golang.org/x/exp/maps"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -20,11 +18,13 @@ import (
 	gwapiv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/api/v1alpha1/validation"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/logging"
 	"github.com/envoyproxy/gateway/internal/wasm"
+	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
 )
 
 const (
