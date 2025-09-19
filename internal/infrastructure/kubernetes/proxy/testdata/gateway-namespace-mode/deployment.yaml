@@ -185,6 +185,7 @@ spec:
                             sds_config:
                               path_config_source:
                                 path: /var/run/secrets/token/sa-token
+                              resource_api_version: V3
                       overwrite: true
                   - name: envoy.extensions.filters.http.upstream_codec.v3.UpstreamCodec
                     typed_config:
@@ -597,6 +598,7 @@ spec:
                             sds_config:
                               path_config_source:
                                 path: /var/run/secrets/token/sa-token
+                              resource_api_version: V3
                       overwrite: true
                   - name: envoy.extensions.filters.http.upstream_codec.v3.UpstreamCodec
                     typed_config:
