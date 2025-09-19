@@ -85,6 +85,8 @@ func (t *Translator) createRateLimitServiceCluster(tCtx *types.ResourceVersionTa
 		Protocol:  ir.GRPC,
 		Endpoints: []*ir.DestinationEndpoint{ir.NewDestEndpoint(nil, host, port, false, nil)},
 		Name:      destinationSettingName(clusterName),
+		// TODO: tracked with issue #6861
+		Metadata: nil,
 	}
 
 	tSocket, err := buildEnvoyClientTLSSocket(envoyClientCertificate)
@@ -98,6 +100,7 @@ func (t *Translator) createRateLimitServiceCluster(tCtx *types.ResourceVersionTa
 		tSocket:      tSocket,
 		endpointType: EndpointTypeDNS,
 		metrics:      metrics,
+		metadata:     ds.Metadata,
 	})
 }
 
@@ -155,6 +158,8 @@ func (t *Translator) createWasmHTTPServiceCluster(tCtx *types.ResourceVersionTab
 		Protocol:  ir.GRPC,
 		Endpoints: []*ir.DestinationEndpoint{ir.NewDestEndpoint(nil, wasmHTTPServiceFQDN(t.ControllerNamespace), wasmHTTPServicePort, false, nil)},
 		Name:      destinationSettingName(wasmHTTPServiceClusterName),
+		// TODO: tracked with issue #6861
+		Metadata: nil,
 	}
 
 	tSocket, err := buildEnvoyClientTLSSocket(envoyClientCertificate)
@@ -168,6 +173,7 @@ func (t *Translator) createWasmHTTPServiceCluster(tCtx *types.ResourceVersionTab
 		tSocket:      tSocket,
 		endpointType: EndpointTypeDNS,
 		metrics:      metrics,
+		metadata:     ds.Metadata,
 	})
 }
 
