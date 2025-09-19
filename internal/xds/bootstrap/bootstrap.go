@@ -46,7 +46,7 @@ const (
 	defaultSdsTrustedCAPath   = "/sds/xds-trusted-ca.json"
 	defaultSdsCertificatePath = "/sds/xds-certificate.json"
 	// #nosec G101 - This is a file path, not a credential
-	defaultServiceAccountTokenPath = "/var/run/secrets/token/sa-token"
+	defaultServiceAccountTokenPath = "/sds/xds-service-account-token.json"
 
 	defaultServiceClusterName = "local_cluster"
 )
@@ -159,6 +159,8 @@ type RenderBootstrapConfigOptions struct {
 type SdsConfigPath struct {
 	Certificate string
 	TrustedCA   string
+	// ServiceAccountToken is the path to the service account token file used for authentication in GatewayNamespaceMode.
+	ServiceAccountToken string
 }
 
 // render the stringified bootstrap config in yaml format.
@@ -268,6 +270,7 @@ func GetRenderedBootstrapConfig(opts *RenderBootstrapConfigOptions) (string, err
 			PrometheusCompressionLibrary: prometheusCompressionLibrary,
 			OtelMetricSinks:              metricSinks,
 			ServiceClusterName:           defaultServiceClusterName,
+			ServiceAccountTokenPath:      defaultServiceAccountTokenPath,
 		},
 	}
 
@@ -311,8 +314,8 @@ func GetRenderedBootstrapConfig(opts *RenderBootstrapConfigOptions) (string, err
 			}
 		}
 		cfg.parameters.GatewayNamespaceMode = opts.GatewayNamespaceMode
-		if opts.GatewayNamespaceMode {
-			cfg.parameters.ServiceAccountTokenPath = defaultServiceAccountTokenPath
+		if opts.GatewayNamespaceMode && len(opts.SdsConfig.ServiceAccountToken) > 0 {
+			cfg.parameters.ServiceAccountTokenPath = opts.SdsConfig.ServiceAccountToken
 		}
 
 		cfg.parameters.OverloadManager.MaxHeapSizeBytes = opts.MaxHeapSizeBytes

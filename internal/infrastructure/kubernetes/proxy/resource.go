@@ -116,7 +116,7 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 	}
 
 	if gatewayNamespaceMode {
-		bootstrapConfigOptions.ServiceAccountTokenPath = filepath.Join("/sds", common.SdsServiceAccountTokenFilename)
+		bootstrapConfigOptions.SdsConfig.ServiceAccountToken = filepath.Join("/sds", common.SdsServiceAccountTokenFilename)
 	}
 
 	args, err := common.BuildProxyArgs(infra, shutdownConfig, bootstrapConfigOptions, fmt.Sprintf("$(%s)", envoyPodEnvVar), gatewayNamespaceMode)

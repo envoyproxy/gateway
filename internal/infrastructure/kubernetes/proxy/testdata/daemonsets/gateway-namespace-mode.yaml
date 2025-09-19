@@ -180,7 +180,7 @@ spec:
                             name: jwt-sa-bearer
                             sds_config:
                               path_config_source:
-                                path: /var/run/secrets/token/sa-token
+                                path: /sds/xds-service-account-token.json
                               resource_api_version: V3
                       overwrite: true
                   - name: envoy.extensions.filters.http.upstream_codec.v3.UpstreamCodec
