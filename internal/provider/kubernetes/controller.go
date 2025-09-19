@@ -40,7 +40,6 @@ import (
 	mcsapiv1a1 "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
-	"github.com/envoyproxy/gateway/api/v1alpha1/validation"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
@@ -51,7 +50,6 @@ import (
 	workqueuemetrics "github.com/envoyproxy/gateway/internal/metrics/workqueue"
 	"github.com/envoyproxy/gateway/internal/utils"
 	"github.com/envoyproxy/gateway/internal/utils/slice"
-	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
 )
 
 var skipNameValidation = func() *bool {
@@ -2417,13 +2415,6 @@ func (r *gatewayAPIReconciler) processEnvoyProxy(ep *egv1a1.EnvoyProxy, resource
 	}
 
 	r.log.Info("processing EnvoyProxy", "namespace", ep.Namespace, "name", ep.Name)
-
-	if err := validation.ValidateEnvoyProxy(ep); err != nil {
-		return fmt.Errorf("invalid EnvoyProxy: %w", err)
-	}
-	if err := bootstrap.Validate(ep.Spec.Bootstrap); err != nil {
-		return fmt.Errorf("invalid EnvoyProxy: %w", err)
-	}
 
 	if ep.Spec.Telemetry != nil {
 		var backendRefs []egv1a1.BackendRef
