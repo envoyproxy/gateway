@@ -195,8 +195,9 @@ func TestCreateOrUpdateProxyConfigMap(t *testing.T) {
 					},
 				},
 				Data: map[string]string{
-					common.SdsCAFilename:   common.GetSdsCAConfigMapData(proxy.XdsTLSCaFilepath),
-					common.SdsCertFilename: common.GetSdsCertConfigMapData(proxy.XdsTLSCertFilepath, proxy.XdsTLSKeyFilepath),
+					common.SdsCAFilename:                  common.GetSdsCAConfigMapData(proxy.XdsTLSCaFilepath),
+					common.SdsCertFilename:                common.GetSdsCertConfigMapData(proxy.XdsTLSCertFilepath, proxy.XdsTLSKeyFilepath),
+					common.SdsServiceAccountTokenFilename: common.GetSdsServiceAccountTokenConfigMapData(proxy.XdsServiceAccountTokenFilepath),
 				},
 			},
 		},
