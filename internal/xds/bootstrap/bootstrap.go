@@ -43,8 +43,9 @@ const (
 	EnvoyReadinessPort = 19003
 	EnvoyReadinessPath = "/ready"
 
-	defaultSdsTrustedCAPath        = "/sds/xds-trusted-ca.json"
-	defaultSdsCertificatePath      = "/sds/xds-certificate.json"
+	defaultSdsTrustedCAPath   = "/sds/xds-trusted-ca.json"
+	defaultSdsCertificatePath = "/sds/xds-certificate.json"
+	// #nosec G101 - This is a file path, not a credential
 	defaultServiceAccountTokenPath = "/var/run/secrets/token/sa-token"
 
 	defaultServiceClusterName = "local_cluster"
@@ -267,7 +268,6 @@ func GetRenderedBootstrapConfig(opts *RenderBootstrapConfigOptions) (string, err
 			PrometheusCompressionLibrary: prometheusCompressionLibrary,
 			OtelMetricSinks:              metricSinks,
 			ServiceClusterName:           defaultServiceClusterName,
-			ServiceAccountTokenPath:      defaultServiceAccountTokenPath,
 		},
 	}
 
@@ -311,6 +311,10 @@ func GetRenderedBootstrapConfig(opts *RenderBootstrapConfigOptions) (string, err
 			}
 		}
 		cfg.parameters.GatewayNamespaceMode = opts.GatewayNamespaceMode
+		if opts.GatewayNamespaceMode {
+			cfg.parameters.ServiceAccountTokenPath = defaultServiceAccountTokenPath
+		}
+
 		cfg.parameters.OverloadManager.MaxHeapSizeBytes = opts.MaxHeapSizeBytes
 		if opts.ServiceClusterName != nil {
 			cfg.parameters.ServiceClusterName = *opts.ServiceClusterName

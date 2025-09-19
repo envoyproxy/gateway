@@ -36,6 +36,7 @@ import (
 const (
 	// XdsServiceAccountTokenFilepath is the fully qualified path of the file containing
 	// the service account token used for authentication in GatewayNamespaceMode.
+	// #nosec G101 - This is a file path, not a credential
 	XdsServiceAccountTokenFilepath = "/var/run/secrets/token/sa-token"
 	// XdsTLSCertFilepath is the fully qualified path of the file containing Envoy's
 	// xDS server TLS certificate.
