@@ -320,7 +320,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 				message.PublishMetric(message.Metadata{
 					Runner:  string(egv1a1.LogComponentProviderRunner),
 					Message: message.GatewayClassStatusMessageName,
-				})
+				}, 1)
 				failToProcessGCParamsRef = true
 			}
 		}
@@ -342,7 +342,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 			message.PublishMetric(message.Metadata{
 				Runner:  string(egv1a1.LogComponentProviderRunner),
 				Message: message.GatewayClassStatusMessageName,
-			})
+			}, 1)
 			failToProcessGCParamsRef = true
 		}
 
@@ -539,7 +539,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 	message.PublishMetric(message.Metadata{
 		Runner:  string(egv1a1.LogComponentProviderRunner),
 		Message: message.ProviderResourcesMessageName,
-	})
+	}, 1)
 
 	r.log.Info("reconciled gateways successfully")
 	return reconcile.Result{}, nil
