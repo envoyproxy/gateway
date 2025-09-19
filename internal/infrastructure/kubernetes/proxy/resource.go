@@ -404,6 +404,10 @@ func sdsConfigMapItems(gatewayNamespaceMode bool) []corev1.KeyToPath {
 				Key:  common.SdsCAFilename,
 				Path: common.SdsCAFilename,
 			},
+			{
+				Key:  common.SdsServiceAccountTokenFilename,
+				Path: common.SdsServiceAccountTokenFilename,
+			},
 		}
 	}
 
