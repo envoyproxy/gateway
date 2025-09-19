@@ -466,9 +466,9 @@ func createOAuth2TokenEndpointCluster(tCtx *types.ResourceVersionTable,
 		Endpoints: []*ir.DestinationEndpoint{
 			ir.NewDestEndpoint(nil, cluster.hostname, cluster.port, false, nil),
 		},
-		Name:     destinationSettingName(cluster.name),
+		Name: destinationSettingName(cluster.name),
 		// TODO: tracked with issue #6861
-		Metadata: nil, 
+		Metadata: nil,
 	}
 
 	clusterArgs := &xdsClusterArgs{
