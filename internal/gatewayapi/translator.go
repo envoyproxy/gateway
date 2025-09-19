@@ -7,6 +7,7 @@ package gatewayapi
 
 import (
 	"errors"
+	"fmt"
 
 	"golang.org/x/exp/maps"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -18,11 +19,14 @@ import (
 	gwapiv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/api/v1alpha1/validation"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/logging"
+	"github.com/envoyproxy/gateway/internal/utils"
 	"github.com/envoyproxy/gateway/internal/wasm"
+	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
 )
 
 const (
@@ -116,7 +120,9 @@ type TranslateResult struct {
 	InfraIR resource.InfraIRMap `json:"infraIR" yaml:"infraIR"`
 }
 
-func newTranslateResult(gateways []*GatewayContext,
+func newTranslateResult(
+	gc *gwapiv1.GatewayClass,
+	gateways []*GatewayContext,
 	httpRoutes []*HTTPRouteContext,
 	grpcRoutes []*GRPCRouteContext,
 	tlsRoutes []*TLSRouteContext,
@@ -308,7 +314,9 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 	allGateways := make([]*GatewayContext, 0, len(acceptedGateways)+len(failedGateways))
 	allGateways = append(allGateways, acceptedGateways...)
 	allGateways = append(allGateways, failedGateways...)
-	return newTranslateResult(allGateways, httpRoutes, grpcRoutes, tlsRoutes,
+
+	return newTranslateResult(resources.GatewayClass,
+		allGateways, httpRoutes, grpcRoutes, tlsRoutes,
 		tcpRoutes, udpRoutes, clientTrafficPolicies, backendTrafficPolicies,
 		securityPolicies, resources.BackendTLSPolicies, envoyExtensionPolicies,
 		extServerPolicies, backends, xdsIR, infraIR), errs
@@ -319,26 +327,98 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 func (t *Translator) GetRelevantGateways(resources *resource.Resources) (
 	acceptedGateways, failedGateways []*GatewayContext,
 ) {
+	envoyproxyMap := make(map[types.NamespacedName]*egv1a1.EnvoyProxy, len(resources.EnvoyProxiesForGateways)+1)
+	envoyproxyValidationErrorMap := make(map[types.NamespacedName]error, len(resources.EnvoyProxiesForGateways))
+
+	// if EnvoyProxy not found, provider layer set GC status to not accepted.
+	// if EnvoyProxy found but invalid, set GC status to not accepted,
+	// otherwise set GC status to accepted.
+	if ep := resources.EnvoyProxyForGatewayClass; ep != nil {
+		err := validateEnvoyProxy(ep)
+		if err != nil {
+			t.Logger.Error(err, "Skipping GatewayClass because EnvoyProxy is invalid",
+				"gatewayclass", t.GatewayClassName,
+				"envoyproxy", ep.Name, "namespace", ep.Namespace)
+			status.SetGatewayClassAccepted(resources.GatewayClass,
+				false, string(gwapiv1.GatewayClassReasonInvalidParameters),
+				fmt.Sprintf("%s: %v", status.MsgGatewayClassInvalidParams, err))
+			return
+		}
+
+		// TODO: remove this nil check after we update all the testdata.
+		if resources.GatewayClass != nil {
+			status.SetGatewayClassAccepted(
+				resources.GatewayClass,
+				true,
+				string(gwapiv1.GatewayClassReasonAccepted),
+				status.MsgValidGatewayClass)
+		}
+
+		key := utils.NamespacedName(ep)
+		envoyproxyMap[key] = ep
+		// we didn't append to envoyproxyValidatioErrorMap because it's valid.
+	}
+
+	for _, ep := range resources.EnvoyProxiesForGateways {
+		key := utils.NamespacedName(ep)
+		envoyproxyMap[key] = ep
+		if err := validateEnvoyProxy(ep); err != nil {
+			envoyproxyValidationErrorMap[key] = err
+		}
+	}
+
 	for _, gateway := range resources.Gateways {
 		if gateway == nil {
+			// Should not happen
 			panic("received nil gateway")
 		}
 
-		if gateway.Spec.GatewayClassName == t.GatewayClassName {
-			gc := &GatewayContext{
-				Gateway: gateway,
-			}
+		logKeysAndValues := []any{
+			"namespace", gateway.Namespace, "name", gateway.Name,
+		}
+		if gateway.Spec.GatewayClassName != t.GatewayClassName {
+			t.Logger.Info("Skipping Gateway because GatewayClassName doesn't match", logKeysAndValues...)
+			continue
+		}
 
-			// Gateways that are not accepted by the controller because they reference an invalid EnvoyProxy.
-			if status.GatewayNotAccepted(gc.Gateway) {
-				failedGateways = append(failedGateways, gc)
-			} else {
-				gc.ResetListeners(resources)
-				acceptedGateways = append(acceptedGateways, gc)
+		gCtx := &GatewayContext{
+			Gateway: gateway,
+		}
+
+		// Gateways that are not accepted by the controller because they reference an invalid EnvoyProxy.
+		if status.GatewayNotAccepted(gCtx.Gateway) {
+			failedGateways = append(failedGateways, gCtx)
+			t.Logger.Info("EnvoyProxy for Gateway not found ", logKeysAndValues...)
+			continue
+		}
+
+		gCtx.ResetListeners(resources, envoyproxyMap)
+		if ep := gCtx.envoyProxy; ep != nil {
+			key := utils.NamespacedName(ep)
+			if err, exits := envoyproxyValidationErrorMap[key]; exits {
+				failedGateways = append(failedGateways, gCtx)
+				t.Logger.Info("EnvoyProxy for Gateway invalid", logKeysAndValues...)
+				status.UpdateGatewayStatusNotAccepted(gCtx.Gateway, gwapiv1.GatewayReasonInvalidParameters,
+					fmt.Sprintf("%s: %v", "Invalid parametersRef:", err.Error()))
+				continue
 			}
 		}
+
+		acceptedGateways = append(acceptedGateways, gCtx)
 	}
 	return
+}
+
+func validateEnvoyProxy(ep *egv1a1.EnvoyProxy) error {
+	if err := validation.ValidateEnvoyProxy(ep); err != nil {
+		return err
+	}
+
+	if err := bootstrap.Validate(ep.Spec.Bootstrap); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // InitIRs checks if mergeGateways is enabled in EnvoyProxy config and initializes XdsIR and InfraIR maps with adequate keys.
