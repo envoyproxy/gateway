@@ -1175,7 +1175,8 @@ func buildValidationContext(tlsConfig *ir.TLSUpstreamConfig) *tlsv3.CommonTlsCon
 		DefaultValidationContext: &tlsv3.CertificateValidationContext{},
 	}
 
-	if tlsConfig.SNI != nil {
+	// When auto validation is used, URI/DNS SAN validation is ignored, no need to configure it.
+	if len(tlsConfig.SubjectAltNames) > 0 && !tlsConfig.AutoSANValidation {
 		validationContext.DefaultValidationContext.MatchTypedSubjectAltNames = []*tlsv3.SubjectAltNameMatcher{
 			{
 				SanType: tlsv3.SubjectAltNameMatcher_DNS,
@@ -1229,8 +1230,13 @@ func buildXdsUpstreamTLSSocketWthCert(tlsConfig *ir.TLSUpstreamConfig) (*corev3.
 		tlsCtx.CommonTlsContext.ValidationContextType = buildValidationContext(tlsConfig)
 	}
 
-	if tlsConfig.SNI != nil {
+	// if auto sni is used, literal SNI is ignored, no need to set it
+	if tlsConfig.SNI != nil && !tlsConfig.AutoSNI {
 		tlsCtx.Sni = *tlsConfig.SNI
+	}
+
+	if tlsConfig.AutoSANValidation {
+		tlsCtx.AutoSniSanValidation = true
 	}
 
 	tlsParams := buildTLSParams(&tlsConfig.TLSConfig)

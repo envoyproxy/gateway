@@ -461,6 +461,8 @@ _Appears in:_
 | `caCertificateRefs` | _LocalObjectReference array_ |  false  |  | CACertificateRefs contains one or more references to Kubernetes objects that<br />contain TLS certificates of the Certificate Authorities that can be used<br />as a trust anchor to validate the certificates presented by the backend.<br />A single reference to a Kubernetes ConfigMap or a Kubernetes Secret,<br />with the CA certificate in a key named `ca.crt` is currently supported.<br />If CACertificateRefs is empty or unspecified, then WellKnownCACertificates must be<br />specified. Only one of CACertificateRefs or WellKnownCACertificates may be specified,<br />not both. |
 | `wellKnownCACertificates` | _[WellKnownCACertificatesType](#wellknowncacertificatestype)_ |  false  |  | WellKnownCACertificates specifies whether system CA certificates may be used in<br />the TLS handshake between the gateway and backend pod.<br />If WellKnownCACertificates is unspecified or empty (""), then CACertificateRefs<br />must be specified with at least one entry for a valid configuration. Only one of<br />CACertificateRefs or WellKnownCACertificates may be specified, not both. |
 | `insecureSkipVerify` | _boolean_ |  false  | false | InsecureSkipVerify indicates whether the upstream's certificate verification<br />should be skipped. Defaults to "false". |
+| `sni` | _[SNIModifier](#snimodifier)_ |  false  |  | SNIModifier specifies how the TLS Server Name Indication value is determined. |
+| `sanValidation` | _[SANValidation](#sanvalidation)_ |  false  |  | SANValidation specifies how the server certificate SANs are validated. |
 
 
 #### BackendTelemetry
@@ -4554,6 +4556,62 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `enabled` | _[RuntimeFlag](#runtimeflag) array_ |  true  |  |  |
 | `disabled` | _[RuntimeFlag](#runtimeflag) array_ |  true  |  |  |
+
+
+#### SANValidation
+
+
+
+
+
+_Appears in:_
+- [BackendTLSSettings](#backendtlssettings)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `type` | _[SANValidationType](#sanvalidationtype)_ |  true  |  |  |
+
+
+#### SANValidationType
+
+_Underlying type:_ _string_
+
+
+
+_Appears in:_
+- [SANValidation](#sanvalidation)
+
+| Value | Description |
+| ----- | ----------- |
+| `SNI` | SANValidationTypeSNI defines a SAN validation strategy which validates that the presented certificate contains a<br />DNS SAN that matches the SNI\value sent by envoy (literal value set in BackendTLSPolicy Hostname or Client SNI<br />selected through Backend TLS).<br />See: https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/transport_sockets/tls/v3/tls.proto#envoy-v3-api-field-extensions-transport-sockets-tls-v3-upstreamtlscontext-auto-sni-san-validation<br />Note: When a Backend enables this option, it will override literal DNS and URI SAN validations<br />configured in a BackendTLSPolicy.<br /> | 
+
+
+#### SNIModifier
+
+
+
+
+
+_Appears in:_
+- [BackendTLSSettings](#backendtlssettings)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `type` | _[SNISelectionType](#sniselectiontype)_ |  true  |  |  |
+
+
+#### SNISelectionType
+
+_Underlying type:_ _string_
+
+
+
+_Appears in:_
+- [SNIModifier](#snimodifier)
+
+| Value | Description |
+| ----- | ----------- |
+| `Client` | SNISelectionTypeClient defines a SNI value selection strategy which uses the client's HTTP Host header as SNI value.<br />See: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/protocol.proto#envoy-v3-api-field-config-core-v3-upstreamhttpprotocoloptions-auto-sni<br />Note:<br />* When a Backend enables this option, it will override literal SNI value configured in a BackendTLSPolicy.<br />* When a Backend that enables this option is referenced in BackendRefs, all other referenced resources must be<br />  Backends that enable this option.<br /> | 
 
 
 

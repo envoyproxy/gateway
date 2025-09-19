@@ -120,6 +120,27 @@ var BackendTLSTest = suite.ConformanceTest{
 
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 		})
+
+		t.Run("With BackendTLSPolicy and Backend.TLS.AutoSNI", func(t *testing.T) {
+			routeNN := types.NamespacedName{Name: "http-with-backend-tls-auto-sni", Namespace: ConformanceInfraNamespace}
+			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+
+			expectedResponse := http.ExpectedResponse{
+				Request: http.Request{
+					Host: "example.com",
+					Path: "/backend-auto-sni",
+				},
+				Response: http.Response{
+					StatusCode: 200,
+				},
+				Namespace: ConformanceInfraNamespace,
+			}
+
+			// make assertion
+			// Since BTLSP uses a Hostname that's incorrect, the request will only succeed if:
+			// SNI is rewritten to example.com and DNS SAN validation is done according to this SNI
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
+		})
 	},
 }
 

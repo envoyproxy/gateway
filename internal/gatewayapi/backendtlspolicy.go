@@ -76,6 +76,8 @@ func (t *Translator) applyBackendTLSSetting(
 	return t.applyEnvoyProxyBackendTLSSetting(upstreamConfig, resources, envoyProxy)
 }
 
+// Merges TLS settings from Gateway API BackendTLSPolicy and Envoy Gateway Backend TL.
+// BackendTLSPolicy takes precedence for identical attributes that are set in both.
 func mergeBackendTLSConfigs(
 	backendTLSSettingsConfig *ir.TLSUpstreamConfig,
 	backendTLSPolicyConfig *ir.TLSUpstreamConfig,
@@ -91,18 +93,21 @@ func mergeBackendTLSConfigs(
 		return backendTLSSettingsConfig
 	}
 
-	// If both are set, we merge them, with BackendTLSPolicy settings taking precedence
+	// If both are set, we merge them, with BackendTLSPolicy settings taking precedence for identical attributes
+	// When Backend.TLS offers more advanced options: InsecureSkipVerify, Auto SNI, Auto SNI: they'll take precedence.
 	mergedConfig := backendTLSSettingsConfig.DeepCopy()
+	// TODO: don't merge when insecureSkipVerify? XDS layer will not create a CA cert anyway
 	if backendTLSPolicyConfig.CACertificate != nil {
 		mergedConfig.CACertificate = backendTLSPolicyConfig.CACertificate
 	}
-	if backendTLSPolicyConfig.SNI != nil {
+	if !mergedConfig.AutoSNI && backendTLSPolicyConfig.SNI != nil {
 		mergedConfig.SNI = backendTLSPolicyConfig.SNI
 	}
+	// TODO: don't merge when insecureSkipVerify? XDS layer will not create a CA cert anyway
 	if backendTLSPolicyConfig.UseSystemTrustStore {
 		mergedConfig.UseSystemTrustStore = backendTLSPolicyConfig.UseSystemTrustStore
 	}
-	if backendTLSPolicyConfig.SubjectAltNames != nil {
+	if !mergedConfig.AutoSANValidation && backendTLSPolicyConfig.SubjectAltNames != nil {
 		mergedConfig.SubjectAltNames = backendTLSPolicyConfig.SubjectAltNames
 	}
 
@@ -115,6 +120,14 @@ func (t *Translator) processBackendTLSSettings(
 ) (*ir.TLSUpstreamConfig, error) {
 	tlsConfig := &ir.TLSUpstreamConfig{
 		InsecureSkipVerify: ptr.Deref(backend.Spec.TLS.InsecureSkipVerify, false),
+	}
+
+	if backend.Spec.TLS.SNIModifier != nil && backend.Spec.TLS.SNIModifier.Type == egv1a1.SNISelectionTypeClient {
+		tlsConfig.AutoSNI = true
+	}
+
+	if backend.Spec.TLS.SANValidation != nil && backend.Spec.TLS.SANValidation.Type == egv1a1.SANValidationTypeSNI {
+		tlsConfig.AutoSANValidation = true
 	}
 
 	if !tlsConfig.InsecureSkipVerify {

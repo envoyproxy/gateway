@@ -1,0 +1,28 @@
+- ignorePortInHostMatching: true
+  name: first-listener
+  virtualHosts:
+  - domains:
+    - '*'
+    name: first-listener/*
+    routes:
+    - match:
+        prefix: /
+      name: auto-sni-route
+      route:
+        cluster: auto-sni-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket
+    - match:
+        prefix: /
+      name: auto-san-route
+      route:
+        cluster: auto-san-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket
+    - match:
+        prefix: /
+      name: auto-sni-san-route
+      route:
+        cluster: auto-sni-san-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket
