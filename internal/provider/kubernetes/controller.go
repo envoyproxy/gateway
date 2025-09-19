@@ -40,7 +40,6 @@ import (
 	mcsapiv1a1 "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
-	"github.com/envoyproxy/gateway/api/v1alpha1/validation"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
@@ -51,7 +50,6 @@ import (
 	workqueuemetrics "github.com/envoyproxy/gateway/internal/metrics/workqueue"
 	"github.com/envoyproxy/gateway/internal/utils"
 	"github.com/envoyproxy/gateway/internal/utils/slice"
-	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
 )
 
 var skipNameValidation = func() *bool {
@@ -2367,7 +2365,7 @@ func (r *gatewayAPIReconciler) processGatewayParamsRef(ctx context.Context, gtw 
 
 	ep := new(egv1a1.EnvoyProxy)
 	if err := r.client.Get(ctx, types.NamespacedName{Namespace: gtw.Namespace, Name: ref.Name}, ep); err != nil {
-		return fmt.Errorf("failed to find envoyproxy %s/%s: %w", gtw.Namespace, ref.Name, err)
+		return fmt.Errorf("failed to find envoyproxy %s/%s for Gateway %s: %w", gtw.Namespace, ref.Name, gtw.Name, err)
 	}
 
 	if err := r.processEnvoyProxy(ep, resourceMap); err != nil {
@@ -2397,8 +2395,9 @@ func (r *gatewayAPIReconciler) processGatewayClassParamsRef(ctx context.Context,
 	}
 
 	ep := new(egv1a1.EnvoyProxy)
-	if err := r.client.Get(ctx, types.NamespacedName{Namespace: string(*gc.Spec.ParametersRef.Namespace), Name: gc.Spec.ParametersRef.Name}, ep); err != nil {
-		return fmt.Errorf("failed to find envoyproxy %s/%s: %w", r.namespace, gc.Spec.ParametersRef.Name, err)
+	nn := types.NamespacedName{Namespace: string(*gc.Spec.ParametersRef.Namespace), Name: gc.Spec.ParametersRef.Name}
+	if err := r.client.Get(ctx, nn, ep); err != nil {
+		return fmt.Errorf("failed to find envoyproxy %s/%s for GatewayClass %s: %w", nn.Namespace, nn.Name, gc.Name, err)
 	}
 
 	// Check for incompatible configuration: both MergeGateways and GatewayNamespaceMode enabled
@@ -2422,13 +2421,6 @@ func (r *gatewayAPIReconciler) processEnvoyProxy(ep *egv1a1.EnvoyProxy, resource
 	}
 
 	r.log.Info("processing EnvoyProxy", "namespace", ep.Namespace, "name", ep.Name)
-
-	if err := validation.ValidateEnvoyProxy(ep); err != nil {
-		return fmt.Errorf("invalid EnvoyProxy: %w", err)
-	}
-	if err := bootstrap.Validate(ep.Spec.Bootstrap); err != nil {
-		return fmt.Errorf("invalid EnvoyProxy: %w", err)
-	}
 
 	if ep.Spec.Telemetry != nil {
 		var backendRefs []egv1a1.BackendRef
