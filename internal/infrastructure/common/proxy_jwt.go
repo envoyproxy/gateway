@@ -8,6 +8,7 @@ package common
 import "fmt"
 
 const (
+	// #nosec G101 - This is a file path, not a credential
 	SdsServiceAccountTokenFilename = "xds_service_account_token.json"
 )
 

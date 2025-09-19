@@ -110,10 +110,13 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 			Certificate: filepath.Join("/sds", common.SdsCertFilename),
 			TrustedCA:   filepath.Join("/sds", common.SdsCAFilename),
 		},
-		ServiceAccountTokenPath:  filepath.Join("/sds", common.SdsServiceAccountTokenFilename),
 		MaxHeapSizeBytes:         maxHeapSizeBytes,
 		XdsServerHost:            ptr.To(fmt.Sprintf("%s.%s.svc.%s.", config.EnvoyGatewayServiceName, controllerNamespace, dnsDomain)),
 		TopologyInjectorDisabled: topologyInjectorDisabled,
+	}
+
+	if gatewayNamespaceMode {
+		bootstrapConfigOptions.ServiceAccountTokenPath = filepath.Join("/sds", common.SdsServiceAccountTokenFilename)
 	}
 
 	args, err := common.BuildProxyArgs(infra, shutdownConfig, bootstrapConfigOptions, fmt.Sprintf("$(%s)", envoyPodEnvVar), gatewayNamespaceMode)
