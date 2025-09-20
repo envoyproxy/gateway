@@ -159,11 +159,17 @@ func buildJWTAuthn(irListener *ir.HTTPListener) (*jwtauthnv3.JwtAuthentication, 
 							},
 							Timeout: durationpb.New(defaultExtServiceRequestTimeout),
 						},
-						CacheDuration: durationpb.New(5 * time.Minute),
-						AsyncFetch:    &jwtauthnv3.JwksAsyncFetch{},
+
+						AsyncFetch: &jwtauthnv3.JwksAsyncFetch{},
 					},
 				}
-
+				if jwks.CacheDuration != nil {
+					cDur, err := time.ParseDuration(string(*jwks.CacheDuration))
+					if err != nil {
+						return nil, err
+					}
+					remote.RemoteJwks.CacheDuration = durationpb.New(cDur)
+				}
 				// Set the retry policy if it exists.
 				if jwks.Traffic != nil && jwks.Traffic.Retry != nil {
 					var rp *corev3.RetryPolicy
