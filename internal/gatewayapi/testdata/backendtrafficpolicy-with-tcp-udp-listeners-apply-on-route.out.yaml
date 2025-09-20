@@ -311,6 +311,10 @@ xdsIR:
       - path: /dev/stdout
     globalResources:
       proxyServiceCluster:
+        metadata:
+          name: envoy-default-tcp-gateway-1ec60381
+          namespace: envoy-gateway-system
+          sectionName: "8080"
         name: default/tcp-gateway
         settings:
         - addressType: IP

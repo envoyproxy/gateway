@@ -48,6 +48,9 @@ type Infra struct {
 
 	// TODO: remove this field once it supports the configurable homeDir
 	sdsConfigPath string
+
+	// defaultEnvoyImage is the default Envoy image to use if no Envoy version is set.
+	defaultEnvoyImage string
 }
 
 func NewInfra(runnerCtx context.Context, cfg *config.Server, logger logging.Logger) (*Infra, error) {
@@ -67,11 +70,12 @@ func NewInfra(runnerCtx context.Context, cfg *config.Server, logger logging.Logg
 	}
 
 	infra := &Infra{
-		HomeDir:         defaultHomeDir,
-		Logger:          logger,
-		EnvoyGateway:    cfg.EnvoyGateway,
-		proxyContextMap: make(map[string]*proxyContext),
-		sdsConfigPath:   defaultLocalCertPathDir,
+		HomeDir:           defaultHomeDir,
+		Logger:            logger,
+		EnvoyGateway:      cfg.EnvoyGateway,
+		proxyContextMap:   make(map[string]*proxyContext),
+		sdsConfigPath:     defaultLocalCertPathDir,
+		defaultEnvoyImage: egv1a1.DefaultEnvoyProxyImage,
 	}
 	return infra, nil
 }
