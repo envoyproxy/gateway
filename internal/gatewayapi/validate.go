@@ -29,7 +29,7 @@ import (
 func (t *Translator) validateBackendRef(backendRefContext BackendRefContext, route RouteContext,
 	resources *resource.Resources, backendNamespace string, routeKind gwapiv1.Kind,
 ) status.Error {
-	backendRef := GetBackendRef(backendRefContext)
+	backendRef := backendRefContext.GetBackendRef()
 
 	if err := t.validateBackendRefFilters(backendRefContext, routeKind); err != nil {
 		return err
@@ -91,7 +91,10 @@ func (t *Translator) validateBackendRefKind(backendRef *gwapiv1a2.BackendRef) st
 }
 
 func (t *Translator) validateBackendRefFilters(backendRef BackendRefContext, routeKind gwapiv1.Kind) status.Error {
-	filters := GetFilters(backendRef)
+	filters := backendRef.GetFilters()
+	if filters == nil {
+		return nil
+	}
 	var unsupportedFilters bool
 
 	switch routeKind {

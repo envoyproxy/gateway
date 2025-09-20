@@ -585,25 +585,35 @@ func (r *RouteParentContext) HasCondition(route RouteContext, condType gwapiv1.R
 	return false
 }
 
-// BackendRefContext represents a generic BackendRef object (HTTPBackendRef, GRPCBackendRef or BackendRef itself)
-type BackendRefContext any
-
-func GetBackendRef(b BackendRefContext) *gwapiv1.BackendRef {
-	rv := reflect.ValueOf(b)
-	br := rv.FieldByName("BackendRef")
-	if br.IsValid() {
-		backendRef := br.Interface().(gwapiv1.BackendRef)
-		return &backendRef
-	}
-
-	backendRef := b.(gwapiv1.BackendRef)
-	return &backendRef
+// BackendRefContext represents a generic BackendRef object
+type BackendRefContext interface {
+	GetBackendRef() *gwapiv1.BackendRef
+	GetFilters() any
 }
 
-func GetFilters(b BackendRefContext) any {
-	filters := reflect.ValueOf(b).FieldByName("Filters")
-	if !filters.IsValid() {
-		return nil
-	}
-	return filters.Interface()
+// BackendRefWithFilters wraps backend refs that have filters (HTTPBackendRef, GRPCBackendRef)
+type BackendRefWithFilters struct {
+	BackendRef *gwapiv1.BackendRef
+	Filters    any // []gwapiv1.HTTPRouteFilter or []gwapiv1.GRPCRouteFilter
+}
+
+func (b BackendRefWithFilters) GetBackendRef() *gwapiv1.BackendRef {
+	return b.BackendRef
+}
+
+func (b BackendRefWithFilters) GetFilters() any {
+	return b.Filters
+}
+
+// DirectBackendRef wraps a BackendRef directly (used by TLS/TCP/UDP routes)
+type DirectBackendRef struct {
+	BackendRef *gwapiv1.BackendRef
+}
+
+func (d DirectBackendRef) GetBackendRef() *gwapiv1.BackendRef {
+	return d.BackendRef
+}
+
+func (d DirectBackendRef) GetFilters() any {
+	return nil
 }
