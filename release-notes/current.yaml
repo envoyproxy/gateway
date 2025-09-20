@@ -26,6 +26,7 @@ bug fixes: |
   Fixed Lua validator log level to be suppressed by default.
   Fixed ProxyTopologyInjector cache sync race condition that caused injection failures
   Fixed validation for grpc routes with extension ref filters.
+  Fixed service account token handling in GatewayNamespaceMode to use SDS for properly refreshing expired token.
 
 # Enhancements that improve performance.
 performance improvements: |
