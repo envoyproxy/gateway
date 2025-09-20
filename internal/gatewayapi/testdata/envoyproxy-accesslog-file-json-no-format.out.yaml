@@ -1,3 +1,17 @@
+gatewayClass:
+  apiVersion: gateway.networking.k8s.io/v1
+  kind: GatewayClass
+  metadata:
+    creationTimestamp: null
+    name: envoy-gateway-class
+  spec:
+    controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    parametersRef:
+      group: gateway.envoyproxy.io
+      kind: EnvoyProxy
+      name: test
+      namespace: envoy-gateway-system
+  status: {}
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
