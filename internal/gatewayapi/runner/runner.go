@@ -12,7 +12,6 @@ import (
 	"fmt"
 	"os"
 	"path"
-	"reflect"
 
 	"github.com/docker/docker/pkg/fileutils"
 	"github.com/telepresenceio/watchable"
@@ -261,7 +260,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 
 				for _, backendTLSPolicy := range result.BackendTLSPolicies {
 					key := utils.NamespacedName(backendTLSPolicy)
-					if !(reflect.ValueOf(backendTLSPolicy.Status).IsZero()) {
+					if len(backendTLSPolicy.Status.Ancestors) > 0 {
 						r.ProviderResources.BackendTLSPolicyStatuses.Store(key, &backendTLSPolicy.Status)
 						backendTLSPolicyStatusCount++
 					}
@@ -270,7 +269,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 
 				for _, clientTrafficPolicy := range result.ClientTrafficPolicies {
 					key := utils.NamespacedName(clientTrafficPolicy)
-					if !(reflect.ValueOf(clientTrafficPolicy.Status).IsZero()) {
+					if len(clientTrafficPolicy.Status.Ancestors) > 0 {
 						r.ProviderResources.ClientTrafficPolicyStatuses.Store(key, &clientTrafficPolicy.Status)
 						clientTrafficPolicyStatusCount++
 					}
@@ -278,7 +277,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 				}
 				for _, backendTrafficPolicy := range result.BackendTrafficPolicies {
 					key := utils.NamespacedName(backendTrafficPolicy)
-					if !(reflect.ValueOf(backendTrafficPolicy.Status).IsZero()) {
+					if len(backendTrafficPolicy.Status.Ancestors) > 0 {
 						r.ProviderResources.BackendTrafficPolicyStatuses.Store(key, &backendTrafficPolicy.Status)
 						backendTrafficPolicyStatusCount++
 					}
@@ -286,7 +285,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 				}
 				for _, securityPolicy := range result.SecurityPolicies {
 					key := utils.NamespacedName(securityPolicy)
-					if !(reflect.ValueOf(securityPolicy.Status).IsZero()) {
+					if len(securityPolicy.Status.Ancestors) > 0 {
 						r.ProviderResources.SecurityPolicyStatuses.Store(key, &securityPolicy.Status)
 						securityPolicyStatusCount++
 					}
@@ -294,7 +293,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 				}
 				for _, envoyExtensionPolicy := range result.EnvoyExtensionPolicies {
 					key := utils.NamespacedName(envoyExtensionPolicy)
-					if !(reflect.ValueOf(envoyExtensionPolicy.Status).IsZero()) {
+					if len(envoyExtensionPolicy.Status.Ancestors) > 0 {
 						r.ProviderResources.EnvoyExtensionPolicyStatuses.Store(key, &envoyExtensionPolicy.Status)
 						envoyExtensionPolicyStatusCount++
 					}
@@ -302,7 +301,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 				}
 				for _, backend := range result.Backends {
 					key := utils.NamespacedName(backend)
-					if !(reflect.ValueOf(backend.Status).IsZero()) {
+					if len(backend.Status.Conditions) > 0 {
 						r.ProviderResources.BackendStatuses.Store(key, &backend.Status)
 						backendStatusCount++
 					}
@@ -313,10 +312,12 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 						NamespacedName:   utils.NamespacedName(&extServerPolicy),
 						GroupVersionKind: extServerPolicy.GroupVersionKind(),
 					}
-					if !(reflect.ValueOf(extServerPolicy.Object["status"]).IsZero()) {
-						policyStatus := unstructuredToPolicyStatus(extServerPolicy.Object["status"].(map[string]any))
-						r.ProviderResources.ExtensionPolicyStatuses.Store(key, &policyStatus)
-						extensionServerPolicyStatusCount++
+					if statusObj, hasStatus := extServerPolicy.Object["status"]; hasStatus && statusObj != nil {
+						if statusMap, ok := statusObj.(map[string]any); ok && len(statusMap) > 0 {
+							policyStatus := unstructuredToPolicyStatus(statusMap)
+							r.ProviderResources.ExtensionPolicyStatuses.Store(key, &policyStatus)
+							extensionServerPolicyStatusCount++
+						}
 					}
 					delete(statusesToDelete.ExtensionServerPolicyStatusKeys, key)
 				}
