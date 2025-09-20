@@ -170,6 +170,10 @@ docs-release-gen:
 	$(eval DOC_VERSION := $(shell cat VERSION | cut -d "." -f 1,2))
 	@$(call log, "Added Release Doc: site/content/en/$(DOC_VERSION)")
 	cp -r site/content/en/latest/ site/content/en/$(DOC_VERSION)/
+	
+docs-sync-owners:
+	@$(LOG_TARGET)
+	tools/bin/sync-docs-codeowners
 
 .PHONY: docs-check-links
 docs-check-links: # Check for broken links in the docs
