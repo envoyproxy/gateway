@@ -40,10 +40,13 @@ spec:
       automountServiceAccountToken: false
       containers:
       - args:
-        - --service-cluster default
-        - --service-node $(ENVOY_POD_NAME)
+        - --service-cluster
+        - default
+        - --service-node
+        - $(ENVOY_POD_NAME)
+        - --config-yaml
         - |
-          --config-yaml admin:
+          admin:
             access_log:
             - name: envoy.access_loggers.file
               typed_config:
@@ -146,11 +149,15 @@ spec:
               typed_config:
                 "@type": type.googleapis.com/envoy.extensions.resource_monitors.downstream_connections.v3.DownstreamConnectionsConfig
                 max_active_downstream_connections: 50000
-        - --log-level warn
+        - --log-level
+        - warn
         - --cpuset-threads
-        - --drain-strategy immediate
-        - --component-log-level misc:error
-        - --drain-time-s 60
+        - --drain-strategy
+        - immediate
+        - --component-log-level
+        - misc:error
+        - --drain-time-s
+        - "60"
         command:
         - envoy
         env:
