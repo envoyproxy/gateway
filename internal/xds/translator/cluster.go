@@ -89,6 +89,8 @@ const (
 )
 
 var (
+	// we need a dummy transport socket to pass the validation,
+	// it's a no-op since transportSocketMatches takes effect
 	dummyTLSContext = &tlsv3.UpstreamTlsContext{
 		CommonTlsContext: &tlsv3.CommonTlsContext{
 			TlsCertificateSdsSecretConfigs: nil,
@@ -210,7 +212,7 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 	requiresAutoHTTPConfig := false
 	for i, ds := range args.settings {
 		if ds.TLS != nil {
-			if !requiresAutoHTTPConfig {
+			if !requiresAutoHTTPConfig && len(ds.TLS.ALPNProtocols) == 0 {
 				requiresAutoHTTPConfig = true
 			}
 
