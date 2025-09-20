@@ -786,10 +786,18 @@ func buildWeightedLocalities(metadata *corev3.Metadata, ds *ir.DestinationSettin
 
 func buildTypedExtensionProtocolOptions(args *xdsClusterArgs) (map[string]*anypb.Any, []*tlsv3.Secret, error) {
 	requiresHTTP2Options := false
+	requiresAutoSNI := false
 	for _, ds := range args.settings {
 		if ds.Protocol == ir.GRPC ||
 			ds.Protocol == ir.HTTP2 {
 			requiresHTTP2Options = true
+		}
+
+		if ds.TLS != nil && ds.TLS.AutoSNI {
+			requiresAutoSNI = true
+		}
+
+		if requiresHTTP2Options && requiresAutoSNI {
 			break
 		}
 	}
@@ -803,7 +811,7 @@ func buildTypedExtensionProtocolOptions(args *xdsClusterArgs) (map[string]*anypb
 
 	requiresHTTPFilters := len(args.settings) > 0 && args.settings[0].Filters != nil && args.settings[0].Filters.CredentialInjection != nil
 
-	if !requiresCommonHTTPOptions && !requiresHTTP1Options && !requiresHTTP2Options && !args.useClientProtocol && !requiresHTTPFilters {
+	if !requiresCommonHTTPOptions && !requiresHTTP1Options && !requiresHTTP2Options && !args.useClientProtocol && !requiresHTTPFilters && !requiresAutoSNI {
 		return nil, nil, nil
 	}
 
@@ -891,6 +899,12 @@ func buildTypedExtensionProtocolOptions(args *xdsClusterArgs) (map[string]*anypb
 		protocolOptions.UpstreamHttpProtocolOptions = &corev3.UpstreamHttpProtocolOptions{
 			AutoSni:           true,
 			AutoSanValidation: true,
+		}
+	}
+
+	if requiresAutoSNI {
+		protocolOptions.UpstreamHttpProtocolOptions = &corev3.UpstreamHttpProtocolOptions{
+			AutoSni: true,
 		}
 	}
 

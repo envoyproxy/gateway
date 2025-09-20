@@ -1,0 +1,137 @@
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_PREFERRED
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
+    serviceName: auto-sni-route-dest
+  ignoreHealthOnHostRemoval: true
+  lbPolicy: LEAST_REQUEST
+  loadBalancingPolicy:
+    policies:
+    - typedExtensionConfig:
+        name: envoy.load_balancing_policies.least_request
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
+          localityLbConfig:
+            localityWeightedLbConfig: {}
+  name: auto-sni-route-dest
+  perConnectionBufferLimitBytes: 32768
+  transportSocketMatches:
+  - match:
+      name: auto-sni-route-dest/tls/0
+    name: auto-sni-route-dest/tls/0
+    transportSocket:
+      name: envoy.transport_sockets.tls
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+        commonTlsContext:
+          combinedValidationContext:
+            defaultValidationContext: {}
+            validationContextSdsSecretConfig:
+              name: policy-btls/backends-ca
+              sdsConfig:
+                ads: {}
+                resourceApiVersion: V3
+  type: EDS
+  typedExtensionProtocolOptions:
+    envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
+      '@type': type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
+      explicitHttpConfig:
+        httpProtocolOptions: {}
+      upstreamHttpProtocolOptions:
+        autoSni: true
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_PREFERRED
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
+    serviceName: auto-san-route-dest
+  ignoreHealthOnHostRemoval: true
+  lbPolicy: LEAST_REQUEST
+  loadBalancingPolicy:
+    policies:
+    - typedExtensionConfig:
+        name: envoy.load_balancing_policies.least_request
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
+          localityLbConfig:
+            localityWeightedLbConfig: {}
+  name: auto-san-route-dest
+  perConnectionBufferLimitBytes: 32768
+  transportSocketMatches:
+  - match:
+      name: auto-san-route-dest/tls/0
+    name: auto-san-route-dest/tls/0
+    transportSocket:
+      name: envoy.transport_sockets.tls
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+        autoSniSanValidation: true
+        commonTlsContext:
+          combinedValidationContext:
+            defaultValidationContext: {}
+            validationContextSdsSecretConfig:
+              name: policy-btls/backends-ca
+              sdsConfig:
+                ads: {}
+                resourceApiVersion: V3
+        sni: example.com
+  type: EDS
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_PREFERRED
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
+    serviceName: auto-sni-san-route-dest
+  ignoreHealthOnHostRemoval: true
+  lbPolicy: LEAST_REQUEST
+  loadBalancingPolicy:
+    policies:
+    - typedExtensionConfig:
+        name: envoy.load_balancing_policies.least_request
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
+          localityLbConfig:
+            localityWeightedLbConfig: {}
+  name: auto-sni-san-route-dest
+  perConnectionBufferLimitBytes: 32768
+  transportSocketMatches:
+  - match:
+      name: auto-sni-san-route-dest/tls/0
+    name: auto-sni-san-route-dest/tls/0
+    transportSocket:
+      name: envoy.transport_sockets.tls
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+        autoSniSanValidation: true
+        commonTlsContext:
+          combinedValidationContext:
+            defaultValidationContext: {}
+            validationContextSdsSecretConfig:
+              name: policy-btls/backends-ca
+              sdsConfig:
+                ads: {}
+                resourceApiVersion: V3
+  type: EDS
+  typedExtensionProtocolOptions:
+    envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
+      '@type': type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
+      explicitHttpConfig:
+        httpProtocolOptions: {}
+      upstreamHttpProtocolOptions:
+        autoSni: true

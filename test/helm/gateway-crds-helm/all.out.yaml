@@ -17535,6 +17535,28 @@ spec:
                       InsecureSkipVerify indicates whether the upstream's certificate verification
                       should be skipped. Defaults to "false".
                     type: boolean
+                  sanValidation:
+                    description: SANValidation specifies how the server certificate
+                      SANs are validated.
+                    properties:
+                      type:
+                        enum:
+                        - Client
+                        type: string
+                    required:
+                    - type
+                    type: object
+                  sni:
+                    description: SNIModifier specifies how the TLS Server Name Indication
+                      value is determined.
+                    properties:
+                      type:
+                        enum:
+                        - Client
+                        type: string
+                    required:
+                    - type
+                    type: object
                   wellKnownCACertificates:
                     description: |-
                       WellKnownCACertificates specifies whether system CA certificates may be used in

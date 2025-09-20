@@ -1,0 +1,48 @@
+- clusterName: auto-sni-route-dest
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 1.2.3.4
+            portValue: 50000
+      loadBalancingWeight: 1
+      metadata:
+        filterMetadata:
+          envoy.transport_socket_match:
+            name: auto-sni-route-dest/tls/0
+    loadBalancingWeight: 1
+    locality:
+      region: auto-sni-route-dest/backend/0
+- clusterName: auto-san-route-dest
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 1.2.3.4
+            portValue: 50000
+      loadBalancingWeight: 1
+      metadata:
+        filterMetadata:
+          envoy.transport_socket_match:
+            name: auto-san-route-dest/tls/0
+    loadBalancingWeight: 1
+    locality:
+      region: auto-san-route-dest/backend/0
+- clusterName: auto-sni-san-route-dest
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 1.2.3.4
+            portValue: 50000
+      loadBalancingWeight: 1
+      metadata:
+        filterMetadata:
+          envoy.transport_socket_match:
+            name: auto-sni-san-route-dest/tls/0
+    loadBalancingWeight: 1
+    locality:
+      region: auto-sni-san-route-dest/backend/0

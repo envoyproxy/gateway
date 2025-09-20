@@ -204,7 +204,53 @@ type BackendTLSSettings struct {
 	// +kubebuilder:default=false
 	// +optional
 	InsecureSkipVerify *bool `json:"insecureSkipVerify,omitempty"`
+
+	// SNIModifier specifies how the TLS Server Name Indication value is determined.
+	//
+	// +optional
+	SNIModifier *SNIModifier `json:"sni,omitempty"`
+
+	// SANValidation specifies how the server certificate SANs are validated.
+	//
+	// +optional
+	SANValidation *SANValidation `json:"sanValidation,omitempty"`
 }
+
+type SNIModifier struct {
+	// +kubebuilder:validation:Enum=Client
+	// +kubebuilder:validation:Required
+	Type SNISelectionType `json:"type"`
+}
+
+type SNISelectionType string
+
+const (
+	// SNISelectionTypeClient defines a SNI value selection strategy which uses the client's HTTP Host header as SNI value.
+	// See: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/protocol.proto#envoy-v3-api-field-config-core-v3-upstreamhttpprotocoloptions-auto-sni
+	// Note:
+	// * When a Backend enables this option, it will override literal SNI value configured in a BackendTLSPolicy.
+	// * When a Backend that enables this option is referenced in BackendRefs, all other referenced resources must be
+	//   Backends that enable this option.
+	SNISelectionTypeClient SNISelectionType = "Client"
+)
+
+type SANValidation struct {
+	// +kubebuilder:validation:Enum=SNI
+	// +kubebuilder:validation:Required
+	Type SANValidationType `json:"type"`
+}
+
+type SANValidationType string
+
+const (
+	// SANValidationTypeSNI defines a SAN validation strategy which validates that the presented certificate contains a
+	// DNS SAN that matches the SNI\value sent by envoy (literal value set in BackendTLSPolicy Hostname or Client SNI
+	// selected through Backend TLS).
+	// See: https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/transport_sockets/tls/v3/tls.proto#envoy-v3-api-field-extensions-transport-sockets-tls-v3-upstreamtlscontext-auto-sni-san-validation
+	// Note: When a Backend enables this option, it will override literal DNS and URI SAN validations
+	// configured in a BackendTLSPolicy.
+	SANValidationTypeSNI SANValidationType = "SNI"
+)
 
 // BackendType defines the type of the Backend.
 type BackendType string
