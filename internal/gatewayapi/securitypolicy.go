@@ -101,12 +101,12 @@ func (t *Translator) ProcessSecurityPolicies(securityPolicies []*egv1a1.Security
 					handledPolicies[policyName] = policy
 					res = append(res, policy)
 				}
+
 				t.processSecurityPolicyForRoute(resources, xdsIR,
 					routeMap, gatewayRouteMap, policy, currTarget)
 			}
 		}
 	}
-
 	// Process the policies targeting whole xRoutes (HTTP + TCP)
 	for _, currPolicy := range securityPolicies {
 		policyName := utils.NamespacedName(currPolicy)
@@ -119,6 +119,7 @@ func (t *Translator) ProcessSecurityPolicies(securityPolicies []*egv1a1.Security
 					handledPolicies[policyName] = policy
 					res = append(res, policy)
 				}
+
 				t.processSecurityPolicyForRoute(resources, xdsIR,
 					routeMap, gatewayRouteMap, policy, currTarget)
 			}
@@ -183,6 +184,7 @@ func (t *Translator) processSecurityPolicyForRoute(
 		parentGateways []gwapiv1a2.ParentReference
 		resolveErr     *status.PolicyResolveError
 	)
+
 	// Skip if the route is not found
 	// It's not necessarily an error because the SecurityPolicy may be
 	// reconciled by multiple controllers. And the other controller may
@@ -232,7 +234,6 @@ func (t *Translator) processSecurityPolicyForRoute(
 			}
 			// Track this route (namespaced) under the listener (or whole gateway key "").
 			listenerRouteMap[sectionName].Insert(utils.NamespacedName(targetedRoute).String())
-
 			parentGateways = append(parentGateways, getAncestorRefForPolicy(gwNN, p.SectionName))
 		}
 	}
@@ -245,6 +246,7 @@ func (t *Translator) processSecurityPolicyForRoute(
 			policy.Generation,
 			resolveErr,
 		)
+
 		return
 	}
 
@@ -257,6 +259,7 @@ func (t *Translator) processSecurityPolicyForRoute(
 				policy.Generation,
 				status.Error2ConditionMsg(fmt.Errorf("invalid SecurityPolicy for TCP route: %w", err)),
 			)
+
 			return
 		}
 	} else {
@@ -267,11 +270,11 @@ func (t *Translator) processSecurityPolicyForRoute(
 				policy.Generation,
 				status.Error2ConditionMsg(fmt.Errorf("invalid SecurityPolicy: %w", err)),
 			)
+
 			return
 		}
 	}
 
-	// Translate
 	if err := t.translateSecurityPolicyForRoute(policy, targetedRoute, currTarget, resources, xdsIR); err != nil {
 		status.SetTranslationErrorForPolicyAncestors(&policy.Status,
 			parentGateways,
@@ -340,6 +343,7 @@ func (t *Translator) processSecurityPolicyForGateway(
 			policy.Generation,
 			resolveErr,
 		)
+
 		return
 	}
 
@@ -382,6 +386,7 @@ func (t *Translator) processSecurityPolicyForGateway(
 			policy.Generation,
 			status.Error2ConditionMsg(fmt.Errorf("invalid SecurityPolicy: %w", vErr)),
 		)
+
 		return
 	}
 
@@ -619,6 +624,7 @@ func resolveSecurityPolicyRouteTargetRef(
 	if !ok {
 		return nil, nil
 	}
+
 	// If sectionName is set, make sure its valid
 	if target.SectionName != nil {
 		// First, validate syntax/name constraints.
@@ -632,6 +638,7 @@ func resolveSecurityPolicyRouteTargetRef(
 		if route.attached {
 			message := fmt.Sprintf("Unable to target %s %s, another SecurityPolicy has already attached to it",
 				string(target.Kind), string(target.Name))
+
 			return route.RouteContext, &status.PolicyResolveError{
 				Reason:  gwapiv1a2.PolicyReasonConflicted,
 				Message: message,
@@ -1104,7 +1111,10 @@ func (t *Translator) translateSecurityPolicyForGateway(
 		if hl == nil || !matchesGateway(hl.Name) {
 			continue
 		}
+		// A Policy targeting the specific scope(xRoute rule, xRoute, Gateway listener) wins over a policy
+		// targeting a lesser specific scope(Gateway).
 		for _, r := range hl.Routes {
+			// if already set - there's a specific level policy, so skip.
 			if r == nil || r.Security != nil {
 				continue
 			}
@@ -1118,6 +1128,9 @@ func (t *Translator) translateSecurityPolicyForGateway(
 				Authorization: authorization,
 			}
 			if errs != nil {
+				// If there is only error for ext auth and ext auth is set to fail open, then skip the ext auth
+				// and allow the request to go through.
+				// Otherwise, return a 500 direct response to avoid unauthorized access.
 				shouldFailOpen := extAuthErr != nil && !hasNonExtAuthError && ptr.Deref(policy.Spec.ExtAuth.FailOpen, false)
 				if !shouldFailOpen {
 					r.DirectResponse = &ir.CustomResponse{StatusCode: ptr.To(uint32(500))}
