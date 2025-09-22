@@ -264,6 +264,76 @@ func buildRouteLocalRateLimits(local *ir.LocalRateLimit) (
 			descriptorEntries = append(descriptorEntries, entry)
 		}
 
+		// MethodMatch
+		if rule.MethodMatch != nil {
+			descriptorKey := getRouteRuleMethodDescriptor(rIdx)
+			descriptorVal := getRouteRuleMethodDescriptor(rIdx)
+			headerMatcher := &routev3.HeaderMatcher{
+				Name: ":method",
+				HeaderMatchSpecifier: &routev3.HeaderMatcher_StringMatch{
+					StringMatch: buildXdsStringMatcher(rule.MethodMatch),
+				},
+			}
+			expectMatch := true
+			if rule.MethodMatch.Invert != nil && *rule.MethodMatch.Invert {
+				expectMatch = false
+			}
+			action := &routev3.RateLimit_Action{
+				ActionSpecifier: &routev3.RateLimit_Action_HeaderValueMatch_{
+					HeaderValueMatch: &routev3.RateLimit_Action_HeaderValueMatch{
+						DescriptorKey:   descriptorKey,
+						DescriptorValue: descriptorVal,
+						ExpectMatch: &wrapperspb.BoolValue{
+							Value: expectMatch,
+						},
+						Headers: []*routev3.HeaderMatcher{headerMatcher},
+					},
+				},
+			}
+			entry := &rlv3.RateLimitDescriptor_Entry{
+				Key:   descriptorKey,
+				Value: descriptorVal,
+			}
+
+			rlActions = append(rlActions, action)
+			descriptorEntries = append(descriptorEntries, entry)
+		}
+
+		// PathMatch
+		if rule.PathMatch != nil {
+			descriptorKey := getRouteRulePathDescriptor(rIdx)
+			descriptorVal := getRouteRulePathDescriptor(rIdx)
+			headerMatcher := &routev3.HeaderMatcher{
+				Name: ":path",
+				HeaderMatchSpecifier: &routev3.HeaderMatcher_StringMatch{
+					StringMatch: buildXdsStringMatcher(rule.PathMatch),
+				},
+			}
+			expectMatch := true
+			if rule.PathMatch.Invert != nil && *rule.PathMatch.Invert {
+				expectMatch = false
+			}
+			action := &routev3.RateLimit_Action{
+				ActionSpecifier: &routev3.RateLimit_Action_HeaderValueMatch_{
+					HeaderValueMatch: &routev3.RateLimit_Action_HeaderValueMatch{
+						DescriptorKey:   descriptorKey,
+						DescriptorValue: descriptorVal,
+						ExpectMatch: &wrapperspb.BoolValue{
+							Value: expectMatch,
+						},
+						Headers: []*routev3.HeaderMatcher{headerMatcher},
+					},
+				},
+			}
+			entry := &rlv3.RateLimitDescriptor_Entry{
+				Key:   descriptorKey,
+				Value: descriptorVal,
+			}
+
+			rlActions = append(rlActions, action)
+			descriptorEntries = append(descriptorEntries, entry)
+		}
+
 		// Source IP CIDRMatch
 		if rule.CIDRMatch != nil {
 			// For CIDR matches, we first need to check if the source IP matches the CIDR range using

@@ -19,6 +19,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -871,10 +872,11 @@ func buildRateLimitRule(rule egv1a1.RateLimitRule) (*ir.RateLimitRule, error) {
 	}
 
 	for _, match := range rule.ClientSelectors {
-		if len(match.Headers) == 0 && match.SourceCIDR == nil {
+		if len(match.Headers) == 0 && match.Method == nil &&
+			match.Path == nil && match.SourceCIDR == nil {
 			return nil, fmt.Errorf(
 				"unable to translate rateLimit. At least one of the" +
-					" header or sourceCIDR must be specified")
+					" header or method or path or sourceCIDR must be specified")
 		}
 		for _, header := range match.Headers {
 			switch {
@@ -911,6 +913,42 @@ func buildRateLimitRule(rule egv1a1.RateLimitRule) (*ir.RateLimitRule, error) {
 				return nil, fmt.Errorf(
 					"unable to translate rateLimit. Either the header." +
 						"Type is not valid or the header is missing a value")
+			}
+		}
+
+		if match.Method != nil {
+			irRule.MethodMatch = &ir.StringMatch{
+				Exact:  match.Method.Value,
+				Invert: match.Method.Invert,
+			}
+		}
+
+		if match.Path != nil {
+			switch {
+			case match.Path.Type == nil && match.Path.Value != nil:
+				fallthrough
+			case *match.Path.Type == gwapiv1.PathMatchPathPrefix && match.Path.Value != nil:
+				irRule.PathMatch = &ir.StringMatch{
+					Prefix: match.Path.Value,
+					Invert: match.Path.Invert,
+				}
+			case *match.Path.Type == gwapiv1.PathMatchExact && match.Path.Value != nil:
+				irRule.PathMatch = &ir.StringMatch{
+					Exact:  match.Path.Value,
+					Invert: match.Path.Invert,
+				}
+			case *match.Path.Type == gwapiv1.PathMatchRegularExpression && match.Path.Value != nil:
+				if err := regex.Validate(*match.Path.Value); err != nil {
+					return nil, err
+				}
+				irRule.PathMatch = &ir.StringMatch{
+					SafeRegex: match.Path.Value,
+					Invert:    match.Path.Invert,
+				}
+			default:
+				return nil, fmt.Errorf(
+					"unable to translate rateLimit. Either the path." +
+						"Type is not valid or the path is missing a value")
 			}
 		}
 

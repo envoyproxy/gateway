@@ -285,6 +285,64 @@ func buildRouteRateLimits(route *ir.HTTPRoute) (rateLimits []*routev3.RateLimit,
 			rlActions = append(rlActions, action)
 		}
 
+		// Process each method match in the rule.
+		if rule.MethodMatch != nil {
+			descriptorKey := getRouteRuleMethodDescriptor(domainRuleIdx)
+			descriptorVal := getRouteRuleMethodDescriptor(domainRuleIdx)
+			headerMatcher := &routev3.HeaderMatcher{
+				Name: ":method",
+				HeaderMatchSpecifier: &routev3.HeaderMatcher_StringMatch{
+					StringMatch: buildXdsStringMatcher(rule.MethodMatch),
+				},
+			}
+			expectMatch := true
+			if rule.MethodMatch.Invert != nil && *rule.MethodMatch.Invert {
+				expectMatch = false
+			}
+			action := &routev3.RateLimit_Action{
+				ActionSpecifier: &routev3.RateLimit_Action_HeaderValueMatch_{
+					HeaderValueMatch: &routev3.RateLimit_Action_HeaderValueMatch{
+						DescriptorKey:   descriptorKey,
+						DescriptorValue: descriptorVal,
+						ExpectMatch: &wrapperspb.BoolValue{
+							Value: expectMatch,
+						},
+						Headers: []*routev3.HeaderMatcher{headerMatcher},
+					},
+				},
+			}
+			rlActions = append(rlActions, action)
+		}
+
+		// Process each path match in the rule.
+		if rule.PathMatch != nil {
+			descriptorKey := getRouteRulePathDescriptor(domainRuleIdx)
+			descriptorVal := getRouteRulePathDescriptor(domainRuleIdx)
+			headerMatcher := &routev3.HeaderMatcher{
+				Name: ":path",
+				HeaderMatchSpecifier: &routev3.HeaderMatcher_StringMatch{
+					StringMatch: buildXdsStringMatcher(rule.PathMatch),
+				},
+			}
+			expectMatch := true
+			if rule.PathMatch.Invert != nil && *rule.PathMatch.Invert {
+				expectMatch = false
+			}
+			action := &routev3.RateLimit_Action{
+				ActionSpecifier: &routev3.RateLimit_Action_HeaderValueMatch_{
+					HeaderValueMatch: &routev3.RateLimit_Action_HeaderValueMatch{
+						DescriptorKey:   descriptorKey,
+						DescriptorValue: descriptorVal,
+						ExpectMatch: &wrapperspb.BoolValue{
+							Value: expectMatch,
+						},
+						Headers: []*routev3.HeaderMatcher{headerMatcher},
+					},
+				},
+			}
+			rlActions = append(rlActions, action)
+		}
+
 		// To be able to rate limit each individual IP, we need to use a nested descriptors structure in the configuration
 		// of the rate limit server:
 		// * the outer layer is a masked_remote_address descriptor that catches all the source IPs inside a specified CIDR.
@@ -330,7 +388,7 @@ func buildRouteRateLimits(route *ir.HTTPRoute) (rateLimits []*routev3.RateLimit,
 			}
 		}
 
-		// Case when both header and cidr match are not set and the ratelimit
+		// Case when both header/method/path and cidr match are not set and the ratelimit
 		// will be applied to all traffic.
 		// 3) No Match (apply to all traffic)
 		if !rule.IsMatchSet() {
@@ -591,8 +649,10 @@ func buildRateLimitServiceDescriptors(route *ir.HTTPRoute) []*rlsconfv3.RateLimi
 	// The order in which matching descriptors are built is consistent with
 	// the order in which ratelimit actions are built:
 	//  1) Header Matches
-	//  2) CIDR Match
-	//  3) No Match
+	//  2) Method Match
+	//  3) Path Match
+	//  4) CIDR Match
+	//  5) No Match
 
 	for rIdx, rule := range global.Rules {
 		rateLimitPolicy := &rlsconfv3.RateLimitPolicy{
@@ -629,6 +689,44 @@ func buildRateLimitServiceDescriptors(route *ir.HTTPRoute) []*rlsconfv3.RateLimi
 			cur = pbDesc
 
 			// Do not add the RateLimitPolicy to the last header match descriptor yet,
+			// as it is also possible that Method/Path/CIDR match descriptor also exist.
+		}
+
+		// 2) Method Match
+		if rule.MethodMatch != nil {
+			pbDesc := new(rlsconfv3.RateLimitDescriptor)
+			pbDesc.Key = getRouteRuleMethodDescriptor(domainRuleIdx)
+			pbDesc.Value = getRouteRuleMethodDescriptor(domainRuleIdx)
+
+			if cur != nil {
+				// The header match descriptor chain exist, add current
+				// descriptor to the chain.
+				cur.Descriptors = []*rlsconfv3.RateLimitDescriptor{pbDesc}
+			} else {
+				head = pbDesc
+			}
+			cur = pbDesc
+
+			// Do not add the RateLimitPolicy to method match descriptor yet,
+			// as it is also possible that Path/CIDR match descriptor also exist.
+		}
+
+		// 3) Path Match
+		if rule.PathMatch != nil {
+			pbDesc := new(rlsconfv3.RateLimitDescriptor)
+			pbDesc.Key = getRouteRulePathDescriptor(domainRuleIdx)
+			pbDesc.Value = getRouteRulePathDescriptor(domainRuleIdx)
+
+			if cur != nil {
+				// The header/method match descriptor chain exist, add current
+				// descriptor to the chain.
+				cur.Descriptors = []*rlsconfv3.RateLimitDescriptor{pbDesc}
+			} else {
+				head = pbDesc
+			}
+			cur = pbDesc
+
+			// Do not add the RateLimitPolicy to path match descriptor yet,
 			// as it is also possible that CIDR match descriptor also exist.
 		}
 
@@ -653,7 +751,7 @@ func buildRateLimitServiceDescriptors(route *ir.HTTPRoute) []*rlsconfv3.RateLimi
 		//            requests_per_unit: 100
 		//
 		// Please refer to [Rate Limit Service Descriptor list definition](https://github.com/envoyproxy/ratelimit#descriptor-list-definition) for details.
-		// 2) CIDR Match
+		// 4) CIDR Match
 		if rule.CIDRMatch != nil {
 			// MaskedRemoteAddress case
 			pbDesc := new(rlsconfv3.RateLimitDescriptor)
@@ -661,7 +759,7 @@ func buildRateLimitServiceDescriptors(route *ir.HTTPRoute) []*rlsconfv3.RateLimi
 			pbDesc.Value = rule.CIDRMatch.CIDR
 
 			if cur != nil {
-				// The header match descriptor chain exist, add current
+				// The header/method/path match descriptor chain exist, add current
 				// descriptor to the chain.
 				cur.Descriptors = []*rlsconfv3.RateLimitDescriptor{pbDesc}
 			} else {
@@ -676,7 +774,7 @@ func buildRateLimitServiceDescriptors(route *ir.HTTPRoute) []*rlsconfv3.RateLimi
 				cur = pbDesc
 			}
 		}
-		// Case when both header and cidr match are not set and the ratelimit
+		// Case when both header/method/path and cidr match are not set and the ratelimit
 		// will be applied to all traffic.
 		// 3) No Match (apply to all traffic)
 		if !rule.IsMatchSet() {
@@ -697,6 +795,14 @@ func buildRateLimitServiceDescriptors(route *ir.HTTPRoute) []*rlsconfv3.RateLimi
 
 func getRouteRuleDescriptor(ruleIndex, matchIndex int) string {
 	return "rule-" + strconv.Itoa(ruleIndex) + "-match-" + strconv.Itoa(matchIndex)
+}
+
+func getRouteRuleMethodDescriptor(ruleIndex int) string {
+	return "rule-" + strconv.Itoa(ruleIndex) + "-method"
+}
+
+func getRouteRulePathDescriptor(ruleIndex int) string {
+	return "rule-" + strconv.Itoa(ruleIndex) + "-path"
 }
 
 func getRouteDescriptor(routeName string) string {

@@ -18487,7 +18487,7 @@ spec:
                                     description: |-
                                       Headers is a list of request headers to match. Multiple header values are ANDed together,
                                       meaning, a request MUST match all the specified headers.
-                                      At least one of headers or sourceCIDR condition must be specified.
+                                      At least one of headers or method or path or sourceCIDR condition must be specified.
                                     items:
                                       description: HeaderMatch defines the match attributes
                                         within the HTTP Headers of the request.
@@ -18528,10 +18528,48 @@ spec:
                                       type: object
                                     maxItems: 16
                                     type: array
+                                  method:
+                                    description: |-
+                                      Method is the request method to match. If not specified, it matches all methods.
+                                      At least one of headers or method or path or sourceCIDR condition must be specified.
+                                    properties:
+                                      invert:
+                                        default: false
+                                        description: Invert specifies whether the
+                                          value match result will be inverted.
+                                        type: boolean
+                                      value:
+                                        description: Value specifies the HTTP method.
+                                        type: string
+                                    type: object
+                                  path:
+                                    description: |-
+                                      Path is the request path to match.
+                                      Support Exact, PathPrefix and RegularExpression match types.
+                                      At least one of headers or method or path or sourceCIDR condition must be specified.
+                                    properties:
+                                      invert:
+                                        default: false
+                                        description: Invert specifies whether the
+                                          value match result will be inverted.
+                                        type: boolean
+                                      type:
+                                        default: PathPrefix
+                                        description: Type specifies how to match against
+                                          the value of the path.
+                                        enum:
+                                        - Exact
+                                        - PathPrefix
+                                        - RegularExpression
+                                        type: string
+                                      value:
+                                        description: Value specifies the HTTP path.
+                                        type: string
+                                    type: object
                                   sourceCIDR:
                                     description: |-
                                       SourceCIDR is the client IP Address range to match on.
-                                      At least one of headers or sourceCIDR condition must be specified.
+                                      At least one of headers or method or path or sourceCIDR condition must be specified.
                                     properties:
                                       type:
                                         default: Exact
@@ -18738,7 +18776,7 @@ spec:
                                     description: |-
                                       Headers is a list of request headers to match. Multiple header values are ANDed together,
                                       meaning, a request MUST match all the specified headers.
-                                      At least one of headers or sourceCIDR condition must be specified.
+                                      At least one of headers or method or path or sourceCIDR condition must be specified.
                                     items:
                                       description: HeaderMatch defines the match attributes
                                         within the HTTP Headers of the request.
@@ -18779,10 +18817,48 @@ spec:
                                       type: object
                                     maxItems: 16
                                     type: array
+                                  method:
+                                    description: |-
+                                      Method is the request method to match. If not specified, it matches all methods.
+                                      At least one of headers or method or path or sourceCIDR condition must be specified.
+                                    properties:
+                                      invert:
+                                        default: false
+                                        description: Invert specifies whether the
+                                          value match result will be inverted.
+                                        type: boolean
+                                      value:
+                                        description: Value specifies the HTTP method.
+                                        type: string
+                                    type: object
+                                  path:
+                                    description: |-
+                                      Path is the request path to match.
+                                      Support Exact, PathPrefix and RegularExpression match types.
+                                      At least one of headers or method or path or sourceCIDR condition must be specified.
+                                    properties:
+                                      invert:
+                                        default: false
+                                        description: Invert specifies whether the
+                                          value match result will be inverted.
+                                        type: boolean
+                                      type:
+                                        default: PathPrefix
+                                        description: Type specifies how to match against
+                                          the value of the path.
+                                        enum:
+                                        - Exact
+                                        - PathPrefix
+                                        - RegularExpression
+                                        type: string
+                                      value:
+                                        description: Value specifies the HTTP path.
+                                        type: string
+                                    type: object
                                   sourceCIDR:
                                     description: |-
                                       SourceCIDR is the client IP Address range to match on.
-                                      At least one of headers or sourceCIDR condition must be specified.
+                                      At least one of headers or method or path or sourceCIDR condition must be specified.
                                     properties:
                                       type:
                                         default: Exact
