@@ -88,7 +88,6 @@ func (t *Translator) ProcessSecurityPolicies(securityPolicies []*egv1a1.Security
 	// 3. Then translate Policies targeting Listeners
 	// 4. Finally, the policies targeting Gateways
 
-	// Process the policies targeting RouteRules
 	// Process the policies targeting RouteRules (HTTP + now TCP)
 	for _, currPolicy := range securityPolicies {
 		policyName := utils.NamespacedName(currPolicy)
@@ -185,14 +184,12 @@ func (t *Translator) processSecurityPolicyForRoute(
 		resolveErr     *status.PolicyResolveError
 	)
 
+	isTCP := currTarget.Kind == resource.KindTCPRoute
+	targetedRoute, resolveErr = resolveSecurityPolicyRouteTargetRef(policy, currTarget, routeMap)
 	// Skip if the route is not found
 	// It's not necessarily an error because the SecurityPolicy may be
 	// reconciled by multiple controllers. And the other controller may
 	// have the target route.
-	isTCP := currTarget.Kind == resource.KindTCPRoute
-
-	// Unified resolution (TCP + HTTP/other routes use same helper now).
-	targetedRoute, resolveErr = resolveSecurityPolicyRouteTargetRef(policy, currTarget, routeMap)
 	if targetedRoute == nil {
 		return
 	}
@@ -223,8 +220,6 @@ func (t *Translator) processSecurityPolicyForRoute(
 				gatewayRouteMap[key] = make(map[string]sets.Set[string])
 			}
 			listenerRouteMap := gatewayRouteMap[key]
-
-			// SectionName (listener) may be nil (whole gateway parentRef)
 			sectionName := ""
 			if p.SectionName != nil {
 				sectionName = string(*p.SectionName)
@@ -232,7 +227,6 @@ func (t *Translator) processSecurityPolicyForRoute(
 			if _, ok := listenerRouteMap[sectionName]; !ok {
 				listenerRouteMap[sectionName] = make(sets.Set[string])
 			}
-			// Track this route (namespaced) under the listener (or whole gateway key "").
 			listenerRouteMap[sectionName].Insert(utils.NamespacedName(targetedRoute).String())
 			parentGateways = append(parentGateways, getAncestorRefForPolicy(gwNN, p.SectionName))
 		}
@@ -634,7 +628,7 @@ func resolveSecurityPolicyRouteTargetRef(
 	}
 
 	if target.SectionName == nil {
-		// Whole route attachment
+		// Check if another policy targeting the same xRoute exists
 		if route.attached {
 			message := fmt.Sprintf("Unable to target %s %s, another SecurityPolicy has already attached to it",
 				string(target.Kind), string(target.Name))
@@ -784,7 +778,8 @@ func (t *Translator) translateSecurityPolicyForRoute(
 				// Nothing else to do for this listener in TCP mode.
 				continue
 			}
-
+			// A Policy targeting the most specific scope(xRoute rule) wins over a policy
+			// targeting a lesser specific scope(xRoute).
 			// HTTP / HTTPS listeners (only when not a TCP route).
 			httpL := xdsIR[irKey].GetHTTPListener(irListenerName(listener))
 			if routeIsTCP || httpL == nil {
@@ -986,6 +981,7 @@ func (t *Translator) translateSecurityPolicyForGateway(
 		if !matchesGateway(hl.Name) {
 			continue
 		}
+		// If specified the sectionName must match listenerName from ir listener metadata.
 		hasHTTP = true
 		sec := ""
 		if hl.Metadata != nil {
