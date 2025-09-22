@@ -76,7 +76,7 @@ type TLSSettings struct {
 	// 3. Backends: proxy uses the appropriate ALPN options for the backend protocol.
 	// When an empty list is provided, the ALPN TLS extension is disabled.
 	//
-	// Default to [http/1.1, h2] if not specified.
+	// Defaults to [http/1.1, h2] if not specified.
 	//
 	// Typical Supported values are:
 	// - http/1.0
