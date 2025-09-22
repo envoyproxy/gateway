@@ -229,7 +229,7 @@ spec:
                     properties:
                       type:
                         enum:
-                        - Client
+                        - SNI
                         type: string
                     required:
                     - type

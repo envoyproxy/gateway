@@ -1177,7 +1177,7 @@ func buildValidationContext(tlsConfig *ir.TLSUpstreamConfig) *tlsv3.CommonTlsCon
 	}
 
 	// When auto validation is used, URI/DNS SAN validation is ignored, no need to configure it.
-	if len(tlsConfig.SubjectAltNames) > 0 && !tlsConfig.AutoSANValidation {
+	if (tlsConfig.SNI != nil || len(tlsConfig.SubjectAltNames) > 0) && !tlsConfig.AutoSANValidation {
 		validationContext.DefaultValidationContext.MatchTypedSubjectAltNames = []*tlsv3.SubjectAltNameMatcher{
 			{
 				SanType: tlsv3.SubjectAltNameMatcher_DNS,
