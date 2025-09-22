@@ -621,7 +621,6 @@ func resolveSecurityPolicyRouteTargetRef(
 
 	// If sectionName is set, make sure its valid
 	if target.SectionName != nil {
-		// First, validate syntax/name constraints.
 		if err := validateRouteRuleSectionName(*target.SectionName, key, route); err != nil {
 			return route.RouteContext, err
 		}
