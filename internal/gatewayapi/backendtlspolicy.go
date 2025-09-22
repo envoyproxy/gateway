@@ -122,7 +122,7 @@ func (t *Translator) processBackendTLSSettings(
 		InsecureSkipVerify: ptr.Deref(backend.Spec.TLS.InsecureSkipVerify, false),
 	}
 
-	if backend.Spec.TLS.SNIModifier != nil && backend.Spec.TLS.SNIModifier.Type == egv1a1.SNISelectionTypeClient {
+	if backend.Spec.TLS.SNIModifier != nil && backend.Spec.TLS.SNIModifier.Type == egv1a1.SNIModifierTypeClient {
 		tlsConfig.AutoSNI = true
 	}
 

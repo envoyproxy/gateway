@@ -219,19 +219,21 @@ type BackendTLSSettings struct {
 type SNIModifier struct {
 	// +kubebuilder:validation:Enum=Client
 	// +kubebuilder:validation:Required
-	Type SNISelectionType `json:"type"`
+	Type SNIModifierType `json:"type"`
 }
 
-type SNISelectionType string
+type SNIModifierType string
 
 const (
-	// SNISelectionTypeClient defines a SNI value selection strategy which uses the client's HTTP Host header as SNI value.
+	// SNIModifierTypeClient defines a SNI value selection strategy which uses the client's HTTP Host header as SNI value.
 	// See: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/protocol.proto#envoy-v3-api-field-config-core-v3-upstreamhttpprotocoloptions-auto-sni
 	// Note:
+	//
 	// * When a Backend enables this option, it will override literal SNI value configured in a BackendTLSPolicy.
+	//
 	// * When a Backend that enables this option is referenced in BackendRefs, all other referenced resources must be
 	//   Backends that enable this option.
-	SNISelectionTypeClient SNISelectionType = "Client"
+	SNIModifierTypeClient SNIModifierType = "Client"
 )
 
 type SANValidation struct {
@@ -244,7 +246,7 @@ type SANValidationType string
 
 const (
 	// SANValidationTypeSNI defines a SAN validation strategy which validates that the presented certificate contains a
-	// DNS SAN that matches the SNI\value sent by envoy (literal value set in BackendTLSPolicy Hostname or Client SNI
+	// DNS SAN that matches the SNI value sent by envoy (literal value set in BackendTLSPolicy Hostname or Client SNIModifier
 	// selected through Backend TLS).
 	// See: https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/transport_sockets/tls/v3/tls.proto#envoy-v3-api-field-extensions-transport-sockets-tls-v3-upstreamtlscontext-auto-sni-san-validation
 	// Note: When a Backend enables this option, it will override literal DNS and URI SAN validations

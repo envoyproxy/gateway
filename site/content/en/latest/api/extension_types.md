@@ -4612,7 +4612,7 @@ _Appears in:_
 
 | Value | Description |
 | ----- | ----------- |
-| `SNI` | SANValidationTypeSNI defines a SAN validation strategy which validates that the presented certificate contains a<br />DNS SAN that matches the SNI\value sent by envoy (literal value set in BackendTLSPolicy Hostname or Client SNI<br />selected through Backend TLS).<br />See: https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/transport_sockets/tls/v3/tls.proto#envoy-v3-api-field-extensions-transport-sockets-tls-v3-upstreamtlscontext-auto-sni-san-validation<br />Note: When a Backend enables this option, it will override literal DNS and URI SAN validations<br />configured in a BackendTLSPolicy.<br /> | 
+| `SNI` | SANValidationTypeSNI defines a SAN validation strategy which validates that the presented certificate contains a<br />DNS SAN that matches the SNI value sent by envoy (literal value set in BackendTLSPolicy Hostname or Client SNIModifier<br />selected through Backend TLS).<br />See: https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/transport_sockets/tls/v3/tls.proto#envoy-v3-api-field-extensions-transport-sockets-tls-v3-upstreamtlscontext-auto-sni-san-validation<br />Note: When a Backend enables this option, it will override literal DNS and URI SAN validations<br />configured in a BackendTLSPolicy.<br /> | 
 
 
 #### SNIModifier
@@ -4626,10 +4626,10 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `type` | _[SNISelectionType](#sniselectiontype)_ |  true  |  |  |
+| `type` | _[SNIModifierType](#snimodifiertype)_ |  true  |  |  |
 
 
-#### SNISelectionType
+#### SNIModifierType
 
 _Underlying type:_ _string_
 
@@ -4640,7 +4640,7 @@ _Appears in:_
 
 | Value | Description |
 | ----- | ----------- |
-| `Client` | SNISelectionTypeClient defines a SNI value selection strategy which uses the client's HTTP Host header as SNI value.<br />See: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/protocol.proto#envoy-v3-api-field-config-core-v3-upstreamhttpprotocoloptions-auto-sni<br />Note:<br />* When a Backend enables this option, it will override literal SNI value configured in a BackendTLSPolicy.<br />* When a Backend that enables this option is referenced in BackendRefs, all other referenced resources must be<br />  Backends that enable this option.<br /> | 
+| `Client` | SNIModifierTypeClient defines a SNI value selection strategy which uses the client's HTTP Host header as SNI value.<br />See: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/protocol.proto#envoy-v3-api-field-config-core-v3-upstreamhttpprotocoloptions-auto-sni<br />Note:<br />* When a Backend enables this option, it will override literal SNI value configured in a BackendTLSPolicy.<br />* When a Backend that enables this option is referenced in BackendRefs, all other referenced resources must be<br />  Backends that enable this option.<br /> | 
 
 
 
