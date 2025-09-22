@@ -969,22 +969,12 @@ func (t *Translator) processRequestMirrorFilter(
 	weight := int32(1)
 	mirrorBackend := mirrorFilter.BackendRef
 
-	// Create the appropriate BackendRef type based on the route type
-	var mirrorBackendRef BackendRefContext
-	if routeType == resource.KindGRPCRoute {
-		mirrorBackendRef = gwapiv1.GRPCBackendRef{
-			BackendRef: gwapiv1.BackendRef{
-				BackendObjectReference: mirrorBackend,
-				Weight:                 &weight,
-			},
-		}
-	} else {
-		mirrorBackendRef = gwapiv1.HTTPBackendRef{
-			BackendRef: gwapiv1.BackendRef{
-				BackendObjectReference: mirrorBackend,
-				Weight:                 &weight,
-			},
-		}
+	// Create a DirectBackendRef for the mirror backend (no filters needed)
+	mirrorBackendRef := DirectBackendRef{
+		BackendRef: &gwapiv1.BackendRef{
+			BackendObjectReference: mirrorBackend,
+			Weight:                 &weight,
+		},
 	}
 
 	// This sets the status on the Route, should the usage be changed so that the status message reflects that the backendRef is from the filter?
