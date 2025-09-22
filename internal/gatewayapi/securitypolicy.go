@@ -619,14 +619,11 @@ func resolveSecurityPolicyRouteTargetRef(
 	if !ok {
 		return nil, nil
 	}
-
+	// If sectionName is set, make sure its valid
 	if target.SectionName != nil {
-		section := string(*target.SectionName)
-		if !routeRuleExists(route, section) {
-			return route.RouteContext, &status.PolicyResolveError{
-				Reason:  gwapiv1a2.PolicyReasonTargetNotFound,
-				Message: fmt.Sprintf("No section name %s found for %s %s/%s", section, key.Kind, key.Namespace, key.Name),
-			}
+		// First, validate syntax/name constraints.
+		if err := validateRouteRuleSectionName(*target.SectionName, key, route); err != nil {
+			return route.RouteContext, err
 		}
 	}
 
@@ -754,63 +751,69 @@ func (t *Translator) translateSecurityPolicyForRoute(
 		}
 
 		irKey := t.getIRKey(gtwCtx.Gateway)
-		// Handle TCP routes differently from HTTP routes (determine by Kind)
-		if route.GetRouteType() == resource.KindTCPRoute {
-			for _, listener := range parentRefCtx.listeners {
-				irListener := xdsIR[irKey].GetTCPListener(irListenerName(listener))
-				if irListener != nil {
-					// For TCP routes, we need exact route name matching (not prefix)
-					expectedRouteName := strings.TrimSuffix(prefix, "/")
-					for _, r := range irListener.Routes {
-						// A Policy targeting the specific scope (TCPRoute) wins over a lesser scope (Gateway)
-						if r.Name == expectedRouteName && r.Security == nil {
-							r.Security = &ir.SecurityFeatures{
-								Authorization: authorization,
-							}
-						}
-					}
-				}
-			}
-			// Nothing more to do for TCP for this parentRef
-			continue
+		routeIsTCP := route.GetRouteType() == resource.KindTCPRoute
+		expectedTCPRouteName := ""
+		if routeIsTCP {
+			// TCP IR route names are flat; prefix ends with '/', strip it.
+			expectedTCPRouteName = strings.TrimSuffix(prefix, "/")
 		}
+
 		for _, listener := range parentRefCtx.listeners {
-			irListener := xdsIR[irKey].GetHTTPListener(irListenerName(listener))
-			if irListener != nil {
-				for _, r := range irListener.Routes {
-					// If specified the sectionName must match route rule from ir route metadata.
-					if target.SectionName != nil && string(*target.SectionName) != r.Metadata.SectionName {
+			// Try TCP listener first (only for TCP routes).
+			tcpL := xdsIR[irKey].GetTCPListener(irListenerName(listener))
+			if routeIsTCP && tcpL != nil {
+				for _, r := range tcpL.Routes {
+					if r == nil || r.Security != nil {
 						continue
 					}
+					// Exact match (TCP IR route names are flat).
+					if r.Name != expectedTCPRouteName {
+						continue
+					}
+					r.Security = &ir.SecurityFeatures{
+						Authorization: authorization,
+					}
+				}
+				// Nothing else to do for this listener in TCP mode.
+				continue
+			}
 
-					// A Policy targeting the most specific scope(xRoute rule) wins over a policy
-					// targeting a lesser specific scope(xRoute).
-					if strings.HasPrefix(r.Name, prefix) {
-						// if already set - there's a specific level policy, so skip.
-						if r.Security != nil {
-							continue
-						}
-
-						r.Security = &ir.SecurityFeatures{
-							CORS:          cors,
-							JWT:           jwt,
-							OIDC:          oidc,
-							APIKeyAuth:    apiKeyAuth,
-							BasicAuth:     basicAuth,
-							ExtAuth:       extAuth,
-							Authorization: authorization,
-						}
-						if errs != nil {
-							// If there is only error for ext auth and ext auth is set to fail open, then skip the ext auth
-							// and allow the request to go through.
-							// Otherwise, return a 500 direct response to avoid unauthorized access.
-							shouldFailOpen := extAuthErr != nil && !hasNonExtAuthError && ptr.Deref(policy.Spec.ExtAuth.FailOpen, false)
-							if !shouldFailOpen {
-								// Return a 500 direct response to avoid unauthorized access
-								r.DirectResponse = &ir.CustomResponse{
-									StatusCode: ptr.To(uint32(500)),
-								}
-							}
+			// HTTP / HTTPS listeners (only when not a TCP route).
+			httpL := xdsIR[irKey].GetHTTPListener(irListenerName(listener))
+			if routeIsTCP || httpL == nil {
+				continue
+			}
+			for _, r := range httpL.Routes {
+				if r == nil {
+					continue
+				}
+				if target.SectionName != nil && string(*target.SectionName) != r.Metadata.SectionName {
+					continue
+				}
+				if !strings.HasPrefix(r.Name, prefix) {
+					continue
+				}
+				if r.Security != nil {
+					continue
+				}
+				r.Security = &ir.SecurityFeatures{
+					CORS:          cors,
+					JWT:           jwt,
+					OIDC:          oidc,
+					APIKeyAuth:    apiKeyAuth,
+					BasicAuth:     basicAuth,
+					ExtAuth:       extAuth,
+					Authorization: authorization,
+				}
+				if errs != nil {
+					// If there is only error for ext auth and ext auth is set to fail open, then skip the ext auth
+					// and allow the request to go through.
+					// Otherwise, return a 500 direct response to avoid unauthorized access.
+					shouldFailOpen := extAuthErr != nil && !hasNonExtAuthError && ptr.Deref(policy.Spec.ExtAuth.FailOpen, false)
+					if !shouldFailOpen {
+						// Return a 500 direct response to avoid unauthorized access
+						r.DirectResponse = &ir.CustomResponse{
+							StatusCode: ptr.To(uint32(500)),
 						}
 					}
 				}
@@ -926,112 +929,183 @@ func (t *Translator) translateSecurityPolicyForGateway(
 	if target.SectionName != nil {
 		sectionName = string(*target.SectionName)
 	}
-	// Detect protocol composition of the Gateway (needed for mixed whole-gateway handling)
-	hasHTTP, hasTCP := false, false
-	for _, l := range gateway.Spec.Listeners {
-		switch l.Protocol {
-		case gwapiv1.HTTPProtocolType, gwapiv1.HTTPSProtocolType:
-			hasHTTP = true
-		case gwapiv1.TCPProtocolType:
-			hasTCP = true
-		}
-	}
-	isMixedWholeGateway := sectionName == "" && hasHTTP && hasTCP
-	// Detect if target is TCP listener (or all listeners TCP when sectionName empty).
-	isTCPListener := false
-	if sectionName != "" {
-		// defensive loop: ensure gateway.Spec is available
-		for _, l := range gateway.Spec.Listeners {
-			if string(l.Name) == sectionName && l.Protocol == gwapiv1.TCPProtocolType {
-				isTCPListener = true
-				break
-			}
-		}
-	} else {
-		allTCP := true
-		for _, l := range gateway.Spec.Listeners {
-			if l.Protocol != gwapiv1.TCPProtocolType {
-				allTCP = false
-				break
-			}
-		}
-		isTCPListener = allTCP
-	}
 
+	// rely on already constructed IR listeners (x.HTTP / x.TCP). This avoids duplicate logic.
 	policyTarget := irStringKey(policy.Namespace, string(target.Name))
 
-	if isTCPListener {
-		// Apply ONLY Authorization to all TCP routes under the targeted listener(s).
-		for _, tl := range x.TCP {
-			if tl == nil {
-				continue
-			}
-			// defensive: ensure metadata present
-			// Listener name format: namespace/gatewayName/listenerName
-			// compute effective section name from metadata if present, else fallback to name suffix
-			effectiveSection := ""
-			if tl.Metadata != nil && tl.Metadata.SectionName != "" {
-				effectiveSection = tl.Metadata.SectionName
-			} else {
-				// fallback: last path segment of tl.Name (`namespace/gateway/listener`)
-				// TODO: remove fallback once IR builder guarantees tl.Metadata.SectionName is populated.
-				if idx := strings.LastIndex(tl.Name, "/"); idx >= 0 && idx < len(tl.Name)-1 {
-					effectiveSection = tl.Name[idx+1:]
-				} else {
-					effectiveSection = tl.Name
-				}
-			}
+	matchesGateway := func(full string) bool {
+		// IR listener name format: namespace/gatewayName/listenerName
+		if !t.MergeGateways {
+			return true
+		}
+		if !strings.HasPrefix(full, policyTarget) {
+			return false
+		}
+		// Ensure prefix boundary (either exact or next char is '/')
+		if len(full) == len(policyTarget) {
+			return true
+		}
+		return full[len(policyTarget)] == '/'
+	}
 
-			if t.MergeGateways && !strings.HasPrefix(tl.Name, policyTarget) {
-				continue
-			}
-			if sectionName != "" && effectiveSection != sectionName {
-				continue
-			}
-			for _, r := range tl.Routes {
-				if r == nil {
-					continue
+	// Compute protocol composition & classify listener sections for this gateway.
+	hasHTTP, hasTCP := false, false
+	tcpSections := make(sets.Set[string])
+	httpSections := make(sets.Set[string])
+
+	for _, tl := range x.TCP {
+		if tl == nil {
+			continue
+		}
+		if !matchesGateway(tl.Name) {
+			continue
+		}
+		hasTCP = true
+		sec := ""
+		if tl.Metadata != nil && tl.Metadata.SectionName != "" {
+			sec = tl.Metadata.SectionName
+		} else if idx := strings.LastIndex(tl.Name, "/"); idx >= 0 && idx < len(tl.Name)-1 {
+			sec = tl.Name[idx+1:]
+		} else {
+			sec = tl.Name
+		}
+		tcpSections.Insert(sec)
+	}
+
+	for _, hl := range x.HTTP {
+		if hl == nil {
+			continue
+		}
+		if !matchesGateway(hl.Name) {
+			continue
+		}
+		hasHTTP = true
+		sec := ""
+		if hl.Metadata != nil {
+			sec = hl.Metadata.SectionName
+		}
+		httpSections.Insert(sec)
+	}
+
+	isMixedWholeGateway := sectionName == "" && hasHTTP && hasTCP
+
+	// Determine if this policy targets a TCP listener (or an all‑TCP gateway when whole-gateway).
+	isTCPListener := false
+	if sectionName != "" {
+		if tcpSections.Has(sectionName) {
+			isTCPListener = true
+		}
+	} else if hasTCP && !hasHTTP {
+		isTCPListener = true
+	}
+
+	// Validation: only‑TCP => TCP rules; otherwise general validation.
+	var vErr error
+	if isTCPListener {
+		vErr = validateSecurityPolicyForTCP(policy)
+	} else {
+		vErr = validateSecurityPolicy(policy)
+	}
+	if vErr != nil {
+		return errors.Join(errs, fmt.Errorf("invalid SecurityPolicy: %w", vErr))
+	}
+
+	// Section-scoped target?
+	if sectionName != "" {
+		// TCP section: Authorization only.
+		if isTCPListener {
+			if authorization != nil {
+				for _, tl := range x.TCP {
+					if tl == nil || !matchesGateway(tl.Name) {
+						continue
+					}
+					sec := ""
+					if tl.Metadata != nil && tl.Metadata.SectionName != "" {
+						sec = tl.Metadata.SectionName
+					} else if idx := strings.LastIndex(tl.Name, "/"); idx >= 0 && idx < len(tl.Name)-1 {
+						sec = tl.Name[idx+1:]
+					} else {
+						sec = tl.Name
+					}
+					if sec != sectionName {
+						continue
+					}
+					for _, r := range tl.Routes {
+						if r == nil || r.Security != nil {
+							continue
+						}
+						r.Security = &ir.SecurityFeatures{
+							Authorization: authorization,
+						}
+					}
 				}
-				if r.Security != nil {
+			}
+			return errs
+		}
+
+		// HTTP section: full features.
+		for _, hl := range x.HTTP {
+			if hl == nil || !matchesGateway(hl.Name) {
+				continue
+			}
+			if hl.Metadata == nil || hl.Metadata.SectionName != sectionName {
+				continue
+			}
+			for _, r := range hl.Routes {
+				if r == nil || r.Security != nil {
 					continue
 				}
 				r.Security = &ir.SecurityFeatures{
+					CORS:          cors,
+					JWT:           jwt,
+					OIDC:          oidc,
+					APIKeyAuth:    apiKeyAuth,
+					BasicAuth:     basicAuth,
+					ExtAuth:       extAuth,
 					Authorization: authorization,
+				}
+				if errs != nil {
+					// If there is only error for ext auth and ext auth is set to fail open, then skip the ext auth
+					// and allow the request to go through.
+					// Otherwise, return a 500 direct response to avoid unauthorized access.
+					shouldFailOpen := extAuthErr != nil && !hasNonExtAuthError && ptr.Deref(policy.Spec.ExtAuth.FailOpen, false)
+					if !shouldFailOpen {
+						r.DirectResponse = &ir.CustomResponse{StatusCode: ptr.To(uint32(500))}
+					}
 				}
 			}
 		}
 		return errs
 	}
 
-	// HTTP branch: defensive nil checks for listeners/metadata
-	for _, h := range x.HTTP {
-		if h == nil {
-			continue
-		}
-		// A HTTPListener name has the format namespace/gatewayName/listenerName
-		gatewayNameEnd := strings.LastIndex(h.Name, "/")
-		if gatewayNameEnd <= 0 || gatewayNameEnd >= len(h.Name) {
-			continue
-		}
-		gatewayName := h.Name[0:gatewayNameEnd]
-		if t.MergeGateways && gatewayName != policyTarget {
-			continue
-		}
-		// If specified the sectionName must match listenerName from ir listener metadata.
-		if h.Metadata == nil {
-			continue
-		}
-		if target.SectionName != nil && string(*target.SectionName) != h.Metadata.SectionName {
-			continue
-		}
-		// A Policy targeting the specific scope(xRoute rule, xRoute, Gateway listener) wins over a policy
-		// targeting a lesser specific scope(Gateway).
-		for _, r := range h.Routes {
-			if r == nil {
-				continue
+	// Whole-gateway target (no sectionName):
+	if isTCPListener {
+		// All listeners are TCP: Authorization only.
+		if authorization != nil {
+			for _, tl := range x.TCP {
+				if tl == nil || !matchesGateway(tl.Name) {
+					continue
+				}
+				for _, r := range tl.Routes {
+					if r == nil || r.Security != nil {
+						continue
+					}
+					r.Security = &ir.SecurityFeatures{
+						Authorization: authorization,
+					}
+				}
 			}
-			// if already set - there's a specific level policy, so skip.
-			if r.Security != nil {
+		}
+		return errs
+	}
+
+	// HTTP listeners: apply full features.
+	for _, hl := range x.HTTP {
+		if hl == nil || !matchesGateway(hl.Name) {
+			continue
+		}
+		for _, r := range hl.Routes {
+			if r == nil || r.Security != nil {
 				continue
 			}
 			r.Security = &ir.SecurityFeatures{
@@ -1044,26 +1118,18 @@ func (t *Translator) translateSecurityPolicyForGateway(
 				Authorization: authorization,
 			}
 			if errs != nil {
-				// If there is only error for ext auth and ext auth is set to fail open, then skip the ext auth
-				// and allow the request to go through.
-				// Otherwise, return a 500 direct response to avoid unauthorized access.
 				shouldFailOpen := extAuthErr != nil && !hasNonExtAuthError && ptr.Deref(policy.Spec.ExtAuth.FailOpen, false)
 				if !shouldFailOpen {
-					r.DirectResponse = &ir.CustomResponse{
-						StatusCode: ptr.To(uint32(500)),
-					}
+					r.DirectResponse = &ir.CustomResponse{StatusCode: ptr.To(uint32(500))}
 				}
 			}
 		}
 	}
-	// NEW: For a mixed-protocol whole-gateway target, also apply ONLY Authorization to TCP listeners.
+
+	// Mixed-protocol whole gateway: add Authorization to TCP (only) after HTTP applied.
 	if isMixedWholeGateway && authorization != nil {
 		for _, tl := range x.TCP {
-			if tl == nil {
-				continue
-			}
-			// When merging gateways ensure the listener belongs to this gateway target.
-			if t.MergeGateways && !strings.HasPrefix(tl.Name, policyTarget) {
+			if tl == nil || !matchesGateway(tl.Name) {
 				continue
 			}
 			for _, r := range tl.Routes {
@@ -1076,6 +1142,7 @@ func (t *Translator) translateSecurityPolicyForGateway(
 			}
 		}
 	}
+
 	return errs
 }
 
@@ -1970,13 +2037,4 @@ func defaultAuthorizationRuleName(policy *egv1a1.SecurityPolicy, index int) stri
 		"%s/authorization/rule/%s",
 		irConfigName(policy),
 		strconv.Itoa(index))
-}
-
-// RouteRuleExists checks if a rule (section name) exists on the Route.
-func routeRuleExists(route *policyRouteTargetContext, section string) bool {
-	if route == nil || route.RouteContext == nil {
-		return false
-	}
-	// Use the RouteContext.HasRuleNames method introduced in the refactor.
-	return route.HasRuleNames(gwapiv1.SectionName(section))
 }
