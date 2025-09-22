@@ -151,6 +151,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 						Address:      address,
 						Port:         uint32(containerPort),
 						ExternalPort: uint32(listener.Port),
+						Metadata:     buildListenerMetadata(listener, gateway),
 						IPFamily:     ipFamily,
 					},
 
@@ -168,6 +169,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 						Address:      address,
 						Port:         uint32(containerPort),
 						ExternalPort: uint32(listener.Port),
+						Metadata:     buildListenerMetadata(listener, gateway),
 					},
 				}
 				xdsIR[irKey].UDP = append(xdsIR[irKey].UDP, irListener)
@@ -817,7 +819,8 @@ func (t *Translator) processBackendRefs(name string, backendCluster egv1a1.Backe
 		return nil, nil, err
 	}
 	result := make([]*ir.DestinationSetting, 0, len(backendCluster.BackendRefs))
-	for _, ref := range backendCluster.BackendRefs {
+	for i := range backendCluster.BackendRefs {
+		ref := &backendCluster.BackendRefs[i]
 		ns := NamespaceDerefOr(ref.Namespace, namespace)
 		kind := KindDerefOr(ref.Kind, resource.KindService)
 		switch kind {

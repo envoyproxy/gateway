@@ -300,6 +300,11 @@ xdsIR:
     tcp:
     - address: 0.0.0.0
       externalPort: 9090
+      metadata:
+        kind: Gateway
+        name: gateway-legacy-only
+        namespace: envoy-gateway
+        sectionName: tcp-1
       name: envoy-gateway/gateway-legacy-only/tcp-1
       port: 9090
       proxyProtocol: {}
@@ -317,6 +322,10 @@ xdsIR:
       - path: /dev/stdout
     globalResources:
       proxyServiceCluster:
+        metadata:
+          name: envoy-envoy-gateway-gateway-precedence-test-6c6824c3
+          namespace: envoy-gateway-system
+          sectionName: "8080"
         name: envoy-gateway/gateway-new-api-only
         settings:
         - metadata:

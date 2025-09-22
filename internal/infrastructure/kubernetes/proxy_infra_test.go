@@ -136,7 +136,7 @@ func TestCreateProxyInfra(t *testing.T) {
 	ep := &egv1a1.EnvoyProxy{
 		Spec: egv1a1.EnvoyProxySpec{
 			Provider: &egv1a1.EnvoyProxyProvider{
-				Type:       egv1a1.ProviderTypeKubernetes,
+				Type:       egv1a1.EnvoyProxyProviderTypeKubernetes,
 				Kubernetes: egv1a1.DefaultEnvoyProxyKubeProvider(),
 			},
 		},

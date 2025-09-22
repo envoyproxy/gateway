@@ -102,6 +102,10 @@ xdsIR:
       - path: /dev/stdout
     globalResources:
       proxyServiceCluster:
+        metadata:
+          name: envoy-gateway-conformance-infra-gateway-tlsroute-refer-1a02781b
+          namespace: envoy-gateway-system
+          sectionName: "8080"
         name: gateway-conformance-infra/gateway-tlsroute-referencegrant
         settings:
         - addressType: IP
@@ -123,5 +127,10 @@ xdsIR:
     tcp:
     - address: 0.0.0.0
       externalPort: 443
+      metadata:
+        kind: Gateway
+        name: gateway-tlsroute-referencegrant
+        namespace: gateway-conformance-infra
+        sectionName: https
       name: gateway-conformance-infra/gateway-tlsroute-referencegrant/https
       port: 10443

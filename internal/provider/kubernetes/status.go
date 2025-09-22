@@ -103,8 +103,16 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context, ext
 							errChan <- err
 							panic(err)
 						}
-						hCopy := h.DeepCopy()
-						hCopy.Status.Parents = mergeRouteParentStatus(h.Namespace, h.Status.Parents, val.Parents)
+						hCopy := &gwapiv1.HTTPRoute{
+							TypeMeta:   h.TypeMeta,
+							ObjectMeta: h.ObjectMeta,
+							Spec:       h.Spec,
+							Status: gwapiv1.HTTPRouteStatus{
+								RouteStatus: gwapiv1.RouteStatus{
+									Parents: mergeRouteParentStatus(h.Namespace, r.envoyGateway.Gateway.ControllerName, h.Status.Parents, val.Parents),
+								},
+							},
+						}
 						return hCopy
 					}),
 				})
@@ -133,8 +141,16 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context, ext
 							errChan <- err
 							panic(err)
 						}
-						gCopy := g.DeepCopy()
-						gCopy.Status.Parents = mergeRouteParentStatus(g.Namespace, g.Status.Parents, val.Parents)
+						gCopy := &gwapiv1.GRPCRoute{
+							TypeMeta:   g.TypeMeta,
+							ObjectMeta: g.ObjectMeta,
+							Spec:       g.Spec,
+							Status: gwapiv1.GRPCRouteStatus{
+								RouteStatus: gwapiv1.RouteStatus{
+									Parents: mergeRouteParentStatus(g.Namespace, r.envoyGateway.Gateway.ControllerName, g.Status.Parents, val.Parents),
+								},
+							},
+						}
 						return gCopy
 					}),
 				})
@@ -165,8 +181,16 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context, ext
 							errChan <- err
 							panic(err)
 						}
-						tCopy := t.DeepCopy()
-						tCopy.Status.Parents = mergeRouteParentStatus(t.Namespace, t.Status.Parents, val.Parents)
+						tCopy := &gwapiv1a2.TLSRoute{
+							TypeMeta:   t.TypeMeta,
+							ObjectMeta: t.ObjectMeta,
+							Spec:       t.Spec,
+							Status: gwapiv1a2.TLSRouteStatus{
+								RouteStatus: gwapiv1.RouteStatus{
+									Parents: mergeRouteParentStatus(t.Namespace, r.envoyGateway.Gateway.ControllerName, t.Status.Parents, val.Parents),
+								},
+							},
+						}
 						return tCopy
 					}),
 				})
@@ -197,8 +221,16 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context, ext
 							errChan <- err
 							panic(err)
 						}
-						tCopy := t.DeepCopy()
-						tCopy.Status.Parents = mergeRouteParentStatus(t.Namespace, t.Status.Parents, val.Parents)
+						tCopy := &gwapiv1a2.TCPRoute{
+							TypeMeta:   t.TypeMeta,
+							ObjectMeta: t.ObjectMeta,
+							Spec:       t.Spec,
+							Status: gwapiv1a2.TCPRouteStatus{
+								RouteStatus: gwapiv1.RouteStatus{
+									Parents: mergeRouteParentStatus(t.Namespace, r.envoyGateway.Gateway.ControllerName, t.Status.Parents, val.Parents),
+								},
+							},
+						}
 						return tCopy
 					}),
 				})
@@ -229,8 +261,16 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context, ext
 							errChan <- err
 							panic(err)
 						}
-						uCopy := u.DeepCopy()
-						uCopy.Status.Parents = mergeRouteParentStatus(u.Namespace, u.Status.Parents, val.Parents)
+						uCopy := &gwapiv1a2.UDPRoute{
+							TypeMeta:   u.TypeMeta,
+							ObjectMeta: u.ObjectMeta,
+							Spec:       u.Spec,
+							Status: gwapiv1a2.UDPRouteStatus{
+								RouteStatus: gwapiv1.RouteStatus{
+									Parents: mergeRouteParentStatus(u.Namespace, r.envoyGateway.Gateway.ControllerName, u.Status.Parents, val.Parents),
+								},
+							},
+						}
 						return uCopy
 					}),
 				})
@@ -261,8 +301,12 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context, ext
 							errChan <- err
 							panic(err)
 						}
-						tCopy := t.DeepCopy()
-						tCopy.Status = *val
+						tCopy := &egv1a1.EnvoyPatchPolicy{
+							TypeMeta:   t.TypeMeta,
+							ObjectMeta: t.ObjectMeta,
+							Spec:       t.Spec,
+							Status:     *val,
+						}
 						return tCopy
 					}),
 				})
@@ -293,8 +337,12 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context, ext
 							errChan <- err
 							panic(err)
 						}
-						tCopy := t.DeepCopy()
-						tCopy.Status = *val
+						tCopy := &egv1a1.ClientTrafficPolicy{
+							TypeMeta:   t.TypeMeta,
+							ObjectMeta: t.ObjectMeta,
+							Spec:       t.Spec,
+							Status:     *val,
+						}
 						return tCopy
 					}),
 				})
@@ -325,8 +373,12 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context, ext
 							errChan <- err
 							panic(err)
 						}
-						tCopy := t.DeepCopy()
-						tCopy.Status = *val
+						tCopy := &egv1a1.BackendTrafficPolicy{
+							TypeMeta:   t.TypeMeta,
+							ObjectMeta: t.ObjectMeta,
+							Spec:       t.Spec,
+							Status:     *val,
+						}
 						return tCopy
 					}),
 				})
@@ -357,8 +409,12 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context, ext
 							errChan <- err
 							panic(err)
 						}
-						tCopy := t.DeepCopy()
-						tCopy.Status = *val
+						tCopy := &egv1a1.SecurityPolicy{
+							TypeMeta:   t.TypeMeta,
+							ObjectMeta: t.ObjectMeta,
+							Spec:       t.Spec,
+							Status:     *val,
+						}
 						return tCopy
 					}),
 				})
@@ -387,8 +443,12 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context, ext
 							errChan <- err
 							panic(err)
 						}
-						tCopy := t.DeepCopy()
-						tCopy.Status = *val
+						tCopy := &gwapiv1a3.BackendTLSPolicy{
+							TypeMeta:   t.TypeMeta,
+							ObjectMeta: t.ObjectMeta,
+							Spec:       t.Spec,
+							Status:     *val,
+						}
 						return tCopy
 					}),
 				})
@@ -419,8 +479,12 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context, ext
 							errChan <- err
 							panic(err)
 						}
-						tCopy := t.DeepCopy()
-						tCopy.Status = *val
+						tCopy := &egv1a1.EnvoyExtensionPolicy{
+							TypeMeta:   t.TypeMeta,
+							ObjectMeta: t.ObjectMeta,
+							Spec:       t.Spec,
+							Status:     *val,
+						}
 						return tCopy
 					}),
 				})
@@ -451,8 +515,12 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context, ext
 							errChan <- err
 							panic(err)
 						}
-						tCopy := t.DeepCopy()
-						tCopy.Status = *val
+						tCopy := &egv1a1.Backend{
+							TypeMeta:   t.TypeMeta,
+							ObjectMeta: t.ObjectMeta,
+							Spec:       t.Spec,
+							Status:     *val,
+						}
 						return tCopy
 					}),
 				})
@@ -501,21 +569,41 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context, ext
 
 // mergeRouteParentStatus merges the old and new RouteParentStatus.
 // This is needed because the RouteParentStatus doesn't support strategic merge patch yet.
-func mergeRouteParentStatus(ns string, old, new []gwapiv1.RouteParentStatus) []gwapiv1.RouteParentStatus {
-	merged := make([]gwapiv1.RouteParentStatus, len(old))
-	_ = copy(merged, old)
-	for _, parent := range new {
+func mergeRouteParentStatus(ns, controllerName string, old, new []gwapiv1.RouteParentStatus) []gwapiv1.RouteParentStatus {
+	// Allocating with worst-case capacity to avoid reallocation.
+	merged := make([]gwapiv1.RouteParentStatus, 0, len(old)+len(new))
+
+	// Range over old status parentRefs in order:
+	// 1. The parentRef exists in the new status: append the new one to the final status.
+	// 2. The parentRef doesn't exist in the new status and it's not our controller: append it to the final status.
+	// 3. The parentRef doesn't exist in the new status, and it is our controller: don't append it to the final status.
+	for _, oldP := range old {
 		found := -1
-		for i, existing := range old {
-			if isParentRefEqual(parent.ParentRef, existing.ParentRef, ns) {
-				found = i
+		for newI, newP := range new {
+			if isParentRefEqual(oldP.ParentRef, newP.ParentRef, ns) {
+				found = newI
 				break
 			}
 		}
 		if found >= 0 {
-			merged[found] = parent
-		} else {
-			merged = append(merged, parent)
+			merged = append(merged, new[found])
+		} else if oldP.ControllerName != gwapiv1.GatewayController(controllerName) {
+			merged = append(merged, oldP)
+		}
+	}
+
+	// Range over new status parentRefs and make sure every parentRef exists in the final status. If not, append it.
+	for _, newP := range new {
+		found := false
+		for _, mergedP := range merged {
+			if isParentRefEqual(newP.ParentRef, mergedP.ParentRef, ns) {
+				found = true
+				break
+			}
+		}
+
+		if !found {
+			merged = append(merged, newP)
 		}
 	}
 	return merged

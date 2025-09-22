@@ -49,6 +49,10 @@
         '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
         commonHttpProtocolOptions:
           headersWithUnderscoresAction: REJECT_REQUEST
+          maxConnectionDuration: 300s
+          maxRequestsPerConnection: 100
+          maxStreamDuration: 200s
+        http1SafeMaxConnectionDuration: true
         http2ProtocolOptions:
           initialConnectionWindowSize: 1048576
           initialStreamWindowSize: 65536
@@ -77,6 +81,49 @@
     socketAddress:
       address: '::'
       portValue: 10082
+  defaultFilterChain:
+    filters:
+    - name: envoy.filters.network.connection_limit
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.connection_limit.v3.ConnectionLimit
+        maxConnections: "5"
+        statPrefix: http-10082
+    - name: envoy.filters.network.http_connection_manager
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+        commonHttpProtocolOptions:
+          headersWithUnderscoresAction: REJECT_REQUEST
+          maxConnectionDuration: 300s
+          maxRequestsPerConnection: 100
+          maxStreamDuration: 200s
+        http2ProtocolOptions:
+          initialConnectionWindowSize: 1048576
+          initialStreamWindowSize: 65536
+          maxConcurrentStreams: 100
+        httpFilters:
+        - name: envoy.filters.http.router
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+            suppressEnvoyHeaders: true
+        mergeSlashes: true
+        normalizePath: true
+        pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
+        rds:
+          configSource:
+            ads: {}
+            resourceApiVersion: V3
+          routeConfigName: third-listener
+        serverHeaderTransformation: PASS_THROUGH
+        statPrefix: http-10082
+        useRemoteAddress: true
+    name: third-listener
+  maxConnectionsToAcceptPerSocketEvent: 1
+  name: third-listener
+  perConnectionBufferLimitBytes: 32768
+- address:
+    socketAddress:
+      address: '::'
+      portValue: 10083
   filterChains:
   - filterChainMatch:
       serverNames:
@@ -86,23 +133,23 @@
       typedConfig:
         '@type': type.googleapis.com/envoy.extensions.filters.network.connection_limit.v3.ConnectionLimit
         maxConnections: "3"
-        statPrefix: tls-passthrough-10082
+        statPrefix: tls-passthrough-10083
     - name: envoy.filters.network.tcp_proxy
       typedConfig:
         '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
         cluster: tls-route-dest
-        statPrefix: tls-passthrough-10082
+        statPrefix: tls-passthrough-10083
   listenerFilters:
   - name: envoy.filters.listener.tls_inspector
     typedConfig:
       '@type': type.googleapis.com/envoy.extensions.filters.listener.tls_inspector.v3.TlsInspector
   maxConnectionsToAcceptPerSocketEvent: 1
-  name: third-listener
+  name: fourth-listener
   perConnectionBufferLimitBytes: 32768
 - address:
     socketAddress:
       address: '::'
-      portValue: 10083
+      portValue: 10084
   filterChains:
   - filters:
     - name: envoy.filters.network.connection_limit
@@ -110,12 +157,12 @@
         '@type': type.googleapis.com/envoy.extensions.filters.network.connection_limit.v3.ConnectionLimit
         delay: 3s
         maxConnections: "10"
-        statPrefix: tcp-10083
+        statPrefix: tcp-10084
     - name: envoy.filters.network.tcp_proxy
       typedConfig:
         '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
         cluster: tcp-route-dest
-        statPrefix: tcp-10083
+        statPrefix: tcp-10084
   maxConnectionsToAcceptPerSocketEvent: 1
-  name: fourth-listener
+  name: fifth-listener
   perConnectionBufferLimitBytes: 32768

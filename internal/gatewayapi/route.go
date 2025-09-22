@@ -198,9 +198,11 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 			continue
 		}
 
+		routeRuleMetadata := buildResourceMetadata(httpRoute, rule.Name)
+
 		// The HTTPRouteRule matches are ORed, a rule is matched if any one of its matches is satisfied,
 		// so generate a unique Xds IR HTTPRoute per match.
-		ruleRoutes, err := t.processHTTPRouteRule(httpRoute, ruleIdx, httpFiltersContext, rule)
+		ruleRoutes, err := t.processHTTPRouteRule(httpRoute, ruleIdx, httpFiltersContext, rule, routeRuleMetadata)
 		if err != nil {
 			errs.Add(status.NewRouteStatusError(
 				fmt.Errorf("failed to process route rule %d: %w", ruleIdx, err),
@@ -216,9 +218,13 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 		backendRefNames := make([]string, len(rule.BackendRefs))
 		backendCustomRefs := []*ir.UnstructuredRef{}
 		// process each backendRef, and calculate the destination settings for this rule
-		for i, backendRef := range rule.BackendRefs {
+		for i := range rule.BackendRefs {
 			settingName := irDestinationSettingName(destName, i)
-			ds, unstructuredRef, err := t.processDestination(settingName, backendRef, parentRef, httpRoute, resources)
+			backendRefCtx := BackendRefWithFilters{
+				BackendRef: &rule.BackendRefs[i].BackendRef,
+				Filters:    rule.BackendRefs[i].Filters,
+			}
+			ds, unstructuredRef, err := t.processDestination(settingName, backendRefCtx, parentRef, httpRoute, resources)
 			if err != nil {
 				errs.Add(status.NewRouteStatusError(
 					fmt.Errorf("failed to process route rule %d backendRef %d: %w", ruleIdx, i, err),
@@ -240,8 +246,8 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 			if ds.IsDynamicResolver {
 				hasDynamicResolver = true
 			}
-			backendNamespace := NamespaceDerefOr(backendRef.Namespace, httpRoute.GetNamespace())
-			backendRefNames[i] = fmt.Sprintf("%s/%s", backendNamespace, backendRef.Name)
+			backendNamespace := NamespaceDerefOr(rule.BackendRefs[i].Namespace, httpRoute.GetNamespace())
+			backendRefNames[i] = fmt.Sprintf("%s/%s", backendNamespace, rule.BackendRefs[i].Name)
 		}
 
 		// process each ir route
@@ -251,7 +257,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 			}
 			destination := &ir.RouteDestination{
 				Settings: allDs,
-				Metadata: buildResourceMetadata(httpRoute, rule.Name),
+				Metadata: routeRuleMetadata,
 			}
 
 			switch {
@@ -379,15 +385,16 @@ func (t *Translator) processHTTPRouteRule(
 	ruleIdx int,
 	httpFiltersContext *HTTPFiltersContext,
 	rule gwapiv1.HTTPRouteRule,
+	routeRuleMetadata *ir.ResourceMetadata,
 ) ([]*ir.HTTPRoute, status.Error) {
 	var ruleRoutes []*ir.HTTPRoute
 
 	// If no matches are specified, the implementation MUST match every HTTP request.
 	if len(rule.Matches) == 0 {
 		irRoute := &ir.HTTPRoute{
-			Name: irRouteName(httpRoute, ruleIdx, -1),
+			Name:     irRouteName(httpRoute, ruleIdx, -1),
+			Metadata: routeRuleMetadata,
 		}
-		irRoute.Metadata = buildResourceMetadata(httpRoute, rule.Name)
 		processRouteTrafficFeatures(irRoute, rule)
 		applyHTTPFiltersContextToIRRoute(httpFiltersContext, irRoute)
 		ruleRoutes = append(ruleRoutes, irRoute)
@@ -453,8 +460,8 @@ func (t *Translator) processHTTPRouteRule(
 		irRoute := &ir.HTTPRoute{
 			Name:               irRouteName(httpRoute, ruleIdx, matchIdx),
 			SessionPersistence: sessionPersistence,
+			Metadata:           routeRuleMetadata,
 		}
-		irRoute.Metadata = buildResourceMetadata(httpRoute, rule.Name)
 		processRouteTrafficFeatures(irRoute, rule)
 
 		if match.Path != nil {
@@ -661,9 +668,13 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 		failedProcessDestination := false
 
 		backendRefNames := make([]string, len(rule.BackendRefs))
-		for i, backendRef := range rule.BackendRefs {
+		for i := range rule.BackendRefs {
 			settingName := irDestinationSettingName(destName, i)
-			ds, _, err := t.processDestination(settingName, backendRef, parentRef, grpcRoute, resources)
+			backendRefCtx := BackendRefWithFilters{
+				BackendRef: &rule.BackendRefs[i].BackendRef,
+				Filters:    rule.BackendRefs[i].Filters,
+			}
+			ds, _, err := t.processDestination(settingName, backendRefCtx, parentRef, grpcRoute, resources)
 			if err != nil {
 				errs.Add(status.NewRouteStatusError(
 					fmt.Errorf("failed to process route rule %d backendRef %d: %w", ruleIdx, i, err),
@@ -677,8 +688,8 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 				continue
 			}
 			allDs = append(allDs, ds)
-			backendNamespace := NamespaceDerefOr(backendRef.Namespace, grpcRoute.GetNamespace())
-			backendRefNames[i] = fmt.Sprintf("%s/%s", backendNamespace, backendRef.Name)
+			backendNamespace := NamespaceDerefOr(rule.BackendRefs[i].Namespace, grpcRoute.GetNamespace())
+			backendRefNames[i] = fmt.Sprintf("%s/%s", backendNamespace, rule.BackendRefs[i].Name)
 		}
 
 		// process each ir route
@@ -896,14 +907,18 @@ func buildResourceMetadata(resource client.Object, sectionName *gwapiv1.SectionN
 }
 
 func filterEGPrefix(in map[string]string) map[string]string {
-	out := map[string]string{}
+	if len(in) == 0 {
+		return nil
+	}
+
+	var out map[string]string
 	for k, v := range in {
 		if strings.HasPrefix(k, egPrefix) {
+			if out == nil {
+				out = make(map[string]string, len(in))
+			}
 			out[strings.TrimPrefix(k, egPrefix)] = v
 		}
-	}
-	if len(out) == 0 {
-		return nil
 	}
 	return out
 }
@@ -948,9 +963,10 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 
 		// compute backends
 		for _, rule := range tlsRoute.Spec.Rules {
-			for i, backendRef := range rule.BackendRefs {
+			for i := range rule.BackendRefs {
 				settingName := irDestinationSettingName(destName, i)
-				ds, _, err := t.processDestination(settingName, backendRef, parentRef, tlsRoute, resources)
+				backendRefCtx := DirectBackendRef{BackendRef: &rule.BackendRefs[i]}
+				ds, _, err := t.processDestination(settingName, backendRefCtx, parentRef, tlsRoute, resources)
 				if err != nil {
 					resolveErrs.Add(err)
 					continue
@@ -1103,9 +1119,10 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 			destName     = irRouteDestinationName(udpRoute, -1 /*rule index*/)
 		)
 
-		for i, backendRef := range udpRoute.Spec.Rules[0].BackendRefs {
+		for i := range udpRoute.Spec.Rules[0].BackendRefs {
 			settingName := irDestinationSettingName(destName, i)
-			ds, _, err := t.processDestination(settingName, backendRef, parentRef, udpRoute, resources)
+			backendRefCtx := DirectBackendRef{BackendRef: &udpRoute.Spec.Rules[0].BackendRefs[i]}
+			ds, _, err := t.processDestination(settingName, backendRefCtx, parentRef, udpRoute, resources)
 			if err != nil {
 				resolveErrs.Add(err)
 				continue
@@ -1163,7 +1180,8 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 					Destination: &ir.RouteDestination{
 						Name:     destName,
 						Settings: destSettings,
-						Metadata: buildResourceMetadata(udpRoute, nil),
+						// udpRoute Must have a single rule, so can use index 0.
+						Metadata: buildResourceMetadata(udpRoute, udpRoute.Spec.Rules[0].Name),
 					},
 				}
 				irListener.Route = irRoute
@@ -1251,9 +1269,10 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 			destName     = irRouteDestinationName(tcpRoute, -1 /*rule index*/)
 		)
 
-		for i, backendRef := range tcpRoute.Spec.Rules[0].BackendRefs {
+		for i := range tcpRoute.Spec.Rules[0].BackendRefs {
 			settingName := irDestinationSettingName(destName, i)
-			ds, _, err := t.processDestination(settingName, backendRef, parentRef, tcpRoute, resources)
+			backendRefCtx := DirectBackendRef{BackendRef: &tcpRoute.Spec.Rules[0].BackendRefs[i]}
+			ds, _, err := t.processDestination(settingName, backendRefCtx, parentRef, tcpRoute, resources)
 			// skip adding the route and provide the reason via route status.
 			if err != nil {
 				resolveErrs.Add(err)
@@ -1310,7 +1329,8 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 					Destination: &ir.RouteDestination{
 						Name:     destName,
 						Settings: destSettings,
-						Metadata: buildResourceMetadata(tcpRoute, nil),
+						// tcpRoute Must have a single rule, so can use index 0.
+						Metadata: buildResourceMetadata(tcpRoute, tcpRoute.Spec.Rules[0].Name),
 					},
 				}
 
@@ -1366,7 +1386,7 @@ func (t *Translator) processDestination(name string, backendRefContext BackendRe
 ) (ds *ir.DestinationSetting, unstructuredRef *ir.UnstructuredRef, err status.Error) {
 	routeType := route.GetRouteType()
 	weight := uint32(1)
-	backendRef := GetBackendRef(backendRefContext)
+	backendRef := backendRefContext.GetBackendRef()
 	if backendRef.Weight != nil {
 		weight = uint32(*backendRef.Weight)
 	}
@@ -1597,7 +1617,10 @@ func (t *Translator) processServiceDestinationSetting(
 }
 
 func getBackendFilters(routeType gwapiv1.Kind, backendRefContext BackendRefContext) (backendFilters any) {
-	filters := GetFilters(backendRefContext)
+	filters := backendRefContext.GetFilters()
+	if filters == nil {
+		return nil
+	}
 	switch routeType {
 	case resource.KindHTTPRoute:
 		if len(filters.([]gwapiv1.HTTPRouteFilter)) > 0 {

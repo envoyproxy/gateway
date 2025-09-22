@@ -199,6 +199,10 @@ xdsIR:
       - path: /dev/stdout
     globalResources:
       proxyServiceCluster:
+        metadata:
+          name: envoy-envoy-gateway-gateway-1-196ae069
+          namespace: envoy-gateway-system
+          sectionName: "8080"
         name: envoy-gateway/gateway-1
         settings:
         - addressType: IP
@@ -234,6 +238,14 @@ xdsIR:
           name: Content-Type
           value:
           - application/json
+        - append: true
+          name: X-Add-Header
+          value:
+          - added-502
+        - append: false
+          name: X-Set-Header
+          value:
+          - set-502
         directResponse:
           body: '{"error": "Internal Server Error"}'
           statusCode: 502

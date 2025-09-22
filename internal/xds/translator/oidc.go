@@ -467,6 +467,8 @@ func createOAuth2TokenEndpointCluster(tCtx *types.ResourceVersionTable,
 			ir.NewDestEndpoint(nil, cluster.hostname, cluster.port, false, nil),
 		},
 		Name: destinationSettingName(cluster.name),
+		// TODO: tracked with issue #6861
+		Metadata: nil,
 	}
 
 	clusterArgs := &xdsClusterArgs{
@@ -474,6 +476,7 @@ func createOAuth2TokenEndpointCluster(tCtx *types.ResourceVersionTable,
 		settings:     []*ir.DestinationSetting{ds},
 		tSocket:      tSocket,
 		endpointType: cluster.endpointType,
+		metadata:     ds.Metadata,
 	}
 	if cluster.tls {
 		if tSocket, err = buildXdsUpstreamTLSSocket(cluster.hostname); err != nil {

@@ -912,6 +912,7 @@ func processServiceCluster(tCtx *types.ResourceVersionTable, xdsIR *ir.Xds) erro
 					MinEndpointsThreshold: ptr.To[uint64](1),
 				},
 			},
+			metadata: svcCluster.Metadata,
 		}); err != nil {
 			return err
 		}

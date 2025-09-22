@@ -140,6 +140,13 @@ backendTrafficPolicies:
           inline: gateway-1 Not Found
           type: Inline
         contentType: text/plain
+        header:
+          add:
+          - name: X-Add-Header
+            value: added-404
+          set:
+          - name: X-Set-Header
+            value: set-404
     - match:
         statusCodes:
         - type: Value
@@ -499,6 +506,15 @@ xdsIR:
                 - value: 404
               name: backendtrafficpolicy/default/policy-for-gateway/responseoverride/rule/0
               response:
+                addResponseHeaders:
+                - append: true
+                  name: X-Add-Header
+                  value:
+                  - added-404
+                - append: false
+                  name: X-Set-Header
+                  value:
+                  - set-404
                 body: gateway-1 Not Found
                 contentType: text/plain
             - match:
@@ -525,6 +541,10 @@ xdsIR:
       - path: /dev/stdout
     globalResources:
       proxyServiceCluster:
+        metadata:
+          name: envoy-default-gateway-1-bfd08ef4
+          namespace: envoy-gateway-system
+          sectionName: "8080"
         name: default/gateway-2
         settings:
         - metadata:
