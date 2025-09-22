@@ -31,7 +31,11 @@
         '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
         commonTlsContext:
           combinedValidationContext:
-            defaultValidationContext: {}
+            defaultValidationContext:
+              matchTypedSubjectAltNames:
+              - matcher:
+                  exact: spiffe://cluster.local/ns/istio-demo/sa/echo-v1
+                sanType: URI
             validationContextSdsSecretConfig:
               name: policy-btls/backends-ca
               sdsConfig:

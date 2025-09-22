@@ -1176,17 +1176,19 @@ func buildValidationContext(tlsConfig *ir.TLSUpstreamConfig) *tlsv3.CommonTlsCon
 		DefaultValidationContext: &tlsv3.CertificateValidationContext{},
 	}
 
-	// When auto validation is used, URI/DNS SAN validation is ignored, no need to configure it.
-	if (tlsConfig.SNI != nil || len(tlsConfig.SubjectAltNames) > 0) && !tlsConfig.AutoSANValidation {
-		validationContext.DefaultValidationContext.MatchTypedSubjectAltNames = []*tlsv3.SubjectAltNameMatcher{
-			{
-				SanType: tlsv3.SubjectAltNameMatcher_DNS,
-				Matcher: &matcherv3.StringMatcher{
-					MatchPattern: &matcherv3.StringMatcher_Exact{
-						Exact: *tlsConfig.SNI,
+	// When auto validation is used, Static URI/DNS SAN validation in TLS context is ignored, no need to configure it.
+	if !tlsConfig.AutoSANValidation {
+		if tlsConfig.SNI != nil {
+			validationContext.DefaultValidationContext.MatchTypedSubjectAltNames = []*tlsv3.SubjectAltNameMatcher{
+				{
+					SanType: tlsv3.SubjectAltNameMatcher_DNS,
+					Matcher: &matcherv3.StringMatcher{
+						MatchPattern: &matcherv3.StringMatcher_Exact{
+							Exact: *tlsConfig.SNI,
+						},
 					},
 				},
-			},
+			}
 		}
 		for _, san := range tlsConfig.SubjectAltNames {
 			var sanType tlsv3.SubjectAltNameMatcher_SanType

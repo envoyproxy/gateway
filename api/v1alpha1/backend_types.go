@@ -227,12 +227,9 @@ type SNIModifierType string
 const (
 	// SNIModifierTypeClient defines a SNI value selection strategy which uses the client's HTTP Host header as SNI value.
 	// See: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/protocol.proto#envoy-v3-api-field-config-core-v3-upstreamhttpprotocoloptions-auto-sni
-	// Note:
-	//
-	// * When a Backend enables this option, it will override literal SNI value configured in a BackendTLSPolicy.
-	//
-	// * When a Backend that enables this option is referenced in BackendRefs, all other referenced resources must be
-	//   Backends that enable this option.
+	// Note: When a Backend enables this option, it will override literal SNI value configured in a BackendTLSPolicy.
+	// If a Backend that enables this option is referenced in BackendRefs, all other referenced resources must be
+	// Backends that enable this option.
 	SNIModifierTypeClient SNIModifierType = "Client"
 )
 

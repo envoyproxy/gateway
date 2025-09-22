@@ -4640,7 +4640,7 @@ _Appears in:_
 
 | Value | Description |
 | ----- | ----------- |
-| `Client` | SNIModifierTypeClient defines a SNI value selection strategy which uses the client's HTTP Host header as SNI value.<br />See: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/protocol.proto#envoy-v3-api-field-config-core-v3-upstreamhttpprotocoloptions-auto-sni<br />Note:<br />* When a Backend enables this option, it will override literal SNI value configured in a BackendTLSPolicy.<br />* When a Backend that enables this option is referenced in BackendRefs, all other referenced resources must be<br />  Backends that enable this option.<br /> | 
+| `Client` | SNIModifierTypeClient defines a SNI value selection strategy which uses the client's HTTP Host header as SNI value.<br />See: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/protocol.proto#envoy-v3-api-field-config-core-v3-upstreamhttpprotocoloptions-auto-sni<br />Note: When a Backend enables this option, it will override literal SNI value configured in a BackendTLSPolicy.<br />If a Backend that enables this option is referenced in BackendRefs, all other referenced resources must be<br />Backends that enable this option.<br /> | 
 
 
 
