@@ -212,10 +212,7 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 	requiresAutoHTTPConfig := false
 	for i, ds := range args.settings {
 		if ds.TLS != nil {
-			if !requiresAutoHTTPConfig && len(ds.TLS.ALPNProtocols) == 0 {
-				requiresAutoHTTPConfig = true
-			}
-
+			requiresAutoHTTPConfig = true
 			socket, err := buildXdsUpstreamTLSSocketWthCert(ds.TLS)
 			if err != nil {
 				// TODO: Log something here
