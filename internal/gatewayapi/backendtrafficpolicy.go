@@ -1154,26 +1154,38 @@ func getCustomResponseBody(body *egv1a1.CustomResponseBody, resources *resource.
 	if body != nil && body.Type != nil && *body.Type == egv1a1.ResponseValueTypeValueRef {
 		cm := resources.GetConfigMap(policyNs, string(body.ValueRef.Name))
 		if cm != nil {
-			b, dataOk := cm.Data["response.body"]
-			switch {
-			case dataOk:
+			if bin, binOk := cm.BinaryData["response.body"]; binOk {
+				b := string(bin)
 				if err := checkResponseBodySize(&b); err != nil {
 					return nil, err
 				}
 				return &b, nil
-			case len(cm.Data) > 0: // Fallback to the first key if response.body is not found
-				for _, value := range cm.Data {
-					b = value
-					break
-				}
-				if err := checkResponseBodySize(&b); err != nil {
-					return nil, err
-				}
-				return &b, nil
-			default:
-				return nil, fmt.Errorf("can't find the key response.body in the referenced configmap %s", body.ValueRef.Name)
 			}
-
+			if b, dataOk := cm.Data["response.body"]; dataOk {
+				if err := checkResponseBodySize(&b); err != nil {
+					return nil, err
+				}
+				return &b, nil
+			}
+			if len(cm.Data) > 0 {
+				for _, value := range cm.Data {
+					b := value
+					if err := checkResponseBodySize(&b); err != nil {
+						return nil, err
+					}
+					return &b, nil
+				}
+			}
+			if len(cm.BinaryData) > 0 {
+				for _, binValue := range cm.BinaryData {
+					b := string(binValue)
+					if err := checkResponseBodySize(&b); err != nil {
+						return nil, err
+					}
+					return &b, nil
+				}
+			}
+			return nil, fmt.Errorf("can't find the key response.body in the referenced configmap %s", body.ValueRef.Name)
 		} else {
 			return nil, fmt.Errorf("can't find the referenced configmap %s", body.ValueRef.Name)
 		}
@@ -1183,7 +1195,6 @@ func getCustomResponseBody(body *egv1a1.CustomResponseBody, resources *resource.
 		}
 		return body.Inline, nil
 	}
-
 	return nil, nil
 }
 
