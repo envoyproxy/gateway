@@ -151,7 +151,7 @@ func (t *Translator) processBackendTLSPolicy(
 
 	tlsBundle, err := getBackendTLSBundle(policy, resources)
 	ancestorRefs := getAncestorRefs(policy)
-	ancestorRefs = append(ancestorRefs, parent)
+	ancestorRefs = append(ancestorRefs, &parent)
 
 	if err != nil {
 		status.SetTranslationErrorForPolicyAncestors(&policy.Status,
@@ -347,10 +347,10 @@ func getCaCertsFromCARefs(namespace string, caCertificates []gwapiv1.LocalObject
 	return []byte(ca), nil
 }
 
-func getAncestorRefs(policy *gwapiv1a3.BackendTLSPolicy) []gwapiv1a2.ParentReference {
-	ret := make([]gwapiv1a2.ParentReference, len(policy.Status.Ancestors))
+func getAncestorRefs(policy *gwapiv1a3.BackendTLSPolicy) []*gwapiv1a2.ParentReference {
+	ret := make([]*gwapiv1a2.ParentReference, len(policy.Status.Ancestors))
 	for i, ancestor := range policy.Status.Ancestors {
-		ret[i] = ancestor.AncestorRef
+		ret[i] = &ancestor.AncestorRef
 	}
 	return ret
 }

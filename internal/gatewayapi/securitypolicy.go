@@ -180,7 +180,7 @@ func (t *Translator) processSecurityPolicyForHTTPRoute(
 ) {
 	var (
 		targetedRoute  RouteContext
-		parentGateways []gwapiv1a2.ParentReference
+		parentGateways []*gwapiv1a2.ParentReference
 		resolveErr     *status.PolicyResolveError
 	)
 
@@ -221,7 +221,8 @@ func (t *Translator) processSecurityPolicyForHTTPRoute(
 				listenerRouteMap[sectionName] = make(sets.Set[string])
 			}
 			listenerRouteMap[sectionName].Insert(utils.NamespacedName(targetedRoute).String())
-			parentGateways = append(parentGateways, getAncestorRefForPolicy(gwNN, p.SectionName))
+			ancestorRef := getAncestorRefForPolicy(gwNN, p.SectionName)
+			parentGateways = append(parentGateways, &ancestorRef)
 		}
 	}
 
@@ -304,14 +305,12 @@ func (t *Translator) processSecurityPolicyForGateway(
 
 	// Find its ancestor reference by resolved gateway, even with resolve error
 	gatewayNN := utils.NamespacedName(targetedGateway)
-	parentGateways := []gwapiv1a2.ParentReference{
-		getAncestorRefForPolicy(gatewayNN, currTarget.SectionName),
-	}
+	parentGateway := getAncestorRefForPolicy(gatewayNN, currTarget.SectionName)
 
 	// Set conditions for resolve error, then skip current gateway
 	if resolveErr != nil {
-		status.SetResolveErrorForPolicyAncestors(&policy.Status,
-			parentGateways,
+		status.SetResolveErrorForPolicyAncestor(&policy.Status,
+			&parentGateway,
 			t.GatewayControllerName,
 			policy.Generation,
 			resolveErr,
@@ -321,8 +320,8 @@ func (t *Translator) processSecurityPolicyForGateway(
 	}
 
 	if err := t.translateSecurityPolicyForGateway(policy, targetedGateway, currTarget, resources, xdsIR); err != nil {
-		status.SetTranslationErrorForPolicyAncestors(&policy.Status,
-			parentGateways,
+		status.SetTranslationErrorForPolicyAncestor(&policy.Status,
+			&parentGateway,
 			t.GatewayControllerName,
 			policy.Generation,
 			status.Error2ConditionMsg(err),
@@ -330,14 +329,14 @@ func (t *Translator) processSecurityPolicyForGateway(
 	}
 
 	// Set Accepted condition if it is unset
-	status.SetAcceptedForPolicyAncestors(&policy.Status, parentGateways, t.GatewayControllerName, policy.Generation)
+	status.SetAcceptedForPolicyAncestor(&policy.Status, &parentGateway, t.GatewayControllerName, policy.Generation)
 
 	// Check if this policy is overridden by other policies targeting at route and listener levels
 	overriddenTargetsMessage := getOverriddenTargetsMessageForGateway(
 		gatewayMap[gatewayNN], gatewayRouteMap[gatewayNN.String()], currTarget.SectionName)
 	if overriddenTargetsMessage != "" {
-		status.SetConditionForPolicyAncestors(&policy.Status,
-			parentGateways,
+		status.SetConditionForPolicyAncestor(&policy.Status,
+			&parentGateway,
 			t.GatewayControllerName,
 			egv1a1.PolicyConditionOverridden,
 			metav1.ConditionTrue,
