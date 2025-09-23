@@ -1,0 +1,51 @@
+- ignorePortInHostMatching: true
+  name: first-listener
+  virtualHosts:
+  - domains:
+    - '*'
+    name: first-listener/*
+    routes:
+    - match:
+        pathSeparatedPrefix: /foo
+      name: first-route
+      route:
+        clusterNotFoundResponseCode: INTERNAL_SERVER_ERROR
+        regexRewrite:
+          pattern:
+            regex: ^/foo\/*
+          substitution: /
+        upgradeConfigs:
+        - upgradeType: websocket
+        weightedClusters:
+          clusters:
+          - name: first-route-dest/backend/0
+            requestHeadersToAdd:
+            - appendAction: OVERWRITE_IF_EXISTS_OR_ADD
+              header:
+                key: add-header-3
+                value: some-value
+            weight: 1
+    - match:
+        pathSeparatedPrefix: /bar
+      name: second-route
+      route:
+        clusterNotFoundResponseCode: INTERNAL_SERVER_ERROR
+        regexRewrite:
+          pattern:
+            regex: ^/bar\/*
+          substitution: /
+        upgradeConfigs:
+        - upgradeType: websocket
+        weightedClusters:
+          clusters:
+          - name: second-route-dest/backend/0
+            requestHeadersToAdd:
+            - header:
+                key: add-header-1
+                value: some-value
+            - header:
+                key: add-header-2
+                value: some-value
+            weight: 8
+          - name: second-route-dest/backend/1
+            weight: 2
