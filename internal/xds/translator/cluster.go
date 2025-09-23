@@ -857,8 +857,6 @@ func buildTypedExtensionProtocolOptions(args *xdsClusterArgs, requiresAutoHTTPCo
 	// When setting any Typed Extension Protocol Options, UpstreamProtocolOptions are mandatory
 	// If translation requires HTTP2 enablement or HTTP1 trailers, set appropriate setting
 	// Default to http1 otherwise
-	// TODO: If the cluster is TLS enabled, use AutoHTTPConfig instead of ExplicitHttpConfig
-	// so that when ALPN is supported then enabling http1 options doesn't force HTTP/1.1
 	switch {
 	case args.useClientProtocol:
 		protocolOptions.UpstreamProtocolOptions = &httpv3.HttpProtocolOptions_UseDownstreamProtocolConfig{

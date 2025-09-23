@@ -2,7 +2,7 @@ date: Pending
 
 # Changes that are expected to cause an incompatibility with previous versions, such as deletions or modifications to existing APIs.
 breaking changes: |
-  ALPNProtocols in EnvoyProxy Backend TLS setting use [http/1.1, h2] if not set.
+  ALPNProtocols in EnvoyProxy Backend TLS setting use [h2, http/1.1] if not set.
 
 # Updates addressing vulnerabilities, security flaws, or compliance requirements.
 security updates: |
