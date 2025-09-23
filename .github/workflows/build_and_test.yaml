@@ -86,6 +86,17 @@ jobs:
         verbose: true
         use_oidc: ${{ !(github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork) }}
 
+  go-benchmark-test:
+    runs-on: ubuntu-latest
+    needs:
+    - changes
+    if: ${{ github.event_name != 'pull_request' || needs.changes.outputs.run_test_workflow == 'true' }}
+    steps:
+    - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8  # v5.0.0
+    - uses: ./tools/github-actions/setup-deps
+    - name: Run Go Benchmark Tests
+      run: make go-benchmark
+
   build:
     runs-on: ubuntu-latest
     needs: [changes, lint, gen-check, license-check, coverage-test]
