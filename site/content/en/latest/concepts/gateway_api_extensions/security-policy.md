@@ -36,7 +36,9 @@ SecurityPolicy can be attached to Gateway API resources using two targeting mech
 1. **Direct Reference (`targetRefs`)**: Explicitly reference specific resources by name and kind.
 2. **Label Selection (`targetSelectors`)**: Match resources based on their labels (see [targetSelectors API reference](../../api/extension_types#targetselectors))
 
-The policy applies to all resources that match either targeting method. You can target various Gateway API resource types including `Gateway`, `HTTPRoute`, and `GRPCRoute`.
+The policy applies to all resources that match either targeting method. You can target various Gateway API resource types including `Gateway`, `HTTPRoute`, `GRPCRoute`, and `TCPRoute`.
+
+Note: TCPRoute support is limited to authorization using client IP allow/deny lists (IP-based authorization). Other SecurityPolicy features such as JWT, API Key, Basic Auth, or OIDC are not applicable to TCPRoute targets.
 
 **Important**: A SecurityPolicy can only target resources in the same namespace as the policy itself.
 
@@ -44,8 +46,8 @@ The policy applies to all resources that match either targeting method. You can 
 
 When multiple SecurityPolicies apply to the same resource, Envoy Gateway resolves conflicts using a precedence hierarchy based on the target resource type and section-level specificity:
 
-1. **Route rule-level policies** (HTTPRoute/GRPCRoute with `sectionName` targeting specific rules) - Highest precedence
-2. **Route-level policies** (HTTPRoute, GRPCRoute without `sectionName`) - High precedence  
+1. **Route rule-level policies** (HTTPRoute, GRPCRoute, or TCPRoute with `sectionName` targeting specific rules) - Highest precedence
+2. **Route-level policies** (HTTPRoute, GRPCRoute, or TCPRoute without `sectionName`) - High precedence  
 3. **Listener-level policies** (Gateway with `sectionName` targeting specific listeners) - Medium precedence
 4. **Gateway-level policies** (Gateway without `sectionName`) - Lowest precedence
 

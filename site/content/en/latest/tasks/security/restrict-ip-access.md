@@ -6,7 +6,7 @@ This task provides instructions for configuring IP allowlist/denylist on Envoy G
 checks if an incoming request is from an allowed IP address before routing the request to a backend service.
 
 Envoy Gateway introduces a new CRD called [SecurityPolicy][SecurityPolicy] that allows the user to configure IP allowlist/denylist.
-This instantiated resource can be linked to a [Gateway][Gateway], [HTTPRoute][HTTPRoute] or [GRPCRoute][GRPCRoute] resource.
+This instantiated resource can be linked to a [Gateway][Gateway], [HTTPRoute][HTTPRoute], [GRPCRoute][GRPCRoute] or [TCPRoute][TCPRoute] resource.
 
 ## Prerequisites
 
@@ -194,3 +194,4 @@ Checkout the [Developer Guide](../../../contributions/develop) to get involved i
 [Gateway]: https://gateway-api.sigs.k8s.io/api-types/gateway
 [HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute
 [GRPCRoute]: https://gateway-api.sigs.k8s.io/api-types/grpcroute
+[TCPRoute]: https://gateway-api.sigs.k8s.io/guides/tcp/

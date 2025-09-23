@@ -12,6 +12,7 @@ new features: |
   Added support for RetryPolicy in gRPC ExtAuth callouts via SecurityPolicy backend settings fields.
   Added support for late response headers in ClientTrafficPolicy.
   Added max connection/stream duration and max requests per connection to ClientTrafficPolicy.
+  Added support for applying SecurityPolicy Authorization to TCPRoute (client IP / allow-deny list for TCP traffic).
 
 bug fixes: |
   Fixed %ROUTE_KIND% operator to be lower-cased when used by clusterStatName in EnvoyProxy API.
