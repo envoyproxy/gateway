@@ -171,6 +171,11 @@ docs-release-gen:
 	@$(call log, "Added Release Doc: site/content/en/$(DOC_VERSION)")
 	cp -r site/content/en/latest/ site/content/en/$(DOC_VERSION)/
 
+.PHONY: docs-sync-owners
+docs-sync-owners: $(tools/sync-docs-codeowners) # Sync maintainers and emeritus-maintainers from OWNERS to CODEOWNERS.md
+	@$(LOG_TARGET)
+	$(tools/sync-docs-codeowners)
+
 .PHONY: docs-check-links
 docs-check-links: # Check for broken links in the docs
 	@$(LOG_TARGET)
