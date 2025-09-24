@@ -1079,7 +1079,7 @@ type RemoteJWKS struct {
 	URI string `json:"uri"`
 
 	// Duration after which the cached JWKS should be expired. If not specified, default cache duration is 5 minutes.
-	CacheDuration *gwapiv1.Duration `json:"cacheDuration,omitempty"`
+	CacheDuration *metav1.Duration `json:"cacheDuration,omitempty"`
 }
 
 // OIDC defines the schema for authenticating HTTP requests using

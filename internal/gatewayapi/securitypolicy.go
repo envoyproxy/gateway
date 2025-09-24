@@ -1007,10 +1007,11 @@ func (t *Translator) buildRemoteJWKS(
 	envoyProxy *egv1a1.EnvoyProxy,
 ) (*ir.RemoteJWKS, error) {
 	var (
-		protocol ir.AppProtocol
-		rd       *ir.RouteDestination
-		traffic  *ir.TrafficFeatures
-		err      error
+		protocol      ir.AppProtocol
+		rd            *ir.RouteDestination
+		traffic       *ir.TrafficFeatures
+		err           error
+		cacheDuration *metav1.Duration
 	)
 
 	u, err := url.Parse(remoteJWKS.URI)
@@ -1037,11 +1038,19 @@ func (t *Translator) buildRemoteJWKS(
 		}
 	}
 
+	if remoteJWKS.CacheDuration != nil {
+		d, err := time.ParseDuration(string(*remoteJWKS.CacheDuration))
+		if err != nil {
+			return nil, err
+		}
+		cacheDuration = ir.MetaV1DurationPtr(d)
+	}
+
 	return &ir.RemoteJWKS{
 		Destination:   rd,
 		Traffic:       traffic,
 		URI:           remoteJWKS.URI,
-		CacheDuration: remoteJWKS.CacheDuration,
+		CacheDuration: cacheDuration,
 	}, nil
 }
 
