@@ -203,7 +203,7 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 	clientTrafficPolicies := t.ProcessClientTrafficPolicies(resources, acceptedGateways, xdsIR, infraIR)
 
 	// Process BackendTrafficPolicies
-	routes := []RouteContext{}
+	routes := make([]RouteContext, 0, len(httpRoutes)+len(grpcRoutes)+len(tlsRoutes)+len(tcpRoutes)+len(udpRoutes))
 	for _, h := range httpRoutes {
 		routes = append(routes, h)
 	}
