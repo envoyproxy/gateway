@@ -93,7 +93,7 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(envoyExtensionPolicies []*egv
 				// gatewayRouteMap and ancestor list, which will be used to check
 				// policy overrides and populate its ancestor status.
 				parentRefs := GetParentReferences(route)
-				ancestorRefs := make([]gwapiv1a2.ParentReference, 0, len(parentRefs))
+				ancestorRefs := make([]*gwapiv1a2.ParentReference, 0, len(parentRefs))
 				for _, p := range parentRefs {
 					if p.Kind == nil || *p.Kind == resource.KindGateway {
 						namespace := route.GetNamespace()
@@ -112,7 +112,8 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(envoyExtensionPolicies []*egv
 						gatewayRouteMap[key].Insert(utils.NamespacedName(route).String())
 
 						// Do need a section name since the policy is targeting to a route
-						ancestorRefs = append(ancestorRefs, getAncestorRefForPolicy(gwNN, p.SectionName))
+						ancestorRef := getAncestorRefForPolicy(gwNN, p.SectionName)
+						ancestorRefs = append(ancestorRefs, &ancestorRef)
 					}
 				}
 
@@ -165,9 +166,10 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(envoyExtensionPolicies []*egv
 
 				// Find its ancestor reference by resolved gateway, even with resolve error
 				gatewayNN := utils.NamespacedName(gateway)
-				ancestorRefs := []gwapiv1a2.ParentReference{
+				ancestorRef := getAncestorRefForPolicy(gatewayNN, nil)
+				ancestorRefs := []*gwapiv1a2.ParentReference{
 					// Don't need a section name since the policy is targeting to a gateway
-					getAncestorRefForPolicy(gatewayNN, nil),
+					&ancestorRef,
 				}
 
 				// Set conditions for resolve error, then skip current gateway

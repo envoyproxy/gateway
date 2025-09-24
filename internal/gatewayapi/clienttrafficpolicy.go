@@ -84,14 +84,12 @@ func (t *Translator) ProcessClientTrafficPolicies(
 					continue
 				}
 				key := utils.NamespacedName(gateway)
-				ancestorRefs := []gwapiv1a2.ParentReference{
-					getAncestorRefForPolicy(key, currTarget.SectionName),
-				}
+				ancestorRef := getAncestorRefForPolicy(key, currTarget.SectionName)
 
 				// Set conditions for resolve error, then skip current gateway
 				if resolveErr != nil {
-					status.SetResolveErrorForPolicyAncestors(&policy.Status,
-						ancestorRefs,
+					status.SetResolveErrorForPolicyAncestor(&policy.Status,
+						&ancestorRef,
 						t.GatewayControllerName,
 						policy.Generation,
 						resolveErr,
@@ -112,8 +110,8 @@ func (t *Translator) ProcessClientTrafficPolicies(
 						Message: message,
 					}
 
-					status.SetResolveErrorForPolicyAncestors(&policy.Status,
-						ancestorRefs,
+					status.SetResolveErrorForPolicyAncestor(&policy.Status,
+						&ancestorRef,
 						t.GatewayControllerName,
 						policy.Generation,
 						resolveErr,
@@ -146,8 +144,8 @@ func (t *Translator) ProcessClientTrafficPolicies(
 
 				// Set conditions for translation error if it got any
 				if err != nil {
-					status.SetTranslationErrorForPolicyAncestors(&policy.Status,
-						ancestorRefs,
+					status.SetTranslationErrorForPolicyAncestor(&policy.Status,
+						&ancestorRef,
 						t.GatewayControllerName,
 						policy.Generation,
 						status.Error2ConditionMsg(err),
@@ -155,7 +153,7 @@ func (t *Translator) ProcessClientTrafficPolicies(
 				}
 
 				// Set Accepted condition if it is unset
-				status.SetAcceptedForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName, policy.Generation)
+				status.SetAcceptedForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName, policy.Generation)
 			}
 		}
 	}
@@ -182,14 +180,12 @@ func (t *Translator) ProcessClientTrafficPolicies(
 				}
 
 				key := utils.NamespacedName(gateway)
-				ancestorRefs := []gwapiv1a2.ParentReference{
-					getAncestorRefForPolicy(key, nil),
-				}
+				ancestorRef := getAncestorRefForPolicy(key, nil)
 
 				// Set conditions for resolve error, then skip current gateway
 				if resolveErr != nil {
-					status.SetResolveErrorForPolicyAncestors(&policy.Status,
-						ancestorRefs,
+					status.SetResolveErrorForPolicyAncestor(&policy.Status,
+						&ancestorRef,
 						t.GatewayControllerName,
 						policy.Generation,
 						resolveErr,
@@ -209,8 +205,8 @@ func (t *Translator) ProcessClientTrafficPolicies(
 						Message: message,
 					}
 
-					status.SetResolveErrorForPolicyAncestors(&policy.Status,
-						ancestorRefs,
+					status.SetResolveErrorForPolicyAncestor(&policy.Status,
+						&ancestorRef,
 						t.GatewayControllerName,
 						policy.Generation,
 						resolveErr,
@@ -226,8 +222,8 @@ func (t *Translator) ProcessClientTrafficPolicies(
 					sort.Strings(sections)
 					message := fmt.Sprintf("There are existing ClientTrafficPolicies that are overriding these sections %v", sections)
 
-					status.SetConditionForPolicyAncestors(&policy.Status,
-						ancestorRefs,
+					status.SetConditionForPolicyAncestor(&policy.Status,
+						&ancestorRef,
 						t.GatewayControllerName,
 						egv1a1.PolicyConditionOverridden,
 						metav1.ConditionTrue,
@@ -264,8 +260,8 @@ func (t *Translator) ProcessClientTrafficPolicies(
 
 				// Set conditions for translation error if it got any
 				if errs != nil {
-					status.SetTranslationErrorForPolicyAncestors(&policy.Status,
-						ancestorRefs,
+					status.SetTranslationErrorForPolicyAncestor(&policy.Status,
+						&ancestorRef,
 						t.GatewayControllerName,
 						policy.Generation,
 						status.Error2ConditionMsg(errs),
@@ -273,7 +269,7 @@ func (t *Translator) ProcessClientTrafficPolicies(
 				}
 
 				// Set Accepted condition if it is unset
-				status.SetAcceptedForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName, policy.Generation)
+				status.SetAcceptedForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName, policy.Generation)
 			}
 		}
 	}
