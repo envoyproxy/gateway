@@ -17,6 +17,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	netutils "github.com/envoyproxy/gateway/internal/utils/net"
 	"github.com/envoyproxy/gateway/internal/utils/regex"
 )
@@ -24,9 +25,6 @@ import (
 const (
 	// envoyCfgFileName is the name of the Envoy configuration file.
 	envoyCfgFileName = "bootstrap.yaml"
-	// envoyGatewayXdsServerHost is the DNS name of the Xds Server within Envoy Gateway.
-	// It defaults to the Envoy Gateway Kubernetes service.
-	envoyGatewayXdsServerHost = "envoy-gateway"
 	// EnvoyAdminAddress is the listening v4 address of the envoy admin interface.
 	EnvoyAdminAddress   = "127.0.0.1"
 	EnvoyAdminAddressV6 = "::1"
@@ -251,7 +249,7 @@ func GetRenderedBootstrapConfig(opts *RenderBootstrapConfigOptions) (string, err
 	cfg := &bootstrapConfig{
 		parameters: bootstrapParameters{
 			XdsServer: serverParameters{
-				Address: envoyGatewayXdsServerHost,
+				Address: config.GetEnvoyGatewayServiceName(),
 				Port:    DefaultXdsServerPort,
 			},
 			AdminServer: adminServerParameters{

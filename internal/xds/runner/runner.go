@@ -123,7 +123,7 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 		if err != nil {
 			return fmt.Errorf("failed to create Kubernetes client: %w", err)
 		}
-		saAudience := fmt.Sprintf("%s.%s.svc.%s", config.EnvoyGatewayServiceName, r.ControllerNamespace, r.DNSDomain)
+		saAudience := fmt.Sprintf("%s.%s.svc.%s", config.GetEnvoyGatewayServiceName(), r.ControllerNamespace, r.DNSDomain)
 		jwtInterceptor := kubejwt.NewJWTAuthInterceptor(
 			r.Logger,
 			clientset,
