@@ -8,6 +8,7 @@ package translator
 import (
 	"errors"
 	"fmt"
+	"regexp"
 	"strings"
 	"time"
 
@@ -440,7 +441,9 @@ func useRegexRewriteForPrefixMatchReplace(pathMatch *ir.StringMatch, prefixMatch
 func prefix2RegexRewrite(prefix string) *matcherv3.RegexMatchAndSubstitute {
 	return &matcherv3.RegexMatchAndSubstitute{
 		Pattern: &matcherv3.RegexMatcher{
-			Regex: "^" + prefix + `\/*`,
+			// Escape prefix for regex metacharacters
+			// https://github.com/envoyproxy/gateway/issues/6857
+			Regex: "^" + regexp.QuoteMeta(prefix) + `\/*`,
 		},
 		Substitution: "/",
 	}
