@@ -40,15 +40,23 @@ spec:
       automountServiceAccountToken: false
       containers:
       - args:
-        - --service-cluster default
-        - --service-node $(ENVOY_POD_NAME)
-        - --config-yaml test bootstrap config
-        - --log-level warn
+        - --service-cluster
+        - default
+        - --service-node
+        - $(ENVOY_POD_NAME)
+        - --config-yaml
+        - test bootstrap config
+        - --log-level
+        - warn
         - --cpuset-threads
-        - --drain-strategy immediate
-        - --concurrency 4
-        - --component-log-level misc:error
-        - --drain-time-s 60
+        - --drain-strategy
+        - immediate
+        - --concurrency
+        - "4"
+        - --component-log-level
+        - misc:error
+        - --drain-time-s
+        - "60"
         command:
         - envoy
         env:
