@@ -212,11 +212,11 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 		}
 
 		destName := irRouteDestinationName(httpRoute, ruleIdx)
-		allDs := []*ir.DestinationSetting{}
+		allDs := make([]*ir.DestinationSetting, 0, len(rule.BackendRefs))
 		failedProcessDestination := false
 		hasDynamicResolver := false
 		backendRefNames := make([]string, len(rule.BackendRefs))
-		backendCustomRefs := []*ir.UnstructuredRef{}
+		backendCustomRefs := make([]*ir.UnstructuredRef, 0, len(rule.BackendRefs))
 		// process each backendRef, and calculate the destination settings for this rule
 		for i := range rule.BackendRefs {
 			settingName := irDestinationSettingName(destName, i)
@@ -664,7 +664,7 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 		}
 
 		destName := irRouteDestinationName(grpcRoute, ruleIdx)
-		allDs := []*ir.DestinationSetting{}
+		allDs := make([]*ir.DestinationSetting, 0, len(rule.BackendRefs))
 		failedProcessDestination := false
 
 		backendRefNames := make([]string, len(rule.BackendRefs))
