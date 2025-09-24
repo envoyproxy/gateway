@@ -41,10 +41,13 @@ spec:
       automountServiceAccountToken: false
       containers:
       - args:
-        - --service-cluster default
-        - --service-node $(ENVOY_POD_NAME)
+        - --service-cluster
+        - default
+        - --service-node
+        - $(ENVOY_POD_NAME)
+        - --config-yaml
         - |
-          --config-yaml admin:
+          admin:
             access_log:
             - name: envoy.access_loggers.file
               typed_config:
@@ -209,11 +212,15 @@ spec:
               - name: "envoy.resource_monitors.fixed_heap"
                 threshold:
                   value: 0.98
-        - --log-level warn
+        - --log-level
+        - warn
         - --cpuset-threads
-        - --drain-strategy immediate
-        - --component-log-level misc:error
-        - --drain-time-s 60
+        - --drain-strategy
+        - immediate
+        - --component-log-level
+        - misc:error
+        - --drain-time-s
+        - "60"
         command:
         - envoy
         env:
