@@ -28,6 +28,7 @@ bug fixes: |
   Fixed ProxyTopologyInjector cache sync race condition that caused injection failures
   Fixed validation for grpc routes with extension ref filters.
   Fixed service account token handling in GatewayNamespaceMode to use SDS for properly refreshing expired token.
+  Fixed handling of regex meta characters in prefix match replace for URL rewrite.
 
 # Enhancements that improve performance.
 performance improvements: |

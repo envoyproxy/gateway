@@ -84,7 +84,7 @@ go.test.cel: manifests # Run the CEL validation tests
 .PHONY: go.test.benchmark
 go.test.benchmark: ## Run benchmark tests for translation performance
 	@$(LOG_TARGET)
-	go test -timeout=10m -run='^$$' -bench=. -benchmem -benchtime=1x -count=3 ./test/gobench
+	go test -timeout=15m -run='^$$' -bench=. -benchmem -benchtime=1x -count=6 ./test/gobench
 
 .PHONY: go.clean
 go.clean: ## Clean the building output files

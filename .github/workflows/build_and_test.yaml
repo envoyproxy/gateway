@@ -93,9 +93,20 @@ jobs:
     if: ${{ github.event_name != 'pull_request' || needs.changes.outputs.run_test_workflow == 'true' }}
     steps:
     - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8  # v5.0.0
+      with:
+        fetch-depth: 0  # Need main branch access for benchmark comparison
     - uses: ./tools/github-actions/setup-deps
-    - name: Run Go Benchmark Tests
-      run: make go-benchmark
+
+    - name: Install benchstat
+      run: go install golang.org/x/perf/cmd/benchstat@latest
+    - name: Run Benchmark Comparison
+      continue-on-error: true
+      run: |
+        if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+          ./tools/hack/go-benchmark-compare.sh
+        else
+          make go-benchmark
+        fi
 
   build:
     runs-on: ubuntu-latest
@@ -346,7 +357,4 @@ jobs:
     steps:
     - run: |
         echo "CI checks completed"
-        [ "${{
-            contains(needs.*.result, 'failure') ||
-            contains(needs.*.result, 'cancelled')
-          }}" == "false" ] || exit 1
+        [ "${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}" == "false" ] || exit 1
