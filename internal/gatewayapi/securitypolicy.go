@@ -56,31 +56,43 @@ func (t *Translator) ProcessSecurityPolicies(securityPolicies []*egv1a1.Security
 	resources *resource.Resources,
 	xdsIR resource.XdsIRMap,
 ) []*egv1a1.SecurityPolicy {
-	var res []*egv1a1.SecurityPolicy
 	// SecurityPolicies are already sorted by the provider layer
 
 	// First build a map out of the routes and gateways for faster lookup since users might have thousands of routes or more.
 	// For gateways this probably isn't quite as necessary.
-	routeMap := map[policyTargetRouteKey]*policyRouteTargetContext{}
+	routeMapSize := len(routes)
+	gatewayMapSize := len(gateways)
+	policyMapSize := len(securityPolicies)
+
+	// Pre-allocate result slice and maps with estimated capacity to reduce memory allocations
+	res := make([]*egv1a1.SecurityPolicy, 0, len(securityPolicies))
+	routeMap := make(map[policyTargetRouteKey]*policyRouteTargetContext, routeMapSize)
 	for _, route := range routes {
 		key := policyTargetRouteKey{
 			Kind:      string(route.GetRouteType()),
 			Name:      route.GetName(),
 			Namespace: route.GetNamespace(),
 		}
-		routeMap[key] = &policyRouteTargetContext{RouteContext: route, attachedToRouteRules: make(sets.Set[string])}
+		routeMap[key] = &policyRouteTargetContext{
+			RouteContext:         route,
+			attachedToRouteRules: make(sets.Set[string]),
+		}
 	}
-	gatewayMap := map[types.NamespacedName]*policyGatewayTargetContext{}
+
+	gatewayMap := make(map[types.NamespacedName]*policyGatewayTargetContext, gatewayMapSize)
 	for _, gw := range gateways {
 		key := utils.NamespacedName(gw)
-		gatewayMap[key] = &policyGatewayTargetContext{GatewayContext: gw, attachedToListeners: make(sets.Set[string])}
+		gatewayMap[key] = &policyGatewayTargetContext{
+			GatewayContext:      gw,
+			attachedToListeners: make(sets.Set[string]),
+		}
 	}
 
 	// Map of Gateway to the routes attached to it.
 	// The routes are grouped by sectionNames of their targetRefs
-	gatewayRouteMap := make(map[string]map[string]sets.Set[string])
+	gatewayRouteMap := make(map[string]map[string]sets.Set[string], gatewayMapSize)
 
-	handledPolicies := make(map[types.NamespacedName]*egv1a1.SecurityPolicy)
+	handledPolicies := make(map[types.NamespacedName]*egv1a1.SecurityPolicy, policyMapSize)
 
 	// Translate
 	// 1. First translate Policies targeting RouteRules
@@ -622,6 +634,28 @@ func (t *Translator) translateSecurityPolicyForRoute(
 			}
 		}
 
+		// Pre-create security features to avoid repeated allocations
+		securityFeatures := &ir.SecurityFeatures{
+			CORS:          cors,
+			JWT:           jwt,
+			OIDC:          oidc,
+			APIKeyAuth:    apiKeyAuth,
+			BasicAuth:     basicAuth,
+			ExtAuth:       extAuth,
+			Authorization: authorization,
+		}
+
+		// Pre-create error response to avoid repeated allocations
+		var errorResponse *ir.CustomResponse
+		if errs != nil {
+			shouldFailOpen := extAuthErr != nil && !hasNonExtAuthError && ptr.Deref(policy.Spec.ExtAuth.FailOpen, false)
+			if !shouldFailOpen {
+				errorResponse = &ir.CustomResponse{
+					StatusCode: ptr.To(uint32(500)),
+				}
+			}
+		}
+
 		irKey := t.getIRKey(gtwCtx.Gateway)
 		for _, listener := range parentRefCtx.listeners {
 			irListener := xdsIR[irKey].GetHTTPListener(irListenerName(listener))
@@ -640,26 +674,10 @@ func (t *Translator) translateSecurityPolicyForRoute(
 							continue
 						}
 
-						r.Security = &ir.SecurityFeatures{
-							CORS:          cors,
-							JWT:           jwt,
-							OIDC:          oidc,
-							APIKeyAuth:    apiKeyAuth,
-							BasicAuth:     basicAuth,
-							ExtAuth:       extAuth,
-							Authorization: authorization,
-						}
-						if errs != nil {
-							// If there is only error for ext auth and ext auth is set to fail open, then skip the ext auth
-							// and allow the request to go through.
-							// Otherwise, return a 500 direct response to avoid unauthorized access.
-							shouldFailOpen := extAuthErr != nil && !hasNonExtAuthError && ptr.Deref(policy.Spec.ExtAuth.FailOpen, false)
-							if !shouldFailOpen {
-								// Return a 500 direct response to avoid unauthorized access
-								r.DirectResponse = &ir.CustomResponse{
-									StatusCode: ptr.To(uint32(500)),
-								}
-							}
+						r.Security = securityFeatures
+						if errorResponse != nil {
+							// Return a 500 direct response to avoid unauthorized access
+							r.DirectResponse = errorResponse
 						}
 					}
 				}
@@ -760,6 +778,30 @@ func (t *Translator) translateSecurityPolicyForGateway(
 	// Should exist since we've validated this
 	x := xdsIR[irKey]
 
+	// Pre-create security features and error response to avoid repeated allocations
+	securityFeatures := &ir.SecurityFeatures{
+		CORS:          cors,
+		JWT:           jwt,
+		OIDC:          oidc,
+		APIKeyAuth:    apiKeyAuth,
+		BasicAuth:     basicAuth,
+		ExtAuth:       extAuth,
+		Authorization: authorization,
+	}
+
+	var errorResponse *ir.CustomResponse
+	if errs != nil {
+		// If there is only error for ext auth and ext auth is set to fail open, then skip the ext auth
+		// and allow the request to go through.
+		// Otherwise, return a 500 direct response to avoid unauthorized access.
+		shouldFailOpen := extAuthErr != nil && !hasNonExtAuthError && ptr.Deref(policy.Spec.ExtAuth.FailOpen, false)
+		if !shouldFailOpen {
+			errorResponse = &ir.CustomResponse{
+				StatusCode: ptr.To(uint32(500)),
+			}
+		}
+	}
+
 	policyTarget := irStringKey(policy.Namespace, string(target.Name))
 	for _, h := range x.HTTP {
 		// A HTTPListener name has the format namespace/gatewayName/listenerName
@@ -772,6 +814,7 @@ func (t *Translator) translateSecurityPolicyForGateway(
 		if target.SectionName != nil && string(*target.SectionName) != h.Metadata.SectionName {
 			continue
 		}
+
 		// A Policy targeting the specific scope(xRoute rule, xRoute, Gateway listener) wins over a policy
 		// targeting a lesser specific scope(Gateway).
 		for _, r := range h.Routes {
@@ -779,25 +822,9 @@ func (t *Translator) translateSecurityPolicyForGateway(
 			if r.Security != nil {
 				continue
 			}
-			r.Security = &ir.SecurityFeatures{
-				CORS:          cors,
-				JWT:           jwt,
-				OIDC:          oidc,
-				APIKeyAuth:    apiKeyAuth,
-				BasicAuth:     basicAuth,
-				ExtAuth:       extAuth,
-				Authorization: authorization,
-			}
-			if errs != nil {
-				// If there is only error for ext auth and ext auth is set to fail open, then skip the ext auth
-				// and allow the request to go through.
-				// Otherwise, return a 500 direct response to avoid unauthorized access.
-				shouldFailOpen := extAuthErr != nil && !hasNonExtAuthError && ptr.Deref(policy.Spec.ExtAuth.FailOpen, false)
-				if !shouldFailOpen {
-					r.DirectResponse = &ir.CustomResponse{
-						StatusCode: ptr.To(uint32(500)),
-					}
-				}
+			r.Security = securityFeatures
+			if errorResponse != nil {
+				r.DirectResponse = errorResponse
 			}
 		}
 	}
