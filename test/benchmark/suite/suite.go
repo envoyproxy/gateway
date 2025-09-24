@@ -98,6 +98,21 @@ func NewBenchmarkTestSuite(client client.Client, options BenchmarkOptions,
 		return nil, err
 	}
 
+	// Override benchmark client image via env vars to avoid using latest tags.
+	// Defaults must be explicit and non-latest to ensure reproducible runs.
+	if len(benchmarkClient.Spec.Template.Spec.Containers) > 0 {
+		image := os.Getenv("NIGHTHAWK_IMAGE")
+		tag := os.Getenv("NIGHTHAWK_TAG")
+		// Provide defaults aligned with Makefile if envs are not set.
+		if image == "" {
+			image = "envoyproxy/nighthawk-dev"
+		}
+		if tag == "" {
+			tag = "v0.7.0"
+		}
+		benchmarkClient.Spec.Template.Spec.Containers[0].Image = fmt.Sprintf("%s:%s", image, tag)
+	}
+
 	// Reset some timeout config for the benchmark test.
 	config.SetupTimeoutConfig(&timeoutConfig)
 	timeoutConfig.RouteMustHaveParents = 180 * time.Second
