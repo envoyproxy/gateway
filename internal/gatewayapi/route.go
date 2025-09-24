@@ -52,7 +52,7 @@ type RoutesTranslator interface {
 }
 
 func (t *Translator) ProcessHTTPRoutes(httpRoutes []*gwapiv1.HTTPRoute, gateways []*GatewayContext, resources *resource.Resources, xdsIR resource.XdsIRMap) []*HTTPRouteContext {
-	var relevantHTTPRoutes []*HTTPRouteContext
+	relevantHTTPRoutes := make([]*HTTPRouteContext, 0, len(httpRoutes))
 
 	// HTTPRoutes are already sorted by the provider layer
 
@@ -79,7 +79,7 @@ func (t *Translator) ProcessHTTPRoutes(httpRoutes []*gwapiv1.HTTPRoute, gateways
 }
 
 func (t *Translator) ProcessGRPCRoutes(grpcRoutes []*gwapiv1.GRPCRoute, gateways []*GatewayContext, resources *resource.Resources, xdsIR resource.XdsIRMap) []*GRPCRouteContext {
-	var relevantGRPCRoutes []*GRPCRouteContext
+	relevantGRPCRoutes := make([]*GRPCRouteContext, 0, len(grpcRoutes))
 
 	// GRPCRoutes are already sorted by the provider layer
 
@@ -387,7 +387,11 @@ func (t *Translator) processHTTPRouteRule(
 	rule *gwapiv1.HTTPRouteRule,
 	routeRuleMetadata *ir.ResourceMetadata,
 ) ([]*ir.HTTPRoute, status.Error) {
-	var ruleRoutes []*ir.HTTPRoute
+	capacity := len(rule.Matches)
+	if capacity == 0 {
+		capacity = 1
+	}
+	ruleRoutes := make([]*ir.HTTPRoute, 0, capacity)
 
 	// If no matches are specified, the implementation MUST match every HTTP request.
 	if len(rule.Matches) == 0 {
@@ -654,7 +658,7 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 		// A rule is matched if any one of its matches
 		// is satisfied (i.e. a logical "OR"), so generate
 		// a unique Xds IR HTTPRoute per match.
-		ruleRoutes, err := t.processGRPCRouteRule(grpcRoute, ruleIdx, httpFiltersContext, &rule)
+		ruleRoutes, err := t.processGRPCRouteRule(grpcRoute, ruleIdx, httpFiltersContext, rule)
 		if err != nil {
 			errs.Add(status.NewRouteStatusError(
 				fmt.Errorf("failed to process route rule %d: %w", ruleIdx, err),
@@ -739,8 +743,12 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 	return irRoutes, errs
 }
 
-func (t *Translator) processGRPCRouteRule(grpcRoute *GRPCRouteContext, ruleIdx int, httpFiltersContext *HTTPFiltersContext, rule *gwapiv1.GRPCRouteRule) ([]*ir.HTTPRoute, status.Error) {
-	var ruleRoutes []*ir.HTTPRoute
+func (t *Translator) processGRPCRouteRule(grpcRoute *GRPCRouteContext, ruleIdx int, httpFiltersContext *HTTPFiltersContext, rule gwapiv1.GRPCRouteRule) ([]*ir.HTTPRoute, status.Error) {
+	capacity := len(rule.Matches)
+	if capacity == 0 {
+		capacity = 1
+	}
+	ruleRoutes := make([]*ir.HTTPRoute, 0, capacity)
 
 	// If no matches are specified, the implementation MUST match every gRPC request.
 	if len(rule.Matches) == 0 {
@@ -924,7 +932,7 @@ func filterEGPrefix(in map[string]string) map[string]string {
 }
 
 func (t *Translator) ProcessTLSRoutes(tlsRoutes []*gwapiv1a2.TLSRoute, gateways []*GatewayContext, resources *resource.Resources, xdsIR resource.XdsIRMap) []*TLSRouteContext {
-	var relevantTLSRoutes []*TLSRouteContext
+	relevantTLSRoutes := make([]*TLSRouteContext, 0, len(tlsRoutes))
 	// TLSRoutes are already sorted by the provider layer
 
 	for _, tls := range tlsRoutes {
@@ -1069,7 +1077,7 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 func (t *Translator) ProcessUDPRoutes(udpRoutes []*gwapiv1a2.UDPRoute, gateways []*GatewayContext, resources *resource.Resources,
 	xdsIR resource.XdsIRMap,
 ) []*UDPRouteContext {
-	var relevantUDPRoutes []*UDPRouteContext
+	relevantUDPRoutes := make([]*UDPRouteContext, 0, len(udpRoutes))
 	// UDPRoutes are already sorted by the provider layer
 
 	for _, u := range udpRoutes {
@@ -1219,7 +1227,7 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 func (t *Translator) ProcessTCPRoutes(tcpRoutes []*gwapiv1a2.TCPRoute, gateways []*GatewayContext, resources *resource.Resources,
 	xdsIR resource.XdsIRMap,
 ) []*TCPRouteContext {
-	var relevantTCPRoutes []*TCPRouteContext
+	relevantTCPRoutes := make([]*TCPRouteContext, 0, len(tcpRoutes))
 	// TCPRoutes are already sorted by the provider layer
 
 	for _, tcp := range tcpRoutes {
@@ -1978,10 +1986,7 @@ func (t *Translator) processBackendDestinationSetting(
 	protocol ir.AppProtocol,
 	resources *resource.Resources,
 ) *ir.DestinationSetting {
-	var (
-		dstEndpoints []*ir.DestinationEndpoint
-		dstAddrType  *ir.DestinationAddressType
-	)
+	var dstAddrType *ir.DestinationAddressType
 
 	addrTypeMap := make(map[ir.DestinationAddressType]int)
 	backend := resources.GetBackend(backendNamespace, string(backendRef.Name))
@@ -1997,6 +2002,8 @@ func (t *Translator) processBackendDestinationSetting(
 		ds.Protocol = protocol
 		return ds
 	}
+
+	dstEndpoints := make([]*ir.DestinationEndpoint, 0, len(backend.Spec.Endpoints))
 
 	for _, bep := range backend.Spec.Endpoints {
 		var irde *ir.DestinationEndpoint

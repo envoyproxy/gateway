@@ -75,11 +75,11 @@ type GatewayRef struct {
 
 // NewGatewayRef creates a GatewayRef resource.  ListenerNames are optional.
 func NewGatewayRef(nn types.NamespacedName, listenerNames ...string) GatewayRef {
-	var listeners []*gwapiv1.SectionName
-
 	if len(listenerNames) == 0 {
 		listenerNames = append(listenerNames, "")
 	}
+
+	listeners := make([]*gwapiv1.SectionName, 0, len(listenerNames))
 
 	for _, listener := range listenerNames {
 		sectionName := gwapiv1.SectionName(listener)
