@@ -5,10 +5,23 @@ metadata:
   namespace: gateway-conformance-infra
 spec:
   gatewayClassName: "{GATEWAY_CLASS_NAME}"
+  infrastructure:
+    parametersRef:
+      group: gateway.envoyproxy.io
+      kind: EnvoyProxy
+      name: backend-tls-setting
   listeners:
-  - name: http
-    port: 80
-    protocol: HTTP
+    - name: http
+      port: 80
+      protocol: HTTP
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: backend-tls-setting
+  namespace: gateway-conformance-infra
+spec:
+  ipFamily: IPv4
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
@@ -17,15 +30,44 @@ metadata:
   namespace: gateway-conformance-infra
 spec:
   parentRefs:
-  - name: backend-tls-setting
+    - name: backend-tls-setting
   rules:
-  - matches:
-    - path:
-        type: PathPrefix
-        value: /backend-tls
-    backendRefs:
-    - name: tls-backend
-      port: 443
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /backend-tls
+      backendRefs:
+        - name: tls-backend
+          port: 443
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: use-client-protocol
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: backend-tls-setting
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /use-client-protocol
+      backendRefs:
+        - name: tls-backend
+          port: 443
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: use-client-protocol-policy
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: use-client-protocol
+  useClientProtocol: true
 ---
 # openssl req -x509 -sha256 -nodes -days 36500 -newkey rsa:2048 -subj '/O=example Inc./CN=example.com' -keyout ca.key -out ca.crt
 apiVersion: v1
@@ -63,15 +105,15 @@ metadata:
   namespace: gateway-conformance-infra
 spec:
   targetRefs:
-  - group: ""
-    kind: Service
-    name: tls-backend
-    sectionName: https
+    - group: ""
+      kind: Service
+      name: tls-backend
+      sectionName: https
   validation:
     caCertificateRefs:
-    - name: ca-certificate
-      group: ""
-      kind: ConfigMap
+      - name: ca-certificate
+        group: ""
+        kind: ConfigMap
     hostname: example.com
 ---
 apiVersion: v1
@@ -83,10 +125,10 @@ spec:
   selector:
     app: tls-backend
   ports:
-  - name: https
-    protocol: TCP
-    port: 443
-    targetPort: 8443
+    - name: https
+      protocol: TCP
+      port: 443
+      targetPort: 8443
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -106,45 +148,45 @@ spec:
         app: tls-backend
     spec:
       containers:
-      - name: tls-backend
-        image: gcr.io/k8s-staging-gateway-api/echo-basic:v20231214-v1.0.0-140-gf544a46e
-        volumeMounts:
-        - name: secret-volume
-          mountPath: /etc/secret-volume
-        - name: client-ca-volume
-          mountPath: /etc/client-ca
-        env:
-        - name: TLS_CLIENT_CACERTS
-          value: /etc/client-ca/ca.crt
-        - name: POD_NAME
-          valueFrom:
-            fieldRef:
-              fieldPath: metadata.name
-        - name: NAMESPACE
-          valueFrom:
-            fieldRef:
-              fieldPath: metadata.namespace
-        - name: SERVICE_NAME
-          value: tls-backend
-        - name: TLS_SERVER_CERT
-          value: /etc/secret-volume/crt
-        - name: TLS_SERVER_PRIVKEY
-          value: /etc/secret-volume/key
-        resources:
-          requests:
-            cpu: 10m
+        - name: tls-backend
+          image: gcr.io/k8s-staging-gateway-api/echo-basic:v20231214-v1.0.0-140-gf544a46e
+          volumeMounts:
+            - name: secret-volume
+              mountPath: /etc/secret-volume
+            - name: client-ca-volume
+              mountPath: /etc/client-ca
+          env:
+            - name: TLS_CLIENT_CACERTS
+              value: /etc/client-ca/ca.crt
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: SERVICE_NAME
+              value: tls-backend
+            - name: TLS_SERVER_CERT
+              value: /etc/secret-volume/crt
+            - name: TLS_SERVER_PRIVKEY
+              value: /etc/secret-volume/key
+          resources:
+            requests:
+              cpu: 10m
       volumes:
-      - name: client-ca-volume
-        configMap:
-          name: ca-certificate
-      - name: secret-volume
-        secret:
-          secretName: backend-tls-certificate-tls-settings
-          items:
-          - key: tls.crt
-            path: crt
-          - key: tls.key
-            path: key
+        - name: client-ca-volume
+          configMap:
+            name: ca-certificate
+        - name: secret-volume
+          secret:
+            secretName: backend-tls-certificate-tls-settings
+            items:
+              - key: tls.crt
+                path: crt
+              - key: tls.key
+                path: key
 ---
 # This is used as the client certificate for the envoy to connect to the backend service
 # openssl req -out envoy.csr -newkey rsa:2048 -nodes -keyout envoy.key -subj "/CN=envoy/O=example organization"
@@ -153,7 +195,7 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: client-tls-certificate
-  namespace: envoy-gateway-system
+  namespace: gateway-conformance-infra
 type: kubernetes.io/tls
 data:
   tls.crt: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUMwakNDQWJvQ0FRQXdEUVlKS29aSWh2Y05BUUVMQlFBd0xURVZNQk1HQTFVRUNnd01aWGhoYlhCc1pTQkoKYm1NdU1SUXdFZ1lEVlFRRERBdGxlR0Z0Y0d4bExtTnZiVEFnRncweU5UQTFNVE13TWpVMU1EUmFHQTh5TVRJMQpNRFF4T1RBeU5UVXdORm93THpFT01Bd0dBMVVFQXd3RlpXNTJiM2t4SFRBYkJnTlZCQW9NRkdWNFlXMXdiR1VnCmIzSm5ZVzVwZW1GMGFXOXVNSUlCSWpBTkJna3Foa2lHOXcwQkFRRUZBQU9DQVE4QU1JSUJDZ0tDQVFFQWlIS3EKU016TkpkM2lCbTg3MzB1OFQ0R25wK2FMaG1rYWFvSHAwMXB6YWJJVitxRUlnREJZUFNLemtsQnk2UVRYcDZ2Zwp4UXIvbDNEdGRqQWFEOEpoNVRRU2syNnRlbnJVWkhyTHFlTTl1VGtZR29jMmF1Nlk4V0tHbCt5QTBKUHNET3VKCjZNRlpZUy82Q2oveDJ0RkZEdFloVjR3cmJXQzUxVU1mY05iYzFoNHozSndGUlpLZi9BdkdDa1c2NkUvZFFDeXEKalRvMEs0SDRqNjZncWJXdGRLY1ZGOTUySUtwYkZwRmh4WmM3VWRJbGNUK1FyVUNCaHFVLzRKNmJXODg1TEZBSwpmWnpLbzBFckl0RFJ3WGNKZU0xSVUrTGs5bkJnUjZYTTVOOHEvVTluVHQ3MGFFR25sVWJSWHhyNmsvVWF1QjdBClRqbXJsVnZBOFVVU1BZbXpVUUlEQVFBQk1BMEdDU3FHU0liM0RRRUJDd1VBQTRJQkFRQTZyNkd2WVF5NHEwRksKWWlqdkR6bTlOS1JaWlY1ajU0WEEwcWFwRGhUQ3loYzFueGQ5cTRLamNZQmhPRzhBczBkWi9SNTg1bzRnZDhpZQpDUmhQSWJ2cEJMZnc3MWFxOVIxSHBIOW9JRlBLN1VnemhpTnQyL0tVWkdURTVGZkRFNFhJa2E3ckVjT0RzMlNKClFxMnkwMmRXTmxLSDZ1cThLTi9zenBYR1RnRUkxT09BYSs2SW11QkF0SVJRY3Jra2JJcyt4eUxWMWlGNnNZZXQKTFdMMnA1MUdOanBiZFdaOXBrZWdvd1JJSXBEWmhDbFVPZHlMREFuQjQ3dE8vNGRTVGxZdndvSUs0UGN3RGxQRQpkUzdqZDI3Y0FzZ0ttb2NyMDhIOHVGUUZaK1VCWmN3YU5qL0lNODhjS0QxWHJIY2F3SXRsc0dKVHlxZkNhUmFPCjNPc0ZSUWNFCi0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K
