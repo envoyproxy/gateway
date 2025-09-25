@@ -119,3 +119,27 @@ backendTrafficPolicies:
               metadata:
                 namespace: something.com
                 key: some_cost_set_by_foo
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    namespace: default
+    name: policy-for-grpc-route
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: GRPCRoute
+      name: grpcroute-1
+    rateLimit:
+      type: Global
+      global:
+        rules:
+        - clientSelectors:
+          - path:
+              type: Exact
+              value: /test
+          - method:
+              value: GET
+              invert: true
+          limit:
+            requests: 30
+            unit: Hour

@@ -49,6 +49,46 @@ backendTrafficPolicies:
   kind: BackendTrafficPolicy
   metadata:
     creationTimestamp: null
+    name: policy-for-grpc-route
+    namespace: default
+  spec:
+    rateLimit:
+      global:
+        rules:
+        - clientSelectors:
+          - path:
+              type: Exact
+              value: /test
+          - method:
+              invert: true
+              value: GET
+          limit:
+            requests: 30
+            unit: Hour
+      type: Global
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: GRPCRoute
+      name: grpcroute-1
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    creationTimestamp: null
     name: policy-for-gateway
     namespace: envoy-gateway
   spec:
@@ -85,6 +125,12 @@ backendTrafficPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: 'This policy is being overridden by other backendTrafficPolicies
+          for these routes: [default/grpcroute-1]'
+        reason: Overridden
+        status: "True"
+        type: Overridden
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
@@ -335,20 +381,20 @@ xdsIR:
           rateLimit:
             global:
               rules:
-              - headerMatches:
-                - distinct: false
-                  exact: one
-                  name: x-user-id
-                - distinct: true
-                  name: x-org-id
-                - distinct: false
-                  exact: admin
+              - MethodMatch:
+                  distinct: false
+                  exact: GET
                   invert: true
-                  name: x-org-id
+                  name: ""
+                headerMatches: []
                 limit:
-                  requests: 10
+                  requests: 30
                   unit: Hour
-                name: envoy-gateway/policy-for-gateway/rule/0
+                name: default/policy-for-grpc-route/rule/0
+                pathMatch:
+                  distinct: false
+                  exact: /test
+                  name: ""
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

@@ -3335,6 +3335,21 @@ _Appears in:_
 | `JSONMerge` | JSONMerge indicates a JSON merge patch type<br /> | 
 
 
+#### MethodMatch
+
+
+
+MethodMatch defines the matching criteria for the HTTP method of a request.
+
+_Appears in:_
+- [RateLimitSelectCondition](#ratelimitselectcondition)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `value` | _string_ |  false  |  | Value specifies the HTTP method. |
+| `invert` | _boolean_ |  false  | false | Invert specifies whether the value match result will be inverted. |
+
+
 #### MetricSinkType
 
 _Underlying type:_ _string_
@@ -3568,6 +3583,22 @@ _Appears in:_
 | `RejectRequest` | RejectRequestAction rejects client requests containing escaped slashes<br />with a 400 status. gRPC requests will be rejected with the INTERNAL (13)<br />error code.<br />The "httpN.downstream_rq_failed_path_normalization" counter is incremented<br />for each rejected request.<br /> | 
 | `UnescapeAndRedirect` | UnescapeAndRedirect unescapes %2F and %5C sequences and redirects to the new path<br />if these sequences were present.<br />Redirect occurs after path normalization and merge slashes transformations if<br />they were configured. gRPC requests will be rejected with the INTERNAL (13)<br />error code.<br />This option minimizes possibility of path confusion exploits by forcing request<br />with unescaped slashes to traverse all parties: downstream client, intermediate<br />proxies, Envoy and upstream server.<br />The “httpN.downstream_rq_redirected_with_normalized_path” counter is incremented<br />for each redirected request.<br /> | 
 | `UnescapeAndForward` | UnescapeAndForward unescapes %2F and %5C sequences and forwards the request.<br />Note: this option should not be enabled if intermediaries perform path based access<br />control as it may lead to path confusion vulnerabilities.<br /> | 
+
+
+#### PathMatch
+
+
+
+PathMatch defines the matching criteria for the HTTP path of a request.
+
+_Appears in:_
+- [RateLimitSelectCondition](#ratelimitselectcondition)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `type` | _[PathMatchType](#pathmatchtype)_ |  false  | PathPrefix | Type specifies how to match against the value of the path. |
+| `value` | _string_ |  false  |  | Value specifies the HTTP path. |
+| `invert` | _boolean_ |  false  | false | Invert specifies whether the value match result will be inverted. |
 
 
 #### PathSettings
@@ -4215,8 +4246,10 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `headers` | _[HeaderMatch](#headermatch) array_ |  false  |  | Headers is a list of request headers to match. Multiple header values are ANDed together,<br />meaning, a request MUST match all the specified headers.<br />At least one of headers or sourceCIDR condition must be specified. |
-| `sourceCIDR` | _[SourceMatch](#sourcematch)_ |  false  |  | SourceCIDR is the client IP Address range to match on.<br />At least one of headers or sourceCIDR condition must be specified. |
+| `headers` | _[HeaderMatch](#headermatch) array_ |  false  |  | Headers is a list of request headers to match. Multiple header values are ANDed together,<br />meaning, a request MUST match all the specified headers.<br />At least one of headers or method or path or sourceCIDR condition must be specified. |
+| `method` | _[MethodMatch](#methodmatch)_ |  false  |  | Method is the request method to match. If not specified, it matches all methods.<br />At least one of headers or method or path or sourceCIDR condition must be specified. |
+| `path` | _[PathMatch](#pathmatch)_ |  false  |  | Path is the request path to match.<br />Support Exact, PathPrefix and RegularExpression match types.<br />At least one of headers or method or path or sourceCIDR condition must be specified. |
+| `sourceCIDR` | _[SourceMatch](#sourcematch)_ |  false  |  | SourceCIDR is the client IP Address range to match on.<br />At least one of headers or method or path or sourceCIDR condition must be specified. |
 
 
 #### RateLimitSpec

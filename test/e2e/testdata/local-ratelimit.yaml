@@ -150,3 +150,82 @@ spec:
         - path:
             type: Exact
             value: /ratelimit-invert-match
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: ratelimit-path-match
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: http-ratelimit-path-match
+  rateLimit:
+    type: Local
+    local:
+      rules:
+        - clientSelectors:
+            - path:
+                type: Exact
+                value: /ratelimit-path-match/foo
+          limit:
+            requests: 3
+            unit: Hour
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-ratelimit-path-match
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: same-namespace
+    - name: all-namespaces
+  rules:
+    - backendRefs:
+        - name: infra-backend-v1
+          port: 8080
+      matches:
+        - path:
+            type: PathPrefix
+            value: /ratelimit-path-match
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: ratelimit-method-match
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: http-ratelimit-method-match
+  rateLimit:
+    type: Local
+    local:
+      rules:
+        - clientSelectors:
+            - method:
+                value: "GET"
+          limit:
+            requests: 3
+            unit: Hour
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-ratelimit-method-match
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: same-namespace
+    - name: all-namespaces
+  rules:
+    - backendRefs:
+        - name: infra-backend-v1
+          port: 8080
+      matches:
+        - path:
+            type: PathPrefix
+            value: /ratelimit-method-match
