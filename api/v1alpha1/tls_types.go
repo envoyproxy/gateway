@@ -9,6 +9,9 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
+// TLSOCSPKey is the key for the OCSP field in a TLS secret.
+const TLSOCSPKey = "tls.ocsp"
+
 type ClientTLSSettings struct {
 	// ClientValidation specifies the configuration to validate the client
 	// initiating the TLS connection to the Gateway listener.
@@ -19,6 +22,20 @@ type ClientTLSSettings struct {
 	// Session defines settings related to TLS session management.
 	// +optional
 	Session *Session `json:"session,omitempty"`
+
+	// OCSPStaple references a Kubernetes ConfigMap or Secret containing the OCSP stapled response
+	// that will be presented by Envoy during TLS handshakes.
+	//
+	// The referenced object must contain a key named `ocsp.staple` with the
+	// base64-encoded OCSP response.
+	//
+	// Envoy Gateway also supports `ocsp.staple` in the certificateRefs of a Gateway Listener.
+	//
+	// If both `OCSPStaple` in ClientTrafficPolicy and `ocsp.staple` in certificateRefs are configured,
+	// the value from ClientTrafficPolicy takes precedence.
+	//
+	// +optional
+	OCSPStaple *gwapiv1.SecretObjectReference `json:"ocspStaple,omitempty"`
 }
 
 // +kubebuilder:validation:XValidation:rule="has(self.minVersion) && self.minVersion == '1.3' ? !has(self.ciphers) : true", message="setting ciphers has no effect if the minimum possible TLS version is 1.3"

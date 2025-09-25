@@ -1236,6 +1236,57 @@ spec:
                     - "1.2"
                     - "1.3"
                     type: string
+                  ocspStaple:
+                    description: |-
+                      OCSPStaple references a Kubernetes ConfigMap or Secret containing the OCSP stapled response
+                      that will be presented by Envoy during TLS handshakes.
+
+                      The referenced object must contain a key named `ocsp.staple` with the
+                      base64-encoded OCSP response.
+
+                      Envoy Gateway also supports `ocsp.staple` in the certificateRefs of a Gateway Listener.
+
+                      If both `OCSPStaple` in ClientTrafficPolicy and `ocsp.staple` in certificateRefs are configured,
+                      the value from ClientTrafficPolicy takes precedence.
+                    properties:
+                      group:
+                        default: ""
+                        description: |-
+                          Group is the group of the referent. For example, "gateway.networking.k8s.io".
+                          When unspecified or empty string, core API group is inferred.
+                        maxLength: 253
+                        pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                        type: string
+                      kind:
+                        default: Secret
+                        description: Kind is kind of the referent. For example "Secret".
+                        maxLength: 63
+                        minLength: 1
+                        pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
+                        type: string
+                      name:
+                        description: Name is the name of the referent.
+                        maxLength: 253
+                        minLength: 1
+                        type: string
+                      namespace:
+                        description: |-
+                          Namespace is the namespace of the referenced object. When unspecified, the local
+                          namespace is inferred.
+
+                          Note that when a namespace different than the local namespace is specified,
+                          a ReferenceGrant object is required in the referent namespace to allow that
+                          namespace's owner to accept the reference. See the ReferenceGrant
+                          documentation for details.
+
+                          Support: Core
+                        maxLength: 63
+                        minLength: 1
+                        pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                        type: string
+                    required:
+                    - name
+                    type: object
                   session:
                     description: Session defines settings related to TLS session management.
                     properties:
