@@ -124,7 +124,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(resources *resource.Resources
 				// gatewayRouteMap and ancestor list, which will be used to check
 				// policy overrides and populate its ancestor status.
 				parentRefs := GetParentReferences(route)
-				ancestorRefs := make([]gwapiv1a2.ParentReference, 0, len(parentRefs))
+				ancestorRefs := make([]*gwapiv1a2.ParentReference, 0, len(parentRefs))
 				routeParents := sets.New[types.NamespacedName]()
 				for _, p := range parentRefs {
 					if p.Kind == nil || *p.Kind == resource.KindGateway {
@@ -145,7 +145,8 @@ func (t *Translator) ProcessBackendTrafficPolicies(resources *resource.Resources
 						gatewayRouteMap[key].Insert(utils.NamespacedName(route).String())
 
 						// Do need a section name since the policy is targeting to a route
-						ancestorRefs = append(ancestorRefs, getAncestorRefForPolicy(gwNN, p.SectionName))
+						ancestorRef := getAncestorRefForPolicy(gwNN, p.SectionName)
+						ancestorRefs = append(ancestorRefs, &ancestorRef)
 					}
 				}
 
@@ -181,7 +182,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(resources *resource.Resources
 							// not found, fall back to the current policy
 							if err := t.translateBackendTrafficPolicyForRoute(policy, route, xdsIR, resources, &gwNN); err != nil {
 								status.SetConditionForPolicyAncestor(&policy.Status,
-									ancestorRef,
+									&ancestorRef,
 									t.GatewayControllerName,
 									gwapiv1a2.PolicyConditionAccepted, metav1.ConditionFalse,
 									egv1a1.PolicyReasonInvalid,
@@ -196,7 +197,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(resources *resource.Resources
 						// merge with parent policy
 						if err := t.translateBackendTrafficPolicyForRouteWithMerge(policy, gwNN, gwPolicy, route, xdsIR, resources); err != nil {
 							status.SetConditionForPolicyAncestor(&policy.Status,
-								ancestorRef,
+								&ancestorRef,
 								t.GatewayControllerName,
 								gwapiv1a2.PolicyConditionAccepted, metav1.ConditionFalse,
 								egv1a1.PolicyReasonInvalid,
@@ -212,7 +213,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(resources *resource.Resources
 						gatewayPolicyMerged[gwNN].Insert(utils.NamespacedName(route).String())
 
 						status.SetConditionForPolicyAncestor(&policy.Status,
-							ancestorRef,
+							&ancestorRef,
 							t.GatewayControllerName,
 							egv1a1.PolicyConditionMerged,
 							metav1.ConditionTrue,
@@ -250,15 +251,12 @@ func (t *Translator) ProcessBackendTrafficPolicies(resources *resource.Resources
 
 				// Find its ancestor reference by resolved gateway, even with resolve error
 				gatewayNN := utils.NamespacedName(gateway)
-				ancestorRefs := []gwapiv1a2.ParentReference{
-					// Don't need a section name since the policy is targeting to a gateway
-					getAncestorRefForPolicy(gatewayNN, nil),
-				}
+				ancestorRef := getAncestorRefForPolicy(gatewayNN, nil)
 
 				// Set conditions for resolve error, then skip current gateway
 				if resolveErr != nil {
-					status.SetResolveErrorForPolicyAncestors(&policy.Status,
-						ancestorRefs,
+					status.SetResolveErrorForPolicyAncestor(&policy.Status,
+						&ancestorRef,
 						t.GatewayControllerName,
 						policy.Generation,
 						resolveErr,
@@ -269,8 +267,8 @@ func (t *Translator) ProcessBackendTrafficPolicies(resources *resource.Resources
 
 				// Set conditions for translation error if it got any
 				if err := t.translateBackendTrafficPolicyForGateway(policy, currTarget, gateway, xdsIR, resources); err != nil {
-					status.SetTranslationErrorForPolicyAncestors(&policy.Status,
-						ancestorRefs,
+					status.SetTranslationErrorForPolicyAncestor(&policy.Status,
+						&ancestorRef,
 						t.GatewayControllerName,
 						policy.Generation,
 						status.Error2ConditionMsg(err),
@@ -278,7 +276,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(resources *resource.Resources
 				}
 
 				// Set Accepted condition if it is unset
-				status.SetAcceptedForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName, policy.Generation)
+				status.SetAcceptedForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName, policy.Generation)
 
 				// Check if this policy is overridden by other policies targeting at
 				// route level
@@ -288,8 +286,8 @@ func (t *Translator) ProcessBackendTrafficPolicies(resources *resource.Resources
 					gatewayMergedRoutes := mergedRoutes.UnsortedList()
 					sort.Strings(gatewayMergedRoutes)
 
-					status.SetConditionForPolicyAncestors(&policy.Status,
-						ancestorRefs,
+					status.SetConditionForPolicyAncestor(&policy.Status,
+						&ancestorRef,
 						t.GatewayControllerName,
 						egv1a1.PolicyConditionMerged,
 						metav1.ConditionTrue,
@@ -312,8 +310,8 @@ func (t *Translator) ProcessBackendTrafficPolicies(resources *resource.Resources
 						continue
 					}
 
-					status.SetConditionForPolicyAncestors(&policy.Status,
-						ancestorRefs,
+					status.SetConditionForPolicyAncestor(&policy.Status,
+						&ancestorRef,
 						t.GatewayControllerName,
 						egv1a1.PolicyConditionOverridden,
 						metav1.ConditionTrue,
@@ -528,7 +526,7 @@ func applyTrafficFeatureToRoute(route RouteContext,
 
 				r.Traffic = tf.DeepCopy()
 
-				if localTo, err := buildClusterSettingsTimeout(policy.Spec.ClusterSettings); err == nil {
+				if localTo, err := buildClusterSettingsTimeout(&policy.Spec.ClusterSettings); err == nil {
 					r.Traffic.Timeout = localTo
 				}
 
@@ -578,20 +576,20 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy, r
 			errs = errors.Join(errs, err)
 		}
 	}
-	if lb, err = buildLoadBalancer(policy.Spec.ClusterSettings); err != nil {
+	if lb, err = buildLoadBalancer(&policy.Spec.ClusterSettings); err != nil {
 		err = perr.WithMessage(err, "LoadBalancer")
 		errs = errors.Join(errs, err)
 	}
-	pp = buildProxyProtocol(policy.Spec.ClusterSettings)
-	hc = buildHealthCheck(policy.Spec.ClusterSettings)
-	if cb, err = buildCircuitBreaker(policy.Spec.ClusterSettings); err != nil {
+	pp = buildProxyProtocol(&policy.Spec.ClusterSettings)
+	hc = buildHealthCheck(&policy.Spec.ClusterSettings)
+	if cb, err = buildCircuitBreaker(&policy.Spec.ClusterSettings); err != nil {
 		err = perr.WithMessage(err, "CircuitBreaker")
 		errs = errors.Join(errs, err)
 	}
 	if policy.Spec.FaultInjection != nil {
 		fi = t.buildFaultInjection(policy)
 	}
-	if ka, err = buildTCPKeepAlive(policy.Spec.ClusterSettings); err != nil {
+	if ka, err = buildTCPKeepAlive(&policy.Spec.ClusterSettings); err != nil {
 		err = perr.WithMessage(err, "TCPKeepalive")
 		errs = errors.Join(errs, err)
 	}
@@ -601,12 +599,12 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy, r
 		errs = errors.Join(errs, err)
 	}
 
-	if to, err = buildClusterSettingsTimeout(policy.Spec.ClusterSettings); err != nil {
+	if to, err = buildClusterSettingsTimeout(&policy.Spec.ClusterSettings); err != nil {
 		err = perr.WithMessage(err, "Timeout")
 		errs = errors.Join(errs, err)
 	}
 
-	if bc, err = buildBackendConnection(policy.Spec.ClusterSettings); err != nil {
+	if bc, err = buildBackendConnection(&policy.Spec.ClusterSettings); err != nil {
 		err = perr.WithMessage(err, "BackendConnection")
 		errs = errors.Join(errs, err)
 	}
@@ -629,7 +627,7 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy, r
 	cp = buildCompression(policy.Spec.Compression)
 	httpUpgrade = buildHTTPProtocolUpgradeConfig(policy.Spec.HTTPUpgrade)
 
-	ds = translateDNS(policy.Spec.ClusterSettings)
+	ds = translateDNS(&policy.Spec.ClusterSettings)
 
 	return &ir.TrafficFeatures{
 		RateLimit:         rl,
@@ -736,7 +734,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 			// Update the Host field in HealthCheck, now that we have access to the Route Hostname.
 			r.Traffic.HealthCheck.SetHTTPHostIfAbsent(r.Hostname)
 
-			if ct, err := buildClusterSettingsTimeout(policy.Spec.ClusterSettings); err == nil {
+			if ct, err := buildClusterSettingsTimeout(&policy.Spec.ClusterSettings); err == nil {
 				r.Traffic.Timeout = ct
 			}
 
