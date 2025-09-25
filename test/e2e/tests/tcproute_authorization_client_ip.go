@@ -36,7 +36,7 @@ var TCPRouteAuthzWithClientIP = suite.ConformanceTest{
 		tcpRouteNN := types.NamespacedName{Name: "tcp-backend-authorization-ip", Namespace: ns}
 		tcpRouteFqdnNN := types.NamespacedName{Name: "tcp-backend-authorization-fqdn", Namespace: ns}
 		gwNN := types.NamespacedName{Name: "tcp-authorization-backend", Namespace: ns}
-		GatewayAndTCPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, NewGatewayRef(gwNN), tcpRouteNN, tcpRouteFqdnNN)
+		GatewayAndTCPRoutesMustBeAccepted(t, suite.Client, &suite.TimeoutConfig, suite.ControllerName, NewGatewayRef(gwNN), tcpRouteNN, tcpRouteFqdnNN)
 
 		// Test the blocked route (ip section)
 		ipSection := gwapiv1.SectionName("ip")
@@ -74,7 +74,7 @@ func testTCPRouteWithBackendBlocked(t *testing.T, suite *suite.ConformanceTestSu
 	ns := "gateway-conformance-infra"
 	routeNN := types.NamespacedName{Name: routeName, Namespace: ns}
 	gwNN := types.NamespacedName{Name: gwName, Namespace: ns}
-	gwAddr := GatewayAndTCPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, NewGatewayRef(gwNN), routeNN)
+	gwAddr := GatewayAndTCPRoutesMustBeAccepted(t, suite.Client, &suite.TimeoutConfig, suite.ControllerName, NewGatewayRef(gwNN), routeNN)
 	BackendMustBeAccepted(t, suite.Client, types.NamespacedName{Name: backendName, Namespace: ns})
 
 	testTCPConnectionBlocked(t, gwAddr)
