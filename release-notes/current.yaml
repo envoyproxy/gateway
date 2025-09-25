@@ -2,14 +2,18 @@ date: Pending
 
 # Changes that are expected to cause an incompatibility with previous versions, such as deletions or modifications to existing APIs.
 breaking changes: |
+  ALPNProtocols in EnvoyProxy Backend TLS setting use [h2, http/1.1] if not set.
 
 # Updates addressing vulnerabilities, security flaws, or compliance requirements.
 security updates: |
 
 # New features or capabilities added in this release.
 new features: |
-  Added support for mTLS configuration for ExtensionServer
-  Added support for returning 503 responses and reporting error log when no valid backend endpoints exist.
+  Added support for mTLS configuration for ExtensionServer.
+  Added support for RetryPolicy in gRPC ExtAuth callouts via SecurityPolicy backend settings fields.
+  Added support for late response headers in ClientTrafficPolicy.
+  Added max connection/stream duration and max requests per connection to ClientTrafficPolicy.
+  Added support for returning 503 responses when no valid backend endpoints exist.
 
 bug fixes: |
   Fixed %ROUTE_KIND% operator to be lower-cased when used by clusterStatName in EnvoyProxy API.
@@ -18,6 +22,14 @@ bug fixes: |
   Fixed log formatting of improper key-value pairs to avoid DPANIC in controller-runtime logger.
   Fixed handling of context-related transient errors to prevent incorrect state reconciliation and unintended behavior.
   Fixed the controller cannot read the EnvoyProxy attached gatewayclass only.
+  Fixed adding metadata for proxyService and oidc xds clusters.
+  Fixed handling of millisecond-level retry durations and token TTLs in OIDC authn.
+  Fixed indexer and controller crashing when BackendTrafficPolicy has a redirect response override.
+  Fixed Lua validator log level to be suppressed by default.
+  Fixed ProxyTopologyInjector cache sync race condition that caused injection failures
+  Fixed validation for grpc routes with extension ref filters.
+  Fixed service account token handling in GatewayNamespaceMode to use SDS for properly refreshing expired token.
+  Fixed handling of regex meta characters in prefix match replace for URL rewrite.
 
 # Enhancements that improve performance.
 performance improvements: |

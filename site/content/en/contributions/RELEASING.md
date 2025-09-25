@@ -55,8 +55,8 @@ export GITHUB_REMOTE=origin
     git push ${GITHUB_REMOTE} release/v${MAJOR_VERSION}.${MINOR_VERSION}
     ```
 
-8. Create a topic branch for updating the Envoy proxy image and Envoy Ratelimit image to the tag supported by the release.
- Please note that the tags should be updated in both the source code and the Helm chart. Reference [PR #2098][]
+8. Create a topic branch for updating the [Envoy proxy image][] and [Envoy Ratelimit image][] to the tag supported by the release.
+ Please note that the tags should be updated in both the source code and the Helm chart. Reference [PR #5872][]
    for additional details on updating the image tag.
 9. Sign, commit, and push your changes to your fork.
 10. Submit a [Pull Request][] to merge the changes into the `release/v${MAJOR_VERSION}.${MINOR_VERSION}` branch. 
@@ -200,6 +200,10 @@ export GITHUB_REMOTE=origin
       git pull $GITHUB_REMOTE release/v${MAJOR_VERSION}.${MINOR_VERSION}
       ```
 
+   9. If upstream has updated the [Envoy proxy image][] or [Envoy Ratelimit image][] tag supported by the release,
+   you should also create a topic branch for bumping these tags.
+   Please note that the tags should be updated in both the source code and the Helm chart. Reference [PR #5872][]
+
 8. Tag the head of your release branch with the release tag. For example:
 
     ```shell
@@ -276,7 +280,6 @@ export GITHUB_REMOTE=origin
 2. Create a topic branch for adding the release notes.
 
    1. Create the release notes. The release note should only include the changes since the last minor or patch release.
-   1. Create a release announcement. Refer to [PR #635] as an example release announcement.
    1. Update `site/layouts/shortcodes/helm-version.html`, update the short code for `{{- with (strings.HasPrefix $pagePrefix "doc") -}}` to the latest patch version. For example:
 
       ```console
@@ -314,7 +317,7 @@ export GITHUB_REMOTE=origin
       ```
 
 3. Sign, commit, and push your changes to your fork.
-4. Submit a [Pull Request][] to merge the changes into the `main` branch. 
+4. Submit a [Pull Request][] to merge the changes into the `main` branch.
 5. Do not proceed until all your PRs have merged and the [Build and Test][] has completed for your final PR.
 6. Checkout the release branch.
 
@@ -322,7 +325,7 @@ export GITHUB_REMOTE=origin
    git checkout release/v${MAJOR_VERSION}.${MINOR_VERSION} $GITHUB_REMOTE/release/v${MAJOR_VERSION}.${MINOR_VERSION}
    ```
 
-7. Cherry-pick the release note and release announcement that you created in the previous step to the release branch. The release note will be included in the release artifacts.
+7. Cherry-pick the release note that you created in the previous step to the release branch. The release note will be included in the release artifacts.
    1. Create a topic branch from the release branch.
    2. Cherry-pick the release note and release announcement commit from `main` to the topic branch.
    3. Submit a PR to merge the topic from of your fork into the release branch.
@@ -346,6 +349,10 @@ export GITHUB_REMOTE=origin
       git pull $GITHUB_REMOTE release/v${MAJOR_VERSION}.${MINOR_VERSION}
       ```
 
+   9. If upstream has updated the [Envoy proxy image][] or [Envoy Ratelimit image][] tag supported by the release,
+   you should also create a topic branch for bumping these tags.
+   Please note that the tags should be updated in both the source code and the Helm chart. Reference [PR #5872][]
+
 9. Tag the head of your release branch with the release tag. For example:
 
     ```shell
@@ -355,7 +362,7 @@ export GITHUB_REMOTE=origin
 10. Push the tag to the Envoy Gateway repository.
 
       ```shell
-      git push origin v${MAJOR_VERSION}.${MINOR_VERSION}.${PATCH_VERSION
+      git push origin v${MAJOR_VERSION}.${MINOR_VERSION}.${PATCH_VERSION}
       ```
 
 11. This will trigger the [release GitHub action][] that generates the release, release artifacts, etc.
@@ -384,6 +391,18 @@ It's important that the world knows about the release. Use the following steps t
    Envoy Gateway v${MAJOR_VERSION}.${MINOR_VERSION}.${PATCH_VERSION} has been released: https://github.com/envoyproxy/gateway/releases/tag/v${MAJOR_VERSION}.${MINOR_VERSION}.${PATCH_VERSION}
    ```
 
+2. Send a message to the Envoy Gateway Slack channel and the [Google Group](https://groups.google.com/g/envoy-gateway-announce). For example:
+
+   ```shell
+   On behalf of the entire Envoy Gateway community, I am pleased to announce the release of Envoy Gateway
+   v${MAJOR_VERSION}.${MINOR_VERSION}. A big thank you to all the contributors that made this release possible.
+   Refer to the official v${MAJOR_VERSION}.${MINOR_VERSION} announcement for release details and the project docs
+   to start using Envoy Gateway.
+   ...
+   ```
+
+   Link to the GitHub release and release announcement page that highlights the release.
+
 [release notes]: https://github.com/envoyproxy/gateway/tree/main/release-notes
 [Pull Request]: https://github.com/envoyproxy/gateway/pulls
 [Quickstart]: https://github.com/envoyproxy/gateway/blob/main/docs/user/quickstart.md
@@ -394,7 +413,9 @@ It's important that the world knows about the release. Use the following steps t
 [release]: https://github.com/envoyproxy/gateway/releases
 [Generate]: https://docs.github.com/en/repositories/releasing-projects-on-github/automatically-generated-release-notes
 [PR #635]: https://github.com/envoyproxy/gateway/pull/635
-[PR #2098]: https://github.com/envoyproxy/gateway/pull/2098
+[PR #5872]: https://github.com/envoyproxy/gateway/pull/5872
 [PR #1002]: https://github.com/envoyproxy/gateway/pull/1002
 [PR #4666]: https://github.com/envoyproxy/gateway/pull/4666
 [VERSION]: https://github.com/envoyproxy/gateway/blob/main/VERSION
+[Envoy proxy image]: https://hub.docker.com/r/envoyproxy/envoy/tags?name=distroless
+[Envoy Ratelimit image]: https://hub.docker.com/r/envoyproxy/ratelimit

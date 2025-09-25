@@ -12,6 +12,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
@@ -27,7 +28,7 @@ import (
 const (
 	defaultHTTPSPort                uint64 = 443
 	defaultHTTPPort                 uint64 = 80
-	defaultExtServiceRequestTimeout        = 10 // 10 seconds
+	defaultExtServiceRequestTimeout        = 10 * time.Second
 )
 
 // urlCluster is a cluster that is created from a URL.
@@ -188,12 +189,15 @@ func addClusterFromURL(url string, tCtx *types.ResourceVersionTable) error {
 		Weight:    ptr.To[uint32](1),
 		Endpoints: []*ir.DestinationEndpoint{ir.NewDestEndpoint(nil, uc.hostname, uc.port, false, nil)},
 		Name:      destinationSettingName(uc.name),
+		// TODO: tracked with issue #6861
+		Metadata: nil,
 	}
 
 	clusterArgs := &xdsClusterArgs{
 		name:         uc.name,
 		settings:     []*ir.DestinationSetting{ds},
 		endpointType: uc.endpointType,
+		metadata:     ds.Metadata,
 	}
 	if uc.tls {
 		if tSocket, err = buildXdsUpstreamTLSSocket(uc.hostname); err != nil {

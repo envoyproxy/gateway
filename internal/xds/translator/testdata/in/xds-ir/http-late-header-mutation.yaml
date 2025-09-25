@@ -1,0 +1,61 @@
+http:
+- name: "first-listener"
+  address: "::"
+  port: 10080
+  hostnames:
+  - "*"
+  http1:
+    preserveHeaderCase: true
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  routes:
+  - name: "first-route"
+    hostname: "*"
+    destination:
+      name: "first-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "first-route-dest/backend/0"
+- name: "second-listener"
+  address: "::"
+  port: 10081
+  hostnames:
+  - "*"
+  headers:
+    lateAddResponseHeaders:
+    - name: "some-header"
+      value:
+      - "some-value1"
+      - "some-value2"
+      append: true
+    - name: "some-header-2"
+      value:
+      - "some-value"
+      append: true
+    - name: "some-header3"
+      value:
+      - "some-value"
+      append: false
+    - name: "some-header4"
+      value:
+      - "some-value"
+      append: false
+    - name: "empty-header"
+      value:
+      append: false
+    lateRemoveResponseHeaders:
+    - "some-header5"
+    - "some-header6"
+  routes:
+  - name: "second-route"
+    hostname: "*"
+    destination:
+      name: "second-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.5"
+          port: 50000
+        name: "second-route-dest/backend/0"

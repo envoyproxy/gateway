@@ -74,8 +74,11 @@ type BackendTrafficPolicySpec struct {
 
 	// The compression config for the http streams.
 	//
+	// +patchMergeKey=type
+	// +patchStrategy=merge
+	//
 	// +optional
-	Compression []*Compression `json:"compression,omitempty"`
+	Compression []*Compression `json:"compression,omitempty" patchMergeKey:"type" patchStrategy:"merge"`
 
 	// ResponseOverride defines the configuration to override specific responses with a custom one.
 	// If multiple configurations are specified, the first one to match wins.

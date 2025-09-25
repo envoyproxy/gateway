@@ -232,6 +232,5 @@ const (
 type OIDCCookieConfig struct {
 	// +optional
 	// +kubebuilder:validation:Enum=Lax;Strict;None
-	// +kubebuilder:default=Strict
 	SameSite *string `json:"sameSite,omitempty"`
 }

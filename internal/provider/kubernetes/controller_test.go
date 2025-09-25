@@ -1278,7 +1278,7 @@ func TestProcessServiceClusterForGatewayClass(t *testing.T) {
 				},
 				Spec: egv1a1.EnvoyProxySpec{
 					Provider: &egv1a1.EnvoyProxyProvider{
-						Type: egv1a1.ProviderTypeKubernetes,
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyService: &egv1a1.KubernetesServiceSpec{
 								Name: ptr.To("merged-gc-svc"),
@@ -1349,7 +1349,7 @@ func TestProcessServiceClusterForGateway(t *testing.T) {
 				},
 				Spec: egv1a1.EnvoyProxySpec{
 					Provider: &egv1a1.EnvoyProxyProvider{
-						Type: egv1a1.ProviderTypeKubernetes,
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyService: &egv1a1.KubernetesServiceSpec{
 								Name: ptr.To("my-gateway-svc"),
@@ -1389,7 +1389,7 @@ func TestProcessServiceClusterForGateway(t *testing.T) {
 				},
 				Spec: egv1a1.EnvoyProxySpec{
 					Provider: &egv1a1.EnvoyProxyProvider{
-						Type: egv1a1.ProviderTypeKubernetes,
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyService: &egv1a1.KubernetesServiceSpec{
 								Name: ptr.To("my-gateway-svc"),
@@ -1417,7 +1417,7 @@ func TestProcessServiceClusterForGateway(t *testing.T) {
 				},
 				Spec: egv1a1.EnvoyProxySpec{
 					Provider: &egv1a1.EnvoyProxyProvider{
-						Type: egv1a1.ProviderTypeKubernetes,
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyService: &egv1a1.KubernetesServiceSpec{
 								Name: ptr.To("my-gateway-svc"),

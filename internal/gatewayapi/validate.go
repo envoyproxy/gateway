@@ -29,7 +29,7 @@ import (
 func (t *Translator) validateBackendRef(backendRefContext BackendRefContext, route RouteContext,
 	resources *resource.Resources, backendNamespace string, routeKind gwapiv1.Kind,
 ) status.Error {
-	backendRef := GetBackendRef(backendRefContext)
+	backendRef := backendRefContext.GetBackendRef()
 
 	if err := t.validateBackendRefFilters(backendRefContext, routeKind); err != nil {
 		return err
@@ -91,7 +91,10 @@ func (t *Translator) validateBackendRefKind(backendRef *gwapiv1a2.BackendRef) st
 }
 
 func (t *Translator) validateBackendRefFilters(backendRef BackendRefContext, routeKind gwapiv1.Kind) status.Error {
-	filters := GetFilters(backendRef)
+	filters := backendRef.GetFilters()
+	if filters == nil {
+		return nil
+	}
 	var unsupportedFilters bool
 
 	switch routeKind {
@@ -1095,14 +1098,7 @@ func validateRouteRuleSectionName(
 	targetKey policyTargetRouteKey,
 	route *policyRouteTargetContext,
 ) *status.PolicyResolveError {
-	found := false
-	for _, name := range GetRuleNames(route.RouteContext) {
-		if name == sectionName {
-			found = true
-			break
-		}
-	}
-	if !found {
+	if !route.HasRuleNames(sectionName) {
 		message := fmt.Sprintf("No section name %s found for %s %s/%s",
 			string(sectionName), targetKey.Kind, targetKey.Namespace, targetKey.Name)
 

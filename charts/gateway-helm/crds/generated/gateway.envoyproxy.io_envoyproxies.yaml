@@ -57,17 +57,16 @@ spec:
                       2. Other Routes: ALPN is disabled.
                       3. Backends: proxy uses the appropriate ALPN options for the backend protocol.
                       When an empty list is provided, the ALPN TLS extension is disabled.
-                      Supported values are:
+
+                      Defaults to [h2, http/1.1] if not specified.
+
+                      Typical Supported values are:
                       - http/1.0
                       - http/1.1
                       - h2
                     items:
                       description: ALPNProtocol specifies the protocol to be negotiated
                         using ALPN
-                      enum:
-                      - http/1.0
-                      - http/1.1
-                      - h2
                       type: string
                     type: array
                   ciphers:
@@ -464,6 +463,19 @@ spec:
                   If unspecified, the "Kubernetes" resource provider is used with default configuration
                   parameters.
                 properties:
+                  host:
+                    description: |-
+                      Host provides runtime deployment of the data plane as a child process on the
+                      host environment.
+                      If unspecified and type is "Host", default settings for the custom provider
+                      are applied.
+                    properties:
+                      envoyVersion:
+                        description: |-
+                          EnvoyVersion is the version of Envoy to use. If unspecified, the version
+                          against which Envoy Gateway is built will be used.
+                        type: string
+                    type: object
                   kubernetes:
                     description: |-
                       Kubernetes defines the desired state of the Kubernetes resource provider.
@@ -10494,10 +10506,10 @@ spec:
                     description: |-
                       Type is the type of resource provider to use. A resource provider provides
                       infrastructure resources for running the data plane, e.g. Envoy proxy, and
-                      optional auxiliary control planes. Supported types are "Kubernetes".
+                      optional auxiliary control planes. Supported types are "Kubernetes"and "Host".
                     enum:
                     - Kubernetes
-                    - Custom
+                    - Host
                     type: string
                 required:
                 - type
@@ -10976,8 +10988,7 @@ spec:
                                                           description: HTTPStatus
                                                             defines the http status
                                                             code.
-                                                          exclusiveMaximum: true
-                                                          maximum: 600
+                                                          maximum: 599
                                                           minimum: 100
                                                           type: integer
                                                         type: array
@@ -11536,8 +11547,7 @@ spec:
                                                     items:
                                                       description: HTTPStatus defines
                                                         the http status code.
-                                                      exclusiveMaximum: true
-                                                      maximum: 600
+                                                      maximum: 599
                                                       minimum: 100
                                                       type: integer
                                                     type: array
@@ -12089,8 +12099,7 @@ spec:
                                                           description: HTTPStatus
                                                             defines the http status
                                                             code.
-                                                          exclusiveMaximum: true
-                                                          maximum: 600
+                                                          maximum: 599
                                                           minimum: 100
                                                           type: integer
                                                         type: array
@@ -12649,8 +12658,7 @@ spec:
                                                     items:
                                                       description: HTTPStatus defines
                                                         the http status code.
-                                                      exclusiveMaximum: true
-                                                      maximum: 600
+                                                      maximum: 599
                                                       minimum: 100
                                                       type: integer
                                                     type: array
@@ -13306,8 +13314,7 @@ spec:
                                                   items:
                                                     description: HTTPStatus defines
                                                       the http status code.
-                                                    exclusiveMaximum: true
-                                                    maximum: 600
+                                                    maximum: 599
                                                     minimum: 100
                                                     type: integer
                                                   type: array
@@ -13841,8 +13848,7 @@ spec:
                                               items:
                                                 description: HTTPStatus defines the
                                                   http status code.
-                                                exclusiveMaximum: true
-                                                maximum: 600
+                                                maximum: 599
                                                 minimum: 100
                                                 type: integer
                                               type: array
@@ -14423,8 +14429,7 @@ spec:
                                             items:
                                               description: HTTPStatus defines the
                                                 http status code.
-                                              exclusiveMaximum: true
-                                              maximum: 600
+                                              maximum: 599
                                               minimum: 100
                                               type: integer
                                             type: array
@@ -14954,8 +14959,7 @@ spec:
                                         items:
                                           description: HTTPStatus defines the http
                                             status code.
-                                          exclusiveMaximum: true
-                                          maximum: 600
+                                          maximum: 599
                                           minimum: 100
                                           type: integer
                                         type: array

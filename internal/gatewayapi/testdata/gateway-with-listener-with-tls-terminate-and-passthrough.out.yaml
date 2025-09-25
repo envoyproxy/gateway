@@ -177,6 +177,10 @@ xdsIR:
       - path: /dev/stdout
     globalResources:
       proxyServiceCluster:
+        metadata:
+          name: envoy-envoy-gateway-gateway-1-196ae069
+          namespace: envoy-gateway-system
+          sectionName: "8080"
         name: envoy-gateway/gateway-1
         settings:
         - addressType: IP
@@ -250,6 +254,11 @@ xdsIR:
     tcp:
     - address: 0.0.0.0
       externalPort: 90
+      metadata:
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: tls-passthrough
       name: envoy-gateway/gateway-1/tls-passthrough
       port: 10090
       routes:

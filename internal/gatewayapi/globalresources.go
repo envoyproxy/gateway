@@ -93,6 +93,7 @@ func (t *Translator) processServiceClusterForGateway(gateway *GatewayContext, re
 	return irKey, &ir.RouteDestination{
 		Name:     dst.Name,
 		Settings: []*ir.DestinationSetting{dst},
+		Metadata: dst.Metadata,
 	}
 }
 

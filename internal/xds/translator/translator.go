@@ -319,7 +319,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 			// Create a new UDP(QUIC) listener for HTTP3 traffic if HTTP3 is enabled
 			if http3Enabled {
 				if quicXDSListener, err = t.buildXdsQuicListener(
-					httpListener.CoreListenerDetails,
+					&httpListener.CoreListenerDetails,
 					httpListener.IPFamily,
 					accessLog,
 				); err != nil {
@@ -335,7 +335,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 
 			// Create a new TCP listener for HTTP1/HTTP2 traffic.
 			if tcpXDSListener, err = t.buildXdsTCPListener(
-				httpListener.CoreListenerDetails,
+				&httpListener.CoreListenerDetails,
 				httpListener.TCPKeepalive,
 				httpListener.Connection,
 				accessLog,
@@ -738,7 +738,7 @@ func (t *Translator) processTCPListenerXdsTranslation(
 		xdsListener := findXdsListenerByHostPort(tCtx, tcpListener.Address, tcpListener.Port, corev3.SocketAddress_TCP)
 		if xdsListener == nil {
 			if xdsListener, err = t.buildXdsTCPListener(
-				tcpListener.CoreListenerDetails,
+				&tcpListener.CoreListenerDetails,
 				tcpListener.TCPKeepalive,
 				tcpListener.Connection,
 				accesslog,
@@ -912,6 +912,7 @@ func processServiceCluster(tCtx *types.ResourceVersionTable, xdsIR *ir.Xds) erro
 					MinEndpointsThreshold: ptr.To[uint64](1),
 				},
 			},
+			metadata: svcCluster.Metadata,
 		}); err != nil {
 			return err
 		}

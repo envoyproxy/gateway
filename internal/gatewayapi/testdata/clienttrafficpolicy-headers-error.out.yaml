@@ -26,6 +26,24 @@ clientTrafficPolicies:
         - name: example-header-4
           value: '  invalid'
       enableEnvoyHeaders: true
+      lateResponseHeaders:
+        add:
+        - name: ""
+          value: empty
+        - name: Example/Header/1
+          value: :/
+        - name: example-header-2
+          value: |
+            multi-line-header-value
+        remove:
+        - ""
+        set:
+        - name: ""
+          value: empty
+        - name: Example:Header:3
+          value: :/
+        - name: example-header-4
+          value: '  invalid'
       preserveXRequestID: true
       withUnderscoresAction: Allow
     targetRef:
@@ -49,7 +67,15 @@ clientTrafficPolicies:
           EarlyRequestHeaders cannot set a header with a '/' or ':' character in them. Header: '"Example:Header:3"'
           EarlyRequestHeaders cannot set a header with an invalid value. Header: '"example-header-4"'
           EarlyRequestHeaders cannot remove a header with an empty name
-          EarlyRequestHeaders did not provide valid configuration to add/set/remove any headers.
+          EarlyRequestHeaders did not provide valid configuration to add/set/remove any headers
+          LateResponseHeaders cannot add a header with an empty name
+          LateResponseHeaders cannot add a header with a '/' or ':' character in them. Header: '"Example/Header/1"'
+          LateResponseHeaders cannot add a header with an invalid value. Header: '"example-header-2"'
+          LateResponseHeaders cannot set a header with an empty name
+          LateResponseHeaders cannot set a header with a '/' or ':' character in them. Header: '"Example:Header:3"'
+          LateResponseHeaders cannot set a header with an invalid value. Header: '"example-header-4"'
+          LateResponseHeaders cannot remove a header with an empty name
+          LateResponseHeaders did not provide valid configuration to add/set/remove any headers.
         reason: Invalid
         status: "False"
         type: Accepted
@@ -122,6 +148,10 @@ xdsIR:
       - path: /dev/stdout
     globalResources:
       proxyServiceCluster:
+        metadata:
+          name: envoy-envoy-gateway-gateway-1-196ae069
+          namespace: envoy-gateway-system
+          sectionName: "8080"
         name: envoy-gateway/gateway-1
         settings:
         - addressType: IP

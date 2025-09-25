@@ -633,7 +633,7 @@ func TestDeployment(t *testing.T) {
 		{
 			caseName:  "with-extra-args",
 			infra:     newTestInfra(),
-			extraArgs: []string{"--key1 val1", "--key2 val2"},
+			extraArgs: []string{"--key1", "val1", "--key2", "val2"},
 		},
 		{
 			caseName: "with-empty-memory-limits",
@@ -1114,7 +1114,7 @@ func TestDaemonSet(t *testing.T) {
 		{
 			caseName:  "with-extra-args",
 			infra:     newTestInfra(),
-			extraArgs: []string{"--key1 val1", "--key2 val2"},
+			extraArgs: []string{"--key1", "val1", "--key2", "val2"},
 		},
 		{
 			caseName: "with-name",
@@ -1972,7 +1972,7 @@ func TestGatewayNamespaceModeMultipleResources(t *testing.T) {
 	if infra1.Proxy.Config.Spec.Provider == nil {
 		infra1.Proxy.Config.Spec.Provider = &egv1a1.EnvoyProxyProvider{}
 	}
-	infra1.Proxy.Config.Spec.Provider.Type = egv1a1.ProviderTypeKubernetes
+	infra1.Proxy.Config.Spec.Provider.Type = egv1a1.EnvoyProxyProviderTypeKubernetes
 	if infra1.Proxy.Config.Spec.Provider.Kubernetes == nil {
 		infra1.Proxy.Config.Spec.Provider.Kubernetes = &egv1a1.EnvoyProxyKubernetesProvider{}
 	}
@@ -1989,7 +1989,7 @@ func TestGatewayNamespaceModeMultipleResources(t *testing.T) {
 	if infra2.Proxy.Config.Spec.Provider == nil {
 		infra2.Proxy.Config.Spec.Provider = &egv1a1.EnvoyProxyProvider{}
 	}
-	infra2.Proxy.Config.Spec.Provider.Type = egv1a1.ProviderTypeKubernetes
+	infra2.Proxy.Config.Spec.Provider.Type = egv1a1.EnvoyProxyProviderTypeKubernetes
 	if infra2.Proxy.Config.Spec.Provider.Kubernetes == nil {
 		infra2.Proxy.Config.Spec.Provider.Kubernetes = &egv1a1.EnvoyProxyKubernetesProvider{}
 	}

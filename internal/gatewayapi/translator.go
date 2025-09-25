@@ -202,22 +202,26 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 	// Process ClientTrafficPolicies
 	clientTrafficPolicies := t.ProcessClientTrafficPolicies(resources, acceptedGateways, xdsIR, infraIR)
 
-	// Process BackendTrafficPolicies
-	routes := []RouteContext{}
-	for _, h := range httpRoutes {
-		routes = append(routes, h)
+	routes := make([]RouteContext, len(httpRoutes)+len(grpcRoutes)+len(tlsRoutes)+len(tcpRoutes)+len(udpRoutes))
+	offset := 0
+	for i := range httpRoutes {
+		routes[offset+i] = httpRoutes[i]
 	}
-	for _, g := range grpcRoutes {
-		routes = append(routes, g)
+	offset += len(httpRoutes)
+	for i := range grpcRoutes {
+		routes[offset+i] = grpcRoutes[i]
 	}
-	for _, t := range tlsRoutes {
-		routes = append(routes, t)
+	offset += len(grpcRoutes)
+	for i := range tlsRoutes {
+		routes[offset+i] = tlsRoutes[i]
 	}
-	for _, t := range tcpRoutes {
-		routes = append(routes, t)
+	offset += len(tlsRoutes)
+	for i := range tcpRoutes {
+		routes[offset+i] = tcpRoutes[i]
 	}
-	for _, u := range udpRoutes {
-		routes = append(routes, u)
+	offset += len(tcpRoutes)
+	for i := range udpRoutes {
+		routes[offset+i] = udpRoutes[i]
 	}
 
 	// Process BackendTrafficPolicies
@@ -280,7 +284,7 @@ func (t *Translator) GetRelevantGateways(resources *resource.Resources) (
 
 		if gateway.Spec.GatewayClassName == t.GatewayClassName {
 			gc := &GatewayContext{
-				Gateway: gateway.DeepCopy(),
+				Gateway: gateway,
 			}
 
 			// Gateways that are not accepted by the controller because they reference an invalid EnvoyProxy.

@@ -14,7 +14,6 @@ import (
 
 	xdscore "github.com/cncf/xds/go/xds/core/v3"
 	matcher "github.com/cncf/xds/go/xds/type/matcher/v3"
-	mutation_rulesv3 "github.com/envoyproxy/go-control-plane/envoy/config/common/mutation_rules/v3"
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	listenerv3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	tls_inspectorv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/listener/tls_inspector/v3"
@@ -185,7 +184,7 @@ func originalIPDetectionExtensions(clientIPDetection *ir.ClientIPDetectionSettin
 
 // buildXdsTCPListener creates a xds Listener resource
 func (t *Translator) buildXdsTCPListener(
-	listenerDetails ir.CoreListenerDetails,
+	listenerDetails *ir.CoreListenerDetails,
 	keepalive *ir.TCPKeepalive,
 	connection *ir.ClientConnection,
 	accesslog *ir.AccessLog,
@@ -262,7 +261,7 @@ func buildMaxAcceptPerSocketEvent(connection *ir.ClientConnection) *wrapperspb.U
 
 // buildXdsQuicListener creates a xds Listener resource for quic
 func (t *Translator) buildXdsQuicListener(
-	listenerDetails ir.CoreListenerDetails,
+	listenerDetails *ir.CoreListenerDetails,
 	ipFamily *egv1a1.IPFamily,
 	accesslog *ir.AccessLog,
 ) (*listenerv3.Listener, error) {
@@ -413,9 +412,7 @@ func (t *Translator) addHCMToXDSListener(
 	patchProxyProtocolFilter(xdsListener, irListener.ProxyProtocol)
 
 	if irListener.IsHTTP2 {
-		mgr.HttpFilters = append(mgr.HttpFilters, xdsfilters.GRPCWeb)
-		// always enable grpc stats filter
-		mgr.HttpFilters = append(mgr.HttpFilters, xdsfilters.GRPCStats)
+		mgr.HttpFilters = append(mgr.HttpFilters, xdsfilters.GRPCWeb, xdsfilters.GRPCStats)
 	}
 
 	if http3Listener {
@@ -431,6 +428,18 @@ func (t *Translator) addHCMToXDSListener(
 	var filters []*listenerv3.Filter
 
 	if connection != nil && connection.ConnectionLimit != nil {
+		connLimit := connection.ConnectionLimit
+		if connLimit.MaxConnectionDuration != nil {
+			mgr.CommonHttpProtocolOptions.MaxConnectionDuration = durationpb.New(connLimit.MaxConnectionDuration.Duration)
+			mgr.Http1SafeMaxConnectionDuration = !ptr.Deref(irListener.HTTP1, ir.HTTP1Settings{}).DisableSafeMaxConnectionDuration
+		}
+		if connLimit.MaxRequestsPerConnection != nil {
+			mgr.CommonHttpProtocolOptions.MaxRequestsPerConnection = wrapperspb.UInt32(*connLimit.MaxRequestsPerConnection)
+		}
+		if connLimit.MaxStreamDuration != nil {
+			mgr.CommonHttpProtocolOptions.MaxStreamDuration = durationpb.New(connLimit.MaxStreamDuration.Duration)
+		}
+
 		cl := buildConnectionLimitFilter(statPrefix, connection)
 		if clf, err := toNetworkFilter(networkConnectionLimit, cl); err == nil {
 			filters = append(filters, clf)
@@ -536,58 +545,8 @@ func buildEarlyHeaderMutation(headers *ir.HeaderSettings) []*corev3.TypedExtensi
 		return nil
 	}
 
-	var mutationRules []*mutation_rulesv3.HeaderMutation
-
-	for _, header := range headers.EarlyAddRequestHeaders {
-		var appendAction corev3.HeaderValueOption_HeaderAppendAction
-		if header.Append {
-			appendAction = corev3.HeaderValueOption_APPEND_IF_EXISTS_OR_ADD
-		} else {
-			appendAction = corev3.HeaderValueOption_OVERWRITE_IF_EXISTS_OR_ADD
-		}
-		// Allow empty headers to be set, but don't add the config to do so unless necessary
-		if len(header.Value) == 0 {
-			mutationRules = append(mutationRules, &mutation_rulesv3.HeaderMutation{
-				Action: &mutation_rulesv3.HeaderMutation_Append{
-					Append: &corev3.HeaderValueOption{
-						Header: &corev3.HeaderValue{
-							Key: header.Name,
-						},
-						AppendAction:   appendAction,
-						KeepEmptyValue: true,
-					},
-				},
-			})
-		} else {
-			for _, val := range header.Value {
-				mutationRules = append(mutationRules, &mutation_rulesv3.HeaderMutation{
-					Action: &mutation_rulesv3.HeaderMutation_Append{
-						Append: &corev3.HeaderValueOption{
-							Header: &corev3.HeaderValue{
-								Key:   header.Name,
-								Value: val,
-							},
-							AppendAction:   appendAction,
-							KeepEmptyValue: val == "",
-						},
-					},
-				})
-			}
-		}
-	}
-
-	for _, header := range headers.EarlyRemoveRequestHeaders {
-		mr := &mutation_rulesv3.HeaderMutation{
-			Action: &mutation_rulesv3.HeaderMutation_Remove{
-				Remove: header,
-			},
-		}
-
-		mutationRules = append(mutationRules, mr)
-	}
-
 	earlyHeaderMutationAny, _ := proto.ToAnyWithValidation(&early_header_mutationv3.HeaderMutation{
-		Mutations: mutationRules,
+		Mutations: buildHeaderMutationRules(headers.EarlyAddRequestHeaders, headers.EarlyRemoveRequestHeaders),
 	})
 
 	return []*corev3.TypedExtensionConfig{

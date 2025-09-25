@@ -245,19 +245,19 @@ type CoreListenerDetails struct {
 	IPFamily *egv1a1.IPFamily `json:"ipFamily,omitempty" yaml:"ipFamily,omitempty"`
 }
 
-func (l CoreListenerDetails) GetName() string {
+func (l *CoreListenerDetails) GetName() string {
 	return l.Name
 }
 
-func (l CoreListenerDetails) GetAddress() string {
+func (l *CoreListenerDetails) GetAddress() string {
 	return l.Address
 }
 
-func (l CoreListenerDetails) GetPort() uint32 {
+func (l *CoreListenerDetails) GetPort() uint32 {
 	return l.Port
 }
 
-func (l CoreListenerDetails) GetExtensionRefs() []*UnstructuredRef {
+func (l *CoreListenerDetails) GetExtensionRefs() []*UnstructuredRef {
 	return l.ExtensionRefs
 }
 
@@ -311,7 +311,7 @@ type HTTPListener struct {
 }
 
 // Validate the fields within the HTTPListener structure
-func (h HTTPListener) Validate() error {
+func (h *HTTPListener) Validate() error {
 	var errs error
 	if h.Name == "" {
 		errs = errors.Join(errs, ErrListenerNameEmpty)
@@ -460,7 +460,7 @@ func (t TLSCertificate) Validate() error {
 }
 
 // Validate the fields within the TLSListenerConfig structure
-func (t TLSConfig) Validate() error {
+func (t *TLSConfig) Validate() error {
 	var errs error
 	for _, cert := range t.Certificates {
 		if err := cert.Validate(); err != nil {
@@ -541,9 +541,10 @@ type BackendWeights struct {
 // HTTP1Settings provides HTTP/1 configuration on the listener.
 // +k8s:deepcopy-gen=true
 type HTTP1Settings struct {
-	EnableTrailers     bool            `json:"enableTrailers,omitempty" yaml:"enableTrailers,omitempty"`
-	PreserveHeaderCase bool            `json:"preserveHeaderCase,omitempty" yaml:"preserveHeaderCase,omitempty"`
-	HTTP10             *HTTP10Settings `json:"http10,omitempty" yaml:"http10,omitempty"`
+	EnableTrailers                   bool            `json:"enableTrailers,omitempty" yaml:"enableTrailers,omitempty"`
+	PreserveHeaderCase               bool            `json:"preserveHeaderCase,omitempty" yaml:"preserveHeaderCase,omitempty"`
+	HTTP10                           *HTTP10Settings `json:"http10,omitempty" yaml:"http10,omitempty"`
+	DisableSafeMaxConnectionDuration bool            `json:"disableSafeMaxConnectionDuration,omitempty" yaml:"disableSafeMaxConnectionDuration,omitempty"`
 }
 
 // HTTP10Settings provides HTTP/1.0 configuration on the listener.
@@ -627,6 +628,9 @@ type CustomResponse struct {
 
 	// StatusCode will be used for the response's status code.
 	StatusCode *uint32 `json:"statusCode,omitempty"`
+
+	// AddResponseHeaders defines header/value sets to be added to the headers of response.
+	AddResponseHeaders []AddHeader `json:"addResponseHeaders,omitempty" yaml:"addResponseHeaders,omitempty"`
 }
 
 // Validate the fields within the CustomResponse structure
@@ -701,6 +705,12 @@ type HeaderSettings struct {
 
 	// EarlyRemoveRequestHeaders defines headers that would be removed before envoy request processing.
 	EarlyRemoveRequestHeaders []string `json:"earlyRemoveRequestHeaders,omitempty" yaml:"earlyRemoveRequestHeaders,omitempty"`
+
+	// LateAddResponseHeaders defines headers that would be added after envoy response processing.
+	LateAddResponseHeaders []AddHeader `json:"lateAddResponseHeaders,omitempty" yaml:"earlyAddRequestHeaders,omitempty"`
+
+	// LateRemoveResponseHeaders defines headers that would be removed after envoy response processing.
+	LateRemoveResponseHeaders []string `json:"lateRemoveResponseHeaders,omitempty" yaml:"earlyRemoveRequestHeaders,omitempty"`
 }
 
 // ClientTimeout sets the timeout configuration for downstream connections
@@ -2033,7 +2043,7 @@ type TLS struct {
 }
 
 // Validate the fields within the TCPListener structure
-func (t TCPListener) Validate() error {
+func (t *TCPListener) Validate() error {
 	var errs error
 	if t.Name == "" {
 		errs = errors.Join(errs, ErrListenerNameEmpty)
@@ -2052,7 +2062,7 @@ func (t TCPListener) Validate() error {
 	return errs
 }
 
-func (t TCPRoute) Validate() error {
+func (t *TCPRoute) Validate() error {
 	var errs error
 
 	if t.Name == "" {
@@ -2132,7 +2142,7 @@ type UDPRoute struct {
 }
 
 // Validate the fields within the UDPListener structure
-func (h UDPListener) Validate() error {
+func (h *UDPListener) Validate() error {
 	var errs error
 	if h.Name == "" {
 		errs = errors.Join(errs, ErrListenerNameEmpty)
@@ -3031,10 +3041,18 @@ type ConnectionLimit struct {
 	// Value of the maximum concurrent connections limit.
 	// When the limit is reached, incoming connections will be closed after the CloseDelay duration.
 	Value *uint64 `json:"value,omitempty" yaml:"value,omitempty"`
-
 	// CloseDelay defines the delay to use before closing connections that are rejected
 	// once the limit value is reached.
 	CloseDelay *metav1.Duration `json:"closeDelay,omitempty" yaml:"closeDelay,omitempty"`
+	// MaxConnectionDuration is the maximum amount of time a connection can remain established
+	// before being drained and/or closed.
+	MaxConnectionDuration *metav1.Duration `json:"maxConnectionDuration,omitempty" yaml:"maxConnectionDuration,omitempty"`
+	// MaxRequestsPerConnection defines the maximum number of requests allowed over a single connection.
+	// If not specified, there is no limit. Setting this parameter to 1 will effectively disable keep alive.
+	MaxRequestsPerConnection *uint32 `json:"maxRequestsPerConnection,omitempty" yaml:"maxRequestsPerConnection,omitempty"`
+	// MaxStreamDuration is the maximum amount of time to keep alive an http stream. When the limit is reached
+	// the stream will be reset independent of any other timeouts. If not specified, no value is set.
+	MaxStreamDuration *metav1.Duration `json:"maxStreamDuration,omitempty" yaml:"maxStreamDuration,omitempty"`
 }
 
 type ExtProcBodyProcessingMode egv1a1.ExtProcBodyProcessingMode

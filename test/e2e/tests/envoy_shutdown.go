@@ -51,7 +51,7 @@ var EnvoyShutdownTest = suite.ConformanceTest{
 				t.Errorf("Failed to get proxy deployment")
 			}
 
-			WaitForPods(t, suite.Client, dp.Namespace, map[string]string{"gateway.envoyproxy.io/owning-gateway-name": name}, corev1.PodRunning, PodReady)
+			WaitForPods(t, suite.Client, dp.Namespace, map[string]string{"gateway.envoyproxy.io/owning-gateway-name": name}, corev1.PodRunning, &PodReady)
 
 			// wait for route to be programmed on envoy
 			expectedResponse := http.ExpectedResponse{
@@ -72,10 +72,10 @@ var EnvoyShutdownTest = suite.ConformanceTest{
 
 			t.Log("Starting load generation")
 			// Run load async and continue to restart deployment
-			go runLoadAndWait(t, suite.TimeoutConfig, loadSuccess, aborter, reqURL.String())
+			go runLoadAndWait(t, &suite.TimeoutConfig, loadSuccess, aborter, reqURL.String())
 
 			t.Log("Rolling out proxy deployment")
-			err = restartProxyAndWaitForRollout(t, suite.TimeoutConfig, suite.Client, epNN, dp)
+			err = restartProxyAndWaitForRollout(t, &suite.TimeoutConfig, suite.Client, epNN, dp)
 
 			t.Log("Stopping load generation and collecting results")
 			aborter.Abort(false) // abort the load either way
@@ -126,11 +126,15 @@ func getDeploymentForGateway(namespace, name string, c client.Client) (*appsv1.D
 
 // sets the "gateway.envoyproxy.io/restartedAt" annotation in the EnvoyProxy resource's deployment patch spec
 // leading to EG triggering a rollout restart of the deployment
-func restartProxyAndWaitForRollout(t *testing.T, timeoutConfig config.TimeoutConfig, c client.Client, epNN types.NamespacedName, dp *appsv1.Deployment) error {
+func restartProxyAndWaitForRollout(t *testing.T, timeoutConfig *config.TimeoutConfig, c client.Client, epNN types.NamespacedName, dp *appsv1.Deployment) error {
 	t.Helper()
 	const egRestartAnnotation = "gateway.envoyproxy.io/restartedAt"
 	restartTime := time.Now().Format(time.RFC3339)
 	ctx := context.Background()
+
+	if timeoutConfig == nil {
+		t.Fatalf("timeoutConfig cannot be nil")
+	}
 	ep := egv1a1.EnvoyProxy{}
 	if err := c.Get(context.Background(), epNN, &ep); err != nil {
 		return err
@@ -163,7 +167,8 @@ func restartProxyAndWaitForRollout(t *testing.T, timeoutConfig config.TimeoutCon
 		}
 
 		rolled := int32(0)
-		for _, rs := range podList.Items {
+		for i := range podList.Items {
+			rs := &podList.Items[i]
 			if rs.Annotations[egRestartAnnotation] == restartTime {
 				rolled++
 			}

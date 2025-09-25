@@ -136,7 +136,7 @@ func (t *Translator) ProcessGRPCFilters(parentRef *RouteParentContext,
 		if httpFiltersContext.DirectResponse != nil {
 			break
 		}
-		if err := ValidateGRPCRouteFilter(&filter); err != nil {
+		if err := ValidateGRPCRouteFilter(&filter, t.ExtensionGroupKinds...); err != nil {
 			t.processInvalidHTTPFilter(string(filter.Type), httpFiltersContext, err)
 			break
 		}
@@ -858,8 +858,27 @@ func (t *Translator) processExtensionRefHTTPFilter(extFilter *gwapiv1.LocalObjec
 						}
 						filterContext.AddResponseHeaders = append(filterContext.AddResponseHeaders, newHeader)
 					}
-
 					filterContext.DirectResponse = dr
+
+					// Add response headers from the direct response filter.
+					// Headers must be added to the filter context to get applied to the response.
+					rhm := hrf.Spec.DirectResponse.Header
+					if rhm != nil {
+						for h := range rhm.Add {
+							filterContext.AddResponseHeaders = append(filterContext.AddResponseHeaders, ir.AddHeader{
+								Name:   string(rhm.Add[h].Name),
+								Append: true,
+								Value:  []string{rhm.Add[h].Value},
+							})
+						}
+						for h := range rhm.Set {
+							filterContext.AddResponseHeaders = append(filterContext.AddResponseHeaders, ir.AddHeader{
+								Name:   string(rhm.Set[h].Name),
+								Append: false,
+								Value:  []string{rhm.Set[h].Value},
+							})
+						}
+					}
 				}
 
 				if hrf.Spec.CredentialInjection != nil {
@@ -946,26 +965,16 @@ func (t *Translator) processRequestMirrorFilter(
 	}
 
 	// Get the route type from the filter context to determine the correct BackendRef type
-	routeType := GetRouteType(filterContext.Route)
+	routeType := filterContext.Route.GetRouteType()
 	weight := int32(1)
 	mirrorBackend := mirrorFilter.BackendRef
 
-	// Create the appropriate BackendRef type based on the route type
-	var mirrorBackendRef BackendRefContext
-	if routeType == resource.KindGRPCRoute {
-		mirrorBackendRef = gwapiv1.GRPCBackendRef{
-			BackendRef: gwapiv1.BackendRef{
-				BackendObjectReference: mirrorBackend,
-				Weight:                 &weight,
-			},
-		}
-	} else {
-		mirrorBackendRef = gwapiv1.HTTPBackendRef{
-			BackendRef: gwapiv1.BackendRef{
-				BackendObjectReference: mirrorBackend,
-				Weight:                 &weight,
-			},
-		}
+	// Create a DirectBackendRef for the mirror backend (no filters needed)
+	mirrorBackendRef := DirectBackendRef{
+		BackendRef: &gwapiv1.BackendRef{
+			BackendObjectReference: mirrorBackend,
+			Weight:                 &weight,
+		},
 	}
 
 	// This sets the status on the Route, should the usage be changed so that the status message reflects that the backendRef is from the filter?

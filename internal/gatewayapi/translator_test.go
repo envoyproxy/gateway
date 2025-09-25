@@ -974,7 +974,7 @@ func TestServicePortToContainerPort(t *testing.T) {
 			envoyProxy: &egv1a1.EnvoyProxy{
 				Spec: egv1a1.EnvoyProxySpec{
 					Provider: &egv1a1.EnvoyProxyProvider{
-						Type: egv1a1.ProviderTypeKubernetes,
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 					},
 				},
 			},
@@ -985,7 +985,7 @@ func TestServicePortToContainerPort(t *testing.T) {
 			envoyProxy: &egv1a1.EnvoyProxy{
 				Spec: egv1a1.EnvoyProxySpec{
 					Provider: &egv1a1.EnvoyProxyProvider{
-						Type: egv1a1.ProviderTypeKubernetes,
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							UseListenerPortAsContainerPort: ptr.To(false),
 						},
@@ -999,7 +999,7 @@ func TestServicePortToContainerPort(t *testing.T) {
 			envoyProxy: &egv1a1.EnvoyProxy{
 				Spec: egv1a1.EnvoyProxySpec{
 					Provider: &egv1a1.EnvoyProxyProvider{
-						Type: egv1a1.ProviderTypeKubernetes,
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							UseListenerPortAsContainerPort: ptr.To(true),
 						},
@@ -1026,7 +1026,7 @@ type mockWasmCache struct{}
 
 func (m *mockWasmCache) Start(_ context.Context) {}
 
-func (m *mockWasmCache) Get(downloadURL string, options wasm.GetOptions) (url, checksum string, err error) {
+func (m *mockWasmCache) Get(downloadURL string, options *wasm.GetOptions) (url, checksum string, err error) {
 	// This is a mock implementation of the wasm.Cache.Get method.
 	sha := sha256.Sum256([]byte(downloadURL))
 	hashedName := hex.EncodeToString(sha[:])

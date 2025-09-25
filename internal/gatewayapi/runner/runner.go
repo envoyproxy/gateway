@@ -12,7 +12,6 @@ import (
 	"fmt"
 	"os"
 	"path"
-	"reflect"
 
 	"github.com/docker/docker/pkg/fileutils"
 	"github.com/telepresenceio/watchable"
@@ -151,6 +150,12 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 			// Remaining keys will be deleted from watchable before we exit this function.
 			statusesToDelete := r.getAllStatuses()
 
+			// Aggregate metric counters for batch publishing
+			var infraIRCount, xdsIRCount, gatewayStatusCount, httpRouteStatusCount, grpcRouteStatusCount int
+			var tlsRouteStatusCount, tcpRouteStatusCount, udpRouteStatusCount int
+			var backendTLSPolicyStatusCount, clientTrafficPolicyStatusCount, backendTrafficPolicyStatusCount int
+			var securityPolicyStatusCount, envoyExtensionPolicyStatusCount, backendStatusCount, extensionServerPolicyStatusCount int
+
 			for _, resources := range *val {
 				// Translate and publish IRs.
 				t := &gatewayapi.Translator{
@@ -195,10 +200,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 						errChan <- err
 					} else {
 						r.InfraIR.Store(key, val)
-						message.PublishMetric(message.Metadata{
-							Runner:  r.Name(),
-							Message: message.InfraIRMessageName,
-						})
+						infraIRCount++
 						newIRKeys = append(newIRKeys, key)
 					}
 				}
@@ -210,10 +212,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 						errChan <- err
 					} else {
 						r.XdsIR.Store(key, val)
-						message.PublishMetric(message.Metadata{
-							Runner:  r.Name(),
-							Message: message.XDSIRMessageName,
-						})
+						xdsIRCount++
 					}
 				}
 
@@ -221,55 +220,37 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 				for _, gateway := range result.Gateways {
 					key := utils.NamespacedName(gateway)
 					r.ProviderResources.GatewayStatuses.Store(key, &gateway.Status)
-					message.PublishMetric(message.Metadata{
-						Runner:  r.Name(),
-						Message: message.GatewayStatusMessageName,
-					})
+					gatewayStatusCount++
 					delete(statusesToDelete.GatewayStatusKeys, key)
 				}
 				for _, httpRoute := range result.HTTPRoutes {
 					key := utils.NamespacedName(httpRoute)
 					r.ProviderResources.HTTPRouteStatuses.Store(key, &httpRoute.Status)
-					message.PublishMetric(message.Metadata{
-						Runner:  r.Name(),
-						Message: message.HTTPRouteStatusMessageName,
-					})
+					httpRouteStatusCount++
 					delete(statusesToDelete.HTTPRouteStatusKeys, key)
 				}
 				for _, grpcRoute := range result.GRPCRoutes {
 					key := utils.NamespacedName(grpcRoute)
 					r.ProviderResources.GRPCRouteStatuses.Store(key, &grpcRoute.Status)
-					message.PublishMetric(message.Metadata{
-						Runner:  r.Name(),
-						Message: message.GRPCRouteStatusMessageName,
-					})
+					grpcRouteStatusCount++
 					delete(statusesToDelete.GRPCRouteStatusKeys, key)
 				}
 				for _, tlsRoute := range result.TLSRoutes {
 					key := utils.NamespacedName(tlsRoute)
 					r.ProviderResources.TLSRouteStatuses.Store(key, &tlsRoute.Status)
-					message.PublishMetric(message.Metadata{
-						Runner:  r.Name(),
-						Message: message.TLSRouteStatusMessageName,
-					})
+					tlsRouteStatusCount++
 					delete(statusesToDelete.TLSRouteStatusKeys, key)
 				}
 				for _, tcpRoute := range result.TCPRoutes {
 					key := utils.NamespacedName(tcpRoute)
 					r.ProviderResources.TCPRouteStatuses.Store(key, &tcpRoute.Status)
-					message.PublishMetric(message.Metadata{
-						Runner:  r.Name(),
-						Message: message.TCPRouteStatusMessageName,
-					})
+					tcpRouteStatusCount++
 					delete(statusesToDelete.TCPRouteStatusKeys, key)
 				}
 				for _, udpRoute := range result.UDPRoutes {
 					key := utils.NamespacedName(udpRoute)
 					r.ProviderResources.UDPRouteStatuses.Store(key, &udpRoute.Status)
-					message.PublishMetric(message.Metadata{
-						Runner:  r.Name(),
-						Message: message.UDPRouteStatusMessageName,
-					})
+					udpRouteStatusCount++
 					delete(statusesToDelete.UDPRouteStatusKeys, key)
 				}
 
@@ -279,68 +260,50 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 
 				for _, backendTLSPolicy := range result.BackendTLSPolicies {
 					key := utils.NamespacedName(backendTLSPolicy)
-					if !(reflect.ValueOf(backendTLSPolicy.Status).IsZero()) {
+					if len(backendTLSPolicy.Status.Ancestors) > 0 {
 						r.ProviderResources.BackendTLSPolicyStatuses.Store(key, &backendTLSPolicy.Status)
-						message.PublishMetric(message.Metadata{
-							Runner:  r.Name(),
-							Message: message.BackendTLSPolicyStatusMessageName,
-						})
+						backendTLSPolicyStatusCount++
 					}
 					delete(statusesToDelete.BackendTLSPolicyStatusKeys, key)
 				}
 
 				for _, clientTrafficPolicy := range result.ClientTrafficPolicies {
 					key := utils.NamespacedName(clientTrafficPolicy)
-					if !(reflect.ValueOf(clientTrafficPolicy.Status).IsZero()) {
+					if len(clientTrafficPolicy.Status.Ancestors) > 0 {
 						r.ProviderResources.ClientTrafficPolicyStatuses.Store(key, &clientTrafficPolicy.Status)
-						message.PublishMetric(message.Metadata{
-							Runner:  r.Name(),
-							Message: message.ClientTrafficPolicyStatusMessageName,
-						})
+						clientTrafficPolicyStatusCount++
 					}
 					delete(statusesToDelete.ClientTrafficPolicyStatusKeys, key)
 				}
 				for _, backendTrafficPolicy := range result.BackendTrafficPolicies {
 					key := utils.NamespacedName(backendTrafficPolicy)
-					if !(reflect.ValueOf(backendTrafficPolicy.Status).IsZero()) {
+					if len(backendTrafficPolicy.Status.Ancestors) > 0 {
 						r.ProviderResources.BackendTrafficPolicyStatuses.Store(key, &backendTrafficPolicy.Status)
-						message.PublishMetric(message.Metadata{
-							Runner:  r.Name(),
-							Message: message.BackendTrafficPolicyStatusMessageName,
-						})
+						backendTrafficPolicyStatusCount++
 					}
 					delete(statusesToDelete.BackendTrafficPolicyStatusKeys, key)
 				}
 				for _, securityPolicy := range result.SecurityPolicies {
 					key := utils.NamespacedName(securityPolicy)
-					if !(reflect.ValueOf(securityPolicy.Status).IsZero()) {
+					if len(securityPolicy.Status.Ancestors) > 0 {
 						r.ProviderResources.SecurityPolicyStatuses.Store(key, &securityPolicy.Status)
-						message.PublishMetric(message.Metadata{
-							Runner:  r.Name(),
-							Message: message.SecurityPolicyStatusMessageName,
-						})
+						securityPolicyStatusCount++
 					}
 					delete(statusesToDelete.SecurityPolicyStatusKeys, key)
 				}
 				for _, envoyExtensionPolicy := range result.EnvoyExtensionPolicies {
 					key := utils.NamespacedName(envoyExtensionPolicy)
-					if !(reflect.ValueOf(envoyExtensionPolicy.Status).IsZero()) {
+					if len(envoyExtensionPolicy.Status.Ancestors) > 0 {
 						r.ProviderResources.EnvoyExtensionPolicyStatuses.Store(key, &envoyExtensionPolicy.Status)
-						message.PublishMetric(message.Metadata{
-							Runner:  r.Name(),
-							Message: message.EnvoyExtensionPolicyStatusMessageName,
-						})
+						envoyExtensionPolicyStatusCount++
 					}
 					delete(statusesToDelete.EnvoyExtensionPolicyStatusKeys, key)
 				}
 				for _, backend := range result.Backends {
 					key := utils.NamespacedName(backend)
-					if !(reflect.ValueOf(backend.Status).IsZero()) {
+					if len(backend.Status.Conditions) > 0 {
 						r.ProviderResources.BackendStatuses.Store(key, &backend.Status)
-						message.PublishMetric(message.Metadata{
-							Runner:  r.Name(),
-							Message: message.BackendStatusMessageName,
-						})
+						backendStatusCount++
 					}
 					delete(statusesToDelete.BackendStatusKeys, key)
 				}
@@ -349,17 +312,33 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 						NamespacedName:   utils.NamespacedName(&extServerPolicy),
 						GroupVersionKind: extServerPolicy.GroupVersionKind(),
 					}
-					if !(reflect.ValueOf(extServerPolicy.Object["status"]).IsZero()) {
-						policyStatus := unstructuredToPolicyStatus(extServerPolicy.Object["status"].(map[string]any))
-						r.ProviderResources.ExtensionPolicyStatuses.Store(key, &policyStatus)
-						message.PublishMetric(message.Metadata{
-							Runner:  r.Name(),
-							Message: message.ExtensionServerPoliciesStatusMessageName,
-						})
+					if statusObj, hasStatus := extServerPolicy.Object["status"]; hasStatus && statusObj != nil {
+						if statusMap, ok := statusObj.(map[string]any); ok && len(statusMap) > 0 {
+							policyStatus := unstructuredToPolicyStatus(statusMap)
+							r.ProviderResources.ExtensionPolicyStatuses.Store(key, &policyStatus)
+							extensionServerPolicyStatusCount++
+						}
 					}
 					delete(statusesToDelete.ExtensionServerPolicyStatusKeys, key)
 				}
 			}
+
+			// Publish aggregated metrics
+			message.PublishMetric(message.Metadata{Runner: r.Name(), Message: message.InfraIRMessageName}, infraIRCount)
+			message.PublishMetric(message.Metadata{Runner: r.Name(), Message: message.XDSIRMessageName}, xdsIRCount)
+			message.PublishMetric(message.Metadata{Runner: r.Name(), Message: message.GatewayStatusMessageName}, gatewayStatusCount)
+			message.PublishMetric(message.Metadata{Runner: r.Name(), Message: message.HTTPRouteStatusMessageName}, httpRouteStatusCount)
+			message.PublishMetric(message.Metadata{Runner: r.Name(), Message: message.GRPCRouteStatusMessageName}, grpcRouteStatusCount)
+			message.PublishMetric(message.Metadata{Runner: r.Name(), Message: message.TLSRouteStatusMessageName}, tlsRouteStatusCount)
+			message.PublishMetric(message.Metadata{Runner: r.Name(), Message: message.TCPRouteStatusMessageName}, tcpRouteStatusCount)
+			message.PublishMetric(message.Metadata{Runner: r.Name(), Message: message.UDPRouteStatusMessageName}, udpRouteStatusCount)
+			message.PublishMetric(message.Metadata{Runner: r.Name(), Message: message.BackendTLSPolicyStatusMessageName}, backendTLSPolicyStatusCount)
+			message.PublishMetric(message.Metadata{Runner: r.Name(), Message: message.ClientTrafficPolicyStatusMessageName}, clientTrafficPolicyStatusCount)
+			message.PublishMetric(message.Metadata{Runner: r.Name(), Message: message.BackendTrafficPolicyStatusMessageName}, backendTrafficPolicyStatusCount)
+			message.PublishMetric(message.Metadata{Runner: r.Name(), Message: message.SecurityPolicyStatusMessageName}, securityPolicyStatusCount)
+			message.PublishMetric(message.Metadata{Runner: r.Name(), Message: message.EnvoyExtensionPolicyStatusMessageName}, envoyExtensionPolicyStatusCount)
+			message.PublishMetric(message.Metadata{Runner: r.Name(), Message: message.BackendStatusMessageName}, backendStatusCount)
+			message.PublishMetric(message.Metadata{Runner: r.Name(), Message: message.ExtensionServerPoliciesStatusMessageName}, extensionServerPolicyStatusCount)
 
 			// Delete IR keys
 			// There is a 1:1 mapping between infra and xds IR keys

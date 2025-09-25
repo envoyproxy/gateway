@@ -34,8 +34,8 @@ const (
 
 func deploymentWithImage(deploy *appsv1.Deployment, image string) *appsv1.Deployment {
 	dCopy := deploy.DeepCopy()
-	for i, c := range dCopy.Spec.Template.Spec.Containers {
-		if c.Name == envoyContainerName {
+	for i := range dCopy.Spec.Template.Spec.Containers {
+		if dCopy.Spec.Template.Spec.Containers[i].Name == envoyContainerName {
 			dCopy.Spec.Template.Spec.Containers[i].Image = image
 		}
 	}
@@ -147,7 +147,7 @@ func TestCreateOrUpdateProxyDeployment(t *testing.T) {
 					Config: &egv1a1.EnvoyProxy{
 						Spec: egv1a1.EnvoyProxySpec{
 							Provider: &egv1a1.EnvoyProxyProvider{
-								Type: egv1a1.ProviderTypeKubernetes,
+								Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 								Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 									EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
 										Container: &egv1a1.KubernetesContainerSpec{
@@ -183,7 +183,7 @@ func TestCreateOrUpdateProxyDeployment(t *testing.T) {
 					Config: &egv1a1.EnvoyProxy{
 						Spec: egv1a1.EnvoyProxySpec{
 							Provider: &egv1a1.EnvoyProxyProvider{
-								Type: egv1a1.ProviderTypeKubernetes,
+								Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 								Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 									EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
 										Pod: &egv1a1.KubernetesPodSpec{
@@ -222,7 +222,7 @@ func TestCreateOrUpdateProxyDeployment(t *testing.T) {
 					Config: &egv1a1.EnvoyProxy{
 						Spec: egv1a1.EnvoyProxySpec{
 							Provider: &egv1a1.EnvoyProxyProvider{
-								Type: egv1a1.ProviderTypeKubernetes,
+								Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 								Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 									EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
 										Pod: &egv1a1.KubernetesPodSpec{
@@ -264,7 +264,7 @@ func TestCreateOrUpdateProxyDeployment(t *testing.T) {
 					Config: &egv1a1.EnvoyProxy{
 						Spec: egv1a1.EnvoyProxySpec{
 							Provider: &egv1a1.EnvoyProxyProvider{
-								Type: egv1a1.ProviderTypeKubernetes,
+								Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 								Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 									EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
 										Pod: &egv1a1.KubernetesPodSpec{

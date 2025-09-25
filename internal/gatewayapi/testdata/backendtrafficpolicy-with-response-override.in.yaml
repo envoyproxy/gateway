@@ -132,6 +132,13 @@ backendTrafficPolicies:
             body:
               type: Inline
               inline: "gateway-1 Not Found"
+            header:
+              add:
+                - name: X-Add-Header
+                  value: "added-404"
+              set:
+                - name: X-Set-Header
+                  value: "set-404"
         - match:
             statusCodes:
               - type: Value

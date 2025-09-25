@@ -26,6 +26,9 @@ http:
   connection:
     limit:
       value: 5
+      maxConnectionDuration: 300s
+      maxRequestsPerConnection: 100
+      maxStreamDuration: 200s
   path:
     mergeSlashes: true
     escapedSlashesAction: UnescapeAndRedirect
@@ -39,10 +42,36 @@ http:
         - host: "1.2.3.4"
           port: 50000
         name: "second-route-dest/backend/0"
-tcp:
 - name: "third-listener"
   address: "::"
   port: 10082
+  hostnames:
+  - "foo.io"
+  connection:
+    limit:
+      value: 5
+      maxConnectionDuration: 300s
+      maxRequestsPerConnection: 100
+      maxStreamDuration: 200s
+  http1:
+    disableSafeMaxConnectionDuration: true
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  routes:
+  - name: "third-route"
+    hostname: "*"
+    destination:
+      name: "third-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "third-route-dest/backend/0"
+tcp:
+- name: "fourth-listener"
+  address: "::"
+  port: 10083
   connection:
     limit:
       value: 3
@@ -58,13 +87,13 @@ tcp:
         - host: "1.2.3.4"
           port: 50000
         name: "tls-route-dest/backend/0"
-- name: "fourth-listener"
+- name: "fifth-listener"
   address: "::"
   connection:
     limit:
       value: 10
       closeDelay: 3s
-  port: 10083
+  port: 10084
   routes:
   - destination:
       name: "tcp-route-dest"

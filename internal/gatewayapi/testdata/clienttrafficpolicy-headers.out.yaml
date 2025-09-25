@@ -22,6 +22,20 @@ clientTrafficPolicies:
         - name: my-set-header
           value: my-set-header-value
       enableEnvoyHeaders: true
+      lateResponseHeaders:
+        add:
+        - name: my-added-response-header
+          value: my-added-response-header-value
+        - name: my-added-response-header
+          value: my-added-response-header-value
+        remove:
+        - my-removed-response-header
+        - my-removed-response-header
+        set:
+        - name: my-set-response-header
+          value: my-set-response-header-value
+        - name: my-set-response-header
+          value: my-set-response-header-value
       requestID: PreserveOrGenerate
       withUnderscoresAction: Allow
     targetRef:
@@ -146,6 +160,10 @@ xdsIR:
       - path: /dev/stdout
     globalResources:
       proxyServiceCluster:
+        metadata:
+          name: envoy-envoy-gateway-gateway-1-196ae069
+          namespace: envoy-gateway-system
+          sectionName: "8080"
         name: envoy-gateway/gateway-1
         settings:
         - addressType: IP
@@ -175,6 +193,17 @@ xdsIR:
         earlyRemoveRequestHeaders:
         - my-removed-header
         enableEnvoyHeaders: true
+        lateAddResponseHeaders:
+        - append: true
+          name: my-added-response-header
+          value:
+          - my-added-response-header-value
+        - append: false
+          name: my-set-response-header
+          value:
+          - my-set-response-header-value
+        lateRemoveResponseHeaders:
+        - my-removed-response-header
         requestID: PreserveOrGenerate
         withUnderscoresAction: Allow
       hostnames:
@@ -205,6 +234,17 @@ xdsIR:
         earlyRemoveRequestHeaders:
         - my-removed-header
         enableEnvoyHeaders: true
+        lateAddResponseHeaders:
+        - append: true
+          name: my-added-response-header
+          value:
+          - my-added-response-header-value
+        - append: false
+          name: my-set-response-header
+          value:
+          - my-set-response-header-value
+        lateRemoveResponseHeaders:
+        - my-removed-response-header
         requestID: PreserveOrGenerate
         withUnderscoresAction: Allow
       hostnames:

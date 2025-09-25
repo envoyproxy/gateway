@@ -19,7 +19,7 @@ spec:
         - name: nighthawk-server
           image: envoyproxy/nighthawk-dev:latest
           imagePullPolicy: IfNotPresent
-          args: ["nighthawk_test_server", "-c", "/etc/test-server-config/nighthawk-test-server-config.yaml"]
+          args: ["-c", "/etc/test-server-config/nighthawk-test-server-config.yaml"]
           ports:
             - containerPort: 8080
           volumeMounts:
