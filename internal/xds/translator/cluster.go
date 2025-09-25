@@ -581,6 +581,10 @@ func buildXdsOutlierDetection(outlierDetection *ir.OutlierDetection) *clusterv3.
 		od.ConsecutiveGatewayFailure = wrapperspb.UInt32(*outlierDetection.ConsecutiveGatewayErrors)
 	}
 
+	if outlierDetection.FailurePercentageThreshold != nil {
+		od.FailurePercentageThreshold = wrapperspb.UInt32(*outlierDetection.FailurePercentageThreshold)
+	}
+
 	return od
 }
 
