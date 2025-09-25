@@ -48,7 +48,8 @@ func (*extProc) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPLi
 			continue
 		}
 
-		for _, ep := range route.EnvoyExtensions.ExtProcs {
+		for i := range route.EnvoyExtensions.ExtProcs {
+			ep := &route.EnvoyExtensions.ExtProcs[i]
 			if hcmContainsFilter(mgr, extProcFilterName(ep)) {
 				continue
 			}
@@ -67,7 +68,7 @@ func (*extProc) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPLi
 }
 
 // buildHCMExtProcFilter returns an ext_proc HTTP filter from the provided IR HTTPRoute.
-func buildHCMExtProcFilter(extProc ir.ExtProc) (*hcmv3.HttpFilter, error) {
+func buildHCMExtProcFilter(extProc *ir.ExtProc) (*hcmv3.HttpFilter, error) {
 	extAuthProto := extProcConfig(extProc)
 	extAuthAny, err := anypb.New(extAuthProto)
 	if err != nil {
@@ -85,11 +86,11 @@ func buildHCMExtProcFilter(extProc ir.ExtProc) (*hcmv3.HttpFilter, error) {
 	}, nil
 }
 
-func extProcFilterName(extProc ir.ExtProc) string {
+func extProcFilterName(extProc *ir.ExtProc) string {
 	return perRouteFilterName(egv1a1.EnvoyFilterExtProc, extProc.Name)
 }
 
-func extProcConfig(extProc ir.ExtProc) *extprocv3.ExternalProcessor {
+func extProcConfig(extProc *ir.ExtProc) *extprocv3.ExternalProcessor {
 	config := &extprocv3.ExternalProcessor{
 		GrpcService: &corev3.GrpcService{
 			TargetSpecifier: &corev3.GrpcService_EnvoyGrpc_{
@@ -146,7 +147,7 @@ func extProcConfig(extProc ir.ExtProc) *extprocv3.ExternalProcessor {
 	return config
 }
 
-func grpcExtProcService(extProc ir.ExtProc) *corev3.GrpcService_EnvoyGrpc {
+func grpcExtProcService(extProc *ir.ExtProc) *corev3.GrpcService_EnvoyGrpc {
 	return &corev3.GrpcService_EnvoyGrpc{
 		ClusterName: extProc.Destination.Name,
 		Authority:   extProc.Authority,
@@ -201,7 +202,8 @@ func (*extProc) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir.HT
 		return nil
 	}
 
-	for _, ep := range irRoute.EnvoyExtensions.ExtProcs {
+	for i := range irRoute.EnvoyExtensions.ExtProcs {
+		ep := &irRoute.EnvoyExtensions.ExtProcs[i]
 		filterName := extProcFilterName(ep)
 		if err := enableFilterOnRoute(route, filterName); err != nil {
 			return err
@@ -210,7 +212,7 @@ func (*extProc) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir.HT
 	return nil
 }
 
-func buildProcessingMode(extProc ir.ExtProc) *extprocv3.ProcessingMode {
+func buildProcessingMode(extProc *ir.ExtProc) *extprocv3.ProcessingMode {
 	processingMode := &extprocv3.ProcessingMode{
 		RequestHeaderMode:   extprocv3.ProcessingMode_SKIP,
 		ResponseHeaderMode:  extprocv3.ProcessingMode_SKIP,

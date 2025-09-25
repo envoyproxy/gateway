@@ -59,7 +59,7 @@ var EnvoyProxyCustomNameTest = suite.ConformanceTest{
 				t.Fatalf("Failed to check EnvoyProxy deployment: %v", err)
 			}
 			// Send a request to a valid path and expect a successful response
-			ExpectEventuallyConsistentResponse(t, suite, gwNN, routeNN, okResp)
+			ExpectEventuallyConsistentResponse(t, suite, gwNN, routeNN, &okResp)
 
 			// Update the Gateway to use a custom name
 			updateGateway(t, suite, gwNN, &gwapiv1.GatewayInfrastructure{
@@ -75,7 +75,7 @@ var EnvoyProxyCustomNameTest = suite.ConformanceTest{
 				t.Fatalf("Failed to delete Gateway: %v", err)
 			}
 			// Send a request to a valid path and expect a successful response
-			ExpectEventuallyConsistentResponse(t, suite, gwNN, routeNN, okResp)
+			ExpectEventuallyConsistentResponse(t, suite, gwNN, routeNN, &okResp)
 
 			// Rollback the Gateway to without custom name
 			updateGateway(t, suite, gwNN, &gwapiv1.GatewayInfrastructure{})
@@ -86,7 +86,7 @@ var EnvoyProxyCustomNameTest = suite.ConformanceTest{
 				t.Fatalf("Failed to check EnvoyProxy deployment: %v", err)
 			}
 			// Send a request to a valid path and expect a successful response
-			ExpectEventuallyConsistentResponse(t, suite, gwNN, routeNN, okResp)
+			ExpectEventuallyConsistentResponse(t, suite, gwNN, routeNN, &okResp)
 		})
 
 		t.Run("DaemonSet", func(t *testing.T) {
@@ -110,7 +110,7 @@ var EnvoyProxyCustomNameTest = suite.ConformanceTest{
 			}
 
 			// Send a request to a valid path and expect a successful response
-			ExpectEventuallyConsistentResponse(t, suite, gwNN, routeNN, okResp)
+			ExpectEventuallyConsistentResponse(t, suite, gwNN, routeNN, &okResp)
 
 			// Update the Gateway to use a custom name
 			updateGateway(t, suite, gwNN, &gwapiv1.GatewayInfrastructure{
@@ -126,7 +126,7 @@ var EnvoyProxyCustomNameTest = suite.ConformanceTest{
 				t.Fatalf("Failed to delete Gateway: %v", err)
 			}
 			// Send a request to a valid path and expect a successful response
-			ExpectEventuallyConsistentResponse(t, suite, gwNN, routeNN, okResp)
+			ExpectEventuallyConsistentResponse(t, suite, gwNN, routeNN, &okResp)
 
 			// Rollback the Gateway to without custom name
 			updateGateway(t, suite, gwNN, &gwapiv1.GatewayInfrastructure{
@@ -144,7 +144,7 @@ var EnvoyProxyCustomNameTest = suite.ConformanceTest{
 			}
 
 			// Send a request to a valid path and expect a successful response
-			ExpectEventuallyConsistentResponse(t, suite, gwNN, routeNN, okResp)
+			ExpectEventuallyConsistentResponse(t, suite, gwNN, routeNN, &okResp)
 		})
 	},
 }
@@ -182,13 +182,17 @@ func updateGateway(t *testing.T, suite *suite.ConformanceTestSuite, gwNN types.N
 // ExpectEventuallyConsistentResponse sends a request to the gateway and waits for an eventually consistent response.
 // This's different from because of the name may change, so we query the gateway address every time.
 func ExpectEventuallyConsistentResponse(t *testing.T, suite *suite.ConformanceTestSuite,
-	gwNN, routeNN types.NamespacedName, expected http.ExpectedResponse,
+	gwNN, routeNN types.NamespacedName, expected *http.ExpectedResponse,
 ) {
 	t.Helper()
 
+	if expected == nil {
+		t.Fatalf("expected response cannot be nil")
+	}
+
 	err := wait.PollUntilContextTimeout(t.Context(), time.Second, suite.TimeoutConfig.CreateTimeout, true, func(ctx context.Context) (bool, error) {
 		gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
-		req := http.MakeRequest(t, &expected, gwAddr, "HTTP", "http")
+		req := http.MakeRequest(t, expected, gwAddr, "HTTP", "http")
 
 		cReq, cRes, err := suite.RoundTripper.CaptureRoundTrip(req)
 		if err != nil {
@@ -196,7 +200,7 @@ func ExpectEventuallyConsistentResponse(t *testing.T, suite *suite.ConformanceTe
 			return false, nil
 		}
 
-		if err := http.CompareRequest(t, &req, cReq, cRes, expected); err != nil {
+		if err := http.CompareRequest(t, &req, cReq, cRes, *expected); err != nil {
 			tlog.Logf(t, "Response expectation failed for request: %+v  %v", req, err)
 			return false, nil
 		}

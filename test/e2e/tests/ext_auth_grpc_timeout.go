@@ -23,16 +23,16 @@ import (
 )
 
 func init() {
-	ConformanceTests = append(ConformanceTests, GRPCExtAuthTest)
+	ConformanceTests = append(ConformanceTests, GRPCExtAuthTimeoutTest)
 }
 
-// GRPCExtAuthTest tests ExtAuth authentication for an http route with ExtAuth configured.
-// The http route points to an application to verify that ExtAuth authentication works on application/http path level.
-// The ExtAuth service is a GRPC service.
-var GRPCExtAuthTest = suite.ConformanceTest{
-	ShortName:   "GRPCExtAuth",
-	Description: "Test ExtAuth authentication with GRPC auth service",
-	Manifests:   []string{"testdata/ext-auth-service.yaml", "testdata/ext-auth-grpc-securitypolicy.yaml"},
+// GRPCExtAuthTimeoutTest tests ExtAuth timeout behavior for gRPC auth service.
+// This test verifies that when a very short timeout is configured, the auth service
+// times out and returns a 403 response.
+var GRPCExtAuthTimeoutTest = suite.ConformanceTest{
+	ShortName:   "GRPCExtAuthTimeout",
+	Description: "Test ExtAuth timeout behavior with GRPC auth service",
+	Manifests:   []string{"testdata/ext-auth-service.yaml", "testdata/ext-auth-grpc-timeout-securitypolicy.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		ns := "gateway-conformance-infra"
 		routeNN := types.NamespacedName{Name: "http-with-ext-auth", Namespace: ns}
@@ -48,7 +48,9 @@ var GRPCExtAuthTest = suite.ConformanceTest{
 		// Wait for the grpc ext auth service pod to be ready
 		WaitForPods(t, suite.Client, ns, map[string]string{"app": "envoy-ext-auth"}, corev1.PodRunning, &PodReady)
 
-		t.Run("http route with ext auth authentication", func(t *testing.T) {
+		t.Run("ext auth with timeout behavior", func(t *testing.T) {
+			// With 0ms timeout, the auth service should timeout immediately
+			// This should result in a 403 response due to timeout
 			expectedResponse := http.ExpectedResponse{
 				Request: http.Request{
 					Host: "www.example.com",
@@ -58,55 +60,7 @@ var GRPCExtAuthTest = suite.ConformanceTest{
 					},
 				},
 				Response: http.Response{
-					StatusCode: 200,
-				},
-				Namespace: ns,
-			}
-
-			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
-		})
-
-		t.Run("without Authorization header", func(t *testing.T) {
-			expectedResponse := http.ExpectedResponse{
-				Request: http.Request{
-					Host: "www.example.com",
-					Path: "/myapp",
-				},
-				Response: http.Response{
 					StatusCode: 403,
-				},
-				Namespace: ns,
-			}
-
-			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
-		})
-
-		t.Run("invalid credential", func(t *testing.T) {
-			expectedResponse := http.ExpectedResponse{
-				Request: http.Request{
-					Host: "www.example.com",
-					Path: "/myapp",
-					Headers: map[string]string{
-						"Authorization": "Bearer invalid-token",
-					},
-				},
-				Response: http.Response{
-					StatusCode: 403,
-				},
-				Namespace: ns,
-			}
-
-			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
-		})
-
-		t.Run("http route without ext auth authentication", func(t *testing.T) {
-			expectedResponse := http.ExpectedResponse{
-				Request: http.Request{
-					Host: "www.example.com",
-					Path: "/public",
-				},
-				Response: http.Response{
-					StatusCode: 200,
 				},
 				Namespace: ns,
 			}

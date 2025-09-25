@@ -676,7 +676,7 @@ func (t *Translator) buildWasms(
 	hasFailClose := false
 	for idx, wasm := range policy.Spec.Wasm {
 		name := irConfigNameForWasm(policy, idx)
-		wasmIR, err := t.buildWasm(name, wasm, policy, idx, resources)
+		wasmIR, err := t.buildWasm(name, &wasm, policy, idx, resources)
 		if err != nil {
 			errs = errors.Join(errs, err)
 			if wasm.FailOpen == nil || !*wasm.FailOpen {
@@ -697,7 +697,7 @@ func (t *Translator) buildWasms(
 
 func (t *Translator) buildWasm(
 	name string,
-	config egv1a1.Wasm,
+	config *egv1a1.Wasm,
 	policy *egv1a1.EnvoyExtensionPolicy,
 	idx int,
 	resources *resource.Resources,
@@ -743,7 +743,7 @@ func (t *Translator) buildWasm(
 
 		http := config.Code.HTTP
 
-		if servingURL, checksum, err = t.WasmCache.Get(http.URL, wasm.GetOptions{
+		if servingURL, checksum, err = t.WasmCache.Get(http.URL, &wasm.GetOptions{
 			Checksum:        originalChecksum,
 			PullPolicy:      pullPolicy,
 			ResourceName:    irConfigNameForWasm(policy, idx),
@@ -811,7 +811,7 @@ func (t *Translator) buildWasm(
 		// The original checksum in the EEP is used to match the digest of OCI image.
 		// The returned checksum from the cache is the checksum of the wasm file
 		// extracted from the OCI image, which is used by the envoy to verify the wasm file.
-		if servingURL, checksum, err = t.WasmCache.Get(imageURL, wasm.GetOptions{
+		if servingURL, checksum, err = t.WasmCache.Get(imageURL, &wasm.GetOptions{
 			Checksum:        originalChecksum,
 			PullSecret:      pullSecret,
 			PullPolicy:      pullPolicy,

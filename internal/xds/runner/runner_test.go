@@ -138,7 +138,7 @@ func TestTLSConfig(t *testing.T) {
 			err = tc.serverCredentials.WritePEM(certFile, keyFile)
 			require.NoError(t, err)
 			clientCert, _ := tc.clientCredentials.TLSCertificate()
-			receivedCert, err := tryConnect(address, clientCert, caCertPool)
+			receivedCert, err := tryConnect(address, &clientCert, caCertPool)
 			gotError := err != nil
 			if gotError != tc.expectError {
 				t.Errorf("Unexpected result when connecting to the server: %s", err)
@@ -153,11 +153,11 @@ func TestTLSConfig(t *testing.T) {
 
 // tryConnect tries to establish TLS connection to the server.
 // If successful, return the server certificate.
-func tryConnect(address string, clientCert tls.Certificate, caCertPool *x509.CertPool) (*x509.Certificate, error) {
+func tryConnect(address string, clientCert *tls.Certificate, caCertPool *x509.CertPool) (*x509.Certificate, error) {
 	clientConfig := &tls.Config{
 		ServerName:   "localhost",
 		MinVersion:   tls.VersionTLS13,
-		Certificates: []tls.Certificate{clientCert},
+		Certificates: []tls.Certificate{*clientCert},
 		NextProtos:   []string{"h2"},
 		RootCAs:      caCertPool,
 	}
