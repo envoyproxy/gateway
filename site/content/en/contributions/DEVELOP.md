@@ -58,7 +58,6 @@ __Note:__ The binaries get generated in the `bin/$OS/$ARCH` directory, for examp
 
 __Note:__ The `golangci-lint` configuration resides [here](https://github.com/envoyproxy/gateway/blob/main/tools/linter/golangci-lint/.golangci.yml).
 
-
 ### Building and Pushing the Image
 
 * Run `IMAGE=docker.io/you/gateway-dev make image` to build the docker image.
