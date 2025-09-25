@@ -574,18 +574,19 @@ func (r *gatewayAPIReconciler) managedGatewayClasses(ctx context.Context) ([]*gw
 
 	var cc controlledClasses
 
-	for _, gwClass := range gatewayClasses.Items {
+	for i := range gatewayClasses.Items {
+		gwClass := &gatewayClasses.Items[i]
 		if gwClass.Spec.ControllerName == r.classController {
 			// The gatewayclass was marked for deletion and the finalizer removed,
 			// so clean-up dependents.
 			if !gwClass.DeletionTimestamp.IsZero() &&
 				!slice.ContainsString(gwClass.Finalizers, gatewayClassFinalizer) {
 				r.log.Info("gatewayclass marked for deletion", "name", gwClass.Name)
-				cc.removeMatch(&gwClass)
+				cc.removeMatch(gwClass)
 				continue
 			}
 
-			cc.addMatch(&gwClass)
+			cc.addMatch(gwClass)
 		}
 	}
 
@@ -1321,19 +1322,21 @@ func (r *gatewayAPIReconciler) findReferenceGrant(ctx context.Context, from, to 
 	refGrants := refGrantList.Items
 	if r.namespaceLabel != nil {
 		var rgs []gwapiv1b1.ReferenceGrant
-		for _, refGrant := range refGrants {
-			if ok, err := r.checkObjectNamespaceLabels(&refGrant); err != nil {
+		for i := range refGrants {
+			refGrant := &refGrants[i]
+			if ok, err := r.checkObjectNamespaceLabels(refGrant); err != nil {
 				r.log.Error(err, "failed to check namespace labels for ReferenceGrant %s in namespace %s: %w", refGrant.GetName(), refGrant.GetNamespace())
 				continue
 			} else if !ok {
 				continue
 			}
-			rgs = append(rgs, refGrant)
+			rgs = append(rgs, *refGrant)
 		}
 		refGrants = rgs
 	}
 
-	for _, refGrant := range refGrants {
+	for i := range refGrants {
+		refGrant := &refGrants[i]
 		if refGrant.Namespace != to.namespace {
 			continue
 		}
@@ -1362,7 +1365,7 @@ func (r *gatewayAPIReconciler) findReferenceGrant(ctx context.Context, from, to 
 			continue
 		}
 
-		return &refGrant, nil
+		return refGrant, nil
 	}
 
 	// No ReferenceGrant found.
@@ -1387,9 +1390,10 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, managedGC *g
 		r.processServiceClusterForGatewayClass(resourceTree.EnvoyProxyForGatewayClass, managedGC, resourceMap)
 	}
 
-	for _, gtw := range gatewayList.Items {
+	for i := range gatewayList.Items {
+		gtw := &gatewayList.Items[i]
 		if r.namespaceLabel != nil {
-			if ok, err := r.checkObjectNamespaceLabels(&gtw); err != nil {
+			if ok, err := r.checkObjectNamespaceLabels(gtw); err != nil {
 				// If the error is transient, we return it to allow Reconcile to retry.
 				if isTransientError(err) {
 					return err
@@ -1424,7 +1428,7 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, managedGC *g
 			}
 		}
 
-		gtwNamespacedName := utils.NamespacedName(&gtw).String()
+		gtwNamespacedName := utils.NamespacedName(gtw).String()
 
 		// Route Processing
 
@@ -1465,7 +1469,7 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, managedGC *g
 		// It will be recomputed by the gateway-api layer
 		gtw.Status = gwapiv1.GatewayStatus{}
 
-		if err := r.processGatewayParamsRef(ctx, &gtw, resourceMap, resourceTree); err != nil {
+		if err := r.processGatewayParamsRef(ctx, gtw, resourceMap, resourceTree); err != nil {
 			// If the error is transient, we return it to allow Reconcile to retry.
 			if isTransientError(err) {
 				return err
@@ -1474,7 +1478,7 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, managedGC *g
 			// These not-accepted gateways will not be processed by the gateway-api layer, but their status will be
 			// updated in the gateway-api layer along with other gateways. This is to avoid the potential race condition
 			// of updating the status in both the controller and the gateway-api layer.
-			status.UpdateGatewayStatusNotAccepted(&gtw, gwapiv1.GatewayReasonInvalidParameters, err.Error())
+			status.UpdateGatewayStatusNotAccepted(gtw, gwapiv1.GatewayReasonInvalidParameters, err.Error())
 			r.log.Error(err, "failed to process infrastructure.parametersRef for gateway", "namespace", gtw.Namespace, "name", gtw.Name)
 		}
 
@@ -1489,12 +1493,12 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, managedGC *g
 			if ep == nil && resourceTree.EnvoyProxyForGatewayClass != nil {
 				ep = resourceTree.EnvoyProxyForGatewayClass
 			}
-			r.processServiceClusterForGateway(ep, &gtw, resourceMap)
+			r.processServiceClusterForGateway(ep, gtw, resourceMap)
 		}
 
 		if !resourceMap.allAssociatedGateways.Has(gtwNamespacedName) {
 			resourceMap.allAssociatedGateways.Insert(gtwNamespacedName)
-			resourceTree.Gateways = append(resourceTree.Gateways, &gtw)
+			resourceTree.Gateways = append(resourceTree.Gateways, gtw)
 		}
 	}
 
@@ -2482,7 +2486,8 @@ func (r *gatewayAPIReconciler) crdExists(mgr manager.Manager, kind, groupVersion
 	}
 	found := false
 	for _, list := range apiResourceList {
-		for _, res := range list.APIResources {
+		for i := range list.APIResources {
+			res := &list.APIResources[i]
 			if list.GroupVersion == groupVersion && res.Kind == kind {
 				found = true
 				break

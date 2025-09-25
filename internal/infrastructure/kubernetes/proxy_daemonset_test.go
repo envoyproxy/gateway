@@ -29,8 +29,8 @@ import (
 
 func daemonsetWithImage(ds *appsv1.DaemonSet, image string) *appsv1.DaemonSet {
 	dCopy := ds.DeepCopy()
-	for i, c := range dCopy.Spec.Template.Spec.Containers {
-		if c.Name == envoyContainerName {
+	for i := range dCopy.Spec.Template.Spec.Containers {
+		if dCopy.Spec.Template.Spec.Containers[i].Name == envoyContainerName {
 			dCopy.Spec.Template.Spec.Containers[i].Image = image
 		}
 	}

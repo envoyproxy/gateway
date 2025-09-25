@@ -72,7 +72,10 @@ const (
 
 // WaitForPods waits for the pods in the given namespace and with the given selector
 // to be in the given phase and condition.
-func WaitForPods(t *testing.T, cl client.Client, namespace string, selectors map[string]string, phase corev1.PodPhase, condition corev1.PodCondition) {
+func WaitForPods(t *testing.T, cl client.Client, namespace string, selectors map[string]string, phase corev1.PodPhase, condition *corev1.PodCondition) {
+	if condition == nil {
+		t.Fatalf("condition cannot be nil")
+	}
 	tlog.Logf(t, "waiting for %s/[%s] to be %v...", namespace, selectors, phase)
 
 	require.Eventually(t, func() bool {
@@ -88,7 +91,8 @@ func WaitForPods(t *testing.T, cl client.Client, namespace string, selectors map
 		}
 
 	checkPods:
-		for _, p := range pods.Items {
+		for i := range pods.Items {
+			p := &pods.Items[i]
 			if p.Status.Phase != phase {
 				return false
 			}
@@ -246,7 +250,7 @@ func AlmostEquals(actual, expect, offset int) bool {
 // runs a load test with options described in opts
 // the done channel is used to notify caller of execution result
 // the execution may end due to an external abort or timeout
-func runLoadAndWait(t *testing.T, timeoutConfig config.TimeoutConfig, done chan bool, aborter *periodic.Aborter, reqURL string) {
+func runLoadAndWait(t *testing.T, timeoutConfig *config.TimeoutConfig, done chan bool, aborter *periodic.Aborter, reqURL string) {
 	qpsVal := os.Getenv("E2E_BACKEND_UPGRADE_QPS")
 	qps := 5000
 	if qpsVal != "" {

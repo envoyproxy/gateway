@@ -234,7 +234,7 @@ func pushWasmImageForTest(t *testing.T, suite *suite.ConformanceTestSuite, regis
 	podReady := corev1.PodCondition{Type: corev1.PodReady, Status: corev1.ConditionTrue}
 	WaitForPods(
 		t, suite.Client, testNS,
-		map[string]string{"app": "oci-registry"}, corev1.PodRunning, podReady)
+		map[string]string{"app": "oci-registry"}, corev1.PodRunning, &podReady)
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*120)
 	defer cancel()

@@ -256,7 +256,7 @@ func translate(w io.Writer, inFile, inType string, outTypes []string, output, re
 			}
 		}
 		// Print
-		if err = printOutput(w, result, output); err != nil {
+		if err = printOutput(w, &result, output); err != nil {
 			return fmt.Errorf("failed to print result, error:%w", err)
 		}
 
@@ -406,7 +406,7 @@ func TranslateGatewayAPIToXds(namespace, dnsDomain, resourceType string, resourc
 }
 
 // printOutput prints the echo-backed gateway API and xDS output
-func printOutput(w io.Writer, result TranslationResult, output string) error {
+func printOutput(w io.Writer, result *TranslationResult, output string) error {
 	var (
 		out []byte
 		err error

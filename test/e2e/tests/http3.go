@@ -69,7 +69,7 @@ var HTTP3Test = suite.ConformanceTest{
 		}
 
 		req := http.MakeRequest(t, &expected, gwAddr, "HTTPS", "https")
-		WaitForConsistentMTLSResponse(t, quicRoundTripper, req, expected, suite.TimeoutConfig.RequiredConsecutiveSuccesses, suite.TimeoutConfig.MaxTimeToConsistency,
+		WaitForConsistentMTLSResponse(t, quicRoundTripper, &req, &expected, suite.TimeoutConfig.RequiredConsecutiveSuccesses, suite.TimeoutConfig.MaxTimeToConsistency,
 			cPem, keyPem, "www.example.com")
 	},
 }

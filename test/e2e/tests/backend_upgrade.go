@@ -68,10 +68,10 @@ var BackendUpgradeTest = suite.ConformanceTest{
 
 			tlog.Logf(t, "Starting load generation")
 			// Run load async and continue to restart deployment
-			go runLoadAndWait(t, suite.TimeoutConfig, loadSuccess, aborter, reqURL.String())
+			go runLoadAndWait(t, &suite.TimeoutConfig, loadSuccess, aborter, reqURL.String())
 
 			tlog.Logf(t, "Restarting deployment")
-			err = restartDeploymentAndWaitForNewPods(t, suite.TimeoutConfig, suite.Client, dp)
+			err = restartDeploymentAndWaitForNewPods(t, &suite.TimeoutConfig, suite.Client, dp)
 
 			tlog.Logf(t, "Stopping load generation and collecting results")
 			aborter.Abort(false) // abort the load either way
@@ -96,11 +96,15 @@ func getDeploymentByNN(namespace, name string, c client.Client) (*appsv1.Deploym
 	return dp, err
 }
 
-func restartDeploymentAndWaitForNewPods(t *testing.T, timeoutConfig config.TimeoutConfig, c client.Client, dp *appsv1.Deployment) error {
+func restartDeploymentAndWaitForNewPods(t *testing.T, timeoutConfig *config.TimeoutConfig, c client.Client, dp *appsv1.Deployment) error {
 	t.Helper()
 	const kubeRestartAnnotation = "kubectl.kubernetes.io/restartedAt"
 
 	ctx := context.Background()
+
+	if timeoutConfig == nil {
+		t.Fatalf("timeoutConfig cannot be nil")
+	}
 
 	if dp.Spec.Template.Annotations == nil {
 		dp.Spec.Template.Annotations = make(map[string]string)
@@ -126,7 +130,8 @@ func restartDeploymentAndWaitForNewPods(t *testing.T, timeoutConfig config.Timeo
 		}
 
 		rolled := int32(0)
-		for _, rs := range podList.Items {
+		for i := range podList.Items {
+			rs := &podList.Items[i]
 			if rs.Annotations[kubeRestartAnnotation] == restartTime {
 				rolled++
 			}

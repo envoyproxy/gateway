@@ -57,7 +57,7 @@ func TestGetConfigValidate(t *testing.T) {
 			require.NoError(t, err)
 			defer os.Remove(file.Name())
 
-			_, err = file.Write([]byte(test.input))
+			_, err = file.WriteString(test.input)
 			require.NoError(t, err)
 
 			_, err = getConfigByPath(os.Stderr, file.Name())

@@ -52,7 +52,7 @@ var BTPTracingTest = suite.ConformanceTest{
 				"provider":     "otel",
 				"service.name": naming.ServiceName(gwNN),
 			}
-			tracing.ExpectedTraceCount(t, suite, gwAddr, expectedResponse, tags)
+			tracing.ExpectedTraceCount(t, suite, gwAddr, &expectedResponse, tags)
 		})
 
 		t.Run("Override", func(t *testing.T) {
@@ -75,7 +75,7 @@ var BTPTracingTest = suite.ConformanceTest{
 				"provider":     "otel-override",
 				"service.name": naming.ServiceName(gwNN),
 			}
-			tracing.ExpectedTraceCount(t, suite, gwAddr, expectedResponse, tags)
+			tracing.ExpectedTraceCount(t, suite, gwAddr, &expectedResponse, tags)
 		})
 	},
 }

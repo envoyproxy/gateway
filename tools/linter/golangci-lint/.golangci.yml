@@ -83,6 +83,9 @@ linters:
               desc: "use errors instead"
             - pkg: github.com/hashicorp/go-multierror
               desc: "use errors instead"
+    gocritic:
+      enabled-tags:
+        - performance
     goheader:
       # Note that because the format is different (this needs no comment markers),
       # updating this text means also updating /tools/boilerplate.txt so that

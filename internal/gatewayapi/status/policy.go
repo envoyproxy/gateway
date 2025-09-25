@@ -174,8 +174,8 @@ func TruncatePolicyAncestors(policyStatus *gwapiv1a2.PolicyStatus, controllerNam
 	// negative polarity (Conflicted, Overridden...) should be clearly indicated to the user.
 	sort.Slice(policyStatus.Ancestors, func(i, j int) bool {
 		a, b := policyStatus.Ancestors[i], policyStatus.Ancestors[j]
-		aRank := sortRankForPolicyAncestor(a)
-		bRank := sortRankForPolicyAncestor(b)
+		aRank := sortRankForPolicyAncestor(&a)
+		bRank := sortRankForPolicyAncestor(&b)
 
 		if aRank != bRank {
 			return aRank < bRank
@@ -216,7 +216,7 @@ func TruncatePolicyAncestors(policyStatus *gwapiv1a2.PolicyStatus, controllerNam
 //	– The ancestor is not accepted (Accepted == false).
 //	– The ancestor is accepted and overridden (Override == true).
 //	– All other cases.
-func sortRankForPolicyAncestor(ancestor gwapiv1a2.PolicyAncestorStatus) int {
+func sortRankForPolicyAncestor(ancestor *gwapiv1a2.PolicyAncestorStatus) int {
 	switch {
 	case meta.IsStatusConditionFalse(ancestor.Conditions, string(gwapiv1a2.PolicyConditionAccepted)):
 		return 0

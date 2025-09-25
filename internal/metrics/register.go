@@ -51,7 +51,7 @@ func (r *Runner) Start(ctx context.Context) error {
 		return err
 	}
 
-	handler, err := r.registerForHandler(options)
+	handler, err := r.registerForHandler(&options)
 	if err != nil {
 		return err
 	}
@@ -159,7 +159,7 @@ func (r *Runner) newOptions() (registerOptions, error) {
 
 // registerForHandler sets the global metrics registry to the provided Prometheus registerer.
 // if enables prometheus, it will return a prom http handler.
-func (r *Runner) registerForHandler(opts registerOptions) (http.Handler, error) {
+func (r *Runner) registerForHandler(opts *registerOptions) (http.Handler, error) {
 	otelOpts := []metric.Option{}
 
 	if err := r.registerOTELPromExporter(&otelOpts, opts); err != nil {
@@ -183,7 +183,7 @@ func (r *Runner) registerForHandler(opts registerOptions) (http.Handler, error) 
 }
 
 // registerOTELPromExporter registers OTEL prometheus exporter (PULL mode).
-func (r *Runner) registerOTELPromExporter(otelOpts *[]metric.Option, opts registerOptions) error {
+func (r *Runner) registerOTELPromExporter(otelOpts *[]metric.Option, opts *registerOptions) error {
 	if !opts.pullOptions.disable {
 		promOpts := []otelprom.Option{
 			otelprom.WithoutScopeInfo(),
@@ -206,7 +206,7 @@ func (r *Runner) registerOTELPromExporter(otelOpts *[]metric.Option, opts regist
 }
 
 // registerOTELHTTPexporter registers OTEL HTTP metrics exporter (PUSH mode).
-func (r *Runner) registerOTELHTTPexporter(otelOpts *[]metric.Option, opts registerOptions) error {
+func (r *Runner) registerOTELHTTPexporter(otelOpts *[]metric.Option, opts *registerOptions) error {
 	for _, sink := range opts.pushOptions.sinks {
 		if sink.protocol == egv1a1.HTTPProtocol {
 			address := net.JoinHostPort(sink.host, fmt.Sprint(sink.port))
@@ -240,7 +240,7 @@ func (r *Runner) registerOTELHTTPexporter(otelOpts *[]metric.Option, opts regist
 }
 
 // registerOTELgRPCexporter registers OTEL gRPC metrics exporter (PUSH mode).
-func (r *Runner) registerOTELgRPCexporter(otelOpts *[]metric.Option, opts registerOptions) error {
+func (r *Runner) registerOTELgRPCexporter(otelOpts *[]metric.Option, opts *registerOptions) error {
 	for _, sink := range opts.pushOptions.sinks {
 		if sink.protocol == egv1a1.GRPCProtocol {
 			address := net.JoinHostPort(sink.host, fmt.Sprint(sink.port))

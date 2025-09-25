@@ -1,7 +1,7 @@
 ---
 tls:
   cipherSuite: "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384"
-  negotiatedProtocol: "http/1.1"
+  negotiatedProtocol: "h2"
   peerCertificates:
     - |
       -----BEGIN CERTIFICATE-----

@@ -28,18 +28,16 @@ import (
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwapiv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 	"sigs.k8s.io/gateway-api/conformance/utils/config"
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
+	"sigs.k8s.io/gateway-api/conformance/utils/roundtripper"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
 	"sigs.k8s.io/yaml"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 )
-
-const BackendTLSChangesMaxTimeout = 30 * time.Second
 
 func init() {
 	ConformanceTests = append(ConformanceTests, BackendTLSSettingsTest)
@@ -50,33 +48,26 @@ var BackendTLSSettingsTest = suite.ConformanceTest{
 	Description: "Use envoy proxy tls settings with backend",
 	Manifests:   []string{"testdata/backend-tls-settings.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
-		t.Run("Apply custom TLS settings when making backend requests.", func(t *testing.T) {
-			depNS := "envoy-gateway-system"
-			ns := "gateway-conformance-infra"
-			routeNN := types.NamespacedName{Name: "backend-tls-setting", Namespace: ns}
-			gwNN := types.NamespacedName{Name: "backend-tls-setting", Namespace: ns}
-			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
-			kubernetes.NamespacesMustBeReady(t, suite.Client, suite.TimeoutConfig, []string{depNS})
-			backendTLSPolicy := &gwapiv1a3.BackendTLSPolicy{}
-			btpNN := types.NamespacedName{Name: "policy-btls", Namespace: ns}
-			err := suite.Client.Get(context.Background(), btpNN, backendTLSPolicy)
-			if err != nil {
-				t.Error(err)
-			}
-			proxyNN := types.NamespacedName{Name: "proxy-config", Namespace: "envoy-gateway-system"}
+		proxyNN := types.NamespacedName{Name: "backend-tls-setting", Namespace: ConformanceInfraNamespace}
+		gwNN := types.NamespacedName{Name: "backend-tls-setting", Namespace: ConformanceInfraNamespace}
+		kubernetes.NamespacesMustBeReady(t, suite.Client, suite.TimeoutConfig, []string{ConformanceInfraNamespace})
 
+		t.Run("Apply custom TLS settings when making backend requests.", func(t *testing.T) {
+			routeNN := types.NamespacedName{Name: "backend-tls-setting", Namespace: ConformanceInfraNamespace}
+			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 			config := &egv1a1.BackendTLSConfig{
 				ClientCertificateRef: &gwapiv1.SecretObjectReference{
 					Kind:      gatewayapi.KindPtr("Secret"),
 					Name:      "client-tls-certificate",
-					Namespace: gatewayapi.NamespacePtr(depNS),
+					Namespace: gatewayapi.NamespacePtr(ConformanceInfraNamespace),
 				},
 				TLSSettings: egv1a1.TLSSettings{
-					MinVersion: ptr.To(egv1a1.TLSv13),
-					MaxVersion: ptr.To(egv1a1.TLSv13),
+					MinVersion:    ptr.To(egv1a1.TLSv13),
+					MaxVersion:    ptr.To(egv1a1.TLSv13),
+					ALPNProtocols: []egv1a1.ALPNProtocol{"http/1.1"},
 				},
 			}
-			err = UpdateProxyConfig(suite.Client, proxyNN, config)
+			err := UpdateProxyConfig(suite.Client, proxyNN, config)
 			if err != nil {
 				t.Error(err)
 			}
@@ -92,28 +83,28 @@ var BackendTLSSettingsTest = suite.ConformanceTest{
 				Response: http.Response{
 					StatusCode: 200,
 				},
-				Namespace: ns,
+				Namespace: ConformanceInfraNamespace,
 			}
 
 			// Reconfigure backend tls settings
 			err = WaitUntil(func(httpRes *http.ExpectedResponse, expectedResBody *Response) error {
 				return confirmEchoBackendRes(httpRes, expectedResBody, gwAddr, t, suite)
-			}, BackendTLSChangesMaxTimeout, &expectOkResp, expectedRes)
+			}, suite.TimeoutConfig.MaxTimeToConsistency, &expectOkResp, expectedRes)
 			if err != nil {
-				t.Error(err)
+				t.Errorf("failed to confirm echo backend for TLS v1.3: %v", err)
 			}
 
 			// rotate the client mTLS secret to ensure that a new secret is used.
 			suite.Applier.MustApplyWithCleanup(t, suite.Client, suite.TimeoutConfig, "testdata/backend-tls-settings-client-cert-rotation.yaml", false)
 
-			err = restartDeploymentAndWaitForRollout(t, suite.TimeoutConfig, suite.Client, &appsv1.Deployment{
+			err = restartDeploymentAndWaitForRollout(t, &suite.TimeoutConfig, suite.Client, &appsv1.Deployment{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "tls-backend",
 					Namespace: "gateway-conformance-infra",
 				},
 			})
 			if err != nil {
-				t.Error(err)
+				t.Errorf("failed to confirm echo backend for client cert rotation: %v", err)
 			}
 
 			// confirm new mtls client cert is used when connecting to backend
@@ -124,20 +115,22 @@ var BackendTLSSettingsTest = suite.ConformanceTest{
 
 			err = WaitUntil(func(httpRes *http.ExpectedResponse, expectedResBody *Response) error {
 				return confirmEchoBackendRes(httpRes, expectedResBody, gwAddr, t, suite)
-			}, BackendTLSChangesMaxTimeout, &expectOkResp, expectedResNewMTLSSecret)
+			}, suite.TimeoutConfig.MaxTimeToConsistency, &expectOkResp, expectedResNewMTLSSecret)
 			if err != nil {
 				t.Error(err)
 			}
 
+			t.Logf("updating backend tls settings to use TLSv1.2 and custom cipher suites")
 			config.TLSSettings = egv1a1.TLSSettings{
-				MinVersion: ptr.To(egv1a1.TLSv12),
-				MaxVersion: ptr.To(egv1a1.TLSv12),
-				Ciphers:    []string{"TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384"},
+				MinVersion:    ptr.To(egv1a1.TLSv12),
+				MaxVersion:    ptr.To(egv1a1.TLSv12),
+				ALPNProtocols: nil, // default ALPN protocols, which means h2 preferred over http/1.1.
+				Ciphers:       []string{"TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384"},
 			}
 
 			err = UpdateProxyConfig(suite.Client, proxyNN, config)
 			if err != nil {
-				t.Error(err)
+				t.Errorf("failed to confirm echo backend for TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384: %v", err)
 			}
 
 			// confirm tls settings can be updated
@@ -148,18 +141,91 @@ var BackendTLSSettingsTest = suite.ConformanceTest{
 
 			err = WaitUntil(func(httpRes *http.ExpectedResponse, expectedResBody *Response) error {
 				return confirmEchoBackendRes(httpRes, expectedResBody, gwAddr, t, suite)
-			}, BackendTLSChangesMaxTimeout, &expectOkResp, expectedUpdatedTLSSettings)
+			}, suite.TimeoutConfig.MaxTimeToConsistency, &expectOkResp, expectedUpdatedTLSSettings)
+			if err != nil {
+				t.Error(err)
+			}
+		})
+
+		t.Run("UseClientProtocol", func(t *testing.T) {
+			routeNN := types.NamespacedName{Name: "use-client-protocol", Namespace: ConformanceInfraNamespace}
+			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+
+			// rotate the client mTLS secret to ensure that a new secret is used.
+			suite.Applier.MustApplyWithCleanup(t, suite.Client, suite.TimeoutConfig, "testdata/backend-tls-settings-client-cert-rotation.yaml", false)
+			err := restartDeploymentAndWaitForRollout(t, &suite.TimeoutConfig, suite.Client, &appsv1.Deployment{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "tls-backend",
+					Namespace: "gateway-conformance-infra",
+				},
+			})
+			if err != nil {
+				t.Errorf("failed to confirm echo backend for client cert rotation: %v", err)
+			}
+
+			config := &egv1a1.BackendTLSConfig{
+				ClientCertificateRef: &gwapiv1.SecretObjectReference{
+					Kind:      gatewayapi.KindPtr("Secret"),
+					Name:      "client-tls-certificate",
+					Namespace: gatewayapi.NamespacePtr(ConformanceInfraNamespace),
+				},
+				TLSSettings: egv1a1.TLSSettings{
+					MinVersion: ptr.To(egv1a1.TLSv13),
+					MaxVersion: ptr.To(egv1a1.TLSv13),
+				},
+			}
+			err = UpdateProxyConfig(suite.Client, proxyNN, config)
 			if err != nil {
 				t.Error(err)
 			}
 
-			// Cleanup backend tls settings.
-			err = UpdateProxyConfig(suite.Client, proxyNN, &egv1a1.BackendTLSConfig{
-				ClientCertificateRef: nil,
-				TLSSettings:          egv1a1.TLSSettings{},
-			})
+			t.Logf("requesting /use-client-protocol with HTTP/1.1")
+			expectedRes, err := asExpectedResponse("client-protocol-http1")
 			if err != nil {
 				t.Error(err)
+			}
+			expectedRes.TLS.NegotiatedProtocol = "http/1.1"
+			expectOkResp := http.ExpectedResponse{
+				Request: http.Request{
+					Path: "/use-client-protocol",
+				},
+				Response: http.Response{
+					StatusCode: 200,
+				},
+				Namespace: ConformanceInfraNamespace,
+			}
+			err = WaitUntil(func(httpRes *http.ExpectedResponse, expectedResBody *Response) error {
+				return confirmEchoBackendRes(httpRes, expectedResBody, gwAddr, t, suite)
+			}, suite.TimeoutConfig.MaxTimeToConsistency, &expectOkResp, expectedRes)
+			if err != nil {
+				t.Errorf("failed to confirm echo backend for HTTP/1.1: %v", err)
+			}
+
+			// Client use HTTP/2
+			t.Logf("requesting /use-client-protocol with HTTP/2")
+			expectedResponse := http.ExpectedResponse{
+				Request: http.Request{
+					Path:     "/use-client-protocol",
+					Protocol: roundtripper.H2CPriorKnowledgeProtocol,
+				},
+				Response: http.Response{
+					StatusCode: 200,
+				},
+				Namespace: ConformanceInfraNamespace,
+			}
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
+
+			req := http.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
+			cReq, cResp, err := suite.RoundTripper.CaptureRoundTrip(req)
+			if err != nil {
+				t.Errorf("failed to get expected response: %v", err)
+			}
+
+			if err := http.CompareRequest(t, &req, cReq, cResp, expectedResponse); err != nil {
+				t.Errorf("failed to compare request and response: %v", err)
+			}
+			if cReq.Protocol != "HTTP/2.0" {
+				t.Errorf("expected http/2.0 protocol, got %s", cReq.Protocol)
 			}
 		})
 	},
@@ -172,7 +238,7 @@ func confirmEchoBackendRes(httpRes *http.ExpectedResponse, expectedResBody *Resp
 		},
 	}
 	req := http.MakeRequest(t, httpRes, gwAddr, "HTTP", "http")
-	res, err := casePreservingRoundTrip(req, transport, suite)
+	res, err := casePreservingRoundTrip(&req, transport, suite)
 	if err != nil {
 		return err
 	}
@@ -259,11 +325,15 @@ type TLSInfo struct {
 	CipherSuite        string   `json:"cipherSuite"`
 }
 
-func restartDeploymentAndWaitForRollout(t *testing.T, timeoutConfig config.TimeoutConfig, c client.Client, dp *appsv1.Deployment) error {
+func restartDeploymentAndWaitForRollout(t *testing.T, timeoutConfig *config.TimeoutConfig, c client.Client, dp *appsv1.Deployment) error {
 	t.Helper()
 	const restartAnnotation = "kubectl.kubernetes.io/restartedAt"
 	restartTime := time.Now().Format(time.RFC3339)
 	ctx := context.Background()
+
+	if timeoutConfig == nil {
+		t.Fatalf("timeoutConfig cannot be nil")
+	}
 
 	if err := c.Get(context.Background(), types.NamespacedName{Name: dp.Name, Namespace: dp.Namespace}, dp); err != nil {
 		return err
@@ -293,7 +363,8 @@ func restartDeploymentAndWaitForRollout(t *testing.T, timeoutConfig config.Timeo
 		}
 
 		rolled := int32(0)
-		for _, rs := range podList.Items {
+		for i := range podList.Items {
+			rs := &podList.Items[i]
 			if rs.Annotations[restartAnnotation] == restartTime {
 				rolled++
 			}

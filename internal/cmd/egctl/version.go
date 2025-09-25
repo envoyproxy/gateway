@@ -98,14 +98,14 @@ func versions(w io.Writer, containerName, output string, remote bool) error {
 		return fmt.Errorf("list EG pods failed: %w", err)
 	}
 
-	for _, pod := range pods.Items {
-		if pod.Status.Phase != "Running" {
+	for i := range pods.Items {
+		if pods.Items[i].Status.Phase != "Running" {
 
-			fmt.Fprintf(w, "WARN: pod %s/%s is not running, skipping it.", pod.Namespace, pod.Name)
+			fmt.Fprintf(w, "WARN: pod %s/%s is not running, skipping it.", pods.Items[i].Namespace, pods.Items[i].Name)
 			continue
 		}
 
-		nn := utils.NamespacedName(&pod)
+		nn := utils.NamespacedName(&pods.Items[i])
 		stdout, _, err := c.PodExec(nn, containerName, "envoy-gateway version -ojson")
 		if err != nil {
 			return fmt.Errorf("pod exec on %s/%s failed: %w", nn.Namespace, nn.Name, err)

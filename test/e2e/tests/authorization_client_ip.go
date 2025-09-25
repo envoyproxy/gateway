@@ -22,8 +22,7 @@ import (
 )
 
 func init() {
-	ConformanceTests = append(ConformanceTests, AuthorizationClientIPTest)
-	ConformanceTests = append(ConformanceTests, AuthorizationClientIPTrustedCidrsTest)
+	ConformanceTests = append(ConformanceTests, AuthorizationClientIPTest, AuthorizationClientIPTrustedCidrsTest)
 }
 
 var AuthorizationClientIPTest = suite.ConformanceTest{

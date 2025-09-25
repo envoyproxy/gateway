@@ -31,7 +31,7 @@ func MergeConditions(conditions []metav1.Condition, updates ...metav1.Condition)
 		for j, cond := range conditions {
 			if cond.Type == update.Type {
 				add = false
-				if conditionChanged(cond, update) {
+				if conditionChanged(&cond, &update) {
 					conditions[j].Status = update.Status
 					conditions[j].Reason = update.Reason
 					conditions[j].Message = update.Message
@@ -60,9 +60,9 @@ func newCondition(t string, status metav1.ConditionStatus, reason, msg string, l
 	}
 }
 
-func conditionChanged(a, b metav1.Condition) bool {
+func conditionChanged(a, b *metav1.Condition) bool {
 	opts := cmpopts.IgnoreFields(metav1.Condition{}, "Type", "LastTransitionTime")
-	return !cmp.Equal(a, b, opts)
+	return !cmp.Equal(*a, *b, opts)
 }
 
 // Error2ConditionMsg format the error string to a Status condition message.

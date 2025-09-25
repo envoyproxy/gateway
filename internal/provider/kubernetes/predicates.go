@@ -303,7 +303,8 @@ func (r *gatewayAPIReconciler) isEnvoyProxyReferencingSecret(nsName *types.Names
 		return false
 	}
 
-	for _, ep := range epList.Items {
+	for i := range epList.Items {
+		ep := &epList.Items[i]
 		if ep.Spec.BackendTLS != nil {
 			if ep.Spec.BackendTLS.ClientCertificateRef != nil {
 				certRef := ep.Spec.BackendTLS.ClientCertificateRef
@@ -332,8 +333,9 @@ func (r *gatewayAPIReconciler) isGatewayReferencingSecret(nsName *types.Namespac
 		return false
 	}
 
-	for _, gw := range gwList.Items {
-		if !r.validateGatewayForReconcile(&gw) {
+	for i := range gwList.Items {
+		gw := &gwList.Items[i]
+		if !r.validateGatewayForReconcile(gw) {
 			return false
 		}
 	}
@@ -746,8 +748,9 @@ func (r *gatewayAPIReconciler) updateStatusForGatewaysUnderGatewayClass(ctx cont
 		return fmt.Errorf("no gateways found for gatewayclass: %s", gatewayClassName)
 	}
 
-	for _, gateway := range gateways.Items {
-		r.updateGatewayStatus(&gateway)
+	for i := range gateways.Items {
+		gateway := &gateways.Items[i]
+		r.updateGatewayStatus(gateway)
 	}
 
 	return nil

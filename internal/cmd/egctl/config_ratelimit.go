@@ -106,14 +106,14 @@ func fetchRunningRateLimitPods(cli kubernetes.CLIClient, namespace string, label
 	}
 
 	rlNN := []types.NamespacedName{}
-	for _, rlPod := range rlPods.Items {
+	for i := range rlPods.Items {
 		rlPodNsName := types.NamespacedName{
-			Namespace: rlPod.Namespace,
-			Name:      rlPod.Name,
+			Namespace: rlPods.Items[i].Namespace,
+			Name:      rlPods.Items[i].Name,
 		}
 
 		// Check that the rate limit pod is ready properly and can accept external traffic
-		if !checkRateLimitPodStatusReady(rlPod.Status) {
+		if !checkRateLimitPodStatusReady(&rlPods.Items[i].Status) {
 			continue
 		}
 
@@ -127,7 +127,7 @@ func fetchRunningRateLimitPods(cli kubernetes.CLIClient, namespace string, label
 }
 
 // checkRateLimitPodStatusReady Check that the rate limit pod is ready
-func checkRateLimitPodStatusReady(status corev1.PodStatus) bool {
+func checkRateLimitPodStatusReady(status *corev1.PodStatus) bool {
 	if status.Phase != corev1.PodRunning {
 		return false
 	}

@@ -337,7 +337,7 @@ func TestTranslateXdsWithExtensionErrorsWhenFailOpen(t *testing.T) {
 				},
 			}
 
-			extMgr, closeFunc, err := registry.NewInMemoryManager(ext, &testingExtensionServer{})
+			extMgr, closeFunc, err := registry.NewInMemoryManager(&ext, &testingExtensionServer{})
 			require.NoError(t, err)
 			defer closeFunc()
 			tr.ExtensionManager = &extMgr
@@ -478,7 +478,7 @@ func TestTranslateXdsWithExtensionErrorsWhenFailClosed(t *testing.T) {
 				},
 			}
 
-			extMgr, closeFunc, err := registry.NewInMemoryManager(ext, &testingExtensionServer{})
+			extMgr, closeFunc, err := registry.NewInMemoryManager(&ext, &testingExtensionServer{})
 			require.NoError(t, err)
 			defer closeFunc()
 			tr.ExtensionManager = &extMgr

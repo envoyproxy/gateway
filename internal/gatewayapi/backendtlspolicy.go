@@ -222,7 +222,7 @@ func (t *Translator) applyEnvoyProxyBackendTLSSetting(tlsConfig *ir.TLSUpstreamC
 	return tlsConfig, nil
 }
 
-func backendTLSTargetMatched(policy gwapiv1a3.BackendTLSPolicy, target gwapiv1a2.LocalPolicyTargetReferenceWithSectionName, backendNamespace string) bool {
+func backendTLSTargetMatched(policy *gwapiv1a3.BackendTLSPolicy, target gwapiv1a2.LocalPolicyTargetReferenceWithSectionName, backendNamespace string) bool {
 	for _, currTarget := range policy.Spec.TargetRefs {
 		if target.Group == currTarget.Group &&
 			target.Kind == currTarget.Kind &&
@@ -248,7 +248,7 @@ func getBackendTLSPolicy(
 	// SectionName is port number for EG Backend object
 	target := getTargetBackendReference(backendRef, backendNamespace, resources)
 	for _, policy := range policies {
-		if backendTLSTargetMatched(*policy, target, backendNamespace) {
+		if backendTLSTargetMatched(policy, target, backendNamespace) {
 			return policy
 		}
 	}

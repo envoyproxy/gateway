@@ -34,8 +34,8 @@ const (
 
 func deploymentWithImage(deploy *appsv1.Deployment, image string) *appsv1.Deployment {
 	dCopy := deploy.DeepCopy()
-	for i, c := range dCopy.Spec.Template.Spec.Containers {
-		if c.Name == envoyContainerName {
+	for i := range dCopy.Spec.Template.Spec.Containers {
+		if dCopy.Spec.Template.Spec.Containers[i].Name == envoyContainerName {
 			dCopy.Spec.Template.Spec.Containers[i].Image = image
 		}
 	}

@@ -87,7 +87,7 @@ func TestConditionChanged(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		if got := conditionChanged(tc.a, tc.b); got != tc.expected {
+		if got := conditionChanged(&tc.a, &tc.b); got != tc.expected {
 			assert.Equal(t, tc.expected, got, tc.name)
 		}
 	}
