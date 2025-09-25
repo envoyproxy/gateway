@@ -1,7 +1,6 @@
 ---
 tls:
-  cipherSuite: "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384"
-  negotiatedProtocol: "h2"
+  cipherSuite: "TLS_AES_128_GCM_SHA256"
   peerCertificates:
     - |
       -----BEGIN CERTIFICATE-----
@@ -22,6 +21,6 @@ tls:
       sVebz36Hvl49niO7VgxGpWkUriN72z88Zl+rvOgBHb0NQoBhn5kvMMI/k/eSQ/gC
       zU6j2vfB
       -----END CERTIFICATE-----
-
+  negotiatedProtocol: "http/1.1"
   serverName: "example.com"
-  version: "TLSv1.2"
+  version: "TLSv1.3"

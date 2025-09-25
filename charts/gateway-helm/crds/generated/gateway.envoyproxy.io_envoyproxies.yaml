@@ -57,6 +57,9 @@ spec:
                       2. Other Routes: ALPN is disabled.
                       3. Backends: proxy uses the appropriate ALPN options for the backend protocol.
                       When an empty list is provided, the ALPN TLS extension is disabled.
+
+                      Defaults to [h2, http/1.1] if not specified.
+
                       Typical Supported values are:
                       - http/1.0
                       - http/1.1
