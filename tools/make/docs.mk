@@ -10,7 +10,7 @@ CLEAN_NODE_MODULES ?= true
 ##@ Docs
 
 .PHONY: docs
-docs: docs.clean helm-readme-gen docs-api copy-current-release-docs ## Generate Envoy Gateway Docs Sources
+docs: docs.clean helm-readme-gen docs-api copy-current-release-docs docs-sync-owners ## Generate Envoy Gateway Docs Sources
 	@$(LOG_TARGET)
 	cd $(ROOT_DIR)/site && npm install
 	cd $(ROOT_DIR)/site && npm run build:production
@@ -172,7 +172,7 @@ docs-release-gen:
 	cp -r site/content/en/latest/ site/content/en/$(DOC_VERSION)/
 
 .PHONY: docs-sync-owners
-docs-sync-owners: $(tools/sync-docs-codeowners) # Sync maintainers and emeritus-maintainers from OWNERS to CODEOWNERS.md
+docs-sync-owners: # Sync maintainers and emeritus-maintainers from OWNERS to CODEOWNERS.md
 	@$(LOG_TARGET)
 	$(tools/sync-docs-codeowners)
 
