@@ -44,7 +44,7 @@ var UDPRouteTest = suite.ConformanceTest{
 			domain := "foo.bar.com."
 			routeNN := types.NamespacedName{Name: "udp-coredns", Namespace: namespace}
 			gwNN := types.NamespacedName{Name: "udp-gateway", Namespace: namespace}
-			gwAddr := GatewayAndUDPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, NewGatewayRef(gwNN), routeNN)
+			gwAddr := GatewayAndUDPRoutesMustBeAccepted(t, suite.Client, &suite.TimeoutConfig, suite.ControllerName, NewGatewayRef(gwNN), routeNN)
 
 			msg := new(dns.Msg)
 			msg.SetQuestion(domain, dns.TypeA)
@@ -95,10 +95,14 @@ func NewGatewayRef(nn types.NamespacedName, listenerNames ...string) GatewayRef 
 // address assigned to it and the UDPRoute has a ParentRef referring to the
 // Gateway. The test will fail if these conditions are not met before the
 // timeouts.
-func GatewayAndUDPRoutesMustBeAccepted(t *testing.T, c client.Client, timeoutConfig config.TimeoutConfig, controllerName string, gw GatewayRef, routeNNs ...types.NamespacedName) string {
+func GatewayAndUDPRoutesMustBeAccepted(t *testing.T, c client.Client, timeoutConfig *config.TimeoutConfig, controllerName string, gw GatewayRef, routeNNs ...types.NamespacedName) string {
 	t.Helper()
 
-	gwAddr, err := kubernetes.WaitForGatewayAddress(t, c, timeoutConfig, kubernetes.GatewayRef{
+	if timeoutConfig == nil {
+		t.Fatalf("timeoutConfig cannot be nil")
+	}
+
+	gwAddr, err := kubernetes.WaitForGatewayAddress(t, c, *timeoutConfig, kubernetes.GatewayRef{
 		NamespacedName: gw.NamespacedName,
 	})
 	require.NoErrorf(t, err, "timed out waiting for Gateway address to be assigned")
@@ -138,8 +142,12 @@ func GatewayAndUDPRoutesMustBeAccepted(t *testing.T, c client.Client, timeoutCon
 	return gwAddr
 }
 
-func UDPRouteMustHaveParents(t *testing.T, client client.Client, timeoutConfig config.TimeoutConfig, routeName types.NamespacedName, parents []gwapiv1.RouteParentStatus, namespaceRequired bool) {
+func UDPRouteMustHaveParents(t *testing.T, client client.Client, timeoutConfig *config.TimeoutConfig, routeName types.NamespacedName, parents []gwapiv1.RouteParentStatus, namespaceRequired bool) {
 	t.Helper()
+
+	if timeoutConfig == nil {
+		t.Fatalf("timeoutConfig cannot be nil")
+	}
 
 	var actual []gwapiv1.RouteParentStatus
 	waitErr := wait.PollUntilContextTimeout(context.Background(), 1*time.Second, timeoutConfig.RouteMustHaveParents, true, func(ctx context.Context) (bool, error) {

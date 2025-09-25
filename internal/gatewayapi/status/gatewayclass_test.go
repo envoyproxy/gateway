@@ -155,7 +155,7 @@ func TestGetSupportedFeatures(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			result := getSupportedFeatures(tc.gatewaySuite, tc.skippedTests)
+			result := getSupportedFeatures(&tc.gatewaySuite, tc.skippedTests)
 
 			assert.ElementsMatch(t, tc.expectedResult, result, "The result should match the expected output for the test case.")
 		})

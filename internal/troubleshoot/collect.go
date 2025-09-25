@@ -36,7 +36,7 @@ func CollectResult(ctx context.Context, restConfig *rest.Config, opts CollectOpt
 
 	collectors := []tbcollect.Collector{
 		// Collect the custom resources from Gateway API and EG
-		collect.CustomResource{
+		&collect.CustomResource{
 			ClientConfig: restConfig,
 			BundlePath:   opts.BundlePath,
 			IncludeGroups: []string{

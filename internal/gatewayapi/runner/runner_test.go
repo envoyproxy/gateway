@@ -33,7 +33,7 @@ func TestRunner(t *testing.T) {
 	infraIR := new(message.InfraIR)
 	cfg, err := config.New(os.Stdout)
 	require.NoError(t, err)
-	extMgr, closeFunc, err := registry.NewInMemoryManager(egv1a1.ExtensionManager{}, &pb.UnimplementedEnvoyGatewayExtensionServer{})
+	extMgr, closeFunc, err := registry.NewInMemoryManager(&egv1a1.ExtensionManager{}, &pb.UnimplementedEnvoyGatewayExtensionServer{})
 	require.NoError(t, err)
 	defer closeFunc()
 	r := New(&Config{
@@ -119,7 +119,7 @@ func TestDeleteStatusKeys(t *testing.T) {
 	infraIR := new(message.InfraIR)
 	cfg, err := config.New(os.Stdout)
 	require.NoError(t, err)
-	extMgr, closeFunc, err := registry.NewInMemoryManager(egv1a1.ExtensionManager{}, &pb.UnimplementedEnvoyGatewayExtensionServer{})
+	extMgr, closeFunc, err := registry.NewInMemoryManager(&egv1a1.ExtensionManager{}, &pb.UnimplementedEnvoyGatewayExtensionServer{})
 	require.NoError(t, err)
 	defer closeFunc()
 	r := New(&Config{
@@ -220,7 +220,7 @@ func TestDeleteAllStatusKeys(t *testing.T) {
 	infraIR := new(message.InfraIR)
 	cfg, err := config.New(os.Stdout)
 	require.NoError(t, err)
-	extMgr, closeFunc, err := registry.NewInMemoryManager(egv1a1.ExtensionManager{}, &pb.UnimplementedEnvoyGatewayExtensionServer{})
+	extMgr, closeFunc, err := registry.NewInMemoryManager(&egv1a1.ExtensionManager{}, &pb.UnimplementedEnvoyGatewayExtensionServer{})
 	require.NoError(t, err)
 	defer closeFunc()
 	r := New(&Config{
