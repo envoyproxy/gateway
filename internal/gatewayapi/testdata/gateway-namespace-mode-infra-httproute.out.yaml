@@ -290,6 +290,10 @@ xdsIR:
       - path: /dev/stdout
     globalResources:
       proxyServiceCluster:
+        metadata:
+          name: gateway-1
+          namespace: default
+          sectionName: "8080"
         name: default/gateway-1
         settings:
         - addressType: IP
@@ -361,6 +365,10 @@ xdsIR:
       - path: /dev/stdout
     globalResources:
       proxyServiceCluster:
+        metadata:
+          name: gateway-2
+          namespace: default
+          sectionName: "8080"
         name: default/gateway-2
         settings:
         - addressType: IP

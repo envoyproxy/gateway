@@ -552,6 +552,10 @@ xdsIR:
       - path: /dev/stdout
     globalResources:
       proxyServiceCluster:
+        metadata:
+          name: envoy-envoy-gateway-gateway-1-196ae069
+          namespace: envoy-gateway-system
+          sectionName: "8080"
         name: envoy-gateway/gateway-1
         settings:
         - addressType: IP
@@ -627,6 +631,10 @@ xdsIR:
       - path: /dev/stdout
     globalResources:
       proxyServiceCluster:
+        metadata:
+          name: envoy-envoy-gateway-gateway-2-4a0e4eb9
+          namespace: envoy-gateway-system
+          sectionName: "8080"
         name: envoy-gateway/gateway-2
         settings:
         - addressType: IP
@@ -683,6 +691,10 @@ xdsIR:
       - path: /dev/stdout
     globalResources:
       proxyServiceCluster:
+        metadata:
+          name: envoy-envoy-gateway-gateway-3-32e857a6
+          namespace: envoy-gateway-system
+          sectionName: "8080"
         name: envoy-gateway/gateway-3
         settings:
         - addressType: IP
@@ -739,6 +751,10 @@ xdsIR:
       - path: /dev/stdout
     globalResources:
       proxyServiceCluster:
+        metadata:
+          name: envoy-envoy-gateway-gateway-4-a293650b
+          namespace: envoy-gateway-system
+          sectionName: "8080"
         name: envoy-gateway/gateway-4
         settings:
         - addressType: IP
@@ -796,7 +812,7 @@ xdsIR:
     globalResources:
       proxyServiceCluster:
         metadata:
-          name: envoy-envoy-gateway-gateway-1-196ae069
+          name: envoy-envoy-gateway-gateway-5-e35ee57f
           namespace: envoy-gateway-system
           sectionName: "8080"
         name: envoy-gateway/gateway-5

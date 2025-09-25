@@ -241,9 +241,9 @@ securityPolicies:
         namespace: default
       conditions:
       - lastTransitionTime: null
-        message: Policy has been accepted.
-        reason: Accepted
-        status: "True"
+        message: 'ExtAuth: no ready endpoints for the related ServiceImport envoy-gateway/http-backend.'
+        reason: Invalid
+        status: "False"
         type: Accepted
       - lastTransitionTime: null
         message: 'This policy is being overridden by other securityPolicies for these
@@ -453,6 +453,8 @@ xdsIR:
             name: httproute/default/httproute-2/rule/0/backend/0
             protocol: HTTP
             weight: 1
+        directResponse:
+          statusCode: 500
         hostname: www.bar.com
         isHTTP2: false
         metadata:
@@ -464,46 +466,7 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /bar
-        security:
-          extAuth:
-            failOpen: false
-            http:
-              authority: http-backend.envoy-gateway:80
-              destination:
-                metadata:
-                  kind: SecurityPolicy
-                  name: policy-for-gateway-1
-                  namespace: default
-                name: securitypolicy/default/policy-for-gateway-1/extauth/0
-                settings:
-                - addressType: IP
-                  metadata:
-                    kind: ServiceImport
-                    name: http-backend
-                    namespace: envoy-gateway
-                    sectionName: "80"
-                  name: securitypolicy/default/policy-for-gateway-1/extauth/0/backend/0
-                  protocol: HTTP
-                  weight: 1
-              headersToBackend:
-              - header1
-              - header2
-              path: /auth
-            name: securitypolicy/default/policy-for-gateway-1
-            traffic:
-              retry:
-                numRetries: 2
-                perRetry:
-                  backOff:
-                    baseInterval: 200ms
-                    maxInterval: 3s
-                  timeout: 3s
-                retryOn:
-                  triggers:
-                  - 5xx
-                  - deadline-exceeded
-                  - internal
-                  - unavailable
+        security: {}
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

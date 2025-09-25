@@ -206,6 +206,23 @@ xdsIR:
               status: "True"
               type: Accepted
             controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    globalResources:
+      proxyServiceCluster:
+        metadata:
+          name: envoy-envoy-gateway-gateway-1-196ae069
+          sectionName: "8080"
+        name: envoy-gateway/gateway-1
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            sectionName: "8080"
+          name: envoy-gateway/gateway-1
+          protocol: TCP
     http:
     - address: 0.0.0.0
       extensionRefs:
@@ -318,7 +335,7 @@ xdsIR:
     globalResources:
       proxyServiceCluster:
         metadata:
-          name: envoy-envoy-gateway-gateway-1-196ae069
+          name: envoy-envoy-gateway-gateway-2-4a0e4eb9
           sectionName: "8080"
         name: envoy-gateway/gateway-2
         settings:
