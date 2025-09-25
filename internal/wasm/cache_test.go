@@ -732,7 +732,7 @@ func TestWasmCache(t *testing.T) {
 			if c.getOptions.PullSecret == nil {
 				c.getOptions.PullSecret = []byte{}
 			}
-			gotFilePath, _, gotErr := cache.Get(c.fetchURL, c.getOptions)
+			gotFilePath, _, gotErr := cache.Get(c.fetchURL, &c.getOptions)
 			serverVisited := atomic.LoadInt32(&tsNumRequest) > 0
 
 			if c.checkPurgeTimeout > 0 {
@@ -905,7 +905,7 @@ func TestWasmCachePolicyChangesUsingHTTP(t *testing.T) {
 
 	testWasmGet := func(downloadURL string, policy PullPolicy, resourceVersion, wantFilePath string, wantNumRequest int) {
 		t.Helper()
-		gotFilePath, _, err := cache.Get(downloadURL, GetOptions{
+		gotFilePath, _, err := cache.Get(downloadURL, &GetOptions{
 			ResourceName:    "namespace.resource",
 			ResourceVersion: resourceVersion,
 			RequestTimeout:  time.Second * 10,
@@ -960,7 +960,7 @@ func TestAllInsecureServer(t *testing.T) {
 	ociURLWithTag := fmt.Sprintf("oci://%s/test/valid/docker:v0.1.0", ou.Host)
 	var defaultPullPolicy PullPolicy
 
-	gotFilePath, _, err := cache.Get(ociURLWithTag, GetOptions{
+	gotFilePath, _, err := cache.Get(ociURLWithTag, &GetOptions{
 		ResourceName:    "namespace.resource",
 		ResourceVersion: "123456",
 		RequestTimeout:  time.Second * 10,

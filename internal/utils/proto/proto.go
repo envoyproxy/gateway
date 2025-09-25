@@ -22,7 +22,10 @@ import (
 )
 
 var (
-	marshaler   = &jsonpb.Marshaler{}
+	// Setting the OrigName flag to true will preserve the expected snake case field names in the JSON output.
+	// Otherwise, camel case is produced, and it causes issues with the func-e library used to unmarshal the
+	// bootstrap configuration.
+	marshaler   = &jsonpb.Marshaler{OrigName: true}
 	unmarshaler = &jsonpb.Unmarshaler{AllowUnknownFields: true}
 )
 
