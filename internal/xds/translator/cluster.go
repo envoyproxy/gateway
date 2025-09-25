@@ -913,9 +913,7 @@ func buildTypedExtensionProtocolOptions(args *xdsClusterArgs, requiresAutoHTTPCo
 			AutoSni:           true,
 			AutoSanValidation: true,
 		}
-	}
-
-	if requiresAutoSNI {
+	} else if requiresAutoSNI {
 		protocolOptions.UpstreamHttpProtocolOptions = &corev3.UpstreamHttpProtocolOptions{
 			AutoSni: true,
 		}
