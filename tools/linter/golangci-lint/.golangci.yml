@@ -42,12 +42,12 @@ linters:
     - gosec
     - importas
     - misspell
+    - promlinter
     - revive
     - staticcheck
     - testifylint
     - unconvert
     - unparam
-    - promlinter
   exclusions:
     generated: lax
     presets:
@@ -124,12 +124,16 @@ linters:
           alias: apiextensionsv1
         - pkg: sigs.k8s.io/mcs-api/pkg/apis/v1alpha1
           alias: mcsapiv1a1
+        - pkg: k8s.io/api/certificates/v1beta1
+          alias: certificatesv1b1
         - pkg: k8s.io/api/(\w+)/(v[\w\d]+)
           alias: $1$2
       # Do not allow unaliased imports of aliased packages.
       no-unaliased: true
       # Do not allow non-required aliases.
       no-extra-aliases: false
+    promlinter:
+      strict: true
     revive:
       # TODO: enable if-return check
       rules:
@@ -147,9 +151,6 @@ linters:
       enable-all: true
     unparam:
       check-exported: false
-    promlinter:
-      disabled-linters: []
-      strict: false
 output:
   show-stats: false
 run:
