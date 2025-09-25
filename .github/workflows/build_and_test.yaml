@@ -252,7 +252,6 @@ jobs:
     - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8  # v5.0.0
     - uses: ./tools/github-actions/setup-deps
 
-    # PNG rendering is optional and disabled by default to speed up
 
     # Benchmark
     - name: Run Benchmark tests
