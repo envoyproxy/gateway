@@ -164,7 +164,6 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 					MergeGateways:             gatewayapi.IsMergeGatewaysEnabled(resources),
 					WasmCache:                 r.wasmCache,
 					ListenerPortShiftDisabled: r.EnvoyGateway.Provider != nil && r.EnvoyGateway.Provider.IsRunningOnHost(),
-					Logger:                    r.Logger,
 				}
 
 				// If an extension is loaded, pass its supported groups/kinds to the translator
