@@ -25,11 +25,7 @@ BENCHMARK_CONNECTIONS ?= 100
 BENCHMARK_DURATION ?= 60
 BENCHMARK_REPORT_DIR ?= benchmark_report
 
-# Benchmark toggles and images
-NIGHTHAWK_IMAGE ?= envoyproxy/nighthawk-dev
-NIGHTHAWK_TAG ?= v0.7.0
-# If true, skip loading locally built image into kind (pull from registry)
-USE_PUBLISHED_IMAGE ?= false
+# Benchmark toggles
 # Disable PNG rendering by default to speed up CI
 BENCHMARK_RENDER_PNG ?= false
 
@@ -192,17 +188,8 @@ conformance: create-cluster kube-install-image kube-deploy run-conformance delet
 .PHONY: experimental-conformance ## Create a kind cluster, deploy EG into it, run Gateway API experimental conformance, and clean up.
 experimental-conformance: create-cluster kube-install-image kube-deploy run-experimental-conformance delete-cluster ## Create a kind cluster, deploy EG into it, run Gateway API conformance, and clean up.
 
-.PHONY: maybe-kube-install-image
-maybe-kube-install-image:
-	@$(LOG_TARGET)
-ifneq ($(USE_PUBLISHED_IMAGE),true)
-	@$(MAKE) kube-install-image
-else
-	@$(call log, "Using published EG image; skipping kind image load")
-endif
-
 .PHONY: benchmark
-benchmark: create-cluster maybe-kube-install-image kube-deploy-for-benchmark-test run-benchmark delete-cluster ## Create a kind cluster, deploy EG into it, run Envoy Gateway benchmark test, and clean up.
+benchmark: create-cluster kube-install-image kube-deploy-for-benchmark-test run-benchmark delete-cluster ## Create a kind cluster, deploy EG into it, run Envoy Gateway benchmark test, and clean up.
 
 .PHONY: resilience
 resilience: create-cluster kube-install-image kube-install-examples-image kube-deploy install-eg-addons enable-simple-extension-server run-resilience delete-cluster ## Create a kind cluster, deploy EG into it, run Envoy Gateway resilience test, and clean up.
@@ -279,8 +266,6 @@ install-benchmark-server: ## Install nighthawk server for benchmark test
 	kubectl create namespace benchmark-test
 	kubectl -n benchmark-test create configmap test-server-config --from-file=test/benchmark/config/nighthawk-test-server-config.yaml -o yaml
 	kubectl apply -f test/benchmark/config/nighthawk-test-server.yaml
-	# Ensure server image is pinned (avoid latest)
-	kubectl -n benchmark-test set image deployment/nighthawk-test-server nighthawk-server=$(NIGHTHAWK_IMAGE):$(NIGHTHAWK_TAG) --record
 
 .PHONY: uninstall-benchmark-server
 uninstall-benchmark-server: ## Uninstall nighthawk server for benchmark test
