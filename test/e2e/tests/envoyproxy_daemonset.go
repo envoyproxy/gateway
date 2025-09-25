@@ -64,7 +64,7 @@ var EnvoyProxyDaemonSetTest = suite.ConformanceTest{
 				t.Fatalf("Failed to check no deployments for the Gateway: %v", err)
 			}
 
-			WaitForPods(t, suite.Client, gwPodNamespace, gwPodSelector, corev1.PodRunning, PodReady)
+			WaitForPods(t, suite.Client, gwPodNamespace, gwPodSelector, corev1.PodRunning, &PodReady)
 
 			// Send a request to a valid path and expect a successful response
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, http.ExpectedResponse{

@@ -100,9 +100,10 @@ func (r *BenchmarkReport) GetResult(ctx context.Context, job *types.NamespacedNa
 
 	// Find the pod that complete successfully.
 	var pod corev1.Pod
-	for _, p := range pods.Items {
+	for i := range pods.Items {
+		p := &pods.Items[i]
 		if p.Status.Phase == corev1.PodSucceeded {
-			pod = p
+			pod = *p
 			break
 		}
 	}
