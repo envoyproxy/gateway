@@ -72,7 +72,7 @@ var OpenTelemetryTracingTest = suite.ConformanceTest{
 					"provider":     "otel",
 					"service.name": tc.expectedSvc,
 				}
-				tracing.ExpectedTraceCount(t, suite, gwAddr, expectedResponse, tags)
+				tracing.ExpectedTraceCount(t, suite, gwAddr, &expectedResponse, tags)
 			})
 		}
 	},
@@ -108,7 +108,7 @@ var ZipkinTracingTest = suite.ConformanceTest{
 				// should make them kept consistent
 				"service.name": fmt.Sprintf("%s/%s", gwNN.Namespace, gwNN.Name),
 			}
-			tracing.ExpectedTraceCount(t, suite, gwAddr, expectedResponse, tags)
+			tracing.ExpectedTraceCount(t, suite, gwAddr, &expectedResponse, tags)
 		})
 	},
 }
@@ -161,7 +161,7 @@ var DatadogTracingTest = suite.ConformanceTest{
 					"provider":     "datadog",
 					"service.name": tc.expectedSvc,
 				}
-				tracing.ExpectedTraceCount(t, suite, gwAddr, expectedResponse, tags)
+				tracing.ExpectedTraceCount(t, suite, gwAddr, &expectedResponse, tags)
 			})
 		}
 	},

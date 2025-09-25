@@ -33,6 +33,9 @@ type QuicRoundTripper struct {
 	TimeoutConfig config.TimeoutConfig
 }
 
+// CaptureRoundTrip satisfies the roundtripper.RoundTripper interface, which requires a value parameter.
+//
+//nolint:gocritic
 func (q *QuicRoundTripper) CaptureRoundTrip(request roundtripper.Request) (*roundtripper.CapturedRequest, *roundtripper.CapturedResponse, error) {
 	tlsConfig := &tls.Config{
 		//nolint:gosec
@@ -52,7 +55,7 @@ func (q *QuicRoundTripper) CaptureRoundTrip(request roundtripper.Request) (*roun
 		transport.TLSClientConfig = clientTLS
 	}
 
-	return q.defaultRoundTrip(request, transport)
+	return q.defaultRoundTrip(&request, transport)
 }
 
 func tlsClientConfig(server string, certPem, keyPem []byte) (*tls.Config, error) {
@@ -83,7 +86,7 @@ func tlsClientConfig(server string, certPem, keyPem []byte) (*tls.Config, error)
 	}, nil
 }
 
-func (q *QuicRoundTripper) defaultRoundTrip(request roundtripper.Request, transport http.RoundTripper) (*roundtripper.CapturedRequest, *roundtripper.CapturedResponse, error) {
+func (q *QuicRoundTripper) defaultRoundTrip(request *roundtripper.Request, transport http.RoundTripper) (*roundtripper.CapturedRequest, *roundtripper.CapturedResponse, error) {
 	client := &http.Client{}
 
 	if request.UnfollowRedirect {
