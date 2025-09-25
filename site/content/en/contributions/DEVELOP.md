@@ -58,6 +58,8 @@ __Note:__ The binaries get generated in the `bin/$OS/$ARCH` directory, for examp
 
 __Note:__ The `golangci-lint` configuration resides [here](https://github.com/envoyproxy/gateway/blob/main/tools/linter/golangci-lint/.golangci.yml).
 
+__Prometheus metrics linting:__ We enable `promlinter` via `golangci-lint` to catch common Prometheus client misuse (e.g., using `promauto` in libraries, non-constant metric descriptors, histogram/summary pitfalls). If your change adds or modifies metrics, ensure it passes these checks.
+
 ### Building and Pushing the Image
 
 * Run `IMAGE=docker.io/you/gateway-dev make image` to build the docker image.
