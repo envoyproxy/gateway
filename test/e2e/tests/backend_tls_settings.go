@@ -96,7 +96,8 @@ var BackendTLSSettingsTest = suite.ConformanceTest{
 
 			// rotate the client mTLS secret to ensure that a new secret is used.
 			suite.Applier.MustApplyWithCleanup(t, suite.Client, suite.TimeoutConfig, "testdata/backend-tls-settings-client-cert-rotation.yaml", false)
-			err = restartDeploymentAndWaitForRollout(t, suite.TimeoutConfig, suite.Client, &appsv1.Deployment{
+
+			err = restartDeploymentAndWaitForRollout(t, &suite.TimeoutConfig, suite.Client, &appsv1.Deployment{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "tls-backend",
 					Namespace: "gateway-conformance-infra",
@@ -152,7 +153,7 @@ var BackendTLSSettingsTest = suite.ConformanceTest{
 
 			// rotate the client mTLS secret to ensure that a new secret is used.
 			suite.Applier.MustApplyWithCleanup(t, suite.Client, suite.TimeoutConfig, "testdata/backend-tls-settings-client-cert-rotation.yaml", false)
-			err := restartDeploymentAndWaitForRollout(t, suite.TimeoutConfig, suite.Client, &appsv1.Deployment{
+			err := restartDeploymentAndWaitForRollout(t, &suite.TimeoutConfig, suite.Client, &appsv1.Deployment{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "tls-backend",
 					Namespace: "gateway-conformance-infra",
@@ -237,7 +238,7 @@ func confirmEchoBackendRes(httpRes *http.ExpectedResponse, expectedResBody *Resp
 		},
 	}
 	req := http.MakeRequest(t, httpRes, gwAddr, "HTTP", "http")
-	res, err := casePreservingRoundTrip(req, transport, suite)
+	res, err := casePreservingRoundTrip(&req, transport, suite)
 	if err != nil {
 		return err
 	}
@@ -324,11 +325,15 @@ type TLSInfo struct {
 	CipherSuite        string   `json:"cipherSuite"`
 }
 
-func restartDeploymentAndWaitForRollout(t *testing.T, timeoutConfig config.TimeoutConfig, c client.Client, dp *appsv1.Deployment) error {
+func restartDeploymentAndWaitForRollout(t *testing.T, timeoutConfig *config.TimeoutConfig, c client.Client, dp *appsv1.Deployment) error {
 	t.Helper()
 	const restartAnnotation = "kubectl.kubernetes.io/restartedAt"
 	restartTime := time.Now().Format(time.RFC3339)
 	ctx := context.Background()
+
+	if timeoutConfig == nil {
+		t.Fatalf("timeoutConfig cannot be nil")
+	}
 
 	if err := c.Get(context.Background(), types.NamespacedName{Name: dp.Name, Namespace: dp.Namespace}, dp); err != nil {
 		return err
@@ -358,7 +363,8 @@ func restartDeploymentAndWaitForRollout(t *testing.T, timeoutConfig config.Timeo
 		}
 
 		rolled := int32(0)
-		for _, rs := range podList.Items {
+		for i := range podList.Items {
+			rs := &podList.Items[i]
 			if rs.Annotations[restartAnnotation] == restartTime {
 				rolled++
 			}

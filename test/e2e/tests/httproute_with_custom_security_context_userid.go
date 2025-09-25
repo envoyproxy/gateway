@@ -101,7 +101,7 @@ func setEGSecurityContextUserID(t *testing.T, suite *suite.ConformanceTestSuite,
 	require.NoError(t, err)
 
 	// test that envoy-gateway pod is running with custom security context user id
-	WaitForPods(t, suite.Client, "envoy-gateway-system", map[string]string{"control-plane": "envoy-gateway"}, corev1.PodRunning, PodReady)
+	WaitForPods(t, suite.Client, "envoy-gateway-system", map[string]string{"control-plane": "envoy-gateway"}, corev1.PodRunning, &PodReady)
 
 	// test that envoy-gateway deployment is updated with custom security context user id
 	egDeployment := &appsv1.Deployment{}
