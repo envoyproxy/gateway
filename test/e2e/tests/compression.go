@@ -125,11 +125,14 @@ type CompressionRoundTripper struct {
 	CustomDialContext func(context.Context, string, string) (net.Conn, error)
 }
 
+// CaptureRoundTrip satisfies the roundtripper.RoundTripper interface, which requires a value parameter.
+//
+//nolint:gocritic
 func (d *CompressionRoundTripper) CaptureRoundTrip(request roundtripper.Request) (*roundtripper.CapturedRequest, *roundtripper.CapturedResponse, error) {
-	return d.defaultRoundTrip(request, &nethttp.Transport{})
+	return d.defaultRoundTrip(&request, &nethttp.Transport{})
 }
 
-func (d *CompressionRoundTripper) defaultRoundTrip(request roundtripper.Request, transport nethttp.RoundTripper) (*roundtripper.CapturedRequest, *roundtripper.CapturedResponse, error) {
+func (d *CompressionRoundTripper) defaultRoundTrip(request *roundtripper.Request, transport nethttp.RoundTripper) (*roundtripper.CapturedRequest, *roundtripper.CapturedResponse, error) {
 	client := &nethttp.Client{}
 
 	client.Transport = transport
