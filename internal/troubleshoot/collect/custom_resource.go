@@ -31,27 +31,27 @@ type CustomResource struct {
 	IncludeGroups []string
 }
 
-func (cr CustomResource) Title() string {
+func (cr *CustomResource) Title() string {
 	return "custom-resource"
 }
 
-func (cr CustomResource) IsExcluded() (bool, error) {
+func (cr *CustomResource) IsExcluded() (bool, error) {
 	return false, nil
 }
 
-func (cr CustomResource) GetRBACErrors() []error {
+func (cr *CustomResource) GetRBACErrors() []error {
 	return nil
 }
 
-func (cr CustomResource) HasRBACErrors() bool {
+func (cr *CustomResource) HasRBACErrors() bool {
 	return false
 }
 
-func (cr CustomResource) CheckRBAC(_ context.Context, _ tbcollect.Collector, _ *troubleshootv1b2.Collect, _ *rest.Config, _ string) error {
+func (cr *CustomResource) CheckRBAC(_ context.Context, _ tbcollect.Collector, _ *troubleshootv1b2.Collect, _ *rest.Config, _ string) error {
 	return nil
 }
 
-func (cr CustomResource) Collect(_ chan<- interface{}) (tbcollect.CollectorResult, error) {
+func (cr *CustomResource) Collect(_ chan<- interface{}) (tbcollect.CollectorResult, error) {
 	ctx := context.Background()
 	output := tbcollect.NewResult()
 	client, err := kubernetes.NewForConfig(cr.ClientConfig)
@@ -74,7 +74,8 @@ func (cr CustomResource) Collect(_ chan<- interface{}) (tbcollect.CollectorResul
 	default:
 		_, namespaceList, _ := getAllNamespaces(ctx, client)
 		if namespaceList != nil {
-			for _, namespace := range namespaceList.Items {
+			for i := range namespaceList.Items {
+				namespace := &namespaceList.Items[i]
 				namespaceNames = append(namespaceNames, namespace.Name)
 			}
 		}

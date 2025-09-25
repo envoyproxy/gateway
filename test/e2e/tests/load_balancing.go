@@ -68,7 +68,7 @@ var RoundRobinLoadBalancingTest = suite.ConformanceTest{
 			Name:      gwapiv1.ObjectName(gwNN.Name),
 		}
 		BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "round-robin-lb-policy", Namespace: ns}, suite.ControllerName, ancestorRef)
-		WaitForPods(t, suite.Client, ns, map[string]string{"app": "lb-backend-roundrobin"}, corev1.PodRunning, PodReady)
+		WaitForPods(t, suite.Client, ns, map[string]string{"app": "lb-backend-roundrobin"}, corev1.PodRunning, &PodReady)
 
 		gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 
@@ -96,7 +96,7 @@ var RoundRobinLoadBalancingTest = suite.ConformanceTest{
 			}
 
 			if err := wait.PollUntilContextTimeout(context.TODO(), time.Second, 30*time.Second, true, func(_ context.Context) (bool, error) {
-				return runTrafficTest(t, suite, req, expectedResponse, sendRequests, compareFunc), nil
+				return runTrafficTest(t, suite, &req, &expectedResponse, sendRequests, compareFunc), nil
 			}); err != nil {
 				tlog.Errorf(t, "failed to run round robin load balancing test: %v", err)
 			}
@@ -107,17 +107,24 @@ var RoundRobinLoadBalancingTest = suite.ConformanceTest{
 type TrafficCompareFunc func(trafficMap map[string]int) bool
 
 func runTrafficTest(t *testing.T, suite *suite.ConformanceTestSuite,
-	req roundtripper.Request, expectedResponse http.ExpectedResponse,
+	req *roundtripper.Request, expectedResponse *http.ExpectedResponse,
 	totalRequestCount int, compareFunc TrafficCompareFunc,
 ) bool {
+	if req == nil {
+		t.Fatalf("request cannot be nil")
+	}
+	if expectedResponse == nil {
+		t.Fatalf("expected response cannot be nil")
+	}
 	trafficMap := make(map[string]int)
 	for i := 0; i < totalRequestCount; i++ {
-		cReq, cResp, err := suite.RoundTripper.CaptureRoundTrip(req)
+		request := *req
+		cReq, cResp, err := suite.RoundTripper.CaptureRoundTrip(request)
 		if err != nil {
 			t.Errorf("failed to get expected response: %v", err)
 		}
 
-		if err := http.CompareRequest(t, &req, cReq, cResp, expectedResponse); err != nil {
+		if err := http.CompareRequest(t, &request, cReq, cResp, *expectedResponse); err != nil {
 			t.Errorf("failed to compare request and response: %v", err)
 		}
 
@@ -156,7 +163,7 @@ var ConsistentHashSourceIPLoadBalancingTest = suite.ConformanceTest{
 			Name:      gwapiv1.ObjectName(gwNN.Name),
 		}
 		BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "source-ip-lb-policy", Namespace: ns}, suite.ControllerName, ancestorRef)
-		WaitForPods(t, suite.Client, ns, map[string]string{"app": "lb-backend-sourceip"}, corev1.PodRunning, PodReady)
+		WaitForPods(t, suite.Client, ns, map[string]string{"app": "lb-backend-sourceip"}, corev1.PodRunning, &PodReady)
 
 		gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 
@@ -178,7 +185,7 @@ var ConsistentHashSourceIPLoadBalancingTest = suite.ConformanceTest{
 			}
 
 			if err := wait.PollUntilContextTimeout(context.TODO(), time.Second, 30*time.Second, true, func(_ context.Context) (bool, error) {
-				return runTrafficTest(t, suite, req, expectedResponse, sendRequests, compareFunc), nil
+				return runTrafficTest(t, suite, &req, &expectedResponse, sendRequests, compareFunc), nil
 			}); err != nil {
 				tlog.Errorf(t, "failed to run source ip based consistent hash load balancing test: %v", err)
 			}
@@ -204,7 +211,7 @@ var ConsistentHashHeaderLoadBalancingTest = suite.ConformanceTest{
 			Name:      gwapiv1.ObjectName(gwNN.Name),
 		}
 		BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "header-lb-policy", Namespace: ns}, suite.ControllerName, ancestorRef)
-		WaitForPods(t, suite.Client, ns, map[string]string{"app": "lb-backend-header"}, corev1.PodRunning, PodReady)
+		WaitForPods(t, suite.Client, ns, map[string]string{"app": "lb-backend-header"}, corev1.PodRunning, &PodReady)
 
 		gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 
@@ -223,7 +230,7 @@ var ConsistentHashHeaderLoadBalancingTest = suite.ConformanceTest{
 			t.Run(header, func(t *testing.T) {
 				req := http.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
 				req.Headers["Lb-Test-Header"] = []string{header}
-				got := runTrafficTest(t, suite, req, expectedResponse, sendRequests, func(trafficMap map[string]int) bool {
+				got := runTrafficTest(t, suite, &req, &expectedResponse, sendRequests, func(trafficMap map[string]int) bool {
 					// All traffic should be routed to the same pod.
 					return len(trafficMap) == 1
 				})
@@ -251,7 +258,7 @@ var ConsistentHashCookieLoadBalancingTest = suite.ConformanceTest{
 			Name:      gwapiv1.ObjectName(gwNN.Name),
 		}
 		BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "cookie-lb-policy", Namespace: ns}, suite.ControllerName, ancestorRef)
-		WaitForPods(t, suite.Client, ns, map[string]string{"app": "lb-backend-cookie"}, corev1.PodRunning, PodReady)
+		WaitForPods(t, suite.Client, ns, map[string]string{"app": "lb-backend-cookie"}, corev1.PodRunning, &PodReady)
 
 		gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 
@@ -380,7 +387,7 @@ var EndpointOverrideLoadBalancingTest = suite.ConformanceTest{
 			Name:      gwapiv1.ObjectName(gwNN.Name),
 		}
 		BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "endpoint-override-header-lb-policy", Namespace: ns}, suite.ControllerName, ancestorRef)
-		WaitForPods(t, suite.Client, ns, map[string]string{"app": "lb-backend-endpointoverride"}, corev1.PodRunning, PodReady)
+		WaitForPods(t, suite.Client, ns, map[string]string{"app": "lb-backend-endpointoverride"}, corev1.PodRunning, &PodReady)
 
 		gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), headerRouteNN)
 
