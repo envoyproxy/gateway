@@ -92,9 +92,6 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 	// Goroutine where Close() is called.
 	c := r.ProviderResources.GatewayAPIResources.Subscribe(ctx)
 
-	// Populate keyCache with existing keys for restart scenario
-	r.populateKeyCache()
-
 	go r.subscribeAndTranslate(c)
 	r.Logger.Info("started")
 	return
