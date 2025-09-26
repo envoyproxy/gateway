@@ -309,12 +309,12 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 
 				r.log.Error(err, "failed to process ParamsRef for gatewayClass", "gatewayClass", managedGC.Name)
 				msg := fmt.Sprintf("%s: %v", status.MsgGatewayClassInvalidParams, err)
-				gc := status.SetGatewayClassAccepted(
-					managedGC.DeepCopy(),
+				status.SetGatewayClassAccepted(
+					managedGC,
 					false,
 					string(gwapiv1.GatewayClassReasonInvalidParameters),
 					msg)
-				r.resources.GatewayClassStatuses.Store(utils.NamespacedName(gc), &gc.Status)
+				r.resources.GatewayClassStatuses.Store(utils.NamespacedName(managedGC), &managedGC.Status)
 				message.PublishMetric(message.Metadata{
 					Runner:  string(egv1a1.LogComponentProviderRunner),
 					Message: message.GatewayClassStatusMessageName,
@@ -331,12 +331,12 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 			}
 
 			r.log.Error(err, "failed process TLS SecretRef for EnvoyProxy for gatewayClass", "gatewayClass", managedGC.Name)
-			gc := status.SetGatewayClassAccepted(
-				managedGC.DeepCopy(),
+			status.SetGatewayClassAccepted(
+				managedGC,
 				false,
 				string(gwapiv1.GatewayClassReasonAccepted),
 				fmt.Sprintf("%s: %v", status.MsgGatewayClassInvalidParams, err))
-			r.resources.GatewayClassStatuses.Store(utils.NamespacedName(gc), &gc.Status)
+			r.resources.GatewayClassStatuses.Store(utils.NamespacedName(managedGC), &managedGC.Status)
 			message.PublishMetric(message.Metadata{
 				Runner:  string(egv1a1.LogComponentProviderRunner),
 				Message: message.GatewayClassStatusMessageName,
@@ -347,12 +347,12 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 		if !failToProcessGCParamsRef {
 			// GatewayClass is valid so far, mark it as accepted.
 			r.log.Info("Set GatewayClass Accepted", "gatewayClass", managedGC.Name)
-			gc := status.SetGatewayClassAccepted(
-				managedGC.DeepCopy(),
+			status.SetGatewayClassAccepted(
+				managedGC,
 				true,
 				string(gwapiv1.GatewayClassReasonAccepted),
 				status.MsgValidGatewayClass)
-			r.resources.GatewayClassStatuses.Store(utils.NamespacedName(gc), &gc.Status)
+			r.resources.GatewayClassStatuses.Store(utils.NamespacedName(managedGC), &managedGC.Status)
 		}
 
 		// it's safe here to append gwcResource to gwcResources
