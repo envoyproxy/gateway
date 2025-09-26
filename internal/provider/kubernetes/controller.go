@@ -298,18 +298,18 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 		gwcResource.GatewayClass = managedGC
 
 		gwcResourceMapping := newResourceMapping()
-
+		logger := r.log.WithValues("GatewayClass", managedGC.Name)
 		// Process the parametersRef of the accepted GatewayClass.
 		// This should run before processGateways and processBackendRefs
 		failToProcessGCParamsRef := false
 		if managedGC.Spec.ParametersRef != nil && managedGC.DeletionTimestamp == nil {
 			if err := r.processGatewayClassParamsRef(ctx, managedGC, gwcResourceMapping, gwcResource); err != nil {
 				if isTransientError(err) {
-					r.log.Error(err, "transient error processing GatewayClass parametersRef", "gatewayClass", managedGC.Name)
+					logger.Error(err, "transient error processing parametersRef for GatewayClass")
 					return reconcile.Result{}, err
 				}
 
-				r.log.Error(err, "failed to process ParametersRef for gatewayClass", "gatewayClass", managedGC.Name)
+				logger.Error(err, "failed to process ParametersRef for GatewayClass")
 				msg := fmt.Sprintf("%s: %v", status.MsgGatewayClassInvalidParams, err)
 				gc := status.SetGatewayClassAccepted(
 					managedGC.DeepCopy(),
@@ -328,11 +328,11 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 		// process envoy gateway secret refs
 		if err := r.processEnvoyProxySecretRef(ctx, gwcResource); err != nil {
 			if isTransientError(err) {
-				r.log.Error(err, "transient error processing TLS SecretRef for EnvoyProxy", "gatewayClass", managedGC.Name)
+				logger.Error(err, "transient error processing TLS SecretRef for EnvoyProxy")
 				return reconcile.Result{}, err
 			}
 
-			r.log.Error(err, "failed process TLS SecretRef for EnvoyProxy for gatewayClass", "gatewayClass", managedGC.Name)
+			r.log.Error(err, "failed to process TLS SecretRef for EnvoyProxy for GatewayClass")
 			gc := status.SetGatewayClassAccepted(
 				managedGC.DeepCopy(),
 				false,
@@ -348,7 +348,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 
 		if !failToProcessGCParamsRef {
 			// GatewayClass is valid so far, mark it as accepted.
-			r.log.Info("Set GatewayClass Accepted", "gatewayClass", managedGC.Name)
+			logger.V(6).Info("Set GatewayClass Accepted")
 			gc := status.SetGatewayClassAccepted(
 				managedGC.DeepCopy(),
 				true,
@@ -363,38 +363,38 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 		// add the OIDC HMAC Secret to the resourceTree
 		if err = r.processOIDCHMACSecret(ctx, gwcResource, gwcResourceMapping); err != nil {
 			if isTransientError(err) {
-				r.log.Error(err, "transient error processing OIDC HMAC Secret", "gatewayClass", managedGC.Name)
+				logger.Error(err, "transient error processing OIDC HMAC Secret")
 				return reconcile.Result{}, err
 			}
-			r.log.Error(err, fmt.Sprintf("failed processOIDCHMACSecret for gatewayClass %s", managedGC.Name))
+			logger.Error(err, "failed to process OIDC HMAC Secret for GatewayClass")
 		}
 
 		// add the Envoy TLS Secret to the resourceTree
 		if err = r.processEnvoyTLSSecret(ctx, gwcResource, gwcResourceMapping); err != nil {
 			if isTransientError(err) {
-				r.log.Error(err, "transient error processing Envoy TLS Secret", "gatewayClass", managedGC.Name)
+				logger.Error(err, "transient error processing Envoy TLS Secret")
 				return reconcile.Result{}, err
 			}
-			r.log.Error(err, fmt.Sprintf("failed processEnvoyTLSSecret for gatewayClass %s", managedGC.Name))
+			logger.Error(err, "failed to process EnvoyTLSSecret")
 		}
 
 		// Add all Gateways, their associated Routes, and referenced resources to the resourceTree
 		if err = r.processGateways(ctx, managedGC, gwcResourceMapping, gwcResource); err != nil {
 			if isTransientError(err) {
-				r.log.Error(err, "transient error processing gateways", "gatewayClass", managedGC.Name)
+				logger.Error(err, "transient error processing gateways")
 				return reconcile.Result{}, err
 			}
-			r.log.Error(err, fmt.Sprintf("failed processGateways for gatewayClass %s", managedGC.Name))
+			logger.Error(err, "failed process gateways for GatewayClass")
 		}
 
 		if r.eppCRDExists {
 			// Add all EnvoyPatchPolicies to the resourceTree
 			if err = r.processEnvoyPatchPolicies(ctx, gwcResource, gwcResourceMapping); err != nil {
 				if isTransientError(err) {
-					r.log.Error(err, "transient error processing EnvoyPatchPolicies", "gatewayClass", managedGC.Name)
+					logger.Error(err, "transient error processing EnvoyPatchPolicies")
 					return reconcile.Result{}, err
 				}
-				r.log.Error(err, fmt.Sprintf("failed processEnvoyPatchPolicies for gatewayClass %s", managedGC.Name))
+				logger.Error(err, "failed to process EnvoyPatchPolicies for GatewayClass")
 			}
 		}
 
@@ -402,10 +402,10 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 			// Add all ClientTrafficPolicies and their referenced resources to the resourceTree
 			if err = r.processClientTrafficPolicies(ctx, gwcResource, gwcResourceMapping); err != nil {
 				if isTransientError(err) {
-					r.log.Error(err, "transient error processing ClientTrafficPolicies", "gatewayClass", managedGC.Name)
+					logger.Error(err, "transient error processing ClientTrafficPolicies")
 					return reconcile.Result{}, err
 				}
-				r.log.Error(err, fmt.Sprintf("failed processClientTrafficPolicies for gatewayClass %s", managedGC.Name))
+				logger.Error(err, "failed process to ClientTrafficPolicies for GatewayClass")
 			}
 		}
 
@@ -413,10 +413,10 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 			// Add all BackendTrafficPolicies to the resourceTree
 			if err = r.processBackendTrafficPolicies(ctx, gwcResource, gwcResourceMapping); err != nil {
 				if isTransientError(err) {
-					r.log.Error(err, "transient error processing BackendTrafficPolicies", "gatewayClass", managedGC.Name)
+					logger.Error(err, "transient error processing BackendTrafficPolicies")
 					return reconcile.Result{}, err
 				}
-				r.log.Error(err, fmt.Sprintf("failed processBackendTrafficPolicies for gatewayClass %s", managedGC.Name))
+				logger.Error(err, "failed to process BackendTrafficPolicies for GatewayClass")
 			}
 		}
 
@@ -424,10 +424,10 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 			// Add all SecurityPolicies and their referenced resources to the resourceTree
 			if err = r.processSecurityPolicies(ctx, gwcResource, gwcResourceMapping); err != nil {
 				if isTransientError(err) {
-					r.log.Error(err, "transient error processing SecurityPolicies", "gatewayClass", managedGC.Name)
+					logger.Error(err, "transient error processing SecurityPolicies")
 					return reconcile.Result{}, err
 				}
-				r.log.Error(err, fmt.Sprintf("failed processSecurityPolicies for gatewayClass %s", managedGC.Name))
+				logger.Error(err, "failed to process SecurityPolicies for GatewayClass")
 			}
 		}
 
@@ -435,10 +435,10 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 			// Add all BackendTLSPolies to the resourceTree
 			if err = r.processBackendTLSPolicies(ctx, gwcResource, gwcResourceMapping); err != nil {
 				if isTransientError(err) {
-					r.log.Error(err, "transient error processing BackendTLSPolicies", "gatewayClass", managedGC.Name)
+					logger.Error(err, "transient error processing BackendTLSPolicies")
 					return reconcile.Result{}, err
 				}
-				r.log.Error(err, fmt.Sprintf("failed processBackendTLSPolicies for gatewayClass %s", managedGC.Name))
+				logger.Error(err, "failed to process BackendTLSPolicies for GatewayClass")
 			}
 		}
 
@@ -446,19 +446,19 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 			// Add all EnvoyExtensionPolicies and their referenced resources to the resourceTree
 			if err = r.processEnvoyExtensionPolicies(ctx, gwcResource, gwcResourceMapping); err != nil {
 				if isTransientError(err) {
-					r.log.Error(err, "transient error processing EnvoyExtensionPolicies", "gatewayClass", managedGC.Name)
+					logger.Error(err, "transient error processing EnvoyExtensionPolicies")
 					return reconcile.Result{}, err
 				}
-				r.log.Error(err, fmt.Sprintf("failed processEnvoyExtensionPolicies for gatewayClass %s", managedGC.Name))
+				logger.Error(err, "failed to process EnvoyExtensionPolicies for GatewayClass")
 			}
 		}
 
 		if err = r.processExtensionServerPolicies(ctx, gwcResource); err != nil {
 			if isTransientError(err) {
-				r.log.Error(err, "transient error processing ExtensionServerPolicies", "gatewayClass", managedGC.Name)
+				logger.Error(err, "transient error processing ExtensionServerPolicies")
 				return reconcile.Result{}, err
 			}
-			r.log.Error(err, fmt.Sprintf("failed processExtensionServerPolicies for gatewayClass %s", managedGC.Name))
+			logger.Error(err, "failed to process ExtensionServerPolicies for GatewayClass")
 		}
 
 		// Add the referenced services, ServiceImports, and EndpointSlices in
@@ -466,11 +466,11 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 		// BackendRefs are referred by various Route objects and the ExtAuth in SecurityPolicies.
 		if err = r.processBackendRefs(ctx, gwcResource, gwcResourceMapping); err != nil {
 			if isTransientError(err) {
-				r.log.Error(err, "transient error processing BackendRefs", "gatewayClass", managedGC.Name)
+				logger.Error(err, "transient error processing BackendRefs")
 				return reconcile.Result{}, err
 			}
 
-			r.log.Error(err, fmt.Sprintf("failed  processBackendRefs for gatewayClass %s", managedGC.Name))
+			logger.Error(err, "failed to process BackendRefs for GatewayClass")
 		}
 
 		// For this particular Gateway, and all associated objects, check whether the
@@ -479,10 +479,10 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 			namespace, err := r.getNamespace(ctx, ns)
 			if err != nil {
 				if isTransientError(err) {
-					r.log.Error(err, "transient error getting namespace", "namespace", ns, "gatewayClass", managedGC.Name)
+					logger.Error(err, "transient error getting namespace", "namespace", ns)
 					return reconcile.Result{}, err
 				}
-				r.log.Error(err, "unable to find the namespace")
+				logger.Error(err, "unable to find the namespace", "namespace", ns)
 				if kerrors.IsNotFound(err) {
 					continue
 				}
@@ -501,24 +501,24 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 		}
 
 		if len(gwcResource.Gateways) == 0 {
-			r.log.Info("No gateways found for accepted gatewayClass", "gatewayClass", managedGC.Name)
+			logger.Info("No gateways found for accepted GatewayClass")
 
 			// If needed, remove the finalizer from the accepted GatewayClass.
 			if err := r.removeFinalizer(ctx, managedGC); err != nil {
 				if isTransientError(err) {
-					r.log.Error(err, "transient error removing finalizer from gatewayClass", "gatewayClass", managedGC.Name)
+					logger.Error(err, "transient error removing finalizer from GatewayClass")
 					return reconcile.Result{}, err
 				}
-				r.log.Error(err, "failed to remove finalizer from gatewayClass", "gatewayClass", managedGC.Name)
+				logger.Error(err, "failed to remove finalizer from GatewayClass")
 			}
 		} else {
 			// finalize the accepted GatewayClass.
 			if err := r.addFinalizer(ctx, managedGC); err != nil {
 				if isTransientError(err) {
-					r.log.Error(err, "transient error adding finalizer to gatewayClass", "gatewayClass", managedGC.Name)
+					logger.Error(err, "transient error adding finalizer to gatewayClass")
 					return reconcile.Result{}, err
 				}
-				r.log.Error(err, "failed adding finalizer to gatewayClass", "gatewayClass", managedGC.Name)
+				logger.Error(err, "failed adding finalizer to gatewayClass")
 			}
 		}
 	}
@@ -1378,14 +1378,14 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, managedGC *g
 	if err := r.client.List(ctx, gatewayList, &client.ListOptions{
 		FieldSelector: fields.OneTermEqualSelector(classGatewayIndex, managedGC.Name),
 	}); err != nil {
-		r.log.Error(err, "failed to list gateways for gatewayClass %s", managedGC.Name)
+		r.log.Error(err, "failed to list gateways for GatewayClass", "GatewayClass", managedGC.Name)
 		return err
 	}
 
 	mergedGateways := false
 	if r.mergeGateways.Has(managedGC.Name) {
 		mergedGateways = true
-		// processGatewayClassParamsRef has been called for this gatewayclass, its EnvoyProxy should exist in resourceTree
+		// processGatewayClassParamsRef has been called for this GatewayClass, its EnvoyProxy should exist in resourceTree
 		r.processServiceClusterForGatewayClass(resourceTree.EnvoyProxyForGatewayClass, managedGC, resourceMap)
 	}
 
@@ -1397,7 +1397,7 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, managedGC *g
 				if isTransientError(err) {
 					return err
 				}
-				r.log.Error(err, "failed to check namespace labels for gateway %s in namespace %s: %w", gtw.GetName(), gtw.GetNamespace())
+				r.log.Error(err, "failed to check namespace labels for gateway", "name", gtw.GetName(), "namespace", gtw.GetNamespace())
 				continue
 			} else if !ok {
 				continue
