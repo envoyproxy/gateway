@@ -297,6 +297,14 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 		return reconcile.Result{}, err
 	}
 
+	gcStatusToDelete := r.loadGatewayClassStatusToDelete()
+	defer func() {
+		for _, key := range gcStatusToDelete.UnsortedList() {
+			r.log.Info("delete from GatewayClass statuses", "key", key)
+			r.resources.GatewayClassStatuses.Delete(key)
+		}
+	}()
+
 	// The gatewayclass was already deleted/finalized and there are stale queue entries.
 	if managedGCs == nil {
 		r.resources.GatewayAPIResources.Delete(string(r.classController))
@@ -379,6 +387,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 
 		// it's safe here to append gwcResource to gwcResources
 		gwcResources = append(gwcResources, gwcResource)
+		gcStatusToDelete.Delete(utils.NamespacedName(managedGC))
 		// process global resources
 		// add the OIDC HMAC Secret to the resourceTree
 		if err = r.processOIDCHMACSecret(ctx, gwcResource, gwcResourceMapping); err != nil {
@@ -558,6 +567,15 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 
 	r.log.Info("reconciled gateways successfully")
 	return reconcile.Result{}, nil
+}
+
+func (r *gatewayAPIReconciler) loadGatewayClassStatusToDelete() sets.Set[types.NamespacedName] {
+	res := sets.New[types.NamespacedName]()
+	for key := range r.resources.GatewayClassStatuses.LoadAll() {
+		res.Insert(key)
+	}
+
+	return res
 }
 
 func (r *gatewayAPIReconciler) processEnvoyProxySecretRef(ctx context.Context, gwcResource *resource.Resources) error {
