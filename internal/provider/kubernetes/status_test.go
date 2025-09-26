@@ -364,6 +364,24 @@ func Test_mergeRouteParentStatus(t *testing.T) {
 				{
 					ControllerName: "gateway.envoyproxy.io/gatewayclass-controller",
 					ParentRef: gwapiv1.ParentReference{
+						Name: "gateway2",
+					},
+					Conditions: []metav1.Condition{
+						{
+							Type:   string(gwapiv1.RouteConditionAccepted),
+							Status: metav1.ConditionTrue,
+							Reason: "Accepted",
+						},
+						{
+							Type:   string(gwapiv1.RouteConditionResolvedRefs),
+							Status: metav1.ConditionTrue,
+							Reason: "ResolvedRefs",
+						},
+					},
+				},
+				{
+					ControllerName: "gateway.envoyproxy.io/gatewayclass-controller",
+					ParentRef: gwapiv1.ParentReference{
 						Name: "gateway3",
 					},
 					Conditions: []metav1.Condition{
@@ -442,6 +460,24 @@ func Test_mergeRouteParentStatus(t *testing.T) {
 						Namespace:   ptr.To[gwapiv1.Namespace]("default"),
 						SectionName: ptr.To[gwapiv1.SectionName]("listener1"),
 						Port:        ptr.To[gwapiv1.PortNumber](80),
+					},
+					Conditions: []metav1.Condition{
+						{
+							Type:   string(gwapiv1.RouteConditionAccepted),
+							Status: metav1.ConditionTrue,
+							Reason: "Accepted",
+						},
+						{
+							Type:   string(gwapiv1.RouteConditionResolvedRefs),
+							Status: metav1.ConditionTrue,
+							Reason: "ResolvedRefs",
+						},
+					},
+				},
+				{
+					ControllerName: "gateway.envoyproxy.io/gatewayclass-controller",
+					ParentRef: gwapiv1.ParentReference{
+						Name: "gateway2",
 					},
 					Conditions: []metav1.Condition{
 						{
@@ -673,6 +709,24 @@ func Test_mergeRouteParentStatus(t *testing.T) {
 				{
 					ControllerName: "gateway.envoyproxy.io/gatewayclass-controller",
 					ParentRef: gwapiv1.ParentReference{
+						Name: "gateway2",
+					},
+					Conditions: []metav1.Condition{
+						{
+							Type:   string(gwapiv1.RouteConditionAccepted),
+							Status: metav1.ConditionTrue,
+							Reason: "Accepted",
+						},
+						{
+							Type:   string(gwapiv1.RouteConditionResolvedRefs),
+							Status: metav1.ConditionTrue,
+							Reason: "ResolvedRefs",
+						},
+					},
+				},
+				{
+					ControllerName: "gateway.envoyproxy.io/gatewayclass-controller",
+					ParentRef: gwapiv1.ParentReference{
 						Name: "gateway3",
 					},
 					Conditions: []metav1.Condition{
@@ -828,7 +882,7 @@ func Test_mergeRouteParentStatus(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := mergeRouteParentStatus("default", "gateway.envoyproxy.io/gatewayclass-controller", tt.args.old, tt.args.new); !reflect.DeepEqual(got, tt.want) {
+			if got := mergeRouteParentStatus("default", tt.args.old, tt.args.new); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("mergeRouteParentStatus() = %v, want %v", got, tt.want)
 			}
 		})
