@@ -171,7 +171,7 @@ type PreferLocalZone struct {
 	// +optional
 	MinEndpointsThreshold *uint64 `json:"minEndpointsThreshold,omitempty"`
 
-	//Configures percentage of requests that will be considered for zone aware routing if zone aware routing is configured. If not specified, Envoy defaults to 100%.
+	// Configures percentage of requests that will be considered for zone aware routing if zone aware routing is configured. If not specified, Envoy defaults to 100%.
 	//
 	// +optional
 	PercentageEnabled *float64 `json:"percentageEnabled,omitempty"`
