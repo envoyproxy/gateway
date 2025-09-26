@@ -14,6 +14,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwapiv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -131,33 +132,56 @@ func newTranslateResult(gateways []*GatewayContext,
 		InfraIR: infraIR,
 	}
 
-	for _, gateway := range gateways {
-		translateResult.Gateways = append(translateResult.Gateways, gateway.Gateway)
-	}
-	for _, httpRoute := range httpRoutes {
-		translateResult.HTTPRoutes = append(translateResult.HTTPRoutes, httpRoute.HTTPRoute)
-	}
-	for _, grpcRoute := range grpcRoutes {
-		translateResult.GRPCRoutes = append(translateResult.GRPCRoutes, grpcRoute.GRPCRoute)
-	}
-	for _, tlsRoute := range tlsRoutes {
-		translateResult.TLSRoutes = append(translateResult.TLSRoutes, tlsRoute.TLSRoute)
-	}
-	for _, tcpRoute := range tcpRoutes {
-		translateResult.TCPRoutes = append(translateResult.TCPRoutes, tcpRoute.TCPRoute)
-	}
-	for _, udpRoute := range udpRoutes {
-		translateResult.UDPRoutes = append(translateResult.UDPRoutes, udpRoute.UDPRoute)
+	if n := len(gateways); n > 0 {
+		translateResult.Gateways = make([]*gwapiv1.Gateway, n)
+		for i, gateway := range gateways {
+			translateResult.Gateways[i] = gateway.Gateway
+		}
 	}
 
-	translateResult.ClientTrafficPolicies = append(translateResult.ClientTrafficPolicies, clientTrafficPolicies...)
-	translateResult.BackendTrafficPolicies = append(translateResult.BackendTrafficPolicies, backendTrafficPolicies...)
-	translateResult.SecurityPolicies = append(translateResult.SecurityPolicies, securityPolicies...)
-	translateResult.BackendTLSPolicies = append(translateResult.BackendTLSPolicies, backendTLSPolicies...)
-	translateResult.EnvoyExtensionPolicies = append(translateResult.EnvoyExtensionPolicies, envoyExtensionPolicies...)
-	translateResult.ExtensionServerPolicies = append(translateResult.ExtensionServerPolicies, extPolicies...)
+	if n := len(httpRoutes); n > 0 {
+		translateResult.HTTPRoutes = make([]*gwapiv1.HTTPRoute, n)
+		for i, httpRoute := range httpRoutes {
+			translateResult.HTTPRoutes[i] = httpRoute.HTTPRoute
+		}
+	}
 
-	translateResult.Backends = append(translateResult.Backends, backends...)
+	if n := len(grpcRoutes); n > 0 {
+		translateResult.GRPCRoutes = make([]*gwapiv1.GRPCRoute, n)
+		for i, grpcRoute := range grpcRoutes {
+			translateResult.GRPCRoutes[i] = grpcRoute.GRPCRoute
+		}
+	}
+
+	if n := len(tlsRoutes); n > 0 {
+		translateResult.TLSRoutes = make([]*gwapiv1a2.TLSRoute, n)
+		for i, tlsRoute := range tlsRoutes {
+			translateResult.TLSRoutes[i] = tlsRoute.TLSRoute
+		}
+	}
+
+	if n := len(tcpRoutes); n > 0 {
+		translateResult.TCPRoutes = make([]*gwapiv1a2.TCPRoute, n)
+		for i, tcpRoute := range tcpRoutes {
+			translateResult.TCPRoutes[i] = tcpRoute.TCPRoute
+		}
+	}
+
+	if n := len(udpRoutes); n > 0 {
+		translateResult.UDPRoutes = make([]*gwapiv1a2.UDPRoute, n)
+		for i, udpRoute := range udpRoutes {
+			translateResult.UDPRoutes[i] = udpRoute.UDPRoute
+		}
+	}
+
+	translateResult.ClientTrafficPolicies = clientTrafficPolicies
+	translateResult.BackendTrafficPolicies = backendTrafficPolicies
+	translateResult.SecurityPolicies = securityPolicies
+	translateResult.BackendTLSPolicies = backendTLSPolicies
+	translateResult.EnvoyExtensionPolicies = envoyExtensionPolicies
+	translateResult.ExtensionServerPolicies = extPolicies
+	translateResult.Backends = backends
+
 	return translateResult
 }
 
