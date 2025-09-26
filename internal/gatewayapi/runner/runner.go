@@ -127,7 +127,7 @@ func (r *Runner) startWasmCache(ctx context.Context) {
 func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *resource.ControllerResources]) {
 	message.HandleSubscription(message.Metadata{Runner: r.Name(), Message: message.ProviderResourcesMessageName}, sub,
 		func(update message.Update[string, *resource.ControllerResources], errChan chan error) {
-			r.Logger.Info("received an update")
+			r.Logger.Info("received an update", "key", update.Key)
 			val := update.Value
 			// There is only 1 key which is the controller name
 			// so when a delete is triggered, delete all IR keys

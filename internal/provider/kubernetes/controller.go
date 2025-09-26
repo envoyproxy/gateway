@@ -307,7 +307,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 					return reconcile.Result{}, err
 				}
 
-				r.log.Error(err, fmt.Sprintf("failed processGatewayClassParamsRef for gatewayClass %s", managedGC.Name))
+				r.log.Error(err, "failed to process ParamsRef for gatewayClass", "gatewayClass", managedGC.Name)
 				msg := fmt.Sprintf("%s: %v", status.MsgGatewayClassInvalidParams, err)
 				gc := status.SetGatewayClassAccepted(
 					managedGC.DeepCopy(),
@@ -330,7 +330,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 				return reconcile.Result{}, err
 			}
 
-			r.log.Error(err, fmt.Sprintf("failed process TLS SecretRef for EnvoyProxy for gatewayClass %s", managedGC.Name))
+			r.log.Error(err, "failed process TLS SecretRef for EnvoyProxy for gatewayClass", "gatewayClass", managedGC.Name)
 			gc := status.SetGatewayClassAccepted(
 				managedGC.DeepCopy(),
 				false,
@@ -346,6 +346,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 
 		if !failToProcessGCParamsRef {
 			// GatewayClass is valid so far, mark it as accepted.
+			r.log.Info("Set GatewayClass Accepted", "gatewayClass", managedGC.Name)
 			gc := status.SetGatewayClassAccepted(
 				managedGC.DeepCopy(),
 				true,
@@ -498,7 +499,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 		}
 
 		if len(gwcResource.Gateways) == 0 {
-			r.log.Info("No gateways found for accepted gatewayClass")
+			r.log.Info("No gateways found for accepted gatewayClass", "gatewayClass", managedGC.Name)
 
 			// If needed, remove the finalizer from the accepted GatewayClass.
 			if err := r.removeFinalizer(ctx, managedGC); err != nil {
@@ -506,8 +507,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 					r.log.Error(err, "transient error removing finalizer from gatewayClass", "gatewayClass", managedGC.Name)
 					return reconcile.Result{}, err
 				}
-				r.log.Error(err, fmt.Sprintf("failed to remove finalizer from gatewayClass %s",
-					managedGC.Name))
+				r.log.Error(err, "failed to remove finalizer from gatewayClass", "gatewayClass", managedGC.Name)
 			}
 		} else {
 			// finalize the accepted GatewayClass.
@@ -516,8 +516,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 					r.log.Error(err, "transient error adding finalizer to gatewayClass", "gatewayClass", managedGC.Name)
 					return reconcile.Result{}, err
 				}
-				r.log.Error(err, fmt.Sprintf("failed adding finalizer to gatewayClass %s",
-					managedGC.Name))
+				r.log.Error(err, "failed adding finalizer to gatewayClass", "gatewayClass", managedGC.Name)
 			}
 		}
 	}
