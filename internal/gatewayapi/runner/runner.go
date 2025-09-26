@@ -194,7 +194,10 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 				// Publish the IRs.
 				// Also validate the ir before sending it.
 				for key, val := range result.InfraIR {
-					r.Logger.V(1).WithValues(string(message.InfraIRMessageName), key).Info(val.JSONString())
+					logger := r.Logger.V(1).WithValues(string(message.InfraIRMessageName), key)
+					if logger.Enabled() {
+						logger.Info(val.JSONString())
+					}
 					if err := val.Validate(); err != nil {
 						r.Logger.Error(err, "unable to validate infra ir, skipped sending it")
 						errChan <- err
@@ -206,7 +209,10 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 				}
 
 				for key, val := range result.XdsIR {
-					r.Logger.V(1).WithValues(string(message.XDSIRMessageName), key).Info(val.JSONString())
+					logger := r.Logger.V(1).WithValues(string(message.XDSIRMessageName), key)
+					if logger.Enabled() {
+						logger.Info(val.JSONString())
+					}
 					if err := val.Validate(); err != nil {
 						r.Logger.Error(err, "unable to validate xds ir, skipped sending it")
 						errChan <- err
