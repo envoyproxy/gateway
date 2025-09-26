@@ -172,7 +172,7 @@ docs-release-gen:
 	cp -r site/content/en/latest/ site/content/en/$(DOC_VERSION)/
 
 .PHONY: docs-sync-owners
-docs-sync-owners: # Sync maintainers and emeritus-maintainers from OWNERS to CODEOWNERS.md
+docs-sync-owners: $(tools/sync-docs-codeowners) # Sync maintainers and emeritus-maintainers from OWNERS to CODEOWNERS.md
 	@$(LOG_TARGET)
 	$(tools/sync-docs-codeowners)
 
