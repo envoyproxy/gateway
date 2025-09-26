@@ -812,10 +812,18 @@ func buildWeightedLocalities(metadata *corev3.Metadata, ds *ir.DestinationSettin
 
 func buildTypedExtensionProtocolOptions(args *xdsClusterArgs, requiresAutoHTTPConfig bool) (map[string]*anypb.Any, []*tlsv3.Secret, error) {
 	requiresHTTP2Options := false
+	requiresAutoSNI := false
 	for _, ds := range args.settings {
 		if ds.Protocol == ir.GRPC ||
 			ds.Protocol == ir.HTTP2 {
 			requiresHTTP2Options = true
+		}
+
+		if ds.TLS != nil && ds.TLS.AutoSNI {
+			requiresAutoSNI = true
+		}
+
+		if requiresHTTP2Options && requiresAutoSNI {
 			break
 		}
 	}
@@ -828,9 +836,11 @@ func buildTypedExtensionProtocolOptions(args *xdsClusterArgs, requiresAutoHTTPCo
 		(args.http1Settings.EnableTrailers || args.http1Settings.PreserveHeaderCase || args.http1Settings.HTTP10 != nil)
 
 	requiresHTTPFilters := len(args.settings) > 0 && args.settings[0].Filters != nil && args.settings[0].Filters.CredentialInjection != nil
-	requiredHTTPProtocolOptions := args.useClientProtocol || requiresAutoHTTPConfig ||
-		requiresCommonHTTPOptions || requiresHTTP1Options || requiresHTTP2Options || requiresHTTPFilters
-	if !requiredHTTPProtocolOptions {
+
+  requiredHTTPProtocolOptions := args.useClientProtocol || requiresAutoHTTPConfig ||
+		requiresCommonHTTPOptions || requiresHTTP1Options || requiresHTTP2Options || requiresHTTPFilters || requiresAutoSNI
+	
+  if !requiredHTTPProtocolOptions {
 		return nil, nil, nil
 	}
 	protocolOptions := httpv3.HttpProtocolOptions{}
@@ -902,6 +912,12 @@ func buildTypedExtensionProtocolOptions(args *xdsClusterArgs, requiresAutoHTTPCo
 		protocolOptions.UpstreamHttpProtocolOptions = &corev3.UpstreamHttpProtocolOptions{
 			AutoSni:           true,
 			AutoSanValidation: true,
+		}
+	}
+
+	if requiresAutoSNI {
+		protocolOptions.UpstreamHttpProtocolOptions = &corev3.UpstreamHttpProtocolOptions{
+			AutoSni: true,
 		}
 	}
 
