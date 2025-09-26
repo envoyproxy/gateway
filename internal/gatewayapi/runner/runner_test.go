@@ -121,6 +121,9 @@ func setupTestRunner(t *testing.T) (*Runner, []types.NamespacedName) {
 	r.ProviderResources.SecurityPolicyStatuses.Store(keys[11], &gwapiv1a2.PolicyStatus{})
 	r.ProviderResources.EnvoyExtensionPolicyStatuses.Store(keys[12], &gwapiv1a2.PolicyStatus{})
 
+	// Populate keyCache to simulate normal operation where stores and keyCache are kept in sync
+	r.populateKeyCache()
+
 	return r, keys
 }
 
