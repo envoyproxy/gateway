@@ -309,7 +309,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 					return reconcile.Result{}, err
 				}
 
-				r.log.Error(err, fmt.Sprintf("failed processGatewayClassParamsRef for gatewayClass %s", managedGC.Name))
+				r.log.Error(err, "failed to process ParametersRef for gatewayClass", "gatewayClass", managedGC.Name)
 				msg := fmt.Sprintf("%s: %v", status.MsgGatewayClassInvalidParams, err)
 				gc := status.SetGatewayClassAccepted(
 					managedGC.DeepCopy(),
@@ -332,7 +332,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 				return reconcile.Result{}, err
 			}
 
-			r.log.Error(err, fmt.Sprintf("failed process TLS SecretRef for EnvoyProxy for gatewayClass %s", managedGC.Name))
+			r.log.Error(err, "failed process TLS SecretRef for EnvoyProxy for gatewayClass", "gatewayClass", managedGC.Name)
 			gc := status.SetGatewayClassAccepted(
 				managedGC.DeepCopy(),
 				false,
@@ -348,6 +348,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 
 		if !failToProcessGCParamsRef {
 			// GatewayClass is valid so far, mark it as accepted.
+			r.log.Info("Set GatewayClass Accepted", "gatewayClass", managedGC.Name)
 			gc := status.SetGatewayClassAccepted(
 				managedGC.DeepCopy(),
 				true,
@@ -500,7 +501,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 		}
 
 		if len(gwcResource.Gateways) == 0 {
-			r.log.Info("No gateways found for accepted gatewayClass")
+			r.log.Info("No gateways found for accepted gatewayClass", "gatewayClass", managedGC.Name)
 
 			// If needed, remove the finalizer from the accepted GatewayClass.
 			if err := r.removeFinalizer(ctx, managedGC); err != nil {
@@ -508,8 +509,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 					r.log.Error(err, "transient error removing finalizer from gatewayClass", "gatewayClass", managedGC.Name)
 					return reconcile.Result{}, err
 				}
-				r.log.Error(err, fmt.Sprintf("failed to remove finalizer from gatewayClass %s",
-					managedGC.Name))
+				r.log.Error(err, "failed to remove finalizer from gatewayClass", "gatewayClass", managedGC.Name)
 			}
 		} else {
 			// finalize the accepted GatewayClass.
@@ -518,8 +518,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 					r.log.Error(err, "transient error adding finalizer to gatewayClass", "gatewayClass", managedGC.Name)
 					return reconcile.Result{}, err
 				}
-				r.log.Error(err, fmt.Sprintf("failed adding finalizer to gatewayClass %s",
-					managedGC.Name))
+				r.log.Error(err, "failed adding finalizer to gatewayClass", "gatewayClass", managedGC.Name)
 			}
 		}
 	}
@@ -2367,7 +2366,7 @@ func (r *gatewayAPIReconciler) processGatewayParamsRef(ctx context.Context, gtw 
 
 	ep := new(egv1a1.EnvoyProxy)
 	if err := r.client.Get(ctx, types.NamespacedName{Namespace: gtw.Namespace, Name: ref.Name}, ep); err != nil {
-		return fmt.Errorf("failed to find envoyproxy %s/%s: %w", gtw.Namespace, ref.Name, err)
+		return fmt.Errorf("failed to find envoyproxy %s/%s for Gateway %s: %w", gtw.Namespace, ref.Name, gtw.Name, err)
 	}
 
 	if err := r.processEnvoyProxy(ep, resourceMap); err != nil {
@@ -2397,8 +2396,9 @@ func (r *gatewayAPIReconciler) processGatewayClassParamsRef(ctx context.Context,
 	}
 
 	ep := new(egv1a1.EnvoyProxy)
-	if err := r.client.Get(ctx, types.NamespacedName{Namespace: string(*gc.Spec.ParametersRef.Namespace), Name: gc.Spec.ParametersRef.Name}, ep); err != nil {
-		return fmt.Errorf("failed to find envoyproxy %s/%s: %w", r.namespace, gc.Spec.ParametersRef.Name, err)
+	nn := types.NamespacedName{Namespace: string(*gc.Spec.ParametersRef.Namespace), Name: gc.Spec.ParametersRef.Name}
+	if err := r.client.Get(ctx, nn, ep); err != nil {
+		return fmt.Errorf("failed to find envoyproxy %s/%s for GatewayClass %s: %w", nn.Namespace, nn.Name, gc.Name, err)
 	}
 
 	// Check for incompatible configuration: both MergeGateways and GatewayNamespaceMode enabled
