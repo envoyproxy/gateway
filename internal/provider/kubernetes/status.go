@@ -576,7 +576,8 @@ func mergeRouteParentStatus(ns, controllerName string, old, new []gwapiv1.RouteP
 	// Range over old status parentRefs in order:
 	// 1. The parentRef exists in the new status: append the new one to the final status.
 	// 2. The parentRef doesn't exist in the new status and it's not our controller: append it to the final status.
-	// 3. The parentRef doesn't exist in the new status, and it is our controller: don't append it to the final status.
+	// 3. The parentRef doesn't exist in the new status, and it is our controller: keep it in the final status.
+	//    This is important for routes with multiple parent references - not all parents are updated in each reconciliation.
 	for _, oldP := range old {
 		found := -1
 		for newI, newP := range new {
@@ -587,7 +588,10 @@ func mergeRouteParentStatus(ns, controllerName string, old, new []gwapiv1.RouteP
 		}
 		if found >= 0 {
 			merged = append(merged, new[found])
-		} else if oldP.ControllerName != gwapiv1.GatewayController(controllerName) {
+		} else {
+			// Keep all old parent statuses, regardless of controller.
+			// For routes with multiple parents managed by the same controller,
+			// not all parents are necessarily updated in each reconciliation.
 			merged = append(merged, oldP)
 		}
 	}

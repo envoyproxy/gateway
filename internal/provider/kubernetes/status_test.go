@@ -690,9 +690,10 @@ func Test_mergeRouteParentStatus(t *testing.T) {
 				},
 			},
 		},
-		// Similar note about practicality of occurrence.
+		// Test that parent refs managed by our controller are preserved even when not in new update.
+		// This is important for routes with multiple parent references.
 		{
-			name: "old contains one parentRef of ours, and it gets dropped in new.",
+			name: "old contains one parentRef of ours, and it's not in new - should be preserved.",
 			args: args{
 				old: []gwapiv1.RouteParentStatus{
 					{
@@ -716,7 +717,113 @@ func Test_mergeRouteParentStatus(t *testing.T) {
 				},
 				new: []gwapiv1.RouteParentStatus{},
 			},
-			want: []gwapiv1.RouteParentStatus{},
+			want: []gwapiv1.RouteParentStatus{
+				{
+					ControllerName: "gateway.envoyproxy.io/gatewayclass-controller",
+					ParentRef: gwapiv1.ParentReference{
+						Name: "gateway2",
+					},
+					Conditions: []metav1.Condition{
+						{
+							Type:   string(gwapiv1.RouteConditionAccepted),
+							Status: metav1.ConditionTrue,
+							Reason: "Accepted",
+						},
+						{
+							Type:   string(gwapiv1.RouteConditionResolvedRefs),
+							Status: metav1.ConditionTrue,
+							Reason: "ResolvedRefs",
+						},
+					},
+				},
+			},
+		},
+		// Test multi-parent scenario where only one parent is updated at a time.
+		{
+			name: "multiple parents from same controller - update one, preserve others",
+			args: args{
+				old: []gwapiv1.RouteParentStatus{
+					{
+						ControllerName: "gateway.envoyproxy.io/gatewayclass-controller",
+						ParentRef: gwapiv1.ParentReference{
+							Name: "gateway1",
+						},
+						Conditions: []metav1.Condition{
+							{
+								Type:   string(gwapiv1.RouteConditionAccepted),
+								Status: metav1.ConditionTrue,
+								Reason: "Accepted",
+							},
+						},
+					},
+					{
+						ControllerName: "gateway.envoyproxy.io/gatewayclass-controller",
+						ParentRef: gwapiv1.ParentReference{
+							Name: "gateway2",
+						},
+						Conditions: []metav1.Condition{
+							{
+								Type:   string(gwapiv1.RouteConditionAccepted),
+								Status: metav1.ConditionTrue,
+								Reason: "Accepted",
+							},
+						},
+					},
+				},
+				new: []gwapiv1.RouteParentStatus{
+					{
+						ControllerName: "gateway.envoyproxy.io/gatewayclass-controller",
+						ParentRef: gwapiv1.ParentReference{
+							Name: "gateway1",
+						},
+						Conditions: []metav1.Condition{
+							{
+								Type:   string(gwapiv1.RouteConditionAccepted),
+								Status: metav1.ConditionTrue,
+								Reason: "Accepted",
+							},
+							{
+								Type:   string(gwapiv1.RouteConditionResolvedRefs),
+								Status: metav1.ConditionTrue,
+								Reason: "ResolvedRefs",
+							},
+						},
+					},
+				},
+			},
+			want: []gwapiv1.RouteParentStatus{
+				{
+					ControllerName: "gateway.envoyproxy.io/gatewayclass-controller",
+					ParentRef: gwapiv1.ParentReference{
+						Name: "gateway1",
+					},
+					Conditions: []metav1.Condition{
+						{
+							Type:   string(gwapiv1.RouteConditionAccepted),
+							Status: metav1.ConditionTrue,
+							Reason: "Accepted",
+						},
+						{
+							Type:   string(gwapiv1.RouteConditionResolvedRefs),
+							Status: metav1.ConditionTrue,
+							Reason: "ResolvedRefs",
+						},
+					},
+				},
+				{
+					ControllerName: "gateway.envoyproxy.io/gatewayclass-controller",
+					ParentRef: gwapiv1.ParentReference{
+						Name: "gateway2",
+					},
+					Conditions: []metav1.Condition{
+						{
+							Type:   string(gwapiv1.RouteConditionAccepted),
+							Status: metav1.ConditionTrue,
+							Reason: "Accepted",
+						},
+					},
+				},
+			},
 		},
 	}
 	for _, tt := range tests {
