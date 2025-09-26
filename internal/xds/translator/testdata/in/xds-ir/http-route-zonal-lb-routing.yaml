@@ -21,6 +21,7 @@ http:
         weight: 30
         preferLocal:
           minEndpointsThreshold: 1
+          percentageEnabled: 90
           force:
             minEndpointsInZoneThreshold: 1
   - name: "route-with-lb-preferlocal"

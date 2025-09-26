@@ -3646,6 +3646,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `force` | _[ForceLocalZone](#forcelocalzone)_ |  false  |  | ForceLocalZone defines override configuration for forcing all traffic to stay within the local zone instead of the default behavior<br />which maintains equal distribution among upstream endpoints while sending as much traffic as possible locally. |
 | `minEndpointsThreshold` | _integer_ |  false  |  | MinEndpointsThreshold is the minimum number of total upstream endpoints across all zones required to enable zone-aware routing. |
+| `percentageEnabled` | _float_ |  false  |  | Configures percentage of requests that will be considered for zone aware routing if zone aware routing is configured. If not specified, Envoy defaults to 100%. |
 
 
 #### Principal

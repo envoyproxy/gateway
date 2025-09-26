@@ -3227,6 +3227,8 @@ type PreferLocalZone struct {
 	Force *ForceLocalZone `json:"force,omitempty" yaml:"force,omitempty"`
 	// MinEndpointsThreshold is the minimum number of total upstream endpoints across all zones required to enable zone-aware routing.
 	MinEndpointsThreshold *uint64 `json:"minEndpointsThreshold,omitempty" yaml:"minEndpointsThreshold,omitempty"`
+	//Configures percentage of requests that will be considered for zone aware routing if zone aware routing is configured. If not specified, the default is 100%.
+	PercentageEnabled *float64 `json:"percentageEnabled,omitempty" yaml:"percentageEnabled,omitempty"`
 }
 
 // ForceLocalZone defines override configuration for forcing all traffic to stay within the local zone instead of the default behavior

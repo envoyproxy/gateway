@@ -496,6 +496,9 @@ func buildZoneAwareLbConfig(preferLocal *ir.PreferLocalZone) *commonv3.LocalityL
 			MinClusterSize: wrapperspb.UInt64(ptr.Deref(preferLocal.MinEndpointsThreshold, 6)),
 		},
 	}
+	if preferLocal.PercentageEnabled != nil {
+		lbConfig.ZoneAwareLbConfig.RoutingEnabled = &xdstype.Percent{Value: *preferLocal.PercentageEnabled}
+	}
 	if preferLocal.Force != nil {
 		lbConfig.ZoneAwareLbConfig.ForceLocalZone = &commonv3.LocalityLbConfig_ZoneAwareLbConfig_ForceLocalZone{
 			MinSize: wrapperspb.UInt32(ptr.Deref(preferLocal.Force.MinEndpointsInZoneThreshold, 1)),

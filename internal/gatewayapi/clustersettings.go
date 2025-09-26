@@ -325,6 +325,7 @@ func buildLoadBalancer(policy *egv1a1.ClusterSettings) (*ir.LoadBalancer, error)
 		preferLocal := policy.LoadBalancer.ZoneAware.PreferLocal
 		lb.PreferLocal = &ir.PreferLocalZone{
 			MinEndpointsThreshold: preferLocal.MinEndpointsThreshold,
+			PercentageEnabled:     preferLocal.PercentageEnabled,
 		}
 		if preferLocal.Force != nil {
 			lb.PreferLocal.Force = &ir.ForceLocalZone{

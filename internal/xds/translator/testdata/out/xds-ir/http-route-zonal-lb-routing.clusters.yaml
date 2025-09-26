@@ -22,6 +22,8 @@
               forceLocalZone:
                 minSize: 1
               minClusterSize: "1"
+              routingEnabled:
+                value: 90
   name: route-with-settings-preferlocal-dest
   perConnectionBufferLimitBytes: 32768
   type: EDS
