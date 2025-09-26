@@ -293,6 +293,7 @@ func (t *Translator) GetRelevantGateways(resources *resource.Resources) (
 	envoyproxyMap := make(map[types.NamespacedName]*egv1a1.EnvoyProxy, len(resources.EnvoyProxiesForGateways)+1)
 	envoyproxyValidationErrorMap := make(map[types.NamespacedName]error, len(resources.EnvoyProxiesForGateways))
 	// make sure that the EnvoyProxyForGatewayClass is valid
+	// TODO: how to handle EnvoyProxy for GatewayClass not found?
 	if ep := resources.EnvoyProxyForGatewayClass; ep != nil {
 		err := validateEnvoyProxy(ep)
 		if err != nil {
@@ -303,6 +304,12 @@ func (t *Translator) GetRelevantGateways(resources *resource.Resources) (
 				false, string(gwapiv1.GatewayClassReasonInvalidParameters),
 				fmt.Sprintf("%s: %v", status.MsgGatewayClassInvalidParams, err))
 			return
+		} else {
+			status.SetGatewayClassAccepted(
+				resources.GatewayClass,
+				true,
+				string(gwapiv1.GatewayClassReasonAccepted),
+				status.MsgValidGatewayClass)
 		}
 
 		key := utils.NamespacedName(ep)
