@@ -24,6 +24,7 @@ func newConfigCommand() *cobra.Command {
 
 	cfgCommand.AddCommand(proxyCommand())
 	cfgCommand.AddCommand(ratelimitCommand())
+	cfgCommand.AddCommand(gatewayCommand())
 
 	options.AddKubeConfigFlags(cfgCommand.PersistentFlags())
 
@@ -37,6 +38,21 @@ func newConfigCommand() *cobra.Command {
 
 func ratelimitCommand() *cobra.Command {
 	return ratelimitConfigCommand()
+}
+
+func gatewayCommand() *cobra.Command {
+	c := &cobra.Command{
+		Use:     "envoy-gateway",
+		Aliases: []string{"gateway", "eg"},
+		Long:    "Retrieve information from Envoy Gateway admin console.",
+	}
+
+	c.AddCommand(gatewayAllConfigCmd())
+	c.AddCommand(gatewaySummaryConfigCmd())
+	c.AddCommand(gatewayInfoCmd())
+	c.AddCommand(gatewayServerInfoCmd())
+
+	return c
 }
 
 func proxyCommand() *cobra.Command {

@@ -257,3 +257,185 @@ func configDumpRequest(address string, includeEds bool) ([]byte, error) {
 
 	return io.ReadAll(resp.Body)
 }
+
+// retrieveGatewayConfigDump retrieves configuration dump from Envoy Gateway admin console
+func retrieveGatewayConfigDump(args []string, configType string) (map[string]interface{}, error) {
+	if !allNamespaces {
+		if len(labelSelectors) == 0 {
+			if len(args) != 0 && args[0] != "" {
+				podName = args[0]
+			}
+		}
+
+		if podNamespace == "" {
+			return nil, fmt.Errorf("pod namespace is required")
+		}
+	}
+
+	cli, err := getCLIClient()
+	if err != nil {
+		return nil, err
+	}
+
+	// Find Envoy Gateway pods using the control-plane label selector
+	labelSelectors := []string{"control-plane=envoy-gateway"}
+	pods, err := fetchRunningEnvoyGatewayPods(cli, types.NamespacedName{Namespace: podNamespace, Name: podName}, labelSelectors, allNamespaces)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(pods) == 0 {
+		return nil, fmt.Errorf("no Envoy Gateway pods found")
+	}
+
+	// Use the first pod for configuration retrieval
+	pod := pods[0]
+	fw, err := portForwarder(cli, pod, envoyGatewayAdminPort)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := fw.Start(); err != nil {
+		return nil, err
+	}
+	defer fw.Stop()
+
+	configDump, err := extractGatewayConfigDump(fw, configType)
+	if err != nil {
+		return nil, err
+	}
+
+	return configDump, nil
+}
+
+// fetchRunningEnvoyGatewayPods gets the Envoy Gateway Pods using the control-plane label selector
+func fetchRunningEnvoyGatewayPods(c kube.CLIClient, nn types.NamespacedName, labelSelectors []string, allNamespaces bool) ([]types.NamespacedName, error) {
+	var pods []corev1.Pod
+
+	switch {
+	case allNamespaces:
+		namespaces, err := c.Kube().CoreV1().Namespaces().List(context.Background(), metav1.ListOptions{})
+		if err != nil {
+			return nil, err
+		}
+		for _, i := range namespaces.Items {
+			podList, err := c.PodsForSelector(i.Name, labelSelectors...)
+			if err != nil {
+				return nil, fmt.Errorf("list pods failed in ns %s: %w", i.Name, err)
+			}
+
+			if len(podList.Items) == 0 {
+				continue
+			}
+
+			pods = append(pods, podList.Items...)
+		}
+	case len(labelSelectors) > 0:
+		podList, err := c.PodsForSelector(nn.Namespace, labelSelectors...)
+		if err != nil {
+			return nil, fmt.Errorf("get pod %s fail: %w", nn, err)
+		}
+
+		if len(podList.Items) == 0 {
+			return nil, fmt.Errorf("no Envoy Gateway Pods found for label selectors %+v", labelSelectors)
+		}
+
+		pods = podList.Items
+	case nn.Name != "":
+		pod, err := c.Pod(nn)
+		if err != nil {
+			return nil, fmt.Errorf("get pod %s fail: %w", nn, err)
+		}
+
+		pods = []corev1.Pod{*pod}
+	case nn.Name == "":
+		podList, err := c.PodsForSelector(nn.Namespace, labelSelectors...)
+		if err != nil {
+			return nil, fmt.Errorf("get pod %s fail: %w", nn, err)
+		}
+
+		if len(podList.Items) == 0 {
+			return nil, fmt.Errorf("no Envoy Gateway Pods found for label selectors %+v", labelSelectors)
+		}
+
+		pods = podList.Items
+	}
+
+	podsNamespacedNames := make([]types.NamespacedName, 0, len(pods))
+	for _, pod := range pods {
+		podNsName := utils.NamespacedName(&pod)
+		if pod.Status.Phase != "Running" {
+			return podsNamespacedNames, fmt.Errorf("pod %s is not running", podNsName)
+		}
+
+		podsNamespacedNames = append(podsNamespacedNames, podNsName)
+	}
+
+	return podsNamespacedNames, nil
+}
+
+// extractGatewayConfigDump extracts configuration dump from Envoy Gateway admin console
+func extractGatewayConfigDump(fw kube.PortForwarder, configType string) (map[string]interface{}, error) {
+	var endpoint string
+	switch configType {
+	case "all":
+		endpoint = "/api/config_dump?resource=all"
+	case "summary":
+		endpoint = "/api/config_dump"
+	case "info":
+		endpoint = "/api/info"
+	case "server-info":
+		endpoint = "/api/server_info"
+	default:
+		return nil, fmt.Errorf("unsupported config type: %s", configType)
+	}
+
+	out, err := gatewayConfigDumpRequest(fw.Address(), endpoint)
+	if err != nil {
+		return nil, err
+	}
+
+	var configDump map[string]interface{}
+	if err := json.Unmarshal(out, &configDump); err != nil {
+		return nil, err
+	}
+
+	return configDump, nil
+}
+
+// gatewayConfigDumpRequest makes HTTP request to Envoy Gateway admin console
+func gatewayConfigDumpRequest(address, endpoint string) ([]byte, error) {
+	url := fmt.Sprintf("http://%s%s", address, endpoint)
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		_ = resp.Body.Close()
+	}()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("HTTP request failed with status: %d", resp.StatusCode)
+	}
+
+	return io.ReadAll(resp.Body)
+}
+
+// marshalGatewayConfig marshals gateway configuration to JSON or YAML
+func marshalGatewayConfig(configDump map[string]interface{}, output string) ([]byte, error) {
+	out, err := json.MarshalIndent(configDump, "", "  ")
+	if err != nil {
+		return nil, err
+	}
+
+	if output == "yaml" {
+		return yaml.JSONToYAML(out)
+	}
+
+	return out, nil
+}
