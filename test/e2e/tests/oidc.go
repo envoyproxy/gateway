@@ -111,15 +111,7 @@ var OIDCTest = suite.ConformanceTest{
 				t.Run(tc.GetTestCaseName(i), func(t *testing.T) {
 					t.Parallel()
 
-					req := gwhttp.MakeRequest(t, &tc, gwAddr, "HTTP", "http")
-					cReq, cResp, err := suite.RoundTripper.CaptureRoundTrip(req)
-					if err != nil {
-						t.Errorf("failed to get expected response: %v", err)
-					}
-
-					if err := gwhttp.CompareRequest(t, &req, cReq, cResp, tc); err != nil {
-						t.Errorf("failed to compare request and response: %v", err)
-					}
+					gwhttp.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, tc)
 				})
 			}
 		})
