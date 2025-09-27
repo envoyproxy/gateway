@@ -20,6 +20,7 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/yaml"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -295,6 +296,7 @@ func mustUnmarshal(t *testing.T, path string, out interface{}) {
 func cmpResources(t *testing.T, x, y interface{}) {
 	opts := []cmp.Option{
 		cmpopts.IgnoreFields(metav1.ObjectMeta{}, "ResourceVersion"),
+		cmpopts.IgnoreFields(gwapiv1.GatewayClassStatus{}, "Conditions"),
 		cmpopts.EquateEmpty(),
 	}
 	require.Empty(t, cmp.Diff(x, y, opts...))
