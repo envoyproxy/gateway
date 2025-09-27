@@ -53,6 +53,12 @@ go.test.fuzz: ## Run all fuzzers in the test/fuzz folder one by one
 go.test.unit: ## Run go unit tests
 	go test -race ./...
 
+.PHONY: go.test.integration
+go.test.integration: manifests ## Run go integration tests
+	@$(LOG_TARGET)
+	KUBEBUILDER_ASSETS="$$($(GO_TOOL) setup-envtest use $(ENVTEST_K8S_VERSION) -p path)" \
+    		go test ./internal/provider/kubernetes --tags=integration -race
+
 .PHONY: go.testdata.complete
 go.testdata.complete: ## Override test ouputdata
 	@$(LOG_TARGET)
