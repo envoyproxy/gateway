@@ -42,6 +42,7 @@ linters:
     - gosec
     - importas
     - misspell
+    - promlinter
     - revive
     - staticcheck
     - testifylint
@@ -131,6 +132,8 @@ linters:
       no-unaliased: true
       # Do not allow non-required aliases.
       no-extra-aliases: false
+    promlinter:
+      strict: true
     revive:
       # TODO: enable if-return check
       rules:
