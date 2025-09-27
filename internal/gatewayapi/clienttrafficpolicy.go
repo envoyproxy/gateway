@@ -737,49 +737,14 @@ func translateHTTP1Settings(http1Settings *egv1a1.HTTP1Settings, connection *ir.
 }
 
 func translateHTTP2Settings(http2Settings *egv1a1.HTTP2Settings, httpIR *ir.HTTPListener) error {
-	if http2Settings == nil {
-		return nil
+	h2, err := buildIRHTTP2Settings(http2Settings)
+	if err != nil {
+		return err
 	}
-
-	var (
-		http2 = &ir.HTTP2Settings{}
-		errs  error
-	)
-
-	if http2Settings.InitialStreamWindowSize != nil {
-		initialStreamWindowSize, ok := http2Settings.InitialStreamWindowSize.AsInt64()
-		switch {
-		case !ok:
-			errs = errors.Join(errs, fmt.Errorf("invalid InitialStreamWindowSize value %s", http2Settings.InitialStreamWindowSize.String()))
-		case initialStreamWindowSize < MinHTTP2InitialStreamWindowSize || initialStreamWindowSize > MaxHTTP2InitialStreamWindowSize:
-			errs = errors.Join(errs, fmt.Errorf("InitialStreamWindowSize value %s is out of range, must be between %d and %d",
-				http2Settings.InitialStreamWindowSize.String(),
-				MinHTTP2InitialStreamWindowSize,
-				MaxHTTP2InitialStreamWindowSize))
-		default:
-			http2.InitialStreamWindowSize = ptr.To(uint32(initialStreamWindowSize))
-		}
+	if h2 != nil {
+		httpIR.HTTP2 = h2
 	}
-
-	if http2Settings.InitialConnectionWindowSize != nil {
-		initialConnectionWindowSize, ok := http2Settings.InitialConnectionWindowSize.AsInt64()
-		switch {
-		case !ok:
-			errs = errors.Join(errs, fmt.Errorf("invalid InitialConnectionWindowSize value %s", http2Settings.InitialConnectionWindowSize.String()))
-		case initialConnectionWindowSize < MinHTTP2InitialConnectionWindowSize || initialConnectionWindowSize > MaxHTTP2InitialConnectionWindowSize:
-			errs = errors.Join(errs, fmt.Errorf("InitialConnectionWindowSize value %s is out of range, must be between %d and %d",
-				http2Settings.InitialConnectionWindowSize.String(),
-				MinHTTP2InitialConnectionWindowSize,
-				MaxHTTP2InitialConnectionWindowSize))
-		default:
-			http2.InitialConnectionWindowSize = ptr.To(uint32(initialConnectionWindowSize))
-		}
-	}
-
-	http2.MaxConcurrentStreams = http2Settings.MaxConcurrentStreams
-
-	httpIR.HTTP2 = http2
-	return errs
+	return nil
 }
 
 func translateHealthCheckSettings(healthCheckSettings *egv1a1.HealthCheckSettings, httpIR *ir.HTTPListener) {
