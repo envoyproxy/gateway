@@ -40,7 +40,6 @@ import (
 	mcsapiv1a1 "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
-	"github.com/envoyproxy/gateway/api/v1alpha1/validation"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
@@ -51,7 +50,6 @@ import (
 	workqueuemetrics "github.com/envoyproxy/gateway/internal/metrics/workqueue"
 	"github.com/envoyproxy/gateway/internal/utils"
 	"github.com/envoyproxy/gateway/internal/utils/slice"
-	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
 )
 
 var skipNameValidation = func() *bool {
@@ -309,14 +307,14 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 					return reconcile.Result{}, err
 				}
 
-				r.log.Error(err, fmt.Sprintf("failed processGatewayClassParamsRef for gatewayClass %s", managedGC.Name))
+				r.log.Error(err, "failed to process ParamsRef for gatewayClass", "gatewayClass", managedGC.Name)
 				msg := fmt.Sprintf("%s: %v", status.MsgGatewayClassInvalidParams, err)
-				gc := status.SetGatewayClassAccepted(
-					managedGC.DeepCopy(),
+				status.SetGatewayClassAccepted(
+					managedGC,
 					false,
 					string(gwapiv1.GatewayClassReasonInvalidParameters),
 					msg)
-				r.resources.GatewayClassStatuses.Store(utils.NamespacedName(gc), &gc.Status)
+				r.resources.GatewayClassStatuses.Store(utils.NamespacedName(managedGC), &managedGC.Status)
 				message.PublishMetric(message.Metadata{
 					Runner:  string(egv1a1.LogComponentProviderRunner),
 					Message: message.GatewayClassStatusMessageName,
@@ -332,13 +330,13 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 				return reconcile.Result{}, err
 			}
 
-			r.log.Error(err, fmt.Sprintf("failed process TLS SecretRef for EnvoyProxy for gatewayClass %s", managedGC.Name))
-			gc := status.SetGatewayClassAccepted(
-				managedGC.DeepCopy(),
+			r.log.Error(err, "failed process TLS SecretRef for EnvoyProxy for gatewayClass", "gatewayClass", managedGC.Name)
+			status.SetGatewayClassAccepted(
+				managedGC,
 				false,
 				string(gwapiv1.GatewayClassReasonAccepted),
 				fmt.Sprintf("%s: %v", status.MsgGatewayClassInvalidParams, err))
-			r.resources.GatewayClassStatuses.Store(utils.NamespacedName(gc), &gc.Status)
+			r.resources.GatewayClassStatuses.Store(utils.NamespacedName(managedGC), &managedGC.Status)
 			message.PublishMetric(message.Metadata{
 				Runner:  string(egv1a1.LogComponentProviderRunner),
 				Message: message.GatewayClassStatusMessageName,
@@ -348,12 +346,13 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 
 		if !failToProcessGCParamsRef {
 			// GatewayClass is valid so far, mark it as accepted.
-			gc := status.SetGatewayClassAccepted(
-				managedGC.DeepCopy(),
+			r.log.Info("Set GatewayClass Accepted", "gatewayClass", managedGC.Name)
+			status.SetGatewayClassAccepted(
+				managedGC,
 				true,
 				string(gwapiv1.GatewayClassReasonAccepted),
 				status.MsgValidGatewayClass)
-			r.resources.GatewayClassStatuses.Store(utils.NamespacedName(gc), &gc.Status)
+			r.resources.GatewayClassStatuses.Store(utils.NamespacedName(managedGC), &managedGC.Status)
 		}
 
 		// it's safe here to append gwcResource to gwcResources
@@ -500,7 +499,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 		}
 
 		if len(gwcResource.Gateways) == 0 {
-			r.log.Info("No gateways found for accepted gatewayClass")
+			r.log.Info("No gateways found for accepted gatewayClass", "gatewayClass", managedGC.Name)
 
 			// If needed, remove the finalizer from the accepted GatewayClass.
 			if err := r.removeFinalizer(ctx, managedGC); err != nil {
@@ -508,8 +507,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 					r.log.Error(err, "transient error removing finalizer from gatewayClass", "gatewayClass", managedGC.Name)
 					return reconcile.Result{}, err
 				}
-				r.log.Error(err, fmt.Sprintf("failed to remove finalizer from gatewayClass %s",
-					managedGC.Name))
+				r.log.Error(err, "failed to remove finalizer from gatewayClass", "gatewayClass", managedGC.Name)
 			}
 		} else {
 			// finalize the accepted GatewayClass.
@@ -518,8 +516,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 					r.log.Error(err, "transient error adding finalizer to gatewayClass", "gatewayClass", managedGC.Name)
 					return reconcile.Result{}, err
 				}
-				r.log.Error(err, fmt.Sprintf("failed adding finalizer to gatewayClass %s",
-					managedGC.Name))
+				r.log.Error(err, "failed adding finalizer to gatewayClass", "gatewayClass", managedGC.Name)
 			}
 		}
 	}
@@ -2367,7 +2364,7 @@ func (r *gatewayAPIReconciler) processGatewayParamsRef(ctx context.Context, gtw 
 
 	ep := new(egv1a1.EnvoyProxy)
 	if err := r.client.Get(ctx, types.NamespacedName{Namespace: gtw.Namespace, Name: ref.Name}, ep); err != nil {
-		return fmt.Errorf("failed to find envoyproxy %s/%s: %w", gtw.Namespace, ref.Name, err)
+		return fmt.Errorf("failed to find envoyproxy %s/%s for Gateway %s: %w", gtw.Namespace, ref.Name, gtw.Name, err)
 	}
 
 	if err := r.processEnvoyProxy(ep, resourceMap); err != nil {
@@ -2397,8 +2394,9 @@ func (r *gatewayAPIReconciler) processGatewayClassParamsRef(ctx context.Context,
 	}
 
 	ep := new(egv1a1.EnvoyProxy)
-	if err := r.client.Get(ctx, types.NamespacedName{Namespace: string(*gc.Spec.ParametersRef.Namespace), Name: gc.Spec.ParametersRef.Name}, ep); err != nil {
-		return fmt.Errorf("failed to find envoyproxy %s/%s: %w", r.namespace, gc.Spec.ParametersRef.Name, err)
+	nn := types.NamespacedName{Namespace: string(*gc.Spec.ParametersRef.Namespace), Name: gc.Spec.ParametersRef.Name}
+	if err := r.client.Get(ctx, nn, ep); err != nil {
+		return fmt.Errorf("failed to find envoyproxy %s/%s for GatewayClass %s: %w", nn.Namespace, nn.Name, gc.Name, err)
 	}
 
 	// Check for incompatible configuration: both MergeGateways and GatewayNamespaceMode enabled
@@ -2422,13 +2420,6 @@ func (r *gatewayAPIReconciler) processEnvoyProxy(ep *egv1a1.EnvoyProxy, resource
 	}
 
 	r.log.Info("processing EnvoyProxy", "namespace", ep.Namespace, "name", ep.Name)
-
-	if err := validation.ValidateEnvoyProxy(ep); err != nil {
-		return fmt.Errorf("invalid EnvoyProxy: %w", err)
-	}
-	if err := bootstrap.Validate(ep.Spec.Bootstrap); err != nil {
-		return fmt.Errorf("invalid EnvoyProxy: %w", err)
-	}
 
 	if ep.Spec.Telemetry != nil {
 		var backendRefs []egv1a1.BackendRef
