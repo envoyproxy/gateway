@@ -1,0 +1,26 @@
+---
+tls:
+  cipherSuite: "TLS_AES_128_GCM_SHA256"
+  peerCertificates:
+    - |
+      -----BEGIN CERTIFICATE-----
+      MIIC0jCCAboCAQAwDQYJKoZIhvcNAQELBQAwLTEVMBMGA1UECgwMZXhhbXBsZSBJ
+      bmMuMRQwEgYDVQQDDAtleGFtcGxlLmNvbTAgFw0yNTA1MTMwNTQxMDFaGA8yMTI1
+      MDQxOTA1NDEwMVowLzEOMAwGA1UEAwwFZW52b3kxHTAbBgNVBAoMFGV4YW1wbGUg
+      b3JnYW5pemF0aW9uMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAlAXf
+      LUNe/clD6V051SYNnWYo6iN8OW296gNmIxqycBtLZte0svRIUvPrW3RA+oFBF1hr
+      SyfFdbyNM2B0wXXEE9QU84sTYvOp6I8N91RPGcflqQu4H++N4llG+XNX9c298rBq
+      EVj+Pvc2YnVgBKR/xmW3MBieXD9EqhPlsf7gGz20JaYjX6rgkTuUgI0JpHK50ph6
+      SPpk1ZHDhO95EE2IQPbNFLSpjmXxAR2Gq96+W72IiliQrFMw3B1YPkgihyZFeHJL
+      9Lx8JYbrgDB6cqAq/IHk4AFgzzx+t8U41YbDGRVQgnlT9XUq5fHvhKsT0tqf6SGb
+      H6xiantirzaVKgb/DQIDAQABMA0GCSqGSIb3DQEBCwUAA4IBAQBmScNH7ryeAe6K
+      yNVqg6RU+8ShY1gM9BA9Te0KVkDwC21VabHtn2bBnL8veg667/PQfalHkGkF0oxj
+      9ITPoKALKytuuVQIEkSVlJ8xcfzePpslbDyvuGfvtkdWFqlIljoOIE4JwR691+pu
+      0wbushi2dw89QfItF8PlmS9f6KHUlLkQtewsXTH5Iej5vll9UwdAcYcP3Ozms4VP
+      V1m9mm635h2IH73j5dJhrS4SndQQRjxg37o6gRKau7n/vjTYnaaGMqNH/2G5pkII
+      sVebz36Hvl49niO7VgxGpWkUriN72z88Zl+rvOgBHb0NQoBhn5kvMMI/k/eSQ/gC
+      zU6j2vfB
+      -----END CERTIFICATE-----
+  negotiatedProtocol: "http/1.1"
+  serverName: "example.com"
+  version: "TLSv1.3"

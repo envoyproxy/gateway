@@ -73,7 +73,8 @@ func (cd ConfigDump) Collect(_ chan<- interface{}) (tbcollect.CollectorResult, e
 	}
 
 	logs := make([]string, 0, len(pods))
-	for _, pod := range pods {
+	for i := range pods {
+		pod := &pods[i]
 		nn := types.NamespacedName{Namespace: pod.Namespace, Name: pod.Name}
 		data, err := configDump(cliClient, nn, true)
 		if err != nil {

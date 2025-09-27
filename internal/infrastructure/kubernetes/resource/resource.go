@@ -70,8 +70,8 @@ func ExpectedContainerEnv(container *egv1a1.KubernetesContainerSpec, env []corev
 // ExpectedVolumes returns expected deployment volumes.
 func ExpectedVolumes(pod *egv1a1.KubernetesPodSpec, volumes []corev1.Volume) []corev1.Volume {
 	amendFunc := func(volume corev1.Volume) {
-		for index, e := range volumes {
-			if e.Name == volume.Name {
+		for index := range volumes {
+			if volumes[index].Name == volume.Name {
 				volumes[index] = volume
 				return
 			}
@@ -80,8 +80,8 @@ func ExpectedVolumes(pod *egv1a1.KubernetesPodSpec, volumes []corev1.Volume) []c
 		volumes = append(volumes, volume)
 	}
 
-	for _, envVar := range pod.Volumes {
-		amendFunc(envVar)
+	for i := range pod.Volumes {
+		amendFunc(pod.Volumes[i])
 	}
 
 	return volumes
@@ -90,8 +90,8 @@ func ExpectedVolumes(pod *egv1a1.KubernetesPodSpec, volumes []corev1.Volume) []c
 // ExpectedContainerVolumeMounts returns expected container volume mounts.
 func ExpectedContainerVolumeMounts(container *egv1a1.KubernetesContainerSpec, volumeMounts []corev1.VolumeMount) []corev1.VolumeMount {
 	amendFunc := func(volumeMount corev1.VolumeMount) {
-		for index, e := range volumeMounts {
-			if e.Name == volumeMount.Name {
+		for index := range volumeMounts {
+			if volumeMounts[index].Name == volumeMount.Name {
 				volumeMounts[index] = volumeMount
 				return
 			}

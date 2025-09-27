@@ -520,7 +520,7 @@ func TestCheckRateLimitPodStatusReady(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.caseName, func(t *testing.T) {
-			actual := checkRateLimitPodStatusReady(tc.status)
+			actual := checkRateLimitPodStatusReady(&tc.status)
 			require.Equal(t, tc.expect, actual)
 		})
 	}
