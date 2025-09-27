@@ -104,3 +104,22 @@ curl --verbose --header "Host: www.example.com" --header "Accept-Encoding: br;q=
 < vary: Accept-Encoding
 < transfer-encoding: chunked
 ```
+
+## Disabling Compression
+
+To disable compression for a specific route, set the `compression` field to an empty array in your `BackendTrafficPolicy`:
+
+```yaml
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: disable-compression
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: backend
+  compression: []  # Empty array disables compression
+```
+
+This is particularly useful when you have a gateway-level compression policy but need to disable compression for specific routes.
