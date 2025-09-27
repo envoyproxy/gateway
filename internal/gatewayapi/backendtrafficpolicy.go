@@ -39,13 +39,17 @@ func (t *Translator) ProcessBackendTrafficPolicies(resources *resource.Resources
 	routes []RouteContext,
 	xdsIR resource.XdsIRMap,
 ) []*egv1a1.BackendTrafficPolicy {
-	res := make([]*egv1a1.BackendTrafficPolicy, 0, len(resources.BackendTrafficPolicies))
-
 	backendTrafficPolicies := resources.BackendTrafficPolicies
 	// BackendTrafficPolicies are already sorted by the provider layer
 
+	routeMapSize := len(routes)
+	gatewayMapSize := len(gateways)
+	policyMapSize := len(backendTrafficPolicies)
+
+	res := make([]*egv1a1.BackendTrafficPolicy, 0, policyMapSize)
+
 	// First build a map out of the routes and gateways for faster lookup since users might have thousands of routes or more.
-	routeMap := map[policyTargetRouteKey]*policyRouteTargetContext{}
+	routeMap := make(map[policyTargetRouteKey]*policyRouteTargetContext, routeMapSize)
 	for _, route := range routes {
 		key := policyTargetRouteKey{
 			Kind:      string(route.GetRouteType()),
@@ -55,19 +59,19 @@ func (t *Translator) ProcessBackendTrafficPolicies(resources *resource.Resources
 		routeMap[key] = &policyRouteTargetContext{RouteContext: route}
 	}
 
-	gatewayMap := map[types.NamespacedName]*policyGatewayTargetContext{}
+	gatewayMap := make(map[types.NamespacedName]*policyGatewayTargetContext, gatewayMapSize)
 	for _, gw := range gateways {
 		key := utils.NamespacedName(gw)
 		gatewayMap[key] = &policyGatewayTargetContext{GatewayContext: gw}
 	}
 
 	// Map of Gateway to the routes attached to it
-	gatewayRouteMap := make(map[string]sets.Set[string])
+	gatewayRouteMap := make(map[string]sets.Set[string], gatewayMapSize)
 
-	handledPolicies := make(map[types.NamespacedName]*egv1a1.BackendTrafficPolicy)
+	handledPolicies := make(map[types.NamespacedName]*egv1a1.BackendTrafficPolicy, policyMapSize)
 
-	gatewayPolicyMap := make(map[types.NamespacedName]*egv1a1.BackendTrafficPolicy)
-	gatewayPolicyMerged := make(map[types.NamespacedName]sets.Set[string])
+	gatewayPolicyMap := make(map[types.NamespacedName]*egv1a1.BackendTrafficPolicy, gatewayMapSize)
+	gatewayPolicyMerged := make(map[types.NamespacedName]sets.Set[string], gatewayMapSize)
 
 	// Translate
 	// 1. First translate Policies targeting xRoutes
