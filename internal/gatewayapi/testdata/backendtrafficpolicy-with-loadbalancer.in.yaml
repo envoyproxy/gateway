@@ -147,6 +147,7 @@ backendTrafficPolicies:
           force:
             minEndpointsInZoneThreshold: 1
           minEndpointsThreshold: 1
+          percentageEnabled: 50.1
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:

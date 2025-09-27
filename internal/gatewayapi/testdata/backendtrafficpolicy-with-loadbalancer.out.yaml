@@ -135,6 +135,7 @@ backendTrafficPolicies:
           force:
             minEndpointsInZoneThreshold: 1
           minEndpointsThreshold: 1
+          percentageEnabled: 50.1
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway
