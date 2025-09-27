@@ -4,7 +4,7 @@
 ENVTEST_K8S_VERSION ?= 1.33.0
 # Need run cel validation across multiple versions of k8s
 # TODO: update kubebuilder assets to 1.34.0 when available
-ENVTEST_K8S_VERSIONS ?= 1.30.3 1.31.0 1.32.0 v1.33.0
+ENVTEST_K8S_VERSIONS ?= 1.30.3 1.31.0 1.32.0 1.33.0
 
 # GATEWAY_API_VERSION refers to the version of Gateway API CRDs.
 # For more details, see https://gateway-api.sigs.k8s.io/guides/getting-started/#installing-gateway-api
