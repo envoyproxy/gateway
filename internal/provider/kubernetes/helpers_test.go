@@ -111,6 +111,21 @@ func TestGatewaysOfClass(t *testing.T) {
 	}
 }
 
+// gatewaysOfClass returns a list of gateways that reference gc from the provided gwList.
+func gatewaysOfClass(gc *gwapiv1.GatewayClass, gwList *gwapiv1.GatewayList) []gwapiv1.Gateway {
+	var gateways []gwapiv1.Gateway
+	if gwList == nil || gc == nil {
+		return gateways
+	}
+	for i := range gwList.Items {
+		gw := gwList.Items[i]
+		if string(gw.Spec.GatewayClassName) == gc.Name {
+			gateways = append(gateways, gw)
+		}
+	}
+	return gateways
+}
+
 func TestIsGatewayClassAccepted(t *testing.T) {
 	testCases := []struct {
 		name   string
@@ -185,10 +200,24 @@ func TestIsGatewayClassAccepted(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			actual := isAccepted(tc.gc)
+			actual := isGatewayClassAccepted(tc.gc)
 			require.Equal(t, tc.expect, actual)
 		})
 	}
+}
+
+// isAccepted returns true if the provided gatewayclass contains the Accepted=true
+// status condition.
+func isGatewayClassAccepted(gc *gwapiv1.GatewayClass) bool {
+	if gc == nil {
+		return false
+	}
+	for _, cond := range gc.Status.Conditions {
+		if cond.Type == string(gwapiv1.GatewayClassConditionStatusAccepted) && cond.Status == metav1.ConditionTrue {
+			return true
+		}
+	}
+	return false
 }
 
 func TestRefsEnvoyProxy(t *testing.T) {
