@@ -75,3 +75,4 @@ http:
                   - gateway-error
                   - reset
             uri: https://foo.bar.com/jwt/public-key/jwks.json
+            cacheDuration: 300s

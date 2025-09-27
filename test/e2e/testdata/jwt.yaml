@@ -21,6 +21,7 @@ spec:
             header: x-name
         remoteJWKS:
           uri: http://static-file-server.gateway-conformance-infra/jwt/jwks.json
+          cacheDuration: 300s
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
