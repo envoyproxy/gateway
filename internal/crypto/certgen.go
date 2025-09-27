@@ -22,9 +22,6 @@ import (
 )
 
 const (
-	// DefaultEnvoyGatewayDNSPrefix defines the default Envoy Gateway DNS prefix.
-	DefaultEnvoyGatewayDNSPrefix = config.EnvoyGatewayServiceName
-
 	// DefaultEnvoyDNSPrefix defines the default Envoy DNS prefix.
 	DefaultEnvoyDNSPrefix = "*"
 
@@ -99,7 +96,7 @@ func GenerateCerts(cfg *config.Server) (*Certificates, error) {
 	case ProviderTypeEnvoyGateway:
 		now := time.Now()
 		expiry := now.Add(24 * time.Duration(DefaultCertificateLifetime) * time.Hour)
-		caCertPEM, caKeyPEM, err := newCA(DefaultEnvoyGatewayDNSPrefix, expiry)
+		caCertPEM, caKeyPEM, err := newCA(config.GetEnvoyGatewayServiceName(), expiry)
 		if err != nil {
 			return nil, err
 		}
@@ -108,7 +105,7 @@ func GenerateCerts(cfg *config.Server) (*Certificates, error) {
 		egProvider := cfg.EnvoyGateway.GetEnvoyGatewayProvider().Type
 		switch egProvider {
 		case egv1a1.ProviderTypeKubernetes:
-			egDNSNames = kubeServiceNames(DefaultEnvoyGatewayDNSPrefix, cfg.ControllerNamespace, cfg.DNSDomain)
+			egDNSNames = kubeServiceNames(config.GetEnvoyGatewayServiceName(), cfg.ControllerNamespace, cfg.DNSDomain)
 			envoyDNSNames = append(envoyDNSNames, fmt.Sprintf("*.%s", cfg.ControllerNamespace))
 		default:
 			// Kubernetes is the only supported Envoy Gateway provider.
@@ -119,7 +116,7 @@ func GenerateCerts(cfg *config.Server) (*Certificates, error) {
 			caCertPEM:  caCertPEM,
 			caKeyPEM:   caKeyPEM,
 			expiry:     expiry,
-			commonName: DefaultEnvoyGatewayDNSPrefix,
+			commonName: config.GetEnvoyGatewayServiceName(),
 			altNames:   egDNSNames,
 		}
 

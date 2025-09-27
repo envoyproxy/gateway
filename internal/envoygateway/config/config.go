@@ -20,7 +20,7 @@ const (
 	DefaultNamespace = "envoy-gateway-system"
 	// DefaultDNSDomain is the default DNS domain used by k8s services.
 	DefaultDNSDomain = "cluster.local"
-	// EnvoyGatewayServiceName is the name of the Envoy Gateway service.
+	// EnvoyGatewayServiceName is the default name of the Envoy Gateway service.
 	EnvoyGatewayServiceName = "envoy-gateway"
 	// EnvoyPrefix is the prefix applied to the Envoy ConfigMap, Service, Deployment, and ServiceAccount.
 	EnvoyPrefix = "envoy"
@@ -65,4 +65,9 @@ func (s *Server) Validate() error {
 	}
 
 	return nil
+}
+
+// GetEnvoyGatewayServiceName returns the xDS Service name from ENVOY_GATEWAY_SERVICE_NAME or the default.
+func GetEnvoyGatewayServiceName() string {
+	return env.Lookup("ENVOY_GATEWAY_SERVICE_NAME", EnvoyGatewayServiceName)
 }
