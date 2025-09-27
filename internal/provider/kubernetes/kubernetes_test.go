@@ -9,7 +9,6 @@ package kubernetes
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -249,7 +248,7 @@ func testGatewayScheduledStatus(ctx context.Context, t *testing.T, provider *Pro
 		}
 
 		return false
-	}, defaultWait, defaultTick)
+	}, defaultWait, defaultTick, " timed out waiting for GatewayClass %s to report Accepted=True condition", gc.Name)
 
 	defer func() {
 		require.NoError(t, cli.Delete(ctx, gc))
@@ -331,22 +330,21 @@ func testGatewayScheduledStatus(ctx context.Context, t *testing.T, provider *Pro
 	require.NoError(t, cli.Create(ctx, deploy))
 	require.NoError(t, cli.Create(ctx, svc))
 
-	// Ensure the Gateway reports "Scheduled".
+	// Ensure the Gateway reports "Accepted".
 	require.Eventually(t, func() bool {
 		if err := cli.Get(ctx, utils.NamespacedName(gw), gw); err != nil {
 			return false
 		}
 
 		for _, cond := range gw.Status.Conditions {
-			fmt.Printf("Condition: %v\n", cond)
 			if cond.Type == string(gwapiv1.GatewayConditionAccepted) && cond.Status == metav1.ConditionTrue {
 				return true
 			}
 		}
 
-		// Scheduled=True condition not found.
+		t.Logf("Accepted=True condition not found in Gateway %s/%s conditions: %+v", gw.Namespace, gw.Name, gw.Status.Conditions)
 		return false
-	}, defaultWait, defaultTick)
+	}, defaultWait, defaultTick, " timed out waiting for Gateway %s to report Accepted=True condition", utils.NamespacedName(gw))
 
 	defer func() {
 		require.NoError(t, cli.Delete(ctx, gw))
