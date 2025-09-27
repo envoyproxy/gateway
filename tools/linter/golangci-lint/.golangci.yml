@@ -42,6 +42,7 @@ linters:
     - gosec
     - importas
     - misspell
+    - prealloc
     - revive
     - staticcheck
     - testifylint

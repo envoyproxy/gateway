@@ -16,7 +16,7 @@ import (
 
 // loadFromFilesAndDirs loads resources from specific files and directories.
 func loadFromFilesAndDirs(files, dirs []string) ([]*resource.Resources, error) {
-	var rs []*resource.Resources
+	rs := make([]*resource.Resources, 0, len(files)+len(dirs))
 
 	for _, file := range files {
 		r, err := loadFromFile(file)
@@ -61,7 +61,7 @@ func loadFromDir(path string) ([]*resource.Resources, error) {
 		return nil, err
 	}
 
-	var rs []*resource.Resources
+	rs := make([]*resource.Resources, 0, len(entries))
 	for _, entry := range entries {
 		// Ignoring subdirectories and all hidden files and directories.
 		if entry.IsDir() || strings.HasPrefix(entry.Name(), ".") {

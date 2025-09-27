@@ -20,7 +20,7 @@ import (
 )
 
 func (t *Translator) ProcessBackends(backends []*egv1a1.Backend, backendTLSPolicies []*gwapiv1a3.BackendTLSPolicy) []*egv1a1.Backend {
-	var res []*egv1a1.Backend
+	res := make([]*egv1a1.Backend, 0, len(backends))
 	for _, backend := range backends {
 		// Ensure Backends are enabled
 		if !t.BackendEnabled {

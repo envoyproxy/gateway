@@ -15,7 +15,7 @@ import (
 )
 
 func ConvertPathToPointers(jsonDoc []byte, jsonPath, path string) ([]string, error) {
-	var jsonPointers []string
+	jsonPointers := make([]string, 0, 4) // reasonable default for most json path queries
 
 	jObj, err := oj.Parse(jsonDoc)
 	if err != nil {
