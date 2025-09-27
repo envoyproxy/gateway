@@ -9,7 +9,7 @@ spec:
     spec:
       containers:
         - name: nighthawk-client
-          image: envoyproxy/nighthawk-dev:latest
+          image: envoyproxy/nighthawk-dev:6198df0e01dc85f8d5efa3ef188f3bcdcc6eecac
           imagePullPolicy: IfNotPresent
           command:
             - /usr/local/bin/nighthawk_client

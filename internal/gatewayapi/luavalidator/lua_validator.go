@@ -24,7 +24,7 @@ const (
 // Refer: https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/lua_filter#stream-handle-api
 //
 //go:embed mocks.lua
-var mockData []byte
+var mockData string
 
 // LuaValidator validates user provided Lua for compatibility with Envoy supported Lua HTTP filter
 // Validation strictness is controlled by the validation field
@@ -47,12 +47,12 @@ func (l *LuaValidator) Validate() error {
 		return fmt.Errorf("expected one of %s() or %s() to be defined", envoyOnRequestFunctionName, envoyOnResponseFunctionName)
 	}
 	if strings.Contains(l.code, envoyOnRequestFunctionName) {
-		if err := l.validate(string(mockData) + "\n" + l.code + "\n" + envoyOnRequestFunctionName + "(StreamHandle)"); err != nil {
+		if err := l.validate(mockData + "\n" + l.code + "\n" + envoyOnRequestFunctionName + "(StreamHandle)"); err != nil {
 			return fmt.Errorf("failed to validate with %s: %w", envoyOnRequestFunctionName, err)
 		}
 	}
 	if strings.Contains(l.code, envoyOnResponseFunctionName) {
-		if err := l.validate(string(mockData) + "\n" + l.code + "\n" + envoyOnResponseFunctionName + "(StreamHandle)"); err != nil {
+		if err := l.validate(mockData + "\n" + l.code + "\n" + envoyOnResponseFunctionName + "(StreamHandle)"); err != nil {
 			return fmt.Errorf("failed to validate with %s: %w", envoyOnResponseFunctionName, err)
 		}
 	}

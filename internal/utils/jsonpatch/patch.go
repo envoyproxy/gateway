@@ -11,7 +11,6 @@ import (
 	"fmt"
 
 	jsonpatchv5 "github.com/evanphx/json-patch/v5"
-	"sigs.k8s.io/yaml"
 
 	"github.com/envoyproxy/gateway/internal/ir"
 )
@@ -58,42 +57,71 @@ func ApplyJSONPatches(document json.RawMessage, patches ...ir.JSONPatchOperation
 		}
 
 		for _, path := range jsonPointers {
-			op := ir.JSONPatchOperation{
-				Path:  &path,
-				Op:    p.Op,
-				Value: p.Value,
-				From:  p.From,
+			operation, err := toPatchOperation(path, p)
+			if err != nil {
+				tErrs = errors.Join(tErrs, err)
+				continue
 			}
 
-			// Convert patch to JSON
-			// The patch library expects an array so convert it into one
-			y, err := yaml.Marshal([]ir.JSONPatchOperation{op})
-			if err != nil {
-				tErr := fmt.Errorf("unable to marshal patch %+v, err: %s", op, err.Error())
-				tErrs = errors.Join(tErrs, tErr)
-				continue
-			}
-			jsonBytes, err := yaml.YAMLToJSON(y)
-			if err != nil {
-				tErr := fmt.Errorf("unable to convert patch to json %s, err: %s", string(y), err.Error())
-				tErrs = errors.Join(tErrs, tErr)
-				continue
-			}
-			patchObj, err := jsonpatchv5.DecodePatch(jsonBytes)
-			if err != nil {
-				tErr := fmt.Errorf("unable to decode patch %s, err: %s", string(jsonBytes), err.Error())
-				tErrs = errors.Join(tErrs, tErr)
-				continue
-			}
+			patch := jsonpatchv5.Patch{operation}
 
 			// Apply patch
-			document, err = patchObj.ApplyWithOptions(document, opts)
+			document, err = patch.ApplyWithOptions(document, opts)
 			if err != nil {
-				tErr := fmt.Errorf("unable to apply patch:\n%s on resource:\n%s, err: %s", string(jsonBytes), string(document), err.Error())
+				tErr := fmt.Errorf("unable to apply patch: op=%s path=%s err: %s", string(p.Op), path, err.Error())
 				tErrs = errors.Join(tErrs, tErr)
 				continue
 			}
 		}
 	}
 	return document, tErrs
+}
+
+func toPatchOperation(path string, original ir.JSONPatchOperation) (jsonpatchv5.Operation, error) {
+	operation := make(jsonpatchv5.Operation, 4)
+
+	rawOp, err := marshalJSONString(string(original.Op))
+	if err != nil {
+		return nil, fmt.Errorf("unable to marshal patch op %q: %w", string(original.Op), err)
+	}
+	operation["op"] = rawOp
+
+	rawPath, err := marshalJSONString(path)
+	if err != nil {
+		return nil, fmt.Errorf("unable to marshal patch path %q: %w", path, err)
+	}
+	operation["path"] = rawPath
+
+	if original.From != nil {
+		rawFrom, err := marshalJSONString(*original.From)
+		if err != nil {
+			return nil, fmt.Errorf("unable to marshal patch from %q: %w", *original.From, err)
+		}
+		operation["from"] = rawFrom
+	}
+
+	if original.Value != nil {
+		operation["value"] = cloneRawJSON(original.Value.Raw)
+	}
+
+	return operation, nil
+}
+
+func marshalJSONString(value string) (*json.RawMessage, error) {
+	b, err := json.Marshal(value)
+	if err != nil {
+		return nil, err
+	}
+	raw := json.RawMessage(b)
+	return &raw, nil
+}
+
+func cloneRawJSON(src []byte) *json.RawMessage {
+	if src == nil {
+		rawNull := json.RawMessage([]byte("null"))
+		return &rawNull
+	}
+	cloned := make(json.RawMessage, len(src))
+	copy(cloned, src)
+	return &cloned
 }
