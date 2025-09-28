@@ -9,7 +9,7 @@ adopters:
     description: "Routing all customer traffic to our various backends. Every time a new customer signs up we dynamically add a route to a new hostname so Envoy Gateway is deeply integrated with our product."
   - name: "Tetrate"
     logo: "/logos/tetrate.svg"
-    url: "https://www.tetrate.io"
+    url: "https://tetrate.io/products/tetrate-enterprise-gateway-for-envoy"
     description: "Tetrate provides Enterprise Gateway (TEG) to end users, which includes a 100% upstream distribution of Envoy Gateway, and management to deliver applications securely, authenticate user traffic, protect services with rate limiting and WAF, and integrate with your observability stack to monitor and observe activity."
   - name: "Airspace Link"
     logo: "/logos/airspacelink.svg"
