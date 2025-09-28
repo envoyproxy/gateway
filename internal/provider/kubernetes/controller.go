@@ -366,7 +366,10 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 				logger.Error(err, "transient error processing OIDC HMAC Secret")
 				return reconcile.Result{}, err
 			}
-			logger.Error(err, "failed to process OIDC HMAC Secret for GatewayClass")
+			// In standalone mode, OIDC HMAC secret may not exist, which is expected
+			if !kerrors.IsNotFound(err) {
+				logger.Error(err, "failed to process OIDC HMAC Secret for GatewayClass")
+			}
 		}
 
 		// add the Envoy TLS Secret to the resourceTree
@@ -375,7 +378,10 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 				logger.Error(err, "transient error processing Envoy TLS Secret")
 				return reconcile.Result{}, err
 			}
-			logger.Error(err, "failed to process EnvoyTLSSecret")
+			// In standalone mode, Envoy TLS secret may not exist, which is expected
+			if !kerrors.IsNotFound(err) {
+				logger.Error(err, "failed to process EnvoyTLSSecret")
+			}
 		}
 
 		// Add all Gateways, their associated Routes, and referenced resources to the resourceTree
