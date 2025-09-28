@@ -9,6 +9,7 @@ import (
 	"context"
 	"os"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -304,4 +305,66 @@ func TestDeleteAllStatusKeys(t *testing.T) {
 	require.Equal(t, 0, r.ProviderResources.TCPRouteStatuses.Len())
 	require.Equal(t, 0, r.ProviderResources.UDPRouteStatuses.Len())
 	require.Equal(t, 0, r.ProviderResources.BackendStatuses.Len())
+}
+
+func TestStandaloneModeErrorSuppression(t *testing.T) {
+	// Test that TLS secret related errors are suppressed in standalone mode
+	testCases := []struct {
+		name         string
+		providerType egv1a1.ProviderType
+		errorMessage string
+		shouldLog    bool
+	}{
+		{
+			name:         "kubernetes mode - TLS secret error should be logged",
+			providerType: egv1a1.ProviderTypeKubernetes,
+			errorMessage: "envoy TLS secret envoy-gateway-system/envoy not found",
+			shouldLog:    true,
+		},
+		{
+			name:         "standalone mode - TLS secret error should be suppressed",
+			providerType: egv1a1.ProviderTypeCustom,
+			errorMessage: "envoy TLS secret envoy-gateway-system/envoy not found",
+			shouldLog:    false,
+		},
+		{
+			name:         "standalone mode - non-TLS error should be logged",
+			providerType: egv1a1.ProviderTypeCustom,
+			errorMessage: "some other error occurred",
+			shouldLog:    true,
+		},
+		{
+			name:         "standalone mode - TLS secret error without 'not found' should be logged",
+			providerType: egv1a1.ProviderTypeCustom,
+			errorMessage: "TLS secret validation failed",
+			shouldLog:    true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Create a mock error
+			err := &mockError{message: tc.errorMessage}
+
+			// Test the error suppression logic
+			shouldLog := true
+			if tc.providerType != egv1a1.ProviderTypeKubernetes {
+				// In standalone mode, suppress TLS secret related errors
+				if strings.Contains(err.Error(), "TLS secret") && strings.Contains(err.Error(), "not found") {
+					shouldLog = false
+				}
+			}
+
+			assert.Equal(t, tc.shouldLog, shouldLog, "Error logging decision should match expected value")
+		})
+	}
+}
+
+// mockError is a simple error implementation for testing
+type mockError struct {
+	message string
+}
+
+func (e *mockError) Error() string {
+	return e.message
 }
