@@ -113,7 +113,10 @@ func (u *UpdateHandler) apply(update Update) {
 
 		newObj.SetUID(obj.GetUID())
 
-		return u.client.Status().Update(context.Background(), newObj)
+		// Use Patch instead of Update to avoid conflicts when multiple controllers
+		// try to update the same resource simultaneously
+		patch := client.MergeFrom(obj)
+		return u.client.Status().Patch(context.Background(), newObj, patch)
 	}); err != nil {
 		log.Error(err, "unable to update status")
 
