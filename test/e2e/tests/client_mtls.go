@@ -139,6 +139,7 @@ var ClientMTLSTest = suite.ConformanceTest{
 			// check positive and negative curves
 			dialWithCurve(t, gwAddr, baseTLSConfig, tls.CurveP256, false)
 			dialWithCurve(t, gwAddr, baseTLSConfig, tls.X25519, false)
+			dialWithCurve(t, gwAddr, baseTLSConfig, tls.X25519MLKEM768, false)
 			dialWithCurve(t, gwAddr, baseTLSConfig, tls.CurveP521, true)
 
 			// Check ALPN
