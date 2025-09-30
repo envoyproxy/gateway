@@ -15,7 +15,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/exp/slices"
 	appsv1 "k8s.io/api/apps/v1"
@@ -62,6 +61,7 @@ func TestProvider(t *testing.T) {
 
 	// Setup and start the kube provider.
 	svr, err := config.New(os.Stdout)
+	require.NoError(t, err)
 
 	// Disable webhook server for provider test to avoid non-existent cert errors
 	svr.EnvoyGateway.Provider.Kubernetes.TopologyInjector = &egv1a1.EnvoyGatewayTopologyInjector{Disable: ptr.To(true)}
@@ -130,7 +130,7 @@ func testGatewayClassController(ctx context.Context, t *testing.T, provider *Pro
 	require.Eventually(t, func() bool {
 		return cli.Get(ctx, types.NamespacedName{Name: gc.Name}, gc) == nil
 	}, defaultWait, defaultTick)
-	assert.Equal(t, gc.ObjectMeta.Generation, int64(1))
+	require.Equal(t, gc.ObjectMeta.Generation, int64(1))
 }
 
 func testGatewayClassAcceptedStatus(ctx context.Context, t *testing.T, provider *Provider, resources *message.ProviderResources) {
@@ -222,7 +222,7 @@ func testGatewayClassWithParamRef(ctx context.Context, t *testing.T, provider *P
 		}
 
 		if res.EnvoyProxyForGatewayClass != nil {
-			assert.Equal(t, res.EnvoyProxyForGatewayClass.Spec, ep.Spec)
+			require.Equal(t, res.EnvoyProxyForGatewayClass.Spec, ep.Spec)
 			return true
 		}
 
@@ -378,13 +378,13 @@ func testGatewayScheduledStatus(ctx context.Context, t *testing.T, provider *Pro
 	}, defaultWait, defaultTick)
 
 	res := resources.GetResourcesByGatewayClass(gc.Name)
-	assert.NotNil(t, res)
+	require.NotNil(t, res)
 	// Only check if the spec is equal
 	// The watchable map will not store a resource
 	// with an updated status if the spec has not changed
 	// to eliminate this endless loop:
 	// reconcile->store->translate->update-status->reconcile
-	assert.Equal(t, gw.Spec, res.Gateways[0].Spec)
+	require.Equal(t, gw.Spec, res.Gateways[0].Spec)
 }
 
 func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resources *message.ProviderResources) {
@@ -913,8 +913,8 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 			}, defaultWait, defaultTick)
 
 			res := resources.GetResourcesByGatewayClass(gc.Name)
-			assert.NotNil(t, res)
-			assert.Equal(t, &testCase.route, res.HTTPRoutes[0])
+			require.NotNil(t, res)
+			require.Equal(t, &testCase.route, res.HTTPRoutes[0])
 
 			// Ensure the HTTPRoute Namespace is in the Namespace resource map.
 			require.Eventually(t, func() bool {
@@ -978,7 +978,7 @@ func testTLSRoute(ctx context.Context, t *testing.T, provider *Provider, resourc
 					Name:     "test",
 					Port:     gwapiv1.PortNumber(int32(8080)),
 					Protocol: gwapiv1.TLSProtocolType,
-					TLS: &gwapiv1.GatewayTLSConfig{
+					TLS: &gwapiv1.ListenerTLSConfig{
 						Mode: ptr.To(gwapiv1.TLSModePassthrough),
 					},
 				},
@@ -1062,8 +1062,8 @@ func testTLSRoute(ctx context.Context, t *testing.T, provider *Provider, resourc
 			}, defaultWait, defaultTick)
 
 			res := resources.GetResourcesByGatewayClass(gc.Name)
-			assert.NotNil(t, res)
-			assert.Equal(t, &testCase.route, res.TLSRoutes[0])
+			require.NotNil(t, res)
+			require.Equal(t, &testCase.route, res.TLSRoutes[0])
 
 			// Ensure the HTTPRoute Namespace is in the Namespace resource map.
 			require.Eventually(t, func() bool {
@@ -1129,7 +1129,7 @@ func testServiceCleanupForMultipleRoutes(ctx context.Context, t *testing.T, prov
 					Name:     "tlstest",
 					Port:     gwapiv1.PortNumber(int32(8043)),
 					Protocol: gwapiv1.TLSProtocolType,
-					TLS: &gwapiv1.GatewayTLSConfig{
+					TLS: &gwapiv1.ListenerTLSConfig{
 						Mode: ptr.To(gwapiv1.TLSModePassthrough),
 					},
 				},
@@ -1317,7 +1317,7 @@ func TestNamespacedProvider(t *testing.T) {
 	// Ensure only 2 gateways are reconciled
 	gatewayList := &gwapiv1.GatewayList{}
 	require.NoError(t, cli.List(ctx, gatewayList))
-	assert.Equal(t, len(gatewayList.Items), 2)
+	require.Equal(t, len(gatewayList.Items), 2)
 
 	// Stop the kube provider.
 	defer func() {
