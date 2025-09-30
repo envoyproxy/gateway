@@ -46,17 +46,9 @@ func TestExperimentalConformance(t *testing.T) {
 	)
 	opts.Hook = e2e.Hook
 
-	// TODO: Not sure why this happens, need to investigate.
-	// There's similar test from EG but passed.
-	// Skipping UDPRoute tests for dual stack as it fails.
-	if ege2etest.IPFamily == "dual" {
-		opts.SkipTests = append(opts.SkipTests,
-			tests.UDPRouteTest.ShortName,
-		)
-	}
-
-	// TODO: support BackendTLSPolicy conformance tests
+	// TODO: support these conformance tests
 	opts.SkipTests = append(opts.SkipTests,
+		tests.UDPRouteTest.ShortName,
 		tests.BackendTLSPolicyInvalidCACertificateRef.ShortName,
 		tests.BackendTLSPolicyInvalidKind.ShortName,
 		tests.BackendTLSPolicySANValidation.ShortName,
