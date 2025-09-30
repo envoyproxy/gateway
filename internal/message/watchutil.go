@@ -18,7 +18,12 @@ import (
 	"github.com/envoyproxy/gateway/internal/metrics"
 )
 
-type Update[K comparable, V any] watchable.Update[K, V]
+type Update[K comparable, V any] struct {
+	Key     K
+	Value   V
+	Delete  bool
+	Version Version
+}
 
 // TODO: Remove the global logger and localize the scope of the logger.
 var logger = logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo).WithName("watchable")
@@ -26,6 +31,13 @@ var logger = logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo).WithName("wat
 type Metadata struct {
 	Runner  string
 	Message MessageName
+}
+
+func extractVersion[V any](value V) Version {
+	if versioned, ok := any(value).(Versioned); ok {
+		return versioned.MessageVersion()
+	}
+	return 0
 }
 
 func PublishMetric(meta Metadata, count int) {
@@ -90,17 +102,24 @@ func HandleSubscription[K comparable, V any](
 	defer close(errChans)
 
 	if snapshot, ok := <-subscription; ok {
-		for k, v := range snapshot.State {
+		for k, value := range snapshot.State {
 			handleWithCrashRecovery(handle, Update[K, V]{
-				Key:   k,
-				Value: v,
+				Key:     k,
+				Value:   value,
+				Version: extractVersion(value),
 			}, meta, errChans)
 		}
 	}
 	for snapshot := range subscription {
 		watchableDepth.With(meta.LabelValues()...).Record(float64(len(subscription)))
 		for _, update := range snapshot.Updates {
-			handleWithCrashRecovery(handle, Update[K, V](update), meta, errChans)
+			value := update.Value.Value
+			handleWithCrashRecovery(handle, Update[K, V]{
+				Key:     update.Key,
+				Value:   value,
+				Delete:  update.Delete,
+				Version: extractVersion(value),
+			}, meta, errChans)
 		}
 	}
 }

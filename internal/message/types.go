@@ -17,11 +17,93 @@ import (
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
+// ProviderResourcesMessage is the top-level payload storing translated provider resources together
+// with the version that produced them.
+type ProviderResourcesMessage struct {
+	Version   Version
+	Resources *resource.ControllerResources
+}
+
+// MessageVersion implements the Versioned interface.
+func (m *ProviderResourcesMessage) MessageVersion() Version {
+	if m == nil {
+		return 0
+	}
+	return m.Version
+}
+
+// NewProviderResourcesMessage builds a ProviderResourcesMessage using the supplied version.
+func NewProviderResourcesMessage(version Version, resources *resource.ControllerResources) *ProviderResourcesMessage {
+	return &ProviderResourcesMessage{
+		Version:   version,
+		Resources: resources,
+	}
+}
+
+// NewProviderResourcesMessageWithNextVersion builds a ProviderResourcesMessage with the next available version.
+func NewProviderResourcesMessageWithNextVersion(resources *resource.ControllerResources) *ProviderResourcesMessage {
+	return NewProviderResourcesMessage(NextVersion(), resources)
+}
+
+// InfraIRMessage stores an Infra IR together with the version that produced it.
+type InfraIRMessage struct {
+	Version Version
+	Infra   *ir.Infra
+}
+
+// MessageVersion implements the Versioned interface.
+func (m *InfraIRMessage) MessageVersion() Version {
+	if m == nil {
+		return 0
+	}
+	return m.Version
+}
+
+// NewInfraIRMessage builds an InfraIRMessage using the supplied version.
+func NewInfraIRMessage(version Version, infra *ir.Infra) *InfraIRMessage {
+	return &InfraIRMessage{
+		Version: version,
+		Infra:   infra,
+	}
+}
+
+// NewInfraIRMessageWithNextVersion builds an InfraIRMessage with the next available version.
+func NewInfraIRMessageWithNextVersion(infra *ir.Infra) *InfraIRMessage {
+	return NewInfraIRMessage(NextVersion(), infra)
+}
+
+// XdsIRMessage stores an Xds IR together with the version that produced it.
+type XdsIRMessage struct {
+	Version Version
+	Xds     *ir.Xds
+}
+
+// MessageVersion implements the Versioned interface.
+func (m *XdsIRMessage) MessageVersion() Version {
+	if m == nil {
+		return 0
+	}
+	return m.Version
+}
+
+// NewXdsIRMessage builds an XdsIRMessage using the supplied version.
+func NewXdsIRMessage(version Version, xds *ir.Xds) *XdsIRMessage {
+	return &XdsIRMessage{
+		Version: version,
+		Xds:     xds,
+	}
+}
+
+// NewXdsIRMessageWithNextVersion builds an XdsIRMessage with the next available version.
+func NewXdsIRMessageWithNextVersion(xds *ir.Xds) *XdsIRMessage {
+	return NewXdsIRMessage(NextVersion(), xds)
+}
+
 // ProviderResources message
 type ProviderResources struct {
 	// GatewayAPIResources is a map from a GatewayClass name to
 	// a group of gateway API and other related resources.
-	GatewayAPIResources watchable.Map[string, *resource.ControllerResources]
+	GatewayAPIResources watchable.Map[string, *ProviderResourcesMessage]
 
 	// GatewayAPIStatuses is a group of gateway api
 	// resource statuses maps.
@@ -39,8 +121,11 @@ func (p *ProviderResources) GetResources() []*resource.Resources {
 		return nil
 	}
 
-	for _, v := range p.GatewayAPIResources.LoadAll() {
-		return *v
+	for _, msg := range p.GatewayAPIResources.LoadAll() {
+		if msg == nil || msg.Resources == nil {
+			continue
+		}
+		return *msg.Resources
 	}
 
 	return nil
@@ -124,12 +209,12 @@ func (p *PolicyStatuses) Close() {
 
 // XdsIR message
 type XdsIR struct {
-	watchable.Map[string, *ir.Xds]
+	watchable.Map[string, *XdsIRMessage]
 }
 
 // InfraIR message
 type InfraIR struct {
-	watchable.Map[string, *ir.Infra]
+	watchable.Map[string, *InfraIRMessage]
 }
 
 type MessageName string

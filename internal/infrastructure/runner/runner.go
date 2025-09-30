@@ -93,12 +93,16 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 	return
 }
 
-func (r *Runner) subscribeToProxyInfraIR(ctx context.Context, sub <-chan watchable.Snapshot[string, *ir.Infra]) {
+func (r *Runner) subscribeToProxyInfraIR(ctx context.Context, sub <-chan watchable.Snapshot[string, *message.InfraIRMessage]) {
 	// Subscribe to resources
 	message.HandleSubscription(message.Metadata{Runner: r.Name(), Message: message.InfraIRMessageName}, sub,
-		func(update message.Update[string, *ir.Infra], errChan chan error) {
-			r.Logger.Info("received an update")
-			val := update.Value
+		func(update message.Update[string, *message.InfraIRMessage], errChan chan error) {
+			r.Logger.Info("received an update", "version", update.Version)
+			msg := update.Value
+			var val *ir.Infra
+			if msg != nil {
+				val = msg.Infra
+			}
 
 			if update.Delete {
 				if err := r.mgr.DeleteProxyInfra(ctx, val); err != nil {
@@ -107,7 +111,7 @@ func (r *Runner) subscribeToProxyInfraIR(ctx context.Context, sub <-chan watchab
 				}
 			} else {
 				// Manage the proxy infra.
-				if len(val.Proxy.Listeners) == 0 {
+				if val == nil || len(val.Proxy.Listeners) == 0 {
 					r.Logger.Info("Infra IR was updated, but no listeners were found. Skipping infra creation.")
 					return
 				}

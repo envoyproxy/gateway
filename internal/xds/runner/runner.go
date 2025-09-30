@@ -195,13 +195,18 @@ func registerServer(srv serverv3.Server, g *grpc.Server) {
 	runtimev3.RegisterRuntimeDiscoveryServiceServer(g, srv)
 }
 
-func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *ir.Xds]) {
+func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *message.XdsIRMessage]) {
 	// Subscribe to resources
 	message.HandleSubscription(message.Metadata{Runner: r.Name(), Message: message.XDSIRMessageName}, sub,
-		func(update message.Update[string, *ir.Xds], errChan chan error) {
-			r.Logger.Info("received an update")
+		func(update message.Update[string, *message.XdsIRMessage], errChan chan error) {
+			r.Logger.Info("received an update", "version", update.Version)
 			key := update.Key
-			val := update.Value
+			msg := update.Value
+			var val *ir.Xds
+			if msg != nil {
+				val = msg.Xds
+			}
+			version := update.Version
 
 			if update.Delete {
 				if err := r.cache.GenerateNewSnapshot(key, nil); err != nil {

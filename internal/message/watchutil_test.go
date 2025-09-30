@@ -20,14 +20,14 @@ import (
 )
 
 func TestHandleSubscriptionAlreadyClosed(t *testing.T) {
-	ch := make(chan watchable.Snapshot[string, any])
+	ch := make(chan watchable.Snapshot[string, string])
 	close(ch)
 
 	var calls int
-	message.HandleSubscription[string, any](
+	message.HandleSubscription[string, string](
 		message.Metadata{Runner: "demo", Message: "demo"},
 		ch,
-		func(update message.Update[string, any], errChans chan error) { calls++ },
+		func(update message.Update[string, string], errChans chan error) { calls++ },
 	)
 	assert.Equal(t, 0, calls)
 }
@@ -38,7 +38,7 @@ func TestPanicInSubscriptionHandler(t *testing.T) {
 			assert.Fail(t, "recovered from an unexpected panic")
 		}
 	}()
-	var m watchable.Map[string, any]
+	var m watchable.Map[string, string]
 	m.Store("foo", "bar")
 
 	go func() {
@@ -49,10 +49,10 @@ func TestPanicInSubscriptionHandler(t *testing.T) {
 	}()
 
 	numCalls := 0
-	message.HandleSubscription[string, any](
+	message.HandleSubscription[string, string](
 		message.Metadata{Runner: "demo", Message: "demo"},
 		m.Subscribe(context.Background()),
-		func(update message.Update[string, any], errChans chan error) {
+		func(update message.Update[string, string], errChans chan error) {
 			numCalls++
 			panic("oops " + update.Key)
 		},
@@ -61,7 +61,7 @@ func TestPanicInSubscriptionHandler(t *testing.T) {
 }
 
 func TestHandleSubscriptionAlreadyInitialized(t *testing.T) {
-	var m watchable.Map[string, any]
+	var m watchable.Map[string, string]
 	m.Store("foo", "bar")
 
 	endCtx, end := context.WithCancel(context.Background())
@@ -77,10 +77,10 @@ func TestHandleSubscriptionAlreadyInitialized(t *testing.T) {
 
 	var storeCalls int
 	var deleteCalls int
-	message.HandleSubscription[string, any](
+	message.HandleSubscription[string, string](
 		message.Metadata{Runner: "demo", Message: "demo"},
 		m.Subscribe(context.Background()),
-		func(update message.Update[string, any], errChans chan error) {
+		func(update message.Update[string, string], errChans chan error) {
 			end()
 			if update.Delete {
 				deleteCalls++
@@ -247,19 +247,19 @@ func TestControllerResourceUpdate(t *testing.T) {
 
 			snapshotC := m.GatewayAPIResources.Subscribe(ctx)
 			endCtx, end := context.WithCancel(ctx)
-			m.GatewayAPIResources.Store("start", &resource.ControllerResources{})
+			m.GatewayAPIResources.Store("start", message.NewProviderResourcesMessageWithNextVersion(&resource.ControllerResources{}))
 
 			go func() {
 				<-endCtx.Done()
 				for _, r := range tc.resources {
 					r.Sort()
-					m.GatewayAPIResources.Store("test", r)
+					m.GatewayAPIResources.Store("test", message.NewProviderResourcesMessageWithNextVersion(r))
 				}
-				m.GatewayAPIResources.Store("end", &resource.ControllerResources{})
+				m.GatewayAPIResources.Store("end", message.NewProviderResourcesMessageWithNextVersion(&resource.ControllerResources{}))
 			}()
 
 			updates := 0
-			message.HandleSubscription(message.Metadata{Runner: "demo", Message: "demo"}, snapshotC, func(u message.Update[string, *resource.ControllerResources], errChans chan error) {
+			message.HandleSubscription(message.Metadata{Runner: "demo", Message: "demo"}, snapshotC, func(u message.Update[string, *message.ProviderResourcesMessage], errChans chan error) {
 				end()
 				if u.Key == "test" {
 					updates += 1

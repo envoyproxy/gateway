@@ -227,7 +227,7 @@ func Test_subscribeAndTranslate(t *testing.T) {
 					xdsIR.Delete(xds.Key)
 					continue
 				}
-				xdsIR.Store(xds.Key, xds.Value)
+				xdsIR.Store(xds.Key, message.NewXdsIRMessageWithNextVersion(xds.Value))
 			}
 
 			diff := ""

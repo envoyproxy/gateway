@@ -136,20 +136,24 @@ func buildXDSResourceFromCache(rateLimitConfigsCache map[string][]cachetype.Reso
 	return xdsResourcesToUpdate
 }
 
-func (r *Runner) subscribeAndTranslate(ctx context.Context, c <-chan watchable.Snapshot[string, *ir.Xds]) {
+func (r *Runner) subscribeAndTranslate(ctx context.Context, c <-chan watchable.Snapshot[string, *message.XdsIRMessage]) {
 	// rateLimitConfigsCache is a cache of the rate limit config, which is keyed by the xdsIR key.
 	rateLimitConfigsCache := map[string][]cachetype.Resource{}
 
 	message.HandleSubscription(message.Metadata{Runner: r.Name(), Message: message.XDSIRMessageName}, c,
-		func(update message.Update[string, *ir.Xds], errChan chan error) {
-			r.Logger.Info("received a notification")
+		func(update message.Update[string, *message.XdsIRMessage], errChan chan error) {
+			r.Logger.Info("received a notification", "version", update.Version)
 
 			if update.Delete {
 				delete(rateLimitConfigsCache, update.Key)
 				r.updateSnapshot(ctx, buildXDSResourceFromCache(rateLimitConfigsCache))
 			} else {
 				// Translate to ratelimit xDS Config.
-				rvt, err := r.translate(update.Value)
+				var xds *ir.Xds
+				if update.Value != nil {
+					xds = update.Value.Xds
+				}
+				rvt, err := r.translate(xds)
 				if err != nil {
 					r.Logger.Error(err, "failed to translate an updated xds-ir to ratelimit xDS Config")
 					errChan <- err

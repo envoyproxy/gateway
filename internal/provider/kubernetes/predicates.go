@@ -749,8 +749,8 @@ func (r *gatewayAPIReconciler) updateGatewayStatus(gateway *gwapiv1.Gateway) {
 	gwName := utils.NamespacedName(gateway)
 	status := &gateway.Status
 	// Use the existing status if it exists to avoid losing the status calculated by the Gateway API translator.
-	if existing, ok := r.resources.GatewayStatuses.Load(gwName); ok {
-		status = existing
+	if existing, ok := r.resources.GatewayStatuses.Load(gwName); ok && existing.Value != nil {
+		status = existing.Value
 	}
 
 	// Since the status does not reflect the actual changed status, we need to delete it first
