@@ -5,7 +5,6 @@ data:
   xds_service_account_token.json: '{"resources":[{"@type":"type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.Secret","name":"jwt-sa-bearer","generic_secret":{"secret":{"filename":"/var/run/secrets/token/sa-token"}}}]}'
 kind: ConfigMap
 metadata:
-  creationTimestamp: null
   labels:
     app.kubernetes.io/component: proxy
     app.kubernetes.io/managed-by: envoy-gateway

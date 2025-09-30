@@ -2,7 +2,6 @@ gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
   metadata:
-    creationTimestamp: null
     name: gateway-1
     namespace: envoy-gateway
   spec:
@@ -43,7 +42,6 @@ httpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
   metadata:
-    creationTimestamp: null
     name: httproute-1
     namespace: default
   spec:
@@ -102,7 +100,6 @@ securityPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: SecurityPolicy
   metadata:
-    creationTimestamp: null
     name: policy-for-gateway
     namespace: envoy-gateway
     uid: b8284d0f-de82-4c65-b204-96a0d3f258a1
@@ -133,9 +130,10 @@ securityPolicies:
         namespace: envoy-gateway
       conditions:
       - lastTransitionTime: null
-        message: Policy has been accepted.
-        reason: Accepted
-        status: "True"
+        message: 'OIDC: error fetching endpoints from issuer: Get "https://accounts.google.com/.well-known/openid-configuration":
+          proxyconnect tcp: dial tcp 192.168.4.146:7890: connect: no route to host.'
+        reason: Invalid
+        status: "False"
         type: Accepted
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 xdsIR:
@@ -197,6 +195,8 @@ xdsIR:
             name: httproute/default/httproute-1/rule/0/backend/0
             protocol: HTTP
             weight: 1
+        directResponse:
+          statusCode: 500
         hostname: www.example.com
         isHTTP2: false
         metadata:
@@ -208,24 +208,7 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /foo
-        security:
-          oidc:
-            clientID: client1.apps.googleusercontent.com
-            clientSecret: '[redacted]'
-            cookieNameOverrides:
-              accessToken: CustomAccessTokenCookie
-              idToken: CustomIdTokenCookie
-            cookieSuffix: b0a1b740
-            hmacSecret: '[redacted]'
-            logoutPath: /bar/logout
-            name: securitypolicy/envoy-gateway/policy-for-gateway
-            provider:
-              authorizationEndpoint: https://accounts.google.com/o/oauth2/v2/auth
-              tokenEndpoint: https://oauth2.googleapis.com/token
-            redirectPath: /bar/oauth2/callback
-            redirectURL: https://www.example.com/bar/oauth2/callback
-            scopes:
-            - openid
+        security: {}
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

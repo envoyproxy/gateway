@@ -2,7 +2,6 @@ gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
   metadata:
-    creationTimestamp: null
     name: gateway-1
     namespace: default
   spec:
@@ -63,7 +62,6 @@ securityPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: SecurityPolicy
   metadata:
-    creationTimestamp: null
     name: policy-non-exist-secretRef
     namespace: default
     uid: b8284d0f-de82-4c65-b204-96a0d3f258a1
@@ -89,8 +87,8 @@ securityPolicies:
         namespace: default
       conditions:
       - lastTransitionTime: null
-        message: 'OIDC: error fetching endpoints from issuer: invalid character ''<''
-          looking for beginning of value.'
+        message: 'OIDC: error fetching endpoints from issuer: Get "https://httpbin.org//.well-known/openid-configuration":
+          proxyconnect tcp: dial tcp 192.168.4.146:7890: connect: no route to host.'
         reason: Invalid
         status: "False"
         type: Accepted
