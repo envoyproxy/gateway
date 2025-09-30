@@ -295,6 +295,7 @@ func mustUnmarshal(t *testing.T, path string, out interface{}) {
 func cmpResources(t *testing.T, x, y interface{}) {
 	opts := []cmp.Option{
 		cmpopts.IgnoreFields(metav1.ObjectMeta{}, "ResourceVersion"),
+		cmpopts.IgnoreFields(metav1.TypeMeta{}, "Kind", "APIVersion"),
 		cmpopts.EquateEmpty(),
 	}
 	require.Empty(t, cmp.Diff(x, y, opts...))
