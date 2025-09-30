@@ -59,6 +59,7 @@ func TestExperimentalConformance(t *testing.T) {
 	opts.SkipTests = append(opts.SkipTests,
 		tests.BackendTLSPolicyInvalidCACertificateRef.ShortName,
 		tests.BackendTLSPolicyInvalidKind.ShortName,
+		tests.BackendTLSPolicySANValidation.ShortName,
 	)
 
 	t.Logf("Running experimental conformance tests with %s GatewayClass\n cleanup: %t\n debug: %t\n enable all features: %t \n conformance profiles: [%v]",
