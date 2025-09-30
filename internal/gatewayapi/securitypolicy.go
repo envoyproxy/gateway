@@ -1095,17 +1095,18 @@ func (t *Translator) buildOIDC(
 	envoyProxy *egv1a1.EnvoyProxy,
 ) (*ir.OIDC, error) {
 	var (
-		oidc                  = policy.Spec.OIDC
-		provider              *ir.OIDCProvider
-		clientID              string
-		clientSecret          *corev1.Secret
-		redirectURL           = defaultRedirectURL
-		redirectPath          = defaultRedirectPath
-		logoutPath            = defaultLogoutPath
-		forwardAccessToken    = defaultForwardAccessToken
-		refreshToken          = defaultRefreshToken
-		passThroughAuthHeader = defaultPassThroughAuthHeader
-		err                   error
+		oidc                   = policy.Spec.OIDC
+		provider               *ir.OIDCProvider
+		clientID               string
+		clientSecret           *corev1.Secret
+		redirectURL            = defaultRedirectURL
+		redirectPath           = defaultRedirectPath
+		logoutPath             = defaultLogoutPath
+		forwardAccessToken     = defaultForwardAccessToken
+		refreshToken           = defaultRefreshToken
+		passThroughAuthHeader  = defaultPassThroughAuthHeader
+		disableTokenEncryption = false
+		err                    error
 	)
 
 	if provider, err = t.buildOIDCProvider(policy, resources, envoyProxy); err != nil {
@@ -1172,6 +1173,9 @@ func (t *Translator) buildOIDC(
 	if oidc.PassThroughAuthHeader != nil {
 		passThroughAuthHeader = *oidc.PassThroughAuthHeader
 	}
+	if oidc.DisableTokenEncryption != nil {
+		disableTokenEncryption = *oidc.DisableTokenEncryption
+	}
 
 	// Generate a unique cookie suffix for oauth filters.
 	// This is to avoid cookie name collision when multiple security policies are applied
@@ -1193,24 +1197,25 @@ func (t *Translator) buildOIDC(
 	}
 
 	irOIDC := &ir.OIDC{
-		Name:                  irConfigName(policy),
-		Provider:              *provider,
-		ClientID:              clientID,
-		ClientSecret:          clientSecretBytes,
-		Scopes:                scopes,
-		Resources:             oidc.Resources,
-		RedirectURL:           redirectURL,
-		RedirectPath:          redirectPath,
-		LogoutPath:            logoutPath,
-		ForwardAccessToken:    forwardAccessToken,
-		RefreshToken:          refreshToken,
-		CookieSuffix:          suffix,
-		CookieNameOverrides:   policy.Spec.OIDC.CookieNames,
-		CookieDomain:          policy.Spec.OIDC.CookieDomain,
-		CookieConfig:          policy.Spec.OIDC.CookieConfig,
-		HMACSecret:            hmacData,
-		PassThroughAuthHeader: passThroughAuthHeader,
-		DenyRedirect:          oidc.DenyRedirect,
+		Name:                   irConfigName(policy),
+		Provider:               *provider,
+		ClientID:               clientID,
+		ClientSecret:           clientSecretBytes,
+		Scopes:                 scopes,
+		Resources:              oidc.Resources,
+		RedirectURL:            redirectURL,
+		RedirectPath:           redirectPath,
+		LogoutPath:             logoutPath,
+		ForwardAccessToken:     forwardAccessToken,
+		RefreshToken:           refreshToken,
+		CookieSuffix:           suffix,
+		CookieNameOverrides:    policy.Spec.OIDC.CookieNames,
+		CookieDomain:           policy.Spec.OIDC.CookieDomain,
+		CookieConfig:           policy.Spec.OIDC.CookieConfig,
+		HMACSecret:             hmacData,
+		PassThroughAuthHeader:  passThroughAuthHeader,
+		DisableTokenEncryption: disableTokenEncryption,
+		DenyRedirect:           oidc.DenyRedirect,
 	}
 
 	if oidc.DefaultTokenTTL != nil {

@@ -43827,6 +43827,12 @@ spec:
                     required:
                     - headers
                     type: object
+                  disableTokenEncryption:
+                    description: |-
+                      Disable token encryption. When set to true, both the access token and the ID token will be stored in plain text.
+                      This option should only be used in secure environments where token encryption is not required.
+                      Default is false (tokens are encrypted).
+                    type: boolean
                   forwardAccessToken:
                     description: |-
                       ForwardAccessToken indicates whether the Envoy should forward the access token
