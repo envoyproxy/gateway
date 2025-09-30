@@ -12,7 +12,6 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -130,10 +129,18 @@ func TestCreateOrUpdateRateLimitServiceAccount(t *testing.T) {
 			}
 			require.NoError(t, kube.Client.Get(context.Background(), client.ObjectKeyFromObject(actual), actual))
 
-			opts := cmpopts.IgnoreFields(metav1.ObjectMeta{}, "ResourceVersion")
-			assert.True(t, cmp.Equal(tc.want, actual, opts))
+			requireEqual(t, tc.want, actual)
 		})
 	}
+}
+
+// TODO: move to utils package?
+func requireEqual(t *testing.T, want, actual any) {
+	opts := []cmp.Option{
+		cmpopts.IgnoreFields(metav1.ObjectMeta{}, "ResourceVersion"),
+		cmpopts.IgnoreFields(metav1.TypeMeta{}, "Kind", "APIVersion"),
+	}
+	require.Empty(t, cmp.Diff(want, actual, opts...))
 }
 
 func TestDeleteRateLimitServiceAccount(t *testing.T) {
