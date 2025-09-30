@@ -63,6 +63,8 @@ func TestExperimentalConformance(t *testing.T) {
 		tests.BackendTLSPolicyConflictResolution.ShortName,
 		tests.BackendTLSPolicy.ShortName,
 		tests.BackendTLSPolicyObservedGenerationBump.ShortName,
+		tests.TLSRouteInvalidReferenceGrant.ShortName,
+		tests.TLSRouteSimpleSameNamespace.ShortName,
 	)
 
 	t.Logf("Running experimental conformance tests with %s GatewayClass\n cleanup: %t\n debug: %t\n enable all features: %t \n conformance profiles: [%v]",
