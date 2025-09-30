@@ -21,7 +21,6 @@ import (
 	utilyaml "k8s.io/apimachinery/pkg/util/yaml"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gwapiv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	"sigs.k8s.io/yaml"
 
@@ -384,7 +383,7 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool) (*Res
 			resources.ConfigMaps = append(resources.ConfigMaps, configMap)
 		case KindBackendTLSPolicy:
 			typedSpec := spec.Interface()
-			backendTLSPolicy := &gwapiv1a3.BackendTLSPolicy{
+			backendTLSPolicy := &gwapiv1.BackendTLSPolicy{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       KindBackendTLSPolicy,
 					APIVersion: gv,
@@ -393,7 +392,7 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool) (*Res
 					Name:      name,
 					Namespace: namespace,
 				},
-				Spec: typedSpec.(gwapiv1a3.BackendTLSPolicySpec),
+				Spec: typedSpec.(gwapiv1.BackendTLSPolicySpec),
 			}
 			resources.BackendTLSPolicies = append(resources.BackendTLSPolicies, backendTLSPolicy)
 		case KindEnvoyExtensionPolicy:

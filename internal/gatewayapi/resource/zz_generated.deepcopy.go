@@ -17,7 +17,6 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
-	"sigs.k8s.io/gateway-api/apis/v1alpha3"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 	apisv1alpha1 "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 )
@@ -242,11 +241,11 @@ func (in *Resources) DeepCopyInto(out *Resources) {
 	}
 	if in.BackendTLSPolicies != nil {
 		in, out := &in.BackendTLSPolicies, &out.BackendTLSPolicies
-		*out = make([]*v1alpha3.BackendTLSPolicy, len(*in))
+		*out = make([]*v1.BackendTLSPolicy, len(*in))
 		for i := range *in {
 			if (*in)[i] != nil {
 				in, out := &(*in)[i], &(*out)[i]
-				*out = new(v1alpha3.BackendTLSPolicy)
+				*out = new(v1.BackendTLSPolicy)
 				(*in).DeepCopyInto(*out)
 			}
 		}

@@ -14,7 +14,6 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gwapiv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	mcsapiv1a1 "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
@@ -59,7 +58,7 @@ type Resources struct {
 	ClientTrafficPolicies   []*egv1a1.ClientTrafficPolicy  `json:"clientTrafficPolicies,omitempty" yaml:"clientTrafficPolicies,omitempty"`
 	BackendTrafficPolicies  []*egv1a1.BackendTrafficPolicy `json:"backendTrafficPolicies,omitempty" yaml:"backendTrafficPolicies,omitempty"`
 	SecurityPolicies        []*egv1a1.SecurityPolicy       `json:"securityPolicies,omitempty" yaml:"securityPolicies,omitempty"`
-	BackendTLSPolicies      []*gwapiv1a3.BackendTLSPolicy  `json:"backendTLSPolicies,omitempty" yaml:"backendTLSPolicies,omitempty"`
+	BackendTLSPolicies      []*gwapiv1.BackendTLSPolicy    `json:"backendTLSPolicies,omitempty" yaml:"backendTLSPolicies,omitempty"`
 	EnvoyExtensionPolicies  []*egv1a1.EnvoyExtensionPolicy `json:"envoyExtensionPolicies,omitempty" yaml:"envoyExtensionPolicies,omitempty"`
 	ExtensionServerPolicies []unstructured.Unstructured    `json:"extensionServerPolicies,omitempty" yaml:"extensionServerPolicies,omitempty"`
 	Backends                []*egv1a1.Backend              `json:"backends,omitempty" yaml:"backends,omitempty"`
@@ -85,7 +84,7 @@ func NewResources() *Resources {
 		ClientTrafficPolicies:   []*egv1a1.ClientTrafficPolicy{},
 		BackendTrafficPolicies:  []*egv1a1.BackendTrafficPolicy{},
 		SecurityPolicies:        []*egv1a1.SecurityPolicy{},
-		BackendTLSPolicies:      []*gwapiv1a3.BackendTLSPolicy{},
+		BackendTLSPolicies:      []*gwapiv1.BackendTLSPolicy{},
 		EnvoyExtensionPolicies:  []*egv1a1.EnvoyExtensionPolicy{},
 		ExtensionServerPolicies: []unstructured.Unstructured{},
 		Backends:                []*egv1a1.Backend{},
