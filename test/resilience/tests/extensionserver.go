@@ -69,19 +69,7 @@ var ESResilience = suite.ResilienceTest{
 				Namespace: ns,
 			}
 
-			req := http.MakeRequest(t, &expectedResponse, gwAddr, "http", "http")
-			http.AwaitConvergence(t, threshold, timeout, func(elapsed time.Duration) bool {
-				cReq, cRes, err := suite.RoundTripper.CaptureRoundTrip(req)
-				if err != nil {
-					tlog.Logf(t, "Request failed, not ready yet: %v (after %v)", err.Error(), elapsed)
-					return false
-				}
-				if err := http.CompareRoundTrip(t, &req, cReq, cRes, expectedResponse); err != nil {
-					tlog.Logf(t, "Response expectation failed for request: %+v  not ready yet: %v (after %v)", req, err, elapsed)
-					return false
-				}
-				return true
-			})
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 
 			t.Log("Check Route is modified by extension server")
 			// ensure the extension server is connected and mutating resources
@@ -96,19 +84,7 @@ var ESResilience = suite.ResilienceTest{
 				Namespace: ns,
 			}
 
-			req = http.MakeRequest(t, &expectedResponse, gwAddr, "http", "http")
-			http.AwaitConvergence(t, threshold, timeout, func(elapsed time.Duration) bool {
-				cReq, cRes, err := suite.RoundTripper.CaptureRoundTrip(req)
-				if err != nil {
-					tlog.Logf(t, "Request failed, not ready yet: %v (after %v)", err.Error(), elapsed)
-					return false
-				}
-				if err := http.CompareRoundTrip(t, &req, cReq, cRes, expectedResponse); err != nil {
-					tlog.Logf(t, "Response expectation failed for request: %+v  not ready yet: %v (after %v)", req, err, elapsed)
-					return false
-				}
-				return true
-			})
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 
 			t.Log("Getting current error translation count")
 			translatorErrors, err := waitForMetricValueVerification(t, suite, PrometheusXDSTranslatorErrors, func(actual float64) bool {
@@ -138,19 +114,7 @@ var ESResilience = suite.ResilienceTest{
 			require.NoError(t, err, "Failed to scale deployment replicas")
 
 			// confirm that the old (pre-error) cache is preserved
-			req = http.MakeRequest(t, &expectedResponse, gwAddr, "http", "http")
-			http.AwaitConvergence(t, threshold, timeout, func(elapsed time.Duration) bool {
-				cReq, cRes, err := suite.RoundTripper.CaptureRoundTrip(req)
-				if err != nil {
-					tlog.Logf(t, "Request failed, not ready yet: %v (after %v)", err.Error(), elapsed)
-					return false
-				}
-				if err := http.CompareRoundTrip(t, &req, cReq, cRes, expectedResponse); err != nil {
-					tlog.Logf(t, "Response expectation failed for request: %+v  not ready yet: %v (after %v)", req, err, elapsed)
-					return false
-				}
-				return true
-			})
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 
 			t.Log("Deleting control plane cache and confirming proxy cache is still preserved")
 			t.Log("Scaling down control plane")
@@ -174,19 +138,7 @@ var ESResilience = suite.ResilienceTest{
 			require.NoError(t, err, "Failed to capture envoy connection to control plane")
 
 			t.Log("Checking proxy cache is still preserved when connected to control plane with no snapshot")
-			req = http.MakeRequest(t, &expectedResponse, gwAddr, "http", "http")
-			http.AwaitConvergence(t, threshold, timeout, func(elapsed time.Duration) bool {
-				cReq, cRes, err := suite.RoundTripper.CaptureRoundTrip(req)
-				if err != nil {
-					tlog.Logf(t, "Request failed, not ready yet: %v (after %v)", err.Error(), elapsed)
-					return false
-				}
-				if err := http.CompareRoundTrip(t, &req, cReq, cRes, expectedResponse); err != nil {
-					tlog.Logf(t, "Response expectation failed for request: %+v  not ready yet: %v (after %v)", req, err, elapsed)
-					return false
-				}
-				return true
-			})
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 
 			t.Log("Fixing translation error by changing the failing route")
 			ap.MustApplyWithCleanup(t, suite.Client, suite.TimeoutConfig, "testdata/route_fail_extension_manager_update.yaml", true)
@@ -203,20 +155,7 @@ var ESResilience = suite.ResilienceTest{
 				Namespace: ns,
 			}
 
-			req = http.MakeRequest(t, &expectedResponse, gwAddr, "http", "http")
-
-			http.AwaitConvergence(t, threshold, timeout, func(elapsed time.Duration) bool {
-				cReq, cRes, err := suite.RoundTripper.CaptureRoundTrip(req)
-				if err != nil {
-					tlog.Logf(t, "Request failed, not ready yet: %v (after %v)", err.Error(), elapsed)
-					return false
-				}
-				if err := http.CompareRoundTrip(t, &req, cReq, cRes, expectedResponse); err != nil {
-					tlog.Logf(t, "Response expectation failed for request: %+v  not ready yet: %v (after %v)", req, err, elapsed)
-					return false
-				}
-				return true
-			})
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 		})
 	},
 }
