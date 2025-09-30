@@ -39,6 +39,11 @@ var EPResilience = suite.ResilienceTest{
 
 		ap.MustApplyWithCleanup(t, suite.Client, suite.TimeoutConfig, "testdata/base.yaml", true)
 
+		// Preserve original convergence semantics for resilience tests
+		localTimeout := suite.TimeoutConfig
+		localTimeout.RequiredConsecutiveSuccesses = 2
+		localTimeout.MaxTimeToConsistency = time.Minute
+
 		t.Run("Envoy proxies continue to work even when eg is offline", func(t *testing.T) {
 			ctx := context.Background()
 
@@ -76,7 +81,7 @@ var EPResilience = suite.ResilienceTest{
 				Namespace: ns,
 			}
 
-			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, localTimeout, gwAddr, expectedResponse)
 		})
 	},
 }

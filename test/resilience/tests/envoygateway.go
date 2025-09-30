@@ -50,6 +50,11 @@ var EGResilience = suite.ResilienceTest{
 		}
 		ap.MustApplyWithCleanup(t, suite.Client, suite.TimeoutConfig, "testdata/base.yaml", true)
 
+		// Preserve original convergence semantics for resilience tests
+		localTimeout := suite.TimeoutConfig
+		localTimeout.RequiredConsecutiveSuccesses = threshold
+		localTimeout.MaxTimeToConsistency = timeout
+
 		// this test will fail until https://github.com/envoyproxy/gateway/pull/4767/files is merged
 		t.Run("Secondary EnvoyGateway instances can serve an up to date xDS", func(t *testing.T) {
 			ctx := context.Background()
@@ -106,7 +111,7 @@ var EGResilience = suite.ResilienceTest{
 				Namespace: ns,
 			}
 
-			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, localTimeout, gwAddr, expectedResponse)
 		})
 
 		t.Run("EnvoyGateway reconciles missed resources and sync xDS after api server connectivity is restored", func(t *testing.T) {
@@ -152,7 +157,7 @@ var EGResilience = suite.ResilienceTest{
 				Namespace: ns,
 			}
 
-			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, localTimeout, gwAddr, expectedResponse)
 
 			require.NoError(t, err, "Failed during connectivity checkup")
 		})
@@ -210,7 +215,7 @@ var EGResilience = suite.ResilienceTest{
 				Namespace: ns,
 			}
 
-			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, localTimeout, gwAddr, expectedResponse)
 		})
 	},
 }
