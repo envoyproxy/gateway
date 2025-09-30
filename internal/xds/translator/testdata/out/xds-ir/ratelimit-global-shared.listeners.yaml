@@ -18,6 +18,7 @@
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.ratelimit.v3.RateLimit
             domain: first-listener
+            disableXEnvoyRatelimitedHeader: true
             enableXRatelimitHeaders: DRAFT_VERSION_03
             rateLimitService:
               grpcService:
@@ -28,6 +29,7 @@
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.ratelimit.v3.RateLimit
             domain: test-namespace/test-policy-1
+            disableXEnvoyRatelimitedHeader: true
             enableXRatelimitHeaders: DRAFT_VERSION_03
             rateLimitService:
               grpcService:
@@ -38,6 +40,7 @@
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.ratelimit.v3.RateLimit
             domain: test-namespace/test-policy-2
+            disableXEnvoyRatelimitedHeader: true
             enableXRatelimitHeaders: DRAFT_VERSION_03
             rateLimitService:
               grpcService:
