@@ -70,7 +70,7 @@ func containsGlobalRateLimit(httpListeners []*ir.HTTPListener) bool {
 func createEnvoyClientTLSCertSecret(tCtx *types.ResourceVersionTable, globalResources *ir.GlobalResources) error {
 	if err := tCtx.AddXdsResource(
 		resourcev3.SecretType,
-		buildXdsTLSCertSecret(*globalResources.EnvoyClientCertificate)); err != nil {
+		buildXdsTLSCertSecret(globalResources.EnvoyClientCertificate)); err != nil {
 		return err
 	}
 	return nil

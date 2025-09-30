@@ -406,7 +406,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 		// 1:1 between IR TLSListenerConfig and xDS Secret
 		if httpListener.TLS != nil {
 			for c := range httpListener.TLS.Certificates {
-				secret := buildXdsTLSCertSecret(httpListener.TLS.Certificates[c])
+				secret := buildXdsTLSCertSecret(&httpListener.TLS.Certificates[c])
 				if err = tCtx.AddXdsResource(resourcev3.SecretType, secret); err != nil {
 					errs = errors.Join(errs, err)
 				}
@@ -427,7 +427,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 				for _, st := range route.Destination.Settings {
 					if st.TLS != nil {
 						for _, cert := range st.TLS.ClientCertificates {
-							secret := buildXdsTLSCertSecret(cert)
+							secret := buildXdsTLSCertSecret(&cert)
 							if err := tCtx.AddXdsResource(resourcev3.SecretType, secret); err != nil {
 								errs = errors.Join(errs, err)
 							}
@@ -774,14 +774,14 @@ func (t *Translator) processTCPListenerXdsTranslation(
 			if route.TLS != nil && route.TLS.Terminate != nil {
 				// add tls route client certs
 				for _, cert := range route.TLS.Terminate.ClientCertificates {
-					secret := buildXdsTLSCertSecret(cert)
+					secret := buildXdsTLSCertSecret(&cert)
 					if err := tCtx.AddXdsResource(resourcev3.SecretType, secret); err != nil {
 						errs = errors.Join(errs, err)
 					}
 				}
 
 				for _, s := range route.TLS.Terminate.Certificates {
-					secret := buildXdsTLSCertSecret(s)
+					secret := buildXdsTLSCertSecret(&s)
 					if err := tCtx.AddXdsResource(resourcev3.SecretType, secret); err != nil {
 						errs = errors.Join(errs, err)
 					}

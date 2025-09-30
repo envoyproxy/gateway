@@ -423,6 +423,8 @@ type TLSCertificate struct {
 	Certificate []byte `json:"certificate,omitempty" yaml:"certificate,omitempty"`
 	// PrivateKey for the server.
 	PrivateKey PrivateBytes `json:"privateKey,omitempty" yaml:"privateKey,omitempty"`
+	// OCSPStaple contains the stapled OCSP response associated with the certificate, if provided.
+	OCSPStaple []byte `json:"ocspStaple,omitempty" yaml:"ocspStaple,omitempty"`
 }
 
 // TLSCACertificate holds CA Certificate to validate clients
@@ -448,7 +450,7 @@ type SubjectAltName struct {
 	URI *string `json:"uri,omitempty" yaml:"uri,omitempty"`
 }
 
-func (t TLSCertificate) Validate() error {
+func (t *TLSCertificate) Validate() error {
 	var errs error
 	if len(t.Certificate) == 0 {
 		errs = errors.Join(errs, ErrTLSCertEmpty)
