@@ -15,22 +15,22 @@ render:
   knownTypes:
     - name: BackendObjectReference
       package: sigs.k8s.io/gateway-api/apis/v1
-      link: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.BackendObjectReference
+      link: https://gateway-api.sigs.k8s.io/reference/spec/#backendobjectreference
     - name: SecretObjectReference
       package: sigs.k8s.io/gateway-api/apis/v1
-      link: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.SecretObjectReference
+      link: https://gateway-api.sigs.k8s.io/reference/spec/#secretobjectreference
     - name: LocalPolicyTargetReferenceWithSectionName
       package: sigs.k8s.io/gateway-api/apis/v1alpha2
-      link: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1alpha2.LocalPolicyTargetReferenceWithSectionName
+      link: https://gateway-api.sigs.k8s.io/reference/spec/#localpolicytargetreferencewithsectionname
     - name: LocalPolicyTargetReference
-      package: sigs.k8s.io/gateway-api/apis/v1alpha2
-      link: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1alpha2.LocalPolicyTargetReference
+      package: sigs.k8s.io/gateway-api/apis/v1
+      link: https://gateway-api.sigs.k8s.io/reference/spec/#localpolicytargetreference
     - name: Duration
       package: sigs.k8s.io/gateway-api/apis/v1
-      link: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.Duration
+      link: https://gateway-api.sigs.k8s.io/reference/spec/#duration
     - name: PolicyStatus
-      package: sigs.k8s.io/gateway-api/apis/v1alpha2
-      link: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1alpha2.PolicyStatus
+      package: sigs.k8s.io/gateway-api/apis/v1
+      link: https://gateway-api.sigs.k8s.io/reference/spec/#policystatus
     - name: Fraction
       package: sigs.k8s.io/gateway-api/apis/v1
-      link: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.Fraction
+      link: https://gateway-api.sigs.k8s.io/reference/spec/#fraction

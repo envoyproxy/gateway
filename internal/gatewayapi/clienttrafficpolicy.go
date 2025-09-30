@@ -18,7 +18,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
@@ -32,7 +32,7 @@ const (
 	AllSections = "/"
 )
 
-func hasSectionName(target *gwapiv1a2.LocalPolicyTargetReferenceWithSectionName) bool {
+func hasSectionName(target *gwapiv1.LocalPolicyTargetReferenceWithSectionName) bool {
 	return target.SectionName != nil
 }
 
@@ -106,7 +106,7 @@ func (t *Translator) ProcessClientTrafficPolicies(
 						string(currTarget.Name))
 
 					resolveErr = &status.PolicyResolveError{
-						Reason:  gwapiv1a2.PolicyReasonConflicted,
+						Reason:  gwapiv1.PolicyReasonConflicted,
 						Message: message,
 					}
 
@@ -201,7 +201,7 @@ func (t *Translator) ProcessClientTrafficPolicies(
 						string(currTarget.Name))
 
 					resolveErr = &status.PolicyResolveError{
-						Reason:  gwapiv1a2.PolicyReasonConflicted,
+						Reason:  gwapiv1.PolicyReasonConflicted,
 						Message: message,
 					}
 
@@ -285,7 +285,7 @@ func (t *Translator) ProcessClientTrafficPolicies(
 
 func resolveCTPolicyTargetRef(
 	policy *egv1a1.ClientTrafficPolicy,
-	targetRef *gwapiv1a2.LocalPolicyTargetReferenceWithSectionName,
+	targetRef *gwapiv1.LocalPolicyTargetReferenceWithSectionName,
 	gateways map[types.NamespacedName]*policyGatewayTargetContext,
 ) (*GatewayContext, *status.PolicyResolveError) {
 	// Check if the gateway exists

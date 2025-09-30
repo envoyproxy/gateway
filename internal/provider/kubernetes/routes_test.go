@@ -60,7 +60,7 @@ func TestProcessHTTPRoutes(t *testing.T) {
 				{
 					Name:     "http",
 					Protocol: gwapiv1.HTTPProtocolType,
-					Port:     gwapiv1.PortNumber(int32(8080)),
+					Port:     int32(8080),
 				},
 			},
 		},
@@ -691,7 +691,7 @@ func TestProcessGRPCRoutes(t *testing.T) {
 				{
 					Name:     "http",
 					Protocol: gwapiv1.HTTPProtocolType,
-					Port:     gwapiv1.PortNumber(int32(8080)),
+					Port:     int32(8080),
 				},
 			},
 		},

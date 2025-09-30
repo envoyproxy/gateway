@@ -7,7 +7,7 @@ package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
 const (
@@ -29,7 +29,7 @@ type EnvoyExtensionPolicy struct {
 	Spec EnvoyExtensionPolicySpec `json:"spec"`
 
 	// Status defines the current status of EnvoyExtensionPolicy.
-	Status gwapiv1a2.PolicyStatus `json:"status,omitempty"`
+	Status gwapiv1.PolicyStatus `json:"status,omitempty"`
 }
 
 // EnvoyExtensionPolicySpec defines the desired state of EnvoyExtensionPolicy.

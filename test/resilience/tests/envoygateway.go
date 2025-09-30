@@ -114,7 +114,7 @@ var EGResilience = suite.ResilienceTest{
 					return false
 				}
 
-				if err := http.CompareRequest(t, &req, cReq, cRes, expectedResponse); err != nil {
+				if err := http.CompareRoundTrip(t, &req, cReq, cRes, expectedResponse); err != nil {
 					tlog.Logf(t, "Response expectation failed for request: %+v  not ready yet: %v (after %v)", req, err, elapsed)
 					return false
 				}
@@ -173,7 +173,7 @@ var EGResilience = suite.ResilienceTest{
 					return false
 				}
 
-				if err := http.CompareRequest(t, &req, cReq, cRes, expectedResponse); err != nil {
+				if err := http.CompareRoundTrip(t, &req, cReq, cRes, expectedResponse); err != nil {
 					tlog.Logf(t, "Response expectation failed for request: %+v  not ready yet: %v (after %v)", req, err, elapsed)
 					return false
 				}
@@ -245,7 +245,7 @@ var EGResilience = suite.ResilienceTest{
 					return false
 				}
 
-				if err := http.CompareRequest(t, &req, cReq, cRes, expectedResponse); err != nil {
+				if err := http.CompareRoundTrip(t, &req, cReq, cRes, expectedResponse); err != nil {
 					tlog.Logf(t, "Response expectation failed for request: %+v  not ready yet: %v (after %v)", req, err, elapsed)
 					return false
 				}

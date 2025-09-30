@@ -11,55 +11,56 @@ import (
 
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
 
 type PolicyResolveError struct {
-	Reason  gwapiv1a2.PolicyConditionReason
+	Reason  gwapiv1.PolicyConditionReason
 	Message string
 
 	error
 }
 
-func SetResolveErrorForPolicyAncestors(policyStatus *gwapiv1a2.PolicyStatus, ancestorRefs []*gwapiv1a2.ParentReference, controllerName string, generation int64, resolveErr *PolicyResolveError) {
+func SetResolveErrorForPolicyAncestors(policyStatus *gwapiv1.PolicyStatus, ancestorRefs []*gwapiv1.ParentReference, controllerName string, generation int64, resolveErr *PolicyResolveError) {
 	for _, ancestorRef := range ancestorRefs {
 		SetConditionForPolicyAncestor(policyStatus, ancestorRef, controllerName,
-			gwapiv1a2.PolicyConditionAccepted, metav1.ConditionFalse, resolveErr.Reason, resolveErr.Message, generation)
+			gwapiv1.PolicyConditionAccepted, metav1.ConditionFalse, resolveErr.Reason, resolveErr.Message, generation)
 	}
 }
 
-func SetResolveErrorForPolicyAncestor(policyStatus *gwapiv1a2.PolicyStatus, ancestorRef *gwapiv1a2.ParentReference, controllerName string, generation int64, resolveErr *PolicyResolveError) {
+func SetResolveErrorForPolicyAncestor(policyStatus *gwapiv1.PolicyStatus, ancestorRef *gwapiv1.ParentReference, controllerName string, generation int64, resolveErr *PolicyResolveError) {
 	SetConditionForPolicyAncestor(policyStatus, ancestorRef, controllerName,
-		gwapiv1a2.PolicyConditionAccepted, metav1.ConditionFalse, resolveErr.Reason, resolveErr.Message, generation)
+		gwapiv1.PolicyConditionAccepted, metav1.ConditionFalse, resolveErr.Reason, resolveErr.Message, generation)
 }
 
-func SetTranslationErrorForPolicyAncestors(policyStatus *gwapiv1a2.PolicyStatus, ancestorRefs []*gwapiv1a2.ParentReference, controllerName string, generation int64, errMsg string) {
+func SetTranslationErrorForPolicyAncestors(policyStatus *gwapiv1.PolicyStatus, ancestorRefs []*gwapiv1.ParentReference, controllerName string, generation int64, errMsg string) {
 	for _, ancestorRef := range ancestorRefs {
 		SetConditionForPolicyAncestor(policyStatus, ancestorRef, controllerName,
-			gwapiv1a2.PolicyConditionAccepted, metav1.ConditionFalse, gwapiv1a2.PolicyReasonInvalid, errMsg, generation)
+			gwapiv1.PolicyConditionAccepted, metav1.ConditionFalse, gwapiv1.PolicyReasonInvalid, errMsg, generation)
 	}
 }
 
-func SetTranslationErrorForPolicyAncestor(policyStatus *gwapiv1a2.PolicyStatus, ancestorRef *gwapiv1a2.ParentReference, controllerName string, generation int64, errMsg string) {
+func SetTranslationErrorForPolicyAncestor(policyStatus *gwapiv1.PolicyStatus, ancestorRef *gwapiv1.ParentReference, controllerName string, generation int64, errMsg string) {
 	SetConditionForPolicyAncestor(policyStatus, ancestorRef, controllerName,
-		gwapiv1a2.PolicyConditionAccepted, metav1.ConditionFalse, gwapiv1a2.PolicyReasonInvalid, errMsg, generation)
+		gwapiv1.PolicyConditionAccepted, metav1.ConditionFalse, gwapiv1.PolicyReasonInvalid, errMsg, generation)
 }
 
 // SetAcceptedForPolicyAncestors sets accepted conditions for each ancestor reference if it is unset.
-func SetAcceptedForPolicyAncestors(policyStatus *gwapiv1a2.PolicyStatus, ancestorRefs []*gwapiv1a2.ParentReference, controllerName string, generation int64) {
+func SetAcceptedForPolicyAncestors(policyStatus *gwapiv1.PolicyStatus, ancestorRefs []*gwapiv1.ParentReference, controllerName string, generation int64) {
 	for _, ancestorRef := range ancestorRefs {
 		SetAcceptedForPolicyAncestor(policyStatus, ancestorRef, controllerName, generation)
 	}
 }
 
-func SetAcceptedForPolicyAncestor(policyStatus *gwapiv1a2.PolicyStatus, ancestorRef *gwapiv1a2.ParentReference, controllerName string, generation int64) {
+func SetAcceptedForPolicyAncestor(policyStatus *gwapiv1.PolicyStatus, ancestorRef *gwapiv1.ParentReference, controllerName string, generation int64) {
 	// Return early if Accepted condition is already set for specific ancestor.
 	for _, ancestor := range policyStatus.Ancestors {
 		if string(ancestor.ControllerName) == controllerName && ancestorRefsEqual(&ancestor.AncestorRef, ancestorRef) {
 			for _, c := range ancestor.Conditions {
-				if c.Type == string(gwapiv1a2.PolicyConditionAccepted) {
+				if c.Type == string(gwapiv1.PolicyConditionAccepted) {
 					return
 				}
 			}
@@ -68,22 +69,22 @@ func SetAcceptedForPolicyAncestor(policyStatus *gwapiv1a2.PolicyStatus, ancestor
 
 	message := "Policy has been accepted."
 	SetConditionForPolicyAncestor(policyStatus, ancestorRef, controllerName,
-		gwapiv1a2.PolicyConditionAccepted, metav1.ConditionTrue, gwapiv1a2.PolicyReasonAccepted, message, generation)
+		gwapiv1.PolicyConditionAccepted, metav1.ConditionTrue, gwapiv1.PolicyReasonAccepted, message, generation)
 }
 
-func SetConditionForPolicyAncestors(policyStatus *gwapiv1a2.PolicyStatus, ancestorRefs []*gwapiv1a2.ParentReference, controllerName string,
-	conditionType gwapiv1a2.PolicyConditionType, status metav1.ConditionStatus, reason gwapiv1a2.PolicyConditionReason, message string, generation int64,
+func SetConditionForPolicyAncestors(policyStatus *gwapiv1.PolicyStatus, ancestorRefs []*gwapiv1.ParentReference, controllerName string,
+	conditionType gwapiv1.PolicyConditionType, status metav1.ConditionStatus, reason gwapiv1.PolicyConditionReason, message string, generation int64,
 ) {
 	for _, ancestorRef := range ancestorRefs {
 		SetConditionForPolicyAncestor(policyStatus, ancestorRef, controllerName, conditionType, status, reason, message, generation)
 	}
 }
 
-func SetConditionForPolicyAncestor(policyStatus *gwapiv1a2.PolicyStatus, ancestorRef *gwapiv1a2.ParentReference, controllerName string,
-	conditionType gwapiv1a2.PolicyConditionType, status metav1.ConditionStatus, reason gwapiv1a2.PolicyConditionReason, message string, generation int64,
+func SetConditionForPolicyAncestor(policyStatus *gwapiv1.PolicyStatus, ancestorRef *gwapiv1.ParentReference, controllerName string,
+	conditionType gwapiv1.PolicyConditionType, status metav1.ConditionStatus, reason gwapiv1.PolicyConditionReason, message string, generation int64,
 ) {
 	if policyStatus.Ancestors == nil {
-		policyStatus.Ancestors = []gwapiv1a2.PolicyAncestorStatus{}
+		policyStatus.Ancestors = []gwapiv1.PolicyAncestorStatus{}
 	}
 
 	// Find existing ancestor first
@@ -109,14 +110,14 @@ func SetConditionForPolicyAncestor(policyStatus *gwapiv1a2.PolicyStatus, ancesto
 
 	// Add condition for new PolicyAncestorStatus
 	cond := newCondition(string(conditionType), status, string(reason), message, time.Now(), generation)
-	policyStatus.Ancestors = append(policyStatus.Ancestors, gwapiv1a2.PolicyAncestorStatus{
+	policyStatus.Ancestors = append(policyStatus.Ancestors, gwapiv1.PolicyAncestorStatus{
 		AncestorRef:    *ancestorRef,
 		ControllerName: gwapiv1a2.GatewayController(controllerName),
 		Conditions:     []metav1.Condition{cond},
 	})
 }
 
-func ancestorRefsEqual(a, b *gwapiv1a2.ParentReference) bool {
+func ancestorRefsEqual(a, b *gwapiv1.ParentReference) bool {
 	if a == nil || b == nil {
 		return a == b
 	}
@@ -164,7 +165,7 @@ func ancestorRefsEqual(a, b *gwapiv1a2.ParentReference) bool {
 // TruncatePolicyAncestors trims PolicyStatus.Ancestors down to at most 16 entries.
 // The first 15 ancestors are shown as is.
 // The last 16th ancestor is shown as is and add Aggregated condition.
-func TruncatePolicyAncestors(policyStatus *gwapiv1a2.PolicyStatus, controllerName string, generation int64) {
+func TruncatePolicyAncestors(policyStatus *gwapiv1.PolicyStatus, controllerName string, generation int64) {
 	if len(policyStatus.Ancestors) <= 16 {
 		return
 	}
@@ -216,9 +217,9 @@ func TruncatePolicyAncestors(policyStatus *gwapiv1a2.PolicyStatus, controllerNam
 //	– The ancestor is not accepted (Accepted == false).
 //	– The ancestor is accepted and overridden (Override == true).
 //	– All other cases.
-func sortRankForPolicyAncestor(ancestor *gwapiv1a2.PolicyAncestorStatus) int {
+func sortRankForPolicyAncestor(ancestor *gwapiv1.PolicyAncestorStatus) int {
 	switch {
-	case meta.IsStatusConditionFalse(ancestor.Conditions, string(gwapiv1a2.PolicyConditionAccepted)):
+	case meta.IsStatusConditionFalse(ancestor.Conditions, string(gwapiv1.PolicyConditionAccepted)):
 		return 0
 	case meta.IsStatusConditionTrue(ancestor.Conditions, string(egv1a1.PolicyReasonOverridden)):
 		return 1

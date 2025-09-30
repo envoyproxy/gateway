@@ -200,7 +200,7 @@ func ExpectEventuallyConsistentResponse(t *testing.T, suite *suite.ConformanceTe
 			return false, nil
 		}
 
-		if err := http.CompareRequest(t, &req, cReq, cRes, *expected); err != nil {
+		if err := http.CompareRoundTrip(t, &req, cReq, cRes, *expected); err != nil {
 			tlog.Logf(t, "Response expectation failed for request: %+v  %v", req, err)
 			return false, nil
 		}

@@ -12,7 +12,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwapiv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -35,7 +34,7 @@ func (t *Translator) ProcessBackendTLSPolicyStatus(btlsp []*gwapiv1a3.BackendTLS
 func (t *Translator) applyBackendTLSSetting(
 	backendRef gwapiv1.BackendObjectReference,
 	backendNamespace string,
-	parent gwapiv1a2.ParentReference,
+	parent gwapiv1.ParentReference,
 	resources *resource.Resources,
 	envoyProxy *egv1a1.EnvoyProxy,
 ) (*ir.TLSUpstreamConfig, error) {
@@ -118,7 +117,7 @@ func (t *Translator) processBackendTLSSettings(
 	}
 
 	if !tlsConfig.InsecureSkipVerify {
-		tlsConfig.UseSystemTrustStore = ptr.Deref(backend.Spec.TLS.WellKnownCACertificates, "") == gwapiv1a3.WellKnownCACertificatesSystem
+		tlsConfig.UseSystemTrustStore = ptr.Deref(backend.Spec.TLS.WellKnownCACertificates, "") == gwapiv1.WellKnownCACertificatesSystem
 
 		if tlsConfig.UseSystemTrustStore {
 			tlsConfig.CACertificate = &ir.TLSCACertificate{
@@ -141,7 +140,7 @@ func (t *Translator) processBackendTLSSettings(
 func (t *Translator) processBackendTLSPolicy(
 	backendRef gwapiv1.BackendObjectReference,
 	backendNamespace string,
-	parent gwapiv1a2.ParentReference,
+	parent gwapiv1.ParentReference,
 	resources *resource.Resources,
 ) (*ir.TLSUpstreamConfig, error) {
 	policy := getBackendTLSPolicy(resources.BackendTLSPolicies, backendRef, backendNamespace, resources)
@@ -162,7 +161,6 @@ func (t *Translator) processBackendTLSPolicy(
 		)
 		return nil, err
 	}
-
 	status.SetAcceptedForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName, policy.Generation)
 	return tlsBundle, nil
 }
@@ -222,7 +220,7 @@ func (t *Translator) applyEnvoyProxyBackendTLSSetting(tlsConfig *ir.TLSUpstreamC
 	return tlsConfig, nil
 }
 
-func backendTLSTargetMatched(policy *gwapiv1a3.BackendTLSPolicy, target gwapiv1a2.LocalPolicyTargetReferenceWithSectionName, backendNamespace string) bool {
+func backendTLSTargetMatched(policy *gwapiv1a3.BackendTLSPolicy, target gwapiv1.LocalPolicyTargetReferenceWithSectionName, backendNamespace string) bool {
 	for _, currTarget := range policy.Spec.TargetRefs {
 		if target.Group == currTarget.Group &&
 			target.Kind == currTarget.Kind &&
@@ -241,7 +239,7 @@ func backendTLSTargetMatched(policy *gwapiv1a3.BackendTLSPolicy, target gwapiv1a
 
 func getBackendTLSPolicy(
 	policies []*gwapiv1a3.BackendTLSPolicy,
-	backendRef gwapiv1a2.BackendObjectReference,
+	backendRef gwapiv1.BackendObjectReference,
 	backendNamespace string,
 	resources *resource.Resources,
 ) *gwapiv1a3.BackendTLSPolicy {
@@ -261,9 +259,9 @@ func getBackendTLSBundle(backendTLSPolicy *gwapiv1a3.BackendTLSPolicy, resources
 	for _, san := range backendTLSPolicy.Spec.Validation.SubjectAltNames {
 		var subjectAltName ir.SubjectAltName
 		switch san.Type {
-		case gwapiv1a3.HostnameSubjectAltNameType:
+		case gwapiv1.HostnameSubjectAltNameType:
 			subjectAltName.Hostname = ptr.To(string(san.Hostname))
-		case gwapiv1a3.URISubjectAltNameType:
+		case gwapiv1.URISubjectAltNameType:
 			subjectAltName.URI = ptr.To(string(san.URI))
 		default:
 			continue // skip unknown types
@@ -273,7 +271,7 @@ func getBackendTLSBundle(backendTLSPolicy *gwapiv1a3.BackendTLSPolicy, resources
 
 	tlsBundle := &ir.TLSUpstreamConfig{
 		SNI:                 ptr.To(string(backendTLSPolicy.Spec.Validation.Hostname)),
-		UseSystemTrustStore: ptr.Deref(backendTLSPolicy.Spec.Validation.WellKnownCACertificates, "") == gwapiv1a3.WellKnownCACertificatesSystem,
+		UseSystemTrustStore: ptr.Deref(backendTLSPolicy.Spec.Validation.WellKnownCACertificates, "") == gwapiv1.WellKnownCACertificatesSystem,
 		SubjectAltNames:     subjectAltNames,
 	}
 	if tlsBundle.UseSystemTrustStore {
@@ -347,8 +345,8 @@ func getCaCertsFromCARefs(namespace string, caCertificates []gwapiv1.LocalObject
 	return []byte(ca), nil
 }
 
-func getAncestorRefs(policy *gwapiv1a3.BackendTLSPolicy) []*gwapiv1a2.ParentReference {
-	ret := make([]*gwapiv1a2.ParentReference, len(policy.Status.Ancestors))
+func getAncestorRefs(policy *gwapiv1a3.BackendTLSPolicy) []*gwapiv1.ParentReference {
+	ret := make([]*gwapiv1.ParentReference, len(policy.Status.Ancestors))
 	for i, ancestor := range policy.Status.Ancestors {
 		ret[i] = &ancestor.AncestorRef
 	}

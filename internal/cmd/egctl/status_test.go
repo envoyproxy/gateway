@@ -14,7 +14,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwapiv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -488,8 +487,8 @@ http2     gateway/test-2   foobar4   test-status-4   test reason 4
 							Name:      "btls",
 							Namespace: "default",
 						},
-						Status: gwapiv1a2.PolicyStatus{
-							Ancestors: []gwapiv1a2.PolicyAncestorStatus{
+						Status: gwapiv1.PolicyStatus{
+							Ancestors: []gwapiv1.PolicyAncestorStatus{
 								{
 									AncestorRef: gwapiv1.ParentReference{
 										Kind: gatewayapi.KindPtr(resource.KindGateway),
@@ -682,8 +681,8 @@ default2    http2     gateway/test-3   foobar6   test-status-6   test reason 6
 							Name:      "btp-1",
 							Namespace: "default",
 						},
-						Status: gwapiv1a2.PolicyStatus{
-							Ancestors: []gwapiv1a2.PolicyAncestorStatus{
+						Status: gwapiv1.PolicyStatus{
+							Ancestors: []gwapiv1.PolicyAncestorStatus{
 								{
 									AncestorRef: gwapiv1.ParentReference{
 										Kind: gatewayapi.KindPtr(resource.KindGateway),
@@ -740,8 +739,8 @@ default2    http2     gateway/test-3   foobar6   test-status-6   test reason 6
 							Name:      "btp-2",
 							Namespace: "default",
 						},
-						Status: gwapiv1a2.PolicyStatus{
-							Ancestors: []gwapiv1a2.PolicyAncestorStatus{
+						Status: gwapiv1.PolicyStatus{
+							Ancestors: []gwapiv1.PolicyAncestorStatus{
 								{
 									AncestorRef: gwapiv1.ParentReference{
 										Kind: gatewayapi.KindPtr(resource.KindGateway),

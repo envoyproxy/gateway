@@ -78,7 +78,7 @@ func GetGateway(nsName types.NamespacedName, gwclass string, listenerPort int32)
 			Listeners: []gwapiv1.Listener{
 				{
 					Name:     "test",
-					Port:     gwapiv1.PortNumber(listenerPort),
+					Port:     listenerPort,
 					Protocol: gwapiv1.HTTPProtocolType,
 				},
 			},
@@ -89,7 +89,7 @@ func GetGateway(nsName types.NamespacedName, gwclass string, listenerPort int32)
 // GetSecureGateway returns a sample Gateway with single TLS listener.
 func GetSecureGateway(nsName types.NamespacedName, gwclass string, secretKindNSName GroupKindNamespacedName) *gwapiv1.Gateway {
 	secureGateway := GetGateway(nsName, gwclass, 8080)
-	secureGateway.Spec.Listeners[0].TLS = &gwapiv1.GatewayTLSConfig{
+	secureGateway.Spec.Listeners[0].TLS = &gwapiv1.ListenerTLSConfig{
 		Mode: ptr.To(gwapiv1.TLSModeTerminate),
 		CertificateRefs: []gwapiv1.SecretObjectReference{{
 			Kind:      &secretKindNSName.Kind,
@@ -114,14 +114,14 @@ func GetSecret(nsName types.NamespacedName) *corev1.Secret {
 func GetServiceBackendRef(name types.NamespacedName, port int32) gwapiv1.BackendObjectReference {
 	return gwapiv1.BackendObjectReference{
 		Name: gwapiv1.ObjectName(name.Name),
-		Port: ptr.To(gwapiv1.PortNumber(port)),
+		Port: ptr.To(port),
 	}
 }
 
 func GetServiceImportBackendRef(name types.NamespacedName, port int32) gwapiv1.BackendObjectReference {
 	return gwapiv1.BackendObjectReference{
 		Name:  gwapiv1.ObjectName(name.Name),
-		Port:  ptr.To(gwapiv1.PortNumber(port)),
+		Port:  ptr.To(port),
 		Kind:  gatewayapi.KindPtr(resource.KindServiceImport),
 		Group: gatewayapi.GroupPtr(mcsapiv1a1.GroupName),
 	}
@@ -190,7 +190,7 @@ func GetGRPCRoute(nsName types.NamespacedName, parent string, serviceName types.
 							BackendRef: gwapiv1.BackendRef{
 								BackendObjectReference: gwapiv1.BackendObjectReference{
 									Name: gwapiv1.ObjectName(serviceName.Name),
-									Port: ptr.To(gwapiv1.PortNumber(port)),
+									Port: ptr.To(port),
 								},
 							},
 						},
@@ -209,18 +209,18 @@ func GetTLSRoute(nsName types.NamespacedName, parent string, serviceName types.N
 			Name:      nsName.Name,
 		},
 		Spec: gwapiv1a2.TLSRouteSpec{
-			CommonRouteSpec: gwapiv1a2.CommonRouteSpec{
-				ParentRefs: []gwapiv1a2.ParentReference{
-					{Name: gwapiv1a2.ObjectName(parent)},
+			CommonRouteSpec: gwapiv1.CommonRouteSpec{
+				ParentRefs: []gwapiv1.ParentReference{
+					{Name: gwapiv1.ObjectName(parent)},
 				},
 			},
 			Rules: []gwapiv1a2.TLSRouteRule{
 				{
 					BackendRefs: []gwapiv1a2.BackendRef{
 						{
-							BackendObjectReference: gwapiv1a2.BackendObjectReference{
-								Name: gwapiv1a2.ObjectName(serviceName.Name),
-								Port: ptr.To(gwapiv1.PortNumber(port)),
+							BackendObjectReference: gwapiv1.BackendObjectReference{
+								Name: gwapiv1.ObjectName(serviceName.Name),
+								Port: ptr.To(port),
 							},
 						},
 					},
@@ -238,18 +238,18 @@ func GetTCPRoute(nsName types.NamespacedName, parent string, serviceName types.N
 			Name:      nsName.Name,
 		},
 		Spec: gwapiv1a2.TCPRouteSpec{
-			CommonRouteSpec: gwapiv1a2.CommonRouteSpec{
-				ParentRefs: []gwapiv1a2.ParentReference{
-					{Name: gwapiv1a2.ObjectName(parent)},
+			CommonRouteSpec: gwapiv1.CommonRouteSpec{
+				ParentRefs: []gwapiv1.ParentReference{
+					{Name: gwapiv1.ObjectName(parent)},
 				},
 			},
 			Rules: []gwapiv1a2.TCPRouteRule{
 				{
 					BackendRefs: []gwapiv1a2.BackendRef{
 						{
-							BackendObjectReference: gwapiv1a2.BackendObjectReference{
-								Name: gwapiv1a2.ObjectName(serviceName.Name),
-								Port: ptr.To(gwapiv1a2.PortNumber(port)),
+							BackendObjectReference: gwapiv1.BackendObjectReference{
+								Name: gwapiv1.ObjectName(serviceName.Name),
+								Port: ptr.To(port),
 							},
 						},
 					},
@@ -267,18 +267,18 @@ func GetUDPRoute(nsName types.NamespacedName, parent string, serviceName types.N
 			Name:      nsName.Name,
 		},
 		Spec: gwapiv1a2.UDPRouteSpec{
-			CommonRouteSpec: gwapiv1a2.CommonRouteSpec{
-				ParentRefs: []gwapiv1a2.ParentReference{
-					{Name: gwapiv1a2.ObjectName(parent)},
+			CommonRouteSpec: gwapiv1.CommonRouteSpec{
+				ParentRefs: []gwapiv1.ParentReference{
+					{Name: gwapiv1.ObjectName(parent)},
 				},
 			},
 			Rules: []gwapiv1a2.UDPRouteRule{
 				{
 					BackendRefs: []gwapiv1a2.BackendRef{
 						{
-							BackendObjectReference: gwapiv1a2.BackendObjectReference{
-								Name: gwapiv1a2.ObjectName(serviceName.Name),
-								Port: ptr.To(gwapiv1a2.PortNumber(port)),
+							BackendObjectReference: gwapiv1.BackendObjectReference{
+								Name: gwapiv1.ObjectName(serviceName.Name),
+								Port: ptr.To(port),
 							},
 						},
 					},

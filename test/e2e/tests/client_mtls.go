@@ -222,7 +222,7 @@ func WaitForConsistentMTLSResponse(t *testing.T, r roundtripper.RoundTripper, re
 			return false
 		}
 
-		if err := http.CompareRequest(t, &updatedReq, cReq, cRes, *expected); err != nil {
+		if err := http.CompareRoundTrip(t, &updatedReq, cReq, cRes, *expected); err != nil {
 			tlog.Logf(t, "Response expectation failed for request: %+v  not ready yet: %v (after %v)", updatedReq, err, elapsed)
 			return false
 		}

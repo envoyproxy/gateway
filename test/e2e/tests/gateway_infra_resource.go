@@ -98,7 +98,7 @@ var GatewayInfraResourceTest = suite.ConformanceTest{
 					Listeners: []gwapiv1.Listener{
 						{
 							Name:     "http",
-							Port:     gwapiv1.PortNumber(newListenerHTTPPort),
+							Port:     newListenerHTTPPort,
 							Protocol: "HTTP",
 						},
 						{

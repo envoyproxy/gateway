@@ -14,7 +14,6 @@ import (
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
@@ -136,7 +135,7 @@ func (t *Translator) processExtServiceDestination(
 		// of the BackendRef is the policy, and there is no hierarchy
 		// relationship between the policy and a gateway.
 		// The owner policy of the BackendRef is used as the parent reference here.
-		gwapiv1a2.ParentReference{
+		gwapiv1.ParentReference{
 			Group:     ptr.To(gwapiv1.Group(egv1a1.GroupName)),
 			Kind:      ptr.To(gwapiv1.Kind(policyKind)),
 			Namespace: ptr.To(gwapiv1.Namespace(policyNamespacedName.Namespace)),

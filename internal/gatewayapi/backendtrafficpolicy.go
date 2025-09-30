@@ -19,7 +19,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
@@ -124,7 +124,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(resources *resource.Resources
 				// gatewayRouteMap and ancestor list, which will be used to check
 				// policy overrides and populate its ancestor status.
 				parentRefs := GetParentReferences(route)
-				ancestorRefs := make([]*gwapiv1a2.ParentReference, 0, len(parentRefs))
+				ancestorRefs := make([]*gwapiv1.ParentReference, 0, len(parentRefs))
 				routeParents := sets.New[types.NamespacedName]()
 				for _, p := range parentRefs {
 					if p.Kind == nil || *p.Kind == resource.KindGateway {
@@ -184,7 +184,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(resources *resource.Resources
 								status.SetConditionForPolicyAncestor(&policy.Status,
 									&ancestorRef,
 									t.GatewayControllerName,
-									gwapiv1a2.PolicyConditionAccepted, metav1.ConditionFalse,
+									gwapiv1.PolicyConditionAccepted, metav1.ConditionFalse,
 									egv1a1.PolicyReasonInvalid,
 									status.Error2ConditionMsg(err),
 									policy.Generation,
@@ -199,7 +199,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(resources *resource.Resources
 							status.SetConditionForPolicyAncestor(&policy.Status,
 								&ancestorRef,
 								t.GatewayControllerName,
-								gwapiv1a2.PolicyConditionAccepted, metav1.ConditionFalse,
+								gwapiv1.PolicyConditionAccepted, metav1.ConditionFalse,
 								egv1a1.PolicyReasonInvalid,
 								status.Error2ConditionMsg(err),
 								policy.Generation,
@@ -333,7 +333,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(resources *resource.Resources
 	return res
 }
 
-func resolveBTPolicyGatewayTargetRef(policy *egv1a1.BackendTrafficPolicy, target gwapiv1a2.LocalPolicyTargetReferenceWithSectionName, gateways map[types.NamespacedName]*policyGatewayTargetContext) (*GatewayContext, *status.PolicyResolveError) {
+func resolveBTPolicyGatewayTargetRef(policy *egv1a1.BackendTrafficPolicy, target gwapiv1.LocalPolicyTargetReferenceWithSectionName, gateways map[types.NamespacedName]*policyGatewayTargetContext) (*GatewayContext, *status.PolicyResolveError) {
 	// Check if the gateway exists
 	key := types.NamespacedName{
 		Name:      string(target.Name),
@@ -352,7 +352,7 @@ func resolveBTPolicyGatewayTargetRef(policy *egv1a1.BackendTrafficPolicy, target
 			string(target.Name))
 
 		return gateway.GatewayContext, &status.PolicyResolveError{
-			Reason:  gwapiv1a2.PolicyReasonConflicted,
+			Reason:  gwapiv1.PolicyReasonConflicted,
 			Message: message,
 		}
 	}
@@ -364,7 +364,7 @@ func resolveBTPolicyGatewayTargetRef(policy *egv1a1.BackendTrafficPolicy, target
 	return gateway.GatewayContext, nil
 }
 
-func resolveBTPolicyRouteTargetRef(policy *egv1a1.BackendTrafficPolicy, target gwapiv1a2.LocalPolicyTargetReferenceWithSectionName, routes map[policyTargetRouteKey]*policyRouteTargetContext) (RouteContext, *status.PolicyResolveError) {
+func resolveBTPolicyRouteTargetRef(policy *egv1a1.BackendTrafficPolicy, target gwapiv1.LocalPolicyTargetReferenceWithSectionName, routes map[policyTargetRouteKey]*policyRouteTargetContext) (RouteContext, *status.PolicyResolveError) {
 	// Check if the route exists
 	key := policyTargetRouteKey{
 		Kind:      string(target.Kind),
@@ -384,7 +384,7 @@ func resolveBTPolicyRouteTargetRef(policy *egv1a1.BackendTrafficPolicy, target g
 			string(target.Kind), string(target.Name))
 
 		return route.RouteContext, &status.PolicyResolveError{
-			Reason:  gwapiv1a2.PolicyReasonConflicted,
+			Reason:  gwapiv1.PolicyReasonConflicted,
 			Message: message,
 		}
 	}
@@ -651,7 +651,7 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy, r
 }
 
 func (t *Translator) translateBackendTrafficPolicyForGateway(
-	policy *egv1a1.BackendTrafficPolicy, target gwapiv1a2.LocalPolicyTargetReferenceWithSectionName,
+	policy *egv1a1.BackendTrafficPolicy, target gwapiv1.LocalPolicyTargetReferenceWithSectionName,
 	gateway *GatewayContext, xdsIR resource.XdsIRMap, resources *resource.Resources,
 ) error {
 	tf, errs := t.buildTrafficFeatures(policy, resources)

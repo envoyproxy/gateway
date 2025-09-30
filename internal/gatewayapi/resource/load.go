@@ -393,7 +393,7 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool) (*Res
 					Name:      name,
 					Namespace: namespace,
 				},
-				Spec: typedSpec.(gwapiv1a3.BackendTLSPolicySpec),
+				Spec: typedSpec.(gwapiv1.BackendTLSPolicySpec),
 			}
 			resources.BackendTLSPolicies = append(resources.BackendTLSPolicies, backendTLSPolicy)
 		case KindEnvoyExtensionPolicy:
@@ -585,7 +585,7 @@ func addMissingServices(requiredServices map[string]*corev1.Service, obj interfa
 		name := string(ref.Name)
 		key := ns + "/" + name
 
-		port := int32(*ref.Port)
+		port := *ref.Port
 		servicePort := corev1.ServicePort{
 			Name:     fmt.Sprintf("%s-%d", protocol, port),
 			Protocol: corev1.Protocol(protocol),

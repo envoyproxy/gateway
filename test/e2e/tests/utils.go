@@ -36,7 +36,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/conformance/utils/config"
 	httputils "sigs.k8s.io/gateway-api/conformance/utils/http"
 	k8sutils "sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
@@ -116,7 +116,7 @@ func WaitForPods(t *testing.T, cl client.Client, namespace string, selectors map
 }
 
 // SecurityPolicyMustBeAccepted waits for the specified SecurityPolicy to be accepted.
-func SecurityPolicyMustBeAccepted(t *testing.T, client client.Client, policyName types.NamespacedName, controllerName string, ancestorRef gwapiv1a2.ParentReference) {
+func SecurityPolicyMustBeAccepted(t *testing.T, client client.Client, policyName types.NamespacedName, controllerName string, ancestorRef gwapiv1.ParentReference) {
 	t.Helper()
 
 	waitErr := wait.PollUntilContextTimeout(context.Background(), 1*time.Second, 60*time.Second, true, func(ctx context.Context) (bool, error) {
@@ -141,7 +141,7 @@ func SecurityPolicyMustBeAccepted(t *testing.T, client client.Client, policyName
 // SecurityPolicyMustFail waits for an SecurityPolicy to fail with the specified reason.
 func SecurityPolicyMustFail(
 	t *testing.T, client client.Client, policyName types.NamespacedName,
-	controllerName string, ancestorRef gwapiv1a2.ParentReference, message string,
+	controllerName string, ancestorRef gwapiv1.ParentReference, message string,
 ) {
 	t.Helper()
 
@@ -166,7 +166,7 @@ func SecurityPolicyMustFail(
 }
 
 // BackendTrafficPolicyMustBeAccepted waits for the specified BackendTrafficPolicy to be accepted.
-func BackendTrafficPolicyMustBeAccepted(t *testing.T, client client.Client, policyName types.NamespacedName, controllerName string, ancestorRef gwapiv1a2.ParentReference) {
+func BackendTrafficPolicyMustBeAccepted(t *testing.T, client client.Client, policyName types.NamespacedName, controllerName string, ancestorRef gwapiv1.ParentReference) {
 	t.Helper()
 
 	waitErr := wait.PollUntilContextTimeout(context.Background(), 1*time.Second, 60*time.Second, true, func(ctx context.Context) (bool, error) {
@@ -190,7 +190,7 @@ func BackendTrafficPolicyMustBeAccepted(t *testing.T, client client.Client, poli
 // BackendTrafficPolicyMustFail waits for an BackendTrafficPolicy to fail with the specified reason.
 func BackendTrafficPolicyMustFail(
 	t *testing.T, client client.Client, policyName types.NamespacedName,
-	controllerName string, ancestorRef gwapiv1a2.ParentReference, message string,
+	controllerName string, ancestorRef gwapiv1.ParentReference, message string,
 ) {
 	t.Helper()
 
@@ -215,7 +215,7 @@ func BackendTrafficPolicyMustFail(
 }
 
 // ClientTrafficPolicyMustBeAccepted waits for the specified ClientTrafficPolicy to be accepted.
-func ClientTrafficPolicyMustBeAccepted(t *testing.T, client client.Client, policyName types.NamespacedName, controllerName string, ancestorRef gwapiv1a2.ParentReference) {
+func ClientTrafficPolicyMustBeAccepted(t *testing.T, client client.Client, policyName types.NamespacedName, controllerName string, ancestorRef gwapiv1.ParentReference) {
 	t.Helper()
 
 	waitErr := wait.PollUntilContextTimeout(context.Background(), 1*time.Second, 60*time.Second, true, func(ctx context.Context) (bool, error) {
@@ -296,11 +296,11 @@ func runLoadAndWait(t *testing.T, timeoutConfig *config.TimeoutConfig, done chan
 	done <- false
 }
 
-func policyAcceptedByAncestor(ancestors []gwapiv1a2.PolicyAncestorStatus, controllerName string, ancestorRef gwapiv1a2.ParentReference) bool {
+func policyAcceptedByAncestor(ancestors []gwapiv1.PolicyAncestorStatus, controllerName string, ancestorRef gwapiv1.ParentReference) bool {
 	for _, ancestor := range ancestors {
 		if string(ancestor.ControllerName) == controllerName && cmp.Equal(ancestor.AncestorRef, ancestorRef) {
 			for _, condition := range ancestor.Conditions {
-				if condition.Type == string(gwapiv1a2.PolicyConditionAccepted) && condition.Status == metav1.ConditionTrue {
+				if condition.Type == string(gwapiv1.PolicyConditionAccepted) && condition.Status == metav1.ConditionTrue {
 					return true
 				}
 			}
@@ -312,7 +312,7 @@ func policyAcceptedByAncestor(ancestors []gwapiv1a2.PolicyAncestorStatus, contro
 // EnvoyExtensionPolicyMustFail waits for an EnvoyExtensionPolicy to fail with the specified reason.
 func EnvoyExtensionPolicyMustFail(
 	t *testing.T, client client.Client, policyName types.NamespacedName,
-	controllerName string, ancestorRef gwapiv1a2.ParentReference, message string,
+	controllerName string, ancestorRef gwapiv1.ParentReference, message string,
 ) {
 	t.Helper()
 
@@ -336,11 +336,11 @@ func EnvoyExtensionPolicyMustFail(
 	require.NoErrorf(t, waitErr, "error waiting for EnvoyExtensionPolicy to fail with message: %s policy %v", message, policy)
 }
 
-func policyFailAcceptedByAncestor(ancestors []gwapiv1a2.PolicyAncestorStatus, controllerName string, ancestorRef gwapiv1a2.ParentReference, message string) bool {
+func policyFailAcceptedByAncestor(ancestors []gwapiv1.PolicyAncestorStatus, controllerName string, ancestorRef gwapiv1.ParentReference, message string) bool {
 	for _, ancestor := range ancestors {
 		if string(ancestor.ControllerName) == controllerName && cmp.Equal(ancestor.AncestorRef, ancestorRef) {
 			for _, condition := range ancestor.Conditions {
-				if condition.Type == string(gwapiv1a2.PolicyConditionAccepted) &&
+				if condition.Type == string(gwapiv1.PolicyConditionAccepted) &&
 					condition.Status == metav1.ConditionFalse &&
 					strings.Contains(condition.Message, message) {
 					return true
@@ -352,7 +352,7 @@ func policyFailAcceptedByAncestor(ancestors []gwapiv1a2.PolicyAncestorStatus, co
 }
 
 // EnvoyExtensionPolicyMustBeAccepted waits for the specified EnvoyExtensionPolicy to be accepted.
-func EnvoyExtensionPolicyMustBeAccepted(t *testing.T, client client.Client, policyName types.NamespacedName, controllerName string, ancestorRef gwapiv1a2.ParentReference) {
+func EnvoyExtensionPolicyMustBeAccepted(t *testing.T, client client.Client, policyName types.NamespacedName, controllerName string, ancestorRef gwapiv1.ParentReference) {
 	t.Helper()
 
 	waitErr := wait.PollUntilContextTimeout(context.Background(), 1*time.Second, 60*time.Second, true, func(ctx context.Context) (bool, error) {

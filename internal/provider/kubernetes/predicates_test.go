@@ -198,9 +198,9 @@ func TestValidateConfigMapForReconcile(t *testing.T) {
 					},
 					Spec: egv1a1.EnvoyExtensionPolicySpec{
 						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-							TargetRefs: []gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
 								{
-									LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+									LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 										Kind: "Gateway",
 										Name: "scheduled-status-test",
 									},
@@ -211,9 +211,9 @@ func TestValidateConfigMapForReconcile(t *testing.T) {
 							{
 								Type: egv1a1.LuaValueTypeValueRef,
 								ValueRef: &gwapiv1.LocalObjectReference{
-									Kind:  gwapiv1a2.Kind("ConfigMap"),
-									Name:  gwapiv1a2.ObjectName("lua"),
-									Group: gwapiv1a2.Group("v1"),
+									Kind:  gwapiv1.Kind("ConfigMap"),
+									Name:  gwapiv1.ObjectName("lua"),
+									Group: gwapiv1.Group("v1"),
 								},
 							},
 						},
@@ -235,9 +235,9 @@ func TestValidateConfigMapForReconcile(t *testing.T) {
 					},
 					Spec: egv1a1.EnvoyExtensionPolicySpec{
 						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-							TargetRefs: []gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
 								{
-									LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+									LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 										Kind: "Gateway",
 										Name: "scheduled-status-test",
 									},
@@ -248,9 +248,9 @@ func TestValidateConfigMapForReconcile(t *testing.T) {
 							{
 								Type: egv1a1.LuaValueTypeValueRef,
 								ValueRef: &gwapiv1.LocalObjectReference{
-									Kind:  gwapiv1a2.Kind("ConfigMap"),
-									Name:  gwapiv1a2.ObjectName("lua"),
-									Group: gwapiv1a2.Group("v1"),
+									Kind:  gwapiv1.Kind("ConfigMap"),
+									Name:  gwapiv1.ObjectName("lua"),
+									Group: gwapiv1.Group("v1"),
 								},
 							},
 						},
@@ -396,8 +396,8 @@ func TestValidateSecretForReconcile(t *testing.T) {
 					},
 					Spec: egv1a1.SecurityPolicySpec{
 						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-							TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
-								LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 									Kind: "Gateway",
 									Name: "scheduled-status-test",
 								},
@@ -431,8 +431,8 @@ func TestValidateSecretForReconcile(t *testing.T) {
 					},
 					Spec: egv1a1.SecurityPolicySpec{
 						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-							TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
-								LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 									Kind: "Gateway",
 									Name: "scheduled-status-test",
 								},
@@ -462,8 +462,8 @@ func TestValidateSecretForReconcile(t *testing.T) {
 					},
 					Spec: egv1a1.SecurityPolicySpec{
 						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-							TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
-								LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 									Kind: "Gateway",
 									Name: "scheduled-status-test",
 								},
@@ -499,9 +499,9 @@ func TestValidateSecretForReconcile(t *testing.T) {
 					},
 					Spec: egv1a1.EnvoyExtensionPolicySpec{
 						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-							TargetRefs: []gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
 								{
-									LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+									LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 										Kind: "Gateway",
 										Name: "scheduled-status-test",
 									},
@@ -920,8 +920,8 @@ func TestValidateServiceForReconcile(t *testing.T) {
 					},
 					Spec: egv1a1.SecurityPolicySpec{
 						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-							TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
-								LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 									Kind: "Gateway",
 									Name: "scheduled-status-test",
 								},
@@ -955,8 +955,8 @@ func TestValidateServiceForReconcile(t *testing.T) {
 					},
 					Spec: egv1a1.SecurityPolicySpec{
 						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-							TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
-								LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 									Kind: "Gateway",
 									Name: "scheduled-status-test",
 								},
@@ -990,8 +990,8 @@ func TestValidateServiceForReconcile(t *testing.T) {
 					},
 					Spec: egv1a1.EnvoyExtensionPolicySpec{
 						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-							TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
-								LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 									Kind: "Gateway",
 									Name: "scheduled-status-test",
 								},
@@ -1025,8 +1025,8 @@ func TestValidateServiceForReconcile(t *testing.T) {
 					},
 					Spec: egv1a1.EnvoyExtensionPolicySpec{
 						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-							TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
-								LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 									Kind: "Gateway",
 									Name: "scheduled-status-test",
 								},
@@ -1515,8 +1515,8 @@ func TestValidateClusterTrustBundleForReconcile(t *testing.T) {
 			Name:      "backend-tls-policy-dynamic-resolver-clustertrustbundle",
 			Namespace: "default",
 		},
-		Spec: gwapiv1a3.BackendTLSPolicySpec{
-			Validation: gwapiv1a3.BackendTLSPolicyValidation{
+		Spec: gwapiv1.BackendTLSPolicySpec{
+			Validation: gwapiv1.BackendTLSPolicyValidation{
 				CACertificateRefs: []gwapiv1.LocalObjectReference{
 					{
 						Kind: gwapiv1.Kind("ClusterTrustBundle"),

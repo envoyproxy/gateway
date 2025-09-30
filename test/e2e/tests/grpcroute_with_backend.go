@@ -70,7 +70,7 @@ func testGRPCRouteWithBackend(t *testing.T, suite *suite.ConformanceTestSuite, b
 	ns := "gateway-conformance-infra"
 	routeNN := types.NamespacedName{Name: "exact-matching", Namespace: ns}
 	gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
-	gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.GRPCRoute{}, routeNN)
+	gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.GRPCRoute{}, false, routeNN)
 	BackendMustBeAccepted(t, suite.Client, types.NamespacedName{Name: backendName, Namespace: ns})
 	OkResp := grpc.ExpectedResponse{
 		EchoRequest: &grpcechoserver.EchoRequest{},

@@ -25,7 +25,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/roundtripper"
@@ -61,7 +60,7 @@ var RoundRobinLoadBalancingTest = suite.ConformanceTest{
 		routeNN := types.NamespacedName{Name: "round-robin-lb-route", Namespace: ns}
 		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 
-		ancestorRef := gwapiv1a2.ParentReference{
+		ancestorRef := gwapiv1.ParentReference{
 			Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
 			Kind:      gatewayapi.KindPtr(resource.KindGateway),
 			Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
@@ -124,7 +123,7 @@ func runTrafficTest(t *testing.T, suite *suite.ConformanceTestSuite,
 			t.Errorf("failed to get expected response: %v", err)
 		}
 
-		if err := http.CompareRequest(t, &request, cReq, cResp, *expectedResponse); err != nil {
+		if err := http.CompareRoundTrip(t, &request, cReq, cResp, *expectedResponse); err != nil {
 			t.Errorf("failed to compare request and response: %v", err)
 		}
 
@@ -156,7 +155,7 @@ var ConsistentHashSourceIPLoadBalancingTest = suite.ConformanceTest{
 		routeNN := types.NamespacedName{Name: "source-ip-lb-route", Namespace: ns}
 		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 
-		ancestorRef := gwapiv1a2.ParentReference{
+		ancestorRef := gwapiv1.ParentReference{
 			Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
 			Kind:      gatewayapi.KindPtr(resource.KindGateway),
 			Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
@@ -204,7 +203,7 @@ var ConsistentHashHeaderLoadBalancingTest = suite.ConformanceTest{
 		routeNN := types.NamespacedName{Name: "header-lb-route", Namespace: ns}
 		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 
-		ancestorRef := gwapiv1a2.ParentReference{
+		ancestorRef := gwapiv1.ParentReference{
 			Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
 			Kind:      gatewayapi.KindPtr(resource.KindGateway),
 			Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
@@ -251,7 +250,7 @@ var ConsistentHashCookieLoadBalancingTest = suite.ConformanceTest{
 		routeNN := types.NamespacedName{Name: "cookie-lb-route", Namespace: ns}
 		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 
-		ancestorRef := gwapiv1a2.ParentReference{
+		ancestorRef := gwapiv1.ParentReference{
 			Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
 			Kind:      gatewayapi.KindPtr(resource.KindGateway),
 			Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
@@ -380,7 +379,7 @@ var EndpointOverrideLoadBalancingTest = suite.ConformanceTest{
 		headerRouteNN := types.NamespacedName{Name: "endpoint-override-header-lb-route", Namespace: ns}
 		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 
-		ancestorRef := gwapiv1a2.ParentReference{
+		ancestorRef := gwapiv1.ParentReference{
 			Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
 			Kind:      gatewayapi.KindPtr(resource.KindGateway),
 			Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
@@ -458,7 +457,7 @@ var EndpointOverrideLoadBalancingTest = suite.ConformanceTest{
 			for i := 0; i < sendRequests; i++ {
 				cReq, cResp, err := suite.RoundTripper.CaptureRoundTrip(req)
 				require.NoError(t, err, "failed to get expected response")
-				require.NoError(t, http.CompareRequest(t, &req, cReq, cResp, expectedResponse), "failed to compare request and response")
+				require.NoError(t, http.CompareRoundTrip(t, &req, cReq, cResp, expectedResponse), "failed to compare request and response")
 
 				actualPodName := cReq.Pod
 				require.Equal(t, expectPodName, actualPodName, "request %d: expected pod %s but got %s", i+1, expectPodName, actualPodName)
@@ -491,7 +490,7 @@ var EndpointOverrideLoadBalancingTest = suite.ConformanceTest{
 			for i := 0; i < sendRequests; i++ {
 				cReq, cResp, err := suite.RoundTripper.CaptureRoundTrip(req)
 				require.NoError(t, err, "failed to get expected response")
-				require.NoError(t, http.CompareRequest(t, &req, cReq, cResp, expectedResponse), "failed to compare request and response")
+				require.NoError(t, http.CompareRoundTrip(t, &req, cReq, cResp, expectedResponse), "failed to compare request and response")
 
 				// For invalid override host, we just verify the response is 200 (fallback works)
 				// No need to check specific pod routing since it should use fallback policy
@@ -518,7 +517,7 @@ var EndpointOverrideLoadBalancingTest = suite.ConformanceTest{
 			for i := 0; i < sendRequests; i++ {
 				cReq, cResp, err := suite.RoundTripper.CaptureRoundTrip(req)
 				require.NoError(t, err, "failed to get expected response")
-				require.NoError(t, http.CompareRequest(t, &req, cReq, cResp, expectedResponse), "failed to compare request and response")
+				require.NoError(t, http.CompareRoundTrip(t, &req, cReq, cResp, expectedResponse), "failed to compare request and response")
 
 				// For missing header, we just verify the response is 200 (fallback works)
 				// No need to check specific pod routing since it should use fallback policy

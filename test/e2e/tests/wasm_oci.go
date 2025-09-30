@@ -32,7 +32,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
@@ -83,7 +82,7 @@ var OCIWasmTest = suite.ConformanceTest{
 		eep := createEEPForWasmTest(t, suite, registryAddr, digest, true)
 
 		// Wait for the EnvoyExtensionPolicy to be accepted
-		ancestorRef := gwapiv1a2.ParentReference{
+		ancestorRef := gwapiv1.ParentReference{
 			Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
 			Kind:      gatewayapi.KindPtr(resource.KindGateway),
 			Namespace: gatewayapi.NamespacePtr(testNS),
@@ -178,7 +177,7 @@ var OCIWasmTest = suite.ConformanceTest{
 			}()
 
 			// Wait for the EnvoyExtensionPolicy to be failed due to missing pull secret
-			ancestorRef := gwapiv1a2.ParentReference{
+			ancestorRef := gwapiv1.ParentReference{
 				Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
 				Kind:      gatewayapi.KindPtr(resource.KindGateway),
 				Namespace: gatewayapi.NamespacePtr(testNS),
@@ -213,7 +212,7 @@ var OCIWasmTest = suite.ConformanceTest{
 			}()
 
 			// Wait for the EnvoyExtensionPolicy to be failed due to missing pull secret
-			ancestorRef := gwapiv1a2.ParentReference{
+			ancestorRef := gwapiv1.ParentReference{
 				Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
 				Kind:      gatewayapi.KindPtr(resource.KindGateway),
 				Namespace: gatewayapi.NamespacePtr(testNS),
@@ -381,9 +380,9 @@ func createEEPForWasmTest(
 		},
 		Spec: egv1a1.EnvoyExtensionPolicySpec{
 			PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-				TargetRefs: []gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+				TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
 					{
-						LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+						LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 							Group: "gateway.networking.k8s.io",
 							Kind:  "HTTPRoute",
 							Name:  httpRouteWithWasm,

@@ -1011,10 +1011,10 @@ func testTLSRoute(ctx context.Context, t *testing.T, provider *Provider, resourc
 					Namespace: ns.Name,
 				},
 				Spec: gwapiv1a2.TLSRouteSpec{
-					CommonRouteSpec: gwapiv1a2.CommonRouteSpec{
-						ParentRefs: []gwapiv1a2.ParentReference{
+					CommonRouteSpec: gwapiv1.CommonRouteSpec{
+						ParentRefs: []gwapiv1.ParentReference{
 							{
-								Name: gwapiv1a2.ObjectName(gw.Name),
+								Name: gwapiv1.ObjectName(gw.Name),
 							},
 						},
 					},
@@ -1023,7 +1023,7 @@ func testTLSRoute(ctx context.Context, t *testing.T, provider *Provider, resourc
 						{
 							BackendRefs: []gwapiv1a2.BackendRef{
 								{
-									BackendObjectReference: gwapiv1a2.BackendObjectReference{
+									BackendObjectReference: gwapiv1.BackendObjectReference{
 										Name: "test",
 										Port: ptr.To(gwapiv1.PortNumber(90)),
 									},
@@ -1156,9 +1156,9 @@ func testServiceCleanupForMultipleRoutes(ctx context.Context, t *testing.T, prov
 			Namespace: ns.Name,
 		},
 		Spec: gwapiv1a2.TLSRouteSpec{
-			CommonRouteSpec: gwapiv1a2.CommonRouteSpec{
-				ParentRefs: []gwapiv1a2.ParentReference{{
-					Name: gwapiv1a2.ObjectName(gw.Name),
+			CommonRouteSpec: gwapiv1.CommonRouteSpec{
+				ParentRefs: []gwapiv1.ParentReference{{
+					Name: gwapiv1.ObjectName(gw.Name),
 				}},
 			},
 			Hostnames: []gwapiv1a2.Hostname{"test-tls.hostname.local"},
@@ -1166,7 +1166,7 @@ func testServiceCleanupForMultipleRoutes(ctx context.Context, t *testing.T, prov
 				{
 					BackendRefs: []gwapiv1a2.BackendRef{
 						{
-							BackendObjectReference: gwapiv1a2.BackendObjectReference{
+							BackendObjectReference: gwapiv1.BackendObjectReference{
 								Name: "test-common-svc",
 								Port: ptr.To(gwapiv1.PortNumber(90)),
 							},

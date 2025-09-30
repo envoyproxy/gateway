@@ -1456,7 +1456,7 @@ func (t *Translator) processDestination(name string, backendRefContext BackendRe
 	ds.TLS, tlsErr = t.applyBackendTLSSetting(
 		backendRef.BackendObjectReference,
 		backendNamespace,
-		gwapiv1a2.ParentReference{
+		gwapiv1.ParentReference{
 			Group:       parentRef.Group,
 			Kind:        parentRef.Kind,
 			Namespace:   parentRef.Namespace,
@@ -1537,7 +1537,7 @@ func (t *Translator) processServiceImportDestinationSetting(
 	serviceImport := resources.GetServiceImport(backendNamespace, string(backendRef.Name))
 	var servicePort mcsapiv1a1.ServicePort
 	for _, port := range serviceImport.Spec.Ports {
-		if port.Port == int32(*backendRef.Port) {
+		if port.Port == *backendRef.Port {
 			servicePort = port
 			break
 		}
@@ -1585,7 +1585,7 @@ func (t *Translator) processServiceDestinationSetting(
 	service := resources.GetService(backendNamespace, string(backendRef.Name))
 	var servicePort corev1.ServicePort
 	for _, port := range service.Spec.Ports {
-		if port.Port == int32(*backendRef.Port) {
+		if port.Port == *backendRef.Port {
 			servicePort = port
 			break
 		}
@@ -1916,10 +1916,10 @@ func (t *Translator) processBackendExtensions(
 	return nil
 }
 
-func getTargetBackendReference(backendRef gwapiv1a2.BackendObjectReference, backendNamespace string, resources *resource.Resources) gwapiv1a2.LocalPolicyTargetReferenceWithSectionName {
-	ref := gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
-		LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
-			Group: func() gwapiv1a2.Group {
+func getTargetBackendReference(backendRef gwapiv1.BackendObjectReference, backendNamespace string, resources *resource.Resources) gwapiv1.LocalPolicyTargetReferenceWithSectionName {
+	ref := gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+		LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+			Group: func() gwapiv1.Group {
 				if backendRef.Group == nil || *backendRef.Group == "" {
 					return ""
 				}
@@ -1942,7 +1942,7 @@ func getTargetBackendReference(backendRef gwapiv1a2.BackendObjectReference, back
 	case backendRef.Kind == nil || *backendRef.Kind == resource.KindService:
 		if service := resources.GetService(backendNamespace, string(backendRef.Name)); service != nil {
 			for _, port := range service.Spec.Ports {
-				if port.Port == int32(*backendRef.Port) {
+				if port.Port == *backendRef.Port {
 					if port.Name != "" {
 						ref.SectionName = SectionNamePtr(port.Name)
 						break
@@ -1954,7 +1954,7 @@ func getTargetBackendReference(backendRef gwapiv1a2.BackendObjectReference, back
 	case *backendRef.Kind == resource.KindServiceImport:
 		if si := resources.GetServiceImport(backendNamespace, string(backendRef.Name)); si != nil {
 			for _, port := range si.Spec.Ports {
-				if port.Port == int32(*backendRef.Port) {
+				if port.Port == *backendRef.Port {
 					if port.Name != "" {
 						ref.SectionName = SectionNamePtr(port.Name)
 						break

@@ -47,7 +47,7 @@ var FaultTest = suite.ConformanceTest{
 				t.Errorf("failed to get expected response: %v", err)
 			}
 
-			if err := http.CompareRequest(t, &req, cReq, cResp, expectedResponse); err != nil {
+			if err := http.CompareRoundTrip(t, &req, cReq, cResp, expectedResponse); err != nil {
 				t.Errorf("failed to compare request and response: %v", err)
 			}
 		})
@@ -74,7 +74,7 @@ var FaultTest = suite.ConformanceTest{
 				t.Errorf("failed to get expected response: %v", err)
 			}
 
-			if err := http.CompareRequest(t, &req, cReq, cResp, expectedResponse); err != nil {
+			if err := http.CompareRoundTrip(t, &req, cReq, cResp, expectedResponse); err != nil {
 				t.Errorf("failed to compare request and response: %v", err)
 			}
 		})

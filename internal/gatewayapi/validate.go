@@ -181,7 +181,7 @@ func (t *Translator) validateBackendPort(backendRef *gwapiv1a2.BackendRef) statu
 	return nil
 }
 
-func validateBackendRefService(backendRef gwapiv1a2.BackendObjectReference, resources *resource.Resources,
+func validateBackendRefService(backendRef gwapiv1.BackendObjectReference, resources *resource.Resources,
 	serviceNamespace string, protocol corev1.Protocol,
 ) status.Error {
 	service := resources.GetService(serviceNamespace, string(backendRef.Name))
@@ -196,7 +196,7 @@ func validateBackendRefService(backendRef gwapiv1a2.BackendObjectReference, reso
 		if port.Protocol == "" { // Default protocol is TCP
 			portProtocol = corev1.ProtocolTCP
 		}
-		if port.Port == int32(*backendRef.Port) && portProtocol == protocol {
+		if port.Port == *backendRef.Port && portProtocol == protocol {
 			portFound = true
 			break
 		}
@@ -210,7 +210,7 @@ func validateBackendRefService(backendRef gwapiv1a2.BackendObjectReference, reso
 	return nil
 }
 
-func (t *Translator) validateBackendServiceImport(backendRef gwapiv1a2.BackendObjectReference, resources *resource.Resources,
+func (t *Translator) validateBackendServiceImport(backendRef gwapiv1.BackendObjectReference, resources *resource.Resources,
 	serviceImportNamespace string, protocol corev1.Protocol,
 ) status.Error {
 	serviceImport := resources.GetServiceImport(serviceImportNamespace, string(backendRef.Name))
@@ -226,7 +226,7 @@ func (t *Translator) validateBackendServiceImport(backendRef gwapiv1a2.BackendOb
 		if port.Protocol == "" { // Default protocol is TCP
 			portProtocol = corev1.ProtocolTCP
 		}
-		if port.Port == int32(*backendRef.Port) && portProtocol == protocol {
+		if port.Port == *backendRef.Port && portProtocol == protocol {
 			portFound = true
 			break
 		}
@@ -241,7 +241,7 @@ func (t *Translator) validateBackendServiceImport(backendRef gwapiv1a2.BackendOb
 	return nil
 }
 
-func (t *Translator) validateBackendRefBackend(backendRef gwapiv1a2.BackendObjectReference, resources *resource.Resources,
+func (t *Translator) validateBackendRefBackend(backendRef gwapiv1.BackendObjectReference, resources *resource.Resources,
 	backendNamespace string, allowUDS bool,
 ) status.Error {
 	if !t.BackendEnabled {
@@ -990,7 +990,7 @@ func (t *Translator) validateExtServiceBackendReference(
 				portProtocol = corev1.ProtocolTCP
 			}
 			// currently only HTTP and GRPC are supported, both of which are TCP
-			if port.Port == int32(*backendRef.Port) && portProtocol == corev1.ProtocolTCP {
+			if port.Port == *backendRef.Port && portProtocol == corev1.ProtocolTCP {
 				portFound = true
 				break
 			}
@@ -1016,7 +1016,7 @@ func (t *Translator) validateExtServiceBackendReference(
 				portProtocol = corev1.ProtocolTCP
 			}
 			// currently only HTTP and GRPC are supported, both of which are TCP
-			if port.Port == int32(*backendRef.Port) && portProtocol == corev1.ProtocolTCP {
+			if port.Port == *backendRef.Port && portProtocol == corev1.ProtocolTCP {
 				portFound = true
 				break
 			}
@@ -1084,7 +1084,7 @@ func validateGatewayListenerSectionName(
 			string(sectionName), targetKey.String())
 
 		return &status.PolicyResolveError{
-			Reason:  gwapiv1a2.PolicyReasonTargetNotFound,
+			Reason:  gwapiv1.PolicyReasonTargetNotFound,
 			Message: message,
 		}
 	}
@@ -1103,7 +1103,7 @@ func validateRouteRuleSectionName(
 			string(sectionName), targetKey.Kind, targetKey.Namespace, targetKey.Name)
 
 		return &status.PolicyResolveError{
-			Reason:  gwapiv1a2.PolicyReasonTargetNotFound,
+			Reason:  gwapiv1.PolicyReasonTargetNotFound,
 			Message: message,
 		}
 	}

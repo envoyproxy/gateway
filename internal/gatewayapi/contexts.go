@@ -480,8 +480,8 @@ func GetRouteParentContext(route RouteContext, forParentRef gwapiv1.ParentRefere
 
 	// If the parent is not found in the Route's Status, create a new RouteParentStatus and add it to the Route's Status.
 	if routeParentStatusIdx == -1 {
-		rParentStatus := gwapiv1a2.RouteParentStatus{
-			ControllerName: gwapiv1a2.GatewayController(controllerName),
+		rParentStatus := gwapiv1.RouteParentStatus{
+			ControllerName: gwapiv1.GatewayController(controllerName),
 			ParentRef:      forParentRef,
 		}
 		routeStatus.Parents = append(routeStatus.Parents, rParentStatus)

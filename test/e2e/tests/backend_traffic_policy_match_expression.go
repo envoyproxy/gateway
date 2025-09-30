@@ -12,7 +12,6 @@ import (
 
 	"k8s.io/apimachinery/pkg/types"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
@@ -50,7 +49,7 @@ var BackendTrafficPolicyMatchExpressionTest = suite.ConformanceTest{
 				suite.Client,
 				types.NamespacedName{Name: "backend-traffic-match-expression", Namespace: ns},
 				suite.ControllerName,
-				gwapiv1a2.ParentReference{
+				gwapiv1.ParentReference{
 					Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
 					Kind:      gatewayapi.KindPtr(resource.KindGateway),
 					Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),

@@ -13,7 +13,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
@@ -38,7 +37,7 @@ var HTTPBackendExtAuthTest = suite.ConformanceTest{
 		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 		gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 
-		ancestorRef := gwapiv1a2.ParentReference{
+		ancestorRef := gwapiv1.ParentReference{
 			Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
 			Kind:      gatewayapi.KindPtr(resource.KindGateway),
 			Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
@@ -95,7 +94,7 @@ var HTTPBackendExtAuthTest = suite.ConformanceTest{
 				t.Errorf("failed to get expected response: %v", err)
 			}
 
-			if err := http.CompareRequest(t, &req, cReq, cResp, expectedResponse); err != nil {
+			if err := http.CompareRoundTrip(t, &req, cReq, cResp, expectedResponse); err != nil {
 				t.Errorf("failed to compare request and response: %v", err)
 			}
 		})
@@ -121,7 +120,7 @@ var HTTPBackendExtAuthTest = suite.ConformanceTest{
 				t.Errorf("failed to get expected response: %v", err)
 			}
 
-			if err := http.CompareRequest(t, &req, cReq, cResp, expectedResponse); err != nil {
+			if err := http.CompareRoundTrip(t, &req, cReq, cResp, expectedResponse); err != nil {
 				t.Errorf("failed to compare request and response: %v", err)
 			}
 		})
@@ -144,7 +143,7 @@ var HTTPBackendExtAuthTest = suite.ConformanceTest{
 				t.Errorf("failed to get expected response: %v", err)
 			}
 
-			if err := http.CompareRequest(t, &req, cReq, cResp, expectedResponse); err != nil {
+			if err := http.CompareRoundTrip(t, &req, cReq, cResp, expectedResponse); err != nil {
 				t.Errorf("failed to compare request and response: %v", err)
 			}
 		})

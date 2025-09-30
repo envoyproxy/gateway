@@ -8,7 +8,7 @@ package v1alpha1
 import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
 const (
@@ -31,7 +31,7 @@ type BackendTrafficPolicy struct {
 	Spec BackendTrafficPolicySpec `json:"spec"`
 
 	// status defines the current status of BackendTrafficPolicy.
-	Status gwapiv1a2.PolicyStatus `json:"status,omitempty"`
+	Status gwapiv1.PolicyStatus `json:"status,omitempty"`
 }
 
 // BackendTrafficPolicySpec defines the desired state of BackendTrafficPolicy.
