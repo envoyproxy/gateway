@@ -614,11 +614,11 @@ func (t *Translator) translateEnvoyExtensionPolicyForGateway(
 }
 
 func (t *Translator) buildLuas(policy *egv1a1.EnvoyExtensionPolicy, resources *resource.Resources, envoyProxy *egv1a1.EnvoyProxy) ([]ir.Lua, error) {
-	var luaIRList []ir.Lua
-
 	if policy == nil {
 		return nil, nil
 	}
+
+	luaIRList := make([]ir.Lua, 0, len(policy.Spec.Lua))
 
 	for idx, ep := range policy.Spec.Lua {
 		name := irConfigNameForLua(policy, idx)
@@ -683,14 +683,15 @@ func getLuaBodyFromLocalObjectReference(valueRef *gwapiv1.LocalObjectReference, 
 
 func (t *Translator) buildExtProcs(policy *egv1a1.EnvoyExtensionPolicy, resources *resource.Resources, envoyProxy *egv1a1.EnvoyProxy) ([]ir.ExtProc, error, bool) {
 	var (
-		extProcIRList []ir.ExtProc
-		failOpen      bool
-		errs          error
+		failOpen bool
+		errs     error
 	)
 
 	if policy == nil {
 		return nil, nil, failOpen
 	}
+
+	extProcIRList := make([]ir.ExtProc, 0, len(policy.Spec.ExtProc))
 
 	hasFailClose := false
 	for idx, ep := range policy.Spec.ExtProc {
@@ -827,14 +828,15 @@ func (t *Translator) buildWasms(
 	resources *resource.Resources,
 ) ([]ir.Wasm, error, bool) {
 	var (
-		wasmIRList []ir.Wasm
-		failOpen   bool
-		errs       error
+		failOpen bool
+		errs     error
 	)
 
 	if len(policy.Spec.Wasm) == 0 {
-		return wasmIRList, nil, failOpen
+		return nil, nil, failOpen
 	}
+
+	wasmIRList := make([]ir.Wasm, 0, len(policy.Spec.Wasm))
 
 	if t.WasmCache == nil {
 		return nil, fmt.Errorf("wasm cache is not initialized"), failOpen

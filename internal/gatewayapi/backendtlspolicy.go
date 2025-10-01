@@ -255,7 +255,7 @@ func getBackendTLSPolicy(
 
 func getBackendTLSBundle(backendTLSPolicy *gwapiv1a3.BackendTLSPolicy, resources *resource.Resources) (*ir.TLSUpstreamConfig, error) {
 	// Translate SubjectAltNames from gwapiv1a3 to ir
-	var subjectAltNames []ir.SubjectAltName
+	subjectAltNames := make([]ir.SubjectAltName, 0, len(backendTLSPolicy.Spec.Validation.SubjectAltNames))
 	for _, san := range backendTLSPolicy.Spec.Validation.SubjectAltNames {
 		var subjectAltName ir.SubjectAltName
 		switch san.Type {

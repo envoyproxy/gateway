@@ -957,7 +957,7 @@ func (r *gatewayAPIReconciler) processSecurityPolicyObjectRefs(
 }
 
 func getBackendRefs(backendCluster egv1a1.BackendCluster) []gwapiv1.BackendObjectReference {
-	var backendRefs []gwapiv1.BackendObjectReference
+	backendRefs := make([]gwapiv1.BackendObjectReference, 0, 1+len(backendCluster.BackendRefs))
 	if backendCluster.BackendRef != nil {
 		backendRefs = append(backendRefs, *backendCluster.BackendRef)
 	}

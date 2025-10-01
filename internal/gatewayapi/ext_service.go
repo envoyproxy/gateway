@@ -33,13 +33,14 @@ func (t *Translator) translateExtServiceBackendRefs(
 ) (*ir.RouteDestination, error) {
 	var (
 		rs  *ir.RouteDestination
-		ds  []*ir.DestinationSetting
 		err error
 	)
 
 	if len(backendRefs) == 0 {
 		return nil, errors.New("no backendRefs found for external service")
 	}
+
+	ds := make([]*ir.DestinationSetting, 0, len(backendRefs))
 
 	pnn := utils.NamespacedName(policy)
 	destName := irIndexedExtServiceDestinationName(pnn, policy.GetObjectKind().GroupVersionKind().Kind, configType, index)

@@ -4834,6 +4834,11 @@ func (in *OIDC) DeepCopyInto(out *OIDC) {
 		*out = new(v1.Duration)
 		**out = **in
 	}
+	if in.DisableTokenEncryption != nil {
+		in, out := &in.DisableTokenEncryption, &out.DisableTokenEncryption
+		*out = new(bool)
+		**out = **in
+	}
 	if in.PassThroughAuthHeader != nil {
 		in, out := &in.PassThroughAuthHeader, &out.PassThroughAuthHeader
 		*out = new(bool)
