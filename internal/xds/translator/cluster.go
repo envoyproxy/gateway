@@ -837,10 +837,10 @@ func buildTypedExtensionProtocolOptions(args *xdsClusterArgs, requiresAutoHTTPCo
 
 	requiresHTTPFilters := len(args.settings) > 0 && args.settings[0].Filters != nil && args.settings[0].Filters.CredentialInjection != nil
 
-  requiredHTTPProtocolOptions := args.useClientProtocol || requiresAutoHTTPConfig ||
+	requiredHTTPProtocolOptions := args.useClientProtocol || requiresAutoHTTPConfig ||
 		requiresCommonHTTPOptions || requiresHTTP1Options || requiresHTTP2Options || requiresHTTPFilters || requiresAutoSNI
-	
-  if !requiredHTTPProtocolOptions {
+
+	if !requiredHTTPProtocolOptions {
 		return nil, nil, nil
 	}
 	protocolOptions := httpv3.HttpProtocolOptions{}
