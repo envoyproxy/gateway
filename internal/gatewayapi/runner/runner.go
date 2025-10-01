@@ -37,6 +37,21 @@ import (
 	"github.com/envoyproxy/gateway/internal/wasm"
 )
 
+// shouldLogTranslateError returns whether a translation error should be logged.
+// In standalone (non-Kubernetes) mode, we suppress known non-actionable
+// TLS secret not-found errors to avoid distracting users.
+func shouldLogTranslateError(providerType egv1a1.ProviderType, err error) bool {
+    if err == nil {
+        return false
+    }
+    if providerType != egv1a1.ProviderTypeKubernetes {
+        if strings.Contains(err.Error(), "TLS secret") && strings.Contains(err.Error(), "not found") {
+            return false
+        }
+    }
+    return true
+}
+
 const (
 	// Default certificates path for envoy-gateway with Kubernetes provider.
 	serveTLSCertFilepath = "/certs/tls.crt"
@@ -186,15 +201,12 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 					r.Logger.Info("extension resources", "GVKs count", len(extGKs))
 				}
 				// Translate to IR
-				result, err := t.Translate(resources)
-				if err != nil {
-					// In standalone mode, suppress known non-actionable TLS-secret-not-found errors
-					if strings.Contains(err.Error(), "TLS secret") && strings.Contains(err.Error(), "not found") && r.EnvoyGateway.Provider.Type != egv1a1.ProviderTypeKubernetes {
-						// noop
-					} else {
-						r.Logger.Error(err, "errors detected during translation", "gateway-class", resources.GatewayClass.Name)
-					}
-				}
+                result, err := t.Translate(resources)
+                if err != nil {
+                    if shouldLogTranslateError(r.EnvoyGateway.Provider.Type, err) {
+                        r.Logger.Error(err, "errors detected during translation", "gateway-class", resources.GatewayClass.Name)
+                    }
+                }
 
 				// Publish the IRs.
 				// Also validate the ir before sending it.

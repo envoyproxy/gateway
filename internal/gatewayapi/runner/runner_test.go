@@ -7,6 +7,7 @@ package runner
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"reflect"
 	"strings"
@@ -358,6 +359,27 @@ func TestStandaloneModeErrorSuppression(t *testing.T) {
 			assert.Equal(t, tc.shouldLog, shouldLog, "Error logging decision should match expected value")
 		})
 	}
+}
+
+func TestShouldLogTranslateError(t *testing.T) {
+    tests := []struct {
+        name         string
+        providerType egv1a1.ProviderType
+        err          error
+        want         bool
+    }{
+        {"k8s logs generic", egv1a1.ProviderTypeKubernetes, fmt.Errorf("random error"), true},
+        {"standalone logs generic", egv1a1.ProviderTypeCustom, fmt.Errorf("random error"), true},
+        {"standalone suppress tls not found", egv1a1.ProviderTypeCustom, fmt.Errorf("TLS secret envoy-gateway-system/envoy not found"), false},
+        {"k8s logs tls not found", egv1a1.ProviderTypeKubernetes, fmt.Errorf("TLS secret envoy-gateway-system/envoy not found"), true},
+        {"nil error", egv1a1.ProviderTypeCustom, nil, false},
+    }
+    for _, tc := range tests {
+        t.Run(tc.name, func(t *testing.T) {
+            got := shouldLogTranslateError(tc.providerType, tc.err)
+            assert.Equal(t, tc.want, got)
+        })
+    }
 }
 
 // mockError is a simple error implementation for testing
