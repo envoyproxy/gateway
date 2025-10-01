@@ -116,14 +116,10 @@ func (u *UpdateHandler) apply(update Update) {
 		// Clear managedFields to satisfy SSA requirement on status subresource
 		newObj.SetManagedFields(nil)
 
-		// Use server-side apply on the status subresource to avoid conflicts when
-		// multiple controllers attempt to update status concurrently.
-		return u.client.Status().Patch(
-			context.Background(),
-			newObj,
-			client.Apply,
-			&client.SubResourcePatchOptions{PatchOptions: client.PatchOptions{FieldManager: "envoy-gateway"}},
-		)
+		// Use a merge Patch on the status subresource to avoid conflicts while
+		// keeping behavior consistent across CI environments.
+		patch := client.MergeFrom(obj)
+		return u.client.Status().Patch(context.Background(), newObj, patch)
 	}); err != nil {
 		log.Error(err, "unable to update status")
 
