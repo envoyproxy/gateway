@@ -303,7 +303,7 @@ func TestProcessBackendRefsWithCustomBackends(t *testing.T) {
 
 			// Create resource mappings
 			resourceMappings := &resourceMappings{
-				allAssociatedBackendRefs:                sets.New[gwapiv1.BackendObjectReference](),
+				allAssociatedBackendRefs:                make(map[utils.NamespacedNameWithGroupKind]gwapiv1.BackendObjectReference),
 				allAssociatedNamespaces:                 sets.New[string](),
 				allAssociatedBackendRefExtensionFilters: sets.New[utils.NamespacedNameWithGroupKind](),
 				extensionRefFilters:                     tc.existingExtFilters,
@@ -311,7 +311,7 @@ func TestProcessBackendRefsWithCustomBackends(t *testing.T) {
 
 			// Add backend refs to the mapping
 			for _, backendRef := range tc.backendRefs {
-				resourceMappings.allAssociatedBackendRefs.Insert(backendRef)
+				resourceMappings.insertBackendRef(backendRef)
 			}
 
 			// Create empty resource tree
@@ -1303,11 +1303,14 @@ func TestProcessServiceClusterForGatewayClass(t *testing.T) {
 
 			r.processServiceClusterForGatewayClass(tc.envoyProxy, tc.gatewayClass, resourceMap)
 
-			require.Contains(t, resourceMap.allAssociatedBackendRefs, gwapiv1.BackendObjectReference{
-				Kind:      ptr.To(gwapiv1.Kind("Service")),
+			expectedRef := gwapiv1.BackendObjectReference{
+				Kind:      ptr.To(gwapiv1.Kind(resource.KindService)),
 				Namespace: gatewayapi.NamespacePtr(r.namespace),
 				Name:      gwapiv1.ObjectName(tc.expectedSvcName),
-			})
+			}
+			key := backendRefKey(expectedRef)
+			require.Contains(t, resourceMap.allAssociatedBackendRefs, key)
+			require.Equal(t, expectedRef, resourceMap.allAssociatedBackendRefs[key])
 		})
 	}
 }
@@ -1457,11 +1460,14 @@ func TestProcessServiceClusterForGateway(t *testing.T) {
 
 			r.processServiceClusterForGateway(tc.envoyProxy, tc.gateway, resourceMap)
 
-			require.Contains(t, resourceMap.allAssociatedBackendRefs, gwapiv1.BackendObjectReference{
-				Kind:      ptr.To(gwapiv1.Kind("Service")),
+			expectedRef := gwapiv1.BackendObjectReference{
+				Kind:      ptr.To(gwapiv1.Kind(resource.KindService)),
 				Namespace: gatewayapi.NamespacePtr(tc.expectedSvcNamespace),
 				Name:      gwapiv1.ObjectName(tc.expectedSvcName),
-			})
+			}
+			key := backendRefKey(expectedRef)
+			require.Contains(t, resourceMap.allAssociatedBackendRefs, key)
+			require.Equal(t, expectedRef, resourceMap.allAssociatedBackendRefs[key])
 		})
 	}
 }
@@ -1479,6 +1485,23 @@ func newGatewayAPIReconciler(logger logging.Logger) *gatewayAPIReconciler {
 			},
 		},
 	}
+}
+
+func TestProcessBackendRefDeduplicatesLogicalBackend(t *testing.T) {
+	logger := logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo)
+	r := newGatewayAPIReconciler(logger)
+	resourceTree := resource.NewResources()
+	resourceMap := newResourceMapping()
+
+	backendRef := gwapiv1.BackendObjectReference{
+		Namespace: gatewayapi.NamespacePtr("default"),
+		Name:      "svc",
+	}
+
+	require.NoError(t, r.processBackendRef(t.Context(), resourceMap, resourceTree, resource.KindHTTPRoute, "default", "route-a", backendRef))
+	require.NoError(t, r.processBackendRef(t.Context(), resourceMap, resourceTree, resource.KindHTTPRoute, "default", "route-b", backendRef))
+
+	require.Equal(t, 1, len(resourceMap.allAssociatedBackendRefs))
 }
 
 func TestProcessBackendRefs(t *testing.T) {
@@ -1584,7 +1607,7 @@ func TestProcessBackendRefs(t *testing.T) {
 			resourceTree := resource.NewResources()
 			resourceMap := newResourceMapping()
 			backend := tc.backend
-			resourceMap.allAssociatedBackendRefs.Insert(gwapiv1.BackendObjectReference{
+			resourceMap.insertBackendRef(gwapiv1.BackendObjectReference{
 				Kind:      gatewayapi.KindPtr(resource.KindBackend),
 				Namespace: gatewayapi.NamespacePtr(backend.Namespace),
 				Name:      gwapiv1.ObjectName(backend.Name),
