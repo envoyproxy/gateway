@@ -216,6 +216,15 @@ type BackendTLSSettings struct {
 	//
 	// +optional
 	SNI *gwapiv1.PreciseHostname `json:"sni,omitempty"`
+
+	// ClientTLS defines the client-side TLS identity and settings Envoy should use
+	// when initiating TLS connections to this backend. This allows configuring the
+	// client certificate/key as well as TLS protocol parameters such as ciphers,
+	// TLS versions, and ALPN. When omitted, Envoy will fall back to the
+	// EnvoyProxy BackendTLS defaults, if any.
+	//
+	// +optional
+	ClientTLS *BackendTLSConfig `json:"clientTLS,omitempty"`
 }
 
 // BackendType defines the type of the Backend.
