@@ -302,8 +302,8 @@ func TestProcessBackendRefsWithCustomBackends(t *testing.T) {
 			}
 
 			// Create resource mappings
-				resourceMappings := &resourceMappings{
-					allAssociatedBackendRefs:                make(map[utils.NamespacedNameWithGroupKind]gwapiv1.BackendObjectReference),
+			resourceMappings := &resourceMappings{
+				allAssociatedBackendRefs:                make(map[utils.NamespacedNameWithGroupKind]gwapiv1.BackendObjectReference),
 				allAssociatedNamespaces:                 sets.New[string](),
 				allAssociatedBackendRefExtensionFilters: sets.New[utils.NamespacedNameWithGroupKind](),
 				extensionRefFilters:                     tc.existingExtFilters,
@@ -1501,7 +1501,7 @@ func TestProcessBackendRefDeduplicatesLogicalBackend(t *testing.T) {
 	require.NoError(t, r.processBackendRef(t.Context(), resourceMap, resourceTree, resource.KindHTTPRoute, "default", "route-a", backendRef))
 	require.NoError(t, r.processBackendRef(t.Context(), resourceMap, resourceTree, resource.KindHTTPRoute, "default", "route-b", backendRef))
 
-	require.Equal(t, 1, len(resourceMap.allAssociatedBackendRefs))
+	require.Len(t, resourceMap.allAssociatedBackendRefs, 1)
 }
 
 func TestProcessBackendRefs(t *testing.T) {
