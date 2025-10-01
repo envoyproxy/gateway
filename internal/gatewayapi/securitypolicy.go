@@ -73,19 +73,13 @@ func (t *Translator) ProcessSecurityPolicies(securityPolicies []*egv1a1.Security
 			Name:      route.GetName(),
 			Namespace: route.GetNamespace(),
 		}
-		routeMap[key] = &policyRouteTargetContext{
-			RouteContext:         route,
-			attachedToRouteRules: make(sets.Set[string]),
-		}
+		routeMap[key] = &policyRouteTargetContext{RouteContext: route}
 	}
 
 	gatewayMap := make(map[types.NamespacedName]*policyGatewayTargetContext, gatewayMapSize)
 	for _, gw := range gateways {
 		key := utils.NamespacedName(gw)
-		gatewayMap[key] = &policyGatewayTargetContext{
-			GatewayContext:      gw,
-			attachedToListeners: make(sets.Set[string]),
-		}
+		gatewayMap[key] = &policyGatewayTargetContext{GatewayContext: gw}
 	}
 
 	// Map of Gateway to the routes attached to it.
@@ -465,7 +459,7 @@ func resolveSecurityPolicyGatewayTargetRef(
 		gateway.attached = true
 	} else {
 		listenerName := string(*target.SectionName)
-		if gateway.attachedToListeners.Has(listenerName) {
+		if gateway.attachedToListeners != nil && gateway.attachedToListeners.Has(listenerName) {
 			message := fmt.Sprintf("Unable to target Listener %s/%s, another SecurityPolicy has already attached to it",
 				string(target.Name), listenerName)
 
@@ -473,6 +467,9 @@ func resolveSecurityPolicyGatewayTargetRef(
 				Reason:  gwapiv1a2.PolicyReasonConflicted,
 				Message: message,
 			}
+		}
+		if gateway.attachedToListeners == nil {
+			gateway.attachedToListeners = make(sets.Set[string])
 		}
 		gateway.attachedToListeners.Insert(listenerName)
 	}
@@ -524,13 +521,16 @@ func resolveSecurityPolicyRouteTargetRef(
 		route.attached = true
 	} else {
 		routeRuleName := string(*target.SectionName)
-		if route.attachedToRouteRules.Has(routeRuleName) {
+		if route.attachedToRouteRules != nil && route.attachedToRouteRules.Has(routeRuleName) {
 			message := fmt.Sprintf("Unable to target RouteRule %s/%s, another SecurityPolicy has already attached to it",
 				string(target.Name), routeRuleName)
 			return route.RouteContext, &status.PolicyResolveError{
 				Reason:  gwapiv1a2.PolicyReasonConflicted,
 				Message: message,
 			}
+		}
+		if route.attachedToRouteRules == nil {
+			route.attachedToRouteRules = make(sets.Set[string])
 		}
 		route.attachedToRouteRules.Insert(routeRuleName)
 	}
@@ -883,7 +883,7 @@ func (t *Translator) buildJWT(
 		return nil, err
 	}
 
-	var providers []ir.JWTProvider
+	providers := make([]ir.JWTProvider, 0, len(policy.Spec.JWT.Providers))
 	for i, p := range policy.Spec.JWT.Providers {
 		provider := ir.JWTProvider{
 			Name:           p.Name,
@@ -1007,10 +1007,11 @@ func (t *Translator) buildRemoteJWKS(
 	envoyProxy *egv1a1.EnvoyProxy,
 ) (*ir.RemoteJWKS, error) {
 	var (
-		protocol ir.AppProtocol
-		rd       *ir.RouteDestination
-		traffic  *ir.TrafficFeatures
-		err      error
+		protocol      ir.AppProtocol
+		rd            *ir.RouteDestination
+		traffic       *ir.TrafficFeatures
+		err           error
+		cacheDuration *metav1.Duration
 	)
 
 	u, err := url.Parse(remoteJWKS.URI)
@@ -1037,10 +1038,19 @@ func (t *Translator) buildRemoteJWKS(
 		}
 	}
 
+	if remoteJWKS.CacheDuration != nil {
+		d, err := time.ParseDuration(string(*remoteJWKS.CacheDuration))
+		if err != nil {
+			return nil, err
+		}
+		cacheDuration = ir.MetaV1DurationPtr(d)
+	}
+
 	return &ir.RemoteJWKS{
-		Destination: rd,
-		Traffic:     traffic,
-		URI:         remoteJWKS.URI,
+		Destination:   rd,
+		Traffic:       traffic,
+		URI:           remoteJWKS.URI,
+		CacheDuration: cacheDuration,
 	}, nil
 }
 
@@ -1085,17 +1095,18 @@ func (t *Translator) buildOIDC(
 	envoyProxy *egv1a1.EnvoyProxy,
 ) (*ir.OIDC, error) {
 	var (
-		oidc                  = policy.Spec.OIDC
-		provider              *ir.OIDCProvider
-		clientID              string
-		clientSecret          *corev1.Secret
-		redirectURL           = defaultRedirectURL
-		redirectPath          = defaultRedirectPath
-		logoutPath            = defaultLogoutPath
-		forwardAccessToken    = defaultForwardAccessToken
-		refreshToken          = defaultRefreshToken
-		passThroughAuthHeader = defaultPassThroughAuthHeader
-		err                   error
+		oidc                   = policy.Spec.OIDC
+		provider               *ir.OIDCProvider
+		clientID               string
+		clientSecret           *corev1.Secret
+		redirectURL            = defaultRedirectURL
+		redirectPath           = defaultRedirectPath
+		logoutPath             = defaultLogoutPath
+		forwardAccessToken     = defaultForwardAccessToken
+		refreshToken           = defaultRefreshToken
+		passThroughAuthHeader  = defaultPassThroughAuthHeader
+		disableTokenEncryption = false
+		err                    error
 	)
 
 	if provider, err = t.buildOIDCProvider(policy, resources, envoyProxy); err != nil {
@@ -1162,6 +1173,9 @@ func (t *Translator) buildOIDC(
 	if oidc.PassThroughAuthHeader != nil {
 		passThroughAuthHeader = *oidc.PassThroughAuthHeader
 	}
+	if oidc.DisableTokenEncryption != nil {
+		disableTokenEncryption = *oidc.DisableTokenEncryption
+	}
 
 	// Generate a unique cookie suffix for oauth filters.
 	// This is to avoid cookie name collision when multiple security policies are applied
@@ -1183,24 +1197,25 @@ func (t *Translator) buildOIDC(
 	}
 
 	irOIDC := &ir.OIDC{
-		Name:                  irConfigName(policy),
-		Provider:              *provider,
-		ClientID:              clientID,
-		ClientSecret:          clientSecretBytes,
-		Scopes:                scopes,
-		Resources:             oidc.Resources,
-		RedirectURL:           redirectURL,
-		RedirectPath:          redirectPath,
-		LogoutPath:            logoutPath,
-		ForwardAccessToken:    forwardAccessToken,
-		RefreshToken:          refreshToken,
-		CookieSuffix:          suffix,
-		CookieNameOverrides:   policy.Spec.OIDC.CookieNames,
-		CookieDomain:          policy.Spec.OIDC.CookieDomain,
-		CookieConfig:          policy.Spec.OIDC.CookieConfig,
-		HMACSecret:            hmacData,
-		PassThroughAuthHeader: passThroughAuthHeader,
-		DenyRedirect:          oidc.DenyRedirect,
+		Name:                   irConfigName(policy),
+		Provider:               *provider,
+		ClientID:               clientID,
+		ClientSecret:           clientSecretBytes,
+		Scopes:                 scopes,
+		Resources:              oidc.Resources,
+		RedirectURL:            redirectURL,
+		RedirectPath:           redirectPath,
+		LogoutPath:             logoutPath,
+		ForwardAccessToken:     forwardAccessToken,
+		RefreshToken:           refreshToken,
+		CookieSuffix:           suffix,
+		CookieNameOverrides:    policy.Spec.OIDC.CookieNames,
+		CookieDomain:           policy.Spec.OIDC.CookieDomain,
+		CookieConfig:           policy.Spec.OIDC.CookieConfig,
+		HMACSecret:             hmacData,
+		PassThroughAuthHeader:  passThroughAuthHeader,
+		DisableTokenEncryption: disableTokenEncryption,
+		DenyRedirect:           oidc.DenyRedirect,
 	}
 
 	if oidc.DefaultTokenTTL != nil {

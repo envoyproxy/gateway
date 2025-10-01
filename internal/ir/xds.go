@@ -1077,6 +1077,9 @@ type RemoteJWKS struct {
 	// URI is the HTTPS URI to fetch the JWKS. Envoy's system trust bundle is used to validate the server certificate.
 	// If a custom trust bundle is needed, it can be specified in a BackendTLSConfig resource and target the BackendRefs.
 	URI string `json:"uri"`
+
+	// Duration after which the cached JWKS should be expired. If not specified, default cache duration is 5 minutes.
+	CacheDuration *metav1.Duration `json:"cacheDuration,omitempty"`
 }
 
 // OIDC defines the schema for authenticating HTTP requests using
@@ -1157,6 +1160,9 @@ type OIDC struct {
 	// filter, normally "Authorization: Bearer ...". This is typically used for non-browser clients that
 	// may not be able to handle OIDC redirects and wish to directly supply a token instead.
 	PassThroughAuthHeader bool `json:"passThroughAuthHeader,omitempty"`
+
+	// DisableTokenEncryption disables encryption of ID and access tokens stored in cookies.
+	DisableTokenEncryption bool `json:"disableTokenEncryption,omitempty"`
 
 	// Any request that matches any of the provided matchers won't be redirected to OAuth server when tokens are not valid.
 	// Automatic access token refresh will be performed for these requests, if enabled.

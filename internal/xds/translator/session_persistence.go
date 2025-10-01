@@ -178,7 +178,7 @@ func routePathToCookiePath(path *ir.StringMatch) string {
 // https://gateway-api.sigs.k8s.io/geps/gep-1619/#path
 func getLongestNonRegexPrefix(path string) string {
 	parts := strings.Split(path, "/")
-	var longestNonRegexPrefix []string
+	longestNonRegexPrefix := make([]string, 0, len(parts))
 	for _, part := range parts {
 		if part == "*" || strings.Contains(part, "*") {
 			break

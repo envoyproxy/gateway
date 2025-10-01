@@ -725,7 +725,6 @@ func buildXdsClusterLoadAssignment(clusterName string, destSettings []*ir.Destin
 }
 
 func buildZonalLocalities(metadata *corev3.Metadata, ds *ir.DestinationSetting) []*endpointv3.LocalityLbEndpoints {
-	var localities []*endpointv3.LocalityLbEndpoints
 	zonalEndpoints := make(map[string][]*endpointv3.LbEndpoint)
 	for _, irEp := range ds.Endpoints {
 		healthStatus := corev3.HealthStatus_UNKNOWN
@@ -748,6 +747,7 @@ func buildZonalLocalities(metadata *corev3.Metadata, ds *ir.DestinationSetting) 
 		zonalEndpoints[zone] = append(zonalEndpoints[zone], lbEndpoint)
 	}
 
+	localities := make([]*endpointv3.LocalityLbEndpoints, 0, len(zonalEndpoints))
 	for zone, endPts := range zonalEndpoints {
 		locality := &endpointv3.LocalityLbEndpoints{
 			Locality: &corev3.Locality{
@@ -1265,7 +1265,7 @@ func buildHTTP2Settings(opts *ir.HTTP2Settings) *corev3.Http2ProtocolOptions {
 // buildEndpointOverrideLoadBalancingPolicy builds the Envoy LoadBalancingPolicy for EndpointOverride
 func buildEndpointOverrideLoadBalancingPolicy(loadBalancer *ir.LoadBalancer) (*clusterv3.LoadBalancingPolicy, error) {
 	// Build override host sources from EndpointOverride
-	var overrideHostSources []*override_hostv3.OverrideHost_OverrideHostSource
+	overrideHostSources := make([]*override_hostv3.OverrideHost_OverrideHostSource, 0, len(loadBalancer.EndpointOverride.ExtractFrom))
 
 	for _, source := range loadBalancer.EndpointOverride.ExtractFrom {
 		overrideSource := &override_hostv3.OverrideHost_OverrideHostSource{}

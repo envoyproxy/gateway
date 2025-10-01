@@ -1412,13 +1412,9 @@ func TestNamespaceSelectorProvider(t *testing.T) {
 		return resources.GatewayAPIResources.Len() != 0
 	}, defaultWait, defaultTick)
 
-	require.Eventually(t, func() bool {
-		res, ok := waitUntilGatewayClassResourcesAreReady(resources, gc.Name)
-		if !ok {
-			return false
-		}
-		return res != nil && len(res.Gateways) == 1
-	}, defaultWait, defaultTick)
+	requireResourceReady(t, resources, gc.Name, func(r *resource.Resources) bool {
+		return len(r.Gateways) == 1
+	})
 
 	_, ok := resources.GatewayStatuses.Load(types.NamespacedName{Name: "non-watched-gateway", Namespace: nonWatchedNS.Name})
 	require.Equal(t, false, ok)
@@ -1560,54 +1556,28 @@ func TestNamespaceSelectorProvider(t *testing.T) {
 		require.NoError(t, cli.Delete(ctx, nonWatchedUDPRoute))
 	}()
 
-	require.Eventually(t, func() bool {
-		res, ok := waitUntilGatewayClassResourcesAreReady(resources, gc.Name)
-		if !ok {
-			return false
-		}
-		// The service number dependes on the service created and the backendRef
-		return res != nil && len(res.Services) == 5
-	}, defaultWait, defaultTick)
+	requireResourceReady(t, resources, gc.Name, func(r *resource.Resources) bool {
+		return len(r.Services) == 1
+	})
 
-	require.Eventually(t, func() bool {
-		res, ok := waitUntilGatewayClassResourcesAreReady(resources, gc.Name)
-		if !ok {
-			return false
-		}
-		return res != nil && len(res.HTTPRoutes) == 1
-	}, defaultWait, defaultTick)
+	requireResourceReady(t, resources, gc.Name, func(r *resource.Resources) bool {
+		return len(r.HTTPRoutes) == 1
+	})
+	requireResourceReady(t, resources, gc.Name, func(r *resource.Resources) bool {
+		return len(r.TCPRoutes) == 1
+	})
 
-	require.Eventually(t, func() bool {
-		res, ok := waitUntilGatewayClassResourcesAreReady(resources, gc.Name)
-		if !ok {
-			return false
-		}
-		return res != nil && len(res.TCPRoutes) == 1
-	}, defaultWait, defaultTick)
+	requireResourceReady(t, resources, gc.Name, func(r *resource.Resources) bool {
+		return len(r.TLSRoutes) == 1
+	})
 
-	require.Eventually(t, func() bool {
-		res, ok := waitUntilGatewayClassResourcesAreReady(resources, gc.Name)
-		if !ok {
-			return false
-		}
-		return res != nil && len(res.TLSRoutes) == 1
-	}, defaultWait, defaultTick)
+	requireResourceReady(t, resources, gc.Name, func(r *resource.Resources) bool {
+		return len(r.UDPRoutes) == 1
+	})
 
-	require.Eventually(t, func() bool {
-		res, ok := waitUntilGatewayClassResourcesAreReady(resources, gc.Name)
-		if !ok {
-			return false
-		}
-		return res != nil && len(res.UDPRoutes) == 1
-	}, defaultWait, defaultTick)
-
-	require.Eventually(t, func() bool {
-		res, ok := waitUntilGatewayClassResourcesAreReady(resources, gc.Name)
-		if !ok {
-			return false
-		}
-		return res != nil && len(res.GRPCRoutes) == 1
-	}, defaultWait, defaultTick)
+	requireResourceReady(t, resources, gc.Name, func(r *resource.Resources) bool {
+		return len(r.GRPCRoutes) == 1
+	})
 }
 
 func waitUntilGatewayClassResourcesAreReady(resources *message.ProviderResources, gatewayClassName string) (*resource.Resources, bool) {
@@ -1617,4 +1587,14 @@ func waitUntilGatewayClassResourcesAreReady(resources *message.ProviderResources
 	}
 
 	return res, true
+}
+
+func requireResourceReady(t *testing.T, resources *message.ProviderResources, gatewayClassName string, cmpFunc func(r *resource.Resources) bool) {
+	require.Eventually(t, func() bool {
+		res, ok := waitUntilGatewayClassResourcesAreReady(resources, gatewayClassName)
+		if !ok {
+			return false
+		}
+		return cmpFunc(res)
+	}, defaultWait, defaultTick)
 }

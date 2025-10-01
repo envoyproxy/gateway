@@ -21,6 +21,7 @@ http:
           - foo.com
           remoteJWKS:
             uri: http://localhost/jwt/public-key/jwks.json
+            cacheDuration: 300s
           claimToHeaders:
           - header: one-route-example-key1
             claim: claim.neteased.key
@@ -64,6 +65,7 @@ http:
           - foo.com
           remoteJWKS:
             uri: http://localhost/jwt/public-key/jwks.json
+            cacheDuration: 300s
           claimToHeaders:
           - header: second-route-example-key1
             claim: claim.neteased.key
@@ -74,6 +76,7 @@ http:
           - two.foo.com
           remoteJWKS:
             uri: https://192.168.1.250:8080/jwt/public-key/jwks.json
+            cacheDuration: 300s
     destination:
       name: "second-route-www.test.com-dest"
       settings:
