@@ -113,6 +113,9 @@ func (u *UpdateHandler) apply(update Update) {
 
 		newObj.SetUID(obj.GetUID())
 
+		// Clear managedFields to satisfy SSA requirement on status subresource
+		newObj.SetManagedFields(nil)
+
 		// Use server-side apply on the status subresource to avoid conflicts when
 		// multiple controllers attempt to update status concurrently.
 		return u.client.Status().Patch(
