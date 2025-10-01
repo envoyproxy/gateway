@@ -90,7 +90,13 @@ func (s *snapshotCache) GenerateNewSnapshot(irKey string, resources types.XdsRes
 	}
 	xdsSnapshotCreateTotal.WithSuccess().Increment()
 
-	s.lastSnapshot[irKey] = snapshot
+	// Delete snapshot from cache if resources are nil
+	if resources == nil {
+		delete(s.lastSnapshot, irKey)
+	} else {
+		// Update snapshot in cache
+		s.lastSnapshot[irKey] = snapshot
+	}
 
 	for _, node := range s.getNodeIDs(irKey) {
 		s.log.Debugf("Generating a snapshot with Node %s", node)
