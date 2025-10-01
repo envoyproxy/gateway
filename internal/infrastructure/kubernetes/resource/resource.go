@@ -6,8 +6,6 @@
 package resource
 
 import (
-	"github.com/google/go-cmp/cmp"
-	"github.com/google/go-cmp/cmp/cmpopts"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
@@ -48,14 +46,6 @@ func ExpectedServiceSpec(service *egv1a1.KubernetesServiceSpec) corev1.ServiceSp
 	}
 
 	return serviceSpec
-}
-
-// CompareSvc compares the Service resource and ignores specific fields that may have been modified by other actors.
-func CompareSvc(currentSvc, originalSvc *corev1.Service) bool {
-	return cmp.Equal(currentSvc.Spec, originalSvc.Spec,
-		cmpopts.IgnoreFields(corev1.ServicePort{}, "NodePort"),
-		cmpopts.IgnoreFields(corev1.ServiceSpec{}, "ClusterIP", "ClusterIPs"),
-		cmpopts.IgnoreFields(metav1.ObjectMeta{}, "Finalizers"))
 }
 
 // ExpectedContainerEnv returns expected container envs.
