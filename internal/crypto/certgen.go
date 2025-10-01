@@ -33,6 +33,12 @@ const (
 	keySize = 2048
 )
 
+// DefaultEnvoyGatewayDNSPrefix defines the default Envoy Gateway DNS prefix.
+// It is aligned with the configurable service name returned by
+// config.GetEnvoyGatewayServiceName(). This is used in tests to assert the
+// default DNS name when no explicit configuration is provided.
+var DefaultEnvoyGatewayDNSPrefix = config.GetEnvoyGatewayServiceName()
+
 // Configuration holds config parameters used for generating certificates.
 type Configuration struct {
 	// Provider defines the desired cert provider and provider-specific
