@@ -302,8 +302,8 @@ func TestProcessBackendRefsWithCustomBackends(t *testing.T) {
 			}
 
 			// Create resource mappings
-			resourceMappings := &resourceMappings{
-				allAssociatedBackendRefs:                make(map[utils.NamespacedNameWithGroupKind]gwapiv1.BackendObjectReference),
+				resourceMappings := &resourceMappings{
+					allAssociatedBackendRefs:                make(map[utils.NamespacedNameWithGroupKind]gwapiv1.BackendObjectReference),
 				allAssociatedNamespaces:                 sets.New[string](),
 				allAssociatedBackendRefExtensionFilters: sets.New[utils.NamespacedNameWithGroupKind](),
 				extensionRefFilters:                     tc.existingExtFilters,
@@ -1308,7 +1308,7 @@ func TestProcessServiceClusterForGatewayClass(t *testing.T) {
 				Namespace: gatewayapi.NamespacePtr(r.namespace),
 				Name:      gwapiv1.ObjectName(tc.expectedSvcName),
 			}
-			key := backendRefKey(expectedRef)
+			key := backendRefKey(&expectedRef)
 			require.Contains(t, resourceMap.allAssociatedBackendRefs, key)
 			require.Equal(t, expectedRef, resourceMap.allAssociatedBackendRefs[key])
 		})
@@ -1465,7 +1465,7 @@ func TestProcessServiceClusterForGateway(t *testing.T) {
 				Namespace: gatewayapi.NamespacePtr(tc.expectedSvcNamespace),
 				Name:      gwapiv1.ObjectName(tc.expectedSvcName),
 			}
-			key := backendRefKey(expectedRef)
+			key := backendRefKey(&expectedRef)
 			require.Contains(t, resourceMap.allAssociatedBackendRefs, key)
 			require.Equal(t, expectedRef, resourceMap.allAssociatedBackendRefs[key])
 		})

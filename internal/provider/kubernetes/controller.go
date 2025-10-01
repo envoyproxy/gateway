@@ -964,7 +964,10 @@ func getBackendRefs(backendCluster egv1a1.BackendCluster) []gwapiv1.BackendObjec
 	return backendRefs
 }
 
-func backendRefKey(ref gwapiv1.BackendObjectReference) utils.NamespacedNameWithGroupKind {
+func backendRefKey(ref *gwapiv1.BackendObjectReference) utils.NamespacedNameWithGroupKind {
+	if ref == nil {
+		return utils.NamespacedNameWithGroupKind{}
+	}
 	namespace := gatewayapi.NamespaceDerefOr(ref.Namespace, "")
 	group := gatewayapi.GroupDerefOr(ref.Group, "")
 	kind := gatewayapi.KindDerefOr(ref.Kind, resource.KindService)
@@ -975,7 +978,7 @@ func backendRefKey(ref gwapiv1.BackendObjectReference) utils.NamespacedNameWithG
 }
 
 func (rm *resourceMappings) insertBackendRef(ref gwapiv1.BackendObjectReference) {
-	key := backendRefKey(ref)
+	key := backendRefKey(&ref)
 	if _, exists := rm.allAssociatedBackendRefs[key]; exists {
 		return
 	}
@@ -999,6 +1002,7 @@ func (r *gatewayAPIReconciler) processBackendRef(
 		Kind:      backendRef.Kind,
 		Namespace: gatewayapi.NamespacePtr(backendNamespace),
 		Name:      backendRef.Name,
+		Port:      backendRef.Port,
 	}
 	resourceMap.insertBackendRef(normalizedRef)
 
@@ -2480,6 +2484,7 @@ func (r *gatewayAPIReconciler) processEnvoyProxy(ep *egv1a1.EnvoyProxy, resource
 				Kind:      backendRef.Kind,
 				Namespace: gatewayapi.NamespacePtr(backendNamespace),
 				Name:      backendRef.Name,
+				Port:      backendRef.Port,
 			}
 			resourceMap.insertBackendRef(normalizedRef)
 		}
