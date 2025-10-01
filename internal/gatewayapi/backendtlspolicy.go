@@ -40,10 +40,13 @@ func (t *Translator) applyBackendTLSSetting(
 	envoyProxy *egv1a1.EnvoyProxy,
 ) (*ir.TLSUpstreamConfig, error) {
 	var (
-		backendTLSSettingsConfig *ir.TLSUpstreamConfig
-		backendTLSPolicyConfig   *ir.TLSUpstreamConfig
-		upstreamConfig           *ir.TLSUpstreamConfig
-		err                      error
+		backendServerValidationTLSConfig *ir.TLSUpstreamConfig // the TLS config to validate the server cert from Backend TLS settings
+		backendTLSPolicyConfig           *ir.TLSUpstreamConfig // the TLS config to validate the server cert from BackendTLSPolicy
+		backendClientTLSConfig           *ir.TLSConfig         // the TLS config for client cert and common TLS settings from Backend TLS settings
+		envoyProxyClientTLSConfig        *ir.TLSConfig         // the TLS config for client cert and common TLS settings from EnvoyProxy BackendTLS
+		mergedClientTLSConfig            *ir.TLSConfig         // the final merged client TLS config to return
+		upstreamConfig                   *ir.TLSUpstreamConfig // the final merged TLS config to return
+		err                              error
 	)
 
 	// If the backendRef is a Backend resource, we need to check if it has TLS settings.
@@ -53,9 +56,16 @@ func (t *Translator) applyBackendTLSSetting(
 			return nil, fmt.Errorf("backend %s not found", backendRef.Name)
 		}
 		if backend.Spec.TLS != nil {
-			// Get the backend certificate validation settings from Backend.
-			if backendTLSSettingsConfig, err = t.processBackendTLSSettings(backend, resources); err != nil {
+			// Get the backend server certificate validation settings from Backend resource.
+			if backendServerValidationTLSConfig, err = t.processServerValidationTLSSettings(backend, resources); err != nil {
 				return nil, err
+			}
+
+			// Get the client certificate and common TLS settings from Backend resource.
+			if backend.Spec.TLS.ClientTLS != nil {
+				if backendClientTLSConfig, err = t.processClientTLSSettings(resources, backend.Spec.TLS.ClientTLS, backend.Namespace, backend.Name, false); err != nil {
+					return nil, err
+				}
 			}
 		}
 	}
@@ -65,35 +75,51 @@ func (t *Translator) applyBackendTLSSetting(
 		return nil, err
 	}
 
-	// If both backend TLS settings and backend TLS policy are defined, we merge them.
-	upstreamConfig = mergeBackendTLSConfigs(backendTLSSettingsConfig, backendTLSPolicyConfig)
+	// Get the client certificate and common TLS settings from EnvoyProxy resource.
+	backendTLSEnabled := backendServerValidationTLSConfig != nil || backendTLSPolicyConfig != nil
+	if backendTLSEnabled && envoyProxy != nil && envoyProxy.Spec.BackendTLS != nil {
+		if envoyProxyClientTLSConfig, err = t.processClientTLSSettings(resources, envoyProxy.Spec.BackendTLS, envoyProxy.Namespace, envoyProxy.Name, true); err != nil {
+			return nil, err
+		}
+	}
+
+	// Merge server validation TLS settings from Backend resource and BackendTLSPolicy.
+	// BackendTLSPolicy takes precedence over Backend resource for identical attributes that are set in both.
+	upstreamConfig = mergeServerValidationTLSConfigs(backendServerValidationTLSConfig, backendTLSPolicyConfig)
 
 	if upstreamConfig != nil && !upstreamConfig.InsecureSkipVerify && upstreamConfig.CACertificate == nil {
 		return nil, fmt.Errorf("CACertificate must be specified when InsecureSkipVerify is false")
 	}
 
-	// Apply the Client Certificate and common TLS settings from the EnvoyProxy resource.
-	return t.applyEnvoyProxyBackendTLSSetting(upstreamConfig, resources, envoyProxy)
+	// Merge client TLS settings from Backend resource and EnvoyProxy resource.
+	// Backend resource client TLS settings take precedence over EnvoyProxy client TLS settings.
+	mergedClientTLSConfig = mergeClientTLSConfigs(backendClientTLSConfig, envoyProxyClientTLSConfig)
+	if mergedClientTLSConfig != nil {
+		upstreamConfig.TLSConfig = *mergedClientTLSConfig
+	}
+
+	return upstreamConfig, nil
 }
 
 // Merges TLS settings from Gateway API BackendTLSPolicy and Envoy Gateway Backend TL.
 // BackendTLSPolicy takes precedence for identical attributes that are set in both.
-func mergeBackendTLSConfigs(
-	backendTLSSettingsConfig *ir.TLSUpstreamConfig,
+func mergeServerValidationTLSConfigs(
+	backendServerValidationTLSConfig *ir.TLSUpstreamConfig,
 	backendTLSPolicyConfig *ir.TLSUpstreamConfig,
 ) *ir.TLSUpstreamConfig {
-	if backendTLSSettingsConfig == nil && backendTLSPolicyConfig == nil {
+	if backendServerValidationTLSConfig == nil && backendTLSPolicyConfig == nil {
 		return nil
 	}
 
-	if backendTLSSettingsConfig == nil {
+	if backendServerValidationTLSConfig == nil {
 		return backendTLSPolicyConfig
 	}
 	if backendTLSPolicyConfig == nil {
-		return backendTLSSettingsConfig
+		return backendServerValidationTLSConfig
 	}
 
-	mergedConfig := backendTLSSettingsConfig.DeepCopy()
+	// We don't use DeepCopy here to avoid unnecessary memory allocation.
+	mergedConfig := backendServerValidationTLSConfig
 
 	if backendTLSPolicyConfig.CACertificate != nil {
 		mergedConfig.CACertificate = backendTLSPolicyConfig.CACertificate
@@ -111,7 +137,61 @@ func mergeBackendTLSConfigs(
 	return mergedConfig
 }
 
-func (t *Translator) processBackendTLSSettings(
+// Merges client TLS settings from backend TLS settings and EnvoyProxy BackendTLS settings.
+// Backend TLS settings take precedence for identical attributes that are set in both.
+func mergeClientTLSConfigs(
+	backendClientTLSConfig *ir.TLSConfig,
+	envoyProxyClientTLSConfig *ir.TLSConfig,
+) *ir.TLSConfig {
+	if backendClientTLSConfig == nil && envoyProxyClientTLSConfig == nil {
+		return nil
+	}
+
+	if backendClientTLSConfig == nil {
+		return envoyProxyClientTLSConfig
+	}
+
+	if envoyProxyClientTLSConfig == nil {
+		return backendClientTLSConfig
+	}
+
+	// We don't use DeepCopy here to avoid unnecessary memory allocation.
+	mergedConfig := envoyProxyClientTLSConfig
+
+	if len(backendClientTLSConfig.ClientCertificates) > 0 {
+		mergedConfig.ClientCertificates = backendClientTLSConfig.ClientCertificates
+	}
+
+	if backendClientTLSConfig.MinVersion != nil {
+		minVersion := *backendClientTLSConfig.MinVersion
+		mergedConfig.MinVersion = &minVersion
+	}
+
+	if backendClientTLSConfig.MaxVersion != nil {
+		maxVersion := *backendClientTLSConfig.MaxVersion
+		mergedConfig.MaxVersion = &maxVersion
+	}
+
+	if len(backendClientTLSConfig.Ciphers) > 0 {
+		mergedConfig.Ciphers = backendClientTLSConfig.Ciphers
+	}
+
+	if len(backendClientTLSConfig.ECDHCurves) > 0 {
+		mergedConfig.ECDHCurves = backendClientTLSConfig.ECDHCurves
+	}
+
+	if len(backendClientTLSConfig.SignatureAlgorithms) > 0 {
+		mergedConfig.SignatureAlgorithms = backendClientTLSConfig.SignatureAlgorithms
+	}
+
+	if len(backendClientTLSConfig.ALPNProtocols) > 0 {
+		mergedConfig.ALPNProtocols = backendClientTLSConfig.ALPNProtocols
+	}
+
+	return mergedConfig
+}
+
+func (t *Translator) processServerValidationTLSSettings(
 	backend *egv1a1.Backend,
 	resources *resource.Resources,
 ) (*ir.TLSUpstreamConfig, error) {
@@ -173,51 +253,57 @@ func (t *Translator) processBackendTLSPolicy(
 	return tlsBundle, nil
 }
 
-func (t *Translator) applyEnvoyProxyBackendTLSSetting(tlsConfig *ir.TLSUpstreamConfig, resources *resource.Resources, ep *egv1a1.EnvoyProxy) (*ir.TLSUpstreamConfig, error) {
-	if ep == nil || ep.Spec.BackendTLS == nil || tlsConfig == nil {
-		return tlsConfig, nil
-	}
+func (t *Translator) processClientTLSSettings(resources *resource.Resources, clientTLS *egv1a1.BackendTLSConfig, ownerNs, ownerName string, fromEnvoyProxy bool) (*ir.TLSConfig, error) {
+	tlsConfig := &ir.TLSConfig{}
 
-	if len(ep.Spec.BackendTLS.Ciphers) > 0 {
-		tlsConfig.Ciphers = ep.Spec.BackendTLS.Ciphers
+	if len(clientTLS.Ciphers) > 0 {
+		tlsConfig.Ciphers = clientTLS.Ciphers
 	}
-	if len(ep.Spec.BackendTLS.ECDHCurves) > 0 {
-		tlsConfig.ECDHCurves = ep.Spec.BackendTLS.ECDHCurves
+	if len(clientTLS.ECDHCurves) > 0 {
+		tlsConfig.ECDHCurves = clientTLS.ECDHCurves
 	}
-	if len(ep.Spec.BackendTLS.SignatureAlgorithms) > 0 {
-		tlsConfig.SignatureAlgorithms = ep.Spec.BackendTLS.SignatureAlgorithms
+	if len(clientTLS.SignatureAlgorithms) > 0 {
+		tlsConfig.SignatureAlgorithms = clientTLS.SignatureAlgorithms
 	}
-	if ep.Spec.BackendTLS.MinVersion != nil {
-		tlsConfig.MinVersion = ptr.To(ir.TLSVersion(*ep.Spec.BackendTLS.MinVersion))
+	if clientTLS.MinVersion != nil {
+		tlsConfig.MinVersion = ptr.To(ir.TLSVersion(*clientTLS.MinVersion))
 	}
-	if ep.Spec.BackendTLS.MaxVersion != nil {
-		tlsConfig.MaxVersion = ptr.To(ir.TLSVersion(*ep.Spec.BackendTLS.MaxVersion))
+	if clientTLS.MaxVersion != nil {
+		tlsConfig.MaxVersion = ptr.To(ir.TLSVersion(*clientTLS.MaxVersion))
 	}
-	if len(ep.Spec.BackendTLS.ALPNProtocols) > 0 {
-		tlsConfig.ALPNProtocols = make([]string, len(ep.Spec.BackendTLS.ALPNProtocols))
-		for i := range ep.Spec.BackendTLS.ALPNProtocols {
-			tlsConfig.ALPNProtocols[i] = string(ep.Spec.BackendTLS.ALPNProtocols[i])
+	if len(clientTLS.ALPNProtocols) > 0 {
+		tlsConfig.ALPNProtocols = make([]string, len(clientTLS.ALPNProtocols))
+		for i := range clientTLS.ALPNProtocols {
+			tlsConfig.ALPNProtocols[i] = string(clientTLS.ALPNProtocols[i])
 		}
 	}
-	if ep.Spec.BackendTLS != nil && ep.Spec.BackendTLS.ClientCertificateRef != nil {
-		ns := string(ptr.Deref(ep.Spec.BackendTLS.ClientCertificateRef.Namespace, ""))
-
+	if clientTLS.ClientCertificateRef != nil {
 		var err error
-		if ns != ep.Namespace {
-			err = fmt.Errorf("ClientCertificateRef Secret is not located in the same namespace as Envoyproxy. Secret namespace: %s does not match Envoyproxy namespace: %s", ns, ep.Namespace)
+		var ownerResource string
+
+		if fromEnvoyProxy {
+			ownerResource = "EnvoyProxy"
+		} else {
+			ownerResource = "Backend"
+		}
+
+		ns := string(ptr.Deref(clientTLS.ClientCertificateRef.Namespace, ""))
+		if ns != ownerNs {
+			err = fmt.Errorf("ClientCertificateRef Secret is not located in the same namespace as %s. Secret namespace: %s does not match %s namespace: %s", ownerResource, ns, ownerResource, ownerNs)
 			return tlsConfig, err
 		}
-		secret := resources.GetSecret(ns, string(ep.Spec.BackendTLS.ClientCertificateRef.Name))
+		secret := resources.GetSecret(ns, string(clientTLS.ClientCertificateRef.Name))
 		if secret == nil {
 			err = fmt.Errorf(
-				"failed to locate TLS secret for client auth: %s specified in EnvoyProxy %s",
+				"failed to locate TLS secret for client auth: %s specified in %s %s",
 				types.NamespacedName{
-					Namespace: ep.Namespace,
-					Name:      string(ep.Spec.BackendTLS.ClientCertificateRef.Name),
+					Namespace: ownerNs,
+					Name:      string(clientTLS.ClientCertificateRef.Name),
 				}.String(),
+				ownerResource,
 				types.NamespacedName{
-					Namespace: ep.Namespace,
-					Name:      ep.Name,
+					Namespace: ownerNs,
+					Name:      ownerName,
 				}.String(),
 			)
 			return tlsConfig, err
