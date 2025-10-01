@@ -1806,20 +1806,20 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		}
 	}
 
-	r.tlsRouteCRDExists = r.crdExists(mgr, resource.KindTLSRoute, gwapiv1.GroupVersion.String())
+	r.tlsRouteCRDExists = r.crdExists(mgr, resource.KindTLSRoute, gwapiv1a3.GroupVersion.String())
 	if !r.tlsRouteCRDExists {
 		r.log.Info("TLSRoute CRD not found, skipping TLSRoute watch")
 	} else {
 		// Watch TLSRoute CRUDs and process affected Gateways.
-		tlsrPredicates := commonPredicates[*gwapiv1a2.TLSRoute]()
+		tlsrPredicates := commonPredicates[*gwapiv1a3.TLSRoute]()
 		if r.namespaceLabel != nil {
-			tlsrPredicates = append(tlsrPredicates, predicate.NewTypedPredicateFuncs(func(route *gwapiv1a2.TLSRoute) bool {
+			tlsrPredicates = append(tlsrPredicates, predicate.NewTypedPredicateFuncs(func(route *gwapiv1a3.TLSRoute) bool {
 				return r.hasMatchingNamespaceLabels(route)
 			}))
 		}
 		if err := c.Watch(
-			source.Kind(mgr.GetCache(), &gwapiv1a2.TLSRoute{},
-				handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, route *gwapiv1a2.TLSRoute) []reconcile.Request {
+			source.Kind(mgr.GetCache(), &gwapiv1a3.TLSRoute{},
+				handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, route *gwapiv1a3.TLSRoute) []reconcile.Request {
 					return r.enqueueClass(ctx, route)
 				}),
 				tlsrPredicates...)); err != nil {
@@ -1830,7 +1830,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		}
 	}
 
-	r.udpRouteCRDExists = r.crdExists(mgr, resource.KindUDPRoute, gwapiv1.GroupVersion.String())
+	r.udpRouteCRDExists = r.crdExists(mgr, resource.KindUDPRoute, gwapiv1a2.GroupVersion.String())
 	if !r.udpRouteCRDExists {
 		r.log.Info("UDPRoute CRD not found, skipping UDPRoute watch")
 	} else {
@@ -1854,7 +1854,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		}
 	}
 
-	r.tcpRouteCRDExists = r.crdExists(mgr, resource.KindTCPRoute, gwapiv1.GroupVersion.String())
+	r.tcpRouteCRDExists = r.crdExists(mgr, resource.KindTCPRoute, gwapiv1a2.GroupVersion.String())
 	if !r.tcpRouteCRDExists {
 		r.log.Info("TCPRoute CRD not found, skipping TCPRoute watch")
 	} else {

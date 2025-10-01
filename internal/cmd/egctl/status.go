@@ -198,7 +198,7 @@ func runStatus(ctx context.Context, logOut io.Writer, cli client.Client, inputRe
 		resourceKind = resource.KindUDPRoute
 
 	case "tlsroute":
-		tlsroute := gwapiv1a2.TLSRouteList{}
+		tlsroute := gwapiv1a3.TLSRouteList{}
 		if err := cli.List(ctx, &tlsroute, client.InNamespace(namespace)); err != nil {
 			return err
 		}

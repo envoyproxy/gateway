@@ -131,8 +131,8 @@ func newOfflineGatewayAPIClient() client.Client {
 		WithIndex(&gwapiv1a2.TCPRoute{}, backendTCPRouteIndex, backendTCPRouteIndexFunc).
 		WithIndex(&gwapiv1a2.UDPRoute{}, gatewayUDPRouteIndex, gatewayUDPRouteIndexFunc).
 		WithIndex(&gwapiv1a2.UDPRoute{}, backendUDPRouteIndex, backendUDPRouteIndexFunc).
-		WithIndex(&gwapiv1a2.TLSRoute{}, gatewayTLSRouteIndex, gatewayTLSRouteIndexFunc).
-		WithIndex(&gwapiv1a2.TLSRoute{}, backendTLSRouteIndex, backendTLSRouteIndexFunc).
+		WithIndex(&gwapiv1a3.TLSRoute{}, gatewayTLSRouteIndex, gatewayTLSRouteIndexFunc).
+		WithIndex(&gwapiv1a3.TLSRoute{}, backendTLSRouteIndex, backendTLSRouteIndexFunc).
 		WithIndex(&egv1a1.EnvoyProxy{}, backendEnvoyProxyTelemetryIndex, backendEnvoyProxyTelemetryIndexFunc).
 		WithIndex(&egv1a1.EnvoyProxy{}, secretEnvoyProxyIndex, secretEnvoyProxyIndexFunc).
 		WithIndex(&egv1a1.BackendTrafficPolicy{}, configMapBtpIndex, configMapBtpIndexFunc).

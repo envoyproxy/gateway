@@ -154,7 +154,7 @@ func newTranslateResult(gateways []*GatewayContext,
 	}
 
 	if n := len(tlsRoutes); n > 0 {
-		translateResult.TLSRoutes = make([]*gwapiv1a2.TLSRoute, n)
+		translateResult.TLSRoutes = make([]*gwapiv1a3.TLSRoute, n)
 		for i, tlsRoute := range tlsRoutes {
 			translateResult.TLSRoutes[i] = tlsRoute.TLSRoute
 		}

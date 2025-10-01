@@ -218,8 +218,8 @@ func isStatusEqual(objA, objB interface{}) bool {
 				return true
 			}
 		}
-	case *gwapiv1a2.TLSRoute:
-		if b, ok := objB.(*gwapiv1a2.TLSRoute); ok {
+	case *gwapiv1a3.TLSRoute:
+		if b, ok := objB.(*gwapiv1a3.TLSRoute); ok {
 			if cmp.Equal(a.Status, b.Status, opts) {
 				return true
 			}
@@ -323,7 +323,7 @@ func KindOf(obj interface{}) string {
 		kind = resource.KindGateway
 	case *gwapiv1.HTTPRoute:
 		kind = resource.KindHTTPRoute
-	case *gwapiv1a2.TLSRoute:
+	case *gwapiv1a3.TLSRoute:
 		kind = resource.KindTLSRoute
 	case *gwapiv1a2.TCPRoute:
 		kind = resource.KindTCPRoute

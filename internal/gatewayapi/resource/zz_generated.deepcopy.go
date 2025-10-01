@@ -81,11 +81,11 @@ func (in *Resources) DeepCopyInto(out *Resources) {
 	}
 	if in.TLSRoutes != nil {
 		in, out := &in.TLSRoutes, &out.TLSRoutes
-		*out = make([]*v1alpha2.TLSRoute, len(*in))
+		*out = make([]*v1alpha3.TLSRoute, len(*in))
 		for i := range *in {
 			if (*in)[i] != nil {
 				in, out := &(*in)[i], &(*out)[i]
-				*out = new(v1alpha2.TLSRoute)
+				*out = new(v1alpha3.TLSRoute)
 				(*in).DeepCopyInto(*out)
 			}
 		}

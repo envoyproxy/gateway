@@ -44,7 +44,7 @@ type Resources struct {
 	Gateways                []*gwapiv1.Gateway             `json:"gateways,omitempty" yaml:"gateways,omitempty"`
 	HTTPRoutes              []*gwapiv1.HTTPRoute           `json:"httpRoutes,omitempty" yaml:"httpRoutes,omitempty"`
 	GRPCRoutes              []*gwapiv1.GRPCRoute           `json:"grpcRoutes,omitempty" yaml:"grpcRoutes,omitempty"`
-	TLSRoutes               []*gwapiv1a2.TLSRoute          `json:"tlsRoutes,omitempty" yaml:"tlsRoutes,omitempty"`
+	TLSRoutes               []*gwapiv1a3.TLSRoute          `json:"tlsRoutes,omitempty" yaml:"tlsRoutes,omitempty"`
 	TCPRoutes               []*gwapiv1a2.TCPRoute          `json:"tcpRoutes,omitempty" yaml:"tcpRoutes,omitempty"`
 	UDPRoutes               []*gwapiv1a2.UDPRoute          `json:"udpRoutes,omitempty" yaml:"udpRoutes,omitempty"`
 	ReferenceGrants         []*gwapiv1b1.ReferenceGrant    `json:"referenceGrants,omitempty" yaml:"referenceGrants,omitempty"`
@@ -73,7 +73,7 @@ func NewResources() *Resources {
 		Gateways:                []*gwapiv1.Gateway{},
 		HTTPRoutes:              []*gwapiv1.HTTPRoute{},
 		GRPCRoutes:              []*gwapiv1.GRPCRoute{},
-		TLSRoutes:               []*gwapiv1a2.TLSRoute{},
+		TLSRoutes:               []*gwapiv1a3.TLSRoute{},
 		Services:                []*corev1.Service{},
 		EndpointSlices:          []*discoveryv1.EndpointSlice{},
 		Secrets:                 []*corev1.Secret{},

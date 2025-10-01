@@ -172,15 +172,15 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context, ext
 				val := update.Value
 				r.statusUpdater.Send(Update{
 					NamespacedName: key,
-					Resource:       new(gwapiv1a2.TLSRoute),
+					Resource:       new(gwapiv1a3.TLSRoute),
 					Mutator: MutatorFunc(func(obj client.Object) client.Object {
-						t, ok := obj.(*gwapiv1a2.TLSRoute)
+						t, ok := obj.(*gwapiv1a3.TLSRoute)
 						if !ok {
 							err := fmt.Errorf("unsupported object type %T", obj)
 							errChan <- err
 							panic(err)
 						}
-						tCopy := &gwapiv1a2.TLSRoute{
+						tCopy := &gwapiv1a3.TLSRoute{
 							TypeMeta:   t.TypeMeta,
 							ObjectMeta: t.ObjectMeta,
 							Spec:       t.Spec,

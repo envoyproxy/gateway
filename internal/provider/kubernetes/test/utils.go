@@ -16,6 +16,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapiv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 	mcsapiv1a1 "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -202,13 +203,14 @@ func GetGRPCRoute(nsName types.NamespacedName, parent string, serviceName types.
 }
 
 // GetTLSRoute returns a sample TLSRoute with a parent reference.
-func GetTLSRoute(nsName types.NamespacedName, parent string, serviceName types.NamespacedName, port int32) *gwapiv1a2.TLSRoute {
-	return &gwapiv1a2.TLSRoute{
+func GetTLSRoute(nsName types.NamespacedName, parent string, serviceName types.NamespacedName, port int32) *gwapiv1a3.TLSRoute {
+	return &gwapiv1a3.TLSRoute{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: nsName.Namespace,
 			Name:      nsName.Name,
 		},
-		Spec: gwapiv1a2.TLSRouteSpec{
+		Spec: gwapiv1a3.TLSRouteSpec{
+			Hostnames: []gwapiv1a3.Hostname{"example.com"},
 			CommonRouteSpec: gwapiv1.CommonRouteSpec{
 				ParentRefs: []gwapiv1.ParentReference{
 					{Name: gwapiv1.ObjectName(parent)},

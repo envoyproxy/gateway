@@ -195,7 +195,7 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool) (*Res
 			resources.UDPRoutes = append(resources.UDPRoutes, udpRoute)
 		case KindTLSRoute:
 			typedSpec := spec.Interface()
-			tlsRoute := &gwapiv1a2.TLSRoute{
+			tlsRoute := &gwapiv1a3.TLSRoute{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       KindTLSRoute,
 					APIVersion: gv,
@@ -204,7 +204,7 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool) (*Res
 					Name:      name,
 					Namespace: namespace,
 				},
-				Spec: typedSpec.(gwapiv1a2.TLSRouteSpec),
+				Spec: typedSpec.(gwapiv1a3.TLSRouteSpec),
 			}
 			resources.TLSRoutes = append(resources.TLSRoutes, tlsRoute)
 		case KindHTTPRoute:
@@ -555,7 +555,7 @@ func addMissingServices(requiredServices map[string]*corev1.Service, obj interfa
 				refs = append(refs, rule.BackendRefs[i].BackendRef)
 			}
 		}
-	case *gwapiv1a2.TLSRoute:
+	case *gwapiv1a3.TLSRoute:
 		objNamespace = route.Namespace
 		for _, rule := range route.Spec.Rules {
 			refs = append(refs, rule.BackendRefs...)

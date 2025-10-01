@@ -356,18 +356,18 @@ func backendGRPCRouteIndexFunc(rawObj client.Object) []string {
 // referenced in TLSRoute objects via `.spec.rules.backendRefs`. This helps in
 // querying for TLSRoutes that are affected by a particular Service CRUD.
 func addTLSRouteIndexers(ctx context.Context, mgr manager.Manager) error {
-	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1a2.TLSRoute{}, gatewayTLSRouteIndex, gatewayTLSRouteIndexFunc); err != nil {
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1a3.TLSRoute{}, gatewayTLSRouteIndex, gatewayTLSRouteIndexFunc); err != nil {
 		return err
 	}
 
-	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1a2.TLSRoute{}, backendTLSRouteIndex, backendTLSRouteIndexFunc); err != nil {
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1a3.TLSRoute{}, backendTLSRouteIndex, backendTLSRouteIndexFunc); err != nil {
 		return err
 	}
 	return nil
 }
 
 func gatewayTLSRouteIndexFunc(rawObj client.Object) []string {
-	tlsRoute := rawObj.(*gwapiv1a2.TLSRoute)
+	tlsRoute := rawObj.(*gwapiv1a3.TLSRoute)
 	var gateways []string
 	for _, parent := range tlsRoute.Spec.ParentRefs {
 		if string(*parent.Kind) == resource.KindGateway {
@@ -385,7 +385,7 @@ func gatewayTLSRouteIndexFunc(rawObj client.Object) []string {
 }
 
 func backendTLSRouteIndexFunc(rawObj client.Object) []string {
-	tlsroute := rawObj.(*gwapiv1a2.TLSRoute)
+	tlsroute := rawObj.(*gwapiv1a3.TLSRoute)
 	var backendRefs []string
 	for _, rule := range tlsroute.Spec.Rules {
 		for _, backend := range rule.BackendRefs {

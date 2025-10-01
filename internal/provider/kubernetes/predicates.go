@@ -516,7 +516,7 @@ func (r *gatewayAPIReconciler) isRouteReferencingBackend(nsName *types.Namespace
 	}
 
 	if r.tlsRouteCRDExists {
-		tlsRouteList := &gwapiv1a2.TLSRouteList{}
+		tlsRouteList := &gwapiv1a3.TLSRouteList{}
 		if err := r.client.List(ctx, tlsRouteList, &client.ListOptions{
 			FieldSelector: fields.OneTermEqualSelector(backendTLSRouteIndex, nsName.String()),
 		}); err != nil && !kerrors.IsNotFound(err) {

@@ -29,6 +29,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapiv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
@@ -1002,16 +1003,16 @@ func testTLSRoute(ctx context.Context, t *testing.T, provider *Provider, resourc
 
 	testCases := []struct {
 		name  string
-		route gwapiv1a2.TLSRoute
+		route gwapiv1a3.TLSRoute
 	}{
 		{
 			name: "tlsroute",
-			route: gwapiv1a2.TLSRoute{
+			route: gwapiv1a3.TLSRoute{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "tlsroute-test",
 					Namespace: ns.Name,
 				},
-				Spec: gwapiv1a2.TLSRouteSpec{
+				Spec: gwapiv1a3.TLSRouteSpec{
 					CommonRouteSpec: gwapiv1.CommonRouteSpec{
 						ParentRefs: []gwapiv1.ParentReference{
 							{
@@ -1065,7 +1066,7 @@ func testTLSRoute(ctx context.Context, t *testing.T, provider *Provider, resourc
 
 			res := resources.GetResourcesByGatewayClass(gc.Name)
 			require.NotNil(t, res)
-			require.Equal(t, &testCase.route, res.TLSRoutes[0])
+			require.Contains(t, res.TLSRoutes, &testCase.route)
 
 			// Ensure the HTTPRoute Namespace is in the Namespace resource map.
 			require.Eventually(t, func() bool {
@@ -1152,12 +1153,12 @@ func testServiceCleanupForMultipleRoutes(ctx context.Context, t *testing.T, prov
 		require.NoError(t, cli.Delete(ctx, svc))
 	}()
 
-	tlsRoute := gwapiv1a2.TLSRoute{
+	tlsRoute := gwapiv1a3.TLSRoute{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "tlsroute-test",
 			Namespace: ns.Name,
 		},
-		Spec: gwapiv1a2.TLSRouteSpec{
+		Spec: gwapiv1a3.TLSRouteSpec{
 			CommonRouteSpec: gwapiv1.CommonRouteSpec{
 				ParentRefs: []gwapiv1.ParentReference{{
 					Name: gwapiv1.ObjectName(gw.Name),
@@ -1291,6 +1292,11 @@ func TestNamespacedProvider(t *testing.T) {
 	go func() {
 		require.NoError(t, provider.Start(ctx))
 	}()
+	// Stop the kube provider.
+	defer func() {
+		cancel()
+		require.NoError(t, testEnv.Stop())
+	}()
 
 	// Make sure a cluster scoped gatewayclass can be reconciled
 	testGatewayClassController(ctx, t, provider, resources)
@@ -1319,13 +1325,7 @@ func TestNamespacedProvider(t *testing.T) {
 	// Ensure only 2 gateways are reconciled
 	gatewayList := &gwapiv1.GatewayList{}
 	require.NoError(t, cli.List(ctx, gatewayList))
-	require.Len(t, len(gatewayList.Items), 2)
-
-	// Stop the kube provider.
-	defer func() {
-		cancel()
-		require.NoError(t, testEnv.Stop())
-	}()
+	require.Len(t, gatewayList.Items, 2)
 }
 
 func TestNamespaceSelectorProvider(t *testing.T) {
