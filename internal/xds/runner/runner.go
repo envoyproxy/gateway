@@ -123,7 +123,7 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 		if err != nil {
 			return fmt.Errorf("failed to create Kubernetes client: %w", err)
 		}
-		saAudience := fmt.Sprintf("%s.%s.svc.%s", config.GetEnvoyGatewayServiceName(), r.ControllerNamespace, r.DNSDomain)
+		saAudience := serviceAccountAudience(r.ControllerNamespace, r.DNSDomain)
 		jwtInterceptor := kubejwt.NewJWTAuthInterceptor(
 			r.Logger,
 			clientset,
@@ -194,6 +194,13 @@ func registerServer(srv serverv3.Server, g *grpc.Server) {
 	listenerv3.RegisterListenerDiscoveryServiceServer(g, srv)
 	routev3.RegisterRouteDiscoveryServiceServer(g, srv)
 	runtimev3.RegisterRuntimeDiscoveryServiceServer(g, srv)
+}
+
+// serviceAccountAudience builds the service account JWT audience used by the
+// xDS server when GatewayNamespaceMode is enabled. Extracted for testability
+// and to ensure deterministic formatting for coverage.
+func serviceAccountAudience(namespace, dnsDomain string) string {
+	return fmt.Sprintf("%s.%s.svc.%s", config.GetEnvoyGatewayServiceName(), namespace, dnsDomain)
 }
 
 func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *ir.Xds]) {
