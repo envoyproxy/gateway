@@ -428,12 +428,14 @@ tcpRoutes:
   status:
     parents: null
 tlsRoutes:
-- apiVersion: gateway.networking.k8s.io/v1alpha2
+- apiVersion: gateway.networking.k8s.io/v1alpha3
   kind: TLSRoute
   metadata:
     name: backend
     namespace: default
   spec:
+    hostnames:
+    - www.example.com
     parentRefs:
     - group: gateway.networking.k8s.io
       kind: Gateway
