@@ -103,7 +103,7 @@ func extAuthConfig(extAuth *ir.ExtAuth) *extauthv3.ExtAuthz {
 		config.ClearRouteCache = *extAuth.RecomputeRoute
 	}
 
-	var headersToExtAuth []*matcherv3.StringMatcher
+	headersToExtAuth := make([]*matcherv3.StringMatcher, 0, len(extAuth.HeadersToExtAuth))
 	for _, header := range extAuth.HeadersToExtAuth {
 		headersToExtAuth = append(headersToExtAuth, &matcherv3.StringMatcher{
 			MatchPattern: &matcherv3.StringMatcher_Exact{
@@ -147,9 +147,8 @@ func extAuthConfig(extAuth *ir.ExtAuth) *extauthv3.ExtAuthz {
 
 func httpService(http *ir.HTTPExtAuthService) *extauthv3.HttpService {
 	var (
-		uri              string
-		headersToBackend []*matcherv3.StringMatcher
-		service          *extauthv3.HttpService
+		uri     string
+		service *extauthv3.HttpService
 	)
 
 	service = &extauthv3.HttpService{
@@ -176,6 +175,7 @@ func httpService(http *ir.HTTPExtAuthService) *extauthv3.HttpService {
 		},
 	}
 
+	headersToBackend := make([]*matcherv3.StringMatcher, 0, len(http.HeadersToBackend))
 	for _, header := range http.HeadersToBackend {
 		headersToBackend = append(headersToBackend, &matcherv3.StringMatcher{
 			MatchPattern: &matcherv3.StringMatcher_Exact{

@@ -534,7 +534,8 @@ func buildEarlyHeaderMutation(headers *ir.HeaderSettings) []*corev3.TypedExtensi
 		return nil
 	}
 
-	var mutationRules []*mutation_rulesv3.HeaderMutation
+	total := len(headers.EarlyAddRequestHeaders) + len(headers.EarlyRemoveRequestHeaders)
+	mutationRules := make([]*mutation_rulesv3.HeaderMutation, 0, total)
 
 	for _, header := range headers.EarlyAddRequestHeaders {
 		var appendAction corev3.HeaderValueOption_HeaderAppendAction

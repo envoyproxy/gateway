@@ -383,7 +383,7 @@ func (s *snapshotCache) GetIrKeys() []string {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	var irKeys []string
+	irKeys := make([]string, 0, len(s.lastSnapshot))
 	for key := range s.lastSnapshot {
 		irKeys = append(irKeys, key)
 	}
