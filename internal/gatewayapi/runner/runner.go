@@ -188,16 +188,10 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 				// Translate to IR
 				result, err := t.Translate(resources)
 				if err != nil {
-					// In standalone mode, some translation errors are expected (e.g., missing TLS secrets)
-					// Only log errors that are not related to missing secrets in standalone mode
-					shouldLog := true
-					if r.EnvoyGateway.Provider.Type != egv1a1.ProviderTypeKubernetes {
-						// In standalone mode, suppress TLS secret related errors
-						if strings.Contains(err.Error(), "TLS secret") && strings.Contains(err.Error(), "not found") {
-							shouldLog = false
-						}
-					}
-					if shouldLog {
+					// In standalone mode, suppress known non-actionable TLS-secret-not-found errors
+					if strings.Contains(err.Error(), "TLS secret") && strings.Contains(err.Error(), "not found") && r.EnvoyGateway.Provider.Type != egv1a1.ProviderTypeKubernetes {
+						// noop
+					} else {
 						r.Logger.Error(err, "errors detected during translation", "gateway-class", resources.GatewayClass.Name)
 					}
 				}
