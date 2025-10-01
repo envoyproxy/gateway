@@ -46,7 +46,7 @@ var HeaderBasedSessionPersistenceTest = suite.ConformanceTest{
 					Path: "/v2",
 				},
 				Response: httputils.Response{
-					StatusCode: http.StatusOK,
+					StatusCodes: []int{http.StatusOK},
 				},
 				Namespace: ns,
 			})
@@ -99,7 +99,7 @@ var HeaderBasedSessionPersistenceTest = suite.ConformanceTest{
 					Path: "/v1",
 				},
 				Response: httputils.Response{
-					StatusCode: http.StatusOK,
+					StatusCodes: []int{http.StatusOK},
 				},
 				Namespace: ns,
 			})
@@ -139,7 +139,7 @@ var CookieBasedSessionPersistenceTest = suite.ConformanceTest{
 					Path: "/v2",
 				},
 				Response: httputils.Response{
-					StatusCode: http.StatusOK,
+					StatusCodes: []int{http.StatusOK},
 				},
 				Namespace: ns,
 			})
@@ -205,7 +205,7 @@ var CookieBasedSessionPersistenceTest = suite.ConformanceTest{
 					Path: "/v1",
 				},
 				Response: httputils.Response{
-					StatusCode: http.StatusOK,
+					StatusCodes: []int{http.StatusOK},
 				},
 				Namespace: ns,
 			})

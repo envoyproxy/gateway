@@ -42,7 +42,7 @@ var EnvoyGatewayBackendTest = suite.ConformanceTest{
 					Path: "/backend-fqdn",
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}
@@ -82,7 +82,7 @@ var EnvoyGatewayBackendTest = suite.ConformanceTest{
 					Path: "/backend-ip",
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}
@@ -102,7 +102,7 @@ var EnvoyGatewayBackendTest = suite.ConformanceTest{
 					Path: "/backend-fqdn-http2",
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}
@@ -122,7 +122,7 @@ var EnvoyGatewayBackendTest = suite.ConformanceTest{
 					Path: "/backend-fqdn-tls",
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}

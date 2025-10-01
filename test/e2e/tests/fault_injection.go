@@ -36,7 +36,7 @@ var FaultTest = suite.ConformanceTest{
 					Path: "/abort",
 				},
 				Response: http.Response{
-					StatusCode: 501,
+					StatusCodes: []int{501},
 				},
 				Namespace: ns,
 			}
@@ -63,7 +63,7 @@ var FaultTest = suite.ConformanceTest{
 					Path: "/delayandabort",
 				},
 				Response: http.Response{
-					StatusCode: 500,
+					StatusCodes: []int{500},
 				},
 				Namespace: ns,
 			}

@@ -138,7 +138,7 @@ var EGUpgradeTest = suite.ConformanceTest{
 					Path: "/eg-upgrade",
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}

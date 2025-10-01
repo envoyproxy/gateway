@@ -48,7 +48,7 @@ var EnvoyGatewayCustomSecurityContextUseridTest = suite.ConformanceTest{
 					Path: "/",
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}

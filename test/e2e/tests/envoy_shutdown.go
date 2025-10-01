@@ -59,7 +59,7 @@ var EnvoyShutdownTest = suite.ConformanceTest{
 					Path: "/envoy-shutdown",
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}

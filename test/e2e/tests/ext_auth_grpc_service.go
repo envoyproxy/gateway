@@ -57,7 +57,7 @@ var GRPCExtAuthTest = suite.ConformanceTest{
 					},
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}
@@ -72,7 +72,7 @@ var GRPCExtAuthTest = suite.ConformanceTest{
 					Path: "/myapp",
 				},
 				Response: http.Response{
-					StatusCode: 403,
+					StatusCodes: []int{403},
 				},
 				Namespace: ns,
 			}
@@ -90,7 +90,7 @@ var GRPCExtAuthTest = suite.ConformanceTest{
 					},
 				},
 				Response: http.Response{
-					StatusCode: 403,
+					StatusCodes: []int{403},
 				},
 				Namespace: ns,
 			}
@@ -105,7 +105,7 @@ var GRPCExtAuthTest = suite.ConformanceTest{
 					Path: "/public",
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}

@@ -48,7 +48,7 @@ var RetryTest = suite.ConformanceTest{
 					Path: "/status/500",
 				},
 				Response: http.Response{
-					StatusCode: 500,
+					StatusCodes: []int{500},
 				},
 				Namespace: ns,
 			}

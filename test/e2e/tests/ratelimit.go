@@ -61,8 +61,8 @@ var RateLimitCIDRMatchTest = suite.ConformanceTest{
 					Path: "/",
 				},
 				Response: http.Response{
-					StatusCode: 200,
-					Headers:    ratelimitHeader,
+					StatusCodes: []int{200},
+					Headers:     ratelimitHeader,
 				},
 				Namespace: ns,
 			}
@@ -74,7 +74,7 @@ var RateLimitCIDRMatchTest = suite.ConformanceTest{
 					Path: "/",
 				},
 				Response: http.Response{
-					StatusCode: 429,
+					StatusCodes: []int{429},
 				},
 				Namespace: ns,
 			}
@@ -134,8 +134,8 @@ var RateLimitHeaderMatchTest = suite.ConformanceTest{
 					Headers: requestHeaders,
 				},
 				Response: http.Response{
-					StatusCode: 200,
-					Headers:    ratelimitHeader,
+					StatusCodes: []int{200},
+					Headers:     ratelimitHeader,
 				},
 				Namespace: ns,
 			}
@@ -148,7 +148,7 @@ var RateLimitHeaderMatchTest = suite.ConformanceTest{
 					Headers: requestHeaders,
 				},
 				Response: http.Response{
-					StatusCode: 429,
+					StatusCodes: []int{429},
 				},
 				Namespace: ns,
 			}
@@ -180,7 +180,7 @@ var RateLimitHeaderMatchTest = suite.ConformanceTest{
 					Headers: requestHeaders,
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}
@@ -221,8 +221,8 @@ var GlobalRateLimitHeaderInvertMatchTest = suite.ConformanceTest{
 					Headers: requestHeaders,
 				},
 				Response: http.Response{
-					StatusCode: 200,
-					Headers:    ratelimitHeader,
+					StatusCodes: []int{200},
+					Headers:     ratelimitHeader,
 				},
 				Namespace: ns,
 			}
@@ -235,7 +235,7 @@ var GlobalRateLimitHeaderInvertMatchTest = suite.ConformanceTest{
 					Headers: requestHeaders,
 				},
 				Response: http.Response{
-					StatusCode: 429,
+					StatusCodes: []int{429},
 				},
 				Namespace: ns,
 			}
@@ -267,7 +267,7 @@ var GlobalRateLimitHeaderInvertMatchTest = suite.ConformanceTest{
 					Headers: requestHeaders,
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}
@@ -309,8 +309,8 @@ var RateLimitHeadersDisabled = suite.ConformanceTest{
 					Headers: requestHeaders,
 				},
 				Response: http.Response{
-					StatusCode: 200,
-					Headers:    ratelimitHeader,
+					StatusCodes: []int{200},
+					Headers:     ratelimitHeader,
 				},
 				Namespace: ns,
 			}
@@ -323,7 +323,7 @@ var RateLimitHeadersDisabled = suite.ConformanceTest{
 					Headers: requestHeaders,
 				},
 				Response: http.Response{
-					StatusCode: 429,
+					StatusCodes: []int{429},
 				},
 				Namespace: ns,
 			}
@@ -355,7 +355,7 @@ var RateLimitHeadersDisabled = suite.ConformanceTest{
 					Headers: requestHeaders,
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}
@@ -393,7 +393,7 @@ var RateLimitBasedJwtClaimsTest = suite.ConformanceTest{
 					Path: "/foo",
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}
@@ -403,7 +403,7 @@ var RateLimitBasedJwtClaimsTest = suite.ConformanceTest{
 					Path: "/foo",
 				},
 				Response: http.Response{
-					StatusCode: 429,
+					StatusCodes: []int{429},
 				},
 				Namespace: ns,
 			}
@@ -422,8 +422,8 @@ var RateLimitBasedJwtClaimsTest = suite.ConformanceTest{
 					},
 				},
 				Response: http.Response{
-					StatusCode: 200,
-					Headers:    ratelimitHeader,
+					StatusCodes: []int{200},
+					Headers:     ratelimitHeader,
 				},
 				Namespace: ns,
 			}
@@ -440,7 +440,7 @@ var RateLimitBasedJwtClaimsTest = suite.ConformanceTest{
 					Headers: DifTokenHeader,
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}
@@ -454,7 +454,7 @@ var RateLimitBasedJwtClaimsTest = suite.ConformanceTest{
 					Path: "/bar",
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}
@@ -486,7 +486,7 @@ var RateLimitBasedJwtClaimsTest = suite.ConformanceTest{
 					Path: "/foo",
 				},
 				Response: http.Response{
-					StatusCode: 401,
+					StatusCodes: []int{401},
 				},
 				Namespace: ns,
 			}
@@ -530,8 +530,8 @@ var RateLimitMultipleListenersTest = suite.ConformanceTest{
 						Path: "/",
 					},
 					Response: http.Response{
-						StatusCode: 200,
-						Headers:    ratelimitHeader,
+						StatusCodes: []int{200},
+						Headers:     ratelimitHeader,
 					},
 					Namespace: ns,
 				}
@@ -543,7 +543,7 @@ var RateLimitMultipleListenersTest = suite.ConformanceTest{
 						Path: "/",
 					},
 					Response: http.Response{
-						StatusCode: 429,
+						StatusCodes: []int{429},
 					},
 					Namespace: ns,
 				}
@@ -593,8 +593,8 @@ var RateLimitHeadersAndCIDRMatchTest = suite.ConformanceTest{
 					Headers: requestHeaders,
 				},
 				Response: http.Response{
-					StatusCode: 200,
-					Headers:    ratelimitHeader,
+					StatusCodes: []int{200},
+					Headers:     ratelimitHeader,
 				},
 				Namespace: ns,
 			}
@@ -607,7 +607,7 @@ var RateLimitHeadersAndCIDRMatchTest = suite.ConformanceTest{
 					Headers: requestHeaders,
 				},
 				Response: http.Response{
-					StatusCode: 429,
+					StatusCodes: []int{429},
 				},
 				Namespace: ns,
 			}
@@ -639,7 +639,7 @@ var RateLimitHeadersAndCIDRMatchTest = suite.ConformanceTest{
 					Headers: requestHeaders,
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}
@@ -663,7 +663,7 @@ var RateLimitHeadersAndCIDRMatchTest = suite.ConformanceTest{
 					Path: "/get",
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}
@@ -712,7 +712,7 @@ var UsageRateLimitTest = suite.ConformanceTest{
 				Path:    "/get",
 				Headers: requestHeaders,
 			},
-			Response:  http.Response{StatusCode: 200, Headers: ratelimitHeader},
+			Response:  http.Response{StatusCodes: []int{200}, Headers: ratelimitHeader},
 			Namespace: ns,
 		}
 		expectOkResp.Response.Headers["X-Ratelimit-Limit"] = "21, 21;w=3600"
@@ -724,7 +724,7 @@ var UsageRateLimitTest = suite.ConformanceTest{
 				Headers: requestHeaders,
 			},
 			Response: http.Response{
-				StatusCode: 429,
+				StatusCodes: []int{429},
 			},
 			Namespace: ns,
 		}
@@ -767,8 +767,8 @@ var RateLimitGlobalSharedCidrMatchTest = suite.ConformanceTest{
 					Path: "/foo", // First route path
 				},
 				Response: http.Response{
-					StatusCode: 200,
-					Headers:    ratelimitHeader,
+					StatusCodes: []int{200},
+					Headers:     ratelimitHeader,
 				},
 				Namespace: ns,
 			}
@@ -779,8 +779,8 @@ var RateLimitGlobalSharedCidrMatchTest = suite.ConformanceTest{
 					Path: "/bar", // Second route path
 				},
 				Response: http.Response{
-					StatusCode: 200,
-					Headers:    ratelimitHeader,
+					StatusCodes: []int{200},
+					Headers:     ratelimitHeader,
 				},
 				Namespace: ns,
 			}
@@ -791,7 +791,7 @@ var RateLimitGlobalSharedCidrMatchTest = suite.ConformanceTest{
 					Path: "/bar", // Path for testing the limit on the second route
 				},
 				Response: http.Response{
-					StatusCode: 429,
+					StatusCodes: []int{429},
 				},
 				Namespace: ns,
 			}
@@ -871,8 +871,8 @@ var RateLimitGlobalSharedGatewayHeaderMatchTest = suite.ConformanceTest{
 					Headers: requestHeaders,
 				},
 				Response: http.Response{
-					StatusCode: 200,
-					Headers:    ratelimitHeader,
+					StatusCodes: []int{200},
+					Headers:     ratelimitHeader,
 				},
 				Namespace: ns,
 			}
@@ -884,8 +884,8 @@ var RateLimitGlobalSharedGatewayHeaderMatchTest = suite.ConformanceTest{
 					Headers: requestHeaders,
 				},
 				Response: http.Response{
-					StatusCode: 200,
-					Headers:    ratelimitHeader,
+					StatusCodes: []int{200},
+					Headers:     ratelimitHeader,
 				},
 				Namespace: ns,
 			}
@@ -897,7 +897,7 @@ var RateLimitGlobalSharedGatewayHeaderMatchTest = suite.ConformanceTest{
 					Headers: requestHeaders,
 				},
 				Response: http.Response{
-					StatusCode: 429,
+					StatusCodes: []int{429},
 				},
 				Namespace: ns,
 			}
@@ -964,9 +964,9 @@ var RateLimitGlobalMergeTest = suite.ConformanceTest{
 		t.Run("shared_route_policy_x-user-id=one", func(t *testing.T) {
 			headers := map[string]string{"x-user-id": "one"}
 
-			expectOk1 := http.ExpectedResponse{Request: http.Request{Path: "/bar", Headers: headers}, Response: http.Response{StatusCode: 200}, Namespace: ns}
-			expectOk2 := http.ExpectedResponse{Request: http.Request{Path: "/foo", Headers: headers}, Response: http.Response{StatusCode: 200}, Namespace: ns}
-			expectLimit := http.ExpectedResponse{Request: http.Request{Path: "/foo", Headers: headers}, Response: http.Response{StatusCode: 429}, Namespace: ns}
+			expectOk1 := http.ExpectedResponse{Request: http.Request{Path: "/bar", Headers: headers}, Response: http.Response{StatusCodes: []int{200}}, Namespace: ns}
+			expectOk2 := http.ExpectedResponse{Request: http.Request{Path: "/foo", Headers: headers}, Response: http.Response{StatusCodes: []int{200}}, Namespace: ns}
+			expectLimit := http.ExpectedResponse{Request: http.Request{Path: "/foo", Headers: headers}, Response: http.Response{StatusCodes: []int{429}}, Namespace: ns}
 
 			require.Eventually(t, func() bool {
 				_, cRes, err := suite.RoundTripper.CaptureRoundTrip(http.MakeRequest(t, &expectOk1, gwAddr2, "HTTP", "http"))
@@ -990,10 +990,10 @@ var RateLimitGlobalMergeTest = suite.ConformanceTest{
 		t.Run("unshared_route_policy_x-user-id=two", func(t *testing.T) {
 			headers := map[string]string{"x-user-id": "two"}
 
-			okFoo := http.ExpectedResponse{Request: http.Request{Path: "/foo", Headers: headers}, Response: http.Response{StatusCode: 200}, Namespace: ns}
-			limitFoo := http.ExpectedResponse{Request: http.Request{Path: "/foo", Headers: headers}, Response: http.Response{StatusCode: 429}, Namespace: ns}
-			okBar := http.ExpectedResponse{Request: http.Request{Path: "/bar", Headers: headers}, Response: http.Response{StatusCode: 200}, Namespace: ns}
-			limitBar := http.ExpectedResponse{Request: http.Request{Path: "/bar", Headers: headers}, Response: http.Response{StatusCode: 429}, Namespace: ns}
+			okFoo := http.ExpectedResponse{Request: http.Request{Path: "/foo", Headers: headers}, Response: http.Response{StatusCodes: []int{200}}, Namespace: ns}
+			limitFoo := http.ExpectedResponse{Request: http.Request{Path: "/foo", Headers: headers}, Response: http.Response{StatusCodes: []int{429}}, Namespace: ns}
+			okBar := http.ExpectedResponse{Request: http.Request{Path: "/bar", Headers: headers}, Response: http.Response{StatusCodes: []int{200}}, Namespace: ns}
+			limitBar := http.ExpectedResponse{Request: http.Request{Path: "/bar", Headers: headers}, Response: http.Response{StatusCodes: []int{429}}, Namespace: ns}
 
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr1, okFoo)
 
@@ -1019,9 +1019,9 @@ var RateLimitGlobalMergeTest = suite.ConformanceTest{
 		t.Run("shared_gateway_policy_x-user-id=three", func(t *testing.T) {
 			headers := map[string]string{"x-user-id": "three"}
 
-			ok1 := http.ExpectedResponse{Request: http.Request{Path: "/bar", Headers: headers}, Response: http.Response{StatusCode: 200}, Namespace: ns}
-			ok2 := http.ExpectedResponse{Request: http.Request{Path: "/foo", Headers: headers}, Response: http.Response{StatusCode: 200}, Namespace: ns}
-			limit := http.ExpectedResponse{Request: http.Request{Path: "/foo", Headers: headers}, Response: http.Response{StatusCode: 429}, Namespace: ns}
+			ok1 := http.ExpectedResponse{Request: http.Request{Path: "/bar", Headers: headers}, Response: http.Response{StatusCodes: []int{200}}, Namespace: ns}
+			ok2 := http.ExpectedResponse{Request: http.Request{Path: "/foo", Headers: headers}, Response: http.Response{StatusCodes: []int{200}}, Namespace: ns}
+			limit := http.ExpectedResponse{Request: http.Request{Path: "/foo", Headers: headers}, Response: http.Response{StatusCodes: []int{429}}, Namespace: ns}
 
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr2, ok1)
 
@@ -1038,10 +1038,10 @@ var RateLimitGlobalMergeTest = suite.ConformanceTest{
 		t.Run("unshared_gateway_policy__x-user-id=four", func(t *testing.T) {
 			headers := map[string]string{"x-user-id": "four"}
 
-			okFoo := http.ExpectedResponse{Request: http.Request{Path: "/foo", Headers: headers}, Response: http.Response{StatusCode: 200}, Namespace: ns}
-			limitFoo := http.ExpectedResponse{Request: http.Request{Path: "/foo", Headers: headers}, Response: http.Response{StatusCode: 429}, Namespace: ns}
-			okBar := http.ExpectedResponse{Request: http.Request{Path: "/bar", Headers: headers}, Response: http.Response{StatusCode: 200}, Namespace: ns}
-			limitBar := http.ExpectedResponse{Request: http.Request{Path: "/bar", Headers: headers}, Response: http.Response{StatusCode: 429}, Namespace: ns}
+			okFoo := http.ExpectedResponse{Request: http.Request{Path: "/foo", Headers: headers}, Response: http.Response{StatusCodes: []int{200}}, Namespace: ns}
+			limitFoo := http.ExpectedResponse{Request: http.Request{Path: "/foo", Headers: headers}, Response: http.Response{StatusCodes: []int{429}}, Namespace: ns}
+			okBar := http.ExpectedResponse{Request: http.Request{Path: "/bar", Headers: headers}, Response: http.Response{StatusCodes: []int{200}}, Namespace: ns}
+			limitBar := http.ExpectedResponse{Request: http.Request{Path: "/bar", Headers: headers}, Response: http.Response{StatusCodes: []int{429}}, Namespace: ns}
 
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr1, okFoo)
 
@@ -1065,8 +1065,8 @@ var RateLimitGlobalMergeTest = suite.ConformanceTest{
 		})
 
 		t.Run("shared_no_client_selectors", func(t *testing.T) {
-			ok1 := http.ExpectedResponse{Request: http.Request{Path: "/bar"}, Response: http.Response{StatusCode: 200}, Namespace: ns}
-			limit := http.ExpectedResponse{Request: http.Request{Path: "/bar"}, Response: http.Response{StatusCode: 429}, Namespace: ns}
+			ok1 := http.ExpectedResponse{Request: http.Request{Path: "/bar"}, Response: http.Response{StatusCodes: []int{200}}, Namespace: ns}
+			limit := http.ExpectedResponse{Request: http.Request{Path: "/bar"}, Response: http.Response{StatusCodes: []int{429}}, Namespace: ns}
 
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr1, ok1)
 

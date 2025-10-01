@@ -58,7 +58,7 @@ var HTTPWasmTest = suite.ConformanceTest{
 					Path: "/no-wasm",
 				},
 				Response: http.Response{
-					StatusCode:    200,
+					StatusCodes:   []int{200},
 					AbsentHeaders: []string{"x-wasm-custom"},
 				},
 				Namespace: ns,
@@ -105,7 +105,7 @@ func testWasmHTTPCodeSource(t *testing.T, suite *suite.ConformanceTestSuite, rou
 		Namespace: "",
 
 		Response: http.Response{
-			StatusCode: 200,
+			StatusCodes: []int{200},
 			Headers: map[string]string{
 				"x-wasm-custom": "FOO", // response header added by wasm
 			},

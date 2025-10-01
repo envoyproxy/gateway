@@ -125,7 +125,7 @@ var OCIWasmTest = suite.ConformanceTest{
 				Namespace: "",
 
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 					Headers: map[string]string{
 						"x-wasm-custom": "FOO", // response header added by wasm
 					},
@@ -154,7 +154,7 @@ var OCIWasmTest = suite.ConformanceTest{
 					Path: "/no-wasm",
 				},
 				Response: http.Response{
-					StatusCode:    200,
+					StatusCodes:   []int{200},
 					AbsentHeaders: []string{"x-wasm-custom"},
 				},
 				Namespace: ns,

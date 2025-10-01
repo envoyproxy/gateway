@@ -101,7 +101,7 @@ var EGResilience = suite.ResilienceTest{
 					Path: "/welcome",
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}
@@ -160,7 +160,7 @@ var EGResilience = suite.ResilienceTest{
 					Path: "/route-change",
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}
@@ -231,7 +231,7 @@ var EGResilience = suite.ResilienceTest{
 					Path: "/route-change",
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}

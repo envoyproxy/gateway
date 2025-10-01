@@ -63,7 +63,7 @@ var HeaderSettingsTest = suite.ConformanceTest{
 					},
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}
@@ -95,7 +95,7 @@ var HeaderSettingsTest = suite.ConformanceTest{
 					"late-removed-header": "backend",
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 					Headers: map[string]string{
 						"late-added-header": "backend,filter,late",
 						"late-set-header":   "late",

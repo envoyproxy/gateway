@@ -47,7 +47,7 @@ var MetricTest = suite.ConformanceTest{
 					Path: "/prom",
 				},
 				Response: httputils.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}
@@ -79,7 +79,7 @@ var MetricTest = suite.ConformanceTest{
 					Path: "/prom",
 				},
 				Response: httputils.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}
@@ -172,7 +172,7 @@ func runMetricCompressorTest(t *testing.T, suite *suite.ConformanceTestSuite, ns
 			Path: checkPath,
 		},
 		Response: httputils.Response{
-			StatusCode: 200,
+			StatusCodes: []int{200},
 		},
 		Namespace: ns,
 	}

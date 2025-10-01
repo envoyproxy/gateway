@@ -43,7 +43,7 @@ var DynamicResolverBackendTest = suite.ConformanceTest{
 					Path: "/",
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ConformanceInfraNamespace,
 			}
@@ -57,7 +57,7 @@ var DynamicResolverBackendTest = suite.ConformanceTest{
 					Path: "/",
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ConformanceInfraNamespace,
 			}
@@ -76,7 +76,7 @@ var DynamicResolverBackendTest = suite.ConformanceTest{
 					Path: "/status/200",
 				},
 				Response: http.Response{
-					StatusCode: 502, // request will fail because httpbin.org doesn't support http2.0
+					StatusCodes: []int{502}, // request will fail because httpbin.org doesn't support http2.0
 				},
 			})
 
@@ -88,12 +88,12 @@ var DynamicResolverBackendTest = suite.ConformanceTest{
 					Path: "httpbin/status/200",
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 			}, gwAddr, "HTTP", "http")
 			http.WaitForConsistentResponse(t, suite.RoundTripper, req, http.ExpectedResponse{
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 			}, suite.TimeoutConfig.RequiredConsecutiveSuccesses, suite.TimeoutConfig.MaxTimeToConsistency)
 		})
@@ -121,7 +121,7 @@ var DynamicResolverBackendWithTLSTest = suite.ConformanceTest{
 					Path: "/with-tls",
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}
@@ -144,7 +144,7 @@ var DynamicResolverBackendWithTLSTest = suite.ConformanceTest{
 					},
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 			}
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
@@ -176,7 +176,7 @@ var DynamicResolverBackendWithClusterTrustBundleTest = suite.ConformanceTest{
 					Path: "/with-clustertrustbundle",
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}

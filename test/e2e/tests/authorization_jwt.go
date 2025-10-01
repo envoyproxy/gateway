@@ -88,7 +88,7 @@ var AuthorizationJWTTest = suite.ConformanceTest{
 					},
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}
@@ -105,7 +105,7 @@ var AuthorizationJWTTest = suite.ConformanceTest{
 					},
 				},
 				Response: http.Response{
-					StatusCode: 403,
+					StatusCodes: []int{403},
 				},
 				Namespace: ns,
 			}
@@ -122,7 +122,7 @@ var AuthorizationJWTTest = suite.ConformanceTest{
 					},
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}
@@ -139,7 +139,7 @@ var AuthorizationJWTTest = suite.ConformanceTest{
 					},
 				},
 				Response: http.Response{
-					StatusCode: 403,
+					StatusCodes: []int{403},
 				},
 				Namespace: ns,
 			}
@@ -156,7 +156,7 @@ var AuthorizationJWTTest = suite.ConformanceTest{
 					},
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}
@@ -173,7 +173,7 @@ var AuthorizationJWTTest = suite.ConformanceTest{
 					},
 				},
 				Response: http.Response{
-					StatusCode: 403,
+					StatusCodes: []int{403},
 				},
 				Namespace: ns,
 			}

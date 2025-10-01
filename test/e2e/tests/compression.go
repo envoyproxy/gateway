@@ -72,7 +72,7 @@ var CompressionTest = suite.ConformanceTest{
 					},
 				},
 				Response: http.Response{
-					StatusCode:    200,
+					StatusCodes:   []int{200},
 					AbsentHeaders: []string{"content-encoding"},
 				},
 				Namespace: ns,
@@ -106,7 +106,7 @@ func testCompression(t *testing.T, suite *suite.ConformanceTestSuite, compressio
 			},
 		},
 		Response: http.Response{
-			StatusCode: 200,
+			StatusCodes: []int{200},
 			Headers: map[string]string{
 				"content-encoding": encoding,
 			},

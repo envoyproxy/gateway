@@ -53,7 +53,7 @@ func runHTTPRouteTest(t *testing.T, suite *suite.ConformanceTestSuite, ns string
 			Path: path,
 		},
 		Response: http.Response{
-			StatusCode: 200,
+			StatusCodes: []int{200},
 		},
 		Namespace: ns,
 	}

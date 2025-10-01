@@ -53,7 +53,7 @@ var AuthorizationClientIPTest = suite.ConformanceTest{
 					},
 				},
 				Response: http.Response{
-					StatusCode: 403,
+					StatusCodes: []int{403},
 				},
 				Namespace: ns,
 			}
@@ -76,7 +76,7 @@ var AuthorizationClientIPTest = suite.ConformanceTest{
 					},
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}
@@ -99,7 +99,7 @@ var AuthorizationClientIPTest = suite.ConformanceTest{
 					},
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}
@@ -123,7 +123,7 @@ var AuthorizationClientIPTest = suite.ConformanceTest{
 					},
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}
@@ -140,7 +140,7 @@ var AuthorizationClientIPTest = suite.ConformanceTest{
 					},
 				},
 				Response: http.Response{
-					StatusCode: 403,
+					StatusCodes: []int{403},
 				},
 				Namespace: ns,
 			}
@@ -183,7 +183,7 @@ var AuthorizationClientIPTrustedCidrsTest = suite.ConformanceTest{
 					},
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}
@@ -206,7 +206,7 @@ var AuthorizationClientIPTrustedCidrsTest = suite.ConformanceTest{
 					},
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}
@@ -229,7 +229,7 @@ var AuthorizationClientIPTrustedCidrsTest = suite.ConformanceTest{
 					},
 				},
 				Response: http.Response{
-					StatusCode: 403,
+					StatusCodes: []int{403},
 				},
 				Namespace: ns,
 			}

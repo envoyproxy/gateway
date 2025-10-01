@@ -50,7 +50,7 @@ var AuthorizationDefaultActionTest = suite.ConformanceTest{
 					Path: "/empty-authorization",
 				},
 				Response: http.Response{
-					StatusCode: 403,
+					StatusCodes: []int{403},
 				},
 				Namespace: ns,
 			}
@@ -64,7 +64,7 @@ var AuthorizationDefaultActionTest = suite.ConformanceTest{
 					Path: "/allow-all",
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}

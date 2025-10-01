@@ -77,7 +77,7 @@ var ExtProcTest = suite.ConformanceTest{
 					},
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 					Headers: map[string]string{
 						// header added by ext-processor to client-bound response
 						"x-response-ext-processed": "true",
@@ -140,7 +140,7 @@ var ExtProcTest = suite.ConformanceTest{
 					},
 				},
 				Response: http.Response{
-					StatusCode:    200,
+					StatusCodes:   []int{200},
 					AbsentHeaders: []string{"x-response-ext-processed"},
 				},
 				Namespace: ns,
@@ -187,7 +187,7 @@ var ExtProcTest = suite.ConformanceTest{
 					},
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 					Headers: map[string]string{
 						"x-response-ext-processed": "true", // header added by ext-processor to client-bound response
 					},

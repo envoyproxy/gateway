@@ -44,7 +44,7 @@ var CredentialInjectionBackendFilterTest = suite.ConformanceTest{
 					},
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}
@@ -70,7 +70,7 @@ var CredentialInjectionBackendFilterTest = suite.ConformanceTest{
 					},
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}
@@ -94,7 +94,7 @@ var CredentialInjectionBackendFilterTest = suite.ConformanceTest{
 					AbsentHeaders: []string{"Authorization", "x-credential"},
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}

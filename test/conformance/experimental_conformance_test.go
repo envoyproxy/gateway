@@ -49,14 +49,6 @@ func TestExperimentalConformance(t *testing.T) {
 	// TODO: support these conformance tests
 	opts.SkipTests = append(opts.SkipTests,
 		tests.UDPRouteTest.ShortName,
-		tests.BackendTLSPolicyInvalidCACertificateRef.ShortName,
-		tests.BackendTLSPolicyInvalidKind.ShortName,
-		tests.BackendTLSPolicySANValidation.ShortName,
-		tests.BackendTLSPolicyConflictResolution.ShortName,
-		tests.BackendTLSPolicy.ShortName,
-		tests.BackendTLSPolicyObservedGenerationBump.ShortName,
-		tests.TLSRouteInvalidReferenceGrant.ShortName,
-		tests.TLSRouteSimpleSameNamespace.ShortName,
 	)
 
 	t.Logf("Running experimental conformance tests with %s GatewayClass\n cleanup: %t\n debug: %t\n enable all features: %t \n conformance profiles: [%v]",

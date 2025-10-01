@@ -98,7 +98,7 @@ var RedirectTrailingSlashTest = suite.ConformanceTest{
 						UnfollowRedirect: true,
 					},
 					Response: http.Response{
-						StatusCode: testCase.statusCode,
+						StatusCodes: []int{testCase.statusCode},
 					},
 					Namespace: ns,
 				}

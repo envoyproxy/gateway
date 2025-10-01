@@ -81,7 +81,7 @@ var BackendTLSSettingsTest = suite.ConformanceTest{
 					Path: "/backend-tls",
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ConformanceInfraNamespace,
 			}
@@ -190,7 +190,7 @@ var BackendTLSSettingsTest = suite.ConformanceTest{
 					Path: "/use-client-protocol",
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ConformanceInfraNamespace,
 			}
@@ -209,7 +209,7 @@ var BackendTLSSettingsTest = suite.ConformanceTest{
 					Protocol: roundtripper.H2CPriorKnowledgeProtocol,
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ConformanceInfraNamespace,
 			}

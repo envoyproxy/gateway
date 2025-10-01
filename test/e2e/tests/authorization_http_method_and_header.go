@@ -51,7 +51,7 @@ var AuthorizationHTTPMethodAndHeaderTest = suite.ConformanceTest{
 					Path: "/protected-only-user-id-header",
 				},
 				Response: http.Response{
-					StatusCode: 403,
+					StatusCodes: []int{403},
 				},
 				Namespace: ns,
 			}
@@ -68,7 +68,7 @@ var AuthorizationHTTPMethodAndHeaderTest = suite.ConformanceTest{
 					},
 				},
 				Response: http.Response{
-					StatusCode: 403,
+					StatusCodes: []int{403},
 				},
 				Namespace: ns,
 			}
@@ -85,7 +85,7 @@ var AuthorizationHTTPMethodAndHeaderTest = suite.ConformanceTest{
 					},
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}
@@ -102,7 +102,7 @@ var AuthorizationHTTPMethodAndHeaderTest = suite.ConformanceTest{
 					},
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}
@@ -117,7 +117,7 @@ var AuthorizationHTTPMethodAndHeaderTest = suite.ConformanceTest{
 					Path: "/protected-multiple-headers-and-methods",
 				},
 				Response: http.Response{
-					StatusCode: 403,
+					StatusCodes: []int{403},
 				},
 				Namespace: ns,
 			}
@@ -135,7 +135,7 @@ var AuthorizationHTTPMethodAndHeaderTest = suite.ConformanceTest{
 					Method: "POST",
 				},
 				Response: http.Response{
-					StatusCode: 403,
+					StatusCodes: []int{403},
 				},
 				Namespace: ns,
 			}
@@ -153,7 +153,7 @@ var AuthorizationHTTPMethodAndHeaderTest = suite.ConformanceTest{
 					Method: "GET",
 				},
 				Response: http.Response{
-					StatusCode: 403,
+					StatusCodes: []int{403},
 				},
 				Namespace: ns,
 			}
@@ -171,7 +171,7 @@ var AuthorizationHTTPMethodAndHeaderTest = suite.ConformanceTest{
 					Method: "GET",
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}

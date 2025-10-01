@@ -81,7 +81,7 @@ func testTLSRouteWithBackend(t *testing.T, suite *suite.ConformanceTestSuite, ro
 			Path: "/",
 		},
 		Response: http.Response{
-			StatusCode: 200,
+			StatusCodes: []int{200},
 		},
 		Namespace: ns,
 	}

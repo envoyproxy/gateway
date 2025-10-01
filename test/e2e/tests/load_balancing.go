@@ -77,7 +77,7 @@ var RoundRobinLoadBalancingTest = suite.ConformanceTest{
 					Path: "/round",
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}
@@ -172,7 +172,7 @@ var ConsistentHashSourceIPLoadBalancingTest = suite.ConformanceTest{
 					Path: "/source",
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}
@@ -219,7 +219,7 @@ var ConsistentHashHeaderLoadBalancingTest = suite.ConformanceTest{
 				Path: "/header",
 			},
 			Response: http.Response{
-				StatusCode: 200,
+				StatusCodes: []int{200},
 			},
 			Namespace: ns,
 		}
@@ -446,7 +446,7 @@ var EndpointOverrideLoadBalancingTest = suite.ConformanceTest{
 					},
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}
@@ -479,7 +479,7 @@ var EndpointOverrideLoadBalancingTest = suite.ConformanceTest{
 					},
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}
@@ -506,7 +506,7 @@ var EndpointOverrideLoadBalancingTest = suite.ConformanceTest{
 					// No x-custom-host header
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}

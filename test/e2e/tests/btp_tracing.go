@@ -40,7 +40,7 @@ var BTPTracingTest = suite.ConformanceTest{
 					Path: "/otel",
 				},
 				Response: httputils.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}
@@ -63,7 +63,7 @@ var BTPTracingTest = suite.ConformanceTest{
 					Path: "/otel-override",
 				},
 				Response: httputils.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}

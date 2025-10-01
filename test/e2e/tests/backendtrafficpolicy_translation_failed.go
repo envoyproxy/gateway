@@ -50,7 +50,7 @@ var FailedBackendTrafficPolicyDirectResponseTest = suite.ConformanceTest{
 					Path: "/myapp",
 				},
 				Response: http.Response{
-					StatusCode: 500,
+					StatusCodes: []int{500},
 				},
 				Namespace: ns,
 			}

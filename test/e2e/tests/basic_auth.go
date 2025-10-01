@@ -52,7 +52,7 @@ var BasicAuthTest = suite.ConformanceTest{
 					},
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}
@@ -80,7 +80,7 @@ var BasicAuthTest = suite.ConformanceTest{
 					Path: "/basic-auth-1",
 				},
 				Response: http.Response{
-					StatusCode: 401,
+					StatusCodes: []int{401},
 				},
 				Namespace: ns,
 			}
@@ -111,7 +111,7 @@ var BasicAuthTest = suite.ConformanceTest{
 					},
 				},
 				Response: http.Response{
-					StatusCode: 401,
+					StatusCodes: []int{401},
 				},
 				Namespace: ns,
 			}
@@ -142,7 +142,7 @@ var BasicAuthTest = suite.ConformanceTest{
 					},
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}
@@ -171,7 +171,7 @@ var BasicAuthTest = suite.ConformanceTest{
 					Path: "/not-matching-route",
 				},
 				Response: http.Response{
-					StatusCode: 404,
+					StatusCodes: []int{404},
 				},
 				Namespace: ns,
 			}
@@ -201,7 +201,7 @@ var BasicAuthTest = suite.ConformanceTest{
 					Path: "/no-basic-auth",
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}
@@ -245,7 +245,7 @@ var BasicAuthTest = suite.ConformanceTest{
 					},
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}

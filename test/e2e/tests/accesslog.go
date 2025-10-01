@@ -52,7 +52,7 @@ var FileAccessLogTest = suite.ConformanceTest{
 					},
 				},
 				Response: httputils.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}
@@ -74,7 +74,7 @@ var FileAccessLogTest = suite.ConformanceTest{
 					// envoy will not log this request without the header x-envoy-logged
 				},
 				Response: httputils.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}
@@ -106,7 +106,7 @@ var FileAccessLogTest = suite.ConformanceTest{
 					},
 				},
 				Response: httputils.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}
@@ -138,7 +138,7 @@ var OpenTelemetryTestText = suite.ConformanceTest{
 					},
 				},
 				Response: httputils.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}
@@ -155,7 +155,7 @@ var OpenTelemetryTestText = suite.ConformanceTest{
 					// envoy will not log this request without the header x-envoy-logged
 				},
 				Response: httputils.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}
@@ -187,7 +187,7 @@ var OpenTelemetryTestJSONAsDefault = suite.ConformanceTest{
 					},
 				},
 				Response: httputils.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}
@@ -204,7 +204,7 @@ var OpenTelemetryTestJSONAsDefault = suite.ConformanceTest{
 					// envoy will not log this request without the header x-envoy-logged
 				},
 				Response: httputils.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}
@@ -236,7 +236,7 @@ var OpenTelemetryTestJSON = suite.ConformanceTest{
 					},
 				},
 				Response: httputils.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}
@@ -253,7 +253,7 @@ var OpenTelemetryTestJSON = suite.ConformanceTest{
 					// envoy will not log this request without the header x-envoy-logged
 				},
 				Response: httputils.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}
@@ -289,7 +289,7 @@ var ALSTest = suite.ConformanceTest{
 					},
 				},
 				Response: httputils.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}

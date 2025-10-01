@@ -17,12 +17,30 @@ func SkipTests(gatewayNamespaceMode bool) []suite.ConformanceTest {
 	if gatewayNamespaceMode {
 		return []suite.ConformanceTest{
 			tests.GatewayStaticAddresses,
+
+			tests.BackendTLSPolicyInvalidCACertificateRef,
+			tests.BackendTLSPolicyInvalidKind,
+			tests.BackendTLSPolicySANValidation,
+			tests.BackendTLSPolicyConflictResolution,
+			tests.BackendTLSPolicy,
+			tests.BackendTLSPolicyObservedGenerationBump,
+			tests.TLSRouteInvalidReferenceGrant,
+			tests.TLSRouteSimpleSameNamespace,
 		}
 	}
 
 	return []suite.ConformanceTest{
 		tests.GatewayStaticAddresses,
 		tests.GatewayInfrastructure,
+
+		tests.BackendTLSPolicyInvalidCACertificateRef,
+		tests.BackendTLSPolicyInvalidKind,
+		tests.BackendTLSPolicySANValidation,
+		tests.BackendTLSPolicyConflictResolution,
+		tests.BackendTLSPolicy,
+		tests.BackendTLSPolicyObservedGenerationBump,
+		tests.TLSRouteInvalidReferenceGrant,
+		tests.TLSRouteSimpleSameNamespace,
 	}
 }
 

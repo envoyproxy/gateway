@@ -37,7 +37,7 @@ var EnvoyProxyHPATest = suite.ConformanceTest{
 					Path: "/foo",
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}

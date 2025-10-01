@@ -41,7 +41,7 @@ func testEnvoyPatchPolicy(t *testing.T, suite *suite.ConformanceTestSuite) {
 			Path: "/foo",
 		},
 		Response: http.Response{
-			StatusCode: 200,
+			StatusCodes: []int{200},
 		},
 		Namespace: ns,
 	}
@@ -54,7 +54,7 @@ func testEnvoyPatchPolicy(t *testing.T, suite *suite.ConformanceTestSuite) {
 			Path: "/bar",
 		},
 		Response: http.Response{
-			StatusCode: 406,
+			StatusCodes: []int{406},
 		},
 		Namespace: ns,
 	}

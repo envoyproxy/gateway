@@ -43,7 +43,7 @@ var StatNameTest = suite.ConformanceTest{
 					Path: "/foo",
 				},
 				Response: httputils.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}
@@ -55,7 +55,7 @@ var StatNameTest = suite.ConformanceTest{
 					Path: "/bar",
 				},
 				Response: httputils.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}

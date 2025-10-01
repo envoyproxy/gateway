@@ -37,7 +37,7 @@ var EnvoyGatewayRoutingType = suite.ConformanceTest{
 				Path: "/to-cluster-ip",
 			},
 			Response: http.Response{
-				StatusCode: 200,
+				StatusCodes: []int{200},
 			},
 			Namespace: ns,
 		}

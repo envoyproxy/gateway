@@ -63,7 +63,7 @@ var ESResilience = suite.ResilienceTest{
 					Path: "/pass",
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}
@@ -90,7 +90,7 @@ var ESResilience = suite.ResilienceTest{
 					Path: "/pass",
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}
@@ -197,7 +197,7 @@ var ESResilience = suite.ResilienceTest{
 					Path: "/pass-updated",
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}

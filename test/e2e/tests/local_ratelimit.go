@@ -95,7 +95,7 @@ func runNoRateLimitTest(t *testing.T, suite *suite.ConformanceTestSuite, disable
 			Path: "/no-ratelimit",
 		},
 		Response: http.Response{
-			StatusCode:    200,
+			StatusCodes:   []int{200},
 			AbsentHeaders: allRateLimitHeaders,
 		},
 		Namespace: ns,
@@ -136,7 +136,7 @@ func runSpecificUserRateLimitTest(t *testing.T, suite *suite.ConformanceTestSuit
 			},
 		},
 		Response: http.Response{
-			StatusCode: 200,
+			StatusCodes: []int{200},
 		},
 		Namespace: ns,
 	}
@@ -160,7 +160,7 @@ func runSpecificUserRateLimitTest(t *testing.T, suite *suite.ConformanceTestSuit
 			},
 		},
 		Response: http.Response{
-			StatusCode: 429,
+			StatusCodes: []int{429},
 		},
 		Namespace: ns,
 	}
@@ -183,7 +183,7 @@ func runSpecificUserRateLimitTest(t *testing.T, suite *suite.ConformanceTestSuit
 			},
 		},
 		Response: http.Response{
-			StatusCode: 200,
+			StatusCodes: []int{200},
 		},
 		Namespace: ns,
 	}
@@ -207,7 +207,7 @@ func runSpecificUserRateLimitTest(t *testing.T, suite *suite.ConformanceTestSuit
 			},
 		},
 		Response: http.Response{
-			StatusCode: 429,
+			StatusCodes: []int{429},
 		},
 		Namespace: ns,
 	}
@@ -240,7 +240,7 @@ func runAllTrafficRateLimitTest(t *testing.T, suite *suite.ConformanceTestSuite,
 			Path: "/ratelimit-all-traffic",
 		},
 		Response: http.Response{
-			StatusCode: 200,
+			StatusCodes: []int{200},
 		},
 		Namespace: ns,
 	}
@@ -261,7 +261,7 @@ func runAllTrafficRateLimitTest(t *testing.T, suite *suite.ConformanceTestSuite,
 			Path: "/ratelimit-all-traffic",
 		},
 		Response: http.Response{
-			StatusCode: 429,
+			StatusCodes: []int{429},
 		},
 		Namespace: ns,
 	}
@@ -300,7 +300,7 @@ func runHeaderInvertMatchRateLimitTest(t *testing.T, suite *suite.ConformanceTes
 			},
 		},
 		Response: http.Response{
-			StatusCode: 200,
+			StatusCodes: []int{200},
 		},
 		Namespace: ns,
 	}
@@ -323,7 +323,7 @@ func runHeaderInvertMatchRateLimitTest(t *testing.T, suite *suite.ConformanceTes
 			},
 		},
 		Response: http.Response{
-			StatusCode: 429,
+			StatusCodes: []int{429},
 		},
 		Namespace: ns,
 	}
@@ -347,7 +347,7 @@ func runHeaderInvertMatchRateLimitTest(t *testing.T, suite *suite.ConformanceTes
 			},
 		},
 		Response: http.Response{
-			StatusCode: 200,
+			StatusCodes: []int{200},
 		},
 		Namespace: ns,
 	}

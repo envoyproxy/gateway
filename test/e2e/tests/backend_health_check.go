@@ -118,7 +118,7 @@ var BackendHealthCheckActiveHTTPTest = suite.ConformanceTest{
 						Path: "/health-check-active-http-pass",
 					},
 					Response: http.Response{
-						StatusCode: 200,
+						StatusCodes: []int{200},
 					},
 					Namespace: ns,
 				}
@@ -132,7 +132,7 @@ var BackendHealthCheckActiveHTTPTest = suite.ConformanceTest{
 						Path: "/health-check-active-http-fail",
 					},
 					Response: http.Response{
-						StatusCode: 503,
+						StatusCodes: []int{503},
 					},
 					Namespace: ns,
 				}

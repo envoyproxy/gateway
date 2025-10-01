@@ -91,7 +91,7 @@ var BackendPanicThresholdHTTPTest = suite.ConformanceTest{
 						Path: "/ping",
 					},
 					Response: http.Response{
-						StatusCode: 200,
+						StatusCodes: []int{200},
 					},
 					Namespace: ns,
 				}

@@ -72,7 +72,7 @@ var EnvoyProxyDaemonSetTest = suite.ConformanceTest{
 					Path: "/daemonset",
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			})

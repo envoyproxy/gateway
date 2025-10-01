@@ -38,7 +38,7 @@ var UseClientProtocolTest = suite.ConformanceTest{
 					Path: "/http11/headers",
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}
@@ -63,7 +63,7 @@ var UseClientProtocolTest = suite.ConformanceTest{
 					Path: "/http2/headers",
 				},
 				Response: http.Response{
-					StatusCode: 400,
+					StatusCodes: []int{400},
 				},
 				Namespace: ns,
 			}
@@ -86,7 +86,7 @@ var UseClientProtocolTest = suite.ConformanceTest{
 					Protocol: roundtripper.H2CPriorKnowledgeProtocol,
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}
@@ -112,7 +112,7 @@ var UseClientProtocolTest = suite.ConformanceTest{
 					Protocol: roundtripper.H2CPriorKnowledgeProtocol,
 				},
 				Response: http.Response{
-					StatusCode: 502,
+					StatusCodes: []int{502},
 				},
 				Namespace: ns,
 			}

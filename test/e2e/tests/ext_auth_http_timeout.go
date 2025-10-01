@@ -60,7 +60,7 @@ var HTTPExtAuthTimeoutTest = suite.ConformanceTest{
 					},
 				},
 				Response: http.Response{
-					StatusCode: 403,
+					StatusCodes: []int{403},
 				},
 				Namespace: ns,
 			}

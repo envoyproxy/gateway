@@ -39,7 +39,7 @@ var MultiReferenceGrantsSameNamespaceTest = suite.ConformanceTest{
 					Path: "/v1/echo",
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Backend:   "app-backend-v1",
 				Namespace: targetNS,
@@ -50,7 +50,7 @@ var MultiReferenceGrantsSameNamespaceTest = suite.ConformanceTest{
 					Path: "/v2/echo",
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Backend:   "app-backend-v2",
 				Namespace: targetNS,
@@ -61,7 +61,7 @@ var MultiReferenceGrantsSameNamespaceTest = suite.ConformanceTest{
 					Path: "/v3/echo",
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Backend:   "app-backend-v3",
 				Namespace: targetNS,

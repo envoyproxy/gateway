@@ -85,7 +85,7 @@ var LocalRateLimitDistinctCIDRTest = suite.ConformanceTest{
 					},
 				},
 				Response: http.Response{
-					StatusCode: 429,
+					StatusCodes: []int{429},
 					Headers: map[string]string{
 						RatelimitLimitHeaderName:     "10", // this means it hit the default bucket
 						RatelimitRemainingHeaderName: "0",
@@ -110,7 +110,7 @@ func testRatelimit(t *testing.T, suite *suite.ConformanceTestSuite, headers map[
 			},
 		},
 		Response: http.Response{
-			StatusCode: 200,
+			StatusCodes: []int{200},
 			Headers: map[string]string{
 				RatelimitLimitHeaderName:     "3",
 				RatelimitRemainingHeaderName: "1",
@@ -131,7 +131,7 @@ func testRatelimit(t *testing.T, suite *suite.ConformanceTestSuite, headers map[
 			},
 		},
 		Response: http.Response{
-			StatusCode: 429,
+			StatusCodes: []int{429},
 			Headers: map[string]string{
 				RatelimitLimitHeaderName:     "3",
 				RatelimitRemainingHeaderName: "0", // at the end the remaining should be 0

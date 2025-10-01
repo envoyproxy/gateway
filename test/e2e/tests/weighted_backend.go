@@ -78,7 +78,7 @@ func runWeightedBackendTest(t *testing.T, suite *suite.ConformanceTestSuite, gat
 			Path: path,
 		},
 		Response: http.Response{
-			StatusCode: 200,
+			StatusCodes: []int{200},
 		},
 		Namespace: ConformanceInfraNamespace,
 	}

@@ -68,7 +68,7 @@ var HTTPBackendExtAuthTest = suite.ConformanceTest{
 					},
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}
@@ -83,7 +83,7 @@ var HTTPBackendExtAuthTest = suite.ConformanceTest{
 					Path: "/myapp",
 				},
 				Response: http.Response{
-					StatusCode: 403,
+					StatusCodes: []int{403},
 				},
 				Namespace: ns,
 			}
@@ -109,7 +109,7 @@ var HTTPBackendExtAuthTest = suite.ConformanceTest{
 					},
 				},
 				Response: http.Response{
-					StatusCode: 403,
+					StatusCodes: []int{403},
 				},
 				Namespace: ns,
 			}
@@ -132,7 +132,7 @@ var HTTPBackendExtAuthTest = suite.ConformanceTest{
 					Path: "/public",
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}
@@ -170,7 +170,7 @@ var HTTPBackendExtAuthTest = suite.ConformanceTest{
 					},
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}
@@ -197,7 +197,7 @@ var HTTPBackendExtAuthTest = suite.ConformanceTest{
 				},
 				Backend: "infra-backend-v3",
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}

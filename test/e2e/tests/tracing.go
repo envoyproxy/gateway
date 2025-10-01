@@ -62,7 +62,7 @@ var OpenTelemetryTracingTest = suite.ConformanceTest{
 						Path: tc.path,
 					},
 					Response: httputils.Response{
-						StatusCode: 200,
+						StatusCodes: []int{200},
 					},
 					Namespace: ns,
 				}
@@ -94,7 +94,7 @@ var ZipkinTracingTest = suite.ConformanceTest{
 					Path: "/zipkin",
 				},
 				Response: httputils.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}
@@ -151,7 +151,7 @@ var DatadogTracingTest = suite.ConformanceTest{
 						Path: tc.path,
 					},
 					Response: httputils.Response{
-						StatusCode: 200,
+						StatusCodes: []int{200},
 					},
 					Namespace: ns,
 				}

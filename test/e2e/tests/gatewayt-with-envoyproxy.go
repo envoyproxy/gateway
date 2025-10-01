@@ -44,7 +44,7 @@ var GatewayWithEnvoyProxy = suite.ConformanceTest{
 					Path: "/basic-auth-1",
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 
 					// Verify that the RouteType is set to Service by the attached EnvoyProxy
 					Headers: map[string]string{

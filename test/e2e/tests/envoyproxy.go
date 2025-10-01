@@ -48,7 +48,7 @@ var EnvoyProxyCustomNameTest = suite.ConformanceTest{
 					Path: "/deploy",
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}
@@ -98,7 +98,7 @@ var EnvoyProxyCustomNameTest = suite.ConformanceTest{
 					Path: "/daemonset",
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}

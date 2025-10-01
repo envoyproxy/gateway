@@ -36,7 +36,7 @@ var CircuitBreakerTest = suite.ConformanceTest{
 					Path: "/circuitbreaker",
 				},
 				Response: http.Response{
-					StatusCode: 503,
+					StatusCodes: []int{503},
 					Headers: map[string]string{
 						"x-envoy-overloaded": "true",
 					},

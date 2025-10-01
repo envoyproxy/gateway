@@ -60,7 +60,7 @@ func testClaimBasedRouting(t *testing.T, suite *suite.ConformanceTestSuite) {
 			},
 			Backend: "infra-backend-v1",
 			Response: http.Response{
-				StatusCode: 200,
+				StatusCodes: []int{200},
 			},
 			Namespace: ns,
 		},
@@ -73,7 +73,7 @@ func testClaimBasedRouting(t *testing.T, suite *suite.ConformanceTestSuite) {
 			},
 			Backend: "infra-backend-v2",
 			Response: http.Response{
-				StatusCode: 200,
+				StatusCodes: []int{200},
 			},
 			Namespace: ns,
 		},
@@ -86,7 +86,7 @@ func testClaimBasedRouting(t *testing.T, suite *suite.ConformanceTestSuite) {
 			},
 			Backend: "infra-backend-v1",
 			Response: http.Response{
-				StatusCode: 500,
+				StatusCodes: []int{500},
 			},
 			Namespace: ns,
 		},
@@ -99,7 +99,7 @@ func testClaimBasedRouting(t *testing.T, suite *suite.ConformanceTestSuite) {
 			},
 			Backend: "infra-backend-v2",
 			Response: http.Response{
-				StatusCode: 401,
+				StatusCodes: []int{401},
 			},
 			Namespace: ns,
 		},
@@ -135,7 +135,7 @@ var OptionalJWTTest = suite.ConformanceTest{
 				},
 				Backend: "infra-backend-v1",
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			},
@@ -149,7 +149,7 @@ var OptionalJWTTest = suite.ConformanceTest{
 				},
 				Backend: "infra-backend-v1",
 				Response: http.Response{
-					StatusCode: 401,
+					StatusCodes: []int{401},
 				},
 				Namespace: ns,
 			},
@@ -160,7 +160,7 @@ var OptionalJWTTest = suite.ConformanceTest{
 				},
 				Backend: "infra-backend-v1",
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			},
@@ -211,7 +211,7 @@ func testLocalJWKS(t *testing.T, suite *suite.ConformanceTestSuite) {
 			},
 			Backend: "infra-backend-v1",
 			Response: http.Response{
-				StatusCode: 200,
+				StatusCodes: []int{200},
 			},
 			Namespace: ns,
 		},
@@ -225,7 +225,7 @@ func testLocalJWKS(t *testing.T, suite *suite.ConformanceTestSuite) {
 			},
 			Backend: "infra-backend-v1",
 			Response: http.Response{
-				StatusCode: 401,
+				StatusCodes: []int{401},
 			},
 			Namespace: ns,
 		},
@@ -236,7 +236,7 @@ func testLocalJWKS(t *testing.T, suite *suite.ConformanceTestSuite) {
 			},
 			Backend: "infra-backend-v1",
 			Response: http.Response{
-				StatusCode: 401,
+				StatusCodes: []int{401},
 			},
 			Namespace: ns,
 		},

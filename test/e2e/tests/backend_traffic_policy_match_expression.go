@@ -64,7 +64,7 @@ var BackendTrafficPolicyMatchExpressionTest = suite.ConformanceTest{
 					Path: "/",
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 			}
 
@@ -82,7 +82,7 @@ var BackendTrafficPolicyMatchExpressionTest = suite.ConformanceTest{
 					Path: "/",
 				},
 				Response: http.Response{
-					StatusCode: 418,
+					StatusCodes: []int{418},
 				},
 			}
 

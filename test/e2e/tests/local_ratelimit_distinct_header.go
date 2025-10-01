@@ -86,7 +86,7 @@ var LocalRateLimitDistinctHeaderTest = suite.ConformanceTest{
 					},
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 					Headers: map[string]string{
 						RatelimitLimitHeaderName:     "10", // this means it hit the default bucket
 						RatelimitRemainingHeaderName: "4",

@@ -85,7 +85,7 @@ func runCORStest(t *testing.T, suite *suite.ConformanceTestSuite, withSecurityPo
 				},
 			},
 			Response: http.Response{
-				StatusCode: 200,
+				StatusCodes: []int{200},
 				Headers: map[string]string{
 					"access-control-allow-origin":   "https://www.foo.com",
 					"access-control-allow-methods":  "GET, POST, PUT, PATCH, DELETE, OPTIONS",
@@ -121,7 +121,7 @@ func runCORStest(t *testing.T, suite *suite.ConformanceTestSuite, withSecurityPo
 				},
 			},
 			Response: http.Response{
-				StatusCode: 200,
+				StatusCodes: []int{200},
 				Headers: map[string]string{
 					"access-control-allow-origin":   "https://anydomain.foobar.com",
 					"access-control-allow-methods":  "GET, POST, PUT, PATCH, DELETE, OPTIONS",
@@ -189,7 +189,7 @@ func runCORStest(t *testing.T, suite *suite.ConformanceTestSuite, withSecurityPo
 				},
 			},
 			Response: http.Response{
-				StatusCode: 200,
+				StatusCodes: []int{200},
 				Headers: map[string]string{
 					"access-control-allow-origin":   "https://foo.bar.com",
 					"access-control-allow-methods":  "GET",

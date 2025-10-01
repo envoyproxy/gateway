@@ -36,7 +36,7 @@ var BackendTLSTest = suite.ConformanceTest{
 					Path: "/backend-tls",
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ConformanceInfraNamespace,
 			}
@@ -63,7 +63,7 @@ var BackendTLSTest = suite.ConformanceTest{
 					},
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 			}
 
@@ -79,7 +79,7 @@ var BackendTLSTest = suite.ConformanceTest{
 					Path: "/backend-tls-without-policy",
 				},
 				Response: http.Response{
-					StatusCode: 400, // Bad Request: Client sent an HTTP request to an HTTPS server
+					StatusCodes: []int{400}, // Bad Request: Client sent an HTTP request to an HTTPS server
 				},
 				Namespace: ConformanceInfraNamespace,
 			}
@@ -96,7 +96,7 @@ var BackendTLSTest = suite.ConformanceTest{
 					Path: "/backend-tls-skip-verify-and-mismatch-ca",
 				},
 				Response: http.Response{
-					StatusCode: 200, // Bad Request: Client sent an HTTP request to an HTTPS server
+					StatusCodes: []int{200}, // Bad Request: Client sent an HTTP request to an HTTPS server
 				},
 				Namespace: ConformanceInfraNamespace,
 			}
@@ -113,7 +113,7 @@ var BackendTLSTest = suite.ConformanceTest{
 					Path: "/backend-tls-skip-verify-without-backend-tls-policy",
 				},
 				Response: http.Response{
-					StatusCode: 200, // Bad Request: Client sent an HTTP request to an HTTPS server
+					StatusCodes: []int{200}, // Bad Request: Client sent an HTTP request to an HTTPS server
 				},
 				Namespace: ConformanceInfraNamespace,
 			}
@@ -143,7 +143,7 @@ var BackendClusterTrustBundleTest = suite.ConformanceTest{
 					Path: "/cluster-trust-bundle",
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ConformanceInfraNamespace,
 			}

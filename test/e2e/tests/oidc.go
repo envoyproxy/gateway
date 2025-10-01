@@ -84,7 +84,7 @@ var OIDCTest = suite.ConformanceTest{
 						Path: "/public",
 					},
 					Response: gwhttp.Response{
-						StatusCode: 200,
+						StatusCodes: []int{200},
 					},
 					Namespace: ns,
 				},
@@ -99,7 +99,7 @@ var OIDCTest = suite.ConformanceTest{
 					},
 					Backend: "infra-backend-v1",
 					Response: gwhttp.Response{
-						StatusCode: 200,
+						StatusCodes: []int{200},
 					},
 					Namespace: ns,
 				},

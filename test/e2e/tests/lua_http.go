@@ -51,7 +51,7 @@ var HTTPLuaTest = suite.ConformanceTest{
 					Path: "/route1",
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 					Headers: map[string]string{
 						"X-Custom-Lua-Header": "lua_value_1",
 					},
@@ -92,7 +92,7 @@ var HTTPLuaTest = suite.ConformanceTest{
 					Path: "/route2",
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 					Headers: map[string]string{
 						"X-Custom-Lua-Header":         "lua_value_2",
 						"X-Custom-Lua-Another-Header": "lua_another_value",
@@ -133,7 +133,7 @@ var HTTPLuaTest = suite.ConformanceTest{
 					Path: "/route3",
 				},
 				Response: http.Response{
-					StatusCode:    200,
+					StatusCodes:   []int{200},
 					AbsentHeaders: []string{"X-Custom-Lua-Header", "X-Custom-Lua-Another-Header"},
 				},
 				Namespace: ns,
