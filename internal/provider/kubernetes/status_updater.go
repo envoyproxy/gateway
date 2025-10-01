@@ -113,10 +113,14 @@ func (u *UpdateHandler) apply(update Update) {
 
 		newObj.SetUID(obj.GetUID())
 
-		// Use Patch instead of Update to avoid conflicts when multiple controllers
-		// try to update the same resource simultaneously
-		patch := client.MergeFrom(obj)
-		return u.client.Status().Patch(context.Background(), newObj, patch)
+		// Use server-side apply on the status subresource to avoid conflicts when
+		// multiple controllers attempt to update status concurrently.
+		return u.client.Status().Patch(
+			context.Background(),
+			newObj,
+			client.Apply,
+			&client.SubResourcePatchOptions{PatchOptions: client.PatchOptions{FieldManager: "envoy-gateway"}},
+		)
 	}); err != nil {
 		log.Error(err, "unable to update status")
 
