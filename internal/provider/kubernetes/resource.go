@@ -20,6 +20,8 @@ type resourceMappings struct {
 	allAssociatedReferenceGrants sets.Set[string]
 	// Set for storing ServiceImports' NamespacedNames.
 	allAssociatedServiceImports sets.Set[string]
+	// Set for storing Services' NamespacedNames.
+	allAssociatedServices sets.Set[string]
 	// Set for storing EndpointSlices' NamespacedNames.
 	allAssociatedEndpointSlices sets.Set[string]
 	// Set for storing Backends' NamespacedNames.
@@ -75,6 +77,7 @@ func newResourceMapping() *resourceMappings {
 		allAssociatedGateways:                   sets.New[string](),
 		allAssociatedReferenceGrants:            sets.New[string](),
 		allAssociatedServiceImports:             sets.New[string](),
+		allAssociatedServices:                   sets.New[string](),
 		allAssociatedEndpointSlices:             sets.New[string](),
 		allAssociatedBackends:                   sets.New[string](),
 		allAssociatedSecrets:                    sets.New[string](),
