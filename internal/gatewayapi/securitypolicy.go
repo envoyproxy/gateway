@@ -883,7 +883,7 @@ func (t *Translator) buildJWT(
 		return nil, err
 	}
 
-	var providers []ir.JWTProvider
+	providers := make([]ir.JWTProvider, 0, len(policy.Spec.JWT.Providers))
 	for i, p := range policy.Spec.JWT.Providers {
 		provider := ir.JWTProvider{
 			Name:           p.Name,

@@ -40196,7 +40196,7 @@ spec:
                                           If multiple values are specified, one of the values must match for the rule to match.
                                         items:
                                           type: string
-                                        maxItems: 16
+                                        maxItems: 128
                                         minItems: 1
                                         type: array
                                     required:
