@@ -17,8 +17,8 @@
         - name: envoy.filters.http.ratelimit
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.ratelimit.v3.RateLimit
-            domain: first-listener
             disableXEnvoyRatelimitedHeader: true
+            domain: first-listener
             rateLimitService:
               grpcService:
                 envoyGrpc:
