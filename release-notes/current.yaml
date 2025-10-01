@@ -15,6 +15,7 @@ new features: |
   Added max connection/stream duration and max requests per connection to ClientTrafficPolicy.
   Added PercentageEnabled to ZoneAware lb config.
   Added cacheDuration for remoteJWKS in SecurityPolicy.
+  Added support for DisableTokenEncryption in OIDC authn to disable encryption of ID and access tokens stored in cookies.
 
 bug fixes: |
   Fixed %ROUTE_KIND% operator to be lower-cased when used by clusterStatName in EnvoyProxy API.
