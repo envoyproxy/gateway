@@ -529,17 +529,74 @@ func TestValidateSecretForReconcile(t *testing.T) {
 			secret: test.GetSecret(types.NamespacedName{Name: "secret"}),
 			expect: true,
 		},
+		{
+			name: "backend client tls secret",
+			configs: []client.Object{
+				test.GetGatewayClass("test-gc", egv1a1.GatewayControllerName, nil),
+				&egv1a1.Backend{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "backend",
+						Namespace: "default",
+					},
+					Spec: egv1a1.BackendSpec{
+						Endpoints: []egv1a1.BackendEndpoint{{
+							IP: &egv1a1.IPEndpoint{Address: "1.1.1.1", Port: 80},
+						}},
+						TLS: &egv1a1.BackendTLSSettings{
+							ClientTLS: &egv1a1.BackendTLSConfig{
+								ClientCertificateRef: &gwapiv1.SecretObjectReference{
+									Name: "secret",
+								},
+							},
+						},
+					},
+				},
+			},
+			secret: test.GetSecret(types.NamespacedName{Namespace: "default", Name: "secret"}),
+			expect: true,
+		},
+		{
+			name: "backend ca certificate secret",
+			configs: []client.Object{
+				test.GetGatewayClass("test-gc", egv1a1.GatewayControllerName, nil),
+				&egv1a1.Backend{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "backend",
+						Namespace: "default",
+					},
+					Spec: egv1a1.BackendSpec{
+						Endpoints: []egv1a1.BackendEndpoint{{
+							IP: &egv1a1.IPEndpoint{Address: "1.1.1.1", Port: 80},
+						}},
+						TLS: &egv1a1.BackendTLSSettings{
+							CACertificateRefs: []gwapiv1.LocalObjectReference{{
+								Kind: resource.KindSecret,
+								Name: "secret",
+							}},
+						},
+					},
+				},
+			},
+			secret: test.GetSecret(types.NamespacedName{Namespace: "default", Name: "secret"}),
+			expect: true,
+		},
 	}
 
 	// Create the reconciler.
 	logger := logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo)
 
 	r := gatewayAPIReconciler{
-		classController: egv1a1.GatewayControllerName,
-		log:             logger,
-		spCRDExists:     true,
-		epCRDExists:     true,
-		eepCRDExists:    true,
+		classController:  egv1a1.GatewayControllerName,
+		log:              logger,
+		spCRDExists:      true,
+		epCRDExists:      true,
+		eepCRDExists:     true,
+		backendCRDExists: true,
+		envoyGateway: &egv1a1.EnvoyGateway{
+			EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+				ExtensionAPIs: &egv1a1.ExtensionAPISettings{EnableBackend: true},
+			},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -550,6 +607,7 @@ func TestValidateSecretForReconcile(t *testing.T) {
 			WithIndex(&egv1a1.SecurityPolicy{}, secretSecurityPolicyIndex, secretSecurityPolicyIndexFunc).
 			WithIndex(&egv1a1.EnvoyProxy{}, secretEnvoyProxyIndex, secretEnvoyProxyIndexFunc).
 			WithIndex(&egv1a1.EnvoyExtensionPolicy{}, secretEnvoyExtensionPolicyIndex, secretEnvoyExtensionPolicyIndexFunc).
+			WithIndex(&egv1a1.Backend{}, secretBackendIndex, secretBackendIndexFunc).
 			Build()
 		t.Run(tc.name, func(t *testing.T) {
 			res := r.validateSecretForReconcile(tc.secret)
