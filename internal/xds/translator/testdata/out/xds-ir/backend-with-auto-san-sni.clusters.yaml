@@ -21,6 +21,11 @@
             localityWeightedLbConfig: {}
   name: auto-sni-route-dest
   perConnectionBufferLimitBytes: 32768
+  transportSocket:
+    name: dummy.transport_socket
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+      commonTlsContext: {}
   transportSocketMatches:
   - match:
       name: auto-sni-route-dest/tls/0
@@ -45,7 +50,10 @@
   typedExtensionProtocolOptions:
     envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
       '@type': type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
-      explicitHttpConfig:
+      autoConfig:
+        http2ProtocolOptions:
+          initialConnectionWindowSize: 1048576
+          initialStreamWindowSize: 65536
         httpProtocolOptions: {}
       upstreamHttpProtocolOptions:
         autoSni: true
@@ -72,6 +80,11 @@
             localityWeightedLbConfig: {}
   name: auto-san-route-dest
   perConnectionBufferLimitBytes: 32768
+  transportSocket:
+    name: dummy.transport_socket
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+      commonTlsContext: {}
   transportSocketMatches:
   - match:
       name: auto-san-route-dest/tls/0
@@ -91,6 +104,14 @@
                 resourceApiVersion: V3
         sni: example.com
   type: EDS
+  typedExtensionProtocolOptions:
+    envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
+      '@type': type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
+      autoConfig:
+        http2ProtocolOptions:
+          initialConnectionWindowSize: 1048576
+          initialStreamWindowSize: 65536
+        httpProtocolOptions: {}
 - circuitBreakers:
     thresholds:
     - maxRetries: 1024
@@ -114,6 +135,11 @@
             localityWeightedLbConfig: {}
   name: auto-sni-san-route-dest
   perConnectionBufferLimitBytes: 32768
+  transportSocket:
+    name: dummy.transport_socket
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+      commonTlsContext: {}
   transportSocketMatches:
   - match:
       name: auto-sni-san-route-dest/tls/0
@@ -135,7 +161,10 @@
   typedExtensionProtocolOptions:
     envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
       '@type': type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
-      explicitHttpConfig:
+      autoConfig:
+        http2ProtocolOptions:
+          initialConnectionWindowSize: 1048576
+          initialStreamWindowSize: 65536
         httpProtocolOptions: {}
       upstreamHttpProtocolOptions:
         autoSni: true
