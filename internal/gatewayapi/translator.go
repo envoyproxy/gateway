@@ -174,13 +174,27 @@ func newTranslateResult(gateways []*GatewayContext,
 		}
 	}
 
-	translateResult.ClientTrafficPolicies = clientTrafficPolicies
-	translateResult.BackendTrafficPolicies = backendTrafficPolicies
-	translateResult.SecurityPolicies = securityPolicies
-	translateResult.BackendTLSPolicies = backendTLSPolicies
-	translateResult.EnvoyExtensionPolicies = envoyExtensionPolicies
-	translateResult.ExtensionServerPolicies = extPolicies
-	translateResult.Backends = backends
+	if len(clientTrafficPolicies) > 0 {
+		translateResult.ClientTrafficPolicies = clientTrafficPolicies
+	}
+	if len(backendTrafficPolicies) > 0 {
+		translateResult.BackendTrafficPolicies = backendTrafficPolicies
+	}
+	if len(securityPolicies) > 0 {
+		translateResult.SecurityPolicies = securityPolicies
+	}
+	if len(backendTLSPolicies) > 0 {
+		translateResult.BackendTLSPolicies = backendTLSPolicies
+	}
+	if len(envoyExtensionPolicies) > 0 {
+		translateResult.EnvoyExtensionPolicies = envoyExtensionPolicies
+	}
+	if len(extPolicies) > 0 {
+		translateResult.ExtensionServerPolicies = extPolicies
+	}
+	if len(backends) > 0 {
+		translateResult.Backends = backends
+	}
 
 	return translateResult
 }
