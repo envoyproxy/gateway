@@ -126,6 +126,12 @@ func createRateLimitFilter(t *Translator, irListener *ir.HTTPListener, domain, f
 		rateLimitFilterProto.Timeout = durationpb.New(t.GlobalRateLimit.Timeout)
 	}
 
+	// Disable the x-envoy-ratelimited header unless envoy headers are explicitly enabled.
+	rateLimitFilterProto.DisableXEnvoyRatelimitedHeader = true
+	if irListener.Headers != nil && irListener.Headers.EnableEnvoyHeaders {
+		rateLimitFilterProto.DisableXEnvoyRatelimitedHeader = false
+	}
+
 	// Configure the X-RateLimit headers based on the listener's header settings
 	if irListener.Headers != nil && irListener.Headers.DisableRateLimitHeaders {
 		rateLimitFilterProto.EnableXRatelimitHeaders = ratelimitfilterv3.RateLimit_OFF

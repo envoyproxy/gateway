@@ -603,46 +603,49 @@ func (r *gatewayAPIReconciler) processBackendRefs(ctx context.Context, gwcResour
 	// All other errors are just logged and ignored - these errors result in missing referenced backend resources
 	// in the resource tree, which is acceptable as the Gateway API translation layer will handle them.
 	// The Gateway API translation layer will surface these errors in the status of the resources referencing them.
-	for backendRef := range resourceMappings.allAssociatedBackendRefs {
+	for _, backendRef := range resourceMappings.allAssociatedBackendRefs {
 		backendRefKind := gatewayapi.KindDerefOr(backendRef.Kind, resource.KindService)
-		r.log.Info("processing Backend", "kind", backendRefKind, "namespace", string(*backendRef.Namespace),
-			"name", string(backendRef.Name))
-
+		backendNs, backendName := string(*backendRef.Namespace), string(backendRef.Name)
+		logger := r.log.WithValues("kind", backendRefKind, "namespace", backendNs,
+			"name", backendName)
+		logger.Info("processing Backend")
+		nn := types.NamespacedName{Namespace: backendNs, Name: backendName}
 		var endpointSliceLabelKey string
 		switch backendRefKind {
 		case resource.KindService:
 			service := new(corev1.Service)
-			err := r.client.Get(ctx, types.NamespacedName{Namespace: string(*backendRef.Namespace), Name: string(backendRef.Name)}, service)
+			err := r.client.Get(ctx, nn, service)
 			if err != nil {
 				if isTransientError(err) {
 					return err
 				}
-				r.log.Error(err, "failed to get Service", "namespace", string(*backendRef.Namespace),
-					"name", string(backendRef.Name))
+				logger.Error(err, "failed to get Service")
 			} else {
 				resourceMappings.allAssociatedNamespaces.Insert(service.Namespace)
-				gwcResource.Services = append(gwcResource.Services, service)
-				r.log.Info("added Service to resource tree", "namespace", string(*backendRef.Namespace),
-					"name", string(backendRef.Name))
+				svcKey := utils.NamespacedName(service).String()
+				if !resourceMappings.allAssociatedServices.Has(svcKey) {
+					resourceMappings.allAssociatedServices.Insert(svcKey)
+					gwcResource.Services = append(gwcResource.Services, service)
+					logger.Info("added Service to resource tree")
+				}
 			}
 			endpointSliceLabelKey = discoveryv1.LabelServiceName
 
 		case resource.KindServiceImport:
 			serviceImport := new(mcsapiv1a1.ServiceImport)
-			err := r.client.Get(ctx, types.NamespacedName{Namespace: string(*backendRef.Namespace), Name: string(backendRef.Name)}, serviceImport)
+			err := r.client.Get(ctx, nn, serviceImport)
 			if err != nil {
 				if isTransientError(err) {
 					return err
 				}
-				r.log.Error(err, "failed to get ServiceImport", "namespace", string(*backendRef.Namespace),
-					"name", string(backendRef.Name))
+				logger.Error(err, "failed to get ServiceImport")
 			} else {
 				resourceMappings.allAssociatedNamespaces.Insert(serviceImport.Namespace)
 				key := utils.NamespacedName(serviceImport).String()
 				if !resourceMappings.allAssociatedServiceImports.Has(key) {
 					resourceMappings.allAssociatedServiceImports.Insert(key)
 					gwcResource.ServiceImports = append(gwcResource.ServiceImports, serviceImport)
-					r.log.Info("added ServiceImport to resource tree", "namespace", string(*backendRef.Namespace),
+					logger.Info("added ServiceImport to resource tree", "namespace", string(*backendRef.Namespace),
 						"name", string(backendRef.Name))
 				}
 			}
@@ -650,27 +653,23 @@ func (r *gatewayAPIReconciler) processBackendRefs(ctx context.Context, gwcResour
 
 		case egv1a1.KindBackend:
 			if r.backendAPIDisabled() {
-				r.log.V(6).Info("skipping Backend processing as Backend API is disabled.")
+				logger.V(6).Info("skipping Backend processing as Backend API is disabled.")
 				continue
 			}
 			backend := new(egv1a1.Backend)
-			err := r.client.Get(ctx, types.NamespacedName{Namespace: string(*backendRef.Namespace), Name: string(backendRef.Name)}, backend)
+			err := r.client.Get(ctx, nn, backend)
 			if err != nil {
 				if isTransientError(err) {
 					return err
 				}
-				r.log.Error(err, "failed to get Backend",
-					"namespace", string(*backendRef.Namespace),
-					"name", string(backendRef.Name))
+				logger.Error(err, "failed to get Backend")
 			} else {
 				resourceMappings.allAssociatedNamespaces.Insert(backend.Namespace)
 				key := utils.NamespacedName(backend).String()
 				if !resourceMappings.allAssociatedBackends.Has(key) {
 					resourceMappings.allAssociatedBackends.Insert(key)
 					gwcResource.Backends = append(gwcResource.Backends, backend)
-					r.log.Info("added Backend to resource tree",
-						"namespace", string(*backendRef.Namespace),
-						"name", string(backendRef.Name))
+					logger.Info("added Backend to resource tree")
 				}
 			}
 
@@ -702,8 +701,7 @@ func (r *gatewayAPIReconciler) processBackendRefs(ctx context.Context, gwcResour
 						if isTransientError(err) {
 							return err
 						}
-						r.log.Error(err,
-							"failed to process CACertificateRef for Backend",
+						logger.Error(err, "failed to process CACertificateRef for Backend",
 							"backend", backend, "caCertificateRef", caCertRef.Name)
 					}
 				}
@@ -727,9 +725,7 @@ func (r *gatewayAPIReconciler) processBackendRefs(ctx context.Context, gwcResour
 					if extRefFilter, exists := resourceMappings.extensionRefFilters[key]; exists {
 						resourceMappings.extensionRefFilters[key] = extRefFilter
 						gwcResource.ExtensionRefFilters = append(gwcResource.ExtensionRefFilters, extRefFilter)
-						r.log.Info("added custom backend resource to resource tree",
-							"kind", backendRefKind, "namespace", string(*backendRef.Namespace),
-							"name", string(backendRef.Name))
+						logger.Info("added custom backend resource to resource tree")
 					}
 				}
 			}
@@ -748,15 +744,14 @@ func (r *gatewayAPIReconciler) processBackendRefs(ctx context.Context, gwcResour
 				if isTransientError(err) {
 					return err
 				}
-				r.log.Error(err, "failed to get EndpointSlices", "namespace", string(*backendRef.Namespace),
-					backendRefKind, string(backendRef.Name))
+				logger.Error(err, "failed to get EndpointSlices")
 			} else {
 				for i := range endpointSliceList.Items {
 					endpointSlice := &endpointSliceList.Items[i]
 					key := utils.NamespacedName(endpointSlice).String()
 					if !resourceMappings.allAssociatedEndpointSlices.Has(key) {
 						resourceMappings.allAssociatedEndpointSlices.Insert(key)
-						r.log.Info("added EndpointSlice to resource tree",
+						logger.Info("added EndpointSlice to resource tree",
 							"namespace", endpointSlice.Namespace,
 							"name", endpointSlice.Name)
 						gwcResource.EndpointSlices = append(gwcResource.EndpointSlices, endpointSlice)
@@ -969,6 +964,27 @@ func getBackendRefs(backendCluster egv1a1.BackendCluster) []gwapiv1.BackendObjec
 	return backendRefs
 }
 
+func backendRefKey(ref *gwapiv1.BackendObjectReference) utils.NamespacedNameWithGroupKind {
+	if ref == nil {
+		return utils.NamespacedNameWithGroupKind{}
+	}
+	namespace := gatewayapi.NamespaceDerefOr(ref.Namespace, "")
+	group := gatewayapi.GroupDerefOr(ref.Group, "")
+	kind := gatewayapi.KindDerefOr(ref.Kind, resource.KindService)
+	return utils.NamespacedNameWithGroupKind{
+		NamespacedName: types.NamespacedName{Namespace: namespace, Name: string(ref.Name)},
+		GroupKind:      schema.GroupKind{Group: group, Kind: kind},
+	}
+}
+
+func (rm *resourceMappings) insertBackendRef(ref gwapiv1.BackendObjectReference) {
+	key := backendRefKey(&ref)
+	if _, exists := rm.allAssociatedBackendRefs[key]; exists {
+		return
+	}
+	rm.allAssociatedBackendRefs[key] = ref
+}
+
 // processBackendRef adds the referenced BackendRef to the resourceMap for later processBackendRefs.
 // If BackendRef exists in a different namespace and there is a ReferenceGrant, adds ReferenceGrant to the resourceTree.
 func (r *gatewayAPIReconciler) processBackendRef(
@@ -981,12 +997,14 @@ func (r *gatewayAPIReconciler) processBackendRef(
 	backendRef gwapiv1.BackendObjectReference,
 ) error {
 	backendNamespace := gatewayapi.NamespaceDerefOr(backendRef.Namespace, ownerNS)
-	resourceMap.allAssociatedBackendRefs.Insert(gwapiv1.BackendObjectReference{
+	normalizedRef := gwapiv1.BackendObjectReference{
 		Group:     backendRef.Group,
 		Kind:      backendRef.Kind,
 		Namespace: gatewayapi.NamespacePtr(backendNamespace),
 		Name:      backendRef.Name,
-	})
+		Port:      backendRef.Port,
+	}
+	resourceMap.insertBackendRef(normalizedRef)
 
 	if backendNamespace != ownerNS {
 		from := ObjectKindNamespacedName{
@@ -1521,7 +1539,7 @@ func (r *gatewayAPIReconciler) processServiceClusterForGatewayClass(ep *egv1a1.E
 		}
 	}
 
-	resourceMap.allAssociatedBackendRefs.Insert(gwapiv1.BackendObjectReference{
+	resourceMap.insertBackendRef(gwapiv1.BackendObjectReference{
 		Kind:      ptr.To(gwapiv1.Kind("Service")),
 		Namespace: gatewayapi.NamespacePtr(proxySvcNamespace),
 		Name:      gwapiv1.ObjectName(proxySvcName),
@@ -1550,7 +1568,7 @@ func (r *gatewayAPIReconciler) processServiceClusterForGateway(ep *egv1a1.EnvoyP
 		}
 	}
 
-	resourceMap.allAssociatedBackendRefs.Insert(gwapiv1.BackendObjectReference{
+	resourceMap.insertBackendRef(gwapiv1.BackendObjectReference{
 		Kind:      ptr.To(gwapiv1.Kind("Service")),
 		Namespace: gatewayapi.NamespacePtr(proxySvcNamespace),
 		Name:      gwapiv1.ObjectName(proxySvcName),
@@ -2461,12 +2479,14 @@ func (r *gatewayAPIReconciler) processEnvoyProxy(ep *egv1a1.EnvoyProxy, resource
 
 		for _, backendRef := range backendRefs {
 			backendNamespace := gatewayapi.NamespaceDerefOr(backendRef.Namespace, ep.Namespace)
-			resourceMap.allAssociatedBackendRefs.Insert(gwapiv1.BackendObjectReference{
+			normalizedRef := gwapiv1.BackendObjectReference{
 				Group:     backendRef.Group,
 				Kind:      backendRef.Kind,
 				Namespace: gatewayapi.NamespacePtr(backendNamespace),
 				Name:      backendRef.Name,
-			})
+				Port:      backendRef.Port,
+			}
+			resourceMap.insertBackendRef(normalizedRef)
 		}
 	}
 
