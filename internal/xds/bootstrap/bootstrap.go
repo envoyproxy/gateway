@@ -174,6 +174,18 @@ func (b *bootstrapConfig) render() error {
 
 // GetRenderedBootstrapConfig renders the bootstrap YAML string
 func GetRenderedBootstrapConfig(opts *RenderBootstrapConfigOptions) (string, error) {
+	// Provide default options if nil
+	if opts == nil {
+		opts = &RenderBootstrapConfigOptions{
+			ServiceName: "envoy-gateway", // Default service name
+		}
+	}
+	
+	// Ensure ServiceName is not empty
+	if opts.ServiceName == "" {
+		opts.ServiceName = "envoy-gateway"
+	}
+	
 	var (
 		enablePrometheus             = true
 		enablePrometheusCompression  = false
@@ -273,55 +285,53 @@ func GetRenderedBootstrapConfig(opts *RenderBootstrapConfigOptions) (string, err
 	}
 
 	// Bootstrap config override
-	if opts != nil {
-		if opts.ProxyMetrics != nil && opts.ProxyMetrics.Matches != nil {
-			cfg.parameters.StatsMatcher = &StatsMatcher
-		}
-
-		// Override Sds configs
-		if len(opts.SdsConfig.Certificate) > 0 {
-			cfg.parameters.SdsCertificatePath = opts.SdsConfig.Certificate
-		}
-		if len(opts.SdsConfig.TrustedCA) > 0 {
-			cfg.parameters.SdsTrustedCAPath = opts.SdsConfig.TrustedCA
-		}
-
-		if opts.XdsServerHost != nil {
-			cfg.parameters.XdsServer.Address = *opts.XdsServerHost
-		}
-
-		// Override the various server port
-		if opts.XdsServerPort != nil {
-			cfg.parameters.XdsServer.Port = *opts.XdsServerPort
-		}
-		if opts.AdminServerPort != nil {
-			cfg.parameters.AdminServer.Port = *opts.AdminServerPort
-		}
-		if opts.StatsServerPort != nil {
-			cfg.parameters.StatsServer.Port = *opts.StatsServerPort
-		}
-
-		if opts.IPFamily != nil {
-			cfg.parameters.IPFamily = string(*opts.IPFamily)
-			switch *opts.IPFamily {
-			case egv1a1.IPv6:
-				cfg.parameters.AdminServer.Address = EnvoyAdminAddressV6
-				cfg.parameters.StatsServer.Address = netutils.IPv6ListenerAddress
-			case egv1a1.DualStack:
-				cfg.parameters.StatsServer.Address = netutils.IPv6ListenerAddress
-			}
-		}
-		cfg.parameters.GatewayNamespaceMode = opts.GatewayNamespaceMode
-		if opts.GatewayNamespaceMode && len(opts.SdsConfig.ServiceAccountToken) > 0 {
-			cfg.parameters.ServiceAccountTokenPath = opts.SdsConfig.ServiceAccountToken
-		}
-
-		cfg.parameters.OverloadManager.MaxHeapSizeBytes = opts.MaxHeapSizeBytes
-		if opts.ServiceClusterName != nil {
-			cfg.parameters.ServiceClusterName = *opts.ServiceClusterName
-		}
-		cfg.parameters.TopologyInjectorDisabled = opts.TopologyInjectorDisabled
+	if opts.ProxyMetrics != nil && opts.ProxyMetrics.Matches != nil {
+		cfg.parameters.StatsMatcher = &StatsMatcher
 	}
+
+	// Override Sds configs
+	if len(opts.SdsConfig.Certificate) > 0 {
+		cfg.parameters.SdsCertificatePath = opts.SdsConfig.Certificate
+	}
+	if len(opts.SdsConfig.TrustedCA) > 0 {
+		cfg.parameters.SdsTrustedCAPath = opts.SdsConfig.TrustedCA
+	}
+
+	if opts.XdsServerHost != nil {
+		cfg.parameters.XdsServer.Address = *opts.XdsServerHost
+	}
+
+	// Override the various server port
+	if opts.XdsServerPort != nil {
+		cfg.parameters.XdsServer.Port = *opts.XdsServerPort
+	}
+	if opts.AdminServerPort != nil {
+		cfg.parameters.AdminServer.Port = *opts.AdminServerPort
+	}
+	if opts.StatsServerPort != nil {
+		cfg.parameters.StatsServer.Port = *opts.StatsServerPort
+	}
+
+	if opts.IPFamily != nil {
+		cfg.parameters.IPFamily = string(*opts.IPFamily)
+		switch *opts.IPFamily {
+		case egv1a1.IPv6:
+			cfg.parameters.AdminServer.Address = EnvoyAdminAddressV6
+			cfg.parameters.StatsServer.Address = netutils.IPv6ListenerAddress
+		case egv1a1.DualStack:
+			cfg.parameters.StatsServer.Address = netutils.IPv6ListenerAddress
+		}
+	}
+	cfg.parameters.GatewayNamespaceMode = opts.GatewayNamespaceMode
+	if opts.GatewayNamespaceMode && len(opts.SdsConfig.ServiceAccountToken) > 0 {
+		cfg.parameters.ServiceAccountTokenPath = opts.SdsConfig.ServiceAccountToken
+	}
+
+	cfg.parameters.OverloadManager.MaxHeapSizeBytes = opts.MaxHeapSizeBytes
+	if opts.ServiceClusterName != nil {
+		cfg.parameters.ServiceClusterName = *opts.ServiceClusterName
+	}
+	cfg.parameters.TopologyInjectorDisabled = opts.TopologyInjectorDisabled
 
 	if err := cfg.render(); err != nil {
 		return "", err

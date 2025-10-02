@@ -18,7 +18,11 @@ import (
 )
 
 func fetchAndPatchBootstrap(boostrapConfig *egv1a1.ProxyBootstrap) (*bootstrapv3.Bootstrap, *bootstrapv3.Bootstrap, error) {
-	defaultBootstrapStr, err := GetRenderedBootstrapConfig(nil)
+	// Use default configuration for validation
+	defaultOpts := &RenderBootstrapConfigOptions{
+		ServiceName: "envoy-gateway", // Use default service name for validation
+	}
+	defaultBootstrapStr, err := GetRenderedBootstrapConfig(defaultOpts)
 	if err != nil {
 		return nil, nil, err
 	}
