@@ -52,6 +52,9 @@ type Infra struct {
 	// DNSDomain is the dns domain used by k8s services. Defaults to "cluster.local".
 	DNSDomain string
 
+	// ServiceName is the name of the Envoy Gateway service. Defaults to "envoy-gateway".
+	ServiceName string
+
 	// EnvoyGateway is the configuration used to startup Envoy Gateway.
 	EnvoyGateway *egv1a1.EnvoyGateway
 
@@ -68,6 +71,7 @@ func NewInfra(cli client.Client, cfg *config.Server) *Infra {
 		// Otherwise RateLimit resource provider will failed to create/delete.
 		ControllerNamespace: cfg.ControllerNamespace,
 		DNSDomain:           cfg.DNSDomain,
+		ServiceName:         cfg.ServiceName,
 		EnvoyGateway:        cfg.EnvoyGateway,
 		Client:              New(cli),
 		logger:              cfg.Logger.WithName(string(egv1a1.LogComponentInfrastructureRunner)),

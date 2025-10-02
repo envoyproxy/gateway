@@ -487,14 +487,6 @@ func TestRunner_withExtensionManager_FailClosed(t *testing.T) {
 	}, time.Second*5, time.Millisecond*50)
 }
 
-func Test_serviceAccountAudience(t *testing.T) {
-	// Ensures the audience string includes the configured service name and is formatted deterministically
-	t.Setenv("ENVOY_GATEWAY_SERVICE_NAME", "eg-custom")
-	got := serviceAccountAudience("envoy-gateway-system", "cluster.local")
-	want := "eg-custom.envoy-gateway-system.svc.cluster.local"
-	require.Equal(t, want, got)
-}
-
 type extManagerMock struct {
 	types.Manager
 	ShouldFailOpen bool

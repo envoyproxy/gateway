@@ -17,7 +17,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
-	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	netutils "github.com/envoyproxy/gateway/internal/utils/net"
 	"github.com/envoyproxy/gateway/internal/utils/regex"
 )
@@ -144,6 +143,7 @@ type RenderBootstrapConfigOptions struct {
 	ProxyMetrics             *egv1a1.ProxyMetrics
 	SdsConfig                SdsConfigPath
 	ServiceClusterName       *string
+	ServiceName              string
 	XdsServerHost            *string
 	XdsServerPort            *int32
 	AdminServerPort          *int32
@@ -249,7 +249,7 @@ func GetRenderedBootstrapConfig(opts *RenderBootstrapConfigOptions) (string, err
 	cfg := &bootstrapConfig{
 		parameters: bootstrapParameters{
 			XdsServer: serverParameters{
-				Address: config.GetEnvoyGatewayServiceName(),
+				Address: opts.ServiceName,
 				Port:    DefaultXdsServerPort,
 			},
 			AdminServer: adminServerParameters{

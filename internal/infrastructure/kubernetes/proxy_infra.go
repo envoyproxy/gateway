@@ -57,6 +57,10 @@ func (i *Infra) GetDNSDomain() string {
 	return i.DNSDomain
 }
 
+func (i *Infra) GetServiceName() string {
+	return i.ServiceName
+}
+
 func (i *Infra) GetEnvoyGateway() *egv1a1.EnvoyGateway {
 	return i.EnvoyGateway
 }

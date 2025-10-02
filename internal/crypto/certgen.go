@@ -34,10 +34,9 @@ const (
 )
 
 // DefaultEnvoyGatewayDNSPrefix defines the default Envoy Gateway DNS prefix.
-// It is aligned with the configurable service name returned by
-// config.GetEnvoyGatewayServiceName(). This is used in tests to assert the
+// It uses the default service name constant. This is used in tests to assert the
 // default DNS name when no explicit configuration is provided.
-var DefaultEnvoyGatewayDNSPrefix = config.GetEnvoyGatewayServiceName()
+var DefaultEnvoyGatewayDNSPrefix = config.EnvoyGatewayServiceName
 
 // Configuration holds config parameters used for generating certificates.
 type Configuration struct {
@@ -102,7 +101,7 @@ func GenerateCerts(cfg *config.Server) (*Certificates, error) {
 	case ProviderTypeEnvoyGateway:
 		now := time.Now()
 		expiry := now.Add(24 * time.Duration(DefaultCertificateLifetime) * time.Hour)
-		caCertPEM, caKeyPEM, err := newCA(config.GetEnvoyGatewayServiceName(), expiry)
+		caCertPEM, caKeyPEM, err := newCA(cfg.ServiceName, expiry)
 		if err != nil {
 			return nil, err
 		}
@@ -111,7 +110,7 @@ func GenerateCerts(cfg *config.Server) (*Certificates, error) {
 		egProvider := cfg.EnvoyGateway.GetEnvoyGatewayProvider().Type
 		switch egProvider {
 		case egv1a1.ProviderTypeKubernetes:
-			egDNSNames = kubeServiceNames(config.GetEnvoyGatewayServiceName(), cfg.ControllerNamespace, cfg.DNSDomain)
+			egDNSNames = kubeServiceNames(cfg.ServiceName, cfg.ControllerNamespace, cfg.DNSDomain)
 			envoyDNSNames = append(envoyDNSNames, fmt.Sprintf("*.%s", cfg.ControllerNamespace))
 		default:
 			// Kubernetes is the only supported Envoy Gateway provider.
@@ -122,7 +121,7 @@ func GenerateCerts(cfg *config.Server) (*Certificates, error) {
 			caCertPEM:  caCertPEM,
 			caKeyPEM:   caKeyPEM,
 			expiry:     expiry,
-			commonName: config.GetEnvoyGatewayServiceName(),
+			commonName: cfg.ServiceName,
 			altNames:   egDNSNames,
 		}
 

@@ -78,7 +78,7 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 	containerSpec *egv1a1.KubernetesContainerSpec,
 	shutdownConfig *egv1a1.ShutdownConfig, shutdownManager *egv1a1.ShutdownManager,
 	topologyInjectorDisabled bool,
-	controllerNamespace, dnsDomain string, gatewayNamespaceMode bool,
+	controllerNamespace, dnsDomain, serviceName string, gatewayNamespaceMode bool,
 ) ([]corev1.Container, error) {
 	ports := make([]corev1.ContainerPort, 0, 2)
 	if enablePrometheus(infra) {
@@ -111,7 +111,8 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 			TrustedCA:   filepath.Join("/sds", common.SdsCAFilename),
 		},
 		MaxHeapSizeBytes:         maxHeapSizeBytes,
-		XdsServerHost:            ptr.To(fmt.Sprintf("%s.%s.svc.%s.", config.GetEnvoyGatewayServiceName(), controllerNamespace, dnsDomain)),
+		ServiceName:              serviceName,
+		XdsServerHost:            ptr.To(fmt.Sprintf("%s.%s.svc.%s.", serviceName, controllerNamespace, dnsDomain)),
 		TopologyInjectorDisabled: topologyInjectorDisabled,
 	}
 
@@ -356,7 +357,7 @@ func (r *ResourceRender) expectedVolumes(pod *egv1a1.KubernetesPodSpec) []corev1
 				},
 			},
 		}
-		saAudience := fmt.Sprintf("%s.%s.svc.%s", config.GetEnvoyGatewayServiceName(), r.ControllerNamespace(), r.DNSDomain)
+		saAudience := fmt.Sprintf("%s.%s.svc.%s", r.ServiceName, r.ControllerNamespace(), r.DNSDomain)
 		saTokenProjectedVolume := corev1.Volume{
 			Name: "sa-token",
 			VolumeSource: corev1.VolumeSource{
