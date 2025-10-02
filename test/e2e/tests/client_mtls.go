@@ -12,6 +12,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
+	"net"
 	"testing"
 	"time"
 
@@ -83,9 +84,11 @@ var ClientMTLSTest = suite.ConformanceTest{
 			ns := "gateway-conformance-infra"
 			routeNN := types.NamespacedName{Name: "http-client-tls-settings", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "client-mtls-gateway", Namespace: ns}
-			gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
+			gwHost := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
 			certNN := types.NamespacedName{Name: "client-tls-settings-certificate", Namespace: ns}
 			kubernetes.NamespacesMustBeReady(t, suite.Client, suite.TimeoutConfig, []string{depNS})
+
+			gwAddr := net.JoinHostPort(gwHost, "443")
 
 			const serverName = "tls-settings.example.com"
 

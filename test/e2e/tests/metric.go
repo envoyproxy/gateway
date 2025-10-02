@@ -10,6 +10,7 @@ package tests
 import (
 	"context"
 	"fmt"
+	"net"
 	"net/http"
 	"strings"
 	"testing"
@@ -165,7 +166,8 @@ func runMetricCompressorTest(t *testing.T, suite *suite.ConformanceTestSuite, ns
 
 	routeNN := types.NamespacedName{Name: routeName, Namespace: ns}
 	gwNN := types.NamespacedName{Name: gtwName, Namespace: ns}
-	gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
+	gwHost := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
+	gwAddr := net.JoinHostPort(gwHost, "80")
 
 	// make sure listener is ready
 	expectedResponse := httputils.ExpectedResponse{

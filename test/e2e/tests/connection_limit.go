@@ -46,7 +46,8 @@ var ConnectionLimitTest = suite.ConformanceTest{
 			ns := "gateway-conformance-infra"
 			routeNN := types.NamespacedName{Name: "http-with-connection-limit", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "connection-limit-gateway", Namespace: ns}
-			gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
+			gwHost := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
+			gwAddr := net.JoinHostPort(gwHost, "80")
 
 			ancestorRef := gwapiv1.ParentReference{
 				Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),

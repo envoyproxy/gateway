@@ -9,6 +9,7 @@ package tests
 
 import (
 	"testing"
+	"time"
 
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/kubectl/pkg/util/slice"
@@ -56,17 +57,18 @@ var ListenerHealthCheckTest = suite.ConformanceTest{
 
 			req := http.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
 
-			_, cResp, err := suite.RoundTripper.CaptureRoundTrip(req)
-			if err != nil {
-				t.Errorf("failed to get expected response: %v", err)
-			}
+			timeoutConfig := suite.TimeoutConfig
+			http.AwaitConvergence(t, timeoutConfig.RequiredConsecutiveSuccesses, timeoutConfig.MaxTimeToConsistency, func(elapsed time.Duration) bool {
+				_, cResp, err := suite.RoundTripper.CaptureRoundTrip(req)
+				if err != nil {
+					t.Errorf("failed to get expected response: %v", err)
+				}
 
-			// directly check the status code of the response, since health check request will be
-			// terminated by envoy instead of echo server in backend, no request will be captured
-			// from the response.
-			if slice.Contains(expectedResponse.Response.StatusCodes, cResp.StatusCode, nil) {
-				t.Errorf("expected status code %v, got %d", expectedResponse.Response.StatusCodes, cResp.StatusCode)
-			}
+				// directly check the status code of the response, since health check request will be
+				// terminated by envoy instead of echo server in backend, no request will be captured
+				// from the response.
+				return slice.Contains(expectedResponse.Response.StatusCodes, cResp.StatusCode, nil)
+			})
 		})
 	},
 }
