@@ -206,7 +206,7 @@ func runStatus(ctx context.Context, logOut io.Writer, cli client.Client, inputRe
 		resourceKind = resource.KindTLSRoute
 
 	case "btlspolicy", "backendtlspolicy":
-		btlspolicy := gwapiv1a3.BackendTLSPolicyList{}
+		btlspolicy := gwapiv1.BackendTLSPolicyList{}
 		if err := cli.List(ctx, &btlspolicy, client.InNamespace(namespace)); err != nil {
 			return err
 		}

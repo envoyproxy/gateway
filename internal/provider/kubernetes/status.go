@@ -434,15 +434,15 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context, ext
 				val := update.Value
 				r.statusUpdater.Send(Update{
 					NamespacedName: key,
-					Resource:       new(gwapiv1a3.BackendTLSPolicy),
+					Resource:       new(gwapiv1.BackendTLSPolicy),
 					Mutator: MutatorFunc(func(obj client.Object) client.Object {
-						t, ok := obj.(*gwapiv1a3.BackendTLSPolicy)
+						t, ok := obj.(*gwapiv1.BackendTLSPolicy)
 						if !ok {
 							err := fmt.Errorf("unsupported object type %T", obj)
 							errChan <- err
 							panic(err)
 						}
-						tCopy := &gwapiv1a3.BackendTLSPolicy{
+						tCopy := &gwapiv1.BackendTLSPolicy{
 							TypeMeta:   t.TypeMeta,
 							ObjectMeta: t.ObjectMeta,
 							Spec:       t.Spec,

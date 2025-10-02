@@ -1649,7 +1649,7 @@ func (r *gatewayAPIReconciler) processSecurityPolicies(
 func (r *gatewayAPIReconciler) processBackendTLSPolicies(
 	ctx context.Context, resourceTree *resource.Resources, resourceMap *resourceMappings,
 ) error {
-	backendTLSPolicies := gwapiv1a3.BackendTLSPolicyList{}
+	backendTLSPolicies := gwapiv1.BackendTLSPolicyList{}
 	if err := r.client.List(ctx, &backendTLSPolicies); err != nil {
 		return fmt.Errorf("error listing BackendTLSPolicies: %w", err)
 	}
@@ -2200,23 +2200,23 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		}
 	}
 
-	r.bTLSPolicyCRDExists = r.crdExists(mgr, resource.KindBackendTLSPolicy, gwapiv1a3.GroupVersion.String())
+	r.bTLSPolicyCRDExists = r.crdExists(mgr, resource.KindBackendTLSPolicy, gwapiv1.GroupVersion.String())
 	if !r.bTLSPolicyCRDExists {
 		r.log.Info("BackendTLSPolicy CRD not found, skipping BackendTLSPolicy watch")
 	} else {
 		// Watch BackendTLSPolicy
-		btlsPredicates := []predicate.TypedPredicate[*gwapiv1a3.BackendTLSPolicy]{
-			predicate.TypedGenerationChangedPredicate[*gwapiv1a3.BackendTLSPolicy]{},
+		btlsPredicates := []predicate.TypedPredicate[*gwapiv1.BackendTLSPolicy]{
+			predicate.TypedGenerationChangedPredicate[*gwapiv1.BackendTLSPolicy]{},
 		}
 		if r.namespaceLabel != nil {
-			btlsPredicates = append(btlsPredicates, predicate.NewTypedPredicateFuncs(func(btp *gwapiv1a3.BackendTLSPolicy) bool {
+			btlsPredicates = append(btlsPredicates, predicate.NewTypedPredicateFuncs(func(btp *gwapiv1.BackendTLSPolicy) bool {
 				return r.hasMatchingNamespaceLabels(btp)
 			}))
 		}
 
 		if err := c.Watch(
-			source.Kind(mgr.GetCache(), &gwapiv1a3.BackendTLSPolicy{},
-				handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, btp *gwapiv1a3.BackendTLSPolicy) []reconcile.Request {
+			source.Kind(mgr.GetCache(), &gwapiv1.BackendTLSPolicy{},
+				handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, btp *gwapiv1.BackendTLSPolicy) []reconcile.Request {
 					return r.enqueueClass(ctx, btp)
 				}),
 				btlsPredicates...)); err != nil {

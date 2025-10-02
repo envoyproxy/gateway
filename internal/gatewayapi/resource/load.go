@@ -384,7 +384,7 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool) (*Res
 			resources.ConfigMaps = append(resources.ConfigMaps, configMap)
 		case KindBackendTLSPolicy:
 			typedSpec := spec.Interface()
-			backendTLSPolicy := &gwapiv1a3.BackendTLSPolicy{
+			backendTLSPolicy := &gwapiv1.BackendTLSPolicy{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       KindBackendTLSPolicy,
 					APIVersion: gv,

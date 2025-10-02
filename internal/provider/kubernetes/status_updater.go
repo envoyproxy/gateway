@@ -266,8 +266,8 @@ func isStatusEqual(objA, objB interface{}) bool {
 				return true
 			}
 		}
-	case *gwapiv1a3.BackendTLSPolicy:
-		if b, ok := objB.(*gwapiv1a3.BackendTLSPolicy); ok {
+	case *gwapiv1.BackendTLSPolicy:
+		if b, ok := objB.(*gwapiv1.BackendTLSPolicy); ok {
 			if cmp.Equal(a.Status, b.Status, opts) {
 				return true
 			}
@@ -341,7 +341,7 @@ func KindOf(obj interface{}) string {
 		kind = resource.KindSecurityPolicy
 	case *egv1a1.EnvoyExtensionPolicy:
 		kind = resource.KindEnvoyExtensionPolicy
-	case *gwapiv1a3.BackendTLSPolicy:
+	case *gwapiv1.BackendTLSPolicy:
 		kind = resource.KindBackendTLSPolicy
 	case *unstructured.Unstructured:
 		kind = o.GetKind()

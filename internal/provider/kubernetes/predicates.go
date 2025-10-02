@@ -231,7 +231,7 @@ func (r *gatewayAPIReconciler) isBackendReferencingClusterTrustBundle(ctb *certi
 }
 
 func (r *gatewayAPIReconciler) isBackendTLSPolicyReferencingClusterTrustBundle(ctb *certificatesv1b1.ClusterTrustBundle) bool {
-	btlsList := &gwapiv1a3.BackendTLSPolicyList{}
+	btlsList := &gwapiv1.BackendTLSPolicyList{}
 	if err := r.client.List(context.Background(), btlsList, &client.ListOptions{
 		FieldSelector: fields.OneTermEqualSelector(clusterTrustBundleBtlsIndex, ctb.Name),
 	}); err != nil {
@@ -263,7 +263,7 @@ func (r *gatewayAPIReconciler) isHTTPRouteFilterReferencingSecret(nsName *types.
 }
 
 func (r *gatewayAPIReconciler) isBackendTLSPolicyReferencingSecret(nsName *types.NamespacedName) bool {
-	btlsList := &gwapiv1a3.BackendTLSPolicyList{}
+	btlsList := &gwapiv1.BackendTLSPolicyList{}
 	if err := r.client.List(context.Background(), btlsList, &client.ListOptions{
 		FieldSelector: fields.OneTermEqualSelector(secretBtlsIndex, nsName.String()),
 	}); err != nil {
@@ -809,7 +809,7 @@ func (r *gatewayAPIReconciler) validateConfigMapForReconcile(obj client.Object) 
 	}
 
 	if r.bTLSPolicyCRDExists {
-		btlsList := &gwapiv1a3.BackendTLSPolicyList{}
+		btlsList := &gwapiv1.BackendTLSPolicyList{}
 		if err := r.client.List(context.Background(), btlsList, &client.ListOptions{
 			FieldSelector: fields.OneTermEqualSelector(configMapBtlsIndex, utils.NamespacedName(configMap).String()),
 		}); err != nil {

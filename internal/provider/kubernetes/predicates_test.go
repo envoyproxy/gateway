@@ -1510,7 +1510,7 @@ func TestValidateClusterTrustBundleForReconcile(t *testing.T) {
 			},
 		},
 	}
-	btp := &gwapiv1a3.BackendTLSPolicy{
+	btp := &gwapiv1.BackendTLSPolicy{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "backend-tls-policy-dynamic-resolver-clustertrustbundle",
 			Namespace: "default",
@@ -1609,7 +1609,7 @@ func TestValidateClusterTrustBundleForReconcile(t *testing.T) {
 			WithScheme(envoygateway.GetScheme()).
 			WithObjects(tc.configs...).
 			WithIndex(&egv1a1.Backend{}, clusterTrustBundleBackendIndex, clusterTrustBundleBackendIndexFunc).
-			WithIndex(&gwapiv1a3.BackendTLSPolicy{}, clusterTrustBundleBtlsIndex, clusterTrustBundleBtlsIndexFunc).
+			WithIndex(&gwapiv1.BackendTLSPolicy{}, clusterTrustBundleBtlsIndex, clusterTrustBundleBtlsIndexFunc).
 			WithIndex(&egv1a1.ClientTrafficPolicy{}, clusterTrustBundleCtpIndex, clusterTrustBundleCtpIndexFunc).
 			Build()
 		t.Run(tc.name, func(t *testing.T) {
