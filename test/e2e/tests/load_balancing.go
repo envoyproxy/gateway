@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	nethttp "net/http"
 	"net/http/cookiejar"
 	"strings"
@@ -259,7 +260,8 @@ var ConsistentHashCookieLoadBalancingTest = suite.ConformanceTest{
 		BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "cookie-lb-policy", Namespace: ns}, suite.ControllerName, ancestorRef)
 		WaitForPods(t, suite.Client, ns, map[string]string{"app": "lb-backend-cookie"}, corev1.PodRunning, &PodReady)
 
-		gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
+		gwHost := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
+		gwAddr := net.JoinHostPort(gwHost, "80")
 
 		t.Run("all traffics route to the same backend with same test cookie", func(t *testing.T) {
 			cookieJar, err := cookiejar.New(nil)
@@ -286,7 +288,7 @@ var ConsistentHashCookieLoadBalancingTest = suite.ConformanceTest{
 					},
 				})
 
-				for i := 0; i < sendRequests; i++ {
+				for range sendRequests {
 					resp, err := client.Do(req)
 					if err != nil {
 						t.Errorf("failed to get response: %v", err)

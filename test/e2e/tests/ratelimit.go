@@ -516,13 +516,10 @@ var RateLimitMultipleListenersTest = suite.ConformanceTest{
 			ns := "gateway-conformance-infra"
 			routeNN := types.NamespacedName{Name: "cidr-ratelimit", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "eg-rate-limit", Namespace: ns}
-			gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
-			gwIP, _, err := net.SplitHostPort(gwAddr)
-			require.NoError(t, err)
+			gwHost := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
 
-			gwPorts := []string{"80", "8080"}
-			for _, port := range gwPorts {
-				gwAddr = net.JoinHostPort(gwIP, port)
+			for _, port := range []string{"80", "8080"} {
+				gwAddr := net.JoinHostPort(gwHost, port)
 
 				ratelimitHeader := make(map[string]string)
 				expectOkResp := http.ExpectedResponse{
