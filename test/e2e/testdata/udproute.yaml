@@ -34,8 +34,16 @@ spec:
         - args:
             - -conf
             - /root/Corefile
-          image: coredns/coredns
+          image: registry.k8s.io/coredns/coredns:v1.12.2
+          imagePullPolicy: IfNotPresent
           name: coredns
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              add:
+                - NET_BIND_SERVICE
+              drop:
+                - ALL
           volumeMounts:
             - mountPath: /root
               name: conf
