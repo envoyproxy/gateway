@@ -21,6 +21,7 @@ http:
           - foo.com
           remoteJWKS:
             uri: https://localhost/jwt/public-key/jwks.json
+            cacheDuration: 300s
     destination:
       name: "first-route-dest"
       settings:

@@ -318,7 +318,7 @@ func TestRunner(t *testing.T) {
 	xdsIR.Delete("test")
 	require.Eventually(t, func() bool {
 		// Wait for the IR to be empty after deletion
-		return len(xdsIR.LoadAll()) == 0
+		return !r.cache.SnapshotHasIrKey("test") && len(xdsIR.LoadAll()) == 0
 	}, time.Second*5, time.Millisecond*50)
 }
 

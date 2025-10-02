@@ -198,8 +198,8 @@ func (*localRateLimit) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, h
 func buildRouteLocalRateLimits(local *ir.LocalRateLimit) (
 	[]*routev3.RateLimit, []*rlv3.LocalRateLimitDescriptor,
 ) {
-	var rateLimits []*routev3.RateLimit
-	var descriptors []*rlv3.LocalRateLimitDescriptor
+	rateLimits := make([]*routev3.RateLimit, 0, len(local.Rules))
+	descriptors := make([]*rlv3.LocalRateLimitDescriptor, 0, len(local.Rules))
 
 	// Rules are ORed
 	for rIdx, rule := range local.Rules {
