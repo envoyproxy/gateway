@@ -54,7 +54,7 @@ var BackendTLSSettingsTest = suite.ConformanceTest{
 
 		t.Run("Apply custom TLS settings when making backend requests.", func(t *testing.T) {
 			routeNN := types.NamespacedName{Name: "backend-tls-setting", Namespace: ConformanceInfraNamespace}
-			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+			gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
 			config := &egv1a1.BackendTLSConfig{
 				ClientCertificateRef: &gwapiv1.SecretObjectReference{
 					Kind:      gatewayapi.KindPtr("Secret"),
@@ -149,7 +149,7 @@ var BackendTLSSettingsTest = suite.ConformanceTest{
 
 		t.Run("UseClientProtocol", func(t *testing.T) {
 			routeNN := types.NamespacedName{Name: "use-client-protocol", Namespace: ConformanceInfraNamespace}
-			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+			gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
 
 			// rotate the client mTLS secret to ensure that a new secret is used.
 			suite.Applier.MustApplyWithCleanup(t, suite.Client, suite.TimeoutConfig, "testdata/backend-tls-settings-client-cert-rotation.yaml", false)

@@ -64,7 +64,7 @@ var EPResilience = suite.ResilienceTest{
 			ns := "gateway-resilience"
 			routeNN := types.NamespacedName{Name: "backend", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "all-namespaces", Namespace: ns}
-			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+			gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
 
 			expectedResponse := http.ExpectedResponse{
 				Request: http.Request{

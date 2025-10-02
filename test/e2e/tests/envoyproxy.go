@@ -191,7 +191,7 @@ func ExpectEventuallyConsistentResponse(t *testing.T, suite *suite.ConformanceTe
 	}
 
 	err := wait.PollUntilContextTimeout(t.Context(), time.Second, suite.TimeoutConfig.CreateTimeout, true, func(ctx context.Context) (bool, error) {
-		gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+		gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
 		req := http.MakeRequest(t, expected, gwAddr, "HTTP", "http")
 
 		cReq, cRes, err := suite.RoundTripper.CaptureRoundTrip(req)

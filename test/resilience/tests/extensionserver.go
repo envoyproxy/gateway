@@ -54,7 +54,7 @@ var ESResilience = suite.ResilienceTest{
 			ns := "gateway-resilience"
 			routeNN := types.NamespacedName{Name: "valid-route-for-extension-server", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "all-namespaces", Namespace: ns}
-			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+			gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
 
 			t.Log("Route is translated")
 			expectedResponse := http.ExpectedResponse{

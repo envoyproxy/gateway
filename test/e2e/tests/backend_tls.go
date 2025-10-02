@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"k8s.io/apimachinery/pkg/types"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
@@ -29,7 +30,7 @@ var BackendTLSTest = suite.ConformanceTest{
 		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ConformanceInfraNamespace}
 		t.Run("with a backend TLS Policy", func(t *testing.T) {
 			routeNN := types.NamespacedName{Name: "http-with-backend-tls", Namespace: ConformanceInfraNamespace}
-			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+			gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
 
 			expectedResponse := http.ExpectedResponse{
 				Request: http.Request{
@@ -50,7 +51,7 @@ var BackendTLSTest = suite.ConformanceTest{
 				t.Skip("Skipping test as IP_FAMILY is IPv6")
 			}
 			routeNN := types.NamespacedName{Name: "http-with-backend-tls-system-trust-store", Namespace: ConformanceInfraNamespace}
-			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+			gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
 
 			expectedResponse := http.ExpectedResponse{
 				Request: http.Request{
@@ -72,7 +73,7 @@ var BackendTLSTest = suite.ConformanceTest{
 
 		t.Run("without a backend TLS Policy", func(t *testing.T) {
 			routeNN := types.NamespacedName{Name: "http-without-backend-tls", Namespace: ConformanceInfraNamespace}
-			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+			gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
 
 			expectedResponse := http.ExpectedResponse{
 				Request: http.Request{
@@ -89,7 +90,7 @@ var BackendTLSTest = suite.ConformanceTest{
 
 		t.Run("with CA mismatch and skip tls verify", func(t *testing.T) {
 			routeNN := types.NamespacedName{Name: "http-with-backend-insecure-skip-verify-and-mismatch-ca", Namespace: ConformanceInfraNamespace}
-			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+			gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
 
 			expectedResponse := http.ExpectedResponse{
 				Request: http.Request{
@@ -106,7 +107,7 @@ var BackendTLSTest = suite.ConformanceTest{
 
 		t.Run("without BackendTLSPolicy and skip tls verify", func(t *testing.T) {
 			routeNN := types.NamespacedName{Name: "http-with-backend-insecure-skip-verify-without-backend-tls-policy", Namespace: ConformanceInfraNamespace}
-			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+			gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
 
 			expectedResponse := http.ExpectedResponse{
 				Request: http.Request{
@@ -136,7 +137,7 @@ var BackendClusterTrustBundleTest = suite.ConformanceTest{
 		gwNN := types.NamespacedName{Name: AllNamespacesGateway, Namespace: ConformanceInfraNamespace}
 		t.Run("with ClusterTrustBundle", func(t *testing.T) {
 			routeNN := types.NamespacedName{Name: "http-with-backend-tls-trust-bundle", Namespace: ConformanceInfraNamespace}
-			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+			gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
 
 			expectedResponse := http.ExpectedResponse{
 				Request: http.Request{

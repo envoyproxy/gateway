@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"k8s.io/apimachinery/pkg/types"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
@@ -33,7 +34,7 @@ var DynamicResolverBackendTest = suite.ConformanceTest{
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ConformanceInfraNamespace}
 		routeNN := types.NamespacedName{Name: "httproute-with-dynamic-resolver-backend", Namespace: ConformanceInfraNamespace}
-		gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+		gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
 		BackendMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "backend-dynamic-resolver", Namespace: ConformanceInfraNamespace})
 
 		t.Run("route to service foo", func(t *testing.T) {
@@ -67,7 +68,7 @@ var DynamicResolverBackendTest = suite.ConformanceTest{
 		t.Run("route to external service with app protocol", func(t *testing.T) {
 			t.Skip("https://github.com/envoyproxy/gateway/issues/7058")
 			routeNN := types.NamespacedName{Name: "httproute-with-dynamic-resolver-backend-with-app-protocol", Namespace: ConformanceInfraNamespace}
-			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+			gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
 			BackendMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "backend-dynamic-resolver-with-app-protocol", Namespace: ConformanceInfraNamespace})
 
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, http.ExpectedResponse{
@@ -112,7 +113,7 @@ var DynamicResolverBackendWithTLSTest = suite.ConformanceTest{
 		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 		t.Run("TLS", func(t *testing.T) {
 			routeNN := types.NamespacedName{Name: "httproute-with-dynamic-resolver-backend-tls", Namespace: ns}
-			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+			gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
 			BackendMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "backend-dynamic-resolver-tls", Namespace: ns})
 
 			expectedResponse := http.ExpectedResponse{
@@ -130,7 +131,7 @@ var DynamicResolverBackendWithTLSTest = suite.ConformanceTest{
 		})
 		t.Run("SystemCA", func(t *testing.T) {
 			routeNN := types.NamespacedName{Name: "httproute-with-dynamic-resolver-backend-tls-system-trust-store", Namespace: ns}
-			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+			gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
 			BackendMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "backend-dynamic-resolver-tls-system-trust-store", Namespace: ns})
 
 			expectedResponse := http.ExpectedResponse{
@@ -167,7 +168,7 @@ var DynamicResolverBackendWithClusterTrustBundleTest = suite.ConformanceTest{
 		gwNN := types.NamespacedName{Name: AllNamespacesGateway, Namespace: ns}
 		t.Run("ClusterTrustBundle", func(t *testing.T) {
 			routeNN := types.NamespacedName{Name: "httproute-clustertrustbundle", Namespace: ns}
-			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+			gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
 			BackendMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "backend-clustertrustbundle", Namespace: ns})
 
 			expectedResponse := http.ExpectedResponse{

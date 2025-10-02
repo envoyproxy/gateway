@@ -100,7 +100,7 @@ var OCIWasmTest = suite.ConformanceTest{
 			// Wait for the HTTPRoute to be accepted
 			routeNN := types.NamespacedName{Name: httpRouteWithWasm, Namespace: testNS}
 			gwNN := types.NamespacedName{Name: testGW, Namespace: testNS}
-			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+			gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
 
 			// Make a request to the gateway and expect the wasm filter to add a response header
 			expectedResponse := http.ExpectedResponse{
@@ -146,7 +146,7 @@ var OCIWasmTest = suite.ConformanceTest{
 			ns := testNS
 			routeNN := types.NamespacedName{Name: httpRouteWithoutWasm, Namespace: ns}
 			gwNN := types.NamespacedName{Name: testGW, Namespace: ns}
-			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+			gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
 
 			expectedResponse := http.ExpectedResponse{
 				Request: http.Request{
