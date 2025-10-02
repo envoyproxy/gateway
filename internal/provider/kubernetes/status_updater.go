@@ -113,13 +113,10 @@ func (u *UpdateHandler) apply(update Update) {
 
 		newObj.SetUID(obj.GetUID())
 
-		// Clear managedFields to satisfy SSA requirement on status subresource
-		newObj.SetManagedFields(nil)
-
-		// Use a merge Patch on the status subresource to avoid conflicts while
-		// keeping behavior consistent across CI environments.
-		patch := client.MergeFrom(obj)
-		return u.client.Status().Patch(context.Background(), newObj, patch)
+		// Use Patch instead of Update to avoid conflicts when multiple controllers
+		// try to update the same resource simultaneously. Use strategic merge patch
+		// which only updates the status field without affecting other fields.
+		return u.client.Status().Patch(context.Background(), newObj, client.MergeFrom(obj))
 	}); err != nil {
 		log.Error(err, "unable to update status")
 
