@@ -16,6 +16,7 @@ bug fixes: |
   Fixed preserve route parent status for multi-parent routes.
   Fixed weighted cluster generation in RouteAction when URLRewrite filter is applied.
   Fixed handling of regex meta characters in prefix match replace for URL rewrite.
+  Disabled the default emission of `x-envoy-ratelimited` headers from the rate limit filter; re-enable with the `enableEnvoyHeaders` setting in ClientTrafficPolicy.
 
 # Enhancements that improve performance.
 performance improvements: |
