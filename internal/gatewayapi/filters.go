@@ -1033,17 +1033,17 @@ func (t *Translator) processCORSFilter(
 		}
 	}
 
-	var allowMethods []string
+	allowMethods := make([]string, 0, len(corsFilter.AllowMethods))
 	for _, method := range corsFilter.AllowMethods {
 		allowMethods = append(allowMethods, string(method))
 	}
 
-	var allowHeaders []string
+	allowHeaders := make([]string, 0, len(corsFilter.AllowHeaders))
 	for _, header := range corsFilter.AllowHeaders {
 		allowHeaders = append(allowHeaders, string(header))
 	}
 
-	var exposeHeaders []string
+	exposeHeaders := make([]string, 0, len(corsFilter.ExposeHeaders))
 	for _, header := range corsFilter.ExposeHeaders {
 		exposeHeaders = append(exposeHeaders, string(header))
 	}

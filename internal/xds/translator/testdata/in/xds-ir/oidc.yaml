@@ -92,3 +92,4 @@ http:
           idToken: "CustomIdTokenOverride"
           accessToken: "CustomAccessTokenOverride"
         cookieDomain: "example.com"
+        disableTokenEncryption: true

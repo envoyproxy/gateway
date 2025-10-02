@@ -70,7 +70,7 @@ func addReferenceGrantIndexers(ctx context.Context, mgr manager.Manager) error {
 
 func getReferenceGrantIndexerFunc(rawObj client.Object) []string {
 	refGrant := rawObj.(*gwapiv1b1.ReferenceGrant)
-	var referredServices []string
+	referredServices := make([]string, 0, len(refGrant.Spec.To))
 	for _, target := range refGrant.Spec.To {
 		referredServices = append(referredServices, string(target.Kind))
 	}
@@ -587,8 +587,8 @@ func secretSecurityPolicyIndexFunc(rawObj client.Object) []string {
 	securityPolicy := rawObj.(*egv1a1.SecurityPolicy)
 
 	var (
-		secretReferences []gwapiv1.SecretObjectReference
-		values           []string
+		secretReferences = make([]gwapiv1.SecretObjectReference, 0, 4) // OIDC (2) + APIKeyAuth + BasicAuth
+		values           = make([]string, 0, 4)
 	)
 
 	if securityPolicy.Spec.OIDC != nil {
@@ -619,8 +619,8 @@ func backendSecurityPolicyIndexFunc(rawObj client.Object) []string {
 	securityPolicy := rawObj.(*egv1a1.SecurityPolicy)
 
 	var (
-		backendRefs []gwapiv1.BackendObjectReference
-		values      []string
+		backendRefs = make([]gwapiv1.BackendObjectReference, 0, 2) // HTTP + GRPC
+		values      = make([]string, 0, 2)
 	)
 
 	if securityPolicy.Spec.ExtAuth != nil {

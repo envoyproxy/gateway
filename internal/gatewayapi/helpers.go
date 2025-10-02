@@ -460,7 +460,7 @@ func IsMergeGatewaysEnabled(resources *resource.Resources) bool {
 }
 
 func protocolSliceToStringSlice(protocols []gwapiv1.ProtocolType) []string {
-	var protocolStrings []string
+	protocolStrings := make([]string, 0, len(protocols))
 	for _, protocol := range protocols {
 		protocolStrings = append(protocolStrings, string(protocol))
 	}

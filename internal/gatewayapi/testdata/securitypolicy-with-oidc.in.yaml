@@ -128,3 +128,4 @@ securityPolicies:
       refreshToken: true
       defaultRefreshTokenTTL: 48h
       cookieDomain: "example.com"
+      disableTokenEncryption: true
