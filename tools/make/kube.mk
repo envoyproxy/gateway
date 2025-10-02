@@ -328,12 +328,16 @@ CONFORMANCE_REPORT_PATH ?=
 .PHONY: run-experimental-conformance
 run-experimental-conformance: prepare-ip-family ## Run Experimental Gateway API conformance.
 	@$(LOG_TARGET)
-	kubectl wait --timeout=$(WAIT_TIMEOUT) -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
-	kubectl apply -f test/config/gatewayclass.yaml
+ifeq ($(CONFORMANCE_RUN_TEST),)
 	go test -v -tags experimental ./test/conformance -run TestExperimentalConformance --gateway-class=envoy-gateway --debug=true \
 		--organization=envoyproxy --project=envoy-gateway --url=https://github.com/envoyproxy/gateway --version=latest \
 		--report-output="$(CONFORMANCE_REPORT_PATH)" --contact=https://github.com/envoyproxy/gateway/blob/main/GOVERNANCE.md \
 		--mode="$(KUBE_DEPLOY_PROFILE)" --version=$(TAG)
+else
+    # we didn't care about output when running single test
+	go test -v -tags experimental ./test/conformance -run TestExperimentalConformance --gateway-class=envoy-gateway --debug=true --run-test $(CONFORMANCE_RUN_TEST)
+endif
+
 
 .PHONY: delete-cluster
 delete-cluster: ## Delete kind cluster.

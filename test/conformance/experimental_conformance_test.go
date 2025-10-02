@@ -46,11 +46,6 @@ func TestExperimentalConformance(t *testing.T) {
 	)
 	opts.Hook = e2e.Hook
 
-	// TODO: support these conformance tests
-	opts.SkipTests = append(opts.SkipTests,
-		tests.UDPRouteTest.ShortName,
-	)
-
 	t.Logf("Running experimental conformance tests with %s GatewayClass\n cleanup: %t\n debug: %t\n enable all features: %t \n conformance profiles: [%v]",
 		*flags.GatewayClassName, *flags.CleanupBaseResources, *flags.ShowDebug, *flags.EnableAllSupportedFeatures, opts.ConformanceProfiles)
 
