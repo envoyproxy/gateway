@@ -51,13 +51,13 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(envoyExtensionPolicies []*egv
 			Name:      route.GetName(),
 			Namespace: route.GetNamespace(),
 		}
-		routeMap[key] = &policyRouteTargetContext{RouteContext: route, attachedToRouteRules: make(sets.Set[string])}
+		routeMap[key] = &policyRouteTargetContext{RouteContext: route}
 	}
 
 	gatewayMap := map[types.NamespacedName]*policyGatewayTargetContext{}
 	for _, gw := range gateways {
 		key := utils.NamespacedName(gw)
-		gatewayMap[key] = &policyGatewayTargetContext{GatewayContext: gw, attachedToListeners: make(sets.Set[string])}
+		gatewayMap[key] = &policyGatewayTargetContext{GatewayContext: gw}
 	}
 
 	// Map of Gateway to the routes attached to it.
@@ -368,7 +368,7 @@ func resolveEEPolicyGatewayTargetRef(
 		gateway.attached = true
 	} else {
 		listenerName := string(*target.SectionName)
-		if gateway.attachedToListeners.Has(listenerName) {
+		if gateway.attachedToListeners != nil && gateway.attachedToListeners.Has(listenerName) {
 			message := fmt.Sprintf("Unable to target Listener %s/%s, another EnvoyExtensionPolicy has already attached to it",
 				string(target.Name), listenerName)
 
@@ -376,6 +376,9 @@ func resolveEEPolicyGatewayTargetRef(
 				Reason:  gwapiv1a2.PolicyReasonConflicted,
 				Message: message,
 			}
+		}
+		if gateway.attachedToListeners == nil {
+			gateway.attachedToListeners = make(sets.Set[string])
 		}
 		gateway.attachedToListeners.Insert(listenerName)
 	}
@@ -424,7 +427,7 @@ func resolveEEPolicyRouteTargetRef(
 		route.attached = true
 	} else {
 		routeRuleName := string(*target.SectionName)
-		if route.attachedToRouteRules.Has(routeRuleName) {
+		if route.attachedToRouteRules != nil && route.attachedToRouteRules.Has(routeRuleName) {
 			message := fmt.Sprintf("Unable to target RouteRule %s/%s, another EnvoyExtensionPolicy has already attached to it",
 				string(target.Name), routeRuleName)
 
@@ -432,6 +435,9 @@ func resolveEEPolicyRouteTargetRef(
 				Reason:  gwapiv1a2.PolicyReasonConflicted,
 				Message: message,
 			}
+		}
+		if route.attachedToRouteRules == nil {
+			route.attachedToRouteRules = make(sets.Set[string])
 		}
 		route.attachedToRouteRules.Insert(routeRuleName)
 	}
@@ -609,11 +615,11 @@ func (t *Translator) translateEnvoyExtensionPolicyForGateway(
 }
 
 func (t *Translator) buildLuas(policy *egv1a1.EnvoyExtensionPolicy, resources *resource.Resources, envoyProxy *egv1a1.EnvoyProxy) ([]ir.Lua, error) {
-	var luaIRList []ir.Lua
-
 	if policy == nil {
 		return nil, nil
 	}
+
+	luaIRList := make([]ir.Lua, 0, len(policy.Spec.Lua))
 
 	for idx, ep := range policy.Spec.Lua {
 		name := irConfigNameForLua(policy, idx)
@@ -678,14 +684,15 @@ func getLuaBodyFromLocalObjectReference(valueRef *gwapiv1.LocalObjectReference, 
 
 func (t *Translator) buildExtProcs(policy *egv1a1.EnvoyExtensionPolicy, resources *resource.Resources, envoyProxy *egv1a1.EnvoyProxy) ([]ir.ExtProc, error, bool) {
 	var (
-		extProcIRList []ir.ExtProc
-		failOpen      bool
-		errs          error
+		failOpen bool
+		errs     error
 	)
 
 	if policy == nil {
 		return nil, nil, failOpen
 	}
+
+	extProcIRList := make([]ir.ExtProc, 0, len(policy.Spec.ExtProc))
 
 	hasFailClose := false
 	for idx, ep := range policy.Spec.ExtProc {
@@ -822,14 +829,15 @@ func (t *Translator) buildWasms(
 	resources *resource.Resources,
 ) ([]ir.Wasm, error, bool) {
 	var (
-		wasmIRList []ir.Wasm
-		failOpen   bool
-		errs       error
+		failOpen bool
+		errs     error
 	)
 
 	if len(policy.Spec.Wasm) == 0 {
-		return wasmIRList, nil, failOpen
+		return nil, nil, failOpen
 	}
+
+	wasmIRList := make([]ir.Wasm, 0, len(policy.Spec.Wasm))
 
 	if t.WasmCache == nil {
 		return nil, fmt.Errorf("wasm cache is not initialized"), failOpen

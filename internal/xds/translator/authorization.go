@@ -153,9 +153,9 @@ func buildRBACPerRoute(authorization *ir.Authorization) (*rbacv3.RBACPerRoute, e
 		rbac        *rbacv3.RBACPerRoute
 		allowAction *anypb.Any
 		denyAction  *anypb.Any
-		matcherList []*matcherv3.Matcher_MatcherList_FieldMatcher
 		err         error
 	)
+	matcherList := make([]*matcherv3.Matcher_MatcherList_FieldMatcher, 0, len(authorization.Rules))
 
 	allow := &rbacconfigv3.Action{
 		Name:   "ALLOW",
@@ -625,7 +625,7 @@ func buildHeaderPredicate(name string, values []string, ignoreCase bool) ([]*mat
 		return nil, err
 	}
 
-	var predicates []*matcherv3.Matcher_MatcherList_Predicate
+	predicates := make([]*matcherv3.Matcher_MatcherList_Predicate, 0, len(values))
 	for _, value := range values {
 		predicates = append(predicates, &matcherv3.Matcher_MatcherList_Predicate{
 			MatchType: &matcherv3.Matcher_MatcherList_Predicate_SinglePredicate_{
