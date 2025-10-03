@@ -9,6 +9,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/telepresenceio/watchable"
@@ -68,6 +69,7 @@ type gatewayAPIReconciler struct {
 	namespaceLabel       *metav1.LabelSelector
 	envoyGateway         *egv1a1.EnvoyGateway
 	mergeGateways        sets.Set[string]
+	mergeGatewaysMu      sync.RWMutex
 	resources            *message.ProviderResources
 	subscriptions        *subscriptions
 	extGVKs              []schema.GroupVersionKind
@@ -91,6 +93,24 @@ type gatewayAPIReconciler struct {
 	udpRouteCRDExists      bool
 
 	clusterTrustBundleExits bool
+}
+
+// isGatewayClassMerged reports whether the supplied GatewayClass has mergeGateways enabled.
+func (r *gatewayAPIReconciler) isGatewayClassMerged(name string) bool {
+	r.mergeGatewaysMu.RLock()
+	defer r.mergeGatewaysMu.RUnlock()
+	return r.mergeGateways.Has(name)
+}
+
+// setGatewayClassMerge toggles mergeGateways tracking for the supplied GatewayClass.
+func (r *gatewayAPIReconciler) setGatewayClassMerge(name string, merged bool) {
+	r.mergeGatewaysMu.Lock()
+	defer r.mergeGatewaysMu.Unlock()
+	if merged {
+		r.mergeGateways.Insert(name)
+		return
+	}
+	r.mergeGateways.Delete(name)
 }
 
 type subscriptions struct {
@@ -493,11 +513,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 		}
 
 		if gwcResource.EnvoyProxyForGatewayClass != nil && gwcResource.EnvoyProxyForGatewayClass.Spec.MergeGateways != nil {
-			if *gwcResource.EnvoyProxyForGatewayClass.Spec.MergeGateways {
-				r.mergeGateways.Insert(managedGC.Name)
-			} else {
-				r.mergeGateways.Delete(managedGC.Name)
-			}
+			r.setGatewayClassMerge(managedGC.Name, *gwcResource.EnvoyProxyForGatewayClass.Spec.MergeGateways)
 		}
 
 		if len(gwcResource.Gateways) == 0 {
@@ -1401,7 +1417,7 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, managedGC *g
 	}
 
 	mergedGateways := false
-	if r.mergeGateways.Has(managedGC.Name) {
+	if r.isGatewayClassMerged(managedGC.Name) {
 		mergedGateways = true
 		// processGatewayClassParamsRef has been called for this GatewayClass, its EnvoyProxy should exist in resourceTree
 		r.processServiceClusterForGatewayClass(resourceTree.EnvoyProxyForGatewayClass, managedGC, resourceMap)
