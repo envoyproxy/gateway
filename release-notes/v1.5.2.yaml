@@ -1,4 +1,4 @@
-date: October 1, 2025
+date: October 2, 2025
 
 # Changes that are expected to cause an incompatibility with previous versions, such as deletions or modifications to existing APIs.
 breaking changes: |
@@ -17,6 +17,7 @@ bug fixes: |
   Fixed weighted cluster generation in RouteAction when URLRewrite filter is applied.
   Fixed handling of regex meta characters in prefix match replace for URL rewrite.
   Disabled the default emission of `x-envoy-ratelimited` headers from the rate limit filter; re-enable with the `enableEnvoyHeaders` setting in ClientTrafficPolicy.
+  Fixed race condition when accessing `mergeGateways` set.
 
 # Enhancements that improve performance.
 performance improvements: |
