@@ -297,7 +297,11 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 		return reconcile.Result{}, err
 	}
 
+	// 1. gets all GatewayClass statuses and put it in a set
+	// 2. deletes the reconciled gateway classes names from the set
+	// 3. deletes the remaining from watchable (representing non-existent gateway classes)
 	gcStatusToDelete := r.loadGatewayClassStatusToDelete()
+
 	defer func() {
 		for _, key := range gcStatusToDelete.UnsortedList() {
 			r.log.Info("delete from GatewayClass statuses", "key", key)
