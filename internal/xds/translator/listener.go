@@ -185,7 +185,7 @@ func originalIPDetectionExtensions(clientIPDetection *ir.ClientIPDetectionSettin
 
 // buildXdsTCPListener creates a xds Listener resource
 func (t *Translator) buildXdsTCPListener(
-	listenerDetails ir.CoreListenerDetails,
+	listenerDetails *ir.CoreListenerDetails,
 	keepalive *ir.TCPKeepalive,
 	connection *ir.ClientConnection,
 	accesslog *ir.AccessLog,
@@ -262,7 +262,7 @@ func buildMaxAcceptPerSocketEvent(connection *ir.ClientConnection) *wrapperspb.U
 
 // buildXdsQuicListener creates a xds Listener resource for quic
 func (t *Translator) buildXdsQuicListener(
-	listenerDetails ir.CoreListenerDetails,
+	listenerDetails *ir.CoreListenerDetails,
 	ipFamily *egv1a1.IPFamily,
 	accesslog *ir.AccessLog,
 ) (*listenerv3.Listener, error) {
@@ -413,9 +413,7 @@ func (t *Translator) addHCMToXDSListener(
 	patchProxyProtocolFilter(xdsListener, irListener.ProxyProtocol)
 
 	if irListener.IsHTTP2 {
-		mgr.HttpFilters = append(mgr.HttpFilters, xdsfilters.GRPCWeb)
-		// always enable grpc stats filter
-		mgr.HttpFilters = append(mgr.HttpFilters, xdsfilters.GRPCStats)
+		mgr.HttpFilters = append(mgr.HttpFilters, xdsfilters.GRPCWeb, xdsfilters.GRPCStats)
 	}
 
 	if http3Listener {
@@ -536,7 +534,8 @@ func buildEarlyHeaderMutation(headers *ir.HeaderSettings) []*corev3.TypedExtensi
 		return nil
 	}
 
-	var mutationRules []*mutation_rulesv3.HeaderMutation
+	total := len(headers.EarlyAddRequestHeaders) + len(headers.EarlyRemoveRequestHeaders)
+	mutationRules := make([]*mutation_rulesv3.HeaderMutation, 0, total)
 
 	for _, header := range headers.EarlyAddRequestHeaders {
 		var appendAction corev3.HeaderValueOption_HeaderAppendAction

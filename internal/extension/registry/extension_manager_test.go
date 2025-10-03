@@ -543,7 +543,7 @@ func Test_Integration_RetryPolicy_MaxAttempts(t *testing.T) {
 				},
 			}
 
-			mgr, _, err := NewInMemoryManager(extManager, &retryTestServer{})
+			mgr, _, err := NewInMemoryManager(&extManager, &retryTestServer{})
 			require.NoError(t, err)
 
 			hook, err := mgr.GetPostXDSHookClient(egv1a1.XDSRoute)
@@ -727,7 +727,7 @@ func Test_Integration_ClusterUpdateExtensionServer(t *testing.T) {
 				},
 			}
 
-			mgr, _, err := NewInMemoryManager(extManager, &clusterUpdateTestServer{})
+			mgr, _, err := NewInMemoryManager(&extManager, &clusterUpdateTestServer{})
 			require.NoError(t, err)
 
 			hook, err := mgr.GetPostXDSHookClient(egv1a1.XDSTranslation)
@@ -804,7 +804,7 @@ func TestPostTranslateModifyHookWithListenersAndRoutes(t *testing.T) {
 		},
 	}
 
-	mgr, _, err := NewInMemoryManager(extManager, &testServer{})
+	mgr, _, err := NewInMemoryManager(&extManager, &testServer{})
 	require.NoError(t, err)
 
 	hook, err := mgr.GetPostXDSHookClient(egv1a1.XDSTranslation)
@@ -934,9 +934,10 @@ func TestGetTranslationHookConfig(t *testing.T) {
 			var err error
 
 			if tt.config == nil {
-				mgr, _, err = NewInMemoryManager(egv1a1.ExtensionManager{}, &testServer{})
+				defaultExt := egv1a1.ExtensionManager{}
+				mgr, _, err = NewInMemoryManager(&defaultExt, &testServer{})
 			} else {
-				mgr, _, err = NewInMemoryManager(*tt.config, &testServer{})
+				mgr, _, err = NewInMemoryManager(tt.config, &testServer{})
 			}
 
 			require.NoError(t, err)

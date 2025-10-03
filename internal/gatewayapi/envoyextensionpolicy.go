@@ -93,7 +93,7 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(envoyExtensionPolicies []*egv
 				// gatewayRouteMap and ancestor list, which will be used to check
 				// policy overrides and populate its ancestor status.
 				parentRefs := GetParentReferences(route)
-				ancestorRefs := make([]gwapiv1a2.ParentReference, 0, len(parentRefs))
+				ancestorRefs := make([]*gwapiv1a2.ParentReference, 0, len(parentRefs))
 				for _, p := range parentRefs {
 					if p.Kind == nil || *p.Kind == resource.KindGateway {
 						namespace := route.GetNamespace()
@@ -112,7 +112,8 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(envoyExtensionPolicies []*egv
 						gatewayRouteMap[key].Insert(utils.NamespacedName(route).String())
 
 						// Do need a section name since the policy is targeting to a route
-						ancestorRefs = append(ancestorRefs, getAncestorRefForPolicy(gwNN, p.SectionName))
+						ancestorRef := getAncestorRefForPolicy(gwNN, p.SectionName)
+						ancestorRefs = append(ancestorRefs, &ancestorRef)
 					}
 				}
 
@@ -165,9 +166,10 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(envoyExtensionPolicies []*egv
 
 				// Find its ancestor reference by resolved gateway, even with resolve error
 				gatewayNN := utils.NamespacedName(gateway)
-				ancestorRefs := []gwapiv1a2.ParentReference{
+				ancestorRef := getAncestorRefForPolicy(gatewayNN, nil)
+				ancestorRefs := []*gwapiv1a2.ParentReference{
 					// Don't need a section name since the policy is targeting to a gateway
-					getAncestorRefForPolicy(gatewayNN, nil),
+					&ancestorRef,
 				}
 
 				// Set conditions for resolve error, then skip current gateway
@@ -441,11 +443,11 @@ func (t *Translator) translateEnvoyExtensionPolicyForGateway(
 }
 
 func (t *Translator) buildLuas(policy *egv1a1.EnvoyExtensionPolicy, resources *resource.Resources, envoyProxy *egv1a1.EnvoyProxy) ([]ir.Lua, error) {
-	var luaIRList []ir.Lua
-
 	if policy == nil {
 		return nil, nil
 	}
+
+	luaIRList := make([]ir.Lua, 0, len(policy.Spec.Lua))
 
 	for idx, ep := range policy.Spec.Lua {
 		name := irConfigNameForLua(policy, idx)
@@ -510,14 +512,15 @@ func getLuaBodyFromLocalObjectReference(valueRef *gwapiv1.LocalObjectReference, 
 
 func (t *Translator) buildExtProcs(policy *egv1a1.EnvoyExtensionPolicy, resources *resource.Resources, envoyProxy *egv1a1.EnvoyProxy) ([]ir.ExtProc, error, bool) {
 	var (
-		extProcIRList []ir.ExtProc
-		failOpen      bool
-		errs          error
+		failOpen bool
+		errs     error
 	)
 
 	if policy == nil {
 		return nil, nil, failOpen
 	}
+
+	extProcIRList := make([]ir.ExtProc, 0, len(policy.Spec.ExtProc))
 
 	hasFailClose := false
 	for idx, ep := range policy.Spec.ExtProc {
@@ -654,14 +657,15 @@ func (t *Translator) buildWasms(
 	resources *resource.Resources,
 ) ([]ir.Wasm, error, bool) {
 	var (
-		wasmIRList []ir.Wasm
-		failOpen   bool
-		errs       error
+		failOpen bool
+		errs     error
 	)
 
 	if len(policy.Spec.Wasm) == 0 {
-		return wasmIRList, nil, failOpen
+		return nil, nil, failOpen
 	}
+
+	wasmIRList := make([]ir.Wasm, 0, len(policy.Spec.Wasm))
 
 	if t.WasmCache == nil {
 		return nil, fmt.Errorf("wasm cache is not initialized"), failOpen
@@ -674,7 +678,7 @@ func (t *Translator) buildWasms(
 	hasFailClose := false
 	for idx, wasm := range policy.Spec.Wasm {
 		name := irConfigNameForWasm(policy, idx)
-		wasmIR, err := t.buildWasm(name, wasm, policy, idx, resources)
+		wasmIR, err := t.buildWasm(name, &wasm, policy, idx, resources)
 		if err != nil {
 			errs = errors.Join(errs, err)
 			if wasm.FailOpen == nil || !*wasm.FailOpen {
@@ -695,7 +699,7 @@ func (t *Translator) buildWasms(
 
 func (t *Translator) buildWasm(
 	name string,
-	config egv1a1.Wasm,
+	config *egv1a1.Wasm,
 	policy *egv1a1.EnvoyExtensionPolicy,
 	idx int,
 	resources *resource.Resources,
@@ -741,7 +745,7 @@ func (t *Translator) buildWasm(
 
 		http := config.Code.HTTP
 
-		if servingURL, checksum, err = t.WasmCache.Get(http.URL, wasm.GetOptions{
+		if servingURL, checksum, err = t.WasmCache.Get(http.URL, &wasm.GetOptions{
 			Checksum:        originalChecksum,
 			PullPolicy:      pullPolicy,
 			ResourceName:    irConfigNameForWasm(policy, idx),
@@ -809,7 +813,7 @@ func (t *Translator) buildWasm(
 		// The original checksum in the EEP is used to match the digest of OCI image.
 		// The returned checksum from the cache is the checksum of the wasm file
 		// extracted from the OCI image, which is used by the envoy to verify the wasm file.
-		if servingURL, checksum, err = t.WasmCache.Get(imageURL, wasm.GetOptions{
+		if servingURL, checksum, err = t.WasmCache.Get(imageURL, &wasm.GetOptions{
 			Checksum:        originalChecksum,
 			PullSecret:      pullSecret,
 			PullPolicy:      pullPolicy,

@@ -6,8 +6,6 @@
 package gatewayapi
 
 import (
-	"reflect"
-
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -80,8 +78,12 @@ type ListenerContext struct {
 }
 
 func (l *ListenerContext) SetSupportedKinds(kinds ...gwapiv1.RouteGroupKind) {
-	l.gateway.Status.Listeners[l.listenerStatusIdx].SupportedKinds = make([]gwapiv1.RouteGroupKind, 0, len(kinds))
-	l.gateway.Status.Listeners[l.listenerStatusIdx].SupportedKinds = append(l.gateway.Status.Listeners[l.listenerStatusIdx].SupportedKinds, kinds...)
+	if len(kinds) > 0 {
+		l.gateway.Status.Listeners[l.listenerStatusIdx].SupportedKinds = make([]gwapiv1.RouteGroupKind, len(kinds))
+		copy(l.gateway.Status.Listeners[l.listenerStatusIdx].SupportedKinds, kinds)
+	} else {
+		l.gateway.Status.Listeners[l.listenerStatusIdx].SupportedKinds = []gwapiv1.RouteGroupKind{}
+	}
 }
 
 func (l *ListenerContext) IncrementAttachedRoutes() {
@@ -456,7 +458,7 @@ func GetRouteParentContext(route RouteContext, forParentRef gwapiv1.ParentRefere
 	var parentRef *gwapiv1.ParentReference
 	specParentRefs := route.GetParentReferences()
 	for _, p := range specParentRefs {
-		if isParentRefEqual(p, forParentRef, route.GetNamespace()) {
+		if IsParentRefEqual(p, forParentRef, route.GetNamespace()) {
 			parentRef = &p
 			break
 		}
@@ -470,7 +472,7 @@ func GetRouteParentContext(route RouteContext, forParentRef gwapiv1.ParentRefere
 	routeStatus := route.GetRouteStatus()
 
 	for i, parent := range routeStatus.Parents {
-		if isParentRefEqual(parent.ParentRef, *parentRef, route.GetNamespace()) {
+		if IsParentRefEqual(parent.ParentRef, *parentRef, route.GetNamespace()) {
 			routeParentStatusIdx = i
 			break
 		}
@@ -510,32 +512,74 @@ func GetRouteParentContext(route RouteContext, forParentRef gwapiv1.ParentRefere
 	return ctx
 }
 
-func isParentRefEqual(ref1, ref2 gwapiv1.ParentReference, routeNS string) bool {
+// IsParentRefEqual compares two ParentReference objects for equality without using reflection.
+func IsParentRefEqual(ref1, ref2 gwapiv1.ParentReference, routeNS string) bool {
+	// Compare Group with default handling
 	defaultGroup := (*gwapiv1.Group)(&gwapiv1.GroupVersion.Group)
-	if ref1.Group == nil {
-		ref1.Group = defaultGroup
+	group1 := ref1.Group
+	if group1 == nil {
+		group1 = defaultGroup
 	}
-	if ref2.Group == nil {
-		ref2.Group = defaultGroup
+	group2 := ref2.Group
+	if group2 == nil {
+		group2 = defaultGroup
+	}
+	if *group1 != *group2 {
+		return false
 	}
 
+	// Compare Kind with default handling
 	defaultKind := gwapiv1.Kind(resource.KindGateway)
-	if ref1.Kind == nil {
-		ref1.Kind = &defaultKind
+	kind1 := ref1.Kind
+	if kind1 == nil {
+		kind1 = &defaultKind
 	}
-	if ref2.Kind == nil {
-		ref2.Kind = &defaultKind
+	kind2 := ref2.Kind
+	if kind2 == nil {
+		kind2 = &defaultKind
+	}
+	if *kind1 != *kind2 {
+		return false
 	}
 
-	// If the parent's namespace is not set, default to the namespace of the Route.
+	// Compare Name (required field)
+	if ref1.Name != ref2.Name {
+		return false
+	}
+
+	// Compare Namespace with default handling
 	defaultNS := gwapiv1.Namespace(routeNS)
-	if ref1.Namespace == nil {
-		ref1.Namespace = &defaultNS
+	namespace1 := ref1.Namespace
+	if namespace1 == nil {
+		namespace1 = &defaultNS
 	}
-	if ref2.Namespace == nil {
-		ref2.Namespace = &defaultNS
+	namespace2 := ref2.Namespace
+	if namespace2 == nil {
+		namespace2 = &defaultNS
 	}
-	return reflect.DeepEqual(ref1, ref2)
+	if *namespace1 != *namespace2 {
+		return false
+	}
+
+	// Compare SectionName (optional field)
+	if ref1.SectionName == nil && ref2.SectionName == nil {
+		return true
+	}
+	if ref1.SectionName == nil || ref2.SectionName == nil {
+		return false
+	}
+	if *ref1.SectionName != *ref2.SectionName {
+		return false
+	}
+
+	// Compare Port (optional field)
+	if ref1.Port == nil && ref2.Port == nil {
+		return true
+	}
+	if ref1.Port == nil || ref2.Port == nil {
+		return false
+	}
+	return *ref1.Port == *ref2.Port
 }
 
 // RouteParentContext wraps a ParentReference and provides helper methods for
@@ -585,25 +629,35 @@ func (r *RouteParentContext) HasCondition(route RouteContext, condType gwapiv1.R
 	return false
 }
 
-// BackendRefContext represents a generic BackendRef object (HTTPBackendRef, GRPCBackendRef or BackendRef itself)
-type BackendRefContext any
-
-func GetBackendRef(b BackendRefContext) *gwapiv1.BackendRef {
-	rv := reflect.ValueOf(b)
-	br := rv.FieldByName("BackendRef")
-	if br.IsValid() {
-		backendRef := br.Interface().(gwapiv1.BackendRef)
-		return &backendRef
-	}
-
-	backendRef := b.(gwapiv1.BackendRef)
-	return &backendRef
+// BackendRefContext represents a generic BackendRef object
+type BackendRefContext interface {
+	GetBackendRef() *gwapiv1.BackendRef
+	GetFilters() any
 }
 
-func GetFilters(b BackendRefContext) any {
-	filters := reflect.ValueOf(b).FieldByName("Filters")
-	if !filters.IsValid() {
-		return nil
-	}
-	return filters.Interface()
+// BackendRefWithFilters wraps backend refs that have filters (HTTPBackendRef, GRPCBackendRef)
+type BackendRefWithFilters struct {
+	BackendRef *gwapiv1.BackendRef
+	Filters    any // []gwapiv1.HTTPRouteFilter or []gwapiv1.GRPCRouteFilter
+}
+
+func (b BackendRefWithFilters) GetBackendRef() *gwapiv1.BackendRef {
+	return b.BackendRef
+}
+
+func (b BackendRefWithFilters) GetFilters() any {
+	return b.Filters
+}
+
+// DirectBackendRef wraps a BackendRef directly (used by TLS/TCP/UDP routes)
+type DirectBackendRef struct {
+	BackendRef *gwapiv1.BackendRef
+}
+
+func (d DirectBackendRef) GetBackendRef() *gwapiv1.BackendRef {
+	return d.BackendRef
+}
+
+func (d DirectBackendRef) GetFilters() any {
+	return nil
 }

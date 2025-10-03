@@ -945,12 +945,12 @@ func (t *Translator) processRequestMirrorFilter(
 		return nil
 	}
 
+	weight := int32(1)
 	mirrorBackend := mirrorFilter.BackendRef
 
-	// Wrap the filter's BackendObjectReference into a BackendRef so we can use existing tooling to check it
-	weight := int32(1)
-	mirrorBackendRef := gwapiv1.HTTPBackendRef{
-		BackendRef: gwapiv1.BackendRef{
+	// Create a DirectBackendRef for the mirror backend (no filters needed)
+	mirrorBackendRef := DirectBackendRef{
+		BackendRef: &gwapiv1.BackendRef{
 			BackendObjectReference: mirrorBackend,
 			Weight:                 &weight,
 		},
@@ -1012,17 +1012,17 @@ func (t *Translator) processCORSFilter(
 		}
 	}
 
-	var allowMethods []string
+	allowMethods := make([]string, 0, len(corsFilter.AllowMethods))
 	for _, method := range corsFilter.AllowMethods {
 		allowMethods = append(allowMethods, string(method))
 	}
 
-	var allowHeaders []string
+	allowHeaders := make([]string, 0, len(corsFilter.AllowHeaders))
 	for _, header := range corsFilter.AllowHeaders {
 		allowHeaders = append(allowHeaders, string(header))
 	}
 
-	var exposeHeaders []string
+	exposeHeaders := make([]string, 0, len(corsFilter.ExposeHeaders))
 	for _, header := range corsFilter.ExposeHeaders {
 		exposeHeaders = append(exposeHeaders, string(header))
 	}

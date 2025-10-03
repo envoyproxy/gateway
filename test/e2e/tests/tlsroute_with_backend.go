@@ -17,8 +17,7 @@ import (
 )
 
 func init() {
-	ConformanceTests = append(ConformanceTests, TLSRouteBackendFQDNTest)
-	ConformanceTests = append(ConformanceTests, TLSRouteBackendIPTest)
+	ConformanceTests = append(ConformanceTests, TLSRouteBackendFQDNTest, TLSRouteBackendIPTest)
 }
 
 var TLSRouteBackendFQDNTest = suite.ConformanceTest{
@@ -99,8 +98,8 @@ func testTLSRouteWithBackend(t *testing.T, suite *suite.ConformanceTestSuite, ro
 	WaitForConsistentMTLSResponse(
 		t,
 		suite.RoundTripper,
-		req,
-		expected,
+		&req,
+		&expected,
 		suite.TimeoutConfig.RequiredConsecutiveSuccesses,
 		suite.TimeoutConfig.MaxTimeToConsistency,
 		cPem,

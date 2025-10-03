@@ -459,7 +459,7 @@ func IsMergeGatewaysEnabled(resources *resource.Resources) bool {
 }
 
 func protocolSliceToStringSlice(protocols []gwapiv1.ProtocolType) []string {
-	var protocolStrings []string
+	protocolStrings := make([]string, 0, len(protocols))
 	for _, protocol := range protocols {
 		protocolStrings = append(protocolStrings, string(protocol))
 	}
@@ -590,9 +590,9 @@ func getPolicyTargetRefs[T client.Object](policy egv1a1.PolicyTargetReferences, 
 	slices.SortFunc(selectorsList, func(i, j targetRefWithTimestamp) int {
 		return i.CreationTimestamp.Compare(j.CreationTimestamp.Time)
 	})
-	ret := []gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{}
-	for _, v := range selectorsList {
-		ret = append(ret, v.LocalPolicyTargetReferenceWithSectionName)
+	ret := make([]gwapiv1a2.LocalPolicyTargetReferenceWithSectionName, len(selectorsList))
+	for i, v := range selectorsList {
+		ret[i] = v.LocalPolicyTargetReferenceWithSectionName
 	}
 	// Plain targetRefs in the policy don't have an associated creation timestamp, but can still refer
 	// to targets that were already found via the selectors. Only add them to the returned list if

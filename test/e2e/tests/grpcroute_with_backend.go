@@ -21,8 +21,7 @@ import (
 )
 
 func init() {
-	ConformanceTests = append(ConformanceTests, GRPCRouteBackendFQDNTest)
-	ConformanceTests = append(ConformanceTests, GRPCRouteBackendIPTest)
+	ConformanceTests = append(ConformanceTests, GRPCRouteBackendFQDNTest, GRPCRouteBackendIPTest)
 }
 
 var GRPCRouteBackendFQDNTest = suite.ConformanceTest{

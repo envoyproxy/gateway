@@ -65,11 +65,11 @@ func TestExperimentalConformance(t *testing.T) {
 	}
 
 	// use to trigger the experimental conformance report
-	err = experimentalConformanceReport(t.Logf, *report, *flags.ReportOutput)
+	err = experimentalConformanceReport(t.Logf, report, *flags.ReportOutput)
 	require.NoError(t, err)
 }
 
-func experimentalConformanceReport(logf func(string, ...any), report conformancev1.ConformanceReport, output string) error {
+func experimentalConformanceReport(logf func(string, ...any), report *conformancev1.ConformanceReport, output string) error {
 	rawReport, err := yaml.Marshal(report)
 	if err != nil {
 		return err

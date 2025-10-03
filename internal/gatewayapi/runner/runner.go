@@ -12,7 +12,6 @@ import (
 	"fmt"
 	"os"
 	"path"
-	"reflect"
 
 	"github.com/docker/docker/pkg/fileutils"
 	"github.com/telepresenceio/watchable"
@@ -20,7 +19,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -65,11 +63,15 @@ type Config struct {
 type Runner struct {
 	Config
 	wasmCache wasm.Cache
+
+	// Key tracking for mark and sweep - avoids expensive LoadAll operations
+	keyCache *KeyCache
 }
 
 func New(cfg *Config) *Runner {
 	return &Runner{
-		Config: *cfg,
+		Config:   *cfg,
+		keyCache: newKeyCache(),
 	}
 }
 
@@ -89,6 +91,7 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 	// Do not call .Subscribe() inside Goroutine since it is supposed to be called from the same
 	// Goroutine where Close() is called.
 	c := r.ProviderResources.GatewayAPIResources.Subscribe(ctx)
+
 	go r.subscribeAndTranslate(c)
 	r.Logger.Info("started")
 	return
@@ -131,25 +134,20 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 			r.Logger.Info("received an update")
 			val := update.Value
 			// There is only 1 key which is the controller name
-			// so when a delete is triggered, delete all IR keys
+			// so when a delete is triggered, delete all keys
 			if update.Delete || val == nil {
-				r.deleteAllIRKeys()
-				r.deleteAllStatusKeys()
+				r.deleteAllKeys()
 				return
 			}
 
-			// IR keys for watchable
-			var curIRKeys, newIRKeys []string
+			// Initialize keysToDelete with tracked keys (mark and sweep approach)
+			keysToDelete := r.keyCache.copy()
 
-			// Get current IR keys
-			for key := range r.InfraIR.LoadAll() {
-				curIRKeys = append(curIRKeys, key)
-			}
-
-			// Get all status keys from watchable and save them in this StatusesToDelete structure.
-			// Iterating through the controller resources, any valid keys will be removed from statusesToDelete.
-			// Remaining keys will be deleted from watchable before we exit this function.
-			statusesToDelete := r.getAllStatuses()
+			// Aggregate metric counters for batch publishing
+			var infraIRCount, xdsIRCount, gatewayStatusCount, httpRouteStatusCount, grpcRouteStatusCount int
+			var tlsRouteStatusCount, tcpRouteStatusCount, udpRouteStatusCount int
+			var backendTLSPolicyStatusCount, clientTrafficPolicyStatusCount, backendTrafficPolicyStatusCount int
+			var securityPolicyStatusCount, envoyExtensionPolicyStatusCount, backendStatusCount, extensionServerPolicyStatusCount int
 
 			for _, resources := range *val {
 				// Translate and publish IRs.
@@ -189,31 +187,33 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 				// Publish the IRs.
 				// Also validate the ir before sending it.
 				for key, val := range result.InfraIR {
-					r.Logger.V(1).WithValues(string(message.InfraIRMessageName), key).Info(val.JSONString())
+					logger := r.Logger.V(1).WithValues(string(message.InfraIRMessageName), key)
+					if logger.Enabled() {
+						logger.Info(val.JSONString())
+					}
 					if err := val.Validate(); err != nil {
 						r.Logger.Error(err, "unable to validate infra ir, skipped sending it")
 						errChan <- err
 					} else {
 						r.InfraIR.Store(key, val)
-						message.PublishMetric(message.Metadata{
-							Runner:  r.Name(),
-							Message: message.InfraIRMessageName,
-						})
-						newIRKeys = append(newIRKeys, key)
+						infraIRCount++
+						// Track IR key for mark and sweep
+						r.keyCache.IR[key] = true
+						delete(keysToDelete.IR, key)
 					}
 				}
 
 				for key, val := range result.XdsIR {
-					r.Logger.V(1).WithValues(string(message.XDSIRMessageName), key).Info(val.JSONString())
+					logger := r.Logger.V(1).WithValues(string(message.XDSIRMessageName), key)
+					if logger.Enabled() {
+						logger.Info(val.JSONString())
+					}
 					if err := val.Validate(); err != nil {
 						r.Logger.Error(err, "unable to validate xds ir, skipped sending it")
 						errChan <- err
 					} else {
 						r.XdsIR.Store(key, val)
-						message.PublishMetric(message.Metadata{
-							Runner:  r.Name(),
-							Message: message.XDSIRMessageName,
-						})
+						xdsIRCount++
 					}
 				}
 
@@ -221,56 +221,44 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 				for _, gateway := range result.Gateways {
 					key := utils.NamespacedName(gateway)
 					r.ProviderResources.GatewayStatuses.Store(key, &gateway.Status)
-					message.PublishMetric(message.Metadata{
-						Runner:  r.Name(),
-						Message: message.GatewayStatusMessageName,
-					})
-					delete(statusesToDelete.GatewayStatusKeys, key)
+					gatewayStatusCount++
+					delete(keysToDelete.GatewayStatus, key)
+					r.keyCache.GatewayStatus[key] = true
 				}
 				for _, httpRoute := range result.HTTPRoutes {
 					key := utils.NamespacedName(httpRoute)
 					r.ProviderResources.HTTPRouteStatuses.Store(key, &httpRoute.Status)
-					message.PublishMetric(message.Metadata{
-						Runner:  r.Name(),
-						Message: message.HTTPRouteStatusMessageName,
-					})
-					delete(statusesToDelete.HTTPRouteStatusKeys, key)
+					httpRouteStatusCount++
+					delete(keysToDelete.HTTPRouteStatus, key)
+					r.keyCache.HTTPRouteStatus[key] = true
 				}
 				for _, grpcRoute := range result.GRPCRoutes {
 					key := utils.NamespacedName(grpcRoute)
 					r.ProviderResources.GRPCRouteStatuses.Store(key, &grpcRoute.Status)
-					message.PublishMetric(message.Metadata{
-						Runner:  r.Name(),
-						Message: message.GRPCRouteStatusMessageName,
-					})
-					delete(statusesToDelete.GRPCRouteStatusKeys, key)
+					grpcRouteStatusCount++
+					delete(keysToDelete.GRPCRouteStatus, key)
+					r.keyCache.GRPCRouteStatus[key] = true
 				}
 				for _, tlsRoute := range result.TLSRoutes {
 					key := utils.NamespacedName(tlsRoute)
 					r.ProviderResources.TLSRouteStatuses.Store(key, &tlsRoute.Status)
-					message.PublishMetric(message.Metadata{
-						Runner:  r.Name(),
-						Message: message.TLSRouteStatusMessageName,
-					})
-					delete(statusesToDelete.TLSRouteStatusKeys, key)
+					tlsRouteStatusCount++
+					delete(keysToDelete.TLSRouteStatus, key)
+					r.keyCache.TLSRouteStatus[key] = true
 				}
 				for _, tcpRoute := range result.TCPRoutes {
 					key := utils.NamespacedName(tcpRoute)
 					r.ProviderResources.TCPRouteStatuses.Store(key, &tcpRoute.Status)
-					message.PublishMetric(message.Metadata{
-						Runner:  r.Name(),
-						Message: message.TCPRouteStatusMessageName,
-					})
-					delete(statusesToDelete.TCPRouteStatusKeys, key)
+					tcpRouteStatusCount++
+					delete(keysToDelete.TCPRouteStatus, key)
+					r.keyCache.TCPRouteStatus[key] = true
 				}
 				for _, udpRoute := range result.UDPRoutes {
 					key := utils.NamespacedName(udpRoute)
 					r.ProviderResources.UDPRouteStatuses.Store(key, &udpRoute.Status)
-					message.PublishMetric(message.Metadata{
-						Runner:  r.Name(),
-						Message: message.UDPRouteStatusMessageName,
-					})
-					delete(statusesToDelete.UDPRouteStatusKeys, key)
+					udpRouteStatusCount++
+					delete(keysToDelete.UDPRouteStatus, key)
+					r.keyCache.UDPRouteStatus[key] = true
 				}
 
 				// Skip updating status for policies with empty status
@@ -279,98 +267,95 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 
 				for _, backendTLSPolicy := range result.BackendTLSPolicies {
 					key := utils.NamespacedName(backendTLSPolicy)
-					if !(reflect.ValueOf(backendTLSPolicy.Status).IsZero()) {
+					if len(backendTLSPolicy.Status.Ancestors) > 0 {
 						r.ProviderResources.BackendTLSPolicyStatuses.Store(key, &backendTLSPolicy.Status)
-						message.PublishMetric(message.Metadata{
-							Runner:  r.Name(),
-							Message: message.BackendTLSPolicyStatusMessageName,
-						})
+						backendTLSPolicyStatusCount++
 					}
-					delete(statusesToDelete.BackendTLSPolicyStatusKeys, key)
+					delete(keysToDelete.BackendTLSPolicyStatus, key)
+					r.keyCache.BackendTLSPolicyStatus[key] = true
 				}
 
 				for _, clientTrafficPolicy := range result.ClientTrafficPolicies {
 					key := utils.NamespacedName(clientTrafficPolicy)
-					if !(reflect.ValueOf(clientTrafficPolicy.Status).IsZero()) {
+					if len(clientTrafficPolicy.Status.Ancestors) > 0 {
 						r.ProviderResources.ClientTrafficPolicyStatuses.Store(key, &clientTrafficPolicy.Status)
-						message.PublishMetric(message.Metadata{
-							Runner:  r.Name(),
-							Message: message.ClientTrafficPolicyStatusMessageName,
-						})
+						clientTrafficPolicyStatusCount++
 					}
-					delete(statusesToDelete.ClientTrafficPolicyStatusKeys, key)
+					delete(keysToDelete.ClientTrafficPolicyStatus, key)
+					r.keyCache.ClientTrafficPolicyStatus[key] = true
 				}
 				for _, backendTrafficPolicy := range result.BackendTrafficPolicies {
 					key := utils.NamespacedName(backendTrafficPolicy)
-					if !(reflect.ValueOf(backendTrafficPolicy.Status).IsZero()) {
+					if len(backendTrafficPolicy.Status.Ancestors) > 0 {
 						r.ProviderResources.BackendTrafficPolicyStatuses.Store(key, &backendTrafficPolicy.Status)
-						message.PublishMetric(message.Metadata{
-							Runner:  r.Name(),
-							Message: message.BackendTrafficPolicyStatusMessageName,
-						})
+						backendTrafficPolicyStatusCount++
 					}
-					delete(statusesToDelete.BackendTrafficPolicyStatusKeys, key)
+					delete(keysToDelete.BackendTrafficPolicyStatus, key)
+					r.keyCache.BackendTrafficPolicyStatus[key] = true
 				}
 				for _, securityPolicy := range result.SecurityPolicies {
 					key := utils.NamespacedName(securityPolicy)
-					if !(reflect.ValueOf(securityPolicy.Status).IsZero()) {
+					if len(securityPolicy.Status.Ancestors) > 0 {
 						r.ProviderResources.SecurityPolicyStatuses.Store(key, &securityPolicy.Status)
-						message.PublishMetric(message.Metadata{
-							Runner:  r.Name(),
-							Message: message.SecurityPolicyStatusMessageName,
-						})
+						securityPolicyStatusCount++
 					}
-					delete(statusesToDelete.SecurityPolicyStatusKeys, key)
+					delete(keysToDelete.SecurityPolicyStatus, key)
+					r.keyCache.SecurityPolicyStatus[key] = true
 				}
 				for _, envoyExtensionPolicy := range result.EnvoyExtensionPolicies {
 					key := utils.NamespacedName(envoyExtensionPolicy)
-					if !(reflect.ValueOf(envoyExtensionPolicy.Status).IsZero()) {
+					if len(envoyExtensionPolicy.Status.Ancestors) > 0 {
 						r.ProviderResources.EnvoyExtensionPolicyStatuses.Store(key, &envoyExtensionPolicy.Status)
-						message.PublishMetric(message.Metadata{
-							Runner:  r.Name(),
-							Message: message.EnvoyExtensionPolicyStatusMessageName,
-						})
+						envoyExtensionPolicyStatusCount++
 					}
-					delete(statusesToDelete.EnvoyExtensionPolicyStatusKeys, key)
+					delete(keysToDelete.EnvoyExtensionPolicyStatus, key)
+					r.keyCache.EnvoyExtensionPolicyStatus[key] = true
 				}
 				for _, backend := range result.Backends {
 					key := utils.NamespacedName(backend)
-					if !(reflect.ValueOf(backend.Status).IsZero()) {
+					if len(backend.Status.Conditions) > 0 {
 						r.ProviderResources.BackendStatuses.Store(key, &backend.Status)
-						message.PublishMetric(message.Metadata{
-							Runner:  r.Name(),
-							Message: message.BackendStatusMessageName,
-						})
+						backendStatusCount++
 					}
-					delete(statusesToDelete.BackendStatusKeys, key)
+					delete(keysToDelete.BackendStatus, key)
+					r.keyCache.BackendStatus[key] = true
 				}
 				for _, extServerPolicy := range result.ExtensionServerPolicies {
 					key := message.NamespacedNameAndGVK{
 						NamespacedName:   utils.NamespacedName(&extServerPolicy),
 						GroupVersionKind: extServerPolicy.GroupVersionKind(),
 					}
-					if !(reflect.ValueOf(extServerPolicy.Object["status"]).IsZero()) {
-						policyStatus := unstructuredToPolicyStatus(extServerPolicy.Object["status"].(map[string]any))
-						r.ProviderResources.ExtensionPolicyStatuses.Store(key, &policyStatus)
-						message.PublishMetric(message.Metadata{
-							Runner:  r.Name(),
-							Message: message.ExtensionServerPoliciesStatusMessageName,
-						})
+					if statusObj, hasStatus := extServerPolicy.Object["status"]; hasStatus && statusObj != nil {
+						if statusMap, ok := statusObj.(map[string]any); ok && len(statusMap) > 0 {
+							policyStatus := unstructuredToPolicyStatus(statusMap)
+							r.ProviderResources.ExtensionPolicyStatuses.Store(key, &policyStatus)
+							extensionServerPolicyStatusCount++
+						}
 					}
-					delete(statusesToDelete.ExtensionServerPolicyStatusKeys, key)
+					delete(keysToDelete.ExtensionServerPolicyStatus, key)
+					r.keyCache.ExtensionServerPolicyStatus[key] = true
 				}
 			}
 
-			// Delete IR keys
-			// There is a 1:1 mapping between infra and xds IR keys
-			delKeys := getIRKeysToDelete(curIRKeys, newIRKeys)
-			for _, key := range delKeys {
-				r.InfraIR.Delete(key)
-				r.XdsIR.Delete(key)
-			}
+			// Publish aggregated metrics
+			message.PublishMetric(message.Metadata{Runner: r.Name(), Message: message.InfraIRMessageName}, infraIRCount)
+			message.PublishMetric(message.Metadata{Runner: r.Name(), Message: message.XDSIRMessageName}, xdsIRCount)
+			message.PublishMetric(message.Metadata{Runner: r.Name(), Message: message.GatewayStatusMessageName}, gatewayStatusCount)
+			message.PublishMetric(message.Metadata{Runner: r.Name(), Message: message.HTTPRouteStatusMessageName}, httpRouteStatusCount)
+			message.PublishMetric(message.Metadata{Runner: r.Name(), Message: message.GRPCRouteStatusMessageName}, grpcRouteStatusCount)
+			message.PublishMetric(message.Metadata{Runner: r.Name(), Message: message.TLSRouteStatusMessageName}, tlsRouteStatusCount)
+			message.PublishMetric(message.Metadata{Runner: r.Name(), Message: message.TCPRouteStatusMessageName}, tcpRouteStatusCount)
+			message.PublishMetric(message.Metadata{Runner: r.Name(), Message: message.UDPRouteStatusMessageName}, udpRouteStatusCount)
+			message.PublishMetric(message.Metadata{Runner: r.Name(), Message: message.BackendTLSPolicyStatusMessageName}, backendTLSPolicyStatusCount)
+			message.PublishMetric(message.Metadata{Runner: r.Name(), Message: message.ClientTrafficPolicyStatusMessageName}, clientTrafficPolicyStatusCount)
+			message.PublishMetric(message.Metadata{Runner: r.Name(), Message: message.BackendTrafficPolicyStatusMessageName}, backendTrafficPolicyStatusCount)
+			message.PublishMetric(message.Metadata{Runner: r.Name(), Message: message.SecurityPolicyStatusMessageName}, securityPolicyStatusCount)
+			message.PublishMetric(message.Metadata{Runner: r.Name(), Message: message.EnvoyExtensionPolicyStatusMessageName}, envoyExtensionPolicyStatusCount)
+			message.PublishMetric(message.Metadata{Runner: r.Name(), Message: message.BackendStatusMessageName}, backendStatusCount)
+			message.PublishMetric(message.Metadata{Runner: r.Name(), Message: message.ExtensionServerPoliciesStatusMessageName}, extensionServerPolicyStatusCount)
 
-			// Delete status keys
-			r.deleteStatusKeys(statusesToDelete)
+			// Delete keys using mark and sweep
+			r.deleteKeys(keysToDelete)
 		},
 	)
 	r.Logger.Info("shutting down")
@@ -416,205 +401,265 @@ func unstructuredToPolicyStatus(policyStatus map[string]any) gwapiv1a2.PolicySta
 	return ret
 }
 
-// deleteAllIRKeys deletes all XdsIR and InfraIR
-func (r *Runner) deleteAllIRKeys() {
-	for key := range r.InfraIR.LoadAll() {
+// deleteAllIRKeys deletes all XdsIR and InfraIR using tracked keys
+func (r *Runner) deleteAllKeys() {
+	// Delete IR keys
+	for key := range r.keyCache.IR {
 		r.InfraIR.Delete(key)
 		r.XdsIR.Delete(key)
 	}
-}
 
-type StatusesToDelete struct {
-	GatewayStatusKeys          map[types.NamespacedName]bool
-	HTTPRouteStatusKeys        map[types.NamespacedName]bool
-	GRPCRouteStatusKeys        map[types.NamespacedName]bool
-	TLSRouteStatusKeys         map[types.NamespacedName]bool
-	TCPRouteStatusKeys         map[types.NamespacedName]bool
-	UDPRouteStatusKeys         map[types.NamespacedName]bool
-	BackendTLSPolicyStatusKeys map[types.NamespacedName]bool
-
-	ClientTrafficPolicyStatusKeys   map[types.NamespacedName]bool
-	BackendTrafficPolicyStatusKeys  map[types.NamespacedName]bool
-	SecurityPolicyStatusKeys        map[types.NamespacedName]bool
-	EnvoyExtensionPolicyStatusKeys  map[types.NamespacedName]bool
-	ExtensionServerPolicyStatusKeys map[message.NamespacedNameAndGVK]bool
-
-	BackendStatusKeys map[types.NamespacedName]bool
-}
-
-func (r *Runner) getAllStatuses() *StatusesToDelete {
-	// Maps storing status keys to be deleted
-	ds := &StatusesToDelete{
-		GatewayStatusKeys:   make(map[types.NamespacedName]bool),
-		HTTPRouteStatusKeys: make(map[types.NamespacedName]bool),
-		GRPCRouteStatusKeys: make(map[types.NamespacedName]bool),
-		TLSRouteStatusKeys:  make(map[types.NamespacedName]bool),
-		TCPRouteStatusKeys:  make(map[types.NamespacedName]bool),
-		UDPRouteStatusKeys:  make(map[types.NamespacedName]bool),
-
-		ClientTrafficPolicyStatusKeys:   make(map[types.NamespacedName]bool),
-		BackendTrafficPolicyStatusKeys:  make(map[types.NamespacedName]bool),
-		SecurityPolicyStatusKeys:        make(map[types.NamespacedName]bool),
-		BackendTLSPolicyStatusKeys:      make(map[types.NamespacedName]bool),
-		EnvoyExtensionPolicyStatusKeys:  make(map[types.NamespacedName]bool),
-		ExtensionServerPolicyStatusKeys: make(map[message.NamespacedNameAndGVK]bool),
-
-		BackendStatusKeys: make(map[types.NamespacedName]bool),
-	}
-
-	// Get current status keys
-	for key := range r.ProviderResources.GatewayStatuses.LoadAll() {
-		ds.GatewayStatusKeys[key] = true
-	}
-	for key := range r.ProviderResources.HTTPRouteStatuses.LoadAll() {
-		ds.HTTPRouteStatusKeys[key] = true
-	}
-	for key := range r.ProviderResources.GRPCRouteStatuses.LoadAll() {
-		ds.GRPCRouteStatusKeys[key] = true
-	}
-	for key := range r.ProviderResources.TLSRouteStatuses.LoadAll() {
-		ds.TLSRouteStatusKeys[key] = true
-	}
-	for key := range r.ProviderResources.TCPRouteStatuses.LoadAll() {
-		ds.TCPRouteStatusKeys[key] = true
-	}
-	for key := range r.ProviderResources.UDPRouteStatuses.LoadAll() {
-		ds.UDPRouteStatusKeys[key] = true
-	}
-	for key := range r.ProviderResources.BackendTLSPolicyStatuses.LoadAll() {
-		ds.BackendTLSPolicyStatusKeys[key] = true
-	}
-
-	for key := range r.ProviderResources.ClientTrafficPolicyStatuses.LoadAll() {
-		ds.ClientTrafficPolicyStatusKeys[key] = true
-	}
-	for key := range r.ProviderResources.BackendTrafficPolicyStatuses.LoadAll() {
-		ds.BackendTrafficPolicyStatusKeys[key] = true
-	}
-	for key := range r.ProviderResources.SecurityPolicyStatuses.LoadAll() {
-		ds.SecurityPolicyStatusKeys[key] = true
-	}
-	for key := range r.ProviderResources.EnvoyExtensionPolicyStatuses.LoadAll() {
-		ds.EnvoyExtensionPolicyStatusKeys[key] = true
-	}
-	for key := range r.ProviderResources.BackendStatuses.LoadAll() {
-		ds.BackendStatusKeys[key] = true
-	}
-	return ds
-}
-
-func (r *Runner) deleteStatusKeys(ds *StatusesToDelete) {
-	for key := range ds.GatewayStatusKeys {
+	// Delete status keys
+	for key := range r.keyCache.GatewayStatus {
 		r.ProviderResources.GatewayStatuses.Delete(key)
-		delete(ds.GatewayStatusKeys, key)
 	}
-	for key := range ds.HTTPRouteStatusKeys {
+	for key := range r.keyCache.HTTPRouteStatus {
 		r.ProviderResources.HTTPRouteStatuses.Delete(key)
-		delete(ds.HTTPRouteStatusKeys, key)
 	}
-	for key := range ds.GRPCRouteStatusKeys {
+	for key := range r.keyCache.GRPCRouteStatus {
 		r.ProviderResources.GRPCRouteStatuses.Delete(key)
-		delete(ds.GRPCRouteStatusKeys, key)
 	}
-	for key := range ds.TLSRouteStatusKeys {
+	for key := range r.keyCache.TLSRouteStatus {
 		r.ProviderResources.TLSRouteStatuses.Delete(key)
-		delete(ds.TLSRouteStatusKeys, key)
 	}
-	for key := range ds.TCPRouteStatusKeys {
+	for key := range r.keyCache.TCPRouteStatus {
 		r.ProviderResources.TCPRouteStatuses.Delete(key)
-		delete(ds.TCPRouteStatusKeys, key)
 	}
-	for key := range ds.UDPRouteStatusKeys {
+	for key := range r.keyCache.UDPRouteStatus {
 		r.ProviderResources.UDPRouteStatuses.Delete(key)
-		delete(ds.UDPRouteStatusKeys, key)
 	}
-
-	for key := range ds.ClientTrafficPolicyStatusKeys {
-		r.ProviderResources.ClientTrafficPolicyStatuses.Delete(key)
-		delete(ds.ClientTrafficPolicyStatusKeys, key)
-	}
-	for key := range ds.BackendTrafficPolicyStatusKeys {
-		r.ProviderResources.BackendTrafficPolicyStatuses.Delete(key)
-		delete(ds.BackendTrafficPolicyStatusKeys, key)
-	}
-	for key := range ds.SecurityPolicyStatusKeys {
-		r.ProviderResources.SecurityPolicyStatuses.Delete(key)
-		delete(ds.SecurityPolicyStatusKeys, key)
-	}
-	for key := range ds.BackendTLSPolicyStatusKeys {
+	for key := range r.keyCache.BackendTLSPolicyStatus {
 		r.ProviderResources.BackendTLSPolicyStatuses.Delete(key)
-		delete(ds.BackendTLSPolicyStatusKeys, key)
 	}
-	for key := range ds.EnvoyExtensionPolicyStatusKeys {
+	for key := range r.keyCache.ClientTrafficPolicyStatus {
+		r.ProviderResources.ClientTrafficPolicyStatuses.Delete(key)
+	}
+	for key := range r.keyCache.BackendTrafficPolicyStatus {
+		r.ProviderResources.BackendTrafficPolicyStatuses.Delete(key)
+	}
+	for key := range r.keyCache.SecurityPolicyStatus {
+		r.ProviderResources.SecurityPolicyStatuses.Delete(key)
+	}
+	for key := range r.keyCache.EnvoyExtensionPolicyStatus {
 		r.ProviderResources.EnvoyExtensionPolicyStatuses.Delete(key)
-		delete(ds.EnvoyExtensionPolicyStatusKeys, key)
 	}
-	for key := range ds.ExtensionServerPolicyStatusKeys {
+	for key := range r.keyCache.ExtensionServerPolicyStatus {
 		r.ProviderResources.ExtensionPolicyStatuses.Delete(key)
-		delete(ds.ExtensionServerPolicyStatusKeys, key)
 	}
-	for key := range ds.BackendStatusKeys {
+	for key := range r.keyCache.BackendStatus {
 		r.ProviderResources.BackendStatuses.Delete(key)
-		delete(ds.BackendStatusKeys, key)
+	}
+
+	// Clear all tracking
+	r.keyCache = newKeyCache()
+}
+
+type KeyCache struct {
+	// IR keys
+	IR map[string]bool
+
+	// Status keys
+	GatewayStatus          map[types.NamespacedName]bool
+	HTTPRouteStatus        map[types.NamespacedName]bool
+	GRPCRouteStatus        map[types.NamespacedName]bool
+	TLSRouteStatus         map[types.NamespacedName]bool
+	TCPRouteStatus         map[types.NamespacedName]bool
+	UDPRouteStatus         map[types.NamespacedName]bool
+	BackendTLSPolicyStatus map[types.NamespacedName]bool
+
+	ClientTrafficPolicyStatus   map[types.NamespacedName]bool
+	BackendTrafficPolicyStatus  map[types.NamespacedName]bool
+	SecurityPolicyStatus        map[types.NamespacedName]bool
+	EnvoyExtensionPolicyStatus  map[types.NamespacedName]bool
+	ExtensionServerPolicyStatus map[message.NamespacedNameAndGVK]bool
+
+	BackendStatus map[types.NamespacedName]bool
+}
+
+// copy creates a deep copy of the KeyCache for mark-and-sweep deletion
+func (kc *KeyCache) copy() *KeyCache {
+	copied := newKeyCache()
+
+	// Copy IR keys
+	for key := range kc.IR {
+		copied.IR[key] = true
+	}
+
+	// Copy status keys
+	for key := range kc.GatewayStatus {
+		copied.GatewayStatus[key] = true
+	}
+	for key := range kc.HTTPRouteStatus {
+		copied.HTTPRouteStatus[key] = true
+	}
+	for key := range kc.GRPCRouteStatus {
+		copied.GRPCRouteStatus[key] = true
+	}
+	for key := range kc.TLSRouteStatus {
+		copied.TLSRouteStatus[key] = true
+	}
+	for key := range kc.TCPRouteStatus {
+		copied.TCPRouteStatus[key] = true
+	}
+	for key := range kc.UDPRouteStatus {
+		copied.UDPRouteStatus[key] = true
+	}
+	for key := range kc.BackendTLSPolicyStatus {
+		copied.BackendTLSPolicyStatus[key] = true
+	}
+	for key := range kc.ClientTrafficPolicyStatus {
+		copied.ClientTrafficPolicyStatus[key] = true
+	}
+	for key := range kc.BackendTrafficPolicyStatus {
+		copied.BackendTrafficPolicyStatus[key] = true
+	}
+	for key := range kc.SecurityPolicyStatus {
+		copied.SecurityPolicyStatus[key] = true
+	}
+	for key := range kc.EnvoyExtensionPolicyStatus {
+		copied.EnvoyExtensionPolicyStatus[key] = true
+	}
+	for key := range kc.ExtensionServerPolicyStatus {
+		copied.ExtensionServerPolicyStatus[key] = true
+	}
+	for key := range kc.BackendStatus {
+		copied.BackendStatus[key] = true
+	}
+
+	return copied
+}
+
+func newKeyCache() *KeyCache {
+	return &KeyCache{
+		IR:                          make(map[string]bool),
+		GatewayStatus:               make(map[types.NamespacedName]bool),
+		HTTPRouteStatus:             make(map[types.NamespacedName]bool),
+		GRPCRouteStatus:             make(map[types.NamespacedName]bool),
+		TLSRouteStatus:              make(map[types.NamespacedName]bool),
+		TCPRouteStatus:              make(map[types.NamespacedName]bool),
+		UDPRouteStatus:              make(map[types.NamespacedName]bool),
+		BackendTLSPolicyStatus:      make(map[types.NamespacedName]bool),
+		ClientTrafficPolicyStatus:   make(map[types.NamespacedName]bool),
+		BackendTrafficPolicyStatus:  make(map[types.NamespacedName]bool),
+		SecurityPolicyStatus:        make(map[types.NamespacedName]bool),
+		EnvoyExtensionPolicyStatus:  make(map[types.NamespacedName]bool),
+		ExtensionServerPolicyStatus: make(map[message.NamespacedNameAndGVK]bool),
+		BackendStatus:               make(map[types.NamespacedName]bool),
 	}
 }
 
-// deleteAllStatusKeys deletes all status keys stored by the subscriber.
-func (r *Runner) deleteAllStatusKeys() {
-	// Fields of GatewayAPIStatuses
-	for key := range r.ProviderResources.GatewayStatuses.LoadAll() {
-		r.ProviderResources.GatewayStatuses.Delete(key)
-	}
-	for key := range r.ProviderResources.HTTPRouteStatuses.LoadAll() {
-		r.ProviderResources.HTTPRouteStatuses.Delete(key)
-	}
-	for key := range r.ProviderResources.GRPCRouteStatuses.LoadAll() {
-		r.ProviderResources.GRPCRouteStatuses.Delete(key)
-	}
-	for key := range r.ProviderResources.TLSRouteStatuses.LoadAll() {
-		r.ProviderResources.TLSRouteStatuses.Delete(key)
-	}
-	for key := range r.ProviderResources.TCPRouteStatuses.LoadAll() {
-		r.ProviderResources.TCPRouteStatuses.Delete(key)
-	}
-	for key := range r.ProviderResources.UDPRouteStatuses.LoadAll() {
-		r.ProviderResources.UDPRouteStatuses.Delete(key)
-	}
-	for key := range r.ProviderResources.BackendTLSPolicyStatuses.LoadAll() {
-		r.ProviderResources.BackendTLSPolicyStatuses.Delete(key)
+// populateKeyCache initializes the keyCache with existing keys from watchable stores
+// This is needed for restart scenarios where stores may already contain data
+func (r *Runner) populateKeyCache() {
+	// Populate IR keys
+	for key := range r.InfraIR.LoadAll() {
+		r.keyCache.IR[key] = true
 	}
 
-	// Fields of PolicyStatuses
+	// Populate status keys
+	for key := range r.ProviderResources.GatewayStatuses.LoadAll() {
+		r.keyCache.GatewayStatus[key] = true
+	}
+	for key := range r.ProviderResources.HTTPRouteStatuses.LoadAll() {
+		r.keyCache.HTTPRouteStatus[key] = true
+	}
+	for key := range r.ProviderResources.GRPCRouteStatuses.LoadAll() {
+		r.keyCache.GRPCRouteStatus[key] = true
+	}
+	for key := range r.ProviderResources.TLSRouteStatuses.LoadAll() {
+		r.keyCache.TLSRouteStatus[key] = true
+	}
+	for key := range r.ProviderResources.TCPRouteStatuses.LoadAll() {
+		r.keyCache.TCPRouteStatus[key] = true
+	}
+	for key := range r.ProviderResources.UDPRouteStatuses.LoadAll() {
+		r.keyCache.UDPRouteStatus[key] = true
+	}
+	for key := range r.ProviderResources.BackendTLSPolicyStatuses.LoadAll() {
+		r.keyCache.BackendTLSPolicyStatus[key] = true
+	}
 	for key := range r.ProviderResources.ClientTrafficPolicyStatuses.LoadAll() {
-		r.ProviderResources.ClientTrafficPolicyStatuses.Delete(key)
+		r.keyCache.ClientTrafficPolicyStatus[key] = true
 	}
 	for key := range r.ProviderResources.BackendTrafficPolicyStatuses.LoadAll() {
-		r.ProviderResources.BackendTrafficPolicyStatuses.Delete(key)
+		r.keyCache.BackendTrafficPolicyStatus[key] = true
 	}
 	for key := range r.ProviderResources.SecurityPolicyStatuses.LoadAll() {
-		r.ProviderResources.SecurityPolicyStatuses.Delete(key)
+		r.keyCache.SecurityPolicyStatus[key] = true
 	}
 	for key := range r.ProviderResources.EnvoyExtensionPolicyStatuses.LoadAll() {
-		r.ProviderResources.EnvoyExtensionPolicyStatuses.Delete(key)
+		r.keyCache.EnvoyExtensionPolicyStatus[key] = true
 	}
 	for key := range r.ProviderResources.ExtensionPolicyStatuses.LoadAll() {
-		r.ProviderResources.ExtensionPolicyStatuses.Delete(key)
+		r.keyCache.ExtensionServerPolicyStatus[key] = true
 	}
 	for key := range r.ProviderResources.BackendStatuses.LoadAll() {
-		r.ProviderResources.BackendStatuses.Delete(key)
+		r.keyCache.BackendStatus[key] = true
 	}
 }
 
-// getIRKeysToDelete returns the list of IR keys to delete
-// based on the difference between the current keys and the
-// new keys parameters passed to the function.
-func getIRKeysToDelete(curKeys, newKeys []string) []string {
-	curSet := sets.NewString(curKeys...)
-	newSet := sets.NewString(newKeys...)
+func (r *Runner) deleteKeys(kc *KeyCache) {
+	// Delete IR keys
+	for key := range kc.IR {
+		r.InfraIR.Delete(key)
+		r.XdsIR.Delete(key)
+		delete(r.keyCache.IR, key)
+	}
 
-	delSet := curSet.Difference(newSet)
+	// Delete status keys
+	for key := range kc.GatewayStatus {
+		r.ProviderResources.GatewayStatuses.Delete(key)
+		delete(r.keyCache.GatewayStatus, key)
+	}
+	for key := range kc.HTTPRouteStatus {
+		r.ProviderResources.HTTPRouteStatuses.Delete(key)
+		delete(r.keyCache.HTTPRouteStatus, key)
+	}
+	for key := range kc.GRPCRouteStatus {
+		r.ProviderResources.GRPCRouteStatuses.Delete(key)
+		delete(r.keyCache.GRPCRouteStatus, key)
+	}
+	for key := range kc.TLSRouteStatus {
+		r.ProviderResources.TLSRouteStatuses.Delete(key)
+		delete(r.keyCache.TLSRouteStatus, key)
+	}
+	for key := range kc.TCPRouteStatus {
+		r.ProviderResources.TCPRouteStatuses.Delete(key)
+		delete(r.keyCache.TCPRouteStatus, key)
+	}
+	for key := range kc.UDPRouteStatus {
+		r.ProviderResources.UDPRouteStatuses.Delete(key)
+		delete(r.keyCache.UDPRouteStatus, key)
+	}
 
-	return delSet.List()
+	for key := range kc.ClientTrafficPolicyStatus {
+		r.ProviderResources.ClientTrafficPolicyStatuses.Delete(key)
+		delete(r.keyCache.ClientTrafficPolicyStatus, key)
+	}
+	for key := range kc.BackendTrafficPolicyStatus {
+		r.ProviderResources.BackendTrafficPolicyStatuses.Delete(key)
+		delete(r.keyCache.BackendTrafficPolicyStatus, key)
+	}
+	for key := range kc.SecurityPolicyStatus {
+		r.ProviderResources.SecurityPolicyStatuses.Delete(key)
+		delete(r.keyCache.SecurityPolicyStatus, key)
+	}
+	for key := range kc.BackendTLSPolicyStatus {
+		r.ProviderResources.BackendTLSPolicyStatuses.Delete(key)
+		delete(r.keyCache.BackendTLSPolicyStatus, key)
+	}
+	for key := range kc.EnvoyExtensionPolicyStatus {
+		r.ProviderResources.EnvoyExtensionPolicyStatuses.Delete(key)
+		delete(r.keyCache.EnvoyExtensionPolicyStatus, key)
+	}
+	for key := range kc.ExtensionServerPolicyStatus {
+		r.ProviderResources.ExtensionPolicyStatuses.Delete(key)
+		delete(r.keyCache.ExtensionServerPolicyStatus, key)
+	}
+	for key := range kc.BackendStatus {
+		r.ProviderResources.BackendStatuses.Delete(key)
+		delete(r.keyCache.BackendStatus, key)
+	}
 }
 
 // hmac returns the HMAC secret generated by the CertGen job.

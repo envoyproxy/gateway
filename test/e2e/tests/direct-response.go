@@ -31,9 +31,9 @@ var DirectResponseTest = suite.ConformanceTest{
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 
 			kubernetes.HTTPRouteMustHaveResolvedRefsConditionsTrue(t, suite.Client, suite.TimeoutConfig, routeNN, gwNN)
-			verifyCustomResponse(t, suite.TimeoutConfig, gwAddr, "/inline", "text/plain", "Oops! Your request is not found.", 200)
-			verifyCustomResponse(t, suite.TimeoutConfig, gwAddr, "/value-ref", "application/json", `{"error": "Internal Server Error"}`, 200)
-			verifyCustomResponse(t, suite.TimeoutConfig, gwAddr, "/401", "", ``, 401)
+			verifyCustomResponse(t, &suite.TimeoutConfig, gwAddr, "/inline", "text/plain", "Oops! Your request is not found.", 200)
+			verifyCustomResponse(t, &suite.TimeoutConfig, gwAddr, "/value-ref", "application/json", `{"error": "Internal Server Error"}`, 200)
+			verifyCustomResponse(t, &suite.TimeoutConfig, gwAddr, "/401", "", ``, 401)
 		})
 	},
 }

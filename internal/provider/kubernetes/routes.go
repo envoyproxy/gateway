@@ -36,10 +36,10 @@ func (r *gatewayAPIReconciler) processTLSRoutes(ctx context.Context, gatewayName
 		return err
 	}
 
-	for _, tlsRoute := range tlsRouteList.Items {
-		tlsRoute := tlsRoute //nolint:copyloopvar
+	for i := range tlsRouteList.Items {
+		tlsRoute := &tlsRouteList.Items[i]
 		if r.namespaceLabel != nil {
-			if ok, err := r.checkObjectNamespaceLabels(&tlsRoute); err != nil {
+			if ok, err := r.checkObjectNamespaceLabels(tlsRoute); err != nil {
 				r.log.Error(err, "failed to check namespace labels for TLSRoute %s in namespace %s: %w", tlsRoute.GetName(), tlsRoute.GetNamespace())
 				continue
 			} else if !ok {
@@ -47,7 +47,7 @@ func (r *gatewayAPIReconciler) processTLSRoutes(ctx context.Context, gatewayName
 			}
 		}
 
-		key := utils.NamespacedName(&tlsRoute).String()
+		key := utils.NamespacedName(tlsRoute).String()
 		if resourceMap.allAssociatedTLSRoutes.Has(key) {
 			r.log.Info("current TLSRoute has been processed already", "namespace", tlsRoute.Namespace, "name", tlsRoute.Name)
 			continue
@@ -81,7 +81,7 @@ func (r *gatewayAPIReconciler) processTLSRoutes(ctx context.Context, gatewayName
 		// Discard Status to reduce memory consumption in watchable
 		// It will be recomputed by the gateway-api layer
 		tlsRoute.Status = gwapiv1a2.TLSRouteStatus{}
-		resourceTree.TLSRoutes = append(resourceTree.TLSRoutes, &tlsRoute)
+		resourceTree.TLSRoutes = append(resourceTree.TLSRoutes, tlsRoute)
 	}
 
 	return nil
@@ -101,10 +101,10 @@ func (r *gatewayAPIReconciler) processGRPCRoutes(ctx context.Context, gatewayNam
 		return err
 	}
 
-	for _, grpcRoute := range grpcRouteList.Items {
-		grpcRoute := grpcRoute //nolint:copyloopvar
+	for i := range grpcRouteList.Items {
+		grpcRoute := &grpcRouteList.Items[i]
 		if r.namespaceLabel != nil {
-			if ok, err := r.checkObjectNamespaceLabels(&grpcRoute); err != nil {
+			if ok, err := r.checkObjectNamespaceLabels(grpcRoute); err != nil {
 				r.log.Error(err, "failed to check namespace labels for GRPCRoute %s in namespace %s: %w", grpcRoute.GetName(), grpcRoute.GetNamespace())
 				continue
 			} else if !ok {
@@ -112,7 +112,7 @@ func (r *gatewayAPIReconciler) processGRPCRoutes(ctx context.Context, gatewayNam
 			}
 		}
 
-		key := utils.NamespacedName(&grpcRoute).String()
+		key := utils.NamespacedName(grpcRoute).String()
 		if resourceMap.allAssociatedGRPCRoutes.Has(key) {
 			r.log.Info("current GRPCRoute has been processed already", "namespace", grpcRoute.Namespace, "name", grpcRoute.Name)
 			continue
@@ -189,7 +189,7 @@ func (r *gatewayAPIReconciler) processGRPCRoutes(ctx context.Context, gatewayNam
 		// Discard Status to reduce memory consumption in watchable
 		// It will be recomputed by the gateway-api layer
 		grpcRoute.Status = gwapiv1.GRPCRouteStatus{}
-		resourceTree.GRPCRoutes = append(resourceTree.GRPCRoutes, &grpcRoute)
+		resourceTree.GRPCRoutes = append(resourceTree.GRPCRoutes, grpcRoute)
 	}
 
 	return nil
@@ -228,10 +228,10 @@ func (r *gatewayAPIReconciler) processHTTPRoutes(ctx context.Context, gatewayNam
 		return err
 	}
 
-	for _, httpRoute := range httpRouteList.Items {
-		httpRoute := httpRoute //nolint:copyloopvar
+	for i := range httpRouteList.Items {
+		httpRoute := &httpRouteList.Items[i]
 		if r.namespaceLabel != nil {
-			if ok, err := r.checkObjectNamespaceLabels(&httpRoute); err != nil {
+			if ok, err := r.checkObjectNamespaceLabels(httpRoute); err != nil {
 				r.log.Error(err, "failed to check namespace labels for HTTPRoute %s in namespace %s: %w", httpRoute.GetName(), httpRoute.GetNamespace())
 				continue
 			} else if !ok {
@@ -239,7 +239,7 @@ func (r *gatewayAPIReconciler) processHTTPRoutes(ctx context.Context, gatewayNam
 			}
 		}
 
-		key := utils.NamespacedName(&httpRoute).String()
+		key := utils.NamespacedName(httpRoute).String()
 		if resourceMap.allAssociatedHTTPRoutes.Has(key) {
 			r.log.Info("current HTTPRoute has been processed already", "namespace", httpRoute.Namespace, "name", httpRoute.Name)
 			continue
@@ -270,19 +270,19 @@ func (r *gatewayAPIReconciler) processHTTPRoutes(ctx context.Context, gatewayNam
 						"httpRoute", httpRoute, "backendRef", backendRef.BackendObjectReference)
 				}
 
-				for i := range backendRef.Filters {
+				for j := range backendRef.Filters {
 					// Some of the validation logic in processHTTPRouteFilter is not needed for backendRef filters.
 					// However, we reuse the same function to avoid code duplication.
-					if err := r.processHTTPRouteFilter(ctx, &backendRef.Filters[i], &httpRoute, resourceMap, resourceTree); err != nil {
-						r.log.Error(err, "bypassing backendRef filter", "index", i)
+					if err := r.processHTTPRouteFilter(ctx, &backendRef.Filters[j], httpRoute, resourceMap, resourceTree); err != nil {
+						r.log.Error(err, "bypassing backendRef filter", "index", j)
 						continue
 					}
 				}
 			}
 
-			for i := range rule.Filters {
-				if err := r.processHTTPRouteFilter(ctx, &rule.Filters[i], &httpRoute, resourceMap, resourceTree); err != nil {
-					r.log.Error(err, "bypassing filter rule", "index", i)
+			for j := range rule.Filters {
+				if err := r.processHTTPRouteFilter(ctx, &rule.Filters[j], httpRoute, resourceMap, resourceTree); err != nil {
+					r.log.Error(err, "bypassing filter rule", "index", j)
 					continue
 				}
 			}
@@ -293,7 +293,7 @@ func (r *gatewayAPIReconciler) processHTTPRoutes(ctx context.Context, gatewayNam
 		// Discard Status to reduce memory consumption in watchable
 		// It will be recomputed by the gateway-api layer
 		httpRoute.Status = gwapiv1.HTTPRouteStatus{}
-		resourceTree.HTTPRoutes = append(resourceTree.HTTPRoutes, &httpRoute)
+		resourceTree.HTTPRoutes = append(resourceTree.HTTPRoutes, httpRoute)
 	}
 
 	return nil
@@ -306,7 +306,7 @@ func (r *gatewayAPIReconciler) processHTTPRouteFilter(
 	resourceMap *resourceMappings,
 	resourceTree *resource.Resources,
 ) error {
-	var extGKs []schema.GroupKind
+	extGKs := make([]schema.GroupKind, 0, len(r.extGVKs))
 	for _, gvk := range r.extGVKs {
 		extGKs = append(extGKs, gvk.GroupKind())
 	}
@@ -406,10 +406,10 @@ func (r *gatewayAPIReconciler) processTCPRoutes(ctx context.Context, gatewayName
 		return err
 	}
 
-	for _, tcpRoute := range tcpRouteList.Items {
-		tcpRoute := tcpRoute //nolint:copyloopvar
+	for i := range tcpRouteList.Items {
+		tcpRoute := &tcpRouteList.Items[i]
 		if r.namespaceLabel != nil {
-			if ok, err := r.checkObjectNamespaceLabels(&tcpRoute); err != nil {
+			if ok, err := r.checkObjectNamespaceLabels(tcpRoute); err != nil {
 				r.log.Error(err, "failed to check namespace labels for TCPRoute %s in namespace %s: %w", tcpRoute.GetName(), tcpRoute.GetNamespace())
 				continue
 			} else if !ok {
@@ -417,7 +417,7 @@ func (r *gatewayAPIReconciler) processTCPRoutes(ctx context.Context, gatewayName
 			}
 		}
 
-		key := utils.NamespacedName(&tcpRoute).String()
+		key := utils.NamespacedName(tcpRoute).String()
 		if resourceMap.allAssociatedTCPRoutes.Has(key) {
 			r.log.Info("current TCPRoute has been processed already", "namespace", tcpRoute.Namespace, "name", tcpRoute.Name)
 			continue
@@ -451,7 +451,7 @@ func (r *gatewayAPIReconciler) processTCPRoutes(ctx context.Context, gatewayName
 		// Discard Status to reduce memory consumption in watchable
 		// It will be recomputed by the gateway-api layer
 		tcpRoute.Status = gwapiv1a2.TCPRouteStatus{}
-		resourceTree.TCPRoutes = append(resourceTree.TCPRoutes, &tcpRoute)
+		resourceTree.TCPRoutes = append(resourceTree.TCPRoutes, tcpRoute)
 	}
 
 	return nil
@@ -470,10 +470,10 @@ func (r *gatewayAPIReconciler) processUDPRoutes(ctx context.Context, gatewayName
 		return err
 	}
 
-	for _, udpRoute := range udpRouteList.Items {
-		udpRoute := udpRoute //nolint:copyloopvar
+	for i := range udpRouteList.Items {
+		udpRoute := &udpRouteList.Items[i]
 		if r.namespaceLabel != nil {
-			if ok, err := r.checkObjectNamespaceLabels(&udpRoute); err != nil {
+			if ok, err := r.checkObjectNamespaceLabels(udpRoute); err != nil {
 				r.log.Error(err, "failed to check namespace labels for UDPRoute %s in namespace %s: %w", udpRoute.GetName(), udpRoute.GetNamespace())
 				continue
 			} else if !ok {
@@ -481,7 +481,7 @@ func (r *gatewayAPIReconciler) processUDPRoutes(ctx context.Context, gatewayName
 			}
 		}
 
-		key := utils.NamespacedName(&udpRoute).String()
+		key := utils.NamespacedName(udpRoute).String()
 		if resourceMap.allAssociatedUDPRoutes.Has(key) {
 			r.log.Info("current UDPRoute has been processed already", "namespace", udpRoute.Namespace, "name", udpRoute.Name)
 			continue
@@ -515,7 +515,7 @@ func (r *gatewayAPIReconciler) processUDPRoutes(ctx context.Context, gatewayName
 		// Discard Status to reduce memory consumption in watchable
 		// It will be recomputed by the gateway-api layer
 		udpRoute.Status = gwapiv1a2.UDPRouteStatus{}
-		resourceTree.UDPRoutes = append(resourceTree.UDPRoutes, &udpRoute)
+		resourceTree.UDPRoutes = append(resourceTree.UDPRoutes, udpRoute)
 	}
 
 	return nil

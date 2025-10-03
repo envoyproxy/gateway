@@ -17,7 +17,6 @@ import (
 	tlsv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 	resourcev3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"google.golang.org/protobuf/encoding/protojson"
-	"sigs.k8s.io/yaml"
 
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -68,17 +67,15 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, envoyPatchPolicies []*
 			// If Path and JSONPath is "" and op is "add", unmarshal and add the patch as a complete
 			// resource
 			if p.Operation.Op == ir.JSONPatchOpAdd && p.Operation.IsPathNilOrEmpty() && p.Operation.IsJSONPathNilOrEmpty() {
-				// Convert patch to JSON
-				// The patch library expects an array so convert it into one
-				y, err := yaml.Marshal(p.Operation.Value)
-				if err != nil {
-					tErr := fmt.Errorf("unable to marshal patch %+v, err: %s", p.Operation.Value, err.Error())
+				if p.Operation.Value == nil {
+					tErr := fmt.Errorf("missing value for add operation with empty path")
 					tErrs = errors.Join(tErrs, tErr)
 					continue
 				}
-				jsonBytes, err := yaml.YAMLToJSON(y)
-				if err != nil {
-					tErr := fmt.Errorf("unable to convert patch to json %s, err: %s", string(y), err.Error())
+
+				jsonBytes := p.Operation.Value.Raw
+				if len(jsonBytes) == 0 {
+					tErr := fmt.Errorf("empty value for add operation with empty path")
 					tErrs = errors.Join(tErrs, tErr)
 					continue
 				}
