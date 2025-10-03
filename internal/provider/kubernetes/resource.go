@@ -46,8 +46,8 @@ type resourceMappings struct {
 	allAssociatedTCPRoutes sets.Set[string]
 	// Set for storing UDPRoutes' NamespacedNames attaching to various Gateway objects.
 	allAssociatedUDPRoutes sets.Set[string]
-	// Set for storing backendRefs' BackendObjectReference referred by various Route objects.
-	allAssociatedBackendRefs sets.Set[gwapiv1.BackendObjectReference]
+	// Map caching BackendObjectReferences keyed by their normalized identifier.
+	allAssociatedBackendRefs map[utils.NamespacedNameWithGroupKind]gwapiv1.BackendObjectReference
 	// Set for storing ClientTrafficPolicies' NamespacedNames referred by various Route objects.
 	allAssociatedClientTrafficPolicies sets.Set[string]
 	// Set for storing BackendTrafficPolicies' NamespacedNames referred by various Route objects.
@@ -90,7 +90,7 @@ func newResourceMapping() *resourceMappings {
 		allAssociatedGRPCRoutes:                 sets.New[string](),
 		allAssociatedTCPRoutes:                  sets.New[string](),
 		allAssociatedUDPRoutes:                  sets.New[string](),
-		allAssociatedBackendRefs:                sets.New[gwapiv1.BackendObjectReference](),
+		allAssociatedBackendRefs:                make(map[utils.NamespacedNameWithGroupKind]gwapiv1.BackendObjectReference),
 		allAssociatedClientTrafficPolicies:      sets.New[string](),
 		allAssociatedBackendTrafficPolicies:     sets.New[string](),
 		allAssociatedSecurityPolicies:           sets.New[string](),
