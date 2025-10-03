@@ -32,6 +32,7 @@ bug fixes: |
   Fixed validation for grpc routes with extension ref filters.
   Fixed service account token handling in GatewayNamespaceMode to use SDS for properly refreshing expired token.
   Fixed handling of regex meta characters in prefix match replace for URL rewrite.
+  Disabled the default emission of `x-envoy-ratelimited` headers from the rate limit filter; re-enable with the `enableEnvoyHeaders` setting in ClientTrafficPolicy.
 
 # Enhancements that improve performance.
 performance improvements: |
