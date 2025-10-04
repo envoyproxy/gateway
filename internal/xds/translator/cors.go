@@ -125,7 +125,6 @@ func (*cors) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir.HTTPL
 	}
 
 	var (
-		allowOrigins     []*matcherv3.StringMatcher
 		allowMethods     string
 		allowHeaders     string
 		exposeHeaders    string
@@ -144,6 +143,7 @@ func (*cors) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir.HTTPL
 
 	//nolint:gocritic
 
+	allowOrigins := make([]*matcherv3.StringMatcher, 0, len(c.AllowOrigins))
 	for _, origin := range c.AllowOrigins {
 		allowOrigins = append(allowOrigins, buildXdsStringMatcher(origin))
 	}

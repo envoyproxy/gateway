@@ -1161,6 +1161,9 @@ type OIDC struct {
 	// may not be able to handle OIDC redirects and wish to directly supply a token instead.
 	PassThroughAuthHeader bool `json:"passThroughAuthHeader,omitempty"`
 
+	// DisableTokenEncryption disables encryption of ID and access tokens stored in cookies.
+	DisableTokenEncryption bool `json:"disableTokenEncryption,omitempty"`
+
 	// Any request that matches any of the provided matchers won't be redirected to OAuth server when tokens are not valid.
 	// Automatic access token refresh will be performed for these requests, if enabled.
 	// This behavior can be useful for AJAX requests.
