@@ -2,7 +2,6 @@ gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
   metadata:
-    creationTimestamp: null
     name: gateway-1
     namespace: envoy-gateway
   spec:
@@ -46,7 +45,6 @@ httpRoutes:
     annotations:
       gateway.envoyproxy.io/foo: bar
       k8s.io/bar: foo
-    creationTimestamp: null
     name: httproute-1
     namespace: default
   spec:
@@ -93,7 +91,6 @@ infraIR:
         apiVersion: gateway.envoyproxy.io/v1alpha1
         kind: EnvoyProxy
         metadata:
-          creationTimestamp: null
           name: test
           namespace: envoy-gateway-system
         spec:

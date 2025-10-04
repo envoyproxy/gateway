@@ -4,7 +4,6 @@ metadata:
   annotations:
     anno1: value1
     anno2: value2
-  creationTimestamp: null
   labels:
     app.kubernetes.io/component: proxy
     app.kubernetes.io/managed-by: envoy-gateway
@@ -36,7 +35,6 @@ spec:
         prometheus.io/path: /stats/prometheus
         prometheus.io/port: "19001"
         prometheus.io/scrape: "true"
-      creationTimestamp: null
       labels:
         app.kubernetes.io/component: proxy
         app.kubernetes.io/managed-by: envoy-gateway

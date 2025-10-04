@@ -2,7 +2,6 @@ backendTLSPolicies:
 - apiVersion: gateway.networking.k8s.io/v1alpha2
   kind: BackendTLSPolicy
   metadata:
-    creationTimestamp: null
     name: policy-btls-for-backend-1
     namespace: default
   spec:
@@ -33,7 +32,6 @@ backendTLSPolicies:
 - apiVersion: gateway.networking.k8s.io/v1alpha2
   kind: BackendTLSPolicy
   metadata:
-    creationTimestamp: null
     name: policy-btls-for-backend-3
     namespace: default
   spec:
@@ -59,7 +57,6 @@ backendTLSPolicies:
 - apiVersion: gateway.networking.k8s.io/v1alpha2
   kind: BackendTLSPolicy
   metadata:
-    creationTimestamp: null
     name: policy-btls-for-backend-4
     namespace: default
   spec:
@@ -86,7 +83,6 @@ backendTLSPolicies:
 - apiVersion: gateway.networking.k8s.io/v1alpha2
   kind: BackendTLSPolicy
   metadata:
-    creationTimestamp: null
     name: policy-btls-for-backend-6
     namespace: default
   spec:
@@ -104,7 +100,6 @@ backends:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: Backend
   metadata:
-    creationTimestamp: null
     name: backend-1
     namespace: default
   spec:
@@ -127,7 +122,6 @@ backends:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: Backend
   metadata:
-    creationTimestamp: null
     name: backend-2
     namespace: default
   spec:
@@ -150,7 +144,6 @@ backends:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: Backend
   metadata:
-    creationTimestamp: null
     name: backend-3
     namespace: default
   spec:
@@ -170,7 +163,6 @@ backends:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: Backend
   metadata:
-    creationTimestamp: null
     name: backend-4
     namespace: default
   spec:
@@ -190,7 +182,6 @@ backends:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: Backend
   metadata:
-    creationTimestamp: null
     name: backend-5
     namespace: default
   spec:
@@ -210,7 +201,6 @@ backends:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: Backend
   metadata:
-    creationTimestamp: null
     name: backend-6
     namespace: default
   spec:
@@ -231,7 +221,6 @@ gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
   metadata:
-    creationTimestamp: null
     name: gateway-1
     namespace: envoy-gateway
   spec:
@@ -272,7 +261,6 @@ httpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
   metadata:
-    creationTimestamp: null
     name: httproute-1
     namespace: default
   spec:
@@ -307,7 +295,6 @@ httpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
   metadata:
-    creationTimestamp: null
     name: httproute-2
     namespace: default
   spec:
@@ -342,7 +329,6 @@ httpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
   metadata:
-    creationTimestamp: null
     name: httproute-3
     namespace: default
   spec:
@@ -377,7 +363,6 @@ httpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
   metadata:
-    creationTimestamp: null
     name: httproute-4
     namespace: default
   spec:
@@ -413,7 +398,6 @@ httpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
   metadata:
-    creationTimestamp: null
     name: httproute-5
     namespace: default
   spec:
@@ -450,7 +434,6 @@ httpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
   metadata:
-    creationTimestamp: null
     name: httproute-6
     namespace: default
   spec:
@@ -492,7 +475,6 @@ infraIR:
         apiVersion: gateway.envoyproxy.io/v1alpha1
         kind: EnvoyProxy
         metadata:
-          creationTimestamp: null
           name: test
           namespace: envoy-gateway-system
         spec:

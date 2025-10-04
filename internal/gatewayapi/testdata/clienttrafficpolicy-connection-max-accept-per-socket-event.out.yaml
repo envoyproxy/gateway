@@ -2,7 +2,6 @@ clientTrafficPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: ClientTrafficPolicy
   metadata:
-    creationTimestamp: null
     name: non-default-max-accept
     namespace: envoy-gateway
   spec:
@@ -31,7 +30,6 @@ clientTrafficPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: ClientTrafficPolicy
   metadata:
-    creationTimestamp: null
     name: disabled-max-accept
     namespace: envoy-gateway
   spec:
@@ -60,7 +58,6 @@ clientTrafficPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: ClientTrafficPolicy
   metadata:
-    creationTimestamp: null
     name: default-max-accept
     namespace: envoy-gateway
   spec:
@@ -93,7 +90,6 @@ gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
   metadata:
-    creationTimestamp: null
     name: gateway-1
     namespace: envoy-gateway
   spec:
