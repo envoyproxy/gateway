@@ -2,6 +2,7 @@ date: Pending
 
 # Changes that are expected to cause an incompatibility with previous versions, such as deletions or modifications to existing APIs.
 breaking changes: |
+  ALPNProtocols in EnvoyProxy Backend TLS setting use [h2, http/1.1] if not set.
 
 # Updates addressing vulnerabilities, security flaws, or compliance requirements.
 security updates: |
@@ -12,6 +13,8 @@ new features: |
   Added support for RetryPolicy in gRPC ExtAuth callouts via SecurityPolicy backend settings fields.
   Added support for late response headers in ClientTrafficPolicy.
   Added max connection/stream duration and max requests per connection to ClientTrafficPolicy.
+  Added cacheDuration for remoteJWKS in SecurityPolicy.
+  Added support for DisableTokenEncryption in OIDC authn to disable encryption of ID and access tokens stored in cookies.
 
 bug fixes: |
   Fixed %ROUTE_KIND% operator to be lower-cased when used by clusterStatName in EnvoyProxy API.
@@ -28,6 +31,7 @@ bug fixes: |
   Fixed validation for grpc routes with extension ref filters.
   Fixed service account token handling in GatewayNamespaceMode to use SDS for properly refreshing expired token.
   Fixed handling of regex meta characters in prefix match replace for URL rewrite.
+  Disabled the default emission of `x-envoy-ratelimited` headers from the rate limit filter; re-enable with the `enableEnvoyHeaders` setting in ClientTrafficPolicy.
 
 # Enhancements that improve performance.
 performance improvements: |

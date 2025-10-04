@@ -10,7 +10,6 @@ import (
 	"crypto/tls"
 	"fmt"
 	"net"
-	"reflect"
 	"strconv"
 	"time"
 
@@ -270,7 +269,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *ir
 					// Skip updating status for policies with empty status
 					// They may have been skipped in this translation because
 					// their target is not found (not relevant)
-					if !(reflect.ValueOf(e.Status).IsZero()) {
+					if len(e.Status.Ancestors) > 0 {
 						r.ProviderResources.EnvoyPatchPolicyStatuses.Store(key, e.Status)
 					}
 					delete(statusesToDelete, key)

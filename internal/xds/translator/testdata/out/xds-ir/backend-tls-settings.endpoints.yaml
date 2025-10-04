@@ -1,0 +1,92 @@
+- clusterName: httproute/default/httproute-1/rule/0
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 1.1.1.1
+            portValue: 3001
+      loadBalancingWeight: 1
+      metadata:
+        filterMetadata:
+          envoy.transport_socket_match:
+            name: httproute/default/httproute-1/rule/0/tls/0
+    loadBalancingWeight: 1
+    locality:
+      region: httproute/default/httproute-1/rule/0/backend/0
+    metadata:
+      filterMetadata:
+        envoy-gateway:
+          resources:
+          - kind: Backend
+            name: backend-1
+            namespace: default
+- clusterName: httproute/default/httproute-2/rule/0
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 2.2.2.2
+            portValue: 3001
+      loadBalancingWeight: 1
+      metadata:
+        filterMetadata:
+          envoy.transport_socket_match:
+            name: httproute/default/httproute-2/rule/0/tls/0
+    loadBalancingWeight: 1
+    locality:
+      region: httproute/default/httproute-2/rule/0/backend/0
+    metadata:
+      filterMetadata:
+        envoy-gateway:
+          resources:
+          - kind: Backend
+            name: backend-2
+            namespace: default
+- clusterName: httproute/default/httproute-3/rule/0
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 3.3.3.3
+            portValue: 3001
+      loadBalancingWeight: 1
+      metadata:
+        filterMetadata:
+          envoy.transport_socket_match:
+            name: httproute/default/httproute-3/rule/0/tls/0
+    loadBalancingWeight: 1
+    locality:
+      region: httproute/default/httproute-3/rule/0/backend/0
+    metadata:
+      filterMetadata:
+        envoy-gateway:
+          resources:
+          - kind: Backend
+            name: backend-3
+            namespace: default
+- clusterName: httproute/default/httproute-4/rule/0
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 3.3.3.3
+            portValue: 3001
+      loadBalancingWeight: 1
+      metadata:
+        filterMetadata:
+          envoy.transport_socket_match:
+            name: httproute/default/httproute-4/rule/0/tls/0
+    loadBalancingWeight: 1
+    locality:
+      region: httproute/default/httproute-4/rule/0/backend/0
+    metadata:
+      filterMetadata:
+        envoy-gateway:
+          resources:
+          - kind: Backend
+            name: backend-4
+            namespace: default

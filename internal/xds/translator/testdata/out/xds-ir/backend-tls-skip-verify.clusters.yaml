@@ -21,6 +21,11 @@
             localityWeightedLbConfig: {}
   name: first-route-dest
   perConnectionBufferLimitBytes: 32768
+  transportSocket:
+    name: dummy.transport_socket
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+      commonTlsContext: {}
   transportSocketMatches:
   - match:
       name: first-route-dest/tls/0
@@ -31,3 +36,11 @@
         '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
         commonTlsContext: {}
   type: EDS
+  typedExtensionProtocolOptions:
+    envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
+      '@type': type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
+      autoConfig:
+        http2ProtocolOptions:
+          initialConnectionWindowSize: 1048576
+          initialStreamWindowSize: 65536
+        httpProtocolOptions: {}

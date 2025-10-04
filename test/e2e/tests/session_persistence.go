@@ -21,8 +21,7 @@ import (
 )
 
 func init() {
-	ConformanceTests = append(ConformanceTests, HeaderBasedSessionPersistenceTest)
-	ConformanceTests = append(ConformanceTests, CookieBasedSessionPersistenceTest)
+	ConformanceTests = append(ConformanceTests, HeaderBasedSessionPersistenceTest, CookieBasedSessionPersistenceTest)
 }
 
 var HeaderBasedSessionPersistenceTest = suite.ConformanceTest{

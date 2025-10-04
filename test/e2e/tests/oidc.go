@@ -59,7 +59,7 @@ var OIDCTest = suite.ConformanceTest{
 
 			podInitialized := corev1.PodCondition{Type: corev1.PodInitialized, Status: corev1.ConditionTrue}
 			// Wait for the keycloak pod to be configured with the test user and client
-			WaitForPods(t, suite.Client, ns, map[string]string{"job-name": "setup-keycloak"}, corev1.PodSucceeded, podInitialized)
+			WaitForPods(t, suite.Client, ns, map[string]string{"job-name": "setup-keycloak"}, corev1.PodSucceeded, &podInitialized)
 
 			// Apply the security policy that configures OIDC authentication
 			suite.Applier.MustApplyWithCleanup(t, suite.Client, suite.TimeoutConfig, "testdata/oidc-securitypolicy.yaml", true)
@@ -111,15 +111,7 @@ var OIDCTest = suite.ConformanceTest{
 				t.Run(tc.GetTestCaseName(i), func(t *testing.T) {
 					t.Parallel()
 
-					req := gwhttp.MakeRequest(t, &tc, gwAddr, "HTTP", "http")
-					cReq, cResp, err := suite.RoundTripper.CaptureRoundTrip(req)
-					if err != nil {
-						t.Errorf("failed to get expected response: %v", err)
-					}
-
-					if err := gwhttp.CompareRequest(t, &req, cReq, cResp, tc); err != nil {
-						t.Errorf("failed to compare request and response: %v", err)
-					}
+					gwhttp.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, tc)
 				})
 			}
 		})
@@ -137,7 +129,7 @@ func testOIDC(t *testing.T, suite *suite.ConformanceTestSuite, securityPolicyMan
 
 	podInitialized := corev1.PodCondition{Type: corev1.PodInitialized, Status: corev1.ConditionTrue}
 	// Wait for the keycloak pod to be configured with the test user and client
-	WaitForPods(t, suite.Client, ns, map[string]string{"job-name": "setup-keycloak"}, corev1.PodSucceeded, podInitialized)
+	WaitForPods(t, suite.Client, ns, map[string]string{"job-name": "setup-keycloak"}, corev1.PodSucceeded, &podInitialized)
 
 	// Apply the security policy that configures OIDC authentication
 	suite.Applier.MustApplyWithCleanup(t, suite.Client, suite.TimeoutConfig, securityPolicyManifest, true)
@@ -239,7 +231,7 @@ func testOIDC(t *testing.T, suite *suite.ConformanceTestSuite, securityPolicyMan
 	deletedCookies := res.Header.Values("Set-Cookie")
 	regx := regexp.MustCompile("^IdToken-.+=deleted.+")
 	for _, cookie := range deletedCookies {
-		if regx.Match([]byte(cookie)) {
+		if regx.MatchString(cookie) {
 			cookieDeleted = true
 		}
 	}

@@ -245,19 +245,19 @@ type CoreListenerDetails struct {
 	IPFamily *egv1a1.IPFamily `json:"ipFamily,omitempty" yaml:"ipFamily,omitempty"`
 }
 
-func (l CoreListenerDetails) GetName() string {
+func (l *CoreListenerDetails) GetName() string {
 	return l.Name
 }
 
-func (l CoreListenerDetails) GetAddress() string {
+func (l *CoreListenerDetails) GetAddress() string {
 	return l.Address
 }
 
-func (l CoreListenerDetails) GetPort() uint32 {
+func (l *CoreListenerDetails) GetPort() uint32 {
 	return l.Port
 }
 
-func (l CoreListenerDetails) GetExtensionRefs() []*UnstructuredRef {
+func (l *CoreListenerDetails) GetExtensionRefs() []*UnstructuredRef {
 	return l.ExtensionRefs
 }
 
@@ -311,7 +311,7 @@ type HTTPListener struct {
 }
 
 // Validate the fields within the HTTPListener structure
-func (h HTTPListener) Validate() error {
+func (h *HTTPListener) Validate() error {
 	var errs error
 	if h.Name == "" {
 		errs = errors.Join(errs, ErrListenerNameEmpty)
@@ -460,7 +460,7 @@ func (t TLSCertificate) Validate() error {
 }
 
 // Validate the fields within the TLSListenerConfig structure
-func (t TLSConfig) Validate() error {
+func (t *TLSConfig) Validate() error {
 	var errs error
 	for _, cert := range t.Certificates {
 		if err := cert.Validate(); err != nil {
@@ -1077,6 +1077,9 @@ type RemoteJWKS struct {
 	// URI is the HTTPS URI to fetch the JWKS. Envoy's system trust bundle is used to validate the server certificate.
 	// If a custom trust bundle is needed, it can be specified in a BackendTLSConfig resource and target the BackendRefs.
 	URI string `json:"uri"`
+
+	// Duration after which the cached JWKS should be expired. If not specified, default cache duration is 5 minutes.
+	CacheDuration *metav1.Duration `json:"cacheDuration,omitempty"`
 }
 
 // OIDC defines the schema for authenticating HTTP requests using
@@ -1157,6 +1160,9 @@ type OIDC struct {
 	// filter, normally "Authorization: Bearer ...". This is typically used for non-browser clients that
 	// may not be able to handle OIDC redirects and wish to directly supply a token instead.
 	PassThroughAuthHeader bool `json:"passThroughAuthHeader,omitempty"`
+
+	// DisableTokenEncryption disables encryption of ID and access tokens stored in cookies.
+	DisableTokenEncryption bool `json:"disableTokenEncryption,omitempty"`
 
 	// Any request that matches any of the provided matchers won't be redirected to OAuth server when tokens are not valid.
 	// Automatic access token refresh will be performed for these requests, if enabled.
@@ -2043,7 +2049,7 @@ type TLS struct {
 }
 
 // Validate the fields within the TCPListener structure
-func (t TCPListener) Validate() error {
+func (t *TCPListener) Validate() error {
 	var errs error
 	if t.Name == "" {
 		errs = errors.Join(errs, ErrListenerNameEmpty)
@@ -2062,7 +2068,7 @@ func (t TCPListener) Validate() error {
 	return errs
 }
 
-func (t TCPRoute) Validate() error {
+func (t *TCPRoute) Validate() error {
 	var errs error
 
 	if t.Name == "" {
@@ -2142,7 +2148,7 @@ type UDPRoute struct {
 }
 
 // Validate the fields within the UDPListener structure
-func (h UDPListener) Validate() error {
+func (h *UDPListener) Validate() error {
 	var errs error
 	if h.Name == "" {
 		errs = errors.Join(errs, ErrListenerNameEmpty)

@@ -39,13 +39,17 @@ func (t *Translator) ProcessBackendTrafficPolicies(resources *resource.Resources
 	routes []RouteContext,
 	xdsIR resource.XdsIRMap,
 ) []*egv1a1.BackendTrafficPolicy {
-	res := make([]*egv1a1.BackendTrafficPolicy, 0, len(resources.BackendTrafficPolicies))
-
 	backendTrafficPolicies := resources.BackendTrafficPolicies
 	// BackendTrafficPolicies are already sorted by the provider layer
 
+	routeMapSize := len(routes)
+	gatewayMapSize := len(gateways)
+	policyMapSize := len(backendTrafficPolicies)
+
+	res := make([]*egv1a1.BackendTrafficPolicy, 0, policyMapSize)
+
 	// First build a map out of the routes and gateways for faster lookup since users might have thousands of routes or more.
-	routeMap := map[policyTargetRouteKey]*policyRouteTargetContext{}
+	routeMap := make(map[policyTargetRouteKey]*policyRouteTargetContext, routeMapSize)
 	for _, route := range routes {
 		key := policyTargetRouteKey{
 			Kind:      string(route.GetRouteType()),
@@ -55,19 +59,19 @@ func (t *Translator) ProcessBackendTrafficPolicies(resources *resource.Resources
 		routeMap[key] = &policyRouteTargetContext{RouteContext: route}
 	}
 
-	gatewayMap := map[types.NamespacedName]*policyGatewayTargetContext{}
+	gatewayMap := make(map[types.NamespacedName]*policyGatewayTargetContext, gatewayMapSize)
 	for _, gw := range gateways {
 		key := utils.NamespacedName(gw)
 		gatewayMap[key] = &policyGatewayTargetContext{GatewayContext: gw}
 	}
 
 	// Map of Gateway to the routes attached to it
-	gatewayRouteMap := make(map[string]sets.Set[string])
+	gatewayRouteMap := make(map[string]sets.Set[string], gatewayMapSize)
 
-	handledPolicies := make(map[types.NamespacedName]*egv1a1.BackendTrafficPolicy)
+	handledPolicies := make(map[types.NamespacedName]*egv1a1.BackendTrafficPolicy, policyMapSize)
 
-	gatewayPolicyMap := make(map[types.NamespacedName]*egv1a1.BackendTrafficPolicy)
-	gatewayPolicyMerged := make(map[types.NamespacedName]sets.Set[string])
+	gatewayPolicyMap := make(map[types.NamespacedName]*egv1a1.BackendTrafficPolicy, gatewayMapSize)
+	gatewayPolicyMerged := make(map[types.NamespacedName]sets.Set[string], gatewayMapSize)
 
 	// Translate
 	// 1. First translate Policies targeting xRoutes
@@ -526,7 +530,7 @@ func applyTrafficFeatureToRoute(route RouteContext,
 
 				r.Traffic = tf.DeepCopy()
 
-				if localTo, err := buildClusterSettingsTimeout(policy.Spec.ClusterSettings); err == nil {
+				if localTo, err := buildClusterSettingsTimeout(&policy.Spec.ClusterSettings); err == nil {
 					r.Traffic.Timeout = localTo
 				}
 
@@ -576,20 +580,20 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy, r
 			errs = errors.Join(errs, err)
 		}
 	}
-	if lb, err = buildLoadBalancer(policy.Spec.ClusterSettings); err != nil {
+	if lb, err = buildLoadBalancer(&policy.Spec.ClusterSettings); err != nil {
 		err = perr.WithMessage(err, "LoadBalancer")
 		errs = errors.Join(errs, err)
 	}
-	pp = buildProxyProtocol(policy.Spec.ClusterSettings)
-	hc = buildHealthCheck(policy.Spec.ClusterSettings)
-	if cb, err = buildCircuitBreaker(policy.Spec.ClusterSettings); err != nil {
+	pp = buildProxyProtocol(&policy.Spec.ClusterSettings)
+	hc = buildHealthCheck(&policy.Spec.ClusterSettings)
+	if cb, err = buildCircuitBreaker(&policy.Spec.ClusterSettings); err != nil {
 		err = perr.WithMessage(err, "CircuitBreaker")
 		errs = errors.Join(errs, err)
 	}
 	if policy.Spec.FaultInjection != nil {
 		fi = t.buildFaultInjection(policy)
 	}
-	if ka, err = buildTCPKeepAlive(policy.Spec.ClusterSettings); err != nil {
+	if ka, err = buildTCPKeepAlive(&policy.Spec.ClusterSettings); err != nil {
 		err = perr.WithMessage(err, "TCPKeepalive")
 		errs = errors.Join(errs, err)
 	}
@@ -599,12 +603,12 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy, r
 		errs = errors.Join(errs, err)
 	}
 
-	if to, err = buildClusterSettingsTimeout(policy.Spec.ClusterSettings); err != nil {
+	if to, err = buildClusterSettingsTimeout(&policy.Spec.ClusterSettings); err != nil {
 		err = perr.WithMessage(err, "Timeout")
 		errs = errors.Join(errs, err)
 	}
 
-	if bc, err = buildBackendConnection(policy.Spec.ClusterSettings); err != nil {
+	if bc, err = buildBackendConnection(&policy.Spec.ClusterSettings); err != nil {
 		err = perr.WithMessage(err, "BackendConnection")
 		errs = errors.Join(errs, err)
 	}
@@ -627,7 +631,7 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy, r
 	cp = buildCompression(policy.Spec.Compression)
 	httpUpgrade = buildHTTPProtocolUpgradeConfig(policy.Spec.HTTPUpgrade)
 
-	ds = translateDNS(policy.Spec.ClusterSettings)
+	ds = translateDNS(&policy.Spec.ClusterSettings)
 
 	return &ir.TrafficFeatures{
 		RateLimit:         rl,
@@ -734,7 +738,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 			// Update the Host field in HealthCheck, now that we have access to the Route Hostname.
 			r.Traffic.HealthCheck.SetHTTPHostIfAbsent(r.Hostname)
 
-			if ct, err := buildClusterSettingsTimeout(policy.Spec.ClusterSettings); err == nil {
+			if ct, err := buildClusterSettingsTimeout(&policy.Spec.ClusterSettings); err == nil {
 				r.Traffic.Timeout = ct
 			}
 

@@ -637,7 +637,7 @@ func TestDeployment(t *testing.T) {
 		{
 			caseName:  "with-extra-args",
 			infra:     newTestInfra(),
-			extraArgs: []string{"--key1 val1", "--key2 val2"},
+			extraArgs: []string{"--key1", "val1", "--key2", "val2"},
 		},
 		{
 			caseName: "with-empty-memory-limits",
@@ -1118,7 +1118,7 @@ func TestDaemonSet(t *testing.T) {
 		{
 			caseName:  "with-extra-args",
 			infra:     newTestInfra(),
-			extraArgs: []string{"--key1 val1", "--key2 val2"},
+			extraArgs: []string{"--key1", "val1", "--key2", "val2"},
 		},
 		{
 			caseName: "with-name",

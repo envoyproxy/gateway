@@ -1,0 +1,30 @@
+date: October 2, 2025
+
+# Changes that are expected to cause an incompatibility with previous versions, such as deletions or modifications to existing APIs.
+breaking changes: |
+
+# Updates addressing vulnerabilities, security flaws, or compliance requirements.
+security updates: |
+  Updated distroless image to resolve glibc CVEs.
+  Bumped Go version to 1.24.7.
+
+# New features or capabilities added in this release.
+new features: |
+
+bug fixes: |
+  Fixed service account token handling in GatewayNamespaceMode to use SDS for properly refreshing expired token.
+  Fixed preserve route parent status for multi-parent routes.
+  Fixed weighted cluster generation in RouteAction when URLRewrite filter is applied.
+  Fixed handling of regex meta characters in prefix match replace for URL rewrite.
+  Disabled the default emission of `x-envoy-ratelimited` headers from the rate limit filter; re-enable with the `enableEnvoyHeaders` setting in ClientTrafficPolicy.
+  Fixed race condition when accessing `mergeGateways` set.
+
+# Enhancements that improve performance.
+performance improvements: |
+  Optimized memory usage of control plane.
+
+# Deprecated features or APIs.
+deprecations: |
+
+# Other notable changes not covered by the above sections.
+Other changes: |

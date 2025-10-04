@@ -373,7 +373,11 @@ func celAccessLogFilter(expr string) (*accesslog.AccessLogFilter, error) {
 
 func buildAccessLogFilter(exprs []string, withNoRouteMatchFilter bool) (*accesslog.AccessLogFilter, error) {
 	// add filter for access logs
-	var filters []*accesslog.AccessLogFilter
+	capacity := len(exprs)
+	if withNoRouteMatchFilter {
+		capacity++
+	}
+	filters := make([]*accesslog.AccessLogFilter, 0, capacity)
 	for _, expr := range exprs {
 		fl, err := celAccessLogFilter(expr)
 		if err != nil {
@@ -476,15 +480,16 @@ func convertToKeyValueList(attributes map[string]string, additionalLabels bool) 
 	// so we set these on attributes that read from the environment.
 	if additionalLabels {
 		// TODO: check the provider type and set the appropriate attributes
-		keyValueList.Values = append(keyValueList.Values, &otlpcommonv1.KeyValue{
-			Key:   k8sNamespaceNameKey,
-			Value: &otlpcommonv1.AnyValue{Value: &otlpcommonv1.AnyValue_StringValue{StringValue: "%ENVIRONMENT(ENVOY_POD_NAMESPACE)%"}},
-		})
-
-		keyValueList.Values = append(keyValueList.Values, &otlpcommonv1.KeyValue{
-			Key:   k8sPodNameKey,
-			Value: &otlpcommonv1.AnyValue{Value: &otlpcommonv1.AnyValue_StringValue{StringValue: "%ENVIRONMENT(ENVOY_POD_NAME)%"}},
-		})
+		keyValueList.Values = append(keyValueList.Values,
+			&otlpcommonv1.KeyValue{
+				Key:   k8sNamespaceNameKey,
+				Value: &otlpcommonv1.AnyValue{Value: &otlpcommonv1.AnyValue_StringValue{StringValue: "%ENVIRONMENT(ENVOY_POD_NAMESPACE)%"}},
+			},
+			&otlpcommonv1.KeyValue{
+				Key:   k8sPodNameKey,
+				Value: &otlpcommonv1.AnyValue{Value: &otlpcommonv1.AnyValue_StringValue{StringValue: "%ENVIRONMENT(ENVOY_POD_NAME)%"}},
+			},
+		)
 	}
 
 	if len(attributes) == 0 {

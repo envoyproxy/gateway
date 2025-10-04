@@ -160,7 +160,7 @@ func (s *HTTPServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // and the checksum of the Wasm module.
 // EG downloads the Wasm module from its original URL, caches it locally in the
 // file system, and serves it through an HTTP server.
-func (s *HTTPServer) Get(originalURL string, opts GetOptions) (servingURL, checksum string, err error) {
+func (s *HTTPServer) Get(originalURL string, opts *GetOptions) (servingURL, checksum string, err error) {
 	var (
 		mappingPath string
 		localFile   string

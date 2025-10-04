@@ -157,6 +157,7 @@ securityPolicies:
       cookieDomain: example.com
       defaultRefreshTokenTTL: 48h
       defaultTokenTTL: 1h
+      disableTokenEncryption: true
       forwardAccessToken: true
       logoutPath: /foo/logout
       provider:
@@ -314,6 +315,7 @@ xdsIR:
             cookieSuffix: 5f93c2e4
             defaultRefreshTokenTTL: 48h0m0s
             defaultTokenTTL: 1h0m0s
+            disableTokenEncryption: true
             forwardAccessToken: true
             hmacSecret: '[redacted]'
             logoutPath: /foo/logout

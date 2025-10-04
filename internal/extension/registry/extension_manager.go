@@ -87,7 +87,7 @@ func NewManager(cfg *config.Server, inK8s bool) (extTypes.Manager, error) {
 	}, nil
 }
 
-func NewInMemoryManager(cfg egv1a1.ExtensionManager, server extension.EnvoyGatewayExtensionServer) (extTypes.Manager, func(), error) {
+func NewInMemoryManager(cfg *egv1a1.ExtensionManager, server extension.EnvoyGatewayExtensionServer) (extTypes.Manager, func(), error) {
 	if server == nil {
 		return nil, nil, fmt.Errorf("in-memory manager must be passed a server")
 	}
@@ -109,7 +109,7 @@ func NewInMemoryManager(cfg egv1a1.ExtensionManager, server extension.EnvoyGatew
 	}
 
 	if cfg.Service != nil {
-		opts, err := setupGRPCOpts(context.Background(), nil, &cfg, "")
+		opts, err := setupGRPCOpts(context.Background(), nil, cfg, "")
 		if err != nil {
 			return nil, nil, err
 		}
@@ -127,7 +127,7 @@ func NewInMemoryManager(cfg egv1a1.ExtensionManager, server extension.EnvoyGatew
 
 	return &Manager{
 		extensionConnCache: conn,
-		extension:          cfg,
+		extension:          *cfg,
 	}, c, nil
 }
 
