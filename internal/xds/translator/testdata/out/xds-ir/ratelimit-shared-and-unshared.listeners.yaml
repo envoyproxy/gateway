@@ -119,6 +119,7 @@
         - name: envoy.filters.http.ratelimit
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.ratelimit.v3.RateLimit
+            disableXEnvoyRatelimitedHeader: true
             domain: envoy-gateway/gateway-1/http
             enableXRatelimitHeaders: DRAFT_VERSION_03
             rateLimitService:
@@ -129,6 +130,7 @@
         - name: envoy.filters.http.ratelimit/default/policy-for-route
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.ratelimit.v3.RateLimit
+            disableXEnvoyRatelimitedHeader: true
             domain: default/policy-for-route
             enableXRatelimitHeaders: DRAFT_VERSION_03
             rateLimitService:
