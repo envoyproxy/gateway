@@ -110,19 +110,21 @@ func (t *Translator) processHTTPRouteParentRefs(httpRoute *HTTPRouteContext, res
 		// Need to compute Route rules within the parentRef loop because
 		// any conditions that come out of it have to go on each RouteParentStatus,
 		// not on the Route as a whole.
-		routeRoutes, err := t.processHTTPRouteRules(httpRoute, parentRef, resources)
+		routeRoutes, errs := t.processHTTPRouteRules(httpRoute, parentRef, resources)
 		// TODO: zhaohuabing: according to the gateway api, the RouteConditionPartiallyInvalid condition should be set
 		// to true when an HTTPRoute contains a combination of both valid and invalid rules.
-		if err != nil {
+		if len(errs) > 0 {
 			routeStatus := GetRouteStatus(httpRoute)
-			status.SetRouteStatusCondition(routeStatus,
-				parentRef.routeParentStatusIdx,
-				httpRoute.GetGeneration(),
-				err.Type(),
-				metav1.ConditionFalse,
-				err.Reason(),
-				status.Error2ConditionMsg(err),
-			)
+			for _, err := range errs {
+				status.SetRouteStatusCondition(routeStatus,
+					parentRef.routeParentStatusIdx,
+					httpRoute.GetGeneration(),
+					err.Type(),
+					metav1.ConditionFalse,
+					err.Reason(),
+					status.Error2ConditionMsg(err),
+				)
+			}
 		}
 
 		// If no negative condition has been set for ResolvedRefs, set "ResolvedRefs=True"
@@ -173,7 +175,7 @@ func (t *Translator) processHTTPRouteParentRefs(httpRoute *HTTPRouteContext, res
 	}
 }
 
-func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRef *RouteParentContext, resources *resource.Resources) ([]*ir.HTTPRoute, status.Error) {
+func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRef *RouteParentContext, resources *resource.Resources) ([]*ir.HTTPRoute, []status.Error) {
 	var (
 		irRoutes []*ir.HTTPRoute
 		errs     = &status.MultiStatusError{}
@@ -230,6 +232,10 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 				// Gateway API conformance: When backendRef Service exists but has no endpoints,
 				// the ResolvedRefs condition should NOT be set to False.
 				if err.Reason() == status.RouteReasonEndpointsNotFound {
+					errs.Add(status.NewRouteStatusError(
+						fmt.Errorf("failed to process route rule %d backendRef %d: %w", ruleIdx, i, err),
+						err.Reason(),
+					).WithType(status.RouteConditionBackendsAvailable))
 					failedNoReadyEndpoints = true
 				} else {
 					errs.Add(status.NewRouteStatusError(
@@ -323,7 +329,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 	if errs.Empty() {
 		return irRoutes, nil
 	}
-	return irRoutes, errs
+	return irRoutes, errs.GroupByType()
 }
 
 func processRouteTrafficFeatures(irRoute *ir.HTTPRoute, rule *gwapiv1.HTTPRouteRule) {
@@ -592,17 +598,19 @@ func (t *Translator) processGRPCRouteParentRefs(grpcRoute *GRPCRouteContext, res
 		// Need to compute Route rules within the parentRef loop because
 		// any conditions that come out of it have to go on each RouteParentStatus,
 		// not on the Route as a whole.
-		routeRoutes, err := t.processGRPCRouteRules(grpcRoute, parentRef, resources)
-		if err != nil {
+		routeRoutes, errs := t.processGRPCRouteRules(grpcRoute, parentRef, resources)
+		if len(errs) > 0 {
 			routeStatus := GetRouteStatus(grpcRoute)
-			status.SetRouteStatusCondition(routeStatus,
-				parentRef.routeParentStatusIdx,
-				grpcRoute.GetGeneration(),
-				err.Type(),
-				metav1.ConditionFalse,
-				err.Reason(),
-				status.Error2ConditionMsg(err),
-			)
+			for _, err := range errs {
+				status.SetRouteStatusCondition(routeStatus,
+					parentRef.routeParentStatusIdx,
+					grpcRoute.GetGeneration(),
+					err.Type(),
+					metav1.ConditionFalse,
+					err.Reason(),
+					status.Error2ConditionMsg(err),
+				)
+			}
 		}
 
 		// If no negative condition has been set for ResolvedRefs, set "ResolvedRefs=True"
@@ -651,7 +659,7 @@ func (t *Translator) processGRPCRouteParentRefs(grpcRoute *GRPCRouteContext, res
 	}
 }
 
-func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRef *RouteParentContext, resources *resource.Resources) ([]*ir.HTTPRoute, status.Error) {
+func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRef *RouteParentContext, resources *resource.Resources) ([]*ir.HTTPRoute, []status.Error) {
 	var (
 		irRoutes []*ir.HTTPRoute
 		errs     = &status.MultiStatusError{}
@@ -698,6 +706,10 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 				// Gateway API conformance: When backendRef Service exists but has no endpoints,
 				// the ResolvedRefs condition should NOT be set to False.
 				if err.Reason() == status.RouteReasonEndpointsNotFound {
+					errs.Add(status.NewRouteStatusError(
+						fmt.Errorf("failed to process route rule %d backendRef %d: %w", ruleIdx, i, err),
+						err.Reason(),
+					).WithType(status.RouteConditionBackendsAvailable))
 					failedNoReadyEndpoints = true
 				} else {
 					errs.Add(status.NewRouteStatusError(
@@ -767,7 +779,7 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 	if errs.Empty() {
 		return irRoutes, nil
 	}
-	return irRoutes, errs
+	return irRoutes, errs.GroupByType()
 }
 
 func (t *Translator) processGRPCRouteRule(grpcRoute *GRPCRouteContext, ruleIdx int, httpFiltersContext *HTTPFiltersContext, rule *gwapiv1.GRPCRouteRule) ([]*ir.HTTPRoute, status.Error) {

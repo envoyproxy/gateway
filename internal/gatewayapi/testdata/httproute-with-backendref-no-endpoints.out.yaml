@@ -67,6 +67,12 @@ httpRoutes:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
+        message: 'Failed to process route rule 0 backendRef 0: no ready endpoints
+          for the related Service default/service-with-no-endpoints.'
+        reason: EndpointsNotFound
+        status: "False"
+        type: BackendsAvailable
+      - lastTransitionTime: null
         message: Resolved all the Object references for the Route
         reason: ResolvedRefs
         status: "True"

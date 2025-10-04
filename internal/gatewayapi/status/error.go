@@ -6,6 +6,7 @@
 package status
 
 import (
+	"errors"
 	"sort"
 	"strings"
 
@@ -29,6 +30,9 @@ const (
 	RouteReasonUnsupportedAddressType gwapiv1.RouteConditionReason = "UnsupportedAddressType"
 	RouteReasonInvalidAddress         gwapiv1.RouteConditionReason = "InvalidAddress"
 	RouteReasonEndpointsNotFound      gwapiv1.RouteConditionReason = "EndpointsNotFound"
+
+	// Network configuration related condition types
+	RouteConditionBackendsAvailable gwapiv1.RouteConditionType = "BackendsAvailable"
 )
 
 // Error is an error interface that represents errors that need to be reflected
@@ -84,7 +88,7 @@ func (s *RouteStatusError) Reason() gwapiv1.RouteConditionReason {
 // Type returns the route condition type associated with this error.
 func (s *RouteStatusError) Type() gwapiv1.RouteConditionType {
 	// Default to ResolvedRefs because it's the most common type.
-	if s == nil {
+	if s == nil || s.RouteConditionType == "" {
 		return gwapiv1.RouteConditionResolvedRefs
 	}
 	return s.RouteConditionType
@@ -168,6 +172,36 @@ func (m *MultiStatusError) Type() gwapiv1.RouteConditionType {
 		}
 	}
 	return gwapiv1.RouteConditionResolvedRefs
+}
+
+// GroupByType groups all errors by their condition type and returns a slice of errors,
+// one for each unique type. Each returned error consolidates all errors of that type,
+// combining their messages and reasons into a single error.
+//
+// For example, if there are multiple "ResolvedRefs" errors and multiple "BackendsAvailable" errors,
+// this method will return two errors: one containing all "ResolvedRefs" errors merged together,
+// and another containing all "BackendsAvailable" errors merged together.
+func (m *MultiStatusError) GroupByType() []Error {
+	if m == nil || len(m.errs) == 0 {
+		return nil
+	}
+
+	typeMap := make(map[gwapiv1.RouteConditionType]*MultiStatusError)
+	for _, err := range m.errs {
+		condType, exists := typeMap[err.Type()]
+		if !exists {
+			typeMap[err.Type()] = &MultiStatusError{errs: []Error{err}}
+			continue
+		}
+		condType.Add(err)
+	}
+
+	result := make([]Error, 0, len(typeMap))
+	for condType, errs := range typeMap {
+		err := NewRouteStatusError(errors.New(errs.Error()), errs.Reason()).WithType(condType)
+		result = append(result, err)
+	}
+	return result
 }
 
 func isAcceptedReason(reason gwapiv1.RouteConditionReason) bool {
