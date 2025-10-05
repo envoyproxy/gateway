@@ -2,7 +2,6 @@ gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
   metadata:
-    creationTimestamp: null
     name: gateway-1
     namespace: envoy-gateway
   spec:
@@ -61,7 +60,6 @@ tcpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1alpha2
   kind: TCPRoute
   metadata:
-    creationTimestamp: null
     name: tcproute-1
     namespace: default
   spec:
@@ -92,7 +90,6 @@ tcpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1alpha2
   kind: TCPRoute
   metadata:
-    creationTimestamp: null
     name: tcproute-2
     namespace: default
   spec:

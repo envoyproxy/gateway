@@ -2,7 +2,6 @@ envoyExtensionPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: EnvoyExtensionPolicy
   metadata:
-    creationTimestamp: null
     name: target-gateway-with-route-level-override-truncated-ancestors
     namespace: envoy-gateway
   spec:
@@ -222,7 +221,6 @@ envoyExtensionPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: EnvoyExtensionPolicy
   metadata:
-    creationTimestamp: null
     name: target-httproute-with-attachment-conflict-truncated-ancestors
     namespace: envoy-gateway
   spec:
@@ -449,7 +447,6 @@ envoyExtensionPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: EnvoyExtensionPolicy
   metadata:
-    creationTimestamp: null
     name: target-httproute-with-accepted-truncated-ancestors
     namespace: envoy-gateway
   spec:
@@ -661,7 +658,6 @@ gateways:
 - apiVersion: gateway.networking.k8s.io/v1beta1
   kind: Gateway
   metadata:
-    creationTimestamp: null
     name: gateway-1
     namespace: envoy-gateway
   spec:
@@ -701,7 +697,6 @@ gateways:
 - apiVersion: gateway.networking.k8s.io/v1beta1
   kind: Gateway
   metadata:
-    creationTimestamp: null
     name: gateway-2
     namespace: envoy-gateway
   spec:
@@ -741,7 +736,6 @@ gateways:
 - apiVersion: gateway.networking.k8s.io/v1beta1
   kind: Gateway
   metadata:
-    creationTimestamp: null
     name: gateway-3
     namespace: envoy-gateway
   spec:
@@ -781,7 +775,6 @@ gateways:
 - apiVersion: gateway.networking.k8s.io/v1beta1
   kind: Gateway
   metadata:
-    creationTimestamp: null
     name: gateway-4
     namespace: envoy-gateway
   spec:
@@ -821,7 +814,6 @@ gateways:
 - apiVersion: gateway.networking.k8s.io/v1beta1
   kind: Gateway
   metadata:
-    creationTimestamp: null
     name: gateway-5
     namespace: envoy-gateway
   spec:
@@ -861,7 +853,6 @@ gateways:
 - apiVersion: gateway.networking.k8s.io/v1beta1
   kind: Gateway
   metadata:
-    creationTimestamp: null
     name: gateway-6
     namespace: envoy-gateway
   spec:
@@ -901,7 +892,6 @@ gateways:
 - apiVersion: gateway.networking.k8s.io/v1beta1
   kind: Gateway
   metadata:
-    creationTimestamp: null
     name: gateway-7
     namespace: envoy-gateway
   spec:
@@ -941,7 +931,6 @@ gateways:
 - apiVersion: gateway.networking.k8s.io/v1beta1
   kind: Gateway
   metadata:
-    creationTimestamp: null
     name: gateway-8
     namespace: envoy-gateway
   spec:
@@ -981,7 +970,6 @@ gateways:
 - apiVersion: gateway.networking.k8s.io/v1beta1
   kind: Gateway
   metadata:
-    creationTimestamp: null
     name: gateway-9
     namespace: envoy-gateway
   spec:
@@ -1021,7 +1009,6 @@ gateways:
 - apiVersion: gateway.networking.k8s.io/v1beta1
   kind: Gateway
   metadata:
-    creationTimestamp: null
     name: gateway-10
     namespace: envoy-gateway
   spec:
@@ -1061,7 +1048,6 @@ gateways:
 - apiVersion: gateway.networking.k8s.io/v1beta1
   kind: Gateway
   metadata:
-    creationTimestamp: null
     name: gateway-11
     namespace: envoy-gateway
   spec:
@@ -1101,7 +1087,6 @@ gateways:
 - apiVersion: gateway.networking.k8s.io/v1beta1
   kind: Gateway
   metadata:
-    creationTimestamp: null
     name: gateway-12
     namespace: envoy-gateway
   spec:
@@ -1141,7 +1126,6 @@ gateways:
 - apiVersion: gateway.networking.k8s.io/v1beta1
   kind: Gateway
   metadata:
-    creationTimestamp: null
     name: gateway-13
     namespace: envoy-gateway
   spec:
@@ -1181,7 +1165,6 @@ gateways:
 - apiVersion: gateway.networking.k8s.io/v1beta1
   kind: Gateway
   metadata:
-    creationTimestamp: null
     name: gateway-14
     namespace: envoy-gateway
   spec:
@@ -1221,7 +1204,6 @@ gateways:
 - apiVersion: gateway.networking.k8s.io/v1beta1
   kind: Gateway
   metadata:
-    creationTimestamp: null
     name: gateway-15
     namespace: envoy-gateway
   spec:
@@ -1261,7 +1243,6 @@ gateways:
 - apiVersion: gateway.networking.k8s.io/v1beta1
   kind: Gateway
   metadata:
-    creationTimestamp: null
     name: gateway-16
     namespace: envoy-gateway
   spec:
@@ -1301,7 +1282,6 @@ gateways:
 - apiVersion: gateway.networking.k8s.io/v1beta1
   kind: Gateway
   metadata:
-    creationTimestamp: null
     name: gateway-17
     namespace: envoy-gateway
   spec:
@@ -1341,7 +1321,6 @@ gateways:
 - apiVersion: gateway.networking.k8s.io/v1beta1
   kind: Gateway
   metadata:
-    creationTimestamp: null
     name: gateway-18
     namespace: envoy-gateway
   spec:
@@ -1382,7 +1361,6 @@ httpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1beta1
   kind: HTTPRoute
   metadata:
-    creationTimestamp: null
     name: httproute-1
     namespace: envoy-gateway
   spec:
@@ -1723,7 +1701,6 @@ httpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1beta1
   kind: HTTPRoute
   metadata:
-    creationTimestamp: null
     name: httproute-2
     namespace: envoy-gateway
   spec:
