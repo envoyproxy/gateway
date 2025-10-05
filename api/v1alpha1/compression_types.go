@@ -14,6 +14,8 @@ const (
 	GzipCompressorType CompressorType = "Gzip"
 
 	BrotliCompressorType CompressorType = "Brotli"
+
+	ZstdCompressorType CompressorType = "Zstd"
 )
 
 // GzipCompressor defines the config for the Gzip compressor.
@@ -25,6 +27,11 @@ type GzipCompressor struct{}
 // The default values can be found here:
 // https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/compression/brotli/compressor/v3/brotli.proto#extension-envoy-compression-brotli-compressor
 type BrotliCompressor struct{}
+
+// ZstdCompressor defines the config for the Zstd compressor.
+// The default values can be found here:
+// https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/compression/zstd/compressor/v3/zstd.proto#extension-envoy-compression-zstd-compressor
+type ZstdCompressor struct{}
 
 // Compression defines the config of enabling compression.
 // This can help reduce the bandwidth at the expense of higher CPU.
@@ -38,6 +45,11 @@ type Compression struct {
 	//
 	// +optional
 	Brotli *BrotliCompressor `json:"brotli,omitempty"`
+
+	// The configuration for Zstd compressor.
+	//
+	// +optional
+	Zstd *ZstdCompressor `json:"zstd,omitempty"`
 
 	// The configuration for GZIP compressor.
 	//

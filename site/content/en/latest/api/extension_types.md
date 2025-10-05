@@ -867,6 +867,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `type` | _[CompressorType](#compressortype)_ |  true  |  | CompressorType defines the compressor type to use for compression. |
 | `brotli` | _[BrotliCompressor](#brotlicompressor)_ |  false  |  | The configuration for Brotli compressor. |
+| `zstd` | _[ZstdCompressor](#zstdcompressor)_ |  false  |  | The configuration for Zstd compressor. |
 | `gzip` | _[GzipCompressor](#gzipcompressor)_ |  false  |  | The configuration for GZIP compressor. |
 
 
@@ -883,6 +884,7 @@ _Appears in:_
 | ----- | ----------- |
 | `Gzip` |  | 
 | `Brotli` |  | 
+| `Zstd` |  | 
 
 
 #### ConnectConfig
@@ -5394,5 +5396,18 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `preferLocal` | _[PreferLocalZone](#preferlocalzone)_ |  false  |  | PreferLocalZone configures zone-aware routing to prefer sending traffic to the local locality zone. |
+
+
+#### ZstdCompressor
+
+
+
+ZstdCompressor defines the config for the Zstd compressor.
+The default values can be found here:
+https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/compression/zstd/compressor/v3/zstd.proto#extension-envoy-compression-zstd-compressor
+
+_Appears in:_
+- [Compression](#compression)
+
 
 

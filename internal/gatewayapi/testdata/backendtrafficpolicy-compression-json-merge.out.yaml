@@ -8,6 +8,7 @@ backendTrafficPolicies:
   spec:
     compression:
     - type: Brotli
+    - type: Zstd
     mergeType: JSONMerge
     targetRef:
       group: gateway.networking.k8s.io
@@ -246,6 +247,7 @@ xdsIR:
         traffic:
           compression:
           - type: Brotli
+          - type: Zstd
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

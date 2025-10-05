@@ -9,6 +9,7 @@ backendTrafficPolicies:
     compression:
     - type: Brotli
     - type: Gzip
+    - type: Zstd
     targetRef:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
@@ -202,6 +203,7 @@ xdsIR:
           compression:
           - type: Brotli
           - type: Gzip
+          - type: Zstd
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

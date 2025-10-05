@@ -39,4 +39,4 @@ http:
       compression:
       - type: Brotli
       - type: Gzip
-      - type: Brotli
+      - type: Zstd
