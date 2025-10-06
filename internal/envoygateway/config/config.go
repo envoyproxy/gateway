@@ -20,7 +20,7 @@ const (
 	DefaultNamespace = "envoy-gateway-system"
 	// DefaultDNSDomain is the default DNS domain used by k8s services.
 	DefaultDNSDomain = "cluster.local"
-	// EnvoyGatewayServiceName is the name of the Envoy Gateway service.
+	// EnvoyGatewayServiceName is the default name of the Envoy Gateway service.
 	EnvoyGatewayServiceName = "envoy-gateway"
 	// EnvoyPrefix is the prefix applied to the Envoy ConfigMap, Service, Deployment, and ServiceAccount.
 	EnvoyPrefix = "envoy"
@@ -35,6 +35,8 @@ type Server struct {
 	ControllerNamespace string
 	// DNSDomain is the dns domain used by k8s services. Defaults to "cluster.local".
 	DNSDomain string
+	// ServiceName is the name of the Envoy Gateway service. Defaults to "envoy-gateway".
+	ServiceName string
 	// Logger is the logr implementation used by Envoy Gateway.
 	Logger logging.Logger
 	// Elected chan is used to signal when an EG instance is elected as leader.
@@ -47,6 +49,7 @@ func New(logOut io.Writer) (*Server, error) {
 		EnvoyGateway:        egv1a1.DefaultEnvoyGateway(),
 		ControllerNamespace: env.Lookup("ENVOY_GATEWAY_NAMESPACE", DefaultNamespace),
 		DNSDomain:           env.Lookup("KUBERNETES_CLUSTER_DOMAIN", DefaultDNSDomain),
+		ServiceName:         env.Lookup("ENVOY_GATEWAY_SERVICE_NAME", EnvoyGatewayServiceName),
 		Logger:              logging.DefaultLogger(logOut, egv1a1.LogLevelInfo),
 		Elected:             make(chan struct{}),
 	}, nil

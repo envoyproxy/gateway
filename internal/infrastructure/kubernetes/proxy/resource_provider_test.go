@@ -66,6 +66,10 @@ func (f *fakeKubernetesInfraProvider) GetDNSDomain() string {
 	return f.DNSDomain
 }
 
+func (f *fakeKubernetesInfraProvider) GetServiceName() string {
+	return "envoy-gateway"
+}
+
 func (f *fakeKubernetesInfraProvider) GetEnvoyGateway() *egv1a1.EnvoyGateway {
 	return f.EnvoyGateway
 }

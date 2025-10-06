@@ -72,6 +72,7 @@ func (i *Infra) CreateOrUpdateProxyInfra(ctx context.Context, infra *ir.Infra) e
 			Certificate: filepath.Join(i.sdsConfigPath, common.SdsCertFilename),
 			TrustedCA:   filepath.Join(i.sdsConfigPath, common.SdsCAFilename),
 		},
+		ServiceName:     i.ServiceName,
 		XdsServerHost:   ptr.To("0.0.0.0"),
 		AdminServerPort: ptr.To(int32(0)),
 		StatsServerPort: ptr.To(int32(0)),
