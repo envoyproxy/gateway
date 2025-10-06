@@ -16,16 +16,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/go-cmp/cmp"
-	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/stretchr/testify/require"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/yaml"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/message"
+	testutil "github.com/envoyproxy/gateway/internal/utils/test"
 )
 
 const (
@@ -129,7 +127,7 @@ func TestFileProvider(t *testing.T) {
 
 		want := &resource.Resources{}
 		mustUnmarshal(t, "testdata/resources.1.yaml", want)
-		cmpResources(t, want, resources)
+		testutil.CmpResources(t, want, resources)
 	})
 
 	t.Run("rename the watched file then rename it back", func(t *testing.T) {
@@ -151,7 +149,7 @@ func TestFileProvider(t *testing.T) {
 		resources := pResources.GetResourcesByGatewayClass("eg-1")
 		want := &resource.Resources{}
 		mustUnmarshal(t, "testdata/resources.1.yaml", want)
-		cmpResources(t, want, resources)
+		testutil.CmpResources(t, want, resources)
 	})
 
 	t.Run("remove the watched file", func(t *testing.T) {
@@ -173,7 +171,7 @@ func TestFileProvider(t *testing.T) {
 		resources := pResources.GetResourcesByGatewayClass("eg-1")
 		want := &resource.Resources{}
 		mustUnmarshal(t, "testdata/resources.1.yaml", want)
-		cmpResources(t, want, resources)
+		testutil.CmpResources(t, want, resources)
 	})
 
 	t.Run("rename the file then rename it back in watched dir", func(t *testing.T) {
@@ -196,7 +194,7 @@ func TestFileProvider(t *testing.T) {
 		resources := pResources.GetResourcesByGatewayClass("eg-1")
 		want := &resource.Resources{}
 		mustUnmarshal(t, "testdata/resources.1.yaml", want)
-		cmpResources(t, want, resources)
+		testutil.CmpResources(t, want, resources)
 	})
 
 	t.Run("update file content in watched dir", func(t *testing.T) {
@@ -223,12 +221,12 @@ func TestFileProvider(t *testing.T) {
 		resources1 := pResources.GetResourcesByGatewayClass("eg-1")
 		want1 := &resource.Resources{}
 		mustUnmarshal(t, "testdata/resources.1.yaml", want1)
-		cmpResources(t, want1, resources1)
+		testutil.CmpResources(t, want1, resources1)
 
 		resources2 := pResources.GetResourcesByGatewayClass("eg-2")
 		want2 := &resource.Resources{}
 		mustUnmarshal(t, "testdata/resources.2.yaml", want2)
-		cmpResources(t, want2, resources2)
+		testutil.CmpResources(t, want2, resources2)
 	})
 
 	t.Run("remove all files in watched dir", func(t *testing.T) {
@@ -290,13 +288,4 @@ func mustUnmarshal(t *testing.T, path string, out interface{}) {
 	content, err := os.ReadFile(path)
 	require.NoError(t, err)
 	require.NoError(t, yaml.UnmarshalStrict(content, out, yaml.DisallowUnknownFields))
-}
-
-func cmpResources(t *testing.T, x, y interface{}) {
-	opts := []cmp.Option{
-		cmpopts.IgnoreFields(metav1.ObjectMeta{}, "ResourceVersion"),
-		cmpopts.IgnoreFields(metav1.TypeMeta{}, "Kind", "APIVersion"),
-		cmpopts.EquateEmpty(),
-	}
-	require.Empty(t, cmp.Diff(x, y, opts...))
 }

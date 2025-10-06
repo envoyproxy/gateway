@@ -24,6 +24,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/proxy"
 	"github.com/envoyproxy/gateway/internal/ir"
+	testutil "github.com/envoyproxy/gateway/internal/utils/test"
 )
 
 func TestCreateOrUpdateProxyServiceAccount(t *testing.T) {
@@ -284,7 +285,7 @@ func TestCreateOrUpdateProxyServiceAccount(t *testing.T) {
 			}
 			require.NoError(t, kube.Client.Get(ctx, client.ObjectKeyFromObject(actual), actual))
 
-			requireEqual(t, tc.want, actual)
+			testutil.CmpResources(t, tc.want, actual)
 		})
 	}
 }
