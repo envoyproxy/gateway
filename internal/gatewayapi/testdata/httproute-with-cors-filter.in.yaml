@@ -82,3 +82,32 @@ httpRoutes:
           - POST
           - PUT
           - DELETE
+
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-cors-specific-methods
+  spec:
+    hostnames:
+    - gateway.envoyproxy.io
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: "/baz"
+        method: "GET"
+      backendRefs:
+      - name: service-1
+        port: 8080
+      filters:
+      - type: CORS
+        cors:
+          allowOrigins:
+          - "https://gateway.envoyproxy.io"
+          allowMethods:
+          - OPTIONS
+          - GET

@@ -15,6 +15,7 @@ new features: |
   Added max connection/stream duration and max requests per connection to ClientTrafficPolicy.
   Added cacheDuration for remoteJWKS in SecurityPolicy.
   Added support for DisableTokenEncryption in OIDC authn to disable encryption of ID and access tokens stored in cookies.
+  Added support for allowing OPTIONS method implicitly when HTTPRoute CORS filter is used.
 
 bug fixes: |
   Fixed %ROUTE_KIND% operator to be lower-cased when used by clusterStatName in EnvoyProxy API.

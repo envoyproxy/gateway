@@ -17,7 +17,7 @@ gateways:
       protocol: HTTP
   status:
     listeners:
-    - attachedRoutes: 2
+    - attachedRoutes: 3
       conditions:
       - lastTransitionTime: null
         message: Sending translated listener configuration to the data plane
@@ -145,6 +145,53 @@ httpRoutes:
         name: gateway-1
         namespace: envoy-gateway
         sectionName: http
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    creationTimestamp: null
+    name: httproute-cors-specific-methods
+    namespace: default
+  spec:
+    hostnames:
+    - gateway.envoyproxy.io
+    parentRefs:
+    - name: gateway-1
+      namespace: envoy-gateway
+      sectionName: http
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8080
+      filters:
+      - cors:
+          allowMethods:
+          - OPTIONS
+          - GET
+          allowOrigins:
+          - https://gateway.envoyproxy.io
+        type: CORS
+      matches:
+      - method: GET
+        path:
+          value: /baz
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http
 infraIR:
   envoy-gateway/gateway-1:
     proxy:
@@ -206,6 +253,96 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
+      - cors:
+          allowMethods:
+          - OPTIONS
+          - GET
+          allowOrigins:
+          - distinct: false
+            exact: https://gateway.envoyproxy.io
+            name: ""
+          maxAge: 0s
+        destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-cors-specific-methods
+            namespace: default
+          name: httproute/default/httproute-cors-specific-methods/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            metadata:
+              name: service-1
+              namespace: default
+              sectionName: "8080"
+            name: httproute/default/httproute-cors-specific-methods/rule/0/backend/0
+            protocol: HTTP
+            weight: 1
+        headerMatches:
+        - distinct: false
+          exact: OPTIONS
+          name: :method
+        - distinct: false
+          name: origin
+          safeRegex: .*
+        - distinct: false
+          name: access-control-request-method
+          safeRegex: .*
+        hostname: gateway.envoyproxy.io
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-cors-specific-methods
+          namespace: default
+        name: httproute/default/httproute-cors-specific-methods/rule/0/match/0/cors-preflight/gateway_envoyproxy_io
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /baz
+      - cors:
+          allowMethods:
+          - OPTIONS
+          - GET
+          allowOrigins:
+          - distinct: false
+            exact: https://gateway.envoyproxy.io
+            name: ""
+          maxAge: 0s
+        destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-cors-specific-methods
+            namespace: default
+          name: httproute/default/httproute-cors-specific-methods/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            metadata:
+              name: service-1
+              namespace: default
+              sectionName: "8080"
+            name: httproute/default/httproute-cors-specific-methods/rule/0/backend/0
+            protocol: HTTP
+            weight: 1
+        headerMatches:
+        - distinct: false
+          exact: GET
+          name: :method
+        hostname: gateway.envoyproxy.io
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-cors-specific-methods
+          namespace: default
+        name: httproute/default/httproute-cors-specific-methods/rule/0/match/0/gateway_envoyproxy_io
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /baz
       - cors:
           allowCredentials: true
           allowHeaders:
