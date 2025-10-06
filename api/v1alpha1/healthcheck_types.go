@@ -80,7 +80,6 @@ type PassiveHealthCheck struct {
 	//
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:validation:Maximum=100
-	// +kubebuilder:default=85
 	// +optional
 	FailurePercentageThreshold *uint32 `json:"failurePercentageThreshold,omitempty"`
 }
