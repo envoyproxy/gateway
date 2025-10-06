@@ -3,6 +3,8 @@ date: Pending
 # Changes that are expected to cause an incompatibility with previous versions, such as deletions or modifications to existing APIs.
 breaking changes: |
   ALPNProtocols in EnvoyProxy Backend TLS setting use [h2, http/1.1] if not set.
+  When a Backend resource specifies TLS settings and SNI is not specified or a BackendTLSPolicy is not attached to it, the value of upstream TLS SNI is determined by the HTTP Host header.
+  When a Backend resource specifies TLS settings and SNI is not specified or a BackendTLSPolicy is not attached to it, the upstream certificate is validated for DNS SAN matching the SNI value sent.
 
 # Updates addressing vulnerabilities, security flaws, or compliance requirements.
 security updates: |

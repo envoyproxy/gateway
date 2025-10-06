@@ -17,7 +17,7 @@ httpRoutes:
   - apiVersion: gateway.networking.k8s.io/v1
     kind: HTTPRoute
     metadata:
-      name: httproute-btls-auto-sni
+      name: httproute-backend-without-sni
       namespace: envoy-gateway
     spec:
       parentRefs:
@@ -25,22 +25,22 @@ httpRoutes:
           name: gateway-btls
           sectionName: http
       hostnames:
-        - auto-sni.example.com
+        - backend-without-sni.example.com
       rules:
         - matches:
             - path:
                 type: Exact
-                value: "/auto-sni"
+                value: "/backend-without-sni"
           backendRefs:
             - kind: Backend
               group: gateway.envoyproxy.io
-              name: backend-auto-sni
+              name: backend-without-sni
               namespace: backends
               port: 8080
   - apiVersion: gateway.networking.k8s.io/v1
     kind: HTTPRoute
     metadata:
-      name: httproute-btls-auto-san
+      name: httproute-backend-with-sni
       namespace: envoy-gateway
     spec:
       parentRefs:
@@ -48,22 +48,22 @@ httpRoutes:
           name: gateway-btls
           sectionName: http
       hostnames:
-        - auto-san.example.com
+        - backend-with-sni.example.com
       rules:
         - matches:
             - path:
                 type: Exact
-                value: "/auto-san"
+                value: "/backend-with-sni"
           backendRefs:
             - kind: Backend
               group: gateway.envoyproxy.io
-              name: backend-auto-san-sni-validation
+              name: backend-with-sni
               namespace: backends
               port: 8080
   - apiVersion: gateway.networking.k8s.io/v1
     kind: HTTPRoute
     metadata:
-      name: httproute-btls-auto-san-auto-sni
+      name: httproute-backend-with-sni-and-btlsp
       namespace: envoy-gateway
     spec:
       parentRefs:
@@ -71,22 +71,22 @@ httpRoutes:
           name: gateway-btls
           sectionName: http
       hostnames:
-        - auto-sni-auto-san.example.com
+        - backend-with-sni-and-btlsp.example.com
       rules:
         - matches:
             - path:
                 type: Exact
-                value: "/auto-sni-auto-san"
+                value: "/backend-with-sni-and-btlsp"
           backendRefs:
             - kind: Backend
               group: gateway.envoyproxy.io
-              name: backend-auto-sni-auto-san-sni-validation
+              name: backend-with-sni-and-btlsp
               namespace: backends
               port: 8080
   - apiVersion: gateway.networking.k8s.io/v1
     kind: HTTPRoute
     metadata:
-      name: httproute-btls-mixed-sni-unsuuported
+      name: httproute-backend-without-sni-and-btlsp
       namespace: envoy-gateway
     spec:
       parentRefs:
@@ -94,21 +94,16 @@ httpRoutes:
           name: gateway-btls
           sectionName: http
       hostnames:
-        - "unsupported.example.com"
+        - "backend-without-sni-and-btlsp.example.com"
       rules:
         - matches:
             - path:
                 type: Exact
-                value: "/mixed-sni"
+                value: "/backend-without-sni-and-btlsp"
           backendRefs:
             - kind: Backend
               group: gateway.envoyproxy.io
-              name: backend-auto-sni
-              namespace: backends
-              port: 8080
-            - kind: Backend
-              group: gateway.envoyproxy.io
-              name: backend-simple
+              name: backend-without-sni-and-btlsp
               namespace: backends
               port: 8080
 referenceGrants:
@@ -136,17 +131,7 @@ backends:
   - apiVersion: gateway.envoyproxy.io/v1alpha1
     kind: Backend
     metadata:
-      name: backend-simple
-      namespace: backends
-    spec:
-      endpoints:
-        - ip:
-            address: 1.1.1.1
-            port: 3001
-  - apiVersion: gateway.envoyproxy.io/v1alpha1
-    kind: Backend
-    metadata:
-      name: backend-auto-sni
+      name: backend-without-sni
       namespace: backends
     spec:
       endpoints:
@@ -154,12 +139,14 @@ backends:
             address: 1.1.1.1
             port: 3001
       tls:
-        sni:
-          type: Client
+        caCertificateRefs:
+          - name: ca-secret
+            group: ""
+            kind: Secret
   - apiVersion: gateway.envoyproxy.io/v1alpha1
     kind: Backend
     metadata:
-      name: backend-auto-san-sni-validation
+      name: backend-with-sni
       namespace: backends
     spec:
       endpoints:
@@ -167,12 +154,15 @@ backends:
             address: 1.1.1.1
             port: 3001
       tls:
-        sanValidation:
-          type: SNI
+        caCertificateRefs:
+          - name: ca-secret
+            group: ""
+            kind: Secret
+        sni: "backend.sni.com"
   - apiVersion: gateway.envoyproxy.io/v1alpha1
     kind: Backend
     metadata:
-      name: backend-auto-sni-auto-san-sni-validation
+      name: backend-without-sni-and-btlsp
       namespace: backends
     spec:
       endpoints:
@@ -180,10 +170,26 @@ backends:
             address: 1.1.1.1
             port: 3001
       tls:
-        sni:
-          type: Client
-        sanValidation:
-          type: SNI
+        caCertificateRefs:
+          - name: ca-secret
+            group: ""
+            kind: Secret
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: Backend
+    metadata:
+      name: backend-with-sni-and-btlsp
+      namespace: backends
+    spec:
+      endpoints:
+        - ip:
+            address: 1.1.1.1
+            port: 3001
+      tls:
+        caCertificateRefs:
+          - name: ca-secret
+            group: ""
+            kind: Secret
+        sni: "backend.sni.com"
 secrets:
   - apiVersion: v1
     kind: Secret
@@ -203,19 +209,10 @@ backendTLSPolicies:
       targetRefs:
         - kind: Backend
           group: gateway.envoyproxy.io
-          name: backend-auto-sni-auto-san-sni-validation
+          name: backend-without-sni-and-btlsp
         - kind: Backend
           group: gateway.envoyproxy.io
-          name: backend-auto-sni-auto-san-sni-validation
-        - kind: Backend
-          group: gateway.envoyproxy.io
-          name: backend-auto-san-sni-validation
-        - kind: Backend
-          group: gateway.envoyproxy.io
-          name: backend-auto-sni
-        - kind: Backend
-          group: gateway.envoyproxy.io
-          name: backend-simple
+          name: backend-with-sni-and-btlsp
       validation:
         caCertificateRefs:
           - name: ca-secret

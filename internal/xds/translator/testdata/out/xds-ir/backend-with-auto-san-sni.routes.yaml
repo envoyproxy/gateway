@@ -14,15 +14,15 @@
         - upgradeType: websocket
     - match:
         prefix: /
-      name: auto-san-route
+      name: auto-sni-san-route
       route:
-        cluster: auto-san-route-dest
+        cluster: auto-sni-san-route-dest
         upgradeConfigs:
         - upgradeType: websocket
     - match:
         prefix: /
-      name: auto-sni-san-route
+      name: mixed-sni-route
       route:
-        cluster: auto-sni-san-route-dest
+        cluster: mixed-sni-route
         upgradeConfigs:
         - upgradeType: websocket

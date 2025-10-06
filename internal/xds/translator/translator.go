@@ -1167,7 +1167,7 @@ func buildXdsUpstreamTLSCASecret(tlsConfig *ir.TLSUpstreamConfig) *tlsv3.Secret 
 	}
 }
 
-func buildValidationContext(tlsConfig *ir.TLSUpstreamConfig) *tlsv3.CommonTlsContext_CombinedValidationContext {
+func buildValidationContext(tlsConfig *ir.TLSUpstreamConfig) (*tlsv3.CommonTlsContext_CombinedValidationContext, bool) {
 	validationContext := &tlsv3.CommonTlsContext_CombinedCertificateValidationContext{
 		ValidationContextSdsSecretConfig: &tlsv3.SdsSecretConfig{
 			Name:      tlsConfig.CACertificate.Name,
@@ -1175,53 +1175,53 @@ func buildValidationContext(tlsConfig *ir.TLSUpstreamConfig) *tlsv3.CommonTlsCon
 		},
 		DefaultValidationContext: &tlsv3.CertificateValidationContext{},
 	}
+	hasSANValidations := false
 
-	// When auto validation is used, Static URI/DNS SAN validation in TLS context is ignored, no need to configure it.
-	if !tlsConfig.AutoSANValidation {
-		if tlsConfig.SNI != nil {
-			validationContext.DefaultValidationContext.MatchTypedSubjectAltNames = []*tlsv3.SubjectAltNameMatcher{
-				{
-					SanType: tlsv3.SubjectAltNameMatcher_DNS,
-					Matcher: &matcherv3.StringMatcher{
-						MatchPattern: &matcherv3.StringMatcher_Exact{
-							Exact: *tlsConfig.SNI,
-						},
+	if tlsConfig.SNI != nil {
+		validationContext.DefaultValidationContext.MatchTypedSubjectAltNames = []*tlsv3.SubjectAltNameMatcher{
+			{
+				SanType: tlsv3.SubjectAltNameMatcher_DNS,
+				Matcher: &matcherv3.StringMatcher{
+					MatchPattern: &matcherv3.StringMatcher_Exact{
+						Exact: *tlsConfig.SNI,
 					},
 				},
-			}
+			},
 		}
-		for _, san := range tlsConfig.SubjectAltNames {
-			var sanType tlsv3.SubjectAltNameMatcher_SanType
-			var value string
+		hasSANValidations = true
+	}
+	for _, san := range tlsConfig.SubjectAltNames {
+		var sanType tlsv3.SubjectAltNameMatcher_SanType
+		var value string
 
-			// Exactly one of san.Hostname or san.URI is guaranteed to be set
-			if san.Hostname != nil {
-				sanType = tlsv3.SubjectAltNameMatcher_DNS
-				value = *san.Hostname
-			} else if san.URI != nil {
-				sanType = tlsv3.SubjectAltNameMatcher_URI
-				value = *san.URI
-			}
-			validationContext.DefaultValidationContext.MatchTypedSubjectAltNames = append(
-				validationContext.DefaultValidationContext.MatchTypedSubjectAltNames,
-				&tlsv3.SubjectAltNameMatcher{
-					SanType: sanType,
-					Matcher: &matcherv3.StringMatcher{
-						MatchPattern: &matcherv3.StringMatcher_Exact{
-							Exact: value,
-						},
+		// Exactly one of san.Hostname or san.URI is guaranteed to be set
+		if san.Hostname != nil {
+			sanType = tlsv3.SubjectAltNameMatcher_DNS
+			value = *san.Hostname
+		} else if san.URI != nil {
+			sanType = tlsv3.SubjectAltNameMatcher_URI
+			value = *san.URI
+		}
+		validationContext.DefaultValidationContext.MatchTypedSubjectAltNames = append(
+			validationContext.DefaultValidationContext.MatchTypedSubjectAltNames,
+			&tlsv3.SubjectAltNameMatcher{
+				SanType: sanType,
+				Matcher: &matcherv3.StringMatcher{
+					MatchPattern: &matcherv3.StringMatcher_Exact{
+						Exact: value,
 					},
 				},
-			)
-		}
+			},
+		)
+		hasSANValidations = true
 	}
 
 	return &tlsv3.CommonTlsContext_CombinedValidationContext{
 		CombinedValidationContext: validationContext,
-	}
+	}, hasSANValidations
 }
 
-func buildXdsUpstreamTLSSocketWthCert(tlsConfig *ir.TLSUpstreamConfig) (*corev3.TransportSocket, error) {
+func buildXdsUpstreamTLSSocketWthCert(tlsConfig *ir.TLSUpstreamConfig, requiresAutoSNI bool, endpointType EndpointType) (*corev3.TransportSocket, error) {
 	tlsCtx := &tlsv3.UpstreamTlsContext{
 		CommonTlsContext: &tlsv3.CommonTlsContext{
 			TlsCertificateSdsSecretConfigs: nil,
@@ -1230,16 +1230,23 @@ func buildXdsUpstreamTLSSocketWthCert(tlsConfig *ir.TLSUpstreamConfig) (*corev3.
 	}
 
 	if !tlsConfig.InsecureSkipVerify {
-		tlsCtx.CommonTlsContext.ValidationContextType = buildValidationContext(tlsConfig)
+		ctx, hasSANValidations := buildValidationContext(tlsConfig)
+		tlsCtx.CommonTlsContext.ValidationContextType = ctx
+
+		// Auto SNI SAN validation is only be enabled in the following cases:
+		// 1. there aren't any other SAN validations
+		// 2. InsecureSkipVerify is disabled
+		// 3. SNI is configured (literal or auto)
+		// 4. Endpoint is not a dynamic resolver, which uses a different strategy for Auto SAN validation
+		// See here: https://www.envoyproxy.io/docs/envoy/latest/start/quick-start/securing#validate-an-endpoint-s-certificates-when-connecting
+		// Also, only enable validation if InsecureSkipVerify id disabled
+		if !hasSANValidations && (tlsConfig.SNI != nil || requiresAutoSNI) && endpointType != EndpointTypeDynamicResolver {
+			tlsCtx.AutoSniSanValidation = true
+		}
 	}
 
-	// if auto sni is used, literal SNI is ignored, no need to set it
-	if tlsConfig.SNI != nil && !tlsConfig.AutoSNI {
+	if tlsConfig.SNI != nil {
 		tlsCtx.Sni = *tlsConfig.SNI
-	}
-
-	if tlsConfig.AutoSANValidation {
-		tlsCtx.AutoSniSanValidation = true
 	}
 
 	tlsParams := buildTLSParams(&tlsConfig.TLSConfig)

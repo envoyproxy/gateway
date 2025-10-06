@@ -240,25 +240,10 @@ spec:
     - fqdn:
         hostname: tls-backend-2.gateway-conformance-infra.svc.cluster.local
         port: 443
+  # the SNI value would be take from the host header sent by the client and
+  # validates DNS SAN equivalent to SNI being sent
   tls:
-    sni:
-      type: Client  # the SNI value would be take from the host header sent by the client
-    sanValidation:
-      type: SNI  # validate DNS SAN equivalent to SNI being sent
----
-apiVersion: gateway.networking.k8s.io/v1alpha3
-kind: BackendTLSPolicy
-metadata:
-  name: policy-btls-auto-sni
-  namespace: gateway-conformance-infra
-spec:
-  targetRefs:
-    - group: gateway.envoyproxy.io
-      kind: Backend
-      name: backend-with-auto-sni
-  validation:
-    caCertificateRefs:  # this is still used to determine trusted CAs
+    caCertificateRefs:
       - name: backend-tls-ca
         group: ""
         kind: ConfigMap
-    hostname: unsupported.service.name.com  # this value would be overridden for sni and san validation due to auto-sni settings in Backend

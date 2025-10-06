@@ -290,16 +290,6 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 			if pattern != "" {
 				destination.StatName = ptr.To(buildStatName(pattern, httpRoute, rule.Name, ruleIdx, backendRefNames))
 			}
-
-			// TODO: support mixed Literal and Auto SNI between backendRefs
-			if destination.HasLiteralAndAutoSNI() {
-				errs.Add(status.NewRouteStatusError(
-					fmt.Errorf(
-						"failed to process route rule %d: Literal and Auto SNI cannot be used by different backends in the same BackendRefs",
-						ruleIdx),
-					status.RouteReasonInvalidBackendRef,
-				))
-			}
 		}
 
 		if hasDynamicResolver && len(rule.BackendRefs) > 1 {

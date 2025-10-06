@@ -1648,23 +1648,6 @@ func (r *RouteDestination) ToBackendWeights() *BackendWeights {
 	return w
 }
 
-// HasLiteralAndAutoSNI returns true if the RouteDestination has endpoints that define auto sni and literal sni
-func (r *RouteDestination) HasLiteralAndAutoSNI() bool {
-	autoSNI := false
-	literalSNI := false
-	for _, s := range r.Settings {
-		if s.TLS != nil {
-			if s.TLS.AutoSNI {
-				autoSNI = true
-			}
-			if s.TLS.SNI != nil {
-				literalSNI = true
-			}
-		}
-	}
-	return autoSNI && literalSNI
-}
-
 // DestinationSetting holds the settings associated with the destination
 // +kubebuilder:object:generate=true
 type DestinationSetting struct {
@@ -3005,8 +2988,6 @@ type BackOffPolicy struct {
 // +k8s:deepcopy-gen=true
 type TLSUpstreamConfig struct {
 	SNI                 *string           `json:"sni,omitempty" yaml:"sni,omitempty"`
-	AutoSNI             bool              `json:"autoSni,omitempty" yaml:"autoSni,omitempty"`
-	AutoSANValidation   bool              `json:"AutoSanValidation,omitempty" yaml:"AutoSanValidation,omitempty"`
 	UseSystemTrustStore bool              `json:"useSystemTrustStore,omitempty" yaml:"useSystemTrustStore,omitempty"`
 	CACertificate       *TLSCACertificate `json:"caCertificate,omitempty" yaml:"caCertificate,omitempty"`
 	TLSConfig           `json:",inline"`

@@ -9,19 +9,10 @@ backendTLSPolicies:
     targetRefs:
     - group: gateway.envoyproxy.io
       kind: Backend
-      name: backend-auto-sni-auto-san-sni-validation
+      name: backend-without-sni-and-btlsp
     - group: gateway.envoyproxy.io
       kind: Backend
-      name: backend-auto-sni-auto-san-sni-validation
-    - group: gateway.envoyproxy.io
-      kind: Backend
-      name: backend-auto-san-sni-validation
-    - group: gateway.envoyproxy.io
-      kind: Backend
-      name: backend-auto-sni
-    - group: gateway.envoyproxy.io
-      kind: Backend
-      name: backend-simple
+      name: backend-with-sni-and-btlsp
     validation:
       caCertificateRefs:
       - group: ""
@@ -51,13 +42,18 @@ backends:
   kind: Backend
   metadata:
     creationTimestamp: null
-    name: backend-simple
+    name: backend-without-sni
     namespace: backends
   spec:
     endpoints:
     - ip:
         address: 1.1.1.1
         port: 3001
+    tls:
+      caCertificateRefs:
+      - group: ""
+        kind: Secret
+        name: ca-secret
   status:
     conditions:
     - lastTransitionTime: null
@@ -69,7 +65,7 @@ backends:
   kind: Backend
   metadata:
     creationTimestamp: null
-    name: backend-auto-sni
+    name: backend-with-sni
     namespace: backends
   spec:
     endpoints:
@@ -77,8 +73,11 @@ backends:
         address: 1.1.1.1
         port: 3001
     tls:
-      sni:
-        type: Client
+      caCertificateRefs:
+      - group: ""
+        kind: Secret
+        name: ca-secret
+      sni: backend.sni.com
   status:
     conditions:
     - lastTransitionTime: null
@@ -90,7 +89,7 @@ backends:
   kind: Backend
   metadata:
     creationTimestamp: null
-    name: backend-auto-san-sni-validation
+    name: backend-without-sni-and-btlsp
     namespace: backends
   spec:
     endpoints:
@@ -98,8 +97,10 @@ backends:
         address: 1.1.1.1
         port: 3001
     tls:
-      sanValidation:
-        type: SNI
+      caCertificateRefs:
+      - group: ""
+        kind: Secret
+        name: ca-secret
   status:
     conditions:
     - lastTransitionTime: null
@@ -111,7 +112,7 @@ backends:
   kind: Backend
   metadata:
     creationTimestamp: null
-    name: backend-auto-sni-auto-san-sni-validation
+    name: backend-with-sni-and-btlsp
     namespace: backends
   spec:
     endpoints:
@@ -119,10 +120,11 @@ backends:
         address: 1.1.1.1
         port: 3001
     tls:
-      sanValidation:
-        type: SNI
-      sni:
-        type: Client
+      caCertificateRefs:
+      - group: ""
+        kind: Secret
+        name: ca-secret
+      sni: backend.sni.com
   status:
     conditions:
     - lastTransitionTime: null
@@ -176,11 +178,11 @@ httpRoutes:
   kind: HTTPRoute
   metadata:
     creationTimestamp: null
-    name: httproute-btls-auto-sni
+    name: httproute-backend-without-sni
     namespace: envoy-gateway
   spec:
     hostnames:
-    - auto-sni.example.com
+    - backend-without-sni.example.com
     parentRefs:
     - name: gateway-btls
       namespace: envoy-gateway
@@ -189,13 +191,13 @@ httpRoutes:
     - backendRefs:
       - group: gateway.envoyproxy.io
         kind: Backend
-        name: backend-auto-sni
+        name: backend-without-sni
         namespace: backends
         port: 8080
       matches:
       - path:
           type: Exact
-          value: /auto-sni
+          value: /backend-without-sni
   status:
     parents:
     - conditions:
@@ -218,11 +220,11 @@ httpRoutes:
   kind: HTTPRoute
   metadata:
     creationTimestamp: null
-    name: httproute-btls-auto-san
+    name: httproute-backend-with-sni
     namespace: envoy-gateway
   spec:
     hostnames:
-    - auto-san.example.com
+    - backend-with-sni.example.com
     parentRefs:
     - name: gateway-btls
       namespace: envoy-gateway
@@ -231,13 +233,13 @@ httpRoutes:
     - backendRefs:
       - group: gateway.envoyproxy.io
         kind: Backend
-        name: backend-auto-san-sni-validation
+        name: backend-with-sni
         namespace: backends
         port: 8080
       matches:
       - path:
           type: Exact
-          value: /auto-san
+          value: /backend-with-sni
   status:
     parents:
     - conditions:
@@ -260,11 +262,11 @@ httpRoutes:
   kind: HTTPRoute
   metadata:
     creationTimestamp: null
-    name: httproute-btls-auto-san-auto-sni
+    name: httproute-backend-with-sni-and-btlsp
     namespace: envoy-gateway
   spec:
     hostnames:
-    - auto-sni-auto-san.example.com
+    - backend-with-sni-and-btlsp.example.com
     parentRefs:
     - name: gateway-btls
       namespace: envoy-gateway
@@ -273,13 +275,13 @@ httpRoutes:
     - backendRefs:
       - group: gateway.envoyproxy.io
         kind: Backend
-        name: backend-auto-sni-auto-san-sni-validation
+        name: backend-with-sni-and-btlsp
         namespace: backends
         port: 8080
       matches:
       - path:
           type: Exact
-          value: /auto-sni-auto-san
+          value: /backend-with-sni-and-btlsp
   status:
     parents:
     - conditions:
@@ -302,11 +304,11 @@ httpRoutes:
   kind: HTTPRoute
   metadata:
     creationTimestamp: null
-    name: httproute-btls-mixed-sni-unsuuported
+    name: httproute-backend-without-sni-and-btlsp
     namespace: envoy-gateway
   spec:
     hostnames:
-    - unsupported.example.com
+    - backend-without-sni-and-btlsp.example.com
     parentRefs:
     - name: gateway-btls
       namespace: envoy-gateway
@@ -315,18 +317,13 @@ httpRoutes:
     - backendRefs:
       - group: gateway.envoyproxy.io
         kind: Backend
-        name: backend-auto-sni
-        namespace: backends
-        port: 8080
-      - group: gateway.envoyproxy.io
-        kind: Backend
-        name: backend-simple
+        name: backend-without-sni-and-btlsp
         namespace: backends
         port: 8080
       matches:
       - path:
           type: Exact
-          value: /mixed-sni
+          value: /backend-without-sni-and-btlsp
   status:
     parents:
     - conditions:
@@ -336,10 +333,9 @@ httpRoutes:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: 'Failed to process route rule 0: Literal and Auto SNI cannot be used
-          by different backends in the same BackendRefs.'
-        reason: InvalidBackendRef
-        status: "False"
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
@@ -410,9 +406,9 @@ xdsIR:
       - destination:
           metadata:
             kind: HTTPRoute
-            name: httproute-btls-auto-san-auto-sni
+            name: httproute-backend-without-sni-and-btlsp
             namespace: envoy-gateway
-          name: httproute/envoy-gateway/httproute-btls-auto-san-auto-sni/rule/0
+          name: httproute/envoy-gateway/httproute-backend-without-sni-and-btlsp/rule/0
           settings:
           - addressType: IP
             endpoints:
@@ -420,64 +416,9 @@ xdsIR:
               port: 3001
             metadata:
               kind: Backend
-              name: backend-auto-sni-auto-san-sni-validation
+              name: backend-without-sni-and-btlsp
               namespace: backends
-            name: httproute/envoy-gateway/httproute-btls-auto-san-auto-sni/rule/0/backend/0
-            protocol: HTTP
-            tls:
-              AutoSanValidation: true
-              alpnProtocols: null
-              autoSni: true
-              caCertificate:
-                certificate: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURKekNDQWcrZ0F3SUJBZ0lVQWw2VUtJdUttenRlODFjbGx6NVBmZE4ySWxJd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0l6RVFNQTRHQTFVRUF3d0hiWGxqYVdWdWRERVBNQTBHQTFVRUNnd0dhM1ZpWldSaU1CNFhEVEl6TVRBdwpNakExTkRFMU4xb1hEVEkwTVRBd01UQTFOREUxTjFvd0l6RVFNQTRHQTFVRUF3d0hiWGxqYVdWdWRERVBNQTBHCkExVUVDZ3dHYTNWaVpXUmlNSUlCSWpBTkJna3Foa2lHOXcwQkFRRUZBQU9DQVE4QU1JSUJDZ0tDQVFFQXdTVGMKMXlqOEhXNjJueW5rRmJYbzRWWEt2MmpDMFBNN2RQVmt5ODdGd2VaY1RLTG9XUVZQUUUycDJrTERLNk9Fc3ptTQp5eXIreHhXdHlpdmVyZW1yV3FuS2tOVFloTGZZUGhnUWtjemliN2VVYWxtRmpVYmhXZEx2SGFrYkVnQ29kbjNiCmt6NTdtSW5YMlZwaURPS2c0a3lIZml1WFdwaUJxckN4MEtOTHB4bzNERVFjRmNzUVRlVEh6aDQ3NTJHVjA0UlUKVGkvR0VXeXpJc2w0Umc3dEd0QXdtY0lQZ1VOVWZZMlEzOTBGR3FkSDRhaG4rbXcvNmFGYlczMVc2M2Q5WUpWcQppb3lPVmNhTUlwTTVCL2M3UWM4U3VoQ0kxWUdoVXlnNGNSSExFdzVWdGlraW95RTNYMDRrbmEzalFBajU0WWJSCmJwRWhjMzVhcEtMQjIxSE9VUUlEQVFBQm8xTXdVVEFkQmdOVkhRNEVGZ1FVeXZsMFZJNXZKVlN1WUZYdTdCNDgKNlBiTUVBb3dId1lEVlIwakJCZ3dGb0FVeXZsMFZJNXZKVlN1WUZYdTdCNDg2UGJNRUFvd0R3WURWUjBUQVFILwpCQVV3QXdFQi96QU5CZ2txaGtpRzl3MEJBUXNGQUFPQ0FRRUFNTHhyZ0ZWTXVOUnEyd0F3Y0J0N1NuTlI1Q2Z6CjJNdlhxNUVVbXVhd0lVaTlrYVlqd2RWaURSRUdTams3SlcxN3ZsNTc2SGpEa2RmUndpNEUyOFN5ZFJJblpmNkoKaThIWmNaN2NhSDZEeFIzMzVmZ0hWekxpNU5pVGNlL09qTkJRelEyTUpYVkRkOERCbUc1ZnlhdEppT0pRNGJXRQpBN0ZsUDBSZFAzQ08zR1dFME01aVhPQjJtMXFXa0UyZXlPNFVIdndUcU5RTGRyZEFYZ0RRbGJhbTllNEJHM0dnCmQvNnRoQWtXRGJ0L1FOVCtFSkhEQ3ZoRFJLaDFSdUdIeWcrWSsvbmViVFdXckZXc2t0UnJiT29IQ1ppQ3BYSTEKM2VYRTZudDBZa2d0RHhHMjJLcW5ocEFnOWdVU3MyaGxob3h5dmt6eUYwbXU2TmhQbHdBZ25xNysvUT09Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K
-                name: policy-btls/backends-ca
-            weight: 1
-        hostname: auto-sni-auto-san.example.com
-        isHTTP2: false
-        metadata:
-          kind: HTTPRoute
-          name: httproute-btls-auto-san-auto-sni
-          namespace: envoy-gateway
-        name: httproute/envoy-gateway/httproute-btls-auto-san-auto-sni/rule/0/match/0/auto-sni-auto-san_example_com
-        pathMatch:
-          distinct: false
-          exact: /auto-sni-auto-san
-          name: ""
-      - destination:
-          metadata:
-            kind: HTTPRoute
-            name: httproute-btls-mixed-sni-unsuuported
-            namespace: envoy-gateway
-          name: httproute/envoy-gateway/httproute-btls-mixed-sni-unsuuported/rule/0
-          settings:
-          - addressType: IP
-            endpoints:
-            - host: 1.1.1.1
-              port: 3001
-            metadata:
-              kind: Backend
-              name: backend-auto-sni
-              namespace: backends
-            name: httproute/envoy-gateway/httproute-btls-mixed-sni-unsuuported/rule/0/backend/0
-            protocol: HTTP
-            tls:
-              alpnProtocols: null
-              autoSni: true
-              caCertificate:
-                certificate: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURKekNDQWcrZ0F3SUJBZ0lVQWw2VUtJdUttenRlODFjbGx6NVBmZE4ySWxJd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0l6RVFNQTRHQTFVRUF3d0hiWGxqYVdWdWRERVBNQTBHQTFVRUNnd0dhM1ZpWldSaU1CNFhEVEl6TVRBdwpNakExTkRFMU4xb1hEVEkwTVRBd01UQTFOREUxTjFvd0l6RVFNQTRHQTFVRUF3d0hiWGxqYVdWdWRERVBNQTBHCkExVUVDZ3dHYTNWaVpXUmlNSUlCSWpBTkJna3Foa2lHOXcwQkFRRUZBQU9DQVE4QU1JSUJDZ0tDQVFFQXdTVGMKMXlqOEhXNjJueW5rRmJYbzRWWEt2MmpDMFBNN2RQVmt5ODdGd2VaY1RLTG9XUVZQUUUycDJrTERLNk9Fc3ptTQp5eXIreHhXdHlpdmVyZW1yV3FuS2tOVFloTGZZUGhnUWtjemliN2VVYWxtRmpVYmhXZEx2SGFrYkVnQ29kbjNiCmt6NTdtSW5YMlZwaURPS2c0a3lIZml1WFdwaUJxckN4MEtOTHB4bzNERVFjRmNzUVRlVEh6aDQ3NTJHVjA0UlUKVGkvR0VXeXpJc2w0Umc3dEd0QXdtY0lQZ1VOVWZZMlEzOTBGR3FkSDRhaG4rbXcvNmFGYlczMVc2M2Q5WUpWcQppb3lPVmNhTUlwTTVCL2M3UWM4U3VoQ0kxWUdoVXlnNGNSSExFdzVWdGlraW95RTNYMDRrbmEzalFBajU0WWJSCmJwRWhjMzVhcEtMQjIxSE9VUUlEQVFBQm8xTXdVVEFkQmdOVkhRNEVGZ1FVeXZsMFZJNXZKVlN1WUZYdTdCNDgKNlBiTUVBb3dId1lEVlIwakJCZ3dGb0FVeXZsMFZJNXZKVlN1WUZYdTdCNDg2UGJNRUFvd0R3WURWUjBUQVFILwpCQVV3QXdFQi96QU5CZ2txaGtpRzl3MEJBUXNGQUFPQ0FRRUFNTHhyZ0ZWTXVOUnEyd0F3Y0J0N1NuTlI1Q2Z6CjJNdlhxNUVVbXVhd0lVaTlrYVlqd2RWaURSRUdTams3SlcxN3ZsNTc2SGpEa2RmUndpNEUyOFN5ZFJJblpmNkoKaThIWmNaN2NhSDZEeFIzMzVmZ0hWekxpNU5pVGNlL09qTkJRelEyTUpYVkRkOERCbUc1ZnlhdEppT0pRNGJXRQpBN0ZsUDBSZFAzQ08zR1dFME01aVhPQjJtMXFXa0UyZXlPNFVIdndUcU5RTGRyZEFYZ0RRbGJhbTllNEJHM0dnCmQvNnRoQWtXRGJ0L1FOVCtFSkhEQ3ZoRFJLaDFSdUdIeWcrWSsvbmViVFdXckZXc2t0UnJiT29IQ1ppQ3BYSTEKM2VYRTZudDBZa2d0RHhHMjJLcW5ocEFnOWdVU3MyaGxob3h5dmt6eUYwbXU2TmhQbHdBZ25xNysvUT09Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K
-                name: policy-btls/backends-ca
-              subjectAltNames:
-              - uri: spiffe://cluster.local/ns/istio-demo/sa/echo-v1
-            weight: 1
-          - addressType: IP
-            endpoints:
-            - host: 1.1.1.1
-              port: 3001
-            metadata:
-              kind: Backend
-              name: backend-simple
-              namespace: backends
-            name: httproute/envoy-gateway/httproute-btls-mixed-sni-unsuuported/rule/0/backend/1
+            name: httproute/envoy-gateway/httproute-backend-without-sni-and-btlsp/rule/0/backend/0
             protocol: HTTP
             tls:
               alpnProtocols: null
@@ -488,23 +429,23 @@ xdsIR:
               subjectAltNames:
               - uri: spiffe://cluster.local/ns/istio-demo/sa/echo-v1
             weight: 1
-        hostname: unsupported.example.com
+        hostname: backend-without-sni-and-btlsp.example.com
         isHTTP2: false
         metadata:
           kind: HTTPRoute
-          name: httproute-btls-mixed-sni-unsuuported
+          name: httproute-backend-without-sni-and-btlsp
           namespace: envoy-gateway
-        name: httproute/envoy-gateway/httproute-btls-mixed-sni-unsuuported/rule/0/match/0/unsupported_example_com
+        name: httproute/envoy-gateway/httproute-backend-without-sni-and-btlsp/rule/0/match/0/backend-without-sni-and-btlsp_example_com
         pathMatch:
           distinct: false
-          exact: /mixed-sni
+          exact: /backend-without-sni-and-btlsp
           name: ""
       - destination:
           metadata:
             kind: HTTPRoute
-            name: httproute-btls-auto-sni
+            name: httproute-backend-with-sni-and-btlsp
             namespace: envoy-gateway
-          name: httproute/envoy-gateway/httproute-btls-auto-sni/rule/0
+          name: httproute/envoy-gateway/httproute-backend-with-sni-and-btlsp/rule/0
           settings:
           - addressType: IP
             endpoints:
@@ -512,65 +453,98 @@ xdsIR:
               port: 3001
             metadata:
               kind: Backend
-              name: backend-auto-sni
+              name: backend-with-sni-and-btlsp
               namespace: backends
-            name: httproute/envoy-gateway/httproute-btls-auto-sni/rule/0/backend/0
+            name: httproute/envoy-gateway/httproute-backend-with-sni-and-btlsp/rule/0/backend/0
             protocol: HTTP
             tls:
-              alpnProtocols: null
-              autoSni: true
-              caCertificate:
-                certificate: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURKekNDQWcrZ0F3SUJBZ0lVQWw2VUtJdUttenRlODFjbGx6NVBmZE4ySWxJd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0l6RVFNQTRHQTFVRUF3d0hiWGxqYVdWdWRERVBNQTBHQTFVRUNnd0dhM1ZpWldSaU1CNFhEVEl6TVRBdwpNakExTkRFMU4xb1hEVEkwTVRBd01UQTFOREUxTjFvd0l6RVFNQTRHQTFVRUF3d0hiWGxqYVdWdWRERVBNQTBHCkExVUVDZ3dHYTNWaVpXUmlNSUlCSWpBTkJna3Foa2lHOXcwQkFRRUZBQU9DQVE4QU1JSUJDZ0tDQVFFQXdTVGMKMXlqOEhXNjJueW5rRmJYbzRWWEt2MmpDMFBNN2RQVmt5ODdGd2VaY1RLTG9XUVZQUUUycDJrTERLNk9Fc3ptTQp5eXIreHhXdHlpdmVyZW1yV3FuS2tOVFloTGZZUGhnUWtjemliN2VVYWxtRmpVYmhXZEx2SGFrYkVnQ29kbjNiCmt6NTdtSW5YMlZwaURPS2c0a3lIZml1WFdwaUJxckN4MEtOTHB4bzNERVFjRmNzUVRlVEh6aDQ3NTJHVjA0UlUKVGkvR0VXeXpJc2w0Umc3dEd0QXdtY0lQZ1VOVWZZMlEzOTBGR3FkSDRhaG4rbXcvNmFGYlczMVc2M2Q5WUpWcQppb3lPVmNhTUlwTTVCL2M3UWM4U3VoQ0kxWUdoVXlnNGNSSExFdzVWdGlraW95RTNYMDRrbmEzalFBajU0WWJSCmJwRWhjMzVhcEtMQjIxSE9VUUlEQVFBQm8xTXdVVEFkQmdOVkhRNEVGZ1FVeXZsMFZJNXZKVlN1WUZYdTdCNDgKNlBiTUVBb3dId1lEVlIwakJCZ3dGb0FVeXZsMFZJNXZKVlN1WUZYdTdCNDg2UGJNRUFvd0R3WURWUjBUQVFILwpCQVV3QXdFQi96QU5CZ2txaGtpRzl3MEJBUXNGQUFPQ0FRRUFNTHhyZ0ZWTXVOUnEyd0F3Y0J0N1NuTlI1Q2Z6CjJNdlhxNUVVbXVhd0lVaTlrYVlqd2RWaURSRUdTams3SlcxN3ZsNTc2SGpEa2RmUndpNEUyOFN5ZFJJblpmNkoKaThIWmNaN2NhSDZEeFIzMzVmZ0hWekxpNU5pVGNlL09qTkJRelEyTUpYVkRkOERCbUc1ZnlhdEppT0pRNGJXRQpBN0ZsUDBSZFAzQ08zR1dFME01aVhPQjJtMXFXa0UyZXlPNFVIdndUcU5RTGRyZEFYZ0RRbGJhbTllNEJHM0dnCmQvNnRoQWtXRGJ0L1FOVCtFSkhEQ3ZoRFJLaDFSdUdIeWcrWSsvbmViVFdXckZXc2t0UnJiT29IQ1ppQ3BYSTEKM2VYRTZudDBZa2d0RHhHMjJLcW5ocEFnOWdVU3MyaGxob3h5dmt6eUYwbXU2TmhQbHdBZ25xNysvUT09Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K
-                name: policy-btls/backends-ca
-              subjectAltNames:
-              - uri: spiffe://cluster.local/ns/istio-demo/sa/echo-v1
-            weight: 1
-        hostname: auto-sni.example.com
-        isHTTP2: false
-        metadata:
-          kind: HTTPRoute
-          name: httproute-btls-auto-sni
-          namespace: envoy-gateway
-        name: httproute/envoy-gateway/httproute-btls-auto-sni/rule/0/match/0/auto-sni_example_com
-        pathMatch:
-          distinct: false
-          exact: /auto-sni
-          name: ""
-      - destination:
-          metadata:
-            kind: HTTPRoute
-            name: httproute-btls-auto-san
-            namespace: envoy-gateway
-          name: httproute/envoy-gateway/httproute-btls-auto-san/rule/0
-          settings:
-          - addressType: IP
-            endpoints:
-            - host: 1.1.1.1
-              port: 3001
-            metadata:
-              kind: Backend
-              name: backend-auto-san-sni-validation
-              namespace: backends
-            name: httproute/envoy-gateway/httproute-btls-auto-san/rule/0/backend/0
-            protocol: HTTP
-            tls:
-              AutoSanValidation: true
               alpnProtocols: null
               caCertificate:
                 certificate: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURKekNDQWcrZ0F3SUJBZ0lVQWw2VUtJdUttenRlODFjbGx6NVBmZE4ySWxJd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0l6RVFNQTRHQTFVRUF3d0hiWGxqYVdWdWRERVBNQTBHQTFVRUNnd0dhM1ZpWldSaU1CNFhEVEl6TVRBdwpNakExTkRFMU4xb1hEVEkwTVRBd01UQTFOREUxTjFvd0l6RVFNQTRHQTFVRUF3d0hiWGxqYVdWdWRERVBNQTBHCkExVUVDZ3dHYTNWaVpXUmlNSUlCSWpBTkJna3Foa2lHOXcwQkFRRUZBQU9DQVE4QU1JSUJDZ0tDQVFFQXdTVGMKMXlqOEhXNjJueW5rRmJYbzRWWEt2MmpDMFBNN2RQVmt5ODdGd2VaY1RLTG9XUVZQUUUycDJrTERLNk9Fc3ptTQp5eXIreHhXdHlpdmVyZW1yV3FuS2tOVFloTGZZUGhnUWtjemliN2VVYWxtRmpVYmhXZEx2SGFrYkVnQ29kbjNiCmt6NTdtSW5YMlZwaURPS2c0a3lIZml1WFdwaUJxckN4MEtOTHB4bzNERVFjRmNzUVRlVEh6aDQ3NTJHVjA0UlUKVGkvR0VXeXpJc2w0Umc3dEd0QXdtY0lQZ1VOVWZZMlEzOTBGR3FkSDRhaG4rbXcvNmFGYlczMVc2M2Q5WUpWcQppb3lPVmNhTUlwTTVCL2M3UWM4U3VoQ0kxWUdoVXlnNGNSSExFdzVWdGlraW95RTNYMDRrbmEzalFBajU0WWJSCmJwRWhjMzVhcEtMQjIxSE9VUUlEQVFBQm8xTXdVVEFkQmdOVkhRNEVGZ1FVeXZsMFZJNXZKVlN1WUZYdTdCNDgKNlBiTUVBb3dId1lEVlIwakJCZ3dGb0FVeXZsMFZJNXZKVlN1WUZYdTdCNDg2UGJNRUFvd0R3WURWUjBUQVFILwpCQVV3QXdFQi96QU5CZ2txaGtpRzl3MEJBUXNGQUFPQ0FRRUFNTHhyZ0ZWTXVOUnEyd0F3Y0J0N1NuTlI1Q2Z6CjJNdlhxNUVVbXVhd0lVaTlrYVlqd2RWaURSRUdTams3SlcxN3ZsNTc2SGpEa2RmUndpNEUyOFN5ZFJJblpmNkoKaThIWmNaN2NhSDZEeFIzMzVmZ0hWekxpNU5pVGNlL09qTkJRelEyTUpYVkRkOERCbUc1ZnlhdEppT0pRNGJXRQpBN0ZsUDBSZFAzQ08zR1dFME01aVhPQjJtMXFXa0UyZXlPNFVIdndUcU5RTGRyZEFYZ0RRbGJhbTllNEJHM0dnCmQvNnRoQWtXRGJ0L1FOVCtFSkhEQ3ZoRFJLaDFSdUdIeWcrWSsvbmViVFdXckZXc2t0UnJiT29IQ1ppQ3BYSTEKM2VYRTZudDBZa2d0RHhHMjJLcW5ocEFnOWdVU3MyaGxob3h5dmt6eUYwbXU2TmhQbHdBZ25xNysvUT09Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K
                 name: policy-btls/backends-ca
               sni: example.com
+              subjectAltNames:
+              - uri: spiffe://cluster.local/ns/istio-demo/sa/echo-v1
             weight: 1
-        hostname: auto-san.example.com
+        hostname: backend-with-sni-and-btlsp.example.com
         isHTTP2: false
         metadata:
           kind: HTTPRoute
-          name: httproute-btls-auto-san
+          name: httproute-backend-with-sni-and-btlsp
           namespace: envoy-gateway
-        name: httproute/envoy-gateway/httproute-btls-auto-san/rule/0/match/0/auto-san_example_com
+        name: httproute/envoy-gateway/httproute-backend-with-sni-and-btlsp/rule/0/match/0/backend-with-sni-and-btlsp_example_com
         pathMatch:
           distinct: false
-          exact: /auto-san
+          exact: /backend-with-sni-and-btlsp
+          name: ""
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-backend-without-sni
+            namespace: envoy-gateway
+          name: httproute/envoy-gateway/httproute-backend-without-sni/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 1.1.1.1
+              port: 3001
+            metadata:
+              kind: Backend
+              name: backend-without-sni
+              namespace: backends
+            name: httproute/envoy-gateway/httproute-backend-without-sni/rule/0/backend/0
+            protocol: HTTP
+            tls:
+              alpnProtocols: null
+              caCertificate:
+                certificate: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURKekNDQWcrZ0F3SUJBZ0lVQWw2VUtJdUttenRlODFjbGx6NVBmZE4ySWxJd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0l6RVFNQTRHQTFVRUF3d0hiWGxqYVdWdWRERVBNQTBHQTFVRUNnd0dhM1ZpWldSaU1CNFhEVEl6TVRBdwpNakExTkRFMU4xb1hEVEkwTVRBd01UQTFOREUxTjFvd0l6RVFNQTRHQTFVRUF3d0hiWGxqYVdWdWRERVBNQTBHCkExVUVDZ3dHYTNWaVpXUmlNSUlCSWpBTkJna3Foa2lHOXcwQkFRRUZBQU9DQVE4QU1JSUJDZ0tDQVFFQXdTVGMKMXlqOEhXNjJueW5rRmJYbzRWWEt2MmpDMFBNN2RQVmt5ODdGd2VaY1RLTG9XUVZQUUUycDJrTERLNk9Fc3ptTQp5eXIreHhXdHlpdmVyZW1yV3FuS2tOVFloTGZZUGhnUWtjemliN2VVYWxtRmpVYmhXZEx2SGFrYkVnQ29kbjNiCmt6NTdtSW5YMlZwaURPS2c0a3lIZml1WFdwaUJxckN4MEtOTHB4bzNERVFjRmNzUVRlVEh6aDQ3NTJHVjA0UlUKVGkvR0VXeXpJc2w0Umc3dEd0QXdtY0lQZ1VOVWZZMlEzOTBGR3FkSDRhaG4rbXcvNmFGYlczMVc2M2Q5WUpWcQppb3lPVmNhTUlwTTVCL2M3UWM4U3VoQ0kxWUdoVXlnNGNSSExFdzVWdGlraW95RTNYMDRrbmEzalFBajU0WWJSCmJwRWhjMzVhcEtMQjIxSE9VUUlEQVFBQm8xTXdVVEFkQmdOVkhRNEVGZ1FVeXZsMFZJNXZKVlN1WUZYdTdCNDgKNlBiTUVBb3dId1lEVlIwakJCZ3dGb0FVeXZsMFZJNXZKVlN1WUZYdTdCNDg2UGJNRUFvd0R3WURWUjBUQVFILwpCQVV3QXdFQi96QU5CZ2txaGtpRzl3MEJBUXNGQUFPQ0FRRUFNTHhyZ0ZWTXVOUnEyd0F3Y0J0N1NuTlI1Q2Z6CjJNdlhxNUVVbXVhd0lVaTlrYVlqd2RWaURSRUdTams3SlcxN3ZsNTc2SGpEa2RmUndpNEUyOFN5ZFJJblpmNkoKaThIWmNaN2NhSDZEeFIzMzVmZ0hWekxpNU5pVGNlL09qTkJRelEyTUpYVkRkOERCbUc1ZnlhdEppT0pRNGJXRQpBN0ZsUDBSZFAzQ08zR1dFME01aVhPQjJtMXFXa0UyZXlPNFVIdndUcU5RTGRyZEFYZ0RRbGJhbTllNEJHM0dnCmQvNnRoQWtXRGJ0L1FOVCtFSkhEQ3ZoRFJLaDFSdUdIeWcrWSsvbmViVFdXckZXc2t0UnJiT29IQ1ppQ3BYSTEKM2VYRTZudDBZa2d0RHhHMjJLcW5ocEFnOWdVU3MyaGxob3h5dmt6eUYwbXU2TmhQbHdBZ25xNysvUT09Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K
+                name: backend-without-sni/backends-ca
+            weight: 1
+        hostname: backend-without-sni.example.com
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-backend-without-sni
+          namespace: envoy-gateway
+        name: httproute/envoy-gateway/httproute-backend-without-sni/rule/0/match/0/backend-without-sni_example_com
+        pathMatch:
+          distinct: false
+          exact: /backend-without-sni
+          name: ""
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-backend-with-sni
+            namespace: envoy-gateway
+          name: httproute/envoy-gateway/httproute-backend-with-sni/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 1.1.1.1
+              port: 3001
+            metadata:
+              kind: Backend
+              name: backend-with-sni
+              namespace: backends
+            name: httproute/envoy-gateway/httproute-backend-with-sni/rule/0/backend/0
+            protocol: HTTP
+            tls:
+              alpnProtocols: null
+              caCertificate:
+                certificate: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURKekNDQWcrZ0F3SUJBZ0lVQWw2VUtJdUttenRlODFjbGx6NVBmZE4ySWxJd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0l6RVFNQTRHQTFVRUF3d0hiWGxqYVdWdWRERVBNQTBHQTFVRUNnd0dhM1ZpWldSaU1CNFhEVEl6TVRBdwpNakExTkRFMU4xb1hEVEkwTVRBd01UQTFOREUxTjFvd0l6RVFNQTRHQTFVRUF3d0hiWGxqYVdWdWRERVBNQTBHCkExVUVDZ3dHYTNWaVpXUmlNSUlCSWpBTkJna3Foa2lHOXcwQkFRRUZBQU9DQVE4QU1JSUJDZ0tDQVFFQXdTVGMKMXlqOEhXNjJueW5rRmJYbzRWWEt2MmpDMFBNN2RQVmt5ODdGd2VaY1RLTG9XUVZQUUUycDJrTERLNk9Fc3ptTQp5eXIreHhXdHlpdmVyZW1yV3FuS2tOVFloTGZZUGhnUWtjemliN2VVYWxtRmpVYmhXZEx2SGFrYkVnQ29kbjNiCmt6NTdtSW5YMlZwaURPS2c0a3lIZml1WFdwaUJxckN4MEtOTHB4bzNERVFjRmNzUVRlVEh6aDQ3NTJHVjA0UlUKVGkvR0VXeXpJc2w0Umc3dEd0QXdtY0lQZ1VOVWZZMlEzOTBGR3FkSDRhaG4rbXcvNmFGYlczMVc2M2Q5WUpWcQppb3lPVmNhTUlwTTVCL2M3UWM4U3VoQ0kxWUdoVXlnNGNSSExFdzVWdGlraW95RTNYMDRrbmEzalFBajU0WWJSCmJwRWhjMzVhcEtMQjIxSE9VUUlEQVFBQm8xTXdVVEFkQmdOVkhRNEVGZ1FVeXZsMFZJNXZKVlN1WUZYdTdCNDgKNlBiTUVBb3dId1lEVlIwakJCZ3dGb0FVeXZsMFZJNXZKVlN1WUZYdTdCNDg2UGJNRUFvd0R3WURWUjBUQVFILwpCQVV3QXdFQi96QU5CZ2txaGtpRzl3MEJBUXNGQUFPQ0FRRUFNTHhyZ0ZWTXVOUnEyd0F3Y0J0N1NuTlI1Q2Z6CjJNdlhxNUVVbXVhd0lVaTlrYVlqd2RWaURSRUdTams3SlcxN3ZsNTc2SGpEa2RmUndpNEUyOFN5ZFJJblpmNkoKaThIWmNaN2NhSDZEeFIzMzVmZ0hWekxpNU5pVGNlL09qTkJRelEyTUpYVkRkOERCbUc1ZnlhdEppT0pRNGJXRQpBN0ZsUDBSZFAzQ08zR1dFME01aVhPQjJtMXFXa0UyZXlPNFVIdndUcU5RTGRyZEFYZ0RRbGJhbTllNEJHM0dnCmQvNnRoQWtXRGJ0L1FOVCtFSkhEQ3ZoRFJLaDFSdUdIeWcrWSsvbmViVFdXckZXc2t0UnJiT29IQ1ppQ3BYSTEKM2VYRTZudDBZa2d0RHhHMjJLcW5ocEFnOWdVU3MyaGxob3h5dmt6eUYwbXU2TmhQbHdBZ25xNysvUT09Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K
+                name: backend-with-sni/backends-ca
+              sni: backend.sni.com
+            weight: 1
+        hostname: backend-with-sni.example.com
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-backend-with-sni
+          namespace: envoy-gateway
+        name: httproute/envoy-gateway/httproute-backend-with-sni/rule/0/match/0/backend-with-sni_example_com
+        pathMatch:
+          distinct: false
+          exact: /backend-with-sni
           name: ""
     readyListener:
       address: 0.0.0.0

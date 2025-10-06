@@ -209,11 +209,34 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 		cluster.TransportSocket = args.tSocket
 	}
 
+	// scan through settings to determine cluster-level configuration options, as some of them
+	// influence transport socket specific settings
 	requiresAutoHTTPConfig := false
-	for i, ds := range args.settings {
+	requiresHTTP2Options := false
+	hasLiteralSNI := false
+	for _, ds := range args.settings {
+		if ds.Protocol == ir.GRPC ||
+			ds.Protocol == ir.HTTP2 {
+			requiresHTTP2Options = true
+		}
+
 		if ds.TLS != nil {
 			requiresAutoHTTPConfig = true
-			socket, err := buildXdsUpstreamTLSSocketWthCert(ds.TLS)
+
+			// it's safe to set autoSNI on cluster level only if all endpoints do not set literal SNIs.
+			// Otherwise, autoSNI will override transport-socket level SNI.
+			// See here: https://www.envoyproxy.io/docs/envoy/latest/start/quick-start/securing#connect-to-an-endpoint-with-sni
+			if ds.TLS.SNI != nil {
+				hasLiteralSNI = true
+			}
+		}
+	}
+	// only enable auto sni if TLS is configured
+	requiresAutoSNI := !hasLiteralSNI && requiresAutoHTTPConfig
+
+	for i, ds := range args.settings {
+		if ds.TLS != nil {
+			socket, err := buildXdsUpstreamTLSSocketWthCert(ds.TLS, requiresAutoSNI, args.endpointType)
 			if err != nil {
 				// TODO: Log something here
 				return nil, err
@@ -247,7 +270,7 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 	}
 
 	// build common, HTTP/1 and HTTP/2  protocol options for cluster
-	epo, secrets, err := buildTypedExtensionProtocolOptions(args, requiresAutoHTTPConfig)
+	epo, secrets, err := buildTypedExtensionProtocolOptions(args, requiresAutoHTTPConfig, requiresHTTP2Options, requiresAutoSNI)
 	if err != nil {
 		return nil, err
 	}
@@ -810,24 +833,7 @@ func buildWeightedLocalities(metadata *corev3.Metadata, ds *ir.DestinationSettin
 	return locality
 }
 
-func buildTypedExtensionProtocolOptions(args *xdsClusterArgs, requiresAutoHTTPConfig bool) (map[string]*anypb.Any, []*tlsv3.Secret, error) {
-	requiresHTTP2Options := false
-	requiresAutoSNI := false
-	for _, ds := range args.settings {
-		if ds.Protocol == ir.GRPC ||
-			ds.Protocol == ir.HTTP2 {
-			requiresHTTP2Options = true
-		}
-
-		if ds.TLS != nil && ds.TLS.AutoSNI {
-			requiresAutoSNI = true
-		}
-
-		if requiresHTTP2Options && requiresAutoSNI {
-			break
-		}
-	}
-
+func buildTypedExtensionProtocolOptions(args *xdsClusterArgs, requiresAutoHTTPConfig, requiresHTTP2Options, requiresAutoSNI bool) (map[string]*anypb.Any, []*tlsv3.Secret, error) {
 	requiresCommonHTTPOptions := (args.timeout != nil && args.timeout.HTTP != nil &&
 		(args.timeout.HTTP.MaxConnectionDuration != nil || args.timeout.HTTP.ConnectionIdleTimeout != nil)) ||
 		(args.circuitBreaker != nil && args.circuitBreaker.MaxRequestsPerConnection != nil)

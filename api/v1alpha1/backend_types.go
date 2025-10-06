@@ -205,10 +205,22 @@ type BackendTLSSettings struct {
 	// +optional
 	InsecureSkipVerify *bool `json:"insecureSkipVerify,omitempty"`
 
+	// SNI is specifies the SNI value used when establishing an upstream TLS connection to the backend.
+	//
+	// Envoy Gateway will use the HTTP host header value for SNI, when all resources referenced in BackendRefs are:
+	// 1. Backend resources that do not set SNI, or
+	// 2. Service/ServiceImport resources that do not have a BackendTLSPolicy attached to them
+	//
+	// When a BackendTLSPolicy attaches to a Backend resource, the BackendTLSPolicy's Hostname value takes precedence
+	// over this value.
+	//
+	// +optional
+	SNI *gwapiv1.PreciseHostname `json:"sni,omitempty"`
+
 	// SNIModifier specifies how the TLS Server Name Indication value is determined.
 	//
 	// +optional
-	SNIModifier *SNIModifier `json:"sni,omitempty"`
+	SNIModifier *SNIModifier `json:"snimodif,omitempty"`
 
 	// SANValidation specifies how the server certificate SANs are validated.
 	//

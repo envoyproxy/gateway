@@ -84,9 +84,6 @@ func (t *Translator) translateExtServiceBackendRefs(
 		return nil, errors.New("external service destinations having multiple endpoint types are not supported")
 	}
 
-	if rs.HasLiteralAndAutoSNI() {
-		return nil, errors.New("external service invalid: Literal and Auto SNI cannot be used by different backends in the same BackendRefs")
-	}
 	return rs, nil
 }
 
