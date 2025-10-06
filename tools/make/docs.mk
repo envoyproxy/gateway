@@ -9,12 +9,15 @@ CLEAN_NODE_MODULES ?= true
 
 ##@ Docs
 
-.PHONY: docs
-docs: docs.clean helm-readme-gen docs-api copy-current-release-docs docs-sync-owners ## Generate Envoy Gateway Docs Sources
+.PHONY: docs-gen
+docs-gen: docs.clean helm-readme-gen docs-api copy-current-release-docs docs-sync-owners ## Generate Envoy Gateway Docs Sources
 	@$(LOG_TARGET)
 	cd $(ROOT_DIR)/site && npm install
 	cd $(ROOT_DIR)/site && npm run build:production
 	cp tools/hack/get-egctl.sh $(DOCS_OUTPUT_DIR)
+
+.PHONY: docs
+docs: docs-gen docs-check ## Generate docs and verify no changes are needed
 
 .PHONY: copy-current-release-docs
 copy-current-release-docs:  ## Copy the current release docs to the docs folder
@@ -183,6 +186,14 @@ docs-check-links: # Check for broken links in the docs
 
 docs-markdown-lint:
 	markdownlint -c .github/markdown_lint_config.json site/content/*
+
+.PHONY: docs-check
+docs-check: ## Verify no doc changes are needed
+	@$(LOG_TARGET)
+	@if [ ! -z "`git status --porcelain`" ]; then \
+		$(call errorlog, ERROR: Some files need to be updated, please run 'make docs' to include any changed files to your PR); \
+		git diff --exit-code; \
+	fi
 
 release-notes-docs: $(tools/release-notes-docs)
 	@$(LOG_TARGET)
