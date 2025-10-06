@@ -133,15 +133,6 @@ func TestCreateOrUpdateRateLimitServiceAccount(t *testing.T) {
 	}
 }
 
-// TODO: move to utils package?
-func requireEqual(t *testing.T, want, actual any) {
-	opts := []cmp.Option{
-		cmpopts.IgnoreFields(metav1.ObjectMeta{}, "ResourceVersion"),
-		cmpopts.IgnoreFields(metav1.TypeMeta{}, "Kind", "APIVersion"),
-	}
-	require.Empty(t, cmp.Diff(want, actual, opts...))
-}
-
 func TestDeleteRateLimitServiceAccount(t *testing.T) {
 	rl := &egv1a1.RateLimit{
 		Backend: egv1a1.RateLimitDatabaseBackend{
