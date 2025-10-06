@@ -2,7 +2,6 @@ backends:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: Backend
   metadata:
-    creationTimestamp: null
     name: backend
     namespace: default
   spec:
@@ -22,7 +21,6 @@ gatewayClass:
   apiVersion: gateway.networking.k8s.io/v1
   kind: GatewayClass
   metadata:
-    creationTimestamp: null
     name: eg
   spec:
     controllerName: gateway.envoyproxy.io/gatewayclass-controller
@@ -37,7 +35,6 @@ gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
   metadata:
-    creationTimestamp: null
     name: eg
     namespace: default
   spec:
@@ -78,7 +75,6 @@ httpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
   metadata:
-    creationTimestamp: null
     name: backend
     namespace: default
   spec:

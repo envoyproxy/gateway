@@ -2,7 +2,6 @@ gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
   metadata:
-    creationTimestamp: null
     name: gateway-1
     namespace: envoy-gateway
   spec:
@@ -95,7 +94,6 @@ udpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1alpha2
   kind: UDPRoute
   metadata:
-    creationTimestamp: null
     name: udproute-1
     namespace: default
   spec:
@@ -126,7 +124,6 @@ udpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1alpha2
   kind: UDPRoute
   metadata:
-    creationTimestamp: null
     name: udproute-2
     namespace: default
   spec:
