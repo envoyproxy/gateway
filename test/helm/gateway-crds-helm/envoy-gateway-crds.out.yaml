@@ -223,17 +223,6 @@ spec:
                       InsecureSkipVerify indicates whether the upstream's certificate verification
                       should be skipped. Defaults to "false".
                     type: boolean
-                  sanValidation:
-                    description: SANValidation specifies how the server certificate
-                      SANs are validated.
-                    properties:
-                      type:
-                        enum:
-                        - SNI
-                        type: string
-                    required:
-                    - type
-                    type: object
                   sni:
                     description: |-
                       SNI is specifies the SNI value used when establishing an upstream TLS connection to the backend.
@@ -248,17 +237,6 @@ spec:
                     minLength: 1
                     pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
                     type: string
-                  snimodif:
-                    description: SNIModifier specifies how the TLS Server Name Indication
-                      value is determined.
-                    properties:
-                      type:
-                        enum:
-                        - Client
-                        type: string
-                    required:
-                    - type
-                    type: object
                   wellKnownCACertificates:
                     description: |-
                       WellKnownCACertificates specifies whether system CA certificates may be used in
