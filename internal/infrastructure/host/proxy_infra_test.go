@@ -23,6 +23,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/logging"
 	"github.com/envoyproxy/gateway/internal/utils/file"
+	"github.com/envoyproxy/gateway/test/utils"
 )
 
 func newMockInfra(t *testing.T, cfg *config.Server) *Infra {
@@ -159,8 +160,9 @@ func TestInfra_runEnvoy_OutputRedirection(t *testing.T) {
 	require.NoError(t, err)
 
 	// Create separate buffers for stdout and stderr
-	stdout := &bytes.Buffer{}
-	stderr := &bytes.Buffer{}
+	buffers := utils.DumpLogsOnFail(t, "stdout", "stderr")
+	stdout := buffers[0]
+	stderr := buffers[1]
 
 	i := &Infra{
 		proxyContextMap: make(map[string]*proxyContext),
