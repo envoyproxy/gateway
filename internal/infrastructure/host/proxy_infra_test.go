@@ -7,9 +7,10 @@ package host
 
 import (
 	"bytes"
-	"os"
+	"io"
 	"path"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	func_e "github.com/tetratelabs/func-e"
@@ -44,16 +45,18 @@ func newMockInfra(t *testing.T, cfg *config.Server) *Infra {
 
 	infra := &Infra{
 		HomeDir:         homeDir,
-		Logger:          logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo),
+		Logger:          logging.DefaultLogger(io.Discard, egv1a1.LogLevelInfo),
 		EnvoyGateway:    cfg.EnvoyGateway,
 		proxyContextMap: make(map[string]*proxyContext),
 		sdsConfigPath:   proxyDir,
+		Stdout:          io.Discard,
+		Stderr:          io.Discard,
 	}
 	return infra
 }
 
 func TestInfraCreateProxy(t *testing.T) {
-	cfg, err := config.New(os.Stdout)
+	cfg, err := config.New(io.Discard, io.Discard)
 	require.NoError(t, err)
 	infra := newMockInfra(t, cfg)
 
@@ -95,7 +98,15 @@ func TestInfra_runEnvoy_stopEnvoy(t *testing.T) {
 	err := func_e.Run(t.Context(), []string{"--version"}, api.HomeDir(tmpdir))
 	require.NoError(t, err)
 
-	i := &Infra{proxyContextMap: make(map[string]*proxyContext), HomeDir: tmpdir}
+	stdout := &bytes.Buffer{}
+	stderr := &bytes.Buffer{}
+	i := &Infra{
+		proxyContextMap: make(map[string]*proxyContext),
+		HomeDir:         tmpdir,
+		Logger:          logging.DefaultLogger(stdout, egv1a1.LogLevelInfo),
+		Stdout:          stdout,
+		Stderr:          stderr,
+	}
 	// Ensures that run -> stop will successfully stop the envoy and we can
 	// run it again without any issues.
 	for range 5 {
@@ -103,8 +114,7 @@ func TestInfra_runEnvoy_stopEnvoy(t *testing.T) {
 			"--config-yaml",
 			"admin: {address: {socket_address: {address: '127.0.0.1', port_value: 9901}}}",
 		}
-		out := &bytes.Buffer{}
-		i.runEnvoy(t.Context(), out, "", "test", args)
+		i.runEnvoy(t.Context(), "", "test", args)
 		require.Len(t, i.proxyContextMap, 1)
 		i.stopEnvoy("test")
 		require.Empty(t, i.proxyContextMap)
@@ -139,6 +149,47 @@ func TestExtractSemver(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestInfra_runEnvoy_OutputRedirection verifies that Envoy output goes to configured writers, not os.Stdout/Stderr.
+func TestInfra_runEnvoy_OutputRedirection(t *testing.T) {
+	tmpdir := t.TempDir()
+	// Ensures that all the required binaries are available.
+	err := func_e.Run(t.Context(), []string{"--version"}, api.HomeDir(tmpdir))
+	require.NoError(t, err)
+
+	// Create separate buffers for stdout and stderr
+	stdout := &bytes.Buffer{}
+	stderr := &bytes.Buffer{}
+
+	i := &Infra{
+		proxyContextMap: make(map[string]*proxyContext),
+		HomeDir:         tmpdir,
+		Logger:          logging.DefaultLogger(stdout, egv1a1.LogLevelInfo),
+		Stdout:          stdout,
+		Stderr:          stderr,
+	}
+
+	// Run envoy with an invalid config to force it to write to stderr and exit quickly
+	args := []string{
+		"--config-yaml",
+		"invalid: yaml: syntax",
+	}
+
+	i.runEnvoy(t.Context(), "", "test", args)
+	require.Len(t, i.proxyContextMap, 1)
+
+	// Wait a bit for envoy to fail
+	require.Eventually(t, func() bool {
+		return stderr.Len() > 0 || stdout.Len() > 0
+	}, 5*time.Second, 100*time.Millisecond, "expected output to be written to buffers")
+
+	i.stopEnvoy("test")
+	require.Empty(t, i.proxyContextMap)
+
+	// Verify that output was captured in buffers (either stdout or stderr should have content)
+	totalOutput := stdout.Len() + stderr.Len()
+	require.Positive(t, totalOutput, "expected some output to be captured in stdout or stderr buffers")
 }
 
 func TestGetEnvoyVersion(t *testing.T) {
