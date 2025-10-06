@@ -1,0 +1,32 @@
+name: "passive-failure-percentage"
+http:
+- name: "listener-1"
+  address: "0.0.0.0"
+  port: 10080
+  hostnames:
+  - "*"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  routes:
+  - name: "route-1"
+    hostname: "*"
+    destination:
+      name: "dest-1"
+      settings:
+      - endpoints:
+        - host: "7.7.7.7"
+          port: 8080
+        name: "dest-1/backend/0"
+        protocol: HTTP
+    traffic:
+      healthCheck:
+        passive:
+          interval: 5s
+          baseEjectionTime: 30s
+          maxEjectionPercent: 50
+          consecutive5XxErrors: 5
+          consecutiveGatewayErrors: 0
+          consecutiveLocalOriginFailures: 5
+          splitExternalLocalOriginErrors: false
+          failurePercentageThreshold: 90

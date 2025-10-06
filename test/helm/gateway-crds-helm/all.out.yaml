@@ -18145,6 +18145,16 @@ spec:
                           Parameter takes effect only when split_external_local_origin_errors is set to true.
                         format: int32
                         type: integer
+                      failurePercentageThreshold:
+                        default: 85
+                        description: |-
+                          FailurePercentageThreshold sets the failure percentage threshold for outlier detection.
+                          If the failure percentage of a given host is greater than or equal to this value, it will be ejected.
+                          Defaults to 85.
+                        format: int32
+                        maximum: 100
+                        minimum: 0
+                        type: integer
                       interval:
                         default: 3s
                         description: Interval defines the time between passive health
@@ -22342,6 +22352,16 @@ spec:
                                     ConsecutiveLocalOriginFailures sets the number of consecutive local origin failures triggering ejection.
                                     Parameter takes effect only when split_external_local_origin_errors is set to true.
                                   format: int32
+                                  type: integer
+                                failurePercentageThreshold:
+                                  default: 85
+                                  description: |-
+                                    FailurePercentageThreshold sets the failure percentage threshold for outlier detection.
+                                    If the failure percentage of a given host is greater than or equal to this value, it will be ejected.
+                                    Defaults to 85.
+                                  format: int32
+                                  maximum: 100
+                                  minimum: 0
                                   type: integer
                                 interval:
                                   default: 3s
@@ -35419,6 +35439,16 @@ spec:
                                                       Parameter takes effect only when split_external_local_origin_errors is set to true.
                                                     format: int32
                                                     type: integer
+                                                  failurePercentageThreshold:
+                                                    default: 85
+                                                    description: |-
+                                                      FailurePercentageThreshold sets the failure percentage threshold for outlier detection.
+                                                      If the failure percentage of a given host is greater than or equal to this value, it will be ejected.
+                                                      Defaults to 85.
+                                                    format: int32
+                                                    maximum: 100
+                                                    minimum: 0
+                                                    type: integer
                                                   interval:
                                                     default: 3s
                                                     description: Interval defines
@@ -36529,6 +36559,16 @@ spec:
                                                       ConsecutiveLocalOriginFailures sets the number of consecutive local origin failures triggering ejection.
                                                       Parameter takes effect only when split_external_local_origin_errors is set to true.
                                                     format: int32
+                                                    type: integer
+                                                  failurePercentageThreshold:
+                                                    default: 85
+                                                    description: |-
+                                                      FailurePercentageThreshold sets the failure percentage threshold for outlier detection.
+                                                      If the failure percentage of a given host is greater than or equal to this value, it will be ejected.
+                                                      Defaults to 85.
+                                                    format: int32
+                                                    maximum: 100
+                                                    minimum: 0
                                                     type: integer
                                                   interval:
                                                     default: 3s
@@ -37733,6 +37773,16 @@ spec:
                                                 Parameter takes effect only when split_external_local_origin_errors is set to true.
                                               format: int32
                                               type: integer
+                                            failurePercentageThreshold:
+                                              default: 85
+                                              description: |-
+                                                FailurePercentageThreshold sets the failure percentage threshold for outlier detection.
+                                                If the failure percentage of a given host is greater than or equal to this value, it will be ejected.
+                                                Defaults to 85.
+                                              format: int32
+                                              maximum: 100
+                                              minimum: 0
+                                              type: integer
                                             interval:
                                               default: 3s
                                               description: Interval defines the time
@@ -38846,6 +38896,16 @@ spec:
                                           ConsecutiveLocalOriginFailures sets the number of consecutive local origin failures triggering ejection.
                                           Parameter takes effect only when split_external_local_origin_errors is set to true.
                                         format: int32
+                                        type: integer
+                                      failurePercentageThreshold:
+                                        default: 85
+                                        description: |-
+                                          FailurePercentageThreshold sets the failure percentage threshold for outlier detection.
+                                          If the failure percentage of a given host is greater than or equal to this value, it will be ejected.
+                                          Defaults to 85.
+                                        format: int32
+                                        maximum: 100
+                                        minimum: 0
                                         type: integer
                                       interval:
                                         default: 3s
@@ -40928,6 +40988,16 @@ spec:
                                       Parameter takes effect only when split_external_local_origin_errors is set to true.
                                     format: int32
                                     type: integer
+                                  failurePercentageThreshold:
+                                    default: 85
+                                    description: |-
+                                      FailurePercentageThreshold sets the failure percentage threshold for outlier detection.
+                                      If the failure percentage of a given host is greater than or equal to this value, it will be ejected.
+                                      Defaults to 85.
+                                    format: int32
+                                    maximum: 100
+                                    minimum: 0
+                                    type: integer
                                   interval:
                                     default: 3s
                                     description: Interval defines the time between
@@ -41934,6 +42004,16 @@ spec:
                                       ConsecutiveLocalOriginFailures sets the number of consecutive local origin failures triggering ejection.
                                       Parameter takes effect only when split_external_local_origin_errors is set to true.
                                     format: int32
+                                    type: integer
+                                  failurePercentageThreshold:
+                                    default: 85
+                                    description: |-
+                                      FailurePercentageThreshold sets the failure percentage threshold for outlier detection.
+                                      If the failure percentage of a given host is greater than or equal to this value, it will be ejected.
+                                      Defaults to 85.
+                                    format: int32
+                                    maximum: 100
+                                    minimum: 0
                                     type: integer
                                   interval:
                                     default: 3s
@@ -43152,6 +43232,16 @@ spec:
                                             ConsecutiveLocalOriginFailures sets the number of consecutive local origin failures triggering ejection.
                                             Parameter takes effect only when split_external_local_origin_errors is set to true.
                                           format: int32
+                                          type: integer
+                                        failurePercentageThreshold:
+                                          default: 85
+                                          description: |-
+                                            FailurePercentageThreshold sets the failure percentage threshold for outlier detection.
+                                            If the failure percentage of a given host is greater than or equal to this value, it will be ejected.
+                                            Defaults to 85.
+                                          format: int32
+                                          maximum: 100
+                                          minimum: 0
                                           type: integer
                                         interval:
                                           default: 3s
@@ -44416,6 +44506,16 @@ spec:
                                       ConsecutiveLocalOriginFailures sets the number of consecutive local origin failures triggering ejection.
                                       Parameter takes effect only when split_external_local_origin_errors is set to true.
                                     format: int32
+                                    type: integer
+                                  failurePercentageThreshold:
+                                    default: 85
+                                    description: |-
+                                      FailurePercentageThreshold sets the failure percentage threshold for outlier detection.
+                                      If the failure percentage of a given host is greater than or equal to this value, it will be ejected.
+                                      Defaults to 85.
+                                    format: int32
+                                    maximum: 100
+                                    minimum: 0
                                     type: integer
                                   interval:
                                     default: 3s
