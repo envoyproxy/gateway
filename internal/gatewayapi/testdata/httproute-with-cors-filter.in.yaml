@@ -52,7 +52,6 @@ httpRoutes:
           - header4
           allowCredentials: true
           maxAge: 1000
-
 - apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
   metadata:
@@ -82,7 +81,6 @@ httpRoutes:
           - POST
           - PUT
           - DELETE
-
 - apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
   metadata:
