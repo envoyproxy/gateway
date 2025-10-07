@@ -26,7 +26,8 @@ metadata:
   name: backend-tls-ca
   namespace: gateway-conformance-infra
 ---
-apiVersion: gateway.networking.k8s.io/v1
+# keep this v1alpha3 to verify EG worked for both v1alpha3 and v1
+apiVersion: gateway.networking.k8s.io/v1alpha3
 kind: BackendTLSPolicy
 metadata:
   name: policy-btls
