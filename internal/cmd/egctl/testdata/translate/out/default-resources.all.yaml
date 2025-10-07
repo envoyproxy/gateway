@@ -2,7 +2,6 @@ envoyProxyForGatewayClass:
   apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: EnvoyProxy
   metadata:
-    creationTimestamp: null
     name: default-envoy-proxy
     namespace: envoy-gateway-system
   spec:
@@ -165,7 +164,6 @@ gatewayClass:
   apiVersion: gateway.networking.k8s.io/v1
   kind: GatewayClass
   metadata:
-    creationTimestamp: null
     name: eg
   spec:
     controllerName: gateway.envoyproxy.io/gatewayclass-controller
@@ -185,7 +183,6 @@ gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
   metadata:
-    creationTimestamp: null
     name: eg
     namespace: default
   spec:
@@ -341,7 +338,6 @@ grpcRoutes:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: GRPCRoute
   metadata:
-    creationTimestamp: null
     name: backend
     namespace: default
   spec:
@@ -387,7 +383,6 @@ httpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
   metadata:
-    creationTimestamp: null
     name: backend
     namespace: default
   spec:
@@ -431,7 +426,6 @@ tcpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1alpha2
   kind: TCPRoute
   metadata:
-    creationTimestamp: null
     name: backend
     namespace: default
   spec:
@@ -470,7 +464,6 @@ tlsRoutes:
 - apiVersion: gateway.networking.k8s.io/v1alpha2
   kind: TLSRoute
   metadata:
-    creationTimestamp: null
     name: backend
     namespace: default
   spec:
@@ -509,7 +502,6 @@ udpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1alpha2
   kind: UDPRoute
   metadata:
-    creationTimestamp: null
     name: backend
     namespace: default
   spec:
