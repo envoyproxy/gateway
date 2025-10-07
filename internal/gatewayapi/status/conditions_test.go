@@ -192,7 +192,7 @@ func TestMergeConditionsTruncatesMessages(t *testing.T) {
 	conditions := MergeConditions(nil, cond)
 
 	if assert.Len(t, conditions, 1) {
-		assert.Equal(t, conditionMessageMaxLength, len(conditions[0].Message))
+		assert.Len(t, conditions[0].Message, conditionMessageMaxLength)
 		prefixLen := conditionMessageMaxLength - len(conditionMessageTruncationSuffix)
 		expectedPrefix := strings.Repeat("x", prefixLen)
 		assert.True(t, strings.HasSuffix(conditions[0].Message, conditionMessageTruncationSuffix))
@@ -228,7 +228,7 @@ func TestError2ConditionMsgTruncation(t *testing.T) {
 	base := strings.Repeat("a", conditionMessageMaxLength+10)
 	got := Error2ConditionMsg(errors.New(base))
 
-	assert.Equal(t, conditionMessageMaxLength, len(got))
+	assert.Len(t, got, conditionMessageMaxLength)
 	assert.EqualValues(t, 'A', got[0])
 	assert.True(t, strings.HasSuffix(got, conditionMessageTruncationSuffix))
 }
