@@ -240,8 +240,8 @@ spec:
     - fqdn:
         hostname: tls-backend-2.gateway-conformance-infra.svc.cluster.local
         port: 443
-  # the SNI value would be take from the host header sent by the client and
-  # validates DNS SAN equivalent to SNI being sent
+  # The SNI value would be taken from the host header sent by the client and
+  # Envoy will validate the upstream certificate for a DNS SAN that matches SNI
   tls:
     caCertificateRefs:
       - name: backend-tls-ca
