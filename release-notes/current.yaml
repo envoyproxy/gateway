@@ -34,6 +34,7 @@ bug fixes: |
   Disabled the default emission of `x-envoy-ratelimited` headers from the rate limit filter; re-enable with the `enableEnvoyHeaders` setting in ClientTrafficPolicy.
   Fixed a nil pointer panic in the XDS translator when building API key authentication filter configurations with `sanitize` enabled and no `forwardClientIDHeader` set.
   Truncated Gateway API status condition messages to stay within Kubernetes limits and prevent update failures.
+  Fixed an issue in EnvoyPatchPolicy where it didn't match the target Gateway/GatewayClass due to an incorrect name reference.
 
 # Enhancements that improve performance.
 performance improvements: |
