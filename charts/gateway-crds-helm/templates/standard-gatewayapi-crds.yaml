@@ -25,7 +25,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/3328
-    gateway.networking.k8s.io/bundle-version: v1.4.0-rc.2
+    gateway.networking.k8s.io/bundle-version: v1.4.0
     gateway.networking.k8s.io/channel: standard
   labels:
     gateway.networking.k8s.io/policy: Direct
@@ -1347,7 +1347,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/3328
-    gateway.networking.k8s.io/bundle-version: v1.4.0-rc.2
+    gateway.networking.k8s.io/bundle-version: v1.4.0
     gateway.networking.k8s.io/channel: standard
   name: gatewayclasses.gateway.networking.k8s.io
 spec:
@@ -1866,7 +1866,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/3328
-    gateway.networking.k8s.io/bundle-version: v1.4.0-rc.2
+    gateway.networking.k8s.io/bundle-version: v1.4.0
     gateway.networking.k8s.io/channel: standard
   name: gateways.gateway.networking.k8s.io
 spec:
@@ -4123,7 +4123,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/3328
-    gateway.networking.k8s.io/bundle-version: v1.4.0-rc.2
+    gateway.networking.k8s.io/bundle-version: v1.4.0
     gateway.networking.k8s.io/channel: standard
   name: grpcroutes.gateway.networking.k8s.io
 spec:
@@ -6197,7 +6197,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/3328
-    gateway.networking.k8s.io/bundle-version: v1.4.0-rc.2
+    gateway.networking.k8s.io/bundle-version: v1.4.0
     gateway.networking.k8s.io/channel: standard
   name: httproutes.gateway.networking.k8s.io
 spec:
@@ -11844,7 +11844,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/3328
-    gateway.networking.k8s.io/bundle-version: v1.4.0-rc.2
+    gateway.networking.k8s.io/bundle-version: v1.4.0
     gateway.networking.k8s.io/channel: standard
   name: referencegrants.gateway.networking.k8s.io
 spec:
