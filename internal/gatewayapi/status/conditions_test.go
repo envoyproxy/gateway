@@ -15,6 +15,7 @@ package status
 
 import (
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -185,6 +186,20 @@ func TestMergeConditions(t *testing.T) {
 	}
 }
 
+func TestMergeConditionsTruncatesMessages(t *testing.T) {
+	longMsg := strings.Repeat("x", conditionMessageMaxLength+5)
+	cond := newCondition("available", metav1.ConditionTrue, "Reason", longMsg, time.Now(), 1)
+	conditions := MergeConditions(nil, cond)
+
+	if assert.Len(t, conditions, 1) {
+		assert.Equal(t, conditionMessageMaxLength, len(conditions[0].Message))
+		prefixLen := conditionMessageMaxLength - len(conditionMessageTruncationSuffix)
+		expectedPrefix := strings.Repeat("x", prefixLen)
+		assert.True(t, strings.HasSuffix(conditions[0].Message, conditionMessageTruncationSuffix))
+		assert.Equal(t, expectedPrefix, conditions[0].Message[:prefixLen])
+	}
+}
+
 func TestError2ConditionMsg(t *testing.T) {
 	testCases := []struct {
 		name   string
@@ -207,4 +222,13 @@ func TestError2ConditionMsg(t *testing.T) {
 			assert.Equalf(t, tt.expect, Error2ConditionMsg(tt.err), "Error2ConditionMsg(%v)", tt.err)
 		})
 	}
+}
+
+func TestError2ConditionMsgTruncation(t *testing.T) {
+	base := strings.Repeat("a", conditionMessageMaxLength+10)
+	got := Error2ConditionMsg(errors.New(base))
+
+	assert.Equal(t, conditionMessageMaxLength, len(got))
+	assert.EqualValues(t, 'A', got[0])
+	assert.True(t, strings.HasSuffix(got, conditionMessageTruncationSuffix))
 }
