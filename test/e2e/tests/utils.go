@@ -26,6 +26,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	dto "github.com/prometheus/client_model/go"
 	"github.com/prometheus/common/expfmt"
+	"github.com/prometheus/common/model"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
@@ -451,7 +452,7 @@ func ServiceHost(c client.Client, nn types.NamespacedName, port int32) (string, 
 	return net.JoinHostPort(host, strconv.Itoa(int(port))), nil
 }
 
-var metricParser = &expfmt.TextParser{}
+var metricParser = expfmt.NewTextParser(model.UTF8Validation)
 
 func RetrieveMetrics(url string, timeout time.Duration) (map[string]*dto.MetricFamily, error) {
 	httpClient := http.Client{
