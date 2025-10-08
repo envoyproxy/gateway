@@ -38,11 +38,9 @@ gateways:
         kind: HTTPRoute
       - group: gateway.networking.k8s.io
         kind: GRPCRoute
-httpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
   metadata:
-    creationTimestamp: null
     name: gateway-2
     namespace: envoy-gateway
   spec:
@@ -82,7 +80,137 @@ httpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
   metadata:
-    creationTimestamp: null
+    name: gateway-tcp
+    namespace: envoy-gateway
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - allowedRoutes:
+        namespaces:
+          from: All
+      name: foo
+      port: 8088
+      protocol: TCP
+    - allowedRoutes:
+        namespaces:
+          from: All
+      name: bar
+      port: 8089
+      protocol: TCP
+  status:
+    listeners:
+    - attachedRoutes: 1
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: foo
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: TCPRoute
+    - attachedRoutes: 1
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: bar
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: TCPRoute
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    name: gateway-mixed
+    namespace: envoy-gateway
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - allowedRoutes:
+        namespaces:
+          from: All
+      name: http
+      port: 80
+      protocol: HTTP
+    - allowedRoutes:
+        namespaces:
+          from: All
+      name: foo
+      port: 8443
+      protocol: TCP
+  status:
+    listeners:
+    - attachedRoutes: 1
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: http
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
+    - attachedRoutes: 1
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: foo
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: TCPRoute
+httpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
     name: httproute-1
     namespace: default
   spec:
@@ -120,7 +248,6 @@ httpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
   metadata:
-    creationTimestamp: null
     name: httproute-gw-2
     namespace: default
   spec:
@@ -158,7 +285,6 @@ httpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
   metadata:
-    creationTimestamp: null
     name: httproute-2
     namespace: default
   spec:
@@ -233,7 +359,6 @@ httpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
   metadata:
-    creationTimestamp: null
     name: hr-app-mixed
     namespace: default
   spec:
@@ -429,7 +554,6 @@ securityPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: SecurityPolicy
   metadata:
-    creationTimestamp: null
     name: sp-tcpr-app-bar
     namespace: default
   spec:
@@ -465,7 +589,6 @@ securityPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: SecurityPolicy
   metadata:
-    creationTimestamp: null
     name: sp-tcpr-app-conflict
     namespace: default
   spec:
@@ -502,7 +625,6 @@ securityPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: SecurityPolicy
   metadata:
-    creationTimestamp: null
     name: policy-for-section-name
     namespace: envoy-gateway
   spec:
@@ -537,7 +659,6 @@ securityPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: SecurityPolicy
   metadata:
-    creationTimestamp: null
     name: sp-gw-tcp-section-foo
     namespace: envoy-gateway
   spec:
@@ -574,7 +695,6 @@ securityPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: SecurityPolicy
   metadata:
-    creationTimestamp: null
     name: sp-tcpr-app-invalid-section
     namespace: envoy-gateway
   spec:
@@ -611,7 +731,6 @@ securityPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: SecurityPolicy
   metadata:
-    creationTimestamp: null
     name: policy-for-gateway
     namespace: envoy-gateway
   spec:
@@ -650,7 +769,6 @@ securityPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: SecurityPolicy
   metadata:
-    creationTimestamp: null
     name: sp-gw-tcp-whole
     namespace: envoy-gateway
   spec:
@@ -691,7 +809,6 @@ securityPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: SecurityPolicy
   metadata:
-    creationTimestamp: null
     name: sp-mixed-gateway
     namespace: envoy-gateway
   spec:
@@ -730,7 +847,6 @@ tcpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1alpha2
   kind: TCPRoute
   metadata:
-    creationTimestamp: null
     name: tcpr-app-foo
     namespace: default
   spec:
@@ -763,7 +879,6 @@ tcpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1alpha2
   kind: TCPRoute
   metadata:
-    creationTimestamp: null
     name: tcpr-app-bar
     namespace: default
   spec:
@@ -796,7 +911,6 @@ tcpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1alpha2
   kind: TCPRoute
   metadata:
-    creationTimestamp: null
     name: tcpr-app-mixed
     namespace: default
   spec:

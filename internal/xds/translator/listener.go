@@ -719,7 +719,7 @@ func buildTCPRBACMatcherFromRules(rules []*ir.AuthorizationRule, defaultAction e
 	}
 
 	// Mixed actions -> ordered matcher path.
-	var fieldMatchers []*matcher.Matcher_MatcherList_FieldMatcher
+	fieldMatchers := make([]*matcher.Matcher_MatcherList_FieldMatcher, 0, len(rules))
 	for _, r := range rules {
 		pred := principalsToPredicate(r.Principal)
 
@@ -815,7 +815,7 @@ func principalsToPredicate(p ir.Principal) *matcher.Matcher_MatcherList_Predicat
 	}
 
 	// Aggregate all CIDRs into one Ip matcher
-	var ranges []*corev3.CidrRange
+	ranges := make([]*corev3.CidrRange, 0, len(p.ClientCIDRs))
 	for _, c := range p.ClientCIDRs {
 		cr := convertCIDR(c)
 		if cr == nil || cr.AddressPrefix == "" || cr.PrefixLen == nil {
