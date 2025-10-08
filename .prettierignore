@@ -1,0 +1,23 @@
+# Generated files
+manifests/charts/
+out/
+site/
+
+# Vendor directories
+vendor/
+
+# Test fixtures that should maintain exact formatting
+**/testdata/
+**/fixtures/
+
+# CI/build artifacts
+.bin/
+.github/workflows/build-artifacts/
+
+# Helm templates (contain Go template syntax)
+**/templates/
+**/*.tpl
+
+# Generated manifests
+charts/gateway-helm/crds/
+charts/gateway-crds-helm/templates/
