@@ -182,7 +182,7 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 	// Do not call .Subscribe() inside Goroutine since it is supposed to be called from the same
 	// Goroutine where Close() is called.
 	sub := r.XdsIR.Subscribe(ctx)
-	go r.subscribeAndTranslate(sub)
+	go r.translateFromSubscription(sub)
 	r.Logger.Info("started")
 	return
 }
@@ -223,7 +223,7 @@ func registerServer(srv serverv3.Server, g *grpc.Server) {
 	runtimev3.RegisterRuntimeDiscoveryServiceServer(g, srv)
 }
 
-func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *ir.Xds]) {
+func (r *Runner) translateFromSubscription(sub <-chan watchable.Snapshot[string, *ir.Xds]) {
 	// Subscribe to resources
 	message.HandleSubscription(message.Metadata{Runner: r.Name(), Message: message.XDSIRMessageName}, sub,
 		func(update message.Update[string, *ir.Xds], errChan chan error) {
