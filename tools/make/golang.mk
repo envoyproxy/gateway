@@ -137,8 +137,13 @@ test: go.test.unit
 format: ## Update and check dependences with go mod tidy.
 format: go.mod.lint
 	@$(LOG_TARGET)
-	@echo "prettier => **/*.{yaml,yml}"
-	@$(GO_TOOL) prettier --write '**/*.{yaml,yml}' || { echo "prettier failed"; exit 1; }
+	@echo "prettier => tracked YAML files"
+	@files=$$(git ls-files :*.yml :*.yaml); \
+	if [ -n "$$files" ]; then \
+		$(GO_TOOL) prettier --log-level warn --ignore-unknown --write $$files || { echo "prettier failed"; exit 1; }; \
+	else \
+		echo "no YAML files to format"; \
+	fi
 
 .PHONY: clean
 clean: ## Remove all files that are created during builds.
