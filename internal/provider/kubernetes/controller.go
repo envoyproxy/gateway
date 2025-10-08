@@ -198,9 +198,18 @@ func newGatewayAPIController(ctx context.Context, mgr manager.Manager, cfg *conf
 		return fmt.Errorf("error watching resources: %w", err)
 	}
 
-	// Do not call .Subscribe() inside Goroutine since it is supposed to be called from the same
-	// Goroutine where Close() is called.
-	r.subscribeToResources(ctx)
+	// This is a blocking function that subscribes to the resource updates and updates the status.
+	subscribeUpdateStatusAndCloseResources := func() {
+		// Subscribe to resource updates
+		r.subscribeToResources(ctx)
+		// Update status
+		go r.subscribeAndUpdateStatus(ctx, cfg.EnvoyGateway.ExtensionManager != nil)
+		r.log.Info("started")
+		// Close resources if the context is done.
+		<-ctx.Done()
+		r.resources.Close()
+		r.log.Info("shutting down")
+	}
 
 	// When leader election is enabled, only subscribe to status updates upon acquiring leadership.
 	if cfg.EnvoyGateway.Provider.Type == egv1a1.ProviderTypeKubernetes &&
@@ -208,13 +217,17 @@ func newGatewayAPIController(ctx context.Context, mgr manager.Manager, cfg *conf
 		go func() {
 			select {
 			case <-ctx.Done():
+				// As a follower EG instance close resources when the context is done.
+				r.resources.Close()
 				return
 			case <-cfg.Elected:
-				r.subscribeAndUpdateStatus(ctx, cfg.EnvoyGateway.ExtensionManager != nil)
+				// As a leader EG instance subscribe to resource updates and Close resources when the context is done.
+				subscribeUpdateStatusAndCloseResources()
 			}
 		}()
 	} else {
-		r.subscribeAndUpdateStatus(ctx, cfg.EnvoyGateway.ExtensionManager != nil)
+		// Since leader election is disabled subscribe to resource updates and Close resources when the context is done.
+		go subscribeUpdateStatusAndCloseResources()
 	}
 	return nil
 }
