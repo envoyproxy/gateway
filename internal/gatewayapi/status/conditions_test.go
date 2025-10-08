@@ -15,6 +15,7 @@ package status
 
 import (
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -182,6 +183,20 @@ func TestMergeConditions(t *testing.T) {
 	for _, tc := range testCases {
 		got := MergeConditions(tc.current, tc.updates...)
 		assert.ElementsMatch(t, tc.expected, got, tc.name)
+	}
+}
+
+func TestMergeConditionsTruncatesMessages(t *testing.T) {
+	longMsg := strings.Repeat("x", conditionMessageMaxLength+5)
+	cond := newCondition("available", metav1.ConditionTrue, "Reason", longMsg, time.Now(), 1)
+	conditions := MergeConditions(nil, cond)
+
+	if assert.Len(t, conditions, 1) {
+		assert.Len(t, conditions[0].Message, conditionMessageMaxLength)
+		prefixLen := conditionMessageMaxLength - len(conditionMessageTruncationSuffix)
+		expectedPrefix := strings.Repeat("x", prefixLen)
+		assert.True(t, strings.HasSuffix(conditions[0].Message, conditionMessageTruncationSuffix))
+		assert.Equal(t, expectedPrefix, conditions[0].Message[:prefixLen])
 	}
 }
 
