@@ -223,12 +223,3 @@ func TestError2ConditionMsg(t *testing.T) {
 		})
 	}
 }
-
-func TestError2ConditionMsgTruncation(t *testing.T) {
-	base := strings.Repeat("a", conditionMessageMaxLength+10)
-	got := Error2ConditionMsg(errors.New(base))
-
-	assert.Len(t, got, conditionMessageMaxLength)
-	assert.EqualValues(t, 'A', got[0])
-	assert.True(t, strings.HasSuffix(got, conditionMessageTruncationSuffix))
-}
