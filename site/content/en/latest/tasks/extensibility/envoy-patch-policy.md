@@ -104,9 +104,9 @@ Because [EnvoyPatchPolicy][] relies on specific xDS resource names, it’s impor
 |                      | V2 (HTTPS)     | `https-<Port>`                                                              | `https-443`                      |
 
 
-This change is gated by the XDSNameSchemeV2 runtime flag. The flag is disabled by default in v1.5 and will be enabled by default starting in v1.6.
+This change is gated by the XDSNameSchemeV2 runtime flag. The flag is disabled by default in v1.5 and will be enabled by default in a future release.
 
-We recommend users begin migrating their [EnvoyPatchPolicy][] resources to use the version 2 naming scheme before upgrading to v1.6.
+We recommend users begin migrating their [EnvoyPatchPolicy][] resources to use the version 2 naming scheme.
 
 To opt in to the new naming scheme early, add the`XDSNameSchemeV2` runtime flag to the `runtimeFlags.enabled` field in your [EnvoyGateway][] configuration.
 
