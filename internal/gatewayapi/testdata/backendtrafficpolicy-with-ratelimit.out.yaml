@@ -59,8 +59,8 @@ backendTrafficPolicies:
           - path:
               type: Exact
               value: /test
-          - method:
-              invert: true
+          - methods:
+            - invert: true
               value: GET
           limit:
             requests: 30
@@ -381,15 +381,15 @@ xdsIR:
           rateLimit:
             global:
               rules:
-              - MethodMatch:
-                  distinct: false
-                  exact: GET
-                  invert: true
-                  name: ""
-                headerMatches: []
+              - headerMatches: []
                 limit:
                   requests: 30
                   unit: Hour
+                methodMatches:
+                - distinct: false
+                  exact: GET
+                  invert: true
+                  name: ""
                 name: default/policy-for-grpc-route/rule/0
                 pathMatch:
                   distinct: false

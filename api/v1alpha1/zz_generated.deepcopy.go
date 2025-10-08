@@ -4766,7 +4766,7 @@ func (in *MethodMatch) DeepCopyInto(out *MethodMatch) {
 	*out = *in
 	if in.Value != nil {
 		in, out := &in.Value, &out.Value
-		*out = new(string)
+		*out = new(v1.HTTPMethod)
 		**out = **in
 	}
 	if in.Invert != nil {
@@ -5939,10 +5939,12 @@ func (in *RateLimitSelectCondition) DeepCopyInto(out *RateLimitSelectCondition) 
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
-	if in.Method != nil {
-		in, out := &in.Method, &out.Method
-		*out = new(MethodMatch)
-		(*in).DeepCopyInto(*out)
+	if in.Methods != nil {
+		in, out := &in.Methods, &out.Methods
+		*out = make([]MethodMatch, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
 	}
 	if in.Path != nil {
 		in, out := &in.Path, &out.Path

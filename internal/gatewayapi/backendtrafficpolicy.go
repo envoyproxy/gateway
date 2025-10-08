@@ -868,11 +868,12 @@ func buildRateLimitRule(rule egv1a1.RateLimitRule) (*ir.RateLimitRule, error) {
 			Unit:     ir.RateLimitUnit(rule.Limit.Unit),
 		},
 		HeaderMatches: make([]*ir.StringMatch, 0),
+		MethodMatches: make([]*ir.StringMatch, 0),
 		Shared:        rule.Shared,
 	}
 
 	for _, match := range rule.ClientSelectors {
-		if len(match.Headers) == 0 && match.Method == nil &&
+		if len(match.Headers) == 0 && len(match.Methods) == 0 &&
 			match.Path == nil && match.SourceCIDR == nil {
 			return nil, fmt.Errorf(
 				"unable to translate rateLimit. At least one of the" +
@@ -916,11 +917,16 @@ func buildRateLimitRule(rule egv1a1.RateLimitRule) (*ir.RateLimitRule, error) {
 			}
 		}
 
-		if match.Method != nil {
-			irRule.MethodMatch = &ir.StringMatch{
-				Exact:  match.Method.Value,
-				Invert: match.Method.Invert,
+		for _, method := range match.Methods {
+			if method.Value == nil {
+				return nil, fmt.Errorf(
+					"unable to translate rateLimit. Either the method." +
+						"the method is missing a value")
 			}
+			irRule.MethodMatches = append(irRule.MethodMatches, &ir.StringMatch{
+				Exact:  ptr.To(string(*method.Value)),
+				Invert: method.Invert,
+			})
 		}
 
 		if match.Path != nil {

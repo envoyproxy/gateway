@@ -27,8 +27,9 @@ http:
               maskLen: 0
               isIPv6: false
               distinct: false
-            methodMatch:
-              exact: "GET"
+            methodMatches:
+              - exact: "GET"
+              - exact: "POST"
             pathMatch:
               exact: "foo/bar/baz"
             limit:

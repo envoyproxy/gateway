@@ -14,14 +14,14 @@ http:
         global:
           rules:
           - name: "test-namespace/test-policy-1/rule/0"
-            methodMatch:
-              exact: "GET"
+            methodMatches:
+              - exact: "GET"
             limit:
               requests: 5
               unit: second
           - name: "test-namespace/test-policy-1/rule/1"
-            methodMatch:
-              exact: "POST"
+            methodMatches:
+              - exact: "POST"
             limit:
               requests: 50
               unit: second

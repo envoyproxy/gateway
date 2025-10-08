@@ -190,27 +190,28 @@ type RateLimitCostMetadata struct {
 type RateLimitSelectCondition struct {
 	// Headers is a list of request headers to match. Multiple header values are ANDed together,
 	// meaning, a request MUST match all the specified headers.
-	// At least one of headers or method or path or sourceCIDR condition must be specified.
+	// At least one of headers or methods or path or sourceCIDR condition must be specified.
 	//
 	// +optional
 	// +kubebuilder:validation:MaxItems=16
 	Headers []HeaderMatch `json:"headers,omitempty"`
 
-	// Method is the request method to match. If not specified, it matches all methods.
-	// At least one of headers or method or path or sourceCIDR condition must be specified.
+	// Methods is a list of request methods to match. Multiple method values are ORed together,
+	// meaning, a request can match any one of the specified methods. If not specified, it matches all methods.
+	// At least one of headers or methods or path or sourceCIDR condition must be specified.
 	//
 	// +optional
-	Method *MethodMatch `json:"method,omitempty"`
+	Methods []MethodMatch `json:"methods,omitempty"`
 
 	// Path is the request path to match.
 	// Support Exact, PathPrefix and RegularExpression match types.
-	// At least one of headers or method or path or sourceCIDR condition must be specified.
+	// At least one of headers or methods or path or sourceCIDR condition must be specified.
 	//
 	// +optional
 	Path *PathMatch `json:"path,omitempty"`
 
 	// SourceCIDR is the client IP Address range to match on.
-	// At least one of headers or method or path or sourceCIDR condition must be specified.
+	// At least one of headers or methods or path or sourceCIDR condition must be specified.
 	//
 	// +optional
 	SourceCIDR *SourceMatch `json:"sourceCIDR,omitempty"`
@@ -300,7 +301,7 @@ type MethodMatch struct {
 	// Value specifies the HTTP method.
 	//
 	// +optional
-	Value *string `json:"value,omitempty"`
+	Value *gwapiv1.HTTPMethod `json:"value,omitempty"`
 
 	// Invert specifies whether the value match result will be inverted.
 	//
@@ -320,6 +321,7 @@ type PathMatch struct {
 	// Value specifies the HTTP path.
 	//
 	// +optional
+	// +kubebuilder:validation:MaxLength=1024
 	Value *string `json:"value,omitempty"`
 
 	// Invert specifies whether the value match result will be inverted.

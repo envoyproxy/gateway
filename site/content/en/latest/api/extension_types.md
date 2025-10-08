@@ -3346,7 +3346,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `value` | _string_ |  false  |  | Value specifies the HTTP method. |
+| `value` | _[HTTPMethod](#httpmethod)_ |  false  |  | Value specifies the HTTP method. |
 | `invert` | _boolean_ |  false  | false | Invert specifies whether the value match result will be inverted. |
 
 
@@ -4246,10 +4246,10 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `headers` | _[HeaderMatch](#headermatch) array_ |  false  |  | Headers is a list of request headers to match. Multiple header values are ANDed together,<br />meaning, a request MUST match all the specified headers.<br />At least one of headers or method or path or sourceCIDR condition must be specified. |
-| `method` | _[MethodMatch](#methodmatch)_ |  false  |  | Method is the request method to match. If not specified, it matches all methods.<br />At least one of headers or method or path or sourceCIDR condition must be specified. |
-| `path` | _[PathMatch](#pathmatch)_ |  false  |  | Path is the request path to match.<br />Support Exact, PathPrefix and RegularExpression match types.<br />At least one of headers or method or path or sourceCIDR condition must be specified. |
-| `sourceCIDR` | _[SourceMatch](#sourcematch)_ |  false  |  | SourceCIDR is the client IP Address range to match on.<br />At least one of headers or method or path or sourceCIDR condition must be specified. |
+| `headers` | _[HeaderMatch](#headermatch) array_ |  false  |  | Headers is a list of request headers to match. Multiple header values are ANDed together,<br />meaning, a request MUST match all the specified headers.<br />At least one of headers or methods or path or sourceCIDR condition must be specified. |
+| `methods` | _[MethodMatch](#methodmatch) array_ |  false  |  | Methods is a list of request methods to match. Multiple method values are ORed together,<br />meaning, a request can match any one of the specified methods. If not specified, it matches all methods.<br />At least one of headers or methods or path or sourceCIDR condition must be specified. |
+| `path` | _[PathMatch](#pathmatch)_ |  false  |  | Path is the request path to match.<br />Support Exact, PathPrefix and RegularExpression match types.<br />At least one of headers or methods or path or sourceCIDR condition must be specified. |
+| `sourceCIDR` | _[SourceMatch](#sourcematch)_ |  false  |  | SourceCIDR is the client IP Address range to match on.<br />At least one of headers or methods or path or sourceCIDR condition must be specified. |
 
 
 #### RateLimitSpec
