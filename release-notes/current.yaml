@@ -32,6 +32,7 @@ bug fixes: |
   Fixed service account token handling in GatewayNamespaceMode to use SDS for properly refreshing expired token.
   Fixed handling of regex meta characters in prefix match replace for URL rewrite.
   Disabled the default emission of `x-envoy-ratelimited` headers from the rate limit filter; re-enable with the `enableEnvoyHeaders` setting in ClientTrafficPolicy.
+  Fixed a nil pointer panic in the XDS translator when building API key authentication filter configurations with `sanitize` enabled and no `forwardClientIDHeader` set.
 
 # Enhancements that improve performance.
 performance improvements: |
