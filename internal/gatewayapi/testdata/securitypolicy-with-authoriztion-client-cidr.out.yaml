@@ -2,7 +2,6 @@ gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
   metadata:
-    creationTimestamp: null
     name: gateway-1
     namespace: envoy-gateway
   spec:
@@ -39,6 +38,7 @@ gateways:
         kind: HTTPRoute
       - group: gateway.networking.k8s.io
         kind: GRPCRoute
+httpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
   metadata:
@@ -81,139 +81,6 @@ gateways:
         kind: GRPCRoute
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
-  metadata:
-    creationTimestamp: null
-    name: gateway-tcp
-    namespace: envoy-gateway
-  spec:
-    gatewayClassName: envoy-gateway-class
-    listeners:
-    - allowedRoutes:
-        namespaces:
-          from: All
-      name: foo
-      port: 8088
-      protocol: TCP
-    - allowedRoutes:
-        namespaces:
-          from: All
-      name: bar
-      port: 8089
-      protocol: TCP
-  status:
-    listeners:
-    - attachedRoutes: 1
-      conditions:
-      - lastTransitionTime: null
-        message: Sending translated listener configuration to the data plane
-        reason: Programmed
-        status: "True"
-        type: Programmed
-      - lastTransitionTime: null
-        message: Listener has been successfully translated
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      - lastTransitionTime: null
-        message: Listener references have been resolved
-        reason: ResolvedRefs
-        status: "True"
-        type: ResolvedRefs
-      name: foo
-      supportedKinds:
-      - group: gateway.networking.k8s.io
-        kind: TCPRoute
-    - attachedRoutes: 1
-      conditions:
-      - lastTransitionTime: null
-        message: Sending translated listener configuration to the data plane
-        reason: Programmed
-        status: "True"
-        type: Programmed
-      - lastTransitionTime: null
-        message: Listener has been successfully translated
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      - lastTransitionTime: null
-        message: Listener references have been resolved
-        reason: ResolvedRefs
-        status: "True"
-        type: ResolvedRefs
-      name: bar
-      supportedKinds:
-      - group: gateway.networking.k8s.io
-        kind: TCPRoute
-- apiVersion: gateway.networking.k8s.io/v1
-  kind: Gateway
-  metadata:
-    creationTimestamp: null
-    name: gateway-mixed
-    namespace: envoy-gateway
-  spec:
-    gatewayClassName: envoy-gateway-class
-    listeners:
-    - allowedRoutes:
-        namespaces:
-          from: All
-      name: http
-      port: 80
-      protocol: HTTP
-    - allowedRoutes:
-        namespaces:
-          from: All
-      name: foo
-      port: 8443
-      protocol: TCP
-  status:
-    listeners:
-    - attachedRoutes: 1
-      conditions:
-      - lastTransitionTime: null
-        message: Sending translated listener configuration to the data plane
-        reason: Programmed
-        status: "True"
-        type: Programmed
-      - lastTransitionTime: null
-        message: Listener has been successfully translated
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      - lastTransitionTime: null
-        message: Listener references have been resolved
-        reason: ResolvedRefs
-        status: "True"
-        type: ResolvedRefs
-      name: http
-      supportedKinds:
-      - group: gateway.networking.k8s.io
-        kind: HTTPRoute
-      - group: gateway.networking.k8s.io
-        kind: GRPCRoute
-    - attachedRoutes: 1
-      conditions:
-      - lastTransitionTime: null
-        message: Sending translated listener configuration to the data plane
-        reason: Programmed
-        status: "True"
-        type: Programmed
-      - lastTransitionTime: null
-        message: Listener has been successfully translated
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      - lastTransitionTime: null
-        message: Listener references have been resolved
-        reason: ResolvedRefs
-        status: "True"
-        type: ResolvedRefs
-      name: foo
-      supportedKinds:
-      - group: gateway.networking.k8s.io
-        kind: TCPRoute
-httpRoutes:
-- apiVersion: gateway.networking.k8s.io/v1
-  kind: HTTPRoute
   metadata:
     creationTimestamp: null
     name: httproute-1
@@ -329,7 +196,6 @@ httpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
   metadata:
-    creationTimestamp: null
     name: httproute-3
     namespace: default
   spec:
@@ -496,7 +362,6 @@ securityPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: SecurityPolicy
   metadata:
-    creationTimestamp: null
     name: policy-for-http-route-1
     namespace: default
   spec:
@@ -537,7 +402,6 @@ securityPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: SecurityPolicy
   metadata:
-    creationTimestamp: null
     name: policy-for-http-route-3
     namespace: default
   spec:

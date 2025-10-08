@@ -18,8 +18,8 @@ import (
 // is not malformed and can be properly parsed
 func validateTLSSecretsData(secrets []*corev1.Secret) ([]*x509.Certificate, error) {
 	var publicKeyAlgorithm string
-	var certs []*x509.Certificate
 	var parseErr error
+	certs := make([]*x509.Certificate, 0, len(secrets))
 
 	pkaSecretSet := make(map[string]string)
 	for _, secret := range secrets {

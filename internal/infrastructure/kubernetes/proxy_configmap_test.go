@@ -10,9 +10,6 @@ import (
 	"os"
 	"testing"
 
-	"github.com/google/go-cmp/cmp"
-	"github.com/google/go-cmp/cmp/cmpopts"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -28,6 +25,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/infrastructure/common"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/proxy"
 	"github.com/envoyproxy/gateway/internal/ir"
+	testutil "github.com/envoyproxy/gateway/internal/utils/test"
 )
 
 func TestCreateOrUpdateProxyConfigMap(t *testing.T) {
@@ -243,8 +241,7 @@ func TestCreateOrUpdateProxyConfigMap(t *testing.T) {
 			}
 			require.NoError(t, kube.Client.Get(ctx, client.ObjectKeyFromObject(actual), actual))
 
-			opts := cmpopts.IgnoreFields(metav1.ObjectMeta{}, "ResourceVersion")
-			assert.True(t, cmp.Equal(tc.expect, actual, opts))
+			testutil.CmpResources(t, tc.expect, actual)
 		})
 	}
 }

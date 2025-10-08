@@ -83,7 +83,7 @@ func getSupportedFeatures(gatewaySuite *suite.ConformanceOptions, skippedTests [
 		})
 	}
 
-	var featureList []gwapiv1.SupportedFeature
+	featureList := make([]gwapiv1.SupportedFeature, 0, len(ret))
 	for feature := range ret {
 		featureList = append(featureList, feature)
 	}

@@ -252,8 +252,6 @@ jobs:
     - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8  # v5.0.0
     - uses: ./tools/github-actions/setup-deps
 
-    - name: Setup Graphviz
-      uses: ts-graphviz/setup-graphviz@b1de5da23ed0a6d14e0aeee8ed52fdd87af2363c  # v2.0.2
 
     # Benchmark
     - name: Run Benchmark tests
@@ -266,6 +264,7 @@ jobs:
         BENCHMARK_CPU_LIMITS: 1000m
         BENCHMARK_MEMORY_LIMITS: 2000Mi
         BENCHMARK_REPORT_DIR: benchmark_report
+        BENCHMARK_RENDER_PNG: "false"
       run: make benchmark
 
     - name: Upload Benchmark report
@@ -310,7 +309,7 @@ jobs:
     # build and push image
     - name: Login to DockerHub
       if: github.event_name == 'push'
-      uses: docker/login-action@184bdaa0721073962dff0199f1fb9940f07167d1  # v3.5.0
+      uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef  # v3.6.0
       with:
         username: ${{ vars.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_PASSWORD }}

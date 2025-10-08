@@ -110,13 +110,7 @@ func matchLabelsAndExpressions(ls *metav1.LabelSelector, objLabels map[string]st
 
 // validateGatewayForReconcile returns true if the provided object is a Gateway
 // using a GatewayClass matching the configured GatewayClass controller name.
-func (r *gatewayAPIReconciler) validateGatewayForReconcile(obj client.Object) bool {
-	gw, ok := obj.(*gwapiv1.Gateway)
-	if !ok {
-		r.log.Info("unexpected object type, bypassing reconciliation", "object", obj)
-		return false
-	}
-
+func (r *gatewayAPIReconciler) validateGatewayForReconcile(gw *gwapiv1.Gateway) bool {
 	gc := &gwapiv1.GatewayClass{}
 	key := types.NamespacedName{Name: string(gw.Spec.GatewayClassName)}
 	if err := r.client.Get(context.Background(), key, gc); err != nil {
@@ -136,13 +130,7 @@ func (r *gatewayAPIReconciler) validateGatewayForReconcile(obj client.Object) bo
 }
 
 // validateSecretForReconcile checks whether the Secret belongs to a valid Gateway.
-func (r *gatewayAPIReconciler) validateSecretForReconcile(obj client.Object) bool {
-	secret, ok := obj.(*corev1.Secret)
-	if !ok {
-		r.log.Info("unexpected object type, bypassing reconciliation", "object", obj)
-		return false
-	}
-
+func (r *gatewayAPIReconciler) validateSecretForReconcile(secret *corev1.Secret) bool {
 	nsName := utils.NamespacedName(secret)
 
 	if r.isGatewayReferencingSecret(&nsName) {
@@ -403,7 +391,7 @@ func (r *gatewayAPIReconciler) validateServiceForReconcile(obj client.Object) bo
 
 	// Merged gateways will have only this label, update status of all Gateways under found GatewayClass.
 	gcName, ok := labels[gatewayapi.OwningGatewayClassLabel]
-	if ok && r.mergeGateways.Has(gcName) {
+	if ok && r.isGatewayClassMerged(gcName) {
 		if err := r.updateStatusForGatewaysUnderGatewayClass(ctx, gcName); err != nil {
 			r.log.Info("no Gateways found under GatewayClass", "name", gcName)
 			return false
@@ -641,7 +629,7 @@ func (r *gatewayAPIReconciler) validateObjectForReconcile(obj client.Object) boo
 
 	// Merged gateways will have only this label, update status of all Gateways under found GatewayClass.
 	gcName, ok := labels[gatewayapi.OwningGatewayClassLabel]
-	if ok && r.mergeGateways.Has(gcName) {
+	if ok && r.isGatewayClassMerged(gcName) {
 		if err := r.updateStatusForGatewaysUnderGatewayClass(ctx, gcName); err != nil {
 			r.log.Info("no Gateways found under GatewayClass", "name", gcName)
 			return false
@@ -663,9 +651,11 @@ func envoyObjectNamespace(r *gatewayAPIReconciler, gateway *gwapiv1.Gateway) str
 // envoyObjectForGateway returns the Envoy Deployment or DaemonSet, returning nil if neither exists.
 func (r *gatewayAPIReconciler) envoyObjectForGateway(ctx context.Context, gateway *gwapiv1.Gateway) (client.Object, error) {
 	// Helper func to list and return the first object from results
+	merged := r.isGatewayClassMerged(string(gateway.Spec.GatewayClassName))
+
 	listResource := func(list client.ObjectList) (client.Object, error) {
 		if err := r.client.List(ctx, list, &client.ListOptions{
-			LabelSelector: labels.SelectorFromSet(gatewayapi.OwnerLabels(gateway, r.mergeGateways.Has(string(gateway.Spec.GatewayClassName)))),
+			LabelSelector: labels.SelectorFromSet(gatewayapi.OwnerLabels(gateway, merged)),
 			Namespace:     envoyObjectNamespace(r, gateway),
 		}); err != nil {
 			if !kerrors.IsNotFound(err) {
@@ -697,7 +687,8 @@ func (r *gatewayAPIReconciler) envoyObjectForGateway(ctx context.Context, gatewa
 // envoyServiceForGateway returns the Envoy service, returning nil if the service doesn't exist.
 func (r *gatewayAPIReconciler) envoyServiceForGateway(ctx context.Context, gateway *gwapiv1.Gateway) (*corev1.Service, error) {
 	var services corev1.ServiceList
-	labelSelector := labels.SelectorFromSet(labels.Set(gatewayapi.OwnerLabels(gateway, r.mergeGateways.Has(string(gateway.Spec.GatewayClassName)))))
+	merged := r.isGatewayClassMerged(string(gateway.Spec.GatewayClassName))
+	labelSelector := labels.SelectorFromSet(labels.Set(gatewayapi.OwnerLabels(gateway, merged)))
 	if err := r.client.List(ctx, &services, &client.ListOptions{
 		LabelSelector: labelSelector,
 		Namespace:     envoyObjectNamespace(r, gateway),
@@ -955,7 +946,7 @@ func (r *gatewayAPIReconciler) isProxyServiceCluster(labels map[string]string) b
 	}
 
 	gcName, ok := labels[gatewayapi.OwningGatewayClassLabel]
-	if ok && r.mergeGateways.Has(gcName) {
+	if ok && r.isGatewayClassMerged(gcName) {
 		return true
 	}
 

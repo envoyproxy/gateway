@@ -57,8 +57,10 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 		return err
 	}
 
-	sub := r.InfraIR.Subscribe(ctx)
-	initInfra := func() {
+	// This is a blocking function that subscribes to the infraIR and initializes the infrastructure.
+	subscribeInitInfraAndCloseInfraIRMessage := func() {
+		// Subscribe and Close in same goroutine to avoid race condition.
+		sub := r.InfraIR.Subscribe(ctx)
 		go r.subscribeToProxyInfraIR(ctx, sub)
 
 		// Enable global ratelimit if it has been configured.
@@ -73,6 +75,9 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 			}()
 		}
 		r.Logger.Info("started")
+		<-ctx.Done()
+		r.InfraIR.Close()
+		r.Logger.Info("shutting down")
 	}
 
 	// When leader election is active, infrastructure initialization occurs only upon acquiring leadership
@@ -82,14 +87,18 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 		go func() {
 			select {
 			case <-ctx.Done():
+				// As a follower EG instance close infraIR when the context is done.
+				r.InfraIR.Close()
 				return
 			case <-r.Elected:
-				initInfra()
+				// As a leader EG instance subscribe to infraIR to initialize the infrastructure and Close when the context is done.
+				subscribeInitInfraAndCloseInfraIRMessage()
 			}
 		}()
-		return
+	} else {
+		// Since leader election is disabled subscribe to infraIR to initialize the infrastructure and Close when the context is done.
+		go subscribeInitInfraAndCloseInfraIRMessage()
 	}
-	initInfra()
 	return
 }
 
