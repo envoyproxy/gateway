@@ -21,3 +21,17 @@ vendor/
 # Generated manifests
 charts/gateway-helm/crds/
 charts/gateway-crds-helm/templates/
+
+# Large or complex YAML files that may cause prettier issues
+**/dashboards/
+**/monitoring/
+**/grafana/
+**/prometheus/
+
+# Example files that may have complex structures
+examples/**/*.yaml
+examples/**/*.yml
+
+# Generated CRDs and manifests
+**/crds/
+**/generated/

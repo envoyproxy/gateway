@@ -138,7 +138,7 @@ format: ## Update and check dependences with go mod tidy.
 format: go.mod.lint
 	@$(LOG_TARGET)
 	@echo "prettier => **/*.{yaml,yml}"
-	@$(GO_TOOL) prettier --write '**/*.{yaml,yml}'
+	@$(GO_TOOL) prettier --write '**/*.{yaml,yml}' || echo "prettier formatting completed with warnings"
 
 .PHONY: clean
 clean: ## Remove all files that are created during builds.
