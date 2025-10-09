@@ -8,7 +8,7 @@ image:
   repository: docker.io/nareddyt/envoy-gateway-kubecon-presentation-2025
   pullPolicy: Always
   # Overrides the image tag whose default is the chart appVersion.
-  tag: "2.1.0"
+  tag: "2.2.1"
 
 imagePullSecrets: []
 nameOverride: ""

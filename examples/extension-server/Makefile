@@ -7,7 +7,7 @@ $(tools.bindir)/%: $(tools.srcdir)/%/pin.go $(tools.srcdir)/%/go.mod
 
 IMAGE_PREFIX ?= nareddyt/
 APP_NAME ?= envoy-gateway-kubecon-presentation-2025
-TAG ?= 2.1.0
+TAG ?= 2.2.1
 
 PLATFORMS ?= linux/amd64,linux/arm64
 

@@ -12,22 +12,28 @@ import (
 	clusterv3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	endpointV3 "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
+	tlsV3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 	extensionv1alpha1 "github.com/exampleorg/envoygateway-extension/api/v1alpha1"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"log/slog"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"time"
 )
 
+const (
+	spireAgentClusterName = "spire_agent"
+)
+
 var (
 	spireAgentCluster = &clusterv3.Cluster{
-		Name:                 "spire_agent",
+		Name:                 spireAgentClusterName,
 		ConnectTimeout:       durationpb.New(time.Second),
 		Http2ProtocolOptions: &corev3.Http2ProtocolOptions{},
 		LoadAssignment: &endpointV3.ClusterLoadAssignment{
-			ClusterName: "spire_agent",
+			ClusterName: spireAgentClusterName,
 			Endpoints: []*endpointV3.LocalityLbEndpoints{
 				{
 					LbEndpoints: []*endpointV3.LbEndpoint{
@@ -42,6 +48,25 @@ var (
 										},
 									},
 								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	sdsConfigSource = &corev3.ConfigSource{
+		ResourceApiVersion: corev3.ApiVersion_V3,
+		ConfigSourceSpecifier: &corev3.ConfigSource_ApiConfigSource{
+			ApiConfigSource: &corev3.ApiConfigSource{
+				ApiType:             corev3.ApiConfigSource_GRPC,
+				TransportApiVersion: corev3.ApiVersion_V3,
+				GrpcServices: []*corev3.GrpcService{
+					{
+						TargetSpecifier: &corev3.GrpcService_EnvoyGrpc_{
+							EnvoyGrpc: &corev3.GrpcService_EnvoyGrpc{
+								ClusterName: spireAgentClusterName,
 							},
 						},
 					},
@@ -102,7 +127,7 @@ func (s *Server) PostTranslateModify(ctx context.Context, req *pb.PostTranslateM
 func (s *Server) maybeAddSdsConfigToCluster(cluster *clusterv3.Cluster, backendMtlsPolicy *extensionv1alpha1.CustomBackendMtlsPolicy) error {
 	backendRef := parseGatewayApiMetadata(cluster)
 	if backendRef == nil {
-		return fmt.Errorf("could not parse backend metadata")
+		return nil
 	}
 
 	shouldModifyCluster := false
@@ -117,8 +142,66 @@ func (s *Server) maybeAddSdsConfigToCluster(cluster *clusterv3.Cluster, backendM
 		return nil
 	}
 
+	return s.addSdsConfigToCluster(cluster, backendMtlsPolicy)
+}
+
+func (s *Server) addSdsConfigToCluster(cluster *clusterv3.Cluster, policy *extensionv1alpha1.CustomBackendMtlsPolicy) error {
 	s.log.Info("Adding SDS config to cluster", slog.String("cluster_name", cluster.GetName()))
+	spiffeId := generateSpiffeID(policy)
+
+	for _, transportSocketMatch := range cluster.TransportSocketMatches {
+		if !isTlsTransportSocket(transportSocketMatch) {
+			continue
+		}
+
+		if err := configureTransportSocketMatch(transportSocketMatch, spiffeId); err != nil {
+			return fmt.Errorf("addSdsConfigToCluster for transport socket match %q: %v", transportSocketMatch.GetName(), err)
+		}
+		s.log.Info("Added SDS config to cluster",
+			slog.String("cluster_name", cluster.GetName()),
+			slog.String("transport_socket_match", transportSocketMatch.GetName()),
+			slog.String("spiffe_id", spiffeId),
+		)
+	}
+
 	return nil
+}
+
+func isTlsTransportSocket(match *clusterv3.Cluster_TransportSocketMatch) bool {
+	return match.TransportSocket != nil && match.TransportSocket.Name == "envoy.transport_sockets.tls"
+}
+
+func configureTransportSocketMatch(match *clusterv3.Cluster_TransportSocketMatch, spiffeId string) error {
+	upstreamTlsCtx := &tlsV3.UpstreamTlsContext{}
+	if err := match.GetTransportSocket().GetTypedConfig().UnmarshalTo(upstreamTlsCtx); err != nil {
+		return fmt.Errorf("unmarshal UpstreamTlsContext failed: %v", err)
+	}
+
+	if upstreamTlsCtx.GetCommonTlsContext() == nil {
+		return fmt.Errorf("upstreamTlsCtx common tls context is nil")
+	}
+
+	upstreamTlsCtx.CommonTlsContext.TlsCertificateSdsSecretConfigs = []*tlsV3.SdsSecretConfig{
+		{
+			Name:      spiffeId,
+			SdsConfig: sdsConfigSource,
+		},
+	}
+
+	typedConfigAny, err := anypb.New(upstreamTlsCtx)
+	if err != nil {
+		return fmt.Errorf("marshal UpstreamTlsContext failed: %v", err)
+	}
+
+	match.TransportSocket.ConfigType = &corev3.TransportSocket_TypedConfig{
+		TypedConfig: typedConfigAny,
+	}
+
+	return nil
+}
+
+func generateSpiffeID(policy *extensionv1alpha1.CustomBackendMtlsPolicy) string {
+	return fmt.Sprintf("spiffe://%s/%s", policy.Spec.TrustDomain, policy.Spec.WorkloadIdentifier)
 }
 
 func parseGatewayApiMetadata(cluster *clusterv3.Cluster) *gwapiv1a2.LocalPolicyTargetReference {

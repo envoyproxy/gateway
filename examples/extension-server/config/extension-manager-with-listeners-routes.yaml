@@ -22,13 +22,7 @@ data:
         # The type of hooks that should be invoked
         xdsTranslator:
           post:
-          - Cluster
           - Translation
-          translation:
-            listener:
-              includeAll: true
-            route:
-              includeAll: true
       service:
         # The service that is hosting the extension server
         fqdn:
