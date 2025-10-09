@@ -216,7 +216,7 @@ var APIKeyAuthTest = suite.ConformanceTest{
 			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 
-			ancestorRef := gwapiv1a2.ParentReference{
+			ancestorRef := gwapiv1.ParentReference{
 				Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
 				Kind:      gatewayapi.KindPtr(resource.KindGateway),
 				Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
