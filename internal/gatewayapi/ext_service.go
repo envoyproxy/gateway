@@ -82,6 +82,7 @@ func (t *Translator) translateExtServiceBackendRefs(
 	if rs.HasMixedEndpoints() {
 		return nil, errors.New("external service destinations having multiple endpoint types are not supported")
 	}
+
 	return rs, nil
 }
 

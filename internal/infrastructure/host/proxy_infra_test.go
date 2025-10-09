@@ -20,9 +20,11 @@ import (
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/crypto"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
+	"github.com/envoyproxy/gateway/internal/infrastructure/common"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/logging"
 	"github.com/envoyproxy/gateway/internal/utils/file"
+	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
 	"github.com/envoyproxy/gateway/test/utils"
 )
 
@@ -269,6 +271,77 @@ func TestGetEnvoyVersion(t *testing.T) {
 				},
 			}
 			require.Equal(t, tc.want, infra.getEnvoyVersion(proxyConfig))
+		})
+	}
+}
+
+// TestTopologyInjectorDisabledInHostMode verifies we don't cause a 15+ second
+// startup delay in standalone mode as Envoy waits for endpoint discovery.
+// See: https://github.com/envoyproxy/gateway/issues/7080
+func TestTopologyInjectorDisabledInHostMode(t *testing.T) {
+	testCases := []struct {
+		name                          string
+		topologyInjectorDisabled      bool
+		expectLocalClusterInBootstrap bool
+	}{
+		{
+			name:                          "topology injector enabled",
+			topologyInjectorDisabled:      false,
+			expectLocalClusterInBootstrap: true,
+		},
+		{
+			name:                          "topology injector disabled",
+			topologyInjectorDisabled:      true,
+			expectLocalClusterInBootstrap: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			proxyInfra := &ir.ProxyInfra{
+				Name:      "test-proxy",
+				Namespace: "default",
+				Config: &egv1a1.EnvoyProxy{
+					Spec: egv1a1.EnvoyProxySpec{
+						Logging: egv1a1.ProxyLogging{
+							Level: map[egv1a1.ProxyLogComponent]egv1a1.LogLevel{
+								egv1a1.LogComponentDefault: egv1a1.LogLevelInfo,
+							},
+						},
+					},
+				},
+			}
+
+			bootstrapConfigOptions := &bootstrap.RenderBootstrapConfigOptions{
+				ProxyMetrics: &egv1a1.ProxyMetrics{
+					Prometheus: &egv1a1.ProxyPrometheusProvider{
+						Disable: true,
+					},
+				},
+				XdsServerHost:            ptr.To("0.0.0.0"),
+				AdminServerPort:          ptr.To(int32(0)),
+				StatsServerPort:          ptr.To(int32(0)),
+				TopologyInjectorDisabled: tc.topologyInjectorDisabled,
+			}
+
+			args, err := common.BuildProxyArgs(proxyInfra, nil, bootstrapConfigOptions, "test-node", false)
+			require.NoError(t, err)
+
+			// Extract the bootstrap YAML from args (it's after --config-yaml)
+			var bootstrapYAML string
+			for i, arg := range args {
+				if arg == "--config-yaml" && i+1 < len(args) {
+					bootstrapYAML = args[i+1]
+					break
+				}
+			}
+			require.NotEmpty(t, bootstrapYAML, "bootstrap YAML not found in args")
+
+			if tc.expectLocalClusterInBootstrap {
+				require.Contains(t, bootstrapYAML, "local_cluster_name:")
+			} else {
+				require.NotContains(t, bootstrapYAML, "local_cluster_name:")
+			}
 		})
 	}
 }

@@ -280,10 +280,18 @@ type ClientIPDetectionSettings struct {
 // for more details.
 // +kubebuilder:validation:XValidation:rule="(has(self.numTrustedHops) && !has(self.trustedCIDRs)) || (!has(self.numTrustedHops) && has(self.trustedCIDRs))", message="only one of numTrustedHops or trustedCIDRs must be set"
 type XForwardedForSettings struct {
-	// NumTrustedHops controls the number of additional ingress proxy hops from the right side of XFF HTTP
-	// headers to trust when determining the origin client's IP address.
-	// Only one of NumTrustedHops and TrustedCIDRs must be set.
+	// NumTrustedHops specifies how many trusted hops to count from the rightmost side of
+	// the X-Forwarded-For (XFF) header when determining the original client’s IP address.
 	//
+	// If NumTrustedHops is set to N, the client IP is taken from the Nth address from the
+	// right end of the XFF header.
+	//
+	// Example:
+	//   XFF = "203.0.113.128, 203.0.113.10, 203.0.113.1"
+	//   NumTrustedHops = 2
+	//   → Trusted client address = 203.0.113.10
+	//
+	// Only one of NumTrustedHops or TrustedCIDRs should be configured.
 	// +optional
 	NumTrustedHops *uint32 `json:"numTrustedHops,omitempty"`
 
