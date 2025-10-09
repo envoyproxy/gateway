@@ -128,14 +128,15 @@ func (r *Runner) startWasmCache(ctx context.Context) {
 	r.wasmCache.Start(ctx)
 }
 
-func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *resource.ControllerResources]) {
+func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *message.ProviderResourcesMessage]) {
 	message.HandleSubscription(message.Metadata{Runner: r.Name(), Message: message.ProviderResourcesMessageName}, sub,
-		func(update message.Update[string, *resource.ControllerResources], errChan chan error) {
-			r.Logger.Info("received an update")
-			val := update.Value
+		func(update message.Update[string, *message.ProviderResourcesMessage], errChan chan error) {
+			msg := update.Value
+			version := update.Version
+			r.Logger.Info("received an update", "version", version)
 			// There is only 1 key which is the controller name
 			// so when a delete is triggered, delete all keys
-			if update.Delete || val == nil {
+			if update.Delete || msg == nil || msg.Resources == nil {
 				r.deleteAllKeys()
 				return
 			}
@@ -143,13 +144,15 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 			// Initialize keysToDelete with tracked keys (mark and sweep approach)
 			keysToDelete := r.keyCache.copy()
 
+			controllerResources := msg.Resources
+
 			// Aggregate metric counters for batch publishing
 			var infraIRCount, xdsIRCount, gatewayStatusCount, httpRouteStatusCount, grpcRouteStatusCount int
 			var tlsRouteStatusCount, tcpRouteStatusCount, udpRouteStatusCount int
 			var backendTLSPolicyStatusCount, clientTrafficPolicyStatusCount, backendTrafficPolicyStatusCount int
 			var securityPolicyStatusCount, envoyExtensionPolicyStatusCount, backendStatusCount, extensionServerPolicyStatusCount int
 
-			for _, resources := range *val {
+			for _, resources := range *controllerResources {
 				// Translate and publish IRs.
 				t := &gatewayapi.Translator{
 					GatewayControllerName:     r.EnvoyGateway.Gateway.ControllerName,
@@ -195,7 +198,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 						r.Logger.Error(err, "unable to validate infra ir, skipped sending it")
 						errChan <- err
 					} else {
-						r.InfraIR.Store(key, val)
+						r.InfraIR.Store(key, message.NewInfraIRMessage(version, val))
 						infraIRCount++
 						// Track IR key for mark and sweep
 						r.keyCache.IR[key] = true
@@ -212,7 +215,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 						r.Logger.Error(err, "unable to validate xds ir, skipped sending it")
 						errChan <- err
 					} else {
-						r.XdsIR.Store(key, val)
+						r.XdsIR.Store(key, message.NewXdsIRMessage(version, val))
 						xdsIRCount++
 					}
 				}

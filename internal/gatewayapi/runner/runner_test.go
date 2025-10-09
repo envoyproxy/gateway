@@ -8,7 +8,6 @@ package runner
 import (
 	"context"
 	"os"
-	"reflect"
 	"testing"
 	"time"
 
@@ -48,8 +47,8 @@ func TestRunner(t *testing.T) {
 	require.NoError(t, err)
 
 	// IR is nil at start
-	require.Equal(t, map[string]*ir.Xds{}, xdsIR.LoadAll())
-	require.Equal(t, map[string]*ir.Infra{}, infraIR.LoadAll())
+	require.Empty(t, xdsIR.LoadAll())
+	require.Empty(t, infraIR.LoadAll())
 
 	// TODO: pass valid provider resources
 
@@ -60,8 +59,8 @@ func TestRunner(t *testing.T) {
 		if out == nil {
 			return false
 		}
-		// Ensure ir is empty
-		return (reflect.DeepEqual(xdsIR.LoadAll(), map[string]*ir.Xds{})) && (reflect.DeepEqual(infraIR.LoadAll(), map[string]*ir.Infra{}))
+		// Ensure IR stores are empty
+		return len(out) == 0 && len(infraIR.LoadAll()) == 0
 	}, time.Second*1, time.Millisecond*20)
 }
 
@@ -85,10 +84,10 @@ func setupTestRunner(t *testing.T) (*Runner, []types.NamespacedName) {
 	})
 
 	// Store test data in IR and status stores
-	r.InfraIR.Store("test-ir-1", nil)
-	r.InfraIR.Store("test-ir-2", nil)
-	r.XdsIR.Store("test-ir-1", nil)
-	r.XdsIR.Store("test-ir-2", nil)
+	r.InfraIR.Store("test-ir-1", message.NewInfraIRMessageWithNextVersion((*ir.Infra)(nil)))
+	r.InfraIR.Store("test-ir-2", message.NewInfraIRMessageWithNextVersion((*ir.Infra)(nil)))
+	r.XdsIR.Store("test-ir-1", message.NewXdsIRMessageWithNextVersion((*ir.Xds)(nil)))
+	r.XdsIR.Store("test-ir-2", message.NewXdsIRMessageWithNextVersion((*ir.Xds)(nil)))
 
 	keys := []types.NamespacedName{
 		{Name: "gateway1", Namespace: "test-namespace"},
