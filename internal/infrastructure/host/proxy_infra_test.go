@@ -126,6 +126,53 @@ func TestInfra_runEnvoy_stopEnvoy(t *testing.T) {
 	}
 }
 
+func TestInfra_Close(t *testing.T) {
+	tmpdir := t.TempDir()
+	// Ensures that all the required binaries are available.
+	err := func_e.Run(t.Context(), []string{"--version"}, api.HomeDir(tmpdir))
+	require.NoError(t, err)
+
+	stdout := &bytes.Buffer{}
+	stderr := &bytes.Buffer{}
+	i := &Infra{
+		HomeDir: tmpdir,
+		Logger:  logging.DefaultLogger(stdout, egv1a1.LogLevelInfo),
+		Stdout:  stdout,
+		Stderr:  stderr,
+	}
+
+	// Start multiple proxies
+	ports := []string{"9901", "9902", "9903"}
+	for idx := range 3 {
+		args := []string{
+			"--config-yaml",
+			"admin: {address: {socket_address: {address: '127.0.0.1', port_value: " + ports[idx] + "}}}",
+		}
+		name := "test-" + ports[idx]
+		i.runEnvoy(t.Context(), "", name, args)
+	}
+
+	// Verify all proxies are running
+	count := 0
+	i.proxyContextMap.Range(func(key, value interface{}) bool {
+		count++
+		return true
+	})
+	require.Equal(t, 3, count, "expected 3 proxies to be running")
+
+	// Close should stop all proxies
+	err = i.Close()
+	require.NoError(t, err)
+
+	// Verify all proxies are stopped
+	count = 0
+	i.proxyContextMap.Range(func(key, value interface{}) bool {
+		count++
+		return true
+	})
+	require.Equal(t, 0, count, "expected all proxies to be stopped")
+}
+
 func TestExtractSemver(t *testing.T) {
 	tests := []struct {
 		image   string
