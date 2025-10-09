@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync"
 
 	func_e "github.com/tetratelabs/func-e"
 	"github.com/tetratelabs/func-e/api"
@@ -34,16 +35,19 @@ type proxyContext struct {
 
 // Close implements the Manager interface.
 func (i *Infra) Close() error {
-	// Collect all proxy names first to avoid holding locks during stopEnvoy calls
-	var names []string
-	i.proxyContextMap.Range(func(key, value interface{}) bool {
-		names = append(names, key.(string))
+	var wg sync.WaitGroup
+
+	// Stop any Envoy subprocesses in parallel
+	i.proxyContextMap.Range(func(key, value any) bool {
+		wg.Add(1)
+		go func(name string) {
+			defer wg.Done()
+			i.stopEnvoy(name)
+		}(key.(string))
 		return true
 	})
 
-	for _, name := range names {
-		i.stopEnvoy(name)
-	}
+	wg.Wait()
 	return nil
 }
 
