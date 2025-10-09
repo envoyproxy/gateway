@@ -17,7 +17,7 @@ bug fixes: |
 
 # Enhancements that improve performance.
 performance improvements: |
-  Optimized memory usage of control plane.
+  Avoided memory build up in follower Envoy Gateway pods, by only subscribing to status and infra messages when they become a leader.
 
 # Deprecated features or APIs.
 deprecations: |
