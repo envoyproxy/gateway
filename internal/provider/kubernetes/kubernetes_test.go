@@ -61,7 +61,7 @@ func TestProvider(t *testing.T) {
 	require.NoError(t, err)
 
 	// Setup and start the kube provider.
-	svr, err := config.New(os.Stdout)
+	svr, err := config.New(os.Stdout, os.Stderr)
 
 	// Disable webhook server for provider test to avoid non-existent cert errors
 	svr.EnvoyGateway.Provider.Kubernetes.TopologyInjector = &egv1a1.EnvoyGatewayTopologyInjector{Disable: ptr.To(true)}
@@ -1267,7 +1267,7 @@ func TestNamespacedProvider(t *testing.T) {
 	require.NoError(t, err)
 
 	// Setup and start the kube provider.
-	svr, err := config.New(os.Stdout)
+	svr, err := config.New(os.Stdout, os.Stderr)
 	require.NoError(t, err)
 	// config to watch a subset of namespaces
 	svr.EnvoyGateway.Provider.Kubernetes = &egv1a1.EnvoyGatewayKubernetesProvider{
@@ -1332,7 +1332,7 @@ func TestNamespaceSelectorProvider(t *testing.T) {
 	require.NoError(t, err)
 
 	// Setup and start the kube provider.
-	svr, err := config.New(os.Stdout)
+	svr, err := config.New(os.Stdout, os.Stderr)
 	require.NoError(t, err)
 	// config to watch a subset of namespaces
 	svr.EnvoyGateway.Provider.Kubernetes = &egv1a1.EnvoyGatewayKubernetesProvider{

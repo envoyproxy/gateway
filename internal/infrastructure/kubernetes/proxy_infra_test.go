@@ -90,7 +90,7 @@ func TestCmpBytes(t *testing.T) {
 }
 
 func newTestInfraWithClient(t *testing.T, cli client.Client) *Infra {
-	cfg, err := config.New(os.Stdout)
+	cfg, err := config.New(os.Stdout, os.Stderr)
 	require.NoError(t, err)
 
 	cfg.EnvoyGateway = &egv1a1.EnvoyGateway{

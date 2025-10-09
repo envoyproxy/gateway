@@ -6,6 +6,8 @@
 package cmd
 
 import (
+	"bytes"
+	"io"
 	"os"
 	"testing"
 
@@ -60,7 +62,7 @@ func TestGetConfigValidate(t *testing.T) {
 			_, err = file.WriteString(test.input)
 			require.NoError(t, err)
 
-			_, err = getConfigByPath(os.Stderr, file.Name())
+			_, err = getConfigByPath(io.Discard, io.Discard, file.Name())
 			if test.errors == nil {
 				require.NoError(t, err)
 			} else {
@@ -70,4 +72,27 @@ func TestGetConfigValidate(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestServerCommand_OutputRedirection verifies that the server command respects output redirection.
+func TestServerCommand_OutputRedirection(t *testing.T) {
+	file, err := os.CreateTemp("", "config")
+	require.NoError(t, err)
+	defer os.Remove(file.Name())
+
+	_, err = file.WriteString(validGatewayConfig)
+	require.NoError(t, err)
+
+	// Create separate buffers for stdout and stderr
+	stdout := &bytes.Buffer{}
+	stderr := &bytes.Buffer{}
+
+	// Test that getConfigByPath uses the provided writers
+	cfg, err := getConfigByPath(stdout, stderr, file.Name())
+	require.NoError(t, err)
+	require.NotNil(t, cfg)
+
+	// Verify the config has the writers set
+	require.Equal(t, stdout, cfg.Stdout)
+	require.Equal(t, stderr, cfg.Stderr)
 }
