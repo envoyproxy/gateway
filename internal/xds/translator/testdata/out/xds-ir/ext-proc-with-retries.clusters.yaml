@@ -1,0 +1,156 @@
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_PREFERRED
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
+    serviceName: httproute/default/httproute-1/rule/0
+  ignoreHealthOnHostRemoval: true
+  lbPolicy: LEAST_REQUEST
+  loadBalancingPolicy:
+    policies:
+    - typedExtensionConfig:
+        name: envoy.load_balancing_policies.least_request
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
+          localityLbConfig:
+            localityWeightedLbConfig: {}
+  name: httproute/default/httproute-1/rule/0
+  perConnectionBufferLimitBytes: 32768
+  type: EDS
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_PREFERRED
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
+    serviceName: httproute/default/httproute-2/rule/0
+  ignoreHealthOnHostRemoval: true
+  lbPolicy: LEAST_REQUEST
+  loadBalancingPolicy:
+    policies:
+    - typedExtensionConfig:
+        name: envoy.load_balancing_policies.least_request
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
+          localityLbConfig:
+            localityWeightedLbConfig: {}
+  name: httproute/default/httproute-2/rule/0
+  perConnectionBufferLimitBytes: 32768
+  type: EDS
+- circuitBreakers:
+    thresholds:
+    - maxConnections: 2048
+      maxRetries: 1024
+  commonLbConfig: {}
+  connectTimeout: 15s
+  dnsLookupFamily: V4_PREFERRED
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
+    serviceName: envoyextensionpolicy/default/policy-for-http-route/0
+  ignoreHealthOnHostRemoval: true
+  loadBalancingPolicy:
+    policies:
+    - typedExtensionConfig:
+        name: envoy.load_balancing_policies.round_robin
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.round_robin.v3.RoundRobin
+          localityLbConfig:
+            localityWeightedLbConfig: {}
+          slowStartConfig:
+            slowStartWindow: 5s
+  name: envoyextensionpolicy/default/policy-for-http-route/0
+  outlierDetection:
+    baseEjectionTime: 30s
+    consecutive5xx: 5
+    consecutiveGatewayFailure: 4
+    consecutiveLocalOriginFailure: 5
+    interval: 5s
+    maxEjectionPercent: 10
+  perConnectionBufferLimitBytes: 20971520
+  transportSocket:
+    name: envoy.transport_sockets.upstream_proxy_protocol
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.transport_sockets.proxy_protocol.v3.ProxyProtocolUpstreamTransport
+      config:
+        version: V2
+      transportSocket:
+        name: envoy.transport_sockets.raw_buffer
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.transport_sockets.raw_buffer.v3.RawBuffer
+  transportSocketMatches:
+  - match:
+      name: envoyextensionpolicy/default/policy-for-http-route/0/tls/0
+    name: envoyextensionpolicy/default/policy-for-http-route/0/tls/0
+    transportSocket:
+      name: envoy.transport_sockets.upstream_proxy_protocol
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.transport_sockets.proxy_protocol.v3.ProxyProtocolUpstreamTransport
+        config:
+          version: V2
+        transportSocket:
+          name: envoy.transport_sockets.tls
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+            commonTlsContext:
+              combinedValidationContext:
+                defaultValidationContext:
+                  matchTypedSubjectAltNames:
+                  - matcher:
+                      exact: grpc-backend
+                    sanType: DNS
+                validationContextSdsSecretConfig:
+                  name: policy-btls-grpc/envoy-gateway-ca
+                  sdsConfig:
+                    ads: {}
+                    resourceApiVersion: V3
+            sni: grpc-backend
+  - match:
+      name: envoyextensionpolicy/default/policy-for-http-route/0/tls/3
+    name: envoyextensionpolicy/default/policy-for-http-route/0/tls/3
+    transportSocket:
+      name: envoy.transport_sockets.upstream_proxy_protocol
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.transport_sockets.proxy_protocol.v3.ProxyProtocolUpstreamTransport
+        config:
+          version: V2
+        transportSocket:
+          name: envoy.transport_sockets.tls
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+            commonTlsContext:
+              combinedValidationContext:
+                defaultValidationContext:
+                  matchTypedSubjectAltNames:
+                  - matcher:
+                      exact: ip-backend
+                    sanType: DNS
+                validationContextSdsSecretConfig:
+                  name: policy-btls-backend-ip/envoy-gateway-ca
+                  sdsConfig:
+                    ads: {}
+                    resourceApiVersion: V3
+            sni: ip-backend
+  type: EDS
+  typedExtensionProtocolOptions:
+    envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
+      '@type': type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
+      explicitHttpConfig:
+        http2ProtocolOptions:
+          initialConnectionWindowSize: 2097152
+          initialStreamWindowSize: 131072
+          maxConcurrentStreams: 200
+          overrideStreamErrorOnInvalidHttpMessage: true
+  upstreamConnectionOptions:
+    tcpKeepalive:
+      keepaliveProbes: 7
