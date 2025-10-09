@@ -42,6 +42,12 @@ type SecurityPolicy struct {
 // +kubebuilder:validation:XValidation:rule="(has(self.authorization) && has(self.authorization.rules) && self.authorization.rules.exists(r, has(r.principal.jwt))) ? has(self.jwt) : true", message="if authorization.rules.principal.jwt is used, jwt must be defined"
 //
 // SecurityPolicySpec defines the desired state of SecurityPolicy.
+//
+// NOTE: SecurityPolicy can target Gateway, HTTPRoute, GRPCRoute, and TCPRoute.
+// When a SecurityPolicy targets a TCPRoute, only client-IP based authorization
+// (Authorization rules that use Principal.ClientCIDRs) is applied. Other
+// authentication/authorization features such as JWT, API Key, Basic Auth,
+// OIDC, or External Authorization are not applicable to TCPRoute targets.
 type SecurityPolicySpec struct {
 	PolicyTargetReferences `json:",inline"`
 

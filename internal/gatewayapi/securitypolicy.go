@@ -706,57 +706,62 @@ func (t *Translator) translateSecurityPolicyForRoute(
 		}
 
 		irKey := t.getIRKey(gtwCtx.Gateway)
-
-		routeIsTCP := route.GetRouteType() == resource.KindTCPRoute
-		expectedTCPRouteName := ""
-		if routeIsTCP {
-			// TCP IR route names are flat; prefix ends with '/', strip it.
-			expectedTCPRouteName = strings.TrimSuffix(prefix, "/")
-		}
-
-		for _, listener := range parentRefCtx.listeners {
-			// Try TCP listener first when dealing with a TCP route
-			if routeIsTCP {
-				if tl := xdsIR[irKey].GetTCPListener(irListenerName(listener)); tl != nil {
-					for _, r := range tl.Routes {
-						if r == nil || r.Security != nil {
-							continue
-						}
-						if r.Name != expectedTCPRouteName { // exact match only
-							continue
-						}
-						// Only authorization for TCP
-						r.Security = &ir.SecurityFeatures{Authorization: authorization}
+		// Use a switch on the route type to keep TCP vs HTTP logic separated and easier to read.
+		switch route.GetRouteType() {
+		case resource.KindTCPRoute:
+			// Only client-IP Authorization is applicable for TCP routes.
+			// TCP IR route names are flat; prefix ends with '/', strip it here.
+			expectedTCPRouteName := strings.TrimSuffix(prefix, "/")
+			for _, listener := range parentRefCtx.listeners {
+				tl := xdsIR[irKey].GetTCPListener(irListenerName(listener))
+				if tl == nil {
+					continue
+				}
+				for _, r := range tl.Routes {
+					if r == nil {
+						continue
 					}
-					// Nothing else to do for this listener in TCP mode
-					continue
+					// if already set - there's a specific level policy, so skip.
+					if r.Security != nil {
+						continue
+					}
+					// exact match only (TCP route names are flat in IR)
+					if r.Name != expectedTCPRouteName {
+						continue
+					}
+					// Only authorization for TCP
+					r.Security = &ir.SecurityFeatures{Authorization: authorization}
 				}
 			}
-
-			// HTTP/HTTPS listener path
-			irListener := xdsIR[irKey].GetHTTPListener(irListenerName(listener))
-			if irListener == nil {
-				continue
-			}
-			for _, r := range irListener.Routes {
-				if r == nil {
+		case resource.KindHTTPRoute, resource.KindGRPCRoute:
+			fallthrough
+		default:
+			// HTTP/HTTPS/GRPC listener path
+			for _, listener := range parentRefCtx.listeners {
+				irListener := xdsIR[irKey].GetHTTPListener(irListenerName(listener))
+				if irListener == nil {
 					continue
 				}
-				// If specified the sectionName must match route rule from ir route metadata.
-				if target.SectionName != nil && string(*target.SectionName) != r.Metadata.SectionName {
-					continue
-				}
-				if !strings.HasPrefix(r.Name, prefix) {
-					continue
-				}
-				// if already set - there's a specific level policy, so skip.
-				if r.Security != nil {
-					continue
-				}
-				r.Security = securityFeatures
-				if errorResponse != nil {
-					// Return a 500 direct response to avoid unauthorized access
-					r.DirectResponse = errorResponse
+				for _, r := range irListener.Routes {
+					if r == nil {
+						continue
+					}
+					// If specified the sectionName must match route rule from ir route metadata.
+					if target.SectionName != nil && string(*target.SectionName) != r.Metadata.SectionName {
+						continue
+					}
+					if !strings.HasPrefix(r.Name, prefix) {
+						continue
+					}
+					// if already set - there's a specific level policy, so skip.
+					if r.Security != nil {
+						continue
+					}
+					r.Security = securityFeatures
+					if errorResponse != nil {
+						// Return a 500 direct response to avoid unauthorized access
+						r.DirectResponse = errorResponse
+					}
 				}
 			}
 		}
@@ -865,11 +870,6 @@ func (t *Translator) translateSecurityPolicyForGateway(
 		ExtAuth:       extAuth,
 		Authorization: authorization,
 	}
-	// Pre-create a TCP-only security feature set (Authorization only) to avoid re-allocation
-	var tcpSecurityFeatures *ir.SecurityFeatures
-	if authorization != nil {
-		tcpSecurityFeatures = &ir.SecurityFeatures{Authorization: authorization}
-	}
 
 	var errorResponse *ir.CustomResponse
 	if errs != nil {
@@ -909,6 +909,12 @@ func (t *Translator) translateSecurityPolicyForGateway(
 				r.DirectResponse = errorResponse
 			}
 		}
+	}
+
+	// Pre-create a TCP-only security feature set (Authorization only) to avoid re-allocation
+	var tcpSecurityFeatures *ir.SecurityFeatures
+	if authorization != nil {
+		tcpSecurityFeatures = &ir.SecurityFeatures{Authorization: authorization}
 	}
 
 	// Apply to TCP listeners (Authorization only). Support metadata nil fallback by parsing section name from listener name suffix.
