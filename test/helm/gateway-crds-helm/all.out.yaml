@@ -17535,6 +17535,20 @@ spec:
                       InsecureSkipVerify indicates whether the upstream's certificate verification
                       should be skipped. Defaults to "false".
                     type: boolean
+                  sni:
+                    description: |-
+                      SNI is specifies the SNI value used when establishing an upstream TLS connection to the backend.
+
+                      Envoy Gateway will use the HTTP host header value for SNI, when all resources referenced in BackendRefs are:
+                      1. Backend resources that do not set SNI, or
+                      2. Service/ServiceImport resources that do not have a BackendTLSPolicy attached to them
+
+                      When a BackendTLSPolicy attaches to a Backend resource, the BackendTLSPolicy's Hostname value takes precedence
+                      over this value.
+                    maxLength: 253
+                    minLength: 1
+                    pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                    type: string
                   wellKnownCACertificates:
                     description: |-
                       WellKnownCACertificates specifies whether system CA certificates may be used in
@@ -20228,9 +20242,18 @@ spec:
                     properties:
                       numTrustedHops:
                         description: |-
-                          NumTrustedHops controls the number of additional ingress proxy hops from the right side of XFF HTTP
-                          headers to trust when determining the origin client's IP address.
-                          Only one of NumTrustedHops and TrustedCIDRs must be set.
+                          NumTrustedHops specifies how many trusted hops to count from the rightmost side of
+                          the X-Forwarded-For (XFF) header when determining the original client’s IP address.
+
+                          If NumTrustedHops is set to N, the client IP is taken from the Nth address from the
+                          right end of the XFF header.
+
+                          Example:
+                            XFF = "203.0.113.128, 203.0.113.10, 203.0.113.1"
+                            NumTrustedHops = 2
+                            → Trusted client address = 203.0.113.10
+
+                          Only one of NumTrustedHops or TrustedCIDRs should be configured.
                         format: int32
                         type: integer
                       trustedCIDRs:
