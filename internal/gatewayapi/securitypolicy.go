@@ -421,9 +421,6 @@ func validateSecurityPolicyForTCP(p *egv1a1.SecurityPolicy) error {
 		if len(rule.Principal.Headers) > 0 {
 			return fmt.Errorf("rule %d: headers not supported for TCP", i)
 		}
-		if rule.Action == egv1a1.AuthorizationActionAllow && len(rule.Principal.ClientCIDRs) == 0 {
-			return fmt.Errorf("rule %d: Allow action must specify at least one ClientCIDR for TCP", i)
-		}
 		if err := validateCIDRs(rule.Principal.ClientCIDRs); err != nil {
 			return fmt.Errorf("rule %d: %w", i, err)
 		}
