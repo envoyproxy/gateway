@@ -165,12 +165,12 @@ func TestInfra_Close(t *testing.T) {
 	})
 
 	// Verify all proxies are stopped
-	count = 0
-	i.proxyContextMap.Range(func(key, value interface{}) bool {
-		count++
-		return true
+	found := false
+	i.proxyContextMap.Range(func(key, value any) bool {
+		found = true
+		return false
 	})
-	require.Equal(t, 0, count, "expected all proxies to be stopped")
+	require.False(t, found, "expected all proxies to be stopped")
 }
 
 func TestExtractSemver(t *testing.T) {
