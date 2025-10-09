@@ -73,9 +73,11 @@ func (i *Infra) CreateOrUpdateProxyInfra(ctx context.Context, infra *ir.Infra) e
 		XdsServerHost:   ptr.To("0.0.0.0"),
 		AdminServerPort: ptr.To(int32(0)),
 		StatsServerPort: ptr.To(int32(0)),
-	}
-	if i.EnvoyGateway != nil {
-		bootstrapConfigOptions.TopologyInjectorDisabled = i.EnvoyGateway.TopologyInjectorDisabled()
+		// Always disable the topology injector in standalone mode. The topology
+		// injector adds an EDS local_cluster to the bootstrap config for
+		// zone-aware routing, which is both irrelevant outside K8s, but also
+		// causes a 15-30s startup delay on the admin /ready endpoint.
+		TopologyInjectorDisabled: true,
 	}
 	args, err := common.BuildProxyArgs(proxyInfra, proxyConfig.Spec.Shutdown, bootstrapConfigOptions, proxyName, false)
 	if err != nil {
