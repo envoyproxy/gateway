@@ -468,24 +468,26 @@ func (t *Translator) processHTTPRouteRule(
 		}
 		processRouteTrafficFeatures(irRoute, rule)
 
+		var pathMatch *ir.StringMatch
 		if match.Path != nil {
 			switch PathMatchTypeDerefOr(match.Path.Type, gwapiv1.PathMatchPathPrefix) {
 			case gwapiv1.PathMatchPathPrefix:
-				irRoute.PathMatch = &ir.StringMatch{
+				pathMatch = &ir.StringMatch{
 					Prefix: match.Path.Value,
 				}
 			case gwapiv1.PathMatchExact:
-				irRoute.PathMatch = &ir.StringMatch{
+				pathMatch = &ir.StringMatch{
 					Exact: match.Path.Value,
 				}
 			case gwapiv1.PathMatchRegularExpression:
 				if err := regex.Validate(*match.Path.Value); err != nil {
 					return nil, status.NewRouteStatusError(err, gwapiv1.RouteReasonUnsupportedValue)
 				}
-				irRoute.PathMatch = &ir.StringMatch{
+				pathMatch = &ir.StringMatch{
 					SafeRegex: match.Path.Value,
 				}
 			}
+			irRoute.PathMatch = pathMatch
 		}
 		for _, headerMatch := range match.Headers {
 			switch HeaderMatchTypeDerefOr(headerMatch.Type, gwapiv1.HeaderMatchExact) {
@@ -530,6 +532,38 @@ func (t *Translator) processHTTPRouteRule(
 		}
 		applyHTTPFiltersContextToIRRoute(httpFiltersContext, irRoute)
 		ruleRoutes = append(ruleRoutes, irRoute)
+
+		// When using a CORS filter with method matching that excludes OPTIONS,
+		// users must explicitly specify OPTIONS method match to handle CORS preflight requests.
+		// - https://github.com/kubernetes-sigs/gateway-api/issues/3857
+		//
+		// Envoy Gateway improves user experience by implicitly creating the envoy route for CORS preflight.
+		if (httpFiltersContext != nil && httpFiltersContext.CORS != nil) &&
+			(match.Method != nil && string(*match.Method) != "OPTIONS") {
+			irRoute := &ir.HTTPRoute{
+				Name:     irRouteName(httpRoute, ruleIdx, matchIdx) + "/cors-preflight",
+				Metadata: routeRuleMetadata,
+				HeaderMatches: []*ir.StringMatch{
+					{
+						Name:  ":method",
+						Exact: ptr.To("OPTIONS"),
+					},
+					{
+						Name:      "origin",
+						SafeRegex: ptr.To(".*"),
+					},
+					{
+						Name:      "access-control-request-method",
+						SafeRegex: ptr.To(".*"),
+					},
+				},
+				CORS: httpFiltersContext.CORS,
+			}
+			if pathMatch != nil {
+				irRoute.PathMatch = pathMatch
+			}
+			ruleRoutes = append(ruleRoutes, irRoute)
+		}
 	}
 
 	return ruleRoutes, nil
