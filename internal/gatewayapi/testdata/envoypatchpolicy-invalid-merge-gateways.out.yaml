@@ -74,6 +74,29 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    envoyPatchPolicies:
+    - jsonPatches:
+      - name: envoy-gateway-gateway-1-http
+        operation:
+          op: replace
+          path: /ignore_global_conn_limit
+          value: "true"
+        type: type.googleapis.com/envoy.config.listener.v3.Listener
+      name: edit-ignore-global-limit
+      namespace: envoy-gateway
+      status:
+        ancestors:
+        - ancestorRef:
+            group: gateway.networking.k8s.io
+            kind: GatewayClass
+            name: envoy-gateway-class
+          conditions:
+          - lastTransitionTime: null
+            message: Policy has been accepted.
+            reason: Accepted
+            status: "True"
+            type: Accepted
+          controllerName: gateway.envoyproxy.io/gatewayclass-controller
     globalResources:
       proxyServiceCluster:
         name: envoy-gateway-class
