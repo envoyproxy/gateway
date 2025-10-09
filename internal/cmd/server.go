@@ -237,15 +237,9 @@ func startRunners(ctx context.Context, cfg *config.Server) (err error) {
 	// Wait until done
 	<-ctx.Done()
 
-	// Close messages
-	closeChannels := []interface{ Close() }{
-		channels.pResources,
-		channels.xdsIR,
-		channels.infraIR,
-	}
-	for _, ch := range closeChannels {
-		ch.Close()
-	}
+	// Close xdsIR channel
+	// No need to close infraIR and pResources channels since they are already closed
+	channels.xdsIR.Close()
 
 	cfg.Logger.Info("runners are shutting down")
 	for _, r := range runners {

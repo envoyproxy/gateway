@@ -22,21 +22,27 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+const (
+	conditionMessageMaxLength        = 32768
+	conditionMessageTruncationSuffix = " (message truncated)."
+)
+
 // MergeConditions adds or updates matching conditions, and updates the transition
 // time if details of a condition have changed. Returns the updated condition array.
 func MergeConditions(conditions []metav1.Condition, updates ...metav1.Condition) []metav1.Condition {
 	var additions []metav1.Condition
-	for i, update := range updates {
+	for i := range updates {
+		updates[i].Message = truncateConditionMessage(updates[i].Message)
 		add := true
-		for j, cond := range conditions {
-			if cond.Type == update.Type {
+		for j := range conditions {
+			if conditions[j].Type == updates[i].Type {
 				add = false
-				if conditionChanged(&cond, &update) {
-					conditions[j].Status = update.Status
-					conditions[j].Reason = update.Reason
-					conditions[j].Message = update.Message
-					conditions[j].ObservedGeneration = update.ObservedGeneration
-					conditions[j].LastTransitionTime = update.LastTransitionTime
+				if conditionChanged(&conditions[j], &updates[i]) {
+					conditions[j].Status = updates[i].Status
+					conditions[j].Reason = updates[i].Reason
+					conditions[j].Message = updates[i].Message
+					conditions[j].ObservedGeneration = updates[i].ObservedGeneration
+					conditions[j].LastTransitionTime = updates[i].LastTransitionTime
 					break
 				}
 			}
@@ -54,7 +60,7 @@ func newCondition(t string, status metav1.ConditionStatus, reason, msg string, l
 		Type:               t,
 		Status:             status,
 		Reason:             reason,
-		Message:            msg,
+		Message:            truncateConditionMessage(msg),
 		LastTransitionTime: metav1.NewTime(lt),
 		ObservedGeneration: og,
 	}
@@ -94,4 +100,12 @@ func Error2ConditionMsg(err error) string {
 
 	// Convert the rune slice back to a string
 	return string(runes)
+}
+
+func truncateConditionMessage(msg string) string {
+	if len(msg) <= conditionMessageMaxLength {
+		return msg
+	}
+	suffixLen := len(conditionMessageTruncationSuffix)
+	return msg[:conditionMessageMaxLength-suffixLen] + conditionMessageTruncationSuffix
 }
