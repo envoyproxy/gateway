@@ -1,6 +1,6 @@
 module github.com/envoyproxy/gateway-grpc-ext-proc
 
-go 1.24.7
+go 1.24.8
 
 require (
 	github.com/envoyproxy/go-control-plane/envoy v1.32.4
