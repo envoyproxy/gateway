@@ -39,15 +39,21 @@ type Server struct {
 	Logger logging.Logger
 	// Elected chan is used to signal when an EG instance is elected as leader.
 	Elected chan struct{}
+	// Stdout is the writer for standard output.
+	Stdout io.Writer
+	// Stderr is the writer for error output.
+	Stderr io.Writer
 }
 
 // New returns a Server with default parameters.
-func New(logOut io.Writer) (*Server, error) {
+func New(stdout, stderr io.Writer) (*Server, error) {
 	return &Server{
 		EnvoyGateway:        egv1a1.DefaultEnvoyGateway(),
 		ControllerNamespace: env.Lookup("ENVOY_GATEWAY_NAMESPACE", DefaultNamespace),
 		DNSDomain:           env.Lookup("KUBERNETES_CLUSTER_DOMAIN", DefaultDNSDomain),
-		Logger:              logging.DefaultLogger(logOut, egv1a1.LogLevelInfo),
+		Logger:              logging.DefaultLogger(stdout, egv1a1.LogLevelInfo),
+		Stdout:              stdout,
+		Stderr:              stderr,
 		Elected:             make(chan struct{}),
 	}, nil
 }

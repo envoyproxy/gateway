@@ -9,8 +9,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
-	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -83,12 +81,12 @@ func (i *Infra) CreateOrUpdateProxyInfra(ctx context.Context, infra *ir.Infra) e
 	if err != nil {
 		return err
 	}
-	i.runEnvoy(ctx, os.Stdout, i.getEnvoyVersion(proxyConfig), proxyName, args)
+	i.runEnvoy(ctx, i.getEnvoyVersion(proxyConfig), proxyName, args)
 	return nil
 }
 
 // runEnvoy runs the Envoy process with the given arguments and name in a separate goroutine.
-func (i *Infra) runEnvoy(ctx context.Context, out io.Writer, envoyVersion, name string, args []string) {
+func (i *Infra) runEnvoy(ctx context.Context, envoyVersion, name string, args []string) {
 	pCtx, cancel := context.WithCancel(ctx)
 	exit := make(chan struct{}, 1)
 	i.proxyContextMap[name] = &proxyContext{cancel: cancel, exit: exit}
@@ -98,7 +96,12 @@ func (i *Infra) runEnvoy(ctx context.Context, out io.Writer, envoyVersion, name 
 		defer func() {
 			exit <- struct{}{}
 		}()
-		err := func_e.Run(pCtx, args, api.HomeDir(i.HomeDir), api.Out(out), api.EnvoyVersion(envoyVersion))
+		err := func_e.Run(pCtx, args,
+			api.HomeDir(i.HomeDir),
+			api.Out(i.Stdout),
+			api.EnvoyOut(i.Stdout),
+			api.EnvoyErr(i.Stderr),
+			api.EnvoyVersion(envoyVersion))
 		if err != nil {
 			i.Logger.Error(err, "failed to run envoy")
 		}
