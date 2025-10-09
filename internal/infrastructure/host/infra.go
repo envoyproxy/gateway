@@ -11,6 +11,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"sync"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
@@ -46,6 +47,8 @@ type Infra struct {
 
 	// proxyContextMap store the context of each running proxy by its name for lifecycle management.
 	proxyContextMap map[string]*proxyContext
+	// mu protects proxyContextMap from concurrent access.
+	mu sync.RWMutex
 
 	// TODO: remove this field once it supports the configurable homeDir
 	sdsConfigPath string
