@@ -979,7 +979,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `refs` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.SecretObjectReference) array_ |  true  |  | Refs contains one or more references to a Kubernetes ConfigMap or a Kubernetes Secret,<br />containing the certificate revocation list in PEM format<br />Expects the content in a key named `ca.crl`.<br />References to a resource in different namespace are invalid UNLESS there<br />is a ReferenceGrant in the target namespace that allows the crl<br />to be attached. |
+| `refs` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/reference/spec/#secretobjectreference) array_ |  true  |  | Refs contains one or more references to a Kubernetes ConfigMap or a Kubernetes Secret,<br />containing the certificate revocation list in PEM format<br />Expects the content in a key named `ca.crl`.<br />References to a resource in different namespace are invalid UNLESS there<br />is a ReferenceGrant in the target namespace that allows the crl<br />to be attached. |
 | `onlyVerifyLeafCertificate` | _boolean_ |  false  |  | If this option is set to true,  Envoy will only verify the certificate at the end of the certificate chain against the CRL.<br />Defaults to false, which will verify the entire certificate chain against the CRL. |
 
 
