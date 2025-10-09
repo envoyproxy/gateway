@@ -61,7 +61,7 @@ func GetCertGenCommand() *cobra.Command {
 
 // certGen generates control plane certificates.
 func certGen(ctx context.Context, logOut io.Writer, local bool) error {
-	cfg, err := config.New(logOut)
+	cfg, err := config.New(logOut, io.Discard)
 	if err != nil {
 		return err
 	}

@@ -461,6 +461,7 @@ _Appears in:_
 | `caCertificateRefs` | _LocalObjectReference array_ |  false  |  | CACertificateRefs contains one or more references to Kubernetes objects that<br />contain TLS certificates of the Certificate Authorities that can be used<br />as a trust anchor to validate the certificates presented by the backend.<br />A single reference to a Kubernetes ConfigMap or a Kubernetes Secret,<br />with the CA certificate in a key named `ca.crt` is currently supported.<br />If CACertificateRefs is empty or unspecified, then WellKnownCACertificates must be<br />specified. Only one of CACertificateRefs or WellKnownCACertificates may be specified,<br />not both. |
 | `wellKnownCACertificates` | _[WellKnownCACertificatesType](#wellknowncacertificatestype)_ |  false  |  | WellKnownCACertificates specifies whether system CA certificates may be used in<br />the TLS handshake between the gateway and backend pod.<br />If WellKnownCACertificates is unspecified or empty (""), then CACertificateRefs<br />must be specified with at least one entry for a valid configuration. Only one of<br />CACertificateRefs or WellKnownCACertificates may be specified, not both. |
 | `insecureSkipVerify` | _boolean_ |  false  | false | InsecureSkipVerify indicates whether the upstream's certificate verification<br />should be skipped. Defaults to "false". |
+| `sni` | _[PreciseHostname](#precisehostname)_ |  false  |  | SNI is specifies the SNI value used when establishing an upstream TLS connection to the backend.<br />Envoy Gateway will use the HTTP host header value for SNI, when all resources referenced in BackendRefs are:<br />1. Backend resources that do not set SNI, or<br />2. Service/ServiceImport resources that do not have a BackendTLSPolicy attached to them<br />When a BackendTLSPolicy attaches to a Backend resource, the BackendTLSPolicy's Hostname value takes precedence<br />over this value. |
 
 
 #### BackendTelemetry
@@ -966,6 +967,21 @@ _Appears in:_
 | `name` | _string_ |  true  |  | Name of the cookie to hash.<br />If this cookie does not exist in the request, Envoy will generate a cookie and set<br />the TTL on the response back to the client based on Layer 4<br />attributes of the backend endpoint, to ensure that these future requests<br />go to the same backend endpoint. Make sure to set the TTL field for this case. |
 | `ttl` | _[Duration](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.Duration)_ |  false  |  | TTL of the generated cookie if the cookie is not present. This value sets the<br />Max-Age attribute value. |
 | `attributes` | _object (keys:string, values:string)_ |  false  |  | Additional Attributes to set for the generated cookie. |
+
+
+#### CrlContext
+
+
+
+CrlContext holds certificate revocation list configuration that can be used to validate the client initiating the TLS connection
+
+_Appears in:_
+- [ClientValidationContext](#clientvalidationcontext)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `refs` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.SecretObjectReference) array_ |  true  |  | Refs contains one or more references to a Kubernetes ConfigMap or a Kubernetes Secret,<br />containing the certificate revocation list in PEM format<br />Expects the content in a key named `ca.crl`.<br />References to a resource in different namespace are invalid UNLESS there<br />is a ReferenceGrant in the target namespace that allows the crl<br />to be attached. |
+| `onlyVerifyLeafCertificate` | _boolean_ |  false  |  | If this option is set to true,  Envoy will only verify the certificate at the end of the certificate chain against the CRL.<br />Defaults to false, which will verify the entire certificate chain against the CRL. |
 
 
 #### CustomHeaderExtensionSettings
@@ -5363,7 +5379,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `numTrustedHops` | _integer_ |  false  |  | NumTrustedHops controls the number of additional ingress proxy hops from the right side of XFF HTTP<br />headers to trust when determining the origin client's IP address.<br />Only one of NumTrustedHops and TrustedCIDRs must be set. |
+| `numTrustedHops` | _integer_ |  false  |  | NumTrustedHops specifies how many trusted hops to count from the rightmost side of<br />the X-Forwarded-For (XFF) header when determining the original client’s IP address.<br />If NumTrustedHops is set to N, the client IP is taken from the Nth address from the<br />right end of the XFF header.<br />Example:<br />  XFF = "203.0.113.128, 203.0.113.10, 203.0.113.1"<br />  NumTrustedHops = 2<br />  → Trusted client address = 203.0.113.10<br />Only one of NumTrustedHops or TrustedCIDRs should be configured. |
 | `trustedCIDRs` | _[CIDR](#cidr) array_ |  false  |  | TrustedCIDRs is a list of CIDR ranges to trust when evaluating<br />the remote IP address to determine the original client’s IP address.<br />When the remote IP address matches a trusted CIDR and the x-forwarded-for header was sent,<br />each entry in the x-forwarded-for header is evaluated from right to left<br />and the first public non-trusted address is used as the original client address.<br />If all addresses in x-forwarded-for are within the trusted list, the first (leftmost) entry is used.<br />Only one of NumTrustedHops and TrustedCIDRs must be set. |
 
 
