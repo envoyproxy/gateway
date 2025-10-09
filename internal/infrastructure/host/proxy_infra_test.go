@@ -11,6 +11,7 @@ import (
 	"io"
 	"path"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"github.com/stretchr/testify/require"
@@ -157,9 +158,11 @@ func TestInfra_Close(t *testing.T) {
 	})
 	require.Equal(t, 3, count, "expected 3 proxies to be running")
 
-	// Close should stop all proxies
-	err = i.Close()
-	require.NoError(t, err)
+	// Close should stop all proxies and not leak goroutines
+	synctest.Test(t, func(t *testing.T) {
+		err := i.Close()
+		require.NoError(t, err)
+	})
 
 	// Verify all proxies are stopped
 	count = 0
