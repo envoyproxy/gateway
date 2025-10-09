@@ -210,7 +210,7 @@ func Test_subscribeAndTranslate(t *testing.T) {
 			defer cancel()
 			xdsIR := new(message.XdsIR)
 			defer xdsIR.Close()
-			cfg, err := config.New(os.Stdout)
+			cfg, err := config.New(os.Stdout, os.Stderr)
 			require.NoError(t, err)
 
 			r := New(&Config{

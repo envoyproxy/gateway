@@ -22,7 +22,7 @@ var (
 )
 
 func TestValidate(t *testing.T) {
-	cfg, err := New(os.Stdout)
+	cfg, err := New(os.Stdout, os.Stderr)
 	require.NoError(t, err)
 
 	testCases := []struct {

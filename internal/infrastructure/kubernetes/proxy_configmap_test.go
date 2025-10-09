@@ -204,7 +204,7 @@ func TestCreateOrUpdateProxyConfigMap(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			ctx := context.Background()
-			cfg, err := config.New(os.Stdout)
+			cfg, err := config.New(os.Stdout, os.Stderr)
 			require.NoError(t, err)
 			cfg.ControllerNamespace = tc.ns
 
@@ -247,7 +247,7 @@ func TestCreateOrUpdateProxyConfigMap(t *testing.T) {
 }
 
 func TestDeleteConfigProxyMap(t *testing.T) {
-	cfg, err := config.New(os.Stdout)
+	cfg, err := config.New(os.Stdout, os.Stderr)
 	require.NoError(t, err)
 
 	infra := ir.NewInfra()

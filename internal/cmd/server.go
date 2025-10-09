@@ -45,7 +45,7 @@ func GetServerCommand() *cobra.Command {
 		Aliases: []string{"serve"},
 		Short:   "Serve Envoy Gateway",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return server(cmd.Context(), cmd.OutOrStdout())
+			return server(cmd.Context(), cmd.OutOrStdout(), cmd.ErrOrStderr())
 		},
 	}
 	cmd.PersistentFlags().StringVarP(&cfgPath, "config-path", "c", "",
@@ -55,8 +55,8 @@ func GetServerCommand() *cobra.Command {
 }
 
 // server serves Envoy Gateway.
-func server(ctx context.Context, logOut io.Writer) error {
-	cfg, err := getConfig(logOut)
+func server(ctx context.Context, stdout, stderr io.Writer) error {
+	cfg, err := getConfig(stdout, stderr)
 	if err != nil {
 		return err
 	}
@@ -72,7 +72,7 @@ func server(ctx context.Context, logOut io.Writer) error {
 		return nil
 	}
 	l := loader.New(cfgPath, cfg, hook)
-	if err := l.Start(ctx, logOut); err != nil {
+	if err := l.Start(ctx, stdout); err != nil {
 		return err
 	}
 
@@ -88,14 +88,14 @@ func server(ctx context.Context, logOut io.Writer) error {
 }
 
 // getConfig gets the Server configuration
-func getConfig(logOut io.Writer) (*config.Server, error) {
-	return getConfigByPath(logOut, cfgPath)
+func getConfig(stdout, stderr io.Writer) (*config.Server, error) {
+	return getConfigByPath(stdout, stderr, cfgPath)
 }
 
 // make `cfgPath` an argument to test it without polluting the global var
-func getConfigByPath(logOut io.Writer, cfgPath string) (*config.Server, error) {
+func getConfigByPath(stdout, stderr io.Writer, cfgPath string) (*config.Server, error) {
 	// Initialize with default config parameters.
-	cfg, err := config.New(logOut)
+	cfg, err := config.New(stdout, stderr)
 	if err != nil {
 		return nil, err
 	}
@@ -118,7 +118,7 @@ func getConfigByPath(logOut io.Writer, cfgPath string) (*config.Server, error) {
 		cfg.EnvoyGateway = eg
 		// update cfg logger
 		eg.Logging.SetEnvoyGatewayLoggingDefaults()
-		cfg.Logger = logging.NewLogger(logOut, eg.Logging)
+		cfg.Logger = logging.NewLogger(stdout, eg.Logging)
 	}
 
 	if err := cfg.Validate(); err != nil {
@@ -237,15 +237,9 @@ func startRunners(ctx context.Context, cfg *config.Server) (err error) {
 	// Wait until done
 	<-ctx.Done()
 
-	// Close messages
-	closeChannels := []interface{ Close() }{
-		channels.pResources,
-		channels.xdsIR,
-		channels.infraIR,
-	}
-	for _, ch := range closeChannels {
-		ch.Close()
-	}
+	// Close xdsIR channel
+	// No need to close infraIR and pResources channels since they are already closed
+	channels.xdsIR.Close()
 
 	cfg.Logger.Info("runners are shutting down")
 	for _, r := range runners {

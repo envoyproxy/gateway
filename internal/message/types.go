@@ -70,6 +70,7 @@ func (p *ProviderResources) Close() {
 	p.GatewayAPIResources.Close()
 	p.GatewayAPIStatuses.Close()
 	p.PolicyStatuses.Close()
+	p.ExtensionStatuses.Close()
 }
 
 // GatewayAPIStatuses contains gateway API resources statuses
@@ -120,6 +121,10 @@ func (p *PolicyStatuses) Close() {
 	p.BackendTLSPolicyStatuses.Close()
 	p.EnvoyExtensionPolicyStatuses.Close()
 	p.ExtensionPolicyStatuses.Close()
+}
+
+func (e *ExtensionStatuses) Close() {
+	e.BackendStatuses.Close()
 }
 
 // XdsIR message
