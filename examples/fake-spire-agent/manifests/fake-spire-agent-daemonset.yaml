@@ -1,0 +1,55 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: fake-spire-agent
+  namespace: envoy-gateway-system
+  labels:
+    app.kubernetes.io/name: fake-spire-agent
+    app.kubernetes.io/part-of: envoy-gateway
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: fake-spire-agent
+  updateStrategy:
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: fake-spire-agent
+    spec:
+      nodeSelector:
+        kubernetes.io/os: linux
+      tolerations:
+        - key: node-role.kubernetes.io/control-plane
+          operator: Exists
+          effect: NoSchedule
+        - key: node-role.kubernetes.io/master
+          operator: Exists
+          effect: NoSchedule
+      containers:
+        - name: fake-spire-agent
+          image: nareddyt/kubecon-2025-fake-spire-server:2.0.0
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            runAsUser: 0
+            runAsGroup: 0
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              cpu: 100m
+              memory: 128Mi
+          volumeMounts:
+            - name: spiffe-workload-api
+              mountPath: /var/run/spiffe-workload-api
+      volumes:
+        - name: spiffe-workload-api
+          hostPath:
+            path: /var/run/spiffe-workload-api
+            type: DirectoryOrCreate
+

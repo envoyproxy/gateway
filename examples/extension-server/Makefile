@@ -6,8 +6,8 @@ $(tools.bindir)/%: $(tools.srcdir)/%/pin.go $(tools.srcdir)/%/go.mod
 	cd $(<D) && GOOS= GOARCH= go build -o $(abspath $@) $$(sed -En 's,^import _ "(.*)".*,\1,p' pin.go)
 
 IMAGE_PREFIX ?= nareddyt/
-APP_NAME ?= envoy-gateway-kubecon-presentation-2025
-TAG ?= 2.2.1
+APP_NAME ?= kubecon-2025-extension-server
+TAG ?= 3.0.0
 
 PLATFORMS ?= linux/amd64,linux/arm64
 

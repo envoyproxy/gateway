@@ -1,0 +1,26 @@
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: custom-proxy-config
+  namespace: envoy-gateway-system
+spec:
+  # backendTLS:
+  #   clientCertificateRef:
+  #     kind: Secret
+  #     name: example-client-cert
+  #     namespace: envoy-gateway-system
+  provider:
+    type: Kubernetes
+    kubernetes:
+      envoyDeployment:
+        container:
+          volumeMounts:
+          - name: spire-agent-socket
+            mountPath: /var/run/spiffe-workload-api
+            readOnly: true
+        pod:
+          volumes:
+          - name: spire-agent-socket
+            hostPath:
+              path: /var/run/spiffe-workload-api
+              type: DirectoryOrCreate
