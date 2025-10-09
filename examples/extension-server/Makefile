@@ -5,13 +5,15 @@ tools.srcdir = tools/src
 $(tools.bindir)/%: $(tools.srcdir)/%/pin.go $(tools.srcdir)/%/go.mod
 	cd $(<D) && GOOS= GOARCH= go build -o $(abspath $@) $$(sed -En 's,^import _ "(.*)".*,\1,p' pin.go)
 
-IMAGE_PREFIX ?= envoyproxy/gateway-
-APP_NAME ?= extension-server
-TAG ?= latest
+IMAGE_PREFIX ?= nareddyt/
+APP_NAME ?= envoy-gateway-kubecon-presentation-2025
+TAG ?= 2.1.0
+
+PLATFORMS ?= linux/amd64,linux/arm64
 
 .PHONY: docker-buildx
 docker-buildx:
-	docker buildx build -f tools/docker/extension-server/Dockerfile . -t $(IMAGE_PREFIX)$(APP_NAME):$(TAG) --build-arg GO_LDFLAGS="$(GO_LDFLAGS)" --load
+	docker buildx build --platform $(PLATFORMS) -f tools/docker/extension-server/Dockerfile . -t $(IMAGE_PREFIX)$(APP_NAME):$(TAG) --build-arg GO_LDFLAGS="$(GO_LDFLAGS)" --push
 
 build: generate manifests
 	mkdir -p bin

@@ -3,22 +3,20 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.17.1
-  name: listenercontextexamples.example.extensions.io
+    controller-gen.kubebuilder.io/version: v0.18.0
+  name: custombackendmtlspolicies.example.extensions.io
 spec:
   group: example.extensions.io
   names:
-    kind: ListenerContextExample
-    listKind: ListenerContextExampleList
-    plural: listenercontextexamples
-    singular: listenercontextexample
+    kind: CustomBackendMtlsPolicy
+    listKind: CustomBackendMtlsPolicyList
+    plural: custombackendmtlspolicies
+    singular: custombackendmtlspolicy
   scope: Namespaced
   versions:
   - name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: ListenerContext provides an example extension policy context
-          resource.
         properties:
           apiVersion:
             description: |-
@@ -39,8 +37,6 @@ spec:
             type: object
           spec:
             properties:
-              password:
-                type: string
               targetRefs:
                 items:
                   description: |-
@@ -93,12 +89,46 @@ spec:
                   - name
                   type: object
                 type: array
-              username:
+              targetRoutes:
+                items:
+                  description: |-
+                    LocalPolicyTargetReference identifies an API object to apply a direct or
+                    inherited policy to. This should be used as part of Policy resources
+                    that can target Gateway API resources. For more information on how this
+                    policy attachment model works, and a sample Policy resource, refer to
+                    the policy attachment documentation for Gateway API.
+                  properties:
+                    group:
+                      description: Group is the group of the target resource.
+                      maxLength: 253
+                      pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                      type: string
+                    kind:
+                      description: Kind is kind of the target resource.
+                      maxLength: 63
+                      minLength: 1
+                      pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
+                      type: string
+                    name:
+                      description: Name is the name of the target resource.
+                      maxLength: 253
+                      minLength: 1
+                      type: string
+                  required:
+                  - group
+                  - kind
+                  - name
+                  type: object
+                type: array
+              trustDomain:
+                type: string
+              workloadIdentifier:
                 type: string
             required:
-            - password
             - targetRefs
-            - username
+            - targetRoutes
+            - trustDomain
+            - workloadIdentifier
             type: object
         required:
         - spec

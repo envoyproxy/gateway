@@ -5,10 +5,10 @@
 replicaCount: 1
 
 image:
-  repository: extension-server
-  pullPolicy: IfNotPresent
+  repository: docker.io/nareddyt/envoy-gateway-kubecon-presentation-2025
+  pullPolicy: Always
   # Overrides the image tag whose default is the chart appVersion.
-  tag: "latest"
+  tag: "2.1.0"
 
 imagePullSecrets: []
 nameOverride: ""

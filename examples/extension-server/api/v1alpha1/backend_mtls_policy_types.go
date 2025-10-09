@@ -12,31 +12,29 @@ import (
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
-//
-// ListenerContext provides an example extension policy context resource.
-type ListenerContextExample struct {
+type CustomBackendMtlsPolicy struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec ListenerContextExampleSpec `json:"spec"`
+	Spec CustomBackendMtlsPolicySpec `json:"spec"`
 }
 
-type ListenerContextExampleSpec struct {
+type CustomBackendMtlsPolicySpec struct {
 	TargetRefs []gwapiv1a2.LocalPolicyTargetReferenceWithSectionName `json:"targetRefs"`
 
-	Username string `json:"username"`
-	Password string `json:"password"`
+	TrustDomain        string `json:"trustDomain"`
+	WorkloadIdentifier string `json:"workloadIdentifier"`
+
+	TargetRoutes []gwapiv1a2.LocalPolicyTargetReference `json:"targetRoutes"`
 }
 
 // +kubebuilder:object:root=true
-//
-// ListenerContextList contains a list of ListenerContext resources.
-type ListenerContextExampleList struct {
+type CustomBackendMtlsPolicyList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []ListenerContextExample `json:"items"`
+	Items           []CustomBackendMtlsPolicy `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&ListenerContextExample{}, &ListenerContextExampleList{})
+	SchemeBuilder.Register(&CustomBackendMtlsPolicy{}, &CustomBackendMtlsPolicyList{})
 }
