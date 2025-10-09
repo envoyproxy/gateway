@@ -34,12 +34,12 @@ type proxyContext struct {
 
 // Close implements the Manager interface.
 func (i *Infra) Close() error {
-	i.mu.RLock()
-	names := make([]string, 0, len(i.proxyContextMap))
-	for name := range i.proxyContextMap {
-		names = append(names, name)
-	}
-	i.mu.RUnlock()
+	// Collect all proxy names first to avoid holding locks during stopEnvoy calls
+	var names []string
+	i.proxyContextMap.Range(func(key, value interface{}) bool {
+		names = append(names, key.(string))
+		return true
+	})
 
 	for _, name := range names {
 		i.stopEnvoy(name)
@@ -60,10 +60,7 @@ func (i *Infra) CreateOrUpdateProxyInfra(ctx context.Context, infra *ir.Infra) e
 	proxyInfra := infra.GetProxyInfra()
 	proxyName := utils.GetHashedName(proxyInfra.Name, 64)
 	// Return directly if the proxy is running.
-	i.mu.RLock()
-	_, running := i.proxyContextMap[proxyName]
-	i.mu.RUnlock()
-	if running {
+	if _, loaded := i.proxyContextMap.Load(proxyName); loaded {
 		return nil
 	}
 
@@ -101,9 +98,7 @@ func (i *Infra) CreateOrUpdateProxyInfra(ctx context.Context, infra *ir.Infra) e
 func (i *Infra) runEnvoy(ctx context.Context, envoyVersion, name string, args []string) {
 	pCtx, cancel := context.WithCancel(ctx)
 	exit := make(chan struct{}, 1)
-	i.mu.Lock()
-	i.proxyContextMap[name] = &proxyContext{cancel: cancel, exit: exit}
-	i.mu.Unlock()
+	i.proxyContextMap.Store(name, &proxyContext{cancel: cancel, exit: exit})
 	go func() {
 		// Run blocks until pCtx is done or the process exits where the latter doesn't happen when
 		// Envoy successfully starts up. So, this will not return until pCtx is done in practice.
@@ -136,18 +131,12 @@ func (i *Infra) DeleteProxyInfra(_ context.Context, infra *ir.Infra) error {
 
 // stopEnvoy stops the Envoy process by its name. It will block until the process completely stopped.
 func (i *Infra) stopEnvoy(proxyName string) {
-	i.mu.Lock()
-	pCtx, ok := i.proxyContextMap[proxyName]
-	i.mu.Unlock()
-
+	value, ok := i.proxyContextMap.LoadAndDelete(proxyName)
 	if ok {
+		pCtx := value.(*proxyContext)
 		pCtx.cancel()    // Cancel causes the Envoy process to exit.
 		<-pCtx.exit      // Wait for the Envoy process to completely exit.
 		close(pCtx.exit) // Close the channel to avoid leaking.
-
-		i.mu.Lock()
-		delete(i.proxyContextMap, proxyName)
-		i.mu.Unlock()
 	}
 }
 
