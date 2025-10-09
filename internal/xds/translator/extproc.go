@@ -7,6 +7,7 @@ package translator
 
 import (
 	"errors"
+	"fmt"
 
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
@@ -69,7 +70,10 @@ func (*extProc) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPLi
 
 // buildHCMExtProcFilter returns an ext_proc HTTP filter from the provided IR HTTPRoute.
 func buildHCMExtProcFilter(extProc *ir.ExtProc) (*hcmv3.HttpFilter, error) {
-	extAuthProto := extProcConfig(extProc)
+	extAuthProto, err := extProcConfig(extProc)
+	if err != nil {
+		return nil, err
+	}
 	extAuthAny, err := anypb.New(extAuthProto)
 	if err != nil {
 		return nil, err
@@ -90,7 +94,7 @@ func extProcFilterName(extProc *ir.ExtProc) string {
 	return perRouteFilterName(egv1a1.EnvoyFilterExtProc, extProc.Name)
 }
 
-func extProcConfig(extProc *ir.ExtProc) *extprocv3.ExternalProcessor {
+func extProcConfig(extProc *ir.ExtProc) (*extprocv3.ExternalProcessor, error) {
 	config := &extprocv3.ExternalProcessor{
 		GrpcService: &corev3.GrpcService{
 			TargetSpecifier: &corev3.GrpcService_EnvoyGrpc_{
@@ -122,6 +126,14 @@ func extProcConfig(extProc *ir.ExtProc) *extprocv3.ExternalProcessor {
 		config.ResponseAttributes = attrs
 	}
 
+	if extProc.Traffic != nil && extProc.Traffic.Retry != nil{
+		rp, err := buildNonRouteRetryPolicy(extProc.Traffic.Retry)
+		if err != nil {
+			return nil, fmt.Errorf("build retry policy for extproc: %w", err)
+		}
+		config.GrpcService.RetryPolicy = rp
+	}
+
 	if extProc.ForwardingMetadataNamespaces != nil || extProc.ReceivingMetadataNamespaces != nil {
 		config.MetadataOptions = &extprocv3.MetadataOptions{}
 
@@ -142,7 +154,7 @@ func extProcConfig(extProc *ir.ExtProc) *extprocv3.ExternalProcessor {
 		}
 	}
 	config.AllowModeOverride = extProc.AllowModeOverride
-	return config
+	return config, nil
 }
 
 func grpcExtProcService(extProc *ir.ExtProc) *corev3.GrpcService_EnvoyGrpc {
