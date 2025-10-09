@@ -7,6 +7,7 @@ package host
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"path"
 	"testing"
@@ -132,24 +133,20 @@ func TestInfra_Close(t *testing.T) {
 	err := func_e.Run(t.Context(), []string{"--version"}, api.HomeDir(tmpdir))
 	require.NoError(t, err)
 
-	stdout := &bytes.Buffer{}
-	stderr := &bytes.Buffer{}
 	i := &Infra{
 		HomeDir: tmpdir,
-		Logger:  logging.DefaultLogger(stdout, egv1a1.LogLevelInfo),
-		Stdout:  stdout,
-		Stderr:  stderr,
+		Logger:  logging.DefaultLogger(io.Discard, egv1a1.LogLevelInfo),
+		Stdout:  io.Discard,
+		Stderr:  io.Discard,
 	}
 
 	// Start multiple proxies
-	ports := []string{"9901", "9902", "9903"}
 	for idx := range 3 {
 		args := []string{
 			"--config-yaml",
-			"admin: {address: {socket_address: {address: '127.0.0.1', port_value: " + ports[idx] + "}}}",
+			"admin: {address: {socket_address: {address: '127.0.0.1', port_value: 0}}}",
 		}
-		name := "test-" + ports[idx]
-		i.runEnvoy(t.Context(), "", name, args)
+		i.runEnvoy(t.Context(), "", fmt.Sprintf("test-%d", idx), args)
 	}
 
 	// Verify all proxies are running
