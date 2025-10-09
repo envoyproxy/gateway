@@ -59,7 +59,7 @@ var FileAccessLogTest = suite.ConformanceTest{
 			// make sure listener is ready
 			httputils.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 
-			runLogTest(t, suite, gwAddr, expectedResponse, labels, match, 1)
+			runLogTest(t, suite, gwAddr, &expectedResponse, labels, match, 1)
 		})
 
 		t.Run("Negative", func(t *testing.T) {
@@ -81,7 +81,7 @@ var FileAccessLogTest = suite.ConformanceTest{
 			// make sure listener is ready
 			httputils.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 
-			runLogTest(t, suite, gwAddr, expectedResponse, labels, match, 0)
+			runLogTest(t, suite, gwAddr, &expectedResponse, labels, match, 0)
 		})
 
 		t.Run("Listener Logs", func(t *testing.T) {
@@ -113,7 +113,7 @@ var FileAccessLogTest = suite.ConformanceTest{
 			// make sure listener is ready
 			httputils.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 
-			runLogTest(t, suite, gwAddr, expectedResponse, labels, expectedMatch, 0)
+			runLogTest(t, suite, gwAddr, &expectedResponse, labels, expectedMatch, 0)
 		})
 	},
 }
@@ -145,7 +145,7 @@ var OpenTelemetryTestText = suite.ConformanceTest{
 			// make sure listener is ready
 			httputils.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 
-			runLogTest(t, suite, gwAddr, expectedResponse, labels, "", 1)
+			runLogTest(t, suite, gwAddr, &expectedResponse, labels, "", 1)
 		})
 
 		t.Run("Negative", func(t *testing.T) {
@@ -162,7 +162,7 @@ var OpenTelemetryTestText = suite.ConformanceTest{
 			// make sure listener is ready
 			httputils.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 
-			runLogTest(t, suite, gwAddr, expectedResponse, labels, "", 0)
+			runLogTest(t, suite, gwAddr, &expectedResponse, labels, "", 0)
 		})
 	},
 }
@@ -194,7 +194,7 @@ var OpenTelemetryTestJSONAsDefault = suite.ConformanceTest{
 			// make sure listener is ready
 			httputils.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 
-			runLogTest(t, suite, gwAddr, expectedResponse, labels, "", 1)
+			runLogTest(t, suite, gwAddr, &expectedResponse, labels, "", 1)
 		})
 
 		t.Run("Negative", func(t *testing.T) {
@@ -211,7 +211,7 @@ var OpenTelemetryTestJSONAsDefault = suite.ConformanceTest{
 			// make sure listener is ready
 			httputils.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 
-			runLogTest(t, suite, gwAddr, expectedResponse, labels, "", 0)
+			runLogTest(t, suite, gwAddr, &expectedResponse, labels, "", 0)
 		})
 	},
 }
@@ -243,7 +243,7 @@ var OpenTelemetryTestJSON = suite.ConformanceTest{
 			// make sure listener is ready
 			httputils.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 
-			runLogTest(t, suite, gwAddr, expectedResponse, labels, "", 1)
+			runLogTest(t, suite, gwAddr, &expectedResponse, labels, "", 1)
 		})
 
 		t.Run("Negative", func(t *testing.T) {
@@ -260,7 +260,7 @@ var OpenTelemetryTestJSON = suite.ConformanceTest{
 			// make sure listener is ready
 			httputils.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 
-			runLogTest(t, suite, gwAddr, expectedResponse, labels, "", 0)
+			runLogTest(t, suite, gwAddr, &expectedResponse, labels, "", 0)
 		})
 	},
 }
@@ -296,7 +296,7 @@ var ALSTest = suite.ConformanceTest{
 			// make sure listener is ready
 			httputils.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 
-			runLogTest(t, suite, gwAddr, expectedResponse, labels, match, 0)
+			runLogTest(t, suite, gwAddr, &expectedResponse, labels, match, 0)
 		})
 	},
 }
@@ -317,7 +317,7 @@ func getOTELLabels(testNamespace string) map[string]string {
 }
 
 func runLogTest(t *testing.T, suite *suite.ConformanceTestSuite, gwAddr string,
-	expectedResponse httputils.ExpectedResponse, expectedLabels map[string]string, expectedMatch string, expectedDelta int,
+	expectedResponse *httputils.ExpectedResponse, expectedLabels map[string]string, expectedMatch string, expectedDelta int,
 ) {
 	if err := wait.PollUntilContextTimeout(context.TODO(), time.Second, 3*time.Minute, true,
 		func(ctx context.Context) (bool, error) {
@@ -328,7 +328,7 @@ func runLogTest(t *testing.T, suite *suite.ConformanceTestSuite, gwAddr string,
 				return false, nil
 			}
 
-			httputils.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
+			httputils.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, *expectedResponse)
 
 			// it will take some time for fluent-bit to collect the log and send to loki
 			// let's wait for a while

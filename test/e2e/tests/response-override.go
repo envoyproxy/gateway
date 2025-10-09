@@ -51,7 +51,7 @@ var ResponseOverrideTest = suite.ConformanceTest{
 			BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "response-override", Namespace: ns}, suite.ControllerName, ancestorRef)
 
 			// Test 404 response override with add and set headers
-			verifyCustomResponse(t, suite.TimeoutConfig, gwAddr, "/status/404", "text/plain", "404 Oops! Your request is not found.", 404, map[string]string{
+			verifyCustomResponse(t, &suite.TimeoutConfig, gwAddr, "/status/404", "text/plain", "404 Oops! Your request is not found.", 404, map[string]string{
 				"X-Add-Header":  "added-404",
 				"X-Set-Header":  "set-404",
 				"X-Error-Type":  "not-found",
@@ -59,24 +59,28 @@ var ResponseOverrideTest = suite.ConformanceTest{
 			})
 
 			// Test 500 response override with add and set headers
-			verifyCustomResponse(t, suite.TimeoutConfig, gwAddr, "/status/500", "application/json", `{"error": "Internal Server Error"}`, 500, map[string]string{
+			verifyCustomResponse(t, &suite.TimeoutConfig, gwAddr, "/status/500", "application/json", `{"error": "Internal Server Error"}`, 500, map[string]string{
 				"X-Add-Header": "added-500",
 				"X-Set-Header": "set-500",
 			})
 
 			// Test 403 response override with add and set headers (status override to 404)
-			verifyCustomResponse(t, suite.TimeoutConfig, gwAddr, "/status/403", "", "", 404, map[string]string{
+			verifyCustomResponse(t, &suite.TimeoutConfig, gwAddr, "/status/403", "", "", 404, map[string]string{
 				"X-Add-Header": "added-403",
 				"X-Set-Header": "set-403",
 			})
-			verifyCustomResponse(t, suite.TimeoutConfig, gwAddr, "/status/401", "", "", 301)
+			verifyCustomResponse(t, &suite.TimeoutConfig, gwAddr, "/status/401", "", "", 301)
 		})
 	},
 }
 
-func verifyCustomResponse(t *testing.T, timeoutConfig config.TimeoutConfig, gwAddr,
+func verifyCustomResponse(t *testing.T, timeoutConfig *config.TimeoutConfig, gwAddr,
 	path, expectedContentType, expectedBody string, expectedStatusCode int, expectedHeaders ...map[string]string,
 ) {
+	if timeoutConfig == nil {
+		t.Fatalf("timeoutConfig cannot be nil")
+	}
+
 	reqURL := url.URL{
 		Scheme: "http",
 		Host:   httputils.CalculateHost(t, gwAddr, "http"),

@@ -76,9 +76,10 @@ func (p PrometheusMetric) Collect(_ chan<- interface{}) (tbcollect.CollectorResu
 	}
 
 	logs := make([]string, 0)
-	for _, pod := range pods {
+	for i := range pods {
+		pod := &pods[i]
 
-		scrape, reqPath, port, err := getPrometheusPathAndPort(&pod)
+		scrape, reqPath, port, err := getPrometheusPathAndPort(pod)
 		if err != nil {
 			logs = append(logs, fmt.Sprintf("pod %s/%s is skipped because of err: %v", pod.Namespace, pod.Name, err))
 		}

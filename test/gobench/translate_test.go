@@ -313,17 +313,17 @@ func BenchmarkGatewayAPItoXDS(b *testing.B) {
 		yaml string
 	}
 	medium := baseYAML + backendYAML + tlsSecretYAML + clientTrafficPolicyYAML +
-		genHTTPRoutes(100) +
-		genGRPCRoutes(50) +
-		genUDPRoutes(20) +
-		genSecurityPolicies(100) +
-		genBackendTrafficPolicies(100)
+		genHTTPRoutes(50) +
+		genGRPCRoutes(25) +
+		genUDPRoutes(10) +
+		genSecurityPolicies(50) +
+		genBackendTrafficPolicies(50)
 	large := baseYAML + backendYAML + tlsSecretYAML + clientTrafficPolicyYAML +
-		genHTTPRoutes(1000) +
-		genGRPCRoutes(500) +
+		genHTTPRoutes(500) +
+		genGRPCRoutes(250) +
 		genUDPRoutes(100) +
-		genSecurityPolicies(1000) +
-		genBackendTrafficPolicies(1000)
+		genSecurityPolicies(500) +
+		genBackendTrafficPolicies(500)
 
 	cases := []benchCase{
 		{

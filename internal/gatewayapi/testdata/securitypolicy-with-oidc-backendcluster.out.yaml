@@ -2,7 +2,6 @@ backendTLSPolicies:
 - apiVersion: gateway.networking.k8s.io/v1alpha2
   kind: BackendTLSPolicy
   metadata:
-    creationTimestamp: null
     name: policy-btls-backend-fqdn
     namespace: envoy-gateway
   spec:
@@ -34,7 +33,6 @@ backends:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: Backend
   metadata:
-    creationTimestamp: null
     name: backend-fqdn
     namespace: envoy-gateway
   spec:
@@ -53,7 +51,6 @@ gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
   metadata:
-    creationTimestamp: null
     name: gateway-1
     namespace: envoy-gateway
   spec:
@@ -94,7 +91,6 @@ httpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
   metadata:
-    creationTimestamp: null
     name: httproute-1
     namespace: default
   spec:
@@ -153,7 +149,6 @@ securityPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: SecurityPolicy
   metadata:
-    creationTimestamp: null
     name: policy-for-gateway
     namespace: envoy-gateway
     uid: b8284d0f-de82-4c65-b204-96a0d3f258a1

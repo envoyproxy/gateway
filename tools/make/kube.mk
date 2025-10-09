@@ -25,6 +25,10 @@ BENCHMARK_CONNECTIONS ?= 100
 BENCHMARK_DURATION ?= 60
 BENCHMARK_REPORT_DIR ?= benchmark_report
 
+# Benchmark toggles
+# Disable PNG rendering by default to speed up CI
+BENCHMARK_RENDER_PNG ?= false
+
 CONFORMANCE_RUN_TEST ?=
 
 E2E_RUN_TEST ?=
@@ -253,8 +257,8 @@ run-benchmark: install-benchmark-server prepare-ip-family ## Run benchmark tests
 	kubectl apply -f test/benchmark/config/gatewayclass.yaml
 	go test -v -tags benchmark -timeout $(BENCHMARK_TIMEOUT) ./test/benchmark --rps=$(BENCHMARK_RPS) --connections=$(BENCHMARK_CONNECTIONS) --duration=$(BENCHMARK_DURATION) --report-save-dir=$(BENCHMARK_REPORT_DIR)
 	# render benchmark profiles into image
-	dot -V
-	find test/benchmark/$(BENCHMARK_REPORT_DIR)/profiles -name "*.pprof" -type f -exec sh -c 'go tool pprof -png "$$1" > "$${1%.pprof}.png"' _ {} \;
+	@if [ "$(BENCHMARK_RENDER_PNG)" != "false" ]; then dot -V; fi
+	@if [ "$(BENCHMARK_RENDER_PNG)" != "false" ]; then find test/benchmark/$(BENCHMARK_REPORT_DIR)/profiles -name "*.pprof" -type f -exec sh -c 'go tool pprof -png "$$1" > "$$${1%.pprof}.png"' _ {} \; ; fi
 
 .PHONY: install-benchmark-server
 install-benchmark-server: ## Install nighthawk server for benchmark test

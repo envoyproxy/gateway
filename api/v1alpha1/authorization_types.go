@@ -190,7 +190,7 @@ type JWTClaim struct {
 	// If multiple values are specified, one of the values must match for the rule to match.
 	//
 	// +kubebuilder:validation:MinItems=1
-	// +kubebuilder:validation:MaxItems=16
+	// +kubebuilder:validation:MaxItems=128
 	Values []string `json:"values"`
 }
 

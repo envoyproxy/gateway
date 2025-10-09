@@ -99,7 +99,7 @@ func TestProcessExtensionPostTranslationHookConfig(t *testing.T) {
 				},
 			}
 
-			mgr, cleanup, err := registry.NewInMemoryManager(extManager, mockServer)
+			mgr, cleanup, err := registry.NewInMemoryManager(&extManager, mockServer)
 			require.NoError(t, err)
 			defer cleanup()
 

@@ -75,6 +75,9 @@ type TLSSettings struct {
 	// 2. Other Routes: ALPN is disabled.
 	// 3. Backends: proxy uses the appropriate ALPN options for the backend protocol.
 	// When an empty list is provided, the ALPN TLS extension is disabled.
+	//
+	// Defaults to [h2, http/1.1] if not specified.
+	//
 	// Typical Supported values are:
 	// - http/1.0
 	// - http/1.1
@@ -158,6 +161,32 @@ type ClientValidationContext struct {
 	// matches one of the specified matchers
 	// +optional
 	SubjectAltNames *SubjectAltNames `json:"subjectAltNames,omitempty"`
+
+	// Crl specifies the crl configuration that can be used to validate the client initiating the TLS connection
+	// +optional
+	// +notImplementedHide
+	Crl *CrlContext `json:"crl,omitempty"`
+}
+
+// CrlContext holds certificate revocation list configuration that can be used to validate the client initiating the TLS connection
+type CrlContext struct {
+	// Refs contains one or more references to a Kubernetes ConfigMap or a Kubernetes Secret,
+	// containing the certificate revocation list in PEM format
+	// Expects the content in a key named `ca.crl`.
+	//
+	// References to a resource in different namespace are invalid UNLESS there
+	// is a ReferenceGrant in the target namespace that allows the crl
+	// to be attached.
+	//
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MinItems=1
+	// +kubebuilder:validation:MaxItems=8
+	Refs []gwapiv1.SecretObjectReference `json:"refs"`
+
+	// If this option is set to true,  Envoy will only verify the certificate at the end of the certificate chain against the CRL.
+	// Defaults to false, which will verify the entire certificate chain against the CRL.
+	// +optional
+	OnlyVerifyLeafCertificate *bool `json:"onlyVerifyLeafCertificate,omitempty"`
 }
 
 type SubjectAltNames struct {

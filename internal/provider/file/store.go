@@ -101,7 +101,7 @@ func (r *resourcesStore) ReloadAll(ctx context.Context, files, dirs []string) er
 	rn := 0
 	deletedKeys := r.keys.Difference(currentKeys)
 	for _, k := range deletionOrderKeyList(deletedKeys) {
-		delObj := makeUnstructuredObjectFromKey(k)
+		delObj := makeUnstructuredObjectFromKey(&k)
 		if err := r.client.Delete(ctx, delObj); err != nil {
 			errList = errors.Join(errList, err)
 			// Insert back if the object is not be removed.
@@ -289,7 +289,7 @@ func (r *resourcesStore) storeObject(ctx context.Context, obj client.Object) (*s
 	var (
 		err    error
 		key    = newStoreKey(obj)
-		oldObj = makeUnstructuredObjectFromKey(key)
+		oldObj = makeUnstructuredObjectFromKey(&key)
 	)
 
 	if err = r.client.Get(ctx, key.NamespacedName, oldObj); err == nil {
@@ -302,7 +302,7 @@ func (r *resourcesStore) storeObject(ctx context.Context, obj client.Object) (*s
 	return nil, err
 }
 
-func makeUnstructuredObjectFromKey(key storeKey) *unstructured.Unstructured {
+func makeUnstructuredObjectFromKey(key *storeKey) *unstructured.Unstructured {
 	obj := &unstructured.Unstructured{}
 	obj.SetGroupVersionKind(key.GroupVersionKind)
 	obj.SetNamespace(key.Namespace)

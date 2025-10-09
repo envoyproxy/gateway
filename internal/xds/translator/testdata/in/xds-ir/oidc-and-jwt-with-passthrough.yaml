@@ -28,6 +28,7 @@ http:
                 name: example1
                 remoteJWKS:
                   uri: https://oauth.foo.com/jwt/public-key/jwks.json
+                  cacheDuration: 300s
               - issuer: https://oauth.foo.com
                 name: example2
                 extractFrom:
@@ -37,6 +38,7 @@ http:
                     - name: MyHeaderNoPrefix
                 remoteJWKS:
                   uri: https://oauth.foo.com/jwt/public-key/jwks.json
+                  cacheDuration: 300s
               - issuer: https://oauth.foo.com
                 name: example3
                 extractFrom:
@@ -45,6 +47,7 @@ http:
                     - Cookie1
                 remoteJWKS:
                   uri: https://oauth.foo.com/jwt/public-key/jwks.json
+                  cacheDuration: 300s
               - issuer: https://oauth.foo.com
                 name: example4
                 extractFrom:
@@ -53,6 +56,7 @@ http:
                     - Param1
                 remoteJWKS:
                   uri: https://oauth.foo.com/jwt/public-key/jwks.json
+                  cacheDuration: 300s
           oidc:
             clientID: client.oauth.foo.com
             clientSecret: Y2xpZW50MTpzZWNyZXQK

@@ -92,7 +92,7 @@ func buildHeaderMutationFilter(headers *ir.HeaderSettings) (*hcmv3.HttpFilter, e
 }
 
 func buildHeaderMutationRules(addHeaders []ir.AddHeader, removeHeaders []string) []*mutation_rulesv3.HeaderMutation {
-	var mutationRules []*mutation_rulesv3.HeaderMutation
+	mutationRules := make([]*mutation_rulesv3.HeaderMutation, 0, len(addHeaders)+len(removeHeaders))
 
 	for _, header := range addHeaders {
 		var appendAction corev3.HeaderValueOption_HeaderAppendAction

@@ -306,7 +306,7 @@ func (r *gatewayAPIReconciler) processHTTPRouteFilter(
 	resourceMap *resourceMappings,
 	resourceTree *resource.Resources,
 ) error {
-	var extGKs []schema.GroupKind
+	extGKs := make([]schema.GroupKind, 0, len(r.extGVKs))
 	for _, gvk := range r.extGVKs {
 		extGKs = append(extGKs, gvk.GroupKind())
 	}

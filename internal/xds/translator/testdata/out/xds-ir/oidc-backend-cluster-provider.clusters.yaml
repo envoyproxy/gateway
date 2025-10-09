@@ -59,6 +59,11 @@
   name: securitypolicy/envoy-gateway/policy-for-gateway/0
   perConnectionBufferLimitBytes: 32768
   respectDnsTtl: true
+  transportSocket:
+    name: dummy.transport_socket
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+      commonTlsContext: {}
   transportSocketMatches:
   - match:
       name: securitypolicy/envoy-gateway/policy-for-gateway/0/tls/0
@@ -81,3 +86,11 @@
                 resourceApiVersion: V3
         sni: oauth.foo.com
   type: STRICT_DNS
+  typedExtensionProtocolOptions:
+    envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
+      '@type': type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
+      autoConfig:
+        http2ProtocolOptions:
+          initialConnectionWindowSize: 1048576
+          initialStreamWindowSize: 65536
+        httpProtocolOptions: {}

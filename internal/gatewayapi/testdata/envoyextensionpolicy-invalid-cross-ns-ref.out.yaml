@@ -2,7 +2,6 @@ envoyExtensionPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: EnvoyExtensionPolicy
   metadata:
-    creationTimestamp: null
     name: policy-for-gateway-1
     namespace: default
   spec:
@@ -20,7 +19,6 @@ gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
   metadata:
-    creationTimestamp: null
     name: gateway-1
     namespace: envoy-gateway
   spec:

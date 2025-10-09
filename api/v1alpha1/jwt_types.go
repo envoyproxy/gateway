@@ -5,7 +5,9 @@
 
 package v1alpha1
 
-import gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+import (
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+)
 
 // JWT defines the configuration for JSON Web Token (JWT) authentication.
 type JWT struct {
@@ -108,6 +110,11 @@ type RemoteJWKS struct {
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
 	URI string `json:"uri"`
+	// Duration after which the cached JWKS should be expired. If not specified, default cache duration is 5 minutes.
+
+	// +kubebuilder:default="300s"
+	// +optional
+	CacheDuration *gwapiv1.Duration `json:"cacheDuration,omitempty"`
 }
 
 // LocalJWKSType defines the types of values for Local JWKS.
