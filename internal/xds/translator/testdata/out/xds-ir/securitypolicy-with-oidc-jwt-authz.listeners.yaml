@@ -44,6 +44,7 @@
                   sdsConfig:
                     ads: {}
                     resourceApiVersion: V3
+              csrfTokenExpiresIn: 3600s
               preserveAuthorizationHeader: true
               redirectPathMatcher:
                 path:
