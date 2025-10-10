@@ -38,6 +38,7 @@ const (
 	L7Protocol = "L7"
 
 	caCertKey = "ca.crt"
+	crlKey    = "ca.crl"
 )
 
 type NamespacedNameWithSection struct {
@@ -466,6 +467,10 @@ func irTLSCACertName(namespace, name string) string {
 	return fmt.Sprintf("%s/%s/%s", namespace, name, caCertKey)
 }
 
+func irTLSCrlName(namespace, name string) string {
+	return fmt.Sprintf("%s/%s/%s", namespace, name, crlKey)
+}
+
 func IsMergeGatewaysEnabled(resources *resource.Resources) bool {
 	return resources.EnvoyProxyForGatewayClass != nil && resources.EnvoyProxyForGatewayClass.Spec.MergeGateways != nil && *resources.EnvoyProxyForGatewayClass.Spec.MergeGateways
 }
@@ -712,38 +717,17 @@ func getPreserveRouteOrder(envoyProxy *egv1a1.EnvoyProxy) bool {
 	return false
 }
 
-func getCaCertFromConfigMap(cm *corev1.ConfigMap) (string, bool) {
-	var data string
-	data, exits := cm.Data[caCertKey]
-	switch {
-	case exits:
-		return data, true
-	case len(cm.Data) == 1: // Fallback to the first key if ca.crt is not found
-		for _, value := range cm.Data {
-			data = value
-			break
+// getOrFirstFromData returns the value of the key in the data map
+// or the first value if the key is not found only if data map has exactly one entry
+func getOrFirstFromData[T any](data map[string]T, key string) (T, bool) {
+	if val, exists := data[key]; exists {
+		return val, true
+	} else if len(data) == 1 {
+		for _, value := range data {
+			return value, true
 		}
-		return data, true
-	default:
-		return "", false
 	}
-}
-
-func getCaCertFromSecret(s *corev1.Secret) ([]byte, bool) {
-	var data []byte
-	data, exits := s.Data[caCertKey]
-	switch {
-	case exits:
-		return data, true
-	case len(s.Data) == 1: // Fallback to the first key if ca.crt is not found
-		for _, value := range s.Data {
-			data = value
-			break
-		}
-		return data, true
-	default:
-		return nil, false
-	}
+	return *new(T), false
 }
 
 func irStringMatch(name string, match egv1a1.StringMatch) *ir.StringMatch {
