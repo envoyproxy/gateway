@@ -21,6 +21,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/proxy"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/ratelimit"
 	"github.com/envoyproxy/gateway/internal/logging"
+	"github.com/envoyproxy/gateway/internal/message"
 )
 
 var (
@@ -59,10 +60,13 @@ type Infra struct {
 	Client *InfraClient
 
 	logger logging.Logger
+
+	// errors is the notifier used to send async errors to the main control loop.
+	errors message.RunnerErrorNotifier
 }
 
 // NewInfra returns a new Infra.
-func NewInfra(cli client.Client, cfg *config.Server) *Infra {
+func NewInfra(cli client.Client, cfg *config.Server, errors message.RunnerErrorNotifier) *Infra {
 	return &Infra{
 		// Always set infra namespace to cfg.ControllerNamespace,
 		// Otherwise RateLimit resource provider will failed to create/delete.
@@ -71,6 +75,7 @@ func NewInfra(cli client.Client, cfg *config.Server) *Infra {
 		EnvoyGateway:        cfg.EnvoyGateway,
 		Client:              New(cli),
 		logger:              cfg.Logger.WithName(string(egv1a1.LogComponentInfrastructureRunner)),
+		errors:              errors,
 	}
 }
 
