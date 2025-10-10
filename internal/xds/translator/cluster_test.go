@@ -116,6 +116,7 @@ func TestBuildXdsOutlierDetection(t *testing.T) {
 				MaxEjectionPercent:         wrapperspb.UInt32(10),
 				Consecutive_5Xx:            wrapperspb.UInt32(5),
 				FailurePercentageThreshold: wrapperspb.UInt32(90),
+				EnforcingFailurePercentage: wrapperspb.UInt32(100),
 			},
 		},
 		{
@@ -139,6 +140,7 @@ func TestBuildXdsOutlierDetection(t *testing.T) {
 				BaseEjectionTime:               durationpb.New(30 * time.Second),
 				MaxEjectionPercent:             wrapperspb.UInt32(10),
 				FailurePercentageThreshold:     wrapperspb.UInt32(85),
+				EnforcingFailurePercentage:     wrapperspb.UInt32(100),
 			},
 		},
 	}
