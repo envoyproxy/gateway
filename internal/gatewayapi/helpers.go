@@ -423,14 +423,17 @@ func irTLSConfigs(tlsSecrets ...*corev1.Secret) *ir.TLSConfig {
 		Certificates: make([]ir.TLSCertificate, len(tlsSecrets)),
 	}
 	for i, tlsSecret := range tlsSecrets {
-		ocspStaple := tlsSecret.Data[egv1a1.TLSOCSPKey]
-
-		tlsListenerConfigs.Certificates[i] = ir.TLSCertificate{
+		cert := ir.TLSCertificate{
 			Name:        irTLSListenerConfigName(tlsSecret),
 			Certificate: tlsSecret.Data[corev1.TLSCertKey],
 			PrivateKey:  tlsSecret.Data[corev1.TLSPrivateKeyKey],
-			OCSPStaple:  ocspStaple,
 		}
+
+		ocspStaple, ok := tlsSecret.Data[egv1a1.TLSOCSPKey]
+		if ok && len(ocspStaple) > 0 {
+			cert.OCSPStaple = ocspStaple
+		}
+		tlsListenerConfigs.Certificates[i] = cert
 	}
 
 	return tlsListenerConfigs
