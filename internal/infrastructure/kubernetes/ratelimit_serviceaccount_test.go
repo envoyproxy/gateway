@@ -105,7 +105,7 @@ func TestCreateOrUpdateRateLimitServiceAccount(t *testing.T) {
 					Build()
 			}
 
-			cfg, err := config.New(os.Stdout)
+			cfg, err := config.New(os.Stdout, os.Stderr)
 			require.NoError(t, err)
 			cfg.ControllerNamespace = tc.ns
 
