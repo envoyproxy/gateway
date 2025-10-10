@@ -48,3 +48,4 @@ deprecations: |
 
 # Other notable changes not covered by the above sections.
 Other changes: |
+  The CSRF token expiration duration in OIDC authentication is set to 1 hour by default. The default expiration time in envoy is 10 minutes, which may be too short in some cases. 1 hour should be long enough for most users. We can make this configurable in the future if needed.

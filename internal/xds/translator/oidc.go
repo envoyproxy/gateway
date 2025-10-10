@@ -8,6 +8,7 @@ package translator
 import (
 	"errors"
 	"fmt"
+	"time"
 
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
@@ -185,6 +186,13 @@ func oauth2Config(securityFeatures *ir.SecurityFeatures) (*oauth2v3.OAuth2, erro
 
 			PreserveAuthorizationHeader: preserveAuthorizationHeader,
 			DisableTokenEncryption:      oidc.DisableTokenEncryption,
+			// Set CSRF token to expire in 1 hour. This should be long enough for most users. We can make
+			// this configurable in the future if needed.
+			//
+			// The CSRF token is used to prevent CSRF attacks during the OAuth2 authorization code flow.
+			// It is stored in a cookie and compared with the state parameter returned by the OIDC provider.
+			// If the token is expired, the user will be redirected to the OIDC provider to re-authenticate.
+			CsrfTokenExpiresIn: durationpb.New(time.Hour), // default 1 hour
 		},
 	}
 
