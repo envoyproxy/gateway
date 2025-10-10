@@ -21,6 +21,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/infrastructure/common"
 	"github.com/envoyproxy/gateway/internal/logging"
+	"github.com/envoyproxy/gateway/internal/message"
 	"github.com/envoyproxy/gateway/internal/utils/file"
 )
 
@@ -62,9 +63,12 @@ type Infra struct {
 
 	// envoyRunner runs Envoy (can be overridden in tests).
 	envoyRunner func_e_api.RunFunc
+
+	// errors is the notifier used to send async errors to the main control loop.
+	errors message.RunnerErrorNotifier
 }
 
-func NewInfra(runnerCtx context.Context, cfg *config.Server, logger logging.Logger) (*Infra, error) {
+func NewInfra(runnerCtx context.Context, cfg *config.Server, logger logging.Logger, errors message.RunnerErrorNotifier) (*Infra, error) {
 	// Get configuration from provider
 	var hostCfg *egv1a1.EnvoyGatewayHostInfrastructureProvider
 	if p := cfg.EnvoyGateway.Provider; p != nil && p.Custom != nil &&
@@ -103,6 +107,7 @@ func NewInfra(runnerCtx context.Context, cfg *config.Server, logger logging.Logg
 		Stdout:            cfg.Stdout,
 		Stderr:            cfg.Stderr,
 		envoyRunner:       func_e.Run,
+		errors:            errors,
 	}
 	return infra, nil
 }
