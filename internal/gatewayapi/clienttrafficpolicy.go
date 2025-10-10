@@ -857,7 +857,7 @@ func (t *Translator) buildListenerTLSParameters(policy *egv1a1.ClientTrafficPoli
 					return irTLSConfig, err
 				}
 
-				secretCertBytes, ok := getCaCertFromSecret(secret)
+				secretCertBytes, ok := getCaCertFromData(secret.Data)
 				if !ok || len(secretCertBytes) == 0 {
 					return irTLSConfig, fmt.Errorf(
 						"caCertificateRef secret [%s] not found", caCertRef.Name)
@@ -869,7 +869,7 @@ func (t *Translator) buildListenerTLSParameters(policy *egv1a1.ClientTrafficPoli
 					return irTLSConfig, err
 				}
 
-				configMapData, ok := getCaCertFromConfigMap(configMap)
+				configMapData, ok := getCaCertFromData(configMap.Data)
 				if !ok || len(configMapData) == 0 {
 					return irTLSConfig, fmt.Errorf(
 						"caCertificateRef configmap [%s] not found", caCertRef.Name)
@@ -892,11 +892,61 @@ func (t *Translator) buildListenerTLSParameters(policy *egv1a1.ClientTrafficPoli
 			}
 			irCACert.Certificate = append(irCACert.Certificate, caCertBytes...)
 		}
-
 		if len(irCACert.Certificate) > 0 {
 			irTLSConfig.CACertificate = irCACert
 			irTLSConfig.RequireClientCertificate = !tlsParams.ClientValidation.Optional
 			setTLSClientValidationContext(tlsParams.ClientValidation, irTLSConfig)
+		}
+
+		irCrl := &ir.TLSCrl{
+			Name: irTLSCrlName(policy.Namespace, policy.Name),
+		}
+
+		if tlsParams.ClientValidation.Crl != nil {
+			for _, crlRef := range tlsParams.ClientValidation.Crl.Refs {
+				crlRefKind := string(ptr.Deref(crlRef.Kind, resource.KindSecret))
+				var crlBytes []byte
+				switch crlRefKind {
+				case resource.KindSecret:
+					secret, err := t.validateSecretRef(false, from, crlRef, resources)
+					if err != nil {
+						return irTLSConfig, err
+					}
+
+					secretCrlBytes, ok := getCrlFromData(secret.Data)
+					if !ok || len(secretCrlBytes) == 0 {
+						return irTLSConfig, fmt.Errorf(
+							"crl secret [%s] not found", crlRef.Name)
+					}
+					crlBytes = secretCrlBytes
+				case resource.KindConfigMap:
+					configMap, err := t.validateConfigMapRef(false, from, crlRef, resources)
+					if err != nil {
+						return irTLSConfig, err
+					}
+
+					configMapData, ok := getCrlFromData(configMap.Data)
+					if !ok || len(configMapData) == 0 {
+						return irTLSConfig, fmt.Errorf(
+							"crl configmap [%s] not found", crlRef.Name)
+					}
+					crlBytes = []byte(configMapData)
+				default:
+					return irTLSConfig, fmt.Errorf("unsupported crlRef kind:%s", crlRefKind)
+				}
+
+				if err := validateCrl(crlBytes); err != nil {
+					return irTLSConfig, fmt.Errorf(
+						"invalid crl in %s %s: %w", crlRefKind, crlRef.Name, err)
+				}
+				irCrl.Data = append(irCrl.Data, crlBytes...)
+			}
+			if len(irCrl.Data) > 0 {
+				irTLSConfig.Crl = irCrl
+			}
+			if tlsParams.ClientValidation.Crl.OnlyVerifyLeafCertificate != nil {
+				irCrl.OnlyVerifyLeafCertificate = *tlsParams.ClientValidation.Crl.OnlyVerifyLeafCertificate
+			}
 		}
 	}
 
