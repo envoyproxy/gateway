@@ -11573,7 +11573,6 @@ spec:
                                                     format: int32
                                                     type: integer
                                                   failurePercentageThreshold:
-                                                    default: 85
                                                     description: |-
                                                       FailurePercentageThreshold sets the failure percentage threshold for outlier detection.
                                                       If the failure percentage of a given host is greater than or equal to this value, it will be ejected.
@@ -12694,7 +12693,6 @@ spec:
                                                     format: int32
                                                     type: integer
                                                   failurePercentageThreshold:
-                                                    default: 85
                                                     description: |-
                                                       FailurePercentageThreshold sets the failure percentage threshold for outlier detection.
                                                       If the failure percentage of a given host is greater than or equal to this value, it will be ejected.
@@ -13907,7 +13905,6 @@ spec:
                                               format: int32
                                               type: integer
                                             failurePercentageThreshold:
-                                              default: 85
                                               description: |-
                                                 FailurePercentageThreshold sets the failure percentage threshold for outlier detection.
                                                 If the failure percentage of a given host is greater than or equal to this value, it will be ejected.
@@ -15031,7 +15028,6 @@ spec:
                                         format: int32
                                         type: integer
                                       failurePercentageThreshold:
-                                        default: 85
                                         description: |-
                                           FailurePercentageThreshold sets the failure percentage threshold for outlier detection.
                                           If the failure percentage of a given host is greater than or equal to this value, it will be ejected.
