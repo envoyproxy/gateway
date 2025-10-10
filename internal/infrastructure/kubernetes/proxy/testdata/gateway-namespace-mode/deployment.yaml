@@ -1,7 +1,6 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  creationTimestamp: null
   labels:
     app.kubernetes.io/component: proxy
     app.kubernetes.io/managed-by: envoy-gateway
@@ -35,7 +34,6 @@ spec:
         prometheus.io/path: /stats/prometheus
         prometheus.io/port: "19001"
         prometheus.io/scrape: "true"
-      creationTimestamp: null
       labels:
         app.kubernetes.io/component: proxy
         app.kubernetes.io/managed-by: envoy-gateway
@@ -423,7 +421,6 @@ status: {}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  creationTimestamp: null
   labels:
     app.kubernetes.io/component: proxy
     app.kubernetes.io/managed-by: envoy-gateway
@@ -457,7 +454,6 @@ spec:
         prometheus.io/path: /stats/prometheus
         prometheus.io/port: "19001"
         prometheus.io/scrape: "true"
-      creationTimestamp: null
       labels:
         app.kubernetes.io/component: proxy
         app.kubernetes.io/managed-by: envoy-gateway

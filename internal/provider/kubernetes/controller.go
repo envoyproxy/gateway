@@ -198,9 +198,18 @@ func newGatewayAPIController(ctx context.Context, mgr manager.Manager, cfg *conf
 		return fmt.Errorf("error watching resources: %w", err)
 	}
 
-	// Do not call .Subscribe() inside Goroutine since it is supposed to be called from the same
-	// Goroutine where Close() is called.
-	r.subscribeToResources(ctx)
+	// This is a blocking function that subscribes to the resource updates and updates the status.
+	subscribeUpdateStatusAndCloseResources := func() {
+		// Subscribe to resource updates
+		r.subscribeToResources(ctx)
+		// Update status
+		go r.subscribeAndUpdateStatus(ctx, cfg.EnvoyGateway.ExtensionManager != nil)
+		r.log.Info("started")
+		// Close resources if the context is done.
+		<-ctx.Done()
+		r.resources.Close()
+		r.log.Info("shutting down")
+	}
 
 	// When leader election is enabled, only subscribe to status updates upon acquiring leadership.
 	if cfg.EnvoyGateway.Provider.Type == egv1a1.ProviderTypeKubernetes &&
@@ -208,13 +217,17 @@ func newGatewayAPIController(ctx context.Context, mgr manager.Manager, cfg *conf
 		go func() {
 			select {
 			case <-ctx.Done():
+				// As a follower EG instance close resources when the context is done.
+				r.resources.Close()
 				return
 			case <-cfg.Elected:
-				r.subscribeAndUpdateStatus(ctx, cfg.EnvoyGateway.ExtensionManager != nil)
+				// As a leader EG instance subscribe to resource updates and Close resources when the context is done.
+				subscribeUpdateStatusAndCloseResources()
 			}
 		}()
 	} else {
-		r.subscribeAndUpdateStatus(ctx, cfg.EnvoyGateway.ExtensionManager != nil)
+		// Since leader election is disabled subscribe to resource updates and Close resources when the context is done.
+		go subscribeUpdateStatusAndCloseResources()
 	}
 	return nil
 }
@@ -296,6 +309,18 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 	if err != nil {
 		return reconcile.Result{}, err
 	}
+
+	// 1. gets all GatewayClass statuses and put it in a set
+	// 2. deletes the reconciled gateway classes names from the set
+	// 3. deletes the remaining from watchable (representing non-existent gateway classes)
+	gcStatusToDelete := r.loadGatewayClassStatusToDelete()
+
+	defer func() {
+		for _, key := range gcStatusToDelete.UnsortedList() {
+			r.log.Info("delete from GatewayClass statuses", "key", key)
+			r.resources.GatewayClassStatuses.Delete(key)
+		}
+	}()
 
 	// The gatewayclass was already deleted/finalized and there are stale queue entries.
 	if managedGCs == nil {
@@ -379,6 +404,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 
 		// it's safe here to append gwcResource to gwcResources
 		gwcResources = append(gwcResources, gwcResource)
+		gcStatusToDelete.Delete(utils.NamespacedName(managedGC))
 		// process global resources
 		// add the OIDC HMAC Secret to the resourceTree
 		if err = r.processOIDCHMACSecret(ctx, gwcResource, gwcResourceMapping); err != nil {
@@ -558,6 +584,15 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 
 	r.log.Info("reconciled gateways successfully")
 	return reconcile.Result{}, nil
+}
+
+func (r *gatewayAPIReconciler) loadGatewayClassStatusToDelete() sets.Set[types.NamespacedName] {
+	res := sets.New[types.NamespacedName]()
+	for key := range r.resources.GatewayClassStatuses.LoadAll() {
+		res.Insert(key)
+	}
+
+	return res
 }
 
 func (r *gatewayAPIReconciler) processEnvoyProxySecretRef(ctx context.Context, gwcResource *resource.Resources) error {

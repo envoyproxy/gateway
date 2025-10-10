@@ -3,6 +3,8 @@ date: Pending
 # Changes that are expected to cause an incompatibility with previous versions, such as deletions or modifications to existing APIs.
 breaking changes: |
   ALPNProtocols in EnvoyProxy Backend TLS setting use [h2, http/1.1] if not set.
+  When a Backend resource specifies TLS settings and SNI is not specified or a BackendTLSPolicy is not attached to it, the value of upstream TLS SNI is determined by the HTTP Host header.
+  When a Backend resource specifies TLS settings and SNI is not specified or a BackendTLSPolicy is not attached to it, the upstream certificate is validated for DNS SAN matching the SNI value sent.
 
 # Updates addressing vulnerabilities, security flaws, or compliance requirements.
 security updates: |
@@ -32,6 +34,9 @@ bug fixes: |
   Fixed service account token handling in GatewayNamespaceMode to use SDS for properly refreshing expired token.
   Fixed handling of regex meta characters in prefix match replace for URL rewrite.
   Disabled the default emission of `x-envoy-ratelimited` headers from the rate limit filter; re-enable with the `enableEnvoyHeaders` setting in ClientTrafficPolicy.
+  Fixed a nil pointer panic in the XDS translator when building API key authentication filter configurations with `sanitize` enabled and no `forwardClientIDHeader` set.
+  Truncated Gateway API status condition messages to stay within Kubernetes limits and prevent update failures.
+  Fixed an issue in EnvoyPatchPolicy where it didn't match the target Gateway/GatewayClass due to an incorrect name reference.
 
 # Enhancements that improve performance.
 performance improvements: |
