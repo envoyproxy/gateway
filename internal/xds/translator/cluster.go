@@ -583,7 +583,7 @@ func buildXdsOutlierDetection(outlierDetection *ir.OutlierDetection) *clusterv3.
 
 	if outlierDetection.FailurePercentageThreshold != nil {
 		od.FailurePercentageThreshold = wrapperspb.UInt32(*outlierDetection.FailurePercentageThreshold)
-		od.EnforcingFailurePercentage = wrapperspb.UInt32(*outlierDetection.FailurePercentageThreshold)
+		od.EnforcingFailurePercentage = wrapperspb.UInt32(100)
 	}
 
 	return od
