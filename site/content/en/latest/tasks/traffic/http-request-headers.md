@@ -446,6 +446,8 @@ spec:
 ## Early Header Modification
 
 In some cases, it could be necessary to modify headers before the proxy performs any sort of processing, routing or tracing. Envoy Gateway supports this functionality using the [ClientTrafficPolicy][] API.
+The same Envoy [format strings][envoy-format-strings] used with `RequestHeaderModifier` values also apply to early
+header modifications, allowing dynamic data to be populated ahead of routing.
 
 A [ClientTrafficPolicy][] resource can be attached to a [Gateway][] resource to configure early header modifications for all its routes. In the following example we will demonstrate how early header modification can be configured.
 
