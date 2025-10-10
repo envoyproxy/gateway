@@ -2781,7 +2781,7 @@ func (in *PreferLocalZone) DeepCopyInto(out *PreferLocalZone) {
 	}
 	if in.PercentageEnabled != nil {
 		in, out := &in.PercentageEnabled, &out.PercentageEnabled
-		*out = new(float64)
+		*out = new(uint32)
 		**out = **in
 	}
 }

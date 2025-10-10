@@ -173,8 +173,10 @@ type PreferLocalZone struct {
 
 	// Configures percentage of requests that will be considered for zone aware routing if zone aware routing is configured. If not specified, Envoy defaults to 100%.
 	//
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=100
 	// +optional
-	PercentageEnabled *float64 `json:"percentageEnabled,omitempty"`
+	PercentageEnabled *uint32 `json:"percentageEnabled,omitempty"`
 }
 
 // ForceLocalZone defines override configuration for forcing all traffic to stay within the local zone instead of the default behavior

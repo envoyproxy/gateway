@@ -520,7 +520,7 @@ func buildZoneAwareLbConfig(preferLocal *ir.PreferLocalZone) *commonv3.LocalityL
 		},
 	}
 	if preferLocal.PercentageEnabled != nil {
-		lbConfig.ZoneAwareLbConfig.RoutingEnabled = &xdstype.Percent{Value: *preferLocal.PercentageEnabled}
+		lbConfig.ZoneAwareLbConfig.RoutingEnabled = &xdstype.Percent{Value: float64(*preferLocal.PercentageEnabled)}
 	}
 	if preferLocal.Force != nil {
 		lbConfig.ZoneAwareLbConfig.ForceLocalZone = &commonv3.LocalityLbConfig_ZoneAwareLbConfig_ForceLocalZone{

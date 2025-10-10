@@ -1351,7 +1351,10 @@ spec:
                                           that will be considered for zone aware routing
                                           if zone aware routing is configured. If
                                           not specified, Envoy defaults to 100%.
-                                        type: number
+                                        format: int32
+                                        maximum: 100
+                                        minimum: 0
+                                        type: integer
                                     type: object
                                 type: object
                             required:
@@ -2364,7 +2367,10 @@ spec:
                                           that will be considered for zone aware routing
                                           if zone aware routing is configured. If
                                           not specified, Envoy defaults to 100%.
-                                        type: number
+                                        format: int32
+                                        maximum: 100
+                                        minimum: 0
+                                        type: integer
                                     type: object
                                 type: object
                             required:
@@ -3591,7 +3597,10 @@ spec:
                                                 zone aware routing if zone aware routing
                                                 is configured. If not specified, Envoy
                                                 defaults to 100%.
-                                              type: number
+                                              format: int32
+                                              maximum: 100
+                                              minimum: 0
+                                              type: integer
                                           type: object
                                       type: object
                                   required:
@@ -4859,7 +4868,10 @@ spec:
                                           that will be considered for zone aware routing
                                           if zone aware routing is configured. If
                                           not specified, Envoy defaults to 100%.
-                                        type: number
+                                        format: int32
+                                        maximum: 100
+                                        minimum: 0
+                                        type: integer
                                     type: object
                                 type: object
                             required:
