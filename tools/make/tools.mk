@@ -5,6 +5,7 @@ tools.srcdir = tools/src
 # =============
 #
 tools/whitenoise = $(tools.bindir)/whitenoise
+tools/sync-docs-codeowners = $(tools.bindir)/sync-docs-codeowners
 $(tools.bindir)/%: $(tools.srcdir)/%.sh
 	mkdir -p $(@D)
 	install $< $@

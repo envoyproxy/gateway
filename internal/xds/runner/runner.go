@@ -9,6 +9,7 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"math/rand"
 	"net"
 	"strconv"
 	"time"
@@ -63,7 +64,15 @@ const (
 	// defaultKubernetesIssuer is the default issuer URL for Kubernetes.
 	// This is used for validating Service Account JWT tokens.
 	defaultKubernetesIssuer = "https://kubernetes.default.svc.cluster.local"
+
+	defaultMaxConnectionAgeGrace = 2 * time.Minute
 )
+
+var maxConnectionAgeValues = []time.Duration{
+	10 * time.Hour,
+	11 * time.Hour,
+	12 * time.Hour,
+}
 
 type Config struct {
 	config.Server
@@ -90,6 +99,20 @@ func (r *Runner) Name() string {
 	return string(egv1a1.LogComponentXdsRunner)
 }
 
+func defaultServerKeepaliveParams() keepalive.ServerParameters {
+	return keepalive.ServerParameters{
+		MaxConnectionAge:      getRandomMaxConnectionAge(),
+		MaxConnectionAgeGrace: defaultMaxConnectionAgeGrace,
+	}
+}
+
+// getRandomMaxConnectionAge picks a random maxConnectionAge value
+// to spread out envoy proxy connections over multiple envoy gateway replicas
+func getRandomMaxConnectionAge() time.Duration {
+	rnd := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
+	return maxConnectionAgeValues[rnd.Intn(len(maxConnectionAgeValues))]
+}
+
 // Close implements Runner interface.
 func (r *Runner) Close() error { return nil }
 
@@ -107,13 +130,21 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 	}
 	r.Logger.Info("loaded TLS certificate and key")
 
-	grpcOpts := []grpc.ServerOption{
-		grpc.Creds(credentials.NewTLS(tlsConfig)),
-		grpc.KeepaliveEnforcementPolicy(keepalive.EnforcementPolicy{
-			MinTime:             15 * time.Second,
-			PermitWithoutStream: true,
-		}),
+	keepaliveParams := defaultServerKeepaliveParams()
+	r.Logger.Info("configured gRPC keepalive defaults", "maxConnectionAge", keepaliveParams.MaxConnectionAge, "maxConnectionAgeGrace", keepaliveParams.MaxConnectionAgeGrace)
+
+	enforcementPolicy := keepalive.EnforcementPolicy{
+		MinTime:             15 * time.Second,
+		PermitWithoutStream: true,
 	}
+
+	baseKeepaliveOptions := []grpc.ServerOption{
+		grpc.KeepaliveEnforcementPolicy(enforcementPolicy),
+		grpc.KeepaliveParams(keepaliveParams),
+	}
+
+	grpcOpts := append([]grpc.ServerOption{}, baseKeepaliveOptions...)
+	grpcOpts = append(grpcOpts, grpc.Creds(credentials.NewTLS(tlsConfig)))
 
 	// When GatewayNamespaceMode is enabled, we will use sTLS and Service Account JWT tokens to authenticate envoy proxy infra and xds server.
 	if r.EnvoyGateway.GatewayNamespaceMode() {
@@ -135,14 +166,11 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 			return fmt.Errorf("failed to create TLS credentials: %w", err)
 		}
 
-		grpcOpts = []grpc.ServerOption{
-			grpc.KeepaliveEnforcementPolicy(keepalive.EnforcementPolicy{
-				MinTime:             15 * time.Second,
-				PermitWithoutStream: true,
-			}),
+		grpcOpts = append([]grpc.ServerOption{}, baseKeepaliveOptions...)
+		grpcOpts = append(grpcOpts,
 			grpc.Creds(creds),
 			grpc.StreamInterceptor(jwtInterceptor.Stream()),
-		}
+		)
 	}
 
 	r.grpc = grpc.NewServer(grpcOpts...)

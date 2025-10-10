@@ -28,7 +28,7 @@ import (
 // OfflineGatewayAPIReconciler can be used for non-kuberetes provider.
 // It can let other providers to have the same reconcile logic without rely on apiserver.
 type OfflineGatewayAPIReconciler struct {
-	gatewayAPIReconciler
+	*gatewayAPIReconciler
 
 	Client client.Client
 }
@@ -63,7 +63,7 @@ func NewOfflineGatewayAPIController(
 	}
 
 	cli := newOfflineGatewayAPIClient()
-	r := gatewayAPIReconciler{
+	r := &gatewayAPIReconciler{
 		client:            cli,
 		log:               cfg.Logger,
 		classController:   gwapiv1.GatewayController(cfg.EnvoyGateway.Gateway.ControllerName),

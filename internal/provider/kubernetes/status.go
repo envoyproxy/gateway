@@ -8,7 +8,6 @@ package kubernetes
 import (
 	"context"
 	"fmt"
-	"reflect"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
@@ -18,7 +17,7 @@ import (
 	gwapiv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
-	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
+	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/message"
 	"github.com/envoyproxy/gateway/internal/utils"
@@ -581,7 +580,7 @@ func mergeRouteParentStatus(ns string, old, new []gwapiv1.RouteParentStatus) []g
 	for _, oldP := range old {
 		found := -1
 		for newI, newP := range new {
-			if isParentRefEqual(oldP.ParentRef, newP.ParentRef, ns) {
+			if gatewayapi.IsParentRefEqual(oldP.ParentRef, newP.ParentRef, ns) {
 				found = newI
 				break
 			}
@@ -600,7 +599,7 @@ func mergeRouteParentStatus(ns string, old, new []gwapiv1.RouteParentStatus) []g
 	for _, newP := range new {
 		found := false
 		for _, mergedP := range merged {
-			if isParentRefEqual(newP.ParentRef, mergedP.ParentRef, ns) {
+			if gatewayapi.IsParentRefEqual(newP.ParentRef, mergedP.ParentRef, ns) {
 				found = true
 				break
 			}
@@ -611,34 +610,6 @@ func mergeRouteParentStatus(ns string, old, new []gwapiv1.RouteParentStatus) []g
 		}
 	}
 	return merged
-}
-
-func isParentRefEqual(ref1, ref2 gwapiv1.ParentReference, routeNS string) bool {
-	defaultGroup := (*gwapiv1.Group)(&gwapiv1.GroupVersion.Group)
-	if ref1.Group == nil {
-		ref1.Group = defaultGroup
-	}
-	if ref2.Group == nil {
-		ref2.Group = defaultGroup
-	}
-
-	defaultKind := gwapiv1.Kind(resource.KindGateway)
-	if ref1.Kind == nil {
-		ref1.Kind = &defaultKind
-	}
-	if ref2.Kind == nil {
-		ref2.Kind = &defaultKind
-	}
-
-	// If the parent's namespace is not set, default to the namespace of the Route.
-	defaultNS := gwapiv1.Namespace(routeNS)
-	if ref1.Namespace == nil {
-		ref1.Namespace = &defaultNS
-	}
-	if ref2.Namespace == nil {
-		ref2.Namespace = &defaultNS
-	}
-	return reflect.DeepEqual(ref1, ref2)
 }
 
 func (r *gatewayAPIReconciler) updateStatusForGateway(ctx context.Context, gtw *gwapiv1.Gateway) {

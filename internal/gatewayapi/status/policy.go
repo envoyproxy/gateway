@@ -86,6 +86,8 @@ func SetConditionForPolicyAncestor(policyStatus *gwapiv1a2.PolicyStatus, ancesto
 		policyStatus.Ancestors = []gwapiv1a2.PolicyAncestorStatus{}
 	}
 
+	sanitizedMessage := truncateConditionMessage(message)
+
 	// Find existing ancestor first
 	for i, ancestor := range policyStatus.Ancestors {
 		if string(ancestor.ControllerName) == controllerName && ancestorRefsEqual(&ancestor.AncestorRef, ancestorRef) {
@@ -94,21 +96,21 @@ func SetConditionForPolicyAncestor(policyStatus *gwapiv1a2.PolicyStatus, ancesto
 				if existingCond.Type == string(conditionType) &&
 					existingCond.Status == status &&
 					existingCond.Reason == string(reason) &&
-					existingCond.Message == message &&
+					existingCond.Message == sanitizedMessage &&
 					existingCond.ObservedGeneration == generation {
 					return
 				}
 			}
 
 			// Only create condition and merge if needed
-			cond := newCondition(string(conditionType), status, string(reason), message, time.Now(), generation)
+			cond := newCondition(string(conditionType), status, string(reason), sanitizedMessage, time.Now(), generation)
 			policyStatus.Ancestors[i].Conditions = MergeConditions(policyStatus.Ancestors[i].Conditions, cond)
 			return
 		}
 	}
 
 	// Add condition for new PolicyAncestorStatus
-	cond := newCondition(string(conditionType), status, string(reason), message, time.Now(), generation)
+	cond := newCondition(string(conditionType), status, string(reason), sanitizedMessage, time.Now(), generation)
 	policyStatus.Ancestors = append(policyStatus.Ancestors, gwapiv1a2.PolicyAncestorStatus{
 		AncestorRef:    *ancestorRef,
 		ControllerName: gwapiv1a2.GatewayController(controllerName),
