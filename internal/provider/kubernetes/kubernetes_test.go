@@ -37,6 +37,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/message"
 	"github.com/envoyproxy/gateway/internal/provider/kubernetes/test"
 	"github.com/envoyproxy/gateway/internal/utils"
+	testutil "github.com/envoyproxy/gateway/internal/utils/test"
 )
 
 const (
@@ -67,7 +68,7 @@ func TestProvider(t *testing.T) {
 	svr.EnvoyGateway.Provider.Kubernetes.TopologyInjector = &egv1a1.EnvoyGatewayTopologyInjector{Disable: ptr.To(true)}
 	require.NoError(t, err)
 	resources := new(message.ProviderResources)
-	provider, err := New(context.Background(), cliCfg, svr, resources)
+	provider, err := New(context.Background(), cliCfg, svr, resources, message.RunnerErrorNotifier(t.Name(), testutil.RunnerErrorsChan(t)))
 	require.NoError(t, err)
 	ctx, cancel := context.WithCancel(ctrl.SetupSignalHandler())
 	go func() {
@@ -1250,7 +1251,7 @@ func TestNamespacedProvider(t *testing.T) {
 	svr.EnvoyGateway.Provider.Kubernetes.TopologyInjector = &egv1a1.EnvoyGatewayTopologyInjector{Disable: ptr.To(true)}
 
 	resources := new(message.ProviderResources)
-	provider, err := New(context.Background(), cliCfg, svr, resources)
+	provider, err := New(context.Background(), cliCfg, svr, resources, message.RunnerErrorNotifier(t.Name(), testutil.RunnerErrorsChan(t)))
 	require.NoError(t, err)
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
@@ -1315,7 +1316,7 @@ func TestNamespaceSelectorProvider(t *testing.T) {
 	svr.EnvoyGateway.Provider.Kubernetes.TopologyInjector = &egv1a1.EnvoyGatewayTopologyInjector{Disable: ptr.To(true)}
 
 	resources := new(message.ProviderResources)
-	provider, err := New(context.Background(), cliCfg, svr, resources)
+	provider, err := New(context.Background(), cliCfg, svr, resources, message.RunnerErrorNotifier(t.Name(), testutil.RunnerErrorsChan(t)))
 	require.NoError(t, err)
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() {

@@ -34,6 +34,8 @@ import (
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/proxy"
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/message"
+	testutil "github.com/envoyproxy/gateway/internal/utils/test"
 )
 
 const (
@@ -112,7 +114,7 @@ func newTestInfraWithClient(t *testing.T, cli client.Client) *Infra {
 		},
 	}
 
-	return NewInfra(cli, cfg)
+	return NewInfra(cli, cfg, message.RunnerErrorNotifier(t.Name(), testutil.RunnerErrorsChan(t)))
 }
 
 func TestCreateProxyInfra(t *testing.T) {

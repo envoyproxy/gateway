@@ -76,7 +76,7 @@ func New(cfg *Config) *Runner {
 }
 
 // Start starts the infrastructure runner
-func (r *Runner) Start(ctx context.Context) (err error) {
+func (r *Runner) Start(ctx context.Context, _ chan<- error) (err error) {
 	r.Logger = r.Logger.WithName(r.Name()).WithValues("runner", r.Name())
 
 	// Set up the gRPC server and register the xDS handler.
