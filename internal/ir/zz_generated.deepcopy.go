@@ -2544,6 +2544,11 @@ func (in *OIDC) DeepCopyInto(out *OIDC) {
 		*out = new(v1.Duration)
 		**out = **in
 	}
+	if in.CSRFTokenTTL != nil {
+		in, out := &in.CSRFTokenTTL, &out.CSRFTokenTTL
+		*out = new(v1.Duration)
+		**out = **in
+	}
 	if in.CookieNameOverrides != nil {
 		in, out := &in.CookieNameOverrides, &out.CookieNameOverrides
 		*out = new(v1alpha1.OIDCCookieNames)

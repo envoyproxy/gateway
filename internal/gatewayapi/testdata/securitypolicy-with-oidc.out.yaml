@@ -200,6 +200,7 @@ securityPolicies:
         group: null
         kind: null
         name: client1-secret
+      csrfTokenTTL: 35m
       defaultRefreshTokenTTL: 24h
       defaultTokenTTL: 30m
       forwardAccessToken: true
@@ -361,6 +362,7 @@ xdsIR:
             clientID: client1.apps.googleusercontent.com
             clientSecret: '[redacted]'
             cookieSuffix: b0a1b740
+            csrfTokenTTL: 35m0s
             defaultRefreshTokenTTL: 24h0m0s
             defaultTokenTTL: 30m0s
             forwardAccessToken: true
