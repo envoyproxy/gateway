@@ -233,7 +233,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 				// the ResolvedRefs condition should NOT be set to False.
 				if err.Reason() == status.RouteReasonEndpointsNotFound {
 					errs.Add(status.NewRouteStatusError(
-						fmt.Errorf("failed to process route rule %d backendRef %d: %w", ruleIdx, i, err),
+						fmt.Errorf("failed to find endpoints: %w", err),
 						err.Reason(),
 					).WithType(status.RouteConditionBackendsAvailable))
 					failedNoReadyEndpoints = true
@@ -707,7 +707,7 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 				// the ResolvedRefs condition should NOT be set to False.
 				if err.Reason() == status.RouteReasonEndpointsNotFound {
 					errs.Add(status.NewRouteStatusError(
-						fmt.Errorf("failed to process route rule %d backendRef %d: %w", ruleIdx, i, err),
+						fmt.Errorf("failed to find endpoints: %w", err),
 						err.Reason(),
 					).WithType(status.RouteConditionBackendsAvailable))
 					failedNoReadyEndpoints = true
