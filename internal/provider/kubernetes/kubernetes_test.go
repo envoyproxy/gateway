@@ -875,12 +875,14 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 				if !ok {
 					return false
 				}
-				return ok && len(res.HTTPRoutes) != 0
-			}, defaultWait, defaultTick)
 
-			res := resources.GetResourcesByGatewayClass(gc.Name)
-			require.NotNil(t, res)
-			require.Contains(t, res.HTTPRoutes, &testCase.route)
+				routes := make([]string, 0, len(res.HTTPRoutes))
+				for _, r := range res.HTTPRoutes {
+					routes = append(routes, utils.NamespacedName(r).String())
+				}
+
+				return slices.Contains(routes, utils.NamespacedName(&testCase.route).String())
+			}, defaultWait, defaultTick)
 
 			// Ensure the HTTPRoute Namespace is in the Namespace resource map.
 			require.Eventually(t, func() bool {
@@ -1025,12 +1027,14 @@ func testTLSRoute(ctx context.Context, t *testing.T, provider *Provider, resourc
 				if !ok {
 					return false
 				}
-				return ok && len(res.TLSRoutes) != 0
-			}, defaultWait, defaultTick)
 
-			res := resources.GetResourcesByGatewayClass(gc.Name)
-			require.NotNil(t, res)
-			require.Contains(t, res.TLSRoutes, &testCase.route)
+				routes := make([]string, 0, len(res.HTTPRoutes))
+				for _, r := range res.TLSRoutes {
+					routes = append(routes, utils.NamespacedName(r).String())
+				}
+
+				return slices.Contains(routes, utils.NamespacedName(&testCase.route).String())
+			}, defaultWait, defaultTick)
 
 			// Ensure the HTTPRoute Namespace is in the Namespace resource map.
 			require.Eventually(t, func() bool {
