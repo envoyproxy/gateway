@@ -628,7 +628,7 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy, r
 		errs = errors.Join(errs, err)
 	}
 
-	cp = buildCompression(policy.Spec.Compression)
+	cp = buildCompression(policy.Spec.Compression, policy.Spec.Compressor)
 	httpUpgrade = buildHTTPProtocolUpgradeConfig(policy.Spec.HTTPUpgrade)
 
 	ds = translateDNS(&policy.Spec.ClusterSettings)
@@ -1194,7 +1194,23 @@ func defaultResponseOverrideRuleName(policy *egv1a1.BackendTrafficPolicy, index 
 		strconv.Itoa(index))
 }
 
-func buildCompression(compression []*egv1a1.Compression) []*ir.Compression {
+func buildCompression(compression, compressor []*egv1a1.Compression) []*ir.Compression {
+	// Handle the Compressor field first (higher priority)
+	if len(compressor) > 0 {
+		irCompression := make([]*ir.Compression, 0, len(compressor))
+		for _, c := range compressor {
+			// Only add compression if the corresponding compressor not null
+			if (c.Type == egv1a1.GzipCompressorType && c.Gzip != nil) ||
+				(c.Type == egv1a1.BrotliCompressorType && c.Brotli != nil) {
+				irCompression = append(irCompression, &ir.Compression{
+					Type: c.Type,
+				})
+			}
+		}
+		return irCompression
+	}
+
+	// Fallback to the deprecated Compression field
 	if compression == nil {
 		return nil
 	}
