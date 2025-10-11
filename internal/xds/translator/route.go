@@ -108,9 +108,31 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute, httpListener *ir.HTTPListener) (*rou
 			router.GetRoute().Timeout = durationpb.New(rt.Duration)
 		}
 
-		// Set grpc_timeout_header_max for GRPCRoute
-		if httpRoute.IsHTTP2 {
-			// The grpcTimeoutHeaderMax field does not exist in RouteAction, so this block is now a no-op.
+		// Set MaxStreamDuration for gRPC routes to enable grpc_timeout_header_max
+		// This allows Envoy to respect the client's grpc-timeout header while capping it at a maximum value
+		if httpRoute.IsHTTP2 &&
+			httpRoute.Traffic != nil &&
+			httpRoute.Traffic.Timeout != nil &&
+			httpRoute.Traffic.Timeout.HTTP != nil {
+
+			// Check if either GrpcTimeoutHeaderMax or StreamTimeout is configured
+			if httpRoute.Traffic.Timeout.HTTP.GrpcTimeoutHeaderMax != nil ||
+				httpRoute.Traffic.Timeout.HTTP.StreamTimeout != nil {
+
+				maxStreamDuration := &routev3.RouteAction_MaxStreamDuration{}
+
+				// Set grpc_timeout_header_max if configured
+				if httpRoute.Traffic.Timeout.HTTP.GrpcTimeoutHeaderMax != nil {
+					maxStreamDuration.GrpcTimeoutHeaderMax = durationpb.New(httpRoute.Traffic.Timeout.HTTP.GrpcTimeoutHeaderMax.Duration)
+				}
+
+				// Set max_stream_duration if StreamTimeout is configured
+				if httpRoute.Traffic.Timeout.HTTP.StreamTimeout != nil {
+					maxStreamDuration.MaxStreamDuration = durationpb.New(httpRoute.Traffic.Timeout.HTTP.StreamTimeout.Duration)
+				}
+
+				router.GetRoute().MaxStreamDuration = maxStreamDuration
+			}
 		}
 	}
 

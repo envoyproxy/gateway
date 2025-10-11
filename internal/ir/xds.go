@@ -2928,6 +2928,12 @@ type HTTPTimeout struct {
 	// This is particularly useful for gRPC streaming calls.
 	// Default: inherited from RequestTimeout.
 	StreamTimeout *metav1.Duration `json:"streamTimeout,omitempty" yaml:"streamTimeout,omitempty"`
+
+	// GrpcTimeoutHeaderMax is the maximum timeout value for gRPC requests as specified
+	// via the grpc-timeout header sent by gRPC clients. When present, Envoy will use the
+	// value from the grpc-timeout header, but limit it to this maximum value.
+	// If set to 0, the grpc-timeout header is used without modification.
+	GrpcTimeoutHeaderMax *metav1.Duration `json:"grpcTimeoutHeaderMax,omitempty" yaml:"grpcTimeoutHeaderMax,omitempty"`
 }
 
 // Retry define the retry policy configuration.

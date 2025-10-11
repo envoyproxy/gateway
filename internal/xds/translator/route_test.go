@@ -8,14 +8,13 @@ package translator
 import (
 	"reflect"
 	"testing"
-
-	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
-	"k8s.io/utils/ptr"
-
 	"time"
 
-	"github.com/envoyproxy/gateway/internal/ir"
+	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
+
+	"github.com/envoyproxy/gateway/internal/ir"
 )
 
 func TestBuildHashPolicy(t *testing.T) {
@@ -233,5 +232,211 @@ func TestGetEffectiveTimeout(t *testing.T) {
 	httpRoute4 := &ir.HTTPRoute{IsHTTP2: true}
 	if got := getEffectiveTimeout(httpRoute4); got != nil {
 		t.Errorf("expected nil for missing fields, got %v", got)
+	}
+}
+
+func TestBuildXdsRoute_GrpcTimeoutHeaderMax(t *testing.T) {
+	tests := []struct {
+		name                     string
+		httpRoute                *ir.HTTPRoute
+		wantGrpcTimeoutHeaderMax *time.Duration
+		wantMaxStreamDuration    *time.Duration
+	}{
+		{
+			name: "gRPC route with GrpcTimeoutHeaderMax only",
+			httpRoute: &ir.HTTPRoute{
+				Name:      "test-grpc-route",
+				IsHTTP2:   true,
+				PathMatch: &ir.StringMatch{Exact: ptr.To("/test")},
+				Destination: &ir.RouteDestination{
+					Name: "test-dest",
+					Settings: []*ir.DestinationSetting{
+						{
+							Weight: ptr.To[uint32](1),
+						},
+					},
+				},
+				Traffic: &ir.TrafficFeatures{
+					Timeout: &ir.Timeout{
+						HTTP: &ir.HTTPTimeout{
+							GrpcTimeoutHeaderMax: &metav1.Duration{Duration: 30 * time.Second},
+						},
+					},
+				},
+			},
+			wantGrpcTimeoutHeaderMax: ptr.To(30 * time.Second),
+			wantMaxStreamDuration:    nil,
+		},
+		{
+			name: "gRPC route with both GrpcTimeoutHeaderMax and StreamTimeout",
+			httpRoute: &ir.HTTPRoute{
+				Name:      "test-grpc-route",
+				IsHTTP2:   true,
+				PathMatch: &ir.StringMatch{Exact: ptr.To("/test")},
+				Destination: &ir.RouteDestination{
+					Name: "test-dest",
+					Settings: []*ir.DestinationSetting{
+						{
+							Weight: ptr.To[uint32](1),
+						},
+					},
+				},
+				Traffic: &ir.TrafficFeatures{
+					Timeout: &ir.Timeout{
+						HTTP: &ir.HTTPTimeout{
+							GrpcTimeoutHeaderMax: &metav1.Duration{Duration: 30 * time.Second},
+							StreamTimeout:        &metav1.Duration{Duration: 60 * time.Second},
+						},
+					},
+				},
+			},
+			wantGrpcTimeoutHeaderMax: ptr.To(30 * time.Second),
+			wantMaxStreamDuration:    ptr.To(60 * time.Second),
+		},
+		{
+			name: "gRPC route with StreamTimeout only",
+			httpRoute: &ir.HTTPRoute{
+				Name:      "test-grpc-route",
+				IsHTTP2:   true,
+				PathMatch: &ir.StringMatch{Exact: ptr.To("/test")},
+				Destination: &ir.RouteDestination{
+					Name: "test-dest",
+					Settings: []*ir.DestinationSetting{
+						{
+							Weight: ptr.To[uint32](1),
+						},
+					},
+				},
+				Traffic: &ir.TrafficFeatures{
+					Timeout: &ir.Timeout{
+						HTTP: &ir.HTTPTimeout{
+							StreamTimeout: &metav1.Duration{Duration: 60 * time.Second},
+						},
+					},
+				},
+			},
+			wantGrpcTimeoutHeaderMax: nil,
+			wantMaxStreamDuration:    ptr.To(60 * time.Second),
+		},
+		{
+			name: "gRPC route with GrpcTimeoutHeaderMax set to 0 (unlimited)",
+			httpRoute: &ir.HTTPRoute{
+				Name:      "test-grpc-route",
+				IsHTTP2:   true,
+				PathMatch: &ir.StringMatch{Exact: ptr.To("/test")},
+				Destination: &ir.RouteDestination{
+					Name: "test-dest",
+					Settings: []*ir.DestinationSetting{
+						{
+							Weight: ptr.To[uint32](1),
+						},
+					},
+				},
+				Traffic: &ir.TrafficFeatures{
+					Timeout: &ir.Timeout{
+						HTTP: &ir.HTTPTimeout{
+							GrpcTimeoutHeaderMax: &metav1.Duration{Duration: 0},
+						},
+					},
+				},
+			},
+			wantGrpcTimeoutHeaderMax: ptr.To(time.Duration(0)),
+			wantMaxStreamDuration:    nil,
+		},
+		{
+			name: "non-gRPC route should not have MaxStreamDuration",
+			httpRoute: &ir.HTTPRoute{
+				Name:      "test-http-route",
+				IsHTTP2:   false,
+				PathMatch: &ir.StringMatch{Exact: ptr.To("/test")},
+				Destination: &ir.RouteDestination{
+					Name: "test-dest",
+					Settings: []*ir.DestinationSetting{
+						{
+							Weight: ptr.To[uint32](1),
+						},
+					},
+				},
+				Traffic: &ir.TrafficFeatures{
+					Timeout: &ir.Timeout{
+						HTTP: &ir.HTTPTimeout{
+							GrpcTimeoutHeaderMax: &metav1.Duration{Duration: 30 * time.Second},
+						},
+					},
+				},
+			},
+			wantGrpcTimeoutHeaderMax: nil,
+			wantMaxStreamDuration:    nil,
+		},
+		{
+			name: "gRPC route without timeout config should not have MaxStreamDuration",
+			httpRoute: &ir.HTTPRoute{
+				Name:      "test-grpc-route",
+				IsHTTP2:   true,
+				PathMatch: &ir.StringMatch{Exact: ptr.To("/test")},
+				Destination: &ir.RouteDestination{
+					Name: "test-dest",
+					Settings: []*ir.DestinationSetting{
+						{
+							Weight: ptr.To[uint32](1),
+						},
+					},
+				},
+			},
+			wantGrpcTimeoutHeaderMax: nil,
+			wantMaxStreamDuration:    nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			route, err := buildXdsRoute(tt.httpRoute, nil)
+			if err != nil {
+				t.Fatalf("buildXdsRoute() error = %v", err)
+			}
+
+			if route.GetRoute() == nil {
+				t.Fatal("expected RouteAction, got nil")
+			}
+
+			got := route.GetRoute().MaxStreamDuration
+			if tt.wantGrpcTimeoutHeaderMax == nil && tt.wantMaxStreamDuration == nil {
+				if got != nil {
+					t.Errorf("expected MaxStreamDuration to be nil, got %v", got)
+				}
+				return
+			}
+
+			if got == nil {
+				t.Errorf("expected MaxStreamDuration to be set, got nil")
+				return
+			}
+
+			// Check GrpcTimeoutHeaderMax
+			if tt.wantGrpcTimeoutHeaderMax != nil {
+				if got.GrpcTimeoutHeaderMax == nil {
+					t.Errorf("expected GrpcTimeoutHeaderMax to be set, got nil")
+				} else if got.GrpcTimeoutHeaderMax.AsDuration() != *tt.wantGrpcTimeoutHeaderMax {
+					t.Errorf("GrpcTimeoutHeaderMax = %v, want %v",
+						got.GrpcTimeoutHeaderMax.AsDuration(),
+						*tt.wantGrpcTimeoutHeaderMax)
+				}
+			} else if got.GrpcTimeoutHeaderMax != nil {
+				t.Errorf("expected GrpcTimeoutHeaderMax to be nil, got %v", got.GrpcTimeoutHeaderMax)
+			}
+
+			// Check MaxStreamDuration
+			if tt.wantMaxStreamDuration != nil {
+				if got.MaxStreamDuration == nil {
+					t.Errorf("expected MaxStreamDuration to be set, got nil")
+				} else if got.MaxStreamDuration.AsDuration() != *tt.wantMaxStreamDuration {
+					t.Errorf("MaxStreamDuration = %v, want %v",
+						got.MaxStreamDuration.AsDuration(),
+						*tt.wantMaxStreamDuration)
+				}
+			} else if got.MaxStreamDuration != nil {
+				t.Errorf("expected MaxStreamDuration to be nil, got %v", got.MaxStreamDuration)
+			}
+		})
 	}
 }
