@@ -113,8 +113,8 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 			}
 
 			// Add the listener to the Xds IR
-			servicePort := &protocolPort{protocol: listener.Protocol, port: int32(listener.Port)}
-			containerPort := t.servicePortToContainerPort(int32(listener.Port), gateway.envoyProxy)
+			servicePort := &protocolPort{protocol: listener.Protocol, port: listener.Port}
+			containerPort := t.servicePortToContainerPort(listener.Port, gateway.envoyProxy)
 			switch listener.Protocol {
 			case gwapiv1.HTTPProtocolType, gwapiv1.HTTPSProtocolType:
 				irListener := &ir.HTTPListener{

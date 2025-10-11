@@ -171,15 +171,15 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 				val := update.Value
 				r.statusUpdater.Send(Update{
 					NamespacedName: key,
-					Resource:       new(gwapiv1a2.TLSRoute),
+					Resource:       new(gwapiv1a3.TLSRoute),
 					Mutator: MutatorFunc(func(obj client.Object) client.Object {
-						t, ok := obj.(*gwapiv1a2.TLSRoute)
+						t, ok := obj.(*gwapiv1a3.TLSRoute)
 						if !ok {
 							err := fmt.Errorf("unsupported object type %T", obj)
 							errChan <- err
 							panic(err)
 						}
-						tCopy := &gwapiv1a2.TLSRoute{
+						tCopy := &gwapiv1a3.TLSRoute{
 							TypeMeta:   t.TypeMeta,
 							ObjectMeta: t.ObjectMeta,
 							Spec:       t.Spec,
@@ -282,7 +282,7 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 		message.HandleSubscription(
 			message.Metadata{Runner: string(egv1a1.LogComponentProviderRunner), Message: message.EnvoyPatchPolicyStatusMessageName},
 			r.subscriptions.envoyPatchPolicyStatuses,
-			func(update message.Update[types.NamespacedName, *gwapiv1a2.PolicyStatus], errChan chan error) {
+			func(update message.Update[types.NamespacedName, *gwapiv1.PolicyStatus], errChan chan error) {
 				// skip delete updates.
 				if update.Delete {
 					return
@@ -318,7 +318,7 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 		message.HandleSubscription(
 			message.Metadata{Runner: string(egv1a1.LogComponentProviderRunner), Message: message.ClientTrafficPolicyStatusMessageName},
 			r.subscriptions.clientTrafficPolicyStatuses,
-			func(update message.Update[types.NamespacedName, *gwapiv1a2.PolicyStatus], errChan chan error) {
+			func(update message.Update[types.NamespacedName, *gwapiv1.PolicyStatus], errChan chan error) {
 				// skip delete updates.
 				if update.Delete {
 					return
@@ -354,7 +354,7 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 		message.HandleSubscription(
 			message.Metadata{Runner: string(egv1a1.LogComponentProviderRunner), Message: message.BackendTrafficPolicyStatusMessageName},
 			r.subscriptions.backendTrafficPolicyStatuses,
-			func(update message.Update[types.NamespacedName, *gwapiv1a2.PolicyStatus], errChan chan error) {
+			func(update message.Update[types.NamespacedName, *gwapiv1.PolicyStatus], errChan chan error) {
 				// skip delete updates.
 				if update.Delete {
 					return
@@ -390,7 +390,7 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 		message.HandleSubscription(
 			message.Metadata{Runner: string(egv1a1.LogComponentProviderRunner), Message: message.SecurityPolicyStatusMessageName},
 			r.subscriptions.securityPolicyStatuses,
-			func(update message.Update[types.NamespacedName, *gwapiv1a2.PolicyStatus], errChan chan error) {
+			func(update message.Update[types.NamespacedName, *gwapiv1.PolicyStatus], errChan chan error) {
 				// skip delete updates.
 				if update.Delete {
 					return
@@ -424,7 +424,7 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 	// BackendTLSPolicy object status updater
 	go func() {
 		message.HandleSubscription(message.Metadata{Runner: string(egv1a1.LogComponentProviderRunner), Message: message.BackendTLSPolicyStatusMessageName}, r.subscriptions.backendTLSPolicyStatuses,
-			func(update message.Update[types.NamespacedName, *gwapiv1a2.PolicyStatus], errChan chan error) {
+			func(update message.Update[types.NamespacedName, *gwapiv1.PolicyStatus], errChan chan error) {
 				// skip delete updates.
 				if update.Delete {
 					return
@@ -433,15 +433,15 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 				val := update.Value
 				r.statusUpdater.Send(Update{
 					NamespacedName: key,
-					Resource:       new(gwapiv1a3.BackendTLSPolicy),
+					Resource:       new(gwapiv1.BackendTLSPolicy),
 					Mutator: MutatorFunc(func(obj client.Object) client.Object {
-						t, ok := obj.(*gwapiv1a3.BackendTLSPolicy)
+						t, ok := obj.(*gwapiv1.BackendTLSPolicy)
 						if !ok {
 							err := fmt.Errorf("unsupported object type %T", obj)
 							errChan <- err
 							panic(err)
 						}
-						tCopy := &gwapiv1a3.BackendTLSPolicy{
+						tCopy := &gwapiv1.BackendTLSPolicy{
 							TypeMeta:   t.TypeMeta,
 							ObjectMeta: t.ObjectMeta,
 							Spec:       t.Spec,
@@ -460,7 +460,7 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 		message.HandleSubscription(
 			message.Metadata{Runner: string(egv1a1.LogComponentProviderRunner), Message: message.EnvoyExtensionPolicyStatusMessageName},
 			r.subscriptions.envoyExtensionPolicyStatuses,
-			func(update message.Update[types.NamespacedName, *gwapiv1a2.PolicyStatus], errChan chan error) {
+			func(update message.Update[types.NamespacedName, *gwapiv1.PolicyStatus], errChan chan error) {
 				// skip delete updates.
 				if update.Delete {
 					return
@@ -533,7 +533,7 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 			message.HandleSubscription(
 				message.Metadata{Runner: string(egv1a1.LogComponentProviderRunner), Message: message.ExtensionServerPoliciesStatusMessageName},
 				r.subscriptions.extensionPolicyStatuses,
-				func(update message.Update[message.NamespacedNameAndGVK, *gwapiv1a2.PolicyStatus], errChan chan error) {
+				func(update message.Update[message.NamespacedNameAndGVK, *gwapiv1.PolicyStatus], errChan chan error) {
 					// skip delete updates.
 					if update.Delete {
 						return

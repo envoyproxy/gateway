@@ -16,6 +16,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/tlog"
@@ -54,7 +55,7 @@ var ESResilience = suite.ResilienceTest{
 			ns := "gateway-resilience"
 			routeNN := types.NamespacedName{Name: "valid-route-for-extension-server", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "all-namespaces", Namespace: ns}
-			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+			gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
 
 			t.Log("Route is translated")
 			expectedResponse := http.ExpectedResponse{
@@ -63,7 +64,7 @@ var ESResilience = suite.ResilienceTest{
 					Path: "/pass",
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}
@@ -75,7 +76,7 @@ var ESResilience = suite.ResilienceTest{
 					tlog.Logf(t, "Request failed, not ready yet: %v (after %v)", err.Error(), elapsed)
 					return false
 				}
-				if err := http.CompareRequest(t, &req, cReq, cRes, expectedResponse); err != nil {
+				if err := http.CompareRoundTrip(t, &req, cReq, cRes, expectedResponse); err != nil {
 					tlog.Logf(t, "Response expectation failed for request: %+v  not ready yet: %v (after %v)", req, err, elapsed)
 					return false
 				}
@@ -90,7 +91,7 @@ var ESResilience = suite.ResilienceTest{
 					Path: "/pass",
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}
@@ -102,7 +103,7 @@ var ESResilience = suite.ResilienceTest{
 					tlog.Logf(t, "Request failed, not ready yet: %v (after %v)", err.Error(), elapsed)
 					return false
 				}
-				if err := http.CompareRequest(t, &req, cReq, cRes, expectedResponse); err != nil {
+				if err := http.CompareRoundTrip(t, &req, cReq, cRes, expectedResponse); err != nil {
 					tlog.Logf(t, "Response expectation failed for request: %+v  not ready yet: %v (after %v)", req, err, elapsed)
 					return false
 				}
@@ -144,7 +145,7 @@ var ESResilience = suite.ResilienceTest{
 					tlog.Logf(t, "Request failed, not ready yet: %v (after %v)", err.Error(), elapsed)
 					return false
 				}
-				if err := http.CompareRequest(t, &req, cReq, cRes, expectedResponse); err != nil {
+				if err := http.CompareRoundTrip(t, &req, cReq, cRes, expectedResponse); err != nil {
 					tlog.Logf(t, "Response expectation failed for request: %+v  not ready yet: %v (after %v)", req, err, elapsed)
 					return false
 				}
@@ -180,7 +181,7 @@ var ESResilience = suite.ResilienceTest{
 					tlog.Logf(t, "Request failed, not ready yet: %v (after %v)", err.Error(), elapsed)
 					return false
 				}
-				if err := http.CompareRequest(t, &req, cReq, cRes, expectedResponse); err != nil {
+				if err := http.CompareRoundTrip(t, &req, cReq, cRes, expectedResponse); err != nil {
 					tlog.Logf(t, "Response expectation failed for request: %+v  not ready yet: %v (after %v)", req, err, elapsed)
 					return false
 				}
@@ -197,7 +198,7 @@ var ESResilience = suite.ResilienceTest{
 					Path: "/pass-updated",
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}
@@ -210,7 +211,7 @@ var ESResilience = suite.ResilienceTest{
 					tlog.Logf(t, "Request failed, not ready yet: %v (after %v)", err.Error(), elapsed)
 					return false
 				}
-				if err := http.CompareRequest(t, &req, cReq, cRes, expectedResponse); err != nil {
+				if err := http.CompareRoundTrip(t, &req, cReq, cRes, expectedResponse); err != nil {
 					tlog.Logf(t, "Response expectation failed for request: %+v  not ready yet: %v (after %v)", req, err, elapsed)
 					return false
 				}
