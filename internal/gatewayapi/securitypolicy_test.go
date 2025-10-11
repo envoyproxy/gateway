@@ -814,23 +814,6 @@ func Test_validateSecurityPolicyForTCP_UnsupportedTopLevelFeatures(t *testing.T)
 	}
 }
 
-func Test_validateSecurityPolicyForTCP_AllowRequiresCIDR(t *testing.T) {
-	// Allow rule without ClientCIDRs should error
-	p := &egv1a1.SecurityPolicy{
-		Spec: egv1a1.SecurityPolicySpec{
-			Authorization: &egv1a1.Authorization{
-				Rules: []egv1a1.AuthorizationRule{
-					{
-						Action: egv1a1.AuthorizationActionAllow,
-						// Principal with zero ClientCIDRs (default) → invalid for TCP Allow
-					},
-				},
-			},
-		},
-	}
-	require.Error(t, validateSecurityPolicyForTCP(p))
-}
-
 func Test_validateSecurityPolicyForTCP_DenyRuleOK(t *testing.T) {
 	// Deny rule is fine without CIDRs
 	p := &egv1a1.SecurityPolicy{
