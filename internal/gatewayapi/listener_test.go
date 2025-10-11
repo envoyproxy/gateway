@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/ptr"
@@ -859,6 +860,32 @@ func TestProcessTracingServiceName(t *testing.T) {
 								Protocol:    corev1.ProtocolTCP,
 								AppProtocol: ptr.To("grpc"),
 							},
+						},
+					},
+				},
+			)
+
+			// Mock endpointSlice to resolve Service
+			resources.EndpointSlices = append(resources.EndpointSlices,
+				&discoveryv1.EndpointSlice{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "monitoring",
+						Name:      "otel-collector",
+						Labels: map[string]string{
+							"kubernetes.io/service-name": "otel-collector",
+						},
+					},
+					Endpoints: []discoveryv1.Endpoint{
+						{
+							Addresses: []string{"10.0.0.1"},
+						},
+					},
+					Ports: []discoveryv1.EndpointPort{
+						{
+							Name:        ptr.To("grpc"),
+							Protocol:    ptr.To(corev1.ProtocolTCP),
+							Port:        ptr.To(int32(4317)),
+							AppProtocol: ptr.To("grpc"),
 						},
 					},
 				},
