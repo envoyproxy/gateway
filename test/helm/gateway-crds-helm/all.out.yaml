@@ -19795,6 +19795,14 @@ spec:
                           Default: 1 hour.
                         pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                         type: string
+                      grpcTimeoutHeaderMax:
+                        description: |-
+                          GrpcTimeoutHeaderMax is the maximum timeout value for gRPC requests as specified
+                          via the grpc-timeout header sent by gRPC clients. When present, Envoy will use the
+                          value from the grpc-timeout header, but limit it to this maximum value.
+                          If set to 0, the grpc-timeout header is used without modification.
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                        type: string
                       maxConnectionDuration:
                         description: |-
                           The maximum duration of an HTTP connection.
@@ -19804,6 +19812,14 @@ spec:
                       requestTimeout:
                         description: RequestTimeout is the time until which entire
                           response is received from the upstream.
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                        type: string
+                      streamTimeout:
+                        description: |-
+                          StreamTimeout is the timeout for streaming requests. This timeout does not apply to non-streaming requests.
+                          When set to "0s", the timeout is disabled for streaming requests, allowing them to run indefinitely.
+                          This is particularly useful for gRPC streaming calls.
+                          Default: inherited from RequestTimeout.
                         pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                         type: string
                     type: object
@@ -22829,6 +22845,14 @@ spec:
                                     Default: 1 hour.
                                   pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                   type: string
+                                grpcTimeoutHeaderMax:
+                                  description: |-
+                                    GrpcTimeoutHeaderMax is the maximum timeout value for gRPC requests as specified
+                                    via the grpc-timeout header sent by gRPC clients. When present, Envoy will use the
+                                    value from the grpc-timeout header, but limit it to this maximum value.
+                                    If set to 0, the grpc-timeout header is used without modification.
+                                  pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                  type: string
                                 maxConnectionDuration:
                                   description: |-
                                     The maximum duration of an HTTP connection.
@@ -22838,6 +22862,14 @@ spec:
                                 requestTimeout:
                                   description: RequestTimeout is the time until which
                                     entire response is received from the upstream.
+                                  pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                  type: string
+                                streamTimeout:
+                                  description: |-
+                                    StreamTimeout is the timeout for streaming requests. This timeout does not apply to non-streaming requests.
+                                    When set to "0s", the timeout is disabled for streaming requests, allowing them to run indefinitely.
+                                    This is particularly useful for gRPC streaming calls.
+                                    Default: inherited from RequestTimeout.
                                   pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                   type: string
                               type: object
@@ -36301,6 +36333,14 @@ spec:
                                                       Default: 1 hour.
                                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                     type: string
+                                                  grpcTimeoutHeaderMax:
+                                                    description: |-
+                                                      GrpcTimeoutHeaderMax is the maximum timeout value for gRPC requests as specified
+                                                      via the grpc-timeout header sent by gRPC clients. When present, Envoy will use the
+                                                      value from the grpc-timeout header, but limit it to this maximum value.
+                                                      If set to 0, the grpc-timeout header is used without modification.
+                                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                                    type: string
                                                   maxConnectionDuration:
                                                     description: |-
                                                       The maximum duration of an HTTP connection.
@@ -36312,6 +36352,14 @@ spec:
                                                       the time until which entire
                                                       response is received from the
                                                       upstream.
+                                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                                    type: string
+                                                  streamTimeout:
+                                                    description: |-
+                                                      StreamTimeout is the timeout for streaming requests. This timeout does not apply to non-streaming requests.
+                                                      When set to "0s", the timeout is disabled for streaming requests, allowing them to run indefinitely.
+                                                      This is particularly useful for gRPC streaming calls.
+                                                      Default: inherited from RequestTimeout.
                                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                     type: string
                                                 type: object
@@ -37412,6 +37460,14 @@ spec:
                                                       Default: 1 hour.
                                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                     type: string
+                                                  grpcTimeoutHeaderMax:
+                                                    description: |-
+                                                      GrpcTimeoutHeaderMax is the maximum timeout value for gRPC requests as specified
+                                                      via the grpc-timeout header sent by gRPC clients. When present, Envoy will use the
+                                                      value from the grpc-timeout header, but limit it to this maximum value.
+                                                      If set to 0, the grpc-timeout header is used without modification.
+                                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                                    type: string
                                                   maxConnectionDuration:
                                                     description: |-
                                                       The maximum duration of an HTTP connection.
@@ -37423,6 +37479,14 @@ spec:
                                                       the time until which entire
                                                       response is received from the
                                                       upstream.
+                                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                                    type: string
+                                                  streamTimeout:
+                                                    description: |-
+                                                      StreamTimeout is the timeout for streaming requests. This timeout does not apply to non-streaming requests.
+                                                      When set to "0s", the timeout is disabled for streaming requests, allowing them to run indefinitely.
+                                                      This is particularly useful for gRPC streaming calls.
+                                                      Default: inherited from RequestTimeout.
                                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                     type: string
                                                 type: object
@@ -38600,6 +38664,14 @@ spec:
                                                 Default: 1 hour.
                                               pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                               type: string
+                                            grpcTimeoutHeaderMax:
+                                              description: |-
+                                                GrpcTimeoutHeaderMax is the maximum timeout value for gRPC requests as specified
+                                                via the grpc-timeout header sent by gRPC clients. When present, Envoy will use the
+                                                value from the grpc-timeout header, but limit it to this maximum value.
+                                                If set to 0, the grpc-timeout header is used without modification.
+                                              pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                              type: string
                                             maxConnectionDuration:
                                               description: |-
                                                 The maximum duration of an HTTP connection.
@@ -38610,6 +38682,14 @@ spec:
                                               description: RequestTimeout is the time
                                                 until which entire response is received
                                                 from the upstream.
+                                              pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                              type: string
+                                            streamTimeout:
+                                              description: |-
+                                                StreamTimeout is the timeout for streaming requests. This timeout does not apply to non-streaming requests.
+                                                When set to "0s", the timeout is disabled for streaming requests, allowing them to run indefinitely.
+                                                This is particularly useful for gRPC streaming calls.
+                                                Default: inherited from RequestTimeout.
                                               pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                               type: string
                                           type: object
@@ -39710,6 +39790,14 @@ spec:
                                           Default: 1 hour.
                                         pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                         type: string
+                                      grpcTimeoutHeaderMax:
+                                        description: |-
+                                          GrpcTimeoutHeaderMax is the maximum timeout value for gRPC requests as specified
+                                          via the grpc-timeout header sent by gRPC clients. When present, Envoy will use the
+                                          value from the grpc-timeout header, but limit it to this maximum value.
+                                          If set to 0, the grpc-timeout header is used without modification.
+                                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                        type: string
                                       maxConnectionDuration:
                                         description: |-
                                           The maximum duration of an HTTP connection.
@@ -39720,6 +39808,14 @@ spec:
                                         description: RequestTimeout is the time until
                                           which entire response is received from the
                                           upstream.
+                                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                        type: string
+                                      streamTimeout:
+                                        description: |-
+                                          StreamTimeout is the timeout for streaming requests. This timeout does not apply to non-streaming requests.
+                                          When set to "0s", the timeout is disabled for streaming requests, allowing them to run indefinitely.
+                                          This is particularly useful for gRPC streaming calls.
+                                          Default: inherited from RequestTimeout.
                                         pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                         type: string
                                     type: object
@@ -41798,6 +41894,14 @@ spec:
                                       Default: 1 hour.
                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
+                                  grpcTimeoutHeaderMax:
+                                    description: |-
+                                      GrpcTimeoutHeaderMax is the maximum timeout value for gRPC requests as specified
+                                      via the grpc-timeout header sent by gRPC clients. When present, Envoy will use the
+                                      value from the grpc-timeout header, but limit it to this maximum value.
+                                      If set to 0, the grpc-timeout header is used without modification.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
                                   maxConnectionDuration:
                                     description: |-
                                       The maximum duration of an HTTP connection.
@@ -41807,6 +41911,14 @@ spec:
                                   requestTimeout:
                                     description: RequestTimeout is the time until
                                       which entire response is received from the upstream.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                  streamTimeout:
+                                    description: |-
+                                      StreamTimeout is the timeout for streaming requests. This timeout does not apply to non-streaming requests.
+                                      When set to "0s", the timeout is disabled for streaming requests, allowing them to run indefinitely.
+                                      This is particularly useful for gRPC streaming calls.
+                                      Default: inherited from RequestTimeout.
                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
                                 type: object
@@ -42805,6 +42917,14 @@ spec:
                                       Default: 1 hour.
                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
+                                  grpcTimeoutHeaderMax:
+                                    description: |-
+                                      GrpcTimeoutHeaderMax is the maximum timeout value for gRPC requests as specified
+                                      via the grpc-timeout header sent by gRPC clients. When present, Envoy will use the
+                                      value from the grpc-timeout header, but limit it to this maximum value.
+                                      If set to 0, the grpc-timeout header is used without modification.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
                                   maxConnectionDuration:
                                     description: |-
                                       The maximum duration of an HTTP connection.
@@ -42814,6 +42934,14 @@ spec:
                                   requestTimeout:
                                     description: RequestTimeout is the time until
                                       which entire response is received from the upstream.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                  streamTimeout:
+                                    description: |-
+                                      StreamTimeout is the timeout for streaming requests. This timeout does not apply to non-streaming requests.
+                                      When set to "0s", the timeout is disabled for streaming requests, allowing them to run indefinitely.
+                                      This is particularly useful for gRPC streaming calls.
+                                      Default: inherited from RequestTimeout.
                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
                                 type: object
@@ -44026,6 +44154,14 @@ spec:
                                             Default: 1 hour.
                                           pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                           type: string
+                                        grpcTimeoutHeaderMax:
+                                          description: |-
+                                            GrpcTimeoutHeaderMax is the maximum timeout value for gRPC requests as specified
+                                            via the grpc-timeout header sent by gRPC clients. When present, Envoy will use the
+                                            value from the grpc-timeout header, but limit it to this maximum value.
+                                            If set to 0, the grpc-timeout header is used without modification.
+                                          pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                          type: string
                                         maxConnectionDuration:
                                           description: |-
                                             The maximum duration of an HTTP connection.
@@ -44036,6 +44172,14 @@ spec:
                                           description: RequestTimeout is the time
                                             until which entire response is received
                                             from the upstream.
+                                          pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                          type: string
+                                        streamTimeout:
+                                          description: |-
+                                            StreamTimeout is the timeout for streaming requests. This timeout does not apply to non-streaming requests.
+                                            When set to "0s", the timeout is disabled for streaming requests, allowing them to run indefinitely.
+                                            This is particularly useful for gRPC streaming calls.
+                                            Default: inherited from RequestTimeout.
                                           pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                           type: string
                                       type: object
@@ -45287,6 +45431,14 @@ spec:
                                       Default: 1 hour.
                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
+                                  grpcTimeoutHeaderMax:
+                                    description: |-
+                                      GrpcTimeoutHeaderMax is the maximum timeout value for gRPC requests as specified
+                                      via the grpc-timeout header sent by gRPC clients. When present, Envoy will use the
+                                      value from the grpc-timeout header, but limit it to this maximum value.
+                                      If set to 0, the grpc-timeout header is used without modification.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
                                   maxConnectionDuration:
                                     description: |-
                                       The maximum duration of an HTTP connection.
@@ -45296,6 +45448,14 @@ spec:
                                   requestTimeout:
                                     description: RequestTimeout is the time until
                                       which entire response is received from the upstream.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                  streamTimeout:
+                                    description: |-
+                                      StreamTimeout is the timeout for streaming requests. This timeout does not apply to non-streaming requests.
+                                      When set to "0s", the timeout is disabled for streaming requests, allowing them to run indefinitely.
+                                      This is particularly useful for gRPC streaming calls.
+                                      Default: inherited from RequestTimeout.
                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
                                 type: object

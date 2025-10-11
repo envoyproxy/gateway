@@ -141,10 +141,32 @@ func buildClusterSettingsTimeout(policy *egv1a1.ClusterSettings) (*ir.Timeout, e
 			}
 		}
 
+		var st *metav1.Duration
+		if pto.HTTP.StreamTimeout != nil {
+			d, err := time.ParseDuration(string(*pto.HTTP.StreamTimeout))
+			if err != nil {
+				errs = errors.Join(errs, fmt.Errorf("invalid StreamTimeout value %s", *pto.HTTP.StreamTimeout))
+			} else {
+				st = ptr.To(metav1.Duration{Duration: d})
+			}
+		}
+
+		var gthm *metav1.Duration
+		if pto.HTTP.GrpcTimeoutHeaderMax != nil {
+			d, err := time.ParseDuration(string(*pto.HTTP.GrpcTimeoutHeaderMax))
+			if err != nil {
+				errs = errors.Join(errs, fmt.Errorf("invalid GrpcTimeoutHeaderMax value %s", *pto.HTTP.GrpcTimeoutHeaderMax))
+			} else {
+				gthm = ptr.To(metav1.Duration{Duration: d})
+			}
+		}
+
 		to.HTTP = &ir.HTTPTimeout{
 			ConnectionIdleTimeout: cit,
 			MaxConnectionDuration: mcd,
 			RequestTimeout:        rt,
+			StreamTimeout:         st,
+			GrpcTimeoutHeaderMax:  gthm,
 		}
 	}
 	return to, errs

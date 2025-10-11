@@ -45,6 +45,22 @@ type HTTPTimeout struct {
 	//
 	// +optional
 	RequestTimeout *gwapiv1.Duration `json:"requestTimeout,omitempty" yaml:"requestTimeout,omitempty"`
+
+	// StreamTimeout is the timeout for streaming requests. This timeout does not apply to non-streaming requests.
+	// When set to "0s", the timeout is disabled for streaming requests, allowing them to run indefinitely.
+	// This is particularly useful for gRPC streaming calls.
+	// Default: inherited from RequestTimeout.
+	//
+	// +optional
+	StreamTimeout *gwapiv1.Duration `json:"streamTimeout,omitempty"`
+
+	// GrpcTimeoutHeaderMax is the maximum timeout value for gRPC requests as specified
+	// via the grpc-timeout header sent by gRPC clients. When present, Envoy will use the
+	// value from the grpc-timeout header, but limit it to this maximum value.
+	// If set to 0, the grpc-timeout header is used without modification.
+	//
+	// +optional
+	GrpcTimeoutHeaderMax *gwapiv1.Duration `json:"grpcTimeoutHeaderMax,omitempty" yaml:"grpcTimeoutHeaderMax,omitempty"`
 }
 
 type ClientTimeout struct {
