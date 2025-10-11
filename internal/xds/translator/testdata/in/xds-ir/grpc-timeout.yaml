@@ -1,0 +1,81 @@
+http:
+- name: "grpc-listener"
+  address: "::"
+  port: 10080
+  hostnames:
+  - "*"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  routes:
+  - name: "grpc-route-with-grpc-timeout-header-max"
+    hostname: "*"
+    isHTTP2: true
+    traffic:
+      timeout:
+        http:
+          grpcTimeoutHeaderMax: "30s"
+    destination:
+      name: "grpc-route-with-grpc-timeout-header-max-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "grpc-route-with-grpc-timeout-header-max-dest/backend/0"
+  - name: "grpc-route-with-both-timeouts"
+    hostname: "*"
+    isHTTP2: true
+    traffic:
+      timeout:
+        http:
+          grpcTimeoutHeaderMax: "30s"
+          streamTimeout: "60s"
+    destination:
+      name: "grpc-route-with-both-timeouts-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50001
+        name: "grpc-route-with-both-timeouts-dest/backend/0"
+  - name: "grpc-route-with-zero-grpc-timeout"
+    hostname: "*"
+    isHTTP2: true
+    traffic:
+      timeout:
+        http:
+          grpcTimeoutHeaderMax: "0s"
+    destination:
+      name: "grpc-route-with-zero-grpc-timeout-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50002
+        name: "grpc-route-with-zero-grpc-timeout-dest/backend/0"
+  - name: "grpc-route-with-only-stream-timeout"
+    hostname: "*"
+    isHTTP2: true
+    traffic:
+      timeout:
+        http:
+          streamTimeout: "45s"
+    destination:
+      name: "grpc-route-with-only-stream-timeout-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50003
+        name: "grpc-route-with-only-stream-timeout-dest/backend/0"
+  - name: "http-route-with-grpc-timeout"
+    hostname: "*"
+    isHTTP2: false
+    traffic:
+      timeout:
+        http:
+          grpcTimeoutHeaderMax: "30s"
+    destination:
+      name: "http-route-with-grpc-timeout-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50004
+        name: "http-route-with-grpc-timeout-dest/backend/0"

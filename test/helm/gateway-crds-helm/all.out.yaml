@@ -19795,6 +19795,14 @@ spec:
                           Default: 1 hour.
                         pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                         type: string
+                      grpcTimeoutHeaderMax:
+                        description: |-
+                          GrpcTimeoutHeaderMax is the maximum timeout value for gRPC requests as specified
+                          via the grpc-timeout header sent by gRPC clients. When present, Envoy will use the
+                          value from the grpc-timeout header, but limit it to this maximum value.
+                          If set to 0, the grpc-timeout header is used without modification.
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                        type: string
                       maxConnectionDuration:
                         description: |-
                           The maximum duration of an HTTP connection.
@@ -22835,6 +22843,14 @@ spec:
                                   description: |-
                                     The idle timeout for an HTTP connection. Idle time is defined as a period in which there are no active requests in the connection.
                                     Default: 1 hour.
+                                  pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                  type: string
+                                grpcTimeoutHeaderMax:
+                                  description: |-
+                                    GrpcTimeoutHeaderMax is the maximum timeout value for gRPC requests as specified
+                                    via the grpc-timeout header sent by gRPC clients. When present, Envoy will use the
+                                    value from the grpc-timeout header, but limit it to this maximum value.
+                                    If set to 0, the grpc-timeout header is used without modification.
                                   pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                   type: string
                                 maxConnectionDuration:
@@ -36317,6 +36333,14 @@ spec:
                                                       Default: 1 hour.
                                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                     type: string
+                                                  grpcTimeoutHeaderMax:
+                                                    description: |-
+                                                      GrpcTimeoutHeaderMax is the maximum timeout value for gRPC requests as specified
+                                                      via the grpc-timeout header sent by gRPC clients. When present, Envoy will use the
+                                                      value from the grpc-timeout header, but limit it to this maximum value.
+                                                      If set to 0, the grpc-timeout header is used without modification.
+                                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                                    type: string
                                                   maxConnectionDuration:
                                                     description: |-
                                                       The maximum duration of an HTTP connection.
@@ -37434,6 +37458,14 @@ spec:
                                                     description: |-
                                                       The idle timeout for an HTTP connection. Idle time is defined as a period in which there are no active requests in the connection.
                                                       Default: 1 hour.
+                                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                                    type: string
+                                                  grpcTimeoutHeaderMax:
+                                                    description: |-
+                                                      GrpcTimeoutHeaderMax is the maximum timeout value for gRPC requests as specified
+                                                      via the grpc-timeout header sent by gRPC clients. When present, Envoy will use the
+                                                      value from the grpc-timeout header, but limit it to this maximum value.
+                                                      If set to 0, the grpc-timeout header is used without modification.
                                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                     type: string
                                                   maxConnectionDuration:
@@ -38632,6 +38664,14 @@ spec:
                                                 Default: 1 hour.
                                               pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                               type: string
+                                            grpcTimeoutHeaderMax:
+                                              description: |-
+                                                GrpcTimeoutHeaderMax is the maximum timeout value for gRPC requests as specified
+                                                via the grpc-timeout header sent by gRPC clients. When present, Envoy will use the
+                                                value from the grpc-timeout header, but limit it to this maximum value.
+                                                If set to 0, the grpc-timeout header is used without modification.
+                                              pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                              type: string
                                             maxConnectionDuration:
                                               description: |-
                                                 The maximum duration of an HTTP connection.
@@ -39748,6 +39788,14 @@ spec:
                                         description: |-
                                           The idle timeout for an HTTP connection. Idle time is defined as a period in which there are no active requests in the connection.
                                           Default: 1 hour.
+                                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                        type: string
+                                      grpcTimeoutHeaderMax:
+                                        description: |-
+                                          GrpcTimeoutHeaderMax is the maximum timeout value for gRPC requests as specified
+                                          via the grpc-timeout header sent by gRPC clients. When present, Envoy will use the
+                                          value from the grpc-timeout header, but limit it to this maximum value.
+                                          If set to 0, the grpc-timeout header is used without modification.
                                         pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                         type: string
                                       maxConnectionDuration:
@@ -41846,6 +41894,14 @@ spec:
                                       Default: 1 hour.
                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
+                                  grpcTimeoutHeaderMax:
+                                    description: |-
+                                      GrpcTimeoutHeaderMax is the maximum timeout value for gRPC requests as specified
+                                      via the grpc-timeout header sent by gRPC clients. When present, Envoy will use the
+                                      value from the grpc-timeout header, but limit it to this maximum value.
+                                      If set to 0, the grpc-timeout header is used without modification.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
                                   maxConnectionDuration:
                                     description: |-
                                       The maximum duration of an HTTP connection.
@@ -42859,6 +42915,14 @@ spec:
                                     description: |-
                                       The idle timeout for an HTTP connection. Idle time is defined as a period in which there are no active requests in the connection.
                                       Default: 1 hour.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                  grpcTimeoutHeaderMax:
+                                    description: |-
+                                      GrpcTimeoutHeaderMax is the maximum timeout value for gRPC requests as specified
+                                      via the grpc-timeout header sent by gRPC clients. When present, Envoy will use the
+                                      value from the grpc-timeout header, but limit it to this maximum value.
+                                      If set to 0, the grpc-timeout header is used without modification.
                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
                                   maxConnectionDuration:
@@ -44088,6 +44152,14 @@ spec:
                                           description: |-
                                             The idle timeout for an HTTP connection. Idle time is defined as a period in which there are no active requests in the connection.
                                             Default: 1 hour.
+                                          pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                          type: string
+                                        grpcTimeoutHeaderMax:
+                                          description: |-
+                                            GrpcTimeoutHeaderMax is the maximum timeout value for gRPC requests as specified
+                                            via the grpc-timeout header sent by gRPC clients. When present, Envoy will use the
+                                            value from the grpc-timeout header, but limit it to this maximum value.
+                                            If set to 0, the grpc-timeout header is used without modification.
                                           pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                           type: string
                                         maxConnectionDuration:
@@ -45357,6 +45429,14 @@ spec:
                                     description: |-
                                       The idle timeout for an HTTP connection. Idle time is defined as a period in which there are no active requests in the connection.
                                       Default: 1 hour.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                  grpcTimeoutHeaderMax:
+                                    description: |-
+                                      GrpcTimeoutHeaderMax is the maximum timeout value for gRPC requests as specified
+                                      via the grpc-timeout header sent by gRPC clients. When present, Envoy will use the
+                                      value from the grpc-timeout header, but limit it to this maximum value.
+                                      If set to 0, the grpc-timeout header is used without modification.
                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
                                   maxConnectionDuration:

@@ -53,6 +53,14 @@ type HTTPTimeout struct {
 	//
 	// +optional
 	StreamTimeout *gwapiv1.Duration `json:"streamTimeout,omitempty"`
+
+	// GrpcTimeoutHeaderMax is the maximum timeout value for gRPC requests as specified
+	// via the grpc-timeout header sent by gRPC clients. When present, Envoy will use the
+	// value from the grpc-timeout header, but limit it to this maximum value.
+	// If set to 0, the grpc-timeout header is used without modification.
+	//
+	// +optional
+	GrpcTimeoutHeaderMax *gwapiv1.Duration `json:"grpcTimeoutHeaderMax,omitempty" yaml:"grpcTimeoutHeaderMax,omitempty"`
 }
 
 type ClientTimeout struct {

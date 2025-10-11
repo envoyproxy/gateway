@@ -2476,6 +2476,7 @@ _Appears in:_
 | `maxConnectionDuration` | _[Duration](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.Duration)_ |  false  |  | The maximum duration of an HTTP connection.<br />Default: unlimited. |
 | `requestTimeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.Duration)_ |  false  |  | RequestTimeout is the time until which entire response is received from the upstream. |
 | `streamTimeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.Duration)_ |  false  |  | StreamTimeout is the timeout for streaming requests. This timeout does not apply to non-streaming requests.<br />When set to "0s", the timeout is disabled for streaming requests, allowing them to run indefinitely.<br />This is particularly useful for gRPC streaming calls.<br />Default: inherited from RequestTimeout. |
+| `grpcTimeoutHeaderMax` | _[Duration](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.Duration)_ |  false  |  | GrpcTimeoutHeaderMax is the maximum timeout value for gRPC requests as specified<br />via the grpc-timeout header sent by gRPC clients. When present, Envoy will use the<br />value from the grpc-timeout header, but limit it to this maximum value.<br />If set to 0, the grpc-timeout header is used without modification. |
 
 
 #### HTTPURLRewriteFilter
