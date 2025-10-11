@@ -177,8 +177,8 @@ func (t *Translator) processHTTPRouteParentRefs(httpRoute *HTTPRouteContext, res
 
 func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRef *RouteParentContext, resources *resource.Resources) ([]*ir.HTTPRoute, []status.Error) {
 	var (
-		irRoutes []*ir.HTTPRoute
-		errs     = &status.MultiStatusError{}
+		irRoutes       []*ir.HTTPRoute
+		errorCollector = &status.TypedErrorCollector{}
 	)
 	pattern := getStatPattern(httpRoute, parentRef, t.GatewayControllerName)
 
@@ -190,12 +190,12 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 			// e.g. Failed to resolve the BackendRef in the RequestMirror filter.
 			// Other errors should be treated as Accepted condition type.
 			if err.Type() != gwapiv1.RouteConditionResolvedRefs {
-				errs.Add(status.NewRouteStatusError(
+				errorCollector.Add(status.NewRouteStatusError(
 					fmt.Errorf("failed to process route rule %d: %w", ruleIdx, err),
 					status.ConvertToAcceptedReason(err.Reason()),
 				).WithType(gwapiv1.RouteConditionAccepted))
 			} else {
-				errs.Add(err)
+				errorCollector.Add(err)
 			}
 			continue
 		}
@@ -206,7 +206,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 		// so generate a unique Xds IR HTTPRoute per match.
 		ruleRoutes, err := t.processHTTPRouteRule(httpRoute, ruleIdx, httpFiltersContext, &rule, routeRuleMetadata)
 		if err != nil {
-			errs.Add(status.NewRouteStatusError(
+			errorCollector.Add(status.NewRouteStatusError(
 				fmt.Errorf("failed to process route rule %d: %w", ruleIdx, err),
 				status.ConvertToAcceptedReason(err.Reason()),
 			).WithType(gwapiv1.RouteConditionAccepted))
@@ -232,13 +232,13 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 				// Gateway API conformance: When backendRef Service exists but has no endpoints,
 				// the ResolvedRefs condition should NOT be set to False.
 				if err.Reason() == status.RouteReasonEndpointsNotFound {
-					errs.Add(status.NewRouteStatusError(
+					errorCollector.Add(status.NewRouteStatusError(
 						fmt.Errorf("failed to find endpoints: %w", err),
 						err.Reason(),
 					).WithType(status.RouteConditionBackendsAvailable))
 					failedNoReadyEndpoints = true
 				} else {
-					errs.Add(status.NewRouteStatusError(
+					errorCollector.Add(status.NewRouteStatusError(
 						fmt.Errorf("failed to process route rule %d backendRef %d: %w", ruleIdx, i, err),
 						err.Reason(),
 					))
@@ -312,7 +312,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 		}
 
 		if hasDynamicResolver && len(rule.BackendRefs) > 1 {
-			errs.Add(status.NewRouteStatusError(
+			errorCollector.Add(status.NewRouteStatusError(
 				fmt.Errorf(
 					"failed to process route rule %d: dynamic resolver is not supported for multiple backendRefs",
 					ruleIdx),
@@ -326,10 +326,16 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 
 		irRoutes = append(irRoutes, ruleRoutes...)
 	}
-	if errs.Empty() {
+	if errorCollector.Empty() {
 		return irRoutes, nil
 	}
-	return irRoutes, errs.GroupByType()
+
+	types := errorCollector.Types()
+	errs := make([]status.Error, 0, len(types))
+	for _, t := range types {
+		errs = append(errs, errorCollector.GetError(t))
+	}
+	return irRoutes, errs
 }
 
 func processRouteTrafficFeatures(irRoute *ir.HTTPRoute, rule *gwapiv1.HTTPRouteRule) {
@@ -661,8 +667,8 @@ func (t *Translator) processGRPCRouteParentRefs(grpcRoute *GRPCRouteContext, res
 
 func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRef *RouteParentContext, resources *resource.Resources) ([]*ir.HTTPRoute, []status.Error) {
 	var (
-		irRoutes []*ir.HTTPRoute
-		errs     = &status.MultiStatusError{}
+		irRoutes       []*ir.HTTPRoute
+		errorCollector = &status.TypedErrorCollector{}
 	)
 	pattern := getStatPattern(grpcRoute, parentRef, t.GatewayControllerName)
 
@@ -671,7 +677,7 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 		rule := &grpcRoute.Spec.Rules[ruleIdx]
 		httpFiltersContext, err := t.ProcessGRPCFilters(parentRef, grpcRoute, rule.Filters, resources)
 		if err != nil {
-			errs.Add(status.NewRouteStatusError(
+			errorCollector.Add(status.NewRouteStatusError(
 				fmt.Errorf("failed to process route rule %d: %w", ruleIdx, err),
 				status.ConvertToAcceptedReason(err.Reason()),
 			).WithType(gwapiv1.RouteConditionAccepted))
@@ -682,7 +688,7 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 		// a unique Xds IR HTTPRoute per match.
 		ruleRoutes, err := t.processGRPCRouteRule(grpcRoute, ruleIdx, httpFiltersContext, rule)
 		if err != nil {
-			errs.Add(status.NewRouteStatusError(
+			errorCollector.Add(status.NewRouteStatusError(
 				fmt.Errorf("failed to process route rule %d: %w", ruleIdx, err),
 				status.ConvertToAcceptedReason(err.Reason()),
 			).WithType(gwapiv1.RouteConditionAccepted))
@@ -706,13 +712,13 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 				// Gateway API conformance: When backendRef Service exists but has no endpoints,
 				// the ResolvedRefs condition should NOT be set to False.
 				if err.Reason() == status.RouteReasonEndpointsNotFound {
-					errs.Add(status.NewRouteStatusError(
+					errorCollector.Add(status.NewRouteStatusError(
 						fmt.Errorf("failed to find endpoints: %w", err),
 						err.Reason(),
 					).WithType(status.RouteConditionBackendsAvailable))
 					failedNoReadyEndpoints = true
 				} else {
-					errs.Add(status.NewRouteStatusError(
+					errorCollector.Add(status.NewRouteStatusError(
 						fmt.Errorf("failed to process route rule %d backendRef %d: %w", ruleIdx, i, err),
 						err.Reason(),
 					))
@@ -776,10 +782,16 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 		irRoutes = append(irRoutes, ruleRoutes...)
 	}
 
-	if errs.Empty() {
+	if errorCollector.Empty() {
 		return irRoutes, nil
 	}
-	return irRoutes, errs.GroupByType()
+
+	types := errorCollector.Types()
+	errs := make([]status.Error, 0, len(types))
+	for _, t := range types {
+		errs = append(errs, errorCollector.GetError(t))
+	}
+	return irRoutes, errs
 }
 
 func (t *Translator) processGRPCRouteRule(grpcRoute *GRPCRouteContext, ruleIdx int, httpFiltersContext *HTTPFiltersContext, rule *gwapiv1.GRPCRouteRule) ([]*ir.HTTPRoute, status.Error) {
