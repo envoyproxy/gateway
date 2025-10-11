@@ -23,10 +23,10 @@ func init() {
 var OIDCBackendClusterTest = suite.ConformanceTest{
 	ShortName:   "OIDC with BackendCluster",
 	Description: "Test OIDC authentication",
-	Manifests:   []string{"testdata/oidc-keycloak.yaml"},
+	Manifests:   []string{"testdata/oidc-keycloak.yaml", "testdata/oidc-securitypolicy-backendcluster.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		t.Run("oidc provider represented by a BackendCluster", func(t *testing.T) {
-			testOIDC(t, suite, "testdata/oidc-securitypolicy-backendcluster.yaml")
+			testOIDC(t, suite)
 		})
 	},
 }
