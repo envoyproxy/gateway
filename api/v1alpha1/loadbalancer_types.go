@@ -85,6 +85,11 @@ type ConsistentHash struct {
 	// +optional
 	Header *Header `json:"header,omitempty"`
 
+	// Headers configures the header hash policy for each header, when the consistent hash type is set to Header.
+	//
+	// +optional
+	Headers []*Header `json:"headers,omitempty"`
+
 	// Cookie configures the cookie hash policy when the consistent hash type is set to Cookie.
 	//
 	// +optional
