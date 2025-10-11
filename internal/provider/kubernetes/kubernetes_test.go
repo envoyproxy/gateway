@@ -876,9 +876,6 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 				if !ok {
 					return false
 				}
-				if len(res.HTTPRoutes) != 0 {
-					return false
-				}
 				return assert.Contains(t, res.HTTPRoutes, &testCase.route)
 			}, defaultWait, defaultTick)
 
