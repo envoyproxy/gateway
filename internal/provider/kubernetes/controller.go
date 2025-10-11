@@ -203,7 +203,7 @@ func newGatewayAPIController(ctx context.Context, mgr manager.Manager, cfg *conf
 		// Subscribe to resource updates
 		r.subscribeToResources(ctx)
 		// Update status
-		go r.subscribeAndUpdateStatus(ctx, cfg.EnvoyGateway.ExtensionManager != nil)
+		go r.updateStatusFromSubscriptions(ctx, cfg.EnvoyGateway.ExtensionManager != nil)
 		r.log.Info("started")
 		// Close resources if the context is done.
 		<-ctx.Done()
