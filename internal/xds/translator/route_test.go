@@ -92,6 +92,41 @@ func TestBuildHashPolicy(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "ConsistentHash with multiple Headers",
+			httpRoute: &ir.HTTPRoute{
+				Traffic: &ir.TrafficFeatures{
+					LoadBalancer: &ir.LoadBalancer{ConsistentHash: &ir.ConsistentHash{Headers: []*ir.Header{
+						{Name: "name"},
+						{Name: "bazz"},
+						{Name: "buzz"},
+					}}},
+				},
+			},
+			want: []*routev3.RouteAction_HashPolicy{
+				{
+					PolicySpecifier: &routev3.RouteAction_HashPolicy_Header_{
+						Header: &routev3.RouteAction_HashPolicy_Header{
+							HeaderName: "name",
+						},
+					},
+				},
+				{
+					PolicySpecifier: &routev3.RouteAction_HashPolicy_Header_{
+						Header: &routev3.RouteAction_HashPolicy_Header{
+							HeaderName: "bazz",
+						},
+					},
+				},
+				{
+					PolicySpecifier: &routev3.RouteAction_HashPolicy_Header_{
+						Header: &routev3.RouteAction_HashPolicy_Header{
+							HeaderName: "buzz",
+						},
+					},
+				},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
