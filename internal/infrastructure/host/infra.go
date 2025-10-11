@@ -16,6 +16,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/infrastructure/common"
 	"github.com/envoyproxy/gateway/internal/logging"
+	"github.com/envoyproxy/gateway/internal/message"
 	"github.com/envoyproxy/gateway/internal/utils/file"
 )
 
@@ -57,9 +58,12 @@ type Infra struct {
 	Stdout io.Writer
 	// Stderr is the writer for error output (for Envoy stderr).
 	Stderr io.Writer
+
+	// errors is the notifier used to send async errors to the main control loop.
+	errors message.ErrorNotifier
 }
 
-func NewInfra(runnerCtx context.Context, cfg *config.Server, logger logging.Logger) (*Infra, error) {
+func NewInfra(runnerCtx context.Context, cfg *config.Server, logger logging.Logger, errors message.ErrorNotifier) (*Infra, error) {
 	// Ensure the home directory exist.
 	if err := os.MkdirAll(defaultHomeDir, 0o750); err != nil {
 		return nil, fmt.Errorf("failed to create dir: %w", err)
@@ -84,6 +88,7 @@ func NewInfra(runnerCtx context.Context, cfg *config.Server, logger logging.Logg
 		defaultEnvoyImage: egv1a1.DefaultEnvoyProxyImage,
 		Stdout:            cfg.Stdout,
 		Stderr:            cfg.Stderr,
+		errors:            errors,
 	}
 	return infra, nil
 }

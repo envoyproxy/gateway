@@ -106,6 +106,9 @@ func (i *Infra) runEnvoy(ctx context.Context, envoyVersion, name string, args []
 			api.EnvoyVersion(envoyVersion))
 		if err != nil {
 			i.Logger.Error(err, "failed to run envoy")
+			// If the Envoy process fails to start, notify an unrecoverable error so that the main control
+			// loop can properly handle it.
+			i.errors.Notify(err)
 		}
 	}()
 }

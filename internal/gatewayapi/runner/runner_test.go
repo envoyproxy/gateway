@@ -22,6 +22,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/extension/registry"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/message"
+	"github.com/envoyproxy/gateway/internal/utils/test"
 	pb "github.com/envoyproxy/gateway/proto/extension"
 )
 
@@ -44,7 +45,7 @@ func TestRunner(t *testing.T) {
 	})
 	ctx := context.Background()
 	// Start
-	err = r.Start(ctx)
+	err = r.Start(ctx, test.RunnerErrorsChan(t))
 	require.NoError(t, err)
 
 	// IR is nil at start

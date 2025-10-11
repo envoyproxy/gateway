@@ -25,6 +25,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/infrastructure/common"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/proxy"
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/message"
 	testutil "github.com/envoyproxy/gateway/internal/utils/test"
 )
 
@@ -221,7 +222,7 @@ func TestCreateOrUpdateProxyConfigMap(t *testing.T) {
 					WithInterceptorFuncs(interceptorFunc).
 					Build()
 			}
-			kube := NewInfra(cli, cfg)
+			kube := NewInfra(cli, cfg, message.RunnerErrorNotifier(t.Name(), testutil.RunnerErrorsChan(t)))
 			require.NoError(t, setupOwnerReferenceResources(ctx, kube.Client))
 			if tc.gatewayNamespaceMode {
 				kube.EnvoyGateway.Provider.Kubernetes.Deploy = &egv1a1.KubernetesDeployMode{
@@ -284,7 +285,7 @@ func TestDeleteConfigProxyMap(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			ctx := context.Background()
 			cli := fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects(tc.current).Build()
-			kube := NewInfra(cli, cfg)
+			kube := NewInfra(cli, cfg, message.RunnerErrorNotifier(t.Name(), testutil.RunnerErrorsChan(t)))
 			require.NoError(t, setupOwnerReferenceResources(ctx, kube.Client))
 
 			infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNamespaceLabel] = "default"

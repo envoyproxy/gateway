@@ -103,7 +103,7 @@ func TestFileProvider(t *testing.T) {
 	cfg, err := newFileProviderConfig([]string{watchFilePath, watchDirPath})
 	require.NoError(t, err)
 	pResources := new(message.ProviderResources)
-	fp, err := New(ctx, cfg, pResources)
+	fp, err := New(ctx, cfg, pResources, message.RunnerErrorNotifier(t.Name(), testutil.RunnerErrorsChan(t)))
 	require.NoError(t, err)
 	// Start file provider.
 	go func() {

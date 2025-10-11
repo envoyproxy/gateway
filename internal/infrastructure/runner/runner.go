@@ -43,7 +43,7 @@ func New(cfg *Config) *Runner {
 }
 
 // Start starts the infrastructure runner
-func (r *Runner) Start(ctx context.Context) (err error) {
+func (r *Runner) Start(ctx context.Context, errChan chan<- error) (err error) {
 	r.Logger = r.Logger.WithName(r.Name()).WithValues("runner", r.Name())
 	if r.EnvoyGateway.Provider.Type == egv1a1.ProviderTypeCustom &&
 		r.EnvoyGateway.Provider.Custom.Infrastructure == nil {
@@ -51,7 +51,8 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 		return nil
 	}
 
-	r.mgr, err = infrastructure.NewManager(ctx, &r.Server, r.Logger)
+	errNotifier := message.RunnerErrorNotifier(r.Name(), errChan)
+	r.mgr, err = infrastructure.NewManager(ctx, &r.Server, r.Logger, errNotifier)
 	if err != nil {
 		r.Logger.Error(err, "failed to create new manager")
 		return err

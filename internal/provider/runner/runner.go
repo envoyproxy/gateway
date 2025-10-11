@@ -41,19 +41,20 @@ func (r *Runner) Name() string {
 }
 
 // Start implements Runner interface.
-func (r *Runner) Start(ctx context.Context) (err error) {
+func (r *Runner) Start(ctx context.Context, errChan chan<- error) (err error) {
 	r.Logger = r.Logger.WithName(r.Name()).WithValues("runner", r.Name())
+	errNotifier := message.RunnerErrorNotifier(r.Name(), errChan)
 
 	var p provider.Provider
 	switch r.EnvoyGateway.Provider.Type {
 	case egv1a1.ProviderTypeKubernetes:
-		p, err = r.createKubernetesProvider(ctx)
+		p, err = r.createKubernetesProvider(ctx, errNotifier)
 		if err != nil {
 			return fmt.Errorf("failed to create kubernetes provider: %w", err)
 		}
 
 	case egv1a1.ProviderTypeCustom:
-		p, err = r.createCustomResourceProvider(ctx)
+		p, err = r.createCustomResourceProvider(ctx, errNotifier)
 		if err != nil {
 			return fmt.Errorf("failed to create custom provider: %w", err)
 		}
@@ -73,13 +74,13 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 	return nil
 }
 
-func (r *Runner) createKubernetesProvider(ctx context.Context) (*kubernetes.Provider, error) {
+func (r *Runner) createKubernetesProvider(ctx context.Context, errors message.ErrorNotifier) (*kubernetes.Provider, error) {
 	cfg, err := ctrl.GetConfig()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get kubeconfig: %w", err)
 	}
 
-	p, err := kubernetes.New(ctx, cfg, &r.Server, r.ProviderResources)
+	p, err := kubernetes.New(ctx, cfg, &r.Server, r.ProviderResources, errors)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create provider %s: %w", egv1a1.ProviderTypeKubernetes, err)
 	}
@@ -87,10 +88,10 @@ func (r *Runner) createKubernetesProvider(ctx context.Context) (*kubernetes.Prov
 	return p, err
 }
 
-func (r *Runner) createCustomResourceProvider(ctx context.Context) (p provider.Provider, err error) {
+func (r *Runner) createCustomResourceProvider(ctx context.Context, errors message.ErrorNotifier) (p provider.Provider, err error) {
 	switch r.EnvoyGateway.Provider.Custom.Resource.Type {
 	case egv1a1.ResourceProviderTypeFile:
-		p, err = file.New(ctx, &r.Server, r.ProviderResources)
+		p, err = file.New(ctx, &r.Server, r.ProviderResources, errors)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create provider %s: %w", egv1a1.ProviderTypeCustom, err)
 		}

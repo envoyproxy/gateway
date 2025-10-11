@@ -36,7 +36,7 @@ func New(cfg *Config) *Runner {
 	}
 }
 
-func (r *Runner) Start(ctx context.Context) error {
+func (r *Runner) Start(ctx context.Context, _ chan<- error) error {
 	if r.cfg.EnvoyGateway.GetEnvoyGatewayAdmin().EnableDumpConfig {
 		spewConfig := spew.NewDefaultConfig()
 		spewConfig.DisableMethods = true
