@@ -461,6 +461,7 @@ _Appears in:_
 | `caCertificateRefs` | _LocalObjectReference array_ |  false  |  | CACertificateRefs contains one or more references to Kubernetes objects that<br />contain TLS certificates of the Certificate Authorities that can be used<br />as a trust anchor to validate the certificates presented by the backend.<br />A single reference to a Kubernetes ConfigMap or a Kubernetes Secret,<br />with the CA certificate in a key named `ca.crt` is currently supported.<br />If CACertificateRefs is empty or unspecified, then WellKnownCACertificates must be<br />specified. Only one of CACertificateRefs or WellKnownCACertificates may be specified,<br />not both. |
 | `wellKnownCACertificates` | _[WellKnownCACertificatesType](#wellknowncacertificatestype)_ |  false  |  | WellKnownCACertificates specifies whether system CA certificates may be used in<br />the TLS handshake between the gateway and backend pod.<br />If WellKnownCACertificates is unspecified or empty (""), then CACertificateRefs<br />must be specified with at least one entry for a valid configuration. Only one of<br />CACertificateRefs or WellKnownCACertificates may be specified, not both. |
 | `insecureSkipVerify` | _boolean_ |  false  | false | InsecureSkipVerify indicates whether the upstream's certificate verification<br />should be skipped. Defaults to "false". |
+| `sni` | _[PreciseHostname](#precisehostname)_ |  false  |  | SNI is specifies the SNI value used when establishing an upstream TLS connection to the backend.<br />Envoy Gateway will use the HTTP host header value for SNI, when all resources referenced in BackendRefs are:<br />1. Backend resources that do not set SNI, or<br />2. Service/ServiceImport resources that do not have a BackendTLSPolicy attached to them<br />When a BackendTLSPolicy attaches to a Backend resource, the BackendTLSPolicy's Hostname value takes precedence<br />over this value. |
 
 
 #### BackendTelemetry
@@ -3678,7 +3679,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `clientCIDRs` | _[CIDR](#cidr) array_ |  false  |  | ClientCIDRs are the IP CIDR ranges of the client.<br />Valid examples are "192.168.1.0/24" or "2001:db8::/64"<br />If multiple CIDR ranges are specified, one of the CIDR ranges must match<br />the client IP for the rule to match.<br />The client IP is inferred from the X-Forwarded-For header, a custom header,<br />or the proxy protocol.<br />You can use the `ClientIPDetection` or the `ProxyProtocol` field in<br />the `ClientTrafficPolicy` to configure how the client IP is detected. |
+| `clientCIDRs` | _[CIDR](#cidr) array_ |  false  |  | ClientCIDRs are the IP CIDR ranges of the client.<br />Valid examples are "192.168.1.0/24" or "2001:db8::/64"<br />If multiple CIDR ranges are specified, one of the CIDR ranges must match<br />the client IP for the rule to match.<br />The client IP is inferred from the X-Forwarded-For header, a custom header,<br />or the proxy protocol.<br />You can use the `ClientIPDetection` or the `ProxyProtocol` field in<br />the `ClientTrafficPolicy` to configure how the client IP is detected.<br />For TCPRoute targets (raw TCP connections), HTTP headers such as<br />X-Forwarded-For are not available. The client IP is obtained from the<br />TCP connection's peer address. If intermediaries (load balancers, NAT)<br />terminate or proxy TCP, the original client IP will only be available<br />if the intermediary preserves the source address (for example by<br />enabling the PROXY protocol or avoiding SNAT). Ensure your L4 proxy is<br />configured to preserve the source IP to enable correct client-IP<br />matching for TCPRoute targets. |
 | `jwt` | _[JWTPrincipal](#jwtprincipal)_ |  false  |  | JWT authorize the request based on the JWT claims and scopes.<br />Note: in order to use JWT claims for authorization, you must configure the<br />JWT authentication in the same `SecurityPolicy`. |
 | `headers` | _[AuthorizationHeaderMatch](#authorizationheadermatch) array_ |  false  |  | Headers authorize the request based on user identity extracted from custom headers.<br />If multiple headers are specified, all headers must match for the rule to match. |
 
@@ -4642,6 +4643,12 @@ Gateway.
 
 SecurityPolicySpec defines the desired state of SecurityPolicy.
 
+NOTE: SecurityPolicy can target Gateway, HTTPRoute, GRPCRoute, and TCPRoute.
+When a SecurityPolicy targets a TCPRoute, only client-IP based authorization
+(Authorization rules that use Principal.ClientCIDRs) is applied. Other
+authentication/authorization features such as JWT, API Key, Basic Auth,
+OIDC, or External Authorization are not applicable to TCPRoute targets.
+
 _Appears in:_
 - [SecurityPolicy](#securitypolicy)
 
@@ -5378,7 +5385,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `numTrustedHops` | _integer_ |  false  |  | NumTrustedHops controls the number of additional ingress proxy hops from the right side of XFF HTTP<br />headers to trust when determining the origin client's IP address.<br />Only one of NumTrustedHops and TrustedCIDRs must be set. |
+| `numTrustedHops` | _integer_ |  false  |  | NumTrustedHops specifies how many trusted hops to count from the rightmost side of<br />the X-Forwarded-For (XFF) header when determining the original client’s IP address.<br />If NumTrustedHops is set to N, the client IP is taken from the Nth address from the<br />right end of the XFF header.<br />Example:<br />  XFF = "203.0.113.128, 203.0.113.10, 203.0.113.1"<br />  NumTrustedHops = 2<br />  → Trusted client address = 203.0.113.10<br />Only one of NumTrustedHops or TrustedCIDRs should be configured. |
 | `trustedCIDRs` | _[CIDR](#cidr) array_ |  false  |  | TrustedCIDRs is a list of CIDR ranges to trust when evaluating<br />the remote IP address to determine the original client’s IP address.<br />When the remote IP address matches a trusted CIDR and the x-forwarded-for header was sent,<br />each entry in the x-forwarded-for header is evaluated from right to left<br />and the first public non-trusted address is used as the original client address.<br />If all addresses in x-forwarded-for are within the trusted list, the first (leftmost) entry is used.<br />Only one of NumTrustedHops and TrustedCIDRs must be set. |
 
 
