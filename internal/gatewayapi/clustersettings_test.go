@@ -32,7 +32,7 @@ func TestTranslateTrafficFeatures(t *testing.T) {
 			want:   nil,
 		},
 		{
-			name: "empty policy",
+			name:   "empty policy",
 			policy: &egv1a1.ClusterSettings{},
 			want:   nil,
 		},
@@ -268,9 +268,9 @@ func TestBuildTCPKeepAlive(t *testing.T) {
 			name: "valid keepalive settings",
 			policy: &egv1a1.ClusterSettings{
 				TCPKeepalive: &egv1a1.TCPKeepalive{
-					Probes:    ptr.To(uint32(3)),
-					IdleTime:  ptr.To(gwapiv1.Duration("60s")),
-					Interval:  ptr.To(gwapiv1.Duration("10s")),
+					Probes:   ptr.To(uint32(3)),
+					IdleTime: ptr.To(gwapiv1.Duration("60s")),
+					Interval: ptr.To(gwapiv1.Duration("10s")),
 				},
 			},
 			want: &ir.TCPKeepalive{
@@ -328,10 +328,10 @@ func TestBuildCircuitBreaker(t *testing.T) {
 			name: "valid circuit breaker settings",
 			policy: &egv1a1.ClusterSettings{
 				CircuitBreaker: &egv1a1.CircuitBreaker{
-					MaxConnections:        ptr.To(int64(100)),
-					MaxParallelRequests:   ptr.To(int64(200)),
-					MaxPendingRequests:    ptr.To(int64(50)),
-					MaxParallelRetries:    ptr.To(int64(10)),
+					MaxConnections:           ptr.To(int64(100)),
+					MaxParallelRequests:      ptr.To(int64(200)),
+					MaxPendingRequests:       ptr.To(int64(50)),
+					MaxParallelRetries:       ptr.To(int64(10)),
 					MaxRequestsPerConnection: ptr.To(int64(1000)),
 					PerEndpoint: &egv1a1.PerEndpointCircuitBreakers{
 						MaxConnections: ptr.To(int64(25)),
@@ -705,13 +705,13 @@ func TestBuildHealthCheck(t *testing.T) {
 				HealthCheck: &egv1a1.HealthCheck{
 					Active: &egv1a1.ActiveHealthCheck{
 						Type:               egv1a1.ActiveHealthCheckerTypeHTTP,
-						Timeout:           ptr.To(gwapiv1.Duration("5s")),
-						Interval:          ptr.To(gwapiv1.Duration("10s")),
+						Timeout:            ptr.To(gwapiv1.Duration("5s")),
+						Interval:           ptr.To(gwapiv1.Duration("10s")),
 						UnhealthyThreshold: ptr.To(uint32(3)),
 						HealthyThreshold:   ptr.To(uint32(2)),
 						HTTP: &egv1a1.HTTPActiveHealthChecker{
-							Path:   "/health",
-							Method: ptr.To("GET"),
+							Path:             "/health",
+							Method:           ptr.To("GET"),
 							ExpectedStatuses: []egv1a1.HTTPStatus{200, 201},
 						},
 					},
