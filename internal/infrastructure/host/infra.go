@@ -11,6 +11,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"sync"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
@@ -45,7 +46,7 @@ type Infra struct {
 	EnvoyGateway *egv1a1.EnvoyGateway
 
 	// proxyContextMap store the context of each running proxy by its name for lifecycle management.
-	proxyContextMap map[string]*proxyContext
+	proxyContextMap sync.Map
 
 	// TODO: remove this field once it supports the configurable homeDir
 	sdsConfigPath string
@@ -79,7 +80,6 @@ func NewInfra(runnerCtx context.Context, cfg *config.Server, logger logging.Logg
 		HomeDir:           defaultHomeDir,
 		Logger:            logger,
 		EnvoyGateway:      cfg.EnvoyGateway,
-		proxyContextMap:   make(map[string]*proxyContext),
 		sdsConfigPath:     defaultLocalCertPathDir,
 		defaultEnvoyImage: egv1a1.DefaultEnvoyProxyImage,
 		Stdout:            cfg.Stdout,

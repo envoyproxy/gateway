@@ -7,6 +7,7 @@ package host
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"path"
 	"testing"
@@ -47,13 +48,12 @@ func newMockInfra(t *testing.T, cfg *config.Server) *Infra {
 	require.NoError(t, err)
 
 	infra := &Infra{
-		HomeDir:         homeDir,
-		Logger:          logging.DefaultLogger(io.Discard, egv1a1.LogLevelInfo),
-		EnvoyGateway:    cfg.EnvoyGateway,
-		proxyContextMap: make(map[string]*proxyContext),
-		sdsConfigPath:   proxyDir,
-		Stdout:          io.Discard,
-		Stderr:          io.Discard,
+		HomeDir:       homeDir,
+		Logger:        logging.DefaultLogger(io.Discard, egv1a1.LogLevelInfo),
+		EnvoyGateway:  cfg.EnvoyGateway,
+		sdsConfigPath: proxyDir,
+		Stdout:        io.Discard,
+		Stderr:        io.Discard,
 	}
 	return infra
 }
@@ -104,11 +104,10 @@ func TestInfra_runEnvoy_stopEnvoy(t *testing.T) {
 	stdout := &bytes.Buffer{}
 	stderr := &bytes.Buffer{}
 	i := &Infra{
-		proxyContextMap: make(map[string]*proxyContext),
-		HomeDir:         tmpdir,
-		Logger:          logging.DefaultLogger(stdout, egv1a1.LogLevelInfo),
-		Stdout:          stdout,
-		Stderr:          stderr,
+		HomeDir: tmpdir,
+		Logger:  logging.DefaultLogger(stdout, egv1a1.LogLevelInfo),
+		Stdout:  stdout,
+		Stderr:  stderr,
 	}
 	// Ensures that run -> stop will successfully stop the envoy and we can
 	// run it again without any issues.
@@ -118,12 +117,57 @@ func TestInfra_runEnvoy_stopEnvoy(t *testing.T) {
 			"admin: {address: {socket_address: {address: '127.0.0.1', port_value: 9901}}}",
 		}
 		i.runEnvoy(t.Context(), "", "test", args)
-		require.Len(t, i.proxyContextMap, 1)
+		_, ok := i.proxyContextMap.Load("test")
+		require.True(t, ok, "expected proxy context to be stored")
 		i.stopEnvoy("test")
-		require.Empty(t, i.proxyContextMap)
+		_, ok = i.proxyContextMap.Load("test")
+		require.False(t, ok, "expected proxy context to be removed")
 		// If the cleanup didn't work, the error due to "address already in use" will be tried to be written to the nil logger,
 		// which will panic.
 	}
+}
+
+func TestInfra_Close(t *testing.T) {
+	tmpdir := t.TempDir()
+	// Ensures that all the required binaries are available.
+	err := func_e.Run(t.Context(), []string{"--version"}, api.HomeDir(tmpdir))
+	require.NoError(t, err)
+
+	i := &Infra{
+		HomeDir: tmpdir,
+		Logger:  logging.DefaultLogger(io.Discard, egv1a1.LogLevelInfo),
+		Stdout:  io.Discard,
+		Stderr:  io.Discard,
+	}
+
+	// Start multiple proxies
+	for idx := range 3 {
+		args := []string{
+			"--config-yaml",
+			"admin: {address: {socket_address: {address: '127.0.0.1', port_value: 0}}}",
+		}
+		i.runEnvoy(t.Context(), "", fmt.Sprintf("test-%d", idx), args)
+	}
+
+	// Verify all proxies are running
+	count := 0
+	i.proxyContextMap.Range(func(key, value interface{}) bool {
+		count++
+		return true
+	})
+	require.Equal(t, 3, count, "expected 3 proxies to be running")
+
+	// Close should stop all proxies
+	err = i.Close()
+	require.NoError(t, err)
+
+	// Verify all proxies are stopped
+	found := false
+	i.proxyContextMap.Range(func(key, value any) bool {
+		found = true
+		return false
+	})
+	require.False(t, found, "expected all proxies to be stopped")
 }
 
 func TestExtractSemver(t *testing.T) {
@@ -167,11 +211,10 @@ func TestInfra_runEnvoy_OutputRedirection(t *testing.T) {
 	stderr := buffers[1]
 
 	i := &Infra{
-		proxyContextMap: make(map[string]*proxyContext),
-		HomeDir:         tmpdir,
-		Logger:          logging.DefaultLogger(stdout, egv1a1.LogLevelInfo),
-		Stdout:          stdout,
-		Stderr:          stderr,
+		HomeDir: tmpdir,
+		Logger:  logging.DefaultLogger(stdout, egv1a1.LogLevelInfo),
+		Stdout:  stdout,
+		Stderr:  stderr,
 	}
 
 	// Run envoy with an invalid config to force it to write to stderr and exit quickly
@@ -181,7 +224,8 @@ func TestInfra_runEnvoy_OutputRedirection(t *testing.T) {
 	}
 
 	i.runEnvoy(t.Context(), "", "test", args)
-	require.Len(t, i.proxyContextMap, 1)
+	_, ok := i.proxyContextMap.Load("test")
+	require.True(t, ok, "expected proxy context to be stored")
 
 	// Wait a bit for envoy to fail
 	require.Eventually(t, func() bool {
@@ -189,7 +233,8 @@ func TestInfra_runEnvoy_OutputRedirection(t *testing.T) {
 	}, 5*time.Second, 100*time.Millisecond, "expected output to be written to buffers")
 
 	i.stopEnvoy("test")
-	require.Empty(t, i.proxyContextMap)
+	_, ok = i.proxyContextMap.Load("test")
+	require.False(t, ok, "expected proxy context to be removed")
 
 	// Verify that output was captured in buffers (either stdout or stderr should have content)
 	totalOutput := stdout.Len() + stderr.Len()
