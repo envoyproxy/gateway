@@ -44,7 +44,7 @@
                   sdsConfig:
                     ads: {}
                     resourceApiVersion: V3
-              csrfTokenExpiresIn: 3600s
+              csrfTokenExpiresIn: 2100s
               defaultExpiresIn: 3600s
               defaultRefreshTokenExpiresIn: 172800s
               forwardBearerToken: true
@@ -93,7 +93,6 @@
                   sdsConfig:
                     ads: {}
                     resourceApiVersion: V3
-              csrfTokenExpiresIn: 3600s
               denyRedirectMatcher:
               - name: test-exact
                 stringMatch:
