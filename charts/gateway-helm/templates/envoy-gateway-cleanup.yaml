@@ -1,0 +1,89 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "eg.fullname" . }}-cleanup
+  labels:
+  {{- include "eg.labels" . | nindent 4 }}
+  {{- if .Values.cleanup.rbac.labels }}
+  {{- toYaml .Values.cleanup.rbac.labels | nindent 4 }}
+  {{- end }}
+  annotations:
+    "helm.sh/hook": pre-delete
+    "helm.sh/hook-weight": "-1"   # Ensure rbac is created before the cleanup job when using ArgoCD.
+  {{- if .Values.cleanup.rbac.annotations }}
+    {{- toYaml .Values.cleanup.rbac.annotations | nindent 4 -}}
+  {{- end }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+- kind: ServiceAccount
+  name: default
+  namespace: '{{ .Release.Namespace }}'
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "eg.fullname" . }}-cleanup
+  namespace: '{{ .Release.Namespace }}'
+  labels:
+  {{- include "eg.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": pre-delete
+  {{- if .Values.cleanup.job.annotations }}
+    {{- toYaml .Values.cleanup.job.annotations | nindent 4 -}}
+  {{- end }}
+spec:
+  backoffLimit: 1
+  completions: 1
+  parallelism: 1
+  template:
+    metadata:
+      labels:
+        app: cleanup
+    spec:
+      containers:
+      - env:
+        - name: ENVOY_GATEWAY_NAMESPACE
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.namespace
+        image: {{ .Values.cleanup.job.image }}
+        command:
+          - "/bin/sh"
+          - -c
+          - |
+            kubectl delete rolebinding -n {{ .Release.Namespace }} {{ include "eg.fullname" . }}-certgen;
+            kubectl delete role -n {{ .Release.Namespace }} {{ include "eg.fullname" . }}-certgen;
+            kubectl delete clusterrolebinding {{ include "eg.fullname" . }}-certgen:{{ .Release.Namespace }};
+            kubectl delete clusterrole {{ include "eg.fullname" . }}-certgen:{{ .Release.Namespace }};
+            kubectl delete sa -n {{ .Release.Namespace }} {{ include "eg.fullname" . }}-certgen;
+            kubectl delete clusterrolebinding {{ include "eg.fullname" . }}-cleanup
+        imagePullPolicy: {{ include "eg.image.pullPolicy" . }}
+        name: envoy-gateway-cleanup
+        {{- with .Values.cleanup.job.resources }}
+        resources:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        securityContext:
+          {{- toYaml .Values.cleanup.job.securityContext | nindent 10 }}
+      {{- include "eg.image.pullSecrets" . | nindent 6 }}
+      {{- with .Values.cleanup.job.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.cleanup.job.nodeSelector }}
+      nodeSelector:
+        {{ toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.cleanup.job.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 6 }}
+      {{- end }}
+      restartPolicy: Never
+      serviceAccountName: default
+  {{- if not ( kindIs "invalid" .Values.cleanup.job.ttlSecondsAfterFinished) }}
+  ttlSecondsAfterFinished: {{ .Values.cleanup.job.ttlSecondsAfterFinished }}
+  {{- end }}
