@@ -14,6 +14,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/exp/slices"
 	appsv1 "k8s.io/api/apps/v1"
@@ -875,12 +876,11 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 				if !ok {
 					return false
 				}
-				return ok && len(res.HTTPRoutes) != 0
+				if len(res.HTTPRoutes) != 0 {
+					return false
+				}
+				return assert.Contains(t, res.HTTPRoutes, &testCase.route)
 			}, defaultWait, defaultTick)
-
-			res := resources.GetResourcesByGatewayClass(gc.Name)
-			require.NotNil(t, res)
-			require.Contains(t, res.HTTPRoutes, &testCase.route)
 
 			// Ensure the HTTPRoute Namespace is in the Namespace resource map.
 			require.Eventually(t, func() bool {
