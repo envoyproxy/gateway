@@ -231,6 +231,10 @@ func oauth2Config(securityFeatures *ir.SecurityFeatures) (*oauth2v3.OAuth2, erro
 		oauth2.Config.EndSessionEndpoint = *oidc.Provider.EndSessionEndpoint
 	}
 
+	if oidc.CSRFTokenTTL != nil {
+		oauth2.Config.CsrfTokenExpiresIn = durationpb.New(oidc.CSRFTokenTTL.Duration)
+	}
+
 	return oauth2, nil
 }
 

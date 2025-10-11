@@ -130,6 +130,16 @@ type OIDC struct {
 	// +optional
 	DefaultRefreshTokenTTL *gwapiv1.Duration `json:"defaultRefreshTokenTTL,omitempty"`
 
+	// CSRFTokenTTL defines how long the CSRF token generated during the OAuth2 authorization flow remains valid.
+	//
+	// This duration determines the lifetime of the CSRF cookie, which is validated against the CSRF token
+	// in the "state" parameter when the provider redirects back to the callback endpoint.
+	//
+	// If omitted, Envoy Gateway defaults the token expiration to 10 minutes.
+	//
+	// +optional
+	CSRFTokenTTL *gwapiv1.Duration `json:"csrfTokenTTL,omitempty"`
+
 	// Disable token encryption. When set to true, both the access token and the ID token will be stored in plain text.
 	// This option should only be used in secure environments where token encryption is not required.
 	// Default is false (tokens are encrypted).
