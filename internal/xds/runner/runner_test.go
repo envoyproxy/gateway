@@ -231,7 +231,7 @@ func TestServeXdsServerListenFailed(t *testing.T) {
 	require.NoError(t, err)
 	defer l.Close()
 
-	cfg, _ := config.New(os.Stdout)
+	cfg, _ := config.New(os.Stdout, os.Stderr)
 	r := New(&Config{
 		Server: *cfg,
 	})
@@ -248,7 +248,7 @@ func TestRunner(t *testing.T) {
 	// Setup
 	xdsIR := new(message.XdsIR)
 	pResource := new(message.ProviderResources)
-	cfg, err := config.New(os.Stdout)
+	cfg, err := config.New(os.Stdout, os.Stderr)
 	require.NoError(t, err)
 	r := New(&Config{
 		Server:            *cfg,
@@ -331,7 +331,7 @@ func TestRunner_withExtensionManager_FailOpen(t *testing.T) {
 	xdsIR := new(message.XdsIR)
 	pResource := new(message.ProviderResources)
 
-	cfg, err := config.New(os.Stdout)
+	cfg, err := config.New(os.Stdout, os.Stderr)
 	require.NoError(t, err)
 	require.NotNil(t, cfg)
 
@@ -414,7 +414,7 @@ func TestRunner_withExtensionManager_FailClosed(t *testing.T) {
 	xdsIR := new(message.XdsIR)
 	pResource := new(message.ProviderResources)
 
-	cfg, err := config.New(os.Stdout)
+	cfg, err := config.New(os.Stdout, os.Stderr)
 	require.NoError(t, err)
 	require.NotNil(t, cfg)
 
@@ -510,4 +510,36 @@ type xdsHookClientMock struct {
 
 func (c *xdsHookClientMock) PostHTTPListenerModifyHook(*listenerv3.Listener, []*unstructured.Unstructured) (*listenerv3.Listener, error) {
 	return nil, fmt.Errorf("assuming a network error during the call")
+}
+
+func TestGetRandomMaxConnectionAge(t *testing.T) {
+	// Counter to track how many times each value is returned
+	counts := make(map[time.Duration]int)
+
+	// Call the function 100 times
+	for i := 0; i < 100; i++ {
+		value := getRandomMaxConnectionAge()
+
+		// Verify the value is one of the expected values from maxConnectionAgeValues
+		found := false
+		for _, expected := range maxConnectionAgeValues {
+			if value == expected {
+				found = true
+				break
+			}
+		}
+		assert.True(t, found, "Unexpected value returned: %v", value)
+
+		// Track counts
+		counts[value]++
+	}
+
+	// Verify each known duration gets called at least 10 times
+	for _, expectedValue := range maxConnectionAgeValues {
+		count := counts[expectedValue]
+		assert.GreaterOrEqual(t, count, 10, "Expected value %v to be called at least 10 times, got %d", expectedValue, count)
+	}
+
+	// Verify we got different values (randomness check)
+	assert.Len(t, counts, len(maxConnectionAgeValues), "Should see all possible values")
 }

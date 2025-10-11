@@ -8,6 +8,7 @@ package host
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 
@@ -51,6 +52,11 @@ type Infra struct {
 
 	// defaultEnvoyImage is the default Envoy image to use if no Envoy version is set.
 	defaultEnvoyImage string
+
+	// Stdout is the writer for standard output (for func-e and Envoy stdout).
+	Stdout io.Writer
+	// Stderr is the writer for error output (for Envoy stderr).
+	Stderr io.Writer
 }
 
 func NewInfra(runnerCtx context.Context, cfg *config.Server, logger logging.Logger) (*Infra, error) {
@@ -76,6 +82,8 @@ func NewInfra(runnerCtx context.Context, cfg *config.Server, logger logging.Logg
 		proxyContextMap:   make(map[string]*proxyContext),
 		sdsConfigPath:     defaultLocalCertPathDir,
 		defaultEnvoyImage: egv1a1.DefaultEnvoyProxyImage,
+		Stdout:            cfg.Stdout,
+		Stderr:            cfg.Stderr,
 	}
 	return infra, nil
 }

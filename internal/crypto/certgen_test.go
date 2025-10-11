@@ -26,7 +26,7 @@ func TestGenerateCerts(t *testing.T) {
 		wantEnvoyDNSName        string
 	}
 
-	cfg, err := config.New(os.Stdout)
+	cfg, err := config.New(os.Stdout, os.Stderr)
 	require.NoError(t, err)
 
 	run := func(t *testing.T, name string, tc testcase) {
