@@ -21,18 +21,19 @@ COPY . .
 # buildx automatically provides TARGETPLATFORM (e.g., linux/amd64)
 RUN CGO_ENABLED=0 go build \
     -ldflags="${GO_LDFLAGS}" \
-    -o /extension-server \
-    ./cmd/extension-server
+    -o /fake-spire-agent \
+    ./cmd/fake-spire-agent
 
 # Stage 2: Create the final minimal image using the distroless base
 # This is the exact base image from your original Dockerfile
 FROM gcr.io/distroless/static:nonroot@sha256:e9ac71e2b8e279a8372741b7a0293afda17650d926900233ec3a7b2b7c22a246
 
 # Copy ONLY the compiled binary from the 'builder' stage
-COPY --from=builder /extension-server /usr/local/bin/extension-server
+COPY --from=builder /fake-spire-agent /usr/local/bin/fake-spire-agent
 
-# This USER line is optional as 'nonroot' image defaults to it, but it's good to be explicit.
-USER 65532:65532
+# Run as root to create and chmod the UDS at /var/run/spiffe-workload-api.
+# In Kubernetes with hostPath, set securityContext.runAsUser: 0 for this container.
+USER 0:0
 
 # Set the entrypoint for the container to run our application
-ENTRYPOINT ["/usr/local/bin/extension-server"]
+ENTRYPOINT ["/usr/local/bin/fake-spire-agent"]

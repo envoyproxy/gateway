@@ -6,6 +6,9 @@
 package main
 
 import (
+	extensionv1alpha1 "github.com/exampleorg/envoygateway-extension/api/v1alpha1"
+	"k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/client-go/kubernetes/scheme"
 	"log/slog"
 	"net"
 	"os"
@@ -18,6 +21,10 @@ import (
 
 	pb "github.com/envoyproxy/gateway/proto/extension"
 )
+
+func init() {
+	runtime.Must(extensionv1alpha1.AddToScheme(scheme.Scheme))
+}
 
 func main() {
 	app := cli.App{

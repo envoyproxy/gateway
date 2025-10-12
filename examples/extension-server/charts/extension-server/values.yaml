@@ -5,10 +5,9 @@
 replicaCount: 1
 
 image:
-  repository: extension-server
-  pullPolicy: IfNotPresent
-  # Overrides the image tag whose default is the chart appVersion.
-  tag: "latest"
+  repository: docker.io/nareddyt/kubecon-2025-extension-server
+  pullPolicy: Always
+  tag: "3.1.0"
 
 imagePullSecrets: []
 nameOverride: ""

@@ -1,0 +1,63 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: "2025-10-09T03:33:12Z"
+  name: custom-backend-mtls-policy-example-status-update
+  resourceVersion: "174193194"
+  uid: 19bc0de3-f2f1-42cd-ae93-2e4c9bef7265
+rules:
+  - apiGroups:
+      - example.extensions.io
+    resources:
+      - custombackendmtlspolicies/status
+    verbs:
+      - update
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: "2025-10-09T03:33:12Z"
+  name: custom-backend-mtls-policy-example-viewer
+  resourceVersion: "174193195"
+  uid: bb4a6f95-346c-4793-ac7e-a9656e3dd57b
+rules:
+  - apiGroups:
+      - example.extensions.io
+    resources:
+      - custombackendmtlspolicies
+    verbs:
+      - get
+      - list
+      - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  creationTimestamp: "2025-10-09T03:33:12Z"
+  name: envoy-gateway-custom-backend-mtls-policy
+  resourceVersion: "174193196"
+  uid: 9d0e50ad-3f67-4b25-8f97-baa6656bbf63
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: custom-backend-mtls-policy-example-viewer
+subjects:
+  - kind: ServiceAccount
+    name: envoy-gateway
+    namespace: envoy-gateway-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  creationTimestamp: "2025-10-09T03:33:12Z"
+  name: envoy-gateway-custom-backend-mtls-policy-status
+  resourceVersion: "174193197"
+  uid: 0f4b2eaa-91c5-4a36-aba4-5a856c4d63ac
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: custom-backend-mtls-policy-example-status-update
+subjects:
+  - kind: ServiceAccount
+    name: envoy-gateway
+    namespace: envoy-gateway-system
