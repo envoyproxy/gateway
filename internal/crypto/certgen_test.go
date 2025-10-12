@@ -54,7 +54,7 @@ func TestGenerateCerts(t *testing.T) {
 
 	run(t, "no configuration - use defaults", testcase{
 		certConfig:              &Configuration{},
-		wantEnvoyGatewayDNSName: DefaultEnvoyGatewayDNSPrefix,
+		wantEnvoyGatewayDNSName: config.EnvoyGatewayServiceName,
 		wantEnvoyDNSName:        fmt.Sprintf("*.%s", config.DefaultNamespace),
 	})
 }
