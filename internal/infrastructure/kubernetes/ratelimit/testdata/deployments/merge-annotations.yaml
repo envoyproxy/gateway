@@ -1,7 +1,6 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  creationTimestamp: null
   labels:
     app.kubernetes.io/component: ratelimit
     app.kubernetes.io/managed-by: envoy-gateway
@@ -31,7 +30,6 @@ spec:
         prometheus.io/path: /metrics
         prometheus.io/port: "19001"
         prometheus.io/scrape: "true"
-      creationTimestamp: null
       labels:
         app.kubernetes.io/component: ratelimit
         app.kubernetes.io/managed-by: envoy-gateway

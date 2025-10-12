@@ -2,7 +2,6 @@ clientTrafficPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: ClientTrafficPolicy
   metadata:
-    creationTimestamp: null
     name: target-gateway-1-section-http-1
     namespace: envoy-gateway
   spec:
@@ -31,7 +30,6 @@ clientTrafficPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: ClientTrafficPolicy
   metadata:
-    creationTimestamp: null
     name: target-gateway-1-section-http-2
     namespace: envoy-gateway
   spec:
@@ -61,7 +59,6 @@ clientTrafficPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: ClientTrafficPolicy
   metadata:
-    creationTimestamp: null
     name: target-gateway-1-section-http-3
     namespace: envoy-gateway
   spec:
@@ -92,7 +89,6 @@ clientTrafficPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: ClientTrafficPolicy
   metadata:
-    creationTimestamp: null
     name: target-gateway-1-section-http-4
     namespace: envoy-gateway
   spec:
@@ -122,7 +118,6 @@ clientTrafficPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: ClientTrafficPolicy
   metadata:
-    creationTimestamp: null
     name: target-gateway-1-section-http-5
     namespace: envoy-gateway
   spec:
@@ -154,7 +149,6 @@ gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
   metadata:
-    creationTimestamp: null
     name: gateway-1
     namespace: envoy-gateway
   spec:
@@ -312,7 +306,6 @@ httpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
   metadata:
-    creationTimestamp: null
     name: httproute-1
     namespace: envoy-gateway
   spec:
@@ -369,7 +362,6 @@ httpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
   metadata:
-    creationTimestamp: null
     name: httproute-2
     namespace: envoy-gateway
   spec:

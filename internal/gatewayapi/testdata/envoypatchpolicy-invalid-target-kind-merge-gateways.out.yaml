@@ -2,7 +2,6 @@ gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
   metadata:
-    creationTimestamp: null
     name: gateway-1
     namespace: envoy-gateway
   spec:
@@ -46,7 +45,6 @@ infraIR:
         apiVersion: gateway.envoyproxy.io/v1alpha1
         kind: EnvoyProxy
         metadata:
-          creationTimestamp: null
           name: test
           namespace: envoy-gateway-system
         spec:
@@ -74,24 +72,6 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
-    envoyPatchPolicies:
-    - name: edit-conn-buffer-bytes
-      namespace: envoy-gateway
-      status:
-        ancestors:
-        - ancestorRef:
-            group: gateway.networking.k8s.io
-            kind: GatewayClass
-            name: gateway-1
-          conditions:
-          - lastTransitionTime: null
-            message: TargetRef.Group:gateway.networking.k8s.io TargetRef.Kind:Gateway,
-              only TargetRef.Group:gateway.networking.k8s.io and TargetRef.Kind:GatewayClass
-              is supported.
-            reason: Invalid
-            status: "False"
-            type: Accepted
-          controllerName: gateway.envoyproxy.io/gatewayclass-controller
     globalResources:
       proxyServiceCluster:
         metadata:

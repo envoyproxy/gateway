@@ -2,7 +2,6 @@ clientTrafficPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: ClientTrafficPolicy
   metadata:
-    creationTimestamp: null
     name: target-gateway-2-http
     namespace: envoy-gateway
   spec:
@@ -29,7 +28,6 @@ clientTrafficPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: ClientTrafficPolicy
   metadata:
-    creationTimestamp: null
     name: target-gateway-2-https
     namespace: envoy-gateway
   spec:
@@ -56,7 +54,6 @@ clientTrafficPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: ClientTrafficPolicy
   metadata:
-    creationTimestamp: null
     name: target-gateway-2-https-as-well
     namespace: envoy-gateway
   spec:
@@ -84,7 +81,6 @@ clientTrafficPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: ClientTrafficPolicy
   metadata:
-    creationTimestamp: null
     name: not-found-section-name
     namespace: envoy-gateway
   spec:
@@ -111,7 +107,6 @@ clientTrafficPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: ClientTrafficPolicy
   metadata:
-    creationTimestamp: null
     name: target-gateway-1
     namespace: envoy-gateway
   spec:
@@ -136,7 +131,6 @@ clientTrafficPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: ClientTrafficPolicy
   metadata:
-    creationTimestamp: null
     name: target-gateway-1-as-well
     namespace: envoy-gateway
   spec:
@@ -162,7 +156,6 @@ clientTrafficPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: ClientTrafficPolicy
   metadata:
-    creationTimestamp: null
     name: target-gateway-2-all-sections
     namespace: envoy-gateway
   spec:
@@ -193,7 +186,6 @@ clientTrafficPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: ClientTrafficPolicy
   metadata:
-    creationTimestamp: null
     name: target-unknown-gateway
     namespace: envoy-gateway
   spec:
@@ -206,7 +198,6 @@ clientTrafficPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: ClientTrafficPolicy
   metadata:
-    creationTimestamp: null
     name: not-same-namespace-with-gateway
     namespace: envoy-gateway
   spec:
@@ -220,7 +211,6 @@ gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
   metadata:
-    creationTimestamp: null
     name: gateway-1
     namespace: envoy-gateway
   spec:
@@ -260,7 +250,6 @@ gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
   metadata:
-    creationTimestamp: null
     name: gateway-2
     namespace: envoy-gateway
   spec:
@@ -351,7 +340,6 @@ gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
   metadata:
-    creationTimestamp: null
     name: gateway-3
     namespace: envoy-gateway
   spec:
@@ -391,7 +379,6 @@ gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
   metadata:
-    creationTimestamp: null
     name: not-same-namespace-gateway
     namespace: not-same-namespace
   spec:
