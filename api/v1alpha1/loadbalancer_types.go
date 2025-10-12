@@ -70,11 +70,13 @@ const (
 // +union
 //
 // +kubebuilder:validation:XValidation:rule="self.type == 'Header' ? has(self.header) : !has(self.header)",message="If consistent hash type is header, the header field must be set."
+// +kubebuilder:validation:XValidation:rule="self.type == 'Headers' ? has(self.headers) : !has(self.headers)",message="If consistent hash type is headers, the headers field must be set."
 // +kubebuilder:validation:XValidation:rule="self.type == 'Cookie' ? has(self.cookie) : !has(self.cookie)",message="If consistent hash type is cookie, the cookie field must be set."
 type ConsistentHash struct {
 	// ConsistentHashType defines the type of input to hash on. Valid Type values are
 	// "SourceIP",
 	// "Header",
+	// "Headers",
 	// "Cookie".
 	//
 	// +unionDiscriminator
@@ -85,7 +87,7 @@ type ConsistentHash struct {
 	// +optional
 	Header *Header `json:"header,omitempty"`
 
-	// Headers configures the header hash policy for each header, when the consistent hash type is set to Header.
+	// Headers configures the header hash policy for each header, when the consistent hash type is set to Headers.
 	//
 	// +optional
 	Headers []*Header `json:"headers,omitempty"`
@@ -132,7 +134,7 @@ type Cookie struct {
 }
 
 // ConsistentHashType defines the type of input to hash on.
-// +kubebuilder:validation:Enum=SourceIP;Header;Cookie
+// +kubebuilder:validation:Enum=SourceIP;Header;Headers;Cookie
 type ConsistentHashType string
 
 const (
@@ -140,6 +142,8 @@ const (
 	SourceIPConsistentHashType ConsistentHashType = "SourceIP"
 	// HeaderConsistentHashType hashes based on a request header.
 	HeaderConsistentHashType ConsistentHashType = "Header"
+	// HeadersConsistentHashType hashes based on multiple request headers.
+	HeadersConsistentHashType ConsistentHashType = "Headers"
 	// CookieConsistentHashType hashes based on a cookie.
 	CookieConsistentHashType ConsistentHashType = "Cookie"
 )
