@@ -181,7 +181,6 @@ func GetRenderedBootstrapConfig(opts *RenderBootstrapConfigOptions) (string, err
 		}
 	}
 	
-	// Ensure ServiceName is not empty
 	if opts.ServiceName == "" {
 		opts.ServiceName = "envoy-gateway"
 	}
