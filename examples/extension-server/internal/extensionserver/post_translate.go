@@ -129,16 +129,7 @@ func (s *Server) maybeAddSdsConfigToCluster(cluster *clusterv3.Cluster, backendM
 	if backendRef == nil {
 		return nil
 	}
-
-	shouldModifyCluster := false
-	for _, targetRoute := range backendMtlsPolicy.Spec.TargetRoutes {
-		if backendRef.Group == targetRoute.Group && backendRef.Name == targetRoute.Name && backendRef.Kind == targetRoute.Kind {
-			shouldModifyCluster = true
-			break
-		}
-	}
-
-	if !shouldModifyCluster {
+	if backendRef.Kind != "HTTPRoute" {
 		return nil
 	}
 

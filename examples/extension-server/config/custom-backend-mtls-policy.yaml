@@ -10,7 +10,3 @@ spec:
       name: eg
   trustDomain: "examples.extensions.io"
   workloadIdentifier: "aws/us-west-2/envoy-proxy"
-  targetRoutes:
-    - group: gateway.networking.k8s.io
-      kind: HTTPRoute
-      name: backend

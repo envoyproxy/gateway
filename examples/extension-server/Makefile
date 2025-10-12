@@ -7,7 +7,7 @@ $(tools.bindir)/%: $(tools.srcdir)/%/pin.go $(tools.srcdir)/%/go.mod
 
 IMAGE_PREFIX ?= nareddyt/
 APP_NAME ?= kubecon-2025-extension-server
-TAG ?= 3.0.0
+TAG ?= 3.1.0
 
 PLATFORMS ?= linux/amd64,linux/arm64
 

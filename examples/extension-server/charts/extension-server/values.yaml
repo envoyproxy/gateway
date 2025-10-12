@@ -7,7 +7,7 @@ replicaCount: 1
 image:
   repository: docker.io/nareddyt/kubecon-2025-extension-server
   pullPolicy: Always
-  tag: "3.0.0"
+  tag: "3.1.0"
 
 imagePullSecrets: []
 nameOverride: ""

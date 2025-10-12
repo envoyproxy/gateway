@@ -24,8 +24,6 @@ type CustomBackendMtlsPolicySpec struct {
 
 	TrustDomain        string `json:"trustDomain"`
 	WorkloadIdentifier string `json:"workloadIdentifier"`
-
-	TargetRoutes []gwapiv1a2.LocalPolicyTargetReference `json:"targetRoutes"`
 }
 
 // +kubebuilder:object:root=true
