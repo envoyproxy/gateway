@@ -240,6 +240,69 @@ var ConsistentHashHeaderLoadBalancingTest = suite.ConformanceTest{
 	},
 }
 
+var MultiHeaderConsistentHashHeaderLoadBalancingTest = suite.ConformanceTest{
+	ShortName:   "MultiHeaderBasedConsistentHashLoadBalancing",
+	Description: "Test for multiple header based consistent hash load balancing type",
+	Manifests:   []string{"testdata/load_balancing_consistent_hash_multi_header.yaml"},
+	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
+		const sendRequests = 10
+
+		ns := "gateway-conformance-infra"
+		routeNN := types.NamespacedName{Name: "header-lb-route", Namespace: ns}
+		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
+
+		ancestorRef := gwapiv1a2.ParentReference{
+			Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
+			Kind:      gatewayapi.KindPtr(resource.KindGateway),
+			Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
+			Name:      gwapiv1.ObjectName(gwNN.Name),
+		}
+		BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "header-lb-policy", Namespace: ns}, suite.ControllerName, ancestorRef)
+		WaitForPods(t, suite.Client, ns, map[string]string{"app": "lb-backend-header"}, corev1.PodRunning, &PodReady)
+
+		gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+
+		expectedResponse := http.ExpectedResponse{
+			Request: http.Request{
+				Path: "/header",
+			},
+			Response: http.Response{
+				StatusCode: 200,
+			},
+			Namespace: ns,
+		}
+
+		// Test with different combinations of multiple headers
+		headerCombinations := []struct {
+			name    string
+			header1 string
+			header2 string
+		}{
+			{"combo1", "value-a", "value-b"},
+			{"combo2", "value-x", "value-y"},
+			{"combo3", "test1", "test2"},
+			{"combo4", "foo", "bar"},
+			{"combo5", "alpha", "beta"},
+		}
+
+		for _, combo := range headerCombinations {
+			t.Run(combo.name, func(t *testing.T) {
+				req := http.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
+				// Set both headers for the consistent hash
+				req.Headers["Lb-Test-1"] = []string{combo.header1}
+				req.Headers["Lb-Test-2"] = []string{combo.header2}
+
+				got := runTrafficTest(t, suite, &req, &expectedResponse, sendRequests, func(trafficMap map[string]int) bool {
+					// All traffic with the same header combination should route to the same pod
+					return len(trafficMap) == 1
+				})
+				require.True(t, got, "Expected all requests with headers %s=%s, %s=%s to route to the same pod",
+					"Lb-Test-1", combo.header1, "Lb-Test-2", combo.header2)
+			})
+		}
+	},
+}
+
 var ConsistentHashCookieLoadBalancingTest = suite.ConformanceTest{
 	ShortName:   "CookieBasedConsistentHashLoadBalancing",
 	Description: "Test for cookie based consistent hash load balancing type",
