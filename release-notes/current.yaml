@@ -3,6 +3,8 @@ date: Pending
 # Changes that are expected to cause an incompatibility with previous versions, such as deletions or modifications to existing APIs.
 breaking changes: |
   ALPNProtocols in EnvoyProxy Backend TLS setting use [h2, http/1.1] if not set.
+  When a Backend resource specifies TLS settings and SNI is not specified or a BackendTLSPolicy is not attached to it, the value of upstream TLS SNI is determined by the HTTP Host header.
+  When a Backend resource specifies TLS settings and SNI is not specified or a BackendTLSPolicy is not attached to it, the upstream certificate is validated for DNS SAN matching the SNI value sent.
 
 # Updates addressing vulnerabilities, security flaws, or compliance requirements.
 security updates: |
@@ -15,6 +17,7 @@ new features: |
   Added max connection/stream duration and max requests per connection to ClientTrafficPolicy.
   Added cacheDuration for remoteJWKS in SecurityPolicy.
   Added support for DisableTokenEncryption in OIDC authn to disable encryption of ID and access tokens stored in cookies.
+  Added support for OCSP stapling in the listener TLS certificates.
 
 bug fixes: |
   Fixed %ROUTE_KIND% operator to be lower-cased when used by clusterStatName in EnvoyProxy API.

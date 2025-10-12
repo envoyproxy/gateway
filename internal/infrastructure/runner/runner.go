@@ -61,7 +61,7 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 	subscribeInitInfraAndCloseInfraIRMessage := func() {
 		// Subscribe and Close in same goroutine to avoid race condition.
 		sub := r.InfraIR.Subscribe(ctx)
-		go r.subscribeToProxyInfraIR(ctx, sub)
+		go r.updateProxyInfraFromSubscription(ctx, sub)
 
 		// Enable global ratelimit if it has been configured.
 		if r.EnvoyGateway.RateLimit != nil {
@@ -102,7 +102,7 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 	return
 }
 
-func (r *Runner) subscribeToProxyInfraIR(ctx context.Context, sub <-chan watchable.Snapshot[string, *ir.Infra]) {
+func (r *Runner) updateProxyInfraFromSubscription(ctx context.Context, sub <-chan watchable.Snapshot[string, *ir.Infra]) {
 	// Subscribe to resources
 	message.HandleSubscription(message.Metadata{Runner: r.Name(), Message: message.InfraIRMessageName}, sub,
 		func(update message.Update[string, *ir.Infra], errChan chan error) {

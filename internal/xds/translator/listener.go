@@ -930,18 +930,26 @@ func buildALPNProtocols(alpn []string) []string {
 	}
 }
 
-func buildXdsTLSCertSecret(tlsConfig ir.TLSCertificate) *tlsv3.Secret {
+func buildXdsTLSCertSecret(tlsConfig *ir.TLSCertificate) *tlsv3.Secret {
+	tlsCertificate := &tlsv3.TlsCertificate{
+		CertificateChain: &corev3.DataSource{
+			Specifier: &corev3.DataSource_InlineBytes{InlineBytes: tlsConfig.Certificate},
+		},
+		PrivateKey: &corev3.DataSource{
+			Specifier: &corev3.DataSource_InlineBytes{InlineBytes: tlsConfig.PrivateKey},
+		},
+	}
+
+	if len(tlsConfig.OCSPStaple) > 0 {
+		tlsCertificate.OcspStaple = &corev3.DataSource{
+			Specifier: &corev3.DataSource_InlineBytes{InlineBytes: tlsConfig.OCSPStaple},
+		}
+	}
+
 	return &tlsv3.Secret{
 		Name: tlsConfig.Name,
 		Type: &tlsv3.Secret_TlsCertificate{
-			TlsCertificate: &tlsv3.TlsCertificate{
-				CertificateChain: &corev3.DataSource{
-					Specifier: &corev3.DataSource_InlineBytes{InlineBytes: tlsConfig.Certificate},
-				},
-				PrivateKey: &corev3.DataSource{
-					Specifier: &corev3.DataSource_InlineBytes{InlineBytes: tlsConfig.PrivateKey},
-				},
-			},
+			TlsCertificate: tlsCertificate,
 		},
 	}
 }
