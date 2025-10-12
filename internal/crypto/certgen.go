@@ -33,7 +33,6 @@ const (
 	keySize = 2048
 )
 
-
 // Configuration holds config parameters used for generating certificates.
 type Configuration struct {
 	// Provider defines the desired cert provider and provider-specific
