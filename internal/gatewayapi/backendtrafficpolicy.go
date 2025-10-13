@@ -6,6 +6,7 @@
 package gatewayapi
 
 import (
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"math"
@@ -1142,54 +1143,59 @@ func checkResponseBodySize(b *string) error {
 	// Make this configurable in the future
 	// https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route.proto.html#max_direct_response_body_size_bytes
 	maxDirectResponseSize := 4096
-	lenB := len(*b)
-	if lenB > maxDirectResponseSize {
-		return fmt.Errorf("response.body size %d greater than the max size %d", lenB, maxDirectResponseSize)
+	data := *b
+	length := len(data)
+
+	if decoded, err := base64.StdEncoding.DecodeString(data); err == nil {
+		length = len(decoded)
 	}
 
+	if length > maxDirectResponseSize {
+		return fmt.Errorf("response.body size %d greater than the max size %d", length, maxDirectResponseSize)
+	}
 	return nil
 }
 
-func getCustomResponseBody(body *egv1a1.CustomResponseBody, resources *resource.Resources, policyNs string) (*string, error) {
-	if body != nil && body.Type != nil && *body.Type == egv1a1.ResponseValueTypeValueRef {
+func getCustomResponseBody(
+	body *egv1a1.CustomResponseBody,
+	resources *resource.Resources,
+	policyNs string,
+) (*string, error) {
+	if body == nil {
+		return nil, nil
+	}
+	if body.Type != nil && *body.Type == egv1a1.ResponseValueTypeValueRef {
 		cm := resources.GetConfigMap(policyNs, string(body.ValueRef.Name))
-		if cm != nil {
-			if bin, binOk := cm.BinaryData["response.body"]; binOk {
-				b := string(bin)
-				if err := checkResponseBodySize(&b); err != nil {
-					return nil, err
-				}
-				return &b, nil
-			}
-			if b, dataOk := cm.Data["response.body"]; dataOk {
-				if err := checkResponseBodySize(&b); err != nil {
-					return nil, err
-				}
-				return &b, nil
-			}
-			if len(cm.Data) > 0 {
-				for _, value := range cm.Data {
-					b := value
-					if err := checkResponseBodySize(&b); err != nil {
-						return nil, err
-					}
-					return &b, nil
-				}
-			}
-			if len(cm.BinaryData) > 0 {
-				for _, binValue := range cm.BinaryData {
-					b := string(binValue)
-					if err := checkResponseBodySize(&b); err != nil {
-						return nil, err
-					}
-					return &b, nil
-				}
-			}
-			return nil, fmt.Errorf("can't find the key response.body in the referenced configmap %s", body.ValueRef.Name)
-		} else {
+		if cm == nil {
 			return nil, fmt.Errorf("can't find the referenced configmap %s", body.ValueRef.Name)
 		}
-	} else if body != nil && body.Inline != nil {
+
+		if s, ok := cm.Data["response.body"]; ok {
+			if err := checkResponseBodySize(&s); err != nil {
+				return nil, err
+			}
+			return &s, nil
+		}
+
+		for _, v := range cm.Data {
+			if err := checkResponseBodySize(&v); err != nil {
+				return nil, err
+			}
+			return &v, nil
+		}
+
+		for _, bin := range cm.BinaryData {
+			encoded := base64.StdEncoding.EncodeToString(bin)
+			if err := checkResponseBodySize(&encoded); err != nil {
+				return nil, err
+			}
+			return &encoded, nil
+		}
+
+		return nil, fmt.Errorf("can't find the key response.body in the referenced configmap %s", body.ValueRef.Name)
+	}
+
+	if body.Inline != nil {
 		if err := checkResponseBodySize(body.Inline); err != nil {
 			return nil, err
 		}
