@@ -13,8 +13,9 @@ spec:
     global:
       rules:
         - clientSelectors:
-            - method:
-                value: "POST"
+            - methods:
+                - value: "POST"
+                - value: "DELETE"
           limit:
             requests: 3
             unit: Hour

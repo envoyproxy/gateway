@@ -151,6 +151,18 @@ var RateLimitMethodMatchTest = suite.ConformanceTest{
 			}
 			expectLimitReq := http.MakeRequest(t, &expectLimitResp, gwAddr, "HTTP", "http")
 
+			expectLimitDeleteReq := http.ExpectedResponse{
+				Request: http.Request{
+					Path:   "/delete",
+					Method: "DELETE",
+				},
+				Response: http.Response{
+					StatusCode: 429,
+				},
+				Namespace: ns,
+			}
+			expectLimitDeleteResp := http.MakeRequest(t, &expectLimitDeleteReq, gwAddr, "HTTP", "http")
+
 			// should just send exactly 4 requests, and expect 429
 
 			// keep sending requests till get 200 first, that will cost one 200
@@ -162,6 +174,11 @@ var RateLimitMethodMatchTest = suite.ConformanceTest{
 			}
 			if err := GotExactExpectedResponse(t, 1, suite.RoundTripper, expectLimitReq, expectLimitResp); err != nil {
 				t.Errorf("failed to get expected response for the last (fourth) request: %v", err)
+			}
+			// Since POST method already consumed the rate limit quota,
+			// DELETE request should be immediately rate limited (both methods share the same counter).
+			if err := GotExactExpectedResponse(t, 1, suite.RoundTripper, expectLimitDeleteResp, expectLimitDeleteReq); err != nil {
+				t.Errorf("failed to get expected response for the limited delete request: %v", err)
 			}
 		})
 
