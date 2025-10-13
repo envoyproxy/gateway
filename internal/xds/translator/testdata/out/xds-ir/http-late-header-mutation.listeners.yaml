@@ -1,0 +1,108 @@
+- address:
+    socketAddress:
+      address: '::'
+      portValue: 10080
+  defaultFilterChain:
+    filters:
+    - name: envoy.filters.network.http_connection_manager
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+        commonHttpProtocolOptions:
+          headersWithUnderscoresAction: REJECT_REQUEST
+        http2ProtocolOptions:
+          initialConnectionWindowSize: 1048576
+          initialStreamWindowSize: 65536
+          maxConcurrentStreams: 100
+        httpFilters:
+        - name: envoy.filters.http.router
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+            suppressEnvoyHeaders: true
+        httpProtocolOptions:
+          headerKeyFormat:
+            statefulFormatter:
+              name: preserve_case
+              typedConfig:
+                '@type': type.googleapis.com/envoy.extensions.http.header_formatters.preserve_case.v3.PreserveCaseFormatterConfig
+        mergeSlashes: true
+        normalizePath: true
+        pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
+        rds:
+          configSource:
+            ads: {}
+            resourceApiVersion: V3
+          routeConfigName: first-listener
+        serverHeaderTransformation: PASS_THROUGH
+        statPrefix: http-10080
+        useRemoteAddress: true
+    name: first-listener
+  maxConnectionsToAcceptPerSocketEvent: 1
+  name: first-listener
+  perConnectionBufferLimitBytes: 32768
+- address:
+    socketAddress:
+      address: '::'
+      portValue: 10081
+  defaultFilterChain:
+    filters:
+    - name: envoy.filters.network.http_connection_manager
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+        commonHttpProtocolOptions:
+          headersWithUnderscoresAction: REJECT_REQUEST
+        http2ProtocolOptions:
+          initialConnectionWindowSize: 1048576
+          initialStreamWindowSize: 65536
+          maxConcurrentStreams: 100
+        httpFilters:
+        - name: envoy.filters.http.header_mutation
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.header_mutation.v3.HeaderMutation
+            mutations:
+              responseMutations:
+              - append:
+                  header:
+                    key: some-header
+                    value: some-value1
+              - append:
+                  header:
+                    key: some-header
+                    value: some-value2
+              - append:
+                  header:
+                    key: some-header-2
+                    value: some-value
+              - append:
+                  appendAction: OVERWRITE_IF_EXISTS_OR_ADD
+                  header:
+                    key: some-header3
+                    value: some-value
+              - append:
+                  appendAction: OVERWRITE_IF_EXISTS_OR_ADD
+                  header:
+                    key: some-header4
+                    value: some-value
+              - append:
+                  appendAction: OVERWRITE_IF_EXISTS_OR_ADD
+                  header:
+                    key: empty-header
+                  keepEmptyValue: true
+              - remove: some-header5
+              - remove: some-header6
+        - name: envoy.filters.http.router
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+            suppressEnvoyHeaders: true
+        normalizePath: true
+        rds:
+          configSource:
+            ads: {}
+            resourceApiVersion: V3
+          routeConfigName: second-listener
+        serverHeaderTransformation: PASS_THROUGH
+        statPrefix: http-10081
+        useRemoteAddress: true
+    name: second-listener
+  maxConnectionsToAcceptPerSocketEvent: 1
+  name: second-listener
+  perConnectionBufferLimitBytes: 32768

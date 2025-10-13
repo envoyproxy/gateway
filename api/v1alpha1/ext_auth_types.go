@@ -5,6 +5,8 @@
 
 package v1alpha1
 
+import gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+
 // ExtAuth defines the configuration for External Authorization.
 //
 // +kubebuilder:validation:XValidation:rule="(has(self.grpc) || has(self.http))",message="one of grpc or http must be specified"
@@ -36,6 +38,11 @@ type ExtAuth struct {
 	// BodyToExtAuth defines the Body to Ext Auth configuration.
 	// +optional
 	BodyToExtAuth *BodyToExtAuth `json:"bodyToExtAuth,omitempty"`
+
+	// Timeout defines the timeout for requests to the external authorization service.
+	// If not specified, defaults to 10 seconds.
+	// +optional
+	Timeout *gwapiv1.Duration `json:"timeout,omitempty"`
 
 	// FailOpen is a switch used to control the behavior when a response from the External Authorization service cannot be obtained.
 	// If FailOpen is set to true, the system allows the traffic to pass through.

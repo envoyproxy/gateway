@@ -3,6 +3,7 @@
 set -euo pipefail
 
 # Setup default values
+KIND=${KIND:-go tool -modfile=tools/go.mod kind}
 CLUSTER_NAME=${CLUSTER_NAME:-"envoy-gateway"}
 METALLB_VERSION=${METALLB_VERSION:-"v0.13.10"}
 KIND_NODE_TAG=${KIND_NODE_TAG:-"v1.33.0"}
@@ -48,7 +49,7 @@ done
 fi
 
 ## Check if kind cluster already exists.
-if go tool kind get clusters | grep -q "${CLUSTER_NAME}"; then
+if ${KIND} get clusters | grep -q "${CLUSTER_NAME}"; then
   echo "Cluster ${CLUSTER_NAME} already exists."
 else
   echo "Creating kind cluster ${CLUSTER_NAME} with the following configuration:"
@@ -56,11 +57,11 @@ else
 
 ## Create kind cluster.
 if [[ -z "${KIND_NODE_TAG}" ]]; then
-  cat << EOF | go tool kind create cluster --name "${CLUSTER_NAME}" --config -
+  cat << EOF | ${KIND} create cluster --name "${CLUSTER_NAME}" --config -
 ${KIND_CFG}
 EOF
 else
-  cat << EOF | go tool kind create cluster --image "kindest/node:${KIND_NODE_TAG}" --name "${CLUSTER_NAME}" --config -
+  cat << EOF | ${KIND} create cluster --image "kindest/node:${KIND_NODE_TAG}" --name "${CLUSTER_NAME}" --config -
 ${KIND_CFG}
 EOF
 fi

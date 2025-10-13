@@ -1,0 +1,20 @@
+{{ $adopters := .Site.Data.enterprise_support.adopters }}
+<section class="adopters-section">
+  <h2 class="text-center mb-5">Enterprise Support</h2>
+  <div class="adopters-list">
+    {{ range $adopters }}
+    <a class="adopter" href="{{ .url }}" target="_blank" rel="noopener noreferrer">
+      <img src="{{ .logo | relURL }}" alt="{{ .name }} logo" loading="lazy">
+      <div class="adopter-info">
+        <p>{{ .description }}</p>
+      </div>
+    </a>
+    {{ end }}
+    <a class="adopter" href="https://github.com/envoyproxy/gateway/blob/main/site/content/en/contributions/ENTERPRISE_SUPPORT.md" target="_blank" rel="noopener noreferrer">
+      <img src="/img/add-your-logo-here.svg" alt="Add your logo here!" loading="lazy">
+      <div class="adopter-info">
+        <p>Provide enterprise support for Envoy Gateway? You can add your company here! Click to learn more.</p>
+      </div>
+    </a>
+  </div>
+</section>

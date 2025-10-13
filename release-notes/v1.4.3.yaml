@@ -1,0 +1,8 @@
+date: August 11, 2025
+
+bug fixes: |
+  Fixed issue where HTTPRoutes with sessionPersistence caused the Envoy listeners to drain.
+  Fixed issue where EnvoyPatchPolicy CEL Validations around FullDuplexStreamed and FailOpen.
+  Fixed issue where http filter was not being added for HTTP3 listeners.
+  Fixed issue where http filters unstable order caused the Envoy listeners to drain.
+  Fixed issue where missing secret in EnvoyProxy caused deployment not to be created.

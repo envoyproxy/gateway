@@ -16,6 +16,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
@@ -138,6 +139,52 @@ func TestHTTPRouteFilter(t *testing.T) {
 				}
 			},
 			wantErrors: []string{"spec.urlRewrite.hostname: Invalid value: \"object\": header must be nil if the type is not Header"},
+		},
+		{
+			desc: "Valid DirectResponse with header add",
+			mutate: func(httproutefilter *egv1a1.HTTPRouteFilter) {
+				httproutefilter.Spec = egv1a1.HTTPRouteFilterSpec{
+					DirectResponse: &egv1a1.HTTPDirectResponseFilter{
+						StatusCode: ptr.To(200),
+						Header: &gwapiv1.HTTPHeaderFilter{
+							Add: []gwapiv1.HTTPHeader{
+								{Name: "X-Custom-Header", Value: "value"},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "Valid DirectResponse with header set",
+			mutate: func(httproutefilter *egv1a1.HTTPRouteFilter) {
+				httproutefilter.Spec = egv1a1.HTTPRouteFilterSpec{
+					DirectResponse: &egv1a1.HTTPDirectResponseFilter{
+						StatusCode: ptr.To(200),
+						Header: &gwapiv1.HTTPHeaderFilter{
+							Set: []gwapiv1.HTTPHeader{
+								{Name: "X-Custom-Header", Value: "value"},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "Invalid DirectResponse with header remove",
+			mutate: func(httproutefilter *egv1a1.HTTPRouteFilter) {
+				httproutefilter.Spec = egv1a1.HTTPRouteFilterSpec{
+					DirectResponse: &egv1a1.HTTPDirectResponseFilter{
+						StatusCode: ptr.To(200),
+						Header: &gwapiv1.HTTPHeaderFilter{
+							Remove: []string{"X-Header-To-Remove"},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"spec.directResponse.header: Invalid value: \"object\": header.remove is not supported for DirectResponse"},
 		},
 	}
 

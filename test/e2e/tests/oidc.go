@@ -48,22 +48,16 @@ func init() {
 var OIDCTest = suite.ConformanceTest{
 	ShortName:   "OIDC",
 	Description: "Test OIDC authentication",
-	Manifests:   []string{"testdata/oidc-keycloak.yaml"},
+	Manifests:   []string{"testdata/oidc-keycloak.yaml", "testdata/oidc-securitypolicy.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		t.Run("oidc provider represented by a URL", func(t *testing.T) {
-			testOIDC(t, suite, "testdata/oidc-securitypolicy.yaml")
+			testOIDC(t, suite)
 		})
 
 		t.Run("oidc bypass", func(t *testing.T) {
 			ns := "gateway-conformance-infra"
-
-			podInitialized := corev1.PodCondition{Type: corev1.PodInitialized, Status: corev1.ConditionTrue}
 			// Wait for the keycloak pod to be configured with the test user and client
-			WaitForPods(t, suite.Client, ns, map[string]string{"job-name": "setup-keycloak"}, corev1.PodSucceeded, podInitialized)
-
-			// Apply the security policy that configures OIDC authentication
-			suite.Applier.MustApplyWithCleanup(t, suite.Client, suite.TimeoutConfig, "testdata/oidc-securitypolicy.yaml", true)
-
+			WaitForPods(t, suite.Client, ns, map[string]string{"app": "keycloak"}, corev1.PodRunning, &PodReady)
 			routeWithOIDCNN := types.NamespacedName{Name: "http-with-oidc", Namespace: ns}
 			routeWithoutOIDCNN := types.NamespacedName{Name: "http-without-oidc", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
@@ -111,22 +105,14 @@ var OIDCTest = suite.ConformanceTest{
 				t.Run(tc.GetTestCaseName(i), func(t *testing.T) {
 					t.Parallel()
 
-					req := gwhttp.MakeRequest(t, &tc, gwAddr, "HTTP", "http")
-					cReq, cResp, err := suite.RoundTripper.CaptureRoundTrip(req)
-					if err != nil {
-						t.Errorf("failed to get expected response: %v", err)
-					}
-
-					if err := gwhttp.CompareRequest(t, &req, cReq, cResp, tc); err != nil {
-						t.Errorf("failed to compare request and response: %v", err)
-					}
+					gwhttp.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, tc)
 				})
 			}
 		})
 	},
 }
 
-func testOIDC(t *testing.T, suite *suite.ConformanceTestSuite, securityPolicyManifest string) {
+func testOIDC(t *testing.T, suite *suite.ConformanceTestSuite) {
 	var (
 		testURL   = "http://www.example.com/myapp"
 		logoutURL = "http://www.example.com/myapp/logout"
@@ -135,12 +121,8 @@ func testOIDC(t *testing.T, suite *suite.ConformanceTestSuite, securityPolicyMan
 		ns        = "gateway-conformance-infra"
 	)
 
-	podInitialized := corev1.PodCondition{Type: corev1.PodInitialized, Status: corev1.ConditionTrue}
 	// Wait for the keycloak pod to be configured with the test user and client
-	WaitForPods(t, suite.Client, ns, map[string]string{"job-name": "setup-keycloak"}, corev1.PodSucceeded, podInitialized)
-
-	// Apply the security policy that configures OIDC authentication
-	suite.Applier.MustApplyWithCleanup(t, suite.Client, suite.TimeoutConfig, securityPolicyManifest, true)
+	WaitForPods(t, suite.Client, ns, map[string]string{"app": "keycloak"}, corev1.PodRunning, &PodReady)
 
 	routeNN := types.NamespacedName{Name: route, Namespace: ns}
 	gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
@@ -197,7 +179,6 @@ func testOIDC(t *testing.T, suite *suite.ConformanceTestSuite, securityPolicyMan
 					},
 				}
 				require.NoError(t, suite.Client.Delete(context.TODO(), existingSP))
-				suite.Applier.MustApplyWithCleanup(t, suite.Client, suite.TimeoutConfig, securityPolicyManifest, false)
 				SecurityPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: sp, Namespace: ns}, suite.ControllerName, ancestorRef)
 				return false, nil
 			}
@@ -239,7 +220,7 @@ func testOIDC(t *testing.T, suite *suite.ConformanceTestSuite, securityPolicyMan
 	deletedCookies := res.Header.Values("Set-Cookie")
 	regx := regexp.MustCompile("^IdToken-.+=deleted.+")
 	for _, cookie := range deletedCookies {
-		if regx.Match([]byte(cookie)) {
+		if regx.MatchString(cookie) {
 			cookieDeleted = true
 		}
 	}

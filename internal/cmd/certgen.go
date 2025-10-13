@@ -61,7 +61,7 @@ func GetCertGenCommand() *cobra.Command {
 
 // certGen generates control plane certificates.
 func certGen(ctx context.Context, logOut io.Writer, local bool) error {
-	cfg, err := config.New(logOut)
+	cfg, err := config.New(logOut, io.Discard)
 	if err != nil {
 		return err
 	}
@@ -137,8 +137,8 @@ func patchTopologyInjectorWebhook(ctx context.Context, cli client.Client, cfg *c
 
 	var updated bool
 	desiredBundle := current.Data["ca.crt"]
-	for i, webhook := range webhookCfg.Webhooks {
-		if !bytes.Equal(desiredBundle, webhook.ClientConfig.CABundle) {
+	for i := range webhookCfg.Webhooks {
+		if !bytes.Equal(desiredBundle, webhookCfg.Webhooks[i].ClientConfig.CABundle) {
 			webhookCfg.Webhooks[i].ClientConfig.CABundle = desiredBundle
 			updated = true
 		}

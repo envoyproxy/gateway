@@ -71,5 +71,44 @@ var HeaderSettingsTest = suite.ConformanceTest{
 
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expected)
 		})
+
+		t.Run("Late header modifications should apply", func(t *testing.T) {
+			ns := "gateway-conformance-infra"
+			routeNN := types.NamespacedName{Name: "http-with-late-headers", Namespace: ns}
+			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
+			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+
+			ancestorRef := gwapiv1a2.ParentReference{
+				Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
+				Kind:      gatewayapi.KindPtr(resource.KindGateway),
+				Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
+				Name:      gwapiv1.ObjectName(gwNN.Name),
+			}
+			ClientTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "early-header-modifier-ctp", Namespace: ns}, suite.ControllerName, ancestorRef)
+
+			expected := http.ExpectedResponse{
+				Request: http.Request{
+					Path: "/late-header",
+				},
+				BackendSetResponseHeaders: map[string]string{
+					"late-added-header":   "backend",
+					"late-set-header":     "backend",
+					"late-removed-header": "backend",
+				},
+				Response: http.Response{
+					StatusCode: 200,
+					Headers: map[string]string{
+						"late-added-header": "backend,filter,late",
+						"late-set-header":   "late",
+					},
+					AbsentHeaders: []string{
+						"late-removed-header",
+					},
+				},
+				Namespace: ns,
+			}
+
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expected)
+		})
 	},
 }

@@ -4,7 +4,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.17.3
+    controller-gen.kubebuilder.io/version: v0.18.0
   name: backends.gateway.envoyproxy.io
 spec:
   group: gateway.envoyproxy.io
@@ -223,6 +223,20 @@ spec:
                       InsecureSkipVerify indicates whether the upstream's certificate verification
                       should be skipped. Defaults to "false".
                     type: boolean
+                  sni:
+                    description: |-
+                      SNI is specifies the SNI value used when establishing an upstream TLS connection to the backend.
+
+                      Envoy Gateway will use the HTTP host header value for SNI, when all resources referenced in BackendRefs are:
+                      1. Backend resources that do not set SNI, or
+                      2. Service/ServiceImport resources that do not have a BackendTLSPolicy attached to them
+
+                      When a BackendTLSPolicy attaches to a Backend resource, the BackendTLSPolicy's Hostname value takes precedence
+                      over this value.
+                    maxLength: 253
+                    minLength: 1
+                    pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                    type: string
                   wellKnownCACertificates:
                     description: |-
                       WellKnownCACertificates specifies whether system CA certificates may be used in

@@ -210,7 +210,7 @@ func Test_subscribeAndTranslate(t *testing.T) {
 			defer cancel()
 			xdsIR := new(message.XdsIR)
 			defer xdsIR.Close()
-			cfg, err := config.New(os.Stdout)
+			cfg, err := config.New(os.Stdout, os.Stderr)
 			require.NoError(t, err)
 
 			r := New(&Config{
@@ -220,7 +220,7 @@ func Test_subscribeAndTranslate(t *testing.T) {
 			})
 
 			c := xdsIR.Subscribe(ctx)
-			go r.subscribeAndTranslate(ctx, c)
+			go r.translateFromSubscription(ctx, c)
 
 			for _, xds := range tt.xdsIRs {
 				if xds.Delete {
@@ -233,11 +233,14 @@ func Test_subscribeAndTranslate(t *testing.T) {
 			diff := ""
 			if !assert.Eventually(t, func() bool {
 				rs, err := r.cache.GetSnapshot(ratelimit.InfraName)
-				require.NoError(t, err)
+				if err != nil {
+					t.Logf("failed to get snapshot: %v", err)
+					return false
+				}
 
 				diff = cmp.Diff(tt.wantRateLimitConfigs, rs.GetResources(resourcev3.RateLimitConfigType), cmpopts.IgnoreUnexported(rlsconfv3.RateLimitConfig{}, rlsconfv3.RateLimitDescriptor{}, rlsconfv3.RateLimitPolicy{}))
 				return diff == ""
-			}, time.Second*1, time.Millisecond*20) {
+			}, time.Second*10, time.Second) {
 				t.Fatalf("snapshot mismatch (-want +got):\n%s", diff)
 			}
 		})

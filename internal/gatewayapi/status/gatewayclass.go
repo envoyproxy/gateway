@@ -71,7 +71,7 @@ func computeGatewayClassAcceptedCondition(gatewayClass *gwapiv1.GatewayClass,
 	}
 }
 
-func getSupportedFeatures(gatewaySuite suite.ConformanceOptions, skippedTests []suite.ConformanceTest) []gwapiv1.SupportedFeature {
+func getSupportedFeatures(gatewaySuite *suite.ConformanceOptions, skippedTests []suite.ConformanceTest) []gwapiv1.SupportedFeature {
 	supportedFeatures := gatewaySuite.SupportedFeatures.Clone()
 	unsupportedFeatures := getUnsupportedFeatures(gatewaySuite, skippedTests)
 	supportedFeatures.Delete(unsupportedFeatures...)
@@ -83,18 +83,18 @@ func getSupportedFeatures(gatewaySuite suite.ConformanceOptions, skippedTests []
 		})
 	}
 
-	var featureList []gwapiv1.SupportedFeature
+	featureList := make([]gwapiv1.SupportedFeature, 0, len(ret))
 	for feature := range ret {
 		featureList = append(featureList, feature)
 	}
 	return featureList
 }
 
-func getUnsupportedFeatures(gatewaySuite suite.ConformanceOptions, skippedTests []suite.ConformanceTest) []features.FeatureName {
+func getUnsupportedFeatures(gatewaySuite *suite.ConformanceOptions, skippedTests []suite.ConformanceTest) []features.FeatureName {
 	unsupportedFeatures := gatewaySuite.ExemptFeatures.UnsortedList()
 
 	for _, skippedTest := range skippedTests {
-		switch conformance.GetTestSupportLevel(skippedTest) {
+		switch conformance.GetTestSupportLevel(&skippedTest) {
 		case conformance.Core:
 			unsupportedFeatures = append(unsupportedFeatures, skippedTest.Features...)
 		case conformance.Extended:

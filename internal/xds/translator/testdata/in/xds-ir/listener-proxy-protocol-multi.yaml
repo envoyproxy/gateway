@@ -1,0 +1,44 @@
+http:
+- name: "listener"
+  address: "::"
+  port: 10080
+  hostnames:
+  - "foo.com"
+  - "bar.com"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  tls:
+    alpnProtocols:
+    - h2
+    - http/1.1
+    certificates:
+    - name: secret-1
+      # byte slice representation of "key-data"
+      certificate: [99, 101, 114, 116, 45, 100, 97, 116, 97]
+      # byte slice representation of "key-data"
+      privateKey: [107, 101, 121, 45, 100, 97, 116, 97]
+    - name: secret-2
+      certificate: [99, 101, 114, 116, 45, 100, 97, 116, 97]
+      privateKey: [107, 101, 121, 45, 100, 97, 116, 97]
+  proxyProtocol:
+    optional: false
+  routes:
+  - name: "first-route"
+    hostname: "foo.com"
+    destination:
+      name: "first-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "first-route-dest/backend/0"
+  - name: "second-route"
+    hostname: "bar.com"
+    destination:
+      name: "second-route-dest"
+      settings:
+      - endpoints:
+        - host: "5.6.7.8"
+          port: 50000
+        name: "second-route-dest/backend/0"

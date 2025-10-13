@@ -6,6 +6,8 @@
 package translator
 
 import (
+	"slices"
+
 	listenerv3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	proxyprotocolv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/listener/proxy_protocol/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
@@ -37,7 +39,7 @@ func patchProxyProtocolFilter(xdsListener *listenerv3.Listener, proxyProtocolSet
 	// Build and patch the Proxy Protocol Filter.
 	filter := buildProxyProtocolFilter(proxyProtocolSettings)
 	if filter != nil {
-		xdsListener.ListenerFilters = append(xdsListener.ListenerFilters, filter)
+		xdsListener.ListenerFilters = slices.Insert(xdsListener.ListenerFilters, 0, filter)
 	}
 }
 

@@ -30,6 +30,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
+	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/proxy"
 	"github.com/envoyproxy/gateway/internal/logging"
 	"github.com/envoyproxy/gateway/internal/provider/kubernetes/test"
 	"github.com/envoyproxy/gateway/internal/utils"
@@ -302,7 +303,7 @@ func TestProcessBackendRefsWithCustomBackends(t *testing.T) {
 
 			// Create resource mappings
 			resourceMappings := &resourceMappings{
-				allAssociatedBackendRefs:                sets.New[gwapiv1.BackendObjectReference](),
+				allAssociatedBackendRefs:                make(map[utils.NamespacedNameWithGroupKind]gwapiv1.BackendObjectReference),
 				allAssociatedNamespaces:                 sets.New[string](),
 				allAssociatedBackendRefExtensionFilters: sets.New[utils.NamespacedNameWithGroupKind](),
 				extensionRefFilters:                     tc.existingExtFilters,
@@ -310,7 +311,7 @@ func TestProcessBackendRefsWithCustomBackends(t *testing.T) {
 
 			// Add backend refs to the mapping
 			for _, backendRef := range tc.backendRefs {
-				resourceMappings.allAssociatedBackendRefs.Insert(backendRef)
+				resourceMappings.insertBackendRef(backendRef)
 			}
 
 			// Create empty resource tree
@@ -1247,6 +1248,230 @@ func TestProcessSecurityPolicyObjectRefs(t *testing.T) {
 	}
 }
 
+func TestProcessServiceClusterForGatewayClass(t *testing.T) {
+	testCases := []struct {
+		name            string
+		gatewayClass    *gwapiv1.GatewayClass
+		envoyProxy      *egv1a1.EnvoyProxy
+		expectedSvcName string
+	}{
+		{
+			name: "when merged gateways and no hardcoded svc name is used",
+			gatewayClass: &gwapiv1.GatewayClass{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "merged-gc",
+				},
+			},
+			envoyProxy:      nil,
+			expectedSvcName: proxy.ExpectedResourceHashedName("merged-gc"),
+		},
+		{
+			name: "when merged gateways and a hardcoded svc name is used",
+			gatewayClass: &gwapiv1.GatewayClass{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "merged-gc",
+				},
+			},
+			envoyProxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "merged-gc",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyService: &egv1a1.KubernetesServiceSpec{
+								Name: ptr.To("merged-gc-svc"),
+							},
+						},
+					},
+				},
+			},
+			expectedSvcName: "merged-gc-svc",
+		},
+	}
+
+	for i := range testCases {
+		tc := testCases[i]
+		// Run the test cases.
+		t.Run(tc.name, func(t *testing.T) {
+			logger := logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo)
+			resourceMap := newResourceMapping()
+
+			r := newGatewayAPIReconciler(logger)
+			r.namespace = "envoy-gateway-system"
+
+			r.processServiceClusterForGatewayClass(tc.envoyProxy, tc.gatewayClass, resourceMap)
+
+			expectedRef := gwapiv1.BackendObjectReference{
+				Kind:      ptr.To(gwapiv1.Kind(resource.KindService)),
+				Namespace: gatewayapi.NamespacePtr(r.namespace),
+				Name:      gwapiv1.ObjectName(tc.expectedSvcName),
+			}
+			key := backendRefKey(&expectedRef)
+			require.Contains(t, resourceMap.allAssociatedBackendRefs, key)
+			require.Equal(t, expectedRef, resourceMap.allAssociatedBackendRefs[key])
+		})
+	}
+}
+
+func TestProcessServiceClusterForGateway(t *testing.T) {
+	testCases := []struct {
+		name                   string
+		gateway                *gwapiv1.Gateway
+		envoyProxy             *egv1a1.EnvoyProxy
+		gatewayClassEnvoyProxy *egv1a1.EnvoyProxy
+		gatewayNamespacedMode  bool
+		expectedSvcName        string
+		expectedSvcNamespace   string
+	}{
+		{
+			name: "no gateway namespaced mode with no hardcoded service name",
+			gateway: &gwapiv1.Gateway{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "my-gateway",
+					Namespace: "app-namespace",
+				},
+			},
+			envoyProxy:            nil,
+			gatewayNamespacedMode: false,
+			expectedSvcName:       "",
+			expectedSvcNamespace:  "",
+		},
+		{
+			name: "no gateway namespaced mode with hardcoded service name",
+			gateway: &gwapiv1.Gateway{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "my-gateway",
+					Namespace: "app-namespace",
+				},
+			},
+			envoyProxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "my-gateway",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyService: &egv1a1.KubernetesServiceSpec{
+								Name: ptr.To("my-gateway-svc"),
+							},
+						},
+					},
+				},
+			},
+			gatewayNamespacedMode: false,
+			expectedSvcName:       "my-gateway-svc",
+			expectedSvcNamespace:  "",
+		},
+		{
+			name: "gateway namespaced mode with no hardcoded service name",
+			gateway: &gwapiv1.Gateway{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "my-gateway",
+					Namespace: "app-namespace",
+				},
+			},
+			envoyProxy:            nil,
+			gatewayNamespacedMode: true,
+			expectedSvcName:       "my-gateway",
+			expectedSvcNamespace:  "app-namespace",
+		},
+		{
+			name: "gateway namespaced mode with hardcoded service name",
+			gateway: &gwapiv1.Gateway{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "my-gateway",
+					Namespace: "app-namespace",
+				},
+			},
+			envoyProxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "my-gateway",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyService: &egv1a1.KubernetesServiceSpec{
+								Name: ptr.To("my-gateway-svc"),
+							},
+						},
+					},
+				},
+			},
+			gatewayNamespacedMode: true,
+			expectedSvcName:       "my-gateway-svc",
+			expectedSvcNamespace:  "app-namespace",
+		},
+		{
+			name: "no gateway namespaced mode with no hardcoded service name attached gatewayclass",
+			gateway: &gwapiv1.Gateway{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "my-gateway",
+					Namespace: "app-namespace",
+				},
+			},
+			envoyProxy: nil,
+			gatewayClassEnvoyProxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "my-gateway",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyService: &egv1a1.KubernetesServiceSpec{
+								Name: ptr.To("my-gateway-svc"),
+							},
+						},
+					},
+				},
+			},
+			gatewayNamespacedMode: false,
+			expectedSvcName:       "my-gateway-svc",
+			expectedSvcNamespace:  "",
+		},
+	}
+
+	for i := range testCases {
+		tc := testCases[i]
+		// Run the test cases.
+		t.Run(tc.name, func(t *testing.T) {
+			logger := logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo)
+			resourceMap := newResourceMapping()
+
+			r := newGatewayAPIReconciler(logger)
+			r.namespace = "envoy-gateway-system"
+			r.gatewayNamespaceMode = tc.gatewayNamespacedMode
+
+			if tc.expectedSvcNamespace == "" {
+				tc.expectedSvcNamespace = r.namespace
+			}
+
+			if tc.expectedSvcName == "" {
+				tc.expectedSvcName = proxy.ExpectedResourceHashedName(utils.NamespacedName(tc.gateway).String())
+			}
+
+			if tc.envoyProxy == nil && tc.gatewayClassEnvoyProxy != nil {
+				tc.envoyProxy = tc.gatewayClassEnvoyProxy
+			}
+
+			r.processServiceClusterForGateway(tc.envoyProxy, tc.gateway, resourceMap)
+
+			expectedRef := gwapiv1.BackendObjectReference{
+				Kind:      ptr.To(gwapiv1.Kind(resource.KindService)),
+				Namespace: gatewayapi.NamespacePtr(tc.expectedSvcNamespace),
+				Name:      gwapiv1.ObjectName(tc.expectedSvcName),
+			}
+			key := backendRefKey(&expectedRef)
+			require.Contains(t, resourceMap.allAssociatedBackendRefs, key)
+			require.Equal(t, expectedRef, resourceMap.allAssociatedBackendRefs[key])
+		})
+	}
+}
+
 func newGatewayAPIReconciler(logger logging.Logger) *gatewayAPIReconciler {
 	return &gatewayAPIReconciler{
 		log:              logger,
@@ -1260,6 +1485,23 @@ func newGatewayAPIReconciler(logger logging.Logger) *gatewayAPIReconciler {
 			},
 		},
 	}
+}
+
+func TestProcessBackendRefDeduplicatesLogicalBackend(t *testing.T) {
+	logger := logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo)
+	r := newGatewayAPIReconciler(logger)
+	resourceTree := resource.NewResources()
+	resourceMap := newResourceMapping()
+
+	backendRef := gwapiv1.BackendObjectReference{
+		Namespace: gatewayapi.NamespacePtr("default"),
+		Name:      "svc",
+	}
+
+	require.NoError(t, r.processBackendRef(t.Context(), resourceMap, resourceTree, resource.KindHTTPRoute, "default", "route-a", backendRef))
+	require.NoError(t, r.processBackendRef(t.Context(), resourceMap, resourceTree, resource.KindHTTPRoute, "default", "route-b", backendRef))
+
+	require.Len(t, resourceMap.allAssociatedBackendRefs, 1)
 }
 
 func TestProcessBackendRefs(t *testing.T) {
@@ -1365,7 +1607,7 @@ func TestProcessBackendRefs(t *testing.T) {
 			resourceTree := resource.NewResources()
 			resourceMap := newResourceMapping()
 			backend := tc.backend
-			resourceMap.allAssociatedBackendRefs.Insert(gwapiv1.BackendObjectReference{
+			resourceMap.insertBackendRef(gwapiv1.BackendObjectReference{
 				Kind:      gatewayapi.KindPtr(resource.KindBackend),
 				Namespace: gatewayapi.NamespacePtr(backend.Namespace),
 				Name:      gwapiv1.ObjectName(backend.Name),
@@ -1417,6 +1659,12 @@ func TestIsTransientError(t *testing.T) {
 	serviceUnavailableErr := kerrors.NewServiceUnavailable("service unavailable")
 	badRequestErr := kerrors.NewBadRequest("bad request")
 
+	// new test errors for context
+	canceledErr := context.Canceled
+	deadlineExceededErr := context.DeadlineExceeded
+	wrappedCanceledErr := fmt.Errorf("wrapped: %w", context.Canceled)
+	wrappedDeadlineExceededErr := fmt.Errorf("wrapped: %w", context.DeadlineExceeded)
+
 	testCases := []struct {
 		name     string
 		err      error
@@ -1428,6 +1676,10 @@ func TestIsTransientError(t *testing.T) {
 		{"ServiceUnavailable", serviceUnavailableErr, true},
 		{"BadRequest", badRequestErr, false},
 		{"NilError", nil, false},
+		{"ContextCanceled", canceledErr, true},
+		{"ContextDeadlineExceeded", deadlineExceededErr, true},
+		{"WrappedContextCanceled", wrappedCanceledErr, true},
+		{"WrappedContextDeadlineExceeded", wrappedDeadlineExceededErr, true},
 	}
 
 	for _, tc := range testCases {

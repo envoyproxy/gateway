@@ -21,9 +21,9 @@ updates:
       # skip to update retest, because it won't work with the latest version
       - dependency-name: "envoyproxy/toolshed/gh-actions/retest"
     groups:
-      github-actions:
+      actions:
         patterns:
-          - "actions*"
+          - "*"
   - package-ecosystem: gomod
     directories:
       - "/"
@@ -58,6 +58,11 @@ updates:
       k8s.io:
         patterns:
           - "k8s.io/*"
+  - package-ecosystem: npm
+    directories:
+      - /site
+    schedule:
+      interval: weekly
   - package-ecosystem: pip
     directories:
       - /tools/src/codespell

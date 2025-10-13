@@ -319,7 +319,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 			// Create a new UDP(QUIC) listener for HTTP3 traffic if HTTP3 is enabled
 			if http3Enabled {
 				if quicXDSListener, err = t.buildXdsQuicListener(
-					httpListener.CoreListenerDetails,
+					&httpListener.CoreListenerDetails,
 					httpListener.IPFamily,
 					accessLog,
 				); err != nil {
@@ -335,7 +335,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 
 			// Create a new TCP listener for HTTP1/HTTP2 traffic.
 			if tcpXDSListener, err = t.buildXdsTCPListener(
-				httpListener.CoreListenerDetails,
+				&httpListener.CoreListenerDetails,
 				httpListener.TCPKeepalive,
 				httpListener.Connection,
 				accessLog,
@@ -406,7 +406,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 		// 1:1 between IR TLSListenerConfig and xDS Secret
 		if httpListener.TLS != nil {
 			for c := range httpListener.TLS.Certificates {
-				secret := buildXdsTLSCertSecret(httpListener.TLS.Certificates[c])
+				secret := buildXdsTLSCertSecret(&httpListener.TLS.Certificates[c])
 				if err = tCtx.AddXdsResource(resourcev3.SecretType, secret); err != nil {
 					errs = errors.Join(errs, err)
 				}
@@ -427,7 +427,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 				for _, st := range route.Destination.Settings {
 					if st.TLS != nil {
 						for _, cert := range st.TLS.ClientCertificates {
-							secret := buildXdsTLSCertSecret(cert)
+							secret := buildXdsTLSCertSecret(&cert)
 							if err := tCtx.AddXdsResource(resourcev3.SecretType, secret); err != nil {
 								errs = errors.Join(errs, err)
 							}
@@ -553,7 +553,7 @@ func (t *Translator) addRouteToRouteConfig(
 		}
 
 		if http3Settings != nil {
-			http3AltSvcHeader := buildHTTP3AltSvcHeader(int(http3Settings.QUICPort))
+			http3AltSvcHeader := buildHTTP3AltSvcHeader(int(httpListener.ExternalPort))
 			if xdsRoute.ResponseHeadersToAdd == nil {
 				xdsRoute.ResponseHeadersToAdd = make([]*corev3.HeaderValueOption, 0)
 			}
@@ -738,7 +738,7 @@ func (t *Translator) processTCPListenerXdsTranslation(
 		xdsListener := findXdsListenerByHostPort(tCtx, tcpListener.Address, tcpListener.Port, corev3.SocketAddress_TCP)
 		if xdsListener == nil {
 			if xdsListener, err = t.buildXdsTCPListener(
-				tcpListener.CoreListenerDetails,
+				&tcpListener.CoreListenerDetails,
 				tcpListener.TCPKeepalive,
 				tcpListener.Connection,
 				accesslog,
@@ -774,14 +774,14 @@ func (t *Translator) processTCPListenerXdsTranslation(
 			if route.TLS != nil && route.TLS.Terminate != nil {
 				// add tls route client certs
 				for _, cert := range route.TLS.Terminate.ClientCertificates {
-					secret := buildXdsTLSCertSecret(cert)
+					secret := buildXdsTLSCertSecret(&cert)
 					if err := tCtx.AddXdsResource(resourcev3.SecretType, secret); err != nil {
 						errs = errors.Join(errs, err)
 					}
 				}
 
 				for _, s := range route.TLS.Terminate.Certificates {
-					secret := buildXdsTLSCertSecret(s)
+					secret := buildXdsTLSCertSecret(&s)
 					if err := tCtx.AddXdsResource(resourcev3.SecretType, secret); err != nil {
 						errs = errors.Join(errs, err)
 					}
@@ -912,6 +912,7 @@ func processServiceCluster(tCtx *types.ResourceVersionTable, xdsIR *ir.Xds) erro
 					MinEndpointsThreshold: ptr.To[uint64](1),
 				},
 			},
+			metadata: svcCluster.Metadata,
 		}); err != nil {
 			return err
 		}
@@ -1166,7 +1167,7 @@ func buildXdsUpstreamTLSCASecret(tlsConfig *ir.TLSUpstreamConfig) *tlsv3.Secret 
 	}
 }
 
-func buildValidationContext(tlsConfig *ir.TLSUpstreamConfig) *tlsv3.CommonTlsContext_CombinedValidationContext {
+func buildValidationContext(tlsConfig *ir.TLSUpstreamConfig) (*tlsv3.CommonTlsContext_CombinedValidationContext, bool) {
 	validationContext := &tlsv3.CommonTlsContext_CombinedCertificateValidationContext{
 		ValidationContextSdsSecretConfig: &tlsv3.SdsSecretConfig{
 			Name:      tlsConfig.CACertificate.Name,
@@ -1174,6 +1175,7 @@ func buildValidationContext(tlsConfig *ir.TLSUpstreamConfig) *tlsv3.CommonTlsCon
 		},
 		DefaultValidationContext: &tlsv3.CertificateValidationContext{},
 	}
+	hasSANValidations := false
 
 	if tlsConfig.SNI != nil {
 		validationContext.DefaultValidationContext.MatchTypedSubjectAltNames = []*tlsv3.SubjectAltNameMatcher{
@@ -1186,38 +1188,40 @@ func buildValidationContext(tlsConfig *ir.TLSUpstreamConfig) *tlsv3.CommonTlsCon
 				},
 			},
 		}
-		for _, san := range tlsConfig.SubjectAltNames {
-			var sanType tlsv3.SubjectAltNameMatcher_SanType
-			var value string
+		hasSANValidations = true
+	}
+	for _, san := range tlsConfig.SubjectAltNames {
+		var sanType tlsv3.SubjectAltNameMatcher_SanType
+		var value string
 
-			// Exactly one of san.Hostname or san.URI is guaranteed to be set
-			if san.Hostname != nil {
-				sanType = tlsv3.SubjectAltNameMatcher_DNS
-				value = *san.Hostname
-			} else if san.URI != nil {
-				sanType = tlsv3.SubjectAltNameMatcher_URI
-				value = *san.URI
-			}
-			validationContext.DefaultValidationContext.MatchTypedSubjectAltNames = append(
-				validationContext.DefaultValidationContext.MatchTypedSubjectAltNames,
-				&tlsv3.SubjectAltNameMatcher{
-					SanType: sanType,
-					Matcher: &matcherv3.StringMatcher{
-						MatchPattern: &matcherv3.StringMatcher_Exact{
-							Exact: value,
-						},
+		// Exactly one of san.Hostname or san.URI is guaranteed to be set
+		if san.Hostname != nil {
+			sanType = tlsv3.SubjectAltNameMatcher_DNS
+			value = *san.Hostname
+		} else if san.URI != nil {
+			sanType = tlsv3.SubjectAltNameMatcher_URI
+			value = *san.URI
+		}
+		validationContext.DefaultValidationContext.MatchTypedSubjectAltNames = append(
+			validationContext.DefaultValidationContext.MatchTypedSubjectAltNames,
+			&tlsv3.SubjectAltNameMatcher{
+				SanType: sanType,
+				Matcher: &matcherv3.StringMatcher{
+					MatchPattern: &matcherv3.StringMatcher_Exact{
+						Exact: value,
 					},
 				},
-			)
-		}
+			},
+		)
+		hasSANValidations = true
 	}
 
 	return &tlsv3.CommonTlsContext_CombinedValidationContext{
 		CombinedValidationContext: validationContext,
-	}
+	}, hasSANValidations
 }
 
-func buildXdsUpstreamTLSSocketWthCert(tlsConfig *ir.TLSUpstreamConfig) (*corev3.TransportSocket, error) {
+func buildXdsUpstreamTLSSocketWthCert(tlsConfig *ir.TLSUpstreamConfig, requiresAutoSNI bool, endpointType EndpointType) (*corev3.TransportSocket, error) {
 	tlsCtx := &tlsv3.UpstreamTlsContext{
 		CommonTlsContext: &tlsv3.CommonTlsContext{
 			TlsCertificateSdsSecretConfigs: nil,
@@ -1226,7 +1230,19 @@ func buildXdsUpstreamTLSSocketWthCert(tlsConfig *ir.TLSUpstreamConfig) (*corev3.
 	}
 
 	if !tlsConfig.InsecureSkipVerify {
-		tlsCtx.CommonTlsContext.ValidationContextType = buildValidationContext(tlsConfig)
+		ctx, hasSANValidations := buildValidationContext(tlsConfig)
+		tlsCtx.CommonTlsContext.ValidationContextType = ctx
+
+		// Auto SNI SAN validation is only be enabled in the following cases:
+		// 1. there aren't any other SAN validations
+		// 2. InsecureSkipVerify is disabled
+		// 3. SNI is configured (literal or auto)
+		// 4. Endpoint is not a dynamic resolver, which uses a different strategy for Auto SAN validation
+		// See here: https://www.envoyproxy.io/docs/envoy/latest/start/quick-start/securing#validate-an-endpoint-s-certificates-when-connecting
+		// Also, only enable validation if InsecureSkipVerify id disabled
+		if !hasSANValidations && (tlsConfig.SNI != nil || requiresAutoSNI) && endpointType != EndpointTypeDynamicResolver {
+			tlsCtx.AutoSniSanValidation = true
+		}
 	}
 
 	if tlsConfig.SNI != nil {

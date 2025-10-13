@@ -1,36 +1,36 @@
 address:
-  socketAddress:
+  socket_address:
     address: 0.0.0.0
-    portValue: 19001
-bypassOverloadManager: true
-filterChains:
+    port_value: 19001
+bypass_overload_manager: true
+filter_chains:
 - filters:
   - name: envoy.filters.network.http_connection_manager
-    typedConfig:
+    typed_config:
       '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
-      httpFilters:
+      http_filters:
       - name: envoy.filters.http.health_check
-        typedConfig:
+        typed_config:
           '@type': type.googleapis.com/envoy.extensions.filters.http.health_check.v3.HealthCheck
           headers:
           - name: :path
-            stringMatch:
+            string_match:
               exact: /ready
-          passThroughMode: false
+          pass_through_mode: false
       - name: envoy.filters.http.router
-        typedConfig:
+        typed_config:
           '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
-          suppressEnvoyHeaders: true
-      routeConfig:
+          suppress_envoy_headers: true
+      route_config:
         name: ready_route
-        virtualHosts:
+        virtual_hosts:
         - domains:
           - '*'
           name: ready_route
           routes:
-          - directResponse:
+          - direct_response:
               status: 500
             match:
               prefix: /
-      statPrefix: eg-ready-http
+      stat_prefix: eg-ready-http
 name: envoy-gateway-proxy-ready-0.0.0.0-19001

@@ -1,10 +1,10 @@
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
 # To know the available versions check:
 # - https://github.com/kubernetes-sigs/controller-tools/blob/main/envtest-releases.yaml
-ENVTEST_K8S_VERSION ?= 1.29.5
+ENVTEST_K8S_VERSION ?= 1.33.0
 # Need run cel validation across multiple versions of k8s
-# TODO: zhaohuabing update kubebuilder assets to 1.33.0 when available
-ENVTEST_K8S_VERSIONS ?= 1.29.5 1.30.3 1.31.0 1.32.0
+# TODO: update kubebuilder assets to 1.34.0 when available
+ENVTEST_K8S_VERSIONS ?= 1.30.3 1.31.0 1.32.0 1.33.0
 
 # GATEWAY_API_VERSION refers to the version of Gateway API CRDs.
 # For more details, see https://gateway-api.sigs.k8s.io/guides/getting-started/#installing-gateway-api
@@ -24,6 +24,10 @@ BENCHMARK_RPS ?= 10000
 BENCHMARK_CONNECTIONS ?= 100
 BENCHMARK_DURATION ?= 60
 BENCHMARK_REPORT_DIR ?= benchmark_report
+
+# Benchmark toggles
+# Disable PNG rendering by default to speed up CI
+BENCHMARK_RENDER_PNG ?= false
 
 CONFORMANCE_RUN_TEST ?=
 
@@ -77,9 +81,9 @@ endif
 .PHONY: manifests
 manifests: generate-gwapi-manifests ## Generate WebhookConfiguration and CustomResourceDefinition objects.
 	@$(LOG_TARGET)
-	@go tool controller-gen crd:allowDangerousTypes=true paths="./api/..." output:crd:artifacts:config=charts/gateway-helm/crds/generated
+	$(GO_TOOL) controller-gen crd:allowDangerousTypes=true paths="./api/..." output:crd:artifacts:config=charts/gateway-helm/crds/generated
 	@mkdir -p charts/gateway-helm/templates/generated
-	@go tool controller-gen crd:allowDangerousTypes=true paths="./api/..." output:crd:artifacts:config=charts/gateway-crds-helm/templates/generated
+	$(GO_TOOL) controller-gen crd:allowDangerousTypes=true paths="./api/..." output:crd:artifacts:config=charts/gateway-crds-helm/templates/generated
 	@for file in charts/gateway-crds-helm/templates/generated/*.yaml; do \
 		sed -i.bak '1s/^/{{- if .Values.crds.envoyGateway.enabled }}\n/' $$file && \
 		echo '{{- end }}' >> $$file && \
@@ -107,12 +111,12 @@ generate-gwapi-manifests: ## Generate Gateway API manifests and make it consiste
 kube-generate: ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
 # Note that the paths can't just be "./..." with the header file, or the tool will panic on run. Sorry.
 	@$(LOG_TARGET)
-	@go tool controller-gen $(CONTROLLERGEN_OBJECT_FLAGS) paths="{$(ROOT_DIR)/api/...,$(ROOT_DIR)/internal/ir/...,$(ROOT_DIR)/internal/gatewayapi/...}"
+	$(GO_TOOL) controller-gen $(CONTROLLERGEN_OBJECT_FLAGS) paths="{$(ROOT_DIR)/api/...,$(ROOT_DIR)/internal/ir/...,$(ROOT_DIR)/internal/gatewayapi/...}"
 
 .PHONY: kube-test
 kube-test: manifests generate ## Run Kubernetes provider tests.
 	@$(LOG_TARGET)
-	KUBEBUILDER_ASSETS="$(shell go tool setup-envtest use $(ENVTEST_K8S_VERSION) -p path)" go test --tags=integration,celvalidation ./... -coverprofile cover.out
+	KUBEBUILDER_ASSETS="$(shell $(GO_TOOL) setup-envtest use $(ENVTEST_K8S_VERSION) -p path)" go test --tags=integration,celvalidation ./... -coverprofile cover.out
 
 ##@ Kubernetes Deployment
 
@@ -253,8 +257,8 @@ run-benchmark: install-benchmark-server prepare-ip-family ## Run benchmark tests
 	kubectl apply -f test/benchmark/config/gatewayclass.yaml
 	go test -v -tags benchmark -timeout $(BENCHMARK_TIMEOUT) ./test/benchmark --rps=$(BENCHMARK_RPS) --connections=$(BENCHMARK_CONNECTIONS) --duration=$(BENCHMARK_DURATION) --report-save-dir=$(BENCHMARK_REPORT_DIR)
 	# render benchmark profiles into image
-	dot -V
-	find test/benchmark/$(BENCHMARK_REPORT_DIR)/profiles -name "*.pprof" -type f -exec sh -c 'go tool pprof -png "$$1" > "$${1%.pprof}.png"' _ {} \;
+	@if [ "$(BENCHMARK_RENDER_PNG)" != "false" ]; then dot -V; fi
+	@if [ "$(BENCHMARK_RENDER_PNG)" != "false" ]; then find test/benchmark/$(BENCHMARK_REPORT_DIR)/profiles -name "*.pprof" -type f -exec sh -c 'go tool pprof -png "$$1" > "$$${1%.pprof}.png"' _ {} \; ; fi
 
 .PHONY: install-benchmark-server
 install-benchmark-server: ## Install nighthawk server for benchmark test
@@ -318,12 +322,15 @@ run-experimental-conformance: prepare-ip-family ## Run Experimental Gateway API 
 	@$(LOG_TARGET)
 	kubectl wait --timeout=$(WAIT_TIMEOUT) -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
 	kubectl apply -f test/config/gatewayclass.yaml
-	go test -v -tags experimental ./test/conformance -run TestExperimentalConformance --gateway-class=envoy-gateway --debug=true --organization=envoyproxy --project=envoy-gateway --url=https://github.com/envoyproxy/gateway --version=latest --report-output="$(CONFORMANCE_REPORT_PATH)" --contact=https://github.com/envoyproxy/gateway/blob/main/GOVERNANCE.md
+	go test -v -tags experimental ./test/conformance -run TestExperimentalConformance --gateway-class=envoy-gateway --debug=true \
+		--organization=envoyproxy --project=envoy-gateway --url=https://github.com/envoyproxy/gateway --version=latest \
+		--report-output="$(CONFORMANCE_REPORT_PATH)" --contact=https://github.com/envoyproxy/gateway/blob/main/GOVERNANCE.md \
+		--mode="$(KUBE_DEPLOY_PROFILE)" --version=$(TAG)
 
 .PHONY: delete-cluster
 delete-cluster: ## Delete kind cluster.
 	@$(LOG_TARGET)
-	@go tool kind delete cluster --name envoy-gateway
+	$(GO_TOOL) kind delete cluster --name envoy-gateway
 
 .PHONY: generate-manifests
 generate-manifests: helm-generate.gateway-helm ## Generate Kubernetes release manifests.

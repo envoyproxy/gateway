@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"k8s.io/utils/ptr"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
@@ -710,6 +711,60 @@ func Test_validateHtpasswdFormat(t *testing.T) {
 			if (err != nil) != tt.wantError {
 				t.Errorf("validateHtpasswdFormat() error = %v, wantErr %v", err, tt.wantError)
 				return
+			}
+		})
+	}
+}
+
+func Test_parseExtAuthTimeout(t *testing.T) {
+	tests := []struct {
+		name      string
+		timeout   *gwapiv1.Duration
+		wantValid bool
+		wantValue string
+	}{
+		{
+			name:      "valid timeout",
+			timeout:   ptr.To(gwapiv1.Duration("10s")),
+			wantValid: true,
+			wantValue: "10s",
+		},
+		{
+			name:      "invalid timeout format",
+			timeout:   ptr.To(gwapiv1.Duration("invalid-duration")),
+			wantValid: false,
+			wantValue: "",
+		},
+		{
+			name:      "nil timeout",
+			timeout:   nil,
+			wantValid: false,
+			wantValue: "",
+		},
+		{
+			name:      "complex valid timeout",
+			timeout:   ptr.To(gwapiv1.Duration("1h30m45s")),
+			wantValid: true,
+			wantValue: "1h30m45s",
+		},
+		{
+			name:      "millisecond timeout",
+			timeout:   ptr.To(gwapiv1.Duration("500ms")),
+			wantValid: true,
+			wantValue: "500ms",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := parseExtAuthTimeout(tt.timeout)
+
+			// Verify the timeout parsing behavior
+			if tt.wantValid {
+				assert.NotNil(t, result)
+				assert.Equal(t, tt.wantValue, result.Duration.String())
+			} else {
+				assert.Nil(t, result)
 			}
 		})
 	}

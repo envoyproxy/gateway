@@ -1,0 +1,95 @@
+- ignorePortInHostMatching: true
+  name: envoy-gateway/gateway-1/http
+  virtualHosts:
+  - domains:
+    - '*'
+    metadata:
+      filterMetadata:
+        envoy-gateway:
+          resources:
+          - kind: Gateway
+            name: gateway-1
+            namespace: envoy-gateway
+            sectionName: http
+    name: envoy-gateway/gateway-1/http/*
+    routes:
+    - match:
+        prefix: /
+      metadata:
+        filterMetadata:
+          envoy-gateway:
+            resources:
+            - kind: HTTPRoute
+              name: httproute-1
+              namespace: default
+      name: httproute/default/httproute-1/rule/0/match/0/*
+      route:
+        cluster: httproute/default/httproute-1/rule/0
+        upgradeConfigs:
+        - upgradeType: websocket
+    - match:
+        prefix: /
+      metadata:
+        filterMetadata:
+          envoy-gateway:
+            resources:
+            - kind: HTTPRoute
+              name: httproute-2
+              namespace: default
+      name: httproute/default/httproute-2/rule/0/match/0/*
+      route:
+        cluster: httproute/default/httproute-2/rule/0
+        upgradeConfigs:
+        - upgradeType: websocket
+    - match:
+        prefix: /
+      metadata:
+        filterMetadata:
+          envoy-gateway:
+            resources:
+            - kind: HTTPRoute
+              name: httproute-3
+              namespace: default
+      name: httproute/default/httproute-3/rule/0/match/0/*
+      route:
+        cluster: httproute/default/httproute-3/rule/0
+        upgradeConfigs:
+        - upgradeType: websocket
+    - match:
+        prefix: /
+      metadata:
+        filterMetadata:
+          envoy-gateway:
+            resources:
+            - kind: HTTPRoute
+              name: httproute-4
+              namespace: default
+      name: httproute/default/httproute-4/rule/0/match/0/*
+      route:
+        cluster: httproute/default/httproute-4/rule/0
+        upgradeConfigs:
+        - upgradeType: websocket
+    - directResponse:
+        status: 500
+      match:
+        prefix: /
+      metadata:
+        filterMetadata:
+          envoy-gateway:
+            resources:
+            - kind: HTTPRoute
+              name: httproute-5
+              namespace: default
+      name: httproute/default/httproute-5/rule/0/match/0/*
+    - directResponse:
+        status: 500
+      match:
+        prefix: /
+      metadata:
+        filterMetadata:
+          envoy-gateway:
+            resources:
+            - kind: HTTPRoute
+              name: httproute-6
+              namespace: default
+      name: httproute/default/httproute-6/rule/0/match/0/*

@@ -12,15 +12,15 @@ HTTP routing, refer to the [Gateway API documentation][].
 
 ## Configuration
 
-In this example, we have one Gateway resource and two TCPRoute resources that distribute the traffic with the following
+In this example, we have one [Gateway][] resource and two [TCPRoute][] resources that distribute the traffic with the following
 rules:
 
-All TCP streams on port `8088` of the Gateway are forwarded to port 3001 of `foo` Kubernetes Service.
-All TCP streams on port `8089` of the Gateway are forwarded to port 3002 of `bar` Kubernetes Service.
-In this example two TCP listeners will be applied to the Gateway in order to route them to two separate backend
-TCPRoutes, note that the protocol set for the listeners on the Gateway is TCP:
+All TCP streams on port `8088` of the [Gateway][] are forwarded to port 3001 of `foo` Kubernetes [Service][].
+All TCP streams on port `8089` of the [Gateway][] are forwarded to port 3002 of `bar` Kubernetes [Service][].
+In this example two TCP listeners will be applied to the [Gateway][] in order to route them to two separate backend
+[TCPRoute][]s, note that the protocol set for the listeners on the [Gateway][] is TCP:
 
-Install the GatewayClass and a `tcp-gateway` Gateway first.
+Install the [GatewayClass][] and a `tcp-gateway` [Gateway][] first.
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
@@ -93,7 +93,7 @@ spec:
 {{% /tab %}}
 {{< /tabpane >}}
 
-Install two services `foo` and `bar`, which are bound to `backend-1` and `backend-2`.
+Install two [Services][] `foo` and `bar`, which are bound to `backend-1` and `backend-2`.
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
@@ -304,7 +304,7 @@ spec:
 {{% /tab %}}
 {{< /tabpane >}}
 
-Install two TCPRoutes `tcp-app-1` and `tcp-app-2` with different `sectionName`:
+Install two [TCPRoute][]s `tcp-app-1` and `tcp-app-2` with different `sectionName`:
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
@@ -385,7 +385,7 @@ spec:
     sectionName: foo
 ```
 
-This corresponds directly with the name in the listeners in the Gateway:
+This corresponds directly with the name in the listeners in the [Gateway][]:
 
 ``` yaml
   listeners:
@@ -397,10 +397,10 @@ This corresponds directly with the name in the listeners in the Gateway:
     port: 8089
 ```
 
-In this way each TCPRoute "attaches" itself to a different port on the Gateway so that the `foo` service
+In this way each [TCPRoute][] "attaches" itself to a different port on the [Gateway][] so that the `foo` service
 is taking traffic for port `8088` from outside the cluster and `bar` service takes the port `8089` traffic.
 
-Before testing, please get the tcp-gateway Gateway's address first:
+Before testing, please get the tcp-gateway [Gateway][]'s address first:
 
 ```shell
 export GATEWAY_HOST=$(kubectl get gateway/tcp-gateway -o jsonpath='{.status.addresses[0].value}')
@@ -480,3 +480,7 @@ You can see that the traffic routing to `bar` service when sending request to `8
 
 [TCPRoute]: https://gateway-api.sigs.k8s.io/reference/spec#gateway.networking.k8s.io/v1alpha2.TCPRoute
 [Gateway API documentation]: https://gateway-api.sigs.k8s.io/
+[GatewayClass]: https://gateway-api.sigs.k8s.io/api-types/gatewayclass/
+[Gateway]: https://gateway-api.sigs.k8s.io/api-types/gateway/
+[Service]: https://kubernetes.io/docs/concepts/services-networking/service/
+[Services]: https://kubernetes.io/docs/concepts/services-networking/service/

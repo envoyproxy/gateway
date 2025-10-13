@@ -20,7 +20,7 @@ GOLANGCI_LINT_FLAGS ?=
 lint: lint.golint
 lint.golint:
 	@$(LOG_TARGET)
-	@go tool golangci-lint run $(GOLANGCI_LINT_FLAGS) --build-tags=$(LINT_BUILD_TAGS) --config=tools/linter/golangci-lint/.golangci.yml
+	$(GO_TOOL) golangci-lint run $(GOLANGCI_LINT_FLAGS) --build-tags=$(LINT_BUILD_TAGS) --config=tools/linter/golangci-lint/.golangci.yml
 
 .PHONY: lint.yamllint
 lint: lint.yamllint
@@ -69,13 +69,12 @@ lint.shellcheck: $(tools/shellcheck)
 	$(tools/shellcheck) tools/hack/*.sh
 
 .PHONY: fix-golint
-fix-golint: lint.fix-golint ## Run golangci-lint and gci to automatically fix code lint issues
+fix-golint: lint.fix-golint ## Run golangci-lint to automatically fix code lint issues
 
 .PHONY: lint.fix-golint
 lint.fix-golint:
 	@$(LOG_TARGET)
 	$(MAKE) lint.golint GOLANGCI_LINT_FLAGS="--fix"
-	find . -name "*.go" | xargs go tool gci write --skip-generated -s Standard -s Default -s "Prefix(github.com/envoyproxy/gateway)"
 
 .PHONY: gen-check
 gen-check: format generate manifests protos go.testdata.complete

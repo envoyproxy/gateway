@@ -943,7 +943,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				`spec.HealthCheck.active.http.expectedStatuses[2]: Invalid value: 601: spec.HealthCheck.active.http.expectedStatuses[2] in body should be less than 600`,
+				`spec.HealthCheck.active.http.expectedStatuses[2]: Invalid value: 601: spec.HealthCheck.active.http.expectedStatuses[2] in body should be less than or equal to 599`,
 			},
 		},
 		{
@@ -2016,6 +2016,84 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{},
+		},
+		{
+			desc: "custom response with valid header - no remove",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+								Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1a2.Kind("Gateway"),
+								Name:  gwapiv1a2.ObjectName("eg"),
+							},
+						},
+					},
+					ResponseOverride: []*egv1a1.ResponseOverride{
+						{
+							Match: egv1a1.CustomResponseMatch{
+								StatusCodes: []egv1a1.StatusCodeMatch{
+									{
+										Value: ptr.To(500),
+									},
+								},
+							},
+							Response: &egv1a1.CustomResponse{
+								StatusCode: ptr.To(503),
+								Header: &gwapiv1.HTTPHeaderFilter{
+									Set: []gwapiv1.HTTPHeader{
+										{Name: "x-custom-header", Value: "custom-value"},
+									},
+									Add: []gwapiv1.HTTPHeader{
+										{Name: "x-added-header", Value: "added-value"},
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "custom response with invalid header - remove not allowed",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+								Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1a2.Kind("Gateway"),
+								Name:  gwapiv1a2.ObjectName("eg"),
+							},
+						},
+					},
+					ResponseOverride: []*egv1a1.ResponseOverride{
+						{
+							Match: egv1a1.CustomResponseMatch{
+								StatusCodes: []egv1a1.StatusCodeMatch{
+									{
+										Value: ptr.To(500),
+									},
+								},
+							},
+							Response: &egv1a1.CustomResponse{
+								StatusCode: ptr.To(503),
+								Header: &gwapiv1.HTTPHeaderFilter{
+									Set: []gwapiv1.HTTPHeader{
+										{Name: "x-custom-header", Value: "custom-value"},
+									},
+									Remove: []string{"x-remove-header"},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"Remove is not supported for Header in CustomResponse",
+			},
 		},
 
 		{

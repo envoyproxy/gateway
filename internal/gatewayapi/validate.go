@@ -29,7 +29,7 @@ import (
 func (t *Translator) validateBackendRef(backendRefContext BackendRefContext, route RouteContext,
 	resources *resource.Resources, backendNamespace string, routeKind gwapiv1.Kind,
 ) status.Error {
-	backendRef := GetBackendRef(backendRefContext)
+	backendRef := backendRefContext.GetBackendRef()
 
 	if err := t.validateBackendRefFilters(backendRefContext, routeKind); err != nil {
 		return err
@@ -91,7 +91,10 @@ func (t *Translator) validateBackendRefKind(backendRef *gwapiv1a2.BackendRef) st
 }
 
 func (t *Translator) validateBackendRefFilters(backendRef BackendRefContext, routeKind gwapiv1.Kind) status.Error {
-	filters := GetFilters(backendRef)
+	filters := backendRef.GetFilters()
+	if filters == nil {
+		return nil
+	}
 	var unsupportedFilters bool
 
 	switch routeKind {
@@ -1079,6 +1082,25 @@ func validateGatewayListenerSectionName(
 	if !found {
 		message := fmt.Sprintf("No section name %s found for Gateway %s",
 			string(sectionName), targetKey.String())
+
+		return &status.PolicyResolveError{
+			Reason:  gwapiv1a2.PolicyReasonTargetNotFound,
+			Message: message,
+		}
+	}
+	return nil
+}
+
+// validateRouteRuleSectionName check:
+// if the section name exists in the target Route rules.
+func validateRouteRuleSectionName(
+	sectionName gwapiv1.SectionName,
+	targetKey policyTargetRouteKey,
+	route *policyRouteTargetContext,
+) *status.PolicyResolveError {
+	if !route.HasRuleNames(sectionName) {
+		message := fmt.Sprintf("No section name %s found for %s %s/%s",
+			string(sectionName), targetKey.Kind, targetKey.Namespace, targetKey.Name)
 
 		return &status.PolicyResolveError{
 			Reason:  gwapiv1a2.PolicyReasonTargetNotFound,

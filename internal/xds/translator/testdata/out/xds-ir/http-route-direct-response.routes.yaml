@@ -12,3 +12,15 @@
       match:
         prefix: /
       name: direct-route
+      responseHeadersToAdd:
+      - appendAction: OVERWRITE_IF_EXISTS_OR_ADD
+        header:
+          key: Content-Type
+          value: application/json
+      - header:
+          key: X-Add-Header
+          value: added-502
+      - appendAction: OVERWRITE_IF_EXISTS_OR_ADD
+        header:
+          key: X-Set-Header
+          value: set-502

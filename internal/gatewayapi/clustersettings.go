@@ -30,41 +30,41 @@ func translateTrafficFeatures(policy *egv1a1.ClusterSettings) (*ir.TrafficFeatur
 	}
 	ret := &ir.TrafficFeatures{}
 
-	if timeout, err := buildClusterSettingsTimeout(*policy); err != nil {
+	if timeout, err := buildClusterSettingsTimeout(policy); err != nil {
 		return nil, err
 	} else {
 		ret.Timeout = timeout
 	}
 
-	if bc, err := buildBackendConnection(*policy); err != nil {
+	if bc, err := buildBackendConnection(policy); err != nil {
 		return nil, err
 	} else {
 		ret.BackendConnection = bc
 	}
 
-	if ka, err := buildTCPKeepAlive(*policy); err != nil {
+	if ka, err := buildTCPKeepAlive(policy); err != nil {
 		return nil, err
 	} else {
 		ret.TCPKeepalive = ka
 	}
 
-	if cb, err := buildCircuitBreaker(*policy); err != nil {
+	if cb, err := buildCircuitBreaker(policy); err != nil {
 		return nil, err
 	} else {
 		ret.CircuitBreaker = cb
 	}
 
-	if lb, err := buildLoadBalancer(*policy); err != nil {
+	if lb, err := buildLoadBalancer(policy); err != nil {
 		return nil, err
 	} else {
 		ret.LoadBalancer = lb
 	}
 
-	ret.ProxyProtocol = buildProxyProtocol(*policy)
+	ret.ProxyProtocol = buildProxyProtocol(policy)
 
-	ret.HealthCheck = buildHealthCheck(*policy)
+	ret.HealthCheck = buildHealthCheck(policy)
 
-	ret.DNS = translateDNS(*policy)
+	ret.DNS = translateDNS(policy)
 
 	if h2, err := buildIRHTTP2Settings(policy.HTTP2); err != nil {
 		return nil, err
@@ -87,7 +87,7 @@ func translateTrafficFeatures(policy *egv1a1.ClusterSettings) (*ir.TrafficFeatur
 	return ret, nil
 }
 
-func buildClusterSettingsTimeout(policy egv1a1.ClusterSettings) (*ir.Timeout, error) {
+func buildClusterSettingsTimeout(policy *egv1a1.ClusterSettings) (*ir.Timeout, error) {
 	if policy.Timeout == nil {
 		return nil, nil
 	}
@@ -150,7 +150,7 @@ func buildClusterSettingsTimeout(policy egv1a1.ClusterSettings) (*ir.Timeout, er
 	return to, errs
 }
 
-func buildBackendConnection(policy egv1a1.ClusterSettings) (*ir.BackendConnection, error) {
+func buildBackendConnection(policy *egv1a1.ClusterSettings) (*ir.BackendConnection, error) {
 	if policy.Connection == nil {
 		return nil, nil
 	}
@@ -178,7 +178,7 @@ func buildBackendConnection(policy egv1a1.ClusterSettings) (*ir.BackendConnectio
 	return bcIR, nil
 }
 
-func buildTCPKeepAlive(policy egv1a1.ClusterSettings) (*ir.TCPKeepalive, error) {
+func buildTCPKeepAlive(policy *egv1a1.ClusterSettings) (*ir.TCPKeepalive, error) {
 	if policy.TCPKeepalive == nil {
 		return nil, nil
 	}
@@ -208,7 +208,7 @@ func buildTCPKeepAlive(policy egv1a1.ClusterSettings) (*ir.TCPKeepalive, error) 
 	return ka, nil
 }
 
-func buildCircuitBreaker(policy egv1a1.ClusterSettings) (*ir.CircuitBreaker, error) {
+func buildCircuitBreaker(policy *egv1a1.ClusterSettings) (*ir.CircuitBreaker, error) {
 	if policy.CircuitBreaker == nil {
 		return nil, nil
 	}
@@ -273,7 +273,7 @@ func buildCircuitBreaker(policy egv1a1.ClusterSettings) (*ir.CircuitBreaker, err
 	return cb, nil
 }
 
-func buildLoadBalancer(policy egv1a1.ClusterSettings) (*ir.LoadBalancer, error) {
+func buildLoadBalancer(policy *egv1a1.ClusterSettings) (*ir.LoadBalancer, error) {
 	if policy.LoadBalancer == nil {
 		return nil, nil
 	}
@@ -385,7 +385,7 @@ func buildEndpointOverride(policy egv1a1.EndpointOverride) *ir.EndpointOverride 
 	return endpointOverride
 }
 
-func buildProxyProtocol(policy egv1a1.ClusterSettings) *ir.ProxyProtocol {
+func buildProxyProtocol(policy *egv1a1.ClusterSettings) *ir.ProxyProtocol {
 	if policy.ProxyProtocol == nil {
 		return nil
 	}
@@ -404,7 +404,7 @@ func buildProxyProtocol(policy egv1a1.ClusterSettings) *ir.ProxyProtocol {
 	return pp
 }
 
-func buildHealthCheck(policy egv1a1.ClusterSettings) *ir.HealthCheck {
+func buildHealthCheck(policy *egv1a1.ClusterSettings) *ir.HealthCheck {
 	if policy.HealthCheck == nil {
 		return nil
 	}
@@ -550,7 +550,7 @@ func translateActiveHealthCheckPayload(p *egv1a1.ActiveHealthCheckPayload) *ir.H
 	return irPayload
 }
 
-func translateDNS(policy egv1a1.ClusterSettings) *ir.DNS {
+func translateDNS(policy *egv1a1.ClusterSettings) *ir.DNS {
 	if policy.DNS == nil {
 		return nil
 	}

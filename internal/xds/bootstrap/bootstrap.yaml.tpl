@@ -8,8 +8,10 @@ admin:
     socket_address:
       address: {{ .AdminServer.Address }}
       port_value: {{ .AdminServer.Port }}
+{{- if not .TopologyInjectorDisabled }}
 cluster_manager:
   local_cluster_name: {{ .ServiceClusterName }}
+{{- end }}
 node:
   locality:
     zone: $(ENVOY_SERVICE_ZONE)
@@ -221,6 +223,10 @@ static_resources:
                 "@type": type.googleapis.com/envoy.extensions.http.injected_credentials.generic.v3.Generic
                 credential:
                   name: jwt-sa-bearer
+                  sds_config:
+                    path_config_source:
+                      path: {{ .ServiceAccountTokenPath }}
+                    resource_api_version: V3
             overwrite: true
         - name: envoy.extensions.filters.http.upstream_codec.v3.UpstreamCodec
           typed_config:
@@ -249,13 +255,6 @@ static_resources:
               path_config_source:
                 path: {{ .SdsTrustedCAPath }}
               resource_api_version: V3
-  {{- if .GatewayNamespaceMode }}
-  secrets:
-  - name: jwt-sa-bearer
-    generic_secret:
-      secret:
-        filename: "/var/run/secrets/token/sa-token"
-  {{- end }}
 overload_manager:
   refresh_interval: 0.25s
   resource_monitors:

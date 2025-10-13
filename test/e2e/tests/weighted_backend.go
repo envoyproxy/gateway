@@ -39,7 +39,7 @@ var WeightedBackendTest = suite.ConformanceTest{
 				"infra-backend-v1": sendRequests * .5,
 				"infra-backend-v2": sendRequests * .5,
 			}
-			runWeightedBackendTest(t, suite, "weight-equal-http-route", "/same-weight", "infra-backend", expected)
+			runWeightedBackendTest(t, suite, nil, "weight-equal-http-route", "/same-weight", "infra-backend", expected)
 		})
 		t.Run("BlueGreen", func(t *testing.T) {
 			// The received request is approximately 9:1
@@ -47,7 +47,7 @@ var WeightedBackendTest = suite.ConformanceTest{
 				"infra-backend-v1": sendRequests * .9,
 				"infra-backend-v2": sendRequests * .1,
 			}
-			runWeightedBackendTest(t, suite, "weight-bluegreen-http-route", "/blue-green", "infra-backend", expected)
+			runWeightedBackendTest(t, suite, nil, "weight-bluegreen-http-route", "/blue-green", "infra-backend", expected)
 		})
 		t.Run("CompleteRollout", func(t *testing.T) {
 			// All the requests should be proxied to v1
@@ -55,16 +55,20 @@ var WeightedBackendTest = suite.ConformanceTest{
 				"infra-backend-v1": sendRequests * 1,
 				"infra-backend-v2": sendRequests * 0,
 			}
-			runWeightedBackendTest(t, suite, "weight-complete-rollout-http-route", "/complete-rollout", "infra-backend", expected)
+			runWeightedBackendTest(t, suite, nil, "weight-complete-rollout-http-route", "/complete-rollout", "infra-backend", expected)
 		})
 	},
 }
 
-func runWeightedBackendTest(t *testing.T, suite *suite.ConformanceTestSuite, routeName, path, backendName string, expectedOutput map[string]int) {
+func runWeightedBackendTest(t *testing.T, suite *suite.ConformanceTestSuite, gateway *types.NamespacedName, routeName, path, backendName string, expectedOutput map[string]int) {
 	weightEqualRoute := types.NamespacedName{Name: routeName, Namespace: ConformanceInfraNamespace}
-	gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig,
-		suite.ControllerName,
-		kubernetes.NewGatewayRef(SameNamespaceGateway), weightEqualRoute)
+
+	gatewayRef := kubernetes.NewGatewayRef(SameNamespaceGateway)
+	if gateway != nil {
+		gatewayRef = kubernetes.NewGatewayRef(*gateway)
+	}
+
+	gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, gatewayRef, weightEqualRoute)
 
 	// Make sure all test resources are ready
 	kubernetes.NamespacesMustBeReady(t, suite.Client, suite.TimeoutConfig, []string{ConformanceInfraNamespace})

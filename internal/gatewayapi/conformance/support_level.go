@@ -41,7 +41,7 @@ func init() {
 
 // GetTestSupportLevel returns the SupportLevel for a conformance test.
 // The support level is determined by the highest support level of the features.
-func GetTestSupportLevel(test suite.ConformanceTest) SupportLevel {
+func GetTestSupportLevel(test *suite.ConformanceTest) SupportLevel {
 	supportLevel := Core
 
 	if ExtendedFeatures.HasAny(test.Features...) {

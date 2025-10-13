@@ -1,0 +1,19 @@
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyGateway
+gateway:
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller
+provider:
+  type: Custom
+  custom:
+    resource:
+      type: File
+      file:
+        paths: ["/tmp/envoy-gateway-test"]
+    infrastructure:
+      type: Host
+      host: {}
+logging:
+  level:
+    default: info
+extensionApis:
+  enableBackend: true

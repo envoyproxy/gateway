@@ -31,17 +31,19 @@ import (
 )
 
 func init() {
-	ConformanceTests = append(ConformanceTests, RateLimitCIDRMatchTest)
-	ConformanceTests = append(ConformanceTests, RateLimitHeaderMatchTest)
-	ConformanceTests = append(ConformanceTests, GlobalRateLimitHeaderInvertMatchTest)
-	ConformanceTests = append(ConformanceTests, RateLimitHeadersDisabled)
-	ConformanceTests = append(ConformanceTests, RateLimitBasedJwtClaimsTest)
-	ConformanceTests = append(ConformanceTests, RateLimitMultipleListenersTest)
-	ConformanceTests = append(ConformanceTests, RateLimitHeadersAndCIDRMatchTest)
-	ConformanceTests = append(ConformanceTests, UsageRateLimitTest)
-	ConformanceTests = append(ConformanceTests, RateLimitGlobalSharedCidrMatchTest)
-	ConformanceTests = append(ConformanceTests, RateLimitGlobalSharedGatewayHeaderMatchTest)
-	ConformanceTests = append(ConformanceTests, RateLimitGlobalMergeTest)
+	ConformanceTests = append(ConformanceTests,
+		RateLimitCIDRMatchTest,
+		RateLimitHeaderMatchTest,
+		GlobalRateLimitHeaderInvertMatchTest,
+		RateLimitHeadersDisabled,
+		RateLimitBasedJwtClaimsTest,
+		RateLimitMultipleListenersTest,
+		RateLimitHeadersAndCIDRMatchTest,
+		UsageRateLimitTest,
+		RateLimitGlobalSharedCidrMatchTest,
+		RateLimitGlobalSharedGatewayHeaderMatchTest,
+		RateLimitGlobalMergeTest,
+	)
 }
 
 var RateLimitCIDRMatchTest = suite.ConformanceTest{
@@ -701,7 +703,7 @@ var UsageRateLimitTest = suite.ConformanceTest{
 		EnvoyExtensionPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "usage-rate-limit", Namespace: ns}, suite.ControllerName, ancestorRef)
 		podReady := corev1.PodCondition{Type: corev1.PodReady, Status: corev1.ConditionTrue}
 		// Wait for the grpc ext auth service pod to be ready
-		WaitForPods(t, suite.Client, ns, map[string]string{"app": "grpc-ext-proc"}, corev1.PodRunning, podReady)
+		WaitForPods(t, suite.Client, ns, map[string]string{"app": "grpc-ext-proc"}, corev1.PodRunning, &podReady)
 
 		requestHeaders := map[string]string{"x-user-id": "one"}
 
@@ -1076,6 +1078,9 @@ var RateLimitGlobalMergeTest = suite.ConformanceTest{
 	},
 }
 
+// GotExactExpectedResponse consumes a request value; keeping value semantics avoids threading pointers through many tests.
+//
+//nolint:gocritic
 func GotExactExpectedResponse(t *testing.T, n int, r roundtripper.RoundTripper, req roundtripper.Request, resp http.ExpectedResponse) error {
 	for i := 0; i < n; i++ {
 		cReq, cRes, err := r.CaptureRoundTrip(req)

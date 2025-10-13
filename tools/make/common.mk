@@ -34,6 +34,9 @@ ifeq ($(origin OUTPUT_DIR),undefined)
 OUTPUT_DIR := $(ROOT_DIR)/bin
 endif
 
+# Common Go tool command including the custom -modfile flag for tools dependencies
+GO_TOOL = go tool -modfile=tools/go.mod
+
 # REV is the short git sha of latest commit.
 REV=$(shell git rev-parse --short HEAD)
 

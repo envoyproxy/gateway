@@ -40,7 +40,7 @@ func (t *Translator) ProcessExtensionServerPolicies(policies []unstructured.Unst
 	// Process the policies targeting Gateways. Only update the policy status if it was accepted.
 	// A policy is considered accepted if at least one targetRef contained inside matched a listener.
 	for policyIndex, policy := range policies {
-		policy := policy.DeepCopy()
+		policy := &policy
 		var policyStatus gwapiv1a2.PolicyStatus
 		accepted := false
 		targetRefs, err := extractTargetRefs(policy, gateways)
@@ -74,10 +74,8 @@ func (t *Translator) ProcessExtensionServerPolicies(policies []unstructured.Unst
 				// Only add a status condition if the policy was added into the IR
 				// Find its ancestor reference by resolved gateway, even with resolve error
 				gatewayNN := utils.NamespacedName(gateway)
-				ancestorRefs := []gwapiv1a2.ParentReference{
-					getAncestorRefForPolicy(gatewayNN, currTarget.SectionName),
-				}
-				status.SetAcceptedForPolicyAncestors(&policyStatus, ancestorRefs, t.GatewayControllerName, policy.GetGeneration())
+				ancestorRef := getAncestorRefForPolicy(gatewayNN, currTarget.SectionName)
+				status.SetAcceptedForPolicyAncestor(&policyStatus, &ancestorRef, t.GatewayControllerName, policy.GetGeneration())
 				accepted = true
 			}
 		}
@@ -103,7 +101,7 @@ func extractTargetRefs(policy *unstructured.Unstructured, gateways []*GatewayCon
 	if err := json.Unmarshal(specAsJSON, &targetRefs); err != nil {
 		return nil, fmt.Errorf("no targets found for the policy")
 	}
-	ret := getPolicyTargetRefs(targetRefs, gateways)
+	ret := getPolicyTargetRefs(targetRefs, gateways, policy.GetNamespace())
 	if len(ret) == 0 {
 		return nil, fmt.Errorf("no targets found for the policy")
 	}

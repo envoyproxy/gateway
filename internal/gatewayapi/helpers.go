@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"net"
 	"slices"
+	"sort"
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
@@ -385,7 +386,7 @@ func irListenerPortName(proto ir.ProtocolType, port int32) string {
 func irRoutePrefix(route RouteContext) string {
 	// add a "/" at the end of the prefix to prevent mismatching routes with the
 	// same prefix. For example, route prefix "/foo/" should not match a route "/foobar".
-	return fmt.Sprintf("%s/%s/%s/", strings.ToLower(string(GetRouteType(route))), route.GetNamespace(), route.GetName())
+	return fmt.Sprintf("%s/%s/%s/", strings.ToLower(string(route.GetRouteType())), route.GetNamespace(), route.GetName())
 }
 
 func irRouteName(route RouteContext, ruleIdx, matchIdx int) string {
@@ -393,7 +394,7 @@ func irRouteName(route RouteContext, ruleIdx, matchIdx int) string {
 }
 
 func irTCPRouteName(route RouteContext) string {
-	return fmt.Sprintf("%s/%s/%s", strings.ToLower(string(GetRouteType(route))), route.GetNamespace(), route.GetName())
+	return fmt.Sprintf("%s/%s/%s", strings.ToLower(string(route.GetRouteType())), route.GetNamespace(), route.GetName())
 }
 
 func irUDPRouteName(route RouteContext) string {
@@ -422,11 +423,17 @@ func irTLSConfigs(tlsSecrets ...*corev1.Secret) *ir.TLSConfig {
 		Certificates: make([]ir.TLSCertificate, len(tlsSecrets)),
 	}
 	for i, tlsSecret := range tlsSecrets {
-		tlsListenerConfigs.Certificates[i] = ir.TLSCertificate{
+		cert := ir.TLSCertificate{
 			Name:        irTLSListenerConfigName(tlsSecret),
 			Certificate: tlsSecret.Data[corev1.TLSCertKey],
 			PrivateKey:  tlsSecret.Data[corev1.TLSPrivateKeyKey],
 		}
+
+		ocspStaple, ok := tlsSecret.Data[egv1a1.TLSOCSPKey]
+		if ok && len(ocspStaple) > 0 {
+			cert.OCSPStaple = ocspStaple
+		}
+		tlsListenerConfigs.Certificates[i] = cert
 	}
 
 	return tlsListenerConfigs
@@ -459,7 +466,7 @@ func IsMergeGatewaysEnabled(resources *resource.Resources) bool {
 }
 
 func protocolSliceToStringSlice(protocols []gwapiv1.ProtocolType) []string {
-	var protocolStrings []string
+	protocolStrings := make([]string, 0, len(protocols))
 	for _, protocol := range protocols {
 		protocolStrings = append(protocolStrings, string(protocol))
 	}
@@ -556,7 +563,7 @@ func selectorFromTargetSelector(selector egv1a1.TargetSelector) labels.Selector 
 	return l
 }
 
-func getPolicyTargetRefs[T client.Object](policy egv1a1.PolicyTargetReferences, potentialTargets []T) []gwapiv1a2.LocalPolicyTargetReferenceWithSectionName {
+func getPolicyTargetRefs[T client.Object](policy egv1a1.PolicyTargetReferences, potentialTargets []T, policyNamespace string) []gwapiv1a2.LocalPolicyTargetReferenceWithSectionName {
 	dedup := sets.New[targetRefWithTimestamp]()
 	for _, currSelector := range policy.TargetSelectors {
 		labelSelector := selectorFromTargetSelector(currSelector)
@@ -564,6 +571,11 @@ func getPolicyTargetRefs[T client.Object](policy egv1a1.PolicyTargetReferences, 
 			gvk := obj.GetObjectKind().GroupVersionKind()
 			if gvk.Kind != string(currSelector.Kind) ||
 				gvk.Group != string(ptr.Deref(currSelector.Group, gwapiv1a2.GroupName)) {
+				continue
+			}
+
+			// Skip objects not in the same namespace as the policy
+			if obj.GetNamespace() != policyNamespace {
 				continue
 			}
 
@@ -585,9 +597,9 @@ func getPolicyTargetRefs[T client.Object](policy egv1a1.PolicyTargetReferences, 
 	slices.SortFunc(selectorsList, func(i, j targetRefWithTimestamp) int {
 		return i.CreationTimestamp.Compare(j.CreationTimestamp.Time)
 	})
-	ret := []gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{}
-	for _, v := range selectorsList {
-		ret = append(ret, v.LocalPolicyTargetReferenceWithSectionName)
+	ret := make([]gwapiv1a2.LocalPolicyTargetReferenceWithSectionName, len(selectorsList))
+	for i, v := range selectorsList {
+		ret[i] = v.LocalPolicyTargetReferenceWithSectionName
 	}
 	// Plain targetRefs in the policy don't have an associated creation timestamp, but can still refer
 	// to targets that were already found via the selectors. Only add them to the returned list if
@@ -727,4 +739,57 @@ func irStringMatch(name string, match egv1a1.StringMatch) *ir.StringMatch {
 	default:
 		return nil
 	}
+}
+
+func getOverriddenTargetsMessageForRoute(
+	targetContext *policyRouteTargetContext,
+	sectionName *gwapiv1.SectionName,
+) string {
+	var routes []string
+	if sectionName == nil {
+		if targetContext != nil {
+			routes = targetContext.attachedToRouteRules.UnsortedList()
+		}
+	}
+	if len(routes) > 0 {
+		sort.Strings(routes)
+		return fmt.Sprintf("these route rules: %v", routes)
+	}
+	return ""
+}
+
+func getOverriddenTargetsMessageForGateway(
+	targetContext *policyGatewayTargetContext,
+	listenerRouteMap map[string]sets.Set[string],
+	sectionName *gwapiv1.SectionName,
+) string {
+	var listeners, routes []string
+	if sectionName == nil {
+		if targetContext != nil {
+			listeners = targetContext.attachedToListeners.UnsortedList()
+		}
+		for _, routeSet := range listenerRouteMap {
+			routes = append(routes, routeSet.UnsortedList()...)
+		}
+	} else if listenerRouteMap != nil {
+		if routeSet, ok := listenerRouteMap[string(*sectionName)]; ok {
+			routes = routeSet.UnsortedList()
+		}
+		if routeSet, ok := listenerRouteMap[""]; ok {
+			routes = append(routes, routeSet.UnsortedList()...)
+		}
+	}
+	if len(listeners) > 0 {
+		sort.Strings(listeners)
+		if len(routes) > 0 {
+			sort.Strings(routes)
+			return fmt.Sprintf("these listeners: %v and these routes: %v", listeners, routes)
+		} else {
+			return fmt.Sprintf("these listeners: %v", listeners)
+		}
+	} else if len(routes) > 0 {
+		sort.Strings(routes)
+		return fmt.Sprintf("these routes: %v", routes)
+	}
+	return ""
 }

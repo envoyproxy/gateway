@@ -1807,3 +1807,15 @@ footer {
     margin: 0 -1rem;
   }
 }
+
+// Details element styling for boilerplate content
+details {
+  summary {
+    font-size: 1.2rem;
+    margin-bottom: 0.5rem;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}

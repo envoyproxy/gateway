@@ -7,21 +7,25 @@ package host
 
 import (
 	"bytes"
-	"context"
-	"os"
+	"io"
 	"path"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	func_e "github.com/tetratelabs/func-e"
 	"github.com/tetratelabs/func-e/api"
+	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/crypto"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
+	"github.com/envoyproxy/gateway/internal/infrastructure/common"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/logging"
 	"github.com/envoyproxy/gateway/internal/utils/file"
+	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
+	"github.com/envoyproxy/gateway/test/utils"
 )
 
 func newMockInfra(t *testing.T, cfg *config.Server) *Infra {
@@ -44,16 +48,18 @@ func newMockInfra(t *testing.T, cfg *config.Server) *Infra {
 
 	infra := &Infra{
 		HomeDir:         homeDir,
-		Logger:          logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo),
+		Logger:          logging.DefaultLogger(io.Discard, egv1a1.LogLevelInfo),
 		EnvoyGateway:    cfg.EnvoyGateway,
 		proxyContextMap: make(map[string]*proxyContext),
 		sdsConfigPath:   proxyDir,
+		Stdout:          io.Discard,
+		Stderr:          io.Discard,
 	}
 	return infra
 }
 
 func TestInfraCreateProxy(t *testing.T) {
-	cfg, err := config.New(os.Stdout)
+	cfg, err := config.New(io.Discard, io.Discard)
 	require.NoError(t, err)
 	infra := newMockInfra(t, cfg)
 
@@ -79,7 +85,7 @@ func TestInfraCreateProxy(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			err = infra.CreateOrUpdateProxyInfra(context.Background(), tc.infra)
+			err = infra.CreateOrUpdateProxyInfra(t.Context(), tc.infra)
 			if tc.expect {
 				require.NoError(t, err)
 			} else {
@@ -92,10 +98,18 @@ func TestInfraCreateProxy(t *testing.T) {
 func TestInfra_runEnvoy_stopEnvoy(t *testing.T) {
 	tmpdir := t.TempDir()
 	// Ensures that all the required binaries are available.
-	err := func_e.Run(context.Background(), []string{"--version"}, api.HomeDir(tmpdir))
+	err := func_e.Run(t.Context(), []string{"--version"}, api.HomeDir(tmpdir))
 	require.NoError(t, err)
 
-	i := &Infra{proxyContextMap: make(map[string]*proxyContext), HomeDir: tmpdir}
+	stdout := &bytes.Buffer{}
+	stderr := &bytes.Buffer{}
+	i := &Infra{
+		proxyContextMap: make(map[string]*proxyContext),
+		HomeDir:         tmpdir,
+		Logger:          logging.DefaultLogger(stdout, egv1a1.LogLevelInfo),
+		Stdout:          stdout,
+		Stderr:          stderr,
+	}
 	// Ensures that run -> stop will successfully stop the envoy and we can
 	// run it again without any issues.
 	for range 5 {
@@ -103,12 +117,231 @@ func TestInfra_runEnvoy_stopEnvoy(t *testing.T) {
 			"--config-yaml",
 			"admin: {address: {socket_address: {address: '127.0.0.1', port_value: 9901}}}",
 		}
-		out := &bytes.Buffer{}
-		i.runEnvoy(context.Background(), out, "test", args)
+		i.runEnvoy(t.Context(), "", "test", args)
 		require.Len(t, i.proxyContextMap, 1)
 		i.stopEnvoy("test")
 		require.Empty(t, i.proxyContextMap)
 		// If the cleanup didn't work, the error due to "address already in use" will be tried to be written to the nil logger,
 		// which will panic.
+	}
+}
+
+func TestExtractSemver(t *testing.T) {
+	tests := []struct {
+		image   string
+		want    string
+		wantErr bool
+	}{
+		{"docker.io/envoyproxy/envoy:distroless-v1.35.0", "1.35.0", false},
+		{"envoyproxy/envoy:v1.28.1", "1.28.1", false},
+		{"envoyproxy/envoy:latest", "", true},
+		{"envoyproxy/envoy", "", true},
+		{"envoyproxy/envoy:distroless-v1.35", "", true},
+		{"envoyproxy/envoy:distroless-v1.35.0-extra", "1.35.0", false},
+		{"envoyproxy/envoy:1.2.3", "1.2.3", false},
+		{"envoyproxy/envoy:foo-2.3.4-bar", "2.3.4", false},
+	}
+	for _, tc := range tests {
+		t.Run(tc.image, func(t *testing.T) {
+			got, err := extractSemver(tc.image)
+			if tc.wantErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tc.want, got)
+			}
+		})
+	}
+}
+
+// TestInfra_runEnvoy_OutputRedirection verifies that Envoy output goes to configured writers, not os.Stdout/Stderr.
+func TestInfra_runEnvoy_OutputRedirection(t *testing.T) {
+	tmpdir := t.TempDir()
+	// Ensures that all the required binaries are available.
+	err := func_e.Run(t.Context(), []string{"--version"}, api.HomeDir(tmpdir))
+	require.NoError(t, err)
+
+	// Create separate buffers for stdout and stderr
+	buffers := utils.DumpLogsOnFail(t, "stdout", "stderr")
+	stdout := buffers[0]
+	stderr := buffers[1]
+
+	i := &Infra{
+		proxyContextMap: make(map[string]*proxyContext),
+		HomeDir:         tmpdir,
+		Logger:          logging.DefaultLogger(stdout, egv1a1.LogLevelInfo),
+		Stdout:          stdout,
+		Stderr:          stderr,
+	}
+
+	// Run envoy with an invalid config to force it to write to stderr and exit quickly
+	args := []string{
+		"--config-yaml",
+		"invalid: yaml: syntax",
+	}
+
+	i.runEnvoy(t.Context(), "", "test", args)
+	require.Len(t, i.proxyContextMap, 1)
+
+	// Wait a bit for envoy to fail
+	require.Eventually(t, func() bool {
+		return stderr.Len() > 0 || stdout.Len() > 0
+	}, 5*time.Second, 100*time.Millisecond, "expected output to be written to buffers")
+
+	i.stopEnvoy("test")
+	require.Empty(t, i.proxyContextMap)
+
+	// Verify that output was captured in buffers (either stdout or stderr should have content)
+	totalOutput := stdout.Len() + stderr.Len()
+	require.Positive(t, totalOutput, "expected some output to be captured in stdout or stderr buffers")
+}
+
+func TestGetEnvoyVersion(t *testing.T) {
+	tests := []struct {
+		name         string
+		defaultImage string
+		provider     *egv1a1.EnvoyProxyProvider
+		want         string
+	}{
+		{
+			name:         "k8s provider default release version",
+			defaultImage: "docker.io/envoyproxy/envoy:distroless-v1.35.0",
+			provider:     egv1a1.DefaultEnvoyProxyProvider(),
+			want:         "1.35.0",
+		},
+		{
+			name:         "k8s provider dev version",
+			defaultImage: "docker.io/envoyproxy/envoy:distroless-dev",
+			provider:     egv1a1.DefaultEnvoyProxyProvider(),
+			want:         "",
+		},
+		{
+			name:         "host provider envoy version unset",
+			defaultImage: "docker.io/envoyproxy/envoy:distroless-v1.35.0",
+			provider: &egv1a1.EnvoyProxyProvider{
+				Type: egv1a1.EnvoyProxyProviderTypeHost,
+				Host: &egv1a1.EnvoyProxyHostProvider{},
+			},
+			want: "1.35.0",
+		},
+		{
+			name:         "host provider envoy version empty",
+			defaultImage: "docker.io/envoyproxy/envoy:distroless-v1.35.0",
+			provider: &egv1a1.EnvoyProxyProvider{
+				Type: egv1a1.EnvoyProxyProviderTypeHost,
+				Host: &egv1a1.EnvoyProxyHostProvider{EnvoyVersion: ptr.To("")},
+			},
+			want: "1.35.0",
+		},
+		{
+			name:         "host provider envoy version unset dev version",
+			defaultImage: "docker.io/envoyproxy/envoy:distroless-dev",
+			provider: &egv1a1.EnvoyProxyProvider{
+				Type: egv1a1.EnvoyProxyProviderTypeHost,
+				Host: &egv1a1.EnvoyProxyHostProvider{},
+			},
+			want: "",
+		},
+		{
+			name:         "host provider envoy version empty dev version",
+			defaultImage: "docker.io/envoyproxy/envoy:distroless-dev",
+			provider: &egv1a1.EnvoyProxyProvider{
+				Type: egv1a1.EnvoyProxyProviderTypeHost,
+				Host: &egv1a1.EnvoyProxyHostProvider{EnvoyVersion: ptr.To("")},
+			},
+			want: "",
+		},
+		{
+			name:         "host provider envoy version custom",
+			defaultImage: "docker.io/envoyproxy/envoy:distroless-v1.35.0",
+			provider: &egv1a1.EnvoyProxyProvider{
+				Type: egv1a1.EnvoyProxyProviderTypeHost,
+				Host: &egv1a1.EnvoyProxyHostProvider{EnvoyVersion: ptr.To("1.2.3")},
+			},
+			want: "1.2.3",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			infra := &Infra{defaultEnvoyImage: tc.defaultImage}
+			proxyConfig := &egv1a1.EnvoyProxy{
+				Spec: egv1a1.EnvoyProxySpec{
+					Provider: tc.provider,
+				},
+			}
+			require.Equal(t, tc.want, infra.getEnvoyVersion(proxyConfig))
+		})
+	}
+}
+
+// TestTopologyInjectorDisabledInHostMode verifies we don't cause a 15+ second
+// startup delay in standalone mode as Envoy waits for endpoint discovery.
+// See: https://github.com/envoyproxy/gateway/issues/7080
+func TestTopologyInjectorDisabledInHostMode(t *testing.T) {
+	testCases := []struct {
+		name                          string
+		topologyInjectorDisabled      bool
+		expectLocalClusterInBootstrap bool
+	}{
+		{
+			name:                          "topology injector enabled",
+			topologyInjectorDisabled:      false,
+			expectLocalClusterInBootstrap: true,
+		},
+		{
+			name:                          "topology injector disabled",
+			topologyInjectorDisabled:      true,
+			expectLocalClusterInBootstrap: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			proxyInfra := &ir.ProxyInfra{
+				Name:      "test-proxy",
+				Namespace: "default",
+				Config: &egv1a1.EnvoyProxy{
+					Spec: egv1a1.EnvoyProxySpec{
+						Logging: egv1a1.ProxyLogging{
+							Level: map[egv1a1.ProxyLogComponent]egv1a1.LogLevel{
+								egv1a1.LogComponentDefault: egv1a1.LogLevelInfo,
+							},
+						},
+					},
+				},
+			}
+
+			bootstrapConfigOptions := &bootstrap.RenderBootstrapConfigOptions{
+				ProxyMetrics: &egv1a1.ProxyMetrics{
+					Prometheus: &egv1a1.ProxyPrometheusProvider{
+						Disable: true,
+					},
+				},
+				XdsServerHost:            ptr.To("0.0.0.0"),
+				AdminServerPort:          ptr.To(int32(0)),
+				StatsServerPort:          ptr.To(int32(0)),
+				TopologyInjectorDisabled: tc.topologyInjectorDisabled,
+			}
+
+			args, err := common.BuildProxyArgs(proxyInfra, nil, bootstrapConfigOptions, "test-node", false)
+			require.NoError(t, err)
+
+			// Extract the bootstrap YAML from args (it's after --config-yaml)
+			var bootstrapYAML string
+			for i, arg := range args {
+				if arg == "--config-yaml" && i+1 < len(args) {
+					bootstrapYAML = args[i+1]
+					break
+				}
+			}
+			require.NotEmpty(t, bootstrapYAML, "bootstrap YAML not found in args")
+
+			if tc.expectLocalClusterInBootstrap {
+				require.Contains(t, bootstrapYAML, "local_cluster_name:")
+			} else {
+				require.NotContains(t, bootstrapYAML, "local_cluster_name:")
+			}
+		})
 	}
 }

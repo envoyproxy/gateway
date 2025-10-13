@@ -22,11 +22,14 @@ import (
 
 type ProxyTopologyInjector struct {
 	client.Client
-	Decoder admission.Decoder
-
-	Logger logging.Logger
+	APIReader client.Reader
+	Decoder   admission.Decoder
+	Logger    logging.Logger
 }
 
+// Handle implements admission.Handler; the interface requires admission.Request by value.
+//
+//nolint:gocritic
 func (m *ProxyTopologyInjector) Handle(ctx context.Context, req admission.Request) admission.Response {
 	logger := m.Logger
 	logger.V(1).Info("receive injector request", "request", req)
@@ -50,9 +53,13 @@ func (m *ProxyTopologyInjector) Handle(ctx context.Context, req admission.Reques
 
 	pod := &corev1.Pod{}
 	if err := m.Get(ctx, podName, pod); err != nil {
-		logger.Error(err, "get pod failed", "pod", podName.String())
-		topologyInjectorEventsTotal.WithFailure(metrics.ReasonError).Increment()
-		return admission.Allowed("internal error, skipped")
+		// Cache isn't guaranteed to be updated yet so if m.Get() fails
+		// try getting the pod from API server directly.
+		if err = m.APIReader.Get(ctx, podName, pod); err != nil {
+			logger.Error(err, "get pod failed", "pod", podName.String())
+			topologyInjectorEventsTotal.WithFailure(metrics.ReasonError).Increment()
+			return admission.Allowed("internal error, skipped")
+		}
 	}
 
 	// Skip non-proxy pods

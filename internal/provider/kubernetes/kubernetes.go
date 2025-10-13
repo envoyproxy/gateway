@@ -10,6 +10,8 @@ import (
 	"fmt"
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/rest"
 	"k8s.io/klog/v2"
 	"k8s.io/utils/ptr"
@@ -26,6 +28,7 @@ import (
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 	ec "github.com/envoyproxy/gateway/internal/envoygateway/config"
+	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/proxy"
 	"github.com/envoyproxy/gateway/internal/message"
 )
 
@@ -112,6 +115,16 @@ func New(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server, resources
 		mgrOpts.Cache.SyncPeriod = ptr.To(csp)
 	}
 
+	// Limit the cache to only Envoy proxy Pods to reduce memory and sync churn.
+	// ProxyTopologyInjector is the only component that interacts with Pods.
+	if mgrOpts.Cache.ByObject == nil {
+		mgrOpts.Cache.ByObject = map[client.Object]cache.ByObject{}
+	}
+
+	mgrOpts.Cache.ByObject[&corev1.Pod{}] = cache.ByObject{
+		Label: labels.SelectorFromSet(proxy.EnvoyAppLabel()),
+	}
+
 	if svrCfg.EnvoyGateway.NamespaceMode() {
 		mgrOpts.Cache.DefaultNamespaces = make(map[string]cache.Config)
 		for _, watchNS := range svrCfg.EnvoyGateway.Provider.Kubernetes.Watch.Namespaces {
@@ -134,9 +147,10 @@ func New(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server, resources
 	if svrCfg.EnvoyGateway.Provider.Kubernetes.TopologyInjector == nil || !ptr.Deref(svrCfg.EnvoyGateway.Provider.Kubernetes.TopologyInjector.Disable, false) {
 		mgr.GetWebhookServer().Register("/inject-pod-topology", &webhook.Admission{
 			Handler: &ProxyTopologyInjector{
-				Client:  mgr.GetClient(),
-				Logger:  svrCfg.Logger.WithName("proxy-topology-injector"),
-				Decoder: admission.NewDecoder(mgr.GetScheme()),
+				Client:    mgr.GetClient(),
+				APIReader: mgr.GetAPIReader(),
+				Logger:    svrCfg.Logger.WithName("proxy-topology-injector"),
+				Decoder:   admission.NewDecoder(mgr.GetScheme()),
 			},
 		})
 	}

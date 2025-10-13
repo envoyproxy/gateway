@@ -544,15 +544,15 @@ func addMissingServices(requiredServices map[string]*corev1.Service, obj interfa
 	case *gwapiv1.HTTPRoute:
 		objNamespace = route.Namespace
 		for _, rule := range route.Spec.Rules {
-			for _, httpBakcendRef := range rule.BackendRefs {
-				refs = append(refs, httpBakcendRef.BackendRef)
+			for i := range rule.BackendRefs {
+				refs = append(refs, rule.BackendRefs[i].BackendRef)
 			}
 		}
 	case *gwapiv1.GRPCRoute:
 		objNamespace = route.Namespace
 		for _, rule := range route.Spec.Rules {
-			for _, gRPCBakcendRef := range rule.BackendRefs {
-				refs = append(refs, gRPCBakcendRef.BackendRef)
+			for i := range rule.BackendRefs {
+				refs = append(refs, rule.BackendRefs[i].BackendRef)
 			}
 		}
 	case *gwapiv1a2.TLSRoute:

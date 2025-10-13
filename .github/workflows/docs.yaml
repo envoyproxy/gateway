@@ -21,7 +21,7 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
     - name: Check out code
-      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8  # v5.0.0
       with:
         ref: ${{ github.event.pull_request.head.sha }}
 
@@ -46,7 +46,7 @@ jobs:
       contents: write
     steps:
     - name: Git checkout
-      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8  # v5.0.0
       with:
         submodules: true
         ref: ${{ github.event.pull_request.head.sha }}
@@ -60,7 +60,7 @@ jobs:
         extended: true
 
     - name: Setup Node
-      uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4.4.0
+      uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444  # v5.0.0
       with:
         node-version: '18'
 
@@ -69,7 +69,7 @@ jobs:
 
     # Upload docs for GitHub Pages
     - name: Upload GitHub Pages artifact
-      uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa  # v3.0.1
+      uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b  # v4.0.0
       with:
         # Path of the directory containing the static assets.
         path: site/public

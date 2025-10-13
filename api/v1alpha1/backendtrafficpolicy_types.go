@@ -74,8 +74,11 @@ type BackendTrafficPolicySpec struct {
 
 	// The compression config for the http streams.
 	//
+	// +patchMergeKey=type
+	// +patchStrategy=merge
+	//
 	// +optional
-	Compression []*Compression `json:"compression,omitempty"`
+	Compression []*Compression `json:"compression,omitempty" patchMergeKey:"type" patchStrategy:"merge"`
 
 	// ResponseOverride defines the configuration to override specific responses with a custom one.
 	// If multiple configurations are specified, the first one to match wins.
@@ -100,7 +103,6 @@ type BackendTrafficPolicySpec struct {
 	// When enabling this option, you should also configure your connection buffer size to account for these request buffers. There will also be an
 	// increase in memory usage for Envoy that should be accounted for in your deployment settings.
 	//
-	// +notImplementedHide
 	// +optional
 	RequestBuffer *RequestBuffer `json:"requestBuffer,omitempty"`
 	// Telemetry configures the telemetry settings for the policy target (Gateway or xRoute).
@@ -148,7 +150,6 @@ type RequestBuffer struct {
 	//
 	// +kubebuilder:validation:XIntOrString
 	// +kubebuilder:validation:Pattern="^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$"
-	// +notImplementedHide
 	Limit resource.Quantity `json:"limit,omitempty"`
 }
 
