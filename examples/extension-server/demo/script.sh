@@ -5,9 +5,11 @@ unset TYPE_SPEED
 . ./demo/demo-magic.sh
 
 alias kubectl=kubecolor
-kubens default
 kubectl delete CustomBackendMtlsPolicy --all -A
 clear
+
+pe "kubens default"
+echo ""
 
 pe "kubectl get pods"
 echo ""
