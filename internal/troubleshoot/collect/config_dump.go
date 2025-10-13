@@ -11,7 +11,6 @@ import (
 	"fmt"
 	"path"
 
-	kube "github.com/envoyproxy/gateway/internal/kubernetes"
 	adminv3 "github.com/envoyproxy/go-control-plane/envoy/admin/v3"
 	troubleshootv1b2 "github.com/replicatedhq/troubleshoot/pkg/apis/troubleshoot/v1beta2"
 	tbcollect "github.com/replicatedhq/troubleshoot/pkg/collect"
@@ -21,6 +20,8 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+
+	kube "github.com/envoyproxy/gateway/internal/kubernetes"
 )
 
 const (
