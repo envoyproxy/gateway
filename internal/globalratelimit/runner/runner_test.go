@@ -220,7 +220,7 @@ func Test_subscribeAndTranslate(t *testing.T) {
 			})
 
 			c := xdsIR.Subscribe(ctx)
-			go r.subscribeAndTranslate(ctx, c)
+			go r.translateFromSubscription(ctx, c)
 
 			for _, xds := range tt.xdsIRs {
 				if xds.Delete {
