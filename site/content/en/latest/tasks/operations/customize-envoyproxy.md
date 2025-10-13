@@ -6,7 +6,7 @@ Envoy Gateway provides an [EnvoyProxy][] CRD that can be linked to the Parameter
 in a Gateway and GatewayClass, allowing cluster admins to customize the managed EnvoyProxy Deployment and
 Service. To learn more about GatewayClass and ParametersRef, please refer to [Gateway API documentation][].
 
-**Note**: It would be better to create a [EnvoyProxy][] resource before creating a Gateway or GatewayClass that references it.
+**Note**: We recommend creating a [EnvoyProxy][] resource before creating a Gateway or GatewayClass that references it to avoid temporary disruption.
 
 ## Prerequisites
 
