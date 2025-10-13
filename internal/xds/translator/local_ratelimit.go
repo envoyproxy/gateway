@@ -280,10 +280,7 @@ func buildHeaderMatchLocalRateLimitActions(
 					StringMatch: buildXdsStringMatcher(match),
 				},
 			}
-			expectMatch := true
-			if match.Invert != nil && *match.Invert {
-				expectMatch = false
-			}
+			expectMatch := match.Invert == nil || !*match.Invert
 			action = &routev3.RateLimit_Action{
 				ActionSpecifier: &routev3.RateLimit_Action_HeaderValueMatch_{
 					HeaderValueMatch: &routev3.RateLimit_Action_HeaderValueMatch{
@@ -325,10 +322,7 @@ func buildPathMatchLocalRateLimitAction(
 			StringMatch: buildXdsStringMatcher(pathMatch),
 		},
 	}
-	expectMatch := true
-	if pathMatch.Invert != nil && *pathMatch.Invert {
-		expectMatch = false
-	}
+	expectMatch := pathMatch.Invert == nil || !*pathMatch.Invert
 	action := &routev3.RateLimit_Action{
 		ActionSpecifier: &routev3.RateLimit_Action_HeaderValueMatch_{
 			HeaderValueMatch: &routev3.RateLimit_Action_HeaderValueMatch{
@@ -416,10 +410,7 @@ func buildMethodMatchLocalRateLimitAction(
 			StringMatch: buildXdsStringMatcher(methodMatch),
 		},
 	}
-	expectMatch := true
-	if methodMatch.Invert != nil && *methodMatch.Invert {
-		expectMatch = false
-	}
+	expectMatch := methodMatch.Invert == nil || !*methodMatch.Invert
 	action := &routev3.RateLimit_Action{
 		ActionSpecifier: &routev3.RateLimit_Action_HeaderValueMatch_{
 			HeaderValueMatch: &routev3.RateLimit_Action_HeaderValueMatch{

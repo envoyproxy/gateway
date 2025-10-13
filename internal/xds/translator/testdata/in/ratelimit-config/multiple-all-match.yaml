@@ -28,8 +28,8 @@ http:
               isIPv6: false
               distinct: false
             methodMatches:
-              - exact: "GET"
-              - exact: "POST"
+            - exact: "GET"
+            - exact: "POST"
             pathMatch:
               exact: "foo/bar/baz"
             limit:

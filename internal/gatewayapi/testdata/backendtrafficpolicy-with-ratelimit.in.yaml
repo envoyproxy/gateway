@@ -138,8 +138,8 @@ backendTrafficPolicies:
               type: Exact
               value: /test
           - methods:
-              - value: GET
-                invert: true
+            - value: GET
+              invert: true
           limit:
             requests: 30
             unit: Hour

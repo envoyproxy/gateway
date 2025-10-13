@@ -155,7 +155,7 @@ var RateLimitMethodMatchTest = suite.ConformanceTest{
 
 			expectLimitDeleteReq := http.ExpectedResponse{
 				Request: http.Request{
-					Path:   "/delete",
+					Path:   "/get",
 					Method: "DELETE",
 				},
 				Response: http.Response{

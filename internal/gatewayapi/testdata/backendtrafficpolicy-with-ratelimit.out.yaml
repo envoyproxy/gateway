@@ -47,7 +47,6 @@ backendTrafficPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:
-    creationTimestamp: null
     name: policy-for-grpc-route
     namespace: default
   spec:
@@ -87,7 +86,6 @@ backendTrafficPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:
-    creationTimestamp: null
     name: policy-for-gateway
     namespace: envoy-gateway
   spec:

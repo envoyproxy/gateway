@@ -206,8 +206,8 @@ spec:
     local:
       rules:
         - clientSelectors:
-            - method:
-                value: "GET"
+            - methods:
+                - value: "GET"
           limit:
             requests: 3
             unit: Hour

@@ -15,13 +15,13 @@ http:
           rules:
           - name: "test-namespace/test-policy-1/rule/0"
             methodMatches:
-              - exact: "GET"
+            - exact: "GET"
             limit:
               requests: 5
               unit: second
           - name: "test-namespace/test-policy-1/rule/1"
             methodMatches:
-              - exact: "POST"
+            - exact: "POST"
             limit:
               requests: 50
               unit: second
