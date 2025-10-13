@@ -234,7 +234,6 @@ If you try to send a request from `http://www.foo.com:8080`, you should also see
 `8080` is not included in the allowed origins.
 
 ```shell
-```shell
 curl -H "Origin: http://www.foo.com:8080" \
   -H "Host: www.example.com" \
   -H "Access-Control-Request-Method: GET" \
