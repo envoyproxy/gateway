@@ -79,7 +79,6 @@ spec:
         principal:
           clientCIDRs:
             - 192.168.254.0/24
-            # - 172.18.0.0/24
 ---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: SecurityPolicy
