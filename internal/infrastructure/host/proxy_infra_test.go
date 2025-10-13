@@ -9,7 +9,9 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"os"
 	"path"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -24,9 +26,10 @@ import (
 	"github.com/envoyproxy/gateway/internal/infrastructure/common"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/logging"
+	"github.com/envoyproxy/gateway/internal/utils"
 	"github.com/envoyproxy/gateway/internal/utils/file"
 	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
-	"github.com/envoyproxy/gateway/test/utils"
+	testutils "github.com/envoyproxy/gateway/test/utils"
 )
 
 func newMockInfra(t *testing.T, cfg *config.Server) *Infra {
@@ -65,31 +68,188 @@ func TestInfraCreateProxy(t *testing.T) {
 
 	// TODO: add more tests once it supports configurable homeDir and runDir.
 	testCases := []struct {
-		name   string
-		expect bool
-		infra  *ir.Infra
+		name          string
+		infra         *ir.Infra
+		expectedError string
 	}{
 		{
-			name:   "nil cfg",
-			expect: false,
-			infra:  nil,
+			name:          "nil cfg",
+			infra:         nil,
+			expectedError: "infra ir is nil",
 		},
 		{
-			name:   "nil proxy",
-			expect: false,
+			name: "nil proxy",
 			infra: &ir.Infra{
 				Proxy: nil,
 			},
+			expectedError: "infra proxy ir is nil",
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			err = infra.CreateOrUpdateProxyInfra(t.Context(), tc.infra)
-			if tc.expect {
-				require.NoError(t, err)
+			actual := infra.CreateOrUpdateProxyInfra(t.Context(), tc.infra)
+			require.EqualError(t, actual, tc.expectedError)
+		})
+	}
+}
+
+func TestInfra_CreateOrUpdateProxyInfra_Success(t *testing.T) {
+	tmpdir := t.TempDir()
+	// Ensures that all the required binaries are available.
+	err := func_e.Run(t.Context(), []string{"--version"}, api.HomeDir(tmpdir))
+	require.NoError(t, err)
+
+	cfg, err := config.New(io.Discard, io.Discard)
+	require.NoError(t, err)
+	infra := newMockInfra(t, cfg)
+
+	testCases := []struct {
+		name              string
+		proxyName         string
+		expectProxyLoaded bool
+	}{
+		{
+			name:              "create new proxy",
+			proxyName:         "test-proxy",
+			expectProxyLoaded: true,
+		},
+		{
+			name:              "idempotent - proxy already exists",
+			proxyName:         "test-proxy-idempotent",
+			expectProxyLoaded: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			infraIR := &ir.Infra{
+				Proxy: &ir.ProxyInfra{
+					Name:      tc.proxyName,
+					Namespace: "default",
+					Config: &egv1a1.EnvoyProxy{
+						Spec: egv1a1.EnvoyProxySpec{
+							Logging: egv1a1.ProxyLogging{
+								Level: map[egv1a1.ProxyLogComponent]egv1a1.LogLevel{
+									egv1a1.LogComponentDefault: egv1a1.LogLevelInfo,
+								},
+							},
+						},
+					},
+				},
+			}
+
+			hashedName := utils.GetHashedName(tc.proxyName, 64)
+			t.Cleanup(func() { infra.stopEnvoy(hashedName) })
+
+			// First call should create the proxy
+			actual := infra.CreateOrUpdateProxyInfra(t.Context(), infraIR)
+			require.NoError(t, actual)
+
+			// Verify proxy context was stored
+			_, loaded := infra.proxyContextMap.Load(hashedName)
+			require.Equal(t, tc.expectProxyLoaded, loaded)
+
+			// Second call should be idempotent (early return)
+			actual = infra.CreateOrUpdateProxyInfra(t.Context(), infraIR)
+			require.NoError(t, actual)
+
+			// Verify proxy is still loaded
+			_, loaded = infra.proxyContextMap.Load(hashedName)
+			require.Equal(t, tc.expectProxyLoaded, loaded)
+		})
+	}
+}
+
+func TestInfra_DeleteProxyInfra(t *testing.T) {
+	tmpdir := t.TempDir()
+	// Ensures that all the required binaries are available.
+	err := func_e.Run(t.Context(), []string{"--version"}, api.HomeDir(tmpdir))
+	require.NoError(t, err)
+
+	cfg, err := config.New(io.Discard, io.Discard)
+	require.NoError(t, err)
+	infra := newMockInfra(t, cfg)
+
+	testCases := []struct {
+		name          string
+		setupProxy    bool
+		proxyName     string
+		infraIR       *ir.Infra
+		expectedError string
+		expectRemoved bool
+	}{
+		{
+			name:       "delete existing proxy",
+			setupProxy: true,
+			proxyName:  "test-proxy-delete",
+			infraIR: &ir.Infra{
+				Proxy: &ir.ProxyInfra{
+					Name:      "test-proxy-delete",
+					Namespace: "default",
+					Config: &egv1a1.EnvoyProxy{
+						Spec: egv1a1.EnvoyProxySpec{
+							Logging: egv1a1.ProxyLogging{
+								Level: map[egv1a1.ProxyLogComponent]egv1a1.LogLevel{
+									egv1a1.LogComponentDefault: egv1a1.LogLevelInfo,
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedError: "",
+			expectRemoved: true,
+		},
+		{
+			name:       "delete non-existent proxy",
+			setupProxy: false,
+			proxyName:  "non-existent-proxy",
+			infraIR: &ir.Infra{
+				Proxy: &ir.ProxyInfra{
+					Name:      "non-existent-proxy",
+					Namespace: "default",
+					Config:    &egv1a1.EnvoyProxy{},
+				},
+			},
+			expectedError: "",
+			expectRemoved: false,
+		},
+		{
+			name:          "nil infra",
+			setupProxy:    false,
+			infraIR:       nil,
+			expectedError: "infra ir is nil",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			var hashedName string
+			if tc.setupProxy {
+				// Create a proxy first
+				actual := infra.CreateOrUpdateProxyInfra(t.Context(), tc.infraIR)
+				require.NoError(t, actual)
+
+				hashedName = utils.GetHashedName(tc.proxyName, 64)
+				t.Cleanup(func() { infra.stopEnvoy(hashedName) })
+
+				_, loaded := infra.proxyContextMap.Load(hashedName)
+				require.True(t, loaded, "proxy should be loaded before deletion")
+			}
+
+			// Delete the proxy
+			actual := infra.DeleteProxyInfra(t.Context(), tc.infraIR)
+			if tc.expectedError != "" {
+				require.EqualError(t, actual, tc.expectedError)
 			} else {
-				require.Error(t, err)
+				require.NoError(t, actual)
+			}
+
+			// Verify deletion
+			if tc.expectRemoved {
+				_, loaded := infra.proxyContextMap.Load(hashedName)
+				require.False(t, loaded, "proxy should be removed after deletion")
 			}
 		})
 	}
@@ -206,7 +366,7 @@ func TestInfra_runEnvoy_OutputRedirection(t *testing.T) {
 	require.NoError(t, err)
 
 	// Create separate buffers for stdout and stderr
-	buffers := utils.DumpLogsOnFail(t, "stdout", "stderr")
+	buffers := testutils.DumpLogsOnFail(t, "stdout", "stderr")
 	stdout := buffers[0]
 	stderr := buffers[1]
 
@@ -323,6 +483,48 @@ func TestGetEnvoyVersion(t *testing.T) {
 // TestTopologyInjectorDisabledInHostMode verifies we don't cause a 15+ second
 // startup delay in standalone mode as Envoy waits for endpoint discovery.
 // See: https://github.com/envoyproxy/gateway/issues/7080
+func TestNewInfra(t *testing.T) {
+	// This test verifies successful creation of Infra using defaults.
+	// NewInfra uses hardcoded paths like defaultHomeDir and defaultLocalCertPathDir,
+	// so we can only test the success case where those directories exist.
+	cfg, err := config.New(io.Discard, io.Discard)
+	require.NoError(t, err)
+
+	actual, err := NewInfra(t.Context(), cfg, logging.DefaultLogger(io.Discard, egv1a1.LogLevelInfo))
+	require.NoError(t, err)
+	require.NotNil(t, actual)
+	require.Equal(t, defaultHomeDir, actual.HomeDir)
+	require.Equal(t, defaultLocalCertPathDir, actual.sdsConfigPath)
+	require.NotNil(t, actual.Logger)
+	require.NotNil(t, actual.EnvoyGateway)
+	require.Equal(t, egv1a1.DefaultEnvoyProxyImage, actual.defaultEnvoyImage)
+	require.NotNil(t, actual.Stdout)
+	require.NotNil(t, actual.Stderr)
+}
+
+func TestCreateSdsConfig(t *testing.T) {
+	dir := t.TempDir()
+	// Create required cert files
+	require.NoError(t, file.WriteDir([]byte("test ca"), dir, XdsTLSCaFilename))
+	require.NoError(t, file.WriteDir([]byte("test cert"), dir, XdsTLSCertFilename))
+	require.NoError(t, file.WriteDir([]byte("test key"), dir, XdsTLSKeyFilename))
+
+	actual := createSdsConfig(dir)
+	require.NoError(t, actual)
+
+	// Verify CA config was created
+	caConfigPath := filepath.Join(dir, common.SdsCAFilename)
+	actualCAConfig, err := os.ReadFile(caConfigPath)
+	require.NoError(t, err)
+	require.NotEmpty(t, actualCAConfig)
+
+	// Verify cert config was created
+	certConfigPath := filepath.Join(dir, common.SdsCertFilename)
+	actualCertConfig, err := os.ReadFile(certConfigPath)
+	require.NoError(t, err)
+	require.NotEmpty(t, actualCertConfig)
+}
+
 func TestTopologyInjectorDisabledInHostMode(t *testing.T) {
 	testCases := []struct {
 		name                          string
