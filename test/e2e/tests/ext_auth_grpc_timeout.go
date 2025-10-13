@@ -46,7 +46,7 @@ var GRPCExtAuthTimeoutTest = suite.ConformanceTest{
 		}
 		SecurityPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "ext-auth-test", Namespace: ns}, suite.ControllerName, ancestorRef)
 		// Wait for the grpc ext auth service pod to be ready
-		WaitForPods(t, suite.Client, ns, map[string]string{"app": "envoy-ext-auth"}, corev1.PodRunning, PodReady)
+		WaitForPods(t, suite.Client, ns, map[string]string{"app": "envoy-ext-auth"}, corev1.PodRunning, &PodReady)
 
 		t.Run("ext auth with timeout behavior", func(t *testing.T) {
 			// With 0ms timeout, the auth service should timeout immediately

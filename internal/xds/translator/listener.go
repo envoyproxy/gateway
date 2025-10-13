@@ -184,7 +184,7 @@ func originalIPDetectionExtensions(clientIPDetection *ir.ClientIPDetectionSettin
 
 // buildXdsTCPListener creates a xds Listener resource
 func (t *Translator) buildXdsTCPListener(
-	listenerDetails ir.CoreListenerDetails,
+	listenerDetails *ir.CoreListenerDetails,
 	keepalive *ir.TCPKeepalive,
 	connection *ir.ClientConnection,
 	accesslog *ir.AccessLog,
@@ -261,7 +261,7 @@ func buildMaxAcceptPerSocketEvent(connection *ir.ClientConnection) *wrapperspb.U
 
 // buildXdsQuicListener creates a xds Listener resource for quic
 func (t *Translator) buildXdsQuicListener(
-	listenerDetails ir.CoreListenerDetails,
+	listenerDetails *ir.CoreListenerDetails,
 	ipFamily *egv1a1.IPFamily,
 	accesslog *ir.AccessLog,
 ) (*listenerv3.Listener, error) {
@@ -412,9 +412,7 @@ func (t *Translator) addHCMToXDSListener(
 	patchProxyProtocolFilter(xdsListener, irListener.ProxyProtocol)
 
 	if irListener.IsHTTP2 {
-		mgr.HttpFilters = append(mgr.HttpFilters, xdsfilters.GRPCWeb)
-		// always enable grpc stats filter
-		mgr.HttpFilters = append(mgr.HttpFilters, xdsfilters.GRPCStats)
+		mgr.HttpFilters = append(mgr.HttpFilters, xdsfilters.GRPCWeb, xdsfilters.GRPCStats)
 	}
 
 	if http3Listener {
@@ -932,18 +930,26 @@ func buildALPNProtocols(alpn []string) []string {
 	}
 }
 
-func buildXdsTLSCertSecret(tlsConfig ir.TLSCertificate) *tlsv3.Secret {
+func buildXdsTLSCertSecret(tlsConfig *ir.TLSCertificate) *tlsv3.Secret {
+	tlsCertificate := &tlsv3.TlsCertificate{
+		CertificateChain: &corev3.DataSource{
+			Specifier: &corev3.DataSource_InlineBytes{InlineBytes: tlsConfig.Certificate},
+		},
+		PrivateKey: &corev3.DataSource{
+			Specifier: &corev3.DataSource_InlineBytes{InlineBytes: tlsConfig.PrivateKey},
+		},
+	}
+
+	if len(tlsConfig.OCSPStaple) > 0 {
+		tlsCertificate.OcspStaple = &corev3.DataSource{
+			Specifier: &corev3.DataSource_InlineBytes{InlineBytes: tlsConfig.OCSPStaple},
+		}
+	}
+
 	return &tlsv3.Secret{
 		Name: tlsConfig.Name,
 		Type: &tlsv3.Secret_TlsCertificate{
-			TlsCertificate: &tlsv3.TlsCertificate{
-				CertificateChain: &corev3.DataSource{
-					Specifier: &corev3.DataSource_InlineBytes{InlineBytes: tlsConfig.Certificate},
-				},
-				PrivateKey: &corev3.DataSource{
-					Specifier: &corev3.DataSource_InlineBytes{InlineBytes: tlsConfig.PrivateKey},
-				},
-			},
+			TlsCertificate: tlsCertificate,
 		},
 	}
 }

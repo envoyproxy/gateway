@@ -8,7 +8,6 @@ package translator
 import (
 	"errors"
 	"fmt"
-	"time"
 
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
@@ -159,11 +158,13 @@ func buildJWTAuthn(irListener *ir.HTTPListener) (*jwtauthnv3.JwtAuthentication, 
 							},
 							Timeout: durationpb.New(defaultExtServiceRequestTimeout),
 						},
-						CacheDuration: durationpb.New(5 * time.Minute),
-						AsyncFetch:    &jwtauthnv3.JwksAsyncFetch{},
+
+						AsyncFetch: &jwtauthnv3.JwksAsyncFetch{},
 					},
 				}
-
+				if jwks.CacheDuration != nil {
+					remote.RemoteJwks.CacheDuration = durationpb.New(jwks.CacheDuration.Duration)
+				}
 				// Set the retry policy if it exists.
 				if jwks.Traffic != nil && jwks.Traffic.Retry != nil {
 					var rp *corev3.RetryPolicy

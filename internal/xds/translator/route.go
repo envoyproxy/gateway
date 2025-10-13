@@ -8,6 +8,7 @@ package translator
 import (
 	"errors"
 	"fmt"
+	"regexp"
 	"strings"
 	"time"
 
@@ -71,7 +72,7 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute, httpListener *ir.HTTPListener) (*rou
 	case httpRoute.Redirect != nil:
 		router.Action = &routev3.Route_Redirect{Redirect: buildXdsRedirectAction(httpRoute)}
 	case httpRoute.URLRewrite != nil:
-		routeAction := buildXdsURLRewriteAction(httpRoute.Destination.Name, httpRoute.URLRewrite, httpRoute.PathMatch)
+		routeAction := buildXdsURLRewriteAction(httpRoute, httpRoute.URLRewrite, httpRoute.PathMatch)
 		routeAction.IdleTimeout = idleTimeout(httpRoute)
 		if httpRoute.Mirrors != nil {
 			routeAction.RequestMirrorPolicies = buildXdsRequestMirrorPolicies(httpRoute.Mirrors)
@@ -440,17 +441,26 @@ func useRegexRewriteForPrefixMatchReplace(pathMatch *ir.StringMatch, prefixMatch
 func prefix2RegexRewrite(prefix string) *matcherv3.RegexMatchAndSubstitute {
 	return &matcherv3.RegexMatchAndSubstitute{
 		Pattern: &matcherv3.RegexMatcher{
-			Regex: "^" + prefix + `\/*`,
+			// Escape prefix for regex metacharacters
+			// https://github.com/envoyproxy/gateway/issues/6857
+			Regex: "^" + regexp.QuoteMeta(prefix) + `\/*`,
 		},
 		Substitution: "/",
 	}
 }
 
-func buildXdsURLRewriteAction(destName string, urlRewrite *ir.URLRewrite, pathMatch *ir.StringMatch) *routev3.RouteAction {
-	routeAction := &routev3.RouteAction{
-		ClusterSpecifier: &routev3.RouteAction_Cluster{
-			Cluster: destName,
-		},
+func buildXdsURLRewriteAction(route *ir.HTTPRoute, urlRewrite *ir.URLRewrite, pathMatch *ir.StringMatch) *routev3.RouteAction {
+	backendWeights := route.Destination.ToBackendWeights()
+	// only use weighted cluster when there are invalid weights
+	var routeAction *routev3.RouteAction
+	if route.NeedsClusterPerSetting() || backendWeights.Invalid != 0 {
+		routeAction = buildXdsWeightedRouteAction(backendWeights, route.Destination.Settings)
+	} else {
+		routeAction = &routev3.RouteAction{
+			ClusterSpecifier: &routev3.RouteAction_Cluster{
+				Cluster: backendWeights.Name,
+			},
+		}
 	}
 
 	if urlRewrite.Path != nil {

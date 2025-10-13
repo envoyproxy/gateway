@@ -21,6 +21,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/envoyproxy/gateway/internal/crypto"
+	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 )
 
 func TestGetCertgenCommand(t *testing.T) {
@@ -29,7 +30,7 @@ func TestGetCertgenCommand(t *testing.T) {
 }
 
 func TestOutputCertsForLocal(t *testing.T) {
-	cfg, err := getConfig(os.Stdout)
+	cfg, err := config.New(os.Stdout, os.Stderr)
 	require.NoError(t, err)
 
 	certs, err := crypto.GenerateCerts(cfg)
@@ -52,7 +53,7 @@ func TestOutputCertsForLocal(t *testing.T) {
 }
 
 func TestPatchTopologyWebhook(t *testing.T) {
-	cfg, err := getConfig(os.Stdout)
+	cfg, err := config.New(os.Stdout, os.Stderr)
 	require.NoError(t, err)
 
 	cases := []struct {

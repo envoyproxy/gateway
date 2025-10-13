@@ -109,6 +109,7 @@
               - name: test-no-type
                 stringMatch:
                   exact: foobar
+              disableTokenEncryption: true
               preserveAuthorizationHeader: true
               redirectPathMatcher:
                 path:

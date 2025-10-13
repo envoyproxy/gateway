@@ -421,7 +421,7 @@ func fetchConditions(parent reflect.Value, quiet, verbose bool) [][]string {
 
 	// All conditions are sorted in descending order by time.
 	for i := len(conditions) - 1; i >= 0; i-- {
-		row := fetchCondition(conditions[i], verbose)
+		row := fetchCondition(&conditions[i], verbose)
 		rows = append(rows, row)
 
 		if quiet {
@@ -433,7 +433,7 @@ func fetchConditions(parent reflect.Value, quiet, verbose bool) [][]string {
 }
 
 // fetchCondition fetches the Type, Status, Reason of one condition, and more if verbose.
-func fetchCondition(condition metav1.Condition, verbose bool) []string {
+func fetchCondition(condition *metav1.Condition, verbose bool) []string {
 	row := []string{condition.Type, string(condition.Status), condition.Reason}
 
 	// Write more details about this condition if verbose is on.

@@ -143,7 +143,7 @@ func TestValidateGatewayForReconcile(t *testing.T) {
 	testCases := []struct {
 		name    string
 		configs []client.Object
-		gateway client.Object
+		gateway *gwapiv1.Gateway
 		expect  bool
 	}{
 		{
@@ -343,7 +343,7 @@ func TestValidateSecretForReconcile(t *testing.T) {
 	testCases := []struct {
 		name    string
 		configs []client.Object
-		secret  client.Object
+		secret  *corev1.Secret
 		expect  bool
 	}{
 		{

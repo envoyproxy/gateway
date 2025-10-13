@@ -27,7 +27,10 @@ import (
 	"sigs.k8s.io/gateway-api/conformance/utils/tlog"
 )
 
-func ExpectedTraceCount(t *testing.T, suite *suite.ConformanceTestSuite, gwAddr string, expectedResponse httputils.ExpectedResponse, tags map[string]string) {
+func ExpectedTraceCount(t *testing.T, suite *suite.ConformanceTestSuite, gwAddr string, expectedResponse *httputils.ExpectedResponse, tags map[string]string) {
+	if expectedResponse == nil {
+		t.Fatalf("expected response cannot be nil")
+	}
 	if err := wait.PollUntilContextTimeout(context.TODO(), time.Second, time.Minute, true,
 		func(ctx context.Context) (bool, error) {
 			preCount, err := queryTraceFromTempo(t, suite.Client, tags)
@@ -36,7 +39,7 @@ func ExpectedTraceCount(t *testing.T, suite *suite.ConformanceTestSuite, gwAddr 
 				return false, nil
 			}
 
-			httputils.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
+			httputils.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, *expectedResponse)
 
 			// looks like we need almost 15 seconds to get the trace from Tempo?
 			err = wait.PollUntilContextTimeout(context.TODO(), time.Second, 15*time.Second, true, func(ctx context.Context) (done bool, err error) {

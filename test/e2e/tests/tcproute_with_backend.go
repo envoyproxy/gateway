@@ -61,7 +61,7 @@ func testTCPRouteWithBackend(t *testing.T, suite *suite.ConformanceTestSuite, gw
 	ns := "gateway-conformance-infra"
 	routeNN := types.NamespacedName{Name: routeName, Namespace: ns}
 	gwNN := types.NamespacedName{Name: gwName, Namespace: ns}
-	gwAddr := GatewayAndTCPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, NewGatewayRef(gwNN), routeNN)
+	gwAddr := GatewayAndTCPRoutesMustBeAccepted(t, suite.Client, &suite.TimeoutConfig, suite.ControllerName, NewGatewayRef(gwNN), routeNN)
 	BackendMustBeAccepted(t, suite.Client, types.NamespacedName{Name: backendName, Namespace: ns})
 	OkResp := http.ExpectedResponse{
 		Request: http.Request{

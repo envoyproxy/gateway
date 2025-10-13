@@ -27,6 +27,9 @@ type ProxyTopologyInjector struct {
 	Logger    logging.Logger
 }
 
+// Handle implements admission.Handler; the interface requires admission.Request by value.
+//
+//nolint:gocritic
 func (m *ProxyTopologyInjector) Handle(ctx context.Context, req admission.Request) admission.Response {
 	logger := m.Logger
 	logger.V(1).Info("receive injector request", "request", req)

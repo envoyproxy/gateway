@@ -130,6 +130,12 @@ type OIDC struct {
 	// +optional
 	DefaultRefreshTokenTTL *gwapiv1.Duration `json:"defaultRefreshTokenTTL,omitempty"`
 
+	// Disable token encryption. When set to true, both the access token and the ID token will be stored in plain text.
+	// This option should only be used in secure environments where token encryption is not required.
+	// Default is false (tokens are encrypted).
+	// +optional
+	DisableTokenEncryption *bool `json:"disableTokenEncryption,omitempty"`
+
 	// Skips OIDC authentication when the request contains a header that will be extracted by the JWT filter. Unless
 	// explicitly stated otherwise in the extractFrom field, this will be the "Authorization: Bearer ..." header.
 	//

@@ -184,6 +184,7 @@ func oauth2Config(securityFeatures *ir.SecurityFeatures) (*oauth2v3.OAuth2, erro
 			Resources:  oidc.Resources,
 
 			PreserveAuthorizationHeader: preserveAuthorizationHeader,
+			DisableTokenEncryption:      oidc.DisableTokenEncryption,
 		},
 	}
 

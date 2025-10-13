@@ -2,7 +2,6 @@ backendTrafficPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:
-    creationTimestamp: null
     name: target-httproute-in-gateway-1
     namespace: envoy-gateway
   spec:
@@ -27,7 +26,6 @@ backendTrafficPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:
-    creationTimestamp: null
     name: also-target-httproute-in-gateway-1
     namespace: envoy-gateway
   spec:
@@ -53,7 +51,6 @@ backendTrafficPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:
-    creationTimestamp: null
     name: target-grpcroute-in-gateway-2
     namespace: envoy-gateway
   spec:
@@ -78,7 +75,6 @@ backendTrafficPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:
-    creationTimestamp: null
     name: target-unknown-httproute
     namespace: envoy-gateway
   spec:
@@ -91,7 +87,6 @@ backendTrafficPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:
-    creationTimestamp: null
     name: not-same-namespace-httproute
     namespace: envoy-gateway
   spec:
@@ -104,7 +99,6 @@ backendTrafficPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:
-    creationTimestamp: null
     name: target-gateway-1
     namespace: envoy-gateway
   spec:
@@ -135,7 +129,6 @@ backendTrafficPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:
-    creationTimestamp: null
     name: target-gateway-1-as-well
     namespace: envoy-gateway
   spec:
@@ -161,7 +154,6 @@ backendTrafficPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:
-    creationTimestamp: null
     name: target-unknown-gateway
     namespace: envoy-gateway
   spec:
@@ -174,7 +166,6 @@ backendTrafficPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:
-    creationTimestamp: null
     name: not-same-namespace-gateway
     namespace: envoy-gateway
   spec:
@@ -188,7 +179,6 @@ gateways:
 - apiVersion: gateway.networking.k8s.io/v1beta1
   kind: Gateway
   metadata:
-    creationTimestamp: null
     name: gateway-1
     namespace: envoy-gateway
   spec:
@@ -228,7 +218,6 @@ gateways:
 - apiVersion: gateway.networking.k8s.io/v1beta1
   kind: Gateway
   metadata:
-    creationTimestamp: null
     name: gateway-2
     namespace: envoy-gateway
   spec:
@@ -319,7 +308,6 @@ gateways:
 - apiVersion: gateway.networking.k8s.io/v1beta1
   kind: Gateway
   metadata:
-    creationTimestamp: null
     name: not-same-namespace-gateway
     namespace: another-namespace
   spec:
@@ -360,7 +348,6 @@ grpcRoutes:
 - apiVersion: gateway.networking.k8s.io/v1alpha2
   kind: GRPCRoute
   metadata:
-    creationTimestamp: null
     name: grpcroute-1
     namespace: envoy-gateway
   spec:
@@ -397,7 +384,6 @@ httpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1beta1
   kind: HTTPRoute
   metadata:
-    creationTimestamp: null
     name: httproute-1
     namespace: envoy-gateway
   spec:
@@ -431,7 +417,6 @@ httpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1beta1
   kind: HTTPRoute
   metadata:
-    creationTimestamp: null
     name: not-same-namespace-httproute
     namespace: another-namespace
   spec:

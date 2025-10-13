@@ -20,6 +20,8 @@ type resourceMappings struct {
 	allAssociatedReferenceGrants sets.Set[string]
 	// Set for storing ServiceImports' NamespacedNames.
 	allAssociatedServiceImports sets.Set[string]
+	// Set for storing Services' NamespacedNames.
+	allAssociatedServices sets.Set[string]
 	// Set for storing EndpointSlices' NamespacedNames.
 	allAssociatedEndpointSlices sets.Set[string]
 	// Set for storing Backends' NamespacedNames.
@@ -44,8 +46,8 @@ type resourceMappings struct {
 	allAssociatedTCPRoutes sets.Set[string]
 	// Set for storing UDPRoutes' NamespacedNames attaching to various Gateway objects.
 	allAssociatedUDPRoutes sets.Set[string]
-	// Set for storing backendRefs' BackendObjectReference referred by various Route objects.
-	allAssociatedBackendRefs sets.Set[gwapiv1.BackendObjectReference]
+	// Map caching BackendObjectReferences keyed by their normalized identifier.
+	allAssociatedBackendRefs map[utils.NamespacedNameWithGroupKind]gwapiv1.BackendObjectReference
 	// Set for storing ClientTrafficPolicies' NamespacedNames referred by various Route objects.
 	allAssociatedClientTrafficPolicies sets.Set[string]
 	// Set for storing BackendTrafficPolicies' NamespacedNames referred by various Route objects.
@@ -75,6 +77,7 @@ func newResourceMapping() *resourceMappings {
 		allAssociatedGateways:                   sets.New[string](),
 		allAssociatedReferenceGrants:            sets.New[string](),
 		allAssociatedServiceImports:             sets.New[string](),
+		allAssociatedServices:                   sets.New[string](),
 		allAssociatedEndpointSlices:             sets.New[string](),
 		allAssociatedBackends:                   sets.New[string](),
 		allAssociatedSecrets:                    sets.New[string](),
@@ -87,7 +90,7 @@ func newResourceMapping() *resourceMappings {
 		allAssociatedGRPCRoutes:                 sets.New[string](),
 		allAssociatedTCPRoutes:                  sets.New[string](),
 		allAssociatedUDPRoutes:                  sets.New[string](),
-		allAssociatedBackendRefs:                sets.New[gwapiv1.BackendObjectReference](),
+		allAssociatedBackendRefs:                make(map[utils.NamespacedNameWithGroupKind]gwapiv1.BackendObjectReference),
 		allAssociatedClientTrafficPolicies:      sets.New[string](),
 		allAssociatedBackendTrafficPolicies:     sets.New[string](),
 		allAssociatedSecurityPolicies:           sets.New[string](),

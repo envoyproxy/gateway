@@ -46,7 +46,7 @@ var GRPCExtAuthTest = suite.ConformanceTest{
 		}
 		SecurityPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "ext-auth-test", Namespace: ns}, suite.ControllerName, ancestorRef)
 		// Wait for the grpc ext auth service pod to be ready
-		WaitForPods(t, suite.Client, ns, map[string]string{"app": "envoy-ext-auth"}, corev1.PodRunning, PodReady)
+		WaitForPods(t, suite.Client, ns, map[string]string{"app": "envoy-ext-auth"}, corev1.PodRunning, &PodReady)
 
 		t.Run("http route with ext auth authentication", func(t *testing.T) {
 			expectedResponse := http.ExpectedResponse{

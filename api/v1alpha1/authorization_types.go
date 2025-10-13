@@ -85,6 +85,14 @@ type Principal struct {
 	// You can use the `ClientIPDetection` or the `ProxyProtocol` field in
 	// the `ClientTrafficPolicy` to configure how the client IP is detected.
 	//
+	// For TCPRoute targets (raw TCP connections), HTTP headers such as
+	// X-Forwarded-For are not available. The client IP is obtained from the
+	// TCP connection's peer address. If intermediaries (load balancers, NAT)
+	// terminate or proxy TCP, the original client IP will only be available
+	// if the intermediary preserves the source address (for example by
+	// enabling the PROXY protocol or avoiding SNAT). Ensure your L4 proxy is
+	// configured to preserve the source IP to enable correct client-IP
+	// matching for TCPRoute targets.
 	// +optional
 	// +kubebuilder:validation:MinItems=1
 	ClientCIDRs []CIDR `json:"clientCIDRs,omitempty"`
@@ -190,7 +198,7 @@ type JWTClaim struct {
 	// If multiple values are specified, one of the values must match for the rule to match.
 	//
 	// +kubebuilder:validation:MinItems=1
-	// +kubebuilder:validation:MaxItems=16
+	// +kubebuilder:validation:MaxItems=128
 	Values []string `json:"values"`
 }
 

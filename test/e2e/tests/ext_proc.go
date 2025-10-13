@@ -49,7 +49,7 @@ var ExtProcTest = suite.ConformanceTest{
 			podReady := corev1.PodCondition{Type: corev1.PodReady, Status: corev1.ConditionTrue}
 
 			// Wait for the grpc ext auth service pod to be ready
-			WaitForPods(t, suite.Client, ns, map[string]string{"app": "grpc-ext-proc"}, corev1.PodRunning, podReady)
+			WaitForPods(t, suite.Client, ns, map[string]string{"app": "grpc-ext-proc"}, corev1.PodRunning, &podReady)
 
 			expectedResponse := http.ExpectedResponse{
 				Request: http.Request{
@@ -122,7 +122,7 @@ var ExtProcTest = suite.ConformanceTest{
 			podReady := corev1.PodCondition{Type: corev1.PodReady, Status: corev1.ConditionTrue}
 
 			// Wait for the grpc ext auth service pod to be ready
-			WaitForPods(t, suite.Client, ns, map[string]string{"app": "grpc-ext-proc"}, corev1.PodRunning, podReady)
+			WaitForPods(t, suite.Client, ns, map[string]string{"app": "grpc-ext-proc"}, corev1.PodRunning, &podReady)
 
 			expectedResponse := http.ExpectedResponse{
 				Request: http.Request{
@@ -167,7 +167,7 @@ var ExtProcTest = suite.ConformanceTest{
 			podReady := corev1.PodCondition{Type: corev1.PodReady, Status: corev1.ConditionTrue}
 
 			// Wait for the grpc ext auth service pod to be ready
-			WaitForPods(t, suite.Client, ns, map[string]string{"app": "grpc-ext-proc"}, corev1.PodRunning, podReady)
+			WaitForPods(t, suite.Client, ns, map[string]string{"app": "grpc-ext-proc"}, corev1.PodRunning, &podReady)
 
 			expectedResponse := http.ExpectedResponse{
 				Request: http.Request{

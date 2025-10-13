@@ -98,6 +98,8 @@ type latencyAdapter struct {
 }
 
 // Observe increments the request latency metric for the given verb/URL.
+//
+//nolint:gocritic // client-go's LatencyMetric interface requires url.URL by value.
 func (l *latencyAdapter) Observe(_ context.Context, verb string, u url.URL, latency time.Duration) {
 	l.metric.WithLabelValues(verb, u.String()).Observe(latency.Seconds())
 }

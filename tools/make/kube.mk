@@ -1,10 +1,10 @@
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
 # To know the available versions check:
 # - https://github.com/kubernetes-sigs/controller-tools/blob/main/envtest-releases.yaml
-ENVTEST_K8S_VERSION ?= 1.29.5
+ENVTEST_K8S_VERSION ?= 1.33.0
 # Need run cel validation across multiple versions of k8s
-# TODO: zhaohuabing update kubebuilder assets to 1.33.0 when available
-ENVTEST_K8S_VERSIONS ?= 1.29.5 1.30.3 1.31.0 1.32.0
+# TODO: update kubebuilder assets to 1.34.0 when available
+ENVTEST_K8S_VERSIONS ?= 1.30.3 1.31.0 1.32.0 1.33.0
 
 # GATEWAY_API_VERSION refers to the version of Gateway API CRDs.
 # For more details, see https://gateway-api.sigs.k8s.io/guides/getting-started/#installing-gateway-api
@@ -24,6 +24,10 @@ BENCHMARK_RPS ?= 10000
 BENCHMARK_CONNECTIONS ?= 100
 BENCHMARK_DURATION ?= 60
 BENCHMARK_REPORT_DIR ?= benchmark_report
+
+# Benchmark toggles
+# Disable PNG rendering by default to speed up CI
+BENCHMARK_RENDER_PNG ?= false
 
 CONFORMANCE_RUN_TEST ?=
 
@@ -253,8 +257,8 @@ run-benchmark: install-benchmark-server prepare-ip-family ## Run benchmark tests
 	kubectl apply -f test/benchmark/config/gatewayclass.yaml
 	go test -v -tags benchmark -timeout $(BENCHMARK_TIMEOUT) ./test/benchmark --rps=$(BENCHMARK_RPS) --connections=$(BENCHMARK_CONNECTIONS) --duration=$(BENCHMARK_DURATION) --report-save-dir=$(BENCHMARK_REPORT_DIR)
 	# render benchmark profiles into image
-	dot -V
-	find test/benchmark/$(BENCHMARK_REPORT_DIR)/profiles -name "*.pprof" -type f -exec sh -c 'go tool pprof -png "$$1" > "$${1%.pprof}.png"' _ {} \;
+	@if [ "$(BENCHMARK_RENDER_PNG)" != "false" ]; then dot -V; fi
+	@if [ "$(BENCHMARK_RENDER_PNG)" != "false" ]; then find test/benchmark/$(BENCHMARK_REPORT_DIR)/profiles -name "*.pprof" -type f -exec sh -c 'go tool pprof -png "$$1" > "$$${1%.pprof}.png"' _ {} \; ; fi
 
 .PHONY: install-benchmark-server
 install-benchmark-server: ## Install nighthawk server for benchmark test
