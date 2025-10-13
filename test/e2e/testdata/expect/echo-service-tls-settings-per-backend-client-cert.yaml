@@ -1,7 +1,7 @@
 ---
 tls:
-  cipherSuite: "TLS_AES_128_GCM_SHA256"
-  negotiatedProtocol: "http/1.1"
+  CipherSuite: "TLS_AES_128_GCM_SHA256"
+  negotiatedProtocol: "h2"
   peerCertificates:
     - |
       -----BEGIN CERTIFICATE-----
@@ -23,6 +23,6 @@ tls:
       WsiqRhQ+Pc77QgxsmPokIZ+dR++fLZsqPELS/Eo07UaUfeoZTL6LCpW9xS8Ezt0k
       SfrMSaTuPJfQcDUtYziBl81tuJLYaYq84iuntxC8tg==
       -----END CERTIFICATE-----
-
-  serverName: "example.com"
+  serverName: "example.com"    
   version: "TLSv1.3"
+
