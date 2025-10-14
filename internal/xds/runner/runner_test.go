@@ -231,7 +231,7 @@ func TestServeXdsServerListenFailed(t *testing.T) {
 	require.NoError(t, err)
 	defer l.Close()
 
-	cfg, _ := config.New(os.Stdout)
+	cfg, _ := config.New(os.Stdout, os.Stderr)
 	r := New(&Config{
 		Server: *cfg,
 	})
@@ -248,7 +248,7 @@ func TestRunner(t *testing.T) {
 	// Setup
 	xdsIR := new(message.XdsIR)
 	pResource := new(message.ProviderResources)
-	cfg, err := config.New(os.Stdout)
+	cfg, err := config.New(os.Stdout, os.Stderr)
 	require.NoError(t, err)
 	r := New(&Config{
 		Server:            *cfg,
@@ -331,7 +331,7 @@ func TestRunner_withExtensionManager_FailOpen(t *testing.T) {
 	xdsIR := new(message.XdsIR)
 	pResource := new(message.ProviderResources)
 
-	cfg, err := config.New(os.Stdout)
+	cfg, err := config.New(os.Stdout, os.Stderr)
 	require.NoError(t, err)
 	require.NotNil(t, cfg)
 
@@ -414,7 +414,7 @@ func TestRunner_withExtensionManager_FailClosed(t *testing.T) {
 	xdsIR := new(message.XdsIR)
 	pResource := new(message.ProviderResources)
 
-	cfg, err := config.New(os.Stdout)
+	cfg, err := config.New(os.Stdout, os.Stderr)
 	require.NoError(t, err)
 	require.NotNil(t, cfg)
 

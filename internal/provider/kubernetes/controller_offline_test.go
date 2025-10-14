@@ -24,7 +24,7 @@ func TestNewOfflineGatewayAPIController(t *testing.T) {
 	})
 
 	t.Run("offline controller does not support k8s provider type", func(t *testing.T) {
-		cfg, err := config.New(os.Stdout)
+		cfg, err := config.New(os.Stdout, os.Stderr)
 		require.NoError(t, err)
 
 		cfg.EnvoyGateway.Provider = &egv1a1.EnvoyGatewayProvider{
@@ -36,7 +36,7 @@ func TestNewOfflineGatewayAPIController(t *testing.T) {
 	})
 
 	t.Run("offline controller creation success", func(t *testing.T) {
-		cfg, err := config.New(os.Stdout)
+		cfg, err := config.New(os.Stdout, os.Stderr)
 		require.NoError(t, err)
 
 		cfg.EnvoyGateway.Provider = &egv1a1.EnvoyGatewayProvider{
