@@ -534,8 +534,8 @@ func requireTestDataOutFile(t *testing.T, name ...string) string {
 	path := filepath.Join(elems...)
 
 	content, err := outFiles.ReadFile(path)
-	// read from FS if file does not exist in go embed
-	if err != nil && strings.Contains(err.Error(), "file does not exist") {
+	// read from FS if overriding, and file does not exist in go embed
+	if err != nil && test.OverrideTestData() && strings.Contains(err.Error(), "file does not exist") {
 		content, err := os.ReadFile(path)
 		require.NoError(t, err)
 		return string(content)
