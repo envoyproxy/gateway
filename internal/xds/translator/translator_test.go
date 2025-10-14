@@ -7,6 +7,7 @@ package translator
 
 import (
 	"embed"
+	"os"
 	"path/filepath"
 	"runtime"
 	"sort"
@@ -530,7 +531,17 @@ func requireXdsIRListenersFromInputTestData(t *testing.T, name string) []*ir.HTT
 func requireTestDataOutFile(t *testing.T, name ...string) string {
 	t.Helper()
 	elems := append([]string{"testdata", "out"}, name...)
-	content, err := outFiles.ReadFile(filepath.Join(elems...))
+	path := filepath.Join(elems...)
+
+	// When overriding test data, read from filesystem to validate newly generated files
+	if test.OverrideTestData() {
+		content, err := os.ReadFile(path)
+		require.NoError(t, err)
+		return string(content)
+	}
+
+	// Normal test runs read from embedded FS
+	content, err := outFiles.ReadFile(path)
 	require.NoError(t, err)
 	return string(content)
 }
