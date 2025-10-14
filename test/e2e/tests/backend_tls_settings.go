@@ -233,7 +233,7 @@ var BackendTLSSettingsTest = suite.ConformanceTest{
 			routeNN := types.NamespacedName{Name: "backend-client-tls-settings", Namespace: ConformanceInfraNamespace}
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 			config := &egv1a1.BackendTLSConfig{
-				ClientCertificateRef: &gwapiv1.SecretObjectReference{
+				ClientCertificateRef: &gwapiv1.SecretObjectReference{ // client cert will be overridden by backend clientTLS settings
 					Kind:      gatewayapi.KindPtr("Secret"),
 					Name:      "client-tls-certificate",
 					Namespace: gatewayapi.NamespacePtr(ConformanceInfraNamespace),

@@ -32,6 +32,8 @@ func (t *Translator) ProcessBackendTLSPolicyStatus(btlsp []*gwapiv1a3.BackendTLS
 	}
 }
 
+// applyBackendTLSSetting processes TLS settings from Backend resource, BackendTLSPolicy, and EnvoyProxy resource.
+// It merges the TLS settings from these resources and returns the final TLS config to be applied to the upstream cluster.
 func (t *Translator) applyBackendTLSSetting(
 	backendRef gwapiv1.BackendObjectReference,
 	backendNamespace string,
@@ -40,13 +42,13 @@ func (t *Translator) applyBackendTLSSetting(
 	envoyProxy *egv1a1.EnvoyProxy,
 ) (*ir.TLSUpstreamConfig, error) {
 	var (
-		backendServerValidationTLSConfig *ir.TLSUpstreamConfig // the TLS config to validate the server cert from Backend TLS settings
-		backendTLSPolicyConfig           *ir.TLSUpstreamConfig // the TLS config to validate the server cert from BackendTLSPolicy
-		backendClientTLSConfig           *ir.TLSConfig         // the TLS config for client cert and common TLS settings from Backend TLS settings
-		envoyProxyClientTLSConfig        *ir.TLSConfig         // the TLS config for client cert and common TLS settings from EnvoyProxy BackendTLS
-		mergedClientTLSConfig            *ir.TLSConfig         // the final merged client TLS config to return
-		upstreamConfig                   *ir.TLSUpstreamConfig // the final merged TLS config to return
-		err                              error
+		backendValidationTLSConfig *ir.TLSUpstreamConfig // the TLS config to validate the server cert from Backend TLS settings
+		btpValidationTLSConfig     *ir.TLSUpstreamConfig // the TLS config to validate the server cert from BackendTLSPolicy
+		backendClientTLSConfig     *ir.TLSConfig         // the TLS config for client cert and common TLS settings from Backend TLS settings
+		envoyProxyClientTLSConfig  *ir.TLSConfig         // the TLS config for client cert and common TLS settings from EnvoyProxy BackendTLS
+		mergedClientTLSConfig      *ir.TLSConfig         // the final merged client TLS config to return
+		mergedTLSConfig            *ir.TLSUpstreamConfig // the final merged TLS config to return
+		err                        error
 	)
 
 	// If the backendRef is a Backend resource, we need to check if it has TLS settings.
@@ -56,8 +58,8 @@ func (t *Translator) applyBackendTLSSetting(
 			return nil, fmt.Errorf("backend %s not found", backendRef.Name)
 		}
 		if backend.Spec.TLS != nil {
-			// Get the backend server certificate validation settings from Backend resource.
-			if backendServerValidationTLSConfig, err = t.processServerValidationTLSSettings(backend, resources); err != nil {
+			// Get the server certificate validation settings from Backend resource.
+			if backendValidationTLSConfig, err = t.processServerValidationTLSSettings(backend, resources); err != nil {
 				return nil, err
 			}
 
@@ -71,67 +73,71 @@ func (t *Translator) applyBackendTLSSetting(
 	}
 
 	// Get the backend certificate validation settings from BackendTLSPolicy.
-	if backendTLSPolicyConfig, err = t.processBackendTLSPolicy(backendRef, backendNamespace, parent, resources); err != nil {
+	if btpValidationTLSConfig, err = t.processBackendTLSPolicy(backendRef, backendNamespace, parent, resources); err != nil {
 		return nil, err
-	}
-
-	// Get the client certificate and common TLS settings from EnvoyProxy resource.
-	backendTLSEnabled := backendServerValidationTLSConfig != nil || backendTLSPolicyConfig != nil
-	if backendTLSEnabled && envoyProxy != nil && envoyProxy.Spec.BackendTLS != nil {
-		if envoyProxyClientTLSConfig, err = t.processClientTLSSettings(resources, envoyProxy.Spec.BackendTLS, envoyProxy.Namespace, envoyProxy.Name, true); err != nil {
-			return nil, err
-		}
 	}
 
 	// Merge server validation TLS settings from Backend resource and BackendTLSPolicy.
 	// BackendTLSPolicy takes precedence over Backend resource for identical attributes that are set in both.
-	upstreamConfig = mergeServerValidationTLSConfigs(backendServerValidationTLSConfig, backendTLSPolicyConfig)
+	mergedTLSConfig = mergeServerValidationTLSConfigs(backendValidationTLSConfig, btpValidationTLSConfig)
 
-	if upstreamConfig != nil && !upstreamConfig.InsecureSkipVerify && upstreamConfig.CACertificate == nil {
+	// If neither Backend resource nor BackendTLSPolicy has TLS settings, no TLS is needed.
+	if mergedTLSConfig == nil {
+		return nil, nil
+	}
+
+	if !mergedTLSConfig.InsecureSkipVerify && mergedTLSConfig.CACertificate == nil {
 		return nil, fmt.Errorf("CACertificate must be specified when InsecureSkipVerify is false")
+	}
+
+	// Get the client certificate and common TLS settings from EnvoyProxy resource.
+	if envoyProxy != nil && envoyProxy.Spec.BackendTLS != nil {
+		if envoyProxyClientTLSConfig, err = t.processClientTLSSettings(resources, envoyProxy.Spec.BackendTLS, envoyProxy.Namespace, envoyProxy.Name, true); err != nil {
+			return nil, err
+		}
 	}
 
 	// Merge client TLS settings from Backend resource and EnvoyProxy resource.
 	// Backend resource client TLS settings take precedence over EnvoyProxy client TLS settings.
 	mergedClientTLSConfig = mergeClientTLSConfigs(backendClientTLSConfig, envoyProxyClientTLSConfig)
 	if mergedClientTLSConfig != nil {
-		upstreamConfig.TLSConfig = *mergedClientTLSConfig
+		mergedTLSConfig.TLSConfig = *mergedClientTLSConfig
 	}
 
-	return upstreamConfig, nil
+	return mergedTLSConfig, nil
 }
 
 // Merges TLS settings from Gateway API BackendTLSPolicy and Envoy Gateway Backend TL.
 // BackendTLSPolicy takes precedence for identical attributes that are set in both.
 func mergeServerValidationTLSConfigs(
-	backendServerValidationTLSConfig *ir.TLSUpstreamConfig,
-	backendTLSPolicyConfig *ir.TLSUpstreamConfig,
+	backendValidationTLSConfig *ir.TLSUpstreamConfig,
+	btpValidationTLSConfig *ir.TLSUpstreamConfig,
 ) *ir.TLSUpstreamConfig {
-	if backendServerValidationTLSConfig == nil && backendTLSPolicyConfig == nil {
+	if backendValidationTLSConfig == nil && btpValidationTLSConfig == nil {
 		return nil
 	}
 
-	if backendServerValidationTLSConfig == nil {
-		return backendTLSPolicyConfig
+	if backendValidationTLSConfig == nil {
+		return btpValidationTLSConfig
 	}
-	if backendTLSPolicyConfig == nil {
-		return backendServerValidationTLSConfig
+	if btpValidationTLSConfig == nil {
+		return backendValidationTLSConfig
 	}
 
 	// We don't use DeepCopy here to avoid unnecessary memory allocation.
-	mergedConfig := backendServerValidationTLSConfig
+	mergedConfig := backendValidationTLSConfig
 
-	if backendTLSPolicyConfig.CACertificate != nil {
-		mergedConfig.CACertificate = backendTLSPolicyConfig.CACertificate
+	if btpValidationTLSConfig.CACertificate != nil {
+		mergedConfig.CACertificate = btpValidationTLSConfig.CACertificate
 	}
-	if backendTLSPolicyConfig.SNI != nil {
-		mergedConfig.SNI = backendTLSPolicyConfig.SNI
+	if btpValidationTLSConfig.SNI != nil {
+		mergedConfig.SNI = btpValidationTLSConfig.SNI
 	}
-	if backendTLSPolicyConfig.UseSystemTrustStore {
-		mergedConfig.UseSystemTrustStore = backendTLSPolicyConfig.UseSystemTrustStore
+	if btpValidationTLSConfig.UseSystemTrustStore {
+		mergedConfig.UseSystemTrustStore = btpValidationTLSConfig.UseSystemTrustStore
 	}
-	if backendTLSPolicyConfig.SubjectAltNames != nil {
-		mergedConfig.SubjectAltNames = backendTLSPolicyConfig.SubjectAltNames
+	if btpValidationTLSConfig.SubjectAltNames != nil {
+		mergedConfig.SubjectAltNames = btpValidationTLSConfig.SubjectAltNames
 	}
 
 	return mergedConfig
