@@ -533,15 +533,13 @@ func requireTestDataOutFile(t *testing.T, name ...string) string {
 	elems := append([]string{"testdata", "out"}, name...)
 	path := filepath.Join(elems...)
 
-	// When overriding test data, read from filesystem to validate newly generated files
-	if test.OverrideTestData() {
+	content, err := outFiles.ReadFile(path)
+	// read from FS if file does not exist in go embed
+	if err != nil && strings.Contains(err.Error(), "file does not exist") {
 		content, err := os.ReadFile(path)
 		require.NoError(t, err)
 		return string(content)
 	}
-
-	// Normal test runs read from embedded FS
-	content, err := outFiles.ReadFile(path)
 	require.NoError(t, err)
 	return string(content)
 }
