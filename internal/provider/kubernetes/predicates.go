@@ -623,8 +623,8 @@ func (r *gatewayAPIReconciler) hasRouteWithEndpointRouting(nsName *types.Namespa
 		r.log.Error(err, "failed to find associated HTTPRoutes")
 		return false
 	}
-	for _, route := range httpRouteList.Items {
-		if r.hasEndpointRouting(route.Namespace, route.Spec.CommonRouteSpec) {
+	for i := range httpRouteList.Items {
+		if r.hasEndpointRouting(httpRouteList.Items[i].Spec.CommonRouteSpec) {
 			return true
 		}
 	}
@@ -637,8 +637,8 @@ func (r *gatewayAPIReconciler) hasRouteWithEndpointRouting(nsName *types.Namespa
 			r.log.Error(err, "failed to find associated GRPCRoutes")
 			return false
 		}
-		for _, route := range grpcRouteList.Items {
-			if r.hasEndpointRouting(route.Namespace, route.Spec.CommonRouteSpec) {
+		for i := range grpcRouteList.Items {
+			if r.hasEndpointRouting(grpcRouteList.Items[i].Spec.CommonRouteSpec) {
 				return true
 			}
 		}
@@ -652,8 +652,8 @@ func (r *gatewayAPIReconciler) hasRouteWithEndpointRouting(nsName *types.Namespa
 			r.log.Error(err, "failed to find associated TLSRoutes")
 			return false
 		}
-		for _, route := range tlsRouteList.Items {
-			if r.hasEndpointRouting(route.Namespace, route.Spec.CommonRouteSpec) {
+		for i := range tlsRouteList.Items {
+			if r.hasEndpointRouting(tlsRouteList.Items[i].Spec.CommonRouteSpec) {
 				return true
 			}
 		}
@@ -667,8 +667,8 @@ func (r *gatewayAPIReconciler) hasRouteWithEndpointRouting(nsName *types.Namespa
 			r.log.Error(err, "failed to find associated TCPRoutes")
 			return false
 		}
-		for _, route := range tcpRouteList.Items {
-			if r.hasEndpointRouting(route.Namespace, route.Spec.CommonRouteSpec) {
+		for i := range tcpRouteList.Items {
+			if r.hasEndpointRouting(tcpRouteList.Items[i].Spec.CommonRouteSpec) {
 				return true
 			}
 		}
@@ -682,8 +682,8 @@ func (r *gatewayAPIReconciler) hasRouteWithEndpointRouting(nsName *types.Namespa
 			r.log.Error(err, "failed to find associated UDPRoutes")
 			return false
 		}
-		for _, route := range udpRouteList.Items {
-			if r.hasEndpointRouting(route.Namespace, route.Spec.CommonRouteSpec) {
+		for i := range udpRouteList.Items {
+			if r.hasEndpointRouting(udpRouteList.Items[i].Spec.CommonRouteSpec) {
 				return true
 			}
 		}
@@ -693,14 +693,11 @@ func (r *gatewayAPIReconciler) hasRouteWithEndpointRouting(nsName *types.Namespa
 }
 
 // hasEndpointRouting checks that the associated egv1a1.EnvoyProxy has endpoint routing.
-func (r *gatewayAPIReconciler) hasEndpointRouting(namespace string, spec gwapiv1.CommonRouteSpec) bool {
+func (r *gatewayAPIReconciler) hasEndpointRouting(spec gwapiv1.CommonRouteSpec) bool {
 	ctx := context.Background()
 	for _, ref := range spec.ParentRefs {
 		if ptr.Deref(ref.Kind, resource.KindGateway) != resource.KindGateway {
 			return false
-		}
-		if ref.Namespace != nil {
-			namespace = string(*ref.Namespace)
 		}
 
 		gw := gwapiv1.Gateway{
