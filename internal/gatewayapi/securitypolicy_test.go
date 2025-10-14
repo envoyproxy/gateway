@@ -1028,9 +1028,9 @@ func Test_translateSecurityPolicyForGateway_TCPListener_MetadataNil_Fallback(t *
 	err := tr.translateSecurityPolicyForGateway(policy, gw, target, resource.NewResources(), xdsMap)
 	require.NoError(t, err)
 
-	require.NotNil(t, fooRoute.Security, "foo route security should be set")
-	require.NotNil(t, fooRoute.Security.Authorization, "foo route authorization should be set")
-	require.Nil(t, barRoute.Security, "bar route security should remain nil")
+	require.NotNil(t, fooRoute.Authorization, "foo route security should be set")
+	require.NotNil(t, fooRoute.Authorization, "foo route authorization should be set")
+	require.Nil(t, barRoute.Authorization, "bar route security should remain nil")
 }
 
 func TestValidateCIDRs_ErrorOnBadCIDR(t *testing.T) {

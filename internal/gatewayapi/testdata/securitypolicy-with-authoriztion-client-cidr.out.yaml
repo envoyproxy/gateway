@@ -1281,7 +1281,19 @@ xdsIR:
       name: envoy-gateway/gateway-mixed/foo
       port: 8443
       routes:
-      - destination:
+      - authorization:
+          defaultAction: Deny
+          rules:
+          - action: Allow
+            name: securitypolicy/envoy-gateway/sp-mixed-gateway/authorization/rule/0
+            principal:
+              clientCIDRs:
+              - cidr: 10.0.0.0/24
+                distinct: false
+                ip: 10.0.0.0
+                isIPv6: false
+                maskLen: 24
+        destination:
           metadata:
             kind: TCPRoute
             name: tcpr-app-mixed
@@ -1300,19 +1312,6 @@ xdsIR:
             protocol: TCP
             weight: 1
         name: tcproute/default/tcpr-app-mixed
-        security:
-          authorization:
-            defaultAction: Deny
-            rules:
-            - action: Allow
-              name: securitypolicy/envoy-gateway/sp-mixed-gateway/authorization/rule/0
-              principal:
-                clientCIDRs:
-                - cidr: 10.0.0.0/24
-                  distinct: false
-                  ip: 10.0.0.0
-                  isIPv6: false
-                  maskLen: 24
   envoy-gateway/gateway-tcp:
     accessLog:
       json:
@@ -1333,7 +1332,29 @@ xdsIR:
       name: envoy-gateway/gateway-tcp/foo
       port: 8088
       routes:
-      - destination:
+      - authorization:
+          defaultAction: Deny
+          rules:
+          - action: Allow
+            name: allow-private-vpc
+            principal:
+              clientCIDRs:
+              - cidr: 10.0.0.0/8
+                distinct: false
+                ip: 10.0.0.0
+                isIPv6: false
+                maskLen: 8
+              - cidr: 172.16.0.0/12
+                distinct: false
+                ip: 172.16.0.0
+                isIPv6: false
+                maskLen: 12
+              - cidr: 192.168.0.0/16
+                distinct: false
+                ip: 192.168.0.0
+                isIPv6: false
+                maskLen: 16
+        destination:
           metadata:
             kind: TCPRoute
             name: tcpr-app-foo
@@ -1352,29 +1373,6 @@ xdsIR:
             protocol: TCP
             weight: 1
         name: tcproute/default/tcpr-app-foo
-        security:
-          authorization:
-            defaultAction: Deny
-            rules:
-            - action: Allow
-              name: allow-private-vpc
-              principal:
-                clientCIDRs:
-                - cidr: 10.0.0.0/8
-                  distinct: false
-                  ip: 10.0.0.0
-                  isIPv6: false
-                  maskLen: 8
-                - cidr: 172.16.0.0/12
-                  distinct: false
-                  ip: 172.16.0.0
-                  isIPv6: false
-                  maskLen: 12
-                - cidr: 192.168.0.0/16
-                  distinct: false
-                  ip: 192.168.0.0
-                  isIPv6: false
-                  maskLen: 16
     - address: 0.0.0.0
       externalPort: 8089
       metadata:
@@ -1385,7 +1383,29 @@ xdsIR:
       name: envoy-gateway/gateway-tcp/bar
       port: 8089
       routes:
-      - destination:
+      - authorization:
+          defaultAction: Deny
+          rules:
+          - action: Allow
+            name: allow-private-vpc
+            principal:
+              clientCIDRs:
+              - cidr: 10.0.0.0/8
+                distinct: false
+                ip: 10.0.0.0
+                isIPv6: false
+                maskLen: 8
+              - cidr: 172.16.0.0/12
+                distinct: false
+                ip: 172.16.0.0
+                isIPv6: false
+                maskLen: 12
+              - cidr: 192.168.0.0/16
+                distinct: false
+                ip: 192.168.0.0
+                isIPv6: false
+                maskLen: 16
+        destination:
           metadata:
             kind: TCPRoute
             name: tcpr-app-bar
@@ -1404,26 +1424,3 @@ xdsIR:
             protocol: TCP
             weight: 1
         name: tcproute/default/tcpr-app-bar
-        security:
-          authorization:
-            defaultAction: Deny
-            rules:
-            - action: Allow
-              name: allow-private-vpc
-              principal:
-                clientCIDRs:
-                - cidr: 10.0.0.0/8
-                  distinct: false
-                  ip: 10.0.0.0
-                  isIPv6: false
-                  maskLen: 8
-                - cidr: 172.16.0.0/12
-                  distinct: false
-                  ip: 172.16.0.0
-                  isIPv6: false
-                  maskLen: 12
-                - cidr: 192.168.0.0/16
-                  distinct: false
-                  ip: 192.168.0.0
-                  isIPv6: false
-                  maskLen: 16

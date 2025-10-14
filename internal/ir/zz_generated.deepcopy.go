@@ -3724,9 +3724,9 @@ func (in *TCPRoute) DeepCopyInto(out *TCPRoute) {
 		*out = new(DNS)
 		(*in).DeepCopyInto(*out)
 	}
-	if in.Security != nil {
-		in, out := &in.Security, &out.Security
-		*out = new(SecurityFeatures)
+	if in.Authorization != nil {
+		in, out := &in.Authorization, &out.Authorization
+		*out = new(Authorization)
 		(*in).DeepCopyInto(*out)
 	}
 }
