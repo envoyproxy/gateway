@@ -19,6 +19,7 @@ import (
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -28,6 +29,7 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/utils"
 )
 
@@ -582,7 +584,7 @@ func (r *gatewayAPIReconciler) validateEndpointSliceForReconcile(obj client.Obje
 		nsName.Name = multiClusterSvcName
 	}
 
-	if r.isRouteReferencingBackend(&nsName) {
+	if r.hasRouteWithEndpointRouting(&nsName) {
 		return true
 	}
 
@@ -606,6 +608,138 @@ func (r *gatewayAPIReconciler) validateEndpointSliceForReconcile(obj client.Obje
 
 	if r.isProxyServiceCluster(ep.GetLabels()) {
 		return true
+	}
+	return false
+}
+
+// hasRouteWithEndpointRouting returns true if the backend(service and serviceImport) is referenced by any of the xRoutes
+// in the system and that route has a parent reference with EndpointRouting.
+func (r *gatewayAPIReconciler) hasRouteWithEndpointRouting(nsName *types.NamespacedName) bool {
+	ctx := context.Background()
+	httpRouteList := &gwapiv1.HTTPRouteList{}
+	if err := r.client.List(ctx, httpRouteList, &client.ListOptions{
+		FieldSelector: fields.OneTermEqualSelector(backendHTTPRouteIndex, nsName.String()),
+	}); err != nil && !kerrors.IsNotFound(err) {
+		r.log.Error(err, "failed to find associated HTTPRoutes")
+		return false
+	}
+	for _, route := range httpRouteList.Items {
+		if r.hasEndpointRouting(route.Namespace, route.Spec.CommonRouteSpec) {
+			return true
+		}
+	}
+
+	if r.grpcRouteCRDExists {
+		grpcRouteList := &gwapiv1.GRPCRouteList{}
+		if err := r.client.List(ctx, grpcRouteList, &client.ListOptions{
+			FieldSelector: fields.OneTermEqualSelector(backendGRPCRouteIndex, nsName.String()),
+		}); err != nil && !kerrors.IsNotFound(err) {
+			r.log.Error(err, "failed to find associated GRPCRoutes")
+			return false
+		}
+		for _, route := range grpcRouteList.Items {
+			if r.hasEndpointRouting(route.Namespace, route.Spec.CommonRouteSpec) {
+				return true
+			}
+		}
+	}
+
+	if r.tlsRouteCRDExists {
+		tlsRouteList := &gwapiv1a2.TLSRouteList{}
+		if err := r.client.List(ctx, tlsRouteList, &client.ListOptions{
+			FieldSelector: fields.OneTermEqualSelector(backendTLSRouteIndex, nsName.String()),
+		}); err != nil && !kerrors.IsNotFound(err) {
+			r.log.Error(err, "failed to find associated TLSRoutes")
+			return false
+		}
+		for _, route := range tlsRouteList.Items {
+			if r.hasEndpointRouting(route.Namespace, route.Spec.CommonRouteSpec) {
+				return true
+			}
+		}
+	}
+
+	if r.tcpRouteCRDExists {
+		tcpRouteList := &gwapiv1a2.TCPRouteList{}
+		if err := r.client.List(ctx, tcpRouteList, &client.ListOptions{
+			FieldSelector: fields.OneTermEqualSelector(backendTCPRouteIndex, nsName.String()),
+		}); err != nil && !kerrors.IsNotFound(err) {
+			r.log.Error(err, "failed to find associated TCPRoutes")
+			return false
+		}
+		for _, route := range tcpRouteList.Items {
+			if r.hasEndpointRouting(route.Namespace, route.Spec.CommonRouteSpec) {
+				return true
+			}
+		}
+	}
+
+	if r.udpRouteCRDExists {
+		udpRouteList := &gwapiv1a2.UDPRouteList{}
+		if err := r.client.List(ctx, udpRouteList, &client.ListOptions{
+			FieldSelector: fields.OneTermEqualSelector(backendUDPRouteIndex, nsName.String()),
+		}); err != nil && !kerrors.IsNotFound(err) {
+			r.log.Error(err, "failed to find associated UDPRoutes")
+			return false
+		}
+		for _, route := range udpRouteList.Items {
+			if r.hasEndpointRouting(route.Namespace, route.Spec.CommonRouteSpec) {
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
+// hasEndpointRouting checks that the associated egv1a1.EnvoyProxy has endpoint routing.
+func (r *gatewayAPIReconciler) hasEndpointRouting(namespace string, spec gwapiv1.CommonRouteSpec) bool {
+	ctx := context.Background()
+	for _, ref := range spec.ParentRefs {
+		if ptr.Deref(ref.Kind, resource.KindGateway) != resource.KindGateway {
+			return false
+		}
+		if ref.Namespace != nil {
+			namespace = string(*ref.Namespace)
+		}
+
+		gw := gwapiv1.Gateway{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      string(ref.Name),
+				Namespace: string(ptr.Deref(ref.Namespace, "default")),
+			},
+		}
+		err := r.client.Get(ctx, client.ObjectKeyFromObject(&gw), &gw)
+		if err != nil {
+			r.log.Error(err, "unable to find associated gateway")
+			return false
+		}
+
+		gwc := gwapiv1.GatewayClass{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: string(gw.Spec.GatewayClassName),
+			},
+		}
+		err = r.client.Get(ctx, client.ObjectKeyFromObject(&gwc), &gwc)
+		if err != nil {
+			r.log.Error(err, "unable to find associated gateway class")
+			return false
+		}
+
+		paramRef := ptr.Deref(gwc.Spec.ParametersRef, gwapiv1.ParametersReference{})
+		ep := egv1a1.EnvoyProxy{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      paramRef.Name,
+				Namespace: string(ptr.Deref(paramRef.Namespace, "")),
+			},
+		}
+		if err := r.client.Get(ctx, client.ObjectKeyFromObject(&ep), &ep); err != nil {
+			r.log.Error(err, "unable to find associated EnvoyProxy")
+			return false
+		}
+		if ptr.Deref(ep.Spec.RoutingType, egv1a1.EndpointRoutingType) == egv1a1.EndpointRoutingType {
+			return true
+		}
 	}
 	return false
 }
