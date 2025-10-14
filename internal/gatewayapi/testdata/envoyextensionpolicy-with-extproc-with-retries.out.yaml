@@ -140,7 +140,6 @@ envoyExtensionPolicies:
           type: ConsistentHash
         proxyProtocol:
           version: V2
-        # START: Test data for retry policy
         retry:
           numRetries: 2
           perRetry:
@@ -154,7 +153,6 @@ envoyExtensionPolicies:
             - unavailable
             - internal
             - deadline-exceeded
-        # END: Test data for retry policy
         tcpKeepalive:
           probes: 7
         timeout:
@@ -461,7 +459,6 @@ xdsIR:
                     name: X-some-header
               proxyProtocol:
                 version: V2
-              # START: Test data for retry policy
               retry:
                 numRetries: 2
                 perRetry:
@@ -475,7 +472,6 @@ xdsIR:
                   - deadline-exceeded
                   - internal
                   - unavailable
-              # END: Test data for retry policy
               tcpKeepalive:
                 probes: 7
               timeout:
