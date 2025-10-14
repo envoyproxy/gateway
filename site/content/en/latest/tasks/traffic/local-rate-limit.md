@@ -617,6 +617,9 @@ transfer-encoding: chunked
 
 ```
 
+**Note:** Local rate limiting does not support `distinct` matching. If you want to rate limit based on distinct values, 
+you should use [Global Rate Limiting][]. 
+
 ## Rate Limit Based on Path
 
 This example shows you how to rate limit requests based on the request path. In this case, we want to limit requests to `/api/users` to 3 requests/Hour.
@@ -845,8 +848,8 @@ spec:
     local:
       rules:
       - clientSelectors:
-        - method:
-            value: POST
+        - methods:
+          - value: POST
         limit:
           requests: 3
           unit: Hour
@@ -873,8 +876,8 @@ spec:
     local:
       rules:
       - clientSelectors:
-        - method:
-            value: POST
+        - methods:
+          - value: POST
         limit:
           requests: 3
           unit: Hour
@@ -1019,8 +1022,6 @@ server: envoy
 ```
 
 As you can see, POST requests are rate limited after the 3rd request (returning 429), while GET requests to the same path are not rate limited.
-
-## Combining Multiple Selectors 
 
 [Global Rate Limiting]: https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/other_features/global_rate_limiting
 [Local rate limiting]: https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/other_features/local_rate_limiting

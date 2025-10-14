@@ -1164,8 +1164,8 @@ spec:
     global:
       rules:
       - clientSelectors:
-        - method:
-            value: POST
+        - methods:
+          - value: POST
         limit:
           requests: 3
           unit: Hour
@@ -1212,8 +1212,8 @@ spec:
     global:
       rules:
       - clientSelectors:
-        - method:
-            value: POST
+        - methods:
+          - value: POST
         limit:
           requests: 3
           unit: Hour
