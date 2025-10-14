@@ -541,8 +541,9 @@ func buildXdsRequestMirrorPolicies(mirrorPolicies []*ir.MirrorPolicy) []*routev3
 	for _, policy := range mirrorPolicies {
 		if mp := mirrorPercentByPolicy(policy); mp != nil && policy.Destination != nil {
 			xdsMirrorPolicies = append(xdsMirrorPolicies, &routev3.RouteAction_RequestMirrorPolicy{
-				Cluster:         policy.Destination.Name,
-				RuntimeFraction: mp,
+				Cluster:                       policy.Destination.Name,
+				RuntimeFraction:               mp,
+				DisableShadowHostSuffixAppend: true,
 			})
 		}
 	}
