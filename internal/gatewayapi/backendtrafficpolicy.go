@@ -920,43 +920,38 @@ func buildRateLimitRule(rule egv1a1.RateLimitRule) (*ir.RateLimitRule, error) {
 		}
 
 		for _, method := range match.Methods {
-			if method.Value == nil {
-				return nil, fmt.Errorf(
-					"unable to translate rateLimit. Either the method." +
-						"the method is missing a value")
-			}
 			irRule.MethodMatches = append(irRule.MethodMatches, &ir.StringMatch{
-				Exact:  ptr.To(string(*method.Value)),
+				Exact:  ptr.To(string(method.Value)),
 				Invert: method.Invert,
 			})
 		}
 
 		if match.Path != nil {
 			switch {
-			case match.Path.Type == nil && match.Path.Value != nil:
+			case match.Path.Type == nil:
 				fallthrough
-			case *match.Path.Type == gwapiv1.PathMatchPathPrefix && match.Path.Value != nil:
+			case *match.Path.Type == gwapiv1.PathMatchPathPrefix:
 				irRule.PathMatch = &ir.StringMatch{
-					Prefix: match.Path.Value,
+					Prefix: ptr.To(match.Path.Value),
 					Invert: match.Path.Invert,
 				}
-			case *match.Path.Type == gwapiv1.PathMatchExact && match.Path.Value != nil:
+			case *match.Path.Type == gwapiv1.PathMatchExact:
 				irRule.PathMatch = &ir.StringMatch{
-					Exact:  match.Path.Value,
+					Exact:  ptr.To(match.Path.Value),
 					Invert: match.Path.Invert,
 				}
-			case *match.Path.Type == gwapiv1.PathMatchRegularExpression && match.Path.Value != nil:
-				if err := regex.Validate(*match.Path.Value); err != nil {
+			case *match.Path.Type == gwapiv1.PathMatchRegularExpression:
+				if err := regex.Validate(match.Path.Value); err != nil {
 					return nil, err
 				}
 				irRule.PathMatch = &ir.StringMatch{
-					SafeRegex: match.Path.Value,
+					SafeRegex: ptr.To(match.Path.Value),
 					Invert:    match.Path.Invert,
 				}
 			default:
 				return nil, fmt.Errorf(
 					"unable to translate rateLimit. Either the path." +
-						"Type is not valid or the path is missing a value")
+						"Type is not valid")
 			}
 		}
 

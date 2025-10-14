@@ -912,6 +912,8 @@ spec:
                                           - TRACE
                                           - PATCH
                                           type: string
+                                      required:
+                                      - value
                                       type: object
                                     type: array
                                   path:
@@ -935,9 +937,12 @@ spec:
                                         - RegularExpression
                                         type: string
                                       value:
+                                        default: /
                                         description: Value specifies the HTTP path.
                                         maxLength: 1024
                                         type: string
+                                    required:
+                                    - value
                                     type: object
                                   sourceCIDR:
                                     description: |-
@@ -1217,6 +1222,8 @@ spec:
                                           - TRACE
                                           - PATCH
                                           type: string
+                                      required:
+                                      - value
                                       type: object
                                     type: array
                                   path:
@@ -1240,9 +1247,12 @@ spec:
                                         - RegularExpression
                                         type: string
                                       value:
+                                        default: /
                                         description: Value specifies the HTTP path.
                                         maxLength: 1024
                                         type: string
+                                    required:
+                                    - value
                                     type: object
                                   sourceCIDR:
                                     description: |-

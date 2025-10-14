@@ -299,9 +299,7 @@ const (
 // MethodMatch defines the matching criteria for the HTTP method of a request.
 type MethodMatch struct {
 	// Value specifies the HTTP method.
-	//
-	// +optional
-	Value *gwapiv1.HTTPMethod `json:"value,omitempty"`
+	Value gwapiv1.HTTPMethod `json:"value"`
 
 	// Invert specifies whether the value match result will be inverted.
 	//
@@ -320,9 +318,9 @@ type PathMatch struct {
 
 	// Value specifies the HTTP path.
 	//
-	// +optional
+	// +kubebuilder:default="/"
 	// +kubebuilder:validation:MaxLength=1024
-	Value *string `json:"value,omitempty"`
+	Value string `json:"value"`
 
 	// Invert specifies whether the value match result will be inverted.
 	//

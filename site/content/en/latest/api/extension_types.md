@@ -3362,7 +3362,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `value` | _[HTTPMethod](#httpmethod)_ |  false  |  | Value specifies the HTTP method. |
+| `value` | _[HTTPMethod](#httpmethod)_ |  true  |  | Value specifies the HTTP method. |
 | `invert` | _boolean_ |  false  | false | Invert specifies whether the value match result will be inverted. |
 
 
@@ -3521,7 +3521,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `methods` | _HTTPMethod array_ |  true  |  | Methods are the HTTP methods of the request.<br />If multiple methods are specified, all specified methods are allowed or denied, based on the action of the rule. |
+| `methods` | _[HTTPMethod](#httpmethod) array_ |  true  |  | Methods are the HTTP methods of the request.<br />If multiple methods are specified, all specified methods are allowed or denied, based on the action of the rule. |
 
 
 #### Origin
@@ -3614,7 +3614,7 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `type` | _[PathMatchType](#pathmatchtype)_ |  false  | PathPrefix | Type specifies how to match against the value of the path. |
-| `value` | _string_ |  false  |  | Value specifies the HTTP path. |
+| `value` | _string_ |  true  | / | Value specifies the HTTP path. |
 | `invert` | _boolean_ |  false  | false | Invert specifies whether the value match result will be inverted. |
 
 
