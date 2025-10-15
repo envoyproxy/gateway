@@ -1,6 +1,6 @@
 module tools
 
-go 1.24.8
+go 1.24.9
 
 tool (
 	github.com/bufbuild/buf/cmd/buf
