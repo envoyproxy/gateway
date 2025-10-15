@@ -400,8 +400,13 @@ func validateSecurityPolicy(p *egv1a1.SecurityPolicy) error {
 	return nil
 }
 
-// validateSecurityPolicyForTCP validates that the SecurityPolicy is valid for TCP routes/listeners.
-// Only Authorization is allowed; within Authorization only ClientCIDRs selector is permitted.
+// validateSecurityPolicyForTCP ensures SecurityPolicy usage on TCP is compatible.
+//
+// TCP supports Authorization with ClientCIDRs ONLY.
+// - Principals.JWT      => invalid (HTTP-only)
+// - Principals.Headers  => invalid (HTTP-only)
+// - Empty/no Authorization is allowed and results in no-op on TCP.
+// Returns an error when any HTTP-only field is present or CIDRs are invalid.
 func validateSecurityPolicyForTCP(p *egv1a1.SecurityPolicy) error {
 	if p.Spec.CORS != nil || p.Spec.JWT != nil || p.Spec.OIDC != nil || p.Spec.APIKeyAuth != nil || p.Spec.BasicAuth != nil || p.Spec.ExtAuth != nil {
 		return fmt.Errorf("only authorization is supported for TCP (routes/listeners)")
