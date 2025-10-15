@@ -41,6 +41,9 @@ type Infra struct {
 	HomeDir string
 	Logger  logging.Logger
 
+	// ServiceName is the name of the Envoy Gateway service. Defaults to "envoy-gateway".
+	ServiceName string
+
 	// EnvoyGateway is the configuration used to startup Envoy Gateway.
 	EnvoyGateway *egv1a1.EnvoyGateway
 
@@ -78,6 +81,7 @@ func NewInfra(runnerCtx context.Context, cfg *config.Server, logger logging.Logg
 	infra := &Infra{
 		HomeDir:           defaultHomeDir,
 		Logger:            logger,
+		ServiceName:       cfg.ServiceName,
 		EnvoyGateway:      cfg.EnvoyGateway,
 		proxyContextMap:   make(map[string]*proxyContext),
 		sdsConfigPath:     defaultLocalCertPathDir,
