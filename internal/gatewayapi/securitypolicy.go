@@ -243,28 +243,21 @@ func (t *Translator) processSecurityPolicyForRoute(
 
 		return
 	}
-
-	// Protocol-specific validation: only Authorization allowed for TCP routes.
-	isTCP := currTarget.Kind == resource.KindTCPRoute
-	if isTCP {
-		if err := validateSecurityPolicyForTCP(policy); err != nil {
-			status.SetTranslationErrorForPolicyAncestors(&policy.Status,
-				parentGateways,
-				t.GatewayControllerName,
-				policy.Generation,
-				status.Error2ConditionMsg(fmt.Errorf("invalid SecurityPolicy for TCP route: %w", err)),
-			)
-
-			return
-		}
-	} else if err := validateSecurityPolicy(policy); err != nil {
+	// Protocol-specific validation: pick the appropriate validator and message,
+	// then run it once to keep the flow linear and easier to read.
+	validator := validateSecurityPolicy
+	errMsg := "invalid SecurityPolicy"
+	if currTarget.Kind == resource.KindTCPRoute {
+		validator = validateSecurityPolicyForTCP
+		errMsg = "invalid SecurityPolicy for TCP route"
+	}
+	if err := validator(policy); err != nil {
 		status.SetTranslationErrorForPolicyAncestors(&policy.Status,
 			parentGateways,
 			t.GatewayControllerName,
 			policy.Generation,
-			status.Error2ConditionMsg(fmt.Errorf("invalid SecurityPolicy: %w", err)),
+			status.Error2ConditionMsg(fmt.Errorf("%s: %w", errMsg, err)),
 		)
-
 		return
 	}
 
