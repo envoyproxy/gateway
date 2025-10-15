@@ -223,6 +223,20 @@ spec:
                       InsecureSkipVerify indicates whether the upstream's certificate verification
                       should be skipped. Defaults to "false".
                     type: boolean
+                  sni:
+                    description: |-
+                      SNI is specifies the SNI value used when establishing an upstream TLS connection to the backend.
+
+                      Envoy Gateway will use the HTTP host header value for SNI, when all resources referenced in BackendRefs are:
+                      1. Backend resources that do not set SNI, or
+                      2. Service/ServiceImport resources that do not have a BackendTLSPolicy attached to them
+
+                      When a BackendTLSPolicy attaches to a Backend resource, the BackendTLSPolicy's Hostname value takes precedence
+                      over this value.
+                    maxLength: 253
+                    minLength: 1
+                    pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                    type: string
                   wellKnownCACertificates:
                     description: |-
                       WellKnownCACertificates specifies whether system CA certificates may be used in
@@ -2911,9 +2925,18 @@ spec:
                     properties:
                       numTrustedHops:
                         description: |-
-                          NumTrustedHops controls the number of additional ingress proxy hops from the right side of XFF HTTP
-                          headers to trust when determining the origin client's IP address.
-                          Only one of NumTrustedHops and TrustedCIDRs must be set.
+                          NumTrustedHops specifies how many trusted hops to count from the rightmost side of
+                          the X-Forwarded-For (XFF) header when determining the original client’s IP address.
+
+                          If NumTrustedHops is set to N, the client IP is taken from the Nth address from the
+                          right end of the XFF header.
+
+                          Example:
+                            XFF = "203.0.113.128, 203.0.113.10, 203.0.113.1"
+                            NumTrustedHops = 2
+                            → Trusted client address = 203.0.113.10
+
+                          Only one of NumTrustedHops or TrustedCIDRs should be configured.
                         format: int32
                         type: integer
                       trustedCIDRs:
@@ -23201,6 +23224,15 @@ spec:
                                 or the proxy protocol.
                                 You can use the `ClientIPDetection` or the `ProxyProtocol` field in
                                 the `ClientTrafficPolicy` to configure how the client IP is detected.
+
+                                For TCPRoute targets (raw TCP connections), HTTP headers such as
+                                X-Forwarded-For are not available. The client IP is obtained from the
+                                TCP connection's peer address. If intermediaries (load balancers, NAT)
+                                terminate or proxy TCP, the original client IP will only be available
+                                if the intermediary preserves the source address (for example by
+                                enabling the PROXY protocol or avoiding SNAT). Ensure your L4 proxy is
+                                configured to preserve the source IP to enable correct client-IP
+                                matching for TCPRoute targets.
                               items:
                                 description: |-
                                   CIDR defines a CIDR Address range.
@@ -28213,15 +28245,15 @@ spec:
             - message: this policy can only have a targetRef.group of gateway.networking.k8s.io
               rule: 'has(self.targetRef) ? self.targetRef.group == ''gateway.networking.k8s.io''
                 : true'
-            - message: this policy can only have a targetRef.kind of Gateway/HTTPRoute/GRPCRoute
+            - message: this policy can only have a targetRef.kind of Gateway/HTTPRoute/GRPCRoute/TCPRoute
               rule: 'has(self.targetRef) ? self.targetRef.kind in [''Gateway'', ''HTTPRoute'',
-                ''GRPCRoute''] : true'
+                ''GRPCRoute'', ''TCPRoute''] : true'
             - message: this policy can only have a targetRefs[*].group of gateway.networking.k8s.io
               rule: 'has(self.targetRefs) ? self.targetRefs.all(ref, ref.group ==
                 ''gateway.networking.k8s.io'') : true '
-            - message: this policy can only have a targetRefs[*].kind of Gateway/HTTPRoute/GRPCRoute
+            - message: this policy can only have a targetRefs[*].kind of Gateway/HTTPRoute/GRPCRoute/TCPRoute
               rule: 'has(self.targetRefs) ? self.targetRefs.all(ref, ref.kind in [''Gateway'',
-                ''HTTPRoute'', ''GRPCRoute'']) : true '
+                ''HTTPRoute'', ''GRPCRoute'', ''TCPRoute'']) : true '
             - message: if authorization.rules.principal.jwt is used, jwt must be defined
               rule: '(has(self.authorization) && has(self.authorization.rules) &&
                 self.authorization.rules.exists(r, has(r.principal.jwt))) ? has(self.jwt)

@@ -8,6 +8,8 @@ description: "This section includes Maintainers of Envoy Gateway."
 - @arkodg
 - @cnvergence
 - @guydc
+- @jukie
+- @kkk777-7
 - @rudrakhp
 - @shawnh2
 - @Xunzhuo
