@@ -336,7 +336,7 @@ You should now expect 200 response status and also see that source IP was preser
 
 ### Configure Client IP Detection
 
-This example configures the number of additional ingress proxy hops from the right side of XFF HTTP headers to trust when determining the origin client's IP address and determines whether or not `x-forwarded-proto` headers will be trusted. Refer to https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_conn_man/headers#x-forwarded-for for details.
+This example configures the number of hops from the right side of the X-Forwarded-For (XFF) to trust when determining the origin client's IP address and determines whether or not `x-forwarded-proto` headers will be trusted. Refer to https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_conn_man/headers#x-forwarded-for for details.
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
@@ -396,38 +396,6 @@ NAME                          STATUS     AGE
 http-client-ip-detection   Accepted   5s
 ```
 
-Open port-forward to the admin interface port:
-
-```shell
-kubectl port-forward deploy/${ENVOY_DEPLOYMENT} -n envoy-gateway-system 19000:19000
-```
-
-Curl the admin interface port to fetch the configured value for `xff_num_trusted_hops`:
-
-```shell
-curl -s 'http://localhost:19000/config_dump?resource=dynamic_listeners' \
-  | jq -r '.configs[1].active_state.listener.default_filter_chain.filters[0].typed_config
-    | {use_remote_address, original_ip_detection_extensions}'
-```
-
-You should expect to see the following:
-
-```json
-{
-  "use_remote_address": false,
-  "original_ip_detection_extensions": [
-    {
-      "name": "envoy.extensions.http.original_ip_detection.xff",
-      "typed_config": {
-        "@type": "type.googleapis.com/envoy.extensions.http.original_ip_detection.xff.v3.XffConfig",
-        "xff_num_trusted_hops": 1,
-        "skip_xff_append": false
-      }
-    }
-  ]
-}
-```
-
 Curl the example app through Envoy proxy:
 
 ```shell
@@ -437,7 +405,11 @@ curl -v http://$GATEWAY_HOST/get \
   -H "X-Forwarded-For: 1.1.1.1,2.2.2.2"
 ```
 
-You should expect 200 response status, see that `X-Forwarded-Proto` was preserved and `X-Envoy-External-Address` was set to the leftmost address in the `X-Forwarded-For` header:
+If `numTrustedHops` is set to N, the client IP is taken from the Nth address from the right end of the XFF header. In this example,
+we set `numTrustedHops` to 2, so the client IP will be taken from the second rightmost address in the XFF header.
+
+You should expect 200 response status, see that `X-Forwarded-Proto` was preserved and `X-Envoy-External-Address` was set to the
+second rightmost address in the `X-Forwarded-For` header:
 
 ```shell
 *   Trying [::1]:8888...
@@ -448,7 +420,7 @@ You should expect 200 response status, see that `X-Forwarded-Proto` was preserve
 > Accept: */*
 > X-Forwarded-Proto: https
 > X-Forwarded-For: 1.1.1.1,2.2.2.2
-> 
+>
 Handling connection for 8888
 < HTTP/1.1 200 OK
 < content-type: application/json
@@ -457,7 +429,7 @@ Handling connection for 8888
 < content-length: 535
 < x-envoy-upstream-service-time: 0
 < server: envoy
-< 
+<
 {
  "path": "/get",
  "host": "www.example.com",
@@ -497,7 +469,7 @@ Handling connection for 8888
 ### Enable HTTP Request Received Timeout
 
 This feature allows you to limit the time taken by the Envoy Proxy fleet to receive the entire request from the client, which is useful in preventing certain clients from consuming too much memory in Envoy
-This example configures the HTTP request timeout for the client, please check out the details [here](https://www.envoyproxy.io/docs/envoy/latest/faq/configuration/timeouts#stream-timeouts). 
+This example configures the HTTP request timeout for the client, please check out the details [here](https://www.envoyproxy.io/docs/envoy/latest/faq/configuration/timeouts#stream-timeouts).
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
@@ -633,7 +605,7 @@ You should expect the connection to be closed after 5s.
 You can also check the number of connections closed due to idle timeout by using the following query:
 
 ```shell
-envoy_http_downstream_cx_idle_timeout{envoy_http_conn_manager_prefix="<name of connection manager>"} 
+envoy_http_downstream_cx_idle_timeout{envoy_http_conn_manager_prefix="<name of connection manager>"}
 ```
 
 The number of connections closed due to idle timeout should be increased by 1.

@@ -90,3 +90,7 @@ adopters:
     logo: "/logos/cloudraft.svg"
     url: "https://www.cloudraft.io"
     description: "CloudRaft uses Envoy Gateway for Kubernetes ingress and traffic management, enabling secure, consistent routing with advanced features like rate limiting and policy enforcement."
+  - name: "University of Wisconsin"
+    logo: "/logos/University of Wisconsin–Madison.png"
+    url: "https://www.wisc.edu"
+    description: "University of Wisconsin uses Envoy Gateway for Kubernetes ingress and traffic management, enabling secure, consistent routing with advanced features like rate limiting and policy enforcement."

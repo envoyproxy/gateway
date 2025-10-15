@@ -100,7 +100,7 @@ func NewOfflineGatewayAPIController(
 	r.subscribeToResources(ctx)
 
 	if su != nil {
-		r.subscribeAndUpdateStatus(ctx, cfg.EnvoyGateway.ExtensionManager != nil)
+		r.updateStatusFromSubscriptions(ctx, cfg.EnvoyGateway.ExtensionManager != nil)
 	}
 
 	return &OfflineGatewayAPIReconciler{

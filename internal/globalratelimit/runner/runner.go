@@ -102,7 +102,7 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 	// Do not call .Subscribe() inside Goroutine since it is supposed to be called from the same
 	// Goroutine where Close() is called.
 	c := r.XdsIR.Subscribe(ctx)
-	go r.subscribeAndTranslate(ctx, c)
+	go r.translateFromSubscription(ctx, c)
 
 	r.Logger.Info("started")
 	return
@@ -136,7 +136,7 @@ func buildXDSResourceFromCache(rateLimitConfigsCache map[string][]cachetype.Reso
 	return xdsResourcesToUpdate
 }
 
-func (r *Runner) subscribeAndTranslate(ctx context.Context, c <-chan watchable.Snapshot[string, *ir.Xds]) {
+func (r *Runner) translateFromSubscription(ctx context.Context, c <-chan watchable.Snapshot[string, *ir.Xds]) {
 	// rateLimitConfigsCache is a cache of the rate limit config, which is keyed by the xdsIR key.
 	rateLimitConfigsCache := map[string][]cachetype.Resource{}
 

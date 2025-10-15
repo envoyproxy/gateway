@@ -23,36 +23,36 @@ func (t *Translator) ProcessEnvoyPatchPolicies(envoyPatchPolicies []*egv1a1.Envo
 
 	for _, policy := range envoyPatchPolicies {
 		var (
-			policy      = policy
 			ancestorRef gwapiv1a2.ParentReference
 			resolveErr  *status.PolicyResolveError
 			targetKind  string
 			irKey       string
 		)
 
+		refKind, refName := policy.Spec.TargetRef.Kind, policy.Spec.TargetRef.Name
 		if t.MergeGateways {
 			targetKind = resource.KindGatewayClass
-			irKey = string(t.GatewayClassName)
-
+			// if ref GatewayClass name is not same as t.GatewayClassName, it will be skipped in L53.
+			irKey = string(refName)
 			ancestorRef = gwapiv1a2.ParentReference{
 				Group: GroupPtr(gwapiv1.GroupName),
 				Kind:  KindPtr(targetKind),
-				Name:  policy.Spec.TargetRef.Name,
+				Name:  refName,
 			}
+
 		} else {
 			targetKind = resource.KindGateway
 			gatewayNN := types.NamespacedName{
 				Namespace: policy.Namespace,
-				Name:      string(policy.Spec.TargetRef.Name),
+				Name:      string(refName),
 			}
-			// It must exist since the gateways have already been processed
-			irKey = irStringKey(gatewayNN.Namespace, gatewayNN.Name)
-
+			irKey = t.IRKey(gatewayNN)
 			ancestorRef = getAncestorRefForPolicy(gatewayNN, nil)
 		}
 
 		gwXdsIR, ok := xdsIR[irKey]
 		if !ok {
+			// The TargetRef Gateway is not an accepted Gateway, then skip processing.
 			continue
 		}
 
@@ -82,7 +82,7 @@ func (t *Translator) ProcessEnvoyPatchPolicies(envoyPatchPolicies []*egv1a1.Envo
 		}
 
 		// Ensure EnvoyPatchPolicy is targeting to a support type
-		if policy.Spec.TargetRef.Group != gwapiv1.GroupName || string(policy.Spec.TargetRef.Kind) != targetKind {
+		if policy.Spec.TargetRef.Group != gwapiv1.GroupName || string(refKind) != targetKind {
 			message := fmt.Sprintf("TargetRef.Group:%s TargetRef.Kind:%s, only TargetRef.Group:%s and TargetRef.Kind:%s is supported.",
 				policy.Spec.TargetRef.Group, policy.Spec.TargetRef.Kind, gwapiv1.GroupName, targetKind)
 

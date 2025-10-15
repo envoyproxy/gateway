@@ -76,6 +76,8 @@ func (t *Translator) applyBackendTLSSetting(
 	return t.applyEnvoyProxyBackendTLSSetting(upstreamConfig, resources, envoyProxy)
 }
 
+// Merges TLS settings from Gateway API BackendTLSPolicy and Envoy Gateway Backend TL.
+// BackendTLSPolicy takes precedence for identical attributes that are set in both.
 func mergeBackendTLSConfigs(
 	backendTLSSettingsConfig *ir.TLSUpstreamConfig,
 	backendTLSPolicyConfig *ir.TLSUpstreamConfig,
@@ -91,8 +93,8 @@ func mergeBackendTLSConfigs(
 		return backendTLSSettingsConfig
 	}
 
-	// If both are set, we merge them, with BackendTLSPolicy settings taking precedence
 	mergedConfig := backendTLSSettingsConfig.DeepCopy()
+
 	if backendTLSPolicyConfig.CACertificate != nil {
 		mergedConfig.CACertificate = backendTLSPolicyConfig.CACertificate
 	}
@@ -115,6 +117,10 @@ func (t *Translator) processBackendTLSSettings(
 ) (*ir.TLSUpstreamConfig, error) {
 	tlsConfig := &ir.TLSUpstreamConfig{
 		InsecureSkipVerify: ptr.Deref(backend.Spec.TLS.InsecureSkipVerify, false),
+	}
+
+	if backend.Spec.TLS.SNI != nil {
+		tlsConfig.SNI = ptr.To(string(*backend.Spec.TLS.SNI))
 	}
 
 	if !tlsConfig.InsecureSkipVerify {

@@ -23,9 +23,8 @@ import (
 	"github.com/envoyproxy/gateway/internal/utils"
 )
 
-// subscribeAndUpdateStatus subscribes to gateway API object status updates and
-// writes it into the Kubernetes API Server.
-func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context, extensionManagerEnabled bool) {
+// updateStatusFromSubscriptions writes gateway API object status updates to the Kubernetes API server.
+func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context, extensionManagerEnabled bool) {
 	// GatewayClass object status updater
 	go func() {
 		message.HandleSubscription(

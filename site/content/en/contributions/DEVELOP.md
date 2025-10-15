@@ -52,6 +52,53 @@ __Note:__ The binaries get generated in the `bin/$OS/$ARCH` directory, for examp
 
 * Run `make testdata` to generate the golden YAML testdata files.
 
+#### Working with Test Data Files
+
+Envoy Gateway uses golden file testing, where test input files (`.in.yaml`) are processed and compared against expected output files (`.out.yaml`).
+
+##### Gateway API Tests (`internal/gatewayapi`)
+
+The Gateway API translator tests use a straightforward filesystem-based approach:
+
+**Test Structure:**
+- Input files: `internal/gatewayapi/testdata/*.in.yaml`
+- Output files: `internal/gatewayapi/testdata/*.out.yaml`
+- Test name is derived from the filename without the `.in.yaml` extension
+
+**Testing a Single File:**
+
+```bash
+# Run test to verify output matches expected
+go test -v -timeout 30s github.com/envoyproxy/gateway/internal/gatewayapi \
+  -run TestTranslate/<test-name>
+
+# Example: Test a specific file
+go test -v -timeout 30s github.com/envoyproxy/gateway/internal/gatewayapi \
+  -run TestTranslate/securitypolicy-with-jwt
+
+# Generate/update the .out.yaml file for a single test
+go test -timeout 30s github.com/envoyproxy/gateway/internal/gatewayapi \
+  -run TestTranslate/<test-name> --override-testdata=true
+```
+
+##### XDS Translator Tests (`internal/xds/translator`)
+
+**Test Structure:**
+- Input files: `internal/xds/translator/testdata/in/xds-ir/*.yaml`
+- Output files: Multiple files per test:
+  - `.listeners.yaml` (always required)
+  - `.routes.yaml` (always required)
+  - `.clusters.yaml` (always required)
+  - `.endpoints.yaml` (always required)
+  - `.secrets.yaml` (only if test includes TLS/secrets)
+
+**Testing a Single XDS File**
+
+```bash
+go test -v -timeout 30s github.com/envoyproxy/gateway/internal/xds/translator \
+  -run TestTranslateXds/<test-name>
+```
+
 ### Running Linters
 
 * Run `make lint` to make sure your code passes all the linter checks.

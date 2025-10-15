@@ -380,13 +380,6 @@ func (t *Translator) InitIRs(gateways []*GatewayContext) (map[string]*ir.Xds, ma
 	return xdsIR, infraIR
 }
 
-func (t *Translator) IRKey(gatewayNN types.NamespacedName) string {
-	if t.MergeGateways {
-		return string(t.GatewayClassName)
-	}
-	return irStringKey(gatewayNN.Namespace, gatewayNN.Name)
-}
-
 // IsEnvoyServiceRouting returns true if EnvoyProxy.Spec.RoutingType == ServiceRoutingType
 // or, alternatively, if Translator.EndpointRoutingDisabled has been explicitly set to true;
 // otherwise, it returns false.
@@ -430,10 +423,15 @@ func infrastructureLabels(gtw *gwapiv1.Gateway) map[string]string {
 
 // XdsIR and InfraIR map keys by default are {GatewayNamespace}/{GatewayName}, but if mergeGateways is set, they are merged under {GatewayClassName} key.
 func (t *Translator) getIRKey(gateway *gwapiv1.Gateway) string {
-	irKey := irStringKey(gateway.Namespace, gateway.Name)
+	return t.IRKey(types.NamespacedName{
+		Namespace: gateway.Namespace,
+		Name:      gateway.Name,
+	})
+}
+
+func (t *Translator) IRKey(gatewayNN types.NamespacedName) string {
 	if t.MergeGateways {
 		return string(t.GatewayClassName)
 	}
-
-	return irKey
+	return irStringKey(gatewayNN.Namespace, gatewayNN.Name)
 }

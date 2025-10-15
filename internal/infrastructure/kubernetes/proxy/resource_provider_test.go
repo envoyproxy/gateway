@@ -194,7 +194,7 @@ func newTestInfraWithAnnotationsAndLabels(annotations, labels map[string]string)
 }
 
 func TestDeployment(t *testing.T) {
-	cfg, err := config.New(os.Stdout)
+	cfg, err := config.New(os.Stdout, os.Stderr)
 	require.NoError(t, err)
 
 	cases := []struct {
@@ -763,7 +763,7 @@ func loadDeployment(caseName string) (*appsv1.Deployment, error) {
 }
 
 func TestDaemonSet(t *testing.T) {
-	cfg, err := config.New(os.Stdout)
+	cfg, err := config.New(os.Stdout, os.Stderr)
 	require.NoError(t, err)
 
 	cases := []struct {
@@ -1226,7 +1226,7 @@ func loadDaemonSet(caseName string) (*appsv1.DaemonSet, error) {
 }
 
 func TestService(t *testing.T) {
-	cfg, err := config.New(os.Stdout)
+	cfg, err := config.New(os.Stdout, os.Stderr)
 	require.NoError(t, err)
 
 	svcType := egv1a1.ServiceTypeClusterIP
@@ -1401,7 +1401,7 @@ func loadService(caseName string) (*corev1.Service, error) {
 }
 
 func TestConfigMap(t *testing.T) {
-	cfg, err := config.New(os.Stdout)
+	cfg, err := config.New(os.Stdout, os.Stderr)
 	require.NoError(t, err)
 	cases := []struct {
 		name                 string
@@ -1469,7 +1469,7 @@ func loadConfigmap(tc string) (*corev1.ConfigMap, error) {
 }
 
 func TestServiceAccount(t *testing.T) {
-	cfg, err := config.New(os.Stdout)
+	cfg, err := config.New(os.Stdout, os.Stderr)
 	require.NoError(t, err)
 	cases := []struct {
 		name                 string
@@ -1543,7 +1543,7 @@ func loadServiceAccount(tc string) (*corev1.ServiceAccount, error) {
 }
 
 func TestPDB(t *testing.T) {
-	cfg, err := config.New(os.Stdout)
+	cfg, err := config.New(os.Stdout, os.Stderr)
 	require.NoError(t, err)
 
 	cases := []struct {
@@ -1685,7 +1685,7 @@ func TestPDB(t *testing.T) {
 }
 
 func TestHorizontalPodAutoscaler(t *testing.T) {
-	cfg, err := config.New(os.Stdout)
+	cfg, err := config.New(os.Stdout, os.Stderr)
 	require.NoError(t, err)
 
 	cases := []struct {
@@ -1949,7 +1949,7 @@ func TestIPFamilyPresentInSpec(t *testing.T) {
 }
 
 func TestGatewayNamespaceModeMultipleResources(t *testing.T) {
-	cfg, err := config.New(os.Stdout)
+	cfg, err := config.New(os.Stdout, os.Stderr)
 	require.NoError(t, err)
 
 	// Configure gateway namespace mode

@@ -66,7 +66,7 @@ func newResourcesParam2() *resourcesParam {
 }
 
 func newFileProviderConfig(paths []string) (*config.Server, error) {
-	cfg, err := config.New(os.Stdout)
+	cfg, err := config.New(os.Stdout, os.Stderr)
 	if err != nil {
 		return nil, err
 	}
