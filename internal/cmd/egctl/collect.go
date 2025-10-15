@@ -29,7 +29,7 @@ type collectOptions struct {
 	outPath               string
 	envoyGatewayNamespace string
 	proxyNamespaces       []string
-	trimSDS               bool
+	enableSDS             bool
 }
 
 func newCollectCommand() *cobra.Command {
@@ -54,8 +54,8 @@ func newCollectCommand() *cobra.Command {
 		"Specify the namespace where the Envoy Gateway controller is installed.")
 	collectCommand.PersistentFlags().StringArrayVarP(&collectOpts.proxyNamespaces, "envoy-proxy-namespaces", "", []string{},
 		"Specify the namespaces where Envoy proxies are running.")
-	collectCommand.PersistentFlags().BoolVarP(&collectOpts.trimSDS, "trim-sds", "", true,
-		"Trim SDS section from the config dump to avoid collecting sensitive information. Defaults to true.")
+	collectCommand.PersistentFlags().BoolVarP(&collectOpts.enableSDS, "sds", "", false,
+		"Specify the SDS will not be dumped or not, Default to false")
 
 	return collectCommand
 }
@@ -105,7 +105,7 @@ func runCollect(errWriter io.Writer, collectOpts collectOptions) error {
 	result, err := tb.CollectResult(ctx, restConfig,
 		tb.WithBundlePath(bundlePath),
 		tb.WithCollectedNamespaces(collectedNamespaces),
-		tb.WithTrimSDS(collectOpts.trimSDS),
+		tb.WithSDS(collectOpts.enableSDS),
 	)
 	if err != nil {
 		_, _ = fmt.Fprintln(errWriter, "warning: failed to collect all data:", err)

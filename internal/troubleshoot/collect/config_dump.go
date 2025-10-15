@@ -36,7 +36,7 @@ type ConfigDump struct {
 	Namespace    string
 	ClientConfig *rest.Config
 
-	TrimSDS bool
+	EnableSDS bool
 }
 
 func (cd ConfigDump) Title() string {
@@ -91,7 +91,7 @@ func (cd ConfigDump) Collect(_ chan<- interface{}) (tbcollect.CollectorResult, e
 			continue
 		}
 
-		if cd.TrimSDS {
+		if !cd.EnableSDS {
 			data, err = trimSDS(data)
 			if err != nil {
 				logs = append(logs, fmt.Sprintf("failed to trim SDS for pod %s/%s: %v", pod.Namespace, pod.Name, err))

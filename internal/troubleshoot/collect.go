@@ -30,10 +30,10 @@ const (
 type CollectOptions struct {
 	namespaces []string
 	bundlePath string
-	// trimSDS indicates whether to remove the SDS section from the config dump
+	// enableSDS indicates whether to remove the SDS section from the config dump
 	// to avoid collecting sensitive information.
-	// Default to true
-	trimSDS bool
+	// Default to false
+	enableSDS bool
 
 	disabledCollectors sets.Set[CollectorType]
 }
@@ -61,15 +61,15 @@ func DisableCollector(collector CollectorType) CollectOption {
 	}
 }
 
-func WithTrimSDS(trim bool) CollectOption {
+func WithSDS(enabled bool) CollectOption {
 	return func(opts *CollectOptions) {
-		opts.trimSDS = trim
+		opts.enableSDS = enabled
 	}
 }
 
 func CollectResult(ctx context.Context, restConfig *rest.Config, opts ...CollectOption) (tbcollect.CollectorResult, error) {
 	collectorOpts := &CollectOptions{
-		trimSDS: true,
+		enableSDS: false,
 	}
 	for _, o := range opts {
 		o(collectorOpts)
@@ -138,7 +138,7 @@ func CollectResult(ctx context.Context, restConfig *rest.Config, opts ...Collect
 					BundlePath:   bundlePath,
 					ClientConfig: restConfig,
 					Namespace:    ns,
-					TrimSDS:      collectorOpts.trimSDS,
+					EnableSDS:    collectorOpts.enableSDS,
 				},
 			},
 		}
