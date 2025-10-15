@@ -115,22 +115,11 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute, httpListener *ir.HTTPListener) (*rou
 			httpRoute.Traffic.Timeout != nil &&
 			httpRoute.Traffic.Timeout.HTTP != nil {
 
-			// Check if either GrpcTimeoutHeaderMax or StreamTimeout is configured
-			if httpRoute.Traffic.Timeout.HTTP.GrpcTimeoutHeaderMax != nil ||
-				httpRoute.Traffic.Timeout.HTTP.StreamTimeout != nil {
-
-				maxStreamDuration := &routev3.RouteAction_MaxStreamDuration{}
-
-				// Set grpc_timeout_header_max if configured
-				if httpRoute.Traffic.Timeout.HTTP.GrpcTimeoutHeaderMax != nil {
-					maxStreamDuration.GrpcTimeoutHeaderMax = durationpb.New(httpRoute.Traffic.Timeout.HTTP.GrpcTimeoutHeaderMax.Duration)
+			// Check if StreamTimeout is configured
+			if httpRoute.Traffic.Timeout.HTTP.StreamTimeout != nil {
+				maxStreamDuration := &routev3.RouteAction_MaxStreamDuration{
+					MaxStreamDuration: durationpb.New(httpRoute.Traffic.Timeout.HTTP.StreamTimeout.Duration),
 				}
-
-				// Set max_stream_duration if StreamTimeout is configured
-				if httpRoute.Traffic.Timeout.HTTP.StreamTimeout != nil {
-					maxStreamDuration.MaxStreamDuration = durationpb.New(httpRoute.Traffic.Timeout.HTTP.StreamTimeout.Duration)
-				}
-
 				router.GetRoute().MaxStreamDuration = maxStreamDuration
 			}
 		}

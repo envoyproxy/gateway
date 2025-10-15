@@ -1,0 +1,38 @@
+http:
+  - name: "grpc-listener"
+    address: "::"
+    port: 10080
+    hostnames:
+      - "*"
+    path:
+      mergeSlashes: true
+      escapedSlashesAction: UnescapeAndRedirect
+    routes:
+      - name: "grpc-route-with-stream-timeout"
+        hostname: "*"
+        isHTTP2: true
+        traffic:
+          timeout:
+            http:
+              streamTimeout: "45s"
+        destination:
+          name: "grpc-route-with-only-stream-timeout-dest"
+          settings:
+            - endpoints:
+                - host: "1.2.3.4"
+                  port: 50003
+              name: "grpc-route-with-only-stream-timeout-dest/backend/0"
+      - name: "grpc-route-with-0s-stream-timeout"
+        hostname: "*"
+        isHTTP2: true
+        traffic:
+          timeout:
+            http:
+              streamTimeout: "0s"
+        destination:
+          name: "grpc-route-with-0s-stream-timeout-dest"
+          settings:
+            - endpoints:
+                - host: "1.2.3.4"
+                  port: 50003
+              name: "grpc-route-with-0s-stream-timeout-dest/backend/1"

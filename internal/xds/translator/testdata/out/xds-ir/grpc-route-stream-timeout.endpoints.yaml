@@ -1,0 +1,24 @@
+- clusterName: grpc-route-with-only-stream-timeout-dest
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 1.2.3.4
+            portValue: 50003
+      loadBalancingWeight: 1
+    loadBalancingWeight: 1
+    locality:
+      region: grpc-route-with-only-stream-timeout-dest/backend/0
+- clusterName: grpc-route-with-0s-stream-timeout-dest
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 1.2.3.4
+            portValue: 50003
+      loadBalancingWeight: 1
+    loadBalancingWeight: 1
+    locality:
+      region: grpc-route-with-0s-stream-timeout-dest/backend/1
