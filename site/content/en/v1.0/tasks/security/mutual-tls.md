@@ -147,4 +147,28 @@ curl -v -HHost:www.example.com --resolve "www.example.com:443:${GATEWAY_HOST}" \
 --cacert example.com.crt https://www.example.com/get
 ```
 
+## Clean-Up
+
+Follow the steps from the [Quickstart](../../quickstart) to uninstall Envoy Gateway and the example manifest.
+
+Delete the ClientTrafficPolicy and the secrets:
+
+```shell
+kubectl delete clienttrafficpolicy/enable-mtls
+kubectl delete secret/example-cert
+kubectl delete secret/example-ca-cert
+```
+
+Delete the certificates and keys:
+
+```shell
+rm example.com.crt example.com.key
+rm www.example.com.crt www.example.com.key www.example.com.csr
+rm client.example.com.crt client.example.com.key client.example.com.csr
+```
+
+## Next Steps
+
+Checkout the [Developer Guide](../../../contributions/develop) to get involved in the project.
+
 [ClientTrafficPolicy]: ../../../api/extension_types#clienttrafficpolicy

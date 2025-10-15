@@ -3957,6 +3957,16 @@ spec:
                           If not specified, defaults to "IdToken-(randomly generated uid)"
                         type: string
                     type: object
+                  csrfTokenTTL:
+                    description: |-
+                      CSRFTokenTTL defines how long the CSRF token generated during the OAuth2 authorization flow remains valid.
+
+                      This duration determines the lifetime of the CSRF cookie, which is validated against the CSRF token
+                      in the "state" parameter when the provider redirects back to the callback endpoint.
+
+                      If omitted, Envoy Gateway defaults the token expiration to 10 minutes.
+                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                    type: string
                   defaultRefreshTokenTTL:
                     description: |-
                       DefaultRefreshTokenTTL is the default lifetime of the refresh token.
