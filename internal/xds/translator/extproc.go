@@ -129,7 +129,7 @@ func extProcConfig(extProc *ir.ExtProc) (*extprocv3.ExternalProcessor, error) {
 	if extProc.Traffic != nil && extProc.Traffic.Retry != nil {
 		rp, err := buildNonRouteRetryPolicy(extProc.Traffic.Retry)
 		if err != nil {
-			return nil, fmt.Errorf("build retry policy for extproc: %w", err)
+			return nil, fmt.Errorf("failed to build retry policy for extproc: %w", err)
 		}
 		config.GrpcService.RetryPolicy = rp
 	}
