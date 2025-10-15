@@ -101,7 +101,7 @@ func TestProxySamplingRate(t *testing.T) {
 	}
 }
 
-func TestIsOverlappingHostname(t *testing.T) {
+func TestAreOverlappingHostnames(t *testing.T) {
 	tests := []struct {
 		name      string
 		hostname1 *gwapiv1.Hostname
@@ -121,10 +121,10 @@ func TestIsOverlappingHostname(t *testing.T) {
 			want:      true,
 		},
 		{
-			name:      "two wildcards matches subdomain",
+			name:      "two wildcards with subdomain does not match",
 			hostname1: ptr.To(gwapiv1.Hostname("*.example.com")),
 			hostname2: ptr.To(gwapiv1.Hostname("*.test.example.com")),
-			want:      true,
+			want:      false,
 		},
 		{
 			name:      "nil hostname matches all",
@@ -145,22 +145,22 @@ func TestIsOverlappingHostname(t *testing.T) {
 			want:      true,
 		},
 		{
-			name:      "wildcard matches exact",
+			name:      "wildcard matches exactly one level of subdomain",
 			hostname1: ptr.To(gwapiv1.Hostname("*.example.com")),
 			hostname2: ptr.To(gwapiv1.Hostname("test.example.com")),
 			want:      true,
 		},
 		{
-			name:      "wildcard matches subdomain",
+			name:      "wildcard matches only one level of subdomain",
 			hostname1: ptr.To(gwapiv1.Hostname("*.example.com")),
 			hostname2: ptr.To(gwapiv1.Hostname("sub.test.example.com")),
-			want:      true,
+			want:      false,
 		},
 		{
-			name:      "wildcard matches empty subdomain",
+			name:      "wildcard does not match empty subdomain",
 			hostname1: ptr.To(gwapiv1.Hostname("*.example.com")),
 			hostname2: ptr.To(gwapiv1.Hostname("example.com")),
-			want:      true,
+			want:      false,
 		},
 		{
 			name:      "different domains",
@@ -186,15 +186,21 @@ func TestIsOverlappingHostname(t *testing.T) {
 			hostname2: ptr.To(gwapiv1.Hostname("testing-api.foo.dev")),
 			want:      false,
 		},
+		{
+			name:      "sub domain does not match with parent domain",
+			hostname1: ptr.To(gwapiv1.Hostname("api.foo.dev")),
+			hostname2: ptr.To(gwapiv1.Hostname("foo.dev")),
+			want:      false,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := isOverlappingHostname(tt.hostname1, tt.hostname2); got != tt.want {
+			if got := areOverlappingHostnames(tt.hostname1, tt.hostname2); got != tt.want {
 				t.Errorf("isOverlappingHostname(%q, %q) = %v, want %v", ptr.Deref(tt.hostname1, ""), ptr.Deref(tt.hostname2, ""), got, tt.want)
 			}
 			// Test should be symmetric
-			if got := isOverlappingHostname(tt.hostname2, tt.hostname1); got != tt.want {
+			if got := areOverlappingHostnames(tt.hostname2, tt.hostname1); got != tt.want {
 				t.Errorf("isOverlappingHostname(%q, %q) = %v, want %v", ptr.Deref(tt.hostname2, ""), ptr.Deref(tt.hostname1, ""), got, tt.want)
 			}
 		})
@@ -307,7 +313,7 @@ func TestCheckOverlappingHostnames(t *testing.T) {
 							Name:     "listener-3",
 							Protocol: gwapiv1.HTTPSProtocolType,
 							Port:     443,
-							Hostname: ptr.To(gwapiv1.Hostname("sub.test.example.com")),
+							Hostname: ptr.To(gwapiv1.Hostname("sub.test.example.com")), // sub domain does not match with parent domain
 						},
 					},
 				},
@@ -315,7 +321,6 @@ func TestCheckOverlappingHostnames(t *testing.T) {
 			expected: map[int]string{
 				0: "test.example.com",
 				1: "*.example.com",
-				2: "*.example.com",
 			},
 		},
 		{

@@ -118,7 +118,20 @@ func New(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server, resources
 	// Limit the cache to only Envoy proxy Pods to reduce memory and sync churn.
 	// ProxyTopologyInjector is the only component that interacts with Pods.
 	if mgrOpts.Cache.ByObject == nil {
-		mgrOpts.Cache.ByObject = map[client.Object]cache.ByObject{}
+		mgrOpts.Cache.ByObject = map[client.Object]cache.ByObject{
+			&corev1.Secret{}: {
+				UnsafeDisableDeepCopy: ptr.To(true),
+			},
+			&corev1.ConfigMap{}: {
+				UnsafeDisableDeepCopy: ptr.To(true),
+			},
+			&corev1.Service{}: {
+				UnsafeDisableDeepCopy: ptr.To(true),
+			},
+			&corev1.ConfigMap{}: {
+				UnsafeDisableDeepCopy: ptr.To(true),
+			},
+		}
 	}
 
 	mgrOpts.Cache.ByObject[&corev1.Pod{}] = cache.ByObject{

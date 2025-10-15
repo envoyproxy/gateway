@@ -4873,6 +4873,11 @@ func (in *OIDC) DeepCopyInto(out *OIDC) {
 		*out = new(v1.Duration)
 		**out = **in
 	}
+	if in.CSRFTokenTTL != nil {
+		in, out := &in.CSRFTokenTTL, &out.CSRFTokenTTL
+		*out = new(v1.Duration)
+		**out = **in
+	}
 	if in.DisableTokenEncryption != nil {
 		in, out := &in.DisableTokenEncryption, &out.DisableTokenEncryption
 		*out = new(bool)
@@ -5238,6 +5243,11 @@ func (in *PreferLocalZone) DeepCopyInto(out *PreferLocalZone) {
 	if in.MinEndpointsThreshold != nil {
 		in, out := &in.MinEndpointsThreshold, &out.MinEndpointsThreshold
 		*out = new(uint64)
+		**out = **in
+	}
+	if in.PercentageEnabled != nil {
+		in, out := &in.PercentageEnabled, &out.PercentageEnabled
+		*out = new(uint32)
 		**out = **in
 	}
 }
