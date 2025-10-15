@@ -1170,6 +1170,10 @@ func getCustomResponseBody(
 			return nil, fmt.Errorf("can't find the referenced configmap %s", body.ValueRef.Name)
 		}
 
+		if len(cm.Data) > 0 && len(cm.BinaryData) > 0 {
+			return nil, fmt.Errorf("the referenced configmap %s contains both data and binaryData", body.ValueRef.Name)
+		}
+
 		if s, ok := cm.Data["response.body"]; ok {
 			if err := checkResponseBodySize(&s); err != nil {
 				return nil, err
