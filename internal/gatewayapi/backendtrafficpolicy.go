@@ -928,9 +928,7 @@ func buildRateLimitRule(rule egv1a1.RateLimitRule) (*ir.RateLimitRule, error) {
 
 		if match.Path != nil {
 			switch {
-			case match.Path.Type == nil:
-				fallthrough
-			case *match.Path.Type == gwapiv1.PathMatchPathPrefix:
+			case match.Path.Type == nil || *match.Path.Type == gwapiv1.PathMatchPathPrefix:
 				irRule.PathMatch = &ir.StringMatch{
 					Prefix: ptr.To(match.Path.Value),
 					Invert: match.Path.Invert,
@@ -949,9 +947,7 @@ func buildRateLimitRule(rule egv1a1.RateLimitRule) (*ir.RateLimitRule, error) {
 					Invert:    match.Path.Invert,
 				}
 			default:
-				return nil, fmt.Errorf(
-					"unable to translate rateLimit. Either the path." +
-						"Type is not valid")
+				return nil, fmt.Errorf("unable to translate rateLimit: invalid path type.")
 			}
 		}
 
