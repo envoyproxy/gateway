@@ -112,7 +112,7 @@ func (t *Translator) ProcessSecurityPolicies(securityPolicies []*egv1a1.Security
 			}
 		}
 	}
-	// Process the policies targeting whole xRoutes (HTTP + TCP)
+	// Process the policies targeting xRoutes (HTTP + TCP)
 	for _, currPolicy := range securityPolicies {
 		policyName := utils.NamespacedName(currPolicy)
 		targetRefs := getPolicyTargetRefs(currPolicy.Spec.PolicyTargetReferences, routes, currPolicy.Namespace)
@@ -243,6 +243,7 @@ func (t *Translator) processSecurityPolicyForRoute(
 
 		return
 	}
+
 	// Protocol-specific validation: pick the appropriate validator and message,
 	// then run it once to keep the flow linear and easier to read.
 	validator := validateSecurityPolicy
@@ -258,6 +259,7 @@ func (t *Translator) processSecurityPolicyForRoute(
 			policy.Generation,
 			status.Error2ConditionMsg(fmt.Errorf("%s: %w", errMsg, err)),
 		)
+
 		return
 	}
 
@@ -741,6 +743,7 @@ func (t *Translator) translateSecurityPolicyForRoute(
 					if target.SectionName != nil && string(*target.SectionName) != r.Metadata.SectionName {
 						continue
 					}
+
 					// A Policy targeting the most specific scope(xRoute rule) wins over a policy
 					// targeting a lesser specific scope(xRoute).
 					if strings.HasPrefix(r.Name, prefix) {
@@ -904,15 +907,15 @@ func (t *Translator) translateSecurityPolicyForGateway(
 		}
 	}
 
-	// Pre-create a TCP-only security feature set (Authorization only) to avoid re-allocation
-	var tcpSecurityFeatures *ir.Authorization
+	// Pre-create a TCP-only authorization object to avoid re-allocation
+	var tcpAuthorization *ir.Authorization
 	if authorization != nil {
 		authCopy := *authorization
-		tcpSecurityFeatures = &authCopy
+		tcpAuthorization = &authCopy
 	}
 
 	// Apply to TCP listeners (Authorization only). Support metadata nil fallback by parsing section name from listener name suffix.
-	if tcpSecurityFeatures != nil {
+	if tcpAuthorization != nil {
 		for _, tl := range x.TCP {
 			if tl == nil || len(tl.Routes) == 0 {
 				continue
@@ -939,7 +942,7 @@ func (t *Translator) translateSecurityPolicyForGateway(
 				if r == nil || r.Authorization != nil { // already set by more specific scope
 					continue
 				}
-				r.Authorization = tcpSecurityFeatures
+				r.Authorization = tcpAuthorization
 			}
 		}
 	}
