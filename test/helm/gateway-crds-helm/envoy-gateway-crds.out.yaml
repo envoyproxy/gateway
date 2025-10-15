@@ -1282,6 +1282,7 @@ spec:
                                         - RegularExpression
                                         type: string
                                       value:
+                                        default: /
                                         description: Value specifies the HTTP path.
                                         maxLength: 1024
                                         type: string
@@ -1591,6 +1592,7 @@ spec:
                                         - RegularExpression
                                         type: string
                                       value:
+                                        default: /
                                         description: Value specifies the HTTP path.
                                         maxLength: 1024
                                         type: string
