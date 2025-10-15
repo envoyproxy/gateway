@@ -2544,6 +2544,11 @@ func (in *OIDC) DeepCopyInto(out *OIDC) {
 		*out = new(v1.Duration)
 		**out = **in
 	}
+	if in.CSRFTokenTTL != nil {
+		in, out := &in.CSRFTokenTTL, &out.CSRFTokenTTL
+		*out = new(v1.Duration)
+		**out = **in
+	}
 	if in.CookieNameOverrides != nil {
 		in, out := &in.CookieNameOverrides, &out.CookieNameOverrides
 		*out = new(v1alpha1.OIDCCookieNames)
@@ -3817,6 +3822,11 @@ func (in *TLSCertificate) DeepCopyInto(out *TLSCertificate) {
 	if in.PrivateKey != nil {
 		in, out := &in.PrivateKey, &out.PrivateKey
 		*out = make(PrivateBytes, len(*in))
+		copy(*out, *in)
+	}
+	if in.OCSPStaple != nil {
+		in, out := &in.OCSPStaple, &out.OCSPStaple
+		*out = make([]byte, len(*in))
 		copy(*out, *in)
 	}
 }
