@@ -244,7 +244,7 @@ func checkOverlappingHostnames(httpsListeners []*ListenerContext) {
 			if httpsListeners[i].Port != httpsListeners[j].Port {
 				continue
 			}
-			if isOverlappingHostname(httpsListeners[i].Hostname, httpsListeners[j].Hostname) {
+			if areOverlappingHostnames(httpsListeners[i].Hostname, httpsListeners[j].Hostname) {
 				// Overlapping listeners can be more than two, we only report the first two for simplicity.
 				overlappingListeners[i] = &overlappingListener{
 					gateway1:  httpsListeners[i].gateway,
@@ -396,7 +396,7 @@ type overlappingCertificate struct {
 func isOverlappingCertificate(cert1DNSNames, cert2DNSNames []string) *overlappingCertificate {
 	for _, dns1 := range cert1DNSNames {
 		for _, dns2 := range cert2DNSNames {
-			if isOverlappingHostname(ptr.To(gwapiv1.Hostname(dns1)), ptr.To(gwapiv1.Hostname(dns2))) {
+			if areOverlappingHostnames(ptr.To(gwapiv1.Hostname(dns1)), ptr.To(gwapiv1.Hostname(dns2))) {
 				return &overlappingCertificate{
 					san1: dns1,
 					san2: dns2,
@@ -407,22 +407,31 @@ func isOverlappingCertificate(cert1DNSNames, cert2DNSNames []string) *overlappin
 	return nil
 }
 
-// isOverlappingHostname checks if two hostnames overlap.
-func isOverlappingHostname(hostname1, hostname2 *gwapiv1.Hostname) bool {
-	if hostname1 == nil || hostname2 == nil {
+func areOverlappingHostnames(this, other *gwapiv1.Hostname) bool {
+	if this == nil || other == nil {
 		return true
 	}
-	domain1 := strings.Replace(string(*hostname1), "*.", "", 1)
-	domain2 := strings.Replace(string(*hostname2), "*.", "", 1)
-	return isSubdomain(domain1, domain2) || isSubdomain(domain2, domain1)
+	return hostnameMatchesWithOther(this, other) || hostnameMatchesWithOther(other, this)
 }
 
-// isSubdomain checks if subDomain is a sub-domain of domain
-func isSubdomain(subDomain, domain string) bool {
-	if subDomain == domain {
-		return true
+// hostnameMatchesWithOther returns true if this hostname matches other hostname.
+// Assumes that hostnames will either be fully qualified or a wildcard hostname prefixed with a single wildcard.
+// E.g. "*.*.example.com" is not valid.
+func hostnameMatchesWithOther(this, other *gwapiv1.Hostname) bool {
+	thisString := string(*this)
+	otherString := string(*other)
+	if hasWildcardPrefix(other) && !hasWildcardPrefix(this) {
+		return strings.HasSuffix(thisString, otherString[1:]) &&
+			!strings.Contains(strings.TrimSuffix(thisString, otherString[1:]), ".") // not a subdomain
 	}
-	return strings.HasSuffix(subDomain, fmt.Sprintf(".%s", domain))
+	return thisString == otherString
+}
+
+func hasWildcardPrefix(h *gwapiv1.Hostname) bool {
+	if h == nil {
+		return false
+	}
+	return len(string(*h)) > 1 && string(*h)[0] == '*'
 }
 
 func buildListenerMetadata(listener *ListenerContext, gateway *GatewayContext) *ir.ResourceMetadata {
