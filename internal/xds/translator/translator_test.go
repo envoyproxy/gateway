@@ -8,6 +8,7 @@ package translator
 import (
 	"embed"
 	"encoding/json"
+	"os"
 	"path/filepath"
 	"runtime"
 	"sort"
@@ -571,7 +572,15 @@ func requireXdsIRListenersFromInputTestData(t *testing.T, name string) []*ir.HTT
 func requireTestDataOutFile(t *testing.T, name ...string) string {
 	t.Helper()
 	elems := append([]string{"testdata", "out"}, name...)
-	content, err := outFiles.ReadFile(filepath.Join(elems...))
+	path := filepath.Join(elems...)
+
+	content, err := outFiles.ReadFile(path)
+	// read from FS if overriding, and file does not exist in go embed
+	if err != nil && test.OverrideTestData() && strings.Contains(err.Error(), "file does not exist") {
+		content, err := os.ReadFile(path)
+		require.NoError(t, err)
+		return string(content)
+	}
 	require.NoError(t, err)
 	return string(content)
 }
