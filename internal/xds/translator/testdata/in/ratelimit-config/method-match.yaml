@@ -16,6 +16,7 @@ http:
           - name: "test-namespace/test-policy-1/rule/0"
             methodMatches:
             - exact: "GET"
+            - exact: "PUT"
             limit:
               requests: 5
               unit: second
