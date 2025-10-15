@@ -748,17 +748,19 @@ func (t *Translator) translateSecurityPolicyForRoute(
 					if target.SectionName != nil && string(*target.SectionName) != r.Metadata.SectionName {
 						continue
 					}
-					if !strings.HasPrefix(r.Name, prefix) {
-						continue
-					}
-					// if already set - there's a specific level policy, so skip.
-					if r.Security != nil {
-						continue
-					}
-					r.Security = securityFeatures
-					if errorResponse != nil {
-						// Return a 500 direct response to avoid unauthorized access
-						r.DirectResponse = errorResponse
+					// A Policy targeting the most specific scope(xRoute rule) wins over a policy
+					// targeting a lesser specific scope(xRoute).
+					if strings.HasPrefix(r.Name, prefix) {
+						// if already set - there's a specific level policy, so skip.
+						if r.Security != nil {
+							continue
+						}
+
+						r.Security = securityFeatures
+						if errorResponse != nil {
+							// Return a 500 direct response to avoid unauthorized access
+							r.DirectResponse = errorResponse
+						}
 					}
 				}
 			}
