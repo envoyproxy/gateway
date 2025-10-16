@@ -663,11 +663,11 @@ func (in *ConsistentHash) DeepCopyInto(out *ConsistentHash) {
 	}
 	if in.Headers != nil {
 		in, out := &in.Headers, &out.Headers
-		*out = make([]*Header, len(*in))
+		*out = make([]*v1alpha1.Header, len(*in))
 		for i := range *in {
 			if (*in)[i] != nil {
 				in, out := &(*in)[i], &(*out)[i]
-				*out = new(Header)
+				*out = new(v1alpha1.Header)
 				**out = **in
 			}
 		}

@@ -12,6 +12,7 @@ import (
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	"k8s.io/utils/ptr"
 
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
@@ -79,7 +80,7 @@ func TestBuildHashPolicy(t *testing.T) {
 			name: "ConsistentHash with multiple Headers",
 			httpRoute: &ir.HTTPRoute{
 				Traffic: &ir.TrafficFeatures{
-					LoadBalancer: &ir.LoadBalancer{ConsistentHash: &ir.ConsistentHash{Headers: []*ir.Header{
+					LoadBalancer: &ir.LoadBalancer{ConsistentHash: &ir.ConsistentHash{Headers: []*egv1a1.Header{
 						{Name: "name"},
 						{Name: "bazz"},
 						{Name: "buzz"},
