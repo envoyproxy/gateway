@@ -1,6 +1,6 @@
 ---
 date: 2025-10-15
-title: From Evaluation to Integration: SAP’s Journey with Envoy Gateway
+title: From Evaluation to Integration: SAP's Journey with Envoy Gateway
 linkTitle: SAP
 author: Guy Daich (SAP)
 ---
