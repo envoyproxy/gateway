@@ -1221,12 +1221,24 @@ func (t *Translator) buildOIDC(
 	if oidc.DefaultTokenTTL != nil {
 		if d, err := time.ParseDuration(string(*oidc.DefaultTokenTTL)); err == nil {
 			irOIDC.DefaultTokenTTL = ir.MetaV1DurationPtr(d)
+		} else {
+			return nil, fmt.Errorf("invalid defaultTokenTTL: %w", err)
 		}
 	}
 
 	if oidc.DefaultRefreshTokenTTL != nil {
 		if d, err := time.ParseDuration(string(*oidc.DefaultRefreshTokenTTL)); err == nil {
 			irOIDC.DefaultRefreshTokenTTL = ir.MetaV1DurationPtr(d)
+		} else {
+			return nil, fmt.Errorf("invalid defaultRefreshTokenTTL: %w", err)
+		}
+	}
+
+	if oidc.CSRFTokenTTL != nil {
+		if d, err := time.ParseDuration(string(*oidc.CSRFTokenTTL)); err == nil {
+			irOIDC.CSRFTokenTTL = ir.MetaV1DurationPtr(d)
+		} else {
+			return nil, fmt.Errorf("invalid csrfTokenTTL: %w", err)
 		}
 	}
 

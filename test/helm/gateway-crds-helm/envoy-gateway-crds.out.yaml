@@ -1241,6 +1241,14 @@ spec:
                               to enable zone-aware routing.
                             format: int64
                             type: integer
+                          percentageEnabled:
+                            description: Configures percentage of requests that will
+                              be considered for zone aware routing if zone aware routing
+                              is configured. If not specified, Envoy defaults to 100%.
+                            format: int32
+                            maximum: 100
+                            minimum: 0
+                            type: integer
                         type: object
                     type: object
                 required:
@@ -5497,6 +5505,15 @@ spec:
                                         number of total upstream endpoints across
                                         all zones required to enable zone-aware routing.
                                       format: int64
+                                      type: integer
+                                    percentageEnabled:
+                                      description: Configures percentage of requests
+                                        that will be considered for zone aware routing
+                                        if zone aware routing is configured. If not
+                                        specified, Envoy defaults to 100%.
+                                      format: int32
+                                      maximum: 100
+                                      minimum: 0
                                       type: integer
                                   type: object
                               type: object
@@ -18961,6 +18978,17 @@ spec:
                                                           to enable zone-aware routing.
                                                         format: int64
                                                         type: integer
+                                                      percentageEnabled:
+                                                        description: Configures percentage
+                                                          of requests that will be
+                                                          considered for zone aware
+                                                          routing if zone aware routing
+                                                          is configured. If not specified,
+                                                          Envoy defaults to 100%.
+                                                        format: int32
+                                                        maximum: 100
+                                                        minimum: 0
+                                                        type: integer
                                                     type: object
                                                 type: object
                                             required:
@@ -20071,6 +20099,17 @@ spec:
                                                           across all zones required
                                                           to enable zone-aware routing.
                                                         format: int64
+                                                        type: integer
+                                                      percentageEnabled:
+                                                        description: Configures percentage
+                                                          of requests that will be
+                                                          considered for zone aware
+                                                          routing if zone aware routing
+                                                          is configured. If not specified,
+                                                          Envoy defaults to 100%.
+                                                        format: int32
+                                                        maximum: 100
+                                                        minimum: 0
                                                         type: integer
                                                     type: object
                                                 type: object
@@ -21266,6 +21305,17 @@ spec:
                                                     routing.
                                                   format: int64
                                                   type: integer
+                                                percentageEnabled:
+                                                  description: Configures percentage
+                                                    of requests that will be considered
+                                                    for zone aware routing if zone
+                                                    aware routing is configured. If
+                                                    not specified, Envoy defaults
+                                                    to 100%.
+                                                  format: int32
+                                                  maximum: 100
+                                                  minimum: 0
+                                                  type: integer
                                               type: object
                                           type: object
                                       required:
@@ -22377,6 +22427,16 @@ spec:
                                               endpoints across all zones required
                                               to enable zone-aware routing.
                                             format: int64
+                                            type: integer
+                                          percentageEnabled:
+                                            description: Configures percentage of
+                                              requests that will be considered for
+                                              zone aware routing if zone aware routing
+                                              is configured. If not specified, Envoy
+                                              defaults to 100%.
+                                            format: int32
+                                            maximum: 100
+                                            minimum: 0
                                             type: integer
                                         type: object
                                     type: object
@@ -24466,6 +24526,15 @@ spec:
                                           routing.
                                         format: int64
                                         type: integer
+                                      percentageEnabled:
+                                        description: Configures percentage of requests
+                                          that will be considered for zone aware routing
+                                          if zone aware routing is configured. If
+                                          not specified, Envoy defaults to 100%.
+                                        format: int32
+                                        maximum: 100
+                                        minimum: 0
+                                        type: integer
                                     type: object
                                 type: object
                             required:
@@ -25472,6 +25541,15 @@ spec:
                                           across all zones required to enable zone-aware
                                           routing.
                                         format: int64
+                                        type: integer
+                                      percentageEnabled:
+                                        description: Configures percentage of requests
+                                          that will be considered for zone aware routing
+                                          if zone aware routing is configured. If
+                                          not specified, Envoy defaults to 100%.
+                                        format: int32
+                                        maximum: 100
+                                        minimum: 0
                                         type: integer
                                     type: object
                                 type: object
@@ -26693,6 +26771,16 @@ spec:
                                                 to enable zone-aware routing.
                                               format: int64
                                               type: integer
+                                            percentageEnabled:
+                                              description: Configures percentage of
+                                                requests that will be considered for
+                                                zone aware routing if zone aware routing
+                                                is configured. If not specified, Envoy
+                                                defaults to 100%.
+                                              format: int32
+                                              maximum: 100
+                                              minimum: 0
+                                              type: integer
                                           type: object
                                       type: object
                                   required:
@@ -27069,6 +27157,16 @@ spec:
                           If not specified, defaults to "IdToken-(randomly generated uid)"
                         type: string
                     type: object
+                  csrfTokenTTL:
+                    description: |-
+                      CSRFTokenTTL defines how long the CSRF token generated during the OAuth2 authorization flow remains valid.
+
+                      This duration determines the lifetime of the CSRF cookie, which is validated against the CSRF token
+                      in the "state" parameter when the provider redirects back to the callback endpoint.
+
+                      If omitted, Envoy Gateway defaults the token expiration to 10 minutes.
+                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                    type: string
                   defaultRefreshTokenTTL:
                     description: |-
                       DefaultRefreshTokenTTL is the default lifetime of the refresh token.
@@ -27954,6 +28052,15 @@ spec:
                                           across all zones required to enable zone-aware
                                           routing.
                                         format: int64
+                                        type: integer
+                                      percentageEnabled:
+                                        description: Configures percentage of requests
+                                          that will be considered for zone aware routing
+                                          if zone aware routing is configured. If
+                                          not specified, Envoy defaults to 100%.
+                                        format: int32
+                                        maximum: 100
+                                        minimum: 0
                                         type: integer
                                     type: object
                                 type: object
