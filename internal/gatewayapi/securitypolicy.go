@@ -703,18 +703,14 @@ func (t *Translator) translateSecurityPolicyForRoute(
 		}
 
 		irKey := t.getIRKey(gtwCtx.Gateway)
-		// Use a switch on the route type to keep TCP vs HTTP logic separated and easier to read.
 		switch route.GetRouteType() {
 		case resource.KindTCPRoute:
 			// Only client-IP Authorization is applicable for TCP routes.
-			// TCP IR route names are flat; prefix ends with '/', strip it here.
-			// example route
-
+			// TCP IR route names are flat. The computed prefix includes a trailing
+			// '/' (e.g. "tcproute/default/tcp-app-2/"), so trim the suffix to get
+			// the exact TCP route name used in the IR:
+			//   prefix == "tcproute/default/tcp-app-2/" -> expectedTCPRouteName == "tcproute/default/tcp-app-2"
 			expectedTCPRouteName := strings.TrimSuffix(prefix, "/")
-			// debug: print prefix and expected TCP route name to help doc differences
-			fmt.Printf("debug securitypolicy: route=%q prefix=%q expectedTCPRouteName=%q\n",
-				route.GetName(), prefix, expectedTCPRouteName)
-
 			for _, listener := range parentRefCtx.listeners {
 				tl := xdsIR[irKey].GetTCPListener(irListenerName(listener))
 				if tl == nil {
@@ -896,18 +892,6 @@ func (t *Translator) translateSecurityPolicyForGateway(
 		if t.MergeGateways && gatewayName != policyTarget {
 			continue
 		}
-		// DEBUG: expose listener metadata.sectionName and a computed fallback suffix
-		metaSection := ""
-		if h.Metadata != nil {
-			metaSection = h.Metadata.SectionName
-		}
-		// fallback: suffix after last slash (listener name)
-		fallbackSection := ""
-		if gatewayNameEnd >= 0 && gatewayNameEnd < len(h.Name)-1 {
-			fallbackSection = h.Name[gatewayNameEnd+1:]
-		}
-		fmt.Printf("debug securitypolicy: HTTP listener=%q metadata.sectionName=%q fallbackSuffix=%q\n", h.Name, metaSection, fallbackSection)
-
 		// If specified the sectionName must match listenerName from ir listener metadata.
 		if target.SectionName != nil && string(*target.SectionName) != h.Metadata.SectionName {
 			continue
@@ -942,38 +926,26 @@ func (t *Translator) translateSecurityPolicyForGateway(
 			}
 			// TCPListener name has same format namespace/gatewayName/listenerName
 			gatewayNameEnd := strings.LastIndex(tl.Name, "/")
-			if gatewayNameEnd <= 0 {
-				continue
-			}
 			gatewayName := tl.Name[0:gatewayNameEnd]
 			if t.MergeGateways && gatewayName != policyTarget {
 				continue
 			}
-			// prefer explicit metadata.SectionName (like HTTP); fallback to name suffix
-			listenerSectionName := ""
-			metaSection := ""
-			if tl.Metadata != nil {
-				metaSection = tl.Metadata.SectionName
-			}
-			if metaSection != "" {
-				listenerSectionName = metaSection
-			} else { // fallback to suffix of name after last slash
-				listenerSectionName = tl.Name[gatewayNameEnd+1:]
-			}
-			// DEBUG: show TCP listener metadata.sectionName and computed listenerSectionName
-			fmt.Printf("debug securitypolicy: TCP listener=%q metadata.sectionName=%q computedSectionName=%q\n",
-				tl.Name, metaSection, listenerSectionName)
-			if target.SectionName != nil && listenerSectionName != string(*target.SectionName) {
+			// If specified the sectionName must match listenerName from ir listener metadata.
+			if target.SectionName != nil && string(*target.SectionName) != tl.Metadata.SectionName {
 				continue
 			}
+			// A Policy targeting the specific scope(xRoute rule, xRoute, Gateway listener) wins over a policy
+			// targeting a lesser specific scope(Gateway).
 			for _, r := range tl.Routes {
-				if r == nil || r.Authorization != nil { // already set by more specific scope
+				// if already set - there's a specific level policy, so skip.
+				if r.Authorization != nil {
 					continue
 				}
 				r.Authorization = tcpAuthorization
 			}
 		}
 	}
+
 	return errs
 }
 

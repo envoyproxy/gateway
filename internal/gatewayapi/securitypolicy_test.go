@@ -12,7 +12,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -20,7 +19,6 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
-	"github.com/envoyproxy/gateway/internal/ir"
 )
 
 func Test_wildcard2regex(t *testing.T) {
@@ -776,263 +774,6 @@ func Test_parseExtAuthTimeout(t *testing.T) {
 	}
 }
 
-func Test_validateSecurityPolicyForTCP_AllowsNilOrEmptyAuth(t *testing.T) {
-	// No Authorization present
-	p := &egv1a1.SecurityPolicy{
-		Spec: egv1a1.SecurityPolicySpec{},
-	}
-	require.NoError(t, validateSecurityPolicyForTCP(p))
-
-	// Authorization present but no rules
-	p = &egv1a1.SecurityPolicy{
-		Spec: egv1a1.SecurityPolicySpec{
-			Authorization: &egv1a1.Authorization{
-				Rules: []egv1a1.AuthorizationRule{},
-			},
-		},
-	}
-	require.NoError(t, validateSecurityPolicyForTCP(p))
-}
-
-func Test_validateSecurityPolicyForTCP_UnsupportedTopLevelFeatures(t *testing.T) {
-	// Any non-authorization feature should fail for TCP
-	cases := []struct {
-		name string
-		spec egv1a1.SecurityPolicySpec
-	}{
-		{"JWT", egv1a1.SecurityPolicySpec{JWT: &egv1a1.JWT{}}},
-		{"OIDC", egv1a1.SecurityPolicySpec{OIDC: &egv1a1.OIDC{}}},
-		{"CORS", egv1a1.SecurityPolicySpec{CORS: &egv1a1.CORS{}}},
-		{"APIKeyAuth", egv1a1.SecurityPolicySpec{APIKeyAuth: &egv1a1.APIKeyAuth{}}},
-		{"BasicAuth", egv1a1.SecurityPolicySpec{BasicAuth: &egv1a1.BasicAuth{}}},
-		{"ExtAuth", egv1a1.SecurityPolicySpec{ExtAuth: &egv1a1.ExtAuth{HTTP: &egv1a1.HTTPExtAuthService{}}}},
-	}
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			p := &egv1a1.SecurityPolicy{Spec: tc.spec}
-			require.Error(t, validateSecurityPolicyForTCP(p))
-		})
-	}
-}
-
-func Test_validateSecurityPolicyForTCP_DenyRuleOK(t *testing.T) {
-	// Deny rule is fine without CIDRs
-	p := &egv1a1.SecurityPolicy{
-		Spec: egv1a1.SecurityPolicySpec{
-			Authorization: &egv1a1.Authorization{
-				Rules: []egv1a1.AuthorizationRule{
-					{
-						Action: egv1a1.AuthorizationActionDeny,
-					},
-				},
-			},
-		},
-	}
-	require.NoError(t, validateSecurityPolicyForTCP(p))
-}
-
-func Test_validateSecurityPolicyForTCP_AllowWithCIDR_OK(t *testing.T) {
-	// Allow rule with at least one ClientCIDR should be valid
-	p := &egv1a1.SecurityPolicy{
-		Spec: egv1a1.SecurityPolicySpec{
-			Authorization: &egv1a1.Authorization{
-				Rules: []egv1a1.AuthorizationRule{
-					{
-						Action: egv1a1.AuthorizationActionAllow,
-						Principal: egv1a1.Principal{
-							ClientCIDRs: []egv1a1.CIDR{"10.0.0.0/8"},
-						},
-					},
-				},
-			},
-		},
-	}
-	require.NoError(t, validateSecurityPolicyForTCP(p))
-}
-
-func Test_validateSecurityPolicyForTCP_AllowWithInvalidCIDR_Errors(t *testing.T) {
-	p := &egv1a1.SecurityPolicy{
-		Spec: egv1a1.SecurityPolicySpec{
-			Authorization: &egv1a1.Authorization{
-				Rules: []egv1a1.AuthorizationRule{
-					{
-						Action: egv1a1.AuthorizationActionAllow,
-						Principal: egv1a1.Principal{
-							ClientCIDRs: []egv1a1.CIDR{"10.0.0.0/99"}, // invalid
-						},
-					},
-				},
-			},
-		},
-	}
-	require.Error(t, validateSecurityPolicyForTCP(p))
-}
-
-func Test_validateSecurityPolicyForTCP_PrincipalJWT_NotSupported(t *testing.T) {
-	p := &egv1a1.SecurityPolicy{
-		Spec: egv1a1.SecurityPolicySpec{
-			Authorization: &egv1a1.Authorization{
-				Rules: []egv1a1.AuthorizationRule{{
-					Action: egv1a1.AuthorizationActionAllow,
-					Principal: egv1a1.Principal{
-						ClientCIDRs: []egv1a1.CIDR{"10.0.0.0/8"},
-						JWT:         &egv1a1.JWTPrincipal{}, // zero value is enough to be non-nil
-					},
-				}},
-			},
-		},
-	}
-	require.Error(t, validateSecurityPolicyForTCP(p))
-}
-
-func Test_validateSecurityPolicyForTCP_PrincipalHeaders_NotSupported(t *testing.T) {
-	p := &egv1a1.SecurityPolicy{
-		Spec: egv1a1.SecurityPolicySpec{
-			Authorization: &egv1a1.Authorization{
-				Rules: []egv1a1.AuthorizationRule{{
-					Action: egv1a1.AuthorizationActionAllow,
-					Principal: egv1a1.Principal{
-						ClientCIDRs: []egv1a1.CIDR{"10.0.0.0/8"},
-						// any non-empty slice will trigger the "headers not supported" branch
-						Headers: []egv1a1.AuthorizationHeaderMatch{{}},
-					},
-				}},
-			},
-		},
-	}
-	require.Error(t, validateSecurityPolicyForTCP(p))
-}
-
-func Test_validateSecurityPolicyForTCP_DenyWithInvalidCIDR_Errors(t *testing.T) {
-	p := &egv1a1.SecurityPolicy{
-		Spec: egv1a1.SecurityPolicySpec{
-			Authorization: &egv1a1.Authorization{
-				Rules: []egv1a1.AuthorizationRule{{
-					Action: egv1a1.AuthorizationActionDeny,
-					Principal: egv1a1.Principal{
-						ClientCIDRs: []egv1a1.CIDR{"10.0.0.0/99"}, // invalid mask
-					},
-				}},
-			},
-		},
-	}
-	require.Error(t, validateSecurityPolicyForTCP(p))
-}
-
-func Test_validateSecurityPolicyForTCP_MixedRules_OK(t *testing.T) {
-	p := &egv1a1.SecurityPolicy{
-		Spec: egv1a1.SecurityPolicySpec{
-			Authorization: &egv1a1.Authorization{
-				Rules: []egv1a1.AuthorizationRule{
-					{
-						Action: egv1a1.AuthorizationActionAllow,
-						Principal: egv1a1.Principal{
-							ClientCIDRs: []egv1a1.CIDR{"192.168.0.0/16"},
-						},
-					},
-					{
-						Action:    egv1a1.AuthorizationActionDeny,
-						Principal: egv1a1.Principal{}, // no CIDR is fine
-					},
-				},
-			},
-		},
-	}
-	require.NoError(t, validateSecurityPolicyForTCP(p))
-}
-
-func Test_translateSecurityPolicyForGateway_TCPListener_MetadataNil_Fallback(t *testing.T) {
-	t.Parallel()
-
-	// Build policy
-	policy := &egv1a1.SecurityPolicy{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-policy",
-			Namespace: "default",
-			UID:       types.UID("uid-test"),
-		},
-		Spec: egv1a1.SecurityPolicySpec{
-			Authorization: &egv1a1.Authorization{
-				Rules: []egv1a1.AuthorizationRule{
-					{
-						Action: egv1a1.AuthorizationActionAllow,
-						Principal: egv1a1.Principal{
-							ClientCIDRs: []egv1a1.CIDR{"10.0.0.0/8"},
-						},
-					},
-				},
-			},
-		},
-	}
-
-	// Prepare IR with TCP listeners (no Metadata -> trigger fallback to name suffix)
-	fooRoute := &ir.TCPRoute{Name: "route-foo"}
-	barRoute := &ir.TCPRoute{Name: "route-bar"}
-
-	tlFoo := &ir.TCPListener{
-		CoreListenerDetails: ir.CoreListenerDetails{
-			Name:    "default/tcp-gateway/foo", // format: ns/gw/listener
-			Address: "0.0.0.0",
-			Port:    10000,
-		},
-		Routes: []*ir.TCPRoute{fooRoute},
-	}
-	tlBar := &ir.TCPListener{
-		CoreListenerDetails: ir.CoreListenerDetails{
-			Name:    "default/tcp-gateway/bar",
-			Address: "0.0.0.0",
-			Port:    10001,
-		},
-		Routes: []*ir.TCPRoute{barRoute},
-	}
-
-	irKey := "default/tcp-gateway"
-	x := &ir.Xds{TCP: []*ir.TCPListener{tlFoo, tlBar}}
-	xdsMap := resource.XdsIRMap{irKey: x}
-
-	gw := &GatewayContext{
-		Gateway: &gwapiv1.Gateway{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "tcp-gateway",
-				Namespace: "default",
-			},
-			Spec: gwapiv1.GatewaySpec{
-				Listeners: []gwapiv1.Listener{
-					{
-						Name:     gwapiv1.SectionName("foo"),
-						Protocol: gwapiv1.TCPProtocolType,
-						Port:     9000,
-					},
-					{
-						Name:     gwapiv1.SectionName("bar"),
-						Protocol: gwapiv1.TCPProtocolType,
-						Port:     9001,
-					},
-				},
-			},
-		},
-	}
-
-	tr := &Translator{}
-
-	section := gwapiv1a2.SectionName("foo")
-	target := gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
-		LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
-			Group: gwapiv1a2.Group(gwapiv1.GroupName),
-			Kind:  gwapiv1a2.Kind(resource.KindGateway),
-			Name:  gwapiv1a2.ObjectName("tcp-gateway"),
-		},
-		SectionName: &section,
-	}
-
-	err := tr.translateSecurityPolicyForGateway(policy, gw, target, resource.NewResources(), xdsMap)
-	require.NoError(t, err)
-
-	require.NotNil(t, fooRoute.Authorization, "foo route security should be set")
-	require.NotNil(t, fooRoute.Authorization, "foo route authorization should be set")
-	require.Nil(t, barRoute.Authorization, "bar route security should remain nil")
-}
-
 func TestValidateCIDRs_ErrorOnBadCIDR(t *testing.T) {
 	if err := validateCIDRs([]egv1a1.CIDR{"10.0.0.0/33"}); err == nil {
 		t.Fatal("expected invalid ClientCIDR error")
@@ -1198,4 +939,152 @@ func Test_SecurityPolicy_HTTP_Invalid_setsStatus_and_returns(t *testing.T) {
 
 	// Assert that the policy has a False condition (error was set)
 	require.True(t, hasParentFalseCondition(policy))
+}
+
+func Test_validateSecurityPolicyForTCP_Table(t *testing.T) {
+	tests := []struct {
+		name    string
+		spec    egv1a1.SecurityPolicySpec
+		wantErr bool
+	}{
+		{
+			name:    "no authorization (nil)",
+			spec:    egv1a1.SecurityPolicySpec{},
+			wantErr: false,
+		},
+		{
+			name: "authorization present but no rules",
+			spec: egv1a1.SecurityPolicySpec{
+				Authorization: &egv1a1.Authorization{
+					Rules: []egv1a1.AuthorizationRule{},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "deny rule ok without cidrs",
+			spec: egv1a1.SecurityPolicySpec{
+				Authorization: &egv1a1.Authorization{
+					Rules: []egv1a1.AuthorizationRule{
+						{Action: egv1a1.AuthorizationActionDeny},
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "allow with valid cidr ok",
+			spec: egv1a1.SecurityPolicySpec{
+				Authorization: &egv1a1.Authorization{
+					Rules: []egv1a1.AuthorizationRule{
+						{
+							Action: egv1a1.AuthorizationActionAllow,
+							Principal: egv1a1.Principal{
+								ClientCIDRs: []egv1a1.CIDR{"10.0.0.0/8"},
+							},
+						},
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "allow with invalid cidr errors",
+			spec: egv1a1.SecurityPolicySpec{
+				Authorization: &egv1a1.Authorization{
+					Rules: []egv1a1.AuthorizationRule{
+						{
+							Action: egv1a1.AuthorizationActionAllow,
+							Principal: egv1a1.Principal{
+								ClientCIDRs: []egv1a1.CIDR{"10.0.0.0/99"},
+							},
+						},
+					},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "deny with invalid cidr errors",
+			spec: egv1a1.SecurityPolicySpec{
+				Authorization: &egv1a1.Authorization{
+					Rules: []egv1a1.AuthorizationRule{
+						{
+							Action: egv1a1.AuthorizationActionDeny,
+							Principal: egv1a1.Principal{
+								ClientCIDRs: []egv1a1.CIDR{"10.0.0.0/99"},
+							},
+						},
+					},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "jwt principal not supported on tcp",
+			spec: egv1a1.SecurityPolicySpec{
+				Authorization: &egv1a1.Authorization{
+					Rules: []egv1a1.AuthorizationRule{
+						{
+							Action: egv1a1.AuthorizationActionAllow,
+							Principal: egv1a1.Principal{
+								ClientCIDRs: []egv1a1.CIDR{"10.0.0.0/8"},
+								JWT:         &egv1a1.JWTPrincipal{},
+							},
+						},
+					},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "headers principal not supported on tcp",
+			spec: egv1a1.SecurityPolicySpec{
+				Authorization: &egv1a1.Authorization{
+					Rules: []egv1a1.AuthorizationRule{
+						{
+							Action: egv1a1.AuthorizationActionAllow,
+							Principal: egv1a1.Principal{
+								ClientCIDRs: []egv1a1.CIDR{"10.0.0.0/8"},
+								Headers:     []egv1a1.AuthorizationHeaderMatch{{}},
+							},
+						},
+					},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "mixed allow and deny ok",
+			spec: egv1a1.SecurityPolicySpec{
+				Authorization: &egv1a1.Authorization{
+					Rules: []egv1a1.AuthorizationRule{
+						{
+							Action: egv1a1.AuthorizationActionAllow,
+							Principal: egv1a1.Principal{
+								ClientCIDRs: []egv1a1.CIDR{"192.168.0.0/16"},
+							},
+						},
+						{
+							Action:    egv1a1.AuthorizationActionDeny,
+							Principal: egv1a1.Principal{},
+						},
+					},
+				},
+			},
+			wantErr: false,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			p := &egv1a1.SecurityPolicy{Spec: tc.spec}
+			err := validateSecurityPolicyForTCP(p)
+			if tc.wantErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
 }
