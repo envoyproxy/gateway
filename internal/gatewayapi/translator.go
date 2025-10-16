@@ -142,6 +142,8 @@ func newTranslateResult(
 		InfraIR: infraIR,
 	}
 
+	translateResult.GatewayClass = gc
+
 	if n := len(gateways); n > 0 {
 		translateResult.Gateways = make([]*gwapiv1.Gateway, n)
 		for i, gateway := range gateways {
