@@ -6,6 +6,7 @@
 package status
 
 import (
+	"errors"
 	"sort"
 	"strings"
 
@@ -28,6 +29,10 @@ const (
 	RouteReasonPortNotSpecified       gwapiv1.RouteConditionReason = "PortNotSpecified"
 	RouteReasonUnsupportedAddressType gwapiv1.RouteConditionReason = "UnsupportedAddressType"
 	RouteReasonInvalidAddress         gwapiv1.RouteConditionReason = "InvalidAddress"
+	RouteReasonEndpointsNotFound      gwapiv1.RouteConditionReason = "EndpointsNotFound"
+
+	// Network configuration related condition types
+	RouteConditionBackendsAvailable gwapiv1.RouteConditionType = "BackendsAvailable"
 )
 
 // Error is an error interface that represents errors that need to be reflected
@@ -83,7 +88,7 @@ func (s *RouteStatusError) Reason() gwapiv1.RouteConditionReason {
 // Type returns the route condition type associated with this error.
 func (s *RouteStatusError) Type() gwapiv1.RouteConditionType {
 	// Default to ResolvedRefs because it's the most common type.
-	if s == nil {
+	if s == nil || s.RouteConditionType == "" {
 		return gwapiv1.RouteConditionResolvedRefs
 	}
 	return s.RouteConditionType
@@ -167,6 +172,57 @@ func (m *MultiStatusError) Type() gwapiv1.RouteConditionType {
 		}
 	}
 	return gwapiv1.RouteConditionResolvedRefs
+}
+
+// TypedErrorCollector collects and organizes status errors by their condition type.
+// It automatically groups errors of the same type together, making it easy to
+// process and report errors for each distinct condition type separately.
+//
+// This is particularly useful when processing routes that may have multiple
+// validation errors across different types. (e.g., ResolvedRefs, Accepted, BackendsAvailable).
+type TypedErrorCollector struct {
+	// errs groups errors by their condition type for efficient retrieval
+	errs map[gwapiv1.RouteConditionType]*MultiStatusError
+}
+
+func (c *TypedErrorCollector) Empty() bool {
+	return len(c.errs) == 0
+}
+
+// Types returns all unique condition types for which errors have been collected.
+func (c *TypedErrorCollector) Types() []gwapiv1.RouteConditionType {
+	if len(c.errs) == 0 {
+		return nil
+	}
+	types := make([]gwapiv1.RouteConditionType, 0, len(c.errs))
+	for t := range c.errs {
+		types = append(types, t)
+	}
+	return types
+}
+
+// Add appends a new error to the collector, automatically grouping it with
+// other errors of the same condition type.
+func (c *TypedErrorCollector) Add(err Error) {
+	if err == nil {
+		return
+	}
+	if c.errs == nil {
+		c.errs = make(map[gwapiv1.RouteConditionType]*MultiStatusError)
+	}
+	if _, exist := c.errs[err.Type()]; !exist {
+		c.errs[err.Type()] = &MultiStatusError{}
+	}
+	c.errs[err.Type()].Add(err)
+}
+
+// GetError returns all errors of the specified condition type as a single RouteStatusError.
+// Multiple errors of the same type are consolidated into one error with combined messages and reasons.
+func (c *TypedErrorCollector) GetError(t gwapiv1.RouteConditionType) Error {
+	if len(c.errs) == 0 {
+		return nil
+	}
+	return NewRouteStatusError(errors.New(c.errs[t].Error()), c.errs[t].Reason()).WithType(t)
 }
 
 func isAcceptedReason(reason gwapiv1.RouteConditionReason) bool {

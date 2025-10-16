@@ -70,7 +70,7 @@ serviceImports:
       ports:
         - port: 80
           name: http
-          # Missing protocol here is intentional to test the default protocol handling.
+          protocol: TCP
   - apiVersion: multicluster.x-k8s.io/v1alpha1
     kind: ServiceImport
     metadata:

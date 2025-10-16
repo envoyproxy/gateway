@@ -18,50 +18,42 @@ httpRoutes:
   kind: HTTPRoute
   metadata:
     namespace: default
-    name: httproute-headless
+    name: httproute-1
   spec:
     parentRefs:
-    - name: gateway-1
-      namespace: envoy-gateway
+    - namespace: envoy-gateway
+      name: gateway-1
     rules:
-    - backendRefs:
-      - name: headless-service
-        port: 80
+    - matches:
+      - path:
+          type: Exact
+          value: "/"
+      backendRefs:
+      - name: service-with-no-endpoints
+        port: 8080
 services:
 - apiVersion: v1
   kind: Service
   metadata:
     namespace: default
-    name: headless-service
+    name: service-with-no-endpoints
   spec:
-    clusterIP: None
+    clusterIP: 1.1.1.1
     ports:
     - name: http
+      port: 8080
       protocol: TCP
-      port: 80
+      targetPort: 8080
 endpointSlices:
 - apiVersion: discovery.k8s.io/v1
   kind: EndpointSlice
   metadata:
     namespace: default
-    name: endpointslice-headless-service
+    name: endpointslice-service-with-no-endpoints
     labels:
-      kubernetes.io/service-name: headless-service
+      kubernetes.io/service-name: service-with-no-endpoints
   addressType: IPv4
   ports:
   - name: http
+    port: 8080
     protocol: TCP
-    port: 80
-  endpoints:
-  - addresses:
-    - 7.7.7.7
-    conditions:
-      ready: true
-envoyProxyForGatewayClass:
-  apiVersion: gateway.envoyproxy.io/v1alpha1
-  kind: EnvoyProxy
-  metadata:
-    name: default
-    namespace: default
-  spec:
-    routingType: Endpoint
