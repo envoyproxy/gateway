@@ -123,7 +123,7 @@ endpointSlices:
       name: endpointslice-http-backend2
       namespace: envoy-gateway
       labels:
-        kubernetes.io/service-name: http-backend
+        kubernetes.io/service-name: http-backend2
     addressType: IPv4
     ports:
       - name: http
