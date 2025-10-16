@@ -380,7 +380,7 @@ spec:
 * The user has created two `RateLimitFilter`s  and has attached it to a `HTTPRoute` - one(`ratelimit-all-safeguard-app`) to
 ensure that the backend does not get overwhelmed with requests, any excess requests are rate limited irrespective of
 the attributes within the traffic flow, and another(`ratelimit-per-user`) to rate limit each distinct user client
-who can be differentiated using the `x-user-id` header, to ensure that each client does not make exessive requests to the backend.
+who can be differentiated using the `x-user-id` header, to ensure that each client does not make excessive requests to the backend.
 * If user `baz` (identified with the header and value of `x-user-id: baz`) sends 90 requests within the first second, and
 user `bar` sends 11 more requests during that same interval of 1 second, and user `bar` sends the 101th request within that second,
 the rule defined in `ratelimit-all-safeguard-app` gets activated and Envoy Gateway will ratelimit the request sent by `bar` (and any other
