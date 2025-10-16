@@ -708,7 +708,13 @@ func (t *Translator) translateSecurityPolicyForRoute(
 		case resource.KindTCPRoute:
 			// Only client-IP Authorization is applicable for TCP routes.
 			// TCP IR route names are flat; prefix ends with '/', strip it here.
+			// example route
+
 			expectedTCPRouteName := strings.TrimSuffix(prefix, "/")
+			// debug: print prefix and expected TCP route name to help doc differences
+			fmt.Printf("debug securitypolicy: route=%q prefix=%q expectedTCPRouteName=%q\n",
+				route.GetName(), prefix, expectedTCPRouteName)
+
 			for _, listener := range parentRefCtx.listeners {
 				tl := xdsIR[irKey].GetTCPListener(irListenerName(listener))
 				if tl == nil {
@@ -732,9 +738,6 @@ func (t *Translator) translateSecurityPolicyForRoute(
 				}
 			}
 		case resource.KindHTTPRoute, resource.KindGRPCRoute:
-			fallthrough
-		default:
-			// HTTP/HTTPS/GRPC listener path
 			for _, listener := range parentRefCtx.listeners {
 				irListener := xdsIR[irKey].GetHTTPListener(irListenerName(listener))
 				if irListener == nil {
@@ -893,6 +896,18 @@ func (t *Translator) translateSecurityPolicyForGateway(
 		if t.MergeGateways && gatewayName != policyTarget {
 			continue
 		}
+		// DEBUG: expose listener metadata.sectionName and a computed fallback suffix
+		metaSection := ""
+		if h.Metadata != nil {
+			metaSection = h.Metadata.SectionName
+		}
+		// fallback: suffix after last slash (listener name)
+		fallbackSection := ""
+		if gatewayNameEnd >= 0 && gatewayNameEnd < len(h.Name)-1 {
+			fallbackSection = h.Name[gatewayNameEnd+1:]
+		}
+		fmt.Printf("debug securitypolicy: HTTP listener=%q metadata.sectionName=%q fallbackSuffix=%q\n", h.Name, metaSection, fallbackSection)
+
 		// If specified the sectionName must match listenerName from ir listener metadata.
 		if target.SectionName != nil && string(*target.SectionName) != h.Metadata.SectionName {
 			continue
@@ -934,12 +949,20 @@ func (t *Translator) translateSecurityPolicyForGateway(
 			if t.MergeGateways && gatewayName != policyTarget {
 				continue
 			}
+			// prefer explicit metadata.SectionName (like HTTP); fallback to name suffix
 			listenerSectionName := ""
-			if tl.Metadata != nil && tl.Metadata.SectionName != "" {
-				listenerSectionName = tl.Metadata.SectionName
+			metaSection := ""
+			if tl.Metadata != nil {
+				metaSection = tl.Metadata.SectionName
+			}
+			if metaSection != "" {
+				listenerSectionName = metaSection
 			} else { // fallback to suffix of name after last slash
 				listenerSectionName = tl.Name[gatewayNameEnd+1:]
 			}
+			// DEBUG: show TCP listener metadata.sectionName and computed listenerSectionName
+			fmt.Printf("debug securitypolicy: TCP listener=%q metadata.sectionName=%q computedSectionName=%q\n",
+				tl.Name, metaSection, listenerSectionName)
 			if target.SectionName != nil && listenerSectionName != string(*target.SectionName) {
 				continue
 			}

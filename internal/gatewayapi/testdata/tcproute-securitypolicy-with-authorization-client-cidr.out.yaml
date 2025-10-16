@@ -545,13 +545,18 @@ xdsIR:
     globalResources:
       proxyServiceCluster:
         metadata:
-          name: envoy-envoy-gateway-gateway-tcp-093cb215
+          name: envoy-envoy-gateway-gateway-mixed-94aaf8eb
           namespace: envoy-gateway-system
           sectionName: "8080"
         name: envoy-gateway/gateway-mixed
         settings:
-        - metadata:
-            name: envoy-envoy-gateway-gateway-tcp-093cb215
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            name: envoy-envoy-gateway-gateway-mixed-94aaf8eb
             namespace: envoy-gateway-system
             sectionName: "8080"
           name: envoy-gateway/gateway-mixed
@@ -674,6 +679,25 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources:
+      proxyServiceCluster:
+        metadata:
+          name: envoy-envoy-gateway-gateway-tcp-093cb215
+          namespace: envoy-gateway-system
+          sectionName: "8080"
+        name: envoy-gateway/gateway-tcp
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            name: envoy-envoy-gateway-gateway-tcp-093cb215
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-tcp
+          protocol: TCP
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
