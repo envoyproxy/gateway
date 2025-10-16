@@ -571,6 +571,7 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy, r
 		rb          *ir.RequestBuffer
 		cp          []*ir.Compression
 		httpUpgrade []ir.HTTPUpgradeConfig
+		ac          *ir.AdmissionControl
 		err, errs   error
 	)
 
@@ -631,6 +632,8 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy, r
 	cp = buildCompression(policy.Spec.Compression)
 	httpUpgrade = buildHTTPProtocolUpgradeConfig(policy.Spec.HTTPUpgrade)
 
+	ac = buildAdmissionControl(policy.Spec.AdmissionControl)
+
 	ds = translateDNS(&policy.Spec.ClusterSettings)
 
 	return &ir.TrafficFeatures{
@@ -651,6 +654,7 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy, r
 		Compression:       cp,
 		HTTPUpgrade:       httpUpgrade,
 		Telemetry:         policy.Spec.Telemetry,
+		AdmissionControl:  ac,
 	}, errs
 }
 
@@ -1227,4 +1231,58 @@ func buildHTTPProtocolUpgradeConfig(cfgs []*egv1a1.ProtocolUpgradeConfig) []ir.H
 	}
 
 	return result
+}
+
+// buildAdmissionControl builds the IR admission control configuration from the API admission control spec.
+func buildAdmissionControl(spec *egv1a1.AdmissionControl) *ir.AdmissionControl {
+	if spec == nil {
+		return nil
+	}
+
+	irAC := &ir.AdmissionControl{
+		Enabled:                 spec.Enabled,
+		SamplingWindow:          spec.SamplingWindow,
+		Aggression:              spec.Aggression,
+		MaxRejectionProbability: spec.MaxRejectionProbability,
+	}
+
+	// Convert float64 to int32 for thresholds
+	if spec.SRThreshold != nil {
+		srThreshold := int32(*spec.SRThreshold * 100) // Convert to percentage
+		irAC.SRThreshold = &srThreshold
+	}
+	if spec.RPSThreshold != nil {
+		rpsThreshold := int32(*spec.RPSThreshold)
+		irAC.RPSThreshold = &rpsThreshold
+	}
+
+	if spec.SuccessCriteria != nil {
+		irAC.SuccessCriteria = &ir.AdmissionControlSuccessCriteria{}
+
+		if spec.SuccessCriteria.HTTP != nil {
+			irAC.SuccessCriteria.HTTP = &ir.AdmissionControlHTTPSuccessCriteria{
+				HTTPSuccessStatus: make([]ir.AdmissionControlStatusRange, len(spec.SuccessCriteria.HTTP.HTTPSuccessStatus)),
+			}
+			for i, statusRange := range spec.SuccessCriteria.HTTP.HTTPSuccessStatus {
+				irAC.SuccessCriteria.HTTP.HTTPSuccessStatus[i] = ir.AdmissionControlStatusRange{
+					Start: statusRange.Start,
+					End:   statusRange.End,
+				}
+			}
+		}
+
+		if spec.SuccessCriteria.GRPC != nil {
+			irAC.SuccessCriteria.GRPC = &ir.AdmissionControlGRPCSuccessCriteria{
+				GRPCSuccessStatus: make([]ir.AdmissionControlStatusRange, len(spec.SuccessCriteria.GRPC.GRPCSuccessStatus)),
+			}
+			for i, statusRange := range spec.SuccessCriteria.GRPC.GRPCSuccessStatus {
+				irAC.SuccessCriteria.GRPC.GRPCSuccessStatus[i] = ir.AdmissionControlStatusRange{
+					Start: statusRange.Start,
+					End:   statusRange.End,
+				}
+			}
+		}
+	}
+
+	return irAC
 }

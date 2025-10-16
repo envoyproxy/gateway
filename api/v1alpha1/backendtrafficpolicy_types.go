@@ -110,6 +110,13 @@ type BackendTrafficPolicySpec struct {
 	//
 	// +optional
 	Telemetry *BackendTelemetry `json:"telemetry,omitempty"`
+
+	// AdmissionControl configures admission control for backend traffic.
+	// This feature rejects a portion of requests when the success rate falls below
+	// a specified threshold to prevent cascading failures.
+	//
+	// +optional
+	AdmissionControl *AdmissionControl `json:"admissionControl,omitempty"`
 }
 
 type BackendTelemetry struct {

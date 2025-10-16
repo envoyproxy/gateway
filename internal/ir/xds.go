@@ -423,8 +423,6 @@ type TLSCertificate struct {
 	Certificate []byte `json:"certificate,omitempty" yaml:"certificate,omitempty"`
 	// PrivateKey for the server.
 	PrivateKey PrivateBytes `json:"privateKey,omitempty" yaml:"privateKey,omitempty"`
-	// OCSPStaple contains the stapled OCSP response associated with the certificate, if provided.
-	OCSPStaple []byte `json:"ocspStaple,omitempty" yaml:"ocspStaple,omitempty"`
 }
 
 // TLSCACertificate holds CA Certificate to validate clients
@@ -450,7 +448,7 @@ type SubjectAltName struct {
 	URI *string `json:"uri,omitempty" yaml:"uri,omitempty"`
 }
 
-func (t *TLSCertificate) Validate() error {
+func (t TLSCertificate) Validate() error {
 	var errs error
 	if len(t.Certificate) == 0 {
 		errs = errors.Join(errs, ErrTLSCertEmpty)
@@ -913,6 +911,8 @@ type TrafficFeatures struct {
 	Telemetry *egv1a1.BackendTelemetry `json:"telemetry,omitempty" yaml:"telemetry,omitempty"`
 	// RequestBuffer defines the schema for enabling buffered requests
 	RequestBuffer *RequestBuffer `json:"requestBuffer,omitempty" yaml:"requestBuffer,omitempty"`
+	// AdmissionControl defines the schema for admission control configuration
+	AdmissionControl *AdmissionControl `json:"admissionControl,omitempty" yaml:"admissionControl,omitempty"`
 }
 
 // +k8s:deepcopy-gen=true
@@ -926,6 +926,62 @@ type HTTPUpgradeConfig struct {
 // +k8s:deepcopy-gen=true
 type ConnectConfig struct {
 	Terminate bool `json:"terminate" yaml:"terminate"`
+}
+
+// AdmissionControl defines the schema for admission control configuration.
+//
+// +k8s:deepcopy-gen=true
+type AdmissionControl struct {
+	// Enabled enables or disables admission control.
+	Enabled *bool `json:"enabled,omitempty" yaml:"enabled,omitempty"`
+	// SuccessCriteria defines the criteria for determining request success.
+	SuccessCriteria *AdmissionControlSuccessCriteria `json:"successCriteria,omitempty" yaml:"successCriteria,omitempty"`
+	// SamplingWindow defines the time window for sampling requests to determine the success rate.
+	SamplingWindow *metav1.Duration `json:"samplingWindow,omitempty" yaml:"samplingWindow,omitempty"`
+	// Aggression defines the aggression factor for admission control.
+	Aggression *float64 `json:"aggression,omitempty" yaml:"aggression,omitempty"`
+	// SRThreshold defines the success rate threshold below which admission control will start rejecting requests.
+	SRThreshold *int32 `json:"srThreshold,omitempty" yaml:"srThreshold,omitempty"`
+	// RPSThreshold defines the minimum requests per second required before admission control becomes active.
+	RPSThreshold *int32 `json:"rpsThreshold,omitempty" yaml:"rpsThreshold,omitempty"`
+	// MaxRejectionProbability defines the maximum probability of rejecting a request when admission control is active.
+	MaxRejectionProbability *float64 `json:"maxRejectionProbability,omitempty" yaml:"maxRejectionProbability,omitempty"`
+}
+
+// AdmissionControlSuccessCriteria defines the criteria for determining request success.
+//
+// +k8s:deepcopy-gen=true
+type AdmissionControlSuccessCriteria struct {
+	// HTTP defines HTTP-specific success criteria.
+	HTTP *AdmissionControlHTTPSuccessCriteria `json:"http,omitempty" yaml:"http,omitempty"`
+	// GRPC defines GRPC-specific success criteria.
+	GRPC *AdmissionControlGRPCSuccessCriteria `json:"grpc,omitempty" yaml:"grpc,omitempty"`
+}
+
+// AdmissionControlHTTPSuccessCriteria defines HTTP-specific success criteria.
+//
+// +k8s:deepcopy-gen=true
+type AdmissionControlHTTPSuccessCriteria struct {
+	// HTTPSuccessStatus defines the range of HTTP status codes considered successful.
+	HTTPSuccessStatus []AdmissionControlStatusRange `json:"httpSuccessStatus,omitempty" yaml:"httpSuccessStatus,omitempty"`
+}
+
+// AdmissionControlGRPCSuccessCriteria defines GRPC-specific success criteria.
+//
+// +k8s:deepcopy-gen=true
+type AdmissionControlGRPCSuccessCriteria struct {
+	// GRPCSuccessStatus defines the range of GRPC status codes considered successful.
+	GRPCSuccessStatus []AdmissionControlStatusRange `json:"grpcSuccessStatus,omitempty" yaml:"grpcSuccessStatus,omitempty"`
+}
+
+// AdmissionControlStatusRange defines a range of status codes.
+//
+// +k8s:deepcopy-gen=true
+type AdmissionControlStatusRange struct {
+	// Start defines the start of the status code range (inclusive).
+	Start int32 `json:"start" yaml:"start"`
+	// End defines the end of the status code range (inclusive).
+	End int32 `json:"end" yaml:"end"`
 }
 
 func (b *TrafficFeatures) Validate() error {
