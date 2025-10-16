@@ -13,6 +13,7 @@ import gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 // +kubebuilder:validation:XValidation:rule="self.type == 'ConsistentHash' ? has(self.consistentHash) : !has(self.consistentHash)",message="If LoadBalancer type is consistentHash, consistentHash field needs to be set."
 // +kubebuilder:validation:XValidation:rule="self.type in ['Random', 'ConsistentHash'] ? !has(self.slowStart) : true ",message="Currently SlowStart is only supported for RoundRobin and LeastRequest load balancers."
 // +kubebuilder:validation:XValidation:rule="self.type == 'ConsistentHash' ? !has(self.zoneAware) : true ",message="Currently ZoneAware is only supported for LeastRequest, Random, and RoundRobin load balancers."
+// +kubebuilder:validation:XValidation:rule="has(self.zoneAware) ? !(has(self.zoneAware.preferLocal) && has(self.zoneAware.weightedZones)) : true",message="ZoneAware PreferLocal and WeightedZones cannot be specified together."
 type LoadBalancer struct {
 	// Type decides the type of Load Balancer policy.
 	// Valid LoadBalancerType values are
@@ -184,6 +185,13 @@ type ZoneAware struct {
 	//
 	// +optional
 	PreferLocal *PreferLocalZone `json:"preferLocal,omitempty"`
+
+	// WeightedZones configures weight-based traffic distribution across locality zones.
+	// Traffic is distributed proportionally based on the sum of all zone weights.
+	//
+	// +optional
+	// +notImplementedHide
+	WeightedZones []WeightedZoneConfig `json:"weightedZones,omitempty"`
 }
 
 // PreferLocalZone configures zone-aware routing to prefer sending traffic to the local locality zone.
@@ -215,6 +223,18 @@ type ForceLocalZone struct {
 	//
 	// +optional
 	MinEndpointsInZoneThreshold *uint32 `json:"minEndpointsInZoneThreshold,omitempty"`
+}
+
+// WeightedZoneConfig defines the weight for a specific locality zone.
+type WeightedZoneConfig struct {
+	// Zone specifies the zone this weight applies to.
+	// Empty string means apply to all zones within the region.
+	Zone string `json:"zone,omitempty"`
+
+	// Weight defines the weight for this locality.
+	// Higher values receive more traffic. The actual traffic distribution
+	// is proportional to this value relative to other localities.
+	Weight uint32 `json:"weight"`
 }
 
 // EndpointOverride defines the configuration for endpoint override.

@@ -5719,6 +5719,21 @@ _Appears in:_
 | `hostKeys` | _string array_ |  false  |  | HostKeys is a list of keys for environment variables from the host envoy process<br />that should be passed into the Wasm VM. This is useful for passing secrets to to Wasm extensions. |
 
 
+#### WeightedZoneConfig
+
+
+
+WeightedZoneConfig defines the weight for a specific locality zone.
+
+_Appears in:_
+- [ZoneAware](#zoneaware)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `zone` | _string_ |  true  |  | Zone specifies the zone this weight applies to.<br />Empty string means apply to all zones within the region. |
+| `weight` | _integer_ |  true  |  | Weight defines the weight for this locality.<br />Higher values receive more traffic. The actual traffic distribution<br />is proportional to this value relative to other localities. |
+
+
 #### WithUnderscoresAction
 
 _Underlying type:_ _string_
