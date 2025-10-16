@@ -76,10 +76,10 @@ http:
               timeout: 3s
             retryOn:
               triggers:
-                - 5xx
-                - deadline-exceeded
-                - internal
-                - unavailable
+              - 5xx
+              - deadline-exceeded
+              - internal
+              - unavailable
           backendConnection:
             bufferLimit: 20971520
           circuitBreaker:

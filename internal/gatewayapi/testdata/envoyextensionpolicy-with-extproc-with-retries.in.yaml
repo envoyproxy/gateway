@@ -216,10 +216,10 @@ envoyExtensionPolicies:
           numRetries: 2
           retryOn:
             triggers:
-              - 5xx
-              - unavailable
-              - internal
-              - deadline-exceeded
+            - 5xx
+            - unavailable
+            - internal
+            - deadline-exceeded
           perRetry:
             timeout: "3s"
             backOff:
