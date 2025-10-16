@@ -194,3 +194,100 @@ func TestBuildHTTPProtocolUpgradeConfig(t *testing.T) {
 		})
 	}
 }
+
+func TestMergeBackendTrafficPolicyCompression(t *testing.T) {
+	tests := []struct {
+		name        string
+		routePolicy *egv1a1.BackendTrafficPolicy
+		gwPolicy    *egv1a1.BackendTrafficPolicy
+		expected    *egv1a1.BackendTrafficPolicy
+		expectError bool
+	}{
+		{
+			name: "gateway has compression, route has empty array - should replace with empty array",
+			routePolicy: &egv1a1.BackendTrafficPolicy{
+				Spec: egv1a1.BackendTrafficPolicySpec{
+					Compression: []*egv1a1.Compression{}, // Empty array
+					MergeType:   func() *egv1a1.MergeType { mt := egv1a1.StrategicMerge; return &mt }(),
+				},
+			},
+			gwPolicy: &egv1a1.BackendTrafficPolicy{
+				Spec: egv1a1.BackendTrafficPolicySpec{
+					Compression: []*egv1a1.Compression{
+						{Type: egv1a1.GzipCompressorType},
+					},
+				},
+			},
+			expected: &egv1a1.BackendTrafficPolicy{
+				Spec: egv1a1.BackendTrafficPolicySpec{
+					Compression: []*egv1a1.Compression{}, // Should be empty array
+					MergeType:   func() *egv1a1.MergeType { mt := egv1a1.StrategicMerge; return &mt }(),
+				},
+			},
+		},
+		{
+			name: "gateway has compression, route has different compression - should replace with route compression",
+			routePolicy: &egv1a1.BackendTrafficPolicy{
+				Spec: egv1a1.BackendTrafficPolicySpec{
+					Compression: []*egv1a1.Compression{
+						{Type: egv1a1.BrotliCompressorType},
+					},
+					MergeType: func() *egv1a1.MergeType { mt := egv1a1.StrategicMerge; return &mt }(),
+				},
+			},
+			gwPolicy: &egv1a1.BackendTrafficPolicy{
+				Spec: egv1a1.BackendTrafficPolicySpec{
+					Compression: []*egv1a1.Compression{
+						{Type: egv1a1.GzipCompressorType},
+					},
+				},
+			},
+			expected: &egv1a1.BackendTrafficPolicy{
+				Spec: egv1a1.BackendTrafficPolicySpec{
+					Compression: []*egv1a1.Compression{
+						{Type: egv1a1.BrotliCompressorType},
+					},
+					MergeType: func() *egv1a1.MergeType { mt := egv1a1.StrategicMerge; return &mt }(),
+				},
+			},
+		},
+		{
+			name: "gateway has compression, route has no mergeType - should return route policy as-is",
+			routePolicy: &egv1a1.BackendTrafficPolicy{
+				Spec: egv1a1.BackendTrafficPolicySpec{
+					Compression: []*egv1a1.Compression{
+						{Type: egv1a1.BrotliCompressorType},
+					},
+				},
+			},
+			gwPolicy: &egv1a1.BackendTrafficPolicy{
+				Spec: egv1a1.BackendTrafficPolicySpec{
+					Compression: []*egv1a1.Compression{
+						{Type: egv1a1.GzipCompressorType},
+					},
+				},
+			},
+			expected: &egv1a1.BackendTrafficPolicy{
+				Spec: egv1a1.BackendTrafficPolicySpec{
+					Compression: []*egv1a1.Compression{
+						{Type: egv1a1.BrotliCompressorType},
+					},
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := mergeBackendTrafficPolicy(tt.routePolicy, tt.gwPolicy)
+
+			if tt.expectError {
+				require.Error(t, err)
+				return
+			}
+
+			require.NoError(t, err)
+			require.Equal(t, tt.expected.Spec.Compression, result.Spec.Compression, "Compression field should match expected")
+		})
+	}
+}
