@@ -313,7 +313,7 @@ kubectl delete httproute/myapp
 
 ## Next Steps
 
-Checkout the [Developer Guide](../../../../contributions/develop) to get involved in the project.
+Checkout the [Developer Guide](../../../contributions/develop) to get involved in the project.
 
 [oidc]: https://openid.net/connect/
 [google-oidc]: https://developers.google.com/identity/protocols/oauth2/openid-connect
