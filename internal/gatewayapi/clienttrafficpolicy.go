@@ -482,11 +482,19 @@ func (t *Translator) translateClientTrafficPolicyForListener(policy *egv1a1.Clie
 
 		// Early return if got any errors
 		if errs != nil {
+			routesWithDirectResponse := sets.New[string]()
 			for _, route := range httpIR.Routes {
 				// Return a 500 direct response
 				route.DirectResponse = &ir.CustomResponse{
 					StatusCode: ptr.To(uint32(500)),
 				}
+				routesWithDirectResponse.Insert(route.Name)
+			}
+			if len(httpIR.Routes) > 0 {
+				t.Logger.Error(errs, "returning 500 direct response due to errors in ClientTrafficPolicy",
+					"policy", utils.NamespacedName(policy),
+					"routes", sets.List(routesWithDirectResponse),
+				)
 			}
 			return errs
 		}

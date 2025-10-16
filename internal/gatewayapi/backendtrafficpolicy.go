@@ -420,7 +420,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(
 			// Skip if not the gateway wanted
 			continue
 		}
-		applyTrafficFeatureToRoute(route, tf, errs, policy, x)
+		t.applyTrafficFeatureToRoute(route, tf, errs, policy, x)
 	}
 
 	return errs
@@ -481,12 +481,12 @@ func (t *Translator) translateBackendTrafficPolicyForRouteWithMerge(
 		// should not happen.
 		return nil
 	}
-	applyTrafficFeatureToRoute(route, tf, errs, mergedPolicy, x)
+	t.applyTrafficFeatureToRoute(route, tf, errs, mergedPolicy, x)
 
 	return nil
 }
 
-func applyTrafficFeatureToRoute(route RouteContext,
+func (t *Translator) applyTrafficFeatureToRoute(route RouteContext,
 	tf *ir.TrafficFeatures, errs error,
 	policy *egv1a1.BackendTrafficPolicy, x *ir.Xds,
 ) {
@@ -516,6 +516,7 @@ func applyTrafficFeatureToRoute(route RouteContext,
 		}
 	}
 
+	routesWithDirectResponse := sets.New[string]()
 	for _, http := range x.HTTP {
 		for _, r := range http.Routes {
 			// Apply if there is a match
@@ -525,6 +526,7 @@ func applyTrafficFeatureToRoute(route RouteContext,
 					r.DirectResponse = &ir.CustomResponse{
 						StatusCode: ptr.To(uint32(500)),
 					}
+					routesWithDirectResponse.Insert(r.Name)
 					continue
 				}
 
@@ -542,6 +544,11 @@ func applyTrafficFeatureToRoute(route RouteContext,
 				}
 			}
 		}
+	}
+	if len(routesWithDirectResponse) > 0 {
+		t.Logger.Error(errs, "returning 500 direct response due to errors in BackendTrafficPolicy",
+			"policy", utils.NamespacedName(policy),
+			"routes", sets.List(routesWithDirectResponse))
 	}
 }
 
@@ -718,6 +725,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 
 		// A Policy targeting the most specific scope(xRoute) wins over a policy
 		// targeting a lesser specific scope(Gateway).
+		routesWithDirectResponse := sets.New[string]()
 		for _, r := range http.Routes {
 			// If any of the features are already set, it means that a more specific
 			// policy(targeting xRoute) has already set it, so we skip it.
@@ -730,6 +738,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 				r.DirectResponse = &ir.CustomResponse{
 					StatusCode: ptr.To(uint32(500)),
 				}
+				routesWithDirectResponse.Insert(r.Name)
 				continue
 			}
 
@@ -745,6 +754,11 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 			if policy.Spec.UseClientProtocol != nil {
 				setIfNil(&r.UseClientProtocol, policy.Spec.UseClientProtocol)
 			}
+		}
+		if len(routesWithDirectResponse) > 0 {
+			t.Logger.Error(errs, "returning 500 direct response due to errors in BackendTrafficPolicy",
+				"policy", utils.NamespacedName(policy),
+				"routes", sets.List(routesWithDirectResponse))
 		}
 	}
 

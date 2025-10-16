@@ -491,6 +491,7 @@ func (t *Translator) translateEnvoyExtensionPolicyForRoute(
 		for _, listener := range parentRefCtx.listeners {
 			irListener := xdsIR[irKey].GetHTTPListener(irListenerName(listener))
 			if irListener != nil {
+				routesWithDirectResponse := sets.New[string]()
 				for _, r := range irListener.Routes {
 					// If specified the sectionName must match route rule from ir route metadata.
 					if target.SectionName != nil && string(*target.SectionName) != r.Metadata.SectionName {
@@ -516,6 +517,7 @@ func (t *Translator) translateEnvoyExtensionPolicyForRoute(
 								r.DirectResponse = &ir.CustomResponse{
 									StatusCode: ptr.To(uint32(500)),
 								}
+								routesWithDirectResponse.Insert(r.Name)
 							}
 							continue
 						}
@@ -525,6 +527,11 @@ func (t *Translator) translateEnvoyExtensionPolicyForRoute(
 							Luas:     luas,
 						}
 					}
+				}
+				if len(routesWithDirectResponse) > 0 {
+					t.Logger.Error(errs, "returning 500 direct response due to errors in EnvoyExtensionPolicy",
+						"policy", fmt.Sprintf("%s/%s", policy.Namespace, policy.Name),
+						"routes", sets.List(routesWithDirectResponse))
 				}
 			}
 		}
@@ -580,6 +587,7 @@ func (t *Translator) translateEnvoyExtensionPolicyForGateway(
 
 		// A Policy targeting the specific scope(xRoute rule, xRoute, Gateway listener) wins over a policy
 		// targeting a lesser specific scope(Gateway).
+		routesWithDirectResponse := sets.New[string]()
 		for _, r := range http.Routes {
 			// if already set - there's a specific level policy, so skip
 			if r.EnvoyExtensions != nil {
@@ -598,6 +606,7 @@ func (t *Translator) translateEnvoyExtensionPolicyForGateway(
 					r.DirectResponse = &ir.CustomResponse{
 						StatusCode: ptr.To(uint32(500)),
 					}
+					routesWithDirectResponse.Insert(r.Name)
 				}
 				continue
 			}
@@ -607,6 +616,11 @@ func (t *Translator) translateEnvoyExtensionPolicyForGateway(
 				Wasms:    wasms,
 				Luas:     luas,
 			}
+		}
+		if len(routesWithDirectResponse) > 0 {
+			t.Logger.Error(errs, "returning 500 direct response due to errors in EnvoyExtensionPolicy",
+				"policy", fmt.Sprintf("%s/%s", policy.Namespace, policy.Name),
+				"routes", sets.List(routesWithDirectResponse))
 		}
 	}
 
