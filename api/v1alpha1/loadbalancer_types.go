@@ -85,6 +85,7 @@ type ConsistentHash struct {
 	// Header configures the header hash policy when the consistent hash type is set to Header.
 	//
 	// Deprecated: use Headers instead
+	// +optional
 	Header *Header `json:"header,omitempty"`
 
 	// Headers configures the header hash policy for each header, when the consistent hash type is set to Headers.
