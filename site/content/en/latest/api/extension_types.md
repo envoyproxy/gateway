@@ -3568,6 +3568,7 @@ _Appears in:_
 | `consecutive5XxErrors` | _integer_ |  false  | 5 | Consecutive5xxErrors sets the number of consecutive 5xx errors triggering ejection. |
 | `baseEjectionTime` | _[Duration](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.Duration)_ |  false  | 30s | BaseEjectionTime defines the base duration for which a host will be ejected on consecutive failures. |
 | `maxEjectionPercent` | _integer_ |  false  | 10 | MaxEjectionPercent sets the maximum percentage of hosts in a cluster that can be ejected. |
+| `failurePercentageThreshold` | _integer_ |  false  |  | FailurePercentageThreshold sets the failure percentage threshold for outlier detection.<br />If the failure percentage of a given host is greater than or equal to this value, it will be ejected.<br />Defaults to 85. |
 
 
 #### PathEscapedSlashAction
@@ -3664,6 +3665,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `force` | _[ForceLocalZone](#forcelocalzone)_ |  false  |  | ForceLocalZone defines override configuration for forcing all traffic to stay within the local zone instead of the default behavior<br />which maintains equal distribution among upstream endpoints while sending as much traffic as possible locally. |
 | `minEndpointsThreshold` | _integer_ |  false  |  | MinEndpointsThreshold is the minimum number of total upstream endpoints across all zones required to enable zone-aware routing. |
+| `percentageEnabled` | _integer_ |  false  |  | Configures percentage of requests that will be considered for zone aware routing if zone aware routing is configured. If not specified, Envoy defaults to 100%. |
 
 
 #### Principal
