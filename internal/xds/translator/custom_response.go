@@ -421,11 +421,18 @@ func (c *customResponse) buildRedirectAction(r ir.ResponseOverrideRule) (*anypb.
 
 func (c *customResponse) buildResponseAction(r ir.ResponseOverrideRule) (*anypb.Any, error) {
 	response := &policyv3.LocalResponsePolicy{}
-
+	fmt.Println("custom response rule:", r.Response)
 	if r.Response.Body != nil && *r.Response.Body != "" {
+		// Serve text data
 		response.BodyFormat = &corev3.SubstitutionFormatString{
 			Format: &corev3.SubstitutionFormatString_TextFormat{
 				TextFormat: *r.Response.Body,
+			},
+		}
+	} else if r.Response.BodyBytes != nil {
+		response.Body = &corev3.DataSource{
+			Specifier: &corev3.DataSource_InlineBytes{
+				InlineBytes: r.Response.BodyBytes,
 			},
 		}
 	}
