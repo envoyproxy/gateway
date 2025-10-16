@@ -11,7 +11,6 @@ import (
 	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
-	certificatesv1b1 "k8s.io/api/certificates/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -131,9 +130,6 @@ func New(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server, resources
 				UnsafeDisableDeepCopy: ptr.To(true),
 			},
 			&corev1.Service{}: {
-				UnsafeDisableDeepCopy: ptr.To(true),
-			},
-			&certificatesv1b1.ClusterTrustBundle{}: {
 				UnsafeDisableDeepCopy: ptr.To(true),
 			},
 			&mcsapiv1a1.ServiceImport{}: {
