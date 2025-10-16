@@ -663,7 +663,7 @@ func (in *ConsistentHash) DeepCopyInto(out *ConsistentHash) {
 	}
 	if in.Header != nil {
 		in, out := &in.Header, &out.Header
-		*out = new(Header)
+		*out = new(v1alpha1.Header)
 		**out = **in
 	}
 	if in.Headers != nil {
