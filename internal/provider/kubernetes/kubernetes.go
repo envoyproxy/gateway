@@ -27,7 +27,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
-	mcsapiv1a1 "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway"
@@ -130,9 +129,6 @@ func New(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server, resources
 				UnsafeDisableDeepCopy: ptr.To(true),
 			},
 			&corev1.Service{}: {
-				UnsafeDisableDeepCopy: ptr.To(true),
-			},
-			&mcsapiv1a1.ServiceImport{}: {
 				UnsafeDisableDeepCopy: ptr.To(true),
 			},
 			&discoveryv1.EndpointSlice{}: {
