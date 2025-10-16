@@ -837,12 +837,49 @@ func (t *Translator) processExtensionRefHTTPFilter(extFilter *gwapiv1.LocalObjec
 
 				if hrf.Spec.DirectResponse != nil {
 					dr := &ir.CustomResponse{}
-					if hrf.Spec.DirectResponse.Body != nil {
-						var err error
-						if dr.Body, err = getCustomResponseBody(hrf.Spec.DirectResponse.Body, resources, filterNs); err != nil {
+					if hrf.Spec.DirectResponse.Body != nil && hrf.Spec.DirectResponse.Body.ValueRef != nil {
+						cm := resources.GetConfigMap(filterNs, string(hrf.Spec.DirectResponse.Body.ValueRef.Name))
+						if cm == nil {
+							t.processInvalidHTTPFilter(string(extFilter.Kind), filterContext, fmt.Errorf("can't find the referenced configmap %s", hrf.Spec.DirectResponse.Body.ValueRef.Name))
+							return
+						}
+
+						if len(cm.Data) > 0 && len(cm.BinaryData) > 0 {
+							t.processInvalidHTTPFilter(string(extFilter.Kind), filterContext, fmt.Errorf("the referenced configmap %s contains both data and binaryData", hrf.Spec.DirectResponse.Body.ValueRef.Name))
+							return
+						}
+
+						// Prefer binaryData if present
+						if len(cm.BinaryData) > 0 {
+							for _, bin := range cm.BinaryData {
+								dr.BodyBytes = bin
+								break
+							}
+						}
+
+						// Otherwise, use text from data
+						var bodyText string
+						if s, ok := cm.Data["response.body"]; ok {
+							bodyText = s
+						} else {
+							for _, v := range cm.Data {
+								bodyText = v
+								break
+							}
+						}
+						if err := checkResponseBodySize(&bodyText); err != nil {
 							t.processInvalidHTTPFilter(string(extFilter.Kind), filterContext, err)
 							return
 						}
+						dr.Body = &bodyText
+					}
+					if hrf.Spec.DirectResponse.Body != nil && hrf.Spec.DirectResponse.Body.Inline != nil {
+						bodyText := *hrf.Spec.DirectResponse.Body.Inline
+						if err := checkResponseBodySize(&bodyText); err != nil {
+							t.processInvalidHTTPFilter(string(extFilter.Kind), filterContext, err)
+							return
+						}
+						dr.Body = &bodyText
 					}
 
 					if hrf.Spec.DirectResponse.StatusCode != nil {

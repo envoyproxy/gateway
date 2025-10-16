@@ -787,6 +787,11 @@ func (in *CustomResponse) DeepCopyInto(out *CustomResponse) {
 		*out = new(string)
 		**out = **in
 	}
+	if in.BodyBytes != nil {
+		in, out := &in.BodyBytes, &out.BodyBytes
+		*out = make([]byte, len(*in))
+		copy(*out, *in)
+	}
 	if in.StatusCode != nil {
 		in, out := &in.StatusCode, &out.StatusCode
 		*out = new(uint32)

@@ -6,7 +6,6 @@
 package gatewayapi
 
 import (
-	"encoding/base64"
 	"errors"
 	"fmt"
 	"math"
@@ -1102,10 +1101,46 @@ func buildResponseOverride(policy *egv1a1.BackendTrafficPolicy, resources *resou
 				response.StatusCode = ptr.To(uint32(*ro.Response.StatusCode))
 			}
 
-			var err error
-			response.Body, err = getCustomResponseBody(ro.Response.Body, resources, policy.Namespace)
-			if err != nil {
-				return nil, err
+			if ro.Response.Body != nil && ro.Response.Body.Type != nil && *ro.Response.Body.Type == egv1a1.ResponseValueTypeValueRef {
+				cm := resources.GetConfigMap(policy.Namespace, string(ro.Response.Body.ValueRef.Name))
+				if cm == nil {
+					return nil, fmt.Errorf("can't find the referenced configmap %s", ro.Response.Body.ValueRef.Name)
+				}
+
+				if len(cm.Data) > 0 && len(cm.BinaryData) > 0 {
+					return nil, fmt.Errorf("the referenced configmap %s contains both data and binaryData", ro.Response.Body.ValueRef.Name)
+				}
+
+				if s, ok := cm.Data["response.body"]; ok {
+					if err := checkResponseBodySize(&s); err != nil {
+						return nil, err
+					}
+					response.Body = &s
+				}
+
+				for _, v := range cm.Data {
+					if err := checkResponseBodySize(&v); err != nil {
+						return nil, err
+					}
+					response.Body = &v
+				}
+
+				for _, bin := range cm.BinaryData {
+					sbin := string(bin)
+					if err := checkResponseBodySize(&sbin); err != nil {
+						return nil, err
+					}
+					response.BodyBytes = bin
+				}
+
+				return nil, fmt.Errorf("can't find the key response.body in the referenced configmap %s", ro.Response.Body.ValueRef.Name)
+			}
+
+			if ro.Response.Body != nil && ro.Response.Body.Inline != nil {
+				if err := checkResponseBodySize(ro.Response.Body.Inline); err != nil {
+					return nil, err
+				}
+				response.Body = ro.Response.Body.Inline
 			}
 
 			rhm := ro.Response.Header
@@ -1143,69 +1178,12 @@ func checkResponseBodySize(b *string) error {
 	// Make this configurable in the future
 	// https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route.proto.html#max_direct_response_body_size_bytes
 	maxDirectResponseSize := 4096
-	data := *b
-	length := len(data)
-
-	if decoded, err := base64.StdEncoding.DecodeString(data); err == nil {
-		length = len(decoded)
+	lenB := len(*b)
+	if lenB > maxDirectResponseSize {
+		return fmt.Errorf("response.body size %d greater than the max size %d", lenB, maxDirectResponseSize)
 	}
 
-	if length > maxDirectResponseSize {
-		return fmt.Errorf("response.body size %d greater than the max size %d", length, maxDirectResponseSize)
-	}
 	return nil
-}
-
-func getCustomResponseBody(
-	body *egv1a1.CustomResponseBody,
-	resources *resource.Resources,
-	policyNs string,
-) (*string, error) {
-	if body == nil {
-		return nil, nil
-	}
-	if body.Type != nil && *body.Type == egv1a1.ResponseValueTypeValueRef {
-		cm := resources.GetConfigMap(policyNs, string(body.ValueRef.Name))
-		if cm == nil {
-			return nil, fmt.Errorf("can't find the referenced configmap %s", body.ValueRef.Name)
-		}
-
-		if len(cm.Data) > 0 && len(cm.BinaryData) > 0 {
-			return nil, fmt.Errorf("the referenced configmap %s contains both data and binaryData", body.ValueRef.Name)
-		}
-
-		if s, ok := cm.Data["response.body"]; ok {
-			if err := checkResponseBodySize(&s); err != nil {
-				return nil, err
-			}
-			return &s, nil
-		}
-
-		for _, v := range cm.Data {
-			if err := checkResponseBodySize(&v); err != nil {
-				return nil, err
-			}
-			return &v, nil
-		}
-
-		for _, bin := range cm.BinaryData {
-			encoded := base64.StdEncoding.EncodeToString(bin)
-			if err := checkResponseBodySize(&encoded); err != nil {
-				return nil, err
-			}
-			return &encoded, nil
-		}
-
-		return nil, fmt.Errorf("can't find the key response.body in the referenced configmap %s", body.ValueRef.Name)
-	}
-
-	if body.Inline != nil {
-		if err := checkResponseBodySize(body.Inline); err != nil {
-			return nil, err
-		}
-		return body.Inline, nil
-	}
-	return nil, nil
 }
 
 func defaultResponseOverrideRuleName(policy *egv1a1.BackendTrafficPolicy, index int) string {

@@ -45,9 +45,10 @@ backendTrafficPolicies:
         sectionName: http
       conditions:
       - lastTransitionTime: null
-        message: Policy has been accepted.
-        reason: Accepted
-        status: "True"
+        message: 'ResponseOverride: can''t find the key response.body in the referenced
+          configmap response-override-config.'
+        reason: Invalid
+        status: "False"
         type: Accepted
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -172,9 +173,10 @@ backendTrafficPolicies:
         namespace: default
       conditions:
       - lastTransitionTime: null
-        message: Policy has been accepted.
-        reason: Accepted
-        status: "True"
+        message: 'ResponseOverride: can''t find the key response.body in the referenced
+          configmap response-override-config.'
+        reason: Invalid
+        status: "False"
         type: Accepted
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 gateways:
@@ -499,6 +501,8 @@ xdsIR:
             name: grpcroute/default/grpcroute-1/rule/0/backend/0
             protocol: GRPC
             weight: 1
+        directResponse:
+          statusCode: 500
         hostname: '*'
         isHTTP2: true
         metadata:
@@ -506,39 +510,6 @@ xdsIR:
           name: grpcroute-1
           namespace: default
         name: grpcroute/default/grpcroute-1/rule/0/match/-1/*
-        traffic:
-          responseOverride:
-            name: backendtrafficpolicy/default/policy-for-gateway
-            rules:
-            - match:
-                statusCodes:
-                - value: 404
-              name: backendtrafficpolicy/default/policy-for-gateway/responseoverride/rule/0
-              response:
-                addResponseHeaders:
-                - append: true
-                  name: X-Add-Header
-                  value:
-                  - added-404
-                - append: false
-                  name: X-Set-Header
-                  value:
-                  - set-404
-                body: gateway-1 Not Found
-                contentType: text/plain
-            - match:
-                statusCodes:
-                - value: 500
-                - range:
-                    end: 511
-                    start: 501
-              name: backendtrafficpolicy/default/policy-for-gateway/responseoverride/rule/1
-              response:
-                body: |
-                  {
-                    "error": "Internal Server Error"
-                  }
-                contentType: application/json
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
@@ -602,6 +573,8 @@ xdsIR:
             name: httproute/default/httproute-1/rule/0/backend/0
             protocol: HTTP
             weight: 1
+        directResponse:
+          statusCode: 500
         hostname: foo.envoyproxy.io
         isHTTP2: false
         metadata:
@@ -613,30 +586,6 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
-        traffic:
-          responseOverride:
-            name: backendtrafficpolicy/default/policy-for-route-1
-            rules:
-            - match:
-                statusCodes:
-                - value: 404
-              name: backendtrafficpolicy/default/policy-for-route-1/responseoverride/rule/0
-              response:
-                body: httproute-1 Not Found
-                contentType: text/plain
-            - match:
-                statusCodes:
-                - value: 500
-                - range:
-                    end: 511
-                    start: 501
-              name: backendtrafficpolicy/default/policy-for-route-1/responseoverride/rule/1
-              response:
-                body: |
-                  {
-                    "error": "Internal Server Error"
-                  }
-                contentType: application/json
       - destination:
           metadata:
             kind: HTTPRoute

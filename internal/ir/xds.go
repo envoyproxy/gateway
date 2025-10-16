@@ -627,6 +627,9 @@ type CustomResponse struct {
 	// Body of the Custom Response
 	Body *string `json:"body,omitempty"`
 
+	// BodyBytes is an alternative way to specify the body of the Custom Response as a byte array.
+	BodyBytes []byte `json:"bodyBytes,omitempty"`
+
 	// StatusCode will be used for the response's status code.
 	StatusCode *uint32 `json:"statusCode,omitempty"`
 
