@@ -1317,17 +1317,6 @@ func TestValidateLoadBalancer(t *testing.T) {
 			want: nil,
 		},
 		{
-			name: "consistent hash with header hash policy",
-			input: LoadBalancer{
-				ConsistentHash: &ConsistentHash{
-					Header: &Header{
-						Name: "name",
-					},
-				},
-			},
-			want: nil,
-		},
-		{
 			name: "least request and random set",
 			input: LoadBalancer{
 				Random:       &Random{},
