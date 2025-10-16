@@ -14,11 +14,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func CmpResources(t *testing.T, x, y interface{}) {
+func CmpResources(t *testing.T, x, y any, cmpOpts ...cmp.Option) {
 	opts := []cmp.Option{
 		cmpopts.IgnoreFields(metav1.ObjectMeta{}, "ResourceVersion"),
 		cmpopts.IgnoreFields(metav1.TypeMeta{}, "Kind", "APIVersion"),
 		cmpopts.EquateEmpty(),
 	}
+	opts = append(opts, cmpOpts...)
+
 	require.Empty(t, cmp.Diff(x, y, opts...))
 }
