@@ -620,6 +620,15 @@ func buildHashPolicy(httpRoute *ir.HTTPRoute) []*routev3.RouteAction_HashPolicy 
 	ch := httpRoute.Traffic.LoadBalancer.ConsistentHash
 
 	switch {
+	case ch.Header != nil:
+		hashPolicy := &routev3.RouteAction_HashPolicy{
+			PolicySpecifier: &routev3.RouteAction_HashPolicy_Header_{
+				Header: &routev3.RouteAction_HashPolicy_Header{
+					HeaderName: ch.Header.Name,
+				},
+			},
+		}
+		return []*routev3.RouteAction_HashPolicy{hashPolicy}
 	case ch.Headers != nil:
 		hps := make([]*routev3.RouteAction_HashPolicy, 0, len(ch.Headers))
 		for _, h := range ch.Headers {
