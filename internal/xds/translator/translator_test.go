@@ -613,7 +613,7 @@ func requireRouteRateLimitsToYAMLString(t *testing.T, rlOutputs []rateLimitOutpu
 		return ""
 	}
 
-	var results []string
+	results := make([]string, 0, len(rlOutputs))
 	for _, output := range rlOutputs {
 		jsonBytes, err := json.Marshal(output)
 		require.NoError(t, err)
