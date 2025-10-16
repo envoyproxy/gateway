@@ -320,7 +320,6 @@ xdsIR:
           value:
           - image/png
         directResponse:
-          body: ""
           bodyBytes: iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==
           statusCode: 502
         hostname: '*.envoyproxy.io'

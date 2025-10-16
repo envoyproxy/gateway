@@ -23,7 +23,7 @@ new features: |
   Added support for OCSP stapling in the listener TLS certificates.
   Added support for returning 503 responses when no valid backend endpoints exist.
   Added support for CSRFTokenTTL in OIDC authn to configure the lifetime of the CSRF token used during the OAuth2 authorization code flow.
-  Added support for binaryData in ConfigMap referenced by HTTPRouteFilter for custom response.
+  Added support for binaryData in ConfigMap referenced by HTTPRouteFilter for direct response.
 
 
 bug fixes: |
