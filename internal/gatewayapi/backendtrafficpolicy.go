@@ -1111,29 +1111,35 @@ func buildResponseOverride(policy *egv1a1.BackendTrafficPolicy, resources *resou
 					return nil, fmt.Errorf("the referenced configmap %s contains both data and binaryData", ro.Response.Body.ValueRef.Name)
 				}
 
-				if s, ok := cm.Data["response.body"]; ok {
-					if err := checkResponseBodySize(&s); err != nil {
+				b, dataOk := cm.Data["response.body"]
+				switch {
+				case dataOk:
+					if err := checkResponseBodySize(&b); err != nil {
 						return nil, err
 					}
-					response.Body = &s
-				}
+					response.Body = &b
 
-				for _, v := range cm.Data {
-					if err := checkResponseBodySize(&v); err != nil {
+				case len(cm.Data) > 0:
+					for _, value := range cm.Data {
+						b = value
+						break
+					}
+					if err := checkResponseBodySize(&b); err != nil {
 						return nil, err
 					}
-					response.Body = &v
-				}
-
-				for _, bin := range cm.BinaryData {
-					sbin := string(bin)
-					if err := checkResponseBodySize(&sbin); err != nil {
-						return nil, err
+					response.Body = &b
+				case len(cm.BinaryData) > 0:
+					for _, bin := range cm.BinaryData {
+						sbin := string(bin)
+						if err := checkResponseBodySize(&sbin); err != nil {
+							return nil, err
+						}
+						response.BodyBytes = bin
+						break
 					}
-					response.BodyBytes = bin
+				default:
+					return nil, fmt.Errorf("can't find the key response.body in the referenced configmap %s", ro.Response.Body.ValueRef.Name)
 				}
-
-				return nil, fmt.Errorf("can't find the key response.body in the referenced configmap %s", ro.Response.Body.ValueRef.Name)
 			}
 
 			if ro.Response.Body != nil && ro.Response.Body.Inline != nil {

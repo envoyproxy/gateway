@@ -848,31 +848,41 @@ func (t *Translator) processExtensionRefHTTPFilter(extFilter *gwapiv1.LocalObjec
 							t.processInvalidHTTPFilter(string(extFilter.Kind), filterContext, fmt.Errorf("the referenced configmap %s contains both data and binaryData", hrf.Spec.DirectResponse.Body.ValueRef.Name))
 							return
 						}
+						b, dataOk := cm.Data["response.body"]
+						switch {
+						case dataOk:
+							if err := checkResponseBodySize(&b); err != nil {
+								t.processInvalidHTTPFilter(string(extFilter.Kind), filterContext, err)
+								return
+							}
+							dr.Body = &b
 
-						// Prefer binaryData if present
-						if len(cm.BinaryData) > 0 {
+						case len(cm.Data) > 0:
+							for _, value := range cm.Data {
+								b = value
+								break
+							}
+							if err := checkResponseBodySize(&b); err != nil {
+								t.processInvalidHTTPFilter(string(extFilter.Kind), filterContext, err)
+								return
+							}
+							dr.Body = &b
+						case len(cm.BinaryData) > 0:
 							for _, bin := range cm.BinaryData {
+								sbin := string(bin)
+								if err := checkResponseBodySize(&sbin); err != nil {
+									t.processInvalidHTTPFilter(string(extFilter.Kind), filterContext, err)
+									return
+								}
 								dr.BodyBytes = bin
 								break
 							}
-						}
-
-						// Otherwise, use text from data
-						var bodyText string
-						if s, ok := cm.Data["response.body"]; ok {
-							bodyText = s
-						} else {
-							for _, v := range cm.Data {
-								bodyText = v
-								break
-							}
-						}
-						if err := checkResponseBodySize(&bodyText); err != nil {
-							t.processInvalidHTTPFilter(string(extFilter.Kind), filterContext, err)
+						default:
+							t.processInvalidHTTPFilter(string(extFilter.Kind), filterContext, fmt.Errorf("can't find the key response.body in the referenced configmap %s", hrf.Spec.DirectResponse.Body.ValueRef.Name))
 							return
 						}
-						dr.Body = &bodyText
 					}
+
 					if hrf.Spec.DirectResponse.Body != nil && hrf.Spec.DirectResponse.Body.Inline != nil {
 						bodyText := *hrf.Spec.DirectResponse.Body.Inline
 						if err := checkResponseBodySize(&bodyText); err != nil {
