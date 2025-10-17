@@ -134,8 +134,13 @@ test: ## Run all Go test of code sources.
 test: go.test.unit
 
 .PHONY: format
-format: ## Update and check dependences with go mod tidy.
-format: go.mod.lint
+format: ## Update and check dependences with go mod tidy and format YAML files with prettier.
+format: go.mod.lint format.yaml
+
+.PHONY: format.yaml
+format.yaml: $(tools/prettier)
+	@$(LOG_TARGET)
+	$(tools/prettier) --write '**/*.{yaml,yml}'
 
 .PHONY: clean
 clean: ## Remove all files that are created during builds.

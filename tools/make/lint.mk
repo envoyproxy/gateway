@@ -8,7 +8,7 @@ GITHUB_ACTION ?=
 LINT_BUILD_TAGS ?= e2e,celvalidation,conformance,experimental,benchmark,resilience
 
 .PHONY: lint
-lint: ## Run all linter of code sources, including golint, yamllint, whitenoise lint and codespell.
+lint: ## Run all linter of code sources, including golint, whitenoise lint and codespell.
 
 # lint-deps is run separately in CI to separate the tooling install logs from the actual output logs generated
 # by the lint tooling.
@@ -22,12 +22,6 @@ lint.golint:
 	@$(LOG_TARGET)
 	$(GO_TOOL) golangci-lint run $(GOLANGCI_LINT_FLAGS) --build-tags=$(LINT_BUILD_TAGS) --config=tools/linter/golangci-lint/.golangci.yml
 
-.PHONY: lint.yamllint
-lint: lint.yamllint
-lint-deps: $(tools/yamllint)
-lint.yamllint: $(tools/yamllint)
-	@$(LOG_TARGET)
-	$(tools/yamllint) --config-file=tools/linter/yamllint/.yamllint $$(git ls-files :*.yml :*.yaml | xargs -L1 dirname | sort -u)
 
 CODESPELL_FLAGS ?= $(if $(GITHUB_ACTION),--disable-colors)
 .PHONY: lint.codespell
