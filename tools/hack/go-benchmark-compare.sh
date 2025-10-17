@@ -9,7 +9,7 @@ set -euo pipefail
 REGRESSION_THRESHOLD=${REGRESSION_THRESHOLD:-5}
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
-BENCHSTAT=${BENCHSTAT:-go tool -modfile=tools/go.mod benchstat}
+BENCHSTAT=${BENCHSTAT:-go tool -modfile="$REPO_ROOT/tools/go.mod" benchstat}
 
 # Function to display usage
 usage() {
