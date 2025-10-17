@@ -290,7 +290,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 				routesWithDirectResponse.Insert(irRoute.Name)
 			}
 			if len(routesWithDirectResponse) > 0 {
-				t.Logger.Error(processDestinationError, "returning 500 direct response due to errors in processing destinations",
+				t.Logger.Error(processDestinationError, "setting 500 direct response in routes due to errors in processing destinations",
 					"routes", sets.List(routesWithDirectResponse))
 			}
 		// return 503 if endpoints does not exist
@@ -309,7 +309,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 				routesWithDirectResponse.Insert(irRoute.Name)
 			}
 			if len(routesWithDirectResponse) > 0 {
-				t.Logger.Error(errors.New("no ready endpoints"), "returning 503 direct response due to no ready endpoints",
+				t.Logger.Error(errors.New("no ready endpoints"), "setting 503 direct response in routes due to no ready endpoints",
 					"routes", sets.List(routesWithDirectResponse))
 			}
 		// return 500 if the weight of all the valid destination settings(endpoints list is not empty) is 0
@@ -327,7 +327,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 				routesWithDirectResponse.Insert(irRoute.Name)
 			}
 			if len(routesWithDirectResponse) > 0 {
-				t.Logger.Error(errors.New("all valid destinations have 0 weight"), "returning 500 direct response due to all valid destinations having 0 weight",
+				t.Logger.Error(errors.New("all valid destinations have 0 weight"), "setting 500 direct response in routes due to all valid destinations having 0 weight",
 					"routes", sets.List(routesWithDirectResponse))
 			}
 			// A route can only have one destination if this destination is a dynamic resolver, because the behavior of
@@ -352,7 +352,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 				status.RouteReasonInvalidBackendRef,
 			))
 			if len(routesWithDirectResponse) > 0 {
-				t.Logger.Error(errors.New("dynamic resolver with multiple backendRefs"), "returning 500 direct response due to dynamic resolver with multiple backendRefs",
+				t.Logger.Error(errors.New("dynamic resolver with multiple backendRefs"), "setting 500 direct response in routes due to dynamic resolver with multiple backendRefs",
 					"routes", sets.List(routesWithDirectResponse))
 			}
 		default:
@@ -826,7 +826,7 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 				routesWithDirectResponse.Insert(irRoute.Name)
 			}
 			if len(routesWithDirectResponse) > 0 {
-				t.Logger.Error(processDestinationError, "returning 500 direct response due to errors in processing destinations",
+				t.Logger.Error(processDestinationError, "setting 500 direct response in routes due to errors in processing destinations",
 					"routes", sets.List(routesWithDirectResponse))
 			}
 		// return 503 if endpoints does not exist
@@ -845,7 +845,7 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 				routesWithDirectResponse.Insert(irRoute.Name)
 			}
 			if len(routesWithDirectResponse) > 0 {
-				t.Logger.Error(errors.New("no ready endpoints"), "returning 503 direct response due to no ready endpoints",
+				t.Logger.Error(errors.New("no ready endpoints"), "setting 503 direct response in routes due to no ready endpoints",
 					"routes", sets.List(routesWithDirectResponse))
 			}
 		// return 500 if the weight of all the valid destination settings(endpoints list is not empty) is 0
@@ -863,7 +863,7 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 				routesWithDirectResponse.Insert(irRoute.Name)
 			}
 			if len(routesWithDirectResponse) > 0 {
-				t.Logger.Error(errors.New("all valid destinations have 0 weight"), "returning 500 direct response due to all valid destinations having 0 weight",
+				t.Logger.Error(errors.New("all valid destinations have 0 weight"), "setting 500 direct response in routes due to all valid destinations having 0 weight",
 					"routes", sets.List(routesWithDirectResponse))
 			}
 		default:
