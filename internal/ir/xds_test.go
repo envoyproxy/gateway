@@ -1320,7 +1320,7 @@ func TestValidateLoadBalancer(t *testing.T) {
 			name: "consistent hash with header hash policy",
 			input: LoadBalancer{
 				ConsistentHash: &ConsistentHash{
-					Header: &Header{
+					Header: &egv1a1.Header{
 						Name: "name",
 					},
 				},
