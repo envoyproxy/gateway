@@ -222,7 +222,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 		// process each backendRef, and calculate the destination settings for this rule
 		destName := irRouteDestinationName(httpRoute, ruleIdx)
 		allDs := make([]*ir.DestinationSetting, 0, len(rule.BackendRefs))
-		failedProcessDestination := false
+		var processDestinationError error
 		failedNoReadyEndpoints := false
 		hasDynamicResolver := false
 		backendRefNames := make([]string, len(rule.BackendRefs))
@@ -248,7 +248,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 						fmt.Errorf("failed to process route rule %d backendRef %d: %w", ruleIdx, i, err),
 						err.Reason(),
 					))
-					failedProcessDestination = true
+					processDestinationError = err
 				}
 				continue
 			}
@@ -277,7 +277,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 		switch {
 		// return 500 if any destination setting is invalid
 		// the error is already added to the error list when processing the destination
-		case failedProcessDestination:
+		case processDestinationError != nil:
 			routesWithDirectResponse := sets.New[string]()
 			for _, irRoute := range ruleRoutes {
 				// If the route already has a direct response or redirect configured, then it was from a filter so skip
@@ -291,8 +291,11 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 				routesWithDirectResponse.Insert(irRoute.Name)
 			}
 			if len(routesWithDirectResponse) > 0 {
-				t.Logger.Info("setting 500 direct response in routes due to errors in processing destinations",
-					"routes", sets.List(routesWithDirectResponse))
+				t.Logger.Info(
+					"setting 500 direct response in routes due to errors in processing destinations",
+					"routes", sets.List(routesWithDirectResponse),
+					"error", err,
+				)
 			}
 		// return 503 if endpoints does not exist
 		// the error is already added to the error list when processing the destination
@@ -767,7 +770,7 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 		// process each backendRef, and calculate the destination settings for this rule
 		destName := irRouteDestinationName(grpcRoute, ruleIdx)
 		allDs := make([]*ir.DestinationSetting, 0, len(rule.BackendRefs))
-		failedProcessDestination := false
+		var processDestinationError error
 		failedNoReadyEndpoints := false
 
 		backendRefNames := make([]string, len(rule.BackendRefs))
@@ -792,7 +795,7 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 						fmt.Errorf("failed to process route rule %d backendRef %d: %w", ruleIdx, i, err),
 						err.Reason(),
 					))
-					failedProcessDestination = true
+					processDestinationError = err
 				}
 				continue
 			}
@@ -813,7 +816,7 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 		switch {
 		// return 500 if any destination setting is invalid
 		// the error is already added to the error list when processing the destination
-		case failedProcessDestination:
+		case processDestinationError != nil:
 			routesWithDirectResponse := sets.New[string]()
 			for _, irRoute := range ruleRoutes {
 				// If the route already has a direct response or redirect configured, then it was from a filter so skip
@@ -828,7 +831,9 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 			}
 			if len(routesWithDirectResponse) > 0 {
 				t.Logger.Info("setting 500 direct response in routes due to errors in processing destinations",
-					"routes", sets.List(routesWithDirectResponse))
+					"routes", sets.List(routesWithDirectResponse),
+					"error", processDestinationError,
+				)
 			}
 		// return 503 if endpoints does not exist
 		// the error is already added to the error list when processing the destination

@@ -11,7 +11,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -1074,7 +1073,7 @@ func (t *Translator) processUnresolvedHTTPFilter(errMsg string, filterContext *H
 	filterContext.DirectResponse = &ir.CustomResponse{
 		StatusCode: ptr.To(uint32(500)),
 	}
-	t.Logger.Error(errors.New(errMsg), "returning 500 response due to unresolved HTTP filter")
+	t.Logger.Info("returning 500 response due to unresolved HTTP filter")
 }
 
 func (t *Translator) processUnsupportedHTTPFilter(filterType string, filterContext *HTTPFiltersContext) {
@@ -1083,7 +1082,7 @@ func (t *Translator) processUnsupportedHTTPFilter(filterType string, filterConte
 	filterContext.DirectResponse = &ir.CustomResponse{
 		StatusCode: ptr.To(uint32(500)),
 	}
-	t.Logger.Error(errors.New(errMsg), "returning 500 response due to unsupported HTTP filter")
+	t.Logger.Info("returning 500 response due to unsupported HTTP filter")
 }
 
 func (t *Translator) processInvalidHTTPFilter(filterType string, filterContext *HTTPFiltersContext, err error) {
@@ -1092,5 +1091,5 @@ func (t *Translator) processInvalidHTTPFilter(filterType string, filterContext *
 	filterContext.DirectResponse = &ir.CustomResponse{
 		StatusCode: ptr.To(uint32(500)),
 	}
-	t.Logger.Error(errors.New(errMsg), "returning 500 response due to invalid HTTP filter")
+	t.Logger.Info("returning 500 response due to invalid HTTP filter")
 }
