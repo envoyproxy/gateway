@@ -625,16 +625,17 @@ type CustomResponse struct {
 	ContentType *string `json:"contentType,omitempty"`
 
 	// Body of the Custom Response
-	Body *string `json:"body,omitempty"`
-
-	// BodyBytes is an alternative way to specify the body of the Custom Response as a byte array.
-	BodyBytes []byte `json:"bodyBytes,omitempty"`
+	Body []byte `json:"body,omitempty"`
 
 	// StatusCode will be used for the response's status code.
 	StatusCode *uint32 `json:"statusCode,omitempty"`
 
 	// AddResponseHeaders defines header/value sets to be added to the headers of response.
 	AddResponseHeaders []AddHeader `json:"addResponseHeaders,omitempty" yaml:"addResponseHeaders,omitempty"`
+}
+
+func (r *CustomResponse) BodyString() string {
+	return string(r.Body)
 }
 
 // Validate the fields within the CustomResponse structure

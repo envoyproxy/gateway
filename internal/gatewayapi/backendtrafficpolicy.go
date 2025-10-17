@@ -1114,27 +1114,27 @@ func buildResponseOverride(policy *egv1a1.BackendTrafficPolicy, resources *resou
 				b, dataOk := cm.Data["response.body"]
 				switch {
 				case dataOk:
-					if err := checkResponseBodySize(&b); err != nil {
+					body := []byte(b)
+					if err := checkResponseBodySize(body); err != nil {
 						return nil, err
 					}
-					response.Body = &b
+					response.Body = body
 
 				case len(cm.Data) > 0:
 					for _, value := range cm.Data {
-						b = value
-						break
-					}
-					if err := checkResponseBodySize(&b); err != nil {
-						return nil, err
-					}
-					response.Body = &b
-				case len(cm.BinaryData) > 0:
-					for _, bin := range cm.BinaryData {
-						sbin := string(bin)
-						if err := checkResponseBodySize(&sbin); err != nil {
+						body := []byte(value)
+						if err := checkResponseBodySize(body); err != nil {
 							return nil, err
 						}
-						response.BodyBytes = bin
+						response.Body = body
+						break
+					}
+				case len(cm.BinaryData) > 0:
+					for _, bin := range cm.BinaryData {
+						if err := checkResponseBodySize(bin); err != nil {
+							return nil, err
+						}
+						response.Body = bin
 						break
 					}
 				default:
@@ -1143,10 +1143,11 @@ func buildResponseOverride(policy *egv1a1.BackendTrafficPolicy, resources *resou
 			}
 
 			if ro.Response.Body != nil && ro.Response.Body.Inline != nil {
-				if err := checkResponseBodySize(ro.Response.Body.Inline); err != nil {
+				body := []byte(*ro.Response.Body.Inline)
+				if err := checkResponseBodySize(body); err != nil {
 					return nil, err
 				}
-				response.Body = ro.Response.Body.Inline
+				response.Body = body
 			}
 
 			rhm := ro.Response.Header
@@ -1180,11 +1181,11 @@ func buildResponseOverride(policy *egv1a1.BackendTrafficPolicy, resources *resou
 	}, nil
 }
 
-func checkResponseBodySize(b *string) error {
+func checkResponseBodySize(b []byte) error {
 	// Make this configurable in the future
 	// https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route.proto.html#max_direct_response_body_size_bytes
 	maxDirectResponseSize := 4096
-	lenB := len(*b)
+	lenB := len(b)
 	if lenB > maxDirectResponseSize {
 		return fmt.Errorf("response.body size %d greater than the max size %d", lenB, maxDirectResponseSize)
 	}
