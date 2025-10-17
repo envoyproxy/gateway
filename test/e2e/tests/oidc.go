@@ -55,14 +55,22 @@ var OIDCTest = suite.ConformanceTest{
 		})
 
 		t.Run("oidc bypass", func(t *testing.T) {
-			ns := "gateway-conformance-infra"
+			var (
+				ns          = "gateway-conformance-infra"
+				keycloakSel = map[string]string{"app": "keycloak"}
+				backendSel  = map[string]string{"app": "infra-backend-v1"}
+			)
+
+			t.Cleanup(func() {
+				if t.Failed() {
+					LogPodsStatus(t, suite.Client, ns, keycloakSel, "OIDC failure - keycloak state")
+					LogPodsStatus(t, suite.Client, ns, backendSel, "OIDC failure - backend state")
+				}
+			})
 
 			podInitialized := corev1.PodCondition{Type: corev1.PodInitialized, Status: corev1.ConditionTrue}
 			// Wait for the keycloak pod to be configured with the test user and client
 			WaitForPods(t, suite.Client, ns, map[string]string{"job-name": "setup-keycloak"}, corev1.PodSucceeded, &podInitialized)
-			keycloakSel := map[string]string{"app": "keycloak"}
-			backendSel := map[string]string{"app": "infra-backend-v1"}
-
 			WaitForPods(t, suite.Client, ns, keycloakSel, corev1.PodRunning, &PodReady)
 			WaitForPods(t, suite.Client, ns, backendSel, corev1.PodRunning, &PodReady)
 
