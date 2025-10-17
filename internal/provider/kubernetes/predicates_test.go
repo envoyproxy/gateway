@@ -187,6 +187,29 @@ func TestValidateConfigMapForReconcile(t *testing.T) {
 		expect    bool
 	}{
 		{
+			name: "references EnvoyProxy BackendTLS ConfigMap",
+			configs: []client.Object{
+				test.GetGatewayClass("test-gc", egv1a1.GatewayControllerName, nil),
+				test.GetGateway(types.NamespacedName{Name: "scheduled-status-test", Namespace: "test"}, "test-gc", 8080),
+				&egv1a1.EnvoyProxy{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "ep",
+						Namespace: "test",
+					},
+					Spec: egv1a1.EnvoyProxySpec{
+						BackendTLS: &egv1a1.BackendTLSConfig{
+							ClientCertificateRef: &gwapiv1.SecretObjectReference{
+								Kind: gatewayapi.KindPtr(resource.KindConfigMap),
+								Name: gwapiv1.ObjectName("client-cert"),
+							},
+						},
+					},
+				},
+			},
+			configMap: test.GetConfigMap(types.NamespacedName{Name: "client-cert", Namespace: "test"}, make(map[string]string), make(map[string]string)),
+			expect:    true,
+		},
+		{
 			name: "references EnvoyExtensionPolicy Lua config map",
 			configs: []client.Object{
 				test.GetGatewayClass("test-gc", egv1a1.GatewayControllerName, nil),
@@ -277,7 +300,9 @@ func TestValidateConfigMapForReconcile(t *testing.T) {
 		r.client = fakeclient.NewClientBuilder().
 			WithScheme(envoygateway.GetScheme()).
 			WithObjects(tc.configs...).
+			WithIndex(&egv1a1.EnvoyProxy{}, configMapEnvoyProxyIndex, configMapEnvoyProxyIndexFunc).
 			WithIndex(&egv1a1.EnvoyExtensionPolicy{}, configMapEepIndex, configMapEepIndexFunc).
+			WithIndex(&egv1a1.SecurityPolicy{}, configMapSecurityPolicyIndex, configMapSecurityPolicyIndexFunc).
 			Build()
 		t.Run(tc.name, func(t *testing.T) {
 			res := r.validateConfigMapForReconcile(tc.configMap)

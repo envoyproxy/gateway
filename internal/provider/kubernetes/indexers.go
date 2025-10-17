@@ -49,6 +49,7 @@ const (
 	backendEnvoyExtensionPolicyIndex = "backendEnvoyExtensionPolicyIndex"
 	backendEnvoyProxyTelemetryIndex  = "backendEnvoyProxyTelemetryIndex"
 	secretEnvoyProxyIndex            = "secretEnvoyProxyIndex"
+	configMapEnvoyProxyIndex         = "configMapEnvoyProxyIndex"
 	secretEnvoyExtensionPolicyIndex  = "secretEnvoyExtensionPolicyIndex"
 	httpRouteFilterHTTPRouteIndex    = "httpRouteFilterHTTPRouteIndex"
 	configMapBtpIndex                = "configMapBtpIndex"
@@ -188,6 +189,10 @@ func addEnvoyProxyIndexers(ctx context.Context, mgr manager.Manager) error {
 		return err
 	}
 
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &egv1a1.EnvoyProxy{}, configMapEnvoyProxyIndex, configMapEnvoyProxyIndexFunc); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -205,18 +210,33 @@ func backendEnvoyProxyTelemetryIndexFunc(rawObj client.Object) []string {
 func secretEnvoyProxyIndexFunc(rawObj client.Object) []string {
 	ep := rawObj.(*egv1a1.EnvoyProxy)
 	var secretReferences []string
-	if ep.Spec.BackendTLS != nil {
-		if ep.Spec.BackendTLS.ClientCertificateRef != nil {
-			if *ep.Spec.BackendTLS.ClientCertificateRef.Kind == resource.KindSecret {
-				secretReferences = append(secretReferences,
-					types.NamespacedName{
-						Namespace: gatewayapi.NamespaceDerefOr(ep.Spec.BackendTLS.ClientCertificateRef.Namespace, ep.Namespace),
-						Name:      string(ep.Spec.BackendTLS.ClientCertificateRef.Name),
-					}.String())
-			}
+	if ep.Spec.BackendTLS != nil && ep.Spec.BackendTLS.ClientCertificateRef != nil {
+		ref := ep.Spec.BackendTLS.ClientCertificateRef
+		if gatewayapi.KindDerefOr(ref.Kind, resource.KindSecret) == resource.KindSecret {
+			secretReferences = append(secretReferences,
+				types.NamespacedName{
+					Namespace: gatewayapi.NamespaceDerefOr(ref.Namespace, ep.Namespace),
+					Name:      string(ref.Name),
+				}.String())
 		}
 	}
 	return secretReferences
+}
+
+func configMapEnvoyProxyIndexFunc(rawObj client.Object) []string {
+	ep := rawObj.(*egv1a1.EnvoyProxy)
+	var configMapReferences []string
+	if ep.Spec.BackendTLS != nil && ep.Spec.BackendTLS.ClientCertificateRef != nil {
+		ref := ep.Spec.BackendTLS.ClientCertificateRef
+		if gatewayapi.KindDerefOr(ref.Kind, resource.KindSecret) == resource.KindConfigMap {
+			configMapReferences = append(configMapReferences,
+				types.NamespacedName{
+					Namespace: gatewayapi.NamespaceDerefOr(ref.Namespace, ep.Namespace),
+					Name:      string(ref.Name),
+				}.String())
+		}
+	}
+	return configMapReferences
 }
 
 func accessLogRefs(ep *egv1a1.EnvoyProxy) []string {

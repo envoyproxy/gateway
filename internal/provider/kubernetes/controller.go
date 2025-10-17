@@ -600,16 +600,32 @@ func (r *gatewayAPIReconciler) processEnvoyProxySecretRef(ctx context.Context, g
 		return nil
 	}
 	certRef := gwcResource.EnvoyProxyForGatewayClass.Spec.BackendTLS.ClientCertificateRef
-	if refsSecret(certRef) {
-		if err := r.processSecretRef(
-			ctx,
-			newResourceMapping(),
-			gwcResource,
-			resource.KindGateway,
-			gwcResource.EnvoyProxyForGatewayClass.Namespace,
-			resource.KindEnvoyProxy,
-			*certRef); err != nil {
-			return err
+	switch gatewayapi.KindDerefOr(certRef.Kind, resource.KindSecret) {
+	case resource.KindSecret:
+		if refsSecret(certRef) {
+			if err := r.processSecretRef(
+				ctx,
+				newResourceMapping(),
+				gwcResource,
+				resource.KindGateway,
+				gwcResource.EnvoyProxyForGatewayClass.Namespace,
+				resource.KindEnvoyProxy,
+				*certRef); err != nil {
+				return err
+			}
+		}
+	case resource.KindConfigMap:
+		if refsConfigMap(certRef) {
+			if err := r.processConfigMapRef(
+				ctx,
+				newResourceMapping(),
+				gwcResource,
+				resource.KindGateway,
+				gwcResource.EnvoyProxyForGatewayClass.Namespace,
+				resource.KindEnvoyProxy,
+				*certRef); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
@@ -2442,14 +2458,25 @@ func (r *gatewayAPIReconciler) processGatewayParamsRef(ctx context.Context, gtw 
 		return err
 	}
 
-	// Missing secret shouldn't stop the Gateway infrastructure from coming up
+	// Missing client certificate reference shouldn't stop the Gateway infrastructure from coming up
 	if ep.Spec.BackendTLS != nil && ep.Spec.BackendTLS.ClientCertificateRef != nil {
 		certRef := ep.Spec.BackendTLS.ClientCertificateRef
-		if refsSecret(certRef) {
-			if err := r.processSecretRef(ctx,
-				resourceMap, resourceTree, resource.KindGateway,
-				gtw.Namespace, gtw.Name, *certRef); err != nil {
-				r.log.Error(err, "failed to process ClientCertificateRef for EnvoyProxy", "namespace", gtw.Namespace, "name", gtw.Name)
+		switch gatewayapi.KindDerefOr(certRef.Kind, resource.KindSecret) {
+		case resource.KindSecret:
+			if refsSecret(certRef) {
+				if err := r.processSecretRef(ctx,
+					resourceMap, resourceTree, resource.KindGateway,
+					gtw.Namespace, gtw.Name, *certRef); err != nil {
+					r.log.Error(err, "failed to process ClientCertificateRef for EnvoyProxy", "namespace", gtw.Namespace, "name", gtw.Name)
+				}
+			}
+		case resource.KindConfigMap:
+			if refsConfigMap(certRef) {
+				if err := r.processConfigMapRef(ctx,
+					resourceMap, resourceTree, resource.KindGateway,
+					gtw.Namespace, gtw.Name, *certRef); err != nil {
+					r.log.Error(err, "failed to process ClientCertificateRef ConfigMap for EnvoyProxy", "namespace", gtw.Namespace, "name", gtw.Name)
+				}
 			}
 		}
 	}

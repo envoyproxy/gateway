@@ -825,6 +825,20 @@ func (r *gatewayAPIReconciler) validateConfigMapForReconcile(obj client.Object) 
 		}
 	}
 
+	if r.epCRDExists {
+		epList := &egv1a1.EnvoyProxyList{}
+		if err := r.client.List(context.Background(), epList, &client.ListOptions{
+			FieldSelector: fields.OneTermEqualSelector(configMapEnvoyProxyIndex, utils.NamespacedName(configMap).String()),
+		}); err != nil {
+			r.log.Error(err, "unable to find associated EnvoyProxies")
+			return false
+		}
+
+		if len(epList.Items) > 0 {
+			return true
+		}
+	}
+
 	if r.btpCRDExists {
 		btpList := &egv1a1.BackendTrafficPolicyList{}
 		if err := r.client.List(context.Background(), btpList, &client.ListOptions{

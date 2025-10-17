@@ -116,6 +116,11 @@ func refsSecret(ref *gwapiv1.SecretObjectReference) bool {
 		(ref.Kind == nil || *ref.Kind == resource.KindSecret)
 }
 
+func refsConfigMap(ref *gwapiv1.SecretObjectReference) bool {
+	return (ref.Group == nil || *ref.Group == corev1.GroupName) &&
+		gatewayapi.KindDerefOr(ref.Kind, resource.KindSecret) == resource.KindConfigMap
+}
+
 // validateBackendRef validates that ref is a reference to a local Service.
 // TODO: Add support for:
 //   - Validating weights.
