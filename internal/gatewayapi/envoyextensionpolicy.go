@@ -532,7 +532,9 @@ func (t *Translator) translateEnvoyExtensionPolicyForRoute(
 				if len(routesWithDirectResponse) > 0 {
 					t.Logger.Info("setting 500 direct response in routes due to errors in EnvoyExtensionPolicy",
 						"policy", fmt.Sprintf("%s/%s", policy.Namespace, policy.Name),
-						"routes", sets.List(routesWithDirectResponse))
+						"routes", sets.List(routesWithDirectResponse),
+						"error", errs,
+					)
 				}
 			}
 		}
@@ -621,7 +623,9 @@ func (t *Translator) translateEnvoyExtensionPolicyForGateway(
 		if len(routesWithDirectResponse) > 0 {
 			t.Logger.Info("setting 500 direct response in routes due to errors in EnvoyExtensionPolicy",
 				"policy", fmt.Sprintf("%s/%s", policy.Namespace, policy.Name),
-				"routes", sets.List(routesWithDirectResponse))
+				"routes", sets.List(routesWithDirectResponse),
+				"error", errs,
+			)
 		}
 	}
 
