@@ -546,7 +546,7 @@ func (t *Translator) applyTrafficFeatureToRoute(route RouteContext,
 		}
 	}
 	if len(routesWithDirectResponse) > 0 {
-		t.Logger.Error(errs, "returning 500 direct response due to errors in BackendTrafficPolicy",
+		t.Logger.Error(errs, "setting 500 direct response in routes due to errors in BackendTrafficPolicy",
 			"policy", utils.NamespacedName(policy),
 			"routes", sets.List(routesWithDirectResponse))
 	}
@@ -756,7 +756,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 			}
 		}
 		if len(routesWithDirectResponse) > 0 {
-			t.Logger.Error(errs, "returning 500 direct response due to errors in BackendTrafficPolicy",
+			t.Logger.Error(errs, "setting 500 direct response in routes due to errors in BackendTrafficPolicy",
 				"policy", utils.NamespacedName(policy),
 				"routes", sets.List(routesWithDirectResponse))
 		}
