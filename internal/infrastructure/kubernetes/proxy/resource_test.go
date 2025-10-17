@@ -7,6 +7,7 @@ package proxy
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -65,7 +66,7 @@ func TestExpectedShutdownManagerSecurityContext(t *testing.T) {
 
 func TestResolveProxyImage(t *testing.T) {
 	defaultImage := egv1a1.DefaultEnvoyProxyImage
-	defaultTag := "distroless-v1.35.3"
+	defaultTag := strings.Split(defaultImage, ":")[1]
 
 	tests := []struct {
 		name        string
