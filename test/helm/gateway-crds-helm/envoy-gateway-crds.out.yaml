@@ -1020,8 +1020,10 @@ spec:
                         - name
                         type: object
                       header:
-                        description: Header configures the header hash policy when
-                          the consistent hash type is set to Header.
+                        description: |-
+                          Header configures the header hash policy when the consistent hash type is set to Header.
+
+                          Deprecated: use Headers instead
                         properties:
                           name:
                             description: Name of the header to hash.
@@ -5373,8 +5375,10 @@ spec:
                                   - name
                                   type: object
                                 header:
-                                  description: Header configures the header hash policy
-                                    when the consistent hash type is set to Header.
+                                  description: |-
+                                    Header configures the header hash policy when the consistent hash type is set to Header.
+
+                                    Deprecated: use Headers instead
                                   properties:
                                     name:
                                       description: Name of the header to hash.
@@ -18927,10 +18931,10 @@ spec:
                                                     - name
                                                     type: object
                                                   header:
-                                                    description: Header configures
-                                                      the header hash policy when
-                                                      the consistent hash type is
-                                                      set to Header.
+                                                    description: |-
+                                                      Header configures the header hash policy when the consistent hash type is set to Header.
+
+                                                      Deprecated: use Headers instead
                                                     properties:
                                                       name:
                                                         description: Name of the header
@@ -20082,10 +20086,10 @@ spec:
                                                     - name
                                                     type: object
                                                   header:
-                                                    description: Header configures
-                                                      the header hash policy when
-                                                      the consistent hash type is
-                                                      set to Header.
+                                                    description: |-
+                                                      Header configures the header hash policy when the consistent hash type is set to Header.
+
+                                                      Deprecated: use Headers instead
                                                     properties:
                                                       name:
                                                         description: Name of the header
@@ -21329,9 +21333,10 @@ spec:
                                               - name
                                               type: object
                                             header:
-                                              description: Header configures the header
-                                                hash policy when the consistent hash
-                                                type is set to Header.
+                                              description: |-
+                                                Header configures the header hash policy when the consistent hash type is set to Header.
+
+                                                Deprecated: use Headers instead
                                               properties:
                                                 name:
                                                   description: Name of the header
@@ -22486,9 +22491,10 @@ spec:
                                         - name
                                         type: object
                                       header:
-                                        description: Header configures the header
-                                          hash policy when the consistent hash type
-                                          is set to Header.
+                                        description: |-
+                                          Header configures the header hash policy when the consistent hash type is set to Header.
+
+                                          Deprecated: use Headers instead
                                         properties:
                                           name:
                                             description: Name of the header to hash.
@@ -24616,9 +24622,10 @@ spec:
                                     - name
                                     type: object
                                   header:
-                                    description: Header configures the header hash
-                                      policy when the consistent hash type is set
-                                      to Header.
+                                    description: |-
+                                      Header configures the header hash policy when the consistent hash type is set to Header.
+
+                                      Deprecated: use Headers instead
                                     properties:
                                       name:
                                         description: Name of the header to hash.
@@ -25662,9 +25669,10 @@ spec:
                                     - name
                                     type: object
                                   header:
-                                    description: Header configures the header hash
-                                      policy when the consistent hash type is set
-                                      to Header.
+                                    description: |-
+                                      Header configures the header hash policy when the consistent hash type is set to Header.
+
+                                      Deprecated: use Headers instead
                                     properties:
                                       name:
                                         description: Name of the header to hash.
@@ -26919,9 +26927,10 @@ spec:
                                           - name
                                           type: object
                                         header:
-                                          description: Header configures the header
-                                            hash policy when the consistent hash type
-                                            is set to Header.
+                                          description: |-
+                                            Header configures the header hash policy when the consistent hash type is set to Header.
+
+                                            Deprecated: use Headers instead
                                           properties:
                                             name:
                                               description: Name of the header to hash.
@@ -28234,9 +28243,10 @@ spec:
                                     - name
                                     type: object
                                   header:
-                                    description: Header configures the header hash
-                                      policy when the consistent hash type is set
-                                      to Header.
+                                    description: |-
+                                      Header configures the header hash policy when the consistent hash type is set to Header.
+
+                                      Deprecated: use Headers instead
                                     properties:
                                       name:
                                         description: Name of the header to hash.
