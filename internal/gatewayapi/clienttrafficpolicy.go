@@ -491,7 +491,7 @@ func (t *Translator) translateClientTrafficPolicyForListener(policy *egv1a1.Clie
 				routesWithDirectResponse.Insert(route.Name)
 			}
 			if len(httpIR.Routes) > 0 {
-				t.Logger.Error(errs, "setting 500 direct response in routes due to errors in ClientTrafficPolicy",
+				t.Logger.Info("setting 500 direct response in routes due to errors in ClientTrafficPolicy",
 					"policy", utils.NamespacedName(policy),
 					"routes", sets.List(routesWithDirectResponse),
 				)

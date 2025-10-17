@@ -684,7 +684,7 @@ func (t *Translator) translateSecurityPolicyForRoute(
 					}
 				}
 				if len(routesWithDirectResponse) > 0 {
-					t.Logger.Error(errs, "setting 500 direct response in routes due to errors in SecurityPolicy",
+					t.Logger.Info("setting 500 direct response in routes due to errors in SecurityPolicy",
 						"policy", fmt.Sprintf("%s/%s", policy.Namespace, policy.Name),
 						"routes", sets.List(routesWithDirectResponse))
 				}
@@ -837,7 +837,7 @@ func (t *Translator) translateSecurityPolicyForGateway(
 			}
 		}
 		if len(routesWithDirectResponse) > 0 {
-			t.Logger.Error(errs, "setting 500 direct response in routes due to errors in SecurityPolicy",
+			t.Logger.Info("setting 500 direct response in routes due to errors in SecurityPolicy",
 				"policy", fmt.Sprintf("%s/%s", policy.Namespace, policy.Name),
 				"routes", sets.List(routesWithDirectResponse))
 		}
