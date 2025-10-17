@@ -55,7 +55,7 @@ func newCollectCommand() *cobra.Command {
 	collectCommand.PersistentFlags().StringArrayVarP(&collectOpts.proxyNamespaces, "envoy-proxy-namespaces", "", []string{},
 		"Specify the namespaces where Envoy proxies are running.")
 	collectCommand.PersistentFlags().BoolVarP(&collectOpts.enableSDS, "sds", "", false,
-		"Specify the SDS will not be dumped or not, Default to false")
+		"Specify if the SDS configuration will retrieved or not, Default to false")
 
 	return collectCommand
 }
