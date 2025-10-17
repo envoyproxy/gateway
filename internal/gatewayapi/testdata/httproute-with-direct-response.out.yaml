@@ -282,7 +282,7 @@ xdsIR:
           value:
           - set-502
         directResponse:
-          body: '{"error": "Internal Server Error"}'
+          body: eyJlcnJvciI6ICJJbnRlcm5hbCBTZXJ2ZXIgRXJyb3IifQ==
           statusCode: 502
         hostname: '*.envoyproxy.io'
         isHTTP2: false
@@ -301,7 +301,7 @@ xdsIR:
           value:
           - text/plain
         directResponse:
-          body: OK
+          body: T0s=
           statusCode: 200
         hostname: '*.envoyproxy.io'
         isHTTP2: false
@@ -320,7 +320,7 @@ xdsIR:
           value:
           - image/png
         directResponse:
-          bodyBytes: iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==
+          body: iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==
           statusCode: 502
         hostname: '*.envoyproxy.io'
         isHTTP2: false

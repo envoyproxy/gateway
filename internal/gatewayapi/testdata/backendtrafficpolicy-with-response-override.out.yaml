@@ -505,7 +505,7 @@ xdsIR:
                   name: X-Set-Header
                   value:
                   - set-404
-                body: gateway-1 Not Found
+                body: Z2F0ZXdheS0xIE5vdCBGb3VuZA==
                 contentType: text/plain
             - match:
                 statusCodes:
@@ -515,10 +515,7 @@ xdsIR:
                     start: 501
               name: backendtrafficpolicy/default/policy-for-gateway/responseoverride/rule/1
               response:
-                body: |
-                  {
-                    "error": "Internal Server Error"
-                  }
+                body: ewogICJlcnJvciI6ICJJbnRlcm5hbCBTZXJ2ZXIgRXJyb3IiCn0K
                 contentType: application/json
     readyListener:
       address: 0.0.0.0
@@ -598,7 +595,7 @@ xdsIR:
                 - value: 404
               name: backendtrafficpolicy/default/policy-for-route-1/responseoverride/rule/0
               response:
-                body: httproute-1 Not Found
+                body: aHR0cHJvdXRlLTEgTm90IEZvdW5k
                 contentType: text/plain
             - match:
                 statusCodes:
@@ -608,10 +605,7 @@ xdsIR:
                     start: 501
               name: backendtrafficpolicy/default/policy-for-route-1/responseoverride/rule/1
               response:
-                body: |
-                  {
-                    "error": "Internal Server Error"
-                  }
+                body: ewogICJlcnJvciI6ICJJbnRlcm5hbCBTZXJ2ZXIgRXJyb3IiCn0K
                 contentType: application/json
       - destination:
           metadata:
