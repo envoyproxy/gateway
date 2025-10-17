@@ -80,7 +80,7 @@ func TestBuildHashPolicy(t *testing.T) {
 			name: "ConsistentHash with Header",
 			httpRoute: &ir.HTTPRoute{
 				Traffic: &ir.TrafficFeatures{
-					LoadBalancer: &ir.LoadBalancer{ConsistentHash: &ir.ConsistentHash{Header: &ir.Header{Name: "name"}}},
+					LoadBalancer: &ir.LoadBalancer{ConsistentHash: &ir.ConsistentHash{Header: &egv1a1.Header{Name: "name"}}},
 				},
 			},
 			want: []*routev3.RouteAction_HashPolicy{
