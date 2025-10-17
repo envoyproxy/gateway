@@ -160,8 +160,8 @@ func buildAPIKeyAuthFilterConfig(apiKeyAuth *ir.APIKeyAuth) *apikeyauthv3.ApiKey
 	sanitize := ptr.Deref(apiKeyAuth.Sanitize, false)
 	if clientIDHeader != "" || sanitize {
 		apiKeyAuthProto.Forwarding = &apikeyauthv3.Forwarding{
-			Header:          *apiKeyAuth.ForwardClientIDHeader,
-			HideCredentials: ptr.Deref(apiKeyAuth.Sanitize, false),
+			Header:          clientIDHeader,
+			HideCredentials: sanitize,
 		}
 	}
 

@@ -423,6 +423,8 @@ type TLSCertificate struct {
 	Certificate []byte `json:"certificate,omitempty" yaml:"certificate,omitempty"`
 	// PrivateKey for the server.
 	PrivateKey PrivateBytes `json:"privateKey,omitempty" yaml:"privateKey,omitempty"`
+	// OCSPStaple contains the stapled OCSP response associated with the certificate, if provided.
+	OCSPStaple []byte `json:"ocspStaple,omitempty" yaml:"ocspStaple,omitempty"`
 }
 
 // TLSCACertificate holds CA Certificate to validate clients
@@ -448,7 +450,7 @@ type SubjectAltName struct {
 	URI *string `json:"uri,omitempty" yaml:"uri,omitempty"`
 }
 
-func (t TLSCertificate) Validate() error {
+func (t *TLSCertificate) Validate() error {
 	var errs error
 	if len(t.Certificate) == 0 {
 		errs = errors.Join(errs, ErrTLSCertEmpty)
@@ -1138,6 +1140,9 @@ type OIDC struct {
 
 	// DefaultRefreshTokenTTL is the default lifetime of the refresh token.
 	DefaultRefreshTokenTTL *metav1.Duration `json:"defaultRefreshTokenTTL,omitempty"`
+
+	// CSRFTokenTTL configures the lifetime of the csrf token Envoy stores in the cookie.
+	CSRFTokenTTL *metav1.Duration `json:"csrfTokenTTL,omitempty"`
 
 	// CookieSuffix will be added to the name of the cookies set by the oauth filter.
 	// Adding a suffix avoids multiple oauth filters from overwriting each other's cookies.
@@ -2676,6 +2681,8 @@ type OutlierDetection struct {
 	BaseEjectionTime *metav1.Duration `json:"baseEjectionTime,omitempty" yaml:"baseEjectionTime,omitempty"`
 	// MaxEjectionPercent sets the maximum percentage of hosts in a cluster that can be ejected.
 	MaxEjectionPercent *int32 `json:"maxEjectionPercent,omitempty" yaml:"maxEjectionPercent,omitempty"`
+	// FailurePercentageThreshold sets the failure percentage threshold for outlier detection.
+	FailurePercentageThreshold *uint32 `json:"failurePercentageThreshold,omitempty" yaml:"failurePercentageThreshold,omitempty"`
 }
 
 // ActiveHealthCheck defines active health check settings
@@ -3233,6 +3240,8 @@ type PreferLocalZone struct {
 	Force *ForceLocalZone `json:"force,omitempty" yaml:"force,omitempty"`
 	// MinEndpointsThreshold is the minimum number of total upstream endpoints across all zones required to enable zone-aware routing.
 	MinEndpointsThreshold *uint64 `json:"minEndpointsThreshold,omitempty" yaml:"minEndpointsThreshold,omitempty"`
+	// Configures percentage of requests that will be considered for zone aware routing if zone aware routing is configured. If not specified, the default is 100%.
+	PercentageEnabled *uint32 `json:"percentageEnabled,omitempty" yaml:"percentageEnabled,omitempty"`
 }
 
 // ForceLocalZone defines override configuration for forcing all traffic to stay within the local zone instead of the default behavior
