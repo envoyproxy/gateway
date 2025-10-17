@@ -92,7 +92,8 @@ func LogPodsStatus(t *testing.T, cl client.Client, namespace string, selectors m
 	for i := range pods.Items {
 		p := &pods.Items[i]
 		var containerSummaries []string
-		for _, cs := range p.Status.ContainerStatuses {
+		for i := 0; i < len(p.Status.ContainerStatuses); i++ {
+			cs := p.Status.ContainerStatuses[i]
 			state := "unknown"
 			switch {
 			case cs.State.Waiting != nil:
@@ -111,64 +112,47 @@ func LogPodsStatus(t *testing.T, cl client.Client, namespace string, selectors m
 	}
 }
 
-// WaitForPods waits for the pods in the given namespace and with the given selector
-// to be in the given phase and condition.
 func WaitForPods(t *testing.T, cl client.Client, namespace string, selectors map[string]string, phase corev1.PodPhase, condition *corev1.PodCondition) {
 	if condition == nil {
 		t.Fatalf("condition cannot be nil")
 	}
 	tlog.Logf(t, "waiting for %s/[%s] to be %v...", namespace, selectors, phase)
 
-	timeout := time.After(defaultServiceStartupTimeout)
-	ticker := time.NewTicker(2 * time.Second)
-	defer ticker.Stop()
-
-	for {
+	require.Eventually(t, func() bool {
 		pods := &corev1.PodList{}
+
 		err := cl.List(context.Background(), pods, &client.ListOptions{
 			Namespace:     namespace,
 			LabelSelector: labels.SelectorFromSet(selectors),
 		})
-		if err == nil && len(pods.Items) > 0 {
-			success := true
-		checkPods:
-			for i := range pods.Items {
-				p := &pods.Items[i]
-				if p.Status.Phase != phase {
-					success = false
-					break
-				}
 
-				if p.Status.Conditions == nil {
-					success = false
-					break
-				}
+		if err != nil || len(pods.Items) == 0 {
+			return false
+		}
 
-				conditionMet := false
-				for _, c := range p.Status.Conditions {
-					if c.Type == condition.Type && c.Status == condition.Status {
-						conditionMet = true
-						continue checkPods
-					}
-				}
-				if !conditionMet {
-					success = false
-					break
+	checkPods:
+		for i := range pods.Items {
+			p := &pods.Items[i]
+			if p.Status.Phase != phase {
+				return false
+			}
+
+			if p.Status.Conditions == nil {
+				return false
+			}
+
+			for _, c := range p.Status.Conditions {
+				if c.Type == condition.Type && c.Status == condition.Status {
+					continue checkPods // pod is ready, check next pod
 				}
 			}
 
-			if success {
-				return
-			}
+			tlog.Logf(t, "pod %s/%s status: %v", p.Namespace, p.Name, p.Status)
+			return false
 		}
 
-		select {
-		case <-timeout:
-			LogPodsStatus(t, cl, namespace, selectors, fmt.Sprintf("timed out waiting for pods to reach %s/%s", phase, condition.Type))
-			t.Fatalf("timed out waiting for pods in %s with selector %v to reach phase %s and condition %s", namespace, selectors, phase, condition.Type)
-		case <-ticker.C:
-		}
-	}
+		return true
+	}, defaultServiceStartupTimeout, 2*time.Second)
 }
 
 // SecurityPolicyMustBeAccepted waits for the specified SecurityPolicy to be accepted.

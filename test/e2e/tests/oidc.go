@@ -59,11 +59,6 @@ var OIDCTest = suite.ConformanceTest{
 			podInitialized := corev1.PodCondition{Type: corev1.PodInitialized, Status: corev1.ConditionTrue}
 			// Wait for the keycloak pod to be configured with the test user and client
 			WaitForPods(t, suite.Client, ns, map[string]string{"job-name": "setup-keycloak"}, corev1.PodSucceeded, &podInitialized)
-			keycloakSel := map[string]string{"app": "keycloak"}
-			backendSel := map[string]string{"app": "infra-backend-v1"}
-
-			WaitForPods(t, suite.Client, ns, keycloakSel, corev1.PodRunning, &PodReady)
-			WaitForPods(t, suite.Client, ns, backendSel, corev1.PodRunning, &PodReady)
 
 			// Apply the security policy that configures OIDC authentication
 			suite.Applier.MustApplyWithCleanup(t, suite.Client, suite.TimeoutConfig, "testdata/oidc-securitypolicy.yaml", true)
@@ -109,11 +104,16 @@ var OIDCTest = suite.ConformanceTest{
 					Namespace: ns,
 				},
 			}
-
+			t.Cleanup(func() {
+				if t.Failed() {
+					LogPodsStatus(t, suite.Client, ns, map[string]string{"app": "keycloak"}, "Keycloak Pods status:")
+					LogPodsStatus(t, suite.Client, ns, map[string]string{"app": "infra-backend-v1"}, "Infra Backend Pods status:")
+				}
+			})
 			for i := range testCases {
 				tc := testCases[i]
 				t.Run(tc.GetTestCaseName(i), func(t *testing.T) {
-					t.Parallel()
+					// t.Parallel()
 
 					gwhttp.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, tc)
 				})
@@ -124,27 +124,16 @@ var OIDCTest = suite.ConformanceTest{
 
 func testOIDC(t *testing.T, suite *suite.ConformanceTestSuite, securityPolicyManifest string) {
 	var (
-		testURL     = "http://www.example.com/myapp"
-		logoutURL   = "http://www.example.com/myapp/logout"
-		route       = "http-with-oidc"
-		sp          = "oidc-test"
-		ns          = "gateway-conformance-infra"
-		keycloakSel = map[string]string{"app": "keycloak"}
-		backendSel  = map[string]string{"app": "infra-backend-v1"}
+		testURL   = "http://www.example.com/myapp"
+		logoutURL = "http://www.example.com/myapp/logout"
+		route     = "http-with-oidc"
+		sp        = "oidc-test"
+		ns        = "gateway-conformance-infra"
 	)
-
-	t.Cleanup(func() {
-		if t.Failed() {
-			LogPodsStatus(t, suite.Client, ns, keycloakSel, "OIDC failure - keycloak state")
-			LogPodsStatus(t, suite.Client, ns, backendSel, "OIDC failure - backend state")
-		}
-	})
 
 	podInitialized := corev1.PodCondition{Type: corev1.PodInitialized, Status: corev1.ConditionTrue}
 	// Wait for the keycloak pod to be configured with the test user and client
 	WaitForPods(t, suite.Client, ns, map[string]string{"job-name": "setup-keycloak"}, corev1.PodSucceeded, &podInitialized)
-	WaitForPods(t, suite.Client, ns, keycloakSel, corev1.PodRunning, &PodReady)
-	WaitForPods(t, suite.Client, ns, backendSel, corev1.PodRunning, &PodReady)
 
 	// Apply the security policy that configures OIDC authentication
 	suite.Applier.MustApplyWithCleanup(t, suite.Client, suite.TimeoutConfig, securityPolicyManifest, true)
