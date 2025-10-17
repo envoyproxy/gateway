@@ -1,13 +1,13 @@
-date: October 15, 2025
+date: October 17, 2025
 
 security updates: |
   Bumped golang to 1.24.9 to fix the crypto/x509 reggression.
 
 bug fixes: |
-  Added check for the case if xds snapshot cache are having other active connections before cleaning the snapshot.
+  Added a check to ensure that per proxy xds snapshot cache references are cleaned up when the connection is closed.
   Fixed an issue where use GRPCRoute with RequestMirror cause panic.
   Fixed an issue where certificate SAN overlap detection in gateway listeners.
   Disabled the default emission of `x-envoy-ratelimited` headers from the rate limit filter and re-enable with the `enableEnvoyHeaders` setting in ClientTrafficPolicy.
 
 other changes: |
-  Updated Envoy Proxy to v1.34.8.
+  Updated Envoy Proxy to v1.34.10.
