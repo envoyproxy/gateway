@@ -9,6 +9,7 @@ set -euo pipefail
 REGRESSION_THRESHOLD=${REGRESSION_THRESHOLD:-5}
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+BENCHSTAT=${BENCHSTAT:-go tool -modfile=tools/go.mod benchstat}
 
 # Function to display usage
 usage() {
@@ -118,12 +119,6 @@ if ! git rev-parse --git-dir >/dev/null 2>&1; then
     exit 1
 fi
 
-# Verify benchstat is available
-if ! command -v benchstat >/dev/null 2>&1; then
-    log "ERROR: benchstat not found. Install with: go install golang.org/x/perf/cmd/benchstat@latest"
-    exit 1
-fi
-
 log "Starting benchmark comparison with ${REGRESSION_THRESHOLD}% regression threshold"
 
 # Store current state
@@ -157,7 +152,7 @@ fi
 
 # Compare benchmarks using benchstat
 log "Comparing benchmark results..."
-if ! benchstat main-bench.txt pr-bench.txt > comparison.txt 2>&1; then
+if ! $BENCHSTAT main-bench.txt pr-bench.txt > comparison.txt 2>&1; then
     log "WARNING: Benchstat comparison had issues, but continuing..."
 fi
 
