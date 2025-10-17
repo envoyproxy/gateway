@@ -230,12 +230,10 @@ securityPolicies:
       defaultAction: Deny
       rules:
       - action: Allow
-        name: allow-private-vpc
+        name: allow-route-bar
         principal:
           clientCIDRs:
-          - 10.0.0.0/8
-          - 172.16.0.0/12
-          - 192.168.0.0/16
+          - 10.10.2.0/24
     targetRef:
       group: gateway.networking.k8s.io
       kind: TCPRoute
@@ -265,12 +263,10 @@ securityPolicies:
       defaultAction: Deny
       rules:
       - action: Allow
-        name: allow-private-vpc
+        name: allow-route-conflict
         principal:
           clientCIDRs:
-          - 10.0.0.0/8
-          - 172.16.0.0/12
-          - 192.168.0.0/16
+          - 10.10.3.0/24
     targetRef:
       group: gateway.networking.k8s.io
       kind: TCPRoute
@@ -301,12 +297,10 @@ securityPolicies:
       defaultAction: Deny
       rules:
       - action: Allow
-        name: allow-private-vpc
+        name: allow-section-foo
         principal:
           clientCIDRs:
-          - 10.0.0.0/8
-          - 172.16.0.0/12
-          - 192.168.0.0/16
+          - 10.10.1.0/24
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway
@@ -337,12 +331,10 @@ securityPolicies:
       defaultAction: Deny
       rules:
       - action: Allow
-        name: allow-private-vpc
+        name: allow-invalid-section
         principal:
           clientCIDRs:
-          - 10.0.0.0/8
-          - 172.16.0.0/12
-          - 192.168.0.0/16
+          - 10.10.4.0/24
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway
@@ -373,12 +365,10 @@ securityPolicies:
       defaultAction: Deny
       rules:
       - action: Allow
-        name: allow-private-vpc
+        name: allow-gateway
         principal:
           clientCIDRs:
-          - 10.0.0.0/8
-          - 172.16.0.0/12
-          - 192.168.0.0/16
+          - 10.10.0.0/24
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway
@@ -415,7 +405,7 @@ securityPolicies:
       - action: Allow
         principal:
           clientCIDRs:
-          - 10.0.0.0/24
+          - 10.10.5.0/24
     cors:
       allowMethods:
       - GET
@@ -615,9 +605,9 @@ xdsIR:
               name: securitypolicy/envoy-gateway/sp-mixed-gateway/authorization/rule/0
               principal:
                 clientCIDRs:
-                - cidr: 10.0.0.0/24
+                - cidr: 10.10.5.0/24
                   distinct: false
-                  ip: 10.0.0.0
+                  ip: 10.10.5.0
                   isIPv6: false
                   maskLen: 24
           cors:
@@ -651,9 +641,9 @@ xdsIR:
             name: securitypolicy/envoy-gateway/sp-mixed-gateway/authorization/rule/0
             principal:
               clientCIDRs:
-              - cidr: 10.0.0.0/24
+              - cidr: 10.10.5.0/24
                 distinct: false
-                ip: 10.0.0.0
+                ip: 10.10.5.0
                 isIPv6: false
                 maskLen: 24
         destination:
@@ -718,24 +708,14 @@ xdsIR:
           defaultAction: Deny
           rules:
           - action: Allow
-            name: allow-private-vpc
+            name: allow-section-foo
             principal:
               clientCIDRs:
-              - cidr: 10.0.0.0/8
+              - cidr: 10.10.1.0/24
                 distinct: false
-                ip: 10.0.0.0
+                ip: 10.10.1.0
                 isIPv6: false
-                maskLen: 8
-              - cidr: 172.16.0.0/12
-                distinct: false
-                ip: 172.16.0.0
-                isIPv6: false
-                maskLen: 12
-              - cidr: 192.168.0.0/16
-                distinct: false
-                ip: 192.168.0.0
-                isIPv6: false
-                maskLen: 16
+                maskLen: 24
         destination:
           metadata:
             kind: TCPRoute
@@ -769,24 +749,14 @@ xdsIR:
           defaultAction: Deny
           rules:
           - action: Allow
-            name: allow-private-vpc
+            name: allow-route-bar
             principal:
               clientCIDRs:
-              - cidr: 10.0.0.0/8
+              - cidr: 10.10.2.0/24
                 distinct: false
-                ip: 10.0.0.0
+                ip: 10.10.2.0
                 isIPv6: false
-                maskLen: 8
-              - cidr: 172.16.0.0/12
-                distinct: false
-                ip: 172.16.0.0
-                isIPv6: false
-                maskLen: 12
-              - cidr: 192.168.0.0/16
-                distinct: false
-                ip: 192.168.0.0
-                isIPv6: false
-                maskLen: 16
+                maskLen: 24
         destination:
           metadata:
             kind: TCPRoute

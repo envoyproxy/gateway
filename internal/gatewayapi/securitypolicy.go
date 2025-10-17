@@ -707,9 +707,9 @@ func (t *Translator) translateSecurityPolicyForRoute(
 		case resource.KindTCPRoute:
 			// Only client-IP Authorization is applicable for TCP routes.
 			// TCP IR route names are flat. The computed prefix includes a trailing
-			// '/' (e.g. "tcproute/default/tcp-app-2/"), so trim the suffix to get
-			// the exact TCP route name used in the IR:
-			//   prefix == "tcproute/default/tcp-app-2/" -> expectedTCPRouteName == "tcproute/default/tcp-app-2"
+			// '/' (e.g. "tcproute/default/tcp-app-2/"), so trim the suffix to
+			// get the exact TCP route name used in the IR:
+			// prefix == "tcproute/default/tcp-app-2/" -> expectedTCPRouteName == "tcproute/default/tcp-app-2"
 			expectedTCPRouteName := strings.TrimSuffix(prefix, "/")
 			for _, listener := range parentRefCtx.listeners {
 				tl := xdsIR[irKey].GetTCPListener(irListenerName(listener))
@@ -718,6 +718,12 @@ func (t *Translator) translateSecurityPolicyForRoute(
 				}
 				for _, r := range tl.Routes {
 					if r == nil {
+						continue
+					}
+					// If target.SectionName is specified it must match the route-rule section name
+					// in the IR. For HTTP/GRPC routes this is r.Metadata.SectionName; for TCP
+					// routes the section name is currently stored on r.Destination.Metadata.SectionName.
+					if target.SectionName != nil && string(*target.SectionName) != r.Destination.Metadata.SectionName {
 						continue
 					}
 					// if already set - there's a specific level policy, so skip.
@@ -918,7 +924,7 @@ func (t *Translator) translateSecurityPolicyForGateway(
 		tcpAuthorization = &authCopy
 	}
 
-	// Apply to TCP listeners (Authorization only). Support metadata nil fallback by parsing section name from listener name suffix.
+	// Apply to TCP listeners (Authorization only).
 	if tcpAuthorization != nil {
 		for _, tl := range x.TCP {
 			if tl == nil || len(tl.Routes) == 0 {

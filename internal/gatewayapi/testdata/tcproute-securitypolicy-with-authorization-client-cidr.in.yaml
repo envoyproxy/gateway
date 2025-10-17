@@ -116,12 +116,10 @@ securityPolicies:
       defaultAction: Deny
       rules:
       - action: Allow
-        name: allow-private-vpc
+        name: allow-gateway
         principal:
           clientCIDRs:
-          - 10.0.0.0/8
-          - 172.16.0.0/12
-          - 192.168.0.0/16
+          - 10.10.0.0/24
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: SecurityPolicy
   metadata:
@@ -137,12 +135,10 @@ securityPolicies:
       defaultAction: Deny
       rules:
       - action: Allow
-        name: allow-private-vpc
+        name: allow-section-foo
         principal:
           clientCIDRs:
-          - 10.0.0.0/8
-          - 172.16.0.0/12
-          - 192.168.0.0/16
+          - 10.10.1.0/24
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: SecurityPolicy
   metadata:
@@ -157,12 +153,10 @@ securityPolicies:
       defaultAction: Deny
       rules:
       - action: Allow
-        name: allow-private-vpc
+        name: allow-route-bar
         principal:
           clientCIDRs:
-          - 10.0.0.0/8
-          - 172.16.0.0/12
-          - 192.168.0.0/16
+          - 10.10.2.0/24
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: SecurityPolicy
   metadata:
@@ -177,12 +171,10 @@ securityPolicies:
       defaultAction: Deny
       rules:
       - action: Allow
-        name: allow-private-vpc
+        name: allow-route-conflict
         principal:
           clientCIDRs:
-          - 10.0.0.0/8
-          - 172.16.0.0/12
-          - 192.168.0.0/16
+          - 10.10.3.0/24
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: SecurityPolicy
   metadata:
@@ -198,12 +190,10 @@ securityPolicies:
       defaultAction: Deny
       rules:
       - action: Allow
-        name: allow-private-vpc
+        name: allow-invalid-section
         principal:
           clientCIDRs:
-          - 10.0.0.0/8
-          - 172.16.0.0/12
-          - 192.168.0.0/16
+          - 10.10.4.0/24
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: SecurityPolicy
   metadata:
@@ -220,7 +210,7 @@ securityPolicies:
       - action: Allow
         principal:
           clientCIDRs:
-          - 10.0.0.0/24
+          - 10.10.5.0/24
     cors:
       allowOrigins:
       - https://example.com
