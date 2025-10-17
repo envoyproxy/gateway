@@ -34,8 +34,10 @@ func GetRootCommand(asyncErrHandler func(error)) *cobra.Command {
 					case <-cmd.Context().Done():
 						close(errChan)
 						return
-					case err := <-errChan:
-						asyncErrHandler(err)
+					case err, ok := <-errChan:
+						if ok {
+							asyncErrHandler(err)
+						}
 					}
 				}
 			}()
