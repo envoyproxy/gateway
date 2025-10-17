@@ -359,7 +359,7 @@ func buildConsistentHashLoadBalancer(policy egv1a1.LoadBalancer) (*ir.Consistent
 	case egv1a1.SourceIPConsistentHashType:
 		consistentHash.SourceIP = ptr.To(true)
 	case egv1a1.HeaderConsistentHashType:
-		consistentHash.Header = &ir.Header{
+		consistentHash.Header = &egv1a1.Header{
 			Name: policy.ConsistentHash.Header.Name,
 		}
 	case egv1a1.HeadersConsistentHashType:
