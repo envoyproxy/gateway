@@ -1101,10 +1101,53 @@ func buildResponseOverride(policy *egv1a1.BackendTrafficPolicy, resources *resou
 				response.StatusCode = ptr.To(uint32(*ro.Response.StatusCode))
 			}
 
-			var err error
-			response.Body, err = getCustomResponseBody(ro.Response.Body, resources, policy.Namespace)
-			if err != nil {
-				return nil, err
+			if ro.Response.Body != nil && ro.Response.Body.Type != nil && *ro.Response.Body.Type == egv1a1.ResponseValueTypeValueRef {
+				cm := resources.GetConfigMap(policy.Namespace, string(ro.Response.Body.ValueRef.Name))
+				if cm == nil {
+					return nil, fmt.Errorf("can't find the referenced configmap %s", ro.Response.Body.ValueRef.Name)
+				}
+
+				if len(cm.Data) > 0 && len(cm.BinaryData) > 0 {
+					return nil, fmt.Errorf("the referenced configmap %s contains both data and binaryData", ro.Response.Body.ValueRef.Name)
+				}
+
+				b, dataOk := cm.Data["response.body"]
+				switch {
+				case dataOk:
+					body := []byte(b)
+					if err := checkResponseBodySize(body); err != nil {
+						return nil, err
+					}
+					response.Body = body
+
+				case len(cm.Data) > 0:
+					for _, value := range cm.Data {
+						body := []byte(value)
+						if err := checkResponseBodySize(body); err != nil {
+							return nil, err
+						}
+						response.Body = body
+						break
+					}
+				case len(cm.BinaryData) > 0:
+					for _, bin := range cm.BinaryData {
+						if err := checkResponseBodySize(bin); err != nil {
+							return nil, err
+						}
+						response.Body = bin
+						break
+					}
+				default:
+					return nil, fmt.Errorf("can't find the key response.body in the referenced configmap %s", ro.Response.Body.ValueRef.Name)
+				}
+			}
+
+			if ro.Response.Body != nil && ro.Response.Body.Inline != nil {
+				body := []byte(*ro.Response.Body.Inline)
+				if err := checkResponseBodySize(body); err != nil {
+					return nil, err
+				}
+				response.Body = body
 			}
 
 			rhm := ro.Response.Header
@@ -1138,53 +1181,16 @@ func buildResponseOverride(policy *egv1a1.BackendTrafficPolicy, resources *resou
 	}, nil
 }
 
-func checkResponseBodySize(b *string) error {
+func checkResponseBodySize(b []byte) error {
 	// Make this configurable in the future
 	// https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route.proto.html#max_direct_response_body_size_bytes
 	maxDirectResponseSize := 4096
-	lenB := len(*b)
+	lenB := len(b)
 	if lenB > maxDirectResponseSize {
 		return fmt.Errorf("response.body size %d greater than the max size %d", lenB, maxDirectResponseSize)
 	}
 
 	return nil
-}
-
-func getCustomResponseBody(body *egv1a1.CustomResponseBody, resources *resource.Resources, policyNs string) (*string, error) {
-	if body != nil && body.Type != nil && *body.Type == egv1a1.ResponseValueTypeValueRef {
-		cm := resources.GetConfigMap(policyNs, string(body.ValueRef.Name))
-		if cm != nil {
-			b, dataOk := cm.Data["response.body"]
-			switch {
-			case dataOk:
-				if err := checkResponseBodySize(&b); err != nil {
-					return nil, err
-				}
-				return &b, nil
-			case len(cm.Data) > 0: // Fallback to the first key if response.body is not found
-				for _, value := range cm.Data {
-					b = value
-					break
-				}
-				if err := checkResponseBodySize(&b); err != nil {
-					return nil, err
-				}
-				return &b, nil
-			default:
-				return nil, fmt.Errorf("can't find the key response.body in the referenced configmap %s", body.ValueRef.Name)
-			}
-
-		} else {
-			return nil, fmt.Errorf("can't find the referenced configmap %s", body.ValueRef.Name)
-		}
-	} else if body != nil && body.Inline != nil {
-		if err := checkResponseBodySize(body.Inline); err != nil {
-			return nil, err
-		}
-		return body.Inline, nil
-	}
-
-	return nil, nil
 }
 
 func defaultResponseOverrideRuleName(policy *egv1a1.BackendTrafficPolicy, index int) string {
