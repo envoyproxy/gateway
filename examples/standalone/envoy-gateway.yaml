@@ -11,6 +11,15 @@ provider:
         paths: ["/tmp/envoy-gateway-test"]
     infrastructure:
       type: Host
+      # Optional: Configure XDG-compliant directory paths under host:
+      # If not specified, uses XDG Base Directory defaults:
+      # - configHome: ~/.config/envoy-gateway
+      # - dataHome: ~/.local/share/envoy-gateway
+      # - stateHome: ~/.local/state/envoy-gateway
+      # - runtimeDir: /tmp/envoy-gateway-${UID}
+      # Example custom configuration:
+      # host:
+      #   dataHome: /custom/data/path
       host: {}
 logging:
   level:

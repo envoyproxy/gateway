@@ -430,7 +430,25 @@ type EnvoyGatewayInfrastructureProvider struct {
 
 // EnvoyGatewayHostInfrastructureProvider defines configuration for the Host Infrastructure provider.
 type EnvoyGatewayHostInfrastructureProvider struct {
-	// TODO: Add config as use cases are better understood.
+	// ConfigHome is the directory for configuration files.
+	// Defaults to ~/.config/envoy-gateway
+	// +optional
+	ConfigHome *string `json:"configHome,omitempty"`
+
+	// DataHome is the directory for persistent data (Envoy binaries).
+	// Defaults to ~/.local/share/envoy-gateway
+	// +optional
+	DataHome *string `json:"dataHome,omitempty"`
+
+	// StateHome is the directory for persistent state (logs).
+	// Defaults to ~/.local/state/envoy-gateway
+	// +optional
+	StateHome *string `json:"stateHome,omitempty"`
+
+	// RuntimeDir is the directory for ephemeral runtime files.
+	// Defaults to /tmp/envoy-gateway-${UID}
+	// +optional
+	RuntimeDir *string `json:"runtimeDir,omitempty"`
 }
 
 // RateLimit defines the configuration associated with the Rate Limit Service

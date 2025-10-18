@@ -7,7 +7,9 @@ package runner
 
 import (
 	"context"
+	"crypto/tls"
 	"os"
+	"path/filepath"
 	"reflect"
 	"testing"
 	"time"
@@ -18,6 +20,7 @@ import (
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/crypto"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/extension/registry"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -234,4 +237,67 @@ func TestDeleteAllKeys(t *testing.T) {
 	require.Empty(t, r.keyCache.BackendTrafficPolicyStatus)
 	require.Empty(t, r.keyCache.SecurityPolicyStatus)
 	require.Empty(t, r.keyCache.EnvoyExtensionPolicyStatus)
+}
+
+func TestLoadTLSConfig_HostMode(t *testing.T) {
+	// Create temporary directory structure for certs using t.TempDir()
+	configHome := t.TempDir()
+	certsDir := filepath.Join(configHome, "certs", "envoy-gateway")
+	hmacDir := filepath.Join(configHome, "certs", "envoy-oidc-hmac")
+	require.NoError(t, os.MkdirAll(certsDir, 0o750))
+	require.NoError(t, os.MkdirAll(hmacDir, 0o750))
+
+	// Create test certificates using internal/crypto package
+	cfg, err := config.New(os.Stdout, os.Stderr)
+	require.NoError(t, err)
+
+	// Generate certificates with default provider (crypto.GenerateCerts only supports Kubernetes)
+	certs, err := crypto.GenerateCerts(cfg)
+	require.NoError(t, err)
+
+	// Write certificates to temp directory
+	caFile := filepath.Join(certsDir, "ca.crt")
+	certFile := filepath.Join(certsDir, "tls.crt")
+	keyFile := filepath.Join(certsDir, "tls.key")
+	hmacFile := filepath.Join(hmacDir, "hmac-secret")
+
+	require.NoError(t, os.WriteFile(caFile, certs.CACertificate, 0o600))
+	require.NoError(t, os.WriteFile(certFile, certs.EnvoyGatewayCertificate, 0o600))
+	require.NoError(t, os.WriteFile(keyFile, certs.EnvoyGatewayPrivateKey, 0o600))
+	require.NoError(t, os.WriteFile(hmacFile, certs.OIDCHMACSecret, 0o600))
+
+	// Configure host mode with custom configHome (certs are stored in configHome)
+	// MUST be set BEFORE creating Runner since Config{Server: *cfg} makes a copy
+	cfg.EnvoyGateway.Provider = &egv1a1.EnvoyGatewayProvider{
+		Type: egv1a1.ProviderTypeCustom,
+		Custom: &egv1a1.EnvoyGatewayCustomProvider{
+			Infrastructure: &egv1a1.EnvoyGatewayInfrastructureProvider{
+				Type: egv1a1.InfrastructureProviderTypeHost,
+				Host: &egv1a1.EnvoyGatewayHostInfrastructureProvider{
+					ConfigHome: &configHome,
+				},
+			},
+		},
+	}
+
+	r := &Runner{
+		Config: Config{
+			Server: *cfg,
+		},
+	}
+
+	// Test loadTLSConfig with host mode
+	tlsConfig, salt, err := r.loadTLSConfig(context.Background())
+	require.NoError(t, err)
+	require.NotNil(t, tlsConfig)
+	require.NotNil(t, salt)
+
+	// Verify HMAC secret was loaded
+	require.Equal(t, certs.OIDCHMACSecret, salt)
+
+	// Verify TLS config properties
+	// crypto.LoadTLSConfig uses GetConfigForClient callback to load certs on demand
+	require.NotNil(t, tlsConfig.GetConfigForClient)
+	require.Equal(t, tls.RequireAndVerifyClientCert, tlsConfig.ClientAuth)
+	require.Equal(t, uint16(tls.VersionTLS13), tlsConfig.MinVersion)
 }
