@@ -99,6 +99,10 @@ tcp:
           name: ca-cert-2
           certificate: [99, 101, 114, 116, 45, 100, 97, 116, 97]
         requireClientCertificate: true
+        crl:
+          name: ca-crl-2
+          data: [99, 101, 114, 116, 45, 100, 97, 116, 97]
+          onlyVerifyLeafCertificate: true
         matchTypedSubjectAltNames:
         - distinct: false
           exact: client2.example.org
