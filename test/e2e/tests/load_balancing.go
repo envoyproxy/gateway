@@ -43,6 +43,7 @@ func init() {
 		ConsistentHashHeaderLoadBalancingTest,
 		ConsistentHashCookieLoadBalancingTest,
 		EndpointOverrideLoadBalancingTest,
+		MultiHeaderConsistentHashHeaderLoadBalancingTest,
 	)
 }
 

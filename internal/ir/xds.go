@@ -2593,7 +2593,6 @@ type Random struct{}
 type ConsistentHash struct {
 	// Hash based on the Source IP Address
 	SourceIP  *bool            `json:"sourceIP,omitempty" yaml:"sourceIP,omitempty"`
-	Header    *egv1a1.Header   `json:"header,omitempty" yaml:"header,omitempty"`
 	Headers   []*egv1a1.Header `json:"headers,omitempty" yaml:"headers,omitempty"`
 	Cookie    *egv1a1.Cookie   `json:"cookie,omitempty" yaml:"cookie,omitempty"`
 	TableSize *uint64          `json:"tableSize,omitempty" yaml:"tableSize,omitempty"`
