@@ -417,7 +417,7 @@ func (t *Translator) processBTPolicyForGateway(
 
 	// Find its ancestor reference by resolved gateway, even with resolve error
 	gatewayNN := utils.NamespacedName(targetedGateway)
-	ancestorRef := getAncestorRefForPolicy(gatewayNN, nil)
+	ancestorRef := getAncestorRefForPolicy(gatewayNN, currTarget.SectionName)
 
 	// Set conditions for resolve error, then skip current gateway
 	if resolveErr != nil {
