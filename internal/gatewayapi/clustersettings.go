@@ -336,6 +336,7 @@ func buildLoadBalancer(policy *egv1a1.ClusterSettings) (*ir.LoadBalancer, error)
 		preferLocal := policy.LoadBalancer.ZoneAware.PreferLocal
 		lb.PreferLocal = &ir.PreferLocalZone{
 			MinEndpointsThreshold: preferLocal.MinEndpointsThreshold,
+			PercentageEnabled:     preferLocal.PercentageEnabled,
 		}
 		if preferLocal.Force != nil {
 			lb.PreferLocal.Force = &ir.ForceLocalZone{
@@ -439,6 +440,7 @@ func buildPassiveHealthCheck(policy egv1a1.HealthCheck) *ir.OutlierDetection {
 		ConsecutiveGatewayErrors:       hc.ConsecutiveGatewayErrors,
 		Consecutive5xxErrors:           hc.Consecutive5xxErrors,
 		MaxEjectionPercent:             hc.MaxEjectionPercent,
+		FailurePercentageThreshold:     hc.FailurePercentageThreshold,
 	}
 
 	if hc.Interval != nil {

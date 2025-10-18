@@ -121,7 +121,7 @@ func newTranslateResult(gateways []*GatewayContext,
 	clientTrafficPolicies []*egv1a1.ClientTrafficPolicy,
 	backendTrafficPolicies []*egv1a1.BackendTrafficPolicy,
 	securityPolicies []*egv1a1.SecurityPolicy,
-	backendTLSPolicies []*gwapiv1a3.BackendTLSPolicy,
+	backendTLSPolicies []*gwapiv1.BackendTLSPolicy,
 	envoyExtensionPolicies []*egv1a1.EnvoyExtensionPolicy,
 	extPolicies []unstructured.Unstructured,
 	backends []*egv1a1.Backend,
@@ -154,7 +154,7 @@ func newTranslateResult(gateways []*GatewayContext,
 	}
 
 	if n := len(tlsRoutes); n > 0 {
-		translateResult.TLSRoutes = make([]*gwapiv1a2.TLSRoute, n)
+		translateResult.TLSRoutes = make([]*gwapiv1a3.TLSRoute, n)
 		for i, tlsRoute := range tlsRoutes {
 			translateResult.TLSRoutes[i] = tlsRoute.TLSRoute
 		}

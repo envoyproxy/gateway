@@ -23,7 +23,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/yaml"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -1141,6 +1140,9 @@ type OIDC struct {
 	// DefaultRefreshTokenTTL is the default lifetime of the refresh token.
 	DefaultRefreshTokenTTL *metav1.Duration `json:"defaultRefreshTokenTTL,omitempty"`
 
+	// CSRFTokenTTL configures the lifetime of the csrf token Envoy stores in the cookie.
+	CSRFTokenTTL *metav1.Duration `json:"csrfTokenTTL,omitempty"`
+
 	// CookieSuffix will be added to the name of the cookies set by the oauth filter.
 	// Adding a suffix avoids multiple oauth filters from overwriting each other's cookies.
 	// These cookies are set by the oauth filter, including: AccessToken,
@@ -2038,6 +2040,8 @@ type TCPRoute struct {
 	BackendConnection *BackendConnection `json:"backendConnection,omitempty" yaml:"backendConnection,omitempty"`
 	// DNS is used to configure how DNS resolution is handled for the route
 	DNS *DNS `json:"dns,omitempty" yaml:"dns,omitempty"`
+	// Authorization defines the schema for the authorization.
+	Authorization *Authorization `json:"authorization,omitempty" yaml:"authorization,omitempty"`
 }
 
 // TLS holds information for configuring TLS on a listener
@@ -2378,7 +2382,7 @@ type EnvoyPatchPolicyStatus struct {
 	Name      string `json:"name,omitempty" yaml:"name"`
 	Namespace string `json:"namespace,omitempty" yaml:"namespace"`
 	// Status of the EnvoyPatchPolicy
-	Status *gwapiv1a2.PolicyStatus `json:"status,omitempty" yaml:"status,omitempty"`
+	Status *gwapiv1.PolicyStatus `json:"status,omitempty" yaml:"status,omitempty"`
 }
 
 // JSONPatchConfig defines the configuration for patching a Envoy xDS Resource
@@ -2678,6 +2682,8 @@ type OutlierDetection struct {
 	BaseEjectionTime *metav1.Duration `json:"baseEjectionTime,omitempty" yaml:"baseEjectionTime,omitempty"`
 	// MaxEjectionPercent sets the maximum percentage of hosts in a cluster that can be ejected.
 	MaxEjectionPercent *int32 `json:"maxEjectionPercent,omitempty" yaml:"maxEjectionPercent,omitempty"`
+	// FailurePercentageThreshold sets the failure percentage threshold for outlier detection.
+	FailurePercentageThreshold *uint32 `json:"failurePercentageThreshold,omitempty" yaml:"failurePercentageThreshold,omitempty"`
 }
 
 // ActiveHealthCheck defines active health check settings
@@ -3241,6 +3247,8 @@ type PreferLocalZone struct {
 	Force *ForceLocalZone `json:"force,omitempty" yaml:"force,omitempty"`
 	// MinEndpointsThreshold is the minimum number of total upstream endpoints across all zones required to enable zone-aware routing.
 	MinEndpointsThreshold *uint64 `json:"minEndpointsThreshold,omitempty" yaml:"minEndpointsThreshold,omitempty"`
+	// Configures percentage of requests that will be considered for zone aware routing if zone aware routing is configured. If not specified, the default is 100%.
+	PercentageEnabled *uint32 `json:"percentageEnabled,omitempty" yaml:"percentageEnabled,omitempty"`
 }
 
 // ForceLocalZone defines override configuration for forcing all traffic to stay within the local zone instead of the default behavior

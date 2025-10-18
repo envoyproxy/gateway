@@ -8,6 +8,7 @@ package egctl
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -28,6 +29,7 @@ type collectOptions struct {
 	outPath               string
 	envoyGatewayNamespace string
 	proxyNamespaces       []string
+	enableSDS             bool
 }
 
 func newCollectCommand() *cobra.Command {
@@ -39,7 +41,7 @@ func newCollectCommand() *cobra.Command {
   egctl experimental collect
 	`,
 		Run: func(c *cobra.Command, args []string) {
-			cmdutil.CheckErr(runCollect(*collectOpts))
+			cmdutil.CheckErr(runCollect(c.OutOrStderr(), *collectOpts))
 		},
 	}
 
@@ -52,11 +54,13 @@ func newCollectCommand() *cobra.Command {
 		"Specify the namespace where the Envoy Gateway controller is installed.")
 	collectCommand.PersistentFlags().StringArrayVarP(&collectOpts.proxyNamespaces, "envoy-proxy-namespaces", "", []string{},
 		"Specify the namespaces where Envoy proxies are running.")
+	collectCommand.PersistentFlags().BoolVarP(&collectOpts.enableSDS, "sds", "", false,
+		"Specify if the SDS configuration will retrieved or not, Default to false")
 
 	return collectCommand
 }
 
-func runCollect(collectOpts collectOptions) error {
+func runCollect(errWriter io.Writer, collectOpts collectOptions) error {
 	cc := options.DefaultConfigFlags.ToRawKubeConfigLoader()
 	restConfig, err := cc.ClientConfig()
 	if err != nil {
@@ -92,15 +96,20 @@ func runCollect(collectOpts collectOptions) error {
 		return fmt.Errorf("create bundle dir: %w", err)
 	}
 
+	collectedNamespaces := []string{collectOpts.envoyGatewayNamespace}
 	proxyNamespaces := sets.New(collectOpts.proxyNamespaces...)
-	opts := tb.CollectOptions{
-		BundlePath:          bundlePath,
-		CollectedNamespaces: []string{collectOpts.envoyGatewayNamespace},
-	}
 	if len(proxyNamespaces) > 0 {
-		opts.CollectedNamespaces = append(opts.CollectedNamespaces, proxyNamespaces.UnsortedList()...)
+		collectedNamespaces = append(collectedNamespaces, proxyNamespaces.UnsortedList()...)
 	}
-	result := tb.CollectResult(ctx, restConfig, opts)
+
+	result, err := tb.CollectResult(ctx, restConfig,
+		tb.WithBundlePath(bundlePath),
+		tb.WithCollectedNamespaces(collectedNamespaces),
+		tb.WithSDS(collectOpts.enableSDS),
+	)
+	if err != nil {
+		_, _ = fmt.Fprintln(errWriter, "warning: failed to collect all data:", err)
+	}
 	return result.ArchiveBundle(bundlePath, fmt.Sprintf("%s.tar.gz", basename))
 }
 

@@ -115,11 +115,11 @@ func setupTestRunner(t *testing.T) (*Runner, []types.NamespacedName) {
 	r.ProviderResources.UDPRouteStatuses.Store(keys[5], &gwapiv1a2.UDPRouteStatus{})
 	r.ProviderResources.UDPRouteStatuses.Store(keys[6], &gwapiv1a2.UDPRouteStatus{})
 	r.ProviderResources.BackendStatuses.Store(keys[7], &egv1a1.BackendStatus{})
-	r.ProviderResources.BackendTLSPolicyStatuses.Store(keys[8], &gwapiv1a2.PolicyStatus{})
-	r.ProviderResources.ClientTrafficPolicyStatuses.Store(keys[9], &gwapiv1a2.PolicyStatus{})
-	r.ProviderResources.BackendTrafficPolicyStatuses.Store(keys[10], &gwapiv1a2.PolicyStatus{})
-	r.ProviderResources.SecurityPolicyStatuses.Store(keys[11], &gwapiv1a2.PolicyStatus{})
-	r.ProviderResources.EnvoyExtensionPolicyStatuses.Store(keys[12], &gwapiv1a2.PolicyStatus{})
+	r.ProviderResources.BackendTLSPolicyStatuses.Store(keys[8], &gwapiv1.PolicyStatus{})
+	r.ProviderResources.ClientTrafficPolicyStatuses.Store(keys[9], &gwapiv1.PolicyStatus{})
+	r.ProviderResources.BackendTrafficPolicyStatuses.Store(keys[10], &gwapiv1.PolicyStatus{})
+	r.ProviderResources.SecurityPolicyStatuses.Store(keys[11], &gwapiv1.PolicyStatus{})
+	r.ProviderResources.EnvoyExtensionPolicyStatuses.Store(keys[12], &gwapiv1.PolicyStatus{})
 
 	// Populate keyCache to simulate normal operation where stores and keyCache are kept in sync
 	r.populateKeyCache()
