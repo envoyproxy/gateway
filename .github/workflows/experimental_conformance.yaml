@@ -64,3 +64,20 @@ jobs:
         with:
           name: conformance-report-k8s-${{ matrix.target.version }}-${{ matrix.target.profile }}
           path: ./test/conformance/conformance-report-k8s-${{ matrix.target.version }}-${{ matrix.target.profile }}.yaml
+
+      - name: Upload Experimental Conformance Test Reports
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2
+        if: always()
+        with:
+          name: experimental-conformance-test-reports-${{ matrix.target.version }}-${{ matrix.target.ipFamily }}-${{ matrix.target.profile }}
+          path: bin/test-reports/
+          retention-days: 30
+
+      - name: Publish Experimental Conformance Test Results
+        uses: dorny/test-reporter@dc3a92680fcc15842eef52e8c4606ea7ce6bd3f3  # v2.1.1
+        if: always()
+        with:
+          name: Experimental Conformance Tests (${{ matrix.target.version }}/${{ matrix.target.ipFamily }}/${{ matrix.target.profile }})
+          path: bin/test-reports/*-junit.xml
+          reporter: java-junit
+          fail-on-error: false

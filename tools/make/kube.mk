@@ -238,13 +238,14 @@ setup-mac-net-connect:
 .PHONY: run-e2e
 run-e2e: ## Run e2e tests
 	@$(LOG_TARGET)
+	@mkdir -p $(OUTPUT_DIR)/test-reports
 ifeq ($(E2E_RUN_TEST),)
-	go test $(E2E_TEST_ARGS) ./test/e2e --gateway-class=envoy-gateway --debug=true --cleanup-base-resources=false $(E2E_REDIRECT)
-	go test $(E2E_TEST_ARGS) ./test/e2e/merge_gateways --gateway-class=merge-gateways --debug=true --cleanup-base-resources=false
-	go test $(E2E_TEST_ARGS) ./test/e2e/multiple_gc --debug=true --cleanup-base-resources=true
-	LAST_VERSION_TAG=$(shell cat VERSION) go test $(E2E_TEST_ARGS) ./test/e2e/upgrade --gateway-class=upgrade --debug=true --cleanup-base-resources=$(E2E_CLEANUP)
+	$(GO_TOOL) gotestsum --format=standard-verbose --jsonfile=$(OUTPUT_DIR)/test-reports/e2e-main.json --junitfile=$(OUTPUT_DIR)/test-reports/e2e-main-junit.xml -- $(E2E_TEST_ARGS) ./test/e2e --gateway-class=envoy-gateway --debug=true --cleanup-base-resources=false $(E2E_REDIRECT)
+	$(GO_TOOL) gotestsum --format=standard-verbose --jsonfile=$(OUTPUT_DIR)/test-reports/e2e-merge-gateways.json --junitfile=$(OUTPUT_DIR)/test-reports/e2e-merge-gateways-junit.xml -- $(E2E_TEST_ARGS) ./test/e2e/merge_gateways --gateway-class=merge-gateways --debug=true --cleanup-base-resources=false
+	$(GO_TOOL) gotestsum --format=standard-verbose --jsonfile=$(OUTPUT_DIR)/test-reports/e2e-multiple-gc.json --junitfile=$(OUTPUT_DIR)/test-reports/e2e-multiple-gc-junit.xml -- $(E2E_TEST_ARGS) ./test/e2e/multiple_gc --debug=true --cleanup-base-resources=true
+	LAST_VERSION_TAG=$(shell cat VERSION) $(GO_TOOL) gotestsum --format=standard-verbose --jsonfile=$(OUTPUT_DIR)/test-reports/e2e-upgrade.json --junitfile=$(OUTPUT_DIR)/test-reports/e2e-upgrade-junit.xml -- $(E2E_TEST_ARGS) ./test/e2e/upgrade --gateway-class=upgrade --debug=true --cleanup-base-resources=$(E2E_CLEANUP)
 else
-	go test $(E2E_TEST_ARGS) ./test/e2e --gateway-class=envoy-gateway --debug=true --cleanup-base-resources=$(E2E_CLEANUP) \
+	$(GO_TOOL) gotestsum --format=standard-verbose --jsonfile=$(OUTPUT_DIR)/test-reports/e2e-single.json --junitfile=$(OUTPUT_DIR)/test-reports/e2e-single-junit.xml -- $(E2E_TEST_ARGS) ./test/e2e --gateway-class=envoy-gateway --debug=true --cleanup-base-resources=$(E2E_CLEANUP) \
 		--run-test $(E2E_RUN_TEST) $(E2E_REDIRECT)
 endif
 
@@ -315,12 +316,13 @@ kube-install-image: image.build ## Install the EG image to a kind cluster using 
 .PHONY: run-conformance
 run-conformance: prepare-ip-family ## Run Gateway API conformance.
 	@$(LOG_TARGET)
+	@mkdir -p $(OUTPUT_DIR)/test-reports
 	kubectl wait --timeout=$(WAIT_TIMEOUT) -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
 	kubectl apply -f test/config/gatewayclass.yaml
 ifeq ($(CONFORMANCE_RUN_TEST),)
-	go test -v -tags conformance ./test/conformance --gateway-class=envoy-gateway --debug=true
+	$(GO_TOOL) gotestsum --format=standard-verbose --jsonfile=$(OUTPUT_DIR)/test-reports/conformance.json --junitfile=$(OUTPUT_DIR)/test-reports/conformance-junit.xml -- -v -tags conformance ./test/conformance --gateway-class=envoy-gateway --debug=true
 else
-	go test -v -tags conformance ./test/conformance --gateway-class=envoy-gateway --debug=true --run-test $(CONFORMANCE_RUN_TEST)
+	$(GO_TOOL) gotestsum --format=standard-verbose --jsonfile=$(OUTPUT_DIR)/test-reports/conformance.json --junitfile=$(OUTPUT_DIR)/test-reports/conformance-junit.xml -- -v -tags conformance ./test/conformance --gateway-class=envoy-gateway --debug=true --run-test $(CONFORMANCE_RUN_TEST)
 endif
 
 CONFORMANCE_REPORT_PATH ?=
@@ -328,16 +330,17 @@ CONFORMANCE_REPORT_PATH ?=
 .PHONY: run-experimental-conformance
 run-experimental-conformance: prepare-ip-family ## Run Experimental Gateway API conformance.
 	@$(LOG_TARGET)
+	@mkdir -p $(OUTPUT_DIR)/test-reports
 	kubectl wait --timeout=$(WAIT_TIMEOUT) -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
 	kubectl apply -f test/config/gatewayclass.yaml
 ifeq ($(CONFORMANCE_RUN_TEST),)
-	go test -v -tags experimental ./test/conformance -run TestExperimentalConformance --gateway-class=envoy-gateway --debug=true \
+	$(GO_TOOL) gotestsum --format=standard-verbose --jsonfile=$(OUTPUT_DIR)/test-reports/experimental-conformance.json --junitfile=$(OUTPUT_DIR)/test-reports/experimental-conformance-junit.xml -- -v -tags experimental ./test/conformance -run TestExperimentalConformance --gateway-class=envoy-gateway --debug=true \
 		--organization=envoyproxy --project=envoy-gateway --url=https://github.com/envoyproxy/gateway --version=latest \
 		--report-output="$(CONFORMANCE_REPORT_PATH)" --contact=https://github.com/envoyproxy/gateway/blob/main/GOVERNANCE.md \
 		--mode="$(KUBE_DEPLOY_PROFILE)" --version=$(TAG)
 else
     # we didn't care about output when running single test
-	go test -v -tags experimental ./test/conformance -run TestExperimentalConformance --gateway-class=envoy-gateway --debug=true --run-test $(CONFORMANCE_RUN_TEST)
+	$(GO_TOOL) gotestsum --format=standard-verbose --jsonfile=$(OUTPUT_DIR)/test-reports/experimental-conformance.json --junitfile=$(OUTPUT_DIR)/test-reports/experimental-conformance-junit.xml -- -v -tags experimental ./test/conformance -run TestExperimentalConformance --gateway-class=envoy-gateway --debug=true --run-test $(CONFORMANCE_RUN_TEST)
 endif
 
 
