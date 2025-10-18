@@ -1,0 +1,25 @@
+- ignorePortInHostMatching: true
+  name: grpc-listener
+  virtualHosts:
+  - domains:
+    - '*'
+    name: grpc-listener/*
+    routes:
+    - match:
+        prefix: /
+      name: grpc-route-with-stream-timeout
+      route:
+        cluster: grpc-route-with-only-stream-timeout-dest
+        idleTimeout: 3600s
+        maxStreamDuration:
+          maxStreamDuration: 45s
+        timeout: 45s
+    - match:
+        prefix: /
+      name: grpc-route-with-0s-stream-timeout
+      route:
+        cluster: grpc-route-with-0s-stream-timeout-dest
+        idleTimeout: 0s
+        maxStreamDuration:
+          maxStreamDuration: 0s
+        timeout: 0s
