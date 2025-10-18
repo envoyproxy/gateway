@@ -55,9 +55,6 @@
       name: seventh-route
       route:
         cluster: seventh-route-dest
-        hashPolicy:
-        - header:
-            headerName: name
         upgradeConfigs:
         - upgradeType: websocket
     - match:
