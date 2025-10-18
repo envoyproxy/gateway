@@ -134,8 +134,17 @@ test: ## Run all Go test of code sources.
 test: go.test.unit
 
 .PHONY: format
-format: ## Update and check dependences with go mod tidy.
-format: go.mod.lint
+format: ## Update and check dependences with go mod tidy and format YAML files with prettier.
+format: go.mod.lint format.yaml
+
+.PHONY: format.yaml
+format.yaml:
+	@$(LOG_TARGET)
+	@echo "Formatting YAML files with prettier (with retry on failure)..."
+	@for i in 1 2 3; do \
+		$(GO_TOOL) prettier --write '**/*.{yaml,yml}' && break || \
+		(echo "Attempt $$i failed, retrying in 2 seconds..." && sleep 2); \
+	done || echo "Warning: YAML formatting failed after 3 attempts, continuing..."
 
 .PHONY: clean
 clean: ## Remove all files that are created during builds.
