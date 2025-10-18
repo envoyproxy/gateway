@@ -2,7 +2,35 @@ backendTrafficPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:
-    name: merged-policy-for-route
+    name: policy-for-httproute-1-rule-2
+    namespace: default
+  spec:
+    connection:
+      bufferLimit: 200M
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-1
+      sectionName: rule-2
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: listener-1
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    name: merged-policy-for-httproute-1
     namespace: default
   spec:
     connection:
@@ -24,10 +52,49 @@ backendTrafficPolicies:
         kind: Gateway
         name: gateway-1
         namespace: envoy-gateway
-        sectionName: http
+        sectionName: listener-1
       conditions:
       - lastTransitionTime: null
-        message: Merged with policy envoy-gateway/policy-for-gateway
+        message: Merged with policy envoy-gateway/policy-for-gateway-1
+        reason: Merged
+        status: "True"
+        type: Merged
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: 'This policy is being overridden by other backendTrafficPolicy for
+          these route rules: [rule-2]'
+        reason: Overridden
+        status: "True"
+        type: Overridden
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    name: merged-policy-for-grpcroute-1
+    namespace: default
+  spec:
+    connection:
+      bufferLimit: 100M
+    mergeType: StrategicMerge
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: GRPCRoute
+      name: grpcroute-1
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: listener-2
+      conditions:
+      - lastTransitionTime: null
+        message: Merged with policy envoy-gateway/policy-for-gateway-1-listener-2
         reason: Merged
         status: "True"
         type: Merged
@@ -40,15 +107,20 @@ backendTrafficPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:
-    name: policy-for-route
-    namespace: default
+    name: policy-for-gateway-1-listener-2
+    namespace: envoy-gateway
   spec:
-    connection:
-      bufferLimit: 100M
     targetRef:
       group: gateway.networking.k8s.io
-      kind: GRPCRoute
-      name: grpcroute-1
+      kind: Gateway
+      name: gateway-1
+      sectionName: listener-2
+    timeout:
+      http:
+        connectionIdleTimeout: 26s
+        maxConnectionDuration: 27s
+      tcp:
+        connectTimeout: 25s
   status:
     ancestors:
     - ancestorRef:
@@ -56,22 +128,26 @@ backendTrafficPolicies:
         kind: Gateway
         name: gateway-1
         namespace: envoy-gateway
-        sectionName: http
+        sectionName: listener-2
       conditions:
       - lastTransitionTime: null
         message: Policy has been accepted.
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: 'This policy is being merged by other backendTrafficPolicies for
+          these routes: [default/grpcroute-1]'
+        reason: Merged
+        status: "True"
+        type: Merged
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:
-    name: policy-for-gateway
+    name: policy-for-gateway-1
     namespace: envoy-gateway
   spec:
-    httpUpgrade:
-    - type: websocket
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway
@@ -97,13 +173,13 @@ backendTrafficPolicies:
         type: Accepted
       - lastTransitionTime: null
         message: 'This policy is being merged by other backendTrafficPolicies for
-          these routes: [default/httproute-1]'
+          these routes: [default/grpcroute-1 default/httproute-1]'
         reason: Merged
         status: "True"
         type: Merged
       - lastTransitionTime: null
         message: 'This policy is being overridden by other backendTrafficPolicies
-          for these routes: [default/grpcroute-1]'
+          for these listeners: [listener-2]'
         reason: Overridden
         status: "True"
         type: Overridden
@@ -120,12 +196,18 @@ gateways:
     - allowedRoutes:
         namespaces:
           from: All
-      name: http
-      port: 80
+      name: listener-1
+      port: 8081
+      protocol: HTTP
+    - allowedRoutes:
+        namespaces:
+          from: All
+      name: listener-2
+      port: 8082
       protocol: HTTP
   status:
     listeners:
-    - attachedRoutes: 2
+    - attachedRoutes: 1
       conditions:
       - lastTransitionTime: null
         message: Sending translated listener configuration to the data plane
@@ -142,7 +224,30 @@ gateways:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
-      name: http
+      name: listener-1
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
+    - attachedRoutes: 1
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: listener-2
       supportedKinds:
       - group: gateway.networking.k8s.io
         kind: HTTPRoute
@@ -158,7 +263,7 @@ grpcRoutes:
     parentRefs:
     - name: gateway-1
       namespace: envoy-gateway
-      sectionName: http
+      sectionName: listener-2
     rules:
     - backendRefs:
       - name: service-1
@@ -180,7 +285,7 @@ grpcRoutes:
       parentRef:
         name: gateway-1
         namespace: envoy-gateway
-        sectionName: http
+        sectionName: listener-2
 httpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
@@ -188,19 +293,25 @@ httpRoutes:
     name: httproute-1
     namespace: default
   spec:
-    hostnames:
-    - gateway.envoyproxy.io
     parentRefs:
     - name: gateway-1
       namespace: envoy-gateway
-      sectionName: http
+      sectionName: listener-1
     rules:
     - backendRefs:
       - name: service-1
         port: 8080
       matches:
       - path:
-          value: /
+          value: /foo
+      name: rule-1
+    - backendRefs:
+      - name: service-1
+        port: 8080
+      matches:
+      - path:
+          value: /bar
+      name: rule-2
   status:
     parents:
     - conditions:
@@ -218,18 +329,25 @@ httpRoutes:
       parentRef:
         name: gateway-1
         namespace: envoy-gateway
-        sectionName: http
+        sectionName: listener-1
 infraIR:
   envoy-gateway/gateway-1:
     proxy:
       listeners:
       - address: null
-        name: envoy-gateway/gateway-1/http
+        name: envoy-gateway/gateway-1/listener-1
         ports:
-        - containerPort: 10080
-          name: http-80
+        - containerPort: 8081
+          name: http-8081
           protocol: HTTP
-          servicePort: 80
+          servicePort: 8081
+      - address: null
+        name: envoy-gateway/gateway-1/listener-2
+        ports:
+        - containerPort: 8082
+          name: http-8082
+          protocol: HTTP
+          servicePort: 8082
       metadata:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
@@ -265,26 +383,27 @@ xdsIR:
           protocol: TCP
     http:
     - address: 0.0.0.0
-      externalPort: 80
+      externalPort: 8081
       hostnames:
       - '*'
-      isHTTP2: true
+      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-1
         namespace: envoy-gateway
-        sectionName: http
-      name: envoy-gateway/gateway-1/http
+        sectionName: listener-1
+      name: envoy-gateway/gateway-1/listener-1
       path:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
-      port: 10080
+      port: 8081
       routes:
       - destination:
           metadata:
             kind: HTTPRoute
             name: httproute-1
             namespace: default
+            sectionName: rule-1
           name: httproute/default/httproute-1/rule/0
           settings:
           - addressType: IP
@@ -298,29 +417,79 @@ xdsIR:
             name: httproute/default/httproute-1/rule/0/backend/0
             protocol: HTTP
             weight: 1
-        hostname: gateway.envoyproxy.io
+        hostname: '*'
         isHTTP2: false
         metadata:
           kind: HTTPRoute
           name: httproute-1
           namespace: default
-        name: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
+          sectionName: rule-1
+        name: httproute/default/httproute-1/rule/0/match/0/*
         pathMatch:
           distinct: false
           name: ""
-          prefix: /
+          prefix: /foo
         traffic:
           backendConnection:
             bufferLimit: 100000000
           httpUpgrade:
           - type: spdy/3.1
-          - type: websocket
           timeout:
             http:
               connectionIdleTimeout: 16s
               maxConnectionDuration: 17s
             tcp:
               connectTimeout: 10s
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-1
+            namespace: default
+            sectionName: rule-2
+          name: httproute/default/httproute-1/rule/1
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            metadata:
+              name: service-1
+              namespace: default
+              sectionName: "8080"
+            name: httproute/default/httproute-1/rule/1/backend/0
+            protocol: HTTP
+            weight: 1
+        hostname: '*'
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-1
+          namespace: default
+          sectionName: rule-2
+        name: httproute/default/httproute-1/rule/1/match/0/*
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /bar
+        traffic:
+          backendConnection:
+            bufferLimit: 200000000
+    - address: 0.0.0.0
+      externalPort: 8082
+      hostnames:
+      - '*'
+      isHTTP2: true
+      metadata:
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: listener-2
+      name: envoy-gateway/gateway-1/listener-2
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
+      port: 8082
+      routes:
       - destination:
           metadata:
             kind: GRPCRoute
@@ -349,6 +518,12 @@ xdsIR:
         traffic:
           backendConnection:
             bufferLimit: 100000000
+          timeout:
+            http:
+              connectionIdleTimeout: 26s
+              maxConnectionDuration: 27s
+            tcp:
+              connectTimeout: 25s
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
