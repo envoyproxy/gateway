@@ -11,6 +11,7 @@ require (
 	google.golang.org/protobuf v1.36.10
 	k8s.io/apimachinery v0.34.1
 	sigs.k8s.io/controller-runtime v0.22.3
+	sigs.k8s.io/gateway-api v1.4.0
 	sigs.k8s.io/gateway-api-inference-extension v0.5.1
 )
 
@@ -53,7 +54,6 @@ require (
 	golang.org/x/sys v0.37.0 // indirect
 	golang.org/x/text v0.30.0 // indirect
 	golang.org/x/tools v0.37.0 // indirect
-	golang.org/x/tools/go/expect v0.1.1-deprecated // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20250825161204-c5933d9347a5 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20250826171959-ef028d996bc1 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
