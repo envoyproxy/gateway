@@ -71,8 +71,47 @@ const (
 	defaultServiceStartupTimeout = 5 * time.Minute
 )
 
-// WaitForPods waits for the pods in the given namespace and with the given selector
-// to be in the given phase and condition.
+// LogPodsStatus writes pod phase, reason, and container states to the test log to help debug readiness issues.
+func LogPodsStatus(t *testing.T, cl client.Client, namespace string, selectors map[string]string, contextMsg string) {
+	t.Helper()
+	pods := &corev1.PodList{}
+
+	if err := cl.List(context.Background(), pods, &client.ListOptions{
+		Namespace:     namespace,
+		LabelSelector: labels.SelectorFromSet(selectors),
+	}); err != nil {
+		t.Logf("%s: failed to list pods in %s with selector %v: %v", contextMsg, namespace, selectors, err)
+		return
+	}
+
+	if len(pods.Items) == 0 {
+		t.Logf("%s: no pods found in %s with selector %v", contextMsg, namespace, selectors)
+		return
+	}
+
+	for i := range pods.Items {
+		p := &pods.Items[i]
+		var containerSummaries []string
+		for i := 0; i < len(p.Status.ContainerStatuses); i++ {
+			cs := p.Status.ContainerStatuses[i]
+			state := "unknown"
+			switch {
+			case cs.State.Waiting != nil:
+				state = "waiting:" + cs.State.Waiting.Reason
+			case cs.State.Running != nil:
+				state = "running"
+			case cs.State.Terminated != nil:
+				state = "terminated:" + cs.State.Terminated.Reason
+			}
+			containerSummaries = append(containerSummaries,
+				fmt.Sprintf("%s ready=%t restarts=%d state=%s", cs.Name, cs.Ready, cs.RestartCount, state))
+		}
+
+		t.Logf("%s: pod %s/%s phase=%s reason=%s message=%s node=%s containers=[%s]",
+			contextMsg, p.Namespace, p.Name, p.Status.Phase, p.Status.Reason, p.Status.Message, p.Spec.NodeName, strings.Join(containerSummaries, "; "))
+	}
+}
+
 func WaitForPods(t *testing.T, cl client.Client, namespace string, selectors map[string]string, phase corev1.PodPhase, condition *corev1.PodCondition) {
 	if condition == nil {
 		t.Fatalf("condition cannot be nil")
