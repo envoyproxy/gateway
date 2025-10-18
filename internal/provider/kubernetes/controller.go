@@ -376,7 +376,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 			}
 
 			r.log.Error(err, "failed to process TLS SecretRef for EnvoyProxy for GatewayClass")
-			_ = status.SetGatewayClassAccepted(
+			status.SetGatewayClassAccepted(
 				managedGC,
 				false,
 				string(gwapiv1.GatewayClassReasonAccepted),
@@ -392,7 +392,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 		if !failToProcessGCParamsRef {
 			// GatewayClass is valid so far, mark it as accepted.
 			logger.V(6).Info("Set GatewayClass Accepted")
-			_ = status.SetGatewayClassAccepted(
+			status.SetGatewayClassAccepted(
 				managedGC,
 				true,
 				string(gwapiv1.GatewayClassReasonAccepted),
