@@ -375,7 +375,7 @@ func runPathMatchRateLimitTest(t *testing.T, suite *suite.ConformanceTestSuite, 
 	gwNN := gatewayNN(disableHeader)
 	gwAddr := gatewayAndHTTPRoutesMustBeAccepted(t, suite, gwNN)
 
-	ancestorRef := gwapiv1a2.ParentReference{
+	ancestorRef := gwapiv1.ParentReference{
 		Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
 		Kind:      gatewayapi.KindPtr(resource.KindGateway),
 		Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
@@ -442,7 +442,7 @@ func runMethodMatchRateLimitTest(t *testing.T, suite *suite.ConformanceTestSuite
 	gwNN := gatewayNN(disableHeader)
 	gwAddr := gatewayAndHTTPRoutesMustBeAccepted(t, suite, gwNN)
 
-	ancestorRef := gwapiv1a2.ParentReference{
+	ancestorRef := gwapiv1.ParentReference{
 		Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
 		Kind:      gatewayapi.KindPtr(resource.KindGateway),
 		Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
