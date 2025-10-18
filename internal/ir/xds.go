@@ -423,6 +423,8 @@ type TLSCertificate struct {
 	Certificate []byte `json:"certificate,omitempty" yaml:"certificate,omitempty"`
 	// PrivateKey for the server.
 	PrivateKey PrivateBytes `json:"privateKey,omitempty" yaml:"privateKey,omitempty"`
+	// OCSPStaple contains the OCSP response for the certificate.
+	OCSPStaple []byte `json:"ocspStaple,omitempty" yaml:"ocspStaple,omitempty"`
 }
 
 // TLSCACertificate holds CA Certificate to validate clients
