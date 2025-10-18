@@ -18,6 +18,7 @@ func CmpResources(t *testing.T, x, y any, cmpOpts ...cmp.Option) {
 	opts := []cmp.Option{
 		cmpopts.IgnoreFields(metav1.ObjectMeta{}, "ResourceVersion"),
 		cmpopts.IgnoreFields(metav1.TypeMeta{}, "Kind", "APIVersion"),
+		cmpopts.IgnoreFields(metav1.Condition{}, "LastTransitionTime"),
 		cmpopts.EquateEmpty(),
 	}
 	opts = append(opts, cmpOpts...)
