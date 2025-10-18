@@ -7,12 +7,13 @@ package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
+// ListenerContextExample provides an example extension policy context resource.
+//
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
-//
-// ListenerContext provides an example extension policy context resource.
 type ListenerContextExample struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
