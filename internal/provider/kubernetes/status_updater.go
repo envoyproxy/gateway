@@ -7,6 +7,7 @@ package kubernetes
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"time"
 
@@ -111,9 +112,15 @@ func (u *UpdateHandler) apply(update Update) {
 			return nil
 		}
 
-		newObj.SetUID(obj.GetUID())
+		// Set LastTransitionTime to current time for all conditions before updating
+		newObjWithUpdatedLastTransitionTime, err := setLastTransitionTimeInStatusConditions(newObj, time.Now())
+		if err != nil {
+			log.Error(err, "unable to set last transition time for status conditions")
+			return err
+		}
 
-		return u.client.Status().Update(context.Background(), newObj)
+		newObjWithUpdatedLastTransitionTime.SetUID(obj.GetUID())
+		return u.client.Status().Update(context.Background(), newObjWithUpdatedLastTransitionTime)
 	}); err != nil {
 		log.Error(err, "unable to update status")
 
@@ -352,4 +359,113 @@ func KindOf(obj interface{}) string {
 	}
 
 	return kind
+}
+
+// setLastTransitionTimeInConditions sets LastTransitionTime to the given time for all conditions in a slice
+func setLastTransitionTimeInConditions(conditions []metav1.Condition, now metav1.Time) {
+	for i := range conditions {
+		conditions[i].LastTransitionTime = now
+	}
+}
+
+// setLastTransitionTimeInConditionsForPolicyStatus sets LastTransitionTime for Policy status conditions
+func setLastTransitionTimeInConditionsForPolicyStatus(status *gwapiv1.PolicyStatus, now metav1.Time) {
+	for i := range status.Ancestors {
+		setLastTransitionTimeInConditions(status.Ancestors[i].Conditions, now)
+	}
+}
+
+// setLastTransitionTimeInConditionsForRouteStatus sets LastTransitionTime for Route status conditions
+func setLastTransitionTimeInConditionsForRouteStatus(status *gwapiv1.RouteStatus, now metav1.Time) {
+	for i := range status.Parents {
+		setLastTransitionTimeInConditions(status.Parents[i].Conditions, now)
+	}
+}
+
+// setLastTransitionTimeInConditionsForUnstructuredStatus sets LastTransitionTime for Unstructured status conditions
+func setLastTransitionTimeInConditionsForUnstructuredStatus(obj *unstructured.Unstructured, now metav1.Time) {
+	if status, ok := obj.Object["status"].(map[string]interface{}); ok {
+		if conditions, ok := status["conditions"].([]interface{}); ok {
+			for i := range conditions {
+				if condition, ok := conditions[i].(map[string]interface{}); ok {
+					condition["lastTransitionTime"] = now
+				}
+			}
+		}
+	}
+}
+
+// setLastTransitionTimeInStatusConditions sets LastTransitionTime to the given time for all conditions in the status
+// and returns a copy of the object with updated LastTransitionTime
+func setLastTransitionTimeInStatusConditions(obj interface{}, timestamp time.Time) (client.Object, error) {
+	now := metav1.NewTime(timestamp)
+
+	switch o := obj.(type) {
+	case *gwapiv1.GatewayClass:
+		oCopy := o.DeepCopy()
+		setLastTransitionTimeInConditions(oCopy.Status.Conditions, now)
+		return oCopy, nil
+	case *gwapiv1.Gateway:
+		oCopy := o.DeepCopy()
+		setLastTransitionTimeInConditions(oCopy.Status.Conditions, now)
+		return oCopy, nil
+	case *egv1a1.Backend:
+		oCopy := o.DeepCopy()
+		setLastTransitionTimeInConditions(oCopy.Status.Conditions, now)
+		return oCopy, nil
+	// Resources with PolicyStatus
+	case *egv1a1.EnvoyPatchPolicy:
+		oCopy := o.DeepCopy()
+		setLastTransitionTimeInConditionsForPolicyStatus(&oCopy.Status, now)
+		return oCopy, nil
+	case *egv1a1.ClientTrafficPolicy:
+		oCopy := o.DeepCopy()
+		setLastTransitionTimeInConditionsForPolicyStatus(&oCopy.Status, now)
+		return oCopy, nil
+	case *egv1a1.BackendTrafficPolicy:
+		oCopy := o.DeepCopy()
+		setLastTransitionTimeInConditionsForPolicyStatus(&oCopy.Status, now)
+		return oCopy, nil
+	case *egv1a1.SecurityPolicy:
+		oCopy := o.DeepCopy()
+		setLastTransitionTimeInConditionsForPolicyStatus(&oCopy.Status, now)
+		return oCopy, nil
+	case *gwapiv1.BackendTLSPolicy:
+		oCopy := o.DeepCopy()
+		setLastTransitionTimeInConditionsForPolicyStatus(&oCopy.Status, now)
+		return oCopy, nil
+	case *egv1a1.EnvoyExtensionPolicy:
+		oCopy := o.DeepCopy()
+		setLastTransitionTimeInConditionsForPolicyStatus(&oCopy.Status, now)
+		return oCopy, nil
+	// Resources with RouteStatus
+	case *gwapiv1.HTTPRoute:
+		oCopy := o.DeepCopy()
+		setLastTransitionTimeInConditionsForRouteStatus(&oCopy.Status.RouteStatus, now)
+		return oCopy, nil
+	case *gwapiv1a3.TLSRoute:
+		oCopy := o.DeepCopy()
+		setLastTransitionTimeInConditionsForRouteStatus(&oCopy.Status.RouteStatus, now)
+		return oCopy, nil
+	case *gwapiv1a2.TCPRoute:
+		oCopy := o.DeepCopy()
+		setLastTransitionTimeInConditionsForRouteStatus(&oCopy.Status.RouteStatus, now)
+		return oCopy, nil
+	case *gwapiv1a2.UDPRoute:
+		oCopy := o.DeepCopy()
+		setLastTransitionTimeInConditionsForRouteStatus(&oCopy.Status.RouteStatus, now)
+		return oCopy, nil
+	case *gwapiv1.GRPCRoute:
+		oCopy := o.DeepCopy()
+		setLastTransitionTimeInConditionsForRouteStatus(&oCopy.Status.RouteStatus, now)
+		return oCopy, nil
+	// Unstructured resources
+	case *unstructured.Unstructured:
+		oCopy := o.DeepCopy()
+		setLastTransitionTimeInConditionsForUnstructuredStatus(oCopy, now)
+		return oCopy, nil
+	// Unknown types
+	default:
+		return nil, fmt.Errorf("cannot set last transition time for unknown object type: %T", o)
+	}
 }

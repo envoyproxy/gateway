@@ -8,7 +8,6 @@ package status
 import (
 	"fmt"
 	"slices"
-	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -19,14 +18,14 @@ import (
 )
 
 func UpdateGatewayStatusNotAccepted(gw *gwapiv1.Gateway, reason gwapiv1.GatewayConditionReason, msg string) *gwapiv1.Gateway {
-	cond := newCondition(string(gwapiv1.GatewayConditionAccepted), metav1.ConditionFalse, string(reason), msg, time.Now(), gw.Generation)
+	cond := newCondition(string(gwapiv1.GatewayConditionAccepted), metav1.ConditionFalse, string(reason), msg, gw.Generation)
 	gw.Status.Conditions = MergeConditions(gw.Status.Conditions, cond)
 	return gw
 }
 
 func UpdateGatewayStatusAccepted(gw *gwapiv1.Gateway) *gwapiv1.Gateway {
 	cond := newCondition(string(gwapiv1.GatewayConditionAccepted), metav1.ConditionTrue,
-		string(gwapiv1.GatewayReasonAccepted), "The Gateway has been scheduled by Envoy Gateway", time.Now(), gw.Generation)
+		string(gwapiv1.GatewayReasonAccepted), "The Gateway has been scheduled by Envoy Gateway", gw.Generation)
 	gw.Status.Conditions = MergeConditions(gw.Status.Conditions, cond)
 	return gw
 }
@@ -144,7 +143,6 @@ func SetGatewayListenerStatusCondition(gateway *gwapiv1.Gateway, listenerStatusI
 		Reason:             string(reason),
 		Message:            message,
 		ObservedGeneration: gateway.Generation,
-		LastTransitionTime: metav1.NewTime(time.Now()),
 	}
 	gateway.Status.Listeners[listenerStatusIdx].Conditions = MergeConditions(gateway.Status.Listeners[listenerStatusIdx].Conditions, cond)
 }
@@ -162,14 +160,14 @@ func updateGatewayProgrammedCondition(gw *gwapiv1.Gateway, envoyObj client.Objec
 	if len(gw.Status.Addresses) == 0 {
 		gw.Status.Conditions = MergeConditions(gw.Status.Conditions,
 			newCondition(string(gwapiv1.GatewayConditionProgrammed), metav1.ConditionFalse, string(gwapiv1.GatewayReasonAddressNotAssigned),
-				messageAddressNotAssigned, time.Now(), gw.Generation))
+				messageAddressNotAssigned, gw.Generation))
 		return
 	}
 
 	if len(gw.Status.Addresses) > 16 {
 		gw.Status.Conditions = MergeConditions(gw.Status.Conditions,
 			newCondition(string(gwapiv1.GatewayConditionProgrammed), metav1.ConditionFalse, string(gwapiv1.GatewayReasonInvalid),
-				fmt.Sprintf(messageFmtTooManyAddresses, len(gw.Status.Addresses)), time.Now(), gw.Generation))
+				fmt.Sprintf(messageFmtTooManyAddresses, len(gw.Status.Addresses)), gw.Generation))
 
 		// Truncate the addresses to 16
 		// so that the status can be updated successfully.
@@ -183,14 +181,14 @@ func updateGatewayProgrammedCondition(gw *gwapiv1.Gateway, envoyObj client.Objec
 		if obj != nil && obj.Status.AvailableReplicas > 0 {
 			gw.Status.Conditions = MergeConditions(gw.Status.Conditions,
 				newCondition(string(gwapiv1.GatewayConditionProgrammed), metav1.ConditionTrue, string(gwapiv1.GatewayConditionProgrammed),
-					fmt.Sprintf(messageFmtProgrammed, obj.Status.AvailableReplicas, obj.Status.Replicas), time.Now(), gw.Generation))
+					fmt.Sprintf(messageFmtProgrammed, obj.Status.AvailableReplicas, obj.Status.Replicas), gw.Generation))
 			return
 		}
 	case *appsv1.DaemonSet:
 		if obj != nil && obj.Status.NumberAvailable > 0 {
 			gw.Status.Conditions = MergeConditions(gw.Status.Conditions,
 				newCondition(string(gwapiv1.GatewayConditionProgrammed), metav1.ConditionTrue, string(gwapiv1.GatewayConditionProgrammed),
-					fmt.Sprintf(messageFmtProgrammed, obj.Status.NumberAvailable, obj.Status.CurrentNumberScheduled), time.Now(), gw.Generation))
+					fmt.Sprintf(messageFmtProgrammed, obj.Status.NumberAvailable, obj.Status.CurrentNumberScheduled), gw.Generation))
 			return
 		}
 	}
@@ -199,7 +197,7 @@ func updateGatewayProgrammedCondition(gw *gwapiv1.Gateway, envoyObj client.Objec
 	// Envoy DaemonSet, don't mark the Gateway as ready yet.
 	gw.Status.Conditions = MergeConditions(gw.Status.Conditions,
 		newCondition(string(gwapiv1.GatewayConditionProgrammed), metav1.ConditionFalse, string(gwapiv1.GatewayReasonNoResources),
-			messageNoResources, time.Now(), gw.Generation))
+			messageNoResources, gw.Generation))
 }
 
 // GetGatewayListenerStatusConditions returns the status conditions for a specific listener in the gateway status.
