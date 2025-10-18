@@ -7,7 +7,6 @@ package status
 
 import (
 	"strings"
-	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -30,14 +29,14 @@ func SetProgrammedForEnvoyPatchPolicy(s *gwapiv1.PolicyStatus) {
 	}
 
 	message := "Patches have been successfully applied."
-	cond := newCondition(string(egv1a1.PolicyConditionProgrammed), metav1.ConditionTrue, string(egv1a1.PolicyReasonProgrammed), message, time.Now(), 0)
+	cond := newCondition(string(egv1a1.PolicyConditionProgrammed), metav1.ConditionTrue, string(egv1a1.PolicyReasonProgrammed), message, 0)
 	for i := range s.Ancestors {
 		s.Ancestors[i].Conditions = MergeConditions(s.Ancestors[i].Conditions, cond)
 	}
 }
 
 func SetTranslationErrorForEnvoyPatchPolicy(s *gwapiv1.PolicyStatus, errMsg string) {
-	cond := newCondition(string(egv1a1.PolicyConditionProgrammed), metav1.ConditionFalse, string(egv1a1.PolicyReasonInvalid), errMsg, time.Now(), 0)
+	cond := newCondition(string(egv1a1.PolicyConditionProgrammed), metav1.ConditionFalse, string(egv1a1.PolicyReasonInvalid), errMsg, 0)
 	for i := range s.Ancestors {
 		s.Ancestors[i].Conditions = MergeConditions(s.Ancestors[i].Conditions, cond)
 	}
@@ -45,7 +44,7 @@ func SetTranslationErrorForEnvoyPatchPolicy(s *gwapiv1.PolicyStatus, errMsg stri
 
 func SetResourceNotFoundErrorForEnvoyPatchPolicy(s *gwapiv1.PolicyStatus, notFoundResources []string) {
 	message := "Unable to find xds resources: " + strings.Join(notFoundResources, ",")
-	cond := newCondition(string(egv1a1.PolicyConditionProgrammed), metav1.ConditionFalse, string(egv1a1.PolicyReasonResourceNotFound), message, time.Now(), 0)
+	cond := newCondition(string(egv1a1.PolicyConditionProgrammed), metav1.ConditionFalse, string(egv1a1.PolicyReasonResourceNotFound), message, 0)
 	for i := range s.Ancestors {
 		s.Ancestors[i].Conditions = MergeConditions(s.Ancestors[i].Conditions, cond)
 	}
