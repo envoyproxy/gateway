@@ -53,10 +53,10 @@ func (*wasm) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPListe
 			continue
 		}
 		for _, ep := range route.EnvoyExtensions.Wasms {
-			if hcmContainsFilter(mgr, wasmFilterName(ep)) {
+			if hcmContainsFilter(mgr, wasmFilterName(&ep)) {
 				continue
 			}
-			filter, err := buildHCMWasmFilter(ep)
+			filter, err := buildHCMWasmFilter(&ep)
 			if err != nil {
 				errs = errors.Join(errs, err)
 				continue
@@ -69,7 +69,7 @@ func (*wasm) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPListe
 }
 
 // buildHCMWasmFilter returns a wasm HTTP filter from the provided IR HTTPRoute.
-func buildHCMWasmFilter(wasm ir.Wasm) (*hcmv3.HttpFilter, error) {
+func buildHCMWasmFilter(wasm *ir.Wasm) (*hcmv3.HttpFilter, error) {
 	var (
 		wasmProto *wasmfilterv3.Wasm
 		wasmAny   *anypb.Any
@@ -94,11 +94,11 @@ func buildHCMWasmFilter(wasm ir.Wasm) (*hcmv3.HttpFilter, error) {
 	}, nil
 }
 
-func wasmFilterName(wasm ir.Wasm) string {
+func wasmFilterName(wasm *ir.Wasm) string {
 	return perRouteFilterName(egv1a1.EnvoyFilterWasm, wasm.Name)
 }
 
-func wasmConfig(wasm ir.Wasm) (*wasmfilterv3.Wasm, error) {
+func wasmConfig(wasm *ir.Wasm) (*wasmfilterv3.Wasm, error) {
 	var (
 		pluginConfig = ""
 		configAny    *anypb.Any
@@ -125,9 +125,7 @@ func wasmConfig(wasm ir.Wasm) (*wasmfilterv3.Wasm, error) {
 						HttpUpstreamType: &corev3.HttpUri_Cluster{
 							Cluster: wasmHTTPServiceClusterName,
 						},
-						Timeout: &durationpb.Duration{
-							Seconds: defaultExtServiceRequestTimeout,
-						},
+						Timeout: durationpb.New(defaultExtServiceRequestTimeout),
 					},
 					Sha256: wasm.Code.SHA256,
 				},
@@ -190,7 +188,7 @@ func (*wasm) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir.HTTPL
 	}
 
 	for _, ep := range irRoute.EnvoyExtensions.Wasms {
-		filterName := wasmFilterName(ep)
+		filterName := wasmFilterName(&ep)
 		if err := enableFilterOnRoute(route, filterName); err != nil {
 			return err
 		}

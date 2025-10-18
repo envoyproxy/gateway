@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	clusterV3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
 	coreV3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
@@ -308,7 +309,7 @@ func (t *testingExtensionServer) PostTranslateModify(_ context.Context, req *pb.
 	for idx, cluster := range req.Clusters {
 		response.Clusters[idx] = proto.Clone(cluster).(*clusterV3.Cluster)
 		if cluster.Name == "first-route" {
-			response.Clusters[idx].ConnectTimeout = &durationpb.Duration{Seconds: 30}
+			response.Clusters[idx].ConnectTimeout = durationpb.New(time.Second * 30)
 		}
 	}
 

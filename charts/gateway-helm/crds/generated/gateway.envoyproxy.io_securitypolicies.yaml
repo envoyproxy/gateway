@@ -254,6 +254,15 @@ spec:
                                 or the proxy protocol.
                                 You can use the `ClientIPDetection` or the `ProxyProtocol` field in
                                 the `ClientTrafficPolicy` to configure how the client IP is detected.
+
+                                For TCPRoute targets (raw TCP connections), HTTP headers such as
+                                X-Forwarded-For are not available. The client IP is obtained from the
+                                TCP connection's peer address. If intermediaries (load balancers, NAT)
+                                terminate or proxy TCP, the original client IP will only be available
+                                if the intermediary preserves the source address (for example by
+                                enabling the PROXY protocol or avoiding SNAT). Ensure your L4 proxy is
+                                configured to preserve the source IP to enable correct client-IP
+                                matching for TCPRoute targets.
                               items:
                                 description: |-
                                   CIDR defines a CIDR Address range.
@@ -339,7 +348,7 @@ spec:
                                           If multiple values are specified, one of the values must match for the rule to match.
                                         items:
                                           type: string
-                                        maxItems: 16
+                                        maxItems: 128
                                         minItems: 1
                                         type: array
                                     required:
@@ -921,8 +930,7 @@ spec:
                                         items:
                                           description: HTTPStatus defines the http
                                             status code.
-                                          exclusiveMaximum: true
-                                          maximum: 600
+                                          maximum: 599
                                           minimum: 100
                                           type: integer
                                         type: array
@@ -1113,6 +1121,15 @@ spec:
                                       ConsecutiveLocalOriginFailures sets the number of consecutive local origin failures triggering ejection.
                                       Parameter takes effect only when split_external_local_origin_errors is set to true.
                                     format: int32
+                                    type: integer
+                                  failurePercentageThreshold:
+                                    description: |-
+                                      FailurePercentageThreshold sets the failure percentage threshold for outlier detection.
+                                      If the failure percentage of a given host is greater than or equal to this value, it will be ejected.
+                                      Defaults to 85.
+                                    format: int32
+                                    maximum: 100
+                                    minimum: 0
                                     type: integer
                                   interval:
                                     default: 3s
@@ -1346,6 +1363,15 @@ spec:
                                           routing.
                                         format: int64
                                         type: integer
+                                      percentageEnabled:
+                                        description: Configures percentage of requests
+                                          that will be considered for zone aware routing
+                                          if zone aware routing is configured. If
+                                          not specified, Envoy defaults to 100%.
+                                        format: int32
+                                        maximum: 100
+                                        minimum: 0
+                                        type: integer
                                     type: object
                                 type: object
                             required:
@@ -1441,8 +1467,7 @@ spec:
                                     items:
                                       description: HTTPStatus defines the http status
                                         code.
-                                      exclusiveMaximum: true
-                                      maximum: 600
+                                      maximum: 599
                                       minimum: 100
                                       type: integer
                                     type: array
@@ -1930,8 +1955,7 @@ spec:
                                         items:
                                           description: HTTPStatus defines the http
                                             status code.
-                                          exclusiveMaximum: true
-                                          maximum: 600
+                                          maximum: 599
                                           minimum: 100
                                           type: integer
                                         type: array
@@ -2122,6 +2146,15 @@ spec:
                                       ConsecutiveLocalOriginFailures sets the number of consecutive local origin failures triggering ejection.
                                       Parameter takes effect only when split_external_local_origin_errors is set to true.
                                     format: int32
+                                    type: integer
+                                  failurePercentageThreshold:
+                                    description: |-
+                                      FailurePercentageThreshold sets the failure percentage threshold for outlier detection.
+                                      If the failure percentage of a given host is greater than or equal to this value, it will be ejected.
+                                      Defaults to 85.
+                                    format: int32
+                                    maximum: 100
+                                    minimum: 0
                                     type: integer
                                   interval:
                                     default: 3s
@@ -2355,6 +2388,15 @@ spec:
                                           routing.
                                         format: int64
                                         type: integer
+                                      percentageEnabled:
+                                        description: Configures percentage of requests
+                                          that will be considered for zone aware routing
+                                          if zone aware routing is configured. If
+                                          not specified, Envoy defaults to 100%.
+                                        format: int32
+                                        maximum: 100
+                                        minimum: 0
+                                        type: integer
                                     type: object
                                 type: object
                             required:
@@ -2450,8 +2492,7 @@ spec:
                                     items:
                                       description: HTTPStatus defines the http status
                                         code.
-                                      exclusiveMaximum: true
-                                      maximum: 600
+                                      maximum: 599
                                       minimum: 100
                                       type: integer
                                     type: array
@@ -3140,8 +3181,7 @@ spec:
                                               items:
                                                 description: HTTPStatus defines the
                                                   http status code.
-                                                exclusiveMaximum: true
-                                                maximum: 600
+                                                maximum: 599
                                                 minimum: 100
                                                 type: integer
                                               type: array
@@ -3342,6 +3382,15 @@ spec:
                                             ConsecutiveLocalOriginFailures sets the number of consecutive local origin failures triggering ejection.
                                             Parameter takes effect only when split_external_local_origin_errors is set to true.
                                           format: int32
+                                          type: integer
+                                        failurePercentageThreshold:
+                                          description: |-
+                                            FailurePercentageThreshold sets the failure percentage threshold for outlier detection.
+                                            If the failure percentage of a given host is greater than or equal to this value, it will be ejected.
+                                            Defaults to 85.
+                                          format: int32
+                                          maximum: 100
+                                          minimum: 0
                                           type: integer
                                         interval:
                                           default: 3s
@@ -3577,6 +3626,16 @@ spec:
                                                 to enable zone-aware routing.
                                               format: int64
                                               type: integer
+                                            percentageEnabled:
+                                              description: Configures percentage of
+                                                requests that will be considered for
+                                                zone aware routing if zone aware routing
+                                                is configured. If not specified, Envoy
+                                                defaults to 100%.
+                                              format: int32
+                                              maximum: 100
+                                              minimum: 0
+                                              type: integer
                                           type: object
                                       type: object
                                   required:
@@ -3673,8 +3732,7 @@ spec:
                                           items:
                                             description: HTTPStatus defines the http
                                               status code.
-                                            exclusiveMaximum: true
-                                            maximum: 600
+                                            maximum: 599
                                             minimum: 100
                                             type: integer
                                           type: array
@@ -3766,6 +3824,13 @@ spec:
                                       type: object
                                   type: object
                               type: object
+                            cacheDuration:
+                              default: 300s
+                              description: |-
+                                Duration is a string value representing a duration in time. The format is as specified
+                                in GEP-2257, a strict subset of the syntax parsed by Golang time.ParseDuration.
+                              pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                              type: string
                             uri:
                               description: |-
                                 URI is the HTTPS URI to fetch the JWKS. Envoy's system trust bundle is used to validate the server certificate.
@@ -3914,7 +3979,6 @@ spec:
                       By default, its unset.
                     properties:
                       sameSite:
-                        default: Strict
                         enum:
                         - Lax
                         - Strict
@@ -3948,6 +4012,16 @@ spec:
                           If not specified, defaults to "IdToken-(randomly generated uid)"
                         type: string
                     type: object
+                  csrfTokenTTL:
+                    description: |-
+                      CSRFTokenTTL defines how long the CSRF token generated during the OAuth2 authorization flow remains valid.
+
+                      This duration determines the lifetime of the CSRF cookie, which is validated against the CSRF token
+                      in the "state" parameter when the provider redirects back to the callback endpoint.
+
+                      If omitted, Envoy Gateway defaults the token expiration to 10 minutes.
+                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                    type: string
                   defaultRefreshTokenTTL:
                     description: |-
                       DefaultRefreshTokenTTL is the default lifetime of the refresh token.
@@ -4012,6 +4086,12 @@ spec:
                     required:
                     - headers
                     type: object
+                  disableTokenEncryption:
+                    description: |-
+                      Disable token encryption. When set to true, both the access token and the ID token will be stored in plain text.
+                      This option should only be used in secure environments where token encryption is not required.
+                      Default is false (tokens are encrypted).
+                    type: boolean
                   forwardAccessToken:
                     description: |-
                       ForwardAccessToken indicates whether the Envoy should forward the access token
@@ -4404,8 +4484,7 @@ spec:
                                         items:
                                           description: HTTPStatus defines the http
                                             status code.
-                                          exclusiveMaximum: true
-                                          maximum: 600
+                                          maximum: 599
                                           minimum: 100
                                           type: integer
                                         type: array
@@ -4596,6 +4675,15 @@ spec:
                                       ConsecutiveLocalOriginFailures sets the number of consecutive local origin failures triggering ejection.
                                       Parameter takes effect only when split_external_local_origin_errors is set to true.
                                     format: int32
+                                    type: integer
+                                  failurePercentageThreshold:
+                                    description: |-
+                                      FailurePercentageThreshold sets the failure percentage threshold for outlier detection.
+                                      If the failure percentage of a given host is greater than or equal to this value, it will be ejected.
+                                      Defaults to 85.
+                                    format: int32
+                                    maximum: 100
+                                    minimum: 0
                                     type: integer
                                   interval:
                                     default: 3s
@@ -4829,6 +4917,15 @@ spec:
                                           routing.
                                         format: int64
                                         type: integer
+                                      percentageEnabled:
+                                        description: Configures percentage of requests
+                                          that will be considered for zone aware routing
+                                          if zone aware routing is configured. If
+                                          not specified, Envoy defaults to 100%.
+                                        format: int32
+                                        maximum: 100
+                                        minimum: 0
+                                        type: integer
                                     type: object
                                 type: object
                             required:
@@ -4924,8 +5021,7 @@ spec:
                                     items:
                                       description: HTTPStatus defines the http status
                                         code.
-                                      exclusiveMaximum: true
-                                      maximum: 600
+                                      maximum: 599
                                       minimum: 100
                                       type: integer
                                     type: array
@@ -5262,15 +5358,15 @@ spec:
             - message: this policy can only have a targetRef.group of gateway.networking.k8s.io
               rule: 'has(self.targetRef) ? self.targetRef.group == ''gateway.networking.k8s.io''
                 : true'
-            - message: this policy can only have a targetRef.kind of Gateway/HTTPRoute/GRPCRoute
+            - message: this policy can only have a targetRef.kind of Gateway/HTTPRoute/GRPCRoute/TCPRoute
               rule: 'has(self.targetRef) ? self.targetRef.kind in [''Gateway'', ''HTTPRoute'',
-                ''GRPCRoute''] : true'
+                ''GRPCRoute'', ''TCPRoute''] : true'
             - message: this policy can only have a targetRefs[*].group of gateway.networking.k8s.io
               rule: 'has(self.targetRefs) ? self.targetRefs.all(ref, ref.group ==
                 ''gateway.networking.k8s.io'') : true '
-            - message: this policy can only have a targetRefs[*].kind of Gateway/HTTPRoute/GRPCRoute
+            - message: this policy can only have a targetRefs[*].kind of Gateway/HTTPRoute/GRPCRoute/TCPRoute
               rule: 'has(self.targetRefs) ? self.targetRefs.all(ref, ref.kind in [''Gateway'',
-                ''HTTPRoute'', ''GRPCRoute'']) : true '
+                ''HTTPRoute'', ''GRPCRoute'', ''TCPRoute'']) : true '
             - message: if authorization.rules.principal.jwt is used, jwt must be defined
               rule: '(has(self.authorization) && has(self.authorization.rules) &&
                 self.authorization.rules.exists(r, has(r.principal.jwt))) ? has(self.jwt)
@@ -5480,8 +5576,38 @@ spec:
                       - name
                       type: object
                     conditions:
-                      description: Conditions describes the status of the Policy with
-                        respect to the given Ancestor.
+                      description: |-
+                        Conditions describes the status of the Policy with respect to the given Ancestor.
+
+                        <gateway:util:excludeFromCRD>
+
+                        Notes for implementors:
+
+                        Conditions are a listType `map`, which means that they function like a
+                        map with a key of the `type` field _in the k8s apiserver_.
+
+                        This means that implementations must obey some rules when updating this
+                        section.
+
+                        * Implementations MUST perform a read-modify-write cycle on this field
+                          before modifying it. That is, when modifying this field, implementations
+                          must be confident they have fetched the most recent version of this field,
+                          and ensure that changes they make are on that recent version.
+                        * Implementations MUST NOT remove or reorder Conditions that they are not
+                          directly responsible for. For example, if an implementation sees a Condition
+                          with type `special.io/SomeField`, it MUST NOT remove, change or update that
+                          Condition.
+                        * Implementations MUST always _merge_ changes into Conditions of the same Type,
+                          rather than creating more than one Condition of the same Type.
+                        * Implementations MUST always update the `observedGeneration` field of the
+                          Condition to the `metadata.generation` of the Gateway at the time of update creation.
+                        * If the `observedGeneration` of a Condition is _greater than_ the value the
+                          implementation knows about, then it MUST NOT perform the update on that Condition,
+                          but must wait for a future reconciliation and status update. (The assumption is that
+                          the implementation's copy of the object is stale and an update will be re-triggered
+                          if relevant.)
+
+                        </gateway:util:excludeFromCRD>
                       items:
                         description: Condition contains details for one aspect of
                           the current state of this API Resource.
@@ -5564,10 +5690,12 @@ spec:
                       type: string
                   required:
                   - ancestorRef
+                  - conditions
                   - controllerName
                   type: object
                 maxItems: 16
                 type: array
+                x-kubernetes-list-type: atomic
             required:
             - ancestors
             type: object

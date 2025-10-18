@@ -11,6 +11,19 @@ http:
   routes:
   - name: "direct-route"
     hostname: "*"
+    addResponseHeaders:
+    - append: false
+      name: Content-Type
+      value:
+      - application/json
+    - append: true
+      name: X-Add-Header
+      value:
+      - added-502
+    - append: false
+      name: X-Set-Header
+      value:
+      - set-502
     destination:
       name: "direct-route-dest"
       settings:

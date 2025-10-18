@@ -17,6 +17,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
@@ -41,14 +42,14 @@ var EnvoyGatewayCustomSecurityContextUseridTest = suite.ConformanceTest{
 			ns := "gateway-conformance-infra"
 			routeNN := types.NamespacedName{Name: "custom-eg-security-context-userid", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
-			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+			gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
 
 			expectedResponse := http.ExpectedResponse{
 				Request: http.Request{
 					Path: "/",
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}
@@ -101,7 +102,7 @@ func setEGSecurityContextUserID(t *testing.T, suite *suite.ConformanceTestSuite,
 	require.NoError(t, err)
 
 	// test that envoy-gateway pod is running with custom security context user id
-	WaitForPods(t, suite.Client, "envoy-gateway-system", map[string]string{"control-plane": "envoy-gateway"}, corev1.PodRunning, PodReady)
+	WaitForPods(t, suite.Client, "envoy-gateway-system", map[string]string{"control-plane": "envoy-gateway"}, corev1.PodRunning, &PodReady)
 
 	// test that envoy-gateway deployment is updated with custom security context user id
 	egDeployment := &appsv1.Deployment{}

@@ -23,7 +23,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/yaml"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -245,19 +244,19 @@ type CoreListenerDetails struct {
 	IPFamily *egv1a1.IPFamily `json:"ipFamily,omitempty" yaml:"ipFamily,omitempty"`
 }
 
-func (l CoreListenerDetails) GetName() string {
+func (l *CoreListenerDetails) GetName() string {
 	return l.Name
 }
 
-func (l CoreListenerDetails) GetAddress() string {
+func (l *CoreListenerDetails) GetAddress() string {
 	return l.Address
 }
 
-func (l CoreListenerDetails) GetPort() uint32 {
+func (l *CoreListenerDetails) GetPort() uint32 {
 	return l.Port
 }
 
-func (l CoreListenerDetails) GetExtensionRefs() []*UnstructuredRef {
+func (l *CoreListenerDetails) GetExtensionRefs() []*UnstructuredRef {
 	return l.ExtensionRefs
 }
 
@@ -311,7 +310,7 @@ type HTTPListener struct {
 }
 
 // Validate the fields within the HTTPListener structure
-func (h HTTPListener) Validate() error {
+func (h *HTTPListener) Validate() error {
 	var errs error
 	if h.Name == "" {
 		errs = errors.Join(errs, ErrListenerNameEmpty)
@@ -423,6 +422,8 @@ type TLSCertificate struct {
 	Certificate []byte `json:"certificate,omitempty" yaml:"certificate,omitempty"`
 	// PrivateKey for the server.
 	PrivateKey PrivateBytes `json:"privateKey,omitempty" yaml:"privateKey,omitempty"`
+	// OCSPStaple contains the stapled OCSP response associated with the certificate, if provided.
+	OCSPStaple []byte `json:"ocspStaple,omitempty" yaml:"ocspStaple,omitempty"`
 }
 
 // TLSCACertificate holds CA Certificate to validate clients
@@ -448,7 +449,7 @@ type SubjectAltName struct {
 	URI *string `json:"uri,omitempty" yaml:"uri,omitempty"`
 }
 
-func (t TLSCertificate) Validate() error {
+func (t *TLSCertificate) Validate() error {
 	var errs error
 	if len(t.Certificate) == 0 {
 		errs = errors.Join(errs, ErrTLSCertEmpty)
@@ -460,7 +461,7 @@ func (t TLSCertificate) Validate() error {
 }
 
 // Validate the fields within the TLSListenerConfig structure
-func (t TLSConfig) Validate() error {
+func (t *TLSConfig) Validate() error {
 	var errs error
 	for _, cert := range t.Certificates {
 		if err := cert.Validate(); err != nil {
@@ -541,9 +542,10 @@ type BackendWeights struct {
 // HTTP1Settings provides HTTP/1 configuration on the listener.
 // +k8s:deepcopy-gen=true
 type HTTP1Settings struct {
-	EnableTrailers     bool            `json:"enableTrailers,omitempty" yaml:"enableTrailers,omitempty"`
-	PreserveHeaderCase bool            `json:"preserveHeaderCase,omitempty" yaml:"preserveHeaderCase,omitempty"`
-	HTTP10             *HTTP10Settings `json:"http10,omitempty" yaml:"http10,omitempty"`
+	EnableTrailers                   bool            `json:"enableTrailers,omitempty" yaml:"enableTrailers,omitempty"`
+	PreserveHeaderCase               bool            `json:"preserveHeaderCase,omitempty" yaml:"preserveHeaderCase,omitempty"`
+	HTTP10                           *HTTP10Settings `json:"http10,omitempty" yaml:"http10,omitempty"`
+	DisableSafeMaxConnectionDuration bool            `json:"disableSafeMaxConnectionDuration,omitempty" yaml:"disableSafeMaxConnectionDuration,omitempty"`
 }
 
 // HTTP10Settings provides HTTP/1.0 configuration on the listener.
@@ -627,6 +629,9 @@ type CustomResponse struct {
 
 	// StatusCode will be used for the response's status code.
 	StatusCode *uint32 `json:"statusCode,omitempty"`
+
+	// AddResponseHeaders defines header/value sets to be added to the headers of response.
+	AddResponseHeaders []AddHeader `json:"addResponseHeaders,omitempty" yaml:"addResponseHeaders,omitempty"`
 }
 
 // Validate the fields within the CustomResponse structure
@@ -701,6 +706,12 @@ type HeaderSettings struct {
 
 	// EarlyRemoveRequestHeaders defines headers that would be removed before envoy request processing.
 	EarlyRemoveRequestHeaders []string `json:"earlyRemoveRequestHeaders,omitempty" yaml:"earlyRemoveRequestHeaders,omitempty"`
+
+	// LateAddResponseHeaders defines headers that would be added after envoy response processing.
+	LateAddResponseHeaders []AddHeader `json:"lateAddResponseHeaders,omitempty" yaml:"earlyAddRequestHeaders,omitempty"`
+
+	// LateRemoveResponseHeaders defines headers that would be removed after envoy response processing.
+	LateRemoveResponseHeaders []string `json:"lateRemoveResponseHeaders,omitempty" yaml:"earlyRemoveRequestHeaders,omitempty"`
 }
 
 // ClientTimeout sets the timeout configuration for downstream connections
@@ -1067,6 +1078,9 @@ type RemoteJWKS struct {
 	// URI is the HTTPS URI to fetch the JWKS. Envoy's system trust bundle is used to validate the server certificate.
 	// If a custom trust bundle is needed, it can be specified in a BackendTLSConfig resource and target the BackendRefs.
 	URI string `json:"uri"`
+
+	// Duration after which the cached JWKS should be expired. If not specified, default cache duration is 5 minutes.
+	CacheDuration *metav1.Duration `json:"cacheDuration,omitempty"`
 }
 
 // OIDC defines the schema for authenticating HTTP requests using
@@ -1126,6 +1140,9 @@ type OIDC struct {
 	// DefaultRefreshTokenTTL is the default lifetime of the refresh token.
 	DefaultRefreshTokenTTL *metav1.Duration `json:"defaultRefreshTokenTTL,omitempty"`
 
+	// CSRFTokenTTL configures the lifetime of the csrf token Envoy stores in the cookie.
+	CSRFTokenTTL *metav1.Duration `json:"csrfTokenTTL,omitempty"`
+
 	// CookieSuffix will be added to the name of the cookies set by the oauth filter.
 	// Adding a suffix avoids multiple oauth filters from overwriting each other's cookies.
 	// These cookies are set by the oauth filter, including: AccessToken,
@@ -1147,6 +1164,9 @@ type OIDC struct {
 	// filter, normally "Authorization: Bearer ...". This is typically used for non-browser clients that
 	// may not be able to handle OIDC redirects and wish to directly supply a token instead.
 	PassThroughAuthHeader bool `json:"passThroughAuthHeader,omitempty"`
+
+	// DisableTokenEncryption disables encryption of ID and access tokens stored in cookies.
+	DisableTokenEncryption bool `json:"disableTokenEncryption,omitempty"`
 
 	// Any request that matches any of the provided matchers won't be redirected to OAuth server when tokens are not valid.
 	// Automatic access token refresh will be performed for these requests, if enabled.
@@ -2020,6 +2040,8 @@ type TCPRoute struct {
 	BackendConnection *BackendConnection `json:"backendConnection,omitempty" yaml:"backendConnection,omitempty"`
 	// DNS is used to configure how DNS resolution is handled for the route
 	DNS *DNS `json:"dns,omitempty" yaml:"dns,omitempty"`
+	// Authorization defines the schema for the authorization.
+	Authorization *Authorization `json:"authorization,omitempty" yaml:"authorization,omitempty"`
 }
 
 // TLS holds information for configuring TLS on a listener
@@ -2033,7 +2055,7 @@ type TLS struct {
 }
 
 // Validate the fields within the TCPListener structure
-func (t TCPListener) Validate() error {
+func (t *TCPListener) Validate() error {
 	var errs error
 	if t.Name == "" {
 		errs = errors.Join(errs, ErrListenerNameEmpty)
@@ -2052,7 +2074,7 @@ func (t TCPListener) Validate() error {
 	return errs
 }
 
-func (t TCPRoute) Validate() error {
+func (t *TCPRoute) Validate() error {
 	var errs error
 
 	if t.Name == "" {
@@ -2132,7 +2154,7 @@ type UDPRoute struct {
 }
 
 // Validate the fields within the UDPListener structure
-func (h UDPListener) Validate() error {
+func (h *UDPListener) Validate() error {
 	var errs error
 	if h.Name == "" {
 		errs = errors.Join(errs, ErrListenerNameEmpty)
@@ -2360,7 +2382,7 @@ type EnvoyPatchPolicyStatus struct {
 	Name      string `json:"name,omitempty" yaml:"name"`
 	Namespace string `json:"namespace,omitempty" yaml:"namespace"`
 	// Status of the EnvoyPatchPolicy
-	Status *gwapiv1a2.PolicyStatus `json:"status,omitempty" yaml:"status,omitempty"`
+	Status *gwapiv1.PolicyStatus `json:"status,omitempty" yaml:"status,omitempty"`
 }
 
 // JSONPatchConfig defines the configuration for patching a Envoy xDS Resource
@@ -2660,6 +2682,8 @@ type OutlierDetection struct {
 	BaseEjectionTime *metav1.Duration `json:"baseEjectionTime,omitempty" yaml:"baseEjectionTime,omitempty"`
 	// MaxEjectionPercent sets the maximum percentage of hosts in a cluster that can be ejected.
 	MaxEjectionPercent *int32 `json:"maxEjectionPercent,omitempty" yaml:"maxEjectionPercent,omitempty"`
+	// FailurePercentageThreshold sets the failure percentage threshold for outlier detection.
+	FailurePercentageThreshold *uint32 `json:"failurePercentageThreshold,omitempty" yaml:"failurePercentageThreshold,omitempty"`
 }
 
 // ActiveHealthCheck defines active health check settings
@@ -3031,10 +3055,18 @@ type ConnectionLimit struct {
 	// Value of the maximum concurrent connections limit.
 	// When the limit is reached, incoming connections will be closed after the CloseDelay duration.
 	Value *uint64 `json:"value,omitempty" yaml:"value,omitempty"`
-
 	// CloseDelay defines the delay to use before closing connections that are rejected
 	// once the limit value is reached.
 	CloseDelay *metav1.Duration `json:"closeDelay,omitempty" yaml:"closeDelay,omitempty"`
+	// MaxConnectionDuration is the maximum amount of time a connection can remain established
+	// before being drained and/or closed.
+	MaxConnectionDuration *metav1.Duration `json:"maxConnectionDuration,omitempty" yaml:"maxConnectionDuration,omitempty"`
+	// MaxRequestsPerConnection defines the maximum number of requests allowed over a single connection.
+	// If not specified, there is no limit. Setting this parameter to 1 will effectively disable keep alive.
+	MaxRequestsPerConnection *uint32 `json:"maxRequestsPerConnection,omitempty" yaml:"maxRequestsPerConnection,omitempty"`
+	// MaxStreamDuration is the maximum amount of time to keep alive an http stream. When the limit is reached
+	// the stream will be reset independent of any other timeouts. If not specified, no value is set.
+	MaxStreamDuration *metav1.Duration `json:"maxStreamDuration,omitempty" yaml:"maxStreamDuration,omitempty"`
 }
 
 type ExtProcBodyProcessingMode egv1a1.ExtProcBodyProcessingMode
@@ -3209,6 +3241,8 @@ type PreferLocalZone struct {
 	Force *ForceLocalZone `json:"force,omitempty" yaml:"force,omitempty"`
 	// MinEndpointsThreshold is the minimum number of total upstream endpoints across all zones required to enable zone-aware routing.
 	MinEndpointsThreshold *uint64 `json:"minEndpointsThreshold,omitempty" yaml:"minEndpointsThreshold,omitempty"`
+	// Configures percentage of requests that will be considered for zone aware routing if zone aware routing is configured. If not specified, the default is 100%.
+	PercentageEnabled *uint32 `json:"percentageEnabled,omitempty" yaml:"percentageEnabled,omitempty"`
 }
 
 // ForceLocalZone defines override configuration for forcing all traffic to stay within the local zone instead of the default behavior

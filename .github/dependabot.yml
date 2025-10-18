@@ -21,9 +21,9 @@ updates:
       # skip to update retest, because it won't work with the latest version
       - dependency-name: "envoyproxy/toolshed/gh-actions/retest"
     groups:
-      github-actions:
+      actions:
         patterns:
-          - "actions*"
+          - "*"
   - package-ecosystem: gomod
     directories:
       - "/"

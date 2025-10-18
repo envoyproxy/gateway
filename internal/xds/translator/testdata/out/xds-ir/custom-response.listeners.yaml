@@ -33,6 +33,13 @@
                           header:
                             key: Content-Type
                             value: text/plain
+                        - header:
+                            key: X-Add-Header
+                            value: added-404
+                        - appendAction: OVERWRITE_IF_EXISTS_OR_ADD
+                          header:
+                            key: X-Set-Header
+                            value: set-404
                   predicate:
                     singlePredicate:
                       input:

@@ -15,6 +15,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	httputils "sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
@@ -42,7 +43,7 @@ var FileAccessLogTest = suite.ConformanceTest{
 			ns := "gateway-conformance-infra"
 			routeNN := types.NamespacedName{Name: "accesslog-file", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
-			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+			gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
 
 			expectedResponse := httputils.ExpectedResponse{
 				Request: httputils.Request{
@@ -52,21 +53,21 @@ var FileAccessLogTest = suite.ConformanceTest{
 					},
 				},
 				Response: httputils.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}
 			// make sure listener is ready
 			httputils.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 
-			runLogTest(t, suite, gwAddr, expectedResponse, labels, match, 1)
+			runLogTest(t, suite, gwAddr, &expectedResponse, labels, match, 1)
 		})
 
 		t.Run("Negative", func(t *testing.T) {
 			ns := "gateway-conformance-infra"
 			routeNN := types.NamespacedName{Name: "accesslog-file", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
-			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+			gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
 
 			expectedResponse := httputils.ExpectedResponse{
 				Request: httputils.Request{
@@ -74,14 +75,14 @@ var FileAccessLogTest = suite.ConformanceTest{
 					// envoy will not log this request without the header x-envoy-logged
 				},
 				Response: httputils.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}
 			// make sure listener is ready
 			httputils.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 
-			runLogTest(t, suite, gwAddr, expectedResponse, labels, match, 0)
+			runLogTest(t, suite, gwAddr, &expectedResponse, labels, match, 0)
 		})
 
 		t.Run("Listener Logs", func(t *testing.T) {
@@ -91,7 +92,7 @@ var FileAccessLogTest = suite.ConformanceTest{
 			ns := "gateway-conformance-infra"
 			routeNN := types.NamespacedName{Name: "accesslog-file", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
-			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+			gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
 
 			expectedResponse := httputils.ExpectedResponse{
 				Request: httputils.Request{
@@ -106,14 +107,14 @@ var FileAccessLogTest = suite.ConformanceTest{
 					},
 				},
 				Response: httputils.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}
 			// make sure listener is ready
 			httputils.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 
-			runLogTest(t, suite, gwAddr, expectedResponse, labels, expectedMatch, 0)
+			runLogTest(t, suite, gwAddr, &expectedResponse, labels, expectedMatch, 0)
 		})
 	},
 }
@@ -127,7 +128,7 @@ var OpenTelemetryTestText = suite.ConformanceTest{
 		labels := getOTELLabels(ns)
 		routeNN := types.NamespacedName{Name: "accesslog-otel", Namespace: ns}
 		gwNN := types.NamespacedName{Name: "accesslog-gtw", Namespace: ns}
-		gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+		gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
 
 		t.Run("Positive", func(t *testing.T) {
 			expectedResponse := httputils.ExpectedResponse{
@@ -138,14 +139,14 @@ var OpenTelemetryTestText = suite.ConformanceTest{
 					},
 				},
 				Response: httputils.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}
 			// make sure listener is ready
 			httputils.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 
-			runLogTest(t, suite, gwAddr, expectedResponse, labels, "", 1)
+			runLogTest(t, suite, gwAddr, &expectedResponse, labels, "", 1)
 		})
 
 		t.Run("Negative", func(t *testing.T) {
@@ -155,14 +156,14 @@ var OpenTelemetryTestText = suite.ConformanceTest{
 					// envoy will not log this request without the header x-envoy-logged
 				},
 				Response: httputils.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}
 			// make sure listener is ready
 			httputils.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 
-			runLogTest(t, suite, gwAddr, expectedResponse, labels, "", 0)
+			runLogTest(t, suite, gwAddr, &expectedResponse, labels, "", 0)
 		})
 	},
 }
@@ -176,7 +177,7 @@ var OpenTelemetryTestJSONAsDefault = suite.ConformanceTest{
 		labels := getOTELLabels(ns)
 		routeNN := types.NamespacedName{Name: "accesslog-otel", Namespace: ns}
 		gwNN := types.NamespacedName{Name: "accesslog-gtw", Namespace: ns}
-		gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+		gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
 
 		t.Run("Positive", func(t *testing.T) {
 			expectedResponse := httputils.ExpectedResponse{
@@ -187,14 +188,14 @@ var OpenTelemetryTestJSONAsDefault = suite.ConformanceTest{
 					},
 				},
 				Response: httputils.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}
 			// make sure listener is ready
 			httputils.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 
-			runLogTest(t, suite, gwAddr, expectedResponse, labels, "", 1)
+			runLogTest(t, suite, gwAddr, &expectedResponse, labels, "", 1)
 		})
 
 		t.Run("Negative", func(t *testing.T) {
@@ -204,14 +205,14 @@ var OpenTelemetryTestJSONAsDefault = suite.ConformanceTest{
 					// envoy will not log this request without the header x-envoy-logged
 				},
 				Response: httputils.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}
 			// make sure listener is ready
 			httputils.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 
-			runLogTest(t, suite, gwAddr, expectedResponse, labels, "", 0)
+			runLogTest(t, suite, gwAddr, &expectedResponse, labels, "", 0)
 		})
 	},
 }
@@ -225,7 +226,7 @@ var OpenTelemetryTestJSON = suite.ConformanceTest{
 		labels := getOTELLabels(ns)
 		routeNN := types.NamespacedName{Name: "accesslog-otel", Namespace: ns}
 		gwNN := types.NamespacedName{Name: "accesslog-gtw", Namespace: ns}
-		gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+		gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
 
 		t.Run("Positive", func(t *testing.T) {
 			expectedResponse := httputils.ExpectedResponse{
@@ -236,14 +237,14 @@ var OpenTelemetryTestJSON = suite.ConformanceTest{
 					},
 				},
 				Response: httputils.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}
 			// make sure listener is ready
 			httputils.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 
-			runLogTest(t, suite, gwAddr, expectedResponse, labels, "", 1)
+			runLogTest(t, suite, gwAddr, &expectedResponse, labels, "", 1)
 		})
 
 		t.Run("Negative", func(t *testing.T) {
@@ -253,14 +254,14 @@ var OpenTelemetryTestJSON = suite.ConformanceTest{
 					// envoy will not log this request without the header x-envoy-logged
 				},
 				Response: httputils.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}
 			// make sure listener is ready
 			httputils.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 
-			runLogTest(t, suite, gwAddr, expectedResponse, labels, "", 0)
+			runLogTest(t, suite, gwAddr, &expectedResponse, labels, "", 0)
 		})
 	},
 }
@@ -279,7 +280,7 @@ var ALSTest = suite.ConformanceTest{
 			ns := "gateway-conformance-infra"
 			routeNN := types.NamespacedName{Name: "accesslog-als", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "accesslog-gtw", Namespace: ns}
-			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+			gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
 
 			expectedResponse := httputils.ExpectedResponse{
 				Request: httputils.Request{
@@ -289,14 +290,14 @@ var ALSTest = suite.ConformanceTest{
 					},
 				},
 				Response: httputils.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}
 			// make sure listener is ready
 			httputils.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 
-			runLogTest(t, suite, gwAddr, expectedResponse, labels, match, 0)
+			runLogTest(t, suite, gwAddr, &expectedResponse, labels, match, 0)
 		})
 	},
 }
@@ -317,7 +318,7 @@ func getOTELLabels(testNamespace string) map[string]string {
 }
 
 func runLogTest(t *testing.T, suite *suite.ConformanceTestSuite, gwAddr string,
-	expectedResponse httputils.ExpectedResponse, expectedLabels map[string]string, expectedMatch string, expectedDelta int,
+	expectedResponse *httputils.ExpectedResponse, expectedLabels map[string]string, expectedMatch string, expectedDelta int,
 ) {
 	if err := wait.PollUntilContextTimeout(context.TODO(), time.Second, 3*time.Minute, true,
 		func(ctx context.Context) (bool, error) {
@@ -328,7 +329,7 @@ func runLogTest(t *testing.T, suite *suite.ConformanceTestSuite, gwAddr string,
 				return false, nil
 			}
 
-			httputils.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
+			httputils.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, *expectedResponse)
 
 			// it will take some time for fluent-bit to collect the log and send to loki
 			// let's wait for a while

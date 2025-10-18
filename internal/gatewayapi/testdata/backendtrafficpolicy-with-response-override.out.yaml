@@ -2,7 +2,6 @@ backendTrafficPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:
-    creationTimestamp: null
     name: policy-for-route-1
     namespace: default
   spec:
@@ -54,7 +53,6 @@ backendTrafficPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:
-    creationTimestamp: null
     name: policy-for-route-2
     namespace: default
   spec:
@@ -87,7 +85,6 @@ backendTrafficPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:
-    creationTimestamp: null
     name: policy-for-route-3
     namespace: default
   spec:
@@ -126,7 +123,6 @@ backendTrafficPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:
-    creationTimestamp: null
     name: policy-for-gateway
     namespace: default
   spec:
@@ -140,6 +136,13 @@ backendTrafficPolicies:
           inline: gateway-1 Not Found
           type: Inline
         contentType: text/plain
+        header:
+          add:
+          - name: X-Add-Header
+            value: added-404
+          set:
+          - name: X-Set-Header
+            value: set-404
     - match:
         statusCodes:
         - type: Value
@@ -178,7 +181,6 @@ gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
   metadata:
-    creationTimestamp: null
     name: gateway-1
     namespace: default
   spec:
@@ -218,7 +220,6 @@ gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
   metadata:
-    creationTimestamp: null
     name: gateway-2
     namespace: default
   spec:
@@ -259,7 +260,6 @@ grpcRoutes:
 - apiVersion: gateway.networking.k8s.io/v1alpha2
   kind: GRPCRoute
   metadata:
-    creationTimestamp: null
     name: grpcroute-1
     namespace: default
   spec:
@@ -293,7 +293,6 @@ httpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
   metadata:
-    creationTimestamp: null
     name: httproute-1
     namespace: default
   spec:
@@ -331,7 +330,6 @@ httpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
   metadata:
-    creationTimestamp: null
     name: httproute-2
     namespace: default
   spec:
@@ -369,7 +367,6 @@ httpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
   metadata:
-    creationTimestamp: null
     name: httproute-3
     namespace: default
   spec:
@@ -448,6 +445,25 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources:
+      proxyServiceCluster:
+        metadata:
+          name: envoy-default-gateway-1-bfd08ef4
+          namespace: envoy-gateway-system
+          sectionName: "8080"
+        name: default/gateway-1
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            name: envoy-default-gateway-1-bfd08ef4
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: default/gateway-1
+          protocol: TCP
     http:
     - address: 0.0.0.0
       externalPort: 80
@@ -499,6 +515,15 @@ xdsIR:
                 - value: 404
               name: backendtrafficpolicy/default/policy-for-gateway/responseoverride/rule/0
               response:
+                addResponseHeaders:
+                - append: true
+                  name: X-Add-Header
+                  value:
+                  - added-404
+                - append: false
+                  name: X-Set-Header
+                  value:
+                  - set-404
                 body: gateway-1 Not Found
                 contentType: text/plain
             - match:
@@ -525,10 +550,19 @@ xdsIR:
       - path: /dev/stdout
     globalResources:
       proxyServiceCluster:
+        metadata:
+          name: envoy-default-gateway-2-5e70ed84
+          namespace: envoy-gateway-system
+          sectionName: "8080"
         name: default/gateway-2
         settings:
-        - metadata:
-            name: envoy-default-gateway-1-bfd08ef4
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            name: envoy-default-gateway-2-5e70ed84
             namespace: envoy-gateway-system
             sectionName: "8080"
           name: default/gateway-2

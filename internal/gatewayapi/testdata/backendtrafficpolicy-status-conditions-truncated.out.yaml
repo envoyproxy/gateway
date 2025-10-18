@@ -2,7 +2,6 @@ backendTrafficPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:
-    creationTimestamp: null
     name: target-gateway-with-route-level-override-truncated-ancestors
     namespace: envoy-gateway
   spec:
@@ -213,8 +212,8 @@ backendTrafficPolicies:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: 'Ancestors have been aggregated because the number of policy ancestors
-          exceeds 16. The aggregated ancestors: gateway-7, gateway-8'
+        message: Ancestors have been truncated because the number of policy ancestors
+          exceeds 16.
         reason: Aggregated
         status: "True"
         type: Aggregated
@@ -222,7 +221,6 @@ backendTrafficPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:
-    creationTimestamp: null
     name: target-httproute-with-attachment-conflict-truncated-ancestors
     namespace: envoy-gateway
   spec:
@@ -440,8 +438,8 @@ backendTrafficPolicies:
         status: "False"
         type: Accepted
       - lastTransitionTime: null
-        message: 'Ancestors have been aggregated because the number of policy ancestors
-          exceeds 16. The aggregated ancestors: gateway-8, gateway-9'
+        message: Ancestors have been truncated because the number of policy ancestors
+          exceeds 16.
         reason: Aggregated
         status: "True"
         type: Aggregated
@@ -449,7 +447,6 @@ backendTrafficPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:
-    creationTimestamp: null
     name: target-httproute-with-accepted-truncated-ancestors
     namespace: envoy-gateway
   spec:
@@ -651,8 +648,8 @@ backendTrafficPolicies:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: 'Ancestors have been aggregated because the number of policy ancestors
-          exceeds 16. The aggregated ancestors: gateway-8, gateway-9'
+        message: Ancestors have been truncated because the number of policy ancestors
+          exceeds 16.
         reason: Aggregated
         status: "True"
         type: Aggregated
@@ -661,7 +658,6 @@ gateways:
 - apiVersion: gateway.networking.k8s.io/v1beta1
   kind: Gateway
   metadata:
-    creationTimestamp: null
     name: gateway-1
     namespace: envoy-gateway
   spec:
@@ -701,7 +697,6 @@ gateways:
 - apiVersion: gateway.networking.k8s.io/v1beta1
   kind: Gateway
   metadata:
-    creationTimestamp: null
     name: gateway-2
     namespace: envoy-gateway
   spec:
@@ -741,7 +736,6 @@ gateways:
 - apiVersion: gateway.networking.k8s.io/v1beta1
   kind: Gateway
   metadata:
-    creationTimestamp: null
     name: gateway-3
     namespace: envoy-gateway
   spec:
@@ -781,7 +775,6 @@ gateways:
 - apiVersion: gateway.networking.k8s.io/v1beta1
   kind: Gateway
   metadata:
-    creationTimestamp: null
     name: gateway-4
     namespace: envoy-gateway
   spec:
@@ -821,7 +814,6 @@ gateways:
 - apiVersion: gateway.networking.k8s.io/v1beta1
   kind: Gateway
   metadata:
-    creationTimestamp: null
     name: gateway-5
     namespace: envoy-gateway
   spec:
@@ -861,7 +853,6 @@ gateways:
 - apiVersion: gateway.networking.k8s.io/v1beta1
   kind: Gateway
   metadata:
-    creationTimestamp: null
     name: gateway-6
     namespace: envoy-gateway
   spec:
@@ -901,7 +892,6 @@ gateways:
 - apiVersion: gateway.networking.k8s.io/v1beta1
   kind: Gateway
   metadata:
-    creationTimestamp: null
     name: gateway-7
     namespace: envoy-gateway
   spec:
@@ -941,7 +931,6 @@ gateways:
 - apiVersion: gateway.networking.k8s.io/v1beta1
   kind: Gateway
   metadata:
-    creationTimestamp: null
     name: gateway-8
     namespace: envoy-gateway
   spec:
@@ -981,7 +970,6 @@ gateways:
 - apiVersion: gateway.networking.k8s.io/v1beta1
   kind: Gateway
   metadata:
-    creationTimestamp: null
     name: gateway-9
     namespace: envoy-gateway
   spec:
@@ -1021,7 +1009,6 @@ gateways:
 - apiVersion: gateway.networking.k8s.io/v1beta1
   kind: Gateway
   metadata:
-    creationTimestamp: null
     name: gateway-10
     namespace: envoy-gateway
   spec:
@@ -1061,7 +1048,6 @@ gateways:
 - apiVersion: gateway.networking.k8s.io/v1beta1
   kind: Gateway
   metadata:
-    creationTimestamp: null
     name: gateway-11
     namespace: envoy-gateway
   spec:
@@ -1101,7 +1087,6 @@ gateways:
 - apiVersion: gateway.networking.k8s.io/v1beta1
   kind: Gateway
   metadata:
-    creationTimestamp: null
     name: gateway-12
     namespace: envoy-gateway
   spec:
@@ -1141,7 +1126,6 @@ gateways:
 - apiVersion: gateway.networking.k8s.io/v1beta1
   kind: Gateway
   metadata:
-    creationTimestamp: null
     name: gateway-13
     namespace: envoy-gateway
   spec:
@@ -1181,7 +1165,6 @@ gateways:
 - apiVersion: gateway.networking.k8s.io/v1beta1
   kind: Gateway
   metadata:
-    creationTimestamp: null
     name: gateway-14
     namespace: envoy-gateway
   spec:
@@ -1221,7 +1204,6 @@ gateways:
 - apiVersion: gateway.networking.k8s.io/v1beta1
   kind: Gateway
   metadata:
-    creationTimestamp: null
     name: gateway-15
     namespace: envoy-gateway
   spec:
@@ -1261,7 +1243,6 @@ gateways:
 - apiVersion: gateway.networking.k8s.io/v1beta1
   kind: Gateway
   metadata:
-    creationTimestamp: null
     name: gateway-16
     namespace: envoy-gateway
   spec:
@@ -1301,7 +1282,6 @@ gateways:
 - apiVersion: gateway.networking.k8s.io/v1beta1
   kind: Gateway
   metadata:
-    creationTimestamp: null
     name: gateway-17
     namespace: envoy-gateway
   spec:
@@ -1341,7 +1321,6 @@ gateways:
 - apiVersion: gateway.networking.k8s.io/v1beta1
   kind: Gateway
   metadata:
-    creationTimestamp: null
     name: gateway-18
     namespace: envoy-gateway
   spec:
@@ -1382,7 +1361,6 @@ httpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1beta1
   kind: HTTPRoute
   metadata:
-    creationTimestamp: null
     name: httproute-1
     namespace: envoy-gateway
   spec:
@@ -1723,7 +1701,6 @@ httpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1beta1
   kind: HTTPRoute
   metadata:
-    creationTimestamp: null
     name: httproute-2
     namespace: envoy-gateway
   spec:
@@ -2409,6 +2386,25 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources:
+      proxyServiceCluster:
+        metadata:
+          name: envoy-envoy-gateway-gateway-1-196ae069
+          namespace: envoy-gateway-system
+          sectionName: "8080"
+        name: envoy-gateway/gateway-1
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-1
+          protocol: TCP
     http:
     - address: 0.0.0.0
       externalPort: 80
@@ -2461,6 +2457,25 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources:
+      proxyServiceCluster:
+        metadata:
+          name: envoy-envoy-gateway-gateway-2-4a0e4eb9
+          namespace: envoy-gateway-system
+          sectionName: "8080"
+        name: envoy-gateway/gateway-2
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            name: envoy-envoy-gateway-gateway-2-4a0e4eb9
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-2
+          protocol: TCP
     http:
     - address: 0.0.0.0
       externalPort: 80
@@ -2513,6 +2528,25 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources:
+      proxyServiceCluster:
+        metadata:
+          name: envoy-envoy-gateway-gateway-3-32e857a6
+          namespace: envoy-gateway-system
+          sectionName: "8080"
+        name: envoy-gateway/gateway-3
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            name: envoy-envoy-gateway-gateway-3-32e857a6
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-3
+          protocol: TCP
     http:
     - address: 0.0.0.0
       externalPort: 80
@@ -2565,6 +2599,25 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources:
+      proxyServiceCluster:
+        metadata:
+          name: envoy-envoy-gateway-gateway-4-a293650b
+          namespace: envoy-gateway-system
+          sectionName: "8080"
+        name: envoy-gateway/gateway-4
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            name: envoy-envoy-gateway-gateway-4-a293650b
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-4
+          protocol: TCP
     http:
     - address: 0.0.0.0
       externalPort: 80
@@ -2617,6 +2670,25 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources:
+      proxyServiceCluster:
+        metadata:
+          name: envoy-envoy-gateway-gateway-5-e35ee57f
+          namespace: envoy-gateway-system
+          sectionName: "8080"
+        name: envoy-gateway/gateway-5
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            name: envoy-envoy-gateway-gateway-5-e35ee57f
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-5
+          protocol: TCP
     http:
     - address: 0.0.0.0
       externalPort: 80
@@ -2669,6 +2741,25 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources:
+      proxyServiceCluster:
+        metadata:
+          name: envoy-envoy-gateway-gateway-6-703894b8
+          namespace: envoy-gateway-system
+          sectionName: "8080"
+        name: envoy-gateway/gateway-6
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            name: envoy-envoy-gateway-gateway-6-703894b8
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-6
+          protocol: TCP
     http:
     - address: 0.0.0.0
       externalPort: 80
@@ -2721,6 +2812,25 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources:
+      proxyServiceCluster:
+        metadata:
+          name: envoy-envoy-gateway-gateway-7-8f166bcc
+          namespace: envoy-gateway-system
+          sectionName: "8080"
+        name: envoy-gateway/gateway-7
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            name: envoy-envoy-gateway-gateway-7-8f166bcc
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-7
+          protocol: TCP
     http:
     - address: 0.0.0.0
       externalPort: 80
@@ -2773,6 +2883,25 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources:
+      proxyServiceCluster:
+        metadata:
+          name: envoy-envoy-gateway-gateway-8-18a274e2
+          namespace: envoy-gateway-system
+          sectionName: "8080"
+        name: envoy-gateway/gateway-8
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            name: envoy-envoy-gateway-gateway-8-18a274e2
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-8
+          protocol: TCP
     http:
     - address: 0.0.0.0
       externalPort: 80
@@ -2825,6 +2954,25 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources:
+      proxyServiceCluster:
+        metadata:
+          name: envoy-envoy-gateway-gateway-9-3f4aa2eb
+          namespace: envoy-gateway-system
+          sectionName: "8080"
+        name: envoy-gateway/gateway-9
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            name: envoy-envoy-gateway-gateway-9-3f4aa2eb
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-9
+          protocol: TCP
     http:
     - address: 0.0.0.0
       externalPort: 80
@@ -2877,6 +3025,25 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources:
+      proxyServiceCluster:
+        metadata:
+          name: envoy-envoy-gateway-gateway-10-323a05f0
+          namespace: envoy-gateway-system
+          sectionName: "8080"
+        name: envoy-gateway/gateway-10
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            name: envoy-envoy-gateway-gateway-10-323a05f0
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-10
+          protocol: TCP
     http:
     - address: 0.0.0.0
       externalPort: 80
@@ -2929,6 +3096,25 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources:
+      proxyServiceCluster:
+        metadata:
+          name: envoy-envoy-gateway-gateway-11-7cd86d79
+          namespace: envoy-gateway-system
+          sectionName: "8080"
+        name: envoy-gateway/gateway-11
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            name: envoy-envoy-gateway-gateway-11-7cd86d79
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-11
+          protocol: TCP
     http:
     - address: 0.0.0.0
       externalPort: 80
@@ -2981,6 +3167,25 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources:
+      proxyServiceCluster:
+        metadata:
+          name: envoy-envoy-gateway-gateway-12-b05135f7
+          namespace: envoy-gateway-system
+          sectionName: "8080"
+        name: envoy-gateway/gateway-12
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            name: envoy-envoy-gateway-gateway-12-b05135f7
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-12
+          protocol: TCP
     http:
     - address: 0.0.0.0
       externalPort: 80
@@ -3033,6 +3238,25 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources:
+      proxyServiceCluster:
+        metadata:
+          name: envoy-envoy-gateway-gateway-13-5ef9b255
+          namespace: envoy-gateway-system
+          sectionName: "8080"
+        name: envoy-gateway/gateway-13
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            name: envoy-envoy-gateway-gateway-13-5ef9b255
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-13
+          protocol: TCP
     http:
     - address: 0.0.0.0
       externalPort: 80
@@ -3085,6 +3309,25 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources:
+      proxyServiceCluster:
+        metadata:
+          name: envoy-envoy-gateway-gateway-14-2b849e6e
+          namespace: envoy-gateway-system
+          sectionName: "8080"
+        name: envoy-gateway/gateway-14
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            name: envoy-envoy-gateway-gateway-14-2b849e6e
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-14
+          protocol: TCP
     http:
     - address: 0.0.0.0
       externalPort: 80
@@ -3137,6 +3380,25 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources:
+      proxyServiceCluster:
+        metadata:
+          name: envoy-envoy-gateway-gateway-15-473da5fd
+          namespace: envoy-gateway-system
+          sectionName: "8080"
+        name: envoy-gateway/gateway-15
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            name: envoy-envoy-gateway-gateway-15-473da5fd
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-15
+          protocol: TCP
     http:
     - address: 0.0.0.0
       externalPort: 80
@@ -3189,6 +3451,25 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources:
+      proxyServiceCluster:
+        metadata:
+          name: envoy-envoy-gateway-gateway-16-bc2b5d3e
+          namespace: envoy-gateway-system
+          sectionName: "8080"
+        name: envoy-gateway/gateway-16
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            name: envoy-envoy-gateway-gateway-16-bc2b5d3e
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-16
+          protocol: TCP
     http:
     - address: 0.0.0.0
       externalPort: 80
@@ -3241,6 +3522,25 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources:
+      proxyServiceCluster:
+        metadata:
+          name: envoy-envoy-gateway-gateway-17-686d5dd1
+          namespace: envoy-gateway-system
+          sectionName: "8080"
+        name: envoy-gateway/gateway-17
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            name: envoy-envoy-gateway-gateway-17-686d5dd1
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-17
+          protocol: TCP
     http:
     - address: 0.0.0.0
       externalPort: 80
@@ -3295,10 +3595,19 @@ xdsIR:
       - path: /dev/stdout
     globalResources:
       proxyServiceCluster:
+        metadata:
+          name: envoy-envoy-gateway-gateway-18-80e55fa6
+          namespace: envoy-gateway-system
+          sectionName: "8080"
         name: envoy-gateway/gateway-18
         settings:
-        - metadata:
-            name: envoy-envoy-gateway-gateway-1-196ae069
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            name: envoy-envoy-gateway-gateway-18-80e55fa6
             namespace: envoy-gateway-system
             sectionName: "8080"
           name: envoy-gateway/gateway-18

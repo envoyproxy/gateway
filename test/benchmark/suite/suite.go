@@ -191,7 +191,7 @@ func (b *BenchmarkTestSuite) Benchmark(t *testing.T, ctx context.Context, jobNam
 	for i := 1; i <= host; i++ {
 		requestHeaders = append(requestHeaders, "Host: "+fmt.Sprintf(hostnamePattern, i))
 	}
-	jobNN, err := b.createBenchmarkClientJob(ctx, jobName, gatewayHostPort, requestHeaders)
+	jobNN, err := b.createBenchmarkClientJob(t, jobName, gatewayHostPort, requestHeaders)
 	if err != nil {
 		return nil, err
 	}
@@ -251,7 +251,7 @@ func (b *BenchmarkTestSuite) Benchmark(t *testing.T, ctx context.Context, jobNam
 	return report, nil
 }
 
-func (b *BenchmarkTestSuite) createBenchmarkClientJob(ctx context.Context, name, gatewayHostPort string, requestHeaders []string) (*types.NamespacedName, error) {
+func (b *BenchmarkTestSuite) createBenchmarkClientJob(t *testing.T, name, gatewayHostPort string, requestHeaders []string) (*types.NamespacedName, error) {
 	job := b.BenchmarkClientJob.DeepCopy()
 	job.SetName(name)
 	job.SetLabels(map[string]string{
@@ -262,7 +262,8 @@ func (b *BenchmarkTestSuite) createBenchmarkClientJob(ctx context.Context, name,
 	container := &job.Spec.Template.Spec.Containers[0]
 	container.Args = append(container.Args, runtimeArgs...)
 
-	if err := b.CreateResource(ctx, job); err != nil {
+	t.Logf("Creating benchmark client job: %s with args: %v", name, job)
+	if err := b.CreateResource(t.Context(), job); err != nil {
 		return nil, err
 	}
 

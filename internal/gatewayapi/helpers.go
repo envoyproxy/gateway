@@ -70,12 +70,12 @@ func SectionNamePtr(name string) *gwapiv1.SectionName {
 }
 
 func PortNumPtr(val int32) *gwapiv1.PortNumber {
-	portNum := gwapiv1.PortNumber(val)
+	portNum := val
 	return &portNum
 }
 
-func ObjectNamePtr(val string) *gwapiv1a2.ObjectName {
-	objectName := gwapiv1a2.ObjectName(val)
+func ObjectNamePtr(val string) *gwapiv1.ObjectName {
+	objectName := gwapiv1.ObjectName(val)
 	return &objectName
 }
 
@@ -386,7 +386,7 @@ func irListenerPortName(proto ir.ProtocolType, port int32) string {
 func irRoutePrefix(route RouteContext) string {
 	// add a "/" at the end of the prefix to prevent mismatching routes with the
 	// same prefix. For example, route prefix "/foo/" should not match a route "/foobar".
-	return fmt.Sprintf("%s/%s/%s/", strings.ToLower(string(GetRouteType(route))), route.GetNamespace(), route.GetName())
+	return fmt.Sprintf("%s/%s/%s/", strings.ToLower(string(route.GetRouteType())), route.GetNamespace(), route.GetName())
 }
 
 func irRouteName(route RouteContext, ruleIdx, matchIdx int) string {
@@ -394,7 +394,7 @@ func irRouteName(route RouteContext, ruleIdx, matchIdx int) string {
 }
 
 func irTCPRouteName(route RouteContext) string {
-	return fmt.Sprintf("%s/%s/%s", strings.ToLower(string(GetRouteType(route))), route.GetNamespace(), route.GetName())
+	return fmt.Sprintf("%s/%s/%s", strings.ToLower(string(route.GetRouteType())), route.GetNamespace(), route.GetName())
 }
 
 func irUDPRouteName(route RouteContext) string {
@@ -423,11 +423,17 @@ func irTLSConfigs(tlsSecrets ...*corev1.Secret) *ir.TLSConfig {
 		Certificates: make([]ir.TLSCertificate, len(tlsSecrets)),
 	}
 	for i, tlsSecret := range tlsSecrets {
-		tlsListenerConfigs.Certificates[i] = ir.TLSCertificate{
+		cert := ir.TLSCertificate{
 			Name:        irTLSListenerConfigName(tlsSecret),
 			Certificate: tlsSecret.Data[corev1.TLSCertKey],
 			PrivateKey:  tlsSecret.Data[corev1.TLSPrivateKeyKey],
 		}
+
+		ocspStaple, ok := tlsSecret.Data[egv1a1.TLSOCSPKey]
+		if ok && len(ocspStaple) > 0 {
+			cert.OCSPStaple = ocspStaple
+		}
+		tlsListenerConfigs.Certificates[i] = cert
 	}
 
 	return tlsListenerConfigs
@@ -460,7 +466,7 @@ func IsMergeGatewaysEnabled(resources *resource.Resources) bool {
 }
 
 func protocolSliceToStringSlice(protocols []gwapiv1.ProtocolType) []string {
-	var protocolStrings []string
+	protocolStrings := make([]string, 0, len(protocols))
 	for _, protocol := range protocols {
 		protocolStrings = append(protocolStrings, string(protocol))
 	}
@@ -468,8 +474,8 @@ func protocolSliceToStringSlice(protocols []gwapiv1.ProtocolType) []string {
 }
 
 // getAncestorRefForPolicy returns Gateway as an ancestor reference for policy.
-func getAncestorRefForPolicy(gatewayNN types.NamespacedName, sectionName *gwapiv1a2.SectionName) gwapiv1a2.ParentReference {
-	return gwapiv1a2.ParentReference{
+func getAncestorRefForPolicy(gatewayNN types.NamespacedName, sectionName *gwapiv1a2.SectionName) gwapiv1.ParentReference {
+	return gwapiv1.ParentReference{
 		Group:       GroupPtr(gwapiv1.GroupName),
 		Kind:        KindPtr(resource.KindGateway),
 		Namespace:   NamespacePtr(gatewayNN.Namespace),
@@ -541,7 +547,7 @@ func irConfigName(policy client.Object) string {
 }
 
 type targetRefWithTimestamp struct {
-	gwapiv1a2.LocalPolicyTargetReferenceWithSectionName
+	gwapiv1.LocalPolicyTargetReferenceWithSectionName
 	CreationTimestamp metav1.Time
 }
 
@@ -557,25 +563,30 @@ func selectorFromTargetSelector(selector egv1a1.TargetSelector) labels.Selector 
 	return l
 }
 
-func getPolicyTargetRefs[T client.Object](policy egv1a1.PolicyTargetReferences, potentialTargets []T) []gwapiv1a2.LocalPolicyTargetReferenceWithSectionName {
+func getPolicyTargetRefs[T client.Object](policy egv1a1.PolicyTargetReferences, potentialTargets []T, policyNamespace string) []gwapiv1.LocalPolicyTargetReferenceWithSectionName {
 	dedup := sets.New[targetRefWithTimestamp]()
 	for _, currSelector := range policy.TargetSelectors {
 		labelSelector := selectorFromTargetSelector(currSelector)
 		for _, obj := range potentialTargets {
 			gvk := obj.GetObjectKind().GroupVersionKind()
 			if gvk.Kind != string(currSelector.Kind) ||
-				gvk.Group != string(ptr.Deref(currSelector.Group, gwapiv1a2.GroupName)) {
+				gvk.Group != string(ptr.Deref(currSelector.Group, gwapiv1.GroupName)) {
+				continue
+			}
+
+			// Skip objects not in the same namespace as the policy
+			if obj.GetNamespace() != policyNamespace {
 				continue
 			}
 
 			if labelSelector.Matches(labels.Set(obj.GetLabels())) {
 				dedup.Insert(targetRefWithTimestamp{
 					CreationTimestamp: obj.GetCreationTimestamp(),
-					LocalPolicyTargetReferenceWithSectionName: gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
-						LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
-							Group: gwapiv1a2.Group(gvk.Group),
-							Kind:  gwapiv1a2.Kind(gvk.Kind),
-							Name:  gwapiv1a2.ObjectName(obj.GetName()),
+					LocalPolicyTargetReferenceWithSectionName: gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+						LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+							Group: gwapiv1.Group(gvk.Group),
+							Kind:  gwapiv1.Kind(gvk.Kind),
+							Name:  gwapiv1.ObjectName(obj.GetName()),
 						},
 					},
 				})
@@ -586,15 +597,15 @@ func getPolicyTargetRefs[T client.Object](policy egv1a1.PolicyTargetReferences, 
 	slices.SortFunc(selectorsList, func(i, j targetRefWithTimestamp) int {
 		return i.CreationTimestamp.Compare(j.CreationTimestamp.Time)
 	})
-	ret := []gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{}
-	for _, v := range selectorsList {
-		ret = append(ret, v.LocalPolicyTargetReferenceWithSectionName)
+	ret := make([]gwapiv1.LocalPolicyTargetReferenceWithSectionName, len(selectorsList))
+	for i, v := range selectorsList {
+		ret[i] = v.LocalPolicyTargetReferenceWithSectionName
 	}
 	// Plain targetRefs in the policy don't have an associated creation timestamp, but can still refer
 	// to targets that were already found via the selectors. Only add them to the returned list if
 	// they are not yet there. Always add them at the end.
 	fastLookup := sets.New(ret...)
-	var emptyTargetRef gwapiv1a2.LocalPolicyTargetReferenceWithSectionName
+	var emptyTargetRef gwapiv1.LocalPolicyTargetReferenceWithSectionName
 	for _, v := range policy.GetTargetRefs() {
 		if v == emptyTargetRef {
 			// This can happen when the targetRef structure is read from extension server policies

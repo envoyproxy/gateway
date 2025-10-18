@@ -223,6 +223,20 @@ spec:
                       InsecureSkipVerify indicates whether the upstream's certificate verification
                       should be skipped. Defaults to "false".
                     type: boolean
+                  sni:
+                    description: |-
+                      SNI is specifies the SNI value used when establishing an upstream TLS connection to the backend.
+
+                      Envoy Gateway will use the HTTP host header value for SNI, when all resources referenced in BackendRefs are:
+                      1. Backend resources that do not set SNI, or
+                      2. Service/ServiceImport resources that do not have a BackendTLSPolicy attached to them
+
+                      When a BackendTLSPolicy attaches to a Backend resource, the BackendTLSPolicy's Hostname value takes precedence
+                      over this value.
+                    maxLength: 253
+                    minLength: 1
+                    pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                    type: string
                   wellKnownCACertificates:
                     description: |-
                       WellKnownCACertificates specifies whether system CA certificates may be used in
@@ -446,7 +460,35 @@ spec:
                     type: object
                 type: object
               compression:
-                description: The compression config for the http streams.
+                description: |-
+                  The compression config for the http streams.
+                  Deprecated: Use Compressor instead.
+                items:
+                  description: |-
+                    Compression defines the config of enabling compression.
+                    This can help reduce the bandwidth at the expense of higher CPU.
+                  properties:
+                    brotli:
+                      description: The configuration for Brotli compressor.
+                      type: object
+                    gzip:
+                      description: The configuration for GZIP compressor.
+                      type: object
+                    type:
+                      description: CompressorType defines the compressor type to use
+                        for compression.
+                      enum:
+                      - Gzip
+                      - Brotli
+                      type: string
+                  required:
+                  - type
+                  type: object
+                type: array
+              compressor:
+                description: |-
+                  The compressor config for the http streams.
+                  This provides more granular control over compression configuration.
                 items:
                   description: |-
                     Compression defines the config of enabling compression.
@@ -651,8 +693,7 @@ spec:
                               Defaults to 200 only
                             items:
                               description: HTTPStatus defines the http status code.
-                              exclusiveMaximum: true
-                              maximum: 600
+                              maximum: 599
                               minimum: 100
                               type: integer
                             type: array
@@ -833,6 +874,15 @@ spec:
                           ConsecutiveLocalOriginFailures sets the number of consecutive local origin failures triggering ejection.
                           Parameter takes effect only when split_external_local_origin_errors is set to true.
                         format: int32
+                        type: integer
+                      failurePercentageThreshold:
+                        description: |-
+                          FailurePercentageThreshold sets the failure percentage threshold for outlier detection.
+                          If the failure percentage of a given host is greater than or equal to this value, it will be ejected.
+                          Defaults to 85.
+                        format: int32
+                        maximum: 100
+                        minimum: 0
                         type: integer
                       interval:
                         default: 3s
@@ -1085,6 +1135,14 @@ spec:
                               of total upstream endpoints across all zones required
                               to enable zone-aware routing.
                             format: int64
+                            type: integer
+                          percentageEnabled:
+                            description: Configures percentage of requests that will
+                              be considered for zone aware routing if zone aware routing
+                              is configured. If not specified, Envoy defaults to 100%.
+                            format: int32
+                            maximum: 100
+                            minimum: 0
                             type: integer
                         type: object
                     type: object
@@ -1840,8 +1898,6 @@ spec:
                             Port will not be added in the 'Location' header if scheme is HTTP and port is 80
                             or scheme is HTTPS and port is 443.
                           format: int32
-                          maximum: 65535
-                          minimum: 1
                           type: integer
                         scheme:
                           description: |-
@@ -1935,6 +1991,142 @@ spec:
                           description: Content Type of the response. This will be
                             set in the Content-Type header.
                           type: string
+                        header:
+                          description: |-
+                            Header defines headers to add, set or remove from the response.
+                            This allows the response policy to append, add or override headers
+                            of the final response before it is sent to a downstream client.
+                            Note: Header removal is not supported for responseOverride.
+                          properties:
+                            add:
+                              description: |-
+                                Add adds the given header(s) (name, value) to the request
+                                before the action. It appends to any existing values associated
+                                with the header name.
+
+                                Input:
+                                  GET /foo HTTP/1.1
+                                  my-header: foo
+
+                                Config:
+                                  add:
+                                  - name: "my-header"
+                                    value: "bar,baz"
+
+                                Output:
+                                  GET /foo HTTP/1.1
+                                  my-header: foo,bar,baz
+                              items:
+                                description: HTTPHeader represents an HTTP Header
+                                  name and value as defined by RFC 7230.
+                                properties:
+                                  name:
+                                    description: |-
+                                      Name is the name of the HTTP Header to be matched. Name matching MUST be
+                                      case-insensitive. (See https://tools.ietf.org/html/rfc7230#section-3.2).
+
+                                      If multiple entries specify equivalent header names, the first entry with
+                                      an equivalent name MUST be considered for a match. Subsequent entries
+                                      with an equivalent header name MUST be ignored. Due to the
+                                      case-insensitivity of header names, "foo" and "Foo" are considered
+                                      equivalent.
+                                    maxLength: 256
+                                    minLength: 1
+                                    pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
+                                    type: string
+                                  value:
+                                    description: Value is the value of HTTP Header
+                                      to be matched.
+                                    maxLength: 4096
+                                    minLength: 1
+                                    type: string
+                                required:
+                                - name
+                                - value
+                                type: object
+                              maxItems: 16
+                              type: array
+                              x-kubernetes-list-map-keys:
+                              - name
+                              x-kubernetes-list-type: map
+                            remove:
+                              description: |-
+                                Remove the given header(s) from the HTTP request before the action. The
+                                value of Remove is a list of HTTP header names. Note that the header
+                                names are case-insensitive (see
+                                https://datatracker.ietf.org/doc/html/rfc2616#section-4.2).
+
+                                Input:
+                                  GET /foo HTTP/1.1
+                                  my-header1: foo
+                                  my-header2: bar
+                                  my-header3: baz
+
+                                Config:
+                                  remove: ["my-header1", "my-header3"]
+
+                                Output:
+                                  GET /foo HTTP/1.1
+                                  my-header2: bar
+                              items:
+                                type: string
+                              maxItems: 16
+                              type: array
+                              x-kubernetes-list-type: set
+                            set:
+                              description: |-
+                                Set overwrites the request with the given header (name, value)
+                                before the action.
+
+                                Input:
+                                  GET /foo HTTP/1.1
+                                  my-header: foo
+
+                                Config:
+                                  set:
+                                  - name: "my-header"
+                                    value: "bar"
+
+                                Output:
+                                  GET /foo HTTP/1.1
+                                  my-header: bar
+                              items:
+                                description: HTTPHeader represents an HTTP Header
+                                  name and value as defined by RFC 7230.
+                                properties:
+                                  name:
+                                    description: |-
+                                      Name is the name of the HTTP Header to be matched. Name matching MUST be
+                                      case-insensitive. (See https://tools.ietf.org/html/rfc7230#section-3.2).
+
+                                      If multiple entries specify equivalent header names, the first entry with
+                                      an equivalent name MUST be considered for a match. Subsequent entries
+                                      with an equivalent header name MUST be ignored. Due to the
+                                      case-insensitivity of header names, "foo" and "Foo" are considered
+                                      equivalent.
+                                    maxLength: 256
+                                    minLength: 1
+                                    pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
+                                    type: string
+                                  value:
+                                    description: Value is the value of HTTP Header
+                                      to be matched.
+                                    maxLength: 4096
+                                    minLength: 1
+                                    type: string
+                                required:
+                                - name
+                                - value
+                                type: object
+                              maxItems: 16
+                              type: array
+                              x-kubernetes-list-map-keys:
+                              - name
+                              x-kubernetes-list-type: map
+                          type: object
+                          x-kubernetes-validations:
+                          - message: Remove is not supported for header in CustomResponse
+                            rule: '!has(self.remove) || size(self.remove) == 0'
                         statusCode:
                           description: |-
                             Status Code of the Custom Response
@@ -2007,8 +2199,7 @@ spec:
                           The retriable-status-codes trigger must also be configured for these status codes to trigger a retry.
                         items:
                           description: HTTPStatus defines the http status code.
-                          exclusiveMaximum: true
-                          maximum: 600
+                          maximum: 599
                           minimum: 100
                           type: integer
                         type: array
@@ -2383,6 +2574,8 @@ spec:
               rule: 'has(self.targetRefs) ? self.targetRefs.all(ref, ref.kind in [''Gateway'',
                 ''HTTPRoute'', ''GRPCRoute'', ''UDPRoute'', ''TCPRoute'', ''TLSRoute''])
                 : true '
+            - message: either compression or compressor can be set, not both
+              rule: '!has(self.compression) || !has(self.compressor)'
           status:
             description: status defines the current status of BackendTrafficPolicy.
             properties:
@@ -2588,8 +2781,38 @@ spec:
                       - name
                       type: object
                     conditions:
-                      description: Conditions describes the status of the Policy with
-                        respect to the given Ancestor.
+                      description: |-
+                        Conditions describes the status of the Policy with respect to the given Ancestor.
+
+                        <gateway:util:excludeFromCRD>
+
+                        Notes for implementors:
+
+                        Conditions are a listType `map`, which means that they function like a
+                        map with a key of the `type` field _in the k8s apiserver_.
+
+                        This means that implementations must obey some rules when updating this
+                        section.
+
+                        * Implementations MUST perform a read-modify-write cycle on this field
+                          before modifying it. That is, when modifying this field, implementations
+                          must be confident they have fetched the most recent version of this field,
+                          and ensure that changes they make are on that recent version.
+                        * Implementations MUST NOT remove or reorder Conditions that they are not
+                          directly responsible for. For example, if an implementation sees a Condition
+                          with type `special.io/SomeField`, it MUST NOT remove, change or update that
+                          Condition.
+                        * Implementations MUST always _merge_ changes into Conditions of the same Type,
+                          rather than creating more than one Condition of the same Type.
+                        * Implementations MUST always update the `observedGeneration` field of the
+                          Condition to the `metadata.generation` of the Gateway at the time of update creation.
+                        * If the `observedGeneration` of a Condition is _greater than_ the value the
+                          implementation knows about, then it MUST NOT perform the update on that Condition,
+                          but must wait for a future reconciliation and status update. (The assumption is that
+                          the implementation's copy of the object is stale and an update will be re-triggered
+                          if relevant.)
+
+                        </gateway:util:excludeFromCRD>
                       items:
                         description: Condition contains details for one aspect of
                           the current state of this API Resource.
@@ -2672,10 +2895,12 @@ spec:
                       type: string
                   required:
                   - ancestorRef
+                  - conditions
                   - controllerName
                   type: object
                 maxItems: 16
                 type: array
+                x-kubernetes-list-type: atomic
             required:
             - ancestors
             type: object
@@ -2772,9 +2997,18 @@ spec:
                     properties:
                       numTrustedHops:
                         description: |-
-                          NumTrustedHops controls the number of additional ingress proxy hops from the right side of XFF HTTP
-                          headers to trust when determining the origin client's IP address.
-                          Only one of NumTrustedHops and TrustedCIDRs must be set.
+                          NumTrustedHops specifies how many trusted hops to count from the rightmost side of
+                          the X-Forwarded-For (XFF) header when determining the original client’s IP address.
+
+                          If NumTrustedHops is set to N, the client IP is taken from the Nth address from the
+                          right end of the XFF header.
+
+                          Example:
+                            XFF = "203.0.113.128, 203.0.113.10, 203.0.113.1"
+                            NumTrustedHops = 2
+                            → Trusted client address = 203.0.113.10
+
+                          Only one of NumTrustedHops or TrustedCIDRs should be configured.
                         format: int32
                         type: integer
                       trustedCIDRs:
@@ -2829,6 +3063,25 @@ spec:
                           CloseDelay defines the delay to use before closing connections that are rejected
                           once the limit value is reached.
                           Default: none.
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                        type: string
+                      maxConnectionDuration:
+                        description: |-
+                          MaxConnectionDuration is the maximum amount of time a connection can remain established
+                          (usually via TCP/HTTP Keepalive packets) before being drained and/or closed.
+                          If not specified, there is no limit.
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                        type: string
+                      maxRequestsPerConnection:
+                        description: |-
+                          MaxRequestsPerConnection defines the maximum number of requests allowed over a single connection.
+                          If not specified, there is no limit. Setting this parameter to 1 will effectively disable keep alive.
+                        format: int32
+                        type: integer
+                      maxStreamDuration:
+                        description: |-
+                          MaxStreamDuration is the maximum amount of time to keep alive an http stream. When the limit is reached
+                          the stream will be reset independent of any other timeouts. If not specified, no value is set.
                         pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                         type: string
                       value:
@@ -3017,6 +3270,136 @@ spec:
                       EnableEnvoyHeaders configures Envoy Proxy to add the "X-Envoy-" headers to requests
                       and responses.
                     type: boolean
+                  lateResponseHeaders:
+                    description: LateResponseHeaders defines settings for global response
+                      header modification.
+                    properties:
+                      add:
+                        description: |-
+                          Add adds the given header(s) (name, value) to the request
+                          before the action. It appends to any existing values associated
+                          with the header name.
+
+                          Input:
+                            GET /foo HTTP/1.1
+                            my-header: foo
+
+                          Config:
+                            add:
+                            - name: "my-header"
+                              value: "bar,baz"
+
+                          Output:
+                            GET /foo HTTP/1.1
+                            my-header: foo,bar,baz
+                        items:
+                          description: HTTPHeader represents an HTTP Header name and
+                            value as defined by RFC 7230.
+                          properties:
+                            name:
+                              description: |-
+                                Name is the name of the HTTP Header to be matched. Name matching MUST be
+                                case-insensitive. (See https://tools.ietf.org/html/rfc7230#section-3.2).
+
+                                If multiple entries specify equivalent header names, the first entry with
+                                an equivalent name MUST be considered for a match. Subsequent entries
+                                with an equivalent header name MUST be ignored. Due to the
+                                case-insensitivity of header names, "foo" and "Foo" are considered
+                                equivalent.
+                              maxLength: 256
+                              minLength: 1
+                              pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
+                              type: string
+                            value:
+                              description: Value is the value of HTTP Header to be
+                                matched.
+                              maxLength: 4096
+                              minLength: 1
+                              type: string
+                          required:
+                          - name
+                          - value
+                          type: object
+                        maxItems: 64
+                        type: array
+                        x-kubernetes-list-map-keys:
+                        - name
+                        x-kubernetes-list-type: map
+                      remove:
+                        description: |-
+                          Remove the given header(s) from the HTTP request before the action. The
+                          value of Remove is a list of HTTP header names. Note that the header
+                          names are case-insensitive (see
+                          https://datatracker.ietf.org/doc/html/rfc2616#section-4.2).
+
+                          Input:
+                            GET /foo HTTP/1.1
+                            my-header1: foo
+                            my-header2: bar
+                            my-header3: baz
+
+                          Config:
+                            remove: ["my-header1", "my-header3"]
+
+                          Output:
+                            GET /foo HTTP/1.1
+                            my-header2: bar
+                        items:
+                          type: string
+                        maxItems: 64
+                        type: array
+                        x-kubernetes-list-type: set
+                      set:
+                        description: |-
+                          Set overwrites the request with the given header (name, value)
+                          before the action.
+
+                          Input:
+                            GET /foo HTTP/1.1
+                            my-header: foo
+
+                          Config:
+                            set:
+                            - name: "my-header"
+                              value: "bar"
+
+                          Output:
+                            GET /foo HTTP/1.1
+                            my-header: bar
+                        items:
+                          description: HTTPHeader represents an HTTP Header name and
+                            value as defined by RFC 7230.
+                          properties:
+                            name:
+                              description: |-
+                                Name is the name of the HTTP Header to be matched. Name matching MUST be
+                                case-insensitive. (See https://tools.ietf.org/html/rfc7230#section-3.2).
+
+                                If multiple entries specify equivalent header names, the first entry with
+                                an equivalent name MUST be considered for a match. Subsequent entries
+                                with an equivalent header name MUST be ignored. Due to the
+                                case-insensitivity of header names, "foo" and "Foo" are considered
+                                equivalent.
+                              maxLength: 256
+                              minLength: 1
+                              pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
+                              type: string
+                            value:
+                              description: Value is the value of HTTP Header to be
+                                matched.
+                              maxLength: 4096
+                              minLength: 1
+                              type: string
+                          required:
+                          - name
+                          - value
+                          type: object
+                        maxItems: 64
+                        type: array
+                        x-kubernetes-list-map-keys:
+                        - name
+                        x-kubernetes-list-type: map
+                    type: object
                   preserveXRequestID:
                     description: |-
                       PreserveXRequestID configures Envoy to keep the X-Request-ID header if passed for a request that is edge
@@ -3115,6 +3498,14 @@ spec:
               http1:
                 description: HTTP1 provides HTTP/1 configuration on the listener.
                 properties:
+                  disableSafeMaxConnectionDuration:
+                    description: |-
+                      DisableSafeMaxConnectionDuration controls the close behavior for HTTP/1 connections.
+                      By default, connection closure is delayed until the next request arrives after maxConnectionDuration is exceeded.
+                      It then adds a Connection: close header and gracefully closes the connection after the response completes.
+                      When set to true (disabled), Envoy uses its default drain behavior, closing the connection shortly after maxConnectionDuration elapses.
+                      Has no effect unless maxConnectionDuration is set.
+                    type: boolean
                   enableTrailers:
                     description: EnableTrailers defines if HTTP/1 trailers should
                       be proxied by Envoy.
@@ -3466,17 +3857,16 @@ spec:
                       2. Other Routes: ALPN is disabled.
                       3. Backends: proxy uses the appropriate ALPN options for the backend protocol.
                       When an empty list is provided, the ALPN TLS extension is disabled.
-                      Supported values are:
+
+                      Defaults to [h2, http/1.1] if not specified.
+
+                      Typical Supported values are:
                       - http/1.0
                       - http/1.1
                       - h2
                     items:
                       description: ALPNProtocol specifies the protocol to be negotiated
                         using ALPN
-                      enum:
-                      - http/1.0
-                      - http/1.1
-                      - h2
                       type: string
                     type: array
                   ciphers:
@@ -3575,6 +3965,81 @@ spec:
                         items:
                           type: string
                         type: array
+                      crl:
+                        description: Crl specifies the crl configuration that can
+                          be used to validate the client initiating the TLS connection
+                        properties:
+                          onlyVerifyLeafCertificate:
+                            description: |-
+                              If this option is set to true,  Envoy will only verify the certificate at the end of the certificate chain against the CRL.
+                              Defaults to false, which will verify the entire certificate chain against the CRL.
+                            type: boolean
+                          refs:
+                            description: |-
+                              Refs contains one or more references to a Kubernetes ConfigMap or a Kubernetes Secret,
+                              containing the certificate revocation list in PEM format
+                              Expects the content in a key named `ca.crl`.
+
+                              References to a resource in different namespace are invalid UNLESS there
+                              is a ReferenceGrant in the target namespace that allows the crl
+                              to be attached.
+                            items:
+                              description: |-
+                                SecretObjectReference identifies an API object including its namespace,
+                                defaulting to Secret.
+
+                                The API object must be valid in the cluster; the Group and Kind must
+                                be registered in the cluster for this reference to be valid.
+
+                                References to objects with invalid Group and Kind are not valid, and must
+                                be rejected by the implementation, with appropriate Conditions set
+                                on the containing object.
+                              properties:
+                                group:
+                                  default: ""
+                                  description: |-
+                                    Group is the group of the referent. For example, "gateway.networking.k8s.io".
+                                    When unspecified or empty string, core API group is inferred.
+                                  maxLength: 253
+                                  pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                                  type: string
+                                kind:
+                                  default: Secret
+                                  description: Kind is kind of the referent. For example
+                                    "Secret".
+                                  maxLength: 63
+                                  minLength: 1
+                                  pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
+                                  type: string
+                                name:
+                                  description: Name is the name of the referent.
+                                  maxLength: 253
+                                  minLength: 1
+                                  type: string
+                                namespace:
+                                  description: |-
+                                    Namespace is the namespace of the referenced object. When unspecified, the local
+                                    namespace is inferred.
+
+                                    Note that when a namespace different than the local namespace is specified,
+                                    a ReferenceGrant object is required in the referent namespace to allow that
+                                    namespace's owner to accept the reference. See the ReferenceGrant
+                                    documentation for details.
+
+                                    Support: Core
+                                  maxLength: 63
+                                  minLength: 1
+                                  pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                                  type: string
+                              required:
+                              - name
+                              type: object
+                            maxItems: 8
+                            minItems: 1
+                            type: array
+                        required:
+                        - refs
+                        type: object
                       optional:
                         description: |-
                           Optional set to true accepts connections even when a client doesn't present a certificate.
@@ -4030,8 +4495,38 @@ spec:
                       - name
                       type: object
                     conditions:
-                      description: Conditions describes the status of the Policy with
-                        respect to the given Ancestor.
+                      description: |-
+                        Conditions describes the status of the Policy with respect to the given Ancestor.
+
+                        <gateway:util:excludeFromCRD>
+
+                        Notes for implementors:
+
+                        Conditions are a listType `map`, which means that they function like a
+                        map with a key of the `type` field _in the k8s apiserver_.
+
+                        This means that implementations must obey some rules when updating this
+                        section.
+
+                        * Implementations MUST perform a read-modify-write cycle on this field
+                          before modifying it. That is, when modifying this field, implementations
+                          must be confident they have fetched the most recent version of this field,
+                          and ensure that changes they make are on that recent version.
+                        * Implementations MUST NOT remove or reorder Conditions that they are not
+                          directly responsible for. For example, if an implementation sees a Condition
+                          with type `special.io/SomeField`, it MUST NOT remove, change or update that
+                          Condition.
+                        * Implementations MUST always _merge_ changes into Conditions of the same Type,
+                          rather than creating more than one Condition of the same Type.
+                        * Implementations MUST always update the `observedGeneration` field of the
+                          Condition to the `metadata.generation` of the Gateway at the time of update creation.
+                        * If the `observedGeneration` of a Condition is _greater than_ the value the
+                          implementation knows about, then it MUST NOT perform the update on that Condition,
+                          but must wait for a future reconciliation and status update. (The assumption is that
+                          the implementation's copy of the object is stale and an update will be re-triggered
+                          if relevant.)
+
+                        </gateway:util:excludeFromCRD>
                       items:
                         description: Condition contains details for one aspect of
                           the current state of this API Resource.
@@ -4114,10 +4609,12 @@ spec:
                       type: string
                   required:
                   - ancestorRef
+                  - conditions
                   - controllerName
                   type: object
                 maxItems: 16
                 type: array
+                x-kubernetes-list-type: atomic
             required:
             - ancestors
             type: object
@@ -4547,8 +5044,7 @@ spec:
                                       items:
                                         description: HTTPStatus defines the http status
                                           code.
-                                        exclusiveMaximum: true
-                                        maximum: 600
+                                        maximum: 599
                                         minimum: 100
                                         type: integer
                                       type: array
@@ -4736,6 +5232,15 @@ spec:
                                     ConsecutiveLocalOriginFailures sets the number of consecutive local origin failures triggering ejection.
                                     Parameter takes effect only when split_external_local_origin_errors is set to true.
                                   format: int32
+                                  type: integer
+                                failurePercentageThreshold:
+                                  description: |-
+                                    FailurePercentageThreshold sets the failure percentage threshold for outlier detection.
+                                    If the failure percentage of a given host is greater than or equal to this value, it will be ejected.
+                                    Defaults to 85.
+                                  format: int32
+                                  maximum: 100
+                                  minimum: 0
                                   type: integer
                                 interval:
                                   default: 3s
@@ -4964,6 +5469,15 @@ spec:
                                         all zones required to enable zone-aware routing.
                                       format: int64
                                       type: integer
+                                    percentageEnabled:
+                                      description: Configures percentage of requests
+                                        that will be considered for zone aware routing
+                                        if zone aware routing is configured. If not
+                                        specified, Envoy defaults to 100%.
+                                      format: int32
+                                      maximum: 100
+                                      minimum: 0
+                                      type: integer
                                   type: object
                               type: object
                           required:
@@ -5058,8 +5572,7 @@ spec:
                                   items:
                                     description: HTTPStatus defines the http status
                                       code.
-                                    exclusiveMaximum: true
-                                    maximum: 600
+                                    maximum: 599
                                     minimum: 100
                                     type: integer
                                   type: array
@@ -6035,8 +6548,38 @@ spec:
                       - name
                       type: object
                     conditions:
-                      description: Conditions describes the status of the Policy with
-                        respect to the given Ancestor.
+                      description: |-
+                        Conditions describes the status of the Policy with respect to the given Ancestor.
+
+                        <gateway:util:excludeFromCRD>
+
+                        Notes for implementors:
+
+                        Conditions are a listType `map`, which means that they function like a
+                        map with a key of the `type` field _in the k8s apiserver_.
+
+                        This means that implementations must obey some rules when updating this
+                        section.
+
+                        * Implementations MUST perform a read-modify-write cycle on this field
+                          before modifying it. That is, when modifying this field, implementations
+                          must be confident they have fetched the most recent version of this field,
+                          and ensure that changes they make are on that recent version.
+                        * Implementations MUST NOT remove or reorder Conditions that they are not
+                          directly responsible for. For example, if an implementation sees a Condition
+                          with type `special.io/SomeField`, it MUST NOT remove, change or update that
+                          Condition.
+                        * Implementations MUST always _merge_ changes into Conditions of the same Type,
+                          rather than creating more than one Condition of the same Type.
+                        * Implementations MUST always update the `observedGeneration` field of the
+                          Condition to the `metadata.generation` of the Gateway at the time of update creation.
+                        * If the `observedGeneration` of a Condition is _greater than_ the value the
+                          implementation knows about, then it MUST NOT perform the update on that Condition,
+                          but must wait for a future reconciliation and status update. (The assumption is that
+                          the implementation's copy of the object is stale and an update will be re-triggered
+                          if relevant.)
+
+                        </gateway:util:excludeFromCRD>
                       items:
                         description: Condition contains details for one aspect of
                           the current state of this API Resource.
@@ -6119,10 +6662,12 @@ spec:
                       type: string
                   required:
                   - ancestorRef
+                  - conditions
                   - controllerName
                   type: object
                 maxItems: 16
                 type: array
+                x-kubernetes-list-type: atomic
             required:
             - ancestors
             type: object
@@ -6511,8 +7056,38 @@ spec:
                       - name
                       type: object
                     conditions:
-                      description: Conditions describes the status of the Policy with
-                        respect to the given Ancestor.
+                      description: |-
+                        Conditions describes the status of the Policy with respect to the given Ancestor.
+
+                        <gateway:util:excludeFromCRD>
+
+                        Notes for implementors:
+
+                        Conditions are a listType `map`, which means that they function like a
+                        map with a key of the `type` field _in the k8s apiserver_.
+
+                        This means that implementations must obey some rules when updating this
+                        section.
+
+                        * Implementations MUST perform a read-modify-write cycle on this field
+                          before modifying it. That is, when modifying this field, implementations
+                          must be confident they have fetched the most recent version of this field,
+                          and ensure that changes they make are on that recent version.
+                        * Implementations MUST NOT remove or reorder Conditions that they are not
+                          directly responsible for. For example, if an implementation sees a Condition
+                          with type `special.io/SomeField`, it MUST NOT remove, change or update that
+                          Condition.
+                        * Implementations MUST always _merge_ changes into Conditions of the same Type,
+                          rather than creating more than one Condition of the same Type.
+                        * Implementations MUST always update the `observedGeneration` field of the
+                          Condition to the `metadata.generation` of the Gateway at the time of update creation.
+                        * If the `observedGeneration` of a Condition is _greater than_ the value the
+                          implementation knows about, then it MUST NOT perform the update on that Condition,
+                          but must wait for a future reconciliation and status update. (The assumption is that
+                          the implementation's copy of the object is stale and an update will be re-triggered
+                          if relevant.)
+
+                        </gateway:util:excludeFromCRD>
                       items:
                         description: Condition contains details for one aspect of
                           the current state of this API Resource.
@@ -6595,10 +7170,12 @@ spec:
                       type: string
                   required:
                   - ancestorRef
+                  - conditions
                   - controllerName
                   type: object
                 maxItems: 16
                 type: array
+                x-kubernetes-list-type: atomic
             required:
             - ancestors
             type: object
@@ -6669,17 +7246,16 @@ spec:
                       2. Other Routes: ALPN is disabled.
                       3. Backends: proxy uses the appropriate ALPN options for the backend protocol.
                       When an empty list is provided, the ALPN TLS extension is disabled.
-                      Supported values are:
+
+                      Defaults to [h2, http/1.1] if not specified.
+
+                      Typical Supported values are:
                       - http/1.0
                       - http/1.1
                       - h2
                     items:
                       description: ALPNProtocol specifies the protocol to be negotiated
                         using ALPN
-                      enum:
-                      - http/1.0
-                      - http/1.1
-                      - h2
                       type: string
                     type: array
                   ciphers:
@@ -7076,6 +7652,19 @@ spec:
                   If unspecified, the "Kubernetes" resource provider is used with default configuration
                   parameters.
                 properties:
+                  host:
+                    description: |-
+                      Host provides runtime deployment of the data plane as a child process on the
+                      host environment.
+                      If unspecified and type is "Host", default settings for the custom provider
+                      are applied.
+                    properties:
+                      envoyVersion:
+                        description: |-
+                          EnvoyVersion is the version of Envoy to use. If unspecified, the version
+                          against which Envoy Gateway is built will be used.
+                        type: string
+                    type: object
                   kubernetes:
                     description: |-
                       Kubernetes defines the desired state of the Kubernetes resource provider.
@@ -7100,8 +7689,9 @@ spec:
                                     present in a Container.
                                   properties:
                                     name:
-                                      description: Name of the environment variable.
-                                        Must be a C_IDENTIFIER.
+                                      description: |-
+                                        Name of the environment variable.
+                                        May consist of any printable ASCII characters except '='.
                                       type: string
                                     value:
                                       description: |-
@@ -7158,6 +7748,43 @@ spec:
                                               type: string
                                           required:
                                           - fieldPath
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                        fileKeyRef:
+                                          description: |-
+                                            FileKeyRef selects a key of the env file.
+                                            Requires the EnvFiles feature gate to be enabled.
+                                          properties:
+                                            key:
+                                              description: |-
+                                                The key within the env file. An invalid key will prevent the pod from starting.
+                                                The keys defined within a source may consist of any printable ASCII characters except '='.
+                                                During Alpha stage of the EnvFiles feature gate, the key size is limited to 128 characters.
+                                              type: string
+                                            optional:
+                                              default: false
+                                              description: |-
+                                                Specify whether the file or its key must be defined. If the file or key
+                                                does not exist, then the env var is not published.
+                                                If optional is set to true and the specified key does not exist,
+                                                the environment variable will not be set in the Pod's containers.
+
+                                                If optional is set to false and the specified key does not exist,
+                                                an error will be returned during Pod creation.
+                                              type: boolean
+                                            path:
+                                              description: |-
+                                                The path within the volume from which to select the file.
+                                                Must be relative and may not contain the '..' path or start with '..'.
+                                              type: string
+                                            volumeName:
+                                              description: The name of the volume
+                                                mount containing the env file.
+                                              type: string
+                                          required:
+                                          - key
+                                          - path
+                                          - volumeName
                                           type: object
                                           x-kubernetes-map-type: atomic
                                         resourceFieldRef:
@@ -7246,7 +7873,7 @@ spec:
                                       Claims lists the names of resources, defined in spec.resourceClaims,
                                       that are used by this container.
 
-                                      This is an alpha field and requires enabling the
+                                      This field depends on the
                                       DynamicResourceAllocation feature gate.
 
                                       This field is immutable. It can only be set for containers.
@@ -8174,8 +8801,8 @@ spec:
                                           most preferred is the one with the greatest sum of weights, i.e.
                                           for each node that meets all of the scheduling requirements (resource
                                           request, requiredDuringScheduling anti-affinity expressions, etc.),
-                                          compute a sum by iterating through the elements of this field and adding
-                                          "weight" to the sum if the node has pods which matches the corresponding podAffinityTerm; the
+                                          compute a sum by iterating through the elements of this field and subtracting
+                                          "weight" from the sum if the node has pods which matches the corresponding podAffinityTerm; the
                                           node(s) with the highest sum are the most preferred.
                                         items:
                                           description: The weights of all of the matched
@@ -9720,15 +10347,13 @@ spec:
                                                     volumeAttributesClassName may be used to set the VolumeAttributesClass used by this claim.
                                                     If specified, the CSI driver will create or update the volume with the attributes defined
                                                     in the corresponding VolumeAttributesClass. This has a different purpose than storageClassName,
-                                                    it can be changed after the claim is created. An empty string value means that no VolumeAttributesClass
-                                                    will be applied to the claim but it's not allowed to reset this field to empty string once it is set.
-                                                    If unspecified and the PersistentVolumeClaim is unbound, the default VolumeAttributesClass
-                                                    will be set by the persistentvolume controller if it exists.
+                                                    it can be changed after the claim is created. An empty string or nil value indicates that no
+                                                    VolumeAttributesClass will be applied to the claim. If the claim enters an Infeasible error state,
+                                                    this field can be reset to its previous value (including nil) to cancel the modification.
                                                     If the resource referred to by volumeAttributesClass does not exist, this PersistentVolumeClaim will be
                                                     set to a Pending state, as reflected by the modifyVolumeStatus field, until such as a resource
                                                     exists.
                                                     More info: https://kubernetes.io/docs/concepts/storage/volume-attributes-classes/
-                                                    (Beta) Using this field requires the VolumeAttributesClass feature gate to be enabled (off by default).
                                                   type: string
                                                 volumeMode:
                                                   description: |-
@@ -9913,12 +10538,10 @@ spec:
                                       description: |-
                                         glusterfs represents a Glusterfs mount on the host that shares a pod's lifetime.
                                         Deprecated: Glusterfs is deprecated and the in-tree glusterfs type is no longer supported.
-                                        More info: https://examples.k8s.io/volumes/glusterfs/README.md
                                       properties:
                                         endpoints:
-                                          description: |-
-                                            endpoints is the endpoint name that details Glusterfs topology.
-                                            More info: https://examples.k8s.io/volumes/glusterfs/README.md#create-a-pod
+                                          description: endpoints is the endpoint name
+                                            that details Glusterfs topology.
                                           type: string
                                         path:
                                           description: |-
@@ -9997,7 +10620,7 @@ spec:
                                       description: |-
                                         iscsi represents an ISCSI Disk resource that is attached to a
                                         kubelet's host machine and then exposed to the pod.
-                                        More info: https://examples.k8s.io/volumes/iscsi/README.md
+                                        More info: https://kubernetes.io/docs/concepts/storage/volumes/#iscsi
                                       properties:
                                         chapAuthDiscovery:
                                           description: chapAuthDiscovery defines whether
@@ -10441,6 +11064,112 @@ spec:
                                                     type: array
                                                     x-kubernetes-list-type: atomic
                                                 type: object
+                                              podCertificate:
+                                                description: |-
+                                                  Projects an auto-rotating credential bundle (private key and certificate
+                                                  chain) that the pod can use either as a TLS client or server.
+
+                                                  Kubelet generates a private key and uses it to send a
+                                                  PodCertificateRequest to the named signer.  Once the signer approves the
+                                                  request and issues a certificate chain, Kubelet writes the key and
+                                                  certificate chain to the pod filesystem.  The pod does not start until
+                                                  certificates have been issued for each podCertificate projected volume
+                                                  source in its spec.
+
+                                                  Kubelet will begin trying to rotate the certificate at the time indicated
+                                                  by the signer using the PodCertificateRequest.Status.BeginRefreshAt
+                                                  timestamp.
+
+                                                  Kubelet can write a single file, indicated by the credentialBundlePath
+                                                  field, or separate files, indicated by the keyPath and
+                                                  certificateChainPath fields.
+
+                                                  The credential bundle is a single file in PEM format.  The first PEM
+                                                  entry is the private key (in PKCS#8 format), and the remaining PEM
+                                                  entries are the certificate chain issued by the signer (typically,
+                                                  signers will return their certificate chain in leaf-to-root order).
+
+                                                  Prefer using the credential bundle format, since your application code
+                                                  can read it atomically.  If you use keyPath and certificateChainPath,
+                                                  your application must make two separate file reads. If these coincide
+                                                  with a certificate rotation, it is possible that the private key and leaf
+                                                  certificate you read may not correspond to each other.  Your application
+                                                  will need to check for this condition, and re-read until they are
+                                                  consistent.
+
+                                                  The named signer controls chooses the format of the certificate it
+                                                  issues; consult the signer implementation's documentation to learn how to
+                                                  use the certificates it issues.
+                                                properties:
+                                                  certificateChainPath:
+                                                    description: |-
+                                                      Write the certificate chain at this path in the projected volume.
+
+                                                      Most applications should use credentialBundlePath.  When using keyPath
+                                                      and certificateChainPath, your application needs to check that the key
+                                                      and leaf certificate are consistent, because it is possible to read the
+                                                      files mid-rotation.
+                                                    type: string
+                                                  credentialBundlePath:
+                                                    description: |-
+                                                      Write the credential bundle at this path in the projected volume.
+
+                                                      The credential bundle is a single file that contains multiple PEM blocks.
+                                                      The first PEM block is a PRIVATE KEY block, containing a PKCS#8 private
+                                                      key.
+
+                                                      The remaining blocks are CERTIFICATE blocks, containing the issued
+                                                      certificate chain from the signer (leaf and any intermediates).
+
+                                                      Using credentialBundlePath lets your Pod's application code make a single
+                                                      atomic read that retrieves a consistent key and certificate chain.  If you
+                                                      project them to separate files, your application code will need to
+                                                      additionally check that the leaf certificate was issued to the key.
+                                                    type: string
+                                                  keyPath:
+                                                    description: |-
+                                                      Write the key at this path in the projected volume.
+
+                                                      Most applications should use credentialBundlePath.  When using keyPath
+                                                      and certificateChainPath, your application needs to check that the key
+                                                      and leaf certificate are consistent, because it is possible to read the
+                                                      files mid-rotation.
+                                                    type: string
+                                                  keyType:
+                                                    description: |-
+                                                      The type of keypair Kubelet will generate for the pod.
+
+                                                      Valid values are "RSA3072", "RSA4096", "ECDSAP256", "ECDSAP384",
+                                                      "ECDSAP521", and "ED25519".
+                                                    type: string
+                                                  maxExpirationSeconds:
+                                                    description: |-
+                                                      maxExpirationSeconds is the maximum lifetime permitted for the
+                                                      certificate.
+
+                                                      Kubelet copies this value verbatim into the PodCertificateRequests it
+                                                      generates for this projection.
+
+                                                      If omitted, kube-apiserver will set it to 86400(24 hours). kube-apiserver
+                                                      will reject values shorter than 3600 (1 hour).  The maximum allowable
+                                                      value is 7862400 (91 days).
+
+                                                      The signer implementation is then free to issue a certificate with any
+                                                      lifetime *shorter* than MaxExpirationSeconds, but no shorter than 3600
+                                                      seconds (1 hour).  This constraint is enforced by kube-apiserver.
+                                                      `kubernetes.io` signers will never issue certificates with a lifetime
+                                                      longer than 24 hours.
+                                                    format: int32
+                                                    type: integer
+                                                  signerName:
+                                                    description: Kubelet's generated
+                                                      CSRs will be addressed to this
+                                                      signer.
+                                                    type: string
+                                                required:
+                                                - keyType
+                                                - signerName
+                                                type: object
                                               secret:
                                                 description: secret information about
                                                   the secret data to project
@@ -10578,7 +11307,6 @@ spec:
                                       description: |-
                                         rbd represents a Rados Block Device mount on the host that shares a pod's lifetime.
                                         Deprecated: RBD is deprecated and the in-tree rbd type is no longer supported.
-                                        More info: https://examples.k8s.io/volumes/rbd/README.md
                                       properties:
                                         fsType:
                                           description: |-
@@ -10894,7 +11622,7 @@ spec:
                                       pod is available (Ready for at least minReadySeconds) the old DaemonSet pod
                                       on that node is marked deleted. If the old pod becomes unavailable for any
                                       reason (Ready transitions to false, is evicted, or is drained) an updated
-                                      pod is immediatedly created on that node without considering surge limits.
+                                      pod is immediately created on that node without considering surge limits.
                                       Allowing surge implies the possibility that the resources consumed by the
                                       daemonset on any given node can double if the readiness check fails, and
                                       so resource intensive daemonsets should take into account that they may
@@ -10945,8 +11673,9 @@ spec:
                                     present in a Container.
                                   properties:
                                     name:
-                                      description: Name of the environment variable.
-                                        Must be a C_IDENTIFIER.
+                                      description: |-
+                                        Name of the environment variable.
+                                        May consist of any printable ASCII characters except '='.
                                       type: string
                                     value:
                                       description: |-
@@ -11003,6 +11732,43 @@ spec:
                                               type: string
                                           required:
                                           - fieldPath
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                        fileKeyRef:
+                                          description: |-
+                                            FileKeyRef selects a key of the env file.
+                                            Requires the EnvFiles feature gate to be enabled.
+                                          properties:
+                                            key:
+                                              description: |-
+                                                The key within the env file. An invalid key will prevent the pod from starting.
+                                                The keys defined within a source may consist of any printable ASCII characters except '='.
+                                                During Alpha stage of the EnvFiles feature gate, the key size is limited to 128 characters.
+                                              type: string
+                                            optional:
+                                              default: false
+                                              description: |-
+                                                Specify whether the file or its key must be defined. If the file or key
+                                                does not exist, then the env var is not published.
+                                                If optional is set to true and the specified key does not exist,
+                                                the environment variable will not be set in the Pod's containers.
+
+                                                If optional is set to false and the specified key does not exist,
+                                                an error will be returned during Pod creation.
+                                              type: boolean
+                                            path:
+                                              description: |-
+                                                The path within the volume from which to select the file.
+                                                Must be relative and may not contain the '..' path or start with '..'.
+                                              type: string
+                                            volumeName:
+                                              description: The name of the volume
+                                                mount containing the env file.
+                                              type: string
+                                          required:
+                                          - key
+                                          - path
+                                          - volumeName
                                           type: object
                                           x-kubernetes-map-type: atomic
                                         resourceFieldRef:
@@ -11091,7 +11857,7 @@ spec:
                                       Claims lists the names of resources, defined in spec.resourceClaims,
                                       that are used by this container.
 
-                                      This is an alpha field and requires enabling the
+                                      This field depends on the
                                       DynamicResourceAllocation feature gate.
 
                                       This field is immutable. It can only be set for containers.
@@ -11453,8 +12219,9 @@ spec:
                                       variable present in a Container.
                                     properties:
                                       name:
-                                        description: Name of the environment variable.
-                                          Must be a C_IDENTIFIER.
+                                        description: |-
+                                          Name of the environment variable.
+                                          May consist of any printable ASCII characters except '='.
                                         type: string
                                       value:
                                         description: |-
@@ -11511,6 +12278,43 @@ spec:
                                                 type: string
                                             required:
                                             - fieldPath
+                                            type: object
+                                            x-kubernetes-map-type: atomic
+                                          fileKeyRef:
+                                            description: |-
+                                              FileKeyRef selects a key of the env file.
+                                              Requires the EnvFiles feature gate to be enabled.
+                                            properties:
+                                              key:
+                                                description: |-
+                                                  The key within the env file. An invalid key will prevent the pod from starting.
+                                                  The keys defined within a source may consist of any printable ASCII characters except '='.
+                                                  During Alpha stage of the EnvFiles feature gate, the key size is limited to 128 characters.
+                                                type: string
+                                              optional:
+                                                default: false
+                                                description: |-
+                                                  Specify whether the file or its key must be defined. If the file or key
+                                                  does not exist, then the env var is not published.
+                                                  If optional is set to true and the specified key does not exist,
+                                                  the environment variable will not be set in the Pod's containers.
+
+                                                  If optional is set to false and the specified key does not exist,
+                                                  an error will be returned during Pod creation.
+                                                type: boolean
+                                              path:
+                                                description: |-
+                                                  The path within the volume from which to select the file.
+                                                  Must be relative and may not contain the '..' path or start with '..'.
+                                                type: string
+                                              volumeName:
+                                                description: The name of the volume
+                                                  mount containing the env file.
+                                                type: string
+                                            required:
+                                            - key
+                                            - path
+                                            - volumeName
                                             type: object
                                             x-kubernetes-map-type: atomic
                                           resourceFieldRef:
@@ -11576,8 +12380,8 @@ spec:
                                 envFrom:
                                   description: |-
                                     List of sources to populate environment variables in the container.
-                                    The keys defined within a source must be a C_IDENTIFIER. All invalid keys
-                                    will be reported as an event when the container is starting. When a key exists in multiple
+                                    The keys defined within a source may consist of any printable ASCII characters except '='.
+                                    When a key exists in multiple
                                     sources, the value associated with the last source will take precedence.
                                     Values defined by an Env with a duplicate key will take precedence.
                                     Cannot be updated.
@@ -11604,9 +12408,9 @@ spec:
                                         type: object
                                         x-kubernetes-map-type: atomic
                                       prefix:
-                                        description: Optional text to prepend to the
-                                          name of each environment variable. Must
-                                          be a C_IDENTIFIER.
+                                        description: |-
+                                          Optional text to prepend to the name of each environment variable.
+                                          May consist of any printable ASCII characters except '='.
                                         type: string
                                       secretRef:
                                         description: The Secret to select from
@@ -12293,7 +13097,7 @@ spec:
                                         Claims lists the names of resources, defined in spec.resourceClaims,
                                         that are used by this container.
 
-                                        This is an alpha field and requires enabling the
+                                        This field depends on the
                                         DynamicResourceAllocation feature gate.
 
                                         This field is immutable. It can only be set for containers.
@@ -12348,10 +13152,10 @@ spec:
                                 restartPolicy:
                                   description: |-
                                     RestartPolicy defines the restart behavior of individual containers in a pod.
-                                    This field may only be set for init containers, and the only allowed value is "Always".
-                                    For non-init containers or when this field is not specified,
+                                    This overrides the pod-level restart policy. When this field is not specified,
                                     the restart behavior is defined by the Pod's restart policy and the container type.
-                                    Setting the RestartPolicy as "Always" for the init container will have the following effect:
+                                    Additionally, setting the RestartPolicy as "Always" for the init container will
+                                    have the following effect:
                                     this init container will be continually restarted on
                                     exit until all regular containers have terminated. Once all regular
                                     containers have completed, all init containers with restartPolicy "Always"
@@ -12363,6 +13167,59 @@ spec:
                                     init container is started, or after any startupProbe has successfully
                                     completed.
                                   type: string
+                                restartPolicyRules:
+                                  description: |-
+                                    Represents a list of rules to be checked to determine if the
+                                    container should be restarted on exit. The rules are evaluated in
+                                    order. Once a rule matches a container exit condition, the remaining
+                                    rules are ignored. If no rule matches the container exit condition,
+                                    the Container-level restart policy determines the whether the container
+                                    is restarted or not. Constraints on the rules:
+                                    - At most 20 rules are allowed.
+                                    - Rules can have the same action.
+                                    - Identical rules are not forbidden in validations.
+                                    When rules are specified, container MUST set RestartPolicy explicitly
+                                    even it if matches the Pod's RestartPolicy.
+                                  items:
+                                    description: ContainerRestartRule describes how
+                                      a container exit is handled.
+                                    properties:
+                                      action:
+                                        description: |-
+                                          Specifies the action taken on a container exit if the requirements
+                                          are satisfied. The only possible value is "Restart" to restart the
+                                          container.
+                                        type: string
+                                      exitCodes:
+                                        description: Represents the exit codes to
+                                          check on container exits.
+                                        properties:
+                                          operator:
+                                            description: |-
+                                              Represents the relationship between the container exit code(s) and the
+                                              specified values. Possible values are:
+                                              - In: the requirement is satisfied if the container exit code is in the
+                                                set of specified values.
+                                              - NotIn: the requirement is satisfied if the container exit code is
+                                                not in the set of specified values.
+                                            type: string
+                                          values:
+                                            description: |-
+                                              Specifies the set of values to check for container exit codes.
+                                              At most 255 elements are allowed.
+                                            items:
+                                              format: int32
+                                              type: integer
+                                            type: array
+                                            x-kubernetes-list-type: set
+                                        required:
+                                        - operator
+                                        type: object
+                                    required:
+                                    - action
+                                    type: object
+                                  type: array
+                                  x-kubernetes-list-type: atomic
                                 securityContext:
                                   description: |-
                                     SecurityContext defines the security options the container should be run with.
@@ -13477,8 +14334,8 @@ spec:
                                           most preferred is the one with the greatest sum of weights, i.e.
                                           for each node that meets all of the scheduling requirements (resource
                                           request, requiredDuringScheduling anti-affinity expressions, etc.),
-                                          compute a sum by iterating through the elements of this field and adding
-                                          "weight" to the sum if the node has pods which matches the corresponding podAffinityTerm; the
+                                          compute a sum by iterating through the elements of this field and subtracting
+                                          "weight" from the sum if the node has pods which matches the corresponding podAffinityTerm; the
                                           node(s) with the highest sum are the most preferred.
                                         items:
                                           description: The weights of all of the matched
@@ -15023,15 +15880,13 @@ spec:
                                                     volumeAttributesClassName may be used to set the VolumeAttributesClass used by this claim.
                                                     If specified, the CSI driver will create or update the volume with the attributes defined
                                                     in the corresponding VolumeAttributesClass. This has a different purpose than storageClassName,
-                                                    it can be changed after the claim is created. An empty string value means that no VolumeAttributesClass
-                                                    will be applied to the claim but it's not allowed to reset this field to empty string once it is set.
-                                                    If unspecified and the PersistentVolumeClaim is unbound, the default VolumeAttributesClass
-                                                    will be set by the persistentvolume controller if it exists.
+                                                    it can be changed after the claim is created. An empty string or nil value indicates that no
+                                                    VolumeAttributesClass will be applied to the claim. If the claim enters an Infeasible error state,
+                                                    this field can be reset to its previous value (including nil) to cancel the modification.
                                                     If the resource referred to by volumeAttributesClass does not exist, this PersistentVolumeClaim will be
                                                     set to a Pending state, as reflected by the modifyVolumeStatus field, until such as a resource
                                                     exists.
                                                     More info: https://kubernetes.io/docs/concepts/storage/volume-attributes-classes/
-                                                    (Beta) Using this field requires the VolumeAttributesClass feature gate to be enabled (off by default).
                                                   type: string
                                                 volumeMode:
                                                   description: |-
@@ -15216,12 +16071,10 @@ spec:
                                       description: |-
                                         glusterfs represents a Glusterfs mount on the host that shares a pod's lifetime.
                                         Deprecated: Glusterfs is deprecated and the in-tree glusterfs type is no longer supported.
-                                        More info: https://examples.k8s.io/volumes/glusterfs/README.md
                                       properties:
                                         endpoints:
-                                          description: |-
-                                            endpoints is the endpoint name that details Glusterfs topology.
-                                            More info: https://examples.k8s.io/volumes/glusterfs/README.md#create-a-pod
+                                          description: endpoints is the endpoint name
+                                            that details Glusterfs topology.
                                           type: string
                                         path:
                                           description: |-
@@ -15300,7 +16153,7 @@ spec:
                                       description: |-
                                         iscsi represents an ISCSI Disk resource that is attached to a
                                         kubelet's host machine and then exposed to the pod.
-                                        More info: https://examples.k8s.io/volumes/iscsi/README.md
+                                        More info: https://kubernetes.io/docs/concepts/storage/volumes/#iscsi
                                       properties:
                                         chapAuthDiscovery:
                                           description: chapAuthDiscovery defines whether
@@ -15744,6 +16597,112 @@ spec:
                                                     type: array
                                                     x-kubernetes-list-type: atomic
                                                 type: object
+                                              podCertificate:
+                                                description: |-
+                                                  Projects an auto-rotating credential bundle (private key and certificate
+                                                  chain) that the pod can use either as a TLS client or server.
+
+                                                  Kubelet generates a private key and uses it to send a
+                                                  PodCertificateRequest to the named signer.  Once the signer approves the
+                                                  request and issues a certificate chain, Kubelet writes the key and
+                                                  certificate chain to the pod filesystem.  The pod does not start until
+                                                  certificates have been issued for each podCertificate projected volume
+                                                  source in its spec.
+
+                                                  Kubelet will begin trying to rotate the certificate at the time indicated
+                                                  by the signer using the PodCertificateRequest.Status.BeginRefreshAt
+                                                  timestamp.
+
+                                                  Kubelet can write a single file, indicated by the credentialBundlePath
+                                                  field, or separate files, indicated by the keyPath and
+                                                  certificateChainPath fields.
+
+                                                  The credential bundle is a single file in PEM format.  The first PEM
+                                                  entry is the private key (in PKCS#8 format), and the remaining PEM
+                                                  entries are the certificate chain issued by the signer (typically,
+                                                  signers will return their certificate chain in leaf-to-root order).
+
+                                                  Prefer using the credential bundle format, since your application code
+                                                  can read it atomically.  If you use keyPath and certificateChainPath,
+                                                  your application must make two separate file reads. If these coincide
+                                                  with a certificate rotation, it is possible that the private key and leaf
+                                                  certificate you read may not correspond to each other.  Your application
+                                                  will need to check for this condition, and re-read until they are
+                                                  consistent.
+
+                                                  The named signer controls chooses the format of the certificate it
+                                                  issues; consult the signer implementation's documentation to learn how to
+                                                  use the certificates it issues.
+                                                properties:
+                                                  certificateChainPath:
+                                                    description: |-
+                                                      Write the certificate chain at this path in the projected volume.
+
+                                                      Most applications should use credentialBundlePath.  When using keyPath
+                                                      and certificateChainPath, your application needs to check that the key
+                                                      and leaf certificate are consistent, because it is possible to read the
+                                                      files mid-rotation.
+                                                    type: string
+                                                  credentialBundlePath:
+                                                    description: |-
+                                                      Write the credential bundle at this path in the projected volume.
+
+                                                      The credential bundle is a single file that contains multiple PEM blocks.
+                                                      The first PEM block is a PRIVATE KEY block, containing a PKCS#8 private
+                                                      key.
+
+                                                      The remaining blocks are CERTIFICATE blocks, containing the issued
+                                                      certificate chain from the signer (leaf and any intermediates).
+
+                                                      Using credentialBundlePath lets your Pod's application code make a single
+                                                      atomic read that retrieves a consistent key and certificate chain.  If you
+                                                      project them to separate files, your application code will need to
+                                                      additionally check that the leaf certificate was issued to the key.
+                                                    type: string
+                                                  keyPath:
+                                                    description: |-
+                                                      Write the key at this path in the projected volume.
+
+                                                      Most applications should use credentialBundlePath.  When using keyPath
+                                                      and certificateChainPath, your application needs to check that the key
+                                                      and leaf certificate are consistent, because it is possible to read the
+                                                      files mid-rotation.
+                                                    type: string
+                                                  keyType:
+                                                    description: |-
+                                                      The type of keypair Kubelet will generate for the pod.
+
+                                                      Valid values are "RSA3072", "RSA4096", "ECDSAP256", "ECDSAP384",
+                                                      "ECDSAP521", and "ED25519".
+                                                    type: string
+                                                  maxExpirationSeconds:
+                                                    description: |-
+                                                      maxExpirationSeconds is the maximum lifetime permitted for the
+                                                      certificate.
+
+                                                      Kubelet copies this value verbatim into the PodCertificateRequests it
+                                                      generates for this projection.
+
+                                                      If omitted, kube-apiserver will set it to 86400(24 hours). kube-apiserver
+                                                      will reject values shorter than 3600 (1 hour).  The maximum allowable
+                                                      value is 7862400 (91 days).
+
+                                                      The signer implementation is then free to issue a certificate with any
+                                                      lifetime *shorter* than MaxExpirationSeconds, but no shorter than 3600
+                                                      seconds (1 hour).  This constraint is enforced by kube-apiserver.
+                                                      `kubernetes.io` signers will never issue certificates with a lifetime
+                                                      longer than 24 hours.
+                                                    format: int32
+                                                    type: integer
+                                                  signerName:
+                                                    description: Kubelet's generated
+                                                      CSRs will be addressed to this
+                                                      signer.
+                                                    type: string
+                                                required:
+                                                - keyType
+                                                - signerName
+                                                type: object
                                               secret:
                                                 description: secret information about
                                                   the secret data to project
@@ -15881,7 +16840,6 @@ spec:
                                       description: |-
                                         rbd represents a Rados Block Device mount on the host that shares a pod's lifetime.
                                         Deprecated: RBD is deprecated and the in-tree rbd type is no longer supported.
-                                        More info: https://examples.k8s.io/volumes/rbd/README.md
                                       properties:
                                         fsType:
                                           description: |-
@@ -17106,10 +18064,10 @@ spec:
                     description: |-
                       Type is the type of resource provider to use. A resource provider provides
                       infrastructure resources for running the data plane, e.g. Envoy proxy, and
-                      optional auxiliary control planes. Supported types are "Kubernetes".
+                      optional auxiliary control planes. Supported types are "Kubernetes"and "Host".
                     enum:
                     - Kubernetes
-                    - Custom
+                    - Host
                     type: string
                 required:
                 - type
@@ -17588,8 +18546,7 @@ spec:
                                                           description: HTTPStatus
                                                             defines the http status
                                                             code.
-                                                          exclusiveMaximum: true
-                                                          maximum: 600
+                                                          maximum: 599
                                                           minimum: 100
                                                           type: integer
                                                         type: array
@@ -17802,6 +18759,15 @@ spec:
                                                       ConsecutiveLocalOriginFailures sets the number of consecutive local origin failures triggering ejection.
                                                       Parameter takes effect only when split_external_local_origin_errors is set to true.
                                                     format: int32
+                                                    type: integer
+                                                  failurePercentageThreshold:
+                                                    description: |-
+                                                      FailurePercentageThreshold sets the failure percentage threshold for outlier detection.
+                                                      If the failure percentage of a given host is greater than or equal to this value, it will be ejected.
+                                                      Defaults to 85.
+                                                    format: int32
+                                                    maximum: 100
+                                                    minimum: 0
                                                     type: integer
                                                   interval:
                                                     default: 3s
@@ -18048,6 +19014,17 @@ spec:
                                                           to enable zone-aware routing.
                                                         format: int64
                                                         type: integer
+                                                      percentageEnabled:
+                                                        description: Configures percentage
+                                                          of requests that will be
+                                                          considered for zone aware
+                                                          routing if zone aware routing
+                                                          is configured. If not specified,
+                                                          Envoy defaults to 100%.
+                                                        format: int32
+                                                        maximum: 100
+                                                        minimum: 0
+                                                        type: integer
                                                     type: object
                                                 type: object
                                             required:
@@ -18148,8 +19125,7 @@ spec:
                                                     items:
                                                       description: HTTPStatus defines
                                                         the http status code.
-                                                      exclusiveMaximum: true
-                                                      maximum: 600
+                                                      maximum: 599
                                                       minimum: 100
                                                       type: integer
                                                     type: array
@@ -18701,8 +19677,7 @@ spec:
                                                           description: HTTPStatus
                                                             defines the http status
                                                             code.
-                                                          exclusiveMaximum: true
-                                                          maximum: 600
+                                                          maximum: 599
                                                           minimum: 100
                                                           type: integer
                                                         type: array
@@ -18915,6 +19890,15 @@ spec:
                                                       ConsecutiveLocalOriginFailures sets the number of consecutive local origin failures triggering ejection.
                                                       Parameter takes effect only when split_external_local_origin_errors is set to true.
                                                     format: int32
+                                                    type: integer
+                                                  failurePercentageThreshold:
+                                                    description: |-
+                                                      FailurePercentageThreshold sets the failure percentage threshold for outlier detection.
+                                                      If the failure percentage of a given host is greater than or equal to this value, it will be ejected.
+                                                      Defaults to 85.
+                                                    format: int32
+                                                    maximum: 100
+                                                    minimum: 0
                                                     type: integer
                                                   interval:
                                                     default: 3s
@@ -19161,6 +20145,17 @@ spec:
                                                           to enable zone-aware routing.
                                                         format: int64
                                                         type: integer
+                                                      percentageEnabled:
+                                                        description: Configures percentage
+                                                          of requests that will be
+                                                          considered for zone aware
+                                                          routing if zone aware routing
+                                                          is configured. If not specified,
+                                                          Envoy defaults to 100%.
+                                                        format: int32
+                                                        maximum: 100
+                                                        minimum: 0
+                                                        type: integer
                                                     type: object
                                                 type: object
                                             required:
@@ -19261,8 +20256,7 @@ spec:
                                                     items:
                                                       description: HTTPStatus defines
                                                         the http status code.
-                                                      exclusiveMaximum: true
-                                                      maximum: 600
+                                                      maximum: 599
                                                       minimum: 100
                                                       type: integer
                                                     type: array
@@ -19918,8 +20912,7 @@ spec:
                                                   items:
                                                     description: HTTPStatus defines
                                                       the http status code.
-                                                    exclusiveMaximum: true
-                                                    maximum: 600
+                                                    maximum: 599
                                                     minimum: 100
                                                     type: integer
                                                   type: array
@@ -20120,6 +21113,15 @@ spec:
                                                 ConsecutiveLocalOriginFailures sets the number of consecutive local origin failures triggering ejection.
                                                 Parameter takes effect only when split_external_local_origin_errors is set to true.
                                               format: int32
+                                              type: integer
+                                            failurePercentageThreshold:
+                                              description: |-
+                                                FailurePercentageThreshold sets the failure percentage threshold for outlier detection.
+                                                If the failure percentage of a given host is greater than or equal to this value, it will be ejected.
+                                                Defaults to 85.
+                                              format: int32
+                                              maximum: 100
+                                              minimum: 0
                                               type: integer
                                             interval:
                                               default: 3s
@@ -20357,6 +21359,17 @@ spec:
                                                     routing.
                                                   format: int64
                                                   type: integer
+                                                percentageEnabled:
+                                                  description: Configures percentage
+                                                    of requests that will be considered
+                                                    for zone aware routing if zone
+                                                    aware routing is configured. If
+                                                    not specified, Envoy defaults
+                                                    to 100%.
+                                                  format: int32
+                                                  maximum: 100
+                                                  minimum: 0
+                                                  type: integer
                                               type: object
                                           type: object
                                       required:
@@ -20453,8 +21466,7 @@ spec:
                                               items:
                                                 description: HTTPStatus defines the
                                                   http status code.
-                                                exclusiveMaximum: true
-                                                maximum: 600
+                                                maximum: 599
                                                 minimum: 100
                                                 type: integer
                                               type: array
@@ -21035,8 +22047,7 @@ spec:
                                             items:
                                               description: HTTPStatus defines the
                                                 http status code.
-                                              exclusiveMaximum: true
-                                              maximum: 600
+                                              maximum: 599
                                               minimum: 100
                                               type: integer
                                             type: array
@@ -21236,6 +22247,15 @@ spec:
                                           ConsecutiveLocalOriginFailures sets the number of consecutive local origin failures triggering ejection.
                                           Parameter takes effect only when split_external_local_origin_errors is set to true.
                                         format: int32
+                                        type: integer
+                                      failurePercentageThreshold:
+                                        description: |-
+                                          FailurePercentageThreshold sets the failure percentage threshold for outlier detection.
+                                          If the failure percentage of a given host is greater than or equal to this value, it will be ejected.
+                                          Defaults to 85.
+                                        format: int32
+                                        maximum: 100
+                                        minimum: 0
                                         type: integer
                                       interval:
                                         default: 3s
@@ -21471,6 +22491,16 @@ spec:
                                               to enable zone-aware routing.
                                             format: int64
                                             type: integer
+                                          percentageEnabled:
+                                            description: Configures percentage of
+                                              requests that will be considered for
+                                              zone aware routing if zone aware routing
+                                              is configured. If not specified, Envoy
+                                              defaults to 100%.
+                                            format: int32
+                                            maximum: 100
+                                            minimum: 0
+                                            type: integer
                                         type: object
                                     type: object
                                 required:
@@ -21566,8 +22596,7 @@ spec:
                                         items:
                                           description: HTTPStatus defines the http
                                             status code.
-                                          exclusiveMaximum: true
-                                          maximum: 600
+                                          maximum: 599
                                           minimum: 100
                                           type: integer
                                         type: array
@@ -21907,7 +22936,7 @@ spec:
                   return a fixed response.
                 properties:
                   body:
-                    description: Body of the Response
+                    description: Body of the direct response.
                     properties:
                       inline:
                         description: Inline contains the value as an inline string.
@@ -21972,9 +23001,141 @@ spec:
                       rule: 'has(self.valueRef) ? self.valueRef.kind == ''ConfigMap''
                         : true'
                   contentType:
-                    description: Content Type of the response. This will be set in
-                      the Content-Type header.
+                    description: Content Type of the direct response. This will be
+                      set in the Content-Type header.
                     type: string
+                  header:
+                    description: Header defines the headers of the direct response.
+                    properties:
+                      add:
+                        description: |-
+                          Add adds the given header(s) (name, value) to the request
+                          before the action. It appends to any existing values associated
+                          with the header name.
+
+                          Input:
+                            GET /foo HTTP/1.1
+                            my-header: foo
+
+                          Config:
+                            add:
+                            - name: "my-header"
+                              value: "bar,baz"
+
+                          Output:
+                            GET /foo HTTP/1.1
+                            my-header: foo,bar,baz
+                        items:
+                          description: HTTPHeader represents an HTTP Header name and
+                            value as defined by RFC 7230.
+                          properties:
+                            name:
+                              description: |-
+                                Name is the name of the HTTP Header to be matched. Name matching MUST be
+                                case-insensitive. (See https://tools.ietf.org/html/rfc7230#section-3.2).
+
+                                If multiple entries specify equivalent header names, the first entry with
+                                an equivalent name MUST be considered for a match. Subsequent entries
+                                with an equivalent header name MUST be ignored. Due to the
+                                case-insensitivity of header names, "foo" and "Foo" are considered
+                                equivalent.
+                              maxLength: 256
+                              minLength: 1
+                              pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
+                              type: string
+                            value:
+                              description: Value is the value of HTTP Header to be
+                                matched.
+                              maxLength: 4096
+                              minLength: 1
+                              type: string
+                          required:
+                          - name
+                          - value
+                          type: object
+                        maxItems: 16
+                        type: array
+                        x-kubernetes-list-map-keys:
+                        - name
+                        x-kubernetes-list-type: map
+                      remove:
+                        description: |-
+                          Remove the given header(s) from the HTTP request before the action. The
+                          value of Remove is a list of HTTP header names. Note that the header
+                          names are case-insensitive (see
+                          https://datatracker.ietf.org/doc/html/rfc2616#section-4.2).
+
+                          Input:
+                            GET /foo HTTP/1.1
+                            my-header1: foo
+                            my-header2: bar
+                            my-header3: baz
+
+                          Config:
+                            remove: ["my-header1", "my-header3"]
+
+                          Output:
+                            GET /foo HTTP/1.1
+                            my-header2: bar
+                        items:
+                          type: string
+                        maxItems: 16
+                        type: array
+                        x-kubernetes-list-type: set
+                      set:
+                        description: |-
+                          Set overwrites the request with the given header (name, value)
+                          before the action.
+
+                          Input:
+                            GET /foo HTTP/1.1
+                            my-header: foo
+
+                          Config:
+                            set:
+                            - name: "my-header"
+                              value: "bar"
+
+                          Output:
+                            GET /foo HTTP/1.1
+                            my-header: bar
+                        items:
+                          description: HTTPHeader represents an HTTP Header name and
+                            value as defined by RFC 7230.
+                          properties:
+                            name:
+                              description: |-
+                                Name is the name of the HTTP Header to be matched. Name matching MUST be
+                                case-insensitive. (See https://tools.ietf.org/html/rfc7230#section-3.2).
+
+                                If multiple entries specify equivalent header names, the first entry with
+                                an equivalent name MUST be considered for a match. Subsequent entries
+                                with an equivalent header name MUST be ignored. Due to the
+                                case-insensitivity of header names, "foo" and "Foo" are considered
+                                equivalent.
+                              maxLength: 256
+                              minLength: 1
+                              pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
+                              type: string
+                            value:
+                              description: Value is the value of HTTP Header to be
+                                matched.
+                              maxLength: 4096
+                              minLength: 1
+                              type: string
+                          required:
+                          - name
+                          - value
+                          type: object
+                        maxItems: 16
+                        type: array
+                        x-kubernetes-list-map-keys:
+                        - name
+                        x-kubernetes-list-type: map
+                    type: object
+                    x-kubernetes-validations:
+                    - message: header.remove is not supported for DirectResponse
+                      rule: '!has(self.remove) || size(self.remove) == 0'
                   statusCode:
                     description: |-
                       Status Code of the HTTP response
@@ -22328,6 +23489,15 @@ spec:
                                 or the proxy protocol.
                                 You can use the `ClientIPDetection` or the `ProxyProtocol` field in
                                 the `ClientTrafficPolicy` to configure how the client IP is detected.
+
+                                For TCPRoute targets (raw TCP connections), HTTP headers such as
+                                X-Forwarded-For are not available. The client IP is obtained from the
+                                TCP connection's peer address. If intermediaries (load balancers, NAT)
+                                terminate or proxy TCP, the original client IP will only be available
+                                if the intermediary preserves the source address (for example by
+                                enabling the PROXY protocol or avoiding SNAT). Ensure your L4 proxy is
+                                configured to preserve the source IP to enable correct client-IP
+                                matching for TCPRoute targets.
                               items:
                                 description: |-
                                   CIDR defines a CIDR Address range.
@@ -22413,7 +23583,7 @@ spec:
                                           If multiple values are specified, one of the values must match for the rule to match.
                                         items:
                                           type: string
-                                        maxItems: 16
+                                        maxItems: 128
                                         minItems: 1
                                         type: array
                                     required:
@@ -22995,8 +24165,7 @@ spec:
                                         items:
                                           description: HTTPStatus defines the http
                                             status code.
-                                          exclusiveMaximum: true
-                                          maximum: 600
+                                          maximum: 599
                                           minimum: 100
                                           type: integer
                                         type: array
@@ -23187,6 +24356,15 @@ spec:
                                       ConsecutiveLocalOriginFailures sets the number of consecutive local origin failures triggering ejection.
                                       Parameter takes effect only when split_external_local_origin_errors is set to true.
                                     format: int32
+                                    type: integer
+                                  failurePercentageThreshold:
+                                    description: |-
+                                      FailurePercentageThreshold sets the failure percentage threshold for outlier detection.
+                                      If the failure percentage of a given host is greater than or equal to this value, it will be ejected.
+                                      Defaults to 85.
+                                    format: int32
+                                    maximum: 100
+                                    minimum: 0
                                     type: integer
                                   interval:
                                     default: 3s
@@ -23420,6 +24598,15 @@ spec:
                                           routing.
                                         format: int64
                                         type: integer
+                                      percentageEnabled:
+                                        description: Configures percentage of requests
+                                          that will be considered for zone aware routing
+                                          if zone aware routing is configured. If
+                                          not specified, Envoy defaults to 100%.
+                                        format: int32
+                                        maximum: 100
+                                        minimum: 0
+                                        type: integer
                                     type: object
                                 type: object
                             required:
@@ -23515,8 +24702,7 @@ spec:
                                     items:
                                       description: HTTPStatus defines the http status
                                         code.
-                                      exclusiveMaximum: true
-                                      maximum: 600
+                                      maximum: 599
                                       minimum: 100
                                       type: integer
                                     type: array
@@ -24004,8 +25190,7 @@ spec:
                                         items:
                                           description: HTTPStatus defines the http
                                             status code.
-                                          exclusiveMaximum: true
-                                          maximum: 600
+                                          maximum: 599
                                           minimum: 100
                                           type: integer
                                         type: array
@@ -24196,6 +25381,15 @@ spec:
                                       ConsecutiveLocalOriginFailures sets the number of consecutive local origin failures triggering ejection.
                                       Parameter takes effect only when split_external_local_origin_errors is set to true.
                                     format: int32
+                                    type: integer
+                                  failurePercentageThreshold:
+                                    description: |-
+                                      FailurePercentageThreshold sets the failure percentage threshold for outlier detection.
+                                      If the failure percentage of a given host is greater than or equal to this value, it will be ejected.
+                                      Defaults to 85.
+                                    format: int32
+                                    maximum: 100
+                                    minimum: 0
                                     type: integer
                                   interval:
                                     default: 3s
@@ -24429,6 +25623,15 @@ spec:
                                           routing.
                                         format: int64
                                         type: integer
+                                      percentageEnabled:
+                                        description: Configures percentage of requests
+                                          that will be considered for zone aware routing
+                                          if zone aware routing is configured. If
+                                          not specified, Envoy defaults to 100%.
+                                        format: int32
+                                        maximum: 100
+                                        minimum: 0
+                                        type: integer
                                     type: object
                                 type: object
                             required:
@@ -24524,8 +25727,7 @@ spec:
                                     items:
                                       description: HTTPStatus defines the http status
                                         code.
-                                      exclusiveMaximum: true
-                                      maximum: 600
+                                      maximum: 599
                                       minimum: 100
                                       type: integer
                                     type: array
@@ -25214,8 +26416,7 @@ spec:
                                               items:
                                                 description: HTTPStatus defines the
                                                   http status code.
-                                                exclusiveMaximum: true
-                                                maximum: 600
+                                                maximum: 599
                                                 minimum: 100
                                                 type: integer
                                               type: array
@@ -25416,6 +26617,15 @@ spec:
                                             ConsecutiveLocalOriginFailures sets the number of consecutive local origin failures triggering ejection.
                                             Parameter takes effect only when split_external_local_origin_errors is set to true.
                                           format: int32
+                                          type: integer
+                                        failurePercentageThreshold:
+                                          description: |-
+                                            FailurePercentageThreshold sets the failure percentage threshold for outlier detection.
+                                            If the failure percentage of a given host is greater than or equal to this value, it will be ejected.
+                                            Defaults to 85.
+                                          format: int32
+                                          maximum: 100
+                                          minimum: 0
                                           type: integer
                                         interval:
                                           default: 3s
@@ -25651,6 +26861,16 @@ spec:
                                                 to enable zone-aware routing.
                                               format: int64
                                               type: integer
+                                            percentageEnabled:
+                                              description: Configures percentage of
+                                                requests that will be considered for
+                                                zone aware routing if zone aware routing
+                                                is configured. If not specified, Envoy
+                                                defaults to 100%.
+                                              format: int32
+                                              maximum: 100
+                                              minimum: 0
+                                              type: integer
                                           type: object
                                       type: object
                                   required:
@@ -25747,8 +26967,7 @@ spec:
                                           items:
                                             description: HTTPStatus defines the http
                                               status code.
-                                            exclusiveMaximum: true
-                                            maximum: 600
+                                            maximum: 599
                                             minimum: 100
                                             type: integer
                                           type: array
@@ -25840,6 +27059,13 @@ spec:
                                       type: object
                                   type: object
                               type: object
+                            cacheDuration:
+                              default: 300s
+                              description: |-
+                                Duration is a string value representing a duration in time. The format is as specified
+                                in GEP-2257, a strict subset of the syntax parsed by Golang time.ParseDuration.
+                              pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                              type: string
                             uri:
                               description: |-
                                 URI is the HTTPS URI to fetch the JWKS. Envoy's system trust bundle is used to validate the server certificate.
@@ -25988,7 +27214,6 @@ spec:
                       By default, its unset.
                     properties:
                       sameSite:
-                        default: Strict
                         enum:
                         - Lax
                         - Strict
@@ -26022,6 +27247,16 @@ spec:
                           If not specified, defaults to "IdToken-(randomly generated uid)"
                         type: string
                     type: object
+                  csrfTokenTTL:
+                    description: |-
+                      CSRFTokenTTL defines how long the CSRF token generated during the OAuth2 authorization flow remains valid.
+
+                      This duration determines the lifetime of the CSRF cookie, which is validated against the CSRF token
+                      in the "state" parameter when the provider redirects back to the callback endpoint.
+
+                      If omitted, Envoy Gateway defaults the token expiration to 10 minutes.
+                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                    type: string
                   defaultRefreshTokenTTL:
                     description: |-
                       DefaultRefreshTokenTTL is the default lifetime of the refresh token.
@@ -26086,6 +27321,12 @@ spec:
                     required:
                     - headers
                     type: object
+                  disableTokenEncryption:
+                    description: |-
+                      Disable token encryption. When set to true, both the access token and the ID token will be stored in plain text.
+                      This option should only be used in secure environments where token encryption is not required.
+                      Default is false (tokens are encrypted).
+                    type: boolean
                   forwardAccessToken:
                     description: |-
                       ForwardAccessToken indicates whether the Envoy should forward the access token
@@ -26478,8 +27719,7 @@ spec:
                                         items:
                                           description: HTTPStatus defines the http
                                             status code.
-                                          exclusiveMaximum: true
-                                          maximum: 600
+                                          maximum: 599
                                           minimum: 100
                                           type: integer
                                         type: array
@@ -26670,6 +27910,15 @@ spec:
                                       ConsecutiveLocalOriginFailures sets the number of consecutive local origin failures triggering ejection.
                                       Parameter takes effect only when split_external_local_origin_errors is set to true.
                                     format: int32
+                                    type: integer
+                                  failurePercentageThreshold:
+                                    description: |-
+                                      FailurePercentageThreshold sets the failure percentage threshold for outlier detection.
+                                      If the failure percentage of a given host is greater than or equal to this value, it will be ejected.
+                                      Defaults to 85.
+                                    format: int32
+                                    maximum: 100
+                                    minimum: 0
                                     type: integer
                                   interval:
                                     default: 3s
@@ -26903,6 +28152,15 @@ spec:
                                           routing.
                                         format: int64
                                         type: integer
+                                      percentageEnabled:
+                                        description: Configures percentage of requests
+                                          that will be considered for zone aware routing
+                                          if zone aware routing is configured. If
+                                          not specified, Envoy defaults to 100%.
+                                        format: int32
+                                        maximum: 100
+                                        minimum: 0
+                                        type: integer
                                     type: object
                                 type: object
                             required:
@@ -26998,8 +28256,7 @@ spec:
                                     items:
                                       description: HTTPStatus defines the http status
                                         code.
-                                      exclusiveMaximum: true
-                                      maximum: 600
+                                      maximum: 599
                                       minimum: 100
                                       type: integer
                                     type: array
@@ -27336,15 +28593,15 @@ spec:
             - message: this policy can only have a targetRef.group of gateway.networking.k8s.io
               rule: 'has(self.targetRef) ? self.targetRef.group == ''gateway.networking.k8s.io''
                 : true'
-            - message: this policy can only have a targetRef.kind of Gateway/HTTPRoute/GRPCRoute
+            - message: this policy can only have a targetRef.kind of Gateway/HTTPRoute/GRPCRoute/TCPRoute
               rule: 'has(self.targetRef) ? self.targetRef.kind in [''Gateway'', ''HTTPRoute'',
-                ''GRPCRoute''] : true'
+                ''GRPCRoute'', ''TCPRoute''] : true'
             - message: this policy can only have a targetRefs[*].group of gateway.networking.k8s.io
               rule: 'has(self.targetRefs) ? self.targetRefs.all(ref, ref.group ==
                 ''gateway.networking.k8s.io'') : true '
-            - message: this policy can only have a targetRefs[*].kind of Gateway/HTTPRoute/GRPCRoute
+            - message: this policy can only have a targetRefs[*].kind of Gateway/HTTPRoute/GRPCRoute/TCPRoute
               rule: 'has(self.targetRefs) ? self.targetRefs.all(ref, ref.kind in [''Gateway'',
-                ''HTTPRoute'', ''GRPCRoute'']) : true '
+                ''HTTPRoute'', ''GRPCRoute'', ''TCPRoute'']) : true '
             - message: if authorization.rules.principal.jwt is used, jwt must be defined
               rule: '(has(self.authorization) && has(self.authorization.rules) &&
                 self.authorization.rules.exists(r, has(r.principal.jwt))) ? has(self.jwt)
@@ -27554,8 +28811,38 @@ spec:
                       - name
                       type: object
                     conditions:
-                      description: Conditions describes the status of the Policy with
-                        respect to the given Ancestor.
+                      description: |-
+                        Conditions describes the status of the Policy with respect to the given Ancestor.
+
+                        <gateway:util:excludeFromCRD>
+
+                        Notes for implementors:
+
+                        Conditions are a listType `map`, which means that they function like a
+                        map with a key of the `type` field _in the k8s apiserver_.
+
+                        This means that implementations must obey some rules when updating this
+                        section.
+
+                        * Implementations MUST perform a read-modify-write cycle on this field
+                          before modifying it. That is, when modifying this field, implementations
+                          must be confident they have fetched the most recent version of this field,
+                          and ensure that changes they make are on that recent version.
+                        * Implementations MUST NOT remove or reorder Conditions that they are not
+                          directly responsible for. For example, if an implementation sees a Condition
+                          with type `special.io/SomeField`, it MUST NOT remove, change or update that
+                          Condition.
+                        * Implementations MUST always _merge_ changes into Conditions of the same Type,
+                          rather than creating more than one Condition of the same Type.
+                        * Implementations MUST always update the `observedGeneration` field of the
+                          Condition to the `metadata.generation` of the Gateway at the time of update creation.
+                        * If the `observedGeneration` of a Condition is _greater than_ the value the
+                          implementation knows about, then it MUST NOT perform the update on that Condition,
+                          but must wait for a future reconciliation and status update. (The assumption is that
+                          the implementation's copy of the object is stale and an update will be re-triggered
+                          if relevant.)
+
+                        </gateway:util:excludeFromCRD>
                       items:
                         description: Condition contains details for one aspect of
                           the current state of this API Resource.
@@ -27638,10 +28925,12 @@ spec:
                       type: string
                   required:
                   - ancestorRef
+                  - conditions
                   - controllerName
                   type: object
                 maxItems: 16
                 type: array
+                x-kubernetes-list-type: atomic
             required:
             - ancestors
             type: object

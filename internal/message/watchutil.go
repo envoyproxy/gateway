@@ -28,8 +28,8 @@ type Metadata struct {
 	Message MessageName
 }
 
-func PublishMetric(meta Metadata) {
-	watchablePublishTotal.WithSuccess(meta.LabelValues()...).Increment()
+func PublishMetric(meta Metadata, count int) {
+	watchablePublishTotal.WithSuccess(meta.LabelValues()...).Add(float64(count))
 }
 
 func (m Metadata) LabelValues() []metrics.LabelValue {

@@ -4,17 +4,20 @@ RELEASE_VERSIONS ?= $(foreach v,$(wildcard ${ROOT_DIR}/docs/*),$(notdir ${v}))
 #       find a way to remove github.com from ignore list
 # TODO: example.com is not a valid domain, we should remove it from ignore list
 # TODO: https://www.gnu.org/software/make became unstable, we should remove it from ignore list later
-LINKINATOR_IGNORE := "opentelemetry.io github.com jwt.io githubusercontent.com example.com github.io gnu.org _print canva.com sched.co sap.com httpbin.org nemlig.com verve.com"
+LINKINATOR_IGNORE := "opentelemetry.io github.com jwt.io githubusercontent.com example.com github.io gnu.org _print canva.com sched.co sap.com httpbin.org nemlig.com verve.com developer.hashicorp.com"
 CLEAN_NODE_MODULES ?= true
 
 ##@ Docs
 
-.PHONY: docs
-docs: docs.clean helm-readme-gen docs-api copy-current-release-docs ## Generate Envoy Gateway Docs Sources
+.PHONY: docs-gen
+docs-gen: docs.clean helm-readme-gen docs-api copy-current-release-docs docs-sync-owners ## Generate Envoy Gateway Docs Sources
 	@$(LOG_TARGET)
 	cd $(ROOT_DIR)/site && npm install
 	cd $(ROOT_DIR)/site && npm run build:production
 	cp tools/hack/get-egctl.sh $(DOCS_OUTPUT_DIR)
+
+.PHONY: docs
+docs: docs-gen docs-check ## Generate docs and verify no changes are needed
 
 .PHONY: copy-current-release-docs
 copy-current-release-docs:  ## Copy the current release docs to the docs folder
@@ -171,6 +174,11 @@ docs-release-gen:
 	@$(call log, "Added Release Doc: site/content/en/$(DOC_VERSION)")
 	cp -r site/content/en/latest/ site/content/en/$(DOC_VERSION)/
 
+.PHONY: docs-sync-owners
+docs-sync-owners: $(tools/sync-docs-codeowners) # Sync maintainers and emeritus-maintainers from OWNERS to CODEOWNERS.md
+	@$(LOG_TARGET)
+	$(tools/sync-docs-codeowners)
+
 .PHONY: docs-check-links
 docs-check-links: # Check for broken links in the docs
 	@$(LOG_TARGET)
@@ -178,6 +186,14 @@ docs-check-links: # Check for broken links in the docs
 
 docs-markdown-lint:
 	markdownlint -c .github/markdown_lint_config.json site/content/*
+
+.PHONY: docs-check
+docs-check: ## Verify no doc changes are needed
+	@$(LOG_TARGET)
+	@if [ ! -z "`git status --porcelain`" ]; then \
+		$(call errorlog, ERROR: Some files need to be updated, please run 'make docs' to include any changed files to your PR); \
+		git diff --exit-code; \
+	fi
 
 release-notes-docs: $(tools/release-notes-docs)
 	@$(LOG_TARGET)

@@ -372,7 +372,7 @@ func TestTranslate(t *testing.T) {
 				resources.EndpointSlices = append(resources.EndpointSlices, &endPtSlice)
 			} else {
 				for _, g := range resources.Gateways {
-					gSvc := svc
+					gSvc := svc.DeepCopy()
 					if gatewayNamespaceMode {
 						// In gateway namespace mode, the service name is the same as the gateway name
 						// and the namespace is the gateway namespace.
@@ -384,13 +384,14 @@ func TestTranslate(t *testing.T) {
 
 					gSvc.Labels[OwningGatewayNameLabel] = g.Name
 					gSvc.Labels[OwningGatewayNamespaceLabel] = g.Namespace
-					gEndPtSlice := endPtSlice
+					gEndPtSlice := endPtSlice.DeepCopy()
 					gEndPtSlice.Name = gSvc.Name
+					gEndPtSlice.Namespace = gSvc.Namespace
 					gEndPtSlice.Labels[discoveryv1.LabelServiceName] = gSvc.Name
 					gEndPtSlice.Labels[OwningGatewayNameLabel] = g.Name
 					gEndPtSlice.Labels[OwningGatewayNamespaceLabel] = g.Namespace
-					resources.Services = append(resources.Services, &gSvc)
-					resources.EndpointSlices = append(resources.EndpointSlices, &gEndPtSlice)
+					resources.Services = append(resources.Services, gSvc)
+					resources.EndpointSlices = append(resources.EndpointSlices, gEndPtSlice)
 				}
 			}
 
@@ -650,7 +651,7 @@ func TestTranslateWithExtensionKinds(t *testing.T) {
 					if g == nil {
 						panic("nil Gateway")
 					}
-					gSvc := svc
+					gSvc := svc.DeepCopy()
 					gSvc.
 						Labels[OwningGatewayNameLabel] = g.
 						Name
@@ -658,13 +659,13 @@ func TestTranslateWithExtensionKinds(t *testing.T) {
 						Namespace
 					// Matches proxy.ExpectedResourceHashedName()
 					gSvc.Name = fmt.Sprintf("%s-%s", config.EnvoyPrefix, utils.GetHashedName(fmt.Sprintf("%s/%s", g.Namespace, g.Name), 48))
-					gEndPtSlice := endPtSlice
+					gEndPtSlice := endPtSlice.DeepCopy()
 					gEndPtSlice.Name = gSvc.Name
 					gEndPtSlice.Labels[discoveryv1.LabelServiceName] = gSvc.Name
 					gEndPtSlice.Labels[OwningGatewayNameLabel] = g.Name
 					gEndPtSlice.Labels[OwningGatewayNamespaceLabel] = g.Namespace
-					resources.Services = append(resources.Services, &gSvc)
-					resources.EndpointSlices = append(resources.EndpointSlices, &gEndPtSlice)
+					resources.Services = append(resources.Services, gSvc)
+					resources.EndpointSlices = append(resources.EndpointSlices, gEndPtSlice)
 				}
 			}
 
@@ -973,7 +974,7 @@ func TestServicePortToContainerPort(t *testing.T) {
 			envoyProxy: &egv1a1.EnvoyProxy{
 				Spec: egv1a1.EnvoyProxySpec{
 					Provider: &egv1a1.EnvoyProxyProvider{
-						Type: egv1a1.ProviderTypeKubernetes,
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 					},
 				},
 			},
@@ -984,7 +985,7 @@ func TestServicePortToContainerPort(t *testing.T) {
 			envoyProxy: &egv1a1.EnvoyProxy{
 				Spec: egv1a1.EnvoyProxySpec{
 					Provider: &egv1a1.EnvoyProxyProvider{
-						Type: egv1a1.ProviderTypeKubernetes,
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							UseListenerPortAsContainerPort: ptr.To(false),
 						},
@@ -998,7 +999,7 @@ func TestServicePortToContainerPort(t *testing.T) {
 			envoyProxy: &egv1a1.EnvoyProxy{
 				Spec: egv1a1.EnvoyProxySpec{
 					Provider: &egv1a1.EnvoyProxyProvider{
-						Type: egv1a1.ProviderTypeKubernetes,
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							UseListenerPortAsContainerPort: ptr.To(true),
 						},
@@ -1025,7 +1026,7 @@ type mockWasmCache struct{}
 
 func (m *mockWasmCache) Start(_ context.Context) {}
 
-func (m *mockWasmCache) Get(downloadURL string, options wasm.GetOptions) (url, checksum string, err error) {
+func (m *mockWasmCache) Get(downloadURL string, options *wasm.GetOptions) (url, checksum string, err error) {
 	// This is a mock implementation of the wasm.Cache.Get method.
 	sha := sha256.Sum256([]byte(downloadURL))
 	hashedName := hex.EncodeToString(sha[:])

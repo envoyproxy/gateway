@@ -2,7 +2,6 @@ clientTrafficPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: ClientTrafficPolicy
   metadata:
-    creationTimestamp: null
     name: target-gateway
     namespace: envoy-gateway
   spec:
@@ -33,7 +32,6 @@ gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
   metadata:
-    creationTimestamp: null
     name: gateway
     namespace: envoy-gateway
   spec:
@@ -133,6 +131,10 @@ xdsIR:
       - path: /dev/stdout
     globalResources:
       proxyServiceCluster:
+        metadata:
+          name: envoy-envoy-gateway-gateway-966d2c13
+          namespace: envoy-gateway-system
+          sectionName: "8080"
         name: envoy-gateway/gateway
         settings:
         - addressType: IP

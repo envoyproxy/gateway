@@ -2,7 +2,6 @@ backends:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: Backend
   metadata:
-    creationTimestamp: null
     name: backend-fqdn
     namespace: default
   spec:
@@ -20,7 +19,6 @@ backends:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: Backend
   metadata:
-    creationTimestamp: null
     name: backend-fqdn
     namespace: default
   spec:
@@ -39,7 +37,6 @@ backends:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: Backend
   metadata:
-    creationTimestamp: null
     name: backend-fqdn
     namespace: default
   spec:
@@ -58,7 +55,6 @@ backends:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: Backend
   metadata:
-    creationTimestamp: null
     name: backend-ip
     namespace: default
   spec:

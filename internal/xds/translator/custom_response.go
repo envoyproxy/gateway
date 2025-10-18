@@ -444,6 +444,10 @@ func (c *customResponse) buildResponseAction(r ir.ResponseOverrideRule) (*anypb.
 		response.StatusCode = &wrapperspb.UInt32Value{Value: *r.Response.StatusCode}
 	}
 
+	if r.Response.AddResponseHeaders != nil {
+		response.ResponseHeadersToAdd = append(response.ResponseHeadersToAdd, buildXdsAddedHeaders(r.Response.AddResponseHeaders)...)
+	}
+
 	return proto.ToAnyWithValidation(response)
 }
 

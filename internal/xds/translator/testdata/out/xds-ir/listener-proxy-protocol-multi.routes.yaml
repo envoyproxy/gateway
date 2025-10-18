@@ -1,0 +1,25 @@
+- ignorePortInHostMatching: true
+  name: listener
+  virtualHosts:
+  - domains:
+    - foo.com
+    name: listener/foo_com
+    routes:
+    - match:
+        prefix: /
+      name: first-route
+      route:
+        cluster: first-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket
+  - domains:
+    - bar.com
+    name: listener/bar_com
+    routes:
+    - match:
+        prefix: /
+      name: second-route
+      route:
+        cluster: second-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket
