@@ -572,6 +572,7 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy, r
 		cp          []*ir.Compression
 		httpUpgrade []ir.HTTPUpgradeConfig
 		ac          *ir.AdmissionControl
+		adc         *ir.AdaptiveConcurrency
 		err, errs   error
 	)
 
@@ -633,28 +634,30 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy, r
 	httpUpgrade = buildHTTPProtocolUpgradeConfig(policy.Spec.HTTPUpgrade)
 
 	ac = buildAdmissionControl(policy.Spec.AdmissionControl)
+	adc = buildAdaptiveConcurrency(policy.Spec.AdaptiveConcurrency)
 
 	ds = translateDNS(&policy.Spec.ClusterSettings)
 
 	return &ir.TrafficFeatures{
-		RateLimit:         rl,
-		LoadBalancer:      lb,
-		ProxyProtocol:     pp,
-		HealthCheck:       hc,
-		CircuitBreaker:    cb,
-		FaultInjection:    fi,
-		TCPKeepalive:      ka,
-		Retry:             rt,
-		BackendConnection: bc,
-		HTTP2:             h2,
-		DNS:               ds,
-		Timeout:           to,
-		ResponseOverride:  ro,
-		RequestBuffer:     rb,
-		Compression:       cp,
-		HTTPUpgrade:       httpUpgrade,
-		Telemetry:         policy.Spec.Telemetry,
-		AdmissionControl:  ac,
+		RateLimit:           rl,
+		LoadBalancer:        lb,
+		ProxyProtocol:       pp,
+		HealthCheck:         hc,
+		CircuitBreaker:      cb,
+		FaultInjection:      fi,
+		TCPKeepalive:        ka,
+		Retry:               rt,
+		BackendConnection:   bc,
+		HTTP2:               h2,
+		DNS:                 ds,
+		Timeout:             to,
+		ResponseOverride:    ro,
+		RequestBuffer:       rb,
+		Compression:         cp,
+		HTTPUpgrade:         httpUpgrade,
+		Telemetry:           policy.Spec.Telemetry,
+		AdmissionControl:    ac,
+		AdaptiveConcurrency: adc,
 	}, errs
 }
 
@@ -1301,4 +1304,59 @@ func buildAdmissionControl(spec *egv1a1.AdmissionControl) *ir.AdmissionControl {
 	}
 
 	return irAC
+}
+
+// buildAdaptiveConcurrency builds the IR adaptive concurrency configuration from the API adaptive concurrency spec.
+func buildAdaptiveConcurrency(spec *egv1a1.AdaptiveConcurrency) *ir.AdaptiveConcurrency {
+	if spec == nil {
+		return nil
+	}
+
+	irADC := &ir.AdaptiveConcurrency{
+		Enabled: spec.Enabled,
+	}
+
+	if spec.GradientController != nil {
+		irADC.GradientController = &ir.AdaptiveConcurrencyGradientController{
+			SampleAggregatePercentile: spec.GradientController.SampleAggregatePercentile,
+		}
+
+		if spec.GradientController.ConcurrencyLimitParams != nil {
+			irADC.GradientController.ConcurrencyLimitParams = &ir.AdaptiveConcurrencyLimitParams{
+				ConcurrencyUpdateInterval: spec.GradientController.ConcurrencyLimitParams.ConcurrencyUpdateInterval,
+				MaxConcurrencyLimit:       spec.GradientController.ConcurrencyLimitParams.MaxConcurrencyLimit,
+				MinConcurrencyLimit:       spec.GradientController.ConcurrencyLimitParams.MinConcurrencyLimit,
+				ConcurrencyUpdateRatio:    spec.GradientController.ConcurrencyLimitParams.ConcurrencyUpdateRatio,
+			}
+		}
+
+		if spec.GradientController.MinRTTCalculation != nil {
+			irADC.GradientController.MinRTTCalculation = &ir.AdaptiveConcurrencyMinRTTCalculation{
+				Interval:     spec.GradientController.MinRTTCalculation.Interval,
+				RequestCount: spec.GradientController.MinRTTCalculation.RequestCount,
+				Jitter:       spec.GradientController.MinRTTCalculation.Jitter,
+				Buffer:       spec.GradientController.MinRTTCalculation.Buffer,
+			}
+		}
+	}
+
+	if spec.MinRTTCalculation != nil {
+		irADC.MinRTTCalculation = &ir.AdaptiveConcurrencyMinRTTCalculation{
+			Interval:     spec.MinRTTCalculation.Interval,
+			RequestCount: spec.MinRTTCalculation.RequestCount,
+			Jitter:       spec.MinRTTCalculation.Jitter,
+			Buffer:       spec.MinRTTCalculation.Buffer,
+		}
+	}
+
+	if spec.ConcurrencyLimitParams != nil {
+		irADC.ConcurrencyLimitParams = &ir.AdaptiveConcurrencyLimitParams{
+			ConcurrencyUpdateInterval: spec.ConcurrencyLimitParams.ConcurrencyUpdateInterval,
+			MaxConcurrencyLimit:       spec.ConcurrencyLimitParams.MaxConcurrencyLimit,
+			MinConcurrencyLimit:       spec.ConcurrencyLimitParams.MinConcurrencyLimit,
+			ConcurrencyUpdateRatio:    spec.ConcurrencyLimitParams.ConcurrencyUpdateRatio,
+		}
+	}
+
+	return irADC
 }

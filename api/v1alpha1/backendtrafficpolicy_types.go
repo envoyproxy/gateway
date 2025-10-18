@@ -128,6 +128,13 @@ type BackendTrafficPolicySpec struct {
 	//
 	// +optional
 	AdmissionControl *AdmissionControl `json:"admissionControl,omitempty"`
+
+	// AdaptiveConcurrency configures adaptive concurrency for backend traffic.
+	// This feature dynamically adjusts the number of concurrent requests to optimize
+	// performance and prevent overload based on downstream response times.
+	//
+	// +optional
+	AdaptiveConcurrency *AdaptiveConcurrency `json:"adaptiveConcurrency,omitempty"`
 }
 
 type BackendTelemetry struct {

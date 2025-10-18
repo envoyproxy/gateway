@@ -2231,3 +2231,151 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 		})
 	}
 }
+
+func TestBackendTrafficPolicyAdaptiveConcurrency(t *testing.T) {
+	ctx := context.Background()
+	baseBTP := egv1a1.BackendTrafficPolicy{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "btp",
+			Namespace: "default",
+		},
+		Spec: egv1a1.BackendTrafficPolicySpec{
+			TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
+				PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+					Group: "gateway.networking.k8s.io",
+					Kind:  "HTTPRoute",
+					Name:  "httproute",
+				},
+			},
+		},
+	}
+
+	cases := []struct {
+		desc       string
+		mutate     func(btp *egv1a1.BackendTrafficPolicy)
+		wantErrors []string
+	}{
+		{
+			desc: "valid adaptive concurrency configuration",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec.AdaptiveConcurrency = &egv1a1.AdaptiveConcurrency{
+					Enabled: ptr.To(true),
+					GradientController: &egv1a1.AdaptiveConcurrencyGradientController{
+						SampleAggregatePercentile: ptr.To(90.0),
+						ConcurrencyLimitParams: &egv1a1.AdaptiveConcurrencyLimitParams{
+							ConcurrencyUpdateInterval: &metav1.Duration{Duration: 100 * time.Millisecond},
+							MaxConcurrencyLimit:       ptr.To(uint32(1000)),
+							MinConcurrencyLimit:       ptr.To(uint32(1)),
+							ConcurrencyUpdateRatio:    ptr.To(0.1),
+						},
+						MinRTTCalculation: &egv1a1.AdaptiveConcurrencyMinRTTCalculation{
+							Interval:     &metav1.Duration{Duration: 60 * time.Second},
+							RequestCount: ptr.To(uint32(50)),
+							Jitter:       ptr.To(10.0),
+							Buffer:       ptr.To(25.0),
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "invalid sample aggregate percentile - too high",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec.AdaptiveConcurrency = &egv1a1.AdaptiveConcurrency{
+					Enabled: ptr.To(true),
+					GradientController: &egv1a1.AdaptiveConcurrencyGradientController{
+						SampleAggregatePercentile: ptr.To(150.0), // Invalid: > 100
+					},
+				}
+			},
+			wantErrors: []string{"sampleAggregatePercentile"},
+		},
+		{
+			desc: "invalid sample aggregate percentile - too low",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec.AdaptiveConcurrency = &egv1a1.AdaptiveConcurrency{
+					Enabled: ptr.To(true),
+					GradientController: &egv1a1.AdaptiveConcurrencyGradientController{
+						SampleAggregatePercentile: ptr.To(-10.0), // Invalid: < 0
+					},
+				}
+			},
+			wantErrors: []string{"sampleAggregatePercentile"},
+		},
+		{
+			desc: "invalid concurrency update ratio - too high",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec.AdaptiveConcurrency = &egv1a1.AdaptiveConcurrency{
+					Enabled: ptr.To(true),
+					ConcurrencyLimitParams: &egv1a1.AdaptiveConcurrencyLimitParams{
+						ConcurrencyUpdateRatio: ptr.To(1.5), // Invalid: > 1.0
+					},
+				}
+			},
+			wantErrors: []string{"concurrencyUpdateRatio"},
+		},
+		{
+			desc: "invalid concurrency update ratio - too low",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec.AdaptiveConcurrency = &egv1a1.AdaptiveConcurrency{
+					Enabled: ptr.To(true),
+					ConcurrencyLimitParams: &egv1a1.AdaptiveConcurrencyLimitParams{
+						ConcurrencyUpdateRatio: ptr.To(-0.1), // Invalid: < 0
+					},
+				}
+			},
+			wantErrors: []string{"concurrencyUpdateRatio"},
+		},
+		{
+			desc: "invalid jitter - too high",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec.AdaptiveConcurrency = &egv1a1.AdaptiveConcurrency{
+					Enabled: ptr.To(true),
+					MinRTTCalculation: &egv1a1.AdaptiveConcurrencyMinRTTCalculation{
+						Jitter: ptr.To(150.0), // Invalid: > 100
+					},
+				}
+			},
+			wantErrors: []string{"jitter"},
+		},
+		{
+			desc: "invalid buffer - too high",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec.AdaptiveConcurrency = &egv1a1.AdaptiveConcurrency{
+					Enabled: ptr.To(true),
+					MinRTTCalculation: &egv1a1.AdaptiveConcurrencyMinRTTCalculation{
+						Buffer: ptr.To(150.0), // Invalid: > 100
+					},
+				}
+			},
+			wantErrors: []string{"buffer"},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.desc, func(t *testing.T) {
+			btp := baseBTP.DeepCopy()
+			btp.Name = fmt.Sprintf("btp-%v", time.Now().UnixNano())
+
+			if tc.mutate != nil {
+				tc.mutate(btp)
+			}
+			err := c.Create(ctx, btp)
+
+			if (len(tc.wantErrors) != 0) != (err != nil) {
+				t.Fatalf("Unexpected response while creating BackendTrafficPolicy; got err=\n%v\n;want error=%v", err, tc.wantErrors)
+			}
+
+			var missingErrorStrings []string
+			for _, wantError := range tc.wantErrors {
+				if !strings.Contains(strings.ToLower(err.Error()), strings.ToLower(wantError)) {
+					missingErrorStrings = append(missingErrorStrings, wantError)
+				}
+			}
+			if len(missingErrorStrings) != 0 {
+				t.Errorf("Unexpected response while creating BackendTrafficPolicy; got err=\n%v\n;missing strings within error=%q", err, missingErrorStrings)
+			}
+		})
+	}
+}

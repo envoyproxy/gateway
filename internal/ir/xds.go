@@ -914,6 +914,8 @@ type TrafficFeatures struct {
 	RequestBuffer *RequestBuffer `json:"requestBuffer,omitempty" yaml:"requestBuffer,omitempty"`
 	// AdmissionControl defines the schema for admission control configuration
 	AdmissionControl *AdmissionControl `json:"admissionControl,omitempty" yaml:"admissionControl,omitempty"`
+	// AdaptiveConcurrency defines the schema for adaptive concurrency configuration
+	AdaptiveConcurrency *AdaptiveConcurrency `json:"adaptiveConcurrency,omitempty" yaml:"adaptiveConcurrency,omitempty"`
 }
 
 // +k8s:deepcopy-gen=true
@@ -983,6 +985,60 @@ type AdmissionControlStatusRange struct {
 	Start int32 `json:"start" yaml:"start"`
 	// End defines the end of the status code range (inclusive).
 	End int32 `json:"end" yaml:"end"`
+}
+
+// AdaptiveConcurrency defines the adaptive concurrency configuration for backend traffic.
+//
+// +k8s:deepcopy-gen=true
+type AdaptiveConcurrency struct {
+	// Enabled enables or disables adaptive concurrency.
+	Enabled *bool `json:"enabled,omitempty" yaml:"enabled,omitempty"`
+	// GradientController defines the gradient controller configuration for adaptive concurrency.
+	GradientController *AdaptiveConcurrencyGradientController `json:"gradientController,omitempty" yaml:"gradientController,omitempty"`
+	// MinRTTCalculation defines the minimum RTT calculation parameters.
+	MinRTTCalculation *AdaptiveConcurrencyMinRTTCalculation `json:"minRTTCalculation,omitempty" yaml:"minRTTCalculation,omitempty"`
+	// ConcurrencyLimitParams defines the concurrency limit parameters.
+	ConcurrencyLimitParams *AdaptiveConcurrencyLimitParams `json:"concurrencyLimitParams,omitempty" yaml:"concurrencyLimitParams,omitempty"`
+}
+
+// AdaptiveConcurrencyGradientController defines the gradient controller configuration.
+//
+// +k8s:deepcopy-gen=true
+type AdaptiveConcurrencyGradientController struct {
+	// SampleAggregatePercentile defines the percentile of request latencies to sample.
+	SampleAggregatePercentile *float64 `json:"sampleAggregatePercentile,omitempty" yaml:"sampleAggregatePercentile,omitempty"`
+	// ConcurrencyLimitParams defines the concurrency limit parameters.
+	ConcurrencyLimitParams *AdaptiveConcurrencyLimitParams `json:"concurrencyLimitParams,omitempty" yaml:"concurrencyLimitParams,omitempty"`
+	// MinRTTCalculation defines the minimum RTT calculation parameters.
+	MinRTTCalculation *AdaptiveConcurrencyMinRTTCalculation `json:"minRTTCalculation,omitempty" yaml:"minRTTCalculation,omitempty"`
+}
+
+// AdaptiveConcurrencyLimitParams defines the concurrency limit parameters.
+//
+// +k8s:deepcopy-gen=true
+type AdaptiveConcurrencyLimitParams struct {
+	// ConcurrencyUpdateInterval defines the interval at which the concurrency limit is updated.
+	ConcurrencyUpdateInterval *metav1.Duration `json:"concurrencyUpdateInterval,omitempty" yaml:"concurrencyUpdateInterval,omitempty"`
+	// MaxConcurrencyLimit defines the maximum concurrency limit.
+	MaxConcurrencyLimit *uint32 `json:"maxConcurrencyLimit,omitempty" yaml:"maxConcurrencyLimit,omitempty"`
+	// MinConcurrencyLimit defines the minimum concurrency limit.
+	MinConcurrencyLimit *uint32 `json:"minConcurrencyLimit,omitempty" yaml:"minConcurrencyLimit,omitempty"`
+	// ConcurrencyUpdateRatio defines the ratio by which the concurrency limit is updated.
+	ConcurrencyUpdateRatio *float64 `json:"concurrencyUpdateRatio,omitempty" yaml:"concurrencyUpdateRatio,omitempty"`
+}
+
+// AdaptiveConcurrencyMinRTTCalculation defines the minimum RTT calculation parameters.
+//
+// +k8s:deepcopy-gen=true
+type AdaptiveConcurrencyMinRTTCalculation struct {
+	// Interval defines the interval at which the minimum RTT is recalculated.
+	Interval *metav1.Duration `json:"interval,omitempty" yaml:"interval,omitempty"`
+	// RequestCount defines the number of requests to use for minimum RTT calculation.
+	RequestCount *uint32 `json:"requestCount,omitempty" yaml:"requestCount,omitempty"`
+	// Jitter defines the jitter to apply to the minimum RTT calculation interval.
+	Jitter *float64 `json:"jitter,omitempty" yaml:"jitter,omitempty"`
+	// Buffer defines the buffer to apply to the minimum RTT calculation.
+	Buffer *float64 `json:"buffer,omitempty" yaml:"buffer,omitempty"`
 }
 
 func (b *TrafficFeatures) Validate() error {
