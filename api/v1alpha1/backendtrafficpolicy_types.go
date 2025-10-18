@@ -89,7 +89,7 @@ type BackendTrafficPolicySpec struct {
 	// +patchStrategy=merge
 	//
 	// +optional
-	Compressor []*Compression `json:"compressor,omitempty" patchMergeKey:"type" patchStrategy:"merge"`
+	Compressor []*Compression `json:"compressor,omitempty"`
 
 	// ResponseOverride defines the configuration to override specific responses with a custom one.
 	// If multiple configurations are specified, the first one to match wins.
