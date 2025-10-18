@@ -138,9 +138,9 @@ format: ## Update and check dependences with go mod tidy and format YAML files w
 format: go.mod.lint format.yaml
 
 .PHONY: format.yaml
-format.yaml: $(tools/prettier)
+format.yaml:
 	@$(LOG_TARGET)
-	$(tools/prettier) --write '**/*.{yaml,yml}'
+	$(GO_TOOL) prettier --write '**/*.{yaml,yml}'
 
 .PHONY: clean
 clean: ## Remove all files that are created during builds.
