@@ -1,0 +1,69 @@
+- address:
+    socketAddress:
+      address: '::'
+      portValue: 10080
+  filterChains:
+  - filters:
+    - name: envoy.filters.network.rbac
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.rbac.v3.RBAC
+        matcher:
+          matcherList:
+            matchers:
+            - onMatch:
+                action:
+                  name: deny-office
+                  typedConfig:
+                    '@type': type.googleapis.com/envoy.config.rbac.v3.Action
+                    action: DENY
+                    name: DENY
+              predicate:
+                singlePredicate:
+                  customMatch:
+                    name: ip_matcher
+                    typedConfig:
+                      '@type': type.googleapis.com/envoy.extensions.matching.input_matchers.ip.v3.Ip
+                      cidrRanges:
+                      - addressPrefix: 10.0.0.0
+                        prefixLen: 24
+                      statPrefix: client_ip
+                  input:
+                    name: client_ip
+                    typedConfig:
+                      '@type': type.googleapis.com/envoy.extensions.matching.common_inputs.network.v3.SourceIPInput
+            - onMatch:
+                action:
+                  name: allow-corp
+                  typedConfig:
+                    '@type': type.googleapis.com/envoy.config.rbac.v3.Action
+                    name: ALLOW
+              predicate:
+                singlePredicate:
+                  customMatch:
+                    name: ip_matcher
+                    typedConfig:
+                      '@type': type.googleapis.com/envoy.extensions.matching.input_matchers.ip.v3.Ip
+                      cidrRanges:
+                      - addressPrefix: 192.168.100.0
+                        prefixLen: 24
+                      statPrefix: client_ip
+                  input:
+                    name: client_ip
+                    typedConfig:
+                      '@type': type.googleapis.com/envoy.extensions.matching.common_inputs.network.v3.SourceIPInput
+          onNoMatch:
+            action:
+              name: default
+              typedConfig:
+                '@type': type.googleapis.com/envoy.config.rbac.v3.Action
+                name: ALLOW
+        statPrefix: tcp-10080
+    - name: envoy.filters.network.tcp_proxy
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
+        cluster: tcp-route-authorization-dest
+        statPrefix: tcp-10080
+    name: tcp-route-authorization
+  maxConnectionsToAcceptPerSocketEvent: 1
+  name: tcp-listener-authorization
+  perConnectionBufferLimitBytes: 32768

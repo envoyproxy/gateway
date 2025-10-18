@@ -48,7 +48,7 @@ var EnvoyProxyCustomNameTest = suite.ConformanceTest{
 					Path: "/deploy",
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}
@@ -98,7 +98,7 @@ var EnvoyProxyCustomNameTest = suite.ConformanceTest{
 					Path: "/daemonset",
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}
@@ -191,7 +191,7 @@ func ExpectEventuallyConsistentResponse(t *testing.T, suite *suite.ConformanceTe
 	}
 
 	err := wait.PollUntilContextTimeout(t.Context(), time.Second, suite.TimeoutConfig.CreateTimeout, true, func(ctx context.Context) (bool, error) {
-		gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+		gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
 		req := http.MakeRequest(t, expected, gwAddr, "HTTP", "http")
 
 		cReq, cRes, err := suite.RoundTripper.CaptureRoundTrip(req)
@@ -200,7 +200,7 @@ func ExpectEventuallyConsistentResponse(t *testing.T, suite *suite.ConformanceTe
 			return false, nil
 		}
 
-		if err := http.CompareRequest(t, &req, cReq, cRes, *expected); err != nil {
+		if err := http.CompareRoundTrip(t, &req, cReq, cRes, *expected); err != nil {
 			tlog.Logf(t, "Response expectation failed for request: %+v  %v", req, err)
 			return false, nil
 		}

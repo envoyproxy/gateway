@@ -13,7 +13,6 @@ import (
 
 	"k8s.io/apimachinery/pkg/types"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
@@ -104,7 +103,7 @@ func runNoRateLimitTest(t *testing.T, suite *suite.ConformanceTestSuite, disable
 			Path: "/no-ratelimit",
 		},
 		Response: http.Response{
-			StatusCode:    200,
+			StatusCodes:   []int{200},
 			AbsentHeaders: allRateLimitHeaders,
 		},
 		Namespace: ns,
@@ -127,7 +126,7 @@ func runSpecificUserRateLimitTest(t *testing.T, suite *suite.ConformanceTestSuit
 	gwNN := gatewayNN(disableHeader)
 	gwAddr := gatewayAndHTTPRoutesMustBeAccepted(t, suite, gwNN)
 
-	ancestorRef := gwapiv1a2.ParentReference{
+	ancestorRef := gwapiv1.ParentReference{
 		Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
 		Kind:      gatewayapi.KindPtr(resource.KindGateway),
 		Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
@@ -145,7 +144,7 @@ func runSpecificUserRateLimitTest(t *testing.T, suite *suite.ConformanceTestSuit
 			},
 		},
 		Response: http.Response{
-			StatusCode: 200,
+			StatusCodes: []int{200},
 		},
 		Namespace: ns,
 	}
@@ -169,7 +168,7 @@ func runSpecificUserRateLimitTest(t *testing.T, suite *suite.ConformanceTestSuit
 			},
 		},
 		Response: http.Response{
-			StatusCode: 429,
+			StatusCodes: []int{429},
 		},
 		Namespace: ns,
 	}
@@ -192,7 +191,7 @@ func runSpecificUserRateLimitTest(t *testing.T, suite *suite.ConformanceTestSuit
 			},
 		},
 		Response: http.Response{
-			StatusCode: 200,
+			StatusCodes: []int{200},
 		},
 		Namespace: ns,
 	}
@@ -216,7 +215,7 @@ func runSpecificUserRateLimitTest(t *testing.T, suite *suite.ConformanceTestSuit
 			},
 		},
 		Response: http.Response{
-			StatusCode: 429,
+			StatusCodes: []int{429},
 		},
 		Namespace: ns,
 	}
@@ -236,7 +235,7 @@ func runAllTrafficRateLimitTest(t *testing.T, suite *suite.ConformanceTestSuite,
 	gwNN := gatewayNN(disableHeader)
 	gwAddr := gatewayAndHTTPRoutesMustBeAccepted(t, suite, gwNN)
 
-	ancestorRef := gwapiv1a2.ParentReference{
+	ancestorRef := gwapiv1.ParentReference{
 		Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
 		Kind:      gatewayapi.KindPtr(resource.KindGateway),
 		Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
@@ -249,7 +248,7 @@ func runAllTrafficRateLimitTest(t *testing.T, suite *suite.ConformanceTestSuite,
 			Path: "/ratelimit-all-traffic",
 		},
 		Response: http.Response{
-			StatusCode: 200,
+			StatusCodes: []int{200},
 		},
 		Namespace: ns,
 	}
@@ -270,7 +269,7 @@ func runAllTrafficRateLimitTest(t *testing.T, suite *suite.ConformanceTestSuite,
 			Path: "/ratelimit-all-traffic",
 		},
 		Response: http.Response{
-			StatusCode: 429,
+			StatusCodes: []int{429},
 		},
 		Namespace: ns,
 	}
@@ -291,7 +290,7 @@ func runHeaderInvertMatchRateLimitTest(t *testing.T, suite *suite.ConformanceTes
 	gwNN := gatewayNN(disableHeader)
 	gwAddr := gatewayAndHTTPRoutesMustBeAccepted(t, suite, gwNN)
 
-	ancestorRef := gwapiv1a2.ParentReference{
+	ancestorRef := gwapiv1.ParentReference{
 		Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
 		Kind:      gatewayapi.KindPtr(resource.KindGateway),
 		Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
@@ -309,7 +308,7 @@ func runHeaderInvertMatchRateLimitTest(t *testing.T, suite *suite.ConformanceTes
 			},
 		},
 		Response: http.Response{
-			StatusCode: 200,
+			StatusCodes: []int{200},
 		},
 		Namespace: ns,
 	}
@@ -332,7 +331,7 @@ func runHeaderInvertMatchRateLimitTest(t *testing.T, suite *suite.ConformanceTes
 			},
 		},
 		Response: http.Response{
-			StatusCode: 429,
+			StatusCodes: []int{429},
 		},
 		Namespace: ns,
 	}
@@ -356,7 +355,7 @@ func runHeaderInvertMatchRateLimitTest(t *testing.T, suite *suite.ConformanceTes
 			},
 		},
 		Response: http.Response{
-			StatusCode: 200,
+			StatusCodes: []int{200},
 		},
 		Namespace: ns,
 	}
