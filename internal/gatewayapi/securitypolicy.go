@@ -659,6 +659,7 @@ func (t *Translator) translateSecurityPolicyForRoute(
 		for _, listener := range parentRefCtx.listeners {
 			irListener := xdsIR[irKey].GetHTTPListener(irListenerName(listener))
 			if irListener != nil {
+				routesWithDirectResponse := sets.New[string]()
 				for _, r := range irListener.Routes {
 					// If specified the sectionName must match route rule from ir route metadata.
 					if target.SectionName != nil && string(*target.SectionName) != r.Metadata.SectionName {
@@ -677,8 +678,16 @@ func (t *Translator) translateSecurityPolicyForRoute(
 						if errorResponse != nil {
 							// Return a 500 direct response to avoid unauthorized access
 							r.DirectResponse = errorResponse
+							routesWithDirectResponse.Insert(r.Name)
 						}
 					}
+				}
+				if len(routesWithDirectResponse) > 0 {
+					t.Logger.Info("setting 500 direct response in routes due to errors in SecurityPolicy",
+						"policy", fmt.Sprintf("%s/%s", policy.Namespace, policy.Name),
+						"routes", sets.List(routesWithDirectResponse),
+						"error", errs,
+					)
 				}
 			}
 		}
@@ -816,6 +825,7 @@ func (t *Translator) translateSecurityPolicyForGateway(
 
 		// A Policy targeting the specific scope(xRoute rule, xRoute, Gateway listener) wins over a policy
 		// targeting a lesser specific scope(Gateway).
+		routesWithDirectResponse := sets.New[string]()
 		for _, r := range h.Routes {
 			// if already set - there's a specific level policy, so skip.
 			if r.Security != nil {
@@ -824,7 +834,15 @@ func (t *Translator) translateSecurityPolicyForGateway(
 			r.Security = securityFeatures
 			if errorResponse != nil {
 				r.DirectResponse = errorResponse
+				routesWithDirectResponse.Insert(r.Name)
 			}
+		}
+		if len(routesWithDirectResponse) > 0 {
+			t.Logger.Info("setting 500 direct response in routes due to errors in SecurityPolicy",
+				"policy", fmt.Sprintf("%s/%s", policy.Namespace, policy.Name),
+				"routes", sets.List(routesWithDirectResponse),
+				"error", errs,
+			)
 		}
 	}
 	return errs

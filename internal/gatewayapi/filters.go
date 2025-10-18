@@ -1073,6 +1073,7 @@ func (t *Translator) processUnresolvedHTTPFilter(errMsg string, filterContext *H
 	filterContext.DirectResponse = &ir.CustomResponse{
 		StatusCode: ptr.To(uint32(500)),
 	}
+	t.Logger.Info("returning 500 response due to unresolved HTTP filter")
 }
 
 func (t *Translator) processUnsupportedHTTPFilter(filterType string, filterContext *HTTPFiltersContext) {
@@ -1081,13 +1082,14 @@ func (t *Translator) processUnsupportedHTTPFilter(filterType string, filterConte
 	filterContext.DirectResponse = &ir.CustomResponse{
 		StatusCode: ptr.To(uint32(500)),
 	}
+	t.Logger.Info("returning 500 response due to unsupported HTTP filter")
 }
 
 func (t *Translator) processInvalidHTTPFilter(filterType string, filterContext *HTTPFiltersContext, err error) {
-	updateRouteStatusForFilter(
-		filterContext,
-		fmt.Sprintf("Invalid filter %s: %v", filterType, err))
+	errMsg := fmt.Sprintf("Invalid filter %s: %v", filterType, err)
+	updateRouteStatusForFilter(filterContext, errMsg)
 	filterContext.DirectResponse = &ir.CustomResponse{
 		StatusCode: ptr.To(uint32(500)),
 	}
+	t.Logger.Info("returning 500 response due to invalid HTTP filter")
 }
