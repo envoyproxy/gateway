@@ -23,7 +23,9 @@ import (
 	"github.com/envoyproxy/gateway/internal/infrastructure/common"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/logging"
+	"github.com/envoyproxy/gateway/internal/message"
 	"github.com/envoyproxy/gateway/internal/utils/file"
+	"github.com/envoyproxy/gateway/internal/utils/test"
 	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
 	"github.com/envoyproxy/gateway/test/utils"
 )
@@ -54,7 +56,9 @@ func newMockInfra(t *testing.T, cfg *config.Server) *Infra {
 		sdsConfigPath:   proxyDir,
 		Stdout:          io.Discard,
 		Stderr:          io.Discard,
+		errors:          message.RunnerErrorNotifier(t.Name(), test.RunnerErrorsChan(t)),
 	}
+
 	return infra
 }
 
@@ -109,6 +113,7 @@ func TestInfra_runEnvoy_stopEnvoy(t *testing.T) {
 		Logger:          logging.DefaultLogger(stdout, egv1a1.LogLevelInfo),
 		Stdout:          stdout,
 		Stderr:          stderr,
+		errors:          message.RunnerErrorNotifier(t.Name(), test.RunnerErrorsChan(t)),
 	}
 	// Ensures that run -> stop will successfully stop the envoy and we can
 	// run it again without any issues.
@@ -172,6 +177,7 @@ func TestInfra_runEnvoy_OutputRedirection(t *testing.T) {
 		Logger:          logging.DefaultLogger(stdout, egv1a1.LogLevelInfo),
 		Stdout:          stdout,
 		Stderr:          stderr,
+		errors:          message.RunnerErrorNotifier(t.Name(), test.RunnerErrorsChan(t)),
 	}
 
 	// Run envoy with an invalid config to force it to write to stderr and exit quickly

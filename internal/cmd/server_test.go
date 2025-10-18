@@ -13,6 +13,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/envoyproxy/gateway/internal/utils/test"
 )
 
 var (
@@ -32,7 +34,7 @@ gateway: {}
 )
 
 func TestGetServerCommand(t *testing.T) {
-	got := GetServerCommand()
+	got := GetServerCommand(test.RunnerErrorsChan(t))
 	assert.Equal(t, "server", got.Use)
 }
 

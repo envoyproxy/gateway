@@ -37,6 +37,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/message"
 	"github.com/envoyproxy/gateway/internal/provider/kubernetes/test"
 	"github.com/envoyproxy/gateway/internal/utils"
+	testutil "github.com/envoyproxy/gateway/internal/utils/test"
 )
 
 const (
@@ -67,7 +68,7 @@ func TestProvider(t *testing.T) {
 	svr.EnvoyGateway.Provider.Kubernetes.TopologyInjector = &egv1a1.EnvoyGatewayTopologyInjector{Disable: ptr.To(true)}
 	require.NoError(t, err)
 	resources := new(message.ProviderResources)
-	provider, err := New(context.Background(), cliCfg, svr, resources)
+	provider, err := New(context.Background(), cliCfg, svr, resources, message.RunnerErrorNotifier(t.Name(), testutil.RunnerErrorsChan(t)))
 	require.NoError(t, err)
 	ctx, cancel := context.WithCancel(ctrl.SetupSignalHandler())
 	go func() {
@@ -130,7 +131,7 @@ func testGatewayClassController(ctx context.Context, t *testing.T, provider *Pro
 	require.Eventually(t, func() bool {
 		return cli.Get(ctx, types.NamespacedName{Name: gc.Name}, gc) == nil
 	}, defaultWait, defaultTick)
-	require.Equal(t, gc.ObjectMeta.Generation, int64(1))
+	require.Equal(t, int64(1), gc.ObjectMeta.Generation)
 }
 
 func testGatewayClassAcceptedStatus(ctx context.Context, t *testing.T, provider *Provider, resources *message.ProviderResources) {
@@ -1254,7 +1255,7 @@ func TestNamespacedProvider(t *testing.T) {
 	svr.EnvoyGateway.Provider.Kubernetes.TopologyInjector = &egv1a1.EnvoyGatewayTopologyInjector{Disable: ptr.To(true)}
 
 	resources := new(message.ProviderResources)
-	provider, err := New(context.Background(), cliCfg, svr, resources)
+	provider, err := New(context.Background(), cliCfg, svr, resources, message.RunnerErrorNotifier(t.Name(), testutil.RunnerErrorsChan(t)))
 	require.NoError(t, err)
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
@@ -1288,7 +1289,7 @@ func TestNamespacedProvider(t *testing.T) {
 	// Ensure only 2 gateways are reconciled
 	gatewayList := &gwapiv1.GatewayList{}
 	require.NoError(t, cli.List(ctx, gatewayList))
-	require.Equal(t, len(gatewayList.Items), 2)
+	require.Equal(t, 2, len(gatewayList.Items))
 
 	// Stop the kube provider.
 	defer func() {
@@ -1319,7 +1320,7 @@ func TestNamespaceSelectorProvider(t *testing.T) {
 	svr.EnvoyGateway.Provider.Kubernetes.TopologyInjector = &egv1a1.EnvoyGatewayTopologyInjector{Disable: ptr.To(true)}
 
 	resources := new(message.ProviderResources)
-	provider, err := New(context.Background(), cliCfg, svr, resources)
+	provider, err := New(context.Background(), cliCfg, svr, resources, message.RunnerErrorNotifier(t.Name(), testutil.RunnerErrorsChan(t)))
 	require.NoError(t, err)
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
@@ -1376,7 +1377,7 @@ func TestNamespaceSelectorProvider(t *testing.T) {
 	})
 
 	_, ok := resources.GatewayStatuses.Load(types.NamespacedName{Name: "non-watched-gateway", Namespace: nonWatchedNS.Name})
-	require.Equal(t, false, ok)
+	require.False(t, ok)
 
 	watchedSvc := test.GetService(types.NamespacedName{Namespace: watchedNS.Name, Name: "watched-service"}, nil, map[string]int32{
 		"http":  80,

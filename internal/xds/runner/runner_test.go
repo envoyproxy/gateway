@@ -33,6 +33,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/extension/types"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/message"
+	"github.com/envoyproxy/gateway/internal/utils/test"
 	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
 )
 
@@ -263,7 +264,7 @@ func TestRunner(t *testing.T) {
 	defer cancel()
 
 	// Start
-	err = r.Start(ctx)
+	err = r.Start(ctx, test.RunnerErrorsChan(t))
 	require.NoError(t, err)
 	defer func() {
 		cancel()
@@ -352,7 +353,7 @@ func TestRunner_withExtensionManager_FailOpen(t *testing.T) {
 	defer cancel()
 
 	// Start
-	err = r.Start(ctx)
+	err = r.Start(ctx, test.RunnerErrorsChan(t))
 	require.NoError(t, err)
 	defer func() {
 		cancel()
@@ -434,7 +435,7 @@ func TestRunner_withExtensionManager_FailClosed(t *testing.T) {
 	defer cancel()
 
 	// Start
-	err = r.Start(ctx)
+	err = r.Start(ctx, test.RunnerErrorsChan(t))
 	require.NoError(t, err)
 	defer func() {
 		cancel()
