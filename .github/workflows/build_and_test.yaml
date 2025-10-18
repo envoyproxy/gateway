@@ -175,6 +175,23 @@ jobs:
         KUBE_DEPLOY_PROFILE: ${{ matrix.target.profile }}
       run: make conformance
 
+    - name: Upload Conformance Test Reports
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2
+      if: always()
+      with:
+        name: conformance-test-reports-${{ matrix.target.version }}-${{ matrix.target.ipFamily }}-${{ matrix.target.profile }}
+        path: bin/test-reports/
+        retention-days: 30
+
+    - name: Publish Conformance Test Results
+      uses: dorny/test-reporter@dc3a92680fcc15842eef52e8c4606ea7ce6bd3f3  # v2.1.1
+      if: always()
+      with:
+        name: Conformance Tests (${{ matrix.target.version }}/${{ matrix.target.ipFamily }}/${{ matrix.target.profile }})
+        path: bin/test-reports/*-junit.xml
+        reporter: java-junit
+        fail-on-error: false
+
   e2e-test:
     runs-on: ubuntu-latest
     needs:
@@ -236,6 +253,23 @@ jobs:
         # Cluster trust bundle reach beta in v1.33, so we can enable it for v1.33 and later.
         ENABLE_CLUSTER_TRUST_BUNDLE: ${{ startsWith(matrix.target.version, 'v1.33') }}
       run: make e2e
+
+    - name: Upload E2E Test Reports
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2
+      if: always()
+      with:
+        name: e2e-test-reports-${{ matrix.target.version }}-${{ matrix.target.ipFamily }}-${{ matrix.target.profile }}
+        path: bin/test-reports/
+        retention-days: 30
+
+    - name: Publish E2E Test Results
+      uses: dorny/test-reporter@dc3a92680fcc15842eef52e8c4606ea7ce6bd3f3  # v2.1.1
+      if: always()
+      with:
+        name: E2E Tests (${{ matrix.target.version }}/${{ matrix.target.ipFamily }}/${{ matrix.target.profile }})
+        path: bin/test-reports/*-junit.xml
+        reporter: java-junit
+        fail-on-error: false
 
   benchmark-test:
     runs-on: ubuntu-latest
