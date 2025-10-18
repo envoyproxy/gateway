@@ -395,6 +395,122 @@ spec:
           spec:
             description: spec defines the desired state of BackendTrafficPolicy.
             properties:
+              admissionControl:
+                description: |-
+                  AdmissionControl configures admission control for backend traffic.
+                  This feature rejects a portion of requests when the success rate falls below
+                  a specified threshold to prevent cascading failures.
+                properties:
+                  aggression:
+                    default: 1
+                    description: |-
+                      Aggression defines how aggressively to reject requests when success rate is low.
+                      Must be between 1.0 and 10.0. Defaults to 1.0.
+                    maximum: 10
+                    minimum: 1
+                    type: number
+                  enabled:
+                    default: false
+                    description: Enabled enables or disables admission control. Defaults
+                      to false.
+                    type: boolean
+                  maxRejectionProbability:
+                    default: 0.8
+                    description: |-
+                      MaxRejectionProbability defines the maximum probability of rejecting a request.
+                      Must be between 0.0 and 1.0. Defaults to 0.8.
+                    maximum: 1
+                    minimum: 0
+                    type: number
+                  rpsThreshold:
+                    default: 5
+                    description: |-
+                      RPSThreshold defines the minimum requests per second required for admission control.
+                      Defaults to 5.0.
+                    minimum: 0
+                    type: number
+                  samplingWindow:
+                    default: 30s
+                    description: |-
+                      SamplingWindow defines the time window for sampling requests.
+                      Defaults to "30s".
+                    type: string
+                  srThreshold:
+                    default: 0.95
+                    description: |-
+                      SRThreshold defines the success rate threshold below which admission control activates.
+                      Must be between 0.0 and 1.0. Defaults to 0.95.
+                    maximum: 1
+                    minimum: 0
+                    type: number
+                  successCriteria:
+                    description: SuccessCriteria defines the criteria for determining
+                      request success.
+                    properties:
+                      grpc:
+                        description: GRPC defines success criteria for gRPC requests.
+                        properties:
+                          grpcSuccessStatus:
+                            description: |-
+                              GRPCSuccessStatus defines the gRPC status codes considered successful.
+                              If not specified, defaults to OK (0).
+                            items:
+                              description: AdmissionControlStatusRange defines a range
+                                of status codes.
+                              properties:
+                                end:
+                                  description: End defines the end of the status code
+                                    range (inclusive).
+                                  format: int32
+                                  maximum: 999
+                                  minimum: 0
+                                  type: integer
+                                start:
+                                  description: Start defines the start of the status
+                                    code range (inclusive).
+                                  format: int32
+                                  maximum: 999
+                                  minimum: 0
+                                  type: integer
+                              required:
+                              - end
+                              - start
+                              type: object
+                            type: array
+                        type: object
+                      http:
+                        description: HTTP defines success criteria for HTTP requests.
+                        properties:
+                          httpSuccessStatus:
+                            description: |-
+                              HTTPSuccessStatus defines the HTTP status codes considered successful.
+                              If not specified, defaults to 200-299 range.
+                            items:
+                              description: AdmissionControlStatusRange defines a range
+                                of status codes.
+                              properties:
+                                end:
+                                  description: End defines the end of the status code
+                                    range (inclusive).
+                                  format: int32
+                                  maximum: 999
+                                  minimum: 0
+                                  type: integer
+                                start:
+                                  description: Start defines the start of the status
+                                    code range (inclusive).
+                                  format: int32
+                                  maximum: 999
+                                  minimum: 0
+                                  type: integer
+                              required:
+                              - end
+                              - start
+                              type: object
+                            type: array
+                        type: object
+                    type: object
+                type: object
               circuitBreaker:
                 description: |-
                   Circuit Breaker settings for the upstream connections and requests.
