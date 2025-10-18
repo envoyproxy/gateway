@@ -96,9 +96,6 @@ jobs:
       with:
         fetch-depth: 0  # Need main branch access for benchmark comparison
     - uses: ./tools/github-actions/setup-deps
-
-    - name: Install benchstat
-      run: go install golang.org/x/perf/cmd/benchstat@latest
     - name: Run Benchmark Comparison
       continue-on-error: true
       run: |
