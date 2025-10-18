@@ -5,6 +5,10 @@
 
 package v1alpha1
 
+import (
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+)
+
 // RateLimitSpec defines the desired state of RateLimitSpec.
 // +union
 type RateLimitSpec struct {
@@ -186,14 +190,28 @@ type RateLimitCostMetadata struct {
 type RateLimitSelectCondition struct {
 	// Headers is a list of request headers to match. Multiple header values are ANDed together,
 	// meaning, a request MUST match all the specified headers.
-	// At least one of headers or sourceCIDR condition must be specified.
+	// At least one of headers or methods or path or sourceCIDR condition must be specified.
 	//
 	// +optional
 	// +kubebuilder:validation:MaxItems=16
 	Headers []HeaderMatch `json:"headers,omitempty"`
 
+	// Methods is a list of request methods to match. Multiple method values are ORed together,
+	// meaning, a request can match any one of the specified methods. If not specified, it matches all methods.
+	// At least one of headers or methods or path or sourceCIDR condition must be specified.
+	//
+	// +optional
+	Methods []MethodMatch `json:"methods,omitempty"`
+
+	// Path is the request path to match.
+	// Support Exact, PathPrefix and RegularExpression match types.
+	// At least one of headers or methods or path or sourceCIDR condition must be specified.
+	//
+	// +optional
+	Path *PathMatch `json:"path,omitempty"`
+
 	// SourceCIDR is the client IP Address range to match on.
-	// At least one of headers or sourceCIDR condition must be specified.
+	// At least one of headers or methods or path or sourceCIDR condition must be specified.
 	//
 	// +optional
 	SourceCIDR *SourceMatch `json:"sourceCIDR,omitempty"`
@@ -277,6 +295,39 @@ const (
 	// bucket.
 	HeaderMatchDistinct HeaderMatchType = "Distinct"
 )
+
+// MethodMatch defines the matching criteria for the HTTP method of a request.
+type MethodMatch struct {
+	// Value specifies the HTTP method.
+	Value gwapiv1.HTTPMethod `json:"value"`
+
+	// Invert specifies whether the value match result will be inverted.
+	//
+	// +optional
+	// +kubebuilder:default=false
+	Invert *bool `json:"invert,omitempty"`
+}
+
+// PathMatch defines the matching criteria for the HTTP path of a request.
+type PathMatch struct {
+	// Type specifies how to match against the value of the path.
+	//
+	// +optional
+	// +kubebuilder:default=PathPrefix
+	Type *gwapiv1.PathMatchType `json:"type,omitempty"`
+
+	// Value specifies the HTTP path.
+	//
+	// +kubebuilder:default="/"
+	// +kubebuilder:validation:MaxLength=1024
+	Value string `json:"value"`
+
+	// Invert specifies whether the value match result will be inverted.
+	//
+	// +optional
+	// +kubebuilder:default=false
+	Invert *bool `json:"invert,omitempty"`
+}
 
 // RateLimitValue defines the limits for rate limiting.
 type RateLimitValue struct {
