@@ -2240,11 +2240,13 @@ func TestBackendTrafficPolicyAdaptiveConcurrency(t *testing.T) {
 			Namespace: "default",
 		},
 		Spec: egv1a1.BackendTrafficPolicySpec{
-			TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
-				PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
-					Group: "gateway.networking.k8s.io",
-					Kind:  "HTTPRoute",
-					Name:  "httproute",
+			PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+				TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+					LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+						Group: gwapiv1.Group("gateway.networking.k8s.io"),
+						Kind:  gwapiv1.Kind("HTTPRoute"),
+						Name:  gwapiv1.ObjectName("httproute"),
+					},
 				},
 			},
 		},

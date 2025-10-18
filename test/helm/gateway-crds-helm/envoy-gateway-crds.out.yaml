@@ -395,6 +395,161 @@ spec:
           spec:
             description: spec defines the desired state of BackendTrafficPolicy.
             properties:
+              adaptiveConcurrency:
+                description: |-
+                  AdaptiveConcurrency configures adaptive concurrency for backend traffic.
+                  This feature dynamically adjusts the number of concurrent requests to optimize
+                  performance and prevent overload based on downstream response times.
+                properties:
+                  concurrencyLimitParams:
+                    description: ConcurrencyLimitParams defines the concurrency limit
+                      parameters.
+                    properties:
+                      concurrencyUpdateInterval:
+                        default: 0.1s
+                        description: ConcurrencyUpdateInterval defines the interval
+                          at which the concurrency limit is updated.
+                        type: string
+                      concurrencyUpdateRatio:
+                        default: 0.1
+                        description: |-
+                          ConcurrencyUpdateRatio defines the ratio by which the concurrency limit is updated.
+                          This should be a value between 0.0 and 1.0.
+                        maximum: 1
+                        minimum: 0
+                        type: number
+                      maxConcurrencyLimit:
+                        default: 1000
+                        description: MaxConcurrencyLimit defines the maximum concurrency
+                          limit.
+                        format: int32
+                        minimum: 1
+                        type: integer
+                      minConcurrencyLimit:
+                        default: 1
+                        description: MinConcurrencyLimit defines the minimum concurrency
+                          limit.
+                        format: int32
+                        minimum: 1
+                        type: integer
+                    type: object
+                  enabled:
+                    default: false
+                    description: Enabled enables or disables adaptive concurrency.
+                      Defaults to false.
+                    type: boolean
+                  gradientController:
+                    description: GradientController defines the gradient controller
+                      configuration for adaptive concurrency.
+                    properties:
+                      concurrencyLimitParams:
+                        description: ConcurrencyLimitParams defines the concurrency
+                          limit parameters.
+                        properties:
+                          concurrencyUpdateInterval:
+                            default: 0.1s
+                            description: ConcurrencyUpdateInterval defines the interval
+                              at which the concurrency limit is updated.
+                            type: string
+                          concurrencyUpdateRatio:
+                            default: 0.1
+                            description: |-
+                              ConcurrencyUpdateRatio defines the ratio by which the concurrency limit is updated.
+                              This should be a value between 0.0 and 1.0.
+                            maximum: 1
+                            minimum: 0
+                            type: number
+                          maxConcurrencyLimit:
+                            default: 1000
+                            description: MaxConcurrencyLimit defines the maximum concurrency
+                              limit.
+                            format: int32
+                            minimum: 1
+                            type: integer
+                          minConcurrencyLimit:
+                            default: 1
+                            description: MinConcurrencyLimit defines the minimum concurrency
+                              limit.
+                            format: int32
+                            minimum: 1
+                            type: integer
+                        type: object
+                      minRTTCalculation:
+                        description: MinRTTCalculation defines the minimum RTT calculation
+                          parameters.
+                        properties:
+                          buffer:
+                            default: 25
+                            description: |-
+                              Buffer defines the buffer to apply to the minimum RTT calculation.
+                              This should be a value between 0 and 100 representing a percentage.
+                            maximum: 100
+                            minimum: 0
+                            type: number
+                          interval:
+                            default: 60s
+                            description: Interval defines the interval at which the
+                              minimum RTT is recalculated.
+                            type: string
+                          jitter:
+                            default: 10
+                            description: |-
+                              Jitter defines the jitter to apply to the minimum RTT calculation interval.
+                              This should be a value between 0 and 100 representing a percentage.
+                            maximum: 100
+                            minimum: 0
+                            type: number
+                          requestCount:
+                            default: 50
+                            description: RequestCount defines the number of requests
+                              to use for minimum RTT calculation.
+                            format: int32
+                            minimum: 1
+                            type: integer
+                        type: object
+                      sampleAggregatePercentile:
+                        default: 90
+                        description: |-
+                          SampleAggregatePercentile defines the percentile of request latencies to sample.
+                          This should be a value between 0 and 100.
+                        maximum: 100
+                        minimum: 0
+                        type: number
+                    type: object
+                  minRTTCalculation:
+                    description: MinRTTCalculation defines the minimum RTT calculation
+                      parameters.
+                    properties:
+                      buffer:
+                        default: 25
+                        description: |-
+                          Buffer defines the buffer to apply to the minimum RTT calculation.
+                          This should be a value between 0 and 100 representing a percentage.
+                        maximum: 100
+                        minimum: 0
+                        type: number
+                      interval:
+                        default: 60s
+                        description: Interval defines the interval at which the minimum
+                          RTT is recalculated.
+                        type: string
+                      jitter:
+                        default: 10
+                        description: |-
+                          Jitter defines the jitter to apply to the minimum RTT calculation interval.
+                          This should be a value between 0 and 100 representing a percentage.
+                        maximum: 100
+                        minimum: 0
+                        type: number
+                      requestCount:
+                        default: 50
+                        description: RequestCount defines the number of requests to
+                          use for minimum RTT calculation.
+                        format: int32
+                        minimum: 1
+                        type: integer
+                    type: object
+                type: object
               admissionControl:
                 description: |-
                   AdmissionControl configures admission control for backend traffic.
