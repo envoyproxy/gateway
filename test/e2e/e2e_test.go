@@ -106,13 +106,30 @@ func TestE2E(t *testing.T) {
 		t.Fatalf("Failed to create ConformanceTestSuite: %v", err)
 	}
 
-	cSuite.Setup(t, tests.ConformanceTests)
+	selectedTests, err := tests.ConformanceTestsForCurrentShard()
+	if err != nil {
+		t.Fatalf("Failed to select tests for shard: %v", err)
+	}
+
+	if len(selectedTests) == 0 {
+		tlog.Logf(t, "No E2E tests matched shard %s/%s, skipping",
+			os.Getenv("E2E_SHARD_INDEX"), os.Getenv("E2E_SHARD_TOTAL"))
+		return
+	}
+
+	cSuite.Setup(t, selectedTests)
 	if cSuite.RunTest != "" {
 		tlog.Logf(t, "Running E2E test %s", cSuite.RunTest)
 	} else {
-		tlog.Logf(t, "Running %d E2E tests", len(tests.ConformanceTests))
+		if os.Getenv("E2E_SHARD_TOTAL") != "" {
+			tlog.Logf(t, "Running %d of %d E2E tests for shard %s",
+				len(selectedTests), len(tests.ConformanceTests), os.Getenv("E2E_SHARD_INDEX"))
+		} else {
+			tlog.Logf(t, "Running %d E2E tests", len(selectedTests))
+		}
 	}
-	err = cSuite.Run(t, tests.ConformanceTests)
+
+	err = cSuite.Run(t, selectedTests)
 	if err != nil {
 		tlog.Fatalf(t, "Failed to run E2E tests: %v", err)
 	}

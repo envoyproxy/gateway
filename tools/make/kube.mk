@@ -37,6 +37,7 @@ E2E_TIMEOUT ?= 20m
 # E2E_REDIRECT allow you specified a redirect when run e2e test locally, e.g. `>> test_output.out 2>&1`
 E2E_REDIRECT ?=
 E2E_TEST_ARGS ?= -v -tags e2e -timeout $(E2E_TIMEOUT)
+E2E_SUITE ?=
 
 DOCKER_MAC_NET_CONNECT ?= true
 HOMEBREW_GOPROXY ?=
@@ -239,10 +240,27 @@ setup-mac-net-connect:
 run-e2e: ## Run e2e tests
 	@$(LOG_TARGET)
 ifeq ($(E2E_RUN_TEST),)
+ifeq ($(strip $(E2E_SUITE)),)
 	go test $(E2E_TEST_ARGS) ./test/e2e --gateway-class=envoy-gateway --debug=true --cleanup-base-resources=false $(E2E_REDIRECT)
 	go test $(E2E_TEST_ARGS) ./test/e2e/merge_gateways --gateway-class=merge-gateways --debug=true --cleanup-base-resources=false
 	go test $(E2E_TEST_ARGS) ./test/e2e/multiple_gc --debug=true --cleanup-base-resources=true
 	LAST_VERSION_TAG=$(shell cat VERSION) go test $(E2E_TEST_ARGS) ./test/e2e/upgrade --gateway-class=upgrade --debug=true --cleanup-base-resources=$(E2E_CLEANUP)
+else ifeq ($(strip $(E2E_SUITE)),all)
+	go test $(E2E_TEST_ARGS) ./test/e2e --gateway-class=envoy-gateway --debug=true --cleanup-base-resources=false $(E2E_REDIRECT)
+	go test $(E2E_TEST_ARGS) ./test/e2e/merge_gateways --gateway-class=merge-gateways --debug=true --cleanup-base-resources=false
+	go test $(E2E_TEST_ARGS) ./test/e2e/multiple_gc --debug=true --cleanup-base-resources=true
+	LAST_VERSION_TAG=$(shell cat VERSION) go test $(E2E_TEST_ARGS) ./test/e2e/upgrade --gateway-class=upgrade --debug=true --cleanup-base-resources=$(E2E_CLEANUP)
+else ifeq ($(strip $(E2E_SUITE)),core)
+	go test $(E2E_TEST_ARGS) ./test/e2e --gateway-class=envoy-gateway --debug=true --cleanup-base-resources=false $(E2E_REDIRECT)
+else ifeq ($(strip $(E2E_SUITE)),merge-gateways)
+	go test $(E2E_TEST_ARGS) ./test/e2e/merge_gateways --gateway-class=merge-gateways --debug=true --cleanup-base-resources=false
+else ifeq ($(strip $(E2E_SUITE)),multiple-gc)
+	go test $(E2E_TEST_ARGS) ./test/e2e/multiple_gc --debug=true --cleanup-base-resources=true
+else ifeq ($(strip $(E2E_SUITE)),upgrade)
+	LAST_VERSION_TAG=$(shell cat VERSION) go test $(E2E_TEST_ARGS) ./test/e2e/upgrade --gateway-class=upgrade --debug=true --cleanup-base-resources=$(E2E_CLEANUP)
+else
+$(error Unsupported E2E_SUITE '$(E2E_SUITE)'. Expected one of '', all, core, merge-gateways, multiple-gc, upgrade.)
+endif
 else
 	go test $(E2E_TEST_ARGS) ./test/e2e --gateway-class=envoy-gateway --debug=true --cleanup-base-resources=$(E2E_CLEANUP) \
 		--run-test $(E2E_RUN_TEST) $(E2E_REDIRECT)

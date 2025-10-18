@@ -14,7 +14,6 @@ import (
 
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/gateway-api/conformance/utils/flags"
-	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
 	"sigs.k8s.io/gateway-api/conformance/utils/tlog"
 	"sigs.k8s.io/gateway-api/pkg/features"
@@ -37,7 +36,6 @@ func TestMultipleGC(t *testing.T) {
 	}
 
 	t.Run("Internet GC Test", func(t *testing.T) {
-		t.Parallel()
 		internetGatewaySuiteGatewayClassName := "internet"
 		internetGatewaySuite, err := suite.NewConformanceTestSuite(suite.ConformanceOptions{
 			Client:               c,
@@ -46,6 +44,7 @@ func TestMultipleGC(t *testing.T) {
 			Debug:                *flags.ShowDebug,
 			CleanupBaseResources: *flags.CleanupBaseResources,
 			RunTest:              *flags.RunTest,
+			ManifestFS:           []fs.FS{e2e.Manifests},
 			// SupportedFeatures cannot be empty, so we set it to SupportGateway
 			// All e2e tests should leave Features empty.
 			SupportedFeatures: sets.New(features.SupportGateway),
@@ -56,12 +55,7 @@ func TestMultipleGC(t *testing.T) {
 			t.Fatalf("Failed to create ConformanceTestSuite: %v", err)
 		}
 
-		// Setting up the necessary arguments for the suite instead of calling Suite.Setup method again,
-		// since this test suite reuse the base resources of previous test suite.
-		internetGatewaySuite.Applier.ManifestFS = []fs.FS{e2e.Manifests}
-		internetGatewaySuite.Applier.GatewayClass = internetGatewaySuiteGatewayClassName
-		internetGatewaySuite.ControllerName = kubernetes.GWCMustHaveAcceptedConditionTrue(t, internetGatewaySuite.Client, internetGatewaySuite.TimeoutConfig, internetGatewaySuite.GatewayClassName)
-
+		internetGatewaySuite.Setup(t, tests.MultipleGCTests[internetGatewaySuiteGatewayClassName])
 		tlog.Logf(t, "Running %d MultipleGC tests", len(tests.MultipleGCTests[internetGatewaySuiteGatewayClassName]))
 
 		err = internetGatewaySuite.Run(t, tests.MultipleGCTests[internetGatewaySuiteGatewayClassName])
@@ -71,7 +65,6 @@ func TestMultipleGC(t *testing.T) {
 	})
 
 	t.Run("Private GC Test", func(t *testing.T) {
-		t.Parallel()
 		privateGatewaySuiteGatewayClassName := "private"
 		privateGatewaySuite, err := suite.NewConformanceTestSuite(suite.ConformanceOptions{
 			Client:               c,
@@ -80,6 +73,7 @@ func TestMultipleGC(t *testing.T) {
 			Debug:                *flags.ShowDebug,
 			CleanupBaseResources: *flags.CleanupBaseResources,
 			RunTest:              *flags.RunTest,
+			ManifestFS:           []fs.FS{e2e.Manifests},
 			// SupportedFeatures cannot be empty, so we set it to SupportGateway
 			// All e2e tests should leave Features empty.
 			SupportedFeatures: sets.New(features.SupportGateway),
@@ -90,12 +84,7 @@ func TestMultipleGC(t *testing.T) {
 			t.Fatalf("Failed to create ConformanceTestSuite: %v", err)
 		}
 
-		// Setting up the necessary arguments for the suite instead of calling Suite.Setup method again,
-		// since this test suite reuse the base resources of previous test suite.
-		privateGatewaySuite.Applier.ManifestFS = []fs.FS{e2e.Manifests}
-		privateGatewaySuite.Applier.GatewayClass = privateGatewaySuiteGatewayClassName
-		privateGatewaySuite.ControllerName = kubernetes.GWCMustHaveAcceptedConditionTrue(t, privateGatewaySuite.Client, privateGatewaySuite.TimeoutConfig, privateGatewaySuite.GatewayClassName)
-
+		privateGatewaySuite.Setup(t, tests.MultipleGCTests[privateGatewaySuiteGatewayClassName])
 		tlog.Logf(t, "Running %d MultipleGC tests", len(tests.MultipleGCTests[privateGatewaySuiteGatewayClassName]))
 		err = privateGatewaySuite.Run(t, tests.MultipleGCTests[privateGatewaySuiteGatewayClassName])
 		if err != nil {
