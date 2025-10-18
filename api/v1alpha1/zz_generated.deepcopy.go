@@ -841,6 +841,17 @@ func (in *BackendTrafficPolicySpec) DeepCopyInto(out *BackendTrafficPolicySpec) 
 			}
 		}
 	}
+	if in.Compressor != nil {
+		in, out := &in.Compressor, &out.Compressor
+		*out = make([]*Compression, len(*in))
+		for i := range *in {
+			if (*in)[i] != nil {
+				in, out := &(*in)[i], &(*out)[i]
+				*out = new(Compression)
+				(*in).DeepCopyInto(*out)
+			}
+		}
+	}
 	if in.ResponseOverride != nil {
 		in, out := &in.ResponseOverride, &out.ResponseOverride
 		*out = make([]*ResponseOverride, len(*in))
