@@ -1,26 +1,15 @@
-name: first-listener
-domain: first-listener
+name: default/policy-for-route
+domain: default/policy-for-route
 descriptors:
-  - key: first-route
-    value: test-namespace/test-policy-1
+  - key: default/policy-for-route/rule/0
+    value: default/policy-for-route/rule/0
     rate_limit: null
     descriptors:
       - key: rule-0-match-0
         value: rule-0-match-0
         rate_limit:
-          requests_per_unit: 5
-          unit: SECOND
-          unlimited: false
-          name: ""
-          replaces: []
-        descriptors: []
-        shadow_mode: false
-        detailed_metric: false
-      - key: rule-1-match-0
-        value: rule-1-match-0
-        rate_limit:
-          requests_per_unit: 5
-          unit: SECOND
+          requests_per_unit: 3
+          unit: HOUR
           unlimited: false
           name: ""
           replaces: []
@@ -30,18 +19,18 @@ descriptors:
     shadow_mode: false
     detailed_metric: false
 ---
-name: test-namespace/test-policy-1
-domain: test-namespace/test-policy-1
+name: envoy-gateway/gateway-1/http
+domain: envoy-gateway/gateway-1/http
 descriptors:
-  - key: test-namespace/test-policy-1/rule/0
-    value: test-namespace/test-policy-1/rule/0
+  - key: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
+    value: default/policy-for-route
     rate_limit: null
     descriptors:
       - key: rule-0-match-0
         value: rule-0-match-0
         rate_limit:
-          requests_per_unit: 5
-          unit: SECOND
+          requests_per_unit: 3
+          unit: HOUR
           unlimited: false
           name: ""
           replaces: []
@@ -50,15 +39,15 @@ descriptors:
         detailed_metric: false
     shadow_mode: false
     detailed_metric: false
-  - key: test-namespace/test-policy-1/rule/2
-    value: test-namespace/test-policy-1/rule/2
+  - key: httproute/default/httproute-2/rule/0/match/0/gateway_envoyproxy_io
+    value: default/policy-for-route
     rate_limit: null
     descriptors:
-      - key: rule-1-match-0
-        value: rule-1-match-0
+      - key: rule-0-match-0
+        value: rule-0-match-0
         rate_limit:
-          requests_per_unit: 5
-          unit: SECOND
+          requests_per_unit: 3
+          unit: HOUR
           unlimited: false
           name: ""
           replaces: []
