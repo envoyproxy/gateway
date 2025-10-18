@@ -15,6 +15,7 @@ import (
 	"github.com/prometheus/common/model"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	httputils "sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
@@ -35,7 +36,7 @@ var StatNameTest = suite.ConformanceTest{
 		ns := "gateway-conformance-infra"
 		routeNN := types.NamespacedName{Name: "stat-name-route", Namespace: ns}
 		gwNN := types.NamespacedName{Name: "stat-name-gtw", Namespace: ns}
-		gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+		gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
 
 		t.Run("prometheus", func(t *testing.T) {
 			expectedResponse := httputils.ExpectedResponse{
@@ -43,7 +44,7 @@ var StatNameTest = suite.ConformanceTest{
 					Path: "/foo",
 				},
 				Response: httputils.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}
@@ -55,7 +56,7 @@ var StatNameTest = suite.ConformanceTest{
 					Path: "/bar",
 				},
 				Response: httputils.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}

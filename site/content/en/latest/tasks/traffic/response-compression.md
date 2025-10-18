@@ -10,10 +10,14 @@ Response Compression allows you to compress the response from the backend before
 
 ## Testing Response Compression
 
-You can enable compression by specifying the compression types in the `BackendTrafficPolicy` resource.
-Multiple compression types can be defined within the resource, allowing Envoy Gateway to choose the most appropriate option based on the `Accept-Encoding header` provided by the client..
+You can enable compression by specifying the compression types in the `BackendTrafficPolicy` resource using the `compressor` field.
+Multiple compression types can be defined within the resource, allowing Envoy Gateway to choose the most appropriate option based on the `Accept-Encoding header` provided by the client.
 
 Envoy Gateway currently supports Brotli and Gzip compression algorithms. Additional compression algorithms may be supported in the future.
+
+{{% alert title="Note" color="warning" %}}
+The `compression` field is deprecated. Use the `compressor` field instead, which provides more granular control over compression configuration.
+{{% /alert %}}
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
@@ -29,9 +33,11 @@ spec:
     group: gateway.networking.k8s.io
     kind: HTTPRoute
     name: backend
-  compression:
+  compressor:
     - type: Brotli
+      brotli: {}
     - type: Gzip
+      gzip: {}
 EOF
 ```
 
@@ -50,14 +56,34 @@ spec:
     group: gateway.networking.k8s.io
     kind: HTTPRoute
     name: backend
-  compression:
+  compressor:
     - type: Brotli
+      brotli: {}
     - type: Gzip
+      gzip: {}
 ```
 
 {{% /tab %}}
 {{< /tabpane >}}
 
+### Deprecated Configuration
+
+The following configuration uses the deprecated `compression` field. While still supported, it's recommended to migrate to the `compressor` field:
+
+```yaml
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: response-compression-deprecated
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: backend
+  compression:
+    - type: Brotli
+    - type: Gzip
+```
 
 To specify the desired compression type, include the `Accept-Encoding` header in requests sent to the Envoy Gateway. The quality value (`q`) in the `Accept-Encoding` header determines the priority of each compression type. Envoy Gateway will select the compression type with the highest `q` value that matches a type configured in the `BackendTrafficPolicy` resource.
 

@@ -76,21 +76,21 @@ var MergeGatewaysTest = suite.ConformanceTest{
 		t.Run("merged three gateways under the same namespace with http routes", func(t *testing.T) {
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gw1HostPort, http.ExpectedResponse{
 				Request:   http.Request{Path: "/merge1", Host: "www.example1.com"},
-				Response:  http.Response{StatusCode: 200},
+				Response:  http.Response{StatusCodes: []int{200}},
 				Namespace: ns,
 				Backend:   "infra-backend-v1",
 			})
 
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gw2HostPort, http.ExpectedResponse{
 				Request:   http.Request{Path: "/merge2", Host: "www.example2.com"},
-				Response:  http.Response{StatusCode: 200},
+				Response:  http.Response{StatusCodes: []int{200}},
 				Namespace: ns,
 				Backend:   "infra-backend-v2",
 			})
 
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gw3HostPort, http.ExpectedResponse{
 				Request:   http.Request{Path: "/merge3", Host: "www.example3.com"},
-				Response:  http.Response{StatusCode: 200},
+				Response:  http.Response{StatusCodes: []int{200}},
 				Namespace: ns,
 				Backend:   "infra-backend-v3",
 			})
@@ -239,7 +239,7 @@ var MergeGatewaysTest = suite.ConformanceTest{
 			// Not merged gateway should not receive any traffic.
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gw4HostPort, http.ExpectedResponse{
 				Request:   http.Request{Path: "/merge4", Host: "www.example4.com"},
-				Response:  http.Response{StatusCode: 404},
+				Response:  http.Response{StatusCodes: []int{404}},
 				Namespace: ns,
 			})
 		})

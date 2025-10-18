@@ -5,7 +5,7 @@
 ##@ Lint
 
 GITHUB_ACTION ?=
-LINT_BUILD_TAGS ?= e2e,celvalidation,conformance,experimental,benchmark,resilience
+LINT_BUILD_TAGS ?= e2e,celvalidation,conformance,experimental,benchmark,resilience,integration
 
 .PHONY: lint
 lint: ## Run all linter of code sources, including golint, whitenoise lint and codespell.

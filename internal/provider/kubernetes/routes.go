@@ -16,6 +16,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapiv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
@@ -28,7 +29,7 @@ import (
 func (r *gatewayAPIReconciler) processTLSRoutes(ctx context.Context, gatewayNamespaceName string,
 	resourceMap *resourceMappings, resourceTree *resource.Resources,
 ) error {
-	tlsRouteList := &gwapiv1a2.TLSRouteList{}
+	tlsRouteList := &gwapiv1a3.TLSRouteList{}
 	if err := r.client.List(ctx, tlsRouteList, &client.ListOptions{
 		FieldSelector: fields.OneTermEqualSelector(gatewayTLSRouteIndex, gatewayNamespaceName),
 	}); err != nil {

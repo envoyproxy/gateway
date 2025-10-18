@@ -8,7 +8,6 @@ package v1alpha1
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwapiv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 )
 
 const (
@@ -196,7 +195,7 @@ type BackendTLSSettings struct {
 	// CACertificateRefs or WellKnownCACertificates may be specified, not both.
 	//
 	// +optional
-	WellKnownCACertificates *gwapiv1a3.WellKnownCACertificatesType `json:"wellKnownCACertificates,omitempty"`
+	WellKnownCACertificates *gwapiv1.WellKnownCACertificatesType `json:"wellKnownCACertificates,omitempty"`
 
 	// InsecureSkipVerify indicates whether the upstream's certificate verification
 	// should be skipped. Defaults to "false".

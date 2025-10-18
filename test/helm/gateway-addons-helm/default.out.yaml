@@ -681,49 +681,6 @@ metadata:
 data:
   envoy-clusters.json: |-
       {
-        "__inputs": [
-          {
-            "name": "DS_THANOS",
-            "label": "thanos",
-            "description": "",
-            "type": "datasource",
-            "pluginId": "prometheus",
-            "pluginName": "Prometheus"
-          }
-        ],
-        "__elements": {},
-        "__requires": [
-          {
-            "type": "panel",
-            "id": "gauge",
-            "name": "Gauge",
-            "version": ""
-          },
-          {
-            "type": "grafana",
-            "id": "grafana",
-            "name": "Grafana",
-            "version": "12.1.0"
-          },
-          {
-            "type": "datasource",
-            "id": "prometheus",
-            "name": "Prometheus",
-            "version": "1.0.0"
-          },
-          {
-            "type": "panel",
-            "id": "stat",
-            "name": "Stat",
-            "version": ""
-          },
-          {
-            "type": "panel",
-            "id": "timeseries",
-            "name": "Time series",
-            "version": ""
-          }
-        ],
         "annotations": {
           "list": [
             {
@@ -832,8 +789,7 @@ data:
             "targets": [
               {
                 "datasource": {
-                  "type": "prometheus",
-                  "uid": "${DS_THANOS}"
+                  "uid": "$datasource"
                 },
                 "editorMode": "code",
                 "expr": "sum(envoy_server_live{})",
@@ -911,8 +867,7 @@ data:
             "targets": [
               {
                 "datasource": {
-                  "type": "prometheus",
-                  "uid": "${DS_THANOS}"
+                  "uid": "$datasource"
                 },
                 "editorMode": "code",
                 "expr": "avg(envoy_server_uptime)",
@@ -1001,8 +956,7 @@ data:
             "targets": [
               {
                 "datasource": {
-                  "type": "prometheus",
-                  "uid": "${DS_THANOS}"
+                  "uid": "$datasource"
                 },
                 "editorMode": "code",
                 "expr": "sum(envoy_server_memory_allocated{})",
@@ -1055,7 +1009,7 @@ data:
           {
             "datasource": {
               "type": "prometheus",
-              "uid": "${DS_THANOS}"
+              "uid": "$datasource"
             },
             "fieldConfig": {
               "defaults": {
@@ -1140,7 +1094,7 @@ data:
               {
                 "datasource": {
                   "type": "prometheus",
-                  "uid": "${DS_THANOS}"
+                  "uid": "$datasource"
                 },
                 "editorMode": "code",
                 "exemplar": false,
@@ -1236,8 +1190,7 @@ data:
             "targets": [
               {
                 "datasource": {
-                  "type": "prometheus",
-                  "uid": "${DS_THANOS}"
+                  "uid": "$datasource"
                 },
                 "editorMode": "code",
                 "expr": "(sum(envoy_cluster_membership_total{envoy_cluster_name=~\"$cluster\",envoy_cluster_name=~\".+?route/${namespace}/${resource}/rule/${rule}\"}) - sum(envoy_cluster_membership_healthy{envoy_cluster_name=~\"$cluster\",envoy_cluster_name=~\".+?route/${namespace}/${resource}/rule/${rule}\"}))",
@@ -1333,8 +1286,7 @@ data:
             "targets": [
               {
                 "datasource": {
-                  "type": "prometheus",
-                  "uid": "${DS_THANOS}"
+                  "uid": "$datasource"
                 },
                 "editorMode": "code",
                 "expr": "(sum(envoy_cluster_membership_total{envoy_cluster_name=~\"$cluster\",envoy_cluster_name=~\".+?route/${namespace}/${resource}/rule/${rule}\"})-sum(envoy_cluster_membership_healthy{envoy_cluster_name=~\"$cluster\",envoy_cluster_name=~\".+?route/${namespace}/${resource}/rule/${rule}\"})) == bool 0",
@@ -1435,8 +1387,7 @@ data:
             "targets": [
               {
                 "datasource": {
-                  "type": "prometheus",
-                  "uid": "${DS_THANOS}"
+                  "uid": "$datasource"
                 },
                 "editorMode": "code",
                 "expr": "sum(envoy_cluster_upstream_cx_active{envoy_cluster_name=~\"$cluster\",envoy_cluster_name=~\".+?route/${namespace}/${resource}/rule/${rule}\"}) by (envoy_cluster_name)",
@@ -1538,7 +1489,7 @@ data:
               {
                 "datasource": {
                   "type": "prometheus",
-                  "uid": "${DS_THANOS}"
+                  "uid": "$datasource"
                 },
                 "editorMode": "code",
                 "expr": "sum(irate(envoy_cluster_upstream_rq_total{envoy_cluster_name=~\"$cluster\",envoy_cluster_name=~\".+?route/${namespace}/${resource}/rule/${rule}\"}[$__rate_interval])) by (envoy_cluster_name)",
@@ -1639,8 +1590,7 @@ data:
             "targets": [
               {
                 "datasource": {
-                  "type": "prometheus",
-                  "uid": "${DS_THANOS}"
+                  "uid": "$datasource"
                 },
                 "editorMode": "code",
                 "expr": "sum(irate(envoy_cluster_upstream_cx_rx_bytes_total{envoy_cluster_name=~\"$cluster\",envoy_cluster_name=~\".+?route/${namespace}/${resource}/rule/${rule}\"}[$__rate_interval])) by (envoy_cluster_name)",
@@ -1669,7 +1619,7 @@ data:
           {
             "datasource": {
               "type": "prometheus",
-              "uid": "${DS_THANOS}"
+              "uid": "$datasource"
             },
             "fieldConfig": {
               "defaults": {
@@ -1782,8 +1732,7 @@ data:
               },
               {
                 "datasource": {
-                  "type": "prometheus",
-                  "uid": "${DS_THANOS}"
+                  "uid": "$datasource"
                 },
                 "editorMode": "code",
                 "expr": "sum(irate(envoy_http_downstream_cx_tx_bytes_total{envoy_http_conn_manager_prefix=~\"http-.*\"}[$__rate_interval]))",
@@ -1884,7 +1833,7 @@ data:
               {
                 "datasource": {
                   "type": "prometheus",
-                  "uid": "${DS_THANOS}"
+                  "uid": "${datasource}"
                 },
                 "editorMode": "code",
                 "expr": "histogram_quantile(0.99, sum(rate(envoy_cluster_upstream_rq_time_bucket{envoy_cluster_name=~\"$cluster\",envoy_cluster_name=~\".+?route/${namespace}/${resource}/rule/${rule}\"}[$__rate_interval])) by (le, envoy_cluster_name))",
@@ -1909,7 +1858,7 @@ data:
               {
                 "datasource": {
                   "type": "prometheus",
-                  "uid": "${DS_THANOS}"
+                  "uid": "${datasource}"
                 },
                 "editorMode": "code",
                 "expr": "histogram_quantile(0.5, sum(rate(envoy_cluster_upstream_rq_time_bucket{envoy_cluster_name=~\"$cluster\",envoy_cluster_name=~\".+?route/${namespace}/${resource}/rule/${rule}\"}[$__rate_interval])) by (le, envoy_cluster_name))",
@@ -2010,7 +1959,7 @@ data:
               {
                 "datasource": {
                   "type": "prometheus",
-                  "uid": "${DS_THANOS}"
+                  "uid": "${datasource}"
                 },
                 "editorMode": "code",
                 "expr": "sum(irate(envoy_cluster_upstream_rq_xx{envoy_response_code_class=~\"2\", envoy_cluster_name=~\"$cluster\",envoy_cluster_name=~\".+?route/${namespace}/${resource}/rule/${rule}\"}[$__rate_interval])) by (envoy_cluster_name)",
@@ -2110,7 +2059,7 @@ data:
               {
                 "datasource": {
                   "type": "prometheus",
-                  "uid": "${DS_THANOS}"
+                  "uid": "${datasource}"
                 },
                 "editorMode": "code",
                 "expr": "sum(irate(envoy_cluster_upstream_rq_xx{envoy_cluster_name=~\"$cluster\",envoy_cluster_name=~\".+?route/${namespace}/${resource}/rule/${rule}\",envoy_response_code_class=~\"4\"}[$__rate_interval])) by (envoy_cluster_name)",
@@ -2212,8 +2161,7 @@ data:
             "targets": [
               {
                 "datasource": {
-                  "type": "prometheus",
-                  "uid": "${DS_THANOS}"
+                  "uid": "$datasource"
                 },
                 "editorMode": "code",
                 "expr": "sum(envoy_cluster_membership_healthy{envoy_cluster_name=~\"$cluster\",envoy_cluster_name=~\".+?route/${namespace}/${resource}/rule/${rule}\"})",
@@ -2243,7 +2191,7 @@ data:
           {
             "datasource": {
               "type": "prometheus",
-              "uid": "${DS_THANOS}"
+              "uid": "${datasource}"
             },
             "fieldConfig": {
               "defaults": {
@@ -2343,7 +2291,7 @@ data:
           {
             "datasource": {
               "type": "prometheus",
-              "uid": "${DS_THANOS}"
+              "uid": "${datasource}"
             },
             "fieldConfig": {
               "defaults": {
@@ -2453,7 +2401,7 @@ data:
               {
                 "datasource": {
                   "type": "prometheus",
-                  "uid": "${DS_THANOS}"
+                  "uid": "$datasource"
                 },
                 "fieldConfig": {
                   "defaults": {
@@ -2554,7 +2502,7 @@ data:
                   {
                     "datasource": {
                       "type": "prometheus",
-                      "uid": "${DS_THANOS}"
+                      "uid": "$datasource"
                     },
                     "editorMode": "code",
                     "expr": "sum(envoy_cluster_membership_total{envoy_cluster_name=~\"$cluster\",envoy_cluster_name=~\".+?route/${namespace}/${resource}/rule/${rule}\"}) - sum(envoy_cluster_membership_healthy{envoy_cluster_name=~\"$cluster\",envoy_cluster_name=~\".+?route/${namespace}/${resource}/rule/${rule}\"})",
@@ -2658,7 +2606,7 @@ data:
                   {
                     "datasource": {
                       "type": "prometheus",
-                      "uid": "${DS_THANOS}"
+                      "uid": "$datasource"
                     },
                     "editorMode": "code",
                     "expr": "avg by (envoy_cluster_name) (envoy_cluster_outlier_detection_ejections_active{envoy_cluster_name=~\"$cluster\", envoy_cluster_name=~\".+?route/${namespace}/${resource}/rule/${rule}\"})",
@@ -2762,7 +2710,7 @@ data:
                   {
                     "datasource": {
                       "type": "prometheus",
-                      "uid": "${DS_THANOS}"
+                      "uid": "$datasource"
                     },
                     "editorMode": "code",
                     "expr": "avg by (envoy_cluster_name) (envoy_cluster_membership_degraded{envoy_cluster_name=~\"$cluster\",envoy_cluster_name=~\".+?route/${namespace}/${resource}/rule/${rule}\"})",
@@ -2866,7 +2814,7 @@ data:
                   {
                     "datasource": {
                       "type": "prometheus",
-                      "uid": "${DS_THANOS}"
+                      "uid": "$datasource"
                     },
                     "editorMode": "code",
                     "expr": "avg by (envoy_cluster_name) (envoy_cluster_membership_excluded{envoy_cluster_name=~\"$cluster\",envoy_cluster_name=~\".+?route/${namespace}/${resource}/rule/${rule}\"})",
@@ -2885,6 +2833,7 @@ data:
             "type": "row"
           }
         ],
+        "preload": false,
         "refresh": "30s",
         "schemaVersion": 41,
         "tags": [
@@ -2926,7 +2875,7 @@ data:
               "current": {},
               "datasource": {
                 "type": "prometheus",
-                "uid": "${DS_THANOS}"
+                "uid": "$datasource"
               },
               "definition": "label_values(envoy_cluster_membership_total,envoy_cluster_name)",
               "includeAll": true,
@@ -2949,7 +2898,7 @@ data:
               "current": {},
               "datasource": {
                 "type": "prometheus",
-                "uid": "${DS_THANOS}"
+                "uid": "$datasource"
               },
               "definition": "label_values(envoy_cluster_membership_total{envoy_cluster_name=~\".*?route/$namespace/.*\"},envoy_cluster_name)",
               "includeAll": true,
@@ -2972,7 +2921,7 @@ data:
               "current": {},
               "datasource": {
                 "type": "prometheus",
-                "uid": "${DS_THANOS}"
+                "uid": "$datasource"
               },
               "definition": "label_values(envoy_cluster_membership_total{envoy_cluster_name=~\".*?route/$namespace/$resource/rule/.*\"},envoy_cluster_name)",
               "includeAll": true,
@@ -3000,8 +2949,7 @@ data:
         "timezone": "",
         "title": "Envoy Clusters",
         "uid": "8WkEOMnANKE6PW5hhpVv",
-        "version": 40,
-        "weekStart": ""
+        "version": 40
       }
   envoy-gateway-global.json: |-
       {
