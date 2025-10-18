@@ -380,6 +380,11 @@ func (t *Translator) processBTPolicyForRoute(
 	status.SetAcceptedForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName, policy.Generation)
 
 	// Check if this policy is overridden by other policies targeting at route rule levels
+	// If policy target is route rule, we can skip the check
+	if currTarget.SectionName != nil {
+		return
+	}
+
 	key := policyTargetRouteKey{
 		Kind:      string(currTarget.Kind),
 		Name:      string(currTarget.Name),
@@ -597,8 +602,8 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(
 	target gwapiv1.LocalPolicyTargetReferenceWithSectionName,
 	xdsIR resource.XdsIRMap,
 	resources *resource.Resources,
-	gatewayNN *types.NamespacedName,
-	listenerName *gwapiv1.SectionName,
+	policyTargetGatewayNN *types.NamespacedName,
+	policyTargetListener *gwapiv1.SectionName,
 ) error {
 	tf, errs := t.buildTrafficFeatures(policy, resources)
 	if tf == nil {
@@ -609,11 +614,11 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(
 	// Apply IR to all relevant routes
 	for key, x := range xdsIR {
 		// if gatewayNN is not nil, only apply to the specific gateway
-		if gatewayNN != nil && key != t.IRKey(*gatewayNN) {
+		if policyTargetGatewayNN != nil && key != t.IRKey(*policyTargetGatewayNN) {
 			// Skip if not the gateway wanted
 			continue
 		}
-		applyTrafficFeatureToRoute(route, tf, errs, policy, target, x, listenerName)
+		applyTrafficFeatureToRoute(route, tf, errs, policy, target, x, policyTargetListener)
 	}
 
 	return errs
@@ -622,7 +627,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(
 func (t *Translator) translateBackendTrafficPolicyForRouteWithMerge(
 	policy, parentPolicy *egv1a1.BackendTrafficPolicy,
 	target gwapiv1.LocalPolicyTargetReferenceWithSectionName,
-	gatewayNN types.NamespacedName, listenerName *gwapiv1.SectionName, route RouteContext,
+	policyTargetGatewayNN types.NamespacedName, policyTargetListener *gwapiv1.SectionName, route RouteContext,
 	xdsIR resource.XdsIRMap, resources *resource.Resources,
 ) error {
 	mergedPolicy, err := mergeBackendTrafficPolicy(policy, parentPolicy)
@@ -669,12 +674,12 @@ func (t *Translator) translateBackendTrafficPolicyForRouteWithMerge(
 	}
 	// Case 3: Only route policy has rate limits or neither has rate limits - use default behavior (tf already built from merged policy)
 
-	x, ok := xdsIR[t.IRKey(gatewayNN)]
+	x, ok := xdsIR[t.IRKey(policyTargetGatewayNN)]
 	if !ok {
 		// should not happen.
 		return nil
 	}
-	applyTrafficFeatureToRoute(route, tf, errs, mergedPolicy, target, x, listenerName)
+	applyTrafficFeatureToRoute(route, tf, errs, mergedPolicy, target, x, policyTargetListener)
 
 	return nil
 }
@@ -685,12 +690,12 @@ func applyTrafficFeatureToRoute(
 	policy *egv1a1.BackendTrafficPolicy,
 	target gwapiv1.LocalPolicyTargetReferenceWithSectionName,
 	x *ir.Xds,
-	listenerName *gwapiv1.SectionName,
+	policyTargetListener *gwapiv1.SectionName,
 ) {
 	prefix := irRoutePrefix(route)
 	for _, tcp := range x.TCP {
 		// if listenerName is not nil, only apply to the specific listener
-		if listenerName != nil && string(*listenerName) != tcp.Metadata.SectionName {
+		if policyTargetListener != nil && string(*policyTargetListener) != tcp.Metadata.SectionName {
 			// Skip if not the listener wanted
 			continue
 		}
@@ -716,7 +721,7 @@ func applyTrafficFeatureToRoute(
 
 	for _, udp := range x.UDP {
 		// if listenerName is not nil, only apply to the specific listener
-		if listenerName != nil && string(*listenerName) != udp.Metadata.SectionName {
+		if policyTargetListener != nil && string(*policyTargetListener) != udp.Metadata.SectionName {
 			// Skip if not the listener wanted
 			continue
 		}
@@ -737,7 +742,7 @@ func applyTrafficFeatureToRoute(
 
 	for _, http := range x.HTTP {
 		// if listenerName is not nil, only apply to the specific listener
-		if listenerName != nil && string(*listenerName) != http.Metadata.SectionName {
+		if policyTargetListener != nil && string(*policyTargetListener) != http.Metadata.SectionName {
 			// Skip if not the listener wanted
 			continue
 		}
@@ -749,8 +754,8 @@ func applyTrafficFeatureToRoute(
 			// Apply if there is a match
 			if strings.HasPrefix(r.Name, prefix) {
 				// If any of the features are already set, it means that a more specific
-				// policy(targeting xRoute rule) has already set it, so we skip it.
-				if r.Traffic != nil || r.UseClientProtocol != nil || r.DirectResponse != nil {
+				// policy (targeting xRoute rule) has already set it, so we skip it.
+				if r.Traffic != nil || r.UseClientProtocol != nil {
 					continue
 				}
 
@@ -762,17 +767,17 @@ func applyTrafficFeatureToRoute(
 					continue
 				}
 
-				setIfNil(&r.Traffic, tf.DeepCopy())
+				r.Traffic = tf.DeepCopy()
 
 				if localTo, err := buildClusterSettingsTimeout(&policy.Spec.ClusterSettings); err == nil {
-					setIfNil(&r.Traffic.Timeout, localTo)
+					r.Traffic.Timeout = localTo
 				}
 
 				// Update the Host field in HealthCheck, now that we have access to the Route Hostname.
 				r.Traffic.HealthCheck.SetHTTPHostIfAbsent(r.Hostname)
 
 				if policy.Spec.UseClientProtocol != nil {
-					setIfNil(&r.UseClientProtocol, policy.Spec.UseClientProtocol)
+					r.UseClientProtocol = policy.Spec.UseClientProtocol
 				}
 			}
 		}
@@ -969,8 +974,8 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 		// targeting a lesser specific scope(Gateway).
 		for _, r := range http.Routes {
 			// If any of the features are already set, it means that a more specific
-			// policy(targeting xRoute) has already set it, so we skip it.
-			if r.Traffic != nil || r.UseClientProtocol != nil || r.DirectResponse != nil {
+			// policy (targeting xRoute rule, xRoute, listener) has already set it, so we skip it.
+			if r.Traffic != nil || r.UseClientProtocol != nil {
 				continue
 			}
 
@@ -984,15 +989,15 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 
 			r.Traffic = tf.DeepCopy()
 
+			if localTo, err := buildClusterSettingsTimeout(&policy.Spec.ClusterSettings); err == nil {
+				r.Traffic.Timeout = localTo
+			}
+
 			// Update the Host field in HealthCheck, now that we have access to the Route Hostname.
 			r.Traffic.HealthCheck.SetHTTPHostIfAbsent(r.Hostname)
 
-			if ct, err := buildClusterSettingsTimeout(&policy.Spec.ClusterSettings); err == nil {
-				r.Traffic.Timeout = ct
-			}
-
 			if policy.Spec.UseClientProtocol != nil {
-				setIfNil(&r.UseClientProtocol, policy.Spec.UseClientProtocol)
+				r.UseClientProtocol = policy.Spec.UseClientProtocol
 			}
 		}
 	}
