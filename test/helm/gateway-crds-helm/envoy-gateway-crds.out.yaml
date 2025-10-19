@@ -1442,7 +1442,7 @@ spec:
                           required:
                           - limit
                           type: object
-                        maxItems: 64
+                        maxItems: 128
                         type: array
                     required:
                     - rules
