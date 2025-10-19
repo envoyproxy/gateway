@@ -10,6 +10,4 @@ runs:
       with:
         go-version-file: go.mod
         cache: true
-        cache-dependency-path: |
-               "**/go.sum"
-               go-mod-force-cache-build
+        cache-dependency-path: "**/go.sum"
