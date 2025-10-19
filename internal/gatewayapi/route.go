@@ -1615,7 +1615,7 @@ func (t *Translator) processServiceImportDestinationSetting(
 	// Route to endpoints by default
 	if !t.IsEnvoyServiceRouting(envoyProxy) {
 		endpointSlices := resources.GetEndpointSlicesForBackend(backendNamespace, string(backendRef.Name), resource.KindServiceImport)
-		endpoints, addrType = getIREndpointsFromEndpointSlices(endpointSlices, servicePort.Name, servicePort.Protocol)
+		endpoints, addrType = getIREndpointsFromEndpointSlices(endpointSlices, servicePort.Name, getServicePortProtocol(servicePort.Protocol))
 		if len(endpoints) == 0 {
 			return nil, status.NewRouteStatusError(
 				fmt.Errorf("no ready endpoints for the related ServiceImport %s/%s", backendNamespace, backendRef.Name),
@@ -1670,7 +1670,7 @@ func (t *Translator) processServiceDestinationSetting(
 	// Route to endpoints by default
 	if !t.IsEnvoyServiceRouting(envoyProxy) {
 		endpointSlices := resources.GetEndpointSlicesForBackend(backendNamespace, string(backendRef.Name), KindDerefOr(backendRef.Kind, resource.KindService))
-		endpoints, addrType = getIREndpointsFromEndpointSlices(endpointSlices, servicePort.Name, servicePort.Protocol)
+		endpoints, addrType = getIREndpointsFromEndpointSlices(endpointSlices, servicePort.Name, getServicePortProtocol(servicePort.Protocol))
 		if len(endpoints) == 0 {
 			return nil, status.NewRouteStatusError(
 				fmt.Errorf("no ready endpoints for the related Service %s/%s", backendNamespace, backendRef.Name),
