@@ -188,6 +188,158 @@ _Appears in:_
 | `GRPC` | ActiveHealthCheckerTypeGRPC defines the GRPC type of health checking.<br /> | 
 
 
+#### AdaptiveConcurrency
+
+
+
+AdaptiveConcurrency defines the adaptive concurrency configuration for backend traffic.
+This feature dynamically adjusts the number of concurrent requests to optimize
+performance and prevent overload based on downstream response times.
+
+_Appears in:_
+- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `enabled` | _boolean_ |  false  | false | Enabled enables or disables adaptive concurrency. Defaults to false. |
+| `gradientController` | _[AdaptiveConcurrencyGradientController](#adaptiveconcurrencygradientcontroller)_ |  false  |  | GradientController defines the gradient controller configuration for adaptive concurrency. |
+| `minRTTCalculation` | _[AdaptiveConcurrencyMinRTTCalculation](#adaptiveconcurrencyminrttcalculation)_ |  false  |  | MinRTTCalculation defines the minimum RTT calculation parameters. |
+| `concurrencyLimitParams` | _[AdaptiveConcurrencyLimitParams](#adaptiveconcurrencylimitparams)_ |  false  |  | ConcurrencyLimitParams defines the concurrency limit parameters. |
+
+
+#### AdaptiveConcurrencyGradientController
+
+
+
+AdaptiveConcurrencyGradientController defines the gradient controller configuration.
+
+_Appears in:_
+- [AdaptiveConcurrency](#adaptiveconcurrency)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `sampleAggregatePercentile` | _float_ |  false  | 90 | SampleAggregatePercentile defines the percentile of request latencies to sample.<br />This should be a value between 0 and 100. |
+| `concurrencyLimitParams` | _[AdaptiveConcurrencyLimitParams](#adaptiveconcurrencylimitparams)_ |  false  |  | ConcurrencyLimitParams defines the concurrency limit parameters. |
+| `minRTTCalculation` | _[AdaptiveConcurrencyMinRTTCalculation](#adaptiveconcurrencyminrttcalculation)_ |  false  |  | MinRTTCalculation defines the minimum RTT calculation parameters. |
+
+
+#### AdaptiveConcurrencyLimitParams
+
+
+
+AdaptiveConcurrencyLimitParams defines the concurrency limit parameters.
+
+_Appears in:_
+- [AdaptiveConcurrency](#adaptiveconcurrency)
+- [AdaptiveConcurrencyGradientController](#adaptiveconcurrencygradientcontroller)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `concurrencyUpdateInterval` | _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#duration-v1-meta)_ |  false  | 0.1s | ConcurrencyUpdateInterval defines the interval at which the concurrency limit is updated. |
+| `maxConcurrencyLimit` | _integer_ |  false  | 1000 | MaxConcurrencyLimit defines the maximum concurrency limit. |
+| `minConcurrencyLimit` | _integer_ |  false  | 1 | MinConcurrencyLimit defines the minimum concurrency limit. |
+| `concurrencyUpdateRatio` | _float_ |  false  | 0.1 | ConcurrencyUpdateRatio defines the ratio by which the concurrency limit is updated.<br />This should be a value between 0.0 and 1.0. |
+
+
+#### AdaptiveConcurrencyMinRTTCalculation
+
+
+
+AdaptiveConcurrencyMinRTTCalculation defines the minimum RTT calculation parameters.
+
+_Appears in:_
+- [AdaptiveConcurrency](#adaptiveconcurrency)
+- [AdaptiveConcurrencyGradientController](#adaptiveconcurrencygradientcontroller)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `interval` | _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#duration-v1-meta)_ |  false  | 60s | Interval defines the interval at which the minimum RTT is recalculated. |
+| `requestCount` | _integer_ |  false  | 50 | RequestCount defines the number of requests to use for minimum RTT calculation. |
+| `jitter` | _float_ |  false  | 10 | Jitter defines the jitter to apply to the minimum RTT calculation interval.<br />This should be a value between 0 and 100 representing a percentage. |
+| `buffer` | _float_ |  false  | 25 | Buffer defines the buffer to apply to the minimum RTT calculation.<br />This should be a value between 0 and 100 representing a percentage. |
+
+
+#### AdmissionControl
+
+
+
+AdmissionControl defines the admission control configuration for backend traffic.
+This feature rejects a portion of requests when the success rate falls below
+a specified threshold to prevent cascading failures.
+
+_Appears in:_
+- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `enabled` | _boolean_ |  false  | false | Enabled enables or disables admission control. Defaults to false. |
+| `successCriteria` | _[AdmissionControlSuccessCriteria](#admissioncontrolsuccesscriteria)_ |  false  |  | SuccessCriteria defines the criteria for determining request success. |
+| `samplingWindow` | _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#duration-v1-meta)_ |  false  | 30s | SamplingWindow defines the time window for sampling requests.<br />Defaults to "30s". |
+| `aggression` | _float_ |  false  | 1 | Aggression defines how aggressively to reject requests when success rate is low.<br />Must be between 1.0 and 10.0. Defaults to 1.0. |
+| `srThreshold` | _float_ |  false  | 0.95 | SRThreshold defines the success rate threshold below which admission control activates.<br />Must be between 0.0 and 1.0. Defaults to 0.95. |
+| `rpsThreshold` | _float_ |  false  | 5 | RPSThreshold defines the minimum requests per second required for admission control.<br />Defaults to 5.0. |
+| `maxRejectionProbability` | _float_ |  false  | 0.8 | MaxRejectionProbability defines the maximum probability of rejecting a request.<br />Must be between 0.0 and 1.0. Defaults to 0.8. |
+
+
+#### AdmissionControlGRPCSuccessCriteria
+
+
+
+AdmissionControlGRPCSuccessCriteria defines success criteria for gRPC requests.
+
+_Appears in:_
+- [AdmissionControlSuccessCriteria](#admissioncontrolsuccesscriteria)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `grpcSuccessStatus` | _[AdmissionControlStatusRange](#admissioncontrolstatusrange) array_ |  false  |  | GRPCSuccessStatus defines the gRPC status codes considered successful.<br />If not specified, defaults to OK (0). |
+
+
+#### AdmissionControlHTTPSuccessCriteria
+
+
+
+AdmissionControlHTTPSuccessCriteria defines success criteria for HTTP requests.
+
+_Appears in:_
+- [AdmissionControlSuccessCriteria](#admissioncontrolsuccesscriteria)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `httpSuccessStatus` | _[AdmissionControlStatusRange](#admissioncontrolstatusrange) array_ |  false  |  | HTTPSuccessStatus defines the HTTP status codes considered successful.<br />If not specified, defaults to 200-299 range. |
+
+
+#### AdmissionControlStatusRange
+
+
+
+AdmissionControlStatusRange defines a range of status codes.
+
+_Appears in:_
+- [AdmissionControlGRPCSuccessCriteria](#admissioncontrolgrpcsuccesscriteria)
+- [AdmissionControlHTTPSuccessCriteria](#admissioncontrolhttpsuccesscriteria)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `start` | _integer_ |  true  |  | Start defines the start of the status code range (inclusive). |
+| `end` | _integer_ |  true  |  | End defines the end of the status code range (inclusive). |
+
+
+#### AdmissionControlSuccessCriteria
+
+
+
+AdmissionControlSuccessCriteria defines the criteria for determining request success.
+
+_Appears in:_
+- [AdmissionControl](#admissioncontrol)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `http` | _[AdmissionControlHTTPSuccessCriteria](#admissioncontrolhttpsuccesscriteria)_ |  false  |  | HTTP defines success criteria for HTTP requests. |
+| `grpc` | _[AdmissionControlGRPCSuccessCriteria](#admissioncontrolgrpcsuccesscriteria)_ |  false  |  | GRPC defines success criteria for gRPC requests. |
+
+
 #### AppProtocolType
 
 _Underlying type:_ _string_
@@ -530,6 +682,8 @@ _Appears in:_
 | `httpUpgrade` | _[ProtocolUpgradeConfig](#protocolupgradeconfig) array_ |  false  |  | HTTPUpgrade defines the configuration for HTTP protocol upgrades.<br />If not specified, the default upgrade configuration(websocket) will be used. |
 | `requestBuffer` | _[RequestBuffer](#requestbuffer)_ |  false  |  | RequestBuffer allows the gateway to buffer and fully receive each request from a client before continuing to send the request<br />upstream to the backends. This can be helpful to shield your backend servers from slow clients, and also to enforce a maximum size per request<br />as any requests larger than the buffer size will be rejected.<br />This can have a negative performance impact so should only be enabled when necessary.<br />When enabling this option, you should also configure your connection buffer size to account for these request buffers. There will also be an<br />increase in memory usage for Envoy that should be accounted for in your deployment settings. |
 | `telemetry` | _[BackendTelemetry](#backendtelemetry)_ |  false  |  | Telemetry configures the telemetry settings for the policy target (Gateway or xRoute).<br />This will override the telemetry settings in the EnvoyProxy resource. |
+| `admissionControl` | _[AdmissionControl](#admissioncontrol)_ |  false  |  | AdmissionControl configures admission control for backend traffic.<br />This feature rejects a portion of requests when the success rate falls below<br />a specified threshold to prevent cascading failures. |
+| `adaptiveConcurrency` | _[AdaptiveConcurrency](#adaptiveconcurrency)_ |  false  |  | AdaptiveConcurrency configures adaptive concurrency for backend traffic.<br />This feature dynamically adjusts the number of concurrent requests to optimize<br />performance and prevent overload based on downstream response times. |
 
 
 #### BackendType
