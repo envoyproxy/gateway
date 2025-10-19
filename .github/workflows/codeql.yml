@@ -11,6 +11,7 @@ on:
   - cron: '16 11 * * 5'
 
 permissions:
+  actions: write
   contents: read
 
 
@@ -20,7 +21,7 @@ jobs:
     runs-on: 'ubuntu-22.04'
     timeout-minutes: 360
     permissions:
-      actions: read
+      actions: write
       contents: read
       security-events: write
 

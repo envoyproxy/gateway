@@ -14,6 +14,7 @@ on:
     - 'tools/make/docs.mk'
 
 permissions:
+  actions: write
   contents: read
 
 jobs:
