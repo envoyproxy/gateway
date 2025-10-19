@@ -11,5 +11,5 @@ runs:
         go-version-file: go.mod
         cache: true
         cache-dependency-path: |
-          "**/go.sum"
-          go-mod-force-cache-build
+               "**/go.sum"
+               go-mod-force-cache-build
