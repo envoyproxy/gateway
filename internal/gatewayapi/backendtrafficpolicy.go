@@ -634,23 +634,25 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy, r
 	ds = translateDNS(&policy.Spec.ClusterSettings)
 
 	return &ir.TrafficFeatures{
-		RateLimit:         rl,
-		LoadBalancer:      lb,
-		ProxyProtocol:     pp,
-		HealthCheck:       hc,
-		CircuitBreaker:    cb,
-		FaultInjection:    fi,
-		TCPKeepalive:      ka,
-		Retry:             rt,
-		BackendConnection: bc,
-		HTTP2:             h2,
-		DNS:               ds,
-		Timeout:           to,
-		ResponseOverride:  ro,
-		RequestBuffer:     rb,
-		Compression:       cp,
-		HTTPUpgrade:       httpUpgrade,
-		Telemetry:         policy.Spec.Telemetry,
+		RateLimit:           rl,
+		LoadBalancer:        lb,
+		ProxyProtocol:       pp,
+		HealthCheck:         hc,
+		CircuitBreaker:      cb,
+		FaultInjection:      fi,
+		TCPKeepalive:        ka,
+		Retry:               rt,
+		BackendConnection:   bc,
+		HTTP2:               h2,
+		DNS:                 ds,
+		Timeout:             to,
+		ResponseOverride:    ro,
+		RequestBuffer:       rb,
+		Compression:         cp,
+		HTTPUpgrade:         httpUpgrade,
+		Telemetry:           policy.Spec.Telemetry,
+		AdmissionControl:    buildAdmissionControl(policy.Spec.AdmissionControl),
+		AdaptiveConcurrency: buildAdaptiveConcurrency(policy.Spec.AdaptiveConcurrency),
 	}, errs
 }
 
@@ -1243,4 +1245,20 @@ func buildHTTPProtocolUpgradeConfig(cfgs []*egv1a1.ProtocolUpgradeConfig) []ir.H
 	}
 
 	return result
+}
+
+// buildAdmissionControl builds the IR admission control configuration from the API admission control spec.
+func buildAdmissionControl(spec *egv1a1.AdmissionControl) *egv1a1.AdmissionControl {
+	if spec == nil {
+		return nil
+	}
+	return spec
+}
+
+// buildAdaptiveConcurrency builds the IR adaptive concurrency configuration from the API adaptive concurrency spec.
+func buildAdaptiveConcurrency(spec *egv1a1.AdaptiveConcurrency) *egv1a1.AdaptiveConcurrency {
+	if spec == nil {
+		return nil
+	}
+	return spec
 }
