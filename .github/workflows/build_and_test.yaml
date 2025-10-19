@@ -38,8 +38,24 @@ jobs:
           run_test_workflow:
             - "!?(site|release-notes)/**"
 
+  go-mod-download:
+    runs-on: ubuntu-22.04
+    steps:
+    - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8  # v5.0.0
+    - uses: ./tools/github-actions/setup-deps
+    - name: Download Go modules
+      run: |
+        set -euo pipefail
+        find . -name go.mod -print | sort | while read -r mod; do
+          dir=$(dirname "$mod")
+          echo "Downloading Go modules in ${dir:-.}"
+          (cd "${dir:-.}" && go mod download)
+        done
+
   lint:
     runs-on: ubuntu-22.04
+    needs:
+    - go-mod-download
     steps:
     - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8  # v5.0.0
     - uses: ./tools/github-actions/setup-deps
@@ -51,6 +67,8 @@ jobs:
 
   gen-check:
     runs-on: ubuntu-22.04
+    needs:
+    - go-mod-download
     steps:
     - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8  # v5.0.0
     - uses: ./tools/github-actions/setup-deps
@@ -58,6 +76,8 @@ jobs:
 
   license-check:
     runs-on: ubuntu-latest
+    needs:
+    - go-mod-download
     steps:
     - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8  # v5.0.0
     - uses: ./tools/github-actions/setup-deps
@@ -70,6 +90,7 @@ jobs:
       id-token: write  #  for fetching OIDC token
     needs:
     - changes
+    - go-mod-download
     if: ${{ github.event_name != 'pull_request' || needs.changes.outputs.run_test_workflow == 'true' }}
     steps:
     - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8  # v5.0.0
@@ -91,6 +112,7 @@ jobs:
     runs-on: ubuntu-latest
     needs:
     - changes
+    - go-mod-download
     if: ${{ github.event_name != 'pull_request' || needs.changes.outputs.run_test_workflow == 'true' }}
     steps:
     - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8  # v5.0.0
@@ -128,6 +150,7 @@ jobs:
     needs:
     - changes
     - build
+    - go-mod-download
     if: ${{ github.event_name != 'pull_request' || needs.changes.outputs.run_test_workflow == 'true' }}
     strategy:
       fail-fast: false
@@ -181,6 +204,7 @@ jobs:
     needs:
     - changes
     - build
+    - go-mod-download
     if: ${{ github.event_name != 'pull_request' || needs.changes.outputs.run_test_workflow == 'true' }}
     strategy:
       fail-fast: false
@@ -243,6 +267,7 @@ jobs:
     needs:
     - build
     - changes
+    - go-mod-download
     # There's a different workflow for benchmark-test on push.
     # So we need to check if this is a pull request and changes.
     if: ${{ github.event_name == 'pull_request' && needs.changes.outputs.run_test_workflow == 'true' }}
@@ -277,6 +302,7 @@ jobs:
     needs:
     - build
     - changes
+    - go-mod-download
     steps:
     - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8  # v5.0.0
     - uses: ./tools/github-actions/setup-deps

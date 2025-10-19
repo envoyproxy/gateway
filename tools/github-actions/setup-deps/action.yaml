@@ -11,12 +11,3 @@ runs:
         go-version-file: go.mod
         cache: true
         cache-dependency-path: "**/go.sum"
-    - name: Download Go modules
-      shell: bash
-      run: |
-        set -euo pipefail
-        find . -name go.mod -print | sort | while read -r mod; do
-          dir=$(dirname "$mod")
-          echo "Downloading Go modules in ${dir:-.}"
-          (cd "${dir:-.}" && go mod download)
-        done
