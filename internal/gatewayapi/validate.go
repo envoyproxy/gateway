@@ -192,10 +192,7 @@ func validateBackendRefService(backendRef gwapiv1.BackendObjectReference, resour
 	}
 	var portFound bool
 	for _, port := range service.Spec.Ports {
-		portProtocol := port.Protocol
-		if port.Protocol == "" { // Default protocol is TCP
-			portProtocol = corev1.ProtocolTCP
-		}
+		portProtocol := getServicePortProtocol(port.Protocol)
 		if port.Port == *backendRef.Port && portProtocol == protocol {
 			portFound = true
 			break
@@ -222,10 +219,7 @@ func (t *Translator) validateBackendServiceImport(backendRef gwapiv1.BackendObje
 
 	var portFound bool
 	for _, port := range serviceImport.Spec.Ports {
-		portProtocol := port.Protocol
-		if port.Protocol == "" { // Default protocol is TCP
-			portProtocol = corev1.ProtocolTCP
-		}
+		portProtocol := getServicePortProtocol(port.Protocol)
 		if port.Port == *backendRef.Port && portProtocol == protocol {
 			portFound = true
 			break
@@ -985,10 +979,7 @@ func (t *Translator) validateExtServiceBackendReference(
 		}
 		var portFound bool
 		for _, port := range service.Spec.Ports {
-			portProtocol := port.Protocol
-			if port.Protocol == "" { // Default protocol is TCP
-				portProtocol = corev1.ProtocolTCP
-			}
+			portProtocol := getServicePortProtocol(port.Protocol)
 			// currently only HTTP and GRPC are supported, both of which are TCP
 			if port.Port == *backendRef.Port && portProtocol == corev1.ProtocolTCP {
 				portFound = true
@@ -1011,10 +1002,7 @@ func (t *Translator) validateExtServiceBackendReference(
 		}
 		var portFound bool
 		for _, port := range serviceImport.Spec.Ports {
-			portProtocol := port.Protocol
-			if port.Protocol == "" { // Default protocol is TCP
-				portProtocol = corev1.ProtocolTCP
-			}
+			portProtocol := getServicePortProtocol(port.Protocol)
 			// currently only HTTP and GRPC are supported, both of which are TCP
 			if port.Port == *backendRef.Port && portProtocol == corev1.ProtocolTCP {
 				portFound = true
