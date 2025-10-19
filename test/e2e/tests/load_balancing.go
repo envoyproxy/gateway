@@ -252,7 +252,7 @@ var MultiHeaderConsistentHashHeaderLoadBalancingTest = suite.ConformanceTest{
 		routeNN := types.NamespacedName{Name: "header-lb-route", Namespace: ns}
 		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 
-		ancestorRef := gwapiv1a2.ParentReference{
+		ancestorRef := gwapiv1.ParentReference{
 			Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
 			Kind:      gatewayapi.KindPtr(resource.KindGateway),
 			Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
