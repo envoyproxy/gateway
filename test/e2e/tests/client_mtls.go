@@ -12,6 +12,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
+	"net"
 	"testing"
 	"time"
 
@@ -19,6 +20,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/roundtripper"
@@ -41,7 +43,7 @@ var ClientMTLSTest = suite.ConformanceTest{
 			ns := "gateway-conformance-infra"
 			routeNN := types.NamespacedName{Name: "http-client-mtls", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "client-mtls-gateway", Namespace: ns}
-			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+			gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
 			kubernetes.NamespacesMustBeReady(t, suite.Client, suite.TimeoutConfig, []string{depNS})
 			certNN := types.NamespacedName{Name: "client-mtls-certificate", Namespace: ns}
 
@@ -60,7 +62,7 @@ var ClientMTLSTest = suite.ConformanceTest{
 					},
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}
@@ -82,9 +84,11 @@ var ClientMTLSTest = suite.ConformanceTest{
 			ns := "gateway-conformance-infra"
 			routeNN := types.NamespacedName{Name: "http-client-tls-settings", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "client-mtls-gateway", Namespace: ns}
-			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+			gwHost := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
 			certNN := types.NamespacedName{Name: "client-tls-settings-certificate", Namespace: ns}
 			kubernetes.NamespacesMustBeReady(t, suite.Client, suite.TimeoutConfig, []string{depNS})
+
+			gwAddr := net.JoinHostPort(gwHost, "443")
 
 			const serverName = "tls-settings.example.com"
 
@@ -100,7 +104,7 @@ var ClientMTLSTest = suite.ConformanceTest{
 					},
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}
@@ -162,7 +166,7 @@ var ClientMTLSClusterTrustBundleTest = suite.ConformanceTest{
 			ns := "gateway-conformance-infra"
 			routeNN := types.NamespacedName{Name: "client-mtls-clustertrustbundle", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "client-mtls-clustertrustbundle", Namespace: ns}
-			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+			gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
 			certNN := types.NamespacedName{Name: "client-example-com", Namespace: ns}
 
 			expected := http.ExpectedResponse{
@@ -180,7 +184,7 @@ var ClientMTLSClusterTrustBundleTest = suite.ConformanceTest{
 					},
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}
@@ -222,7 +226,7 @@ func WaitForConsistentMTLSResponse(t *testing.T, r roundtripper.RoundTripper, re
 			return false
 		}
 
-		if err := http.CompareRequest(t, &updatedReq, cReq, cRes, *expected); err != nil {
+		if err := http.CompareRoundTrip(t, &updatedReq, cReq, cRes, *expected); err != nil {
 			tlog.Logf(t, "Response expectation failed for request: %+v  not ready yet: %v (after %v)", updatedReq, err, elapsed)
 			return false
 		}

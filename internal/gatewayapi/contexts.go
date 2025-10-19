@@ -12,6 +12,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapiv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
@@ -272,7 +273,7 @@ func (r *GRPCRouteContext) SetRouteParentContext(forParentRef gwapiv1.ParentRefe
 // TLSRouteContext wraps a TLSRoute and provides helper methods for
 // accessing the route's parents.
 type TLSRouteContext struct {
-	*gwapiv1a2.TLSRoute
+	*gwapiv1a3.TLSRoute
 
 	ParentRefs map[gwapiv1.ParentReference]*RouteParentContext
 }
@@ -480,8 +481,8 @@ func GetRouteParentContext(route RouteContext, forParentRef gwapiv1.ParentRefere
 
 	// If the parent is not found in the Route's Status, create a new RouteParentStatus and add it to the Route's Status.
 	if routeParentStatusIdx == -1 {
-		rParentStatus := gwapiv1a2.RouteParentStatus{
-			ControllerName: gwapiv1a2.GatewayController(controllerName),
+		rParentStatus := gwapiv1.RouteParentStatus{
+			ControllerName: gwapiv1.GatewayController(controllerName),
 			ParentRef:      forParentRef,
 		}
 		routeStatus.Parents = append(routeStatus.Parents, rParentStatus)
@@ -592,7 +593,7 @@ type RouteParentContext struct {
 	// a single field pointing to *gwapiv1.RouteStatus.
 	HTTPRoute *gwapiv1.HTTPRoute
 	GRPCRoute *gwapiv1.GRPCRoute
-	TLSRoute  *gwapiv1a2.TLSRoute
+	TLSRoute  *gwapiv1a3.TLSRoute
 	TCPRoute  *gwapiv1a2.TCPRoute
 	UDPRoute  *gwapiv1a2.UDPRoute
 

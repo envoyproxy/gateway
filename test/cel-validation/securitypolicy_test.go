@@ -46,11 +46,11 @@ func TestSecurityPolicyTarget(t *testing.T) {
 			mutate: func(sp *egv1a1.SecurityPolicy) {
 				sp.Spec = egv1a1.SecurityPolicySpec{
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
-							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
-								Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
-								Kind:  gwapiv1a2.Kind("Gateway"),
-								Name:  gwapiv1a2.ObjectName("eg"),
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
 							},
 						},
 					},
@@ -72,11 +72,11 @@ func TestSecurityPolicyTarget(t *testing.T) {
 			mutate: func(sp *egv1a1.SecurityPolicy) {
 				sp.Spec = egv1a1.SecurityPolicySpec{
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
-							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
-								Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
-								Kind:  gwapiv1a2.Kind("foo"),
-								Name:  gwapiv1a2.ObjectName("eg"),
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("foo"),
+								Name:  gwapiv1.ObjectName("eg"),
 							},
 						},
 					},
@@ -91,11 +91,11 @@ func TestSecurityPolicyTarget(t *testing.T) {
 			mutate: func(sp *egv1a1.SecurityPolicy) {
 				sp.Spec = egv1a1.SecurityPolicySpec{
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
-							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
-								Group: gwapiv1a2.Group("foo"),
-								Kind:  gwapiv1a2.Kind("Gateway"),
-								Name:  gwapiv1a2.ObjectName("eg"),
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("foo"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
 							},
 						},
 					},
@@ -110,11 +110,11 @@ func TestSecurityPolicyTarget(t *testing.T) {
 			mutate: func(sp *egv1a1.SecurityPolicy) {
 				sp.Spec = egv1a1.SecurityPolicySpec{
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
-							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
-								Group: gwapiv1a2.Group("foo"),
-								Kind:  gwapiv1a2.Kind("bar"),
-								Name:  gwapiv1a2.ObjectName("eg"),
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("foo"),
+								Kind:  gwapiv1.Kind("bar"),
+								Name:  gwapiv1.ObjectName("eg"),
 							},
 						},
 					},
@@ -130,12 +130,12 @@ func TestSecurityPolicyTarget(t *testing.T) {
 			mutate: func(sp *egv1a1.SecurityPolicy) {
 				sp.Spec = egv1a1.SecurityPolicySpec{
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-						TargetRefs: []gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+						TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
 							{
-								LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
-									Group: gwapiv1a2.Group("foo"),
-									Kind:  gwapiv1a2.Kind("bar"),
-									Name:  gwapiv1a2.ObjectName("eg"),
+								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+									Group: gwapiv1.Group("foo"),
+									Kind:  gwapiv1.Kind("bar"),
+									Name:  gwapiv1.ObjectName("eg"),
 								},
 							},
 						},
@@ -153,11 +153,11 @@ func TestSecurityPolicyTarget(t *testing.T) {
 			mutate: func(sp *egv1a1.SecurityPolicy) {
 				sp.Spec = egv1a1.SecurityPolicySpec{
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
-							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
-								Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
-								Kind:  gwapiv1a2.Kind("Gateway"),
-								Name:  gwapiv1a2.ObjectName("eg"),
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
 							},
 							SectionName: &sectionName,
 						},
@@ -171,12 +171,12 @@ func TestSecurityPolicyTarget(t *testing.T) {
 			mutate: func(sp *egv1a1.SecurityPolicy) {
 				sp.Spec = egv1a1.SecurityPolicySpec{
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-						TargetRefs: []gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+						TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
 							{
-								LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
-									Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
-									Kind:  gwapiv1a2.Kind("Gateway"),
-									Name:  gwapiv1a2.ObjectName("eg"),
+								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+									Group: gwapiv1.Group("gateway.networking.k8s.io"),
+									Kind:  gwapiv1.Kind("Gateway"),
+									Name:  gwapiv1.ObjectName("eg"),
 								},
 								SectionName: &sectionName,
 							},
@@ -191,11 +191,11 @@ func TestSecurityPolicyTarget(t *testing.T) {
 			mutate: func(sp *egv1a1.SecurityPolicy) {
 				sp.Spec = egv1a1.SecurityPolicySpec{
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
-							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
-								Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
-								Kind:  gwapiv1a2.Kind("HTTPRoute"),
-								Name:  gwapiv1a2.ObjectName("backend"),
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("HTTPRoute"),
+								Name:  gwapiv1.ObjectName("backend"),
 							},
 							SectionName: &sectionName,
 						},
@@ -209,12 +209,12 @@ func TestSecurityPolicyTarget(t *testing.T) {
 			mutate: func(sp *egv1a1.SecurityPolicy) {
 				sp.Spec = egv1a1.SecurityPolicySpec{
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-						TargetRefs: []gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+						TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
 							{
-								LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
-									Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
-									Kind:  gwapiv1a2.Kind("HTTPRoute"),
-									Name:  gwapiv1a2.ObjectName("backend"),
+								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+									Group: gwapiv1.Group("gateway.networking.k8s.io"),
+									Kind:  gwapiv1.Kind("HTTPRoute"),
+									Name:  gwapiv1.ObjectName("backend"),
 								},
 								SectionName: &sectionName,
 							},
@@ -236,11 +236,11 @@ func TestSecurityPolicyTarget(t *testing.T) {
 						},
 					},
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
-							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
-								Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
-								Kind:  gwapiv1a2.Kind("Gateway"),
-								Name:  gwapiv1a2.ObjectName("eg"),
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
 							},
 						},
 					},
@@ -258,11 +258,11 @@ func TestSecurityPolicyTarget(t *testing.T) {
 						},
 					},
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
-							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
-								Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
-								Kind:  gwapiv1a2.Kind("Gateway"),
-								Name:  gwapiv1a2.ObjectName("eg"),
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
 							},
 						},
 					},
@@ -280,11 +280,11 @@ func TestSecurityPolicyTarget(t *testing.T) {
 						},
 					},
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
-							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
-								Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
-								Kind:  gwapiv1a2.Kind("Gateway"),
-								Name:  gwapiv1a2.ObjectName("eg"),
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
 							},
 						},
 					},
@@ -302,11 +302,11 @@ func TestSecurityPolicyTarget(t *testing.T) {
 						},
 					},
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
-							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
-								Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
-								Kind:  gwapiv1a2.Kind("Gateway"),
-								Name:  gwapiv1a2.ObjectName("eg"),
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
 							},
 						},
 					},
@@ -324,11 +324,11 @@ func TestSecurityPolicyTarget(t *testing.T) {
 						},
 					},
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
-							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
-								Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
-								Kind:  gwapiv1a2.Kind("Gateway"),
-								Name:  gwapiv1a2.ObjectName("eg"),
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
 							},
 						},
 					},
@@ -346,11 +346,11 @@ func TestSecurityPolicyTarget(t *testing.T) {
 						},
 					},
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
-							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
-								Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
-								Kind:  gwapiv1a2.Kind("Gateway"),
-								Name:  gwapiv1a2.ObjectName("eg"),
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
 							},
 						},
 					},
@@ -368,11 +368,11 @@ func TestSecurityPolicyTarget(t *testing.T) {
 						},
 					},
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
-							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
-								Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
-								Kind:  gwapiv1a2.Kind("Gateway"),
-								Name:  gwapiv1a2.ObjectName("eg"),
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
 							},
 						},
 					},
@@ -390,11 +390,11 @@ func TestSecurityPolicyTarget(t *testing.T) {
 						},
 					},
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
-							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
-								Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
-								Kind:  gwapiv1a2.Kind("Gateway"),
-								Name:  gwapiv1a2.ObjectName("eg"),
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
 							},
 						},
 					},
@@ -414,11 +414,11 @@ func TestSecurityPolicyTarget(t *testing.T) {
 						},
 					},
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
-							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
-								Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
-								Kind:  gwapiv1a2.Kind("Gateway"),
-								Name:  gwapiv1a2.ObjectName("eg"),
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
 							},
 						},
 					},
@@ -438,11 +438,11 @@ func TestSecurityPolicyTarget(t *testing.T) {
 						},
 					},
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
-							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
-								Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
-								Kind:  gwapiv1a2.Kind("Gateway"),
-								Name:  gwapiv1a2.ObjectName("eg"),
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
 							},
 						},
 					},
@@ -473,8 +473,8 @@ func TestSecurityPolicyTarget(t *testing.T) {
 						},
 					},
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
-							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 								Group: "gateway.networking.k8s.io",
 								Kind:  "Gateway",
 								Name:  "eg",
@@ -496,7 +496,7 @@ func TestSecurityPolicyTarget(t *testing.T) {
 									{
 										BackendObjectReference: gwapiv1.BackendObjectReference{
 											Name: "grpc-auth-service",
-											Kind: ptr.To(gwapiv1a2.Kind("Service")),
+											Kind: ptr.To(gwapiv1.Kind("Service")),
 											Port: ptr.To(gwapiv1.PortNumber(80)),
 										},
 									},
@@ -505,8 +505,8 @@ func TestSecurityPolicyTarget(t *testing.T) {
 						},
 					},
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
-							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 								Group: "gateway.networking.k8s.io",
 								Kind:  "Gateway",
 								Name:  "eg",
@@ -529,7 +529,7 @@ func TestSecurityPolicyTarget(t *testing.T) {
 										BackendObjectReference: gwapiv1.BackendObjectReference{
 											Group: ptr.To(gwapiv1.Group("multicluster.x-k8s.io")),
 											Name:  "grpc-auth-service",
-											Kind:  ptr.To(gwapiv1a2.Kind("ServiceImport")),
+											Kind:  ptr.To(gwapiv1.Kind("ServiceImport")),
 											Port:  ptr.To(gwapiv1.PortNumber(80)),
 										},
 									},
@@ -538,8 +538,8 @@ func TestSecurityPolicyTarget(t *testing.T) {
 						},
 					},
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
-							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 								Group: "gateway.networking.k8s.io",
 								Kind:  "Gateway",
 								Name:  "eg",
@@ -558,8 +558,8 @@ func TestSecurityPolicyTarget(t *testing.T) {
 						GRPC: &egv1a1.GRPCExtAuthService{},
 					},
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
-							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 								Group: "gateway.networking.k8s.io",
 								Kind:  "Gateway",
 								Name:  "eg",
@@ -589,8 +589,8 @@ func TestSecurityPolicyTarget(t *testing.T) {
 						},
 					},
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
-							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 								Group: "gateway.networking.k8s.io",
 								Kind:  "Gateway",
 								Name:  "eg",
@@ -612,7 +612,7 @@ func TestSecurityPolicyTarget(t *testing.T) {
 									{
 										BackendObjectReference: gwapiv1.BackendObjectReference{
 											Name: "grpc-auth-service",
-											Kind: ptr.To(gwapiv1a2.Kind("Service")),
+											Kind: ptr.To(gwapiv1.Kind("Service")),
 											Port: ptr.To(gwapiv1.PortNumber(80)),
 										},
 									},
@@ -621,8 +621,8 @@ func TestSecurityPolicyTarget(t *testing.T) {
 						},
 					},
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
-							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 								Group: "gateway.networking.k8s.io",
 								Kind:  "Gateway",
 								Name:  "eg",
@@ -645,7 +645,7 @@ func TestSecurityPolicyTarget(t *testing.T) {
 										BackendObjectReference: gwapiv1.BackendObjectReference{
 											Group: ptr.To(gwapiv1.Group("multicluster.x-k8s.io")),
 											Name:  "grpc-auth-service",
-											Kind:  ptr.To(gwapiv1a2.Kind("ServiceImport")),
+											Kind:  ptr.To(gwapiv1.Kind("ServiceImport")),
 											Port:  ptr.To(gwapiv1.PortNumber(80)),
 										},
 									},
@@ -654,8 +654,8 @@ func TestSecurityPolicyTarget(t *testing.T) {
 						},
 					},
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
-							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 								Group: "gateway.networking.k8s.io",
 								Kind:  "Gateway",
 								Name:  "eg",
@@ -674,8 +674,8 @@ func TestSecurityPolicyTarget(t *testing.T) {
 						HTTP: &egv1a1.HTTPExtAuthService{},
 					},
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
-							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 								Group: "gateway.networking.k8s.io",
 								Kind:  "Gateway",
 								Name:  "eg",
@@ -692,8 +692,8 @@ func TestSecurityPolicyTarget(t *testing.T) {
 				sp.Spec = egv1a1.SecurityPolicySpec{
 					ExtAuth: &egv1a1.ExtAuth{},
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
-							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 								Group: "gateway.networking.k8s.io",
 								Kind:  "Gateway",
 								Name:  "eg",
@@ -729,8 +729,8 @@ func TestSecurityPolicyTarget(t *testing.T) {
 						},
 					},
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
-							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 								Group: "gateway.networking.k8s.io",
 								Kind:  "Gateway",
 								Name:  "eg",
@@ -763,8 +763,8 @@ func TestSecurityPolicyTarget(t *testing.T) {
 						},
 					},
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
-							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 								Group: "gateway.networking.k8s.io",
 								Kind:  "Gateway",
 								Name:  "eg",
@@ -788,7 +788,7 @@ func TestSecurityPolicyTarget(t *testing.T) {
 									{
 										BackendObjectReference: gwapiv1.BackendObjectReference{
 											Name: "grpc-auth-service",
-											Kind: ptr.To(gwapiv1a2.Kind("unsupported")),
+											Kind: ptr.To(gwapiv1.Kind("unsupported")),
 											Port: ptr.To(gwapiv1.PortNumber(80)),
 										},
 									},
@@ -797,8 +797,8 @@ func TestSecurityPolicyTarget(t *testing.T) {
 						},
 					},
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
-							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 								Group: "gateway.networking.k8s.io",
 								Kind:  "Gateway",
 								Name:  "eg",
@@ -829,8 +829,8 @@ func TestSecurityPolicyTarget(t *testing.T) {
 						},
 					},
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
-							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 								Group: "gateway.networking.k8s.io",
 								Kind:  "Gateway",
 								Name:  "eg",
@@ -854,7 +854,7 @@ func TestSecurityPolicyTarget(t *testing.T) {
 									{
 										BackendObjectReference: gwapiv1.BackendObjectReference{
 											Name: "grpc-auth-service",
-											Kind: ptr.To(gwapiv1a2.Kind("unsupported")),
+											Kind: ptr.To(gwapiv1.Kind("unsupported")),
 											Port: ptr.To(gwapiv1.PortNumber(80)),
 										},
 									},
@@ -863,8 +863,8 @@ func TestSecurityPolicyTarget(t *testing.T) {
 						},
 					},
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
-							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 								Group: "gateway.networking.k8s.io",
 								Kind:  "Gateway",
 								Name:  "eg",
@@ -897,8 +897,8 @@ func TestSecurityPolicyTarget(t *testing.T) {
 						Timeout: ptr.To(gwapiv1.Duration("50s")),
 					},
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
-							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 								Group: "gateway.networking.k8s.io",
 								Kind:  "Gateway",
 								Name:  "eg",
@@ -930,8 +930,8 @@ func TestSecurityPolicyTarget(t *testing.T) {
 						Timeout: ptr.To(gwapiv1.Duration("2s")),
 					},
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
-							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 								Group: "gateway.networking.k8s.io",
 								Kind:  "Gateway",
 								Name:  "eg",
@@ -959,8 +959,8 @@ func TestSecurityPolicyTarget(t *testing.T) {
 						},
 					},
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
-							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 								Group: "gateway.networking.k8s.io",
 								Kind:  "Gateway",
 								Name:  "eg",
@@ -992,8 +992,8 @@ func TestSecurityPolicyTarget(t *testing.T) {
 						},
 					},
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
-							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 								Group: "gateway.networking.k8s.io",
 								Kind:  "Gateway",
 								Name:  "eg",
@@ -1020,8 +1020,8 @@ func TestSecurityPolicyTarget(t *testing.T) {
 						},
 					},
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
-							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 								Group: "gateway.networking.k8s.io",
 								Kind:  "Gateway",
 								Name:  "eg",
@@ -1054,8 +1054,8 @@ func TestSecurityPolicyTarget(t *testing.T) {
 						},
 					},
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
-							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 								Group: "gateway.networking.k8s.io",
 								Kind:  "Gateway",
 								Name:  "eg",
@@ -1095,8 +1095,8 @@ func TestSecurityPolicyTarget(t *testing.T) {
 						},
 					},
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
-							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 								Group: "gateway.networking.k8s.io",
 								Kind:  "Gateway",
 								Name:  "eg",
@@ -1121,8 +1121,8 @@ func TestSecurityPolicyTarget(t *testing.T) {
 						},
 					},
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
-							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 								Group: "gateway.networking.k8s.io",
 								Kind:  "Gateway",
 								Name:  "eg",
@@ -1162,8 +1162,8 @@ func TestSecurityPolicyTarget(t *testing.T) {
 						},
 					},
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
-							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 								Group: "gateway.networking.k8s.io",
 								Kind:  "Gateway",
 								Name:  "eg",
@@ -1183,7 +1183,7 @@ func TestSecurityPolicyTarget(t *testing.T) {
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
 						TargetSelectors: []egv1a1.TargetSelector{
 							{
-								Group: ptr.To(gwapiv1a2.Group("gateway.networking.k8s.io")),
+								Group: ptr.To(gwapiv1.Group("gateway.networking.k8s.io")),
 								Kind:  "HTTPRoute",
 								MatchLabels: map[string]string{
 									"eg/namespace": "reference-apps",
@@ -1202,7 +1202,7 @@ func TestSecurityPolicyTarget(t *testing.T) {
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
 						TargetSelectors: []egv1a1.TargetSelector{
 							{
-								Group: ptr.To(gwapiv1a2.Group("gateway.networking.k8s.io")),
+								Group: ptr.To(gwapiv1.Group("gateway.networking.k8s.io")),
 								Kind:  "HTTPRoute",
 								MatchLabels: map[string]string{
 									"eg/namespace": "reference-apps",
@@ -1217,9 +1217,9 @@ func TestSecurityPolicyTarget(t *testing.T) {
 									{
 										BackendObjectReference: gwapiv1.BackendObjectReference{
 											Name:  "grpc-auth-backend",
-											Kind:  ptr.To(gwapiv1a2.Kind("Backend")),
+											Kind:  ptr.To(gwapiv1.Kind("Backend")),
 											Port:  ptr.To(gwapiv1.PortNumber(8080)),
-											Group: ptr.To(gwapiv1a2.Group("gateway.envoyproxy.io")),
+											Group: ptr.To(gwapiv1.Group("gateway.envoyproxy.io")),
 										},
 									},
 								},
@@ -1237,7 +1237,7 @@ func TestSecurityPolicyTarget(t *testing.T) {
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
 						TargetSelectors: []egv1a1.TargetSelector{
 							{
-								Group: ptr.To(gwapiv1a2.Group("gateway.networking.k8s.io")),
+								Group: ptr.To(gwapiv1.Group("gateway.networking.k8s.io")),
 								Kind:  "HTTPRoute",
 								MatchLabels: map[string]string{
 									"eg/namespace": "reference-apps",
@@ -1252,9 +1252,9 @@ func TestSecurityPolicyTarget(t *testing.T) {
 									{
 										BackendObjectReference: gwapiv1.BackendObjectReference{
 											Name:  "http-auth-backend",
-											Kind:  ptr.To(gwapiv1a2.Kind("Backend")),
+											Kind:  ptr.To(gwapiv1.Kind("Backend")),
 											Port:  ptr.To(gwapiv1.PortNumber(80)),
-											Group: ptr.To(gwapiv1a2.Group("gateway.envoyproxy.io")),
+											Group: ptr.To(gwapiv1.Group("gateway.envoyproxy.io")),
 										},
 									},
 								},
@@ -1272,7 +1272,7 @@ func TestSecurityPolicyTarget(t *testing.T) {
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
 						TargetSelectors: []egv1a1.TargetSelector{
 							{
-								Group: ptr.To(gwapiv1a2.Group("gateway.networking.k8s.io")),
+								Group: ptr.To(gwapiv1.Group("gateway.networking.k8s.io")),
 								Kind:  "HTTPRoute",
 								MatchLabels: map[string]string{
 									"eg/namespace": "reference-apps",
@@ -1299,7 +1299,7 @@ func TestSecurityPolicyTarget(t *testing.T) {
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
 						TargetSelectors: []egv1a1.TargetSelector{
 							{
-								Group: ptr.To(gwapiv1a2.Group("gateway.networking.k8s.io")),
+								Group: ptr.To(gwapiv1.Group("gateway.networking.k8s.io")),
 								Kind:  "HTTPRoute",
 								MatchLabels: map[string]string{
 									"eg/namespace": "reference-apps",
@@ -1335,7 +1335,7 @@ func TestSecurityPolicyTarget(t *testing.T) {
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
 						TargetSelectors: []egv1a1.TargetSelector{
 							{
-								Group: ptr.To(gwapiv1a2.Group("gateway.networking.k8s.io")),
+								Group: ptr.To(gwapiv1.Group("gateway.networking.k8s.io")),
 								Kind:  "HTTPRoute",
 								MatchLabels: map[string]string{
 									"eg/namespace": "reference-apps",
@@ -1364,7 +1364,7 @@ func TestSecurityPolicyTarget(t *testing.T) {
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
 						TargetSelectors: []egv1a1.TargetSelector{
 							{
-								Group: ptr.To(gwapiv1a2.Group("gateway.networking.k8s.io")),
+								Group: ptr.To(gwapiv1.Group("gateway.networking.k8s.io")),
 								Kind:  "HTTPRoute",
 								MatchLabels: map[string]string{
 									"eg/namespace": "reference-apps",
@@ -1412,7 +1412,7 @@ func TestSecurityPolicyTarget(t *testing.T) {
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
 						TargetSelectors: []egv1a1.TargetSelector{
 							{
-								Group: ptr.To(gwapiv1a2.Group("gateway.networking.k8s.io")),
+								Group: ptr.To(gwapiv1.Group("gateway.networking.k8s.io")),
 								Kind:  "HTTPRoute",
 								MatchLabels: map[string]string{
 									"eg/namespace": "reference-apps",
@@ -1455,7 +1455,7 @@ func TestSecurityPolicyTarget(t *testing.T) {
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
 						TargetSelectors: []egv1a1.TargetSelector{
 							{
-								Group: ptr.To(gwapiv1a2.Group("gateway.networking.k8s.io")),
+								Group: ptr.To(gwapiv1.Group("gateway.networking.k8s.io")),
 								Kind:  "HTTPRoute",
 								MatchLabels: map[string]string{
 									"eg/namespace": "reference-apps",
@@ -1484,7 +1484,7 @@ func TestSecurityPolicyTarget(t *testing.T) {
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
 						TargetSelectors: []egv1a1.TargetSelector{
 							{
-								Group: ptr.To(gwapiv1a2.Group("gateway.networking.k8s.io")),
+								Group: ptr.To(gwapiv1.Group("gateway.networking.k8s.io")),
 								Kind:  "HTTPRoute",
 								MatchLabels: map[string]string{
 									"eg/namespace": "reference-apps",

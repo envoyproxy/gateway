@@ -10,7 +10,6 @@ import (
 
 	"k8s.io/apimachinery/pkg/types"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
@@ -23,7 +22,7 @@ func (t *Translator) ProcessEnvoyPatchPolicies(envoyPatchPolicies []*egv1a1.Envo
 
 	for _, policy := range envoyPatchPolicies {
 		var (
-			ancestorRef gwapiv1a2.ParentReference
+			ancestorRef gwapiv1.ParentReference
 			resolveErr  *status.PolicyResolveError
 			targetKind  string
 			irKey       string
@@ -34,7 +33,7 @@ func (t *Translator) ProcessEnvoyPatchPolicies(envoyPatchPolicies []*egv1a1.Envo
 			targetKind = resource.KindGatewayClass
 			// if ref GatewayClass name is not same as t.GatewayClassName, it will be skipped in L53.
 			irKey = string(refName)
-			ancestorRef = gwapiv1a2.ParentReference{
+			ancestorRef = gwapiv1.ParentReference{
 				Group: GroupPtr(gwapiv1.GroupName),
 				Kind:  KindPtr(targetKind),
 				Name:  refName,
@@ -87,7 +86,7 @@ func (t *Translator) ProcessEnvoyPatchPolicies(envoyPatchPolicies []*egv1a1.Envo
 				policy.Spec.TargetRef.Group, policy.Spec.TargetRef.Kind, gwapiv1.GroupName, targetKind)
 
 			resolveErr = &status.PolicyResolveError{
-				Reason:  gwapiv1a2.PolicyReasonInvalid,
+				Reason:  gwapiv1.PolicyReasonInvalid,
 				Message: message,
 			}
 			status.SetResolveErrorForPolicyAncestor(&policy.Status,

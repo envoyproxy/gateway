@@ -16,7 +16,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
-	gwapiv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
@@ -308,7 +308,7 @@ func TestBackend(t *testing.T) {
 					Type: ptr.To(egv1a1.BackendTypeDynamicResolver),
 					TLS: &egv1a1.BackendTLSSettings{
 						InsecureSkipVerify:      ptr.To(true),
-						WellKnownCACertificates: ptr.To(gwapiv1a3.WellKnownCACertificatesSystem),
+						WellKnownCACertificates: ptr.To(gwapiv1.WellKnownCACertificatesSystem),
 					},
 				}
 			},
