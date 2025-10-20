@@ -345,6 +345,7 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `bufferLimit` | _[Quantity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#quantity-resource-api)_ |  false  |  | BufferLimit Soft limit on size of the cluster’s connections read and write buffers.<br />BufferLimit applies to connection streaming (maybe non-streaming) channel between processes, it's in user space.<br />If unspecified, an implementation defined default is applied (32768 bytes).<br />For example, 20Mi, 1Gi, 256Ki etc.<br />Note: that when the suffix is not provided, the value is interpreted as bytes. |
+| `preconnect` | _[PreconnectPolicy](#preconnectpolicy)_ |  false  |  | Preconnect configures proactive upstream connections to reduce latency by establishing<br />connections before they’re needed and avoiding connection establishment overhead.<br />If unset, Envoy will fetch connections as needed to serve in-flight requests. |
 
 
 #### BackendEndpoint
@@ -3651,6 +3652,22 @@ _Appears in:_
 | `targetRef` | _[LocalPolicyTargetReferenceWithSectionName](#localpolicytargetreferencewithsectionname)_ |  true  |  | TargetRef is the name of the resource this policy is being attached to.<br />This policy and the TargetRef MUST be in the same namespace for this<br />Policy to have effect<br />Deprecated: use targetRefs/targetSelectors instead |
 | `targetRefs` | _LocalPolicyTargetReferenceWithSectionName array_ |  true  |  | TargetRefs are the names of the Gateway resources this policy<br />is being attached to. |
 | `targetSelectors` | _[TargetSelector](#targetselector) array_ |  true  |  | TargetSelectors allow targeting resources for this policy based on labels |
+
+
+#### PreconnectPolicy
+
+
+
+Preconnect configures proactive upstream connections to reduce latency by establishing
+connections before they’re needed and avoiding connection establishment overhead.
+
+_Appears in:_
+- [BackendConnection](#backendconnection)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `perUpstreamRatio` | _float_ |  false  |  | PerUpstreamRatio configures the ratio of connections to anticipate per-upstream for each<br />incoming connection. This is most effective for high-QPS or latency-sensitive services<br />where connection establishment cost is significant.<br />Allowed values are between 1.0 and 3.0. |
+| `predictiveRatio` | _float_ |  false  |  | PredictiveRatio configures how many connections to anticipate for an upstream cluster<br />for each incoming connection. Useful for latency sensitive, low-QPS services.<br />Relies on deterministic endpoint selection and is only supported with RoundRobin<br />or Random load balancing.<br />Minimum value is 1.0. |
 
 
 #### PreferLocalZone

@@ -11233,6 +11233,31 @@ spec:
                                                   For example, 20Mi, 1Gi, 256Ki etc.
                                                   Note: that when the suffix is not provided, the value is interpreted as bytes.
                                                 x-kubernetes-int-or-string: true
+                                              preconnect:
+                                                description: |-
+                                                  Preconnect configures proactive upstream connections to reduce latency by establishing
+                                                  connections before they’re needed and avoiding connection establishment overhead.
+                                                  If unset, Envoy will fetch connections as needed to serve in-flight requests.
+                                                properties:
+                                                  perUpstreamRatio:
+                                                    description: |-
+                                                      PerUpstreamRatio configures the ratio of connections to anticipate per-upstream for each
+                                                      incoming connection. This is most effective for high-QPS or latency-sensitive services
+                                                      where connection establishment cost is significant.
+                                                      Allowed values are between 1.0 and 3.0.
+                                                    maximum: 3
+                                                    minimum: 1
+                                                    type: number
+                                                  predictiveRatio:
+                                                    description: |-
+                                                      PredictiveRatio configures how many connections to anticipate for an upstream cluster
+                                                      for each incoming connection. Useful for latency sensitive, low-QPS services.
+                                                      Relies on deterministic endpoint selection and is only supported with RoundRobin
+                                                      or Random load balancing.
+                                                      Minimum value is 1.0.
+                                                    minimum: 1
+                                                    type: number
+                                                type: object
                                               socketBufferLimit:
                                                 allOf:
                                                 - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
@@ -12033,6 +12058,15 @@ spec:
                                                 type: object
                                             type: object
                                         type: object
+                                        x-kubernetes-validations:
+                                        - message: predictiveRatio in preconnect policy
+                                            only works with RoundRobin or Random load
+                                            balancers
+                                          rule: '!((has(self.connection) && has(self.connection.preconnect)
+                                            && has(self.connection.preconnect.predictiveRatio))
+                                            && !(has(self.loadBalancer) && has(self.loadBalancer.type)
+                                            && self.loadBalancer.type in [''Random'',
+                                            ''RoundRobin'']))'
                                       http:
                                         description: HTTP defines additional configuration
                                           specific to HTTP access logs.
@@ -12364,6 +12398,31 @@ spec:
                                                   For example, 20Mi, 1Gi, 256Ki etc.
                                                   Note: that when the suffix is not provided, the value is interpreted as bytes.
                                                 x-kubernetes-int-or-string: true
+                                              preconnect:
+                                                description: |-
+                                                  Preconnect configures proactive upstream connections to reduce latency by establishing
+                                                  connections before they’re needed and avoiding connection establishment overhead.
+                                                  If unset, Envoy will fetch connections as needed to serve in-flight requests.
+                                                properties:
+                                                  perUpstreamRatio:
+                                                    description: |-
+                                                      PerUpstreamRatio configures the ratio of connections to anticipate per-upstream for each
+                                                      incoming connection. This is most effective for high-QPS or latency-sensitive services
+                                                      where connection establishment cost is significant.
+                                                      Allowed values are between 1.0 and 3.0.
+                                                    maximum: 3
+                                                    minimum: 1
+                                                    type: number
+                                                  predictiveRatio:
+                                                    description: |-
+                                                      PredictiveRatio configures how many connections to anticipate for an upstream cluster
+                                                      for each incoming connection. Useful for latency sensitive, low-QPS services.
+                                                      Relies on deterministic endpoint selection and is only supported with RoundRobin
+                                                      or Random load balancing.
+                                                      Minimum value is 1.0.
+                                                    minimum: 1
+                                                    type: number
+                                                type: object
                                               socketBufferLimit:
                                                 allOf:
                                                 - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
@@ -13164,6 +13223,15 @@ spec:
                                                 type: object
                                             type: object
                                         type: object
+                                        x-kubernetes-validations:
+                                        - message: predictiveRatio in preconnect policy
+                                            only works with RoundRobin or Random load
+                                            balancers
+                                          rule: '!((has(self.connection) && has(self.connection.preconnect)
+                                            && has(self.connection.preconnect.predictiveRatio))
+                                            && !(has(self.loadBalancer) && has(self.loadBalancer.type)
+                                            && self.loadBalancer.type in [''Random'',
+                                            ''RoundRobin'']))'
                                       host:
                                         description: |-
                                           Host define the extension service hostname.
@@ -13604,6 +13672,31 @@ spec:
                                             For example, 20Mi, 1Gi, 256Ki etc.
                                             Note: that when the suffix is not provided, the value is interpreted as bytes.
                                           x-kubernetes-int-or-string: true
+                                        preconnect:
+                                          description: |-
+                                            Preconnect configures proactive upstream connections to reduce latency by establishing
+                                            connections before they’re needed and avoiding connection establishment overhead.
+                                            If unset, Envoy will fetch connections as needed to serve in-flight requests.
+                                          properties:
+                                            perUpstreamRatio:
+                                              description: |-
+                                                PerUpstreamRatio configures the ratio of connections to anticipate per-upstream for each
+                                                incoming connection. This is most effective for high-QPS or latency-sensitive services
+                                                where connection establishment cost is significant.
+                                                Allowed values are between 1.0 and 3.0.
+                                              maximum: 3
+                                              minimum: 1
+                                              type: number
+                                            predictiveRatio:
+                                              description: |-
+                                                PredictiveRatio configures how many connections to anticipate for an upstream cluster
+                                                for each incoming connection. Useful for latency sensitive, low-QPS services.
+                                                Relies on deterministic endpoint selection and is only supported with RoundRobin
+                                                or Random load balancing.
+                                                Minimum value is 1.0.
+                                              minimum: 1
+                                              type: number
+                                          type: object
                                         socketBufferLimit:
                                           allOf:
                                           - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
@@ -14370,6 +14463,13 @@ spec:
                                           type: object
                                       type: object
                                   type: object
+                                  x-kubernetes-validations:
+                                  - message: predictiveRatio in preconnect policy
+                                      only works with RoundRobin or Random load balancers
+                                    rule: '!((has(self.connection) && has(self.connection.preconnect)
+                                      && has(self.connection.preconnect.predictiveRatio))
+                                      && !(has(self.loadBalancer) && has(self.loadBalancer.type)
+                                      && self.loadBalancer.type in [''Random'', ''RoundRobin'']))'
                                 host:
                                   description: |-
                                     Host define the service hostname.
@@ -14740,6 +14840,31 @@ spec:
                                       For example, 20Mi, 1Gi, 256Ki etc.
                                       Note: that when the suffix is not provided, the value is interpreted as bytes.
                                     x-kubernetes-int-or-string: true
+                                  preconnect:
+                                    description: |-
+                                      Preconnect configures proactive upstream connections to reduce latency by establishing
+                                      connections before they’re needed and avoiding connection establishment overhead.
+                                      If unset, Envoy will fetch connections as needed to serve in-flight requests.
+                                    properties:
+                                      perUpstreamRatio:
+                                        description: |-
+                                          PerUpstreamRatio configures the ratio of connections to anticipate per-upstream for each
+                                          incoming connection. This is most effective for high-QPS or latency-sensitive services
+                                          where connection establishment cost is significant.
+                                          Allowed values are between 1.0 and 3.0.
+                                        maximum: 3
+                                        minimum: 1
+                                        type: number
+                                      predictiveRatio:
+                                        description: |-
+                                          PredictiveRatio configures how many connections to anticipate for an upstream cluster
+                                          for each incoming connection. Useful for latency sensitive, low-QPS services.
+                                          Relies on deterministic endpoint selection and is only supported with RoundRobin
+                                          or Random load balancing.
+                                          Minimum value is 1.0.
+                                        minimum: 1
+                                        type: number
+                                    type: object
                                   socketBufferLimit:
                                     allOf:
                                     - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
@@ -15499,6 +15624,13 @@ spec:
                                     type: object
                                 type: object
                             type: object
+                            x-kubernetes-validations:
+                            - message: predictiveRatio in preconnect policy only works
+                                with RoundRobin or Random load balancers
+                              rule: '!((has(self.connection) && has(self.connection.preconnect)
+                                && has(self.connection.preconnect.predictiveRatio))
+                                && !(has(self.loadBalancer) && has(self.loadBalancer.type)
+                                && self.loadBalancer.type in [''Random'', ''RoundRobin'']))'
                           host:
                             description: |-
                               Host define the provider service hostname.

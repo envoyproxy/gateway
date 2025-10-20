@@ -1251,6 +1251,119 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			},
 		},
 		{
+			desc: "valid preconnect perUpstreamRatio",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					ClusterSettings: egv1a1.ClusterSettings{
+						Connection: &egv1a1.BackendConnection{
+							Preconnect: &egv1a1.PreconnectPolicy{
+								PerUpstreamRatio: ptr.To(1.0),
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "valid preconnect PredictiveRatio",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					ClusterSettings: egv1a1.ClusterSettings{
+						Connection: &egv1a1.BackendConnection{
+							Preconnect: &egv1a1.PreconnectPolicy{
+								PredictiveRatio:  ptr.To(1.0),
+								PerUpstreamRatio: ptr.To(1.0),
+							},
+						},
+						LoadBalancer: &egv1a1.LoadBalancer{
+							Type: egv1a1.RoundRobinLoadBalancerType,
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "invalid preconnect policy due to loadbalancer type",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					ClusterSettings: egv1a1.ClusterSettings{
+						Connection: &egv1a1.BackendConnection{
+							Preconnect: &egv1a1.PreconnectPolicy{
+								PredictiveRatio:  ptr.To(1.0),
+								PerUpstreamRatio: ptr.To(1.0),
+							},
+						},
+						LoadBalancer: &egv1a1.LoadBalancer{
+							Type: egv1a1.LeastRequestLoadBalancerType,
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				" Invalid value: \"object\": predictiveRatio in preconnect policy only works with RoundRobin or Random load balancers",
+			},
+		},
+		{
+			desc: "invalid preconnect policy due to ratio values",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					ClusterSettings: egv1a1.ClusterSettings{
+						Connection: &egv1a1.BackendConnection{
+							Preconnect: &egv1a1.PreconnectPolicy{
+								PredictiveRatio:  ptr.To(0.5),
+								PerUpstreamRatio: ptr.To(0.5),
+							},
+						},
+						LoadBalancer: &egv1a1.LoadBalancer{
+							Type: egv1a1.RandomLoadBalancerType,
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.connection.preconnect.predictiveRatio: Invalid value: 0.5: spec.connection.preconnect.predictiveRatio in body should be greater than or equal to 1",
+				"spec.connection.preconnect.perUpstreamRatio: Invalid value: 0.5: spec.connection.preconnect.perUpstreamRatio in body should be greater than or equal to 1",
+			},
+		},
+		{
 			desc: "both targetref and targetrefs specified",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{

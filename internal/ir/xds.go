@@ -2038,6 +2038,9 @@ type TCPRoute struct {
 	ProxyProtocol *ProxyProtocol `json:"proxyProtocol,omitempty" yaml:"proxyProtocol,omitempty"`
 	// settings of upstream connection
 	BackendConnection *BackendConnection `json:"backendConnection,omitempty" yaml:"backendConnection,omitempty"`
+	// Preconnect configures preconnecting to upstream endpoints
+	// +optional
+	Preconnect *Preconnect `json:"preconnect,omitempty" yaml:"preconnect,omitempty"`
 	// DNS is used to configure how DNS resolution is handled for the route
 	DNS *DNS `json:"dns,omitempty" yaml:"dns,omitempty"`
 	// Authorization defines the schema for the authorization.
@@ -3036,6 +3039,18 @@ func (t *TLSUpstreamConfig) ToTLSConfig() (*tls.Config, error) {
 type BackendConnection struct {
 	// BufferLimitBytes is the maximum number of bytes that can be buffered for a connection.
 	BufferLimitBytes *uint32 `json:"bufferLimit,omitempty" yaml:"bufferLimit,omitempty"`
+	// Preconnect configures preconnecting to upstream endpoints
+	// +optional
+	Preconnect *Preconnect `json:"preconnect,omitempty" yaml:"preconnect,omitempty"`
+}
+
+// Preconnect configures preconnecting to upstream endpoints to reduce connection establishment latency
+// +k8s:deepcopy-gen=true
+type Preconnect struct {
+	// PerUpstreamRatio is the ratio of connections to preconnect per upstream endpoint.
+	PerUpstreamRatio *float64 `json:"perUpstreamRatio,omitempty" yaml:"perUpstreamRatio,omitempty"`
+	// PredictiveRatio is the ratio of connections to preconnect across the entire cluster.
+	PredictiveRatio *float64 `json:"predictiveRatio,omitempty" yaml:"predictiveRatio,omitempty"`
 }
 
 // ClientConnection settings for downstream connections

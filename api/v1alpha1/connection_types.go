@@ -70,6 +70,37 @@ type BackendConnection struct {
 	// +optional
 	// +notImplementedHide
 	SocketBufferLimit *resource.Quantity `json:"socketBufferLimit,omitempty"`
+
+	// Preconnect configures proactive upstream connections to reduce latency by establishing
+	// connections before they’re needed and avoiding connection establishment overhead.
+	// If unset, Envoy will fetch connections as needed to serve in-flight requests.
+	//
+	// +optional
+	Preconnect *PreconnectPolicy `json:"preconnect,omitempty"`
+}
+
+// Preconnect configures proactive upstream connections to reduce latency by establishing
+// connections before they’re needed and avoiding connection establishment overhead.
+type PreconnectPolicy struct {
+	// PerUpstreamRatio configures the ratio of connections to anticipate per-upstream for each
+	// incoming connection. This is most effective for high-QPS or latency-sensitive services
+	// where connection establishment cost is significant.
+	// Allowed values are between 1.0 and 3.0.
+	//
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=3
+	// +optional
+	PerUpstreamRatio *float64 `json:"perUpstreamRatio,omitempty"`
+
+	// PredictiveRatio configures how many connections to anticipate for an upstream cluster
+	// for each incoming connection. Useful for latency sensitive, low-QPS services.
+	// Relies on deterministic endpoint selection and is only supported with RoundRobin
+	// or Random load balancing.
+	// Minimum value is 1.0.
+	//
+	// +kubebuilder:validation:Minimum=1
+	// +optional
+	PredictiveRatio *float64 `json:"predictiveRatio,omitempty"`
 }
 
 type ConnectionLimit struct {
