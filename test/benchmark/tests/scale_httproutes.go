@@ -83,12 +83,12 @@ var ScaleHTTPRoutes = suite.BenchmarkTest{
 									Path: "/",
 								},
 								Response: http.Response{
-									StatusCode: 200,
+									StatusCodes: []int{200},
 								},
 							}, gwAddr, "HTTP", "HTTP")
 							http.WaitForConsistentResponse(t, &r, req, http.ExpectedResponse{
 								Response: http.Response{
-									StatusCode: 200,
+									StatusCodes: []int{200},
 								},
 							}, bSuite.TimeoutConfig.RequiredConsecutiveSuccesses, bSuite.TimeoutConfig.MaxTimeToConsistency)
 

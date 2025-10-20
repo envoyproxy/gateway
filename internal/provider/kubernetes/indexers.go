@@ -356,18 +356,18 @@ func backendGRPCRouteIndexFunc(rawObj client.Object) []string {
 // referenced in TLSRoute objects via `.spec.rules.backendRefs`. This helps in
 // querying for TLSRoutes that are affected by a particular Service CRUD.
 func addTLSRouteIndexers(ctx context.Context, mgr manager.Manager) error {
-	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1a2.TLSRoute{}, gatewayTLSRouteIndex, gatewayTLSRouteIndexFunc); err != nil {
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1a3.TLSRoute{}, gatewayTLSRouteIndex, gatewayTLSRouteIndexFunc); err != nil {
 		return err
 	}
 
-	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1a2.TLSRoute{}, backendTLSRouteIndex, backendTLSRouteIndexFunc); err != nil {
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1a3.TLSRoute{}, backendTLSRouteIndex, backendTLSRouteIndexFunc); err != nil {
 		return err
 	}
 	return nil
 }
 
 func gatewayTLSRouteIndexFunc(rawObj client.Object) []string {
-	tlsRoute := rawObj.(*gwapiv1a2.TLSRoute)
+	tlsRoute := rawObj.(*gwapiv1a3.TLSRoute)
 	var gateways []string
 	for _, parent := range tlsRoute.Spec.ParentRefs {
 		if string(*parent.Kind) == resource.KindGateway {
@@ -385,7 +385,7 @@ func gatewayTLSRouteIndexFunc(rawObj client.Object) []string {
 }
 
 func backendTLSRouteIndexFunc(rawObj client.Object) []string {
-	tlsroute := rawObj.(*gwapiv1a2.TLSRoute)
+	tlsroute := rawObj.(*gwapiv1a3.TLSRoute)
 	var backendRefs []string
 	for _, rule := range tlsroute.Spec.Rules {
 		for _, backend := range rule.BackendRefs {
@@ -943,15 +943,15 @@ func secretRouteFilterIndexFunc(rawObj client.Object) []string {
 // referenced in BackendTLSPolicy objects. This helps in querying for BackendTLSPolicies that are
 // affected by a particular ConfigMap CRUD.
 func addBtlsIndexers(ctx context.Context, mgr manager.Manager) error {
-	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1a3.BackendTLSPolicy{}, configMapBtlsIndex, configMapBtlsIndexFunc); err != nil {
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1.BackendTLSPolicy{}, configMapBtlsIndex, configMapBtlsIndexFunc); err != nil {
 		return err
 	}
 
-	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1a3.BackendTLSPolicy{}, secretBtlsIndex, secretBtlsIndexFunc); err != nil {
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1.BackendTLSPolicy{}, secretBtlsIndex, secretBtlsIndexFunc); err != nil {
 		return err
 	}
 
-	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1a3.BackendTLSPolicy{}, clusterTrustBundleBtlsIndex, clusterTrustBundleBtlsIndexFunc); err != nil {
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1.BackendTLSPolicy{}, clusterTrustBundleBtlsIndex, clusterTrustBundleBtlsIndexFunc); err != nil {
 		return err
 	}
 
@@ -959,7 +959,7 @@ func addBtlsIndexers(ctx context.Context, mgr manager.Manager) error {
 }
 
 func configMapBtlsIndexFunc(rawObj client.Object) []string {
-	btls := rawObj.(*gwapiv1a3.BackendTLSPolicy)
+	btls := rawObj.(*gwapiv1.BackendTLSPolicy)
 	var configMapReferences []string
 	if btls.Spec.Validation.CACertificateRefs != nil {
 		for _, caCertRef := range btls.Spec.Validation.CACertificateRefs {
@@ -977,7 +977,7 @@ func configMapBtlsIndexFunc(rawObj client.Object) []string {
 }
 
 func secretBtlsIndexFunc(rawObj client.Object) []string {
-	btls := rawObj.(*gwapiv1a3.BackendTLSPolicy)
+	btls := rawObj.(*gwapiv1.BackendTLSPolicy)
 	var secretReferences []string
 	if btls.Spec.Validation.CACertificateRefs != nil {
 		for _, caCertRef := range btls.Spec.Validation.CACertificateRefs {
@@ -995,7 +995,7 @@ func secretBtlsIndexFunc(rawObj client.Object) []string {
 }
 
 func clusterTrustBundleBtlsIndexFunc(rawObj client.Object) []string {
-	btls := rawObj.(*gwapiv1a3.BackendTLSPolicy)
+	btls := rawObj.(*gwapiv1.BackendTLSPolicy)
 	var refs []string
 	for _, caCertRef := range btls.Spec.Validation.CACertificateRefs {
 		if string(caCertRef.Kind) == resource.KindClusterTrustBundle {

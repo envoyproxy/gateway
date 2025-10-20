@@ -127,7 +127,7 @@ data:
     S6dQHcHa8Lk99ROXMpx2Jmc=
     -----END CERTIFICATE-----
 ---
-apiVersion: gateway.networking.k8s.io/v1alpha3
+apiVersion: gateway.networking.k8s.io/v1
 kind: BackendTLSPolicy
 metadata:
   name: policy-btls

@@ -1,0 +1,23 @@
+date: October 20, 2025
+
+# Changes that are expected to cause an incompatibility with previous versions, such as deletions or modifications to existing APIs.
+breaking changes: |
+
+# Updates addressing vulnerabilities, security flaws, or compliance requirements.
+security updates: |
+  Bumped Go version to `1.24.9`.
+  Bumped Envoy to `1.35.6`.
+
+# New features or capabilities added in this release.
+new features: |
+
+bug fixes: |
+
+# Enhancements that improve performance.
+performance improvements: |
+
+# Deprecated features or APIs.
+deprecations: |
+
+# Other notable changes not covered by the above sections.
+Other changes: |

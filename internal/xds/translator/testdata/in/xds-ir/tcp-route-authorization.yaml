@@ -1,0 +1,34 @@
+tcp:
+- name: "tcp-listener-authorization"
+  address: "::"
+  port: 10080
+  routes:
+  - name: "tcp-route-authorization"
+    authorization:
+      defaultAction: Allow
+      rules:
+      - action: Deny
+        name: deny-office
+        principal:
+          clientCIDRs:
+          - cidr: 10.0.0.0/24
+            distinct: false
+            ip: 10.0.0.0
+            isIPv6: false
+            maskLen: 24
+      - action: Allow
+        name: allow-corp
+        principal:
+          clientCIDRs:
+          - cidr: 192.168.100.0/24
+            distinct: false
+            ip: 192.168.100.0
+            isIPv6: false
+            maskLen: 24
+    destination:
+      name: "tcp-route-authorization-dest"
+      settings:
+      - endpoints:
+        - host: "10.2.3.4"
+          port: 50000
+        name: "tcp-route-authorization-dest/backend/0"
