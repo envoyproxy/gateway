@@ -46,13 +46,13 @@ type Compression struct {
 	// +optional
 	Brotli *BrotliCompressor `json:"brotli,omitempty"`
 
-	// The configuration for Zstd compressor.
-	//
-	// +optional
-	Zstd *ZstdCompressor `json:"zstd,omitempty"`
-
 	// The configuration for GZIP compressor.
 	//
 	// +optional
 	Gzip *GzipCompressor `json:"gzip,omitempty"`
+
+	// The configuration for Zstd compressor.
+	//
+	// +optional
+	Zstd *ZstdCompressor `json:"zstd,omitempty"`
 }
