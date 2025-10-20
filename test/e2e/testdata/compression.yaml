@@ -46,3 +46,4 @@ spec:
   compression:
     - type: Brotli
     - type: Gzip
+    - type: Zstd
