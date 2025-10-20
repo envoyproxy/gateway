@@ -51,6 +51,10 @@ var CompressionTest = suite.ConformanceTest{
 			testCompression(t, suite, egv1a1.GzipCompressorType)
 		})
 
+		t.Run("HTTPRoute with zstd compression", func(t *testing.T) {
+			testCompression(t, suite, egv1a1.ZstdCompressorType)
+		})
+
 		t.Run("HTTPRoute without compression", func(t *testing.T) {
 			ns := "gateway-conformance-infra"
 			routeNN := types.NamespacedName{Name: "no-compression", Namespace: ns}
