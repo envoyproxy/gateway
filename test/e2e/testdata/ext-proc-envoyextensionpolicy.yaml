@@ -144,7 +144,7 @@ spec:
       namespace: gateway-conformance-infra
       port: 9002
 ---
-apiVersion: gateway.networking.k8s.io/v1alpha3
+apiVersion: gateway.networking.k8s.io/v1
 kind: BackendTLSPolicy
 metadata:
   name: grpc-ext-proc-btls
@@ -210,7 +210,7 @@ spec:
       request: {}
       response: {}
 ---
-apiVersion: gateway.networking.k8s.io/v1alpha3
+apiVersion: gateway.networking.k8s.io/v1
 kind: BackendTLSPolicy
 metadata:
   name: policy-btls-uds-extproc
