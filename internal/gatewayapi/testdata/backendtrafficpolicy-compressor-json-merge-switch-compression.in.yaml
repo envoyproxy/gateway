@@ -48,12 +48,12 @@ backendTrafficPolicies:
       compressor:
         - type: Gzip
           gzip: {}
-  # Route-level policy - Switch to Brotli, disable Gzip
+  # Route-level policy - Switch to Brotli and Zstd, disable Gzip
   - apiVersion: gateway.envoyproxy.io/v1alpha1
     kind: BackendTrafficPolicy
     metadata:
       namespace: default
-      name: route-compressor-policy-switch-to-brotli
+      name: route-compressor-policy-switch-to-brotli-and-zstd
     spec:
       targetRef:
         group: gateway.networking.k8s.io
@@ -64,4 +64,6 @@ backendTrafficPolicies:
           gzip: null
         - type: Brotli
           brotli: {}
+        - type: Zstd
+          zstd: {}
       mergeType: JSONMerge

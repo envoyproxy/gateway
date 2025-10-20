@@ -691,6 +691,8 @@ func ContentEncoding(compressorType egv1a1.CompressorType) string {
 		encoding = "br"
 	case egv1a1.GzipCompressorType:
 		encoding = "gzip"
+	case egv1a1.ZstdCompressorType:
+		encoding = "zstd"
 	}
 
 	return encoding

@@ -30,6 +30,14 @@
               name: envoy.compression.gzip.compressor
               typedConfig:
                 '@type': type.googleapis.com/envoy.extensions.compression.gzip.compressor.v3.Gzip
+        - disabled: true
+          name: envoy.filters.http.compressor.zstd
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.compressor.v3.Compressor
+            compressorLibrary:
+              name: envoy.compression.zstd.compressor
+              typedConfig:
+                '@type': type.googleapis.com/envoy.extensions.compression.zstd.compressor.v3.Zstd
         - name: envoy.filters.http.router
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router

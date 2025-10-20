@@ -8,6 +8,7 @@ backendTrafficPolicies:
     compressor:
     - type: Brotli
     - type: Gzip
+    - type: Zstd
     targetRef:
       group: gateway.networking.k8s.io
       kind: HTTPRoute

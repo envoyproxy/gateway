@@ -49,3 +49,5 @@ backendTrafficPolicies:
           brotli: {}
         - type: Gzip
           gzip: {}
+        - type: Zstd
+          zstd: {}
