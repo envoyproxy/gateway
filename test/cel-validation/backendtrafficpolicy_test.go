@@ -427,11 +427,11 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-						TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
-							LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
-								Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
-								Kind:  gwapiv1a2.Kind("Gateway"),
-								Name:  gwapiv1a2.ObjectName("eg"),
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
 							},
 						},
 					},
