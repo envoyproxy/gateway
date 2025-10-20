@@ -1306,14 +1306,14 @@ func (in *Compression) DeepCopyInto(out *Compression) {
 		*out = new(BrotliCompressor)
 		**out = **in
 	}
-	if in.Zstd != nil {
-		in, out := &in.Zstd, &out.Zstd
-		*out = new(ZstdCompressor)
-		**out = **in
-	}
 	if in.Gzip != nil {
 		in, out := &in.Gzip, &out.Gzip
 		*out = new(GzipCompressor)
+		**out = **in
+	}
+	if in.Zstd != nil {
+		in, out := &in.Zstd, &out.Zstd
+		*out = new(ZstdCompressor)
 		**out = **in
 	}
 }
