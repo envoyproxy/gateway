@@ -7,7 +7,7 @@ package v1alpha1
 
 // CompressorType defines the types of compressor library supported by Envoy Gateway.
 //
-// +kubebuilder:validation:Enum=Gzip;Brotli
+// +kubebuilder:validation:Enum=Gzip;Brotli;Zstd
 type CompressorType string
 
 const (

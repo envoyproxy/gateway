@@ -155,6 +155,9 @@ var MetricCompressorTest = suite.ConformanceTest{
 		t.Run("brotli", func(t *testing.T) {
 			runMetricCompressorTest(t, suite, ns, egv1a1.BrotliCompressorType)
 		})
+		t.Run("zstd", func(t *testing.T) {
+			runMetricCompressorTest(t, suite, ns, egv1a1.ZstdCompressorType)
+		}
 	},
 }
 

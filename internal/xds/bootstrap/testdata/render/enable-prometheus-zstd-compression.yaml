@@ -78,6 +78,10 @@ static_resources:
           - name: envoy.filters.http.compressor
             typed_config:
               "@type": type.googleapis.com/envoy.extensions.filters.http.compressor.v3.Compressor
+              compressor_library:
+                name: text_optimized
+                typed_config:
+                  "@type": type.googleapis.com/envoy.extensions.compression.zstd.compressor.v3.Zstd
           - name: envoy.filters.http.router
             typed_config:
               "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router

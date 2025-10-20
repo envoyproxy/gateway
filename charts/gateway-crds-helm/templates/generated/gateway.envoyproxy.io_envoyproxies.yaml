@@ -13333,6 +13333,7 @@ spec:
                                 enum:
                                 - Gzip
                                 - Brotli
+                                - Zstd
                                 type: string
                               zstd:
                                 description: The configuration for Zstd compressor.
