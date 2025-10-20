@@ -6,13 +6,14 @@
 package v1alpha1
 
 // RateLimitSpec defines the desired state of RateLimitSpec.
-// +union
 type RateLimitSpec struct {
 	// Type decides the scope for the RateLimits.
 	// Valid RateLimitType values are "Global" or "Local".
 	//
-	// +unionDiscriminator
-	Type RateLimitType `json:"type"`
+	// Deprecated: Use Type. allow both "Global" and "Local" fields now.
+	//
+	// +optional
+	Type *RateLimitType `json:"type"`
 	// Global defines global rate limit configuration.
 	//
 	// +optional
