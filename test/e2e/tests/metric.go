@@ -157,7 +157,7 @@ var MetricCompressorTest = suite.ConformanceTest{
 		})
 		t.Run("zstd", func(t *testing.T) {
 			runMetricCompressorTest(t, suite, ns, egv1a1.ZstdCompressorType)
-		}
+		})
 	},
 }
 
