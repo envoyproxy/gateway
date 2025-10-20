@@ -6,7 +6,6 @@
 package resource
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -73,6 +72,7 @@ func TestLoadAllSupportedResourcesFromYAMLBytes(t *testing.T) {
 
 			want := &Resources{}
 			output, err := os.ReadFile(outputFile)
+			require.NoError(t, err)
 			mustUnmarshal(t, output, want)
 
 			opts := []cmp.Option{
@@ -81,13 +81,6 @@ func TestLoadAllSupportedResourcesFromYAMLBytes(t *testing.T) {
 			require.Empty(t, cmp.Diff(want, got, opts...))
 		})
 	}
-}
-
-func requireTestDataFile(t *testing.T, name, ioType string) []byte {
-	t.Helper()
-	content, err := os.ReadFile(filepath.Join("testdata", fmt.Sprintf("%s.%s.yaml", name, ioType)))
-	require.NoError(t, err)
-	return content
 }
 
 func mustUnmarshal(t *testing.T, val []byte, out interface{}) {
