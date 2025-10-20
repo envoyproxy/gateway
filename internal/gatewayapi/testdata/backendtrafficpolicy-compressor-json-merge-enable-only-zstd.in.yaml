@@ -34,7 +34,7 @@ httpRoutes:
             - name: service-1
               port: 8080
 backendTrafficPolicies:
-  # Gateway-level policy - Enable Brotli, Gzip, and Zstd compression
+  # Gateway-level policy - No compression enabled
   - apiVersion: gateway.envoyproxy.io/v1alpha1
     kind: BackendTrafficPolicy
     metadata:
@@ -45,29 +45,18 @@ backendTrafficPolicies:
         group: gateway.networking.k8s.io
         kind: Gateway
         name: gateway-1
-      compressor:
-        - type: Brotli
-          brotli: {}
-        - type: Gzip
-          gzip: {}
-        - type: Zstd
-          zstd: {}
-  # Route-level policy - Disable all compression
+  # Route-level policy - Enable only Zstd
   - apiVersion: gateway.envoyproxy.io/v1alpha1
     kind: BackendTrafficPolicy
     metadata:
       namespace: default
-      name: route-compressor-policy-disable-all
+      name: route-compressor-policy-enable-zstd
     spec:
       targetRef:
         group: gateway.networking.k8s.io
         kind: HTTPRoute
         name: httproute-1
       compressor:
-        - type: Brotli
-          brotli: null
-        - type: Gzip
-          gzip: null
         - type: Zstd
-          zstd: null
+          zstd: {}
       mergeType: JSONMerge

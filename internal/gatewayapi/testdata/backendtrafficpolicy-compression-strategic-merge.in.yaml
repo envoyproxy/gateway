@@ -98,6 +98,7 @@ backendTrafficPolicies:
         name: httproute-1
       compression:
         - type: Brotli
+        - type: Zstd
       mergeType: StrategicMerge
   # Route-level policy without mergeType (should not merge with gateway policy)
   - apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -112,6 +113,7 @@ backendTrafficPolicies:
         name: httproute-2
       compression:
         - type: Brotli
+        - type: Zstd
   # Route-level policy with StrategicMerge but no compression (should inherit from gateway)
   - apiVersion: gateway.envoyproxy.io/v1alpha1
     kind: BackendTrafficPolicy

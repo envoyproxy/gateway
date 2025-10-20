@@ -6,8 +6,9 @@ backendTrafficPolicies:
     namespace: default
   spec:
     compressor:
-    - type: Gzip
     - type: Brotli
+    - type: Gzip
+    - type: Zstd
     mergeType: JSONMerge
     targetRef:
       group: gateway.networking.k8s.io
@@ -47,10 +48,12 @@ backendTrafficPolicies:
     namespace: envoy-gateway
   spec:
     compressor:
-    - gzip: {}
-      type: Gzip
     - brotli: {}
       type: Brotli
+    - gzip: {}
+      type: Gzip
+    - type: Zstd
+      zstd: {}
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway
