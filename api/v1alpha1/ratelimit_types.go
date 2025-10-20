@@ -49,7 +49,7 @@ type GlobalRateLimit struct {
 	// matches two rules, one rate limited and one not, the final decision will be
 	// to rate limit the request.
 	//
-	// +kubebuilder:validation:MaxItems=64
+	// +kubebuilder:validation:MaxItems=128
 	Rules []RateLimitRule `json:"rules"`
 }
 

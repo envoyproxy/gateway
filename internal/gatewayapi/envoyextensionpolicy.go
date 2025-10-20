@@ -20,7 +20,6 @@ import (
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/luavalidator"
@@ -163,11 +162,11 @@ func (t *Translator) processEEPolicyForRoute(
 	routeMap map[policyTargetRouteKey]*policyRouteTargetContext,
 	gatewayRouteMap map[string]map[string]sets.Set[string],
 	policy *egv1a1.EnvoyExtensionPolicy,
-	currTarget gwapiv1a2.LocalPolicyTargetReferenceWithSectionName,
+	currTarget gwapiv1.LocalPolicyTargetReferenceWithSectionName,
 ) {
 	var (
 		targetedRoute RouteContext
-		ancestorRefs  []*gwapiv1a2.ParentReference
+		ancestorRefs  []*gwapiv1.ParentReference
 		resolveErr    *status.PolicyResolveError
 	)
 
@@ -265,7 +264,7 @@ func (t *Translator) processEEPolicyForGateway(
 	gatewayMap map[types.NamespacedName]*policyGatewayTargetContext,
 	gatewayRouteMap map[string]map[string]sets.Set[string],
 	policy *egv1a1.EnvoyExtensionPolicy,
-	currTarget gwapiv1a2.LocalPolicyTargetReferenceWithSectionName,
+	currTarget gwapiv1.LocalPolicyTargetReferenceWithSectionName,
 ) {
 	var (
 		targetedGateway *GatewayContext
@@ -328,7 +327,7 @@ func (t *Translator) processEEPolicyForGateway(
 
 func resolveEEPolicyGatewayTargetRef(
 	policy *egv1a1.EnvoyExtensionPolicy,
-	target gwapiv1a2.LocalPolicyTargetReferenceWithSectionName,
+	target gwapiv1.LocalPolicyTargetReferenceWithSectionName,
 	gateways map[types.NamespacedName]*policyGatewayTargetContext,
 ) (*GatewayContext, *status.PolicyResolveError) {
 	// Check if the gateway exists
@@ -361,7 +360,7 @@ func resolveEEPolicyGatewayTargetRef(
 				string(target.Name))
 
 			return gateway.GatewayContext, &status.PolicyResolveError{
-				Reason:  gwapiv1a2.PolicyReasonConflicted,
+				Reason:  gwapiv1.PolicyReasonConflicted,
 				Message: message,
 			}
 		}
@@ -373,7 +372,7 @@ func resolveEEPolicyGatewayTargetRef(
 				string(target.Name), listenerName)
 
 			return gateway.GatewayContext, &status.PolicyResolveError{
-				Reason:  gwapiv1a2.PolicyReasonConflicted,
+				Reason:  gwapiv1.PolicyReasonConflicted,
 				Message: message,
 			}
 		}
@@ -390,7 +389,7 @@ func resolveEEPolicyGatewayTargetRef(
 
 func resolveEEPolicyRouteTargetRef(
 	policy *egv1a1.EnvoyExtensionPolicy,
-	target gwapiv1a2.LocalPolicyTargetReferenceWithSectionName,
+	target gwapiv1.LocalPolicyTargetReferenceWithSectionName,
 	routes map[policyTargetRouteKey]*policyRouteTargetContext,
 ) (RouteContext, *status.PolicyResolveError) {
 	// Check if the route exists
@@ -420,7 +419,7 @@ func resolveEEPolicyRouteTargetRef(
 				string(target.Kind), string(target.Name))
 
 			return route.RouteContext, &status.PolicyResolveError{
-				Reason:  gwapiv1a2.PolicyReasonConflicted,
+				Reason:  gwapiv1.PolicyReasonConflicted,
 				Message: message,
 			}
 		}
@@ -432,7 +431,7 @@ func resolveEEPolicyRouteTargetRef(
 				string(target.Name), routeRuleName)
 
 			return route.RouteContext, &status.PolicyResolveError{
-				Reason:  gwapiv1a2.PolicyReasonConflicted,
+				Reason:  gwapiv1.PolicyReasonConflicted,
 				Message: message,
 			}
 		}
@@ -450,7 +449,7 @@ func resolveEEPolicyRouteTargetRef(
 func (t *Translator) translateEnvoyExtensionPolicyForRoute(
 	policy *egv1a1.EnvoyExtensionPolicy,
 	route RouteContext,
-	target gwapiv1a2.LocalPolicyTargetReferenceWithSectionName,
+	target gwapiv1.LocalPolicyTargetReferenceWithSectionName,
 	xdsIR resource.XdsIRMap,
 	resources *resource.Resources,
 ) error {
@@ -536,7 +535,7 @@ func (t *Translator) translateEnvoyExtensionPolicyForRoute(
 
 func (t *Translator) translateEnvoyExtensionPolicyForGateway(
 	policy *egv1a1.EnvoyExtensionPolicy,
-	target gwapiv1a2.LocalPolicyTargetReferenceWithSectionName,
+	target gwapiv1.LocalPolicyTargetReferenceWithSectionName,
 	gateway *GatewayContext,
 	xdsIR resource.XdsIRMap,
 	resources *resource.Resources,

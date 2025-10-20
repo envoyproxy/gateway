@@ -9,10 +9,11 @@ package tests
 
 import (
 	"testing"
+	"time"
 
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/kubectl/pkg/util/slice"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
@@ -34,9 +35,9 @@ var ListenerHealthCheckTest = suite.ConformanceTest{
 			ns := "gateway-conformance-infra"
 			routeNN := types.NamespacedName{Name: "http-with-health-check", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
-			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+			gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
 
-			ancestorRef := gwapiv1a2.ParentReference{
+			ancestorRef := gwapiv1.ParentReference{
 				Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
 				Kind:      gatewayapi.KindPtr(resource.KindGateway),
 				Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
@@ -49,24 +50,25 @@ var ListenerHealthCheckTest = suite.ConformanceTest{
 					Path: "/ready",
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}
 
 			req := http.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
 
-			_, cResp, err := suite.RoundTripper.CaptureRoundTrip(req)
-			if err != nil {
-				t.Errorf("failed to get expected response: %v", err)
-			}
+			timeoutConfig := suite.TimeoutConfig
+			http.AwaitConvergence(t, timeoutConfig.RequiredConsecutiveSuccesses, timeoutConfig.MaxTimeToConsistency, func(elapsed time.Duration) bool {
+				_, cResp, err := suite.RoundTripper.CaptureRoundTrip(req)
+				if err != nil {
+					t.Errorf("failed to get expected response: %v", err)
+				}
 
-			// directly check the status code of the response, since health check request will be
-			// terminated by envoy instead of echo server in backend, no request will be captured
-			// from the response.
-			if cResp.StatusCode != expectedResponse.Response.StatusCode {
-				t.Errorf("expected status code %d, got %d", expectedResponse.Response.StatusCode, cResp.StatusCode)
-			}
+				// directly check the status code of the response, since health check request will be
+				// terminated by envoy instead of echo server in backend, no request will be captured
+				// from the response.
+				return slice.Contains(expectedResponse.Response.StatusCodes, cResp.StatusCode, nil)
+			})
 		})
 	},
 }

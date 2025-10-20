@@ -44,6 +44,7 @@
                   sdsConfig:
                     ads: {}
                     resourceApiVersion: V3
+              csrfTokenExpiresIn: 2100s
               defaultExpiresIn: 3600s
               defaultRefreshTokenExpiresIn: 172800s
               forwardBearerToken: true

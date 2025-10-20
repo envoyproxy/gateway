@@ -16,6 +16,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/tlog"
@@ -94,14 +95,14 @@ var EGResilience = suite.ResilienceTest{
 			ns := "gateway-resilience"
 			routeNN := types.NamespacedName{Name: "backend", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "all-namespaces", Namespace: ns}
-			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+			gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
 
 			expectedResponse := http.ExpectedResponse{
 				Request: http.Request{
 					Path: "/welcome",
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}
@@ -114,7 +115,7 @@ var EGResilience = suite.ResilienceTest{
 					return false
 				}
 
-				if err := http.CompareRequest(t, &req, cReq, cRes, expectedResponse); err != nil {
+				if err := http.CompareRoundTrip(t, &req, cReq, cRes, expectedResponse); err != nil {
 					tlog.Logf(t, "Response expectation failed for request: %+v  not ready yet: %v (after %v)", req, err, elapsed)
 					return false
 				}
@@ -153,14 +154,14 @@ var EGResilience = suite.ResilienceTest{
 			ns := "gateway-resilience"
 			routeNN := types.NamespacedName{Name: "backend", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "all-namespaces", Namespace: ns}
-			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+			gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
 
 			expectedResponse := http.ExpectedResponse{
 				Request: http.Request{
 					Path: "/route-change",
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}
@@ -173,7 +174,7 @@ var EGResilience = suite.ResilienceTest{
 					return false
 				}
 
-				if err := http.CompareRequest(t, &req, cReq, cRes, expectedResponse); err != nil {
+				if err := http.CompareRoundTrip(t, &req, cReq, cRes, expectedResponse); err != nil {
 					tlog.Logf(t, "Response expectation failed for request: %+v  not ready yet: %v (after %v)", req, err, elapsed)
 					return false
 				}
@@ -224,14 +225,14 @@ var EGResilience = suite.ResilienceTest{
 			ns := "gateway-resilience"
 			routeNN := types.NamespacedName{Name: "backend", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "all-namespaces", Namespace: ns}
-			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+			gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
 
 			expectedResponse := http.ExpectedResponse{
 				Request: http.Request{
 					Path: "/route-change",
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}
@@ -245,7 +246,7 @@ var EGResilience = suite.ResilienceTest{
 					return false
 				}
 
-				if err := http.CompareRequest(t, &req, cReq, cRes, expectedResponse); err != nil {
+				if err := http.CompareRoundTrip(t, &req, cReq, cRes, expectedResponse); err != nil {
 					tlog.Logf(t, "Response expectation failed for request: %+v  not ready yet: %v (after %v)", req, err, elapsed)
 					return false
 				}
