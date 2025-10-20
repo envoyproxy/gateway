@@ -839,9 +839,9 @@ func Test_SecurityPolicy_TCP_Invalid_setsStatus_and_returns(t *testing.T) {
 	}
 
 	// Create the target reference
-	target := gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
-		LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
-			Group: gwapiv1a2.Group(gwapiv1a2.GroupVersion.Group),
+	target := gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+		LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+			Group: gwapiv1.Group(gwapiv1.GroupVersion.Group),
 			Kind:  resource.KindTCPRoute,
 			Name:  "tcp-route",
 		},
@@ -913,9 +913,9 @@ func Test_SecurityPolicy_HTTP_Invalid_setsStatus_and_returns(t *testing.T) {
 	}
 
 	// Create the target reference
-	target := gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
-		LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
-			Group: gwapiv1a2.Group(gwapiv1a2.GroupVersion.Group),
+	target := gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+		LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+			Group: gwapiv1.Group(gwapiv1.GroupVersion.Group),
 			Kind:  resource.KindHTTPRoute,
 			Name:  "http-route",
 		},
