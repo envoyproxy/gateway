@@ -100,7 +100,6 @@ data:
         match_metric_type: counter
 kind: ConfigMap
 metadata:
-  creationTimestamp: null
   labels:
     app.kubernetes.io/component: ratelimit
     app.kubernetes.io/managed-by: envoy-gateway

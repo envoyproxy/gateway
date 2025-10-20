@@ -10,7 +10,9 @@ import (
 	"fmt"
 	"time"
 
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/rest"
 	"k8s.io/klog/v2"
@@ -24,6 +26,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
+	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway"
@@ -116,11 +119,37 @@ func New(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server, resources
 	}
 
 	// Limit the cache to only Envoy proxy Pods to reduce memory and sync churn.
-	// ProxyTopologyInjector is the only component that interacts with Pods.
 	if mgrOpts.Cache.ByObject == nil {
-		mgrOpts.Cache.ByObject = map[client.Object]cache.ByObject{}
+		mgrOpts.Cache.ByObject = map[client.Object]cache.ByObject{
+			// Disable deepcopy for read only resources
+			&corev1.Secret{}: {
+				UnsafeDisableDeepCopy: ptr.To(true),
+			},
+			&corev1.ConfigMap{}: {
+				UnsafeDisableDeepCopy: ptr.To(true),
+			},
+			&corev1.Service{}: {
+				UnsafeDisableDeepCopy: ptr.To(true),
+			},
+			&discoveryv1.EndpointSlice{}: {
+				UnsafeDisableDeepCopy: ptr.To(true),
+			},
+			&appsv1.Deployment{}: {
+				UnsafeDisableDeepCopy: ptr.To(true),
+			},
+			&corev1.Node{}: {
+				UnsafeDisableDeepCopy: ptr.To(true),
+			},
+			&gwapiv1b1.ReferenceGrant{}: {
+				UnsafeDisableDeepCopy: ptr.To(true),
+			},
+			&appsv1.DaemonSet{}: {
+				UnsafeDisableDeepCopy: ptr.To(true),
+			},
+		}
 	}
 
+	// ProxyTopologyInjector is the only component that interacts with Pods.
 	mgrOpts.Cache.ByObject[&corev1.Pod{}] = cache.ByObject{
 		Label: labels.SelectorFromSet(proxy.EnvoyAppLabel()),
 	}

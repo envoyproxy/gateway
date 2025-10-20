@@ -83,9 +83,18 @@ spec:
                     properties:
                       numTrustedHops:
                         description: |-
-                          NumTrustedHops controls the number of additional ingress proxy hops from the right side of XFF HTTP
-                          headers to trust when determining the origin client's IP address.
-                          Only one of NumTrustedHops and TrustedCIDRs must be set.
+                          NumTrustedHops specifies how many trusted hops to count from the rightmost side of
+                          the X-Forwarded-For (XFF) header when determining the original client’s IP address.
+
+                          If NumTrustedHops is set to N, the client IP is taken from the Nth address from the
+                          right end of the XFF header.
+
+                          Example:
+                            XFF = "203.0.113.128, 203.0.113.10, 203.0.113.1"
+                            NumTrustedHops = 2
+                            → Trusted client address = 203.0.113.10
+
+                          Only one of NumTrustedHops or TrustedCIDRs should be configured.
                         format: int32
                         type: integer
                       trustedCIDRs:
@@ -1042,6 +1051,81 @@ spec:
                         items:
                           type: string
                         type: array
+                      crl:
+                        description: Crl specifies the crl configuration that can
+                          be used to validate the client initiating the TLS connection
+                        properties:
+                          onlyVerifyLeafCertificate:
+                            description: |-
+                              If this option is set to true,  Envoy will only verify the certificate at the end of the certificate chain against the CRL.
+                              Defaults to false, which will verify the entire certificate chain against the CRL.
+                            type: boolean
+                          refs:
+                            description: |-
+                              Refs contains one or more references to a Kubernetes ConfigMap or a Kubernetes Secret,
+                              containing the certificate revocation list in PEM format
+                              Expects the content in a key named `ca.crl`.
+
+                              References to a resource in different namespace are invalid UNLESS there
+                              is a ReferenceGrant in the target namespace that allows the crl
+                              to be attached.
+                            items:
+                              description: |-
+                                SecretObjectReference identifies an API object including its namespace,
+                                defaulting to Secret.
+
+                                The API object must be valid in the cluster; the Group and Kind must
+                                be registered in the cluster for this reference to be valid.
+
+                                References to objects with invalid Group and Kind are not valid, and must
+                                be rejected by the implementation, with appropriate Conditions set
+                                on the containing object.
+                              properties:
+                                group:
+                                  default: ""
+                                  description: |-
+                                    Group is the group of the referent. For example, "gateway.networking.k8s.io".
+                                    When unspecified or empty string, core API group is inferred.
+                                  maxLength: 253
+                                  pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                                  type: string
+                                kind:
+                                  default: Secret
+                                  description: Kind is kind of the referent. For example
+                                    "Secret".
+                                  maxLength: 63
+                                  minLength: 1
+                                  pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
+                                  type: string
+                                name:
+                                  description: Name is the name of the referent.
+                                  maxLength: 253
+                                  minLength: 1
+                                  type: string
+                                namespace:
+                                  description: |-
+                                    Namespace is the namespace of the referenced object. When unspecified, the local
+                                    namespace is inferred.
+
+                                    Note that when a namespace different than the local namespace is specified,
+                                    a ReferenceGrant object is required in the referent namespace to allow that
+                                    namespace's owner to accept the reference. See the ReferenceGrant
+                                    documentation for details.
+
+                                    Support: Core
+                                  maxLength: 63
+                                  minLength: 1
+                                  pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                                  type: string
+                              required:
+                              - name
+                              type: object
+                            maxItems: 8
+                            minItems: 1
+                            type: array
+                        required:
+                        - refs
+                        type: object
                       optional:
                         description: |-
                           Optional set to true accepts connections even when a client doesn't present a certificate.
@@ -1497,8 +1581,38 @@ spec:
                       - name
                       type: object
                     conditions:
-                      description: Conditions describes the status of the Policy with
-                        respect to the given Ancestor.
+                      description: |-
+                        Conditions describes the status of the Policy with respect to the given Ancestor.
+
+                        <gateway:util:excludeFromCRD>
+
+                        Notes for implementors:
+
+                        Conditions are a listType `map`, which means that they function like a
+                        map with a key of the `type` field _in the k8s apiserver_.
+
+                        This means that implementations must obey some rules when updating this
+                        section.
+
+                        * Implementations MUST perform a read-modify-write cycle on this field
+                          before modifying it. That is, when modifying this field, implementations
+                          must be confident they have fetched the most recent version of this field,
+                          and ensure that changes they make are on that recent version.
+                        * Implementations MUST NOT remove or reorder Conditions that they are not
+                          directly responsible for. For example, if an implementation sees a Condition
+                          with type `special.io/SomeField`, it MUST NOT remove, change or update that
+                          Condition.
+                        * Implementations MUST always _merge_ changes into Conditions of the same Type,
+                          rather than creating more than one Condition of the same Type.
+                        * Implementations MUST always update the `observedGeneration` field of the
+                          Condition to the `metadata.generation` of the Gateway at the time of update creation.
+                        * If the `observedGeneration` of a Condition is _greater than_ the value the
+                          implementation knows about, then it MUST NOT perform the update on that Condition,
+                          but must wait for a future reconciliation and status update. (The assumption is that
+                          the implementation's copy of the object is stale and an update will be re-triggered
+                          if relevant.)
+
+                        </gateway:util:excludeFromCRD>
                       items:
                         description: Condition contains details for one aspect of
                           the current state of this API Resource.
@@ -1581,10 +1695,12 @@ spec:
                       type: string
                   required:
                   - ancestorRef
+                  - conditions
                   - controllerName
                   type: object
                 maxItems: 16
                 type: array
+                x-kubernetes-list-type: atomic
             required:
             - ancestors
             type: object

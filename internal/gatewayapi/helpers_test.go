@@ -22,7 +22,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -207,7 +206,7 @@ func TestGetPolicyTargetRefs(t *testing.T) {
 		name    string
 		policy  egv1a1.PolicyTargetReferences
 		targets []*unstructured.Unstructured
-		results []gwapiv1a2.LocalPolicyTargetReferenceWithSectionName
+		results []gwapiv1.LocalPolicyTargetReferenceWithSectionName
 	}{
 		{
 			name: "simple",
@@ -263,9 +262,9 @@ func TestGetPolicyTargetRefs(t *testing.T) {
 					},
 				},
 			},
-			results: []gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+			results: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
 				{
-					LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+					LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 						Group: "gateway.networking.k8s.io",
 						Kind:  "Gateway",
 						Name:  "second",
@@ -332,16 +331,16 @@ func TestGetPolicyTargetRefs(t *testing.T) {
 					},
 				},
 			},
-			results: []gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+			results: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
 				{
-					LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+					LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 						Group: "gateway.networking.k8s.io",
 						Kind:  "TLSRoute",
 						Name:  "third",
 					},
 				},
 				{
-					LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+					LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 						Group: "gateway.networking.k8s.io",
 						Kind:  "Gateway",
 						Name:  "second",
@@ -352,9 +351,9 @@ func TestGetPolicyTargetRefs(t *testing.T) {
 		{
 			name: "deduplicated",
 			policy: egv1a1.PolicyTargetReferences{
-				TargetRefs: []gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+				TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
 					{
-						LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+						LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 							Group: "gateway.networking.k8s.io",
 							Kind:  "TLSRoute",
 							Name:  "third",
@@ -411,9 +410,9 @@ func TestGetPolicyTargetRefs(t *testing.T) {
 					},
 				},
 			},
-			results: []gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+			results: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
 				{
-					LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+					LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 						Group: "gateway.networking.k8s.io",
 						Kind:  "TLSRoute",
 						Name:  "third",
@@ -475,7 +474,7 @@ func TestGetPolicyTargetRefs(t *testing.T) {
 					},
 				},
 			},
-			results: []gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{},
+			results: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{},
 		},
 		{
 			name: "match expression",
@@ -521,9 +520,9 @@ func TestGetPolicyTargetRefs(t *testing.T) {
 					},
 				},
 			},
-			results: []gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+			results: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
 				{
-					LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+					LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 						Group: "gateway.networking.k8s.io",
 						Kind:  "Gateway",
 						Name:  "first",
@@ -575,7 +574,7 @@ func TestGetPolicyTargetRefs(t *testing.T) {
 					},
 				},
 			},
-			results: []gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{},
+			results: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{},
 		},
 	}
 

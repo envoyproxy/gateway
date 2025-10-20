@@ -640,45 +640,17 @@ func (t *Translator) addXdsTCPFilterChain(
 
 	// Append port to the statPrefix.
 	statPrefix = strings.Join([]string{statPrefix, strconv.Itoa(int(xdsListener.Address.GetSocketAddress().GetPortValue()))}, "-")
-	al, error := buildXdsAccessLog(accesslog, ir.ProxyAccessLogTypeRoute)
-	if error != nil {
-		return error
-	}
-	mgr := &tcpv3.TcpProxy{
-		AccessLog:  al,
-		StatPrefix: statPrefix,
-		ClusterSpecifier: &tcpv3.TcpProxy_Cluster{
-			Cluster: clusterName,
-		},
-		HashPolicy: buildTCPProxyHashPolicy(irRoute.LoadBalancer),
-	}
 
-	if timeout != nil && timeout.TCP != nil {
-		if timeout.TCP.IdleTimeout != nil {
-			mgr.IdleTimeout = durationpb.New(timeout.TCP.IdleTimeout.Duration)
-		}
-	}
-
-	var filters []*listenerv3.Filter
-
-	if connection != nil && connection.ConnectionLimit != nil {
-		cl := buildConnectionLimitFilter(statPrefix, connection)
-		if clf, err := toNetworkFilter(networkConnectionLimit, cl); err == nil {
-			filters = append(filters, clf)
-		} else {
-			return err
-		}
-	}
-
-	if mgrf, err := toNetworkFilter(wellknown.TCPProxy, mgr); err == nil {
-		filters = append(filters, mgrf)
-	} else {
+	filterChain, err := buildTCPFilterChain(
+		irRoute,
+		clusterName,
+		statPrefix,
+		accesslog,
+		timeout,
+		connection,
+	)
+	if err != nil {
 		return err
-	}
-
-	filterChain := &listenerv3.FilterChain{
-		Name:    tlsListenerFilterChainName(irRoute),
-		Filters: filters,
 	}
 
 	if isTLSPassthrough {
@@ -705,6 +677,61 @@ func (t *Translator) addXdsTCPFilterChain(
 	xdsListener.FilterChains = append(xdsListener.FilterChains, filterChain)
 
 	return nil
+}
+
+func buildTCPFilterChain(
+	irRoute *ir.TCPRoute,
+	clusterName string,
+	statPrefix string,
+	accesslog *ir.AccessLog,
+	timeout *ir.ClientTimeout,
+	connection *ir.ClientConnection,
+) (*listenerv3.FilterChain, error) {
+	var filters []*listenerv3.Filter
+
+	al, err := buildXdsAccessLog(accesslog, ir.ProxyAccessLogTypeRoute)
+	if err != nil {
+		return nil, err
+	}
+
+	if authzFilter, err := buildTCPRBACFilter(statPrefix, irRoute.Authorization); err != nil {
+		return nil, err
+	} else if authzFilter != nil {
+		filters = append(filters, authzFilter)
+	}
+
+	// Connection limit (if configured)
+	if connection != nil && connection.ConnectionLimit != nil {
+		cl := buildConnectionLimitFilter(statPrefix, connection)
+		if clf, err := toNetworkFilter(networkConnectionLimit, cl); err == nil {
+			filters = append(filters, clf)
+		} else {
+			return nil, err
+		}
+	}
+
+	// TCP proxy last
+	mgr := &tcpv3.TcpProxy{
+		AccessLog:  al,
+		StatPrefix: statPrefix,
+		ClusterSpecifier: &tcpv3.TcpProxy_Cluster{
+			Cluster: clusterName,
+		},
+		HashPolicy: buildTCPProxyHashPolicy(irRoute.LoadBalancer),
+	}
+	if timeout != nil && timeout.TCP != nil && timeout.TCP.IdleTimeout != nil {
+		mgr.IdleTimeout = durationpb.New(timeout.TCP.IdleTimeout.Duration)
+	}
+	if mgrf, err := toNetworkFilter(wellknown.TCPProxy, mgr); err == nil {
+		filters = append(filters, mgrf)
+	} else {
+		return nil, err
+	}
+
+	return &listenerv3.FilterChain{
+		Filters: filters,
+		Name:    tlsListenerFilterChainName(irRoute),
+	}, nil
 }
 
 func buildConnectionLimitFilter(statPrefix string, connection *ir.ClientConnection) *connection_limitv3.ConnectionLimit {
@@ -930,18 +957,26 @@ func buildALPNProtocols(alpn []string) []string {
 	}
 }
 
-func buildXdsTLSCertSecret(tlsConfig ir.TLSCertificate) *tlsv3.Secret {
+func buildXdsTLSCertSecret(tlsConfig *ir.TLSCertificate) *tlsv3.Secret {
+	tlsCertificate := &tlsv3.TlsCertificate{
+		CertificateChain: &corev3.DataSource{
+			Specifier: &corev3.DataSource_InlineBytes{InlineBytes: tlsConfig.Certificate},
+		},
+		PrivateKey: &corev3.DataSource{
+			Specifier: &corev3.DataSource_InlineBytes{InlineBytes: tlsConfig.PrivateKey},
+		},
+	}
+
+	if len(tlsConfig.OCSPStaple) > 0 {
+		tlsCertificate.OcspStaple = &corev3.DataSource{
+			Specifier: &corev3.DataSource_InlineBytes{InlineBytes: tlsConfig.OCSPStaple},
+		}
+	}
+
 	return &tlsv3.Secret{
 		Name: tlsConfig.Name,
 		Type: &tlsv3.Secret_TlsCertificate{
-			TlsCertificate: &tlsv3.TlsCertificate{
-				CertificateChain: &corev3.DataSource{
-					Specifier: &corev3.DataSource_InlineBytes{InlineBytes: tlsConfig.Certificate},
-				},
-				PrivateKey: &corev3.DataSource{
-					Specifier: &corev3.DataSource_InlineBytes{InlineBytes: tlsConfig.PrivateKey},
-				},
-			},
+			TlsCertificate: tlsCertificate,
 		},
 	}
 }

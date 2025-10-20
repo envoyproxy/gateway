@@ -1048,13 +1048,14 @@ func (t *Translator) processCORSFilter(
 		exposeHeaders = append(exposeHeaders, string(header))
 	}
 
+	allowCredentials := ptr.Deref(corsFilter.AllowCredentials, false)
 	filterContext.CORS = &ir.CORS{
 		AllowOrigins:     allowOrigins,
 		AllowMethods:     allowMethods,
 		AllowHeaders:     allowHeaders,
 		ExposeHeaders:    exposeHeaders,
 		MaxAge:           ir.MetaV1DurationPtr(time.Duration(corsFilter.MaxAge) * time.Second),
-		AllowCredentials: bool(corsFilter.AllowCredentials),
+		AllowCredentials: allowCredentials,
 	}
 }
 

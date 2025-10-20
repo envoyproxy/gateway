@@ -55,7 +55,7 @@ func deploymentWithSelectorAndLabel(deploy *appsv1.Deployment, selector *metav1.
 
 func setupCreateOrUpdateProxyDeployment(gatewayNamespaceMode bool) (*appsv1.Deployment, *ir.Infra, *config.Server, error) {
 	ctx := context.Background()
-	cfg, err := config.New(os.Stdout)
+	cfg, err := config.New(os.Stdout, os.Stderr)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -344,7 +344,7 @@ func TestDeleteProxyDeployment(t *testing.T) {
 		WithObjects().
 		WithInterceptorFuncs(interceptorFunc).
 		Build()
-	cfg, err := config.New(os.Stdout)
+	cfg, err := config.New(os.Stdout, os.Stderr)
 	require.NoError(t, err)
 
 	testCases := []struct {
