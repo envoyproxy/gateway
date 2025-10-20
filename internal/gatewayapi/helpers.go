@@ -626,6 +626,14 @@ func setIfNil[T any](target **T, value *T) {
 	}
 }
 
+// getServicePortProtocol returns the service port protocol. If the protocol is not specified, it defaults to TCP.
+func getServicePortProtocol(protocol corev1.Protocol) corev1.Protocol {
+	if protocol == "" {
+		return corev1.ProtocolTCP
+	}
+	return protocol
+}
+
 // getServiceIPFamily returns the IP family configuration from a Kubernetes Service
 // following the dual-stack service configuration scenarios:
 // https://kubernetes.io/docs/concepts/services-networking/dual-stack/#dual-stack-service-configuration-scenarios
