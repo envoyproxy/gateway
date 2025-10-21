@@ -18,7 +18,6 @@ func SkipTests(gatewayNamespaceMode bool) []suite.ConformanceTest {
 		tests.GatewayStaticAddresses,
 
 		tests.BackendTLSPolicy,
-		tests.BackendTLSPolicyInvalidCACertificateRef,
 		tests.BackendTLSPolicySANValidation,
 		tests.BackendTLSPolicyConflictResolution,
 		tests.BackendTLSPolicyObservedGenerationBump,

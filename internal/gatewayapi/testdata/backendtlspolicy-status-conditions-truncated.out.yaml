@@ -212,6 +212,11 @@ backendTLSPolicies:
         reason: NoValidCACertificate
         status: "False"
         type: Accepted
+      - lastTransitionTime: null
+        message: Configmap ca-not-found not found in namespace envoy-gateway.
+        reason: InvalidCACertificateRef
+        status: "False"
+        type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
     - ancestorRef:
         name: gateway-10
@@ -222,6 +227,11 @@ backendTLSPolicies:
         reason: NoValidCACertificate
         status: "False"
         type: Accepted
+      - lastTransitionTime: null
+        message: Configmap ca-not-found not found in namespace envoy-gateway.
+        reason: InvalidCACertificateRef
+        status: "False"
+        type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
     - ancestorRef:
         name: gateway-11
@@ -232,6 +242,11 @@ backendTLSPolicies:
         reason: NoValidCACertificate
         status: "False"
         type: Accepted
+      - lastTransitionTime: null
+        message: Configmap ca-not-found not found in namespace envoy-gateway.
+        reason: InvalidCACertificateRef
+        status: "False"
+        type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
     - ancestorRef:
         name: gateway-12
@@ -242,6 +257,11 @@ backendTLSPolicies:
         reason: NoValidCACertificate
         status: "False"
         type: Accepted
+      - lastTransitionTime: null
+        message: Configmap ca-not-found not found in namespace envoy-gateway.
+        reason: InvalidCACertificateRef
+        status: "False"
+        type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
     - ancestorRef:
         name: gateway-13
@@ -252,6 +272,11 @@ backendTLSPolicies:
         reason: NoValidCACertificate
         status: "False"
         type: Accepted
+      - lastTransitionTime: null
+        message: Configmap ca-not-found not found in namespace envoy-gateway.
+        reason: InvalidCACertificateRef
+        status: "False"
+        type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
     - ancestorRef:
         name: gateway-14
@@ -262,6 +287,11 @@ backendTLSPolicies:
         reason: NoValidCACertificate
         status: "False"
         type: Accepted
+      - lastTransitionTime: null
+        message: Configmap ca-not-found not found in namespace envoy-gateway.
+        reason: InvalidCACertificateRef
+        status: "False"
+        type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
     - ancestorRef:
         name: gateway-15
@@ -272,6 +302,11 @@ backendTLSPolicies:
         reason: NoValidCACertificate
         status: "False"
         type: Accepted
+      - lastTransitionTime: null
+        message: Configmap ca-not-found not found in namespace envoy-gateway.
+        reason: InvalidCACertificateRef
+        status: "False"
+        type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
     - ancestorRef:
         name: gateway-16
@@ -282,6 +317,11 @@ backendTLSPolicies:
         reason: NoValidCACertificate
         status: "False"
         type: Accepted
+      - lastTransitionTime: null
+        message: Configmap ca-not-found not found in namespace envoy-gateway.
+        reason: InvalidCACertificateRef
+        status: "False"
+        type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
     - ancestorRef:
         name: gateway-17
@@ -292,6 +332,11 @@ backendTLSPolicies:
         reason: NoValidCACertificate
         status: "False"
         type: Accepted
+      - lastTransitionTime: null
+        message: Configmap ca-not-found not found in namespace envoy-gateway.
+        reason: InvalidCACertificateRef
+        status: "False"
+        type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
     - ancestorRef:
         name: gateway-18
@@ -302,6 +347,11 @@ backendTLSPolicies:
         reason: NoValidCACertificate
         status: "False"
         type: Accepted
+      - lastTransitionTime: null
+        message: Configmap ca-not-found not found in namespace envoy-gateway.
+        reason: InvalidCACertificateRef
+        status: "False"
+        type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
     - ancestorRef:
         name: gateway-2
@@ -312,6 +362,11 @@ backendTLSPolicies:
         reason: NoValidCACertificate
         status: "False"
         type: Accepted
+      - lastTransitionTime: null
+        message: Configmap ca-not-found not found in namespace envoy-gateway.
+        reason: InvalidCACertificateRef
+        status: "False"
+        type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
     - ancestorRef:
         name: gateway-3
@@ -322,6 +377,11 @@ backendTLSPolicies:
         reason: NoValidCACertificate
         status: "False"
         type: Accepted
+      - lastTransitionTime: null
+        message: Configmap ca-not-found not found in namespace envoy-gateway.
+        reason: InvalidCACertificateRef
+        status: "False"
+        type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
     - ancestorRef:
         name: gateway-4
@@ -332,6 +392,11 @@ backendTLSPolicies:
         reason: NoValidCACertificate
         status: "False"
         type: Accepted
+      - lastTransitionTime: null
+        message: Configmap ca-not-found not found in namespace envoy-gateway.
+        reason: InvalidCACertificateRef
+        status: "False"
+        type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
     - ancestorRef:
         name: gateway-5
@@ -342,6 +407,11 @@ backendTLSPolicies:
         reason: NoValidCACertificate
         status: "False"
         type: Accepted
+      - lastTransitionTime: null
+        message: Configmap ca-not-found not found in namespace envoy-gateway.
+        reason: InvalidCACertificateRef
+        status: "False"
+        type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
     - ancestorRef:
         name: gateway-6
@@ -352,6 +422,11 @@ backendTLSPolicies:
         reason: NoValidCACertificate
         status: "False"
         type: Accepted
+      - lastTransitionTime: null
+        message: Configmap ca-not-found not found in namespace envoy-gateway.
+        reason: InvalidCACertificateRef
+        status: "False"
+        type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
     - ancestorRef:
         name: gateway-7
@@ -362,6 +437,11 @@ backendTLSPolicies:
         reason: NoValidCACertificate
         status: "False"
         type: Accepted
+      - lastTransitionTime: null
+        message: Configmap ca-not-found not found in namespace envoy-gateway.
+        reason: InvalidCACertificateRef
+        status: "False"
+        type: ResolvedRefs
       - lastTransitionTime: null
         message: Ancestors have been truncated because the number of policy ancestors
           exceeds 16.

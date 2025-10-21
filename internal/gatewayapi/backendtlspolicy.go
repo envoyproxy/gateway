@@ -172,17 +172,20 @@ func (t *Translator) processBackendTLSPolicy(
 			policy.Generation,
 		)
 
+		reason := gwapiv1.BackendTLSPolicyReasonInvalidCACertificateRef
 		if errors.Is(err, ErrBackendTLSPolicyInvalidKind) {
-			status.SetConditionForPolicyAncestors(&policy.Status,
-				ancestorRefs,
-				t.GatewayControllerName,
-				gwapiv1.BackendTLSPolicyConditionResolvedRefs,
-				metav1.ConditionFalse,
-				gwapiv1.BackendTLSPolicyReasonInvalidKind,
-				status.Error2ConditionMsg(err),
-				policy.Generation,
-			)
+			reason = gwapiv1.BackendTLSPolicyReasonInvalidKind
 		}
+
+		status.SetConditionForPolicyAncestors(&policy.Status,
+			ancestorRefs,
+			t.GatewayControllerName,
+			gwapiv1.BackendTLSPolicyConditionResolvedRefs,
+			metav1.ConditionFalse,
+			reason,
+			status.Error2ConditionMsg(err),
+			policy.Generation,
+		)
 
 		return nil, err
 	}
