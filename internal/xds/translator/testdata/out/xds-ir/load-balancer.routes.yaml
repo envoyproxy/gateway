@@ -55,6 +55,9 @@
       name: seventh-route
       route:
         cluster: seventh-route-dest
+        hashPolicy:
+        - header:
+            headerName: name
         upgradeConfigs:
         - upgradeType: websocket
     - match:
@@ -106,5 +109,17 @@
       name: thirteen-route
       route:
         cluster: thirteen-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket
+    - match:
+        prefix: /
+      name: fourteenth-route
+      route:
+        cluster: fourteenth-route-dest
+        hashPolicy:
+        - header:
+            headerName: name
+        - header:
+            headerName: bar
         upgradeConfigs:
         - upgradeType: websocket
