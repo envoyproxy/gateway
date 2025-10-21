@@ -181,6 +181,28 @@ func (r *gatewayAPIReconciler) validateSecretForReconcile(secret *corev1.Secret)
 		}
 	}
 
+	if r.backendCRDExists {
+		if r.isBackendReferencingSecret(&nsName) {
+			return true
+		}
+	}
+
+	return false
+}
+
+func (r *gatewayAPIReconciler) isBackendReferencingSecret(nsName *types.NamespacedName) bool {
+	backendList := &egv1a1.BackendList{}
+	if err := r.client.List(context.Background(), backendList, &client.ListOptions{
+		FieldSelector: fields.OneTermEqualSelector(secretBackendIndex, nsName.String()),
+	}); err != nil {
+		r.log.Error(err, "unable to find associated Backend")
+		return false
+	}
+
+	if len(backendList.Items) > 0 {
+		return true
+	}
+
 	return false
 }
 
@@ -877,6 +899,20 @@ func (r *gatewayAPIReconciler) validateConfigMapForReconcile(obj client.Object) 
 		}
 
 		if len(spList.Items) > 0 {
+			return true
+		}
+	}
+
+	if r.backendCRDExists {
+		backendList := &egv1a1.BackendList{}
+		if err := r.client.List(context.Background(), backendList, &client.ListOptions{
+			FieldSelector: fields.OneTermEqualSelector(configMapBackendIndex, utils.NamespacedName(configMap).String()),
+		}); err != nil {
+			r.log.Error(err, "unable to find associated Backend")
+			return false
+		}
+
+		if len(backendList.Items) > 0 {
 			return true
 		}
 	}
