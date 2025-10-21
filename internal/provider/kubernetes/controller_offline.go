@@ -50,6 +50,8 @@ func NewOfflineGatewayAPIController(
 	var (
 		extGVKs               []schema.GroupVersionKind
 		extServerPoliciesGVKs []schema.GroupVersionKind
+		//TODO: handle extBackendGVKs here?
+		//extBackendGVKs        []schema.GroupVersionKind
 	)
 
 	if cfg.EnvoyGateway.ExtensionManager != nil {
@@ -61,6 +63,10 @@ func NewOfflineGatewayAPIController(
 			gvk := schema.GroupVersionKind(rsrc)
 			extServerPoliciesGVKs = append(extServerPoliciesGVKs, gvk)
 		}
+		//for _, rsrc := range cfg.EnvoyGateway.ExtensionManager.BackendResources {
+		//	gvk := schema.GroupVersionKind(rsrc)
+		//	extBackendPoliciesGVKs = append(extBackendPoliciesGVKs, gvk)
+		//}
 	}
 
 	cli := newOfflineGatewayAPIClient(extServerPoliciesGVKs)
@@ -77,6 +83,7 @@ func NewOfflineGatewayAPIController(
 		envoyGateway:      cfg.EnvoyGateway,
 		mergeGateways:     sets.New[string](),
 		extServerPolicies: extServerPoliciesGVKs,
+		//extBackendGVKs: extBackendPoliciesGVKs
 		// We assume all CRDs are available in offline mode.
 		bTLSPolicyCRDExists:    true,
 		btpCRDExists:           true,
@@ -132,6 +139,8 @@ func newOfflineGatewayAPIClient(extServerPoliciesGVKs []schema.GroupVersionKind)
 		listGVK.Kind += "List"
 		scheme.AddKnownTypeWithName(listGVK, &unstructured.UnstructuredList{})
 	}
+
+	//TODO: do we need to register extGVKs and extBackendGVKs as well here?
 
 	return fake.NewClientBuilder().
 		WithScheme(scheme).
