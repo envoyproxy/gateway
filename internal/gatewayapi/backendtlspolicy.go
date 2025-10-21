@@ -189,6 +189,15 @@ func (t *Translator) processBackendTLSPolicy(
 
 		return nil, err
 	}
+	status.SetConditionForPolicyAncestors(&policy.Status,
+		ancestorRefs,
+		t.GatewayControllerName,
+		gwapiv1.BackendTLSPolicyConditionResolvedRefs,
+		metav1.ConditionTrue,
+		gwapiv1.BackendTLSPolicyReasonResolvedRefs,
+		"CA certificate resolved.",
+		policy.Generation,
+	)
 	status.SetAcceptedForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName, policy.Generation)
 	return tlsBundle, nil
 }

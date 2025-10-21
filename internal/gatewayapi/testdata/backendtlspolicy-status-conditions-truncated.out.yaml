@@ -23,6 +23,11 @@ backendTLSPolicies:
         namespace: envoy-gateway
       conditions:
       - lastTransitionTime: null
+        message: CA certificate resolved.
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      - lastTransitionTime: null
         message: Policy has been accepted.
         reason: Accepted
         status: "True"
@@ -32,6 +37,11 @@ backendTLSPolicies:
         name: gateway-10
         namespace: envoy-gateway
       conditions:
+      - lastTransitionTime: null
+        message: CA certificate resolved.
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
       - lastTransitionTime: null
         message: Policy has been accepted.
         reason: Accepted
@@ -43,6 +53,11 @@ backendTLSPolicies:
         namespace: envoy-gateway
       conditions:
       - lastTransitionTime: null
+        message: CA certificate resolved.
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      - lastTransitionTime: null
         message: Policy has been accepted.
         reason: Accepted
         status: "True"
@@ -52,6 +67,11 @@ backendTLSPolicies:
         name: gateway-12
         namespace: envoy-gateway
       conditions:
+      - lastTransitionTime: null
+        message: CA certificate resolved.
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
       - lastTransitionTime: null
         message: Policy has been accepted.
         reason: Accepted
@@ -63,6 +83,11 @@ backendTLSPolicies:
         namespace: envoy-gateway
       conditions:
       - lastTransitionTime: null
+        message: CA certificate resolved.
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      - lastTransitionTime: null
         message: Policy has been accepted.
         reason: Accepted
         status: "True"
@@ -72,6 +97,11 @@ backendTLSPolicies:
         name: gateway-14
         namespace: envoy-gateway
       conditions:
+      - lastTransitionTime: null
+        message: CA certificate resolved.
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
       - lastTransitionTime: null
         message: Policy has been accepted.
         reason: Accepted
@@ -83,6 +113,11 @@ backendTLSPolicies:
         namespace: envoy-gateway
       conditions:
       - lastTransitionTime: null
+        message: CA certificate resolved.
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      - lastTransitionTime: null
         message: Policy has been accepted.
         reason: Accepted
         status: "True"
@@ -92,6 +127,11 @@ backendTLSPolicies:
         name: gateway-16
         namespace: envoy-gateway
       conditions:
+      - lastTransitionTime: null
+        message: CA certificate resolved.
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
       - lastTransitionTime: null
         message: Policy has been accepted.
         reason: Accepted
@@ -103,6 +143,11 @@ backendTLSPolicies:
         namespace: envoy-gateway
       conditions:
       - lastTransitionTime: null
+        message: CA certificate resolved.
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      - lastTransitionTime: null
         message: Policy has been accepted.
         reason: Accepted
         status: "True"
@@ -112,6 +157,11 @@ backendTLSPolicies:
         name: gateway-18
         namespace: envoy-gateway
       conditions:
+      - lastTransitionTime: null
+        message: CA certificate resolved.
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
       - lastTransitionTime: null
         message: Policy has been accepted.
         reason: Accepted
@@ -123,6 +173,11 @@ backendTLSPolicies:
         namespace: envoy-gateway
       conditions:
       - lastTransitionTime: null
+        message: CA certificate resolved.
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      - lastTransitionTime: null
         message: Policy has been accepted.
         reason: Accepted
         status: "True"
@@ -132,6 +187,11 @@ backendTLSPolicies:
         name: gateway-3
         namespace: envoy-gateway
       conditions:
+      - lastTransitionTime: null
+        message: CA certificate resolved.
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
       - lastTransitionTime: null
         message: Policy has been accepted.
         reason: Accepted
@@ -143,6 +203,11 @@ backendTLSPolicies:
         namespace: envoy-gateway
       conditions:
       - lastTransitionTime: null
+        message: CA certificate resolved.
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      - lastTransitionTime: null
         message: Policy has been accepted.
         reason: Accepted
         status: "True"
@@ -152,6 +217,11 @@ backendTLSPolicies:
         name: gateway-5
         namespace: envoy-gateway
       conditions:
+      - lastTransitionTime: null
+        message: CA certificate resolved.
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
       - lastTransitionTime: null
         message: Policy has been accepted.
         reason: Accepted
@@ -163,6 +233,11 @@ backendTLSPolicies:
         namespace: envoy-gateway
       conditions:
       - lastTransitionTime: null
+        message: CA certificate resolved.
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      - lastTransitionTime: null
         message: Policy has been accepted.
         reason: Accepted
         status: "True"
@@ -172,6 +247,11 @@ backendTLSPolicies:
         name: gateway-7
         namespace: envoy-gateway
       conditions:
+      - lastTransitionTime: null
+        message: CA certificate resolved.
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
       - lastTransitionTime: null
         message: Policy has been accepted.
         reason: Accepted

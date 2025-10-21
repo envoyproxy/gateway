@@ -17,7 +17,7 @@ func SkipTests(gatewayNamespaceMode bool) []suite.ConformanceTest {
 	skipTests := []suite.ConformanceTest{
 		tests.GatewayStaticAddresses,
 
-		tests.BackendTLSPolicy,
+		// TODO: fix me
 		tests.BackendTLSPolicyConflictResolution,
 		tests.BackendTLSPolicyObservedGenerationBump,
 	}
