@@ -424,6 +424,10 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool) (*Res
 				Spec: typedSpec.(gwapiv1b1.ReferenceGrantSpec),
 			}
 			resources.ReferenceGrants = append(resources.ReferenceGrants, referenceGrant)
+		default:
+			// temporary hack: treat every unrecognised Kind as an extension policy.
+			// TODO: how can this be improved?
+			resources.ExtensionServerPolicies = append(resources.ExtensionServerPolicies, *un)
 		}
 
 		return nil
