@@ -523,7 +523,8 @@ func buildXdsDirectResponseAction(res *ir.CustomResponse) *routev3.DirectRespons
 	if res.StatusCode != nil {
 		routeAction.Status = *res.StatusCode
 	}
-	if res.Body != nil {
+
+	if len(res.Body) > 0 {
 		routeAction.Body = &corev3.DataSource{
 			Specifier: &corev3.DataSource_InlineBytes{
 				InlineBytes: res.Body,
