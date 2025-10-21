@@ -91,7 +91,7 @@ http:
       loadBalancer:
         consistentHash:
           headers:
-            - name: name
+          - name: name
     destination:
       name: "seventh-route-dest"
       settings:
@@ -193,8 +193,8 @@ http:
       loadBalancer:
         consistentHash:
           headers:
-            - name: name
-            - name: bar
+          - name: name
+          - name: bar
     destination:
       name: "fourteenth-route-dest"
       settings:
