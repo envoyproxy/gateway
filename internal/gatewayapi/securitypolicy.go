@@ -704,33 +704,17 @@ func (t *Translator) translateSecurityPolicyForRoute(
 		irKey := t.getIRKey(gtwCtx.Gateway)
 		switch route.GetRouteType() {
 		case resource.KindTCPRoute:
-			// Only client-IP Authorization is applicable for TCP routes.
-			// TCP IR route names are flat. The computed prefix includes a trailing
-			// '/' (e.g. "tcproute/default/tcp-app-2/"), so trim the suffix to
-			// get the exact TCP route name used in the IR:
-			// prefix == "tcproute/default/tcp-app-2/" -> expectedTCPRouteName == "tcproute/default/tcp-app-2"
-			expectedTCPRouteName := strings.TrimSuffix(prefix, "/")
 			for _, listener := range parentRefCtx.listeners {
 				tl := xdsIR[irKey].GetTCPListener(irListenerName(listener))
-				if tl == nil {
-					continue
-				}
 				for _, r := range tl.Routes {
-					if r == nil {
-						continue
-					}
 					// If target.SectionName is specified it must match the route-rule section name
 					// in the IR. For HTTP/GRPC routes this is r.Metadata.SectionName; for TCP
 					// routes the section name is currently stored on r.Destination.Metadata.SectionName.
 					if target.SectionName != nil && string(*target.SectionName) != r.Destination.Metadata.SectionName {
 						continue
 					}
-					// if already set - there's a specific level policy, so skip.
+
 					if r.Authorization != nil {
-						continue
-					}
-					// exact match only (TCP route names are flat in IR)
-					if r.Name != expectedTCPRouteName {
 						continue
 					}
 					// Only authorization for TCP
@@ -741,30 +725,26 @@ func (t *Translator) translateSecurityPolicyForRoute(
 		case resource.KindHTTPRoute, resource.KindGRPCRoute:
 			for _, listener := range parentRefCtx.listeners {
 				irListener := xdsIR[irKey].GetHTTPListener(irListenerName(listener))
-				if irListener == nil {
-					continue
-				}
-				for _, r := range irListener.Routes {
-					if r == nil {
-						continue
-					}
-					// If specified the sectionName must match route rule from ir route metadata.
-					if target.SectionName != nil && string(*target.SectionName) != r.Metadata.SectionName {
-						continue
-					}
-
-					// A Policy targeting the most specific scope(xRoute rule) wins over a policy
-					// targeting a lesser specific scope(xRoute).
-					if strings.HasPrefix(r.Name, prefix) {
-						// if already set - there's a specific level policy, so skip.
-						if r.Security != nil {
+				if irListener != nil {
+					for _, r := range irListener.Routes {
+						// If specified the sectionName must match route rule from ir route metadata.
+						if target.SectionName != nil && string(*target.SectionName) != r.Metadata.SectionName {
 							continue
 						}
 
-						r.Security = securityFeatures
-						if errorResponse != nil {
-							// Return a 500 direct response to avoid unauthorized access
-							r.DirectResponse = errorResponse
+						// A Policy targeting the most specific scope(xRoute rule) wins over a policy
+						// targeting a lesser specific scope(xRoute).
+						if strings.HasPrefix(r.Name, prefix) {
+							// if already set - there's a specific level policy, so skip.
+							if r.Security != nil {
+								continue
+							}
+
+							r.Security = securityFeatures
+							if errorResponse != nil {
+								// Return a 500 direct response to avoid unauthorized access
+								r.DirectResponse = errorResponse
+							}
 						}
 					}
 				}
