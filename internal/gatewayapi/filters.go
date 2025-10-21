@@ -837,59 +837,12 @@ func (t *Translator) processExtensionRefHTTPFilter(extFilter *gwapiv1.LocalObjec
 
 				if hrf.Spec.DirectResponse != nil {
 					dr := &ir.CustomResponse{}
-					if hrf.Spec.DirectResponse.Body != nil && hrf.Spec.DirectResponse.Body.ValueRef != nil {
-						cm := resources.GetConfigMap(filterNs, string(hrf.Spec.DirectResponse.Body.ValueRef.Name))
-						if cm == nil {
-							t.processInvalidHTTPFilter(string(extFilter.Kind), filterContext, fmt.Errorf("can't find the referenced configmap %s", hrf.Spec.DirectResponse.Body.ValueRef.Name))
-							return
-						}
-
-						if len(cm.Data) > 0 && len(cm.BinaryData) > 0 {
-							t.processInvalidHTTPFilter(string(extFilter.Kind), filterContext, fmt.Errorf("the referenced configmap %s contains both data and binaryData", hrf.Spec.DirectResponse.Body.ValueRef.Name))
-							return
-						}
-
-						b, dataOk := cm.Data["response.body"]
-						switch {
-						case dataOk:
-							body := []byte(b)
-							if err := checkResponseBodySize(body); err != nil {
-								t.processInvalidHTTPFilter(string(extFilter.Kind), filterContext, err)
-								return
-							}
-							dr.Body = body
-						case len(cm.Data) > 0:
-							for _, value := range cm.Data {
-								body := []byte(value)
-								if err := checkResponseBodySize(body); err != nil {
-									t.processInvalidHTTPFilter(string(extFilter.Kind), filterContext, err)
-									return
-								}
-								dr.Body = body
-								break
-							}
-						case len(cm.BinaryData) > 0:
-							for _, bin := range cm.BinaryData {
-								if err := checkResponseBodySize(bin); err != nil {
-									t.processInvalidHTTPFilter(string(extFilter.Kind), filterContext, err)
-									return
-								}
-								dr.Body = bin
-								break
-							}
-						default:
-							t.processInvalidHTTPFilter(string(extFilter.Kind), filterContext, fmt.Errorf("can't find the key response.body in the referenced configmap %s", hrf.Spec.DirectResponse.Body.ValueRef.Name))
-							return
-						}
-					}
-
-					if hrf.Spec.DirectResponse.Body != nil && hrf.Spec.DirectResponse.Body.Inline != nil {
-						body := []byte(*hrf.Spec.DirectResponse.Body.Inline)
-						if err := checkResponseBodySize(body); err != nil {
+					if hrf.Spec.DirectResponse.Body != nil {
+						var err error
+						if dr.Body, err = getCustomResponseBody(hrf.Spec.DirectResponse.Body, resources, filterNs); err != nil {
 							t.processInvalidHTTPFilter(string(extFilter.Kind), filterContext, err)
 							return
 						}
-						dr.Body = body
 					}
 
 					if hrf.Spec.DirectResponse.StatusCode != nil {

@@ -634,10 +634,6 @@ type CustomResponse struct {
 	AddResponseHeaders []AddHeader `json:"addResponseHeaders,omitempty" yaml:"addResponseHeaders,omitempty"`
 }
 
-func (r *CustomResponse) BodyString() string {
-	return string(r.Body)
-}
-
 // Validate the fields within the CustomResponse structure
 func (r *CustomResponse) Validate() error {
 	var errs error
