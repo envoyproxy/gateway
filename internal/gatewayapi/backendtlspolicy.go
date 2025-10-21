@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/pkg/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -18,6 +20,8 @@ import (
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/ir"
 )
+
+var BackendTLSPolicyInvalidKind = fmt.Errorf("no ca found in referred ConfigMap, Secret or ClusterTrustBundle")
 
 // ProcessBackendTLSPolicyStatus is called to post-process Backend TLS Policy status
 // after they were applied in all relevant translations.
@@ -158,12 +162,28 @@ func (t *Translator) processBackendTLSPolicy(
 	ancestorRefs = append(ancestorRefs, &parent)
 
 	if err != nil {
-		status.SetTranslationErrorForPolicyAncestors(&policy.Status,
+		status.SetConditionForPolicyAncestors(&policy.Status,
 			ancestorRefs,
 			t.GatewayControllerName,
-			policy.Generation,
+			gwapiv1.PolicyConditionAccepted,
+			metav1.ConditionFalse,
+			gwapiv1.BackendTLSPolicyReasonNoValidCACertificate,
 			status.Error2ConditionMsg(err),
+			policy.Generation,
 		)
+
+		if errors.Is(err, BackendTLSPolicyInvalidKind) {
+			status.SetConditionForPolicyAncestors(&policy.Status,
+				ancestorRefs,
+				t.GatewayControllerName,
+				gwapiv1.BackendTLSPolicyConditionResolvedRefs,
+				metav1.ConditionFalse,
+				gwapiv1.BackendTLSPolicyReasonInvalidKind,
+				status.Error2ConditionMsg(err),
+				policy.Generation,
+			)
+		}
+
 		return nil, err
 	}
 	status.SetAcceptedForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName, policy.Generation)
@@ -345,7 +365,7 @@ func getCaCertsFromCARefs(namespace string, caCertificates []gwapiv1.LocalObject
 	}
 
 	if ca == "" {
-		return nil, fmt.Errorf("no ca found in referred ConfigMap or Secret")
+		return nil, BackendTLSPolicyInvalidKind
 	}
 	return []byte(ca), nil
 }

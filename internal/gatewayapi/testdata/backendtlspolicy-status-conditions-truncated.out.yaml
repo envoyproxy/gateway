@@ -209,7 +209,7 @@ backendTLSPolicies:
       conditions:
       - lastTransitionTime: null
         message: Configmap ca-not-found not found in namespace envoy-gateway.
-        reason: Invalid
+        reason: NoValidCACertificate
         status: "False"
         type: Accepted
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
@@ -219,7 +219,7 @@ backendTLSPolicies:
       conditions:
       - lastTransitionTime: null
         message: Configmap ca-not-found not found in namespace envoy-gateway.
-        reason: Invalid
+        reason: NoValidCACertificate
         status: "False"
         type: Accepted
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
@@ -229,7 +229,7 @@ backendTLSPolicies:
       conditions:
       - lastTransitionTime: null
         message: Configmap ca-not-found not found in namespace envoy-gateway.
-        reason: Invalid
+        reason: NoValidCACertificate
         status: "False"
         type: Accepted
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
@@ -239,7 +239,7 @@ backendTLSPolicies:
       conditions:
       - lastTransitionTime: null
         message: Configmap ca-not-found not found in namespace envoy-gateway.
-        reason: Invalid
+        reason: NoValidCACertificate
         status: "False"
         type: Accepted
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
@@ -249,7 +249,7 @@ backendTLSPolicies:
       conditions:
       - lastTransitionTime: null
         message: Configmap ca-not-found not found in namespace envoy-gateway.
-        reason: Invalid
+        reason: NoValidCACertificate
         status: "False"
         type: Accepted
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
@@ -259,7 +259,7 @@ backendTLSPolicies:
       conditions:
       - lastTransitionTime: null
         message: Configmap ca-not-found not found in namespace envoy-gateway.
-        reason: Invalid
+        reason: NoValidCACertificate
         status: "False"
         type: Accepted
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
@@ -269,7 +269,7 @@ backendTLSPolicies:
       conditions:
       - lastTransitionTime: null
         message: Configmap ca-not-found not found in namespace envoy-gateway.
-        reason: Invalid
+        reason: NoValidCACertificate
         status: "False"
         type: Accepted
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
@@ -279,7 +279,7 @@ backendTLSPolicies:
       conditions:
       - lastTransitionTime: null
         message: Configmap ca-not-found not found in namespace envoy-gateway.
-        reason: Invalid
+        reason: NoValidCACertificate
         status: "False"
         type: Accepted
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
@@ -289,7 +289,7 @@ backendTLSPolicies:
       conditions:
       - lastTransitionTime: null
         message: Configmap ca-not-found not found in namespace envoy-gateway.
-        reason: Invalid
+        reason: NoValidCACertificate
         status: "False"
         type: Accepted
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
@@ -299,7 +299,7 @@ backendTLSPolicies:
       conditions:
       - lastTransitionTime: null
         message: Configmap ca-not-found not found in namespace envoy-gateway.
-        reason: Invalid
+        reason: NoValidCACertificate
         status: "False"
         type: Accepted
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
@@ -309,7 +309,7 @@ backendTLSPolicies:
       conditions:
       - lastTransitionTime: null
         message: Configmap ca-not-found not found in namespace envoy-gateway.
-        reason: Invalid
+        reason: NoValidCACertificate
         status: "False"
         type: Accepted
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
@@ -319,7 +319,7 @@ backendTLSPolicies:
       conditions:
       - lastTransitionTime: null
         message: Configmap ca-not-found not found in namespace envoy-gateway.
-        reason: Invalid
+        reason: NoValidCACertificate
         status: "False"
         type: Accepted
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
@@ -329,7 +329,7 @@ backendTLSPolicies:
       conditions:
       - lastTransitionTime: null
         message: Configmap ca-not-found not found in namespace envoy-gateway.
-        reason: Invalid
+        reason: NoValidCACertificate
         status: "False"
         type: Accepted
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
@@ -339,7 +339,7 @@ backendTLSPolicies:
       conditions:
       - lastTransitionTime: null
         message: Configmap ca-not-found not found in namespace envoy-gateway.
-        reason: Invalid
+        reason: NoValidCACertificate
         status: "False"
         type: Accepted
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
@@ -349,7 +349,7 @@ backendTLSPolicies:
       conditions:
       - lastTransitionTime: null
         message: Configmap ca-not-found not found in namespace envoy-gateway.
-        reason: Invalid
+        reason: NoValidCACertificate
         status: "False"
         type: Accepted
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
@@ -359,7 +359,7 @@ backendTLSPolicies:
       conditions:
       - lastTransitionTime: null
         message: Configmap ca-not-found not found in namespace envoy-gateway.
-        reason: Invalid
+        reason: NoValidCACertificate
         status: "False"
         type: Accepted
       - lastTransitionTime: null

@@ -57,7 +57,7 @@ backendTLSPolicies:
       conditions:
       - lastTransitionTime: null
         message: Configmap ca-cmap not found in namespace default.
-        reason: Invalid
+        reason: NoValidCACertificate
         status: "False"
         type: Accepted
       controllerName: gateway.envoyproxy.io/gatewayclass-controller

@@ -25,9 +25,44 @@ backendTLSPolicies:
       conditions:
       - lastTransitionTime: null
         message: Configmap no-ca-cmap not found in namespace backends.
-        reason: Invalid
+        reason: NoValidCACertificate
         status: "False"
         type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+- apiVersion: gateway.networking.k8s.io/v1alpha2
+  kind: BackendTLSPolicy
+  metadata:
+    name: policy-invalid-kind
+    namespace: backends
+  spec:
+    targetRefs:
+    - group: ""
+      kind: Service
+      name: http-backend2
+      sectionName: http
+    validation:
+      caCertificateRefs:
+      - group: ""
+        kind: InvalidKind
+        name: invalid-kind
+      hostname: example.com
+  status:
+    ancestors:
+    - ancestorRef:
+        name: gateway-btls
+        namespace: envoy-gateway
+        sectionName: http
+      conditions:
+      - lastTransitionTime: null
+        message: No ca found in referred ConfigMap, Secret or ClusterTrustBundle.
+        reason: NoValidCACertificate
+        status: "False"
+        type: Accepted
+      - lastTransitionTime: null
+        message: No ca found in referred ConfigMap, Secret or ClusterTrustBundle.
+        reason: InvalidKind
+        status: "False"
+        type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
@@ -85,6 +120,9 @@ httpRoutes:
       - name: http-backend
         namespace: backends
         port: 8080
+      - name: http-backend2
+        namespace: backends
+        port: 8080
       matches:
       - path:
           type: Exact
@@ -98,8 +136,9 @@ httpRoutes:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: 'Failed to process route rule 0 backendRef 0: configmap no-ca-cmap
-          not found in namespace backends.'
+        message: |-
+          Failed to process route rule 0 backendRef 0: configmap no-ca-cmap not found in namespace backends.
+          Failed to process route rule 0 backendRef 1: no ca found in referred ConfigMap, Secret or ClusterTrustBundle.
         reason: InvalidBackendTLS
         status: "False"
         type: ResolvedRefs

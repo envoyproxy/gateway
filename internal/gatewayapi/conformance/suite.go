@@ -21,7 +21,6 @@ func SkipTests(gatewayNamespaceMode bool) []suite.ConformanceTest {
 		tests.BackendTLSPolicyInvalidCACertificateRef,
 		tests.BackendTLSPolicySANValidation,
 		tests.BackendTLSPolicyConflictResolution,
-		tests.BackendTLSPolicyInvalidKind,
 		tests.BackendTLSPolicyObservedGenerationBump,
 	}
 
