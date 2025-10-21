@@ -1201,7 +1201,8 @@ func buildCompression(compression, compressor []*egv1a1.Compression) []*ir.Compr
 		for _, c := range compressor {
 			// Only add compression if the corresponding compressor not null
 			if (c.Type == egv1a1.GzipCompressorType && c.Gzip != nil) ||
-				(c.Type == egv1a1.BrotliCompressorType && c.Brotli != nil) {
+				(c.Type == egv1a1.BrotliCompressorType && c.Brotli != nil) ||
+				(c.Type == egv1a1.ZstdCompressorType && c.Zstd != nil) {
 				irCompression = append(irCompression, &ir.Compression{
 					Type: c.Type,
 				})
