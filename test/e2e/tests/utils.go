@@ -623,6 +623,11 @@ type LokiQueryResponse struct {
 // CollectAndDump collects and dumps the cluster data for troubleshooting and log.
 // This function should be call within t.Cleanup.
 func CollectAndDump(t *testing.T, rest *rest.Config) {
+	if os.Getenv("ACTIONS_STEP_DEBUG") != "true" {
+		tlog.Logf(t, "Skipping collecting and dumping cluster data, set ACTIONS_STEP_DEBUG=true to enable it")
+		return
+	}
+
 	dumpedNamespaces := []string{"envoy-gateway-system"}
 	if IsGatewayNamespaceMode() {
 		dumpedNamespaces = append(dumpedNamespaces, ConformanceInfraNamespace)
@@ -630,15 +635,6 @@ func CollectAndDump(t *testing.T, rest *rest.Config) {
 
 	opts := []tb.CollectOption{
 		tb.WithCollectedNamespaces(dumpedNamespaces),
-	}
-
-	if os.Getenv("ACTIONS_STEP_DEBUG") != "true" {
-		// don't collector metrics, pod logs and config dumps when ACTIONS_STEP_DEBUG is false
-		opts = append(opts,
-			tb.DisableCollector(tb.CollectorTypePrometheusMetrics),
-			tb.DisableCollector(tb.CollectorTypePodLogs),
-			tb.DisableCollector(tb.CollectorTypeConfigDump),
-		)
 	}
 
 	result, _ := tb.CollectResult(t.Context(), rest, opts...)
