@@ -17,7 +17,6 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
-	"sigs.k8s.io/gateway-api/conformance/utils/tlog"
 
 	"github.com/envoyproxy/gateway/test/resilience/suite"
 )
@@ -39,6 +38,11 @@ var EPResilience = suite.ResilienceTest{
 		}
 
 		ap.MustApplyWithCleanup(t, suite.Client, suite.TimeoutConfig, "testdata/base.yaml", true)
+
+		// Preserve original convergence semantics for resilience tests
+		localTimeout := suite.TimeoutConfig
+		localTimeout.RequiredConsecutiveSuccesses = 2
+		localTimeout.MaxTimeToConsistency = time.Minute
 
 		t.Run("Envoy proxies continue to work even when eg is offline", func(t *testing.T) {
 			ctx := context.Background()
@@ -77,19 +81,7 @@ var EPResilience = suite.ResilienceTest{
 				Namespace: ns,
 			}
 
-			req := http.MakeRequest(t, &expectedResponse, gwAddr, "http", "http")
-			http.AwaitConvergence(t, threshold, timeout, func(elapsed time.Duration) bool {
-				cReq, cRes, err := suite.RoundTripper.CaptureRoundTrip(req)
-				if err != nil {
-					tlog.Logf(t, "Request failed, not ready yet: %v (after %v)", err.Error(), elapsed)
-					return false
-				}
-				if err := http.CompareRoundTrip(t, &req, cReq, cRes, expectedResponse); err != nil {
-					tlog.Logf(t, "Response expectation failed for request: %+v  not ready yet: %v (after %v)", req, err, elapsed)
-					return false
-				}
-				return true
-			})
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, localTimeout, gwAddr, expectedResponse)
 		})
 	},
 }
