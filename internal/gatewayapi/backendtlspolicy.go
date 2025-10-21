@@ -21,7 +21,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
-var BackendTLSPolicyInvalidKind = fmt.Errorf("no ca found in referred ConfigMap, Secret or ClusterTrustBundle")
+var ErrBackendTLSPolicyInvalidKind = fmt.Errorf("no ca found in referred ConfigMap, Secret or ClusterTrustBundle")
 
 // ProcessBackendTLSPolicyStatus is called to post-process Backend TLS Policy status
 // after they were applied in all relevant translations.
@@ -172,7 +172,7 @@ func (t *Translator) processBackendTLSPolicy(
 			policy.Generation,
 		)
 
-		if errors.Is(err, BackendTLSPolicyInvalidKind) {
+		if errors.Is(err, ErrBackendTLSPolicyInvalidKind) {
 			status.SetConditionForPolicyAncestors(&policy.Status,
 				ancestorRefs,
 				t.GatewayControllerName,
@@ -365,7 +365,7 @@ func getCaCertsFromCARefs(namespace string, caCertificates []gwapiv1.LocalObject
 	}
 
 	if ca == "" {
-		return nil, BackendTLSPolicyInvalidKind
+		return nil, ErrBackendTLSPolicyInvalidKind
 	}
 	return []byte(ca), nil
 }
