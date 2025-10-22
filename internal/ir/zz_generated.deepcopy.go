@@ -784,8 +784,8 @@ func (in *CustomResponse) DeepCopyInto(out *CustomResponse) {
 	}
 	if in.Body != nil {
 		in, out := &in.Body, &out.Body
-		*out = new(string)
-		**out = **in
+		*out = make([]byte, len(*in))
+		copy(*out, *in)
 	}
 	if in.StatusCode != nil {
 		in, out := &in.StatusCode, &out.StatusCode
