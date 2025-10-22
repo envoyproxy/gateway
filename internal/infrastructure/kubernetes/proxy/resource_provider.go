@@ -64,6 +64,9 @@ type ResourceRender struct {
 	// DNSDomain is the dns domain used by k8s services. Defaults to "cluster.local".
 	DNSDomain string
 
+	// ServiceName is the name of the Envoy Gateway service. Defaults to "envoy-gateway".
+	ServiceName string
+
 	ShutdownManager *egv1a1.ShutdownManager
 
 	TopologyInjectorDisabled bool
@@ -80,6 +83,7 @@ type ResourceRender struct {
 type KubernetesInfraProvider interface {
 	GetControllerNamespace() string
 	GetDNSDomain() string
+	GetServiceName() string
 	GetEnvoyGateway() *egv1a1.EnvoyGateway
 	GetOwnerReferenceUID(ctx context.Context, infra *ir.Infra) (map[string]types.UID, error)
 	GetResourceNamespace(ir *ir.Infra) string
@@ -95,6 +99,7 @@ func NewResourceRender(ctx context.Context, kubeInfra KubernetesInfraProvider, i
 		envoyNamespace:           kubeInfra.GetResourceNamespace(infra),
 		controllerNamespace:      kubeInfra.GetControllerNamespace(),
 		DNSDomain:                kubeInfra.GetDNSDomain(),
+		ServiceName:              kubeInfra.GetServiceName(),
 		infra:                    infra.GetProxyInfra(),
 		ShutdownManager:          kubeInfra.GetEnvoyGateway().GetEnvoyGatewayProvider().GetEnvoyGatewayKubeProvider().ShutdownManager,
 		TopologyInjectorDisabled: kubeInfra.GetEnvoyGateway().TopologyInjectorDisabled(),
@@ -378,7 +383,7 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 	}
 
 	// Get expected bootstrap configurations rendered ProxyContainers
-	containers, err := expectedProxyContainers(r.infra, deploymentConfig.Container, proxyConfig.Spec.Shutdown, r.ShutdownManager, r.TopologyInjectorDisabled, r.ControllerNamespace(), r.DNSDomain, r.GatewayNamespaceMode)
+	containers, err := expectedProxyContainers(r.infra, deploymentConfig.Container, proxyConfig.Spec.Shutdown, r.ShutdownManager, r.TopologyInjectorDisabled, r.ControllerNamespace(), r.DNSDomain, r.ServiceName, r.GatewayNamespaceMode)
 	if err != nil {
 		return nil, err
 	}
@@ -468,7 +473,7 @@ func (r *ResourceRender) DaemonSet() (*appsv1.DaemonSet, error) {
 	}
 
 	// Get expected bootstrap configurations rendered ProxyContainers
-	containers, err := expectedProxyContainers(r.infra, daemonSetConfig.Container, proxyConfig.Spec.Shutdown, r.ShutdownManager, r.TopologyInjectorDisabled, r.ControllerNamespace(), r.DNSDomain, r.GatewayNamespaceMode)
+	containers, err := expectedProxyContainers(r.infra, daemonSetConfig.Container, proxyConfig.Spec.Shutdown, r.ShutdownManager, r.TopologyInjectorDisabled, r.ControllerNamespace(), r.DNSDomain, r.ServiceName, r.GatewayNamespaceMode)
 	if err != nil {
 		return nil, err
 	}

@@ -38,7 +38,8 @@ func TestGetRenderedBootstrapConfig(t *testing.T) {
 						Disable: true,
 					},
 				},
-				SdsConfig: sds,
+				SdsConfig:   sds,
+				ServiceName: "envoy-gateway",
 			},
 		},
 		{
@@ -47,7 +48,8 @@ func TestGetRenderedBootstrapConfig(t *testing.T) {
 				ProxyMetrics: &egv1a1.ProxyMetrics{
 					Prometheus: &egv1a1.ProxyPrometheusProvider{},
 				},
-				SdsConfig: sds,
+				SdsConfig:   sds,
+				ServiceName: "envoy-gateway",
 			},
 		},
 		{
@@ -60,7 +62,8 @@ func TestGetRenderedBootstrapConfig(t *testing.T) {
 						},
 					},
 				},
-				SdsConfig: sds,
+				SdsConfig:   sds,
+				ServiceName: "envoy-gateway",
 			},
 		},
 		{
@@ -73,7 +76,8 @@ func TestGetRenderedBootstrapConfig(t *testing.T) {
 						},
 					},
 				},
-				SdsConfig: sds,
+				SdsConfig:   sds,
+				ServiceName: "envoy-gateway",
 			},
 		},
 		{
@@ -106,7 +110,8 @@ func TestGetRenderedBootstrapConfig(t *testing.T) {
 						},
 					},
 				},
-				SdsConfig: sds,
+				SdsConfig:   sds,
+				ServiceName: "envoy-gateway",
 			},
 		},
 		{
@@ -137,7 +142,8 @@ func TestGetRenderedBootstrapConfig(t *testing.T) {
 						},
 					},
 				},
-				SdsConfig: sds,
+				SdsConfig:   sds,
+				ServiceName: "envoy-gateway",
 			},
 		},
 		{
@@ -167,7 +173,8 @@ func TestGetRenderedBootstrapConfig(t *testing.T) {
 						},
 					},
 				},
-				SdsConfig: sds,
+				SdsConfig:   sds,
+				ServiceName: "envoy-gateway",
 			},
 		},
 		{
@@ -178,6 +185,7 @@ func TestGetRenderedBootstrapConfig(t *testing.T) {
 				AdminServerPort: ptr.To(int32(2222)),
 				StatsServerPort: ptr.To(int32(3333)),
 				SdsConfig:       sds,
+				ServiceName:     "envoy-gateway",
 			},
 		},
 		{
@@ -185,12 +193,14 @@ func TestGetRenderedBootstrapConfig(t *testing.T) {
 			opts: &RenderBootstrapConfigOptions{
 				MaxHeapSizeBytes: 1073741824,
 				SdsConfig:        sds,
+				ServiceName:      "envoy-gateway",
 			},
 		},
 		{
 			name: "ipv6",
 			opts: &RenderBootstrapConfigOptions{
-				IPFamily: ptr.To(egv1a1.IPv6),
+				IPFamily:    ptr.To(egv1a1.IPv6),
+				ServiceName: "envoy-gateway",
 			},
 		},
 		{
@@ -202,6 +212,7 @@ func TestGetRenderedBootstrapConfig(t *testing.T) {
 					},
 				},
 				SdsConfig:                sds,
+				ServiceName:              "envoy-gateway",
 				TopologyInjectorDisabled: true,
 			},
 		},
@@ -214,6 +225,7 @@ func TestGetRenderedBootstrapConfig(t *testing.T) {
 					},
 				},
 				SdsConfig:                sds,
+				ServiceName:              "envoy-gateway",
 				TopologyInjectorDisabled: false,
 			},
 		},
