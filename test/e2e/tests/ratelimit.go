@@ -120,6 +120,7 @@ var RateLimitHeaderMatchTest = suite.ConformanceTest{
 		routeNN := types.NamespacedName{Name: "header-ratelimit", Namespace: ns}
 		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 		gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
+		kubernetes.NamespacesMustBeReady(t, suite.Client, suite.TimeoutConfig, []string{ns})
 
 		t.Run("all matched headers can got limited", func(t *testing.T) {
 			requestHeaders := map[string]string{
@@ -208,6 +209,7 @@ var GlobalRateLimitHeaderInvertMatchTest = suite.ConformanceTest{
 		routeNN := types.NamespacedName{Name: "header-ratelimit", Namespace: ns}
 		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 		gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
+		kubernetes.NamespacesMustBeReady(t, suite.Client, suite.TimeoutConfig, []string{ns})
 
 		t.Run("all matched headers got limited", func(t *testing.T) {
 			requestHeaders := map[string]string{
@@ -295,6 +297,7 @@ var RateLimitHeadersDisabled = suite.ConformanceTest{
 		routeNN := types.NamespacedName{Name: "ratelimit-headers-disabled", Namespace: ns}
 		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 		gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
+		kubernetes.NamespacesMustBeReady(t, suite.Client, suite.TimeoutConfig, []string{ns})
 
 		t.Run("all matched headers can get limited", func(t *testing.T) {
 			requestHeaders := map[string]string{
@@ -384,6 +387,7 @@ var RateLimitBasedJwtClaimsTest = suite.ConformanceTest{
 			routeNN := types.NamespacedName{Name: "http-ratelimit-based-jwt-claims", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 			gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
+			kubernetes.NamespacesMustBeReady(t, suite.Client, suite.TimeoutConfig, []string{ns})
 
 			preCount, err := OverLimitCount(suite)
 			require.NoError(t, err)
@@ -517,6 +521,7 @@ var RateLimitMultipleListenersTest = suite.ConformanceTest{
 			routeNN := types.NamespacedName{Name: "cidr-ratelimit", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "eg-rate-limit", Namespace: ns}
 			gwHost := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
+			kubernetes.NamespacesMustBeReady(t, suite.Client, suite.TimeoutConfig, []string{ns})
 
 			for _, port := range []string{"80", "8080"} {
 				gwAddr := net.JoinHostPort(gwHost, port)
@@ -572,6 +577,7 @@ var RateLimitHeadersAndCIDRMatchTest = suite.ConformanceTest{
 		routeNN := types.NamespacedName{Name: "header-and-cidr-ratelimit", Namespace: ns}
 		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 		gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
+		kubernetes.NamespacesMustBeReady(t, suite.Client, suite.TimeoutConfig, []string{ns})
 
 		t.Run("all matched both headers and cidr can got limited", func(t *testing.T) {
 			if IPFamily == "ipv6" {
@@ -688,6 +694,7 @@ var UsageRateLimitTest = suite.ConformanceTest{
 		routeNN := types.NamespacedName{Name: "usage-rate-limit", Namespace: ns}
 		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 		gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
+		kubernetes.NamespacesMustBeReady(t, suite.Client, suite.TimeoutConfig, []string{ns})
 
 		// Waiting for the extproc service to be ready.
 		ancestorRef := gwapiv1.ParentReference{
@@ -757,6 +764,9 @@ var RateLimitGlobalSharedCidrMatchTest = suite.ConformanceTest{
 
 			// Get gateway address for the second route
 			gwAddr2 := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), route2NN)
+
+			// Wait for resources to be ready
+			kubernetes.NamespacesMustBeReady(t, suite.Client, suite.TimeoutConfig, []string{ns})
 
 			ratelimitHeader := make(map[string]string)
 			expectOkResp1 := http.ExpectedResponse{
@@ -855,6 +865,9 @@ var RateLimitGlobalSharedGatewayHeaderMatchTest = suite.ConformanceTest{
 
 			// Get gateway address for the second route
 			gwAddr2 := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), route2NN)
+
+			// Wait for resources to be ready
+			kubernetes.NamespacesMustBeReady(t, suite.Client, suite.TimeoutConfig, []string{ns})
 
 			// Define headers that will trigger the rate limit
 			requestHeaders := map[string]string{
@@ -957,6 +970,7 @@ var RateLimitGlobalMergeTest = suite.ConformanceTest{
 
 		gwAddr1 := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), route1NN)
 		gwAddr2 := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), route2NN)
+		kubernetes.NamespacesMustBeReady(t, suite.Client, suite.TimeoutConfig, []string{ns})
 
 		t.Run("shared_route_policy_x-user-id=one", func(t *testing.T) {
 			headers := map[string]string{"x-user-id": "one"}
