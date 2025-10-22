@@ -3568,7 +3568,7 @@ _Appears in:_
 | `splitExternalLocalOriginErrors` | _boolean_ |  false  | false | SplitExternalLocalOriginErrors enables splitting of errors between external and local origin. |
 | `interval` | _[Duration](https://gateway-api.sigs.k8s.io/reference/spec/#duration)_ |  false  | 3s | Interval defines the time between passive health checks. |
 | `consecutiveLocalOriginFailures` | _integer_ |  false  | 5 | ConsecutiveLocalOriginFailures sets the number of consecutive local origin failures triggering ejection.<br />Parameter takes effect only when split_external_local_origin_errors is set to true. |
-| `consecutiveGatewayErrors` | _integer_ |  false  | 0 | ConsecutiveGatewayErrors sets the number of consecutive gateway errors triggering ejection. |
+| `consecutiveGatewayErrors` | _integer_ |  false  |  | ConsecutiveGatewayErrors sets the number of consecutive gateway errors triggering ejection. |
 | `consecutive5XxErrors` | _integer_ |  false  | 5 | Consecutive5xxErrors sets the number of consecutive 5xx errors triggering ejection. |
 | `baseEjectionTime` | _[Duration](https://gateway-api.sigs.k8s.io/reference/spec/#duration)_ |  false  | 30s | BaseEjectionTime defines the base duration for which a host will be ejected on consecutive failures. |
 | `maxEjectionPercent` | _integer_ |  false  | 10 | MaxEjectionPercent sets the maximum percentage of hosts in a cluster that can be ejected. |

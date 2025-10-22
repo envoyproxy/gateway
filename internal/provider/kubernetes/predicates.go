@@ -149,12 +149,6 @@ func (r *gatewayAPIReconciler) validateSecretForReconcile(secret *corev1.Secret)
 		}
 	}
 
-	if !r.backendAPIDisabled() {
-		if r.isBackendReferencingSecret(&nsName) {
-			return true
-		}
-	}
-
 	if r.isOIDCHMACSecret(&nsName) {
 		return true
 	}
@@ -185,6 +179,28 @@ func (r *gatewayAPIReconciler) validateSecretForReconcile(secret *corev1.Secret)
 		if r.isHTTPRouteFilterReferencingSecret(&nsName) {
 			return true
 		}
+	}
+
+	if !r.backendAPIDisabled() {
+		if r.isBackendReferencingSecret(&nsName) {
+			return true
+		}
+	}
+
+	return false
+}
+
+func (r *gatewayAPIReconciler) isBackendReferencingSecret(nsName *types.NamespacedName) bool {
+	backendList := &egv1a1.BackendList{}
+	if err := r.client.List(context.Background(), backendList, &client.ListOptions{
+		FieldSelector: fields.OneTermEqualSelector(secretBackendIndex, nsName.String()),
+	}); err != nil {
+		r.log.Error(err, "unable to find associated Backend")
+		return false
+	}
+
+	if len(backendList.Items) > 0 {
+		return true
 	}
 
 	return false
@@ -282,18 +298,6 @@ func (r *gatewayAPIReconciler) isBackendTLSPolicyReferencingSecret(nsName *types
 	}
 
 	return false
-}
-
-func (r *gatewayAPIReconciler) isBackendReferencingSecret(nsName *types.NamespacedName) bool {
-	backendList := &egv1a1.BackendList{}
-	if err := r.client.List(context.Background(), backendList, &client.ListOptions{
-		FieldSelector: fields.OneTermEqualSelector(secretBackendIndex, nsName.String()),
-	}); err != nil {
-		r.log.Error(err, "unable to find associated Backend")
-		return false
-	}
-
-	return len(backendList.Items) > 0
 }
 
 func (r *gatewayAPIReconciler) isEnvoyProxyReferencingSecret(nsName *types.NamespacedName) bool {
@@ -895,6 +899,20 @@ func (r *gatewayAPIReconciler) validateConfigMapForReconcile(obj client.Object) 
 		}
 
 		if len(spList.Items) > 0 {
+			return true
+		}
+	}
+
+	if !r.backendAPIDisabled() {
+		backendList := &egv1a1.BackendList{}
+		if err := r.client.List(context.Background(), backendList, &client.ListOptions{
+			FieldSelector: fields.OneTermEqualSelector(configMapBackendIndex, utils.NamespacedName(configMap).String()),
+		}); err != nil {
+			r.log.Error(err, "unable to find associated Backend")
+			return false
+		}
+
+		if len(backendList.Items) > 0 {
 			return true
 		}
 	}
