@@ -366,6 +366,74 @@ func TestDecode(t *testing.T) {
 			},
 			expect: true,
 		},
+		{
+			in: inPath + "standalone-extension-server.yaml",
+			out: &egv1a1.EnvoyGateway{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       egv1a1.KindEnvoyGateway,
+					APIVersion: egv1a1.GroupVersion.String(),
+				},
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					Gateway: egv1a1.DefaultGateway(),
+					Provider: &egv1a1.EnvoyGatewayProvider{
+						Type: egv1a1.ProviderTypeCustom,
+						Custom: &egv1a1.EnvoyGatewayCustomProvider{
+							Resource: egv1a1.EnvoyGatewayResourceProvider{
+								Type: egv1a1.ResourceProviderTypeFile,
+								File: &egv1a1.EnvoyGatewayFileResourceProvider{
+									Paths: []string{
+										"/tmp/envoy-gateway-test",
+									},
+								},
+							},
+							Infrastructure: &egv1a1.EnvoyGatewayInfrastructureProvider{
+								Type: egv1a1.InfrastructureProviderTypeHost,
+								Host: &egv1a1.EnvoyGatewayHostInfrastructureProvider{},
+							},
+						},
+					},
+					Logging: egv1a1.DefaultEnvoyGatewayLogging(),
+					ExtensionManager: &egv1a1.ExtensionManager{
+						PolicyResources: []egv1a1.GroupVersionKind{
+							{
+								Group:   "gateway.example.io",
+								Version: "v1alpha1",
+								Kind:    "ExampleExtPolicy",
+							},
+						},
+						Hooks: &egv1a1.ExtensionHooks{
+							XDSTranslator: &egv1a1.XDSTranslatorHooks{
+								Post: []egv1a1.XDSTranslatorHook{
+									egv1a1.XDSHTTPListener,
+									egv1a1.XDSRoute,
+									egv1a1.XDSVirtualHost,
+									egv1a1.XDSCluster,
+									egv1a1.XDSTranslation,
+								},
+							},
+						},
+						Service: &egv1a1.ExtensionService{
+							BackendEndpoint: egv1a1.BackendEndpoint{
+								FQDN: &egv1a1.FQDNEndpoint{
+									Hostname: "127.0.0.1",
+									Port:     5005,
+								},
+							},
+						},
+					},
+					ExtensionAPIs: &egv1a1.ExtensionAPISettings{
+						EnableBackend:          true,
+						EnableEnvoyPatchPolicy: false,
+					},
+					RuntimeFlags: &egv1a1.RuntimeFlags{
+						Enabled: []egv1a1.RuntimeFlag{
+							"XDSNameSchemeV2",
+						},
+					},
+				},
+			},
+			expect: true,
+		},
 	}
 
 	for _, tc := range testCases {
