@@ -625,7 +625,7 @@ type CustomResponse struct {
 	ContentType *string `json:"contentType,omitempty"`
 
 	// Body of the Custom Response
-	Body *string `json:"body,omitempty"`
+	Body []byte `json:"body,omitempty"`
 
 	// StatusCode will be used for the response's status code.
 	StatusCode *uint32 `json:"statusCode,omitempty"`
