@@ -14,9 +14,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-// validateTLSSecretData ensures the cert and key provided in a secret
-// is not malformed and can be properly parsed
-func validateTLSSecretsData(secrets []*corev1.Secret) ([]*x509.Certificate, error) {
+// parseCertsFromTLSSecretsData parses the cert and key provided in a secret
+// and ensures that they are not malformed and can be properly parsed
+func parseCertsFromTLSSecretsData(secrets []*corev1.Secret) ([]*x509.Certificate, error) {
 	var publicKeyAlgorithm string
 	var parseErr error
 	certs := make([]*x509.Certificate, 0, len(secrets))
@@ -29,12 +29,12 @@ func validateTLSSecretsData(secrets []*corev1.Secret) ([]*x509.Certificate, erro
 			return nil, fmt.Errorf("%s/%s must contain valid %s and %s, unable to validate certificate in %s: %w", secret.Namespace, secret.Name, corev1.TLSCertKey, corev1.TLSPrivateKeyKey, corev1.TLSCertKey, err)
 		}
 
-		certBlock, _ := pem.Decode(certData)
-		if certBlock == nil {
-			return nil, fmt.Errorf("%s/%s must contain valid %s and %s, unable to decode pem data in %s", secret.Namespace, secret.Name, corev1.TLSCertKey, corev1.TLSPrivateKeyKey, corev1.TLSCertKey)
+		certBlockBytes, err := decodePemDataForBlockType(certData, "CERTIFICATE")
+		if err != nil {
+			return nil, fmt.Errorf("%s/%s must contain valid %s and %s, unable to decode pem data in %s: %w", secret.Namespace, secret.Name, corev1.TLSCertKey, corev1.TLSPrivateKeyKey, corev1.TLSCertKey, err)
 		}
 
-		cert, err := x509.ParseCertificate(certBlock.Bytes)
+		cert, err := x509.ParseCertificate(certBlockBytes)
 		if err != nil {
 			return nil, fmt.Errorf("%s/%s must contain valid %s and %s, unable to parse certificate in %s: %w", secret.Namespace, secret.Name, corev1.TLSCertKey, corev1.TLSPrivateKeyKey, corev1.TLSCertKey, err)
 		}
@@ -96,23 +96,63 @@ func validateTLSSecretsData(secrets []*corev1.Secret) ([]*x509.Certificate, erro
 	return certs, parseErr
 }
 
-func validateCertificate(data []byte) error {
-	block, _ := pem.Decode(data)
-	if block == nil {
-		return fmt.Errorf("pem decode failed")
+// decodePemDataForBlockType decodes PEM encoded data and returns the bytes for a given block type.
+// skips over other block types.
+func decodePemDataForBlockType(data []byte, blockType string) ([]byte, error) {
+	blockBytes := []byte{}
+	for {
+		block, remaining := pem.Decode(data)
+		if block == nil {
+			if len(blockBytes) > 0 {
+				return blockBytes, nil
+			}
+			return nil, fmt.Errorf("no block found for type %s", blockType)
+		}
+		if block.Type == blockType {
+			blockBytes = append(blockBytes, block.Bytes...)
+		}
+		data = remaining
 	}
-	certs, err := x509.ParseCertificates(block.Bytes)
+}
+
+// validateCertificate validates all certificates in PEM encoded data.
+func validateCertificate(data []byte) error {
+	blockBytes, err := decodePemDataForBlockType(data, "CERTIFICATE")
+	if err != nil {
+		return fmt.Errorf("unable to decode pem data for certificate: %w", err)
+	}
+	certs, err := x509.ParseCertificates(blockBytes)
 	if err != nil {
 		return err
 	}
 	now := time.Now()
 	for _, cert := range certs {
 		if now.After(cert.NotAfter) {
-			return fmt.Errorf("certificate is expired")
+			return fmt.Errorf("certificate has expired since %v", cert.NotAfter)
 		}
 		if now.Before(cert.NotBefore) {
-			return fmt.Errorf("certificate is not yet valid")
+			return fmt.Errorf("certificate will be valid after %v", cert.NotBefore)
 		}
+	}
+	return nil
+}
+
+// validateCrl validates all CRLs in PEM encoded data.
+func validateCrl(data []byte) error {
+	blockBytes, err := decodePemDataForBlockType(data, "X509 CRL")
+	if err != nil {
+		return fmt.Errorf("unable to decode pem data for CRL: %w", err)
+	}
+	crl, err := x509.ParseRevocationList(blockBytes)
+	if err != nil {
+		return fmt.Errorf("failed to parse CRL: %w", err)
+	}
+	now := time.Now()
+	if now.After(crl.NextUpdate) {
+		return fmt.Errorf("CRL is expired (next update was due at %v)", crl.NextUpdate)
+	}
+	if now.Before(crl.ThisUpdate) {
+		return fmt.Errorf("CRL is not yet valid (this update starts at %v)", crl.ThisUpdate)
 	}
 	return nil
 }

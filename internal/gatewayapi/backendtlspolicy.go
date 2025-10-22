@@ -306,7 +306,7 @@ func getCaCertsFromCARefs(namespace string, caCertificates []gwapiv1.LocalObject
 		case resource.KindConfigMap:
 			cm := resources.GetConfigMap(namespace, string(caRef.Name))
 			if cm != nil {
-				if crt, dataOk := getCaCertFromConfigMap(cm); dataOk {
+				if crt, dataOk := getCaCertFromData(cm.Data); dataOk {
 					if ca != "" {
 						ca += "\n"
 					}
@@ -320,7 +320,7 @@ func getCaCertsFromCARefs(namespace string, caCertificates []gwapiv1.LocalObject
 		case resource.KindSecret:
 			secret := resources.GetSecret(namespace, string(caRef.Name))
 			if secret != nil {
-				if crt, dataOk := getCaCertFromSecret(secret); dataOk {
+				if crt, dataOk := getCaCertFromData(secret.Data); dataOk {
 					if ca != "" {
 						ca += "\n"
 					}

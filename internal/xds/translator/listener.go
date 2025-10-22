@@ -981,15 +981,22 @@ func buildXdsTLSCertSecret(tlsConfig *ir.TLSCertificate) *tlsv3.Secret {
 	}
 }
 
-func buildXdsTLSCaCertSecret(caCertificate *ir.TLSCACertificate) *tlsv3.Secret {
+func buildXdsTLSCaCertSecret(caCertificate *ir.TLSCACertificate, crl *ir.TLSCrl) *tlsv3.Secret {
+	validationContext := &tlsv3.CertificateValidationContext{
+		TrustedCa: &corev3.DataSource{
+			Specifier: &corev3.DataSource_InlineBytes{InlineBytes: caCertificate.Certificate},
+		},
+	}
+	if crl != nil {
+		validationContext.Crl = &corev3.DataSource{
+			Specifier: &corev3.DataSource_InlineBytes{InlineBytes: crl.Data},
+		}
+		validationContext.OnlyVerifyLeafCertCrl = crl.OnlyVerifyLeafCertificate
+	}
 	return &tlsv3.Secret{
 		Name: caCertificate.Name,
 		Type: &tlsv3.Secret_ValidationContext{
-			ValidationContext: &tlsv3.CertificateValidationContext{
-				TrustedCa: &corev3.DataSource{
-					Specifier: &corev3.DataSource_InlineBytes{InlineBytes: caCertificate.Certificate},
-				},
-			},
+			ValidationContext: validationContext,
 		},
 	}
 }

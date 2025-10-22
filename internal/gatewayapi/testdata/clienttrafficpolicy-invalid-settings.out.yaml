@@ -31,8 +31,8 @@ clientTrafficPolicies:
       conditions:
       - lastTransitionTime: null
         message: |-
-          TLS: caCertificateRef secret [tls-secret-1] not found
-          TLS: caCertificateRef secret [tls-secret-1] not found.
+          TLS: invalid certificate in Secret tls-secret-1: certificate has expired since 2025-01-25 23:15:31 +0000 UTC
+          TLS: invalid certificate in Secret tls-secret-1: certificate has expired since 2025-01-25 23:15:31 +0000 UTC.
         reason: Invalid
         status: "False"
         type: Accepted
