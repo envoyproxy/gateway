@@ -1598,8 +1598,7 @@ func (t *Translator) processDestination(name string, backendRefContext BackendRe
 
 	protocol := inspectAppProtocolByRouteKind(routeType)
 
-	// this's used to pass the BackendTLSPolicyObservedGenerationBump conformance test
-	// Always proccessing BackendTLSPolicy if possible.
+	// Always processing BackendTLSPolicy if possible.
 	tls, tlsErr := t.applyBackendTLSSetting(
 		backendRef.BackendObjectReference,
 		backendNamespace,
