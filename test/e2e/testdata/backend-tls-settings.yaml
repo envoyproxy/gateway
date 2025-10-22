@@ -281,13 +281,12 @@ spec:
       - name: ca-certificate
         group: ""
         kind: ConfigMap
-    clientTLS:
-      certificateRef:
-        name: client-tls-certificate-override
-        kind: Secret
-        group: ""
-      alpnProtocols:
-        - h2
+    certificateRef:
+      name: client-tls-certificate-override
+      kind: Secret
+      group: ""
+    alpnProtocols:
+      - h2
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
