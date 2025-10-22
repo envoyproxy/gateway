@@ -19,7 +19,6 @@ func SkipTests(gatewayNamespaceMode bool) []suite.ConformanceTest {
 
 		// TODO: fix me
 		tests.BackendTLSPolicyConflictResolution,
-		tests.BackendTLSPolicyObservedGenerationBump,
 	}
 
 	if gatewayNamespaceMode {

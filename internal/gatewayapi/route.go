@@ -1598,6 +1598,26 @@ func (t *Translator) processDestination(name string, backendRefContext BackendRe
 
 	protocol := inspectAppProtocolByRouteKind(routeType)
 
+	// this's used to pass the BackendTLSPolicyObservedGenerationBump conformance test
+	// Always proccessing BackendTLSPolicy if possible.
+	tls, tlsErr := t.applyBackendTLSSetting(
+		backendRef.BackendObjectReference,
+		backendNamespace,
+		gwapiv1.ParentReference{
+			Group:       parentRef.Group,
+			Kind:        parentRef.Kind,
+			Namespace:   parentRef.Namespace,
+			Name:        parentRef.Name,
+			SectionName: parentRef.SectionName,
+			Port:        parentRef.Port,
+		},
+		resources,
+		envoyProxy,
+	)
+	if tlsErr != nil {
+		return nil, nil, status.NewRouteStatusError(tlsErr, status.RouteReasonInvalidBackendTLS)
+	}
+
 	switch KindDerefOr(backendRef.Kind, resource.KindService) {
 	case resource.KindServiceImport:
 		ds, err = t.processServiceImportDestinationSetting(name, backendRef.BackendObjectReference, backendNamespace, protocol, resources, envoyProxy)
@@ -1612,7 +1632,6 @@ func (t *Translator) processDestination(name string, backendRefContext BackendRe
 		svc := resources.GetService(backendNamespace, string(backendRef.Name))
 		ds.IPFamily = getServiceIPFamily(svc)
 		ds.PreferLocal = processPreferLocalZone(svc)
-
 	case egv1a1.KindBackend:
 		ds = t.processBackendDestinationSetting(name, backendRef.BackendObjectReference, backendNamespace, protocol, resources)
 	default:
@@ -1640,24 +1659,7 @@ func (t *Translator) processDestination(name string, backendRefContext BackendRe
 		}
 	}
 
-	var tlsErr error
-	ds.TLS, tlsErr = t.applyBackendTLSSetting(
-		backendRef.BackendObjectReference,
-		backendNamespace,
-		gwapiv1.ParentReference{
-			Group:       parentRef.Group,
-			Kind:        parentRef.Kind,
-			Namespace:   parentRef.Namespace,
-			Name:        parentRef.Name,
-			SectionName: parentRef.SectionName,
-			Port:        parentRef.Port,
-		},
-		resources,
-		envoyProxy,
-	)
-	if tlsErr != nil {
-		return nil, nil, status.NewRouteStatusError(tlsErr, status.RouteReasonInvalidBackendTLS)
-	}
+	ds.TLS = tls
 
 	var filtersErr error
 	ds.Filters, filtersErr = t.processDestinationFilters(routeType, backendRefContext, parentRef, route, resources)
