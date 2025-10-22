@@ -519,6 +519,9 @@ func buildZoneAwareLbConfig(preferLocal *ir.PreferLocalZone) *commonv3.LocalityL
 			MinClusterSize: wrapperspb.UInt64(ptr.Deref(preferLocal.MinEndpointsThreshold, 6)),
 		},
 	}
+	if preferLocal.PercentageEnabled != nil {
+		lbConfig.ZoneAwareLbConfig.RoutingEnabled = &xdstype.Percent{Value: float64(*preferLocal.PercentageEnabled)}
+	}
 	if preferLocal.Force != nil {
 		lbConfig.ZoneAwareLbConfig.ForceLocalZone = &commonv3.LocalityLbConfig_ZoneAwareLbConfig_ForceLocalZone{
 			MinSize: wrapperspb.UInt32(ptr.Deref(preferLocal.Force.MinEndpointsInZoneThreshold, 1)),
@@ -601,7 +604,13 @@ func buildXdsOutlierDetection(outlierDetection *ir.OutlierDetection) *clusterv3.
 	}
 
 	if outlierDetection.ConsecutiveGatewayErrors != nil {
+		od.EnforcingConsecutiveGatewayFailure = wrapperspb.UInt32(100)
 		od.ConsecutiveGatewayFailure = wrapperspb.UInt32(*outlierDetection.ConsecutiveGatewayErrors)
+	}
+
+	if outlierDetection.FailurePercentageThreshold != nil {
+		od.FailurePercentageThreshold = wrapperspb.UInt32(*outlierDetection.FailurePercentageThreshold)
+		od.EnforcingFailurePercentage = wrapperspb.UInt32(100)
 	}
 
 	return od

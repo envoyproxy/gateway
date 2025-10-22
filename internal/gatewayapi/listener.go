@@ -113,8 +113,8 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 			}
 
 			// Add the listener to the Xds IR
-			servicePort := &protocolPort{protocol: listener.Protocol, port: int32(listener.Port)}
-			containerPort := t.servicePortToContainerPort(int32(listener.Port), gateway.envoyProxy)
+			servicePort := &protocolPort{protocol: listener.Protocol, port: listener.Port}
+			containerPort := t.servicePortToContainerPort(listener.Port, gateway.envoyProxy)
 			switch listener.Protocol {
 			case gwapiv1.HTTPProtocolType, gwapiv1.HTTPSProtocolType:
 				irListener := &ir.HTTPListener{
@@ -837,7 +837,10 @@ func (t *Translator) processBackendRefs(name string, backendCluster egv1a1.Backe
 			if err := validateBackendRefService(ref.BackendObjectReference, resources, ns, corev1.ProtocolTCP); err != nil {
 				return nil, nil, err
 			}
-			ds := t.processServiceDestinationSetting(name, ref.BackendObjectReference, ns, ir.TCP, resources, envoyProxy)
+			ds, err := t.processServiceDestinationSetting(name, ref.BackendObjectReference, ns, ir.TCP, resources, envoyProxy)
+			if err != nil {
+				return nil, nil, err
+			}
 			result = append(result, ds)
 		case resource.KindBackend:
 			if err := t.validateBackendRefBackend(ref.BackendObjectReference, resources, ns, true); err != nil {

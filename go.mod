@@ -1,6 +1,6 @@
 module github.com/envoyproxy/gateway
 
-go 1.24.8
+go 1.25.3
 
 require (
 	fortio.org/fortio v1.73.0
@@ -34,6 +34,7 @@ require (
 	github.com/google/cel-go v0.26.0
 	github.com/google/go-cmp v0.7.0
 	github.com/google/go-containerregistry v0.20.6
+	github.com/klauspost/compress v1.18.0
 	github.com/miekg/dns v1.1.68
 	github.com/ohler55/ojg v1.26.10
 	github.com/pkg/errors v0.9.1
@@ -41,13 +42,13 @@ require (
 	github.com/prometheus/client_model v0.6.2
 	github.com/prometheus/common v0.67.1
 	github.com/quic-go/quic-go v0.55.0
-	github.com/replicatedhq/troubleshoot v0.123.7
+	github.com/replicatedhq/troubleshoot v0.123.10
 	github.com/shopspring/decimal v1.4.0
 	github.com/spf13/cobra v1.10.1
 	github.com/spf13/pflag v1.0.10
 	github.com/stretchr/testify v1.11.1
 	github.com/telepresenceio/watchable v0.0.0-20220726211108-9bb86f92afa7
-	github.com/tetratelabs/func-e v1.2.0
+	github.com/tetratelabs/func-e v1.3.0
 	github.com/tsaarni/certyaml v0.10.0
 	github.com/yuin/gopher-lua v1.1.1
 	go.opentelemetry.io/otel v1.38.0
@@ -81,7 +82,7 @@ require (
 	k8s.io/kubectl v0.34.1
 	k8s.io/utils v0.0.0-20250820121507-0af2bda4dd1d
 	sigs.k8s.io/controller-runtime v0.22.3
-	sigs.k8s.io/gateway-api v1.3.1-0.20250527223622-54df0a899c1c
+	sigs.k8s.io/gateway-api v1.4.0
 	sigs.k8s.io/kubectl-validate v0.0.5-0.20250915070809-d2f2d68fba09
 	sigs.k8s.io/mcs-api v0.3.0
 	sigs.k8s.io/yaml v1.6.0
@@ -200,7 +201,6 @@ require (
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/kelseyhightower/envconfig v1.4.0 // indirect
-	github.com/klauspost/compress v1.18.0 // indirect
 	github.com/klauspost/pgzip v1.2.6 // indirect
 	github.com/kortschak/goroutine v1.1.3 // indirect
 	github.com/kylelemons/godebug v1.1.0 // indirect
