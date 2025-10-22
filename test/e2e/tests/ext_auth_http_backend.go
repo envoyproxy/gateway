@@ -13,7 +13,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
@@ -36,9 +35,9 @@ var HTTPBackendExtAuthTest = suite.ConformanceTest{
 		ns := "gateway-conformance-infra"
 		routeNN := types.NamespacedName{Name: "http-ext-auth-backend", Namespace: ns}
 		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
-		gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+		gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
 
-		ancestorRef := gwapiv1a2.ParentReference{
+		ancestorRef := gwapiv1.ParentReference{
 			Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
 			Kind:      gatewayapi.KindPtr(resource.KindGateway),
 			Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
@@ -69,7 +68,7 @@ var HTTPBackendExtAuthTest = suite.ConformanceTest{
 					},
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}
@@ -84,7 +83,7 @@ var HTTPBackendExtAuthTest = suite.ConformanceTest{
 					Path: "/myapp",
 				},
 				Response: http.Response{
-					StatusCode: 403,
+					StatusCodes: []int{403},
 				},
 				Namespace: ns,
 			}
@@ -95,7 +94,7 @@ var HTTPBackendExtAuthTest = suite.ConformanceTest{
 				t.Errorf("failed to get expected response: %v", err)
 			}
 
-			if err := http.CompareRequest(t, &req, cReq, cResp, expectedResponse); err != nil {
+			if err := http.CompareRoundTrip(t, &req, cReq, cResp, expectedResponse); err != nil {
 				t.Errorf("failed to compare request and response: %v", err)
 			}
 		})
@@ -110,7 +109,7 @@ var HTTPBackendExtAuthTest = suite.ConformanceTest{
 					},
 				},
 				Response: http.Response{
-					StatusCode: 403,
+					StatusCodes: []int{403},
 				},
 				Namespace: ns,
 			}
@@ -121,7 +120,7 @@ var HTTPBackendExtAuthTest = suite.ConformanceTest{
 				t.Errorf("failed to get expected response: %v", err)
 			}
 
-			if err := http.CompareRequest(t, &req, cReq, cResp, expectedResponse); err != nil {
+			if err := http.CompareRoundTrip(t, &req, cReq, cResp, expectedResponse); err != nil {
 				t.Errorf("failed to compare request and response: %v", err)
 			}
 		})
@@ -133,7 +132,7 @@ var HTTPBackendExtAuthTest = suite.ConformanceTest{
 					Path: "/public",
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}
@@ -144,7 +143,7 @@ var HTTPBackendExtAuthTest = suite.ConformanceTest{
 				t.Errorf("failed to get expected response: %v", err)
 			}
 
-			if err := http.CompareRequest(t, &req, cReq, cResp, expectedResponse); err != nil {
+			if err := http.CompareRoundTrip(t, &req, cReq, cResp, expectedResponse); err != nil {
 				t.Errorf("failed to compare request and response: %v", err)
 			}
 		})
@@ -171,7 +170,7 @@ var HTTPBackendExtAuthTest = suite.ConformanceTest{
 					},
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}
@@ -198,7 +197,7 @@ var HTTPBackendExtAuthTest = suite.ConformanceTest{
 				},
 				Backend: "infra-backend-v3",
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}

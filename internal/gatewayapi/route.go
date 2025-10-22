@@ -19,6 +19,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapiv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 	mcsapiv1a1 "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -46,7 +47,7 @@ var (
 type RoutesTranslator interface {
 	ProcessHTTPRoutes(httpRoutes []*gwapiv1.HTTPRoute, gateways []*GatewayContext, resources *resource.Resources, xdsIR resource.XdsIRMap) []*HTTPRouteContext
 	ProcessGRPCRoutes(grpcRoutes []*gwapiv1.GRPCRoute, gateways []*GatewayContext, resources *resource.Resources, xdsIR resource.XdsIRMap) []*GRPCRouteContext
-	ProcessTLSRoutes(tlsRoutes []*gwapiv1a2.TLSRoute, gateways []*GatewayContext, resources *resource.Resources, xdsIR resource.XdsIRMap) []*TLSRouteContext
+	ProcessTLSRoutes(tlsRoutes []*gwapiv1a3.TLSRoute, gateways []*GatewayContext, resources *resource.Resources, xdsIR resource.XdsIRMap) []*TLSRouteContext
 	ProcessTCPRoutes(tcpRoutes []*gwapiv1a2.TCPRoute, gateways []*GatewayContext, resources *resource.Resources, xdsIR resource.XdsIRMap) []*TCPRouteContext
 	ProcessUDPRoutes(udpRoutes []*gwapiv1a2.UDPRoute, gateways []*GatewayContext, resources *resource.Resources, xdsIR resource.XdsIRMap) []*UDPRouteContext
 }
@@ -982,7 +983,7 @@ func filterEGPrefix(in map[string]string) map[string]string {
 	return out
 }
 
-func (t *Translator) ProcessTLSRoutes(tlsRoutes []*gwapiv1a2.TLSRoute, gateways []*GatewayContext, resources *resource.Resources, xdsIR resource.XdsIRMap) []*TLSRouteContext {
+func (t *Translator) ProcessTLSRoutes(tlsRoutes []*gwapiv1a3.TLSRoute, gateways []*GatewayContext, resources *resource.Resources, xdsIR resource.XdsIRMap) []*TLSRouteContext {
 	relevantTLSRoutes := make([]*TLSRouteContext, 0, len(tlsRoutes))
 	// TLSRoutes are already sorted by the provider layer
 
@@ -1520,7 +1521,7 @@ func (t *Translator) processDestination(name string, backendRefContext BackendRe
 	ds.TLS, tlsErr = t.applyBackendTLSSetting(
 		backendRef.BackendObjectReference,
 		backendNamespace,
-		gwapiv1a2.ParentReference{
+		gwapiv1.ParentReference{
 			Group:       parentRef.Group,
 			Kind:        parentRef.Kind,
 			Namespace:   parentRef.Namespace,
@@ -1601,7 +1602,7 @@ func (t *Translator) processServiceImportDestinationSetting(
 	serviceImport := resources.GetServiceImport(backendNamespace, string(backendRef.Name))
 	var servicePort mcsapiv1a1.ServicePort
 	for _, port := range serviceImport.Spec.Ports {
-		if port.Port == int32(*backendRef.Port) {
+		if port.Port == *backendRef.Port {
 			servicePort = port
 			break
 		}
@@ -1614,7 +1615,7 @@ func (t *Translator) processServiceImportDestinationSetting(
 	// Route to endpoints by default
 	if !t.IsEnvoyServiceRouting(envoyProxy) {
 		endpointSlices := resources.GetEndpointSlicesForBackend(backendNamespace, string(backendRef.Name), resource.KindServiceImport)
-		endpoints, addrType = getIREndpointsFromEndpointSlices(endpointSlices, servicePort.Name, servicePort.Protocol)
+		endpoints, addrType = getIREndpointsFromEndpointSlices(endpointSlices, servicePort.Name, getServicePortProtocol(servicePort.Protocol))
 		if len(endpoints) == 0 {
 			return nil, status.NewRouteStatusError(
 				fmt.Errorf("no ready endpoints for the related ServiceImport %s/%s", backendNamespace, backendRef.Name),
@@ -1655,7 +1656,7 @@ func (t *Translator) processServiceDestinationSetting(
 	service := resources.GetService(backendNamespace, string(backendRef.Name))
 	var servicePort corev1.ServicePort
 	for _, port := range service.Spec.Ports {
-		if port.Port == int32(*backendRef.Port) {
+		if port.Port == *backendRef.Port {
 			servicePort = port
 			break
 		}
@@ -1669,7 +1670,7 @@ func (t *Translator) processServiceDestinationSetting(
 	// Route to endpoints by default
 	if !t.IsEnvoyServiceRouting(envoyProxy) {
 		endpointSlices := resources.GetEndpointSlicesForBackend(backendNamespace, string(backendRef.Name), KindDerefOr(backendRef.Kind, resource.KindService))
-		endpoints, addrType = getIREndpointsFromEndpointSlices(endpointSlices, servicePort.Name, servicePort.Protocol)
+		endpoints, addrType = getIREndpointsFromEndpointSlices(endpointSlices, servicePort.Name, getServicePortProtocol(servicePort.Protocol))
 		if len(endpoints) == 0 {
 			return nil, status.NewRouteStatusError(
 				fmt.Errorf("no ready endpoints for the related Service %s/%s", backendNamespace, backendRef.Name),
@@ -1992,10 +1993,10 @@ func (t *Translator) processBackendExtensions(
 	return nil
 }
 
-func getTargetBackendReference(backendRef gwapiv1a2.BackendObjectReference, backendNamespace string, resources *resource.Resources) gwapiv1a2.LocalPolicyTargetReferenceWithSectionName {
-	ref := gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
-		LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
-			Group: func() gwapiv1a2.Group {
+func getTargetBackendReference(backendRef gwapiv1.BackendObjectReference, backendNamespace string, resources *resource.Resources) gwapiv1.LocalPolicyTargetReferenceWithSectionName {
+	ref := gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+		LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+			Group: func() gwapiv1.Group {
 				if backendRef.Group == nil || *backendRef.Group == "" {
 					return ""
 				}
@@ -2018,7 +2019,7 @@ func getTargetBackendReference(backendRef gwapiv1a2.BackendObjectReference, back
 	case backendRef.Kind == nil || *backendRef.Kind == resource.KindService:
 		if service := resources.GetService(backendNamespace, string(backendRef.Name)); service != nil {
 			for _, port := range service.Spec.Ports {
-				if port.Port == int32(*backendRef.Port) {
+				if port.Port == *backendRef.Port {
 					if port.Name != "" {
 						ref.SectionName = SectionNamePtr(port.Name)
 						break
@@ -2030,7 +2031,7 @@ func getTargetBackendReference(backendRef gwapiv1a2.BackendObjectReference, back
 	case *backendRef.Kind == resource.KindServiceImport:
 		if si := resources.GetServiceImport(backendNamespace, string(backendRef.Name)); si != nil {
 			for _, port := range si.Spec.Ports {
-				if port.Port == int32(*backendRef.Port) {
+				if port.Port == *backendRef.Port {
 					if port.Name != "" {
 						ref.SectionName = SectionNamePtr(port.Name)
 						break

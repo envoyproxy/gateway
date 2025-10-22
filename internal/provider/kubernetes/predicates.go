@@ -181,6 +181,28 @@ func (r *gatewayAPIReconciler) validateSecretForReconcile(secret *corev1.Secret)
 		}
 	}
 
+	if !r.backendAPIDisabled() {
+		if r.isBackendReferencingSecret(&nsName) {
+			return true
+		}
+	}
+
+	return false
+}
+
+func (r *gatewayAPIReconciler) isBackendReferencingSecret(nsName *types.NamespacedName) bool {
+	backendList := &egv1a1.BackendList{}
+	if err := r.client.List(context.Background(), backendList, &client.ListOptions{
+		FieldSelector: fields.OneTermEqualSelector(secretBackendIndex, nsName.String()),
+	}); err != nil {
+		r.log.Error(err, "unable to find associated Backend")
+		return false
+	}
+
+	if len(backendList.Items) > 0 {
+		return true
+	}
+
 	return false
 }
 
@@ -231,7 +253,7 @@ func (r *gatewayAPIReconciler) isBackendReferencingClusterTrustBundle(ctb *certi
 }
 
 func (r *gatewayAPIReconciler) isBackendTLSPolicyReferencingClusterTrustBundle(ctb *certificatesv1b1.ClusterTrustBundle) bool {
-	btlsList := &gwapiv1a3.BackendTLSPolicyList{}
+	btlsList := &gwapiv1.BackendTLSPolicyList{}
 	if err := r.client.List(context.Background(), btlsList, &client.ListOptions{
 		FieldSelector: fields.OneTermEqualSelector(clusterTrustBundleBtlsIndex, ctb.Name),
 	}); err != nil {
@@ -263,7 +285,7 @@ func (r *gatewayAPIReconciler) isHTTPRouteFilterReferencingSecret(nsName *types.
 }
 
 func (r *gatewayAPIReconciler) isBackendTLSPolicyReferencingSecret(nsName *types.NamespacedName) bool {
-	btlsList := &gwapiv1a3.BackendTLSPolicyList{}
+	btlsList := &gwapiv1.BackendTLSPolicyList{}
 	if err := r.client.List(context.Background(), btlsList, &client.ListOptions{
 		FieldSelector: fields.OneTermEqualSelector(secretBtlsIndex, nsName.String()),
 	}); err != nil {
@@ -516,7 +538,7 @@ func (r *gatewayAPIReconciler) isRouteReferencingBackend(nsName *types.Namespace
 	}
 
 	if r.tlsRouteCRDExists {
-		tlsRouteList := &gwapiv1a2.TLSRouteList{}
+		tlsRouteList := &gwapiv1a3.TLSRouteList{}
 		if err := r.client.List(ctx, tlsRouteList, &client.ListOptions{
 			FieldSelector: fields.OneTermEqualSelector(backendTLSRouteIndex, nsName.String()),
 		}); err != nil && !kerrors.IsNotFound(err) {
@@ -812,7 +834,7 @@ func (r *gatewayAPIReconciler) validateConfigMapForReconcile(obj client.Object) 
 	}
 
 	if r.bTLSPolicyCRDExists {
-		btlsList := &gwapiv1a3.BackendTLSPolicyList{}
+		btlsList := &gwapiv1.BackendTLSPolicyList{}
 		if err := r.client.List(context.Background(), btlsList, &client.ListOptions{
 			FieldSelector: fields.OneTermEqualSelector(configMapBtlsIndex, utils.NamespacedName(configMap).String()),
 		}); err != nil {
@@ -877,6 +899,20 @@ func (r *gatewayAPIReconciler) validateConfigMapForReconcile(obj client.Object) 
 		}
 
 		if len(spList.Items) > 0 {
+			return true
+		}
+	}
+
+	if !r.backendAPIDisabled() {
+		backendList := &egv1a1.BackendList{}
+		if err := r.client.List(context.Background(), backendList, &client.ListOptions{
+			FieldSelector: fields.OneTermEqualSelector(configMapBackendIndex, utils.NamespacedName(configMap).String()),
+		}); err != nil {
+			r.log.Error(err, "unable to find associated Backend")
+			return false
+		}
+
+		if len(backendList.Items) > 0 {
 			return true
 		}
 	}

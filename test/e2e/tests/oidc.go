@@ -22,7 +22,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwhttp "sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
@@ -48,22 +47,28 @@ func init() {
 var OIDCTest = suite.ConformanceTest{
 	ShortName:   "OIDC",
 	Description: "Test OIDC authentication",
-	Manifests:   []string{"testdata/oidc-keycloak.yaml", "testdata/oidc-securitypolicy.yaml"},
+	Manifests:   []string{"testdata/oidc-keycloak.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		t.Run("oidc provider represented by a URL", func(t *testing.T) {
-			testOIDC(t, suite)
+			testOIDC(t, suite, "testdata/oidc-securitypolicy.yaml")
 		})
 
 		t.Run("oidc bypass", func(t *testing.T) {
 			ns := "gateway-conformance-infra"
+
+			podInitialized := corev1.PodCondition{Type: corev1.PodInitialized, Status: corev1.ConditionTrue}
 			// Wait for the keycloak pod to be configured with the test user and client
-			WaitForPods(t, suite.Client, ns, map[string]string{"app": "keycloak"}, corev1.PodRunning, &PodReady)
+			WaitForPods(t, suite.Client, ns, map[string]string{"job-name": "setup-keycloak"}, corev1.PodSucceeded, &podInitialized)
+
+			// Apply the security policy that configures OIDC authentication
+			suite.Applier.MustApplyWithCleanup(t, suite.Client, suite.TimeoutConfig, "testdata/oidc-securitypolicy.yaml", true)
+
 			routeWithOIDCNN := types.NamespacedName{Name: "http-with-oidc", Namespace: ns}
 			routeWithoutOIDCNN := types.NamespacedName{Name: "http-without-oidc", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeWithOIDCNN, routeWithoutOIDCNN)
 
-			ancestorRef := gwapiv1a2.ParentReference{
+			ancestorRef := gwapiv1.ParentReference{
 				Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
 				Kind:      gatewayapi.KindPtr(resource.KindGateway),
 				Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
@@ -79,7 +84,7 @@ var OIDCTest = suite.ConformanceTest{
 						Path: "/public",
 					},
 					Response: gwhttp.Response{
-						StatusCode: 200,
+						StatusCodes: []int{200},
 					},
 					Namespace: ns,
 				},
@@ -94,7 +99,7 @@ var OIDCTest = suite.ConformanceTest{
 					},
 					Backend: "infra-backend-v1",
 					Response: gwhttp.Response{
-						StatusCode: 200,
+						StatusCodes: []int{200},
 					},
 					Namespace: ns,
 				},
@@ -112,7 +117,7 @@ var OIDCTest = suite.ConformanceTest{
 	},
 }
 
-func testOIDC(t *testing.T, suite *suite.ConformanceTestSuite) {
+func testOIDC(t *testing.T, suite *suite.ConformanceTestSuite, securityPolicyManifest string) {
 	var (
 		testURL   = "http://www.example.com/myapp"
 		logoutURL = "http://www.example.com/myapp/logout"
@@ -121,15 +126,19 @@ func testOIDC(t *testing.T, suite *suite.ConformanceTestSuite) {
 		ns        = "gateway-conformance-infra"
 	)
 
+	podInitialized := corev1.PodCondition{Type: corev1.PodInitialized, Status: corev1.ConditionTrue}
 	// Wait for the keycloak pod to be configured with the test user and client
-	WaitForPods(t, suite.Client, ns, map[string]string{"app": "keycloak"}, corev1.PodRunning, &PodReady)
+	WaitForPods(t, suite.Client, ns, map[string]string{"job-name": "setup-keycloak"}, corev1.PodSucceeded, &podInitialized)
+
+	// Apply the security policy that configures OIDC authentication
+	suite.Applier.MustApplyWithCleanup(t, suite.Client, suite.TimeoutConfig, securityPolicyManifest, true)
 
 	routeNN := types.NamespacedName{Name: route, Namespace: ns}
 	gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 	httpGWAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN, "http"), routeNN)
 	host, _, _ := net.SplitHostPort(httpGWAddr)
 	tlsGWAddr := net.JoinHostPort(host, "443")
-	ancestorRef := gwapiv1a2.ParentReference{
+	ancestorRef := gwapiv1.ParentReference{
 		Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
 		Kind:      gatewayapi.KindPtr(resource.KindGateway),
 		Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
@@ -179,6 +188,7 @@ func testOIDC(t *testing.T, suite *suite.ConformanceTestSuite) {
 					},
 				}
 				require.NoError(t, suite.Client.Delete(context.TODO(), existingSP))
+				suite.Applier.MustApplyWithCleanup(t, suite.Client, suite.TimeoutConfig, securityPolicyManifest, false)
 				SecurityPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: sp, Namespace: ns}, suite.ControllerName, ancestorRef)
 				return false, nil
 			}

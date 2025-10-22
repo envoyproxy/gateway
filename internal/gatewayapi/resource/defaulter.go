@@ -61,6 +61,7 @@ func GetGatewaySchemaDefaulter() *Defaulter {
 type Defaulter struct {
 	gvs         map[string]openapi.GroupVersion
 	schemaCache map[schema.GroupVersionKind]*kubespec.Schema
+	cacheMu     sync.Mutex
 }
 
 func newDefaulter(client openapi.Client) (*Defaulter, error) {
@@ -115,6 +116,8 @@ func (d *Defaulter) ApplyDefault(obj *unstructured.Unstructured) (*unstructured.
 }
 
 func (d *Defaulter) parseSchema(gvk schema.GroupVersionKind) (*kubespec.Schema, error) {
+	d.cacheMu.Lock()
+	defer d.cacheMu.Unlock()
 	if existing, ok := d.schemaCache[gvk]; ok {
 		return existing, nil
 	}

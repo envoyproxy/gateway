@@ -6,6 +6,8 @@ breaking changes: |
   When a Backend resource specifies TLS settings and SNI is not specified or a BackendTLSPolicy is not attached to it, the value of upstream TLS SNI is determined by the HTTP Host header.
   When a Backend resource specifies TLS settings and SNI is not specified or a BackendTLSPolicy is not attached to it, the upstream certificate is validated for DNS SAN matching the SNI value sent.
   When a MirrorPolicy is used, the shadow host suffix is not appended to the mirrored cluster name.
+  When running `egctl experimental collect`, SDS will not be dumped, you can enable it by adding `--sds true`.
+  When setting the 'consecutiveGatewayFailure' will 'enforcingConsecutiveGatewayFailure set to 100.
 
 # Updates addressing vulnerabilities, security flaws, or compliance requirements.
 security updates: |
@@ -22,6 +24,7 @@ new features: |
   Added support for OCSP stapling in the listener TLS certificates.
   Added support for returning 503 responses when no valid backend endpoints exist.
   Added support for CSRFTokenTTL in OIDC authn to configure the lifetime of the CSRF token used during the OAuth2 authorization code flow.
+  Added support for binaryData in ConfigMap referenced by HTTPRouteFilter for direct response.
 
 
 bug fixes: |
