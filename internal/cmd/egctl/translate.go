@@ -279,7 +279,8 @@ func translateGatewayAPIToIR(resources *resource.Resources) (*gatewayapi.Transla
 		EndpointRoutingDisabled: true,
 		EnvoyPatchPolicyEnabled: true,
 		BackendEnabled:          true,
-		Logger:                  logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo),
+		// Discard logs during translation for egctl command to avoid polluting output
+		Logger: logging.DefaultLogger(io.Discard, egv1a1.LogLevelInfo),
 	}
 
 	// Fix the services in the resources section so that they have an IP address - this prevents nasty
@@ -308,7 +309,7 @@ func translateGatewayAPIToGatewayAPI(resources *resource.Resources) (resource.Re
 		EndpointRoutingDisabled: true,
 		EnvoyPatchPolicyEnabled: true,
 		BackendEnabled:          true,
-		Logger:                  logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo),
+		Logger:                  logging.DefaultLogger(io.Discard, egv1a1.LogLevelInfo),
 	}
 	gRes, _ := gTranslator.Translate(resources)
 	// Update the status of the GatewayClass based on EnvoyProxy validation
@@ -348,7 +349,7 @@ func TranslateGatewayAPIToXds(namespace, dnsDomain, resourceType string, resourc
 		EndpointRoutingDisabled: true,
 		EnvoyPatchPolicyEnabled: true,
 		BackendEnabled:          true,
-		Logger:                  logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo),
+		Logger:                  logging.DefaultLogger(io.Discard, egv1a1.LogLevelInfo),
 	}
 	gRes, _ := gTranslator.Translate(resources)
 
@@ -368,7 +369,7 @@ func TranslateGatewayAPIToXds(namespace, dnsDomain, resourceType string, resourc
 			GlobalRateLimit: &translator.GlobalRateLimitSettings{
 				ServiceURL: ratelimit.GetServiceURL(namespace, dnsDomain),
 			},
-			Logger: logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo),
+			Logger: logging.DefaultLogger(io.Discard, egv1a1.LogLevelInfo),
 		}
 		if resources.EnvoyProxyForGatewayClass != nil {
 			xTranslator.FilterOrder = resources.EnvoyProxyForGatewayClass.Spec.FilterOrder
