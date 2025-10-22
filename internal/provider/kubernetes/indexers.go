@@ -810,8 +810,8 @@ func secretBackendIndexFunc(rawObj client.Object) []string {
 		}
 	}
 
-	if backend.Spec.TLS.ClientTLS != nil && backend.Spec.TLS.ClientTLS.ClientCertificateRef != nil {
-		certRef := backend.Spec.TLS.ClientTLS.ClientCertificateRef
+	if backend.Spec.TLS.BackendTLSConfig != nil && backend.Spec.TLS.BackendTLSConfig.ClientCertificateRef != nil {
+		certRef := backend.Spec.TLS.BackendTLSConfig.ClientCertificateRef
 		if certRef.Kind == nil || string(*certRef.Kind) == resource.KindSecret {
 			secretReferences = append(secretReferences,
 				types.NamespacedName{

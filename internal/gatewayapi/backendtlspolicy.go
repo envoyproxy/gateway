@@ -62,8 +62,8 @@ func (t *Translator) applyBackendTLSSetting(
 			}
 
 			// Get the client certificate and common TLS settings from Backend resource.
-			if backend.Spec.TLS.ClientTLS != nil {
-				if backendClientTLSConfig, err = t.processClientTLSSettings(resources, backend.Spec.TLS.ClientTLS, backend.Namespace, backend.Name, false); err != nil {
+			if backend.Spec.TLS.BackendTLSConfig != nil {
+				if backendClientTLSConfig, err = t.processClientTLSSettings(resources, backend.Spec.TLS.BackendTLSConfig, backend.Namespace, backend.Name, false); err != nil {
 					return nil, err
 				}
 			}

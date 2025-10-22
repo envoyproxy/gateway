@@ -582,8 +582,8 @@ func (in *BackendTLSSettings) DeepCopyInto(out *BackendTLSSettings) {
 		*out = new(v1.PreciseHostname)
 		**out = **in
 	}
-	if in.ClientTLS != nil {
-		in, out := &in.ClientTLS, &out.ClientTLS
+	if in.BackendTLSConfig != nil {
+		in, out := &in.BackendTLSConfig, &out.BackendTLSConfig
 		*out = new(BackendTLSConfig)
 		(*in).DeepCopyInto(*out)
 	}

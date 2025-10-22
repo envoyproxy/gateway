@@ -758,8 +758,8 @@ func (r *gatewayAPIReconciler) processBackendRefs(ctx context.Context, gwcResour
 				}
 			}
 
-			if backend.Spec.TLS != nil && backend.Spec.TLS.ClientTLS != nil && backend.Spec.TLS.ClientTLS.ClientCertificateRef != nil {
-				certRef := *backend.Spec.TLS.ClientTLS.ClientCertificateRef
+			if backend.Spec.TLS != nil && backend.Spec.TLS.BackendTLSConfig != nil && backend.Spec.TLS.BackendTLSConfig.ClientCertificateRef != nil {
+				certRef := *backend.Spec.TLS.BackendTLSConfig.ClientCertificateRef
 				if refsSecret(&certRef) {
 					if err := r.processSecretRef(
 						ctx, resourceMappings, gwcResource,

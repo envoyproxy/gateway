@@ -358,14 +358,13 @@ backends:
     spec:
       tls:
         wellKnownCACertificates: System
-        clientTLS:
-          clientCertificateRef:
-            group: ""
-            kind: Secret
-            namespace: default
-            name: client-auth-override
-          alpnProtocols:
-            - HTTP/2
+        clientCertificateRef:
+          group: ""
+          kind: Secret
+          namespace: default
+          name: client-auth-override
+        alpnProtocols:
+          - HTTP/2
       endpoints:
         - ip:
             address: 3.3.3.3

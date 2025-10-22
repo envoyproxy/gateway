@@ -228,14 +228,13 @@ backends:
         address: 3.3.3.3
         port: 3001
     tls:
-      clientTLS:
-        alpnProtocols:
-        - HTTP/2
-        clientCertificateRef:
-          group: ""
-          kind: Secret
-          name: client-auth-override
-          namespace: default
+      alpnProtocols:
+      - HTTP/2
+      clientCertificateRef:
+        group: ""
+        kind: Secret
+        name: client-auth-override
+        namespace: default
       wellKnownCACertificates: System
   status:
     conditions:
