@@ -293,6 +293,13 @@ func TestValidateConfigMapForReconcile(t *testing.T) {
 		log:              logger,
 		backendCRDExists: true,
 		eepCRDExists:     true,
+		envoyGateway: &egv1a1.EnvoyGateway{
+			EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+				ExtensionAPIs: &egv1a1.ExtensionAPISettings{
+					EnableBackend: true,
+				},
+			},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -587,6 +594,13 @@ func TestValidateSecretForReconcile(t *testing.T) {
 		spCRDExists:      true,
 		epCRDExists:      true,
 		eepCRDExists:     true,
+		envoyGateway: &egv1a1.EnvoyGateway{
+			EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+				ExtensionAPIs: &egv1a1.ExtensionAPISettings{
+					EnableBackend: true,
+				},
+			},
+		},
 	}
 
 	for _, tc := range testCases {

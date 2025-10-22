@@ -181,7 +181,7 @@ func (r *gatewayAPIReconciler) validateSecretForReconcile(secret *corev1.Secret)
 		}
 	}
 
-	if r.backendCRDExists {
+	if !r.backendAPIDisabled() {
 		if r.isBackendReferencingSecret(&nsName) {
 			return true
 		}
@@ -903,7 +903,7 @@ func (r *gatewayAPIReconciler) validateConfigMapForReconcile(obj client.Object) 
 		}
 	}
 
-	if r.backendCRDExists {
+	if !r.backendAPIDisabled() {
 		backendList := &egv1a1.BackendList{}
 		if err := r.client.List(context.Background(), backendList, &client.ListOptions{
 			FieldSelector: fields.OneTermEqualSelector(configMapBackendIndex, utils.NamespacedName(configMap).String()),
