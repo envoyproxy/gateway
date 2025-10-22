@@ -19,7 +19,6 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
-	"sigs.k8s.io/gateway-api/conformance/utils/tlog"
 
 	"github.com/envoyproxy/gateway/test/resilience/suite"
 )
@@ -50,6 +49,11 @@ var EGResilience = suite.ResilienceTest{
 			ControllerName: "gateway.envoyproxy.io/gatewayclass-controller",
 		}
 		ap.MustApplyWithCleanup(t, suite.Client, suite.TimeoutConfig, "testdata/base.yaml", true)
+
+		// Preserve original convergence semantics for resilience tests
+		localTimeout := suite.TimeoutConfig
+		localTimeout.RequiredConsecutiveSuccesses = threshold
+		localTimeout.MaxTimeToConsistency = timeout
 
 		// this test will fail until https://github.com/envoyproxy/gateway/pull/4767/files is merged
 		t.Run("Secondary EnvoyGateway instances can serve an up to date xDS", func(t *testing.T) {
@@ -107,20 +111,7 @@ var EGResilience = suite.ResilienceTest{
 				Namespace: ns,
 			}
 
-			req := http.MakeRequest(t, &expectedResponse, gwAddr, "http", "http")
-			http.AwaitConvergence(t, threshold, timeout, func(elapsed time.Duration) bool {
-				cReq, cRes, err := suite.RoundTripper.CaptureRoundTrip(req)
-				if err != nil {
-					tlog.Logf(t, "Request failed, not ready yet: %v (after %v)", err.Error(), elapsed)
-					return false
-				}
-
-				if err := http.CompareRoundTrip(t, &req, cReq, cRes, expectedResponse); err != nil {
-					tlog.Logf(t, "Response expectation failed for request: %+v  not ready yet: %v (after %v)", req, err, elapsed)
-					return false
-				}
-				return true
-			})
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, localTimeout, gwAddr, expectedResponse)
 		})
 
 		t.Run("EnvoyGateway reconciles missed resources and sync xDS after api server connectivity is restored", func(t *testing.T) {
@@ -166,20 +157,7 @@ var EGResilience = suite.ResilienceTest{
 				Namespace: ns,
 			}
 
-			req := http.MakeRequest(t, &expectedResponse, gwAddr, "http", "http")
-			http.AwaitConvergence(t, threshold, time.Minute, func(elapsed time.Duration) bool {
-				cReq, cRes, err := suite.RoundTripper.CaptureRoundTrip(req)
-				if err != nil {
-					tlog.Logf(t, "Request failed, not ready yet: %v (after %v)", err.Error(), elapsed)
-					return false
-				}
-
-				if err := http.CompareRoundTrip(t, &req, cReq, cRes, expectedResponse); err != nil {
-					tlog.Logf(t, "Response expectation failed for request: %+v  not ready yet: %v (after %v)", req, err, elapsed)
-					return false
-				}
-				return true
-			})
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, localTimeout, gwAddr, expectedResponse)
 
 			require.NoError(t, err, "Failed during connectivity checkup")
 		})
@@ -237,21 +215,7 @@ var EGResilience = suite.ResilienceTest{
 				Namespace: ns,
 			}
 
-			req := http.MakeRequest(t, &expectedResponse, gwAddr, "http", "http")
-
-			http.AwaitConvergence(t, threshold, timeout, func(elapsed time.Duration) bool {
-				cReq, cRes, err := suite.RoundTripper.CaptureRoundTrip(req)
-				if err != nil {
-					tlog.Logf(t, "Request failed, not ready yet: %v (after %v)", err.Error(), elapsed)
-					return false
-				}
-
-				if err := http.CompareRoundTrip(t, &req, cReq, cRes, expectedResponse); err != nil {
-					tlog.Logf(t, "Response expectation failed for request: %+v  not ready yet: %v (after %v)", req, err, elapsed)
-					return false
-				}
-				return true
-			})
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, localTimeout, gwAddr, expectedResponse)
 		})
 	},
 }

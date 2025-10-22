@@ -1,0 +1,473 @@
+backendTLSPolicies:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: BackendTLSPolicy
+  metadata:
+    name: example-tls-policy
+    namespace: envoy-gateway-system
+  spec:
+    targetRefs:
+    - group: gateway.envoyproxy.io
+      kind: Backend
+      name: backend
+    validation:
+      hostname: www.example.com
+      wellKnownCACertificates: System
+  status:
+    ancestors: null
+backendTrafficPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    name: cookie-lb-policy
+    namespace: gateway-conformance-infra
+  spec:
+    circuitBreaker:
+      maxConnections: 1024
+      maxParallelRequests: 1024
+      maxParallelRetries: 1024
+      maxPendingRequests: 1024
+      maxRequestsPerConnection: 123
+    healthCheck:
+      active:
+        healthyThreshold: 1
+        http:
+          method: GET
+          path: /
+        interval: 3s
+        timeout: 1s
+        type: HTTP
+        unhealthyThreshold: 3
+    loadBalancer:
+      consistentHash:
+        cookie:
+          attributes:
+            SameSite: Strict
+          name: Lb-Test-Cookie
+          ttl: 60s
+        tableSize: 65537
+        type: Cookie
+      type: ConsistentHash
+    retry:
+      numRetries: 2
+      retryOn:
+        httpStatusCodes:
+        - 200
+        - 404
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: cookie-lb-route
+  status:
+    ancestors: null
+backends:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: Backend
+  metadata:
+    name: backend
+    namespace: envoy-gateway-system
+  spec:
+    endpoints:
+    - ip:
+        address: 0.0.0.0
+        port: 4321
+    type: Endpoints
+  status: {}
+clientTrafficPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: ClientTrafficPolicy
+  metadata:
+    name: client-timeout
+    namespace: gateway-conformance-infra
+  spec:
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: same-namespace
+    timeout:
+      http:
+        requestReceivedTimeout: 50ms
+  status:
+    ancestors: null
+configMaps:
+- apiVersion: v1
+  data:
+    game.properties: |
+      enemy.types=aliens,monsters
+      player.maximum-lives=5
+    player_initial_lives: "3"
+  kind: ConfigMap
+  metadata:
+    name: configmap
+    namespace: default
+envoyExtensionPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyExtensionPolicy
+  metadata:
+    name: ext-proc-example
+    namespace: envoy-gateway-system
+  spec:
+    extProc:
+    - backendRefs:
+      - group: ""
+        kind: Service
+        name: grpc-ext-proc
+        port: 9002
+      failOpen: false
+      processingMode:
+        request: {}
+        response:
+          body: Streamed
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: backend
+  status:
+    ancestors: null
+envoyPatchPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyPatchPolicy
+  metadata:
+    name: ratelimit-patch-policy
+    namespace: default
+  spec:
+    jsonPatches:
+    - name: default/eg/http
+      operation:
+        op: add
+        path: /default_filter_chain/filters/0/typed_config/http_filters/0
+        value:
+          name: envoy.filters.http.ratelimit
+          typed_config:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.ratelimit.v3.RateLimit
+            domain: eag-ratelimit
+            failure_mode_deny: true
+            rate_limit_service:
+              grpc_service:
+                envoy_grpc:
+                  cluster_name: rate-limit-cluster
+              transport_api_version: V3
+            timeout: 1s
+      type: type.googleapis.com/envoy.config.listener.v3.Listener
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: eg
+    type: JSONPatch
+  status:
+    ancestors: null
+envoyProxyForGatewayClass:
+  apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyProxy
+  metadata:
+    name: example
+    namespace: default
+  spec:
+    logging:
+      level:
+        default: warn
+    provider:
+      kubernetes:
+        envoyService:
+          annotations:
+            custom1: svc-annotation1
+          externalTrafficPolicy: Local
+          type: LoadBalancer
+      type: Kubernetes
+  status: {}
+gatewayClass:
+  apiVersion: gateway.networking.k8s.io/v1
+  kind: GatewayClass
+  metadata:
+    name: eg
+  spec:
+    controllerName: gateway.envoyproxy.io/gatewayclass-controller
+  status: {}
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    name: eg
+    namespace: envoy-gateway-system
+  spec:
+    gatewayClassName: eg
+    listeners:
+    - allowedRoutes:
+        namespaces:
+          from: Same
+      name: http
+      port: 80
+      protocol: HTTP
+  status: {}
+grpcRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: GRPCRoute
+  metadata:
+    name: backend
+    namespace: default
+  spec:
+    hostnames:
+    - www.grpc-example.com
+    parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: eg
+      sectionName: grpc
+    rules:
+    - backendRefs:
+      - group: ""
+        kind: Service
+        name: providedBackend
+        port: 9000
+        weight: 1
+      matches:
+      - headers:
+        - name: com.example.Header
+          type: Exact
+          value: foobar
+        method:
+          method: DoThing
+          service: com.example.Things
+          type: Exact
+  status:
+    parents: null
+httpFilters:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: HTTPRouteFilter
+  metadata:
+    name: direct-response-inline
+    namespace: default
+  spec:
+    directResponse:
+      body:
+        inline: OK
+        type: Inline
+      contentType: text/plain
+httpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    name: backend
+    namespace: default
+  spec:
+    hostnames:
+    - www.example.com
+    parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: eg
+    rules:
+    - backendRefs:
+      - group: ""
+        kind: Service
+        name: providedBackend
+        port: 8000
+        weight: 1
+      matches:
+      - path:
+          type: PathPrefix
+          value: /
+  status:
+    parents: null
+namespaces:
+- apiVersion: v1
+  kind: Namespace
+  metadata:
+    name: default
+  spec: {}
+  status: {}
+- apiVersion: v1
+  kind: Namespace
+  metadata:
+    name: envoy-gateway-system
+  spec: {}
+  status: {}
+- apiVersion: v1
+  kind: Namespace
+  metadata:
+    name: gateway-conformance-infra
+  spec: {}
+  status: {}
+referenceGrants:
+- apiVersion: gateway.networking.k8s.io/v1beta1
+  kind: ReferenceGrant
+  metadata:
+    name: refg-example
+    namespace: default
+  spec:
+    from:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      namespace: envoy-gateway
+    - group: gateway.networking.k8s.io
+      kind: TCPRoute
+      namespace: envoy-gateway
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      namespace: envoy-gateway
+    - group: gateway.networking.k8s.io
+      kind: BackendTLSPolicy
+      namespace: default
+    to:
+    - group: ""
+      kind: Service
+secrets:
+- apiVersion: v1
+  data:
+    .secret-file: dmFsdWUtMg0KDQo=
+  kind: Secret
+  metadata:
+    name: secret-with-data
+    namespace: default
+- apiVersion: v1
+  data:
+    .secret-file: dmFsdWUtMg0KDQo=
+  kind: Secret
+  metadata:
+    name: secret-with-data-and-string-data
+    namespace: default
+  stringData:
+    secret: literal value
+- apiVersion: v1
+  kind: Secret
+  metadata:
+    name: secret-with-string-data
+    namespace: default
+  stringData:
+    secret: literal value
+- apiVersion: v1
+  data:
+    .secret-file: dmFsdWUtMg0KDQo=
+  kind: Secret
+  metadata:
+    name: secret-with-type
+    namespace: default
+  type: type value
+securityPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    name: jwt-example
+    namespace: envoy-gateway-system
+  spec:
+    apiKeyAuth:
+      credentialRefs:
+      - group: ""
+        kind: Secret
+        name: foobar
+      extractFrom:
+      - headers:
+        - foobar
+    jwt:
+      providers:
+      - name: example
+        remoteJWKS:
+          cacheDuration: 300s
+          uri: https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/kubernetes/jwt/jwks.json
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: backend
+  status:
+    ancestors: null
+services:
+- apiVersion: v1
+  kind: Service
+  metadata:
+    name: backend
+    namespace: default
+  spec:
+    clusterIP: 1.2.3.4
+    ports:
+    - name: TCP-3000
+      port: 3000
+      protocol: TCP
+      targetPort: 0
+    - name: UDP-3000
+      port: 3000
+      protocol: UDP
+      targetPort: 0
+  status:
+    loadBalancer: {}
+- apiVersion: v1
+  kind: Service
+  metadata:
+    name: providedBackend
+    namespace: default
+  spec:
+    clusterIP: 1.2.3.4
+    ports:
+    - name: TCP-8000
+      port: 8000
+      protocol: TCP
+      targetPort: 0
+    - name: TCP-9000
+      port: 9000
+      protocol: TCP
+      targetPort: 0
+  status:
+    loadBalancer: {}
+tcpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1alpha2
+  kind: TCPRoute
+  metadata:
+    name: backend
+    namespace: default
+  spec:
+    parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: eg
+      sectionName: tcp
+    rules:
+    - backendRefs:
+      - group: ""
+        kind: Service
+        name: backend
+        port: 3000
+        weight: 1
+  status:
+    parents: null
+tlsRoutes:
+- apiVersion: gateway.networking.k8s.io/v1alpha3
+  kind: TLSRoute
+  metadata:
+    name: backend
+    namespace: default
+  spec:
+    hostnames:
+    - www.example.com
+    parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: eg
+      sectionName: tls-passthrough
+    rules:
+    - backendRefs:
+      - group: ""
+        kind: Service
+        name: backend
+        port: 3000
+        weight: 1
+  status:
+    parents: null
+udpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1alpha2
+  kind: UDPRoute
+  metadata:
+    name: backend
+    namespace: default
+  spec:
+    parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: eg
+      sectionName: udp
+    rules:
+    - backendRefs:
+      - group: ""
+        kind: Service
+        name: backend
+        port: 3000
+        weight: 1
+  status:
+    parents: null

@@ -1110,7 +1110,6 @@ spec:
                                     format: int32
                                     type: integer
                                   consecutiveGatewayErrors:
-                                    default: 0
                                     description: ConsecutiveGatewayErrors sets the
                                       number of consecutive gateway errors triggering
                                       ejection.
@@ -2135,7 +2134,6 @@ spec:
                                     format: int32
                                     type: integer
                                   consecutiveGatewayErrors:
-                                    default: 0
                                     description: ConsecutiveGatewayErrors sets the
                                       number of consecutive gateway errors triggering
                                       ejection.
@@ -3371,7 +3369,6 @@ spec:
                                           format: int32
                                           type: integer
                                         consecutiveGatewayErrors:
-                                          default: 0
                                           description: ConsecutiveGatewayErrors sets
                                             the number of consecutive gateway errors
                                             triggering ejection.
@@ -4664,7 +4661,6 @@ spec:
                                     format: int32
                                     type: integer
                                   consecutiveGatewayErrors:
-                                    default: 0
                                     description: ConsecutiveGatewayErrors sets the
                                       number of consecutive gateway errors triggering
                                       ejection.

@@ -2,19 +2,31 @@ backendTrafficPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:
-    name: policy-for-route
+    name: route-compressor-policy-enable-zstd
     namespace: default
   spec:
-    compression:
-    - type: Brotli
-    - type: Gzip
+    compressor:
     - type: Zstd
+      zstd: {}
+    mergeType: JSONMerge
     targetRef:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
   status:
     ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: Merged with policy envoy-gateway/gateway-compressor-policy
+        reason: Merged
+        status: "True"
+        type: Merged
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
     - ancestorRef:
         group: gateway.networking.k8s.io
         kind: Gateway
@@ -27,6 +39,36 @@ backendTrafficPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    name: gateway-compressor-policy
+    namespace: envoy-gateway
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-1
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: 'This policy is being merged by other backendTrafficPolicies for
+          these routes: [default/httproute-1]'
+        reason: Merged
+        status: "True"
+        type: Merged
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
@@ -198,8 +240,6 @@ xdsIR:
           prefix: /
         traffic:
           compression:
-          - type: Brotli
-          - type: Gzip
           - type: Zstd
     readyListener:
       address: 0.0.0.0
