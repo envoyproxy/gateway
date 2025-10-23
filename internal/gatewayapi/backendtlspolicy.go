@@ -6,10 +6,10 @@
 package gatewayapi
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
 
-	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
@@ -21,7 +21,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
-var ErrBackendTLSPolicyInvalidKind = fmt.Errorf("no ca found in referred ConfigMap, Secret or ClusterTrustBundle")
+var ErrBackendTLSPolicyInvalidKind = fmt.Errorf("no CA bundle found in referenced ConfigMap, Secret, or ClusterTrustBundle")
 
 // ProcessBackendTLSPolicyStatus is called to post-process Backend TLS Policy status
 // after they were applied in all relevant translations.

@@ -1598,7 +1598,7 @@ func (t *Translator) processDestination(name string, backendRefContext BackendRe
 
 	protocol := inspectAppProtocolByRouteKind(routeType)
 
-	// Always processing BackendTLSPolicy if possible.
+	// Process BackendTLSPolicy first to ensure status is set.
 	tls, tlsErr := t.applyBackendTLSSetting(
 		backendRef.BackendObjectReference,
 		backendNamespace,
