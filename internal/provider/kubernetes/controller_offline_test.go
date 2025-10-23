@@ -10,6 +10,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
@@ -72,6 +73,18 @@ func TestNewOfflineGatewayAPIController(t *testing.T) {
 
 		// Verify version registration and that the custom resource is recognized by the scheme
 		require.True(t, reconciler.client.Scheme().IsVersionRegistered(schema.GroupVersion{Group: gvk.Group, Version: gvk.Version}))
+		require.True(t, reconciler.client.Scheme().IsGroupRegistered(gvk.Group))
 		require.True(t, reconciler.client.Scheme().Recognizes(schema.GroupVersionKind{Group: gvk.Group, Version: gvk.Version, Kind: gvk.Kind}))
+
+		// Verify the custom resource can be loaded from yaml
+		inFile := "./testdata/custom-resource.yaml"
+		data, err := os.ReadFile(inFile)
+		require.NoError(t, err)
+		resources, err := resource.LoadResourcesFromYAMLBytes(data, true)
+		require.NoError(t, err)
+		require.Equal(t, 1, len(resources.ExtensionServerPolicies))
+
+		// Verify the custom resource gets the default namespace
+		require.Equal(t, "envoy-gateway-system", resources.ExtensionServerPolicies[0].GetNamespace())
 	})
 }
