@@ -1,0 +1,53 @@
+name: Upgrade Tests
+
+on:
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch: {}
+
+jobs:
+  upgrade-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22.x'
+
+      - name: Set up Kind cluster
+        uses: helm/kind-action@v1.7.0
+        with:
+          cluster_name: eg-upgrade-tests
+          kubectl_version: v1.27.3
+
+      - name: Setup dependencies
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Build and load Envoy Gateway image into Kind
+        run: |
+          make kube-install-image TAG=test-ci
+
+      - name: Deploy Envoy Gateway and addons
+        run: |
+          TAG=test-ci make kube-deploy
+          make install-ratelimit
+          make install-eg-addons
+
+      - name: Run upgrade tests
+        run: |
+          go test ./test/e2e/upgrade -tags=e2e -v --gateway-class=upgrade --debug=false
+
+      - name: Upload logs on failure
+        if: failure()
+        run: |
+          kubectl get pods -A > pods.txt
+          kubectl logs -n envoy-gateway-system -l app=envoy-gateway > eg-logs.txt || true
+          kubectl logs -n envoy-gateway-system -l app=envoy > envoy-logs.txt || true
+        shell: bash
