@@ -221,7 +221,7 @@ type BackendTLSSettings struct {
 	// When omitted, Envoy will fall back to the EnvoyProxy BackendTLS defaults, if any.
 	//
 	// +optional
-	*BackendTLSConfig  `json:",inline"`
+	*BackendTLSConfig `json:",inline"`
 }
 
 // BackendType defines the type of the Backend.
