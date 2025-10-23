@@ -168,6 +168,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 						Address:      address,
 						Port:         uint32(containerPort),
 						ExternalPort: uint32(listener.Port),
+						IPFamily:     ipFamily,
 					},
 				}
 				xdsIR[irKey].UDP = append(xdsIR[irKey].UDP, irListener)
