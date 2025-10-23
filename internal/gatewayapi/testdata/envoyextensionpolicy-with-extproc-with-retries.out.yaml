@@ -458,8 +458,8 @@ xdsIR:
                 resetStreamOnError: true
               loadBalancer:
                 consistentHash:
-                  header:
-                    name: X-some-header
+                  headers:
+                  - name: X-some-header
               proxyProtocol:
                 version: V2
               retry:
