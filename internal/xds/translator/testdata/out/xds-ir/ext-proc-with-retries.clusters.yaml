@@ -75,6 +75,7 @@
     consecutive5xx: 5
     consecutiveGatewayFailure: 4
     consecutiveLocalOriginFailure: 5
+    enforcingConsecutiveGatewayFailure: 100
     interval: 5s
     maxEjectionPercent: 10
   perConnectionBufferLimitBytes: 20971520
