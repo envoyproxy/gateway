@@ -11,7 +11,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
+	nethttp "net/http"
 	"net/url"
+	"sync"
 	"testing"
 	"time"
 
@@ -79,6 +82,118 @@ var EnvoyShutdownTest = suite.ConformanceTest{
 			err = restartProxyAndWaitForRollout(t, &suite.TimeoutConfig, suite.Client, epNN, dp)
 
 			t.Log("Stopping load generation and collecting results")
+			aborter.Abort(false) // abort the load either way
+
+			if err != nil {
+				t.Errorf("Failed to rollout proxy deployment: %v", err)
+			}
+
+			// Wait for the goroutine to finish
+			result := <-loadSuccess
+			if !result {
+				t.Errorf("Load test failed")
+			}
+		})
+	},
+}
+
+// EnvoyShutdownLongRequestTest verifies that a long-lived request completes
+// successfully during envoy graceful drain.
+var EnvoyShutdownLongRequestTest = suite.ConformanceTest{
+	ShortName:   "EnvoyShutdownLongRequest",
+	Description: "Deleting envoy pod should not interrupt long-running requests",
+	Manifests:   []string{"testdata/envoy-shutdown.yaml"},
+	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
+		t.Run("All delayed requests must succeed", func(t *testing.T) {
+			ns := "gateway-upgrade-infra"
+			name := "ha-gateway"
+			routeNN := types.NamespacedName{Name: "http-envoy-shutdown", Namespace: ns}
+			gwNN := types.NamespacedName{Name: name, Namespace: ns}
+			gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
+			reqURL := url.URL{Scheme: "http", Host: http.CalculateHost(t, gwAddr, "http"), Path: "/envoy-shutdown"}
+			// add a delay query param.
+			q := reqURL.Query()
+			q.Set("delay", "3s")
+			reqURL.RawQuery = q.Encode()
+			epNN := types.NamespacedName{Name: "upgrade-config", Namespace: "envoy-gateway-system"}
+			dp, err := getDeploymentForGateway(ns, name, suite.Client)
+			if err != nil {
+				t.Errorf("Failed to get proxy deployment")
+			}
+
+			WaitForPods(t, suite.Client, dp.Namespace, map[string]string{"gateway.envoyproxy.io/owning-gateway-name": name}, corev1.PodRunning, &PodReady)
+
+			// wait for route to be programmed on envoy
+			expectedResponse := http.ExpectedResponse{
+				Request: http.Request{
+					Path: "/envoy-shutdown",
+				},
+				Response: http.Response{
+					StatusCodes: []int{200},
+				},
+				Namespace: ns,
+			}
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
+
+			// can be used to abort the test after deployment restart is complete or failed
+			aborter := periodic.NewAborter()
+			// will contain indication on success or failure of load test
+			loadSuccess := make(chan bool)
+
+			t.Log("Starting delayed-request load generation")
+			// Minimal async load loop: small parallel batch every 250ms until aborted.
+			go func() {
+				defer close(loadSuccess)
+
+				client := &nethttp.Client{
+					Timeout: 30 * time.Second,
+				}
+
+				hadError := false
+				ticker := time.NewTicker(250 * time.Millisecond)
+				defer ticker.Stop()
+
+				const parallel = 4
+
+				for {
+					select {
+					case <-aborter.StopChan:
+						loadSuccess <- !hadError
+						return
+					case <-ticker.C:
+						var wg sync.WaitGroup
+						errCh := make(chan error, parallel)
+
+						wg.Add(parallel)
+						for i := 0; i < parallel; i++ {
+							go func() {
+								defer wg.Done()
+								resp, err := client.Get(reqURL.String())
+								if err != nil {
+									errCh <- fmt.Errorf("request error: %w", err)
+									return
+								}
+								_, _ = io.Copy(io.Discard, resp.Body)
+								resp.Body.Close()
+								if resp.StatusCode != 200 {
+									errCh <- fmt.Errorf("unexpected status %d", resp.StatusCode)
+								}
+							}()
+						}
+						wg.Wait()
+						close(errCh)
+						for e := range errCh {
+							hadError = true
+							t.Errorf("HTTP request failed: %v", e)
+						}
+					}
+				}
+			}()
+
+			t.Log("Rolling out proxy deployment")
+			err = restartProxyAndWaitForRollout(t, &suite.TimeoutConfig, suite.Client, epNN, dp)
+
+			t.Log("Stopping delayed-request load generation and collecting results")
 			aborter.Abort(false) // abort the load either way
 
 			if err != nil {
