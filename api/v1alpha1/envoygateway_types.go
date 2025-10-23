@@ -269,6 +269,11 @@ type EnvoyGatewayKubernetesProvider struct {
 	// +optional
 	RateLimitHpa *KubernetesHorizontalPodAutoscalerSpec `json:"rateLimitHpa,omitempty"`
 
+	// RateLimit defines the configuration associated with the Rate Limit service
+	//
+	// +optional
+	RateLimit *KubernetesRateLimitSpec `json:"rateLimit,omitempty"`
+
 	// Watch holds configuration of which input resources should be watched and reconciled.
 	// +optional
 	Watch *KubernetesWatchMode `json:"watch,omitempty"`
@@ -300,6 +305,14 @@ type EnvoyGatewayKubernetesProvider struct {
 	// Default: 10 hours
 	// +optional
 	CacheSyncPeriod *gwapiv1.Duration `json:"cacheSyncPeriod,omitempty"`
+}
+
+// KubernetesRateLimitSpec defines the configuration associated with the Rate Limit service
+// TODO: move RateLimitDeployment and RateLimitHpa to here.
+type KubernetesRateLimitSpec struct {
+	// PDB allows to control the pod disruption budget of rate limit service.
+	// +optional
+	PDB *KubernetesPodDisruptionBudgetSpec `json:"pdb,omitempty"`
 }
 
 const (

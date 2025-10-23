@@ -27,6 +27,7 @@ new features: |
   Added support for CSRFTokenTTL in OIDC authn to configure the lifetime of the CSRF token used during the OAuth2 authorization code flow.
   Added support for Envoy PreconnectPolicy in BackendTrafficPolicy.
   Added support for binaryData in ConfigMap referenced by HTTPRouteFilter for direct response.
+  Added support PDB for Ratelimit service.
 
 
 bug fixes: |
