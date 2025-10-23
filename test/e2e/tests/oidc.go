@@ -104,11 +104,16 @@ var OIDCTest = suite.ConformanceTest{
 					Namespace: ns,
 				},
 			}
-
+			t.Cleanup(func() {
+				if t.Failed() {
+					LogPodsStatus(t, suite.Client, ns, map[string]string{"app": "keycloak"}, "Keycloak Pods status:")
+					LogPodsStatus(t, suite.Client, ns, map[string]string{"app": "infra-backend-v1"}, "Infra Backend Pods status:")
+				}
+			})
 			for i := range testCases {
 				tc := testCases[i]
 				t.Run(tc.GetTestCaseName(i), func(t *testing.T) {
-					t.Parallel()
+					// t.Parallel()
 
 					gwhttp.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, tc)
 				})
