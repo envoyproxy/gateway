@@ -140,6 +140,19 @@ envoyExtensionPolicies:
           type: ConsistentHash
         proxyProtocol:
           version: V2
+        retry:
+          numRetries: 2
+          perRetry:
+            backOff:
+              baseInterval: 0.2s
+              maxInterval: 3s
+            timeout: 3s
+          retryOn:
+            triggers:
+            - 5xx
+            - unavailable
+            - internal
+            - deadline-exceeded
         tcpKeepalive:
           probes: 7
         timeout:
@@ -449,6 +462,19 @@ xdsIR:
                   - name: X-some-header
               proxyProtocol:
                 version: V2
+              retry:
+                numRetries: 2
+                perRetry:
+                  backOff:
+                    baseInterval: 200ms
+                    maxInterval: 3s
+                  timeout: 3s
+                retryOn:
+                  triggers:
+                  - 5xx
+                  - deadline-exceeded
+                  - internal
+                  - unavailable
               tcpKeepalive:
                 probes: 7
               timeout:

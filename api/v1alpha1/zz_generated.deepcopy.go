@@ -1391,6 +1391,17 @@ func (in *ConsistentHash) DeepCopyInto(out *ConsistentHash) {
 		*out = new(Header)
 		**out = **in
 	}
+	if in.Headers != nil {
+		in, out := &in.Headers, &out.Headers
+		*out = make([]*Header, len(*in))
+		for i := range *in {
+			if (*in)[i] != nil {
+				in, out := &(*in)[i], &(*out)[i]
+				*out = new(Header)
+				**out = **in
+			}
+		}
+	}
 	if in.Cookie != nil {
 		in, out := &in.Cookie, &out.Cookie
 		*out = new(Cookie)
