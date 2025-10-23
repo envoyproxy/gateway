@@ -90,8 +90,8 @@ http:
     traffic:
       loadBalancer:
         consistentHash:
-          header:
-            name: name
+          headers:
+          - name: name
     destination:
       name: "seventh-route-dest"
       settings:
@@ -187,3 +187,18 @@ http:
         - host: "1.2.3.4"
           port: 50000
         name: "thirteen-route-dest/backend/0"
+  - name: "fourteenth-route"
+    hostname: "*"
+    traffic:
+      loadBalancer:
+        consistentHash:
+          headers:
+          - name: name
+          - name: bar
+    destination:
+      name: "fourteenth-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "fourteenth-route-dest/backend/0"

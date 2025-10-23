@@ -25,6 +25,7 @@ new features: |
   Added support for per-backend client TLS settings in Backend resources. This allows configuring the client certificate as well as TLS protocol parameters such as ciphers, TLS versions, and ALPN protocols on a per-backend basis.
   Added support for returning 503 responses when no valid backend endpoints exist.
   Added support for CSRFTokenTTL in OIDC authn to configure the lifetime of the CSRF token used during the OAuth2 authorization code flow.
+  Added support for binaryData in ConfigMap referenced by HTTPRouteFilter for direct response.
 
 
 bug fixes: |
