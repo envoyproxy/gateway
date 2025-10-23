@@ -68,6 +68,7 @@ func TestEGUpgrade(t *testing.T) {
 	// upgrade tests should be executed in a specific order
 	tests.UpgradeTests = []suite.ConformanceTest{
 		tests.EnvoyShutdownTest,
+		tests.EnvoyShutdownLongRequestTest,
 		tests.EGUpgradeTest,
 	}
 
