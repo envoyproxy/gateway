@@ -3,8 +3,6 @@
 // The full text of the Apache license is available in the LICENSE file at
 // the root of the repo.
 
-//go:build e2e
-
 package tests
 
 import (
@@ -111,7 +109,7 @@ var EnvoyShutdownLongRequestTest = suite.ConformanceTest{
 			gwNN := types.NamespacedName{Name: name, Namespace: ns}
 			gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
 			reqURL := url.URL{Scheme: "http", Host: http.CalculateHost(t, gwAddr, "http"), Path: "/envoy-shutdown"}
-			// add a delay query param.
+			// add a delay query param
 			q := reqURL.Query()
 			q.Set("delay", "3s")
 			reqURL.RawQuery = q.Encode()
@@ -135,78 +133,88 @@ var EnvoyShutdownLongRequestTest = suite.ConformanceTest{
 			}
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 
-			// can be used to abort the test after deployment restart is complete or failed
-			aborter := periodic.NewAborter()
-			// will contain indication on success or failure of load test
-			loadSuccess := make(chan bool)
-
-			t.Log("Starting delayed-request load generation")
-			// Minimal async load loop: small parallel batch every 250ms until aborted.
-			go func() {
-				defer close(loadSuccess)
-
-				client := &nethttp.Client{
-					Timeout: 30 * time.Second,
-				}
-
-				hadError := false
-				ticker := time.NewTicker(250 * time.Millisecond)
-				defer ticker.Stop()
-
-				const parallel = 4
-
-				for {
-					select {
-					case <-aborter.StopChan:
-						loadSuccess <- !hadError
-						return
-					case <-ticker.C:
-						var wg sync.WaitGroup
-						errCh := make(chan error, parallel)
-
-						wg.Add(parallel)
-						for i := 0; i < parallel; i++ {
-							go func() {
-								defer wg.Done()
-								resp, err := client.Get(reqURL.String())
-								if err != nil {
-									errCh <- fmt.Errorf("request error: %w", err)
-									return
-								}
-								_, _ = io.Copy(io.Discard, resp.Body)
-								resp.Body.Close()
-								if resp.StatusCode != 200 {
-									errCh <- fmt.Errorf("unexpected status %d", resp.StatusCode)
-								}
-							}()
-						}
-						wg.Wait()
-						close(errCh)
-						for e := range errCh {
-							hadError = true
-							t.Errorf("HTTP request failed: %v", e)
-						}
-					}
-				}
-			}()
+			t.Logf("Starting delayed-request load generation to %s", reqURL.String())
+			stopCh := make(chan struct{})
+			loadDone := execRequests(t, reqURL.String(), stopCh)
 
 			t.Log("Rolling out proxy deployment")
 			err = restartProxyAndWaitForRollout(t, &suite.TimeoutConfig, suite.Client, epNN, dp)
 
 			t.Log("Stopping delayed-request load generation and collecting results")
-			aborter.Abort(false) // abort the load either way
+			close(stopCh)
 
 			if err != nil {
 				t.Errorf("Failed to rollout proxy deployment: %v", err)
 			}
 
-			// Wait for the goroutine to finish
-			result := <-loadSuccess
-			if !result {
-				t.Errorf("Load test failed")
+			select {
+			case ok := <-loadDone:
+				if !ok {
+					t.Errorf("Load test failed")
+				}
+			case <-time.After(30 * time.Second):
+				t.Errorf("Timed out waiting for load generator to stop")
 			}
 		})
 	},
+}
+
+func execRequests(t *testing.T, targetURL string, stopCh <-chan struct{}) <-chan bool {
+	result := make(chan bool, 1)
+
+	const workers = 4
+
+	go func() {
+		defer close(result)
+
+		cli := &nethttp.Client{
+			Timeout: 10 * time.Second,
+		}
+
+		var wg sync.WaitGroup
+		errCh := make(chan error, workers)
+
+		for i := 0; i < workers; i++ {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				for {
+					select {
+					case <-stopCh:
+						return
+					default:
+						resp, err := cli.Get(targetURL)
+						if err != nil {
+							errCh <- err
+							return
+						}
+						_, _ = io.Copy(io.Discard, resp.Body)
+						resp.Body.Close()
+						if resp.StatusCode != nethttp.StatusOK {
+							errCh <- fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+							return
+						}
+						time.Sleep(200 * time.Millisecond)
+					}
+				}
+			}()
+		}
+
+		go func() {
+			wg.Wait()
+			close(errCh)
+		}()
+
+		for e := range errCh {
+			t.Logf("request error: %v", e)
+			result <- false
+			return
+		}
+
+		result <- true
+	}()
+
+	return result
 }
 
 // gets the proxy deployment created for a gateway, assuming merge-gateways is not used
