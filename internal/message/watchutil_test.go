@@ -89,41 +89,8 @@ func TestHandleSubscriptionAlreadyInitialized(t *testing.T) {
 			}
 		},
 	)
-	assert.LessOrEqual(t, storeCalls, 2) // Can be coalesced TODO handle delete
+	assert.Equal(t, 2, storeCalls)
 	assert.Equal(t, 1, deleteCalls)
-}
-
-func TestHandleSubscriptionCoalescesUpdates(t *testing.T) {
-	snapshotC := make(chan watchable.Snapshot[string, any], 2)
-	snapshotC <- watchable.Snapshot[string, any]{State: map[string]any{}}
-	snapshotC <- watchable.Snapshot[string, any]{
-		State: map[string]any{},
-		Updates: []watchable.Update[string, any]{
-			{Key: "foo", Value: "v1"},
-			{Key: "foo", Value: "v2"},
-			{Key: "foo", Delete: true},
-			{Key: "foo", Value: "v3"},
-			{Key: "bar", Value: "v1"},
-			{Key: "bar", Value: "v2"},
-		},
-	}
-	close(snapshotC)
-
-	var observed []watchable.Update[string, any]
-	message.HandleSubscription[string, any](
-		message.Metadata{Runner: "demo", Message: "demo"},
-		snapshotC,
-		func(update message.Update[string, any], errChans chan error) {
-			observed = append(observed, watchable.Update[string, any](update))
-		},
-	)
-
-	assert.Len(t, observed, 2)
-	assert.Equal(t, "foo", observed[0].Key)
-	assert.Equal(t, "v3", observed[0].Value)
-	assert.False(t, observed[0].Delete)
-	assert.Equal(t, "bar", observed[1].Key)
-	assert.Equal(t, "v2", observed[1].Value)
 }
 
 func TestControllerResourceUpdate(t *testing.T) {
