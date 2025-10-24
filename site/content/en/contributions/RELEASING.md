@@ -42,46 +42,53 @@ export GITHUB_REMOTE=origin
 3. Sign, commit, and push your changes to your fork.
 4. Submit a [Pull Request][] to merge the changes into the `main` branch. 
 5. Do not proceed until your PR has merged and the [Build and Test][] has successfully completed.
-6. Create a new release branch from `main`. The release branch should be named
+6. **Create a new marker tag on `main` for the next minor version.**  
+   This tag serves as a **non-release marker** to indicate the start of the next development cycle.  
+   It is **not a real release candidate** (see [envoyproxy/gateway#7248](https://github.com/envoyproxy/gateway/issues/7248) for details).
+   ```shell
+   git tag "v${MAJOR_VERSION}.$((MINOR_VERSION + 1)).0-rc.0"
+   git push origin "v${MAJOR_VERSION}.$((MINOR_VERSION + 1)).0-rc.0"
+   ```
+7. Create a new release branch from `main`. The release branch should be named
    `release/v${MAJOR_VERSION}.${MINOR_VERSION}`, e.g. `release/v0.3`.
 
    ```shell
    git checkout -b release/v${MAJOR_VERSION}.${MINOR_VERSION}
    ```
 
-7. Push the branch to the Envoy Gateway repo.
+8. Push the branch to the Envoy Gateway repo.
 
     ```shell
     git push ${GITHUB_REMOTE} release/v${MAJOR_VERSION}.${MINOR_VERSION}
     ```
 
-8. Create a topic branch for updating the [Envoy proxy image][] and [Envoy Ratelimit image][] to the tag supported by the release.
+9. Create a topic branch for updating the [Envoy proxy image][] and [Envoy Ratelimit image][] to the tag supported by the release.
  Please note that the tags should be updated in both the source code and the Helm chart. Reference [PR #5872][]
    for additional details on updating the image tag.
-9. Sign, commit, and push your changes to your fork.
-10. Submit a [Pull Request][] to merge the changes into the `release/v${MAJOR_VERSION}.${MINOR_VERSION}` branch. 
-11. Do not proceed until your PR has merged into the release branch and the [Build and Test][] has completed for your PR.
-12. Ensure your release branch is up-to-date and tag the head of your release branch with the release candidate number.
+10. Sign, commit, and push your changes to your fork.
+11. Submit a [Pull Request][] to merge the changes into the `release/v${MAJOR_VERSION}.${MINOR_VERSION}` branch. 
+12. Do not proceed until your PR has merged into the release branch and the [Build and Test][] has completed for your PR.
+13. Ensure your release branch is up-to-date and tag the head of your release branch with the release candidate number.
 
     ```shell
     git tag -a v${MAJOR_VERSION}.${MINOR_VERSION}.0-rc.${RELEASE_CANDIDATE_NUMBER} -m 'Envoy Gateway v${MAJOR_VERSION}.${MINOR_VERSION}.0-rc.${RELEASE_CANDIDATE_NUMBER} Release Candidate'
     ```
 
-13. Push the tag to the Envoy Gateway repository.
+14. Push the tag to the Envoy Gateway repository.
 
     ```shell
     git push ${GITHUB_REMOTE} v${MAJOR_VERSION}.${MINOR_VERSION}.0-rc.${RELEASE_CANDIDATE_NUMBER}
     ```
 
-14. This will trigger the [release GitHub action][] that generates the release, release artifacts, etc.
-15. Confirm that the [release workflow][] completed successfully.
-16. Confirm that the Envoy Gateway [image][] with the correct release tag was published to Docker Hub.
-17. Confirm that the [release][] was created.
-18. Note that the [Quickstart][] references are __not__ updated for release candidates. However, test
+15. This will trigger the [release GitHub action][] that generates the release, release artifacts, etc.
+16. Confirm that the [release workflow][] completed successfully.
+17. Confirm that the Envoy Gateway [image][] with the correct release tag was published to Docker Hub.
+18. Confirm that the [release][] was created.
+19. Note that the [Quickstart][] references are __not__ updated for release candidates. However, test
     the quickstart steps using the release candidate by manually updating the links.
-19. [Generate][] the GitHub changelog.
-20. Ensure you check the "This is a pre-release" checkbox when editing the GitHub release.
-21. If you find any bugs in this process, please create an issue.
+20. [Generate][] the GitHub changelog.
+21. Ensure you check the "This is a pre-release" checkbox when editing the GitHub release.
+22. If you find any bugs in this process, please create an issue.
 
 ## Minor Release
 

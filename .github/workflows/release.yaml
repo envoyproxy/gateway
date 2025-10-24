@@ -8,6 +8,10 @@ on:
     # Sequence of patterns matched against refs/tags
     tags:
       - "v*.*.*"
+      # Exclude rc.0 tags — they’re not real release candidates but markers for main
+      # See: https://github.com/envoyproxy/gateway/issues/7248
+      - "!v*.*.*-rc.0"
+
 
 jobs:
   # For push event, we run benchmark test here because we need to
