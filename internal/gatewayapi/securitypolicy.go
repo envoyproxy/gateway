@@ -1417,7 +1417,7 @@ func (t *Translator) buildOIDCProvider(policy *egv1a1.SecurityPolicy, resources 
 	if provider.TokenEndpoint == nil || provider.AuthorizationEndpoint == nil {
 		discoveredConfig, err := fetchEndpointsFromIssuer(provider.Issuer, providerTLS)
 		if err != nil {
-			return nil, fmt.Errorf("error fetching endpoints from issuer: %w", err)
+			return nil, err
 		}
 		tokenEndpoint = discoveredConfig.TokenEndpoint
 		authorizationEndpoint = discoveredConfig.AuthorizationEndpoint
@@ -1493,6 +1493,16 @@ type OpenIDConfig struct {
 	EndSessionEndpoint    *string `json:"end_session_endpoint,omitempty"`
 }
 
+func (o *OpenIDConfig) validate() error {
+	if o.TokenEndpoint == "" {
+		return errors.New("token_endpoint not found in OpenID configuration")
+	}
+	if o.AuthorizationEndpoint == "" {
+		return errors.New("authorization_endpoint not found in OpenID configuration")
+	}
+	return nil
+}
+
 func fetchEndpointsFromIssuer(issuerURL string, providerTLS *ir.TLSUpstreamConfig) (*OpenIDConfig, error) {
 	var (
 		tlsConfig *tls.Config
@@ -1516,19 +1526,45 @@ func fetchEndpointsFromIssuer(issuerURL string, providerTLS *ir.TLSUpstreamConfi
 	var config OpenIDConfig
 	if err = backoff.Retry(func() error {
 		resp, err := client.Get(fmt.Sprintf("%s/.well-known/openid-configuration", issuerURL))
+		// Retry on transport errors
 		if err != nil {
 			return err
 		}
+
 		defer resp.Body.Close()
-		if err = json.NewDecoder(resp.Body).Decode(&config); err != nil {
-			return err
+		switch {
+		// Retry on transient errors
+		case retryable(resp.StatusCode):
+			return fmt.Errorf("transient error fetching openid-configuration from issuer URL: %s, status code: %d", issuerURL, resp.StatusCode)
+		// Do not retry on client errors
+		case resp.StatusCode == http.StatusNotFound || resp.StatusCode == http.StatusBadRequest:
+			return &backoff.PermanentError{Err: fmt.Errorf("failed fetching openid-configuration from issuer URL: %s, status code: %d", issuerURL, resp.StatusCode)}
+		case resp.StatusCode == http.StatusOK:
+			// Do not retry if decoding fails
+			if err = json.NewDecoder(resp.Body).Decode(&config); err != nil {
+				return &backoff.PermanentError{Err: fmt.Errorf("error decoding openid-configuration response: %w", err)}
+			}
+		default:
+			// Do not retry on other status codes
+			return &backoff.PermanentError{Err: fmt.Errorf("unexpected status code %d when fetching openid-configuration from issuer URL: %s", resp.StatusCode, issuerURL)}
 		}
 		return nil
 	}, backoff.NewExponentialBackOff(backoff.WithMaxElapsedTime(5*time.Second))); err != nil {
 		return nil, err
 	}
 
+	if err = config.validate(); err != nil {
+		return nil, fmt.Errorf("invalid openid-configuration from issuer URL %s: %w", issuerURL, err)
+	}
+
 	return &config, nil
+}
+
+func retryable(code int) bool {
+	return code >= 500 &&
+		(code != http.StatusNotImplemented &&
+			code != http.StatusHTTPVersionNotSupported &&
+			code != http.StatusNetworkAuthenticationRequired)
 }
 
 // validateTokenEndpoint validates the token endpoint URL
