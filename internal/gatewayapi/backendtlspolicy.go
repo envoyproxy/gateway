@@ -195,7 +195,7 @@ func (t *Translator) processBackendTLSPolicy(
 		gwapiv1.BackendTLSPolicyConditionResolvedRefs,
 		metav1.ConditionTrue,
 		gwapiv1.BackendTLSPolicyReasonResolvedRefs,
-		"CA certificate resolved.",
+		"Resolved all the Object references.",
 		policy.Generation,
 	)
 	status.SetAcceptedForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName, policy.Generation)

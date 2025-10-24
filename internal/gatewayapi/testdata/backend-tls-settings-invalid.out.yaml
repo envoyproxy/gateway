@@ -27,7 +27,7 @@ backendTLSPolicies:
         namespace: envoy-gateway
       conditions:
       - lastTransitionTime: null
-        message: CA certificate resolved.
+        message: Resolved all the Object references.
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
