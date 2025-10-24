@@ -16,6 +16,7 @@ import (
 	"sort"
 	"time"
 
+	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/go-logr/logr"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -75,9 +76,9 @@ func newStoreKey(obj client.Object) storeKey {
 }
 
 // ReloadAll loads and stores all resources from all given files and directories.
-func (r *resourcesStore) ReloadAll(ctx context.Context, files, dirs []string) error {
+func (r *resourcesStore) ReloadAll(ctx context.Context, srv *config.Server, files, dirs []string) error {
 	// TODO(sh2): add arbitrary number of resources support for load function.
-	resources, err := loadFromFilesAndDirs(files, dirs)
+	resources, err := loadFromFilesAndDirs(srv, files, dirs)
 	if err != nil {
 		return err
 	}
@@ -128,7 +129,7 @@ func (r *resourcesStore) ReloadAll(ctx context.Context, files, dirs []string) er
 // - Service
 // - ServiceImport
 // - EndpointSlices
-// Becasues these resources has no effects on the host infra layer.
+// Because these resources have no effects on the host infra layer.
 func (r *resourcesStore) storeResources(ctx context.Context, re *resource.Resources) (sets.Set[storeKey], error) {
 	if re == nil {
 		return nil, nil

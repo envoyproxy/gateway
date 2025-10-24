@@ -342,7 +342,7 @@ func BenchmarkGatewayAPItoXDS(b *testing.B) {
 
 	for _, tc := range cases {
 		b.Run(tc.name, func(b *testing.B) {
-			rs, err := resource.LoadResourcesFromYAMLBytes([]byte(tc.yaml), true)
+			rs, err := resource.LoadResourcesFromYAMLBytes(nil, []byte(tc.yaml), true)
 			if err != nil {
 				b.Fatalf("load: %v", err)
 			}
