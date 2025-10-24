@@ -1,0 +1,16 @@
+name: go-mod-download
+description: Install host system dependencies
+
+runs:
+  using: composite
+  steps:
+    - uses: ./tools/github-actions/setup-deps
+    - name: Download Go modules
+      shell: bash
+      run: |
+        set -euo pipefail
+        find . -name go.mod -print | sort | while read -r mod; do
+          dir=$(dirname "$mod")
+          echo "Downloading Go modules in ${dir:-.}"
+          (cd "${dir:-.}" && go mod download)
+        done
