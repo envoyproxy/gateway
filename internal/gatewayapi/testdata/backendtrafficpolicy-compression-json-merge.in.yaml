@@ -60,4 +60,5 @@ backendTrafficPolicies:
         name: httproute-1
       compression:
         - type: Brotli
+        - type: Zstd
       mergeType: JSONMerge

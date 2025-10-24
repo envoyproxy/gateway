@@ -661,10 +661,16 @@ func (in *ConsistentHash) DeepCopyInto(out *ConsistentHash) {
 		*out = new(bool)
 		**out = **in
 	}
-	if in.Header != nil {
-		in, out := &in.Header, &out.Header
-		*out = new(Header)
-		**out = **in
+	if in.Headers != nil {
+		in, out := &in.Headers, &out.Headers
+		*out = make([]*v1alpha1.Header, len(*in))
+		for i := range *in {
+			if (*in)[i] != nil {
+				in, out := &(*in)[i], &(*out)[i]
+				*out = new(v1alpha1.Header)
+				**out = **in
+			}
+		}
 	}
 	if in.Cookie != nil {
 		in, out := &in.Cookie, &out.Cookie
@@ -784,8 +790,8 @@ func (in *CustomResponse) DeepCopyInto(out *CustomResponse) {
 	}
 	if in.Body != nil {
 		in, out := &in.Body, &out.Body
-		*out = new(string)
-		**out = **in
+		*out = make([]byte, len(*in))
+		copy(*out, *in)
 	}
 	if in.StatusCode != nil {
 		in, out := &in.StatusCode, &out.StatusCode

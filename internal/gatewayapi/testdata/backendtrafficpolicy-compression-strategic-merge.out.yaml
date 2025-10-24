@@ -7,6 +7,7 @@ backendTrafficPolicies:
   spec:
     compression:
     - type: Brotli
+    - type: Zstd
     mergeType: StrategicMerge
     targetRef:
       group: gateway.networking.k8s.io
@@ -47,6 +48,7 @@ backendTrafficPolicies:
   spec:
     compression:
     - type: Brotli
+    - type: Zstd
     targetRef:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
@@ -419,6 +421,7 @@ xdsIR:
         traffic:
           compression:
           - type: Brotli
+          - type: Zstd
       - destination:
           metadata:
             kind: HTTPRoute
@@ -451,6 +454,7 @@ xdsIR:
         traffic:
           compression:
           - type: Brotli
+          - type: Zstd
           - type: Gzip
     readyListener:
       address: 0.0.0.0

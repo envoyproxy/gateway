@@ -132,6 +132,12 @@ static_resources:
                 typed_config:
                   "@type": type.googleapis.com/envoy.extensions.compression.brotli.compressor.v3.Brotli
               {{- end }}
+              {{- if eq .PrometheusCompressionLibrary "Zstd"}}
+              compressor_library:
+                name: text_optimized
+                typed_config:
+                  "@type": type.googleapis.com/envoy.extensions.compression.zstd.compressor.v3.Zstd
+              {{- end }}
           {{- end }}
           - name: envoy.filters.http.router
             typed_config:
