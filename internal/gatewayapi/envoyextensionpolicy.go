@@ -469,6 +469,7 @@ func (t *Translator) translateEnvoyExtensionPolicyForRoute(
 	// Apply IR to all relevant routes
 	prefix := irRoutePrefix(route)
 	parentRefs := GetParentReferences(route)
+	routesWithDirectResponse := sets.New[string]()
 	for _, p := range parentRefs {
 		parentRefCtx := GetRouteParentContext(route, p, t.GatewayControllerName)
 		gtwCtx := parentRefCtx.GetGateway()
@@ -516,6 +517,7 @@ func (t *Translator) translateEnvoyExtensionPolicyForRoute(
 								r.DirectResponse = &ir.CustomResponse{
 									StatusCode: ptr.To(uint32(500)),
 								}
+								routesWithDirectResponse.Insert(r.Name)
 							}
 							continue
 						}
@@ -528,6 +530,13 @@ func (t *Translator) translateEnvoyExtensionPolicyForRoute(
 				}
 			}
 		}
+	}
+	if len(routesWithDirectResponse) > 0 {
+		t.Logger.Info("setting 500 direct response in routes due to errors in EnvoyExtensionPolicy",
+			"policy", fmt.Sprintf("%s/%s", policy.Namespace, policy.Name),
+			"routes", sets.List(routesWithDirectResponse),
+			"error", errs,
+		)
 	}
 
 	return errs
@@ -568,6 +577,7 @@ func (t *Translator) translateEnvoyExtensionPolicyForGateway(
 
 	policyTarget := irStringKey(policy.Namespace, string(target.Name))
 
+	routesWithDirectResponse := sets.New[string]()
 	for _, http := range x.HTTP {
 		gatewayName := http.Name[0:strings.LastIndex(http.Name, "/")]
 		if t.MergeGateways && gatewayName != policyTarget {
@@ -598,6 +608,7 @@ func (t *Translator) translateEnvoyExtensionPolicyForGateway(
 					r.DirectResponse = &ir.CustomResponse{
 						StatusCode: ptr.To(uint32(500)),
 					}
+					routesWithDirectResponse.Insert(r.Name)
 				}
 				continue
 			}
@@ -608,6 +619,13 @@ func (t *Translator) translateEnvoyExtensionPolicyForGateway(
 				Luas:     luas,
 			}
 		}
+	}
+	if len(routesWithDirectResponse) > 0 {
+		t.Logger.Info("setting 500 direct response in routes due to errors in EnvoyExtensionPolicy",
+			"policy", fmt.Sprintf("%s/%s", policy.Namespace, policy.Name),
+			"routes", sets.List(routesWithDirectResponse),
+			"error", errs,
+		)
 	}
 
 	return errs

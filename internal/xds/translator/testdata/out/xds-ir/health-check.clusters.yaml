@@ -40,6 +40,7 @@
     consecutive5xx: 5
     consecutiveGatewayFailure: 0
     consecutiveLocalOriginFailure: 5
+    enforcingConsecutiveGatewayFailure: 100
     interval: 2s
     maxEjectionPercent: 100
   perConnectionBufferLimitBytes: 32768
@@ -84,6 +85,7 @@
     consecutive5xx: 5
     consecutiveGatewayFailure: 0
     consecutiveLocalOriginFailure: 5
+    enforcingConsecutiveGatewayFailure: 100
     interval: 1s
     maxEjectionPercent: 100
   perConnectionBufferLimitBytes: 32768
@@ -125,6 +127,7 @@
     consecutive5xx: 5
     consecutiveGatewayFailure: 0
     consecutiveLocalOriginFailure: 5
+    enforcingConsecutiveGatewayFailure: 100
     interval: 1s
     maxEjectionPercent: 100
   perConnectionBufferLimitBytes: 32768
@@ -166,6 +169,7 @@
     consecutive5xx: 5
     consecutiveGatewayFailure: 0
     consecutiveLocalOriginFailure: 5
+    enforcingConsecutiveGatewayFailure: 100
     interval: 1s
     maxEjectionPercent: 90
     splitExternalLocalOriginErrors: true
