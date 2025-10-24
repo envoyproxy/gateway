@@ -16,9 +16,6 @@ import (
 func SkipTests(gatewayNamespaceMode bool) []suite.ConformanceTest {
 	skipTests := []suite.ConformanceTest{
 		tests.GatewayStaticAddresses,
-
-		// TODO: fix me
-		tests.BackendTLSPolicyConflictResolution,
 	}
 
 	if gatewayNamespaceMode {
