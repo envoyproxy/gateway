@@ -59,11 +59,8 @@ func NewResourceRender(ns string, gateway *egv1a1.EnvoyGateway, ownerReferenceUI
 		rateLimit:           gateway.RateLimit,
 		rateLimitDeployment: prov.RateLimitDeployment,
 		rateLimitHpa:        prov.RateLimitHpa,
+		rateLimitPdb:        prov.RateLimitPDB,
 		ownerReferenceUID:   ownerReferenceUID,
-	}
-
-	if prov.RateLimit != nil && prov.RateLimit.PDB != nil {
-		render.rateLimitPdb = prov.RateLimit.PDB
 	}
 
 	return render

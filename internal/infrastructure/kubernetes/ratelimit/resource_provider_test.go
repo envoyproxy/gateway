@@ -236,9 +236,7 @@ func TestPDB(t *testing.T) {
 			cfg.EnvoyGateway.Provider = &egv1a1.EnvoyGatewayProvider{
 				Type: egv1a1.ProviderTypeKubernetes,
 				Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
-					RateLimit: &egv1a1.KubernetesRateLimitSpec{
-						PDB: tc.pdb,
-					},
+					RateLimitPDB: tc.pdb,
 				},
 			}
 			r := NewResourceRender(cfg.ControllerNamespace, cfg.EnvoyGateway, ownerReferenceUID)
