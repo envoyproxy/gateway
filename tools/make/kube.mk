@@ -29,14 +29,16 @@ BENCHMARK_REPORT_DIR ?= benchmark_report
 # Disable PNG rendering by default to speed up CI
 BENCHMARK_RENDER_PNG ?= false
 
-CONFORMANCE_RUN_TEST ?=
-
 E2E_RUN_TEST ?=
 E2E_CLEANUP ?= true
 E2E_TIMEOUT ?= 20m
 # E2E_REDIRECT allow you specified a redirect when run e2e test locally, e.g. `>> test_output.out 2>&1`
 E2E_REDIRECT ?=
 E2E_TEST_ARGS ?= -v -tags e2e -timeout $(E2E_TIMEOUT)
+
+CONFORMANCE_RUN_TEST ?=
+CONFORMANCE_TEST_ARGS ?= -v -tags conformance -timeout $(E2E_TIMEOUT)
+EXPERIMENTAL_CONFORMANCE_TEST_ARGS ?= -v -tags experimental -timeout $(E2E_TIMEOUT)
 
 DOCKER_MAC_NET_CONNECT ?= true
 HOMEBREW_GOPROXY ?=
@@ -318,9 +320,9 @@ run-conformance: prepare-ip-family ## Run Gateway API conformance.
 	kubectl wait --timeout=$(WAIT_TIMEOUT) -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
 	kubectl apply -f test/config/gatewayclass.yaml
 ifeq ($(CONFORMANCE_RUN_TEST),)
-	go test -v -tags conformance ./test/conformance --gateway-class=envoy-gateway --debug=true
+	go test $(CONFORMANCE_TEST_ARGS) ./test/conformance --gateway-class=envoy-gateway --debug=true $(E2E_REDIRECT)
 else
-	go test -v -tags conformance ./test/conformance --gateway-class=envoy-gateway --debug=true --run-test $(CONFORMANCE_RUN_TEST)
+	go test $(CONFORMANCE_TEST_ARGS) ./test/conformance --gateway-class=envoy-gateway --debug=true --run-test $(CONFORMANCE_RUN_TEST) $(E2E_REDIRECT)
 endif
 
 CONFORMANCE_REPORT_PATH ?=
@@ -331,13 +333,13 @@ run-experimental-conformance: prepare-ip-family ## Run Experimental Gateway API 
 	kubectl wait --timeout=$(WAIT_TIMEOUT) -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
 	kubectl apply -f test/config/gatewayclass.yaml
 ifeq ($(CONFORMANCE_RUN_TEST),)
-	go test -v -tags experimental ./test/conformance -run TestExperimentalConformance --gateway-class=envoy-gateway --debug=true \
+	go test $(EXPERIMENTAL_CONFORMANCE_TEST_ARGS) ./test/conformance -run TestExperimentalConformance --gateway-class=envoy-gateway --debug=true \
 		--organization=envoyproxy --project=envoy-gateway --url=https://github.com/envoyproxy/gateway --version=latest \
 		--report-output="$(CONFORMANCE_REPORT_PATH)" --contact=https://github.com/envoyproxy/gateway/blob/main/GOVERNANCE.md \
 		--mode="$(KUBE_DEPLOY_PROFILE)" --version=$(TAG)
 else
     # we didn't care about output when running single test
-	go test -v -tags experimental ./test/conformance -run TestExperimentalConformance --gateway-class=envoy-gateway --debug=true --run-test $(CONFORMANCE_RUN_TEST)
+	go test $(EXPERIMENTAL_CONFORMANCE_TEST_ARGS) ./test/conformance -run TestExperimentalConformance --gateway-class=envoy-gateway --debug=true --run-test $(CONFORMANCE_RUN_TEST)
 endif
 
 
