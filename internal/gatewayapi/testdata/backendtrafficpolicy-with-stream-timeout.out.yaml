@@ -11,7 +11,7 @@ backendTrafficPolicies:
       name: grpcroute-1
     timeout:
       http:
-        streamTimeout: 30s
+        maxStreamDuration: 30s
   status:
     ancestors:
     - ancestorRef:
@@ -39,7 +39,7 @@ backendTrafficPolicies:
       name: grpcroute-1
     timeout:
       http:
-        streamTimeout: 0s
+        maxStreamDuration: 0s
   status:
     ancestors:
     - ancestorRef:
@@ -70,8 +70,8 @@ backendTrafficPolicies:
       http:
         connectionIdleTimeout: 16s
         maxConnectionDuration: 17s
+        maxStreamDuration: 30s
         requestTimeout: 18s
-        streamTimeout: 30s
       tcp:
         connectTimeout: 15s
   status:
@@ -256,7 +256,7 @@ xdsIR:
         traffic:
           timeout:
             http:
-              streamTimeout: 30s
+              maxStreamDuration: 30s
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

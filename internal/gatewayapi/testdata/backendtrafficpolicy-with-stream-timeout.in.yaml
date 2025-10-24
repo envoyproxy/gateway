@@ -46,7 +46,7 @@ backendTrafficPolicies:
           connectionIdleTimeout: 16s
           maxConnectionDuration: 17s
           requestTimeout: 18s
-          streamTimeout: 30s
+          maxStreamDuration: 30s
   - apiVersion: gateway.envoyproxy.io/v1alpha1
     kind: BackendTrafficPolicy
     metadata:
@@ -59,7 +59,7 @@ backendTrafficPolicies:
         name: grpcroute-1
       timeout:
         http:
-          streamTimeout: 30s
+          maxStreamDuration: 30s
   - apiVersion: gateway.envoyproxy.io/v1alpha1
     kind: BackendTrafficPolicy
     metadata:
@@ -72,4 +72,4 @@ backendTrafficPolicies:
         name: grpcroute-1
       timeout:
         http:
-          streamTimeout: 0s
+          maxStreamDuration: 0s

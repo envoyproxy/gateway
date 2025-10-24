@@ -180,57 +180,122 @@ func TestBuildUpgradeConfig(t *testing.T) {
 	}
 }
 
-func TestGetEffectiveTimeout(t *testing.T) {
-	// Case 1: HTTP2 with StreamTimeout
-	streamTimeout := &metav1.Duration{Duration: 10 * time.Second}
+func TestGetEffectiveRequestTimeout(t *testing.T) {
+	// Case 1: Route with Gateway API timeout should take precedence
+	gatewayTimeout := &metav1.Duration{Duration: 3 * time.Second}
 	httpRoute := &ir.HTTPRoute{
-		IsHTTP2: true,
+		Timeout: gatewayTimeout,
 		Traffic: &ir.TrafficFeatures{
 			Timeout: &ir.Timeout{
 				HTTP: &ir.HTTPTimeout{
-					StreamTimeout: streamTimeout,
+					RequestTimeout: &metav1.Duration{Duration: 5 * time.Second},
 				},
 			},
 		},
 	}
-	if got := getEffectiveTimeout(httpRoute); got != streamTimeout {
-		t.Errorf("expected StreamTimeout, got %v", got)
+	if got := getEffectiveRequestTimeout(httpRoute); got != gatewayTimeout {
+		t.Errorf("expected Gateway API timeout, got %v", got)
 	}
 
-	// Case 2: HTTP2 without StreamTimeout (should fall back)
+	// Case 2: Route with BackendTrafficPolicy RequestTimeout should be used
+	policyTimeout := &metav1.Duration{Duration: 7 * time.Second}
+	httpRoute2 := &ir.HTTPRoute{
+		Traffic: &ir.TrafficFeatures{
+			Timeout: &ir.Timeout{
+				HTTP: &ir.HTTPTimeout{
+					RequestTimeout: policyTimeout,
+				},
+			},
+		},
+	}
+	if got := getEffectiveRequestTimeout(httpRoute2); got != policyTimeout {
+		t.Errorf("expected BackendTrafficPolicy RequestTimeout, got %v", got)
+	}
+
+	// Case 3: Route with both timeouts but Gateway API should take precedence
+	httpRoute3 := &ir.HTTPRoute{
+		Timeout: &metav1.Duration{Duration: 2 * time.Second},
+		Traffic: &ir.TrafficFeatures{
+			Timeout: &ir.Timeout{
+				HTTP: &ir.HTTPTimeout{
+					RequestTimeout: &metav1.Duration{Duration: 8 * time.Second},
+				},
+			},
+		},
+	}
+	if got := getEffectiveRequestTimeout(httpRoute3); got.Duration != 2*time.Second {
+		t.Errorf("expected Gateway API timeout to take precedence, got %v", got)
+	}
+
+	// Case 4: Route with no timeouts should return nil
+	httpRoute4 := &ir.HTTPRoute{IsHTTP2: true}
+	if got := getEffectiveRequestTimeout(httpRoute4); got != nil {
+		t.Errorf("expected nil for missing timeouts, got %v", got)
+	}
+}
+
+func TestRouteTimeoutsIndependent(t *testing.T) {
+	// Test that getEffectiveRequestTimeout ignores MaxStreamDuration
+	// This ensures route timeout and MaxStreamDuration are independent
 	reqTimeout := &metav1.Duration{Duration: 5 * time.Second}
+	maxStreamDur := &metav1.Duration{Duration: 30 * time.Second}
+
+	httpRoute := &ir.HTTPRoute{
+		IsHTTP2: true,
+		Timeout: reqTimeout,
+		Traffic: &ir.TrafficFeatures{
+			Timeout: &ir.Timeout{
+				HTTP: &ir.HTTPTimeout{
+					RequestTimeout:    &metav1.Duration{Duration: 10 * time.Second}, // Should be ignored due to Gateway API timeout
+					MaxStreamDuration: maxStreamDur,                                 // Should be ignored by getEffectiveRequestTimeout
+				},
+			},
+		},
+	}
+
+	// Test that getEffectiveRequestTimeout returns the Gateway API timeout
+	// and ignores MaxStreamDuration and BackendTrafficPolicy RequestTimeout
+	timeout := getEffectiveRequestTimeout(httpRoute)
+	if timeout == nil {
+		t.Errorf("expected timeout to be set")
+	} else if timeout.Duration != reqTimeout.Duration {
+		t.Errorf("expected Gateway API timeout %v, got %v", reqTimeout.Duration, timeout.Duration)
+	}
+
+	// Test route without Gateway API timeout should use BackendTrafficPolicy
 	httpRoute2 := &ir.HTTPRoute{
 		IsHTTP2: true,
 		Traffic: &ir.TrafficFeatures{
 			Timeout: &ir.Timeout{
 				HTTP: &ir.HTTPTimeout{
-					RequestTimeout: reqTimeout,
+					RequestTimeout:    &metav1.Duration{Duration: 15 * time.Second},
+					MaxStreamDuration: maxStreamDur, // Should be ignored
 				},
 			},
 		},
 	}
-	if got := getEffectiveTimeout(httpRoute2); got != reqTimeout {
-		t.Errorf("expected RequestTimeout fallback, got %v", got)
+
+	timeout2 := getEffectiveRequestTimeout(httpRoute2)
+	if timeout2 == nil {
+		t.Errorf("expected timeout to be set from BackendTrafficPolicy")
+	} else if timeout2.Duration != 15*time.Second {
+		t.Errorf("expected BackendTrafficPolicy timeout, got %v", timeout2.Duration)
 	}
 
-	// Case 3: HTTP1 (IsHTTP2=false, should always use RequestTimeout)
+	// Test that MaxStreamDuration doesn't affect request timeout calculation
 	httpRoute3 := &ir.HTTPRoute{
-		IsHTTP2: false,
+		IsHTTP2: true,
 		Traffic: &ir.TrafficFeatures{
 			Timeout: &ir.Timeout{
 				HTTP: &ir.HTTPTimeout{
-					RequestTimeout: reqTimeout,
+					MaxStreamDuration: maxStreamDur, // Only MaxStreamDuration set
 				},
 			},
 		},
 	}
-	if got := getEffectiveTimeout(httpRoute3); got != reqTimeout {
-		t.Errorf("expected RequestTimeout for HTTP1, got %v", got)
-	}
 
-	// Case 4: HTTP2 with nil Traffic/Timeout/HTTP (should return nil)
-	httpRoute4 := &ir.HTTPRoute{IsHTTP2: true}
-	if got := getEffectiveTimeout(httpRoute4); got != nil {
-		t.Errorf("expected nil for missing fields, got %v", got)
+	timeout3 := getEffectiveRequestTimeout(httpRoute3)
+	if timeout3 != nil {
+		t.Errorf("expected nil timeout when only MaxStreamDuration is set, got %v", timeout3)
 	}
 }

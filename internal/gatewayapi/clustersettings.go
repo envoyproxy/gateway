@@ -141,13 +141,13 @@ func buildClusterSettingsTimeout(policy *egv1a1.ClusterSettings) (*ir.Timeout, e
 			}
 		}
 
-		var st *metav1.Duration
-		if pto.HTTP.StreamTimeout != nil {
-			d, err := time.ParseDuration(string(*pto.HTTP.StreamTimeout))
+		var msd *metav1.Duration
+		if pto.HTTP.MaxStreamDuration != nil {
+			d, err := time.ParseDuration(string(*pto.HTTP.MaxStreamDuration))
 			if err != nil {
-				errs = errors.Join(errs, fmt.Errorf("invalid StreamTimeout value %s", *pto.HTTP.StreamTimeout))
+				errs = errors.Join(errs, fmt.Errorf("invalid MaxStreamDuration value %s", *pto.HTTP.MaxStreamDuration))
 			} else {
-				st = ptr.To(metav1.Duration{Duration: d})
+				msd = ptr.To(metav1.Duration{Duration: d})
 			}
 		}
 
@@ -155,7 +155,7 @@ func buildClusterSettingsTimeout(policy *egv1a1.ClusterSettings) (*ir.Timeout, e
 			ConnectionIdleTimeout: cit,
 			MaxConnectionDuration: mcd,
 			RequestTimeout:        rt,
-			StreamTimeout:         st,
+			MaxStreamDuration:     msd,
 		}
 	}
 	return to, errs

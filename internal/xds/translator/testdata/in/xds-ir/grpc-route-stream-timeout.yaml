@@ -14,7 +14,7 @@ http:
         traffic:
           timeout:
             http:
-              streamTimeout: "45s"
+              maxStreamDuration: "45s"
         destination:
           name: "grpc-route-with-only-stream-timeout-dest"
           settings:
@@ -28,7 +28,7 @@ http:
         traffic:
           timeout:
             http:
-              streamTimeout: "0s"
+              maxStreamDuration: "0s"
         destination:
           name: "grpc-route-with-0s-stream-timeout-dest"
           settings:

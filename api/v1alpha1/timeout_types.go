@@ -46,13 +46,13 @@ type HTTPTimeout struct {
 	// +optional
 	RequestTimeout *gwapiv1.Duration `json:"requestTimeout,omitempty" yaml:"requestTimeout,omitempty"`
 
-	// StreamTimeout is the timeout for streaming requests. This timeout does not apply to non-streaming requests.
-	// When set to "0s", the timeout is disabled for streaming requests, allowing them to run indefinitely.
-	// This is particularly useful for gRPC streaming calls.
-	// Default: inherited from RequestTimeout.
+	// MaxStreamDuration is the maximum duration for a stream to complete. This timeout measures the time
+	// from when the request is sent until the response stream is fully consumed and does not apply to
+	// non-streaming requests.
+	// When set to "0s", no max duration is applied and streams can run indefinitely.
 	//
 	// +optional
-	StreamTimeout *gwapiv1.Duration `json:"streamTimeout,omitempty"`
+	MaxStreamDuration *gwapiv1.Duration `json:"maxStreamDuration,omitempty"`
 }
 
 type ClientTimeout struct {

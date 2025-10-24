@@ -3651,8 +3651,8 @@ func (in *HTTPTimeout) DeepCopyInto(out *HTTPTimeout) {
 		*out = new(v1.Duration)
 		**out = **in
 	}
-	if in.StreamTimeout != nil {
-		in, out := &in.StreamTimeout, &out.StreamTimeout
+	if in.MaxStreamDuration != nil {
+		in, out := &in.MaxStreamDuration, &out.MaxStreamDuration
 		*out = new(v1.Duration)
 		**out = **in
 	}

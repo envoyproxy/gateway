@@ -2929,11 +2929,8 @@ type HTTPTimeout struct {
 	// The maximum duration of an HTTP connection.
 	MaxConnectionDuration *metav1.Duration `json:"maxConnectionDuration,omitempty" yaml:"maxConnectionDuration,omitempty"`
 
-	// StreamTimeout is the timeout for streaming requests. This timeout does not apply to non-streaming requests.
-	// When set to "0s", the timeout is disabled for streaming requests, allowing them to run indefinitely.
-	// This is particularly useful for gRPC streaming calls.
-	// Default: inherited from RequestTimeout.
-	StreamTimeout *metav1.Duration `json:"streamTimeout,omitempty" yaml:"streamTimeout,omitempty"`
+	// The maximum duration of an HTTP stream.
+	MaxStreamDuration *metav1.Duration `json:"maxStreamDuration,omitempty" yaml:"maxStreamDuration,omitempty"`
 }
 
 // Retry define the retry policy configuration.
