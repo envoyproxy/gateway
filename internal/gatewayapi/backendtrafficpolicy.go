@@ -891,10 +891,10 @@ func buildRateLimitRule(rule egv1a1.RateLimitRule) (*ir.RateLimitRule, error) {
 	}
 
 	for _, match := range rule.ClientSelectors {
-		if len(match.Headers) == 0 && match.SourceCIDR == nil {
+		if len(match.Headers) == 0 && match.SourceCIDR == nil && match.QueryParameters == nil {
 			return nil, fmt.Errorf(
 				"unable to translate rateLimit. At least one of the" +
-					" header or sourceCIDR must be specified")
+					" header, sourceCIDR, or queryParameters must be specified")
 		}
 		for _, header := range match.Headers {
 			switch {
@@ -949,6 +949,17 @@ func buildRateLimitRule(rule egv1a1.RateLimitRule) (*ir.RateLimitRule, error) {
 			}
 			cidrMatch.Distinct = distinct
 			irRule.CIDRMatch = cidrMatch
+		}
+
+		if match.QueryParameters != nil {
+			// Validate QueryParameters
+			if match.QueryParameters.QueryParameterName == "" {
+				return nil, fmt.Errorf("queryParameterName is required when QueryParameters is specified")
+			}
+			if match.QueryParameters.DescriptorKey == "" {
+				return nil, fmt.Errorf("descriptorKey is required when QueryParameters is specified")
+			}
+			irRule.QueryParameters = (*ir.QueryParameters)(match.QueryParameters)
 		}
 	}
 

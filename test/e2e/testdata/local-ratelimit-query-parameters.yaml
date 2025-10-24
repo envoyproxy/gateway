@@ -1,0 +1,52 @@
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: ClientTrafficPolicy
+metadata:
+  name: disable-ratelimit-header
+  namespace: gateway-conformance-infra
+spec:
+  headers:
+    disableRateLimitHeaders: true
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: all-namespaces
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: local-ratelimit-query-parameters
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: local-query-parameters-ratelimit
+  rateLimit:
+    type: Local
+    local:
+      rules:
+        - clientSelectors:
+            - queryParameters:
+                queryParameterName: user
+                descriptorKey: user_param
+          limit:
+            requests: 3
+            unit: Second
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: local-query-parameters-ratelimit
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: same-namespace
+    - name: all-namespaces
+  rules:
+    - backendRefs:
+        - name: infra-backend-v1
+          port: 8080
+      matches:
+        - path:
+            type: Exact
+            value: /query-ratelimit

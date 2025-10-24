@@ -1,0 +1,52 @@
+- ignorePortInHostMatching: true
+  name: first-listener
+  virtualHosts:
+  - domains:
+    - '*'
+    name: first-listener/*
+    routes:
+    - match:
+        path: foo/bar
+      name: first-route-ratelimit-query-parameters
+      route:
+        cluster: first-route-dest
+        rateLimits:
+        - actions:
+          - headerValueMatch:
+              descriptorKey: rule-0-match-0
+              descriptorValue: rule-0-match-0
+              expectMatch: true
+              headers:
+              - name: x-user-id
+                stringMatch:
+                  exact: one
+          - queryParameters:
+              descriptorKey: user_param
+              queryParameterName: user
+        upgradeConfigs:
+        - upgradeType: websocket
+      typedPerFilterConfig:
+        envoy.filters.http.local_ratelimit:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.local_ratelimit.v3.LocalRateLimit
+          alwaysConsumeDefaultTokenBucket: false
+          descriptors:
+          - entries:
+            - key: rule-0-match-0
+              value: rule-0-match-0
+            - key: user_param
+            tokenBucket:
+              fillInterval: 3600s
+              maxTokens: 10
+              tokensPerFill: 10
+          enableXRatelimitHeaders: DRAFT_VERSION_03
+          filterEnabled:
+            defaultValue:
+              numerator: 100
+          filterEnforced:
+            defaultValue:
+              numerator: 100
+          statPrefix: http_local_rate_limiter
+          tokenBucket:
+            fillInterval: 60s
+            maxTokens: 10
+            tokensPerFill: 10

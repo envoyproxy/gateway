@@ -2242,6 +2242,8 @@ type RateLimitRule struct {
 	HeaderMatches []*StringMatch `json:"headerMatches" yaml:"headerMatches"`
 	// CIDRMatch define the match conditions on the source IP's CIDR for this route.
 	CIDRMatch *CIDRMatch `json:"cidrMatch,omitempty" yaml:"cidrMatch,omitempty"`
+	// Rate limit on query parameters.
+	QueryParameters *QueryParameters `json:"queryParameters,omitempty" yaml:"queryParameters,omitempty"`
 	// Limit holds the rate limit values.
 	Limit RateLimitValue `json:"limit,omitempty" yaml:"limit,omitempty"`
 	// RequestCost specifies the cost of the request.
@@ -2257,6 +2259,12 @@ type RateLimitRule struct {
 	Shared *bool `json:"shared,omitempty" yaml:"shared,omitempty"`
 	// Name is a unique identifier for this rule, set as <policy-ns>/<policy-name>/rule/<rule-index>.
 	Name string `json:"name,omitempty" yaml:"name,omitempty"`
+}
+
+// +k8s:deepcopy-gen=true
+type QueryParameters struct {
+	QueryParameterName string `json:"queryParameterName,omitempty" yaml:"queryParameterName,omitempty"`
+	DescriptorKey      string `json:"descriptorKey,omitempty" yaml:"descriptorKey,omitempty"`
 }
 
 // RateLimitCost specifies the cost of the request or response.
@@ -2278,7 +2286,7 @@ type CIDRMatch struct {
 
 // TODO zhaohuabing: remove this function
 func (r *RateLimitRule) IsMatchSet() bool {
-	return len(r.HeaderMatches) != 0 || r.CIDRMatch != nil
+	return len(r.HeaderMatches) != 0 || r.CIDRMatch != nil || r.QueryParameters != nil
 }
 
 type RateLimitUnit egv1a1.RateLimitUnit

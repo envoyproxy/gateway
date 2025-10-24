@@ -336,6 +336,18 @@ func buildRouteRateLimits(route *ir.HTTPRoute) (rateLimits []*routev3.RateLimit,
 			}
 		}
 
+		if rule.QueryParameters != nil {
+			queryParam := &routev3.RateLimit_Action_QueryParameters{}
+			queryParam.DescriptorKey = rule.QueryParameters.DescriptorKey
+			queryParam.QueryParameterName = rule.QueryParameters.QueryParameterName
+			action := &routev3.RateLimit_Action{
+				ActionSpecifier: &routev3.RateLimit_Action_QueryParameters_{
+					QueryParameters: queryParam,
+				},
+			}
+			rlActions = append(rlActions, action)
+		}
+
 		// Case when both header and cidr match are not set and the ratelimit
 		// will be applied to all traffic.
 		// 3) No Match (apply to all traffic)
@@ -598,7 +610,8 @@ func buildRateLimitServiceDescriptors(route *ir.HTTPRoute) []*rlsconfv3.RateLimi
 	// the order in which ratelimit actions are built:
 	//  1) Header Matches
 	//  2) CIDR Match
-	//  3) No Match
+	//  3) Query Parameters
+	//  4) No Match
 
 	for rIdx, rule := range global.Rules {
 		rateLimitPolicy := &rlsconfv3.RateLimitPolicy{
@@ -682,9 +695,26 @@ func buildRateLimitServiceDescriptors(route *ir.HTTPRoute) []*rlsconfv3.RateLimi
 				cur = pbDesc
 			}
 		}
-		// Case when both header and cidr match are not set and the ratelimit
+
+		// 3) Query Parameters
+		if rule.QueryParameters != nil {
+			pbDesc := new(rlsconfv3.RateLimitDescriptor)
+			pbDesc.Key = rule.QueryParameters.DescriptorKey
+			pbDesc.Value = ""
+
+			if cur != nil {
+				// The header or cidr match descriptor chain exists, add current
+				// descriptor to the chain.
+				cur.Descriptors = []*rlsconfv3.RateLimitDescriptor{pbDesc}
+			} else {
+				head = pbDesc
+			}
+			cur = pbDesc
+		}
+
+		// Case when both header, cidr match, and query parameters are not set and the ratelimit
 		// will be applied to all traffic.
-		// 3) No Match (apply to all traffic)
+		// 4) No Match (apply to all traffic)
 		if !rule.IsMatchSet() {
 			pbDesc := new(rlsconfv3.RateLimitDescriptor)
 			pbDesc.Key = getRouteRuleDescriptor(domainRuleIdx, -1)
