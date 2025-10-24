@@ -1353,6 +1353,12 @@ EnvoyGatewayHostInfrastructureProvider defines configuration for the Host Infras
 _Appears in:_
 - [EnvoyGatewayInfrastructureProvider](#envoygatewayinfrastructureprovider)
 
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `configHome` | _string_ |  false  |  | ConfigHome is the directory for configuration files.<br />Defaults to ~/.config/envoy-gateway |
+| `dataHome` | _string_ |  false  |  | DataHome is the directory for persistent data (Envoy binaries).<br />Defaults to ~/.local/share/envoy-gateway |
+| `stateHome` | _string_ |  false  |  | StateHome is the directory for persistent state (logs).<br />Defaults to ~/.local/state/envoy-gateway |
+| `runtimeDir` | _string_ |  false  |  | RuntimeDir is the directory for ephemeral runtime files.<br />Defaults to /tmp/envoy-gateway-$\{UID\} |
 
 
 #### EnvoyGatewayInfrastructureProvider

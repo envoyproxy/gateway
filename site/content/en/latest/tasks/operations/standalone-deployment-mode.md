@@ -49,6 +49,13 @@ ensure the Envoy Gateway works properly.
 envoy-gateway certgen --local
 ```
 
+By default, certificates are stored in `~/.config/envoy-gateway/certs/`. You can customize this
+location using the `--config-home` flag (certs will be in a `certs/` subdirectory):
+
+```shell
+envoy-gateway certgen --local --config-home /custom/config/path
+```
+
 ### Start Envoy Gateway
 
 Start Envoy Gateway by the following command:
@@ -73,7 +80,15 @@ provider:
         paths: ["/tmp/envoy-gateway-test"]
     infrastructure:
       type: Host
-      host: {}
+      host:
+        # Optional: Configure XDG-compliant directory paths
+        # If not specified, uses XDG Base Directory defaults:
+        # - configHome: ~/.config/envoy-gateway
+        # - dataHome: ~/.local/share/envoy-gateway
+        # - stateHome: ~/.local/state/envoy-gateway
+        # - runtimeDir: /tmp/envoy-gateway-${UID}
+        # Example custom configuration:
+        # dataHome: /custom/data/path
 logging:
   level:
     default: info
@@ -156,7 +171,7 @@ All runners in Envoy Gateway are using TLS connection, so create these TLS certi
 ensure the Envoy Gateway works properly.
 
 ```shell
-docker run --rm --volume /tmp/envoy-gateway-test:/tmp/envoy-gateway envoyproxy/gateway:{{< helm-version >}} certgen --local
+docker run --rm --volume /tmp/envoy-gateway-test:/tmp/envoy-gateway envoyproxy/gateway:{{< helm-version >}} certgen --local --data-home /tmp/envoy-gateway
 ```
 
 ### Start Envoy Gateway
@@ -177,7 +192,12 @@ provider:
         paths: ["/tmp/envoy-gateway/config"]
     infrastructure:
       type: Host
-      host: {}
+      host:
+        # Configure configHome and dataHome to use the mounted volume
+        # configHome: for certificates
+        # dataHome: for Envoy binaries
+        configHome: /tmp/envoy-gateway
+        dataHome: /tmp/envoy-gateway
 logging:
   level:
     default: info
