@@ -107,6 +107,18 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute, httpListener *ir.HTTPListener) (*rou
 		if rt != nil {
 			router.GetRoute().Timeout = durationpb.New(rt.Duration)
 		}
+
+		// Check if MaxStreamDuration is configured
+		if httpRoute.Traffic != nil &&
+			httpRoute.Traffic.Timeout != nil &&
+			httpRoute.Traffic.Timeout.HTTP != nil {
+			if httpRoute.Traffic.Timeout.HTTP.MaxStreamDuration != nil {
+				maxStreamDuration := &routev3.RouteAction_MaxStreamDuration{
+					MaxStreamDuration: durationpb.New(httpRoute.Traffic.Timeout.HTTP.MaxStreamDuration.Duration),
+				}
+				router.GetRoute().MaxStreamDuration = maxStreamDuration
+			}
+		}
 	}
 
 	// Retries

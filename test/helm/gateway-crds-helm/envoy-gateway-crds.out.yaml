@@ -2693,6 +2693,14 @@ spec:
                           Default: unlimited.
                         pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                         type: string
+                      maxStreamDuration:
+                        description: |-
+                          MaxStreamDuration is the maximum duration for a stream to complete. This timeout measures the time
+                          from when the request is sent until the response stream is fully consumed and does not apply to
+                          non-streaming requests.
+                          When set to "0s", no max duration is applied and streams can run indefinitely.
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                        type: string
                       requestTimeout:
                         description: RequestTimeout is the time until which entire
                           response is received from the upstream.
@@ -5832,6 +5840,14 @@ spec:
                                   description: |-
                                     The maximum duration of an HTTP connection.
                                     Default: unlimited.
+                                  pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                  type: string
+                                maxStreamDuration:
+                                  description: |-
+                                    MaxStreamDuration is the maximum duration for a stream to complete. This timeout measures the time
+                                    from when the request is sent until the response stream is fully consumed and does not apply to
+                                    non-streaming requests.
+                                    When set to "0s", no max duration is applied and streams can run indefinitely.
                                   pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                   type: string
                                 requestTimeout:
@@ -19414,6 +19430,14 @@ spec:
                                                       Default: unlimited.
                                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                     type: string
+                                                  maxStreamDuration:
+                                                    description: |-
+                                                      MaxStreamDuration is the maximum duration for a stream to complete. This timeout measures the time
+                                                      from when the request is sent until the response stream is fully consumed and does not apply to
+                                                      non-streaming requests.
+                                                      When set to "0s", no max duration is applied and streams can run indefinitely.
+                                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                                    type: string
                                                   requestTimeout:
                                                     description: RequestTimeout is
                                                       the time until which entire
@@ -20567,6 +20591,14 @@ spec:
                                                     description: |-
                                                       The maximum duration of an HTTP connection.
                                                       Default: unlimited.
+                                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                                    type: string
+                                                  maxStreamDuration:
+                                                    description: |-
+                                                      MaxStreamDuration is the maximum duration for a stream to complete. This timeout measures the time
+                                                      from when the request is sent until the response stream is fully consumed and does not apply to
+                                                      non-streaming requests.
+                                                      When set to "0s", no max duration is applied and streams can run indefinitely.
                                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                     type: string
                                                   requestTimeout:
@@ -21805,6 +21837,14 @@ spec:
                                                 Default: unlimited.
                                               pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                               type: string
+                                            maxStreamDuration:
+                                              description: |-
+                                                MaxStreamDuration is the maximum duration for a stream to complete. This timeout measures the time
+                                                from when the request is sent until the response stream is fully consumed and does not apply to
+                                                non-streaming requests.
+                                                When set to "0s", no max duration is applied and streams can run indefinitely.
+                                              pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                              type: string
                                             requestTimeout:
                                               description: RequestTimeout is the time
                                                 until which entire response is received
@@ -22954,6 +22994,14 @@ spec:
                                         description: |-
                                           The maximum duration of an HTTP connection.
                                           Default: unlimited.
+                                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                        type: string
+                                      maxStreamDuration:
+                                        description: |-
+                                          MaxStreamDuration is the maximum duration for a stream to complete. This timeout measures the time
+                                          from when the request is sent until the response stream is fully consumed and does not apply to
+                                          non-streaming requests.
+                                          When set to "0s", no max duration is applied and streams can run indefinitely.
                                         pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                         type: string
                                       requestTimeout:
@@ -25084,6 +25132,14 @@ spec:
                                       Default: unlimited.
                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
+                                  maxStreamDuration:
+                                    description: |-
+                                      MaxStreamDuration is the maximum duration for a stream to complete. This timeout measures the time
+                                      from when the request is sent until the response stream is fully consumed and does not apply to
+                                      non-streaming requests.
+                                      When set to "0s", no max duration is applied and streams can run indefinitely.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
                                   requestTimeout:
                                     description: RequestTimeout is the time until
                                       which entire response is received from the upstream.
@@ -26129,6 +26185,14 @@ spec:
                                     description: |-
                                       The maximum duration of an HTTP connection.
                                       Default: unlimited.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                  maxStreamDuration:
+                                    description: |-
+                                      MaxStreamDuration is the maximum duration for a stream to complete. This timeout measures the time
+                                      from when the request is sent until the response stream is fully consumed and does not apply to
+                                      non-streaming requests.
+                                      When set to "0s", no max duration is applied and streams can run indefinitely.
                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
                                   requestTimeout:
@@ -27392,6 +27456,14 @@ spec:
                                           description: |-
                                             The maximum duration of an HTTP connection.
                                             Default: unlimited.
+                                          pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                          type: string
+                                        maxStreamDuration:
+                                          description: |-
+                                            MaxStreamDuration is the maximum duration for a stream to complete. This timeout measures the time
+                                            from when the request is sent until the response stream is fully consumed and does not apply to
+                                            non-streaming requests.
+                                            When set to "0s", no max duration is applied and streams can run indefinitely.
                                           pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                           type: string
                                         requestTimeout:
@@ -28703,6 +28775,14 @@ spec:
                                     description: |-
                                       The maximum duration of an HTTP connection.
                                       Default: unlimited.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                  maxStreamDuration:
+                                    description: |-
+                                      MaxStreamDuration is the maximum duration for a stream to complete. This timeout measures the time
+                                      from when the request is sent until the response stream is fully consumed and does not apply to
+                                      non-streaming requests.
+                                      When set to "0s", no max duration is applied and streams can run indefinitely.
                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
                                   requestTimeout:
