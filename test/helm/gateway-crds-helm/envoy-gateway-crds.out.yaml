@@ -1436,6 +1436,20 @@ spec:
                                       type: object
                                     maxItems: 16
                                     type: array
+                                  queryParameters:
+                                    description: Rate limit on query parameters.
+                                    properties:
+                                      descriptorKey:
+                                        description: |-
+                                          The key to use when creating the rate limit descriptor entry.
+                                          This descriptor key will be used to identify the rate limit rule in the rate limiting service.
+                                        type: string
+                                      queryParameterName:
+                                        description: |-
+                                          The name of the query parameter to use for rate limiting.
+                                          Value of this query parameter is used to populate the value of the descriptor entry for the descriptor_key.
+                                        type: string
+                                    type: object
                                   sourceCIDR:
                                     description: |-
                                       SourceCIDR is the client IP Address range to match on.
@@ -1687,6 +1701,20 @@ spec:
                                       type: object
                                     maxItems: 16
                                     type: array
+                                  queryParameters:
+                                    description: Rate limit on query parameters.
+                                    properties:
+                                      descriptorKey:
+                                        description: |-
+                                          The key to use when creating the rate limit descriptor entry.
+                                          This descriptor key will be used to identify the rate limit rule in the rate limiting service.
+                                        type: string
+                                      queryParameterName:
+                                        description: |-
+                                          The name of the query parameter to use for rate limiting.
+                                          Value of this query parameter is used to populate the value of the descriptor entry for the descriptor_key.
+                                        type: string
+                                    type: object
                                   sourceCIDR:
                                     description: |-
                                       SourceCIDR is the client IP Address range to match on.

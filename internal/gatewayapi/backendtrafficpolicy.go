@@ -950,6 +950,17 @@ func buildRateLimitRule(rule egv1a1.RateLimitRule) (*ir.RateLimitRule, error) {
 			cidrMatch.Distinct = distinct
 			irRule.CIDRMatch = cidrMatch
 		}
+
+		if match.QueryParameters != nil {
+			// Validate QueryParameters
+			if match.QueryParameters.QueryParameterName == "" {
+				return nil, fmt.Errorf("queryParameterName is required when QueryParameters is specified")
+			}
+			if match.QueryParameters.DescriptorKey == "" {
+				return nil, fmt.Errorf("descriptorKey is required when QueryParameters is specified")
+			}
+			irRule.QueryParameters = (*ir.QueryParameters)(match.QueryParameters)
+		}
 	}
 
 	if cost := rule.Cost; cost != nil {
