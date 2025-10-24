@@ -9,6 +9,7 @@ import (
 	"context"
 	"fmt"
 
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -49,6 +50,8 @@ func NewOfflineGatewayAPIController(
 	var (
 		extGVKs               []schema.GroupVersionKind
 		extServerPoliciesGVKs []schema.GroupVersionKind
+		//TODO: handle extBackendGVKs here?
+		//extBackendGVKs        []schema.GroupVersionKind
 	)
 
 	if cfg.EnvoyGateway.ExtensionManager != nil {
@@ -60,9 +63,13 @@ func NewOfflineGatewayAPIController(
 			gvk := schema.GroupVersionKind(rsrc)
 			extServerPoliciesGVKs = append(extServerPoliciesGVKs, gvk)
 		}
+		//for _, rsrc := range cfg.EnvoyGateway.ExtensionManager.BackendResources {
+		//	gvk := schema.GroupVersionKind(rsrc)
+		//	extBackendPoliciesGVKs = append(extBackendPoliciesGVKs, gvk)
+		//}
 	}
 
-	cli := newOfflineGatewayAPIClient()
+	cli := newOfflineGatewayAPIClient(extServerPoliciesGVKs)
 	r := &gatewayAPIReconciler{
 		client:            cli,
 		log:               cfg.Logger,
@@ -76,6 +83,7 @@ func NewOfflineGatewayAPIController(
 		envoyGateway:      cfg.EnvoyGateway,
 		mergeGateways:     sets.New[string](),
 		extServerPolicies: extServerPoliciesGVKs,
+		//extBackendGVKs: extBackendPoliciesGVKs
 		// We assume all CRDs are available in offline mode.
 		bTLSPolicyCRDExists:    true,
 		btpCRDExists:           true,
@@ -116,10 +124,26 @@ func (r *OfflineGatewayAPIReconciler) Reconcile(ctx context.Context) error {
 	return err
 }
 
-// newOfflineGatewayAPIClient returns a offline client with gateway-api schemas and indexes.
-func newOfflineGatewayAPIClient() client.Client {
+// newOfflineGatewayAPIClient returns an in-memory Kubernetes client that
+// understands Envoy-Gateway, Gateway-API resources and any extension-server
+// policy kinds supplied by an extension.
+func newOfflineGatewayAPIClient(extServerPoliciesGVKs []schema.GroupVersionKind) client.Client {
+	// Base scheme already holds Envoy-Gateway and Gateway-API types.
+	scheme := envoygateway.GetScheme()
+	// Register extension-server GVKs as Unstructured so the client can handle them.
+	for _, gvk := range extServerPoliciesGVKs {
+		// single object
+		scheme.AddKnownTypeWithName(gvk, &unstructured.Unstructured{})
+		// list object
+		listGVK := gvk
+		listGVK.Kind += "List"
+		scheme.AddKnownTypeWithName(listGVK, &unstructured.UnstructuredList{})
+	}
+
+	//TODO: do we need to register extGVKs and extBackendGVKs as well here?
+
 	return fake.NewClientBuilder().
-		WithScheme(envoygateway.GetScheme()).
+		WithScheme(scheme).
 		WithIndex(&gwapiv1.Gateway{}, classGatewayIndex, gatewayIndexFunc).
 		WithIndex(&gwapiv1.Gateway{}, secretGatewayIndex, secretGatewayIndexFunc).
 		WithIndex(&gwapiv1.HTTPRoute{}, gatewayHTTPRouteIndex, gatewayHTTPRouteIndexFunc).
