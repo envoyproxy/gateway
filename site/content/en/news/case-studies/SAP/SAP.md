@@ -3,6 +3,7 @@ date: 2025-10-15
 title: "From Evaluation to Integration: SAP's Journey with Envoy Gateway"
 linkTitle: SAP
 author: Guy Daich (SAP)
+copyright: Copyright 2025, SAP  SE or an SAP affiliate company and Envoy Gateway Authors
 ---
 
 ## Why Envoy Gateway
@@ -47,7 +48,7 @@ From [Envoy Gateway Project Update](https://sched.co/1iW9c) presented at KubeCon
 
 In parallel, we executed a controlled rollout across diverse environments. We identified and resolved real-world resilience, scale, and performance bottlenecks along the way. The outcomes were substantial: significantly lower CPU and memory consumption, much larger configuration scale support, and markedly faster configuration programming times. Envoy Gateway now runs reliably across hundreds of clusters worldwide on multiple infrastructure providers.
 
-Envoy Gateway is currently used to manage HTTPS traffic routing across multiple cloud products. The project's robust support for data plane and control plane extensibility has enabled SAP to implement organization-specific extensions, such as support for custom authentication, authorization, rate-limiting policies, request modification, and flexible dynamic routing capabilities. Moreover, control plane extensibility has allowed SAP to overcome limitations in the Gateway API and fine-tune low-level Envoy configuration options that are currently not exposed, demonstrating the versatility and power of Envoy Gateway in meeting the unique demands of an enterprise environment.
+Envoy Gateway is currently used to manage HTTPS traffic across multiple cloud products. The project's robust support for data plane extensibility has enabled SAP to implement organization-specific policies and routing capabilities. Moreover, control plane extensibility has allowed SAP to overcome limitations in the Gateway API and fine-tune low-level Envoy configuration options that are currently not exposed, demonstrating the versatility and power of Envoy Gateway in meeting the unique demands of an enterprise environment.
 
 We are grateful to the contributors, reviewers, maintainers, and committee members who shaped this work. We’re genuinely excited to see our joint efforts in production and to watch the foundation we helped build continuously improve and be extended by end users and adopters. If you’re building on Envoy and value openness and collaboration, we invite you to join the [Envoy Gateway community](https://gateway.envoyproxy.io/).
 
