@@ -9,8 +9,10 @@ import (
 	"context"
 	_ "embed"
 	"os"
+	"sync/atomic"
 	"testing"
 
+	"github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/stretchr/testify/require"
 
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
@@ -39,7 +41,7 @@ func TestConfigLoader(t *testing.T) {
 	s, err := config.New(os.Stdout, os.Stderr)
 	require.NoError(t, err)
 
-	ctx, cancel := context.WithCancel(context.TODO())
+	ctx, cancel := context.WithCancel(context.Background())
 	defer func() {
 		cancel()
 	}()
@@ -74,16 +76,23 @@ func TestConfigLoaderStandaloneExtensionServerAndCustomResource(t *testing.T) {
 	s, err := config.New(os.Stdout, os.Stderr)
 	require.NoError(t, err)
 
-	ctx, cancel := context.WithCancel(context.TODO())
+	ctx, cancel := context.WithCancel(context.Background())
 	defer func() {
 		cancel()
 	}()
 
-	changed := 0
+	type testResult struct {
+		changed int32
+		extMgr  *v1alpha1.ExtensionManager
+	}
+	resultChannel := make(chan testResult, 1)
+
+	var changed int32
 	loader := New(cfgPath, s, func(_ context.Context, cfg *config.Server) error {
-		changed++
-		t.Logf("config changed %d times", changed)
-		if changed > 1 {
+		c := atomic.AddInt32(&changed, 1)
+		t.Logf("config changed %d times", c)
+		if c > 1 {
+			resultChannel <- testResult{changed: c, extMgr: cfg.EnvoyGateway.ExtensionManager}
 			cancel()
 		}
 		return nil
@@ -98,10 +107,12 @@ func TestConfigLoaderStandaloneExtensionServerAndCustomResource(t *testing.T) {
 	}()
 
 	<-ctx.Done()
-	require.Equal(t, 2, changed)
-	require.NotNil(t, loader.cfg.EnvoyGateway.ExtensionManager)
-	require.NotNil(t, loader.cfg.EnvoyGateway.ExtensionManager.PolicyResources)
-	require.Equal(t, "gateway.example.io", loader.cfg.EnvoyGateway.ExtensionManager.PolicyResources[0].Group)
-	require.Equal(t, "v1alpha1", loader.cfg.EnvoyGateway.ExtensionManager.PolicyResources[0].Version)
-	require.Equal(t, "ExampleExtPolicy", loader.cfg.EnvoyGateway.ExtensionManager.PolicyResources[0].Kind)
+	res := <-resultChannel // wait until second reload
+	require.Equal(t, int32(2), res.changed)
+	require.NotNil(t, res.extMgr)
+	require.NotNil(t, res.extMgr.PolicyResources)
+	require.Len(t, res.extMgr.PolicyResources, 1)
+	require.Equal(t, "gateway.example.io", res.extMgr.PolicyResources[0].Group)
+	require.Equal(t, "v1alpha1", res.extMgr.PolicyResources[0].Version)
+	require.Equal(t, "ExampleExtPolicy", res.extMgr.PolicyResources[0].Kind)
 }
