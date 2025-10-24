@@ -19,6 +19,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/utils"
 )
 
 var ErrBackendTLSPolicyInvalidKind = fmt.Errorf("no CA bundle found in referenced ConfigMap, Secret, or ClusterTrustBundle")
@@ -26,12 +27,48 @@ var ErrBackendTLSPolicyInvalidKind = fmt.Errorf("no CA bundle found in reference
 // ProcessBackendTLSPolicyStatus is called to post-process Backend TLS Policy status
 // after they were applied in all relevant translations.
 func (t *Translator) ProcessBackendTLSPolicyStatus(btlsp []*gwapiv1.BackendTLSPolicy) {
+	targetRefs := map[string]*gwapiv1.BackendTLSPolicy{}
 	for _, policy := range btlsp {
+		conflicted, conflictPolicy := false, &gwapiv1.BackendTLSPolicy{}
+		for _, ref := range policy.Spec.TargetRefs {
+			key := localPolicyTargetReferenceWithSectionNameToKey(policy.Namespace, ref)
+			p, exists := targetRefs[key]
+			if exists {
+				conflicted = true
+				conflictPolicy = p
+				break
+			}
+
+			targetRefs[key] = policy
+		}
+
+		if conflicted {
+			// let's copy the ancestorRefs from the conflictPolicy.
+			ancestorRefs := make([]*gwapiv1.ParentReference, 0, len(policy.Status.Ancestors))
+			for _, ancestor := range conflictPolicy.Status.Ancestors {
+				ancestorRefs = append(ancestorRefs, &ancestor.AncestorRef)
+			}
+			status.SetConditionForPolicyAncestors(&policy.Status,
+				ancestorRefs,
+				t.GatewayControllerName,
+				gwapiv1.PolicyConditionAccepted,
+				metav1.ConditionFalse,
+				gwapiv1.PolicyReasonConflicted,
+				fmt.Sprintf("Policy conflicts with BackendTLSPolicy %s.", utils.NamespacedName(conflictPolicy).String()),
+				policy.Generation,
+			)
+		}
+
 		// Truncate Ancestor list of longer than 16
 		if len(policy.Status.Ancestors) > 16 {
 			status.TruncatePolicyAncestors(&policy.Status, t.GatewayControllerName, policy.Generation)
 		}
 	}
+}
+
+func localPolicyTargetReferenceWithSectionNameToKey(ns string, targetRef gwapiv1.LocalPolicyTargetReferenceWithSectionName) string {
+	sectionName := ptr.Deref(targetRef.SectionName, "")
+	return fmt.Sprintf("%s/%s/%s/%s/%v", ns, targetRef.Group, targetRef.Kind, targetRef.Name, sectionName)
 }
 
 // applyBackendTLSSetting processes TLS settings from Backend resource, BackendTLSPolicy, and EnvoyProxy resource.
