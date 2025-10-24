@@ -225,6 +225,19 @@ type RateLimitSelectCondition struct {
 	//
 	// +optional
 	SourceCIDR *SourceMatch `json:"sourceCIDR,omitempty"`
+
+	// Rate limit on query parameters.
+	// +optional
+	QueryParameters *QueryParameters `json:"queryParameters,omitempty"`
+}
+
+type QueryParameters struct {
+	// The name of the query parameter to use for rate limiting.
+	// Value of this query parameter is used to populate the value of the descriptor entry for the descriptor_key.
+	QueryParameterName string `json:"queryParameterName,omitempty"`
+	// The key to use when creating the rate limit descriptor entry.
+	// This descriptor key will be used to identify the rate limit rule in the rate limiting service.
+	DescriptorKey string `json:"descriptorKey,omitempty"`
 }
 
 // +kubebuilder:validation:Enum=Exact;Distinct

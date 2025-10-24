@@ -220,10 +220,12 @@ func buildRouteLocalRateLimits(local *ir.LocalRateLimit) (
 			// - MethodMatch
 			// - PathMatch
 			// - CIDRMatch
+			// - QueryParamMatch
 			buildHeaderMatchLocalRateLimitActions(&rlActions, &descriptorEntries, rIdx, rule.HeaderMatches)
 			buildMethodMatchLocalRateLimitAction(&rlActions, &descriptorEntries, rIdx, methodMatch)
 			buildPathMatchLocalRateLimitAction(&rlActions, &descriptorEntries, rIdx, rule.PathMatch)
 			buildCIDRMatchLocalRateLimitActions(&rlActions, &descriptorEntries, rule.CIDRMatch)
+			buildQueryParamMatchLocalRateLimitActions(&rlActions, &descriptorEntries, rule.QueryParamMatches)
 
 			// Create rate limit and descriptor
 			rateLimits = append(rateLimits, &routev3.RateLimit{Actions: rlActions})
@@ -430,4 +432,27 @@ func buildMethodMatchLocalRateLimitAction(
 
 	*rlActions = append(*rlActions, action)
 	*descriptorEntries = append(*descriptorEntries, entry)
+}
+
+func buildQueryParamMatchLocalRateLimitActions(
+	rlActions *[]*routev3.RateLimit_Action,
+	descriptorEntries *[]*rlv3.RateLimitDescriptor_Entry,
+	queryParamMatches []*ir.QueryParamMatch,
+) {
+	for _, queryParam := range queryParamMatches {
+		queryParamAction := &routev3.RateLimit_Action_QueryParameters{}
+		queryParamAction.DescriptorKey = queryParam.DescriptorKey
+		queryParamAction.QueryParameterName = queryParam.Name
+		action := &routev3.RateLimit_Action{
+			ActionSpecifier: &routev3.RateLimit_Action_QueryParameters_{
+				QueryParameters: queryParamAction,
+			},
+		}
+		*rlActions = append(*rlActions, action)
+
+		entry := &rlv3.RateLimitDescriptor_Entry{
+			Key: queryParam.DescriptorKey,
+		}
+		*descriptorEntries = append(*descriptorEntries, entry)
+	}
 }

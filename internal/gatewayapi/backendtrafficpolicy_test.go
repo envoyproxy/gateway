@@ -406,3 +406,181 @@ func TestBuildCompression(t *testing.T) {
 		})
 	}
 }
+
+func TestBuildRateLimitRuleQueryParameters(t *testing.T) {
+	testCases := []struct {
+		name        string
+		rule        egv1a1.RateLimitRule
+		expected    *ir.RateLimitRule
+		expectError bool
+		errorMsg    string
+	}{
+		{
+			name: "valid query parameters",
+			rule: egv1a1.RateLimitRule{
+				ClientSelectors: []egv1a1.RateLimitSelectCondition{
+					{
+						QueryParameters: &egv1a1.QueryParameters{
+							QueryParameterName: "user",
+							DescriptorKey:      "user_param",
+						},
+					},
+				},
+				Limit: egv1a1.RateLimitValue{
+					Requests: 10,
+					Unit:     egv1a1.RateLimitUnitHour,
+				},
+			},
+			expected: &ir.RateLimitRule{
+				QueryParameters: &ir.QueryParameters{
+					QueryParameterName: "user",
+					DescriptorKey:      "user_param",
+				},
+				Limit: ir.RateLimitValue{
+					Requests: 10,
+					Unit:     ir.RateLimitUnit(egv1a1.RateLimitUnitHour),
+				},
+				HeaderMatches: []*ir.StringMatch{},
+				Shared:        nil,
+			},
+			expectError: false,
+		},
+		{
+			name: "query parameters with empty queryParameterName",
+			rule: egv1a1.RateLimitRule{
+				ClientSelectors: []egv1a1.RateLimitSelectCondition{
+					{
+						QueryParameters: &egv1a1.QueryParameters{
+							QueryParameterName: "",
+							DescriptorKey:      "user_param",
+						},
+					},
+				},
+				Limit: egv1a1.RateLimitValue{
+					Requests: 10,
+					Unit:     egv1a1.RateLimitUnitHour,
+				},
+			},
+			expected:    nil,
+			expectError: true,
+			errorMsg:    "queryParameterName is required when QueryParameters is specified",
+		},
+		{
+			name: "query parameters with empty descriptorKey",
+			rule: egv1a1.RateLimitRule{
+				ClientSelectors: []egv1a1.RateLimitSelectCondition{
+					{
+						QueryParameters: &egv1a1.QueryParameters{
+							QueryParameterName: "user",
+							DescriptorKey:      "",
+						},
+					},
+				},
+				Limit: egv1a1.RateLimitValue{
+					Requests: 10,
+					Unit:     egv1a1.RateLimitUnitHour,
+				},
+			},
+			expected:    nil,
+			expectError: true,
+			errorMsg:    "descriptorKey is required when QueryParameters is specified",
+		},
+		{
+			name: "query parameters with headers",
+			rule: egv1a1.RateLimitRule{
+				ClientSelectors: []egv1a1.RateLimitSelectCondition{
+					{
+						Headers: []egv1a1.HeaderMatch{
+							{
+								Name:  "x-user-id",
+								Type:  ptr.To(egv1a1.HeaderMatchExact),
+								Value: ptr.To("alice"),
+							},
+						},
+						QueryParameters: &egv1a1.QueryParameters{
+							QueryParameterName: "user",
+							DescriptorKey:      "user_param",
+						},
+					},
+				},
+				Limit: egv1a1.RateLimitValue{
+					Requests: 10,
+					Unit:     egv1a1.RateLimitUnitHour,
+				},
+			},
+			expected: &ir.RateLimitRule{
+				QueryParameters: &ir.QueryParameters{
+					QueryParameterName: "user",
+					DescriptorKey:      "user_param",
+				},
+				Limit: ir.RateLimitValue{
+					Requests: 10,
+					Unit:     ir.RateLimitUnit(egv1a1.RateLimitUnitHour),
+				},
+				HeaderMatches: []*ir.StringMatch{
+					{
+						Name:   "x-user-id",
+						Exact:  ptr.To("alice"),
+						Invert: nil,
+					},
+				},
+				Shared: nil,
+			},
+			expectError: false,
+		},
+		{
+			name: "query parameters with sourceCIDR",
+			rule: egv1a1.RateLimitRule{
+				ClientSelectors: []egv1a1.RateLimitSelectCondition{
+					{
+						SourceCIDR: &egv1a1.SourceMatch{
+							Type:  ptr.To(egv1a1.SourceMatchDistinct),
+							Value: "192.168.1.0/24",
+						},
+						QueryParameters: &egv1a1.QueryParameters{
+							QueryParameterName: "user",
+							DescriptorKey:      "user_param",
+						},
+					},
+				},
+				Limit: egv1a1.RateLimitValue{
+					Requests: 10,
+					Unit:     egv1a1.RateLimitUnitHour,
+				},
+			},
+			expected: &ir.RateLimitRule{
+				QueryParameters: &ir.QueryParameters{
+					QueryParameterName: "user",
+					DescriptorKey:      "user_param",
+				},
+				Limit: ir.RateLimitValue{
+					Requests: 10,
+					Unit:     ir.RateLimitUnit(egv1a1.RateLimitUnitHour),
+				},
+				HeaderMatches: []*ir.StringMatch{},
+				CIDRMatch: &ir.CIDRMatch{
+					CIDR:     "192.168.1.0/24",
+					IP:       "192.168.1.0",
+					MaskLen:  24,
+					Distinct: true,
+				},
+				Shared: nil,
+			},
+			expectError: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := buildRateLimitRule(tc.rule)
+			if tc.expectError {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), tc.errorMsg)
+				require.Nil(t, got)
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tc.expected, got)
+			}
+		})
+	}
+}

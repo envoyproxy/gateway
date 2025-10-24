@@ -262,6 +262,8 @@ func buildRouteRateLimits(route *ir.HTTPRoute) (rateLimits []*routev3.RateLimit,
 			buildPathMatchRateLimitActions(&rlActions, domainRuleIdx, rule.PathMatch)
 			// Process each CIDR match in the rule.
 			buildCIDRMatchRateLimitActions(&rlActions, rule.CIDRMatch)
+			// Process each query parameter match in the rule.
+			buildQueryParamMatchRateLimitActions(&rlActions, rule.QueryParamMatches)
 
 			// Case when both header/method/path and cidr match are not set and the ratelimit
 			// will be applied to all traffic.
@@ -466,6 +468,23 @@ func buildCIDRMatchRateLimitActions(
 		action = &routev3.RateLimit_Action{
 			ActionSpecifier: &routev3.RateLimit_Action_RemoteAddress_{
 				RemoteAddress: &routev3.RateLimit_Action_RemoteAddress{},
+			},
+		}
+		*rlActions = append(*rlActions, action)
+	}
+}
+
+func buildQueryParamMatchRateLimitActions(
+	rlActions *[]*routev3.RateLimit_Action,
+	queryParamMatches []*ir.QueryParamMatch,
+) {
+	for _, queryParam := range queryParamMatches {
+		queryParamAction := &routev3.RateLimit_Action_QueryParameters{}
+		queryParamAction.DescriptorKey = queryParam.DescriptorKey
+		queryParamAction.QueryParameterName = queryParam.Name
+		action := &routev3.RateLimit_Action{
+			ActionSpecifier: &routev3.RateLimit_Action_QueryParameters_{
+				QueryParameters: queryParamAction,
 			},
 		}
 		*rlActions = append(*rlActions, action)
@@ -704,7 +723,8 @@ func buildRateLimitServiceDescriptors(route *ir.HTTPRoute) []*rlsconfv3.RateLimi
 	//  2) Method Match
 	//  3) Path Match
 	//  4) CIDR Match
-	//  5) No Match
+	//  5) Query Parameters
+	//  6) No Match
 
 	for rIdx, rule := range global.Rules {
 		rateLimitPolicy := &rlsconfv3.RateLimitPolicy{
@@ -831,9 +851,26 @@ func buildRateLimitServiceDescriptors(route *ir.HTTPRoute) []*rlsconfv3.RateLimi
 				cur = pbDesc
 			}
 		}
+
+		// 5) Query Parameters
+		for _, queryParam := range rule.QueryParamMatches {
+			pbDesc := new(rlsconfv3.RateLimitDescriptor)
+			pbDesc.Key = queryParam.DescriptorKey
+			pbDesc.Value = ""
+
+			if cur != nil {
+				// The header/method/path or cidr match descriptor chain exists, add current
+				// descriptor to the chain.
+				cur.Descriptors = []*rlsconfv3.RateLimitDescriptor{pbDesc}
+			} else {
+				head = pbDesc
+			}
+			cur = pbDesc
+		}
+
 		// Case when both header/method/path and cidr match are not set and the ratelimit
 		// will be applied to all traffic.
-		// 3) No Match (apply to all traffic)
+		// 6) No Match (apply to all traffic)
 		if !rule.IsMatchSet() {
 			pbDesc := new(rlsconfv3.RateLimitDescriptor)
 			pbDesc.ShadowMode = isRuleShadowMode(rule)

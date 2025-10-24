@@ -46,6 +46,7 @@ func init() {
 		RateLimitGlobalSharedGatewayHeaderMatchTest,
 		RateLimitGlobalMergeTest,
 		RateLimitGlobalShadowModeTest,
+		RateLimitQueryParametersTest,
 	)
 }
 
@@ -1370,6 +1371,96 @@ var RateLimitGlobalShadowModeTest = suite.ConformanceTest{
 			// send 2 more requests that exceed the limit, but still expect 200 (not 429) due to shadow mode
 			if err := GotExactExpectedResponse(t, 2, suite.RoundTripper, expectOkReq, expectOkResp); err != nil {
 				t.Errorf("failed to get expected response for requests exceeding the limit: %v", err)
+			}
+		})
+	},
+}
+
+var RateLimitQueryParametersTest = suite.ConformanceTest{
+	ShortName:   "RateLimitQueryParameters",
+	Description: "Limit all requests that match query parameters",
+	Manifests:   []string{"testdata/ratelimit-query-parameters.yaml"},
+	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
+		ns := "gateway-conformance-infra"
+		routeNN := types.NamespacedName{Name: "query-parameters-ratelimit", Namespace: ns}
+		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
+		gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
+
+		t.Run("all matched query parameters can got limited", func(t *testing.T) {
+			ratelimitHeader := make(map[string]string)
+			expectOkResp := http.ExpectedResponse{
+				Request: http.Request{
+					Path: "/get?user=alice",
+				},
+				Response: http.Response{
+					StatusCodes: []int{200},
+					Headers:     ratelimitHeader,
+				},
+				Namespace: ns,
+			}
+			expectOkResp.Response.Headers["X-Ratelimit-Limit"] = "3, 3;w=3600"
+			expectOkReq := http.MakeRequest(t, &expectOkResp, gwAddr, "HTTP", "http")
+
+			expectLimitResp := http.ExpectedResponse{
+				Request: http.Request{
+					Path: "/get?user=alice",
+				},
+				Response: http.Response{
+					StatusCodes: []int{429},
+				},
+				Namespace: ns,
+			}
+			expectLimitReq := http.MakeRequest(t, &expectLimitResp, gwAddr, "HTTP", "http")
+
+			// should just send exactly 4 requests, and expect 429
+
+			// keep sending requests till get 200 first, that will cost one 200
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectOkResp)
+
+			// fire the rest of requests
+			if err := GotExactExpectedResponse(t, 2, suite.RoundTripper, expectOkReq, expectOkResp); err != nil {
+				t.Errorf("failed to get expected response for the first three requests: %v", err)
+			}
+			if err := GotExactExpectedResponse(t, 1, suite.RoundTripper, expectLimitReq, expectLimitResp); err != nil {
+				t.Errorf("failed to get expected response for the last (fourth) request: %v", err)
+			}
+			// make sure that metric worked as expected.
+			if err := wait.PollUntilContextTimeout(context.TODO(), 3*time.Second, time.Minute, true, func(ctx context.Context) (done bool, err error) {
+				v, err := prometheus.QueryPrometheus(suite.Client, `ratelimit_service_rate_limit_over_limit{key2="user"}`)
+				if err != nil {
+					tlog.Logf(t, "failed to query prometheus: %v", err)
+					return false, err
+				}
+				if v != nil {
+					tlog.Logf(t, "got expected value: %v", v)
+					return true, nil
+				}
+				return false, nil
+			}); err != nil {
+				t.Errorf("failed to get expected response for the last (fourth) request: %v", err)
+			}
+		})
+
+		t.Run("different query parameter values should not be limited", func(t *testing.T) {
+			expectOkResp := http.ExpectedResponse{
+				Request: http.Request{
+					Path: "/get?name=bob",
+				},
+				Response: http.Response{
+					StatusCodes: []int{200},
+				},
+				Namespace: ns,
+			}
+			expectOkReq := http.MakeRequest(t, &expectOkResp, gwAddr, "HTTP", "http")
+
+			// send exactly 4 requests, and still expect 200
+
+			// keep sending requests till get 200 first, that will cost one 200
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectOkResp)
+
+			// fire the rest of the requests
+			if err := GotExactExpectedResponse(t, 3, suite.RoundTripper, expectOkReq, expectOkResp); err != nil {
+				t.Errorf("failed to get expected responses for the request: %v", err)
 			}
 		})
 	},
