@@ -636,6 +636,7 @@ func (t *Translator) translateSecurityPolicyForRoute(
 	// Apply IR to all relevant routes
 	prefix := irRoutePrefix(route)
 	parentRefs := GetParentReferences(route)
+	routesWithDirectResponse := sets.New[string]()
 	for _, p := range parentRefs {
 		parentRefCtx := GetRouteParentContext(route, p, t.GatewayControllerName)
 		gtwCtx := parentRefCtx.GetGateway()
@@ -744,12 +745,20 @@ func (t *Translator) translateSecurityPolicyForRoute(
 							if errorResponse != nil {
 								// Return a 500 direct response to avoid unauthorized access
 								r.DirectResponse = errorResponse
+								routesWithDirectResponse.Insert(r.Name)
 							}
 						}
 					}
 				}
 			}
 		}
+	}
+	if len(routesWithDirectResponse) > 0 {
+		t.Logger.Info("setting 500 direct response in routes due to errors in SecurityPolicy",
+			"policy", fmt.Sprintf("%s/%s", policy.Namespace, policy.Name),
+			"routes", sets.List(routesWithDirectResponse),
+			"error", errs,
+		)
 	}
 	return errs
 }
@@ -870,6 +879,7 @@ func (t *Translator) translateSecurityPolicyForGateway(
 	}
 
 	policyTarget := irStringKey(policy.Namespace, string(target.Name))
+	routesWithDirectResponse := sets.New[string]()
 	for _, h := range x.HTTP {
 		// A HTTPListener name has the format namespace/gatewayName/listenerName
 		gatewayNameEnd := strings.LastIndex(h.Name, "/")
@@ -892,8 +902,16 @@ func (t *Translator) translateSecurityPolicyForGateway(
 			r.Security = securityFeatures
 			if errorResponse != nil {
 				r.DirectResponse = errorResponse
+				routesWithDirectResponse.Insert(r.Name)
 			}
 		}
+	}
+	if len(routesWithDirectResponse) > 0 {
+		t.Logger.Info("setting 500 direct response in routes due to errors in SecurityPolicy",
+			"policy", fmt.Sprintf("%s/%s", policy.Namespace, policy.Name),
+			"routes", sets.List(routesWithDirectResponse),
+			"error", errs,
+		)
 	}
 
 	// Pre-create a TCP-only authorization object to avoid re-allocation
