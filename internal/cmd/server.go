@@ -28,7 +28,8 @@ import (
 )
 
 type Runner interface {
-	Start(context.Context) error
+	// Start the runner. This receives a channel where the runner can notify asynchronous errors.
+	Start(context.Context, chan<- error) error
 	Name() string
 	// Close closes the runner when the server is shutting down.
 	// This called after all the subscriptions are closed at the very end of the server shutdown.
@@ -39,23 +40,22 @@ type Runner interface {
 var cfgPath string
 
 // GetServerCommand returns the server cobra command to be executed.
-func GetServerCommand() *cobra.Command {
+func GetServerCommand(errChan chan<- error) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "server",
 		Aliases: []string{"serve"},
 		Short:   "Serve Envoy Gateway",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return server(cmd.Context(), cmd.OutOrStdout(), cmd.ErrOrStderr())
+			return server(cmd.Context(), cmd.OutOrStdout(), cmd.ErrOrStderr(), errChan)
 		},
 	}
 	cmd.PersistentFlags().StringVarP(&cfgPath, "config-path", "c", "",
 		"The path to the configuration file.")
-
 	return cmd
 }
 
 // server serves Envoy Gateway.
-func server(ctx context.Context, stdout, stderr io.Writer) error {
+func server(ctx context.Context, stdout, stderr io.Writer, errChan chan<- error) error {
 	cfg, err := getConfig(stdout, stderr)
 	if err != nil {
 		return err
@@ -64,7 +64,7 @@ func server(ctx context.Context, stdout, stderr io.Writer) error {
 	runnersDone := make(chan struct{})
 	hook := func(c context.Context, cfg *config.Server) error {
 		cfg.Logger.Info("Start runners")
-		if err := startRunners(c, cfg); err != nil {
+		if err := startRunners(c, cfg, errChan); err != nil {
 			cfg.Logger.Error(err, "failed to start runners")
 			return err
 		}
@@ -132,7 +132,7 @@ func getConfigByPath(stdout, stderr io.Writer, cfgPath string) (*config.Server, 
 //
 // This will block until the context is done, and returns after synchronously
 // closing all the runners.
-func startRunners(ctx context.Context, cfg *config.Server) (err error) {
+func startRunners(ctx context.Context, cfg *config.Server, errChan chan<- error) (err error) {
 	channels := struct {
 		pResources *message.ProviderResources
 		xdsIR      *message.XdsIR
@@ -217,7 +217,7 @@ func startRunners(ctx context.Context, cfg *config.Server) (err error) {
 
 	// Start all runners
 	for _, r := range runners {
-		if err = startRunner(ctx, cfg, r.runner); err != nil {
+		if err = startRunner(ctx, cfg, r.runner, errChan); err != nil {
 			return err
 		}
 	}
@@ -229,7 +229,7 @@ func startRunners(ctx context.Context, cfg *config.Server) (err error) {
 			Server: *cfg,
 			XdsIR:  channels.xdsIR,
 		})
-		if err = startRunner(ctx, cfg, rateLimitRunner); err != nil {
+		if err = startRunner(ctx, cfg, rateLimitRunner, errChan); err != nil {
 			return err
 		}
 	}
@@ -258,9 +258,9 @@ func startRunners(ctx context.Context, cfg *config.Server) (err error) {
 	return nil
 }
 
-func startRunner(ctx context.Context, cfg *config.Server, runner Runner) error {
+func startRunner(ctx context.Context, cfg *config.Server, runner Runner, errors chan<- error) error {
 	cfg.Logger.Info("Starting runner", "name", runner.Name())
-	if err := runner.Start(ctx); err != nil {
+	if err := runner.Start(ctx, errors); err != nil {
 		cfg.Logger.Error(err, "Failed to start runner", "name", runner.Name())
 		return err
 	}

@@ -15,6 +15,7 @@ import (
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/logging"
+	"github.com/envoyproxy/gateway/internal/utils/test"
 )
 
 func TestInitAdminServer(t *testing.T) {
@@ -28,7 +29,7 @@ func TestInitAdminServer(t *testing.T) {
 	runner := New(&Config{
 		Server: *svrConfig,
 	})
-	err := runner.Start(context.Background())
+	err := runner.Start(context.Background(), test.RunnerErrorsChan(t))
 	require.NoError(t, err)
 
 	// Clean up

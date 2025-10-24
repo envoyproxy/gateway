@@ -117,7 +117,7 @@ func getRandomMaxConnectionAge() time.Duration {
 func (r *Runner) Close() error { return nil }
 
 // Start starts the xds-server runner
-func (r *Runner) Start(ctx context.Context) (err error) {
+func (r *Runner) Start(ctx context.Context, _ chan<- error) (err error) {
 	r.Logger = r.Logger.WithName(r.Name()).WithValues("runner", r.Name())
 	r.cache = cache.NewSnapshotCache(true, r.Logger)
 

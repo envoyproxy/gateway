@@ -83,7 +83,7 @@ func (r *Runner) Name() string {
 }
 
 // Start starts the gateway-api translator runner
-func (r *Runner) Start(ctx context.Context) (err error) {
+func (r *Runner) Start(ctx context.Context, errChan chan<- error) (err error) {
 	r.Logger = r.Logger.WithName(r.Name()).WithValues("runner", r.Name())
 
 	go r.startWasmCache(ctx)
@@ -91,7 +91,8 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 	// Goroutine where Close() is called.
 	c := r.ProviderResources.GatewayAPIResources.Subscribe(ctx)
 
-	go r.subscribeAndTranslate(c)
+	errNotifier := message.RunnerErrorNotifier(r.Name(), errChan)
+	go r.subscribeAndTranslate(c, errNotifier)
 	r.Logger.Info("started")
 	return
 }
@@ -127,7 +128,7 @@ func (r *Runner) startWasmCache(ctx context.Context) {
 	r.wasmCache.Start(ctx)
 }
 
-func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *resource.ControllerResources]) {
+func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *resource.ControllerResources], errors message.ErrorNotifier) {
 	message.HandleSubscription(message.Metadata{Runner: r.Name(), Message: message.ProviderResourcesMessageName}, sub,
 		func(update message.Update[string, *resource.ControllerResources], errChan chan error) {
 			r.Logger.Info("received an update")
@@ -182,6 +183,9 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 				if err != nil {
 					// Currently all errors that Translate returns should just be logged
 					r.Logger.Error(err, "errors detected during translation", "gateway-class", resources.GatewayClass.Name)
+					// Notify the main control loop about translation errors. This may be a critical error in standalone mode, so
+					// notify the control loop in case this needs to be handled.
+					errors.Notify(err)
 				}
 
 				// Publish the IRs.
