@@ -62,13 +62,6 @@ func TestE2E(t *testing.T) {
 		)
 	}
 
-	// TODO: make these tests work in GatewayNamespaceMode
-	if tests.IsGatewayNamespaceMode() {
-		skipTests = append(skipTests,
-			tests.ZoneAwareRoutingTest.ShortName,
-		)
-	}
-
 	if tests.XDSNameSchemeV2() {
 		skipTests = append(skipTests,
 			tests.EnvoyPatchPolicyTest.ShortName,
