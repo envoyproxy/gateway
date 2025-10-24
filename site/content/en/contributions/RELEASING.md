@@ -44,7 +44,7 @@ export GITHUB_REMOTE=origin
 5. Do not proceed until your PR has merged and the [Build and Test][] has successfully completed.
 6. **Create a new marker tag on `main` for the next minor version.**  
    This tag serves as a **non-release marker** to indicate the start of the next development cycle.  
-   It is **not a real release candidate** (see [envoyproxy/gateway#7248](https://github.com/envoyproxy/gateway/issues/7248) for details).
+   It is **not a real release candidate** (see [#7248](https://github.com/envoyproxy/gateway/issues/7248) for details).
    ```shell
    git tag "v${MAJOR_VERSION}.$((MINOR_VERSION + 1)).0-rc.0"
    git push origin "v${MAJOR_VERSION}.$((MINOR_VERSION + 1)).0-rc.0"
