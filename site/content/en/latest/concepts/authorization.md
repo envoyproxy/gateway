@@ -7,6 +7,7 @@ title: "Authorization"
 Authorization controls what an authenticated identity is allowed to do. Envoy Gateway supports both local RBAC and external authorization integrations.
 
 ## Key Concepts
+
 | Concept | Description |
 |----------|--------------|
 | RBAC | Role-based access control rules for routes or clusters. |
