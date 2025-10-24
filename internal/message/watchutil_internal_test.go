@@ -29,13 +29,15 @@ func TestMergeUpdates(t *testing.T) {
 			name: "latest update per key delete state wins",
 			input: []watchable.Update[string, int]{
 				{Key: "foo", Value: 1},
-				{Key: "foo", Value: 2},
 				{Key: "bar", Delete: true, Value: 10},
+				{Key: "baz", Value: 5},
 				{Key: "bar", Delete: true, Value: 11},
+				{Key: "foo", Value: 2},
 			},
 			expected: []watchable.Update[string, int]{
-				{Key: "foo", Value: 2},
+				{Key: "baz", Value: 5},
 				{Key: "bar", Delete: true, Value: 11},
+				{Key: "foo", Value: 2},
 			},
 		},
 	}
