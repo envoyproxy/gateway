@@ -80,7 +80,7 @@ func TestNewOfflineGatewayAPIController(t *testing.T) {
 		inFile := "./testdata/custom-resource.yaml"
 		data, err := os.ReadFile(inFile)
 		require.NoError(t, err)
-		resources, err := resource.LoadResourcesFromYAMLBytes(data, true)
+		resources, err := resource.LoadResourcesFromYAMLBytes(cfg, data, true)
 		require.NoError(t, err)
 		require.Equal(t, 1, len(resources.ExtensionServerPolicies))
 

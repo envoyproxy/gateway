@@ -36,8 +36,8 @@ const dummyClusterIP = "1.2.3.4"
 
 // LoadResourcesFromYAMLBytes will load Resources from given Kubernetes YAML string.
 // TODO: This function should be able to process arbitrary number of resources, tracked by https://github.com/envoyproxy/gateway/issues/3207.
-func LoadResourcesFromYAMLBytes(yamlBytes []byte, addMissingResources bool) (*Resources, error) {
-	r, err := loadKubernetesYAMLToResources(yamlBytes, addMissingResources)
+func LoadResourcesFromYAMLBytes(srv *config.Server, yamlBytes []byte, addMissingResources bool) (*Resources, error) {
+	r, err := loadKubernetesYAMLToResources(srv, yamlBytes, addMissingResources)
 	if err != nil {
 		return nil, err
 	}
@@ -53,7 +53,7 @@ func LoadResourcesFromYAMLBytes(yamlBytes []byte, addMissingResources bool) (*Re
 }
 
 // loadKubernetesYAMLToResources converts a Kubernetes YAML string into GatewayAPI Resources.
-func loadKubernetesYAMLToResources(input []byte, addMissingResources bool) (*Resources, error) {
+func loadKubernetesYAMLToResources(srv *config.Server, input []byte, addMissingResources bool) (*Resources, error) {
 	resources := NewResources()
 	var useDefaultNamespace bool
 	providedNamespaceMap := sets.New[string]()
@@ -117,6 +117,7 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool) (*Res
 		data := kobjVal.FieldByName("Data")
 		stringData := kobjVal.FieldByName("StringData")
 
+	LeaveSwitch:
 		switch gvk.Kind {
 		case KindEnvoyProxy:
 			typedSpec := spec.Interface()
@@ -425,10 +426,37 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool) (*Res
 			}
 			resources.ReferenceGrants = append(resources.ReferenceGrants, referenceGrant)
 		default:
-			// temporary hack: treat every unrecognised Kind as an extension policy.
-			// TODO: how can this be improved?
-			un.SetNamespace(namespace)
-			resources.ExtensionServerPolicies = append(resources.ExtensionServerPolicies, *un)
+			// unknown kind most probably means it's a custom resource from the extension manager
+			// we need to check whether this custom resource is defined as a route filter resource,
+			// a policy resource or a backend resource
+			if srv != nil && srv.EnvoyGateway.ExtensionManager != nil {
+				// check resources (route filters)
+				/*for _, policy := range srv.EnvoyGateway.ExtensionManager.Resources {
+					if policy.Kind == un.GetKind() && policy.Version == un.GroupVersionKind().Version && policy.Group == un.GroupVersionKind().Group {
+						un.SetNamespace(namespace)
+						//TODO where to add in the resource tree?
+						//resources.ExtensionServerPolicies = append(resources.ExtensionServerPolicies, *un)
+						break LeaveSwitch
+					}
+				}*/
+				// check policyResources
+				for _, policy := range srv.EnvoyGateway.ExtensionManager.PolicyResources {
+					if policy.Kind == un.GetKind() && policy.Version == un.GroupVersionKind().Version && policy.Group == un.GroupVersionKind().Group {
+						un.SetNamespace(namespace)
+						resources.ExtensionServerPolicies = append(resources.ExtensionServerPolicies, *un)
+						break LeaveSwitch
+					}
+				}
+				// check backendResources
+				/*for _, policy := range srv.EnvoyGateway.ExtensionManager.BackendResources {
+					if policy.Kind == un.GetKind() && policy.Version == un.GroupVersionKind().Version && policy.Group == un.GroupVersionKind().Group {
+						un.SetNamespace(namespace)
+						// TODO where to add in the resource tree?
+						//resources.ExtensionServerPolicies = append(resources.ExtensionServerPolicies, *un)
+						break LeaveSwitch
+					}
+				}*/
+			}
 		}
 
 		return nil
