@@ -6,15 +6,13 @@
 package host
 
 import (
-	"bytes"
 	"io"
+	"os"
 	"path"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
-	func_e "github.com/tetratelabs/func-e"
-	"github.com/tetratelabs/func-e/api"
 	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -46,8 +44,14 @@ func newMockInfra(t *testing.T, cfg *config.Server) *Infra {
 	err = createSdsConfig(proxyDir)
 	require.NoError(t, err)
 
+	paths := &Paths{
+		ConfigHome: homeDir,
+		DataHome:   homeDir,
+		StateHome:  homeDir,
+		RuntimeDir: homeDir,
+	}
 	infra := &Infra{
-		HomeDir:         homeDir,
+		Paths:           paths,
 		Logger:          logging.DefaultLogger(io.Discard, egv1a1.LogLevelInfo),
 		EnvoyGateway:    cfg.EnvoyGateway,
 		proxyContextMap: make(map[string]*proxyContext),
@@ -63,7 +67,6 @@ func TestInfraCreateProxy(t *testing.T) {
 	require.NoError(t, err)
 	infra := newMockInfra(t, cfg)
 
-	// TODO: add more tests once it supports configurable homeDir and runDir.
 	testCases := []struct {
 		name   string
 		expect bool
@@ -95,37 +98,6 @@ func TestInfraCreateProxy(t *testing.T) {
 	}
 }
 
-func TestInfra_runEnvoy_stopEnvoy(t *testing.T) {
-	tmpdir := t.TempDir()
-	// Ensures that all the required binaries are available.
-	err := func_e.Run(t.Context(), []string{"--version"}, api.HomeDir(tmpdir))
-	require.NoError(t, err)
-
-	stdout := &bytes.Buffer{}
-	stderr := &bytes.Buffer{}
-	i := &Infra{
-		proxyContextMap: make(map[string]*proxyContext),
-		HomeDir:         tmpdir,
-		Logger:          logging.DefaultLogger(stdout, egv1a1.LogLevelInfo),
-		Stdout:          stdout,
-		Stderr:          stderr,
-	}
-	// Ensures that run -> stop will successfully stop the envoy and we can
-	// run it again without any issues.
-	for range 5 {
-		args := []string{
-			"--config-yaml",
-			"admin: {address: {socket_address: {address: '127.0.0.1', port_value: 9901}}}",
-		}
-		i.runEnvoy(t.Context(), "", "test", args)
-		require.Len(t, i.proxyContextMap, 1)
-		i.stopEnvoy("test")
-		require.Empty(t, i.proxyContextMap)
-		// If the cleanup didn't work, the error due to "address already in use" will be tried to be written to the nil logger,
-		// which will panic.
-	}
-}
-
 func TestExtractSemver(t *testing.T) {
 	tests := []struct {
 		image   string
@@ -154,46 +126,97 @@ func TestExtractSemver(t *testing.T) {
 	}
 }
 
-// TestInfra_runEnvoy_OutputRedirection verifies that Envoy output goes to configured writers, not os.Stdout/Stderr.
-func TestInfra_runEnvoy_OutputRedirection(t *testing.T) {
-	tmpdir := t.TempDir()
-	// Ensures that all the required binaries are available.
-	err := func_e.Run(t.Context(), []string{"--version"}, api.HomeDir(tmpdir))
-	require.NoError(t, err)
+// TestInfra_runEnvoy verifies Envoy process lifecycle, output redirection, and XDG directory usage.
+func TestInfra_runEnvoy(t *testing.T) {
+	// Create separate XDG directories
+	baseDir := t.TempDir()
+	configHome := path.Join(baseDir, "config")
+	dataHome := path.Join(baseDir, "data")
+	stateHome := path.Join(baseDir, "state")
+	runtimeDir := path.Join(baseDir, "runtime")
 
 	// Create separate buffers for stdout and stderr
 	buffers := utils.DumpLogsOnFail(t, "stdout", "stderr")
 	stdout := buffers[0]
 	stderr := buffers[1]
 
+	paths := &Paths{
+		ConfigHome: configHome,
+		DataHome:   dataHome,
+		StateHome:  stateHome,
+		RuntimeDir: runtimeDir,
+	}
 	i := &Infra{
 		proxyContextMap: make(map[string]*proxyContext),
-		HomeDir:         tmpdir,
+		Paths:           paths,
 		Logger:          logging.DefaultLogger(stdout, egv1a1.LogLevelInfo),
 		Stdout:          stdout,
 		Stderr:          stderr,
 	}
 
-	// Run envoy with an invalid config to force it to write to stderr and exit quickly
+	// Run envoy once to let func-e set up all XDG directories
 	args := []string{
 		"--config-yaml",
-		"invalid: yaml: syntax",
+		"admin: {address: {socket_address: {address: '127.0.0.1', port_value: 9901}}}",
 	}
-
 	i.runEnvoy(t.Context(), "", "test", args)
 	require.Len(t, i.proxyContextMap, 1)
 
-	// Wait a bit for envoy to fail
+	// Wait for func-e to create all XDG directories
 	require.Eventually(t, func() bool {
-		return stderr.Len() > 0 || stdout.Len() > 0
-	}, 5*time.Second, 100*time.Millisecond, "expected output to be written to buffers")
+		_, err := os.Stat(path.Join(configHome, "envoy-version"))
+		return err == nil
+	}, 5*time.Second, 100*time.Millisecond, "envoy-version file should be created in configHome")
 
 	i.stopEnvoy("test")
 	require.Empty(t, i.proxyContextMap)
 
-	// Verify that output was captured in buffers (either stdout or stderr should have content)
-	totalOutput := stdout.Len() + stderr.Len()
-	require.Positive(t, totalOutput, "expected some output to be captured in stdout or stderr buffers")
+	t.Run("xdg_directory_state", func(t *testing.T) {
+		// Verify XDG directories were created at configured paths by func-e
+		// This proves the Paths configuration was properly propagated to func-e API
+
+		// ConfigHome must exist with envoy-version file
+		require.DirExists(t, configHome, "configHome should exist at configured path")
+		require.FileExists(t, path.Join(configHome, "envoy-version"), "envoy-version file should exist in configHome")
+
+		// DataHome must exist with envoy-versions subdirectory for downloaded binaries
+		require.DirExists(t, dataHome, "dataHome should exist at configured path")
+		require.DirExists(t, path.Join(dataHome, "envoy-versions"), "envoy-versions dir should exist under dataHome")
+
+		// StateHome must exist with envoy-runs subdirectory for per-run logs
+		require.DirExists(t, stateHome, "stateHome should exist at configured path")
+		require.DirExists(t, path.Join(stateHome, "envoy-runs"), "envoy-runs dir should exist under stateHome")
+
+		// RuntimeDir must exist - func-e creates runID subdirectories with admin-address.txt
+		require.DirExists(t, runtimeDir, "runtimeDir should exist at configured path")
+
+		// Verify each XDG directory is separate (not the same path)
+		require.NotEqual(t, configHome, dataHome, "configHome and dataHome must be different")
+		require.NotEqual(t, dataHome, stateHome, "dataHome and stateHome must be different")
+		require.NotEqual(t, stateHome, runtimeDir, "stateHome and runtimeDir must be different")
+	})
+
+	t.Run("output_redirection", func(t *testing.T) {
+		// Verify output was captured in buffers (not os.Stdout/Stderr)
+		totalOutput := stdout.Len() + stderr.Len()
+		require.Positive(t, totalOutput, "expected some output to be captured in stdout or stderr buffers")
+	})
+
+	t.Run("stop_start_cycle", func(t *testing.T) {
+		// Ensures that run -> stop cycle works multiple times without issues
+		for range 5 {
+			args := []string{
+				"--config-yaml",
+				"admin: {address: {socket_address: {address: '127.0.0.1', port_value: 9901}}}",
+			}
+			i.runEnvoy(t.Context(), "", "test", args)
+			require.Len(t, i.proxyContextMap, 1)
+			i.stopEnvoy("test")
+			require.Empty(t, i.proxyContextMap)
+			// If the cleanup didn't work, the error due to "address already in use" will be
+			// tried to be written to the nil logger, which will panic.
+		}
+	})
 }
 
 func TestGetEnvoyVersion(t *testing.T) {
