@@ -14,6 +14,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
@@ -81,7 +82,7 @@ func TestBuildHashPolicy(t *testing.T) {
 			name: "ConsistentHash with Header",
 			httpRoute: &ir.HTTPRoute{
 				Traffic: &ir.TrafficFeatures{
-					LoadBalancer: &ir.LoadBalancer{ConsistentHash: &ir.ConsistentHash{Header: &ir.Header{Name: "name"}}},
+					LoadBalancer: &ir.LoadBalancer{ConsistentHash: &ir.ConsistentHash{Headers: []*egv1a1.Header{{Name: "name"}}}},
 				},
 			},
 			want: []*routev3.RouteAction_HashPolicy{
@@ -89,6 +90,41 @@ func TestBuildHashPolicy(t *testing.T) {
 					PolicySpecifier: &routev3.RouteAction_HashPolicy_Header_{
 						Header: &routev3.RouteAction_HashPolicy_Header{
 							HeaderName: "name",
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "ConsistentHash with multiple Headers",
+			httpRoute: &ir.HTTPRoute{
+				Traffic: &ir.TrafficFeatures{
+					LoadBalancer: &ir.LoadBalancer{ConsistentHash: &ir.ConsistentHash{Headers: []*egv1a1.Header{
+						{Name: "name"},
+						{Name: "bazz"},
+						{Name: "buzz"},
+					}}},
+				},
+			},
+			want: []*routev3.RouteAction_HashPolicy{
+				{
+					PolicySpecifier: &routev3.RouteAction_HashPolicy_Header_{
+						Header: &routev3.RouteAction_HashPolicy_Header{
+							HeaderName: "name",
+						},
+					},
+				},
+				{
+					PolicySpecifier: &routev3.RouteAction_HashPolicy_Header_{
+						Header: &routev3.RouteAction_HashPolicy_Header{
+							HeaderName: "bazz",
+						},
+					},
+				},
+				{
+					PolicySpecifier: &routev3.RouteAction_HashPolicy_Header_{
+						Header: &routev3.RouteAction_HashPolicy_Header{
+							HeaderName: "buzz",
 						},
 					},
 				},

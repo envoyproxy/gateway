@@ -604,6 +604,7 @@ func buildXdsOutlierDetection(outlierDetection *ir.OutlierDetection) *clusterv3.
 	}
 
 	if outlierDetection.ConsecutiveGatewayErrors != nil {
+		od.EnforcingConsecutiveGatewayFailure = wrapperspb.UInt32(100)
 		od.ConsecutiveGatewayFailure = wrapperspb.UInt32(*outlierDetection.ConsecutiveGatewayErrors)
 	}
 

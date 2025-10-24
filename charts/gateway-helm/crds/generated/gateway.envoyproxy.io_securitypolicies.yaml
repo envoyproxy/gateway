@@ -1109,7 +1109,6 @@ spec:
                                     format: int32
                                     type: integer
                                   consecutiveGatewayErrors:
-                                    default: 0
                                     description: ConsecutiveGatewayErrors sets the
                                       number of consecutive gateway errors triggering
                                       ejection.
@@ -1233,9 +1232,10 @@ spec:
                                     - name
                                     type: object
                                   header:
-                                    description: Header configures the header hash
-                                      policy when the consistent hash type is set
-                                      to Header.
+                                    description: |-
+                                      Header configures the header hash policy when the consistent hash type is set to Header.
+
+                                      Deprecated: use Headers instead
                                     properties:
                                       name:
                                         description: Name of the header to hash.
@@ -1243,6 +1243,22 @@ spec:
                                     required:
                                     - name
                                     type: object
+                                  headers:
+                                    description: Headers configures the header hash
+                                      policy for each header, when the consistent
+                                      hash type is set to Headers.
+                                    items:
+                                      description: |-
+                                        Header defines the header hashing configuration for consistent hash based
+                                        load balancing.
+                                      properties:
+                                        name:
+                                          description: Name of the header to hash.
+                                          type: string
+                                      required:
+                                      - name
+                                      type: object
+                                    type: array
                                   tableSize:
                                     default: 65537
                                     description: The table size for consistent hashing,
@@ -1256,10 +1272,12 @@ spec:
                                       ConsistentHashType defines the type of input to hash on. Valid Type values are
                                       "SourceIP",
                                       "Header",
+                                      "Headers",
                                       "Cookie".
                                     enum:
                                     - SourceIP
                                     - Header
+                                    - Headers
                                     - Cookie
                                     type: string
                                 required:
@@ -1270,6 +1288,10 @@ spec:
                                     header field must be set.
                                   rule: 'self.type == ''Header'' ? has(self.header)
                                     : !has(self.header)'
+                                - message: If consistent hash type is headers, the
+                                    headers field must be set.
+                                  rule: 'self.type == ''Headers'' ? has(self.headers)
+                                    : !has(self.headers)'
                                 - message: If consistent hash type is cookie, the
                                     cookie field must be set.
                                   rule: 'self.type == ''Cookie'' ? has(self.cookie)
@@ -2142,7 +2164,6 @@ spec:
                                     format: int32
                                     type: integer
                                   consecutiveGatewayErrors:
-                                    default: 0
                                     description: ConsecutiveGatewayErrors sets the
                                       number of consecutive gateway errors triggering
                                       ejection.
@@ -2266,9 +2287,10 @@ spec:
                                     - name
                                     type: object
                                   header:
-                                    description: Header configures the header hash
-                                      policy when the consistent hash type is set
-                                      to Header.
+                                    description: |-
+                                      Header configures the header hash policy when the consistent hash type is set to Header.
+
+                                      Deprecated: use Headers instead
                                     properties:
                                       name:
                                         description: Name of the header to hash.
@@ -2276,6 +2298,22 @@ spec:
                                     required:
                                     - name
                                     type: object
+                                  headers:
+                                    description: Headers configures the header hash
+                                      policy for each header, when the consistent
+                                      hash type is set to Headers.
+                                    items:
+                                      description: |-
+                                        Header defines the header hashing configuration for consistent hash based
+                                        load balancing.
+                                      properties:
+                                        name:
+                                          description: Name of the header to hash.
+                                          type: string
+                                      required:
+                                      - name
+                                      type: object
+                                    type: array
                                   tableSize:
                                     default: 65537
                                     description: The table size for consistent hashing,
@@ -2289,10 +2327,12 @@ spec:
                                       ConsistentHashType defines the type of input to hash on. Valid Type values are
                                       "SourceIP",
                                       "Header",
+                                      "Headers",
                                       "Cookie".
                                     enum:
                                     - SourceIP
                                     - Header
+                                    - Headers
                                     - Cookie
                                     type: string
                                 required:
@@ -2303,6 +2343,10 @@ spec:
                                     header field must be set.
                                   rule: 'self.type == ''Header'' ? has(self.header)
                                     : !has(self.header)'
+                                - message: If consistent hash type is headers, the
+                                    headers field must be set.
+                                  rule: 'self.type == ''Headers'' ? has(self.headers)
+                                    : !has(self.headers)'
                                 - message: If consistent hash type is cookie, the
                                     cookie field must be set.
                                   rule: 'self.type == ''Cookie'' ? has(self.cookie)
@@ -3386,7 +3430,6 @@ spec:
                                           format: int32
                                           type: integer
                                         consecutiveGatewayErrors:
-                                          default: 0
                                           description: ConsecutiveGatewayErrors sets
                                             the number of consecutive gateway errors
                                             triggering ejection.
@@ -3510,9 +3553,10 @@ spec:
                                           - name
                                           type: object
                                         header:
-                                          description: Header configures the header
-                                            hash policy when the consistent hash type
-                                            is set to Header.
+                                          description: |-
+                                            Header configures the header hash policy when the consistent hash type is set to Header.
+
+                                            Deprecated: use Headers instead
                                           properties:
                                             name:
                                               description: Name of the header to hash.
@@ -3520,6 +3564,23 @@ spec:
                                           required:
                                           - name
                                           type: object
+                                        headers:
+                                          description: Headers configures the header
+                                            hash policy for each header, when the
+                                            consistent hash type is set to Headers.
+                                          items:
+                                            description: |-
+                                              Header defines the header hashing configuration for consistent hash based
+                                              load balancing.
+                                            properties:
+                                              name:
+                                                description: Name of the header to
+                                                  hash.
+                                                type: string
+                                            required:
+                                            - name
+                                            type: object
+                                          type: array
                                         tableSize:
                                           default: 65537
                                           description: The table size for consistent
@@ -3534,10 +3595,12 @@ spec:
                                             ConsistentHashType defines the type of input to hash on. Valid Type values are
                                             "SourceIP",
                                             "Header",
+                                            "Headers",
                                             "Cookie".
                                           enum:
                                           - SourceIP
                                           - Header
+                                          - Headers
                                           - Cookie
                                           type: string
                                       required:
@@ -3548,6 +3611,10 @@ spec:
                                           the header field must be set.
                                         rule: 'self.type == ''Header'' ? has(self.header)
                                           : !has(self.header)'
+                                      - message: If consistent hash type is headers,
+                                          the headers field must be set.
+                                        rule: 'self.type == ''Headers'' ? has(self.headers)
+                                          : !has(self.headers)'
                                       - message: If consistent hash type is cookie,
                                           the cookie field must be set.
                                         rule: 'self.type == ''Cookie'' ? has(self.cookie)
@@ -4687,7 +4754,6 @@ spec:
                                     format: int32
                                     type: integer
                                   consecutiveGatewayErrors:
-                                    default: 0
                                     description: ConsecutiveGatewayErrors sets the
                                       number of consecutive gateway errors triggering
                                       ejection.
@@ -4811,9 +4877,10 @@ spec:
                                     - name
                                     type: object
                                   header:
-                                    description: Header configures the header hash
-                                      policy when the consistent hash type is set
-                                      to Header.
+                                    description: |-
+                                      Header configures the header hash policy when the consistent hash type is set to Header.
+
+                                      Deprecated: use Headers instead
                                     properties:
                                       name:
                                         description: Name of the header to hash.
@@ -4821,6 +4888,22 @@ spec:
                                     required:
                                     - name
                                     type: object
+                                  headers:
+                                    description: Headers configures the header hash
+                                      policy for each header, when the consistent
+                                      hash type is set to Headers.
+                                    items:
+                                      description: |-
+                                        Header defines the header hashing configuration for consistent hash based
+                                        load balancing.
+                                      properties:
+                                        name:
+                                          description: Name of the header to hash.
+                                          type: string
+                                      required:
+                                      - name
+                                      type: object
+                                    type: array
                                   tableSize:
                                     default: 65537
                                     description: The table size for consistent hashing,
@@ -4834,10 +4917,12 @@ spec:
                                       ConsistentHashType defines the type of input to hash on. Valid Type values are
                                       "SourceIP",
                                       "Header",
+                                      "Headers",
                                       "Cookie".
                                     enum:
                                     - SourceIP
                                     - Header
+                                    - Headers
                                     - Cookie
                                     type: string
                                 required:
@@ -4848,6 +4933,10 @@ spec:
                                     header field must be set.
                                   rule: 'self.type == ''Header'' ? has(self.header)
                                     : !has(self.header)'
+                                - message: If consistent hash type is headers, the
+                                    headers field must be set.
+                                  rule: 'self.type == ''Headers'' ? has(self.headers)
+                                    : !has(self.headers)'
                                 - message: If consistent hash type is cookie, the
                                     cookie field must be set.
                                   rule: 'self.type == ''Cookie'' ? has(self.cookie)
