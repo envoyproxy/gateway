@@ -12,7 +12,7 @@ import (
 	"github.com/telepresenceio/watchable"
 )
 
-func TestMergeUpdates(t *testing.T) {
+func TestCoalesceUpdates(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
@@ -26,18 +26,51 @@ func TestMergeUpdates(t *testing.T) {
 			expected: []watchable.Update[string, int]{},
 		},
 		{
-			name: "latest update per key delete state wins",
+			name: "simple updates without repeats",
 			input: []watchable.Update[string, int]{
 				{Key: "foo", Value: 1},
-				{Key: "bar", Delete: true, Value: 10},
-				{Key: "baz", Value: 5},
-				{Key: "bar", Delete: true, Value: 11},
-				{Key: "foo", Value: 2},
+				{Key: "bar", Value: 2},
+				{Key: "baz", Value: 3},
 			},
 			expected: []watchable.Update[string, int]{
-				{Key: "baz", Value: 5},
-				{Key: "bar", Delete: true, Value: 11},
-				{Key: "foo", Value: 2},
+				{Key: "foo", Value: 1},
+				{Key: "bar", Value: 2},
+				{Key: "baz", Value: 3},
+			},
+		},
+		{
+			name: "latest update per key wins",
+			input: []watchable.Update[string, int]{
+				{Key: "foo", Value: 1},
+				{Key: "bar", Value: 2},
+				{Key: "baz", Value: 3},
+				{Key: "bar", Value: 4},
+				{Key: "foo", Value: 5},
+				{Key: "baz", Value: 6},
+			},
+			expected: []watchable.Update[string, int]{
+				{Key: "bar", Value: 4},
+				{Key: "foo", Value: 5},
+				{Key: "baz", Value: 6},
+			},
+		},
+		{
+			name: "keep intermediate deletes",
+			input: []watchable.Update[string, int]{
+				{Key: "foo", Value: 1},
+				{Key: "bar", Delete: true, Value: 2},
+				{Key: "baz", Value: 3},
+				{Key: "bar", Value: 4},
+				{Key: "foo", Value: 5},
+				{Key: "baz", Delete: true, Value: 6},
+				{Key: "bar", Value: 6},
+			},
+			expected: []watchable.Update[string, int]{
+				{Key: "bar", Delete: true, Value: 2},
+				{Key: "baz", Value: 3},
+				{Key: "foo", Value: 5},
+				{Key: "baz", Delete: true, Value: 6},
+				{Key: "bar", Value: 6},
 			},
 		},
 	}
