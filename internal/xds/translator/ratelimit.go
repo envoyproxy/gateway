@@ -336,6 +336,18 @@ func buildRouteRateLimits(route *ir.HTTPRoute) (rateLimits []*routev3.RateLimit,
 			}
 		}
 
+		if rule.QueryParameters != nil {
+			queryParam := &routev3.RateLimit_Action_QueryParameters{}
+			queryParam.DescriptorKey = rule.QueryParameters.DescriptorKey
+			queryParam.QueryParameterName = rule.QueryParameters.QueryParameterName
+			action := &routev3.RateLimit_Action{
+				ActionSpecifier: &routev3.RateLimit_Action_QueryParameters_{
+					QueryParameters: queryParam,
+				},
+			}
+			rlActions = append(rlActions, action)
+		}
+
 		// Case when both header and cidr match are not set and the ratelimit
 		// will be applied to all traffic.
 		// 3) No Match (apply to all traffic)

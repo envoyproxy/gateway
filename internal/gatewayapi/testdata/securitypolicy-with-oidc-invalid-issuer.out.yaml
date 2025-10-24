@@ -87,8 +87,8 @@ securityPolicies:
         namespace: default
       conditions:
       - lastTransitionTime: null
-        message: 'OIDC: failed fetching openid-configuration from issuer URL: https://httpbin.org/,
-          status code: 404.'
+        message: 'OIDC: transient error fetching openid-configuration from issuer
+          URL: https://httpbin.org/, status code: 503.'
         reason: Invalid
         status: "False"
         type: Accepted

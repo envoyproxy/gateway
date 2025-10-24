@@ -23,7 +23,10 @@ import (
 )
 
 func init() {
-	ConformanceTests = append(ConformanceTests, LocalRateLimitTest)
+	ConformanceTests = append(ConformanceTests,
+		LocalRateLimitTest,
+		LocalRateLimitQueryParametersTest,
+	)
 }
 
 const (
@@ -360,4 +363,81 @@ func runHeaderInvertMatchRateLimitTest(t *testing.T, suite *suite.ConformanceTes
 		testOrgResponse.Response.AbsentHeaders = allRateLimitHeaders
 	}
 	http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, testOrgResponse)
+}
+
+var LocalRateLimitQueryParametersTest = suite.ConformanceTest{
+	ShortName:   "LocalRateLimitQueryParameters",
+	Description: "Make sure local rate limit work with query parameters",
+	Manifests:   []string{"testdata/local-ratelimit-query-parameters.yaml"},
+	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
+		ns := "gateway-conformance-infra"
+		routeNN := types.NamespacedName{Name: "local-query-parameters-ratelimit", Namespace: ns}
+		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
+		gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+
+		t.Run("query parameters should be rate limited", func(t *testing.T) {
+			ratelimitHeaders := map[string]string{
+				RatelimitLimitHeaderName:     "3",
+				RatelimitRemainingHeaderName: "2",
+				RatelimitResetHeaderName:     "3600",
+			}
+
+			expectOkResp := http.ExpectedResponse{
+				Request: http.Request{
+					Path: "/get?user=alice",
+				},
+				Response: http.Response{
+					StatusCode: 200,
+					Headers:    ratelimitHeaders,
+				},
+				Namespace: ns,
+			}
+			expectOkReq := http.MakeRequest(t, &expectOkResp, gwAddr, "HTTP", "http")
+
+			expectLimitResp := http.ExpectedResponse{
+				Request: http.Request{
+					Path: "/get?user=alice",
+				},
+				Response: http.Response{
+					StatusCode: 429,
+				},
+				Namespace: ns,
+			}
+			expectLimitReq := http.MakeRequest(t, &expectLimitResp, gwAddr, "HTTP", "http")
+
+			// Send 3 requests that should succeed
+			if err := GotExactExpectedResponse(t, 3, suite.RoundTripper, expectOkReq, expectOkResp); err != nil {
+				t.Errorf("failed to get expected response for the first three requests: %v", err)
+			}
+
+			// Send 1 request that should be rate limited
+			if err := GotExactExpectedResponse(t, 1, suite.RoundTripper, expectLimitReq, expectLimitResp); err != nil {
+				t.Errorf("failed to get expected response for the rate limited request: %v", err)
+			}
+		})
+
+		t.Run("different query parameter values should not be limited", func(t *testing.T) {
+			ratelimitHeaders := map[string]string{
+				RatelimitLimitHeaderName:     "3",
+				RatelimitRemainingHeaderName: "2",
+				RatelimitResetHeaderName:     "3600",
+			}
+
+			expectOkResp := http.ExpectedResponse{
+				Request: http.Request{
+					Path: "/get?user=bob",
+				},
+				Response: http.Response{
+					StatusCode: 200,
+					Headers:    ratelimitHeaders,
+				},
+				Namespace: ns,
+			}
+			expectOkReq := http.MakeRequest(t, &expectOkResp, gwAddr, "HTTP", "http")
+
+			if err := GotExactExpectedResponse(t, 3, suite.RoundTripper, expectOkReq, expectOkResp); err != nil {
+				t.Errorf("failed to get expected response for requests with different user value: %v", err)
+			}
+		})
+	},
 }
