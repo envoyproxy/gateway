@@ -69,7 +69,7 @@ var BackendUpgradeTest = suite.ConformanceTest{
 
 			tlog.Logf(t, "Starting load generation")
 			// Run load async and continue to restart deployment
-			go runLoadAndWait(t, &suite.TimeoutConfig, loadSuccess, aborter, reqURL.String())
+			go runLoadAndWait(t, &suite.TimeoutConfig, loadSuccess, aborter, reqURL.String(), 3*time.Second)
 
 			tlog.Logf(t, "Restarting deployment")
 			err = restartDeploymentAndWaitForNewPods(t, &suite.TimeoutConfig, suite.Client, dp)
