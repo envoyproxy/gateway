@@ -434,6 +434,7 @@ _Appears in:_
 BackendTLSConfig describes the BackendTLS configuration for Envoy Proxy.
 
 _Appears in:_
+- [BackendTLSSettings](#backendtlssettings)
 - [EnvoyProxySpec](#envoyproxyspec)
 
 | Field | Type | Required | Default | Description |
