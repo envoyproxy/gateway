@@ -3044,13 +3044,13 @@ type BackendConnection struct {
 	Preconnect *Preconnect `json:"preconnect,omitempty" yaml:"preconnect,omitempty"`
 }
 
-// Preconnect configures preconnecting to upstream endpoints to reduce connection establishment latency
+// Preconnect configures preconnecting to upstream endpoints
 // +k8s:deepcopy-gen=true
 type Preconnect struct {
-	// PerUpstreamRatio is the ratio of connections to preconnect per upstream endpoint.
-	PerUpstreamRatio *float64 `json:"perUpstreamRatio,omitempty" yaml:"perUpstreamRatio,omitempty"`
-	// PredictiveRatio is the ratio of connections to preconnect across the entire cluster.
-	PredictiveRatio *float64 `json:"predictiveRatio,omitempty" yaml:"predictiveRatio,omitempty"`
+	// PerUpstreamPercent is the percent of connections to preconnect per upstream endpoint.
+	PerUpstreamPercent *uint32 `json:"perUpstreamPercent,omitempty" yaml:"perUpstreamPercent,omitempty"`
+	// PredictivePercent is the percent of connections to preconnect across the entire cluster.
+	PredictivePercent *uint32 `json:"predictivePercent,omitempty" yaml:"predictivePercent,omitempty"`
 }
 
 // ClientConnection settings for downstream connections

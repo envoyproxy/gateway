@@ -1091,21 +1091,21 @@ func buildBackendConnectionPreconnectPolicy(bc *ir.BackendConnection) *clusterv3
 	}
 
 	pc := bc.Preconnect
-	if pc.PerUpstreamRatio == nil && pc.PredictiveRatio == nil {
+	if pc.PerUpstreamPercent == nil && pc.PredictivePercent == nil {
 		return nil
 	}
 
 	policy := &clusterv3.Cluster_PreconnectPolicy{}
 
-	if pc.PerUpstreamRatio != nil {
+	if pc.PerUpstreamPercent != nil {
 		policy.PerUpstreamPreconnectRatio = &wrapperspb.DoubleValue{
-			Value: *pc.PerUpstreamRatio,
+			Value: 1.0 + (0.01 * float64(*pc.PerUpstreamPercent)),
 		}
 	}
 
-	if pc.PredictiveRatio != nil {
+	if pc.PredictivePercent != nil {
 		policy.PredictivePreconnectRatio = &wrapperspb.DoubleValue{
-			Value: *pc.PredictiveRatio,
+			Value: 1.0 + (0.01 * float64(*pc.PredictivePercent)),
 		}
 	}
 

@@ -586,7 +586,7 @@ type BackendCluster struct {
 // ClusterSettings provides the various knobs that can be set to control how traffic to a given
 // backend will be configured.
 //
-// +kubebuilder:validation:XValidation:rule="!((has(self.connection) && has(self.connection.preconnect) && has(self.connection.preconnect.predictiveRatio)) && !(has(self.loadBalancer) && has(self.loadBalancer.type) && self.loadBalancer.type in ['Random', 'RoundRobin']))",message="predictiveRatio in preconnect policy only works with RoundRobin or Random load balancers"
+// +kubebuilder:validation:XValidation:rule="!((has(self.connection) && has(self.connection.preconnect) && has(self.connection.preconnect.predictivePercent)) && !(has(self.loadBalancer) && has(self.loadBalancer.type) && self.loadBalancer.type in ['Random', 'RoundRobin']))",message="predictivePercent in preconnect policy only works with RoundRobin or Random load balancers"
 type ClusterSettings struct {
 	// LoadBalancer policy to apply when routing traffic from the gateway to
 	// the backend endpoints. Defaults to `LeastRequest`.

@@ -1251,7 +1251,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			},
 		},
 		{
-			desc: "valid preconnect perUpstreamRatio",
+			desc: "valid preconnect perUpstreamPercent",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
@@ -1266,7 +1266,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 					ClusterSettings: egv1a1.ClusterSettings{
 						Connection: &egv1a1.BackendConnection{
 							Preconnect: &egv1a1.PreconnectPolicy{
-								PerUpstreamRatio: ptr.To(1.0),
+								PerUpstreamPercent: ptr.To(uint32(100)),
 							},
 						},
 					},
@@ -1275,7 +1275,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			wantErrors: []string{},
 		},
 		{
-			desc: "valid preconnect PredictiveRatio",
+			desc: "valid preconnect PredictivePercent",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
@@ -1290,8 +1290,8 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 					ClusterSettings: egv1a1.ClusterSettings{
 						Connection: &egv1a1.BackendConnection{
 							Preconnect: &egv1a1.PreconnectPolicy{
-								PredictiveRatio:  ptr.To(1.0),
-								PerUpstreamRatio: ptr.To(1.0),
+								PredictivePercent:  ptr.To(uint32(10)),
+								PerUpstreamPercent: ptr.To(uint32(33)),
 							},
 						},
 						LoadBalancer: &egv1a1.LoadBalancer{
@@ -1318,8 +1318,8 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 					ClusterSettings: egv1a1.ClusterSettings{
 						Connection: &egv1a1.BackendConnection{
 							Preconnect: &egv1a1.PreconnectPolicy{
-								PredictiveRatio:  ptr.To(1.0),
-								PerUpstreamRatio: ptr.To(1.0),
+								PredictivePercent:  ptr.To(uint32(33)),
+								PerUpstreamPercent: ptr.To(uint32(50)),
 							},
 						},
 						LoadBalancer: &egv1a1.LoadBalancer{
@@ -1329,7 +1329,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				" Invalid value: \"object\": predictiveRatio in preconnect policy only works with RoundRobin or Random load balancers",
+				" Invalid value: \"object\": predictivePercent in preconnect policy only works with RoundRobin or Random load balancers",
 			},
 		},
 		{
@@ -1348,8 +1348,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 					ClusterSettings: egv1a1.ClusterSettings{
 						Connection: &egv1a1.BackendConnection{
 							Preconnect: &egv1a1.PreconnectPolicy{
-								PredictiveRatio:  ptr.To(0.5),
-								PerUpstreamRatio: ptr.To(0.5),
+								PerUpstreamPercent: ptr.To(uint32(305)),
 							},
 						},
 						LoadBalancer: &egv1a1.LoadBalancer{
@@ -1359,8 +1358,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				"spec.connection.preconnect.predictiveRatio: Invalid value: 0.5: spec.connection.preconnect.predictiveRatio in body should be greater than or equal to 1",
-				"spec.connection.preconnect.perUpstreamRatio: Invalid value: 0.5: spec.connection.preconnect.perUpstreamRatio in body should be greater than or equal to 1",
+				"spec.connection.preconnect.perUpstreamPercent: Invalid value: 305: spec.connection.preconnect.perUpstreamPercent in body should be less than or equal to 200",
 			},
 		},
 		{

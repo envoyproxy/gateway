@@ -73,34 +73,41 @@ type BackendConnection struct {
 
 	// Preconnect configures proactive upstream connections to reduce latency by establishing
 	// connections before they’re needed and avoiding connection establishment overhead.
+	//
 	// If unset, Envoy will fetch connections as needed to serve in-flight requests.
 	//
 	// +optional
 	Preconnect *PreconnectPolicy `json:"preconnect,omitempty"`
 }
 
-// Preconnect configures proactive upstream connections to reduce latency by establishing
-// connections before they’re needed and avoiding connection establishment overhead.
+// Preconnect configures proactive upstream connections to avoid
+// connection establishment overhead and reduce latency.
 type PreconnectPolicy struct {
-	// PerUpstreamRatio configures the ratio of connections to anticipate per-upstream for each
-	// incoming connection. This is most effective for high-QPS or latency-sensitive services
-	// where connection establishment cost is significant.
-	// Allowed values are between 1.0 and 3.0.
-	//
-	// +kubebuilder:validation:Minimum=1
-	// +kubebuilder:validation:Maximum=3
-	// +optional
-	PerUpstreamRatio *float64 `json:"perUpstreamRatio,omitempty"`
 
-	// PredictiveRatio configures how many connections to anticipate for an upstream cluster
-	// for each incoming connection. Useful for latency sensitive, low-QPS services.
-	// Relies on deterministic endpoint selection and is only supported with RoundRobin
-	// or Random load balancing.
-	// Minimum value is 1.0.
+	// PerUpstreamPercent configures how many additional connections to maintain per
+	// upstream endpoint, useful for high-QPS or latency sensitive services. Expressed as a
+	// percentage over the connections required by active streams
+	// (e.g. 0 = preconnect disabled 5 = 1.05x connections per-upstream, 100 = 2.00×).
 	//
-	// +kubebuilder:validation:Minimum=1
+	// Maximum allowed is 200. When both PerUpstreamPercent and
+	// PredictivePercent are set, Envoy ensures both are satisfied (max of the two).
+	//
+	// +kubebuilder:validation:Maximum=200
 	// +optional
-	PredictiveRatio *float64 `json:"predictiveRatio,omitempty"`
+	PerUpstreamPercent *uint32 `json:"perUpstreamPercent,omitempty"`
+
+	// PredictivePercent configures how many additional connections to maintain
+	// across the cluster by anticipating which upstream endpoint the load balancer
+	// will select next, useful for low-QPS services. Relies on deterministic
+	// loadbalancing and is only supported with Random or RoundRobin.
+	// Expressed as a percentage over the connections required by active streams
+	// (e.g. 0 = preconnect disabled, 5 = 1.05× connections across the cluster, 100 = 2.00×).
+	//
+	// When both PerUpstreamPercent and PredictivePercent are
+	// set Envoy ensures both are satisfied per host (max of the two).
+	//
+	// +optional
+	PredictivePercent *uint32 `json:"predictivePercent,omitempty"`
 }
 
 type ConnectionLimit struct {

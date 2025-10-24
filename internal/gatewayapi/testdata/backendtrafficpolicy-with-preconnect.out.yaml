@@ -7,7 +7,8 @@ backendTrafficPolicies:
   spec:
     connection:
       preconnect:
-        predictiveRatio: 2
+        perUpstreamPercent: 0
+        predictivePercent: 234
     targetRef:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
@@ -35,7 +36,8 @@ backendTrafficPolicies:
   spec:
     connection:
       preconnect:
-        perUpstreamRatio: 2
+        perUpstreamPercent: 123
+        predictivePercent: 0
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway
@@ -312,7 +314,7 @@ xdsIR:
         traffic:
           backendConnection:
             preconnect:
-              perUpstreamRatio: 2
+              perUpstreamPercent: 123
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
@@ -390,7 +392,7 @@ xdsIR:
         traffic:
           backendConnection:
             preconnect:
-              predictiveRatio: 2
+              predictivePercent: 234
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

@@ -3660,16 +3660,16 @@ _Appears in:_
 
 
 
-Preconnect configures proactive upstream connections to reduce latency by establishing
-connections before they’re needed and avoiding connection establishment overhead.
+Preconnect configures proactive upstream connections to avoid
+connection establishment overhead and reduce latency.
 
 _Appears in:_
 - [BackendConnection](#backendconnection)
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `perUpstreamRatio` | _float_ |  false  |  | PerUpstreamRatio configures the ratio of connections to anticipate per-upstream for each<br />incoming connection. This is most effective for high-QPS or latency-sensitive services<br />where connection establishment cost is significant.<br />Allowed values are between 1.0 and 3.0. |
-| `predictiveRatio` | _float_ |  false  |  | PredictiveRatio configures how many connections to anticipate for an upstream cluster<br />for each incoming connection. Useful for latency sensitive, low-QPS services.<br />Relies on deterministic endpoint selection and is only supported with RoundRobin<br />or Random load balancing.<br />Minimum value is 1.0. |
+| `perUpstreamPercent` | _integer_ |  false  |  | PerUpstreamPercent configures how many additional connections to maintain per<br />upstream endpoint, useful for high-QPS or latency sensitive services. Expressed as a<br />percentage over the connections required by active streams<br />(e.g. 0 = preconnect disabled 5 = 1.05x connections per-upstream, 100 = 2.00×).<br />Maximum allowed is 200. When both PerUpstreamPercent and<br />PredictivePercent are set, Envoy ensures both are satisfied (max of the two). |
+| `predictivePercent` | _integer_ |  false  |  | PredictivePercent configures how many additional connections to maintain<br />across the cluster by anticipating which upstream endpoint the load balancer<br />will select next, useful for low-QPS services. Relies on deterministic<br />loadbalancing and is only supported with Random or RoundRobin.<br />Expressed as a percentage over the connections required by active streams<br />(e.g. 0 = preconnect disabled, 5 = 1.05× connections across the cluster, 100 = 2.00×).<br />When both PerUpstreamPercent and PredictivePercent are<br />set Envoy ensures both are satisfied per host (max of the two). |
 
 
 #### PreferLocalZone
