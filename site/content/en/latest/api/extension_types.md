@@ -4358,6 +4358,19 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `name` | _string_ |  true  |  | Name of the query param to hash. |
+#### QueryParameters
+
+
+
+
+
+_Appears in:_
+- [RateLimitSelectCondition](#ratelimitselectcondition)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `queryParameterName` | _string_ |  true  |  | The name of the query parameter to use for rate limiting.<br />Value of this query parameter is used to populate the value of the descriptor entry for the descriptor_key. |
+| `descriptorKey` | _string_ |  true  |  | The key to use when creating the rate limit descriptor entry.<br />This descriptor key will be used to identify the rate limit rule in the rate limiting service. |
 
 
 #### RateLimit
@@ -4553,6 +4566,7 @@ _Appears in:_
 | `methods` | _[MethodMatch](#methodmatch) array_ |  false  |  | Methods is a list of request methods to match. Multiple method values are ORed together,<br />meaning, a request can match any one of the specified methods. If not specified, it matches all methods. |
 | `path` | _[PathMatch](#pathmatch)_ |  false  |  | Path is the request path to match.<br />Support Exact, PathPrefix and RegularExpression match types. |
 | `sourceCIDR` | _[SourceMatch](#sourcematch)_ |  false  |  | SourceCIDR is the client IP Address range to match on. |
+| `queryParameters` | _[QueryParameters](#queryparameters)_ |  false  |  | Rate limit on query parameters. |
 
 
 #### RateLimitSpec
