@@ -6,6 +6,7 @@ title: " Extensibility Options"
 Envoy Gateway can be extended to support custom logic and integrations through filters, external processors, and WebAssembly modules.
 
 ## Key Concepts
+
 | Concept | Description |
 |----------|--------------|
 | Filters | Processing units in request/response path. |
