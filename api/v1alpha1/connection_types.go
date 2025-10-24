@@ -83,7 +83,6 @@ type BackendConnection struct {
 // Preconnect configures proactive upstream connections to avoid
 // connection establishment overhead and reduce latency.
 type PreconnectPolicy struct {
-
 	// PerUpstreamPercent configures how many additional connections to maintain per
 	// upstream endpoint, useful for high-QPS or latency sensitive services. Expressed as a
 	// percentage over the connections required by active streams
