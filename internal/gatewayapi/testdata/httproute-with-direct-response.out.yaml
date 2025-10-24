@@ -16,7 +16,7 @@ gateways:
       protocol: HTTP
   status:
     listeners:
-    - attachedRoutes: 3
+    - attachedRoutes: 4
       conditions:
       - lastTransitionTime: null
         message: Sending translated listener configuration to the data plane
@@ -168,6 +168,45 @@ httpRoutes:
         name: gateway-1
         namespace: envoy-gateway
         sectionName: http
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    name: direct-response-binary
+    namespace: default
+  spec:
+    parentRefs:
+    - name: gateway-1
+      namespace: envoy-gateway
+      sectionName: http
+    rules:
+    - filters:
+      - extensionRef:
+          group: gateway.envoyproxy.io
+          kind: HTTPRouteFilter
+          name: direct-response-binary-logo
+        type: ExtensionRef
+      matches:
+      - path:
+          type: PathPrefix
+          value: /logo
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http
 infraIR:
   envoy-gateway/gateway-1:
     proxy:
@@ -243,7 +282,7 @@ xdsIR:
           value:
           - set-502
         directResponse:
-          body: '{"error": "Internal Server Error"}'
+          body: eyJlcnJvciI6ICJJbnRlcm5hbCBTZXJ2ZXIgRXJyb3IifQ==
           statusCode: 502
         hostname: '*.envoyproxy.io'
         isHTTP2: false
@@ -262,7 +301,7 @@ xdsIR:
           value:
           - text/plain
         directResponse:
-          body: OK
+          body: T0s=
           statusCode: 200
         hostname: '*.envoyproxy.io'
         isHTTP2: false
@@ -275,6 +314,25 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /inline
+      - addResponseHeaders:
+        - append: false
+          name: Content-Type
+          value:
+          - image/png
+        directResponse:
+          body: iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==
+          statusCode: 502
+        hostname: '*.envoyproxy.io'
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: direct-response-binary
+          namespace: default
+        name: httproute/default/direct-response-binary/rule/0/match/0/*_envoyproxy_io
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /logo
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

@@ -23,7 +23,6 @@ import (
 	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/crypto"
@@ -157,6 +156,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 					MergeGateways:             gatewayapi.IsMergeGatewaysEnabled(resources),
 					WasmCache:                 r.wasmCache,
 					ListenerPortShiftDisabled: r.EnvoyGateway.Provider != nil && r.EnvoyGateway.Provider.IsRunningOnHost(),
+					Logger:                    r.Logger,
 				}
 
 				// If an extension is loaded, pass its supported groups/kinds to the translator
@@ -405,8 +405,8 @@ func (r *Runner) loadTLSConfig(ctx context.Context) (tlsConfig *tls.Config, salt
 	return
 }
 
-func unstructuredToPolicyStatus(policyStatus map[string]any) gwapiv1a2.PolicyStatus {
-	var ret gwapiv1a2.PolicyStatus
+func unstructuredToPolicyStatus(policyStatus map[string]any) gwapiv1.PolicyStatus {
+	var ret gwapiv1.PolicyStatus
 	// No need to check the json marshal/unmarshal error, the policyStatus was
 	// created via a typed object so the marshalling/unmarshalling will always
 	// work

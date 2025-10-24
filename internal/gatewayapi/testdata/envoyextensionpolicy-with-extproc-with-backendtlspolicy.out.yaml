@@ -25,6 +25,11 @@ backendTLSPolicies:
         namespace: default
       conditions:
       - lastTransitionTime: null
+        message: Resolved all the Object references.
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      - lastTransitionTime: null
         message: Policy has been accepted.
         reason: Accepted
         status: "True"
@@ -57,9 +62,14 @@ backendTLSPolicies:
       conditions:
       - lastTransitionTime: null
         message: Configmap ca-cmap not found in namespace default.
-        reason: Invalid
+        reason: NoValidCACertificate
         status: "False"
         type: Accepted
+      - lastTransitionTime: null
+        message: Configmap ca-cmap not found in namespace default.
+        reason: InvalidCACertificateRef
+        status: "False"
+        type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 envoyExtensionPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -355,6 +365,9 @@ xdsIR:
               name: envoyextensionpolicy/default/policy-for-gateway/extproc/0
               settings:
               - addressType: IP
+                endpoints:
+                - host: 7.7.7.7
+                  port: 8000
                 metadata:
                   kind: Service
                   name: grpc-backend
@@ -426,6 +439,9 @@ xdsIR:
               name: envoyextensionpolicy/default/policy-for-gateway/extproc/0
               settings:
               - addressType: IP
+                endpoints:
+                - host: 7.7.7.7
+                  port: 8000
                 metadata:
                   kind: Service
                   name: grpc-backend

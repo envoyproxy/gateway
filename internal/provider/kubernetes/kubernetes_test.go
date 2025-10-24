@@ -29,6 +29,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapiv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
@@ -130,7 +131,7 @@ func testGatewayClassController(ctx context.Context, t *testing.T, provider *Pro
 	require.Eventually(t, func() bool {
 		return cli.Get(ctx, types.NamespacedName{Name: gc.Name}, gc) == nil
 	}, defaultWait, defaultTick)
-	require.Equal(t, gc.ObjectMeta.Generation, int64(1))
+	require.Equal(t, int64(1), gc.Generation)
 }
 
 func testGatewayClassAcceptedStatus(ctx context.Context, t *testing.T, provider *Provider, resources *message.ProviderResources) {
@@ -248,7 +249,7 @@ func testGatewayScheduledStatus(ctx context.Context, t *testing.T, provider *Pro
 			Listeners: []gwapiv1.Listener{
 				{
 					Name:     "test",
-					Port:     gwapiv1.PortNumber(int32(8080)),
+					Port:     int32(8080),
 					Protocol: gwapiv1.HTTPProtocolType,
 				},
 			},
@@ -391,7 +392,7 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 			Listeners: []gwapiv1.Listener{
 				{
 					Name:     "test",
-					Port:     gwapiv1.PortNumber(int32(8080)),
+					Port:     int32(8080),
 					Protocol: gwapiv1.HTTPProtocolType,
 				},
 			},
@@ -944,9 +945,9 @@ func testTLSRoute(ctx context.Context, t *testing.T, provider *Provider, resourc
 			Listeners: []gwapiv1.Listener{
 				{
 					Name:     "test",
-					Port:     gwapiv1.PortNumber(int32(8080)),
+					Port:     int32(8080),
 					Protocol: gwapiv1.TLSProtocolType,
-					TLS: &gwapiv1.GatewayTLSConfig{
+					TLS: &gwapiv1.ListenerTLSConfig{
 						Mode: ptr.To(gwapiv1.TLSModePassthrough),
 					},
 				},
@@ -969,20 +970,20 @@ func testTLSRoute(ctx context.Context, t *testing.T, provider *Provider, resourc
 
 	testCases := []struct {
 		name  string
-		route gwapiv1a2.TLSRoute
+		route gwapiv1a3.TLSRoute
 	}{
 		{
 			name: "tlsroute",
-			route: gwapiv1a2.TLSRoute{
+			route: gwapiv1a3.TLSRoute{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "tlsroute-test",
 					Namespace: ns.Name,
 				},
-				Spec: gwapiv1a2.TLSRouteSpec{
-					CommonRouteSpec: gwapiv1a2.CommonRouteSpec{
-						ParentRefs: []gwapiv1a2.ParentReference{
+				Spec: gwapiv1a3.TLSRouteSpec{
+					CommonRouteSpec: gwapiv1.CommonRouteSpec{
+						ParentRefs: []gwapiv1.ParentReference{
 							{
-								Name: gwapiv1a2.ObjectName(gw.Name),
+								Name: gwapiv1.ObjectName(gw.Name),
 							},
 						},
 					},
@@ -991,7 +992,7 @@ func testTLSRoute(ctx context.Context, t *testing.T, provider *Provider, resourc
 						{
 							BackendRefs: []gwapiv1a2.BackendRef{
 								{
-									BackendObjectReference: gwapiv1a2.BackendObjectReference{
+									BackendObjectReference: gwapiv1.BackendObjectReference{
 										Name: "test",
 										Port: ptr.To(gwapiv1.PortNumber(90)),
 									},
@@ -1093,14 +1094,14 @@ func testServiceCleanupForMultipleRoutes(ctx context.Context, t *testing.T, prov
 			Listeners: []gwapiv1.Listener{
 				{
 					Name:     "httptest",
-					Port:     gwapiv1.PortNumber(int32(8080)),
+					Port:     int32(8080),
 					Protocol: gwapiv1.HTTPProtocolType,
 				},
 				{
 					Name:     "tlstest",
-					Port:     gwapiv1.PortNumber(int32(8043)),
+					Port:     int32(8043),
 					Protocol: gwapiv1.TLSProtocolType,
-					TLS: &gwapiv1.GatewayTLSConfig{
+					TLS: &gwapiv1.ListenerTLSConfig{
 						Mode: ptr.To(gwapiv1.TLSModePassthrough),
 					},
 				},
@@ -1121,15 +1122,15 @@ func testServiceCleanupForMultipleRoutes(ctx context.Context, t *testing.T, prov
 		require.NoError(t, cli.Delete(ctx, svc))
 	}()
 
-	tlsRoute := gwapiv1a2.TLSRoute{
+	tlsRoute := gwapiv1a3.TLSRoute{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "tlsroute-test",
 			Namespace: ns.Name,
 		},
-		Spec: gwapiv1a2.TLSRouteSpec{
-			CommonRouteSpec: gwapiv1a2.CommonRouteSpec{
-				ParentRefs: []gwapiv1a2.ParentReference{{
-					Name: gwapiv1a2.ObjectName(gw.Name),
+		Spec: gwapiv1a3.TLSRouteSpec{
+			CommonRouteSpec: gwapiv1.CommonRouteSpec{
+				ParentRefs: []gwapiv1.ParentReference{{
+					Name: gwapiv1.ObjectName(gw.Name),
 				}},
 			},
 			Hostnames: []gwapiv1a2.Hostname{"test-tls.hostname.local"},
@@ -1137,7 +1138,7 @@ func testServiceCleanupForMultipleRoutes(ctx context.Context, t *testing.T, prov
 				{
 					BackendRefs: []gwapiv1a2.BackendRef{
 						{
-							BackendObjectReference: gwapiv1a2.BackendObjectReference{
+							BackendObjectReference: gwapiv1.BackendObjectReference{
 								Name: "test-common-svc",
 								Port: ptr.To(gwapiv1.PortNumber(90)),
 							},
@@ -1260,6 +1261,11 @@ func TestNamespacedProvider(t *testing.T) {
 	go func() {
 		require.NoError(t, provider.Start(ctx))
 	}()
+	// Stop the kube provider.
+	defer func() {
+		cancel()
+		require.NoError(t, testEnv.Stop())
+	}()
 
 	// Make sure a cluster scoped gatewayclass can be reconciled
 	testGatewayClassController(ctx, t, provider, resources)
@@ -1288,13 +1294,7 @@ func TestNamespacedProvider(t *testing.T) {
 	// Ensure only 2 gateways are reconciled
 	gatewayList := &gwapiv1.GatewayList{}
 	require.NoError(t, cli.List(ctx, gatewayList))
-	require.Equal(t, len(gatewayList.Items), 2)
-
-	// Stop the kube provider.
-	defer func() {
-		cancel()
-		require.NoError(t, testEnv.Stop())
-	}()
+	require.Len(t, gatewayList.Items, 2)
 }
 
 func TestNamespaceSelectorProvider(t *testing.T) {
@@ -1375,8 +1375,8 @@ func TestNamespaceSelectorProvider(t *testing.T) {
 		return len(r.Gateways) == 1
 	})
 
-	_, ok := resources.GatewayStatuses.Load(types.NamespacedName{Name: "non-watched-gateway", Namespace: nonWatchedNS.Name})
-	require.Equal(t, false, ok)
+	_, loaded := resources.GatewayStatuses.Load(types.NamespacedName{Name: "non-watched-gateway", Namespace: nonWatchedNS.Name})
+	require.False(t, loaded)
 
 	watchedSvc := test.GetService(types.NamespacedName{Namespace: watchedNS.Name, Name: "watched-service"}, nil, map[string]int32{
 		"http":  80,

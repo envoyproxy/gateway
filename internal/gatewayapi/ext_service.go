@@ -14,7 +14,6 @@ import (
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
@@ -99,15 +98,22 @@ func (t *Translator) processExtServiceDestination(
 	var (
 		backendTLS *ir.TLSUpstreamConfig
 		ds         *ir.DestinationSetting
+		err        error
 	)
 
 	backendNamespace := NamespaceDerefOr(backendRef.Namespace, policyNamespacedName.Namespace)
 
 	switch KindDerefOr(backendRef.Kind, resource.KindService) {
 	case resource.KindService:
-		ds = t.processServiceDestinationSetting(settingName, backendRef.BackendObjectReference, backendNamespace, protocol, resources, envoyProxy)
+		ds, err = t.processServiceDestinationSetting(settingName, backendRef.BackendObjectReference, backendNamespace, protocol, resources, envoyProxy)
+		if err != nil {
+			return nil, err
+		}
 	case resource.KindServiceImport:
-		ds = t.processServiceImportDestinationSetting(settingName, backendRef.BackendObjectReference, backendNamespace, protocol, resources, envoyProxy)
+		ds, err = t.processServiceImportDestinationSetting(settingName, backendRef.BackendObjectReference, backendNamespace, protocol, resources, envoyProxy)
+		if err != nil {
+			return nil, err
+		}
 	case egv1a1.KindBackend:
 		if !t.BackendEnabled {
 			return nil, fmt.Errorf("resource %s of type Backend cannot be used since Backend is disabled in Envoy Gateway configuration", string(backendRef.Name))
@@ -130,7 +136,6 @@ func (t *Translator) processExtServiceDestination(
 			"mixed endpointslice address type for the same backendRef is not supported")
 	}
 
-	var err error
 	backendTLS, err = t.applyBackendTLSSetting(
 		backendRef.BackendObjectReference,
 		backendNamespace,
@@ -138,7 +143,7 @@ func (t *Translator) processExtServiceDestination(
 		// of the BackendRef is the policy, and there is no hierarchy
 		// relationship between the policy and a gateway.
 		// The owner policy of the BackendRef is used as the parent reference here.
-		gwapiv1a2.ParentReference{
+		gwapiv1.ParentReference{
 			Group:     ptr.To(gwapiv1.Group(egv1a1.GroupName)),
 			Kind:      ptr.To(gwapiv1.Kind(policyKind)),
 			Namespace: ptr.To(gwapiv1.Namespace(policyNamespacedName.Namespace)),

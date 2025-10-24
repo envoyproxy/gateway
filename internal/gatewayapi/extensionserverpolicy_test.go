@@ -10,14 +10,14 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
 func TestExtractTargetRefs(t *testing.T) {
 	tests := []struct {
 		desc          string
 		specInput     map[string]any
-		output        []gwapiv1a2.LocalPolicyTargetReferenceWithSectionName
+		output        []gwapiv1.LocalPolicyTargetReferenceWithSectionName
 		expectedError string
 	}{
 		{
@@ -61,9 +61,9 @@ func TestExtractTargetRefs(t *testing.T) {
 					"name":  "name",
 				},
 			},
-			output: []gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+			output: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
 				{
-					LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+					LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 						Group: "some.group",
 						Kind:  "SomeKind",
 						Name:  "name",
@@ -87,16 +87,16 @@ func TestExtractTargetRefs(t *testing.T) {
 					},
 				},
 			},
-			output: []gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+			output: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
 				{
-					LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+					LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 						Group: "some.group",
 						Kind:  "SomeKind2",
 						Name:  "othername",
 					},
 				},
 				{
-					LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+					LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 						Group: "some.group",
 						Kind:  "SomeKind",
 						Name:  "name",

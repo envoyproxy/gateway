@@ -25,6 +25,11 @@ backendTLSPolicies:
         namespace: default
       conditions:
       - lastTransitionTime: null
+        message: Resolved all the Object references.
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      - lastTransitionTime: null
         message: Policy has been accepted.
         reason: Accepted
         status: "True"
@@ -54,6 +59,11 @@ backendTLSPolicies:
         name: policy-for-http-route
         namespace: default
       conditions:
+      - lastTransitionTime: null
+        message: Resolved all the Object references.
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
       - lastTransitionTime: null
         message: Policy has been accepted.
         reason: Accepted
@@ -369,6 +379,9 @@ xdsIR:
               name: envoyextensionpolicy/default/policy-for-http-route/extproc/0
               settings:
               - addressType: IP
+                endpoints:
+                - host: 7.7.7.7
+                  port: 8000
                 metadata:
                   kind: Service
                   name: grpc-backend
@@ -442,8 +455,8 @@ xdsIR:
                 resetStreamOnError: true
               loadBalancer:
                 consistentHash:
-                  header:
-                    name: X-some-header
+                  headers:
+                  - name: X-some-header
               proxyProtocol:
                 version: V2
               tcpKeepalive:
