@@ -99,6 +99,7 @@ jobs:
       - name: Upload Release Manifests
         uses: softprops/action-gh-release@da05d552573ad5aba039eaac05058a918a7bf631  # v2.2.2
         with:
+          make_latest: false
           files: |
             release-artifacts/install.yaml
             release-artifacts/quickstart.yaml
