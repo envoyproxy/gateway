@@ -7,6 +7,7 @@ package translator
 
 import (
 	"embed"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -15,6 +16,7 @@ import (
 	"testing"
 	"time"
 
+	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/cache/types"
 	resourcev3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	ratelimitv3 "github.com/envoyproxy/go-control-plane/ratelimit/config/ratelimit/v3"
@@ -48,6 +50,12 @@ type testFileConfig struct {
 	dnsDomain                 string
 	errMsg                    string
 	runtimeFlags              *egv1a1.RuntimeFlags
+}
+
+type rateLimitOutput struct {
+	RouteName     string               `json:"routeName" yaml:"routeName"`
+	RateLimits    []*routev3.RateLimit `json:"rateLimits" yaml:"rateLimits"`
+	CostSpecified bool                 `json:"costSpecified" yaml:"costSpecified"`
 }
 
 func TestTranslateXds(t *testing.T) {
@@ -243,6 +251,39 @@ func TestTranslateRateLimitConfig(t *testing.T) {
 				require.NoError(t, file.Write(requireRateLimitConfigsToYAMLString(t, configs), filepath.Join("testdata", "out", "ratelimit-config", inputFileName+".yaml")))
 			}
 			require.Equal(t, requireTestDataOutFile(t, "ratelimit-config", inputFileName+".yaml"), requireRateLimitConfigsToYAMLString(t, configs))
+		})
+	}
+}
+
+func TestBuildRouteRateLimits(t *testing.T) {
+	inputFiles, err := filepath.Glob(filepath.Join("testdata", "in", "ratelimit-config", "*.yaml"))
+	require.NoError(t, err)
+
+	for _, inputFile := range inputFiles {
+		inputFileName := testName(inputFile)
+		t.Run(inputFileName, func(t *testing.T) {
+			// Get listeners from the test data
+			listeners := requireXdsIRListenersFromInputTestData(t, inputFile)
+
+			var outputs []rateLimitOutput
+
+			// Process each route to get rate limit actions
+			for _, listener := range listeners {
+				for _, route := range listener.Routes {
+					rateLimits, costSpecified := buildRouteRateLimits(route)
+
+					output := rateLimitOutput{
+						RouteName:     route.Name,
+						RateLimits:    rateLimits,
+						CostSpecified: costSpecified,
+					}
+					outputs = append(outputs, output)
+				}
+			}
+			if test.OverrideTestData() {
+				require.NoError(t, file.Write(requireRouteRateLimitsToYAMLString(t, outputs), filepath.Join("testdata", "out", "ratelimit-config", inputFileName+".routes.yaml")))
+			}
+			require.Equal(t, requireTestDataOutFile(t, "ratelimit-config", inputFileName+".routes.yaml"), requireRouteRateLimitsToYAMLString(t, outputs))
 		})
 	}
 }
@@ -565,6 +606,24 @@ func requireRateLimitConfigsToYAMLString(t *testing.T, configs []*ratelimitv3.Ra
 		result += str
 	}
 	return result
+}
+
+func requireRouteRateLimitsToYAMLString(t *testing.T, rlOutputs []rateLimitOutput) string {
+	if len(rlOutputs) == 0 {
+		return ""
+	}
+
+	results := make([]string, 0, len(rlOutputs))
+	for _, output := range rlOutputs {
+		jsonBytes, err := json.Marshal(output)
+		require.NoError(t, err)
+		yamlBytes, err := yaml.JSONToYAML(jsonBytes)
+		require.NoError(t, err)
+
+		results = append(results, string(yamlBytes))
+	}
+
+	return strings.Join(results, "---\n")
 }
 
 func requireResourcesToYAMLString(t *testing.T, resources []types.Resource) string {
