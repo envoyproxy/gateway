@@ -79,6 +79,7 @@ The Helm chart for Envoy Gateway
 | podDisruptionBudget.minAvailable | int | `0` |  |
 | service.annotations | object | `{}` |  |
 | service.trafficDistribution | string | `""` |  |
+| service.type | string | `"ClusterIP"` |  |
 | topologyInjector.annotations | object | `{}` |  |
 | topologyInjector.enabled | bool | `true` |  |
 

@@ -444,6 +444,7 @@ metadata:
     app.kubernetes.io/version: "latest"
     app.kubernetes.io/managed-by: Helm
 spec:
+  type: ClusterIP
   selector:
     control-plane: envoy-gateway
     app.kubernetes.io/name: gateway-helm
