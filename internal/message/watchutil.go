@@ -99,8 +99,48 @@ func HandleSubscription[K comparable, V any](
 	}
 	for snapshot := range subscription {
 		watchableDepth.With(meta.LabelValues()...).Record(float64(len(subscription)))
-		for _, update := range snapshot.Updates {
+
+		for _, update := range coalesceUpdates(meta.Runner, snapshot.Updates) {
 			handleWithCrashRecovery(handle, Update[K, V](update), meta, errChans)
 		}
 	}
+}
+
+// updateKey is a helper struct used to uniquely identify updates by their key and deletion status.
+// This is to ensure that delete operations are treated distinctly from update operations.
+type updateKey[K comparable] struct {
+	Key    K
+	Delete bool
+}
+
+// coalesceUpdates merges multiple updates for the same key into a single update,
+// preserving the latest state for each key.
+// This helps reduce redundant processing and ensures that only the most recent update per key is handled.
+func coalesceUpdates[K comparable, V any](runner string, updates []watchable.Update[K, V]) []watchable.Update[K, V] {
+	if len(updates) <= 1 {
+		return updates
+	}
+
+	result := make([]watchable.Update[K, V], 0, len(updates))
+	indexByKey := make(map[updateKey[K]]int, len(updates))
+
+	for i := len(updates) - 1; i >= 0; i-- {
+		update := updates[i]
+		key := updateKey[K]{Key: update.Key, Delete: update.Delete}
+		if _, ok := indexByKey[key]; ok {
+			continue
+		}
+
+		indexByKey[key] = len(result)
+		result = append(result, update)
+	}
+
+	// Reverse the result slice to restore the original order
+	for left, right := 0, len(result)-1; left < right; left, right = left+1, right-1 {
+		result[left], result[right] = result[right], result[left]
+	}
+
+	logger.WithValues("runner", runner).Info("coalesced updates", "count", len(result), "before", len(updates))
+
+	return result
 }

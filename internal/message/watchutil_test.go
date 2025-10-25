@@ -268,7 +268,11 @@ func TestControllerResourceUpdate(t *testing.T) {
 					m.GatewayAPIResources.Close()
 				}
 			})
-			assert.Equal(t, tc.updates, updates)
+			if tc.updates > 1 {
+				assert.LessOrEqual(t, updates, tc.updates) // Updates can be coalesced
+			} else {
+				assert.Equal(t, 1, updates)
+			}
 		})
 	}
 }
