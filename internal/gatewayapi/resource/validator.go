@@ -28,6 +28,7 @@ func GetDefaultValidator() *Validator {
 // Validator is a local/offline Kubernetes resources validator.
 type Validator struct {
 	resolver *validator.Validator
+	mu       sync.Mutex
 }
 
 // newDefaultValidator init a default validator for internal usage.
@@ -37,6 +38,8 @@ func newDefaultValidator() *Validator {
 }
 
 // Validate validates one Kubernetes resource.
-func (v Validator) Validate(content []byte) error {
+func (v *Validator) Validate(content []byte) error {
+	v.mu.Lock()
+	defer v.mu.Unlock()
 	return kvalidate.ValidateDocument(content, v.resolver)
 }

@@ -625,7 +625,7 @@ type CustomResponse struct {
 	ContentType *string `json:"contentType,omitempty"`
 
 	// Body of the Custom Response
-	Body *string `json:"body,omitempty"`
+	Body []byte `json:"body,omitempty"`
 
 	// StatusCode will be used for the response's status code.
 	StatusCode *uint32 `json:"statusCode,omitempty"`
@@ -2596,15 +2596,10 @@ type Random struct{}
 // +k8s:deepcopy-gen=true
 type ConsistentHash struct {
 	// Hash based on the Source IP Address
-	SourceIP  *bool          `json:"sourceIP,omitempty" yaml:"sourceIP,omitempty"`
-	Header    *Header        `json:"header,omitempty" yaml:"header,omitempty"`
-	Cookie    *egv1a1.Cookie `json:"cookie,omitempty" yaml:"cookie,omitempty"`
-	TableSize *uint64        `json:"tableSize,omitempty" yaml:"tableSize,omitempty"`
-}
-
-// Header consistent hash type settings
-type Header struct {
-	Name string `json:"name" yaml:"name"`
+	SourceIP  *bool            `json:"sourceIP,omitempty" yaml:"sourceIP,omitempty"`
+	Headers   []*egv1a1.Header `json:"headers,omitempty" yaml:"headers,omitempty"`
+	Cookie    *egv1a1.Cookie   `json:"cookie,omitempty" yaml:"cookie,omitempty"`
+	TableSize *uint64          `json:"tableSize,omitempty" yaml:"tableSize,omitempty"`
 }
 
 type ProxyProtocolVersion string

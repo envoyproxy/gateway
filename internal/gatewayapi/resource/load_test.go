@@ -6,9 +6,9 @@
 package resource
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -46,32 +46,41 @@ test: foo3
 	require.ElementsMatch(t, names, []string{"foo1", "foo2", "foo3"})
 }
 
-func TestLoadAllSupportedResourcesFromYAMLBytes(t *testing.T) {
-	inFile := requireTestDataFile(t, "all-resources", "in")
-	got, err := LoadResourcesFromYAMLBytes(inFile, true)
-	require.NoError(t, err)
-
-	if test.OverrideTestData() {
-		out, err := yaml.Marshal(got)
-		require.NoError(t, err)
-		require.NoError(t, file.Write(string(out), filepath.Join("testdata", "all-resources.out.yaml")))
-	}
-
-	want := &Resources{}
-	outFile := requireTestDataFile(t, "all-resources", "out")
-	mustUnmarshal(t, outFile, want)
-
-	opts := []cmp.Option{
-		cmpopts.EquateEmpty(),
-	}
-	require.Empty(t, cmp.Diff(want, got, opts...))
+func testName(inputFile string) string {
+	_, fileName := filepath.Split(inputFile)
+	return strings.TrimSuffix(fileName, ".in.yaml")
 }
 
-func requireTestDataFile(t *testing.T, name, ioType string) []byte {
-	t.Helper()
-	content, err := os.ReadFile(filepath.Join("testdata", fmt.Sprintf("%s.%s.yaml", name, ioType)))
+func TestLoadAllSupportedResourcesFromYAMLBytes(t *testing.T) {
+	// list all file names in testdata
+	inputFiles, err := filepath.Glob(filepath.Join("testdata", "*.in.yaml"))
 	require.NoError(t, err)
-	return content
+	for _, inFile := range inputFiles {
+		t.Run(testName(inFile), func(t *testing.T) {
+			t.Parallel() // this's used for race detection
+			data, err := os.ReadFile(inFile)
+			require.NoError(t, err)
+			got, err := LoadResourcesFromYAMLBytes(data, true)
+			require.NoError(t, err)
+
+			outputFile := strings.Replace(inFile, ".in.yaml", ".out.yaml", 1)
+			if test.OverrideTestData() {
+				out, err := yaml.Marshal(got)
+				require.NoError(t, err)
+				require.NoError(t, file.Write(string(out), outputFile))
+			}
+
+			want := &Resources{}
+			output, err := os.ReadFile(outputFile)
+			require.NoError(t, err)
+			mustUnmarshal(t, output, want)
+
+			opts := []cmp.Option{
+				cmpopts.EquateEmpty(),
+			}
+			require.Empty(t, cmp.Diff(want, got, opts...))
+		})
+	}
 }
 
 func mustUnmarshal(t *testing.T, val []byte, out interface{}) {
