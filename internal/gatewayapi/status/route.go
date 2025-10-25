@@ -6,8 +6,6 @@
 package status
 
 import (
-	"time"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
@@ -21,7 +19,6 @@ func SetRouteStatusCondition(route *gwapiv1.RouteStatus, routeParentStatusIdx in
 		Reason:             string(reason),
 		Message:            message,
 		ObservedGeneration: routeGeneration,
-		LastTransitionTime: metav1.NewTime(time.Now()),
 	}
 
 	route.Parents[routeParentStatusIdx].Conditions = MergeConditions(route.Parents[routeParentStatusIdx].Conditions, cond)

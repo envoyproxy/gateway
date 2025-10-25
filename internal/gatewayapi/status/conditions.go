@@ -14,7 +14,6 @@
 package status
 
 import (
-	"time"
 	"unicode"
 
 	"github.com/google/go-cmp/cmp"
@@ -42,7 +41,6 @@ func MergeConditions(conditions []metav1.Condition, updates ...metav1.Condition)
 					conditions[j].Reason = updates[i].Reason
 					conditions[j].Message = updates[i].Message
 					conditions[j].ObservedGeneration = updates[i].ObservedGeneration
-					conditions[j].LastTransitionTime = updates[i].LastTransitionTime
 					break
 				}
 			}
@@ -55,13 +53,12 @@ func MergeConditions(conditions []metav1.Condition, updates ...metav1.Condition)
 	return conditions
 }
 
-func newCondition(t string, status metav1.ConditionStatus, reason, msg string, lt time.Time, og int64) metav1.Condition {
+func newCondition(t string, status metav1.ConditionStatus, reason, msg string, og int64) metav1.Condition {
 	return metav1.Condition{
 		Type:               t,
 		Status:             status,
 		Reason:             reason,
 		Message:            truncateConditionMessage(msg),
-		LastTransitionTime: metav1.NewTime(lt),
 		ObservedGeneration: og,
 	}
 }
