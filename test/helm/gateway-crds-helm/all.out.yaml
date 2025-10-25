@@ -21336,7 +21336,7 @@ spec:
                           PerEndpointPercent configures how many additional connections to maintain per
                           upstream endpoint, useful for high-QPS or latency sensitive services. Expressed as a
                           percentage of the connections required by active streams
-                          (e.g. 100 = preconnect disabled, 105 = 1.05x connections per-upstream, 200 = 2.00×).
+                          (e.g. 100 = preconnect disabled, 105 = 1.05x connections per-endpoint, 200 = 2.00×).
 
                           Allowed value range is between 100-300. When both PerEndpointPercent and
                           PredictivePercent are set, Envoy ensures both are satisfied (max of the two).
@@ -25804,7 +25804,7 @@ spec:
                                     PerEndpointPercent configures how many additional connections to maintain per
                                     upstream endpoint, useful for high-QPS or latency sensitive services. Expressed as a
                                     percentage of the connections required by active streams
-                                    (e.g. 100 = preconnect disabled, 105 = 1.05x connections per-upstream, 200 = 2.00×).
+                                    (e.g. 100 = preconnect disabled, 105 = 1.05x connections per-endpoint, 200 = 2.00×).
 
                                     Allowed value range is between 100-300. When both PerEndpointPercent and
                                     PredictivePercent are set, Envoy ensures both are satisfied (max of the two).
@@ -39362,7 +39362,7 @@ spec:
                                                       PerEndpointPercent configures how many additional connections to maintain per
                                                       upstream endpoint, useful for high-QPS or latency sensitive services. Expressed as a
                                                       percentage of the connections required by active streams
-                                                      (e.g. 100 = preconnect disabled, 105 = 1.05x connections per-upstream, 200 = 2.00×).
+                                                      (e.g. 100 = preconnect disabled, 105 = 1.05x connections per-endpoint, 200 = 2.00×).
 
                                                       Allowed value range is between 100-300. When both PerEndpointPercent and
                                                       PredictivePercent are set, Envoy ensures both are satisfied (max of the two).
@@ -40561,7 +40561,7 @@ spec:
                                                       PerEndpointPercent configures how many additional connections to maintain per
                                                       upstream endpoint, useful for high-QPS or latency sensitive services. Expressed as a
                                                       percentage of the connections required by active streams
-                                                      (e.g. 100 = preconnect disabled, 105 = 1.05x connections per-upstream, 200 = 2.00×).
+                                                      (e.g. 100 = preconnect disabled, 105 = 1.05x connections per-endpoint, 200 = 2.00×).
 
                                                       Allowed value range is between 100-300. When both PerEndpointPercent and
                                                       PredictivePercent are set, Envoy ensures both are satisfied (max of the two).
@@ -41873,7 +41873,7 @@ spec:
                                                 PerEndpointPercent configures how many additional connections to maintain per
                                                 upstream endpoint, useful for high-QPS or latency sensitive services. Expressed as a
                                                 percentage of the connections required by active streams
-                                                (e.g. 100 = preconnect disabled, 105 = 1.05x connections per-upstream, 200 = 2.00×).
+                                                (e.g. 100 = preconnect disabled, 105 = 1.05x connections per-endpoint, 200 = 2.00×).
 
                                                 Allowed value range is between 100-300. When both PerEndpointPercent and
                                                 PredictivePercent are set, Envoy ensures both are satisfied (max of the two).
@@ -43075,7 +43075,7 @@ spec:
                                           PerEndpointPercent configures how many additional connections to maintain per
                                           upstream endpoint, useful for high-QPS or latency sensitive services. Expressed as a
                                           percentage of the connections required by active streams
-                                          (e.g. 100 = preconnect disabled, 105 = 1.05x connections per-upstream, 200 = 2.00×).
+                                          (e.g. 100 = preconnect disabled, 105 = 1.05x connections per-endpoint, 200 = 2.00×).
 
                                           Allowed value range is between 100-300. When both PerEndpointPercent and
                                           PredictivePercent are set, Envoy ensures both are satisfied (max of the two).
@@ -45260,7 +45260,7 @@ spec:
                                       PerEndpointPercent configures how many additional connections to maintain per
                                       upstream endpoint, useful for high-QPS or latency sensitive services. Expressed as a
                                       percentage of the connections required by active streams
-                                      (e.g. 100 = preconnect disabled, 105 = 1.05x connections per-upstream, 200 = 2.00×).
+                                      (e.g. 100 = preconnect disabled, 105 = 1.05x connections per-endpoint, 200 = 2.00×).
 
                                       Allowed value range is between 100-300. When both PerEndpointPercent and
                                       PredictivePercent are set, Envoy ensures both are satisfied (max of the two).
@@ -46349,7 +46349,7 @@ spec:
                                       PerEndpointPercent configures how many additional connections to maintain per
                                       upstream endpoint, useful for high-QPS or latency sensitive services. Expressed as a
                                       percentage of the connections required by active streams
-                                      (e.g. 100 = preconnect disabled, 105 = 1.05x connections per-upstream, 200 = 2.00×).
+                                      (e.g. 100 = preconnect disabled, 105 = 1.05x connections per-endpoint, 200 = 2.00×).
 
                                       Allowed value range is between 100-300. When both PerEndpointPercent and
                                       PredictivePercent are set, Envoy ensures both are satisfied (max of the two).
@@ -47636,7 +47636,7 @@ spec:
                                             PerEndpointPercent configures how many additional connections to maintain per
                                             upstream endpoint, useful for high-QPS or latency sensitive services. Expressed as a
                                             percentage of the connections required by active streams
-                                            (e.g. 100 = preconnect disabled, 105 = 1.05x connections per-upstream, 200 = 2.00×).
+                                            (e.g. 100 = preconnect disabled, 105 = 1.05x connections per-endpoint, 200 = 2.00×).
 
                                             Allowed value range is between 100-300. When both PerEndpointPercent and
                                             PredictivePercent are set, Envoy ensures both are satisfied (max of the two).
@@ -49007,7 +49007,7 @@ spec:
                                       PerEndpointPercent configures how many additional connections to maintain per
                                       upstream endpoint, useful for high-QPS or latency sensitive services. Expressed as a
                                       percentage of the connections required by active streams
-                                      (e.g. 100 = preconnect disabled, 105 = 1.05x connections per-upstream, 200 = 2.00×).
+                                      (e.g. 100 = preconnect disabled, 105 = 1.05x connections per-endpoint, 200 = 2.00×).
 
                                       Allowed value range is between 100-300. When both PerEndpointPercent and
                                       PredictivePercent are set, Envoy ensures both are satisfied (max of the two).
