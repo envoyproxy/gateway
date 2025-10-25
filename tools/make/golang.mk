@@ -140,11 +140,14 @@ format: go.mod.lint format.yaml
 .PHONY: format.yaml
 format.yaml:
 	@$(LOG_TARGET)
-	@echo "Formatting YAML files with prettier (with retry on failure)..."
-	@for i in 1 2 3; do \
-		$(GO_TOOL) prettier --write '**/*.{yaml,yml}' && break || \
-		(echo "Attempt $$i failed, retrying in 2 seconds..." && sleep 2); \
-	done || echo "Warning: YAML formatting failed after 3 attempts, continuing..."
+	@echo "Formatting YAML files with prettier (processing in batches)..."
+	@find . -name "*.yaml" -o -name "*.yml" | grep -v -E "(vendor/|site/|out/|manifests/charts/|\.bin/|\.github/workflows/build-artifacts/|templates/|crds/|generated/|dashboards/|monitoring/)" | while read file; do \
+		echo "Formatting $$file..."; \
+		for i in 1 2 3; do \
+			$(GO_TOOL) prettier --write "$$file" && break || \
+			(echo "Attempt $$i failed for $$file, retrying in 1 second..." && sleep 1); \
+		done || echo "Warning: Failed to format $$file after 3 attempts, continuing..."; \
+	done
 
 .PHONY: clean
 clean: ## Remove all files that are created during builds.
