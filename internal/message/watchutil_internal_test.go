@@ -55,7 +55,7 @@ func TestCoalesceUpdates(t *testing.T) {
 			},
 		},
 		{
-			name: "keep intermediate deletes",
+			name: "do not coalesce delete and update for the same key",
 			input: []watchable.Update[string, int]{
 				{Key: "foo", Value: 1},
 				{Key: "bar", Delete: true, Value: 2},
