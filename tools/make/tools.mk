@@ -28,6 +28,14 @@ $(tools.bindir)/%: $(tools.bindir)/%.d/venv
 		ln -sf $*.d/venv/bin/$* $@; \
 	fi
 
+# kube-api-linter
+# ===============
+#
+tools/kal = $(tools.bindir)/kal
+$(tools/kal):
+	cd $(CURDIR)/tools && \
+	go build -buildmode=plugin -o bin/kube-api-linter.so sigs.k8s.io/kube-api-linter/pkg/plugin
+
 ifneq ($(GOOS),windows)
 # Shellcheck
 # ==========
