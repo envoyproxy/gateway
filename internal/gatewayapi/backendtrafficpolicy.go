@@ -926,18 +926,18 @@ func buildRateLimitRule(rule egv1a1.RateLimitRule) (*ir.RateLimitRule, error) {
 		}
 
 		if match.Path != nil {
-			switch {
-			case match.Path.Type == nil || *match.Path.Type == gwapiv1.PathMatchPathPrefix:
+			switch ptr.Deref(match.Path.Type, gwapiv1.PathMatchPathPrefix) {
+			case gwapiv1.PathMatchPathPrefix:
 				irRule.PathMatch = &ir.StringMatch{
 					Prefix: ptr.To(match.Path.Value),
 					Invert: match.Path.Invert,
 				}
-			case *match.Path.Type == gwapiv1.PathMatchExact:
+			case gwapiv1.PathMatchExact:
 				irRule.PathMatch = &ir.StringMatch{
 					Exact:  ptr.To(match.Path.Value),
 					Invert: match.Path.Invert,
 				}
-			case *match.Path.Type == gwapiv1.PathMatchRegularExpression:
+			case gwapiv1.PathMatchRegularExpression:
 				if err := regex.Validate(match.Path.Value); err != nil {
 					return nil, err
 				}

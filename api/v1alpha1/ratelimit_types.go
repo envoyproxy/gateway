@@ -187,10 +187,12 @@ type RateLimitCostMetadata struct {
 // RateLimitSelectCondition specifies the attributes within the traffic flow that can
 // be used to select a subset of clients to be ratelimited.
 // All the individual conditions must hold True for the overall condition to hold True.
+// And, at least one of headers or methods or path or sourceCIDR condition must be specified.
+//
+// +kubebuilder:validation:XValidation:rule="has(self.headers) || has(self.methods) || has(self.path) || has(self.sourceCIDR)",message="at least one of headers, methods, path or sourceCIDR must be specified"
 type RateLimitSelectCondition struct {
 	// Headers is a list of request headers to match. Multiple header values are ANDed together,
 	// meaning, a request MUST match all the specified headers.
-	// At least one of headers or methods or path or sourceCIDR condition must be specified.
 	//
 	// +optional
 	// +kubebuilder:validation:MaxItems=16
@@ -198,20 +200,17 @@ type RateLimitSelectCondition struct {
 
 	// Methods is a list of request methods to match. Multiple method values are ORed together,
 	// meaning, a request can match any one of the specified methods. If not specified, it matches all methods.
-	// At least one of headers or methods or path or sourceCIDR condition must be specified.
 	//
 	// +optional
 	Methods []MethodMatch `json:"methods,omitempty"`
 
 	// Path is the request path to match.
 	// Support Exact, PathPrefix and RegularExpression match types.
-	// At least one of headers or methods or path or sourceCIDR condition must be specified.
 	//
 	// +optional
 	Path *PathMatch `json:"path,omitempty"`
 
 	// SourceCIDR is the client IP Address range to match on.
-	// At least one of headers or methods or path or sourceCIDR condition must be specified.
 	//
 	// +optional
 	SourceCIDR *SourceMatch `json:"sourceCIDR,omitempty"`

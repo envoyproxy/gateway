@@ -4261,16 +4261,17 @@ _Appears in:_
 RateLimitSelectCondition specifies the attributes within the traffic flow that can
 be used to select a subset of clients to be ratelimited.
 All the individual conditions must hold True for the overall condition to hold True.
+And, at least one of headers or methods or path or sourceCIDR condition must be specified.
 
 _Appears in:_
 - [RateLimitRule](#ratelimitrule)
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `headers` | _[HeaderMatch](#headermatch) array_ |  false  |  | Headers is a list of request headers to match. Multiple header values are ANDed together,<br />meaning, a request MUST match all the specified headers.<br />At least one of headers or methods or path or sourceCIDR condition must be specified. |
-| `methods` | _[MethodMatch](#methodmatch) array_ |  false  |  | Methods is a list of request methods to match. Multiple method values are ORed together,<br />meaning, a request can match any one of the specified methods. If not specified, it matches all methods.<br />At least one of headers or methods or path or sourceCIDR condition must be specified. |
-| `path` | _[PathMatch](#pathmatch)_ |  false  |  | Path is the request path to match.<br />Support Exact, PathPrefix and RegularExpression match types.<br />At least one of headers or methods or path or sourceCIDR condition must be specified. |
-| `sourceCIDR` | _[SourceMatch](#sourcematch)_ |  false  |  | SourceCIDR is the client IP Address range to match on.<br />At least one of headers or methods or path or sourceCIDR condition must be specified. |
+| `headers` | _[HeaderMatch](#headermatch) array_ |  false  |  | Headers is a list of request headers to match. Multiple header values are ANDed together,<br />meaning, a request MUST match all the specified headers. |
+| `methods` | _[MethodMatch](#methodmatch) array_ |  false  |  | Methods is a list of request methods to match. Multiple method values are ORed together,<br />meaning, a request can match any one of the specified methods. If not specified, it matches all methods. |
+| `path` | _[PathMatch](#pathmatch)_ |  false  |  | Path is the request path to match.<br />Support Exact, PathPrefix and RegularExpression match types. |
+| `sourceCIDR` | _[SourceMatch](#sourcematch)_ |  false  |  | SourceCIDR is the client IP Address range to match on. |
 
 
 #### RateLimitSpec

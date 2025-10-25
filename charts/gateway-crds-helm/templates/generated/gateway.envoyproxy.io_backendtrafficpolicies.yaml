@@ -884,12 +884,12 @@ spec:
                                   RateLimitSelectCondition specifies the attributes within the traffic flow that can
                                   be used to select a subset of clients to be ratelimited.
                                   All the individual conditions must hold True for the overall condition to hold True.
+                                  And, at least one of headers or methods or path or sourceCIDR condition must be specified.
                                 properties:
                                   headers:
                                     description: |-
                                       Headers is a list of request headers to match. Multiple header values are ANDed together,
                                       meaning, a request MUST match all the specified headers.
-                                      At least one of headers or methods or path or sourceCIDR condition must be specified.
                                     items:
                                       description: HeaderMatch defines the match attributes
                                         within the HTTP Headers of the request.
@@ -934,7 +934,6 @@ spec:
                                     description: |-
                                       Methods is a list of request methods to match. Multiple method values are ORed together,
                                       meaning, a request can match any one of the specified methods. If not specified, it matches all methods.
-                                      At least one of headers or methods or path or sourceCIDR condition must be specified.
                                     items:
                                       description: MethodMatch defines the matching
                                         criteria for the HTTP method of a request.
@@ -965,7 +964,6 @@ spec:
                                     description: |-
                                       Path is the request path to match.
                                       Support Exact, PathPrefix and RegularExpression match types.
-                                      At least one of headers or methods or path or sourceCIDR condition must be specified.
                                     properties:
                                       invert:
                                         default: false
@@ -990,9 +988,8 @@ spec:
                                     - value
                                     type: object
                                   sourceCIDR:
-                                    description: |-
-                                      SourceCIDR is the client IP Address range to match on.
-                                      At least one of headers or methods or path or sourceCIDR condition must be specified.
+                                    description: SourceCIDR is the client IP Address
+                                      range to match on.
                                     properties:
                                       type:
                                         default: Exact
@@ -1012,6 +1009,11 @@ spec:
                                     - value
                                     type: object
                                 type: object
+                                x-kubernetes-validations:
+                                - message: at least one of headers, methods, path
+                                    or sourceCIDR must be specified
+                                  rule: has(self.headers) || has(self.methods) ||
+                                    has(self.path) || has(self.sourceCIDR)
                               maxItems: 8
                               type: array
                             cost:
@@ -1194,12 +1196,12 @@ spec:
                                   RateLimitSelectCondition specifies the attributes within the traffic flow that can
                                   be used to select a subset of clients to be ratelimited.
                                   All the individual conditions must hold True for the overall condition to hold True.
+                                  And, at least one of headers or methods or path or sourceCIDR condition must be specified.
                                 properties:
                                   headers:
                                     description: |-
                                       Headers is a list of request headers to match. Multiple header values are ANDed together,
                                       meaning, a request MUST match all the specified headers.
-                                      At least one of headers or methods or path or sourceCIDR condition must be specified.
                                     items:
                                       description: HeaderMatch defines the match attributes
                                         within the HTTP Headers of the request.
@@ -1244,7 +1246,6 @@ spec:
                                     description: |-
                                       Methods is a list of request methods to match. Multiple method values are ORed together,
                                       meaning, a request can match any one of the specified methods. If not specified, it matches all methods.
-                                      At least one of headers or methods or path or sourceCIDR condition must be specified.
                                     items:
                                       description: MethodMatch defines the matching
                                         criteria for the HTTP method of a request.
@@ -1275,7 +1276,6 @@ spec:
                                     description: |-
                                       Path is the request path to match.
                                       Support Exact, PathPrefix and RegularExpression match types.
-                                      At least one of headers or methods or path or sourceCIDR condition must be specified.
                                     properties:
                                       invert:
                                         default: false
@@ -1300,9 +1300,8 @@ spec:
                                     - value
                                     type: object
                                   sourceCIDR:
-                                    description: |-
-                                      SourceCIDR is the client IP Address range to match on.
-                                      At least one of headers or methods or path or sourceCIDR condition must be specified.
+                                    description: SourceCIDR is the client IP Address
+                                      range to match on.
                                     properties:
                                       type:
                                         default: Exact
@@ -1322,6 +1321,11 @@ spec:
                                     - value
                                     type: object
                                 type: object
+                                x-kubernetes-validations:
+                                - message: at least one of headers, methods, path
+                                    or sourceCIDR must be specified
+                                  rule: has(self.headers) || has(self.methods) ||
+                                    has(self.path) || has(self.sourceCIDR)
                               maxItems: 8
                               type: array
                             cost:
