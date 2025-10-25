@@ -65,16 +65,19 @@ func (t *Translator) ProcessBackendTrafficPolicies(resources *resource.Resources
 	}
 
 	// Map of Gateway to the routes attached to it.
-	// First key is Gateway (namespace/name), second key is SectionName (listener name, or "" for entire gateway).
-	gatewayRouteMap := make(map[types.NamespacedName]map[string]sets.Set[string], gatewayMapSize)
+	gatewayRouteMap := &GatewayPolicyRouteMap{
+		Routes:       make(map[NamespacedNameWithSection]sets.Set[string], gatewayMapSize),
+		SectionIndex: make(map[types.NamespacedName]sets.Set[string], gatewayMapSize),
+	}
 
 	// Map of attached Policy to Gateway. It is used to merge policies process.
-	// First key is Gateway (namespace/name), second key is SectionName (listener name, or "" for entire gateway).
-	gatewayPolicyMap := make(map[types.NamespacedName]map[string]*egv1a1.BackendTrafficPolicy, gatewayMapSize)
+	gatewayPolicyMap := make(map[NamespacedNameWithSection]*egv1a1.BackendTrafficPolicy, gatewayMapSize)
 
 	// Map of Gateway to the routes merged to it.
-	// First key is Gateway (namespace/name), second key is SectionName (listener name, or "" for entire gateway).
-	gatewayPolicyMerged := make(map[types.NamespacedName]map[string]sets.Set[string], gatewayMapSize)
+	gatewayPolicyMerged := &GatewayPolicyRouteMap{
+		Routes:       make(map[NamespacedNameWithSection]sets.Set[string], gatewayMapSize),
+		SectionIndex: make(map[types.NamespacedName]sets.Set[string], gatewayMapSize),
+	}
 
 	handledPolicies := make(map[types.NamespacedName]*egv1a1.BackendTrafficPolicy, policyMapSize)
 
@@ -178,7 +181,7 @@ func (t *Translator) buildGatewayPolicyMap(
 	backendTrafficPolicies []*egv1a1.BackendTrafficPolicy,
 	gateways []*GatewayContext,
 	gatewayMap map[types.NamespacedName]*policyGatewayTargetContext,
-	gatewayPolicyMap map[types.NamespacedName]map[string]*egv1a1.BackendTrafficPolicy,
+	gatewayPolicyMap map[NamespacedNameWithSection]*egv1a1.BackendTrafficPolicy,
 ) {
 	for _, currPolicy := range backendTrafficPolicies {
 		targetRefs := getPolicyTargetRefs(currPolicy.Spec.PolicyTargetReferences, gateways, currPolicy.Namespace)
@@ -205,20 +208,14 @@ func (t *Translator) buildGatewayPolicyMap(
 					}
 				}
 
-				listenerPolicyMap, policyExists := gatewayPolicyMap[key]
-				if !policyExists {
-					listenerPolicyMap = make(map[string]*egv1a1.BackendTrafficPolicy)
-					gatewayPolicyMap[key] = listenerPolicyMap
+				mapKey := NamespacedNameWithSection{
+					NamespacedName: key,
+					SectionName:    ptr.Deref(currTarget.SectionName, ""),
 				}
-
-				sectionName := ""
-				if currTarget.SectionName != nil {
-					sectionName = string(*currTarget.SectionName)
-				}
-				if _, ok := listenerPolicyMap[sectionName]; ok {
+				if _, ok := gatewayPolicyMap[mapKey]; ok {
 					continue
 				}
-				listenerPolicyMap[sectionName] = currPolicy
+				gatewayPolicyMap[mapKey] = currPolicy
 			}
 		}
 	}
@@ -228,9 +225,9 @@ func (t *Translator) processBTPolicyForRoute(
 	resources *resource.Resources,
 	xdsIR resource.XdsIRMap,
 	routeMap map[policyTargetRouteKey]*policyRouteTargetContext,
-	gatewayRouteMap map[types.NamespacedName]map[string]sets.Set[string],
-	gatewayPolicyMergedMap map[types.NamespacedName]map[string]sets.Set[string],
-	gatewayPolicyMap map[types.NamespacedName]map[string]*egv1a1.BackendTrafficPolicy,
+	gatewayRouteMap *GatewayPolicyRouteMap,
+	gatewayPolicyMergedMap *GatewayPolicyRouteMap,
+	gatewayPolicyMap map[NamespacedNameWithSection]*egv1a1.BackendTrafficPolicy,
 	policy *egv1a1.BackendTrafficPolicy,
 	currTarget gwapiv1.LocalPolicyTargetReferenceWithSectionName,
 ) {
@@ -261,26 +258,27 @@ func (t *Translator) processBTPolicyForRoute(
 			if p.Namespace != nil {
 				namespace = string(*p.Namespace)
 			}
-			gwNN := types.NamespacedName{
-				Namespace: namespace,
-				Name:      string(p.Name),
-			}
 
-			if _, ok := gatewayRouteMap[gwNN]; !ok {
-				gatewayRouteMap[gwNN] = make(map[string]sets.Set[string])
+			mapKey := NamespacedNameWithSection{
+				NamespacedName: types.NamespacedName{
+					Name:      string(p.Name),
+					Namespace: namespace,
+				},
+				SectionName: ptr.Deref(p.SectionName, ""),
 			}
-			listenerRouteMap := gatewayRouteMap[gwNN]
-			sectionName := ""
-			if p.SectionName != nil {
-				sectionName = string(*p.SectionName)
+			if _, ok := gatewayRouteMap.Routes[mapKey]; !ok {
+				gatewayRouteMap.Routes[mapKey] = make(sets.Set[string])
 			}
-			if _, ok := listenerRouteMap[sectionName]; !ok {
-				listenerRouteMap[sectionName] = make(sets.Set[string])
+			gatewayRouteMap.Routes[mapKey].Insert(utils.NamespacedName(targetedRoute).String())
+
+			// Register section name to Gateway index for efficient lookup when retrieving overridden and merged targets
+			if _, ok := gatewayRouteMap.SectionIndex[mapKey.NamespacedName]; !ok {
+				gatewayRouteMap.SectionIndex[mapKey.NamespacedName] = make(sets.Set[string])
 			}
-			listenerRouteMap[sectionName].Insert(utils.NamespacedName(targetedRoute).String())
+			gatewayRouteMap.SectionIndex[mapKey.NamespacedName].Insert(string(mapKey.SectionName))
 
 			// Do need a section name since the policy is targeting to a route.
-			ancestorRef := getAncestorRefForPolicy(gwNN, p.SectionName)
+			ancestorRef := getAncestorRefForPolicy(mapKey.NamespacedName, p.SectionName)
 			ancestorRefs = append(ancestorRefs, &ancestorRef)
 
 			parentRefCtxs = append(parentRefCtxs, GetRouteParentContext(targetedRoute, p, t.GatewayControllerName))
@@ -315,9 +313,17 @@ func (t *Translator) processBTPolicyForRoute(
 				ancestorRef := getAncestorRefForPolicy(gwNN, &listener.Name)
 
 				// Find Gateway listener level policy
-				listenerPolicy := gatewayPolicyMap[gwNN][string(listener.Name)]
+				listenerMapKey := NamespacedNameWithSection{
+					NamespacedName: gwNN,
+					SectionName:    listener.Name,
+				}
+				listenerPolicy := gatewayPolicyMap[listenerMapKey]
+
 				// Find Gateway level policy
-				gwPolicy := gatewayPolicyMap[gwNN][""]
+				gwMapKey := NamespacedNameWithSection{
+					NamespacedName: gwNN,
+				}
+				gwPolicy := gatewayPolicyMap[gwMapKey]
 				if gwPolicy == nil && listenerPolicy == nil {
 					// not found, fall back to the current policy
 					if err := t.translateBackendTrafficPolicyForRoute(policy, targetedRoute, currTarget, xdsIR, resources, &gwNN, &listener.Name); err != nil {
@@ -354,14 +360,16 @@ func (t *Translator) processBTPolicyForRoute(
 				}
 
 				// Record the merged routes for gateway
-				if _, ok := gatewayPolicyMergedMap[gwNN]; !ok {
-					gatewayPolicyMergedMap[gwNN] = make(map[string]sets.Set[string])
+				if _, ok := gatewayPolicyMergedMap.Routes[listenerMapKey]; !ok {
+					gatewayPolicyMergedMap.Routes[listenerMapKey] = make(sets.Set[string])
 				}
-				listenerMergeMap := gatewayPolicyMergedMap[gwNN]
-				if _, ok := listenerMergeMap[string(listener.Name)]; !ok {
-					listenerMergeMap[string(listener.Name)] = make(sets.Set[string])
+				gatewayPolicyMergedMap.Routes[listenerMapKey].Insert(utils.NamespacedName(targetedRoute).String())
+
+				// Register section name to Gateway index for efficient lookup when retrieving overridden and merged targets
+				if _, ok := gatewayPolicyMergedMap.SectionIndex[listenerMapKey.NamespacedName]; !ok {
+					gatewayPolicyMergedMap.SectionIndex[listenerMapKey.NamespacedName] = make(sets.Set[string])
 				}
-				listenerMergeMap[string(listener.Name)].Insert(utils.NamespacedName(targetedRoute).String())
+				gatewayPolicyMergedMap.SectionIndex[listenerMapKey.NamespacedName].Insert(string(listenerMapKey.SectionName))
 
 				status.SetConditionForPolicyAncestor(&policy.Status,
 					&ancestorRef,
@@ -408,8 +416,8 @@ func (t *Translator) processBTPolicyForGateway(
 	resources *resource.Resources,
 	xdsIR resource.XdsIRMap,
 	gatewayMap map[types.NamespacedName]*policyGatewayTargetContext,
-	gatewayRouteMap map[types.NamespacedName]map[string]sets.Set[string],
-	gatewayPolicyMergedMap map[types.NamespacedName]map[string]sets.Set[string],
+	gatewayRouteMap *GatewayPolicyRouteMap,
+	gatewayPolicyMergedMap *GatewayPolicyRouteMap,
 	policy *egv1a1.BackendTrafficPolicy,
 	currTarget gwapiv1.LocalPolicyTargetReferenceWithSectionName,
 ) {
@@ -453,7 +461,7 @@ func (t *Translator) processBTPolicyForGateway(
 	status.SetAcceptedForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName, policy.Generation)
 
 	overriddenMessage, mergedMessage := getOverriddenAndMergedTargetsMessageForGateway(
-		gatewayMap[gatewayNN], gatewayRouteMap[gatewayNN], gatewayPolicyMergedMap[gatewayNN], currTarget.SectionName)
+		gatewayMap[gatewayNN], gatewayRouteMap, gatewayPolicyMergedMap, currTarget.SectionName)
 
 	if mergedMessage != "" {
 		status.SetConditionForPolicyAncestor(&policy.Status,
