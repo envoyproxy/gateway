@@ -624,7 +624,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(
 			// Skip if not the gateway wanted
 			continue
 		}
-		applyTrafficFeatureToRoute(route, tf, errs, policy, target, x, policyTargetListener)
+		t.applyTrafficFeatureToRoute(route, tf, errs, policy, target, x, policyTargetListener)
 	}
 
 	return errs
@@ -685,13 +685,12 @@ func (t *Translator) translateBackendTrafficPolicyForRouteWithMerge(
 		// should not happen.
 		return nil
 	}
-	applyTrafficFeatureToRoute(route, tf, errs, mergedPolicy, target, x, policyTargetListener)
+	t.applyTrafficFeatureToRoute(route, tf, errs, mergedPolicy, target, x, policyTargetListener)
 
 	return nil
 }
 
-func applyTrafficFeatureToRoute(
-	route RouteContext,
+func (t *Translator) applyTrafficFeatureToRoute(route RouteContext,
 	tf *ir.TrafficFeatures, errs error,
 	policy *egv1a1.BackendTrafficPolicy,
 	target gwapiv1.LocalPolicyTargetReferenceWithSectionName,
@@ -746,6 +745,7 @@ func applyTrafficFeatureToRoute(
 		}
 	}
 
+	routesWithDirectResponse := sets.New[string]()
 	for _, http := range x.HTTP {
 		// if listenerName is not nil, only apply to the specific listener
 		if policyTargetListener != nil && string(*policyTargetListener) != http.Metadata.SectionName {
@@ -770,6 +770,7 @@ func applyTrafficFeatureToRoute(
 					r.DirectResponse = &ir.CustomResponse{
 						StatusCode: ptr.To(uint32(500)),
 					}
+					routesWithDirectResponse.Insert(r.Name)
 					continue
 				}
 
@@ -787,6 +788,13 @@ func applyTrafficFeatureToRoute(
 				}
 			}
 		}
+	}
+	if len(routesWithDirectResponse) > 0 {
+		t.Logger.Info("setting 500 direct response in routes due to errors in BackendTrafficPolicy",
+			"policy", utils.NamespacedName(policy),
+			"routes", sets.List(routesWithDirectResponse),
+			"error", errs,
+		)
 	}
 }
 
@@ -965,6 +973,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 		setIfNil(&route.DNS, tf.DNS)
 	}
 
+	routesWithDirectResponse := sets.New[string]()
 	for _, http := range x.HTTP {
 		gatewayName := http.Name[0:strings.LastIndex(http.Name, "/")]
 		if t.MergeGateways && gatewayName != policyTarget {
@@ -990,6 +999,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 				r.DirectResponse = &ir.CustomResponse{
 					StatusCode: ptr.To(uint32(500)),
 				}
+				routesWithDirectResponse.Insert(r.Name)
 				continue
 			}
 
@@ -1006,6 +1016,13 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 				r.UseClientProtocol = policy.Spec.UseClientProtocol
 			}
 		}
+	}
+	if len(routesWithDirectResponse) > 0 {
+		t.Logger.Info("setting 500 direct response in routes due to errors in BackendTrafficPolicy",
+			"policy", utils.NamespacedName(policy),
+			"routes", sets.List(routesWithDirectResponse),
+			"error", errs,
+		)
 	}
 
 	return errs
@@ -1398,11 +1415,11 @@ func buildResponseOverride(policy *egv1a1.BackendTrafficPolicy, resources *resou
 	}, nil
 }
 
-func checkResponseBodySize(b *string) error {
+func checkResponseBodySize(b []byte) error {
 	// Make this configurable in the future
 	// https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route.proto.html#max_direct_response_body_size_bytes
 	maxDirectResponseSize := 4096
-	lenB := len(*b)
+	lenB := len(b)
 	if lenB > maxDirectResponseSize {
 		return fmt.Errorf("response.body size %d greater than the max size %d", lenB, maxDirectResponseSize)
 	}
@@ -1410,38 +1427,45 @@ func checkResponseBodySize(b *string) error {
 	return nil
 }
 
-func getCustomResponseBody(body *egv1a1.CustomResponseBody, resources *resource.Resources, policyNs string) (*string, error) {
+func getCustomResponseBody(body *egv1a1.CustomResponseBody, resources *resource.Resources, policyNs string) ([]byte, error) {
 	if body != nil && body.Type != nil && *body.Type == egv1a1.ResponseValueTypeValueRef {
 		cm := resources.GetConfigMap(policyNs, string(body.ValueRef.Name))
 		if cm != nil {
 			b, dataOk := cm.Data["response.body"]
 			switch {
 			case dataOk:
-				if err := checkResponseBodySize(&b); err != nil {
+				body := []byte(b)
+				if err := checkResponseBodySize(body); err != nil {
 					return nil, err
 				}
-				return &b, nil
+				return body, nil
 			case len(cm.Data) > 0: // Fallback to the first key if response.body is not found
 				for _, value := range cm.Data {
-					b = value
-					break
+					body := []byte(value)
+					if err := checkResponseBodySize(body); err != nil {
+						return nil, err
+					}
+					return body, nil
 				}
-				if err := checkResponseBodySize(&b); err != nil {
-					return nil, err
+			case len(cm.BinaryData) > 0:
+				for _, binData := range cm.BinaryData {
+					if err := checkResponseBodySize(binData); err != nil {
+						return nil, err
+					}
+					return binData, nil
 				}
-				return &b, nil
 			default:
 				return nil, fmt.Errorf("can't find the key response.body in the referenced configmap %s", body.ValueRef.Name)
 			}
-
 		} else {
 			return nil, fmt.Errorf("can't find the referenced configmap %s", body.ValueRef.Name)
 		}
 	} else if body != nil && body.Inline != nil {
-		if err := checkResponseBodySize(body.Inline); err != nil {
+		inlineValue := []byte(*body.Inline)
+		if err := checkResponseBodySize(inlineValue); err != nil {
 			return nil, err
 		}
-		return body.Inline, nil
+		return inlineValue, nil
 	}
 
 	return nil, nil
@@ -1461,7 +1485,8 @@ func buildCompression(compression, compressor []*egv1a1.Compression) []*ir.Compr
 		for _, c := range compressor {
 			// Only add compression if the corresponding compressor not null
 			if (c.Type == egv1a1.GzipCompressorType && c.Gzip != nil) ||
-				(c.Type == egv1a1.BrotliCompressorType && c.Brotli != nil) {
+				(c.Type == egv1a1.BrotliCompressorType && c.Brotli != nil) ||
+				(c.Type == egv1a1.ZstdCompressorType && c.Zstd != nil) {
 				irCompression = append(irCompression, &ir.Compression{
 					Type: c.Type,
 				})

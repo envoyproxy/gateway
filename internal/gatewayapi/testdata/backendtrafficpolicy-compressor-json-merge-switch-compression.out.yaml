@@ -2,13 +2,15 @@ backendTrafficPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:
-    name: route-compressor-policy-switch-to-brotli
+    name: route-compressor-policy-switch-to-brotli-and-zstd
     namespace: default
   spec:
     compressor:
     - type: Gzip
     - brotli: {}
       type: Brotli
+    - type: Zstd
+      zstd: {}
     mergeType: JSONMerge
     targetRef:
       group: gateway.networking.k8s.io
@@ -238,6 +240,7 @@ xdsIR:
         traffic:
           compression:
           - type: Brotli
+          - type: Zstd
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

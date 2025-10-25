@@ -99,7 +99,10 @@ func (i *Infra) runEnvoy(ctx context.Context, envoyVersion, name string, args []
 			exit <- struct{}{}
 		}()
 		err := func_e.Run(pCtx, args,
-			api.HomeDir(i.HomeDir),
+			api.ConfigHome(i.Paths.ConfigHome),
+			api.DataHome(i.Paths.DataHome),
+			api.StateHome(i.Paths.StateHome),
+			api.RuntimeDir(i.Paths.RuntimeDir),
 			api.Out(i.Stdout),
 			api.EnvoyOut(i.Stdout),
 			api.EnvoyErr(i.Stderr),

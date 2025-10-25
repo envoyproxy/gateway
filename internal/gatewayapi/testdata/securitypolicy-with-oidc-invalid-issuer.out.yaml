@@ -87,8 +87,8 @@ securityPolicies:
         namespace: default
       conditions:
       - lastTransitionTime: null
-        message: 'OIDC: error fetching endpoints from issuer: invalid character ''<''
-          looking for beginning of value.'
+        message: 'OIDC: failed fetching openid-configuration from issuer URL: https://httpbin.org/,
+          status code: 404.'
         reason: Invalid
         status: "False"
         type: Accepted

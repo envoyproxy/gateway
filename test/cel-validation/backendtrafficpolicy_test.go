@@ -1114,7 +1114,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 		{
 			desc: "valid count of Global rate limit rules items",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
-				rules := make([]egv1a1.RateLimitRule, 64)
+				rules := make([]egv1a1.RateLimitRule, 128)
 				rule := egv1a1.RateLimitRule{
 					Limit: egv1a1.RateLimitValue{
 						Requests: 10,
@@ -1148,7 +1148,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 		{
 			desc: "invalid count of Global rate limit rules items",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
-				rules := make([]egv1a1.RateLimitRule, 65)
+				rules := make([]egv1a1.RateLimitRule, 129)
 				rule := egv1a1.RateLimitRule{
 					Limit: egv1a1.RateLimitValue{
 						Requests: 10,
@@ -1178,7 +1178,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				`[spec.rateLimit.global.rules: Too many: 65: must have at most 64 items, <nil>: Invalid value: "null": some validation rules were not checked because the object was invalid; correct the existing errors to complete validation]`,
+				`[spec.rateLimit.global.rules: Too many: 129: must have at most 128 items, <nil>: Invalid value: "null": some validation rules were not checked because the object was invalid; correct the existing errors to complete validation]`,
 			},
 		},
 		{

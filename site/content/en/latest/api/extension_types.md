@@ -434,6 +434,7 @@ _Appears in:_
 BackendTLSConfig describes the BackendTLS configuration for Envoy Proxy.
 
 _Appears in:_
+- [BackendTLSSettings](#backendtlssettings)
 - [EnvoyProxySpec](#envoyproxyspec)
 
 | Field | Type | Required | Default | Description |
@@ -870,6 +871,7 @@ _Appears in:_
 | `type` | _[CompressorType](#compressortype)_ |  true  |  | CompressorType defines the compressor type to use for compression. |
 | `brotli` | _[BrotliCompressor](#brotlicompressor)_ |  false  |  | The configuration for Brotli compressor. |
 | `gzip` | _[GzipCompressor](#gzipcompressor)_ |  false  |  | The configuration for GZIP compressor. |
+| `zstd` | _[ZstdCompressor](#zstdcompressor)_ |  false  |  | The configuration for Zstd compressor. |
 
 
 #### CompressorType
@@ -885,6 +887,7 @@ _Appears in:_
 | ----- | ----------- |
 | `Gzip` |  | 
 | `Brotli` |  | 
+| `Zstd` |  | 
 
 
 #### ConnectConfig
@@ -931,8 +934,9 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `type` | _[ConsistentHashType](#consistenthashtype)_ |  true  |  | ConsistentHashType defines the type of input to hash on. Valid Type values are<br />"SourceIP",<br />"Header",<br />"Cookie". |
-| `header` | _[Header](#header)_ |  false  |  | Header configures the header hash policy when the consistent hash type is set to Header. |
+| `type` | _[ConsistentHashType](#consistenthashtype)_ |  true  |  | ConsistentHashType defines the type of input to hash on. Valid Type values are<br />"SourceIP",<br />"Header",<br />"Headers",<br />"Cookie". |
+| `header` | _[Header](#header)_ |  false  |  | Header configures the header hash policy when the consistent hash type is set to Header.<br />Deprecated: use Headers instead |
+| `headers` | _[Header](#header) array_ |  false  |  | Headers configures the header hash policy for each header, when the consistent hash type is set to Headers. |
 | `cookie` | _[Cookie](#cookie)_ |  false  |  | Cookie configures the cookie hash policy when the consistent hash type is set to Cookie. |
 | `tableSize` | _integer_ |  false  | 65537 | The table size for consistent hashing, must be prime number limited to 5000011. |
 
@@ -949,7 +953,8 @@ _Appears in:_
 | Value | Description |
 | ----- | ----------- |
 | `SourceIP` | SourceIPConsistentHashType hashes based on the source IP address.<br /> | 
-| `Header` | HeaderConsistentHashType hashes based on a request header.<br /> | 
+| `Header` | HeaderConsistentHashType hashes based on a request header.<br />Deprecated: use HeadersConsistentHashType instead<br /> | 
+| `Headers` | HeadersConsistentHashType hashes based on multiple request headers.<br /> | 
 | `Cookie` | CookieConsistentHashType hashes based on a cookie.<br /> | 
 
 
@@ -1349,6 +1354,12 @@ EnvoyGatewayHostInfrastructureProvider defines configuration for the Host Infras
 _Appears in:_
 - [EnvoyGatewayInfrastructureProvider](#envoygatewayinfrastructureprovider)
 
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `configHome` | _string_ |  false  |  | ConfigHome is the directory for configuration files.<br />Defaults to ~/.config/envoy-gateway |
+| `dataHome` | _string_ |  false  |  | DataHome is the directory for persistent data (Envoy binaries).<br />Defaults to ~/.local/share/envoy-gateway |
+| `stateHome` | _string_ |  false  |  | StateHome is the directory for persistent state (logs).<br />Defaults to ~/.local/state/envoy-gateway |
+| `runtimeDir` | _string_ |  false  |  | RuntimeDir is the directory for ephemeral runtime files.<br />Defaults to /tmp/envoy-gateway-$\{UID\} |
 
 
 #### EnvoyGatewayInfrastructureProvider
@@ -3565,7 +3576,7 @@ _Appears in:_
 | `splitExternalLocalOriginErrors` | _boolean_ |  false  | false | SplitExternalLocalOriginErrors enables splitting of errors between external and local origin. |
 | `interval` | _[Duration](https://gateway-api.sigs.k8s.io/reference/spec/#duration)_ |  false  | 3s | Interval defines the time between passive health checks. |
 | `consecutiveLocalOriginFailures` | _integer_ |  false  | 5 | ConsecutiveLocalOriginFailures sets the number of consecutive local origin failures triggering ejection.<br />Parameter takes effect only when split_external_local_origin_errors is set to true. |
-| `consecutiveGatewayErrors` | _integer_ |  false  | 0 | ConsecutiveGatewayErrors sets the number of consecutive gateway errors triggering ejection. |
+| `consecutiveGatewayErrors` | _integer_ |  false  |  | ConsecutiveGatewayErrors sets the number of consecutive gateway errors triggering ejection. |
 | `consecutive5XxErrors` | _integer_ |  false  | 5 | Consecutive5xxErrors sets the number of consecutive 5xx errors triggering ejection. |
 | `baseEjectionTime` | _[Duration](https://gateway-api.sigs.k8s.io/reference/spec/#duration)_ |  false  | 30s | BaseEjectionTime defines the base duration for which a host will be ejected on consecutive failures. |
 | `maxEjectionPercent` | _integer_ |  false  | 10 | MaxEjectionPercent sets the maximum percentage of hosts in a cluster that can be ejected. |
@@ -5420,5 +5431,18 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `preferLocal` | _[PreferLocalZone](#preferlocalzone)_ |  false  |  | PreferLocalZone configures zone-aware routing to prefer sending traffic to the local locality zone. |
+
+
+#### ZstdCompressor
+
+
+
+ZstdCompressor defines the config for the Zstd compressor.
+The default values can be found here:
+https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/compression/zstd/compressor/v3/zstd.proto#extension-envoy-compression-zstd-compressor
+
+_Appears in:_
+- [Compression](#compression)
+
 
 
