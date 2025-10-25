@@ -3042,8 +3042,8 @@ type BackendConnection struct {
 // Preconnect configures preconnecting to upstream endpoints
 // +k8s:deepcopy-gen=true
 type Preconnect struct {
-	// PerUpstreamPercent is the percent of connections to preconnect per upstream endpoint.
-	PerUpstreamPercent *uint32 `json:"perUpstreamPercent,omitempty" yaml:"perUpstreamPercent,omitempty"`
+	// PerEndpointPercent is the percent of connections to preconnect per upstream endpoint.
+	PerEndpointPercent *uint32 `json:"perEndpointPercent,omitempty" yaml:"perEndpointPercent,omitempty"`
 	// PredictivePercent is the percent of connections to preconnect across the entire cluster.
 	PredictivePercent *uint32 `json:"predictivePercent,omitempty" yaml:"predictivePercent,omitempty"`
 }

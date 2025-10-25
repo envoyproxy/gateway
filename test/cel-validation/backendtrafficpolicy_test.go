@@ -1251,7 +1251,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			},
 		},
 		{
-			desc: "valid preconnect perUpstreamPercent",
+			desc: "valid preconnect perEndpointPercent",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
@@ -1266,7 +1266,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 					ClusterSettings: egv1a1.ClusterSettings{
 						Connection: &egv1a1.BackendConnection{
 							Preconnect: &egv1a1.PreconnectPolicy{
-								PerUpstreamPercent: ptr.To(uint32(100)),
+								PerEndpointPercent: ptr.To(uint32(100)),
 							},
 						},
 					},
@@ -1290,8 +1290,8 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 					ClusterSettings: egv1a1.ClusterSettings{
 						Connection: &egv1a1.BackendConnection{
 							Preconnect: &egv1a1.PreconnectPolicy{
-								PredictivePercent:  ptr.To(uint32(10)),
-								PerUpstreamPercent: ptr.To(uint32(33)),
+								PredictivePercent:  ptr.To(uint32(110)),
+								PerEndpointPercent: ptr.To(uint32(133)),
 							},
 						},
 						LoadBalancer: &egv1a1.LoadBalancer{
@@ -1318,8 +1318,8 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 					ClusterSettings: egv1a1.ClusterSettings{
 						Connection: &egv1a1.BackendConnection{
 							Preconnect: &egv1a1.PreconnectPolicy{
-								PredictivePercent:  ptr.To(uint32(33)),
-								PerUpstreamPercent: ptr.To(uint32(50)),
+								PredictivePercent:  ptr.To(uint32(133)),
+								PerEndpointPercent: ptr.To(uint32(150)),
 							},
 						},
 						LoadBalancer: &egv1a1.LoadBalancer{
@@ -1348,7 +1348,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 					ClusterSettings: egv1a1.ClusterSettings{
 						Connection: &egv1a1.BackendConnection{
 							Preconnect: &egv1a1.PreconnectPolicy{
-								PerUpstreamPercent: ptr.To(uint32(305)),
+								PerEndpointPercent: ptr.To(uint32(305)),
 							},
 						},
 						LoadBalancer: &egv1a1.LoadBalancer{
@@ -1358,7 +1358,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				"spec.connection.preconnect.perUpstreamPercent: Invalid value: 305: spec.connection.preconnect.perUpstreamPercent in body should be less than or equal to 200",
+				"spec.connection.preconnect.perEndpointPercent: Invalid value: 305: spec.connection.preconnect.perEndpointPercent in body should be less than or equal to 300",
 			},
 		},
 		{

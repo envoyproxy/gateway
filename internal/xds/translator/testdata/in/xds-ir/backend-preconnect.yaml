@@ -22,8 +22,8 @@ http:
         traffic:
           backendConnection:
             preconnect:
-              perUpstreamPercent: 5
-              predictivePercent: 105
+              perEndpointPercent: 105
+              predictivePercent: 205
   - name: "second-listener"
     address: "::"
     port: 10081
@@ -49,8 +49,8 @@ http:
         traffic:
           backendConnection:
             preconnect:
-              perUpstreamPercent: 99
-              predictivePercent: 33
+              perEndpointPercent: 199
+              predictivePercent: 133
 tcp:
   - name: "tcp-listener"
     address: "::"
@@ -68,5 +68,5 @@ tcp:
               name: "tcp-route-dest/backend/0"
         backendConnection:
           preconnect:
-            perUpstreamPercent: 150
+            perEndpointPercent: 150
             predictivePercent: 150

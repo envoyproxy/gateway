@@ -75,8 +75,8 @@ backendTrafficPolicies:
         name: gateway-1
       connection:
         preconnect:
-          perUpstreamPercent: 123
-          predictivePercent: 0
+          perEndpointPercent: 123
+          predictivePercent: 100
   - apiVersion: gateway.envoyproxy.io/v1alpha1
     kind: BackendTrafficPolicy
     metadata:
@@ -89,5 +89,5 @@ backendTrafficPolicies:
         name: httproute-1
       connection:
         preconnect:
-          perUpstreamPercent: 0
+          perEndpointPercent: 100
           predictivePercent: 234

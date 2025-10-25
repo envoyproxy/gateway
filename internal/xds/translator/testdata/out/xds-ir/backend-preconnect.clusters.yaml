@@ -76,6 +76,6 @@
   name: tcp-route-dest
   perConnectionBufferLimitBytes: 32768
   preconnectPolicy:
-    perUpstreamPreconnectRatio: 2.5
-    predictivePreconnectRatio: 2.5
+    perUpstreamPreconnectRatio: 1.5
+    predictivePreconnectRatio: 1.5
   type: EDS

@@ -176,10 +176,10 @@ func buildBackendConnection(policy *egv1a1.ClusterSettings) (*ir.BackendConnecti
 		if bc.Preconnect != nil {
 			preconnect := &ir.Preconnect{}
 			pc := bc.Preconnect
-			if pc.PerUpstreamPercent != nil && *pc.PerUpstreamPercent > 0 {
-				preconnect.PerUpstreamPercent = pc.PerUpstreamPercent
+			if pc.PerEndpointPercent != nil {
+				preconnect.PerEndpointPercent = pc.PerEndpointPercent
 			}
-			if pc.PredictivePercent != nil && *pc.PredictivePercent > 0 {
+			if pc.PredictivePercent != nil {
 				preconnect.PredictivePercent = pc.PredictivePercent
 			}
 			bcIR.Preconnect = preconnect
