@@ -22555,12 +22555,12 @@ spec:
                     description: |-
                       Type decides the scope for the RateLimits.
                       Valid RateLimitType values are "Global" or "Local".
+
+                      Deprecated: Use Global and/or Local fields directly instead. Both can be specified simultaneously for combined rate limiting.
                     enum:
                     - Global
                     - Local
                     type: string
-                required:
-                - type
                 type: object
               requestBuffer:
                 description: |-

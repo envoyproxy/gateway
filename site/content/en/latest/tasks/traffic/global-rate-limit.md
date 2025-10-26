@@ -211,7 +211,6 @@ spec:
     kind: HTTPRoute
     name: http-ratelimit
   rateLimit:
-    type: Global
     global:
       rules:
       - clientSelectors:
@@ -240,7 +239,6 @@ spec:
     kind: HTTPRoute
     name: http-ratelimit
   rateLimit:
-    type: Global
     global:
       rules:
       - clientSelectors:
@@ -429,7 +427,6 @@ spec:
     kind: HTTPRoute
     name: http-ratelimit
   rateLimit:
-    type: Global
     global:
       rules:
       - clientSelectors:
@@ -461,7 +458,6 @@ spec:
     kind: HTTPRoute
     name: http-ratelimit
   rateLimit:
-    type: Global
     global:
       rules:
       - clientSelectors:
@@ -677,7 +673,6 @@ spec:
     kind: HTTPRoute
     name: http-ratelimit
   rateLimit:
-    type: Global
     global:
       rules:
       - limit:
@@ -702,7 +697,6 @@ spec:
     kind: HTTPRoute
     name: http-ratelimit
   rateLimit:
-    type: Global
     global:
       rules:
       - limit:
@@ -833,7 +827,6 @@ spec:
     kind: HTTPRoute
     name: http-ratelimit
   rateLimit:
-    type: Global
     global:
       rules:
       - clientSelectors:
@@ -882,7 +875,6 @@ spec:
     kind: HTTPRoute
     name: http-ratelimit
   rateLimit:
-    type: Global
     global:
       rules:
       - clientSelectors:
@@ -991,7 +983,6 @@ spec:
     kind: HTTPRoute
     name: example
   rateLimit:
-    type: Global
     global:
       rules:
       - clientSelectors:
@@ -1059,7 +1050,6 @@ spec:
     kind: HTTPRoute
     name: example
   rateLimit:
-    type: Global
     global:
       rules:
       - clientSelectors:
@@ -1209,7 +1199,6 @@ metadata:
   name: global-backendtrafficpolicy
 spec:
   rateLimit:
-    type: Global
     global:
       rules:
       - clientSelectors:
@@ -1232,7 +1221,6 @@ metadata:
 spec:
   mergeType: StrategicMerge
   rateLimit:
-    type: Global
     global:
       rules:
       - clientSelectors:
@@ -1282,7 +1270,6 @@ metadata:
   name: global-backendtrafficpolicy
 spec:
   rateLimit:
-    type: Global
     global:
       rules:
       - clientSelectors:
@@ -1305,7 +1292,6 @@ metadata:
 spec:
   mergeType: StrategicMerge
   rateLimit:
-    type: Global
     global:
       rules:
       - clientSelectors:

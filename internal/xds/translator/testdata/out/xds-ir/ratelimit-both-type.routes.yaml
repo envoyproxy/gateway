@@ -32,6 +32,15 @@
         cluster: second-route-dest
         rateLimits:
         - actions:
+          - headerValueMatch:
+              descriptorKey: local_rule-0-match-0
+              descriptorValue: local_rule-0-match-0
+              expectMatch: true
+              headers:
+              - name: x-user-id
+                stringMatch:
+                  exact: one
+        - actions:
           - genericKey:
               descriptorKey: second-route
               descriptorValue: second-route
@@ -46,8 +55,8 @@
           alwaysConsumeDefaultTokenBucket: false
           descriptors:
           - entries:
-            - key: rule-0-match-0
-              value: rule-0-match-0
+            - key: local_rule-0-match-0
+              value: local_rule-0-match-0
             tokenBucket:
               fillInterval: 3600s
               maxTokens: 10

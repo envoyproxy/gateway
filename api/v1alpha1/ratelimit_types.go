@@ -10,7 +10,7 @@ type RateLimitSpec struct {
 	// Type decides the scope for the RateLimits.
 	// Valid RateLimitType values are "Global" or "Local".
 	//
-	// Deprecated: Use Type. allow both "Global" and "Local" fields now.
+	// Deprecated: Use Global and/or Local fields directly instead. Both can be specified simultaneously for combined rate limiting.
 	//
 	// +optional
 	Type *RateLimitType `json:"type"`
