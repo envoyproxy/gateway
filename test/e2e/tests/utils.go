@@ -273,9 +273,12 @@ func runLoadAndWait(t *testing.T, timeoutConfig *config.TimeoutConfig, done chan
 			Out:        io.Discard,
 		},
 		HTTPOptions: fhttp.HTTPOptions{
-			URL:            reqURL,
-			HTTPReqTimeOut: reqTimeout,
+			URL: reqURL,
 		},
+	}
+
+	if reqTimeout > 0 {
+		opts.HTTPOptions.HTTPReqTimeOut = reqTimeout
 	}
 
 	res, err := fhttp.RunHTTPTest(&opts)

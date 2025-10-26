@@ -39,75 +39,68 @@ var EnvoyShutdownTest = suite.ConformanceTest{
 	Description: "Deleting envoy pod should not lead to failures",
 	Manifests:   []string{"testdata/envoy-shutdown.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
-		t.Run("All requests must succeed", func(t *testing.T) {
-			runEnvoyShutdownCase(t, suite, "", 3*time.Second)
+		t.Run("All requests (regular + delayed) must succeed during rollout", func(t *testing.T) {
+			ns := "gateway-upgrade-infra"
+			name := "ha-gateway"
+			routeNN := types.NamespacedName{Name: "http-envoy-shutdown", Namespace: ns}
+			gwNN := types.NamespacedName{Name: name, Namespace: ns}
+			gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
+			baseURL := url.URL{Scheme: "http", Host: http.CalculateHost(t, gwAddr, "http"), Path: "/envoy-shutdown"}
+			epNN := types.NamespacedName{Name: "upgrade-config", Namespace: "envoy-gateway-system"}
+			dp, err := getDeploymentForGateway(ns, name, suite.Client)
+			if err != nil {
+				t.Errorf("Failed to get proxy deployment")
+			}
+
+			WaitForPods(t, suite.Client, dp.Namespace, map[string]string{"gateway.envoyproxy.io/owning-gateway-name": name}, corev1.PodRunning, &PodReady)
+
+			expectedResponse := http.ExpectedResponse{
+				Request: http.Request{
+					Path: "/envoy-shutdown",
+				},
+				Response: http.Response{
+					StatusCodes: []int{200},
+				},
+				Namespace: ns,
+			}
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
+
+			aborter := periodic.NewAborter()
+			regDone := make(chan bool)
+			delayedDone := make(chan bool)
+
+			regURL := baseURL.String()
+			delayedURL := func() string {
+				u := baseURL
+				q := u.Query()
+				q.Set("delay", "3s")
+				u.RawQuery = q.Encode()
+				return u.String()
+			}()
+
+			t.Logf("Starting regular load to %s", regURL)
+			go runLoadAndWait(t, &suite.TimeoutConfig, regDone, aborter, regURL, 0)
+
+			t.Logf("Starting delayed load to %s", delayedURL)
+			go runLoadAndWait(t, &suite.TimeoutConfig, delayedDone, aborter, delayedURL, 10*time.Second)
+
+			t.Log("Rolling out proxy deployment")
+			err = restartProxyAndWaitForRollout(t, &suite.TimeoutConfig, suite.Client, epNN, dp)
+
+			t.Log("Stopping load generation and collecting results")
+			aborter.Abort(false)
+
+			if err != nil {
+				t.Errorf("Failed to rollout proxy deployment: %v", err)
+			}
+			if ok := <-regDone; !ok {
+				t.Errorf("Regular load failed during rollout")
+			}
+			if ok := <-delayedDone; !ok {
+				t.Errorf("Delayed load failed during rollout")
+			}
 		})
 	},
-}
-
-// EnvoyShutdownLongRequestTest verifies that a long-lived request completes
-// successfully during envoy graceful drain.
-var EnvoyShutdownLongRequestTest = suite.ConformanceTest{
-	ShortName:   "EnvoyShutdownLongRequest",
-	Description: "Deleting envoy pod should not interrupt long-running requests",
-	Manifests:   []string{"testdata/envoy-shutdown.yaml"},
-	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
-		t.Run("All delayed requests must succeed", func(t *testing.T) {
-			runEnvoyShutdownCase(t, suite, "3s", 10*time.Second)
-		})
-	},
-}
-
-func runEnvoyShutdownCase(t *testing.T, suite *suite.ConformanceTestSuite, delay string, perRequestTimeout time.Duration) {
-	ns := "gateway-upgrade-infra"
-	name := "ha-gateway"
-	routeNN := types.NamespacedName{Name: "http-envoy-shutdown", Namespace: ns}
-	gwNN := types.NamespacedName{Name: name, Namespace: ns}
-	gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
-	reqURL := url.URL{Scheme: "http", Host: http.CalculateHost(t, gwAddr, "http"), Path: "/envoy-shutdown"}
-	if delay != "" {
-		q := reqURL.Query()
-		q.Set("delay", delay)
-		reqURL.RawQuery = q.Encode()
-	}
-
-	epNN := types.NamespacedName{Name: "upgrade-config", Namespace: "envoy-gateway-system"}
-	dp, err := getDeploymentForGateway(ns, name, suite.Client)
-	if err != nil {
-		t.Errorf("Failed to get proxy deployment")
-	}
-
-	WaitForPods(t, suite.Client, dp.Namespace, map[string]string{"gateway.envoyproxy.io/owning-gateway-name": name}, corev1.PodRunning, &PodReady)
-
-	expectedResponse := http.ExpectedResponse{
-		Request: http.Request{Path: "/envoy-shutdown"},
-		Response: http.Response{
-			StatusCodes: []int{200},
-		},
-		Namespace: ns,
-	}
-
-	http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
-
-	aborter := periodic.NewAborter()
-	loadDone := make(chan bool)
-
-	t.Logf("Starting load generation to %s (timeout=%s)", reqURL.String(), perRequestTimeout)
-	go runLoadAndWait(t, &suite.TimeoutConfig, loadDone, aborter, reqURL.String(), perRequestTimeout)
-
-	t.Log("Rolling out proxy deployment")
-	err = restartProxyAndWaitForRollout(t, &suite.TimeoutConfig, suite.Client, epNN, dp)
-
-	t.Log("Stopping load generation and collecting results")
-	aborter.Abort(false)
-
-	if err != nil {
-		t.Errorf("Failed to rollout proxy deployment: %v", err)
-	}
-
-	if ok := <-loadDone; !ok {
-		t.Errorf("Load test failed")
-	}
 }
 
 // gets the proxy deployment created for a gateway, assuming merge-gateways is not used
