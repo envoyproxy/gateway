@@ -143,6 +143,8 @@ func newOrderedHTTPFilter(filter *hcmv3.HttpFilter) *OrderedHTTPFilter {
 		order = 307
 	case isFilterType(filter, egv1a1.EnvoyFilterCompressor):
 		order = 308
+	case isFilterType(filter, egv1a1.EnvoyFilterDecompressor):
+		order = 309
 	case isFilterType(filter, egv1a1.EnvoyFilterRouter):
 		order = 310
 	}
@@ -287,6 +289,9 @@ func (t *Translator) patchHCMWithFilters(
 	// RateLimit filter is handled separately because it relies on the global
 	// rate limit server configuration.
 	t.patchHCMWithRateLimit(mgr, irListener)
+
+	// Decompressor filter is handled separately because it relies on the global
+	// Xds configuration and is added by processDecompressorFilters.
 
 	// Add the router filter if it doesn't exist.
 	hasRouter := false

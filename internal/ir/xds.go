@@ -159,6 +159,8 @@ type Xds struct {
 	GlobalResources *GlobalResources `json:"globalResources,omitempty" yaml:"globalResources,omitempty"`
 	// ExtensionServerPolicies is the intermediate representation of the ExtensionServerPolicy resource
 	ExtensionServerPolicies []*UnstructuredRef `json:"extensionServerPolicies,omitempty" yaml:"extensionServerPolicies,omitempty"`
+	// Decompression defines the global decompression configuration
+	Decompression []*Decompression `json:"decompression,omitempty" yaml:"decompression,omitempty"`
 }
 
 // Validate the fields within the Xds structure.
@@ -871,6 +873,19 @@ type HeaderBasedSessionPersistence struct {
 type Compression struct {
 	// Type of compression to be used.
 	Type egv1a1.CompressorType `json:"type" yaml:"type"`
+}
+
+// Decompression holds the configuration for HTTP decompression.
+// +k8s:deepcopy-gen=true
+type Decompression struct {
+	// Type of decompression to be used.
+	Type egv1a1.DecompressorType `json:"type" yaml:"type"`
+	// Gzip decompressor configuration.
+	Gzip *egv1a1.GzipDecompressor `json:"gzip,omitempty" yaml:"gzip,omitempty"`
+	// Brotli decompressor configuration.
+	Brotli *egv1a1.BrotliDecompressor `json:"brotli,omitempty" yaml:"brotli,omitempty"`
+	// Zstd decompressor configuration.
+	Zstd *egv1a1.ZstdDecompressor `json:"zstd,omitempty" yaml:"zstd,omitempty"`
 }
 
 // TrafficFeatures holds the information associated with the Backend Traffic Policy.

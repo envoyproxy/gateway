@@ -295,12 +295,26 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 	// Sort xdsIR based on the Gateway API spec
 	sortXdsIRMap(xdsIR)
 
-	// Set custom filter order if EnvoyProxy is set
+	// Set custom filter order and decompression config if EnvoyProxy is set
 	// The custom filter order will be applied when generating the HTTP filter chain.
 	for _, gateway := range acceptedGateways {
 		if gateway.envoyProxy != nil {
 			irKey := t.getIRKey(gateway.Gateway)
 			xdsIR[irKey].FilterOrder = gateway.envoyProxy.Spec.FilterOrder
+
+			// Set decompression configuration
+			if len(gateway.envoyProxy.Spec.Decompression) > 0 {
+				xdsIR[irKey].Decompression = make([]*ir.Decompression, 0, len(gateway.envoyProxy.Spec.Decompression))
+				for _, decomp := range gateway.envoyProxy.Spec.Decompression {
+					irDecomp := &ir.Decompression{
+						Type:   decomp.Type,
+						Gzip:   decomp.Gzip,
+						Brotli: decomp.Brotli,
+						Zstd:   decomp.Zstd,
+					}
+					xdsIR[irKey].Decompression = append(xdsIR[irKey].Decompression, irDecomp)
+				}
+			}
 		}
 	}
 

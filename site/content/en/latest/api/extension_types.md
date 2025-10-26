@@ -527,6 +527,7 @@ _Appears in:_
 | `useClientProtocol` | _boolean_ |  false  |  | UseClientProtocol configures Envoy to prefer sending requests to backends using<br />the same HTTP protocol that the incoming request used. Defaults to false, which means<br />that Envoy will use the protocol indicated by the attached BackendRef. |
 | `compression` | _[Compression](#compression) array_ |  false  |  | The compression config for the http streams.<br />Deprecated: Use Compressor instead. |
 | `compressor` | _[Compression](#compression) array_ |  false  |  | The compressor config for the http streams.<br />This provides more granular control over compression configuration. |
+| `decompressor` | _[Decompression](#decompression) array_ |  false  |  | The decompressor config for the http streams.<br />This provides configuration for decompressing compressed request/response bodies. |
 | `responseOverride` | _[ResponseOverride](#responseoverride) array_ |  false  |  | ResponseOverride defines the configuration to override specific responses with a custom one.<br />If multiple configurations are specified, the first one to match wins. |
 | `httpUpgrade` | _[ProtocolUpgradeConfig](#protocolupgradeconfig) array_ |  false  |  | HTTPUpgrade defines the configuration for HTTP protocol upgrades.<br />If not specified, the default upgrade configuration(websocket) will be used. |
 | `requestBuffer` | _[RequestBuffer](#requestbuffer)_ |  false  |  | RequestBuffer allows the gateway to buffer and fully receive each request from a client before continuing to send the request<br />upstream to the backends. This can be helpful to shield your backend servers from slow clients, and also to enforce a maximum size per request<br />as any requests larger than the buffer size will be rejected.<br />This can have a negative performance impact so should only be enabled when necessary.<br />When enabling this option, you should also configure your connection buffer size to account for these request buffers. There will also be an<br />increase in memory usage for Envoy that should be accounted for in your deployment settings. |
@@ -603,6 +604,19 @@ https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/compression/brotli
 
 _Appears in:_
 - [Compression](#compression)
+
+
+
+#### BrotliDecompressor
+
+
+
+BrotliDecompressor defines the config for the Brotli decompressor.
+The default values can be found here:
+https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/compression/brotli/decompressor/v3/brotli.proto#extension-envoy-compression-brotli-decompressor
+
+_Appears in:_
+- [Decompression](#decompression)
 
 
 
@@ -1143,6 +1157,41 @@ _Appears in:_
 | `IPv4AndIPv6` | IPv4AndIPv6DNSLookupFamily mean the DNS resolver will perform a lookup for both IPv4 and IPv6 families, and return all resolved<br />addresses. When this is used, Happy Eyeballs will be enabled for upstream connections.<br /> | 
 
 
+#### Decompression
+
+
+
+Decompression defines the config of enabling decompression.
+This can help decompress compressed request/response bodies.
+
+_Appears in:_
+- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
+- [EnvoyProxySpec](#envoyproxyspec)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `type` | _[DecompressorType](#decompressortype)_ |  true  |  | DecompressorType defines the decompressor type to use for decompression. |
+| `brotli` | _[BrotliDecompressor](#brotlidecompressor)_ |  false  |  | The configuration for Brotli decompressor. |
+| `gzip` | _[GzipDecompressor](#gzipdecompressor)_ |  false  |  | The configuration for GZIP decompressor. |
+| `zstd` | _[ZstdDecompressor](#zstddecompressor)_ |  false  |  | The configuration for Zstd decompressor. |
+
+
+#### DecompressorType
+
+_Underlying type:_ _string_
+
+DecompressorType defines the types of decompressor library supported by Envoy Gateway.
+
+_Appears in:_
+- [Decompression](#decompression)
+
+| Value | Description |
+| ----- | ----------- |
+| `Gzip` |  | 
+| `Brotli` |  | 
+| `Zstd` |  | 
+
+
 #### EndpointOverride
 
 
@@ -1256,6 +1305,7 @@ _Appears in:_
 | `envoy.filters.http.custom_response` | EnvoyFilterCustomResponse defines the Envoy HTTP custom response filter.<br /> | 
 | `envoy.filters.http.credential_injector` | EnvoyFilterCredentialInjector defines the Envoy HTTP credential injector filter.<br /> | 
 | `envoy.filters.http.compressor` | EnvoyFilterCompressor defines the Envoy HTTP compressor filter.<br /> | 
+| `envoy.filters.http.decompressor` | EnvoyFilterDecompressor defines the Envoy HTTP decompressor filter.<br /> | 
 | `envoy.filters.http.router` | EnvoyFilterRouter defines the Envoy HTTP router filter.<br /> | 
 | `envoy.filters.http.buffer` | EnvoyFilterBuffer defines the Envoy HTTP buffer filter<br /> | 
 | `envoy.filters.http.header_mutation` | EnvoyFilterHeaderMutation defines the Envoy HTTP header mutation filter<br /> | 
@@ -1750,6 +1800,7 @@ _Appears in:_
 | `extraArgs` | _string array_ |  false  |  | ExtraArgs defines additional command line options that are provided to Envoy.<br />More info: https://www.envoyproxy.io/docs/envoy/latest/operations/cli#command-line-options<br />Note: some command line options are used internally(e.g. --log-level) so they cannot be provided here. |
 | `mergeGateways` | _boolean_ |  false  |  | MergeGateways defines if Gateway resources should be merged onto the same Envoy Proxy Infrastructure.<br />Setting this field to true would merge all Gateway Listeners under the parent Gateway Class.<br />This means that the port, protocol and hostname tuple must be unique for every listener.<br />If a duplicate listener is detected, the newer listener (based on timestamp) will be rejected and its status will be updated with a "Accepted=False" condition. |
 | `shutdown` | _[ShutdownConfig](#shutdownconfig)_ |  false  |  | Shutdown defines configuration for graceful envoy shutdown process. |
+| `decompression` | _[Decompression](#decompression) array_ |  false  |  | Decompression defines the configuration for request/response decompression. |
 | `filterOrder` | _[FilterPosition](#filterposition) array_ |  false  |  | FilterOrder defines the order of filters in the Envoy proxy's HTTP filter chain.<br />The FilterPosition in the list will be applied in the order they are defined.<br />If unspecified, the default filter order is applied.<br />Default filter order is:<br />- envoy.filters.http.health_check<br />- envoy.filters.http.fault<br />- envoy.filters.http.cors<br />- envoy.filters.http.ext_authz<br />- envoy.filters.http.basic_auth<br />- envoy.filters.http.oauth2<br />- envoy.filters.http.jwt_authn<br />- envoy.filters.http.stateful_session<br />- envoy.filters.http.lua<br />- envoy.filters.http.ext_proc<br />- envoy.filters.http.wasm<br />- envoy.filters.http.rbac<br />- envoy.filters.http.local_ratelimit<br />- envoy.filters.http.ratelimit<br />- envoy.filters.http.custom_response<br />- envoy.filters.http.router<br />Note: "envoy.filters.http.router" cannot be reordered, it's always the last filter in the chain. |
 | `backendTLS` | _[BackendTLSConfig](#backendtlsconfig)_ |  false  |  | BackendTLS is the TLS configuration for the Envoy proxy to use when connecting to backends.<br />These settings are applied on backends for which TLS policies are specified. |
 | `ipFamily` | _[IPFamily](#ipfamily)_ |  false  |  | IPFamily specifies the IP family for the EnvoyProxy fleet.<br />This setting only affects the Gateway listener port and does not impact<br />other aspects of the Envoy proxy configuration.<br />If not specified, the system will operate as follows:<br />- It defaults to IPv4 only.<br />- IPv6 and dual-stack environments are not supported in this default configuration.<br />Note: To enable IPv6 or dual-stack functionality, explicit configuration is required. |
@@ -2197,6 +2248,22 @@ https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/compression/gzip/c
 _Appears in:_
 - [Compression](#compression)
 
+
+
+#### GzipDecompressor
+
+
+
+GzipDecompressor defines the config for the Gzip decompressor.
+The default values can be found here:
+https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/compression/gzip/decompressor/v3/gzip.proto#extension-envoy-compression-gzip-decompressor
+
+_Appears in:_
+- [Decompression](#decompression)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `windowBits` | _integer_ |  false  | 15 | WindowBits is the window size for decompression. The valid range is 9 to 15.<br />The default value is 15. |
 
 
 #### HTTP10Settings
@@ -5443,6 +5510,19 @@ https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/compression/zstd/c
 
 _Appears in:_
 - [Compression](#compression)
+
+
+
+#### ZstdDecompressor
+
+
+
+ZstdDecompressor defines the config for the Zstd decompressor.
+The default values can be found here:
+https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/compression/zstd/decompressor/v3/zstd.proto#extension-envoy-compression-zstd-decompressor
+
+_Appears in:_
+- [Decompression](#decompression)
 
 
 
