@@ -93,11 +93,6 @@ type EnvoyProxySpec struct {
 	// +optional
 	Shutdown *ShutdownConfig `json:"shutdown,omitempty"`
 
-	// Decompression defines the configuration for request/response decompression.
-	//
-	// +optional
-	Decompression []*Decompression `json:"decompression,omitempty"`
-
 	// FilterOrder defines the order of filters in the Envoy proxy's HTTP filter chain.
 	// The FilterPosition in the list will be applied in the order they are defined.
 	// If unspecified, the default filter order is applied.

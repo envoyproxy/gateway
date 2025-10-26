@@ -121,11 +121,6 @@ func (t *Translator) Translate(xdsIR *ir.Xds) (*types.ResourceVersionTable, erro
 		errs = errors.Join(errs, err)
 	}
 
-	// Add decompressor filters to all HTTP listeners if configured
-	if err := t.processDecompressorFilters(tCtx, xdsIR); err != nil {
-		errs = errors.Join(errs, err)
-	}
-
 	if err := t.processTCPListenerXdsTranslation(tCtx, xdsIR.TCP, xdsIR.AccessLog, xdsIR.Metrics); err != nil {
 		errs = errors.Join(errs, err)
 	}
@@ -263,75 +258,6 @@ func (t *Translator) processHTTPReadyListenerXdsTranslation(tCtx *types.Resource
 	if err != nil {
 		return err
 	}
-	return nil
-}
-
-// processDecompressorFilters adds decompressor filters to all HTTP listeners if decompression is configured
-func (t *Translator) processDecompressorFilters(tCtx *types.ResourceVersionTable, xdsIR *ir.Xds) error {
-	// Return early if no decompression is configured
-	if xdsIR == nil || len(xdsIR.Decompression) == 0 {
-		return nil
-	}
-
-	// Process all listeners to add decompressor filters
-	for _, resource := range tCtx.XdsResources[resourcev3.ListenerType] {
-		listener := resource.(*listenerv3.Listener)
-
-		// Process each filter chain
-		for _, fc := range listener.FilterChains {
-			for _, filter := range fc.Filters {
-				if filter.Name == wellknown.HTTPConnectionManager {
-					// Get the HCM config
-					mgr := &hcmv3.HttpConnectionManager{}
-					if err := filter.GetTypedConfig().UnmarshalTo(mgr); err != nil {
-						return err
-					}
-
-					// Add decompressor filters
-					if err := t.patchHCMWithDecompressor(mgr, xdsIR); err != nil {
-						return err
-					}
-
-					// Re-marshal the HCM config
-					mgrAny, err := proto.ToAnyWithValidation(mgr)
-					if err != nil {
-						return err
-					}
-					filter.ConfigType = &listenerv3.Filter_TypedConfig{
-						TypedConfig: mgrAny,
-					}
-				}
-			}
-		}
-
-		// Also process the default filter chain if it exists
-		if listener.DefaultFilterChain != nil {
-			for _, filter := range listener.DefaultFilterChain.Filters {
-				if filter.Name == wellknown.HTTPConnectionManager {
-					// Get the HCM config
-					mgr := &hcmv3.HttpConnectionManager{}
-					if err := filter.GetTypedConfig().UnmarshalTo(mgr); err != nil {
-						return err
-					}
-
-					// Add decompressor filters
-					if err := t.patchHCMWithDecompressor(mgr, xdsIR); err != nil {
-						return err
-					}
-
-					// Re-marshal the HCM config
-					mgrAny, err := proto.ToAnyWithValidation(mgr)
-					if err != nil {
-						return err
-					}
-					filter.ConfigType = &listenerv3.Filter_TypedConfig{
-						TypedConfig: mgrAny,
-					}
-				}
-			}
-		}
-	}
-
 	return nil
 }
 

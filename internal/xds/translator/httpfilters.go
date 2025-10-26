@@ -290,9 +290,6 @@ func (t *Translator) patchHCMWithFilters(
 	// rate limit server configuration.
 	t.patchHCMWithRateLimit(mgr, irListener)
 
-	// Decompressor filter is handled separately because it relies on the global
-	// Xds configuration and is added by processDecompressorFilters.
-
 	// Add the router filter if it doesn't exist.
 	hasRouter := false
 	for _, filter := range mgr.HttpFilters {

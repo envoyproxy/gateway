@@ -159,8 +159,6 @@ type Xds struct {
 	GlobalResources *GlobalResources `json:"globalResources,omitempty" yaml:"globalResources,omitempty"`
 	// ExtensionServerPolicies is the intermediate representation of the ExtensionServerPolicy resource
 	ExtensionServerPolicies []*UnstructuredRef `json:"extensionServerPolicies,omitempty" yaml:"extensionServerPolicies,omitempty"`
-	// Decompression defines the global decompression configuration
-	Decompression []*Decompression `json:"decompression,omitempty" yaml:"decompression,omitempty"`
 }
 
 // Validate the fields within the Xds structure.
@@ -309,6 +307,8 @@ type HTTPListener struct {
 	Connection *ClientConnection `json:"connection,omitempty" yaml:"connection,omitempty"`
 	// PreserveRouteOrder determines if routes should be sorted according to GW-API specs
 	PreserveRouteOrder bool `json:"preserveRouteOrder,omitempty" yaml:"preserveRouteOrder,omitempty"`
+	// Decompression holds the decompression configuration for the listener
+	Decompression []*Decompression `json:"decompression,omitempty" yaml:"decompression,omitempty"`
 }
 
 // Validate the fields within the HTTPListener structure

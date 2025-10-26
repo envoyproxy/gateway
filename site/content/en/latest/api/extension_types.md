@@ -527,7 +527,6 @@ _Appears in:_
 | `useClientProtocol` | _boolean_ |  false  |  | UseClientProtocol configures Envoy to prefer sending requests to backends using<br />the same HTTP protocol that the incoming request used. Defaults to false, which means<br />that Envoy will use the protocol indicated by the attached BackendRef. |
 | `compression` | _[Compression](#compression) array_ |  false  |  | The compression config for the http streams.<br />Deprecated: Use Compressor instead. |
 | `compressor` | _[Compression](#compression) array_ |  false  |  | The compressor config for the http streams.<br />This provides more granular control over compression configuration. |
-| `decompressor` | _[Decompression](#decompression) array_ |  false  |  | The decompressor config for the http streams.<br />This provides configuration for decompressing compressed request/response bodies. |
 | `responseOverride` | _[ResponseOverride](#responseoverride) array_ |  false  |  | ResponseOverride defines the configuration to override specific responses with a custom one.<br />If multiple configurations are specified, the first one to match wins. |
 | `httpUpgrade` | _[ProtocolUpgradeConfig](#protocolupgradeconfig) array_ |  false  |  | HTTPUpgrade defines the configuration for HTTP protocol upgrades.<br />If not specified, the default upgrade configuration(websocket) will be used. |
 | `requestBuffer` | _[RequestBuffer](#requestbuffer)_ |  false  |  | RequestBuffer allows the gateway to buffer and fully receive each request from a client before continuing to send the request<br />upstream to the backends. This can be helpful to shield your backend servers from slow clients, and also to enforce a maximum size per request<br />as any requests larger than the buffer size will be rejected.<br />This can have a negative performance impact so should only be enabled when necessary.<br />When enabling this option, you should also configure your connection buffer size to account for these request buffers. There will also be an<br />increase in memory usage for Envoy that should be accounted for in your deployment settings. |
@@ -799,6 +798,7 @@ _Appears in:_
 | `http2` | _[HTTP2Settings](#http2settings)_ |  false  |  | HTTP2 provides HTTP/2 configuration on the listener. |
 | `http3` | _[HTTP3Settings](#http3settings)_ |  false  |  | HTTP3 provides HTTP/3 configuration on the listener. |
 | `healthCheck` | _[HealthCheckSettings](#healthchecksettings)_ |  false  |  | HealthCheck provides configuration for determining whether the HTTP/HTTPS listener is healthy. |
+| `decompression` | _[Decompression](#decompression) array_ |  false  |  | Decompression provides configuration for request/response decompression.<br />Decompression is compatible with HTTP compression performed by the backend. |
 
 
 #### ClientValidationContext
@@ -1165,8 +1165,7 @@ Decompression defines the config of enabling decompression.
 This can help decompress compressed request/response bodies.
 
 _Appears in:_
-- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
-- [EnvoyProxySpec](#envoyproxyspec)
+- [ClientTrafficPolicySpec](#clienttrafficpolicyspec)
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
@@ -1800,7 +1799,6 @@ _Appears in:_
 | `extraArgs` | _string array_ |  false  |  | ExtraArgs defines additional command line options that are provided to Envoy.<br />More info: https://www.envoyproxy.io/docs/envoy/latest/operations/cli#command-line-options<br />Note: some command line options are used internally(e.g. --log-level) so they cannot be provided here. |
 | `mergeGateways` | _boolean_ |  false  |  | MergeGateways defines if Gateway resources should be merged onto the same Envoy Proxy Infrastructure.<br />Setting this field to true would merge all Gateway Listeners under the parent Gateway Class.<br />This means that the port, protocol and hostname tuple must be unique for every listener.<br />If a duplicate listener is detected, the newer listener (based on timestamp) will be rejected and its status will be updated with a "Accepted=False" condition. |
 | `shutdown` | _[ShutdownConfig](#shutdownconfig)_ |  false  |  | Shutdown defines configuration for graceful envoy shutdown process. |
-| `decompression` | _[Decompression](#decompression) array_ |  false  |  | Decompression defines the configuration for request/response decompression. |
 | `filterOrder` | _[FilterPosition](#filterposition) array_ |  false  |  | FilterOrder defines the order of filters in the Envoy proxy's HTTP filter chain.<br />The FilterPosition in the list will be applied in the order they are defined.<br />If unspecified, the default filter order is applied.<br />Default filter order is:<br />- envoy.filters.http.health_check<br />- envoy.filters.http.fault<br />- envoy.filters.http.cors<br />- envoy.filters.http.ext_authz<br />- envoy.filters.http.basic_auth<br />- envoy.filters.http.oauth2<br />- envoy.filters.http.jwt_authn<br />- envoy.filters.http.stateful_session<br />- envoy.filters.http.lua<br />- envoy.filters.http.ext_proc<br />- envoy.filters.http.wasm<br />- envoy.filters.http.rbac<br />- envoy.filters.http.local_ratelimit<br />- envoy.filters.http.ratelimit<br />- envoy.filters.http.custom_response<br />- envoy.filters.http.router<br />Note: "envoy.filters.http.router" cannot be reordered, it's always the last filter in the chain. |
 | `backendTLS` | _[BackendTLSConfig](#backendtlsconfig)_ |  false  |  | BackendTLS is the TLS configuration for the Envoy proxy to use when connecting to backends.<br />These settings are applied on backends for which TLS policies are specified. |
 | `ipFamily` | _[IPFamily](#ipfamily)_ |  false  |  | IPFamily specifies the IP family for the EnvoyProxy fleet.<br />This setting only affects the Gateway listener port and does not impact<br />other aspects of the Envoy proxy configuration.<br />If not specified, the system will operate as follows:<br />- It defaults to IPv4 only.<br />- IPv6 and dual-stack environments are not supported in this default configuration.<br />Note: To enable IPv6 or dual-stack functionality, explicit configuration is required. |

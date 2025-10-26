@@ -6,6 +6,7 @@
 package translator
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
@@ -36,28 +37,16 @@ var _ httpFilter = &decompressor{}
 
 // patchHCM builds and appends the decompressor Filter to the HTTP Connection Manager
 // if applicable, and it does not already exist.
-// Note: This is a no-op for decompressor as it requires global configuration.
-// The actual decompressor filter addition is handled by patchHCMWithDecompressor in the translator.
 func (*decompressor) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPListener) error {
-	// Decompressor configuration is handled at the translator level
-	// since it requires access to the global Xds configuration
-	return nil
-}
+	if mgr == nil {
+		return errors.New("hcm is nil")
+	}
+	if irListener == nil {
+		return errors.New("ir listener is nil")
+	}
 
-func (*decompressor) patchResources(*types.ResourceVersionTable, []*ir.HTTPRoute) error {
-	return nil
-}
-
-// patchRoute enables the decompressor filters for all routes when decompression is configured globally.
-func (*decompressor) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir.HTTPListener) error {
-	// Route-level configuration is handled by patchHCMWithDecompressor
-	return nil
-}
-
-// patchHCMWithDecompressor adds decompressor filters to the HCM based on the global Xds configuration.
-// This is called from the translator which has access to the full Xds configuration.
-func (t *Translator) patchHCMWithDecompressor(mgr *hcmv3.HttpConnectionManager, xds *ir.Xds) error {
-	if mgr == nil || xds == nil || len(xds.Decompression) == 0 {
+	// Return early if no decompression is configured
+	if len(irListener.Decompression) == 0 {
 		return nil
 	}
 
@@ -67,7 +56,7 @@ func (t *Translator) patchHCMWithDecompressor(mgr *hcmv3.HttpConnectionManager, 
 	)
 
 	// Process each decompression type
-	for _, irDecomp := range xds.Decompression {
+	for _, irDecomp := range irListener.Decompression {
 		filterName := decompressorFilterName(irDecomp.Type)
 
 		// Skip if filter already exists
@@ -88,6 +77,16 @@ func (t *Translator) patchHCMWithDecompressor(mgr *hcmv3.HttpConnectionManager, 
 		mgr.HttpFilters = append(mgr.HttpFilters, filter)
 	}
 
+	return nil
+}
+
+func (*decompressor) patchResources(*types.ResourceVersionTable, []*ir.HTTPRoute) error {
+	return nil
+}
+
+// patchRoute enables the decompressor filters for all routes when decompression is configured globally.
+func (*decompressor) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir.HTTPListener) error {
+	// Decompressor is a listener-level filter, no per-route configuration needed
 	return nil
 }
 
@@ -133,7 +132,8 @@ func buildDecompressorFilter(decompressionType egv1a1.DecompressorType, windowBi
 			Name:        extensionName,
 			TypedConfig: extensionAny,
 		},
-		// Enable decompression for both request and response by default
+		// When this filter is added (only when explicitly configured in ClientTrafficPolicy),
+		// enable decompression for both request and response directions
 		RequestDirectionConfig: &decompressorv3.Decompressor_RequestDirectionConfig{
 			CommonConfig: &decompressorv3.Decompressor_CommonDirectionConfig{
 				Enabled: &corev3.RuntimeFeatureFlag{
@@ -159,7 +159,5 @@ func buildDecompressorFilter(decompressionType egv1a1.DecompressorType, windowBi
 		ConfigType: &hcmv3.HttpFilter_TypedConfig{
 			TypedConfig: decompressorAny,
 		},
-		// Decompressor is enabled globally, not disabled by default
-		Disabled: false,
 	}, nil
 }
