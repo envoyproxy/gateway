@@ -173,6 +173,17 @@ func buildBackendConnection(policy *egv1a1.ClusterSettings) (*ir.BackendConnecti
 
 			bcIR.BufferLimitBytes = ptr.To(uint32(bf))
 		}
+		if bc.Preconnect != nil {
+			preconnect := &ir.Preconnect{}
+			pc := bc.Preconnect
+			if pc.PerEndpointPercent != nil {
+				preconnect.PerEndpointPercent = pc.PerEndpointPercent
+			}
+			if pc.PredictivePercent != nil {
+				preconnect.PredictivePercent = pc.PredictivePercent
+			}
+			bcIR.Preconnect = preconnect
+		}
 	}
 
 	return bcIR, nil
