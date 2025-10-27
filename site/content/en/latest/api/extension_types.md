@@ -345,6 +345,7 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `bufferLimit` | _[Quantity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#quantity-resource-api)_ |  false  |  | BufferLimit Soft limit on size of the cluster’s connections read and write buffers.<br />BufferLimit applies to connection streaming (maybe non-streaming) channel between processes, it's in user space.<br />If unspecified, an implementation defined default is applied (32768 bytes).<br />For example, 20Mi, 1Gi, 256Ki etc.<br />Note: that when the suffix is not provided, the value is interpreted as bytes. |
+| `preconnect` | _[PreconnectPolicy](#preconnectpolicy)_ |  false  |  | Preconnect configures proactive upstream connections to reduce latency by establishing<br />connections before they’re needed and avoiding connection establishment overhead.<br />If unset, Envoy will fetch connections as needed to serve in-flight requests. |
 
 
 #### BackendEndpoint
@@ -3662,6 +3663,22 @@ _Appears in:_
 | `targetRef` | _[LocalPolicyTargetReferenceWithSectionName](#localpolicytargetreferencewithsectionname)_ |  true  |  | TargetRef is the name of the resource this policy is being attached to.<br />This policy and the TargetRef MUST be in the same namespace for this<br />Policy to have effect<br />Deprecated: use targetRefs/targetSelectors instead |
 | `targetRefs` | _LocalPolicyTargetReferenceWithSectionName array_ |  true  |  | TargetRefs are the names of the Gateway resources this policy<br />is being attached to. |
 | `targetSelectors` | _[TargetSelector](#targetselector) array_ |  true  |  | TargetSelectors allow targeting resources for this policy based on labels |
+
+
+#### PreconnectPolicy
+
+
+
+Preconnect configures proactive upstream connections to avoid
+connection establishment overhead and reduce latency.
+
+_Appears in:_
+- [BackendConnection](#backendconnection)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `perEndpointPercent` | _integer_ |  false  |  | PerEndpointPercent configures how many additional connections to maintain per<br />upstream endpoint, useful for high-QPS or latency sensitive services. Expressed as a<br />percentage of the connections required by active streams<br />(e.g. 100 = preconnect disabled, 105 = 1.05x connections per-endpoint, 200 = 2.00×).<br />Allowed value range is between 100-300. When both PerEndpointPercent and<br />PredictivePercent are set, Envoy ensures both are satisfied (max of the two). |
+| `predictivePercent` | _integer_ |  false  |  | PredictivePercent configures how many additional connections to maintain<br />across the cluster by anticipating which upstream endpoint the load balancer<br />will select next, useful for low-QPS services. Relies on deterministic<br />loadbalancing and is only supported with Random or RoundRobin.<br />Expressed as a percentage of the connections required by active streams<br />(e.g. 100 = 1.0 (no preconnect), 105 = 1.05× connections across the cluster, 200 = 2.00×).<br />Minimum allowed value is 100. When both PerEndpointPercent and PredictivePercent are<br />set Envoy ensures both are satisfied per host (max of the two). |
 
 
 #### PreferLocalZone
