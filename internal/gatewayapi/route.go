@@ -294,7 +294,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 				t.Logger.Info(
 					"setting 500 direct response in routes due to errors in processing destinations",
 					"routes", sets.List(routesWithDirectResponse),
-					"error", err,
+					"error", processDestinationError,
 				)
 			}
 		// return 503 if endpoints does not exist
