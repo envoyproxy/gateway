@@ -17,22 +17,22 @@ Follow the steps from the [Backend TLS][] to install Envoy Gateway and configure
 
 ## TLS Certificates
 
-Generate the certificates and keys used by the Gateway for authentication against the backend.
+Generate the client certificate and key used by the Gateway for authentication against the backend.
 
-Create a root certificate and private key to sign certificates:
+Create a root certificate and private key to sign the client certificate:
 
 ```shell
 openssl req -x509 -sha256 -nodes -days 365 -newkey rsa:2048 -subj '/O=example Inc./CN=example.com' -keyout clientca.key -out clientca.crt
 ```
 
-Create a certificate and a private key for `www.example.com`:
+Create the client certificate and a private key for `www.example.com`:
 
 ```shell
 openssl req -new -newkey rsa:2048 -nodes -keyout client.key -out client.csr -subj "/CN=example-client/O=example organization"
 openssl x509 -req -days 365 -CA clientca.crt -CAkey clientca.key -set_serial 0 -in client.csr -out client.crt
 ```
 
-Store the cert/key in a Secret:
+Store the the client cert/key in a Secret:
 
 ```shell
 kubectl -n envoy-gateway-system create secret tls example-client-cert --key=client.key --cert=client.crt
@@ -183,6 +183,65 @@ spec:
 When multiple backends require distinct client certificates, configure each one using a dedicated [Backend][] resource that includes its own client certificate reference.
 TLS settings defined in the Backend resource take precedence over the defaults set in EnvoyProxy.backendTLS.
 
+Before creating Backend resources, make sure the Backend API is enabled in the Envoy Gateway configuration (see [Backend Routing](../traffic/backend#enable-backend) for full details). If it is not already enabled, update the `envoy-gateway-config` ConfigMap as shown below:
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: envoy-gateway-config
+  namespace: envoy-gateway-system
+data:
+  envoy-gateway.yaml: |
+    apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: EnvoyGateway
+    provider:
+      type: Kubernetes
+    gateway:
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    extensionApis:
+      enableBackend: true
+EOF
+```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: envoy-gateway-config
+  namespace: envoy-gateway-system
+data:
+  envoy-gateway.yaml: |
+    apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: EnvoyGateway
+    provider:
+      type: Kubernetes
+    gateway:
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    extensionApis:
+      enableBackend: true
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
+
+{{< boilerplate rollout-envoy-gateway >}}
+
+Roll out the updated Envoy Gateway deployment:
+
+```shell
+kubectl -n envoy-gateway-system rollout restart deployment envoy-gateway
+```
+
 Create the client certificate secret in the backend namespace (reusing the same certificate and key generated earlier):
 
 ```shell
@@ -207,14 +266,13 @@ spec:
       hostname: tls-backend.default.svc.cluster.local
       port: 443
   tls:
-    caCertificateRefs:
-    - group: ""
-      kind: ConfigMap
-      name: example-client-ca
-    sni: www.example.com
     clientCertificateRef:
       kind: Secret
       name: example-client-cert
+    caCertificateRefs:
+    - group: ""
+      kind: ConfigMap
+      name: example-ca
 EOF
 ```
 
@@ -235,14 +293,13 @@ spec:
       hostname: tls-backend.default.svc.cluster.local
       port: 443
   tls:
-    caCertificateRefs:
-    - group: ""
-      kind: ConfigMap
-      name: example-client-ca
-    sni: www.example.com
     clientCertificateRef:
       kind: Secret
       name: example-client-cert
+    caCertificateRefs:
+    - group: ""
+      kind: ConfigMap
+      name: example-ca
 ```
 
 {{% /tab %}}
