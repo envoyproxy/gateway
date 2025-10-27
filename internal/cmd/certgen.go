@@ -56,7 +56,7 @@ func GetCertGenCommand() *cobra.Command {
 
 	cmd.PersistentFlags().BoolVarP(&local, "local", "l", false,
 		"Generate all the certificates locally.")
-	cmd.PersistentFlags().StringVar(&configHome, "data-home", "",
+	cmd.PersistentFlags().StringVar(&configHome, "config-home", "",
 		"Directory for certificates (defaults to ~/.config/envoy-gateway")
 	cmd.PersistentFlags().BoolVarP(&overwriteControlPlaneCerts, "overwrite", "o", false,
 		"Updates the secrets containing the control plane certs.")
