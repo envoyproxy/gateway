@@ -17,9 +17,7 @@ This instantiated resource can be linked to a [Gateway][Gateway] and [HTTPRoute]
 
 ## Choosing a Deployment Pattern
 
-You can deploy your external processing service in two main ways:  
-as a **separate Kubernetes Service** or as a **sidecar container** within the Envoy pod.  
-The best choice depends on your needs for latency, resource management, and operational simplicity.
+You can deploy your external processing service in two main ways: as a **separate Kubernetes Service** or as a **sidecar container** within the Envoy pod. The best choice depends on your needs for latency, resource management, and operational simplicity.
 
 ### Pattern 1: Separate Service Deployment
 
@@ -33,7 +31,7 @@ The best choice depends on your needs for latency, resource management, and oper
 ### Pattern 2: Sidecar Deployment (Localhost ExtProc)
 
 **Pros:**
-- Ultra-low latency — communication happens over `localhost`.
+- Low latency — communication happens over `localhost`.
 - Processor lifecycle is tied to the Envoy pod, simplifying operations.
 
 **Cons:**
