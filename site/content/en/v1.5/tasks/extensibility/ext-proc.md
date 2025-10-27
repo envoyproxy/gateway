@@ -14,7 +14,34 @@ This instantiated resource can be linked to a [Gateway][Gateway] and [HTTPRoute]
 
 {{< boilerplate prerequisites >}}
 
-## GRPC External Processing Service
+
+## Choosing a Deployment Pattern
+
+You can deploy your external processing service in two main ways:  
+as a **separate Kubernetes Service** or as a **sidecar container** within the Envoy pod.  
+The best choice depends on your needs for latency, resource management, and operational simplicity.
+
+### Pattern 1: Separate Service Deployment
+
+**Pros:**
+- Standard Kubernetes approach.
+- Independently scalable and deployable from the gateway.
+
+**Cons:**
+- Higher network latency between Envoy and the processor, since traffic traverses the pod network.
+
+### Pattern 2: Sidecar Deployment (Localhost ExtProc)
+
+**Pros:**
+- Ultra-low latency — communication happens over `localhost`.
+- Processor lifecycle is tied to the Envoy pod, simplifying operations.
+
+**Cons:**
+- Processor shares CPU and memory with the Envoy container.
+- Scales together with the gateway, which may not suit all workloads.
+
+
+## Pattern 1: Separate Service Deployment
 
 ### Installation
 
@@ -155,7 +182,6 @@ Verify the Envoy Extension Policy configuration:
 kubectl get envoyextensionpolicy/ext-proc-example -o yaml
 ```
 
-
 Because the gRPC external processing service is enabled with TLS, a [BackendTLSPolicy][] needs to be created to configure
 the communication between the Envoy proxy and the gRPC auth service.
 
@@ -214,6 +240,129 @@ Verify the BackendTLSPolicy configuration:
 kubectl get backendtlspolicy/grpc-ext-proc-btls -o yaml
 ```
 
+Optional: Enable TLS Between Envoy and the gRPC Processor
+
+If your gRPC service uses TLS, create a `BackendTLSPolicy` to configure trust and validation.
+
+```yaml
+---
+apiVersion: gateway.networking.k8s.io/v1alpha2
+kind: BackendTLSPolicy
+metadata:
+  name: grpc-ext-proc-btls
+spec:
+  targetRefs:
+    - group: ''
+      kind: Service
+      name: grpc-ext-proc
+  validation:
+    caCertificateRefs:
+      - name: grpc-ext-proc-ca
+        group: ''
+        kind: ConfigMap
+    hostname: grpc-ext-proc.default.svc.cluster.local
+```
+
+## Pattern 2: Sidecar Deployment (Localhost ExtProc)
+
+For latency-sensitive use cases, you can deploy the external processing gRPC service as a sidecar in the same Pod as Envoy.
+
+This allows communication over `localhost`, which avoids pod-to-pod networking overhead.
+
+### Step 1: Enable Extension APIs
+Enable the `EnvoyPatchPolicy` and `Backend` APIs in your Envoy Gateway configuration.
+This is done by editing the `envoy-gateway-config` ConfigMap in the `envoy-gateway-system` namespace.
+
+```yaml
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: envoy-gateway-config
+  namespace: envoy-gateway-system
+data:
+  envoy-gateway.yaml: |
+    apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: EnvoyGateway
+    provider:
+      type: Kubernetes
+    gateway:
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    extensionApis:
+      enableEnvoyPatchPolicy: true
+      enableBackend: true
+```
+
+### Step 2: Add the Sidecar Container with EnvoyProxy
+Use an `EnvoyProxy` resource to patch the Envoy Deployment and include your gRPC service container:
+
+```yaml
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: gateway
+  namespace: envoy-gateway-system
+spec:
+  provider:
+    type: Kubernetes
+    kubernetes:
+      envoyDeployment:
+        patch:
+          type: StrategicMerge
+          value:
+            spec:
+              template:
+                spec:
+                  containers:
+                    - name: my-ext-proc-image
+                      image: my-ext-image:latest
+                      ports:
+                        - containerPort: 9000
+```
+
+### Step 3: Define the localhost Backend
+
+Create a Backend resource that defines the localhost endpoint:
+
+```yaml
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: Backend
+metadata:
+  name: extproc
+  namespace: envoy-gateway-system
+spec:
+  endpoints:
+    - ip:
+        address: "127.0.0.1"
+        port: 9000
+```
+
+### Step 4: Configure the EnvoyExtensionPolicy
+
+Link your route to the localhost backend:
+
+```yaml
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyExtensionPolicy
+metadata:
+  name: add-ext-proc-server
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: myapp
+  extProc:
+    backendRefs:
+      - name: extproc
+        kind: Backend
+        namespace: envoy-gateway-system
+        port: 9000
+
+```
+
 ### Testing
 
 Ensure the `GATEWAY_HOST` environment variable from the [Quickstart](../../quickstart) is set. If not, follow the
@@ -260,9 +409,9 @@ curl -v -H "Host: www.example.com"  http://localhost:10080/myapp
 
 ## Clean-Up
 
-Follow the steps from the [Quickstart](../../quickstart) to uninstall Envoy Gateway and the example manifest.
+Follow the steps from the [Quickstart](../../quickstart) to uninstall Envoy Gateway and the example manifest. Then delete the resources specific to the deployment pattern you used.
 
-Delete the demo auth services, HTTPRoute, EnvoyExtensionPolicy and BackendTLSPolicy:
+### For the Separate Service Pattern
 
 ```shell
 kubectl delete -f https://raw.githubusercontent.com/envoyproxy/gateway/latest/examples/kubernetes/ext-proc-grpc-service.yaml
@@ -270,6 +419,18 @@ kubectl delete httproute/myapp
 kubectl delete envoyextensionpolicy/ext-proc-example
 kubectl delete backendtlspolicy/grpc-ext-proc-btls
 ```
+
+### For the Sidecar Pattern
+
+To clean up the sidecar configuration, remove the patch from your `EnvoyProxy` resource and delete the `Backend` and `EnvoyExtensionPolicy` resources you created:
+
+```shell
+kubectl delete envoyextensionpolicy/add-ext-proc-server
+kubectl delete backend/extproc -n envoy-gateway-system
+kubectl delete envoyproxy/gateway -n envoy-gateway-system
+```
+
+If you modified the `envoy-gateway-config` ConfigMap to enable `extensionApis`, you can revert it by restoring the original configuration from the [Quickstart](../../quickstart).
 
 ## Next Steps
 
