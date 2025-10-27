@@ -26,6 +26,7 @@ new features: |
   Added support for returning 503 responses when no valid backend endpoints exist.
   Added support for CSRFTokenTTL in OIDC authn to configure the lifetime of the CSRF token used during the OAuth2 authorization code flow.
   Added support for http2 stream timeout
+  Added support for Envoy PreconnectPolicy in BackendTrafficPolicy.
   Added support for binaryData in ConfigMap referenced by HTTPRouteFilter for direct response.
 
 bug fixes: |
