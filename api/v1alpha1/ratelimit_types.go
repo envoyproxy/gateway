@@ -13,7 +13,7 @@ type RateLimitSpec struct {
 	// Deprecated: Use Global and/or Local fields directly instead. Both can be specified simultaneously for combined rate limiting.
 	//
 	// +optional
-	Type *RateLimitType `json:"type"`
+	Type *RateLimitType `json:"type,omitempty"`
 	// Global defines global rate limit configuration.
 	//
 	// +optional

@@ -26,7 +26,6 @@ backendTrafficPolicies:
           limit:
             requests: 10
             unit: Hour
-      type: null
     targetRef:
       group: gateway.networking.k8s.io
       kind: GRPCRoute

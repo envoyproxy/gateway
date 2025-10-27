@@ -213,7 +213,7 @@ func buildRouteLocalRateLimits(local *ir.LocalRateLimit) (
 
 			if match.Distinct {
 				// For distinct matches, we only check if the header exists using the RequestHeaders action.
-				descriptorKey := fmt.Sprintf("local_%s", getRouteRuleDescriptor(rIdx, mIdx))
+				descriptorKey := getRouteRuleDescriptor(rIdx, mIdx)
 				action = &routev3.RateLimit_Action{
 					ActionSpecifier: &routev3.RateLimit_Action_RequestHeaders_{
 						RequestHeaders: &routev3.RateLimit_Action_RequestHeaders{
@@ -230,8 +230,8 @@ func buildRouteLocalRateLimits(local *ir.LocalRateLimit) (
 			} else {
 				// For exact matches, we check if there is an existing header with the matching value using the
 				// HeaderValueMatch action.
-				descriptorKey := fmt.Sprintf("local_%s", getRouteRuleDescriptor(rIdx, mIdx))
-				descriptorVal := fmt.Sprintf("local_%s", getRouteRuleDescriptor(rIdx, mIdx))
+				descriptorKey := getRouteRuleDescriptor(rIdx, mIdx)
+				descriptorVal := getRouteRuleDescriptor(rIdx, mIdx)
 				headerMatcher := &routev3.HeaderMatcher{
 					Name: match.Name,
 					HeaderMatchSpecifier: &routev3.HeaderMatcher_StringMatch{
@@ -281,7 +281,7 @@ func buildRouteLocalRateLimits(local *ir.LocalRateLimit) (
 				},
 			}
 			entry := &rlv3.RateLimitDescriptor_Entry{
-				Key:   fmt.Sprintf("local_%s", descriptorMaskedRemoteAddress),
+				Key:   descriptorMaskedRemoteAddress,
 				Value: rule.CIDRMatch.CIDR,
 			}
 			descriptorEntries = append(descriptorEntries, entry)
@@ -298,7 +298,7 @@ func buildRouteLocalRateLimits(local *ir.LocalRateLimit) (
 				// If the CIDRMatch is distinct, we use the built-in remote address descriptor key without a value.
 				// This means that each distinct client IP will be counted separately.
 				entry = &rlv3.RateLimitDescriptor_Entry{
-					Key: fmt.Sprintf("local_%s", descriptorRemoteAddress),
+					Key: descriptorRemoteAddress,
 				}
 				descriptorEntries = append(descriptorEntries, entry)
 				rlActions = append(rlActions, action)

@@ -13,16 +13,16 @@
         rateLimits:
         - actions:
           - headerValueMatch:
-              descriptorKey: local_rule-0-match-0
-              descriptorValue: local_rule-0-match-0
+              descriptorKey: rule-0-match-0
+              descriptorValue: rule-0-match-0
               expectMatch: true
               headers:
               - name: x-user-id
                 stringMatch:
                   exact: one
           - headerValueMatch:
-              descriptorKey: local_rule-0-match-1
-              descriptorValue: local_rule-0-match-1
+              descriptorKey: rule-0-match-1
+              descriptorValue: rule-0-match-1
               expectMatch: true
               headers:
               - name: x-org-id
@@ -36,10 +36,10 @@
           alwaysConsumeDefaultTokenBucket: false
           descriptors:
           - entries:
-            - key: local_rule-0-match-0
-              value: local_rule-0-match-0
-            - key: local_rule-0-match-1
-              value: local_rule-0-match-1
+            - key: rule-0-match-0
+              value: rule-0-match-0
+            - key: rule-0-match-1
+              value: rule-0-match-1
             tokenBucket:
               fillInterval: 3600s
               maxTokens: 10
@@ -64,16 +64,16 @@
         rateLimits:
         - actions:
           - headerValueMatch:
-              descriptorKey: local_rule-0-match-0
-              descriptorValue: local_rule-0-match-0
+              descriptorKey: rule-0-match-0
+              descriptorValue: rule-0-match-0
               expectMatch: true
               headers:
               - name: x-user-id
                 stringMatch:
                   exact: one
           - headerValueMatch:
-              descriptorKey: local_rule-0-match-1
-              descriptorValue: local_rule-0-match-1
+              descriptorKey: rule-0-match-1
+              descriptorValue: rule-0-match-1
               expectMatch: true
               headers:
               - name: x-org-id
@@ -81,16 +81,16 @@
                   exact: foo
         - actions:
           - headerValueMatch:
-              descriptorKey: local_rule-1-match-0
-              descriptorValue: local_rule-1-match-0
+              descriptorKey: rule-1-match-0
+              descriptorValue: rule-1-match-0
               expectMatch: true
               headers:
               - name: x-user-id
                 stringMatch:
                   exact: two
           - headerValueMatch:
-              descriptorKey: local_rule-1-match-1
-              descriptorValue: local_rule-1-match-1
+              descriptorKey: rule-1-match-1
+              descriptorValue: rule-1-match-1
               expectMatch: true
               headers:
               - name: x-org-id
@@ -106,20 +106,20 @@
           alwaysConsumeDefaultTokenBucket: false
           descriptors:
           - entries:
-            - key: local_rule-0-match-0
-              value: local_rule-0-match-0
-            - key: local_rule-0-match-1
-              value: local_rule-0-match-1
+            - key: rule-0-match-0
+              value: rule-0-match-0
+            - key: rule-0-match-1
+              value: rule-0-match-1
             tokenBucket:
               fillInterval: 3600s
               maxTokens: 10
               tokensPerFill: 10
           - entries:
-            - key: local_rule-1-match-0
-              value: local_rule-1-match-0
-            - key: local_rule-1-match-1
-              value: local_rule-1-match-1
-            - key: local_masked_remote_address
+            - key: rule-1-match-0
+              value: rule-1-match-0
+            - key: rule-1-match-1
+              value: rule-1-match-1
+            - key: masked_remote_address
               value: 192.168.0.0/16
             tokenBucket:
               fillInterval: 60s
