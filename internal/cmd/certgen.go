@@ -12,7 +12,6 @@ import (
 	"fmt"
 	"io"
 	"path"
-	"path/filepath"
 
 	"github.com/spf13/cobra"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
@@ -103,7 +102,7 @@ func certGen(ctx context.Context, logOut io.Writer, local bool, configHome strin
 			return fmt.Errorf("failed to determine paths: %w", err)
 		}
 
-		certPath := filepath.Join(paths.ConfigHome, "certs")
+		certPath := paths.CertDir("")
 		log.Info("generated certificates", "path", certPath)
 
 		if err = outputCertsForLocal(certPath, certs); err != nil {
