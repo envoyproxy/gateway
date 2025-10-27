@@ -51,8 +51,8 @@ func TestCoalesceUpdates(t *testing.T) {
 			},
 			expected: []watchable.Update[string, int]{
 				{Key: "foo", Value: 5},
-				{Key: "bar", Value: 7},
 				{Key: "baz", Delete: true, Value: 6},
+				{Key: "bar", Value: 7},
 			},
 		},
 	}
