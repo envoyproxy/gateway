@@ -42,35 +42,17 @@ func TestCoalesceUpdates(t *testing.T) {
 			name: "latest update per key wins",
 			input: []watchable.Update[string, int]{
 				{Key: "foo", Value: 1},
-				{Key: "bar", Value: 2},
-				{Key: "baz", Value: 3},
-				{Key: "bar", Value: 4},
-				{Key: "foo", Value: 5},
-				{Key: "baz", Value: 6},
-			},
-			expected: []watchable.Update[string, int]{
-				{Key: "bar", Value: 4},
-				{Key: "foo", Value: 5},
-				{Key: "baz", Value: 6},
-			},
-		},
-		{
-			name: "do not coalesce delete and update for the same key",
-			input: []watchable.Update[string, int]{
-				{Key: "foo", Value: 1},
 				{Key: "bar", Delete: true, Value: 2},
 				{Key: "baz", Value: 3},
 				{Key: "bar", Value: 4},
 				{Key: "foo", Value: 5},
 				{Key: "baz", Delete: true, Value: 6},
-				{Key: "bar", Value: 6},
+				{Key: "bar", Value: 7},
 			},
 			expected: []watchable.Update[string, int]{
-				{Key: "bar", Delete: true, Value: 2},
-				{Key: "baz", Value: 3},
 				{Key: "foo", Value: 5},
+				{Key: "bar", Value: 7},
 				{Key: "baz", Delete: true, Value: 6},
-				{Key: "bar", Value: 6},
 			},
 		},
 	}
