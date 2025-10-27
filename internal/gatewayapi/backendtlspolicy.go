@@ -39,6 +39,7 @@ func (t *Translator) ProcessBackendTLSPolicyStatus(btlsp []*gwapiv1.BackendTLSPo
 				break
 			}
 
+			// TODO: do we need to verify a backend(Ref) used in somewhere?
 			targetRefs[key] = policy
 		}
 
