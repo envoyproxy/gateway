@@ -1,3 +1,4 @@
+# This file tests JWT configuration from multiple HTTP listeners sharing the same port won't overlap.
 http:
   - address: 0.0.0.0
     externalPort: 80
