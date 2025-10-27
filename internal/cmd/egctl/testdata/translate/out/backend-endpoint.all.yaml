@@ -1,5 +1,5 @@
 backendTLSPolicies:
-- apiVersion: gateway.networking.k8s.io/v1alpha3
+- apiVersion: gateway.networking.k8s.io/v1
   kind: BackendTLSPolicy
   metadata:
     name: example-com-tls-policy
@@ -19,6 +19,11 @@ backendTLSPolicies:
         kind: Gateway
         name: eg
       conditions:
+      - lastTransitionTime: null
+        message: Resolved all the Object references.
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
       - lastTransitionTime: null
         message: Policy has been accepted.
         reason: Accepted

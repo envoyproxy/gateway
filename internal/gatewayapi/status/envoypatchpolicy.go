@@ -10,20 +10,20 @@ import (
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
 
 // SetProgrammedForEnvoyPatchPolicy sets programmed conditions for each ancestor reference in policy status if it is unset.
-func SetProgrammedForEnvoyPatchPolicy(s *gwapiv1a2.PolicyStatus) {
+func SetProgrammedForEnvoyPatchPolicy(s *gwapiv1.PolicyStatus) {
 	// Return early if Programmed condition is already set
 	for _, ancestor := range s.Ancestors {
 		for _, c := range ancestor.Conditions {
 			if c.Type == string(egv1a1.PolicyConditionProgrammed) {
 				return
 			}
-			if c.Type == string(gwapiv1a2.PolicyConditionAccepted) && c.Status == metav1.ConditionFalse {
+			if c.Type == string(gwapiv1.PolicyConditionAccepted) && c.Status == metav1.ConditionFalse {
 				return
 			}
 		}
@@ -36,14 +36,14 @@ func SetProgrammedForEnvoyPatchPolicy(s *gwapiv1a2.PolicyStatus) {
 	}
 }
 
-func SetTranslationErrorForEnvoyPatchPolicy(s *gwapiv1a2.PolicyStatus, errMsg string) {
+func SetTranslationErrorForEnvoyPatchPolicy(s *gwapiv1.PolicyStatus, errMsg string) {
 	cond := newCondition(string(egv1a1.PolicyConditionProgrammed), metav1.ConditionFalse, string(egv1a1.PolicyReasonInvalid), errMsg, time.Now(), 0)
 	for i := range s.Ancestors {
 		s.Ancestors[i].Conditions = MergeConditions(s.Ancestors[i].Conditions, cond)
 	}
 }
 
-func SetResourceNotFoundErrorForEnvoyPatchPolicy(s *gwapiv1a2.PolicyStatus, notFoundResources []string) {
+func SetResourceNotFoundErrorForEnvoyPatchPolicy(s *gwapiv1.PolicyStatus, notFoundResources []string) {
 	message := "Unable to find xds resources: " + strings.Join(notFoundResources, ",")
 	cond := newCondition(string(egv1a1.PolicyConditionProgrammed), metav1.ConditionFalse, string(egv1a1.PolicyReasonResourceNotFound), message, time.Now(), 0)
 	for i := range s.Ancestors {
