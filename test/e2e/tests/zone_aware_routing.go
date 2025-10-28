@@ -48,6 +48,7 @@ var ZoneAwareRoutingTest = suite.ConformanceTest{
 				suite.Client,
 				types.NamespacedName{Name: "btp-force-local-zone", Namespace: "gateway-conformance-infra"},
 				suite.ControllerName,
+				false,
 				gwapiv1.ParentReference{
 					Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
 					Kind:      gatewayapi.KindPtr(resource.KindGateway),
@@ -69,6 +70,7 @@ var ZoneAwareRoutingTest = suite.ConformanceTest{
 				suite.Client,
 				types.NamespacedName{Name: "btp-no-force-local-zone", Namespace: "gateway-conformance-infra"},
 				suite.ControllerName,
+				false,
 				gwapiv1.ParentReference{
 					Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
 					Kind:      gatewayapi.KindPtr(resource.KindGateway),
@@ -92,6 +94,7 @@ var ZoneAwareRoutingTest = suite.ConformanceTest{
 				suite.Client,
 				types.NamespacedName{Name: "btp-no-force-local-zone-hardcoded-svc-name", Namespace: "gateway-conformance-infra"},
 				suite.ControllerName,
+				false,
 				gwapiv1.ParentReference{
 					Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
 					Kind:      gatewayapi.KindPtr(resource.KindGateway),

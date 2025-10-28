@@ -49,6 +49,7 @@ var BackendTrafficPolicyMatchExpressionTest = suite.ConformanceTest{
 				suite.Client,
 				types.NamespacedName{Name: "backend-traffic-match-expression", Namespace: ns},
 				suite.ControllerName,
+				false,
 				gwapiv1.ParentReference{
 					Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
 					Kind:      gatewayapi.KindPtr(resource.KindGateway),

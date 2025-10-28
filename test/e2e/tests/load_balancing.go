@@ -68,7 +68,7 @@ var RoundRobinLoadBalancingTest = suite.ConformanceTest{
 			Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
 			Name:      gwapiv1.ObjectName(gwNN.Name),
 		}
-		BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "round-robin-lb-policy", Namespace: ns}, suite.ControllerName, ancestorRef)
+		BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "round-robin-lb-policy", Namespace: ns}, suite.ControllerName, false, ancestorRef)
 		WaitForPods(t, suite.Client, ns, map[string]string{"app": "lb-backend-roundrobin"}, corev1.PodRunning, &PodReady)
 
 		gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
@@ -163,7 +163,7 @@ var ConsistentHashSourceIPLoadBalancingTest = suite.ConformanceTest{
 			Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
 			Name:      gwapiv1.ObjectName(gwNN.Name),
 		}
-		BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "source-ip-lb-policy", Namespace: ns}, suite.ControllerName, ancestorRef)
+		BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "source-ip-lb-policy", Namespace: ns}, suite.ControllerName, false, ancestorRef)
 		WaitForPods(t, suite.Client, ns, map[string]string{"app": "lb-backend-sourceip"}, corev1.PodRunning, &PodReady)
 
 		gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
@@ -211,7 +211,7 @@ var ConsistentHashHeaderLoadBalancingTest = suite.ConformanceTest{
 			Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
 			Name:      gwapiv1.ObjectName(gwNN.Name),
 		}
-		BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "header-lb-policy", Namespace: ns}, suite.ControllerName, ancestorRef)
+		BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "header-lb-policy", Namespace: ns}, suite.ControllerName, false, ancestorRef)
 		WaitForPods(t, suite.Client, ns, map[string]string{"app": "lb-backend-header"}, corev1.PodRunning, &PodReady)
 
 		gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
@@ -258,7 +258,7 @@ var MultiHeaderConsistentHashHeaderLoadBalancingTest = suite.ConformanceTest{
 			Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
 			Name:      gwapiv1.ObjectName(gwNN.Name),
 		}
-		BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "header-lb-policy", Namespace: ns}, suite.ControllerName, ancestorRef)
+		BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "header-lb-policy", Namespace: ns}, suite.ControllerName, false, ancestorRef)
 		WaitForPods(t, suite.Client, ns, map[string]string{"app": "lb-backend-header"}, corev1.PodRunning, &PodReady)
 
 		gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
@@ -321,7 +321,7 @@ var ConsistentHashCookieLoadBalancingTest = suite.ConformanceTest{
 			Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
 			Name:      gwapiv1.ObjectName(gwNN.Name),
 		}
-		BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "cookie-lb-policy", Namespace: ns}, suite.ControllerName, ancestorRef)
+		BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "cookie-lb-policy", Namespace: ns}, suite.ControllerName, false, ancestorRef)
 		WaitForPods(t, suite.Client, ns, map[string]string{"app": "lb-backend-cookie"}, corev1.PodRunning, &PodReady)
 
 		gwHost := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
@@ -340,7 +340,7 @@ var ConsistentHashCookieLoadBalancingTest = suite.ConformanceTest{
 			req, err := nethttp.NewRequest(nethttp.MethodGet, fmt.Sprintf("http://%s/cookie", gwAddr), nil)
 			require.NoError(t, err)
 
-			cookieValues := []string{"abc", "def", "ghi", "jkl", "mno"}
+			cookieValues := []string{"abc", "def", "ghi", "jkl", "mnofalse, "}
 			for _, cookieValue := range cookieValues {
 				// Same test cookie will always hit the same endpoint.
 				var expectPodName string
@@ -451,7 +451,7 @@ var EndpointOverrideLoadBalancingTest = suite.ConformanceTest{
 			Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
 			Name:      gwapiv1.ObjectName(gwNN.Name),
 		}
-		BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "endpoint-override-header-lb-policy", Namespace: ns}, suite.ControllerName, ancestorRef)
+		BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "endpoint-override-header-lb-policy", Namespace: ns}, suite.ControllerName, false, ancestorRef)
 		WaitForPods(t, suite.Client, ns, map[string]string{"app": "lb-backend-endpointoverride"}, corev1.PodRunning, &PodReady)
 
 		gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), headerRouteNN)

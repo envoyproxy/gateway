@@ -167,7 +167,10 @@ func SecurityPolicyMustFail(
 }
 
 // BackendTrafficPolicyMustBeAccepted waits for the specified BackendTrafficPolicy to be accepted.
-func BackendTrafficPolicyMustBeAccepted(t *testing.T, client client.Client, policyName types.NamespacedName, controllerName string, ancestorRef gwapiv1.ParentReference) {
+func BackendTrafficPolicyMustBeAccepted(
+	t *testing.T, client client.Client, policyName types.NamespacedName,
+	controllerName string, allAncestors bool, ancestorRefs ...gwapiv1.ParentReference,
+) {
 	t.Helper()
 
 	waitErr := wait.PollUntilContextTimeout(context.Background(), 1*time.Second, 60*time.Second, true, func(ctx context.Context) (bool, error) {
@@ -177,8 +180,16 @@ func BackendTrafficPolicyMustBeAccepted(t *testing.T, client client.Client, poli
 			return false, fmt.Errorf("error fetching BackendTrafficPolicy: %w", err)
 		}
 
-		if policyAcceptedByAncestor(policy.Status.Ancestors, controllerName, ancestorRef) {
-			return true, nil
+		// `allAncestors=true`  means we're passed all `ancestorRefs`, check they all match the actual ones in the status.
+		// `allAncestors=false` means we're passed some `ancestorRefs`, check if each exists/is accepted in the status.
+		if allAncestors {
+			return ancestorsForPolicyMatch(t, policyName, ancestorRefs, policy.Status.Ancestors, controllerName), nil
+		} else {
+			for _, ancestorRef := range ancestorRefs {
+				if policyAcceptedByAncestor(policy.Status.Ancestors, controllerName, ancestorRef) {
+					return true, nil
+				}
+			}
 		}
 
 		tlog.Logf(t, "BackendTrafficPolicy not yet accepted: %v", policy)
@@ -312,6 +323,36 @@ func policyAcceptedByAncestor(ancestors []gwapiv1.PolicyAncestorStatus, controll
 		}
 	}
 	return false
+}
+
+func ancestorsForPolicyMatch(t *testing.T, policyName types.NamespacedName, expected []gwapiv1.ParentReference, actual []gwapiv1.PolicyAncestorStatus, controllerName string) bool {
+	t.Helper()
+
+	if len(expected) != len(actual) {
+		tlog.Logf(t, "Policy %s/%s expected %d ancestors got %d", policyName.Namespace, policyName.Name, len(expected), len(actual))
+		return false
+	}
+
+	for i, expectedAncestor := range expected {
+		actualAncestor := actual[i]
+		accepted := false
+		if string(actualAncestor.ControllerName) == controllerName && cmp.Equal(actualAncestor.AncestorRef, expectedAncestor) {
+			for _, condition := range actualAncestor.Conditions {
+				if condition.Type == string(gwapiv1.PolicyConditionAccepted) && condition.Status == metav1.ConditionTrue {
+					accepted = true
+					break
+				}
+			}
+			if !accepted {
+				tlog.Logf(t, "Policy %s/%s expected Accepted condition on ancestor %s", policyName.Namespace, policyName.Name, actualAncestor.AncestorRef.Name)
+				return false
+			}
+		} else {
+			tlog.Logf(t, "Policy %s/%s expected Ancestor %s", policyName.Namespace, policyName.Name, actualAncestor.AncestorRef.Name)
+			return false
+		}
+	}
+	return true
 }
 
 // EnvoyExtensionPolicyMustFail waits for an EnvoyExtensionPolicy to fail with the specified reason.

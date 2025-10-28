@@ -41,7 +41,7 @@ var LocalRateLimitDistinctCIDRTest = suite.ConformanceTest{
 		}
 
 		t.Run("requests with x-forwarded-for header should be limited per IP", func(t *testing.T) {
-			BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "ratelimit-distinct-cidr", Namespace: ns}, suite.ControllerName, ancestorRef)
+			BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "ratelimit-distinct-cidr", Namespace: ns}, suite.ControllerName, false, ancestorRef)
 			path := "/ratelimit-distinct-cidr"
 			testRatelimit(t, suite, map[string]string{
 				"X-Forwarded-For": "192.168.1.1",
@@ -54,7 +54,7 @@ var LocalRateLimitDistinctCIDRTest = suite.ConformanceTest{
 		})
 
 		t.Run("requests with x-forwarded-for header and matching x-org-id header should be limited per IP", func(t *testing.T) {
-			BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "ratelimit-distinct-cidr-and-exact-header", Namespace: ns}, suite.ControllerName, ancestorRef)
+			BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "ratelimit-distinct-cidr-and-exact-header", Namespace: ns}, suite.ControllerName, false, ancestorRef)
 			path := "/ratelimit-distinct-cidr-and-exact-header"
 			testRatelimit(t, suite, map[string]string{
 				"X-Forwarded-For": "192.168.1.1",
@@ -67,7 +67,7 @@ var LocalRateLimitDistinctCIDRTest = suite.ConformanceTest{
 		})
 
 		t.Run("requests with with x-forwarded-for header but no matching x-org-id header will hit default bucket", func(t *testing.T) {
-			BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "ratelimit-distinct-cidr-and-exact-header", Namespace: ns}, suite.ControllerName, ancestorRef)
+			BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "ratelimit-distinct-cidr-and-exact-header", Namespace: ns}, suite.ControllerName, false, ancestorRef)
 			path := "/ratelimit-distinct-cidr-and-exact-header"
 
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, http.ExpectedResponse{
