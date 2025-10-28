@@ -67,24 +67,30 @@ func validateEnvoyProxySpec(spec *egv1a1.EnvoyProxySpec) error {
 func validateProvider(spec *egv1a1.EnvoyProxySpec) []error {
 	var errs []error
 	if spec != nil && spec.Provider != nil {
-		if spec.Provider.Type != egv1a1.ProviderTypeKubernetes {
+		switch spec.Provider.Type {
+		case egv1a1.EnvoyProxyProviderTypeKubernetes:
+			validateDeploymentErrs := validateDeployment(spec)
+			if len(validateDeploymentErrs) != 0 {
+				errs = append(errs, validateDeploymentErrs...)
+			}
+			validateHpaErrors := validateHpa(spec)
+			if len(validateHpaErrors) != 0 {
+				errs = append(errs, validateHpaErrors...)
+			}
+			validatePdbErrors := validatePdb(spec)
+			if len(validatePdbErrors) != 0 {
+				errs = append(errs, validatePdbErrors...)
+			}
+			validateServiceErrs := validateService(spec)
+			if len(validateServiceErrs) != 0 {
+				errs = append(errs, validateServiceErrs...)
+			}
+		case egv1a1.EnvoyProxyProviderTypeHost:
+			if spec.Provider.Host == nil {
+				errs = append(errs, fmt.Errorf("field 'host' should be specified when provider type is 'Host'"))
+			}
+		default:
 			errs = append(errs, fmt.Errorf("unsupported provider type %v", spec.Provider.Type))
-		}
-		validateDeploymentErrs := validateDeployment(spec)
-		if len(validateDeploymentErrs) != 0 {
-			errs = append(errs, validateDeploymentErrs...)
-		}
-		validateHpaErrors := validateHpa(spec)
-		if len(validateHpaErrors) != 0 {
-			errs = append(errs, validateHpaErrors...)
-		}
-		validatePdbErrors := validatePdb(spec)
-		if len(validatePdbErrors) != 0 {
-			errs = append(errs, validatePdbErrors...)
-		}
-		validateServiceErrs := validateService(spec)
-		if len(validateServiceErrs) != 0 {
-			errs = append(errs, validateServiceErrs...)
 		}
 	}
 	return errs
@@ -232,10 +238,7 @@ func validateProxyAccessLog(accessLog *egv1a1.ProxyAccessLog) []error {
 					errs = append(errs, err)
 				}
 			case egv1a1.ProxyAccessLogFormatTypeJSON:
-				if setting.Format.JSON == nil {
-					err := fmt.Errorf("unable to configure access log when using JSON format but \"json\" field being empty")
-					errs = append(errs, err)
-				}
+				// TODO: add JSON format validation if needed
 			}
 		}
 

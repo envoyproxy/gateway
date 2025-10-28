@@ -1,7 +1,6 @@
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  creationTimestamp: null
   labels:
     app.kubernetes.io/component: proxy
     app.kubernetes.io/managed-by: envoy-gateway

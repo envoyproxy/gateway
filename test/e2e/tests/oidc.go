@@ -22,7 +22,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwhttp "sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
@@ -59,7 +58,7 @@ var OIDCTest = suite.ConformanceTest{
 
 			podInitialized := corev1.PodCondition{Type: corev1.PodInitialized, Status: corev1.ConditionTrue}
 			// Wait for the keycloak pod to be configured with the test user and client
-			WaitForPods(t, suite.Client, ns, map[string]string{"job-name": "setup-keycloak"}, corev1.PodSucceeded, podInitialized)
+			WaitForPods(t, suite.Client, ns, map[string]string{"job-name": "setup-keycloak"}, corev1.PodSucceeded, &podInitialized)
 
 			// Apply the security policy that configures OIDC authentication
 			suite.Applier.MustApplyWithCleanup(t, suite.Client, suite.TimeoutConfig, "testdata/oidc-securitypolicy.yaml", true)
@@ -69,7 +68,7 @@ var OIDCTest = suite.ConformanceTest{
 			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeWithOIDCNN, routeWithoutOIDCNN)
 
-			ancestorRef := gwapiv1a2.ParentReference{
+			ancestorRef := gwapiv1.ParentReference{
 				Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
 				Kind:      gatewayapi.KindPtr(resource.KindGateway),
 				Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
@@ -85,7 +84,7 @@ var OIDCTest = suite.ConformanceTest{
 						Path: "/public",
 					},
 					Response: gwhttp.Response{
-						StatusCode: 200,
+						StatusCodes: []int{200},
 					},
 					Namespace: ns,
 				},
@@ -100,7 +99,7 @@ var OIDCTest = suite.ConformanceTest{
 					},
 					Backend: "infra-backend-v1",
 					Response: gwhttp.Response{
-						StatusCode: 200,
+						StatusCodes: []int{200},
 					},
 					Namespace: ns,
 				},
@@ -111,15 +110,7 @@ var OIDCTest = suite.ConformanceTest{
 				t.Run(tc.GetTestCaseName(i), func(t *testing.T) {
 					t.Parallel()
 
-					req := gwhttp.MakeRequest(t, &tc, gwAddr, "HTTP", "http")
-					cReq, cResp, err := suite.RoundTripper.CaptureRoundTrip(req)
-					if err != nil {
-						t.Errorf("failed to get expected response: %v", err)
-					}
-
-					if err := gwhttp.CompareRequest(t, &req, cReq, cResp, tc); err != nil {
-						t.Errorf("failed to compare request and response: %v", err)
-					}
+					gwhttp.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, tc)
 				})
 			}
 		})
@@ -137,7 +128,7 @@ func testOIDC(t *testing.T, suite *suite.ConformanceTestSuite, securityPolicyMan
 
 	podInitialized := corev1.PodCondition{Type: corev1.PodInitialized, Status: corev1.ConditionTrue}
 	// Wait for the keycloak pod to be configured with the test user and client
-	WaitForPods(t, suite.Client, ns, map[string]string{"job-name": "setup-keycloak"}, corev1.PodSucceeded, podInitialized)
+	WaitForPods(t, suite.Client, ns, map[string]string{"job-name": "setup-keycloak"}, corev1.PodSucceeded, &podInitialized)
 
 	// Apply the security policy that configures OIDC authentication
 	suite.Applier.MustApplyWithCleanup(t, suite.Client, suite.TimeoutConfig, securityPolicyManifest, true)
@@ -147,7 +138,7 @@ func testOIDC(t *testing.T, suite *suite.ConformanceTestSuite, securityPolicyMan
 	httpGWAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN, "http"), routeNN)
 	host, _, _ := net.SplitHostPort(httpGWAddr)
 	tlsGWAddr := net.JoinHostPort(host, "443")
-	ancestorRef := gwapiv1a2.ParentReference{
+	ancestorRef := gwapiv1.ParentReference{
 		Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
 		Kind:      gatewayapi.KindPtr(resource.KindGateway),
 		Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
@@ -239,7 +230,7 @@ func testOIDC(t *testing.T, suite *suite.ConformanceTestSuite, securityPolicyMan
 	deletedCookies := res.Header.Values("Set-Cookie")
 	regx := regexp.MustCompile("^IdToken-.+=deleted.+")
 	for _, cookie := range deletedCookies {
-		if regx.Match([]byte(cookie)) {
+		if regx.MatchString(cookie) {
 			cookieDeleted = true
 		}
 	}

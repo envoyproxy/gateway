@@ -1,6 +1,5 @@
 kind: BackendTrafficPolicy
 metadata:
-  creationTimestamp: null
   name: original-2
 spec:
   rateLimit:

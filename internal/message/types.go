@@ -70,6 +70,7 @@ func (p *ProviderResources) Close() {
 	p.GatewayAPIResources.Close()
 	p.GatewayAPIStatuses.Close()
 	p.PolicyStatuses.Close()
+	p.ExtensionStatuses.Close()
 }
 
 // GatewayAPIStatuses contains gateway API resources statuses
@@ -99,13 +100,13 @@ type NamespacedNameAndGVK struct {
 
 // PolicyStatuses contains policy related resources statuses
 type PolicyStatuses struct {
-	ClientTrafficPolicyStatuses  watchable.Map[types.NamespacedName, *gwapiv1a2.PolicyStatus]
-	BackendTrafficPolicyStatuses watchable.Map[types.NamespacedName, *gwapiv1a2.PolicyStatus]
-	EnvoyPatchPolicyStatuses     watchable.Map[types.NamespacedName, *gwapiv1a2.PolicyStatus]
-	SecurityPolicyStatuses       watchable.Map[types.NamespacedName, *gwapiv1a2.PolicyStatus]
-	BackendTLSPolicyStatuses     watchable.Map[types.NamespacedName, *gwapiv1a2.PolicyStatus]
-	EnvoyExtensionPolicyStatuses watchable.Map[types.NamespacedName, *gwapiv1a2.PolicyStatus]
-	ExtensionPolicyStatuses      watchable.Map[NamespacedNameAndGVK, *gwapiv1a2.PolicyStatus]
+	ClientTrafficPolicyStatuses  watchable.Map[types.NamespacedName, *gwapiv1.PolicyStatus]
+	BackendTrafficPolicyStatuses watchable.Map[types.NamespacedName, *gwapiv1.PolicyStatus]
+	EnvoyPatchPolicyStatuses     watchable.Map[types.NamespacedName, *gwapiv1.PolicyStatus]
+	SecurityPolicyStatuses       watchable.Map[types.NamespacedName, *gwapiv1.PolicyStatus]
+	BackendTLSPolicyStatuses     watchable.Map[types.NamespacedName, *gwapiv1.PolicyStatus]
+	EnvoyExtensionPolicyStatuses watchable.Map[types.NamespacedName, *gwapiv1.PolicyStatus]
+	ExtensionPolicyStatuses      watchable.Map[NamespacedNameAndGVK, *gwapiv1.PolicyStatus]
 }
 
 // ExtensionStatuses contains statuses related to gw-api extension resources
@@ -120,6 +121,10 @@ func (p *PolicyStatuses) Close() {
 	p.BackendTLSPolicyStatuses.Close()
 	p.EnvoyExtensionPolicyStatuses.Close()
 	p.ExtensionPolicyStatuses.Close()
+}
+
+func (e *ExtensionStatuses) Close() {
+	e.BackendStatuses.Close()
 }
 
 // XdsIR message

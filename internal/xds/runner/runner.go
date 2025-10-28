@@ -9,8 +9,9 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"math/rand"
 	"net"
-	"reflect"
+	"path/filepath"
 	"strconv"
 	"time"
 
@@ -32,6 +33,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/crypto"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	extension "github.com/envoyproxy/gateway/internal/extension/types"
+	"github.com/envoyproxy/gateway/internal/infrastructure/host"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/ratelimit"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/message"
@@ -56,15 +58,18 @@ const (
 	// xDS server trusted CA certificate.
 	xdsTLSCaFilepath = "/certs/ca.crt"
 
-	// TODO: Make these path configurable.
-	// Default certificates path for envoy-gateway with Host infrastructure provider.
-	localTLSCertFilepath = "/tmp/envoy-gateway/certs/envoy-gateway/tls.crt"
-	localTLSKeyFilepath  = "/tmp/envoy-gateway/certs/envoy-gateway/tls.key"
-	localTLSCaFilepath   = "/tmp/envoy-gateway/certs/envoy-gateway/ca.crt"
 	// defaultKubernetesIssuer is the default issuer URL for Kubernetes.
 	// This is used for validating Service Account JWT tokens.
 	defaultKubernetesIssuer = "https://kubernetes.default.svc.cluster.local"
+
+	defaultMaxConnectionAgeGrace = 2 * time.Minute
 )
+
+var maxConnectionAgeValues = []time.Duration{
+	10 * time.Hour,
+	11 * time.Hour,
+	12 * time.Hour,
+}
 
 type Config struct {
 	config.Server
@@ -91,6 +96,20 @@ func (r *Runner) Name() string {
 	return string(egv1a1.LogComponentXdsRunner)
 }
 
+func defaultServerKeepaliveParams() keepalive.ServerParameters {
+	return keepalive.ServerParameters{
+		MaxConnectionAge:      getRandomMaxConnectionAge(),
+		MaxConnectionAgeGrace: defaultMaxConnectionAgeGrace,
+	}
+}
+
+// getRandomMaxConnectionAge picks a random maxConnectionAge value
+// to spread out envoy proxy connections over multiple envoy gateway replicas
+func getRandomMaxConnectionAge() time.Duration {
+	rnd := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
+	return maxConnectionAgeValues[rnd.Intn(len(maxConnectionAgeValues))]
+}
+
 // Close implements Runner interface.
 func (r *Runner) Close() error { return nil }
 
@@ -108,13 +127,21 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 	}
 	r.Logger.Info("loaded TLS certificate and key")
 
-	grpcOpts := []grpc.ServerOption{
-		grpc.Creds(credentials.NewTLS(tlsConfig)),
-		grpc.KeepaliveEnforcementPolicy(keepalive.EnforcementPolicy{
-			MinTime:             15 * time.Second,
-			PermitWithoutStream: true,
-		}),
+	keepaliveParams := defaultServerKeepaliveParams()
+	r.Logger.Info("configured gRPC keepalive defaults", "maxConnectionAge", keepaliveParams.MaxConnectionAge, "maxConnectionAgeGrace", keepaliveParams.MaxConnectionAgeGrace)
+
+	enforcementPolicy := keepalive.EnforcementPolicy{
+		MinTime:             15 * time.Second,
+		PermitWithoutStream: true,
 	}
+
+	baseKeepaliveOptions := []grpc.ServerOption{
+		grpc.KeepaliveEnforcementPolicy(enforcementPolicy),
+		grpc.KeepaliveParams(keepaliveParams),
+	}
+
+	grpcOpts := append([]grpc.ServerOption{}, baseKeepaliveOptions...)
+	grpcOpts = append(grpcOpts, grpc.Creds(credentials.NewTLS(tlsConfig)))
 
 	// When GatewayNamespaceMode is enabled, we will use sTLS and Service Account JWT tokens to authenticate envoy proxy infra and xds server.
 	if r.EnvoyGateway.GatewayNamespaceMode() {
@@ -136,14 +163,11 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 			return fmt.Errorf("failed to create TLS credentials: %w", err)
 		}
 
-		grpcOpts = []grpc.ServerOption{
-			grpc.KeepaliveEnforcementPolicy(keepalive.EnforcementPolicy{
-				MinTime:             15 * time.Second,
-				PermitWithoutStream: true,
-			}),
+		grpcOpts = append([]grpc.ServerOption{}, baseKeepaliveOptions...)
+		grpcOpts = append(grpcOpts,
 			grpc.Creds(creds),
 			grpc.StreamInterceptor(jwtInterceptor.Stream()),
-		}
+		)
 	}
 
 	r.grpc = grpc.NewServer(grpcOpts...)
@@ -155,7 +179,7 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 	// Do not call .Subscribe() inside Goroutine since it is supposed to be called from the same
 	// Goroutine where Close() is called.
 	sub := r.XdsIR.Subscribe(ctx)
-	go r.subscribeAndTranslate(sub)
+	go r.translateFromSubscription(sub)
 	r.Logger.Info("started")
 	return
 }
@@ -196,7 +220,7 @@ func registerServer(srv serverv3.Server, g *grpc.Server) {
 	runtimev3.RegisterRuntimeDiscoveryServiceServer(g, srv)
 }
 
-func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *ir.Xds]) {
+func (r *Runner) translateFromSubscription(sub <-chan watchable.Snapshot[string, *ir.Xds]) {
 	// Subscribe to resources
 	message.HandleSubscription(message.Metadata{Runner: r.Name(), Message: message.XDSIRMessageName}, sub,
 		func(update message.Update[string, *ir.Xds], errChan chan error) {
@@ -270,7 +294,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *ir
 					// Skip updating status for policies with empty status
 					// They may have been skipped in this translation because
 					// their target is not found (not relevant)
-					if !(reflect.ValueOf(e.Status).IsZero()) {
+					if len(e.Status.Ancestors) > 0 {
 						r.ProviderResources.EnvoyPatchPolicyStatuses.Store(key, e.Status)
 					}
 					delete(statusesToDelete, key)
@@ -322,9 +346,22 @@ func (r *Runner) loadTLSConfig() (tlsConfig *tls.Config, err error) {
 			keyPath = xdsTLSKeyFilepath
 			caPath = xdsTLSCaFilepath
 		case r.EnvoyGateway.Provider.IsRunningOnHost():
-			certPath = localTLSCertFilepath
-			keyPath = localTLSKeyFilepath
-			caPath = localTLSCaFilepath
+			// Get config
+			var hostCfg *egv1a1.EnvoyGatewayHostInfrastructureProvider
+			if p := r.EnvoyGateway.Provider; p != nil && p.Custom != nil &&
+				p.Custom.Infrastructure != nil && p.Custom.Infrastructure.Host != nil {
+				hostCfg = p.Custom.Infrastructure.Host
+			}
+
+			paths, err := host.GetPaths(hostCfg)
+			if err != nil {
+				return nil, fmt.Errorf("failed to determine paths: %w", err)
+			}
+
+			certDir := paths.CertDir("envoy-gateway")
+			certPath = filepath.Join(certDir, "tls.crt")
+			keyPath = filepath.Join(certDir, "tls.key")
+			caPath = filepath.Join(certDir, "ca.crt")
 		default:
 			return nil, fmt.Errorf("no valid tls certificates")
 		}

@@ -18,12 +18,18 @@ func ContainsString(slice []string, s string) bool {
 // RemoveString returns a newly created []string that contains all items from slice that
 // are not equal to s.
 func RemoveString(slice []string, s string) []string {
-	var newSlice []string
+	if slice == nil {
+		return nil
+	}
+	newSlice := make([]string, 0, len(slice))
 	for _, item := range slice {
 		if item == s {
 			continue
 		}
 		newSlice = append(newSlice, item)
+	}
+	if len(newSlice) == 0 {
+		return nil
 	}
 	return newSlice
 }

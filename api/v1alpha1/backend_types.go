@@ -8,7 +8,6 @@ package v1alpha1
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwapiv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 )
 
 const (
@@ -196,7 +195,7 @@ type BackendTLSSettings struct {
 	// CACertificateRefs or WellKnownCACertificates may be specified, not both.
 	//
 	// +optional
-	WellKnownCACertificates *gwapiv1a3.WellKnownCACertificatesType `json:"wellKnownCACertificates,omitempty"`
+	WellKnownCACertificates *gwapiv1.WellKnownCACertificatesType `json:"wellKnownCACertificates,omitempty"`
 
 	// InsecureSkipVerify indicates whether the upstream's certificate verification
 	// should be skipped. Defaults to "false".
@@ -204,6 +203,25 @@ type BackendTLSSettings struct {
 	// +kubebuilder:default=false
 	// +optional
 	InsecureSkipVerify *bool `json:"insecureSkipVerify,omitempty"`
+
+	// SNI is specifies the SNI value used when establishing an upstream TLS connection to the backend.
+	//
+	// Envoy Gateway will use the HTTP host header value for SNI, when all resources referenced in BackendRefs are:
+	// 1. Backend resources that do not set SNI, or
+	// 2. Service/ServiceImport resources that do not have a BackendTLSPolicy attached to them
+	//
+	// When a BackendTLSPolicy attaches to a Backend resource, the BackendTLSPolicy's Hostname value takes precedence
+	// over this value.
+	//
+	// +optional
+	SNI *gwapiv1.PreciseHostname `json:"sni,omitempty"`
+
+	// BackendTLSConfig defines the client certificate/key as well as TLS protocol parameters such as ciphers, TLS versions,
+	// and ALPN that the Envoy uses when connecting to the backend.
+	// When omitted, Envoy will fall back to the EnvoyProxy BackendTLS defaults, if any.
+	//
+	// +optional
+	*BackendTLSConfig `json:",inline"`
 }
 
 // BackendType defines the type of the Backend.

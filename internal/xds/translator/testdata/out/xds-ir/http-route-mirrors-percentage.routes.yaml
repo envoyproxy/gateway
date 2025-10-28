@@ -12,6 +12,7 @@
         cluster: route-dest
         requestMirrorPolicies:
         - cluster: mirror-route-dest
+          disableShadowHostSuffixAppend: true
           runtimeFraction:
             defaultValue:
               denominator: MILLION

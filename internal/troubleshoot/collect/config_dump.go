@@ -11,14 +11,21 @@ import (
 	"fmt"
 	"path"
 
+	adminv3 "github.com/envoyproxy/go-control-plane/envoy/admin/v3"
 	troubleshootv1b2 "github.com/replicatedhq/troubleshoot/pkg/apis/troubleshoot/v1beta2"
 	tbcollect "github.com/replicatedhq/troubleshoot/pkg/collect"
+	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/types/known/anypb"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 
 	kube "github.com/envoyproxy/gateway/internal/kubernetes"
+)
+
+const (
+	SecretsConfigDumpTypeURL = "type.googleapis.com/envoy.admin.v3.SecretsConfigDump"
 )
 
 var _ tbcollect.Collector = &ConfigDump{}
@@ -28,6 +35,8 @@ type ConfigDump struct {
 	BundlePath   string
 	Namespace    string
 	ClientConfig *rest.Config
+
+	EnableSDS bool
 }
 
 func (cd ConfigDump) Title() string {
@@ -73,12 +82,21 @@ func (cd ConfigDump) Collect(_ chan<- interface{}) (tbcollect.CollectorResult, e
 	}
 
 	logs := make([]string, 0, len(pods))
-	for _, pod := range pods {
+	for i := range pods {
+		pod := &pods[i]
 		nn := types.NamespacedName{Namespace: pod.Namespace, Name: pod.Name}
 		data, err := configDump(cliClient, nn, true)
 		if err != nil {
 			logs = append(logs, fmt.Sprintf("failed to get config dump for pod %s/%s: %v", pod.Namespace, pod.Name, err))
 			continue
+		}
+
+		if !cd.EnableSDS {
+			data, err = trimSDS(data)
+			if err != nil {
+				logs = append(logs, fmt.Sprintf("failed to trim SDS for pod %s/%s: %v", pod.Namespace, pod.Name, err))
+				continue
+			}
 		}
 
 		_ = output.SaveResult(cd.BundlePath, path.Join("config-dumps", pod.Namespace, fmt.Sprintf("%s.json", pod.Name)), bytes.NewBuffer(data))
@@ -96,4 +114,32 @@ func configDump(cli kube.CLIClient, nn types.NamespacedName, includeEds bool) ([
 		reqPath = fmt.Sprintf("%s?include_eds", reqPath)
 	}
 	return RequestWithPortForwarder(cli, nn, 19000, reqPath)
+}
+
+var marshaller = protojson.MarshalOptions{
+	Indent: "    ", // pretty output
+}
+
+func trimSDS(input []byte) ([]byte, error) {
+	dump := &adminv3.ConfigDump{}
+	if err := protojson.Unmarshal(input, dump); err != nil {
+		return input, err
+	}
+
+	cfgs := make([]*anypb.Any, 0, len(dump.Configs))
+	for _, section := range dump.Configs {
+		if section.TypeUrl == SecretsConfigDumpTypeURL {
+			continue
+		}
+
+		cfgs = append(cfgs, section)
+	}
+
+	dump.Configs = cfgs
+	res, err := marshaller.Marshal(dump)
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
 }

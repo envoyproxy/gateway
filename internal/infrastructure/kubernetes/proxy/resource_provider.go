@@ -34,6 +34,10 @@ import (
 )
 
 const (
+	// XdsServiceAccountTokenFilepath is the fully qualified path of the file containing
+	// the service account token used for authentication in GatewayNamespaceMode.
+	// #nosec G101 - This is a file path, not a credential
+	XdsServiceAccountTokenFilepath = "/var/run/secrets/token/sa-token"
 	// XdsTLSCertFilepath is the fully qualified path of the file containing Envoy's
 	// xDS server TLS certificate.
 	XdsTLSCertFilepath = "/certs/tls.crt"
@@ -319,6 +323,11 @@ func (r *ResourceRender) ConfigMap(cert string) (*corev1.ConfigMap, error) {
 		common.SdsCAFilename:   common.GetSdsCAConfigMapData(XdsTLSCaFilepath),
 		common.SdsCertFilename: common.GetSdsCertConfigMapData(XdsTLSCertFilepath, XdsTLSKeyFilepath),
 	}
+
+	if r.GatewayNamespaceMode {
+		data[common.SdsServiceAccountTokenFilename] = common.GetSdsServiceAccountTokenConfigMapData(XdsServiceAccountTokenFilepath)
+	}
+
 	if cert != "" {
 		data[XdsTLSCaFileName] = cert
 	}
@@ -358,7 +367,7 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 
 	// Get the EnvoyProxy config to configure the deployment.
 	provider := proxyConfig.GetEnvoyProxyProvider()
-	if provider.Type != egv1a1.ProviderTypeKubernetes {
+	if provider.Type != egv1a1.EnvoyProxyProviderTypeKubernetes {
 		return nil, fmt.Errorf("invalid provider type %v for Kubernetes infra manager", provider.Type)
 	}
 	deploymentConfig := provider.GetEnvoyProxyKubeProvider().EnvoyDeployment
@@ -447,7 +456,7 @@ func (r *ResourceRender) DaemonSet() (*appsv1.DaemonSet, error) {
 
 	// Get the EnvoyProxy config to configure the daemonset.
 	provider := proxyConfig.GetEnvoyProxyProvider()
-	if provider.Type != egv1a1.ProviderTypeKubernetes {
+	if provider.Type != egv1a1.EnvoyProxyProviderTypeKubernetes {
 		return nil, fmt.Errorf("invalid provider type %v for Kubernetes infra manager", provider.Type)
 	}
 
@@ -515,7 +524,7 @@ func (r *ResourceRender) DaemonSet() (*appsv1.DaemonSet, error) {
 
 func (r *ResourceRender) pdbConfig() (*egv1a1.KubernetesPodDisruptionBudgetSpec, error) {
 	provider := r.infra.GetProxyConfig().GetEnvoyProxyProvider()
-	if provider.Type != egv1a1.ProviderTypeKubernetes {
+	if provider.Type != egv1a1.EnvoyProxyProviderTypeKubernetes {
 		return nil, fmt.Errorf("invalid provider type %v for Kubernetes infra manager", provider.Type)
 	}
 
@@ -577,7 +586,7 @@ func (r *ResourceRender) PodDisruptionBudget() (*policyv1.PodDisruptionBudget, e
 
 func (r *ResourceRender) HorizontalPodAutoscaler() (*autoscalingv2.HorizontalPodAutoscaler, error) {
 	provider := r.infra.GetProxyConfig().GetEnvoyProxyProvider()
-	if provider.Type != egv1a1.ProviderTypeKubernetes {
+	if provider.Type != egv1a1.EnvoyProxyProviderTypeKubernetes {
 		return nil, fmt.Errorf("invalid provider type %v for Kubernetes infra manager", provider.Type)
 	}
 

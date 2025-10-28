@@ -21,6 +21,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/roundtripper"
@@ -44,7 +45,10 @@ func formatDump(data []byte) string {
 // to the remote side.
 // The default HTTP client implementation in Golang also automatically normalizes received
 // headers as they are parsed , so it's not possible to verify that returned headers were not normalized
-func casePreservingRoundTrip(request roundtripper.Request, transport nethttp.RoundTripper, suite *suite.ConformanceTestSuite) (map[string]any, error) {
+func casePreservingRoundTrip(request *roundtripper.Request, transport nethttp.RoundTripper, suite *suite.ConformanceTestSuite) (map[string]any, error) {
+	if request == nil {
+		return nil, fmt.Errorf("request cannot be nil")
+	}
 	client := &nethttp.Client{}
 	client.Transport = transport
 
@@ -113,9 +117,9 @@ var PreserveCaseTest = suite.ConformanceTest{
 			ns := "gateway-conformance-infra"
 			routeNN := types.NamespacedName{Name: "preserve-case", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
-			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+			gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
 
-			WaitForPods(t, suite.Client, "gateway-preserve-case-backend", map[string]string{"app": "preserve-case"}, corev1.PodRunning, PodReady)
+			WaitForPods(t, suite.Client, "gateway-preserve-case-backend", map[string]string{"app": "preserve-case"}, corev1.PodRunning, &PodReady)
 
 			err := wait.PollUntilContextTimeout(context.TODO(), time.Second, suite.TimeoutConfig.DeleteTimeout, true, func(ctx context.Context) (bool, error) {
 				// Can't use the standard method for checking the response, since the remote side isn't the
@@ -132,7 +136,7 @@ var PreserveCaseTest = suite.ConformanceTest{
 
 				var rt nethttp.RoundTripper
 				req := http.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
-				respBody, err := casePreservingRoundTrip(req, rt, suite)
+				respBody, err := casePreservingRoundTrip(&req, rt, suite)
 				if err != nil {
 					tlog.Logf(t, "failed to get expected response: %v", err)
 					return false, nil

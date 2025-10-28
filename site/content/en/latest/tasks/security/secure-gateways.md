@@ -11,7 +11,7 @@ This task uses a self-signed CA, so it should be used for testing and demonstrat
 
 ## Installation
 
-{{< boilerplate prerequisites >}}  
+{{< boilerplate prerequisites >}}
 
 ## TLS Certificates
 
@@ -61,6 +61,12 @@ Verify the Gateway status:
 ```shell
 kubectl get gateway/eg -o yaml
 ```
+
+## OCSP Stapling
+
+Online Certificate Status Protocol (OCSP) stapling allows the gateway to proactively attach proof that a certificate is still valid, eliminating the need for each client to query the certificate authority (CA) during the TLS handshake. This reduces latency and prevents client browsing information from being exposed to the CA.
+
+Envoy Gateway supports OCSP stapling by attaching an OCSP response during the TLS handshake whenever the Gateway listener’s certificate Secret includes one. Specifically, Envoy Gateway looks for the OCSP response in the Secret’s `tls.ocsp-staple` data field. If present, Envoy Gateway staples the response to the handshake automatically.
 
 ## Testing
 
@@ -317,7 +323,7 @@ This section gives a walkthrough to generate RSA and ECDSA derived certificates 
 
 ## Prerequisites
 
-{{< boilerplate prerequisites >}}  
+{{< boilerplate prerequisites >}}
 
 Follow the steps in the [TLS Certificates](#tls-certificates) section to generate self-signed RSA derived Server certificate and private key, and configure those in the Gateway listener configuration to terminate HTTPS traffic.
 
@@ -542,7 +548,7 @@ This sections gives a walkthrough to generate multiple certificates correspondin
 
 ## Prerequisites
 
-{{< boilerplate prerequisites >}}  
+{{< boilerplate prerequisites >}}
 
 Follow the steps in the [TLS Certificates](#tls-certificates) section to generate self-signed RSA derived Server certificate and private key, and configure those in the Gateway listener configuration to terminate HTTPS traffic.
 

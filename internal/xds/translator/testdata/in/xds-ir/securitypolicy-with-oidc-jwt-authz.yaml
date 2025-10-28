@@ -61,6 +61,7 @@ http:
           name: exjwt
           remoteJWKS:
             uri: https://oidc.example.com/auth/realms/example/protocol/openid-connect/certs
+            cacheDuration: 300s
       oidc:
         clientID: prometheus
         clientSecret: '[redacted]'

@@ -194,7 +194,7 @@ func newTestInfraWithAnnotationsAndLabels(annotations, labels map[string]string)
 }
 
 func TestDeployment(t *testing.T) {
-	cfg, err := config.New(os.Stdout)
+	cfg, err := config.New(os.Stdout, os.Stderr)
 	require.NoError(t, err)
 
 	cases := []struct {
@@ -633,7 +633,7 @@ func TestDeployment(t *testing.T) {
 		{
 			caseName:  "with-extra-args",
 			infra:     newTestInfra(),
-			extraArgs: []string{"--key1 val1", "--key2 val2"},
+			extraArgs: []string{"--key1", "val1", "--key2", "val2"},
 		},
 		{
 			caseName: "with-empty-memory-limits",
@@ -763,7 +763,7 @@ func loadDeployment(caseName string) (*appsv1.Deployment, error) {
 }
 
 func TestDaemonSet(t *testing.T) {
-	cfg, err := config.New(os.Stdout)
+	cfg, err := config.New(os.Stdout, os.Stderr)
 	require.NoError(t, err)
 
 	cases := []struct {
@@ -1114,7 +1114,7 @@ func TestDaemonSet(t *testing.T) {
 		{
 			caseName:  "with-extra-args",
 			infra:     newTestInfra(),
-			extraArgs: []string{"--key1 val1", "--key2 val2"},
+			extraArgs: []string{"--key1", "val1", "--key2", "val2"},
 		},
 		{
 			caseName: "with-name",
@@ -1226,7 +1226,7 @@ func loadDaemonSet(caseName string) (*appsv1.DaemonSet, error) {
 }
 
 func TestService(t *testing.T) {
-	cfg, err := config.New(os.Stdout)
+	cfg, err := config.New(os.Stdout, os.Stderr)
 	require.NoError(t, err)
 
 	svcType := egv1a1.ServiceTypeClusterIP
@@ -1401,7 +1401,7 @@ func loadService(caseName string) (*corev1.Service, error) {
 }
 
 func TestConfigMap(t *testing.T) {
-	cfg, err := config.New(os.Stdout)
+	cfg, err := config.New(os.Stdout, os.Stderr)
 	require.NoError(t, err)
 	cases := []struct {
 		name                 string
@@ -1469,7 +1469,7 @@ func loadConfigmap(tc string) (*corev1.ConfigMap, error) {
 }
 
 func TestServiceAccount(t *testing.T) {
-	cfg, err := config.New(os.Stdout)
+	cfg, err := config.New(os.Stdout, os.Stderr)
 	require.NoError(t, err)
 	cases := []struct {
 		name                 string
@@ -1543,7 +1543,7 @@ func loadServiceAccount(tc string) (*corev1.ServiceAccount, error) {
 }
 
 func TestPDB(t *testing.T) {
-	cfg, err := config.New(os.Stdout)
+	cfg, err := config.New(os.Stdout, os.Stderr)
 	require.NoError(t, err)
 
 	cases := []struct {
@@ -1685,7 +1685,7 @@ func TestPDB(t *testing.T) {
 }
 
 func TestHorizontalPodAutoscaler(t *testing.T) {
-	cfg, err := config.New(os.Stdout)
+	cfg, err := config.New(os.Stdout, os.Stderr)
 	require.NoError(t, err)
 
 	cases := []struct {
@@ -1949,7 +1949,7 @@ func TestIPFamilyPresentInSpec(t *testing.T) {
 }
 
 func TestGatewayNamespaceModeMultipleResources(t *testing.T) {
-	cfg, err := config.New(os.Stdout)
+	cfg, err := config.New(os.Stdout, os.Stderr)
 	require.NoError(t, err)
 
 	// Configure gateway namespace mode
@@ -1972,7 +1972,7 @@ func TestGatewayNamespaceModeMultipleResources(t *testing.T) {
 	if infra1.Proxy.Config.Spec.Provider == nil {
 		infra1.Proxy.Config.Spec.Provider = &egv1a1.EnvoyProxyProvider{}
 	}
-	infra1.Proxy.Config.Spec.Provider.Type = egv1a1.ProviderTypeKubernetes
+	infra1.Proxy.Config.Spec.Provider.Type = egv1a1.EnvoyProxyProviderTypeKubernetes
 	if infra1.Proxy.Config.Spec.Provider.Kubernetes == nil {
 		infra1.Proxy.Config.Spec.Provider.Kubernetes = &egv1a1.EnvoyProxyKubernetesProvider{}
 	}
@@ -1989,7 +1989,7 @@ func TestGatewayNamespaceModeMultipleResources(t *testing.T) {
 	if infra2.Proxy.Config.Spec.Provider == nil {
 		infra2.Proxy.Config.Spec.Provider = &egv1a1.EnvoyProxyProvider{}
 	}
-	infra2.Proxy.Config.Spec.Provider.Type = egv1a1.ProviderTypeKubernetes
+	infra2.Proxy.Config.Spec.Provider.Type = egv1a1.EnvoyProxyProviderTypeKubernetes
 	if infra2.Proxy.Config.Spec.Provider.Kubernetes == nil {
 		infra2.Proxy.Config.Spec.Provider.Kubernetes = &egv1a1.EnvoyProxyKubernetesProvider{}
 	}

@@ -2,7 +2,6 @@ gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
   metadata:
-    creationTimestamp: null
     name: gateway-1
     namespace: envoy-gateway
   spec:
@@ -63,7 +62,6 @@ tlsRoutes:
 - apiVersion: gateway.networking.k8s.io/v1alpha2
   kind: TLSRoute
   metadata:
-    creationTimestamp: null
     name: tlsroute-1
     namespace: default
   spec:
@@ -98,6 +96,10 @@ xdsIR:
       - path: /dev/stdout
     globalResources:
       proxyServiceCluster:
+        metadata:
+          name: envoy-envoy-gateway-gateway-1-196ae069
+          namespace: envoy-gateway-system
+          sectionName: "8080"
         name: envoy-gateway/gateway-1
         settings:
         - addressType: IP
@@ -119,6 +121,11 @@ xdsIR:
     tcp:
     - address: 0.0.0.0
       externalPort: 91
+      metadata:
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: tls
       name: envoy-gateway/gateway-1/tls
       port: 10091
       routes:

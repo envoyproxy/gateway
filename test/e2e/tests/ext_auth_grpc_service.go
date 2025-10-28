@@ -13,7 +13,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
@@ -37,8 +36,8 @@ var GRPCExtAuthTest = suite.ConformanceTest{
 		ns := "gateway-conformance-infra"
 		routeNN := types.NamespacedName{Name: "http-with-ext-auth", Namespace: ns}
 		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
-		gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
-		ancestorRef := gwapiv1a2.ParentReference{
+		gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
+		ancestorRef := gwapiv1.ParentReference{
 			Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
 			Kind:      gatewayapi.KindPtr(resource.KindGateway),
 			Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
@@ -46,7 +45,7 @@ var GRPCExtAuthTest = suite.ConformanceTest{
 		}
 		SecurityPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "ext-auth-test", Namespace: ns}, suite.ControllerName, ancestorRef)
 		// Wait for the grpc ext auth service pod to be ready
-		WaitForPods(t, suite.Client, ns, map[string]string{"app": "envoy-ext-auth"}, corev1.PodRunning, PodReady)
+		WaitForPods(t, suite.Client, ns, map[string]string{"app": "envoy-ext-auth"}, corev1.PodRunning, &PodReady)
 
 		t.Run("http route with ext auth authentication", func(t *testing.T) {
 			expectedResponse := http.ExpectedResponse{
@@ -58,7 +57,7 @@ var GRPCExtAuthTest = suite.ConformanceTest{
 					},
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}
@@ -73,7 +72,7 @@ var GRPCExtAuthTest = suite.ConformanceTest{
 					Path: "/myapp",
 				},
 				Response: http.Response{
-					StatusCode: 403,
+					StatusCodes: []int{403},
 				},
 				Namespace: ns,
 			}
@@ -91,7 +90,7 @@ var GRPCExtAuthTest = suite.ConformanceTest{
 					},
 				},
 				Response: http.Response{
-					StatusCode: 403,
+					StatusCodes: []int{403},
 				},
 				Namespace: ns,
 			}
@@ -106,7 +105,7 @@ var GRPCExtAuthTest = suite.ConformanceTest{
 					Path: "/public",
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}

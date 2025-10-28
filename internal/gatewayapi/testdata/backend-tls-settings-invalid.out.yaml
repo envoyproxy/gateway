@@ -2,7 +2,6 @@ backendTLSPolicies:
 - apiVersion: gateway.networking.k8s.io/v1alpha3
   kind: BackendTLSPolicy
   metadata:
-    creationTimestamp: null
     name: policy-btls-for-backend-1
     namespace: default
   spec:
@@ -28,6 +27,11 @@ backendTLSPolicies:
         namespace: envoy-gateway
       conditions:
       - lastTransitionTime: null
+        message: Resolved all the Object references.
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      - lastTransitionTime: null
         message: Policy has been accepted.
         reason: Accepted
         status: "True"
@@ -37,7 +41,6 @@ backends:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: Backend
   metadata:
-    creationTimestamp: null
     name: backend-1
     namespace: default
   spec:
@@ -60,7 +63,6 @@ backends:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: Backend
   metadata:
-    creationTimestamp: null
     name: backend-2
     namespace: default
   spec:
@@ -79,7 +81,6 @@ gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
   metadata:
-    creationTimestamp: null
     name: gateway-1
     namespace: envoy-gateway
   spec:
@@ -120,7 +121,6 @@ httpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
   metadata:
-    creationTimestamp: null
     name: httproute-1
     namespace: default
   spec:
@@ -157,7 +157,6 @@ httpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
   metadata:
-    creationTimestamp: null
     name: httproute-2
     namespace: default
   spec:
@@ -196,7 +195,6 @@ infraIR:
         apiVersion: gateway.envoyproxy.io/v1alpha1
         kind: EnvoyProxy
         metadata:
-          creationTimestamp: null
           name: test
           namespace: envoy-gateway-system
         spec:
@@ -246,6 +244,10 @@ xdsIR:
       - path: /dev/stdout
     globalResources:
       proxyServiceCluster:
+        metadata:
+          name: envoy-envoy-gateway-gateway-1-196ae069
+          namespace: envoy-gateway-system
+          sectionName: "8080"
         name: envoy-gateway/gateway-1
         settings:
         - addressType: IP

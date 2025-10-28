@@ -38,7 +38,7 @@ metadata:
   namespace: default
 spec:
 ...
-local validation error: Gateway.gateway.networking.k8s.io "eg2" is invalid: [spec.listeners[1]: Duplicate value: map[string]interface {}{"name":"tcp"}, spec.listeners: Invalid value: "array": Listener name must be unique within the Gateway, spec.listeners: Invalid value: "array": Combination of port, protocol and hostname must be unique for each listener]
+local validation error: Gateway.gateway.networking.k8s.io "eg2" is invalid: [spec.listeners[1]: Duplicate value: {"name":"tcp"}, spec.listeners: Invalid value: "array": Listener name must be unique within the Gateway, spec.listeners: Invalid value: "array": Combination of port, protocol and hostname must be unique for each listener]
 
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute

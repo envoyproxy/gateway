@@ -29,12 +29,12 @@ func (f *Histogram) Record(value float64) {
 }
 
 func (f *Histogram) With(labelValues ...LabelValue) *Histogram {
-	attrs, set := mergeLabelValues(f.attrs, labelValues)
+	mergedAttrs := mergeLabelValues(f.attrs, labelValues)
 	m := &Histogram{
 		name:             f.name,
-		attrs:            attrs,
+		attrs:            mergedAttrs,
 		d:                f.d,
-		preRecordOptions: []api.RecordOption{api.WithAttributeSet(set)},
+		preRecordOptions: []api.RecordOption{api.WithAttributes(mergedAttrs...)},
 	}
 
 	return m

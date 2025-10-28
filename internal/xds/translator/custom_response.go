@@ -422,10 +422,10 @@ func (c *customResponse) buildRedirectAction(r ir.ResponseOverrideRule) (*anypb.
 func (c *customResponse) buildResponseAction(r ir.ResponseOverrideRule) (*anypb.Any, error) {
 	response := &policyv3.LocalResponsePolicy{}
 
-	if r.Response.Body != nil && *r.Response.Body != "" {
+	if len(r.Response.Body) > 0 {
 		response.BodyFormat = &corev3.SubstitutionFormatString{
 			Format: &corev3.SubstitutionFormatString_TextFormat{
-				TextFormat: *r.Response.Body,
+				TextFormat: string(r.Response.Body),
 			},
 		}
 	}
@@ -442,6 +442,10 @@ func (c *customResponse) buildResponseAction(r ir.ResponseOverrideRule) (*anypb.
 
 	if r.Response.StatusCode != nil {
 		response.StatusCode = &wrapperspb.UInt32Value{Value: *r.Response.StatusCode}
+	}
+
+	if r.Response.AddResponseHeaders != nil {
+		response.ResponseHeadersToAdd = append(response.ResponseHeadersToAdd, buildXdsAddedHeaders(r.Response.AddResponseHeaders)...)
 	}
 
 	return proto.ToAnyWithValidation(response)

@@ -22,8 +22,7 @@ import (
 )
 
 func init() {
-	ConformanceTests = append(ConformanceTests, UDPRouteBackendFQDNTest)
-	ConformanceTests = append(ConformanceTests, UDPRouteBackendIPTest)
+	ConformanceTests = append(ConformanceTests, UDPRouteBackendFQDNTest, UDPRouteBackendIPTest)
 }
 
 var UDPRouteBackendFQDNTest = suite.ConformanceTest{
@@ -77,7 +76,7 @@ func testUDPRouteWithBackend(t *testing.T, suite *suite.ConformanceTestSuite, ba
 	domain := "foo.bar.com."
 	routeNN := types.NamespacedName{Name: "udp-coredns", Namespace: namespace}
 	gwNN := types.NamespacedName{Name: "udp-gateway", Namespace: namespace}
-	gwAddr := GatewayAndUDPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, NewGatewayRef(gwNN), routeNN)
+	gwAddr := GatewayAndUDPRoutesMustBeAccepted(t, suite.Client, &suite.TimeoutConfig, suite.ControllerName, NewGatewayRef(gwNN), routeNN)
 
 	BackendMustBeAccepted(t, suite.Client, types.NamespacedName{Name: backend, Namespace: namespace})
 

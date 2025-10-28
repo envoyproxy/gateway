@@ -58,12 +58,12 @@ type HTTPURLRewriteFilter struct {
 
 // HTTPDirectResponseFilter defines the configuration to return a fixed response.
 type HTTPDirectResponseFilter struct {
-	// Content Type of the response. This will be set in the Content-Type header.
+	// Content Type of the direct response. This will be set in the Content-Type header.
 	//
 	// +optional
 	ContentType *string `json:"contentType,omitempty"`
 
-	// Body of the Response
+	// Body of the direct response.
 	//
 	// +optional
 	Body *CustomResponseBody `json:"body,omitempty"`
@@ -72,6 +72,11 @@ type HTTPDirectResponseFilter struct {
 	// If unset, defaults to 200.
 	// +optional
 	StatusCode *int `json:"statusCode,omitempty"`
+
+	// Header defines the headers of the direct response.
+	// +optional
+	// +kubebuilder:validation:XValidation:rule="!has(self.remove) || size(self.remove) == 0",message="header.remove is not supported for DirectResponse"
+	Header *gwapiv1.HTTPHeaderFilter `json:"header,omitempty"`
 }
 
 // HTTPPathModifierType defines the type of path redirect or rewrite.

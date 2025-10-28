@@ -90,7 +90,7 @@ func TestCmpBytes(t *testing.T) {
 }
 
 func newTestInfraWithClient(t *testing.T, cli client.Client) *Infra {
-	cfg, err := config.New(os.Stdout)
+	cfg, err := config.New(os.Stdout, os.Stderr)
 	require.NoError(t, err)
 
 	cfg.EnvoyGateway = &egv1a1.EnvoyGateway{
@@ -136,7 +136,7 @@ func TestCreateProxyInfra(t *testing.T) {
 	ep := &egv1a1.EnvoyProxy{
 		Spec: egv1a1.EnvoyProxySpec{
 			Provider: &egv1a1.EnvoyProxyProvider{
-				Type:       egv1a1.ProviderTypeKubernetes,
+				Type:       egv1a1.EnvoyProxyProviderTypeKubernetes,
 				Kubernetes: egv1a1.DefaultEnvoyProxyKubeProvider(),
 			},
 		},

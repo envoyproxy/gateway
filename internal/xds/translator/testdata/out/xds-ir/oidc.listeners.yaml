@@ -44,6 +44,7 @@
                   sdsConfig:
                     ads: {}
                     resourceApiVersion: V3
+              csrfTokenExpiresIn: 2100s
               defaultExpiresIn: 3600s
               defaultRefreshTokenExpiresIn: 172800s
               forwardBearerToken: true
@@ -109,6 +110,7 @@
               - name: test-no-type
                 stringMatch:
                   exact: foobar
+              disableTokenEncryption: true
               preserveAuthorizationHeader: true
               redirectPathMatcher:
                 path:

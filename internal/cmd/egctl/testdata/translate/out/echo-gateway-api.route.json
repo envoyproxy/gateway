@@ -3,8 +3,7 @@
     "kind": "GatewayClass",
     "apiVersion": "gateway.networking.k8s.io/v1",
     "metadata": {
-      "name": "eg",
-      "creationTimestamp": null
+      "name": "eg"
     },
     "spec": {
       "controllerName": "gateway.envoyproxy.io/gatewayclass-controller"
@@ -27,8 +26,7 @@
       "apiVersion": "gateway.networking.k8s.io/v1",
       "metadata": {
         "name": "eg",
-        "namespace": "envoy-gateway-system",
-        "creationTimestamp": null
+        "namespace": "envoy-gateway-system"
       },
       "spec": {
         "gatewayClassName": "eg",
@@ -94,8 +92,7 @@
       "apiVersion": "gateway.networking.k8s.io/v1",
       "metadata": {
         "name": "backend",
-        "namespace": "envoy-gateway-system",
-        "creationTimestamp": null
+        "namespace": "envoy-gateway-system"
       },
       "spec": {
         "parentRefs": [

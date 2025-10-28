@@ -106,6 +106,29 @@ Some of the quick ways of using the helm install command for envoy gateway insta
 If you want to know all the available fields inside the values.yaml file, please see the [Helm Chart Values](./gateway-helm-api).
 {{% /alert %}}
 
+### Enable Backend API
+
+The Backend API is not enabled by default. Enable it via Helm values:
+
+```shell
+helm install eg oci://docker.io/envoyproxy/gateway-helm --version {{< helm-version >}} -n envoy-gateway-system --create-namespace --set config.envoyGateway.extensionApis.enableBackend=true
+```
+
+Or with a `values.yaml` file:
+
+```yaml
+config:
+  envoyGateway:
+    extensionApis:
+      enableBackend: true
+```
+
+Then install using the file:
+
+```shell
+helm install eg oci://docker.io/envoyproxy/gateway-helm --version {{< helm-version >}} -n envoy-gateway-system --create-namespace -f values.yaml
+```
+
 ### Increase the replicas
 
 ```shell

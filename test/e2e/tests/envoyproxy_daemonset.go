@@ -38,7 +38,7 @@ var EnvoyProxyDaemonSetTest = suite.ConformanceTest{
 			ns := "gateway-conformance-infra"
 			routeNN := types.NamespacedName{Name: "daemonset-route", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "eg-ds", Namespace: ns}
-			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+			gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
 
 			gwPodNamespace := GetGatewayResourceNamespace()
 			gwPodSelector := map[string]string{
@@ -64,7 +64,7 @@ var EnvoyProxyDaemonSetTest = suite.ConformanceTest{
 				t.Fatalf("Failed to check no deployments for the Gateway: %v", err)
 			}
 
-			WaitForPods(t, suite.Client, gwPodNamespace, gwPodSelector, corev1.PodRunning, PodReady)
+			WaitForPods(t, suite.Client, gwPodNamespace, gwPodSelector, corev1.PodRunning, &PodReady)
 
 			// Send a request to a valid path and expect a successful response
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, http.ExpectedResponse{
@@ -72,7 +72,7 @@ var EnvoyProxyDaemonSetTest = suite.ConformanceTest{
 					Path: "/daemonset",
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			})

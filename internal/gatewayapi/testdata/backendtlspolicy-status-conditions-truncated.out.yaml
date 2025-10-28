@@ -2,7 +2,6 @@ backendTLSPolicies:
 - apiVersion: gateway.networking.k8s.io/v1alpha2
   kind: BackendTLSPolicy
   metadata:
-    creationTimestamp: null
     name: policy-btls
     namespace: envoy-gateway
   spec:
@@ -24,6 +23,11 @@ backendTLSPolicies:
         namespace: envoy-gateway
       conditions:
       - lastTransitionTime: null
+        message: Resolved all the Object references.
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      - lastTransitionTime: null
         message: Policy has been accepted.
         reason: Accepted
         status: "True"
@@ -33,6 +37,11 @@ backendTLSPolicies:
         name: gateway-10
         namespace: envoy-gateway
       conditions:
+      - lastTransitionTime: null
+        message: Resolved all the Object references.
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
       - lastTransitionTime: null
         message: Policy has been accepted.
         reason: Accepted
@@ -44,6 +53,11 @@ backendTLSPolicies:
         namespace: envoy-gateway
       conditions:
       - lastTransitionTime: null
+        message: Resolved all the Object references.
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      - lastTransitionTime: null
         message: Policy has been accepted.
         reason: Accepted
         status: "True"
@@ -53,6 +67,11 @@ backendTLSPolicies:
         name: gateway-12
         namespace: envoy-gateway
       conditions:
+      - lastTransitionTime: null
+        message: Resolved all the Object references.
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
       - lastTransitionTime: null
         message: Policy has been accepted.
         reason: Accepted
@@ -64,6 +83,11 @@ backendTLSPolicies:
         namespace: envoy-gateway
       conditions:
       - lastTransitionTime: null
+        message: Resolved all the Object references.
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      - lastTransitionTime: null
         message: Policy has been accepted.
         reason: Accepted
         status: "True"
@@ -73,6 +97,11 @@ backendTLSPolicies:
         name: gateway-14
         namespace: envoy-gateway
       conditions:
+      - lastTransitionTime: null
+        message: Resolved all the Object references.
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
       - lastTransitionTime: null
         message: Policy has been accepted.
         reason: Accepted
@@ -84,6 +113,11 @@ backendTLSPolicies:
         namespace: envoy-gateway
       conditions:
       - lastTransitionTime: null
+        message: Resolved all the Object references.
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      - lastTransitionTime: null
         message: Policy has been accepted.
         reason: Accepted
         status: "True"
@@ -93,6 +127,11 @@ backendTLSPolicies:
         name: gateway-16
         namespace: envoy-gateway
       conditions:
+      - lastTransitionTime: null
+        message: Resolved all the Object references.
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
       - lastTransitionTime: null
         message: Policy has been accepted.
         reason: Accepted
@@ -104,6 +143,11 @@ backendTLSPolicies:
         namespace: envoy-gateway
       conditions:
       - lastTransitionTime: null
+        message: Resolved all the Object references.
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      - lastTransitionTime: null
         message: Policy has been accepted.
         reason: Accepted
         status: "True"
@@ -113,6 +157,11 @@ backendTLSPolicies:
         name: gateway-18
         namespace: envoy-gateway
       conditions:
+      - lastTransitionTime: null
+        message: Resolved all the Object references.
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
       - lastTransitionTime: null
         message: Policy has been accepted.
         reason: Accepted
@@ -124,6 +173,11 @@ backendTLSPolicies:
         namespace: envoy-gateway
       conditions:
       - lastTransitionTime: null
+        message: Resolved all the Object references.
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      - lastTransitionTime: null
         message: Policy has been accepted.
         reason: Accepted
         status: "True"
@@ -133,6 +187,11 @@ backendTLSPolicies:
         name: gateway-3
         namespace: envoy-gateway
       conditions:
+      - lastTransitionTime: null
+        message: Resolved all the Object references.
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
       - lastTransitionTime: null
         message: Policy has been accepted.
         reason: Accepted
@@ -144,6 +203,11 @@ backendTLSPolicies:
         namespace: envoy-gateway
       conditions:
       - lastTransitionTime: null
+        message: Resolved all the Object references.
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      - lastTransitionTime: null
         message: Policy has been accepted.
         reason: Accepted
         status: "True"
@@ -153,6 +217,11 @@ backendTLSPolicies:
         name: gateway-5
         namespace: envoy-gateway
       conditions:
+      - lastTransitionTime: null
+        message: Resolved all the Object references.
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
       - lastTransitionTime: null
         message: Policy has been accepted.
         reason: Accepted
@@ -164,6 +233,11 @@ backendTLSPolicies:
         namespace: envoy-gateway
       conditions:
       - lastTransitionTime: null
+        message: Resolved all the Object references.
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      - lastTransitionTime: null
         message: Policy has been accepted.
         reason: Accepted
         status: "True"
@@ -174,13 +248,18 @@ backendTLSPolicies:
         namespace: envoy-gateway
       conditions:
       - lastTransitionTime: null
+        message: Resolved all the Object references.
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      - lastTransitionTime: null
         message: Policy has been accepted.
         reason: Accepted
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: 'Ancestors have been aggregated because the number of policy ancestors
-          exceeds 16. The aggregated ancestors: gateway-8, gateway-9'
+        message: Ancestors have been truncated because the number of policy ancestors
+          exceeds 16.
         reason: Aggregated
         status: "True"
         type: Aggregated
@@ -188,7 +267,6 @@ backendTLSPolicies:
 - apiVersion: gateway.networking.k8s.io/v1alpha2
   kind: BackendTLSPolicy
   metadata:
-    creationTimestamp: null
     name: policy-btls-invalid
     namespace: envoy-gateway
   spec:
@@ -211,9 +289,14 @@ backendTLSPolicies:
       conditions:
       - lastTransitionTime: null
         message: Configmap ca-not-found not found in namespace envoy-gateway.
-        reason: Invalid
+        reason: NoValidCACertificate
         status: "False"
         type: Accepted
+      - lastTransitionTime: null
+        message: Configmap ca-not-found not found in namespace envoy-gateway.
+        reason: InvalidCACertificateRef
+        status: "False"
+        type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
     - ancestorRef:
         name: gateway-10
@@ -221,9 +304,14 @@ backendTLSPolicies:
       conditions:
       - lastTransitionTime: null
         message: Configmap ca-not-found not found in namespace envoy-gateway.
-        reason: Invalid
+        reason: NoValidCACertificate
         status: "False"
         type: Accepted
+      - lastTransitionTime: null
+        message: Configmap ca-not-found not found in namespace envoy-gateway.
+        reason: InvalidCACertificateRef
+        status: "False"
+        type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
     - ancestorRef:
         name: gateway-11
@@ -231,9 +319,14 @@ backendTLSPolicies:
       conditions:
       - lastTransitionTime: null
         message: Configmap ca-not-found not found in namespace envoy-gateway.
-        reason: Invalid
+        reason: NoValidCACertificate
         status: "False"
         type: Accepted
+      - lastTransitionTime: null
+        message: Configmap ca-not-found not found in namespace envoy-gateway.
+        reason: InvalidCACertificateRef
+        status: "False"
+        type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
     - ancestorRef:
         name: gateway-12
@@ -241,9 +334,14 @@ backendTLSPolicies:
       conditions:
       - lastTransitionTime: null
         message: Configmap ca-not-found not found in namespace envoy-gateway.
-        reason: Invalid
+        reason: NoValidCACertificate
         status: "False"
         type: Accepted
+      - lastTransitionTime: null
+        message: Configmap ca-not-found not found in namespace envoy-gateway.
+        reason: InvalidCACertificateRef
+        status: "False"
+        type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
     - ancestorRef:
         name: gateway-13
@@ -251,9 +349,14 @@ backendTLSPolicies:
       conditions:
       - lastTransitionTime: null
         message: Configmap ca-not-found not found in namespace envoy-gateway.
-        reason: Invalid
+        reason: NoValidCACertificate
         status: "False"
         type: Accepted
+      - lastTransitionTime: null
+        message: Configmap ca-not-found not found in namespace envoy-gateway.
+        reason: InvalidCACertificateRef
+        status: "False"
+        type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
     - ancestorRef:
         name: gateway-14
@@ -261,9 +364,14 @@ backendTLSPolicies:
       conditions:
       - lastTransitionTime: null
         message: Configmap ca-not-found not found in namespace envoy-gateway.
-        reason: Invalid
+        reason: NoValidCACertificate
         status: "False"
         type: Accepted
+      - lastTransitionTime: null
+        message: Configmap ca-not-found not found in namespace envoy-gateway.
+        reason: InvalidCACertificateRef
+        status: "False"
+        type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
     - ancestorRef:
         name: gateway-15
@@ -271,9 +379,14 @@ backendTLSPolicies:
       conditions:
       - lastTransitionTime: null
         message: Configmap ca-not-found not found in namespace envoy-gateway.
-        reason: Invalid
+        reason: NoValidCACertificate
         status: "False"
         type: Accepted
+      - lastTransitionTime: null
+        message: Configmap ca-not-found not found in namespace envoy-gateway.
+        reason: InvalidCACertificateRef
+        status: "False"
+        type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
     - ancestorRef:
         name: gateway-16
@@ -281,9 +394,14 @@ backendTLSPolicies:
       conditions:
       - lastTransitionTime: null
         message: Configmap ca-not-found not found in namespace envoy-gateway.
-        reason: Invalid
+        reason: NoValidCACertificate
         status: "False"
         type: Accepted
+      - lastTransitionTime: null
+        message: Configmap ca-not-found not found in namespace envoy-gateway.
+        reason: InvalidCACertificateRef
+        status: "False"
+        type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
     - ancestorRef:
         name: gateway-17
@@ -291,9 +409,14 @@ backendTLSPolicies:
       conditions:
       - lastTransitionTime: null
         message: Configmap ca-not-found not found in namespace envoy-gateway.
-        reason: Invalid
+        reason: NoValidCACertificate
         status: "False"
         type: Accepted
+      - lastTransitionTime: null
+        message: Configmap ca-not-found not found in namespace envoy-gateway.
+        reason: InvalidCACertificateRef
+        status: "False"
+        type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
     - ancestorRef:
         name: gateway-18
@@ -301,9 +424,14 @@ backendTLSPolicies:
       conditions:
       - lastTransitionTime: null
         message: Configmap ca-not-found not found in namespace envoy-gateway.
-        reason: Invalid
+        reason: NoValidCACertificate
         status: "False"
         type: Accepted
+      - lastTransitionTime: null
+        message: Configmap ca-not-found not found in namespace envoy-gateway.
+        reason: InvalidCACertificateRef
+        status: "False"
+        type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
     - ancestorRef:
         name: gateway-2
@@ -311,9 +439,14 @@ backendTLSPolicies:
       conditions:
       - lastTransitionTime: null
         message: Configmap ca-not-found not found in namespace envoy-gateway.
-        reason: Invalid
+        reason: NoValidCACertificate
         status: "False"
         type: Accepted
+      - lastTransitionTime: null
+        message: Configmap ca-not-found not found in namespace envoy-gateway.
+        reason: InvalidCACertificateRef
+        status: "False"
+        type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
     - ancestorRef:
         name: gateway-3
@@ -321,9 +454,14 @@ backendTLSPolicies:
       conditions:
       - lastTransitionTime: null
         message: Configmap ca-not-found not found in namespace envoy-gateway.
-        reason: Invalid
+        reason: NoValidCACertificate
         status: "False"
         type: Accepted
+      - lastTransitionTime: null
+        message: Configmap ca-not-found not found in namespace envoy-gateway.
+        reason: InvalidCACertificateRef
+        status: "False"
+        type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
     - ancestorRef:
         name: gateway-4
@@ -331,9 +469,14 @@ backendTLSPolicies:
       conditions:
       - lastTransitionTime: null
         message: Configmap ca-not-found not found in namespace envoy-gateway.
-        reason: Invalid
+        reason: NoValidCACertificate
         status: "False"
         type: Accepted
+      - lastTransitionTime: null
+        message: Configmap ca-not-found not found in namespace envoy-gateway.
+        reason: InvalidCACertificateRef
+        status: "False"
+        type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
     - ancestorRef:
         name: gateway-5
@@ -341,9 +484,14 @@ backendTLSPolicies:
       conditions:
       - lastTransitionTime: null
         message: Configmap ca-not-found not found in namespace envoy-gateway.
-        reason: Invalid
+        reason: NoValidCACertificate
         status: "False"
         type: Accepted
+      - lastTransitionTime: null
+        message: Configmap ca-not-found not found in namespace envoy-gateway.
+        reason: InvalidCACertificateRef
+        status: "False"
+        type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
     - ancestorRef:
         name: gateway-6
@@ -351,9 +499,14 @@ backendTLSPolicies:
       conditions:
       - lastTransitionTime: null
         message: Configmap ca-not-found not found in namespace envoy-gateway.
-        reason: Invalid
+        reason: NoValidCACertificate
         status: "False"
         type: Accepted
+      - lastTransitionTime: null
+        message: Configmap ca-not-found not found in namespace envoy-gateway.
+        reason: InvalidCACertificateRef
+        status: "False"
+        type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
     - ancestorRef:
         name: gateway-7
@@ -361,12 +514,17 @@ backendTLSPolicies:
       conditions:
       - lastTransitionTime: null
         message: Configmap ca-not-found not found in namespace envoy-gateway.
-        reason: Invalid
+        reason: NoValidCACertificate
         status: "False"
         type: Accepted
       - lastTransitionTime: null
-        message: 'Ancestors have been aggregated because the number of policy ancestors
-          exceeds 16. The aggregated ancestors: gateway-8, gateway-9'
+        message: Configmap ca-not-found not found in namespace envoy-gateway.
+        reason: InvalidCACertificateRef
+        status: "False"
+        type: ResolvedRefs
+      - lastTransitionTime: null
+        message: Ancestors have been truncated because the number of policy ancestors
+          exceeds 16.
         reason: Aggregated
         status: "True"
         type: Aggregated
@@ -375,7 +533,6 @@ gateways:
 - apiVersion: gateway.networking.k8s.io/v1beta1
   kind: Gateway
   metadata:
-    creationTimestamp: null
     name: gateway-1
     namespace: envoy-gateway
   spec:
@@ -415,7 +572,6 @@ gateways:
 - apiVersion: gateway.networking.k8s.io/v1beta1
   kind: Gateway
   metadata:
-    creationTimestamp: null
     name: gateway-2
     namespace: envoy-gateway
   spec:
@@ -455,7 +611,6 @@ gateways:
 - apiVersion: gateway.networking.k8s.io/v1beta1
   kind: Gateway
   metadata:
-    creationTimestamp: null
     name: gateway-3
     namespace: envoy-gateway
   spec:
@@ -495,7 +650,6 @@ gateways:
 - apiVersion: gateway.networking.k8s.io/v1beta1
   kind: Gateway
   metadata:
-    creationTimestamp: null
     name: gateway-4
     namespace: envoy-gateway
   spec:
@@ -535,7 +689,6 @@ gateways:
 - apiVersion: gateway.networking.k8s.io/v1beta1
   kind: Gateway
   metadata:
-    creationTimestamp: null
     name: gateway-5
     namespace: envoy-gateway
   spec:
@@ -575,7 +728,6 @@ gateways:
 - apiVersion: gateway.networking.k8s.io/v1beta1
   kind: Gateway
   metadata:
-    creationTimestamp: null
     name: gateway-6
     namespace: envoy-gateway
   spec:
@@ -615,7 +767,6 @@ gateways:
 - apiVersion: gateway.networking.k8s.io/v1beta1
   kind: Gateway
   metadata:
-    creationTimestamp: null
     name: gateway-7
     namespace: envoy-gateway
   spec:
@@ -655,7 +806,6 @@ gateways:
 - apiVersion: gateway.networking.k8s.io/v1beta1
   kind: Gateway
   metadata:
-    creationTimestamp: null
     name: gateway-8
     namespace: envoy-gateway
   spec:
@@ -695,7 +845,6 @@ gateways:
 - apiVersion: gateway.networking.k8s.io/v1beta1
   kind: Gateway
   metadata:
-    creationTimestamp: null
     name: gateway-9
     namespace: envoy-gateway
   spec:
@@ -735,7 +884,6 @@ gateways:
 - apiVersion: gateway.networking.k8s.io/v1beta1
   kind: Gateway
   metadata:
-    creationTimestamp: null
     name: gateway-10
     namespace: envoy-gateway
   spec:
@@ -775,7 +923,6 @@ gateways:
 - apiVersion: gateway.networking.k8s.io/v1beta1
   kind: Gateway
   metadata:
-    creationTimestamp: null
     name: gateway-11
     namespace: envoy-gateway
   spec:
@@ -815,7 +962,6 @@ gateways:
 - apiVersion: gateway.networking.k8s.io/v1beta1
   kind: Gateway
   metadata:
-    creationTimestamp: null
     name: gateway-12
     namespace: envoy-gateway
   spec:
@@ -855,7 +1001,6 @@ gateways:
 - apiVersion: gateway.networking.k8s.io/v1beta1
   kind: Gateway
   metadata:
-    creationTimestamp: null
     name: gateway-13
     namespace: envoy-gateway
   spec:
@@ -895,7 +1040,6 @@ gateways:
 - apiVersion: gateway.networking.k8s.io/v1beta1
   kind: Gateway
   metadata:
-    creationTimestamp: null
     name: gateway-14
     namespace: envoy-gateway
   spec:
@@ -935,7 +1079,6 @@ gateways:
 - apiVersion: gateway.networking.k8s.io/v1beta1
   kind: Gateway
   metadata:
-    creationTimestamp: null
     name: gateway-15
     namespace: envoy-gateway
   spec:
@@ -975,7 +1118,6 @@ gateways:
 - apiVersion: gateway.networking.k8s.io/v1beta1
   kind: Gateway
   metadata:
-    creationTimestamp: null
     name: gateway-16
     namespace: envoy-gateway
   spec:
@@ -1015,7 +1157,6 @@ gateways:
 - apiVersion: gateway.networking.k8s.io/v1beta1
   kind: Gateway
   metadata:
-    creationTimestamp: null
     name: gateway-17
     namespace: envoy-gateway
   spec:
@@ -1055,7 +1196,6 @@ gateways:
 - apiVersion: gateway.networking.k8s.io/v1beta1
   kind: Gateway
   metadata:
-    creationTimestamp: null
     name: gateway-18
     namespace: envoy-gateway
   spec:
@@ -1096,7 +1236,6 @@ httpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1beta1
   kind: HTTPRoute
   metadata:
-    creationTimestamp: null
     name: httproute-1
     namespace: envoy-gateway
   spec:
@@ -1419,7 +1558,6 @@ httpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1beta1
   kind: HTTPRoute
   metadata:
-    creationTimestamp: null
     name: httproute-2
     namespace: envoy-gateway
   spec:
@@ -2105,6 +2243,25 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources:
+      proxyServiceCluster:
+        metadata:
+          name: envoy-envoy-gateway-gateway-1-196ae069
+          namespace: envoy-gateway-system
+          sectionName: "8080"
+        name: envoy-gateway/gateway-1
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-1
+          protocol: TCP
     http:
     - address: 0.0.0.0
       externalPort: 80
@@ -2122,8 +2279,31 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - directResponse:
-          statusCode: 500
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-1
+            namespace: envoy-gateway
+          name: httproute/envoy-gateway/httproute-1/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8443
+            metadata:
+              kind: Service
+              name: http-backend
+              namespace: envoy-gateway
+              sectionName: "8443"
+            name: httproute/envoy-gateway/httproute-1/rule/0/backend/0
+            protocol: HTTP
+            tls:
+              alpnProtocols: null
+              caCertificate:
+                certificate: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURKekNDQWcrZ0F3SUJBZ0lVQWw2VUtJdUttenRlODFjbGx6NVBmZE4ySWxJd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0l6RVFNQTRHQTFVRUF3d0hiWGxqYVdWdWRERVBNQTBHQTFVRUNnd0dhM1ZpWldSaU1CNFhEVEl6TVRBdwpNakExTkRFMU4xb1hEVEkwTVRBd01UQTFOREUxTjFvd0l6RVFNQTRHQTFVRUF3d0hiWGxqYVdWdWRERVBNQTBHCkExVUVDZ3dHYTNWaVpXUmlNSUlCSWpBTkJna3Foa2lHOXcwQkFRRUZBQU9DQVE4QU1JSUJDZ0tDQVFFQXdTVGMKMXlqOEhXNjJueW5rRmJYbzRWWEt2MmpDMFBNN2RQVmt5ODdGd2VaY1RLTG9XUVZQUUUycDJrTERLNk9Fc3ptTQp5eXIreHhXdHlpdmVyZW1yV3FuS2tOVFloTGZZUGhnUWtjemliN2VVYWxtRmpVYmhXZEx2SGFrYkVnQ29kbjNiCmt6NTdtSW5YMlZwaURPS2c0a3lIZml1WFdwaUJxckN4MEtOTHB4bzNERVFjRmNzUVRlVEh6aDQ3NTJHVjA0UlUKVGkvR0VXeXpJc2w0Umc3dEd0QXdtY0lQZ1VOVWZZMlEzOTBGR3FkSDRhaG4rbXcvNmFGYlczMVc2M2Q5WUpWcQppb3lPVmNhTUlwTTVCL2M3UWM4U3VoQ0kxWUdoVXlnNGNSSExFdzVWdGlraW95RTNYMDRrbmEzalFBajU0WWJSCmJwRWhjMzVhcEtMQjIxSE9VUUlEQVFBQm8xTXdVVEFkQmdOVkhRNEVGZ1FVeXZsMFZJNXZKVlN1WUZYdTdCNDgKNlBiTUVBb3dId1lEVlIwakJCZ3dGb0FVeXZsMFZJNXZKVlN1WUZYdTdCNDg2UGJNRUFvd0R3WURWUjBUQVFILwpCQVV3QXdFQi96QU5CZ2txaGtpRzl3MEJBUXNGQUFPQ0FRRUFNTHhyZ0ZWTXVOUnEyd0F3Y0J0N1NuTlI1Q2Z6CjJNdlhxNUVVbXVhd0lVaTlrYVlqd2RWaURSRUdTams3SlcxN3ZsNTc2SGpEa2RmUndpNEUyOFN5ZFJJblpmNkoKaThIWmNaN2NhSDZEeFIzMzVmZ0hWekxpNU5pVGNlL09qTkJRelEyTUpYVkRkOERCbUc1ZnlhdEppT0pRNGJXRQpBN0ZsUDBSZFAzQ08zR1dFME01aVhPQjJtMXFXa0UyZXlPNFVIdndUcU5RTGRyZEFYZ0RRbGJhbTllNEJHM0dnCmQvNnRoQWtXRGJ0L1FOVCtFSkhEQ3ZoRFJLaDFSdUdIeWcrWSsvbmViVFdXckZXc2t0UnJiT29IQ1ppQ3BYSTEKM2VYRTZudDBZa2d0RHhHMjJLcW5ocEFnOWdVU3MyaGxob3h5dmt6eUYwbXU2TmhQbHdBZ25xNysvUT09Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K
+                name: policy-btls/envoy-gateway-ca
+              sni: example.com
+            weight: 1
         hostname: '*'
         isHTTP2: false
         metadata:
@@ -2157,6 +2337,25 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources:
+      proxyServiceCluster:
+        metadata:
+          name: envoy-envoy-gateway-gateway-2-4a0e4eb9
+          namespace: envoy-gateway-system
+          sectionName: "8080"
+        name: envoy-gateway/gateway-2
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            name: envoy-envoy-gateway-gateway-2-4a0e4eb9
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-2
+          protocol: TCP
     http:
     - address: 0.0.0.0
       externalPort: 80
@@ -2174,8 +2373,31 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - directResponse:
-          statusCode: 500
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-1
+            namespace: envoy-gateway
+          name: httproute/envoy-gateway/httproute-1/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8443
+            metadata:
+              kind: Service
+              name: http-backend
+              namespace: envoy-gateway
+              sectionName: "8443"
+            name: httproute/envoy-gateway/httproute-1/rule/0/backend/0
+            protocol: HTTP
+            tls:
+              alpnProtocols: null
+              caCertificate:
+                certificate: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURKekNDQWcrZ0F3SUJBZ0lVQWw2VUtJdUttenRlODFjbGx6NVBmZE4ySWxJd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0l6RVFNQTRHQTFVRUF3d0hiWGxqYVdWdWRERVBNQTBHQTFVRUNnd0dhM1ZpWldSaU1CNFhEVEl6TVRBdwpNakExTkRFMU4xb1hEVEkwTVRBd01UQTFOREUxTjFvd0l6RVFNQTRHQTFVRUF3d0hiWGxqYVdWdWRERVBNQTBHCkExVUVDZ3dHYTNWaVpXUmlNSUlCSWpBTkJna3Foa2lHOXcwQkFRRUZBQU9DQVE4QU1JSUJDZ0tDQVFFQXdTVGMKMXlqOEhXNjJueW5rRmJYbzRWWEt2MmpDMFBNN2RQVmt5ODdGd2VaY1RLTG9XUVZQUUUycDJrTERLNk9Fc3ptTQp5eXIreHhXdHlpdmVyZW1yV3FuS2tOVFloTGZZUGhnUWtjemliN2VVYWxtRmpVYmhXZEx2SGFrYkVnQ29kbjNiCmt6NTdtSW5YMlZwaURPS2c0a3lIZml1WFdwaUJxckN4MEtOTHB4bzNERVFjRmNzUVRlVEh6aDQ3NTJHVjA0UlUKVGkvR0VXeXpJc2w0Umc3dEd0QXdtY0lQZ1VOVWZZMlEzOTBGR3FkSDRhaG4rbXcvNmFGYlczMVc2M2Q5WUpWcQppb3lPVmNhTUlwTTVCL2M3UWM4U3VoQ0kxWUdoVXlnNGNSSExFdzVWdGlraW95RTNYMDRrbmEzalFBajU0WWJSCmJwRWhjMzVhcEtMQjIxSE9VUUlEQVFBQm8xTXdVVEFkQmdOVkhRNEVGZ1FVeXZsMFZJNXZKVlN1WUZYdTdCNDgKNlBiTUVBb3dId1lEVlIwakJCZ3dGb0FVeXZsMFZJNXZKVlN1WUZYdTdCNDg2UGJNRUFvd0R3WURWUjBUQVFILwpCQVV3QXdFQi96QU5CZ2txaGtpRzl3MEJBUXNGQUFPQ0FRRUFNTHhyZ0ZWTXVOUnEyd0F3Y0J0N1NuTlI1Q2Z6CjJNdlhxNUVVbXVhd0lVaTlrYVlqd2RWaURSRUdTams3SlcxN3ZsNTc2SGpEa2RmUndpNEUyOFN5ZFJJblpmNkoKaThIWmNaN2NhSDZEeFIzMzVmZ0hWekxpNU5pVGNlL09qTkJRelEyTUpYVkRkOERCbUc1ZnlhdEppT0pRNGJXRQpBN0ZsUDBSZFAzQ08zR1dFME01aVhPQjJtMXFXa0UyZXlPNFVIdndUcU5RTGRyZEFYZ0RRbGJhbTllNEJHM0dnCmQvNnRoQWtXRGJ0L1FOVCtFSkhEQ3ZoRFJLaDFSdUdIeWcrWSsvbmViVFdXckZXc2t0UnJiT29IQ1ppQ3BYSTEKM2VYRTZudDBZa2d0RHhHMjJLcW5ocEFnOWdVU3MyaGxob3h5dmt6eUYwbXU2TmhQbHdBZ25xNysvUT09Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K
+                name: policy-btls/envoy-gateway-ca
+              sni: example.com
+            weight: 1
         hostname: '*'
         isHTTP2: false
         metadata:
@@ -2209,6 +2431,25 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources:
+      proxyServiceCluster:
+        metadata:
+          name: envoy-envoy-gateway-gateway-3-32e857a6
+          namespace: envoy-gateway-system
+          sectionName: "8080"
+        name: envoy-gateway/gateway-3
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            name: envoy-envoy-gateway-gateway-3-32e857a6
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-3
+          protocol: TCP
     http:
     - address: 0.0.0.0
       externalPort: 80
@@ -2226,8 +2467,31 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - directResponse:
-          statusCode: 500
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-1
+            namespace: envoy-gateway
+          name: httproute/envoy-gateway/httproute-1/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8443
+            metadata:
+              kind: Service
+              name: http-backend
+              namespace: envoy-gateway
+              sectionName: "8443"
+            name: httproute/envoy-gateway/httproute-1/rule/0/backend/0
+            protocol: HTTP
+            tls:
+              alpnProtocols: null
+              caCertificate:
+                certificate: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURKekNDQWcrZ0F3SUJBZ0lVQWw2VUtJdUttenRlODFjbGx6NVBmZE4ySWxJd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0l6RVFNQTRHQTFVRUF3d0hiWGxqYVdWdWRERVBNQTBHQTFVRUNnd0dhM1ZpWldSaU1CNFhEVEl6TVRBdwpNakExTkRFMU4xb1hEVEkwTVRBd01UQTFOREUxTjFvd0l6RVFNQTRHQTFVRUF3d0hiWGxqYVdWdWRERVBNQTBHCkExVUVDZ3dHYTNWaVpXUmlNSUlCSWpBTkJna3Foa2lHOXcwQkFRRUZBQU9DQVE4QU1JSUJDZ0tDQVFFQXdTVGMKMXlqOEhXNjJueW5rRmJYbzRWWEt2MmpDMFBNN2RQVmt5ODdGd2VaY1RLTG9XUVZQUUUycDJrTERLNk9Fc3ptTQp5eXIreHhXdHlpdmVyZW1yV3FuS2tOVFloTGZZUGhnUWtjemliN2VVYWxtRmpVYmhXZEx2SGFrYkVnQ29kbjNiCmt6NTdtSW5YMlZwaURPS2c0a3lIZml1WFdwaUJxckN4MEtOTHB4bzNERVFjRmNzUVRlVEh6aDQ3NTJHVjA0UlUKVGkvR0VXeXpJc2w0Umc3dEd0QXdtY0lQZ1VOVWZZMlEzOTBGR3FkSDRhaG4rbXcvNmFGYlczMVc2M2Q5WUpWcQppb3lPVmNhTUlwTTVCL2M3UWM4U3VoQ0kxWUdoVXlnNGNSSExFdzVWdGlraW95RTNYMDRrbmEzalFBajU0WWJSCmJwRWhjMzVhcEtMQjIxSE9VUUlEQVFBQm8xTXdVVEFkQmdOVkhRNEVGZ1FVeXZsMFZJNXZKVlN1WUZYdTdCNDgKNlBiTUVBb3dId1lEVlIwakJCZ3dGb0FVeXZsMFZJNXZKVlN1WUZYdTdCNDg2UGJNRUFvd0R3WURWUjBUQVFILwpCQVV3QXdFQi96QU5CZ2txaGtpRzl3MEJBUXNGQUFPQ0FRRUFNTHhyZ0ZWTXVOUnEyd0F3Y0J0N1NuTlI1Q2Z6CjJNdlhxNUVVbXVhd0lVaTlrYVlqd2RWaURSRUdTams3SlcxN3ZsNTc2SGpEa2RmUndpNEUyOFN5ZFJJblpmNkoKaThIWmNaN2NhSDZEeFIzMzVmZ0hWekxpNU5pVGNlL09qTkJRelEyTUpYVkRkOERCbUc1ZnlhdEppT0pRNGJXRQpBN0ZsUDBSZFAzQ08zR1dFME01aVhPQjJtMXFXa0UyZXlPNFVIdndUcU5RTGRyZEFYZ0RRbGJhbTllNEJHM0dnCmQvNnRoQWtXRGJ0L1FOVCtFSkhEQ3ZoRFJLaDFSdUdIeWcrWSsvbmViVFdXckZXc2t0UnJiT29IQ1ppQ3BYSTEKM2VYRTZudDBZa2d0RHhHMjJLcW5ocEFnOWdVU3MyaGxob3h5dmt6eUYwbXU2TmhQbHdBZ25xNysvUT09Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K
+                name: policy-btls/envoy-gateway-ca
+              sni: example.com
+            weight: 1
         hostname: '*'
         isHTTP2: false
         metadata:
@@ -2261,6 +2525,25 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources:
+      proxyServiceCluster:
+        metadata:
+          name: envoy-envoy-gateway-gateway-4-a293650b
+          namespace: envoy-gateway-system
+          sectionName: "8080"
+        name: envoy-gateway/gateway-4
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            name: envoy-envoy-gateway-gateway-4-a293650b
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-4
+          protocol: TCP
     http:
     - address: 0.0.0.0
       externalPort: 80
@@ -2278,8 +2561,31 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - directResponse:
-          statusCode: 500
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-1
+            namespace: envoy-gateway
+          name: httproute/envoy-gateway/httproute-1/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8443
+            metadata:
+              kind: Service
+              name: http-backend
+              namespace: envoy-gateway
+              sectionName: "8443"
+            name: httproute/envoy-gateway/httproute-1/rule/0/backend/0
+            protocol: HTTP
+            tls:
+              alpnProtocols: null
+              caCertificate:
+                certificate: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURKekNDQWcrZ0F3SUJBZ0lVQWw2VUtJdUttenRlODFjbGx6NVBmZE4ySWxJd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0l6RVFNQTRHQTFVRUF3d0hiWGxqYVdWdWRERVBNQTBHQTFVRUNnd0dhM1ZpWldSaU1CNFhEVEl6TVRBdwpNakExTkRFMU4xb1hEVEkwTVRBd01UQTFOREUxTjFvd0l6RVFNQTRHQTFVRUF3d0hiWGxqYVdWdWRERVBNQTBHCkExVUVDZ3dHYTNWaVpXUmlNSUlCSWpBTkJna3Foa2lHOXcwQkFRRUZBQU9DQVE4QU1JSUJDZ0tDQVFFQXdTVGMKMXlqOEhXNjJueW5rRmJYbzRWWEt2MmpDMFBNN2RQVmt5ODdGd2VaY1RLTG9XUVZQUUUycDJrTERLNk9Fc3ptTQp5eXIreHhXdHlpdmVyZW1yV3FuS2tOVFloTGZZUGhnUWtjemliN2VVYWxtRmpVYmhXZEx2SGFrYkVnQ29kbjNiCmt6NTdtSW5YMlZwaURPS2c0a3lIZml1WFdwaUJxckN4MEtOTHB4bzNERVFjRmNzUVRlVEh6aDQ3NTJHVjA0UlUKVGkvR0VXeXpJc2w0Umc3dEd0QXdtY0lQZ1VOVWZZMlEzOTBGR3FkSDRhaG4rbXcvNmFGYlczMVc2M2Q5WUpWcQppb3lPVmNhTUlwTTVCL2M3UWM4U3VoQ0kxWUdoVXlnNGNSSExFdzVWdGlraW95RTNYMDRrbmEzalFBajU0WWJSCmJwRWhjMzVhcEtMQjIxSE9VUUlEQVFBQm8xTXdVVEFkQmdOVkhRNEVGZ1FVeXZsMFZJNXZKVlN1WUZYdTdCNDgKNlBiTUVBb3dId1lEVlIwakJCZ3dGb0FVeXZsMFZJNXZKVlN1WUZYdTdCNDg2UGJNRUFvd0R3WURWUjBUQVFILwpCQVV3QXdFQi96QU5CZ2txaGtpRzl3MEJBUXNGQUFPQ0FRRUFNTHhyZ0ZWTXVOUnEyd0F3Y0J0N1NuTlI1Q2Z6CjJNdlhxNUVVbXVhd0lVaTlrYVlqd2RWaURSRUdTams3SlcxN3ZsNTc2SGpEa2RmUndpNEUyOFN5ZFJJblpmNkoKaThIWmNaN2NhSDZEeFIzMzVmZ0hWekxpNU5pVGNlL09qTkJRelEyTUpYVkRkOERCbUc1ZnlhdEppT0pRNGJXRQpBN0ZsUDBSZFAzQ08zR1dFME01aVhPQjJtMXFXa0UyZXlPNFVIdndUcU5RTGRyZEFYZ0RRbGJhbTllNEJHM0dnCmQvNnRoQWtXRGJ0L1FOVCtFSkhEQ3ZoRFJLaDFSdUdIeWcrWSsvbmViVFdXckZXc2t0UnJiT29IQ1ppQ3BYSTEKM2VYRTZudDBZa2d0RHhHMjJLcW5ocEFnOWdVU3MyaGxob3h5dmt6eUYwbXU2TmhQbHdBZ25xNysvUT09Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K
+                name: policy-btls/envoy-gateway-ca
+              sni: example.com
+            weight: 1
         hostname: '*'
         isHTTP2: false
         metadata:
@@ -2313,6 +2619,25 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources:
+      proxyServiceCluster:
+        metadata:
+          name: envoy-envoy-gateway-gateway-5-e35ee57f
+          namespace: envoy-gateway-system
+          sectionName: "8080"
+        name: envoy-gateway/gateway-5
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            name: envoy-envoy-gateway-gateway-5-e35ee57f
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-5
+          protocol: TCP
     http:
     - address: 0.0.0.0
       externalPort: 80
@@ -2330,8 +2655,31 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - directResponse:
-          statusCode: 500
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-1
+            namespace: envoy-gateway
+          name: httproute/envoy-gateway/httproute-1/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8443
+            metadata:
+              kind: Service
+              name: http-backend
+              namespace: envoy-gateway
+              sectionName: "8443"
+            name: httproute/envoy-gateway/httproute-1/rule/0/backend/0
+            protocol: HTTP
+            tls:
+              alpnProtocols: null
+              caCertificate:
+                certificate: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURKekNDQWcrZ0F3SUJBZ0lVQWw2VUtJdUttenRlODFjbGx6NVBmZE4ySWxJd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0l6RVFNQTRHQTFVRUF3d0hiWGxqYVdWdWRERVBNQTBHQTFVRUNnd0dhM1ZpWldSaU1CNFhEVEl6TVRBdwpNakExTkRFMU4xb1hEVEkwTVRBd01UQTFOREUxTjFvd0l6RVFNQTRHQTFVRUF3d0hiWGxqYVdWdWRERVBNQTBHCkExVUVDZ3dHYTNWaVpXUmlNSUlCSWpBTkJna3Foa2lHOXcwQkFRRUZBQU9DQVE4QU1JSUJDZ0tDQVFFQXdTVGMKMXlqOEhXNjJueW5rRmJYbzRWWEt2MmpDMFBNN2RQVmt5ODdGd2VaY1RLTG9XUVZQUUUycDJrTERLNk9Fc3ptTQp5eXIreHhXdHlpdmVyZW1yV3FuS2tOVFloTGZZUGhnUWtjemliN2VVYWxtRmpVYmhXZEx2SGFrYkVnQ29kbjNiCmt6NTdtSW5YMlZwaURPS2c0a3lIZml1WFdwaUJxckN4MEtOTHB4bzNERVFjRmNzUVRlVEh6aDQ3NTJHVjA0UlUKVGkvR0VXeXpJc2w0Umc3dEd0QXdtY0lQZ1VOVWZZMlEzOTBGR3FkSDRhaG4rbXcvNmFGYlczMVc2M2Q5WUpWcQppb3lPVmNhTUlwTTVCL2M3UWM4U3VoQ0kxWUdoVXlnNGNSSExFdzVWdGlraW95RTNYMDRrbmEzalFBajU0WWJSCmJwRWhjMzVhcEtMQjIxSE9VUUlEQVFBQm8xTXdVVEFkQmdOVkhRNEVGZ1FVeXZsMFZJNXZKVlN1WUZYdTdCNDgKNlBiTUVBb3dId1lEVlIwakJCZ3dGb0FVeXZsMFZJNXZKVlN1WUZYdTdCNDg2UGJNRUFvd0R3WURWUjBUQVFILwpCQVV3QXdFQi96QU5CZ2txaGtpRzl3MEJBUXNGQUFPQ0FRRUFNTHhyZ0ZWTXVOUnEyd0F3Y0J0N1NuTlI1Q2Z6CjJNdlhxNUVVbXVhd0lVaTlrYVlqd2RWaURSRUdTams3SlcxN3ZsNTc2SGpEa2RmUndpNEUyOFN5ZFJJblpmNkoKaThIWmNaN2NhSDZEeFIzMzVmZ0hWekxpNU5pVGNlL09qTkJRelEyTUpYVkRkOERCbUc1ZnlhdEppT0pRNGJXRQpBN0ZsUDBSZFAzQ08zR1dFME01aVhPQjJtMXFXa0UyZXlPNFVIdndUcU5RTGRyZEFYZ0RRbGJhbTllNEJHM0dnCmQvNnRoQWtXRGJ0L1FOVCtFSkhEQ3ZoRFJLaDFSdUdIeWcrWSsvbmViVFdXckZXc2t0UnJiT29IQ1ppQ3BYSTEKM2VYRTZudDBZa2d0RHhHMjJLcW5ocEFnOWdVU3MyaGxob3h5dmt6eUYwbXU2TmhQbHdBZ25xNysvUT09Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K
+                name: policy-btls/envoy-gateway-ca
+              sni: example.com
+            weight: 1
         hostname: '*'
         isHTTP2: false
         metadata:
@@ -2365,6 +2713,25 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources:
+      proxyServiceCluster:
+        metadata:
+          name: envoy-envoy-gateway-gateway-6-703894b8
+          namespace: envoy-gateway-system
+          sectionName: "8080"
+        name: envoy-gateway/gateway-6
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            name: envoy-envoy-gateway-gateway-6-703894b8
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-6
+          protocol: TCP
     http:
     - address: 0.0.0.0
       externalPort: 80
@@ -2382,8 +2749,31 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - directResponse:
-          statusCode: 500
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-1
+            namespace: envoy-gateway
+          name: httproute/envoy-gateway/httproute-1/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8443
+            metadata:
+              kind: Service
+              name: http-backend
+              namespace: envoy-gateway
+              sectionName: "8443"
+            name: httproute/envoy-gateway/httproute-1/rule/0/backend/0
+            protocol: HTTP
+            tls:
+              alpnProtocols: null
+              caCertificate:
+                certificate: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURKekNDQWcrZ0F3SUJBZ0lVQWw2VUtJdUttenRlODFjbGx6NVBmZE4ySWxJd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0l6RVFNQTRHQTFVRUF3d0hiWGxqYVdWdWRERVBNQTBHQTFVRUNnd0dhM1ZpWldSaU1CNFhEVEl6TVRBdwpNakExTkRFMU4xb1hEVEkwTVRBd01UQTFOREUxTjFvd0l6RVFNQTRHQTFVRUF3d0hiWGxqYVdWdWRERVBNQTBHCkExVUVDZ3dHYTNWaVpXUmlNSUlCSWpBTkJna3Foa2lHOXcwQkFRRUZBQU9DQVE4QU1JSUJDZ0tDQVFFQXdTVGMKMXlqOEhXNjJueW5rRmJYbzRWWEt2MmpDMFBNN2RQVmt5ODdGd2VaY1RLTG9XUVZQUUUycDJrTERLNk9Fc3ptTQp5eXIreHhXdHlpdmVyZW1yV3FuS2tOVFloTGZZUGhnUWtjemliN2VVYWxtRmpVYmhXZEx2SGFrYkVnQ29kbjNiCmt6NTdtSW5YMlZwaURPS2c0a3lIZml1WFdwaUJxckN4MEtOTHB4bzNERVFjRmNzUVRlVEh6aDQ3NTJHVjA0UlUKVGkvR0VXeXpJc2w0Umc3dEd0QXdtY0lQZ1VOVWZZMlEzOTBGR3FkSDRhaG4rbXcvNmFGYlczMVc2M2Q5WUpWcQppb3lPVmNhTUlwTTVCL2M3UWM4U3VoQ0kxWUdoVXlnNGNSSExFdzVWdGlraW95RTNYMDRrbmEzalFBajU0WWJSCmJwRWhjMzVhcEtMQjIxSE9VUUlEQVFBQm8xTXdVVEFkQmdOVkhRNEVGZ1FVeXZsMFZJNXZKVlN1WUZYdTdCNDgKNlBiTUVBb3dId1lEVlIwakJCZ3dGb0FVeXZsMFZJNXZKVlN1WUZYdTdCNDg2UGJNRUFvd0R3WURWUjBUQVFILwpCQVV3QXdFQi96QU5CZ2txaGtpRzl3MEJBUXNGQUFPQ0FRRUFNTHhyZ0ZWTXVOUnEyd0F3Y0J0N1NuTlI1Q2Z6CjJNdlhxNUVVbXVhd0lVaTlrYVlqd2RWaURSRUdTams3SlcxN3ZsNTc2SGpEa2RmUndpNEUyOFN5ZFJJblpmNkoKaThIWmNaN2NhSDZEeFIzMzVmZ0hWekxpNU5pVGNlL09qTkJRelEyTUpYVkRkOERCbUc1ZnlhdEppT0pRNGJXRQpBN0ZsUDBSZFAzQ08zR1dFME01aVhPQjJtMXFXa0UyZXlPNFVIdndUcU5RTGRyZEFYZ0RRbGJhbTllNEJHM0dnCmQvNnRoQWtXRGJ0L1FOVCtFSkhEQ3ZoRFJLaDFSdUdIeWcrWSsvbmViVFdXckZXc2t0UnJiT29IQ1ppQ3BYSTEKM2VYRTZudDBZa2d0RHhHMjJLcW5ocEFnOWdVU3MyaGxob3h5dmt6eUYwbXU2TmhQbHdBZ25xNysvUT09Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K
+                name: policy-btls/envoy-gateway-ca
+              sni: example.com
+            weight: 1
         hostname: '*'
         isHTTP2: false
         metadata:
@@ -2417,6 +2807,25 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources:
+      proxyServiceCluster:
+        metadata:
+          name: envoy-envoy-gateway-gateway-7-8f166bcc
+          namespace: envoy-gateway-system
+          sectionName: "8080"
+        name: envoy-gateway/gateway-7
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            name: envoy-envoy-gateway-gateway-7-8f166bcc
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-7
+          protocol: TCP
     http:
     - address: 0.0.0.0
       externalPort: 80
@@ -2434,8 +2843,31 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - directResponse:
-          statusCode: 500
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-1
+            namespace: envoy-gateway
+          name: httproute/envoy-gateway/httproute-1/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8443
+            metadata:
+              kind: Service
+              name: http-backend
+              namespace: envoy-gateway
+              sectionName: "8443"
+            name: httproute/envoy-gateway/httproute-1/rule/0/backend/0
+            protocol: HTTP
+            tls:
+              alpnProtocols: null
+              caCertificate:
+                certificate: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURKekNDQWcrZ0F3SUJBZ0lVQWw2VUtJdUttenRlODFjbGx6NVBmZE4ySWxJd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0l6RVFNQTRHQTFVRUF3d0hiWGxqYVdWdWRERVBNQTBHQTFVRUNnd0dhM1ZpWldSaU1CNFhEVEl6TVRBdwpNakExTkRFMU4xb1hEVEkwTVRBd01UQTFOREUxTjFvd0l6RVFNQTRHQTFVRUF3d0hiWGxqYVdWdWRERVBNQTBHCkExVUVDZ3dHYTNWaVpXUmlNSUlCSWpBTkJna3Foa2lHOXcwQkFRRUZBQU9DQVE4QU1JSUJDZ0tDQVFFQXdTVGMKMXlqOEhXNjJueW5rRmJYbzRWWEt2MmpDMFBNN2RQVmt5ODdGd2VaY1RLTG9XUVZQUUUycDJrTERLNk9Fc3ptTQp5eXIreHhXdHlpdmVyZW1yV3FuS2tOVFloTGZZUGhnUWtjemliN2VVYWxtRmpVYmhXZEx2SGFrYkVnQ29kbjNiCmt6NTdtSW5YMlZwaURPS2c0a3lIZml1WFdwaUJxckN4MEtOTHB4bzNERVFjRmNzUVRlVEh6aDQ3NTJHVjA0UlUKVGkvR0VXeXpJc2w0Umc3dEd0QXdtY0lQZ1VOVWZZMlEzOTBGR3FkSDRhaG4rbXcvNmFGYlczMVc2M2Q5WUpWcQppb3lPVmNhTUlwTTVCL2M3UWM4U3VoQ0kxWUdoVXlnNGNSSExFdzVWdGlraW95RTNYMDRrbmEzalFBajU0WWJSCmJwRWhjMzVhcEtMQjIxSE9VUUlEQVFBQm8xTXdVVEFkQmdOVkhRNEVGZ1FVeXZsMFZJNXZKVlN1WUZYdTdCNDgKNlBiTUVBb3dId1lEVlIwakJCZ3dGb0FVeXZsMFZJNXZKVlN1WUZYdTdCNDg2UGJNRUFvd0R3WURWUjBUQVFILwpCQVV3QXdFQi96QU5CZ2txaGtpRzl3MEJBUXNGQUFPQ0FRRUFNTHhyZ0ZWTXVOUnEyd0F3Y0J0N1NuTlI1Q2Z6CjJNdlhxNUVVbXVhd0lVaTlrYVlqd2RWaURSRUdTams3SlcxN3ZsNTc2SGpEa2RmUndpNEUyOFN5ZFJJblpmNkoKaThIWmNaN2NhSDZEeFIzMzVmZ0hWekxpNU5pVGNlL09qTkJRelEyTUpYVkRkOERCbUc1ZnlhdEppT0pRNGJXRQpBN0ZsUDBSZFAzQ08zR1dFME01aVhPQjJtMXFXa0UyZXlPNFVIdndUcU5RTGRyZEFYZ0RRbGJhbTllNEJHM0dnCmQvNnRoQWtXRGJ0L1FOVCtFSkhEQ3ZoRFJLaDFSdUdIeWcrWSsvbmViVFdXckZXc2t0UnJiT29IQ1ppQ3BYSTEKM2VYRTZudDBZa2d0RHhHMjJLcW5ocEFnOWdVU3MyaGxob3h5dmt6eUYwbXU2TmhQbHdBZ25xNysvUT09Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K
+                name: policy-btls/envoy-gateway-ca
+              sni: example.com
+            weight: 1
         hostname: '*'
         isHTTP2: false
         metadata:
@@ -2469,6 +2901,25 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources:
+      proxyServiceCluster:
+        metadata:
+          name: envoy-envoy-gateway-gateway-8-18a274e2
+          namespace: envoy-gateway-system
+          sectionName: "8080"
+        name: envoy-gateway/gateway-8
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            name: envoy-envoy-gateway-gateway-8-18a274e2
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-8
+          protocol: TCP
     http:
     - address: 0.0.0.0
       externalPort: 80
@@ -2486,8 +2937,31 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - directResponse:
-          statusCode: 500
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-1
+            namespace: envoy-gateway
+          name: httproute/envoy-gateway/httproute-1/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8443
+            metadata:
+              kind: Service
+              name: http-backend
+              namespace: envoy-gateway
+              sectionName: "8443"
+            name: httproute/envoy-gateway/httproute-1/rule/0/backend/0
+            protocol: HTTP
+            tls:
+              alpnProtocols: null
+              caCertificate:
+                certificate: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURKekNDQWcrZ0F3SUJBZ0lVQWw2VUtJdUttenRlODFjbGx6NVBmZE4ySWxJd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0l6RVFNQTRHQTFVRUF3d0hiWGxqYVdWdWRERVBNQTBHQTFVRUNnd0dhM1ZpWldSaU1CNFhEVEl6TVRBdwpNakExTkRFMU4xb1hEVEkwTVRBd01UQTFOREUxTjFvd0l6RVFNQTRHQTFVRUF3d0hiWGxqYVdWdWRERVBNQTBHCkExVUVDZ3dHYTNWaVpXUmlNSUlCSWpBTkJna3Foa2lHOXcwQkFRRUZBQU9DQVE4QU1JSUJDZ0tDQVFFQXdTVGMKMXlqOEhXNjJueW5rRmJYbzRWWEt2MmpDMFBNN2RQVmt5ODdGd2VaY1RLTG9XUVZQUUUycDJrTERLNk9Fc3ptTQp5eXIreHhXdHlpdmVyZW1yV3FuS2tOVFloTGZZUGhnUWtjemliN2VVYWxtRmpVYmhXZEx2SGFrYkVnQ29kbjNiCmt6NTdtSW5YMlZwaURPS2c0a3lIZml1WFdwaUJxckN4MEtOTHB4bzNERVFjRmNzUVRlVEh6aDQ3NTJHVjA0UlUKVGkvR0VXeXpJc2w0Umc3dEd0QXdtY0lQZ1VOVWZZMlEzOTBGR3FkSDRhaG4rbXcvNmFGYlczMVc2M2Q5WUpWcQppb3lPVmNhTUlwTTVCL2M3UWM4U3VoQ0kxWUdoVXlnNGNSSExFdzVWdGlraW95RTNYMDRrbmEzalFBajU0WWJSCmJwRWhjMzVhcEtMQjIxSE9VUUlEQVFBQm8xTXdVVEFkQmdOVkhRNEVGZ1FVeXZsMFZJNXZKVlN1WUZYdTdCNDgKNlBiTUVBb3dId1lEVlIwakJCZ3dGb0FVeXZsMFZJNXZKVlN1WUZYdTdCNDg2UGJNRUFvd0R3WURWUjBUQVFILwpCQVV3QXdFQi96QU5CZ2txaGtpRzl3MEJBUXNGQUFPQ0FRRUFNTHhyZ0ZWTXVOUnEyd0F3Y0J0N1NuTlI1Q2Z6CjJNdlhxNUVVbXVhd0lVaTlrYVlqd2RWaURSRUdTams3SlcxN3ZsNTc2SGpEa2RmUndpNEUyOFN5ZFJJblpmNkoKaThIWmNaN2NhSDZEeFIzMzVmZ0hWekxpNU5pVGNlL09qTkJRelEyTUpYVkRkOERCbUc1ZnlhdEppT0pRNGJXRQpBN0ZsUDBSZFAzQ08zR1dFME01aVhPQjJtMXFXa0UyZXlPNFVIdndUcU5RTGRyZEFYZ0RRbGJhbTllNEJHM0dnCmQvNnRoQWtXRGJ0L1FOVCtFSkhEQ3ZoRFJLaDFSdUdIeWcrWSsvbmViVFdXckZXc2t0UnJiT29IQ1ppQ3BYSTEKM2VYRTZudDBZa2d0RHhHMjJLcW5ocEFnOWdVU3MyaGxob3h5dmt6eUYwbXU2TmhQbHdBZ25xNysvUT09Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K
+                name: policy-btls/envoy-gateway-ca
+              sni: example.com
+            weight: 1
         hostname: '*'
         isHTTP2: false
         metadata:
@@ -2521,6 +2995,25 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources:
+      proxyServiceCluster:
+        metadata:
+          name: envoy-envoy-gateway-gateway-9-3f4aa2eb
+          namespace: envoy-gateway-system
+          sectionName: "8080"
+        name: envoy-gateway/gateway-9
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            name: envoy-envoy-gateway-gateway-9-3f4aa2eb
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-9
+          protocol: TCP
     http:
     - address: 0.0.0.0
       externalPort: 80
@@ -2538,8 +3031,31 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - directResponse:
-          statusCode: 500
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-1
+            namespace: envoy-gateway
+          name: httproute/envoy-gateway/httproute-1/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8443
+            metadata:
+              kind: Service
+              name: http-backend
+              namespace: envoy-gateway
+              sectionName: "8443"
+            name: httproute/envoy-gateway/httproute-1/rule/0/backend/0
+            protocol: HTTP
+            tls:
+              alpnProtocols: null
+              caCertificate:
+                certificate: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURKekNDQWcrZ0F3SUJBZ0lVQWw2VUtJdUttenRlODFjbGx6NVBmZE4ySWxJd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0l6RVFNQTRHQTFVRUF3d0hiWGxqYVdWdWRERVBNQTBHQTFVRUNnd0dhM1ZpWldSaU1CNFhEVEl6TVRBdwpNakExTkRFMU4xb1hEVEkwTVRBd01UQTFOREUxTjFvd0l6RVFNQTRHQTFVRUF3d0hiWGxqYVdWdWRERVBNQTBHCkExVUVDZ3dHYTNWaVpXUmlNSUlCSWpBTkJna3Foa2lHOXcwQkFRRUZBQU9DQVE4QU1JSUJDZ0tDQVFFQXdTVGMKMXlqOEhXNjJueW5rRmJYbzRWWEt2MmpDMFBNN2RQVmt5ODdGd2VaY1RLTG9XUVZQUUUycDJrTERLNk9Fc3ptTQp5eXIreHhXdHlpdmVyZW1yV3FuS2tOVFloTGZZUGhnUWtjemliN2VVYWxtRmpVYmhXZEx2SGFrYkVnQ29kbjNiCmt6NTdtSW5YMlZwaURPS2c0a3lIZml1WFdwaUJxckN4MEtOTHB4bzNERVFjRmNzUVRlVEh6aDQ3NTJHVjA0UlUKVGkvR0VXeXpJc2w0Umc3dEd0QXdtY0lQZ1VOVWZZMlEzOTBGR3FkSDRhaG4rbXcvNmFGYlczMVc2M2Q5WUpWcQppb3lPVmNhTUlwTTVCL2M3UWM4U3VoQ0kxWUdoVXlnNGNSSExFdzVWdGlraW95RTNYMDRrbmEzalFBajU0WWJSCmJwRWhjMzVhcEtMQjIxSE9VUUlEQVFBQm8xTXdVVEFkQmdOVkhRNEVGZ1FVeXZsMFZJNXZKVlN1WUZYdTdCNDgKNlBiTUVBb3dId1lEVlIwakJCZ3dGb0FVeXZsMFZJNXZKVlN1WUZYdTdCNDg2UGJNRUFvd0R3WURWUjBUQVFILwpCQVV3QXdFQi96QU5CZ2txaGtpRzl3MEJBUXNGQUFPQ0FRRUFNTHhyZ0ZWTXVOUnEyd0F3Y0J0N1NuTlI1Q2Z6CjJNdlhxNUVVbXVhd0lVaTlrYVlqd2RWaURSRUdTams3SlcxN3ZsNTc2SGpEa2RmUndpNEUyOFN5ZFJJblpmNkoKaThIWmNaN2NhSDZEeFIzMzVmZ0hWekxpNU5pVGNlL09qTkJRelEyTUpYVkRkOERCbUc1ZnlhdEppT0pRNGJXRQpBN0ZsUDBSZFAzQ08zR1dFME01aVhPQjJtMXFXa0UyZXlPNFVIdndUcU5RTGRyZEFYZ0RRbGJhbTllNEJHM0dnCmQvNnRoQWtXRGJ0L1FOVCtFSkhEQ3ZoRFJLaDFSdUdIeWcrWSsvbmViVFdXckZXc2t0UnJiT29IQ1ppQ3BYSTEKM2VYRTZudDBZa2d0RHhHMjJLcW5ocEFnOWdVU3MyaGxob3h5dmt6eUYwbXU2TmhQbHdBZ25xNysvUT09Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K
+                name: policy-btls/envoy-gateway-ca
+              sni: example.com
+            weight: 1
         hostname: '*'
         isHTTP2: false
         metadata:
@@ -2573,6 +3089,25 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources:
+      proxyServiceCluster:
+        metadata:
+          name: envoy-envoy-gateway-gateway-10-323a05f0
+          namespace: envoy-gateway-system
+          sectionName: "8080"
+        name: envoy-gateway/gateway-10
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            name: envoy-envoy-gateway-gateway-10-323a05f0
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-10
+          protocol: TCP
     http:
     - address: 0.0.0.0
       externalPort: 80
@@ -2590,8 +3125,31 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - directResponse:
-          statusCode: 500
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-1
+            namespace: envoy-gateway
+          name: httproute/envoy-gateway/httproute-1/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8443
+            metadata:
+              kind: Service
+              name: http-backend
+              namespace: envoy-gateway
+              sectionName: "8443"
+            name: httproute/envoy-gateway/httproute-1/rule/0/backend/0
+            protocol: HTTP
+            tls:
+              alpnProtocols: null
+              caCertificate:
+                certificate: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURKekNDQWcrZ0F3SUJBZ0lVQWw2VUtJdUttenRlODFjbGx6NVBmZE4ySWxJd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0l6RVFNQTRHQTFVRUF3d0hiWGxqYVdWdWRERVBNQTBHQTFVRUNnd0dhM1ZpWldSaU1CNFhEVEl6TVRBdwpNakExTkRFMU4xb1hEVEkwTVRBd01UQTFOREUxTjFvd0l6RVFNQTRHQTFVRUF3d0hiWGxqYVdWdWRERVBNQTBHCkExVUVDZ3dHYTNWaVpXUmlNSUlCSWpBTkJna3Foa2lHOXcwQkFRRUZBQU9DQVE4QU1JSUJDZ0tDQVFFQXdTVGMKMXlqOEhXNjJueW5rRmJYbzRWWEt2MmpDMFBNN2RQVmt5ODdGd2VaY1RLTG9XUVZQUUUycDJrTERLNk9Fc3ptTQp5eXIreHhXdHlpdmVyZW1yV3FuS2tOVFloTGZZUGhnUWtjemliN2VVYWxtRmpVYmhXZEx2SGFrYkVnQ29kbjNiCmt6NTdtSW5YMlZwaURPS2c0a3lIZml1WFdwaUJxckN4MEtOTHB4bzNERVFjRmNzUVRlVEh6aDQ3NTJHVjA0UlUKVGkvR0VXeXpJc2w0Umc3dEd0QXdtY0lQZ1VOVWZZMlEzOTBGR3FkSDRhaG4rbXcvNmFGYlczMVc2M2Q5WUpWcQppb3lPVmNhTUlwTTVCL2M3UWM4U3VoQ0kxWUdoVXlnNGNSSExFdzVWdGlraW95RTNYMDRrbmEzalFBajU0WWJSCmJwRWhjMzVhcEtMQjIxSE9VUUlEQVFBQm8xTXdVVEFkQmdOVkhRNEVGZ1FVeXZsMFZJNXZKVlN1WUZYdTdCNDgKNlBiTUVBb3dId1lEVlIwakJCZ3dGb0FVeXZsMFZJNXZKVlN1WUZYdTdCNDg2UGJNRUFvd0R3WURWUjBUQVFILwpCQVV3QXdFQi96QU5CZ2txaGtpRzl3MEJBUXNGQUFPQ0FRRUFNTHhyZ0ZWTXVOUnEyd0F3Y0J0N1NuTlI1Q2Z6CjJNdlhxNUVVbXVhd0lVaTlrYVlqd2RWaURSRUdTams3SlcxN3ZsNTc2SGpEa2RmUndpNEUyOFN5ZFJJblpmNkoKaThIWmNaN2NhSDZEeFIzMzVmZ0hWekxpNU5pVGNlL09qTkJRelEyTUpYVkRkOERCbUc1ZnlhdEppT0pRNGJXRQpBN0ZsUDBSZFAzQ08zR1dFME01aVhPQjJtMXFXa0UyZXlPNFVIdndUcU5RTGRyZEFYZ0RRbGJhbTllNEJHM0dnCmQvNnRoQWtXRGJ0L1FOVCtFSkhEQ3ZoRFJLaDFSdUdIeWcrWSsvbmViVFdXckZXc2t0UnJiT29IQ1ppQ3BYSTEKM2VYRTZudDBZa2d0RHhHMjJLcW5ocEFnOWdVU3MyaGxob3h5dmt6eUYwbXU2TmhQbHdBZ25xNysvUT09Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K
+                name: policy-btls/envoy-gateway-ca
+              sni: example.com
+            weight: 1
         hostname: '*'
         isHTTP2: false
         metadata:
@@ -2625,6 +3183,25 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources:
+      proxyServiceCluster:
+        metadata:
+          name: envoy-envoy-gateway-gateway-11-7cd86d79
+          namespace: envoy-gateway-system
+          sectionName: "8080"
+        name: envoy-gateway/gateway-11
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            name: envoy-envoy-gateway-gateway-11-7cd86d79
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-11
+          protocol: TCP
     http:
     - address: 0.0.0.0
       externalPort: 80
@@ -2642,8 +3219,31 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - directResponse:
-          statusCode: 500
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-1
+            namespace: envoy-gateway
+          name: httproute/envoy-gateway/httproute-1/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8443
+            metadata:
+              kind: Service
+              name: http-backend
+              namespace: envoy-gateway
+              sectionName: "8443"
+            name: httproute/envoy-gateway/httproute-1/rule/0/backend/0
+            protocol: HTTP
+            tls:
+              alpnProtocols: null
+              caCertificate:
+                certificate: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURKekNDQWcrZ0F3SUJBZ0lVQWw2VUtJdUttenRlODFjbGx6NVBmZE4ySWxJd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0l6RVFNQTRHQTFVRUF3d0hiWGxqYVdWdWRERVBNQTBHQTFVRUNnd0dhM1ZpWldSaU1CNFhEVEl6TVRBdwpNakExTkRFMU4xb1hEVEkwTVRBd01UQTFOREUxTjFvd0l6RVFNQTRHQTFVRUF3d0hiWGxqYVdWdWRERVBNQTBHCkExVUVDZ3dHYTNWaVpXUmlNSUlCSWpBTkJna3Foa2lHOXcwQkFRRUZBQU9DQVE4QU1JSUJDZ0tDQVFFQXdTVGMKMXlqOEhXNjJueW5rRmJYbzRWWEt2MmpDMFBNN2RQVmt5ODdGd2VaY1RLTG9XUVZQUUUycDJrTERLNk9Fc3ptTQp5eXIreHhXdHlpdmVyZW1yV3FuS2tOVFloTGZZUGhnUWtjemliN2VVYWxtRmpVYmhXZEx2SGFrYkVnQ29kbjNiCmt6NTdtSW5YMlZwaURPS2c0a3lIZml1WFdwaUJxckN4MEtOTHB4bzNERVFjRmNzUVRlVEh6aDQ3NTJHVjA0UlUKVGkvR0VXeXpJc2w0Umc3dEd0QXdtY0lQZ1VOVWZZMlEzOTBGR3FkSDRhaG4rbXcvNmFGYlczMVc2M2Q5WUpWcQppb3lPVmNhTUlwTTVCL2M3UWM4U3VoQ0kxWUdoVXlnNGNSSExFdzVWdGlraW95RTNYMDRrbmEzalFBajU0WWJSCmJwRWhjMzVhcEtMQjIxSE9VUUlEQVFBQm8xTXdVVEFkQmdOVkhRNEVGZ1FVeXZsMFZJNXZKVlN1WUZYdTdCNDgKNlBiTUVBb3dId1lEVlIwakJCZ3dGb0FVeXZsMFZJNXZKVlN1WUZYdTdCNDg2UGJNRUFvd0R3WURWUjBUQVFILwpCQVV3QXdFQi96QU5CZ2txaGtpRzl3MEJBUXNGQUFPQ0FRRUFNTHhyZ0ZWTXVOUnEyd0F3Y0J0N1NuTlI1Q2Z6CjJNdlhxNUVVbXVhd0lVaTlrYVlqd2RWaURSRUdTams3SlcxN3ZsNTc2SGpEa2RmUndpNEUyOFN5ZFJJblpmNkoKaThIWmNaN2NhSDZEeFIzMzVmZ0hWekxpNU5pVGNlL09qTkJRelEyTUpYVkRkOERCbUc1ZnlhdEppT0pRNGJXRQpBN0ZsUDBSZFAzQ08zR1dFME01aVhPQjJtMXFXa0UyZXlPNFVIdndUcU5RTGRyZEFYZ0RRbGJhbTllNEJHM0dnCmQvNnRoQWtXRGJ0L1FOVCtFSkhEQ3ZoRFJLaDFSdUdIeWcrWSsvbmViVFdXckZXc2t0UnJiT29IQ1ppQ3BYSTEKM2VYRTZudDBZa2d0RHhHMjJLcW5ocEFnOWdVU3MyaGxob3h5dmt6eUYwbXU2TmhQbHdBZ25xNysvUT09Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K
+                name: policy-btls/envoy-gateway-ca
+              sni: example.com
+            weight: 1
         hostname: '*'
         isHTTP2: false
         metadata:
@@ -2677,6 +3277,25 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources:
+      proxyServiceCluster:
+        metadata:
+          name: envoy-envoy-gateway-gateway-12-b05135f7
+          namespace: envoy-gateway-system
+          sectionName: "8080"
+        name: envoy-gateway/gateway-12
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            name: envoy-envoy-gateway-gateway-12-b05135f7
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-12
+          protocol: TCP
     http:
     - address: 0.0.0.0
       externalPort: 80
@@ -2694,8 +3313,31 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - directResponse:
-          statusCode: 500
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-1
+            namespace: envoy-gateway
+          name: httproute/envoy-gateway/httproute-1/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8443
+            metadata:
+              kind: Service
+              name: http-backend
+              namespace: envoy-gateway
+              sectionName: "8443"
+            name: httproute/envoy-gateway/httproute-1/rule/0/backend/0
+            protocol: HTTP
+            tls:
+              alpnProtocols: null
+              caCertificate:
+                certificate: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURKekNDQWcrZ0F3SUJBZ0lVQWw2VUtJdUttenRlODFjbGx6NVBmZE4ySWxJd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0l6RVFNQTRHQTFVRUF3d0hiWGxqYVdWdWRERVBNQTBHQTFVRUNnd0dhM1ZpWldSaU1CNFhEVEl6TVRBdwpNakExTkRFMU4xb1hEVEkwTVRBd01UQTFOREUxTjFvd0l6RVFNQTRHQTFVRUF3d0hiWGxqYVdWdWRERVBNQTBHCkExVUVDZ3dHYTNWaVpXUmlNSUlCSWpBTkJna3Foa2lHOXcwQkFRRUZBQU9DQVE4QU1JSUJDZ0tDQVFFQXdTVGMKMXlqOEhXNjJueW5rRmJYbzRWWEt2MmpDMFBNN2RQVmt5ODdGd2VaY1RLTG9XUVZQUUUycDJrTERLNk9Fc3ptTQp5eXIreHhXdHlpdmVyZW1yV3FuS2tOVFloTGZZUGhnUWtjemliN2VVYWxtRmpVYmhXZEx2SGFrYkVnQ29kbjNiCmt6NTdtSW5YMlZwaURPS2c0a3lIZml1WFdwaUJxckN4MEtOTHB4bzNERVFjRmNzUVRlVEh6aDQ3NTJHVjA0UlUKVGkvR0VXeXpJc2w0Umc3dEd0QXdtY0lQZ1VOVWZZMlEzOTBGR3FkSDRhaG4rbXcvNmFGYlczMVc2M2Q5WUpWcQppb3lPVmNhTUlwTTVCL2M3UWM4U3VoQ0kxWUdoVXlnNGNSSExFdzVWdGlraW95RTNYMDRrbmEzalFBajU0WWJSCmJwRWhjMzVhcEtMQjIxSE9VUUlEQVFBQm8xTXdVVEFkQmdOVkhRNEVGZ1FVeXZsMFZJNXZKVlN1WUZYdTdCNDgKNlBiTUVBb3dId1lEVlIwakJCZ3dGb0FVeXZsMFZJNXZKVlN1WUZYdTdCNDg2UGJNRUFvd0R3WURWUjBUQVFILwpCQVV3QXdFQi96QU5CZ2txaGtpRzl3MEJBUXNGQUFPQ0FRRUFNTHhyZ0ZWTXVOUnEyd0F3Y0J0N1NuTlI1Q2Z6CjJNdlhxNUVVbXVhd0lVaTlrYVlqd2RWaURSRUdTams3SlcxN3ZsNTc2SGpEa2RmUndpNEUyOFN5ZFJJblpmNkoKaThIWmNaN2NhSDZEeFIzMzVmZ0hWekxpNU5pVGNlL09qTkJRelEyTUpYVkRkOERCbUc1ZnlhdEppT0pRNGJXRQpBN0ZsUDBSZFAzQ08zR1dFME01aVhPQjJtMXFXa0UyZXlPNFVIdndUcU5RTGRyZEFYZ0RRbGJhbTllNEJHM0dnCmQvNnRoQWtXRGJ0L1FOVCtFSkhEQ3ZoRFJLaDFSdUdIeWcrWSsvbmViVFdXckZXc2t0UnJiT29IQ1ppQ3BYSTEKM2VYRTZudDBZa2d0RHhHMjJLcW5ocEFnOWdVU3MyaGxob3h5dmt6eUYwbXU2TmhQbHdBZ25xNysvUT09Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K
+                name: policy-btls/envoy-gateway-ca
+              sni: example.com
+            weight: 1
         hostname: '*'
         isHTTP2: false
         metadata:
@@ -2729,6 +3371,25 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources:
+      proxyServiceCluster:
+        metadata:
+          name: envoy-envoy-gateway-gateway-13-5ef9b255
+          namespace: envoy-gateway-system
+          sectionName: "8080"
+        name: envoy-gateway/gateway-13
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            name: envoy-envoy-gateway-gateway-13-5ef9b255
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-13
+          protocol: TCP
     http:
     - address: 0.0.0.0
       externalPort: 80
@@ -2746,8 +3407,31 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - directResponse:
-          statusCode: 500
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-1
+            namespace: envoy-gateway
+          name: httproute/envoy-gateway/httproute-1/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8443
+            metadata:
+              kind: Service
+              name: http-backend
+              namespace: envoy-gateway
+              sectionName: "8443"
+            name: httproute/envoy-gateway/httproute-1/rule/0/backend/0
+            protocol: HTTP
+            tls:
+              alpnProtocols: null
+              caCertificate:
+                certificate: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURKekNDQWcrZ0F3SUJBZ0lVQWw2VUtJdUttenRlODFjbGx6NVBmZE4ySWxJd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0l6RVFNQTRHQTFVRUF3d0hiWGxqYVdWdWRERVBNQTBHQTFVRUNnd0dhM1ZpWldSaU1CNFhEVEl6TVRBdwpNakExTkRFMU4xb1hEVEkwTVRBd01UQTFOREUxTjFvd0l6RVFNQTRHQTFVRUF3d0hiWGxqYVdWdWRERVBNQTBHCkExVUVDZ3dHYTNWaVpXUmlNSUlCSWpBTkJna3Foa2lHOXcwQkFRRUZBQU9DQVE4QU1JSUJDZ0tDQVFFQXdTVGMKMXlqOEhXNjJueW5rRmJYbzRWWEt2MmpDMFBNN2RQVmt5ODdGd2VaY1RLTG9XUVZQUUUycDJrTERLNk9Fc3ptTQp5eXIreHhXdHlpdmVyZW1yV3FuS2tOVFloTGZZUGhnUWtjemliN2VVYWxtRmpVYmhXZEx2SGFrYkVnQ29kbjNiCmt6NTdtSW5YMlZwaURPS2c0a3lIZml1WFdwaUJxckN4MEtOTHB4bzNERVFjRmNzUVRlVEh6aDQ3NTJHVjA0UlUKVGkvR0VXeXpJc2w0Umc3dEd0QXdtY0lQZ1VOVWZZMlEzOTBGR3FkSDRhaG4rbXcvNmFGYlczMVc2M2Q5WUpWcQppb3lPVmNhTUlwTTVCL2M3UWM4U3VoQ0kxWUdoVXlnNGNSSExFdzVWdGlraW95RTNYMDRrbmEzalFBajU0WWJSCmJwRWhjMzVhcEtMQjIxSE9VUUlEQVFBQm8xTXdVVEFkQmdOVkhRNEVGZ1FVeXZsMFZJNXZKVlN1WUZYdTdCNDgKNlBiTUVBb3dId1lEVlIwakJCZ3dGb0FVeXZsMFZJNXZKVlN1WUZYdTdCNDg2UGJNRUFvd0R3WURWUjBUQVFILwpCQVV3QXdFQi96QU5CZ2txaGtpRzl3MEJBUXNGQUFPQ0FRRUFNTHhyZ0ZWTXVOUnEyd0F3Y0J0N1NuTlI1Q2Z6CjJNdlhxNUVVbXVhd0lVaTlrYVlqd2RWaURSRUdTams3SlcxN3ZsNTc2SGpEa2RmUndpNEUyOFN5ZFJJblpmNkoKaThIWmNaN2NhSDZEeFIzMzVmZ0hWekxpNU5pVGNlL09qTkJRelEyTUpYVkRkOERCbUc1ZnlhdEppT0pRNGJXRQpBN0ZsUDBSZFAzQ08zR1dFME01aVhPQjJtMXFXa0UyZXlPNFVIdndUcU5RTGRyZEFYZ0RRbGJhbTllNEJHM0dnCmQvNnRoQWtXRGJ0L1FOVCtFSkhEQ3ZoRFJLaDFSdUdIeWcrWSsvbmViVFdXckZXc2t0UnJiT29IQ1ppQ3BYSTEKM2VYRTZudDBZa2d0RHhHMjJLcW5ocEFnOWdVU3MyaGxob3h5dmt6eUYwbXU2TmhQbHdBZ25xNysvUT09Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K
+                name: policy-btls/envoy-gateway-ca
+              sni: example.com
+            weight: 1
         hostname: '*'
         isHTTP2: false
         metadata:
@@ -2781,6 +3465,25 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources:
+      proxyServiceCluster:
+        metadata:
+          name: envoy-envoy-gateway-gateway-14-2b849e6e
+          namespace: envoy-gateway-system
+          sectionName: "8080"
+        name: envoy-gateway/gateway-14
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            name: envoy-envoy-gateway-gateway-14-2b849e6e
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-14
+          protocol: TCP
     http:
     - address: 0.0.0.0
       externalPort: 80
@@ -2798,8 +3501,31 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - directResponse:
-          statusCode: 500
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-1
+            namespace: envoy-gateway
+          name: httproute/envoy-gateway/httproute-1/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8443
+            metadata:
+              kind: Service
+              name: http-backend
+              namespace: envoy-gateway
+              sectionName: "8443"
+            name: httproute/envoy-gateway/httproute-1/rule/0/backend/0
+            protocol: HTTP
+            tls:
+              alpnProtocols: null
+              caCertificate:
+                certificate: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURKekNDQWcrZ0F3SUJBZ0lVQWw2VUtJdUttenRlODFjbGx6NVBmZE4ySWxJd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0l6RVFNQTRHQTFVRUF3d0hiWGxqYVdWdWRERVBNQTBHQTFVRUNnd0dhM1ZpWldSaU1CNFhEVEl6TVRBdwpNakExTkRFMU4xb1hEVEkwTVRBd01UQTFOREUxTjFvd0l6RVFNQTRHQTFVRUF3d0hiWGxqYVdWdWRERVBNQTBHCkExVUVDZ3dHYTNWaVpXUmlNSUlCSWpBTkJna3Foa2lHOXcwQkFRRUZBQU9DQVE4QU1JSUJDZ0tDQVFFQXdTVGMKMXlqOEhXNjJueW5rRmJYbzRWWEt2MmpDMFBNN2RQVmt5ODdGd2VaY1RLTG9XUVZQUUUycDJrTERLNk9Fc3ptTQp5eXIreHhXdHlpdmVyZW1yV3FuS2tOVFloTGZZUGhnUWtjemliN2VVYWxtRmpVYmhXZEx2SGFrYkVnQ29kbjNiCmt6NTdtSW5YMlZwaURPS2c0a3lIZml1WFdwaUJxckN4MEtOTHB4bzNERVFjRmNzUVRlVEh6aDQ3NTJHVjA0UlUKVGkvR0VXeXpJc2w0Umc3dEd0QXdtY0lQZ1VOVWZZMlEzOTBGR3FkSDRhaG4rbXcvNmFGYlczMVc2M2Q5WUpWcQppb3lPVmNhTUlwTTVCL2M3UWM4U3VoQ0kxWUdoVXlnNGNSSExFdzVWdGlraW95RTNYMDRrbmEzalFBajU0WWJSCmJwRWhjMzVhcEtMQjIxSE9VUUlEQVFBQm8xTXdVVEFkQmdOVkhRNEVGZ1FVeXZsMFZJNXZKVlN1WUZYdTdCNDgKNlBiTUVBb3dId1lEVlIwakJCZ3dGb0FVeXZsMFZJNXZKVlN1WUZYdTdCNDg2UGJNRUFvd0R3WURWUjBUQVFILwpCQVV3QXdFQi96QU5CZ2txaGtpRzl3MEJBUXNGQUFPQ0FRRUFNTHhyZ0ZWTXVOUnEyd0F3Y0J0N1NuTlI1Q2Z6CjJNdlhxNUVVbXVhd0lVaTlrYVlqd2RWaURSRUdTams3SlcxN3ZsNTc2SGpEa2RmUndpNEUyOFN5ZFJJblpmNkoKaThIWmNaN2NhSDZEeFIzMzVmZ0hWekxpNU5pVGNlL09qTkJRelEyTUpYVkRkOERCbUc1ZnlhdEppT0pRNGJXRQpBN0ZsUDBSZFAzQ08zR1dFME01aVhPQjJtMXFXa0UyZXlPNFVIdndUcU5RTGRyZEFYZ0RRbGJhbTllNEJHM0dnCmQvNnRoQWtXRGJ0L1FOVCtFSkhEQ3ZoRFJLaDFSdUdIeWcrWSsvbmViVFdXckZXc2t0UnJiT29IQ1ppQ3BYSTEKM2VYRTZudDBZa2d0RHhHMjJLcW5ocEFnOWdVU3MyaGxob3h5dmt6eUYwbXU2TmhQbHdBZ25xNysvUT09Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K
+                name: policy-btls/envoy-gateway-ca
+              sni: example.com
+            weight: 1
         hostname: '*'
         isHTTP2: false
         metadata:
@@ -2833,6 +3559,25 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources:
+      proxyServiceCluster:
+        metadata:
+          name: envoy-envoy-gateway-gateway-15-473da5fd
+          namespace: envoy-gateway-system
+          sectionName: "8080"
+        name: envoy-gateway/gateway-15
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            name: envoy-envoy-gateway-gateway-15-473da5fd
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-15
+          protocol: TCP
     http:
     - address: 0.0.0.0
       externalPort: 80
@@ -2850,8 +3595,31 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - directResponse:
-          statusCode: 500
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-1
+            namespace: envoy-gateway
+          name: httproute/envoy-gateway/httproute-1/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8443
+            metadata:
+              kind: Service
+              name: http-backend
+              namespace: envoy-gateway
+              sectionName: "8443"
+            name: httproute/envoy-gateway/httproute-1/rule/0/backend/0
+            protocol: HTTP
+            tls:
+              alpnProtocols: null
+              caCertificate:
+                certificate: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURKekNDQWcrZ0F3SUJBZ0lVQWw2VUtJdUttenRlODFjbGx6NVBmZE4ySWxJd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0l6RVFNQTRHQTFVRUF3d0hiWGxqYVdWdWRERVBNQTBHQTFVRUNnd0dhM1ZpWldSaU1CNFhEVEl6TVRBdwpNakExTkRFMU4xb1hEVEkwTVRBd01UQTFOREUxTjFvd0l6RVFNQTRHQTFVRUF3d0hiWGxqYVdWdWRERVBNQTBHCkExVUVDZ3dHYTNWaVpXUmlNSUlCSWpBTkJna3Foa2lHOXcwQkFRRUZBQU9DQVE4QU1JSUJDZ0tDQVFFQXdTVGMKMXlqOEhXNjJueW5rRmJYbzRWWEt2MmpDMFBNN2RQVmt5ODdGd2VaY1RLTG9XUVZQUUUycDJrTERLNk9Fc3ptTQp5eXIreHhXdHlpdmVyZW1yV3FuS2tOVFloTGZZUGhnUWtjemliN2VVYWxtRmpVYmhXZEx2SGFrYkVnQ29kbjNiCmt6NTdtSW5YMlZwaURPS2c0a3lIZml1WFdwaUJxckN4MEtOTHB4bzNERVFjRmNzUVRlVEh6aDQ3NTJHVjA0UlUKVGkvR0VXeXpJc2w0Umc3dEd0QXdtY0lQZ1VOVWZZMlEzOTBGR3FkSDRhaG4rbXcvNmFGYlczMVc2M2Q5WUpWcQppb3lPVmNhTUlwTTVCL2M3UWM4U3VoQ0kxWUdoVXlnNGNSSExFdzVWdGlraW95RTNYMDRrbmEzalFBajU0WWJSCmJwRWhjMzVhcEtMQjIxSE9VUUlEQVFBQm8xTXdVVEFkQmdOVkhRNEVGZ1FVeXZsMFZJNXZKVlN1WUZYdTdCNDgKNlBiTUVBb3dId1lEVlIwakJCZ3dGb0FVeXZsMFZJNXZKVlN1WUZYdTdCNDg2UGJNRUFvd0R3WURWUjBUQVFILwpCQVV3QXdFQi96QU5CZ2txaGtpRzl3MEJBUXNGQUFPQ0FRRUFNTHhyZ0ZWTXVOUnEyd0F3Y0J0N1NuTlI1Q2Z6CjJNdlhxNUVVbXVhd0lVaTlrYVlqd2RWaURSRUdTams3SlcxN3ZsNTc2SGpEa2RmUndpNEUyOFN5ZFJJblpmNkoKaThIWmNaN2NhSDZEeFIzMzVmZ0hWekxpNU5pVGNlL09qTkJRelEyTUpYVkRkOERCbUc1ZnlhdEppT0pRNGJXRQpBN0ZsUDBSZFAzQ08zR1dFME01aVhPQjJtMXFXa0UyZXlPNFVIdndUcU5RTGRyZEFYZ0RRbGJhbTllNEJHM0dnCmQvNnRoQWtXRGJ0L1FOVCtFSkhEQ3ZoRFJLaDFSdUdIeWcrWSsvbmViVFdXckZXc2t0UnJiT29IQ1ppQ3BYSTEKM2VYRTZudDBZa2d0RHhHMjJLcW5ocEFnOWdVU3MyaGxob3h5dmt6eUYwbXU2TmhQbHdBZ25xNysvUT09Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K
+                name: policy-btls/envoy-gateway-ca
+              sni: example.com
+            weight: 1
         hostname: '*'
         isHTTP2: false
         metadata:
@@ -2885,6 +3653,25 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources:
+      proxyServiceCluster:
+        metadata:
+          name: envoy-envoy-gateway-gateway-16-bc2b5d3e
+          namespace: envoy-gateway-system
+          sectionName: "8080"
+        name: envoy-gateway/gateway-16
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            name: envoy-envoy-gateway-gateway-16-bc2b5d3e
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-16
+          protocol: TCP
     http:
     - address: 0.0.0.0
       externalPort: 80
@@ -2902,8 +3689,31 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - directResponse:
-          statusCode: 500
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-1
+            namespace: envoy-gateway
+          name: httproute/envoy-gateway/httproute-1/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8443
+            metadata:
+              kind: Service
+              name: http-backend
+              namespace: envoy-gateway
+              sectionName: "8443"
+            name: httproute/envoy-gateway/httproute-1/rule/0/backend/0
+            protocol: HTTP
+            tls:
+              alpnProtocols: null
+              caCertificate:
+                certificate: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURKekNDQWcrZ0F3SUJBZ0lVQWw2VUtJdUttenRlODFjbGx6NVBmZE4ySWxJd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0l6RVFNQTRHQTFVRUF3d0hiWGxqYVdWdWRERVBNQTBHQTFVRUNnd0dhM1ZpWldSaU1CNFhEVEl6TVRBdwpNakExTkRFMU4xb1hEVEkwTVRBd01UQTFOREUxTjFvd0l6RVFNQTRHQTFVRUF3d0hiWGxqYVdWdWRERVBNQTBHCkExVUVDZ3dHYTNWaVpXUmlNSUlCSWpBTkJna3Foa2lHOXcwQkFRRUZBQU9DQVE4QU1JSUJDZ0tDQVFFQXdTVGMKMXlqOEhXNjJueW5rRmJYbzRWWEt2MmpDMFBNN2RQVmt5ODdGd2VaY1RLTG9XUVZQUUUycDJrTERLNk9Fc3ptTQp5eXIreHhXdHlpdmVyZW1yV3FuS2tOVFloTGZZUGhnUWtjemliN2VVYWxtRmpVYmhXZEx2SGFrYkVnQ29kbjNiCmt6NTdtSW5YMlZwaURPS2c0a3lIZml1WFdwaUJxckN4MEtOTHB4bzNERVFjRmNzUVRlVEh6aDQ3NTJHVjA0UlUKVGkvR0VXeXpJc2w0Umc3dEd0QXdtY0lQZ1VOVWZZMlEzOTBGR3FkSDRhaG4rbXcvNmFGYlczMVc2M2Q5WUpWcQppb3lPVmNhTUlwTTVCL2M3UWM4U3VoQ0kxWUdoVXlnNGNSSExFdzVWdGlraW95RTNYMDRrbmEzalFBajU0WWJSCmJwRWhjMzVhcEtMQjIxSE9VUUlEQVFBQm8xTXdVVEFkQmdOVkhRNEVGZ1FVeXZsMFZJNXZKVlN1WUZYdTdCNDgKNlBiTUVBb3dId1lEVlIwakJCZ3dGb0FVeXZsMFZJNXZKVlN1WUZYdTdCNDg2UGJNRUFvd0R3WURWUjBUQVFILwpCQVV3QXdFQi96QU5CZ2txaGtpRzl3MEJBUXNGQUFPQ0FRRUFNTHhyZ0ZWTXVOUnEyd0F3Y0J0N1NuTlI1Q2Z6CjJNdlhxNUVVbXVhd0lVaTlrYVlqd2RWaURSRUdTams3SlcxN3ZsNTc2SGpEa2RmUndpNEUyOFN5ZFJJblpmNkoKaThIWmNaN2NhSDZEeFIzMzVmZ0hWekxpNU5pVGNlL09qTkJRelEyTUpYVkRkOERCbUc1ZnlhdEppT0pRNGJXRQpBN0ZsUDBSZFAzQ08zR1dFME01aVhPQjJtMXFXa0UyZXlPNFVIdndUcU5RTGRyZEFYZ0RRbGJhbTllNEJHM0dnCmQvNnRoQWtXRGJ0L1FOVCtFSkhEQ3ZoRFJLaDFSdUdIeWcrWSsvbmViVFdXckZXc2t0UnJiT29IQ1ppQ3BYSTEKM2VYRTZudDBZa2d0RHhHMjJLcW5ocEFnOWdVU3MyaGxob3h5dmt6eUYwbXU2TmhQbHdBZ25xNysvUT09Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K
+                name: policy-btls/envoy-gateway-ca
+              sni: example.com
+            weight: 1
         hostname: '*'
         isHTTP2: false
         metadata:
@@ -2937,6 +3747,25 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources:
+      proxyServiceCluster:
+        metadata:
+          name: envoy-envoy-gateway-gateway-17-686d5dd1
+          namespace: envoy-gateway-system
+          sectionName: "8080"
+        name: envoy-gateway/gateway-17
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            name: envoy-envoy-gateway-gateway-17-686d5dd1
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-17
+          protocol: TCP
     http:
     - address: 0.0.0.0
       externalPort: 80
@@ -2954,8 +3783,31 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - directResponse:
-          statusCode: 500
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-1
+            namespace: envoy-gateway
+          name: httproute/envoy-gateway/httproute-1/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8443
+            metadata:
+              kind: Service
+              name: http-backend
+              namespace: envoy-gateway
+              sectionName: "8443"
+            name: httproute/envoy-gateway/httproute-1/rule/0/backend/0
+            protocol: HTTP
+            tls:
+              alpnProtocols: null
+              caCertificate:
+                certificate: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURKekNDQWcrZ0F3SUJBZ0lVQWw2VUtJdUttenRlODFjbGx6NVBmZE4ySWxJd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0l6RVFNQTRHQTFVRUF3d0hiWGxqYVdWdWRERVBNQTBHQTFVRUNnd0dhM1ZpWldSaU1CNFhEVEl6TVRBdwpNakExTkRFMU4xb1hEVEkwTVRBd01UQTFOREUxTjFvd0l6RVFNQTRHQTFVRUF3d0hiWGxqYVdWdWRERVBNQTBHCkExVUVDZ3dHYTNWaVpXUmlNSUlCSWpBTkJna3Foa2lHOXcwQkFRRUZBQU9DQVE4QU1JSUJDZ0tDQVFFQXdTVGMKMXlqOEhXNjJueW5rRmJYbzRWWEt2MmpDMFBNN2RQVmt5ODdGd2VaY1RLTG9XUVZQUUUycDJrTERLNk9Fc3ptTQp5eXIreHhXdHlpdmVyZW1yV3FuS2tOVFloTGZZUGhnUWtjemliN2VVYWxtRmpVYmhXZEx2SGFrYkVnQ29kbjNiCmt6NTdtSW5YMlZwaURPS2c0a3lIZml1WFdwaUJxckN4MEtOTHB4bzNERVFjRmNzUVRlVEh6aDQ3NTJHVjA0UlUKVGkvR0VXeXpJc2w0Umc3dEd0QXdtY0lQZ1VOVWZZMlEzOTBGR3FkSDRhaG4rbXcvNmFGYlczMVc2M2Q5WUpWcQppb3lPVmNhTUlwTTVCL2M3UWM4U3VoQ0kxWUdoVXlnNGNSSExFdzVWdGlraW95RTNYMDRrbmEzalFBajU0WWJSCmJwRWhjMzVhcEtMQjIxSE9VUUlEQVFBQm8xTXdVVEFkQmdOVkhRNEVGZ1FVeXZsMFZJNXZKVlN1WUZYdTdCNDgKNlBiTUVBb3dId1lEVlIwakJCZ3dGb0FVeXZsMFZJNXZKVlN1WUZYdTdCNDg2UGJNRUFvd0R3WURWUjBUQVFILwpCQVV3QXdFQi96QU5CZ2txaGtpRzl3MEJBUXNGQUFPQ0FRRUFNTHhyZ0ZWTXVOUnEyd0F3Y0J0N1NuTlI1Q2Z6CjJNdlhxNUVVbXVhd0lVaTlrYVlqd2RWaURSRUdTams3SlcxN3ZsNTc2SGpEa2RmUndpNEUyOFN5ZFJJblpmNkoKaThIWmNaN2NhSDZEeFIzMzVmZ0hWekxpNU5pVGNlL09qTkJRelEyTUpYVkRkOERCbUc1ZnlhdEppT0pRNGJXRQpBN0ZsUDBSZFAzQ08zR1dFME01aVhPQjJtMXFXa0UyZXlPNFVIdndUcU5RTGRyZEFYZ0RRbGJhbTllNEJHM0dnCmQvNnRoQWtXRGJ0L1FOVCtFSkhEQ3ZoRFJLaDFSdUdIeWcrWSsvbmViVFdXckZXc2t0UnJiT29IQ1ppQ3BYSTEKM2VYRTZudDBZa2d0RHhHMjJLcW5ocEFnOWdVU3MyaGxob3h5dmt6eUYwbXU2TmhQbHdBZ25xNysvUT09Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K
+                name: policy-btls/envoy-gateway-ca
+              sni: example.com
+            weight: 1
         hostname: '*'
         isHTTP2: false
         metadata:
@@ -2991,10 +3843,19 @@ xdsIR:
       - path: /dev/stdout
     globalResources:
       proxyServiceCluster:
+        metadata:
+          name: envoy-envoy-gateway-gateway-18-80e55fa6
+          namespace: envoy-gateway-system
+          sectionName: "8080"
         name: envoy-gateway/gateway-18
         settings:
-        - metadata:
-            name: envoy-envoy-gateway-gateway-1-196ae069
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            name: envoy-envoy-gateway-gateway-18-80e55fa6
             namespace: envoy-gateway-system
             sectionName: "8080"
           name: envoy-gateway/gateway-18
@@ -3016,8 +3877,31 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - directResponse:
-          statusCode: 500
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-1
+            namespace: envoy-gateway
+          name: httproute/envoy-gateway/httproute-1/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8443
+            metadata:
+              kind: Service
+              name: http-backend
+              namespace: envoy-gateway
+              sectionName: "8443"
+            name: httproute/envoy-gateway/httproute-1/rule/0/backend/0
+            protocol: HTTP
+            tls:
+              alpnProtocols: null
+              caCertificate:
+                certificate: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURKekNDQWcrZ0F3SUJBZ0lVQWw2VUtJdUttenRlODFjbGx6NVBmZE4ySWxJd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0l6RVFNQTRHQTFVRUF3d0hiWGxqYVdWdWRERVBNQTBHQTFVRUNnd0dhM1ZpWldSaU1CNFhEVEl6TVRBdwpNakExTkRFMU4xb1hEVEkwTVRBd01UQTFOREUxTjFvd0l6RVFNQTRHQTFVRUF3d0hiWGxqYVdWdWRERVBNQTBHCkExVUVDZ3dHYTNWaVpXUmlNSUlCSWpBTkJna3Foa2lHOXcwQkFRRUZBQU9DQVE4QU1JSUJDZ0tDQVFFQXdTVGMKMXlqOEhXNjJueW5rRmJYbzRWWEt2MmpDMFBNN2RQVmt5ODdGd2VaY1RLTG9XUVZQUUUycDJrTERLNk9Fc3ptTQp5eXIreHhXdHlpdmVyZW1yV3FuS2tOVFloTGZZUGhnUWtjemliN2VVYWxtRmpVYmhXZEx2SGFrYkVnQ29kbjNiCmt6NTdtSW5YMlZwaURPS2c0a3lIZml1WFdwaUJxckN4MEtOTHB4bzNERVFjRmNzUVRlVEh6aDQ3NTJHVjA0UlUKVGkvR0VXeXpJc2w0Umc3dEd0QXdtY0lQZ1VOVWZZMlEzOTBGR3FkSDRhaG4rbXcvNmFGYlczMVc2M2Q5WUpWcQppb3lPVmNhTUlwTTVCL2M3UWM4U3VoQ0kxWUdoVXlnNGNSSExFdzVWdGlraW95RTNYMDRrbmEzalFBajU0WWJSCmJwRWhjMzVhcEtMQjIxSE9VUUlEQVFBQm8xTXdVVEFkQmdOVkhRNEVGZ1FVeXZsMFZJNXZKVlN1WUZYdTdCNDgKNlBiTUVBb3dId1lEVlIwakJCZ3dGb0FVeXZsMFZJNXZKVlN1WUZYdTdCNDg2UGJNRUFvd0R3WURWUjBUQVFILwpCQVV3QXdFQi96QU5CZ2txaGtpRzl3MEJBUXNGQUFPQ0FRRUFNTHhyZ0ZWTXVOUnEyd0F3Y0J0N1NuTlI1Q2Z6CjJNdlhxNUVVbXVhd0lVaTlrYVlqd2RWaURSRUdTams3SlcxN3ZsNTc2SGpEa2RmUndpNEUyOFN5ZFJJblpmNkoKaThIWmNaN2NhSDZEeFIzMzVmZ0hWekxpNU5pVGNlL09qTkJRelEyTUpYVkRkOERCbUc1ZnlhdEppT0pRNGJXRQpBN0ZsUDBSZFAzQ08zR1dFME01aVhPQjJtMXFXa0UyZXlPNFVIdndUcU5RTGRyZEFYZ0RRbGJhbTllNEJHM0dnCmQvNnRoQWtXRGJ0L1FOVCtFSkhEQ3ZoRFJLaDFSdUdIeWcrWSsvbmViVFdXckZXc2t0UnJiT29IQ1ppQ3BYSTEKM2VYRTZudDBZa2d0RHhHMjJLcW5ocEFnOWdVU3MyaGxob3h5dmt6eUYwbXU2TmhQbHdBZ25xNysvUT09Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K
+                name: policy-btls/envoy-gateway-ca
+              sni: example.com
+            weight: 1
         hostname: '*'
         isHTTP2: false
         metadata:

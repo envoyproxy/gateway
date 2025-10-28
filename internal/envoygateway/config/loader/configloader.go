@@ -38,7 +38,7 @@ func New(cfgPath string, cfg *config.Server, f HookFunc) *Loader {
 }
 
 func (r *Loader) Start(ctx context.Context, logOut io.Writer) error {
-	r.runHook()
+	r.runHook(ctx)
 
 	if r.cfgPath == "" {
 		r.logger.Info("no config file provided, skipping config watcher")
@@ -83,7 +83,7 @@ func (r *Loader) Start(ctx context.Context, logOut io.Writer) error {
 				// Otherwise we might end up with error listening on:8081
 				time.Sleep(3 * time.Second)
 
-				r.runHook()
+				r.runHook(ctx)
 			case err := <-r.w.Errors(r.cfgPath):
 				r.logger.Error(err, "watcher error")
 			case <-ctx.Done():
@@ -98,13 +98,13 @@ func (r *Loader) Start(ctx context.Context, logOut io.Writer) error {
 	return nil
 }
 
-func (r *Loader) runHook() {
+func (r *Loader) runHook(ctx context.Context) {
 	if r.hook == nil {
 		return
 	}
 
 	r.logger.Info("running hook")
-	c, cancel := context.WithCancel(context.TODO())
+	c, cancel := context.WithCancel(ctx)
 	r.cancel = cancel
 	go func(ctx context.Context) {
 		if err := r.hook(ctx, r.cfg); err != nil {

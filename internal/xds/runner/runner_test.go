@@ -138,7 +138,7 @@ func TestTLSConfig(t *testing.T) {
 			err = tc.serverCredentials.WritePEM(certFile, keyFile)
 			require.NoError(t, err)
 			clientCert, _ := tc.clientCredentials.TLSCertificate()
-			receivedCert, err := tryConnect(address, clientCert, caCertPool)
+			receivedCert, err := tryConnect(address, &clientCert, caCertPool)
 			gotError := err != nil
 			if gotError != tc.expectError {
 				t.Errorf("Unexpected result when connecting to the server: %s", err)
@@ -153,11 +153,11 @@ func TestTLSConfig(t *testing.T) {
 
 // tryConnect tries to establish TLS connection to the server.
 // If successful, return the server certificate.
-func tryConnect(address string, clientCert tls.Certificate, caCertPool *x509.CertPool) (*x509.Certificate, error) {
+func tryConnect(address string, clientCert *tls.Certificate, caCertPool *x509.CertPool) (*x509.Certificate, error) {
 	clientConfig := &tls.Config{
 		ServerName:   "localhost",
 		MinVersion:   tls.VersionTLS13,
-		Certificates: []tls.Certificate{clientCert},
+		Certificates: []tls.Certificate{*clientCert},
 		NextProtos:   []string{"h2"},
 		RootCAs:      caCertPool,
 	}
@@ -231,7 +231,7 @@ func TestServeXdsServerListenFailed(t *testing.T) {
 	require.NoError(t, err)
 	defer l.Close()
 
-	cfg, _ := config.New(os.Stdout)
+	cfg, _ := config.New(os.Stdout, os.Stderr)
 	r := New(&Config{
 		Server: *cfg,
 	})
@@ -248,7 +248,7 @@ func TestRunner(t *testing.T) {
 	// Setup
 	xdsIR := new(message.XdsIR)
 	pResource := new(message.ProviderResources)
-	cfg, err := config.New(os.Stdout)
+	cfg, err := config.New(os.Stdout, os.Stderr)
 	require.NoError(t, err)
 	r := New(&Config{
 		Server:            *cfg,
@@ -318,7 +318,7 @@ func TestRunner(t *testing.T) {
 	xdsIR.Delete("test")
 	require.Eventually(t, func() bool {
 		// Wait for the IR to be empty after deletion
-		return len(xdsIR.LoadAll()) == 0
+		return !r.cache.SnapshotHasIrKey("test") && len(xdsIR.LoadAll()) == 0
 	}, time.Second*5, time.Millisecond*50)
 }
 
@@ -331,7 +331,7 @@ func TestRunner_withExtensionManager_FailOpen(t *testing.T) {
 	xdsIR := new(message.XdsIR)
 	pResource := new(message.ProviderResources)
 
-	cfg, err := config.New(os.Stdout)
+	cfg, err := config.New(os.Stdout, os.Stderr)
 	require.NoError(t, err)
 	require.NotNil(t, cfg)
 
@@ -414,7 +414,7 @@ func TestRunner_withExtensionManager_FailClosed(t *testing.T) {
 	xdsIR := new(message.XdsIR)
 	pResource := new(message.ProviderResources)
 
-	cfg, err := config.New(os.Stdout)
+	cfg, err := config.New(os.Stdout, os.Stderr)
 	require.NoError(t, err)
 	require.NotNil(t, cfg)
 
@@ -510,4 +510,97 @@ type xdsHookClientMock struct {
 
 func (c *xdsHookClientMock) PostHTTPListenerModifyHook(*listenerv3.Listener, []*unstructured.Unstructured) (*listenerv3.Listener, error) {
 	return nil, fmt.Errorf("assuming a network error during the call")
+}
+
+func TestGetRandomMaxConnectionAge(t *testing.T) {
+	// Counter to track how many times each value is returned
+	counts := make(map[time.Duration]int)
+
+	// Call the function 100 times
+	for i := 0; i < 100; i++ {
+		value := getRandomMaxConnectionAge()
+
+		// Verify the value is one of the expected values from maxConnectionAgeValues
+		found := false
+		for _, expected := range maxConnectionAgeValues {
+			if value == expected {
+				found = true
+				break
+			}
+		}
+		assert.True(t, found, "Unexpected value returned: %v", value)
+
+		// Track counts
+		counts[value]++
+	}
+
+	// Verify each known duration gets called at least 10 times
+	for _, expectedValue := range maxConnectionAgeValues {
+		count := counts[expectedValue]
+		assert.GreaterOrEqual(t, count, 10, "Expected value %v to be called at least 10 times, got %d", expectedValue, count)
+	}
+
+	// Verify we got different values (randomness check)
+	assert.Len(t, counts, len(maxConnectionAgeValues), "Should see all possible values")
+}
+
+func TestLoadTLSConfig_HostMode(t *testing.T) {
+	// Create temporary directory structure for certs using t.TempDir()
+	configHome := t.TempDir()
+	certsDir := filepath.Join(configHome, "certs", "envoy-gateway")
+	err := os.MkdirAll(certsDir, 0o750)
+	require.NoError(t, err)
+
+	// Create test certificates
+	trustedCACert := certyaml.Certificate{
+		Subject: "cn=test-ca",
+	}
+	serverCert := certyaml.Certificate{
+		Subject:         "cn=test-server",
+		SubjectAltNames: []string{"DNS:localhost"},
+		Issuer:          &trustedCACert,
+	}
+
+	caFile := filepath.Join(certsDir, "ca.crt")
+	certFile := filepath.Join(certsDir, "tls.crt")
+	keyFile := filepath.Join(certsDir, "tls.key")
+
+	err = trustedCACert.WritePEM(caFile, keyFile)
+	require.NoError(t, err)
+	err = serverCert.WritePEM(certFile, keyFile)
+	require.NoError(t, err)
+
+	// Configure host mode with custom configHome (certs are stored in configHome)
+	// MUST be set BEFORE creating Runner since Config{Server: *cfg} makes a copy
+	cfg, err := config.New(os.Stdout, os.Stderr)
+	require.NoError(t, err)
+
+	cfg.EnvoyGateway.Provider = &egv1a1.EnvoyGatewayProvider{
+		Type: egv1a1.ProviderTypeCustom,
+		Custom: &egv1a1.EnvoyGatewayCustomProvider{
+			Infrastructure: &egv1a1.EnvoyGatewayInfrastructureProvider{
+				Type: egv1a1.InfrastructureProviderTypeHost,
+				Host: &egv1a1.EnvoyGatewayHostInfrastructureProvider{
+					ConfigHome: &configHome,
+				},
+			},
+		},
+	}
+
+	r := &Runner{
+		Config: Config{
+			Server: *cfg,
+		},
+	}
+
+	// Test loadTLSConfig with host mode
+	tlsConfig, err := r.loadTLSConfig()
+	require.NoError(t, err)
+	require.NotNil(t, tlsConfig)
+
+	// Verify TLS config properties
+	// crypto.LoadTLSConfig uses GetConfigForClient callback to load certs on demand
+	require.NotNil(t, tlsConfig.GetConfigForClient)
+	require.Equal(t, tls.RequireAndVerifyClientCert, tlsConfig.ClientAuth)
+	require.Equal(t, uint16(tls.VersionTLS13), tlsConfig.MinVersion)
 }

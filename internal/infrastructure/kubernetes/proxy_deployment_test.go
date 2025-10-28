@@ -34,8 +34,8 @@ const (
 
 func deploymentWithImage(deploy *appsv1.Deployment, image string) *appsv1.Deployment {
 	dCopy := deploy.DeepCopy()
-	for i, c := range dCopy.Spec.Template.Spec.Containers {
-		if c.Name == envoyContainerName {
+	for i := range dCopy.Spec.Template.Spec.Containers {
+		if dCopy.Spec.Template.Spec.Containers[i].Name == envoyContainerName {
 			dCopy.Spec.Template.Spec.Containers[i].Image = image
 		}
 	}
@@ -55,7 +55,7 @@ func deploymentWithSelectorAndLabel(deploy *appsv1.Deployment, selector *metav1.
 
 func setupCreateOrUpdateProxyDeployment(gatewayNamespaceMode bool) (*appsv1.Deployment, *ir.Infra, *config.Server, error) {
 	ctx := context.Background()
-	cfg, err := config.New(os.Stdout)
+	cfg, err := config.New(os.Stdout, os.Stderr)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -147,7 +147,7 @@ func TestCreateOrUpdateProxyDeployment(t *testing.T) {
 					Config: &egv1a1.EnvoyProxy{
 						Spec: egv1a1.EnvoyProxySpec{
 							Provider: &egv1a1.EnvoyProxyProvider{
-								Type: egv1a1.ProviderTypeKubernetes,
+								Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 								Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 									EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
 										Container: &egv1a1.KubernetesContainerSpec{
@@ -183,7 +183,7 @@ func TestCreateOrUpdateProxyDeployment(t *testing.T) {
 					Config: &egv1a1.EnvoyProxy{
 						Spec: egv1a1.EnvoyProxySpec{
 							Provider: &egv1a1.EnvoyProxyProvider{
-								Type: egv1a1.ProviderTypeKubernetes,
+								Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 								Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 									EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
 										Pod: &egv1a1.KubernetesPodSpec{
@@ -222,7 +222,7 @@ func TestCreateOrUpdateProxyDeployment(t *testing.T) {
 					Config: &egv1a1.EnvoyProxy{
 						Spec: egv1a1.EnvoyProxySpec{
 							Provider: &egv1a1.EnvoyProxyProvider{
-								Type: egv1a1.ProviderTypeKubernetes,
+								Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 								Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 									EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
 										Pod: &egv1a1.KubernetesPodSpec{
@@ -264,7 +264,7 @@ func TestCreateOrUpdateProxyDeployment(t *testing.T) {
 					Config: &egv1a1.EnvoyProxy{
 						Spec: egv1a1.EnvoyProxySpec{
 							Provider: &egv1a1.EnvoyProxyProvider{
-								Type: egv1a1.ProviderTypeKubernetes,
+								Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 								Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 									EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
 										Pod: &egv1a1.KubernetesPodSpec{
@@ -344,7 +344,7 @@ func TestDeleteProxyDeployment(t *testing.T) {
 		WithObjects().
 		WithInterceptorFuncs(interceptorFunc).
 		Build()
-	cfg, err := config.New(os.Stdout)
+	cfg, err := config.New(os.Stdout, os.Stderr)
 	require.NoError(t, err)
 
 	testCases := []struct {

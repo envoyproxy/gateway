@@ -6,8 +6,6 @@
 package resource
 
 import (
-	"github.com/google/go-cmp/cmp"
-	"github.com/google/go-cmp/cmp/cmpopts"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
@@ -50,14 +48,6 @@ func ExpectedServiceSpec(service *egv1a1.KubernetesServiceSpec) corev1.ServiceSp
 	return serviceSpec
 }
 
-// CompareSvc compares the Service resource and ignores specific fields that may have been modified by other actors.
-func CompareSvc(currentSvc, originalSvc *corev1.Service) bool {
-	return cmp.Equal(currentSvc.Spec, originalSvc.Spec,
-		cmpopts.IgnoreFields(corev1.ServicePort{}, "NodePort"),
-		cmpopts.IgnoreFields(corev1.ServiceSpec{}, "ClusterIP", "ClusterIPs"),
-		cmpopts.IgnoreFields(metav1.ObjectMeta{}, "Finalizers"))
-}
-
 // ExpectedContainerEnv returns expected container envs.
 func ExpectedContainerEnv(container *egv1a1.KubernetesContainerSpec, env []corev1.EnvVar) []corev1.EnvVar {
 	amendFunc := func(envVar corev1.EnvVar) {
@@ -80,8 +70,8 @@ func ExpectedContainerEnv(container *egv1a1.KubernetesContainerSpec, env []corev
 // ExpectedVolumes returns expected deployment volumes.
 func ExpectedVolumes(pod *egv1a1.KubernetesPodSpec, volumes []corev1.Volume) []corev1.Volume {
 	amendFunc := func(volume corev1.Volume) {
-		for index, e := range volumes {
-			if e.Name == volume.Name {
+		for index := range volumes {
+			if volumes[index].Name == volume.Name {
 				volumes[index] = volume
 				return
 			}
@@ -90,8 +80,8 @@ func ExpectedVolumes(pod *egv1a1.KubernetesPodSpec, volumes []corev1.Volume) []c
 		volumes = append(volumes, volume)
 	}
 
-	for _, envVar := range pod.Volumes {
-		amendFunc(envVar)
+	for i := range pod.Volumes {
+		amendFunc(pod.Volumes[i])
 	}
 
 	return volumes
@@ -100,8 +90,8 @@ func ExpectedVolumes(pod *egv1a1.KubernetesPodSpec, volumes []corev1.Volume) []c
 // ExpectedContainerVolumeMounts returns expected container volume mounts.
 func ExpectedContainerVolumeMounts(container *egv1a1.KubernetesContainerSpec, volumeMounts []corev1.VolumeMount) []corev1.VolumeMount {
 	amendFunc := func(volumeMount corev1.VolumeMount) {
-		for index, e := range volumeMounts {
-			if e.Name == volumeMount.Name {
+		for index := range volumeMounts {
+			if volumeMounts[index].Name == volumeMount.Name {
 				volumeMounts[index] = volumeMount
 				return
 			}

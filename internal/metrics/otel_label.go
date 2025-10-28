@@ -54,12 +54,11 @@ func (l LabelValue) Value() string {
 	return l.keyValue.Value.AsString()
 }
 
-func mergeLabelValues(attrs []attribute.KeyValue, labelValues []LabelValue) ([]attribute.KeyValue, attribute.Set) {
-	mergedAttrs := make([]attribute.KeyValue, 0, len(attrs)+len(labelValues))
-	mergedAttrs = append(mergedAttrs, attrs...)
-	for _, v := range labelValues {
-		mergedAttrs = append(mergedAttrs, v.keyValue)
+func mergeLabelValues(attrs []attribute.KeyValue, labelValues []LabelValue) []attribute.KeyValue {
+	mergedAttrs := make([]attribute.KeyValue, len(attrs)+len(labelValues))
+	copy(mergedAttrs, attrs)
+	for i, v := range labelValues {
+		mergedAttrs[len(attrs)+i] = v.keyValue
 	}
-
-	return mergedAttrs, attribute.NewSet(mergedAttrs...)
+	return mergedAttrs
 }

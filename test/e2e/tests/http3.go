@@ -12,7 +12,6 @@ import (
 
 	"k8s.io/apimachinery/pkg/types"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
@@ -36,7 +35,7 @@ var HTTP3Test = suite.ConformanceTest{
 		gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName,
 			kubernetes.NewGatewayRef(gwNN), routeNN)
 
-		ancestorRef := gwapiv1a2.ParentReference{
+		ancestorRef := gwapiv1.ParentReference{
 			Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
 			Kind:      gatewayapi.KindPtr(resource.KindGateway),
 			Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
@@ -56,7 +55,7 @@ var HTTP3Test = suite.ConformanceTest{
 				Path: "/",
 			},
 			Response: http.Response{
-				StatusCode: 200,
+				StatusCodes: []int{200},
 			},
 			Namespace: ConformanceInfraNamespace,
 		}
@@ -69,7 +68,7 @@ var HTTP3Test = suite.ConformanceTest{
 		}
 
 		req := http.MakeRequest(t, &expected, gwAddr, "HTTPS", "https")
-		WaitForConsistentMTLSResponse(t, quicRoundTripper, req, expected, suite.TimeoutConfig.RequiredConsecutiveSuccesses, suite.TimeoutConfig.MaxTimeToConsistency,
+		WaitForConsistentMTLSResponse(t, quicRoundTripper, &req, &expected, suite.TimeoutConfig.RequiredConsecutiveSuccesses, suite.TimeoutConfig.MaxTimeToConsistency,
 			cPem, keyPem, "www.example.com")
 	},
 }

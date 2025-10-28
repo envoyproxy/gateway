@@ -24,7 +24,7 @@ import (
 )
 
 func TestCreateOrUpdateRateLimitDeployment(t *testing.T) {
-	cfg, err := config.New(os.Stdout)
+	cfg, err := config.New(os.Stdout, os.Stderr)
 	require.NoError(t, err)
 
 	cfg.EnvoyGateway.RateLimit = &egv1a1.RateLimit{

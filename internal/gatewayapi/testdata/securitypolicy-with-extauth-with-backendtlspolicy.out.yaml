@@ -2,7 +2,6 @@ backendTLSPolicies:
 - apiVersion: gateway.networking.k8s.io/v1alpha2
   kind: BackendTLSPolicy
   metadata:
-    creationTimestamp: null
     name: policy-btls-http
     namespace: envoy-gateway
   spec:
@@ -26,6 +25,11 @@ backendTLSPolicies:
         namespace: default
       conditions:
       - lastTransitionTime: null
+        message: Resolved all the Object references.
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      - lastTransitionTime: null
         message: Policy has been accepted.
         reason: Accepted
         status: "True"
@@ -34,7 +38,6 @@ backendTLSPolicies:
 - apiVersion: gateway.networking.k8s.io/v1alpha2
   kind: BackendTLSPolicy
   metadata:
-    creationTimestamp: null
     name: policy-btls-grpc
     namespace: default
   spec:
@@ -58,6 +61,11 @@ backendTLSPolicies:
         namespace: default
       conditions:
       - lastTransitionTime: null
+        message: Resolved all the Object references.
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      - lastTransitionTime: null
         message: Policy has been accepted.
         reason: Accepted
         status: "True"
@@ -67,7 +75,6 @@ gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
   metadata:
-    creationTimestamp: null
     name: gateway-1
     namespace: default
   spec:
@@ -108,7 +115,6 @@ httpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
   metadata:
-    creationTimestamp: null
     name: httproute-1
     namespace: default
   spec:
@@ -146,7 +152,6 @@ httpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
   metadata:
-    creationTimestamp: null
     name: httproute-2
     namespace: default
   spec:
@@ -205,7 +210,6 @@ securityPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: SecurityPolicy
   metadata:
-    creationTimestamp: null
     name: policy-for-http-route
     namespace: default
   spec:
@@ -242,7 +246,6 @@ securityPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: SecurityPolicy
   metadata:
-    creationTimestamp: null
     name: policy-for-gateway
     namespace: default
   spec:
@@ -288,6 +291,10 @@ xdsIR:
       - path: /dev/stdout
     globalResources:
       proxyServiceCluster:
+        metadata:
+          name: envoy-default-gateway-1-bfd08ef4
+          namespace: envoy-gateway-system
+          sectionName: "8080"
         name: default/gateway-1
         settings:
         - addressType: IP

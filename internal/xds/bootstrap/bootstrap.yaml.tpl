@@ -132,6 +132,12 @@ static_resources:
                 typed_config:
                   "@type": type.googleapis.com/envoy.extensions.compression.brotli.compressor.v3.Brotli
               {{- end }}
+              {{- if eq .PrometheusCompressionLibrary "Zstd"}}
+              compressor_library:
+                name: text_optimized
+                typed_config:
+                  "@type": type.googleapis.com/envoy.extensions.compression.zstd.compressor.v3.Zstd
+              {{- end }}
           {{- end }}
           - name: envoy.filters.http.router
             typed_config:
@@ -223,6 +229,10 @@ static_resources:
                 "@type": type.googleapis.com/envoy.extensions.http.injected_credentials.generic.v3.Generic
                 credential:
                   name: jwt-sa-bearer
+                  sds_config:
+                    path_config_source:
+                      path: {{ .ServiceAccountTokenPath }}
+                    resource_api_version: V3
             overwrite: true
         - name: envoy.extensions.filters.http.upstream_codec.v3.UpstreamCodec
           typed_config:
@@ -251,13 +261,6 @@ static_resources:
               path_config_source:
                 path: {{ .SdsTrustedCAPath }}
               resource_api_version: V3
-  {{- if .GatewayNamespaceMode }}
-  secrets:
-  - name: jwt-sa-bearer
-    generic_secret:
-      secret:
-        filename: "/var/run/secrets/token/sa-token"
-  {{- end }}
 overload_manager:
   refresh_interval: 0.25s
   resource_monitors:

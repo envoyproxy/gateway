@@ -4,9 +4,9 @@ title: "Data Plane Observability: Accesslog"
 
 ## Overview
 
-Envoy supports extensible accesslog to different sinks, File, gRPC etc. 
+Envoy supports extensible accesslog to different sinks, File, gRPC etc.
 
-Envoy supports customizable access log formats using predefined fields as well as arbitrary HTTP request and response headers. 
+Envoy supports customizable access log formats using predefined fields as well as arbitrary HTTP request and response headers.
 
 Envoy supports several built-in access log filters and extension filters that are registered at runtime.
 
@@ -177,14 +177,14 @@ spec:
     accessLog:
       settings:
         - format:
-          type: JSON
-          json:
-            status: "%RESPONSE_CODE%"
-            message: "%LOCAL_REPLY_BODY%"
-      sinks:
-        - type: File
-          file:
-            path: /dev/stdout
+            type: JSON
+            json:
+              status: "%RESPONSE_CODE%"
+              message: "%LOCAL_REPLY_BODY%"
+          sinks:
+            - type: File
+              file:
+                path: /dev/stdout
 ```
 
 - The following is an example with OpenTelemetry format access log.

@@ -14,12 +14,14 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwapiv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/logging"
 	"github.com/envoyproxy/gateway/internal/wasm"
 )
 
@@ -103,6 +105,9 @@ type Translator struct {
 	// gateway listener port into a non privileged port
 	// and reuses the specified value.
 	ListenerPortShiftDisabled bool
+
+	// Logger is the logger used by the translator.
+	Logger logging.Logger
 }
 
 type TranslateResult struct {
@@ -120,7 +125,7 @@ func newTranslateResult(gateways []*GatewayContext,
 	clientTrafficPolicies []*egv1a1.ClientTrafficPolicy,
 	backendTrafficPolicies []*egv1a1.BackendTrafficPolicy,
 	securityPolicies []*egv1a1.SecurityPolicy,
-	backendTLSPolicies []*gwapiv1a3.BackendTLSPolicy,
+	backendTLSPolicies []*gwapiv1.BackendTLSPolicy,
 	envoyExtensionPolicies []*egv1a1.EnvoyExtensionPolicy,
 	extPolicies []unstructured.Unstructured,
 	backends []*egv1a1.Backend,
@@ -131,33 +136,70 @@ func newTranslateResult(gateways []*GatewayContext,
 		InfraIR: infraIR,
 	}
 
-	for _, gateway := range gateways {
-		translateResult.Gateways = append(translateResult.Gateways, gateway.Gateway)
-	}
-	for _, httpRoute := range httpRoutes {
-		translateResult.HTTPRoutes = append(translateResult.HTTPRoutes, httpRoute.HTTPRoute)
-	}
-	for _, grpcRoute := range grpcRoutes {
-		translateResult.GRPCRoutes = append(translateResult.GRPCRoutes, grpcRoute.GRPCRoute)
-	}
-	for _, tlsRoute := range tlsRoutes {
-		translateResult.TLSRoutes = append(translateResult.TLSRoutes, tlsRoute.TLSRoute)
-	}
-	for _, tcpRoute := range tcpRoutes {
-		translateResult.TCPRoutes = append(translateResult.TCPRoutes, tcpRoute.TCPRoute)
-	}
-	for _, udpRoute := range udpRoutes {
-		translateResult.UDPRoutes = append(translateResult.UDPRoutes, udpRoute.UDPRoute)
+	if n := len(gateways); n > 0 {
+		translateResult.Gateways = make([]*gwapiv1.Gateway, n)
+		for i, gateway := range gateways {
+			translateResult.Gateways[i] = gateway.Gateway
+		}
 	}
 
-	translateResult.ClientTrafficPolicies = append(translateResult.ClientTrafficPolicies, clientTrafficPolicies...)
-	translateResult.BackendTrafficPolicies = append(translateResult.BackendTrafficPolicies, backendTrafficPolicies...)
-	translateResult.SecurityPolicies = append(translateResult.SecurityPolicies, securityPolicies...)
-	translateResult.BackendTLSPolicies = append(translateResult.BackendTLSPolicies, backendTLSPolicies...)
-	translateResult.EnvoyExtensionPolicies = append(translateResult.EnvoyExtensionPolicies, envoyExtensionPolicies...)
-	translateResult.ExtensionServerPolicies = append(translateResult.ExtensionServerPolicies, extPolicies...)
+	if n := len(httpRoutes); n > 0 {
+		translateResult.HTTPRoutes = make([]*gwapiv1.HTTPRoute, n)
+		for i, httpRoute := range httpRoutes {
+			translateResult.HTTPRoutes[i] = httpRoute.HTTPRoute
+		}
+	}
 
-	translateResult.Backends = append(translateResult.Backends, backends...)
+	if n := len(grpcRoutes); n > 0 {
+		translateResult.GRPCRoutes = make([]*gwapiv1.GRPCRoute, n)
+		for i, grpcRoute := range grpcRoutes {
+			translateResult.GRPCRoutes[i] = grpcRoute.GRPCRoute
+		}
+	}
+
+	if n := len(tlsRoutes); n > 0 {
+		translateResult.TLSRoutes = make([]*gwapiv1a3.TLSRoute, n)
+		for i, tlsRoute := range tlsRoutes {
+			translateResult.TLSRoutes[i] = tlsRoute.TLSRoute
+		}
+	}
+
+	if n := len(tcpRoutes); n > 0 {
+		translateResult.TCPRoutes = make([]*gwapiv1a2.TCPRoute, n)
+		for i, tcpRoute := range tcpRoutes {
+			translateResult.TCPRoutes[i] = tcpRoute.TCPRoute
+		}
+	}
+
+	if n := len(udpRoutes); n > 0 {
+		translateResult.UDPRoutes = make([]*gwapiv1a2.UDPRoute, n)
+		for i, udpRoute := range udpRoutes {
+			translateResult.UDPRoutes[i] = udpRoute.UDPRoute
+		}
+	}
+
+	if len(clientTrafficPolicies) > 0 {
+		translateResult.ClientTrafficPolicies = clientTrafficPolicies
+	}
+	if len(backendTrafficPolicies) > 0 {
+		translateResult.BackendTrafficPolicies = backendTrafficPolicies
+	}
+	if len(securityPolicies) > 0 {
+		translateResult.SecurityPolicies = securityPolicies
+	}
+	if len(backendTLSPolicies) > 0 {
+		translateResult.BackendTLSPolicies = backendTLSPolicies
+	}
+	if len(envoyExtensionPolicies) > 0 {
+		translateResult.EnvoyExtensionPolicies = envoyExtensionPolicies
+	}
+	if len(extPolicies) > 0 {
+		translateResult.ExtensionServerPolicies = extPolicies
+	}
+	if len(backends) > 0 {
+		translateResult.Backends = backends
+	}
+
 	return translateResult
 }
 
@@ -202,22 +244,26 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 	// Process ClientTrafficPolicies
 	clientTrafficPolicies := t.ProcessClientTrafficPolicies(resources, acceptedGateways, xdsIR, infraIR)
 
-	// Process BackendTrafficPolicies
-	routes := []RouteContext{}
-	for _, h := range httpRoutes {
-		routes = append(routes, h)
+	routes := make([]RouteContext, len(httpRoutes)+len(grpcRoutes)+len(tlsRoutes)+len(tcpRoutes)+len(udpRoutes))
+	offset := 0
+	for i := range httpRoutes {
+		routes[offset+i] = httpRoutes[i]
 	}
-	for _, g := range grpcRoutes {
-		routes = append(routes, g)
+	offset += len(httpRoutes)
+	for i := range grpcRoutes {
+		routes[offset+i] = grpcRoutes[i]
 	}
-	for _, t := range tlsRoutes {
-		routes = append(routes, t)
+	offset += len(grpcRoutes)
+	for i := range tlsRoutes {
+		routes[offset+i] = tlsRoutes[i]
 	}
-	for _, t := range tcpRoutes {
-		routes = append(routes, t)
+	offset += len(tlsRoutes)
+	for i := range tcpRoutes {
+		routes[offset+i] = tcpRoutes[i]
 	}
-	for _, u := range udpRoutes {
-		routes = append(routes, u)
+	offset += len(tcpRoutes)
+	for i := range udpRoutes {
+		routes[offset+i] = udpRoutes[i]
 	}
 
 	// Process BackendTrafficPolicies
@@ -280,7 +326,7 @@ func (t *Translator) GetRelevantGateways(resources *resource.Resources) (
 
 		if gateway.Spec.GatewayClassName == t.GatewayClassName {
 			gc := &GatewayContext{
-				Gateway: gateway.DeepCopy(),
+				Gateway: gateway,
 			}
 
 			// Gateways that are not accepted by the controller because they reference an invalid EnvoyProxy.
@@ -338,13 +384,6 @@ func (t *Translator) InitIRs(gateways []*GatewayContext) (map[string]*ir.Xds, ma
 	return xdsIR, infraIR
 }
 
-func (t *Translator) IRKey(gatewayNN types.NamespacedName) string {
-	if t.MergeGateways {
-		return string(t.GatewayClassName)
-	}
-	return irStringKey(gatewayNN.Namespace, gatewayNN.Name)
-}
-
 // IsEnvoyServiceRouting returns true if EnvoyProxy.Spec.RoutingType == ServiceRoutingType
 // or, alternatively, if Translator.EndpointRoutingDisabled has been explicitly set to true;
 // otherwise, it returns false.
@@ -388,10 +427,15 @@ func infrastructureLabels(gtw *gwapiv1.Gateway) map[string]string {
 
 // XdsIR and InfraIR map keys by default are {GatewayNamespace}/{GatewayName}, but if mergeGateways is set, they are merged under {GatewayClassName} key.
 func (t *Translator) getIRKey(gateway *gwapiv1.Gateway) string {
-	irKey := irStringKey(gateway.Namespace, gateway.Name)
+	return t.IRKey(types.NamespacedName{
+		Namespace: gateway.Namespace,
+		Name:      gateway.Name,
+	})
+}
+
+func (t *Translator) IRKey(gatewayNN types.NamespacedName) string {
 	if t.MergeGateways {
 		return string(t.GatewayClassName)
 	}
-
-	return irKey
+	return irStringKey(gatewayNN.Namespace, gatewayNN.Name)
 }

@@ -115,6 +115,10 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 		TopologyInjectorDisabled: topologyInjectorDisabled,
 	}
 
+	if gatewayNamespaceMode {
+		bootstrapConfigOptions.SdsConfig.ServiceAccountToken = filepath.Join("/sds", common.SdsServiceAccountTokenFilename)
+	}
+
 	args, err := common.BuildProxyArgs(infra, shutdownConfig, bootstrapConfigOptions, fmt.Sprintf("$(%s)", envoyPodEnvVar), gatewayNamespaceMode)
 	if err != nil {
 		return nil, err
@@ -399,6 +403,10 @@ func sdsConfigMapItems(gatewayNamespaceMode bool) []corev1.KeyToPath {
 			{
 				Key:  common.SdsCAFilename,
 				Path: common.SdsCAFilename,
+			},
+			{
+				Key:  common.SdsServiceAccountTokenFilename,
+				Path: common.SdsServiceAccountTokenFilename,
 			},
 		}
 	}

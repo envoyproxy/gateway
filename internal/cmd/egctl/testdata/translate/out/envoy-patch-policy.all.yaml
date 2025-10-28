@@ -189,6 +189,7 @@ xds:
                     typedConfig:
                       '@type': type.googleapis.com/envoy.extensions.filters.http.ratelimit.v3.RateLimit
                       domain: eag-ratelimit
+                      disableXEnvoyRatelimitedHeader: true
                       failureModeDeny: true
                       rateLimitService:
                         grpcService:

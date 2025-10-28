@@ -198,7 +198,7 @@ func runStatus(ctx context.Context, logOut io.Writer, cli client.Client, inputRe
 		resourceKind = resource.KindUDPRoute
 
 	case "tlsroute":
-		tlsroute := gwapiv1a2.TLSRouteList{}
+		tlsroute := gwapiv1a3.TLSRouteList{}
 		if err := cli.List(ctx, &tlsroute, client.InNamespace(namespace)); err != nil {
 			return err
 		}
@@ -206,7 +206,7 @@ func runStatus(ctx context.Context, logOut io.Writer, cli client.Client, inputRe
 		resourceKind = resource.KindTLSRoute
 
 	case "btlspolicy", "backendtlspolicy":
-		btlspolicy := gwapiv1a3.BackendTLSPolicyList{}
+		btlspolicy := gwapiv1.BackendTLSPolicyList{}
 		if err := cli.List(ctx, &btlspolicy, client.InNamespace(namespace)); err != nil {
 			return err
 		}
@@ -421,7 +421,7 @@ func fetchConditions(parent reflect.Value, quiet, verbose bool) [][]string {
 
 	// All conditions are sorted in descending order by time.
 	for i := len(conditions) - 1; i >= 0; i-- {
-		row := fetchCondition(conditions[i], verbose)
+		row := fetchCondition(&conditions[i], verbose)
 		rows = append(rows, row)
 
 		if quiet {
@@ -433,7 +433,7 @@ func fetchConditions(parent reflect.Value, quiet, verbose bool) [][]string {
 }
 
 // fetchCondition fetches the Type, Status, Reason of one condition, and more if verbose.
-func fetchCondition(condition metav1.Condition, verbose bool) []string {
+func fetchCondition(condition *metav1.Condition, verbose bool) []string {
 	row := []string{condition.Type, string(condition.Status), condition.Reason}
 
 	// Write more details about this condition if verbose is on.
