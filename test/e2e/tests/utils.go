@@ -251,7 +251,7 @@ func AlmostEquals(actual, expect, offset int) bool {
 // runs a load test with options described in opts
 // the done channel is used to notify caller of execution result
 // the execution may end due to an external abort or timeout
-func runLoadAndWait(t *testing.T, timeoutConfig *config.TimeoutConfig, done chan bool, aborter *periodic.Aborter, reqURL string) {
+func runLoadAndWait(t *testing.T, timeoutConfig *config.TimeoutConfig, done chan bool, aborter *periodic.Aborter, reqURL string, reqTimeout time.Duration) {
 	qpsVal := os.Getenv("E2E_BACKEND_UPGRADE_QPS")
 	qps := 5000
 	if qpsVal != "" {
@@ -275,6 +275,10 @@ func runLoadAndWait(t *testing.T, timeoutConfig *config.TimeoutConfig, done chan
 		HTTPOptions: fhttp.HTTPOptions{
 			URL: reqURL,
 		},
+	}
+
+	if reqTimeout > 0 {
+		opts.HTTPReqTimeOut = reqTimeout
 	}
 
 	res, err := fhttp.RunHTTPTest(&opts)

@@ -12,7 +12,6 @@ import (
 	"fmt"
 	"io"
 	"path"
-	"path/filepath"
 
 	"github.com/spf13/cobra"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
@@ -42,22 +41,22 @@ const (
 // GetCertGenCommand returns the certGen cobra command to be executed.
 func GetCertGenCommand() *cobra.Command {
 	var (
-		local    bool
-		dataHome string
+		local      bool
+		configHome string
 	)
 
 	cmd := &cobra.Command{
 		Use:   "certgen",
 		Short: "Generate Control Plane Certificates",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return certGen(cmd.Context(), cmd.OutOrStdout(), local, dataHome)
+			return certGen(cmd.Context(), cmd.OutOrStdout(), local, configHome)
 		},
 	}
 
 	cmd.PersistentFlags().BoolVarP(&local, "local", "l", false,
 		"Generate all the certificates locally.")
-	cmd.PersistentFlags().StringVar(&dataHome, "data-home", "",
-		"Directory for certificates (defaults to ~/.local/share/envoy-gateway)")
+	cmd.PersistentFlags().StringVar(&configHome, "config-home", "",
+		"Directory for certificates (defaults to ~/.config/envoy-gateway")
 	cmd.PersistentFlags().BoolVarP(&overwriteControlPlaneCerts, "overwrite", "o", false,
 		"Updates the secrets containing the control plane certs.")
 	cmd.PersistentFlags().BoolVar(&disableTopologyInjector, "disable-topology-injector", false,
@@ -66,7 +65,7 @@ func GetCertGenCommand() *cobra.Command {
 }
 
 // certGen generates control plane certificates.
-func certGen(ctx context.Context, logOut io.Writer, local bool, dataHome string) error {
+func certGen(ctx context.Context, logOut io.Writer, local bool, configHome string) error {
 	cfg, err := config.New(logOut, io.Discard)
 	if err != nil {
 		return err
@@ -92,10 +91,10 @@ func certGen(ctx context.Context, logOut io.Writer, local bool, dataHome string)
 			return fmt.Errorf("failed to patch webhook: %w", err)
 		}
 	} else {
-		// Use provided dataHome or default
+		// Use provided configHome or default
 		hostCfg := &egv1a1.EnvoyGatewayHostInfrastructureProvider{}
-		if dataHome != "" {
-			hostCfg.DataHome = &dataHome
+		if configHome != "" {
+			hostCfg.ConfigHome = &configHome
 		}
 
 		paths, err := host.GetPaths(hostCfg)
@@ -103,7 +102,7 @@ func certGen(ctx context.Context, logOut io.Writer, local bool, dataHome string)
 			return fmt.Errorf("failed to determine paths: %w", err)
 		}
 
-		certPath := filepath.Join(paths.DataHome, "certs")
+		certPath := paths.CertDir("")
 		log.Info("generated certificates", "path", certPath)
 
 		if err = outputCertsForLocal(certPath, certs); err != nil {
