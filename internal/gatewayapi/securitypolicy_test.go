@@ -16,6 +16,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -23,6 +24,7 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
+	"github.com/envoyproxy/gateway/internal/utils"
 )
 
 func Test_wildcard2regex(t *testing.T) {
@@ -933,12 +935,22 @@ func Test_SecurityPolicy_TCP_Invalid_setsStatus_and_returns(t *testing.T) {
 	}
 	routeMap[key] = &policyRouteTargetContext{RouteContext: tcpRoute}
 
+	// Create the gateway map with gateways that belong to our controller
+	gw := &gwapiv1.Gateway{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-gateway",
+			Namespace: "default",
+		},
+	}
+	gatewayMap := make(map[types.NamespacedName]*policyGatewayTargetContext, 1)
+	gatewayMap[utils.NamespacedName(gw)] = &policyGatewayTargetContext{GatewayContext: &GatewayContext{Gateway: gw}}
+
 	gatewayRouteMap := make(map[string]map[string]sets.Set[string])
 	resources := resource.NewResources()
 	xdsIR := make(resource.XdsIRMap)
 
 	// Process the policy - this should set error status
-	tr.processSecurityPolicyForRoute(resources, xdsIR, routeMap, gatewayRouteMap, policy, target)
+	tr.processSecurityPolicyForRoute(resources, xdsIR, routeMap, gatewayMap, gatewayRouteMap, policy, target)
 
 	// Assert that the policy has a False condition (error was set)
 	require.True(t, hasParentFalseCondition(policy))
@@ -1007,12 +1019,22 @@ func Test_SecurityPolicy_HTTP_Invalid_setsStatus_and_returns(t *testing.T) {
 	}
 	routeMap[key] = &policyRouteTargetContext{RouteContext: httpRoute}
 
+	// Create the gateway map with gateways that belong to our controller
+	gw := &gwapiv1.Gateway{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-gateway",
+			Namespace: "default",
+		},
+	}
+	gatewayMap := make(map[types.NamespacedName]*policyGatewayTargetContext, 1)
+	gatewayMap[utils.NamespacedName(gw)] = &policyGatewayTargetContext{GatewayContext: &GatewayContext{Gateway: gw}}
+
 	gatewayRouteMap := make(map[string]map[string]sets.Set[string])
 	resources := resource.NewResources()
 	xdsIR := make(resource.XdsIRMap)
 
 	// Process the policy - this should set error status
-	tr.processSecurityPolicyForRoute(resources, xdsIR, routeMap, gatewayRouteMap, policy, target)
+	tr.processSecurityPolicyForRoute(resources, xdsIR, routeMap, gatewayMap, gatewayRouteMap, policy, target)
 
 	// Assert that the policy has a False condition (error was set)
 	require.True(t, hasParentFalseCondition(policy))
