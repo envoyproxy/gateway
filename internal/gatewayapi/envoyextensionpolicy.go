@@ -86,7 +86,7 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(envoyExtensionPolicies []*egv
 				}
 
 				t.processEnvoyExtensionPolicyForRoute(resources, xdsIR,
-					routeMap, gatewayRouteMap, policy, currTarget)
+					routeMap, gatewayMap, gatewayRouteMap, policy, currTarget)
 			}
 		}
 	}
@@ -106,7 +106,7 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(envoyExtensionPolicies []*egv
 				}
 
 				t.processEnvoyExtensionPolicyForRoute(resources, xdsIR,
-					routeMap, gatewayRouteMap, policy, currTarget)
+					routeMap, gatewayMap, gatewayRouteMap, policy, currTarget)
 			}
 		}
 	}
@@ -164,6 +164,7 @@ func (t *Translator) processEnvoyExtensionPolicyForRoute(
 	resources *resource.Resources,
 	xdsIR resource.XdsIRMap,
 	routeMap map[policyTargetRouteKey]*policyRouteTargetContext,
+	gatewayMap map[types.NamespacedName]*policyGatewayTargetContext,
 	gatewayRouteMap map[string]map[string]sets.Set[string],
 	policy *egv1a1.EnvoyExtensionPolicy,
 	currTarget gwapiv1.LocalPolicyTargetReferenceWithSectionName,
@@ -188,15 +189,16 @@ func (t *Translator) processEnvoyExtensionPolicyForRoute(
 	// policy overrides and populate its ancestor status.
 	parentRefs := GetParentReferences(targetedRoute)
 	for _, p := range parentRefs {
-		if p.Kind == nil || *p.Kind == resource.KindGateway {
-			namespace := targetedRoute.GetNamespace()
-			if p.Namespace != nil {
-				namespace = string(*p.Namespace)
-			}
-			gwNN := types.NamespacedName{
-				Namespace: namespace,
-				Name:      string(p.Name),
-			}
+		namespace := targetedRoute.GetNamespace()
+		if p.Namespace != nil {
+			namespace = string(*p.Namespace)
+		}
+		gwNN := types.NamespacedName{
+			Namespace: namespace,
+			Name:      string(p.Name),
+		}
+
+		if _, ok := gatewayMap[gwNN]; ok && (p.Kind == nil || *p.Kind == resource.KindGateway) {
 
 			key := gwNN.String()
 			if _, ok := gatewayRouteMap[key]; !ok {
@@ -230,7 +232,7 @@ func (t *Translator) processEnvoyExtensionPolicyForRoute(
 	}
 
 	// Set conditions for translation error if it got any
-	if err := t.translateEnvoyExtensionPolicyForRoute(policy, targetedRoute, currTarget, xdsIR, resources); err != nil {
+	if err := t.translateEnvoyExtensionPolicyForRoute(policy, targetedRoute, currTarget, gatewayMap, xdsIR, resources); err != nil {
 		status.SetTranslationErrorForPolicyAncestors(&policy.Status,
 			ancestorRefs,
 			t.GatewayControllerName,
@@ -454,6 +456,7 @@ func (t *Translator) translateEnvoyExtensionPolicyForRoute(
 	policy *egv1a1.EnvoyExtensionPolicy,
 	route RouteContext,
 	target gwapiv1.LocalPolicyTargetReferenceWithSectionName,
+	gatewayMap map[types.NamespacedName]*policyGatewayTargetContext,
 	xdsIR resource.XdsIRMap,
 	resources *resource.Resources,
 ) error {
@@ -475,6 +478,17 @@ func (t *Translator) translateEnvoyExtensionPolicyForRoute(
 	parentRefs := GetParentReferences(route)
 	routesWithDirectResponse := sets.New[string]()
 	for _, p := range parentRefs {
+		namespace := route.GetNamespace()
+		if p.Namespace != nil {
+			namespace = string(*p.Namespace)
+		}
+		gwNN := types.NamespacedName{
+			Namespace: namespace,
+			Name:      string(p.Name),
+		}
+		if _, ok := gatewayMap[gwNN]; !ok {
+			continue
+		}
 		parentRefCtx := GetRouteParentContext(route, p, t.GatewayControllerName)
 		gtwCtx := parentRefCtx.GetGateway()
 		if gtwCtx == nil {
