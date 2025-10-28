@@ -194,7 +194,7 @@ func (t *Translator) applyEnvoyProxyBackendTLSSetting(tlsConfig *ir.TLSUpstreamC
 		}
 	}
 	if ep.Spec.BackendTLS != nil && ep.Spec.BackendTLS.ClientCertificateRef != nil {
-		ns := string(ptr.Deref(ep.Spec.BackendTLS.ClientCertificateRef.Namespace, ""))
+		ns := string(ptr.Deref(ep.Spec.BackendTLS.ClientCertificateRef.Namespace, "default"))
 
 		var err error
 		if ns != ep.Namespace {
