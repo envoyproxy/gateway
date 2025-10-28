@@ -524,10 +524,10 @@ func buildXdsDirectResponseAction(res *ir.CustomResponse) *routev3.DirectRespons
 		routeAction.Status = *res.StatusCode
 	}
 
-	if res.Body != nil && *res.Body != "" {
+	if len(res.Body) > 0 {
 		routeAction.Body = &corev3.DataSource{
-			Specifier: &corev3.DataSource_InlineString{
-				InlineString: *res.Body,
+			Specifier: &corev3.DataSource_InlineBytes{
+				InlineBytes: res.Body,
 			},
 		}
 	}
@@ -543,6 +543,8 @@ func buildXdsRequestMirrorPolicies(mirrorPolicies []*ir.MirrorPolicy) []*routev3
 			xdsMirrorPolicies = append(xdsMirrorPolicies, &routev3.RouteAction_RequestMirrorPolicy{
 				Cluster:         policy.Destination.Name,
 				RuntimeFraction: mp,
+				// We don't need to append the shadow host suffix as the mirror policy already uses a different cluster which is enough to distinguish the mirrored traffic
+				DisableShadowHostSuffixAppend: true,
 			})
 		}
 	}
@@ -618,15 +620,19 @@ func buildHashPolicy(httpRoute *ir.HTTPRoute) []*routev3.RouteAction_HashPolicy 
 	ch := httpRoute.Traffic.LoadBalancer.ConsistentHash
 
 	switch {
-	case ch.Header != nil:
-		hashPolicy := &routev3.RouteAction_HashPolicy{
-			PolicySpecifier: &routev3.RouteAction_HashPolicy_Header_{
-				Header: &routev3.RouteAction_HashPolicy_Header{
-					HeaderName: ch.Header.Name,
+	case ch.Headers != nil:
+		hps := make([]*routev3.RouteAction_HashPolicy, 0, len(ch.Headers))
+		for _, h := range ch.Headers {
+			hp := &routev3.RouteAction_HashPolicy{
+				PolicySpecifier: &routev3.RouteAction_HashPolicy_Header_{
+					Header: &routev3.RouteAction_HashPolicy_Header{
+						HeaderName: h.Name,
+					},
 				},
-			},
+			}
+			hps = append(hps, hp)
 		}
-		return []*routev3.RouteAction_HashPolicy{hashPolicy}
+		return hps
 	case ch.Cookie != nil:
 		hashPolicy := &routev3.RouteAction_HashPolicy{
 			PolicySpecifier: &routev3.RouteAction_HashPolicy_Cookie_{

@@ -8,7 +8,7 @@ ENVTEST_K8S_VERSIONS ?= 1.30.3 1.31.0 1.32.0 1.33.0
 
 # GATEWAY_API_VERSION refers to the version of Gateway API CRDs.
 # For more details, see https://gateway-api.sigs.k8s.io/guides/getting-started/#installing-gateway-api
-GATEWAY_API_VERSION ?= v1.3.0
+GATEWAY_API_VERSION ?= v1.4.0
 
 GATEWAY_API_RELEASE_URL ?= https://github.com/kubernetes-sigs/gateway-api/releases/download/${GATEWAY_API_VERSION}
 EXPERIMENTAL_GATEWAY_API_RELEASE_URL ?= ${GATEWAY_API_RELEASE_URL}/experimental-install.yaml
@@ -29,14 +29,16 @@ BENCHMARK_REPORT_DIR ?= benchmark_report
 # Disable PNG rendering by default to speed up CI
 BENCHMARK_RENDER_PNG ?= false
 
-CONFORMANCE_RUN_TEST ?=
-
 E2E_RUN_TEST ?=
 E2E_CLEANUP ?= true
 E2E_TIMEOUT ?= 20m
 # E2E_REDIRECT allow you specified a redirect when run e2e test locally, e.g. `>> test_output.out 2>&1`
 E2E_REDIRECT ?=
 E2E_TEST_ARGS ?= -v -tags e2e -timeout $(E2E_TIMEOUT)
+
+CONFORMANCE_RUN_TEST ?=
+CONFORMANCE_TEST_ARGS ?= -v -tags conformance -timeout $(E2E_TIMEOUT)
+EXPERIMENTAL_CONFORMANCE_TEST_ARGS ?= -v -tags experimental -timeout $(E2E_TIMEOUT)
 
 DOCKER_MAC_NET_CONNECT ?= true
 HOMEBREW_GOPROXY ?=
@@ -114,9 +116,17 @@ kube-generate: ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyO
 	$(GO_TOOL) controller-gen $(CONTROLLERGEN_OBJECT_FLAGS) paths="{$(ROOT_DIR)/api/...,$(ROOT_DIR)/internal/ir/...,$(ROOT_DIR)/internal/gatewayapi/...}"
 
 .PHONY: kube-test
-kube-test: manifests generate ## Run Kubernetes provider tests.
+kube-test: manifests generate run-kube-test
+
+# KUBE_TEST_PACKAGE=./internal/provider/kubernetes/... make run-kube-tes
+KUBE_TEST_PACKAGE ?= ./...
+# KUBE_TEST_ARGS can be used to pass extra args to `go test`, e.g. -run ^TestNamespaceSelectorProvider
+KUBE_TEST_ARGS ?=
+
+.PHONY: run-kube-test
+run-kube-test: # Run Kubernetes provider tests.
 	@$(LOG_TARGET)
-	KUBEBUILDER_ASSETS="$(shell $(GO_TOOL) setup-envtest use $(ENVTEST_K8S_VERSION) -p path)" go test --tags=integration,celvalidation ./... -coverprofile cover.out
+	KUBEBUILDER_ASSETS="$(shell $(GO_TOOL) setup-envtest use $(ENVTEST_K8S_VERSION) -p path)" go test $(KUBE_TEST_ARGS) --tags=integration,celvalidation $(KUBE_TEST_PACKAGE) -coverprofile cover.out
 
 ##@ Kubernetes Deployment
 
@@ -310,9 +320,9 @@ run-conformance: prepare-ip-family ## Run Gateway API conformance.
 	kubectl wait --timeout=$(WAIT_TIMEOUT) -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
 	kubectl apply -f test/config/gatewayclass.yaml
 ifeq ($(CONFORMANCE_RUN_TEST),)
-	go test -v -tags conformance ./test/conformance --gateway-class=envoy-gateway --debug=true
+	go test $(CONFORMANCE_TEST_ARGS) ./test/conformance --gateway-class=envoy-gateway --debug=true $(E2E_REDIRECT)
 else
-	go test -v -tags conformance ./test/conformance --gateway-class=envoy-gateway --debug=true --run-test $(CONFORMANCE_RUN_TEST)
+	go test $(CONFORMANCE_TEST_ARGS) ./test/conformance --gateway-class=envoy-gateway --debug=true --run-test $(CONFORMANCE_RUN_TEST) $(E2E_REDIRECT)
 endif
 
 CONFORMANCE_REPORT_PATH ?=
@@ -322,10 +332,16 @@ run-experimental-conformance: prepare-ip-family ## Run Experimental Gateway API 
 	@$(LOG_TARGET)
 	kubectl wait --timeout=$(WAIT_TIMEOUT) -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
 	kubectl apply -f test/config/gatewayclass.yaml
-	go test -v -tags experimental ./test/conformance -run TestExperimentalConformance --gateway-class=envoy-gateway --debug=true \
+ifeq ($(CONFORMANCE_RUN_TEST),)
+	go test $(EXPERIMENTAL_CONFORMANCE_TEST_ARGS) ./test/conformance -run TestExperimentalConformance --gateway-class=envoy-gateway --debug=true \
 		--organization=envoyproxy --project=envoy-gateway --url=https://github.com/envoyproxy/gateway --version=latest \
 		--report-output="$(CONFORMANCE_REPORT_PATH)" --contact=https://github.com/envoyproxy/gateway/blob/main/GOVERNANCE.md \
 		--mode="$(KUBE_DEPLOY_PROFILE)" --version=$(TAG)
+else
+    # we didn't care about output when running single test
+	go test $(EXPERIMENTAL_CONFORMANCE_TEST_ARGS) ./test/conformance -run TestExperimentalConformance --gateway-class=envoy-gateway --debug=true --run-test $(CONFORMANCE_RUN_TEST)
+endif
+
 
 .PHONY: delete-cluster
 delete-cluster: ## Delete kind cluster.

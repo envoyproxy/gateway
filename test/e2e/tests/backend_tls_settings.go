@@ -54,7 +54,7 @@ var BackendTLSSettingsTest = suite.ConformanceTest{
 
 		t.Run("Apply custom TLS settings when making backend requests.", func(t *testing.T) {
 			routeNN := types.NamespacedName{Name: "backend-tls-setting", Namespace: ConformanceInfraNamespace}
-			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+			gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
 			config := &egv1a1.BackendTLSConfig{
 				ClientCertificateRef: &gwapiv1.SecretObjectReference{
 					Kind:      gatewayapi.KindPtr("Secret"),
@@ -81,7 +81,7 @@ var BackendTLSSettingsTest = suite.ConformanceTest{
 					Path: "/backend-tls",
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ConformanceInfraNamespace,
 			}
@@ -149,7 +149,7 @@ var BackendTLSSettingsTest = suite.ConformanceTest{
 
 		t.Run("UseClientProtocol", func(t *testing.T) {
 			routeNN := types.NamespacedName{Name: "use-client-protocol", Namespace: ConformanceInfraNamespace}
-			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+			gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
 
 			// rotate the client mTLS secret to ensure that a new secret is used.
 			suite.Applier.MustApplyWithCleanup(t, suite.Client, suite.TimeoutConfig, "testdata/backend-tls-settings-client-cert-rotation.yaml", false)
@@ -190,7 +190,7 @@ var BackendTLSSettingsTest = suite.ConformanceTest{
 					Path: "/use-client-protocol",
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ConformanceInfraNamespace,
 			}
@@ -209,7 +209,7 @@ var BackendTLSSettingsTest = suite.ConformanceTest{
 					Protocol: roundtripper.H2CPriorKnowledgeProtocol,
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ConformanceInfraNamespace,
 			}
@@ -221,11 +221,54 @@ var BackendTLSSettingsTest = suite.ConformanceTest{
 				t.Errorf("failed to get expected response: %v", err)
 			}
 
-			if err := http.CompareRequest(t, &req, cReq, cResp, expectedResponse); err != nil {
+			if err := http.CompareRoundTrip(t, &req, cReq, cResp, expectedResponse); err != nil {
 				t.Errorf("failed to compare request and response: %v", err)
 			}
 			if cReq.Protocol != "HTTP/2.0" {
 				t.Errorf("expected http/2.0 protocol, got %s", cReq.Protocol)
+			}
+		})
+
+		t.Run("Apply client certificate from backend ClientTLS settings.", func(t *testing.T) {
+			routeNN := types.NamespacedName{Name: "backend-client-tls-settings", Namespace: ConformanceInfraNamespace}
+			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+			config := &egv1a1.BackendTLSConfig{
+				ClientCertificateRef: &gwapiv1.SecretObjectReference{ // client cert will be overridden by backend clientTLS settings
+					Kind:      gatewayapi.KindPtr("Secret"),
+					Name:      "client-tls-certificate",
+					Namespace: gatewayapi.NamespacePtr(ConformanceInfraNamespace),
+				},
+				TLSSettings: egv1a1.TLSSettings{
+					MinVersion:    ptr.To(egv1a1.TLSv13),
+					MaxVersion:    ptr.To(egv1a1.TLSv13),
+					ALPNProtocols: []egv1a1.ALPNProtocol{"http/1.1"}, // alpn will be overridden by backend clientTLS settings
+				},
+			}
+			err := UpdateProxyConfig(suite.Client, proxyNN, config)
+			if err != nil {
+				t.Error(err)
+			}
+
+			expectedRes, err := asExpectedResponse("echo-service-tls-settings-per-backend-client-cert")
+			if err != nil {
+				t.Error(err)
+			}
+			expectOkResp := http.ExpectedResponse{
+				Request: http.Request{
+					Path: "/backend-client-tls",
+				},
+				Response: http.Response{
+					StatusCode: 200,
+				},
+				Namespace: ConformanceInfraNamespace,
+			}
+
+			// Reconfigure backend tls settings
+			err = WaitUntil(func(httpRes *http.ExpectedResponse, expectedResBody *Response) error {
+				return confirmEchoBackendRes(httpRes, expectedResBody, gwAddr, t, suite)
+			}, suite.TimeoutConfig.MaxTimeToConsistency, &expectOkResp, expectedRes)
+			if err != nil {
+				t.Errorf("failed to confirm echo backend for per-backend client cert: %v", err)
 			}
 		})
 	},
