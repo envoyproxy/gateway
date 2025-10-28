@@ -39,13 +39,13 @@ var EnvoyShutdownTest = suite.ConformanceTest{
 	Description: "Deleting envoy pod should not lead to failures",
 	Manifests:   []string{"testdata/envoy-shutdown.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
-		t.Run("All requests must succeed", func(t *testing.T) {
+		t.Run("All requests (regular + delayed) must succeed during rollout", func(t *testing.T) {
 			ns := "gateway-upgrade-infra"
 			name := "ha-gateway"
 			routeNN := types.NamespacedName{Name: "http-envoy-shutdown", Namespace: ns}
 			gwNN := types.NamespacedName{Name: name, Namespace: ns}
 			gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
-			reqURL := url.URL{Scheme: "http", Host: http.CalculateHost(t, gwAddr, "http"), Path: "/envoy-shutdown"}
+			baseURL := url.URL{Scheme: "http", Host: http.CalculateHost(t, gwAddr, "http"), Path: "/envoy-shutdown"}
 			epNN := types.NamespacedName{Name: "upgrade-config", Namespace: "envoy-gateway-system"}
 			dp, err := getDeploymentForGateway(ns, name, suite.Client)
 			if err != nil {
@@ -66,29 +66,39 @@ var EnvoyShutdownTest = suite.ConformanceTest{
 			}
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 
-			// can be used to abort the test after deployment restart is complete or failed
 			aborter := periodic.NewAborter()
-			// will contain indication on success or failure of load test
-			loadSuccess := make(chan bool)
+			regDone := make(chan bool)
+			delayedDone := make(chan bool)
 
-			t.Log("Starting load generation")
-			// Run load async and continue to restart deployment
-			go runLoadAndWait(t, &suite.TimeoutConfig, loadSuccess, aborter, reqURL.String())
+			regURL := baseURL.String()
+			delayedURL := func() string {
+				u := baseURL
+				q := u.Query()
+				q.Set("delay", "3s")
+				u.RawQuery = q.Encode()
+				return u.String()
+			}()
+
+			t.Logf("Starting regular load to %s", regURL)
+			go runLoadAndWait(t, &suite.TimeoutConfig, regDone, aborter, regURL, 0)
+
+			t.Logf("Starting delayed load to %s", delayedURL)
+			go runLoadAndWait(t, &suite.TimeoutConfig, delayedDone, aborter, delayedURL, 10*time.Second)
 
 			t.Log("Rolling out proxy deployment")
 			err = restartProxyAndWaitForRollout(t, &suite.TimeoutConfig, suite.Client, epNN, dp)
 
 			t.Log("Stopping load generation and collecting results")
-			aborter.Abort(false) // abort the load either way
+			aborter.Abort(false)
 
 			if err != nil {
 				t.Errorf("Failed to rollout proxy deployment: %v", err)
 			}
-
-			// Wait for the goroutine to finish
-			result := <-loadSuccess
-			if !result {
-				t.Errorf("Load test failed")
+			if ok := <-regDone; !ok {
+				t.Errorf("Regular load failed during rollout")
+			}
+			if ok := <-delayedDone; !ok {
+				t.Errorf("Delayed load failed during rollout")
 			}
 		})
 	},
