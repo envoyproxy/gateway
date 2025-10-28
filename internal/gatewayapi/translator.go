@@ -338,7 +338,7 @@ func (t *Translator) GetRelevantGateways(resources *resource.Resources) (
 			}
 		}
 	}
-	return
+	return acceptedGateways, failedGateways
 }
 
 // InitIRs checks if mergeGateways is enabled in EnvoyProxy config and initializes XdsIR and InfraIR maps with adequate keys.

@@ -154,7 +154,7 @@ var ScaleHTTPRoutes = suite.BenchmarkTest{
 			}
 		})
 
-		return
+		return reports
 	},
 }
 

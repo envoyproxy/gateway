@@ -181,7 +181,7 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 	sub := r.XdsIR.Subscribe(ctx)
 	go r.translateFromSubscription(sub)
 	r.Logger.Info("started")
-	return
+	return err
 }
 
 func (r *Runner) serveXdsServer(ctx context.Context) {
@@ -371,5 +371,5 @@ func (r *Runner) loadTLSConfig() (tlsConfig *tls.Config, err error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to create tls config: %w", err)
 	}
-	return
+	return tlsConfig, err
 }

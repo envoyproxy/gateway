@@ -208,5 +208,5 @@ func outputCertsForLocal(localPath string, certs *crypto.Certificates) (err erro
 		return err
 	}
 
-	return
+	return err
 }
