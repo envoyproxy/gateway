@@ -114,25 +114,26 @@ func coalesceUpdates[K comparable, V any](runner string, updates []watchable.Upd
 		return updates
 	}
 
-	result := make([]watchable.Update[K, V], 0, len(updates))
-	indexByKey := make(map[K]int, len(updates))
+	seen := make(map[K]struct{}, len(updates))
+	write := len(updates) - 1
 
-	for i := len(updates) - 1; i >= 0; i-- {
-		update := updates[i]
-		if _, ok := indexByKey[update.Key]; ok {
+	for read := len(updates) - 1; read >= 0; read-- {
+		update := updates[read]
+		if _, ok := seen[update.Key]; ok {
 			continue
 		}
-
-		indexByKey[update.Key] = len(result)
-		result = append(result, update)
+		seen[update.Key] = struct{}{}
+		updates[write] = update
+		write--
 	}
 
-	// Reverse the result slice to restore the original order of the last updates for each key
-	for left, right := 0, len(result)-1; left < right; left, right = left+1, right-1 {
-		result[left], result[right] = result[right], result[left]
+	result := updates[write+1:]
+	if len(result) != len(updates) {
+		logger.WithValues("runner", runner).Info(
+			"coalesced updates",
+			"count", len(result),
+			"before", len(updates),
+		)
 	}
-
-	logger.WithValues("runner", runner).Info("coalesced updates", "count", len(result), "before", len(updates))
-
 	return result
 }
