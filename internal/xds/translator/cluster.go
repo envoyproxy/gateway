@@ -168,6 +168,7 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 		DnsLookupFamily:               dnsLookupFamily,
 		CommonLbConfig:                &clusterv3.Cluster_CommonLbConfig{},
 		PerConnectionBufferLimitBytes: buildBackandConnectionBufferLimitBytes(args.backendConnection),
+		PreconnectPolicy:              buildBackendConnectionPreconnectPolicy(args.backendConnection),
 		Metadata:                      buildXdsMetadata(args.metadata),
 		// Dont wait for a health check to determine health and remove these endpoints
 		// if the endpoint has been removed via EDS by the control plane or removed from DNS query results
@@ -1083,6 +1084,33 @@ func buildXdsClusterUpstreamOptions(tcpkeepalive *ir.TCPKeepalive) *clusterv3.Up
 	}
 
 	return ka
+}
+
+func buildBackendConnectionPreconnectPolicy(bc *ir.BackendConnection) *clusterv3.Cluster_PreconnectPolicy {
+	if bc == nil || bc.Preconnect == nil {
+		return nil
+	}
+
+	pc := bc.Preconnect
+	if pc.PerEndpointPercent == nil && pc.PredictivePercent == nil {
+		return nil
+	}
+
+	policy := &clusterv3.Cluster_PreconnectPolicy{}
+
+	if pc.PerEndpointPercent != nil {
+		policy.PerUpstreamPreconnectRatio = &wrapperspb.DoubleValue{
+			Value: 0.01 * float64(*pc.PerEndpointPercent),
+		}
+	}
+
+	if pc.PredictivePercent != nil {
+		policy.PredictivePreconnectRatio = &wrapperspb.DoubleValue{
+			Value: 0.01 * float64(*pc.PredictivePercent),
+		}
+	}
+
+	return policy
 }
 
 func buildAddress(irEp *ir.DestinationEndpoint) *corev3.Address {
