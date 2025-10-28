@@ -18,11 +18,14 @@ import (
 	"github.com/telepresenceio/watchable"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapiv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/crypto"
@@ -143,6 +146,9 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 			var backendTLSPolicyStatusCount, clientTrafficPolicyStatusCount, backendTrafficPolicyStatusCount int
 			var securityPolicyStatusCount, envoyExtensionPolicyStatusCount, backendStatusCount, extensionServerPolicyStatusCount int
 
+			// `aggregatedResult` aggregates status result of resources from all
+			// parents/ancestors, and then stores the status once for every resource.
+			var aggregatedResult resource.Resources
 			for _, resources := range *val {
 				// Translate and publish IRs.
 				t := &gatewayapi.Translator{
@@ -218,123 +224,327 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 					r.ProviderResources.GatewayClassStatuses.Store(key, &result.GatewayClass.Status)
 				}
 
-				for _, gateway := range result.Gateways {
-					key := utils.NamespacedName(gateway)
-					r.ProviderResources.GatewayStatuses.Store(key, &gateway.Status)
-					gatewayStatusCount++
-					delete(keysToDelete.GatewayStatus, key)
-					r.keyCache.GatewayStatus[key] = true
-				}
+				// Aggregate status (parents/ancestors) from all GatewayClasses.
+				aggregatedResult.Gateways = append(aggregatedResult.Gateways, result.Gateways...)
 				for _, httpRoute := range result.HTTPRoutes {
-					key := utils.NamespacedName(httpRoute)
-					r.ProviderResources.HTTPRouteStatuses.Store(key, &httpRoute.Status)
-					httpRouteStatusCount++
-					delete(keysToDelete.HTTPRouteStatus, key)
-					r.keyCache.HTTPRouteStatus[key] = true
-				}
-				for _, grpcRoute := range result.GRPCRoutes {
-					key := utils.NamespacedName(grpcRoute)
-					r.ProviderResources.GRPCRouteStatuses.Store(key, &grpcRoute.Status)
-					grpcRouteStatusCount++
-					delete(keysToDelete.GRPCRouteStatus, key)
-					r.keyCache.GRPCRouteStatus[key] = true
-				}
-				for _, tlsRoute := range result.TLSRoutes {
-					key := utils.NamespacedName(tlsRoute)
-					r.ProviderResources.TLSRouteStatuses.Store(key, &tlsRoute.Status)
-					tlsRouteStatusCount++
-					delete(keysToDelete.TLSRouteStatus, key)
-					r.keyCache.TLSRouteStatus[key] = true
-				}
-				for _, tcpRoute := range result.TCPRoutes {
-					key := utils.NamespacedName(tcpRoute)
-					r.ProviderResources.TCPRouteStatuses.Store(key, &tcpRoute.Status)
-					tcpRouteStatusCount++
-					delete(keysToDelete.TCPRouteStatus, key)
-					r.keyCache.TCPRouteStatus[key] = true
-				}
-				for _, udpRoute := range result.UDPRoutes {
-					key := utils.NamespacedName(udpRoute)
-					r.ProviderResources.UDPRouteStatuses.Store(key, &udpRoute.Status)
-					udpRouteStatusCount++
-					delete(keysToDelete.UDPRouteStatus, key)
-					r.keyCache.UDPRouteStatus[key] = true
-				}
-
-				// Skip updating status for policies with empty status
-				// They may have been skipped in this translation because
-				// their target is not found (not relevant)
-
-				for _, backendTLSPolicy := range result.BackendTLSPolicies {
-					key := utils.NamespacedName(backendTLSPolicy)
-					if len(backendTLSPolicy.Status.Ancestors) > 0 {
-						r.ProviderResources.BackendTLSPolicyStatuses.Store(key, &backendTLSPolicy.Status)
-						backendTLSPolicyStatusCount++
-					}
-					delete(keysToDelete.BackendTLSPolicyStatus, key)
-					r.keyCache.BackendTLSPolicyStatus[key] = true
-				}
-
-				for _, clientTrafficPolicy := range result.ClientTrafficPolicies {
-					key := utils.NamespacedName(clientTrafficPolicy)
-					if len(clientTrafficPolicy.Status.Ancestors) > 0 {
-						r.ProviderResources.ClientTrafficPolicyStatuses.Store(key, &clientTrafficPolicy.Status)
-						clientTrafficPolicyStatusCount++
-					}
-					delete(keysToDelete.ClientTrafficPolicyStatus, key)
-					r.keyCache.ClientTrafficPolicyStatus[key] = true
-				}
-				for _, backendTrafficPolicy := range result.BackendTrafficPolicies {
-					key := utils.NamespacedName(backendTrafficPolicy)
-					if len(backendTrafficPolicy.Status.Ancestors) > 0 {
-						r.ProviderResources.BackendTrafficPolicyStatuses.Store(key, &backendTrafficPolicy.Status)
-						backendTrafficPolicyStatusCount++
-					}
-					delete(keysToDelete.BackendTrafficPolicyStatus, key)
-					r.keyCache.BackendTrafficPolicyStatus[key] = true
-				}
-				for _, securityPolicy := range result.SecurityPolicies {
-					key := utils.NamespacedName(securityPolicy)
-					if len(securityPolicy.Status.Ancestors) > 0 {
-						r.ProviderResources.SecurityPolicyStatuses.Store(key, &securityPolicy.Status)
-						securityPolicyStatusCount++
-					}
-					delete(keysToDelete.SecurityPolicyStatus, key)
-					r.keyCache.SecurityPolicyStatus[key] = true
-				}
-				for _, envoyExtensionPolicy := range result.EnvoyExtensionPolicies {
-					key := utils.NamespacedName(envoyExtensionPolicy)
-					if len(envoyExtensionPolicy.Status.Ancestors) > 0 {
-						r.ProviderResources.EnvoyExtensionPolicyStatuses.Store(key, &envoyExtensionPolicy.Status)
-						envoyExtensionPolicyStatusCount++
-					}
-					delete(keysToDelete.EnvoyExtensionPolicyStatus, key)
-					r.keyCache.EnvoyExtensionPolicyStatus[key] = true
-				}
-				for _, backend := range result.Backends {
-					key := utils.NamespacedName(backend)
-					if len(backend.Status.Conditions) > 0 {
-						r.ProviderResources.BackendStatuses.Store(key, &backend.Status)
-						backendStatusCount++
-					}
-					delete(keysToDelete.BackendStatus, key)
-					r.keyCache.BackendStatus[key] = true
-				}
-				for _, extServerPolicy := range result.ExtensionServerPolicies {
-					key := message.NamespacedNameAndGVK{
-						NamespacedName:   utils.NamespacedName(&extServerPolicy),
-						GroupVersionKind: extServerPolicy.GroupVersionKind(),
-					}
-					if statusObj, hasStatus := extServerPolicy.Object["status"]; hasStatus && statusObj != nil {
-						if statusMap, ok := statusObj.(map[string]any); ok && len(statusMap) > 0 {
-							policyStatus := unstructuredToPolicyStatus(statusMap)
-							r.ProviderResources.ExtensionPolicyStatuses.Store(key, &policyStatus)
-							extensionServerPolicyStatusCount++
+					var aggregatedRoute *gwapiv1.HTTPRoute
+					for _, ar := range aggregatedResult.HTTPRoutes {
+						if utils.NamespacedName(httpRoute) == utils.NamespacedName(ar) {
+							aggregatedRoute = ar
+							break
 						}
 					}
-					delete(keysToDelete.ExtensionServerPolicyStatus, key)
-					r.keyCache.ExtensionServerPolicyStatus[key] = true
+					// If already found (because processed in an earlier gatewayclass), append its status parents.
+					// Otherwise, append it to the list of *Routes in the accumulated result.
+					if aggregatedRoute != nil {
+						aggregatedRoute.Status.Parents = append(aggregatedRoute.Status.Parents, httpRoute.Status.Parents...)
+					} else {
+						aggregatedRoute = httpRoute
+						aggregatedResult.HTTPRoutes = append(aggregatedResult.HTTPRoutes, aggregatedRoute)
+					}
 				}
+				for _, grpcRoute := range result.GRPCRoutes {
+					var aggregatedRoute *gwapiv1.GRPCRoute
+					for _, ar := range aggregatedResult.GRPCRoutes {
+						if utils.NamespacedName(grpcRoute) == utils.NamespacedName(ar) {
+							aggregatedRoute = ar
+							break
+						}
+					}
+					// If already found (because processed in an earlier gatewayclass), append its status parents.
+					// Otherwise, append it to the list of *Routes in the accumulated result.
+					if aggregatedRoute != nil {
+						aggregatedRoute.Status.Parents = append(aggregatedRoute.Status.Parents, grpcRoute.Status.Parents...)
+					} else {
+						aggregatedRoute = grpcRoute
+						aggregatedResult.GRPCRoutes = append(aggregatedResult.GRPCRoutes, aggregatedRoute)
+					}
+				}
+				for _, tlsRoute := range result.TLSRoutes {
+					var aggregatedRoute *gwapiv1a3.TLSRoute
+					for _, ar := range aggregatedResult.TLSRoutes {
+						if utils.NamespacedName(tlsRoute) == utils.NamespacedName(ar) {
+							aggregatedRoute = ar
+							break
+						}
+					}
+					// If already found (because processed in an earlier gatewayclass), append its status parents.
+					// Otherwise, append it to the list of *Routes in the accumulated result.
+					if aggregatedRoute != nil {
+						aggregatedRoute.Status.Parents = append(aggregatedRoute.Status.Parents, tlsRoute.Status.Parents...)
+					} else {
+						aggregatedRoute = tlsRoute
+						aggregatedResult.TLSRoutes = append(aggregatedResult.TLSRoutes, aggregatedRoute)
+					}
+				}
+				for _, tcpRoute := range result.TCPRoutes {
+					var aggregatedRoute *gwapiv1a2.TCPRoute
+					for _, ar := range aggregatedResult.TCPRoutes {
+						if utils.NamespacedName(tcpRoute) == utils.NamespacedName(ar) {
+							aggregatedRoute = ar
+							break
+						}
+					}
+					// If already found (because processed in an earlier gatewayclass), append its status parents.
+					// Otherwise, append it to the list of *Routes in the accumulated result.
+					if aggregatedRoute != nil {
+						aggregatedRoute.Status.Parents = append(aggregatedRoute.Status.Parents, tcpRoute.Status.Parents...)
+					} else {
+						aggregatedRoute = tcpRoute
+						aggregatedResult.TCPRoutes = append(aggregatedResult.TCPRoutes, aggregatedRoute)
+					}
+				}
+				for _, udpRoute := range result.UDPRoutes {
+					var aggregatedRoute *gwapiv1a2.UDPRoute
+					for _, ar := range aggregatedResult.UDPRoutes {
+						if utils.NamespacedName(udpRoute) == utils.NamespacedName(ar) {
+							aggregatedRoute = ar
+							break
+						}
+					}
+					// If already found (because processed in an earlier gatewayclass), append its status parents.
+					// Otherwise, append it to the list of *Routes in the accumulated result.
+					if aggregatedRoute != nil {
+						aggregatedRoute.Status.Parents = append(aggregatedRoute.Status.Parents, udpRoute.Status.Parents...)
+					} else {
+						aggregatedRoute = udpRoute
+						aggregatedResult.UDPRoutes = append(aggregatedResult.UDPRoutes, aggregatedRoute)
+					}
+				}
+
+				for _, backendTLSPolicy := range result.BackendTLSPolicies {
+					var aggregatedPolicy *gwapiv1.BackendTLSPolicy
+					for _, ap := range aggregatedResult.BackendTLSPolicies {
+						if utils.NamespacedName(backendTLSPolicy) == utils.NamespacedName(ap) {
+							aggregatedPolicy = ap
+							break
+						}
+					}
+					// If already found (because processed in an earlier gatewayclass), append its status ancestors.
+					// Otherwise, append it to the list of *Policies in the accumulated result.
+					if aggregatedPolicy != nil {
+						aggregatedPolicy.Status.Ancestors = append(aggregatedPolicy.Status.Ancestors, backendTLSPolicy.Status.Ancestors...)
+					} else {
+						aggregatedPolicy = backendTLSPolicy
+						aggregatedResult.BackendTLSPolicies = append(aggregatedResult.BackendTLSPolicies, aggregatedPolicy)
+					}
+				}
+				for _, clientTrafficPolicy := range result.ClientTrafficPolicies {
+					var aggregatedPolicy *egv1a1.ClientTrafficPolicy
+					for _, ap := range aggregatedResult.ClientTrafficPolicies {
+						if utils.NamespacedName(clientTrafficPolicy) == utils.NamespacedName(ap) {
+							aggregatedPolicy = ap
+							break
+						}
+					}
+					// If already found (because processed in an earlier gatewayclass), append its status ancestors.
+					// Otherwise, append it to the list of *Policies in the accumulated result.
+					if aggregatedPolicy != nil {
+						aggregatedPolicy.Status.Ancestors = append(aggregatedPolicy.Status.Ancestors, clientTrafficPolicy.Status.Ancestors...)
+					} else {
+						aggregatedPolicy = clientTrafficPolicy
+						aggregatedResult.ClientTrafficPolicies = append(aggregatedResult.ClientTrafficPolicies, aggregatedPolicy)
+					}
+				}
+				for _, backendTrafficPolicy := range result.BackendTrafficPolicies {
+					var aggregatedPolicy *egv1a1.BackendTrafficPolicy
+					for _, ap := range aggregatedResult.BackendTrafficPolicies {
+						if utils.NamespacedName(backendTrafficPolicy) == utils.NamespacedName(ap) {
+							aggregatedPolicy = ap
+							break
+						}
+					}
+					// If already found (because processed in an earlier gatewayclass), append its status ancestors.
+					// Otherwise, append it to the list of *Policies in the accumulated result.
+					if aggregatedPolicy != nil {
+						aggregatedPolicy.Status.Ancestors = append(aggregatedPolicy.Status.Ancestors, backendTrafficPolicy.Status.Ancestors...)
+					} else {
+						aggregatedPolicy = backendTrafficPolicy
+						aggregatedResult.BackendTrafficPolicies = append(aggregatedResult.BackendTrafficPolicies, aggregatedPolicy)
+					}
+				}
+				for _, securityPolicy := range result.SecurityPolicies {
+					var aggregatedPolicy *egv1a1.SecurityPolicy
+					for _, ap := range aggregatedResult.SecurityPolicies {
+						if utils.NamespacedName(securityPolicy) == utils.NamespacedName(ap) {
+							aggregatedPolicy = ap
+							break
+						}
+					}
+					// If already found (because processed in an earlier gatewayclass), append its status ancestors.
+					// Otherwise, append it to the list of *Policies in the accumulated result.
+					if aggregatedPolicy != nil {
+						aggregatedPolicy.Status.Ancestors = append(aggregatedPolicy.Status.Ancestors, securityPolicy.Status.Ancestors...)
+					} else {
+						aggregatedPolicy = securityPolicy
+						aggregatedResult.SecurityPolicies = append(aggregatedResult.SecurityPolicies, aggregatedPolicy)
+					}
+
+				}
+				for _, envoyExtensionPolicy := range result.EnvoyExtensionPolicies {
+					var aggregatedPolicy *egv1a1.EnvoyExtensionPolicy
+					for _, ap := range aggregatedResult.EnvoyExtensionPolicies {
+						if utils.NamespacedName(envoyExtensionPolicy) == utils.NamespacedName(ap) {
+							aggregatedPolicy = ap
+							break
+						}
+					}
+					// If already found (because processed in an earlier gatewayclass), append its status ancestors.
+					// Otherwise, append it to the list of *Policies in the accumulated result.
+					if aggregatedPolicy != nil {
+						aggregatedPolicy.Status.Ancestors = append(aggregatedPolicy.Status.Ancestors, envoyExtensionPolicy.Status.Ancestors...)
+					} else {
+						aggregatedPolicy = envoyExtensionPolicy
+						aggregatedResult.EnvoyExtensionPolicies = append(aggregatedResult.EnvoyExtensionPolicies, aggregatedPolicy)
+					}
+				}
+				aggregatedResult.Backends = append(aggregatedResult.Backends, result.Backends...)
+				for _, extServerPolicy := range result.ExtensionServerPolicies {
+					var aggregatedPolicy *unstructured.Unstructured
+					for _, ap := range aggregatedResult.ExtensionServerPolicies {
+						if utils.NamespacedName(&extServerPolicy) == utils.NamespacedName(&ap) {
+							aggregatedPolicy = &ap
+							break
+						}
+					}
+
+					// If already found (because processed in an earlier gatewayclass), append its status ancestors.
+					// Otherwise, append it to the list of *Policies in the accumulated result.
+					if aggregatedPolicy != nil {
+						ancestorsObject, found, err := unstructured.NestedFieldCopy(aggregatedPolicy.Object, "status", "ancestors")
+						if !found || err != nil {
+							r.Logger.Error(err, "failed to get existing ancestors", "policyName", aggregatedPolicy.GetName(), "ancestorsFound", found)
+							continue
+						}
+						ancestors, ok := ancestorsObject.([]gwapiv1.PolicyAncestorStatus)
+						if !ok {
+							r.Logger.Error(err, "failed to assert existing ancestors type", "policyName", aggregatedPolicy.GetName())
+							continue
+						}
+
+						newAncestorsObject, found, err := unstructured.NestedFieldCopy(extServerPolicy.Object, "status", "ancestors")
+						if !found || err != nil {
+							r.Logger.Error(err, "failed to get new ancestors", "policyName", aggregatedPolicy.GetName(), "ancestorsFound", found)
+							continue
+						}
+						newAncestors, ok := newAncestorsObject.([]gwapiv1.PolicyAncestorStatus)
+						if !ok {
+							r.Logger.Error(err, "failed to assert new ancestors type", "policyName", aggregatedPolicy.GetName())
+							continue
+						}
+
+						ancestors = append(ancestors, newAncestors...)
+						err = unstructured.SetNestedField(aggregatedPolicy.Object, ancestors, "status", "ancestors")
+						if err != nil {
+							r.Logger.Error(err, "failed to update ancestors of policy", "policyName", aggregatedPolicy.GetName())
+						}
+					} else {
+						aggregatedPolicy = &extServerPolicy
+						aggregatedResult.ExtensionServerPolicies = append(aggregatedResult.ExtensionServerPolicies, *aggregatedPolicy)
+					}
+				}
+			}
+
+			// Store the stauses of all objects atomically with the aggregated status.
+			for _, gateway := range aggregatedResult.Gateways {
+				key := utils.NamespacedName(gateway)
+				r.ProviderResources.GatewayStatuses.Store(key, &gateway.Status)
+				gatewayStatusCount++
+				delete(keysToDelete.GatewayStatus, key)
+				r.keyCache.GatewayStatus[key] = true
+			}
+			for _, httpRoute := range aggregatedResult.HTTPRoutes {
+				key := utils.NamespacedName(httpRoute)
+				r.ProviderResources.HTTPRouteStatuses.Store(key, &httpRoute.Status)
+				httpRouteStatusCount++
+				delete(keysToDelete.HTTPRouteStatus, key)
+				r.keyCache.HTTPRouteStatus[key] = true
+			}
+			for _, grpcRoute := range aggregatedResult.GRPCRoutes {
+				key := utils.NamespacedName(grpcRoute)
+				r.ProviderResources.GRPCRouteStatuses.Store(key, &grpcRoute.Status)
+				grpcRouteStatusCount++
+				delete(keysToDelete.GRPCRouteStatus, key)
+				r.keyCache.GRPCRouteStatus[key] = true
+
+			}
+			for _, tlsRoute := range aggregatedResult.TLSRoutes {
+				key := utils.NamespacedName(tlsRoute)
+				r.ProviderResources.TLSRouteStatuses.Store(key, &tlsRoute.Status)
+				tlsRouteStatusCount++
+				delete(keysToDelete.TLSRouteStatus, key)
+				r.keyCache.TLSRouteStatus[key] = true
+			}
+			for _, tcpRoute := range aggregatedResult.TCPRoutes {
+				key := utils.NamespacedName(tcpRoute)
+				r.ProviderResources.TCPRouteStatuses.Store(key, &tcpRoute.Status)
+				tcpRouteStatusCount++
+				delete(keysToDelete.TCPRouteStatus, key)
+				r.keyCache.TCPRouteStatus[key] = true
+			}
+			for _, udpRoute := range aggregatedResult.UDPRoutes {
+				key := utils.NamespacedName(udpRoute)
+				r.ProviderResources.UDPRouteStatuses.Store(key, &udpRoute.Status)
+				udpRouteStatusCount++
+				delete(keysToDelete.UDPRouteStatus, key)
+				r.keyCache.UDPRouteStatus[key] = true
+			}
+			for _, backendTLSPolicy := range aggregatedResult.BackendTLSPolicies {
+				key := utils.NamespacedName(backendTLSPolicy)
+				r.ProviderResources.BackendTLSPolicyStatuses.Store(key, &backendTLSPolicy.Status)
+				backendTLSPolicyStatusCount++
+				delete(keysToDelete.BackendTLSPolicyStatus, key)
+				r.keyCache.BackendTLSPolicyStatus[key] = true
+			}
+			for _, clientTrafficPolicy := range aggregatedResult.ClientTrafficPolicies {
+				key := utils.NamespacedName(clientTrafficPolicy)
+				r.ProviderResources.ClientTrafficPolicyStatuses.Store(key, &clientTrafficPolicy.Status)
+				clientTrafficPolicyStatusCount++
+				delete(keysToDelete.ClientTrafficPolicyStatus, key)
+				r.keyCache.ClientTrafficPolicyStatus[key] = true
+			}
+			for _, backendTrafficPolicy := range aggregatedResult.BackendTrafficPolicies {
+				key := utils.NamespacedName(backendTrafficPolicy)
+				r.ProviderResources.BackendTrafficPolicyStatuses.Store(key, &backendTrafficPolicy.Status)
+				backendTrafficPolicyStatusCount++
+				delete(keysToDelete.BackendTrafficPolicyStatus, key)
+				r.keyCache.BackendTrafficPolicyStatus[key] = true
+			}
+			for _, securityPolicy := range aggregatedResult.SecurityPolicies {
+				key := utils.NamespacedName(securityPolicy)
+				r.ProviderResources.SecurityPolicyStatuses.Store(key, &securityPolicy.Status)
+				securityPolicyStatusCount++
+				delete(keysToDelete.SecurityPolicyStatus, key)
+				r.keyCache.SecurityPolicyStatus[key] = true
+			}
+			for _, envoyExtensionPolicy := range aggregatedResult.EnvoyExtensionPolicies {
+				key := utils.NamespacedName(envoyExtensionPolicy)
+				r.ProviderResources.EnvoyExtensionPolicyStatuses.Store(key, &envoyExtensionPolicy.Status)
+				envoyExtensionPolicyStatusCount++
+				delete(keysToDelete.EnvoyExtensionPolicyStatus, key)
+				r.keyCache.EnvoyExtensionPolicyStatus[key] = true
+			}
+			for _, backend := range aggregatedResult.Backends {
+				key := utils.NamespacedName(backend)
+				r.ProviderResources.BackendStatuses.Store(key, &backend.Status)
+				backendStatusCount++
+				delete(keysToDelete.BackendStatus, key)
+				r.keyCache.BackendStatus[key] = true
+			}
+			for _, extServerPolicy := range aggregatedResult.ExtensionServerPolicies {
+				key := message.NamespacedNameAndGVK{
+					NamespacedName:   utils.NamespacedName(&extServerPolicy),
+					GroupVersionKind: extServerPolicy.GroupVersionKind(),
+				}
+				if statusObj, hasStatus := extServerPolicy.Object["status"]; hasStatus && statusObj != nil {
+					if statusMap, ok := statusObj.(map[string]any); ok && len(statusMap) > 0 {
+						policyStatus := unstructuredToPolicyStatus(statusMap)
+						r.ProviderResources.ExtensionPolicyStatuses.Store(key, &policyStatus)
+						extensionServerPolicyStatusCount++
+					}
+				}
+				delete(keysToDelete.ExtensionServerPolicyStatus, key)
+				r.keyCache.ExtensionServerPolicyStatus[key] = true
 			}
 
 			// Publish aggregated metrics

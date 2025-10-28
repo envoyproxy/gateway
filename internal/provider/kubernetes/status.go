@@ -8,6 +8,7 @@ package kubernetes
 import (
 	"context"
 	"fmt"
+	"reflect"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
@@ -107,7 +108,7 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 							Spec:       h.Spec,
 							Status: gwapiv1.HTTPRouteStatus{
 								RouteStatus: gwapiv1.RouteStatus{
-									Parents: mergeRouteParentStatus(h.Namespace, h.Status.Parents, val.Parents),
+									Parents: mergeStatus(h.Namespace, r.envoyGateway.Gateway.ControllerName, h.Status.Parents, val.Parents),
 								},
 							},
 						}
@@ -145,7 +146,7 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 							Spec:       g.Spec,
 							Status: gwapiv1.GRPCRouteStatus{
 								RouteStatus: gwapiv1.RouteStatus{
-									Parents: mergeRouteParentStatus(g.Namespace, g.Status.Parents, val.Parents),
+									Parents: mergeStatus(g.Namespace, r.envoyGateway.Gateway.ControllerName, g.Status.Parents, val.Parents),
 								},
 							},
 						}
@@ -185,7 +186,7 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 							Spec:       t.Spec,
 							Status: gwapiv1a2.TLSRouteStatus{
 								RouteStatus: gwapiv1.RouteStatus{
-									Parents: mergeRouteParentStatus(t.Namespace, t.Status.Parents, val.Parents),
+									Parents: mergeStatus(t.Namespace, r.envoyGateway.Gateway.ControllerName, t.Status.Parents, val.Parents),
 								},
 							},
 						}
@@ -225,7 +226,7 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 							Spec:       t.Spec,
 							Status: gwapiv1a2.TCPRouteStatus{
 								RouteStatus: gwapiv1.RouteStatus{
-									Parents: mergeRouteParentStatus(t.Namespace, t.Status.Parents, val.Parents),
+									Parents: mergeStatus(t.Namespace, r.envoyGateway.Gateway.ControllerName, t.Status.Parents, val.Parents),
 								},
 							},
 						}
@@ -265,7 +266,7 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 							Spec:       u.Spec,
 							Status: gwapiv1a2.UDPRouteStatus{
 								RouteStatus: gwapiv1.RouteStatus{
-									Parents: mergeRouteParentStatus(u.Namespace, u.Status.Parents, val.Parents),
+									Parents: mergeStatus(u.Namespace, r.envoyGateway.Gateway.ControllerName, u.Status.Parents, val.Parents),
 								},
 							},
 						}
@@ -303,7 +304,9 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 							TypeMeta:   t.TypeMeta,
 							ObjectMeta: t.ObjectMeta,
 							Spec:       t.Spec,
-							Status:     *val,
+							Status: gwapiv1.PolicyStatus{
+								Ancestors: mergeStatus(t.Namespace, r.envoyGateway.Gateway.ControllerName, t.Status.Ancestors, val.Ancestors),
+							},
 						}
 						return tCopy
 					}),
@@ -339,7 +342,9 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 							TypeMeta:   t.TypeMeta,
 							ObjectMeta: t.ObjectMeta,
 							Spec:       t.Spec,
-							Status:     *val,
+							Status: gwapiv1.PolicyStatus{
+								Ancestors: mergeStatus(t.Namespace, r.envoyGateway.Gateway.ControllerName, t.Status.Ancestors, val.Ancestors),
+							},
 						}
 						return tCopy
 					}),
@@ -375,7 +380,9 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 							TypeMeta:   t.TypeMeta,
 							ObjectMeta: t.ObjectMeta,
 							Spec:       t.Spec,
-							Status:     *val,
+							Status: gwapiv1.PolicyStatus{
+								Ancestors: mergeStatus(t.Namespace, r.envoyGateway.Gateway.ControllerName, t.Status.Ancestors, val.Ancestors),
+							},
 						}
 						return tCopy
 					}),
@@ -411,7 +418,9 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 							TypeMeta:   t.TypeMeta,
 							ObjectMeta: t.ObjectMeta,
 							Spec:       t.Spec,
-							Status:     *val,
+							Status: gwapiv1.PolicyStatus{
+								Ancestors: mergeStatus(t.Namespace, r.envoyGateway.Gateway.ControllerName, t.Status.Ancestors, val.Ancestors),
+							},
 						}
 						return tCopy
 					}),
@@ -445,7 +454,9 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 							TypeMeta:   t.TypeMeta,
 							ObjectMeta: t.ObjectMeta,
 							Spec:       t.Spec,
-							Status:     *val,
+							Status: gwapiv1.PolicyStatus{
+								Ancestors: mergeStatus(t.Namespace, r.envoyGateway.Gateway.ControllerName, t.Status.Ancestors, val.Ancestors),
+							},
 						}
 						return tCopy
 					}),
@@ -481,7 +492,9 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 							TypeMeta:   t.TypeMeta,
 							ObjectMeta: t.ObjectMeta,
 							Spec:       t.Spec,
-							Status:     *val,
+							Status: gwapiv1.PolicyStatus{
+								Ancestors: mergeStatus(t.Namespace, r.envoyGateway.Gateway.ControllerName, t.Status.Ancestors, val.Ancestors),
+							},
 						}
 						return tCopy
 					}),
@@ -554,6 +567,15 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 								panic(err)
 							}
 							tCopy := t.DeepCopy()
+							var oldAncestors []gwapiv1.PolicyAncestorStatus
+							o, found, err := unstructured.NestedFieldCopy(tCopy.Object, "status", "ancestors")
+							if found && err == nil {
+								oldAncestors, ok = o.([]gwapiv1.PolicyAncestorStatus)
+								if ok {
+									tCopy.Object["status"] = mergeStatus(t.GetNamespace(), r.envoyGateway.Gateway.ControllerName, oldAncestors, val.Ancestors)
+									return tCopy
+								}
+							}
 							tCopy.Object["status"] = *val
 							return tCopy
 						}),
@@ -565,31 +587,28 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 	}
 }
 
-// mergeRouteParentStatus merges the old and new RouteParentStatus.
-// This is needed because the RouteParentStatus doesn't support strategic merge patch yet.
-func mergeRouteParentStatus(ns string, old, new []gwapiv1.RouteParentStatus) []gwapiv1.RouteParentStatus {
+// mergeStatus merges the old and new `RouteParentStatus`/`PolicyAncestorStatus`.
+// This is needed because the `RouteParentStatus`/`PolicyAncestorStatus` doesn't support strategic merge patch yet.
+// This depends on the fact that we get the full updated status of the route/policy (all parents/ancestors), and will break otherwise.
+func mergeStatus[K interface{}](ns, controllerName string, old, new []K) []K {
 	// Allocating with worst-case capacity to avoid reallocation.
-	merged := make([]gwapiv1.RouteParentStatus, 0, len(old)+len(new))
+	merged := make([]K, 0, len(old)+len(new))
 
 	// Range over old status parentRefs in order:
 	// 1. The parentRef exists in the new status: append the new one to the final status.
 	// 2. The parentRef doesn't exist in the new status and it's not our controller: append it to the final status.
-	// 3. The parentRef doesn't exist in the new status, and it is our controller: keep it in the final status.
-	//    This is important for routes with multiple parent references - not all parents are updated in each reconciliation.
+	// 3. The parentRef doesn't exist in the new status, and it is our controller: don't append it to the final status.
 	for _, oldP := range old {
 		found := -1
 		for newI, newP := range new {
-			if gatewayapi.IsParentRefEqual(oldP.ParentRef, newP.ParentRef, ns) {
+			if isParentOrAncestorRefEqual(oldP, newP, ns) {
 				found = newI
 				break
 			}
 		}
 		if found >= 0 {
 			merged = append(merged, new[found])
-		} else {
-			// Keep all old parent statuses, regardless of controller.
-			// For routes with multiple parents managed by the same controller,
-			// not all parents are necessarily updated in each reconciliation.
+		} else if parentOrAncestorControllerName(oldP) != gwapiv1.GatewayController(controllerName) {
 			merged = append(merged, oldP)
 		}
 	}
@@ -598,7 +617,7 @@ func mergeRouteParentStatus(ns string, old, new []gwapiv1.RouteParentStatus) []g
 	for _, newP := range new {
 		found := false
 		for _, mergedP := range merged {
-			if gatewayapi.IsParentRefEqual(newP.ParentRef, mergedP.ParentRef, ns) {
+			if isParentOrAncestorRefEqual(newP, mergedP, ns) {
 				found = true
 				break
 			}
@@ -609,6 +628,28 @@ func mergeRouteParentStatus(ns string, old, new []gwapiv1.RouteParentStatus) []g
 		}
 	}
 	return merged
+}
+
+func isParentOrAncestorRefEqual[K any](firstRef, secondRef K, ns string) bool {
+	switch reflect.TypeOf(firstRef) {
+	case reflect.TypeOf(gwapiv1.RouteParentStatus{}):
+		return gatewayapi.IsParentRefEqual(any(firstRef).(gwapiv1.RouteParentStatus).ParentRef, any(secondRef).(gwapiv1.RouteParentStatus).ParentRef, ns)
+	case reflect.TypeOf(gwapiv1.PolicyAncestorStatus{}):
+		return gatewayapi.IsParentRefEqual(any(firstRef).(gwapiv1.PolicyAncestorStatus).AncestorRef, any(secondRef).(gwapiv1.PolicyAncestorStatus).AncestorRef, ns)
+	default:
+		return false
+	}
+}
+
+func parentOrAncestorControllerName[K any](ref K) gwapiv1.GatewayController {
+	switch reflect.TypeOf(ref) {
+	case reflect.TypeOf(gwapiv1.RouteParentStatus{}):
+		return any(ref).(gwapiv1.RouteParentStatus).ControllerName
+	case reflect.TypeOf(gwapiv1.PolicyAncestorStatus{}):
+		return any(ref).(gwapiv1.PolicyAncestorStatus).ControllerName
+	default:
+		return gwapiv1.GatewayController("")
+	}
 }
 
 func (r *gatewayAPIReconciler) updateStatusForGateway(ctx context.Context, gtw *gwapiv1.Gateway) {
