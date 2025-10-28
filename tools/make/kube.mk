@@ -113,13 +113,41 @@ generate-gwapi-manifests: ## Generate Gateway API manifests and make it consiste
 kube-generate-clients: ## Generate Kubernetes clients, informers, and listers
 	@$(LOG_TARGET)
 	@echo "Generating Kubernetes clients..."
-	$(ROOT_DIR)/tools/src/update-codegen.sh
-
-.PHONY: kube-verify-clients
-kube-verify-clients: ## Verify generated clients are up to date
-	@$(LOG_TARGET)
-	@echo "Verifying Kubernetes clients..."
-	$(ROOT_DIR)/tools/src/verify-codegen.sh
+	@# Preserve test file if it exists
+	@if [ -f "$(ROOT_DIR)/pkg/client/clientset_test.go" ]; then \
+		cp "$(ROOT_DIR)/pkg/client/clientset_test.go" "$(ROOT_DIR)/pkg/client/clientset_test.go.bak"; \
+	fi
+	@echo "Running client-gen..."
+	$(GO_TOOL) client-gen \
+		--clientset-name versioned \
+		--input-base "" \
+		--input github.com/envoyproxy/gateway/api/v1alpha1 \
+		--go-header-file "$(ROOT_DIR)/tools/boilerplate/boilerplate.generatego.txt" \
+		--output-pkg github.com/envoyproxy/gateway/pkg/client/clientset \
+		--output-dir "$(ROOT_DIR)/pkg/client/clientset" \
+		--plural-exceptions "EnvoyProxy:EnvoyProxies" \
+		github.com/envoyproxy/gateway/api/v1alpha1
+	@echo "Running lister-gen..."
+	$(GO_TOOL) lister-gen \
+		--go-header-file "$(ROOT_DIR)/tools/boilerplate/boilerplate.generatego.txt" \
+		--output-pkg github.com/envoyproxy/gateway/pkg/client/listers \
+		--output-dir "$(ROOT_DIR)/pkg/client/listers" \
+		--plural-exceptions "EnvoyProxy:EnvoyProxies" \
+		github.com/envoyproxy/gateway/api/v1alpha1
+	@echo "Running informer-gen..."
+	$(GO_TOOL) informer-gen \
+		--versioned-clientset-package github.com/envoyproxy/gateway/pkg/client/clientset/versioned \
+		--listers-package github.com/envoyproxy/gateway/pkg/client/listers \
+		--go-header-file "$(ROOT_DIR)/tools/boilerplate/boilerplate.generatego.txt" \
+		--output-pkg github.com/envoyproxy/gateway/pkg/client/informers \
+		--output-dir "$(ROOT_DIR)/pkg/client/informers" \
+		--plural-exceptions "EnvoyProxy:EnvoyProxies" \
+		github.com/envoyproxy/gateway/api/v1alpha1
+	@# Restore test file if it was backed up
+	@if [ -f "$(ROOT_DIR)/pkg/client/clientset_test.go.bak" ]; then \
+		mv "$(ROOT_DIR)/pkg/client/clientset_test.go.bak" "$(ROOT_DIR)/pkg/client/clientset_test.go"; \
+	fi
+	@echo "Client generation complete!"
 
 .PHONY: kube-generate
 kube-generate: kube-generate-clients ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
