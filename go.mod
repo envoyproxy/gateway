@@ -34,7 +34,7 @@ require (
 	github.com/google/cel-go v0.26.0
 	github.com/google/go-cmp v0.7.0
 	github.com/google/go-containerregistry v0.20.6
-	github.com/klauspost/compress v1.18.0
+	github.com/klauspost/compress v1.18.1
 	github.com/miekg/dns v1.1.68
 	github.com/ohler55/ojg v1.26.10
 	github.com/pkg/errors v0.9.1
@@ -42,7 +42,7 @@ require (
 	github.com/prometheus/client_model v0.6.2
 	github.com/prometheus/common v0.67.1
 	github.com/quic-go/quic-go v0.55.0
-	github.com/replicatedhq/troubleshoot v0.123.10
+	github.com/replicatedhq/troubleshoot v0.123.12
 	github.com/shopspring/decimal v1.4.0
 	github.com/spf13/cobra v1.10.1
 	github.com/spf13/pflag v1.0.10

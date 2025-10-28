@@ -87,7 +87,11 @@ func validateBackend(backend *egv1a1.Backend, backendTLSPolicies []*gwapiv1.Back
 
 // validateBackendTLSSettings validates CACert is specified if InsecureSkipVerify is false
 func validateBackendTLSSettings(backend *egv1a1.Backend, backendTLSPolicies []*gwapiv1.BackendTLSPolicy) status.Error {
-	if backend.Spec.TLS != nil && !ptr.Deref(backend.Spec.TLS.InsecureSkipVerify, false) {
+	if backend.Spec.TLS == nil {
+		return nil
+	}
+
+	if !ptr.Deref(backend.Spec.TLS.InsecureSkipVerify, false) {
 		var (
 			backendTLSHasCACerts         bool
 			backendTLSPoliciesHasCACerts bool
@@ -150,6 +154,16 @@ func validateBackendTLSSettings(backend *egv1a1.Backend, backendTLSPolicies []*g
 					status.RouteReasonInvalidBackendRef,
 				)
 			}
+		}
+	}
+
+	if backend.Spec.TLS.BackendTLSConfig != nil && backend.Spec.TLS.ClientCertificateRef != nil {
+		ns := string(ptr.Deref(backend.Spec.TLS.ClientCertificateRef.Namespace, "default"))
+		if ns != backend.Namespace {
+			return status.NewRouteStatusError(
+				fmt.Errorf("clientCertificateRef Secret is not located in the same namespace as Backend. Secret namespace: %s does not match Backend namespace: %s", ns, backend.Namespace),
+				status.RouteReasonInvalidBackendRef,
+			)
 		}
 	}
 	return nil

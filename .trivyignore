@@ -1,4 +1,0 @@
-# Following vulnerabilities are false positives because EG does not release from main branch
-# TODO remove this file once v1.6.0-rc.0 tag is available
-CVE-2025-24030
-CVE-2025-25294
