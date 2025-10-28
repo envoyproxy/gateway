@@ -22,6 +22,8 @@ const (
 
 // ClientTrafficPolicy allows the user to configure the behavior of the connection
 // between the downstream client and Envoy Proxy listener.
+// +genclient
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 type ClientTrafficPolicy struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -394,6 +396,7 @@ type ProxyProtocolSettings struct {
 //+kubebuilder:object:root=true
 
 // ClientTrafficPolicyList contains a list of ClientTrafficPolicy resources.
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 type ClientTrafficPolicyList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
@@ -401,5 +404,5 @@ type ClientTrafficPolicyList struct {
 }
 
 func init() {
-	SchemeBuilder.Register(&ClientTrafficPolicy{}, &ClientTrafficPolicyList{})
+	localSchemeBuilder.Register(&ClientTrafficPolicy{}, &ClientTrafficPolicyList{})
 }

@@ -6,6 +6,7 @@
 // Package v1alpha1 contains API schema definitions for the gateway.envoyproxy.io
 // API group.
 //
-// +kubebuilder:object:generate=true
+// +k8s:deepcopy-gen=package
 // +groupName=gateway.envoyproxy.io
+// +kubebuilder:object:generate=true
 package v1alpha1

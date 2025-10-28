@@ -109,11 +109,23 @@ generate-gwapi-manifests: ## Generate Gateway API manifests and make it consiste
 	@mv $(OUTPUT_DIR)/experimental-gatewayapi-crds.yaml charts/gateway-crds-helm/templates/experimental-gatewayapi-crds.yaml
 	@mv $(OUTPUT_DIR)/standard-gatewayapi-crds.yaml charts/gateway-crds-helm/templates/standard-gatewayapi-crds.yaml
 
+.PHONY: kube-generate-clients
+kube-generate-clients: ## Generate Kubernetes clients, informers, and listers
+	@$(LOG_TARGET)
+	@echo "Generating Kubernetes clients..."
+	$(ROOT_DIR)/tools/src/update-codegen.sh
+
+.PHONY: kube-verify-clients
+kube-verify-clients: ## Verify generated clients are up to date
+	@$(LOG_TARGET)
+	@echo "Verifying Kubernetes clients..."
+	$(ROOT_DIR)/tools/src/verify-codegen.sh
+
 .PHONY: kube-generate
-kube-generate: ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
+kube-generate: kube-generate-clients ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
 # Note that the paths can't just be "./..." with the header file, or the tool will panic on run. Sorry.
 	@$(LOG_TARGET)
-	$(GO_TOOL) controller-gen $(CONTROLLERGEN_OBJECT_FLAGS) paths="{$(ROOT_DIR)/api/...,$(ROOT_DIR)/internal/ir/...,$(ROOT_DIR)/internal/gatewayapi/...}"
+	$(GO_TOOL) controller-gen $(CONTROLLERGEN_OBJECT_FLAGS) paths="{$(ROOT_DIR)/api/...,$(ROOT_DIR)/internal/gatewayapi/...}"
 
 .PHONY: kube-test
 kube-test: manifests generate run-kube-test

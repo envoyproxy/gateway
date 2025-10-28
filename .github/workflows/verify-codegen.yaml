@@ -1,0 +1,50 @@
+name: Verify Code Generation
+
+on:
+  pull_request:
+    branches:
+      - main
+      - 'release/**'
+    paths:
+      - 'api/**'
+      - 'pkg/client/**'
+      - 'tools/src/*-codegen.sh'
+      - 'tools/make/kube.mk'
+      - '.github/workflows/verify-codegen.yaml'
+
+jobs:
+  verify-codegen:
+    name: Verify Generated Code
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Install dependencies
+        run: |
+          cd tools
+          go mod download
+          cd ..
+
+      - name: Verify generated code
+        run: make kube-verify-clients
+
+      - name: Check for uncommitted changes
+        run: |
+          if ! git diff --exit-code pkg/client/; then
+            echo "ERROR: Generated code is not up to date."
+            echo "Please run 'make kube-generate' and commit the changes."
+            echo ""
+            echo "Diff:"
+            git diff pkg/client/
+            exit 1
+          fi
+

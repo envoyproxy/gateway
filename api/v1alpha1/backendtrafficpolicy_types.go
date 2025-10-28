@@ -23,6 +23,8 @@ const (
 // +kubebuilder:resource:categories=envoy-gateway,shortName=btp
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
+// +genclient
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 type BackendTrafficPolicy struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -167,6 +169,7 @@ type RequestBuffer struct {
 // BackendTrafficPolicyList contains a list of BackendTrafficPolicy resources.
 //
 // +kubebuilder:object:root=true
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 type BackendTrafficPolicyList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
@@ -174,5 +177,5 @@ type BackendTrafficPolicyList struct {
 }
 
 func init() {
-	SchemeBuilder.Register(&BackendTrafficPolicy{}, &BackendTrafficPolicyList{})
+	localSchemeBuilder.Register(&BackendTrafficPolicy{}, &BackendTrafficPolicyList{})
 }
