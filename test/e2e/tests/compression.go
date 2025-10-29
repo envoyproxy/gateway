@@ -19,6 +19,7 @@ import (
 	"testing"
 
 	"github.com/andybalholm/brotli"
+	"github.com/klauspost/compress/zstd"
 	"k8s.io/apimachinery/pkg/types"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/conformance/utils/config"
@@ -48,6 +49,10 @@ var CompressionTest = suite.ConformanceTest{
 
 		t.Run("HTTPRoute with gzip compression", func(t *testing.T) {
 			testCompression(t, suite, egv1a1.GzipCompressorType)
+		})
+
+		t.Run("HTTPRoute with zstd compression", func(t *testing.T) {
+			testCompression(t, suite, egv1a1.ZstdCompressorType)
 		})
 
 		t.Run("HTTPRoute without compression", func(t *testing.T) {
@@ -194,6 +199,10 @@ func (d *CompressionRoundTripper) defaultRoundTrip(request *roundtripper.Request
 		}
 	case "br":
 		reader = brotli.NewReader(resp.Body)
+	case "zstd":
+		if reader, err = zstd.NewReader(resp.Body); err != nil {
+			return nil, nil, err
+		}
 	default:
 		reader = resp.Body
 	}

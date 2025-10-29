@@ -793,7 +793,11 @@ func configMapBackendIndexFunc(rawObj client.Object) []string {
 func secretBackendIndexFunc(rawObj client.Object) []string {
 	backend := rawObj.(*egv1a1.Backend)
 	var secretReferences []string
-	if backend.Spec.TLS != nil && backend.Spec.TLS.CACertificateRefs != nil {
+	if backend.Spec.TLS == nil {
+		return secretReferences
+	}
+
+	if backend.Spec.TLS.CACertificateRefs != nil {
 		for _, caCertRef := range backend.Spec.TLS.CACertificateRefs {
 			if caCertRef.Kind == resource.KindSecret {
 				secretReferences = append(secretReferences,
@@ -803,6 +807,18 @@ func secretBackendIndexFunc(rawObj client.Object) []string {
 					}.String(),
 				)
 			}
+		}
+	}
+
+	if backend.Spec.TLS.BackendTLSConfig != nil && backend.Spec.TLS.ClientCertificateRef != nil {
+		certRef := backend.Spec.TLS.ClientCertificateRef
+		if certRef.Kind == nil || string(*certRef.Kind) == resource.KindSecret {
+			secretReferences = append(secretReferences,
+				types.NamespacedName{
+					Namespace: gatewayapi.NamespaceDerefOr(certRef.Namespace, backend.Namespace),
+					Name:      string(certRef.Name),
+				}.String(),
+			)
 		}
 	}
 	return secretReferences

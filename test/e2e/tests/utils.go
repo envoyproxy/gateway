@@ -251,7 +251,7 @@ func AlmostEquals(actual, expect, offset int) bool {
 // runs a load test with options described in opts
 // the done channel is used to notify caller of execution result
 // the execution may end due to an external abort or timeout
-func runLoadAndWait(t *testing.T, timeoutConfig *config.TimeoutConfig, done chan bool, aborter *periodic.Aborter, reqURL string) {
+func runLoadAndWait(t *testing.T, timeoutConfig *config.TimeoutConfig, done chan bool, aborter *periodic.Aborter, reqURL string, reqTimeout time.Duration) {
 	qpsVal := os.Getenv("E2E_BACKEND_UPGRADE_QPS")
 	qps := 5000
 	if qpsVal != "" {
@@ -275,6 +275,10 @@ func runLoadAndWait(t *testing.T, timeoutConfig *config.TimeoutConfig, done chan
 		HTTPOptions: fhttp.HTTPOptions{
 			URL: reqURL,
 		},
+	}
+
+	if reqTimeout > 0 {
+		opts.HTTPReqTimeOut = reqTimeout
 	}
 
 	res, err := fhttp.RunHTTPTest(&opts)
@@ -623,6 +627,11 @@ type LokiQueryResponse struct {
 // CollectAndDump collects and dumps the cluster data for troubleshooting and log.
 // This function should be call within t.Cleanup.
 func CollectAndDump(t *testing.T, rest *rest.Config) {
+	if os.Getenv("ACTIONS_STEP_DEBUG") != "true" {
+		tlog.Logf(t, "Skipping collecting and dumping cluster data, set ACTIONS_STEP_DEBUG=true to enable it")
+		return
+	}
+
 	dumpedNamespaces := []string{"envoy-gateway-system"}
 	if IsGatewayNamespaceMode() {
 		dumpedNamespaces = append(dumpedNamespaces, ConformanceInfraNamespace)
@@ -630,15 +639,6 @@ func CollectAndDump(t *testing.T, rest *rest.Config) {
 
 	opts := []tb.CollectOption{
 		tb.WithCollectedNamespaces(dumpedNamespaces),
-	}
-
-	if os.Getenv("ACTIONS_STEP_DEBUG") != "true" {
-		// don't collector metrics, pod logs and config dumps when ACTIONS_STEP_DEBUG is false
-		opts = append(opts,
-			tb.DisableCollector(tb.CollectorTypePrometheusMetrics),
-			tb.DisableCollector(tb.CollectorTypePodLogs),
-			tb.DisableCollector(tb.CollectorTypeConfigDump),
-		)
 	}
 
 	result, _ := tb.CollectResult(t.Context(), rest, opts...)
@@ -691,6 +691,8 @@ func ContentEncoding(compressorType egv1a1.CompressorType) string {
 		encoding = "br"
 	case egv1a1.GzipCompressorType:
 		encoding = "gzip"
+	case egv1a1.ZstdCompressorType:
+		encoding = "zstd"
 	}
 
 	return encoding
