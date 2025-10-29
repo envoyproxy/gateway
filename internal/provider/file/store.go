@@ -97,7 +97,7 @@ func (r *ResourcesStore) ReloadAll(ctx context.Context, files, dirs []string) er
 	rn := 0
 	deletedKeys := r.keys.Difference(currentKeys)
 	for _, k := range deletionOrderKeyList(deletedKeys) {
-		delObj := makeUnstructuredObjectFromKey(k)
+		delObj := makeUnstructuredObjectFromKey(&k)
 		if err := r.client.Delete(ctx, delObj); err != nil {
 			errList = errors.Join(errList, err)
 			// Insert back if the object is not be removed.
@@ -135,13 +135,15 @@ func (r *ResourcesStore) Store(ctx context.Context, re *resource.LoadResources, 
 		collectKeys = sets.New[storeKey]()
 	)
 
-	for _, obj := range re.GatewayClasses {
-		if err := r.storeObjectWithKeys(ctx, obj, collectKeys); err != nil {
-			errs = errors.Join(errs, err)
-		}
+	if err := r.storeObjectWithKeys(ctx, re.EnvoyProxyForGatewayClass, collectKeys); err != nil {
+		errs = errors.Join(errs, err)
 	}
 
-	for _, obj := range re.EnvoyProxies {
+	if err := r.storeObjectWithKeys(ctx, re.GatewayClass, collectKeys); err != nil {
+		errs = errors.Join(errs, err)
+	}
+
+	for _, obj := range re.EnvoyProxiesForGateways {
 		if err := r.storeObjectWithKeys(ctx, obj, collectKeys); err != nil {
 			errs = errors.Join(errs, err)
 		}
@@ -279,7 +281,7 @@ func (r *ResourcesStore) Store(ctx context.Context, re *resource.LoadResources, 
 }
 
 // storeObjectWithKeys stores object while collecting its key.
-func (r *ResourcesStore) storeObjectWithKeys(ctx context.Context, obj client.Object, keys sets.Set[storeKey]) error {
+func (r *resourcesStore) storeObjectWithKeys(ctx context.Context, obj client.Object, keys sets.Set[storeKey]) error {
 	key, err := r.storeObject(ctx, obj)
 	if err != nil && key != nil {
 		return fmt.Errorf("failed to store %s %s: %w", key.Kind, key.NamespacedName.String(), err)
@@ -303,7 +305,7 @@ func (r *ResourcesStore) storeObject(ctx context.Context, obj client.Object) (*s
 	var (
 		err    error
 		key    = newStoreKey(obj)
-		oldObj = makeUnstructuredObjectFromKey(key)
+		oldObj = makeUnstructuredObjectFromKey(&key)
 	)
 
 	if err = r.client.Get(ctx, key.NamespacedName, oldObj); err == nil {
@@ -316,7 +318,7 @@ func (r *ResourcesStore) storeObject(ctx context.Context, obj client.Object) (*s
 	return nil, err
 }
 
-func makeUnstructuredObjectFromKey(key storeKey) *unstructured.Unstructured {
+func makeUnstructuredObjectFromKey(key *storeKey) *unstructured.Unstructured {
 	obj := &unstructured.Unstructured{}
 	obj.SetGroupVersionKind(key.GroupVersionKind)
 	obj.SetNamespace(key.Namespace)

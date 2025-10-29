@@ -53,14 +53,14 @@ func TestEnvoyProxyProvider(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{"Unsupported value: \"foo\": supported values: \"Kubernetes\""},
+			wantErrors: []string{"Unsupported value: \"foo\": supported values: \"Kubernetes\", \"Host\""},
 		},
 		{
 			desc: "invalid service type",
 			mutate: func(envoy *egv1a1.EnvoyProxy) {
 				envoy.Spec = egv1a1.EnvoyProxySpec{
 					Provider: &egv1a1.EnvoyProxyProvider{
-						Type: egv1a1.ProviderTypeKubernetes,
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyService: &egv1a1.KubernetesServiceSpec{
 								Type: ptr.To(egv1a1.ServiceType("foo")),
@@ -76,7 +76,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			mutate: func(envoy *egv1a1.EnvoyProxy) {
 				envoy.Spec = egv1a1.EnvoyProxySpec{
 					Provider: &egv1a1.EnvoyProxyProvider{
-						Type: egv1a1.ProviderTypeKubernetes,
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyService: &egv1a1.KubernetesServiceSpec{
 								Type:                          ptr.To(egv1a1.ServiceTypeLoadBalancer),
@@ -93,7 +93,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			mutate: func(envoy *egv1a1.EnvoyProxy) {
 				envoy.Spec = egv1a1.EnvoyProxySpec{
 					Provider: &egv1a1.EnvoyProxyProvider{
-						Type: egv1a1.ProviderTypeKubernetes,
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyService: &egv1a1.KubernetesServiceSpec{
 								Type: ptr.To(egv1a1.ServiceTypeClusterIP),
@@ -109,7 +109,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			mutate: func(envoy *egv1a1.EnvoyProxy) {
 				envoy.Spec = egv1a1.EnvoyProxySpec{
 					Provider: &egv1a1.EnvoyProxyProvider{
-						Type: egv1a1.ProviderTypeKubernetes,
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyService: &egv1a1.KubernetesServiceSpec{
 								Type:                          ptr.To(egv1a1.ServiceTypeClusterIP),
@@ -126,7 +126,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			mutate: func(envoy *egv1a1.EnvoyProxy) {
 				envoy.Spec = egv1a1.EnvoyProxySpec{
 					Provider: &egv1a1.EnvoyProxyProvider{
-						Type: egv1a1.ProviderTypeKubernetes,
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyService: &egv1a1.KubernetesServiceSpec{
 								Type:                     ptr.To(egv1a1.ServiceTypeLoadBalancer),
@@ -143,7 +143,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			mutate: func(envoy *egv1a1.EnvoyProxy) {
 				envoy.Spec = egv1a1.EnvoyProxySpec{
 					Provider: &egv1a1.EnvoyProxyProvider{
-						Type: egv1a1.ProviderTypeKubernetes,
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyService: &egv1a1.KubernetesServiceSpec{
 								Type: ptr.To(egv1a1.ServiceTypeClusterIP),
@@ -159,7 +159,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			mutate: func(envoy *egv1a1.EnvoyProxy) {
 				envoy.Spec = egv1a1.EnvoyProxySpec{
 					Provider: &egv1a1.EnvoyProxyProvider{
-						Type: egv1a1.ProviderTypeKubernetes,
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyService: &egv1a1.KubernetesServiceSpec{
 								Type:                     ptr.To(egv1a1.ServiceTypeClusterIP),
@@ -176,7 +176,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			mutate: func(envoy *egv1a1.EnvoyProxy) {
 				envoy.Spec = egv1a1.EnvoyProxySpec{
 					Provider: &egv1a1.EnvoyProxyProvider{
-						Type: egv1a1.ProviderTypeKubernetes,
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyService: &egv1a1.KubernetesServiceSpec{
 								Type:           ptr.To(egv1a1.ServiceTypeLoadBalancer),
@@ -193,7 +193,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			mutate: func(envoy *egv1a1.EnvoyProxy) {
 				envoy.Spec = egv1a1.EnvoyProxySpec{
 					Provider: &egv1a1.EnvoyProxyProvider{
-						Type: egv1a1.ProviderTypeKubernetes,
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyService: &egv1a1.KubernetesServiceSpec{
 								Type: ptr.To(egv1a1.ServiceTypeLoadBalancer),
@@ -209,7 +209,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			mutate: func(envoy *egv1a1.EnvoyProxy) {
 				envoy.Spec = egv1a1.EnvoyProxySpec{
 					Provider: &egv1a1.EnvoyProxyProvider{
-						Type: egv1a1.ProviderTypeKubernetes,
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyService: &egv1a1.KubernetesServiceSpec{
 								Type:           ptr.To(egv1a1.ServiceTypeLoadBalancer),
@@ -226,7 +226,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			mutate: func(envoy *egv1a1.EnvoyProxy) {
 				envoy.Spec = egv1a1.EnvoyProxySpec{
 					Provider: &egv1a1.EnvoyProxyProvider{
-						Type: egv1a1.ProviderTypeKubernetes,
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyService: &egv1a1.KubernetesServiceSpec{
 								Type:           ptr.To(egv1a1.ServiceTypeLoadBalancer),
@@ -243,7 +243,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			mutate: func(envoy *egv1a1.EnvoyProxy) {
 				envoy.Spec = egv1a1.EnvoyProxySpec{
 					Provider: &egv1a1.EnvoyProxyProvider{
-						Type: egv1a1.ProviderTypeKubernetes,
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyService: &egv1a1.KubernetesServiceSpec{
 								Type: ptr.To(egv1a1.ServiceTypeClusterIP),
@@ -259,7 +259,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			mutate: func(envoy *egv1a1.EnvoyProxy) {
 				envoy.Spec = egv1a1.EnvoyProxySpec{
 					Provider: &egv1a1.EnvoyProxyProvider{
-						Type: egv1a1.ProviderTypeKubernetes,
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyPDB: &egv1a1.KubernetesPodDisruptionBudgetSpec{
 								MinAvailable:   &intstr.IntOrString{Type: intstr.Int, IntVal: 1},
@@ -276,7 +276,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			mutate: func(envoy *egv1a1.EnvoyProxy) {
 				envoy.Spec = egv1a1.EnvoyProxySpec{
 					Provider: &egv1a1.EnvoyProxyProvider{
-						Type: egv1a1.ProviderTypeKubernetes,
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyPDB: &egv1a1.KubernetesPodDisruptionBudgetSpec{
 								MaxUnavailable: &intstr.IntOrString{Type: intstr.Int, IntVal: 1},
@@ -292,7 +292,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			mutate: func(envoy *egv1a1.EnvoyProxy) {
 				envoy.Spec = egv1a1.EnvoyProxySpec{
 					Provider: &egv1a1.EnvoyProxyProvider{
-						Type: egv1a1.ProviderTypeKubernetes,
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyService: &egv1a1.KubernetesServiceSpec{
 								Type:           ptr.To(egv1a1.ServiceTypeClusterIP),
@@ -1219,7 +1219,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			mutate: func(envoy *egv1a1.EnvoyProxy) {
 				envoy.Spec = egv1a1.EnvoyProxySpec{
 					Provider: &egv1a1.EnvoyProxyProvider{
-						Type: egv1a1.ProviderTypeKubernetes,
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyHpa: &egv1a1.KubernetesHorizontalPodAutoscalerSpec{},
 						},
@@ -1233,7 +1233,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			mutate: func(envoy *egv1a1.EnvoyProxy) {
 				envoy.Spec = egv1a1.EnvoyProxySpec{
 					Provider: &egv1a1.EnvoyProxyProvider{
-						Type: egv1a1.ProviderTypeKubernetes,
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyHpa: &egv1a1.KubernetesHorizontalPodAutoscalerSpec{
 								MinReplicas: ptr.To[int32](-1),
@@ -1250,7 +1250,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			mutate: func(envoy *egv1a1.EnvoyProxy) {
 				envoy.Spec = egv1a1.EnvoyProxySpec{
 					Provider: &egv1a1.EnvoyProxyProvider{
-						Type: egv1a1.ProviderTypeKubernetes,
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyHpa: &egv1a1.KubernetesHorizontalPodAutoscalerSpec{
 								MaxReplicas: ptr.To[int32](-1),
@@ -1266,7 +1266,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			mutate: func(envoy *egv1a1.EnvoyProxy) {
 				envoy.Spec = egv1a1.EnvoyProxySpec{
 					Provider: &egv1a1.EnvoyProxyProvider{
-						Type: egv1a1.ProviderTypeKubernetes,
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyHpa: &egv1a1.KubernetesHorizontalPodAutoscalerSpec{
 								MinReplicas: ptr.To[int32](5),
@@ -1283,7 +1283,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			mutate: func(envoy *egv1a1.EnvoyProxy) {
 				envoy.Spec = egv1a1.EnvoyProxySpec{
 					Provider: &egv1a1.EnvoyProxyProvider{
-						Type: egv1a1.ProviderTypeKubernetes,
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyHpa: &egv1a1.KubernetesHorizontalPodAutoscalerSpec{
 								MinReplicas: ptr.To[int32](2),
@@ -1300,7 +1300,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			mutate: func(envoy *egv1a1.EnvoyProxy) {
 				envoy.Spec = egv1a1.EnvoyProxySpec{
 					Provider: &egv1a1.EnvoyProxyProvider{
-						Type: egv1a1.ProviderTypeKubernetes,
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyHpa: &egv1a1.KubernetesHorizontalPodAutoscalerSpec{
 								MinReplicas: ptr.To[int32](5),
@@ -1372,7 +1372,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			mutate: func(envoy *egv1a1.EnvoyProxy) {
 				envoy.Spec = egv1a1.EnvoyProxySpec{
 					Provider: &egv1a1.EnvoyProxyProvider{
-						Type: egv1a1.ProviderTypeKubernetes,
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{},
 							EnvoyDaemonSet:  &egv1a1.KubernetesDaemonSetSpec{},
@@ -1387,7 +1387,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			mutate: func(envoy *egv1a1.EnvoyProxy) {
 				envoy.Spec = egv1a1.EnvoyProxySpec{
 					Provider: &egv1a1.EnvoyProxyProvider{
-						Type: egv1a1.ProviderTypeKubernetes,
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyDaemonSet: &egv1a1.KubernetesDaemonSetSpec{},
 							EnvoyHpa: &egv1a1.KubernetesHorizontalPodAutoscalerSpec{
@@ -1405,7 +1405,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			mutate: func(envoy *egv1a1.EnvoyProxy) {
 				envoy.Spec = egv1a1.EnvoyProxySpec{
 					Provider: &egv1a1.EnvoyProxyProvider{
-						Type: egv1a1.ProviderTypeKubernetes,
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{},
 							EnvoyDaemonSet:  &egv1a1.KubernetesDaemonSetSpec{},
@@ -1420,7 +1420,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			mutate: func(envoy *egv1a1.EnvoyProxy) {
 				envoy.Spec = egv1a1.EnvoyProxySpec{
 					Provider: &egv1a1.EnvoyProxyProvider{
-						Type: egv1a1.ProviderTypeKubernetes,
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyDaemonSet: &egv1a1.KubernetesDaemonSetSpec{},
 							EnvoyHpa: &egv1a1.KubernetesHorizontalPodAutoscalerSpec{
@@ -1602,7 +1602,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			mutate: func(envoy *egv1a1.EnvoyProxy) {
 				envoy.Spec = egv1a1.EnvoyProxySpec{
 					Provider: &egv1a1.EnvoyProxyProvider{
-						Type: egv1a1.ProviderTypeKubernetes,
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
 								Container: &egv1a1.KubernetesContainerSpec{
@@ -1620,7 +1620,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			mutate: func(envoy *egv1a1.EnvoyProxy) {
 				envoy.Spec = egv1a1.EnvoyProxySpec{
 					Provider: &egv1a1.EnvoyProxyProvider{
-						Type: egv1a1.ProviderTypeKubernetes,
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
 								Container: &egv1a1.KubernetesContainerSpec{
@@ -1638,7 +1638,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			mutate: func(envoy *egv1a1.EnvoyProxy) {
 				envoy.Spec = egv1a1.EnvoyProxySpec{
 					Provider: &egv1a1.EnvoyProxyProvider{
-						Type: egv1a1.ProviderTypeKubernetes,
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
 								Container: &egv1a1.KubernetesContainerSpec{
@@ -1656,7 +1656,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			mutate: func(envoy *egv1a1.EnvoyProxy) {
 				envoy.Spec = egv1a1.EnvoyProxySpec{
 					Provider: &egv1a1.EnvoyProxyProvider{
-						Type: egv1a1.ProviderTypeKubernetes,
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
 								Container: &egv1a1.KubernetesContainerSpec{
@@ -1670,11 +1670,47 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			wantErrors: []string{},
 		},
 		{
+			desc: "valid: imageRepository with ip and port",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
+								Container: &egv1a1.KubernetesContainerSpec{
+									ImageRepository: ptr.To("192.168.1.1:8000"),
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "valid: imageRepository with domain and port",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
+								Container: &egv1a1.KubernetesContainerSpec{
+									ImageRepository: ptr.To("registry.com:8000"),
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
 			desc: "valid: imageRepository set without tag, image not set",
 			mutate: func(envoy *egv1a1.EnvoyProxy) {
 				envoy.Spec = egv1a1.EnvoyProxySpec{
 					Provider: &egv1a1.EnvoyProxyProvider{
-						Type: egv1a1.ProviderTypeKubernetes,
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
 								Container: &egv1a1.KubernetesContainerSpec{
@@ -1692,7 +1728,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			mutate: func(envoy *egv1a1.EnvoyProxy) {
 				envoy.Spec = egv1a1.EnvoyProxySpec{
 					Provider: &egv1a1.EnvoyProxyProvider{
-						Type: egv1a1.ProviderTypeKubernetes,
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
 								Container: &egv1a1.KubernetesContainerSpec{
@@ -1711,7 +1747,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			mutate: func(envoy *egv1a1.EnvoyProxy) {
 				envoy.Spec = egv1a1.EnvoyProxySpec{
 					Provider: &egv1a1.EnvoyProxyProvider{
-						Type: egv1a1.ProviderTypeKubernetes,
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
 								Container: &egv1a1.KubernetesContainerSpec{
@@ -1729,7 +1765,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			mutate: func(envoy *egv1a1.EnvoyProxy) {
 				envoy.Spec = egv1a1.EnvoyProxySpec{
 					Provider: &egv1a1.EnvoyProxyProvider{
-						Type: egv1a1.ProviderTypeKubernetes,
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
 								Container: &egv1a1.KubernetesContainerSpec{
@@ -1747,7 +1783,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			mutate: func(envoy *egv1a1.EnvoyProxy) {
 				envoy.Spec = egv1a1.EnvoyProxySpec{
 					Provider: &egv1a1.EnvoyProxyProvider{
-						Type: egv1a1.ProviderTypeKubernetes,
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
 								Container: &egv1a1.KubernetesContainerSpec{
@@ -1761,11 +1797,47 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			wantErrors: []string{"Image must include a tag and allowed characters only (e.g., 'repo:tag')."},
 		},
 		{
+			desc: "valid: image with domain and port",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
+								Container: &egv1a1.KubernetesContainerSpec{
+									Image: ptr.To("registry.com:3000/envoy:v1.2.3"),
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "valid: image with ip and port",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
+								Container: &egv1a1.KubernetesContainerSpec{
+									Image: ptr.To("127.0.0.1:3000/envoy:v1.2.3"),
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
 			desc: "invalid: imageRepository contains tag",
 			mutate: func(envoy *egv1a1.EnvoyProxy) {
 				envoy.Spec = egv1a1.EnvoyProxySpec{
 					Provider: &egv1a1.EnvoyProxyProvider{
-						Type: egv1a1.ProviderTypeKubernetes,
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
 								Container: &egv1a1.KubernetesContainerSpec{
@@ -1783,7 +1855,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			mutate: func(envoy *egv1a1.EnvoyProxy) {
 				envoy.Spec = egv1a1.EnvoyProxySpec{
 					Provider: &egv1a1.EnvoyProxyProvider{
-						Type: egv1a1.ProviderTypeKubernetes,
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
 								Container: &egv1a1.KubernetesContainerSpec{
@@ -1801,7 +1873,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			mutate: func(envoy *egv1a1.EnvoyProxy) {
 				envoy.Spec = egv1a1.EnvoyProxySpec{
 					Provider: &egv1a1.EnvoyProxyProvider{
-						Type: egv1a1.ProviderTypeKubernetes,
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
 								Container: &egv1a1.KubernetesContainerSpec{

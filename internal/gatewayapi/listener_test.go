@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/ptr"
@@ -100,7 +101,7 @@ func TestProxySamplingRate(t *testing.T) {
 	}
 }
 
-func TestIsOverlappingHostname(t *testing.T) {
+func TestAreOverlappingHostnames(t *testing.T) {
 	tests := []struct {
 		name      string
 		hostname1 *gwapiv1.Hostname
@@ -120,10 +121,10 @@ func TestIsOverlappingHostname(t *testing.T) {
 			want:      true,
 		},
 		{
-			name:      "two wildcards matches subdomain",
+			name:      "two wildcards with subdomain does not match",
 			hostname1: ptr.To(gwapiv1.Hostname("*.example.com")),
 			hostname2: ptr.To(gwapiv1.Hostname("*.test.example.com")),
-			want:      true,
+			want:      false,
 		},
 		{
 			name:      "nil hostname matches all",
@@ -144,22 +145,22 @@ func TestIsOverlappingHostname(t *testing.T) {
 			want:      true,
 		},
 		{
-			name:      "wildcard matches exact",
+			name:      "wildcard matches exactly one level of subdomain",
 			hostname1: ptr.To(gwapiv1.Hostname("*.example.com")),
 			hostname2: ptr.To(gwapiv1.Hostname("test.example.com")),
 			want:      true,
 		},
 		{
-			name:      "wildcard matches subdomain",
+			name:      "wildcard matches only one level of subdomain",
 			hostname1: ptr.To(gwapiv1.Hostname("*.example.com")),
 			hostname2: ptr.To(gwapiv1.Hostname("sub.test.example.com")),
-			want:      true,
+			want:      false,
 		},
 		{
-			name:      "wildcard matches empty subdomain",
+			name:      "wildcard does not match empty subdomain",
 			hostname1: ptr.To(gwapiv1.Hostname("*.example.com")),
 			hostname2: ptr.To(gwapiv1.Hostname("example.com")),
-			want:      true,
+			want:      false,
 		},
 		{
 			name:      "different domains",
@@ -185,15 +186,21 @@ func TestIsOverlappingHostname(t *testing.T) {
 			hostname2: ptr.To(gwapiv1.Hostname("testing-api.foo.dev")),
 			want:      false,
 		},
+		{
+			name:      "sub domain does not match with parent domain",
+			hostname1: ptr.To(gwapiv1.Hostname("api.foo.dev")),
+			hostname2: ptr.To(gwapiv1.Hostname("foo.dev")),
+			want:      false,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := isOverlappingHostname(tt.hostname1, tt.hostname2); got != tt.want {
+			if got := areOverlappingHostnames(tt.hostname1, tt.hostname2); got != tt.want {
 				t.Errorf("isOverlappingHostname(%q, %q) = %v, want %v", ptr.Deref(tt.hostname1, ""), ptr.Deref(tt.hostname2, ""), got, tt.want)
 			}
 			// Test should be symmetric
-			if got := isOverlappingHostname(tt.hostname2, tt.hostname1); got != tt.want {
+			if got := areOverlappingHostnames(tt.hostname2, tt.hostname1); got != tt.want {
 				t.Errorf("isOverlappingHostname(%q, %q) = %v, want %v", ptr.Deref(tt.hostname2, ""), ptr.Deref(tt.hostname1, ""), got, tt.want)
 			}
 		})
@@ -306,7 +313,7 @@ func TestCheckOverlappingHostnames(t *testing.T) {
 							Name:     "listener-3",
 							Protocol: gwapiv1.HTTPSProtocolType,
 							Port:     443,
-							Hostname: ptr.To(gwapiv1.Hostname("sub.test.example.com")),
+							Hostname: ptr.To(gwapiv1.Hostname("sub.test.example.com")), // sub domain does not match with parent domain
 						},
 					},
 				},
@@ -314,7 +321,6 @@ func TestCheckOverlappingHostnames(t *testing.T) {
 			expected: map[int]string{
 				0: "test.example.com",
 				1: "*.example.com",
-				2: "*.example.com",
 			},
 		},
 		{
@@ -859,6 +865,32 @@ func TestProcessTracingServiceName(t *testing.T) {
 								Protocol:    corev1.ProtocolTCP,
 								AppProtocol: ptr.To("grpc"),
 							},
+						},
+					},
+				},
+			)
+
+			// Mock endpointSlice to resolve Service
+			resources.EndpointSlices = append(resources.EndpointSlices,
+				&discoveryv1.EndpointSlice{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "monitoring",
+						Name:      "otel-collector",
+						Labels: map[string]string{
+							"kubernetes.io/service-name": "otel-collector",
+						},
+					},
+					Endpoints: []discoveryv1.Endpoint{
+						{
+							Addresses: []string{"10.0.0.1"},
+						},
+					},
+					Ports: []discoveryv1.EndpointPort{
+						{
+							Name:        ptr.To("grpc"),
+							Protocol:    ptr.To(corev1.ProtocolTCP),
+							Port:        ptr.To(int32(4317)),
+							AppProtocol: ptr.To("grpc"),
 						},
 					},
 				},

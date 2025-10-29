@@ -7,6 +7,7 @@ package translator
 
 import (
 	"errors"
+	"fmt"
 	"net/url"
 
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
@@ -71,7 +72,10 @@ func (*extAuth) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPLi
 
 // buildHCMExtAuthFilter returns an ext_authz HTTP filter from the provided IR HTTPRoute.
 func buildHCMExtAuthFilter(extAuth *ir.ExtAuth) (*hcmv3.HttpFilter, error) {
-	extAuthProto := extAuthConfig(extAuth)
+	extAuthProto, err := extAuthConfig(extAuth)
+	if err != nil {
+		return nil, err
+	}
 	extAuthAny, err := anypb.New(extAuthProto)
 	if err != nil {
 		return nil, err
@@ -90,7 +94,7 @@ func extAuthFilterName(extAuth *ir.ExtAuth) string {
 	return perRouteFilterName(egv1a1.EnvoyFilterExtAuthz, extAuth.Name)
 }
 
-func extAuthConfig(extAuth *ir.ExtAuth) *extauthv3.ExtAuthz {
+func extAuthConfig(extAuth *ir.ExtAuth) (*extauthv3.ExtAuthz, error) {
 	config := &extauthv3.ExtAuthz{
 		TransportApiVersion: corev3.ApiVersion_V3,
 	}
@@ -103,7 +107,7 @@ func extAuthConfig(extAuth *ir.ExtAuth) *extauthv3.ExtAuthz {
 		config.ClearRouteCache = *extAuth.RecomputeRoute
 	}
 
-	var headersToExtAuth []*matcherv3.StringMatcher
+	headersToExtAuth := make([]*matcherv3.StringMatcher, 0, len(extAuth.HeadersToExtAuth))
 	for _, header := range extAuth.HeadersToExtAuth {
 		headersToExtAuth = append(headersToExtAuth, &matcherv3.StringMatcher{
 			MatchPattern: &matcherv3.StringMatcher_Exact{
@@ -125,31 +129,49 @@ func extAuthConfig(extAuth *ir.ExtAuth) *extauthv3.ExtAuthz {
 		}
 	}
 
-	if extAuth.HTTP != nil {
-		config.Services = &extauthv3.ExtAuthz_HttpService{
-			HttpService: httpService(extAuth.HTTP),
-		}
-	} else if extAuth.GRPC != nil {
-		config.Services = &extauthv3.ExtAuthz_GrpcService{
-			GrpcService: &corev3.GrpcService{
-				TargetSpecifier: &corev3.GrpcService_EnvoyGrpc_{
-					EnvoyGrpc: grpcService(extAuth.GRPC),
-				},
-				Timeout: &durationpb.Duration{
-					Seconds: defaultExtServiceRequestTimeout,
-				},
-			},
+	timeout := durationpb.New(defaultExtServiceRequestTimeout)
+	if extAuth.Timeout != nil {
+		timeout = durationpb.New(extAuth.Timeout.Duration)
+	}
+
+	var rp *corev3.RetryPolicy
+	// Set the retry policy if it exists.
+	if extAuth.Traffic != nil && extAuth.Traffic.Retry != nil {
+		var err error
+		rp, err = buildNonRouteRetryPolicy(extAuth.Traffic.Retry)
+		if err != nil {
+			return nil, fmt.Errorf("build retry policy for http service: %w", err)
 		}
 	}
 
-	return config
+	if extAuth.HTTP != nil {
+		hs := httpService(extAuth.HTTP, timeout)
+		hs.RetryPolicy = rp
+
+		config.Services = &extauthv3.ExtAuthz_HttpService{
+			HttpService: hs,
+		}
+	} else if extAuth.GRPC != nil {
+		service := &corev3.GrpcService{
+			TargetSpecifier: &corev3.GrpcService_EnvoyGrpc_{
+				EnvoyGrpc: grpcService(extAuth.GRPC),
+			},
+			Timeout: timeout,
+		}
+		service.RetryPolicy = rp
+
+		config.Services = &extauthv3.ExtAuthz_GrpcService{
+			GrpcService: service,
+		}
+	}
+
+	return config, nil
 }
 
-func httpService(http *ir.HTTPExtAuthService) *extauthv3.HttpService {
+func httpService(http *ir.HTTPExtAuthService, timeout *durationpb.Duration) *extauthv3.HttpService {
 	var (
-		uri              string
-		headersToBackend []*matcherv3.StringMatcher
-		service          *extauthv3.HttpService
+		uri     string
+		service *extauthv3.HttpService
 	)
 
 	service = &extauthv3.HttpService{
@@ -171,11 +193,10 @@ func httpService(http *ir.HTTPExtAuthService) *extauthv3.HttpService {
 		HttpUpstreamType: &corev3.HttpUri_Cluster{
 			Cluster: http.Destination.Name,
 		},
-		Timeout: &durationpb.Duration{
-			Seconds: defaultExtServiceRequestTimeout,
-		},
+		Timeout: timeout,
 	}
 
+	headersToBackend := make([]*matcherv3.StringMatcher, 0, len(http.HeadersToBackend))
 	for _, header := range http.HeadersToBackend {
 		headersToBackend = append(headersToBackend, &matcherv3.StringMatcher{
 			MatchPattern: &matcherv3.StringMatcher_Exact{

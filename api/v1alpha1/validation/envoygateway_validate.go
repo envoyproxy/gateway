@@ -129,7 +129,7 @@ func validateEnvoyGatewayCustomInfrastructureProvider(infra *egv1a1.EnvoyGateway
 			return fmt.Errorf("field 'host' should be specified when infrastructure type is 'Host'")
 		}
 	default:
-		return fmt.Errorf("unsupported infrastructure provdier: %s", infra.Type)
+		return fmt.Errorf("unsupported infrastructure provider: %s", infra.Type)
 	}
 	return nil
 }

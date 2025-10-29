@@ -10,7 +10,8 @@ refer to the [Gateway API documentation][].
 A [`RequestHeaderModifier` filter][req_filter] instructs Gateways to modify the headers in requests that match the rule
 before forwarding the request upstream. Note that the `RequestHeaderModifier` filter will only modify headers before the
 request is sent from Envoy to the upstream service and will not affect response headers returned to the downstream
-client.
+client. Header values support Envoy [format strings][envoy-format-strings], enabling dynamic values sourced from the
+request and connection metadata.
 
 ## Prerequisites
 
@@ -95,19 +96,19 @@ spec:
 {{< /tabpane >}}
 
 
-The HTTPRoute status should indicate that it has been accepted and is bound to the example Gateway.
+The `HTTPRoute]` status should indicate that it has been accepted and is bound to the example `Gateway`.
 
 ```shell
 kubectl get httproute/http-headers -o yaml
 ```
 
-Get the Gateway's address:
+Get the `Gateway`'s address:
 
 ```shell
 export GATEWAY_HOST=$(kubectl get gateway/eg -o jsonpath='{.status.addresses[0].value}')
 ```
 
-Querying `headers.example/get` should result in a `200` response from the example Gateway and the output from the
+Querying `headers.example/get` should result in a `200` response from the example `Gateway` and the output from the
 example app should indicate that the upstream example app received the header `add-header` with the value:
 `something,foo`
 
@@ -218,7 +219,7 @@ spec:
 {{% /tab %}}
 {{< /tabpane >}}
 
-Querying `headers.example/get` should result in a `200` response from the example Gateway and the output from the
+Querying `headers.example/get` should result in a `200` response from the example `Gateway` and the output from the
 example app should indicate that the upstream example app received the header `add-header` with the original value
 `something` replaced by `foo`.
 
@@ -325,7 +326,7 @@ spec:
 {{% /tab %}}
 {{< /tabpane >}}
 
-Querying `headers.example/get` should result in a `200` response from the example Gateway and the output from the
+Querying `headers.example/get` should result in a `200` response from the example `Gateway` and the output from the
 example app should indicate that the upstream example app received the header `add-header`, but the header
 `remove-header` that was sent by curl was removed before the upstream received the request.
 
@@ -445,8 +446,10 @@ spec:
 ## Early Header Modification
 
 In some cases, it could be necessary to modify headers before the proxy performs any sort of processing, routing or tracing. Envoy Gateway supports this functionality using the [ClientTrafficPolicy][] API.
+The same Envoy [format strings][envoy-format-strings] used with `RequestHeaderModifier` values also apply to early
+header modifications, allowing dynamic data to be populated ahead of routing.
 
-A ClientTrafficPolicy resource can be attached to a Gateway resource to configure early header modifications for all its routes. In the following example we will demonstrate how early header modification can be configured.
+A [ClientTrafficPolicy][] resource can be attached to a [Gateway][] resource to configure early header modifications for all its routes. In the following example we will demonstrate how early header modification can be configured.
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
@@ -570,7 +573,7 @@ spec:
 {{< /tabpane >}}
 
 
-Querying `headers.example/get` should result in a `200` response from the example Gateway and the output from the
+Querying `headers.example/get` should result in a `200` response from the example `Gateway` and the output from the
 example app should indicate that the upstream example app received the following headers:
 - `early-added-header` contains early (ClientTrafficPolicy) and late (RouteFilter) values
 - `early-set-header` contains only early (ClientTrafficPolicy) and late (RouteFilter) values, since the early modification overwritten the client value.
@@ -617,4 +620,6 @@ $ curl -vvv --header "Host: headers.example" "http://${GATEWAY_HOST}/get" --head
 [HTTPRoute filters]: https://gateway-api.sigs.k8s.io/reference/spec#gateway.networking.k8s.io/v1.HTTPRouteFilter
 [Gateway API documentation]: https://gateway-api.sigs.k8s.io/
 [req_filter]: https://gateway-api.sigs.k8s.io/reference/spec#gateway.networking.k8s.io/v1.HTTPHeaderFilter
+[Gateway]: https://gateway-api.sigs.k8s.io/api-types/gateway/
 [ClientTrafficPolicy]: ../../../api/extension_types#clienttrafficpolicy
+[envoy-format-strings]: https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#config-access-log-format

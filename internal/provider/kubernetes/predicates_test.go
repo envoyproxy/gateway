@@ -143,7 +143,7 @@ func TestValidateGatewayForReconcile(t *testing.T) {
 	testCases := []struct {
 		name    string
 		configs []client.Object
-		gateway client.Object
+		gateway *gwapiv1.Gateway
 		expect  bool
 	}{
 		{
@@ -187,6 +187,29 @@ func TestValidateConfigMapForReconcile(t *testing.T) {
 		expect    bool
 	}{
 		{
+			name: "references Backend TLS config map",
+			configs: []client.Object{
+				&egv1a1.Backend{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "static-backend",
+						Namespace: "default",
+					},
+					Spec: egv1a1.BackendSpec{
+						TLS: &egv1a1.BackendTLSSettings{
+							CACertificateRefs: []gwapiv1.LocalObjectReference{
+								{
+									Kind: gwapiv1.Kind(resource.KindConfigMap),
+									Name: gwapiv1.ObjectName("backend-ca"),
+								},
+							},
+						},
+					},
+				},
+			},
+			configMap: test.GetConfigMap(types.NamespacedName{Namespace: "default", Name: "backend-ca"}, make(map[string]string), make(map[string]string)),
+			expect:    true,
+		},
+		{
 			name: "references EnvoyExtensionPolicy Lua config map",
 			configs: []client.Object{
 				test.GetGatewayClass("test-gc", egv1a1.GatewayControllerName, nil),
@@ -198,9 +221,9 @@ func TestValidateConfigMapForReconcile(t *testing.T) {
 					},
 					Spec: egv1a1.EnvoyExtensionPolicySpec{
 						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-							TargetRefs: []gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
 								{
-									LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+									LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 										Kind: "Gateway",
 										Name: "scheduled-status-test",
 									},
@@ -211,9 +234,9 @@ func TestValidateConfigMapForReconcile(t *testing.T) {
 							{
 								Type: egv1a1.LuaValueTypeValueRef,
 								ValueRef: &gwapiv1.LocalObjectReference{
-									Kind:  gwapiv1a2.Kind("ConfigMap"),
-									Name:  gwapiv1a2.ObjectName("lua"),
-									Group: gwapiv1a2.Group("v1"),
+									Kind:  gwapiv1.Kind("ConfigMap"),
+									Name:  gwapiv1.ObjectName("lua"),
+									Group: gwapiv1.Group("v1"),
 								},
 							},
 						},
@@ -235,9 +258,9 @@ func TestValidateConfigMapForReconcile(t *testing.T) {
 					},
 					Spec: egv1a1.EnvoyExtensionPolicySpec{
 						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-							TargetRefs: []gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
 								{
-									LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+									LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 										Kind: "Gateway",
 										Name: "scheduled-status-test",
 									},
@@ -248,9 +271,9 @@ func TestValidateConfigMapForReconcile(t *testing.T) {
 							{
 								Type: egv1a1.LuaValueTypeValueRef,
 								ValueRef: &gwapiv1.LocalObjectReference{
-									Kind:  gwapiv1a2.Kind("ConfigMap"),
-									Name:  gwapiv1a2.ObjectName("lua"),
-									Group: gwapiv1a2.Group("v1"),
+									Kind:  gwapiv1.Kind("ConfigMap"),
+									Name:  gwapiv1.ObjectName("lua"),
+									Group: gwapiv1.Group("v1"),
 								},
 							},
 						},
@@ -266,17 +289,24 @@ func TestValidateConfigMapForReconcile(t *testing.T) {
 	logger := logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo)
 
 	r := gatewayAPIReconciler{
-		classController: egv1a1.GatewayControllerName,
-		log:             logger,
-		spCRDExists:     true,
-		epCRDExists:     true,
-		eepCRDExists:    true,
+		classController:  egv1a1.GatewayControllerName,
+		log:              logger,
+		backendCRDExists: true,
+		eepCRDExists:     true,
+		envoyGateway: &egv1a1.EnvoyGateway{
+			EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+				ExtensionAPIs: &egv1a1.ExtensionAPISettings{
+					EnableBackend: true,
+				},
+			},
+		},
 	}
 
 	for _, tc := range testCases {
 		r.client = fakeclient.NewClientBuilder().
 			WithScheme(envoygateway.GetScheme()).
 			WithObjects(tc.configs...).
+			WithIndex(&egv1a1.Backend{}, configMapBackendIndex, configMapBackendIndexFunc).
 			WithIndex(&egv1a1.EnvoyExtensionPolicy{}, configMapEepIndex, configMapEepIndexFunc).
 			Build()
 		t.Run(tc.name, func(t *testing.T) {
@@ -284,6 +314,42 @@ func TestValidateConfigMapForReconcile(t *testing.T) {
 			require.Equal(t, tc.expect, res)
 		})
 	}
+}
+
+// TestValidateBackendTrafficPolicyForReconcileWithRedirectResponseOverride tests the validateBackendTrafficPolicyForReconcile
+// predicate function with a redirect response override.
+func TestValidateBackendTrafficPolicyForReconcileWithRedirectResponseOverride(t *testing.T) {
+	btpWithRedirect := &egv1a1.BackendTrafficPolicy{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "response-override",
+			Namespace: "envoy-gateway-system",
+		},
+		Spec: egv1a1.BackendTrafficPolicySpec{
+			ResponseOverride: []*egv1a1.ResponseOverride{
+				{
+					Match: egv1a1.CustomResponseMatch{
+						StatusCodes: []egv1a1.StatusCodeMatch{
+							{
+								Type: &[]egv1a1.StatusCodeValueType{egv1a1.StatusCodeValueTypeRange}[0],
+								Range: &egv1a1.StatusCodeRange{
+									Start: 500,
+									End:   511,
+								},
+							},
+						},
+					},
+					// Using redirect instead of response causes ro.Response to be nil
+					Redirect: &egv1a1.CustomRedirect{
+						Hostname:   &[]gwapiv1.PreciseHostname{"custom-errors.example.com"}[0],
+						StatusCode: &[]int{302}[0],
+						Scheme:     &[]string{"https"}[0],
+					},
+				},
+			},
+		},
+	}
+	result := configMapBtpIndexFunc(btpWithRedirect)
+	require.Empty(t, result)
 }
 
 // TestValidateSecretForReconcile tests the validateSecretForReconcile
@@ -307,9 +373,32 @@ func TestValidateSecretForReconcile(t *testing.T) {
 	testCases := []struct {
 		name    string
 		configs []client.Object
-		secret  client.Object
+		secret  *corev1.Secret
 		expect  bool
 	}{
+		{
+			name: "backend references TLS secret",
+			configs: []client.Object{
+				&egv1a1.Backend{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+						Name:      "secure-backend",
+					},
+					Spec: egv1a1.BackendSpec{
+						TLS: &egv1a1.BackendTLSSettings{
+							CACertificateRefs: []gwapiv1.LocalObjectReference{
+								{
+									Kind: gwapiv1.Kind(resource.KindSecret),
+									Name: gwapiv1.ObjectName("backend-ca-secret"),
+								},
+							},
+						},
+					},
+				},
+			},
+			secret: test.GetSecret(types.NamespacedName{Namespace: "default", Name: "backend-ca-secret"}),
+			expect: true,
+		},
 		{
 			name: "envoy proxy references a secret",
 			configs: []client.Object{
@@ -360,8 +449,8 @@ func TestValidateSecretForReconcile(t *testing.T) {
 					},
 					Spec: egv1a1.SecurityPolicySpec{
 						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-							TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
-								LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 									Kind: "Gateway",
 									Name: "scheduled-status-test",
 								},
@@ -395,8 +484,8 @@ func TestValidateSecretForReconcile(t *testing.T) {
 					},
 					Spec: egv1a1.SecurityPolicySpec{
 						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-							TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
-								LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 									Kind: "Gateway",
 									Name: "scheduled-status-test",
 								},
@@ -426,8 +515,8 @@ func TestValidateSecretForReconcile(t *testing.T) {
 					},
 					Spec: egv1a1.SecurityPolicySpec{
 						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-							TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
-								LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 									Kind: "Gateway",
 									Name: "scheduled-status-test",
 								},
@@ -463,9 +552,9 @@ func TestValidateSecretForReconcile(t *testing.T) {
 					},
 					Spec: egv1a1.EnvoyExtensionPolicySpec{
 						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-							TargetRefs: []gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+							TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
 								{
-									LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+									LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 										Kind: "Gateway",
 										Name: "scheduled-status-test",
 									},
@@ -493,17 +582,76 @@ func TestValidateSecretForReconcile(t *testing.T) {
 			secret: test.GetSecret(types.NamespacedName{Name: "secret"}),
 			expect: true,
 		},
+		{
+			name: "backend client tls secret",
+			configs: []client.Object{
+				test.GetGatewayClass("test-gc", egv1a1.GatewayControllerName, nil),
+				&egv1a1.Backend{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "backend",
+						Namespace: "default",
+					},
+					Spec: egv1a1.BackendSpec{
+						Endpoints: []egv1a1.BackendEndpoint{{
+							IP: &egv1a1.IPEndpoint{Address: "1.1.1.1", Port: 80},
+						}},
+						TLS: &egv1a1.BackendTLSSettings{
+							BackendTLSConfig: &egv1a1.BackendTLSConfig{
+								ClientCertificateRef: &gwapiv1.SecretObjectReference{
+									Name: "secret",
+								},
+							},
+						},
+					},
+				},
+			},
+			secret: test.GetSecret(types.NamespacedName{Namespace: "default", Name: "secret"}),
+			expect: true,
+		},
+		{
+			name: "backend ca certificate secret",
+			configs: []client.Object{
+				test.GetGatewayClass("test-gc", egv1a1.GatewayControllerName, nil),
+				&egv1a1.Backend{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "backend",
+						Namespace: "default",
+					},
+					Spec: egv1a1.BackendSpec{
+						Endpoints: []egv1a1.BackendEndpoint{{
+							IP: &egv1a1.IPEndpoint{Address: "1.1.1.1", Port: 80},
+						}},
+						TLS: &egv1a1.BackendTLSSettings{
+							CACertificateRefs: []gwapiv1.LocalObjectReference{{
+								Kind: resource.KindSecret,
+								Name: "secret",
+							}},
+						},
+					},
+				},
+			},
+			secret: test.GetSecret(types.NamespacedName{Namespace: "default", Name: "secret"}),
+			expect: true,
+		},
 	}
 
 	// Create the reconciler.
 	logger := logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo)
 
 	r := gatewayAPIReconciler{
-		classController: egv1a1.GatewayControllerName,
-		log:             logger,
-		spCRDExists:     true,
-		epCRDExists:     true,
-		eepCRDExists:    true,
+		classController:  egv1a1.GatewayControllerName,
+		log:              logger,
+		backendCRDExists: true,
+		spCRDExists:      true,
+		epCRDExists:      true,
+		eepCRDExists:     true,
+		envoyGateway: &egv1a1.EnvoyGateway{
+			EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+				ExtensionAPIs: &egv1a1.ExtensionAPISettings{
+					EnableBackend: true,
+				},
+			},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -514,6 +662,7 @@ func TestValidateSecretForReconcile(t *testing.T) {
 			WithIndex(&egv1a1.SecurityPolicy{}, secretSecurityPolicyIndex, secretSecurityPolicyIndexFunc).
 			WithIndex(&egv1a1.EnvoyProxy{}, secretEnvoyProxyIndex, secretEnvoyProxyIndexFunc).
 			WithIndex(&egv1a1.EnvoyExtensionPolicy{}, secretEnvoyExtensionPolicyIndex, secretEnvoyExtensionPolicyIndexFunc).
+			WithIndex(&egv1a1.Backend{}, secretBackendIndex, secretBackendIndexFunc).
 			Build()
 		t.Run(tc.name, func(t *testing.T) {
 			res := r.validateSecretForReconcile(tc.secret)
@@ -637,7 +786,7 @@ func TestValidateEndpointSliceForReconcile(t *testing.T) {
 			WithObjects(tc.configs...).
 			WithIndex(&gwapiv1.HTTPRoute{}, backendHTTPRouteIndex, backendHTTPRouteIndexFunc).
 			WithIndex(&gwapiv1.GRPCRoute{}, backendGRPCRouteIndex, backendGRPCRouteIndexFunc).
-			WithIndex(&gwapiv1a2.TLSRoute{}, backendTLSRouteIndex, backendTLSRouteIndexFunc).
+			WithIndex(&gwapiv1a3.TLSRoute{}, backendTLSRouteIndex, backendTLSRouteIndexFunc).
 			WithIndex(&gwapiv1a2.TCPRoute{}, backendTCPRouteIndex, backendTCPRouteIndexFunc).
 			WithIndex(&gwapiv1a2.UDPRoute{}, backendUDPRouteIndex, backendUDPRouteIndexFunc).
 			Build()
@@ -884,8 +1033,8 @@ func TestValidateServiceForReconcile(t *testing.T) {
 					},
 					Spec: egv1a1.SecurityPolicySpec{
 						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-							TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
-								LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 									Kind: "Gateway",
 									Name: "scheduled-status-test",
 								},
@@ -919,8 +1068,8 @@ func TestValidateServiceForReconcile(t *testing.T) {
 					},
 					Spec: egv1a1.SecurityPolicySpec{
 						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-							TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
-								LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 									Kind: "Gateway",
 									Name: "scheduled-status-test",
 								},
@@ -954,8 +1103,8 @@ func TestValidateServiceForReconcile(t *testing.T) {
 					},
 					Spec: egv1a1.EnvoyExtensionPolicySpec{
 						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-							TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
-								LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 									Kind: "Gateway",
 									Name: "scheduled-status-test",
 								},
@@ -989,8 +1138,8 @@ func TestValidateServiceForReconcile(t *testing.T) {
 					},
 					Spec: egv1a1.EnvoyExtensionPolicySpec{
 						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-							TargetRef: &gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
-								LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 									Kind: "Gateway",
 									Name: "scheduled-status-test",
 								},
@@ -1075,7 +1224,7 @@ func TestValidateServiceForReconcile(t *testing.T) {
 			WithObjects(tc.configs...).
 			WithIndex(&gwapiv1.HTTPRoute{}, backendHTTPRouteIndex, backendHTTPRouteIndexFunc).
 			WithIndex(&gwapiv1.GRPCRoute{}, backendGRPCRouteIndex, backendGRPCRouteIndexFunc).
-			WithIndex(&gwapiv1a2.TLSRoute{}, backendTLSRouteIndex, backendTLSRouteIndexFunc).
+			WithIndex(&gwapiv1a3.TLSRoute{}, backendTLSRouteIndex, backendTLSRouteIndexFunc).
 			WithIndex(&gwapiv1a2.TCPRoute{}, backendTCPRouteIndex, backendTCPRouteIndexFunc).
 			WithIndex(&gwapiv1a2.UDPRoute{}, backendUDPRouteIndex, backendUDPRouteIndexFunc).
 			WithIndex(&egv1a1.SecurityPolicy{}, backendSecurityPolicyIndex, backendSecurityPolicyIndexFunc).
@@ -1474,13 +1623,13 @@ func TestValidateClusterTrustBundleForReconcile(t *testing.T) {
 			},
 		},
 	}
-	btp := &gwapiv1a3.BackendTLSPolicy{
+	btp := &gwapiv1.BackendTLSPolicy{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "backend-tls-policy-dynamic-resolver-clustertrustbundle",
 			Namespace: "default",
 		},
-		Spec: gwapiv1a3.BackendTLSPolicySpec{
-			Validation: gwapiv1a3.BackendTLSPolicyValidation{
+		Spec: gwapiv1.BackendTLSPolicySpec{
+			Validation: gwapiv1.BackendTLSPolicyValidation{
 				CACertificateRefs: []gwapiv1.LocalObjectReference{
 					{
 						Kind: gwapiv1.Kind("ClusterTrustBundle"),
@@ -1573,7 +1722,7 @@ func TestValidateClusterTrustBundleForReconcile(t *testing.T) {
 			WithScheme(envoygateway.GetScheme()).
 			WithObjects(tc.configs...).
 			WithIndex(&egv1a1.Backend{}, clusterTrustBundleBackendIndex, clusterTrustBundleBackendIndexFunc).
-			WithIndex(&gwapiv1a3.BackendTLSPolicy{}, clusterTrustBundleBtlsIndex, clusterTrustBundleBtlsIndexFunc).
+			WithIndex(&gwapiv1.BackendTLSPolicy{}, clusterTrustBundleBtlsIndex, clusterTrustBundleBtlsIndexFunc).
 			WithIndex(&egv1a1.ClientTrafficPolicy{}, clusterTrustBundleCtpIndex, clusterTrustBundleCtpIndexFunc).
 			Build()
 		t.Run(tc.name, func(t *testing.T) {

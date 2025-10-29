@@ -8,6 +8,7 @@ package translator
 import (
 	"errors"
 	"fmt"
+	"regexp"
 	"strings"
 	"time"
 
@@ -71,7 +72,7 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute, httpListener *ir.HTTPListener) (*rou
 	case httpRoute.Redirect != nil:
 		router.Action = &routev3.Route_Redirect{Redirect: buildXdsRedirectAction(httpRoute)}
 	case httpRoute.URLRewrite != nil:
-		routeAction := buildXdsURLRewriteAction(httpRoute.Destination.Name, httpRoute.URLRewrite, httpRoute.PathMatch)
+		routeAction := buildXdsURLRewriteAction(httpRoute, httpRoute.URLRewrite, httpRoute.PathMatch)
 		routeAction.IdleTimeout = idleTimeout(httpRoute)
 		if httpRoute.Mirrors != nil {
 			routeAction.RequestMirrorPolicies = buildXdsRequestMirrorPolicies(httpRoute.Mirrors)
@@ -105,6 +106,18 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute, httpListener *ir.HTTPListener) (*rou
 		rt := getEffectiveRequestTimeout(httpRoute)
 		if rt != nil {
 			router.GetRoute().Timeout = durationpb.New(rt.Duration)
+		}
+
+		// Check if MaxStreamDuration is configured
+		if httpRoute.Traffic != nil &&
+			httpRoute.Traffic.Timeout != nil &&
+			httpRoute.Traffic.Timeout.HTTP != nil {
+			if httpRoute.Traffic.Timeout.HTTP.MaxStreamDuration != nil {
+				maxStreamDuration := &routev3.RouteAction_MaxStreamDuration{
+					MaxStreamDuration: durationpb.New(httpRoute.Traffic.Timeout.HTTP.MaxStreamDuration.Duration),
+				}
+				router.GetRoute().MaxStreamDuration = maxStreamDuration
+			}
 		}
 	}
 
@@ -440,17 +453,26 @@ func useRegexRewriteForPrefixMatchReplace(pathMatch *ir.StringMatch, prefixMatch
 func prefix2RegexRewrite(prefix string) *matcherv3.RegexMatchAndSubstitute {
 	return &matcherv3.RegexMatchAndSubstitute{
 		Pattern: &matcherv3.RegexMatcher{
-			Regex: "^" + prefix + `\/*`,
+			// Escape prefix for regex metacharacters
+			// https://github.com/envoyproxy/gateway/issues/6857
+			Regex: "^" + regexp.QuoteMeta(prefix) + `\/*`,
 		},
 		Substitution: "/",
 	}
 }
 
-func buildXdsURLRewriteAction(destName string, urlRewrite *ir.URLRewrite, pathMatch *ir.StringMatch) *routev3.RouteAction {
-	routeAction := &routev3.RouteAction{
-		ClusterSpecifier: &routev3.RouteAction_Cluster{
-			Cluster: destName,
-		},
+func buildXdsURLRewriteAction(route *ir.HTTPRoute, urlRewrite *ir.URLRewrite, pathMatch *ir.StringMatch) *routev3.RouteAction {
+	backendWeights := route.Destination.ToBackendWeights()
+	// only use weighted cluster when there are invalid weights
+	var routeAction *routev3.RouteAction
+	if route.NeedsClusterPerSetting() || backendWeights.Invalid != 0 {
+		routeAction = buildXdsWeightedRouteAction(backendWeights, route.Destination.Settings)
+	} else {
+		routeAction = &routev3.RouteAction{
+			ClusterSpecifier: &routev3.RouteAction_Cluster{
+				Cluster: backendWeights.Name,
+			},
+		}
 	}
 
 	if urlRewrite.Path != nil {
@@ -514,10 +536,10 @@ func buildXdsDirectResponseAction(res *ir.CustomResponse) *routev3.DirectRespons
 		routeAction.Status = *res.StatusCode
 	}
 
-	if res.Body != nil && *res.Body != "" {
+	if len(res.Body) > 0 {
 		routeAction.Body = &corev3.DataSource{
-			Specifier: &corev3.DataSource_InlineString{
-				InlineString: *res.Body,
+			Specifier: &corev3.DataSource_InlineBytes{
+				InlineBytes: res.Body,
 			},
 		}
 	}
@@ -533,6 +555,8 @@ func buildXdsRequestMirrorPolicies(mirrorPolicies []*ir.MirrorPolicy) []*routev3
 			xdsMirrorPolicies = append(xdsMirrorPolicies, &routev3.RouteAction_RequestMirrorPolicy{
 				Cluster:         policy.Destination.Name,
 				RuntimeFraction: mp,
+				// We don't need to append the shadow host suffix as the mirror policy already uses a different cluster which is enough to distinguish the mirrored traffic
+				DisableShadowHostSuffixAppend: true,
 			})
 		}
 	}
@@ -608,15 +632,19 @@ func buildHashPolicy(httpRoute *ir.HTTPRoute) []*routev3.RouteAction_HashPolicy 
 	ch := httpRoute.Traffic.LoadBalancer.ConsistentHash
 
 	switch {
-	case ch.Header != nil:
-		hashPolicy := &routev3.RouteAction_HashPolicy{
-			PolicySpecifier: &routev3.RouteAction_HashPolicy_Header_{
-				Header: &routev3.RouteAction_HashPolicy_Header{
-					HeaderName: ch.Header.Name,
+	case ch.Headers != nil:
+		hps := make([]*routev3.RouteAction_HashPolicy, 0, len(ch.Headers))
+		for _, h := range ch.Headers {
+			hp := &routev3.RouteAction_HashPolicy{
+				PolicySpecifier: &routev3.RouteAction_HashPolicy_Header_{
+					Header: &routev3.RouteAction_HashPolicy_Header{
+						HeaderName: h.Name,
+					},
 				},
-			},
+			}
+			hps = append(hps, hp)
 		}
-		return []*routev3.RouteAction_HashPolicy{hashPolicy}
+		return hps
 	case ch.Cookie != nil:
 		hashPolicy := &routev3.RouteAction_HashPolicy{
 			PolicySpecifier: &routev3.RouteAction_HashPolicy_Cookie_{

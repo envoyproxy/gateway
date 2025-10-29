@@ -1,3 +1,0 @@
-# Following vulnerabilities are false positives because EG does not release from main branch
-CVE-2025-24030
-CVE-2025-25294

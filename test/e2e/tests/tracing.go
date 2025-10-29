@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"k8s.io/apimachinery/pkg/types"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	httputils "sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
@@ -56,13 +57,13 @@ var OpenTelemetryTracingTest = suite.ConformanceTest{
 				ns := "gateway-conformance-infra"
 				routeNN := types.NamespacedName{Name: tc.routeName, Namespace: ns}
 				gwNN := types.NamespacedName{Name: tc.gwName, Namespace: ns}
-				gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+				gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
 				expectedResponse := httputils.ExpectedResponse{
 					Request: httputils.Request{
 						Path: tc.path,
 					},
 					Response: httputils.Response{
-						StatusCode: 200,
+						StatusCodes: []int{200},
 					},
 					Namespace: ns,
 				}
@@ -72,7 +73,7 @@ var OpenTelemetryTracingTest = suite.ConformanceTest{
 					"provider":     "otel",
 					"service.name": tc.expectedSvc,
 				}
-				tracing.ExpectedTraceCount(t, suite, gwAddr, expectedResponse, tags)
+				tracing.ExpectedTraceCount(t, suite, gwAddr, &expectedResponse, tags)
 			})
 		}
 	},
@@ -87,14 +88,14 @@ var ZipkinTracingTest = suite.ConformanceTest{
 			ns := "gateway-conformance-infra"
 			routeNN := types.NamespacedName{Name: "tracing-zipkin", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "tracing-zipkin", Namespace: ns}
-			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+			gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
 
 			expectedResponse := httputils.ExpectedResponse{
 				Request: httputils.Request{
 					Path: "/zipkin",
 				},
 				Response: httputils.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}
@@ -108,7 +109,7 @@ var ZipkinTracingTest = suite.ConformanceTest{
 				// should make them kept consistent
 				"service.name": fmt.Sprintf("%s/%s", gwNN.Namespace, gwNN.Name),
 			}
-			tracing.ExpectedTraceCount(t, suite, gwAddr, expectedResponse, tags)
+			tracing.ExpectedTraceCount(t, suite, gwAddr, &expectedResponse, tags)
 		})
 	},
 }
@@ -145,13 +146,13 @@ var DatadogTracingTest = suite.ConformanceTest{
 				ns := "gateway-conformance-infra"
 				routeNN := types.NamespacedName{Name: tc.routeName, Namespace: ns}
 				gwNN := types.NamespacedName{Name: tc.gwName, Namespace: ns}
-				gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+				gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
 				expectedResponse := httputils.ExpectedResponse{
 					Request: httputils.Request{
 						Path: tc.path,
 					},
 					Response: httputils.Response{
-						StatusCode: 200,
+						StatusCodes: []int{200},
 					},
 					Namespace: ns,
 				}
@@ -161,7 +162,7 @@ var DatadogTracingTest = suite.ConformanceTest{
 					"provider":     "datadog",
 					"service.name": tc.expectedSvc,
 				}
-				tracing.ExpectedTraceCount(t, suite, gwAddr, expectedResponse, tags)
+				tracing.ExpectedTraceCount(t, suite, gwAddr, &expectedResponse, tags)
 			})
 		}
 	},

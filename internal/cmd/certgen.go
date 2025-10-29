@@ -20,9 +20,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	clicfg "sigs.k8s.io/controller-runtime/pkg/client/config"
 
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/crypto"
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
+	"github.com/envoyproxy/gateway/internal/infrastructure/host"
 	"github.com/envoyproxy/gateway/internal/provider/kubernetes"
 	"github.com/envoyproxy/gateway/internal/utils/file"
 )
@@ -32,26 +34,29 @@ var overwriteControlPlaneCerts bool
 
 var disableTopologyInjector bool
 
-// TODO: make this path configurable or use server config directly.
 const (
-	defaultLocalCertPath      = "/tmp/envoy-gateway/certs"
 	topologyWebhookNamePrefix = "envoy-gateway-topology-injector"
 )
 
 // GetCertGenCommand returns the certGen cobra command to be executed.
 func GetCertGenCommand() *cobra.Command {
-	var local bool
+	var (
+		local      bool
+		configHome string
+	)
 
 	cmd := &cobra.Command{
 		Use:   "certgen",
 		Short: "Generate Control Plane Certificates",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return certGen(cmd.Context(), cmd.OutOrStdout(), local)
+			return certGen(cmd.Context(), cmd.OutOrStdout(), local, configHome)
 		},
 	}
 
 	cmd.PersistentFlags().BoolVarP(&local, "local", "l", false,
 		"Generate all the certificates locally.")
+	cmd.PersistentFlags().StringVar(&configHome, "config-home", "",
+		"Directory for certificates (defaults to ~/.config/envoy-gateway")
 	cmd.PersistentFlags().BoolVarP(&overwriteControlPlaneCerts, "overwrite", "o", false,
 		"Updates the secrets containing the control plane certs.")
 	cmd.PersistentFlags().BoolVar(&disableTopologyInjector, "disable-topology-injector", false,
@@ -60,8 +65,8 @@ func GetCertGenCommand() *cobra.Command {
 }
 
 // certGen generates control plane certificates.
-func certGen(ctx context.Context, logOut io.Writer, local bool) error {
-	cfg, err := config.New(logOut)
+func certGen(ctx context.Context, logOut io.Writer, local bool, configHome string) error {
+	cfg, err := config.New(logOut, io.Discard)
 	if err != nil {
 		return err
 	}
@@ -86,8 +91,21 @@ func certGen(ctx context.Context, logOut io.Writer, local bool) error {
 			return fmt.Errorf("failed to patch webhook: %w", err)
 		}
 	} else {
-		log.Info("generated certificates", "path", defaultLocalCertPath)
-		if err = outputCertsForLocal(defaultLocalCertPath, certs); err != nil {
+		// Use provided configHome or default
+		hostCfg := &egv1a1.EnvoyGatewayHostInfrastructureProvider{}
+		if configHome != "" {
+			hostCfg.ConfigHome = &configHome
+		}
+
+		paths, err := host.GetPaths(hostCfg)
+		if err != nil {
+			return fmt.Errorf("failed to determine paths: %w", err)
+		}
+
+		certPath := paths.CertDir("")
+		log.Info("generated certificates", "path", certPath)
+
+		if err = outputCertsForLocal(certPath, certs); err != nil {
 			return fmt.Errorf("failed to output certificates locally: %w", err)
 		}
 	}
@@ -137,8 +155,8 @@ func patchTopologyInjectorWebhook(ctx context.Context, cli client.Client, cfg *c
 
 	var updated bool
 	desiredBundle := current.Data["ca.crt"]
-	for i, webhook := range webhookCfg.Webhooks {
-		if !bytes.Equal(desiredBundle, webhook.ClientConfig.CABundle) {
+	for i := range webhookCfg.Webhooks {
+		if !bytes.Equal(desiredBundle, webhookCfg.Webhooks[i].ClientConfig.CABundle) {
 			webhookCfg.Webhooks[i].ClientConfig.CABundle = desiredBundle
 			updated = true
 		}

@@ -23,6 +23,20 @@ clientTrafficPolicies:
         remove:
         - "my-removed-header"
         - "my-removed-header"
+      lateResponseHeaders:
+        add:
+        - name: "my-added-response-header"
+          value: "my-added-response-header-value"
+        - name: "my-added-response-header"
+          value: "my-added-response-header-value"
+        set:
+        - name: "my-set-response-header"
+          value: "my-set-response-header-value"
+        - name: "my-set-response-header"
+          value: "my-set-response-header-value"
+        remove:
+        - "my-removed-response-header"
+        - "my-removed-response-header"
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway

@@ -97,35 +97,6 @@ func (cc *controlledClasses) removeMatch(gc *gwapiv1.GatewayClass) {
 	}
 }
 
-// isAccepted returns true if the provided gatewayclass contains the Accepted=true
-// status condition.
-func isAccepted(gc *gwapiv1.GatewayClass) bool {
-	if gc == nil {
-		return false
-	}
-	for _, cond := range gc.Status.Conditions {
-		if cond.Type == string(gwapiv1.GatewayClassConditionStatusAccepted) && cond.Status == metav1.ConditionTrue {
-			return true
-		}
-	}
-	return false
-}
-
-// gatewaysOfClass returns a list of gateways that reference gc from the provided gwList.
-func gatewaysOfClass(gc *gwapiv1.GatewayClass, gwList *gwapiv1.GatewayList) []gwapiv1.Gateway {
-	var gateways []gwapiv1.Gateway
-	if gwList == nil || gc == nil {
-		return gateways
-	}
-	for i := range gwList.Items {
-		gw := gwList.Items[i]
-		if string(gw.Spec.GatewayClassName) == gc.Name {
-			gateways = append(gateways, gw)
-		}
-	}
-	return gateways
-}
-
 // terminatesTLS returns true if the provided gateway contains a listener configured
 // for TLS termination.
 func terminatesTLS(listener *gwapiv1.Listener) bool {

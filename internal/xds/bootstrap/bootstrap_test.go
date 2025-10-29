@@ -77,6 +77,19 @@ func TestGetRenderedBootstrapConfig(t *testing.T) {
 			},
 		},
 		{
+			name: "enable-prometheus-zstd-compression",
+			opts: &RenderBootstrapConfigOptions{
+				ProxyMetrics: &egv1a1.ProxyMetrics{
+					Prometheus: &egv1a1.ProxyPrometheusProvider{
+						Compression: &egv1a1.Compression{
+							Type: egv1a1.ZstdCompressorType,
+						},
+					},
+				},
+				SdsConfig: sds,
+			},
+		},
+		{
 			name: "otel-metrics",
 			opts: &RenderBootstrapConfigOptions{
 				ProxyMetrics: &egv1a1.ProxyMetrics{
@@ -178,6 +191,30 @@ func TestGetRenderedBootstrapConfig(t *testing.T) {
 			name: "ipv6",
 			opts: &RenderBootstrapConfigOptions{
 				IPFamily: ptr.To(egv1a1.IPv6),
+			},
+		},
+		{
+			name: "topology-injector-disabled",
+			opts: &RenderBootstrapConfigOptions{
+				ProxyMetrics: &egv1a1.ProxyMetrics{
+					Prometheus: &egv1a1.ProxyPrometheusProvider{
+						Disable: true,
+					},
+				},
+				SdsConfig:                sds,
+				TopologyInjectorDisabled: true,
+			},
+		},
+		{
+			name: "topology-injector-enabled",
+			opts: &RenderBootstrapConfigOptions{
+				ProxyMetrics: &egv1a1.ProxyMetrics{
+					Prometheus: &egv1a1.ProxyPrometheusProvider{
+						Disable: true,
+					},
+				},
+				SdsConfig:                sds,
+				TopologyInjectorDisabled: false,
 			},
 		},
 	}

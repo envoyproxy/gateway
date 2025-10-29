@@ -14,16 +14,17 @@ import (
 
 // SkipTests is a list of tests that are skipped in the conformance suite.
 func SkipTests(gatewayNamespaceMode bool) []suite.ConformanceTest {
-	if gatewayNamespaceMode {
-		return []suite.ConformanceTest{
-			tests.GatewayStaticAddresses,
-		}
+	skipTests := []suite.ConformanceTest{
+		tests.GatewayStaticAddresses,
 	}
 
-	return []suite.ConformanceTest{
-		tests.GatewayStaticAddresses,
-		tests.GatewayInfrastructure,
+	if gatewayNamespaceMode {
+		return skipTests
 	}
+
+	skipTests = append(skipTests, tests.GatewayInfrastructure)
+
+	return skipTests
 }
 
 // SkipFeatures is a list of features that are skipped in the conformance report.
@@ -63,6 +64,9 @@ func allFeatures(gatewayNamespaceMode bool) sets.Set[features.FeatureName] {
 		if !skipped.Has(feature.Name) {
 			result.Insert(feature.Name)
 		}
+	}
+	for _, feature := range features.UDPRouteFeatures {
+		result.Insert(feature.Name)
 	}
 	return result
 }

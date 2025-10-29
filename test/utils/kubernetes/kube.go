@@ -263,9 +263,10 @@ func (ka *KubeActions) getDepByPrefix(ctx context.Context, prefix, namespace str
 	}
 
 	// Search for the deployment with the specified prefix
-	for _, dep := range deployments.Items {
+	for i := range deployments.Items {
+		dep := &deployments.Items[i]
 		if len(dep.Name) >= len(prefix) && dep.Name[:len(prefix)] == prefix {
-			return &dep, nil
+			return dep, nil
 		}
 	}
 	return nil, errors.New("deployment not found")

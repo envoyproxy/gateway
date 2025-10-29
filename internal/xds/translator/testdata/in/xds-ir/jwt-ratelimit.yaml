@@ -43,6 +43,7 @@ http:
           - foo.com
           remoteJWKS:
             uri: https://192.168.1.250/jwt/public-key/jwks.json
+            cacheDuration: 300s
   - name: "second-route"
     hostname: "*"
     traffic:

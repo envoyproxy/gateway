@@ -592,9 +592,9 @@ func TestValidateXds(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			if test.want == nil {
-				require.NoError(t, test.input.Validate())
+				require.NoError(t, (&test.input).Validate())
 			} else {
-				got := test.input.Validate()
+				got := (&test.input).Validate()
 				for _, w := range test.want {
 					require.ErrorContains(t, got, w.Error())
 				}
@@ -646,9 +646,9 @@ func TestValidateHTTPListener(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			if test.want == nil {
-				require.NoError(t, test.input.Validate())
+				require.NoError(t, (&test.input).Validate())
 			} else {
-				got := test.input.Validate()
+				got := (&test.input).Validate()
 				for _, w := range test.want {
 					require.ErrorContains(t, got, w.Error())
 				}
@@ -697,9 +697,9 @@ func TestValidateTCPListener(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			if test.want == nil {
-				require.NoError(t, test.input.Validate())
+				require.NoError(t, (&test.input).Validate())
 			} else {
-				got := test.input.Validate()
+				got := (&test.input).Validate()
 				for _, w := range test.want {
 					require.ErrorContains(t, got, w.Error())
 				}
@@ -746,7 +746,7 @@ func TestValidateTLSListenerConfig(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			if test.want == nil {
-				require.NoError(t, test.input.Validate())
+				require.NoError(t, (&test.input).Validate())
 			} else {
 				require.EqualError(t, test.input.Validate(), test.want.Error())
 			}
@@ -784,9 +784,9 @@ func TestValidateUDPListener(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			if test.want == nil {
-				require.NoError(t, test.input.Validate())
+				require.NoError(t, (&test.input).Validate())
 			} else {
-				got := test.input.Validate()
+				got := (&test.input).Validate()
 				for _, w := range test.want {
 					require.ErrorContains(t, got, w.Error())
 				}
@@ -935,9 +935,9 @@ func TestValidateHTTPRoute(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			if test.want == nil {
-				require.NoError(t, test.input.Validate())
+				require.NoError(t, (&test.input).Validate())
 			} else {
-				got := test.input.Validate()
+				got := (&test.input).Validate()
 				for _, w := range test.want {
 					require.ErrorContains(t, got, w.Error())
 				}
@@ -976,9 +976,9 @@ func TestValidateTCPRoute(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			if test.want == nil {
-				require.NoError(t, test.input.Validate())
+				require.NoError(t, (&test.input).Validate())
 			} else {
-				got := test.input.Validate()
+				got := (&test.input).Validate()
 				for _, w := range test.want {
 					assert.ErrorContains(t, got, w.Error())
 				}
@@ -1230,7 +1230,7 @@ func TestValidateRouteDestination(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			if test.want == nil {
-				require.NoError(t, test.input.Validate())
+				require.NoError(t, (&test.input).Validate())
 			} else {
 				require.EqualError(t, test.input.Validate(), test.want.Error())
 			}
@@ -1286,7 +1286,7 @@ func TestValidateStringMatch(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			if test.want == nil {
-				require.NoError(t, test.input.Validate())
+				require.NoError(t, (&test.input).Validate())
 			} else {
 				require.EqualError(t, test.input.Validate(), test.want.Error())
 			}
@@ -1320,8 +1320,10 @@ func TestValidateLoadBalancer(t *testing.T) {
 			name: "consistent hash with header hash policy",
 			input: LoadBalancer{
 				ConsistentHash: &ConsistentHash{
-					Header: &Header{
-						Name: "name",
+					Headers: []*egv1a1.Header{
+						{
+							Name: "name",
+						},
 					},
 				},
 			},
@@ -1340,7 +1342,7 @@ func TestValidateLoadBalancer(t *testing.T) {
 		test := tests[i]
 		t.Run(test.name, func(t *testing.T) {
 			if test.want == nil {
-				require.NoError(t, test.input.Validate())
+				require.NoError(t, (&test.input).Validate())
 			} else {
 				require.EqualError(t, test.input.Validate(), test.want.Error())
 			}
@@ -1768,7 +1770,7 @@ func TestValidateHealthCheck(t *testing.T) {
 		test := tests[i]
 		t.Run(test.name, func(t *testing.T) {
 			if test.want == nil {
-				require.NoError(t, test.input.Validate())
+				require.NoError(t, (&test.input).Validate())
 			} else {
 				require.EqualError(t, test.input.Validate(), test.want.Error())
 			}

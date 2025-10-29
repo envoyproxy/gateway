@@ -2,6 +2,7 @@
 title: "ClientTrafficPolicy"
 ---
 ## Before you Begin
+
 - [Gateway API Extensions](_index.md)
 
 ## Overview
@@ -129,6 +130,7 @@ spec:
 ```
 
 In this case:
+
 - Policy A will be applied/attached to the specific Listener defined in the `targetRef.SectionName`
 - Policy B will be applied to the remaining Listeners within the Gateway. Policy B will have an additional status condition Overridden=True.
 
@@ -136,6 +138,7 @@ In this case:
 
 - [Connection Limit](../../tasks/traffic/connection-limit.md)
 - [HTTP Request Headers](../../tasks/traffic/http-request-headers)
+- [HTTP Response Headers](../../tasks/traffic/http-response-headers)
 - [HTTP/3](../../tasks/traffic/http3)
 - [Mutual TLS: External Clients to the Gateway](../../tasks/security/mutual-tls/)
 - [ClientTrafficPolicy API Reference](../../api/extension_types#clienttrafficpolicy)

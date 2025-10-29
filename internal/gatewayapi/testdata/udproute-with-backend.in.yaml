@@ -24,7 +24,8 @@ udpRoutes:
         - namespace: envoy-gateway
           name: gateway-1
       rules:
-        - backendRefs:
+        - name: rule-1
+          backendRefs:
             - group: gateway.envoyproxy.io
               kind: Backend
               name: backend-ip

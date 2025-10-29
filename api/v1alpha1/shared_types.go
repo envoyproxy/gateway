@@ -13,7 +13,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 )
 
 const (
@@ -47,18 +46,18 @@ const (
 	//
 	// * "Overridden"
 	//
-	PolicyConditionOverridden gwapiv1a2.PolicyConditionType = "Overridden"
+	PolicyConditionOverridden gwapiv1.PolicyConditionType = "Overridden"
 
 	// PolicyReasonOverridden is used with the "Overridden" condition when the policy
 	// has been overridden by another policy targeting a section within the same target.
-	PolicyReasonOverridden gwapiv1a2.PolicyConditionReason = "Overridden"
+	PolicyReasonOverridden gwapiv1.PolicyConditionReason = "Overridden"
 
 	// PolicyConditionMerged indicates whether the policy has
 	// been merged with another policy targeting the parent(e.g. Gateway).
-	PolicyConditionMerged gwapiv1a2.PolicyConditionType = "Merged"
+	PolicyConditionMerged gwapiv1.PolicyConditionType = "Merged"
 	// PolicyReasonMerged is used with the "Merged" condition when the policy
 	// has been merged with another policy targeting the parent(e.g. Gateway).
-	PolicyReasonMerged gwapiv1a2.PolicyConditionReason = "Merged"
+	PolicyReasonMerged gwapiv1.PolicyConditionReason = "Merged"
 )
 
 // GroupVersionKind unambiguously identifies a Kind.
@@ -231,7 +230,7 @@ type KubernetesContainerSpec struct {
 	// Image specifies the EnvoyProxy container image to be used including a tag, instead of the default image.
 	// This field is mutually exclusive with ImageRepository.
 	//
-	// +kubebuilder:validation:XValidation:rule="self.matches('^[a-zA-Z0-9._/-]+(:[a-zA-Z0-9._-]+)?(@sha256:[a-z0-9]+)?$')",message="Image must include a tag and allowed characters only (e.g., 'repo:tag')."
+	// +kubebuilder:validation:XValidation:rule="self.matches('^[a-zA-Z0-9._-]+(:[0-9]+)?(/[a-zA-Z0-9._/-]+)?(:[a-zA-Z0-9._-]+)?(@sha256:[a-z0-9]+)?$')",message="Image must include a tag and allowed characters only (e.g., 'repo:tag')."
 	// +optional
 	Image *string `json:"image,omitempty"`
 
@@ -516,8 +515,7 @@ type KubernetesHorizontalPodAutoscalerSpec struct {
 
 // HTTPStatus defines the http status code.
 // +kubebuilder:validation:Minimum=100
-// +kubebuilder:validation:Maximum=600
-// +kubebuilder:validation:ExclusiveMaximum=true
+// +kubebuilder:validation:Maximum=599
 type HTTPStatus int
 
 // MergeType defines the type of merge operation
@@ -587,6 +585,8 @@ type BackendCluster struct {
 
 // ClusterSettings provides the various knobs that can be set to control how traffic to a given
 // backend will be configured.
+//
+// +kubebuilder:validation:XValidation:rule="!((has(self.connection) && has(self.connection.preconnect) && has(self.connection.preconnect.predictivePercent)) && !(has(self.loadBalancer) && has(self.loadBalancer.type) && self.loadBalancer.type in ['Random', 'RoundRobin']))",message="predictivePercent in preconnect policy only works with RoundRobin or Random load balancers"
 type ClusterSettings struct {
 	// LoadBalancer policy to apply when routing traffic from the gateway to
 	// the backend endpoints. Defaults to `LeastRequest`.
@@ -766,6 +766,15 @@ type CustomResponse struct {
 	//
 	// +optional
 	StatusCode *int `json:"statusCode,omitempty"`
+
+	// Header defines headers to add, set or remove from the response.
+	// This allows the response policy to append, add or override headers
+	// of the final response before it is sent to a downstream client.
+	// Note: Header removal is not supported for responseOverride.
+	//
+	// +optional
+	// +kubebuilder:validation:XValidation:rule="!has(self.remove) || size(self.remove) == 0",message="Remove is not supported for header in CustomResponse"
+	Header *gwapiv1.HTTPHeaderFilter `json:"header,omitempty"`
 }
 
 // ResponseValueType defines the types of values for the response body supported by Envoy Gateway.

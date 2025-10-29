@@ -2,7 +2,6 @@ backendTLSPolicies:
 - apiVersion: gateway.networking.k8s.io/v1alpha2
   kind: BackendTLSPolicy
   metadata:
-    creationTimestamp: null
     name: policy-btls-grpc
     namespace: envoy-gateway
   spec:
@@ -26,6 +25,11 @@ backendTLSPolicies:
         namespace: default
       conditions:
       - lastTransitionTime: null
+        message: Resolved all the Object references.
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      - lastTransitionTime: null
         message: Policy has been accepted.
         reason: Accepted
         status: "True"
@@ -34,7 +38,6 @@ backendTLSPolicies:
 - apiVersion: gateway.networking.k8s.io/v1alpha2
   kind: BackendTLSPolicy
   metadata:
-    creationTimestamp: null
     name: policy-btls-backend-ip
     namespace: envoy-gateway
   spec:
@@ -57,6 +60,11 @@ backendTLSPolicies:
         namespace: default
       conditions:
       - lastTransitionTime: null
+        message: Resolved all the Object references.
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      - lastTransitionTime: null
         message: Policy has been accepted.
         reason: Accepted
         status: "True"
@@ -66,7 +74,6 @@ backends:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: Backend
   metadata:
-    creationTimestamp: null
     name: backend-ip
     namespace: default
   spec:
@@ -84,7 +91,6 @@ backends:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: Backend
   metadata:
-    creationTimestamp: null
     name: backend-ip-tls
     namespace: envoy-gateway
   spec:
@@ -103,7 +109,6 @@ envoyExtensionPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: EnvoyExtensionPolicy
   metadata:
-    creationTimestamp: null
     name: policy-for-http-route
     namespace: default
   spec:
@@ -173,7 +178,6 @@ gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
   metadata:
-    creationTimestamp: null
     name: gateway-1
     namespace: default
   spec:
@@ -214,7 +218,6 @@ httpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
   metadata:
-    creationTimestamp: null
     name: httproute-1
     namespace: default
   spec:
@@ -252,7 +255,6 @@ httpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
   metadata:
-    creationTimestamp: null
     name: httproute-2
     namespace: default
   spec:
@@ -314,6 +316,10 @@ xdsIR:
       - path: /dev/stdout
     globalResources:
       proxyServiceCluster:
+        metadata:
+          name: envoy-default-gateway-1-bfd08ef4
+          namespace: envoy-gateway-system
+          sectionName: "8080"
         name: default/gateway-1
         settings:
         - addressType: IP
@@ -373,6 +379,9 @@ xdsIR:
               name: envoyextensionpolicy/default/policy-for-http-route/extproc/0
               settings:
               - addressType: IP
+                endpoints:
+                - host: 7.7.7.7
+                  port: 8000
                 metadata:
                   kind: Service
                   name: grpc-backend
@@ -446,8 +455,8 @@ xdsIR:
                 resetStreamOnError: true
               loadBalancer:
                 consistentHash:
-                  header:
-                    name: X-some-header
+                  headers:
+                  - name: X-some-header
               proxyProtocol:
                 version: V2
               tcpKeepalive:

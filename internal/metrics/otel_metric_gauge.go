@@ -42,17 +42,19 @@ func (f *Gauge) With(labelValues ...LabelValue) *Gauge {
 	f.mutex.Lock()
 	defer f.mutex.Unlock()
 
-	attrs, set := mergeLabelValues(f.attrs, labelValues)
+	mergedAttrs := mergeLabelValues(f.attrs, labelValues)
+	set := attribute.NewSet(mergedAttrs...)
+
 	m := &Gauge{
 		g:      f.g,
 		mutex:  f.mutex,
 		stores: f.stores,
 		name:   f.name,
-		attrs:  attrs,
+		attrs:  mergedAttrs,
 	}
 	if _, f := m.stores[set]; !f {
 		m.stores[set] = &GaugeValues{
-			opt: []api.ObserveOption{api.WithAttributeSet(set)},
+			opt: []api.ObserveOption{api.WithAttributes(mergedAttrs...)},
 		}
 	}
 	m.current = m.stores[set]

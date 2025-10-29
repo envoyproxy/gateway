@@ -5,7 +5,7 @@
 ##@ Lint
 
 GITHUB_ACTION ?=
-LINT_BUILD_TAGS ?= e2e,celvalidation,conformance,experimental,benchmark,resilience
+LINT_BUILD_TAGS ?= e2e,celvalidation,conformance,experimental,benchmark,resilience,integration
 
 .PHONY: lint
 lint: ## Run all linter of code sources, including golint, yamllint, whitenoise lint and codespell.
@@ -20,7 +20,7 @@ GOLANGCI_LINT_FLAGS ?=
 lint: lint.golint
 lint.golint:
 	@$(LOG_TARGET)
-	@go tool golangci-lint run $(GOLANGCI_LINT_FLAGS) --build-tags=$(LINT_BUILD_TAGS) --config=tools/linter/golangci-lint/.golangci.yml
+	$(GO_TOOL) golangci-lint run $(GOLANGCI_LINT_FLAGS) --build-tags=$(LINT_BUILD_TAGS) --config=tools/linter/golangci-lint/.golangci.yml
 
 .PHONY: lint.yamllint
 lint: lint.yamllint

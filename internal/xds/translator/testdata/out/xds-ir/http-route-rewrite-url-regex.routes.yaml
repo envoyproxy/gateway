@@ -17,6 +17,17 @@
         upgradeConfigs:
         - upgradeType: websocket
     - match:
+        pathSeparatedPrefix: /$env
+      name: rewrite-route-with-special-characters
+      route:
+        cluster: rewrite-route
+        regexRewrite:
+          pattern:
+            regex: ^/\$env\/*
+          substitution: /
+        upgradeConfigs:
+        - upgradeType: websocket
+    - match:
         pathSeparatedPrefix: /origin
       name: rewrite-route-timeout
       route:

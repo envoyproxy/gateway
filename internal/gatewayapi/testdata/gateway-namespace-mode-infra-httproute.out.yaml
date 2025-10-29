@@ -2,7 +2,6 @@ gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
   metadata:
-    creationTimestamp: null
     name: gateway-1
     namespace: default
   spec:
@@ -42,7 +41,6 @@ gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
   metadata:
-    creationTimestamp: null
     name: gateway-2
     namespace: default
   spec:
@@ -82,7 +80,6 @@ gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
   metadata:
-    creationTimestamp: null
     name: gateway-3
     namespace: test-ns
   spec:
@@ -123,7 +120,6 @@ httpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
   metadata:
-    creationTimestamp: null
     name: httproute-1
     namespace: default
   spec:
@@ -158,7 +154,6 @@ httpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
   metadata:
-    creationTimestamp: null
     name: httproute-2
     namespace: default
   spec:
@@ -193,7 +188,6 @@ httpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
   metadata:
-    creationTimestamp: null
     name: httproute-3
     namespace: test-ns
   spec:
@@ -288,6 +282,25 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources:
+      proxyServiceCluster:
+        metadata:
+          name: gateway-1
+          namespace: default
+          sectionName: "8080"
+        name: default/gateway-1
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            name: gateway-1
+            namespace: default
+            sectionName: "8080"
+          name: default/gateway-1
+          protocol: TCP
     http:
     - address: 0.0.0.0
       externalPort: 80
@@ -344,6 +357,25 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources:
+      proxyServiceCluster:
+        metadata:
+          name: gateway-2
+          namespace: default
+          sectionName: "8080"
+        name: default/gateway-2
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            name: gateway-2
+            namespace: default
+            sectionName: "8080"
+          name: default/gateway-2
+          protocol: TCP
     http:
     - address: 0.0.0.0
       externalPort: 80
@@ -402,9 +434,18 @@ xdsIR:
       - path: /dev/stdout
     globalResources:
       proxyServiceCluster:
+        metadata:
+          name: gateway-3
+          namespace: test-ns
+          sectionName: "8080"
         name: test-ns/gateway-3
         settings:
-        - metadata:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
             name: gateway-3
             namespace: test-ns
             sectionName: "8080"
@@ -427,8 +468,25 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - directResponse:
-          statusCode: 500
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-3
+            namespace: test-ns
+          name: httproute/test-ns/httproute-3/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            metadata:
+              kind: Service
+              name: service-3
+              namespace: test-ns
+              sectionName: "8080"
+            name: httproute/test-ns/httproute-3/rule/0/backend/0
+            protocol: HTTP
+            weight: 1
         hostname: '*'
         isHTTP2: false
         metadata:

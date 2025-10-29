@@ -27,6 +27,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	gwapiresource "github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/infrastructure/common"
+	infracommon "github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/common"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/resource"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils"
@@ -34,6 +35,10 @@ import (
 )
 
 const (
+	// XdsServiceAccountTokenFilepath is the fully qualified path of the file containing
+	// the service account token used for authentication in GatewayNamespaceMode.
+	// #nosec G101 - This is a file path, not a credential
+	XdsServiceAccountTokenFilepath = "/var/run/secrets/token/sa-token"
 	// XdsTLSCertFilepath is the fully qualified path of the file containing Envoy's
 	// xDS server TLS certificate.
 	XdsTLSCertFilepath = "/certs/tls.crt"
@@ -130,7 +135,7 @@ func (r *ResourceRender) LabelSelector() labels.Selector {
 	return labels.SelectorFromSet(r.stableSelector().MatchLabels)
 }
 
-func (r *ResourceRender) OwnerReferences() []metav1.OwnerReference {
+func (r *ResourceRender) ownerReferences() []metav1.OwnerReference {
 	var ownerReferences []metav1.OwnerReference
 	if r.ownerReferenceUID != nil {
 		key := gwapiresource.KindGatewayClass
@@ -168,7 +173,7 @@ func (r *ResourceRender) ServiceAccount() (*corev1.ServiceAccount, error) {
 			Name:            r.serviceAccountName(),
 			Labels:          saLabels,
 			Annotations:     r.infra.GetProxyMetadata().Annotations,
-			OwnerReferences: r.OwnerReferences(),
+			OwnerReferences: r.ownerReferences(),
 		},
 	}, nil
 }
@@ -286,7 +291,7 @@ func (r *ResourceRender) Service() (*corev1.Service, error) {
 			Namespace:       r.Namespace(),
 			Labels:          svcLabels,
 			Annotations:     annotations,
-			OwnerReferences: r.OwnerReferences(),
+			OwnerReferences: r.ownerReferences(),
 		},
 		Spec: serviceSpec,
 	}
@@ -319,6 +324,11 @@ func (r *ResourceRender) ConfigMap(cert string) (*corev1.ConfigMap, error) {
 		common.SdsCAFilename:   common.GetSdsCAConfigMapData(XdsTLSCaFilepath),
 		common.SdsCertFilename: common.GetSdsCertConfigMapData(XdsTLSCertFilepath, XdsTLSKeyFilepath),
 	}
+
+	if r.GatewayNamespaceMode {
+		data[common.SdsServiceAccountTokenFilename] = common.GetSdsServiceAccountTokenConfigMapData(XdsServiceAccountTokenFilepath)
+	}
+
 	if cert != "" {
 		data[XdsTLSCaFileName] = cert
 	}
@@ -333,7 +343,7 @@ func (r *ResourceRender) ConfigMap(cert string) (*corev1.ConfigMap, error) {
 			Name:            r.Name(),
 			Labels:          cmLabels,
 			Annotations:     r.infra.GetProxyMetadata().Annotations,
-			OwnerReferences: r.OwnerReferences(),
+			OwnerReferences: r.ownerReferences(),
 		},
 		Data: data,
 	}, nil
@@ -358,7 +368,7 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 
 	// Get the EnvoyProxy config to configure the deployment.
 	provider := proxyConfig.GetEnvoyProxyProvider()
-	if provider.Type != egv1a1.ProviderTypeKubernetes {
+	if provider.Type != egv1a1.EnvoyProxyProviderTypeKubernetes {
 		return nil, fmt.Errorf("invalid provider type %v for Kubernetes infra manager", provider.Type)
 	}
 	deploymentConfig := provider.GetEnvoyProxyKubeProvider().EnvoyDeployment
@@ -392,7 +402,7 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 			Namespace:       r.Namespace(),
 			Labels:          dpLabels,
 			Annotations:     dpAnnotations,
-			OwnerReferences: r.OwnerReferences(),
+			OwnerReferences: r.ownerReferences(),
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: deploymentConfig.Replicas,
@@ -447,7 +457,7 @@ func (r *ResourceRender) DaemonSet() (*appsv1.DaemonSet, error) {
 
 	// Get the EnvoyProxy config to configure the daemonset.
 	provider := proxyConfig.GetEnvoyProxyProvider()
-	if provider.Type != egv1a1.ProviderTypeKubernetes {
+	if provider.Type != egv1a1.EnvoyProxyProviderTypeKubernetes {
 		return nil, fmt.Errorf("invalid provider type %v for Kubernetes infra manager", provider.Type)
 	}
 
@@ -482,7 +492,7 @@ func (r *ResourceRender) DaemonSet() (*appsv1.DaemonSet, error) {
 			Namespace:       r.Namespace(),
 			Labels:          dsLabels,
 			Annotations:     dsAnnotations,
-			OwnerReferences: r.OwnerReferences(),
+			OwnerReferences: r.ownerReferences(),
 		},
 		Spec: appsv1.DaemonSetSpec{
 			// Daemonset's selector is immutable.
@@ -515,7 +525,7 @@ func (r *ResourceRender) DaemonSet() (*appsv1.DaemonSet, error) {
 
 func (r *ResourceRender) pdbConfig() (*egv1a1.KubernetesPodDisruptionBudgetSpec, error) {
 	provider := r.infra.GetProxyConfig().GetEnvoyProxyProvider()
-	if provider.Type != egv1a1.ProviderTypeKubernetes {
+	if provider.Type != egv1a1.EnvoyProxyProviderTypeKubernetes {
 		return nil, fmt.Errorf("invalid provider type %v for Kubernetes infra manager", provider.Type)
 	}
 
@@ -534,50 +544,18 @@ func (r *ResourceRender) PodDisruptionBudget() (*policyv1.PodDisruptionBudget, e
 		return nil, err
 	}
 
-	pdbSpec := policyv1.PodDisruptionBudgetSpec{
-		Selector: r.stableSelector(),
-	}
-	switch {
-	case pdb.MinAvailable != nil:
-		pdbSpec.MinAvailable = pdb.MinAvailable
-	case pdb.MaxUnavailable != nil:
-		pdbSpec.MaxUnavailable = pdb.MaxUnavailable
-	default:
-		pdbSpec.MinAvailable = &intstr.IntOrString{Type: intstr.Int, IntVal: 0}
-	}
-
-	podDisruptionBudget := &policyv1.PodDisruptionBudget{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace:       r.Namespace(),
-			OwnerReferences: r.OwnerReferences(),
-			Annotations:     r.infra.GetProxyMetadata().Annotations,
-			Labels:          r.stableSelector().MatchLabels,
-		},
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "policy/v1",
-			Kind:       "PodDisruptionBudget",
-		},
-		Spec: pdbSpec,
-	}
-
 	// set name
+	resourceName := r.Name()
 	if pdb.Name != nil {
-		podDisruptionBudget.Name = *pdb.Name
-	} else {
-		podDisruptionBudget.Name = r.Name()
+		resourceName = *pdb.Name
 	}
 
-	// apply merge patch to PodDisruptionBudget
-	if podDisruptionBudget, err = pdb.ApplyMergePatch(podDisruptionBudget); err != nil {
-		return nil, err
-	}
-
-	return podDisruptionBudget, nil
+	return infracommon.GetPodDisruptionBudget(pdb, r.stableSelector(), &types.NamespacedName{Name: resourceName, Namespace: r.Namespace()}, r.ownerReferences())
 }
 
 func (r *ResourceRender) HorizontalPodAutoscaler() (*autoscalingv2.HorizontalPodAutoscaler, error) {
 	provider := r.infra.GetProxyConfig().GetEnvoyProxyProvider()
-	if provider.Type != egv1a1.ProviderTypeKubernetes {
+	if provider.Type != egv1a1.EnvoyProxyProviderTypeKubernetes {
 		return nil, fmt.Errorf("invalid provider type %v for Kubernetes infra manager", provider.Type)
 	}
 
@@ -595,7 +573,7 @@ func (r *ResourceRender) HorizontalPodAutoscaler() (*autoscalingv2.HorizontalPod
 			Namespace:       r.Namespace(),
 			Annotations:     r.infra.GetProxyMetadata().Annotations,
 			Labels:          r.stableSelector().MatchLabels,
-			OwnerReferences: r.OwnerReferences(),
+			OwnerReferences: r.ownerReferences(),
 		},
 		Spec: autoscalingv2.HorizontalPodAutoscalerSpec{
 			ScaleTargetRef: autoscalingv2.CrossVersionObjectReference{

@@ -30,41 +30,41 @@ func translateTrafficFeatures(policy *egv1a1.ClusterSettings) (*ir.TrafficFeatur
 	}
 	ret := &ir.TrafficFeatures{}
 
-	if timeout, err := buildClusterSettingsTimeout(*policy); err != nil {
+	if timeout, err := buildClusterSettingsTimeout(policy); err != nil {
 		return nil, err
 	} else {
 		ret.Timeout = timeout
 	}
 
-	if bc, err := buildBackendConnection(*policy); err != nil {
+	if bc, err := buildBackendConnection(policy); err != nil {
 		return nil, err
 	} else {
 		ret.BackendConnection = bc
 	}
 
-	if ka, err := buildTCPKeepAlive(*policy); err != nil {
+	if ka, err := buildTCPKeepAlive(policy); err != nil {
 		return nil, err
 	} else {
 		ret.TCPKeepalive = ka
 	}
 
-	if cb, err := buildCircuitBreaker(*policy); err != nil {
+	if cb, err := buildCircuitBreaker(policy); err != nil {
 		return nil, err
 	} else {
 		ret.CircuitBreaker = cb
 	}
 
-	if lb, err := buildLoadBalancer(*policy); err != nil {
+	if lb, err := buildLoadBalancer(policy); err != nil {
 		return nil, err
 	} else {
 		ret.LoadBalancer = lb
 	}
 
-	ret.ProxyProtocol = buildProxyProtocol(*policy)
+	ret.ProxyProtocol = buildProxyProtocol(policy)
 
-	ret.HealthCheck = buildHealthCheck(*policy)
+	ret.HealthCheck = buildHealthCheck(policy)
 
-	ret.DNS = translateDNS(*policy)
+	ret.DNS = translateDNS(policy)
 
 	if h2, err := buildIRHTTP2Settings(policy.HTTP2); err != nil {
 		return nil, err
@@ -87,7 +87,7 @@ func translateTrafficFeatures(policy *egv1a1.ClusterSettings) (*ir.TrafficFeatur
 	return ret, nil
 }
 
-func buildClusterSettingsTimeout(policy egv1a1.ClusterSettings) (*ir.Timeout, error) {
+func buildClusterSettingsTimeout(policy *egv1a1.ClusterSettings) (*ir.Timeout, error) {
 	if policy.Timeout == nil {
 		return nil, nil
 	}
@@ -141,16 +141,27 @@ func buildClusterSettingsTimeout(policy egv1a1.ClusterSettings) (*ir.Timeout, er
 			}
 		}
 
+		var msd *metav1.Duration
+		if pto.HTTP.MaxStreamDuration != nil {
+			d, err := time.ParseDuration(string(*pto.HTTP.MaxStreamDuration))
+			if err != nil {
+				errs = errors.Join(errs, fmt.Errorf("invalid MaxStreamDuration value %s", *pto.HTTP.MaxStreamDuration))
+			} else {
+				msd = ptr.To(metav1.Duration{Duration: d})
+			}
+		}
+
 		to.HTTP = &ir.HTTPTimeout{
 			ConnectionIdleTimeout: cit,
 			MaxConnectionDuration: mcd,
 			RequestTimeout:        rt,
+			MaxStreamDuration:     msd,
 		}
 	}
 	return to, errs
 }
 
-func buildBackendConnection(policy egv1a1.ClusterSettings) (*ir.BackendConnection, error) {
+func buildBackendConnection(policy *egv1a1.ClusterSettings) (*ir.BackendConnection, error) {
 	if policy.Connection == nil {
 		return nil, nil
 	}
@@ -173,12 +184,23 @@ func buildBackendConnection(policy egv1a1.ClusterSettings) (*ir.BackendConnectio
 
 			bcIR.BufferLimitBytes = ptr.To(uint32(bf))
 		}
+		if bc.Preconnect != nil {
+			preconnect := &ir.Preconnect{}
+			pc := bc.Preconnect
+			if pc.PerEndpointPercent != nil {
+				preconnect.PerEndpointPercent = pc.PerEndpointPercent
+			}
+			if pc.PredictivePercent != nil {
+				preconnect.PredictivePercent = pc.PredictivePercent
+			}
+			bcIR.Preconnect = preconnect
+		}
 	}
 
 	return bcIR, nil
 }
 
-func buildTCPKeepAlive(policy egv1a1.ClusterSettings) (*ir.TCPKeepalive, error) {
+func buildTCPKeepAlive(policy *egv1a1.ClusterSettings) (*ir.TCPKeepalive, error) {
 	if policy.TCPKeepalive == nil {
 		return nil, nil
 	}
@@ -208,7 +230,7 @@ func buildTCPKeepAlive(policy egv1a1.ClusterSettings) (*ir.TCPKeepalive, error) 
 	return ka, nil
 }
 
-func buildCircuitBreaker(policy egv1a1.ClusterSettings) (*ir.CircuitBreaker, error) {
+func buildCircuitBreaker(policy *egv1a1.ClusterSettings) (*ir.CircuitBreaker, error) {
 	if policy.CircuitBreaker == nil {
 		return nil, nil
 	}
@@ -273,7 +295,7 @@ func buildCircuitBreaker(policy egv1a1.ClusterSettings) (*ir.CircuitBreaker, err
 	return cb, nil
 }
 
-func buildLoadBalancer(policy egv1a1.ClusterSettings) (*ir.LoadBalancer, error) {
+func buildLoadBalancer(policy *egv1a1.ClusterSettings) (*ir.LoadBalancer, error) {
 	if policy.LoadBalancer == nil {
 		return nil, nil
 	}
@@ -325,6 +347,7 @@ func buildLoadBalancer(policy egv1a1.ClusterSettings) (*ir.LoadBalancer, error) 
 		preferLocal := policy.LoadBalancer.ZoneAware.PreferLocal
 		lb.PreferLocal = &ir.PreferLocalZone{
 			MinEndpointsThreshold: preferLocal.MinEndpointsThreshold,
+			PercentageEnabled:     preferLocal.PercentageEnabled,
 		}
 		if preferLocal.Force != nil {
 			lb.PreferLocal.Force = &ir.ForceLocalZone{
@@ -358,9 +381,19 @@ func buildConsistentHashLoadBalancer(policy egv1a1.LoadBalancer) (*ir.Consistent
 	case egv1a1.SourceIPConsistentHashType:
 		consistentHash.SourceIP = ptr.To(true)
 	case egv1a1.HeaderConsistentHashType:
-		consistentHash.Header = &ir.Header{
-			Name: policy.ConsistentHash.Header.Name,
+		consistentHash.Headers = []*egv1a1.Header{
+			{
+				Name: policy.ConsistentHash.Header.Name,
+			},
 		}
+	case egv1a1.HeadersConsistentHashType:
+		headers := make([]*egv1a1.Header, 0, len(policy.ConsistentHash.Headers))
+		for _, h := range policy.ConsistentHash.Headers {
+			headers = append(headers, &egv1a1.Header{
+				Name: h.Name,
+			})
+		}
+		consistentHash.Headers = headers
 	case egv1a1.CookieConsistentHashType:
 		consistentHash.Cookie = policy.ConsistentHash.Cookie
 	}
@@ -385,7 +418,7 @@ func buildEndpointOverride(policy egv1a1.EndpointOverride) *ir.EndpointOverride 
 	return endpointOverride
 }
 
-func buildProxyProtocol(policy egv1a1.ClusterSettings) *ir.ProxyProtocol {
+func buildProxyProtocol(policy *egv1a1.ClusterSettings) *ir.ProxyProtocol {
 	if policy.ProxyProtocol == nil {
 		return nil
 	}
@@ -404,7 +437,7 @@ func buildProxyProtocol(policy egv1a1.ClusterSettings) *ir.ProxyProtocol {
 	return pp
 }
 
-func buildHealthCheck(policy egv1a1.ClusterSettings) *ir.HealthCheck {
+func buildHealthCheck(policy *egv1a1.ClusterSettings) *ir.HealthCheck {
 	if policy.HealthCheck == nil {
 		return nil
 	}
@@ -428,6 +461,7 @@ func buildPassiveHealthCheck(policy egv1a1.HealthCheck) *ir.OutlierDetection {
 		ConsecutiveGatewayErrors:       hc.ConsecutiveGatewayErrors,
 		Consecutive5xxErrors:           hc.Consecutive5xxErrors,
 		MaxEjectionPercent:             hc.MaxEjectionPercent,
+		FailurePercentageThreshold:     hc.FailurePercentageThreshold,
 	}
 
 	if hc.Interval != nil {
@@ -550,7 +584,7 @@ func translateActiveHealthCheckPayload(p *egv1a1.ActiveHealthCheckPayload) *ir.H
 	return irPayload
 }
 
-func translateDNS(policy egv1a1.ClusterSettings) *ir.DNS {
+func translateDNS(policy *egv1a1.ClusterSettings) *ir.DNS {
 	if policy.DNS == nil {
 		return nil
 	}

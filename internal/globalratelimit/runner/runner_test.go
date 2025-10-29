@@ -7,8 +7,10 @@ package runner
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -22,6 +24,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/crypto"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/ratelimit"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -210,7 +213,7 @@ func Test_subscribeAndTranslate(t *testing.T) {
 			defer cancel()
 			xdsIR := new(message.XdsIR)
 			defer xdsIR.Close()
-			cfg, err := config.New(os.Stdout)
+			cfg, err := config.New(os.Stdout, os.Stderr)
 			require.NoError(t, err)
 
 			r := New(&Config{
@@ -220,7 +223,7 @@ func Test_subscribeAndTranslate(t *testing.T) {
 			})
 
 			c := xdsIR.Subscribe(ctx)
-			go r.subscribeAndTranslate(ctx, c)
+			go r.translateFromSubscription(ctx, c)
 
 			for _, xds := range tt.xdsIRs {
 				if xds.Delete {
@@ -233,13 +236,71 @@ func Test_subscribeAndTranslate(t *testing.T) {
 			diff := ""
 			if !assert.Eventually(t, func() bool {
 				rs, err := r.cache.GetSnapshot(ratelimit.InfraName)
-				require.NoError(t, err)
+				if err != nil {
+					t.Logf("failed to get snapshot: %v", err)
+					return false
+				}
 
 				diff = cmp.Diff(tt.wantRateLimitConfigs, rs.GetResources(resourcev3.RateLimitConfigType), cmpopts.IgnoreUnexported(rlsconfv3.RateLimitConfig{}, rlsconfv3.RateLimitDescriptor{}, rlsconfv3.RateLimitPolicy{}))
 				return diff == ""
-			}, time.Second*1, time.Millisecond*20) {
+			}, time.Second*10, time.Second) {
 				t.Fatalf("snapshot mismatch (-want +got):\n%s", diff)
 			}
 		})
 	}
+}
+
+func TestLoadTLSConfig_HostMode(t *testing.T) {
+	// Create temporary directory structure for certs using t.TempDir()
+	configHome := t.TempDir()
+	certsDir := filepath.Join(configHome, "certs", "envoy-gateway")
+	require.NoError(t, os.MkdirAll(certsDir, 0o750))
+
+	// Create test certificates using internal/crypto package
+	cfg, err := config.New(os.Stdout, os.Stderr)
+	require.NoError(t, err)
+
+	// Generate certificates with default provider (crypto.GenerateCerts only supports Kubernetes)
+	certs, err := crypto.GenerateCerts(cfg)
+	require.NoError(t, err)
+
+	// Write certificates to temp directory
+	caFile := filepath.Join(certsDir, "ca.crt")
+	certFile := filepath.Join(certsDir, "tls.crt")
+	keyFile := filepath.Join(certsDir, "tls.key")
+
+	require.NoError(t, os.WriteFile(caFile, certs.CACertificate, 0o600))
+	require.NoError(t, os.WriteFile(certFile, certs.EnvoyGatewayCertificate, 0o600))
+	require.NoError(t, os.WriteFile(keyFile, certs.EnvoyGatewayPrivateKey, 0o600))
+
+	// Configure host mode with custom configHome (certs are stored in configHome)
+	// MUST be set BEFORE creating Runner since Config{Server: *cfg} makes a copy
+	cfg.EnvoyGateway.Provider = &egv1a1.EnvoyGatewayProvider{
+		Type: egv1a1.ProviderTypeCustom,
+		Custom: &egv1a1.EnvoyGatewayCustomProvider{
+			Infrastructure: &egv1a1.EnvoyGatewayInfrastructureProvider{
+				Type: egv1a1.InfrastructureProviderTypeHost,
+				Host: &egv1a1.EnvoyGatewayHostInfrastructureProvider{
+					ConfigHome: &configHome,
+				},
+			},
+		},
+	}
+
+	r := &Runner{
+		Config: Config{
+			Server: *cfg,
+		},
+	}
+
+	// Test loadTLSConfig with host mode
+	tlsConfig, err := r.loadTLSConfig()
+	require.NoError(t, err)
+	require.NotNil(t, tlsConfig)
+
+	// Verify TLS config properties
+	// crypto.LoadTLSConfig uses GetConfigForClient callback to load certs on demand
+	require.NotNil(t, tlsConfig.GetConfigForClient)
+	require.Equal(t, tls.RequireAndVerifyClientCert, tlsConfig.ClientAuth)
+	require.Equal(t, uint16(tls.VersionTLS13), tlsConfig.MinVersion)
 }

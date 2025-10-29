@@ -11,9 +11,14 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 )
 
 func Test_wildcard2regex(t *testing.T) {
@@ -710,6 +715,375 @@ func Test_validateHtpasswdFormat(t *testing.T) {
 			if (err != nil) != tt.wantError {
 				t.Errorf("validateHtpasswdFormat() error = %v, wantErr %v", err, tt.wantError)
 				return
+			}
+		})
+	}
+}
+
+func Test_parseExtAuthTimeout(t *testing.T) {
+	tests := []struct {
+		name      string
+		timeout   *gwapiv1.Duration
+		wantValid bool
+		wantValue string
+	}{
+		{
+			name:      "valid timeout",
+			timeout:   ptr.To(gwapiv1.Duration("10s")),
+			wantValid: true,
+			wantValue: "10s",
+		},
+		{
+			name:      "invalid timeout format",
+			timeout:   ptr.To(gwapiv1.Duration("invalid-duration")),
+			wantValid: false,
+			wantValue: "",
+		},
+		{
+			name:      "nil timeout",
+			timeout:   nil,
+			wantValid: false,
+			wantValue: "",
+		},
+		{
+			name:      "complex valid timeout",
+			timeout:   ptr.To(gwapiv1.Duration("1h30m45s")),
+			wantValid: true,
+			wantValue: "1h30m45s",
+		},
+		{
+			name:      "millisecond timeout",
+			timeout:   ptr.To(gwapiv1.Duration("500ms")),
+			wantValid: true,
+			wantValue: "500ms",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := parseExtAuthTimeout(tt.timeout)
+
+			// Verify the timeout parsing behavior
+			if tt.wantValid {
+				assert.NotNil(t, result)
+				assert.Equal(t, tt.wantValue, result.Duration.String())
+			} else {
+				assert.Nil(t, result)
+			}
+		})
+	}
+}
+
+func TestValidateCIDRs_ErrorOnBadCIDR(t *testing.T) {
+	if err := validateCIDRs([]egv1a1.CIDR{"10.0.0.0/33"}); err == nil {
+		t.Fatal("expected invalid ClientCIDR error")
+	}
+}
+
+// / tiny helper to build a minimal SecurityPolicy
+func sp(ns, name string) *egv1a1.SecurityPolicy {
+	return &egv1a1.SecurityPolicy{
+		ObjectMeta: metav1.ObjectMeta{Namespace: ns, Name: name},
+	}
+}
+
+// looks for any False condition on PolicyStatus parents (how EG surfaces translation errors)
+func hasParentFalseCondition(p *egv1a1.SecurityPolicy) bool {
+	for _, pr := range p.Status.Ancestors {
+		for _, c := range pr.Conditions {
+			if c.Status == metav1.ConditionFalse {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// --- TCP branch: validateSecurityPolicyForTCP(...) returns err -> SetTranslationErrorForPolicyAncestors(...) + return
+func Test_SecurityPolicy_TCP_Invalid_setsStatus_and_returns(t *testing.T) {
+	tr := &Translator{GatewayControllerName: "gateway.envoyproxy.io/gatewayclass-controller"}
+
+	// Create an invalid TCP policy (has CORS which is not allowed for TCP)
+	policy := sp("default", "bad-tcp")
+	policy.Spec.CORS = &egv1a1.CORS{}
+
+	// Create a mock TCP route
+	tcpRoute := &TCPRouteContext{
+		TCPRoute: &gwapiv1a2.TCPRoute{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: "default",
+				Name:      "tcp-route",
+			},
+			Spec: gwapiv1a2.TCPRouteSpec{
+				CommonRouteSpec: gwapiv1a2.CommonRouteSpec{
+					ParentRefs: []gwapiv1a2.ParentReference{
+						{
+							Name: "test-gateway",
+						},
+					},
+				},
+				Rules: []gwapiv1a2.TCPRouteRule{
+					{
+						BackendRefs: []gwapiv1a2.BackendRef{
+							{
+								BackendObjectReference: gwapiv1a2.BackendObjectReference{
+									Name: "test-service",
+									Port: ptr.To(gwapiv1a2.PortNumber(80)),
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	// Create the target reference
+	target := gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+		LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+			Group: gwapiv1.Group(gwapiv1.GroupVersion.Group),
+			Kind:  resource.KindTCPRoute,
+			Name:  "tcp-route",
+		},
+	}
+
+	// Create route map
+	routeMap := make(map[policyTargetRouteKey]*policyRouteTargetContext)
+	key := policyTargetRouteKey{
+		Kind:      string(resource.KindTCPRoute),
+		Name:      "tcp-route",
+		Namespace: "default",
+	}
+	routeMap[key] = &policyRouteTargetContext{RouteContext: tcpRoute}
+
+	gatewayRouteMap := make(map[string]map[string]sets.Set[string])
+	resources := resource.NewResources()
+	xdsIR := make(resource.XdsIRMap)
+
+	// Process the policy - this should set error status
+	tr.processSecurityPolicyForRoute(resources, xdsIR, routeMap, gatewayRouteMap, policy, target)
+
+	// Assert that the policy has a False condition (error was set)
+	require.True(t, hasParentFalseCondition(policy))
+}
+
+// --- non-TCP branch: malformed CIDR should return err -> SetTranslationErrorForPolicyAncestors(...) + return
+func Test_SecurityPolicy_HTTP_Invalid_setsStatus_and_returns(t *testing.T) {
+	tr := &Translator{GatewayControllerName: "gateway.envoyproxy.io/gatewayclass-controller"}
+
+	// Create an invalid HTTP policy (malformed CIDR)
+	policy := sp("default", "bad-http")
+	policy.Spec.Authorization = &egv1a1.Authorization{
+		Rules: []egv1a1.AuthorizationRule{
+			{Principal: egv1a1.Principal{ClientCIDRs: []egv1a1.CIDR{"not-a-cidr"}}},
+		},
+	}
+
+	// Create a mock HTTP route
+	httpRoute := &HTTPRouteContext{
+		HTTPRoute: &gwapiv1.HTTPRoute{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: "default",
+				Name:      "http-route",
+			},
+			Spec: gwapiv1.HTTPRouteSpec{
+				CommonRouteSpec: gwapiv1a2.CommonRouteSpec{
+					ParentRefs: []gwapiv1.ParentReference{
+						{
+							Name: "test-gateway",
+						},
+					},
+				},
+				Rules: []gwapiv1.HTTPRouteRule{
+					{
+						BackendRefs: []gwapiv1.HTTPBackendRef{
+							{
+								BackendRef: gwapiv1.BackendRef{
+									BackendObjectReference: gwapiv1.BackendObjectReference{
+										Name: "test-service",
+										Port: ptr.To(gwapiv1.PortNumber(80)),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	// Create the target reference
+	target := gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+		LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+			Group: gwapiv1.Group(gwapiv1.GroupVersion.Group),
+			Kind:  resource.KindHTTPRoute,
+			Name:  "http-route",
+		},
+	}
+
+	// Create route map
+	routeMap := make(map[policyTargetRouteKey]*policyRouteTargetContext)
+	key := policyTargetRouteKey{
+		Kind:      string(resource.KindHTTPRoute),
+		Name:      "http-route",
+		Namespace: "default",
+	}
+	routeMap[key] = &policyRouteTargetContext{RouteContext: httpRoute}
+
+	gatewayRouteMap := make(map[string]map[string]sets.Set[string])
+	resources := resource.NewResources()
+	xdsIR := make(resource.XdsIRMap)
+
+	// Process the policy - this should set error status
+	tr.processSecurityPolicyForRoute(resources, xdsIR, routeMap, gatewayRouteMap, policy, target)
+
+	// Assert that the policy has a False condition (error was set)
+	require.True(t, hasParentFalseCondition(policy))
+}
+
+func Test_validateSecurityPolicyForTCP_Table(t *testing.T) {
+	tests := []struct {
+		name    string
+		spec    egv1a1.SecurityPolicySpec
+		wantErr bool
+	}{
+		{
+			name:    "no authorization (nil)",
+			spec:    egv1a1.SecurityPolicySpec{},
+			wantErr: false,
+		},
+		{
+			name: "authorization present but no rules",
+			spec: egv1a1.SecurityPolicySpec{
+				Authorization: &egv1a1.Authorization{
+					Rules: []egv1a1.AuthorizationRule{},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "deny rule ok without cidrs",
+			spec: egv1a1.SecurityPolicySpec{
+				Authorization: &egv1a1.Authorization{
+					Rules: []egv1a1.AuthorizationRule{
+						{Action: egv1a1.AuthorizationActionDeny},
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "allow with valid cidr ok",
+			spec: egv1a1.SecurityPolicySpec{
+				Authorization: &egv1a1.Authorization{
+					Rules: []egv1a1.AuthorizationRule{
+						{
+							Action: egv1a1.AuthorizationActionAllow,
+							Principal: egv1a1.Principal{
+								ClientCIDRs: []egv1a1.CIDR{"10.0.0.0/8"},
+							},
+						},
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "allow with invalid cidr errors",
+			spec: egv1a1.SecurityPolicySpec{
+				Authorization: &egv1a1.Authorization{
+					Rules: []egv1a1.AuthorizationRule{
+						{
+							Action: egv1a1.AuthorizationActionAllow,
+							Principal: egv1a1.Principal{
+								ClientCIDRs: []egv1a1.CIDR{"10.0.0.0/99"},
+							},
+						},
+					},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "deny with invalid cidr errors",
+			spec: egv1a1.SecurityPolicySpec{
+				Authorization: &egv1a1.Authorization{
+					Rules: []egv1a1.AuthorizationRule{
+						{
+							Action: egv1a1.AuthorizationActionDeny,
+							Principal: egv1a1.Principal{
+								ClientCIDRs: []egv1a1.CIDR{"10.0.0.0/99"},
+							},
+						},
+					},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "jwt principal not supported on tcp",
+			spec: egv1a1.SecurityPolicySpec{
+				Authorization: &egv1a1.Authorization{
+					Rules: []egv1a1.AuthorizationRule{
+						{
+							Action: egv1a1.AuthorizationActionAllow,
+							Principal: egv1a1.Principal{
+								ClientCIDRs: []egv1a1.CIDR{"10.0.0.0/8"},
+								JWT:         &egv1a1.JWTPrincipal{},
+							},
+						},
+					},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "headers principal not supported on tcp",
+			spec: egv1a1.SecurityPolicySpec{
+				Authorization: &egv1a1.Authorization{
+					Rules: []egv1a1.AuthorizationRule{
+						{
+							Action: egv1a1.AuthorizationActionAllow,
+							Principal: egv1a1.Principal{
+								ClientCIDRs: []egv1a1.CIDR{"10.0.0.0/8"},
+								Headers:     []egv1a1.AuthorizationHeaderMatch{{}},
+							},
+						},
+					},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "mixed allow and deny ok",
+			spec: egv1a1.SecurityPolicySpec{
+				Authorization: &egv1a1.Authorization{
+					Rules: []egv1a1.AuthorizationRule{
+						{
+							Action: egv1a1.AuthorizationActionAllow,
+							Principal: egv1a1.Principal{
+								ClientCIDRs: []egv1a1.CIDR{"192.168.0.0/16"},
+							},
+						},
+						{
+							Action:    egv1a1.AuthorizationActionDeny,
+							Principal: egv1a1.Principal{},
+						},
+					},
+				},
+			},
+			wantErr: false,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			p := &egv1a1.SecurityPolicy{Spec: tc.spec}
+			err := validateSecurityPolicyForTCP(p)
+			if tc.wantErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
 			}
 		})
 	}
