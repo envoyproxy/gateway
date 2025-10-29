@@ -19,7 +19,7 @@ no_list: true
         <i class="fas fa-rocket me-2"></i>Quickstart Guide
       </a>
       <a class="btn btn-lg btn-glass" href="https://github.com/envoyproxy/gateway">
-        <i class="fab fa-github me-2"></i>Explore GitHub
+        <i class="fab fa-github me-2"></i>View on GitHub
       </a>
     </div>
     <!-- <div class="mt-4">
