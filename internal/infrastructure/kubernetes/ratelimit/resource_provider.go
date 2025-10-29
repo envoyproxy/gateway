@@ -21,6 +21,7 @@ import (
 	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/common"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/resource"
 	"github.com/envoyproxy/gateway/internal/utils"
 )
@@ -364,40 +365,27 @@ func (r *ResourceRender) HorizontalPodAutoscaler() (*autoscalingv2.HorizontalPod
 
 func (r *ResourceRender) PodDisruptionBudget() (*policyv1.PodDisruptionBudget, error) {
 	pdb := r.rateLimitPdb
-	// If podDisruptionBudget config is nil, ignore PodDisruptionBudget.
 	if pdb == nil {
 		return nil, nil
 	}
 
-	selector := resource.GetSelector(rateLimitLabels())
-	pdbSpec := policyv1.PodDisruptionBudgetSpec{
-		Selector: resource.GetSelector(rateLimitLabels()),
+	// set name
+	resourceName := r.Name()
+	if pdb.Name != nil {
+		resourceName = *pdb.Name
 	}
 
-	switch {
-	case pdb.MinAvailable != nil:
-		pdbSpec.MinAvailable = pdb.MinAvailable
-	case pdb.MaxUnavailable != nil:
-		pdbSpec.MaxUnavailable = pdb.MaxUnavailable
-	default:
-		pdbSpec.MinAvailable = &intstr.IntOrString{Type: intstr.Int, IntVal: 0}
-	}
+	return common.GetPodDisruptionBudget(r.rateLimitPdb, resource.GetSelector(rateLimitLabels()), &types.NamespacedName{
+		Name:      resourceName,
+		Namespace: r.Namespace(),
+	}, r.ownerReferences())
+}
 
-	podDisruptionBudget := &policyv1.PodDisruptionBudget{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: r.Namespace(),
-			Labels:    selector.MatchLabels,
-		},
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "policy/v1",
-			Kind:       "PodDisruptionBudget",
-		},
-		Spec: pdbSpec,
-	}
-
+func (r *ResourceRender) ownerReferences() []metav1.OwnerReference {
+	var ownerReferences []metav1.OwnerReference
 	if r.ownerReferenceUID != nil {
 		if uid, ok := r.ownerReferenceUID[ResourceKindDeployment]; ok {
-			podDisruptionBudget.OwnerReferences = []metav1.OwnerReference{
+			ownerReferences = []metav1.OwnerReference{
 				{
 					Kind:       ResourceKindDeployment,
 					APIVersion: appsAPIVersion,
@@ -407,18 +395,5 @@ func (r *ResourceRender) PodDisruptionBudget() (*policyv1.PodDisruptionBudget, e
 			}
 		}
 	}
-
-	// set name
-	if pdb.Name != nil {
-		podDisruptionBudget.Name = *pdb.Name
-	} else {
-		podDisruptionBudget.Name = r.Name()
-	}
-
-	// apply merge patch to PodDisruptionBudget
-	podDisruptionBudget, err := pdb.ApplyMergePatch(podDisruptionBudget)
-	if err != nil {
-		return nil, err
-	}
-	return podDisruptionBudget, nil
+	return ownerReferences
 }
