@@ -2057,24 +2057,23 @@ func getIREndpointsFromEndpointSlice(endpointSlice *discoveryv1.EndpointSlice, p
 				continue
 			}
 			conditions := endpoint.Conditions
+
 			// Unknown Serving/Terminating (nil) should fall-back to Ready, see https://pkg.go.dev/k8s.io/api/discovery/v1#EndpointConditions
+			// So drain the endpoint if:
+			// 1. Both `Terminating` and `Serving` are != null, and either `Terminating=true` or `Serving=false`
+			// 2. Or `Ready=false`
+			var draining bool
 			if conditions.Serving != nil && conditions.Terminating != nil {
-				// Check if the endpoint is serving
-				if !*conditions.Serving {
-					continue
-				}
-				// Drain the endpoint if it is being terminated
-				draining := *conditions.Terminating
-				for _, address := range endpoint.Addresses {
-					ep := ir.NewDestEndpoint(nil, address, uint32(*endpointPort.Port), draining, endpoint.Zone)
-					endpoints = append(endpoints, ep)
-				}
-			} else if conditions.Ready == nil || *conditions.Ready {
-				for _, address := range endpoint.Addresses {
-					ep := ir.NewDestEndpoint(nil, address, uint32(*endpointPort.Port), false, endpoint.Zone)
-					endpoints = append(endpoints, ep)
-				}
+				draining = *conditions.Terminating || !*conditions.Serving
+			} else {
+				draining = conditions.Ready != nil && !*conditions.Ready
 			}
+
+			for _, address := range endpoint.Addresses {
+				ep := ir.NewDestEndpoint(nil, address, uint32(*endpointPort.Port), draining, endpoint.Zone)
+				endpoints = append(endpoints, ep)
+			}
+
 		}
 	}
 
