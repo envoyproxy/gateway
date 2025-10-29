@@ -21324,6 +21324,41 @@ spec:
                       For example, 20Mi, 1Gi, 256Ki etc.
                       Note: that when the suffix is not provided, the value is interpreted as bytes.
                     x-kubernetes-int-or-string: true
+                  preconnect:
+                    description: |-
+                      Preconnect configures proactive upstream connections to reduce latency by establishing
+                      connections before they’re needed and avoiding connection establishment overhead.
+
+                      If unset, Envoy will fetch connections as needed to serve in-flight requests.
+                    properties:
+                      perEndpointPercent:
+                        description: |-
+                          PerEndpointPercent configures how many additional connections to maintain per
+                          upstream endpoint, useful for high-QPS or latency sensitive services. Expressed as a
+                          percentage of the connections required by active streams
+                          (e.g. 100 = preconnect disabled, 105 = 1.05x connections per-endpoint, 200 = 2.00×).
+
+                          Allowed value range is between 100-300. When both PerEndpointPercent and
+                          PredictivePercent are set, Envoy ensures both are satisfied (max of the two).
+                        format: int32
+                        maximum: 300
+                        minimum: 100
+                        type: integer
+                      predictivePercent:
+                        description: |-
+                          PredictivePercent configures how many additional connections to maintain
+                          across the cluster by anticipating which upstream endpoint the load balancer
+                          will select next, useful for low-QPS services. Relies on deterministic
+                          loadbalancing and is only supported with Random or RoundRobin.
+                          Expressed as a percentage of the connections required by active streams
+                          (e.g. 100 = 1.0 (no preconnect), 105 = 1.05× connections across the cluster, 200 = 2.00×).
+
+                          Minimum allowed value is 100. When both PerEndpointPercent and PredictivePercent are
+                          set Envoy ensures both are satisfied per host (max of the two).
+                        format: int32
+                        minimum: 100
+                        type: integer
+                    type: object
                   socketBufferLimit:
                     allOf:
                     - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
@@ -23471,6 +23506,14 @@ spec:
                           Default: unlimited.
                         pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                         type: string
+                      maxStreamDuration:
+                        description: |-
+                          MaxStreamDuration is the maximum duration for a stream to complete. This timeout measures the time
+                          from when the request is sent until the response stream is fully consumed and does not apply to
+                          non-streaming requests.
+                          When set to "0s", no max duration is applied and streams can run indefinitely.
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                        type: string
                       requestTimeout:
                         description: RequestTimeout is the time until which entire
                           response is received from the upstream.
@@ -23520,6 +23563,12 @@ spec:
                 : true'
             - message: either compression or compressor can be set, not both
               rule: '!has(self.compression) || !has(self.compressor)'
+            - message: predictivePercent in preconnect policy only works with RoundRobin
+                or Random load balancers
+              rule: '!((has(self.connection) && has(self.connection.preconnect) &&
+                has(self.connection.preconnect.predictivePercent)) && !(has(self.loadBalancer)
+                && has(self.loadBalancer.type) && self.loadBalancer.type in [''Random'',
+                ''RoundRobin'']))'
           status:
             description: status defines the current status of BackendTrafficPolicy.
             properties:
@@ -24349,12 +24398,13 @@ spec:
                       PreserveXRequestID configures Envoy to keep the X-Request-ID header if passed for a request that is edge
                       (Edge request is the request from external clients to front Envoy) and not reset it, which is the current Envoy behaviour.
                       Defaults to false and cannot be combined with RequestID.
-                      Deprecated: use RequestID=Preserve instead
+                      Deprecated: use RequestID=PreserveOrGenerate instead
                     type: boolean
                   requestID:
                     description: |-
                       RequestID configures Envoy's behavior for handling the `X-Request-ID` header.
-                      Defaults to `Generate` and builds the `X-Request-ID` for every request and ignores pre-existing values from the edge.
+                      When omitted default behavior is `Generate` which builds the `X-Request-ID` for every request
+                       and ignores pre-existing values from the edge.
                       (An "edge request" refers to a request from an external client to the Envoy entrypoint.)
                     enum:
                     - PreserveOrGenerate
@@ -25873,6 +25923,41 @@ spec:
                                 For example, 20Mi, 1Gi, 256Ki etc.
                                 Note: that when the suffix is not provided, the value is interpreted as bytes.
                               x-kubernetes-int-or-string: true
+                            preconnect:
+                              description: |-
+                                Preconnect configures proactive upstream connections to reduce latency by establishing
+                                connections before they’re needed and avoiding connection establishment overhead.
+
+                                If unset, Envoy will fetch connections as needed to serve in-flight requests.
+                              properties:
+                                perEndpointPercent:
+                                  description: |-
+                                    PerEndpointPercent configures how many additional connections to maintain per
+                                    upstream endpoint, useful for high-QPS or latency sensitive services. Expressed as a
+                                    percentage of the connections required by active streams
+                                    (e.g. 100 = preconnect disabled, 105 = 1.05x connections per-endpoint, 200 = 2.00×).
+
+                                    Allowed value range is between 100-300. When both PerEndpointPercent and
+                                    PredictivePercent are set, Envoy ensures both are satisfied (max of the two).
+                                  format: int32
+                                  maximum: 300
+                                  minimum: 100
+                                  type: integer
+                                predictivePercent:
+                                  description: |-
+                                    PredictivePercent configures how many additional connections to maintain
+                                    across the cluster by anticipating which upstream endpoint the load balancer
+                                    will select next, useful for low-QPS services. Relies on deterministic
+                                    loadbalancing and is only supported with Random or RoundRobin.
+                                    Expressed as a percentage of the connections required by active streams
+                                    (e.g. 100 = 1.0 (no preconnect), 105 = 1.05× connections across the cluster, 200 = 2.00×).
+
+                                    Minimum allowed value is 100. When both PerEndpointPercent and PredictivePercent are
+                                    set Envoy ensures both are satisfied per host (max of the two).
+                                  format: int32
+                                  minimum: 100
+                                  type: integer
+                              type: object
                             socketBufferLimit:
                               allOf:
                               - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
@@ -26612,6 +26697,14 @@ spec:
                                     Default: unlimited.
                                   pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                   type: string
+                                maxStreamDuration:
+                                  description: |-
+                                    MaxStreamDuration is the maximum duration for a stream to complete. This timeout measures the time
+                                    from when the request is sent until the response stream is fully consumed and does not apply to
+                                    non-streaming requests.
+                                    When set to "0s", no max duration is applied and streams can run indefinitely.
+                                  pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                  type: string
                                 requestTimeout:
                                   description: RequestTimeout is the time until which
                                     entire response is received from the upstream.
@@ -26630,6 +26723,13 @@ spec:
                               type: object
                           type: object
                       type: object
+                      x-kubernetes-validations:
+                      - message: predictivePercent in preconnect policy only works
+                          with RoundRobin or Random load balancers
+                        rule: '!((has(self.connection) && has(self.connection.preconnect)
+                          && has(self.connection.preconnect.predictivePercent)) &&
+                          !(has(self.loadBalancer) && has(self.loadBalancer.type)
+                          && self.loadBalancer.type in [''Random'', ''RoundRobin'']))'
                     failOpen:
                       default: false
                       description: |-
@@ -39389,6 +39489,41 @@ spec:
                                                   For example, 20Mi, 1Gi, 256Ki etc.
                                                   Note: that when the suffix is not provided, the value is interpreted as bytes.
                                                 x-kubernetes-int-or-string: true
+                                              preconnect:
+                                                description: |-
+                                                  Preconnect configures proactive upstream connections to reduce latency by establishing
+                                                  connections before they’re needed and avoiding connection establishment overhead.
+
+                                                  If unset, Envoy will fetch connections as needed to serve in-flight requests.
+                                                properties:
+                                                  perEndpointPercent:
+                                                    description: |-
+                                                      PerEndpointPercent configures how many additional connections to maintain per
+                                                      upstream endpoint, useful for high-QPS or latency sensitive services. Expressed as a
+                                                      percentage of the connections required by active streams
+                                                      (e.g. 100 = preconnect disabled, 105 = 1.05x connections per-endpoint, 200 = 2.00×).
+
+                                                      Allowed value range is between 100-300. When both PerEndpointPercent and
+                                                      PredictivePercent are set, Envoy ensures both are satisfied (max of the two).
+                                                    format: int32
+                                                    maximum: 300
+                                                    minimum: 100
+                                                    type: integer
+                                                  predictivePercent:
+                                                    description: |-
+                                                      PredictivePercent configures how many additional connections to maintain
+                                                      across the cluster by anticipating which upstream endpoint the load balancer
+                                                      will select next, useful for low-QPS services. Relies on deterministic
+                                                      loadbalancing and is only supported with Random or RoundRobin.
+                                                      Expressed as a percentage of the connections required by active streams
+                                                      (e.g. 100 = 1.0 (no preconnect), 105 = 1.05× connections across the cluster, 200 = 2.00×).
+
+                                                      Minimum allowed value is 100. When both PerEndpointPercent and PredictivePercent are
+                                                      set Envoy ensures both are satisfied per host (max of the two).
+                                                    format: int32
+                                                    minimum: 100
+                                                    type: integer
+                                                type: object
                                               socketBufferLimit:
                                                 allOf:
                                                 - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
@@ -40192,6 +40327,14 @@ spec:
                                                       Default: unlimited.
                                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                     type: string
+                                                  maxStreamDuration:
+                                                    description: |-
+                                                      MaxStreamDuration is the maximum duration for a stream to complete. This timeout measures the time
+                                                      from when the request is sent until the response stream is fully consumed and does not apply to
+                                                      non-streaming requests.
+                                                      When set to "0s", no max duration is applied and streams can run indefinitely.
+                                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                                    type: string
                                                   requestTimeout:
                                                     description: RequestTimeout is
                                                       the time until which entire
@@ -40213,6 +40356,15 @@ spec:
                                                 type: object
                                             type: object
                                         type: object
+                                        x-kubernetes-validations:
+                                        - message: predictivePercent in preconnect
+                                            policy only works with RoundRobin or Random
+                                            load balancers
+                                          rule: '!((has(self.connection) && has(self.connection.preconnect)
+                                            && has(self.connection.preconnect.predictivePercent))
+                                            && !(has(self.loadBalancer) && has(self.loadBalancer.type)
+                                            && self.loadBalancer.type in [''Random'',
+                                            ''RoundRobin'']))'
                                       http:
                                         description: HTTP defines additional configuration
                                           specific to HTTP access logs.
@@ -40544,6 +40696,41 @@ spec:
                                                   For example, 20Mi, 1Gi, 256Ki etc.
                                                   Note: that when the suffix is not provided, the value is interpreted as bytes.
                                                 x-kubernetes-int-or-string: true
+                                              preconnect:
+                                                description: |-
+                                                  Preconnect configures proactive upstream connections to reduce latency by establishing
+                                                  connections before they’re needed and avoiding connection establishment overhead.
+
+                                                  If unset, Envoy will fetch connections as needed to serve in-flight requests.
+                                                properties:
+                                                  perEndpointPercent:
+                                                    description: |-
+                                                      PerEndpointPercent configures how many additional connections to maintain per
+                                                      upstream endpoint, useful for high-QPS or latency sensitive services. Expressed as a
+                                                      percentage of the connections required by active streams
+                                                      (e.g. 100 = preconnect disabled, 105 = 1.05x connections per-endpoint, 200 = 2.00×).
+
+                                                      Allowed value range is between 100-300. When both PerEndpointPercent and
+                                                      PredictivePercent are set, Envoy ensures both are satisfied (max of the two).
+                                                    format: int32
+                                                    maximum: 300
+                                                    minimum: 100
+                                                    type: integer
+                                                  predictivePercent:
+                                                    description: |-
+                                                      PredictivePercent configures how many additional connections to maintain
+                                                      across the cluster by anticipating which upstream endpoint the load balancer
+                                                      will select next, useful for low-QPS services. Relies on deterministic
+                                                      loadbalancing and is only supported with Random or RoundRobin.
+                                                      Expressed as a percentage of the connections required by active streams
+                                                      (e.g. 100 = 1.0 (no preconnect), 105 = 1.05× connections across the cluster, 200 = 2.00×).
+
+                                                      Minimum allowed value is 100. When both PerEndpointPercent and PredictivePercent are
+                                                      set Envoy ensures both are satisfied per host (max of the two).
+                                                    format: int32
+                                                    minimum: 100
+                                                    type: integer
+                                                type: object
                                               socketBufferLimit:
                                                 allOf:
                                                 - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
@@ -41347,6 +41534,14 @@ spec:
                                                       Default: unlimited.
                                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                     type: string
+                                                  maxStreamDuration:
+                                                    description: |-
+                                                      MaxStreamDuration is the maximum duration for a stream to complete. This timeout measures the time
+                                                      from when the request is sent until the response stream is fully consumed and does not apply to
+                                                      non-streaming requests.
+                                                      When set to "0s", no max duration is applied and streams can run indefinitely.
+                                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                                    type: string
                                                   requestTimeout:
                                                     description: RequestTimeout is
                                                       the time until which entire
@@ -41368,6 +41563,15 @@ spec:
                                                 type: object
                                             type: object
                                         type: object
+                                        x-kubernetes-validations:
+                                        - message: predictivePercent in preconnect
+                                            policy only works with RoundRobin or Random
+                                            load balancers
+                                          rule: '!((has(self.connection) && has(self.connection.preconnect)
+                                            && has(self.connection.preconnect.predictivePercent))
+                                            && !(has(self.loadBalancer) && has(self.loadBalancer.type)
+                                            && self.loadBalancer.type in [''Random'',
+                                            ''RoundRobin'']))'
                                       host:
                                         description: |-
                                           Host define the extension service hostname.
@@ -41812,6 +42016,41 @@ spec:
                                             For example, 20Mi, 1Gi, 256Ki etc.
                                             Note: that when the suffix is not provided, the value is interpreted as bytes.
                                           x-kubernetes-int-or-string: true
+                                        preconnect:
+                                          description: |-
+                                            Preconnect configures proactive upstream connections to reduce latency by establishing
+                                            connections before they’re needed and avoiding connection establishment overhead.
+
+                                            If unset, Envoy will fetch connections as needed to serve in-flight requests.
+                                          properties:
+                                            perEndpointPercent:
+                                              description: |-
+                                                PerEndpointPercent configures how many additional connections to maintain per
+                                                upstream endpoint, useful for high-QPS or latency sensitive services. Expressed as a
+                                                percentage of the connections required by active streams
+                                                (e.g. 100 = preconnect disabled, 105 = 1.05x connections per-endpoint, 200 = 2.00×).
+
+                                                Allowed value range is between 100-300. When both PerEndpointPercent and
+                                                PredictivePercent are set, Envoy ensures both are satisfied (max of the two).
+                                              format: int32
+                                              maximum: 300
+                                              minimum: 100
+                                              type: integer
+                                            predictivePercent:
+                                              description: |-
+                                                PredictivePercent configures how many additional connections to maintain
+                                                across the cluster by anticipating which upstream endpoint the load balancer
+                                                will select next, useful for low-QPS services. Relies on deterministic
+                                                loadbalancing and is only supported with Random or RoundRobin.
+                                                Expressed as a percentage of the connections required by active streams
+                                                (e.g. 100 = 1.0 (no preconnect), 105 = 1.05× connections across the cluster, 200 = 2.00×).
+
+                                                Minimum allowed value is 100. When both PerEndpointPercent and PredictivePercent are
+                                                set Envoy ensures both are satisfied per host (max of the two).
+                                              format: int32
+                                              minimum: 100
+                                              type: integer
+                                          type: object
                                         socketBufferLimit:
                                           allOf:
                                           - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
@@ -42583,6 +42822,14 @@ spec:
                                                 Default: unlimited.
                                               pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                               type: string
+                                            maxStreamDuration:
+                                              description: |-
+                                                MaxStreamDuration is the maximum duration for a stream to complete. This timeout measures the time
+                                                from when the request is sent until the response stream is fully consumed and does not apply to
+                                                non-streaming requests.
+                                                When set to "0s", no max duration is applied and streams can run indefinitely.
+                                              pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                              type: string
                                             requestTimeout:
                                               description: RequestTimeout is the time
                                                 until which entire response is received
@@ -42602,6 +42849,13 @@ spec:
                                           type: object
                                       type: object
                                   type: object
+                                  x-kubernetes-validations:
+                                  - message: predictivePercent in preconnect policy
+                                      only works with RoundRobin or Random load balancers
+                                    rule: '!((has(self.connection) && has(self.connection.preconnect)
+                                      && has(self.connection.preconnect.predictivePercent))
+                                      && !(has(self.loadBalancer) && has(self.loadBalancer.type)
+                                      && self.loadBalancer.type in [''Random'', ''RoundRobin'']))'
                                 host:
                                   description: |-
                                     Host define the service hostname.
@@ -42972,6 +43226,41 @@ spec:
                                       For example, 20Mi, 1Gi, 256Ki etc.
                                       Note: that when the suffix is not provided, the value is interpreted as bytes.
                                     x-kubernetes-int-or-string: true
+                                  preconnect:
+                                    description: |-
+                                      Preconnect configures proactive upstream connections to reduce latency by establishing
+                                      connections before they’re needed and avoiding connection establishment overhead.
+
+                                      If unset, Envoy will fetch connections as needed to serve in-flight requests.
+                                    properties:
+                                      perEndpointPercent:
+                                        description: |-
+                                          PerEndpointPercent configures how many additional connections to maintain per
+                                          upstream endpoint, useful for high-QPS or latency sensitive services. Expressed as a
+                                          percentage of the connections required by active streams
+                                          (e.g. 100 = preconnect disabled, 105 = 1.05x connections per-endpoint, 200 = 2.00×).
+
+                                          Allowed value range is between 100-300. When both PerEndpointPercent and
+                                          PredictivePercent are set, Envoy ensures both are satisfied (max of the two).
+                                        format: int32
+                                        maximum: 300
+                                        minimum: 100
+                                        type: integer
+                                      predictivePercent:
+                                        description: |-
+                                          PredictivePercent configures how many additional connections to maintain
+                                          across the cluster by anticipating which upstream endpoint the load balancer
+                                          will select next, useful for low-QPS services. Relies on deterministic
+                                          loadbalancing and is only supported with Random or RoundRobin.
+                                          Expressed as a percentage of the connections required by active streams
+                                          (e.g. 100 = 1.0 (no preconnect), 105 = 1.05× connections across the cluster, 200 = 2.00×).
+
+                                          Minimum allowed value is 100. When both PerEndpointPercent and PredictivePercent are
+                                          set Envoy ensures both are satisfied per host (max of the two).
+                                        format: int32
+                                        minimum: 100
+                                        type: integer
+                                    type: object
                                   socketBufferLimit:
                                     allOf:
                                     - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
@@ -43734,6 +44023,14 @@ spec:
                                           Default: unlimited.
                                         pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                         type: string
+                                      maxStreamDuration:
+                                        description: |-
+                                          MaxStreamDuration is the maximum duration for a stream to complete. This timeout measures the time
+                                          from when the request is sent until the response stream is fully consumed and does not apply to
+                                          non-streaming requests.
+                                          When set to "0s", no max duration is applied and streams can run indefinitely.
+                                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                        type: string
                                       requestTimeout:
                                         description: RequestTimeout is the time until
                                           which entire response is received from the
@@ -43753,6 +44050,13 @@ spec:
                                     type: object
                                 type: object
                             type: object
+                            x-kubernetes-validations:
+                            - message: predictivePercent in preconnect policy only
+                                works with RoundRobin or Random load balancers
+                              rule: '!((has(self.connection) && has(self.connection.preconnect)
+                                && has(self.connection.preconnect.predictivePercent))
+                                && !(has(self.loadBalancer) && has(self.loadBalancer.type)
+                                && self.loadBalancer.type in [''Random'', ''RoundRobin'']))'
                           host:
                             description: |-
                               Host define the provider service hostname.
@@ -45115,6 +45419,41 @@ spec:
                                   For example, 20Mi, 1Gi, 256Ki etc.
                                   Note: that when the suffix is not provided, the value is interpreted as bytes.
                                 x-kubernetes-int-or-string: true
+                              preconnect:
+                                description: |-
+                                  Preconnect configures proactive upstream connections to reduce latency by establishing
+                                  connections before they’re needed and avoiding connection establishment overhead.
+
+                                  If unset, Envoy will fetch connections as needed to serve in-flight requests.
+                                properties:
+                                  perEndpointPercent:
+                                    description: |-
+                                      PerEndpointPercent configures how many additional connections to maintain per
+                                      upstream endpoint, useful for high-QPS or latency sensitive services. Expressed as a
+                                      percentage of the connections required by active streams
+                                      (e.g. 100 = preconnect disabled, 105 = 1.05x connections per-endpoint, 200 = 2.00×).
+
+                                      Allowed value range is between 100-300. When both PerEndpointPercent and
+                                      PredictivePercent are set, Envoy ensures both are satisfied (max of the two).
+                                    format: int32
+                                    maximum: 300
+                                    minimum: 100
+                                    type: integer
+                                  predictivePercent:
+                                    description: |-
+                                      PredictivePercent configures how many additional connections to maintain
+                                      across the cluster by anticipating which upstream endpoint the load balancer
+                                      will select next, useful for low-QPS services. Relies on deterministic
+                                      loadbalancing and is only supported with Random or RoundRobin.
+                                      Expressed as a percentage of the connections required by active streams
+                                      (e.g. 100 = 1.0 (no preconnect), 105 = 1.05× connections across the cluster, 200 = 2.00×).
+
+                                      Minimum allowed value is 100. When both PerEndpointPercent and PredictivePercent are
+                                      set Envoy ensures both are satisfied per host (max of the two).
+                                    format: int32
+                                    minimum: 100
+                                    type: integer
+                                type: object
                               socketBufferLimit:
                                 allOf:
                                 - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
@@ -45862,6 +46201,14 @@ spec:
                                       Default: unlimited.
                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
+                                  maxStreamDuration:
+                                    description: |-
+                                      MaxStreamDuration is the maximum duration for a stream to complete. This timeout measures the time
+                                      from when the request is sent until the response stream is fully consumed and does not apply to
+                                      non-streaming requests.
+                                      When set to "0s", no max duration is applied and streams can run indefinitely.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
                                   requestTimeout:
                                     description: RequestTimeout is the time until
                                       which entire response is received from the upstream.
@@ -45880,6 +46227,13 @@ spec:
                                 type: object
                             type: object
                         type: object
+                        x-kubernetes-validations:
+                        - message: predictivePercent in preconnect policy only works
+                            with RoundRobin or Random load balancers
+                          rule: '!((has(self.connection) && has(self.connection.preconnect)
+                            && has(self.connection.preconnect.predictivePercent))
+                            && !(has(self.loadBalancer) && has(self.loadBalancer.type)
+                            && self.loadBalancer.type in [''Random'', ''RoundRobin'']))'
                     type: object
                     x-kubernetes-validations:
                     - message: backendRef or backendRefs needs to be set
@@ -46162,6 +46516,41 @@ spec:
                                   For example, 20Mi, 1Gi, 256Ki etc.
                                   Note: that when the suffix is not provided, the value is interpreted as bytes.
                                 x-kubernetes-int-or-string: true
+                              preconnect:
+                                description: |-
+                                  Preconnect configures proactive upstream connections to reduce latency by establishing
+                                  connections before they’re needed and avoiding connection establishment overhead.
+
+                                  If unset, Envoy will fetch connections as needed to serve in-flight requests.
+                                properties:
+                                  perEndpointPercent:
+                                    description: |-
+                                      PerEndpointPercent configures how many additional connections to maintain per
+                                      upstream endpoint, useful for high-QPS or latency sensitive services. Expressed as a
+                                      percentage of the connections required by active streams
+                                      (e.g. 100 = preconnect disabled, 105 = 1.05x connections per-endpoint, 200 = 2.00×).
+
+                                      Allowed value range is between 100-300. When both PerEndpointPercent and
+                                      PredictivePercent are set, Envoy ensures both are satisfied (max of the two).
+                                    format: int32
+                                    maximum: 300
+                                    minimum: 100
+                                    type: integer
+                                  predictivePercent:
+                                    description: |-
+                                      PredictivePercent configures how many additional connections to maintain
+                                      across the cluster by anticipating which upstream endpoint the load balancer
+                                      will select next, useful for low-QPS services. Relies on deterministic
+                                      loadbalancing and is only supported with Random or RoundRobin.
+                                      Expressed as a percentage of the connections required by active streams
+                                      (e.g. 100 = 1.0 (no preconnect), 105 = 1.05× connections across the cluster, 200 = 2.00×).
+
+                                      Minimum allowed value is 100. When both PerEndpointPercent and PredictivePercent are
+                                      set Envoy ensures both are satisfied per host (max of the two).
+                                    format: int32
+                                    minimum: 100
+                                    type: integer
+                                type: object
                               socketBufferLimit:
                                 allOf:
                                 - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
@@ -46909,6 +47298,14 @@ spec:
                                       Default: unlimited.
                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
+                                  maxStreamDuration:
+                                    description: |-
+                                      MaxStreamDuration is the maximum duration for a stream to complete. This timeout measures the time
+                                      from when the request is sent until the response stream is fully consumed and does not apply to
+                                      non-streaming requests.
+                                      When set to "0s", no max duration is applied and streams can run indefinitely.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
                                   requestTimeout:
                                     description: RequestTimeout is the time until
                                       which entire response is received from the upstream.
@@ -46927,6 +47324,13 @@ spec:
                                 type: object
                             type: object
                         type: object
+                        x-kubernetes-validations:
+                        - message: predictivePercent in preconnect policy only works
+                            with RoundRobin or Random load balancers
+                          rule: '!((has(self.connection) && has(self.connection.preconnect)
+                            && has(self.connection.preconnect.predictivePercent))
+                            && !(has(self.loadBalancer) && has(self.loadBalancer.type)
+                            && self.loadBalancer.type in [''Random'', ''RoundRobin'']))'
                       headersToBackend:
                         description: |-
                           HeadersToBackend are the authorization response headers that will be added
@@ -47407,6 +47811,41 @@ spec:
                                         For example, 20Mi, 1Gi, 256Ki etc.
                                         Note: that when the suffix is not provided, the value is interpreted as bytes.
                                       x-kubernetes-int-or-string: true
+                                    preconnect:
+                                      description: |-
+                                        Preconnect configures proactive upstream connections to reduce latency by establishing
+                                        connections before they’re needed and avoiding connection establishment overhead.
+
+                                        If unset, Envoy will fetch connections as needed to serve in-flight requests.
+                                      properties:
+                                        perEndpointPercent:
+                                          description: |-
+                                            PerEndpointPercent configures how many additional connections to maintain per
+                                            upstream endpoint, useful for high-QPS or latency sensitive services. Expressed as a
+                                            percentage of the connections required by active streams
+                                            (e.g. 100 = preconnect disabled, 105 = 1.05x connections per-endpoint, 200 = 2.00×).
+
+                                            Allowed value range is between 100-300. When both PerEndpointPercent and
+                                            PredictivePercent are set, Envoy ensures both are satisfied (max of the two).
+                                          format: int32
+                                          maximum: 300
+                                          minimum: 100
+                                          type: integer
+                                        predictivePercent:
+                                          description: |-
+                                            PredictivePercent configures how many additional connections to maintain
+                                            across the cluster by anticipating which upstream endpoint the load balancer
+                                            will select next, useful for low-QPS services. Relies on deterministic
+                                            loadbalancing and is only supported with Random or RoundRobin.
+                                            Expressed as a percentage of the connections required by active streams
+                                            (e.g. 100 = 1.0 (no preconnect), 105 = 1.05× connections across the cluster, 200 = 2.00×).
+
+                                            Minimum allowed value is 100. When both PerEndpointPercent and PredictivePercent are
+                                            set Envoy ensures both are satisfied per host (max of the two).
+                                          format: int32
+                                          minimum: 100
+                                          type: integer
+                                      type: object
                                     socketBufferLimit:
                                       allOf:
                                       - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
@@ -48172,6 +48611,14 @@ spec:
                                             Default: unlimited.
                                           pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                           type: string
+                                        maxStreamDuration:
+                                          description: |-
+                                            MaxStreamDuration is the maximum duration for a stream to complete. This timeout measures the time
+                                            from when the request is sent until the response stream is fully consumed and does not apply to
+                                            non-streaming requests.
+                                            When set to "0s", no max duration is applied and streams can run indefinitely.
+                                          pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                          type: string
                                         requestTimeout:
                                           description: RequestTimeout is the time
                                             until which entire response is received
@@ -48191,6 +48638,13 @@ spec:
                                       type: object
                                   type: object
                               type: object
+                              x-kubernetes-validations:
+                              - message: predictivePercent in preconnect policy only
+                                  works with RoundRobin or Random load balancers
+                                rule: '!((has(self.connection) && has(self.connection.preconnect)
+                                  && has(self.connection.preconnect.predictivePercent))
+                                  && !(has(self.loadBalancer) && has(self.loadBalancer.type)
+                                  && self.loadBalancer.type in [''Random'', ''RoundRobin'']))'
                             cacheDuration:
                               default: 300s
                               description: |-
@@ -48736,6 +49190,41 @@ spec:
                                   For example, 20Mi, 1Gi, 256Ki etc.
                                   Note: that when the suffix is not provided, the value is interpreted as bytes.
                                 x-kubernetes-int-or-string: true
+                              preconnect:
+                                description: |-
+                                  Preconnect configures proactive upstream connections to reduce latency by establishing
+                                  connections before they’re needed and avoiding connection establishment overhead.
+
+                                  If unset, Envoy will fetch connections as needed to serve in-flight requests.
+                                properties:
+                                  perEndpointPercent:
+                                    description: |-
+                                      PerEndpointPercent configures how many additional connections to maintain per
+                                      upstream endpoint, useful for high-QPS or latency sensitive services. Expressed as a
+                                      percentage of the connections required by active streams
+                                      (e.g. 100 = preconnect disabled, 105 = 1.05x connections per-endpoint, 200 = 2.00×).
+
+                                      Allowed value range is between 100-300. When both PerEndpointPercent and
+                                      PredictivePercent are set, Envoy ensures both are satisfied (max of the two).
+                                    format: int32
+                                    maximum: 300
+                                    minimum: 100
+                                    type: integer
+                                  predictivePercent:
+                                    description: |-
+                                      PredictivePercent configures how many additional connections to maintain
+                                      across the cluster by anticipating which upstream endpoint the load balancer
+                                      will select next, useful for low-QPS services. Relies on deterministic
+                                      loadbalancing and is only supported with Random or RoundRobin.
+                                      Expressed as a percentage of the connections required by active streams
+                                      (e.g. 100 = 1.0 (no preconnect), 105 = 1.05× connections across the cluster, 200 = 2.00×).
+
+                                      Minimum allowed value is 100. When both PerEndpointPercent and PredictivePercent are
+                                      set Envoy ensures both are satisfied per host (max of the two).
+                                    format: int32
+                                    minimum: 100
+                                    type: integer
+                                type: object
                               socketBufferLimit:
                                 allOf:
                                 - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
@@ -49483,6 +49972,14 @@ spec:
                                       Default: unlimited.
                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
+                                  maxStreamDuration:
+                                    description: |-
+                                      MaxStreamDuration is the maximum duration for a stream to complete. This timeout measures the time
+                                      from when the request is sent until the response stream is fully consumed and does not apply to
+                                      non-streaming requests.
+                                      When set to "0s", no max duration is applied and streams can run indefinitely.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
                                   requestTimeout:
                                     description: RequestTimeout is the time until
                                       which entire response is received from the upstream.
@@ -49501,6 +49998,13 @@ spec:
                                 type: object
                             type: object
                         type: object
+                        x-kubernetes-validations:
+                        - message: predictivePercent in preconnect policy only works
+                            with RoundRobin or Random load balancers
+                          rule: '!((has(self.connection) && has(self.connection.preconnect)
+                            && has(self.connection.preconnect.predictivePercent))
+                            && !(has(self.loadBalancer) && has(self.loadBalancer.type)
+                            && self.loadBalancer.type in [''Random'', ''RoundRobin'']))'
                       endSessionEndpoint:
                         description: |-
                           The OIDC Provider's [end session endpoint](https://openid.net/specs/openid-connect-core-1_0.html#RPLogout).

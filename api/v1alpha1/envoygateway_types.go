@@ -269,6 +269,11 @@ type EnvoyGatewayKubernetesProvider struct {
 	// +optional
 	RateLimitHpa *KubernetesHorizontalPodAutoscalerSpec `json:"rateLimitHpa,omitempty"`
 
+	// RateLimitPDB allows to control the pod disruption budget of rate limit service.
+	//
+	// +optional
+	RateLimitPDB *KubernetesPodDisruptionBudgetSpec `json:"rateLimitPdb,omitempty"`
+
 	// Watch holds configuration of which input resources should be watched and reconciled.
 	// +optional
 	Watch *KubernetesWatchMode `json:"watch,omitempty"`
