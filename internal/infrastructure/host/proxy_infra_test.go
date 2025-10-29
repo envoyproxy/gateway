@@ -6,13 +6,17 @@
 package host
 
 import (
+	"context"
+	"fmt"
 	"io"
 	"os"
 	"path"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"github.com/stretchr/testify/require"
+	func_e_api "github.com/tetratelabs/func-e/api"
 	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -21,11 +25,13 @@ import (
 	"github.com/envoyproxy/gateway/internal/infrastructure/common"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/logging"
+	"github.com/envoyproxy/gateway/internal/utils"
 	"github.com/envoyproxy/gateway/internal/utils/file"
 	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
-	"github.com/envoyproxy/gateway/test/utils"
+	testutils "github.com/envoyproxy/gateway/test/utils"
 )
 
+// newMockInfra doesn't actually run Envoy
 func newMockInfra(t *testing.T, cfg *config.Server) *Infra {
 	t.Helper()
 	homeDir := t.TempDir()
@@ -51,51 +57,197 @@ func newMockInfra(t *testing.T, cfg *config.Server) *Infra {
 		RuntimeDir: homeDir,
 	}
 	infra := &Infra{
-		Paths:           paths,
-		Logger:          logging.DefaultLogger(io.Discard, egv1a1.LogLevelInfo),
-		EnvoyGateway:    cfg.EnvoyGateway,
-		proxyContextMap: make(map[string]*proxyContext),
-		sdsConfigPath:   proxyDir,
-		Stdout:          io.Discard,
-		Stderr:          io.Discard,
+		Paths:         paths,
+		Logger:        logging.DefaultLogger(io.Discard, egv1a1.LogLevelInfo),
+		EnvoyGateway:  cfg.EnvoyGateway,
+		sdsConfigPath: proxyDir,
+		Stdout:        io.Discard,
+		Stderr:        io.Discard,
+		envoyRunner: func(ctx context.Context, args []string, options ...func_e_api.RunOption) error {
+			// Block until context is cancelled (mimics real Envoy blocking)
+			<-ctx.Done()
+			return ctx.Err()
+		},
 	}
 	return infra
 }
 
-func TestInfraCreateProxy(t *testing.T) {
+func TestInfra_CreateOrUpdateProxyInfra(t *testing.T) {
 	cfg, err := config.New(io.Discard, io.Discard)
 	require.NoError(t, err)
 	infra := newMockInfra(t, cfg)
 
+	t.Run("create new proxy", func(t *testing.T) {
+		infraIR := &ir.Infra{
+			Proxy: &ir.ProxyInfra{
+				Name:      "test-proxy",
+				Namespace: "default",
+				Config: &egv1a1.EnvoyProxy{
+					Spec: egv1a1.EnvoyProxySpec{
+						Logging: egv1a1.ProxyLogging{
+							Level: map[egv1a1.ProxyLogComponent]egv1a1.LogLevel{
+								egv1a1.LogComponentDefault: egv1a1.LogLevelInfo,
+							},
+						},
+					},
+				},
+			},
+		}
+
+		hashedName := utils.GetHashedName("test-proxy", 64)
+		t.Cleanup(func() { infra.stopEnvoy(hashedName) })
+
+		err := infra.CreateOrUpdateProxyInfra(t.Context(), infraIR)
+		require.NoError(t, err)
+
+		// Verify proxy context was stored
+		_, loaded := infra.proxyContextMap.Load(hashedName)
+		require.True(t, loaded, "proxy should be loaded after creation")
+	})
+
+	t.Run("idempotent - proxy already exists", func(t *testing.T) {
+		infraIR := &ir.Infra{
+			Proxy: &ir.ProxyInfra{
+				Name:      "test-proxy-idempotent",
+				Namespace: "default",
+				Config: &egv1a1.EnvoyProxy{
+					Spec: egv1a1.EnvoyProxySpec{
+						Logging: egv1a1.ProxyLogging{
+							Level: map[egv1a1.ProxyLogComponent]egv1a1.LogLevel{
+								egv1a1.LogComponentDefault: egv1a1.LogLevelInfo,
+							},
+						},
+					},
+				},
+			},
+		}
+
+		hashedName := utils.GetHashedName("test-proxy-idempotent", 64)
+		t.Cleanup(func() { infra.stopEnvoy(hashedName) })
+
+		// First call creates the proxy
+		err := infra.CreateOrUpdateProxyInfra(t.Context(), infraIR)
+		require.NoError(t, err)
+
+		_, loaded := infra.proxyContextMap.Load(hashedName)
+		require.True(t, loaded, "proxy should be loaded after first call")
+
+		// Second call should be idempotent (early return without error)
+		err = infra.CreateOrUpdateProxyInfra(t.Context(), infraIR)
+		require.NoError(t, err)
+
+		// Verify proxy is still loaded and wasn't recreated
+		_, loaded = infra.proxyContextMap.Load(hashedName)
+		require.True(t, loaded, "proxy should still be loaded after second call")
+	})
+
 	testCases := []struct {
-		name   string
-		expect bool
-		infra  *ir.Infra
+		name          string
+		infra         *ir.Infra
+		expectedError string
 	}{
 		{
-			name:   "nil cfg",
-			expect: false,
-			infra:  nil,
+			name:          "nil cfg",
+			infra:         nil,
+			expectedError: "infra ir is nil",
 		},
 		{
-			name:   "nil proxy",
-			expect: false,
+			name: "nil proxy",
 			infra: &ir.Infra{
 				Proxy: nil,
 			},
+			expectedError: "infra proxy ir is nil",
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			err = infra.CreateOrUpdateProxyInfra(t.Context(), tc.infra)
-			if tc.expect {
-				require.NoError(t, err)
-			} else {
-				require.Error(t, err)
-			}
+			actual := infra.CreateOrUpdateProxyInfra(t.Context(), tc.infra)
+			require.EqualError(t, actual, tc.expectedError)
 		})
 	}
+
+	t.Run("invalid_bootstrap_config", func(t *testing.T) {
+		infraIR := &ir.Infra{
+			Proxy: &ir.ProxyInfra{
+				Name:      "test-proxy-invalid",
+				Namespace: "default",
+				Config: &egv1a1.EnvoyProxy{
+					Spec: egv1a1.EnvoyProxySpec{
+						Bootstrap: &egv1a1.ProxyBootstrap{
+							Type: ptr.To(egv1a1.BootstrapTypeMerge),
+							// Invalid YAML that will cause bootstrap merge to fail
+							Value: ptr.To("invalid: yaml: [unclosed"),
+						},
+					},
+				},
+			},
+		}
+
+		err := infra.CreateOrUpdateProxyInfra(t.Context(), infraIR)
+		require.Error(t, err)
+	})
+}
+
+func TestInfra_DeleteProxyInfra(t *testing.T) {
+	cfg, err := config.New(io.Discard, io.Discard)
+	require.NoError(t, err)
+	infra := newMockInfra(t, cfg)
+
+	t.Run("delete existing proxy", func(t *testing.T) {
+		infraIR := &ir.Infra{
+			Proxy: &ir.ProxyInfra{
+				Name:      "test-proxy-delete",
+				Namespace: "default",
+				Config: &egv1a1.EnvoyProxy{
+					Spec: egv1a1.EnvoyProxySpec{
+						Logging: egv1a1.ProxyLogging{
+							Level: map[egv1a1.ProxyLogComponent]egv1a1.LogLevel{
+								egv1a1.LogComponentDefault: egv1a1.LogLevelInfo,
+							},
+						},
+					},
+				},
+			},
+		}
+
+		// Create a proxy first
+		err := infra.CreateOrUpdateProxyInfra(t.Context(), infraIR)
+		require.NoError(t, err)
+
+		hashedName := utils.GetHashedName("test-proxy-delete", 64)
+		t.Cleanup(func() { infra.stopEnvoy(hashedName) })
+
+		_, loaded := infra.proxyContextMap.Load(hashedName)
+		require.True(t, loaded, "proxy should be loaded before deletion")
+
+		// Delete the proxy
+		err = infra.DeleteProxyInfra(t.Context(), infraIR)
+		require.NoError(t, err)
+
+		// Verify deletion
+		_, loaded = infra.proxyContextMap.Load(hashedName)
+		require.False(t, loaded, "proxy should be removed after deletion")
+	})
+
+	t.Run("delete non-existent proxy", func(t *testing.T) {
+		infraIR := &ir.Infra{
+			Proxy: &ir.ProxyInfra{
+				Name:      "non-existent-proxy",
+				Namespace: "default",
+				Config:    &egv1a1.EnvoyProxy{},
+			},
+		}
+
+		// Delete a proxy that was never created - should not error
+		err := infra.DeleteProxyInfra(t.Context(), infraIR)
+		require.NoError(t, err)
+	})
+
+	t.Run("nil infra", func(t *testing.T) {
+		err := infra.DeleteProxyInfra(t.Context(), nil)
+		require.EqualError(t, err, "infra ir is nil")
+	})
 }
 
 func TestExtractSemver(t *testing.T) {
@@ -126,8 +278,8 @@ func TestExtractSemver(t *testing.T) {
 	}
 }
 
-// TestInfra_runEnvoy verifies Envoy process lifecycle, output redirection, and XDG directory usage.
-func TestInfra_runEnvoy(t *testing.T) {
+// TestInfra_runEnvoy_integration verifies Envoy process lifecycle, output redirection, and XDG directory usage.
+func TestInfra_runEnvoy_integration(t *testing.T) {
 	// Create separate XDG directories
 	baseDir := t.TempDir()
 	configHome := path.Join(baseDir, "config")
@@ -136,31 +288,39 @@ func TestInfra_runEnvoy(t *testing.T) {
 	runtimeDir := path.Join(baseDir, "runtime")
 
 	// Create separate buffers for stdout and stderr
-	buffers := utils.DumpLogsOnFail(t, "stdout", "stderr")
+	buffers := testutils.DumpLogsOnFail(t, "stdout", "stderr")
 	stdout := buffers[0]
 	stderr := buffers[1]
 
-	paths := &Paths{
-		ConfigHome: configHome,
-		DataHome:   dataHome,
-		StateHome:  stateHome,
-		RuntimeDir: runtimeDir,
+	// Create config with custom paths
+	cfg, err := config.New(stdout, stderr)
+	require.NoError(t, err)
+	cfg.EnvoyGateway.Provider = &egv1a1.EnvoyGatewayProvider{
+		Type: egv1a1.ProviderTypeCustom,
+		Custom: &egv1a1.EnvoyGatewayCustomProvider{
+			Infrastructure: &egv1a1.EnvoyGatewayInfrastructureProvider{
+				Type: egv1a1.InfrastructureProviderTypeHost,
+				Host: &egv1a1.EnvoyGatewayHostInfrastructureProvider{
+					ConfigHome: ptr.To(configHome),
+					DataHome:   ptr.To(dataHome),
+					StateHome:  ptr.To(stateHome),
+					RuntimeDir: ptr.To(runtimeDir),
+				},
+			},
+		},
 	}
-	i := &Infra{
-		proxyContextMap: make(map[string]*proxyContext),
-		Paths:           paths,
-		Logger:          logging.DefaultLogger(stdout, egv1a1.LogLevelInfo),
-		Stdout:          stdout,
-		Stderr:          stderr,
-	}
+
+	i, err := NewInfra(t.Context(), cfg, logging.DefaultLogger(stdout, egv1a1.LogLevelInfo))
+	require.NoError(t, err)
 
 	// Run envoy once to let func-e set up all XDG directories
 	args := []string{
 		"--config-yaml",
-		"admin: {address: {socket_address: {address: '127.0.0.1', port_value: 9901}}}",
+		"admin: {address: {socket_address: {address: '127.0.0.1', port_value: 0}}}",
 	}
 	i.runEnvoy(t.Context(), "", "test", args)
-	require.Len(t, i.proxyContextMap, 1)
+	_, ok := i.proxyContextMap.Load("test")
+	require.True(t, ok, "expected proxy context to be stored")
 
 	// Wait for func-e to create all XDG directories
 	require.Eventually(t, func() bool {
@@ -169,7 +329,8 @@ func TestInfra_runEnvoy(t *testing.T) {
 	}, 5*time.Second, 100*time.Millisecond, "envoy-version file should be created in configHome")
 
 	i.stopEnvoy("test")
-	require.Empty(t, i.proxyContextMap)
+	_, ok = i.proxyContextMap.Load("test")
+	require.False(t, ok, "expected proxy context to be removed")
 
 	t.Run("xdg_directory_state", func(t *testing.T) {
 		// Verify XDG directories were created at configured paths by func-e
@@ -189,11 +350,6 @@ func TestInfra_runEnvoy(t *testing.T) {
 
 		// RuntimeDir must exist - func-e creates runID subdirectories with admin-address.txt
 		require.DirExists(t, runtimeDir, "runtimeDir should exist at configured path")
-
-		// Verify each XDG directory is separate (not the same path)
-		require.NotEqual(t, configHome, dataHome, "configHome and dataHome must be different")
-		require.NotEqual(t, dataHome, stateHome, "dataHome and stateHome must be different")
-		require.NotEqual(t, stateHome, runtimeDir, "stateHome and runtimeDir must be different")
 	})
 
 	t.Run("output_redirection", func(t *testing.T) {
@@ -201,21 +357,66 @@ func TestInfra_runEnvoy(t *testing.T) {
 		totalOutput := stdout.Len() + stderr.Len()
 		require.Positive(t, totalOutput, "expected some output to be captured in stdout or stderr buffers")
 	})
+}
 
-	t.Run("stop_start_cycle", func(t *testing.T) {
-		// Ensures that run -> stop cycle works multiple times without issues
-		for range 5 {
-			args := []string{
-				"--config-yaml",
-				"admin: {address: {socket_address: {address: '127.0.0.1', port_value: 9901}}}",
-			}
-			i.runEnvoy(t.Context(), "", "test", args)
-			require.Len(t, i.proxyContextMap, 1)
-			i.stopEnvoy("test")
-			require.Empty(t, i.proxyContextMap)
-			// If the cleanup didn't work, the error due to "address already in use" will be
-			// tried to be written to the nil logger, which will panic.
+func TestInfra_StopStartCycle(t *testing.T) {
+	cfg, err := config.New(io.Discard, io.Discard)
+	require.NoError(t, err)
+
+	// Use mock infra with fake runner - no actual Envoy process
+	infra := newMockInfra(t, cfg)
+
+	// Verify concurrent run -> stop cycles work without races
+	synctest.Test(t, func(t *testing.T) {
+		for i := range 5 {
+			go func(id int) {
+				name := utils.GetHashedName(fmt.Sprintf("test-%d", id), 64)
+				infra.runEnvoy(t.Context(), "", name, []string{"--version"})
+				_, ok := infra.proxyContextMap.Load(name)
+				require.True(t, ok, "expected proxy context to be stored")
+
+				infra.stopEnvoy(name)
+				_, ok = infra.proxyContextMap.Load(name)
+				require.False(t, ok, "expected proxy context to be removed")
+			}(i)
 		}
+	})
+}
+
+func TestInfra_Close(t *testing.T) {
+	cfg, err := config.New(io.Discard, io.Discard)
+	require.NoError(t, err)
+
+	infra := newMockInfra(t, cfg)
+
+	synctest.Test(t, func(t *testing.T) {
+		for id := range 5 {
+			name := utils.GetHashedName(fmt.Sprintf("proxy-%d", id), 64)
+			infra.runEnvoy(t.Context(), "", name, []string{"--version"})
+		}
+
+		// Wait for all runEnvoy calls to complete
+		synctest.Wait()
+
+		// Verify all proxies are running
+		count := 0
+		infra.proxyContextMap.Range(func(key, value any) bool {
+			count++
+			return true
+		})
+		require.Equal(t, 5, count, "expected 5 proxies to be running")
+
+		// Close should stop all proxies concurrently
+		err := infra.Close()
+		require.NoError(t, err)
+
+		// Verify all proxies were stopped
+		count = 0
+		infra.proxyContextMap.Range(func(key, value any) bool {
+			count++
+			return true
+		})
+		require.Equal(t, 0, count, "expected all proxies to be stopped")
 	})
 }
 
@@ -301,6 +502,24 @@ func TestGetEnvoyVersion(t *testing.T) {
 // TestTopologyInjectorDisabledInHostMode verifies we don't cause a 15+ second
 // startup delay in standalone mode as Envoy waits for endpoint discovery.
 // See: https://github.com/envoyproxy/gateway/issues/7080
+func TestNewInfra(t *testing.T) {
+	// This test verifies successful creation of Infra.
+	cfg, err := config.New(io.Discard, io.Discard)
+	require.NoError(t, err)
+
+	actual, err := NewInfra(t.Context(), cfg, logging.DefaultLogger(io.Discard, egv1a1.LogLevelInfo))
+	require.NoError(t, err)
+	require.NotNil(t, actual)
+	require.NotNil(t, actual.Paths)
+	require.NotEmpty(t, actual.sdsConfigPath)
+	require.NotNil(t, actual.Logger)
+	require.NotNil(t, actual.EnvoyGateway)
+	require.Equal(t, egv1a1.DefaultEnvoyProxyImage, actual.defaultEnvoyImage)
+	require.NotNil(t, actual.Stdout)
+	require.NotNil(t, actual.Stderr)
+	require.NotNil(t, actual.envoyRunner)
+}
+
 func TestTopologyInjectorDisabledInHostMode(t *testing.T) {
 	testCases := []struct {
 		name                          string
