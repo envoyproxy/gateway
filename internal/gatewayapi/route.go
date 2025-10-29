@@ -561,26 +561,24 @@ func (t *Translator) processHTTPRouteRule(
 		}
 		processRouteTrafficFeatures(irRoute, rule)
 
-		var pathMatch *ir.StringMatch
 		if match.Path != nil {
 			switch PathMatchTypeDerefOr(match.Path.Type, gwapiv1.PathMatchPathPrefix) {
 			case gwapiv1.PathMatchPathPrefix:
-				pathMatch = &ir.StringMatch{
+				irRoute.PathMatch = &ir.StringMatch{
 					Prefix: match.Path.Value,
 				}
 			case gwapiv1.PathMatchExact:
-				pathMatch = &ir.StringMatch{
+				irRoute.PathMatch = &ir.StringMatch{
 					Exact: match.Path.Value,
 				}
 			case gwapiv1.PathMatchRegularExpression:
 				if err := regex.Validate(*match.Path.Value); err != nil {
 					return nil, status.NewRouteStatusError(err, gwapiv1.RouteReasonUnsupportedValue)
 				}
-				pathMatch = &ir.StringMatch{
+				irRoute.PathMatch = &ir.StringMatch{
 					SafeRegex: match.Path.Value,
 				}
 			}
-			irRoute.PathMatch = pathMatch
 		}
 		for _, headerMatch := range match.Headers {
 			switch HeaderMatchTypeDerefOr(headerMatch.Type, gwapiv1.HeaderMatchExact) {
@@ -633,29 +631,43 @@ func (t *Translator) processHTTPRouteRule(
 		// Envoy Gateway improves user experience by implicitly creating the envoy route for CORS preflight.
 		if (httpFiltersContext != nil && httpFiltersContext.CORS != nil) &&
 			(match.Method != nil && string(*match.Method) != "OPTIONS") {
-			irRoute := &ir.HTTPRoute{
-				Name:     irRouteName(httpRoute, ruleIdx, matchIdx) + "/cors-preflight",
-				Metadata: routeRuleMetadata,
-				HeaderMatches: []*ir.StringMatch{
-					{
-						Name:  ":method",
-						Exact: ptr.To("OPTIONS"),
-					},
-					{
-						Name:      "origin",
-						SafeRegex: ptr.To(".*"),
-					},
-					{
-						Name:      "access-control-request-method",
-						SafeRegex: ptr.To(".*"),
-					},
+			corsRoute := &ir.HTTPRoute{
+				Name:              irRouteName(httpRoute, ruleIdx, matchIdx) + "/cors-preflight",
+				Metadata:          routeRuleMetadata,
+				PathMatch:         irRoute.PathMatch,
+				QueryParamMatches: irRoute.QueryParamMatches,
+				CORS:              httpFiltersContext.CORS,
+			}
+
+			// Create header matches:
+			// copy original headers (excluding :method) + add CORS headers (:method=OPTIONS, origin, access-control-request-method)
+			headerMatches := make([]*ir.StringMatch, 0, len(irRoute.HeaderMatches)+2)
+			for _, headerMatch := range irRoute.HeaderMatches {
+				// Skip the original method match for CORS preflight route to avoid conflicting method requirements.
+				if headerMatch.Name == ":method" {
+					continue
+				}
+				headerMatches = append(headerMatches, headerMatch)
+			}
+
+			corsHeaders := []*ir.StringMatch{
+				{
+					Name:  ":method",
+					Exact: ptr.To("OPTIONS"),
 				},
-				CORS: httpFiltersContext.CORS,
+				{
+					Name:      "origin",
+					SafeRegex: ptr.To(".*"),
+				},
+				{
+					Name:      "access-control-request-method",
+					SafeRegex: ptr.To(".*"),
+				},
 			}
-			if pathMatch != nil {
-				irRoute.PathMatch = pathMatch
-			}
-			ruleRoutes = append(ruleRoutes, irRoute)
+			headerMatches = append(headerMatches, corsHeaders...)
+
+			corsRoute.HeaderMatches = headerMatches
+			ruleRoutes = append(ruleRoutes, corsRoute)
 		}
 	}
 

@@ -170,6 +170,10 @@ httpRoutes:
       - method: GET
         path:
           value: /baz
+        queryParams:
+        - name: id
+          type: RegularExpression
+          value: .*
   status:
     parents:
     - conditions:
@@ -297,6 +301,10 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /baz
+        queryParamMatches:
+        - distinct: false
+          name: id
+          safeRegex: .*
       - cors:
           allowMethods:
           - OPTIONS
@@ -339,6 +347,10 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /baz
+        queryParamMatches:
+        - distinct: false
+          name: id
+          safeRegex: .*
       - cors:
           allowCredentials: true
           allowHeaders:

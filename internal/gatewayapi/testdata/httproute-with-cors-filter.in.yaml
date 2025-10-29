@@ -98,6 +98,10 @@ httpRoutes:
       - path:
           value: "/baz"
         method: "GET"
+        queryParams:
+        - type: RegularExpression
+          name: id
+          value: '.*'
       backendRefs:
       - name: service-1
         port: 8080
