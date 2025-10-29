@@ -47,6 +47,7 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&ClientTrafficPolicyList{},
 		&EnvoyExtensionPolicy{},
 		&EnvoyExtensionPolicyList{},
+		&EnvoyGateway{},
 		&EnvoyPatchPolicy{},
 		&EnvoyPatchPolicyList{},
 		&EnvoyProxy{},

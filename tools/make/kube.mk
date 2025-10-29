@@ -113,10 +113,6 @@ generate-gwapi-manifests: ## Generate Gateway API manifests and make it consiste
 kube-generate-clients: ## Generate Kubernetes clients, informers, and listers
 	@$(LOG_TARGET)
 	@echo "Generating Kubernetes clients..."
-	@# Preserve test file if it exists
-	@if [ -f "$(ROOT_DIR)/pkg/client/clientset_test.go" ]; then \
-		cp "$(ROOT_DIR)/pkg/client/clientset_test.go" "$(ROOT_DIR)/pkg/client/clientset_test.go.bak"; \
-	fi
 	@echo "Running client-gen..."
 	$(GO_TOOL) client-gen \
 		--clientset-name versioned \
@@ -143,10 +139,6 @@ kube-generate-clients: ## Generate Kubernetes clients, informers, and listers
 		--output-dir "$(ROOT_DIR)/pkg/client/informers" \
 		--plural-exceptions "EnvoyProxy:EnvoyProxies" \
 		github.com/envoyproxy/gateway/api/v1alpha1
-	@# Restore test file if it was backed up
-	@if [ -f "$(ROOT_DIR)/pkg/client/clientset_test.go.bak" ]; then \
-		mv "$(ROOT_DIR)/pkg/client/clientset_test.go.bak" "$(ROOT_DIR)/pkg/client/clientset_test.go"; \
-	fi
 	@echo "Client generation complete!"
 
 .PHONY: kube-generate
