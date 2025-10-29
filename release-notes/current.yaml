@@ -50,6 +50,7 @@ bug fixes: |
   Truncated Gateway API status condition messages to stay within Kubernetes limits and prevent update failures.
   Fixed an issue in EnvoyPatchPolicy where it didn't match the target Gateway/GatewayClass due to an incorrect name reference.
   Fixed certificate SAN overlap detection in gateway listeners.
+  Fixed description and translation behavior for PreserveXRequestID
 
 # Enhancements that improve performance.
 performance improvements: |
