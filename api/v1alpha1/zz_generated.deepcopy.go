@@ -2022,6 +2022,11 @@ func (in *EnvoyGatewayKubernetesProvider) DeepCopyInto(out *EnvoyGatewayKubernet
 		*out = new(KubernetesHorizontalPodAutoscalerSpec)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.RateLimitPDB != nil {
+		in, out := &in.RateLimitPDB, &out.RateLimitPDB
+		*out = new(KubernetesPodDisruptionBudgetSpec)
+		(*in).DeepCopyInto(*out)
+	}
 	if in.Watch != nil {
 		in, out := &in.Watch, &out.Watch
 		*out = new(KubernetesWatchMode)
