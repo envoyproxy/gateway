@@ -168,7 +168,7 @@ xdsIR:
       externalPort: 80
       headers:
         enableEnvoyHeaders: true
-        requestID: Preserve
+        requestID: PreserveOrGenerate
         withUnderscoresAction: Allow
       hostnames:
       - '*'
