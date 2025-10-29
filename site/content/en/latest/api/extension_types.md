@@ -1391,6 +1391,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `rateLimitDeployment` | _[KubernetesDeploymentSpec](#kubernetesdeploymentspec)_ |  false  |  | RateLimitDeployment defines the desired state of the Envoy ratelimit deployment resource.<br />If unspecified, default settings for the managed Envoy ratelimit deployment resource<br />are applied. |
 | `rateLimitHpa` | _[KubernetesHorizontalPodAutoscalerSpec](#kuberneteshorizontalpodautoscalerspec)_ |  false  |  | RateLimitHpa defines the Horizontal Pod Autoscaler settings for Envoy ratelimit Deployment.<br />If the HPA is set, Replicas field from RateLimitDeployment will be ignored. |
+| `rateLimitPdb` | _[KubernetesPodDisruptionBudgetSpec](#kubernetespoddisruptionbudgetspec)_ |  false  |  | RateLimitPDB allows to control the pod disruption budget of rate limit service. |
 | `watch` | _[KubernetesWatchMode](#kuberneteswatchmode)_ |  false  |  | Watch holds configuration of which input resources should be watched and reconciled. |
 | `leaderElection` | _[LeaderElection](#leaderelection)_ |  false  |  | LeaderElection specifies the configuration for leader election.<br />If it's not set up, leader election will be active by default, using Kubernetes' standard settings. |
 | `shutdownManager` | _[ShutdownManager](#shutdownmanager)_ |  false  |  | ShutdownManager defines the configuration for the shutdown manager. |
@@ -3059,6 +3060,7 @@ _Appears in:_
 KubernetesPodDisruptionBudgetSpec defines Kubernetes PodDisruptionBudget settings of Envoy Proxy Deployment.
 
 _Appears in:_
+- [EnvoyGatewayKubernetesProvider](#envoygatewaykubernetesprovider)
 - [EnvoyProxyKubernetesProvider](#envoyproxykubernetesprovider)
 
 | Field | Type | Required | Default | Description |

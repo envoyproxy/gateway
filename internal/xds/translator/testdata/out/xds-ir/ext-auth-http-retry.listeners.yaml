@@ -49,17 +49,17 @@
                 ignoreCase: true
               - exact: header2
                 ignoreCase: true
-            grpcService:
-              envoyGrpc:
-                authority: grpc-backend.default:9000
-                clusterName: securitypolicy/default/policy-for-http-route-1/default/grpc-backend
+            httpService:
               retryPolicy:
                 numRetries: 2
                 retryBackOff:
                   baseInterval: 0.200s
                   maxInterval: 3s
                 retryOn: 5xx,deadline-exceeded,internal,unavailable
-              timeout: 10s
+              serverUri:
+                cluster: securitypolicy/default/policy-for-http-route-1/default/http-backend
+                timeout: 10s
+                uri: http://http-backend.default:9000
             transportApiVersion: V3
         - name: envoy.filters.http.router
           typedConfig:
