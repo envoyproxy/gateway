@@ -63,6 +63,7 @@ spec:
         exposeHeaders:
         - "*"
 ---
+# HTTPRoute with CORS filter and method match to verify that OPTIONS method is implicitly allowed for CORS preflight
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:

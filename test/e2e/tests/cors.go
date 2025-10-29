@@ -205,6 +205,8 @@ func runCORStest(t *testing.T, suite *suite.ConformanceTestSuite, withSecurityPo
 
 	if !withSecurityPolicy {
 		t.Run("should enable cors with specific method match", func(t *testing.T) {
+			// When using HTTPCORSFilter with method match, OPTIONS method is implicitly allowed for CORS preflight
+			// even without explicit OPTIONS method match, so preflight response should be returned successfully
 			expectedResponse := http.ExpectedResponse{
 				Request: http.Request{
 					Path:   "/cors-specific-method",
