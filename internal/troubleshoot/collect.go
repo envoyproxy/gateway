@@ -86,24 +86,26 @@ func CollectResult(ctx context.Context, restConfig *rest.Config, opts ...Collect
 		}
 	}()
 
-	collectors := []tbcollect.Collector{
-		// Collect the custom resources from Gateway API and EG
-		&collect.CustomResource{
-			ClientConfig: restConfig,
-			BundlePath:   collectorOpts.bundlePath,
-			IncludeGroups: []string{
-				"gateway.envoyproxy.io",
-				"gateway.networking.k8s.io",
-			},
-		},
-	}
-
+	collectors := []tbcollect.Collector{}
 	bundlePath := collectorOpts.bundlePath
 	for _, ns := range collectorOpts.namespaces {
 		collectorList := []struct {
 			cType     CollectorType
 			collector tbcollect.Collector
 		}{
+			{
+				cType: CollectorTypeEnvoyGatewayResource,
+				// Collect the custom resources from Gateway API and EG
+				collector: &collect.CustomResource{
+					ClientConfig: restConfig,
+					BundlePath:   collectorOpts.bundlePath,
+					Namespace:    ns,
+					IncludeGroups: []string{
+						"gateway.envoyproxy.io",
+						"gateway.networking.k8s.io",
+					},
+				},
+			},
 			{
 				cType: CollectorTypeEnvoyGatewayResource,
 				collector: collect.EnvoyGatewayResource{

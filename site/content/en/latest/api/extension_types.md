@@ -345,6 +345,7 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `bufferLimit` | _[Quantity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#quantity-resource-api)_ |  false  |  | BufferLimit Soft limit on size of the cluster’s connections read and write buffers.<br />BufferLimit applies to connection streaming (maybe non-streaming) channel between processes, it's in user space.<br />If unspecified, an implementation defined default is applied (32768 bytes).<br />For example, 20Mi, 1Gi, 256Ki etc.<br />Note: that when the suffix is not provided, the value is interpreted as bytes. |
+| `preconnect` | _[PreconnectPolicy](#preconnectpolicy)_ |  false  |  | Preconnect configures proactive upstream connections to reduce latency by establishing<br />connections before they’re needed and avoiding connection establishment overhead.<br />If unset, Envoy will fetch connections as needed to serve in-flight requests. |
 
 
 #### BackendEndpoint
@@ -434,6 +435,7 @@ _Appears in:_
 BackendTLSConfig describes the BackendTLS configuration for Envoy Proxy.
 
 _Appears in:_
+- [BackendTLSSettings](#backendtlssettings)
 - [EnvoyProxySpec](#envoyproxyspec)
 
 | Field | Type | Required | Default | Description |
@@ -1353,6 +1355,12 @@ EnvoyGatewayHostInfrastructureProvider defines configuration for the Host Infras
 _Appears in:_
 - [EnvoyGatewayInfrastructureProvider](#envoygatewayinfrastructureprovider)
 
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `configHome` | _string_ |  false  |  | ConfigHome is the directory for configuration files.<br />Defaults to ~/.config/envoy-gateway |
+| `dataHome` | _string_ |  false  |  | DataHome is the directory for persistent data (Envoy binaries).<br />Defaults to ~/.local/share/envoy-gateway |
+| `stateHome` | _string_ |  false  |  | StateHome is the directory for persistent state (logs).<br />Defaults to ~/.local/state/envoy-gateway |
+| `runtimeDir` | _string_ |  false  |  | RuntimeDir is the directory for ephemeral runtime files.<br />Defaults to /tmp/envoy-gateway-$\{UID\} |
 
 
 #### EnvoyGatewayInfrastructureProvider
@@ -2480,6 +2488,7 @@ _Appears in:_
 | `connectionIdleTimeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/spec/#duration)_ |  false  |  | The idle timeout for an HTTP connection. Idle time is defined as a period in which there are no active requests in the connection.<br />Default: 1 hour. |
 | `maxConnectionDuration` | _[Duration](https://gateway-api.sigs.k8s.io/reference/spec/#duration)_ |  false  |  | The maximum duration of an HTTP connection.<br />Default: unlimited. |
 | `requestTimeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/spec/#duration)_ |  false  |  | RequestTimeout is the time until which entire response is received from the upstream. |
+| `maxStreamDuration` | _[Duration](https://gateway-api.sigs.k8s.io/reference/spec/#duration)_ |  false  |  | MaxStreamDuration is the maximum duration for a stream to complete. This timeout measures the time<br />from when the request is sent until the response stream is fully consumed and does not apply to<br />non-streaming requests.<br />When set to "0s", no max duration is applied and streams can run indefinitely. |
 
 
 #### HTTPURLRewriteFilter
@@ -2576,8 +2585,8 @@ _Appears in:_
 | `disableRateLimitHeaders` | _boolean_ |  false  |  | DisableRateLimitHeaders configures Envoy Proxy to omit the "X-RateLimit-" response headers<br />when rate limiting is enabled. |
 | `xForwardedClientCert` | _[XForwardedClientCert](#xforwardedclientcert)_ |  false  |  | XForwardedClientCert configures how Envoy Proxy handle the x-forwarded-client-cert (XFCC) HTTP header.<br />x-forwarded-client-cert (XFCC) is an HTTP header used to forward the certificate<br />information of part or all of the clients or proxies that a request has flowed through,<br />on its way from the client to the server.<br />Envoy proxy may choose to sanitize/append/forward the XFCC header before proxying the request.<br />If not set, the default behavior is sanitizing the XFCC header. |
 | `withUnderscoresAction` | _[WithUnderscoresAction](#withunderscoresaction)_ |  false  |  | WithUnderscoresAction configures the action to take when an HTTP header with underscores<br />is encountered. The default action is to reject the request. |
-| `preserveXRequestID` | _boolean_ |  false  |  | PreserveXRequestID configures Envoy to keep the X-Request-ID header if passed for a request that is edge<br />(Edge request is the request from external clients to front Envoy) and not reset it, which is the current Envoy behaviour.<br />Defaults to false and cannot be combined with RequestID.<br />Deprecated: use RequestID=Preserve instead |
-| `requestID` | _[RequestIDAction](#requestidaction)_ |  false  |  | RequestID configures Envoy's behavior for handling the `X-Request-ID` header.<br />Defaults to `Generate` and builds the `X-Request-ID` for every request and ignores pre-existing values from the edge.<br />(An "edge request" refers to a request from an external client to the Envoy entrypoint.) |
+| `preserveXRequestID` | _boolean_ |  false  |  | PreserveXRequestID configures Envoy to keep the X-Request-ID header if passed for a request that is edge<br />(Edge request is the request from external clients to front Envoy) and not reset it, which is the current Envoy behaviour.<br />Defaults to false and cannot be combined with RequestID.<br />Deprecated: use RequestID=PreserveOrGenerate instead |
+| `requestID` | _[RequestIDAction](#requestidaction)_ |  false  |  | RequestID configures Envoy's behavior for handling the `X-Request-ID` header.<br />When omitted default behavior is `Generate` which builds the `X-Request-ID` for every request<br /> and ignores pre-existing values from the edge.<br />(An "edge request" refers to a request from an external client to the Envoy entrypoint.) |
 | `earlyRequestHeaders` | _[HTTPHeaderFilter](#httpheaderfilter)_ |  false  |  | EarlyRequestHeaders defines settings for early request header modification, before envoy performs<br />routing, tracing and built-in header manipulation. |
 | `lateResponseHeaders` | _[HTTPHeaderFilter](#httpheaderfilter)_ |  false  |  | LateResponseHeaders defines settings for global response header modification. |
 
@@ -3657,6 +3666,22 @@ _Appears in:_
 | `targetSelectors` | _[TargetSelector](#targetselector) array_ |  true  |  | TargetSelectors allow targeting resources for this policy based on labels |
 
 
+#### PreconnectPolicy
+
+
+
+Preconnect configures proactive upstream connections to avoid
+connection establishment overhead and reduce latency.
+
+_Appears in:_
+- [BackendConnection](#backendconnection)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `perEndpointPercent` | _integer_ |  false  |  | PerEndpointPercent configures how many additional connections to maintain per<br />upstream endpoint, useful for high-QPS or latency sensitive services. Expressed as a<br />percentage of the connections required by active streams<br />(e.g. 100 = preconnect disabled, 105 = 1.05x connections per-endpoint, 200 = 2.00×).<br />Allowed value range is between 100-300. When both PerEndpointPercent and<br />PredictivePercent are set, Envoy ensures both are satisfied (max of the two). |
+| `predictivePercent` | _integer_ |  false  |  | PredictivePercent configures how many additional connections to maintain<br />across the cluster by anticipating which upstream endpoint the load balancer<br />will select next, useful for low-QPS services. Relies on deterministic<br />loadbalancing and is only supported with Random or RoundRobin.<br />Expressed as a percentage of the connections required by active streams<br />(e.g. 100 = 1.0 (no preconnect), 105 = 1.05× connections across the cluster, 200 = 2.00×).<br />Minimum allowed value is 100. When both PerEndpointPercent and PredictivePercent are<br />set Envoy ensures both are satisfied per host (max of the two). |
+
+
 #### PreferLocalZone
 
 
@@ -4446,7 +4471,8 @@ _Appears in:_
 
 _Underlying type:_ _string_
 
-RequestIDAction configures Envoy's behavior for handling the `X-Request-ID` header.
+RequestIDAction configures Envoy's behavior for handling the `X-Request-ID` header at the edge.
+An "edge request" refers to a request from an external client to the Envoy entrypoint.
 
 _Appears in:_
 - [HeaderSettings](#headersettings)

@@ -294,7 +294,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 				t.Logger.Info(
 					"setting 500 direct response in routes due to errors in processing destinations",
 					"routes", sets.List(routesWithDirectResponse),
-					"error", err,
+					"error", processDestinationError,
 				)
 			}
 		// return 503 if endpoints does not exist
@@ -1598,6 +1598,25 @@ func (t *Translator) processDestination(name string, backendRefContext BackendRe
 
 	protocol := inspectAppProtocolByRouteKind(routeType)
 
+	// Process BackendTLSPolicy first to ensure status is set.
+	tls, tlsErr := t.applyBackendTLSSetting(
+		backendRef.BackendObjectReference,
+		backendNamespace,
+		gwapiv1.ParentReference{
+			Group:       parentRef.Group,
+			Kind:        parentRef.Kind,
+			Namespace:   parentRef.Namespace,
+			Name:        parentRef.Name,
+			SectionName: parentRef.SectionName,
+			Port:        parentRef.Port,
+		},
+		resources,
+		envoyProxy,
+	)
+	if tlsErr != nil {
+		return nil, nil, status.NewRouteStatusError(tlsErr, status.RouteReasonInvalidBackendTLS)
+	}
+
 	switch KindDerefOr(backendRef.Kind, resource.KindService) {
 	case resource.KindServiceImport:
 		ds, err = t.processServiceImportDestinationSetting(name, backendRef.BackendObjectReference, backendNamespace, protocol, resources, envoyProxy)
@@ -1612,7 +1631,6 @@ func (t *Translator) processDestination(name string, backendRefContext BackendRe
 		svc := resources.GetService(backendNamespace, string(backendRef.Name))
 		ds.IPFamily = getServiceIPFamily(svc)
 		ds.PreferLocal = processPreferLocalZone(svc)
-
 	case egv1a1.KindBackend:
 		ds = t.processBackendDestinationSetting(name, backendRef.BackendObjectReference, backendNamespace, protocol, resources)
 	default:
@@ -1640,24 +1658,7 @@ func (t *Translator) processDestination(name string, backendRefContext BackendRe
 		}
 	}
 
-	var tlsErr error
-	ds.TLS, tlsErr = t.applyBackendTLSSetting(
-		backendRef.BackendObjectReference,
-		backendNamespace,
-		gwapiv1.ParentReference{
-			Group:       parentRef.Group,
-			Kind:        parentRef.Kind,
-			Namespace:   parentRef.Namespace,
-			Name:        parentRef.Name,
-			SectionName: parentRef.SectionName,
-			Port:        parentRef.Port,
-		},
-		resources,
-		envoyProxy,
-	)
-	if tlsErr != nil {
-		return nil, nil, status.NewRouteStatusError(tlsErr, status.RouteReasonInvalidBackendTLS)
-	}
+	ds.TLS = tls
 
 	var filtersErr error
 	ds.Filters, filtersErr = t.processDestinationFilters(routeType, backendRefContext, parentRef, route, resources)
@@ -2056,24 +2057,23 @@ func getIREndpointsFromEndpointSlice(endpointSlice *discoveryv1.EndpointSlice, p
 				continue
 			}
 			conditions := endpoint.Conditions
+
 			// Unknown Serving/Terminating (nil) should fall-back to Ready, see https://pkg.go.dev/k8s.io/api/discovery/v1#EndpointConditions
+			// So drain the endpoint if:
+			// 1. Both `Terminating` and `Serving` are != null, and either `Terminating=true` or `Serving=false`
+			// 2. Or `Ready=false`
+			var draining bool
 			if conditions.Serving != nil && conditions.Terminating != nil {
-				// Check if the endpoint is serving
-				if !*conditions.Serving {
-					continue
-				}
-				// Drain the endpoint if it is being terminated
-				draining := *conditions.Terminating
-				for _, address := range endpoint.Addresses {
-					ep := ir.NewDestEndpoint(nil, address, uint32(*endpointPort.Port), draining, endpoint.Zone)
-					endpoints = append(endpoints, ep)
-				}
-			} else if conditions.Ready == nil || *conditions.Ready {
-				for _, address := range endpoint.Addresses {
-					ep := ir.NewDestEndpoint(nil, address, uint32(*endpointPort.Port), false, endpoint.Zone)
-					endpoints = append(endpoints, ep)
-				}
+				draining = *conditions.Terminating || !*conditions.Serving
+			} else {
+				draining = conditions.Ready != nil && !*conditions.Ready
 			}
+
+			for _, address := range endpoint.Addresses {
+				ep := ir.NewDestEndpoint(nil, address, uint32(*endpointPort.Port), draining, endpoint.Zone)
+				endpoints = append(endpoints, ep)
+			}
+
 		}
 	}
 
