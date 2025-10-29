@@ -215,6 +215,13 @@ type BackendTLSSettings struct {
 	//
 	// +optional
 	SNI *gwapiv1.PreciseHostname `json:"sni,omitempty"`
+
+	// BackendTLSConfig defines the client certificate/key as well as TLS protocol parameters such as ciphers, TLS versions,
+	// and ALPN that the Envoy uses when connecting to the backend.
+	// When omitted, Envoy will fall back to the EnvoyProxy BackendTLS defaults, if any.
+	//
+	// +optional
+	*BackendTLSConfig `json:",inline"`
 }
 
 // BackendType defines the type of the Backend.

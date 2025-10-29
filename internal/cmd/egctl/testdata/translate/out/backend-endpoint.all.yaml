@@ -20,6 +20,11 @@ backendTLSPolicies:
         name: eg
       conditions:
       - lastTransitionTime: null
+        message: Resolved all the Object references.
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      - lastTransitionTime: null
         message: Policy has been accepted.
         reason: Accepted
         status: "True"
