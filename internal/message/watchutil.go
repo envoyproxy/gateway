@@ -95,8 +95,41 @@ func HandleSubscription[K comparable, V any](
 	}
 	for snapshot := range subscription {
 		watchableDepth.With(meta.LabelValues()...).Record(float64(len(subscription)))
-		for _, update := range snapshot.Updates {
+
+		for _, update := range coalesceUpdates(meta.Runner, snapshot.Updates) {
 			handleWithCrashRecovery(handle, Update[K, V](update), meta, errChans)
 		}
 	}
+}
+
+// coalesceUpdates merges multiple updates for the same key into a single update,
+// preserving the latest state for each key.
+// This helps reduce redundant processing and ensures that only the most recent update per key is handled.
+func coalesceUpdates[K comparable, V any](runner string, updates []watchable.Update[K, V]) []watchable.Update[K, V] {
+	if len(updates) <= 1 {
+		return updates
+	}
+
+	seen := make(map[K]struct{}, len(updates))
+	write := len(updates) - 1
+
+	for read := len(updates) - 1; read >= 0; read-- {
+		update := updates[read]
+		if _, ok := seen[update.Key]; ok {
+			continue
+		}
+		seen[update.Key] = struct{}{}
+		updates[write] = update
+		write--
+	}
+
+	result := updates[write+1:]
+	if len(result) != len(updates) {
+		logger.WithValues("runner", runner).Info(
+			"coalesced updates",
+			"count", len(result),
+			"before", len(updates),
+		)
+	}
+	return result
 }
