@@ -37,7 +37,7 @@ jobs:
           run_test_workflow:
             - "!?(site|release-notes)/**"
 
-  # Dedicated job to download go modules due to the write permissions
+  # Dedicated job to store go modules in cache due to the write permissions
   go-mod-download:
     runs-on: ubuntu-22.04
     permissions:

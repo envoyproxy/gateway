@@ -15,6 +15,15 @@ permissions:
 
 
 jobs:
+  # Dedicated job to store go modules in cache due to the write permissions
+  go-mod-download:
+    runs-on: ubuntu-22.04
+    permissions:
+      actions: write
+    steps:
+    - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8  # v5.0.0
+    - uses: ./tools/github-actions/go-mod-download
+
   analyze:
     name: Analyze
     runs-on: 'ubuntu-22.04'
@@ -29,7 +38,8 @@ jobs:
       matrix:
         language:
         - go
-
+    needs:
+    - go-mod-download
     steps:
     - name: Checkout repository
       uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8  # v5.0.0

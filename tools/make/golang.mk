@@ -14,7 +14,7 @@ ifeq ($(origin GOBIN), undefined)
 	GOBIN := $(GOPATH)/bin
 endif
 
-GO_VERSION = $(shell grep -oE "^go [[:digit:]]*\.[[:digit:]]*" go.mod | cut -d' ' -f2)
+GO_VERSION = $(shell grep -oE "^go [[:digit:]]*\.[[:digit:]]*\.[[:digit:]]*" go.mod | cut -d' ' -f2)
 
 # Build the target binary in target platform.
 # The pattern of build.% is `build.{Platform}.{Command}`.
