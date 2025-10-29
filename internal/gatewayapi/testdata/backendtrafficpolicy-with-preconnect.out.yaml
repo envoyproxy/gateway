@@ -5,18 +5,14 @@ backendTrafficPolicies:
     name: policy-for-route
     namespace: default
   spec:
+    connection:
+      preconnect:
+        perEndpointPercent: 100
+        predictivePercent: 234
     targetRef:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
-    timeout:
-      http:
-        connectionIdleTimeout: 21s
-        maxConnectionDuration: 22s
-        maxStreamDuration: 0s
-        requestTimeout: 23s
-      tcp:
-        connectTimeout: 20s
   status:
     ancestors:
     - ancestorRef:
@@ -38,18 +34,14 @@ backendTrafficPolicies:
     name: policy-for-gateway
     namespace: envoy-gateway
   spec:
+    connection:
+      preconnect:
+        perEndpointPercent: 123
+        predictivePercent: 100
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
-    timeout:
-      http:
-        connectionIdleTimeout: 16s
-        maxConnectionDuration: 17s
-        maxStreamDuration: 30s
-        requestTimeout: 18s
-      tcp:
-        connectTimeout: 15s
   status:
     ancestors:
     - ancestorRef:
@@ -196,8 +188,6 @@ httpRoutes:
       matches:
       - path:
           value: /
-      timeouts:
-        request: 1s
   status:
     parents:
     - conditions:
@@ -322,14 +312,10 @@ xdsIR:
           namespace: default
         name: grpcroute/default/grpcroute-1/rule/0/match/-1/*
         traffic:
-          timeout:
-            http:
-              connectionIdleTimeout: 16s
-              maxConnectionDuration: 17s
-              maxStreamDuration: 30s
-              requestTimeout: 18s
-            tcp:
-              connectTimeout: 15s
+          backendConnection:
+            preconnect:
+              perEndpointPercent: 123
+              predictivePercent: 100
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
@@ -404,16 +390,11 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
-        timeout: 1s
         traffic:
-          timeout:
-            http:
-              connectionIdleTimeout: 21s
-              maxConnectionDuration: 22s
-              maxStreamDuration: 0s
-              requestTimeout: 23s
-            tcp:
-              connectTimeout: 20s
+          backendConnection:
+            preconnect:
+              perEndpointPercent: 100
+              predictivePercent: 234
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
