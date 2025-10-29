@@ -473,6 +473,9 @@ func (t *Translator) translateClientTrafficPolicyForListener(policy *egv1a1.Clie
 		// Translate Health Check Settings
 		translateHealthCheckSettings(policy.Spec.HealthCheck, httpIR)
 
+		// Translate Decompression Settings
+		translateDecompressionSettings(policy.Spec.Decompression, httpIR)
+
 		// Translate TLS parameters
 		tlsConfig, err = t.buildListenerTLSParameters(policy, httpIR.TLS, resources)
 		if err != nil {
@@ -798,6 +801,24 @@ func translateHealthCheckSettings(healthCheckSettings *egv1a1.HealthCheckSetting
 	}
 
 	httpIR.HealthCheck = (*ir.HealthCheckSettings)(healthCheckSettings)
+}
+
+func translateDecompressionSettings(decompressionSettings []*egv1a1.Decompression, httpIR *ir.HTTPListener) {
+	// Return early if not set
+	if len(decompressionSettings) == 0 {
+		return
+	}
+
+	httpIR.Decompression = make([]*ir.Decompression, 0, len(decompressionSettings))
+	for _, decomp := range decompressionSettings {
+		irDecomp := &ir.Decompression{
+			Type:   decomp.Type,
+			Gzip:   decomp.Gzip,
+			Brotli: decomp.Brotli,
+			Zstd:   decomp.Zstd,
+		}
+		httpIR.Decompression = append(httpIR.Decompression, irDecomp)
+	}
 }
 
 func (t *Translator) buildListenerTLSParameters(policy *egv1a1.ClientTrafficPolicy,

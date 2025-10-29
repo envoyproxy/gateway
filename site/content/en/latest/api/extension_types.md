@@ -607,6 +607,19 @@ _Appears in:_
 
 
 
+#### BrotliDecompressor
+
+
+
+BrotliDecompressor defines the config for the Brotli decompressor.
+The default values can be found here:
+https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/compression/brotli/decompressor/v3/brotli.proto#extension-envoy-compression-brotli-decompressor
+
+_Appears in:_
+- [Decompression](#decompression)
+
+
+
 #### CIDR
 
 _Underlying type:_ _string_
@@ -786,6 +799,7 @@ _Appears in:_
 | `http2` | _[HTTP2Settings](#http2settings)_ |  false  |  | HTTP2 provides HTTP/2 configuration on the listener. |
 | `http3` | _[HTTP3Settings](#http3settings)_ |  false  |  | HTTP3 provides HTTP/3 configuration on the listener. |
 | `healthCheck` | _[HealthCheckSettings](#healthchecksettings)_ |  false  |  | HealthCheck provides configuration for determining whether the HTTP/HTTPS listener is healthy. |
+| `decompression` | _[Decompression](#decompression) array_ |  false  |  | Decompression provides configuration for request/response decompression.<br />Decompression is compatible with HTTP compression performed by the backend. |
 
 
 #### ClientValidationContext
@@ -1144,6 +1158,40 @@ _Appears in:_
 | `IPv4AndIPv6` | IPv4AndIPv6DNSLookupFamily mean the DNS resolver will perform a lookup for both IPv4 and IPv6 families, and return all resolved<br />addresses. When this is used, Happy Eyeballs will be enabled for upstream connections.<br /> | 
 
 
+#### Decompression
+
+
+
+Decompression defines the config of enabling decompression.
+This can help decompress compressed request/response bodies.
+
+_Appears in:_
+- [ClientTrafficPolicySpec](#clienttrafficpolicyspec)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `type` | _[DecompressorType](#decompressortype)_ |  true  |  | DecompressorType defines the decompressor type to use for decompression. |
+| `brotli` | _[BrotliDecompressor](#brotlidecompressor)_ |  false  |  | The configuration for Brotli decompressor. |
+| `gzip` | _[GzipDecompressor](#gzipdecompressor)_ |  false  |  | The configuration for GZIP decompressor. |
+| `zstd` | _[ZstdDecompressor](#zstddecompressor)_ |  false  |  | The configuration for Zstd decompressor. |
+
+
+#### DecompressorType
+
+_Underlying type:_ _string_
+
+DecompressorType defines the types of decompressor library supported by Envoy Gateway.
+
+_Appears in:_
+- [Decompression](#decompression)
+
+| Value | Description |
+| ----- | ----------- |
+| `Gzip` |  | 
+| `Brotli` |  | 
+| `Zstd` |  | 
+
+
 #### EndpointOverride
 
 
@@ -1257,6 +1305,7 @@ _Appears in:_
 | `envoy.filters.http.custom_response` | EnvoyFilterCustomResponse defines the Envoy HTTP custom response filter.<br /> | 
 | `envoy.filters.http.credential_injector` | EnvoyFilterCredentialInjector defines the Envoy HTTP credential injector filter.<br /> | 
 | `envoy.filters.http.compressor` | EnvoyFilterCompressor defines the Envoy HTTP compressor filter.<br /> | 
+| `envoy.filters.http.decompressor` | EnvoyFilterDecompressor defines the Envoy HTTP decompressor filter.<br /> | 
 | `envoy.filters.http.router` | EnvoyFilterRouter defines the Envoy HTTP router filter.<br /> | 
 | `envoy.filters.http.buffer` | EnvoyFilterBuffer defines the Envoy HTTP buffer filter<br /> | 
 | `envoy.filters.http.header_mutation` | EnvoyFilterHeaderMutation defines the Envoy HTTP header mutation filter<br /> | 
@@ -2199,6 +2248,22 @@ https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/compression/gzip/c
 _Appears in:_
 - [Compression](#compression)
 
+
+
+#### GzipDecompressor
+
+
+
+GzipDecompressor defines the config for the Gzip decompressor.
+The default values can be found here:
+https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/compression/gzip/decompressor/v3/gzip.proto#extension-envoy-compression-gzip-decompressor
+
+_Appears in:_
+- [Decompression](#decompression)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `windowBits` | _integer_ |  false  | 15 | WindowBits is the window size for decompression. The valid range is 9 to 15.<br />The default value is 15. |
 
 
 #### HTTP10Settings
@@ -5464,6 +5529,19 @@ https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/compression/zstd/c
 
 _Appears in:_
 - [Compression](#compression)
+
+
+
+#### ZstdDecompressor
+
+
+
+ZstdDecompressor defines the config for the Zstd decompressor.
+The default values can be found here:
+https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/compression/zstd/decompressor/v3/zstd.proto#extension-envoy-compression-zstd-decompressor
+
+_Appears in:_
+- [Decompression](#decompression)
 
 
 

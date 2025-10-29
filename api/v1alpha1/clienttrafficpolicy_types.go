@@ -105,6 +105,15 @@ type ClientTrafficPolicySpec struct {
 	//
 	// +optional
 	HealthCheck *HealthCheckSettings `json:"healthCheck,omitempty"`
+
+	// Decompression provides configuration for request/response decompression.
+	// Decompression is compatible with HTTP compression performed by the backend.
+	//
+	// +patchMergeKey=type
+	// +patchStrategy=merge
+	//
+	// +optional
+	Decompression []*Decompression `json:"decompression,omitempty" patchMergeKey:"type" patchStrategy:"merge"`
 }
 
 // HeaderSettings provides configuration options for headers on the listener.
