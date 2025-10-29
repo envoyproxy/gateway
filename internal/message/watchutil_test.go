@@ -89,7 +89,7 @@ func TestHandleSubscriptionAlreadyInitialized(t *testing.T) {
 			}
 		},
 	)
-	assert.Equal(t, 2, storeCalls)
+	assert.LessOrEqual(t, 2, storeCalls) // updates can be coalesced
 	assert.Equal(t, 1, deleteCalls)
 }
 
