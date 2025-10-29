@@ -2,7 +2,7 @@ name: first-listener
 domain: first-listener
 descriptors:
   - key: first-route
-    value: first-route
+    value: test-namespace/test-policy-1
     rate_limit: null
     descriptors:
       - key: masked_remote_address
@@ -19,7 +19,7 @@ descriptors:
     shadow_mode: false
     detailed_metric: false
   - key: second-route
-    value: second-route
+    value: test-namespace/test-policy-2
     rate_limit: null
     descriptors:
       - key: masked_remote_address
