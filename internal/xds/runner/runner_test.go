@@ -231,7 +231,7 @@ func TestServeXdsServerListenFailed(t *testing.T) {
 	require.NoError(t, err)
 	defer l.Close()
 
-	cfg, _ := config.New(os.Stdout)
+	cfg, _ := config.New(os.Stdout, os.Stderr)
 	r := New(&Config{
 		Server: *cfg,
 	})
@@ -248,7 +248,7 @@ func TestRunner(t *testing.T) {
 	// Setup
 	xdsIR := new(message.XdsIR)
 	pResource := new(message.ProviderResources)
-	cfg, err := config.New(os.Stdout)
+	cfg, err := config.New(os.Stdout, os.Stderr)
 	require.NoError(t, err)
 	r := New(&Config{
 		Server:            *cfg,
@@ -331,7 +331,7 @@ func TestRunner_withExtensionManager_FailOpen(t *testing.T) {
 	xdsIR := new(message.XdsIR)
 	pResource := new(message.ProviderResources)
 
-	cfg, err := config.New(os.Stdout)
+	cfg, err := config.New(os.Stdout, os.Stderr)
 	require.NoError(t, err)
 	require.NotNil(t, cfg)
 
@@ -414,7 +414,7 @@ func TestRunner_withExtensionManager_FailClosed(t *testing.T) {
 	xdsIR := new(message.XdsIR)
 	pResource := new(message.ProviderResources)
 
-	cfg, err := config.New(os.Stdout)
+	cfg, err := config.New(os.Stdout, os.Stderr)
 	require.NoError(t, err)
 	require.NotNil(t, cfg)
 
@@ -542,4 +542,65 @@ func TestGetRandomMaxConnectionAge(t *testing.T) {
 
 	// Verify we got different values (randomness check)
 	assert.Len(t, counts, len(maxConnectionAgeValues), "Should see all possible values")
+}
+
+func TestLoadTLSConfig_HostMode(t *testing.T) {
+	// Create temporary directory structure for certs using t.TempDir()
+	configHome := t.TempDir()
+	certsDir := filepath.Join(configHome, "certs", "envoy-gateway")
+	err := os.MkdirAll(certsDir, 0o750)
+	require.NoError(t, err)
+
+	// Create test certificates
+	trustedCACert := certyaml.Certificate{
+		Subject: "cn=test-ca",
+	}
+	serverCert := certyaml.Certificate{
+		Subject:         "cn=test-server",
+		SubjectAltNames: []string{"DNS:localhost"},
+		Issuer:          &trustedCACert,
+	}
+
+	caFile := filepath.Join(certsDir, "ca.crt")
+	certFile := filepath.Join(certsDir, "tls.crt")
+	keyFile := filepath.Join(certsDir, "tls.key")
+
+	err = trustedCACert.WritePEM(caFile, keyFile)
+	require.NoError(t, err)
+	err = serverCert.WritePEM(certFile, keyFile)
+	require.NoError(t, err)
+
+	// Configure host mode with custom configHome (certs are stored in configHome)
+	// MUST be set BEFORE creating Runner since Config{Server: *cfg} makes a copy
+	cfg, err := config.New(os.Stdout, os.Stderr)
+	require.NoError(t, err)
+
+	cfg.EnvoyGateway.Provider = &egv1a1.EnvoyGatewayProvider{
+		Type: egv1a1.ProviderTypeCustom,
+		Custom: &egv1a1.EnvoyGatewayCustomProvider{
+			Infrastructure: &egv1a1.EnvoyGatewayInfrastructureProvider{
+				Type: egv1a1.InfrastructureProviderTypeHost,
+				Host: &egv1a1.EnvoyGatewayHostInfrastructureProvider{
+					ConfigHome: &configHome,
+				},
+			},
+		},
+	}
+
+	r := &Runner{
+		Config: Config{
+			Server: *cfg,
+		},
+	}
+
+	// Test loadTLSConfig with host mode
+	tlsConfig, err := r.loadTLSConfig()
+	require.NoError(t, err)
+	require.NotNil(t, tlsConfig)
+
+	// Verify TLS config properties
+	// crypto.LoadTLSConfig uses GetConfigForClient callback to load certs on demand
+	require.NotNil(t, tlsConfig.GetConfigForClient)
+	require.Equal(t, tls.RequireAndVerifyClientCert, tlsConfig.ClientAuth)
+	require.Equal(t, uint16(tls.VersionTLS13), tlsConfig.MinVersion)
 }

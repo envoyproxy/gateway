@@ -121,14 +121,14 @@ type subscriptions struct {
 	tlsRouteStatuses             <-chan watchable.Snapshot[types.NamespacedName, *gwapiv1a2.TLSRouteStatus]
 	tcpRouteStatuses             <-chan watchable.Snapshot[types.NamespacedName, *gwapiv1a2.TCPRouteStatus]
 	udpRouteStatuses             <-chan watchable.Snapshot[types.NamespacedName, *gwapiv1a2.UDPRouteStatus]
-	backendTLSPolicyStatuses     <-chan watchable.Snapshot[types.NamespacedName, *gwapiv1a2.PolicyStatus]
-	backendTrafficPolicyStatuses <-chan watchable.Snapshot[types.NamespacedName, *gwapiv1a2.PolicyStatus]
-	envoyExtensionPolicyStatuses <-chan watchable.Snapshot[types.NamespacedName, *gwapiv1a2.PolicyStatus]
-	envoyPatchPolicyStatuses     <-chan watchable.Snapshot[types.NamespacedName, *gwapiv1a2.PolicyStatus]
-	clientTrafficPolicyStatuses  <-chan watchable.Snapshot[types.NamespacedName, *gwapiv1a2.PolicyStatus]
-	securityPolicyStatuses       <-chan watchable.Snapshot[types.NamespacedName, *gwapiv1a2.PolicyStatus]
+	backendTLSPolicyStatuses     <-chan watchable.Snapshot[types.NamespacedName, *gwapiv1.PolicyStatus]
+	backendTrafficPolicyStatuses <-chan watchable.Snapshot[types.NamespacedName, *gwapiv1.PolicyStatus]
+	envoyExtensionPolicyStatuses <-chan watchable.Snapshot[types.NamespacedName, *gwapiv1.PolicyStatus]
+	envoyPatchPolicyStatuses     <-chan watchable.Snapshot[types.NamespacedName, *gwapiv1.PolicyStatus]
+	clientTrafficPolicyStatuses  <-chan watchable.Snapshot[types.NamespacedName, *gwapiv1.PolicyStatus]
+	securityPolicyStatuses       <-chan watchable.Snapshot[types.NamespacedName, *gwapiv1.PolicyStatus]
 	backendStatuses              <-chan watchable.Snapshot[types.NamespacedName, *egv1a1.BackendStatus]
-	extensionPolicyStatuses      <-chan watchable.Snapshot[message.NamespacedNameAndGVK, *gwapiv1a2.PolicyStatus]
+	extensionPolicyStatuses      <-chan watchable.Snapshot[message.NamespacedNameAndGVK, *gwapiv1.PolicyStatus]
 }
 
 // newGatewayAPIController
@@ -198,9 +198,18 @@ func newGatewayAPIController(ctx context.Context, mgr manager.Manager, cfg *conf
 		return fmt.Errorf("error watching resources: %w", err)
 	}
 
-	// Do not call .Subscribe() inside Goroutine since it is supposed to be called from the same
-	// Goroutine where Close() is called.
-	r.subscribeToResources(ctx)
+	// This is a blocking function that subscribes to the resource updates and updates the status.
+	subscribeUpdateStatusAndCloseResources := func() {
+		// Subscribe to resource updates
+		r.subscribeToResources(ctx)
+		// Update status
+		go r.updateStatusFromSubscriptions(ctx, cfg.EnvoyGateway.ExtensionManager != nil)
+		r.log.Info("started")
+		// Close resources if the context is done.
+		<-ctx.Done()
+		r.resources.Close()
+		r.log.Info("shutting down")
+	}
 
 	// When leader election is enabled, only subscribe to status updates upon acquiring leadership.
 	if cfg.EnvoyGateway.Provider.Type == egv1a1.ProviderTypeKubernetes &&
@@ -208,13 +217,17 @@ func newGatewayAPIController(ctx context.Context, mgr manager.Manager, cfg *conf
 		go func() {
 			select {
 			case <-ctx.Done():
+				// As a follower EG instance close resources when the context is done.
+				r.resources.Close()
 				return
 			case <-cfg.Elected:
-				r.subscribeAndUpdateStatus(ctx, cfg.EnvoyGateway.ExtensionManager != nil)
+				// As a leader EG instance subscribe to resource updates and Close resources when the context is done.
+				subscribeUpdateStatusAndCloseResources()
 			}
 		}()
 	} else {
-		r.subscribeAndUpdateStatus(ctx, cfg.EnvoyGateway.ExtensionManager != nil)
+		// Since leader election is disabled subscribe to resource updates and Close resources when the context is done.
+		go subscribeUpdateStatusAndCloseResources()
 	}
 	return nil
 }
@@ -741,6 +754,23 @@ func (r *gatewayAPIReconciler) processBackendRefs(ctx context.Context, gwcResour
 						}
 						logger.Error(err, "failed to process CACertificateRef for Backend",
 							"backend", backend, "caCertificateRef", caCertRef.Name)
+					}
+				}
+			}
+
+			if backend.Spec.TLS != nil && backend.Spec.TLS.BackendTLSConfig != nil && backend.Spec.TLS.ClientCertificateRef != nil {
+				certRef := *backend.Spec.TLS.ClientCertificateRef
+				if refsSecret(&certRef) {
+					if err := r.processSecretRef(
+						ctx, resourceMappings, gwcResource,
+						resource.KindBackend, backend.Namespace, backend.Name,
+						certRef); err != nil {
+						if isTransientError(err) {
+							return err
+						}
+						r.log.Error(err,
+							"failed to process ClientTLS secret for Backend",
+							"backend", backend, "clientCertificateRef", certRef.Name)
 					}
 				}
 			}
@@ -1624,7 +1654,7 @@ func (r *gatewayAPIReconciler) processEnvoyPatchPolicies(ctx context.Context, re
 		envoyPatchPolicy := &envoyPatchPolicies.Items[i]
 		// Discard Status to reduce memory consumption in watchable
 		// It will be recomputed by the gateway-api layer
-		envoyPatchPolicy.Status = gwapiv1a2.PolicyStatus{}
+		envoyPatchPolicy.Status = gwapiv1.PolicyStatus{}
 		if !resourceMap.allAssociatedEnvoyPatchPolicies.Has(utils.NamespacedName(envoyPatchPolicy).String()) {
 			resourceMap.allAssociatedEnvoyPatchPolicies.Insert(utils.NamespacedName(envoyPatchPolicy).String())
 			resourceTree.EnvoyPatchPolicies = append(resourceTree.EnvoyPatchPolicies, envoyPatchPolicy)
@@ -1646,7 +1676,7 @@ func (r *gatewayAPIReconciler) processClientTrafficPolicies(
 		clientTrafficPolicy := &clientTrafficPolicies.Items[i]
 		// Discard Status to reduce memory consumption in watchable
 		// It will be recomputed by the gateway-api layer
-		clientTrafficPolicy.Status = gwapiv1a2.PolicyStatus{}
+		clientTrafficPolicy.Status = gwapiv1.PolicyStatus{}
 		if !resourceMap.allAssociatedClientTrafficPolicies.Has(utils.NamespacedName(clientTrafficPolicy).String()) {
 			resourceMap.allAssociatedClientTrafficPolicies.Insert(utils.NamespacedName(clientTrafficPolicy).String())
 			resourceTree.ClientTrafficPolicies = append(resourceTree.ClientTrafficPolicies, clientTrafficPolicy)
@@ -1668,7 +1698,7 @@ func (r *gatewayAPIReconciler) processBackendTrafficPolicies(ctx context.Context
 		backendTrafficPolicy := &backendTrafficPolicies.Items[i]
 		// Discard Status to reduce memory consumption in watchable
 		// It will be recomputed by the gateway-api layer
-		backendTrafficPolicy.Status = gwapiv1a2.PolicyStatus{}
+		backendTrafficPolicy.Status = gwapiv1.PolicyStatus{}
 		if !resourceMap.allAssociatedBackendTrafficPolicies.Has(utils.NamespacedName(backendTrafficPolicy).String()) {
 			resourceMap.allAssociatedBackendTrafficPolicies.Insert(utils.NamespacedName(backendTrafficPolicy).String())
 			resourceTree.BackendTrafficPolicies = append(resourceTree.BackendTrafficPolicies, backendTrafficPolicy)
@@ -1690,7 +1720,7 @@ func (r *gatewayAPIReconciler) processSecurityPolicies(
 		securityPolicy := &securityPolicies.Items[i]
 		// Discard Status to reduce memory consumption in watchable
 		// It will be recomputed by the gateway-api layer
-		securityPolicy.Status = gwapiv1a2.PolicyStatus{}
+		securityPolicy.Status = gwapiv1.PolicyStatus{}
 		if !resourceMap.allAssociatedSecurityPolicies.Has(utils.NamespacedName(securityPolicy).String()) {
 			resourceMap.allAssociatedSecurityPolicies.Insert(utils.NamespacedName(securityPolicy).String())
 			resourceTree.SecurityPolicies = append(resourceTree.SecurityPolicies, securityPolicy)
@@ -1705,7 +1735,7 @@ func (r *gatewayAPIReconciler) processSecurityPolicies(
 func (r *gatewayAPIReconciler) processBackendTLSPolicies(
 	ctx context.Context, resourceTree *resource.Resources, resourceMap *resourceMappings,
 ) error {
-	backendTLSPolicies := gwapiv1a3.BackendTLSPolicyList{}
+	backendTLSPolicies := gwapiv1.BackendTLSPolicyList{}
 	if err := r.client.List(ctx, &backendTLSPolicies); err != nil {
 		return fmt.Errorf("error listing BackendTLSPolicies: %w", err)
 	}
@@ -1714,7 +1744,7 @@ func (r *gatewayAPIReconciler) processBackendTLSPolicies(
 		backendTLSPolicy := &backendTLSPolicies.Items[i]
 		// Discard Status to reduce memory consumption in watchable
 		// It will be recomputed by the gateway-api layer
-		backendTLSPolicy.Status = gwapiv1a2.PolicyStatus{}
+		backendTLSPolicy.Status = gwapiv1.PolicyStatus{}
 		if !resourceMap.allAssociatedBackendTLSPolicies.Has(utils.NamespacedName(backendTLSPolicy).String()) {
 			resourceMap.allAssociatedBackendTLSPolicies.Insert(utils.NamespacedName(backendTLSPolicy).String())
 			resourceTree.BackendTLSPolicies = append(resourceTree.BackendTLSPolicies, backendTLSPolicy)
@@ -1862,20 +1892,20 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		}
 	}
 
-	r.tlsRouteCRDExists = r.crdExists(mgr, resource.KindTLSRoute, gwapiv1a2.GroupVersion.String())
+	r.tlsRouteCRDExists = r.crdExists(mgr, resource.KindTLSRoute, gwapiv1a3.GroupVersion.String())
 	if !r.tlsRouteCRDExists {
 		r.log.Info("TLSRoute CRD not found, skipping TLSRoute watch")
 	} else {
 		// Watch TLSRoute CRUDs and process affected Gateways.
-		tlsrPredicates := commonPredicates[*gwapiv1a2.TLSRoute]()
+		tlsrPredicates := commonPredicates[*gwapiv1a3.TLSRoute]()
 		if r.namespaceLabel != nil {
-			tlsrPredicates = append(tlsrPredicates, predicate.NewTypedPredicateFuncs(func(route *gwapiv1a2.TLSRoute) bool {
+			tlsrPredicates = append(tlsrPredicates, predicate.NewTypedPredicateFuncs(func(route *gwapiv1a3.TLSRoute) bool {
 				return r.hasMatchingNamespaceLabels(route)
 			}))
 		}
 		if err := c.Watch(
-			source.Kind(mgr.GetCache(), &gwapiv1a2.TLSRoute{},
-				handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, route *gwapiv1a2.TLSRoute) []reconcile.Request {
+			source.Kind(mgr.GetCache(), &gwapiv1a3.TLSRoute{},
+				handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, route *gwapiv1a3.TLSRoute) []reconcile.Request {
 					return r.enqueueClass(ctx, route)
 				}),
 				tlsrPredicates...)); err != nil {
@@ -2256,23 +2286,23 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		}
 	}
 
-	r.bTLSPolicyCRDExists = r.crdExists(mgr, resource.KindBackendTLSPolicy, gwapiv1a3.GroupVersion.String())
+	r.bTLSPolicyCRDExists = r.crdExists(mgr, resource.KindBackendTLSPolicy, gwapiv1.GroupVersion.String())
 	if !r.bTLSPolicyCRDExists {
 		r.log.Info("BackendTLSPolicy CRD not found, skipping BackendTLSPolicy watch")
 	} else {
 		// Watch BackendTLSPolicy
-		btlsPredicates := []predicate.TypedPredicate[*gwapiv1a3.BackendTLSPolicy]{
-			predicate.TypedGenerationChangedPredicate[*gwapiv1a3.BackendTLSPolicy]{},
+		btlsPredicates := []predicate.TypedPredicate[*gwapiv1.BackendTLSPolicy]{
+			predicate.TypedGenerationChangedPredicate[*gwapiv1.BackendTLSPolicy]{},
 		}
 		if r.namespaceLabel != nil {
-			btlsPredicates = append(btlsPredicates, predicate.NewTypedPredicateFuncs(func(btp *gwapiv1a3.BackendTLSPolicy) bool {
+			btlsPredicates = append(btlsPredicates, predicate.NewTypedPredicateFuncs(func(btp *gwapiv1.BackendTLSPolicy) bool {
 				return r.hasMatchingNamespaceLabels(btp)
 			}))
 		}
 
 		if err := c.Watch(
-			source.Kind(mgr.GetCache(), &gwapiv1a3.BackendTLSPolicy{},
-				handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, btp *gwapiv1a3.BackendTLSPolicy) []reconcile.Request {
+			source.Kind(mgr.GetCache(), &gwapiv1.BackendTLSPolicy{},
+				handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, btp *gwapiv1.BackendTLSPolicy) []reconcile.Request {
 					return r.enqueueClass(ctx, btp)
 				}),
 				btlsPredicates...)); err != nil {
@@ -2640,7 +2670,7 @@ func (r *gatewayAPIReconciler) processEnvoyExtensionPolicies(
 		envoyExtensionPolicy := &envoyExtensionPolicies.Items[i]
 		// Discard Status to reduce memory consumption in watchable
 		// It will be recomputed by the gateway-api layer
-		envoyExtensionPolicy.Status = gwapiv1a2.PolicyStatus{}
+		envoyExtensionPolicy.Status = gwapiv1.PolicyStatus{}
 		if !resourceMap.allAssociatedEnvoyExtensionPolicies.Has(utils.NamespacedName(envoyExtensionPolicy).String()) {
 			resourceMap.allAssociatedEnvoyExtensionPolicies.Insert(utils.NamespacedName(envoyExtensionPolicy).String())
 			resourceTree.EnvoyExtensionPolicies = append(resourceTree.EnvoyExtensionPolicies, envoyExtensionPolicy)

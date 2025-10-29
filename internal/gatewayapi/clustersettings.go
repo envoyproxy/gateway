@@ -141,10 +141,21 @@ func buildClusterSettingsTimeout(policy *egv1a1.ClusterSettings) (*ir.Timeout, e
 			}
 		}
 
+		var msd *metav1.Duration
+		if pto.HTTP.MaxStreamDuration != nil {
+			d, err := time.ParseDuration(string(*pto.HTTP.MaxStreamDuration))
+			if err != nil {
+				errs = errors.Join(errs, fmt.Errorf("invalid MaxStreamDuration value %s", *pto.HTTP.MaxStreamDuration))
+			} else {
+				msd = ptr.To(metav1.Duration{Duration: d})
+			}
+		}
+
 		to.HTTP = &ir.HTTPTimeout{
 			ConnectionIdleTimeout: cit,
 			MaxConnectionDuration: mcd,
 			RequestTimeout:        rt,
+			MaxStreamDuration:     msd,
 		}
 	}
 	return to, errs
@@ -172,6 +183,17 @@ func buildBackendConnection(policy *egv1a1.ClusterSettings) (*ir.BackendConnecti
 			}
 
 			bcIR.BufferLimitBytes = ptr.To(uint32(bf))
+		}
+		if bc.Preconnect != nil {
+			preconnect := &ir.Preconnect{}
+			pc := bc.Preconnect
+			if pc.PerEndpointPercent != nil {
+				preconnect.PerEndpointPercent = pc.PerEndpointPercent
+			}
+			if pc.PredictivePercent != nil {
+				preconnect.PredictivePercent = pc.PredictivePercent
+			}
+			bcIR.Preconnect = preconnect
 		}
 	}
 
@@ -325,6 +347,7 @@ func buildLoadBalancer(policy *egv1a1.ClusterSettings) (*ir.LoadBalancer, error)
 		preferLocal := policy.LoadBalancer.ZoneAware.PreferLocal
 		lb.PreferLocal = &ir.PreferLocalZone{
 			MinEndpointsThreshold: preferLocal.MinEndpointsThreshold,
+			PercentageEnabled:     preferLocal.PercentageEnabled,
 		}
 		if preferLocal.Force != nil {
 			lb.PreferLocal.Force = &ir.ForceLocalZone{
@@ -358,9 +381,19 @@ func buildConsistentHashLoadBalancer(policy egv1a1.LoadBalancer) (*ir.Consistent
 	case egv1a1.SourceIPConsistentHashType:
 		consistentHash.SourceIP = ptr.To(true)
 	case egv1a1.HeaderConsistentHashType:
-		consistentHash.Header = &ir.Header{
-			Name: policy.ConsistentHash.Header.Name,
+		consistentHash.Headers = []*egv1a1.Header{
+			{
+				Name: policy.ConsistentHash.Header.Name,
+			},
 		}
+	case egv1a1.HeadersConsistentHashType:
+		headers := make([]*egv1a1.Header, 0, len(policy.ConsistentHash.Headers))
+		for _, h := range policy.ConsistentHash.Headers {
+			headers = append(headers, &egv1a1.Header{
+				Name: h.Name,
+			})
+		}
+		consistentHash.Headers = headers
 	case egv1a1.CookieConsistentHashType:
 		consistentHash.Cookie = policy.ConsistentHash.Cookie
 	}
@@ -428,6 +461,7 @@ func buildPassiveHealthCheck(policy egv1a1.HealthCheck) *ir.OutlierDetection {
 		ConsecutiveGatewayErrors:       hc.ConsecutiveGatewayErrors,
 		Consecutive5xxErrors:           hc.Consecutive5xxErrors,
 		MaxEjectionPercent:             hc.MaxEjectionPercent,
+		FailurePercentageThreshold:     hc.FailurePercentageThreshold,
 	}
 
 	if hc.Interval != nil {

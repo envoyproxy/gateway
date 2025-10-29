@@ -7,7 +7,7 @@ package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
 const (
@@ -30,17 +30,16 @@ type ClientTrafficPolicy struct {
 	Spec ClientTrafficPolicySpec `json:"spec"`
 
 	// Status defines the current status of ClientTrafficPolicy.
-	Status gwapiv1a2.PolicyStatus `json:"status,omitempty"`
+	Status gwapiv1.PolicyStatus `json:"status,omitempty"`
 }
 
-// +kubebuilder:validation:XValidation:rule="(has(self.targetRef) && !has(self.targetRefs)) || (!has(self.targetRef) && has(self.targetRefs)) || (has(self.targetSelectors) && self.targetSelectors.size() > 0) ", message="either targetRef or targetRefs must be used"
+// ClientTrafficPolicySpec defines the desired state of ClientTrafficPolicy.
 //
+// +kubebuilder:validation:XValidation:rule="(has(self.targetRef) && !has(self.targetRefs)) || (!has(self.targetRef) && has(self.targetRefs)) || (has(self.targetSelectors) && self.targetSelectors.size() > 0) ", message="either targetRef or targetRefs must be used"
 // +kubebuilder:validation:XValidation:rule="has(self.targetRef) ? self.targetRef.group == 'gateway.networking.k8s.io' : true", message="this policy can only have a targetRef.group of gateway.networking.k8s.io"
 // +kubebuilder:validation:XValidation:rule="has(self.targetRef) ? self.targetRef.kind == 'Gateway' : true", message="this policy can only have a targetRef.kind of Gateway"
 // +kubebuilder:validation:XValidation:rule="has(self.targetRefs) ? self.targetRefs.all(ref, ref.group == 'gateway.networking.k8s.io') : true", message="this policy can only have a targetRefs[*].group of gateway.networking.k8s.io"
 // +kubebuilder:validation:XValidation:rule="has(self.targetRefs) ? self.targetRefs.all(ref, ref.kind == 'Gateway') : true", message="this policy can only have a targetRefs[*].kind of Gateway"
-//
-// ClientTrafficPolicySpec defines the desired state of ClientTrafficPolicy.
 type ClientTrafficPolicySpec struct {
 	PolicyTargetReferences `json:",inline"`
 
@@ -142,13 +141,14 @@ type HeaderSettings struct {
 	// PreserveXRequestID configures Envoy to keep the X-Request-ID header if passed for a request that is edge
 	// (Edge request is the request from external clients to front Envoy) and not reset it, which is the current Envoy behaviour.
 	// Defaults to false and cannot be combined with RequestID.
-	// Deprecated: use RequestID=Preserve instead
+	// Deprecated: use RequestID=PreserveOrGenerate instead
 	//
 	// +optional
 	PreserveXRequestID *bool `json:"preserveXRequestID,omitempty"`
 
 	// RequestID configures Envoy's behavior for handling the `X-Request-ID` header.
-	// Defaults to `Generate` and builds the `X-Request-ID` for every request and ignores pre-existing values from the edge.
+	// When omitted default behavior is `Generate` which builds the `X-Request-ID` for every request
+	//  and ignores pre-existing values from the edge.
 	// (An "edge request" refers to a request from an external client to the Envoy entrypoint.)
 	//
 	// +optional
@@ -183,7 +183,8 @@ const (
 	WithUnderscoresActionDropHeader WithUnderscoresAction = "DropHeader"
 )
 
-// RequestIDAction configures Envoy's behavior for handling the `X-Request-ID` header.
+// RequestIDAction configures Envoy's behavior for handling the `X-Request-ID` header at the edge.
+// An "edge request" refers to a request from an external client to the Envoy entrypoint.
 //
 // +kubebuilder:validation:Enum=PreserveOrGenerate;Preserve;Generate;Disable
 type RequestIDAction string
@@ -281,10 +282,18 @@ type ClientIPDetectionSettings struct {
 // for more details.
 // +kubebuilder:validation:XValidation:rule="(has(self.numTrustedHops) && !has(self.trustedCIDRs)) || (!has(self.numTrustedHops) && has(self.trustedCIDRs))", message="only one of numTrustedHops or trustedCIDRs must be set"
 type XForwardedForSettings struct {
-	// NumTrustedHops controls the number of additional ingress proxy hops from the right side of XFF HTTP
-	// headers to trust when determining the origin client's IP address.
-	// Only one of NumTrustedHops and TrustedCIDRs must be set.
+	// NumTrustedHops specifies how many trusted hops to count from the rightmost side of
+	// the X-Forwarded-For (XFF) header when determining the original client’s IP address.
 	//
+	// If NumTrustedHops is set to N, the client IP is taken from the Nth address from the
+	// right end of the XFF header.
+	//
+	// Example:
+	//   XFF = "203.0.113.128, 203.0.113.10, 203.0.113.1"
+	//   NumTrustedHops = 2
+	//   → Trusted client address = 203.0.113.10
+	//
+	// Only one of NumTrustedHops or TrustedCIDRs should be configured.
 	// +optional
 	NumTrustedHops *uint32 `json:"numTrustedHops,omitempty"`
 

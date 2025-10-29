@@ -21,6 +21,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/logging"
 	"github.com/envoyproxy/gateway/internal/wasm"
 )
 
@@ -104,6 +105,9 @@ type Translator struct {
 	// gateway listener port into a non privileged port
 	// and reuses the specified value.
 	ListenerPortShiftDisabled bool
+
+	// Logger is the logger used by the translator.
+	Logger logging.Logger
 }
 
 type TranslateResult struct {
@@ -121,7 +125,7 @@ func newTranslateResult(gateways []*GatewayContext,
 	clientTrafficPolicies []*egv1a1.ClientTrafficPolicy,
 	backendTrafficPolicies []*egv1a1.BackendTrafficPolicy,
 	securityPolicies []*egv1a1.SecurityPolicy,
-	backendTLSPolicies []*gwapiv1a3.BackendTLSPolicy,
+	backendTLSPolicies []*gwapiv1.BackendTLSPolicy,
 	envoyExtensionPolicies []*egv1a1.EnvoyExtensionPolicy,
 	extPolicies []unstructured.Unstructured,
 	backends []*egv1a1.Backend,
@@ -154,7 +158,7 @@ func newTranslateResult(gateways []*GatewayContext,
 	}
 
 	if n := len(tlsRoutes); n > 0 {
-		translateResult.TLSRoutes = make([]*gwapiv1a2.TLSRoute, n)
+		translateResult.TLSRoutes = make([]*gwapiv1a3.TLSRoute, n)
 		for i, tlsRoute := range tlsRoutes {
 			translateResult.TLSRoutes[i] = tlsRoute.TLSRoute
 		}
@@ -380,13 +384,6 @@ func (t *Translator) InitIRs(gateways []*GatewayContext) (map[string]*ir.Xds, ma
 	return xdsIR, infraIR
 }
 
-func (t *Translator) IRKey(gatewayNN types.NamespacedName) string {
-	if t.MergeGateways {
-		return string(t.GatewayClassName)
-	}
-	return irStringKey(gatewayNN.Namespace, gatewayNN.Name)
-}
-
 // IsEnvoyServiceRouting returns true if EnvoyProxy.Spec.RoutingType == ServiceRoutingType
 // or, alternatively, if Translator.EndpointRoutingDisabled has been explicitly set to true;
 // otherwise, it returns false.
@@ -430,10 +427,15 @@ func infrastructureLabels(gtw *gwapiv1.Gateway) map[string]string {
 
 // XdsIR and InfraIR map keys by default are {GatewayNamespace}/{GatewayName}, but if mergeGateways is set, they are merged under {GatewayClassName} key.
 func (t *Translator) getIRKey(gateway *gwapiv1.Gateway) string {
-	irKey := irStringKey(gateway.Namespace, gateway.Name)
+	return t.IRKey(types.NamespacedName{
+		Namespace: gateway.Namespace,
+		Name:      gateway.Name,
+	})
+}
+
+func (t *Translator) IRKey(gatewayNN types.NamespacedName) string {
 	if t.MergeGateways {
 		return string(t.GatewayClassName)
 	}
-
-	return irKey
+	return irStringKey(gatewayNN.Namespace, gatewayNN.Name)
 }

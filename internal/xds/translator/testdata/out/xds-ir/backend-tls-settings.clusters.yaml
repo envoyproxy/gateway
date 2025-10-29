@@ -46,9 +46,6 @@
             defaultValidationContext:
               matchTypedSubjectAltNames:
               - matcher:
-                  exact: example.com
-                sanType: DNS
-              - matcher:
                   exact: spiffe://cluster.local/ns/istio-demo/sa/echo-v1
                 sanType: URI
               - matcher:
@@ -127,6 +124,7 @@
       name: envoy.transport_sockets.tls
       typedConfig:
         '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+        autoSniSanValidation: true
         commonTlsContext:
           combinedValidationContext:
             defaultValidationContext: {}
@@ -159,6 +157,8 @@
           initialConnectionWindowSize: 1048576
           initialStreamWindowSize: 65536
         httpProtocolOptions: {}
+      upstreamHttpProtocolOptions:
+        autoSni: true
 - circuitBreakers:
     thresholds:
     - maxRetries: 1024

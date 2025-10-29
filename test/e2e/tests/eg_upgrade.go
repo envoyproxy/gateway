@@ -33,6 +33,7 @@ import (
 	"k8s.io/kubectl/pkg/cmd/util"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
@@ -52,7 +53,7 @@ var EGUpgradeTest = suite.ConformanceTest{
 			chartPath := "../../../charts/gateway-helm"
 			relName := "eg"
 			depNS := "envoy-gateway-system"
-			lastVersionTag := "v1.5.2" //  the latest prior release
+			lastVersionTag := "1.5.4" //  the latest prior release
 
 			t.Logf("Upgrading from version: %s", lastVersionTag)
 
@@ -130,7 +131,7 @@ var EGUpgradeTest = suite.ConformanceTest{
 
 			// wait for everything to startup
 			routeNN := types.NamespacedName{Name: "http-backend-eg-upgrade", Namespace: ns}
-			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+			gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
 
 			kubernetes.NamespacesMustBeReady(t, suite.Client, suite.TimeoutConfig, []string{depNS})
 			expectOkResp := http.ExpectedResponse{
@@ -138,7 +139,7 @@ var EGUpgradeTest = suite.ConformanceTest{
 					Path: "/eg-upgrade",
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}

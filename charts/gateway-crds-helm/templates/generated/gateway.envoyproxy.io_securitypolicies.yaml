@@ -255,6 +255,15 @@ spec:
                                 or the proxy protocol.
                                 You can use the `ClientIPDetection` or the `ProxyProtocol` field in
                                 the `ClientTrafficPolicy` to configure how the client IP is detected.
+
+                                For TCPRoute targets (raw TCP connections), HTTP headers such as
+                                X-Forwarded-For are not available. The client IP is obtained from the
+                                TCP connection's peer address. If intermediaries (load balancers, NAT)
+                                terminate or proxy TCP, the original client IP will only be available
+                                if the intermediary preserves the source address (for example by
+                                enabling the PROXY protocol or avoiding SNAT). Ensure your L4 proxy is
+                                configured to preserve the source IP to enable correct client-IP
+                                matching for TCPRoute targets.
                               items:
                                 description: |-
                                   CIDR defines a CIDR Address range.
@@ -807,6 +816,41 @@ spec:
                                   For example, 20Mi, 1Gi, 256Ki etc.
                                   Note: that when the suffix is not provided, the value is interpreted as bytes.
                                 x-kubernetes-int-or-string: true
+                              preconnect:
+                                description: |-
+                                  Preconnect configures proactive upstream connections to reduce latency by establishing
+                                  connections before they’re needed and avoiding connection establishment overhead.
+
+                                  If unset, Envoy will fetch connections as needed to serve in-flight requests.
+                                properties:
+                                  perEndpointPercent:
+                                    description: |-
+                                      PerEndpointPercent configures how many additional connections to maintain per
+                                      upstream endpoint, useful for high-QPS or latency sensitive services. Expressed as a
+                                      percentage of the connections required by active streams
+                                      (e.g. 100 = preconnect disabled, 105 = 1.05x connections per-endpoint, 200 = 2.00×).
+
+                                      Allowed value range is between 100-300. When both PerEndpointPercent and
+                                      PredictivePercent are set, Envoy ensures both are satisfied (max of the two).
+                                    format: int32
+                                    maximum: 300
+                                    minimum: 100
+                                    type: integer
+                                  predictivePercent:
+                                    description: |-
+                                      PredictivePercent configures how many additional connections to maintain
+                                      across the cluster by anticipating which upstream endpoint the load balancer
+                                      will select next, useful for low-QPS services. Relies on deterministic
+                                      loadbalancing and is only supported with Random or RoundRobin.
+                                      Expressed as a percentage of the connections required by active streams
+                                      (e.g. 100 = 1.0 (no preconnect), 105 = 1.05× connections across the cluster, 200 = 2.00×).
+
+                                      Minimum allowed value is 100. When both PerEndpointPercent and PredictivePercent are
+                                      set Envoy ensures both are satisfied per host (max of the two).
+                                    format: int32
+                                    minimum: 100
+                                    type: integer
+                                type: object
                               socketBufferLimit:
                                 allOf:
                                 - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
@@ -1101,7 +1145,6 @@ spec:
                                     format: int32
                                     type: integer
                                   consecutiveGatewayErrors:
-                                    default: 0
                                     description: ConsecutiveGatewayErrors sets the
                                       number of consecutive gateway errors triggering
                                       ejection.
@@ -1113,6 +1156,15 @@ spec:
                                       ConsecutiveLocalOriginFailures sets the number of consecutive local origin failures triggering ejection.
                                       Parameter takes effect only when split_external_local_origin_errors is set to true.
                                     format: int32
+                                    type: integer
+                                  failurePercentageThreshold:
+                                    description: |-
+                                      FailurePercentageThreshold sets the failure percentage threshold for outlier detection.
+                                      If the failure percentage of a given host is greater than or equal to this value, it will be ejected.
+                                      Defaults to 85.
+                                    format: int32
+                                    maximum: 100
+                                    minimum: 0
                                     type: integer
                                   interval:
                                     default: 3s
@@ -1216,9 +1268,10 @@ spec:
                                     - name
                                     type: object
                                   header:
-                                    description: Header configures the header hash
-                                      policy when the consistent hash type is set
-                                      to Header.
+                                    description: |-
+                                      Header configures the header hash policy when the consistent hash type is set to Header.
+
+                                      Deprecated: use Headers instead
                                     properties:
                                       name:
                                         description: Name of the header to hash.
@@ -1226,6 +1279,22 @@ spec:
                                     required:
                                     - name
                                     type: object
+                                  headers:
+                                    description: Headers configures the header hash
+                                      policy for each header, when the consistent
+                                      hash type is set to Headers.
+                                    items:
+                                      description: |-
+                                        Header defines the header hashing configuration for consistent hash based
+                                        load balancing.
+                                      properties:
+                                        name:
+                                          description: Name of the header to hash.
+                                          type: string
+                                      required:
+                                      - name
+                                      type: object
+                                    type: array
                                   tableSize:
                                     default: 65537
                                     description: The table size for consistent hashing,
@@ -1239,10 +1308,12 @@ spec:
                                       ConsistentHashType defines the type of input to hash on. Valid Type values are
                                       "SourceIP",
                                       "Header",
+                                      "Headers",
                                       "Cookie".
                                     enum:
                                     - SourceIP
                                     - Header
+                                    - Headers
                                     - Cookie
                                     type: string
                                 required:
@@ -1253,6 +1324,10 @@ spec:
                                     header field must be set.
                                   rule: 'self.type == ''Header'' ? has(self.header)
                                     : !has(self.header)'
+                                - message: If consistent hash type is headers, the
+                                    headers field must be set.
+                                  rule: 'self.type == ''Headers'' ? has(self.headers)
+                                    : !has(self.headers)'
                                 - message: If consistent hash type is cookie, the
                                     cookie field must be set.
                                   rule: 'self.type == ''Cookie'' ? has(self.cookie)
@@ -1345,6 +1420,15 @@ spec:
                                           across all zones required to enable zone-aware
                                           routing.
                                         format: int64
+                                        type: integer
+                                      percentageEnabled:
+                                        description: Configures percentage of requests
+                                          that will be considered for zone aware routing
+                                          if zone aware routing is configured. If
+                                          not specified, Envoy defaults to 100%.
+                                        format: int32
+                                        maximum: 100
+                                        minimum: 0
                                         type: integer
                                     type: object
                                 type: object
@@ -1514,6 +1598,14 @@ spec:
                                       Default: unlimited.
                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
+                                  maxStreamDuration:
+                                    description: |-
+                                      MaxStreamDuration is the maximum duration for a stream to complete. This timeout measures the time
+                                      from when the request is sent until the response stream is fully consumed and does not apply to
+                                      non-streaming requests.
+                                      When set to "0s", no max duration is applied and streams can run indefinitely.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
                                   requestTimeout:
                                     description: RequestTimeout is the time until
                                       which entire response is received from the upstream.
@@ -1532,6 +1624,13 @@ spec:
                                 type: object
                             type: object
                         type: object
+                        x-kubernetes-validations:
+                        - message: predictivePercent in preconnect policy only works
+                            with RoundRobin or Random load balancers
+                          rule: '!((has(self.connection) && has(self.connection.preconnect)
+                            && has(self.connection.preconnect.predictivePercent))
+                            && !(has(self.loadBalancer) && has(self.loadBalancer.type)
+                            && self.loadBalancer.type in [''Random'', ''RoundRobin'']))'
                     type: object
                     x-kubernetes-validations:
                     - message: backendRef or backendRefs needs to be set
@@ -1814,6 +1913,41 @@ spec:
                                   For example, 20Mi, 1Gi, 256Ki etc.
                                   Note: that when the suffix is not provided, the value is interpreted as bytes.
                                 x-kubernetes-int-or-string: true
+                              preconnect:
+                                description: |-
+                                  Preconnect configures proactive upstream connections to reduce latency by establishing
+                                  connections before they’re needed and avoiding connection establishment overhead.
+
+                                  If unset, Envoy will fetch connections as needed to serve in-flight requests.
+                                properties:
+                                  perEndpointPercent:
+                                    description: |-
+                                      PerEndpointPercent configures how many additional connections to maintain per
+                                      upstream endpoint, useful for high-QPS or latency sensitive services. Expressed as a
+                                      percentage of the connections required by active streams
+                                      (e.g. 100 = preconnect disabled, 105 = 1.05x connections per-endpoint, 200 = 2.00×).
+
+                                      Allowed value range is between 100-300. When both PerEndpointPercent and
+                                      PredictivePercent are set, Envoy ensures both are satisfied (max of the two).
+                                    format: int32
+                                    maximum: 300
+                                    minimum: 100
+                                    type: integer
+                                  predictivePercent:
+                                    description: |-
+                                      PredictivePercent configures how many additional connections to maintain
+                                      across the cluster by anticipating which upstream endpoint the load balancer
+                                      will select next, useful for low-QPS services. Relies on deterministic
+                                      loadbalancing and is only supported with Random or RoundRobin.
+                                      Expressed as a percentage of the connections required by active streams
+                                      (e.g. 100 = 1.0 (no preconnect), 105 = 1.05× connections across the cluster, 200 = 2.00×).
+
+                                      Minimum allowed value is 100. When both PerEndpointPercent and PredictivePercent are
+                                      set Envoy ensures both are satisfied per host (max of the two).
+                                    format: int32
+                                    minimum: 100
+                                    type: integer
+                                type: object
                               socketBufferLimit:
                                 allOf:
                                 - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
@@ -2108,7 +2242,6 @@ spec:
                                     format: int32
                                     type: integer
                                   consecutiveGatewayErrors:
-                                    default: 0
                                     description: ConsecutiveGatewayErrors sets the
                                       number of consecutive gateway errors triggering
                                       ejection.
@@ -2120,6 +2253,15 @@ spec:
                                       ConsecutiveLocalOriginFailures sets the number of consecutive local origin failures triggering ejection.
                                       Parameter takes effect only when split_external_local_origin_errors is set to true.
                                     format: int32
+                                    type: integer
+                                  failurePercentageThreshold:
+                                    description: |-
+                                      FailurePercentageThreshold sets the failure percentage threshold for outlier detection.
+                                      If the failure percentage of a given host is greater than or equal to this value, it will be ejected.
+                                      Defaults to 85.
+                                    format: int32
+                                    maximum: 100
+                                    minimum: 0
                                     type: integer
                                   interval:
                                     default: 3s
@@ -2223,9 +2365,10 @@ spec:
                                     - name
                                     type: object
                                   header:
-                                    description: Header configures the header hash
-                                      policy when the consistent hash type is set
-                                      to Header.
+                                    description: |-
+                                      Header configures the header hash policy when the consistent hash type is set to Header.
+
+                                      Deprecated: use Headers instead
                                     properties:
                                       name:
                                         description: Name of the header to hash.
@@ -2233,6 +2376,22 @@ spec:
                                     required:
                                     - name
                                     type: object
+                                  headers:
+                                    description: Headers configures the header hash
+                                      policy for each header, when the consistent
+                                      hash type is set to Headers.
+                                    items:
+                                      description: |-
+                                        Header defines the header hashing configuration for consistent hash based
+                                        load balancing.
+                                      properties:
+                                        name:
+                                          description: Name of the header to hash.
+                                          type: string
+                                      required:
+                                      - name
+                                      type: object
+                                    type: array
                                   tableSize:
                                     default: 65537
                                     description: The table size for consistent hashing,
@@ -2246,10 +2405,12 @@ spec:
                                       ConsistentHashType defines the type of input to hash on. Valid Type values are
                                       "SourceIP",
                                       "Header",
+                                      "Headers",
                                       "Cookie".
                                     enum:
                                     - SourceIP
                                     - Header
+                                    - Headers
                                     - Cookie
                                     type: string
                                 required:
@@ -2260,6 +2421,10 @@ spec:
                                     header field must be set.
                                   rule: 'self.type == ''Header'' ? has(self.header)
                                     : !has(self.header)'
+                                - message: If consistent hash type is headers, the
+                                    headers field must be set.
+                                  rule: 'self.type == ''Headers'' ? has(self.headers)
+                                    : !has(self.headers)'
                                 - message: If consistent hash type is cookie, the
                                     cookie field must be set.
                                   rule: 'self.type == ''Cookie'' ? has(self.cookie)
@@ -2352,6 +2517,15 @@ spec:
                                           across all zones required to enable zone-aware
                                           routing.
                                         format: int64
+                                        type: integer
+                                      percentageEnabled:
+                                        description: Configures percentage of requests
+                                          that will be considered for zone aware routing
+                                          if zone aware routing is configured. If
+                                          not specified, Envoy defaults to 100%.
+                                        format: int32
+                                        maximum: 100
+                                        minimum: 0
                                         type: integer
                                     type: object
                                 type: object
@@ -2521,6 +2695,14 @@ spec:
                                       Default: unlimited.
                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
+                                  maxStreamDuration:
+                                    description: |-
+                                      MaxStreamDuration is the maximum duration for a stream to complete. This timeout measures the time
+                                      from when the request is sent until the response stream is fully consumed and does not apply to
+                                      non-streaming requests.
+                                      When set to "0s", no max duration is applied and streams can run indefinitely.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
                                   requestTimeout:
                                     description: RequestTimeout is the time until
                                       which entire response is received from the upstream.
@@ -2539,6 +2721,13 @@ spec:
                                 type: object
                             type: object
                         type: object
+                        x-kubernetes-validations:
+                        - message: predictivePercent in preconnect policy only works
+                            with RoundRobin or Random load balancers
+                          rule: '!((has(self.connection) && has(self.connection.preconnect)
+                            && has(self.connection.preconnect.predictivePercent))
+                            && !(has(self.loadBalancer) && has(self.loadBalancer.type)
+                            && self.loadBalancer.type in [''Random'', ''RoundRobin'']))'
                       headersToBackend:
                         description: |-
                           HeadersToBackend are the authorization response headers that will be added
@@ -3019,6 +3208,41 @@ spec:
                                         For example, 20Mi, 1Gi, 256Ki etc.
                                         Note: that when the suffix is not provided, the value is interpreted as bytes.
                                       x-kubernetes-int-or-string: true
+                                    preconnect:
+                                      description: |-
+                                        Preconnect configures proactive upstream connections to reduce latency by establishing
+                                        connections before they’re needed and avoiding connection establishment overhead.
+
+                                        If unset, Envoy will fetch connections as needed to serve in-flight requests.
+                                      properties:
+                                        perEndpointPercent:
+                                          description: |-
+                                            PerEndpointPercent configures how many additional connections to maintain per
+                                            upstream endpoint, useful for high-QPS or latency sensitive services. Expressed as a
+                                            percentage of the connections required by active streams
+                                            (e.g. 100 = preconnect disabled, 105 = 1.05x connections per-endpoint, 200 = 2.00×).
+
+                                            Allowed value range is between 100-300. When both PerEndpointPercent and
+                                            PredictivePercent are set, Envoy ensures both are satisfied (max of the two).
+                                          format: int32
+                                          maximum: 300
+                                          minimum: 100
+                                          type: integer
+                                        predictivePercent:
+                                          description: |-
+                                            PredictivePercent configures how many additional connections to maintain
+                                            across the cluster by anticipating which upstream endpoint the load balancer
+                                            will select next, useful for low-QPS services. Relies on deterministic
+                                            loadbalancing and is only supported with Random or RoundRobin.
+                                            Expressed as a percentage of the connections required by active streams
+                                            (e.g. 100 = 1.0 (no preconnect), 105 = 1.05× connections across the cluster, 200 = 2.00×).
+
+                                            Minimum allowed value is 100. When both PerEndpointPercent and PredictivePercent are
+                                            set Envoy ensures both are satisfied per host (max of the two).
+                                          format: int32
+                                          minimum: 100
+                                          type: integer
+                                      type: object
                                     socketBufferLimit:
                                       allOf:
                                       - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
@@ -3326,7 +3550,6 @@ spec:
                                           format: int32
                                           type: integer
                                         consecutiveGatewayErrors:
-                                          default: 0
                                           description: ConsecutiveGatewayErrors sets
                                             the number of consecutive gateway errors
                                             triggering ejection.
@@ -3338,6 +3561,15 @@ spec:
                                             ConsecutiveLocalOriginFailures sets the number of consecutive local origin failures triggering ejection.
                                             Parameter takes effect only when split_external_local_origin_errors is set to true.
                                           format: int32
+                                          type: integer
+                                        failurePercentageThreshold:
+                                          description: |-
+                                            FailurePercentageThreshold sets the failure percentage threshold for outlier detection.
+                                            If the failure percentage of a given host is greater than or equal to this value, it will be ejected.
+                                            Defaults to 85.
+                                          format: int32
+                                          maximum: 100
+                                          minimum: 0
                                           type: integer
                                         interval:
                                           default: 3s
@@ -3441,9 +3673,10 @@ spec:
                                           - name
                                           type: object
                                         header:
-                                          description: Header configures the header
-                                            hash policy when the consistent hash type
-                                            is set to Header.
+                                          description: |-
+                                            Header configures the header hash policy when the consistent hash type is set to Header.
+
+                                            Deprecated: use Headers instead
                                           properties:
                                             name:
                                               description: Name of the header to hash.
@@ -3451,6 +3684,23 @@ spec:
                                           required:
                                           - name
                                           type: object
+                                        headers:
+                                          description: Headers configures the header
+                                            hash policy for each header, when the
+                                            consistent hash type is set to Headers.
+                                          items:
+                                            description: |-
+                                              Header defines the header hashing configuration for consistent hash based
+                                              load balancing.
+                                            properties:
+                                              name:
+                                                description: Name of the header to
+                                                  hash.
+                                                type: string
+                                            required:
+                                            - name
+                                            type: object
+                                          type: array
                                         tableSize:
                                           default: 65537
                                           description: The table size for consistent
@@ -3465,10 +3715,12 @@ spec:
                                             ConsistentHashType defines the type of input to hash on. Valid Type values are
                                             "SourceIP",
                                             "Header",
+                                            "Headers",
                                             "Cookie".
                                           enum:
                                           - SourceIP
                                           - Header
+                                          - Headers
                                           - Cookie
                                           type: string
                                       required:
@@ -3479,6 +3731,10 @@ spec:
                                           the header field must be set.
                                         rule: 'self.type == ''Header'' ? has(self.header)
                                           : !has(self.header)'
+                                      - message: If consistent hash type is headers,
+                                          the headers field must be set.
+                                        rule: 'self.type == ''Headers'' ? has(self.headers)
+                                          : !has(self.headers)'
                                       - message: If consistent hash type is cookie,
                                           the cookie field must be set.
                                         rule: 'self.type == ''Cookie'' ? has(self.cookie)
@@ -3572,6 +3828,16 @@ spec:
                                                 endpoints across all zones required
                                                 to enable zone-aware routing.
                                               format: int64
+                                              type: integer
+                                            percentageEnabled:
+                                              description: Configures percentage of
+                                                requests that will be considered for
+                                                zone aware routing if zone aware routing
+                                                is configured. If not specified, Envoy
+                                                defaults to 100%.
+                                              format: int32
+                                              maximum: 100
+                                              minimum: 0
                                               type: integer
                                           type: object
                                       type: object
@@ -3742,6 +4008,14 @@ spec:
                                             Default: unlimited.
                                           pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                           type: string
+                                        maxStreamDuration:
+                                          description: |-
+                                            MaxStreamDuration is the maximum duration for a stream to complete. This timeout measures the time
+                                            from when the request is sent until the response stream is fully consumed and does not apply to
+                                            non-streaming requests.
+                                            When set to "0s", no max duration is applied and streams can run indefinitely.
+                                          pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                          type: string
                                         requestTimeout:
                                           description: RequestTimeout is the time
                                             until which entire response is received
@@ -3761,6 +4035,13 @@ spec:
                                       type: object
                                   type: object
                               type: object
+                              x-kubernetes-validations:
+                              - message: predictivePercent in preconnect policy only
+                                  works with RoundRobin or Random load balancers
+                                rule: '!((has(self.connection) && has(self.connection.preconnect)
+                                  && has(self.connection.preconnect.predictivePercent))
+                                  && !(has(self.loadBalancer) && has(self.loadBalancer.type)
+                                  && self.loadBalancer.type in [''Random'', ''RoundRobin'']))'
                             cacheDuration:
                               default: 300s
                               description: |-
@@ -3949,6 +4230,16 @@ spec:
                           If not specified, defaults to "IdToken-(randomly generated uid)"
                         type: string
                     type: object
+                  csrfTokenTTL:
+                    description: |-
+                      CSRFTokenTTL defines how long the CSRF token generated during the OAuth2 authorization flow remains valid.
+
+                      This duration determines the lifetime of the CSRF cookie, which is validated against the CSRF token
+                      in the "state" parameter when the provider redirects back to the callback endpoint.
+
+                      If omitted, Envoy Gateway defaults the token expiration to 10 minutes.
+                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                    type: string
                   defaultRefreshTokenTTL:
                     description: |-
                       DefaultRefreshTokenTTL is the default lifetime of the refresh token.
@@ -4296,6 +4587,41 @@ spec:
                                   For example, 20Mi, 1Gi, 256Ki etc.
                                   Note: that when the suffix is not provided, the value is interpreted as bytes.
                                 x-kubernetes-int-or-string: true
+                              preconnect:
+                                description: |-
+                                  Preconnect configures proactive upstream connections to reduce latency by establishing
+                                  connections before they’re needed and avoiding connection establishment overhead.
+
+                                  If unset, Envoy will fetch connections as needed to serve in-flight requests.
+                                properties:
+                                  perEndpointPercent:
+                                    description: |-
+                                      PerEndpointPercent configures how many additional connections to maintain per
+                                      upstream endpoint, useful for high-QPS or latency sensitive services. Expressed as a
+                                      percentage of the connections required by active streams
+                                      (e.g. 100 = preconnect disabled, 105 = 1.05x connections per-endpoint, 200 = 2.00×).
+
+                                      Allowed value range is between 100-300. When both PerEndpointPercent and
+                                      PredictivePercent are set, Envoy ensures both are satisfied (max of the two).
+                                    format: int32
+                                    maximum: 300
+                                    minimum: 100
+                                    type: integer
+                                  predictivePercent:
+                                    description: |-
+                                      PredictivePercent configures how many additional connections to maintain
+                                      across the cluster by anticipating which upstream endpoint the load balancer
+                                      will select next, useful for low-QPS services. Relies on deterministic
+                                      loadbalancing and is only supported with Random or RoundRobin.
+                                      Expressed as a percentage of the connections required by active streams
+                                      (e.g. 100 = 1.0 (no preconnect), 105 = 1.05× connections across the cluster, 200 = 2.00×).
+
+                                      Minimum allowed value is 100. When both PerEndpointPercent and PredictivePercent are
+                                      set Envoy ensures both are satisfied per host (max of the two).
+                                    format: int32
+                                    minimum: 100
+                                    type: integer
+                                type: object
                               socketBufferLimit:
                                 allOf:
                                 - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
@@ -4590,7 +4916,6 @@ spec:
                                     format: int32
                                     type: integer
                                   consecutiveGatewayErrors:
-                                    default: 0
                                     description: ConsecutiveGatewayErrors sets the
                                       number of consecutive gateway errors triggering
                                       ejection.
@@ -4602,6 +4927,15 @@ spec:
                                       ConsecutiveLocalOriginFailures sets the number of consecutive local origin failures triggering ejection.
                                       Parameter takes effect only when split_external_local_origin_errors is set to true.
                                     format: int32
+                                    type: integer
+                                  failurePercentageThreshold:
+                                    description: |-
+                                      FailurePercentageThreshold sets the failure percentage threshold for outlier detection.
+                                      If the failure percentage of a given host is greater than or equal to this value, it will be ejected.
+                                      Defaults to 85.
+                                    format: int32
+                                    maximum: 100
+                                    minimum: 0
                                     type: integer
                                   interval:
                                     default: 3s
@@ -4705,9 +5039,10 @@ spec:
                                     - name
                                     type: object
                                   header:
-                                    description: Header configures the header hash
-                                      policy when the consistent hash type is set
-                                      to Header.
+                                    description: |-
+                                      Header configures the header hash policy when the consistent hash type is set to Header.
+
+                                      Deprecated: use Headers instead
                                     properties:
                                       name:
                                         description: Name of the header to hash.
@@ -4715,6 +5050,22 @@ spec:
                                     required:
                                     - name
                                     type: object
+                                  headers:
+                                    description: Headers configures the header hash
+                                      policy for each header, when the consistent
+                                      hash type is set to Headers.
+                                    items:
+                                      description: |-
+                                        Header defines the header hashing configuration for consistent hash based
+                                        load balancing.
+                                      properties:
+                                        name:
+                                          description: Name of the header to hash.
+                                          type: string
+                                      required:
+                                      - name
+                                      type: object
+                                    type: array
                                   tableSize:
                                     default: 65537
                                     description: The table size for consistent hashing,
@@ -4728,10 +5079,12 @@ spec:
                                       ConsistentHashType defines the type of input to hash on. Valid Type values are
                                       "SourceIP",
                                       "Header",
+                                      "Headers",
                                       "Cookie".
                                     enum:
                                     - SourceIP
                                     - Header
+                                    - Headers
                                     - Cookie
                                     type: string
                                 required:
@@ -4742,6 +5095,10 @@ spec:
                                     header field must be set.
                                   rule: 'self.type == ''Header'' ? has(self.header)
                                     : !has(self.header)'
+                                - message: If consistent hash type is headers, the
+                                    headers field must be set.
+                                  rule: 'self.type == ''Headers'' ? has(self.headers)
+                                    : !has(self.headers)'
                                 - message: If consistent hash type is cookie, the
                                     cookie field must be set.
                                   rule: 'self.type == ''Cookie'' ? has(self.cookie)
@@ -4834,6 +5191,15 @@ spec:
                                           across all zones required to enable zone-aware
                                           routing.
                                         format: int64
+                                        type: integer
+                                      percentageEnabled:
+                                        description: Configures percentage of requests
+                                          that will be considered for zone aware routing
+                                          if zone aware routing is configured. If
+                                          not specified, Envoy defaults to 100%.
+                                        format: int32
+                                        maximum: 100
+                                        minimum: 0
                                         type: integer
                                     type: object
                                 type: object
@@ -5003,6 +5369,14 @@ spec:
                                       Default: unlimited.
                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
+                                  maxStreamDuration:
+                                    description: |-
+                                      MaxStreamDuration is the maximum duration for a stream to complete. This timeout measures the time
+                                      from when the request is sent until the response stream is fully consumed and does not apply to
+                                      non-streaming requests.
+                                      When set to "0s", no max duration is applied and streams can run indefinitely.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
                                   requestTimeout:
                                     description: RequestTimeout is the time until
                                       which entire response is received from the upstream.
@@ -5021,6 +5395,13 @@ spec:
                                 type: object
                             type: object
                         type: object
+                        x-kubernetes-validations:
+                        - message: predictivePercent in preconnect policy only works
+                            with RoundRobin or Random load balancers
+                          rule: '!((has(self.connection) && has(self.connection.preconnect)
+                            && has(self.connection.preconnect.predictivePercent))
+                            && !(has(self.loadBalancer) && has(self.loadBalancer.type)
+                            && self.loadBalancer.type in [''Random'', ''RoundRobin'']))'
                       endSessionEndpoint:
                         description: |-
                           The OIDC Provider's [end session endpoint](https://openid.net/specs/openid-connect-core-1_0.html#RPLogout).
@@ -5267,15 +5648,15 @@ spec:
             - message: this policy can only have a targetRef.group of gateway.networking.k8s.io
               rule: 'has(self.targetRef) ? self.targetRef.group == ''gateway.networking.k8s.io''
                 : true'
-            - message: this policy can only have a targetRef.kind of Gateway/HTTPRoute/GRPCRoute
+            - message: this policy can only have a targetRef.kind of Gateway/HTTPRoute/GRPCRoute/TCPRoute
               rule: 'has(self.targetRef) ? self.targetRef.kind in [''Gateway'', ''HTTPRoute'',
-                ''GRPCRoute''] : true'
+                ''GRPCRoute'', ''TCPRoute''] : true'
             - message: this policy can only have a targetRefs[*].group of gateway.networking.k8s.io
               rule: 'has(self.targetRefs) ? self.targetRefs.all(ref, ref.group ==
                 ''gateway.networking.k8s.io'') : true '
-            - message: this policy can only have a targetRefs[*].kind of Gateway/HTTPRoute/GRPCRoute
+            - message: this policy can only have a targetRefs[*].kind of Gateway/HTTPRoute/GRPCRoute/TCPRoute
               rule: 'has(self.targetRefs) ? self.targetRefs.all(ref, ref.kind in [''Gateway'',
-                ''HTTPRoute'', ''GRPCRoute'']) : true '
+                ''HTTPRoute'', ''GRPCRoute'', ''TCPRoute'']) : true '
             - message: if authorization.rules.principal.jwt is used, jwt must be defined
               rule: '(has(self.authorization) && has(self.authorization.rules) &&
                 self.authorization.rules.exists(r, has(r.principal.jwt))) ? has(self.jwt)
@@ -5485,8 +5866,38 @@ spec:
                       - name
                       type: object
                     conditions:
-                      description: Conditions describes the status of the Policy with
-                        respect to the given Ancestor.
+                      description: |-
+                        Conditions describes the status of the Policy with respect to the given Ancestor.
+
+                        <gateway:util:excludeFromCRD>
+
+                        Notes for implementors:
+
+                        Conditions are a listType `map`, which means that they function like a
+                        map with a key of the `type` field _in the k8s apiserver_.
+
+                        This means that implementations must obey some rules when updating this
+                        section.
+
+                        * Implementations MUST perform a read-modify-write cycle on this field
+                          before modifying it. That is, when modifying this field, implementations
+                          must be confident they have fetched the most recent version of this field,
+                          and ensure that changes they make are on that recent version.
+                        * Implementations MUST NOT remove or reorder Conditions that they are not
+                          directly responsible for. For example, if an implementation sees a Condition
+                          with type `special.io/SomeField`, it MUST NOT remove, change or update that
+                          Condition.
+                        * Implementations MUST always _merge_ changes into Conditions of the same Type,
+                          rather than creating more than one Condition of the same Type.
+                        * Implementations MUST always update the `observedGeneration` field of the
+                          Condition to the `metadata.generation` of the Gateway at the time of update creation.
+                        * If the `observedGeneration` of a Condition is _greater than_ the value the
+                          implementation knows about, then it MUST NOT perform the update on that Condition,
+                          but must wait for a future reconciliation and status update. (The assumption is that
+                          the implementation's copy of the object is stale and an update will be re-triggered
+                          if relevant.)
+
+                        </gateway:util:excludeFromCRD>
                       items:
                         description: Condition contains details for one aspect of
                           the current state of this API Resource.
@@ -5569,10 +5980,12 @@ spec:
                       type: string
                   required:
                   - ancestorRef
+                  - conditions
                   - controllerName
                   type: object
                 maxItems: 16
                 type: array
+                x-kubernetes-list-type: atomic
             required:
             - ancestors
             type: object

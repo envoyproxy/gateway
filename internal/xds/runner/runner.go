@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"math/rand"
 	"net"
+	"path/filepath"
 	"strconv"
 	"time"
 
@@ -32,6 +33,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/crypto"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	extension "github.com/envoyproxy/gateway/internal/extension/types"
+	"github.com/envoyproxy/gateway/internal/infrastructure/host"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/ratelimit"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/message"
@@ -56,11 +58,6 @@ const (
 	// xDS server trusted CA certificate.
 	xdsTLSCaFilepath = "/certs/ca.crt"
 
-	// TODO: Make these path configurable.
-	// Default certificates path for envoy-gateway with Host infrastructure provider.
-	localTLSCertFilepath = "/tmp/envoy-gateway/certs/envoy-gateway/tls.crt"
-	localTLSKeyFilepath  = "/tmp/envoy-gateway/certs/envoy-gateway/tls.key"
-	localTLSCaFilepath   = "/tmp/envoy-gateway/certs/envoy-gateway/ca.crt"
 	// defaultKubernetesIssuer is the default issuer URL for Kubernetes.
 	// This is used for validating Service Account JWT tokens.
 	defaultKubernetesIssuer = "https://kubernetes.default.svc.cluster.local"
@@ -182,7 +179,7 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 	// Do not call .Subscribe() inside Goroutine since it is supposed to be called from the same
 	// Goroutine where Close() is called.
 	sub := r.XdsIR.Subscribe(ctx)
-	go r.subscribeAndTranslate(sub)
+	go r.translateFromSubscription(sub)
 	r.Logger.Info("started")
 	return
 }
@@ -223,7 +220,7 @@ func registerServer(srv serverv3.Server, g *grpc.Server) {
 	runtimev3.RegisterRuntimeDiscoveryServiceServer(g, srv)
 }
 
-func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *ir.Xds]) {
+func (r *Runner) translateFromSubscription(sub <-chan watchable.Snapshot[string, *ir.Xds]) {
 	// Subscribe to resources
 	message.HandleSubscription(message.Metadata{Runner: r.Name(), Message: message.XDSIRMessageName}, sub,
 		func(update message.Update[string, *ir.Xds], errChan chan error) {
@@ -349,9 +346,22 @@ func (r *Runner) loadTLSConfig() (tlsConfig *tls.Config, err error) {
 			keyPath = xdsTLSKeyFilepath
 			caPath = xdsTLSCaFilepath
 		case r.EnvoyGateway.Provider.IsRunningOnHost():
-			certPath = localTLSCertFilepath
-			keyPath = localTLSKeyFilepath
-			caPath = localTLSCaFilepath
+			// Get config
+			var hostCfg *egv1a1.EnvoyGatewayHostInfrastructureProvider
+			if p := r.EnvoyGateway.Provider; p != nil && p.Custom != nil &&
+				p.Custom.Infrastructure != nil && p.Custom.Infrastructure.Host != nil {
+				hostCfg = p.Custom.Infrastructure.Host
+			}
+
+			paths, err := host.GetPaths(hostCfg)
+			if err != nil {
+				return nil, fmt.Errorf("failed to determine paths: %w", err)
+			}
+
+			certDir := paths.CertDir("envoy-gateway")
+			certPath = filepath.Join(certDir, "tls.crt")
+			keyPath = filepath.Join(certDir, "tls.key")
+			caPath = filepath.Join(certDir, "ca.crt")
 		default:
 			return nil, fmt.Errorf("no valid tls certificates")
 		}

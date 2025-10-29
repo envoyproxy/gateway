@@ -6,22 +6,24 @@
 package host
 
 import (
-	"bytes"
+	"io"
 	"os"
 	"path"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
-	func_e "github.com/tetratelabs/func-e"
-	"github.com/tetratelabs/func-e/api"
 	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/crypto"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
+	"github.com/envoyproxy/gateway/internal/infrastructure/common"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/logging"
 	"github.com/envoyproxy/gateway/internal/utils/file"
+	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
+	"github.com/envoyproxy/gateway/test/utils"
 )
 
 func newMockInfra(t *testing.T, cfg *config.Server) *Infra {
@@ -42,22 +44,29 @@ func newMockInfra(t *testing.T, cfg *config.Server) *Infra {
 	err = createSdsConfig(proxyDir)
 	require.NoError(t, err)
 
+	paths := &Paths{
+		ConfigHome: homeDir,
+		DataHome:   homeDir,
+		StateHome:  homeDir,
+		RuntimeDir: homeDir,
+	}
 	infra := &Infra{
-		HomeDir:         homeDir,
-		Logger:          logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo),
+		Paths:           paths,
+		Logger:          logging.DefaultLogger(io.Discard, egv1a1.LogLevelInfo),
 		EnvoyGateway:    cfg.EnvoyGateway,
 		proxyContextMap: make(map[string]*proxyContext),
 		sdsConfigPath:   proxyDir,
+		Stdout:          io.Discard,
+		Stderr:          io.Discard,
 	}
 	return infra
 }
 
 func TestInfraCreateProxy(t *testing.T) {
-	cfg, err := config.New(os.Stdout)
+	cfg, err := config.New(io.Discard, io.Discard)
 	require.NoError(t, err)
 	infra := newMockInfra(t, cfg)
 
-	// TODO: add more tests once it supports configurable homeDir and runDir.
 	testCases := []struct {
 		name   string
 		expect bool
@@ -89,30 +98,6 @@ func TestInfraCreateProxy(t *testing.T) {
 	}
 }
 
-func TestInfra_runEnvoy_stopEnvoy(t *testing.T) {
-	tmpdir := t.TempDir()
-	// Ensures that all the required binaries are available.
-	err := func_e.Run(t.Context(), []string{"--version"}, api.HomeDir(tmpdir))
-	require.NoError(t, err)
-
-	i := &Infra{proxyContextMap: make(map[string]*proxyContext), HomeDir: tmpdir}
-	// Ensures that run -> stop will successfully stop the envoy and we can
-	// run it again without any issues.
-	for range 5 {
-		args := []string{
-			"--config-yaml",
-			"admin: {address: {socket_address: {address: '127.0.0.1', port_value: 9901}}}",
-		}
-		out := &bytes.Buffer{}
-		i.runEnvoy(t.Context(), out, "", "test", args)
-		require.Len(t, i.proxyContextMap, 1)
-		i.stopEnvoy("test")
-		require.Empty(t, i.proxyContextMap)
-		// If the cleanup didn't work, the error due to "address already in use" will be tried to be written to the nil logger,
-		// which will panic.
-	}
-}
-
 func TestExtractSemver(t *testing.T) {
 	tests := []struct {
 		image   string
@@ -139,6 +124,99 @@ func TestExtractSemver(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestInfra_runEnvoy verifies Envoy process lifecycle, output redirection, and XDG directory usage.
+func TestInfra_runEnvoy(t *testing.T) {
+	// Create separate XDG directories
+	baseDir := t.TempDir()
+	configHome := path.Join(baseDir, "config")
+	dataHome := path.Join(baseDir, "data")
+	stateHome := path.Join(baseDir, "state")
+	runtimeDir := path.Join(baseDir, "runtime")
+
+	// Create separate buffers for stdout and stderr
+	buffers := utils.DumpLogsOnFail(t, "stdout", "stderr")
+	stdout := buffers[0]
+	stderr := buffers[1]
+
+	paths := &Paths{
+		ConfigHome: configHome,
+		DataHome:   dataHome,
+		StateHome:  stateHome,
+		RuntimeDir: runtimeDir,
+	}
+	i := &Infra{
+		proxyContextMap: make(map[string]*proxyContext),
+		Paths:           paths,
+		Logger:          logging.DefaultLogger(stdout, egv1a1.LogLevelInfo),
+		Stdout:          stdout,
+		Stderr:          stderr,
+	}
+
+	// Run envoy once to let func-e set up all XDG directories
+	args := []string{
+		"--config-yaml",
+		"admin: {address: {socket_address: {address: '127.0.0.1', port_value: 9901}}}",
+	}
+	i.runEnvoy(t.Context(), "", "test", args)
+	require.Len(t, i.proxyContextMap, 1)
+
+	// Wait for func-e to create all XDG directories
+	require.Eventually(t, func() bool {
+		_, err := os.Stat(path.Join(configHome, "envoy-version"))
+		return err == nil
+	}, 5*time.Second, 100*time.Millisecond, "envoy-version file should be created in configHome")
+
+	i.stopEnvoy("test")
+	require.Empty(t, i.proxyContextMap)
+
+	t.Run("xdg_directory_state", func(t *testing.T) {
+		// Verify XDG directories were created at configured paths by func-e
+		// This proves the Paths configuration was properly propagated to func-e API
+
+		// ConfigHome must exist with envoy-version file
+		require.DirExists(t, configHome, "configHome should exist at configured path")
+		require.FileExists(t, path.Join(configHome, "envoy-version"), "envoy-version file should exist in configHome")
+
+		// DataHome must exist with envoy-versions subdirectory for downloaded binaries
+		require.DirExists(t, dataHome, "dataHome should exist at configured path")
+		require.DirExists(t, path.Join(dataHome, "envoy-versions"), "envoy-versions dir should exist under dataHome")
+
+		// StateHome must exist with envoy-runs subdirectory for per-run logs
+		require.DirExists(t, stateHome, "stateHome should exist at configured path")
+		require.DirExists(t, path.Join(stateHome, "envoy-runs"), "envoy-runs dir should exist under stateHome")
+
+		// RuntimeDir must exist - func-e creates runID subdirectories with admin-address.txt
+		require.DirExists(t, runtimeDir, "runtimeDir should exist at configured path")
+
+		// Verify each XDG directory is separate (not the same path)
+		require.NotEqual(t, configHome, dataHome, "configHome and dataHome must be different")
+		require.NotEqual(t, dataHome, stateHome, "dataHome and stateHome must be different")
+		require.NotEqual(t, stateHome, runtimeDir, "stateHome and runtimeDir must be different")
+	})
+
+	t.Run("output_redirection", func(t *testing.T) {
+		// Verify output was captured in buffers (not os.Stdout/Stderr)
+		totalOutput := stdout.Len() + stderr.Len()
+		require.Positive(t, totalOutput, "expected some output to be captured in stdout or stderr buffers")
+	})
+
+	t.Run("stop_start_cycle", func(t *testing.T) {
+		// Ensures that run -> stop cycle works multiple times without issues
+		for range 5 {
+			args := []string{
+				"--config-yaml",
+				"admin: {address: {socket_address: {address: '127.0.0.1', port_value: 9901}}}",
+			}
+			i.runEnvoy(t.Context(), "", "test", args)
+			require.Len(t, i.proxyContextMap, 1)
+			i.stopEnvoy("test")
+			require.Empty(t, i.proxyContextMap)
+			// If the cleanup didn't work, the error due to "address already in use" will be
+			// tried to be written to the nil logger, which will panic.
+		}
+	})
 }
 
 func TestGetEnvoyVersion(t *testing.T) {
@@ -216,6 +294,77 @@ func TestGetEnvoyVersion(t *testing.T) {
 				},
 			}
 			require.Equal(t, tc.want, infra.getEnvoyVersion(proxyConfig))
+		})
+	}
+}
+
+// TestTopologyInjectorDisabledInHostMode verifies we don't cause a 15+ second
+// startup delay in standalone mode as Envoy waits for endpoint discovery.
+// See: https://github.com/envoyproxy/gateway/issues/7080
+func TestTopologyInjectorDisabledInHostMode(t *testing.T) {
+	testCases := []struct {
+		name                          string
+		topologyInjectorDisabled      bool
+		expectLocalClusterInBootstrap bool
+	}{
+		{
+			name:                          "topology injector enabled",
+			topologyInjectorDisabled:      false,
+			expectLocalClusterInBootstrap: true,
+		},
+		{
+			name:                          "topology injector disabled",
+			topologyInjectorDisabled:      true,
+			expectLocalClusterInBootstrap: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			proxyInfra := &ir.ProxyInfra{
+				Name:      "test-proxy",
+				Namespace: "default",
+				Config: &egv1a1.EnvoyProxy{
+					Spec: egv1a1.EnvoyProxySpec{
+						Logging: egv1a1.ProxyLogging{
+							Level: map[egv1a1.ProxyLogComponent]egv1a1.LogLevel{
+								egv1a1.LogComponentDefault: egv1a1.LogLevelInfo,
+							},
+						},
+					},
+				},
+			}
+
+			bootstrapConfigOptions := &bootstrap.RenderBootstrapConfigOptions{
+				ProxyMetrics: &egv1a1.ProxyMetrics{
+					Prometheus: &egv1a1.ProxyPrometheusProvider{
+						Disable: true,
+					},
+				},
+				XdsServerHost:            ptr.To("0.0.0.0"),
+				AdminServerPort:          ptr.To(int32(0)),
+				StatsServerPort:          ptr.To(int32(0)),
+				TopologyInjectorDisabled: tc.topologyInjectorDisabled,
+			}
+
+			args, err := common.BuildProxyArgs(proxyInfra, nil, bootstrapConfigOptions, "test-node", false)
+			require.NoError(t, err)
+
+			// Extract the bootstrap YAML from args (it's after --config-yaml)
+			var bootstrapYAML string
+			for i, arg := range args {
+				if arg == "--config-yaml" && i+1 < len(args) {
+					bootstrapYAML = args[i+1]
+					break
+				}
+			}
+			require.NotEmpty(t, bootstrapYAML, "bootstrap YAML not found in args")
+
+			if tc.expectLocalClusterInBootstrap {
+				require.Contains(t, bootstrapYAML, "local_cluster_name:")
+			} else {
+				require.NotContains(t, bootstrapYAML, "local_cluster_name:")
+			}
 		})
 	}
 }

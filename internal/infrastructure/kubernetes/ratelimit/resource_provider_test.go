@@ -11,15 +11,16 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
+	policyv1 "k8s.io/api/policy/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/yaml"
@@ -87,7 +88,7 @@ func TestRateLimitLabels(t *testing.T) {
 }
 
 func TestServiceAccount(t *testing.T) {
-	cfg, err := config.New(os.Stdout)
+	cfg, err := config.New(os.Stdout, os.Stderr)
 	require.NoError(t, err)
 
 	cfg.EnvoyGateway.RateLimit = &egv1a1.RateLimit{
@@ -103,24 +104,11 @@ func TestServiceAccount(t *testing.T) {
 	sa, err := r.ServiceAccount()
 	require.NoError(t, err)
 
-	expected, err := loadServiceAccount()
-	require.NoError(t, err)
-
-	assert.Equal(t, expected, sa)
-}
-
-func loadServiceAccount() (*corev1.ServiceAccount, error) {
-	saYAML, err := os.ReadFile("testdata/envoy-ratelimit-serviceaccount.yaml")
-	if err != nil {
-		return nil, err
-	}
-	sa := &corev1.ServiceAccount{}
-	_ = yaml.Unmarshal(saYAML, sa)
-	return sa, nil
+	requireObject[corev1.ServiceAccount](t, sa, "testdata/envoy-ratelimit-serviceaccount.yaml")
 }
 
 func TestService(t *testing.T) {
-	cfg, err := config.New(os.Stdout)
+	cfg, err := config.New(os.Stdout, os.Stderr)
 	require.NoError(t, err)
 
 	cases := []struct {
@@ -164,26 +152,12 @@ func TestService(t *testing.T) {
 
 		svc, err := r.Service()
 		require.NoError(t, err)
-
-		expected, err := loadService(tc.caseName)
-		require.NoError(t, err)
-
-		assert.Equal(t, expected, svc)
+		requireObject[corev1.Service](t, svc, fmt.Sprintf("testdata/services/envoy-ratelimit-service-%s.yaml", tc.caseName))
 	}
-}
-
-func loadService(caseName string) (*corev1.Service, error) {
-	serviceYAML, err := os.ReadFile(fmt.Sprintf("testdata/services/envoy-ratelimit-service-%s.yaml", caseName))
-	if err != nil {
-		return nil, err
-	}
-	svc := &corev1.Service{}
-	_ = yaml.Unmarshal(serviceYAML, svc)
-	return svc, nil
 }
 
 func TestConfigmap(t *testing.T) {
-	cfg, err := config.New(os.Stdout)
+	cfg, err := config.New(os.Stdout, os.Stderr)
 	require.NoError(t, err)
 
 	cfg.EnvoyGateway.RateLimit = &egv1a1.RateLimit{
@@ -197,34 +171,85 @@ func TestConfigmap(t *testing.T) {
 	r := NewResourceRender(cfg.ControllerNamespace, cfg.EnvoyGateway, ownerReferenceUID)
 	cm, err := r.ConfigMap("")
 	require.NoError(t, err)
-
-	if test.OverrideTestData() {
-		cmYAML, err := yaml.Marshal(cm)
-		require.NoError(t, err)
-		// nolint:gosec
-		err = os.WriteFile("testdata/envoy-ratelimit-configmap.yaml", cmYAML, 0o644)
-		require.NoError(t, err)
-		return
-	}
-
-	expected, err := loadConfigmap()
-	require.NoError(t, err)
-
-	assert.Equal(t, expected, cm)
+	requireObject[corev1.ConfigMap](t, cm, "testdata/envoy-ratelimit-configmap.yaml")
 }
 
-func loadConfigmap() (*corev1.ConfigMap, error) {
-	configmapYAML, err := os.ReadFile("testdata/envoy-ratelimit-configmap.yaml")
-	if err != nil {
-		return nil, err
+func TestPDB(t *testing.T) {
+	cfg, err := config.New(os.Stdout, os.Stderr)
+	require.NoError(t, err)
+	cases := []struct {
+		caseName  string
+		rateLimit *egv1a1.RateLimit
+		pdb       *egv1a1.KubernetesPodDisruptionBudgetSpec
+	}{
+		{
+			caseName: "default",
+			rateLimit: &egv1a1.RateLimit{
+				Backend: egv1a1.RateLimitDatabaseBackend{
+					Type: egv1a1.RedisBackendType,
+					Redis: &egv1a1.RateLimitRedisSettings{
+						URL: "redis.redis.svc:6379",
+					},
+				},
+			},
+			pdb: &egv1a1.KubernetesPodDisruptionBudgetSpec{},
+		},
+		{
+			caseName: "custom",
+			rateLimit: &egv1a1.RateLimit{
+				Backend: egv1a1.RateLimitDatabaseBackend{
+					Type: egv1a1.RedisBackendType,
+					Redis: &egv1a1.RateLimitRedisSettings{
+						URL: "redis.redis.svc:6379",
+					},
+				},
+			},
+			pdb: &egv1a1.KubernetesPodDisruptionBudgetSpec{
+				MinAvailable: &intstr.IntOrString{Type: intstr.Int, IntVal: 10},
+				Patch: &egv1a1.KubernetesPatchSpec{
+					Type: ptr.To(egv1a1.StrategicMerge),
+					Value: apiextensionsv1.JSON{
+						Raw: []byte("{\"spec\":{\"maxUnavailable\": 11}}"),
+					},
+				},
+			},
+		},
+		{
+			caseName: "with-name",
+			rateLimit: &egv1a1.RateLimit{
+				Backend: egv1a1.RateLimitDatabaseBackend{
+					Type: egv1a1.RedisBackendType,
+					Redis: &egv1a1.RateLimitRedisSettings{
+						URL: "redis.redis.svc:6379",
+					},
+				},
+			},
+			pdb: &egv1a1.KubernetesPodDisruptionBudgetSpec{
+				Name: ptr.To("custom-pdb-name"),
+			},
+		},
 	}
-	cm := &corev1.ConfigMap{}
-	_ = yaml.Unmarshal(configmapYAML, cm)
-	return cm, nil
+	for _, tc := range cases {
+		t.Run(tc.caseName, func(t *testing.T) {
+			cfg.EnvoyGateway.RateLimit = tc.rateLimit
+
+			cfg.EnvoyGateway.Provider = &egv1a1.EnvoyGatewayProvider{
+				Type: egv1a1.ProviderTypeKubernetes,
+				Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
+					RateLimitPDB: tc.pdb,
+				},
+			}
+			r := NewResourceRender(cfg.ControllerNamespace, cfg.EnvoyGateway, ownerReferenceUID)
+			pdb, err := r.PodDisruptionBudget()
+			require.NoError(t, err)
+
+			requireObject[policyv1.PodDisruptionBudget](t, pdb, fmt.Sprintf("testdata/pdb/%s.yaml", tc.caseName))
+		})
+	}
 }
 
 func TestDeployment(t *testing.T) {
-	cfg, err := config.New(os.Stdout)
+	cfg, err := config.New(os.Stdout, os.Stderr)
 	require.NoError(t, err)
 	rateLimit := &egv1a1.RateLimit{
 		Backend: egv1a1.RateLimitDatabaseBackend{
@@ -767,36 +792,13 @@ func TestDeployment(t *testing.T) {
 			r := NewResourceRender(cfg.ControllerNamespace, cfg.EnvoyGateway, ownerReferenceUID)
 			dp, err := r.Deployment()
 			require.NoError(t, err)
-
-			if test.OverrideTestData() {
-				deploymentYAML, err := yaml.Marshal(dp)
-				require.NoError(t, err)
-				// nolint:gosec
-				err = os.WriteFile(fmt.Sprintf("testdata/deployments/%s.yaml", tc.caseName), deploymentYAML, 0o644)
-				require.NoError(t, err)
-				return
-			}
-
-			expected, err := loadDeployment(tc.caseName)
-			require.NoError(t, err)
-
-			assert.Equal(t, expected, dp)
+			requireObject[appsv1.Deployment](t, dp, fmt.Sprintf("testdata/deployments/%s.yaml", tc.caseName))
 		})
 	}
 }
 
-func loadDeployment(caseName string) (*appsv1.Deployment, error) {
-	deploymentYAML, err := os.ReadFile(fmt.Sprintf("testdata/deployments/%s.yaml", caseName))
-	if err != nil {
-		return nil, err
-	}
-	deployment := &appsv1.Deployment{}
-	_ = yaml.Unmarshal(deploymentYAML, deployment)
-	return deployment, nil
-}
-
 func TestHorizontalPodAutoscaler(t *testing.T) {
-	cfg, err := config.New(os.Stdout)
+	cfg, err := config.New(os.Stdout, os.Stderr)
 	require.NoError(t, err)
 	cases := []struct {
 		caseName            string
@@ -898,35 +900,38 @@ func TestHorizontalPodAutoscaler(t *testing.T) {
 			hpa, err := r.HorizontalPodAutoscaler()
 			require.NoError(t, err)
 
-			if test.OverrideTestData() {
-				hpaYAML, err := yaml.Marshal(hpa)
-				require.NoError(t, err)
-				// nolint:gosec
-				err = os.WriteFile(fmt.Sprintf("testdata/hpa/%s.yaml", tc.caseName), hpaYAML, 0o644)
-				require.NoError(t, err)
-				return
-			}
-
-			expected, err := loadHpa(tc.caseName)
-			require.NoError(t, err)
-
-			assert.Equal(t, expected, hpa)
+			requireObject[autoscalingv2.HorizontalPodAutoscaler](t, hpa, fmt.Sprintf("testdata/hpa/%s.yaml", tc.caseName))
 		})
 	}
 }
 
-func loadHpa(caseName string) (*autoscalingv2.HorizontalPodAutoscaler, error) {
-	hpaYAML, err := os.ReadFile(fmt.Sprintf("testdata/hpa/%s.yaml", caseName))
+func loadObject[T any](filename string) (*T, error) {
+	obj := new(T)
+	data, err := os.ReadFile(filename)
 	if err != nil {
-		return nil, err
+		return obj, err
 	}
 
-	hpa := &autoscalingv2.HorizontalPodAutoscaler{}
-	_ = yaml.Unmarshal(hpaYAML, hpa)
-	return hpa, nil
+	_ = yaml.Unmarshal(data, obj)
+	return obj, nil
+}
+
+func requireObject[ObjectT any](t *testing.T, got *ObjectT, filename string) {
+	if test.OverrideTestData() {
+		cmYAML, err := yaml.Marshal(got)
+		require.NoError(t, err)
+		// nolint:gosec
+		err = os.WriteFile(filename, cmYAML, 0o644)
+		require.NoError(t, err)
+		return
+	}
+
+	expected, err := loadObject[ObjectT](filename)
+	require.NoError(t, err)
+	require.Equal(t, expected, got)
 }
 
 func TestGetServiceURL(t *testing.T) {
 	got := GetServiceURL("envoy-gateway-system", "example-cluster.local")
-	assert.Equal(t, "grpc://envoy-ratelimit.envoy-gateway-system.svc.example-cluster.local:8081", got)
+	require.Equal(t, "grpc://envoy-ratelimit.envoy-gateway-system.svc.example-cluster.local:8081", got)
 }

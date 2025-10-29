@@ -83,7 +83,7 @@ endpointSlices:
         kubernetes.io/service-name: grpc-backend
     addressType: IPv4
     ports:
-      - name: http
+      - name: grpc
         protocol: TCP
         port: 8000
     endpoints:
