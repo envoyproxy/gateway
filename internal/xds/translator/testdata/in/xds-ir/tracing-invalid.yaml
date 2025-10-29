@@ -40,5 +40,5 @@ http:
                   port: 50000
               name: "direct-route-dest/backend/0"
         directResponse:
-          body: "Unknown custom filter type: UnsupportedType"
+          body: VW5rbm93biBjdXN0b20gZmlsdGVyIHR5cGU6IFVuc3VwcG9ydGVkVHlwZQ==
           statusCode: 500

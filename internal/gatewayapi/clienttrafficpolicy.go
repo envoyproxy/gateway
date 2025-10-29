@@ -482,11 +482,20 @@ func (t *Translator) translateClientTrafficPolicyForListener(policy *egv1a1.Clie
 
 		// Early return if got any errors
 		if errs != nil {
+			routesWithDirectResponse := sets.New[string]()
 			for _, route := range httpIR.Routes {
 				// Return a 500 direct response
 				route.DirectResponse = &ir.CustomResponse{
 					StatusCode: ptr.To(uint32(500)),
 				}
+				routesWithDirectResponse.Insert(route.Name)
+			}
+			if len(httpIR.Routes) > 0 {
+				t.Logger.Info("setting 500 direct response in routes due to errors in ClientTrafficPolicy",
+					"policy", utils.NamespacedName(policy),
+					"routes", sets.List(routesWithDirectResponse),
+					"error", errs,
+				)
 			}
 			return errs
 		}
@@ -639,7 +648,7 @@ func translateListenerHeaderSettings(headerSettings *egv1a1.HeaderSettings, http
 	if headerSettings.RequestID != nil {
 		httpIR.Headers.RequestID = (*ir.RequestIDAction)(headerSettings.RequestID)
 	} else if headerSettings.PreserveXRequestID != nil && *headerSettings.PreserveXRequestID {
-		httpIR.Headers.RequestID = ptr.To(ir.RequestIDActionPreserve)
+		httpIR.Headers.RequestID = ptr.To(ir.RequestIDActionPreserveOrGenerate)
 	}
 
 	if headerSettings.XForwardedClientCert != nil {

@@ -141,13 +141,14 @@ type HeaderSettings struct {
 	// PreserveXRequestID configures Envoy to keep the X-Request-ID header if passed for a request that is edge
 	// (Edge request is the request from external clients to front Envoy) and not reset it, which is the current Envoy behaviour.
 	// Defaults to false and cannot be combined with RequestID.
-	// Deprecated: use RequestID=Preserve instead
+	// Deprecated: use RequestID=PreserveOrGenerate instead
 	//
 	// +optional
 	PreserveXRequestID *bool `json:"preserveXRequestID,omitempty"`
 
 	// RequestID configures Envoy's behavior for handling the `X-Request-ID` header.
-	// Defaults to `Generate` and builds the `X-Request-ID` for every request and ignores pre-existing values from the edge.
+	// When omitted default behavior is `Generate` which builds the `X-Request-ID` for every request
+	//  and ignores pre-existing values from the edge.
 	// (An "edge request" refers to a request from an external client to the Envoy entrypoint.)
 	//
 	// +optional
@@ -182,7 +183,8 @@ const (
 	WithUnderscoresActionDropHeader WithUnderscoresAction = "DropHeader"
 )
 
-// RequestIDAction configures Envoy's behavior for handling the `X-Request-ID` header.
+// RequestIDAction configures Envoy's behavior for handling the `X-Request-ID` header at the edge.
+// An "edge request" refers to a request from an external client to the Envoy entrypoint.
 //
 // +kubebuilder:validation:Enum=PreserveOrGenerate;Preserve;Generate;Disable
 type RequestIDAction string

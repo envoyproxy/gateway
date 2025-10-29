@@ -176,7 +176,7 @@ func TestGetIREndpointsFromEndpointSlices(t *testing.T) {
 			expectedAddrType: ir.MIXED,
 		},
 		{
-			name: "Keep serving and terminating as draining",
+			name: "Keep non-serving or terminating as draining",
 			endpointSlices: []*discoveryv1.EndpointSlice{
 				{
 					ObjectMeta:  metav1.ObjectMeta{Name: "slice1"},
@@ -201,6 +201,8 @@ func TestGetIREndpointsFromEndpointSlices(t *testing.T) {
 			portProtocol: corev1.ProtocolTCP,
 			expectedEndpoints: []*ir.DestinationEndpoint{
 				{Host: "192.0.2.1", Port: 80, Draining: true},
+				{Host: "192.0.2.2", Port: 80, Draining: true},
+				{Host: "192.0.2.3", Port: 80, Draining: true},
 			},
 			expectedAddrType: ir.IP,
 		},

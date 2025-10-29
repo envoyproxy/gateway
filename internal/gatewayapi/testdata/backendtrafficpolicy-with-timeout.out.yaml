@@ -13,6 +13,7 @@ backendTrafficPolicies:
       http:
         connectionIdleTimeout: 21s
         maxConnectionDuration: 22s
+        maxStreamDuration: 0s
         requestTimeout: 23s
       tcp:
         connectTimeout: 20s
@@ -45,6 +46,7 @@ backendTrafficPolicies:
       http:
         connectionIdleTimeout: 16s
         maxConnectionDuration: 17s
+        maxStreamDuration: 30s
         requestTimeout: 18s
       tcp:
         connectTimeout: 15s
@@ -324,6 +326,7 @@ xdsIR:
             http:
               connectionIdleTimeout: 16s
               maxConnectionDuration: 17s
+              maxStreamDuration: 30s
               requestTimeout: 18s
             tcp:
               connectTimeout: 15s
@@ -407,6 +410,7 @@ xdsIR:
             http:
               connectionIdleTimeout: 21s
               maxConnectionDuration: 22s
+              maxStreamDuration: 0s
               requestTimeout: 23s
             tcp:
               connectTimeout: 20s

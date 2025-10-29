@@ -36,6 +36,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/logging"
 	"github.com/envoyproxy/gateway/internal/utils"
 	"github.com/envoyproxy/gateway/internal/utils/field"
 	"github.com/envoyproxy/gateway/internal/utils/file"
@@ -107,6 +108,7 @@ func TestTranslate(t *testing.T) {
 				MergeGateways:           IsMergeGatewaysEnabled(resources),
 				GatewayNamespaceMode:    gatewayNamespaceMode,
 				WasmCache:               &mockWasmCache{},
+				Logger:                  logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo),
 			}
 
 			// Add common test fixtures
@@ -456,6 +458,7 @@ func TestTranslateWithExtensionKinds(t *testing.T) {
 					{Group: "compute.example.io", Kind: "LambdaBackend"},
 				},
 				MergeGateways: IsMergeGatewaysEnabled(resources),
+				Logger:        logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo),
 			}
 
 			// Add common test fixtures

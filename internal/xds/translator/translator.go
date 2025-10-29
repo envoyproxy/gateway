@@ -1177,7 +1177,10 @@ func buildValidationContext(tlsConfig *ir.TLSUpstreamConfig) (*tlsv3.CommonTlsCo
 	}
 	hasSANValidations := false
 
-	if tlsConfig.SNI != nil {
+	// 3. If SubjectAltNames are specified, Hostname can be used for certificate selection
+	//    but MUST NOT be used for authentication. If you want to use the value
+	//    of the Hostname field for authentication, you MUST add it to the SubjectAltNames list.
+	if tlsConfig.SNI != nil && len(tlsConfig.SubjectAltNames) == 0 {
 		validationContext.DefaultValidationContext.MatchTypedSubjectAltNames = []*tlsv3.SubjectAltNameMatcher{
 			{
 				SanType: tlsv3.SubjectAltNameMatcher_DNS,

@@ -23,11 +23,13 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/yaml"
 
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/api/v1alpha1/validation"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/ratelimit"
+	"github.com/envoyproxy/gateway/internal/logging"
 	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
 	"github.com/envoyproxy/gateway/internal/xds/translator"
 	xds_types "github.com/envoyproxy/gateway/internal/xds/types"
@@ -277,6 +279,8 @@ func translateGatewayAPIToIR(resources *resource.Resources) (*gatewayapi.Transla
 		EndpointRoutingDisabled: true,
 		EnvoyPatchPolicyEnabled: true,
 		BackendEnabled:          true,
+		// Discard logs during translation for egctl command to avoid polluting output
+		Logger: logging.DefaultLogger(io.Discard, egv1a1.LogLevelInfo),
 	}
 
 	// Fix the services in the resources section so that they have an IP address - this prevents nasty
@@ -305,6 +309,7 @@ func translateGatewayAPIToGatewayAPI(resources *resource.Resources) (resource.Re
 		EndpointRoutingDisabled: true,
 		EnvoyPatchPolicyEnabled: true,
 		BackendEnabled:          true,
+		Logger:                  logging.DefaultLogger(io.Discard, egv1a1.LogLevelInfo),
 	}
 	gRes, _ := gTranslator.Translate(resources)
 	// Update the status of the GatewayClass based on EnvoyProxy validation
@@ -344,6 +349,7 @@ func TranslateGatewayAPIToXds(namespace, dnsDomain, resourceType string, resourc
 		EndpointRoutingDisabled: true,
 		EnvoyPatchPolicyEnabled: true,
 		BackendEnabled:          true,
+		Logger:                  logging.DefaultLogger(io.Discard, egv1a1.LogLevelInfo),
 	}
 	gRes, _ := gTranslator.Translate(resources)
 
@@ -363,6 +369,7 @@ func TranslateGatewayAPIToXds(namespace, dnsDomain, resourceType string, resourc
 			GlobalRateLimit: &translator.GlobalRateLimitSettings{
 				ServiceURL: ratelimit.GetServiceURL(namespace, dnsDomain),
 			},
+			Logger: logging.DefaultLogger(io.Discard, egv1a1.LogLevelInfo),
 		}
 		if resources.EnvoyProxyForGatewayClass != nil {
 			xTranslator.FilterOrder = resources.EnvoyProxyForGatewayClass.Spec.FilterOrder
