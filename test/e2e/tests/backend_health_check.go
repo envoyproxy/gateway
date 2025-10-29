@@ -49,8 +49,8 @@ var BackendHealthCheckActiveHTTPTest = suite.ConformanceTest{
 				Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
 				Name:      gwapiv1.ObjectName(gwNN.Name),
 			}
-			BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "health-check-active-http-pass-btp", Namespace: ns}, suite.ControllerName, ancestorRef)
-			BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "health-check-active-http-fail-btp", Namespace: ns}, suite.ControllerName, ancestorRef)
+			BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "health-check-active-http-pass-btp", Namespace: ns}, suite.ControllerName, false, ancestorRef)
+			BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "health-check-active-http-fail-btp", Namespace: ns}, suite.ControllerName, false, ancestorRef)
 
 			promClient, err := prometheus.NewClient(suite.Client,
 				types.NamespacedName{Name: "prometheus", Namespace: "monitoring"},

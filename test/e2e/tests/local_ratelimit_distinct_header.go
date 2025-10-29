@@ -41,7 +41,7 @@ var LocalRateLimitDistinctHeaderTest = suite.ConformanceTest{
 		}
 
 		t.Run("requests with x-user-id header should be limited per user", func(t *testing.T) {
-			BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "ratelimit-distinct-header", Namespace: ns}, suite.ControllerName, ancestorRef)
+			BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "ratelimit-distinct-header", Namespace: ns}, suite.ControllerName, false, ancestorRef)
 			path := "/ratelimit-distinct-header"
 
 			testRatelimit(t, suite, map[string]string{
@@ -55,7 +55,7 @@ var LocalRateLimitDistinctHeaderTest = suite.ConformanceTest{
 		})
 
 		t.Run("requests with x-user-id header and matching x-org-id header should be limited per user", func(t *testing.T) {
-			BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "ratelimit-distinct-header-and-exact-header", Namespace: ns}, suite.ControllerName, ancestorRef)
+			BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "ratelimit-distinct-header-and-exact-header", Namespace: ns}, suite.ControllerName, false, ancestorRef)
 			path := "/ratelimit-distinct-header-and-exact-header"
 
 			testRatelimit(t, suite, map[string]string{
@@ -69,7 +69,7 @@ var LocalRateLimitDistinctHeaderTest = suite.ConformanceTest{
 		})
 
 		t.Run("requests with x-user-id header but no matching x-org-id header will hit default bucket", func(t *testing.T) {
-			BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "ratelimit-distinct-header-and-exact-header", Namespace: ns}, suite.ControllerName, ancestorRef)
+			BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "ratelimit-distinct-header-and-exact-header", Namespace: ns}, suite.ControllerName, false, ancestorRef)
 			path := "/ratelimit-distinct-header-and-exact-header"
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, http.ExpectedResponse{
 				Request: http.Request{

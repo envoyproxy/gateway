@@ -48,7 +48,7 @@ var BackendPanicThresholdHTTPTest = suite.ConformanceTest{
 				Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
 				Name:      gwapiv1.ObjectName(gwNN.Name),
 			}
-			BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "panic-threshold-pass-btp", Namespace: ns}, suite.ControllerName, ancestorRef)
+			BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "panic-threshold-pass-btp", Namespace: ns}, suite.ControllerName, false, ancestorRef)
 
 			promClient, err := prometheus.NewClient(suite.Client,
 				types.NamespacedName{Name: "prometheus", Namespace: "monitoring"},

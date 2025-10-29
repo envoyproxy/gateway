@@ -131,15 +131,16 @@ func (t *Translator) ProcessBackendTrafficPolicies(resources *resource.Resources
 				ancestorRefs := make([]*gwapiv1.ParentReference, 0, len(parentRefs))
 				routeParents := sets.New[types.NamespacedName]()
 				for _, p := range parentRefs {
-					if p.Kind == nil || *p.Kind == resource.KindGateway {
-						namespace := route.GetNamespace()
-						if p.Namespace != nil {
-							namespace = string(*p.Namespace)
-						}
-						gwNN := types.NamespacedName{
-							Namespace: namespace,
-							Name:      string(p.Name),
-						}
+					namespace := route.GetNamespace()
+					if p.Namespace != nil {
+						namespace = string(*p.Namespace)
+					}
+					gwNN := types.NamespacedName{
+						Namespace: namespace,
+						Name:      string(p.Name),
+					}
+
+					if _, ok := gatewayMap[gwNN]; ok && (p.Kind == nil || *p.Kind == resource.KindGateway) {
 						routeParents.Insert(gwNN)
 
 						key := gwNN.String()

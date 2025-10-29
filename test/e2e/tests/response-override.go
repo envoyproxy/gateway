@@ -47,7 +47,7 @@ var ResponseOverrideTest = suite.ConformanceTest{
 				Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
 				Name:      gwapiv1.ObjectName(gwNN.Name),
 			}
-			BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "response-override", Namespace: ns}, suite.ControllerName, ancestorRef)
+			BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "response-override", Namespace: ns}, suite.ControllerName, false, ancestorRef)
 
 			// Test 404 response override with add and set headers
 			verifyCustomResponse(t, &suite.TimeoutConfig, gwAddr, "/status/404", "text/plain", "404 Oops! Your request is not found.", 404, map[string]string{

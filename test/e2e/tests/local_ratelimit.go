@@ -124,7 +124,7 @@ func runSpecificUserRateLimitTest(t *testing.T, suite *suite.ConformanceTestSuit
 		Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
 		Name:      gwapiv1.ObjectName(gwNN.Name),
 	}
-	BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "ratelimit-specific-user", Namespace: ns}, suite.ControllerName, ancestorRef)
+	BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "ratelimit-specific-user", Namespace: ns}, suite.ControllerName, false, ancestorRef)
 
 	// keep sending requests till get 200 first, that will cost one 200
 	// use EG forked function to check the existence of the header
@@ -233,7 +233,7 @@ func runAllTrafficRateLimitTest(t *testing.T, suite *suite.ConformanceTestSuite,
 		Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
 		Name:      gwapiv1.ObjectName(gwNN.Name),
 	}
-	BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "ratelimit-all-traffic", Namespace: ns}, suite.ControllerName, ancestorRef)
+	BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "ratelimit-all-traffic", Namespace: ns}, suite.ControllerName, false, ancestorRef)
 
 	okResponse := http.ExpectedResponse{
 		Request: http.Request{
@@ -288,7 +288,7 @@ func runHeaderInvertMatchRateLimitTest(t *testing.T, suite *suite.ConformanceTes
 		Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
 		Name:      gwapiv1.ObjectName(gwNN.Name),
 	}
-	BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "ratelimit-invert-match", Namespace: ns}, suite.ControllerName, ancestorRef)
+	BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "ratelimit-invert-match", Namespace: ns}, suite.ControllerName, false, ancestorRef)
 
 	// keep sending requests till get 200 first, that will cost one 200
 	okResponse := http.ExpectedResponse{

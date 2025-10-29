@@ -107,7 +107,7 @@ func (t *Translator) ProcessSecurityPolicies(securityPolicies []*egv1a1.Security
 				}
 
 				t.processSecurityPolicyForRoute(resources, xdsIR,
-					routeMap, gatewayRouteMap, policy, currTarget)
+					routeMap, gatewayMap, gatewayRouteMap, policy, currTarget)
 			}
 		}
 	}
@@ -125,7 +125,7 @@ func (t *Translator) ProcessSecurityPolicies(securityPolicies []*egv1a1.Security
 				}
 
 				t.processSecurityPolicyForRoute(resources, xdsIR,
-					routeMap, gatewayRouteMap, policy, currTarget)
+					routeMap, gatewayMap, gatewayRouteMap, policy, currTarget)
 			}
 		}
 	}
@@ -179,6 +179,7 @@ func (t *Translator) processSecurityPolicyForRoute(
 	resources *resource.Resources,
 	xdsIR resource.XdsIRMap,
 	routeMap map[policyTargetRouteKey]*policyRouteTargetContext,
+	gatewayMap map[types.NamespacedName]*policyGatewayTargetContext,
 	gatewayRouteMap map[string]map[string]sets.Set[string],
 	policy *egv1a1.SecurityPolicy,
 	currTarget gwapiv1.LocalPolicyTargetReferenceWithSectionName,
@@ -203,16 +204,15 @@ func (t *Translator) processSecurityPolicyForRoute(
 	// The parent gateways are also used to set the status of the policy.
 	parentRefs := GetParentReferences(targetedRoute)
 	for _, p := range parentRefs {
-		if p.Kind == nil || *p.Kind == resource.KindGateway {
-			namespace := targetedRoute.GetNamespace()
-			if p.Namespace != nil {
-				namespace = string(*p.Namespace)
-			}
-			gwNN := types.NamespacedName{
-				Namespace: namespace,
-				Name:      string(p.Name),
-			}
-
+		namespace := targetedRoute.GetNamespace()
+		if p.Namespace != nil {
+			namespace = string(*p.Namespace)
+		}
+		gwNN := types.NamespacedName{
+			Namespace: namespace,
+			Name:      string(p.Name),
+		}
+		if _, ok := gatewayMap[gwNN]; ok && (p.Kind == nil || *p.Kind == resource.KindGateway) {
 			key := gwNN.String()
 			if _, ok := gatewayRouteMap[key]; !ok {
 				gatewayRouteMap[key] = make(map[string]sets.Set[string])
@@ -262,7 +262,7 @@ func (t *Translator) processSecurityPolicyForRoute(
 		return
 	}
 
-	if err := t.translateSecurityPolicyForRoute(policy, targetedRoute, currTarget, resources, xdsIR); err != nil {
+	if err := t.translateSecurityPolicyForRoute(policy, targetedRoute, currTarget, gatewayMap, resources, xdsIR); err != nil {
 		status.SetTranslationErrorForPolicyAncestors(&policy.Status,
 			parentGateways,
 			t.GatewayControllerName,
@@ -589,6 +589,7 @@ func (t *Translator) translateSecurityPolicyForRoute(
 	policy *egv1a1.SecurityPolicy,
 	route RouteContext,
 	target gwapiv1.LocalPolicyTargetReferenceWithSectionName,
+	gatewayMap map[types.NamespacedName]*policyGatewayTargetContext,
 	resources *resource.Resources,
 	xdsIR resource.XdsIRMap,
 ) error {
@@ -638,6 +639,18 @@ func (t *Translator) translateSecurityPolicyForRoute(
 	parentRefs := GetParentReferences(route)
 	routesWithDirectResponse := sets.New[string]()
 	for _, p := range parentRefs {
+		namespace := route.GetNamespace()
+		if p.Namespace != nil {
+			namespace = string(*p.Namespace)
+		}
+		gwNN := types.NamespacedName{
+			Namespace: namespace,
+			Name:      string(p.Name),
+		}
+		if _, ok := gatewayMap[gwNN]; !ok {
+			continue
+		}
+
 		parentRefCtx := GetRouteParentContext(route, p, t.GatewayControllerName)
 		gtwCtx := parentRefCtx.GetGateway()
 		if gtwCtx == nil {
