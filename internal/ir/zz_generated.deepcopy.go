@@ -3064,6 +3064,22 @@ func (in *RateLimitRule) DeepCopyInto(out *RateLimitRule) {
 			}
 		}
 	}
+	if in.PathMatch != nil {
+		in, out := &in.PathMatch, &out.PathMatch
+		*out = new(StringMatch)
+		(*in).DeepCopyInto(*out)
+	}
+	if in.MethodMatches != nil {
+		in, out := &in.MethodMatches, &out.MethodMatches
+		*out = make([]*StringMatch, len(*in))
+		for i := range *in {
+			if (*in)[i] != nil {
+				in, out := &(*in)[i], &(*out)[i]
+				*out = new(StringMatch)
+				(*in).DeepCopyInto(*out)
+			}
+		}
+	}
 	if in.CIDRMatch != nil {
 		in, out := &in.CIDRMatch, &out.CIDRMatch
 		*out = new(CIDRMatch)
