@@ -88,7 +88,7 @@ type Gateway struct {
 	// defaults to "gateway.envoyproxy.io/gatewayclass-controller". See the following
 	// for additional details:
 	//
-	// https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.GatewayClass
+	// https://gateway-api.sigs.k8s.io/reference/1.4/spec/#gatewayclass
 	//
 	// +optional
 	ControllerName string `json:"controllerName,omitempty"`
@@ -348,6 +348,6 @@ __Note:__ The NetworkPublishing API is currently undefined and is provided here 
 [issue_51]: https://github.com/envoyproxy/gateway/issues/51
 [design_doc]: ../system-design/
 [gw_api]: https://gateway-api.sigs.k8s.io/
-[gc]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.GatewayClass
+[gc]: https://gateway-api.sigs.k8s.io/reference/1.4/spec/#gatewayclass
 [cr]: https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/
 [union]: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#unions

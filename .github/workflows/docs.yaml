@@ -34,7 +34,7 @@ jobs:
         config_file: ".github/markdown_lint_config.json"
 
     - name: Install linkinator
-      run: npm install -g linkinator@6.0.4
+      run: npm install -g linkinator@7.4.0
 
     - name: Check links
       run: make docs docs-check-links
