@@ -282,7 +282,7 @@ func TestBuildPassiveHealthCheck(t *testing.T) {
 	}
 }
 
-func TestBuildRateLimitRuleQueryParameters(t *testing.T) {
+func TestBuildRateLimitRuleQueryParams(t *testing.T) {
 	testCases := []struct {
 		name        string
 		rule        egv1a1.RateLimitRule
@@ -295,9 +295,13 @@ func TestBuildRateLimitRuleQueryParameters(t *testing.T) {
 			rule: egv1a1.RateLimitRule{
 				ClientSelectors: []egv1a1.RateLimitSelectCondition{
 					{
-						QueryParameters: &egv1a1.QueryParameters{
-							QueryParameterName: "user",
-							DescriptorKey:      "user_param",
+						QueryParams: []egv1a1.QueryParamMatch{
+							{
+								Name:          "user",
+								DescriptorKey: "user_param",
+								Type:          ptr.To(egv1a1.QueryParamMatchExact),
+								Value:         ptr.To("alice"),
+							},
 						},
 					},
 				},
@@ -307,9 +311,15 @@ func TestBuildRateLimitRuleQueryParameters(t *testing.T) {
 				},
 			},
 			expected: &ir.RateLimitRule{
-				QueryParameters: &ir.QueryParameters{
-					QueryParameterName: "user",
-					DescriptorKey:      "user_param",
+				QueryParamMatches: []*ir.QueryParamMatch{
+					{
+						Name:          "user",
+						DescriptorKey: "user_param",
+						StringMatch: &ir.StringMatch{
+							Exact:  ptr.To("alice"),
+							Invert: nil,
+						},
+					},
 				},
 				Limit: ir.RateLimitValue{
 					Requests: 10,
@@ -321,13 +331,15 @@ func TestBuildRateLimitRuleQueryParameters(t *testing.T) {
 			expectError: false,
 		},
 		{
-			name: "query parameters with empty queryParameterName",
+			name: "query parameters with empty name",
 			rule: egv1a1.RateLimitRule{
 				ClientSelectors: []egv1a1.RateLimitSelectCondition{
 					{
-						QueryParameters: &egv1a1.QueryParameters{
-							QueryParameterName: "",
-							DescriptorKey:      "user_param",
+						QueryParams: []egv1a1.QueryParamMatch{
+							{
+								Name:          "",
+								DescriptorKey: "user_param",
+							},
 						},
 					},
 				},
@@ -338,16 +350,18 @@ func TestBuildRateLimitRuleQueryParameters(t *testing.T) {
 			},
 			expected:    nil,
 			expectError: true,
-			errorMsg:    "queryParameterName is required when QueryParameters is specified",
+			errorMsg:    "name is required when QueryParamMatch is specified",
 		},
 		{
 			name: "query parameters with empty descriptorKey",
 			rule: egv1a1.RateLimitRule{
 				ClientSelectors: []egv1a1.RateLimitSelectCondition{
 					{
-						QueryParameters: &egv1a1.QueryParameters{
-							QueryParameterName: "user",
-							DescriptorKey:      "",
+						QueryParams: []egv1a1.QueryParamMatch{
+							{
+								Name:          "user",
+								DescriptorKey: "",
+							},
 						},
 					},
 				},
@@ -358,7 +372,7 @@ func TestBuildRateLimitRuleQueryParameters(t *testing.T) {
 			},
 			expected:    nil,
 			expectError: true,
-			errorMsg:    "descriptorKey is required when QueryParameters is specified",
+			errorMsg:    "descriptorKey is required when QueryParamMatch is specified",
 		},
 		{
 			name: "query parameters with headers",
@@ -372,9 +386,13 @@ func TestBuildRateLimitRuleQueryParameters(t *testing.T) {
 								Value: ptr.To("alice"),
 							},
 						},
-						QueryParameters: &egv1a1.QueryParameters{
-							QueryParameterName: "user",
-							DescriptorKey:      "user_param",
+						QueryParams: []egv1a1.QueryParamMatch{
+							{
+								Name:          "user",
+								DescriptorKey: "user_param",
+								Type:          ptr.To(egv1a1.QueryParamMatchExact),
+								Value:         ptr.To("alice"),
+							},
 						},
 					},
 				},
@@ -384,9 +402,15 @@ func TestBuildRateLimitRuleQueryParameters(t *testing.T) {
 				},
 			},
 			expected: &ir.RateLimitRule{
-				QueryParameters: &ir.QueryParameters{
-					QueryParameterName: "user",
-					DescriptorKey:      "user_param",
+				QueryParamMatches: []*ir.QueryParamMatch{
+					{
+						Name:          "user",
+						DescriptorKey: "user_param",
+						StringMatch: &ir.StringMatch{
+							Exact:  ptr.To("alice"),
+							Invert: nil,
+						},
+					},
 				},
 				Limit: ir.RateLimitValue{
 					Requests: 10,
@@ -412,9 +436,13 @@ func TestBuildRateLimitRuleQueryParameters(t *testing.T) {
 							Type:  ptr.To(egv1a1.SourceMatchDistinct),
 							Value: "192.168.1.0/24",
 						},
-						QueryParameters: &egv1a1.QueryParameters{
-							QueryParameterName: "user",
-							DescriptorKey:      "user_param",
+						QueryParams: []egv1a1.QueryParamMatch{
+							{
+								Name:          "user",
+								DescriptorKey: "user_param",
+								Type:          ptr.To(egv1a1.QueryParamMatchExact),
+								Value:         ptr.To("alice"),
+							},
 						},
 					},
 				},
@@ -424,9 +452,15 @@ func TestBuildRateLimitRuleQueryParameters(t *testing.T) {
 				},
 			},
 			expected: &ir.RateLimitRule{
-				QueryParameters: &ir.QueryParameters{
-					QueryParameterName: "user",
-					DescriptorKey:      "user_param",
+				QueryParamMatches: []*ir.QueryParamMatch{
+					{
+						Name:          "user",
+						DescriptorKey: "user_param",
+						StringMatch: &ir.StringMatch{
+							Exact:  ptr.To("alice"),
+							Invert: nil,
+						},
+					},
 				},
 				Limit: ir.RateLimitValue{
 					Requests: 10,
