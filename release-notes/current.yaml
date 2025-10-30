@@ -29,6 +29,7 @@ new features: |
   Added support for Envoy PreconnectPolicy in BackendTrafficPolicy.
   Added support for binaryData in ConfigMap referenced by HTTPRouteFilter for direct response.
   Added support PDB for Ratelimit service.
+  Added support for allowing OPTIONS method implicitly when HTTPRoute CORS filter is used.
   Added support rate limit based on path and method in BackendTrafficPolicy.
 
 bug fixes: |
