@@ -384,6 +384,7 @@ xdsIR:
                   requests: 5
                   unit: Hour
                 name: default/policy-for-route/rule/0
+                queryParamMatches: null
               - headerMatches:
                 - distinct: false
                   exact: two
@@ -392,6 +393,7 @@ xdsIR:
                   requests: 5
                   unit: Hour
                 name: envoy-gateway/policy-for-gateway1/rule/0
+                queryParamMatches: null
           timeout:
             http:
               connectionIdleTimeout: 16s
@@ -491,6 +493,7 @@ xdsIR:
                   requests: 5
                   unit: Hour
                 name: default/policy-for-route/rule/0
+                queryParamMatches: null
           timeout:
             tcp:
               connectTimeout: 10s

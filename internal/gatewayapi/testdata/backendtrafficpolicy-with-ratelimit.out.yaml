@@ -361,6 +361,7 @@ xdsIR:
                   requests: 10
                   unit: Hour
                 name: envoy-gateway/policy-for-gateway/rule/0
+                queryParamMatches: null
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
@@ -454,6 +455,7 @@ xdsIR:
                   requests: 20
                   unit: Hour
                 name: default/policy-for-route/rule/0
+                queryParamMatches: null
                 requestCost:
                   number: 1
                 responseCost:

@@ -2242,8 +2242,8 @@ type RateLimitRule struct {
 	HeaderMatches []*StringMatch `json:"headerMatches" yaml:"headerMatches"`
 	// CIDRMatch define the match conditions on the source IP's CIDR for this route.
 	CIDRMatch *CIDRMatch `json:"cidrMatch,omitempty" yaml:"cidrMatch,omitempty"`
-	// Rate limit on query parameters.
-	QueryParameters *QueryParameters `json:"queryParameters,omitempty" yaml:"queryParameters,omitempty"`
+	// QueryParamMatches define the match conditions on the request query parameters for this route.
+	QueryParamMatches []*QueryParamMatch `json:"queryParamMatches" yaml:"queryParamMatches"`
 	// Limit holds the rate limit values.
 	Limit RateLimitValue `json:"limit,omitempty" yaml:"limit,omitempty"`
 	// RequestCost specifies the cost of the request.
@@ -2259,12 +2259,6 @@ type RateLimitRule struct {
 	Shared *bool `json:"shared,omitempty" yaml:"shared,omitempty"`
 	// Name is a unique identifier for this rule, set as <policy-ns>/<policy-name>/rule/<rule-index>.
 	Name string `json:"name,omitempty" yaml:"name,omitempty"`
-}
-
-// +k8s:deepcopy-gen=true
-type QueryParameters struct {
-	QueryParameterName string `json:"queryParameterName,omitempty" yaml:"queryParameterName,omitempty"`
-	DescriptorKey      string `json:"descriptorKey,omitempty" yaml:"descriptorKey,omitempty"`
 }
 
 // RateLimitCost specifies the cost of the request or response.
@@ -2284,9 +2278,20 @@ type CIDRMatch struct {
 	Distinct bool `json:"distinct" yaml:"distinct"`
 }
 
+// QueryParamMatch defines the match attributes within the query parameters of the request.
+// +k8s:deepcopy-gen=true
+type QueryParamMatch struct {
+	// Name of the query parameter.
+	Name string `json:"name" yaml:"name"`
+	// DescriptorKey is the key to use when creating the rate limit descriptor entry.
+	DescriptorKey string `json:"descriptorKey" yaml:"descriptorKey"`
+	// StringMatch defines how to match against the value of the query parameter.
+	*StringMatch `json:",inline" yaml:",inline"`
+}
+
 // TODO zhaohuabing: remove this function
 func (r *RateLimitRule) IsMatchSet() bool {
-	return len(r.HeaderMatches) != 0 || r.CIDRMatch != nil || r.QueryParameters != nil
+	return len(r.HeaderMatches) != 0 || r.CIDRMatch != nil || len(r.QueryParamMatches) != 0
 }
 
 type RateLimitUnit egv1a1.RateLimitUnit

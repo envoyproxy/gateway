@@ -385,6 +385,7 @@ xdsIR:
                   requests: 5
                   unit: Hour
                 name: envoy-gateway/policy-for-gateway1/rule/0
+                queryParamMatches: null
                 shared: true
               - headerMatches:
                 - distinct: false
@@ -394,6 +395,7 @@ xdsIR:
                   requests: 5
                   unit: Hour
                 name: envoy-gateway/policy-for-gateway1/rule/1
+                queryParamMatches: null
                 shared: true
           timeout:
             http:

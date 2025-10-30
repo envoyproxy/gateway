@@ -4077,19 +4077,39 @@ _Appears in:_
 | `provider` | _[TracingProvider](#tracingprovider)_ |  true  |  | Provider defines the tracing provider. |
 
 
-#### QueryParameters
+#### QueryParamMatch
 
 
 
-
+QueryParamMatch defines the match attributes within the query parameters of the request.
 
 _Appears in:_
 - [RateLimitSelectCondition](#ratelimitselectcondition)
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `queryParameterName` | _string_ |  true  |  | The name of the query parameter to use for rate limiting.<br />Value of this query parameter is used to populate the value of the descriptor entry for the descriptor_key. |
-| `descriptorKey` | _string_ |  true  |  | The key to use when creating the rate limit descriptor entry.<br />This descriptor key will be used to identify the rate limit rule in the rate limiting service. |
+| `type` | _[QueryParamMatchType](#queryparammatchtype)_ |  false  | Exact | Type specifies how to match against the value of the query parameter. |
+| `name` | _string_ |  true  |  | Name of the query parameter. |
+| `value` | _string_ |  false  |  | Value within the query parameter.<br />Do not set this field when Type="Distinct", implying matching on any/all unique<br />values within the query parameter. |
+| `invert` | _boolean_ |  false  | false | Invert specifies whether the value match result will be inverted.<br />Do not set this field when Type="Distinct", implying matching on any/all unique<br />values within the query parameter. |
+| `descriptorKey` | _string_ |  true  |  | DescriptorKey is the key to use when creating the rate limit descriptor entry.<br />This descriptor key will be used to identify the rate limit rule in the rate limiting service. |
+
+
+#### QueryParamMatchType
+
+_Underlying type:_ _string_
+
+QueryParamMatchType specifies the semantics of how query parameter values should be compared.
+Valid QueryParamMatchType values are "Exact", "RegularExpression", and "Distinct".
+
+_Appears in:_
+- [QueryParamMatch](#queryparammatch)
+
+| Value | Description |
+| ----- | ----------- |
+| `Exact` | QueryParamMatchExact matches the exact value of the Value field against the value of<br />the specified query parameter.<br /> | 
+| `RegularExpression` | QueryParamMatchRegularExpression matches a regular expression against the value of the<br />specified query parameter. The regex string must adhere to the syntax documented in<br />https://github.com/google/re2/wiki/Syntax.<br /> | 
+| `Distinct` | QueryParamMatchDistinct matches any and all possible unique values encountered in the<br />specified query parameter. Note that each unique value will receive its own rate limit<br />bucket.<br /> | 
 
 
 #### RateLimit
@@ -4279,9 +4299,9 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `headers` | _[HeaderMatch](#headermatch) array_ |  false  |  | Headers is a list of request headers to match. Multiple header values are ANDed together,<br />meaning, a request MUST match all the specified headers.<br />At least one of headers or sourceCIDR condition must be specified. |
-| `sourceCIDR` | _[SourceMatch](#sourcematch)_ |  false  |  | SourceCIDR is the client IP Address range to match on.<br />At least one of headers or sourceCIDR condition must be specified. |
-| `queryParameters` | _[QueryParameters](#queryparameters)_ |  false  |  | Rate limit on query parameters. |
+| `headers` | _[HeaderMatch](#headermatch) array_ |  false  |  | Headers is a list of request headers to match. Multiple header values are ANDed together,<br />meaning, a request MUST match all the specified headers.<br />At least one of headers, sourceCIDR, or queryParams condition must be specified. |
+| `sourceCIDR` | _[SourceMatch](#sourcematch)_ |  false  |  | SourceCIDR is the client IP Address range to match on.<br />At least one of headers, sourceCIDR, or queryParams condition must be specified. |
+| `queryParams` | _[QueryParamMatch](#queryparammatch) array_ |  false  |  | QueryParams is a list of query parameters to match. Multiple query parameter values are ANDed together,<br />meaning, a request MUST match all the specified query parameters.<br />At least one of headers, sourceCIDR, or queryParams condition must be specified. |
 
 
 #### RateLimitSpec

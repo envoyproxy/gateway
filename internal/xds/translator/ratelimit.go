@@ -336,13 +336,13 @@ func buildRouteRateLimits(route *ir.HTTPRoute) (rateLimits []*routev3.RateLimit,
 			}
 		}
 
-		if rule.QueryParameters != nil {
-			queryParam := &routev3.RateLimit_Action_QueryParameters{}
-			queryParam.DescriptorKey = rule.QueryParameters.DescriptorKey
-			queryParam.QueryParameterName = rule.QueryParameters.QueryParameterName
+		for _, queryParam := range rule.QueryParamMatches {
+			queryParamAction := &routev3.RateLimit_Action_QueryParameters{}
+			queryParamAction.DescriptorKey = queryParam.DescriptorKey
+			queryParamAction.QueryParameterName = queryParam.Name
 			action := &routev3.RateLimit_Action{
 				ActionSpecifier: &routev3.RateLimit_Action_QueryParameters_{
-					QueryParameters: queryParam,
+					QueryParameters: queryParamAction,
 				},
 			}
 			rlActions = append(rlActions, action)
@@ -697,9 +697,9 @@ func buildRateLimitServiceDescriptors(route *ir.HTTPRoute) []*rlsconfv3.RateLimi
 		}
 
 		// 3) Query Parameters
-		if rule.QueryParameters != nil {
+		for _, queryParam := range rule.QueryParamMatches {
 			pbDesc := new(rlsconfv3.RateLimitDescriptor)
-			pbDesc.Key = rule.QueryParameters.DescriptorKey
+			pbDesc.Key = queryParam.DescriptorKey
 			pbDesc.Value = ""
 
 			if cur != nil {

@@ -304,19 +304,19 @@ func buildRouteLocalRateLimits(local *ir.LocalRateLimit) (
 				rlActions = append(rlActions, action)
 			}
 		}
-		if rule.QueryParameters != nil {
-			queryParam := &routev3.RateLimit_Action_QueryParameters{}
-			queryParam.DescriptorKey = rule.QueryParameters.DescriptorKey
-			queryParam.QueryParameterName = rule.QueryParameters.QueryParameterName
+		for _, queryParam := range rule.QueryParamMatches {
+			queryParamAction := &routev3.RateLimit_Action_QueryParameters{}
+			queryParamAction.DescriptorKey = queryParam.DescriptorKey
+			queryParamAction.QueryParameterName = queryParam.Name
 			action := &routev3.RateLimit_Action{
 				ActionSpecifier: &routev3.RateLimit_Action_QueryParameters_{
-					QueryParameters: queryParam,
+					QueryParameters: queryParamAction,
 				},
 			}
 			rlActions = append(rlActions, action)
 
 			entry := &rlv3.RateLimitDescriptor_Entry{
-				Key: rule.QueryParameters.DescriptorKey,
+				Key: queryParam.DescriptorKey,
 			}
 			descriptorEntries = append(descriptorEntries, entry)
 		}
