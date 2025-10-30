@@ -8,6 +8,7 @@ breaking changes: |
   When a MirrorPolicy is used, the shadow host suffix is not appended to the mirrored cluster name.
   When running `egctl experimental collect`, SDS will not be dumped, you can enable it by adding `--sds true`.
   When setting the 'consecutiveGatewayFailure' will 'enforcingConsecutiveGatewayFailure set to 100.
+  Enabled OIDC refresh tokens by default. When refresh tokens are received from the OIDC provider, they will be used to obtain new access and ID tokens when the current tokens expire.
 
 # Updates addressing vulnerabilities, security flaws, or compliance requirements.
 security updates: |

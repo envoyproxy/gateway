@@ -81,7 +81,7 @@
                 cluster: oauth_foo_com_443
                 timeout: 10s
                 uri: https://oauth.foo.com/token
-              useRefreshToken: false
+              useRefreshToken: true
         - name: envoy.filters.http.router
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
