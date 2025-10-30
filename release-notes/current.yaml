@@ -25,10 +25,14 @@ new features: |
   Added support for per-backend client TLS settings in Backend resources. This allows configuring the client certificate as well as TLS protocol parameters such as ciphers, TLS versions, and ALPN protocols on a per-backend basis.
   Added support for returning 503 responses when no valid backend endpoints exist.
   Added support for CSRFTokenTTL in OIDC authn to configure the lifetime of the CSRF token used during the OAuth2 authorization code flow.
+  Added support for http2 stream timeout
   Added support for Envoy PreconnectPolicy in BackendTrafficPolicy.
   Added support for binaryData in ConfigMap referenced by HTTPRouteFilter for direct response.
+  Added support PDB for Ratelimit service.
+  Auto-generates TLS certificates in host mode when they don't exist.
+  Added support for allowing OPTIONS method implicitly when HTTPRoute CORS filter is used.
+  Added support rate limit based on path and method in BackendTrafficPolicy.
   Added support for both Global and Local rate limiting in BackendTrafficPolicy simultaneously.
-
 
 bug fixes: |
   Fixed %ROUTE_KIND% operator to be lower-cased when used by clusterStatName in EnvoyProxy API.
@@ -50,6 +54,8 @@ bug fixes: |
   Truncated Gateway API status condition messages to stay within Kubernetes limits and prevent update failures.
   Fixed an issue in EnvoyPatchPolicy where it didn't match the target Gateway/GatewayClass due to an incorrect name reference.
   Fixed certificate SAN overlap detection in gateway listeners.
+  Fixed description and translation behavior for PreserveXRequestID
+  Fixed race condition in proxy context map used in host mode.
 
 # Enhancements that improve performance.
 performance improvements: |

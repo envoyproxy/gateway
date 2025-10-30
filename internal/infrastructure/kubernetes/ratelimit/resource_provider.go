@@ -21,6 +21,7 @@ import (
 	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/common"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/resource"
 	"github.com/envoyproxy/gateway/internal/utils"
 )
@@ -44,6 +45,7 @@ type ResourceRender struct {
 	rateLimit           *egv1a1.RateLimit
 	rateLimitDeployment *egv1a1.KubernetesDeploymentSpec
 	rateLimitHpa        *egv1a1.KubernetesHorizontalPodAutoscalerSpec
+	rateLimitPdb        *egv1a1.KubernetesPodDisruptionBudgetSpec
 
 	// ownerReferenceUID store the uid of its owner reference.
 	ownerReferenceUID map[string]types.UID
@@ -51,13 +53,18 @@ type ResourceRender struct {
 
 // NewResourceRender returns a new ResourceRender.
 func NewResourceRender(ns string, gateway *egv1a1.EnvoyGateway, ownerReferenceUID map[string]types.UID) *ResourceRender {
-	return &ResourceRender{
+	prov := gateway.GetEnvoyGatewayProvider().GetEnvoyGatewayKubeProvider()
+
+	render := &ResourceRender{
 		namespace:           ns,
 		rateLimit:           gateway.RateLimit,
-		rateLimitDeployment: gateway.GetEnvoyGatewayProvider().GetEnvoyGatewayKubeProvider().RateLimitDeployment,
-		rateLimitHpa:        gateway.GetEnvoyGatewayProvider().GetEnvoyGatewayKubeProvider().RateLimitHpa,
+		rateLimitDeployment: prov.RateLimitDeployment,
+		rateLimitHpa:        prov.RateLimitHpa,
+		rateLimitPdb:        prov.RateLimitPDB,
 		ownerReferenceUID:   ownerReferenceUID,
 	}
+
+	return render
 }
 
 func (r *ResourceRender) Name() string {
@@ -84,7 +91,7 @@ func enablePrometheus(rl *egv1a1.RateLimit) bool {
 }
 
 // ConfigMap returns the expected rate limit ConfigMap based on the provided infra.
-func (r *ResourceRender) ConfigMap(cert string) (*corev1.ConfigMap, error) {
+func (r *ResourceRender) ConfigMap(_ string) (*corev1.ConfigMap, error) {
 	if !enablePrometheus(r.rateLimit) {
 		return nil, nil
 	}
@@ -357,5 +364,36 @@ func (r *ResourceRender) HorizontalPodAutoscaler() (*autoscalingv2.HorizontalPod
 }
 
 func (r *ResourceRender) PodDisruptionBudget() (*policyv1.PodDisruptionBudget, error) {
-	return nil, nil
+	pdb := r.rateLimitPdb
+	if pdb == nil {
+		return nil, nil
+	}
+
+	// set name
+	resourceName := r.Name()
+	if pdb.Name != nil {
+		resourceName = *pdb.Name
+	}
+
+	return common.GetPodDisruptionBudget(r.rateLimitPdb, resource.GetSelector(rateLimitLabels()), &types.NamespacedName{
+		Name:      resourceName,
+		Namespace: r.Namespace(),
+	}, r.ownerReferences())
+}
+
+func (r *ResourceRender) ownerReferences() []metav1.OwnerReference {
+	var ownerReferences []metav1.OwnerReference
+	if r.ownerReferenceUID != nil {
+		if uid, ok := r.ownerReferenceUID[ResourceKindDeployment]; ok {
+			ownerReferences = []metav1.OwnerReference{
+				{
+					Kind:       ResourceKindDeployment,
+					APIVersion: appsAPIVersion,
+					Name:       "envoy-gateway",
+					UID:        uid,
+				},
+			}
+		}
+	}
+	return ownerReferences
 }

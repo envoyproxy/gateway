@@ -12,9 +12,9 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync"
 
-	func_e "github.com/tetratelabs/func-e"
-	"github.com/tetratelabs/func-e/api"
+	func_e_api "github.com/tetratelabs/func-e/api"
 	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -34,9 +34,19 @@ type proxyContext struct {
 
 // Close implements the Manager interface.
 func (i *Infra) Close() error {
-	for name := range i.proxyContextMap {
-		i.stopEnvoy(name)
-	}
+	var wg sync.WaitGroup
+
+	// Stop any Envoy subprocesses in parallel
+	i.proxyContextMap.Range(func(key, value any) bool {
+		wg.Add(1)
+		go func(name string) {
+			defer wg.Done()
+			i.stopEnvoy(name)
+		}(key.(string))
+		return true
+	})
+
+	wg.Wait()
 	return nil
 }
 
@@ -53,7 +63,7 @@ func (i *Infra) CreateOrUpdateProxyInfra(ctx context.Context, infra *ir.Infra) e
 	proxyInfra := infra.GetProxyInfra()
 	proxyName := utils.GetHashedName(proxyInfra.Name, 64)
 	// Return directly if the proxy is running.
-	if _, ok := i.proxyContextMap[proxyName]; ok {
+	if _, loaded := i.proxyContextMap.Load(proxyName); loaded {
 		return nil
 	}
 
@@ -91,22 +101,22 @@ func (i *Infra) CreateOrUpdateProxyInfra(ctx context.Context, infra *ir.Infra) e
 func (i *Infra) runEnvoy(ctx context.Context, envoyVersion, name string, args []string) {
 	pCtx, cancel := context.WithCancel(ctx)
 	exit := make(chan struct{}, 1)
-	i.proxyContextMap[name] = &proxyContext{cancel: cancel, exit: exit}
+	i.proxyContextMap.Store(name, &proxyContext{cancel: cancel, exit: exit})
 	go func() {
 		// Run blocks until pCtx is done or the process exits where the latter doesn't happen when
 		// Envoy successfully starts up. So, this will not return until pCtx is done in practice.
 		defer func() {
 			exit <- struct{}{}
 		}()
-		err := func_e.Run(pCtx, args,
-			api.ConfigHome(i.Paths.ConfigHome),
-			api.DataHome(i.Paths.DataHome),
-			api.StateHome(i.Paths.StateHome),
-			api.RuntimeDir(i.Paths.RuntimeDir),
-			api.Out(i.Stdout),
-			api.EnvoyOut(i.Stdout),
-			api.EnvoyErr(i.Stderr),
-			api.EnvoyVersion(envoyVersion))
+		err := i.envoyRunner(pCtx, args,
+			func_e_api.ConfigHome(i.Paths.ConfigHome),
+			func_e_api.DataHome(i.Paths.DataHome),
+			func_e_api.StateHome(i.Paths.StateHome),
+			func_e_api.RuntimeDir(i.Paths.RuntimeDir),
+			func_e_api.Out(i.Stdout),
+			func_e_api.EnvoyOut(i.Stdout),
+			func_e_api.EnvoyErr(i.Stderr),
+			func_e_api.EnvoyVersion(envoyVersion))
 		if err != nil {
 			i.Logger.Error(err, "failed to run envoy")
 		}
@@ -127,11 +137,12 @@ func (i *Infra) DeleteProxyInfra(_ context.Context, infra *ir.Infra) error {
 
 // stopEnvoy stops the Envoy process by its name. It will block until the process completely stopped.
 func (i *Infra) stopEnvoy(proxyName string) {
-	if pCtx, ok := i.proxyContextMap[proxyName]; ok {
+	value, ok := i.proxyContextMap.LoadAndDelete(proxyName)
+	if ok {
+		pCtx := value.(*proxyContext)
 		pCtx.cancel()    // Cancel causes the Envoy process to exit.
 		<-pCtx.exit      // Wait for the Envoy process to completely exit.
 		close(pCtx.exit) // Close the channel to avoid leaking.
-		delete(i.proxyContextMap, proxyName)
 	}
 }
 
