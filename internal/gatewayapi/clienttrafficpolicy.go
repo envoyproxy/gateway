@@ -77,7 +77,7 @@ func (t *Translator) ProcessClientTrafficPolicies(
 					res = append(res, policy)
 				}
 
-				gateway, resolveErr := resolveCTPolicyTargetRef(policy, &currTarget, gatewayMap)
+				gateway, resolveErr := resolveClientTrafficPolicyTargetRef(policy, &currTarget, gatewayMap)
 
 				// Negative statuses have already been assigned so its safe to skip
 				if gateway == nil {
@@ -172,7 +172,7 @@ func (t *Translator) ProcessClientTrafficPolicies(
 					handledPolicies[policyName] = policy
 				}
 
-				gateway, resolveErr := resolveCTPolicyTargetRef(policy, &currTarget, gatewayMap)
+				gateway, resolveErr := resolveClientTrafficPolicyTargetRef(policy, &currTarget, gatewayMap)
 
 				// Negative statuses have already been assigned so its safe to skip
 				if gateway == nil {
@@ -283,7 +283,7 @@ func (t *Translator) ProcessClientTrafficPolicies(
 	return res
 }
 
-func resolveCTPolicyTargetRef(
+func resolveClientTrafficPolicyTargetRef(
 	policy *egv1a1.ClientTrafficPolicy,
 	targetRef *gwapiv1.LocalPolicyTargetReferenceWithSectionName,
 	gateways map[types.NamespacedName]*policyGatewayTargetContext,
