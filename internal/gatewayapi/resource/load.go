@@ -431,11 +431,11 @@ func loadKubernetesYAMLToResources(srv *config.Server, input []byte, addMissingR
 			// a policy resource or a backend resource
 			if srv != nil && srv.EnvoyGateway.ExtensionManager != nil {
 				// check resources (route filters)
-				/*for _, policy := range srv.EnvoyGateway.ExtensionManager.Resources {
+				/* for _, policy := range srv.EnvoyGateway.ExtensionManager.Resources {
 					if policy.Kind == un.GetKind() && policy.Version == un.GroupVersionKind().Version && policy.Group == un.GroupVersionKind().Group {
 						un.SetNamespace(namespace)
-						//TODO where to add in the resource tree?
-						//resources.ExtensionServerPolicies = append(resources.ExtensionServerPolicies, *un)
+						// TODO where to add in the resource tree?
+						// resources.ExtensionServerPolicies = append(resources.ExtensionServerPolicies, *un)
 						break LeaveSwitch
 					}
 				}*/
@@ -452,7 +452,7 @@ func loadKubernetesYAMLToResources(srv *config.Server, input []byte, addMissingR
 					if policy.Kind == un.GetKind() && policy.Version == un.GroupVersionKind().Version && policy.Group == un.GroupVersionKind().Group {
 						un.SetNamespace(namespace)
 						// TODO where to add in the resource tree?
-						//resources.ExtensionServerPolicies = append(resources.ExtensionServerPolicies, *un)
+						// resources.ExtensionServerPolicies = append(resources.ExtensionServerPolicies, *un)
 						break LeaveSwitch
 					}
 				}*/

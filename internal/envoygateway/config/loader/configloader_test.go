@@ -12,9 +12,9 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/stretchr/testify/require"
 
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 )
 
@@ -83,7 +83,7 @@ func TestConfigLoaderStandaloneExtensionServerAndCustomResource(t *testing.T) {
 
 	type testResult struct {
 		changed int32
-		extMgr  *v1alpha1.ExtensionManager
+		extMgr  *egv1a1.ExtensionManager
 	}
 	resultChannel := make(chan testResult, 1)
 

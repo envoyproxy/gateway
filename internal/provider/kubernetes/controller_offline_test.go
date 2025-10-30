@@ -10,12 +10,12 @@ import (
 	"os"
 	"testing"
 
-	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/message"
 )
 
@@ -82,9 +82,9 @@ func TestNewOfflineGatewayAPIController(t *testing.T) {
 		require.NoError(t, err)
 		resources, err := resource.LoadResourcesFromYAMLBytes(cfg, data, true)
 		require.NoError(t, err)
-		require.Equal(t, 1, len(resources.ExtensionServerPolicies))
+		require.Len(t, resources.ExtensionServerPolicies, 1)
 
 		// Verify the custom resource gets the default namespace
-		require.Equal(t, "envoy-gateway-system", resources.ExtensionServerPolicies[0].GetNamespace())
+		require.Equal(t, config.DefaultNamespace, resources.ExtensionServerPolicies[0].GetNamespace())
 	})
 }
