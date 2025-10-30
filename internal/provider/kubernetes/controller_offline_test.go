@@ -10,6 +10,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
@@ -53,17 +54,27 @@ func TestNewOfflineGatewayAPIController(t *testing.T) {
 		cfg, err := config.New(os.Stdout, os.Stderr)
 		require.NoError(t, err)
 
-		gvk := egv1a1.GroupVersionKind{
+		extGVK := egv1a1.GroupVersionKind{
 			Group:   "gateway.example.io",
 			Version: "v1alpha1",
-			Kind:    "ExampleExtPolicy",
+			Kind:    "CustomRouteFilterResource",
+		}
+		extServerPolicyGVK := egv1a1.GroupVersionKind{
+			Group:   "extensions.example.io",
+			Version: "v1alpha1",
+			Kind:    "CustomExtensionServerPolicy",
+		}
+		extBackendGVK := egv1a1.GroupVersionKind{
+			Group:   "backend.example.io",
+			Version: "v1alpha1",
+			Kind:    "CustomBackendResource",
 		}
 
 		cfg.EnvoyGateway.Provider = &egv1a1.EnvoyGatewayProvider{
 			Type: egv1a1.ProviderTypeCustom,
 		}
 		cfg.EnvoyGateway.ExtensionManager = &egv1a1.ExtensionManager{
-			PolicyResources: []egv1a1.GroupVersionKind{gvk},
+			PolicyResources: []egv1a1.GroupVersionKind{extServerPolicyGVK},
 		}
 
 		pResources := new(message.ProviderResources)
@@ -72,11 +83,17 @@ func TestNewOfflineGatewayAPIController(t *testing.T) {
 		require.NotNil(t, reconciler)
 
 		// Verify version registration and that the custom resource is recognized by the scheme
-		require.True(t, reconciler.client.Scheme().IsVersionRegistered(schema.GroupVersion{Group: gvk.Group, Version: gvk.Version}))
-		require.True(t, reconciler.client.Scheme().IsGroupRegistered(gvk.Group))
-		require.True(t, reconciler.client.Scheme().Recognizes(schema.GroupVersionKind{Group: gvk.Group, Version: gvk.Version, Kind: gvk.Kind}))
+		assert.True(t, reconciler.client.Scheme().IsVersionRegistered(schema.GroupVersion{Group: extGVK.Group, Version: extGVK.Version}))
+		assert.True(t, reconciler.client.Scheme().IsGroupRegistered(extGVK.Group))
+		assert.True(t, reconciler.client.Scheme().Recognizes(schema.GroupVersionKind{Group: extGVK.Group, Version: extGVK.Version, Kind: extGVK.Kind}))
+		assert.True(t, reconciler.client.Scheme().IsVersionRegistered(schema.GroupVersion{Group: extServerPolicyGVK.Group, Version: extServerPolicyGVK.Version}))
+		assert.True(t, reconciler.client.Scheme().IsGroupRegistered(extServerPolicyGVK.Group))
+		assert.True(t, reconciler.client.Scheme().Recognizes(schema.GroupVersionKind{Group: extServerPolicyGVK.Group, Version: extServerPolicyGVK.Version, Kind: extServerPolicyGVK.Kind}))
+		assert.True(t, reconciler.client.Scheme().IsVersionRegistered(schema.GroupVersion{Group: extBackendGVK.Group, Version: extBackendGVK.Version}))
+		assert.True(t, reconciler.client.Scheme().IsGroupRegistered(extBackendGVK.Group))
+		assert.True(t, reconciler.client.Scheme().Recognizes(schema.GroupVersionKind{Group: extBackendGVK.Group, Version: extBackendGVK.Version, Kind: extBackendGVK.Kind}))
 
-		// Verify the custom resource can be loaded from yaml
+		// Verify the custom resource can be loaded from YAML
 		inFile := "./testdata/custom-resource.yaml"
 		data, err := os.ReadFile(inFile)
 		require.NoError(t, err)
