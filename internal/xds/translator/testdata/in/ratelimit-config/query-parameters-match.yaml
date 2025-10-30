@@ -17,9 +17,10 @@ http:
             headerMatches:
             - name: "x-user-id"
               exact: "one"
-            queryParameters:
-              queryParameterName: "user"
+            queryParamMatches:
+            - name: "user"
               descriptorKey: "user_param"
+              exact: "alice"
             limit:
               requests: 5
               unit: second

@@ -26,9 +26,11 @@ spec:
     local:
       rules:
         - clientSelectors:
-            - queryParameters:
-                queryParameterName: user
-                descriptorKey: user_param
+            - queryParams:
+                - name: user
+                  descriptorKey: user_param
+                  type: Exact
+                  value: alice
           limit:
             requests: 3
             unit: Second
