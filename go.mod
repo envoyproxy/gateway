@@ -15,9 +15,9 @@ require (
 	github.com/docker/cli v28.5.1+incompatible
 	github.com/docker/docker v28.3.3+incompatible
 	github.com/dominikbraun/graph v0.23.0
-	github.com/envoyproxy/go-control-plane v0.13.5-0.20250929230642-07d3df27ff4f
+	github.com/envoyproxy/go-control-plane v0.13.5-0.20251022160057-de4316c523b7
 	github.com/envoyproxy/go-control-plane/contrib v1.32.5-0.20250430092421-68a532e11403
-	github.com/envoyproxy/go-control-plane/envoy v1.35.1-0.20250929230642-07d3df27ff4f
+	github.com/envoyproxy/go-control-plane/envoy v1.35.1-0.20251022160057-de4316c523b7
 	github.com/envoyproxy/go-control-plane/ratelimit v0.1.1-0.20250805143705-d51f8590a549
 	github.com/envoyproxy/ratelimit v1.4.1-0.20230427142404-e2a87f41d3a7
 	github.com/evanphx/json-patch v5.9.11+incompatible
@@ -42,7 +42,7 @@ require (
 	github.com/prometheus/client_model v0.6.2
 	github.com/prometheus/common v0.67.1
 	github.com/quic-go/quic-go v0.55.0
-	github.com/replicatedhq/troubleshoot v0.123.12
+	github.com/replicatedhq/troubleshoot v0.123.11
 	github.com/shopspring/decimal v1.4.0
 	github.com/spf13/cobra v1.10.1
 	github.com/spf13/pflag v1.0.10

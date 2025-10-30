@@ -887,14 +887,16 @@ func buildRateLimitRule(rule egv1a1.RateLimitRule) (*ir.RateLimitRule, error) {
 			Unit:     ir.RateLimitUnit(rule.Limit.Unit),
 		},
 		HeaderMatches: make([]*ir.StringMatch, 0),
+		MethodMatches: make([]*ir.StringMatch, 0),
 		Shared:        rule.Shared,
 	}
 
 	for _, match := range rule.ClientSelectors {
-		if len(match.Headers) == 0 && match.SourceCIDR == nil {
+		if len(match.Headers) == 0 && len(match.Methods) == 0 &&
+			match.Path == nil && match.SourceCIDR == nil {
 			return nil, fmt.Errorf(
 				"unable to translate rateLimit. At least one of the" +
-					" header or sourceCIDR must be specified")
+					" header or method or path or sourceCIDR must be specified")
 		}
 		for _, header := range match.Headers {
 			switch {
@@ -931,6 +933,38 @@ func buildRateLimitRule(rule egv1a1.RateLimitRule) (*ir.RateLimitRule, error) {
 				return nil, fmt.Errorf(
 					"unable to translate rateLimit. Either the header." +
 						"Type is not valid or the header is missing a value")
+			}
+		}
+
+		for _, method := range match.Methods {
+			irRule.MethodMatches = append(irRule.MethodMatches, &ir.StringMatch{
+				Exact:  ptr.To(string(method.Value)),
+				Invert: method.Invert,
+			})
+		}
+
+		if match.Path != nil {
+			switch ptr.Deref(match.Path.Type, gwapiv1.PathMatchPathPrefix) {
+			case gwapiv1.PathMatchPathPrefix:
+				irRule.PathMatch = &ir.StringMatch{
+					Prefix: ptr.To(match.Path.Value),
+					Invert: match.Path.Invert,
+				}
+			case gwapiv1.PathMatchExact:
+				irRule.PathMatch = &ir.StringMatch{
+					Exact:  ptr.To(match.Path.Value),
+					Invert: match.Path.Invert,
+				}
+			case gwapiv1.PathMatchRegularExpression:
+				if err := regex.Validate(match.Path.Value); err != nil {
+					return nil, err
+				}
+				irRule.PathMatch = &ir.StringMatch{
+					SafeRegex: ptr.To(match.Path.Value),
+					Invert:    match.Path.Invert,
+				}
+			default:
+				return nil, fmt.Errorf("unable to translate rateLimit: invalid path type.")
 			}
 		}
 

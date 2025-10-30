@@ -2240,6 +2240,10 @@ type LocalRateLimit struct {
 type RateLimitRule struct {
 	// HeaderMatches define the match conditions on the request headers for this route.
 	HeaderMatches []*StringMatch `json:"headerMatches" yaml:"headerMatches"`
+	// PathMatch defines the match conditions on the request path for this route.
+	PathMatch *StringMatch `json:"pathMatch,omitempty" yaml:"pathMatch,omitempty"`
+	// MethodMatches define the match conditions on the request methods for this route.
+	MethodMatches []*StringMatch `json:"methodMatches,omitempty" yaml:"methodMatches,omitempty"`
 	// CIDRMatch define the match conditions on the source IP's CIDR for this route.
 	CIDRMatch *CIDRMatch `json:"cidrMatch,omitempty" yaml:"cidrMatch,omitempty"`
 	// Limit holds the rate limit values.
@@ -2278,7 +2282,7 @@ type CIDRMatch struct {
 
 // TODO zhaohuabing: remove this function
 func (r *RateLimitRule) IsMatchSet() bool {
-	return len(r.HeaderMatches) != 0 || r.CIDRMatch != nil
+	return len(r.HeaderMatches) != 0 || r.PathMatch != nil || len(r.MethodMatches) != 0 || r.CIDRMatch != nil
 }
 
 type RateLimitUnit egv1a1.RateLimitUnit
@@ -2926,6 +2930,9 @@ type HTTPTimeout struct {
 
 	// The maximum duration of an HTTP connection.
 	MaxConnectionDuration *metav1.Duration `json:"maxConnectionDuration,omitempty" yaml:"maxConnectionDuration,omitempty"`
+
+	// The maximum duration of an HTTP stream.
+	MaxStreamDuration *metav1.Duration `json:"maxStreamDuration,omitempty" yaml:"maxStreamDuration,omitempty"`
 }
 
 // Retry define the retry policy configuration.

@@ -173,12 +173,12 @@ github.com/emicklei/go-restful/v3 v3.13.0/go.mod h1:6n3XBCmQQb25CM2LCACGz8ukIrRr
 github.com/envoyproxy/go-control-plane v0.9.0/go.mod h1:YTl/9mNaCwkRvm6d1a2C3ymFceY/DCBVvsKhRF0iEA4=
 github.com/envoyproxy/go-control-plane v0.9.1-0.20191026205805-5f8ba28d4473/go.mod h1:YTl/9mNaCwkRvm6d1a2C3ymFceY/DCBVvsKhRF0iEA4=
 github.com/envoyproxy/go-control-plane v0.9.4/go.mod h1:6rpuAdCZL397s3pYoYcLgu1mIlRU8Am5FuJP05cCM98=
-github.com/envoyproxy/go-control-plane v0.13.5-0.20250929230642-07d3df27ff4f h1:36vvJBe/wXWfD7qrTb1WnbPVPMxNFDfEygztH8wgebw=
-github.com/envoyproxy/go-control-plane v0.13.5-0.20250929230642-07d3df27ff4f/go.mod h1:PTY7yDlLxB4bW7rEOO7e79uTDr9yXzpuI1QGIDfxEzc=
+github.com/envoyproxy/go-control-plane v0.13.5-0.20251022160057-de4316c523b7 h1:JsOVlgacLOjgYWGb4V2E/d/c/o4+HEvYjr0+KnL4j4o=
+github.com/envoyproxy/go-control-plane v0.13.5-0.20251022160057-de4316c523b7/go.mod h1:Alz8LEClvR7xKsrq3qzoc4N0guvVNSS8KmSChGYr9hs=
 github.com/envoyproxy/go-control-plane/contrib v1.32.5-0.20250430092421-68a532e11403 h1:5wPocL1bGYhA4TtKZwcdVI5fsXo1JatkbcxPBcFQswc=
 github.com/envoyproxy/go-control-plane/contrib v1.32.5-0.20250430092421-68a532e11403/go.mod h1:Xkwx/TGvEKRCL2mitdiuQWOD1ECvfM5krWWVo2vI2Zk=
-github.com/envoyproxy/go-control-plane/envoy v1.35.1-0.20250929230642-07d3df27ff4f h1:4efYrIQgVRwCmwCveby6ck+VpxqzibdOL1Out1rJqqc=
-github.com/envoyproxy/go-control-plane/envoy v1.35.1-0.20250929230642-07d3df27ff4f/go.mod h1:2LcmvJoXsDSrsGZIxGM0Gah9ykiwTn/kgjyQdnNH8Jc=
+github.com/envoyproxy/go-control-plane/envoy v1.35.1-0.20251022160057-de4316c523b7 h1:Q4zISHdb9brRNvzmQl8Bwvap7GAtGrQjHyyw9OYmkFk=
+github.com/envoyproxy/go-control-plane/envoy v1.35.1-0.20251022160057-de4316c523b7/go.mod h1:ty89S1YCCVruQAm9OtKeEkQLTb+Lkz0k8v9W0Oxsv98=
 github.com/envoyproxy/go-control-plane/ratelimit v0.1.1-0.20250805143705-d51f8590a549 h1:5K0vH5H4dtCIO8+w/yq6vDaMcGn9RoPrHfmPAFAztwU=
 github.com/envoyproxy/go-control-plane/ratelimit v0.1.1-0.20250805143705-d51f8590a549/go.mod h1:KxtyvDAPIEkqUUvF9ooo5gSGVOtQ08wUTnQe5LsJC6c=
 github.com/envoyproxy/protoc-gen-validate v0.1.0/go.mod h1:iSmxcyjqTsJpI2R4NaDN7+kN2VEUnK/pcBlmesArF7c=
@@ -562,8 +562,8 @@ github.com/redis/go-redis/extra/redisotel/v9 v9.0.5 h1:EfpWLLCyXw8PSM2/XNJLjI3Pb
 github.com/redis/go-redis/extra/redisotel/v9 v9.0.5/go.mod h1:WZjPDy7VNzn77AAfnAfVjZNvfJTYfPetfZk5yoSTLaQ=
 github.com/redis/go-redis/v9 v9.7.3 h1:YpPyAayJV+XErNsatSElgRZZVCwXX9QzkKYNvO7x0wM=
 github.com/redis/go-redis/v9 v9.7.3/go.mod h1:bGUrSggJ9X9GUmZpZNEOQKaANxSGgOEBRltRTZHSvrA=
-github.com/replicatedhq/troubleshoot v0.123.12 h1:XbgZJMSwIHyf1lvxIRNwI9AVsRzcA7N3AWLPLSkrr+w=
-github.com/replicatedhq/troubleshoot v0.123.12/go.mod h1:CKPCj8si77XuSL6sIAFdqtO23/eha159eEBlQF8HpVw=
+github.com/replicatedhq/troubleshoot v0.123.11 h1:gHzjBuoYrYD9NsnLNb7/AA/V5Xwn8hl0wobB/PD9aTY=
+github.com/replicatedhq/troubleshoot v0.123.11/go.mod h1:CKPCj8si77XuSL6sIAFdqtO23/eha159eEBlQF8HpVw=
 github.com/rivo/uniseg v0.2.0/go.mod h1:J6wj4VEh+S6ZtnVlnTBMWIodfgj8LQOQFoIToxlJtxc=
 github.com/rivo/uniseg v0.4.7 h1:WUdvkW8uEhrYfLC4ZzdpI2ztxP1I582+49Oc5Mq64VQ=
 github.com/rivo/uniseg v0.4.7/go.mod h1:FN3SvrM+Zdj16jyLfmOkMNblXMcoc8DfTHruCPUcx88=
