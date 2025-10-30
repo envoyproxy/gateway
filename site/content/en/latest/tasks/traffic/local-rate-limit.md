@@ -633,7 +633,6 @@ spec:
     kind: HTTPRoute
     name: http-ratelimit
   rateLimit:
-    type: Local
     local:
       rules:
       - clientSelectors:
@@ -662,7 +661,6 @@ spec:
     kind: HTTPRoute
     name: http-ratelimit
   rateLimit:
-    type: Local
     local:
       rules:
       - clientSelectors:
@@ -838,7 +836,6 @@ spec:
     kind: HTTPRoute
     name: http-ratelimit
   rateLimit:
-    type: Local
     local:
       rules:
       - clientSelectors:
@@ -866,7 +863,6 @@ spec:
     kind: HTTPRoute
     name: http-ratelimit
   rateLimit:
-    type: Local
     local:
       rules:
       - clientSelectors:

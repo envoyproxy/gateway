@@ -2015,7 +2015,6 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 						},
 					},
 					RateLimit: &egv1a1.RateLimitSpec{
-						Type: egv1a1.GlobalRateLimitType,
 						Global: &egv1a1.GlobalRateLimit{
 							Rules: []egv1a1.RateLimitRule{
 								{

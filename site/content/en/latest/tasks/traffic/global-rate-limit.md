@@ -965,7 +965,6 @@ spec:
     kind: HTTPRoute
     name: http-ratelimit
   rateLimit:
-    type: Global
     global:
       rules:
       - clientSelectors:
@@ -1014,7 +1013,6 @@ spec:
     kind: HTTPRoute
     name: http-ratelimit
   rateLimit:
-    type: Global
     global:
       rules:
       - clientSelectors:
@@ -1152,7 +1150,6 @@ spec:
     kind: HTTPRoute
     name: http-ratelimit
   rateLimit:
-    type: Global
     global:
       rules:
       - clientSelectors:
@@ -1200,7 +1197,6 @@ spec:
     kind: HTTPRoute
     name: http-ratelimit
   rateLimit:
-    type: Global
     global:
       rules:
       - clientSelectors:
