@@ -835,7 +835,7 @@ func (r *gatewayAPIReconciler) processBackendRefs(ctx context.Context, gwcResour
 // to the resourceTree
 // - BackendRefs and Secrets for OIDC
 // - Secrets for BasicAuth
-// - BackendRefs for ExAuth
+// - BackendRefs, ConfigMaps, and Secrets for ExAuth
 func (r *gatewayAPIReconciler) processSecurityPolicyObjectRefs(
 	ctx context.Context, resourceTree *resource.Resources, resourceMap *resourceMappings,
 ) error {
@@ -965,6 +965,65 @@ func (r *gatewayAPIReconciler) processSecurityPolicyObjectRefs(
 						backendRef); err != nil {
 						r.log.Error(err, "failed to process ExtAuth BackendRef for SecurityPolicy",
 							"policy", policy, "backendRef", backendRef)
+					}
+				}
+			}
+
+			if len(extAuth.ContextExtensions) > 0 {
+				for _, ctxExt := range extAuth.ContextExtensions {
+					if ctxExt.Type != egv1a1.ContextExtensionValueTypeValueRef {
+						continue
+					}
+
+					if ctxExt.ValueRef == nil {
+						continue
+					}
+
+					switch ctxExt.ValueRef.Kind {
+					case resource.KindConfigMap:
+						configMap := new(corev1.ConfigMap)
+						err := r.client.Get(ctx,
+							types.NamespacedName{Namespace: policy.Namespace, Name: string(ctxExt.ValueRef.Name)},
+							configMap,
+						)
+						if err != nil {
+							// If the error is transient, we return it to retry later
+							if isTransientError(err) {
+								return err
+							}
+							r.log.Error(err,
+								"failed to process ExtAuth ContextExtension ValueRef for SecurityPolicy",
+								"policy", policy, "ValueRef", ctxExt.ValueRef)
+						}
+
+						resourceMap.allAssociatedNamespaces.Insert(policy.Namespace)
+						if !resourceMap.allAssociatedConfigMaps.Has(utils.NamespacedName(configMap).String()) {
+							resourceMap.allAssociatedConfigMaps.Insert(utils.NamespacedName(configMap).String())
+							resourceTree.ConfigMaps = append(resourceTree.ConfigMaps, configMap)
+							r.log.Info("processing ConfigMap", "namespace", policy.Namespace, "name", string(ctxExt.ValueRef.Name))
+						}
+					case resource.KindSecret:
+						secret := new(corev1.Secret)
+						err := r.client.Get(ctx,
+							types.NamespacedName{Namespace: policy.Namespace, Name: string(ctxExt.ValueRef.Name)},
+							secret,
+						)
+						if err != nil {
+							// If the error is transient, we return it to retry later
+							if isTransientError(err) {
+								return err
+							}
+							r.log.Error(err,
+								"failed to process ExtAuth ContextExtension ValueRef for SecurityPolicy",
+								"policy", policy, "ValueRef", ctxExt.ValueRef)
+						}
+
+						resourceMap.allAssociatedNamespaces.Insert(policy.Namespace)
+						if !resourceMap.allAssociatedSecrets.Has(utils.NamespacedName(secret).String()) {
+							resourceMap.allAssociatedSecrets.Insert(utils.NamespacedName(secret).String())
+							resourceTree.Secrets = append(resourceTree.Secrets, secret)
+							r.log.Info("processing Secret", "namespace", policy.Namespace, "name", string(ctxExt.ValueRef.Name))
+						}
 					}
 				}
 			}

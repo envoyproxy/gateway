@@ -276,8 +276,30 @@ func (*extAuth) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir.HT
 		return nil
 	}
 	filterName := extAuthFilterName(irRoute.Security.ExtAuth)
-	if err := enableFilterOnRoute(route, filterName); err != nil {
+	contextExtensions := convertContextExtensions(irRoute.Security.ExtAuth.ContextExtensions)
+	if err := enableFilterOnRoute(route, filterName, &extauthv3.ExtAuthzPerRoute{
+		Override: &extauthv3.ExtAuthzPerRoute_CheckSettings{
+			CheckSettings: &extauthv3.CheckSettings{
+				ContextExtensions: contextExtensions,
+			},
+		},
+	}); err != nil {
 		return err
 	}
 	return nil
+}
+
+// convertContextExtensions converts the provided context extensions
+// [ir.PrivateBytes] values to regular string values.
+func convertContextExtensions(privateCtxExts map[string]ir.PrivateBytes) map[string]string {
+	if privateCtxExts == nil {
+		return nil
+	}
+
+	ctxExts := make(map[string]string, len(privateCtxExts))
+	for name, value := range privateCtxExts {
+		ctxExts[name] = string(value)
+	}
+
+	return ctxExts
 }
