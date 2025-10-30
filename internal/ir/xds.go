@@ -2382,17 +2382,6 @@ type RateLimitRule struct {
 	Name string `json:"name,omitempty" yaml:"name,omitempty"`
 }
 
-// QueryParamMatch defines the match attributes within the query parameters of the request.
-// +k8s:deepcopy-gen=true
-type QueryParamMatch struct {
-	// Name of the query parameter.
-	Name string `json:"name" yaml:"name"`
-	// DescriptorKey is the key to use when creating the rate limit descriptor entry.
-	DescriptorKey string `json:"descriptorKey" yaml:"descriptorKey"`
-	// StringMatch defines how to match against the value of the query parameter.
-	*StringMatch `json:",inline" yaml:",inline"`
-}
-
 // RateLimitCost specifies the cost of the request or response.
 // +k8s:deepcopy-gen=true
 type RateLimitCost struct {
@@ -2408,6 +2397,17 @@ type CIDRMatch struct {
 	// Distinct means that each IP Address within the specified Source IP CIDR is treated as a distinct client selector
 	// and uses a separate rate limit bucket/counter.
 	Distinct bool `json:"distinct" yaml:"distinct"`
+}
+
+// QueryParamMatch defines the match attributes within the query parameters of the request.
+// +k8s:deepcopy-gen=true
+type QueryParamMatch struct {
+	// Name of the query parameter.
+	Name string `json:"name" yaml:"name"`
+	// DescriptorKey is the key to use when creating the rate limit descriptor entry.
+	DescriptorKey string `json:"descriptorKey" yaml:"descriptorKey"`
+	// StringMatch defines how to match against the value of the query parameter.
+	*StringMatch `json:",inline" yaml:",inline"`
 }
 
 // TODO zhaohuabing: remove this function

@@ -226,19 +226,72 @@ type RateLimitSelectCondition struct {
 	// +optional
 	SourceCIDR *SourceMatch `json:"sourceCIDR,omitempty"`
 
-	// Rate limit on query parameters.
+	// QueryParams is a list of query parameters to match. Multiple query parameter values are ANDed together,
+	// meaning, a request MUST match all the specified query parameters.
+	// At least one of headers, sourceCIDR, or queryParams condition must be specified.
+	//
 	// +optional
-	QueryParameters *QueryParameters `json:"queryParameters,omitempty"`
+	// +kubebuilder:validation:MaxItems=16
+	QueryParams []QueryParamMatch `json:"queryParams,omitempty"`
 }
 
-type QueryParameters struct {
-	// The name of the query parameter to use for rate limiting.
-	// Value of this query parameter is used to populate the value of the descriptor entry for the descriptor_key.
-	QueryParameterName string `json:"queryParameterName,omitempty"`
-	// The key to use when creating the rate limit descriptor entry.
+// QueryParamMatch defines the match attributes within the query parameters of the request.
+type QueryParamMatch struct {
+	// Type specifies how to match against the value of the query parameter.
+	//
+	// +optional
+	// +kubebuilder:default=Exact
+	Type *QueryParamMatchType `json:"type,omitempty"`
+
+	// Name of the query parameter.
+	//
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	Name string `json:"name"`
+
+	// Value within the query parameter.
+	// Do not set this field when Type="Distinct", implying matching on any/all unique
+	// values within the query parameter.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=1024
+	Value *string `json:"value,omitempty"`
+
+	// Invert specifies whether the value match result will be inverted.
+	// Do not set this field when Type="Distinct", implying matching on any/all unique
+	// values within the query parameter.
+	//
+	// +optional
+	// +kubebuilder:default=false
+	Invert *bool `json:"invert,omitempty"`
+
+	// DescriptorKey is the key to use when creating the rate limit descriptor entry.
 	// This descriptor key will be used to identify the rate limit rule in the rate limiting service.
-	DescriptorKey string `json:"descriptorKey,omitempty"`
+	//
+	// +kubebuilder:validation:Required
+	DescriptorKey string `json:"descriptorKey"`
 }
+
+// QueryParamMatchType specifies the semantics of how query parameter values should be compared.
+// Valid QueryParamMatchType values are "Exact", "RegularExpression", and "Distinct".
+//
+// +kubebuilder:validation:Enum=Exact;RegularExpression;Distinct
+type QueryParamMatchType string
+
+// QueryParamMatchType constants.
+const (
+	// QueryParamMatchExact matches the exact value of the Value field against the value of
+	// the specified query parameter.
+	QueryParamMatchExact QueryParamMatchType = "Exact"
+	// QueryParamMatchRegularExpression matches a regular expression against the value of the
+	// specified query parameter. The regex string must adhere to the syntax documented in
+	// https://github.com/google/re2/wiki/Syntax.
+	QueryParamMatchRegularExpression QueryParamMatchType = "RegularExpression"
+	// QueryParamMatchDistinct matches any and all possible unique values encountered in the
+	// specified query parameter. Note that each unique value will receive its own rate limit
+	// bucket.
+	QueryParamMatchDistinct QueryParamMatchType = "Distinct"
+)
 
 // +kubebuilder:validation:Enum=Exact;Distinct
 type SourceMatchType string
