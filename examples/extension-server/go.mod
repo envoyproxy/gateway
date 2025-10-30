@@ -4,8 +4,8 @@ go 1.25.3
 
 require (
 	github.com/envoyproxy/gateway v1.3.1
-	github.com/envoyproxy/go-control-plane v0.13.5-0.20250929230642-07d3df27ff4f
-	github.com/envoyproxy/go-control-plane/envoy v1.35.1-0.20250929230642-07d3df27ff4f
+	github.com/envoyproxy/go-control-plane v0.13.5-0.20251022160057-de4316c523b7
+	github.com/envoyproxy/go-control-plane/envoy v1.35.1-0.20251022160057-de4316c523b7
 	github.com/urfave/cli/v2 v2.27.7
 	google.golang.org/grpc v1.76.0
 	google.golang.org/protobuf v1.36.10

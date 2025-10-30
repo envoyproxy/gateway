@@ -389,14 +389,12 @@ func TestInfra_Close(t *testing.T) {
 
 	infra := newMockInfra(t, cfg)
 
+	// Use synctest as runEnvoy internally starts goroutines
 	synctest.Test(t, func(t *testing.T) {
 		for id := range 5 {
 			name := utils.GetHashedName(fmt.Sprintf("proxy-%d", id), 64)
 			infra.runEnvoy(t.Context(), "", name, []string{"--version"})
 		}
-
-		// Wait for all runEnvoy calls to complete
-		synctest.Wait()
 
 		// Verify all proxies are running
 		count := 0
