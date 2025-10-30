@@ -272,7 +272,7 @@ type EnvoyGatewayKubernetesProvider struct {
 	// RateLimitPDB allows to control the pod disruption budget of rate limit service.
 	//
 	// +optional
-	RateLimitPDB *KubernetesPodDisruptionBudgetSpec `json:"rateLimitPdb,omitempty"`
+	RateLimitPDB *KubernetesPodDisruptionBudgetSpec `json:"rateLimitPDB,omitempty"`
 
 	// Watch holds configuration of which input resources should be watched and reconciled.
 	// +optional

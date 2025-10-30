@@ -1,0 +1,12 @@
+costSpecified: false
+rateLimits:
+- actions:
+  - ActionSpecifier:
+      GenericKey:
+        descriptor_key: first-route
+        descriptor_value: first-route
+  - ActionSpecifier:
+      MaskedRemoteAddress:
+        v4_prefix_mask_len:
+          value: 16
+routeName: first-route
