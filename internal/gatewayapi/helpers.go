@@ -830,11 +830,14 @@ func getOverriddenAndMergedTargetsMessageForGateway(
 	var overrideMessage, mergedMessage string
 
 	gwNN := utils.NamespacedName(targetContext.GatewayContext)
+	// Initialize sets
+	overrideRouteSet := sets.New[string]()
+	mergedRouteSet := sets.New[string]()
 
 	// Get merged targets
 	if gatewayPolicyMergedMap.Routes != nil {
 		if sectionName == nil {
-			// When sectionName is nil, retrieve routes from all listeners including Gateway-level ("")
+			// When sectionName is nil, retrieve routes from all listeners
 			if gatewayPolicyMergedMap.SectionIndex != nil && gatewayPolicyMergedMap.SectionIndex[gwNN] != nil {
 				for _, listener := range gatewayPolicyMergedMap.SectionIndex[gwNN].UnsortedList() {
 					listenerKey := NamespacedNameWithSection{
@@ -842,7 +845,7 @@ func getOverriddenAndMergedTargetsMessageForGateway(
 						SectionName:    gwapiv1.SectionName(listener),
 					}
 					if routeSet, ok := gatewayPolicyMergedMap.Routes[listenerKey]; ok {
-						mergedRoutes = append(mergedRoutes, routeSet.UnsortedList()...)
+						mergedRouteSet.Insert(routeSet.UnsortedList()...)
 					}
 				}
 			}
@@ -853,14 +856,7 @@ func getOverriddenAndMergedTargetsMessageForGateway(
 				SectionName:    *sectionName,
 			}
 			if routeSet, ok := gatewayPolicyMergedMap.Routes[listenerKey]; ok {
-				mergedRoutes = routeSet.UnsortedList()
-			}
-			gwKey := NamespacedNameWithSection{
-				NamespacedName: gwNN,
-				SectionName:    "",
-			}
-			if routeSet, ok := gatewayPolicyMergedMap.Routes[gwKey]; ok {
-				mergedRoutes = routeSet.UnsortedList()
+				mergedRouteSet.Insert(routeSet.UnsortedList()...)
 			}
 		}
 	}
@@ -879,7 +875,7 @@ func getOverriddenAndMergedTargetsMessageForGateway(
 						SectionName:    gwapiv1.SectionName(listener),
 					}
 					if routeSet, ok := gatewayRouteMap.Routes[listenerKey]; ok {
-						overrideRoutes = append(overrideRoutes, routeSet.UnsortedList()...)
+						overrideRouteSet.Insert(routeSet.UnsortedList()...)
 					}
 				}
 			}
@@ -890,21 +886,20 @@ func getOverriddenAndMergedTargetsMessageForGateway(
 				SectionName:    *sectionName,
 			}
 			if routeSet, ok := gatewayRouteMap.Routes[listenerKey]; ok {
-				overrideRoutes = routeSet.UnsortedList()
+				overrideRouteSet.Insert(routeSet.UnsortedList()...)
 			}
 			gwKey := NamespacedNameWithSection{
 				NamespacedName: gwNN,
 				SectionName:    "",
 			}
 			if routeSet, ok := gatewayRouteMap.Routes[gwKey]; ok {
-				overrideRoutes = append(overrideRoutes, routeSet.UnsortedList()...)
+				overrideRouteSet.Insert(routeSet.UnsortedList()...)
 			}
 		}
 	}
 
+	mergedRoutes = mergedRouteSet.UnsortedList()
 	// Exclude merged routes from overridden routes
-	mergedRouteSet := sets.New(mergedRoutes...)
-	overrideRouteSet := sets.New(overrideRoutes...)
 	overrideRoutes = overrideRouteSet.Difference(mergedRouteSet).UnsortedList()
 
 	if len(overrideListeners) > 0 {
