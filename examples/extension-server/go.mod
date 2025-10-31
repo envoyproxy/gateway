@@ -12,6 +12,7 @@ require (
 	k8s.io/apimachinery v0.34.1
 	sigs.k8s.io/controller-runtime v0.22.3
 	sigs.k8s.io/gateway-api v1.4.0
+	sigs.k8s.io/gateway-api-inference-extension v0.5.1
 )
 
 require (
