@@ -33,6 +33,10 @@ func New(cfg *config.Server) *Runner {
 }
 
 func (r *Runner) Start(ctx context.Context) error {
+	if r.cfg.EnvoyGateway.DisableTraces() {
+		return nil
+	}
+
 	config := r.cfg.EnvoyGateway.GetEnvoyGatewayTelemetry().Traces.Sink
 	configObj := config.OpenTelemetry
 
