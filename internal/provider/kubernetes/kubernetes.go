@@ -148,11 +148,11 @@ func New(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server, resources
 			},
 		}
 	}
-
 	// ProxyTopologyInjector is the only component that interacts with Pods.
 	mgrOpts.Cache.ByObject[&corev1.Pod{}] = cache.ByObject{
 		Label: labels.SelectorFromSet(proxy.EnvoyAppLabel()),
 	}
+	mgrOpts.Cache.DefaultTransform = cache.TransformStripManagedFields()
 
 	if svrCfg.EnvoyGateway.NamespaceMode() {
 		mgrOpts.Cache.DefaultNamespaces = make(map[string]cache.Config)

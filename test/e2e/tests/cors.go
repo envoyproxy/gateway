@@ -202,4 +202,44 @@ func runCORStest(t *testing.T, suite *suite.ConformanceTestSuite, withSecurityPo
 
 		http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 	})
+
+	if !withSecurityPolicy {
+		t.Run("should enable cors with specific method match", func(t *testing.T) {
+			// When using HTTPCORSFilter with method match, OPTIONS method is implicitly allowed for CORS preflight
+			// even without explicit OPTIONS method match, so preflight response should be returned successfully
+			expectedResponse := http.ExpectedResponse{
+				Request: http.Request{
+					Path:   "/cors-specific-method",
+					Method: "OPTIONS",
+					Headers: map[string]string{
+						"Origin":                         "https://www.foo.com",
+						"access-control-request-method":  "GET",
+						"access-control-request-headers": "x-header-1, x-header-2",
+					},
+				},
+				// Set the expected request properties to empty strings.
+				// This is a workaround to avoid the test failure.
+				// The response body is empty because the request is a preflight request.
+				ExpectedRequest: &http.ExpectedRequest{
+					Request: http.Request{
+						Host:    "",
+						Method:  "OPTIONS",
+						Path:    "",
+						Headers: nil,
+					},
+				},
+				Response: http.Response{
+					StatusCode: 200,
+					Headers: map[string]string{
+						"access-control-allow-origin":   "https://www.foo.com",
+						"access-control-allow-methods":  "GET, OPTIONS",
+						"access-control-allow-headers":  "x-header-1, x-header-2",
+						"access-control-expose-headers": "*",
+					},
+				},
+				Namespace: "",
+			}
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
+		})
+	}
 }

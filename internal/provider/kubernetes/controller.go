@@ -755,6 +755,23 @@ func (r *gatewayAPIReconciler) processBackendRefs(ctx context.Context, gwcResour
 					}
 				}
 			}
+
+			if backend.Spec.TLS != nil && backend.Spec.TLS.BackendTLSConfig != nil && backend.Spec.TLS.ClientCertificateRef != nil {
+				certRef := *backend.Spec.TLS.ClientCertificateRef
+				if refsSecret(&certRef) {
+					if err := r.processSecretRef(
+						ctx, resourceMappings, gwcResource,
+						resource.KindBackend, backend.Namespace, backend.Name,
+						certRef); err != nil {
+						if isTransientError(err) {
+							return err
+						}
+						r.log.Error(err,
+							"failed to process ClientTLS secret for Backend",
+							"backend", backend, "clientCertificateRef", certRef.Name)
+					}
+				}
+			}
 		default:
 			// Handle custom backend resources defined in extension manager
 			if r.isCustomBackendResource(backendRef.Group, backendRefKind) {
