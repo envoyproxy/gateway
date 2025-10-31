@@ -4,11 +4,11 @@ go 1.24.9
 
 require (
 	github.com/envoyproxy/gateway v1.3.1
-	github.com/envoyproxy/go-control-plane v0.13.5-0.20250622153809-434b6986176d
-	github.com/envoyproxy/go-control-plane/envoy v1.32.5-0.20250622153809-434b6986176d
+	github.com/envoyproxy/go-control-plane v0.13.5-0.20250724095927-7a953c2d3b3e
+	github.com/envoyproxy/go-control-plane/envoy v1.35.1-0.20250724095927-7a953c2d3b3e
 	github.com/urfave/cli/v2 v2.27.7
-	google.golang.org/grpc v1.74.2
-	google.golang.org/protobuf v1.36.6
+	google.golang.org/grpc v1.75.1
+	google.golang.org/protobuf v1.36.10
 	k8s.io/apimachinery v0.33.3
 	sigs.k8s.io/controller-runtime v0.21.0
 	sigs.k8s.io/gateway-api v1.3.1-0.20250527223622-54df0a899c1c
