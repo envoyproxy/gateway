@@ -12100,6 +12100,12 @@ spec:
                                                     type: string
                                                 type: object
                                             type: object
+                                          useClientProtocol:
+                                            description: |-
+                                              UseClientProtocol configures Envoy to prefer sending requests to backends using
+                                              the same HTTP protocol that the incoming request used. Defaults to false, which means
+                                              that Envoy will use the protocol indicated by the attached BackendRef.
+                                            type: boolean
                                         type: object
                                         x-kubernetes-validations:
                                         - message: predictivePercent in preconnect
@@ -13307,6 +13313,12 @@ spec:
                                                     type: string
                                                 type: object
                                             type: object
+                                          useClientProtocol:
+                                            description: |-
+                                              UseClientProtocol configures Envoy to prefer sending requests to backends using
+                                              the same HTTP protocol that the incoming request used. Defaults to false, which means
+                                              that Envoy will use the protocol indicated by the attached BackendRef.
+                                            type: boolean
                                         type: object
                                         x-kubernetes-validations:
                                         - message: predictivePercent in preconnect
@@ -14593,6 +14605,12 @@ spec:
                                               type: string
                                           type: object
                                       type: object
+                                    useClientProtocol:
+                                      description: |-
+                                        UseClientProtocol configures Envoy to prefer sending requests to backends using
+                                        the same HTTP protocol that the incoming request used. Defaults to false, which means
+                                        that Envoy will use the protocol indicated by the attached BackendRef.
+                                      type: boolean
                                   type: object
                                   x-kubernetes-validations:
                                   - message: predictivePercent in preconnect policy
@@ -15794,6 +15812,12 @@ spec:
                                         type: string
                                     type: object
                                 type: object
+                              useClientProtocol:
+                                description: |-
+                                  UseClientProtocol configures Envoy to prefer sending requests to backends using
+                                  the same HTTP protocol that the incoming request used. Defaults to false, which means
+                                  that Envoy will use the protocol indicated by the attached BackendRef.
+                                type: boolean
                             type: object
                             x-kubernetes-validations:
                             - message: predictivePercent in preconnect policy only
