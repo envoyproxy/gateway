@@ -912,6 +912,10 @@ type TrafficFeatures struct {
 	Telemetry *egv1a1.BackendTelemetry `json:"telemetry,omitempty" yaml:"telemetry,omitempty"`
 	// RequestBuffer defines the schema for enabling buffered requests
 	RequestBuffer *RequestBuffer `json:"requestBuffer,omitempty" yaml:"requestBuffer,omitempty"`
+	// AdmissionControl defines the schema for admission control configuration.
+	AdmissionControl *egv1a1.AdmissionControl `json:"admissionControl,omitempty" yaml:"admissionControl,omitempty"`
+	// AdaptiveConcurrency defines the schema for adaptive concurrency configuration.
+	AdaptiveConcurrency *egv1a1.AdaptiveConcurrency `json:"adaptiveConcurrency,omitempty" yaml:"adaptiveConcurrency,omitempty"`
 }
 
 // +k8s:deepcopy-gen=true
