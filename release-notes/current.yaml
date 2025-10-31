@@ -8,8 +8,9 @@ breaking changes: |
   When a MirrorPolicy is used, the shadow host suffix is not appended to the mirrored cluster name.
   When running `egctl experimental collect`, SDS will not be dumped, you can enable it by adding `--sds true`.
   When setting the 'consecutiveGatewayFailure' will 'enforcingConsecutiveGatewayFailure set to 100.
-  Enabled OIDC refresh tokens by default. When refresh tokens are received from the OIDC provider, they will be used to obtain new access and ID tokens when the current tokens expire. If you want to keep the previous behavior of not using refresh tokens, set 'refreshToken' to false in the OIDC authentication configuration.
+  When the OIDC provider issues a refresh token, Envoy Gateway will now use it to automatically obtain new access and ID tokens when the current ones expire. To keep the previous behavior (not using refresh tokens), set `refreshToken` (see https://gateway.envoyproxy.io/docs/api/extension_types/#securitypolicyspec) to false in the OIDC authentication configuration.
 
+To retain the previous behavior (not using refresh tokens), set refreshToken to false in your OIDC authentication configuration.
 # Updates addressing vulnerabilities, security flaws, or compliance requirements.
 security updates: |
 
