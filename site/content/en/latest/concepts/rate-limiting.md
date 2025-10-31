@@ -55,7 +55,6 @@ spec:
     kind: HTTPRoute
     name: my-api
   rateLimit:
-    type: Global
     global:
       rules:
       - limit:
@@ -91,7 +90,6 @@ spec:
     kind: HTTPRoute
     name: my-api
   rateLimit:
-    type: Local
     local:
       rules:
       - limit:
@@ -100,6 +98,57 @@ spec:
 
 ```
 This configuration limits traffic to 50 requests per minute per Envoy instance for the my-api route. If there are two Envoy replicas, up to 100 total requests per minute may be allowed (50 per replica).
+
+---
+
+## Combining Global and Local Rate Limiting
+
+Envoy Gateway supports configuring both Global and Local rate limits simultaneously on the same route. This layered approach provides comprehensive protection by combining the benefits of both strategies.
+
+**How it works:**
+
+When both rate limits are configured:
+1. **Local rate limits** is evaluated first at each Envoy instance
+2. **Global rate limits** is then evaluated using the shared rate limit service
+3. A request must pass both checks to be allowed through
+
+**Benefits of combined rate limiting:**
+
+- Local limits provide immediate protection against sudden traffic spikes at each instance without external service calls
+- Reduces load on the global rate limit service
+
+### Example
+
+```yaml
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: combined-ratelimit
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: my-api
+  rateLimit:
+    local:
+      rules:
+      - limit:
+          requests: 50
+          unit: Minute
+    global:
+      rules:
+      - limit:
+          requests: 100
+          unit: Minute
+```
+
+This configuration applies both rate limiting strategies to the my-api route:
+- **Local limiting**: Each Envoy instance independently allows up to 50 requests per second. If you have 3 Envoy replicas, the theoretical maximum would be 150 requests per second (50 per replica) assuming perfect load distribution.
+- **Global limiting**: All requests across all Envoy instances are limited to 100 requests per minute total. This is enforced by the shared rate limit service, ensuring the combined traffic from all replicas never exceeds this limit.
+
+In practice, a request will be rejected if it exceeds either limit. For example:
+- If one Envoy instance receives 51 requests in a second, the 51st request is rejected locally (local limit exceeded)
+- If the system has already processed 100 requests in the current minute across all instances, the 101st request is rejected globally (global limit exceeded)
 
 ## Related Resources
 - [BackendTrafficPolicy](gateway_api_extensions/backend-traffic-policy.md)

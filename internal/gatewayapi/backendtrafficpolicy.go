@@ -1037,14 +1037,18 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 }
 
 func (t *Translator) buildRateLimit(policy *egv1a1.BackendTrafficPolicy) (*ir.RateLimit, error) {
-	switch policy.Spec.RateLimit.Type {
-	case egv1a1.GlobalRateLimitType:
-		return t.buildGlobalRateLimit(policy)
-	case egv1a1.LocalRateLimitType:
-		return t.buildLocalRateLimit(policy)
+	// For backward compatibility, process the deprecated Type field if specified.
+	if policy.Spec.RateLimit.Type != nil {
+		switch *policy.Spec.RateLimit.Type {
+		case egv1a1.GlobalRateLimitType:
+			return t.buildGlobalRateLimit(policy)
+		case egv1a1.LocalRateLimitType:
+			return t.buildLocalRateLimit(policy)
+		}
+		return nil, fmt.Errorf("invalid rateLimit type: %s", *policy.Spec.RateLimit.Type)
 	}
 
-	return nil, fmt.Errorf("invalid rateLimit type: %s", policy.Spec.RateLimit.Type)
+	return t.buildBothRateLimit(policy)
 }
 
 func (t *Translator) buildLocalRateLimit(policy *egv1a1.BackendTrafficPolicy) (*ir.RateLimit, error) {
@@ -1145,6 +1149,35 @@ func (t *Translator) buildGlobalRateLimit(policy *egv1a1.BackendTrafficPolicy) (
 	}
 
 	return rateLimit, nil
+}
+
+func (t *Translator) buildBothRateLimit(policy *egv1a1.BackendTrafficPolicy) (*ir.RateLimit, error) {
+	var (
+		localRateLimit  *ir.RateLimit
+		globalRateLimit *ir.RateLimit
+		err             error
+	)
+
+	if policy.Spec.RateLimit.Local != nil {
+		localRateLimit, err = t.buildLocalRateLimit(policy)
+		if err != nil {
+			return nil, err
+		}
+	}
+	if policy.Spec.RateLimit.Global != nil {
+		globalRateLimit, err = t.buildGlobalRateLimit(policy)
+		if err != nil {
+			return nil, err
+		}
+	}
+	rl := &ir.RateLimit{}
+	if localRateLimit != nil && localRateLimit.Local != nil {
+		rl.Local = localRateLimit.Local
+	}
+	if globalRateLimit != nil && globalRateLimit.Global != nil {
+		rl.Global = globalRateLimit.Global
+	}
+	return rl, nil
 }
 
 func buildRateLimitRule(rule egv1a1.RateLimitRule) (*ir.RateLimitRule, error) {

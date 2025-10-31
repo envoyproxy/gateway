@@ -171,7 +171,7 @@ func patchRouteWithRateLimit(route *routev3.Route, irRoute *ir.HTTPRoute) error 
 	if costSpecified {
 		return patchRouteWithRateLimitOnTypedFilterConfig(route, rateLimits, irRoute)
 	}
-	xdsRouteAction.RateLimits = rateLimits
+	xdsRouteAction.RateLimits = append(xdsRouteAction.RateLimits, rateLimits...)
 	return nil
 }
 

@@ -61,7 +61,6 @@ spec:
       matchLabels:
         app: payment-service
   rateLimit:
-    type: Local
     local:
       requests: 10
       unit: Second
@@ -173,7 +172,6 @@ metadata:
   name: global-backendtrafficpolicy
 spec:
   rateLimit:
-    type: Global
     global:
       rules:
       - clientSelectors:
@@ -198,7 +196,6 @@ metadata:
 spec:
   mergeType: StrategicMerge  # Enables merging with gateway policy
   rateLimit:
-    type: Global
     global:
       rules:
       - clientSelectors:
