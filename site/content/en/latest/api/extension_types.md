@@ -806,6 +806,7 @@ _Appears in:_
 | `spkiHashes` | _string array_ |  false  |  | An optional list of base64-encoded SHA-256 hashes. If specified, Envoy will<br />verify that the SHA-256 of the DER-encoded Subject Public Key Information<br />(SPKI) of the presented certificate matches one of the specified values. |
 | `certificateHashes` | _string array_ |  false  |  | An optional list of hex-encoded SHA-256 hashes. If specified, Envoy will<br />verify that the SHA-256 of the DER-encoded presented certificate matches<br />one of the specified values. |
 | `subjectAltNames` | _[SubjectAltNames](#subjectaltnames)_ |  false  |  | An optional list of Subject Alternative name matchers. If specified, Envoy<br />will verify that the Subject Alternative Name of the presented certificate<br />matches one of the specified matchers |
+| `crl` | _[CrlContext](#crlcontext)_ |  false  |  | Crl specifies the crl configuration that can be used to validate the client initiating the TLS connection |
 
 
 #### ClusterSettings

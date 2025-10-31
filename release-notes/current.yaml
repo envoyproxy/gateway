@@ -32,6 +32,7 @@ new features: |
   Auto-generates TLS certificates in host mode when they don't exist.
   Added support for allowing OPTIONS method implicitly when HTTPRoute CORS filter is used.
   Added support rate limit based on path and method in BackendTrafficPolicy.
+  Added support for Certificate Revocation Lists (CRLs) in ClientTrafficPolicy.
 
 bug fixes: |
   Fixed %ROUTE_KIND% operator to be lower-cased when used by clusterStatName in EnvoyProxy API.
