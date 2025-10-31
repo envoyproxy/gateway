@@ -74,7 +74,7 @@ type EnvoyGatewayTracingSink struct {
 	// If ExportTimeout is less than or equal to zero, 30 seconds
 	// is used as the default.
 	ExportTimeout *gwapiv1.Duration `json:"exportTimeout,omitempty"`
-	//TODO sampling rate
+	// TODO sampling rate
 }
 
 type EnvoyGatewayOpenTelemetrySink struct {
