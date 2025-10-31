@@ -1125,7 +1125,7 @@ var RateLimitQueryParametersTest = suite.ConformanceTest{
 			}
 			// make sure that metric worked as expected.
 			if err := wait.PollUntilContextTimeout(context.TODO(), 3*time.Second, time.Minute, true, func(ctx context.Context) (done bool, err error) {
-				v, err := prometheus.QueryPrometheus(suite.Client, `ratelimit_service_rate_limit_over_limit{key2="user_param"}`)
+				v, err := prometheus.QueryPrometheus(suite.Client, `ratelimit_service_rate_limit_over_limit{key2="user"}`)
 				if err != nil {
 					tlog.Logf(t, "failed to query prometheus: %v", err)
 					return false, err

@@ -9,7 +9,7 @@ descriptors:
         value: rule-0-match-0
         rate_limit: null
         descriptors:
-          - key: user_param
+          - key: user
             value: ""
             rate_limit:
               requests_per_unit: 5

@@ -21,7 +21,7 @@
                 stringMatch:
                   exact: one
           - queryParameters:
-              descriptorKey: user_param
+              descriptorKey: user
               queryParameterName: user
         upgradeConfigs:
         - upgradeType: websocket
@@ -33,7 +33,7 @@
           - entries:
             - key: rule-0-match-0
               value: rule-0-match-0
-            - key: user_param
+            - key: user
             tokenBucket:
               fillInterval: 3600s
               maxTokens: 10

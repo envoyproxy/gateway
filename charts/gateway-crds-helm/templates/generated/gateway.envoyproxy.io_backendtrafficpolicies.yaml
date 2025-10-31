@@ -1004,11 +1004,6 @@ spec:
                                         attributes within the query parameters of
                                         the request.
                                       properties:
-                                        descriptorKey:
-                                          description: |-
-                                            DescriptorKey is the key to use when creating the rate limit descriptor entry.
-                                            This descriptor key will be used to identify the rate limit rule in the rate limiting service.
-                                          type: string
                                         invert:
                                           default: false
                                           description: |-
@@ -1038,7 +1033,6 @@ spec:
                                           maxLength: 1024
                                           type: string
                                       required:
-                                      - descriptorKey
                                       - name
                                       type: object
                                     maxItems: 16
@@ -1304,11 +1298,6 @@ spec:
                                         attributes within the query parameters of
                                         the request.
                                       properties:
-                                        descriptorKey:
-                                          description: |-
-                                            DescriptorKey is the key to use when creating the rate limit descriptor entry.
-                                            This descriptor key will be used to identify the rate limit rule in the rate limiting service.
-                                          type: string
                                         invert:
                                           default: false
                                           description: |-
@@ -1338,7 +1327,6 @@ spec:
                                           maxLength: 1024
                                           type: string
                                       required:
-                                      - descriptorKey
                                       - name
                                       type: object
                                     maxItems: 16
