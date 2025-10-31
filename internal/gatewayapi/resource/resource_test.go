@@ -261,7 +261,7 @@ func TestControllerResourcesContextDeepCopy(t *testing.T) {
 				assert.NotSame(t, tc.ctx.Resources, copied.Resources)
 
 				// Verify the contents are equal
-				assert.Equal(t, len(*tc.ctx.Resources), len(*copied.Resources))
+				assert.Len(t, *copied.Resources, len(*tc.ctx.Resources))
 			}
 
 			// Verify Context is preserved (not deep copied, same reference)
@@ -332,7 +332,7 @@ func TestControllerResourcesDeepCopy(t *testing.T) {
 			assert.NotSame(t, tc.resources, copied)
 
 			// Verify the length is the same
-			assert.Equal(t, len(*tc.resources), len(*copied))
+			assert.Len(t, *copied, len(*tc.resources))
 
 			// Verify each resource is deep copied
 			for i := range *tc.resources {
