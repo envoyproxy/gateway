@@ -216,6 +216,18 @@ type ControllerResourcesContext struct {
 	Context   context.Context
 }
 
+// DeepCopy creates a new ControllerResourcesContext.
+// The Context field is preserved (not deep copied) since contexts are meant to be passed around.
+func (c *ControllerResourcesContext) DeepCopy() *ControllerResourcesContext {
+	if c == nil {
+		return nil
+	}
+	return &ControllerResourcesContext{
+		Resources: c.Resources.DeepCopy(),
+		Context:   c.Context,
+	}
+}
+
 // DeepCopy creates a new ControllerResources.
 // It is handwritten since the tooling was unable to copy into a new slice
 func (c *ControllerResources) DeepCopy() *ControllerResources {

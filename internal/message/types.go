@@ -136,6 +136,18 @@ type XdsIRWithContext struct {
 	Context context.Context
 }
 
+// DeepCopy creates a new ControllerResourcesContext.
+// The Context field is preserved (not deep copied) since contexts are meant to be passed around.
+func (x *XdsIRWithContext) DeepCopy() *XdsIRWithContext {
+	if x == nil {
+		return nil
+	}
+	return &XdsIRWithContext{
+		XdsIR:   x.XdsIR.DeepCopy(),
+		Context: x.Context,
+	}
+}
+
 // XdsIR message
 type XdsIR struct {
 	watchable.Map[string, *XdsIRWithContext]
