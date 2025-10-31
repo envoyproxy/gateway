@@ -26,7 +26,7 @@ func TestPostRouteModify_WithInferencePool(t *testing.T) {
 	// Marshal the InferencePool to JSON as unstructured
 	unstructuredObj := map[string]interface{}{
 		"kind":       "InferencePool",
-		"apiVersion": "sigs.k8s.io/gateway-api-inference-extension/v1alpha2",
+		"apiVersion": "sigs.k8s.io/gateway-api-inference-extension/v1",
 		"metadata": map[string]interface{}{
 			"name":      "test-inference-pool",
 			"namespace": "default",
@@ -182,7 +182,7 @@ func TestPostClusterModify_WithInferencePool(t *testing.T) {
 	// Marshal the InferencePool to JSON as unstructured
 	unstructuredObj := map[string]interface{}{
 		"kind":       "InferencePool",
-		"apiVersion": "sigs.k8s.io/gateway-api-inference-extension/v1alpha2",
+		"apiVersion": "sigs.k8s.io/gateway-api-inference-extension/v1",
 		"metadata": map[string]interface{}{
 			"name":      "test-inference-pool",
 			"namespace": "default",

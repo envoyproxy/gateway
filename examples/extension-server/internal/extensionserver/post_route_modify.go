@@ -16,7 +16,7 @@ import (
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/durationpb"
-	inferencev1alpha2 "sigs.k8s.io/gateway-api-inference-extension/api/v1alpha2"
+	inferencev1 "sigs.k8s.io/gateway-api-inference-extension/api/v1"
 
 	pb "github.com/envoyproxy/gateway/proto/extension"
 )
@@ -31,7 +31,7 @@ func (s *Server) PostRouteModify(ctx context.Context, req *pb.PostRouteModifyReq
 
 	// Check if there are any InferencePool extension resources
 	var hasInferencePool bool
-	var inferencePool *inferencev1alpha2.InferencePool
+	var inferencePool *inferencev1.InferencePool
 	for _, ext := range req.PostRouteContext.ExtensionResources {
 		// Parse the JSON to check the kind and apiVersion
 		var resourceInfo map[string]interface{}
@@ -49,9 +49,9 @@ func (s *Server) PostRouteModify(ctx context.Context, req *pb.PostRouteModifyReq
 			slog.String("apiVersion", apiVersion))
 
 		// Check if it's an InferencePool
-		if kind == "InferencePool" && apiVersion == "sigs.k8s.io/gateway-api-inference-extension/v1alpha2" {
+		if kind == "InferencePool" && apiVersion == "sigs.k8s.io/gateway-api-inference-extension/v1" {
 			// Now unmarshal directly to InferencePool type
-			var pool inferencev1alpha2.InferencePool
+			var pool inferencev1.InferencePool
 			if err := json.Unmarshal(ext.GetUnstructuredBytes(), &pool); err != nil {
 				s.log.Error("failed to unmarshal InferencePool", slog.String("error", err.Error()))
 				continue
