@@ -48,10 +48,10 @@ func NewOfflineGatewayAPIController(
 
 	// Gather additional resources to watch from registered extensions.
 	var (
-		extGVKs               []schema.GroupVersionKind
-		extServerPoliciesGVKs []schema.GroupVersionKind
-		// TODO: handle extBackendGVKs here?
-		// extBackendGVKs        []schema.GroupVersionKind
+		extGVKs                []schema.GroupVersionKind
+		extServerPoliciesGVKs  []schema.GroupVersionKind
+		extBackendPoliciesGVKs []schema.GroupVersionKind
+		allExtensions          []schema.GroupVersionKind
 	)
 
 	if cfg.EnvoyGateway.ExtensionManager != nil {
@@ -62,14 +62,18 @@ func NewOfflineGatewayAPIController(
 		for _, rsrc := range cfg.EnvoyGateway.ExtensionManager.PolicyResources {
 			gvk := schema.GroupVersionKind(rsrc)
 			extServerPoliciesGVKs = append(extServerPoliciesGVKs, gvk)
-		}
-		// for _, rsrc := range cfg.EnvoyGateway.ExtensionManager.BackendResources {
-		//	gvk := schema.GroupVersionKind(rsrc)
-		//	extBackendPoliciesGVKs = append(extBackendPoliciesGVKs, gvk)
-		// }
-	}
 
-	cli := newOfflineGatewayAPIClient(extServerPoliciesGVKs)
+		}
+		for _, rsrc := range cfg.EnvoyGateway.ExtensionManager.BackendResources {
+			gvk := schema.GroupVersionKind(rsrc)
+			extBackendPoliciesGVKs = append(extBackendPoliciesGVKs, gvk)
+		}
+	}
+	allExtensions = append(allExtensions, extGVKs...)
+	allExtensions = append(allExtensions, extServerPoliciesGVKs...)
+	allExtensions = append(allExtensions, extBackendPoliciesGVKs...)
+
+	cli := newOfflineGatewayAPIClient(allExtensions)
 	r := &gatewayAPIReconciler{
 		client:            cli,
 		log:               cfg.Logger,
@@ -83,7 +87,7 @@ func NewOfflineGatewayAPIController(
 		envoyGateway:      cfg.EnvoyGateway,
 		mergeGateways:     sets.New[string](),
 		extServerPolicies: extServerPoliciesGVKs,
-		// extBackendGVKs: extBackendPoliciesGVKs
+		extBackendGVKs:    extBackendPoliciesGVKs,
 		// We assume all CRDs are available in offline mode.
 		bTLSPolicyCRDExists:    true,
 		btpCRDExists:           true,
@@ -127,12 +131,12 @@ func (r *OfflineGatewayAPIReconciler) Reconcile(ctx context.Context) error {
 // newOfflineGatewayAPIClient returns an in-memory Kubernetes client that
 // understands Envoy-Gateway, Gateway-API resources and any extension-server
 // policy kinds supplied by an extension.
-func newOfflineGatewayAPIClient(extServerPoliciesGVKs []schema.GroupVersionKind) client.Client {
+func newOfflineGatewayAPIClient(extensionPoilicies []schema.GroupVersionKind) client.Client {
 	// Base scheme already holds Envoy-Gateway and Gateway-API types.
 	scheme := envoygateway.GetScheme()
 	// Register extension-server GVKs as Unstructured so the client can handle them.
 	// nolint:copyloopvar
-	for _, gvk := range extServerPoliciesGVKs {
+	for _, gvk := range extensionPoilicies {
 		// single object
 		scheme.AddKnownTypeWithName(gvk, &unstructured.Unstructured{})
 		// list object
@@ -140,8 +144,6 @@ func newOfflineGatewayAPIClient(extServerPoliciesGVKs []schema.GroupVersionKind)
 		listGVK.Kind += "List"
 		scheme.AddKnownTypeWithName(listGVK, &unstructured.UnstructuredList{})
 	}
-
-	// TODO: do we need to register extGVKs and extBackendGVKs as well here?
 
 	return fake.NewClientBuilder().
 		WithScheme(scheme).

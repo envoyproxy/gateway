@@ -74,7 +74,9 @@ func TestNewOfflineGatewayAPIController(t *testing.T) {
 			Type: egv1a1.ProviderTypeCustom,
 		}
 		cfg.EnvoyGateway.ExtensionManager = &egv1a1.ExtensionManager{
-			PolicyResources: []egv1a1.GroupVersionKind{extServerPolicyGVK},
+			Resources:        []egv1a1.GroupVersionKind{extGVK},
+			PolicyResources:  []egv1a1.GroupVersionKind{extServerPolicyGVK},
+			BackendResources: []egv1a1.GroupVersionKind{extBackendGVK},
 		}
 
 		pResources := new(message.ProviderResources)
