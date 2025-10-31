@@ -4374,7 +4374,6 @@ _Appears in:_
 | `name` | _string_ |  true  |  | Name of the query parameter. |
 | `value` | _string_ |  false  |  | Value within the query parameter.<br />Do not set this field when Type="Distinct", implying matching on any/all unique<br />values within the query parameter. |
 | `invert` | _boolean_ |  false  | false | Invert specifies whether the value match result will be inverted.<br />Do not set this field when Type="Distinct", implying matching on any/all unique<br />values within the query parameter. |
-| `descriptorKey` | _string_ |  true  |  | DescriptorKey is the key to use when creating the rate limit descriptor entry.<br />This descriptor key will be used to identify the rate limit rule in the rate limiting service. |
 
 
 #### QueryParamMatchType

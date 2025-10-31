@@ -28,7 +28,6 @@ spec:
         - clientSelectors:
             - queryParams:
                 - name: user
-                  descriptorKey: user_param
                   type: Exact
                   value: alice
           limit:

@@ -264,12 +264,6 @@ type QueryParamMatch struct {
 	// +optional
 	// +kubebuilder:default=false
 	Invert *bool `json:"invert,omitempty"`
-
-	// DescriptorKey is the key to use when creating the rate limit descriptor entry.
-	// This descriptor key will be used to identify the rate limit rule in the rate limiting service.
-	//
-	// +kubebuilder:validation:Required
-	DescriptorKey string `json:"descriptorKey"`
 }
 
 // QueryParamMatchType specifies the semantics of how query parameter values should be compared.

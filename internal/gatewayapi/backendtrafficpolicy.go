@@ -1363,9 +1363,6 @@ func buildRateLimitRule(rule egv1a1.RateLimitRule) (*ir.RateLimitRule, error) {
 			if queryParam.Name == "" {
 				return nil, fmt.Errorf("name is required when QueryParamMatch is specified")
 			}
-			if queryParam.DescriptorKey == "" {
-				return nil, fmt.Errorf("descriptorKey is required when QueryParamMatch is specified")
-			}
 
 			var stringMatch *ir.StringMatch
 			switch {
@@ -1398,9 +1395,13 @@ func buildRateLimitRule(rule egv1a1.RateLimitRule) (*ir.RateLimitRule, error) {
 						"Type is not valid or the queryParam is missing a value")
 			}
 
+			// Generate descriptor key internally using the query parameter name
+			// The descriptor key is used to identify the rate limit rule in the rate limiting service.
+			descriptorKey := queryParam.Name
+
 			m := &ir.QueryParamMatch{
 				Name:          queryParam.Name,
-				DescriptorKey: queryParam.DescriptorKey,
+				DescriptorKey: descriptorKey,
 				StringMatch:   stringMatch,
 			}
 			irRule.QueryParamMatches = append(irRule.QueryParamMatches, m)
