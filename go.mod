@@ -18,9 +18,9 @@ require (
 	github.com/docker/cli v28.3.3+incompatible
 	github.com/docker/docker v28.3.3+incompatible
 	github.com/dominikbraun/graph v0.23.0
-	github.com/envoyproxy/go-control-plane v0.13.5-0.20250622153809-434b6986176d
-	github.com/envoyproxy/go-control-plane/contrib v1.32.5-0.20250430092421-68a532e11403
-	github.com/envoyproxy/go-control-plane/envoy v1.32.5-0.20250622153809-434b6986176d
+	github.com/envoyproxy/go-control-plane v0.13.5-0.20250724095927-7a953c2d3b3e
+	github.com/envoyproxy/go-control-plane/contrib v1.32.5-0.20250724095927-7a953c2d3b3e
+	github.com/envoyproxy/go-control-plane/envoy v1.35.1-0.20250724095927-7a953c2d3b3e
 	github.com/envoyproxy/go-control-plane/ratelimit v0.1.1-0.20250805143705-d51f8590a549
 	github.com/envoyproxy/ratelimit v1.4.1-0.20230427142404-e2a87f41d3a7
 	github.com/evanphx/json-patch v5.9.11+incompatible
@@ -67,9 +67,9 @@ require (
 	golang.org/x/net v0.42.0
 	gomodules.xyz/jsonpatch/v2 v2.5.0
 	google.golang.org/genproto/googleapis/api v0.0.0-20250728155136-f173205681a0
-	google.golang.org/grpc v1.74.2
+	google.golang.org/grpc v1.75.1
 	google.golang.org/grpc/security/advancedtls v1.0.0
-	google.golang.org/protobuf v1.36.6
+	google.golang.org/protobuf v1.36.10
 	gopkg.in/yaml.v3 v3.0.1
 	helm.sh/helm/v3 v3.18.4
 	k8s.io/api v0.33.3
@@ -223,7 +223,7 @@ require (
 	github.com/go-critic/go-critic v0.13.0 // indirect
 	github.com/go-errors/errors v1.4.2 // indirect
 	github.com/go-gorp/gorp/v3 v3.1.0 // indirect
-	github.com/go-jose/go-jose/v4 v4.1.0 // indirect
+	github.com/go-jose/go-jose/v4 v4.1.1 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-ole/go-ole v1.3.0 // indirect
 	github.com/go-openapi/analysis v0.23.0 // indirect
