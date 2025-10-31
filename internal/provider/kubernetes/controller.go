@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/telepresenceio/watchable"
+	"go.opentelemetry.io/otel"
 	appsv1 "k8s.io/api/apps/v1"
 	certificatesv1b1 "k8s.io/api/certificates/v1beta1"
 	corev1 "k8s.io/api/core/v1"
@@ -58,6 +59,8 @@ import (
 var skipNameValidation = func() *bool {
 	return ptr.To(false)
 }
+
+var tracer = otel.Tracer("envoy-gateway/reconciliation")
 
 type gatewayAPIReconciler struct {
 	client               client.Client
@@ -298,6 +301,8 @@ func isTransientError(err error) bool {
 // same reconcile.Request containing the gateway controller name. This allows multiple resource updates to
 // be handled by a single call to Reconcile. The reconcile.Request DOES NOT map to a specific resource.
 func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Request) (reconcile.Result, error) {
+	ctx, span := tracer.Start(ctx, "GatewayAPIReconciler.Reconcile")
+	defer span.End()
 	var (
 		managedGCs []*gwapiv1.GatewayClass
 		err        error
@@ -572,11 +577,15 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 	//    which impacts translation output
 	gwcResources.Sort()
 
-	// Store the Gateway Resources for the GatewayClass.
+	// Store the Gateway Resources for the GatewayClass with trace context.
 	// The Store is triggered even when there are no Gateways associated to the
 	// GatewayClass. This would happen in case the last Gateway is removed and the
 	// Store will be required to trigger a cleanup of envoy infra resources.
-	r.resources.GatewayAPIResources.Store(string(r.classController), &gwcResources)
+	resourcesWithContext := &resource.ControllerResourcesContext{
+		Resources: &gwcResources,
+		Context:   ctx,
+	}
+	r.resources.GatewayAPIResources.Store(string(r.classController), resourcesWithContext)
 	message.PublishMetric(message.Metadata{
 		Runner:  string(egv1a1.LogComponentProviderRunner),
 		Message: message.ProviderResourcesMessageName,

@@ -247,19 +247,28 @@ func TestControllerResourceUpdate(t *testing.T) {
 
 			snapshotC := m.GatewayAPIResources.Subscribe(ctx)
 			endCtx, end := context.WithCancel(ctx)
-			m.GatewayAPIResources.Store("start", &resource.ControllerResources{})
+			m.GatewayAPIResources.Store("start", &resource.ControllerResourcesContext{
+				Resources: &resource.ControllerResources{},
+				Context:   ctx,
+			})
 
 			go func() {
 				<-endCtx.Done()
 				for _, r := range tc.resources {
 					r.Sort()
-					m.GatewayAPIResources.Store("test", r)
+					m.GatewayAPIResources.Store("test", &resource.ControllerResourcesContext{
+						Resources: r,
+						Context:   ctx,
+					})
 				}
-				m.GatewayAPIResources.Store("end", &resource.ControllerResources{})
+				m.GatewayAPIResources.Store("end", &resource.ControllerResourcesContext{
+					Resources: &resource.ControllerResources{},
+					Context:   ctx,
+				})
 			}()
 
 			updates := 0
-			message.HandleSubscription(message.Metadata{Runner: "demo", Message: "demo"}, snapshotC, func(u message.Update[string, *resource.ControllerResources], errChans chan error) {
+			message.HandleSubscription(message.Metadata{Runner: "demo", Message: "demo"}, snapshotC, func(u message.Update[string, *resource.ControllerResourcesContext], errChans chan error) {
 				end()
 				if u.Key == "test" {
 					updates += 1

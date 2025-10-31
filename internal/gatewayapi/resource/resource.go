@@ -6,6 +6,7 @@
 package resource
 
 import (
+	"context"
 	"sort"
 
 	certificatesv1b1 "k8s.io/api/certificates/v1beta1"
@@ -207,6 +208,13 @@ func (r *Resources) GetEndpointSlicesForBackend(svcNamespace, svcName, backendKi
 
 // ControllerResources holds all the GatewayAPI resources per GatewayClass
 type ControllerResources []*Resources
+
+// ControllerResourcesContext wraps ControllerResources with trace context
+// for propagating spans across async message boundaries
+type ControllerResourcesContext struct {
+	Resources *ControllerResources
+	Context   context.Context
+}
 
 // DeepCopy creates a new ControllerResources.
 // It is handwritten since the tooling was unable to copy into a new slice

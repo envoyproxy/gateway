@@ -24,6 +24,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/message"
 	"github.com/envoyproxy/gateway/internal/metrics"
 	providerrunner "github.com/envoyproxy/gateway/internal/provider/runner"
+	"github.com/envoyproxy/gateway/internal/traces"
 	xdsrunner "github.com/envoyproxy/gateway/internal/xds/runner"
 )
 
@@ -212,6 +213,11 @@ func startRunners(ctx context.Context, cfg *config.Server) (err error) {
 			// Start the Metrics Server
 			// It provides metrics endpoints for monitoring.
 			runner: metrics.New(cfg),
+		},
+		{
+			// Start the Metrics Server
+			// It provides metrics endpoints for monitoring.
+			runner: traces.New(cfg),
 		},
 	}
 

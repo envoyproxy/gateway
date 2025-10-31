@@ -16,6 +16,8 @@ import (
 
 	"github.com/docker/docker/pkg/fileutils"
 	"github.com/telepresenceio/watchable"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -45,6 +47,8 @@ const (
 	hmacSecretName = "envoy-oidc-hmac" // nolint: gosec
 	hmacSecretKey  = "hmac-secret"
 )
+
+var tracer = otel.Tracer("envoy-gateway/gateway-api")
 
 type Config struct {
 	config.Server
@@ -122,16 +126,37 @@ func (r *Runner) startWasmCache(ctx context.Context) {
 	r.wasmCache.Start(ctx)
 }
 
-func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *resource.ControllerResources]) {
+func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *resource.ControllerResourcesContext]) {
 	message.HandleSubscription(message.Metadata{Runner: r.Name(), Message: message.ProviderResourcesMessageName}, sub,
-		func(update message.Update[string, *resource.ControllerResources], errChan chan error) {
+		func(update message.Update[string, *resource.ControllerResourcesContext], errChan chan error) {
+
+			parentCtx := context.Background()
+			if update.Value != nil && update.Value.Context != nil {
+				parentCtx = update.Value.Context
+			}
+
+			_, span := tracer.Start(parentCtx, "Runner.subscribeAndTranslate")
+			defer span.End()
+
 			r.Logger.Info("received an update")
-			val := update.Value
+			valWrapper := update.Value
 			// There is only 1 key which is the controller name
 			// so when a delete is triggered, delete all keys
-			if update.Delete || val == nil {
+			if update.Delete || valWrapper == nil || valWrapper.Resources == nil {
+				span.AddEvent("delete_all_keys")
 				r.deleteAllKeys()
 				return
+			}
+
+			val := valWrapper.Resources
+
+			// Add span attributes for observability
+			span.SetAttributes(
+				attribute.String("controller.key", update.Key),
+				attribute.Bool("update.delete", update.Delete),
+			)
+			if val != nil {
+				span.SetAttributes(attribute.Int("resources.count", len(*val)))
 			}
 
 			// Initialize keysToDelete with tracked keys (mark and sweep approach)
@@ -207,7 +232,11 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 						r.Logger.Error(err, "unable to validate xds ir, skipped sending it")
 						errChan <- err
 					} else {
-						r.XdsIR.Store(key, val)
+						m := message.XdsIRWithContext{
+							XdsIR:   val,
+							Context: parentCtx,
+						}
+						r.XdsIR.Store(key, &m)
 						xdsIRCount++
 					}
 				}

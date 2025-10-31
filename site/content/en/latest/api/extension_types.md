@@ -1475,6 +1475,7 @@ _Appears in:_
 
 _Appears in:_
 - [EnvoyGatewayMetricSink](#envoygatewaymetricsink)
+- [EnvoyGatewayTraceSink](#envoygatewaytracesink)
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
@@ -1567,6 +1568,7 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `metrics` | _[EnvoyGatewayMetrics](#envoygatewaymetrics)_ |  true  |  | Metrics defines metrics configuration for envoy gateway. |
+| `traces` | _[EnvoyGatewayTraces](#envoygatewaytraces)_ |  true  |  |  |
 
 
 #### EnvoyGatewayTopologyInjector
@@ -1581,6 +1583,39 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `disabled` | _boolean_ |  false  |  |  |
+
+
+#### EnvoyGatewayTraceSink
+
+
+
+EnvoyGatewayTraceSink defines control plane
+trace sinks where traces are sent to.
+
+_Appears in:_
+- [EnvoyGatewayTraces](#envoygatewaytraces)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `type` | _[TraceSinkType](#tracesinktype)_ |  true  | OpenTelemetry | Type defines the trace sink type.<br />EG control plane currently supports OpenTelemetry. |
+| `openTelemetry` | _[EnvoyGatewayOpenTelemetrySink](#envoygatewayopentelemetrysink)_ |  true  |  | OpenTelemetry defines the configuration for OpenTelemetry sink.<br />It's required if the sink type is OpenTelemetry. |
+
+
+#### EnvoyGatewayTraces
+
+
+
+EnvoyGatewayMetrics defines control plane push/pull metrics configurations.
+
+_Appears in:_
+- [EnvoyGatewayTelemetry](#envoygatewaytelemetry)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `sink` | _[EnvoyGatewayTraceSink](#envoygatewaytracesink)_ |  true  |  | Sink defines the metric sink where metrics are sent to. |
+| `enable` | _boolean_ |  true  |  | Disable disables the traces. |
+
+
 
 
 #### EnvoyJSONPatchConfig
@@ -5142,6 +5177,20 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `tcp` | _[TCPTimeout](#tcptimeout)_ |  false  |  | Timeout settings for TCP. |
 | `http` | _[HTTPTimeout](#httptimeout)_ |  false  |  | Timeout settings for HTTP. |
+
+
+#### TraceSinkType
+
+_Underlying type:_ _string_
+
+
+
+_Appears in:_
+- [EnvoyGatewayTraceSink](#envoygatewaytracesink)
+
+| Value | Description |
+| ----- | ----------- |
+| `OpenTelemetry` |  | 
 
 
 #### Tracing

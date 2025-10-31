@@ -15,6 +15,15 @@ type EnvoyGatewayMetrics struct {
 	Prometheus *EnvoyGatewayPrometheusProvider `json:"prometheus,omitempty"`
 }
 
+// EnvoyGatewayMetrics defines control plane push/pull metrics configurations.
+type EnvoyGatewayTraces struct {
+	// Sink defines the metric sink where metrics are sent to.
+	Sink EnvoyGatewayTraceSink `json:"sink,omitempty"`
+	// Disable disables the traces.
+	// TODO: implement disability
+	Disable bool `json:"enable,omitempty"`
+}
+
 // EnvoyGatewayMetricSink defines control plane
 // metric sinks where metrics are sent to.
 type EnvoyGatewayMetricSink struct {
@@ -26,6 +35,46 @@ type EnvoyGatewayMetricSink struct {
 	// OpenTelemetry defines the configuration for OpenTelemetry sink.
 	// It's required if the sink type is OpenTelemetry.
 	OpenTelemetry *EnvoyGatewayOpenTelemetrySink `json:"openTelemetry,omitempty"`
+}
+
+// EnvoyGatewayTraceSink defines control plane
+// trace sinks where traces are sent to.
+type EnvoyGatewayTraceSink struct {
+	// Type defines the trace sink type.
+	// EG control plane currently supports OpenTelemetry.
+	// +kubebuilder:validation:Enum=OpenTelemetry
+	// +kubebuilder:default=OpenTelemetry
+	Type TraceSinkType `json:"type"` // TODO: is this even needed?
+	// OpenTelemetry defines the configuration for OpenTelemetry sink.
+	// It's required if the sink type is OpenTelemetry.
+	OpenTelemetry *EnvoyGatewayOpenTelemetrySink `json:"openTelemetry,omitempty"`
+}
+
+type EnvoyGatewayTracingSink struct {
+	// Host define the sink service hostname.
+	Host string `json:"host"`
+	// Protocol define the sink service protocol.
+	// +kubebuilder:validation:Enum=grpc;http
+	Protocol string `json:"protocol"`
+	// Port defines the port the sink service is exposed on.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:default=4319
+	Port int32 `json:"port,omitempty"`
+	// ExportInterval configures the intervening time between exports for a
+	// Sink. This option overrides any value set for the
+	// OTEL_METRIC_EXPORT_INTERVAL environment variable.
+	// If ExportInterval is less than or equal to zero, 60 seconds
+	// is used as the default.
+	ExportInterval *gwapiv1.Duration `json:"exportInterval,omitempty"`
+	// ExportTimeout configures the time a Sink waits for an export to
+	// complete before canceling it. This option overrides any value set for the
+	// OTEL_METRIC_EXPORT_TIMEOUT environment variable.
+	// If ExportTimeout is less than or equal to zero, 30 seconds
+	// is used as the default.
+	ExportTimeout *gwapiv1.Duration `json:"exportTimeout,omitempty"`
+	//TODO sampling rate
 }
 
 type EnvoyGatewayOpenTelemetrySink struct {
