@@ -852,5 +852,5 @@ type EnvoyGatewayTopologyInjector struct {
 }
 
 func init() {
-	SchemeBuilder.Register(&EnvoyGateway{})
+	localSchemeBuilder.Register(&EnvoyGateway{})
 }
