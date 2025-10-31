@@ -22,7 +22,7 @@ http:
               exact: one
             queryParamMatches:
             - name: "user"
-              descriptorKey: "user_param"
+              descriptorKey: "user"
               exact: "alice"
             limit:
               requests: 10
