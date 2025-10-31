@@ -206,6 +206,7 @@ func (e *EnvoyGateway) DisablePrometheus() bool {
 func DefaultEnvoyGatewayTelemetry() *EnvoyGatewayTelemetry {
 	return &EnvoyGatewayTelemetry{
 		Metrics: DefaultEnvoyGatewayMetrics(),
+		Traces:  DefaultEnvoyGatewayTraces(),
 	}
 }
 
@@ -214,6 +215,10 @@ func DefaultEnvoyGatewayMetrics() *EnvoyGatewayMetrics {
 	return &EnvoyGatewayMetrics{
 		Prometheus: DefaultEnvoyGatewayPrometheus(),
 	}
+}
+
+func DefaultEnvoyGatewayTraces() *EnvoyGatewayTraces {
+	return &EnvoyGatewayTraces{}
 }
 
 // DefaultEnvoyGatewayPrometheus returns a new EnvoyGatewayMetrics with default configuration parameters.
