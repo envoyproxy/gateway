@@ -14,7 +14,6 @@ $(tools.bindir)/%: $(tools.srcdir)/%.sh
 # =========================
 #
 tools/codespell    = $(tools.bindir)/codespell
-tools/yamllint     = $(tools.bindir)/yamllint
 tools/sphinx-build = $(tools.bindir)/sphinx-build
 tools/release-notes-docs = $(tools.bindir)/release-notes-docs
 $(tools.bindir)/%.d/venv: $(tools.srcdir)/%/requirements.txt
