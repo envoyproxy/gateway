@@ -576,7 +576,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `batchTimeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/spec/#duration)_ |  false  |  | BatchTimeout is the maximum duration for constructing a batch. Spans are<br />exported when either the batch is full or this timeout is reached.<br />Default is 5s. For e2e testing, a lower value like 100ms is recommended. |
+| `batchTimeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#duration)_ |  false  |  | BatchTimeout is the maximum duration for constructing a batch. Spans are<br />exported when either the batch is full or this timeout is reached.<br />Default is 5s. For e2e testing, a lower value like 100ms is recommended. |
 | `maxExportBatchSize` | _integer_ |  false  |  | MaxExportBatchSize is the maximum number of spans to export in a single batch.<br />Default is 512. |
 | `maxQueueSize` | _integer_ |  false  |  | MaxQueueSize is the maximum queue size to buffer spans for delayed processing.<br />If the queue gets full it drops the spans. Default is 2048. |
 
