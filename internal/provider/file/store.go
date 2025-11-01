@@ -135,15 +135,13 @@ func (r *ResourcesStore) Store(ctx context.Context, re *resource.LoadResources, 
 		collectKeys = sets.New[storeKey]()
 	)
 
-	if err := r.storeObjectWithKeys(ctx, re.EnvoyProxyForGatewayClass, collectKeys); err != nil {
-		errs = errors.Join(errs, err)
+	for _, obj := range re.GatewayClasses {
+		if err := r.storeObjectWithKeys(ctx, obj, collectKeys); err != nil {
+			errs = errors.Join(errs, err)
+		}
 	}
 
-	if err := r.storeObjectWithKeys(ctx, re.GatewayClass, collectKeys); err != nil {
-		errs = errors.Join(errs, err)
-	}
-
-	for _, obj := range re.EnvoyProxiesForGateways {
+	for _, obj := range re.EnvoyProxies {
 		if err := r.storeObjectWithKeys(ctx, obj, collectKeys); err != nil {
 			errs = errors.Join(errs, err)
 		}
@@ -281,7 +279,7 @@ func (r *ResourcesStore) Store(ctx context.Context, re *resource.LoadResources, 
 }
 
 // storeObjectWithKeys stores object while collecting its key.
-func (r *resourcesStore) storeObjectWithKeys(ctx context.Context, obj client.Object, keys sets.Set[storeKey]) error {
+func (r *ResourcesStore) storeObjectWithKeys(ctx context.Context, obj client.Object, keys sets.Set[storeKey]) error {
 	key, err := r.storeObject(ctx, obj)
 	if err != nil && key != nil {
 		return fmt.Errorf("failed to store %s %s: %w", key.Kind, key.NamespacedName.String(), err)

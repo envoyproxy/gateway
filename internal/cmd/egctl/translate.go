@@ -26,11 +26,15 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/api/v1alpha1/validation"
+	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/ratelimit"
 	"github.com/envoyproxy/gateway/internal/logging"
+	"github.com/envoyproxy/gateway/internal/message"
+	"github.com/envoyproxy/gateway/internal/provider/file"
+	"github.com/envoyproxy/gateway/internal/provider/kubernetes"
 	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
 	"github.com/envoyproxy/gateway/internal/xds/translator"
 	xds_types "github.com/envoyproxy/gateway/internal/xds/types"
@@ -215,6 +219,31 @@ func validate(inFile, inType string, outTypes []string, resourceType string) err
 	return nil
 }
 
+// newSimpleController creates a simple controller that only has basic load
+// and reconcile capabilities.
+func newSimpleController(ctx context.Context,
+	pr *message.ProviderResources,
+	namespace string,
+) (loadAndReconcile func(*resource.LoadResources) error) {
+	cfg, _ := config.New(os.Stdout, os.Stderr)
+	cfg.EnvoyGateway.Provider = &egv1a1.EnvoyGatewayProvider{Type: egv1a1.ProviderTypeCustom}
+	cfg.ControllerNamespace = namespace
+
+	reconciler, err := kubernetes.NewOfflineGatewayAPIController(ctx, cfg, nil, pr)
+	if err != nil {
+		panic(err)
+	}
+	store := file.NewResourcesStore(cfg.EnvoyGateway.Gateway.ControllerName, reconciler.Client, pr, cfg.Logger.Logger)
+
+	return func(rs *resource.LoadResources) error {
+		_, err := store.Store(ctx, rs, true)
+		if err != nil {
+			return err
+		}
+		return reconciler.Reconcile(ctx)
+	}
+}
+
 func translate(w io.Writer, inFile, inType string, outTypes []string, output, resourceType string, addMissingResources bool, namespace, dnsDomain string) error {
 	if err := validate(inFile, inType, outTypes, resourceType); err != nil {
 		return err
@@ -226,7 +255,7 @@ func translate(w io.Writer, inFile, inType string, outTypes []string, output, re
 	}
 
 	pResources := new(message.ProviderResources)
-	loadAndReconcile := NewSimpleController(context.Background(), pResources, namespace)
+	loadAndReconcile := newSimpleController(context.Background(), pResources, namespace)
 
 	if inType == gatewayAPIType {
 		// Unmarshal input

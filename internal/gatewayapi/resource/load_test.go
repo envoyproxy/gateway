@@ -70,7 +70,7 @@ func TestLoadAllSupportedResourcesFromYAMLBytes(t *testing.T) {
 				require.NoError(t, file.Write(string(out), outputFile))
 			}
 
-			want := &Resources{}
+			want := &LoadResources{}
 			output, err := os.ReadFile(outputFile)
 			require.NoError(t, err)
 			mustUnmarshal(t, output, want)
