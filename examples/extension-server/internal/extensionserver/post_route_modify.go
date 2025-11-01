@@ -62,7 +62,7 @@ func (s *Server) PostRouteModify(ctx context.Context, req *pb.PostRouteModifyReq
 			s.log.Info("found InferencePool backend",
 				slog.String("name", pool.GetName()),
 				slog.String("namespace", pool.GetNamespace()),
-				slog.Int("targetPortNumber", int(pool.Spec.TargetPortNumber)))
+				slog.Any("targetPorts", pool.Spec.TargetPorts))
 			break
 		}
 	}
@@ -92,7 +92,7 @@ func (s *Server) PostRouteModify(ctx context.Context, req *pb.PostRouteModifyReq
 		slog.String("route_name", modifiedRoute.GetName()),
 		slog.String("inference_pool_name", inferencePool.GetName()),
 		slog.String("inference_pool_namespace", inferencePool.GetNamespace()),
-		slog.Int("target_port", int(inferencePool.Spec.TargetPortNumber)))
+		slog.Any("target_ports", inferencePool.Spec.TargetPorts))
 
 	return &pb.PostRouteModifyResponse{
 		Route: modifiedRoute,

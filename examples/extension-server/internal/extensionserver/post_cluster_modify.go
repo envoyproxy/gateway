@@ -53,7 +53,7 @@ func (s *Server) PostClusterModify(ctx context.Context, req *pb.PostClusterModif
 			s.log.Info("found InferencePool for cluster modification",
 				slog.String("name", pool.GetName()),
 				slog.String("namespace", pool.GetNamespace()),
-				slog.Int("targetPortNumber", int(pool.Spec.TargetPortNumber)))
+				slog.Any("targetPorts", pool.Spec.TargetPorts))
 
 			inferencePoolConfigs = append(inferencePoolConfigs, &pool)
 		}
