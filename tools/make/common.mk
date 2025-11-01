@@ -14,7 +14,7 @@
 # https://news.ycombinator.com/item?id=16486331
 .SECONDARY:
 
-SHELL:=/bin/bash
+SHELL:=/usr/bin/env bash -euo pipefail
 
 # ====================================================================================================
 # ROOT Options:
