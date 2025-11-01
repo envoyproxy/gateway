@@ -471,9 +471,9 @@ tcpRoutes:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: no ready endpoints for the related Service envoy-gateway/service-1
-        reason: EndpointsNotFound
-        status: "False"
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
@@ -700,6 +700,19 @@ xdsIR:
             name: tcproute-1
             namespace: envoy-gateway
           name: tcproute/envoy-gateway/tcproute-1/rule/-1
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 10.244.0.11
+              port: 8080
+            metadata:
+              kind: Service
+              name: service-1
+              namespace: envoy-gateway
+              sectionName: "8080"
+            name: tcproute/envoy-gateway/tcproute-1/rule/-1/backend/0
+            protocol: TCP
+            weight: 1
         name: tcproute/envoy-gateway/tcproute-1
         tls:
           terminate:
