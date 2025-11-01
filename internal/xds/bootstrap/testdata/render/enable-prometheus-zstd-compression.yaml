@@ -74,10 +74,12 @@ static_resources:
                     "@type": type.googleapis.com/envoy.extensions.filters.http.compressor.v3.CompressorPerRoute
                     overrides:
                       response_direction_config:
+                        remove_accept_encoding_header: true
           http_filters:
           - name: envoy.filters.http.compressor
             typed_config:
               "@type": type.googleapis.com/envoy.extensions.filters.http.compressor.v3.Compressor
+              choose_first: true
               compressor_library:
                 name: text_optimized
                 typed_config:

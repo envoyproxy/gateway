@@ -34,6 +34,7 @@
           name: envoy.filters.http.compressor.zstd
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.compressor.v3.Compressor
+            chooseFirst: true
             compressorLibrary:
               name: envoy.compression.zstd.compressor
               typedConfig:

@@ -1571,9 +1571,16 @@ func buildCompression(compression, compressor []*egv1a1.Compression) []*ir.Compr
 			if (c.Type == egv1a1.GzipCompressorType && c.Gzip != nil) ||
 				(c.Type == egv1a1.BrotliCompressorType && c.Brotli != nil) ||
 				(c.Type == egv1a1.ZstdCompressorType && c.Zstd != nil) {
-				irCompression = append(irCompression, &ir.Compression{
+				compression := &ir.Compression{
 					Type: c.Type,
-				})
+				}
+				if c.ChooseFirst {
+					compression.ChooseFirst = true
+				}
+				if c.RemoveAcceptEncodingHeader {
+					compression.RemoveAcceptEncodingHeader = true
+				}
+				irCompression = append(irCompression, compression)
 			}
 		}
 		return irCompression
@@ -1585,9 +1592,16 @@ func buildCompression(compression, compressor []*egv1a1.Compression) []*ir.Compr
 	}
 	irCompression := make([]*ir.Compression, 0, len(compression))
 	for _, c := range compression {
-		irCompression = append(irCompression, &ir.Compression{
+		compression := &ir.Compression{
 			Type: c.Type,
-		})
+		}
+		if c.ChooseFirst {
+			compression.ChooseFirst = true
+		}
+		if c.RemoveAcceptEncodingHeader {
+			compression.RemoveAcceptEncodingHeader = true
+		}
+		irCompression = append(irCompression, compression)
 	}
 
 	return irCompression

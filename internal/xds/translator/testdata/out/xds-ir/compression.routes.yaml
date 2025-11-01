@@ -39,4 +39,5 @@
         envoy.filters.http.compressor.zstd:
           '@type': type.googleapis.com/envoy.extensions.filters.http.compressor.v3.CompressorPerRoute
           overrides:
-            responseDirectionConfig: {}
+            responseDirectionConfig:
+              removeAcceptEncodingHeader: true

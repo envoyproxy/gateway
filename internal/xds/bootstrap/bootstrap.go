@@ -84,6 +84,11 @@ type bootstrapParameters struct {
 	// PrometheusCompressionLibrary defines the HTTP compression library for metrics endpoint for prometheus.
 	// TODO: remove this field because it is not used.
 	PrometheusCompressionLibrary string
+	// PrometheusCompressionChooseFirst defines whether to choose first encoding type for metrics endpoint for prometheus.
+	PrometheusCompressionChooseFirst bool
+	// PrometheusCompressionRemoveAcceptEncodingHeader defines whether to remove the
+	// Accept-Encoding header from the request before forwarding it to the upstream for metrics endpoint for prometheus.
+	PrometheusCompressionRemoveAcceptEncodingHeader bool
 
 	// OtelMetricSinks defines the configuration of the OpenTelemetry sinks.
 	OtelMetricSinks []metricSink
@@ -177,11 +182,13 @@ func (b *bootstrapConfig) render() error {
 // GetRenderedBootstrapConfig renders the bootstrap YAML string
 func GetRenderedBootstrapConfig(opts *RenderBootstrapConfigOptions) (string, error) {
 	var (
-		enablePrometheus             = true
-		enablePrometheusCompression  = false
-		prometheusCompressionLibrary = "Gzip"
-		metricSinks                  []metricSink
-		StatsMatcher                 StatsMatcherParameters
+		enablePrometheus                                = true
+		enablePrometheusCompression                     = false
+		prometheusCompressionLibrary                    = "Gzip"
+		prometheusCompressionChooseFirst                = false
+		prometheusCompressionRemoveAcceptEncodingHeader = false
+		metricSinks                                     []metricSink
+		StatsMatcher                                    StatsMatcherParameters
 	)
 
 	if opts != nil && opts.ProxyMetrics != nil {
@@ -193,6 +200,8 @@ func GetRenderedBootstrapConfig(opts *RenderBootstrapConfigOptions) (string, err
 			if proxyMetrics.Prometheus.Compression != nil {
 				enablePrometheusCompression = true
 				prometheusCompressionLibrary = string(proxyMetrics.Prometheus.Compression.Type)
+				prometheusCompressionChooseFirst = proxyMetrics.Prometheus.Compression.ChooseFirst
+				prometheusCompressionRemoveAcceptEncodingHeader = proxyMetrics.Prometheus.Compression.RemoveAcceptEncodingHeader
 			}
 		}
 
@@ -263,14 +272,16 @@ func GetRenderedBootstrapConfig(opts *RenderBootstrapConfigOptions) (string, err
 				Address: netutils.IPv4ListenerAddress,
 				Port:    EnvoyStatsPort,
 			},
-			SdsCertificatePath:           defaultSdsCertificatePath,
-			SdsTrustedCAPath:             defaultSdsTrustedCAPath,
-			EnablePrometheus:             enablePrometheus,
-			EnablePrometheusCompression:  enablePrometheusCompression,
-			PrometheusCompressionLibrary: prometheusCompressionLibrary,
-			OtelMetricSinks:              metricSinks,
-			ServiceClusterName:           defaultServiceClusterName,
-			ServiceAccountTokenPath:      defaultServiceAccountTokenPath,
+			SdsCertificatePath:                              defaultSdsCertificatePath,
+			SdsTrustedCAPath:                                defaultSdsTrustedCAPath,
+			EnablePrometheus:                                enablePrometheus,
+			EnablePrometheusCompression:                     enablePrometheusCompression,
+			PrometheusCompressionLibrary:                    prometheusCompressionLibrary,
+			PrometheusCompressionChooseFirst:                prometheusCompressionChooseFirst,
+			PrometheusCompressionRemoveAcceptEncodingHeader: prometheusCompressionRemoveAcceptEncodingHeader,
+			OtelMetricSinks:                                 metricSinks,
+			ServiceClusterName:                              defaultServiceClusterName,
+			ServiceAccountTokenPath:                         defaultServiceAccountTokenPath,
 		},
 	}
 

@@ -55,6 +55,39 @@ var CompressionTest = suite.ConformanceTest{
 			testCompression(t, suite, egv1a1.ZstdCompressorType)
 		})
 
+		t.Run("HTTPRoute with compression and zstd chooseFirst", func(t *testing.T) {
+			ns := "gateway-conformance-infra"
+			routeNN := types.NamespacedName{Name: "compression-choose-first", Namespace: ns}
+			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
+			gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
+
+			ancestorRef := gwapiv1.ParentReference{
+				Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
+				Kind:      gatewayapi.KindPtr(resource.KindGateway),
+				Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
+				Name:      gwapiv1.ObjectName(gwNN.Name),
+			}
+			BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "compression", Namespace: ns}, suite.ControllerName, ancestorRef)
+
+			expectedResponse := http.ExpectedResponse{
+				Request: http.Request{
+					Path: "/compression-choose-first",
+					Headers: map[string]string{
+						"Accept-encoding": "gzip, brotli, zstd",
+					},
+				},
+				Response: http.Response{
+					StatusCodes: []int{200},
+					Headers: map[string]string{
+						"content-encoding": "zstd",
+					},
+				},
+				Namespace: ns,
+			}
+			roundTripper := &CompressionRoundTripper{Debug: suite.Debug, TimeoutConfig: suite.TimeoutConfig}
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, roundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
+		})
+
 		t.Run("HTTPRoute without compression", func(t *testing.T) {
 			ns := "gateway-conformance-infra"
 			routeNN := types.NamespacedName{Name: "no-compression", Namespace: ns}

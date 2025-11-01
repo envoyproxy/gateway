@@ -47,3 +47,19 @@ spec:
     - type: Brotli
     - type: Gzip
     - type: Zstd
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: compression-choosefirst
+  namespace: gateway-conformance-infra
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: compression
+  compression:
+    - type: Brotli
+    - type: Gzip
+    - type: Zstd
+      chooseFirst: true
