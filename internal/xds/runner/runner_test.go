@@ -308,7 +308,11 @@ func TestRunner(t *testing.T) {
 			},
 		},
 	}
-	xdsIR.Store("test", &res)
+	m := message.XdsIRWithContext{
+		XdsIR:   &res,
+		Context: context.Background(),
+	}
+	xdsIR.Store("test", &m)
 	require.Eventually(t, func() bool {
 		// Check that the cache has the snapshot for our test key
 		return r.cache.SnapshotHasIrKey("test")
@@ -397,7 +401,11 @@ func TestRunner_withExtensionManager_FailOpen(t *testing.T) {
 			},
 		},
 	}
-	xdsIR.Store("test", &res)
+	m := message.XdsIRWithContext{
+		XdsIR:   &res,
+		Context: context.Background(),
+	}
+	xdsIR.Store("test", &m)
 	require.Eventually(t, func() bool {
 		// Since the extension manager is configured to fail open, in an event of an error
 		// from the extension manager hooks, xds update should be published.
@@ -479,7 +487,11 @@ func TestRunner_withExtensionManager_FailClosed(t *testing.T) {
 			},
 		},
 	}
-	xdsIR.Store("test", &res)
+	m := message.XdsIRWithContext{
+		XdsIR:   &res,
+		Context: context.Background(),
+	}
+	xdsIR.Store("test", &m)
 	require.Never(t, func() bool {
 		// Since the extension manager is configured to fail closed, in an event of an error
 		// from the extension manager hooks, xds update should not be published.

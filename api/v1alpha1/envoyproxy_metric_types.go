@@ -5,10 +5,14 @@
 
 package v1alpha1
 
-type MetricSinkType string
+type (
+	MetricSinkType string
+	TraceSinkType  string
+)
 
 const (
 	MetricSinkTypeOpenTelemetry MetricSinkType = "OpenTelemetry"
+	TraceSinkTypeOpenTelemetry  TraceSinkType  = "OpenTelemetry"
 )
 
 type ProxyMetrics struct {
