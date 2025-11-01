@@ -606,6 +606,11 @@ spec:
                     gzip:
                       description: The configuration for GZIP compressor.
                       type: object
+                    removeAcceptEncodingHeader:
+                      description: |-
+                        RemoveAcceptEncodingHeader indicates whether to remove the
+                        Accept-Encoding header from the request before forwarding it to the upstream.
+                      type: boolean
                     type:
                       description: CompressorType defines the compressor type to use
                         for compression.
@@ -636,6 +641,11 @@ spec:
                     gzip:
                       description: The configuration for GZIP compressor.
                       type: object
+                    removeAcceptEncodingHeader:
+                      description: |-
+                        RemoveAcceptEncodingHeader indicates whether to remove the
+                        Accept-Encoding header from the request before forwarding it to the upstream.
+                      type: boolean
                     type:
                       description: CompressorType defines the compressor type to use
                         for compression.
@@ -21097,6 +21107,11 @@ spec:
                               gzip:
                                 description: The configuration for GZIP compressor.
                                 type: object
+                              removeAcceptEncodingHeader:
+                                description: |-
+                                  RemoveAcceptEncodingHeader indicates whether to remove the
+                                  Accept-Encoding header from the request before forwarding it to the upstream.
+                                type: boolean
                               type:
                                 description: CompressorType defines the compressor
                                   type to use for compression.

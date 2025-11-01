@@ -871,6 +871,7 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `type` | _[CompressorType](#compressortype)_ |  true  |  | CompressorType defines the compressor type to use for compression. |
+| `removeAcceptEncodingHeader` | _boolean_ |  false  |  | RemoveAcceptEncodingHeader indicates whether to remove the<br />Accept-Encoding header from the request before forwarding it to the upstream. |
 | `brotli` | _[BrotliCompressor](#brotlicompressor)_ |  false  |  | The configuration for Brotli compressor. |
 | `gzip` | _[GzipCompressor](#gzipcompressor)_ |  false  |  | The configuration for GZIP compressor. |
 | `zstd` | _[ZstdCompressor](#zstdcompressor)_ |  false  |  | The configuration for Zstd compressor. |
