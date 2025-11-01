@@ -85,7 +85,7 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(envoyExtensionPolicies []*egv
 					handledPolicies[policyName] = policy
 				}
 
-				t.processEEPolicyForRoute(resources, xdsIR,
+				t.processEnvoyExtensionPolicyForRoute(resources, xdsIR,
 					routeMap, gatewayRouteMap, policy, currTarget)
 			}
 		}
@@ -105,7 +105,7 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(envoyExtensionPolicies []*egv
 					handledPolicies[policyName] = policy
 				}
 
-				t.processEEPolicyForRoute(resources, xdsIR,
+				t.processEnvoyExtensionPolicyForRoute(resources, xdsIR,
 					routeMap, gatewayRouteMap, policy, currTarget)
 			}
 		}
@@ -125,7 +125,7 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(envoyExtensionPolicies []*egv
 					handledPolicies[policyName] = policy
 				}
 
-				t.processEEPolicyForGateway(resources, xdsIR,
+				t.processEnvoyExtensionPolicyForGateway(resources, xdsIR,
 					gatewayMap, gatewayRouteMap, policy, currTarget)
 			}
 		}
@@ -145,7 +145,7 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(envoyExtensionPolicies []*egv
 					handledPolicies[policyName] = policy
 				}
 
-				t.processEEPolicyForGateway(resources, xdsIR,
+				t.processEnvoyExtensionPolicyForGateway(resources, xdsIR,
 					gatewayMap, gatewayRouteMap, policy, currTarget)
 			}
 		}
@@ -160,7 +160,7 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(envoyExtensionPolicies []*egv
 	return res
 }
 
-func (t *Translator) processEEPolicyForRoute(
+func (t *Translator) processEnvoyExtensionPolicyForRoute(
 	resources *resource.Resources,
 	xdsIR resource.XdsIRMap,
 	routeMap map[policyTargetRouteKey]*policyRouteTargetContext,
@@ -174,7 +174,7 @@ func (t *Translator) processEEPolicyForRoute(
 		resolveErr    *status.PolicyResolveError
 	)
 
-	targetedRoute, resolveErr = resolveEEPolicyRouteTargetRef(policy, currTarget, routeMap)
+	targetedRoute, resolveErr = resolveEnvoyExtensionPolicyRouteTargetRef(policy, currTarget, routeMap)
 	// Skip if the route is not found
 	// It's not necessarily an error because the EnvoyExtensionPolicy may be
 	// reconciled by multiple controllers. And the other controller may
@@ -262,7 +262,7 @@ func (t *Translator) processEEPolicyForRoute(
 	}
 }
 
-func (t *Translator) processEEPolicyForGateway(
+func (t *Translator) processEnvoyExtensionPolicyForGateway(
 	resources *resource.Resources,
 	xdsIR resource.XdsIRMap,
 	gatewayMap map[types.NamespacedName]*policyGatewayTargetContext,
@@ -275,7 +275,7 @@ func (t *Translator) processEEPolicyForGateway(
 		resolveErr      *status.PolicyResolveError
 	)
 
-	targetedGateway, resolveErr = resolveEEPolicyGatewayTargetRef(policy, currTarget, gatewayMap)
+	targetedGateway, resolveErr = resolveEnvoyExtensionPolicyGatewayTargetRef(policy, currTarget, gatewayMap)
 	// Skip if the gateway is not found
 	// It's not necessarily an error because the EnvoyExtensionPolicy may be
 	// reconciled by multiple controllers. And the other controller may
@@ -329,7 +329,7 @@ func (t *Translator) processEEPolicyForGateway(
 	}
 }
 
-func resolveEEPolicyGatewayTargetRef(
+func resolveEnvoyExtensionPolicyGatewayTargetRef(
 	policy *egv1a1.EnvoyExtensionPolicy,
 	target gwapiv1.LocalPolicyTargetReferenceWithSectionName,
 	gateways map[types.NamespacedName]*policyGatewayTargetContext,
@@ -391,7 +391,7 @@ func resolveEEPolicyGatewayTargetRef(
 	return gateway.GatewayContext, nil
 }
 
-func resolveEEPolicyRouteTargetRef(
+func resolveEnvoyExtensionPolicyRouteTargetRef(
 	policy *egv1a1.EnvoyExtensionPolicy,
 	target gwapiv1.LocalPolicyTargetReferenceWithSectionName,
 	routes map[policyTargetRouteKey]*policyRouteTargetContext,

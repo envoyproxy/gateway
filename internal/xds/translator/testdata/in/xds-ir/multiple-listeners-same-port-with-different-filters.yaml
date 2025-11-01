@@ -122,3 +122,4 @@ http:
             redirectPath: "/foo/oauth2/callback"
             logoutPath: "/foo/logout"
             cookieSuffix: 5F93C2E4
+            refreshToken: true

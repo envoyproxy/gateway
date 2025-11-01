@@ -167,7 +167,6 @@ type ClientValidationContext struct {
 
 	// Crl specifies the crl configuration that can be used to validate the client initiating the TLS connection
 	// +optional
-	// +notImplementedHide
 	Crl *CrlContext `json:"crl,omitempty"`
 }
 
