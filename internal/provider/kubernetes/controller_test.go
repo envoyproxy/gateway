@@ -1248,6 +1248,108 @@ func TestProcessSecurityPolicyObjectRefs(t *testing.T) {
 	}
 }
 
+func TestProcessSecurityPolicyObjectKeyRefs(t *testing.T) {
+	ns := "default"
+	secret := test.GetSecret(types.NamespacedName{Namespace: ns, Name: "fake-secret"})
+	cm := test.GetConfigMap(types.NamespacedName{Namespace: ns, Name: "fake-cm"}, nil, nil)
+
+	testCases := []struct {
+		name                   string
+		securityPolicy         *egv1a1.SecurityPolicy
+		secretShouldBeAdded    bool
+		configmapShouldBeAdded bool
+	}{
+		{
+			name: "ContextExtension value with ConfigMap",
+			securityPolicy: &egv1a1.SecurityPolicy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: ns,
+					Name:      "test-policy",
+				},
+				Spec: egv1a1.SecurityPolicySpec{
+					ExtAuth: &egv1a1.ExtAuth{
+						ContextExtensions: []*egv1a1.ContextExtension{
+							{
+								Name: "foo",
+								Type: egv1a1.ContextExtensionValueTypeValueRef,
+								ValueRef: &egv1a1.LocalObjectKeyReference{
+									LocalObjectReference: gwapiv1.LocalObjectReference{
+										Kind: resource.KindConfigMap,
+										Name: "fake-cm",
+									},
+									Key: "foo",
+								},
+							},
+						},
+					},
+				},
+			},
+			configmapShouldBeAdded: true,
+		},
+		{
+			name: "ContextExtension value with Secret",
+			securityPolicy: &egv1a1.SecurityPolicy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: ns,
+					Name:      "test-policy",
+				},
+				Spec: egv1a1.SecurityPolicySpec{
+					ExtAuth: &egv1a1.ExtAuth{
+						ContextExtensions: []*egv1a1.ContextExtension{
+							{
+								Name: "foo",
+								Type: egv1a1.ContextExtensionValueTypeValueRef,
+								ValueRef: &egv1a1.LocalObjectKeyReference{
+									LocalObjectReference: gwapiv1.LocalObjectReference{
+										Kind: resource.KindSecret,
+										Name: "fake-secret",
+									},
+									Key: "foo",
+								},
+							},
+						},
+					},
+				},
+			},
+			secretShouldBeAdded: true,
+		},
+	}
+
+	for i := range testCases {
+		tc := testCases[i]
+		// Run the test cases.
+		t.Run(tc.name, func(t *testing.T) {
+			// Add objects referenced by test cases.
+			objs := []client.Object{tc.securityPolicy, secret, cm}
+			logger := logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo)
+
+			r := newGatewayAPIReconciler(logger)
+			r.client = fakeclient.NewClientBuilder().
+				WithScheme(envoygateway.GetScheme()).
+				WithObjects(objs...).
+				Build()
+
+			resourceTree := resource.NewResources()
+			resourceTree.SecurityPolicies = append(resourceTree.SecurityPolicies, tc.securityPolicy)
+			resourceMap := newResourceMapping()
+
+			require.NoError(t, r.processSecurityPolicyObjectRefs(t.Context(), resourceTree, resourceMap))
+
+			if tc.secretShouldBeAdded {
+				require.Contains(t, resourceTree.Secrets, secret)
+			} else {
+				require.NotContains(t, resourceTree.Secrets, secret)
+			}
+
+			if tc.configmapShouldBeAdded {
+				require.Contains(t, resourceTree.ConfigMaps, cm)
+			} else {
+				require.NotContains(t, resourceTree.ConfigMaps, cm)
+			}
+		})
+	}
+}
+
 func TestProcessServiceClusterForGatewayClass(t *testing.T) {
 	testCases := []struct {
 		name            string

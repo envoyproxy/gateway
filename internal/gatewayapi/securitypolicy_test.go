@@ -11,6 +11,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
@@ -19,6 +20,7 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
+	"github.com/envoyproxy/gateway/internal/ir"
 )
 
 func Test_wildcard2regex(t *testing.T) {
@@ -1085,6 +1087,212 @@ func Test_validateSecurityPolicyForTCP_Table(t *testing.T) {
 			} else {
 				require.NoError(t, err)
 			}
+		})
+	}
+}
+
+func Test_buildContextExtensions(t *testing.T) {
+	policyNs := "default"
+	tests := []struct {
+		name              string
+		contextExtensions []*egv1a1.ContextExtension
+		resources         *resource.Resources
+		want              map[string]ir.PrivateBytes
+		wantErr           bool
+	}{
+		{
+			name:              "Nil",
+			contextExtensions: nil,
+			want:              nil,
+		},
+		{
+			name:              "Empty",
+			contextExtensions: []*egv1a1.ContextExtension{},
+			want:              nil,
+		},
+		{
+			name: "TypeInline",
+			contextExtensions: []*egv1a1.ContextExtension{
+				{Name: "foo", Inline: "bar"},
+			},
+			want: map[string]ir.PrivateBytes{"foo": ir.PrivateBytes("bar")},
+		},
+		{
+			name:              "TypeInlineEmpty",
+			contextExtensions: []*egv1a1.ContextExtension{{Name: "foo"}},
+			want:              map[string]ir.PrivateBytes{"foo": {}},
+		},
+		{
+			name: "TypeInlineExplicit",
+			contextExtensions: []*egv1a1.ContextExtension{
+				{
+					Name:   "foo",
+					Type:   egv1a1.ContextExtensionValueTypeInline,
+					Inline: "bar",
+				},
+			},
+			want: map[string]ir.PrivateBytes{"foo": ir.PrivateBytes("bar")},
+		},
+		{
+			name: "TypeValueRefNil",
+			contextExtensions: []*egv1a1.ContextExtension{
+				{Name: "foo", Type: egv1a1.ContextExtensionValueTypeValueRef},
+			},
+			wantErr: true,
+		},
+		{
+			name: "TypeValueRefConfigMapNotFound",
+			contextExtensions: []*egv1a1.ContextExtension{{
+				Name: "foo",
+				Type: egv1a1.ContextExtensionValueTypeValueRef,
+				ValueRef: &egv1a1.LocalObjectKeyReference{
+					LocalObjectReference: gwapiv1.LocalObjectReference{
+						Kind: resource.KindConfigMap,
+						Name: "test-cm",
+					},
+					Key: "test-key",
+				},
+			}},
+			resources: &resource.Resources{},
+			wantErr:   true,
+		},
+		{
+			name: "TypeValueRefConfigMapKeyNotFound",
+			contextExtensions: []*egv1a1.ContextExtension{{
+				Name: "foo",
+				Type: egv1a1.ContextExtensionValueTypeValueRef,
+				ValueRef: &egv1a1.LocalObjectKeyReference{
+					LocalObjectReference: gwapiv1.LocalObjectReference{
+						Kind: resource.KindConfigMap,
+						Name: "test-cm",
+					},
+					Key: "test-key",
+				},
+			}},
+			resources: &resource.Resources{
+				ConfigMaps: []*corev1.ConfigMap{{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: policyNs,
+						Name:      "test-cm",
+					},
+				}},
+			},
+			wantErr: true,
+		},
+		{
+			name: "TypeValueRefConfigMap",
+			contextExtensions: []*egv1a1.ContextExtension{{
+				Name: "foo",
+				Type: egv1a1.ContextExtensionValueTypeValueRef,
+				ValueRef: &egv1a1.LocalObjectKeyReference{
+					LocalObjectReference: gwapiv1.LocalObjectReference{
+						Kind: resource.KindConfigMap,
+						Name: "test-cm",
+					},
+					Key: "test-key",
+				},
+			}},
+			resources: &resource.Resources{
+				ConfigMaps: []*corev1.ConfigMap{{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: policyNs,
+						Name:      "test-cm",
+					},
+					Data: map[string]string{"test-key": "bar"},
+				}},
+			},
+			want: map[string]ir.PrivateBytes{"foo": ir.PrivateBytes("bar")},
+		},
+		{
+			name: "TypeValueRefSecretNotFound",
+			contextExtensions: []*egv1a1.ContextExtension{{
+				Name: "foo",
+				Type: egv1a1.ContextExtensionValueTypeValueRef,
+				ValueRef: &egv1a1.LocalObjectKeyReference{
+					LocalObjectReference: gwapiv1.LocalObjectReference{
+						Kind: resource.KindSecret,
+						Name: "test-secret",
+					},
+					Key: "test-key",
+				},
+			}},
+			resources: &resource.Resources{},
+			wantErr:   true,
+		},
+		{
+			name: "TypeValueRefSecretKeyNotFound",
+			contextExtensions: []*egv1a1.ContextExtension{{
+				Name: "foo",
+				Type: egv1a1.ContextExtensionValueTypeValueRef,
+				ValueRef: &egv1a1.LocalObjectKeyReference{
+					LocalObjectReference: gwapiv1.LocalObjectReference{
+						Kind: resource.KindSecret,
+						Name: "test-secret",
+					},
+					Key: "test-key",
+				},
+			}},
+			resources: &resource.Resources{
+				Secrets: []*corev1.Secret{{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: policyNs,
+						Name:      "test-secret",
+					},
+				}},
+			},
+			wantErr: true,
+		},
+		{
+			name: "TypeValueRefSecret",
+			contextExtensions: []*egv1a1.ContextExtension{{
+				Name: "foo",
+				Type: egv1a1.ContextExtensionValueTypeValueRef,
+				ValueRef: &egv1a1.LocalObjectKeyReference{
+					LocalObjectReference: gwapiv1.LocalObjectReference{
+						Kind: resource.KindSecret,
+						Name: "test-secret",
+					},
+					Key: "test-key",
+				},
+			}},
+			resources: &resource.Resources{
+				Secrets: []*corev1.Secret{{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: policyNs,
+						Name:      "test-secret",
+					},
+					Data: map[string][]byte{"test-key": []byte("YmFy")},
+				}},
+			},
+			want: map[string]ir.PrivateBytes{"foo": ir.PrivateBytes("bar")},
+		},
+		{
+			name: "TypeValueRefUnexpectedKind",
+			contextExtensions: []*egv1a1.ContextExtension{{
+				Name: "foo",
+				Type: egv1a1.ContextExtensionValueTypeValueRef,
+				ValueRef: &egv1a1.LocalObjectKeyReference{
+					LocalObjectReference: gwapiv1.LocalObjectReference{
+						Kind: resource.KindService,
+						Name: "test-secret",
+					},
+					Key: "test-key",
+				},
+			}},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := buildContextExtensions(tt.contextExtensions, tt.resources, policyNs)
+			if tt.wantErr {
+				require.Error(t, err)
+				require.Nil(t, got)
+				return
+			}
+
+			require.NoError(t, err)
+			require.Equal(t, tt.want, got)
 		})
 	}
 }

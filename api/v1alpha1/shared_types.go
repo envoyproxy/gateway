@@ -961,3 +961,11 @@ type HTTPHeaderFilter struct {
 	// +kubebuilder:validation:MaxItems=64
 	Remove []string `json:"remove,omitempty"`
 }
+
+// LocalObjectKeyReference selects a key from a local object.
+type LocalObjectKeyReference struct {
+	// The local object to select from.
+	gwapiv1.LocalObjectReference `json:",inline"`
+	// The key to select.
+	Key string `json:"key"`
+}
