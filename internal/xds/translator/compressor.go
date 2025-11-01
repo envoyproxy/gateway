@@ -107,6 +107,12 @@ func buildCompressorFilter(compression *ir.Compression, chooseFirst bool) (*hcmv
 
 	if chooseFirst {
 		compressorProto.ChooseFirst = true
+
+		// This will remove the Accept-Encoding header from the request.
+		// It can only be set on the main compressor in the list.
+		compressorProto.ResponseDirectionConfig = &compressorv3.Compressor_ResponseDirectionConfig{
+			RemoveAcceptEncodingHeader: true,
+		}
 	}
 
 	if compressorAny, err = proto.ToAnyWithValidation(compressorProto); err != nil {

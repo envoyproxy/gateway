@@ -114,6 +114,12 @@ func testCompression(t *testing.T, suite *suite.ConformanceTestSuite, compressio
 				"Accept-encoding": encoding,
 			},
 		},
+		ExpectedRequest: &http.ExpectedRequest{
+			Request: http.Request{
+				Path: "/compression",
+			},
+			AbsentHeaders: []string{"Accept-Encoding"},
+		},
 		Response: http.Response{
 			StatusCodes: []int{200},
 			Headers: map[string]string{
@@ -147,6 +153,12 @@ func testCompressionChooseFirst(t *testing.T, suite *suite.ConformanceTestSuite,
 			Headers: map[string]string{
 				"Accept-encoding": "gzip, br, zstd",
 			},
+		},
+		ExpectedRequest: &http.ExpectedRequest{
+			Request: http.Request{
+				Path: "/compression",
+			},
+			AbsentHeaders: []string{"Accept-Encoding"},
 		},
 		Response: http.Response{
 			StatusCodes: []int{200},

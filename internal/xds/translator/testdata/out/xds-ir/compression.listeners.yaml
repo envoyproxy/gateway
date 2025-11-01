@@ -23,6 +23,8 @@
               name: envoy.compression.brotli.compressor
               typedConfig:
                 '@type': type.googleapis.com/envoy.extensions.compression.brotli.compressor.v3.Brotli
+            responseDirectionConfig:
+              removeAcceptEncodingHeader: true
         - disabled: true
           name: envoy.filters.http.compressor.gzip
           typedConfig:
