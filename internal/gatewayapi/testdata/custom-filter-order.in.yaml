@@ -17,7 +17,7 @@ envoyProxyForGatewayClass:
       - name: envoy.filters.http.wasm
         before: envoy.filters.http.jwt_authn
       - name: envoy.filters.http.cors
-        after: envoy.filters.http.basic_authn
+        after: envoy.filters.http.basic_auth
 gateways:
   - apiVersion: gateway.networking.k8s.io/v1
     kind: Gateway
