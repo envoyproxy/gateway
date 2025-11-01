@@ -298,7 +298,7 @@ func buildRouteRateLimits(route *ir.HTTPRoute) (rateLimits []*routev3.RateLimit,
 			}
 		}
 	}
-	return
+	return rateLimits, costSpecified
 }
 
 func buildHeaderMatchRateLimitActions(

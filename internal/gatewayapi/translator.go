@@ -408,7 +408,7 @@ func (t *Translator) GetRelevantGateways(resources *resource.Resources) (
 
 		acceptedGateways = append(acceptedGateways, gCtx)
 	}
-	return
+	return acceptedGateways, failedGateways
 }
 
 func validateEnvoyProxy(ep *egv1a1.EnvoyProxy) error {

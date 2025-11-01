@@ -88,7 +88,7 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 
 	go r.subscribeAndTranslate(c)
 	r.Logger.Info("started")
-	return
+	return err
 }
 
 func (r *Runner) startWasmCache(ctx context.Context) {
@@ -408,7 +408,7 @@ func (r *Runner) loadTLSConfig(ctx context.Context) (tlsConfig *tls.Config, salt
 	default:
 		return nil, nil, fmt.Errorf("no valid tls certificates")
 	}
-	return
+	return tlsConfig, salt, err
 }
 
 func unstructuredToPolicyStatus(policyStatus map[string]any) gwapiv1.PolicyStatus {
@@ -707,5 +707,5 @@ func hmac(ctx context.Context, namespace string) (hmac []byte, err error) {
 		return nil, fmt.Errorf(
 			"HMAC secret not found in secret %s/%s", namespace, hmacSecretName)
 	}
-	return
+	return hmac, err
 }

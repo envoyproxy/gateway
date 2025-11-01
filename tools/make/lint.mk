@@ -22,6 +22,12 @@ lint.golint:
 	@$(LOG_TARGET)
 	$(GO_TOOL) golangci-lint run $(GOLANGCI_LINT_FLAGS) --build-tags=$(LINT_BUILD_TAGS) --config=tools/linter/golangci-lint/.golangci.yml
 
+.PHONY: lint.kal
+lint: lint.kal
+lint-deps: $(tools/kal)
+lint.kal:
+	@$(LOG_TARGET)
+	$(GO_TOOL) golangci-lint run $(GOLANGCI_LINT_FLAGS) --build-tags=$(LINT_BUILD_TAGS) --config=tools/linter/golangci-lint/.golangci-kal.yml ./api/... --verbose
 .PHONY: lint.yamllint
 lint: lint.yamllint
 lint-deps: $(tools/yamllint)

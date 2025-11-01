@@ -54,7 +54,7 @@ func ListDirsAndFiles(paths []string) (dirs, files sets.Set[string]) {
 	}
 	files.Delete(ignoreFiles...)
 
-	return
+	return dirs, files
 }
 
 // GetParentDirs returns all the parent directories of given files.

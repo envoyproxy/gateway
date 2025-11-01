@@ -182,5 +182,5 @@ func getPath(path string) (cleanedPath, parentPath string) {
 		parentPath = cleanedPath
 	}
 
-	return
+	return cleanedPath, parentPath
 }

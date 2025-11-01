@@ -869,7 +869,7 @@ func setupOCIRegistry(t *testing.T, host string) (dockerImageDigest, invalidOCII
 	if err != nil {
 		t.Fatal(err)
 	}
-	return
+	return dockerImageDigest, invalidOCIImageDigest
 }
 
 func TestWasmCachePolicyChangesUsingHTTP(t *testing.T) {

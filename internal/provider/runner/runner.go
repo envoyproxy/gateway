@@ -99,5 +99,5 @@ func (r *Runner) createCustomResourceProvider(ctx context.Context) (p provider.P
 		return nil, fmt.Errorf("unsupported resource provider type")
 	}
 
-	return
+	return p, err
 }
