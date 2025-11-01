@@ -107,7 +107,17 @@ spec:
   hostnames:
     - "www.example.com"
   rules:
-    - backendRefs:
+    - filters:
+        - type: RequestHeaderModifier
+          requestHeaderModifier:
+            add:
+              - name: X-Request-ID
+                value: '%REQ(X-REQUEST-ID)%'
+              - name: X-Forwarded-For
+                value: '%REQ(X-FORWARDED-FOR?X-REAL-IP)%'
+              - name: X-Request-Start
+                value: 't=%START_TIME(%s.%6f)%'
+      backendRefs:
         - name: provided-backend
           port: 8000
 `
@@ -248,7 +258,15 @@ spec:
   hostnames:
     - "www.example-%d.com"
   rules:
-    - backendRefs:
+    - filters:
+        - type: RequestHeaderModifier
+          requestHeaderModifier:
+            add:
+              - name: X-Request-ID
+                value: '%%REQ(X-REQUEST-ID)%%'
+              - name: X-Forwarded-For
+                value: '%%REQ(X-FORWARDED-FOR?X-REAL-IP)%%'
+      backendRefs:
         - name: provided-backend
           port: 8000
 `, i, i))
