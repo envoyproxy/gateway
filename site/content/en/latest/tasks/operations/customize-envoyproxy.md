@@ -1025,17 +1025,27 @@ Under the hood, Envoy Gateway uses a series of [Envoy HTTP filters](https://www.
 to process HTTP requests and responses, and to apply various policies.
 
 By default, Envoy Gateway applies the following filters in the order shown:
+* envoy.filters.http.health_check
 * envoy.filters.http.fault
 * envoy.filters.http.cors
 * envoy.filters.http.ext_authz
+* envoy.filters.http.api_key_auth
 * envoy.filters.http.basic_authn
 * envoy.filters.http.oauth2
 * envoy.filters.http.jwt_authn
+* envoy.filters.http.stateful_session
+* envoy.filters.http.buffer
+* envoy.filters.http.lua
 * envoy.filters.http.ext_proc
 * envoy.filters.http.wasm
 * envoy.filters.http.rbac
 * envoy.filters.http.local_ratelimit
 * envoy.filters.http.ratelimit
+* envoy.filters.http.grpc_web
+* envoy.filters.http.grpc_stats
+* envoy.filters.http.custom_response
+* envoy.filters.http.credential_injector
+* envoy.filters.http.compressor
 * envoy.filters.http.router
 
 The default order in which these filters are applied is opinionated and may not suit all use cases.
