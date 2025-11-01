@@ -220,6 +220,24 @@ services:
     - name: http
       protocol: TCP
       port: 8080
+endpointSlices:
+- apiVersion: discovery.k8s.io/v1
+  kind: EndpointSlice
+  metadata:
+    name: endpointslice-service-1
+    namespace: envoy-gateway
+    labels:
+      kubernetes.io/service-name: service-1
+  addressType: IPv4
+  ports:
+  - name: http
+    protocol: TCP
+    port: 8080
+  endpoints:
+  - addresses:
+    - "10.244.0.11"
+    conditions:
+      ready: true
 configMaps:
 - apiVersion: v1
   kind: ConfigMap
