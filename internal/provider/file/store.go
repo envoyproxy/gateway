@@ -24,6 +24,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/message"
 )
@@ -75,9 +76,9 @@ func newStoreKey(obj client.Object) storeKey {
 }
 
 // ReloadAll loads and stores all resources from all given files and directories.
-func (r *resourcesStore) ReloadAll(ctx context.Context, files, dirs []string) error {
+func (r *resourcesStore) ReloadAll(ctx context.Context, srv *config.Server, files, dirs []string) error {
 	// TODO(sh2): add arbitrary number of resources support for load function.
-	resources, err := loadFromFilesAndDirs(files, dirs)
+	resources, err := loadFromFilesAndDirs(srv, files, dirs)
 	if err != nil {
 		return err
 	}
@@ -128,7 +129,7 @@ func (r *resourcesStore) ReloadAll(ctx context.Context, files, dirs []string) er
 // - Service
 // - ServiceImport
 // - EndpointSlices
-// Becasues these resources has no effects on the host infra layer.
+// Because these resources have no effects on the host infra layer.
 func (r *resourcesStore) storeResources(ctx context.Context, re *resource.Resources) (sets.Set[storeKey], error) {
 	if re == nil {
 		return nil, nil
@@ -245,6 +246,12 @@ func (r *resourcesStore) storeResources(ctx context.Context, re *resource.Resour
 
 	for _, obj := range re.EnvoyExtensionPolicies {
 		if err := r.storeObjectWithKeys(ctx, obj, collectKeys); err != nil {
+			errs = errors.Join(errs, err)
+		}
+	}
+
+	for _, obj := range re.ExtensionServerPolicies {
+		if err := r.storeObjectWithKeys(ctx, &obj, collectKeys); err != nil {
 			errs = errors.Join(errs, err)
 		}
 	}

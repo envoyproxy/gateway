@@ -38,6 +38,7 @@ type Provider struct {
 	reconciler *kubernetes.OfflineGatewayAPIReconciler
 	store      *resourcesStore
 	status     *StatusHandler
+	srv        *config.Server
 
 	// ready indicates whether the provider can start watching filesystem events.
 	ready atomic.Bool
@@ -65,6 +66,7 @@ func New(ctx context.Context, svr *config.Server, resources *message.ProviderRes
 		reconciler: reconciler,
 		store:      newResourcesStore(svr.EnvoyGateway.Gateway.ControllerName, reconciler.Client, resources, logger),
 		status:     statusHandler,
+		srv:        svr,
 	}, nil
 }
 
@@ -96,7 +98,7 @@ func (p *Provider) Start(ctx context.Context) error {
 
 	initDirs, initFiles := path.ListDirsAndFiles(p.paths)
 	// Initially load resources.
-	if err := p.store.ReloadAll(ctx, initFiles.UnsortedList(), initDirs.UnsortedList()); err != nil {
+	if err := p.store.ReloadAll(ctx, p.srv, initFiles.UnsortedList(), initDirs.UnsortedList()); err != nil {
 		p.logger.Error(err, "failed to reload resources initially")
 	}
 
@@ -169,7 +171,7 @@ func (p *Provider) Start(ctx context.Context) error {
 			p.logger.Info("file changed", "op", event.Op, "name", event.Name, "dir", filepath.Dir(event.Name))
 
 		handle:
-			if err := p.store.ReloadAll(ctx, curFiles.UnsortedList(), curDirs.UnsortedList()); err != nil {
+			if err := p.store.ReloadAll(ctx, p.srv, curFiles.UnsortedList(), curDirs.UnsortedList()); err != nil {
 				p.logger.Error(err, "error when reload resources", "op", event.Op, "name", event.Name)
 			}
 		}

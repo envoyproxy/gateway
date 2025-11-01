@@ -16,26 +16,26 @@ import (
 
 func Test_loadFromFilesAndDirs(t *testing.T) {
 	t.Run("non-existent file", func(t *testing.T) {
-		_, err := loadFromFilesAndDirs([]string{"non-existent-file"}, nil)
+		_, err := loadFromFilesAndDirs(nil, []string{"non-existent-file"}, nil)
 		require.ErrorContains(t, err, "file non-existent-file is not exist")
 	})
 	t.Run("invalid content in a file", func(t *testing.T) {
 		tmpfile := t.TempDir() + "/invalid.yaml"
 		err := os.WriteFile(tmpfile, []byte("invalid"), 0o600)
 		require.NoError(t, err)
-		_, err = loadFromFilesAndDirs([]string{tmpfile}, nil)
+		_, err = loadFromFilesAndDirs(nil, []string{tmpfile}, nil)
 		require.ErrorContains(t, err,
 			fmt.Sprintf("failed to load resources from file %s", tmpfile))
 	})
 	t.Run("non-existent directory", func(t *testing.T) {
-		_, err := loadFromFilesAndDirs(nil, []string{"non-existent-directory"})
+		_, err := loadFromFilesAndDirs(nil, nil, []string{"non-existent-directory"})
 		require.ErrorContains(t, err, "no such file or directory")
 	})
 	t.Run("invalid content in a file in a directory", func(t *testing.T) {
 		tmpdir := t.TempDir()
 		err := os.WriteFile(filepath.Join(tmpdir, "invalid.yaml"), []byte("invalid"), 0o600)
 		require.NoError(t, err)
-		_, err = loadFromFilesAndDirs(nil, []string{tmpdir})
+		_, err = loadFromFilesAndDirs(nil, nil, []string{tmpdir})
 		require.ErrorContains(t, err,
 			fmt.Sprintf("failed to load resources from file %s", filepath.Join(tmpdir, "invalid.yaml")))
 	})
@@ -50,7 +50,7 @@ spec:
   controllerName: gateway.envoyproxy.io/gatewayclass-controller
 `), 0o600)
 		require.NoError(t, err)
-		rs, err := loadFromFilesAndDirs([]string{tmpfile}, nil)
+		rs, err := loadFromFilesAndDirs(nil, []string{tmpfile}, nil)
 		require.NoError(t, err)
 		require.Len(t, rs, 1)
 	})
@@ -58,14 +58,14 @@ spec:
 
 func Test_loadFromDir(t *testing.T) {
 	t.Run("non-existent directory", func(t *testing.T) {
-		_, err := loadFromDir("non-existent-directory")
+		_, err := loadFromDir("non-existent-directory", nil)
 		require.ErrorContains(t, err, "no such file or directory")
 	})
 	t.Run("invalid content in a file", func(t *testing.T) {
 		tmpdir := t.TempDir()
 		err := os.WriteFile(filepath.Join(tmpdir, "invalid.yaml"), []byte("invalid"), 0o600)
 		require.NoError(t, err)
-		_, err = loadFromDir(tmpdir)
+		_, err = loadFromDir(tmpdir, nil)
 		require.ErrorContains(t, err,
 			fmt.Sprintf("failed to load resources from file %s", filepath.Join(tmpdir, "invalid.yaml")))
 	})
@@ -80,7 +80,7 @@ spec:
   controllerName: gateway.envoyproxy.io/gatewayclass-controller
 `), 0o600)
 		require.NoError(t, err)
-		rs, err := loadFromDir(tmpdir)
+		rs, err := loadFromDir(tmpdir, nil)
 		require.NoError(t, err)
 		require.Len(t, rs, 1)
 	})
