@@ -234,7 +234,7 @@ func (r *Runner) translateFromSubscription(sub <-chan watchable.Snapshot[string,
 				parentCtx = update.Value.Context
 			}
 
-			_, span := tracer.Start(parentCtx, "Runner.subscribeAndTranslate")
+			_, span := tracer.Start(parentCtx, "XdsRunner.subscribeAndTranslate")
 			defer span.End()
 
 			key := update.Key

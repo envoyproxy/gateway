@@ -134,7 +134,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 				parentCtx = update.Value.Context
 			}
 
-			_, span := tracer.Start(parentCtx, "Runner.subscribeAndTranslate")
+			_, span := tracer.Start(parentCtx, "GatewayApiRunner.subscribeAndTranslate")
 			defer span.End()
 
 			r.Logger.Info("received an update")

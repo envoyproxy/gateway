@@ -37,10 +37,28 @@ func (r *Runner) Start(ctx context.Context) error {
 		return nil
 	}
 
-	config := r.cfg.EnvoyGateway.GetEnvoyGatewayTelemetry().Traces.Sink
-	configObj := config.OpenTelemetry
+	tracesConfig := r.cfg.EnvoyGateway.GetEnvoyGatewayTelemetry().Traces
+	sinkConfig := tracesConfig.Sink
+	configObj := sinkConfig.OpenTelemetry
 
-	endpoint := fmt.Sprintf("%s:%d", config.OpenTelemetry.Host, config.OpenTelemetry.Port)
+	endpoint := fmt.Sprintf("%s:%d", sinkConfig.OpenTelemetry.Host, sinkConfig.OpenTelemetry.Port)
+
+	// Create resource
+	res, err := resource.New(ctx,
+		resource.WithAttributes(
+			semconv.ServiceNameKey.String("envoy-gateway"),
+		),
+	)
+	if err != nil {
+		return err
+	}
+
+	// Get sampler configuration
+	sampler := r.getSampler(tracesConfig)
+
+	// Get batch span processor options
+	batchOptions := r.getBatchSpanProcessorOptions(tracesConfig)
+
 	if configObj.Protocol == egv1a1.GRPCProtocol {
 		exporter, err := otlptracegrpc.New(ctx,
 			otlptracegrpc.WithEndpoint(endpoint),
@@ -50,19 +68,11 @@ func (r *Runner) Start(ctx context.Context) error {
 			return err
 		}
 
-		res, err := resource.New(ctx,
-			resource.WithAttributes(
-				semconv.ServiceNameKey.String("envoy-gateway"),
-			),
-		)
-		if err != nil {
-			return err
-		}
-
+		bsp := trace.NewBatchSpanProcessor(exporter, batchOptions...)
 		tp := trace.NewTracerProvider(
-			trace.WithBatcher(exporter),
+			trace.WithSpanProcessor(bsp),
 			trace.WithResource(res),
-			trace.WithSampler(trace.AlwaysSample()), // TODO: configurable?
+			trace.WithSampler(sampler),
 		)
 
 		otel.SetTracerProvider(tp)
@@ -76,26 +86,16 @@ func (r *Runner) Start(ctx context.Context) error {
 		exporter, err := otlptracehttp.New(ctx,
 			otlptracehttp.WithEndpoint(endpoint),
 			otlptracehttp.WithInsecure(),
-			// TODO: should we make path configurable?
-			// otlptracehttp.WithURLPath("/v1/traces"),   // Optional: custom path
 		)
 		if err != nil {
 			return err
 		}
 
-		res, err := resource.New(ctx,
-			resource.WithAttributes(
-				semconv.ServiceNameKey.String("envoy-gateway"),
-			),
-		)
-		if err != nil {
-			return err
-		}
-
+		bsp := trace.NewBatchSpanProcessor(exporter, batchOptions...)
 		tp := trace.NewTracerProvider(
-			trace.WithBatcher(exporter),
+			trace.WithSpanProcessor(bsp),
 			trace.WithResource(res),
-			trace.WithSampler(trace.AlwaysSample()), // TODO: configurable?
+			trace.WithSampler(sampler),
 		)
 
 		otel.SetTracerProvider(tp)
@@ -105,6 +105,45 @@ func (r *Runner) Start(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+// getSampler returns the configured sampler or a default sampler
+func (r *Runner) getSampler(tracesConfig *egv1a1.EnvoyGatewayTraces) trace.Sampler {
+	if tracesConfig.SamplingRate != nil {
+		return trace.TraceIDRatioBased(*tracesConfig.SamplingRate)
+	}
+	// Default to always sample (100%)
+	return trace.AlwaysSample()
+}
+
+// getBatchSpanProcessorOptions returns the configured batch span processor options
+func (r *Runner) getBatchSpanProcessorOptions(tracesConfig *egv1a1.EnvoyGatewayTraces) []trace.BatchSpanProcessorOption {
+	var options []trace.BatchSpanProcessorOption
+
+	if tracesConfig.BatchSpanProcessorConfig != nil {
+		cfg := tracesConfig.BatchSpanProcessorConfig
+
+		if cfg.BatchTimeout != nil {
+			timeout, err := time.ParseDuration(string(*cfg.BatchTimeout))
+			if err == nil && timeout > 0 {
+				options = append(options, trace.WithBatchTimeout(timeout))
+			}
+		}
+
+		if cfg.MaxExportBatchSize != nil && *cfg.MaxExportBatchSize > 0 {
+			options = append(options, trace.WithMaxExportBatchSize(*cfg.MaxExportBatchSize))
+		}
+
+		if cfg.MaxQueueSize != nil && *cfg.MaxQueueSize > 0 {
+			options = append(options, trace.WithMaxQueueSize(*cfg.MaxQueueSize))
+		}
+	}
+
+	// If no options were configured, use defaults
+	// Default BatchTimeout is 5s, MaxExportBatchSize is 512, MaxQueueSize is 2048
+	// These are the OpenTelemetry SDK defaults
+
+	return options
 }
 
 func (r *Runner) Name() string {
