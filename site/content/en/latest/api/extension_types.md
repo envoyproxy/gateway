@@ -576,7 +576,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `batchTimeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#duration)_ |  false  |  | BatchTimeout is the maximum duration for constructing a batch. Spans are<br />exported when either the batch is full or this timeout is reached.<br />Default is 5s. For e2e testing, a lower value like 100ms is recommended. |
+| `batchTimeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#duration)_ |  false  |  | BatchTimeout is the maximum duration for constructing a batch. Spans are<br />exported when either the batch is full or this timeout is reached. |
 | `maxExportBatchSize` | _integer_ |  false  |  | MaxExportBatchSize is the maximum number of spans to export in a single batch.<br />Default is 512. |
 | `maxQueueSize` | _integer_ |  false  |  | MaxQueueSize is the maximum queue size to buffer spans for delayed processing.<br />If the queue gets full it drops the spans. Default is 2048. |
 
@@ -1490,7 +1490,8 @@ _Appears in:_
 
 
 
-
+EnvoyGatewayOpenTelemetrySink defines the configuration for OpenTelemetry sink.
+This is shared between metrics and traces.
 
 _Appears in:_
 - [EnvoyGatewayMetricSink](#envoygatewaymetricsink)
@@ -1633,7 +1634,7 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `sink` | _[EnvoyGatewayTraceSink](#envoygatewaytracesink)_ |  true  |  | Sink defines the trace sink where traces are sent to. |
-| `enable` | _boolean_ |  true  |  | Disable disables the traces. |
+| `disable` | _boolean_ |  false  |  | Disable disables the traces. |
 | `samplingRate` | _float_ |  false  |  | SamplingRate controls the rate at which traces are sampled.<br />Defaults to 1.0 (100% sampling). Valid values are between 0.0 and 1.0.<br />0.0 means no sampling, 1.0 means all traces are sampled. |
 | `batchSpanProcessor` | _[BatchSpanProcessorConfig](#batchspanprocessorconfig)_ |  false  |  | BatchSpanProcessorConfig defines the configuration for the batch span processor.<br />This processor batches spans before exporting them to the configured sink. |
 
