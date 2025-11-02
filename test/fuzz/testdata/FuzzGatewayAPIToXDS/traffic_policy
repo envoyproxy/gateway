@@ -45,3 +45,20 @@ spec:
   timeout:
     http:
       requestReceivedTimeout: 50ms
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: cswrr-lb-policy
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: cswrr-lb-route
+  loadBalancer:
+    type: ClientSideWeightedRoundRobin
+    clientSideWeightedRoundRobin:
+      enableOOBLoadReport: true
+      oobReportingPeriod: 5s
+      errorUtilizationPenalty: 1.2

@@ -1337,6 +1337,15 @@ func TestValidateLoadBalancer(t *testing.T) {
 			},
 			want: ErrLoadBalancerInvalid,
 		},
+		{
+			name: "client side wrr set",
+			input: LoadBalancer{
+				ClientSideWeightedRoundRobin: &ClientSideWeightedRoundRobin{
+					EnableOOBLoadReport:                ptr.To(false),
+					MetricNamesForComputingUtilization: []string{"named_metrics.foo"},
+				},
+			},
+		},
 	}
 	for i := range tests {
 		test := tests[i]

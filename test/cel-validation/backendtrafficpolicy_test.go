@@ -414,7 +414,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			wantErrors: []string{},
 		},
 		{
-			desc: "leastRequest with SlowStar is set",
+			desc: "leastRequest with SlowStart is set",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
@@ -515,6 +515,138 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			},
 			wantErrors: []string{
 				"spec.loadBalancer: Invalid value: \"object\": Currently SlowStart is only supported for RoundRobin and LeastRequest load balancers.",
+			},
+		},
+		{
+			desc: "cswrr all fields set",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					ClusterSettings: egv1a1.ClusterSettings{
+						LoadBalancer: &egv1a1.LoadBalancer{
+							Type: egv1a1.ClientSideWeightedRoundRobinLoadBalancerType,
+							ClientSideWeightedRoundRobin: &egv1a1.ClientSideWeightedRoundRobin{
+								EnableOOBLoadReport:                ptr.To[bool](false),
+								OOBReportingPeriod:                 ptr.To(gwapiv1.Duration("30s")),
+								BlackoutPeriod:                     ptr.To(gwapiv1.Duration("10s")),
+								WeightUpdatePeriod:                 ptr.To(gwapiv1.Duration("10s")),
+								WeightExpirationPeriod:             ptr.To(gwapiv1.Duration("10s")),
+								ErrorUtilizationPenalty:            ptr.To[float32](0.5),
+								MetricNamesForComputingUtilization: []string{"metric1", "metric2"},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "cswrr field nil when type is ClientSideWeightedRoundRobin",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					ClusterSettings: egv1a1.ClusterSettings{
+						LoadBalancer: &egv1a1.LoadBalancer{
+							Type: egv1a1.ClientSideWeightedRoundRobinLoadBalancerType,
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.loadBalancer: Invalid value: \"object\": If LoadBalancer type is ClientSideWeightedRoundRobin, clientSideWeightedRoundRobin field needs to be set.",
+			},
+		},
+		{
+			desc: "cswrr with SlowStart is set",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					ClusterSettings: egv1a1.ClusterSettings{
+						LoadBalancer: &egv1a1.LoadBalancer{
+							Type:                         egv1a1.ClientSideWeightedRoundRobinLoadBalancerType,
+							ClientSideWeightedRoundRobin: &egv1a1.ClientSideWeightedRoundRobin{},
+							SlowStart:                    &egv1a1.SlowStart{Window: ptr.To(gwapiv1.Duration("10ms"))},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.loadBalancer: Invalid value: \"object\": Currently SlowStart is only supported for RoundRobin and LeastRequest load balancers.",
+			},
+		},
+		{
+			desc: "cswrr with ZoneAware is set",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					ClusterSettings: egv1a1.ClusterSettings{
+						LoadBalancer: &egv1a1.LoadBalancer{
+							Type:                         egv1a1.ClientSideWeightedRoundRobinLoadBalancerType,
+							ClientSideWeightedRoundRobin: &egv1a1.ClientSideWeightedRoundRobin{},
+							ZoneAware:                    &egv1a1.ZoneAware{PreferLocal: &egv1a1.PreferLocalZone{}},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.loadBalancer: Invalid value: \"object\": Currently ZoneAware is only supported for LeastRequest, Random, and RoundRobin load balancers.",
+			},
+		},
+		{
+			desc: "cswrr with negative penalty is invalid",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					ClusterSettings: egv1a1.ClusterSettings{
+						LoadBalancer: &egv1a1.LoadBalancer{
+							Type:                         egv1a1.ClientSideWeightedRoundRobinLoadBalancerType,
+							ClientSideWeightedRoundRobin: &egv1a1.ClientSideWeightedRoundRobin{ErrorUtilizationPenalty: ptr.To[float32](-1)},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.loadBalancer.clientSideWeightedRoundRobin.errorUtilizationPenalty: Invalid value: -1: must be greater than or equal to 0",
 			},
 		},
 		{

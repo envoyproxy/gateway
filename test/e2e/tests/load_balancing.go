@@ -651,3 +651,117 @@ var EndpointOverrideLoadBalancingTest = suite.ConformanceTest{
 		})
 	},
 }
+
+var ClientSideWeightedRoundRobinOOBLoadBalancingTest = suite.ConformanceTest{
+	ShortName:   "ClientSideWeightedRoundRobinOOBLoadBalancing",
+	Description: "Test for client-side weighted round robin with OOB enabled",
+	Manifests:   []string{"testdata/load_balancing_client_side_weighted_round_robin_oob.yaml"},
+	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
+		const (
+			sendRequests = 90
+			replicas     = 3
+			offset       = 6
+		)
+
+		ns := "gateway-conformance-infra"
+		routeNN := types.NamespacedName{Name: "client-side-wrr-lb-route-oob", Namespace: ns}
+		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
+
+		ancestorRef := gwapiv1.ParentReference{
+			Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
+			Kind:      gatewayapi.KindPtr(resource.KindGateway),
+			Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
+			Name:      gwapiv1.ObjectName(gwNN.Name),
+		}
+		BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "client-side-wrr-lb-policy-oob", Namespace: ns}, suite.ControllerName, ancestorRef)
+		WaitForPods(t, suite.Client, ns, map[string]string{"app": "lb-backend-cswrr-oob"}, corev1.PodRunning, &PodReady)
+
+		gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
+
+		t.Run("traffic should be roughly even with OOB enabled (no ORCA signals)", func(t *testing.T) {
+			expectedResponse := http.ExpectedResponse{
+				Request: http.Request{
+					Path: "/cswrroob",
+				},
+				Response: http.Response{
+					StatusCodes: []int{200},
+				},
+				Namespace: ns,
+			}
+			req := http.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
+
+			compareFunc := func(trafficMap map[string]int) bool {
+				even := sendRequests / replicas
+				for _, count := range trafficMap {
+					if !AlmostEquals(count, even, offset) {
+						return false
+					}
+				}
+				return true
+			}
+
+			if err := wait.PollUntilContextTimeout(context.TODO(), time.Second, 30*time.Second, true, func(_ context.Context) (bool, error) {
+				return runTrafficTest(t, suite, &req, &expectedResponse, sendRequests, compareFunc), nil
+			}); err != nil {
+				tlog.Errorf(t, "failed to run client-side WRR OOB test: %v", err)
+			}
+		})
+	},
+}
+
+var ClientSideWeightedRoundRobinPenaltyLoadBalancingTest = suite.ConformanceTest{
+	ShortName:   "ClientSideWeightedRoundRobinPenaltyLoadBalancing",
+	Description: "Test for client-side weighted round robin with penalty and metrics",
+	Manifests:   []string{"testdata/load_balancing_client_side_weighted_round_robin_penalty.yaml"},
+	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
+		const (
+			sendRequests = 90
+			replicas     = 3
+			offset       = 6
+		)
+
+		ns := "gateway-conformance-infra"
+		routeNN := types.NamespacedName{Name: "client-side-wrr-lb-route-penalty", Namespace: ns}
+		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
+
+		ancestorRef := gwapiv1.ParentReference{
+			Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
+			Kind:      gatewayapi.KindPtr(resource.KindGateway),
+			Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
+			Name:      gwapiv1.ObjectName(gwNN.Name),
+		}
+		BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "client-side-wrr-lb-policy-penalty", Namespace: ns}, suite.ControllerName, ancestorRef)
+		WaitForPods(t, suite.Client, ns, map[string]string{"app": "lb-backend-cswrr-penalty"}, corev1.PodRunning, &PodReady)
+
+		gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
+
+		t.Run("traffic should be roughly even without ORCA, even with penalty configured", func(t *testing.T) {
+			expectedResponse := http.ExpectedResponse{
+				Request: http.Request{
+					Path: "/cswrrpenalty",
+				},
+				Response: http.Response{
+					StatusCodes: []int{200},
+				},
+				Namespace: ns,
+			}
+			req := http.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
+
+			compareFunc := func(trafficMap map[string]int) bool {
+				even := sendRequests / replicas
+				for _, count := range trafficMap {
+					if !AlmostEquals(count, even, offset) {
+						return false
+					}
+				}
+				return true
+			}
+
+			if err := wait.PollUntilContextTimeout(context.TODO(), time.Second, 30*time.Second, true, func(_ context.Context) (bool, error) {
+				return runTrafficTest(t, suite, &req, &expectedResponse, sendRequests, compareFunc), nil
+			}); err != nil {
+				tlog.Errorf(t, "failed to run client-side WRR penalty test: %v", err)
+			}
+		})
+	},
+}

@@ -7,9 +7,9 @@ spec:
   selector:
     app: lb-backend-cswrr
   ports:
-    - protocol: TCP
-      port: 8080
-      targetPort: 3000
+  - protocol: TCP
+    port: 8080
+    targetPort: 3000
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -29,23 +29,23 @@ spec:
         app: lb-backend-cswrr
     spec:
       containers:
-        - name: backend
-          image: gcr.io/k8s-staging-gateway-api/echo-basic:v20231214-v1.0.0-140-gf544a46e
-          imagePullPolicy: IfNotPresent
-          env:
-            - name: POD_NAME
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.name
-            - name: NAMESPACE
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.namespace
-            - name: SERVICE_NAME
-              value: lb-backend-cswrr
-          resources:
-            requests:
-              cpu: 10m
+      - name: backend
+        image: gcr.io/k8s-staging-gateway-api/echo-basic:v20231214-v1.0.0-140-gf544a46e
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: SERVICE_NAME
+          value: lb-backend-cswrr
+        resources:
+          requests:
+            cpu: 10m
 ---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: BackendTrafficPolicy
@@ -54,13 +54,19 @@ metadata:
   namespace: gateway-conformance-infra
 spec:
   targetRefs:
-    - group: gateway.networking.k8s.io
-      kind: HTTPRoute
-      name: client-side-wrr-lb-route
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: client-side-wrr-lb-route
   loadBalancer:
     type: ClientSideWeightedRoundRobin
     clientSideWeightedRoundRobin:
       enableOOBLoadReport: false
+      oobReportingPeriod: 20s
+      blackoutPeriod: 30s
+      weightExpirationPeriod: 60s
+      weightUpdatePeriod: 10s
+      metricNamesForComputingUtilization:
+      - "named_metric.foo"
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
@@ -69,12 +75,12 @@ metadata:
   namespace: gateway-conformance-infra
 spec:
   parentRefs:
-    - name: same-namespace
+  - name: same-namespace
   rules:
-    - matches:
-        - path:
-            type: PathPrefix
-            value: /cswrr
-      backendRefs:
-        - name: lb-backend-cswrr
-          port: 8080
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /cswrr
+    backendRefs:
+    - name: lb-backend-cswrr
+      port: 8080
