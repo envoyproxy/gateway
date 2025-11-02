@@ -12,7 +12,7 @@ package ir
 import (
 	"github.com/envoyproxy/gateway/api/v1alpha1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	apisv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
@@ -3785,6 +3785,11 @@ func (in *TCPRoute) DeepCopyInto(out *TCPRoute) {
 		*out = new(ProxyProtocol)
 		**out = **in
 	}
+	if in.Metadata != nil {
+		in, out := &in.Metadata, &out.Metadata
+		*out = new(ResourceMetadata)
+		(*in).DeepCopyInto(*out)
+	}
 	if in.BackendConnection != nil {
 		in, out := &in.BackendConnection, &out.BackendConnection
 		*out = new(BackendConnection)
@@ -3804,6 +3809,11 @@ func (in *TCPRoute) DeepCopyInto(out *TCPRoute) {
 		in, out := &in.Authorization, &out.Authorization
 		*out = new(Authorization)
 		(*in).DeepCopyInto(*out)
+	}
+	if in.Metrics != nil {
+		in, out := &in.Metrics, &out.Metrics
+		*out = new(v1alpha1.BackendMetrics)
+		**out = **in
 	}
 }
 

@@ -2054,15 +2054,18 @@ type TCPRoute struct {
 	HealthCheck *HealthCheck `json:"healthCheck,omitempty" yaml:"healthCheck,omitempty"`
 	// Proxy Protocol Settings
 	ProxyProtocol *ProxyProtocol `json:"proxyProtocol,omitempty" yaml:"proxyProtocol,omitempty"`
+	// Metadata is used to enrich envoy route metadata with user and provider-specific information
+	Metadata *ResourceMetadata `json:"metadata,omitempty" yaml:"metadata,omitempty"`
 	// settings of upstream connection
 	BackendConnection *BackendConnection `json:"backendConnection,omitempty" yaml:"backendConnection,omitempty"`
 	// Preconnect configures preconnecting to upstream endpoints
 	// +optional
 	Preconnect *Preconnect `json:"preconnect,omitempty" yaml:"preconnect,omitempty"`
 	// DNS is used to configure how DNS resolution is handled for the route
-	DNS *DNS `json:"dns,omitempty" yaml:"dns,omitempty"`
-	// Authorization defines the schema for the authorization.
+	DNS           *DNS           `json:"dns,omitempty" yaml:"dns,omitempty"`
 	Authorization *Authorization `json:"authorization,omitempty" yaml:"authorization,omitempty"`
+	// Metrics defines the schema for metric stat configuration.
+	Metrics *egv1a1.BackendMetrics `json:"metrics,omitempty" yaml:"metrics,omitempty"`
 }
 
 // TLS holds information for configuring TLS on a listener
@@ -3259,6 +3262,8 @@ type ResourceMetadata struct {
 	Annotations map[string]string `json:"annotations,omitempty" yaml:"annotations,omitempty"`
 	// SectionName is the name of a section of a resource
 	SectionName string `json:"sectionName,omitempty" yaml:"sectionName,omitempty"`
+	// RuleIndex is the index of a rule of a resource
+	RuleIndex int `json:"ruleIndex,omitempty" yaml:"ruleIndex,omitempty"`
 }
 
 // RequestBuffer holds the information for the Buffer filter

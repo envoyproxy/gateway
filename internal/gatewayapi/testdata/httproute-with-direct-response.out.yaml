@@ -290,6 +290,7 @@ xdsIR:
           kind: HTTPRoute
           name: direct-response
           namespace: default
+          ruleIndex: 1
         name: httproute/default/direct-response/rule/1/match/0/*_envoyproxy_io
         pathMatch:
           distinct: false

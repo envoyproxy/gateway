@@ -21,6 +21,7 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	egv1a1validation "github.com/envoyproxy/gateway/api/v1alpha1/validation"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -889,6 +890,11 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy, r
 		errs = errors.Join(errs, err)
 	}
 
+	if err = validateTelemetry(policy.Spec.Telemetry); err != nil {
+		err = perr.WithMessage(err, "Telemetry")
+		errs = errors.Join(errs, err)
+	}
+
 	cp = buildCompression(policy.Spec.Compression, policy.Spec.Compressor)
 	httpUpgrade = buildHTTPProtocolUpgradeConfig(policy.Spec.HTTPUpgrade)
 
@@ -1612,4 +1618,16 @@ func buildHTTPProtocolUpgradeConfig(cfgs []*egv1a1.ProtocolUpgradeConfig) []ir.H
 	}
 
 	return result
+}
+
+func validateTelemetry(telemetry *egv1a1.BackendTelemetry) error {
+	if telemetry == nil {
+		return nil
+	}
+
+	if telemetry.Metrics != nil && telemetry.Metrics.RouteStatName != "" {
+		return egv1a1validation.ValidateRouteStatName(telemetry.Metrics.RouteStatName)
+	}
+
+	return nil
 }
