@@ -2066,14 +2066,8 @@ type TCPRoute struct {
 	// +optional
 	Preconnect *Preconnect `json:"preconnect,omitempty" yaml:"preconnect,omitempty"`
 	// DNS is used to configure how DNS resolution is handled for the route
-<<<<<<< HEAD
 	DNS           *DNS           `json:"dns,omitempty" yaml:"dns,omitempty"`
 	Authorization *Authorization `json:"authorization,omitempty" yaml:"authorization,omitempty"`
-	// Metrics defines the schema for metric stat configuration.
-	Metrics *egv1a1.BackendMetrics `json:"metrics,omitempty" yaml:"metrics,omitempty"`
-=======
-	DNS *DNS `json:"dns,omitempty" yaml:"dns,omitempty"`
->>>>>>> 25ffbd49d (delete RULE_NAME and ROUTE_NUMBER)
 }
 
 // TLS holds information for configuring TLS on a listener

@@ -724,7 +724,6 @@ func (t *Translator) applyTrafficFeatureToRoute(route RouteContext,
 				continue
 			}
 			if strings.HasPrefix(r.Destination.Name, prefix) {
-<<<<<<< HEAD
 				// only set attributes which weren't already set by a more
 				// specific policy
 				setIfNil(&r.LoadBalancer, tf.LoadBalancer)
@@ -735,17 +734,7 @@ func (t *Translator) applyTrafficFeatureToRoute(route RouteContext,
 				setIfNil(&r.Timeout, tf.Timeout)
 				setIfNil(&r.BackendConnection, tf.BackendConnection)
 				setIfNil(&r.DNS, tf.DNS)
-=======
-				r.LoadBalancer = tf.LoadBalancer
-				r.ProxyProtocol = tf.ProxyProtocol
-				r.HealthCheck = tf.HealthCheck
-				r.CircuitBreaker = tf.CircuitBreaker
-				r.TCPKeepalive = tf.TCPKeepalive
-				r.Timeout = tf.Timeout
-				r.BackendConnection = tf.BackendConnection
-				r.DNS = tf.DNS
 				r.StatName = buildRouteStatName(routeStatName, r.Metadata)
->>>>>>> 25ffbd49d (delete RULE_NAME and ROUTE_NUMBER)
 			}
 		}
 	}
@@ -785,16 +774,13 @@ func (t *Translator) applyTrafficFeatureToRoute(route RouteContext,
 			}
 			// Apply if there is a match
 			if strings.HasPrefix(r.Name, prefix) {
-<<<<<<< HEAD
+				r.StatName = buildRouteStatName(routeStatName, r.Metadata)
 				// If any of the features are already set, it means that a more specific
 				// policy (targeting xRoute rule) has already set it, so we skip it.
 				if r.Traffic != nil || r.UseClientProtocol != nil {
 					continue
 				}
 
-=======
-				r.StatName = buildRouteStatName(routeStatName, r.Metadata)
->>>>>>> 25ffbd49d (delete RULE_NAME and ROUTE_NUMBER)
 				if errs != nil {
 					// Return a 500 direct response
 					r.DirectResponse = &ir.CustomResponse{
@@ -1674,6 +1660,6 @@ func buildRouteStatName(routeStatName string, metadata *ir.ResourceMetadata) *st
 	} else {
 		statName = strings.ReplaceAll(statName, egv1a1.StatFormatterRouteRuleName, metadata.SectionName)
 	}
-	statName = strings.ReplaceAll(statName, egv1a1.StatFormatterRouteRuleNumber, fmt.Sprintf("%d", metadata.RuleIndex))
+
 	return &statName
 }
