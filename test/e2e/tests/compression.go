@@ -181,7 +181,7 @@ func testCompressionChooseFirst(t *testing.T, suite *suite.ConformanceTestSuite,
 		Request: http.Request{
 			Path: "/compression-choose-first-" + encoding,
 			Headers: map[string]string{
-				"Accept-encoding": "gzip, brotli, zstd",
+				"Accept-encoding": "gzip, br, zstd",
 			},
 		},
 		Response: http.Response{
