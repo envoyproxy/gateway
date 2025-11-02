@@ -13,14 +13,9 @@ http:
       kind: HTTPRoute
       name: httproute-1
       namespace: default
-      sectionName: first
-      ruleIndex: 0
     pathMatch:
       prefix: "/first/"
-    traffic:
-      telemetry:
-        metrics:
-          routeStatName: "route=/test,kind=%ROUTE_KIND%,ns=%ROUTE_NAMESPACE%,name=%ROUTE_NAME%,ruleName=%ROUTE_RULE_NAME%,ruleNumber=%ROUTE_RULE_NUMBER%"
+    statName: "route=/first,kind=HTTPRoute,ns=default,name=httproute-1"
     hostname: "*"
     destination:
       name: "first-route-dest"
@@ -49,16 +44,11 @@ http:
     hostname: "*"
     metadata:
       kind: HTTPRoute
-      name: httproute-1
+      name: httproute-2
       namespace: default
-      sectionName: second
-      ruleIndex: 1
     pathMatch:
       prefix: "/second/"
-    traffic:
-      telemetry:
-        metrics:
-          routeStatName: "route=/test,kind=%ROUTE_KIND%,ns=%ROUTE_NAMESPACE%,name=%ROUTE_NAME%,ruleName=%ROUTE_RULE_NAME%,ruleNumber=%ROUTE_RULE_NUMBER%"
+    statName: "route=/second,kind=HTTPRoute,ns=default,name=httproute-2"
     destination:
       name: "second-route-dest"
       settings:

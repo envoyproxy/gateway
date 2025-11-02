@@ -12,16 +12,24 @@
 package extension
 
 import (
+<<<<<<< HEAD
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
 
 	v31 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
 	v32 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
+=======
+	v32 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
+	v31 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
+>>>>>>> 25ffbd49d (delete RULE_NAME and ROUTE_NUMBER)
 	v3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	v33 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	reflect "reflect"
+	sync "sync"
+	unsafe "unsafe"
 )
 
 const (

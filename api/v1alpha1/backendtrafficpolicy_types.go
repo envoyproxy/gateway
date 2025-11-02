@@ -139,12 +139,11 @@ type BackendMetrics struct {
 	// %ROUTE_NAME%: name of Gateway API xRoute resource
 	// %ROUTE_NAMESPACE%: namespace of Gateway API xRoute resource
 	// %ROUTE_KIND%: kind of Gateway API xRoute resource
-	// %ROUTE_RULE_NAME%: name of the Gateway API xRoute section
-	// %ROUTE_RULE_NUMBER%: sequence number of the Gateway API xRoute resource
-	// Example: %ROUTE_KIND%/%ROUTE_NAMESPACE%/%ROUTE_NAME%/rule/%ROUTE_RULE_NUMBER% => httproute/my-ns/my-route/rule/0
+	// Example: %ROUTE_KIND%/%ROUTE_NAMESPACE%/%ROUTE_NAME% => httproute/my-ns/my-route
+	// Disabled by default.
 	//
 	// +optional
-	RouteStatName string `json:"routeStatName,omitempty"`
+	RouteStatName *string `json:"routeStatName,omitempty"`
 }
 
 // ProtocolUpgradeConfig specifies the configuration for protocol upgrades.
