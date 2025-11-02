@@ -55,9 +55,9 @@ var CompressionTest = suite.ConformanceTest{
 			testCompression(t, suite, egv1a1.ZstdCompressorType)
 		})
 
-		t.Run("HTTPRoute with compression and zstd chooseFirst", func(t *testing.T) {
+		t.Run("HTTPRoute with compression zstd chooseFirst", func(t *testing.T) {
 			ns := "gateway-conformance-infra"
-			routeNN := types.NamespacedName{Name: "compression-choose-first", Namespace: ns}
+			routeNN := types.NamespacedName{Name: "compression-zstd-choosefirst", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 			gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
 
@@ -71,7 +71,7 @@ var CompressionTest = suite.ConformanceTest{
 
 			expectedResponse := http.ExpectedResponse{
 				Request: http.Request{
-					Path: "/compression-choose-first",
+					Path: "/compression-zstd-choosefirst",
 					Headers: map[string]string{
 						"Accept-encoding": "gzip, brotli, zstd",
 					},
