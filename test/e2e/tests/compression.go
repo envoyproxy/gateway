@@ -197,8 +197,6 @@ func testCompressionChooseFirst(t *testing.T, suite *suite.ConformanceTestSuite,
 }
 
 func testCompressionWithRemovedHeader(t *testing.T, suite *suite.ConformanceTestSuite, compressionType egv1a1.CompressorType) {
-	encoding := ContentEncoding(compressionType)
-
 	ns := "gateway-conformance-infra"
 	routeNN := types.NamespacedName{Name: "compression-remove-accept-encoding-header", Namespace: ns}
 	gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
@@ -212,6 +210,7 @@ func testCompressionWithRemovedHeader(t *testing.T, suite *suite.ConformanceTest
 	}
 	BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "compression-remove-accept-encoding-header", Namespace: ns}, suite.ControllerName, ancestorRef)
 
+	encoding := ContentEncoding(compressionType)
 	path := "/compression-remove-accept-encoding-header"
 	expectedResponse := http.ExpectedResponse{
 		Request: http.Request{
