@@ -13,6 +13,7 @@ bug fixes: |
   Fix 500 errors caused by partially invalid BackendRefs; traffic is now correctly routed between valid backends and 500 responses according to their configured weights.
   Fixed certificate SAN overlap detection in gateway listeners.
   Fix panic with request mirror with GRPCRoute.
+  Fixed Listener port limit typo 65353 -> 65535.
 
 # Enhancements that improve performance.
 performance improvements: |
