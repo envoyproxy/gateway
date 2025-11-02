@@ -10,7 +10,7 @@ security updates: |
 new features: |
 
 bug fixes: |
-
+ - Fixed Listener port limit typo 65353 -> 65535.
 # Enhancements that improve performance.
 performance improvements: |
 
