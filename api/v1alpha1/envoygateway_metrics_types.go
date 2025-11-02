@@ -20,7 +20,6 @@ type EnvoyGatewayTraces struct {
 	// Sink defines the trace sink where traces are sent to.
 	Sink EnvoyGatewayTraceSink `json:"sink,omitempty"`
 	// Disable disables the traces.
-	// TODO: implement disability
 	Disable bool `json:"enable,omitempty"`
 	// SamplingRate controls the rate at which traces are sampled.
 	// Defaults to 1.0 (100% sampling). Valid values are between 0.0 and 1.0.
@@ -42,7 +41,6 @@ type EnvoyGatewayTraces struct {
 type BatchSpanProcessorConfig struct {
 	// BatchTimeout is the maximum duration for constructing a batch. Spans are
 	// exported when either the batch is full or this timeout is reached.
-	// Default is 5s. For e2e testing, a lower value like 100ms is recommended.
 	//
 	// +optional
 	BatchTimeout *gwapiv1.Duration `json:"batchTimeout,omitempty"`
@@ -110,7 +108,6 @@ type EnvoyGatewayTracingSink struct {
 	// If ExportTimeout is less than or equal to zero, 30 seconds
 	// is used as the default.
 	ExportTimeout *gwapiv1.Duration `json:"exportTimeout,omitempty"`
-	// TODO sampling rate
 }
 
 type EnvoyGatewayOpenTelemetrySink struct {
