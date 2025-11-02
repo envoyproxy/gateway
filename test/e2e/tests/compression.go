@@ -96,7 +96,7 @@ var CompressionTest = suite.ConformanceTest{
 }
 
 var CompressionChooseFirstTestBrotli = suite.ConformanceTest{
-	ShortName:   "Compression-Choose-First",
+	ShortName:   "Compression-Choose-First-Brotli",
 	Description: "Test response compression chooseFirst on HTTPRoute",
 	Manifests:   []string{"testdata/compression-choose-first-br.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {

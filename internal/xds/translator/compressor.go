@@ -54,11 +54,14 @@ func (*compressor) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTT
 		if route.Traffic != nil && route.Traffic.Compression != nil {
 			for _, irComp := range route.Traffic.Compression {
 				filterName := compressorFilterName(irComp.Type)
-				if !hcmContainsFilter(mgr, filterName) {
-					if filter, err = buildCompressorFilter(irComp); err != nil {
-						return err
-					}
+				if filter, err = buildCompressorFilter(irComp); err != nil {
+					return err
+				}
+				existingIdx := findFilterIndex(mgr, filterName)
+				if existingIdx == -1 {
 					mgr.HttpFilters = append(mgr.HttpFilters, filter)
+				} else if !filtersEqual(mgr.HttpFilters[existingIdx], filter) {
+					mgr.HttpFilters[existingIdx] = filter
 				}
 			}
 		}
