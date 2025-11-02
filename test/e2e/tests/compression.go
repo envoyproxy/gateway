@@ -41,7 +41,7 @@ func init() {
 		CompressionChooseFirstTestBrotli,
 		CompressionChooseFirstTestGzip,
 		CompressionChooseFirstTestZstd,
-		CompressionRemoveAcceptEncodingHeaderTest
+		CompressionRemoveAcceptEncodingHeaderTest,
 	)
 }
 
