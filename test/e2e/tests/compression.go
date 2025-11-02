@@ -247,8 +247,16 @@ func testCompressionWithRemovedHeader(t *testing.T, suite *suite.ConformanceTest
 		},
 		Response: http.Response{
 			StatusCodes: []int{200},
-			Headers: map[string]string{
-				"content-encoding": encoding,
+			// Verify that response from the backend is NOT compressed
+			AbsentHeaders: []string{"content-encoding"},
+		},
+		ExpectedResponse: &http.ExpectedResponse{
+			Response: http.Response{
+				StatusCodes: []int{200},
+				// Verify that response to the client IS compressed
+				Headers: map[string]string{
+					"content-encoding": encoding,
+				},
 			},
 		},
 		Namespace: ns,
