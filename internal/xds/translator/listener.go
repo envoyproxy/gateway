@@ -644,9 +644,6 @@ func (t *Translator) addXdsTCPFilterChain(
 		statPrefix = strings.Join([]string{statPrefix, strconv.Itoa(int(xdsListener.Address.GetSocketAddress().GetPortValue()))}, "-")
 	}
 
-	// Append port to the statPrefix.
-	statPrefix = strings.Join([]string{statPrefix, strconv.Itoa(int(xdsListener.Address.GetSocketAddress().GetPortValue()))}, "-")
-
 	filterChain, err := buildTCPFilterChain(
 		irRoute,
 		clusterName,

@@ -298,11 +298,10 @@ func validateFilterOrder(filterOrder []egv1a1.FilterPosition) error {
 
 func ValidateRouteStatName(routeStatName string) error {
 	supportedOperators := map[string]bool{
-		egv1a1.StatFormatterRouteName:       true,
-		egv1a1.StatFormatterRouteNamespace:  true,
-		egv1a1.StatFormatterRouteKind:       true,
-		egv1a1.StatFormatterRouteRuleName:   true,
-		egv1a1.StatFormatterRouteRuleNumber: true,
+		egv1a1.StatFormatterRouteName:      true,
+		egv1a1.StatFormatterRouteNamespace: true,
+		egv1a1.StatFormatterRouteKind:      true,
+		egv1a1.StatFormatterRouteRuleName:  true,
 	}
 
 	if err := validateStatName(routeStatName, supportedOperators); err != nil {
