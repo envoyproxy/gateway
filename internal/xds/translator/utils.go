@@ -17,6 +17,7 @@ import (
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
+	protobuf "google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
 	"k8s.io/utils/ptr"
 
@@ -134,6 +135,25 @@ func hcmContainsFilter(mgr *hcmv3.HttpConnectionManager, filterName string) bool
 		}
 	}
 	return false
+}
+
+// findFilterIndex finds the index of a filter with the given name in the HTTP filters list.
+// Returns the index if found, -1 otherwise.
+func findFilterIndex(mgr *hcmv3.HttpConnectionManager, filterName string) int {
+	for i, existingFilter := range mgr.HttpFilters {
+		if existingFilter.Name == filterName {
+			return i
+		}
+	}
+	return -1
+}
+
+// filtersEqual checks if two HTTP filters are equal by comparing their proto representation.
+func filtersEqual(filter1, filter2 *hcmv3.HttpFilter) bool {
+	if filter1 == nil || filter2 == nil {
+		return filter1 == filter2
+	}
+	return protobuf.Equal(filter1, filter2)
 }
 
 func createExtServiceXDSCluster(rd *ir.RouteDestination, traffic *ir.TrafficFeatures, tCtx *types.ResourceVersionTable) error {

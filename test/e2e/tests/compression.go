@@ -175,7 +175,7 @@ func testCompressionChooseFirst(t *testing.T, suite *suite.ConformanceTestSuite,
 		Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
 		Name:      gwapiv1.ObjectName(gwNN.Name),
 	}
-	BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "compression-choose-first", Namespace: ns}, suite.ControllerName, ancestorRef)
+	BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "compression-choose-first-" + encoding, Namespace: ns}, suite.ControllerName, ancestorRef)
 
 	expectedResponse := http.ExpectedResponse{
 		Request: http.Request{
@@ -223,8 +223,8 @@ func testCompressionWithRemovedHeader(t *testing.T, suite *suite.ConformanceTest
 			Request: http.Request{
 				Path: path,
 			},
-			// Verify that Accept-Encoding header was NOT forwarded to the backend
-			AbsentHeaders: []string{"Accept-Encoding"},
+			// Verify that Accept-encoding header was NOT forwarded to the backend
+			AbsentHeaders: []string{"Accept-encoding"},
 		},
 		Response: http.Response{
 			StatusCodes: []int{200},
