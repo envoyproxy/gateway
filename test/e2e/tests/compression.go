@@ -35,9 +35,14 @@ import (
 )
 
 func init() {
-	ConformanceTests = append(ConformanceTests, CompressionTest,
-		CompressionChooseFirstTest,
-		CompressionRemoveAcceptEncodingHeaderTest)
+	ConformanceTests = append(
+		ConformanceTests,
+		CompressionTest,
+		CompressionChooseFirstTestBrotli,
+		CompressionChooseFirstTestGzip,
+		CompressionChooseFirstTestZstd,
+		CompressionRemoveAcceptEncodingHeaderTest
+	)
 }
 
 var CompressionTest = suite.ConformanceTest{
@@ -90,19 +95,33 @@ var CompressionTest = suite.ConformanceTest{
 	},
 }
 
-var CompressionChooseFirstTest = suite.ConformanceTest{
+var CompressionChooseFirstTestBrotli = suite.ConformanceTest{
 	ShortName:   "Compression-Choose-First",
 	Description: "Test response compression chooseFirst on HTTPRoute",
-	Manifests:   []string{"testdata/compression-choose-first.yaml"},
+	Manifests:   []string{"testdata/compression-choose-first-br.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		t.Run("HTTPRoute with brotli compression chooseFirst", func(t *testing.T) {
 			testCompressionChooseFirst(t, suite, egv1a1.BrotliCompressorType)
 		})
+	},
+}
 
+var CompressionChooseFirstTestGzip = suite.ConformanceTest{
+	ShortName:   "Compression-Choose-First-Gzip",
+	Description: "Test response compression chooseFirst on HTTPRoute",
+	Manifests:   []string{"testdata/compression-choose-first-gzip.yaml"},
+	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		t.Run("HTTPRoute with gzip compression chooseFirst", func(t *testing.T) {
 			testCompressionChooseFirst(t, suite, egv1a1.GzipCompressorType)
 		})
+	},
+}
 
+var CompressionChooseFirstTestZstd = suite.ConformanceTest{
+	ShortName:   "Compression-Choose-First-Zstd",
+	Description: "Test response compression chooseFirst on HTTPRoute",
+	Manifests:   []string{"testdata/compression-choose-first-zstd.yaml"},
+	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		t.Run("HTTPRoute with zstd compression chooseFirst", func(t *testing.T) {
 			testCompressionChooseFirst(t, suite, egv1a1.ZstdCompressorType)
 		})
