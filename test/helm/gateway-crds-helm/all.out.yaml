@@ -21810,6 +21810,53 @@ spec:
                   LoadBalancer policy to apply when routing traffic from the gateway to
                   the backend endpoints. Defaults to `LeastRequest`.
                 properties:
+                  clientSideWeightedRoundRobin:
+                    description: |-
+                      ClientSideWeightedRoundRobin defines the configuration when the load balancer type is
+                      set to ClientSideWeightedRoundRobin.
+                    properties:
+                      blackoutPeriod:
+                        description: |-
+                          A given endpoint must report load metrics continuously for at least this long before the endpoint weight will be used.
+                          Default is 10s.
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                        type: string
+                      enableOOBLoadReport:
+                        description: |-
+                          Whether to enable out-of-band utilization reporting collection from the endpoints.
+                          By default, per-request utilization reporting is used.
+                        type: boolean
+                      errorUtilizationPenalty:
+                        description: |-
+                          The multiplier used to adjust endpoint weights with the error rate calculated as eps/qps.
+                          Must be non-negative. Default is 1.0.
+                        minimum: 0
+                        type: number
+                      metricNamesForComputingUtilization:
+                        description: |-
+                          Metric names used to compute utilization if application_utilization is not set.
+                          For map fields in ORCA proto, use the form "<map_field>.<key>", e.g., "named_metrics.foo".
+                        items:
+                          type: string
+                        type: array
+                      oobReportingPeriod:
+                        description: |-
+                          Load reporting interval to request from the server. Used only when enableOOBLoadReport is true.
+                          Default is 10s; server may not provide reports as frequently as requested.
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                        type: string
+                      weightExpirationPeriod:
+                        description: If a given endpoint has not reported load metrics
+                          in this long, stop using the reported weight. Defaults to
+                          3m.
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                        type: string
+                      weightUpdatePeriod:
+                        description: How often endpoint weights are recalculated.
+                          Values less than 100ms are capped at 100ms. Default 1s.
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                        type: string
+                    type: object
                   consistentHash:
                     description: |-
                       ConsistentHash defines the configuration when the load balancer type is
@@ -21955,12 +22002,14 @@ spec:
                       "ConsistentHash",
                       "LeastRequest",
                       "Random",
-                      "RoundRobin".
+                      "RoundRobin",
+                      "ClientSideWeightedRoundRobin".
                     enum:
                     - ConsistentHash
                     - LeastRequest
                     - Random
                     - RoundRobin
+                    - ClientSideWeightedRoundRobin
                     type: string
                   zoneAware:
                     description: ZoneAware defines the configuration related to the
@@ -22006,14 +22055,18 @@ spec:
                     field needs to be set.
                   rule: 'self.type == ''ConsistentHash'' ? has(self.consistentHash)
                     : !has(self.consistentHash)'
+                - message: If LoadBalancer type is ClientSideWeightedRoundRobin, clientSideWeightedRoundRobin
+                    field needs to be set.
+                  rule: 'self.type == ''ClientSideWeightedRoundRobin'' ? has(self.clientSideWeightedRoundRobin)
+                    : !has(self.clientSideWeightedRoundRobin)'
                 - message: Currently SlowStart is only supported for RoundRobin and
                     LeastRequest load balancers.
-                  rule: 'self.type in [''Random'', ''ConsistentHash''] ? !has(self.slowStart)
-                    : true '
+                  rule: 'self.type in [''Random'', ''ConsistentHash'', ''ClientSideWeightedRoundRobin'']
+                    ? !has(self.slowStart) : true '
                 - message: Currently ZoneAware is only supported for LeastRequest,
                     Random, and RoundRobin load balancers.
-                  rule: 'self.type == ''ConsistentHash'' ? !has(self.zoneAware) :
-                    true '
+                  rule: 'self.type in [''ConsistentHash'', ''ClientSideWeightedRoundRobin'']
+                    ? !has(self.zoneAware) : true '
               mergeType:
                 description: |-
                   MergeType determines how this configuration is merged with existing BackendTrafficPolicy
@@ -26332,6 +26385,54 @@ spec:
                             LoadBalancer policy to apply when routing traffic from the gateway to
                             the backend endpoints. Defaults to `LeastRequest`.
                           properties:
+                            clientSideWeightedRoundRobin:
+                              description: |-
+                                ClientSideWeightedRoundRobin defines the configuration when the load balancer type is
+                                set to ClientSideWeightedRoundRobin.
+                              properties:
+                                blackoutPeriod:
+                                  description: |-
+                                    A given endpoint must report load metrics continuously for at least this long before the endpoint weight will be used.
+                                    Default is 10s.
+                                  pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                  type: string
+                                enableOOBLoadReport:
+                                  description: |-
+                                    Whether to enable out-of-band utilization reporting collection from the endpoints.
+                                    By default, per-request utilization reporting is used.
+                                  type: boolean
+                                errorUtilizationPenalty:
+                                  description: |-
+                                    The multiplier used to adjust endpoint weights with the error rate calculated as eps/qps.
+                                    Must be non-negative. Default is 1.0.
+                                  minimum: 0
+                                  type: number
+                                metricNamesForComputingUtilization:
+                                  description: |-
+                                    Metric names used to compute utilization if application_utilization is not set.
+                                    For map fields in ORCA proto, use the form "<map_field>.<key>", e.g., "named_metrics.foo".
+                                  items:
+                                    type: string
+                                  type: array
+                                oobReportingPeriod:
+                                  description: |-
+                                    Load reporting interval to request from the server. Used only when enableOOBLoadReport is true.
+                                    Default is 10s; server may not provide reports as frequently as requested.
+                                  pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                  type: string
+                                weightExpirationPeriod:
+                                  description: If a given endpoint has not reported
+                                    load metrics in this long, stop using the reported
+                                    weight. Defaults to 3m.
+                                  pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                  type: string
+                                weightUpdatePeriod:
+                                  description: How often endpoint weights are recalculated.
+                                    Values less than 100ms are capped at 100ms. Default
+                                    1s.
+                                  pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                  type: string
+                              type: object
                             consistentHash:
                               description: |-
                                 ConsistentHash defines the configuration when the load balancer type is
@@ -26482,12 +26583,14 @@ spec:
                                 "ConsistentHash",
                                 "LeastRequest",
                                 "Random",
-                                "RoundRobin".
+                                "RoundRobin",
+                                "ClientSideWeightedRoundRobin".
                               enum:
                               - ConsistentHash
                               - LeastRequest
                               - Random
                               - RoundRobin
+                              - ClientSideWeightedRoundRobin
                               type: string
                             zoneAware:
                               description: ZoneAware defines the configuration related
@@ -26535,14 +26638,18 @@ spec:
                               field needs to be set.
                             rule: 'self.type == ''ConsistentHash'' ? has(self.consistentHash)
                               : !has(self.consistentHash)'
+                          - message: If LoadBalancer type is ClientSideWeightedRoundRobin,
+                              clientSideWeightedRoundRobin field needs to be set.
+                            rule: 'self.type == ''ClientSideWeightedRoundRobin'' ?
+                              has(self.clientSideWeightedRoundRobin) : !has(self.clientSideWeightedRoundRobin)'
                           - message: Currently SlowStart is only supported for RoundRobin
                               and LeastRequest load balancers.
-                            rule: 'self.type in [''Random'', ''ConsistentHash''] ?
-                              !has(self.slowStart) : true '
+                            rule: 'self.type in [''Random'', ''ConsistentHash'', ''ClientSideWeightedRoundRobin'']
+                              ? !has(self.slowStart) : true '
                           - message: Currently ZoneAware is only supported for LeastRequest,
                               Random, and RoundRobin load balancers.
-                            rule: 'self.type == ''ConsistentHash'' ? !has(self.zoneAware)
-                              : true '
+                            rule: 'self.type in [''ConsistentHash'', ''ClientSideWeightedRoundRobin'']
+                              ? !has(self.zoneAware) : true '
                         proxyProtocol:
                           description: ProxyProtocol enables the Proxy Protocol when
                             communicating with the backend.
@@ -39935,6 +40042,57 @@ spec:
                                               LoadBalancer policy to apply when routing traffic from the gateway to
                                               the backend endpoints. Defaults to `LeastRequest`.
                                             properties:
+                                              clientSideWeightedRoundRobin:
+                                                description: |-
+                                                  ClientSideWeightedRoundRobin defines the configuration when the load balancer type is
+                                                  set to ClientSideWeightedRoundRobin.
+                                                properties:
+                                                  blackoutPeriod:
+                                                    description: |-
+                                                      A given endpoint must report load metrics continuously for at least this long before the endpoint weight will be used.
+                                                      Default is 10s.
+                                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                                    type: string
+                                                  enableOOBLoadReport:
+                                                    description: |-
+                                                      Whether to enable out-of-band utilization reporting collection from the endpoints.
+                                                      By default, per-request utilization reporting is used.
+                                                    type: boolean
+                                                  errorUtilizationPenalty:
+                                                    description: |-
+                                                      The multiplier used to adjust endpoint weights with the error rate calculated as eps/qps.
+                                                      Must be non-negative. Default is 1.0.
+                                                    minimum: 0
+                                                    type: number
+                                                  metricNamesForComputingUtilization:
+                                                    description: |-
+                                                      Metric names used to compute utilization if application_utilization is not set.
+                                                      For map fields in ORCA proto, use the form "<map_field>.<key>", e.g., "named_metrics.foo".
+                                                    items:
+                                                      type: string
+                                                    type: array
+                                                  oobReportingPeriod:
+                                                    description: |-
+                                                      Load reporting interval to request from the server. Used only when enableOOBLoadReport is true.
+                                                      Default is 10s; server may not provide reports as frequently as requested.
+                                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                                    type: string
+                                                  weightExpirationPeriod:
+                                                    description: If a given endpoint
+                                                      has not reported load metrics
+                                                      in this long, stop using the
+                                                      reported weight. Defaults to
+                                                      3m.
+                                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                                    type: string
+                                                  weightUpdatePeriod:
+                                                    description: How often endpoint
+                                                      weights are recalculated. Values
+                                                      less than 100ms are capped at
+                                                      100ms. Default 1s.
+                                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                                    type: string
+                                                type: object
                                               consistentHash:
                                                 description: |-
                                                   ConsistentHash defines the configuration when the load balancer type is
@@ -40097,12 +40255,14 @@ spec:
                                                   "ConsistentHash",
                                                   "LeastRequest",
                                                   "Random",
-                                                  "RoundRobin".
+                                                  "RoundRobin",
+                                                  "ClientSideWeightedRoundRobin".
                                                 enum:
                                                 - ConsistentHash
                                                 - LeastRequest
                                                 - Random
                                                 - RoundRobin
+                                                - ClientSideWeightedRoundRobin
                                                 type: string
                                               zoneAware:
                                                 description: ZoneAware defines the
@@ -40156,15 +40316,23 @@ spec:
                                                 consistentHash field needs to be set.
                                               rule: 'self.type == ''ConsistentHash''
                                                 ? has(self.consistentHash) : !has(self.consistentHash)'
+                                            - message: If LoadBalancer type is ClientSideWeightedRoundRobin,
+                                                clientSideWeightedRoundRobin field
+                                                needs to be set.
+                                              rule: 'self.type == ''ClientSideWeightedRoundRobin''
+                                                ? has(self.clientSideWeightedRoundRobin)
+                                                : !has(self.clientSideWeightedRoundRobin)'
                                             - message: Currently SlowStart is only
                                                 supported for RoundRobin and LeastRequest
                                                 load balancers.
-                                              rule: 'self.type in [''Random'', ''ConsistentHash'']
+                                              rule: 'self.type in [''Random'', ''ConsistentHash'',
+                                                ''ClientSideWeightedRoundRobin'']
                                                 ? !has(self.slowStart) : true '
                                             - message: Currently ZoneAware is only
                                                 supported for LeastRequest, Random,
                                                 and RoundRobin load balancers.
-                                              rule: 'self.type == ''ConsistentHash''
+                                              rule: 'self.type in [''ConsistentHash'',
+                                                ''ClientSideWeightedRoundRobin'']
                                                 ? !has(self.zoneAware) : true '
                                           proxyProtocol:
                                             description: ProxyProtocol enables the
@@ -41142,6 +41310,57 @@ spec:
                                               LoadBalancer policy to apply when routing traffic from the gateway to
                                               the backend endpoints. Defaults to `LeastRequest`.
                                             properties:
+                                              clientSideWeightedRoundRobin:
+                                                description: |-
+                                                  ClientSideWeightedRoundRobin defines the configuration when the load balancer type is
+                                                  set to ClientSideWeightedRoundRobin.
+                                                properties:
+                                                  blackoutPeriod:
+                                                    description: |-
+                                                      A given endpoint must report load metrics continuously for at least this long before the endpoint weight will be used.
+                                                      Default is 10s.
+                                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                                    type: string
+                                                  enableOOBLoadReport:
+                                                    description: |-
+                                                      Whether to enable out-of-band utilization reporting collection from the endpoints.
+                                                      By default, per-request utilization reporting is used.
+                                                    type: boolean
+                                                  errorUtilizationPenalty:
+                                                    description: |-
+                                                      The multiplier used to adjust endpoint weights with the error rate calculated as eps/qps.
+                                                      Must be non-negative. Default is 1.0.
+                                                    minimum: 0
+                                                    type: number
+                                                  metricNamesForComputingUtilization:
+                                                    description: |-
+                                                      Metric names used to compute utilization if application_utilization is not set.
+                                                      For map fields in ORCA proto, use the form "<map_field>.<key>", e.g., "named_metrics.foo".
+                                                    items:
+                                                      type: string
+                                                    type: array
+                                                  oobReportingPeriod:
+                                                    description: |-
+                                                      Load reporting interval to request from the server. Used only when enableOOBLoadReport is true.
+                                                      Default is 10s; server may not provide reports as frequently as requested.
+                                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                                    type: string
+                                                  weightExpirationPeriod:
+                                                    description: If a given endpoint
+                                                      has not reported load metrics
+                                                      in this long, stop using the
+                                                      reported weight. Defaults to
+                                                      3m.
+                                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                                    type: string
+                                                  weightUpdatePeriod:
+                                                    description: How often endpoint
+                                                      weights are recalculated. Values
+                                                      less than 100ms are capped at
+                                                      100ms. Default 1s.
+                                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                                    type: string
+                                                type: object
                                               consistentHash:
                                                 description: |-
                                                   ConsistentHash defines the configuration when the load balancer type is
@@ -41304,12 +41523,14 @@ spec:
                                                   "ConsistentHash",
                                                   "LeastRequest",
                                                   "Random",
-                                                  "RoundRobin".
+                                                  "RoundRobin",
+                                                  "ClientSideWeightedRoundRobin".
                                                 enum:
                                                 - ConsistentHash
                                                 - LeastRequest
                                                 - Random
                                                 - RoundRobin
+                                                - ClientSideWeightedRoundRobin
                                                 type: string
                                               zoneAware:
                                                 description: ZoneAware defines the
@@ -41363,15 +41584,23 @@ spec:
                                                 consistentHash field needs to be set.
                                               rule: 'self.type == ''ConsistentHash''
                                                 ? has(self.consistentHash) : !has(self.consistentHash)'
+                                            - message: If LoadBalancer type is ClientSideWeightedRoundRobin,
+                                                clientSideWeightedRoundRobin field
+                                                needs to be set.
+                                              rule: 'self.type == ''ClientSideWeightedRoundRobin''
+                                                ? has(self.clientSideWeightedRoundRobin)
+                                                : !has(self.clientSideWeightedRoundRobin)'
                                             - message: Currently SlowStart is only
                                                 supported for RoundRobin and LeastRequest
                                                 load balancers.
-                                              rule: 'self.type in [''Random'', ''ConsistentHash'']
+                                              rule: 'self.type in [''Random'', ''ConsistentHash'',
+                                                ''ClientSideWeightedRoundRobin'']
                                                 ? !has(self.slowStart) : true '
                                             - message: Currently ZoneAware is only
                                                 supported for LeastRequest, Random,
                                                 and RoundRobin load balancers.
-                                              rule: 'self.type == ''ConsistentHash''
+                                              rule: 'self.type in [''ConsistentHash'',
+                                                ''ClientSideWeightedRoundRobin'']
                                                 ? !has(self.zoneAware) : true '
                                           proxyProtocol:
                                             description: ProxyProtocol enables the
@@ -42443,6 +42672,56 @@ spec:
                                         LoadBalancer policy to apply when routing traffic from the gateway to
                                         the backend endpoints. Defaults to `LeastRequest`.
                                       properties:
+                                        clientSideWeightedRoundRobin:
+                                          description: |-
+                                            ClientSideWeightedRoundRobin defines the configuration when the load balancer type is
+                                            set to ClientSideWeightedRoundRobin.
+                                          properties:
+                                            blackoutPeriod:
+                                              description: |-
+                                                A given endpoint must report load metrics continuously for at least this long before the endpoint weight will be used.
+                                                Default is 10s.
+                                              pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                              type: string
+                                            enableOOBLoadReport:
+                                              description: |-
+                                                Whether to enable out-of-band utilization reporting collection from the endpoints.
+                                                By default, per-request utilization reporting is used.
+                                              type: boolean
+                                            errorUtilizationPenalty:
+                                              description: |-
+                                                The multiplier used to adjust endpoint weights with the error rate calculated as eps/qps.
+                                                Must be non-negative. Default is 1.0.
+                                              minimum: 0
+                                              type: number
+                                            metricNamesForComputingUtilization:
+                                              description: |-
+                                                Metric names used to compute utilization if application_utilization is not set.
+                                                For map fields in ORCA proto, use the form "<map_field>.<key>", e.g., "named_metrics.foo".
+                                              items:
+                                                type: string
+                                              type: array
+                                            oobReportingPeriod:
+                                              description: |-
+                                                Load reporting interval to request from the server. Used only when enableOOBLoadReport is true.
+                                                Default is 10s; server may not provide reports as frequently as requested.
+                                              pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                              type: string
+                                            weightExpirationPeriod:
+                                              description: If a given endpoint has
+                                                not reported load metrics in this
+                                                long, stop using the reported weight.
+                                                Defaults to 3m.
+                                              pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                              type: string
+                                            weightUpdatePeriod:
+                                              description: How often endpoint weights
+                                                are recalculated. Values less than
+                                                100ms are capped at 100ms. Default
+                                                1s.
+                                              pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                              type: string
+                                          type: object
                                         consistentHash:
                                           description: |-
                                             ConsistentHash defines the configuration when the load balancer type is
@@ -42599,12 +42878,14 @@ spec:
                                             "ConsistentHash",
                                             "LeastRequest",
                                             "Random",
-                                            "RoundRobin".
+                                            "RoundRobin",
+                                            "ClientSideWeightedRoundRobin".
                                           enum:
                                           - ConsistentHash
                                           - LeastRequest
                                           - Random
                                           - RoundRobin
+                                          - ClientSideWeightedRoundRobin
                                           type: string
                                         zoneAware:
                                           description: ZoneAware defines the configuration
@@ -42657,15 +42938,22 @@ spec:
                                           consistentHash field needs to be set.
                                         rule: 'self.type == ''ConsistentHash'' ? has(self.consistentHash)
                                           : !has(self.consistentHash)'
+                                      - message: If LoadBalancer type is ClientSideWeightedRoundRobin,
+                                          clientSideWeightedRoundRobin field needs
+                                          to be set.
+                                        rule: 'self.type == ''ClientSideWeightedRoundRobin''
+                                          ? has(self.clientSideWeightedRoundRobin)
+                                          : !has(self.clientSideWeightedRoundRobin)'
                                       - message: Currently SlowStart is only supported
                                           for RoundRobin and LeastRequest load balancers.
-                                        rule: 'self.type in [''Random'', ''ConsistentHash'']
-                                          ? !has(self.slowStart) : true '
+                                        rule: 'self.type in [''Random'', ''ConsistentHash'',
+                                          ''ClientSideWeightedRoundRobin''] ? !has(self.slowStart)
+                                          : true '
                                       - message: Currently ZoneAware is only supported
                                           for LeastRequest, Random, and RoundRobin
                                           load balancers.
-                                        rule: 'self.type == ''ConsistentHash'' ? !has(self.zoneAware)
-                                          : true '
+                                        rule: 'self.type in [''ConsistentHash'', ''ClientSideWeightedRoundRobin'']
+                                          ? !has(self.zoneAware) : true '
                                     proxyProtocol:
                                       description: ProxyProtocol enables the Proxy
                                         Protocol when communicating with the backend.
@@ -43651,6 +43939,54 @@ spec:
                                   LoadBalancer policy to apply when routing traffic from the gateway to
                                   the backend endpoints. Defaults to `LeastRequest`.
                                 properties:
+                                  clientSideWeightedRoundRobin:
+                                    description: |-
+                                      ClientSideWeightedRoundRobin defines the configuration when the load balancer type is
+                                      set to ClientSideWeightedRoundRobin.
+                                    properties:
+                                      blackoutPeriod:
+                                        description: |-
+                                          A given endpoint must report load metrics continuously for at least this long before the endpoint weight will be used.
+                                          Default is 10s.
+                                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                        type: string
+                                      enableOOBLoadReport:
+                                        description: |-
+                                          Whether to enable out-of-band utilization reporting collection from the endpoints.
+                                          By default, per-request utilization reporting is used.
+                                        type: boolean
+                                      errorUtilizationPenalty:
+                                        description: |-
+                                          The multiplier used to adjust endpoint weights with the error rate calculated as eps/qps.
+                                          Must be non-negative. Default is 1.0.
+                                        minimum: 0
+                                        type: number
+                                      metricNamesForComputingUtilization:
+                                        description: |-
+                                          Metric names used to compute utilization if application_utilization is not set.
+                                          For map fields in ORCA proto, use the form "<map_field>.<key>", e.g., "named_metrics.foo".
+                                        items:
+                                          type: string
+                                        type: array
+                                      oobReportingPeriod:
+                                        description: |-
+                                          Load reporting interval to request from the server. Used only when enableOOBLoadReport is true.
+                                          Default is 10s; server may not provide reports as frequently as requested.
+                                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                        type: string
+                                      weightExpirationPeriod:
+                                        description: If a given endpoint has not reported
+                                          load metrics in this long, stop using the
+                                          reported weight. Defaults to 3m.
+                                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                        type: string
+                                      weightUpdatePeriod:
+                                        description: How often endpoint weights are
+                                          recalculated. Values less than 100ms are
+                                          capped at 100ms. Default 1s.
+                                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                        type: string
+                                    type: object
                                   consistentHash:
                                     description: |-
                                       ConsistentHash defines the configuration when the load balancer type is
@@ -43804,12 +44140,14 @@ spec:
                                       "ConsistentHash",
                                       "LeastRequest",
                                       "Random",
-                                      "RoundRobin".
+                                      "RoundRobin",
+                                      "ClientSideWeightedRoundRobin".
                                     enum:
                                     - ConsistentHash
                                     - LeastRequest
                                     - Random
                                     - RoundRobin
+                                    - ClientSideWeightedRoundRobin
                                     type: string
                                   zoneAware:
                                     description: ZoneAware defines the configuration
@@ -43860,14 +44198,20 @@ spec:
                                     consistentHash field needs to be set.
                                   rule: 'self.type == ''ConsistentHash'' ? has(self.consistentHash)
                                     : !has(self.consistentHash)'
+                                - message: If LoadBalancer type is ClientSideWeightedRoundRobin,
+                                    clientSideWeightedRoundRobin field needs to be
+                                    set.
+                                  rule: 'self.type == ''ClientSideWeightedRoundRobin''
+                                    ? has(self.clientSideWeightedRoundRobin) : !has(self.clientSideWeightedRoundRobin)'
                                 - message: Currently SlowStart is only supported for
                                     RoundRobin and LeastRequest load balancers.
-                                  rule: 'self.type in [''Random'', ''ConsistentHash'']
-                                    ? !has(self.slowStart) : true '
+                                  rule: 'self.type in [''Random'', ''ConsistentHash'',
+                                    ''ClientSideWeightedRoundRobin''] ? !has(self.slowStart)
+                                    : true '
                                 - message: Currently ZoneAware is only supported for
                                     LeastRequest, Random, and RoundRobin load balancers.
-                                  rule: 'self.type == ''ConsistentHash'' ? !has(self.zoneAware)
-                                    : true '
+                                  rule: 'self.type in [''ConsistentHash'', ''ClientSideWeightedRoundRobin'']
+                                    ? !has(self.zoneAware) : true '
                               proxyProtocol:
                                 description: ProxyProtocol enables the Proxy Protocol
                                   when communicating with the backend.
@@ -45832,6 +46176,54 @@ spec:
                               LoadBalancer policy to apply when routing traffic from the gateway to
                               the backend endpoints. Defaults to `LeastRequest`.
                             properties:
+                              clientSideWeightedRoundRobin:
+                                description: |-
+                                  ClientSideWeightedRoundRobin defines the configuration when the load balancer type is
+                                  set to ClientSideWeightedRoundRobin.
+                                properties:
+                                  blackoutPeriod:
+                                    description: |-
+                                      A given endpoint must report load metrics continuously for at least this long before the endpoint weight will be used.
+                                      Default is 10s.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                  enableOOBLoadReport:
+                                    description: |-
+                                      Whether to enable out-of-band utilization reporting collection from the endpoints.
+                                      By default, per-request utilization reporting is used.
+                                    type: boolean
+                                  errorUtilizationPenalty:
+                                    description: |-
+                                      The multiplier used to adjust endpoint weights with the error rate calculated as eps/qps.
+                                      Must be non-negative. Default is 1.0.
+                                    minimum: 0
+                                    type: number
+                                  metricNamesForComputingUtilization:
+                                    description: |-
+                                      Metric names used to compute utilization if application_utilization is not set.
+                                      For map fields in ORCA proto, use the form "<map_field>.<key>", e.g., "named_metrics.foo".
+                                    items:
+                                      type: string
+                                    type: array
+                                  oobReportingPeriod:
+                                    description: |-
+                                      Load reporting interval to request from the server. Used only when enableOOBLoadReport is true.
+                                      Default is 10s; server may not provide reports as frequently as requested.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                  weightExpirationPeriod:
+                                    description: If a given endpoint has not reported
+                                      load metrics in this long, stop using the reported
+                                      weight. Defaults to 3m.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                  weightUpdatePeriod:
+                                    description: How often endpoint weights are recalculated.
+                                      Values less than 100ms are capped at 100ms.
+                                      Default 1s.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                type: object
                               consistentHash:
                                 description: |-
                                   ConsistentHash defines the configuration when the load balancer type is
@@ -45983,12 +46375,14 @@ spec:
                                   "ConsistentHash",
                                   "LeastRequest",
                                   "Random",
-                                  "RoundRobin".
+                                  "RoundRobin",
+                                  "ClientSideWeightedRoundRobin".
                                 enum:
                                 - ConsistentHash
                                 - LeastRequest
                                 - Random
                                 - RoundRobin
+                                - ClientSideWeightedRoundRobin
                                 type: string
                               zoneAware:
                                 description: ZoneAware defines the configuration related
@@ -46038,14 +46432,19 @@ spec:
                                 field needs to be set.
                               rule: 'self.type == ''ConsistentHash'' ? has(self.consistentHash)
                                 : !has(self.consistentHash)'
+                            - message: If LoadBalancer type is ClientSideWeightedRoundRobin,
+                                clientSideWeightedRoundRobin field needs to be set.
+                              rule: 'self.type == ''ClientSideWeightedRoundRobin''
+                                ? has(self.clientSideWeightedRoundRobin) : !has(self.clientSideWeightedRoundRobin)'
                             - message: Currently SlowStart is only supported for RoundRobin
                                 and LeastRequest load balancers.
-                              rule: 'self.type in [''Random'', ''ConsistentHash'']
-                                ? !has(self.slowStart) : true '
+                              rule: 'self.type in [''Random'', ''ConsistentHash'',
+                                ''ClientSideWeightedRoundRobin''] ? !has(self.slowStart)
+                                : true '
                             - message: Currently ZoneAware is only supported for LeastRequest,
                                 Random, and RoundRobin load balancers.
-                              rule: 'self.type == ''ConsistentHash'' ? !has(self.zoneAware)
-                                : true '
+                              rule: 'self.type in [''ConsistentHash'', ''ClientSideWeightedRoundRobin'']
+                                ? !has(self.zoneAware) : true '
                           proxyProtocol:
                             description: ProxyProtocol enables the Proxy Protocol
                               when communicating with the backend.
@@ -46929,6 +47328,54 @@ spec:
                               LoadBalancer policy to apply when routing traffic from the gateway to
                               the backend endpoints. Defaults to `LeastRequest`.
                             properties:
+                              clientSideWeightedRoundRobin:
+                                description: |-
+                                  ClientSideWeightedRoundRobin defines the configuration when the load balancer type is
+                                  set to ClientSideWeightedRoundRobin.
+                                properties:
+                                  blackoutPeriod:
+                                    description: |-
+                                      A given endpoint must report load metrics continuously for at least this long before the endpoint weight will be used.
+                                      Default is 10s.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                  enableOOBLoadReport:
+                                    description: |-
+                                      Whether to enable out-of-band utilization reporting collection from the endpoints.
+                                      By default, per-request utilization reporting is used.
+                                    type: boolean
+                                  errorUtilizationPenalty:
+                                    description: |-
+                                      The multiplier used to adjust endpoint weights with the error rate calculated as eps/qps.
+                                      Must be non-negative. Default is 1.0.
+                                    minimum: 0
+                                    type: number
+                                  metricNamesForComputingUtilization:
+                                    description: |-
+                                      Metric names used to compute utilization if application_utilization is not set.
+                                      For map fields in ORCA proto, use the form "<map_field>.<key>", e.g., "named_metrics.foo".
+                                    items:
+                                      type: string
+                                    type: array
+                                  oobReportingPeriod:
+                                    description: |-
+                                      Load reporting interval to request from the server. Used only when enableOOBLoadReport is true.
+                                      Default is 10s; server may not provide reports as frequently as requested.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                  weightExpirationPeriod:
+                                    description: If a given endpoint has not reported
+                                      load metrics in this long, stop using the reported
+                                      weight. Defaults to 3m.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                  weightUpdatePeriod:
+                                    description: How often endpoint weights are recalculated.
+                                      Values less than 100ms are capped at 100ms.
+                                      Default 1s.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                type: object
                               consistentHash:
                                 description: |-
                                   ConsistentHash defines the configuration when the load balancer type is
@@ -47080,12 +47527,14 @@ spec:
                                   "ConsistentHash",
                                   "LeastRequest",
                                   "Random",
-                                  "RoundRobin".
+                                  "RoundRobin",
+                                  "ClientSideWeightedRoundRobin".
                                 enum:
                                 - ConsistentHash
                                 - LeastRequest
                                 - Random
                                 - RoundRobin
+                                - ClientSideWeightedRoundRobin
                                 type: string
                               zoneAware:
                                 description: ZoneAware defines the configuration related
@@ -47135,14 +47584,19 @@ spec:
                                 field needs to be set.
                               rule: 'self.type == ''ConsistentHash'' ? has(self.consistentHash)
                                 : !has(self.consistentHash)'
+                            - message: If LoadBalancer type is ClientSideWeightedRoundRobin,
+                                clientSideWeightedRoundRobin field needs to be set.
+                              rule: 'self.type == ''ClientSideWeightedRoundRobin''
+                                ? has(self.clientSideWeightedRoundRobin) : !has(self.clientSideWeightedRoundRobin)'
                             - message: Currently SlowStart is only supported for RoundRobin
                                 and LeastRequest load balancers.
-                              rule: 'self.type in [''Random'', ''ConsistentHash'']
-                                ? !has(self.slowStart) : true '
+                              rule: 'self.type in [''Random'', ''ConsistentHash'',
+                                ''ClientSideWeightedRoundRobin''] ? !has(self.slowStart)
+                                : true '
                             - message: Currently ZoneAware is only supported for LeastRequest,
                                 Random, and RoundRobin load balancers.
-                              rule: 'self.type == ''ConsistentHash'' ? !has(self.zoneAware)
-                                : true '
+                              rule: 'self.type in [''ConsistentHash'', ''ClientSideWeightedRoundRobin'']
+                                ? !has(self.zoneAware) : true '
                           proxyProtocol:
                             description: ProxyProtocol enables the Proxy Protocol
                               when communicating with the backend.
@@ -48237,6 +48691,55 @@ spec:
                                     LoadBalancer policy to apply when routing traffic from the gateway to
                                     the backend endpoints. Defaults to `LeastRequest`.
                                   properties:
+                                    clientSideWeightedRoundRobin:
+                                      description: |-
+                                        ClientSideWeightedRoundRobin defines the configuration when the load balancer type is
+                                        set to ClientSideWeightedRoundRobin.
+                                      properties:
+                                        blackoutPeriod:
+                                          description: |-
+                                            A given endpoint must report load metrics continuously for at least this long before the endpoint weight will be used.
+                                            Default is 10s.
+                                          pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                          type: string
+                                        enableOOBLoadReport:
+                                          description: |-
+                                            Whether to enable out-of-band utilization reporting collection from the endpoints.
+                                            By default, per-request utilization reporting is used.
+                                          type: boolean
+                                        errorUtilizationPenalty:
+                                          description: |-
+                                            The multiplier used to adjust endpoint weights with the error rate calculated as eps/qps.
+                                            Must be non-negative. Default is 1.0.
+                                          minimum: 0
+                                          type: number
+                                        metricNamesForComputingUtilization:
+                                          description: |-
+                                            Metric names used to compute utilization if application_utilization is not set.
+                                            For map fields in ORCA proto, use the form "<map_field>.<key>", e.g., "named_metrics.foo".
+                                          items:
+                                            type: string
+                                          type: array
+                                        oobReportingPeriod:
+                                          description: |-
+                                            Load reporting interval to request from the server. Used only when enableOOBLoadReport is true.
+                                            Default is 10s; server may not provide reports as frequently as requested.
+                                          pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                          type: string
+                                        weightExpirationPeriod:
+                                          description: If a given endpoint has not
+                                            reported load metrics in this long, stop
+                                            using the reported weight. Defaults to
+                                            3m.
+                                          pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                          type: string
+                                        weightUpdatePeriod:
+                                          description: How often endpoint weights
+                                            are recalculated. Values less than 100ms
+                                            are capped at 100ms. Default 1s.
+                                          pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                          type: string
+                                      type: object
                                     consistentHash:
                                       description: |-
                                         ConsistentHash defines the configuration when the load balancer type is
@@ -48391,12 +48894,14 @@ spec:
                                         "ConsistentHash",
                                         "LeastRequest",
                                         "Random",
-                                        "RoundRobin".
+                                        "RoundRobin",
+                                        "ClientSideWeightedRoundRobin".
                                       enum:
                                       - ConsistentHash
                                       - LeastRequest
                                       - Random
                                       - RoundRobin
+                                      - ClientSideWeightedRoundRobin
                                       type: string
                                     zoneAware:
                                       description: ZoneAware defines the configuration
@@ -48447,15 +48952,21 @@ spec:
                                       consistentHash field needs to be set.
                                     rule: 'self.type == ''ConsistentHash'' ? has(self.consistentHash)
                                       : !has(self.consistentHash)'
+                                  - message: If LoadBalancer type is ClientSideWeightedRoundRobin,
+                                      clientSideWeightedRoundRobin field needs to
+                                      be set.
+                                    rule: 'self.type == ''ClientSideWeightedRoundRobin''
+                                      ? has(self.clientSideWeightedRoundRobin) : !has(self.clientSideWeightedRoundRobin)'
                                   - message: Currently SlowStart is only supported
                                       for RoundRobin and LeastRequest load balancers.
-                                    rule: 'self.type in [''Random'', ''ConsistentHash'']
-                                      ? !has(self.slowStart) : true '
+                                    rule: 'self.type in [''Random'', ''ConsistentHash'',
+                                      ''ClientSideWeightedRoundRobin''] ? !has(self.slowStart)
+                                      : true '
                                   - message: Currently ZoneAware is only supported
                                       for LeastRequest, Random, and RoundRobin load
                                       balancers.
-                                    rule: 'self.type == ''ConsistentHash'' ? !has(self.zoneAware)
-                                      : true '
+                                    rule: 'self.type in [''ConsistentHash'', ''ClientSideWeightedRoundRobin'']
+                                      ? !has(self.zoneAware) : true '
                                 proxyProtocol:
                                   description: ProxyProtocol enables the Proxy Protocol
                                     when communicating with the backend.
@@ -49603,6 +50114,54 @@ spec:
                               LoadBalancer policy to apply when routing traffic from the gateway to
                               the backend endpoints. Defaults to `LeastRequest`.
                             properties:
+                              clientSideWeightedRoundRobin:
+                                description: |-
+                                  ClientSideWeightedRoundRobin defines the configuration when the load balancer type is
+                                  set to ClientSideWeightedRoundRobin.
+                                properties:
+                                  blackoutPeriod:
+                                    description: |-
+                                      A given endpoint must report load metrics continuously for at least this long before the endpoint weight will be used.
+                                      Default is 10s.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                  enableOOBLoadReport:
+                                    description: |-
+                                      Whether to enable out-of-band utilization reporting collection from the endpoints.
+                                      By default, per-request utilization reporting is used.
+                                    type: boolean
+                                  errorUtilizationPenalty:
+                                    description: |-
+                                      The multiplier used to adjust endpoint weights with the error rate calculated as eps/qps.
+                                      Must be non-negative. Default is 1.0.
+                                    minimum: 0
+                                    type: number
+                                  metricNamesForComputingUtilization:
+                                    description: |-
+                                      Metric names used to compute utilization if application_utilization is not set.
+                                      For map fields in ORCA proto, use the form "<map_field>.<key>", e.g., "named_metrics.foo".
+                                    items:
+                                      type: string
+                                    type: array
+                                  oobReportingPeriod:
+                                    description: |-
+                                      Load reporting interval to request from the server. Used only when enableOOBLoadReport is true.
+                                      Default is 10s; server may not provide reports as frequently as requested.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                  weightExpirationPeriod:
+                                    description: If a given endpoint has not reported
+                                      load metrics in this long, stop using the reported
+                                      weight. Defaults to 3m.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                  weightUpdatePeriod:
+                                    description: How often endpoint weights are recalculated.
+                                      Values less than 100ms are capped at 100ms.
+                                      Default 1s.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                type: object
                               consistentHash:
                                 description: |-
                                   ConsistentHash defines the configuration when the load balancer type is
@@ -49754,12 +50313,14 @@ spec:
                                   "ConsistentHash",
                                   "LeastRequest",
                                   "Random",
-                                  "RoundRobin".
+                                  "RoundRobin",
+                                  "ClientSideWeightedRoundRobin".
                                 enum:
                                 - ConsistentHash
                                 - LeastRequest
                                 - Random
                                 - RoundRobin
+                                - ClientSideWeightedRoundRobin
                                 type: string
                               zoneAware:
                                 description: ZoneAware defines the configuration related
@@ -49809,14 +50370,19 @@ spec:
                                 field needs to be set.
                               rule: 'self.type == ''ConsistentHash'' ? has(self.consistentHash)
                                 : !has(self.consistentHash)'
+                            - message: If LoadBalancer type is ClientSideWeightedRoundRobin,
+                                clientSideWeightedRoundRobin field needs to be set.
+                              rule: 'self.type == ''ClientSideWeightedRoundRobin''
+                                ? has(self.clientSideWeightedRoundRobin) : !has(self.clientSideWeightedRoundRobin)'
                             - message: Currently SlowStart is only supported for RoundRobin
                                 and LeastRequest load balancers.
-                              rule: 'self.type in [''Random'', ''ConsistentHash'']
-                                ? !has(self.slowStart) : true '
+                              rule: 'self.type in [''Random'', ''ConsistentHash'',
+                                ''ClientSideWeightedRoundRobin''] ? !has(self.slowStart)
+                                : true '
                             - message: Currently ZoneAware is only supported for LeastRequest,
                                 Random, and RoundRobin load balancers.
-                              rule: 'self.type == ''ConsistentHash'' ? !has(self.zoneAware)
-                                : true '
+                              rule: 'self.type in [''ConsistentHash'', ''ClientSideWeightedRoundRobin'']
+                                ? !has(self.zoneAware) : true '
                           proxyProtocol:
                             description: ProxyProtocol enables the Proxy Protocol
                               when communicating with the backend.

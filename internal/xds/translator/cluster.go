@@ -19,6 +19,7 @@ import (
 	codecv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/upstream_codec/v3"
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	preservecasev3 "github.com/envoyproxy/go-control-plane/envoy/extensions/http/header_formatters/preserve_case/v3"
+	cswrrv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/load_balancing_policies/client_side_weighted_round_robin/v3"
 	cluster_providedv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/load_balancing_policies/cluster_provided/v3"
 	commonv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/load_balancing_policies/common/v3"
 	least_requestv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/load_balancing_policies/least_request/v3"
@@ -394,6 +395,44 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 				TypedExtensionConfig: &corev3.TypedExtensionConfig{
 					Name:        "envoy.load_balancing_policies.maglev",
 					TypedConfig: typedConsistentHash,
+				},
+			}},
+		}
+	case args.loadBalancer.ClientSideWeightedRoundRobin != nil:
+		cluster.LbPolicy = clusterv3.Cluster_CLUSTER_PROVIDED
+		cswrr := &cswrrv3.ClientSideWeightedRoundRobin{}
+		if v := args.loadBalancer.ClientSideWeightedRoundRobin; v != nil {
+			if v.EnableOOBLoadReport != nil {
+				cswrr.EnableOobLoadReport = wrapperspb.Bool(*v.EnableOOBLoadReport)
+			}
+			if v.OOBReportingPeriod != nil && v.OOBReportingPeriod.Duration > 0 {
+				cswrr.OobReportingPeriod = durationpb.New(v.OOBReportingPeriod.Duration)
+			}
+			if v.BlackoutPeriod != nil && v.BlackoutPeriod.Duration > 0 {
+				cswrr.BlackoutPeriod = durationpb.New(v.BlackoutPeriod.Duration)
+			}
+			if v.WeightExpirationPeriod != nil && v.WeightExpirationPeriod.Duration > 0 {
+				cswrr.WeightExpirationPeriod = durationpb.New(v.WeightExpirationPeriod.Duration)
+			}
+			if v.WeightUpdatePeriod != nil && v.WeightUpdatePeriod.Duration > 0 {
+				cswrr.WeightUpdatePeriod = durationpb.New(v.WeightUpdatePeriod.Duration)
+			}
+			if v.ErrorUtilizationPenalty != nil {
+				cswrr.ErrorUtilizationPenalty = wrapperspb.Float(float32(*v.ErrorUtilizationPenalty))
+			}
+			if len(v.MetricNamesForComputingUtilization) > 0 {
+				cswrr.MetricNamesForComputingUtilization = append([]string(nil), v.MetricNamesForComputingUtilization...)
+			}
+		}
+		typedCSWRR, err := proto.ToAnyWithValidation(cswrr)
+		if err != nil {
+			return nil, err
+		}
+		cluster.LoadBalancingPolicy = &clusterv3.LoadBalancingPolicy{
+			Policies: []*clusterv3.LoadBalancingPolicy_Policy{{
+				TypedExtensionConfig: &corev3.TypedExtensionConfig{
+					Name:        "envoy.load_balancing_policies.client_side_weighted_round_robin",
+					TypedConfig: typedCSWRR,
 				},
 			}},
 		}
@@ -1329,6 +1368,8 @@ func buildEndpointOverrideLoadBalancingPolicy(loadBalancer *ir.LoadBalancer) (*c
 		fallbackType = ir.RandomLoadBalancer
 	case loadBalancer.ConsistentHash != nil:
 		fallbackType = ir.ConsistentHashLoadBalancer
+	case loadBalancer.ClientSideWeightedRoundRobin != nil:
+		fallbackType = ir.ClientSideWeightedRoundRobinLoadBalancer
 	default:
 		// Default to LeastRequest if no specific type is set
 		fallbackType = ir.LeastRequestLoadBalancer
@@ -1419,6 +1460,21 @@ func buildFallbackLoadBalancingPolicy(fallbackType ir.LoadBalancerType) (*cluste
 				{
 					TypedExtensionConfig: &corev3.TypedExtensionConfig{
 						Name:        "envoy.load_balancing_policies.maglev",
+						TypedConfig: fallbackPolicyAny,
+					},
+				},
+			},
+		}, nil
+	case ir.ClientSideWeightedRoundRobinLoadBalancer:
+		fallbackPolicyAny, err := anypb.New(&cswrrv3.ClientSideWeightedRoundRobin{})
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal ClientSideWeightedRoundRobin policy: %w", err)
+		}
+		return &clusterv3.LoadBalancingPolicy{
+			Policies: []*clusterv3.LoadBalancingPolicy_Policy{
+				{
+					TypedExtensionConfig: &corev3.TypedExtensionConfig{
+						Name:        "envoy.load_balancing_policies.client_side_weighted_round_robin",
 						TypedConfig: fallbackPolicyAny,
 					},
 				},

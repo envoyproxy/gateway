@@ -2556,6 +2556,8 @@ type LoadBalancer struct {
 	Random *Random `json:"random,omitempty" yaml:"random,omitempty"`
 	// ConsistentHash load balancer policy
 	ConsistentHash *ConsistentHash `json:"consistentHash,omitempty" yaml:"consistentHash,omitempty"`
+	// ClientSideWeightedRoundRobin load balancer policy
+	ClientSideWeightedRoundRobin *ClientSideWeightedRoundRobin `json:"clientSideWeightedRoundRobin,omitempty" yaml:"clientSideWeightedRoundRobin,omitempty"`
 	// PreferLocal defines the configuration related to the distribution of requests between locality zones.
 	PreferLocal *PreferLocalZone `json:"preferLocal,omitempty" yaml:"preferLocal,omitempty"`
 	// EndpointOverride defines the configuration for endpoint override.
@@ -2579,6 +2581,9 @@ func (l *LoadBalancer) Validate() error {
 		matchCount++
 	}
 	if l.ConsistentHash != nil {
+		matchCount++
+	}
+	if l.ClientSideWeightedRoundRobin != nil {
 		matchCount++
 	}
 	if matchCount != 1 {
@@ -2607,6 +2612,18 @@ type LeastRequest struct {
 // Random load balancer settings
 // +k8s:deepcopy-gen=true
 type Random struct{}
+
+// ClientSideWeightedRoundRobin load balancer settings
+// +k8s:deepcopy-gen=true
+type ClientSideWeightedRoundRobin struct {
+	EnableOOBLoadReport                *bool            `json:"enableOOBLoadReport,omitempty" yaml:"enableOOBLoadReport,omitempty"`
+	OOBReportingPeriod                 *metav1.Duration `json:"oobReportingPeriod,omitempty" yaml:"oobReportingPeriod,omitempty"`
+	BlackoutPeriod                     *metav1.Duration `json:"blackoutPeriod,omitempty" yaml:"blackoutPeriod,omitempty"`
+	WeightExpirationPeriod             *metav1.Duration `json:"weightExpirationPeriod,omitempty" yaml:"weightExpirationPeriod,omitempty"`
+	WeightUpdatePeriod                 *metav1.Duration `json:"weightUpdatePeriod,omitempty" yaml:"weightUpdatePeriod,omitempty"`
+	ErrorUtilizationPenalty            *float32         `json:"errorUtilizationPenalty,omitempty" yaml:"errorUtilizationPenalty,omitempty"`
+	MetricNamesForComputingUtilization []string         `json:"metricNamesForComputingUtilization,omitempty" yaml:"metricNamesForComputingUtilization,omitempty"`
+}
 
 // ConsistentHash load balancer settings
 // +k8s:deepcopy-gen=true
@@ -3310,4 +3327,6 @@ const (
 	RandomLoadBalancer LoadBalancerType = "Random"
 	// ConsistentHashLoadBalancer is the consistent hash load balancer type.
 	ConsistentHashLoadBalancer LoadBalancerType = "ConsistentHash"
+	// ClientSideWeightedRoundRobinLoadBalancer is the client-side weighted round robin load balancer type.
+	ClientSideWeightedRoundRobinLoadBalancer LoadBalancerType = "ClientSideWeightedRoundRobin"
 )
