@@ -121,7 +121,7 @@ var TCPRouteStatNameTest = suite.ConformanceTest{
 		ns := "gateway-conformance-infra"
 		routeNN := types.NamespacedName{Name: "tcp-route-stat-name", Namespace: ns}
 		gwNN := types.NamespacedName{Name: "tcp-stat-name-backend-gateway", Namespace: ns}
-		gwAddr := GatewayAndTCPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, NewGatewayRef(gwNN), routeNN)
+		gwAddr := GatewayAndTCPRoutesMustBeAccepted(t, suite.Client, &suite.TimeoutConfig, suite.ControllerName, NewGatewayRef(gwNN), routeNN)
 
 		t.Run("prometheus", func(t *testing.T) {
 			expectedResponse := httputils.ExpectedResponse{

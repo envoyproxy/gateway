@@ -713,6 +713,10 @@ xdsIR:
             name: tcproute/envoy-gateway/tcproute-1/rule/-1/backend/0
             protocol: TCP
             weight: 1
+        metadata:
+          kind: TCPRoute
+          name: tcproute-1
+          namespace: envoy-gateway
         name: tcproute/envoy-gateway/tcproute-1
         tls:
           terminate:
