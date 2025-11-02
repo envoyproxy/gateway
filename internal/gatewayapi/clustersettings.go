@@ -340,6 +340,42 @@ func buildLoadBalancer(policy *egv1a1.ClusterSettings) (*ir.LoadBalancer, error)
 				Window: ir.MetaV1DurationPtr(d),
 			}
 		}
+	case egv1a1.ClientSideWeightedRoundRobinLoadBalancerType:
+		lb = &ir.LoadBalancer{
+			ClientSideWeightedRoundRobin: &ir.ClientSideWeightedRoundRobin{},
+		}
+		cswrr := policy.LoadBalancer.ClientSideWeightedRoundRobin
+		if cswrr != nil {
+			if cswrr.EnableOOBLoadReport != nil {
+				lb.ClientSideWeightedRoundRobin.EnableOOBLoadReport = cswrr.EnableOOBLoadReport
+			}
+			if cswrr.OOBReportingPeriod != nil {
+				if d, err := time.ParseDuration(string(*cswrr.OOBReportingPeriod)); err == nil {
+					lb.ClientSideWeightedRoundRobin.OOBReportingPeriod = ir.MetaV1DurationPtr(d)
+				}
+			}
+			if cswrr.BlackoutPeriod != nil {
+				if d, err := time.ParseDuration(string(*cswrr.BlackoutPeriod)); err == nil {
+					lb.ClientSideWeightedRoundRobin.BlackoutPeriod = ir.MetaV1DurationPtr(d)
+				}
+			}
+			if cswrr.WeightExpirationPeriod != nil {
+				if d, err := time.ParseDuration(string(*cswrr.WeightExpirationPeriod)); err == nil {
+					lb.ClientSideWeightedRoundRobin.WeightExpirationPeriod = ir.MetaV1DurationPtr(d)
+				}
+			}
+			if cswrr.WeightUpdatePeriod != nil {
+				if d, err := time.ParseDuration(string(*cswrr.WeightUpdatePeriod)); err == nil {
+					lb.ClientSideWeightedRoundRobin.WeightUpdatePeriod = ir.MetaV1DurationPtr(d)
+				}
+			}
+			if cswrr.ErrorUtilizationPenalty != nil {
+				lb.ClientSideWeightedRoundRobin.ErrorUtilizationPenalty = cswrr.ErrorUtilizationPenalty
+			}
+			if len(cswrr.MetricNamesForComputingUtilization) > 0 {
+				lb.ClientSideWeightedRoundRobin.MetricNamesForComputingUtilization = append([]string(nil), cswrr.MetricNamesForComputingUtilization...)
+			}
+		}
 	}
 
 	// Add ZoneAware loadbalancer settings
