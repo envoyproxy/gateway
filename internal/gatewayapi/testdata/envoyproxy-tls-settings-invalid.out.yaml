@@ -303,6 +303,10 @@ xdsIR:
             name: envoy-gateway
             namespace: envoy-gateway
           name: tcproute/envoy-gateway/envoy-gateway/rule/-1
+        metadata:
+          kind: TCPRoute
+          name: envoy-gateway
+          namespace: envoy-gateway
         name: tcproute/envoy-gateway/envoy-gateway
         tls:
           terminate:
