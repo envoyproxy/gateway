@@ -161,7 +161,6 @@ xdsIR:
             kind: HTTPRoute
             name: httproute-1
             namespace: default
-            ruleIndex: 1
             sectionName: rule-2
           name: httproute/default/httproute-1/rule/1
           settings:
@@ -193,7 +192,6 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-1
           namespace: default
-          ruleIndex: 1
           sectionName: rule-2
         name: httproute/default/httproute-1/rule/1/match/0/*
       - destination:

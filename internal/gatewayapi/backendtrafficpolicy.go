@@ -734,7 +734,7 @@ func (t *Translator) applyTrafficFeatureToRoute(route RouteContext,
 				setIfNil(&r.Timeout, tf.Timeout)
 				setIfNil(&r.BackendConnection, tf.BackendConnection)
 				setIfNil(&r.DNS, tf.DNS)
-				r.StatName = buildRouteStatName(routeStatName, r.Metadata)
+				setIfNil(&r.StatName, buildRouteStatName(routeStatName, r.Metadata))
 			}
 		}
 	}
@@ -774,13 +774,13 @@ func (t *Translator) applyTrafficFeatureToRoute(route RouteContext,
 			}
 			// Apply if there is a match
 			if strings.HasPrefix(r.Name, prefix) {
-				r.StatName = buildRouteStatName(routeStatName, r.Metadata)
 				// If any of the features are already set, it means that a more specific
 				// policy (targeting xRoute rule) has already set it, so we skip it.
 				if r.Traffic != nil || r.UseClientProtocol != nil {
 					continue
 				}
 
+				r.StatName = buildRouteStatName(routeStatName, r.Metadata)
 				if errs != nil {
 					// Return a 500 direct response
 					r.DirectResponse = &ir.CustomResponse{

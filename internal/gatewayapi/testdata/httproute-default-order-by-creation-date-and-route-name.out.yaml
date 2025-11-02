@@ -433,7 +433,6 @@ xdsIR:
             kind: HTTPRoute
             name: httproute-1
             namespace: default
-            ruleIndex: 1
           name: httproute/default/httproute-1/rule/1
           settings:
           - addressType: IP
@@ -453,7 +452,6 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-1
           namespace: default
-          ruleIndex: 1
         name: httproute/default/httproute-1/rule/1/match/0/gateway_envoyproxy_io
         pathMatch:
           distinct: false
@@ -493,7 +491,6 @@ xdsIR:
             kind: HTTPRoute
             name: httproute-2
             namespace: test-ns
-            ruleIndex: 1
           name: httproute/test-ns/httproute-2/rule/1
           settings:
           - addressType: IP
@@ -514,7 +511,6 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-2
           namespace: test-ns
-          ruleIndex: 1
         name: httproute/test-ns/httproute-2/rule/1/match/0/gateway_envoyproxy_io
         pathMatch:
           distinct: false
@@ -525,7 +521,6 @@ xdsIR:
             kind: HTTPRoute
             name: httproute-4
             namespace: test-ns2
-            ruleIndex: 1
           name: httproute/test-ns2/httproute-4/rule/1
           settings:
           - addressType: IP
@@ -546,7 +541,6 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-4
           namespace: test-ns2
-          ruleIndex: 1
         name: httproute/test-ns2/httproute-4/rule/1/match/0/gateway_envoyproxy_io
         pathMatch:
           distinct: false
@@ -557,7 +551,6 @@ xdsIR:
             kind: HTTPRoute
             name: httproute-1
             namespace: default
-            ruleIndex: 2
           name: httproute/default/httproute-1/rule/2
           settings:
           - addressType: IP
@@ -577,7 +570,6 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-1
           namespace: default
-          ruleIndex: 2
         name: httproute/default/httproute-1/rule/2/match/0/gateway_envoyproxy_io
         pathMatch:
           distinct: false
@@ -588,7 +580,6 @@ xdsIR:
             kind: HTTPRoute
             name: httproute-5
             namespace: default
-            ruleIndex: 1
           name: httproute/default/httproute-5/rule/1
           settings:
           - addressType: IP
@@ -608,7 +599,6 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-5
           namespace: default
-          ruleIndex: 1
         name: httproute/default/httproute-5/rule/1/match/0/gateway_envoyproxy_io
         pathMatch:
           distinct: false

@@ -621,7 +621,6 @@ xdsIR:
             kind: HTTPRoute
             name: httproute-5
             namespace: default
-            ruleIndex: 1
             sectionName: rule-2
           name: httproute/default/httproute-5/rule/1
           settings:
@@ -642,7 +641,6 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-5
           namespace: default
-          ruleIndex: 1
           sectionName: rule-2
         name: httproute/default/httproute-5/rule/1/match/0/listener-1_gateway-1_envoyproxy_io
         pathMatch:
@@ -881,7 +879,6 @@ xdsIR:
             kind: HTTPRoute
             name: httproute-5
             namespace: default
-            ruleIndex: 1
             sectionName: rule-2
           name: httproute/default/httproute-5/rule/1
           settings:
@@ -902,7 +899,6 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-5
           namespace: default
-          ruleIndex: 1
           sectionName: rule-2
         name: httproute/default/httproute-5/rule/1/match/0/listener-2_gateway-1_envoyproxy_io
         pathMatch:

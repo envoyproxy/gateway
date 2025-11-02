@@ -2066,7 +2066,8 @@ type TCPRoute struct {
 	// +optional
 	Preconnect *Preconnect `json:"preconnect,omitempty" yaml:"preconnect,omitempty"`
 	// DNS is used to configure how DNS resolution is handled for the route
-	DNS           *DNS           `json:"dns,omitempty" yaml:"dns,omitempty"`
+	DNS *DNS `json:"dns,omitempty" yaml:"dns,omitempty"`
+	// Authorization defines the schema for the authorization.
 	Authorization *Authorization `json:"authorization,omitempty" yaml:"authorization,omitempty"`
 }
 
@@ -3264,8 +3265,6 @@ type ResourceMetadata struct {
 	Annotations map[string]string `json:"annotations,omitempty" yaml:"annotations,omitempty"`
 	// SectionName is the name of a section of a resource
 	SectionName string `json:"sectionName,omitempty" yaml:"sectionName,omitempty"`
-	// RuleIndex is the index of a rule of a resource
-	RuleIndex int `json:"ruleIndex,omitempty" yaml:"ruleIndex,omitempty"`
 }
 
 // RequestBuffer holds the information for the Buffer filter

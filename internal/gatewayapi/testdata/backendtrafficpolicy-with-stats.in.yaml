@@ -89,7 +89,7 @@ backendTrafficPolicies:
       name: gateway-1
     telemetry:
       metrics:
-        routeStatName: "%ROUTE_KIND%/%ROUTE_NAMESPACE%/%ROUTE_NAME%/%ROUTE_NAME%/%ROUTE_RULE_NUMBER%"
+        routeStatName: "%ROUTE_KIND%/%ROUTE_NAMESPACE%/%ROUTE_NAME%/%ROUTE_NAME%"
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:
