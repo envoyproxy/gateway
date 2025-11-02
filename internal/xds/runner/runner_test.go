@@ -271,7 +271,7 @@ func TestRunner(t *testing.T) {
 	}()
 
 	// xDS is nil at start
-	require.Equal(t, map[string]*ir.Xds{}, xdsIR.LoadAll())
+	require.Equal(t, map[string]*message.XdsIRWithContext{}, xdsIR.LoadAll())
 
 	// test translation
 	path := "example"
@@ -364,7 +364,7 @@ func TestRunner_withExtensionManager_FailOpen(t *testing.T) {
 	}()
 
 	// xDS is nil at start
-	require.Equal(t, map[string]*ir.Xds{}, xdsIR.LoadAll())
+	require.Equal(t, map[string]*message.XdsIRWithContext{}, xdsIR.LoadAll())
 
 	// test translation
 	path := "example"
@@ -450,7 +450,7 @@ func TestRunner_withExtensionManager_FailClosed(t *testing.T) {
 	}()
 
 	// xDS is nil at start
-	require.Equal(t, map[string]*ir.Xds{}, xdsIR.LoadAll())
+	require.Equal(t, map[string]*message.XdsIRWithContext{}, xdsIR.LoadAll())
 
 	// test translation
 	path := "example"

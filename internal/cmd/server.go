@@ -215,8 +215,7 @@ func startRunners(ctx context.Context, cfg *config.Server) (err error) {
 			runner: metrics.New(cfg),
 		},
 		{
-			// Start the Metrics Server
-			// It provides metrics endpoints for monitoring.
+			// Start the Traces Server
 			runner: traces.New(cfg),
 		},
 	}
