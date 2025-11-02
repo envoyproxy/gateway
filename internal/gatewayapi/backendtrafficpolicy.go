@@ -650,6 +650,16 @@ func (t *Translator) translateBackendTrafficPolicyForRouteWithMerge(
 		return fmt.Errorf("error merging policies: %w", err)
 	}
 
+	if policy.Spec.Telemetry != nil && policy.Spec.Telemetry.Metrics != nil {
+		print("\npolicy\n")
+		print(ptr.Deref(policy.Spec.Telemetry.Metrics.RouteStatName, ""))
+	}
+
+	if gwPolicy != nil && gwPolicy.Spec.Telemetry != nil && gwPolicy.Spec.Telemetry.Metrics != nil {
+		print("\ngwPolicy\n")
+		print(ptr.Deref(gwPolicy.Spec.Telemetry.Metrics.RouteStatName, ""))
+	}
+
 	// Build traffic features from the merged policy
 	tf, errs := t.buildTrafficFeatures(mergedPolicy, resources)
 	if tf == nil {
@@ -706,6 +716,11 @@ func (t *Translator) applyTrafficFeatureToRoute(route RouteContext,
 	x *ir.Xds,
 	policyTargetListener *gwapiv1.SectionName,
 ) {
+	routeStatName := ""
+	if tf.Telemetry != nil && tf.Telemetry.Metrics != nil {
+		routeStatName = ptr.Deref(tf.Telemetry.Metrics.RouteStatName, "")
+	}
+
 	prefix := irRoutePrefix(route)
 	for _, tcp := range x.TCP {
 		// if listenerName is not nil, only apply to the specific listener
@@ -719,6 +734,7 @@ func (t *Translator) applyTrafficFeatureToRoute(route RouteContext,
 				continue
 			}
 			if strings.HasPrefix(r.Destination.Name, prefix) {
+<<<<<<< HEAD
 				// only set attributes which weren't already set by a more
 				// specific policy
 				setIfNil(&r.LoadBalancer, tf.LoadBalancer)
@@ -729,6 +745,17 @@ func (t *Translator) applyTrafficFeatureToRoute(route RouteContext,
 				setIfNil(&r.Timeout, tf.Timeout)
 				setIfNil(&r.BackendConnection, tf.BackendConnection)
 				setIfNil(&r.DNS, tf.DNS)
+=======
+				r.LoadBalancer = tf.LoadBalancer
+				r.ProxyProtocol = tf.ProxyProtocol
+				r.HealthCheck = tf.HealthCheck
+				r.CircuitBreaker = tf.CircuitBreaker
+				r.TCPKeepalive = tf.TCPKeepalive
+				r.Timeout = tf.Timeout
+				r.BackendConnection = tf.BackendConnection
+				r.DNS = tf.DNS
+				r.StatName = buildRouteStatName(routeStatName, r.Metadata)
+>>>>>>> 25ffbd49d (delete RULE_NAME and ROUTE_NUMBER)
 			}
 		}
 	}
@@ -768,12 +795,16 @@ func (t *Translator) applyTrafficFeatureToRoute(route RouteContext,
 			}
 			// Apply if there is a match
 			if strings.HasPrefix(r.Name, prefix) {
+<<<<<<< HEAD
 				// If any of the features are already set, it means that a more specific
 				// policy (targeting xRoute rule) has already set it, so we skip it.
 				if r.Traffic != nil || r.UseClientProtocol != nil {
 					continue
 				}
 
+=======
+				r.StatName = buildRouteStatName(routeStatName, r.Metadata)
+>>>>>>> 25ffbd49d (delete RULE_NAME and ROUTE_NUMBER)
 				if errs != nil {
 					// Return a 500 direct response
 					r.DirectResponse = &ir.CustomResponse{
@@ -931,6 +962,11 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 		return errs
 	}
 
+	routeStatName := ""
+	if tf.Telemetry != nil && tf.Telemetry.Metrics != nil {
+		routeStatName = ptr.Deref(tf.Telemetry.Metrics.RouteStatName, "")
+	}
+
 	// Apply IR to all the routes within the specific Gateway
 	// If the feature is already set, then skip it, since it must have
 	// set by a policy attaching to the route
@@ -961,6 +997,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 			setIfNil(&r.TCPKeepalive, tf.TCPKeepalive)
 			setIfNil(&r.Timeout, tf.Timeout)
 			setIfNil(&r.DNS, tf.DNS)
+			r.StatName = buildRouteStatName(routeStatName, r.Metadata)
 		}
 	}
 
@@ -1008,6 +1045,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 				continue
 			}
 
+			r.StatName = buildRouteStatName(routeStatName, r.Metadata)
 			if errs != nil {
 				// Return a 500 direct response
 				r.DirectResponse = &ir.CustomResponse{
@@ -1625,9 +1663,27 @@ func validateTelemetry(telemetry *egv1a1.BackendTelemetry) error {
 		return nil
 	}
 
-	if telemetry.Metrics != nil && telemetry.Metrics.RouteStatName != "" {
-		return egv1a1validation.ValidateRouteStatName(telemetry.Metrics.RouteStatName)
+	if telemetry.Metrics != nil && ptr.Deref(telemetry.Metrics.RouteStatName, "") != "" {
+		return egv1a1validation.ValidateRouteStatName(*telemetry.Metrics.RouteStatName)
 	}
 
 	return nil
+}
+
+func buildRouteStatName(routeStatName string, metadata *ir.ResourceMetadata) string {
+	if routeStatName == "" || metadata == nil {
+		return ""
+	}
+
+	statName := strings.ReplaceAll(routeStatName, egv1a1.StatFormatterRouteName, metadata.Name)
+	statName = strings.ReplaceAll(statName, egv1a1.StatFormatterRouteNamespace, metadata.Namespace)
+	statName = strings.ReplaceAll(statName, egv1a1.StatFormatterRouteKind, metadata.Kind)
+
+	if metadata.SectionName == "" {
+		statName = strings.ReplaceAll(statName, egv1a1.StatFormatterRouteRuleName, "-")
+	} else {
+		statName = strings.ReplaceAll(statName, egv1a1.StatFormatterRouteRuleName, metadata.SectionName)
+	}
+	statName = strings.ReplaceAll(statName, egv1a1.StatFormatterRouteRuleNumber, fmt.Sprintf("%d", metadata.RuleIndex))
+	return statName
 }

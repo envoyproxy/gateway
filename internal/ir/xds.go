@@ -766,6 +766,8 @@ type HTTPClientTimeout struct {
 type HTTPRoute struct {
 	// Name of the HTTPRoute
 	Name string `json:"name" yaml:"name"`
+	// StatName is the name of the route used for statistics and metrics.
+	StatName string `json:"statName,omitempty" yaml:"statName,omitempty"`
 	// Hostname that the route matches against
 	Hostname string `json:"hostname" yaml:"hostname,omitempty"`
 	// IsHTTP2 is set if the route is configured to serve HTTP2 traffic
@@ -2038,6 +2040,8 @@ type TCPListener struct {
 type TCPRoute struct {
 	// Name of the TCPRoute.
 	Name string `json:"name" yaml:"name"`
+	// StatName is the name of the route used for statistics and metrics.
+	StatName string `json:"statName,omitempty" yaml:"statName,omitempty"`
 	// TLS holds information for configuring TLS on a listener
 	TLS *TLS `json:"tls,omitempty" yaml:"tls,omitempty"`
 	// Destinations associated with TCP traffic to the service.
@@ -2062,10 +2066,14 @@ type TCPRoute struct {
 	// +optional
 	Preconnect *Preconnect `json:"preconnect,omitempty" yaml:"preconnect,omitempty"`
 	// DNS is used to configure how DNS resolution is handled for the route
+<<<<<<< HEAD
 	DNS           *DNS           `json:"dns,omitempty" yaml:"dns,omitempty"`
 	Authorization *Authorization `json:"authorization,omitempty" yaml:"authorization,omitempty"`
 	// Metrics defines the schema for metric stat configuration.
 	Metrics *egv1a1.BackendMetrics `json:"metrics,omitempty" yaml:"metrics,omitempty"`
+=======
+	DNS *DNS `json:"dns,omitempty" yaml:"dns,omitempty"`
+>>>>>>> 25ffbd49d (delete RULE_NAME and ROUTE_NUMBER)
 }
 
 // TLS holds information for configuring TLS on a listener

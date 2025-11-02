@@ -14,13 +14,12 @@
             - kind: HTTPRoute
               name: httproute-1
               namespace: default
-              sectionName: first
       name: first-route
       route:
         cluster: first-route-dest
         upgradeConfigs:
         - upgradeType: websocket
-      statPrefix: route=/test,kind=HTTPRoute,ns=default,name=httproute-1,ruleName=first,ruleNumber=0
+      statPrefix: route=/first,kind=HTTPRoute,ns=default,name=httproute-1
     - match:
         pathSeparatedPrefix: /second
       metadata:
@@ -28,12 +27,11 @@
           envoy-gateway:
             resources:
             - kind: HTTPRoute
-              name: httproute-1
+              name: httproute-2
               namespace: default
-              sectionName: second
       name: second-route
       route:
         cluster: second-route-dest
         upgradeConfigs:
         - upgradeType: websocket
-      statPrefix: route=/test,kind=HTTPRoute,ns=default,name=httproute-1,ruleName=second,ruleNumber=1
+      statPrefix: route=/second,kind=HTTPRoute,ns=default,name=httproute-2

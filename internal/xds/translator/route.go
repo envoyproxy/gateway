@@ -21,7 +21,6 @@ import (
 	"google.golang.org/protobuf/types/known/wrapperspb"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils/proto"
 	"github.com/envoyproxy/gateway/internal/xds/utils/fractionalpercent"
@@ -139,10 +138,10 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute, httpListener *ir.HTTPListener) (*rou
 		} else {
 			return nil, err
 		}
-
-		// Metrics
-		router.StatPrefix = buildRouteStatName(httpRoute.Traffic.Telemetry.Metrics, httpRoute.Metadata)
 	}
+
+	// Metrics
+	router.StatPrefix = httpRoute.StatName
 
 	// Add per route filter configs to the route, if needed.
 	if err := patchRouteWithPerRouteConfig(router, httpRoute, httpListener); err != nil {
@@ -787,25 +786,6 @@ func buildRouteTracing(httpRoute *ir.HTTPRoute) (*routev3.Tracing, error) {
 		RandomSampling: fractionalpercent.FromFraction(tracing.SamplingFraction),
 		CustomTags:     tags,
 	}, nil
-}
-
-func buildRouteStatName(metrics *egv1a1.BackendMetrics, metadata *ir.ResourceMetadata) string {
-	if metrics == nil || metrics.RouteStatName == "" ||
-		metadata == nil {
-		return ""
-	}
-
-	statName := strings.ReplaceAll(metrics.RouteStatName, egv1a1.StatFormatterRouteName, metadata.Name)
-	statName = strings.ReplaceAll(statName, egv1a1.StatFormatterRouteNamespace, metadata.Namespace)
-	statName = strings.ReplaceAll(statName, egv1a1.StatFormatterRouteKind, metadata.Kind)
-
-	if metadata.SectionName == "" {
-		statName = strings.ReplaceAll(statName, egv1a1.StatFormatterRouteRuleName, "-")
-	} else {
-		statName = strings.ReplaceAll(statName, egv1a1.StatFormatterRouteRuleName, metadata.SectionName)
-	}
-	statName = strings.ReplaceAll(statName, egv1a1.StatFormatterRouteRuleNumber, fmt.Sprintf("%d", metadata.RuleIndex))
-	return statName
 }
 
 func buildRetryStatusCodes(codes []ir.HTTPStatus) []uint32 {

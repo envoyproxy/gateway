@@ -28,4 +28,4 @@ spec:
       name: http-route-stat-name
   telemetry:
     metrics:
-      routeStatName: "%ROUTE_NAMESPACE%/%ROUTE_NAME%/%ROUTE_NUMBER%"
+      routeStatName: "%ROUTE_NAMESPACE%/%ROUTE_NAME%"

@@ -25,7 +25,7 @@ import (
 )
 
 func init() {
-	ConformanceTests = append(ConformanceTests, ClusterStatNameTest, HTTPRouteStatNameTest)
+	ConformanceTests = append(ConformanceTests, ClusterStatNameTest, HTTPRouteStatNameTest, TCPRouteStatNameTest)
 }
 
 var ClusterStatNameTest = suite.ConformanceTest{
@@ -108,24 +108,55 @@ var HTTPRouteStatNameTest = suite.ConformanceTest{
 			}
 			// make sure listener is ready
 			httputils.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
-
-			if err := wait.PollUntilContextTimeout(context.TODO(), 3*time.Second, time.Minute, true, func(ctx context.Context) (done bool, err error) {
-				v, err := prometheus.QueryPrometheus(suite.Client, `envoy_vhost_route_upstream_rq{vhost="gateway-conformance-infra/http-route-stat-name/0"}`)
-				if err != nil {
-					tlog.Logf(t, "failed to query prometheus: %v", err)
-					return false, err
-				}
-				if v != nil && v.Type() == model.ValVector {
-					vectorVal := v.(model.Vector)
-					if len(vectorVal) == 1 && vectorVal[0].Value == 1 {
-						tlog.Logf(t, "got expected value: %v", v)
-						return true, nil
-					}
-				}
-				return false, nil
-			}); err != nil {
-				t.Errorf("failed to get expected response for the last (fourth) request: %v", err)
-			}
+			verifyMetrics(t, suite, `envoy_vhost_route_upstream_rq{envoy_route="gateway-conformance-infra/http-route-stat-name"}`)
 		})
 	},
+}
+
+var TCPRouteStatNameTest = suite.ConformanceTest{
+	ShortName:   "TCPRouteStatNameTest",
+	Description: "Make sure per tcp route metrics is working",
+	Manifests:   []string{"testdata/tcproute-metrics-stat.yaml"},
+	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
+		ns := "gateway-conformance-infra"
+		routeNN := types.NamespacedName{Name: "tcp-route-stat-name", Namespace: ns}
+		gwNN := types.NamespacedName{Name: "tcp-stat-name-backend-gateway", Namespace: ns}
+		gwAddr := GatewayAndTCPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, NewGatewayRef(gwNN), routeNN)
+
+		t.Run("prometheus", func(t *testing.T) {
+			expectedResponse := httputils.ExpectedResponse{
+				Request: httputils.Request{
+					Path: "/foo",
+				},
+				Response: httputils.Response{
+					StatusCode: 200,
+				},
+				Namespace: ns,
+			}
+
+			// make sure listener is ready
+			httputils.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
+			verifyMetrics(t, suite, `envoy_tcp_downstream_cx_total{envoy_tcp_prefix="gateway-conformance-infra/tcp-route-stat-name"}`)
+		})
+	},
+}
+
+func verifyMetrics(t *testing.T, suite *suite.ConformanceTestSuite, promQuery string) {
+	if err := wait.PollUntilContextTimeout(context.TODO(), 3*time.Second, time.Minute, true, func(ctx context.Context) (done bool, err error) {
+		v, err := prometheus.QueryPrometheus(suite.Client, promQuery)
+		if err != nil {
+			tlog.Logf(t, "failed to query prometheus: %v", err)
+			return false, err
+		}
+		if v != nil && v.Type() == model.ValVector {
+			vectorVal := v.(model.Vector)
+			if len(vectorVal) == 1 {
+				tlog.Logf(t, "got expected value: %v", v)
+				return true, nil
+			}
+		}
+		return false, nil
+	}); err != nil {
+		t.Errorf("failed to get expected response for the last (fourth) request: %v", err)
+	}
 }
