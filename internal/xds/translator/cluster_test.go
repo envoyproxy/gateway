@@ -176,8 +176,6 @@ func TestBuildCluster_WithClientSideWeightedRoundRobin(t *testing.T) {
 	cluster := result.cluster
 	require.NotNil(t, cluster)
 
-	// LbPolicy should be CLUSTER_PROVIDED when using typed LoadBalancingPolicy
-	require.Equal(t, clusterv3.Cluster_CLUSTER_PROVIDED, cluster.LbPolicy)
 	require.NotNil(t, cluster.LoadBalancingPolicy)
 	require.Len(t, cluster.LoadBalancingPolicy.Policies, 1)
 

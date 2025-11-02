@@ -399,7 +399,6 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 			}},
 		}
 	case args.loadBalancer.ClientSideWeightedRoundRobin != nil:
-		cluster.LbPolicy = clusterv3.Cluster_CLUSTER_PROVIDED
 		cswrr := &cswrrv3.ClientSideWeightedRoundRobin{}
 		if v := args.loadBalancer.ClientSideWeightedRoundRobin; v != nil {
 			if v.EnableOOBLoadReport != nil {
