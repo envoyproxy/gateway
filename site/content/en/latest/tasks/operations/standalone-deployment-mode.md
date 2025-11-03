@@ -171,7 +171,7 @@ All runners in Envoy Gateway are using TLS connection, so create these TLS certi
 ensure the Envoy Gateway works properly.
 
 ```shell
-docker run --rm --volume /tmp/envoy-gateway-test:/tmp/envoy-gateway envoyproxy/gateway:{{< helm-version >}} certgen --local --data-home /tmp/envoy-gateway
+docker run --rm --volume /tmp/envoy-gateway-test:/tmp/envoy-gateway envoyproxy/gateway:{{< helm-version >}} certgen --local --config-home /tmp/envoy-gateway
 ```
 
 ### Start Envoy Gateway

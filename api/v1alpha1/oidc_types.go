@@ -116,7 +116,8 @@ type OIDC struct {
 	// When set to true, the Envoy will use the refresh token to get a new id token
 	// and access token when they expire.
 	//
-	// If not specified, defaults to false.
+	// If not specified, defaults to true.
+	// +kubebuilder:default=true
 	// +optional
 	RefreshToken *bool `json:"refreshToken,omitempty"`
 

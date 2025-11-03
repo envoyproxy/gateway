@@ -230,6 +230,7 @@ xdsIR:
               tokenEndpoint: https://oauth.foo.com/token
             redirectPath: /oauth2/callback
             redirectURL: https://www.example.com/oauth2/callback
+            refreshToken: true
             scopes:
             - openid
     readyListener:

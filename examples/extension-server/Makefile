@@ -8,14 +8,15 @@ $(tools.bindir)/%: $(tools.srcdir)/%/pin.go $(tools.srcdir)/%/go.mod
 IMAGE_PREFIX ?= envoyproxy/gateway-
 APP_NAME ?= extension-server
 TAG ?= latest
+GO_LDFLAGS ?=
 
 .PHONY: docker-buildx
-docker-buildx:
-	docker buildx build -f tools/docker/extension-server/Dockerfile . -t $(IMAGE_PREFIX)$(APP_NAME):$(TAG) --build-arg GO_LDFLAGS="$(GO_LDFLAGS)" --load
+docker-buildx: build
+	docker buildx build -f tools/docker/extension-server/Dockerfile . -t $(IMAGE_PREFIX)$(APP_NAME):$(TAG) --load
 
 build: generate manifests
 	mkdir -p bin
-	CGO_ENABLED=0 go build -o bin/extension-server ./cmd/extension-server
+	CGO_ENABLED=0 go build -o bin/extension-server -ldflags "$(GO_LDFLAGS)" ./cmd/extension-server
 
 image: build
 	docker build -t extension-server:latest -f tools/docker/extension-server/Dockerfile .

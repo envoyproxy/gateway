@@ -270,4 +270,4 @@ Checkout the [Developer Guide](../../../contributions/develop) to get involved i
 [Gateway]: https://gateway-api.sigs.k8s.io/api-types/gateway
 [HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute
 [GRPCRoute]: https://gateway-api.sigs.k8s.io/api-types/grpcroute
-[HTTPCORSFilter]: https://gateway-api.sigs.k8s.io/reference/spec#httpcorsfilter
+[HTTPCORSFilter]: https://gateway-api.sigs.k8s.io/reference/1.4/spec#httpcorsfilter
