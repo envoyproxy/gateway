@@ -41,7 +41,7 @@ const (
 	defaultRedirectPath          = "/oauth2/callback"
 	defaultLogoutPath            = "/logout"
 	defaultForwardAccessToken    = false
-	defaultRefreshToken          = false
+	defaultRefreshToken          = true
 	defaultPassThroughAuthHeader = false
 
 	// nolint: gosec

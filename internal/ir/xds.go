@@ -393,6 +393,8 @@ type TLSConfig struct {
 	VerifyCertificateSpki []string `json:"verifyCertificateSpki,omitempty" yaml:"verifyCertificateSpki,omitempty"`
 	// A list of allowed hex-encoded SHA-256 hashes of the DER-encoded certificate
 	VerifyCertificateHash []string `json:"verifyCertificateHash,omitempty" yaml:"verifyCertificateHash,omitempty"`
+	// CRL to verify the client certificates
+	Crl *TLSCrl `json:"crl,omitempty" yaml:"crl,omitempty"`
 	// A list of Subject Alternative name matchers
 	MatchTypedSubjectAltNames []*StringMatch `json:"matchTypedSubjectAltNames,omitempty" yaml:"matchTypedSubjectAltNames,omitempty"`
 	// MinVersion defines the minimal version of the TLS protocol supported by this listener.
@@ -424,6 +426,17 @@ type TLSCertificate struct {
 	PrivateKey PrivateBytes `json:"privateKey,omitempty" yaml:"privateKey,omitempty"`
 	// OCSPStaple contains the stapled OCSP response associated with the certificate, if provided.
 	OCSPStaple []byte `json:"ocspStaple,omitempty" yaml:"ocspStaple,omitempty"`
+}
+
+// TLSCrl holds a single CRL's details
+// +k8s:deepcopy-gen=true
+type TLSCrl struct {
+	// Name of the Secret object.
+	Name string `json:"name" yaml:"name"`
+	// CRL content.
+	Data []byte `json:"data,omitempty" yaml:"data,omitempty"`
+	// OnlyVerifyLeafCertificate to verify the leaf certificate against the CRL
+	OnlyVerifyLeafCertificate bool `json:"onlyVerifyLeafCertificate,omitempty" yaml:"onlyVerifyLeafCertificate,omitempty"`
 }
 
 // TLSCACertificate holds CA Certificate to validate clients

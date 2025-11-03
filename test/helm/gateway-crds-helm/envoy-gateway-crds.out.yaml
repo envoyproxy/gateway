@@ -29383,13 +29383,14 @@ spec:
                       If not specified, uses the default redirect URI "%REQ(x-forwarded-proto)%://%REQ(:authority)%/oauth2/callback"
                     type: string
                   refreshToken:
+                    default: true
                     description: |-
                       RefreshToken indicates whether the Envoy should automatically refresh the
                       id token and access token when they expire.
                       When set to true, the Envoy will use the refresh token to get a new id token
                       and access token when they expire.
 
-                      If not specified, defaults to false.
+                      If not specified, defaults to true.
                     type: boolean
                   resources:
                     description: |-

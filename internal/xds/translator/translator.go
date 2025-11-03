@@ -413,7 +413,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 			}
 
 			if httpListener.TLS.CACertificate != nil {
-				caSecret := buildXdsTLSCaCertSecret(httpListener.TLS.CACertificate)
+				caSecret := buildXdsTLSCaCertSecret(httpListener.TLS.CACertificate, httpListener.TLS.Crl)
 				if err = tCtx.AddXdsResource(resourcev3.SecretType, caSecret); err != nil {
 					errs = errors.Join(errs, err)
 				}
@@ -787,7 +787,7 @@ func (t *Translator) processTCPListenerXdsTranslation(
 					}
 				}
 				if route.TLS.Terminate.CACertificate != nil {
-					caSecret := buildXdsTLSCaCertSecret(route.TLS.Terminate.CACertificate)
+					caSecret := buildXdsTLSCaCertSecret(route.TLS.Terminate.CACertificate, route.TLS.Terminate.Crl)
 					if err := tCtx.AddXdsResource(resourcev3.SecretType, caSecret); err != nil {
 						errs = errors.Join(errs, err)
 					}

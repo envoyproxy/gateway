@@ -104,7 +104,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(resources *resource.Resources
 					res = append(res, policy)
 				}
 
-				t.processBTPolicyForRoute(resources, xdsIR,
+				t.processBackendTrafficPolicyForRoute(resources, xdsIR,
 					routeMap, gatewayRouteMap, gatewayPolicyMerged, gatewayPolicyMap, policy, currTarget)
 			}
 		}
@@ -124,7 +124,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(resources *resource.Resources
 					res = append(res, policy)
 				}
 
-				t.processBTPolicyForRoute(resources, xdsIR,
+				t.processBackendTrafficPolicyForRoute(resources, xdsIR,
 					routeMap, gatewayRouteMap, gatewayPolicyMerged, gatewayPolicyMap, policy, currTarget)
 			}
 		}
@@ -143,7 +143,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(resources *resource.Resources
 					handledPolicies[policyName] = policy
 					res = append(res, policy)
 				}
-				t.processBTPolicyForGateway(resources, xdsIR,
+				t.processBackendTrafficPolicyForGateway(resources, xdsIR,
 					gatewayMap, gatewayRouteMap, gatewayPolicyMerged, policy, currTarget)
 			}
 		}
@@ -162,7 +162,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(resources *resource.Resources
 					handledPolicies[policyName] = policy
 					res = append(res, policy)
 				}
-				t.processBTPolicyForGateway(resources, xdsIR,
+				t.processBackendTrafficPolicyForGateway(resources, xdsIR,
 					gatewayMap, gatewayRouteMap, gatewayPolicyMerged, policy, currTarget)
 			}
 		}
@@ -221,7 +221,7 @@ func (t *Translator) buildGatewayPolicyMap(
 	}
 }
 
-func (t *Translator) processBTPolicyForRoute(
+func (t *Translator) processBackendTrafficPolicyForRoute(
 	resources *resource.Resources,
 	xdsIR resource.XdsIRMap,
 	routeMap map[policyTargetRouteKey]*policyRouteTargetContext,
@@ -236,7 +236,7 @@ func (t *Translator) processBTPolicyForRoute(
 		resolveErr    *status.PolicyResolveError
 	)
 
-	targetedRoute, resolveErr = resolveBTPolicyRouteTargetRef(policy, currTarget, routeMap)
+	targetedRoute, resolveErr = resolveBackendTrafficPolicyRouteTargetRef(policy, currTarget, routeMap)
 	// Skip if the route is not found
 	// It's not necessarily an error because the BackendTrafficPolicy may be
 	// reconciled by multiple controllers. And the other controller may
@@ -412,7 +412,7 @@ func (t *Translator) processBTPolicyForRoute(
 	}
 }
 
-func (t *Translator) processBTPolicyForGateway(
+func (t *Translator) processBackendTrafficPolicyForGateway(
 	resources *resource.Resources,
 	xdsIR resource.XdsIRMap,
 	gatewayMap map[types.NamespacedName]*policyGatewayTargetContext,
@@ -427,7 +427,7 @@ func (t *Translator) processBTPolicyForGateway(
 	)
 
 	// Negative statuses have already been assigned so it's safe to skip
-	targetedGateway, resolveErr = resolveBTPolicyGatewayTargetRef(policy, currTarget, gatewayMap)
+	targetedGateway, resolveErr = resolveBackendTrafficPolicyGatewayTargetRef(policy, currTarget, gatewayMap)
 	if targetedGateway == nil {
 		return
 	}
@@ -487,7 +487,7 @@ func (t *Translator) processBTPolicyForGateway(
 	}
 }
 
-func resolveBTPolicyGatewayTargetRef(
+func resolveBackendTrafficPolicyGatewayTargetRef(
 	policy *egv1a1.BackendTrafficPolicy,
 	target gwapiv1.LocalPolicyTargetReferenceWithSectionName,
 	gateways map[types.NamespacedName]*policyGatewayTargetContext,
@@ -551,7 +551,7 @@ func resolveBTPolicyGatewayTargetRef(
 	return gateway.GatewayContext, nil
 }
 
-func resolveBTPolicyRouteTargetRef(
+func resolveBackendTrafficPolicyRouteTargetRef(
 	policy *egv1a1.BackendTrafficPolicy,
 	target gwapiv1.LocalPolicyTargetReferenceWithSectionName,
 	routes map[policyTargetRouteKey]*policyRouteTargetContext,

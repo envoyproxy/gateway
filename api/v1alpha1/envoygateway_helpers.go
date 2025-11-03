@@ -27,6 +27,7 @@ func DefaultEnvoyGateway() *EnvoyGateway {
 			Logging:   DefaultEnvoyGatewayLogging(),
 			Admin:     DefaultEnvoyGatewayAdmin(),
 			Telemetry: DefaultEnvoyGatewayTelemetry(),
+			XDSServer: DefaultXDSServer(),
 		},
 	}
 }
@@ -66,6 +67,9 @@ func (e *EnvoyGateway) SetEnvoyGatewayDefaults() {
 	}
 	if e.Telemetry == nil {
 		e.Telemetry = DefaultEnvoyGatewayTelemetry()
+	}
+	if e.XDSServer == nil {
+		e.XDSServer = DefaultXDSServer()
 	}
 }
 
@@ -170,6 +174,11 @@ func DefaultGateway() *Gateway {
 	return &Gateway{
 		ControllerName: GatewayControllerName,
 	}
+}
+
+// DefaultXDSServer returns a new XDSServer with default configuration parameters.
+func DefaultXDSServer() *XDSServer {
+	return &XDSServer{}
 }
 
 // DefaultEnvoyGatewayLogging returns a new EnvoyGatewayLogging with default configuration parameters.
