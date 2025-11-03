@@ -77,7 +77,7 @@ func (t *Translator) ProcessClientTrafficPolicies(
 					res = append(res, policy)
 				}
 
-				gateway, resolveErr := resolveCTPolicyTargetRef(policy, &currTarget, gatewayMap)
+				gateway, resolveErr := resolveClientTrafficPolicyTargetRef(policy, &currTarget, gatewayMap)
 
 				// Negative statuses have already been assigned so its safe to skip
 				if gateway == nil {
@@ -172,7 +172,7 @@ func (t *Translator) ProcessClientTrafficPolicies(
 					handledPolicies[policyName] = policy
 				}
 
-				gateway, resolveErr := resolveCTPolicyTargetRef(policy, &currTarget, gatewayMap)
+				gateway, resolveErr := resolveClientTrafficPolicyTargetRef(policy, &currTarget, gatewayMap)
 
 				// Negative statuses have already been assigned so its safe to skip
 				if gateway == nil {
@@ -283,7 +283,7 @@ func (t *Translator) ProcessClientTrafficPolicies(
 	return res
 }
 
-func resolveCTPolicyTargetRef(
+func resolveClientTrafficPolicyTargetRef(
 	policy *egv1a1.ClientTrafficPolicy,
 	targetRef *gwapiv1.LocalPolicyTargetReferenceWithSectionName,
 	gateways map[types.NamespacedName]*policyGatewayTargetContext,
@@ -482,11 +482,20 @@ func (t *Translator) translateClientTrafficPolicyForListener(policy *egv1a1.Clie
 
 		// Early return if got any errors
 		if errs != nil {
+			routesWithDirectResponse := sets.New[string]()
 			for _, route := range httpIR.Routes {
 				// Return a 500 direct response
 				route.DirectResponse = &ir.CustomResponse{
 					StatusCode: ptr.To(uint32(500)),
 				}
+				routesWithDirectResponse.Insert(route.Name)
+			}
+			if len(httpIR.Routes) > 0 {
+				t.Logger.Info("setting 500 direct response in routes due to errors in ClientTrafficPolicy",
+					"policy", utils.NamespacedName(policy),
+					"routes", sets.List(routesWithDirectResponse),
+					"error", errs,
+				)
 			}
 			return errs
 		}
@@ -639,7 +648,7 @@ func translateListenerHeaderSettings(headerSettings *egv1a1.HeaderSettings, http
 	if headerSettings.RequestID != nil {
 		httpIR.Headers.RequestID = (*ir.RequestIDAction)(headerSettings.RequestID)
 	} else if headerSettings.PreserveXRequestID != nil && *headerSettings.PreserveXRequestID {
-		httpIR.Headers.RequestID = ptr.To(ir.RequestIDActionPreserve)
+		httpIR.Headers.RequestID = ptr.To(ir.RequestIDActionPreserveOrGenerate)
 	}
 
 	if headerSettings.XForwardedClientCert != nil {
@@ -848,55 +857,42 @@ func (t *Translator) buildListenerTLSParameters(policy *egv1a1.ClientTrafficPoli
 		}
 
 		for _, caCertRef := range tlsParams.ClientValidation.CACertificateRefs {
-			caCertRefKind := string(ptr.Deref(caCertRef.Kind, resource.KindSecret))
-			var caCertBytes []byte
-			switch caCertRefKind {
-			case resource.KindSecret:
-				secret, err := t.validateSecretRef(false, from, caCertRef, resources)
-				if err != nil {
-					return irTLSConfig, err
-				}
-
-				secretCertBytes, ok := getCaCertFromSecret(secret)
-				if !ok || len(secretCertBytes) == 0 {
-					return irTLSConfig, fmt.Errorf(
-						"caCertificateRef secret [%s] not found", caCertRef.Name)
-				}
-				caCertBytes = secretCertBytes
-			case resource.KindConfigMap:
-				configMap, err := t.validateConfigMapRef(false, from, caCertRef, resources)
-				if err != nil {
-					return irTLSConfig, err
-				}
-
-				configMapData, ok := getCaCertFromConfigMap(configMap)
-				if !ok || len(configMapData) == 0 {
-					return irTLSConfig, fmt.Errorf(
-						"caCertificateRef configmap [%s] not found", caCertRef.Name)
-				}
-				caCertBytes = []byte(configMapData)
-			case resource.KindClusterTrustBundle:
-				trustBundle := resources.GetClusterTrustBundle(string(caCertRef.Name))
-				if trustBundle == nil {
-					return irTLSConfig, fmt.Errorf(
-						"caCertificateRef ClusterTrustBundle [%s] not found", caCertRef.Name)
-				}
-				caCertBytes = []byte(trustBundle.Spec.TrustBundle)
-			default:
-				return irTLSConfig, fmt.Errorf("unsupported caCertificateRef kind:%s", caCertRefKind)
+			caCertBytes, err := t.validateAndGetDataAtKeyInRef(caCertRef, caCertKey, resources, from)
+			if err != nil {
+				return irTLSConfig, fmt.Errorf("failed to get certificate from ref: %w", err)
 			}
-
-			if err := validateCertificate(caCertBytes); err != nil {
-				return irTLSConfig, fmt.Errorf(
-					"invalid certificate in %s %s: %w", caCertRefKind, caCertRef.Name, err)
+			if err := validateCertificates(caCertBytes); err != nil {
+				return irTLSConfig, fmt.Errorf("invalid certificate in %s: %w", caCertRef.Name, err)
 			}
 			irCACert.Certificate = append(irCACert.Certificate, caCertBytes...)
 		}
-
 		if len(irCACert.Certificate) > 0 {
 			irTLSConfig.CACertificate = irCACert
 			irTLSConfig.RequireClientCertificate = !tlsParams.ClientValidation.Optional
 			setTLSClientValidationContext(tlsParams.ClientValidation, irTLSConfig)
+		}
+
+		irCrl := &ir.TLSCrl{
+			Name: irTLSCrlName(policy.Namespace, policy.Name),
+		}
+
+		if tlsParams.ClientValidation.Crl != nil {
+			for _, crlRef := range tlsParams.ClientValidation.Crl.Refs {
+				crlBytes, err := t.validateAndGetDataAtKeyInRef(crlRef, crlKey, resources, from)
+				if err != nil {
+					return irTLSConfig, fmt.Errorf("failed to get crl from ref: %w", err)
+				}
+				if err := validateCrl(crlBytes); err != nil {
+					return irTLSConfig, fmt.Errorf("invalid crl in %s: %w", crlRef.Name, err)
+				}
+				irCrl.Data = append(irCrl.Data, crlBytes...)
+			}
+			if len(irCrl.Data) > 0 {
+				irTLSConfig.Crl = irCrl
+				if tlsParams.ClientValidation.Crl.OnlyVerifyLeafCertificate != nil {
+					irCrl.OnlyVerifyLeafCertificate = *tlsParams.ClientValidation.Crl.OnlyVerifyLeafCertificate
+				}
+			}
 		}
 	}
 
@@ -910,6 +906,43 @@ func (t *Translator) buildListenerTLSParameters(policy *egv1a1.ClientTrafficPoli
 	}
 
 	return irTLSConfig, nil
+}
+
+// validateAndGetDataAtKeyInRef validates the secret object reference and gets the data at the key in the secret or configmap
+func (t *Translator) validateAndGetDataAtKeyInRef(ref gwapiv1.SecretObjectReference, key string, resources *resource.Resources, from crossNamespaceFrom) ([]byte, error) {
+	refKind := string(ptr.Deref(ref.Kind, resource.KindSecret))
+	switch refKind {
+	case resource.KindSecret:
+		secret, err := t.validateSecretRef(false, from, ref, resources)
+		if err != nil {
+			return nil, err
+		}
+
+		secretCertBytes, ok := getOrFirstFromData(secret.Data, key)
+		if !ok || len(secretCertBytes) == 0 {
+			return nil, fmt.Errorf("ref secret [%s] has no key %s and more than one entry", ref.Name, key)
+		}
+		return secretCertBytes, nil
+	case resource.KindConfigMap:
+		configMap, err := t.validateConfigMapRef(false, from, ref, resources)
+		if err != nil {
+			return nil, err
+		}
+
+		configMapData, ok := getOrFirstFromData(configMap.Data, key)
+		if !ok || len(configMapData) == 0 {
+			return nil, fmt.Errorf("ref configmap [%s] has no key %s and more than one entry", ref.Name, key)
+		}
+		return []byte(configMapData), nil
+	case resource.KindClusterTrustBundle:
+		trustBundle := resources.GetClusterTrustBundle(string(ref.Name))
+		if trustBundle == nil {
+			return nil, fmt.Errorf("ref ClusterTrustBundle [%s] not found", ref.Name)
+		}
+		return []byte(trustBundle.Spec.TrustBundle), nil
+	default:
+		return nil, fmt.Errorf("unsupported ref kind:%s", refKind)
+	}
 }
 
 func setTLSClientValidationContext(tlsClientValidation *egv1a1.ClientValidationContext, irTLSConfig *ir.TLSConfig) {

@@ -471,14 +471,14 @@ only one Route rule may match each request. For more information on how conflict
 resolution applies to merging, refer to the [API specification][httprouterule].
 
 
-[httproute]: https://gateway-api.sigs.k8s.io/reference/spec#gateway.networking.k8s.io/v1.HTTPRoute
-[httprouterule]: https://gateway-api.sigs.k8s.io/reference/spec#gateway.networking.k8s.io/v1.HTTPRouteRule
-[hostname]: https://gateway-api.sigs.k8s.io/reference/spec#gateway.networking.k8s.io/v1.Hostname
+[httproute]: https://gateway-api.sigs.k8s.io/reference/1.4/spec#httproute
+[httprouterule]: https://gateway-api.sigs.k8s.io/reference/1.4/spec#httprouterule
+[hostname]: https://gateway-api.sigs.k8s.io/reference/1.4/spec#hostname
 [rfc-3986]: https://tools.ietf.org/html/rfc3986
-[matches]: https://gateway-api.sigs.k8s.io/reference/spec#gateway.networking.k8s.io/v1.HTTPRouteMatch
-[filters]: https://gateway-api.sigs.k8s.io/reference/spec#gateway.networking.k8s.io/v1.HTTPRouteFilter
-[backendRef]: https://gateway-api.sigs.k8s.io/reference/spec#gateway.networking.k8s.io/v1.HTTPBackendRef
-[parentRef]: https://gateway-api.sigs.k8s.io/reference/spec#gateway.networking.k8s.io/v1.ParentRef
-[timeouts]: https://gateway-api.sigs.k8s.io/reference/spec#gateway.networking.k8s.io/v1.HTTPRouteTimeouts
+[matches]: https://gateway-api.sigs.k8s.io/reference/1.4/spec#httproutematch
+[filters]: https://gateway-api.sigs.k8s.io/reference/1.4/spec#httproutefilter
+[backendRef]: https://gateway-api.sigs.k8s.io/reference/1.4/spec#httpbackendref
+[parentRef]: https://gateway-api.sigs.k8s.io/reference/1.4/spec#parentref
+[timeouts]: https://gateway-api.sigs.k8s.io/reference/1.4/spec#httproutetimeouts
 [appProtocol]: https://kubernetes.io/docs/concepts/services-networking/service/#application-protocol
-[sectionName]: https://gateway-api.sigs.k8s.io/reference/spec#gateway.networking.k8s.io/v1.SectionName
+[sectionName]: https://gateway-api.sigs.k8s.io/reference/1.4/spec#sectionname

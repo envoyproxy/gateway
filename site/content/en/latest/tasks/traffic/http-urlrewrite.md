@@ -694,6 +694,6 @@ You can see that the host is rewritten from `host.header.rewrite.example`, to th
 `x-custom-host` header `foo`. The original host header is preserved in the `X-Forwarded-Host` header.
 
 
-[HTTPURLRewriteFilter]: https://gateway-api.sigs.k8s.io/reference/spec#gateway.networking.k8s.io/v1.HTTPURLRewriteFilter
+[HTTPURLRewriteFilter]: https://gateway-api.sigs.k8s.io/reference/1.4/spec#httpurlrewritefilter
 [HTTPRouteFilter]: ../../../api/extension_types#httproutefilter
 [RE2]: https://github.com/google/re2/wiki/Syntax

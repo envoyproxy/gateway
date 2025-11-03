@@ -134,11 +134,23 @@ func extAuthConfig(extAuth *ir.ExtAuth) (*extauthv3.ExtAuthz, error) {
 		timeout = durationpb.New(extAuth.Timeout.Duration)
 	}
 
-	if extAuth.HTTP != nil {
-		config.Services = &extauthv3.ExtAuthz_HttpService{
-			HttpService: httpService(extAuth.HTTP, timeout),
+	var rp *corev3.RetryPolicy
+	// Set the retry policy if it exists.
+	if extAuth.Traffic != nil && extAuth.Traffic.Retry != nil {
+		var err error
+		rp, err = buildNonRouteRetryPolicy(extAuth.Traffic.Retry)
+		if err != nil {
+			return nil, fmt.Errorf("build retry policy for http service: %w", err)
 		}
-		// Retry policy is not supported for HTTP service.
+	}
+
+	if extAuth.HTTP != nil {
+		hs := httpService(extAuth.HTTP, timeout)
+		hs.RetryPolicy = rp
+
+		config.Services = &extauthv3.ExtAuthz_HttpService{
+			HttpService: hs,
+		}
 	} else if extAuth.GRPC != nil {
 		service := &corev3.GrpcService{
 			TargetSpecifier: &corev3.GrpcService_EnvoyGrpc_{
@@ -146,14 +158,8 @@ func extAuthConfig(extAuth *ir.ExtAuth) (*extauthv3.ExtAuthz, error) {
 			},
 			Timeout: timeout,
 		}
-		// Set the retry policy if it exists.
-		if extAuth.Traffic != nil && extAuth.Traffic.Retry != nil {
-			rp, err := buildNonRouteRetryPolicy(extAuth.Traffic.Retry)
-			if err != nil {
-				return nil, fmt.Errorf("build retry policy for gRPC service: %w", err)
-			}
-			service.RetryPolicy = rp
-		}
+		service.RetryPolicy = rp
+
 		config.Services = &extauthv3.ExtAuthz_GrpcService{
 			GrpcService: service,
 		}

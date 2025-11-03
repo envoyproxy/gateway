@@ -89,7 +89,7 @@ func TestHandleSubscriptionAlreadyInitialized(t *testing.T) {
 			}
 		},
 	)
-	assert.Equal(t, 2, storeCalls)
+	assert.LessOrEqual(t, storeCalls, 2) // updates can be coalesced
 	assert.Equal(t, 1, deleteCalls)
 }
 
@@ -268,7 +268,11 @@ func TestControllerResourceUpdate(t *testing.T) {
 					m.GatewayAPIResources.Close()
 				}
 			})
-			assert.Equal(t, tc.updates, updates)
+			if tc.updates > 1 {
+				assert.LessOrEqual(t, updates, tc.updates) // Updates can be coalesced
+			} else {
+				assert.Equal(t, 1, updates)
+			}
 		})
 	}
 }

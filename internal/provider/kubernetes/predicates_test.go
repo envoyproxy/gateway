@@ -582,6 +582,57 @@ func TestValidateSecretForReconcile(t *testing.T) {
 			secret: test.GetSecret(types.NamespacedName{Name: "secret"}),
 			expect: true,
 		},
+		{
+			name: "backend client tls secret",
+			configs: []client.Object{
+				test.GetGatewayClass("test-gc", egv1a1.GatewayControllerName, nil),
+				&egv1a1.Backend{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "backend",
+						Namespace: "default",
+					},
+					Spec: egv1a1.BackendSpec{
+						Endpoints: []egv1a1.BackendEndpoint{{
+							IP: &egv1a1.IPEndpoint{Address: "1.1.1.1", Port: 80},
+						}},
+						TLS: &egv1a1.BackendTLSSettings{
+							BackendTLSConfig: &egv1a1.BackendTLSConfig{
+								ClientCertificateRef: &gwapiv1.SecretObjectReference{
+									Name: "secret",
+								},
+							},
+						},
+					},
+				},
+			},
+			secret: test.GetSecret(types.NamespacedName{Namespace: "default", Name: "secret"}),
+			expect: true,
+		},
+		{
+			name: "backend ca certificate secret",
+			configs: []client.Object{
+				test.GetGatewayClass("test-gc", egv1a1.GatewayControllerName, nil),
+				&egv1a1.Backend{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "backend",
+						Namespace: "default",
+					},
+					Spec: egv1a1.BackendSpec{
+						Endpoints: []egv1a1.BackendEndpoint{{
+							IP: &egv1a1.IPEndpoint{Address: "1.1.1.1", Port: 80},
+						}},
+						TLS: &egv1a1.BackendTLSSettings{
+							CACertificateRefs: []gwapiv1.LocalObjectReference{{
+								Kind: resource.KindSecret,
+								Name: "secret",
+							}},
+						},
+					},
+				},
+			},
+			secret: test.GetSecret(types.NamespacedName{Namespace: "default", Name: "secret"}),
+			expect: true,
+		},
 	}
 
 	// Create the reconciler.

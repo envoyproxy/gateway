@@ -47,7 +47,7 @@ func testEnvoyPatchPolicy(t *testing.T, suite *suite.ConformanceTestSuite) {
 		Namespace: ns,
 	}
 
-	// Send a request to an valid path and expect a successful response
+	// Send a request to a valid path and expect a successful response
 	http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, OkResp)
 
 	customResp := http.ExpectedResponse{

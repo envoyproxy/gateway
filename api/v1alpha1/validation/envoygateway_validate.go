@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net/url"
 	"strings"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 
@@ -59,6 +60,10 @@ func ValidateEnvoyGateway(eg *egv1a1.EnvoyGateway) error {
 	}
 
 	if err := validateEnvoyGatewayTelemetry(eg.Telemetry); err != nil {
+		return err
+	}
+
+	if err := validateEnvoyGatewayXDSServer(eg.XDSServer); err != nil {
 		return err
 	}
 
@@ -222,6 +227,34 @@ func validateEnvoyGatewayExtensionManager(extensionManager *egv1a1.ExtensionMana
 			}
 		}
 	}
+	return nil
+}
+
+func validateEnvoyGatewayXDSServer(xdsServer *egv1a1.XDSServer) error {
+	if xdsServer == nil {
+		return nil
+	}
+
+	if xdsServer.MaxConnectionAge != nil {
+		d, err := time.ParseDuration(string(*xdsServer.MaxConnectionAge))
+		if err != nil {
+			return fmt.Errorf("invalid xdsServer.maxConnectionAge: %w", err)
+		}
+		if d <= 0 {
+			return fmt.Errorf("xdsServer.maxConnectionAge must be greater than zero")
+		}
+	}
+
+	if xdsServer.MaxConnectionAgeGrace != nil {
+		d, err := time.ParseDuration(string(*xdsServer.MaxConnectionAgeGrace))
+		if err != nil {
+			return fmt.Errorf("invalid xdsServer.maxConnectionAgeGrace: %w", err)
+		}
+		if d <= 0 {
+			return fmt.Errorf("xdsServer.maxConnectionAgeGrace must be greater than zero")
+		}
+	}
+
 	return nil
 }
 

@@ -12,7 +12,7 @@ import (
 
 	clusterv3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
 	"google.golang.org/protobuf/types/known/durationpb"
-	inferencev1alpha2 "sigs.k8s.io/gateway-api-inference-extension/api/v1alpha2"
+	inferencev1 "sigs.k8s.io/gateway-api-inference-extension/api/v1"
 
 	pb "github.com/envoyproxy/gateway/proto/extension"
 )
@@ -25,7 +25,7 @@ func (s *Server) PostClusterModify(ctx context.Context, req *pb.PostClusterModif
 	s.log.Info("postClusterModify callback was invoked", slog.String("cluster_name", req.Cluster.Name))
 
 	// Parse extension resources to find InferencePool configurations
-	var inferencePoolConfigs []*inferencev1alpha2.InferencePool
+	var inferencePoolConfigs []*inferencev1.InferencePool
 	for _, ext := range req.PostClusterContext.BackendExtensionResources {
 		// Parse the JSON to check the kind and apiVersion
 		var resourceInfo map[string]interface{}
@@ -42,9 +42,9 @@ func (s *Server) PostClusterModify(ctx context.Context, req *pb.PostClusterModif
 			slog.String("apiVersion", apiVersion))
 
 		// Check if it's an InferencePool
-		if kind == "InferencePool" && apiVersion == "sigs.k8s.io/gateway-api-inference-extension/v1alpha2" {
+		if kind == "InferencePool" && apiVersion == "sigs.k8s.io/gateway-api-inference-extension/v1" {
 			// Now unmarshal directly to InferencePool type
-			var pool inferencev1alpha2.InferencePool
+			var pool inferencev1.InferencePool
 			if err := json.Unmarshal(ext.GetUnstructuredBytes(), &pool); err != nil {
 				s.log.Error("failed to unmarshal InferencePool", slog.String("error", err.Error()))
 				continue
@@ -53,7 +53,7 @@ func (s *Server) PostClusterModify(ctx context.Context, req *pb.PostClusterModif
 			s.log.Info("found InferencePool for cluster modification",
 				slog.String("name", pool.GetName()),
 				slog.String("namespace", pool.GetNamespace()),
-				slog.Int("targetPortNumber", int(pool.Spec.TargetPortNumber)))
+				slog.Any("targetPorts", pool.Spec.TargetPorts))
 
 			inferencePoolConfigs = append(inferencePoolConfigs, &pool)
 		}
@@ -76,7 +76,7 @@ func (s *Server) PostClusterModify(ctx context.Context, req *pb.PostClusterModif
 }
 
 // modifyClusterForInferencePool modifies an existing cluster based on InferencePool configurations
-func (s *Server) modifyClusterForInferencePool(cluster *clusterv3.Cluster, pool *inferencev1alpha2.InferencePool) *clusterv3.Cluster {
+func (s *Server) modifyClusterForInferencePool(cluster *clusterv3.Cluster, pool *inferencev1.InferencePool) *clusterv3.Cluster {
 	s.log.Info("modifying cluster for InferencePool",
 		slog.String("cluster_name", cluster.Name),
 		slog.String("inference_pool", pool.GetName()))
@@ -87,7 +87,7 @@ func (s *Server) modifyClusterForInferencePool(cluster *clusterv3.Cluster, pool 
 }
 
 // convertToOriginalDestCluster converts a regular cluster to an ORIGINAL_DST cluster for InferencePool
-func (s *Server) convertToOriginalDestCluster(originalCluster *clusterv3.Cluster, pool *inferencev1alpha2.InferencePool) *clusterv3.Cluster {
+func (s *Server) convertToOriginalDestCluster(originalCluster *clusterv3.Cluster, pool *inferencev1.InferencePool) *clusterv3.Cluster {
 	originalCluster.LbPolicy = clusterv3.Cluster_CLUSTER_PROVIDED
 	originalCluster.ClusterDiscoveryType = &clusterv3.Cluster_Type{
 		Type: clusterv3.Cluster_ORIGINAL_DST,
