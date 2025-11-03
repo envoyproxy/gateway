@@ -19,6 +19,14 @@ format-yaml: ## Format YAML files with go-prettier
 	   $(GO_TOOL) prettier -w $$files; \
 	 fi
 
+.PHONY: check-format-yaml
+check-format-yaml: ## Check YAML formatting with go-prettier (no changes)
+	@$(LOG_TARGET)
+	@files="$$(git ls-files :*.yml :*.yaml)"; \
+	 if [ -n "$$files" ]; then \
+	   $(GO_TOOL) prettier --check $$files; \
+	 fi
+
 # lint-deps is run separately in CI to separate the tooling install logs from the actual output logs generated
 # by the lint tooling.
 .PHONY: lint-deps

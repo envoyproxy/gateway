@@ -17,12 +17,8 @@ jobs:
         with:
           go-version-file: tools/go.mod
 
-      - name: Run YAML formatter
+      - name: Check YAML formatting (no changes)
         run: |
-          make format-yaml
-
-      - name: Check for unformatted changes
-        run: |
-          git diff --exit-code || (echo "Error: YAML files need formatting. Run 'make format-yaml'" && exit 1)
+          make check-format-yaml
 
 
