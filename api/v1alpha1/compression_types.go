@@ -41,7 +41,8 @@ type Compression struct {
 	// +required
 	Type CompressorType `json:"type"`
 
-	// ChooseFirst indicates whether to choose the first encoding type
+	// ChooseFirst indicates whether the compressor is preferred when q-values in Accept-Encoding are equal.
+	// If multiple compressor filters set choose_first to true, the last one in the filter chain is chosen.
 	//
 	// +optional
 	ChooseFirst bool `json:"chooseFirst,omitempty"`
