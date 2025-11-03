@@ -93,28 +93,25 @@ DOC_DEST_DIR=$(ROOT_DIR)/site/content/en/latest/api/gateway_api
 SYNC_FILES := gateway.md gatewayclass.md httproute.md grpcroute.md backendtlspolicy.md referencegrant.md
 
 # Main target to synchronize all gateway-api documentation components.
-sync-gwapi-docs: gwapi-doc-download gwapi-doc-transform gwapi-doc-download-includes gwapi-doc-replace-includes gwapi-doc-clean-includes gwapi-doc-remove-special-lines gwapi-doc-update-relative-links
+sync-gwapi-docs: gwapi-doc-download gwapi-doc-transform \
+	gwapi-doc-download-includes gwapi-doc-replace-includes gwapi-doc-clean-includes \
+	gwapi-doc-remove-special-lines gwapi-doc-update-relative-links
 
 # Download the documentation files from the gateway-api repository to the local destination directory.
 gwapi-doc-download:
-# 	@$(LOG_TARGET)
-# 	@mkdir -p $(DOC_DEST_DIR)
-# 	@$(foreach file, $(SYNC_FILES), curl -s -o $(DOC_DEST_DIR)/$(file) $(DOC_SRC_URL)/$(file);)
+	@$(LOG_TARGET)
+	@mkdir -p $(DOC_DEST_DIR)
+	@$(foreach file, $(SYNC_FILES), curl -s -o $(DOC_DEST_DIR)/$(file) $(DOC_SRC_URL)/$(file);)
 
 # Transform the first line of each markdown file to a header format suitable for Hugo.
 gwapi-doc-transform:
-# 	@$(LOG_TARGET)
-# 	@$(foreach file, $(SYNC_FILES), sed -i '1s/^# \(.*\)/+++\ntitle = "\1"\n+++/' $(DOC_DEST_DIR)/$(file);)
+	@$(LOG_TARGET)
+	@$(foreach file, $(SYNC_FILES), $(SED) '1s/^# \(.*\)/+++\ntitle = "\1"\n+++/' $(DOC_DEST_DIR)/$(file);)
 
 # Download included YAML files referenced within the documentation.
 gwapi-doc-download-includes:
 	@$(LOG_TARGET)
-	@$(foreach file, $(SYNC_FILES), \
-		grep -o "{% include '.*' %}" $(DOC_DEST_DIR)/$(file) | sed "s/{% include '\(.*\)' %}/\1/" | \
-		while read yaml_path; do \
-			yaml_file=$$(basename $$yaml_path); \
-			curl -s -o $(DOC_DEST_DIR)/$$yaml_file $(YAML_SRC_BASE_URL)/$$yaml_path; \
-		done;)
+	@DOC_DEST_DIR=$(DOC_DEST_DIR) YAML_SRC_BASE_URL=$(YAML_SRC_BASE_URL) SYNC_FILES="$(SYNC_FILES)" ./tools/hack/gwapi-doc-download-includes.sh
 
 # Replace include statements with the actual content of the YAML files.
 gwapi-doc-replace-includes:
@@ -137,15 +134,22 @@ gwapi-doc-clean-includes:
 # Remove special lines that start with '!!!' or `???` from the documentation.
 gwapi-doc-remove-special-lines:
 	@$(LOG_TARGET)
-# 	@$(foreach file, $(SYNC_FILES), \
-# 		sed -i '/^[\?!]\{3\}/d' $(DOC_DEST_DIR)/$(file);)
+	@$(foreach file, $(SYNC_FILES), \
+		$(SED) '/^[\?!]\{3\}/d' $(DOC_DEST_DIR)/$(file);)
 
 # Update relative links
 gwapi-doc-update-relative-links:
-# 	@$(foreach file, $(SYNC_FILES), \
-# 		sed -i -e 's/\(\.*\]\)(\(\.\.\/[^:]*\))/\1(https:\/\/gateway-api.sigs.k8s.io\2)/g' -e 's/\(\[.*\]: \)\(\/[^:]*\)/\1https:\/\/gateway-api.sigs.k8s.io\2/g' -e 's/\(\[.*\]: \)\(\.\.\/[^:]*\)/\1https:\/\/gateway-api.sigs.k8s.io\2/g' $(DOC_DEST_DIR)/$(file);)
-# 	@$(foreach file, $(SYNC_FILES), \
-# 		sed -i -e 's/https:\/\/gateway-api.sigs.k8s.io\.\./https:\/\/gateway-api.sigs.k8s.io/g' $(DOC_DEST_DIR)/$(file);)
+	@$(LOG_TARGET)
+	# Replace ../reference/spec.md to https://gateway-api.sigs.k8s.io/reference/spec/
+	@$(foreach file, $(SYNC_FILES), \
+ 		$(SED) -e 's/\(\[.*\]\)(\(\.\.\/reference\/spec.md\))/\1(https:\/\/gateway-api.sigs.k8s.io\/reference\/spec\/)/g' -e 's/\(\[.*\]: \)\(\/reference\/spec.md\)/\1https:\/\/gateway-api.sigs.k8s.io\/reference\/spec\//g' -e 's/\(\[.*\]: \)\(\.\.\/reference\/spec.md\)/\1https:\/\/gateway-api.sigs.k8s.io\/reference\/spec\//g' $(DOC_DEST_DIR)/$(file);)
+	@$(foreach file, $(SYNC_FILES), \
+ 		$(SED) -e 's/\(\.*\]\)(\(\.\.\/[^:]*\))/\1(https:\/\/gateway-api.sigs.k8s.io\2)/g' -e 's/\(\[.*\]: \)\(\/[^:]*\)/\1https:\/\/gateway-api.sigs.k8s.io\2/g' -e 's/\(\[.*\]: \)\(\.\.\/[^:]*\)/\1https:\/\/gateway-api.sigs.k8s.io\2/g' $(DOC_DEST_DIR)/$(file);)
+	@$(foreach file, $(SYNC_FILES), \
+ 		$(SED) -e 's/https:\/\/gateway-api.sigs.k8s.io\.\./https:\/\/gateway-api.sigs.k8s.io/g' $(DOC_DEST_DIR)/$(file);)
+ 	# Remove .md from links
+	@$(foreach file, $(SYNC_FILES), \
+ 		$(SED) -e 's/\(\[.*\](https:\/\/gateway-api.sigs.k8s.io[^)]*\)\.md/\1/g' $(DOC_DEST_DIR)/$(file);)
 
 .PHONY: helm-readme-gen
 helm-readme-gen:

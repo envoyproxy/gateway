@@ -67,8 +67,6 @@ endif
 
 ##@ Kubernetes Development
 
-GNU_SED := $(shell sed --version >/dev/null 2>&1 && echo "yes" || echo "no")
-
 YEAR := $(shell date +%Y)
 CONTROLLERGEN_OBJECT_FLAGS :=  object:headerFile="$(ROOT_DIR)/tools/boilerplate/boilerplate.generatego.txt",year=$(YEAR)
 
