@@ -96,14 +96,14 @@ backendTrafficPolicies:
     namespace: default
   spec:
     loadBalancer:
-      type: ClientSideWeightedRoundRobin
       clientSideWeightedRoundRobin:
         blackoutPeriod: 10s
-        weightExpirationPeriod: 60s
-        weightUpdatePeriod: 10s
         errorUtilizationPenalty: 1
         metricNamesForComputingUtilization:
-        - "cpu_utilization"
+        - cpu_utilization
+        weightExpirationPeriod: 60s
+        weightUpdatePeriod: 10s
+      type: ClientSideWeightedRoundRobin
     targetRef:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
@@ -184,7 +184,8 @@ backendTrafficPolicies:
         type: Accepted
       - lastTransitionTime: null
         message: 'This policy is being overridden by other backendTrafficPolicies
-          for these routes: [default/httproute-1 default/httproute-2 default/httproute-3 default/httproute-4]'
+          for these routes: [default/httproute-1 default/httproute-2 default/httproute-3
+          default/httproute-4]'
         reason: Overridden
         status: "True"
         type: Overridden
@@ -704,11 +705,11 @@ xdsIR:
           loadBalancer:
             clientSideWeightedRoundRobin:
               blackoutPeriod: 10s
-              weightExpirationPeriod: 60s
-              weightUpdatePeriod: 10s
               errorUtilizationPenalty: 1
               metricNamesForComputingUtilization:
-              - "cpu_utilization"
+              - cpu_utilization
+              weightExpirationPeriod: 1m0s
+              weightUpdatePeriod: 10s
       - destination:
           metadata:
             kind: HTTPRoute
