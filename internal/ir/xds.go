@@ -2621,8 +2621,6 @@ type Random struct{}
 // ClientSideWeightedRoundRobin load balancer settings
 // +k8s:deepcopy-gen=true
 type ClientSideWeightedRoundRobin struct {
-	EnableOOBLoadReport                *bool            `json:"enableOOBLoadReport,omitempty" yaml:"enableOOBLoadReport,omitempty"`
-	OOBReportingPeriod                 *metav1.Duration `json:"oobReportingPeriod,omitempty" yaml:"oobReportingPeriod,omitempty"`
 	BlackoutPeriod                     *metav1.Duration `json:"blackoutPeriod,omitempty" yaml:"blackoutPeriod,omitempty"`
 	WeightExpirationPeriod             *metav1.Duration `json:"weightExpirationPeriod,omitempty" yaml:"weightExpirationPeriod,omitempty"`
 	WeightUpdatePeriod                 *metav1.Duration `json:"weightUpdatePeriod,omitempty" yaml:"weightUpdatePeriod,omitempty"`

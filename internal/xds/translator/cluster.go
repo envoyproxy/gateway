@@ -403,12 +403,6 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 	case args.loadBalancer.ClientSideWeightedRoundRobin != nil:
 		cswrr := &cswrrv3.ClientSideWeightedRoundRobin{}
 		if v := args.loadBalancer.ClientSideWeightedRoundRobin; v != nil {
-			if v.EnableOOBLoadReport != nil {
-				cswrr.EnableOobLoadReport = wrapperspb.Bool(*v.EnableOOBLoadReport)
-			}
-			if v.OOBReportingPeriod != nil && v.OOBReportingPeriod.Duration > 0 {
-				cswrr.OobReportingPeriod = durationpb.New(v.OOBReportingPeriod.Duration)
-			}
 			if v.BlackoutPeriod != nil && v.BlackoutPeriod.Duration > 0 {
 				cswrr.BlackoutPeriod = durationpb.New(v.BlackoutPeriod.Duration)
 			}

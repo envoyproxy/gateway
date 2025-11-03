@@ -534,8 +534,6 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 						LoadBalancer: &egv1a1.LoadBalancer{
 							Type: egv1a1.ClientSideWeightedRoundRobinLoadBalancerType,
 							ClientSideWeightedRoundRobin: &egv1a1.ClientSideWeightedRoundRobin{
-								EnableOOBLoadReport:                ptr.To[bool](false),
-								OOBReportingPeriod:                 ptr.To(gwapiv1.Duration("30s")),
 								BlackoutPeriod:                     ptr.To(gwapiv1.Duration("10s")),
 								WeightUpdatePeriod:                 ptr.To(gwapiv1.Duration("10s")),
 								WeightExpirationPeriod:             ptr.To(gwapiv1.Duration("10s")),

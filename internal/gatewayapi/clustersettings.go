@@ -346,14 +346,6 @@ func buildLoadBalancer(policy *egv1a1.ClusterSettings) (*ir.LoadBalancer, error)
 		}
 		cswrr := policy.LoadBalancer.ClientSideWeightedRoundRobin
 		if cswrr != nil {
-			if cswrr.EnableOOBLoadReport != nil {
-				lb.ClientSideWeightedRoundRobin.EnableOOBLoadReport = cswrr.EnableOOBLoadReport
-			}
-			if cswrr.OOBReportingPeriod != nil {
-				if d, err := time.ParseDuration(string(*cswrr.OOBReportingPeriod)); err == nil {
-					lb.ClientSideWeightedRoundRobin.OOBReportingPeriod = ir.MetaV1DurationPtr(d)
-				}
-			}
 			if cswrr.BlackoutPeriod != nil {
 				if d, err := time.ParseDuration(string(*cswrr.BlackoutPeriod)); err == nil {
 					lb.ClientSideWeightedRoundRobin.BlackoutPeriod = ir.MetaV1DurationPtr(d)
