@@ -1425,12 +1425,12 @@ spec:
                                   RateLimitSelectCondition specifies the attributes within the traffic flow that can
                                   be used to select a subset of clients to be ratelimited.
                                   All the individual conditions must hold True for the overall condition to hold True.
+                                  And, at least one of headers or methods or path or sourceCIDR condition must be specified.
                                 properties:
                                   headers:
                                     description: |-
                                       Headers is a list of request headers to match. Multiple header values are ANDed together,
                                       meaning, a request MUST match all the specified headers.
-                                      At least one of headers or sourceCIDR condition must be specified.
                                     items:
                                       description: HeaderMatch defines the match attributes
                                         within the HTTP Headers of the request.
@@ -1471,10 +1471,66 @@ spec:
                                       type: object
                                     maxItems: 16
                                     type: array
-                                  sourceCIDR:
+                                  methods:
                                     description: |-
-                                      SourceCIDR is the client IP Address range to match on.
-                                      At least one of headers or sourceCIDR condition must be specified.
+                                      Methods is a list of request methods to match. Multiple method values are ORed together,
+                                      meaning, a request can match any one of the specified methods. If not specified, it matches all methods.
+                                    items:
+                                      description: MethodMatch defines the matching
+                                        criteria for the HTTP method of a request.
+                                      properties:
+                                        invert:
+                                          default: false
+                                          description: Invert specifies whether the
+                                            value match result will be inverted.
+                                          type: boolean
+                                        value:
+                                          description: Value specifies the HTTP method.
+                                          enum:
+                                          - GET
+                                          - HEAD
+                                          - POST
+                                          - PUT
+                                          - DELETE
+                                          - CONNECT
+                                          - OPTIONS
+                                          - TRACE
+                                          - PATCH
+                                          type: string
+                                      required:
+                                      - value
+                                      type: object
+                                    type: array
+                                  path:
+                                    description: |-
+                                      Path is the request path to match.
+                                      Support Exact, PathPrefix and RegularExpression match types.
+                                    properties:
+                                      invert:
+                                        default: false
+                                        description: Invert specifies whether the
+                                          value match result will be inverted.
+                                        type: boolean
+                                      type:
+                                        default: PathPrefix
+                                        description: Type specifies how to match against
+                                          the value of the path.
+                                        enum:
+                                        - Exact
+                                        - PathPrefix
+                                        - RegularExpression
+                                        type: string
+                                      value:
+                                        default: /
+                                        description: Value specifies the HTTP path.
+                                        maxLength: 1024
+                                        type: string
+                                    required:
+                                    - value
+                                    type: object
+                                  sourceCIDR:
+                                    description: SourceCIDR is the client IP Address
+                                      range to match on.
                                     properties:
                                       type:
                                         default: Exact
@@ -1494,6 +1550,11 @@ spec:
                                     - value
                                     type: object
                                 type: object
+                                x-kubernetes-validations:
+                                - message: at least one of headers, methods, path
+                                    or sourceCIDR must be specified
+                                  rule: has(self.headers) || has(self.methods) ||
+                                    has(self.path) || has(self.sourceCIDR)
                               maxItems: 8
                               type: array
                             cost:
@@ -1676,12 +1737,12 @@ spec:
                                   RateLimitSelectCondition specifies the attributes within the traffic flow that can
                                   be used to select a subset of clients to be ratelimited.
                                   All the individual conditions must hold True for the overall condition to hold True.
+                                  And, at least one of headers or methods or path or sourceCIDR condition must be specified.
                                 properties:
                                   headers:
                                     description: |-
                                       Headers is a list of request headers to match. Multiple header values are ANDed together,
                                       meaning, a request MUST match all the specified headers.
-                                      At least one of headers or sourceCIDR condition must be specified.
                                     items:
                                       description: HeaderMatch defines the match attributes
                                         within the HTTP Headers of the request.
@@ -1722,10 +1783,66 @@ spec:
                                       type: object
                                     maxItems: 16
                                     type: array
-                                  sourceCIDR:
+                                  methods:
                                     description: |-
-                                      SourceCIDR is the client IP Address range to match on.
-                                      At least one of headers or sourceCIDR condition must be specified.
+                                      Methods is a list of request methods to match. Multiple method values are ORed together,
+                                      meaning, a request can match any one of the specified methods. If not specified, it matches all methods.
+                                    items:
+                                      description: MethodMatch defines the matching
+                                        criteria for the HTTP method of a request.
+                                      properties:
+                                        invert:
+                                          default: false
+                                          description: Invert specifies whether the
+                                            value match result will be inverted.
+                                          type: boolean
+                                        value:
+                                          description: Value specifies the HTTP method.
+                                          enum:
+                                          - GET
+                                          - HEAD
+                                          - POST
+                                          - PUT
+                                          - DELETE
+                                          - CONNECT
+                                          - OPTIONS
+                                          - TRACE
+                                          - PATCH
+                                          type: string
+                                      required:
+                                      - value
+                                      type: object
+                                    type: array
+                                  path:
+                                    description: |-
+                                      Path is the request path to match.
+                                      Support Exact, PathPrefix and RegularExpression match types.
+                                    properties:
+                                      invert:
+                                        default: false
+                                        description: Invert specifies whether the
+                                          value match result will be inverted.
+                                        type: boolean
+                                      type:
+                                        default: PathPrefix
+                                        description: Type specifies how to match against
+                                          the value of the path.
+                                        enum:
+                                        - Exact
+                                        - PathPrefix
+                                        - RegularExpression
+                                        type: string
+                                      value:
+                                        default: /
+                                        description: Value specifies the HTTP path.
+                                        maxLength: 1024
+                                        type: string
+                                    required:
+                                    - value
+                                    type: object
+                                  sourceCIDR:
+                                    description: SourceCIDR is the client IP Address
+                                      range to match on.
                                     properties:
                                       type:
                                         default: Exact
@@ -1745,6 +1862,11 @@ spec:
                                     - value
                                     type: object
                                 type: object
+                                x-kubernetes-validations:
+                                - message: at least one of headers, methods, path
+                                    or sourceCIDR must be specified
+                                  rule: has(self.headers) || has(self.methods) ||
+                                    has(self.path) || has(self.sourceCIDR)
                               maxItems: 8
                               type: array
                             cost:
@@ -2728,6 +2850,14 @@ spec:
                           Default: unlimited.
                         pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                         type: string
+                      maxStreamDuration:
+                        description: |-
+                          MaxStreamDuration is the maximum duration for a stream to complete. This timeout measures the time
+                          from when the request is sent until the response stream is fully consumed and does not apply to
+                          non-streaming requests.
+                          When set to "0s", no max duration is applied and streams can run indefinitely.
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                        type: string
                       requestTimeout:
                         description: RequestTimeout is the time until which entire
                           response is received from the upstream.
@@ -2763,8 +2893,6 @@ spec:
             - message: this policy can only have a targetRef.kind of Gateway/HTTPRoute/GRPCRoute/TCPRoute/UDPRoute/TLSRoute
               rule: 'has(self.targetRef) ? self.targetRef.kind in [''Gateway'', ''HTTPRoute'',
                 ''GRPCRoute'', ''UDPRoute'', ''TCPRoute'', ''TLSRoute''] : true'
-            - message: this policy does not yet support the sectionName field
-              rule: 'has(self.targetRef) ? !has(self.targetRef.sectionName) : true'
             - message: this policy can only have a targetRefs[*].group of gateway.networking.k8s.io
               rule: 'has(self.targetRefs) ? self.targetRefs.all(ref, ref.group ==
                 ''gateway.networking.k8s.io'') : true '
@@ -2772,9 +2900,6 @@ spec:
               rule: 'has(self.targetRefs) ? self.targetRefs.all(ref, ref.kind in [''Gateway'',
                 ''HTTPRoute'', ''GRPCRoute'', ''UDPRoute'', ''TCPRoute'', ''TLSRoute''])
                 : true '
-            - message: this policy does not yet support the sectionName field
-              rule: 'has(self.targetRefs) ? self.targetRefs.all(ref, !has(ref.sectionName))
-                : true'
             - message: either compression or compressor can be set, not both
               rule: '!has(self.compression) || !has(self.compressor)'
             - message: predictivePercent in preconnect policy only works with RoundRobin
@@ -3612,12 +3737,13 @@ spec:
                       PreserveXRequestID configures Envoy to keep the X-Request-ID header if passed for a request that is edge
                       (Edge request is the request from external clients to front Envoy) and not reset it, which is the current Envoy behaviour.
                       Defaults to false and cannot be combined with RequestID.
-                      Deprecated: use RequestID=Preserve instead
+                      Deprecated: use RequestID=PreserveOrGenerate instead
                     type: boolean
                   requestID:
                     description: |-
                       RequestID configures Envoy's behavior for handling the `X-Request-ID` header.
-                      Defaults to `Generate` and builds the `X-Request-ID` for every request and ignores pre-existing values from the edge.
+                      When omitted default behavior is `Generate` which builds the `X-Request-ID` for every request
+                       and ignores pre-existing values from the edge.
                       (An "edge request" refers to a request from an external client to the Envoy entrypoint.)
                     enum:
                     - PreserveOrGenerate
@@ -5910,6 +6036,14 @@ spec:
                                     Default: unlimited.
                                   pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                   type: string
+                                maxStreamDuration:
+                                  description: |-
+                                    MaxStreamDuration is the maximum duration for a stream to complete. This timeout measures the time
+                                    from when the request is sent until the response stream is fully consumed and does not apply to
+                                    non-streaming requests.
+                                    When set to "0s", no max duration is applied and streams can run indefinitely.
+                                  pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                  type: string
                                 requestTimeout:
                                   description: RequestTimeout is the time until which
                                     entire response is received from the upstream.
@@ -7920,7 +8054,7 @@ spec:
               preserveRouteOrder:
                 description: |-
                   PreserveRouteOrder determines if the order of matching for HTTPRoutes is determined by Gateway-API
-                  specification (https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.HTTPRouteRule)
+                  specification (https://gateway-api.sigs.k8s.io/reference/1.4/spec/#httprouterule)
                   or preserves the order defined by users in the HTTPRoute's HTTPRouteRule list.
                   Default: False
                 type: boolean
@@ -19538,6 +19672,14 @@ spec:
                                                       Default: unlimited.
                                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                     type: string
+                                                  maxStreamDuration:
+                                                    description: |-
+                                                      MaxStreamDuration is the maximum duration for a stream to complete. This timeout measures the time
+                                                      from when the request is sent until the response stream is fully consumed and does not apply to
+                                                      non-streaming requests.
+                                                      When set to "0s", no max duration is applied and streams can run indefinitely.
+                                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                                    type: string
                                                   requestTimeout:
                                                     description: RequestTimeout is
                                                       the time until which entire
@@ -20741,6 +20883,14 @@ spec:
                                                     description: |-
                                                       The maximum duration of an HTTP connection.
                                                       Default: unlimited.
+                                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                                    type: string
+                                                  maxStreamDuration:
+                                                    description: |-
+                                                      MaxStreamDuration is the maximum duration for a stream to complete. This timeout measures the time
+                                                      from when the request is sent until the response stream is fully consumed and does not apply to
+                                                      non-streaming requests.
+                                                      When set to "0s", no max duration is applied and streams can run indefinitely.
                                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                     type: string
                                                   requestTimeout:
@@ -22029,6 +22179,14 @@ spec:
                                                 Default: unlimited.
                                               pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                               type: string
+                                            maxStreamDuration:
+                                              description: |-
+                                                MaxStreamDuration is the maximum duration for a stream to complete. This timeout measures the time
+                                                from when the request is sent until the response stream is fully consumed and does not apply to
+                                                non-streaming requests.
+                                                When set to "0s", no max duration is applied and streams can run indefinitely.
+                                              pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                              type: string
                                             requestTimeout:
                                               description: RequestTimeout is the time
                                                 until which entire response is received
@@ -23226,6 +23384,14 @@ spec:
                                         description: |-
                                           The maximum duration of an HTTP connection.
                                           Default: unlimited.
+                                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                        type: string
+                                      maxStreamDuration:
+                                        description: |-
+                                          MaxStreamDuration is the maximum duration for a stream to complete. This timeout measures the time
+                                          from when the request is sent until the response stream is fully consumed and does not apply to
+                                          non-streaming requests.
+                                          When set to "0s", no max duration is applied and streams can run indefinitely.
                                         pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                         type: string
                                       requestTimeout:
@@ -25404,6 +25570,14 @@ spec:
                                       Default: unlimited.
                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
+                                  maxStreamDuration:
+                                    description: |-
+                                      MaxStreamDuration is the maximum duration for a stream to complete. This timeout measures the time
+                                      from when the request is sent until the response stream is fully consumed and does not apply to
+                                      non-streaming requests.
+                                      When set to "0s", no max duration is applied and streams can run indefinitely.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
                                   requestTimeout:
                                     description: RequestTimeout is the time until
                                       which entire response is received from the upstream.
@@ -26497,6 +26671,14 @@ spec:
                                     description: |-
                                       The maximum duration of an HTTP connection.
                                       Default: unlimited.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                  maxStreamDuration:
+                                    description: |-
+                                      MaxStreamDuration is the maximum duration for a stream to complete. This timeout measures the time
+                                      from when the request is sent until the response stream is fully consumed and does not apply to
+                                      non-streaming requests.
+                                      When set to "0s", no max duration is applied and streams can run indefinitely.
                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
                                   requestTimeout:
@@ -27808,6 +27990,14 @@ spec:
                                           description: |-
                                             The maximum duration of an HTTP connection.
                                             Default: unlimited.
+                                          pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                          type: string
+                                        maxStreamDuration:
+                                          description: |-
+                                            MaxStreamDuration is the maximum duration for a stream to complete. This timeout measures the time
+                                            from when the request is sent until the response stream is fully consumed and does not apply to
+                                            non-streaming requests.
+                                            When set to "0s", no max duration is applied and streams can run indefinitely.
                                           pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                           type: string
                                         requestTimeout:
@@ -29169,6 +29359,14 @@ spec:
                                       Default: unlimited.
                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
+                                  maxStreamDuration:
+                                    description: |-
+                                      MaxStreamDuration is the maximum duration for a stream to complete. This timeout measures the time
+                                      from when the request is sent until the response stream is fully consumed and does not apply to
+                                      non-streaming requests.
+                                      When set to "0s", no max duration is applied and streams can run indefinitely.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
                                   requestTimeout:
                                     description: RequestTimeout is the time until
                                       which entire response is received from the upstream.
@@ -29239,13 +29437,14 @@ spec:
                       If not specified, uses the default redirect URI "%REQ(x-forwarded-proto)%://%REQ(:authority)%/oauth2/callback"
                     type: string
                   refreshToken:
+                    default: true
                     description: |-
                       RefreshToken indicates whether the Envoy should automatically refresh the
                       id token and access token when they expire.
                       When set to true, the Envoy will use the refresh token to get a new id token
                       and access token when they expire.
 
-                      If not specified, defaults to false.
+                      If not specified, defaults to true.
                     type: boolean
                   resources:
                     description: |-

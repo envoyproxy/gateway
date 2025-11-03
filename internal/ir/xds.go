@@ -393,6 +393,8 @@ type TLSConfig struct {
 	VerifyCertificateSpki []string `json:"verifyCertificateSpki,omitempty" yaml:"verifyCertificateSpki,omitempty"`
 	// A list of allowed hex-encoded SHA-256 hashes of the DER-encoded certificate
 	VerifyCertificateHash []string `json:"verifyCertificateHash,omitempty" yaml:"verifyCertificateHash,omitempty"`
+	// CRL to verify the client certificates
+	Crl *TLSCrl `json:"crl,omitempty" yaml:"crl,omitempty"`
 	// A list of Subject Alternative name matchers
 	MatchTypedSubjectAltNames []*StringMatch `json:"matchTypedSubjectAltNames,omitempty" yaml:"matchTypedSubjectAltNames,omitempty"`
 	// MinVersion defines the minimal version of the TLS protocol supported by this listener.
@@ -424,6 +426,17 @@ type TLSCertificate struct {
 	PrivateKey PrivateBytes `json:"privateKey,omitempty" yaml:"privateKey,omitempty"`
 	// OCSPStaple contains the stapled OCSP response associated with the certificate, if provided.
 	OCSPStaple []byte `json:"ocspStaple,omitempty" yaml:"ocspStaple,omitempty"`
+}
+
+// TLSCrl holds a single CRL's details
+// +k8s:deepcopy-gen=true
+type TLSCrl struct {
+	// Name of the Secret object.
+	Name string `json:"name" yaml:"name"`
+	// CRL content.
+	Data []byte `json:"data,omitempty" yaml:"data,omitempty"`
+	// OnlyVerifyLeafCertificate to verify the leaf certificate against the CRL
+	OnlyVerifyLeafCertificate bool `json:"onlyVerifyLeafCertificate,omitempty" yaml:"onlyVerifyLeafCertificate,omitempty"`
 }
 
 // TLSCACertificate holds CA Certificate to validate clients
@@ -2240,6 +2253,10 @@ type LocalRateLimit struct {
 type RateLimitRule struct {
 	// HeaderMatches define the match conditions on the request headers for this route.
 	HeaderMatches []*StringMatch `json:"headerMatches" yaml:"headerMatches"`
+	// PathMatch defines the match conditions on the request path for this route.
+	PathMatch *StringMatch `json:"pathMatch,omitempty" yaml:"pathMatch,omitempty"`
+	// MethodMatches define the match conditions on the request methods for this route.
+	MethodMatches []*StringMatch `json:"methodMatches,omitempty" yaml:"methodMatches,omitempty"`
 	// CIDRMatch define the match conditions on the source IP's CIDR for this route.
 	CIDRMatch *CIDRMatch `json:"cidrMatch,omitempty" yaml:"cidrMatch,omitempty"`
 	// Limit holds the rate limit values.
@@ -2278,7 +2295,7 @@ type CIDRMatch struct {
 
 // TODO zhaohuabing: remove this function
 func (r *RateLimitRule) IsMatchSet() bool {
-	return len(r.HeaderMatches) != 0 || r.CIDRMatch != nil
+	return len(r.HeaderMatches) != 0 || r.PathMatch != nil || len(r.MethodMatches) != 0 || r.CIDRMatch != nil
 }
 
 type RateLimitUnit egv1a1.RateLimitUnit
@@ -2926,6 +2943,9 @@ type HTTPTimeout struct {
 
 	// The maximum duration of an HTTP connection.
 	MaxConnectionDuration *metav1.Duration `json:"maxConnectionDuration,omitempty" yaml:"maxConnectionDuration,omitempty"`
+
+	// The maximum duration of an HTTP stream.
+	MaxStreamDuration *metav1.Duration `json:"maxStreamDuration,omitempty" yaml:"maxStreamDuration,omitempty"`
 }
 
 // Retry define the retry policy configuration.

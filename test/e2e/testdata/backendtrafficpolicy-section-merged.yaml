@@ -1,0 +1,133 @@
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: btp-section
+  namespace: gateway-conformance-infra
+spec:
+  gatewayClassName: "{GATEWAY_CLASS_NAME}"
+  listeners:
+  - name: listener-1
+    hostname: "listener1.merged.example.com"
+    port: 80
+    protocol: HTTP
+    allowedRoutes:
+      namespaces:
+        from: Same
+  - name: listener-2
+    hostname: "listener2.merged.example.com"
+    port: 80
+    protocol: HTTP
+    allowedRoutes:
+      namespaces:
+        from: Same
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: btp-section
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+  - name: btp-section
+    sectionName: listener-1
+  hostnames: ["listener1.merged.example.com"]
+  rules:
+  - name: rule-1
+    matches:
+    - path:
+        value: "/foo"
+    backendRefs:
+    - name: infra-backend-v1
+      port: 8080
+  - name: rule-2
+    matches:
+    - path:
+        value: "/bar"
+    backendRefs:
+    - name: infra-backend-v1
+      port: 8080
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: btp-non-section
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+  - name: btp-section
+    sectionName: listener-2
+  hostnames: ["listener2.merged.example.com"]
+  rules:
+  - matches:
+    - path:
+        value: "/foo"
+    backendRefs:
+    - name: infra-backend-v1
+      port: 8080
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: btp-section-gateway
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: Gateway
+    name: btp-section
+    sectionName: listener-1
+  responseOverride:
+  - match:
+      statusCodes:
+      - type: Range
+        range:
+          start: 418
+          end: 420
+    response:
+      statusCode: 500
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: btp-section-route
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: btp-section
+  mergeType: StrategicMerge
+  faultInjection:
+    abort:
+      httpStatus: 418
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: btp-section-route-rule
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: btp-section
+    sectionName: rule-2
+  faultInjection:
+    abort:
+      httpStatus: 419
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: btp-non-section-route
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: btp-non-section
+  mergeType: StrategicMerge
+  faultInjection:
+    abort:
+      httpStatus: 420

@@ -73,7 +73,7 @@ securityPolicies:
         kind: null
         name: client1-secret
       provider:
-        issuer: https://httpbin.org/
+        issuer: https://gateway.envoyproxy.io
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway
@@ -87,7 +87,7 @@ securityPolicies:
         namespace: default
       conditions:
       - lastTransitionTime: null
-        message: 'OIDC: failed fetching openid-configuration from issuer URL: https://httpbin.org/,
+        message: 'OIDC: failed fetching openid-configuration from issuer URL: https://gateway.envoyproxy.io,
           status code: 404.'
         reason: Invalid
         status: "False"
