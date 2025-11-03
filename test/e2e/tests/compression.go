@@ -38,10 +38,9 @@ func init() {
 	ConformanceTests = append(
 		ConformanceTests,
 		CompressionTest,
-		CompressionChooseFirstTestBrotli,
-		CompressionChooseFirstTestGzip,
-		CompressionChooseFirstTestZstd,
-		CompressionRemoveAcceptEncodingHeaderTest,
+		CompressionTestBrotli,
+		CompressionTestGzip,
+		CompressionTestZstd,
 	)
 }
 
@@ -95,54 +94,47 @@ var CompressionTest = suite.ConformanceTest{
 	},
 }
 
-var CompressionChooseFirstTestBrotli = suite.ConformanceTest{
-	ShortName:   "Compression-Choose-First-Brotli",
-	Description: "Test response compression chooseFirst on HTTPRoute",
-	Manifests:   []string{"testdata/compression-choose-first-br.yaml"},
+var CompressionTestBrotli = suite.ConformanceTest{
+	ShortName:   "Compression-Brotli",
+	Description: "Test brotli response compression on HTTPRoute",
+	Manifests:   []string{"testdata/compression-brotli.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		t.Run("HTTPRoute with brotli compression chooseFirst", func(t *testing.T) {
 			testCompressionChooseFirst(t, suite, egv1a1.BrotliCompressorType)
 		})
+
+		t.Run("HTTPRoute with brotli compression removeAcceptEncodingHeader", func(t *testing.T) {
+			testCompressionRemoveAcceptEncodingHeader(t, suite, egv1a1.BrotliCompressorType)
+		})
 	},
 }
 
-var CompressionChooseFirstTestGzip = suite.ConformanceTest{
-	ShortName:   "Compression-Choose-First-Gzip",
-	Description: "Test response compression chooseFirst on HTTPRoute",
-	Manifests:   []string{"testdata/compression-choose-first-gzip.yaml"},
+var CompressionTestGzip = suite.ConformanceTest{
+	ShortName:   "Compression-Gzip",
+	Description: "Test gzip response compression on HTTPRoute",
+	Manifests:   []string{"testdata/compression-gzip.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		t.Run("HTTPRoute with gzip compression chooseFirst", func(t *testing.T) {
 			testCompressionChooseFirst(t, suite, egv1a1.GzipCompressorType)
 		})
+
+		t.Run("HTTPRoute with gzip compression removeAcceptEncodingHeader", func(t *testing.T) {
+			testCompressionRemoveAcceptEncodingHeader(t, suite, egv1a1.GzipCompressorType)
+		})
 	},
 }
 
-var CompressionChooseFirstTestZstd = suite.ConformanceTest{
-	ShortName:   "Compression-Choose-First-Zstd",
-	Description: "Test response compression chooseFirst on HTTPRoute",
-	Manifests:   []string{"testdata/compression-choose-first-zstd.yaml"},
+var CompressionTestZstd = suite.ConformanceTest{
+	ShortName:   "Compression-Zstd",
+	Description: "Test zstd response compression on HTTPRoute",
+	Manifests:   []string{"testdata/compression-zstd.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		t.Run("HTTPRoute with zstd compression chooseFirst", func(t *testing.T) {
 			testCompressionChooseFirst(t, suite, egv1a1.ZstdCompressorType)
 		})
-	},
-}
 
-var CompressionRemoveAcceptEncodingHeaderTest = suite.ConformanceTest{
-	ShortName:   "Compression-Remove-Accept-Encoding-Header",
-	Description: "Test response compression with removeAcceptEncodingHeader on HTTPRoute",
-	Manifests:   []string{"testdata/compression-remove-accept-encoding-header.yaml"},
-	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
-		t.Run("HTTPRoute with brotli compression and removeAcceptEncodingHeader", func(t *testing.T) {
-			testCompressionWithRemovedHeader(t, suite, egv1a1.BrotliCompressorType)
-		})
-
-		t.Run("HTTPRoute with gzip compression and removeAcceptEncodingHeader", func(t *testing.T) {
-			testCompressionWithRemovedHeader(t, suite, egv1a1.GzipCompressorType)
-		})
-
-		t.Run("HTTPRoute with zstd compression and removeAcceptEncodingHeader", func(t *testing.T) {
-			testCompressionWithRemovedHeader(t, suite, egv1a1.ZstdCompressorType)
+		t.Run("HTTPRoute with zstd compression removeAcceptEncodingHeader", func(t *testing.T) {
+			testCompressionRemoveAcceptEncodingHeader(t, suite, egv1a1.ZstdCompressorType)
 		})
 	},
 }
@@ -183,8 +175,7 @@ func testCompression(t *testing.T, suite *suite.ConformanceTestSuite, compressio
 
 func testCompressionChooseFirst(t *testing.T, suite *suite.ConformanceTestSuite, compressionType egv1a1.CompressorType) {
 	ns := "gateway-conformance-infra"
-	encoding := ContentEncoding(compressionType)
-	routeNN := types.NamespacedName{Name: "compression-choose-first-" + encoding, Namespace: ns}
+	routeNN := types.NamespacedName{Name: "compression", Namespace: ns}
 	gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 	gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
 
@@ -194,11 +185,12 @@ func testCompressionChooseFirst(t *testing.T, suite *suite.ConformanceTestSuite,
 		Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
 		Name:      gwapiv1.ObjectName(gwNN.Name),
 	}
-	BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "compression-choose-first-" + encoding, Namespace: ns}, suite.ControllerName, ancestorRef)
+	BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "compression", Namespace: ns}, suite.ControllerName, ancestorRef)
 
+	encoding := ContentEncoding(compressionType)
 	expectedResponse := http.ExpectedResponse{
 		Request: http.Request{
-			Path: "/compression-choose-first-" + encoding,
+			Path: "/compression",
 			Headers: map[string]string{
 				"Accept-encoding": "gzip, br, zstd",
 			},
@@ -215,9 +207,9 @@ func testCompressionChooseFirst(t *testing.T, suite *suite.ConformanceTestSuite,
 	http.MakeRequestAndExpectEventuallyConsistentResponse(t, roundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 }
 
-func testCompressionWithRemovedHeader(t *testing.T, suite *suite.ConformanceTestSuite, compressionType egv1a1.CompressorType) {
+func testCompressionRemoveAcceptEncodingHeader(t *testing.T, suite *suite.ConformanceTestSuite, compressionType egv1a1.CompressorType) {
 	ns := "gateway-conformance-infra"
-	routeNN := types.NamespacedName{Name: "compression-remove-accept-encoding-header", Namespace: ns}
+	routeNN := types.NamespacedName{Name: "compression", Namespace: ns}
 	gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 	gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
 
@@ -227,22 +219,18 @@ func testCompressionWithRemovedHeader(t *testing.T, suite *suite.ConformanceTest
 		Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
 		Name:      gwapiv1.ObjectName(gwNN.Name),
 	}
-	BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "compression-remove-accept-encoding-header", Namespace: ns}, suite.ControllerName, ancestorRef)
+	BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "compression", Namespace: ns}, suite.ControllerName, ancestorRef)
 
 	encoding := ContentEncoding(compressionType)
-	path := "/compression-remove-accept-encoding-header"
 	expectedResponse := http.ExpectedResponse{
 		Request: http.Request{
-			Path: path,
+			Path: "/compression",
 			Headers: map[string]string{
 				"Accept-encoding": encoding,
 			},
 		},
+		// Verify that Accept-encoding header was NOT forwarded to the backend
 		ExpectedRequest: &http.ExpectedRequest{
-			Request: http.Request{
-				Path: path,
-			},
-			// Verify that Accept-encoding header was NOT forwarded to the backend
 			AbsentHeaders: []string{"Accept-encoding"},
 		},
 		Response: http.Response{

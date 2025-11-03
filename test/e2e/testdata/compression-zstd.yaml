@@ -2,7 +2,7 @@
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
-  name: compression-choose-first-gzip
+  name: compression
   namespace: gateway-conformance-infra
 spec:
   parentRefs:
@@ -11,7 +11,7 @@ spec:
     - matches:
         - path:
             type: PathPrefix
-            value: /compression-choose-first-gzip
+            value: /compression
       backendRefs:
         - name: infra-backend-v1
           port: 8080
@@ -19,15 +19,16 @@ spec:
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: BackendTrafficPolicy
 metadata:
-  name: compression-choose-first-gzip
+  name: compression
   namespace: gateway-conformance-infra
 spec:
   targetRef:
     group: gateway.networking.k8s.io
     kind: HTTPRoute
-    name: compression-choose-first-gzip
+    name: compression
   compression:
     - type: Brotli
     - type: Gzip
-      chooseFirst: true
     - type: Zstd
+      chooseFirst: true
+      removeAcceptEncodingHeader: true
