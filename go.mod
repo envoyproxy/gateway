@@ -40,9 +40,9 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.23.2
 	github.com/prometheus/client_model v0.6.2
-	github.com/prometheus/common v0.67.1
+	github.com/prometheus/common v0.67.2
 	github.com/quic-go/quic-go v0.55.0
-	github.com/replicatedhq/troubleshoot v0.123.11
+	github.com/replicatedhq/troubleshoot v0.123.12
 	github.com/shopspring/decimal v1.4.0
 	github.com/spf13/cobra v1.10.1
 	github.com/spf13/pflag v1.0.10
@@ -297,7 +297,7 @@ require (
 	golang.org/x/crypto v0.43.0 // indirect
 	golang.org/x/crypto/x509roots/fallback v0.0.0-20250406160420-959f8f3db0fb // indirect
 	golang.org/x/mod v0.28.0 // indirect
-	golang.org/x/oauth2 v0.31.0 // indirect
+	golang.org/x/oauth2 v0.32.0 // indirect
 	golang.org/x/sync v0.17.0 // indirect
 	golang.org/x/sys v0.37.0 // indirect
 	golang.org/x/term v0.36.0 // indirect
