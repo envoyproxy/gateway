@@ -19,7 +19,7 @@ jobs:
 
       - name: Install go-prettier (prettier binary)
         run: |
-          go install github.com/wasilibs/go-prettier/v3/cmd/prettier@v3.6.3
+          go install github.com/wasilibs/go-prettier/v3/cmd/prettier@latest
           echo "$HOME/go/bin" >> $GITHUB_PATH
 
       - name: Check YAML formatting (no changes)
