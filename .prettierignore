@@ -18,3 +18,6 @@ examples/extension-server/charts/extension-server
 site/node_modules/
 .vscode/
 
+# test files and workflow files
+**/testdata/**
+.github/workflows/*
