@@ -164,6 +164,10 @@ type HeaderSettings struct {
 	//
 	// +optional
 	LateResponseHeaders *HTTPHeaderFilter `json:"lateResponseHeaders,omitempty"`
+	// RequestIDExtension defines configuration for Envoy's request ID extension.
+	//
+	// +optional
+	RequestIDExtension *RequestIDExtensionSettings `json:"requestIdExtension,omitempty"`
 }
 
 // WithUnderscoresAction configures the action to take when an HTTP header with underscores
@@ -391,6 +395,34 @@ type ProxyProtocolSettings struct {
 	//
 	// +optional
 	Optional *bool `json:"optional,omitempty"`
+}
+
+// RequestIDExtension defines configuration for the UUID request ID extension.
+type RequestIDExtensionSettings struct {
+	// PackTraceReason indicates whether the implementation alters the UUID
+	// to contain the trace sampling decision as per the UuidRequestIdConfig
+	// message documentation.
+	//
+	// Defaults to true. If disabled, no modification to the UUID will be
+	// performed. Note that if disabled, stable sampling of traces, access logs,
+	// etc. will no longer work and only random sampling will be possible.
+	//
+	// Corresponds to Envoy’s `pack_trace_reason`.
+	//
+	// +kubebuilder:default=true
+	// +optional
+	PackTraceReason *bool `json:"packTraceReason,omitempty"`
+
+	// UseRequestIDForTraceSampling sets whether to use x-request-id for
+	// sampling decisions. Defaults to true.
+	//
+	// See the Envoy context propagation overview for more information.
+	//
+	// Corresponds to Envoy’s `use_request_id_for_trace_sampling`.
+	//
+	// +kubebuilder:default=true
+	// +optional
+	UseRequestIDForTraceSampling *bool `json:"useRequestIDForTraceSampling,omitempty"`
 }
 
 //+kubebuilder:object:root=true
