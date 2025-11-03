@@ -55,7 +55,6 @@ changes:
       Use helm-docs to generate chart docs
       Support Not-Implemented-Hide marker in API docs
 
-
   - area: installation
     change: |
       Added new gateway-addons-helm chart for Observability
@@ -67,7 +66,6 @@ changes:
       Updated ttlSecondsAfterFinished on certgen job to 30 by default
       Updated Envoy Gateway ImagePullPolicy to IfNotPresent released charts
       Remove envoy-gateway-metrics-service and merge its contents into envoy-gateway service
-
 
   - area: api
     change: |
@@ -127,11 +125,9 @@ changes:
       Added Support for External Processing extension in EnvoyExtensionPolicy CRD
       Removed Status Print Column from xPolicy CRDs
 
-
     breaking-change: |
       Gateway-API BackendTLSPolicy v1alpha3 is incompatible with previous versions of the CRD
       xPolicy targetRefs can no longer specify a namespace, since Gateway-API v1.1.0 uses LocalPolicyTargetReferenceWithSectionName in Policy resources
-
 
     deprecation: |
       xPolicy targetRef is deprecated, use targetRefs instead
@@ -141,11 +137,9 @@ changes:
       Proxy Tracing Provider Host and Port are deprecated, use backendRefs instead
       Envoy Gateway Extension Server Host and Port are deprecated, use BackendEndpoint instead
 
-
   - area: conformance
     change: |
       Added Supported Features to Gateway Class
-
 
   - area: testing
     change: |
@@ -177,7 +171,6 @@ changes:
       Run CEL tests on all supported K8s versions
       Added OSV Scanner for Golang Vulnerabilities and Licenses
       Added Trivy scanner for Docker images
-
 
   - area: translator
     change: |
@@ -224,11 +217,9 @@ changes:
     change: |
       Bumped K8s Client to v0.30.0
 
-
   - area: xds
     change: |
       Bumped go-control-plane to v0.12.1
-
 
   - area: cli
     change: |
@@ -236,4 +227,3 @@ changes:
       Added Support for xRoute and xPolicy in egctl x status
       Added Golang version to Envoy Gateway version command
       Fixed egctl x status gatewayclass example message
-

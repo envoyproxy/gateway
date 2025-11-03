@@ -21,3 +21,10 @@ site/node_modules/
 # test files and workflow files
 **/testdata/**
 .github/workflows/*
+
+# prevent format failures
+**/examples/**
+**/.examples/**
+**/test/**
+**/.test/**
+tools/linter/golangci-lint/.golangci.yml

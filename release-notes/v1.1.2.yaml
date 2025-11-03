@@ -5,7 +5,6 @@ changes:
     change: |
       Fixed handling of sectionName in BackendTLSPolicy for Backend resource
 
-
   - area: infra-manager
     change: |
       Pin Envoy Proxy version to v1.32.2

@@ -13,4 +13,3 @@ bug fixes: |
 Other changes: |
   Bumped Rate Limit to 49af5cca
   Bumped golang.org/x/crypto to 0.31.0
-

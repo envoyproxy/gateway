@@ -25,4 +25,3 @@ performance improvements: |
 Other changes: |
   Bumped Envoy proxy to 1.31.3
   Bumped github.com/docker/docker to 27.3.1+incompatible
-

@@ -5,16 +5,13 @@ changes:
     change: |
       Bumped Golang version to 1.22.7
 
-
   - area: conformance
     change: |
       Enabled GatewayHTTPListenerIsolation test
 
-
   - area: testing
     change: |
       Fix download URL of envoy proxy WASM examples used in tests
-
 
   - area: translator
     change: |
@@ -27,16 +24,13 @@ changes:
       Fixed support for empty SlowStart configuration when using LeastRequest loadbalancing
       Fixed update of status for Backends
 
-
   - area: infra-manager
     change: |
       Pin ratelimit version to 26f28d78
       Reduce readinessProbe failureThreshold and periodSeconds of proxy
       Expose ratelimit statsd
 
-
   - area: providers
     change: |
       Fixed error returned when referenced Configmap or Secret is not found
       Use component name in Envoy Gateway logs
-
