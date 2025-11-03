@@ -401,11 +401,9 @@ func (t *Translator) GetRelevantGateways(resources *resource.Resources) (
 		if ep := gCtx.envoyProxy; ep != nil {
 			key := utils.NamespacedName(ep)
 			if err, exits := envoyproxyValidationErrorMap[key]; exits {
-				failedGateways = append(failedGateways, gCtx)
 				t.Logger.Info("EnvoyProxy for Gateway invalid", logKeysAndValues...)
 				status.UpdateGatewayStatusNotAccepted(gCtx.Gateway, gwapiv1.GatewayReasonInvalidParameters,
 					fmt.Sprintf("%s: %v", "Invalid parametersRef:", err.Error()))
-				continue
 			}
 		}
 
@@ -417,7 +415,7 @@ func (t *Translator) GetRelevantGateways(resources *resource.Resources) (
 }
 
 func validateEnvoyProxy(ep *egv1a1.EnvoyProxy) error {
-	if err := validation.ValidateEnvoyProxy(ep); err != nil {
+	if err := validation.ValidateEnvoyProxy(ep, true); err != nil {
 		return err
 	}
 

@@ -315,7 +315,7 @@ func translateGatewayAPIToGatewayAPI(resources *resource.Resources) (resource.Re
 	// Update the status of the GatewayClass based on EnvoyProxy validation
 	epInvalid := false
 	if resources.EnvoyProxyForGatewayClass != nil {
-		if err := validation.ValidateEnvoyProxy(resources.EnvoyProxyForGatewayClass); err != nil {
+		if err := validation.ValidateEnvoyProxy(resources.EnvoyProxyForGatewayClass, false); err != nil {
 			epInvalid = true
 			msg := fmt.Sprintf("%s: %v", status.MsgGatewayClassInvalidParams, err)
 			status.SetGatewayClassAccepted(resources.GatewayClass, false, string(gwapiv1.GatewayClassReasonInvalidParameters), msg)

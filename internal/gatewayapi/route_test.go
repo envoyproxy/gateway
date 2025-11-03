@@ -6,7 +6,6 @@
 package gatewayapi
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -212,20 +211,6 @@ func TestGetIREndpointsFromEndpointSlices(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			endpoints, addrType := getIREndpointsFromEndpointSlices(tt.endpointSlices, tt.portName, tt.portProtocol)
 
-			fmt.Printf("Test case: %s\n", tt.name)
-			fmt.Printf("Number of endpoints: %d\n", len(endpoints))
-			fmt.Printf("Address type: %v\n", *addrType)
-
-			fmt.Println("Actual endpoints:")
-			for i, endpoint := range endpoints {
-				fmt.Printf("  Endpoint %d:\n", i+1)
-				fmt.Printf("    Address: %s\n", endpoint.Host)
-				fmt.Printf("    Port: %d\n", endpoint.Port)
-				fmt.Printf("    Draining: %t\n", endpoint.Draining)
-
-			}
-
-			fmt.Println()
 			require.Equal(t, tt.expectedEndpoints, endpoints)
 			require.Equal(t, tt.expectedAddrType, *addrType)
 		})

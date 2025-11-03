@@ -832,7 +832,7 @@ func TestValidateEnvoyProxy(t *testing.T) {
 	for i := range testCases {
 		tc := testCases[i]
 		t.Run(tc.name, func(t *testing.T) {
-			err := ValidateEnvoyProxy(tc.proxy)
+			err := ValidateEnvoyProxy(tc.proxy, false)
 			if tc.expected {
 				require.NoError(t, err)
 			} else {
@@ -961,6 +961,42 @@ func TestGetEnvoyProxyComponentLevelArgs(t *testing.T) {
 		t.Run("", func(t *testing.T) {
 			got := tc.logging.GetEnvoyProxyComponentLevel()
 			require.Equal(t, tc.expected, got)
+		})
+	}
+}
+
+func TestValidateClusterStatName(t *testing.T) {
+	testCases := []struct {
+		name     string
+		statName string
+		expected bool
+	}{
+		{
+			name:     "valid cluster stat name with supported operators",
+			statName: "%ROUTE_NAME%/%ROUTE_NAMESPACE%/%BACKEND_REFS%",
+			expected: true,
+		},
+		{
+			name:     "invalid cluster stat name with unsupported operators",
+			statName: "%ROUTE_NAME%/%FOO%/%BAR%",
+			expected: false,
+		},
+		{
+			name:     "invalid cluster stat name",
+			statName: "%ROUTE_NAME",
+			expected: false,
+		},
+	}
+
+	for i := range testCases {
+		tc := testCases[i]
+		t.Run(tc.name, func(t *testing.T) {
+			errs := validateClusterStatName(tc.statName)
+			if tc.expected {
+				require.Empty(t, errs)
+			} else {
+				require.NotEmpty(t, len(errs))
+			}
 		})
 	}
 }

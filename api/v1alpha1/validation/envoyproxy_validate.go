@@ -20,12 +20,15 @@ import (
 )
 
 // ValidateEnvoyProxy validates the provided EnvoyProxy.
-func ValidateEnvoyProxy(proxy *egv1a1.EnvoyProxy) error {
+// if mutate is true, the function may modify the provided EnvoyProxy to fix certain validation errors.
+// For example, if the ClusterStatName is invalid, it will be cleared to prevent xDS errors.
+func ValidateEnvoyProxy(proxy *egv1a1.EnvoyProxy, mutate bool) error {
 	var errs []error
 	if proxy == nil {
 		return errors.New("envoyproxy is nil")
 	}
-	if err := validateEnvoyProxySpec(&proxy.Spec); err != nil {
+
+	if err := validateEnvoyProxySpec(&proxy.Spec, mutate); err != nil {
 		errs = append(errs, err)
 	}
 
@@ -35,7 +38,7 @@ func ValidateEnvoyProxy(proxy *egv1a1.EnvoyProxy) error {
 // validateEnvoyProxySpec validates the provided EnvoyProxy spec.
 // This method validates everything except for the bootstrap section, because validating the bootstrap
 // section in this method would require calling into the internal apis, and would cause an import cycle.
-func validateEnvoyProxySpec(spec *egv1a1.EnvoyProxySpec) error {
+func validateEnvoyProxySpec(spec *egv1a1.EnvoyProxySpec, mutate bool) error {
 	var errs []error
 
 	if spec == nil {
@@ -48,7 +51,7 @@ func validateEnvoyProxySpec(spec *egv1a1.EnvoyProxySpec) error {
 		errs = append(errs, validateProviderErrs...)
 	}
 
-	validateProxyTelemetryErrs := validateProxyTelemetry(spec)
+	validateProxyTelemetryErrs := validateProxyTelemetry(spec, mutate)
 	if len(validateProxyTelemetryErrs) != 0 {
 		errs = append(errs, validateProxyTelemetryErrs...)
 	}
@@ -190,7 +193,7 @@ func validateService(spec *egv1a1.EnvoyProxySpec) []error {
 	return errs
 }
 
-func validateProxyTelemetry(spec *egv1a1.EnvoyProxySpec) []error {
+func validateProxyTelemetry(spec *egv1a1.EnvoyProxySpec, mutate bool) []error {
 	var errs []error
 
 	if spec != nil &&
@@ -214,6 +217,10 @@ func validateProxyTelemetry(spec *egv1a1.EnvoyProxySpec) []error {
 
 		if spec.Telemetry.Metrics.ClusterStatName != nil {
 			if clusterStatErrs := validateClusterStatName(*spec.Telemetry.Metrics.ClusterStatName); clusterStatErrs != nil {
+				if mutate {
+					// clear the invalid ClusterStatName to prevent xds error
+					spec.Telemetry.Metrics.ClusterStatName = nil
+				}
 				errs = append(errs, clusterStatErrs...)
 			}
 		}
@@ -294,19 +301,22 @@ func validateFilterOrder(filterOrder []egv1a1.FilterPosition) error {
 	return nil
 }
 
-func validateClusterStatName(clusterStatName string) []error {
-	supportedOperators := map[string]bool{
-		egv1a1.StatFormatterRouteName:       true,
-		egv1a1.StatFormatterRouteNamespace:  true,
-		egv1a1.StatFormatterRouteKind:       true,
-		egv1a1.StatFormatterRouteRuleName:   true,
-		egv1a1.StatFormatterRouteRuleNumber: true,
-		egv1a1.StatFormatterBackendRefs:     true,
-	}
+var supportedOperators = map[string]bool{
+	egv1a1.StatFormatterRouteName:       true,
+	egv1a1.StatFormatterRouteNamespace:  true,
+	egv1a1.StatFormatterRouteKind:       true,
+	egv1a1.StatFormatterRouteRuleName:   true,
+	egv1a1.StatFormatterRouteRuleNumber: true,
+	egv1a1.StatFormatterBackendRefs:     true,
+}
 
+func validateClusterStatName(clusterStatName string) []error {
 	var errs []error
 	re := regexp.MustCompile("%[^%]*%")
 	matches := re.FindAllString(clusterStatName, -1)
+	if len(matches) == 0 {
+		errs = append(errs, fmt.Errorf("unable to configure Cluster Stat Name without any operator"))
+	}
 	for _, operator := range matches {
 		if _, ok := supportedOperators[operator]; !ok {
 			err := fmt.Errorf("unable to configure Cluster Stat Name with unsupported operator: %s", operator)
