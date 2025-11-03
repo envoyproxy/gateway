@@ -260,6 +260,17 @@ func (l *CoreListenerDetails) GetExtensionRefs() []*UnstructuredRef {
 	return l.ExtensionRefs
 }
 
+// RequestIDExtension defines configuration for the UUID request ID extension.
+// +k8s:deepcopy-gen=true
+type RequestIDExtensionAction egv1a1.RequestIDExtensionAction
+
+const (
+	RequestIDExtensionActionPackAndSample = RequestIDExtensionAction(egv1a1.RequestIDExtensionActionPackAndSample)
+	RequestIDExtensionActionSample        = RequestIDExtensionAction(egv1a1.RequestIDExtensionActionSample)
+	RequestIDExtensionActionPack          = RequestIDExtensionAction(egv1a1.RequestIDExtensionActionPack)
+	RequestIDExtensionActionDisable       = RequestIDExtensionAction(egv1a1.RequestIDExtensionActionDisable)
+)
+
 // HTTPListener holds the listener configuration.
 // +k8s:deepcopy-gen=true
 type HTTPListener struct {
@@ -307,6 +318,8 @@ type HTTPListener struct {
 	Connection *ClientConnection `json:"connection,omitempty" yaml:"connection,omitempty"`
 	// PreserveRouteOrder determines if routes should be sorted according to GW-API specs
 	PreserveRouteOrder bool `json:"preserveRouteOrder,omitempty" yaml:"preserveRouteOrder,omitempty"`
+	// RequestID defines configuration for the UUID request ID extension.
+	RequestID *RequestIDExtensionAction `json:"requestID,omitempty" yaml:"requestID,omitempty"`
 }
 
 // Validate the fields within the HTTPListener structure
