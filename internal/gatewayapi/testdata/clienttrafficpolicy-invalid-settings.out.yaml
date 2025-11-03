@@ -31,8 +31,8 @@ clientTrafficPolicies:
       conditions:
       - lastTransitionTime: null
         message: |-
-          TLS: caCertificateRef secret [tls-secret-1] not found
-          TLS: caCertificateRef secret [tls-secret-1] not found.
+          TLS: failed to get certificate from ref: ref secret [tls-secret-1] has no key ca.crt and more than one entry
+          TLS: failed to get certificate from ref: ref secret [tls-secret-1] has no key ca.crt and more than one entry.
         reason: Invalid
         status: "False"
         type: Accepted
@@ -69,8 +69,8 @@ clientTrafficPolicies:
       conditions:
       - lastTransitionTime: null
         message: |-
-          TLS: configmap default/tls-cm-1 does not exist
-          TLS: configmap default/tls-cm-1 does not exist.
+          TLS: failed to get certificate from ref: configmap default/tls-cm-1 does not exist
+          TLS: failed to get certificate from ref: configmap default/tls-cm-1 does not exist.
         reason: Invalid
         status: "False"
         type: Accepted
@@ -107,8 +107,8 @@ clientTrafficPolicies:
       conditions:
       - lastTransitionTime: null
         message: |-
-          TLS: caCertificateRef ClusterTrustBundle [tls-ctb-1] not found
-          TLS: caCertificateRef ClusterTrustBundle [tls-ctb-1] not found.
+          TLS: failed to get certificate from ref: ref ClusterTrustBundle [tls-ctb-1] not found
+          TLS: failed to get certificate from ref: ref ClusterTrustBundle [tls-ctb-1] not found.
         reason: Invalid
         status: "False"
         type: Accepted

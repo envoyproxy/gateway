@@ -115,6 +115,7 @@ helm uninstall eg -n envoy-gateway-system
 | podDisruptionBudget.minAvailable | int | `0` |  |
 | service.annotations | object | `{}` |  |
 | service.trafficDistribution | string | `""` |  |
+| service.type | string | `"ClusterIP"` |  |
 | topologyInjector.annotations | object | `{}` |  |
 | topologyInjector.enabled | bool | `true` |  |
 

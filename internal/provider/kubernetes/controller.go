@@ -41,7 +41,6 @@ import (
 	mcsapiv1a1 "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
-	"github.com/envoyproxy/gateway/api/v1alpha1/validation"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
@@ -52,7 +51,6 @@ import (
 	workqueuemetrics "github.com/envoyproxy/gateway/internal/metrics/workqueue"
 	"github.com/envoyproxy/gateway/internal/utils"
 	"github.com/envoyproxy/gateway/internal/utils/slice"
-	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
 )
 
 var skipNameValidation = func() *bool {
@@ -356,12 +354,12 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 
 				logger.Error(err, "failed to process ParametersRef for GatewayClass")
 				msg := fmt.Sprintf("%s: %v", status.MsgGatewayClassInvalidParams, err)
-				gc := status.SetGatewayClassAccepted(
-					managedGC.DeepCopy(),
+				status.SetGatewayClassAccepted(
+					managedGC,
 					false,
 					string(gwapiv1.GatewayClassReasonInvalidParameters),
 					msg)
-				r.resources.GatewayClassStatuses.Store(utils.NamespacedName(gc), &gc.Status)
+				r.resources.GatewayClassStatuses.Store(utils.NamespacedName(managedGC), &managedGC.Status)
 				message.PublishMetric(message.Metadata{
 					Runner:  string(egv1a1.LogComponentProviderRunner),
 					Message: message.GatewayClassStatusMessageName,
@@ -378,12 +376,12 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 			}
 
 			r.log.Error(err, "failed to process TLS SecretRef for EnvoyProxy for GatewayClass")
-			gc := status.SetGatewayClassAccepted(
-				managedGC.DeepCopy(),
+			status.SetGatewayClassAccepted(
+				managedGC,
 				false,
 				string(gwapiv1.GatewayClassReasonAccepted),
 				fmt.Sprintf("%s: %v", status.MsgGatewayClassInvalidParams, err))
-			r.resources.GatewayClassStatuses.Store(utils.NamespacedName(gc), &gc.Status)
+			r.resources.GatewayClassStatuses.Store(utils.NamespacedName(managedGC), &managedGC.Status)
 			message.PublishMetric(message.Metadata{
 				Runner:  string(egv1a1.LogComponentProviderRunner),
 				Message: message.GatewayClassStatusMessageName,
@@ -394,12 +392,12 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 		if !failToProcessGCParamsRef {
 			// GatewayClass is valid so far, mark it as accepted.
 			logger.V(6).Info("Set GatewayClass Accepted")
-			gc := status.SetGatewayClassAccepted(
-				managedGC.DeepCopy(),
+			status.SetGatewayClassAccepted(
+				managedGC,
 				true,
 				string(gwapiv1.GatewayClassReasonAccepted),
 				status.MsgValidGatewayClass)
-			r.resources.GatewayClassStatuses.Store(utils.NamespacedName(gc), &gc.Status)
+			r.resources.GatewayClassStatuses.Store(utils.NamespacedName(managedGC), &managedGC.Status)
 		}
 
 		// it's safe here to append gwcResource to gwcResources
@@ -754,6 +752,23 @@ func (r *gatewayAPIReconciler) processBackendRefs(ctx context.Context, gwcResour
 						}
 						logger.Error(err, "failed to process CACertificateRef for Backend",
 							"backend", backend, "caCertificateRef", caCertRef.Name)
+					}
+				}
+			}
+
+			if backend.Spec.TLS != nil && backend.Spec.TLS.BackendTLSConfig != nil && backend.Spec.TLS.ClientCertificateRef != nil {
+				certRef := *backend.Spec.TLS.ClientCertificateRef
+				if refsSecret(&certRef) {
+					if err := r.processSecretRef(
+						ctx, resourceMappings, gwcResource,
+						resource.KindBackend, backend.Namespace, backend.Name,
+						certRef); err != nil {
+						if isTransientError(err) {
+							return err
+						}
+						r.log.Error(err,
+							"failed to process ClientTLS secret for Backend",
+							"backend", backend, "clientCertificateRef", certRef.Name)
 					}
 				}
 			}
@@ -2491,13 +2506,6 @@ func (r *gatewayAPIReconciler) processEnvoyProxy(ep *egv1a1.EnvoyProxy, resource
 	}
 
 	r.log.Info("processing EnvoyProxy", "namespace", ep.Namespace, "name", ep.Name)
-
-	if err := validation.ValidateEnvoyProxy(ep); err != nil {
-		return fmt.Errorf("invalid EnvoyProxy: %w", err)
-	}
-	if err := bootstrap.Validate(ep.Spec.Bootstrap); err != nil {
-		return fmt.Errorf("invalid EnvoyProxy: %w", err)
-	}
 
 	if ep.Spec.Telemetry != nil {
 		var backendRefs []egv1a1.BackendRef

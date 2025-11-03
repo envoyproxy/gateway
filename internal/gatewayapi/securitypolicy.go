@@ -41,7 +41,7 @@ const (
 	defaultRedirectPath          = "/oauth2/callback"
 	defaultLogoutPath            = "/logout"
 	defaultForwardAccessToken    = false
-	defaultRefreshToken          = false
+	defaultRefreshToken          = true
 	defaultPassThroughAuthHeader = false
 
 	// nolint: gosec
@@ -98,6 +98,7 @@ func (t *Translator) ProcessSecurityPolicies(securityPolicies []*egv1a1.Security
 		policyName := utils.NamespacedName(currPolicy)
 		targetRefs := getPolicyTargetRefs(currPolicy.Spec.PolicyTargetReferences, routes, currPolicy.Namespace)
 		for _, currTarget := range targetRefs {
+			// If the target is not a gateway, then it's an xRoute. If the section name is defined, then it's a route rule.
 			if currTarget.Kind != resource.KindGateway && currTarget.SectionName != nil {
 				policy, found := handledPolicies[policyName]
 				if !found {
@@ -116,6 +117,7 @@ func (t *Translator) ProcessSecurityPolicies(securityPolicies []*egv1a1.Security
 		policyName := utils.NamespacedName(currPolicy)
 		targetRefs := getPolicyTargetRefs(currPolicy.Spec.PolicyTargetReferences, routes, currPolicy.Namespace)
 		for _, currTarget := range targetRefs {
+			// If the target is not a gateway, then it's an xRoute. If the section name is not defined, then it's a route.
 			if currTarget.Kind != resource.KindGateway && currTarget.SectionName == nil {
 				policy, found := handledPolicies[policyName]
 				if !found {
@@ -134,6 +136,7 @@ func (t *Translator) ProcessSecurityPolicies(securityPolicies []*egv1a1.Security
 		policyName := utils.NamespacedName(currPolicy)
 		targetRefs := getPolicyTargetRefs(currPolicy.Spec.PolicyTargetReferences, gateways, currPolicy.Namespace)
 		for _, currTarget := range targetRefs {
+			// If the target is a gateway and the section name is defined, then it's a listener.
 			if currTarget.Kind == resource.KindGateway && currTarget.SectionName != nil {
 				policy, found := handledPolicies[policyName]
 				if !found {
@@ -152,6 +155,7 @@ func (t *Translator) ProcessSecurityPolicies(securityPolicies []*egv1a1.Security
 		policyName := utils.NamespacedName(currPolicy)
 		targetRefs := getPolicyTargetRefs(currPolicy.Spec.PolicyTargetReferences, gateways, currPolicy.Namespace)
 		for _, currTarget := range targetRefs {
+			// If the target is a gateway and the section name is not defined, then it's a gateway.
 			if currTarget.Kind == resource.KindGateway && currTarget.SectionName == nil {
 				policy, found := handledPolicies[policyName]
 				if !found {
@@ -636,6 +640,7 @@ func (t *Translator) translateSecurityPolicyForRoute(
 	// Apply IR to all relevant routes
 	prefix := irRoutePrefix(route)
 	parentRefs := GetParentReferences(route)
+	routesWithDirectResponse := sets.New[string]()
 	for _, p := range parentRefs {
 		parentRefCtx := GetRouteParentContext(route, p, t.GatewayControllerName)
 		gtwCtx := parentRefCtx.GetGateway()
@@ -744,12 +749,20 @@ func (t *Translator) translateSecurityPolicyForRoute(
 							if errorResponse != nil {
 								// Return a 500 direct response to avoid unauthorized access
 								r.DirectResponse = errorResponse
+								routesWithDirectResponse.Insert(r.Name)
 							}
 						}
 					}
 				}
 			}
 		}
+	}
+	if len(routesWithDirectResponse) > 0 {
+		t.Logger.Info("setting 500 direct response in routes due to errors in SecurityPolicy",
+			"policy", fmt.Sprintf("%s/%s", policy.Namespace, policy.Name),
+			"routes", sets.List(routesWithDirectResponse),
+			"error", errs,
+		)
 	}
 	return errs
 }
@@ -870,6 +883,7 @@ func (t *Translator) translateSecurityPolicyForGateway(
 	}
 
 	policyTarget := irStringKey(policy.Namespace, string(target.Name))
+	routesWithDirectResponse := sets.New[string]()
 	for _, h := range x.HTTP {
 		// A HTTPListener name has the format namespace/gatewayName/listenerName
 		gatewayNameEnd := strings.LastIndex(h.Name, "/")
@@ -892,8 +906,16 @@ func (t *Translator) translateSecurityPolicyForGateway(
 			r.Security = securityFeatures
 			if errorResponse != nil {
 				r.DirectResponse = errorResponse
+				routesWithDirectResponse.Insert(r.Name)
 			}
 		}
+	}
+	if len(routesWithDirectResponse) > 0 {
+		t.Logger.Info("setting 500 direct response in routes due to errors in SecurityPolicy",
+			"policy", fmt.Sprintf("%s/%s", policy.Namespace, policy.Name),
+			"routes", sets.List(routesWithDirectResponse),
+			"error", errs,
+		)
 	}
 
 	// Pre-create a TCP-only authorization object to avoid re-allocation
@@ -1399,7 +1421,7 @@ func (t *Translator) buildOIDCProvider(policy *egv1a1.SecurityPolicy, resources 
 	if provider.TokenEndpoint == nil || provider.AuthorizationEndpoint == nil {
 		discoveredConfig, err := fetchEndpointsFromIssuer(provider.Issuer, providerTLS)
 		if err != nil {
-			return nil, fmt.Errorf("error fetching endpoints from issuer: %w", err)
+			return nil, err
 		}
 		tokenEndpoint = discoveredConfig.TokenEndpoint
 		authorizationEndpoint = discoveredConfig.AuthorizationEndpoint
@@ -1475,6 +1497,16 @@ type OpenIDConfig struct {
 	EndSessionEndpoint    *string `json:"end_session_endpoint,omitempty"`
 }
 
+func (o *OpenIDConfig) validate() error {
+	if o.TokenEndpoint == "" {
+		return errors.New("token_endpoint not found in OpenID configuration")
+	}
+	if o.AuthorizationEndpoint == "" {
+		return errors.New("authorization_endpoint not found in OpenID configuration")
+	}
+	return nil
+}
+
 func fetchEndpointsFromIssuer(issuerURL string, providerTLS *ir.TLSUpstreamConfig) (*OpenIDConfig, error) {
 	var (
 		tlsConfig *tls.Config
@@ -1498,19 +1530,45 @@ func fetchEndpointsFromIssuer(issuerURL string, providerTLS *ir.TLSUpstreamConfi
 	var config OpenIDConfig
 	if err = backoff.Retry(func() error {
 		resp, err := client.Get(fmt.Sprintf("%s/.well-known/openid-configuration", issuerURL))
+		// Retry on transport errors
 		if err != nil {
 			return err
 		}
+
 		defer resp.Body.Close()
-		if err = json.NewDecoder(resp.Body).Decode(&config); err != nil {
-			return err
+		switch {
+		// Retry on transient errors
+		case retryable(resp.StatusCode):
+			return fmt.Errorf("transient error fetching openid-configuration from issuer URL: %s, status code: %d", issuerURL, resp.StatusCode)
+		// Do not retry on client errors
+		case resp.StatusCode == http.StatusNotFound || resp.StatusCode == http.StatusBadRequest:
+			return &backoff.PermanentError{Err: fmt.Errorf("failed fetching openid-configuration from issuer URL: %s, status code: %d", issuerURL, resp.StatusCode)}
+		case resp.StatusCode == http.StatusOK:
+			// Do not retry if decoding fails
+			if err = json.NewDecoder(resp.Body).Decode(&config); err != nil {
+				return &backoff.PermanentError{Err: fmt.Errorf("error decoding openid-configuration response: %w", err)}
+			}
+		default:
+			// Do not retry on other status codes
+			return &backoff.PermanentError{Err: fmt.Errorf("unexpected status code %d when fetching openid-configuration from issuer URL: %s", resp.StatusCode, issuerURL)}
 		}
 		return nil
 	}, backoff.NewExponentialBackOff(backoff.WithMaxElapsedTime(5*time.Second))); err != nil {
 		return nil, err
 	}
 
+	if err = config.validate(); err != nil {
+		return nil, fmt.Errorf("invalid openid-configuration from issuer URL %s: %w", issuerURL, err)
+	}
+
 	return &config, nil
+}
+
+func retryable(code int) bool {
+	return code >= 500 &&
+		(code != http.StatusNotImplemented &&
+			code != http.StatusHTTPVersionNotSupported &&
+			code != http.StatusNetworkAuthenticationRequired)
 }
 
 // validateTokenEndpoint validates the token endpoint URL

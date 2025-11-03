@@ -14,34 +14,17 @@ import (
 
 // SkipTests is a list of tests that are skipped in the conformance suite.
 func SkipTests(gatewayNamespaceMode bool) []suite.ConformanceTest {
-	if gatewayNamespaceMode {
-		return []suite.ConformanceTest{
-			tests.GatewayStaticAddresses,
-
-			tests.BackendTLSPolicyInvalidCACertificateRef,
-			tests.BackendTLSPolicyInvalidKind,
-			tests.BackendTLSPolicySANValidation,
-			tests.BackendTLSPolicyConflictResolution,
-			tests.BackendTLSPolicy,
-			tests.BackendTLSPolicyObservedGenerationBump,
-			tests.TLSRouteInvalidReferenceGrant,
-			tests.TLSRouteSimpleSameNamespace,
-		}
-	}
-
-	return []suite.ConformanceTest{
+	skipTests := []suite.ConformanceTest{
 		tests.GatewayStaticAddresses,
-		tests.GatewayInfrastructure,
-
-		tests.BackendTLSPolicyInvalidCACertificateRef,
-		tests.BackendTLSPolicyInvalidKind,
-		tests.BackendTLSPolicySANValidation,
-		tests.BackendTLSPolicyConflictResolution,
-		tests.BackendTLSPolicy,
-		tests.BackendTLSPolicyObservedGenerationBump,
-		tests.TLSRouteInvalidReferenceGrant,
-		tests.TLSRouteSimpleSameNamespace,
 	}
+
+	if gatewayNamespaceMode {
+		return skipTests
+	}
+
+	skipTests = append(skipTests, tests.GatewayInfrastructure)
+
+	return skipTests
 }
 
 // SkipFeatures is a list of features that are skipped in the conformance report.
