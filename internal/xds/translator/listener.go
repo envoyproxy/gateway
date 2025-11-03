@@ -25,6 +25,7 @@ import (
 	preservecasev3 "github.com/envoyproxy/go-control-plane/envoy/extensions/http/header_formatters/preserve_case/v3"
 	customheaderv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/http/original_ip_detection/custom_header/v3"
 	xffv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/http/original_ip_detection/xff/v3"
+	uuidv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/request_id/uuid/v3"
 	quicv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/quic/v3"
 	tlsv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 	typev3 "github.com/envoyproxy/go-control-plane/envoy/type/v3"
@@ -371,6 +372,7 @@ func (t *Translator) addHCMToXDSListener(
 		Tracing:                       hcmTracing,
 		ForwardClientCertDetails:      buildForwardClientCertDetailsAction(irListener.Headers),
 		EarlyHeaderMutationExtensions: buildEarlyHeaderMutation(irListener.Headers),
+		RequestIdExtension:            buildRequestIDExtension(irListener.Headers),
 	}
 
 	if requestID := ptr.Deref(irListener.Headers, ir.HeaderSettings{}).RequestID; requestID != nil {
@@ -1202,4 +1204,27 @@ func buildSetCurrentClientCertDetails(in *ir.HeaderSettings) *hcmv3.HttpConnecti
 	}
 
 	return clientCertDetails
+}
+
+func buildRequestIDExtension(headers *ir.HeaderSettings) *hcmv3.RequestIDExtension {
+	if headers == nil || headers.RequestIDExtension == nil {
+		return nil
+	}
+
+	ridExt := headers.RequestIDExtension
+	cfg := &uuidv3.UuidRequestIdConfig{}
+
+	if ridExt.PackTraceReason != nil {
+		cfg.PackTraceReason = wrapperspb.Bool(*ridExt.PackTraceReason)
+	}
+
+	if ridExt.UseRequestIDForTraceSampling != nil {
+		cfg.UseRequestIdForTraceSampling = wrapperspb.Bool(*ridExt.UseRequestIDForTraceSampling)
+	}
+
+	requestIDConfig, _ := proto.ToAnyWithValidation(cfg)
+
+	return &hcmv3.RequestIDExtension{
+		TypedConfig: requestIDConfig,
+	}
 }

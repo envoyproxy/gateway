@@ -48,6 +48,9 @@ http:
     lateRemoveResponseHeaders:
     - "some-header5"
     - "some-header6"
+    requestIdExtension:
+      packTraceReason: false
+      useRequestIDForTraceSampling: false
   routes:
   - name: "second-route"
     hostname: "*"
