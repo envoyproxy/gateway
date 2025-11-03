@@ -389,10 +389,8 @@
         typedConfig:
           '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.client_side_weighted_round_robin.v3.ClientSideWeightedRoundRobin
           blackoutPeriod: 30s
-          enableOobLoadReport: true
           metricNamesForComputingUtilization:
           - named_metric.foo
-          oobReportingPeriod: 20s
           weightExpirationPeriod: 60s
           weightUpdatePeriod: 10s
   name: sixteenth-route-dest

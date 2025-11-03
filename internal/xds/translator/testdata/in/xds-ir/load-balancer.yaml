@@ -225,8 +225,6 @@ http:
     traffic:
       loadBalancer:
         clientSideWeightedRoundRobin:
-          enableOobLoadReport: true
-          oobReportingPeriod: 20s
           blackoutPeriod: 30s
           weightExpirationPeriod: 60s
           weightUpdatePeriod: 10s

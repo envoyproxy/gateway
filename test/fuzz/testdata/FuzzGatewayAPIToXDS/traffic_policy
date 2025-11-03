@@ -59,6 +59,4 @@ spec:
   loadBalancer:
     type: ClientSideWeightedRoundRobin
     clientSideWeightedRoundRobin:
-      enableOOBLoadReport: true
-      oobReportingPeriod: 5s
       errorUtilizationPenalty: 1.2

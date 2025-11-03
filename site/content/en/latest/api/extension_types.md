@@ -718,8 +718,6 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `enableOOBLoadReport` | _boolean_ |  false  |  | Whether to enable out-of-band utilization reporting collection from the endpoints.<br />By default, per-request utilization reporting is used. |
-| `oobReportingPeriod` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#duration)_ |  false  |  | Load reporting interval to request from the server. Used only when enableOOBLoadReport is true.<br />Default is 10s; server may not provide reports as frequently as requested. |
 | `blackoutPeriod` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#duration)_ |  false  |  | A given endpoint must report load metrics continuously for at least this long before the endpoint weight will be used.<br />Default is 10s. |
 | `weightExpirationPeriod` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#duration)_ |  false  |  | If a given endpoint has not reported load metrics in this long, stop using the reported weight. Defaults to 3m. |
 | `weightUpdatePeriod` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#duration)_ |  false  |  | How often endpoint weights are recalculated. Values less than 100ms are capped at 100ms. Default 1s. |
