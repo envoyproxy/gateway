@@ -148,16 +148,6 @@ type Cookie struct {
 // See Envoy proto: envoy.extensions.load_balancing_policies.client_side_weighted_round_robin.v3.ClientSideWeightedRoundRobin
 // Note: SlowStart is not supported for this policy in Envoy Gateway at this time.
 type ClientSideWeightedRoundRobin struct {
-	// Whether to enable out-of-band utilization reporting collection from the endpoints.
-	// By default, per-request utilization reporting is used.
-	// +optional
-	EnableOOBLoadReport *bool `json:"-"`
-
-	// Load reporting interval to request from the server. Used only when enableOOBLoadReport is true.
-	// Default is 10s; server may not provide reports as frequently as requested.
-	// +optional
-	OOBReportingPeriod *gwapiv1.Duration `json:"-"`
-
 	// A given endpoint must report load metrics continuously for at least this long before the endpoint weight will be used.
 	// Default is 10s.
 	// +optional
