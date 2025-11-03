@@ -903,6 +903,31 @@ func TestEnvoyGateway(t *testing.T) {
 	assert.Equal(t, egv1a1.LogLevelInfo, gatewayLogging.Level[egv1a1.LogComponentGatewayDefault])
 }
 
+func TestValidateEnvoyGatewayXDSServer(t *testing.T) {
+	t.Run("valid no overrides", func(t *testing.T) {
+		require.NoError(t, validateEnvoyGatewayXDSServer(nil))
+	})
+
+	t.Run("valid overrides", func(t *testing.T) {
+		age := gwapiv1.Duration("30m")
+		grace := gwapiv1.Duration("1m")
+		x := &egv1a1.XDSServer{MaxConnectionAge: &age, MaxConnectionAgeGrace: &grace}
+		require.NoError(t, validateEnvoyGatewayXDSServer(x))
+	})
+
+	t.Run("invalid duration", func(t *testing.T) {
+		age := gwapiv1.Duration("bad")
+		x := &egv1a1.XDSServer{MaxConnectionAge: &age}
+		require.Error(t, validateEnvoyGatewayXDSServer(x))
+	})
+
+	t.Run("non positive", func(t *testing.T) {
+		age := gwapiv1.Duration("0s")
+		x := &egv1a1.XDSServer{MaxConnectionAgeGrace: &age}
+		require.Error(t, validateEnvoyGatewayXDSServer(x))
+	})
+}
+
 func TestDefaultEnvoyGatewayLoggingLevel(t *testing.T) {
 	type args struct {
 		component string
