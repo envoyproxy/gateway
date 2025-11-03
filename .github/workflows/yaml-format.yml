@@ -1,0 +1,28 @@
+name: YAML Formatting
+
+on:
+  pull_request:
+  push:
+    branches: [ main ]
+
+jobs:
+  format-yaml:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: tools/go.mod
+
+      - name: Run YAML formatter
+        run: |
+          make format-yaml
+
+      - name: Check for unformatted changes
+        run: |
+          git diff --exit-code || (echo "Error: YAML files need formatting. Run 'make format-yaml'" && exit 1)
+
+
