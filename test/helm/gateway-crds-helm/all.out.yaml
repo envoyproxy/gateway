@@ -21260,8 +21260,9 @@ spec:
                       description: The configuration for Brotli compressor.
                       type: object
                     chooseFirst:
-                      description: ChooseFirst indicates whether to choose the first
-                        encoding type
+                      description: |-
+                        ChooseFirst indicates whether the compressor is preferred when q-values in Accept-Encoding are equal.
+                        If multiple compressor filters set choose_first to true, the last one in the filter chain is chosen.
                       type: boolean
                     gzip:
                       description: The configuration for GZIP compressor.
@@ -21299,8 +21300,9 @@ spec:
                       description: The configuration for Brotli compressor.
                       type: object
                     chooseFirst:
-                      description: ChooseFirst indicates whether to choose the first
-                        encoding type
+                      description: |-
+                        ChooseFirst indicates whether the compressor is preferred when q-values in Accept-Encoding are equal.
+                        If multiple compressor filters set choose_first to true, the last one in the filter chain is chosen.
                       type: boolean
                     gzip:
                       description: The configuration for GZIP compressor.
@@ -41769,8 +41771,9 @@ spec:
                                 description: The configuration for Brotli compressor.
                                 type: object
                               chooseFirst:
-                                description: ChooseFirst indicates whether to choose
-                                  the first encoding type
+                                description: |-
+                                  ChooseFirst indicates whether the compressor is preferred when q-values in Accept-Encoding are equal.
+                                  If multiple compressor filters set choose_first to true, the last one in the filter chain is chosen.
                                 type: boolean
                               gzip:
                                 description: The configuration for GZIP compressor.

@@ -871,7 +871,7 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `type` | _[CompressorType](#compressortype)_ |  true  |  | CompressorType defines the compressor type to use for compression. |
-| `chooseFirst` | _boolean_ |  false  |  | ChooseFirst indicates whether to choose the first encoding type |
+| `chooseFirst` | _boolean_ |  false  |  | ChooseFirst indicates whether the compressor is preferred when q-values in Accept-Encoding are equal.<br />If multiple compressor filters set choose_first to true, the last one in the filter chain is chosen. |
 | `removeAcceptEncodingHeader` | _boolean_ |  false  |  | RemoveAcceptEncodingHeader indicates whether to remove the<br />Accept-Encoding header from the request before forwarding it to the upstream. |
 | `brotli` | _[BrotliCompressor](#brotlicompressor)_ |  false  |  | The configuration for Brotli compressor. |
 | `gzip` | _[GzipCompressor](#gzipcompressor)_ |  false  |  | The configuration for GZIP compressor. |
