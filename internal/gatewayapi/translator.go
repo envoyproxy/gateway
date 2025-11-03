@@ -222,6 +222,13 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 	// Build IR maps.
 	xdsIR, infraIR := t.InitIRs(acceptedGateways)
 
+	// add failedGateways to InfraIR(with empty Proxy) to avoid deletion
+	for _, gw := range failedGateways {
+		irKey := t.IRKey(types.NamespacedName{Namespace: gw.Namespace, Name: gw.Name})
+		infra := &ir.Infra{}
+		infraIR[irKey] = infra
+	}
+
 	// Process all Listeners for all relevant Gateways.
 	t.ProcessListeners(acceptedGateways, xdsIR, infraIR, resources)
 
