@@ -1245,11 +1245,6 @@ spec:
                                       Default is 10s.
                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
-                                  enableOOBLoadReport:
-                                    description: |-
-                                      Whether to enable out-of-band utilization reporting collection from the endpoints.
-                                      By default, per-request utilization reporting is used.
-                                    type: boolean
                                   errorUtilizationPenalty:
                                     description: |-
                                       The multiplier used to adjust endpoint weights with the error rate calculated as eps/qps.
@@ -1263,12 +1258,6 @@ spec:
                                     items:
                                       type: string
                                     type: array
-                                  oobReportingPeriod:
-                                    description: |-
-                                      Load reporting interval to request from the server. Used only when enableOOBLoadReport is true.
-                                      Default is 10s; server may not provide reports as frequently as requested.
-                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
-                                    type: string
                                   weightExpirationPeriod:
                                     description: If a given endpoint has not reported
                                       load metrics in this long, stop using the reported
@@ -2397,11 +2386,6 @@ spec:
                                       Default is 10s.
                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
-                                  enableOOBLoadReport:
-                                    description: |-
-                                      Whether to enable out-of-band utilization reporting collection from the endpoints.
-                                      By default, per-request utilization reporting is used.
-                                    type: boolean
                                   errorUtilizationPenalty:
                                     description: |-
                                       The multiplier used to adjust endpoint weights with the error rate calculated as eps/qps.
@@ -2415,12 +2399,6 @@ spec:
                                     items:
                                       type: string
                                     type: array
-                                  oobReportingPeriod:
-                                    description: |-
-                                      Load reporting interval to request from the server. Used only when enableOOBLoadReport is true.
-                                      Default is 10s; server may not provide reports as frequently as requested.
-                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
-                                    type: string
                                   weightExpirationPeriod:
                                     description: If a given endpoint has not reported
                                       load metrics in this long, stop using the reported
@@ -3760,11 +3738,6 @@ spec:
                                             Default is 10s.
                                           pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                           type: string
-                                        enableOOBLoadReport:
-                                          description: |-
-                                            Whether to enable out-of-band utilization reporting collection from the endpoints.
-                                            By default, per-request utilization reporting is used.
-                                          type: boolean
                                         errorUtilizationPenalty:
                                           description: |-
                                             The multiplier used to adjust endpoint weights with the error rate calculated as eps/qps.
@@ -3778,12 +3751,6 @@ spec:
                                           items:
                                             type: string
                                           type: array
-                                        oobReportingPeriod:
-                                          description: |-
-                                            Load reporting interval to request from the server. Used only when enableOOBLoadReport is true.
-                                            Default is 10s; server may not provide reports as frequently as requested.
-                                          pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
-                                          type: string
                                         weightExpirationPeriod:
                                           description: If a given endpoint has not
                                             reported load metrics in this long, stop
@@ -5183,11 +5150,6 @@ spec:
                                       Default is 10s.
                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
-                                  enableOOBLoadReport:
-                                    description: |-
-                                      Whether to enable out-of-band utilization reporting collection from the endpoints.
-                                      By default, per-request utilization reporting is used.
-                                    type: boolean
                                   errorUtilizationPenalty:
                                     description: |-
                                       The multiplier used to adjust endpoint weights with the error rate calculated as eps/qps.
@@ -5201,12 +5163,6 @@ spec:
                                     items:
                                       type: string
                                     type: array
-                                  oobReportingPeriod:
-                                    description: |-
-                                      Load reporting interval to request from the server. Used only when enableOOBLoadReport is true.
-                                      Default is 10s; server may not provide reports as frequently as requested.
-                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
-                                    type: string
                                   weightExpirationPeriod:
                                     description: If a given endpoint has not reported
                                       load metrics in this long, stop using the reported

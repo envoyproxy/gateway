@@ -60,8 +60,6 @@ spec:
   loadBalancer:
     type: ClientSideWeightedRoundRobin
     clientSideWeightedRoundRobin:
-      enableOOBLoadReport: false
-      oobReportingPeriod: 20s
       blackoutPeriod: 30s
       weightExpirationPeriod: 60s
       weightUpdatePeriod: 10s
