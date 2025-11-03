@@ -175,7 +175,7 @@ func testCompression(t *testing.T, suite *suite.ConformanceTestSuite, compressio
 
 func testCompressionChooseFirst(t *testing.T, suite *suite.ConformanceTestSuite, compressionType egv1a1.CompressorType) {
 	ns := "gateway-conformance-infra"
-	routeNN := types.NamespacedName{Name: "compression", Namespace: ns}
+	routeNN := types.NamespacedName{Name: "compression-choose-first", Namespace: ns}
 	gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 	gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
 
@@ -185,12 +185,12 @@ func testCompressionChooseFirst(t *testing.T, suite *suite.ConformanceTestSuite,
 		Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
 		Name:      gwapiv1.ObjectName(gwNN.Name),
 	}
-	BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "compression", Namespace: ns}, suite.ControllerName, ancestorRef)
+	BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "compression-choose-first", Namespace: ns}, suite.ControllerName, ancestorRef)
 
 	encoding := ContentEncoding(compressionType)
 	expectedResponse := http.ExpectedResponse{
 		Request: http.Request{
-			Path: "/compression",
+			Path: "/compression-choose-first",
 			Headers: map[string]string{
 				"Accept-encoding": "gzip, br, zstd",
 			},
@@ -209,7 +209,7 @@ func testCompressionChooseFirst(t *testing.T, suite *suite.ConformanceTestSuite,
 
 func testCompressionRemoveAcceptEncodingHeader(t *testing.T, suite *suite.ConformanceTestSuite, compressionType egv1a1.CompressorType) {
 	ns := "gateway-conformance-infra"
-	routeNN := types.NamespacedName{Name: "compression", Namespace: ns}
+	routeNN := types.NamespacedName{Name: "compression-remove-accept-encoding", Namespace: ns}
 	gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 	gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
 
@@ -219,12 +219,12 @@ func testCompressionRemoveAcceptEncodingHeader(t *testing.T, suite *suite.Confor
 		Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
 		Name:      gwapiv1.ObjectName(gwNN.Name),
 	}
-	BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "compression", Namespace: ns}, suite.ControllerName, ancestorRef)
+	BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "compression-remove-accept-encoding", Namespace: ns}, suite.ControllerName, ancestorRef)
 
 	encoding := ContentEncoding(compressionType)
 	expectedResponse := http.ExpectedResponse{
 		Request: http.Request{
-			Path: "/compression",
+			Path: "/compression-remove-accept-encoding",
 			Headers: map[string]string{
 				"Accept-encoding": encoding,
 			},
@@ -232,7 +232,7 @@ func testCompressionRemoveAcceptEncodingHeader(t *testing.T, suite *suite.Confor
 		// Verify that Accept-encoding header was NOT forwarded to the backend
 		ExpectedRequest: &http.ExpectedRequest{
 			Request: http.Request{
-				Path: "/compression",
+				Path: "/compression-remove-accept-encoding",
 			},
 			AbsentHeaders: []string{"Accept-Encoding"},
 		},

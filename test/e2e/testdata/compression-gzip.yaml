@@ -2,7 +2,7 @@
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
-  name: compression
+  name: compression-choose-first
   namespace: gateway-conformance-infra
 spec:
   parentRefs:
@@ -11,7 +11,7 @@ spec:
     - matches:
         - path:
             type: PathPrefix
-            value: /compression
+            value: /compression-choose-first
       backendRefs:
         - name: infra-backend-v1
           port: 8080
@@ -19,16 +19,48 @@ spec:
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: BackendTrafficPolicy
 metadata:
-  name: compression
+  name: compression-choose-first
   namespace: gateway-conformance-infra
 spec:
   targetRef:
     group: gateway.networking.k8s.io
     kind: HTTPRoute
-    name: compression
+    name: compression-choose-first
   compression:
     - type: Brotli
     - type: Gzip
       chooseFirst: true
+    - type: Zstd
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: compression-remove-accept-encoding
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: same-namespace
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /compression-remove-accept-encoding
+      backendRefs:
+        - name: infra-backend-v1
+          port: 8080
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: compression-remove-accept-encoding
+  namespace: gateway-conformance-infra
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: compression-remove-accept-encoding
+  compression:
+    - type: Brotli
+    - type: Gzip
       removeAcceptEncodingHeader: true
     - type: Zstd
