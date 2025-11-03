@@ -231,6 +231,7 @@ func testCompressionRemoveAcceptEncodingHeader(t *testing.T, suite *suite.Confor
 		},
 		// Verify that Accept-encoding header was NOT forwarded to the backend
 		ExpectedRequest: &http.ExpectedRequest{
+			Path:          "/compression",
 			AbsentHeaders: []string{"Accept-encoding"},
 		},
 		Response: http.Response{
