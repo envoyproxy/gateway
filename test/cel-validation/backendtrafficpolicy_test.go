@@ -646,7 +646,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				"spec.loadBalancer.clientSideWeightedRoundRobin.errorUtilizationPenalty: Invalid value: -1: must be greater than or equal to 0",
+				"Invalid value: -1: spec.loadBalancer.clientSideWeightedRoundRobin.errorUtilizationPenalty in body should be greater than or equal to 0",
 			},
 		},
 		{
