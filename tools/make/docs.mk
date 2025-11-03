@@ -149,7 +149,7 @@ gwapi-doc-update-relative-links:
  		$(SED) -e 's/https:\/\/gateway-api.sigs.k8s.io\.\./https:\/\/gateway-api.sigs.k8s.io/g' $(DOC_DEST_DIR)/$(file);)
  	# Remove .md from links
 	@$(foreach file, $(SYNC_FILES), \
- 		$(SED) -e 's/\(\[.*\](https:\/\/gateway-api.sigs.k8s.io[^)]*\)\.md/\1/g' $(DOC_DEST_DIR)/$(file);)
+ 		$(SED) -e 's/\((https:\/\/gateway-api.sigs.k8s.io[^)]*\)\.md/\1/g' $(DOC_DEST_DIR)/$(file);)
 
 .PHONY: helm-readme-gen
 helm-readme-gen:

@@ -5,7 +5,7 @@ title = "HTTPRoute"
 
     The `HTTPRoute` resource is GA and has been part of the Standard Channel since
     `v0.5.0`. For more information on release channels, refer to our [versioning
-    guide](https://gateway-api.sigs.k8s.io/concepts/versioning.md).
+    guide](https://gateway-api.sigs.k8s.io/concepts/versioning).
 
 [HTTPRoute][httproute] is a Gateway API type for specifying routing behavior
 of HTTP requests from a Gateway listener to an API object, i.e. Service.

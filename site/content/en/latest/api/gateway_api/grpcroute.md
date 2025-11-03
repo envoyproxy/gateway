@@ -5,7 +5,7 @@ title = "GRPCRoute"
 
     The `GRPCRoute` resource is GA and has been part of the Standard Channel since
     `v1.1.0`. For more information on release channels, refer to our [versioning
-    guide](https://gateway-api.sigs.k8s.io/concepts/versioning.md).
+    guide](https://gateway-api.sigs.k8s.io/concepts/versioning).
 
 [GRPCRoute][grpcroute] is a Gateway API type for specifying routing behavior
 of gRPC requests from a Gateway listener to an API object, i.e. Service.

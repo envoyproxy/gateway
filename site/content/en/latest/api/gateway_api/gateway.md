@@ -5,7 +5,7 @@ title = "Gateway"
 
     The `Gateway` resource is GA and has been part of the Standard Channel since
     `v0.5.0`. For more information on release channels, refer to our [versioning
-    guide](https://gateway-api.sigs.k8s.io/concepts/versioning.md).
+    guide](https://gateway-api.sigs.k8s.io/concepts/versioning).
 
 A `Gateway` is 1:1 with the lifecycle of the configuration of infrastructure.
 When a user creates a `Gateway`, some load balancing infrastructure is
