@@ -63,4 +63,5 @@ spec:
     - type: Brotli
     - type: Gzip
     - type: Zstd
+      chooseFirst: true
       removeAcceptEncodingHeader: true

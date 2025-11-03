@@ -61,6 +61,7 @@ spec:
     name: compression-remove-accept-encoding
   compression:
     - type: Brotli
+      chooseFirst: true
       removeAcceptEncodingHeader: true
     - type: Gzip
     - type: Zstd

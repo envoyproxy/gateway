@@ -62,5 +62,6 @@ spec:
   compression:
     - type: Brotli
     - type: Gzip
+      chooseFirst: true
       removeAcceptEncodingHeader: true
     - type: Zstd
