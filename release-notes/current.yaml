@@ -10,7 +10,8 @@ security updates: |
 new features: |
 
 bug fixes: |
-  - Fixed Listener port limit typo 65353 -> 65535.
+ - Fixed Listener port limit typo 65353 -> 65535.
+ - Fixed issue where reloading invalid envoy gateway configuration.
 # Enhancements that improve performance.
 performance improvements: |
 
