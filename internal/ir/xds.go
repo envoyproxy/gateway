@@ -393,6 +393,8 @@ type TLSConfig struct {
 	VerifyCertificateSpki []string `json:"verifyCertificateSpki,omitempty" yaml:"verifyCertificateSpki,omitempty"`
 	// A list of allowed hex-encoded SHA-256 hashes of the DER-encoded certificate
 	VerifyCertificateHash []string `json:"verifyCertificateHash,omitempty" yaml:"verifyCertificateHash,omitempty"`
+	// CRL to verify the client certificates
+	Crl *TLSCrl `json:"crl,omitempty" yaml:"crl,omitempty"`
 	// A list of Subject Alternative name matchers
 	MatchTypedSubjectAltNames []*StringMatch `json:"matchTypedSubjectAltNames,omitempty" yaml:"matchTypedSubjectAltNames,omitempty"`
 	// MinVersion defines the minimal version of the TLS protocol supported by this listener.
@@ -424,6 +426,17 @@ type TLSCertificate struct {
 	PrivateKey PrivateBytes `json:"privateKey,omitempty" yaml:"privateKey,omitempty"`
 	// OCSPStaple contains the stapled OCSP response associated with the certificate, if provided.
 	OCSPStaple []byte `json:"ocspStaple,omitempty" yaml:"ocspStaple,omitempty"`
+}
+
+// TLSCrl holds a single CRL's details
+// +k8s:deepcopy-gen=true
+type TLSCrl struct {
+	// Name of the Secret object.
+	Name string `json:"name" yaml:"name"`
+	// CRL content.
+	Data []byte `json:"data,omitempty" yaml:"data,omitempty"`
+	// OnlyVerifyLeafCertificate to verify the leaf certificate against the CRL
+	OnlyVerifyLeafCertificate bool `json:"onlyVerifyLeafCertificate,omitempty" yaml:"onlyVerifyLeafCertificate,omitempty"`
 }
 
 // TLSCACertificate holds CA Certificate to validate clients
@@ -625,7 +638,7 @@ type CustomResponse struct {
 	ContentType *string `json:"contentType,omitempty"`
 
 	// Body of the Custom Response
-	Body *string `json:"body,omitempty"`
+	Body []byte `json:"body,omitempty"`
 
 	// StatusCode will be used for the response's status code.
 	StatusCode *uint32 `json:"statusCode,omitempty"`
@@ -2038,6 +2051,9 @@ type TCPRoute struct {
 	ProxyProtocol *ProxyProtocol `json:"proxyProtocol,omitempty" yaml:"proxyProtocol,omitempty"`
 	// settings of upstream connection
 	BackendConnection *BackendConnection `json:"backendConnection,omitempty" yaml:"backendConnection,omitempty"`
+	// Preconnect configures preconnecting to upstream endpoints
+	// +optional
+	Preconnect *Preconnect `json:"preconnect,omitempty" yaml:"preconnect,omitempty"`
 	// DNS is used to configure how DNS resolution is handled for the route
 	DNS *DNS `json:"dns,omitempty" yaml:"dns,omitempty"`
 	// Authorization defines the schema for the authorization.
@@ -2237,6 +2253,10 @@ type LocalRateLimit struct {
 type RateLimitRule struct {
 	// HeaderMatches define the match conditions on the request headers for this route.
 	HeaderMatches []*StringMatch `json:"headerMatches" yaml:"headerMatches"`
+	// PathMatch defines the match conditions on the request path for this route.
+	PathMatch *StringMatch `json:"pathMatch,omitempty" yaml:"pathMatch,omitempty"`
+	// MethodMatches define the match conditions on the request methods for this route.
+	MethodMatches []*StringMatch `json:"methodMatches,omitempty" yaml:"methodMatches,omitempty"`
 	// CIDRMatch define the match conditions on the source IP's CIDR for this route.
 	CIDRMatch *CIDRMatch `json:"cidrMatch,omitempty" yaml:"cidrMatch,omitempty"`
 	// Limit holds the rate limit values.
@@ -2275,7 +2295,7 @@ type CIDRMatch struct {
 
 // TODO zhaohuabing: remove this function
 func (r *RateLimitRule) IsMatchSet() bool {
-	return len(r.HeaderMatches) != 0 || r.CIDRMatch != nil
+	return len(r.HeaderMatches) != 0 || r.PathMatch != nil || len(r.MethodMatches) != 0 || r.CIDRMatch != nil
 }
 
 type RateLimitUnit egv1a1.RateLimitUnit
@@ -2592,15 +2612,10 @@ type Random struct{}
 // +k8s:deepcopy-gen=true
 type ConsistentHash struct {
 	// Hash based on the Source IP Address
-	SourceIP  *bool          `json:"sourceIP,omitempty" yaml:"sourceIP,omitempty"`
-	Header    *Header        `json:"header,omitempty" yaml:"header,omitempty"`
-	Cookie    *egv1a1.Cookie `json:"cookie,omitempty" yaml:"cookie,omitempty"`
-	TableSize *uint64        `json:"tableSize,omitempty" yaml:"tableSize,omitempty"`
-}
-
-// Header consistent hash type settings
-type Header struct {
-	Name string `json:"name" yaml:"name"`
+	SourceIP  *bool            `json:"sourceIP,omitempty" yaml:"sourceIP,omitempty"`
+	Headers   []*egv1a1.Header `json:"headers,omitempty" yaml:"headers,omitempty"`
+	Cookie    *egv1a1.Cookie   `json:"cookie,omitempty" yaml:"cookie,omitempty"`
+	TableSize *uint64          `json:"tableSize,omitempty" yaml:"tableSize,omitempty"`
 }
 
 type ProxyProtocolVersion string
@@ -2928,6 +2943,9 @@ type HTTPTimeout struct {
 
 	// The maximum duration of an HTTP connection.
 	MaxConnectionDuration *metav1.Duration `json:"maxConnectionDuration,omitempty" yaml:"maxConnectionDuration,omitempty"`
+
+	// The maximum duration of an HTTP stream.
+	MaxStreamDuration *metav1.Duration `json:"maxStreamDuration,omitempty" yaml:"maxStreamDuration,omitempty"`
 }
 
 // Retry define the retry policy configuration.
@@ -3036,6 +3054,18 @@ func (t *TLSUpstreamConfig) ToTLSConfig() (*tls.Config, error) {
 type BackendConnection struct {
 	// BufferLimitBytes is the maximum number of bytes that can be buffered for a connection.
 	BufferLimitBytes *uint32 `json:"bufferLimit,omitempty" yaml:"bufferLimit,omitempty"`
+	// Preconnect configures preconnecting to upstream endpoints
+	// +optional
+	Preconnect *Preconnect `json:"preconnect,omitempty" yaml:"preconnect,omitempty"`
+}
+
+// Preconnect configures preconnecting to upstream endpoints
+// +k8s:deepcopy-gen=true
+type Preconnect struct {
+	// PerEndpointPercent is the percent of connections to preconnect per upstream endpoint.
+	PerEndpointPercent *uint32 `json:"perEndpointPercent,omitempty" yaml:"perEndpointPercent,omitempty"`
+	// PredictivePercent is the percent of connections to preconnect across the entire cluster.
+	PredictivePercent *uint32 `json:"predictivePercent,omitempty" yaml:"predictivePercent,omitempty"`
 }
 
 // ClientConnection settings for downstream connections
