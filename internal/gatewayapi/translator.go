@@ -386,6 +386,7 @@ func (t *Translator) GetRelevantGateways(resources *resource.Resources) (
 		gCtx := &GatewayContext{
 			Gateway: gateway,
 		}
+		gCtx.attachEnvoyProxy(resources, envoyproxyMap)
 
 		// Gateways that are not accepted by the controller because they reference an invalid EnvoyProxy.
 		if status.GatewayNotAccepted(gCtx.Gateway) {
@@ -394,7 +395,6 @@ func (t *Translator) GetRelevantGateways(resources *resource.Resources) (
 			continue
 		}
 
-		gCtx.ResetListeners(resources, envoyproxyMap)
 		if ep := gCtx.envoyProxy; ep != nil {
 			key := utils.NamespacedName(ep)
 			if err, exits := envoyproxyValidationErrorMap[key]; exits {
@@ -406,6 +406,8 @@ func (t *Translator) GetRelevantGateways(resources *resource.Resources) (
 			}
 		}
 
+		// we cannot do this early, otherwise there's an error when updating status.
+		gCtx.ResetListeners(resources, envoyproxyMap)
 		acceptedGateways = append(acceptedGateways, gCtx)
 	}
 	return
