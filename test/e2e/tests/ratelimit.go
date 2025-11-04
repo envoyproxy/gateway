@@ -258,6 +258,36 @@ var RateLimitPathMatchTest = suite.ConformanceTest{
 			if err := GotExactExpectedResponse(t, 1, suite.RoundTripper, expectLimitReq, expectLimitResp); err != nil {
 				t.Errorf("failed to get expected response for the last (fourth) request: %v", err)
 			}
+
+			// Subpath should be rate limited due to prefix matching.
+			expectLimitResp = http.ExpectedResponse{
+				Request: http.Request{
+					Path: "/get/specific-path/subpath",
+				},
+				Response: http.Response{
+					StatusCode: 429,
+				},
+				Namespace: ns,
+			}
+			expectLimitReq = http.MakeRequest(t, &expectLimitResp, gwAddr, "HTTP", "http")
+			if err := GotExactExpectedResponse(t, 1, suite.RoundTripper, expectLimitReq, expectLimitResp); err != nil {
+				t.Errorf("failed to get expected response for the last (fourth) request: %v", err)
+			}
+
+			// Different path (contains the path prefix) should not be rate limited.
+			expectOkResp = http.ExpectedResponse{
+				Request: http.Request{
+					Path: "/get/specific-path2",
+				},
+				Response: http.Response{
+					StatusCode: 200,
+				},
+				Namespace: ns,
+			}
+			expectOkReq = http.MakeRequest(t, &expectOkResp, gwAddr, "HTTP", "http")
+			if err := GotExactExpectedResponse(t, 1, suite.RoundTripper, expectOkReq, expectOkResp); err != nil {
+				t.Errorf("failed to get expected response for the last (fourth) request: %v", err)
+			}
 		})
 
 		t.Run("not matched path cannot got limited", func(t *testing.T) {

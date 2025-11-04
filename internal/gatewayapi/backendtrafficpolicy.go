@@ -1246,9 +1246,18 @@ func buildRateLimitRule(rule egv1a1.RateLimitRule) (*ir.RateLimitRule, error) {
 		if match.Path != nil {
 			switch ptr.Deref(match.Path.Type, gwapiv1.PathMatchPathPrefix) {
 			case gwapiv1.PathMatchPathPrefix:
-				irRule.PathMatch = &ir.StringMatch{
-					Prefix: ptr.To(match.Path.Value),
-					Invert: match.Path.Invert,
+				if match.Path.Value == "/" {
+					irRule.PathMatch = &ir.StringMatch{
+						Prefix: ptr.To(match.Path.Value),
+						Invert: match.Path.Invert,
+					}
+				} else {
+					// envoy ratelimit HeaderMatcher doesn't support PathSeparatedPrefix like route matching,
+					// so we use regex to achieve the same path-separated prefix behavior.
+					irRule.PathMatch = &ir.StringMatch{
+						SafeRegex: ptr.To(regex.PathSeparatedPrefixRegex(match.Path.Value)),
+						Invert:    match.Path.Invert,
+					}
 				}
 			case gwapiv1.PathMatchExact:
 				irRule.PathMatch = &ir.StringMatch{
