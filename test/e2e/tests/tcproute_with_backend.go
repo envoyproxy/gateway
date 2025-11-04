@@ -12,6 +12,7 @@ package tests
 import (
 	"testing"
 
+	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
@@ -61,7 +62,7 @@ func testTCPRouteWithBackend(t *testing.T, suite *suite.ConformanceTestSuite, gw
 	ns := "gateway-conformance-infra"
 	routeNN := types.NamespacedName{Name: routeName, Namespace: ns}
 	gwNN := types.NamespacedName{Name: gwName, Namespace: ns}
-	gwAddr := GatewayAndTCPRoutesMustBeAccepted(t, suite.Client, &suite.TimeoutConfig, suite.ControllerName, NewGatewayRef(gwNN), routeNN)
+	gwAddrs := GatewayAndTCPRoutesMustBeAccepted(t, suite.Client, &suite.TimeoutConfig, suite.ControllerName, []GatewayRef{NewGatewayRef(gwNN)}, routeNN)
 	BackendMustBeAccepted(t, suite.Client, types.NamespacedName{Name: backendName, Namespace: ns})
 	OkResp := http.ExpectedResponse{
 		Request: http.Request{
@@ -74,5 +75,6 @@ func testTCPRouteWithBackend(t *testing.T, suite *suite.ConformanceTestSuite, gw
 	}
 
 	// Send a request to a valid path and expect a successful response
-	http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, OkResp)
+	require.Len(t, gwAddrs, 1)
+	http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddrs[0], OkResp)
 }
