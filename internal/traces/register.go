@@ -39,7 +39,6 @@ func (r *Runner) Start(ctx context.Context) error {
 			semconv.ServiceNameKey.String("envoy-gateway"),
 		),
 	)
-
 	if err != nil {
 		return err
 	}
