@@ -1588,7 +1588,7 @@ func discoverEndpointsFromIssuer(issuerURL string, providerTLS *ir.TLSUpstreamCo
 }
 
 // oidcDiscoveryCache is a cache for auto-discovered OIDC configurations from the issuer's well-known URL.
-// The cache is only used within the current translation, so no need to lock it.
+// The cache is only used within the current translation, so no need to lock it or expire entries.
 type oidcDiscoveryCache struct {
 	entries map[string]cachedOIDCEntry
 }
