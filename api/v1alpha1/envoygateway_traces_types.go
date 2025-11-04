@@ -5,8 +5,8 @@
 
 package v1alpha1
 
-// EnvoyGatewayTraces defines control plane tracing configurations.
-type EnvoyGatewayTraces struct {
+// EnvoyGatewayTracing defines control plane tracing configurations.
+type EnvoyGatewayTracing struct {
 	// Disable disables the traces.
 	//
 	// +optional

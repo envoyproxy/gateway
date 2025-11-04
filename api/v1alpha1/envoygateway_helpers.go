@@ -220,7 +220,7 @@ func (e *EnvoyGateway) DisableTraces() bool {
 func DefaultEnvoyGatewayTelemetry() *EnvoyGatewayTelemetry {
 	return &EnvoyGatewayTelemetry{
 		Metrics: DefaultEnvoyGatewayMetrics(),
-		Traces:  DefaultEnvoyGatewayTraces(),
+		Traces:  DefaultEnvoyGatewayTracing(),
 	}
 }
 
@@ -231,8 +231,8 @@ func DefaultEnvoyGatewayMetrics() *EnvoyGatewayMetrics {
 	}
 }
 
-func DefaultEnvoyGatewayTraces() *EnvoyGatewayTraces {
-	return &EnvoyGatewayTraces{
+func DefaultEnvoyGatewayTracing() *EnvoyGatewayTracing {
+	return &EnvoyGatewayTracing{
 		Disable: true,
 	}
 }

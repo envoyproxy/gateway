@@ -1571,7 +1571,7 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `metrics` | _[EnvoyGatewayMetrics](#envoygatewaymetrics)_ |  true  |  | Metrics defines metrics configuration for envoy gateway. |
-| `traces` | _[EnvoyGatewayTraces](#envoygatewaytraces)_ |  true  |  |  |
+| `traces` | _[EnvoyGatewayTracing](#envoygatewaytracing)_ |  true  |  |  |
 
 
 #### EnvoyGatewayTopologyInjector
@@ -1588,11 +1588,11 @@ _Appears in:_
 | `disabled` | _boolean_ |  false  |  |  |
 
 
-#### EnvoyGatewayTraces
+#### EnvoyGatewayTracing
 
 
 
-EnvoyGatewayTraces defines control plane tracing configurations.
+EnvoyGatewayTracing defines control plane tracing configurations.
 
 _Appears in:_
 - [EnvoyGatewayTelemetry](#envoygatewaytelemetry)
