@@ -171,7 +171,7 @@ func TestUpdateGatewayStatusProgrammedCondition(t *testing.T) {
 					for i := 0; i < 20; i++ {
 						addr.IPv4 = append(addr.IPv4, strconv.Itoa(i))
 					}
-					return
+					return addr
 				}(),
 				svc: &corev1.Service{
 					TypeMeta:   metav1.TypeMeta{},
@@ -192,7 +192,7 @@ func TestUpdateGatewayStatusProgrammedCondition(t *testing.T) {
 						Value: strconv.Itoa(i),
 					})
 				}
-				return
+				return addr
 			}(),
 		},
 		{

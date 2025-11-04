@@ -99,7 +99,7 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 		// Since leader election is disabled subscribe to infraIR to initialize the infrastructure and Close when the context is done.
 		go subscribeInitInfraAndCloseInfraIRMessage()
 	}
-	return
+	return err
 }
 
 func (r *Runner) updateProxyInfraFromSubscription(ctx context.Context, sub <-chan watchable.Snapshot[string, *ir.Infra]) {
