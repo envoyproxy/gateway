@@ -394,6 +394,20 @@ func TestDecode(t *testing.T) {
 					},
 					Logging: egv1a1.DefaultEnvoyGatewayLogging(),
 					ExtensionManager: &egv1a1.ExtensionManager{
+						Resources: []egv1a1.GroupVersionKind{
+							{
+								Group:   "gateway.example.io",
+								Version: "v1alpha1",
+								Kind:    "CustomRouteFilterResource",
+							},
+						},
+						BackendResources: []egv1a1.GroupVersionKind{
+							{
+								Group:   "storage.example.io",
+								Version: "v1",
+								Kind:    "S3Bucket",
+							},
+						},
 						PolicyResources: []egv1a1.GroupVersionKind{
 							{
 								Group:   "gateway.example.io",
