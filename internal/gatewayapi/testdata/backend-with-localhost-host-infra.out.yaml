@@ -1,0 +1,37 @@
+backends:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: Backend
+  metadata:
+    name: backend-fqdn
+    namespace: default
+  spec:
+    endpoints:
+    - fqdn:
+        hostname: localhost
+        port: 3000
+  status:
+    conditions:
+      - lastTransitionTime: null
+        message: The Backend was accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: Backend
+  metadata:
+    name: backend-fqdn
+    namespace: default
+  spec:
+    endpoints:
+    - ip:
+        address: 127.0.0.3
+        port: 3000
+  status:
+    conditions:
+      - lastTransitionTime: null
+        message: The Backend was accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+infraIR: {}
+xdsIR: {}
