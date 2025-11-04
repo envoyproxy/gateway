@@ -96,8 +96,10 @@ func New(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server, resources
 		Scheme:                  envoygateway.GetScheme(),
 		Logger:                  svrCfg.Logger.Logger,
 		HealthProbeBindAddress:  healthProbeBindAddress,
+		LeaderElection:          false,
 		LeaderElectionID:        "5b9825d2.gateway.envoyproxy.io",
 		LeaderElectionNamespace: svrCfg.ControllerNamespace,
+		Controller:              config.Controller{NeedLeaderElection: ptr.To(false)},
 	}
 
 	log.SetLogger(mgrOpts.Logger)
@@ -107,6 +109,9 @@ func New(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server, resources
 
 	if !ptr.Deref(svrCfg.EnvoyGateway.Provider.Kubernetes.LeaderElection.Disable, false) {
 		mgrOpts.LeaderElection = true
+		mgrOpts.Controller.NeedLeaderElection = ptr.To(true)
+		mgrOpts.Controller.EnableWarmup = ptr.To(true)
+
 		if svrCfg.EnvoyGateway.Provider.Kubernetes.LeaderElection.LeaseDuration != nil {
 			ld, err := time.ParseDuration(string(*svrCfg.EnvoyGateway.Provider.Kubernetes.LeaderElection.LeaseDuration))
 			if err != nil {
@@ -130,7 +135,6 @@ func New(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server, resources
 			}
 			mgrOpts.RenewDeadline = ptr.To(rd)
 		}
-		mgrOpts.Controller = config.Controller{NeedLeaderElection: ptr.To(false)}
 	}
 
 	if svrCfg.EnvoyGateway.Provider.Kubernetes.CacheSyncPeriod != nil {
