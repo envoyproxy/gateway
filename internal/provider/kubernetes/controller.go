@@ -1470,7 +1470,7 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, managedGC *g
 	if r.isGatewayClassMerged(managedGC.Name) {
 		mergedGateways = true
 		// processGatewayClassParamsRef has been called for this GatewayClass, its EnvoyProxy should exist in resourceTree
-		r.processServiceClusterForGatewayClass(resourceTree.EnvoyProxyForGatewayClass, managedGC, resourceMap)
+		r.processServiceClusterForGatewayClass(ctx, resourceTree.EnvoyProxyForGatewayClass, managedGC, resourceMap)
 	}
 
 	for i := range gatewayList.Items {
@@ -1576,7 +1576,7 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, managedGC *g
 			if ep == nil && resourceTree.EnvoyProxyForGatewayClass != nil {
 				ep = resourceTree.EnvoyProxyForGatewayClass
 			}
-			r.processServiceClusterForGateway(ep, gtw, resourceMap)
+			r.processServiceClusterForGateway(ctx, ep, gtw, resourceMap)
 		}
 
 		if !resourceMap.allAssociatedGateways.Has(gtwNamespacedName) {
@@ -1589,7 +1589,7 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, managedGC *g
 }
 
 // Called on a GatewayClass when merged gateways mode is enabled for it.
-func (r *gatewayAPIReconciler) processServiceClusterForGatewayClass(ep *egv1a1.EnvoyProxy, gatewayClass *gwapiv1.GatewayClass, resourceMap *resourceMappings) {
+func (r *gatewayAPIReconciler) processServiceClusterForGatewayClass(ctx context.Context, ep *egv1a1.EnvoyProxy, gatewayClass *gwapiv1.GatewayClass, resourceMap *resourceMappings) {
 	// Skip processing if topology injector is disabled
 	if r.envoyGateway != nil && r.envoyGateway.TopologyInjectorDisabled() {
 		return
@@ -1605,11 +1605,11 @@ func (r *gatewayAPIReconciler) processServiceClusterForGatewayClass(ep *egv1a1.E
 		}
 	}
 
-	r.insertProxyServiceIfExists(proxySvcName, proxySvcNamespace, resourceMap)
+	r.insertProxyServiceIfExists(ctx, proxySvcName, proxySvcNamespace, resourceMap)
 }
 
 // Called on a Gateway when merged gateways mode is not enabled for its parent GatewayClass.
-func (r *gatewayAPIReconciler) processServiceClusterForGateway(ep *egv1a1.EnvoyProxy, gateway *gwapiv1.Gateway, resourceMap *resourceMappings) {
+func (r *gatewayAPIReconciler) processServiceClusterForGateway(ctx context.Context, ep *egv1a1.EnvoyProxy, gateway *gwapiv1.Gateway, resourceMap *resourceMappings) {
 	// Skip processing if topology injector is disabled
 	if r.envoyGateway != nil && r.envoyGateway.TopologyInjectorDisabled() {
 		return
@@ -1630,17 +1630,17 @@ func (r *gatewayAPIReconciler) processServiceClusterForGateway(ep *egv1a1.EnvoyP
 		}
 	}
 
-	r.insertProxyServiceIfExists(proxySvcName, proxySvcNamespace, resourceMap)
+	r.insertProxyServiceIfExists(ctx, proxySvcName, proxySvcNamespace, resourceMap)
 }
 
-func (r *gatewayAPIReconciler) insertProxyServiceIfExists(name, namespace string, resourceMap *resourceMappings) {
+func (r *gatewayAPIReconciler) insertProxyServiceIfExists(ctx context.Context, name, namespace string, resourceMap *resourceMappings) {
 	svcNN := types.NamespacedName{Name: name, Namespace: namespace}
 	svc := new(corev1.Service)
-	err := r.client.Get(context.Background(), svcNN, svc)
+	err := r.client.Get(ctx, svcNN, svc)
 	// Only insert if service exists
 	if err != nil {
 		if !kerrors.IsNotFound(err) {
-			r.log.Error(err, "failed to get proxy service", "namespace", namespace, "name", name)
+			r.log.Info("failed to get proxy service", "namespace", namespace, "name", name, "error", err)
 		}
 		return
 	}
