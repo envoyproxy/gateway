@@ -34,7 +34,17 @@ import (
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/message"
 	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
+	"go.opentelemetry.io/otel/trace"
 )
+
+func newTestTraceContext() context.Context {
+	sc := trace.NewSpanContext(trace.SpanContextConfig{
+		TraceID:    trace.TraceID{0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf, 0x0},
+		SpanID:     trace.SpanID{0xa, 0xb, 0xc, 0xd, 0xe, 0xf, 0x0, 0x1},
+		TraceFlags: trace.FlagsSampled,
+	})
+	return trace.ContextWithSpanContext(context.Background(), sc)
+}
 
 func TestTLSConfig(t *testing.T) {
 	// Create trusted CA, server and client certs.
@@ -259,7 +269,7 @@ func TestRunner(t *testing.T) {
 		TLSCaPath:         caFile,
 	})
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(newTestTraceContext())
 	defer cancel()
 
 	// Start
@@ -310,7 +320,7 @@ func TestRunner(t *testing.T) {
 	}
 	m := message.XdsIRWithContext{
 		XdsIR:   &res,
-		Context: context.Background(),
+		Context: newTestTraceContext(),
 	}
 	xdsIR.Store("test", &m)
 	require.Eventually(t, func() bool {
@@ -352,7 +362,7 @@ func TestRunner_withExtensionManager_FailOpen(t *testing.T) {
 		TLSCaPath:         caFile,
 	})
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(newTestTraceContext())
 	defer cancel()
 
 	// Start
@@ -403,7 +413,7 @@ func TestRunner_withExtensionManager_FailOpen(t *testing.T) {
 	}
 	m := message.XdsIRWithContext{
 		XdsIR:   &res,
-		Context: context.Background(),
+		Context: newTestTraceContext(),
 	}
 	xdsIR.Store("test", &m)
 	require.Eventually(t, func() bool {
@@ -438,7 +448,7 @@ func TestRunner_withExtensionManager_FailClosed(t *testing.T) {
 		TLSCaPath:         caFile,
 	})
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(newTestTraceContext())
 	defer cancel()
 
 	// Start
@@ -489,7 +499,7 @@ func TestRunner_withExtensionManager_FailClosed(t *testing.T) {
 	}
 	m := message.XdsIRWithContext{
 		XdsIR:   &res,
-		Context: context.Background(),
+		Context: newTestTraceContext(),
 	}
 	xdsIR.Store("test", &m)
 	require.Never(t, func() bool {

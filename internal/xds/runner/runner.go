@@ -260,12 +260,13 @@ func (r *Runner) translateFromSubscription(sub <-chan watchable.Snapshot[string,
 	// Subscribe to resources
 	message.HandleSubscription(message.Metadata{Runner: r.Name(), Message: message.XDSIRMessageName}, sub,
 		func(update message.Update[string, *message.XdsIRWithContext], errChan chan error) {
-			r.Logger.Info("received an update")
-
 			parentCtx := context.Background()
 			if update.Value != nil && update.Value.Context != nil {
 				parentCtx = update.Value.Context
 			}
+
+			traceLogger := r.Logger.WithTrace(parentCtx)
+			traceLogger.Info("received an update")
 
 			_, span := tracer.Start(parentCtx, "XdsRunner.subscribeAndTranslate")
 			defer span.End()
@@ -281,7 +282,7 @@ func (r *Runner) translateFromSubscription(sub <-chan watchable.Snapshot[string,
 
 			if update.Delete {
 				if err := r.cache.GenerateNewSnapshot(key, nil); err != nil {
-					r.Logger.Error(err, "failed to delete the snapshot")
+					traceLogger.Error(err, "failed to delete the snapshot")
 					errChan <- err
 				}
 			} else {
@@ -290,7 +291,7 @@ func (r *Runner) translateFromSubscription(sub <-chan watchable.Snapshot[string,
 					ControllerNamespace: r.ControllerNamespace,
 					FilterOrder:         val.XdsIR.FilterOrder,
 					RuntimeFlags:        r.EnvoyGateway.RuntimeFlags,
-					Logger:              r.Logger,
+					Logger:              traceLogger,
 				}
 
 				// Set the extension manager if an extension is loaded
@@ -307,7 +308,7 @@ func (r *Runner) translateFromSubscription(sub <-chan watchable.Snapshot[string,
 					if r.EnvoyGateway.RateLimit.Timeout != nil {
 						d, err := time.ParseDuration(string(*r.EnvoyGateway.RateLimit.Timeout))
 						if err != nil {
-							r.Logger.Error(err, "invalid rateLimit timeout")
+							traceLogger.Error(err, "invalid rateLimit timeout")
 							errChan <- err
 						} else {
 							t.GlobalRateLimit.Timeout = d
@@ -317,14 +318,14 @@ func (r *Runner) translateFromSubscription(sub <-chan watchable.Snapshot[string,
 
 				result, err := t.Translate(val.XdsIR)
 				if err != nil {
-					r.Logger.Error(err, "failed to translate xds ir")
+					traceLogger.Error(err, "failed to translate xds ir")
 					errChan <- err
 				}
 
 				// xDS translation is done in a best-effort manner, so the result
 				// may contain partial resources even if there are errors.
 				if result == nil {
-					r.Logger.Info("no xds resources to publish")
+					traceLogger.Info("no xds resources to publish")
 					return
 				}
 
@@ -357,17 +358,17 @@ func (r *Runner) translateFromSubscription(sub <-chan watchable.Snapshot[string,
 				if err == nil {
 					if result.XdsResources != nil {
 						if r.cache == nil {
-							r.Logger.Error(err, "failed to init snapshot cache")
+							traceLogger.Error(err, "failed to init snapshot cache")
 							errChan <- err
 						} else {
 							// Update snapshot cache
 							if err := r.cache.GenerateNewSnapshot(key, result.XdsResources); err != nil {
-								r.Logger.Error(err, "failed to generate a snapshot")
+								traceLogger.Error(err, "failed to generate a snapshot")
 								errChan <- err
 							}
 						}
 					} else {
-						r.Logger.Error(err, "skipped publishing xds resources")
+						traceLogger.Error(err, "skipped publishing xds resources")
 					}
 				}
 

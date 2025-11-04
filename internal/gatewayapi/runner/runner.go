@@ -129,16 +129,17 @@ func (r *Runner) startWasmCache(ctx context.Context) {
 func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *resource.ControllerResourcesContext]) {
 	message.HandleSubscription(message.Metadata{Runner: r.Name(), Message: message.ProviderResourcesMessageName}, sub,
 		func(update message.Update[string, *resource.ControllerResourcesContext], errChan chan error) {
-			r.Logger.Info("received an update", "key", update.Key)
 			parentCtx := context.Background()
 			if update.Value != nil && update.Value.Context != nil {
 				parentCtx = update.Value.Context
 			}
 
+			traceLogger := r.Logger.WithTrace(parentCtx)
+
+			traceLogger.Info("received an update", "key", update.Key)
+
 			_, span := tracer.Start(parentCtx, "GatewayApiRunner.subscribeAndTranslate")
 			defer span.End()
-
-			r.Logger.Info("received an update")
 			valWrapper := update.Value
 			// There is only 1 key which is the controller name
 			// so when a delete is triggered, delete all keys
@@ -181,7 +182,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 					MergeGateways:             gatewayapi.IsMergeGatewaysEnabled(resources),
 					WasmCache:                 r.wasmCache,
 					ListenerPortShiftDisabled: r.EnvoyGateway.Provider != nil && r.EnvoyGateway.Provider.IsRunningOnHost(),
-					Logger:                    r.Logger,
+					Logger:                    traceLogger,
 				}
 
 				// If an extension is loaded, pass its supported groups/kinds to the translator
@@ -195,24 +196,24 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 						extGKs = append(extGKs, schema.GroupKind{Group: gvk.Group, Kind: gvk.Kind})
 					}
 					t.ExtensionGroupKinds = extGKs
-					r.Logger.Info("extension resources", "GVKs count", len(extGKs))
+					traceLogger.Info("extension resources", "GVKs count", len(extGKs))
 				}
 				// Translate to IR
 				result, err := t.Translate(resources)
 				if err != nil {
 					// Currently all errors that Translate returns should just be logged
-					r.Logger.Error(err, "errors detected during translation", "gateway-class", resources.GatewayClass.Name)
+					traceLogger.Error(err, "errors detected during translation", "gateway-class", resources.GatewayClass.Name)
 				}
 
 				// Publish the IRs.
 				// Also validate the ir before sending it.
 				for key, val := range result.InfraIR {
-					logger := r.Logger.V(1).WithValues(string(message.InfraIRMessageName), key)
-					if logger.Enabled() {
-						logger.Info(val.JSONString())
+					logV := traceLogger.V(1).WithValues(string(message.InfraIRMessageName), key)
+					if logV.Enabled() {
+						logV.Info(val.JSONString())
 					}
 					if err := val.Validate(); err != nil {
-						r.Logger.Error(err, "unable to validate infra ir, skipped sending it")
+						traceLogger.Error(err, "unable to validate infra ir, skipped sending it")
 						errChan <- err
 					} else {
 						r.InfraIR.Store(key, val)
@@ -224,12 +225,12 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 				}
 
 				for key, val := range result.XdsIR {
-					logger := r.Logger.V(1).WithValues(string(message.XDSIRMessageName), key)
-					if logger.Enabled() {
-						logger.Info(val.JSONString())
+					logV := traceLogger.V(1).WithValues(string(message.XDSIRMessageName), key)
+					if logV.Enabled() {
+						logV.Info(val.JSONString())
 					}
 					if err := val.Validate(); err != nil {
-						r.Logger.Error(err, "unable to validate xds ir, skipped sending it")
+						traceLogger.Error(err, "unable to validate xds ir, skipped sending it")
 						errChan <- err
 					} else {
 						m := message.XdsIRWithContext{
