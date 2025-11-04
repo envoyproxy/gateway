@@ -31,7 +31,7 @@ Use API security to:
 
 ## API Security in Envoy Gateway
 
-API security is implemented through Kubernetes-native policies and Envoy Gateway API extensions. The core mechanism is the `SecurityPolicy` Custom Resource Definition (CRD), which defines how authentication, authorization, and encryption are applied to incoming traffic. Policies attach to Gateway API resources (such as Gateways, HTTPRoutes, or GRPCRoutes) using `targetRefs` or `targetSelectors`. The most specific policy applies when multiple policies target the same resource.
+API security is implemented through Kubernetes-native policies and Envoy Gateway API extensions. The core mechanism is the [SecurityPolicy](./../concepts/gateway_api_extensions/security-policy.md) Custom Resource Definition (CRD), which defines how authentication, authorization, and encryption are applied to incoming traffic. Policies attach to Gateway API resources (such as Gateways, HTTPRoutes, or GRPCRoutes) using `targetRefs` or `targetSelectors`. The most specific policy applies when multiple policies target the same resource.
 
 Envoy Gateway supports API key, JWT, mTLS, Basic Auth, and OIDC authentication; authorization via external services or JWT claims; access control with IP allow/deny lists; CORS configuration; and rate limiting. This model enables secure, declarative access control at the edge, aligning with Kubernetes best practices.
 

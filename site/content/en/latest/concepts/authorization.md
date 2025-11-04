@@ -20,7 +20,7 @@ Authorization controls what an authenticated identity is allowed to do. Envoy Ga
 - Integrate with an external OPA or custom AuthZ service.  
 
 ## Implementation
-`AuthorizationPolicy` resources are implemented using Envoy RBAC and `ext_authz` filters, evaluated per request.
+`SecurityPolicy` resources are implemented using Envoy RBAC and `ext_authz` filters, evaluated per request.
 
 ## Examples
 - Deny all except specific IPs.  

@@ -16,7 +16,7 @@ Envoy Gateway leverages standards like Prometheus and OpenTelemetry to export me
 | Metrics      | Quantitative data from Envoy Gateway and Envoy Proxy. Supports Prometheus (pull) and OpenTelemetry (push) sinks. Includes counters, gauges, histograms, and labels for component/resource identification. |
 | Logs         | Structured logs from the Envoy Gateway control plane, managed by an internal zap-based library and written to `/dev/stdout`. Logging levels can be configured per component. |
 | Traces       | Distributed tracing using OpenTelemetry, Zipkin, or Datadog tracers. Configurable via the EnvoyProxy CRD with support for sampling rate and custom tags. |
-| Components   | Core telemetry sources: Resource Provider, xDS Translator, Infra Manager, xDS Server, Status Updater. Each emits labeled metrics to support monitoring and troubleshooting. |
+| Runners   | Core telemetry sources: Resource Provider, xDS Translator, Infra Manager, xDS Server, Status Updater. Each emits labeled metrics to support monitoring and troubleshooting. |
 
 ## Use Cases
 

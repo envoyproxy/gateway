@@ -3,7 +3,7 @@ title: "Traffic Basics"
 ---
 
 ## Overview
-Traffic in Envoy Gateway represents the flow of network requests between clients and services. It defines how requests are received, processed, routed, and returned. Envoy Gateway uses the xDS API and Kubernetes Gateway resources (`HTTPRoute`, `Gateway`) to manage and direct traffic dynamically.
+Traffic in Envoy Gateway represents the flow of network requests between clients and services. It defines how requests are received, processed, routed, and returned. Envoy Gateway uses the [Envoy Proxy xDS API](https://www.envoyproxy.io/docs/envoy/latest/api-docs/xds_protocol) and Kubernetes Gateway resources (`HTTPRoute`, `Gateway`) to manage and direct traffic dynamically.
 
 ## Key Concepts
 
