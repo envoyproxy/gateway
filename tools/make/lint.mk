@@ -27,6 +27,9 @@ check-format-yaml: ## Check YAML formatting with go-prettier (no changes)
 	   prettier --check $$files; \
 	 fi
 
+# Run YAML format check as part of gen-check to integrate with existing CI
+gen-check: check-format-yaml
+
 # lint-deps is run separately in CI to separate the tooling install logs from the actual output logs generated
 # by the lint tooling.
 .PHONY: lint-deps
