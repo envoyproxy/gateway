@@ -250,6 +250,12 @@ func (r *resourcesStore) storeResources(ctx context.Context, re *resource.Resour
 		}
 	}
 
+	for _, obj := range re.ExtensionRefFilters {
+		if err := r.storeObjectWithKeys(ctx, &obj, collectKeys); err != nil {
+			errs = errors.Join(errs, err)
+		}
+	}
+
 	for _, obj := range re.ExtensionServerPolicies {
 		if err := r.storeObjectWithKeys(ctx, &obj, collectKeys); err != nil {
 			errs = errors.Join(errs, err)
