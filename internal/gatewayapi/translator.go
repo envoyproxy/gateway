@@ -110,6 +110,9 @@ type Translator struct {
 	// and reuses the specified value.
 	ListenerPortShiftDisabled bool
 
+	// oidcDiscoveryCache is the cache for OIDC configurations discovered from issuer's well-known URL.
+	oidcDiscoveryCache *oidcDiscoveryCache
+
 	// Logger is the logger used by the translator.
 	Logger logging.Logger
 }
