@@ -9,11 +9,23 @@ import (
 	"errors"
 	"os"
 
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
-	"github.com/envoyproxy/gateway/internal/envoygateway"
 )
+
+var (
+	// configScheme is a dedicated scheme for decoding EnvoyGateway configuration.
+	// EnvoyGateway is a configuration type loaded from files/ConfigMaps, not a CRD,
+	// so it should not be added to the main CRD scheme.
+	configScheme = runtime.NewScheme()
+)
+
+func init() {
+	// Register only the EnvoyGateway configuration type
+	configScheme.AddKnownTypes(egv1a1.GroupVersion, &egv1a1.EnvoyGateway{})
+}
 
 func Decode(cfgPath string) (*egv1a1.EnvoyGateway, error) {
 	data, err := os.ReadFile(cfgPath)
@@ -21,8 +33,13 @@ func Decode(cfgPath string) (*egv1a1.EnvoyGateway, error) {
 		return nil, err
 	}
 
-	// Decode the config file.
-	decoder := serializer.NewCodecFactory(envoygateway.GetScheme()).UniversalDeserializer()
+	return DecodeBytes(data)
+}
+
+// DecodeBytes decodes an EnvoyGateway configuration from bytes.
+func DecodeBytes(data []byte) (*egv1a1.EnvoyGateway, error) {
+	// Decode the config using the dedicated config scheme.
+	decoder := serializer.NewCodecFactory(configScheme).UniversalDeserializer()
 	obj, gvk, err := decoder.Decode(data, nil, nil)
 	if err != nil {
 		return nil, err
