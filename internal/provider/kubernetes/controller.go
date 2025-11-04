@@ -1637,16 +1637,15 @@ func (r *gatewayAPIReconciler) insertProxyServiceIfExists(name, namespace string
 	svcNN := types.NamespacedName{Name: name, Namespace: namespace}
 	svc := new(corev1.Service)
 	err := r.client.Get(context.Background(), svcNN, svc)
+	// Only insert if service exists
 	if err != nil {
-		if kerrors.IsNotFound(err) {
-			r.log.Info("proxy service not found, this is expected upon first iteration", "namespace", namespace, "name", name)
-		} else {
+		if !kerrors.IsNotFound(err) {
 			r.log.Error(err, "failed to get proxy service", "namespace", namespace, "name", name)
 		}
 		return
 	}
 	resourceMap.insertBackendRef(gwapiv1.BackendObjectReference{
-		Kind:      ptr.To(gwapiv1.Kind(svc.Kind)),
+		Kind:      ptr.To(gwapiv1.Kind(resource.KindService)),
 		Namespace: gatewayapi.NamespacePtr(svc.Namespace),
 		Name:      gwapiv1.ObjectName(svc.Name),
 	})
