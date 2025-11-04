@@ -28,3 +28,6 @@ site/node_modules/
 **/test/**
 **/.test/**
 tools/linter/golangci-lint/.golangci.yml
+
+# exclude release-notes
+release-notes/*
