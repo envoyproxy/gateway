@@ -61,7 +61,6 @@ spec:
       matchLabels:
         app: payment-service
   rateLimit:
-    type: Local
     local:
       requests: 10
       unit: Second
@@ -74,10 +73,12 @@ The policy applies to all resources that match either targeting method. You can 
 
 ### Precedence
 
-When multiple BackendTrafficPolicies apply to the same resource, Envoy Gateway resolves conflicts using a precedence hierarchy based on the target resource type, regardless of how the policy was attached:
+When multiple BackendTrafficPolicies apply to the same resource, Envoy Gateway resolves conflicts using a precedence hierarchy based on the target resource type and section-level specificity:
 
-1. **Route-level policies** (HTTPRoute, GRPCRoute, etc.) - Highest precedence
-2. **Gateway-level policies** - Lower precedence
+1. **Route rule-level policies** (HTTPRoute/GRPCRoute with `sectionName` targeting specific rules) - Highest precedence
+2. **Route-level policies** (HTTPRoute, GRPCRoute without `sectionName`) - High precedence
+3. **Listener-level policies** (Gateway with `sectionName` targeting specific listeners) - Medium precedence
+4. **Gateway-level policies** (Gateway without `sectionName`) - Lowest precedence
 
 ```yaml
 # Gateway-level policy (lower precedence) - Applies to all routes in the gateway
@@ -150,7 +151,9 @@ When the `mergeType` field is unset, no merging occurs and only the most specifi
 
 ## Policy Merging
 
-BackendTrafficPolicy supports merging configurations using the `mergeType` field, which allows route-level policies to combine with gateway-level policies rather than completely overriding them. This enables layered policy strategies where platform teams can set baseline configurations at the Gateway level, while application teams can add specific policies for their routes.
+BackendTrafficPolicy supports merging configurations using the `mergeType` field, which allows route-level or route rule-level policies to combine with gateway-level or listener-level policies rather than completely overriding them. This enables layered policy strategies where platform teams can set baseline configurations at the Gateway level, while application teams can add specific policies for their routes.
+
+When merging occurs, route-level policies will merge with either a gateway-level or listener-level policy, but not both. If both gateway and listener policies exist, the listener-level policy takes precedence.
 
 ### Merge Types
 
@@ -169,7 +172,6 @@ metadata:
   name: global-backendtrafficpolicy
 spec:
   rateLimit:
-    type: Global
     global:
       rules:
       - clientSelectors:
@@ -194,7 +196,6 @@ metadata:
 spec:
   mergeType: StrategicMerge  # Enables merging with gateway policy
   rateLimit:
-    type: Global
     global:
       rules:
       - clientSelectors:

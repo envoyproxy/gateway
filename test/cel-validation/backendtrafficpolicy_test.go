@@ -164,7 +164,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			},
 		},
 		{
-			desc: "sectionName disabled until supported",
+			desc: "sectionName supported",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
@@ -179,9 +179,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{
-				"spec: Invalid value: \"object\": this policy does not yet support the sectionName field",
-			},
+			wantErrors: []string{},
 		},
 		{
 			desc: "consistentHash field not nil when type is consistentHash",
@@ -1138,7 +1136,6 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 						},
 					},
 					RateLimit: &egv1a1.RateLimitSpec{
-						Type: egv1a1.GlobalRateLimitType,
 						Global: &egv1a1.GlobalRateLimit{
 							Rules: rules,
 						},
@@ -1172,7 +1169,6 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 						},
 					},
 					RateLimit: &egv1a1.RateLimitSpec{
-						Type: egv1a1.GlobalRateLimitType,
 						Global: &egv1a1.GlobalRateLimit{
 							Rules: rules,
 						},
@@ -1932,7 +1928,6 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 						},
 					},
 					RateLimit: &egv1a1.RateLimitSpec{
-						Type: egv1a1.GlobalRateLimitType,
 						Global: &egv1a1.GlobalRateLimit{
 							Rules: rules,
 						},
@@ -1955,7 +1950,6 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 						},
 					},
 					RateLimit: &egv1a1.RateLimitSpec{
-						Type: egv1a1.GlobalRateLimitType,
 						Global: &egv1a1.GlobalRateLimit{
 							Rules: []egv1a1.RateLimitRule{
 								{
@@ -1991,7 +1985,6 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 						},
 					},
 					RateLimit: &egv1a1.RateLimitSpec{
-						Type: egv1a1.GlobalRateLimitType,
 						Local: &egv1a1.LocalRateLimit{
 							Rules: []egv1a1.RateLimitRule{
 								{
@@ -2022,7 +2015,6 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 						},
 					},
 					RateLimit: &egv1a1.RateLimitSpec{
-						Type: egv1a1.GlobalRateLimitType,
 						Global: &egv1a1.GlobalRateLimit{
 							Rules: []egv1a1.RateLimitRule{
 								{

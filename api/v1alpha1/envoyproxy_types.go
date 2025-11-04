@@ -108,6 +108,8 @@ type EnvoyProxySpec struct {
 	//
 	// - envoy.filters.http.ext_authz
 	//
+	// - envoy.filters.http.api_key_auth
+	//
 	// - envoy.filters.http.basic_auth
 	//
 	// - envoy.filters.http.oauth2
@@ -115,6 +117,8 @@ type EnvoyProxySpec struct {
 	// - envoy.filters.http.jwt_authn
 	//
 	// - envoy.filters.http.stateful_session
+	//
+	// - envoy.filters.http.buffer
 	//
 	// - envoy.filters.http.lua
 	//
@@ -128,7 +132,15 @@ type EnvoyProxySpec struct {
 	//
 	// - envoy.filters.http.ratelimit
 	//
+	// - envoy.filters.http.grpc_web
+	//
+	// - envoy.filters.http.grpc_stats
+	//
 	// - envoy.filters.http.custom_response
+	//
+	// - envoy.filters.http.credential_injector
+	//
+	// - envoy.filters.http.compressor
 	//
 	// - envoy.filters.http.router
 	//
@@ -153,7 +165,7 @@ type EnvoyProxySpec struct {
 	IPFamily *IPFamily `json:"ipFamily,omitempty"`
 
 	// PreserveRouteOrder determines if the order of matching for HTTPRoutes is determined by Gateway-API
-	// specification (https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.HTTPRouteRule)
+	// specification (https://gateway-api.sigs.k8s.io/reference/1.4/spec/#httprouterule)
 	// or preserves the order defined by users in the HTTPRoute's HTTPRouteRule list.
 	// Default: False
 	//
@@ -224,7 +236,7 @@ type FilterPosition struct {
 }
 
 // EnvoyFilter defines the type of Envoy HTTP filter.
-// +kubebuilder:validation:Enum=envoy.filters.http.health_check;envoy.filters.http.fault;envoy.filters.http.cors;envoy.filters.http.ext_authz;envoy.filters.http.api_key_auth;envoy.filters.http.basic_auth;envoy.filters.http.oauth2;envoy.filters.http.jwt_authn;envoy.filters.http.stateful_session;envoy.filters.http.lua;envoy.filters.http.ext_proc;envoy.filters.http.wasm;envoy.filters.http.rbac;envoy.filters.http.local_ratelimit;envoy.filters.http.ratelimit;envoy.filters.http.custom_response;envoy.filters.http.compressor
+// +kubebuilder:validation:Enum=envoy.filters.http.health_check;envoy.filters.http.fault;envoy.filters.http.cors;envoy.filters.http.ext_authz;envoy.filters.http.api_key_auth;envoy.filters.http.basic_auth;envoy.filters.http.oauth2;envoy.filters.http.jwt_authn;envoy.filters.http.stateful_session;envoy.filters.http.buffer;envoy.filters.http.lua;envoy.filters.http.ext_proc;envoy.filters.http.wasm;envoy.filters.http.rbac;envoy.filters.http.local_ratelimit;envoy.filters.http.ratelimit;envoy.filters.http.grpc_web;envoy.filters.http.grpc_stats;envoy.filters.http.custom_response;envoy.filters.http.credential_injector;envoy.filters.http.compressor
 type EnvoyFilter string
 
 const (

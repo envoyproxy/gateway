@@ -76,6 +76,7 @@ http:
           tokenEndpoint: https://oidc.example.com/oauth/token
         redirectPath: /oauth2/callback
         redirectURL: '%REQ(x-forwarded-proto)%://%REQ(:authority)%/oauth2/callback'
+        refreshToken: true
         scopes:
         - openid
         - email

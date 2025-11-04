@@ -2021,12 +2021,12 @@ spec:
                     description: |-
                       Type decides the scope for the RateLimits.
                       Valid RateLimitType values are "Global" or "Local".
+
+                      Deprecated: Use Global and/or Local fields directly instead. Both can be specified simultaneously for combined rate limiting.
                     enum:
                     - Global
                     - Local
                     type: string
-                required:
-                - type
                 type: object
               requestBuffer:
                 description: |-
@@ -2893,8 +2893,6 @@ spec:
             - message: this policy can only have a targetRef.kind of Gateway/HTTPRoute/GRPCRoute/TCPRoute/UDPRoute/TLSRoute
               rule: 'has(self.targetRef) ? self.targetRef.kind in [''Gateway'', ''HTTPRoute'',
                 ''GRPCRoute'', ''UDPRoute'', ''TCPRoute'', ''TLSRoute''] : true'
-            - message: this policy does not yet support the sectionName field
-              rule: 'has(self.targetRef) ? !has(self.targetRef.sectionName) : true'
             - message: this policy can only have a targetRefs[*].group of gateway.networking.k8s.io
               rule: 'has(self.targetRefs) ? self.targetRefs.all(ref, ref.group ==
                 ''gateway.networking.k8s.io'') : true '
@@ -2902,9 +2900,6 @@ spec:
               rule: 'has(self.targetRefs) ? self.targetRefs.all(ref, ref.kind in [''Gateway'',
                 ''HTTPRoute'', ''GRPCRoute'', ''UDPRoute'', ''TCPRoute'', ''TLSRoute''])
                 : true '
-            - message: this policy does not yet support the sectionName field
-              rule: 'has(self.targetRefs) ? self.targetRefs.all(ref, !has(ref.sectionName))
-                : true'
             - message: either compression or compressor can be set, not both
               rule: '!has(self.compression) || !has(self.compressor)'
             - message: predictivePercent in preconnect policy only works with RoundRobin
@@ -7891,6 +7886,8 @@ spec:
 
                   - envoy.filters.http.ext_authz
 
+                  - envoy.filters.http.api_key_auth
+
                   - envoy.filters.http.basic_auth
 
                   - envoy.filters.http.oauth2
@@ -7898,6 +7895,8 @@ spec:
                   - envoy.filters.http.jwt_authn
 
                   - envoy.filters.http.stateful_session
+
+                  - envoy.filters.http.buffer
 
                   - envoy.filters.http.lua
 
@@ -7911,7 +7910,15 @@ spec:
 
                   - envoy.filters.http.ratelimit
 
+                  - envoy.filters.http.grpc_web
+
+                  - envoy.filters.http.grpc_stats
+
                   - envoy.filters.http.custom_response
+
+                  - envoy.filters.http.credential_injector
+
+                  - envoy.filters.http.compressor
 
                   - envoy.filters.http.router
 
@@ -7934,13 +7941,17 @@ spec:
                       - envoy.filters.http.oauth2
                       - envoy.filters.http.jwt_authn
                       - envoy.filters.http.stateful_session
+                      - envoy.filters.http.buffer
                       - envoy.filters.http.lua
                       - envoy.filters.http.ext_proc
                       - envoy.filters.http.wasm
                       - envoy.filters.http.rbac
                       - envoy.filters.http.local_ratelimit
                       - envoy.filters.http.ratelimit
+                      - envoy.filters.http.grpc_web
+                      - envoy.filters.http.grpc_stats
                       - envoy.filters.http.custom_response
+                      - envoy.filters.http.credential_injector
                       - envoy.filters.http.compressor
                       type: string
                     before:
@@ -7957,13 +7968,17 @@ spec:
                       - envoy.filters.http.oauth2
                       - envoy.filters.http.jwt_authn
                       - envoy.filters.http.stateful_session
+                      - envoy.filters.http.buffer
                       - envoy.filters.http.lua
                       - envoy.filters.http.ext_proc
                       - envoy.filters.http.wasm
                       - envoy.filters.http.rbac
                       - envoy.filters.http.local_ratelimit
                       - envoy.filters.http.ratelimit
+                      - envoy.filters.http.grpc_web
+                      - envoy.filters.http.grpc_stats
                       - envoy.filters.http.custom_response
+                      - envoy.filters.http.credential_injector
                       - envoy.filters.http.compressor
                       type: string
                     name:
@@ -7978,13 +7993,17 @@ spec:
                       - envoy.filters.http.oauth2
                       - envoy.filters.http.jwt_authn
                       - envoy.filters.http.stateful_session
+                      - envoy.filters.http.buffer
                       - envoy.filters.http.lua
                       - envoy.filters.http.ext_proc
                       - envoy.filters.http.wasm
                       - envoy.filters.http.rbac
                       - envoy.filters.http.local_ratelimit
                       - envoy.filters.http.ratelimit
+                      - envoy.filters.http.grpc_web
+                      - envoy.filters.http.grpc_stats
                       - envoy.filters.http.custom_response
+                      - envoy.filters.http.credential_injector
                       - envoy.filters.http.compressor
                       type: string
                   required:
@@ -8053,7 +8072,7 @@ spec:
               preserveRouteOrder:
                 description: |-
                   PreserveRouteOrder determines if the order of matching for HTTPRoutes is determined by Gateway-API
-                  specification (https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.HTTPRouteRule)
+                  specification (https://gateway-api.sigs.k8s.io/reference/1.4/spec/#httprouterule)
                   or preserves the order defined by users in the HTTPRoute's HTTPRouteRule list.
                   Default: False
                 type: boolean
@@ -29388,13 +29407,14 @@ spec:
                       If not specified, uses the default redirect URI "%REQ(x-forwarded-proto)%://%REQ(:authority)%/oauth2/callback"
                     type: string
                   refreshToken:
+                    default: true
                     description: |-
                       RefreshToken indicates whether the Envoy should automatically refresh the
                       id token and access token when they expire.
                       When set to true, the Envoy will use the refresh token to get a new id token
                       and access token when they expire.
 
-                      If not specified, defaults to false.
+                      If not specified, defaults to true.
                     type: boolean
                   resources:
                     description: |-

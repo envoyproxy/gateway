@@ -10,6 +10,7 @@ import (
 	"io"
 	"time"
 
+	"github.com/envoyproxy/gateway/api/v1alpha1/validation"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/filewatcher"
 	"github.com/envoyproxy/gateway/internal/logging"
@@ -67,6 +68,12 @@ func (r *Loader) Start(ctx context.Context, logOut io.Writer) error {
 					// TODO: add a metric for this?
 					continue
 				}
+
+				if err := validation.ValidateEnvoyGateway(eg); err != nil {
+					r.logger.Error(err, "failed to validate EnvoyGateway config")
+					continue
+				}
+
 				// Set defaults for unset fields
 				eg.SetEnvoyGatewayDefaults()
 				r.cfg.EnvoyGateway = eg

@@ -9,6 +9,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
@@ -30,7 +31,7 @@ type GatewayContext struct {
 
 // ResetListeners resets the listener statuses and re-generates the GatewayContext
 // ListenerContexts from the Gateway spec.
-func (g *GatewayContext) ResetListeners(resource *resource.Resources) {
+func (g *GatewayContext) ResetListeners(resources *resource.Resources, epMap map[types.NamespacedName]*egv1a1.EnvoyProxy) {
 	numListeners := len(g.Spec.Listeners)
 	g.Status.Listeners = make([]gwapiv1.ListenerStatus, numListeners)
 	g.listeners = make([]*ListenerContext, numListeners)
@@ -44,15 +45,15 @@ func (g *GatewayContext) ResetListeners(resource *resource.Resources) {
 		}
 	}
 
-	g.attachEnvoyProxy(resource)
+	g.attachEnvoyProxy(resources, epMap)
 }
 
-func (g *GatewayContext) attachEnvoyProxy(resources *resource.Resources) {
+func (g *GatewayContext) attachEnvoyProxy(resources *resource.Resources, epMap map[types.NamespacedName]*egv1a1.EnvoyProxy) {
 	if g.Spec.Infrastructure != nil && g.Spec.Infrastructure.ParametersRef != nil && !IsMergeGatewaysEnabled(resources) {
 		ref := g.Spec.Infrastructure.ParametersRef
 		if string(ref.Group) == egv1a1.GroupVersion.Group && ref.Kind == egv1a1.KindEnvoyProxy {
-			ep := resources.GetEnvoyProxy(g.Namespace, ref.Name)
-			if ep != nil {
+			ep, exists := epMap[types.NamespacedName{Namespace: g.Namespace, Name: ref.Name}]
+			if exists {
 				g.envoyProxy = ep
 				return
 			}
