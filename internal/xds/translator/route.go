@@ -683,6 +683,15 @@ func buildHashPolicy(httpRoute *ir.HTTPRoute) []*routev3.RouteAction_HashPolicy 
 			},
 		}
 		return []*routev3.RouteAction_HashPolicy{hashPolicy}
+	case ch.QueryParam != nil:
+		hashPolicy := &routev3.RouteAction_HashPolicy{
+			PolicySpecifier: &routev3.RouteAction_HashPolicy_QueryParameter_{
+				QueryParameter: &routev3.RouteAction_HashPolicy_QueryParameter{
+					Name: string(*ch.QueryParam),
+				},
+			},
+		}
+		return []*routev3.RouteAction_HashPolicy{hashPolicy}
 	default:
 		return nil
 	}
