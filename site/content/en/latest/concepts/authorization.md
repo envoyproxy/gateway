@@ -29,4 +29,4 @@ Authorization controls what an authenticated identity is allowed to do. Envoy Ga
 
 ## Related Resources
 
-- [External Authorization Reference](../reference/ext-auth.md)
+- [External Authorization Reference](./../tasks/security/ext-auth.md)
