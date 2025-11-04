@@ -1605,11 +1605,7 @@ func (r *gatewayAPIReconciler) processServiceClusterForGatewayClass(ep *egv1a1.E
 		}
 	}
 
-	resourceMap.insertBackendRef(gwapiv1.BackendObjectReference{
-		Kind:      ptr.To(gwapiv1.Kind("Service")),
-		Namespace: gatewayapi.NamespacePtr(proxySvcNamespace),
-		Name:      gwapiv1.ObjectName(proxySvcName),
-	})
+	r.insertProxyServiceIfExists(proxySvcName, proxySvcNamespace, resourceMap)
 }
 
 // Called on a Gateway when merged gateways mode is not enabled for its parent GatewayClass.
@@ -1634,10 +1630,24 @@ func (r *gatewayAPIReconciler) processServiceClusterForGateway(ep *egv1a1.EnvoyP
 		}
 	}
 
+	r.insertProxyServiceIfExists(proxySvcName, proxySvcNamespace, resourceMap)
+}
+
+func (r *gatewayAPIReconciler) insertProxyServiceIfExists(name, namespace string, resourceMap *resourceMappings) {
+	svcNN := types.NamespacedName{Name: name, Namespace: namespace}
+	svc := new(corev1.Service)
+	err := r.client.Get(context.Background(), svcNN, svc)
+	// Only insert if service exists
+	if err != nil {
+		if !kerrors.IsNotFound(err) {
+			r.log.Error(err, "failed to get proxy service", "namespace", namespace, "name", name)
+		}
+		return
+	}
 	resourceMap.insertBackendRef(gwapiv1.BackendObjectReference{
-		Kind:      ptr.To(gwapiv1.Kind("Service")),
-		Namespace: gatewayapi.NamespacePtr(proxySvcNamespace),
-		Name:      gwapiv1.ObjectName(proxySvcName),
+		Kind:      ptr.To(gwapiv1.Kind(resource.KindService)),
+		Namespace: gatewayapi.NamespacePtr(svc.Namespace),
+		Name:      gwapiv1.ObjectName(svc.Name),
 	})
 }
 
