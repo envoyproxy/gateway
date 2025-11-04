@@ -8,10 +8,14 @@ security updates: |
 
 # New features or capabilities added in this release.
 new features: |
+ Added support for both Global and Local rate limiting in BackendTrafficPolicy simultaneously.
+ Added support for applying SecurityPolicy Authorization to TCPRoute (client IP / allow-deny list for TCP traffic).
 
 bug fixes: |
-  - Fixed Listener port limit typo 65353 -> 65535.
-  - Fixed issue where reloading invalid envoy gateway configuration.
+ - Fixed Listener port limit typo 65353 -> 65535.
+ - Fixed issue where reloading invalid envoy gateway configuration.
+ - Fixed missing JWT provider configuration when JWT authentication is configured on multiple HTTP listeners sharing the same port.
+
 # Enhancements that improve performance.
 performance improvements: |
 
