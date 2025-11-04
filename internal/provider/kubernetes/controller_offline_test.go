@@ -101,9 +101,13 @@ func TestNewOfflineGatewayAPIController(t *testing.T) {
 		require.NoError(t, err)
 		resources, err := resource.LoadResourcesFromYAMLBytes(cfg, data, true)
 		require.NoError(t, err)
+		// Expect 1 extension server policy and 2 extension-managed resources (route filter and backend)
 		require.Len(t, resources.ExtensionServerPolicies, 1)
+		require.Len(t, resources.ExtensionRefFilters, 2)
 
-		// Verify the custom resource gets the default namespace
+		// Verify the custom resources get the default namespace
 		require.Equal(t, config.DefaultNamespace, resources.ExtensionServerPolicies[0].GetNamespace())
+		require.Equal(t, config.DefaultNamespace, resources.ExtensionRefFilters[0].GetNamespace())
+		require.Equal(t, config.DefaultNamespace, resources.ExtensionRefFilters[1].GetNamespace())
 	})
 }
