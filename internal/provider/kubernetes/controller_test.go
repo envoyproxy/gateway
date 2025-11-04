@@ -1335,7 +1335,7 @@ func TestProcessServiceClusterForGatewayClass(t *testing.T) {
 				Build()
 			r.namespace = "envoy-gateway-system"
 
-			r.processServiceClusterForGatewayClass(tc.envoyProxy, tc.gatewayClass, resourceMap)
+			r.processServiceClusterForGatewayClass(context.Background(), tc.envoyProxy, tc.gatewayClass, resourceMap)
 
 			expectedRef := gwapiv1.BackendObjectReference{
 				Kind:      ptr.To(gwapiv1.Kind(resource.KindService)),
@@ -1517,7 +1517,7 @@ func TestProcessServiceClusterForGateway(t *testing.T) {
 				tc.envoyProxy = tc.gatewayClassEnvoyProxy
 			}
 
-			r.processServiceClusterForGateway(tc.envoyProxy, tc.gateway, resourceMap)
+			r.processServiceClusterForGateway(context.Background(), tc.envoyProxy, tc.gateway, resourceMap)
 
 			expectedRef := gwapiv1.BackendObjectReference{
 				Kind:      ptr.To(gwapiv1.Kind(resource.KindService)),
