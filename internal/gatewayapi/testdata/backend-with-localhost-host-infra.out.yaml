@@ -11,11 +11,11 @@ backends:
         port: 3000
   status:
     conditions:
-      - lastTransitionTime: null
-        message: The Backend was accepted
-        reason: Accepted
-        status: "True"
-        type: Accepted
+    - lastTransitionTime: null
+      message: The Backend was accepted
+      reason: Accepted
+      status: "True"
+      type: Accepted
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: Backend
   metadata:
@@ -28,10 +28,10 @@ backends:
         port: 3000
   status:
     conditions:
-      - lastTransitionTime: null
-        message: The Backend was accepted
-        reason: Accepted
-        status: "True"
-        type: Accepted
+    - lastTransitionTime: null
+      message: The Backend was accepted
+      reason: Accepted
+      status: "True"
+      type: Accepted
 infraIR: {}
 xdsIR: {}
