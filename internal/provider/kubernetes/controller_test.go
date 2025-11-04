@@ -13,7 +13,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -1269,13 +1268,10 @@ func TestProcessServiceClusterForGatewayClass(t *testing.T) {
 			envoyProxy:      nil,
 			expectedSvcName: proxy.ExpectedResourceHashedName(gcName),
 			serviceCluster: []client.Object{
-				&v1.Service{
+				&corev1.Service{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      proxy.ExpectedResourceHashedName(gcName),
 						Namespace: nsName,
-					},
-					Spec: v1.ServiceSpec{
-						Type: v1.ServiceTypeClusterIP,
 					},
 				},
 			},
@@ -1304,13 +1300,10 @@ func TestProcessServiceClusterForGatewayClass(t *testing.T) {
 			},
 			expectedSvcName: "merged-gc-svc",
 			serviceCluster: []client.Object{
-				&v1.Service{
+				&corev1.Service{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "merged-gc-svc",
 						Namespace: nsName,
-					},
-					Spec: v1.ServiceSpec{
-						Type: v1.ServiceTypeClusterIP,
 					},
 				},
 			},
@@ -1424,7 +1417,7 @@ func TestProcessServiceClusterForGateway(t *testing.T) {
 			expectedSvcName:       "my-gateway",
 			expectedSvcNamespace:  "app-namespace",
 			serviceCluster: []client.Object{
-				&v1.Service{
+				&corev1.Service{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "my-gateway",
 						Namespace: "app-namespace",
@@ -1459,7 +1452,7 @@ func TestProcessServiceClusterForGateway(t *testing.T) {
 			expectedSvcName:       "my-gateway-svc",
 			expectedSvcNamespace:  "app-namespace",
 			serviceCluster: []client.Object{
-				&v1.Service{
+				&corev1.Service{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "my-gateway-svc",
 						Namespace: "app-namespace",
