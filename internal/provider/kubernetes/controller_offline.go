@@ -131,12 +131,12 @@ func (r *OfflineGatewayAPIReconciler) Reconcile(ctx context.Context) error {
 // newOfflineGatewayAPIClient returns an in-memory Kubernetes client that
 // understands Envoy-Gateway, Gateway-API resources and any extension-server
 // policy kinds supplied by an extension.
-func newOfflineGatewayAPIClient(extensionPoilicies []schema.GroupVersionKind) client.Client {
+func newOfflineGatewayAPIClient(extensionPolicies []schema.GroupVersionKind) client.Client {
 	// Base scheme already holds Envoy-Gateway and Gateway-API types.
 	scheme := envoygateway.GetScheme()
 	// Register extension-server GVKs as Unstructured so the client can handle them.
 	// nolint:copyloopvar
-	for _, gvk := range extensionPoilicies {
+	for _, gvk := range extensionPolicies {
 		// single object
 		scheme.AddKnownTypeWithName(gvk, &unstructured.Unstructured{})
 		// list object
