@@ -281,7 +281,7 @@ func (r *Runner) translateFromSubscription(sub <-chan watchable.Snapshot[string,
 			)
 
 			if update.Delete {
-				if err := r.cache.GenerateNewSnapshot(key, nil); err != nil {
+				if err := r.cache.GenerateNewSnapshot(key, nil, parentCtx); err != nil {
 					traceLogger.Error(err, "failed to delete the snapshot")
 					errChan <- err
 				}
@@ -362,7 +362,7 @@ func (r *Runner) translateFromSubscription(sub <-chan watchable.Snapshot[string,
 							errChan <- err
 						} else {
 							// Update snapshot cache
-							if err := r.cache.GenerateNewSnapshot(key, result.XdsResources); err != nil {
+							if err := r.cache.GenerateNewSnapshot(key, result.XdsResources, parentCtx); err != nil {
 								traceLogger.Error(err, "failed to generate a snapshot")
 								errChan <- err
 							}
