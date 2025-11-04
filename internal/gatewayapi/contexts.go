@@ -44,8 +44,6 @@ func (g *GatewayContext) ResetListeners(resources *resource.Resources, epMap map
 			listenerStatusIdx: i,
 		}
 	}
-
-	g.attachEnvoyProxy(resources, epMap)
 }
 
 func (g *GatewayContext) attachEnvoyProxy(resources *resource.Resources, epMap map[types.NamespacedName]*egv1a1.EnvoyProxy) {
