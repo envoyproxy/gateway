@@ -347,7 +347,7 @@ func (t *Translator) GetRelevantGateways(resources *resource.Resources) (
 			status.SetGatewayClassAccepted(resources.GatewayClass,
 				false, string(gwapiv1.GatewayClassReasonInvalidParameters),
 				fmt.Sprintf("%s: %v", status.MsgGatewayClassInvalidParams, err))
-			return
+			return acceptedGateways, failedGateways
 		}
 
 		// TODO: remove this nil check after we update all the testdata.
@@ -413,7 +413,7 @@ func (t *Translator) GetRelevantGateways(resources *resource.Resources) (
 		gCtx.ResetListeners(resources, envoyproxyMap)
 		acceptedGateways = append(acceptedGateways, gCtx)
 	}
-	return
+	return acceptedGateways, failedGateways
 }
 
 func validateEnvoyProxy(ep *egv1a1.EnvoyProxy) error {
