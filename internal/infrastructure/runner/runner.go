@@ -106,7 +106,7 @@ func (r *Runner) updateProxyInfraFromSubscription(ctx context.Context, sub <-cha
 	// Subscribe to resources
 	message.HandleSubscription(message.Metadata{Runner: r.Name(), Message: message.InfraIRMessageName}, sub,
 		func(update message.Update[string, *ir.Infra], errChan chan error) {
-			r.Logger.Info("received an update")
+			r.Logger.Info("received an update", "key", update.Key, "delete", update.Delete)
 			val := update.Value
 
 			if update.Delete {
