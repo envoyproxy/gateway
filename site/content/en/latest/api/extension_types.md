@@ -5163,8 +5163,6 @@ _Appears in:_
 | `http` | _[HTTPTimeout](#httptimeout)_ |  false  |  | Timeout settings for HTTP. |
 
 
-
-
 #### Tracing
 
 
