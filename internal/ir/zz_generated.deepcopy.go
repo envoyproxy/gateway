@@ -682,6 +682,11 @@ func (in *ConsistentHash) DeepCopyInto(out *ConsistentHash) {
 		*out = new(v1alpha1.Cookie)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.QueryParameter != nil {
+		in, out := &in.QueryParameter, &out.QueryParameter
+		*out = new(v1alpha1.QueryParameter)
+		**out = **in
+	}
 	if in.TableSize != nil {
 		in, out := &in.TableSize, &out.TableSize
 		*out = new(uint64)

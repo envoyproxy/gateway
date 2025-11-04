@@ -128,6 +128,23 @@ func TestBuildHashPolicy(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "ConsistentHash with QueryParameter",
+			httpRoute: &ir.HTTPRoute{
+				Traffic: &ir.TrafficFeatures{
+					LoadBalancer: &ir.LoadBalancer{ConsistentHash: &ir.ConsistentHash{QueryParameter: (*egv1a1.QueryParameter)(ptr.To("name"))}},
+				},
+			},
+			want: []*routev3.RouteAction_HashPolicy{
+				{
+					PolicySpecifier: &routev3.RouteAction_HashPolicy_QueryParameter_{
+						QueryParameter: &routev3.RouteAction_HashPolicy_QueryParameter{
+							Name: "name",
+						},
+					},
+				},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

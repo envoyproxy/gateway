@@ -65,6 +65,10 @@ const (
 	RoundRobinLoadBalancerType LoadBalancerType = "RoundRobin"
 )
 
+// QueryParameterName defines the query parameter name hashing configuration for consistent hash based
+// load balancing.
+type QueryParameter string
+
 // ConsistentHash defines the configuration related to the consistent hash
 // load balancer policy.
 // +union
@@ -72,12 +76,14 @@ const (
 // +kubebuilder:validation:XValidation:rule="self.type == 'Header' ? has(self.header) : !has(self.header)",message="If consistent hash type is header, the header field must be set."
 // +kubebuilder:validation:XValidation:rule="self.type == 'Headers' ? has(self.headers) : !has(self.headers)",message="If consistent hash type is headers, the headers field must be set."
 // +kubebuilder:validation:XValidation:rule="self.type == 'Cookie' ? has(self.cookie) : !has(self.cookie)",message="If consistent hash type is cookie, the cookie field must be set."
+// +kubebuilder:validation:XValidation:rule="self.type == 'QueryParameter' ? has(self.queryParameter) : !has(self.queryParameter)",message="If consistent hash type is queryParameter, the queryParameter field must be set."
 type ConsistentHash struct {
 	// ConsistentHashType defines the type of input to hash on. Valid Type values are
 	// "SourceIP",
 	// "Header",
 	// "Headers",
 	// "Cookie".
+	// "QueryParameter".
 	//
 	// +unionDiscriminator
 	Type ConsistentHashType `json:"type"`
@@ -97,6 +103,11 @@ type ConsistentHash struct {
 	//
 	// +optional
 	Cookie *Cookie `json:"cookie,omitempty"`
+
+	// QueryParameter configures the query parameter hash policy when the consistent hash type is set to QueryParameter.
+	//
+	// +optional
+	QueryParameter *QueryParameter `json:"queryParameter,omitempty"`
 
 	// The table size for consistent hashing, must be prime number limited to 5000011.
 	//
@@ -135,7 +146,7 @@ type Cookie struct {
 }
 
 // ConsistentHashType defines the type of input to hash on.
-// +kubebuilder:validation:Enum=SourceIP;Header;Headers;Cookie
+// +kubebuilder:validation:Enum=SourceIP;Header;Headers;Cookie;QueryParameter
 type ConsistentHashType string
 
 const (
@@ -149,6 +160,8 @@ const (
 	HeadersConsistentHashType ConsistentHashType = "Headers"
 	// CookieConsistentHashType hashes based on a cookie.
 	CookieConsistentHashType ConsistentHashType = "Cookie"
+	// QueryParameterConsistentHashType hashes based on a query parameter.
+	QueryParameterConsistentHashType ConsistentHashType = "QueryParameter"
 )
 
 // SlowStart defines the configuration related to the slow start load balancer policy.

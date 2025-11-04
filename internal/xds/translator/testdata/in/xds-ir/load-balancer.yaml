@@ -202,3 +202,16 @@ http:
         - host: "1.2.3.4"
           port: 50000
         name: "fourteenth-route-dest/backend/0"
+  - name: "fifteenth-route"
+    hostname: "*"
+    traffic:
+      loadBalancer:
+        consistentHash:
+          queryParameter: "name"
+    destination:
+      name: "fifteenth-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "fifteenth-route-dest/backend/0"
