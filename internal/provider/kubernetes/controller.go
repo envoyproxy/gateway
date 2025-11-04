@@ -1634,6 +1634,17 @@ func (r *gatewayAPIReconciler) processServiceClusterForGateway(ep *egv1a1.EnvoyP
 		}
 	}
 
+	svc := &corev1.Service{}
+	svcNN := types.NamespacedName{Name: proxySvcName, Namespace: proxySvcNamespace}
+	if err := r.client.Get(context.Background(), svcNN, svc); err != nil {
+		if kerrors.IsNotFound(err) {
+			r.log.Info("proxy service not found, this is expected upon first iteration", "namespace", proxySvcNamespace, "name", proxySvcName)
+			return
+		}
+		r.log.Error(err, "failed to get proxy proxy service", "namespace", proxySvcNamespace, "name", proxySvcName)
+		return
+	}
+
 	resourceMap.insertBackendRef(gwapiv1.BackendObjectReference{
 		Kind:      ptr.To(gwapiv1.Kind("Service")),
 		Namespace: gatewayapi.NamespacePtr(proxySvcNamespace),
