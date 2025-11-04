@@ -10,13 +10,14 @@ import (
 )
 
 // RateLimitSpec defines the desired state of RateLimitSpec.
-// +union
 type RateLimitSpec struct {
 	// Type decides the scope for the RateLimits.
 	// Valid RateLimitType values are "Global" or "Local".
 	//
-	// +unionDiscriminator
-	Type RateLimitType `json:"type"`
+	// Deprecated: Use Global and/or Local fields directly instead. Both can be specified simultaneously for combined rate limiting.
+	//
+	// +optional
+	Type *RateLimitType `json:"type,omitempty"`
 	// Global defines global rate limit configuration.
 	//
 	// +optional
