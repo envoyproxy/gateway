@@ -8,7 +8,6 @@ package runner
 import (
 	"context"
 	"crypto/tls"
-	"encoding/json"
 	"fmt"
 	"os"
 	"path"
@@ -407,37 +406,10 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 							break
 						}
 					}
-
 					// If already found (because processed in an earlier gatewayclass), append its status ancestors.
 					// Otherwise, append it to the list of *Policies in the accumulated result.
 					if aggregatedPolicy != nil {
-						ancestorsObject, found, err := unstructured.NestedFieldCopy(aggregatedPolicy.Object, "status", "ancestors")
-						if !found || err != nil {
-							r.Logger.Error(err, "failed to get existing ancestors", "policyName", aggregatedPolicy.GetName(), "ancestorsFound", found)
-							continue
-						}
-						ancestors, ok := ancestorsObject.([]gwapiv1.PolicyAncestorStatus)
-						if !ok {
-							r.Logger.Error(err, "failed to assert existing ancestors type", "policyName", aggregatedPolicy.GetName())
-							continue
-						}
-
-						newAncestorsObject, found, err := unstructured.NestedFieldCopy(extServerPolicy.Object, "status", "ancestors")
-						if !found || err != nil {
-							r.Logger.Error(err, "failed to get new ancestors", "policyName", aggregatedPolicy.GetName(), "ancestorsFound", found)
-							continue
-						}
-						newAncestors, ok := newAncestorsObject.([]gwapiv1.PolicyAncestorStatus)
-						if !ok {
-							r.Logger.Error(err, "failed to assert new ancestors type", "policyName", aggregatedPolicy.GetName())
-							continue
-						}
-
-						ancestors = append(ancestors, newAncestors...)
-						err = unstructured.SetNestedField(aggregatedPolicy.Object, ancestors, "status", "ancestors")
-						if err != nil {
-							r.Logger.Error(err, "failed to update ancestors of policy", "policyName", aggregatedPolicy.GetName())
-						}
+						gatewayapi.MergeAncestorsForExtensionServerPolicies(aggregatedPolicy, &extServerPolicy)
 					} else {
 						aggregatedPolicy = &extServerPolicy
 						aggregatedResult.ExtensionServerPolicies = append(aggregatedResult.ExtensionServerPolicies, *aggregatedPolicy)
@@ -538,7 +510,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 				}
 				if statusObj, hasStatus := extServerPolicy.Object["status"]; hasStatus && statusObj != nil {
 					if statusMap, ok := statusObj.(map[string]any); ok && len(statusMap) > 0 {
-						policyStatus := unstructuredToPolicyStatus(statusMap)
+						policyStatus := gatewayapi.UnstructuredToPolicyStatus(statusMap)
 						r.ProviderResources.ExtensionPolicyStatuses.Store(key, &policyStatus)
 						extensionServerPolicyStatusCount++
 					}
@@ -620,16 +592,6 @@ func (r *Runner) loadTLSConfig(ctx context.Context) (*tls.Config, []byte, error)
 	default:
 		return nil, nil, fmt.Errorf("no valid tls certificates")
 	}
-}
-
-func unstructuredToPolicyStatus(policyStatus map[string]any) gwapiv1.PolicyStatus {
-	var ret gwapiv1.PolicyStatus
-	// No need to check the json marshal/unmarshal error, the policyStatus was
-	// created via a typed object so the marshalling/unmarshalling will always
-	// work
-	d, _ := json.Marshal(policyStatus)
-	_ = json.Unmarshal(d, &ret)
-	return ret
 }
 
 // deleteAllIRKeys deletes all XdsIR and InfraIR using tracked keys
