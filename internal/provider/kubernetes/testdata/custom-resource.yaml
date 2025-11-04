@@ -27,3 +27,29 @@ spec:
       group: gateway.networking.k8s.io
   username: user
   password: p@ssw0rd
+---
+apiVersion: gateway.example.io/v1alpha1
+kind: CustomRouteFilterResource
+metadata:
+  name: example-filter
+spec:
+  type: HeaderModifier
+  headerModifier:
+    add:
+      - name: x-custom
+        value: added-by-filter
+    remove: ["x-deprecated"]
+---
+apiVersion: backend.example.io/v1alpha1
+kind: CustomBackendResource
+metadata:
+  name: example-backend
+spec:
+  endpoints:
+    - address: 10.0.0.1
+      port: 8080
+    - address: 10.0.0.2
+      port: 8080
+  healthCheck:
+    path: /healthz
+    intervalSeconds: 10
