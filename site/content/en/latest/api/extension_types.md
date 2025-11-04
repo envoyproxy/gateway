@@ -564,23 +564,6 @@ _Appears in:_
 | `forwardUsernameHeader` | _string_ |  false  |  | This field specifies the header name to forward a successfully authenticated user to<br />the backend. The header will be added to the request with the username as the value.<br />If it is not specified, the username will not be forwarded. |
 
 
-#### BatchSpanProcessorConfig
-
-
-
-BatchSpanProcessorConfig defines the configuration for the OpenTelemetry batch span processor.
-The batch span processor batches spans before sending them to the exporter.
-
-_Appears in:_
-- [EnvoyGatewayTraces](#envoygatewaytraces)
-
-| Field | Type | Required | Default | Description |
-| ---   | ---  | ---      | ---     | ---         |
-| `batchTimeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#duration)_ |  false  |  | BatchTimeout is the maximum duration for constructing a batch. Spans are<br />exported when either the batch is full or this timeout is reached. |
-| `maxExportBatchSize` | _integer_ |  false  |  | MaxExportBatchSize is the maximum number of spans to export in a single batch.<br />Default is 512. |
-| `maxQueueSize` | _integer_ |  false  |  | MaxQueueSize is the maximum queue size to buffer spans for delayed processing.<br />If the queue gets full it drops the spans. Default is 2048. |
-
-
 #### BodyToExtAuth
 
 
@@ -1495,7 +1478,6 @@ This is shared between metrics and traces.
 
 _Appears in:_
 - [EnvoyGatewayMetricSink](#envoygatewaymetricsink)
-- [EnvoyGatewayTraceSink](#envoygatewaytracesink)
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
@@ -1606,22 +1588,6 @@ _Appears in:_
 | `disabled` | _boolean_ |  false  |  |  |
 
 
-#### EnvoyGatewayTraceSink
-
-
-
-EnvoyGatewayTraceSink defines control plane
-trace sinks where traces are sent to.
-
-_Appears in:_
-- [EnvoyGatewayTraces](#envoygatewaytraces)
-
-| Field | Type | Required | Default | Description |
-| ---   | ---  | ---      | ---     | ---         |
-| `type` | _[TraceSinkType](#tracesinktype)_ |  true  | OpenTelemetry | Type defines the trace sink type.<br />EG control plane currently supports OpenTelemetry. |
-| `openTelemetry` | _[EnvoyGatewayOpenTelemetrySink](#envoygatewayopentelemetrysink)_ |  true  |  | OpenTelemetry defines the configuration for OpenTelemetry sink.<br />It's required if the sink type is OpenTelemetry. |
-
-
 #### EnvoyGatewayTraces
 
 
@@ -1633,12 +1599,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `sink` | _[EnvoyGatewayTraceSink](#envoygatewaytracesink)_ |  true  |  | Sink defines the trace sink where traces are sent to. |
 | `disable` | _boolean_ |  false  |  | Disable disables the traces. |
-| `samplingRate` | _float_ |  false  |  | SamplingRate controls the rate at which traces are sampled.<br />Defaults to 1.0 (100% sampling). Valid values are between 0.0 and 1.0.<br />0.0 means no sampling, 1.0 means all traces are sampled. |
-| `batchSpanProcessor` | _[BatchSpanProcessorConfig](#batchspanprocessorconfig)_ |  false  |  | BatchSpanProcessorConfig defines the configuration for the batch span processor.<br />This processor batches spans before exporting them to the configured sink. |
-
-
 
 
 #### EnvoyJSONPatchConfig
@@ -5202,18 +5163,6 @@ _Appears in:_
 | `http` | _[HTTPTimeout](#httptimeout)_ |  false  |  | Timeout settings for HTTP. |
 
 
-#### TraceSinkType
-
-_Underlying type:_ _string_
-
-
-
-_Appears in:_
-- [EnvoyGatewayTraceSink](#envoygatewaytracesink)
-
-| Value | Description |
-| ----- | ----------- |
-| `OpenTelemetry` |  | 
 
 
 #### Tracing
