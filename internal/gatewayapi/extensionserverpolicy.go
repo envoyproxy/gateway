@@ -81,7 +81,7 @@ func (t *Translator) ProcessExtensionServerPolicies(policies []unstructured.Unst
 		}
 		if accepted {
 			res = append(res, *policy)
-			policy.Object["status"] = policyStatusToUnstructured(policyStatus)
+			policy.Object["status"] = PolicyStatusToUnstructured(policyStatus)
 		}
 	}
 
@@ -108,14 +108,6 @@ func extractTargetRefs(policy *unstructured.Unstructured, gateways []*GatewayCon
 	return ret, nil
 }
 
-func policyStatusToUnstructured(policyStatus gwapiv1.PolicyStatus) map[string]any {
-	ret := map[string]any{}
-	// No need to check the marshal/unmarshal error here
-	d, _ := json.Marshal(policyStatus)
-	_ = json.Unmarshal(d, &ret)
-	return ret
-}
-
 func resolveExtServerPolicyGatewayTargetRef(policy *unstructured.Unstructured, target gwapiv1.LocalPolicyTargetReferenceWithSectionName, gateways map[types.NamespacedName]*policyGatewayTargetContext) *GatewayContext {
 	// Check if the gateway exists
 	key := types.NamespacedName{
@@ -130,6 +122,24 @@ func resolveExtServerPolicyGatewayTargetRef(policy *unstructured.Unstructured, t
 	}
 
 	return gateway.GatewayContext
+}
+
+func PolicyStatusToUnstructured(policyStatus gwapiv1.PolicyStatus) map[string]any {
+	ret := map[string]any{}
+	// No need to check the marshal/unmarshal error here
+	d, _ := json.Marshal(policyStatus)
+	_ = json.Unmarshal(d, &ret)
+	return ret
+}
+
+func UnstructuredToPolicyStatus(policyStatus map[string]any) gwapiv1.PolicyStatus {
+	var ret gwapiv1.PolicyStatus
+	// No need to check the json marshal/unmarshal error, the policyStatus was
+	// created via a typed object so the marshalling/unmarshalling will always
+	// work
+	d, _ := json.Marshal(policyStatus)
+	_ = json.Unmarshal(d, &ret)
+	return ret
 }
 
 func (t *Translator) translateExtServerPolicyForGateway(
@@ -172,4 +182,30 @@ func (t *Translator) translateExtServerPolicyForGateway(
 		found = true
 	}
 	return found
+}
+
+// Appends status ancestors from newPolicy into aggregatedPolicy's list of ancestors.
+func MergeAncestorsForExtensionServerPolicies(aggregatedPolicy, newPolicy *unstructured.Unstructured) {
+	aggStatusObj := aggregatedPolicy.Object["status"]
+	var aggStatus gwapiv1.PolicyStatus
+	if _, ok := aggStatusObj.(map[string]any); ok {
+		aggStatus = UnstructuredToPolicyStatus(aggStatusObj.(map[string]any))
+	} else if _, ok := aggStatusObj.(gwapiv1.PolicyStatus); ok {
+		aggStatus = aggStatusObj.(gwapiv1.PolicyStatus)
+	} else {
+		aggStatus = gwapiv1.PolicyStatus{}
+	}
+
+	newStatusObj := newPolicy.Object["status"]
+	var newStatus gwapiv1.PolicyStatus
+	if _, ok := newStatusObj.(map[string]any); ok {
+		newStatus = UnstructuredToPolicyStatus(newStatusObj.(map[string]any))
+	} else if _, ok := newStatusObj.(gwapiv1.PolicyStatus); ok {
+		newStatus = newStatusObj.(gwapiv1.PolicyStatus)
+	} else {
+		newStatus = gwapiv1.PolicyStatus{}
+	}
+
+	aggStatus.Ancestors = append(aggStatus.Ancestors, newStatus.Ancestors...)
+	aggregatedPolicy.Object["status"] = PolicyStatusToUnstructured(aggStatus)
 }
