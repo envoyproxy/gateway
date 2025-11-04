@@ -310,6 +310,24 @@ func (r *Runner) translateFromSubscription(sub <-chan watchable.Snapshot[string,
 					return
 				}
 
+				// Update snapshot cache
+				if err == nil {
+					if result.XdsResources != nil {
+						if r.cache == nil {
+							r.Logger.Error(err, "failed to init snapshot cache")
+							errChan <- err
+						} else {
+							// Update snapshot cache
+							if err := r.cache.GenerateNewSnapshot(key, result.XdsResources); err != nil {
+								r.Logger.Error(err, "failed to generate a snapshot")
+								errChan <- err
+							}
+						}
+					} else {
+						r.Logger.Error(err, "skipped publishing xds resources")
+					}
+				}
+
 				// Get all status keys from watchable and save them in the map statusesToDelete.
 				// Iterating through result.EnvoyPatchPolicyStatuses, any valid keys will be removed from statusesToDelete.
 				// Remaining keys will be deleted from watchable before we exit this function.
@@ -334,24 +352,6 @@ func (r *Runner) translateFromSubscription(sub <-chan watchable.Snapshot[string,
 				}
 				// Discard the EnvoyPatchPolicyStatuses to reduce memory footprint
 				result.EnvoyPatchPolicyStatuses = nil
-
-				// Update snapshot cache
-				if err == nil {
-					if result.XdsResources != nil {
-						if r.cache == nil {
-							r.Logger.Error(err, "failed to init snapshot cache")
-							errChan <- err
-						} else {
-							// Update snapshot cache
-							if err := r.cache.GenerateNewSnapshot(key, result.XdsResources); err != nil {
-								r.Logger.Error(err, "failed to generate a snapshot")
-								errChan <- err
-							}
-						}
-					} else {
-						r.Logger.Error(err, "skipped publishing xds resources")
-					}
-				}
 
 				// Delete all the deletable status keys
 				for key := range statusesToDelete {
