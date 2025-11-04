@@ -28,5 +28,5 @@ Authorization controls what an authenticated identity is allowed to do. Envoy Ga
 - Apply per-route RBAC policies.
 
 ## Related Resources
-- [Authorization Guide](../howto/authorization.md)  
-- [External Authorization Reference](../reference/ext-authz.md)
+
+- [External Authorization Reference](../reference/ext-auth.md)
