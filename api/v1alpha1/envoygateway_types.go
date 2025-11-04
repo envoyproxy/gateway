@@ -74,6 +74,12 @@ type EnvoyGatewaySpec struct {
 	// +optional
 	Telemetry *EnvoyGatewayTelemetry `json:"telemetry,omitempty"`
 
+	// XDSServer defines the configuration for the Envoy Gateway xDS gRPC server.
+	// If unspecified, default connection keepalive settings will be used.
+	//
+	// +optional
+	XDSServer *XDSServer `json:"xdsServer,omitempty"`
+
 	// RateLimit defines the configuration associated with the Rate Limit service
 	// deployed by Envoy Gateway required to implement the Global Rate limiting
 	// functionality. The specific rate limit service used here is the reference
@@ -138,6 +144,21 @@ type KubernetesClientRateLimit struct {
 	// +kubebuilder:validation:Minimum=1
 	// +kubebuilder:default=100
 	Burst *int32 `json:"burst,omitempty"`
+}
+
+// XDSServer defines configuration values for the xDS gRPC server.
+type XDSServer struct {
+	// MaxConnectionAge is the maximum age of an active connection before Envoy Gateway will initiate a graceful close.
+	// If unspecified, Envoy Gateway randomly selects a value between 10h and 12h to stagger reconnects across replicas.
+	//
+	// +optional
+	MaxConnectionAge *gwapiv1.Duration `json:"maxConnectionAge,omitempty"`
+
+	// MaxConnectionAgeGrace is the grace period granted after reaching MaxConnectionAge before the connection is forcibly closed.
+	// The default grace period is 2m.
+	//
+	// +optional
+	MaxConnectionAgeGrace *gwapiv1.Duration `json:"maxConnectionAgeGrace,omitempty"`
 }
 
 // LeaderElection defines the desired leader election settings.
@@ -216,7 +237,7 @@ type Gateway struct {
 	// ControllerName defines the name of the Gateway API controller. If unspecified,
 	// defaults to "gateway.envoyproxy.io/gatewayclass-controller". See the following
 	// for additional details:
-	//   https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.GatewayClass
+	//   https://gateway-api.sigs.k8s.io/reference/1.4/spec/#gatewayclass
 	//
 	// +optional
 	ControllerName string `json:"controllerName,omitempty"`
@@ -272,7 +293,7 @@ type EnvoyGatewayKubernetesProvider struct {
 	// RateLimitPDB allows to control the pod disruption budget of rate limit service.
 	//
 	// +optional
-	RateLimitPDB *KubernetesPodDisruptionBudgetSpec `json:"rateLimitPdb,omitempty"`
+	RateLimitPDB *KubernetesPodDisruptionBudgetSpec `json:"rateLimitPDB,omitempty"`
 
 	// Watch holds configuration of which input resources should be watched and reconciled.
 	// +optional

@@ -85,6 +85,7 @@ service:
   # If set to PreferClose, the Envoy fleet will prioritize connecting to the Envoy Gateway pods that are topologically closest to them.
   trafficDistribution: ""
   annotations: {}
+  type: "ClusterIP"
 
 hpa:
   enabled: false

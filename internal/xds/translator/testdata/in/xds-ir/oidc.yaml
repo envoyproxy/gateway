@@ -94,3 +94,4 @@ http:
           accessToken: "CustomAccessTokenOverride"
         cookieDomain: "example.com"
         disableTokenEncryption: true
+        refreshToken: false

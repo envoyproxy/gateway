@@ -16,18 +16,16 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 )
 
 func TestGenerateCerts(t *testing.T) {
 	type testcase struct {
-		certConfig              *Configuration
+		cfg                     *config.Server
 		wantEnvoyGatewayDNSName string
 		wantEnvoyDNSName        string
 	}
-
-	cfg, err := config.New(os.Stdout, os.Stderr)
-	require.NoError(t, err)
 
 	run := func(t *testing.T, name string, tc testcase) {
 		t.Helper()
@@ -35,7 +33,7 @@ func TestGenerateCerts(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Helper()
 
-			got, err := GenerateCerts(cfg)
+			got, err := GenerateCerts(tc.cfg)
 			require.NoError(t, err)
 
 			roots := x509.NewCertPool()
@@ -52,10 +50,28 @@ func TestGenerateCerts(t *testing.T) {
 		})
 	}
 
-	run(t, "no configuration - use defaults", testcase{
-		certConfig:              &Configuration{},
+	// Test Kubernetes provider (default)
+	kubeCfg, err := config.New(os.Stdout, os.Stderr)
+	require.NoError(t, err)
+
+	run(t, "kubernetes provider - use defaults", testcase{
+		cfg:                     kubeCfg,
 		wantEnvoyGatewayDNSName: DefaultEnvoyGatewayDNSPrefix,
 		wantEnvoyDNSName:        fmt.Sprintf("*.%s", config.DefaultNamespace),
+	})
+
+	// Test Custom provider
+	customCfg, err := config.New(os.Stdout, os.Stderr)
+	require.NoError(t, err)
+	// Set provider type to Custom
+	customCfg.EnvoyGateway.Provider = &egv1a1.EnvoyGatewayProvider{
+		Type: egv1a1.ProviderTypeCustom,
+	}
+
+	run(t, "custom provider - use localhost", testcase{
+		cfg:                     customCfg,
+		wantEnvoyGatewayDNSName: "localhost",
+		wantEnvoyDNSName:        "localhost",
 	})
 }
 

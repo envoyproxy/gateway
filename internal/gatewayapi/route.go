@@ -623,6 +623,52 @@ func (t *Translator) processHTTPRouteRule(
 		}
 		applyHTTPFiltersContextToIRRoute(httpFiltersContext, irRoute)
 		ruleRoutes = append(ruleRoutes, irRoute)
+
+		// When using a CORS filter with method matching that excludes OPTIONS,
+		// users must explicitly specify OPTIONS method match to handle CORS preflight requests.
+		// - https://github.com/kubernetes-sigs/gateway-api/issues/3857
+		//
+		// Envoy Gateway improves user experience by implicitly creating the envoy route for CORS preflight.
+		if (httpFiltersContext != nil && httpFiltersContext.CORS != nil) &&
+			(match.Method != nil && string(*match.Method) != "OPTIONS") {
+			corsRoute := &ir.HTTPRoute{
+				Name:              irRouteName(httpRoute, ruleIdx, matchIdx) + "/cors-preflight",
+				Metadata:          routeRuleMetadata,
+				PathMatch:         irRoute.PathMatch,
+				QueryParamMatches: irRoute.QueryParamMatches,
+				CORS:              httpFiltersContext.CORS,
+			}
+
+			// Create header matches:
+			// copy original headers (excluding :method) + add CORS headers (:method=OPTIONS, origin, access-control-request-method)
+			headerMatches := make([]*ir.StringMatch, 0, len(irRoute.HeaderMatches)+2)
+			for _, headerMatch := range irRoute.HeaderMatches {
+				// Skip the original method match for CORS preflight route to avoid conflicting method requirements.
+				if headerMatch.Name == ":method" {
+					continue
+				}
+				headerMatches = append(headerMatches, headerMatch)
+			}
+
+			corsHeaders := []*ir.StringMatch{
+				{
+					Name:  ":method",
+					Exact: ptr.To("OPTIONS"),
+				},
+				{
+					Name:      "origin",
+					SafeRegex: ptr.To(".*"),
+				},
+				{
+					Name:      "access-control-request-method",
+					SafeRegex: ptr.To(".*"),
+				},
+			}
+			headerMatches = append(headerMatches, corsHeaders...)
+
+			corsRoute.HeaderMatches = headerMatches
+			ruleRoutes = append(ruleRoutes, corsRoute)
+		}
 	}
 
 	return ruleRoutes, nil

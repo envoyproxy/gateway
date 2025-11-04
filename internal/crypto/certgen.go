@@ -110,6 +110,10 @@ func GenerateCerts(cfg *config.Server) (*Certificates, error) {
 		case egv1a1.ProviderTypeKubernetes:
 			egDNSNames = kubeServiceNames(DefaultEnvoyGatewayDNSPrefix, cfg.ControllerNamespace, cfg.DNSDomain)
 			envoyDNSNames = append(envoyDNSNames, fmt.Sprintf("*.%s", cfg.ControllerNamespace))
+		case egv1a1.ProviderTypeCustom:
+			// For custom provider (host mode), use localhost for xDS communication
+			egDNSNames = []string{"localhost"}
+			envoyDNSNames = []string{"localhost"}
 		default:
 			// Kubernetes is the only supported Envoy Gateway provider.
 			return nil, fmt.Errorf("unsupported provider type %v", egProvider)

@@ -226,6 +226,7 @@ func TestFileProvider(t *testing.T) {
 		resources2 := pResources.GetResourcesByGatewayClass("eg-2")
 		want2 := &resource.Resources{}
 		mustUnmarshal(t, "testdata/resources.2.yaml", want2)
+		// We don't care about the conditions
 		testutil.CmpResources(t, want2, resources2)
 	})
 
