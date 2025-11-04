@@ -78,7 +78,7 @@ func (r *gatewayAPIReconciler) checkObjectNamespaceLabels(obj metav1.Object) (bo
 
 	ns := &corev1.Namespace{}
 	if err := r.client.Get(
-		context.Background(),
+		r.ctx,
 		client.ObjectKey{
 			Namespace: "", // Namespace object should have an empty Namespace
 			Name:      nsString,
@@ -113,7 +113,7 @@ func matchLabelsAndExpressions(ls *metav1.LabelSelector, objLabels map[string]st
 func (r *gatewayAPIReconciler) validateGatewayForReconcile(gw *gwapiv1.Gateway) bool {
 	gc := &gwapiv1.GatewayClass{}
 	key := types.NamespacedName{Name: string(gw.Spec.GatewayClassName)}
-	if err := r.client.Get(context.Background(), key, gc); err != nil {
+	if err := r.client.Get(r.ctx, key, gc); err != nil {
 		r.log.Error(err, "failed to get GatewayClass", "name", gw.Spec.GatewayClassName)
 		return false
 	}
@@ -192,7 +192,7 @@ func (r *gatewayAPIReconciler) validateSecretForReconcile(secret *corev1.Secret)
 
 func (r *gatewayAPIReconciler) isBackendReferencingSecret(nsName *types.NamespacedName) bool {
 	backendList := &egv1a1.BackendList{}
-	if err := r.client.List(context.Background(), backendList, &client.ListOptions{
+	if err := r.client.List(r.ctx, backendList, &client.ListOptions{
 		FieldSelector: fields.OneTermEqualSelector(secretBackendIndex, nsName.String()),
 	}); err != nil {
 		r.log.Error(err, "unable to find associated Backend")
@@ -230,7 +230,7 @@ func (r *gatewayAPIReconciler) validateClusterTrustBundleForReconcile(ctb *certi
 
 func (r *gatewayAPIReconciler) isCtpReferencingClusterTrustBundle(ctb *certificatesv1b1.ClusterTrustBundle) bool {
 	ctpList := &egv1a1.ClientTrafficPolicyList{}
-	if err := r.client.List(context.Background(), ctpList, &client.ListOptions{
+	if err := r.client.List(r.ctx, ctpList, &client.ListOptions{
 		FieldSelector: fields.OneTermEqualSelector(clusterTrustBundleCtpIndex, ctb.Name),
 	}); err != nil {
 		r.log.Error(err, "unable to find associated ClientTrafficPolicies")
@@ -242,7 +242,7 @@ func (r *gatewayAPIReconciler) isCtpReferencingClusterTrustBundle(ctb *certifica
 
 func (r *gatewayAPIReconciler) isBackendReferencingClusterTrustBundle(ctb *certificatesv1b1.ClusterTrustBundle) bool {
 	backendList := &egv1a1.BackendList{}
-	if err := r.client.List(context.Background(), backendList, &client.ListOptions{
+	if err := r.client.List(r.ctx, backendList, &client.ListOptions{
 		FieldSelector: fields.OneTermEqualSelector(clusterTrustBundleBackendIndex, ctb.Name),
 	}); err != nil {
 		r.log.Error(err, "unable to find associated Backend")
@@ -254,7 +254,7 @@ func (r *gatewayAPIReconciler) isBackendReferencingClusterTrustBundle(ctb *certi
 
 func (r *gatewayAPIReconciler) isBackendTLSPolicyReferencingClusterTrustBundle(ctb *certificatesv1b1.ClusterTrustBundle) bool {
 	btlsList := &gwapiv1.BackendTLSPolicyList{}
-	if err := r.client.List(context.Background(), btlsList, &client.ListOptions{
+	if err := r.client.List(r.ctx, btlsList, &client.ListOptions{
 		FieldSelector: fields.OneTermEqualSelector(clusterTrustBundleBtlsIndex, ctb.Name),
 	}); err != nil {
 		r.log.Error(err, "unable to find associated BackendTLSPolicy")
@@ -270,7 +270,7 @@ func (r *gatewayAPIReconciler) isBackendTLSPolicyReferencingClusterTrustBundle(c
 
 func (r *gatewayAPIReconciler) isHTTPRouteFilterReferencingSecret(nsName *types.NamespacedName) bool {
 	routeFilterList := &egv1a1.HTTPRouteFilterList{}
-	if err := r.client.List(context.Background(), routeFilterList, &client.ListOptions{
+	if err := r.client.List(r.ctx, routeFilterList, &client.ListOptions{
 		FieldSelector: fields.OneTermEqualSelector(secretHTTPRouteFilterIndex, nsName.String()),
 	}); err != nil {
 		r.log.Error(err, "unable to find associated HTTPRouteFilter")
@@ -286,7 +286,7 @@ func (r *gatewayAPIReconciler) isHTTPRouteFilterReferencingSecret(nsName *types.
 
 func (r *gatewayAPIReconciler) isBackendTLSPolicyReferencingSecret(nsName *types.NamespacedName) bool {
 	btlsList := &gwapiv1.BackendTLSPolicyList{}
-	if err := r.client.List(context.Background(), btlsList, &client.ListOptions{
+	if err := r.client.List(r.ctx, btlsList, &client.ListOptions{
 		FieldSelector: fields.OneTermEqualSelector(secretBtlsIndex, nsName.String()),
 	}); err != nil {
 		r.log.Error(err, "unable to find associated BackendTLSPolicy")
@@ -302,7 +302,7 @@ func (r *gatewayAPIReconciler) isBackendTLSPolicyReferencingSecret(nsName *types
 
 func (r *gatewayAPIReconciler) isEnvoyProxyReferencingSecret(nsName *types.NamespacedName) bool {
 	epList := &egv1a1.EnvoyProxyList{}
-	if err := r.client.List(context.Background(), epList, &client.ListOptions{
+	if err := r.client.List(r.ctx, epList, &client.ListOptions{
 		FieldSelector: fields.OneTermEqualSelector(secretEnvoyProxyIndex, nsName.String()),
 	}); err != nil {
 		r.log.Error(err, "unable to find associated Gateways")
@@ -332,7 +332,7 @@ func (r *gatewayAPIReconciler) isEnvoyProxyReferencingSecret(nsName *types.Names
 
 func (r *gatewayAPIReconciler) isGatewayReferencingSecret(nsName *types.NamespacedName) bool {
 	gwList := &gwapiv1.GatewayList{}
-	if err := r.client.List(context.Background(), gwList, &client.ListOptions{
+	if err := r.client.List(r.ctx, gwList, &client.ListOptions{
 		FieldSelector: fields.OneTermEqualSelector(secretGatewayIndex, nsName.String()),
 	}); err != nil {
 		r.log.Error(err, "unable to find associated Gateways")
@@ -354,7 +354,7 @@ func (r *gatewayAPIReconciler) isGatewayReferencingSecret(nsName *types.Namespac
 
 func (r *gatewayAPIReconciler) isSecurityPolicyReferencingSecret(nsName *types.NamespacedName) bool {
 	spList := &egv1a1.SecurityPolicyList{}
-	if err := r.client.List(context.Background(), spList, &client.ListOptions{
+	if err := r.client.List(r.ctx, spList, &client.ListOptions{
 		FieldSelector: fields.OneTermEqualSelector(secretSecurityPolicyIndex, nsName.String()),
 	}); err != nil {
 		r.log.Error(err, "unable to find associated SecurityPolicies")
@@ -366,7 +366,7 @@ func (r *gatewayAPIReconciler) isSecurityPolicyReferencingSecret(nsName *types.N
 
 func (r *gatewayAPIReconciler) isCtpReferencingSecret(nsName *types.NamespacedName) bool {
 	ctpList := &egv1a1.ClientTrafficPolicyList{}
-	if err := r.client.List(context.Background(), ctpList, &client.ListOptions{
+	if err := r.client.List(r.ctx, ctpList, &client.ListOptions{
 		FieldSelector: fields.OneTermEqualSelector(secretCtpIndex, nsName.String()),
 	}); err != nil {
 		r.log.Error(err, "unable to find associated ClientTrafficPolicies")
@@ -396,7 +396,6 @@ func (r *gatewayAPIReconciler) isEnvoyTLSSecret(nsName *types.NamespacedName) bo
 // if it exists, finds the Gateway's Deployment, and further updates the Gateway
 // status Ready condition. All Services are pushed for reconciliation.
 func (r *gatewayAPIReconciler) validateServiceForReconcile(obj client.Object) bool {
-	ctx := context.Background()
 	svc, ok := obj.(*corev1.Service)
 	if !ok {
 		r.log.Info("unexpected object type, bypassing reconciliation", "object", obj)
@@ -405,7 +404,7 @@ func (r *gatewayAPIReconciler) validateServiceForReconcile(obj client.Object) bo
 	labels := svc.GetLabels()
 
 	// Check if the Service belongs to a Gateway, if so, update the Gateway status.
-	gtw := r.findOwningGateway(ctx, labels)
+	gtw := r.findOwningGateway(r.ctx, labels)
 	if gtw != nil {
 		r.updateGatewayStatus(gtw)
 		return false
@@ -414,7 +413,7 @@ func (r *gatewayAPIReconciler) validateServiceForReconcile(obj client.Object) bo
 	// Merged gateways will have only this label, update status of all Gateways under found GatewayClass.
 	gcName, ok := labels[gatewayapi.OwningGatewayClassLabel]
 	if ok && r.isGatewayClassMerged(gcName) {
-		if err := r.updateStatusForGatewaysUnderGatewayClass(ctx, gcName); err != nil {
+		if err := r.updateStatusForGatewaysUnderGatewayClass(r.ctx, gcName); err != nil {
 			r.log.Info("no Gateways found under GatewayClass", "name", gcName)
 			return false
 		}
@@ -485,7 +484,7 @@ func (r *gatewayAPIReconciler) validateBackendForReconcile(obj client.Object) bo
 
 func (r *gatewayAPIReconciler) isSecurityPolicyReferencingBackend(nsName *types.NamespacedName) bool {
 	spList := &egv1a1.SecurityPolicyList{}
-	if err := r.client.List(context.Background(), spList, &client.ListOptions{
+	if err := r.client.List(r.ctx, spList, &client.ListOptions{
 		FieldSelector: fields.OneTermEqualSelector(backendSecurityPolicyIndex, nsName.String()),
 	}); err != nil {
 		r.log.Error(err, "unable to find associated SecurityPolicies")
@@ -512,9 +511,8 @@ func (r *gatewayAPIReconciler) validateServiceImportForReconcile(obj client.Obje
 // isRouteReferencingBackend returns true if the backend(service and serviceImport) is referenced by any of the xRoutes
 // in the system, else returns false.
 func (r *gatewayAPIReconciler) isRouteReferencingBackend(nsName *types.NamespacedName) bool {
-	ctx := context.Background()
 	httpRouteList := &gwapiv1.HTTPRouteList{}
-	if err := r.client.List(ctx, httpRouteList, &client.ListOptions{
+	if err := r.client.List(r.ctx, httpRouteList, &client.ListOptions{
 		FieldSelector: fields.OneTermEqualSelector(backendHTTPRouteIndex, nsName.String()),
 	}); err != nil && !kerrors.IsNotFound(err) {
 		r.log.Error(err, "failed to find associated HTTPRoutes")
@@ -526,7 +524,7 @@ func (r *gatewayAPIReconciler) isRouteReferencingBackend(nsName *types.Namespace
 
 	if r.grpcRouteCRDExists {
 		grpcRouteList := &gwapiv1.GRPCRouteList{}
-		if err := r.client.List(ctx, grpcRouteList, &client.ListOptions{
+		if err := r.client.List(r.ctx, grpcRouteList, &client.ListOptions{
 			FieldSelector: fields.OneTermEqualSelector(backendGRPCRouteIndex, nsName.String()),
 		}); err != nil && !kerrors.IsNotFound(err) {
 			r.log.Error(err, "failed to find associated GRPCRoutes")
@@ -539,7 +537,7 @@ func (r *gatewayAPIReconciler) isRouteReferencingBackend(nsName *types.Namespace
 
 	if r.tlsRouteCRDExists {
 		tlsRouteList := &gwapiv1a3.TLSRouteList{}
-		if err := r.client.List(ctx, tlsRouteList, &client.ListOptions{
+		if err := r.client.List(r.ctx, tlsRouteList, &client.ListOptions{
 			FieldSelector: fields.OneTermEqualSelector(backendTLSRouteIndex, nsName.String()),
 		}); err != nil && !kerrors.IsNotFound(err) {
 			r.log.Error(err, "failed to find associated TLSRoutes")
@@ -552,7 +550,7 @@ func (r *gatewayAPIReconciler) isRouteReferencingBackend(nsName *types.Namespace
 
 	if r.tcpRouteCRDExists {
 		tcpRouteList := &gwapiv1a2.TCPRouteList{}
-		if err := r.client.List(ctx, tcpRouteList, &client.ListOptions{
+		if err := r.client.List(r.ctx, tcpRouteList, &client.ListOptions{
 			FieldSelector: fields.OneTermEqualSelector(backendTCPRouteIndex, nsName.String()),
 		}); err != nil && !kerrors.IsNotFound(err) {
 			r.log.Error(err, "failed to find associated TCPRoutes")
@@ -565,7 +563,7 @@ func (r *gatewayAPIReconciler) isRouteReferencingBackend(nsName *types.Namespace
 
 	if r.udpRouteCRDExists {
 		udpRouteList := &gwapiv1a2.UDPRouteList{}
-		if err := r.client.List(ctx, udpRouteList, &client.ListOptions{
+		if err := r.client.List(r.ctx, udpRouteList, &client.ListOptions{
 			FieldSelector: fields.OneTermEqualSelector(backendUDPRouteIndex, nsName.String()),
 		}); err != nil && !kerrors.IsNotFound(err) {
 			r.log.Error(err, "failed to find associated UDPRoutes")
@@ -636,13 +634,12 @@ func (r *gatewayAPIReconciler) validateEndpointSliceForReconcile(obj client.Obje
 // if it exists, finds the Gateway's Service, and further updates the Gateway
 // status Ready condition. No Deployments or DaemonSets are pushed for reconciliation.
 func (r *gatewayAPIReconciler) validateObjectForReconcile(obj client.Object) bool {
-	ctx := context.Background()
 	labels := obj.GetLabels()
 
 	// Only objects in the configured namespace should be reconciled.
 	if obj.GetNamespace() == r.namespace || r.gatewayNamespaceMode {
 		// Check if the obj belongs to a Gateway, if so, update the Gateway status.
-		gtw := r.findOwningGateway(ctx, labels)
+		gtw := r.findOwningGateway(r.ctx, labels)
 		if gtw != nil {
 			r.updateGatewayStatus(gtw)
 			return false
@@ -652,7 +649,7 @@ func (r *gatewayAPIReconciler) validateObjectForReconcile(obj client.Object) boo
 	// Merged gateways will have only this label, update status of all Gateways under found GatewayClass.
 	gcName, ok := labels[gatewayapi.OwningGatewayClassLabel]
 	if ok && r.isGatewayClassMerged(gcName) {
-		if err := r.updateStatusForGatewaysUnderGatewayClass(ctx, gcName); err != nil {
+		if err := r.updateStatusForGatewaysUnderGatewayClass(r.ctx, gcName); err != nil {
 			r.log.Info("no Gateways found under GatewayClass", "name", gcName)
 			return false
 		}
@@ -790,7 +787,6 @@ func (r *gatewayAPIReconciler) updateGatewayStatus(gateway *gwapiv1.Gateway) {
 }
 
 func (r *gatewayAPIReconciler) handleNode(obj client.Object) bool {
-	ctx := context.Background()
 	node, ok := obj.(*corev1.Node)
 	if !ok {
 		r.log.Info("unexpected object type, bypassing reconciliation", "object", obj)
@@ -798,7 +794,7 @@ func (r *gatewayAPIReconciler) handleNode(obj client.Object) bool {
 	}
 
 	key := types.NamespacedName{Name: node.Name}
-	if err := r.client.Get(ctx, key, node); err != nil {
+	if err := r.client.Get(r.ctx, key, node); err != nil {
 		if kerrors.IsNotFound(err) {
 			r.store.removeNode(node)
 			return true
@@ -821,7 +817,7 @@ func (r *gatewayAPIReconciler) validateConfigMapForReconcile(obj client.Object) 
 
 	if r.ctpCRDExists {
 		ctpList := &egv1a1.ClientTrafficPolicyList{}
-		if err := r.client.List(context.Background(), ctpList, &client.ListOptions{
+		if err := r.client.List(r.ctx, ctpList, &client.ListOptions{
 			FieldSelector: fields.OneTermEqualSelector(configMapCtpIndex, utils.NamespacedName(configMap).String()),
 		}); err != nil {
 			r.log.Error(err, "unable to find associated ClientTrafficPolicy")
@@ -835,7 +831,7 @@ func (r *gatewayAPIReconciler) validateConfigMapForReconcile(obj client.Object) 
 
 	if r.bTLSPolicyCRDExists {
 		btlsList := &gwapiv1.BackendTLSPolicyList{}
-		if err := r.client.List(context.Background(), btlsList, &client.ListOptions{
+		if err := r.client.List(r.ctx, btlsList, &client.ListOptions{
 			FieldSelector: fields.OneTermEqualSelector(configMapBtlsIndex, utils.NamespacedName(configMap).String()),
 		}); err != nil {
 			r.log.Error(err, "unable to find associated BackendTLSPolicy")
@@ -849,7 +845,7 @@ func (r *gatewayAPIReconciler) validateConfigMapForReconcile(obj client.Object) 
 
 	if r.btpCRDExists {
 		btpList := &egv1a1.BackendTrafficPolicyList{}
-		if err := r.client.List(context.Background(), btpList, &client.ListOptions{
+		if err := r.client.List(r.ctx, btpList, &client.ListOptions{
 			FieldSelector: fields.OneTermEqualSelector(configMapBtpIndex, utils.NamespacedName(configMap).String()),
 		}); err != nil {
 			r.log.Error(err, "unable to find associated BackendTrafficPolicy")
@@ -863,7 +859,7 @@ func (r *gatewayAPIReconciler) validateConfigMapForReconcile(obj client.Object) 
 
 	if r.eepCRDExists {
 		eepList := &egv1a1.EnvoyExtensionPolicyList{}
-		if err := r.client.List(context.Background(), eepList, &client.ListOptions{
+		if err := r.client.List(r.ctx, eepList, &client.ListOptions{
 			FieldSelector: fields.OneTermEqualSelector(configMapEepIndex, utils.NamespacedName(configMap).String()),
 		}); err != nil {
 			r.log.Error(err, "unable to find associated EnvoyExtensionPolicy")
@@ -877,7 +873,7 @@ func (r *gatewayAPIReconciler) validateConfigMapForReconcile(obj client.Object) 
 
 	if r.hrfCRDExists {
 		routeFilterList := &egv1a1.HTTPRouteFilterList{}
-		if err := r.client.List(context.Background(), routeFilterList, &client.ListOptions{
+		if err := r.client.List(r.ctx, routeFilterList, &client.ListOptions{
 			FieldSelector: fields.OneTermEqualSelector(configMapHTTPRouteFilterIndex, utils.NamespacedName(configMap).String()),
 		}); err != nil {
 			r.log.Error(err, "unable to find associated HTTPRouteFilter")
@@ -891,7 +887,7 @@ func (r *gatewayAPIReconciler) validateConfigMapForReconcile(obj client.Object) 
 
 	if r.spCRDExists {
 		spList := &egv1a1.SecurityPolicyList{}
-		if err := r.client.List(context.Background(), spList, &client.ListOptions{
+		if err := r.client.List(r.ctx, spList, &client.ListOptions{
 			FieldSelector: fields.OneTermEqualSelector(configMapSecurityPolicyIndex, utils.NamespacedName(configMap).String()),
 		}); err != nil {
 			r.log.Error(err, "unable to find associated SecurityPolicy")
@@ -905,7 +901,7 @@ func (r *gatewayAPIReconciler) validateConfigMapForReconcile(obj client.Object) 
 
 	if !r.backendAPIDisabled() {
 		backendList := &egv1a1.BackendList{}
-		if err := r.client.List(context.Background(), backendList, &client.ListOptions{
+		if err := r.client.List(r.ctx, backendList, &client.ListOptions{
 			FieldSelector: fields.OneTermEqualSelector(configMapBackendIndex, utils.NamespacedName(configMap).String()),
 		}); err != nil {
 			r.log.Error(err, "unable to find associated Backend")
@@ -922,7 +918,7 @@ func (r *gatewayAPIReconciler) validateConfigMapForReconcile(obj client.Object) 
 
 func (r *gatewayAPIReconciler) isEnvoyExtensionPolicyReferencingBackend(nsName *types.NamespacedName) bool {
 	spList := &egv1a1.EnvoyExtensionPolicyList{}
-	if err := r.client.List(context.Background(), spList, &client.ListOptions{
+	if err := r.client.List(r.ctx, spList, &client.ListOptions{
 		FieldSelector: fields.OneTermEqualSelector(backendEnvoyExtensionPolicyIndex, nsName.String()),
 	}); err != nil {
 		r.log.Error(err, "unable to find associated EnvoyExtensionPolicies")
@@ -934,7 +930,7 @@ func (r *gatewayAPIReconciler) isEnvoyExtensionPolicyReferencingBackend(nsName *
 
 func (r *gatewayAPIReconciler) isEnvoyProxyReferencingBackend(nn *types.NamespacedName) bool {
 	proxyList := &egv1a1.EnvoyProxyList{}
-	if err := r.client.List(context.Background(), proxyList, &client.ListOptions{
+	if err := r.client.List(r.ctx, proxyList, &client.ListOptions{
 		FieldSelector: fields.OneTermEqualSelector(backendEnvoyProxyTelemetryIndex, nn.String()),
 	}); err != nil {
 		r.log.Error(err, "unable to find associated EnvoyProxies")
@@ -946,7 +942,7 @@ func (r *gatewayAPIReconciler) isEnvoyProxyReferencingBackend(nn *types.Namespac
 
 func (r *gatewayAPIReconciler) isExtensionPolicyReferencingSecret(nsName *types.NamespacedName) bool {
 	eepList := &egv1a1.EnvoyExtensionPolicyList{}
-	if err := r.client.List(context.Background(), eepList, &client.ListOptions{
+	if err := r.client.List(r.ctx, eepList, &client.ListOptions{
 		FieldSelector: fields.OneTermEqualSelector(secretEnvoyExtensionPolicyIndex, nsName.String()),
 	}); err != nil {
 		r.log.Error(err, "unable to find associated ExtensionPolicies")
@@ -958,9 +954,8 @@ func (r *gatewayAPIReconciler) isExtensionPolicyReferencingSecret(nsName *types.
 
 // isRouteReferencingHTTPRouteFilter returns true if the HTTPRouteFilter is referenced by an HTTPRoute
 func (r *gatewayAPIReconciler) isRouteReferencingHTTPRouteFilter(nsName *types.NamespacedName) bool {
-	ctx := context.Background()
 	httpRouteList := &gwapiv1.HTTPRouteList{}
-	if err := r.client.List(ctx, httpRouteList, &client.ListOptions{
+	if err := r.client.List(r.ctx, httpRouteList, &client.ListOptions{
 		FieldSelector: fields.OneTermEqualSelector(httpRouteFilterHTTPRouteIndex, nsName.String()),
 	}); err != nil {
 		r.log.Error(err, "unable to find associated HTTPRoutes")
@@ -977,7 +972,7 @@ func (r *gatewayAPIReconciler) isProxyServiceCluster(labels map[string]string) b
 		return false
 	}
 
-	if gtw := r.findOwningGateway(context.Background(), labels); gtw != nil {
+	if gtw := r.findOwningGateway(r.ctx, labels); gtw != nil {
 		return true
 	}
 

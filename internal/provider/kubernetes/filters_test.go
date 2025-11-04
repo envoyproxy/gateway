@@ -165,6 +165,7 @@ func TestGetExtensionRefFilters(t *testing.T) {
 
 			// Create reconciler with test configuration
 			r := &gatewayAPIReconciler{
+				ctx:            ctx,
 				extGVKs:        tc.extGVKs,
 				namespaceLabel: tc.namespaceLabel,
 				log:            logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo),
@@ -327,6 +328,7 @@ func TestGetExtensionBackendResources(t *testing.T) {
 
 			// Create reconciler with test configuration
 			r := &gatewayAPIReconciler{
+				ctx:            ctx,
 				extBackendGVKs: tc.extBackendGVKs,
 				namespaceLabel: tc.namespaceLabel,
 				log:            logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo),

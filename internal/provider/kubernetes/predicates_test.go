@@ -6,6 +6,7 @@
 package kubernetes
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"testing"
@@ -58,6 +59,7 @@ func TestGatewayClassHasMatchingController(t *testing.T) {
 	logger := logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo)
 
 	r := gatewayAPIReconciler{
+		ctx:             context.Background(),
 		classController: egv1a1.GatewayControllerName,
 		log:             logger,
 	}
@@ -111,6 +113,7 @@ func TestGatewayClassHasMatchingNamespaceLabels(t *testing.T) {
 
 	for _, tc := range testCases {
 		r := gatewayAPIReconciler{
+			ctx:             context.Background(),
 			classController: egv1a1.GatewayControllerName,
 			namespaceLabel:  &metav1.LabelSelector{MatchExpressions: matchExpressions(tc.namespaceLabels, metav1.LabelSelectorOpExists, []string{})},
 			log:             logger,
@@ -164,6 +167,7 @@ func TestValidateGatewayForReconcile(t *testing.T) {
 	logger := logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo)
 
 	r := gatewayAPIReconciler{
+		ctx:             context.Background(),
 		classController: egv1a1.GatewayControllerName,
 		log:             logger,
 	}
@@ -289,6 +293,7 @@ func TestValidateConfigMapForReconcile(t *testing.T) {
 	logger := logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo)
 
 	r := gatewayAPIReconciler{
+		ctx:              context.Background(),
 		classController:  egv1a1.GatewayControllerName,
 		log:              logger,
 		backendCRDExists: true,
@@ -639,6 +644,7 @@ func TestValidateSecretForReconcile(t *testing.T) {
 	logger := logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo)
 
 	r := gatewayAPIReconciler{
+		ctx:              context.Background(),
 		classController:  egv1a1.GatewayControllerName,
 		log:              logger,
 		backendCRDExists: true,
@@ -776,6 +782,7 @@ func TestValidateEndpointSliceForReconcile(t *testing.T) {
 	logger := logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo)
 
 	r := gatewayAPIReconciler{
+		ctx:             context.Background(),
 		classController: egv1a1.GatewayControllerName,
 		log:             logger,
 	}
@@ -1205,6 +1212,7 @@ func TestValidateServiceForReconcile(t *testing.T) {
 	logger := logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo)
 
 	r := gatewayAPIReconciler{
+		ctx:                context.Background(),
 		classController:    egv1a1.GatewayControllerName,
 		log:                logger,
 		mergeGateways:      sets.New[string]("test-mg"),
@@ -1324,6 +1332,7 @@ func TestValidateObjectForReconcile(t *testing.T) {
 	logger := logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo)
 
 	r := gatewayAPIReconciler{
+		ctx:             context.Background(),
 		classController: egv1a1.GatewayControllerName,
 		log:             logger,
 		mergeGateways:   sets.New[string]("test-mg"),
@@ -1431,6 +1440,7 @@ func TestCheckObjectNamespaceLabels(t *testing.T) {
 	logger := logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo)
 
 	r := gatewayAPIReconciler{
+		ctx:             context.Background(),
 		classController: egv1a1.GatewayControllerName,
 		log:             logger,
 	}
@@ -1584,6 +1594,7 @@ func TestValidateHTTPRouteFilerForReconcile(t *testing.T) {
 	logger := logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo)
 
 	r := gatewayAPIReconciler{
+		ctx:             context.Background(),
 		classController: egv1a1.GatewayControllerName,
 		log:             logger,
 	}
@@ -1703,6 +1714,7 @@ func TestValidateClusterTrustBundleForReconcile(t *testing.T) {
 	logger := logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo)
 
 	r := gatewayAPIReconciler{
+		ctx:                 context.Background(),
 		classController:     egv1a1.GatewayControllerName,
 		log:                 logger,
 		backendCRDExists:    true,

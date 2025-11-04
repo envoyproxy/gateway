@@ -165,6 +165,7 @@ func TestIsCustomBackendResource(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			r := &gatewayAPIReconciler{
+				ctx:            context.Background(),
 				extBackendGVKs: tc.extBackendGVKs,
 			}
 			result := r.isCustomBackendResource(tc.group, tc.kind)
@@ -296,6 +297,7 @@ func TestProcessBackendRefsWithCustomBackends(t *testing.T) {
 
 			// Create reconciler with test configuration
 			r := &gatewayAPIReconciler{
+				ctx:            context.Background(),
 				extBackendGVKs: tc.extBackendGVKs,
 				log:            logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo),
 				client:         fakeClient,
@@ -586,6 +588,7 @@ func TestProcessGatewayClassParamsRef(t *testing.T) {
 		logger := logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo)
 
 		r := &gatewayAPIReconciler{
+			ctx:                  context.Background(),
 			log:                  logger,
 			classController:      gcCtrlName,
 			namespace:            config.DefaultNamespace,
@@ -1474,6 +1477,7 @@ func TestProcessServiceClusterForGateway(t *testing.T) {
 
 func newGatewayAPIReconciler(logger logging.Logger) *gatewayAPIReconciler {
 	return &gatewayAPIReconciler{
+		ctx:              context.Background(),
 		log:              logger,
 		classController:  "some-gateway-class",
 		backendCRDExists: true,
@@ -1639,6 +1643,7 @@ func setupReferenceGrantReconciler(objs []client.Object) *gatewayAPIReconciler {
 	logger := logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo)
 
 	r := &gatewayAPIReconciler{
+		ctx:             context.Background(),
 		log:             logger,
 		classController: "some-gateway-class",
 	}

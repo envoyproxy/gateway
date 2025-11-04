@@ -602,6 +602,7 @@ func TestProcessHTTPRoutes(t *testing.T) {
 			ctx := context.Background()
 
 			r := &gatewayAPIReconciler{
+				ctx:             ctx,
 				log:             logger,
 				classController: gcCtrlName,
 				hrfCRDExists:    true,
@@ -762,6 +763,7 @@ func TestProcessGRPCRoutes(t *testing.T) {
 			ctx := context.Background()
 
 			r := &gatewayAPIReconciler{
+				ctx:             ctx,
 				log:             logger,
 				classController: gcCtrlName,
 			}
@@ -1103,8 +1105,11 @@ func TestValidateHTTPRouteParentRefs(t *testing.T) {
 	}
 
 	// Create the reconciler.
-	r := &gatewayAPIReconciler{classController: gwapiv1.GatewayController(egv1a1.GatewayControllerName)}
 	ctx := context.Background()
+	r := &gatewayAPIReconciler{
+		ctx:             ctx,
+		classController: gwapiv1.GatewayController(egv1a1.GatewayControllerName),
+	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -1286,6 +1291,7 @@ func TestProcessHTTPRoutesWithCustomBackends(t *testing.T) {
 
 			// Create reconciler with test configuration
 			r := &gatewayAPIReconciler{
+				ctx:            ctx,
 				extBackendGVKs: tc.extBackendGVKs,
 				log:            logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo),
 				client:         fakeClient,

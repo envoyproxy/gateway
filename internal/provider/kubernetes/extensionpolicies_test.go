@@ -212,6 +212,7 @@ func TestProcessExtensionPolicies(t *testing.T) {
 			ctx := context.Background()
 
 			r := &gatewayAPIReconciler{
+				ctx:             ctx,
 				log:             logger,
 				classController: "some-gateway-class",
 			}

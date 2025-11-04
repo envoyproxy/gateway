@@ -59,6 +59,7 @@ var skipNameValidation = func() *bool {
 
 type gatewayAPIReconciler struct {
 	client               client.Client
+	ctx                  context.Context
 	log                  logging.Logger
 	statusUpdater        Updater
 	classController      gwapiv1.GatewayController
@@ -154,6 +155,7 @@ func newGatewayAPIController(ctx context.Context, mgr manager.Manager, cfg *conf
 
 	r := &gatewayAPIReconciler{
 		client:               mgr.GetClient(),
+		ctx:                  ctx,
 		log:                  cfg.Logger,
 		classController:      gwapiv1.GatewayController(cfg.EnvoyGateway.Gateway.ControllerName),
 		namespace:            cfg.ControllerNamespace,
