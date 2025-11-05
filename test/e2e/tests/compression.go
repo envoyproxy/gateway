@@ -38,9 +38,12 @@ func init() {
 	ConformanceTests = append(
 		ConformanceTests,
 		CompressionTest,
-		CompressionTestBrotli,
-		CompressionTestGzip,
-		CompressionTestZstd,
+		CompressionTestBrotliChooseFirst,
+		CompressionTestBrotliRemoveAcceptEncodingHeader,
+		CompressionTestGzipChooseFirst,
+		CompressionTestGzipRemoveAcceptEncodingHeader,
+		CompressionTestZstdChooseFirst,
+		CompressionTestZstdRemoveAcceptEncodingHeader,
 	)
 }
 
@@ -94,45 +97,66 @@ var CompressionTest = suite.ConformanceTest{
 	},
 }
 
-var CompressionTestBrotli = suite.ConformanceTest{
-	ShortName:   "Compression-Brotli",
-	Description: "Test brotli response compression on HTTPRoute",
-	Manifests:   []string{"testdata/compression-brotli.yaml"},
+var CompressionTestBrotliChooseFirst = suite.ConformanceTest{
+	ShortName:   "Compression-Brotli-Choose-First",
+	Description: "Test brotli chooseFirst response compression on HTTPRoute",
+	Manifests:   []string{"testdata/compression-brotli-choose-first.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		t.Run("HTTPRoute with brotli compression chooseFirst", func(t *testing.T) {
 			testCompressionChooseFirst(t, suite, egv1a1.BrotliCompressorType)
 		})
+	},
+}
 
+var CompressionTestBrotliRemoveAcceptEncodingHeader = suite.ConformanceTest{
+	ShortName:   "Compression-Brotli-Remove-Accept-Encoding-Header",
+	Description: "Test brotli removeAcceptEncodingHeader response compression on HTTPRoute",
+	Manifests:   []string{"testdata/compression-brotli-remove-accept-encoding-header.yaml"},
+	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		t.Run("HTTPRoute with brotli compression removeAcceptEncodingHeader", func(t *testing.T) {
 			testCompressionRemoveAcceptEncodingHeader(t, suite, egv1a1.BrotliCompressorType)
 		})
 	},
 }
 
-var CompressionTestGzip = suite.ConformanceTest{
-	ShortName:   "Compression-Gzip",
-	Description: "Test gzip response compression on HTTPRoute",
-	Manifests:   []string{"testdata/compression-gzip.yaml"},
+var CompressionTestGzipChooseFirst = suite.ConformanceTest{
+	ShortName:   "Compression-Gzip-Choose-First",
+	Description: "Test gzip chooseFirst response compression on HTTPRoute",
+	Manifests:   []string{"testdata/compression-gzip-choose-first.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		t.Run("HTTPRoute with gzip compression chooseFirst", func(t *testing.T) {
 			testCompressionChooseFirst(t, suite, egv1a1.GzipCompressorType)
 		})
+	},
+}
 
+var CompressionTestGzipRemoveAcceptEncodingHeader = suite.ConformanceTest{
+	ShortName:   "Compression-Gzip-Remove-Accept-Encoding-Header",
+	Description: "Test gzip removeAcceptEncodingHeader response compression on HTTPRoute",
+	Manifests:   []string{"testdata/compression-gzip-remove-accept-encoding-header.yaml"},
+	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		t.Run("HTTPRoute with gzip compression removeAcceptEncodingHeader", func(t *testing.T) {
 			testCompressionRemoveAcceptEncodingHeader(t, suite, egv1a1.GzipCompressorType)
 		})
 	},
 }
 
-var CompressionTestZstd = suite.ConformanceTest{
-	ShortName:   "Compression-Zstd",
-	Description: "Test zstd response compression on HTTPRoute",
-	Manifests:   []string{"testdata/compression-zstd.yaml"},
+var CompressionTestZstdChooseFirst = suite.ConformanceTest{
+	ShortName:   "Compression-Zstd-Choose-First",
+	Description: "Test zstd chooseFirst response compression on HTTPRoute",
+	Manifests:   []string{"testdata/compression-zstd-choose-first.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		t.Run("HTTPRoute with zstd compression chooseFirst", func(t *testing.T) {
 			testCompressionChooseFirst(t, suite, egv1a1.ZstdCompressorType)
 		})
+	},
+}
 
+var CompressionTestZstdRemoveAcceptEncodingHeader = suite.ConformanceTest{
+	ShortName:   "Compression-Zstd-Remove-Accept-Encoding-Header",
+	Description: "Test zstd removeAcceptEncodingHeader response compression on HTTPRoute",
+	Manifests:   []string{"testdata/compression-zstd-remove-accept-encoding-header.yaml"},
+	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		t.Run("HTTPRoute with zstd compression removeAcceptEncodingHeader", func(t *testing.T) {
 			testCompressionRemoveAcceptEncodingHeader(t, suite, egv1a1.ZstdCompressorType)
 		})
