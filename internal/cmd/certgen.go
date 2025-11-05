@@ -170,43 +170,43 @@ func patchTopologyInjectorWebhook(ctx context.Context, cli client.Client, cfg *c
 }
 
 // outputCertsForLocal outputs the provided certs to the local directory as files.
-func outputCertsForLocal(localPath string, certs *crypto.Certificates) (err error) {
+func outputCertsForLocal(localPath string, certs *crypto.Certificates) error {
 	egDir := path.Join(localPath, "envoy-gateway")
-	if err = file.WriteDir(certs.CACertificate, egDir, "ca.crt"); err != nil {
+	if err := file.WriteDir(certs.CACertificate, egDir, "ca.crt"); err != nil {
 		return err
 	}
-	if err = file.WriteDir(certs.EnvoyGatewayCertificate, egDir, "tls.crt"); err != nil {
+	if err := file.WriteDir(certs.EnvoyGatewayCertificate, egDir, "tls.crt"); err != nil {
 		return err
 	}
-	if err = file.WriteDir(certs.EnvoyGatewayPrivateKey, egDir, "tls.key"); err != nil {
+	if err := file.WriteDir(certs.EnvoyGatewayPrivateKey, egDir, "tls.key"); err != nil {
 		return err
 	}
 
 	envoyDir := path.Join(localPath, "envoy")
-	if err = file.WriteDir(certs.CACertificate, envoyDir, "ca.crt"); err != nil {
+	if err := file.WriteDir(certs.CACertificate, envoyDir, "ca.crt"); err != nil {
 		return err
 	}
-	if err = file.WriteDir(certs.EnvoyCertificate, envoyDir, "tls.crt"); err != nil {
+	if err := file.WriteDir(certs.EnvoyCertificate, envoyDir, "tls.crt"); err != nil {
 		return err
 	}
-	if err = file.WriteDir(certs.EnvoyPrivateKey, envoyDir, "tls.key"); err != nil {
+	if err := file.WriteDir(certs.EnvoyPrivateKey, envoyDir, "tls.key"); err != nil {
 		return err
 	}
 
 	rlDir := path.Join(localPath, "envoy-rate-limit")
-	if err = file.WriteDir(certs.CACertificate, rlDir, "ca.crt"); err != nil {
+	if err := file.WriteDir(certs.CACertificate, rlDir, "ca.crt"); err != nil {
 		return err
 	}
-	if err = file.WriteDir(certs.EnvoyRateLimitCertificate, rlDir, "tls.crt"); err != nil {
+	if err := file.WriteDir(certs.EnvoyRateLimitCertificate, rlDir, "tls.crt"); err != nil {
 		return err
 	}
-	if err = file.WriteDir(certs.EnvoyRateLimitPrivateKey, rlDir, "tls.key"); err != nil {
-		return err
-	}
-
-	if err = file.WriteDir(certs.OIDCHMACSecret, path.Join(localPath, "envoy-oidc-hmac"), "hmac-secret"); err != nil {
+	if err := file.WriteDir(certs.EnvoyRateLimitPrivateKey, rlDir, "tls.key"); err != nil {
 		return err
 	}
 
-	return
+	if err := file.WriteDir(certs.OIDCHMACSecret, path.Join(localPath, "envoy-oidc-hmac"), "hmac-secret"); err != nil {
+		return err
+	}
+
+	return nil
 }

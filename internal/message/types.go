@@ -89,6 +89,7 @@ type GatewayAPIStatuses struct {
 }
 
 func (s *GatewayAPIStatuses) Close() {
+	s.GatewayClassStatuses.Close()
 	s.GatewayStatuses.Close()
 	s.HTTPRouteStatuses.Close()
 	s.GRPCRouteStatuses.Close()
@@ -120,6 +121,7 @@ type ExtensionStatuses struct {
 
 func (p *PolicyStatuses) Close() {
 	p.ClientTrafficPolicyStatuses.Close()
+	p.BackendTrafficPolicyStatuses.Close()
 	p.SecurityPolicyStatuses.Close()
 	p.EnvoyPatchPolicyStatuses.Close()
 	p.BackendTLSPolicyStatuses.Close()

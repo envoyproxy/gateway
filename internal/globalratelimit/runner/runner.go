@@ -72,7 +72,7 @@ func New(cfg *Config) *Runner {
 }
 
 // Start starts the infrastructure runner
-func (r *Runner) Start(ctx context.Context) (err error) {
+func (r *Runner) Start(ctx context.Context) error {
 	r.Logger = r.Logger.WithName(r.Name()).WithValues("runner", r.Name())
 
 	// Set up the gRPC server and register the xDS handler.
@@ -101,7 +101,7 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 	go r.translateFromSubscription(ctx, c)
 
 	r.Logger.Info("started")
-	return
+	return err
 }
 
 func (r *Runner) serveXdsConfigServer(ctx context.Context) {
@@ -211,7 +211,7 @@ func (r *Runner) addNewSnapshot(ctx context.Context, resource types.XdsResources
 	return nil
 }
 
-func (r *Runner) loadTLSConfig() (tlsConfig *tls.Config, err error) {
+func (r *Runner) loadTLSConfig() (*tls.Config, error) {
 	var certPath, keyPath, caPath string
 
 	switch {
@@ -240,9 +240,9 @@ func (r *Runner) loadTLSConfig() (tlsConfig *tls.Config, err error) {
 		return nil, fmt.Errorf("no valid tls certificates")
 	}
 
-	tlsConfig, err = crypto.LoadTLSConfig(certPath, keyPath, caPath)
+	tlsConfig, err := crypto.LoadTLSConfig(certPath, keyPath, caPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create tls config: %w", err)
 	}
-	return
+	return tlsConfig, err
 }
