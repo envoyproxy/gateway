@@ -45,4 +45,3 @@ extensionManager:
 runtimeFlags:
   enabled:
     - XDSNameSchemeV2
-  
