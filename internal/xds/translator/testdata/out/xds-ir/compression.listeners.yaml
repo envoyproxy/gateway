@@ -39,6 +39,8 @@
               name: envoy.compression.zstd.compressor
               typedConfig:
                 '@type': type.googleapis.com/envoy.extensions.compression.zstd.compressor.v3.Zstd
+            responseDirectionConfig:
+              removeAcceptEncodingHeader: true
         - name: envoy.filters.http.router
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
