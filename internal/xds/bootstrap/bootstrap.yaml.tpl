@@ -129,6 +129,10 @@ static_resources:
                 typed_config:
                   "@type": type.googleapis.com/envoy.extensions.compression.gzip.compressor.v3.Gzip
               {{- end }}
+              {{- if .PrometheusCompressionRemoveAcceptEncodingHeader }}
+              response_direction_config:
+                remove_accept_encoding_header: true
+              {{- end }}
               {{- if eq .PrometheusCompressionLibrary "Brotli"}}
               {{- if .PrometheusCompressionChooseFirst }}
               choose_first: true
@@ -137,6 +141,10 @@ static_resources:
                 name: text_optimized
                 typed_config:
                   "@type": type.googleapis.com/envoy.extensions.compression.brotli.compressor.v3.Brotli
+              {{- end }}
+              {{- if .PrometheusCompressionRemoveAcceptEncodingHeader }}
+              response_direction_config:
+                remove_accept_encoding_header: true
               {{- end }}
               {{- if eq .PrometheusCompressionLibrary "Zstd"}}
               {{- if .PrometheusCompressionChooseFirst }}
