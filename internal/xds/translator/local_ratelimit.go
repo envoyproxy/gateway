@@ -136,7 +136,6 @@ func (*localRateLimit) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, h
 	local := irRoute.Traffic.RateLimit.Local
 
 	rateLimits, descriptors := buildRouteLocalRateLimits(local)
-	routeAction.RateLimits = rateLimits
 
 	filterCfg := route.GetTypedPerFilterConfig()
 	if _, ok := filterCfg[egv1a1.EnvoyFilterLocalRateLimit.String()]; ok {
@@ -177,6 +176,7 @@ func (*localRateLimit) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, h
 		AlwaysConsumeDefaultTokenBucket: &wrapperspb.BoolValue{
 			Value: false,
 		},
+		RateLimits: rateLimits,
 	}
 	if httpListener.Headers != nil && httpListener.Headers.DisableRateLimitHeaders {
 		localRl.EnableXRatelimitHeaders = rlv3.XRateLimitHeadersRFCVersion_OFF

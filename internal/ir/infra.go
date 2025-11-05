@@ -17,7 +17,8 @@ import (
 )
 
 const (
-	DefaultProxyName = "default"
+	DefaultProxyName       = "default"
+	MaxPort          int32 = 65535
 )
 
 // Infra defines managed infrastructure.
@@ -224,10 +225,10 @@ func (p *ProxyInfra) Validate() error {
 				if len(listener.Ports[j].Name) == 0 {
 					errs = append(errs, errors.New("listener name field required"))
 				}
-				if listener.Ports[j].ServicePort < 1 || listener.Ports[j].ServicePort > 65353 {
+				if listener.Ports[j].ServicePort < 1 || listener.Ports[j].ServicePort > MaxPort {
 					errs = append(errs, errors.New("listener service port must be a valid port number"))
 				}
-				if listener.Ports[j].ContainerPort < 1 || listener.Ports[j].ContainerPort > 65353 {
+				if listener.Ports[j].ContainerPort < 1 || listener.Ports[j].ContainerPort > MaxPort {
 					errs = append(errs, errors.New("listener container port must be a valid port number"))
 				}
 			}

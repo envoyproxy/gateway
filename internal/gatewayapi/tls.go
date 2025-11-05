@@ -129,7 +129,7 @@ func validateCrl(data []byte) error {
 		return fmt.Errorf("failed to parse CRL: %w", err)
 	}
 	now := time.Now()
-	if now.After(crl.NextUpdate) {
+	if !crl.NextUpdate.IsZero() && now.After(crl.NextUpdate) {
 		return fmt.Errorf("CRL is expired (next update was due at %v)", crl.NextUpdate)
 	}
 	if now.Before(crl.ThisUpdate) {

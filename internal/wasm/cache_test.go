@@ -803,7 +803,7 @@ func TestWasmCache(t *testing.T) {
 	}
 }
 
-func setupOCIRegistry(t *testing.T, host string) (dockerImageDigest, invalidOCIImageDigest string) {
+func setupOCIRegistry(t *testing.T, host string) (string, string) {
 	// Push *compat* variant docker image (others are well tested in imagefetcher's test and the behavior is consistent).
 	ref := fmt.Sprintf("%s/test/valid/docker:v0.1.0", host)
 	binary := wasmHeader
@@ -845,7 +845,7 @@ func setupOCIRegistry(t *testing.T, host string) (dockerImageDigest, invalidOCII
 
 	// Calculate sum
 	d, _ := img.Digest()
-	dockerImageDigest = d.Hex
+	dockerImageDigest := d.Hex
 
 	// Finally push the invalid image.
 	ref = fmt.Sprintf("%s/test/invalid", host)
@@ -862,14 +862,14 @@ func setupOCIRegistry(t *testing.T, host string) (dockerImageDigest, invalidOCII
 	img2 = mutate.MediaType(img2, types.OCIManifestSchema1)
 
 	d, _ = img2.Digest()
-	invalidOCIImageDigest = d.Hex
+	invalidOCIImageDigest := d.Hex
 
 	// Push image to the registry.
 	err = crane.Push(img2, ref, fetchOpt)
 	if err != nil {
 		t.Fatal(err)
 	}
-	return
+	return dockerImageDigest, invalidOCIImageDigest
 }
 
 func TestWasmCachePolicyChangesUsingHTTP(t *testing.T) {

@@ -43,6 +43,7 @@ const (
 	defaultForwardAccessToken    = false
 	defaultRefreshToken          = true
 	defaultPassThroughAuthHeader = false
+	defaultOIDCHTTPTimeout       = 5 * time.Second
 
 	// nolint: gosec
 	oidcHMACSecretName = "envoy-oidc-hmac"
@@ -55,6 +56,10 @@ func (t *Translator) ProcessSecurityPolicies(securityPolicies []*egv1a1.Security
 	resources *resource.Resources,
 	xdsIR resource.XdsIRMap,
 ) []*egv1a1.SecurityPolicy {
+	// Cache is only reused during one translation across multiple routes and gateways.
+	// The failed fetches will be retried in the next translation when the provider resources are reconciled again.
+	t.oidcDiscoveryCache = newOIDCDiscoveryCache()
+
 	// SecurityPolicies are already sorted by the provider layer
 
 	// First build a map out of the routes and gateways for faster lookup since users might have thousands of routes or more.
@@ -1419,7 +1424,7 @@ func (t *Translator) buildOIDCProvider(policy *egv1a1.SecurityPolicy, resources 
 	// EG assumes that the issuer url uses the same protocol and CA as the token endpoint.
 	// If we need to support different protocols or CAs, we need to add more fields to the OIDCProvider CRD.
 	if provider.TokenEndpoint == nil || provider.AuthorizationEndpoint == nil {
-		discoveredConfig, err := fetchEndpointsFromIssuer(provider.Issuer, providerTLS)
+		discoveredConfig, err := t.fetchEndpointsFromIssuer(provider.Issuer, providerTLS)
 		if err != nil {
 			return nil, err
 		}
@@ -1507,7 +1512,25 @@ func (o *OpenIDConfig) validate() error {
 	return nil
 }
 
-func fetchEndpointsFromIssuer(issuerURL string, providerTLS *ir.TLSUpstreamConfig) (*OpenIDConfig, error) {
+func (t *Translator) fetchEndpointsFromIssuer(issuerURL string, providerTLS *ir.TLSUpstreamConfig) (*OpenIDConfig, error) {
+	if config, cachedErr, ok := t.oidcDiscoveryCache.Get(issuerURL); ok {
+		if cachedErr != nil {
+			return nil, cachedErr
+		}
+		return config, nil
+	}
+
+	config, err := discoverEndpointsFromIssuer(issuerURL, providerTLS)
+	if err != nil {
+		t.oidcDiscoveryCache.Set(issuerURL, nil, err)
+		return nil, err
+	}
+
+	t.oidcDiscoveryCache.Set(issuerURL, config, nil)
+	return config, nil
+}
+
+func discoverEndpointsFromIssuer(issuerURL string, providerTLS *ir.TLSUpstreamConfig) (*OpenIDConfig, error) {
 	var (
 		tlsConfig *tls.Config
 		err       error
@@ -1519,7 +1542,7 @@ func fetchEndpointsFromIssuer(issuerURL string, providerTLS *ir.TLSUpstreamConfi
 		}
 	}
 
-	client := &http.Client{}
+	client := &http.Client{Timeout: defaultOIDCHTTPTimeout}
 	if tlsConfig != nil {
 		client.Transport = &http.Transport{
 			TLSClientConfig: tlsConfig,
@@ -1562,6 +1585,47 @@ func fetchEndpointsFromIssuer(issuerURL string, providerTLS *ir.TLSUpstreamConfi
 	}
 
 	return &config, nil
+}
+
+// oidcDiscoveryCache is a cache for auto-discovered OIDC configurations from the issuer's well-known URL.
+// The cache is only used within the current translation, so no need to lock it or expire entries.
+type oidcDiscoveryCache struct {
+	entries map[string]cachedOIDCEntry
+}
+
+type cachedOIDCEntry struct {
+	config *OpenIDConfig
+	err    error
+}
+
+func newOIDCDiscoveryCache() *oidcDiscoveryCache {
+	return &oidcDiscoveryCache{
+		entries: make(map[string]cachedOIDCEntry),
+	}
+}
+
+func (c *oidcDiscoveryCache) Get(issuer string) (*OpenIDConfig, error, bool) {
+	if c == nil {
+		return nil, nil, false
+	}
+
+	entry, ok := c.entries[issuer]
+	if !ok {
+		return nil, nil, false
+	}
+
+	return entry.config, entry.err, true
+}
+
+func (c *oidcDiscoveryCache) Set(issuer string, cfg *OpenIDConfig, err error) {
+	if c == nil {
+		return
+	}
+
+	c.entries[issuer] = cachedOIDCEntry{
+		config: cfg,
+		err:    err,
+	}
 }
 
 func retryable(code int) bool {

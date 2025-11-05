@@ -9,7 +9,10 @@ backendTrafficPolicies:
       global:
         rules:
         - clientSelectors:
-          - sourceCIDR:
+          - path:
+              type: PathPrefix
+              value: /
+            sourceCIDR:
               type: Distinct
               value: 192.168.0.0/16
           cost:
@@ -101,6 +104,9 @@ backendTrafficPolicies:
             - invert: true
               name: x-org-id
               value: admin
+            path:
+              type: PathPrefix
+              value: /user
           limit:
             requests: 10
             unit: Hour
@@ -490,6 +496,10 @@ xdsIR:
                   requests: 10
                   unit: Hour
                 name: envoy-gateway/policy-for-gateway/rule/0
+                pathMatch:
+                  distinct: false
+                  name: ""
+                  safeRegex: ^/user(/.*|\?.*|#.*|;.*|$)
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
@@ -583,6 +593,10 @@ xdsIR:
                   requests: 20
                   unit: Hour
                 name: default/policy-for-route/rule/0
+                pathMatch:
+                  distinct: false
+                  name: ""
+                  prefix: /
                 requestCost:
                   number: 1
                 responseCost:

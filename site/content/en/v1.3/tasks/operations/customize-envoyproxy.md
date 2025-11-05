@@ -513,7 +513,7 @@ apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
   name: custom-proxy-config
-  namespace: default 
+  namespace: default
 spec:
   bootstrap:
     type: Replace
@@ -688,7 +688,7 @@ apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
   name: custom-proxy-config
-  namespace: default 
+  namespace: default
 spec:
   bootstrap:
     type: JSONPatch
@@ -742,7 +742,7 @@ apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
   name: custom-proxy-config
-  namespace: default 
+  namespace: default
 spec:
   provider:
     type: Kubernetes
@@ -770,7 +770,7 @@ apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
   name: custom-proxy-config
-  namespace: default 
+  namespace: default
 spec:
   provider:
     type: Kubernetes
@@ -806,10 +806,10 @@ apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
   name: custom-proxy-config
-  namespace: default 
+  namespace: default
 spec:
   extraArgs:
-    - --disable-extensions envoy.access_loggers/envoy.access_loggers.wasm 
+    - --disable-extensions envoy.access_loggers/envoy.access_loggers.wasm
 EOF
 ```
 
@@ -823,10 +823,10 @@ apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
   name: custom-proxy-config
-  namespace: default 
+  namespace: default
 spec:
   extraArgs:
-    - --disable-extensions envoy.access_loggers/envoy.access_loggers.wasm 
+    - --disable-extensions envoy.access_loggers/envoy.access_loggers.wasm
 ```
 
 {{% /tab %}}
@@ -849,7 +849,7 @@ apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
   name: eg
-  namespace: default 
+  namespace: default
 spec:
   provider:
     type: Kubernetes
@@ -981,7 +981,7 @@ By default, Envoy Gateway applies the following filters in the order shown:
 * envoy.filters.http.fault
 * envoy.filters.http.cors
 * envoy.filters.http.ext_authz
-* envoy.filters.http.basic_authn
+* envoy.filters.http.basic_auth
 * envoy.filters.http.oauth2
 * envoy.filters.http.jwt_authn
 * envoy.filters.http.ext_proc
@@ -991,7 +991,7 @@ By default, Envoy Gateway applies the following filters in the order shown:
 * envoy.filters.http.ratelimit
 * envoy.filters.http.router
 
-The default order in which these filters are applied is opinionated and may not suit all use cases. 
+The default order in which these filters are applied is opinionated and may not suit all use cases.
 To address this, Envoy Gateway allows you to adjust the execution order of these filters with the `filterOrder` field in the [EnvoyProxy][] resource.
 
 `filterOrder` is a list of customized filter order configurations. Each configuration can specify a filter
@@ -1000,7 +1000,7 @@ If a filter occurs in multiple configurations, the final order is the result of 
 To avoid conflicts, it is recommended to only specify one configuration per filter.
 
 For example, the following configuration moves the `envoy.filters.http.wasm` filter before the `envoy.filters.http.jwt_authn`
-filter and the `envoy.filters.http.cors` filter after the `envoy.filters.http.basic_authn` filter:
+filter and the `envoy.filters.http.cors` filter after the `envoy.filters.http.basic_auth` filter:
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
@@ -1017,7 +1017,7 @@ spec:
     - name: envoy.filters.http.wasm
       before: envoy.filters.http.jwt_authn
     - name: envoy.filters.http.cors
-      after: envoy.filters.http.basic_authn
+      after: envoy.filters.http.basic_auth
 EOF
 ```
 
@@ -1037,7 +1037,7 @@ spec:
     - name: envoy.filters.http.wasm
       before: envoy.filters.http.jwt_authn
     - name: envoy.filters.http.cors
-      after: envoy.filters.http.basic_authn
+      after: envoy.filters.http.basic_auth
 ```
 
 {{% /tab %}}
