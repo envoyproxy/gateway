@@ -96,10 +96,10 @@ func TestNewOfflineGatewayAPIController(t *testing.T) {
 		assert.True(t, reconciler.client.Scheme().Recognizes(schema.GroupVersionKind{Group: extBackendGVK.Group, Version: extBackendGVK.Version, Kind: extBackendGVK.Kind}))
 
 		// Verify the custom resource can be loaded from YAML
-		inFile := "./testdata/custom-resource.yaml"
+		inFile := "testdata/custom-resource.yaml"
 		data, err := os.ReadFile(inFile)
 		require.NoError(t, err)
-		resources, err := resource.LoadResourcesFromYAMLBytes(cfg, data, true)
+		resources, err := resource.LoadResourcesFromYAMLBytes(data, true, cfg.EnvoyGateway)
 		require.NoError(t, err)
 		// Expect 1 extension server policy and 2 extension-managed resources (route filter and backend)
 		require.Len(t, resources.ExtensionServerPolicies, 1)

@@ -60,7 +60,7 @@ func TestLoadAllSupportedResourcesFromYAMLBytes(t *testing.T) {
 			t.Parallel() // this's used for race detection
 			data, err := os.ReadFile(inFile)
 			require.NoError(t, err)
-			got, err := LoadResourcesFromYAMLBytes(nil, data, true)
+			got, err := LoadResourcesFromYAMLBytes(data, true, nil)
 			require.NoError(t, err)
 
 			outputFile := strings.Replace(inFile, ".in.yaml", ".out.yaml", 1)

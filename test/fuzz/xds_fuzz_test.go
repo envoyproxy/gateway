@@ -111,7 +111,7 @@ spec:
 	f.Add([]byte(baseYAML + udpRoute + backendYAML))
 
 	f.Fuzz(func(t *testing.T, b []byte) {
-		rs, err := resource.LoadResourcesFromYAMLBytes(nil, b, true)
+		rs, err := resource.LoadResourcesFromYAMLBytes(b, true, nil)
 		if err != nil {
 			return
 		}

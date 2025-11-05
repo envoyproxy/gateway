@@ -11,16 +11,16 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/envoyproxy/gateway/internal/envoygateway/config"
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 )
 
 // loadFromFilesAndDirs loads resources from specific files and directories.
-func loadFromFilesAndDirs(srv *config.Server, files, dirs []string) ([]*resource.Resources, error) {
+func loadFromFilesAndDirs(files, dirs []string, envoyGateway *egv1a1.EnvoyGateway) ([]*resource.Resources, error) {
 	rs := make([]*resource.Resources, 0, len(files)+len(dirs))
 
 	for _, file := range files {
-		r, err := loadFromFile(file, srv)
+		r, err := loadFromFile(file, envoyGateway)
 		if err != nil {
 			return nil, fmt.Errorf("failed to load resources from file %s: %w", file, err)
 		}
@@ -28,7 +28,7 @@ func loadFromFilesAndDirs(srv *config.Server, files, dirs []string) ([]*resource
 	}
 
 	for _, dir := range dirs {
-		r, err := loadFromDir(dir, srv)
+		r, err := loadFromDir(dir, envoyGateway)
 		if err != nil {
 			return nil, err
 		}
@@ -39,7 +39,7 @@ func loadFromFilesAndDirs(srv *config.Server, files, dirs []string) ([]*resource
 }
 
 // loadFromFile loads resources from a specific file.
-func loadFromFile(path string, srv *config.Server) (*resource.Resources, error) {
+func loadFromFile(path string, envoyGateway *egv1a1.EnvoyGateway) (*resource.Resources, error) {
 	if _, err := os.Stat(path); err != nil {
 		if os.IsNotExist(err) {
 			return nil, fmt.Errorf("file %s is not exist", path)
@@ -51,11 +51,11 @@ func loadFromFile(path string, srv *config.Server) (*resource.Resources, error) 
 		return nil, err
 	}
 
-	return resource.LoadResourcesFromYAMLBytes(srv, bytes, false)
+	return resource.LoadResourcesFromYAMLBytes(bytes, false, envoyGateway)
 }
 
 // loadFromDir loads resources from all the files under a specific directory excluding subdirectories.
-func loadFromDir(path string, srv *config.Server) ([]*resource.Resources, error) {
+func loadFromDir(path string, envoyGateway *egv1a1.EnvoyGateway) ([]*resource.Resources, error) {
 	entries, err := os.ReadDir(path)
 	if err != nil {
 		return nil, err
@@ -68,7 +68,7 @@ func loadFromDir(path string, srv *config.Server) ([]*resource.Resources, error)
 			continue
 		}
 		full := filepath.Join(path, entry.Name())
-		r, err := loadFromFile(full, srv)
+		r, err := loadFromFile(full, envoyGateway)
 		if err != nil {
 			return nil, fmt.Errorf("failed to load resources from file %s: %w", full, err)
 		}
