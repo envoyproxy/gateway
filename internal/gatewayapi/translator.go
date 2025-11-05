@@ -110,6 +110,9 @@ type Translator struct {
 	// and reuses the specified value.
 	ListenerPortShiftDisabled bool
 
+	// oidcDiscoveryCache is the cache for OIDC configurations discovered from issuer's well-known URL.
+	oidcDiscoveryCache *oidcDiscoveryCache
+
 	// Logger is the logger used by the translator.
 	Logger logging.Logger
 }
@@ -344,7 +347,7 @@ func (t *Translator) GetRelevantGateways(resources *resource.Resources) (
 			status.SetGatewayClassAccepted(resources.GatewayClass,
 				false, string(gwapiv1.GatewayClassReasonInvalidParameters),
 				fmt.Sprintf("%s: %v", status.MsgGatewayClassInvalidParams, err))
-			return
+			return acceptedGateways, failedGateways
 		}
 
 		// TODO: remove this nil check after we update all the testdata.
@@ -386,6 +389,7 @@ func (t *Translator) GetRelevantGateways(resources *resource.Resources) (
 		gCtx := &GatewayContext{
 			Gateway: gateway,
 		}
+		gCtx.attachEnvoyProxy(resources, envoyproxyMap)
 
 		// Gateways that are not accepted by the controller because they reference an invalid EnvoyProxy.
 		if status.GatewayNotAccepted(gCtx.Gateway) {
@@ -394,7 +398,6 @@ func (t *Translator) GetRelevantGateways(resources *resource.Resources) (
 			continue
 		}
 
-		gCtx.ResetListeners(resources, envoyproxyMap)
 		if ep := gCtx.envoyProxy; ep != nil {
 			key := utils.NamespacedName(ep)
 			if err, exits := envoyproxyValidationErrorMap[key]; exits {
@@ -406,9 +409,11 @@ func (t *Translator) GetRelevantGateways(resources *resource.Resources) (
 			}
 		}
 
+		// we cannot do this early, otherwise there's an error when updating status.
+		gCtx.ResetListeners(resources, envoyproxyMap)
 		acceptedGateways = append(acceptedGateways, gCtx)
 	}
-	return
+	return acceptedGateways, failedGateways
 }
 
 func validateEnvoyProxy(ep *egv1a1.EnvoyProxy) error {
