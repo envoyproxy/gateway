@@ -178,10 +178,8 @@ func validateHostname(hostname, typeName string, allowLocalhost bool) *status.Ro
 			status.RouteReasonInvalidAddress,
 		)
 	}
-	if allowLocalhost && hostname == net.DefaultLocalAddress {
-		return nil
-	}
-	if len(strings.Split(hostname, ".")) < 2 {
+	isLocalHostname := allowLocalhost && hostname == net.DefaultLocalAddress
+	if !isLocalHostname && len(strings.Split(hostname, ".")) < 2 {
 		return status.NewRouteStatusError(
 			fmt.Errorf("hostname %s should be a domain with at least two segments separated by dots", hostname),
 			status.RouteReasonInvalidAddress,
