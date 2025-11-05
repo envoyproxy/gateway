@@ -19,6 +19,10 @@ http:
           port: 50000
         name: "response-header-route-dest/backend/0"
     addResponseHeaders:
+    - name: "some-header-multi-value"
+      value:
+      - "some-value,some-additional-value"
+      append: false
     - name: "some-header"
       value:
       - "some-value"
