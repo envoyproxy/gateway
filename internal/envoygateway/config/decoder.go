@@ -15,12 +15,10 @@ import (
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
 
-var (
-	// configScheme is a dedicated scheme for decoding EnvoyGateway configuration.
-	// EnvoyGateway is a configuration type loaded from files/ConfigMaps, not a CRD,
-	// so it should not be added to the main CRD scheme.
-	configScheme = runtime.NewScheme()
-)
+// configScheme is a dedicated scheme for decoding EnvoyGateway configuration.
+// EnvoyGateway is a configuration type loaded from files/ConfigMaps, not a CRD,
+// so it should not be added to the main CRD scheme.
+var configScheme = runtime.NewScheme()
 
 func init() {
 	// Register only the EnvoyGateway configuration type

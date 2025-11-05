@@ -78,6 +78,7 @@ func verifyCustomResponse(t *testing.T, timeoutConfig *config.TimeoutConfig, gwA
 ) {
 	if timeoutConfig == nil {
 		t.Fatalf("timeoutConfig cannot be nil")
+		return
 	}
 
 	reqURL := url.URL{

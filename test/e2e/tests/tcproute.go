@@ -135,6 +135,7 @@ func WaitForGatewayAddress(t *testing.T, client client.Client, timeoutConfig *co
 
 	if timeoutConfig == nil {
 		t.Fatalf("timeoutConfig cannot be nil")
+		return "", nil
 	}
 
 	var ipAddr, port string
@@ -179,6 +180,7 @@ func TCPRouteMustHaveParents(t *testing.T, client client.Client, timeoutConfig *
 
 	if timeoutConfig == nil {
 		t.Fatalf("timeoutConfig cannot be nil")
+		return
 	}
 
 	var actual []gwapiv1.RouteParentStatus
