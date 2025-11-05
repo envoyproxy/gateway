@@ -357,11 +357,21 @@ type HTTP1Settings struct {
 
 // HTTP10Settings provides HTTP/1.0 configuration on the listener.
 type HTTP10Settings struct {
-	// UseDefaultHost defines if the HTTP/1.0 request is missing the Host header,
-	// then the hostname associated with the listener should be injected into the
-	// request.
-	// If this is not set and an HTTP/1.0 request arrives without a host, then
-	// it will be rejected.
+	// UseDefaultHost specifies whether a default Host header should be injected
+	// into HTTP/1.0 requests that do not include one.
+	//
+	// When set to true, Envoy Gateway injects the hostname associated with the
+	// listener or route into the request, in the following order:
+	//
+	//   1. If the targeted listener has a non-wildcard hostname, use that hostname.
+	//   2. If there is exactly one HTTPRoute with a non-wildcard hostname under
+	//      the targeted listener, use that hostname.
+	//
+	// Note: If this field is set to true but neither the listener nor the route
+	// has a non-wildcard hostname, or if the listener lacks a non-wildcard hostname
+	// and multiple routes define different hostnames, the associated
+	// ClientTrafficPolicy will be considered invalid.
+	//
 	// +optional
 	UseDefaultHost *bool `json:"useDefaultHost,omitempty"`
 }
