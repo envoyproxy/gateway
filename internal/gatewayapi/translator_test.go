@@ -54,6 +54,7 @@ func TestTranslate(t *testing.T) {
 		EnvoyPatchPolicyEnabled bool
 		BackendEnabled          bool
 		GatewayNamespaceMode    bool
+		RunningOnHost           bool
 	}{
 		{
 			name:                    "envoypatchpolicy-invalid-feature-disabled",
@@ -66,6 +67,16 @@ func TestTranslate(t *testing.T) {
 		{
 			name:                 "gateway-namespace-mode-infra-httproute",
 			GatewayNamespaceMode: true,
+		},
+		{
+			name:           "backend-with-localhost-host-infra",
+			BackendEnabled: true,
+			RunningOnHost:  true,
+		},
+		{
+			name:           "httproute-attaching-to-listener-with-backend-backendref-host-infra",
+			BackendEnabled: true,
+			RunningOnHost:  true,
 		},
 	}
 
@@ -89,12 +100,14 @@ func TestTranslate(t *testing.T) {
 			envoyPatchPolicyEnabled := true
 			backendEnabled := true
 			gatewayNamespaceMode := false
+			runningOnHost := false
 
 			for _, config := range testCasesConfig {
 				if config.name == strings.Split(filepath.Base(inputFile), ".")[0] {
 					envoyPatchPolicyEnabled = config.EnvoyPatchPolicyEnabled
 					backendEnabled = config.BackendEnabled
 					gatewayNamespaceMode = config.GatewayNamespaceMode
+					runningOnHost = config.RunningOnHost
 				}
 			}
 
@@ -108,6 +121,7 @@ func TestTranslate(t *testing.T) {
 				MergeGateways:           IsMergeGatewaysEnabled(resources),
 				GatewayNamespaceMode:    gatewayNamespaceMode,
 				WasmCache:               &mockWasmCache{},
+				RunningOnHost:           runningOnHost,
 				Logger:                  logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo),
 			}
 
@@ -946,10 +960,10 @@ func TestIsValidCrossNamespaceRef(t *testing.T) {
 
 func TestServicePortToContainerPort(t *testing.T) {
 	testCases := []struct {
-		servicePort               int32
-		containerPort             int32
-		envoyProxy                *egv1a1.EnvoyProxy
-		listenerPortShiftDisabled bool
+		servicePort   int32
+		containerPort int32
+		envoyProxy    *egv1a1.EnvoyProxy
+		runningOnHost bool
 	}{
 		{
 			servicePort:   99,
@@ -1011,13 +1025,13 @@ func TestServicePortToContainerPort(t *testing.T) {
 			},
 		},
 		{
-			servicePort:               99,
-			containerPort:             99,
-			listenerPortShiftDisabled: true,
+			servicePort:   99,
+			containerPort: 99,
+			runningOnHost: true,
 		},
 	}
 	for _, tc := range testCases {
-		translator := &Translator{ListenerPortShiftDisabled: tc.listenerPortShiftDisabled}
+		translator := &Translator{RunningOnHost: tc.runningOnHost}
 		got := translator.servicePortToContainerPort(tc.servicePort, tc.envoyProxy)
 		assert.Equal(t, tc.containerPort, got)
 	}
