@@ -1669,6 +1669,25 @@ EnvoyProxy is the schema for the envoyproxies API.
 | `status` | _[EnvoyProxyStatus](#envoyproxystatus)_ |  true  |  | EnvoyProxyStatus defines the actual state of EnvoyProxy. |
 
 
+#### EnvoyProxyAncestorStatus
+
+
+
+
+
+_Appears in:_
+- [EnvoyProxyStatus](#envoyproxystatus)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `ancestorRef` | _[ParentReference](#parentreference)_ |  true  |  | AncestorRef corresponds a GatewayClass or Gateway use this EnvoyProxy with ParametersReference. |
+| `conditions` | _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#condition-v1-meta) array_ |  true  |  | Conditions describes the status of the Policy with respect to the given Ancestor. |
+
+
+
+
+
+
 #### EnvoyProxyHostProvider
 
 
@@ -1766,12 +1785,14 @@ _Appears in:_
 
 
 
-EnvoyProxyStatus defines the observed state of EnvoyProxy. This type is not implemented
-until https://github.com/envoyproxy/gateway/issues/1007 is fixed.
+EnvoyProxyStatus defines the observed state of EnvoyProxy.
 
 _Appears in:_
 - [EnvoyProxy](#envoyproxy)
 
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `ancestors` | _[EnvoyProxyAncestorStatus](#envoyproxyancestorstatus) array_ |  false  |  | Ancestors represent the status information for all the GatewayClass or Gateway<br />reference this EnvoyProxy with ParametersReference. |
 
 
 #### EnvoyResourceType
