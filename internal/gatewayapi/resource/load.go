@@ -62,6 +62,30 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool, envoy
 	defaulter := GetGatewaySchemaDefaulter()
 	validator := GetDefaultValidator()
 
+	// Build a map of extension-managed resources (by Group/Version/Kind)
+	type extCategory int
+	const (
+		extNone extCategory = iota
+		extFilter
+		extPolicy
+		extBackend
+	)
+	extGVKMap := map[string]extCategory{}
+	if envoyGateway != nil && envoyGateway.ExtensionManager != nil {
+		for _, gvk := range envoyGateway.ExtensionManager.Resources {
+			key := fmt.Sprintf("%s/%s/%s", gvk.Group, gvk.Version, gvk.Kind)
+			extGVKMap[key] = extFilter
+		}
+		for _, gvk := range envoyGateway.ExtensionManager.PolicyResources {
+			key := fmt.Sprintf("%s/%s/%s", gvk.Group, gvk.Version, gvk.Kind)
+			extGVKMap[key] = extPolicy
+		}
+		for _, gvk := range envoyGateway.ExtensionManager.BackendResources {
+			key := fmt.Sprintf("%s/%s/%s", gvk.Group, gvk.Version, gvk.Kind)
+			extGVKMap[key] = extBackend
+		}
+	}
+
 	if err := IterYAMLBytes(input, func(yamlByte []byte) error {
 		var obj map[string]interface{}
 		err := yaml.Unmarshal(yamlByte, &obj)
@@ -117,7 +141,21 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool, envoy
 		data := kobjVal.FieldByName("Data")
 		stringData := kobjVal.FieldByName("StringData")
 
-	LeaveSwitch:
+		// Check if this resource is managed by the ExtensionManager and if so, classify it
+		if len(extGVKMap) > 0 {
+			key := fmt.Sprintf("%s/%s/%s", gvk.Group, gvk.Version, gvk.Kind)
+			if category, ok := extGVKMap[key]; ok {
+				un.SetNamespace(namespace)
+				switch category {
+				case extFilter, extBackend:
+					resources.ExtensionRefFilters = append(resources.ExtensionRefFilters, *un)
+				case extPolicy:
+					resources.ExtensionServerPolicies = append(resources.ExtensionServerPolicies, *un)
+				}
+				return nil
+			}
+		}
+
 		switch gvk.Kind {
 		case KindEnvoyProxy:
 			typedSpec := spec.Interface()
@@ -425,36 +463,6 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool, envoy
 				Spec: typedSpec.(gwapiv1b1.ReferenceGrantSpec),
 			}
 			resources.ReferenceGrants = append(resources.ReferenceGrants, referenceGrant)
-		default:
-			// unknown kind most probably means it's a custom resource from the extension manager
-			// we need to check whether this custom resource is defined as a route filter resource,
-			// a policy resource or a backend resource
-			if envoyGateway != nil && envoyGateway.ExtensionManager != nil {
-				// check resources (route filters)
-				for _, gvk := range envoyGateway.ExtensionManager.Resources {
-					if gvk.Kind == un.GetKind() && gvk.Version == un.GroupVersionKind().Version && gvk.Group == un.GroupVersionKind().Group {
-						un.SetNamespace(namespace)
-						resources.ExtensionRefFilters = append(resources.ExtensionRefFilters, *un)
-						break LeaveSwitch
-					}
-				}
-				// check policyResources
-				for _, gvk := range envoyGateway.ExtensionManager.PolicyResources {
-					if gvk.Kind == un.GetKind() && gvk.Version == un.GroupVersionKind().Version && gvk.Group == un.GroupVersionKind().Group {
-						un.SetNamespace(namespace)
-						resources.ExtensionServerPolicies = append(resources.ExtensionServerPolicies, *un)
-						break LeaveSwitch
-					}
-				}
-				// check backendResources
-				for _, gvk := range envoyGateway.ExtensionManager.BackendResources {
-					if gvk.Kind == un.GetKind() && gvk.Version == un.GroupVersionKind().Version && gvk.Group == un.GroupVersionKind().Group {
-						un.SetNamespace(namespace)
-						resources.ExtensionRefFilters = append(resources.ExtensionRefFilters, *un)
-						break LeaveSwitch
-					}
-				}
-			}
 		}
 
 		return nil
