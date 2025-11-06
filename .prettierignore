@@ -18,16 +18,14 @@ examples/extension-server/charts/extension-server
 site/node_modules/
 .vscode/
 
-# test files and workflow files
-**/testdata/**
-.github/workflows/*
-
-# prevent format failures
-**/examples/**
-**/.examples/**
-**/test/**
-**/.test/**
-tools/github_actions
-
 # exclude release-notes
 release-notes/*
+
+# testdata directories 
+**/testdata/**
+
+# GitHub workflows 
+.github/workflows/*
+
+# tools/github-actions 
+tools/github-actions/**
