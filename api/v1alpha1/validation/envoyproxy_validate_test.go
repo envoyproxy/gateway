@@ -995,7 +995,7 @@ func TestValidateClusterStatName(t *testing.T) {
 			if tc.expected {
 				require.Empty(t, errs)
 			} else {
-				require.NotEmpty(t, len(errs))
+				require.NotEmpty(t, errs)
 			}
 		})
 	}
