@@ -1695,9 +1695,28 @@ EnvoyProxy is the schema for the envoyproxies API.
 | ---   | ---  | ---      | ---     | ---         |
 | `apiVersion` | _string_ | |`gateway.envoyproxy.io/v1alpha1`
 | `kind` | _string_ | |`EnvoyProxy`
-| `metadata` | _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#objectmeta-v1-meta)_ |  true  |  | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `metadata` | _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#objectmeta-v1-meta)_ |  false  |  | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` | _[EnvoyProxySpec](#envoyproxyspec)_ |  true  |  | EnvoyProxySpec defines the desired state of EnvoyProxy. |
-| `status` | _[EnvoyProxyStatus](#envoyproxystatus)_ |  true  |  | EnvoyProxyStatus defines the actual state of EnvoyProxy. |
+| `status` | _[EnvoyProxyStatus](#envoyproxystatus)_ |  false  |  | EnvoyProxyStatus defines the actual state of EnvoyProxy. |
+
+
+#### EnvoyProxyAncestorStatus
+
+
+
+
+
+_Appears in:_
+- [EnvoyProxyStatus](#envoyproxystatus)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `ancestorRef` | _[ParentReference](#parentreference)_ |  true  |  | AncestorRef corresponds a GatewayClass or Gateway use this EnvoyProxy with ParametersReference. |
+| `conditions` | _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#condition-v1-meta) array_ |  true  |  | Conditions describes the status of the Policy with respect to the given Ancestor. |
+
+
+
+
 
 
 #### EnvoyProxyHostProvider
@@ -1797,12 +1816,14 @@ _Appears in:_
 
 
 
-EnvoyProxyStatus defines the observed state of EnvoyProxy. This type is not implemented
-until https://github.com/envoyproxy/gateway/issues/1007 is fixed.
+EnvoyProxyStatus defines the observed state of EnvoyProxy.
 
 _Appears in:_
 - [EnvoyProxy](#envoyproxy)
 
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `ancestors` | _[EnvoyProxyAncestorStatus](#envoyproxyancestorstatus) array_ |  false  |  | Ancestors represent the status information for all the GatewayClass or Gateway<br />reference this EnvoyProxy with ParametersReference. |
 
 
 #### EnvoyResourceType
