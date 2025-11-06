@@ -35,10 +35,10 @@
     "update:pkgs": "npx npm-check-updates -u"
   },
   "devDependencies": {
-    "@fortawesome/fontawesome-free": "^7.0.0",
+    "@fortawesome/fontawesome-free": "^7.1.0",
     "autoprefixer": "^10.4.20",
     "cross-env": "^10.0.0",
-    "hugo-extended": "0.151.2",
+    "hugo-extended": "0.152.2",
     "postcss-cli": "^11.0.0",
     "rtlcss": "^4.3.0"
   },
