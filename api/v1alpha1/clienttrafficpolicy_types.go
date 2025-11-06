@@ -367,10 +367,8 @@ type HTTP10Settings struct {
 	//   2. If there is exactly one HTTPRoute with a non-wildcard hostname under
 	//      the targeted listener, use that hostname.
 	//
-	// Note: If this field is set to true but neither the listener nor the route
-	// has a non-wildcard hostname, or if the listener lacks a non-wildcard hostname
-	// and multiple routes define different hostnames, the associated
-	// ClientTrafficPolicy will be considered invalid.
+	//  Note: Setting this field to true without a non-wildcard hostname makes the
+	// ClientTrafficPolicy invalid.
 	//
 	// +optional
 	UseDefaultHost *bool `json:"useDefaultHost,omitempty"`
