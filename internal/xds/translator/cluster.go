@@ -204,7 +204,8 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 	}
 
 	// Set Proxy Protocol
-	if args.proxyProtocol != nil {
+	proxyProtocolEnabled := args.proxyProtocol != nil
+	if proxyProtocolEnabled {
 		cluster.TransportSocket = buildProxyProtocolSocket(args.proxyProtocol, args.tSocket)
 	} else if args.tSocket != nil {
 		cluster.TransportSocket = args.tSocket
@@ -242,7 +243,7 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 				// TODO: Log something here
 				return nil, err
 			}
-			if args.proxyProtocol != nil {
+			if proxyProtocolEnabled {
 				socket = buildProxyProtocolSocket(args.proxyProtocol, socket)
 			}
 			matchName := fmt.Sprintf("%s/tls/%d", args.name, i)
@@ -265,7 +266,7 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 	}
 
 	// TransportSocket is required for auto HTTP config
-	if requiresAutoHTTPConfig && cluster.TransportSocket == nil {
+	if requiresAutoHTTPConfig && cluster.TransportSocket == nil && !proxyProtocolEnabled {
 		// we need a dummy transport socket to pass the validation
 		cluster.TransportSocket = dummyTransportSocket
 	}
@@ -275,7 +276,8 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 	if err != nil {
 		return nil, err
 	}
-	if epo != nil {
+	// Set TypedExtensionProtocolOptions if not using Proxy Protocol
+	if !proxyProtocolEnabled && epo != nil {
 		cluster.TypedExtensionProtocolOptions = epo
 	}
 
