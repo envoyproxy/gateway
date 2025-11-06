@@ -27,7 +27,7 @@ site/node_modules/
 **/.examples/**
 **/test/**
 **/.test/**
-tools/linter/golangci-lint/.golangci.yml
+tools/github_actions
 
 # exclude release-notes
 release-notes/*
