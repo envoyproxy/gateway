@@ -8,7 +8,27 @@ GITHUB_ACTION ?=
 LINT_BUILD_TAGS ?= e2e,celvalidation,conformance,experimental,benchmark,resilience,integration
 
 .PHONY: lint
-lint: ## Run all linter of code sources, including golint, yamllint, whitenoise lint and codespell.
+lint: ## Run all linter of code sources, including golint, whitenoise lint and codespell.
+
+# Format YAML files with go-prettier for consistent style.
+.PHONY: format-yaml
+format-yaml: ## Format YAML files with go-prettier
+	@$(LOG_TARGET)
+	@files="$$(git ls-files :*.yml :*.yaml)"; \
+	 if [ -n "$$files" ]; then \
+	   prettier -w $$files; \
+	 fi
+
+.PHONY: check-format-yaml
+check-format-yaml: ## Check YAML formatting with go-prettier (no changes)
+	@$(LOG_TARGET)
+	@files="$$(git ls-files :*.yml :*.yaml)"; \
+	 if [ -n "$$files" ]; then \
+	   prettier --check $$files; \
+	 fi
+
+# Run YAML format check as part of gen-check to integrate with existing CI
+gen-check: check-format-yaml
 
 # lint-deps is run separately in CI to separate the tooling install logs from the actual output logs generated
 # by the lint tooling.
@@ -22,12 +42,7 @@ lint.golint:
 	@$(LOG_TARGET)
 	$(GO_TOOL) golangci-lint run $(GOLANGCI_LINT_FLAGS) --build-tags=$(LINT_BUILD_TAGS) --config=tools/linter/golangci-lint/.golangci.yml
 
-.PHONY: lint.yamllint
-lint: lint.yamllint
-lint-deps: $(tools/yamllint)
-lint.yamllint: $(tools/yamllint)
-	@$(LOG_TARGET)
-	$(tools/yamllint) --config-file=tools/linter/yamllint/.yamllint $$(git ls-files :*.yml :*.yaml | xargs -L1 dirname | sort -u)
+
 
 CODESPELL_FLAGS ?= $(if $(GITHUB_ACTION),--disable-colors)
 .PHONY: lint.codespell

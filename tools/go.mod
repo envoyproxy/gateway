@@ -9,6 +9,7 @@ tool (
 	github.com/google/go-jsonnet/cmd/jsonnet
 	github.com/jsonnet-bundler/jsonnet-bundler/cmd/jb
 	github.com/norwoodj/helm-docs/cmd/helm-docs
+	github.com/wasilibs/go-prettier/v3/cmd/prettier
 	golang.org/x/perf/cmd/benchstat
 	google.golang.org/grpc/cmd/protoc-gen-go-grpc
 	google.golang.org/protobuf/cmd/protoc-gen-go

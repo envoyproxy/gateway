@@ -1,0 +1,31 @@
+# Ignore templated/generated or external directories for YAML formatting
+charts/gateway-helm/
+charts/gateway-addons-helm/
+charts/gateway-crds-helm/
+
+# Generated install bundle
+bin/install.yaml
+
+# Helm test charts
+test/helm/gateway-helm/
+test/helm/gateway-addons-helm/
+test/helm/gateway-crds-helm/
+
+# Example chart
+examples/extension-server/charts/extension-server
+
+# Third-party / editor dirs
+site/node_modules/
+.vscode/
+
+# exclude release-notes
+release-notes/*
+
+# testdata directories 
+**/testdata/**
+
+# GitHub workflows 
+.github/workflows/*
+
+# tools/github-actions 
+tools/github-actions/**
