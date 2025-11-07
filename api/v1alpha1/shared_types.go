@@ -574,7 +574,6 @@ type BackendRef struct {
 	// the health of the active backends falls below 72%.
 	//
 	// +optional
-
 	Fallback *bool `json:"fallback,omitempty"`
 }
 
