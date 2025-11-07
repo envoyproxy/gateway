@@ -7,7 +7,6 @@ package status
 
 import (
 	"sort"
-	"time"
 
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -104,14 +103,14 @@ func SetConditionForPolicyAncestor(policyStatus *gwapiv1.PolicyStatus, ancestorR
 			}
 
 			// Only create condition and merge if needed
-			cond := newCondition(string(conditionType), status, string(reason), sanitizedMessage, time.Now(), generation)
+			cond := newCondition(string(conditionType), status, string(reason), sanitizedMessage, generation)
 			policyStatus.Ancestors[i].Conditions = MergeConditions(policyStatus.Ancestors[i].Conditions, cond)
 			return
 		}
 	}
 
 	// Add condition for new PolicyAncestorStatus
-	cond := newCondition(string(conditionType), status, string(reason), sanitizedMessage, time.Now(), generation)
+	cond := newCondition(string(conditionType), status, string(reason), sanitizedMessage, generation)
 	policyStatus.Ancestors = append(policyStatus.Ancestors, gwapiv1.PolicyAncestorStatus{
 		AncestorRef:    *ancestorRef,
 		ControllerName: gwapiv1a2.GatewayController(controllerName),
