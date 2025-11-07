@@ -140,9 +140,9 @@ gwapi-doc-remove-special-lines:
 # Update relative links
 gwapi-doc-update-relative-links:
 	@$(LOG_TARGET)
-	# Replace ../reference/spec.md to https://gateway-api.sigs.k8s.io/reference/spec/
+	# Replace ../reference/spec.md to https://gateway-api.sigs.k8s.io/reference/$(GATEWAY_API_MINOR_VERSION)/spec/
 	@$(foreach file, $(SYNC_FILES), \
- 		$(SED) -e 's/\(\[.*\]\)(\(\.\.\/reference\/spec.md\))/\1(https:\/\/gateway-api.sigs.k8s.io\/reference\/spec\/)/g' -e 's/\(\[.*\]: \)\(\/reference\/spec.md\)/\1https:\/\/gateway-api.sigs.k8s.io\/reference\/spec\//g' -e 's/\(\[.*\]: \)\(\.\.\/reference\/spec.md\)/\1https:\/\/gateway-api.sigs.k8s.io\/reference\/spec\//g' $(DOC_DEST_DIR)/$(file);)
+ 		$(SED) -e 's/\(\[.*\]\)(\(\.\.\/reference\/spec.md\))/\1(https:\/\/gateway-api.sigs.k8s.io\/reference\/$(GATEWAY_API_MINOR_VERSION)\/spec\/)/g' -e 's/\(\[.*\]: \)\(\/reference\/spec.md\)/\1https:\/\/gateway-api.sigs.k8s.io\/reference\/$(GATEWAY_API_MINOR_VERSION)\/spec\//g' -e 's/\(\[.*\]: \)\(\.\.\/reference\/spec.md\)/\1https:\/\/gateway-api.sigs.k8s.io\/reference\/$(GATEWAY_API_MINOR_VERSION)\/spec\//g' $(DOC_DEST_DIR)/$(file);)
 	@$(foreach file, $(SYNC_FILES), \
  		$(SED) -e 's/\(\.*\]\)(\(\.\.\/[^:]*\))/\1(https:\/\/gateway-api.sigs.k8s.io\2)/g' -e 's/\(\[.*\]: \)\(\/[^:]*\)/\1https:\/\/gateway-api.sigs.k8s.io\2/g' -e 's/\(\[.*\]: \)\(\.\.\/[^:]*\)/\1https:\/\/gateway-api.sigs.k8s.io\2/g' $(DOC_DEST_DIR)/$(file);)
 	@$(foreach file, $(SYNC_FILES), \

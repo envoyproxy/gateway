@@ -159,12 +159,12 @@ Status defines the observed state of the BackendTLSPolicy and is not user-config
 way you do for other Gateway API objects to verify correct operation.  Note that the status in BackendTLSPolicy
 uses `PolicyAncestorStatus` to allow you to know which parentReference set that particular status.
 
-[backendtlspolicy]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1alpha3.BackendTLSPolicy
-[validation]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1alpha3.BackendTLSPolicy.Validation
-[caCertificateRefs]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1alpha3.BackendTLSPolicyValidation.CACertificateRefs
-[wellKnownCACertificates]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1alpha3.BackendTLSPolicyValidation.WellKnownCACertificates
-[hostname]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.PreciseHostname
+[backendtlspolicy]: https://gateway-api.sigs.k8s.io/reference/1.4/spec/#backendtlspolicy
+[validation]: https://gateway-api.sigs.k8s.io/reference/1.4/spec/#backendtlspolicyvalidation
+[caCertificateRefs]: https://gateway-api.sigs.k8s.io/reference/1.4/spec/#localobjectreference
+[wellKnownCACertificates]: https://gateway-api.sigs.k8s.io/reference/1.4/spec/#localobjectreference
+[hostname]: https://gateway-api.sigs.k8s.io/reference/1.4/spec/#precisehostname
 [rfc-3986]: https://tools.ietf.org/html/rfc3986
-[targetRefs]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1alpha2.PolicyTargetReference
-[subjectAltNames]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1alpha3.BackendTLSPolicyValidation 
-[options]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1alpha3.GatewayTLSConfig
+[targetRefs]: https://gateway-api.sigs.k8s.io/reference/1.4/spec/#localpolicytargetreferencewithsectionname
+[subjectAltNames]: https://gateway-api.sigs.k8s.io/reference/1.4/spec/#subjectaltname
+[options]: https://gateway-api.sigs.k8s.io/reference/1.4/spec/#backendtlspolicyspec
