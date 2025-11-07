@@ -21,9 +21,6 @@ site/node_modules/
 # exclude release-notes
 release-notes/*
 
-# testdata directories 
-**/testdata/**
-
 # GitHub workflows 
 .github/workflows/*
 
