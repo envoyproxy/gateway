@@ -10,7 +10,3 @@ runs:
       with:
         go-version-file: go.mod
         cache: true
-    - shell: bash
-      run: |
-        go install github.com/wasilibs/go-prettier/v3/cmd/prettier@latest
-        echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
