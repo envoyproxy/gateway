@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	client "sigs.k8s.io/controller-runtime/pkg/client"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
@@ -109,5 +110,31 @@ func TestNewOfflineGatewayAPIController(t *testing.T) {
 		require.Equal(t, config.DefaultNamespace, resources.ExtensionServerPolicies[0].GetNamespace())
 		require.Equal(t, config.DefaultNamespace, resources.ExtensionRefFilters[0].GetNamespace())
 		require.Equal(t, config.DefaultNamespace, resources.ExtensionRefFilters[1].GetNamespace())
+	})
+}
+
+func TestNewOfflineGatewayAPIControllerIndexRegistration(t *testing.T) {
+	t.Run("offline controller creation list index test", func(t *testing.T) {
+		cfg, err := config.New(os.Stdout, os.Stderr)
+		require.NoError(t, err)
+
+		cfg.EnvoyGateway.Provider = &egv1a1.EnvoyGatewayProvider{
+			Type: egv1a1.ProviderTypeCustom,
+		}
+
+		pResources := new(message.ProviderResources)
+		reconciler, err := NewOfflineGatewayAPIController(context.Background(), cfg, nil, pResources)
+		require.NoError(t, err)
+		require.NotNil(t, reconciler)
+
+		// test an index that is registered by a "WithIndex" call
+		cli := reconciler.Client
+		// call client.List with a "matching field" list option that uses the index
+		err = cli.List(context.Background(), &egv1a1.EnvoyProxyList{}, client.MatchingFields{secretEnvoyProxyIndex: "any"})
+		require.NoError(t, err)
+
+		// test another index which exists in indexers.go but isn't registered
+		err = cli.List(context.Background(), &egv1a1.BackendList{}, client.MatchingFields{secretBackendIndex: "test"})
+		require.NoError(t, err)
 	})
 }
