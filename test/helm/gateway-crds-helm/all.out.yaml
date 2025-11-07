@@ -22677,12 +22677,12 @@ spec:
                     description: |-
                       Type decides the scope for the RateLimits.
                       Valid RateLimitType values are "Global" or "Local".
-
-                      Deprecated: Use Global and/or Local fields directly instead. Both can be specified simultaneously for combined rate limiting.
                     enum:
                     - Global
                     - Local
                     type: string
+                required:
+                - type
                 type: object
               requestBuffer:
                 description: |-
@@ -28542,8 +28542,6 @@ spec:
 
                   - envoy.filters.http.ext_authz
 
-                  - envoy.filters.http.api_key_auth
-
                   - envoy.filters.http.basic_auth
 
                   - envoy.filters.http.oauth2
@@ -28551,8 +28549,6 @@ spec:
                   - envoy.filters.http.jwt_authn
 
                   - envoy.filters.http.stateful_session
-
-                  - envoy.filters.http.buffer
 
                   - envoy.filters.http.lua
 
@@ -28566,15 +28562,7 @@ spec:
 
                   - envoy.filters.http.ratelimit
 
-                  - envoy.filters.http.grpc_web
-
-                  - envoy.filters.http.grpc_stats
-
                   - envoy.filters.http.custom_response
-
-                  - envoy.filters.http.credential_injector
-
-                  - envoy.filters.http.compressor
 
                   - envoy.filters.http.router
 
@@ -28597,17 +28585,13 @@ spec:
                       - envoy.filters.http.oauth2
                       - envoy.filters.http.jwt_authn
                       - envoy.filters.http.stateful_session
-                      - envoy.filters.http.buffer
                       - envoy.filters.http.lua
                       - envoy.filters.http.ext_proc
                       - envoy.filters.http.wasm
                       - envoy.filters.http.rbac
                       - envoy.filters.http.local_ratelimit
                       - envoy.filters.http.ratelimit
-                      - envoy.filters.http.grpc_web
-                      - envoy.filters.http.grpc_stats
                       - envoy.filters.http.custom_response
-                      - envoy.filters.http.credential_injector
                       - envoy.filters.http.compressor
                       type: string
                     before:
@@ -28624,17 +28608,13 @@ spec:
                       - envoy.filters.http.oauth2
                       - envoy.filters.http.jwt_authn
                       - envoy.filters.http.stateful_session
-                      - envoy.filters.http.buffer
                       - envoy.filters.http.lua
                       - envoy.filters.http.ext_proc
                       - envoy.filters.http.wasm
                       - envoy.filters.http.rbac
                       - envoy.filters.http.local_ratelimit
                       - envoy.filters.http.ratelimit
-                      - envoy.filters.http.grpc_web
-                      - envoy.filters.http.grpc_stats
                       - envoy.filters.http.custom_response
-                      - envoy.filters.http.credential_injector
                       - envoy.filters.http.compressor
                       type: string
                     name:
@@ -28649,17 +28629,13 @@ spec:
                       - envoy.filters.http.oauth2
                       - envoy.filters.http.jwt_authn
                       - envoy.filters.http.stateful_session
-                      - envoy.filters.http.buffer
                       - envoy.filters.http.lua
                       - envoy.filters.http.ext_proc
                       - envoy.filters.http.wasm
                       - envoy.filters.http.rbac
                       - envoy.filters.http.local_ratelimit
                       - envoy.filters.http.ratelimit
-                      - envoy.filters.http.grpc_web
-                      - envoy.filters.http.grpc_stats
                       - envoy.filters.http.custom_response
-                      - envoy.filters.http.credential_injector
                       - envoy.filters.http.compressor
                       type: string
                   required:

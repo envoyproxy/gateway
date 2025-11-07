@@ -135,7 +135,7 @@ infraIR:
           filterOrder:
           - before: envoy.filters.http.jwt_authn
             name: envoy.filters.http.wasm
-          - after: envoy.filters.http.basic_auth
+          - after: envoy.filters.http.basic_authn
             name: envoy.filters.http.cors
           logging: {}
         status: {}
@@ -221,7 +221,7 @@ xdsIR:
     filterOrder:
     - before: envoy.filters.http.jwt_authn
       name: envoy.filters.http.wasm
-    - after: envoy.filters.http.basic_auth
+    - after: envoy.filters.http.basic_authn
       name: envoy.filters.http.cors
     globalResources:
       envoyClientCertificate:

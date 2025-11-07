@@ -9,7 +9,6 @@ clientTrafficPolicies:
       initialConnectionWindowSize: 32Mi
       initialStreamWindowSize: 64Ki
       maxConcurrentStreams: 200
-      onInvalidMessage: TerminateConnection
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway
@@ -192,7 +191,6 @@ xdsIR:
         initialConnectionWindowSize: 65536
         initialStreamWindowSize: 33554432
         maxConcurrentStreams: 200
-        resetStreamOnError: false
       isHTTP2: false
       metadata:
         kind: Gateway
@@ -208,6 +206,8 @@ xdsIR:
       externalPort: 8080
       hostnames:
       - www.example.com
+      http2:
+        maxConcurrentStreams: 200
       isHTTP2: false
       metadata:
         kind: Gateway

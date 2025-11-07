@@ -16,8 +16,8 @@ spec:
       watch:
         type: Namespaces
         namespaces:
-          - default
-          - app-namespace
+        - default
+        - app-namespace
 
   # Admin server configuration
   admin:
@@ -54,11 +54,11 @@ spec:
       prometheus:
         disable: false
       sinks:
-        - type: OpenTelemetry
-          openTelemetry:
-            host: otel-collector.monitoring.svc.cluster.local
-            port: 4317
-            protocol: grpc
+      - type: OpenTelemetry
+        openTelemetry:
+          host: otel-collector.monitoring.svc.cluster.local
+          port: 4317
+          protocol: grpc
 
 ---
 # Example: Production configuration with console disabled
@@ -77,8 +77,8 @@ spec:
       watch:
         type: Namespaces
         namespaces:
-          - production
-          - staging
+        - production
+        - staging
 
   # Production admin configuration - more restrictive
   admin:
@@ -117,9 +117,9 @@ spec:
       watch:
         type: Namespaces
         namespaces:
-          - default
-          - development
-          - testing
+        - default
+        - development
+        - testing
 
   # Development admin configuration - all features enabled
   admin:
@@ -148,8 +148,8 @@ spec:
       prometheus:
         disable: false
       sinks:
-        - type: OpenTelemetry
-          openTelemetry:
-            host: jaeger-collector.observability.svc.cluster.local
-            port: 4317
-            protocol: grpc
+      - type: OpenTelemetry
+        openTelemetry:
+          host: jaeger-collector.observability.svc.cluster.local
+          port: 4317
+          protocol: grpc

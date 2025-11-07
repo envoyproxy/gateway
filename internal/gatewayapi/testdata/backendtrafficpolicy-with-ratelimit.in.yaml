@@ -114,9 +114,6 @@ backendTrafficPolicies:
             - name: x-org-id
               value: admin
               invert: true
-            path:
-              type: PathPrefix
-              value: "/user"
           limit:
             requests: 10
             unit: Hour
@@ -138,9 +135,6 @@ backendTrafficPolicies:
           - sourceCIDR:
               type: "Distinct"
               value: 192.168.0.0/16
-            path:
-              type: PathPrefix
-              value: "/"
           limit:
             requests: 20
             unit: Hour
