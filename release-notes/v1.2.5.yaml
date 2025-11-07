@@ -1,5 +1,6 @@
 date: January 14, 2025
 
+
 bug fixes: |
   Fixed a nil pointer error that occurred when a SecurityPolicy referred to a UDS backend.
   Fixed an issue where the Gateway API translator did not use the TLS configuration from the BackendTLSPolicy when connecting to the OIDC provider’s well-known endpoint.

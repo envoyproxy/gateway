@@ -12,6 +12,7 @@ changes:
       Updated EnvoyProxy image to be a distroless variant.
       Removed resources around kube-rbac-proxy
 
+
   - area: api
     change: |
       Upgraded to Gateway API v1.0.0
