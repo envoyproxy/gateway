@@ -172,17 +172,17 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 			for _, resources := range *val {
 				// Translate and publish IRs.
 				t := &gatewayapi.Translator{
-					GatewayControllerName:     r.EnvoyGateway.Gateway.ControllerName,
-					GatewayClassName:          gwapiv1.ObjectName(resources.GatewayClass.Name),
-					GlobalRateLimitEnabled:    r.EnvoyGateway.RateLimit != nil,
-					EnvoyPatchPolicyEnabled:   r.EnvoyGateway.ExtensionAPIs != nil && r.EnvoyGateway.ExtensionAPIs.EnableEnvoyPatchPolicy,
-					BackendEnabled:            r.EnvoyGateway.ExtensionAPIs != nil && r.EnvoyGateway.ExtensionAPIs.EnableBackend,
-					ControllerNamespace:       r.ControllerNamespace,
-					GatewayNamespaceMode:      r.EnvoyGateway.GatewayNamespaceMode(),
-					MergeGateways:             gatewayapi.IsMergeGatewaysEnabled(resources),
-					WasmCache:                 r.wasmCache,
-					ListenerPortShiftDisabled: r.EnvoyGateway.Provider != nil && r.EnvoyGateway.Provider.IsRunningOnHost(),
-					Logger:                    traceLogger,
+					GatewayControllerName:   r.EnvoyGateway.Gateway.ControllerName,
+					GatewayClassName:        gwapiv1.ObjectName(resources.GatewayClass.Name),
+					GlobalRateLimitEnabled:  r.EnvoyGateway.RateLimit != nil,
+					EnvoyPatchPolicyEnabled: r.EnvoyGateway.ExtensionAPIs != nil && r.EnvoyGateway.ExtensionAPIs.EnableEnvoyPatchPolicy,
+					BackendEnabled:          r.EnvoyGateway.ExtensionAPIs != nil && r.EnvoyGateway.ExtensionAPIs.EnableBackend,
+					ControllerNamespace:     r.ControllerNamespace,
+					GatewayNamespaceMode:    r.EnvoyGateway.GatewayNamespaceMode(),
+					MergeGateways:           gatewayapi.IsMergeGatewaysEnabled(resources),
+					WasmCache:               r.wasmCache,
+					RunningOnHost:           r.EnvoyGateway.Provider != nil && r.EnvoyGateway.Provider.IsRunningOnHost(),
+					Logger:                  traceLogger,
 				}
 
 				// If an extension is loaded, pass its supported groups/kinds to the translator
