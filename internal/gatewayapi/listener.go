@@ -891,7 +891,9 @@ func validCELExpression(expr string) bool {
 // servicePortToContainerPort translates a service port into an ephemeral
 // container port.
 func (t *Translator) servicePortToContainerPort(servicePort int32, envoyProxy *egv1a1.EnvoyProxy) int32 {
-	if t.ListenerPortShiftDisabled {
+	// When running on the local host using the Host infrastructure provider, disable translating the
+	// gateway listener port into a non-privileged port and reuse the specified value.
+	if t.RunningOnHost {
 		return servicePort
 	}
 

@@ -62,11 +62,10 @@ backends:
   status:
     conditions:
     - lastTransitionTime: null
-      message: 'The Backend was not accepted: IP address 127.0.0.1 in the loopback
-        range is only supported when using the Host infrastructure'
+      message: The Backend was accepted
       reason: Accepted
-      status: "False"
-      type: Invalid
+      status: "True"
+      type: Accepted
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: Backend
   metadata:
@@ -80,11 +79,10 @@ backends:
   status:
     conditions:
     - lastTransitionTime: null
-      message: 'The Backend was not accepted: hostname localhost should be a domain
-        with at least two segments separated by dots'
+      message: The Backend was accepted
       reason: Accepted
-      status: "False"
-      type: Invalid
+      status: "True"
+      type: Accepted
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
@@ -262,10 +260,9 @@ httpRoutes:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: 'Failed to process route rule 0 backendRef 0: IP address 127.0.0.1
-          in the loopback range is only supported when using the Host infrastructure.'
-        reason: InvalidAddress
-        status: "False"
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
@@ -299,10 +296,9 @@ httpRoutes:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: 'Failed to process route rule 0 backendRef 0: hostname localhost
-          should be a domain with at least two segments separated by dots.'
-        reason: InvalidAddress
-        status: "False"
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
@@ -316,7 +312,7 @@ infraIR:
       - address: null
         name: envoy-gateway/gateway-1/http
         ports:
-        - containerPort: 10080
+        - containerPort: 80
           name: http-80
           protocol: HTTP
           servicePort: 80
@@ -368,7 +364,7 @@ xdsIR:
       path:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
-      port: 10080
+      port: 80
       routes:
       - directResponse:
           statusCode: 500
@@ -441,8 +437,24 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /2
-      - directResponse:
-          statusCode: 500
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-4
+            namespace: default
+          name: httproute/default/httproute-4/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 127.0.0.1
+              port: 3001
+            metadata:
+              kind: Backend
+              name: backend-ip-localhost
+              namespace: default
+            name: httproute/default/httproute-4/rule/0/backend/0
+            protocol: HTTP
+            weight: 1
         hostname: '*'
         isHTTP2: false
         metadata:
@@ -454,8 +466,24 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /4
-      - directResponse:
-          statusCode: 500
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-5
+            namespace: default
+          name: httproute/default/httproute-5/rule/0
+          settings:
+          - addressType: FQDN
+            endpoints:
+            - host: localhost
+              port: 3001
+            metadata:
+              kind: Backend
+              name: backend-fqdn-localhost
+              namespace: default
+            name: httproute/default/httproute-5/rule/0/backend/0
+            protocol: HTTP
+            weight: 1
         hostname: '*'
         isHTTP2: false
         metadata:
