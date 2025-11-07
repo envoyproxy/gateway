@@ -337,7 +337,7 @@ func (r *Runner) translateFromSubscription(sub <-chan watchable.Snapshot[string,
 							errChan <- err
 						} else {
 							// Update snapshot cache
-							if err := r.cache.GenerateNewSnapshot(key, result.XdsResources); err != nil {
+							if err := r.cache.GenerateNewSnapshot(key, result.XdsResources, parentCtx); err != nil {
 								r.Logger.Error(err, "failed to generate a snapshot")
 								errChan <- err
 							}
