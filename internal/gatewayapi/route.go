@@ -47,14 +47,14 @@ var (
 )
 
 type RoutesTranslator interface {
-	ProcessHTTPRoutes(httpRoutes []*gwapiv1.HTTPRoute, gateways []*GatewayContext, resources *resource.Resources, xdsIR resource.XdsIRMap) []*HTTPRouteContext
-	ProcessGRPCRoutes(grpcRoutes []*gwapiv1.GRPCRoute, gateways []*GatewayContext, resources *resource.Resources, xdsIR resource.XdsIRMap) []*GRPCRouteContext
-	ProcessTLSRoutes(tlsRoutes []*gwapiv1a3.TLSRoute, gateways []*GatewayContext, resources *resource.Resources, xdsIR resource.XdsIRMap) []*TLSRouteContext
-	ProcessTCPRoutes(tcpRoutes []*gwapiv1a2.TCPRoute, gateways []*GatewayContext, resources *resource.Resources, xdsIR resource.XdsIRMap) []*TCPRouteContext
-	ProcessUDPRoutes(udpRoutes []*gwapiv1a2.UDPRoute, gateways []*GatewayContext, resources *resource.Resources, xdsIR resource.XdsIRMap) []*UDPRouteContext
+	ProcessHTTPRoutes(translatorContext *TranslatorContext, httpRoutes []*gwapiv1.HTTPRoute, gateways []*GatewayContext, resources *resource.Resources, xdsIR resource.XdsIRMap) []*HTTPRouteContext
+	ProcessGRPCRoutes(translatorContext *TranslatorContext, grpcRoutes []*gwapiv1.GRPCRoute, gateways []*GatewayContext, resources *resource.Resources, xdsIR resource.XdsIRMap) []*GRPCRouteContext
+	ProcessTLSRoutes(translatorContext *TranslatorContext, tlsRoutes []*gwapiv1a3.TLSRoute, gateways []*GatewayContext, resources *resource.Resources, xdsIR resource.XdsIRMap) []*TLSRouteContext
+	ProcessTCPRoutes(translatorContext *TranslatorContext, tcpRoutes []*gwapiv1a2.TCPRoute, gateways []*GatewayContext, resources *resource.Resources, xdsIR resource.XdsIRMap) []*TCPRouteContext
+	ProcessUDPRoutes(translatorContext *TranslatorContext, udpRoutes []*gwapiv1a2.UDPRoute, gateways []*GatewayContext, resources *resource.Resources, xdsIR resource.XdsIRMap) []*UDPRouteContext
 }
 
-func (t *Translator) ProcessHTTPRoutes(httpRoutes []*gwapiv1.HTTPRoute, gateways []*GatewayContext, resources *resource.Resources, xdsIR resource.XdsIRMap) []*HTTPRouteContext {
+func (t *Translator) ProcessHTTPRoutes(translatorContext *TranslatorContext, httpRoutes []*gwapiv1.HTTPRoute, gateways []*GatewayContext, resources *resource.Resources, xdsIR resource.XdsIRMap) []*HTTPRouteContext {
 	relevantHTTPRoutes := make([]*HTTPRouteContext, 0, len(httpRoutes))
 
 	// HTTPRoutes are already sorted by the provider layer
@@ -75,13 +75,13 @@ func (t *Translator) ProcessHTTPRoutes(httpRoutes []*gwapiv1.HTTPRoute, gateways
 
 		relevantHTTPRoutes = append(relevantHTTPRoutes, httpRoute)
 
-		t.processHTTPRouteParentRefs(httpRoute, resources, xdsIR)
+		t.processHTTPRouteParentRefs(translatorContext, httpRoute, resources, xdsIR)
 	}
 
 	return relevantHTTPRoutes
 }
 
-func (t *Translator) ProcessGRPCRoutes(grpcRoutes []*gwapiv1.GRPCRoute, gateways []*GatewayContext, resources *resource.Resources, xdsIR resource.XdsIRMap) []*GRPCRouteContext {
+func (t *Translator) ProcessGRPCRoutes(translatorContext *TranslatorContext, grpcRoutes []*gwapiv1.GRPCRoute, gateways []*GatewayContext, resources *resource.Resources, xdsIR resource.XdsIRMap) []*GRPCRouteContext {
 	relevantGRPCRoutes := make([]*GRPCRouteContext, 0, len(grpcRoutes))
 
 	// GRPCRoutes are already sorted by the provider layer
@@ -102,18 +102,18 @@ func (t *Translator) ProcessGRPCRoutes(grpcRoutes []*gwapiv1.GRPCRoute, gateways
 
 		relevantGRPCRoutes = append(relevantGRPCRoutes, grpcRoute)
 
-		t.processGRPCRouteParentRefs(grpcRoute, resources, xdsIR)
+		t.processGRPCRouteParentRefs(translatorContext, grpcRoute, resources, xdsIR)
 	}
 
 	return relevantGRPCRoutes
 }
 
-func (t *Translator) processHTTPRouteParentRefs(httpRoute *HTTPRouteContext, resources *resource.Resources, xdsIR resource.XdsIRMap) {
+func (t *Translator) processHTTPRouteParentRefs(translatorContext *TranslatorContext, httpRoute *HTTPRouteContext, resources *resource.Resources, xdsIR resource.XdsIRMap) {
 	for _, parentRef := range httpRoute.ParentRefs {
 		// Need to compute Route rules within the parentRef loop because
 		// any conditions that come out of it have to go on each RouteParentStatus,
 		// not on the Route as a whole.
-		routeRoutes, errs := t.processHTTPRouteRules(httpRoute, parentRef, resources)
+		routeRoutes, errs := t.processHTTPRouteRules(translatorContext, httpRoute, parentRef, resources)
 		// TODO: zhaohuabing: according to the gateway api, the RouteConditionPartiallyInvalid condition should be set
 		// to true when an HTTPRoute contains a combination of both valid and invalid rules.
 		if len(errs) > 0 {
@@ -178,7 +178,7 @@ func (t *Translator) processHTTPRouteParentRefs(httpRoute *HTTPRouteContext, res
 	}
 }
 
-func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRef *RouteParentContext, resources *resource.Resources) ([]*ir.HTTPRoute, []status.Error) {
+func (t *Translator) processHTTPRouteRules(translatorContext *TranslatorContext, httpRoute *HTTPRouteContext, parentRef *RouteParentContext, resources *resource.Resources) ([]*ir.HTTPRoute, []status.Error) {
 	var (
 		irRoutes       []*ir.HTTPRoute
 		errorCollector = &status.TypedErrorCollector{}
@@ -188,7 +188,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 	// process each HTTPRouteRule, generate a unique Xds IR HTTPRoute per match of the rule
 	for ruleIdx, rule := range httpRoute.Spec.Rules {
 		// process HTTP Route filters first, so that the filters can be applied to the IR route later
-		httpFiltersContext, err := t.ProcessHTTPFilters(parentRef, httpRoute, rule.Filters, ruleIdx, resources)
+		httpFiltersContext, err := t.ProcessHTTPFilters(translatorContext, parentRef, httpRoute, rule.Filters, ruleIdx, resources)
 		if err != nil {
 			// Some errors should be treated as ResolvedRefs condition type,
 			// e.g. Failed to resolve the BackendRef in the RequestMirror filter.
@@ -234,7 +234,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 				Filters:    rule.BackendRefs[i].Filters,
 			}
 			// ds will never be nil here because processDestination returns an empty DestinationSetting for invalid backendRefs.
-			ds, unstructuredRef, err := t.processDestination(settingName, backendRefCtx, parentRef, httpRoute, resources)
+			ds, unstructuredRef, err := t.processDestination(translatorContext, settingName, backendRefCtx, parentRef, httpRoute, resources)
 			if err != nil {
 				// Gateway API conformance: When backendRef Service exists but has no endpoints,
 				// the ResolvedRefs condition should NOT be set to False.
@@ -708,13 +708,13 @@ func applyHTTPFiltersContextToIRRoute(httpFiltersContext *HTTPFiltersContext, ir
 	}
 }
 
-func (t *Translator) processGRPCRouteParentRefs(grpcRoute *GRPCRouteContext, resources *resource.Resources, xdsIR resource.XdsIRMap) {
+func (t *Translator) processGRPCRouteParentRefs(translatorContext *TranslatorContext, grpcRoute *GRPCRouteContext, resources *resource.Resources, xdsIR resource.XdsIRMap) {
 	for _, parentRef := range grpcRoute.ParentRefs {
 
 		// Need to compute Route rules within the parentRef loop because
 		// any conditions that come out of it have to go on each RouteParentStatus,
 		// not on the Route as a whole.
-		routeRoutes, errs := t.processGRPCRouteRules(grpcRoute, parentRef, resources)
+		routeRoutes, errs := t.processGRPCRouteRules(translatorContext, grpcRoute, parentRef, resources)
 		if len(errs) > 0 {
 			routeStatus := GetRouteStatus(grpcRoute)
 			for _, err := range errs {
@@ -775,7 +775,7 @@ func (t *Translator) processGRPCRouteParentRefs(grpcRoute *GRPCRouteContext, res
 	}
 }
 
-func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRef *RouteParentContext, resources *resource.Resources) ([]*ir.HTTPRoute, []status.Error) {
+func (t *Translator) processGRPCRouteRules(translatorContext *TranslatorContext, grpcRoute *GRPCRouteContext, parentRef *RouteParentContext, resources *resource.Resources) ([]*ir.HTTPRoute, []status.Error) {
 	var (
 		irRoutes       []*ir.HTTPRoute
 		errorCollector = &status.TypedErrorCollector{}
@@ -787,7 +787,7 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 		rule := &grpcRoute.Spec.Rules[ruleIdx]
 
 		// process GRPC route filters first, so that the filters can be applied to the IR route later
-		httpFiltersContext, err := t.ProcessGRPCFilters(parentRef, grpcRoute, rule.Filters, resources)
+		httpFiltersContext, err := t.ProcessGRPCFilters(translatorContext, parentRef, grpcRoute, rule.Filters, resources)
 		if err != nil {
 			errorCollector.Add(status.NewRouteStatusError(
 				fmt.Errorf("failed to process route rule %d: %w", ruleIdx, err),
@@ -823,7 +823,7 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 				Filters:    rule.BackendRefs[i].Filters,
 			}
 			// ds will never be nil here because processDestination returns an empty DestinationSetting for invalid backendRefs.
-			ds, _, err := t.processDestination(settingName, backendRefCtx, parentRef, grpcRoute, resources)
+			ds, _, err := t.processDestination(translatorContext, settingName, backendRefCtx, parentRef, grpcRoute, resources)
 			if err != nil {
 				// Gateway API conformance: When backendRef Service exists but has no endpoints,
 				// the ResolvedRefs condition should NOT be set to False.
@@ -1145,7 +1145,7 @@ func filterEGPrefix(in map[string]string) map[string]string {
 	return out
 }
 
-func (t *Translator) ProcessTLSRoutes(tlsRoutes []*gwapiv1a3.TLSRoute, gateways []*GatewayContext, resources *resource.Resources, xdsIR resource.XdsIRMap) []*TLSRouteContext {
+func (t *Translator) ProcessTLSRoutes(translatorContext *TranslatorContext, tlsRoutes []*gwapiv1a3.TLSRoute, gateways []*GatewayContext, resources *resource.Resources, xdsIR resource.XdsIRMap) []*TLSRouteContext {
 	relevantTLSRoutes := make([]*TLSRouteContext, 0, len(tlsRoutes))
 	// TLSRoutes are already sorted by the provider layer
 
@@ -1165,13 +1165,13 @@ func (t *Translator) ProcessTLSRoutes(tlsRoutes []*gwapiv1a3.TLSRoute, gateways 
 
 		relevantTLSRoutes = append(relevantTLSRoutes, tlsRoute)
 
-		t.processTLSRouteParentRefs(tlsRoute, resources, xdsIR)
+		t.processTLSRouteParentRefs(translatorContext, tlsRoute, resources, xdsIR)
 	}
 
 	return relevantTLSRoutes
 }
 
-func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resources *resource.Resources, xdsIR resource.XdsIRMap) {
+func (t *Translator) processTLSRouteParentRefs(translatorContext *TranslatorContext, tlsRoute *TLSRouteContext, resources *resource.Resources, xdsIR resource.XdsIRMap) {
 	for _, parentRef := range tlsRoute.ParentRefs {
 
 		// Need to compute Route rules within the parentRef loop because
@@ -1189,7 +1189,7 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 				settingName := irDestinationSettingName(destName, i)
 				backendRefCtx := DirectBackendRef{BackendRef: &rule.BackendRefs[i]}
 				// ds will never be nil here because processDestination returns an empty DestinationSetting for invalid backendRefs.
-				ds, _, err := t.processDestination(settingName, backendRefCtx, parentRef, tlsRoute, resources)
+				ds, _, err := t.processDestination(translatorContext, settingName, backendRefCtx, parentRef, tlsRoute, resources)
 				if err != nil {
 					resolveErrs.Add(err)
 					continue
@@ -1290,7 +1290,7 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 	}
 }
 
-func (t *Translator) ProcessUDPRoutes(udpRoutes []*gwapiv1a2.UDPRoute, gateways []*GatewayContext, resources *resource.Resources,
+func (t *Translator) ProcessUDPRoutes(translatorContext *TranslatorContext, udpRoutes []*gwapiv1a2.UDPRoute, gateways []*GatewayContext, resources *resource.Resources,
 	xdsIR resource.XdsIRMap,
 ) []*UDPRouteContext {
 	relevantUDPRoutes := make([]*UDPRouteContext, 0, len(udpRoutes))
@@ -1312,13 +1312,13 @@ func (t *Translator) ProcessUDPRoutes(udpRoutes []*gwapiv1a2.UDPRoute, gateways 
 
 		relevantUDPRoutes = append(relevantUDPRoutes, udpRoute)
 
-		t.processUDPRouteParentRefs(udpRoute, resources, xdsIR)
+		t.processUDPRouteParentRefs(translatorContext, udpRoute, resources, xdsIR)
 	}
 
 	return relevantUDPRoutes
 }
 
-func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resources *resource.Resources, xdsIR resource.XdsIRMap) {
+func (t *Translator) processUDPRouteParentRefs(translatorContext *TranslatorContext, udpRoute *UDPRouteContext, resources *resource.Resources, xdsIR resource.XdsIRMap) {
 	for _, parentRef := range udpRoute.ParentRefs {
 		// compute backends
 		if len(udpRoute.Spec.Rules) != 1 {
@@ -1347,7 +1347,7 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 			settingName := irDestinationSettingName(destName, i)
 			backendRefCtx := DirectBackendRef{BackendRef: &udpRoute.Spec.Rules[0].BackendRefs[i]}
 			// ds will never be nil here because processDestination returns an empty DestinationSetting for invalid backendRefs.
-			ds, _, err := t.processDestination(settingName, backendRefCtx, parentRef, udpRoute, resources)
+			ds, _, err := t.processDestination(translatorContext, settingName, backendRefCtx, parentRef, udpRoute, resources)
 			if err != nil {
 				resolveErrs.Add(err)
 				continue
@@ -1441,7 +1441,7 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 	}
 }
 
-func (t *Translator) ProcessTCPRoutes(tcpRoutes []*gwapiv1a2.TCPRoute, gateways []*GatewayContext, resources *resource.Resources,
+func (t *Translator) ProcessTCPRoutes(translatorContext *TranslatorContext, tcpRoutes []*gwapiv1a2.TCPRoute, gateways []*GatewayContext, resources *resource.Resources,
 	xdsIR resource.XdsIRMap,
 ) []*TCPRouteContext {
 	relevantTCPRoutes := make([]*TCPRouteContext, 0, len(tcpRoutes))
@@ -1463,13 +1463,13 @@ func (t *Translator) ProcessTCPRoutes(tcpRoutes []*gwapiv1a2.TCPRoute, gateways 
 
 		relevantTCPRoutes = append(relevantTCPRoutes, tcpRoute)
 
-		t.processTCPRouteParentRefs(tcpRoute, resources, xdsIR)
+		t.processTCPRouteParentRefs(translatorContext, tcpRoute, resources, xdsIR)
 	}
 
 	return relevantTCPRoutes
 }
 
-func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resources *resource.Resources, xdsIR resource.XdsIRMap) {
+func (t *Translator) processTCPRouteParentRefs(translatorContext *TranslatorContext, tcpRoute *TCPRouteContext, resources *resource.Resources, xdsIR resource.XdsIRMap) {
 	for _, parentRef := range tcpRoute.ParentRefs {
 		// compute backends
 		if len(tcpRoute.Spec.Rules) != 1 {
@@ -1497,7 +1497,7 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 		for i := range tcpRoute.Spec.Rules[0].BackendRefs {
 			settingName := irDestinationSettingName(destName, i)
 			backendRefCtx := DirectBackendRef{BackendRef: &tcpRoute.Spec.Rules[0].BackendRefs[i]}
-			ds, _, err := t.processDestination(settingName, backendRefCtx, parentRef, tcpRoute, resources)
+			ds, _, err := t.processDestination(translatorContext, settingName, backendRefCtx, parentRef, tcpRoute, resources)
 			// skip adding the route and provide the reason via route status.
 			if err != nil {
 				resolveErrs.Add(err)
@@ -1606,7 +1606,7 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 // processDestination translates a backendRef into a destination settings.
 // If an error occurs during this conversion, an error is returned, and the associated routes are expected to become inactive.
 // This will result in a direct 500 response for HTTP-based requests.
-func (t *Translator) processDestination(name string, backendRefContext BackendRefContext,
+func (t *Translator) processDestination(translatorContext *TranslatorContext, name string, backendRefContext BackendRefContext,
 	parentRef *RouteParentContext, route RouteContext, resources *resource.Resources,
 ) (ds *ir.DestinationSetting, unstructuredRef *ir.UnstructuredRef, err status.Error) {
 	var (
@@ -1624,7 +1624,7 @@ func (t *Translator) processDestination(name string, backendRefContext BackendRe
 
 	backendNamespace := NamespaceDerefOr(backendRef.Namespace, route.GetNamespace())
 	if !t.isCustomBackendResource(backendRef.Group, KindDerefOr(backendRef.Kind, resource.KindService)) {
-		err = t.validateBackendRef(backendRefContext, route, resources, backendNamespace, routeType)
+		err = t.validateBackendRef(translatorContext, backendRefContext, route, resources, backendNamespace, routeType)
 		{
 			// Empty DS means the backend is invalid and an error to fail the associated route.
 			if err != nil {
@@ -1648,6 +1648,7 @@ func (t *Translator) processDestination(name string, backendRefContext BackendRe
 
 	// Process BackendTLSPolicy first to ensure status is set.
 	tls, tlsErr := t.applyBackendTLSSetting(
+		translatorContext,
 		backendRef.BackendObjectReference,
 		backendNamespace,
 		gwapiv1.ParentReference{
@@ -1672,11 +1673,11 @@ func (t *Translator) processDestination(name string, backendRefContext BackendRe
 			return emptyDS, nil, err
 		}
 	case resource.KindService:
-		ds, err = t.processServiceDestinationSetting(name, backendRef.BackendObjectReference, backendNamespace, protocol, resources, envoyProxy)
+		ds, err = t.processServiceDestinationSetting(translatorContext, name, backendRef.BackendObjectReference, backendNamespace, protocol, resources, envoyProxy)
 		if err != nil {
 			return emptyDS, nil, err
 		}
-		svc := resources.GetService(backendNamespace, string(backendRef.Name))
+		svc := translatorContext.GetService(backendNamespace, string(backendRef.Name))
 		ds.IPFamily = getServiceIPFamily(svc)
 		ds.PreferLocal = processPreferLocalZone(svc)
 	case egv1a1.KindBackend:
@@ -1709,7 +1710,7 @@ func (t *Translator) processDestination(name string, backendRefContext BackendRe
 	ds.TLS = tls
 
 	var filtersErr error
-	ds.Filters, filtersErr = t.processDestinationFilters(routeType, backendRefContext, parentRef, route, resources)
+	ds.Filters, filtersErr = t.processDestinationFilters(translatorContext, routeType, backendRefContext, parentRef, route, resources)
 	if filtersErr != nil {
 		return emptyDS, nil, status.NewRouteStatusError(filtersErr, status.RouteReasonInvalidBackendFilters)
 	}
@@ -1813,6 +1814,7 @@ func (t *Translator) processServiceImportDestinationSetting(
 }
 
 func (t *Translator) processServiceDestinationSetting(
+	translatorContext *TranslatorContext,
 	name string,
 	backendRef gwapiv1.BackendObjectReference,
 	backendNamespace string,
@@ -1825,7 +1827,7 @@ func (t *Translator) processServiceDestinationSetting(
 		addrType  *ir.DestinationAddressType
 	)
 
-	service := resources.GetService(backendNamespace, string(backendRef.Name))
+	service := translatorContext.GetService(backendNamespace, string(backendRef.Name))
 	var servicePort corev1.ServicePort
 	for _, port := range service.Spec.Ports {
 		if port.Port == *backendRef.Port {
@@ -1914,7 +1916,7 @@ func processPreferLocalZone(svc *corev1.Service) *ir.PreferLocalZone {
 	return nil
 }
 
-func (t *Translator) processDestinationFilters(routeType gwapiv1.Kind, backendRefContext BackendRefContext, parentRef *RouteParentContext, route RouteContext, resources *resource.Resources) (*ir.DestinationFilters, error) {
+func (t *Translator) processDestinationFilters(translatorContext *TranslatorContext, routeType gwapiv1.Kind, backendRefContext BackendRefContext, parentRef *RouteParentContext, route RouteContext, resources *resource.Resources) (*ir.DestinationFilters, error) {
 	backendFilters := getBackendFilters(routeType, backendRefContext)
 	if backendFilters == nil {
 		return nil, nil
@@ -1926,10 +1928,10 @@ func (t *Translator) processDestinationFilters(routeType gwapiv1.Kind, backendRe
 	var err error
 	switch filters := backendFilters.(type) {
 	case []gwapiv1.HTTPRouteFilter:
-		httpFiltersContext, err = t.ProcessHTTPFilters(parentRef, route, filters, 0, resources)
+		httpFiltersContext, err = t.ProcessHTTPFilters(translatorContext, parentRef, route, filters, 0, resources)
 
 	case []gwapiv1.GRPCRouteFilter:
-		httpFiltersContext, err = t.ProcessGRPCFilters(parentRef, route, filters, resources)
+		httpFiltersContext, err = t.ProcessGRPCFilters(translatorContext, parentRef, route, filters, resources)
 		if err != nil {
 			return &destFilters, err
 		}
@@ -2164,7 +2166,12 @@ func (t *Translator) processBackendExtensions(
 	return nil
 }
 
-func getTargetBackendReference(backendRef gwapiv1.BackendObjectReference, backendNamespace string, resources *resource.Resources) gwapiv1.LocalPolicyTargetReferenceWithSectionName {
+func getTargetBackendReference(
+	translatorContext *TranslatorContext,
+	backendRef gwapiv1.BackendObjectReference,
+	backendNamespace string,
+	resources *resource.Resources,
+) gwapiv1.LocalPolicyTargetReferenceWithSectionName {
 	ref := gwapiv1.LocalPolicyTargetReferenceWithSectionName{
 		LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 			Group: func() gwapiv1.Group {
@@ -2188,7 +2195,7 @@ func getTargetBackendReference(backendRef gwapiv1.BackendObjectReference, backen
 
 	switch {
 	case backendRef.Kind == nil || *backendRef.Kind == resource.KindService:
-		if service := resources.GetService(backendNamespace, string(backendRef.Name)); service != nil {
+		if service := translatorContext.GetService(backendNamespace, string(backendRef.Name)); service != nil {
 			for _, port := range service.Spec.Ports {
 				if port.Port == *backendRef.Port {
 					if port.Name != "" {

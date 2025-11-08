@@ -32,7 +32,7 @@ type HTTPFiltersTranslator interface {
 	processRedirectFilter(redirect *gwapiv1.HTTPRequestRedirectFilter, filterContext *HTTPFiltersContext)
 	processRequestHeaderModifierFilter(headerModifier *gwapiv1.HTTPHeaderFilter, filterContext *HTTPFiltersContext)
 	processResponseHeaderModifierFilter(headerModifier *gwapiv1.HTTPHeaderFilter, filterContext *HTTPFiltersContext)
-	processRequestMirrorFilter(filterIdx int, mirror *gwapiv1.HTTPRequestMirrorFilter, filterContext *HTTPFiltersContext, resources *resource.Resources) status.Error
+	processRequestMirrorFilter(translatorContext *TranslatorContext, filterIdx int, mirror *gwapiv1.HTTPRequestMirrorFilter, filterContext *HTTPFiltersContext, resources *resource.Resources) status.Error
 	processUnsupportedHTTPFilter(filterType string, filterContext *HTTPFiltersContext)
 }
 
@@ -70,7 +70,8 @@ type HTTPFilterIR struct {
 var HeaderValueRegexp = regexp.MustCompile(`^[!-~]+([\t ]?[!-~]+)*$`)
 
 // ProcessHTTPFilters translates gateway api http filters to IRs.
-func (t *Translator) ProcessHTTPFilters(parentRef *RouteParentContext,
+func (t *Translator) ProcessHTTPFilters(translatorContext *TranslatorContext,
+	parentRef *RouteParentContext,
 	route RouteContext,
 	filters []gwapiv1.HTTPRouteFilter,
 	ruleIdx int,
@@ -104,7 +105,7 @@ func (t *Translator) ProcessHTTPFilters(parentRef *RouteParentContext,
 		case gwapiv1.HTTPRouteFilterResponseHeaderModifier:
 			t.processResponseHeaderModifierFilter(filter.ResponseHeaderModifier, httpFiltersContext)
 		case gwapiv1.HTTPRouteFilterRequestMirror:
-			err = t.processRequestMirrorFilter(i, filter.RequestMirror, httpFiltersContext, resources)
+			err = t.processRequestMirrorFilter(translatorContext, i, filter.RequestMirror, httpFiltersContext, resources)
 		case gwapiv1.HTTPRouteFilterCORS:
 			t.processCORSFilter(filter.CORS, httpFiltersContext)
 		case gwapiv1.HTTPRouteFilterExtensionRef:
@@ -118,7 +119,8 @@ func (t *Translator) ProcessHTTPFilters(parentRef *RouteParentContext,
 }
 
 // ProcessGRPCFilters translates gateway api grpc filters to IRs.
-func (t *Translator) ProcessGRPCFilters(parentRef *RouteParentContext,
+func (t *Translator) ProcessGRPCFilters(translatorContext *TranslatorContext,
+	parentRef *RouteParentContext,
 	route RouteContext,
 	filters []gwapiv1.GRPCRouteFilter,
 	resources *resource.Resources,
@@ -147,7 +149,7 @@ func (t *Translator) ProcessGRPCFilters(parentRef *RouteParentContext,
 		case gwapiv1.GRPCRouteFilterResponseHeaderModifier:
 			t.processResponseHeaderModifierFilter(filter.ResponseHeaderModifier, httpFiltersContext)
 		case gwapiv1.GRPCRouteFilterRequestMirror:
-			err := t.processRequestMirrorFilter(i, filter.RequestMirror, httpFiltersContext, resources)
+			err := t.processRequestMirrorFilter(translatorContext, i, filter.RequestMirror, httpFiltersContext, resources)
 			if err != nil {
 				return nil, err
 			}
@@ -954,6 +956,7 @@ func (t *Translator) processExtensionRefHTTPFilter(extFilter *gwapiv1.LocalObjec
 }
 
 func (t *Translator) processRequestMirrorFilter(
+	translatorContext *TranslatorContext,
 	filterIdx int,
 	mirrorFilter *gwapiv1.HTTPRequestMirrorFilter,
 	filterContext *HTTPFiltersContext,
@@ -980,7 +983,7 @@ func (t *Translator) processRequestMirrorFilter(
 	// This sets the status on the Route, should the usage be changed so that the status message reflects that the backendRef is from the filter?
 	filterNs := filterContext.Route.GetNamespace()
 	serviceNamespace := NamespaceDerefOr(mirrorBackend.Namespace, filterNs)
-	err = t.validateBackendRef(mirrorBackendRef, filterContext.Route,
+	err = t.validateBackendRef(translatorContext, mirrorBackendRef, filterContext.Route,
 		resources, serviceNamespace, routeType)
 	if err != nil {
 		return status.NewRouteStatusError(
@@ -989,7 +992,7 @@ func (t *Translator) processRequestMirrorFilter(
 
 	destName := fmt.Sprintf("%s-mirror-%d", irRouteDestinationName(filterContext.Route, filterContext.RuleIdx), filterIdx)
 	settingName := irDestinationSettingName(destName, -1 /*unused*/)
-	ds, _, err := t.processDestination(settingName, mirrorBackendRef, filterContext.ParentRef, filterContext.Route, resources)
+	ds, _, err := t.processDestination(translatorContext, settingName, mirrorBackendRef, filterContext.ParentRef, filterContext.Route, resources)
 	if err != nil {
 		return err
 	}

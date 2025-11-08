@@ -26,7 +26,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 )
 
-func (t *Translator) validateBackendRef(backendRefContext BackendRefContext, route RouteContext,
+func (t *Translator) validateBackendRef(translatorContext *TranslatorContext, backendRefContext BackendRefContext, route RouteContext,
 	resources *resource.Resources, backendNamespace string, routeKind gwapiv1.Kind,
 ) status.Error {
 	backendRef := backendRefContext.GetBackendRef()
@@ -55,7 +55,7 @@ func (t *Translator) validateBackendRef(backendRefContext BackendRefContext, rou
 	backendRefKind := KindDerefOr(backendRef.Kind, resource.KindService)
 	switch backendRefKind {
 	case resource.KindService:
-		if err := validateBackendRefService(backendRef.BackendObjectReference, resources, backendNamespace, protocol); err != nil {
+		if err := validateBackendRefService(translatorContext, backendRef.BackendObjectReference, backendNamespace, protocol); err != nil {
 			return err
 		}
 	case resource.KindServiceImport:
@@ -181,10 +181,10 @@ func (t *Translator) validateBackendPort(backendRef *gwapiv1a2.BackendRef) statu
 	return nil
 }
 
-func validateBackendRefService(backendRef gwapiv1.BackendObjectReference, resources *resource.Resources,
+func validateBackendRefService(translatorContext *TranslatorContext, backendRef gwapiv1.BackendObjectReference,
 	serviceNamespace string, protocol corev1.Protocol,
 ) status.Error {
-	service := resources.GetService(serviceNamespace, string(backendRef.Name))
+	service := translatorContext.GetService(serviceNamespace, string(backendRef.Name))
 	if service == nil {
 		return status.NewRouteStatusError(
 			fmt.Errorf("service %s/%s not found", serviceNamespace, string(backendRef.Name)),
@@ -950,6 +950,7 @@ func (t *Translator) validateSecretObjectRef(
 //  5. The cross-namespace reference is permitted by the ReferenceGrants if the
 //     namespace is different from the policy's namespace.
 func (t *Translator) validateExtServiceBackendReference(
+	translatorContext *TranslatorContext,
 	backendRef *gwapiv1.BackendObjectReference,
 	ownerNamespace string,
 	policyKind string,
@@ -973,7 +974,7 @@ func (t *Translator) validateExtServiceBackendReference(
 	case resource.KindService:
 		// check if the service is valid
 		serviceNamespace := NamespaceDerefOr(backendRef.Namespace, ownerNamespace)
-		service := resources.GetService(serviceNamespace, string(backendRef.Name))
+		service := translatorContext.GetService(serviceNamespace, string(backendRef.Name))
 		if service == nil {
 			return fmt.Errorf("service %s/%s not found", serviceNamespace, backendRef.Name)
 		}

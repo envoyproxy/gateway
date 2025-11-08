@@ -847,6 +847,7 @@ func TestProcessTracingServiceName(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			translator := &Translator{}
 			resources := &resource.Resources{}
+			translatorContext := translator.buildTranslatorContext(resources)
 
 			// Mock service to resolve BackendRefs
 			resources.Services = append(resources.Services,
@@ -896,7 +897,7 @@ func TestProcessTracingServiceName(t *testing.T) {
 				},
 			)
 
-			result, err := translator.processTracing(tc.gateway, tc.envoyProxy, tc.mergeGateways, resources)
+			result, err := translator.processTracing(translatorContext, tc.gateway, tc.envoyProxy, tc.mergeGateways, resources)
 
 			if tc.expectError {
 				assert.Error(t, err)

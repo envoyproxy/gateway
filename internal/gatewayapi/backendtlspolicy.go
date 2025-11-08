@@ -75,6 +75,7 @@ func localPolicyTargetReferenceWithSectionNameToKey(ns string, targetRef gwapiv1
 // applyBackendTLSSetting processes TLS settings from Backend resource, BackendTLSPolicy, and EnvoyProxy resource.
 // It merges the TLS settings from these resources and returns the final TLS config to be applied to the upstream cluster.
 func (t *Translator) applyBackendTLSSetting(
+	translatorContext *TranslatorContext,
 	backendRef gwapiv1.BackendObjectReference,
 	backendNamespace string,
 	parent gwapiv1.ParentReference,
@@ -113,7 +114,7 @@ func (t *Translator) applyBackendTLSSetting(
 	}
 
 	// Get the backend certificate validation settings from BackendTLSPolicy.
-	if btpValidationTLSConfig, err = t.processBackendTLSPolicy(backendRef, backendNamespace, parent, resources); err != nil {
+	if btpValidationTLSConfig, err = t.processBackendTLSPolicy(translatorContext, backendRef, backendNamespace, parent, resources); err != nil {
 		return nil, err
 	}
 
@@ -271,12 +272,13 @@ func (t *Translator) processServerValidationTLSSettings(
 }
 
 func (t *Translator) processBackendTLSPolicy(
+	translatorContext *TranslatorContext,
 	backendRef gwapiv1.BackendObjectReference,
 	backendNamespace string,
 	parent gwapiv1.ParentReference,
 	resources *resource.Resources,
 ) (*ir.TLSUpstreamConfig, error) {
-	policy := getBackendTLSPolicy(resources.BackendTLSPolicies, backendRef, backendNamespace, resources)
+	policy := getBackendTLSPolicy(translatorContext, resources.BackendTLSPolicies, backendRef, backendNamespace, resources)
 	if policy == nil {
 		return nil, nil
 	}
@@ -405,13 +407,14 @@ func backendTLSTargetMatched(policy *gwapiv1.BackendTLSPolicy, target gwapiv1.Lo
 }
 
 func getBackendTLSPolicy(
+	translatorContext *TranslatorContext,
 	policies []*gwapiv1.BackendTLSPolicy,
 	backendRef gwapiv1.BackendObjectReference,
 	backendNamespace string,
 	resources *resource.Resources,
 ) *gwapiv1.BackendTLSPolicy {
 	// SectionName is port number for EG Backend object
-	target := getTargetBackendReference(backendRef, backendNamespace, resources)
+	target := getTargetBackendReference(translatorContext, backendRef, backendNamespace, resources)
 	for _, policy := range policies {
 		if backendTLSTargetMatched(policy, target, backendNamespace) {
 			return policy

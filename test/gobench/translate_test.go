@@ -249,9 +249,9 @@ spec:
     - "www.example-%d.com"
   rules:
     - backendRefs:
-        - name: provided-backend
+        - name: service-backend-%d
           port: 8000
-`, i, i))
+`, i, i, i))
 	}
 	return sb.String()
 }
@@ -277,9 +277,9 @@ spec:
             service: com.example.Service%d
             method: Call
       backendRefs:
-        - name: provided-backend
+        - name: service-backend-%d
           port: 9000
-`, i, i, i))
+`, i, i, i, i))
 	}
 	return sb.String()
 }
@@ -299,9 +299,30 @@ spec:
       sectionName: udp
   rules:
     - backendRefs:
-        - name: provided-backend
+        - name: service-backend-%d
           port: %d
-`, i, 3000+i))
+`, i, i, 3000+i))
+	}
+	return sb.String()
+}
+
+func genService(n int) string {
+	var sb strings.Builder
+	for i := 0; i < n; i++ {
+		sb.WriteString(fmt.Sprintf(`---
+apiVersion: v1
+kind: Service
+metadata:
+  name: service-backend-%d
+  namespace: default
+spec:
+  clusterIP: 10.11.12.13
+  ports:
+    - port: 8000
+      name: http
+      protocol: TCP
+      targetPort: 8000
+`, i))
 	}
 	return sb.String()
 }
@@ -317,13 +338,15 @@ func BenchmarkGatewayAPItoXDS(b *testing.B) {
 		genGRPCRoutes(25) +
 		genUDPRoutes(10) +
 		genSecurityPolicies(50) +
-		genBackendTrafficPolicies(50)
+		genBackendTrafficPolicies(50) +
+		genService(50)
 	large := baseYAML + backendYAML + tlsSecretYAML + clientTrafficPolicyYAML +
 		genHTTPRoutes(500) +
 		genGRPCRoutes(250) +
 		genUDPRoutes(100) +
 		genSecurityPolicies(500) +
-		genBackendTrafficPolicies(500)
+		genBackendTrafficPolicies(500) +
+		genService(500)
 
 	cases := []benchCase{
 		{

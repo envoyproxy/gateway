@@ -936,9 +936,10 @@ func Test_SecurityPolicy_TCP_Invalid_setsStatus_and_returns(t *testing.T) {
 	gatewayRouteMap := make(map[string]map[string]sets.Set[string])
 	resources := resource.NewResources()
 	xdsIR := make(resource.XdsIRMap)
+	translatorContext := tr.buildTranslatorContext(resources)
 
 	// Process the policy - this should set error status
-	tr.processSecurityPolicyForRoute(resources, xdsIR, routeMap, gatewayRouteMap, policy, target)
+	tr.processSecurityPolicyForRoute(translatorContext, resources, xdsIR, routeMap, gatewayRouteMap, policy, target)
 
 	// Assert that the policy has a False condition (error was set)
 	require.True(t, hasParentFalseCondition(policy))
@@ -1010,9 +1011,10 @@ func Test_SecurityPolicy_HTTP_Invalid_setsStatus_and_returns(t *testing.T) {
 	gatewayRouteMap := make(map[string]map[string]sets.Set[string])
 	resources := resource.NewResources()
 	xdsIR := make(resource.XdsIRMap)
+	translatorContext := tr.buildTranslatorContext(resources)
 
 	// Process the policy - this should set error status
-	tr.processSecurityPolicyForRoute(resources, xdsIR, routeMap, gatewayRouteMap, policy, target)
+	tr.processSecurityPolicyForRoute(translatorContext, resources, xdsIR, routeMap, gatewayRouteMap, policy, target)
 
 	// Assert that the policy has a False condition (error was set)
 	require.True(t, hasParentFalseCondition(policy))

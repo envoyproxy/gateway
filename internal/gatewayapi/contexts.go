@@ -661,3 +661,14 @@ func (d DirectBackendRef) GetBackendRef() *gwapiv1.BackendRef {
 func (d DirectBackendRef) GetFilters() any {
 	return nil
 }
+
+type TranslatorContext struct {
+	ServiceMap map[types.NamespacedName]*corev1.Service
+}
+
+func (t *TranslatorContext) GetService(namespace, name string) *corev1.Service {
+	if svc, ok := t.ServiceMap[types.NamespacedName{Namespace: namespace, Name: name}]; ok {
+		return svc
+	}
+	return nil
+}
