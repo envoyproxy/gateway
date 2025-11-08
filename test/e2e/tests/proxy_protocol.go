@@ -27,7 +27,7 @@ func init() {
 
 var ProxyProtocolTest = suite.ConformanceTest{
 	ShortName:   "ProxyProtocol",
-	Description: "Make sure ProxyProtocol is working (default and custom service name)",
+	Description: "Make sure ProxyProtocol is working",
 	Manifests:   []string{"testdata/proxy-protocol-with-tls.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		ns := "gateway-conformance-infra"
@@ -37,7 +37,10 @@ var ProxyProtocolTest = suite.ConformanceTest{
 		// Update the backend FQDN to point to the service in the same namespace when using gateway namespace mode.
 		if IsGatewayNamespaceMode() {
 			backend := &egv1a1.Backend{}
-			err := suite.Client.Get(t.Context(), types.NamespacedName{}, backend)
+			err := suite.Client.Get(t.Context(), types.NamespacedName{
+				Name:      "proxy-protocol-backend",
+				Namespace: ns,
+			}, backend)
 			require.NoError(t, err)
 
 			for _, ep := range backend.Spec.Endpoints {
