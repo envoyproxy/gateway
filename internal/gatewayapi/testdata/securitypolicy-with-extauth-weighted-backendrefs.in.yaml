@@ -58,6 +58,25 @@ httpRoutes:
           backendRefs:
             - name: service-3
               port: 8080
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: default
+      name: httproute-3
+    spec:
+      hostnames:
+        - www.foobar.com
+      parentRefs:
+        - namespace: default
+          name: gateway-1
+          sectionName: http
+      rules:
+        - matches:
+            - path:
+                value: /foobar
+          backendRefs:
+            - name: service-4
+              port: 8080
 services:
   - apiVersion: v1
     kind: Service
@@ -94,6 +113,16 @@ services:
     metadata:
       namespace: default
       name: grpc-backend2
+    spec:
+      ports:
+        - port: 9000
+          name: grpc
+          protocol: TCP
+  - apiVersion: v1
+    kind: Service
+    metadata:
+      namespace: default
+      name: grpc-backend3
     spec:
       ports:
         - port: 9000
@@ -168,6 +197,23 @@ endpointSlices:
           - 8.8.8.9
         conditions:
           ready: true
+  - apiVersion: discovery.k8s.io/v1
+    kind: EndpointSlice
+    metadata:
+      name: endpointslice-grpc-backend2
+      namespace: default
+      labels:
+        kubernetes.io/service-name: grpc-backend2
+    addressType: IPv4
+    ports:
+      - name: grpc
+        protocol: TCP
+        port: 9000
+    endpoints:
+      - addresses:
+          - 8.8.8.7
+        conditions:
+          ready: true
 referenceGrants:
   - apiVersion: gateway.networking.k8s.io/v1alpha2
     kind: ReferenceGrant
@@ -229,3 +275,27 @@ securityPolicies:
             - name: grpc-backend2
               port: 9000
               weight: 99
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: SecurityPolicy
+    metadata:
+      namespace: default
+      # policy with weight specified
+      name: policy-for-http-route-3
+    spec:
+      targetRef:
+        group: gateway.networking.k8s.io
+        kind: HTTPRoute
+        name: httproute-3
+      extAuth:
+        failOpen: false
+        headersToExtAuth:
+          - header1
+          - header2
+        grpc:
+          backendRefs:
+            - name: grpc-backend
+              port: 9000
+              weight: 99
+            - name: grpc-backend3
+              port: 9000
+              weight: 0
