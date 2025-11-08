@@ -1,6 +1,0 @@
-# the default configuration for the gateway helm chart
-deployment:
-  envoyGateway:
-    image:
-      repository: pahujanayan/envoyproxy-gateway-dev
-      tag: "d73079bd6"
