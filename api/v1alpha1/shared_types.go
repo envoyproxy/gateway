@@ -638,6 +638,13 @@ type ClusterSettings struct {
 	//
 	// +optional
 	HTTP2 *HTTP2Settings `json:"http2,omitempty"`
+
+	// UseClientProtocol configures Envoy to prefer sending requests to backends using
+	// the same HTTP protocol that the incoming request used. Defaults to false, which means
+	// that Envoy will use the protocol indicated by the attached BackendRef.
+	//
+	// +optional
+	UseClientProtocol *bool `json:"useClientProtocol,omitempty"`
 }
 
 // CIDR defines a CIDR Address range.
