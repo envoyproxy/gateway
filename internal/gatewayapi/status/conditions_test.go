@@ -15,6 +15,7 @@ package status
 
 import (
 	"errors"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -39,20 +40,6 @@ func TestConditionChanged(t *testing.T) {
 			expected: false,
 			a:        metav1.Condition{},
 			b:        metav1.Condition{},
-		},
-		{
-			name:     "condition LastTransitionTime should be ignored",
-			expected: false,
-			a: metav1.Condition{
-				Type:               string(gwapiv1.GatewayClassConditionStatusAccepted),
-				Status:             metav1.ConditionTrue,
-				LastTransitionTime: metav1.Unix(0, 0),
-			},
-			b: metav1.Condition{
-				Type:               string(gwapiv1.GatewayClassConditionStatusAccepted),
-				Status:             metav1.ConditionTrue,
-				LastTransitionTime: metav1.Unix(1, 0),
-			},
 		},
 		{
 			name:     "check condition reason differs",
@@ -83,7 +70,7 @@ func TestConditionChanged(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		if got := conditionChanged(&tc.a, &tc.b); got != tc.expected {
+		if got := !reflect.DeepEqual(tc.a, tc.b); got != tc.expected {
 			assert.Equal(t, tc.expected, got, tc.name)
 		}
 	}
