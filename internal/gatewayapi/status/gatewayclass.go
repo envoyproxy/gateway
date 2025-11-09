@@ -14,8 +14,6 @@
 package status
 
 import (
-	"time"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -56,7 +54,6 @@ func computeGatewayClassAcceptedCondition(gatewayClass *gwapiv1.GatewayClass,
 			Reason:             reason,
 			Message:            msg,
 			ObservedGeneration: gatewayClass.Generation,
-			LastTransitionTime: metav1.NewTime(time.Now()),
 		}
 	default:
 		return metav1.Condition{
@@ -65,7 +62,6 @@ func computeGatewayClassAcceptedCondition(gatewayClass *gwapiv1.GatewayClass,
 			Reason:             reason,
 			Message:            msg,
 			ObservedGeneration: gatewayClass.Generation,
-			LastTransitionTime: metav1.NewTime(time.Now()),
 		}
 	}
 }
