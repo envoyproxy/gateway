@@ -102,5 +102,4 @@ lint.markdown:
 lint: lint.dependabot
 lint.dependabot: ## Check if dependabot configuration is valid
 	@$(LOG_TARGET)
-	# TODO: re-enable this when https://json.schemastore.org/dependabot-2.0.json is back to normal.
-	@#npx @bugron/validate-dependabot-yaml .github/dependabot.yml
+	@npx @bugron/validate-dependabot-yaml .github/dependabot.yml
