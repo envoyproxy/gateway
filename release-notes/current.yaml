@@ -15,6 +15,7 @@ bug fixes: |
  - Fixed Listener port limit typo 65353 -> 65535.
  - Fixed issue where reloading invalid envoy gateway configuration.
  - Fixed missing JWT provider configuration when JWT authentication is configured on multiple HTTP listeners sharing the same port.
+ - Fixed issue where header modifier doesn't permit multiple values with commas.
 
 # Enhancements that improve performance.
 performance improvements: |
