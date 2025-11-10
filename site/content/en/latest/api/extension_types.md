@@ -2215,7 +2215,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `useDefaultHost` | _boolean_ |  false  |  | UseDefaultHost defines if the HTTP/1.0 request is missing the Host header,<br />then the hostname associated with the listener should be injected into the<br />request.<br />If this is not set and an HTTP/1.0 request arrives without a host, then<br />it will be rejected. |
+| `useDefaultHost` | _boolean_ |  false  |  | UseDefaultHost specifies whether a default Host header should be injected<br />into HTTP/1.0 requests that do not include one.<br />When set to true, Envoy Gateway injects the hostname associated with the<br />listener or route into the request, in the following order:<br />  1. If the targeted listener has a non-wildcard hostname, use that hostname.<br />  2. If there is exactly one HTTPRoute with a non-wildcard hostname under<br />     the targeted listener, use that hostname.<br /> Note: Setting this field to true without a non-wildcard hostname makes the<br />ClientTrafficPolicy invalid. |
 
 
 #### HTTP1Settings

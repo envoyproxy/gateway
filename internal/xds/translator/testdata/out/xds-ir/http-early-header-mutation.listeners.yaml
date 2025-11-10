@@ -58,11 +58,7 @@
             - append:
                 header:
                   key: some-header
-                  value: some-value1
-            - append:
-                header:
-                  key: some-header
-                  value: some-value2
+                  value: some-value1,some-value2
             - append:
                 header:
                   key: some-header-2
