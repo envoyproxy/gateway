@@ -51,7 +51,7 @@ metadata:
   name: example-com-tls-policy
 spec:
   targetRefs:
-    - group: 'gateway.envoyproxy.io'
+    - group: "gateway.envoyproxy.io"
       kind: Backend
       name: backend
   validation:

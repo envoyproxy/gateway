@@ -9,10 +9,10 @@ spec:
     name: foo
   jwt:
     providers:
-    - name: example
-      remoteJWKS:
-        uri: https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/kubernetes/jwt/jwks.json
-        cacheDuration: 60s
+      - name: example
+        remoteJWKS:
+          uri: https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/kubernetes/jwt/jwks.json
+          cacheDuration: 60s
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
@@ -20,20 +20,20 @@ metadata:
   name: foo
 spec:
   parentRefs:
-  - name: eg
+    - name: eg
   hostnames:
-  - "www.example.com"
+    - "www.example.com"
   rules:
-  - backendRefs:
-    - group: ""
-      kind: Service
-      name: backend
-      port: 3000
-      weight: 1
-    matches:
-    - path:
-        type: PathPrefix
-        value: /foo
+    - backendRefs:
+        - group: ""
+          kind: Service
+          name: backend
+          port: 3000
+          weight: 1
+      matches:
+        - path:
+            type: PathPrefix
+            value: /foo
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
@@ -41,17 +41,17 @@ metadata:
   name: bar
 spec:
   parentRefs:
-  - name: eg
+    - name: eg
   hostnames:
-  - "www.example.com"
+    - "www.example.com"
   rules:
-  - backendRefs:
-    - group: ""
-      kind: Service
-      name: backend
-      port: 3000
-      weight: 1
-    matches:
-    - path:
-        type: PathPrefix
-        value: /bar
+    - backendRefs:
+        - group: ""
+          kind: Service
+          name: backend
+          port: 3000
+          weight: 1
+      matches:
+        - path:
+            type: PathPrefix
+            value: /bar

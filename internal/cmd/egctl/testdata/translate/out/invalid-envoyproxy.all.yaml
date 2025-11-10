@@ -36,8 +36,8 @@ gatewayClass:
       namespace: default
   status:
     conditions:
-    - lastTransitionTime: null
-      message: 'Invalid parametersRef: dynamic_resources cannot be modified'
-      reason: InvalidParameters
-      status: "False"
-      type: Accepted
+      - lastTransitionTime: null
+        message: "Invalid parametersRef: dynamic_resources cannot be modified"
+        reason: InvalidParameters
+        status: "False"
+        type: Accepted
