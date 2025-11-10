@@ -14,10 +14,9 @@
 package status
 
 import (
+	"reflect"
 	"unicode"
 
-	"github.com/google/go-cmp/cmp"
-	"github.com/google/go-cmp/cmp/cmpopts"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -36,7 +35,7 @@ func MergeConditions(conditions []metav1.Condition, updates ...metav1.Condition)
 		for j := range conditions {
 			if conditions[j].Type == updates[i].Type {
 				add = false
-				if conditionChanged(&conditions[j], &updates[i]) {
+				if !reflect.DeepEqual(conditions[j], updates[i]) {
 					conditions[j].Status = updates[i].Status
 					conditions[j].Reason = updates[i].Reason
 					conditions[j].Message = updates[i].Message
@@ -61,11 +60,6 @@ func newCondition(t string, status metav1.ConditionStatus, reason, msg string, o
 		Message:            truncateConditionMessage(msg),
 		ObservedGeneration: og,
 	}
-}
-
-func conditionChanged(a, b *metav1.Condition) bool {
-	opts := cmpopts.IgnoreFields(metav1.Condition{}, "Type", "LastTransitionTime")
-	return !cmp.Equal(*a, *b, opts)
 }
 
 // Error2ConditionMsg format the error string to a Status condition message.
