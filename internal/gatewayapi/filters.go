@@ -69,6 +69,8 @@ type HTTPFilterIR struct {
 // Header value pattern according to RFC 7230
 var HeaderValueRegexp = regexp.MustCompile(`^[!-~]+([\t ]?[!-~]+)*$`)
 
+const requestMirrorDirectResponseConflictMsg = "RequestMirror filter cannot be used when the rule also configures a DirectResponse filter"
+
 // ProcessHTTPFilters translates gateway api http filters to IRs.
 func (t *Translator) ProcessHTTPFilters(parentRef *RouteParentContext,
 	route RouteContext,
@@ -112,6 +114,10 @@ func (t *Translator) ProcessHTTPFilters(parentRef *RouteParentContext,
 		default:
 			t.processUnsupportedHTTPFilter(string(filter.Type), httpFiltersContext)
 		}
+	}
+
+	if httpFiltersContext.DirectResponse != nil && len(httpFiltersContext.Mirrors) > 0 {
+		updateRouteStatusForFilter(httpFiltersContext, requestMirrorDirectResponseConflictMsg)
 	}
 
 	return httpFiltersContext, err
