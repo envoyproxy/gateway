@@ -22,6 +22,13 @@ lint.golint:
 	@$(LOG_TARGET)
 	$(GO_TOOL) golangci-lint run $(GOLANGCI_LINT_FLAGS) --build-tags=$(LINT_BUILD_TAGS) --config=tools/linter/golangci-lint/.golangci.yml
 
+.PHONY: lint.kube-api-linter
+lint: lint.kube-api-linter
+lint-deps: $(tools/kube-api-linter)
+lint.kube-api-linter:
+	@$(LOG_TARGET)
+	$(GO_TOOL) golangci-lint run $(GOLANGCI_LINT_FLAGS) --build-tags=$(LINT_BUILD_TAGS) --config=tools/linter/golangci-lint/.golangci-kal.yml ./api/... --verbose
+
 .PHONY: lint.yamllint
 lint: lint.yamllint
 lint-deps: $(tools/yamllint)
