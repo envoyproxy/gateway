@@ -1249,32 +1249,43 @@ func TestProcessSecurityPolicyObjectRefs(t *testing.T) {
 }
 
 func TestProcessServiceClusterForGatewayClass(t *testing.T) {
+	gcName := "merged-gc"
+	nsName := "envoy-gateway-system"
 	testCases := []struct {
 		name            string
 		gatewayClass    *gwapiv1.GatewayClass
 		envoyProxy      *egv1a1.EnvoyProxy
 		expectedSvcName string
+		serviceCluster  []client.Object
 	}{
 		{
 			name: "when merged gateways and no hardcoded svc name is used",
 			gatewayClass: &gwapiv1.GatewayClass{
 				ObjectMeta: metav1.ObjectMeta{
-					Name: "merged-gc",
+					Name: gcName,
 				},
 			},
 			envoyProxy:      nil,
-			expectedSvcName: proxy.ExpectedResourceHashedName("merged-gc"),
+			expectedSvcName: proxy.ExpectedResourceHashedName(gcName),
+			serviceCluster: []client.Object{
+				&corev1.Service{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      proxy.ExpectedResourceHashedName(gcName),
+						Namespace: nsName,
+					},
+				},
+			},
 		},
 		{
 			name: "when merged gateways and a hardcoded svc name is used",
 			gatewayClass: &gwapiv1.GatewayClass{
 				ObjectMeta: metav1.ObjectMeta{
-					Name: "merged-gc",
+					Name: gcName,
 				},
 			},
 			envoyProxy: &egv1a1.EnvoyProxy{
 				ObjectMeta: metav1.ObjectMeta{
-					Name: "merged-gc",
+					Name: gcName,
 				},
 				Spec: egv1a1.EnvoyProxySpec{
 					Provider: &egv1a1.EnvoyProxyProvider{
@@ -1288,6 +1299,25 @@ func TestProcessServiceClusterForGatewayClass(t *testing.T) {
 				},
 			},
 			expectedSvcName: "merged-gc-svc",
+			serviceCluster: []client.Object{
+				&corev1.Service{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "merged-gc-svc",
+						Namespace: nsName,
+					},
+				},
+			},
+		},
+		{
+			name: "non-existent proxy service",
+			gatewayClass: &gwapiv1.GatewayClass{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: gcName,
+				},
+			},
+			envoyProxy:      nil,
+			expectedSvcName: proxy.ExpectedResourceHashedName(gcName),
+			serviceCluster:  nil,
 		},
 	}
 
@@ -1299,9 +1329,13 @@ func TestProcessServiceClusterForGatewayClass(t *testing.T) {
 			resourceMap := newResourceMapping()
 
 			r := newGatewayAPIReconciler(logger)
+			r.client = fakeclient.NewClientBuilder().
+				WithScheme(envoygateway.GetScheme()).
+				WithObjects(tc.serviceCluster...).
+				Build()
 			r.namespace = "envoy-gateway-system"
 
-			r.processServiceClusterForGatewayClass(tc.envoyProxy, tc.gatewayClass, resourceMap)
+			r.processServiceClusterForGatewayClass(context.Background(), tc.envoyProxy, tc.gatewayClass, resourceMap)
 
 			expectedRef := gwapiv1.BackendObjectReference{
 				Kind:      ptr.To(gwapiv1.Kind(resource.KindService)),
@@ -1309,8 +1343,12 @@ func TestProcessServiceClusterForGatewayClass(t *testing.T) {
 				Name:      gwapiv1.ObjectName(tc.expectedSvcName),
 			}
 			key := backendRefKey(&expectedRef)
-			require.Contains(t, resourceMap.allAssociatedBackendRefs, key)
-			require.Equal(t, expectedRef, resourceMap.allAssociatedBackendRefs[key])
+			if tc.serviceCluster != nil {
+				require.Contains(t, resourceMap.allAssociatedBackendRefs, key)
+				require.Equal(t, expectedRef, resourceMap.allAssociatedBackendRefs[key])
+			} else {
+				require.NotContains(t, resourceMap.allAssociatedBackendRefs, key)
+			}
 		})
 	}
 }
@@ -1324,6 +1362,7 @@ func TestProcessServiceClusterForGateway(t *testing.T) {
 		gatewayNamespacedMode  bool
 		expectedSvcName        string
 		expectedSvcNamespace   string
+		serviceCluster         []client.Object
 	}{
 		{
 			name: "no gateway namespaced mode with no hardcoded service name",
@@ -1377,6 +1416,14 @@ func TestProcessServiceClusterForGateway(t *testing.T) {
 			gatewayNamespacedMode: true,
 			expectedSvcName:       "my-gateway",
 			expectedSvcNamespace:  "app-namespace",
+			serviceCluster: []client.Object{
+				&corev1.Service{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "my-gateway",
+						Namespace: "app-namespace",
+					},
+				},
+			},
 		},
 		{
 			name: "gateway namespaced mode with hardcoded service name",
@@ -1404,6 +1451,14 @@ func TestProcessServiceClusterForGateway(t *testing.T) {
 			gatewayNamespacedMode: true,
 			expectedSvcName:       "my-gateway-svc",
 			expectedSvcNamespace:  "app-namespace",
+			serviceCluster: []client.Object{
+				&corev1.Service{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "my-gateway-svc",
+						Namespace: "app-namespace",
+					},
+				},
+			},
 		},
 		{
 			name: "no gateway namespaced mode with no hardcoded service name attached gatewayclass",
@@ -1443,6 +1498,10 @@ func TestProcessServiceClusterForGateway(t *testing.T) {
 			resourceMap := newResourceMapping()
 
 			r := newGatewayAPIReconciler(logger)
+			r.client = fakeclient.NewClientBuilder().
+				WithScheme(envoygateway.GetScheme()).
+				WithObjects(tc.serviceCluster...).
+				Build()
 			r.namespace = "envoy-gateway-system"
 			r.gatewayNamespaceMode = tc.gatewayNamespacedMode
 
@@ -1458,7 +1517,7 @@ func TestProcessServiceClusterForGateway(t *testing.T) {
 				tc.envoyProxy = tc.gatewayClassEnvoyProxy
 			}
 
-			r.processServiceClusterForGateway(tc.envoyProxy, tc.gateway, resourceMap)
+			r.processServiceClusterForGateway(context.Background(), tc.envoyProxy, tc.gateway, resourceMap)
 
 			expectedRef := gwapiv1.BackendObjectReference{
 				Kind:      ptr.To(gwapiv1.Kind(resource.KindService)),
@@ -1466,8 +1525,12 @@ func TestProcessServiceClusterForGateway(t *testing.T) {
 				Name:      gwapiv1.ObjectName(tc.expectedSvcName),
 			}
 			key := backendRefKey(&expectedRef)
-			require.Contains(t, resourceMap.allAssociatedBackendRefs, key)
-			require.Equal(t, expectedRef, resourceMap.allAssociatedBackendRefs[key])
+			if tc.serviceCluster != nil {
+				require.Contains(t, resourceMap.allAssociatedBackendRefs, key)
+				require.Equal(t, expectedRef, resourceMap.allAssociatedBackendRefs[key])
+			} else {
+				require.NotContains(t, resourceMap.allAssociatedBackendRefs, key)
+			}
 		})
 	}
 }

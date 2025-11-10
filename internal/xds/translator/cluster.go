@@ -203,13 +203,6 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 		}
 	}
 
-	// Set Proxy Protocol
-	if args.proxyProtocol != nil {
-		cluster.TransportSocket = buildProxyProtocolSocket(args.proxyProtocol, args.tSocket)
-	} else if args.tSocket != nil {
-		cluster.TransportSocket = args.tSocket
-	}
-
 	// scan through settings to determine cluster-level configuration options, as some of them
 	// influence transport socket specific settings
 	requiresAutoHTTPConfig := false
@@ -235,6 +228,14 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 	// only enable auto sni if TLS is configured
 	requiresAutoSNI := !hasLiteralSNI && requiresAutoHTTPConfig
 
+	// Set Proxy Protocol
+	proxyProtocolEnabled := args.proxyProtocol != nil
+	if proxyProtocolEnabled {
+		cluster.TransportSocket = buildProxyProtocolSocket(args.proxyProtocol, args.tSocket, requiresAutoHTTPConfig)
+	} else if args.tSocket != nil {
+		cluster.TransportSocket = args.tSocket
+	}
+
 	for i, ds := range args.settings {
 		if ds.TLS != nil {
 			socket, err := buildXdsUpstreamTLSSocketWthCert(ds.TLS, requiresAutoSNI, args.endpointType)
@@ -242,8 +243,8 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 				// TODO: Log something here
 				return nil, err
 			}
-			if args.proxyProtocol != nil {
-				socket = buildProxyProtocolSocket(args.proxyProtocol, socket)
+			if proxyProtocolEnabled {
+				socket = buildProxyProtocolSocket(args.proxyProtocol, socket, requiresAutoHTTPConfig)
 			}
 			matchName := fmt.Sprintf("%s/tls/%d", args.name, i)
 
@@ -265,7 +266,7 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 	}
 
 	// TransportSocket is required for auto HTTP config
-	if requiresAutoHTTPConfig && cluster.TransportSocket == nil {
+	if requiresAutoHTTPConfig && cluster.TransportSocket == nil && !proxyProtocolEnabled {
 		// we need a dummy transport socket to pass the validation
 		cluster.TransportSocket = dummyTransportSocket
 	}
@@ -275,7 +276,8 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 	if err != nil {
 		return nil, err
 	}
-	if epo != nil {
+	// Set TypedExtensionProtocolOptions if not using Proxy Protocol
+	if !proxyProtocolEnabled && epo != nil {
 		cluster.TypedExtensionProtocolOptions = epo
 	}
 
@@ -1006,7 +1008,7 @@ func buildUpstreamCodecFilter() (*hcmv3.HttpFilter, error) {
 }
 
 // buildProxyProtocolSocket builds the ProxyProtocol transport socket.
-func buildProxyProtocolSocket(proxyProtocol *ir.ProxyProtocol, tSocket *corev3.TransportSocket) *corev3.TransportSocket {
+func buildProxyProtocolSocket(proxyProtocol *ir.ProxyProtocol, tSocket *corev3.TransportSocket, requiresAutoHTTPConfig bool) *corev3.TransportSocket {
 	if proxyProtocol == nil {
 		return nil
 	}
@@ -1026,18 +1028,22 @@ func buildProxyProtocolSocket(proxyProtocol *ir.ProxyProtocol, tSocket *corev3.T
 
 	// If existing transport socket does not exist wrap around raw buffer
 	if tSocket == nil {
-		rawCtx := &rawbufferv3.RawBuffer{}
-		rawCtxAny, err := proto.ToAnyWithValidation(rawCtx)
-		if err != nil {
-			return nil
+		if requiresAutoHTTPConfig {
+			ppCtx.TransportSocket = dummyTransportSocket
+		} else {
+			rawCtx := &rawbufferv3.RawBuffer{}
+			rawCtxAny, err := proto.ToAnyWithValidation(rawCtx)
+			if err != nil {
+				return nil
+			}
+			rawSocket := &corev3.TransportSocket{
+				Name: wellknown.TransportSocketRawBuffer,
+				ConfigType: &corev3.TransportSocket_TypedConfig{
+					TypedConfig: rawCtxAny,
+				},
+			}
+			ppCtx.TransportSocket = rawSocket
 		}
-		rawSocket := &corev3.TransportSocket{
-			Name: wellknown.TransportSocketRawBuffer,
-			ConfigType: &corev3.TransportSocket_TypedConfig{
-				TypedConfig: rawCtxAny,
-			},
-		}
-		ppCtx.TransportSocket = rawSocket
 	} else {
 		ppCtx.TransportSocket = tSocket
 	}

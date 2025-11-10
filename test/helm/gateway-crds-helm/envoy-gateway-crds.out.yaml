@@ -2021,12 +2021,12 @@ spec:
                     description: |-
                       Type decides the scope for the RateLimits.
                       Valid RateLimitType values are "Global" or "Local".
+
+                      Deprecated: Use Global and/or Local fields directly instead. Both can be specified simultaneously for combined rate limiting.
                     enum:
                     - Global
                     - Local
                     type: string
-                required:
-                - type
                 type: object
               requestBuffer:
                 description: |-
@@ -3849,11 +3849,18 @@ spec:
                     properties:
                       useDefaultHost:
                         description: |-
-                          UseDefaultHost defines if the HTTP/1.0 request is missing the Host header,
-                          then the hostname associated with the listener should be injected into the
-                          request.
-                          If this is not set and an HTTP/1.0 request arrives without a host, then
-                          it will be rejected.
+                          UseDefaultHost specifies whether a default Host header should be injected
+                          into HTTP/1.0 requests that do not include one.
+
+                          When set to true, Envoy Gateway injects the hostname associated with the
+                          listener or route into the request, in the following order:
+
+                            1. If the targeted listener has a non-wildcard hostname, use that hostname.
+                            2. If there is exactly one HTTPRoute with a non-wildcard hostname under
+                               the targeted listener, use that hostname.
+
+                           Note: Setting this field to true without a non-wildcard hostname makes the
+                          ClientTrafficPolicy invalid.
                         type: boolean
                     type: object
                   preserveHeaderCase:
@@ -7886,6 +7893,8 @@ spec:
 
                   - envoy.filters.http.ext_authz
 
+                  - envoy.filters.http.api_key_auth
+
                   - envoy.filters.http.basic_auth
 
                   - envoy.filters.http.oauth2
@@ -7893,6 +7902,8 @@ spec:
                   - envoy.filters.http.jwt_authn
 
                   - envoy.filters.http.stateful_session
+
+                  - envoy.filters.http.buffer
 
                   - envoy.filters.http.lua
 
@@ -7906,7 +7917,15 @@ spec:
 
                   - envoy.filters.http.ratelimit
 
+                  - envoy.filters.http.grpc_web
+
+                  - envoy.filters.http.grpc_stats
+
                   - envoy.filters.http.custom_response
+
+                  - envoy.filters.http.credential_injector
+
+                  - envoy.filters.http.compressor
 
                   - envoy.filters.http.router
 
@@ -7929,13 +7948,17 @@ spec:
                       - envoy.filters.http.oauth2
                       - envoy.filters.http.jwt_authn
                       - envoy.filters.http.stateful_session
+                      - envoy.filters.http.buffer
                       - envoy.filters.http.lua
                       - envoy.filters.http.ext_proc
                       - envoy.filters.http.wasm
                       - envoy.filters.http.rbac
                       - envoy.filters.http.local_ratelimit
                       - envoy.filters.http.ratelimit
+                      - envoy.filters.http.grpc_web
+                      - envoy.filters.http.grpc_stats
                       - envoy.filters.http.custom_response
+                      - envoy.filters.http.credential_injector
                       - envoy.filters.http.compressor
                       type: string
                     before:
@@ -7952,13 +7975,17 @@ spec:
                       - envoy.filters.http.oauth2
                       - envoy.filters.http.jwt_authn
                       - envoy.filters.http.stateful_session
+                      - envoy.filters.http.buffer
                       - envoy.filters.http.lua
                       - envoy.filters.http.ext_proc
                       - envoy.filters.http.wasm
                       - envoy.filters.http.rbac
                       - envoy.filters.http.local_ratelimit
                       - envoy.filters.http.ratelimit
+                      - envoy.filters.http.grpc_web
+                      - envoy.filters.http.grpc_stats
                       - envoy.filters.http.custom_response
+                      - envoy.filters.http.credential_injector
                       - envoy.filters.http.compressor
                       type: string
                     name:
@@ -7973,13 +8000,17 @@ spec:
                       - envoy.filters.http.oauth2
                       - envoy.filters.http.jwt_authn
                       - envoy.filters.http.stateful_session
+                      - envoy.filters.http.buffer
                       - envoy.filters.http.lua
                       - envoy.filters.http.ext_proc
                       - envoy.filters.http.wasm
                       - envoy.filters.http.rbac
                       - envoy.filters.http.local_ratelimit
                       - envoy.filters.http.ratelimit
+                      - envoy.filters.http.grpc_web
+                      - envoy.filters.http.grpc_stats
                       - envoy.filters.http.custom_response
+                      - envoy.filters.http.credential_injector
                       - envoy.filters.http.compressor
                       type: string
                   required:

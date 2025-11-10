@@ -6,7 +6,11 @@
 package gatewayapi
 
 import (
+	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"regexp"
+	"sync/atomic"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -778,6 +782,79 @@ func TestValidateCIDRs_ErrorOnBadCIDR(t *testing.T) {
 	if err := validateCIDRs([]egv1a1.CIDR{"10.0.0.0/33"}); err == nil {
 		t.Fatal("expected invalid ClientCIDR error")
 	}
+}
+
+func TestTranslatorFetchEndpointsFromIssuerCache(t *testing.T) {
+	var (
+		callCount atomic.Int32
+		server    *httptest.Server
+	)
+
+	server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/.well-known/openid-configuration" {
+			http.NotFound(w, r)
+			return
+		}
+
+		callCount.Add(1)
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = fmt.Fprintf(w, `{"token_endpoint":%q,"authorization_endpoint":%q}`, server.URL+"/token", server.URL+"/authorize")
+	}))
+	defer server.Close()
+
+	tr := &Translator{GatewayControllerName: "gateway.envoyproxy.io/gatewayclass-controller"}
+	tr.oidcDiscoveryCache = newOIDCDiscoveryCache()
+
+	cfg, err := tr.fetchEndpointsFromIssuer(server.URL, nil)
+	require.NoError(t, err)
+	require.NotNil(t, cfg)
+	require.Equal(t, int32(1), callCount.Load())
+
+	cfgCached, err := tr.fetchEndpointsFromIssuer(server.URL, nil)
+	require.NoError(t, err)
+	require.NotNil(t, cfgCached)
+	require.Equal(t, int32(1), callCount.Load(), "second fetch should use cache")
+
+	cfgAgain, err := tr.fetchEndpointsFromIssuer(server.URL, nil)
+	require.NoError(t, err)
+	require.NotNil(t, cfgAgain)
+	require.Equal(t, int32(1), callCount.Load(), "subsequent fetch should continue using cache")
+}
+
+func TestTranslatorFetchEndpointsFromIssuerCacheError(t *testing.T) {
+	var (
+		callCount atomic.Int32
+		server    *httptest.Server
+	)
+
+	server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/.well-known/openid-configuration" {
+			http.NotFound(w, r)
+			return
+		}
+
+		callCount.Add(1)
+		http.NotFound(w, r)
+	}))
+	defer server.Close()
+
+	tr := &Translator{GatewayControllerName: "gateway.envoyproxy.io/gatewayclass-controller"}
+	tr.oidcDiscoveryCache = newOIDCDiscoveryCache()
+
+	cfg, err := tr.fetchEndpointsFromIssuer(server.URL, nil)
+	require.Error(t, err)
+	require.Nil(t, cfg)
+	require.Equal(t, int32(1), callCount.Load())
+
+	cfgCached, err := tr.fetchEndpointsFromIssuer(server.URL, nil)
+	require.Error(t, err)
+	require.Nil(t, cfgCached)
+	require.Equal(t, int32(1), callCount.Load(), "second fetch should use cached error")
+
+	cfgAfter, err := tr.fetchEndpointsFromIssuer(server.URL, nil)
+	require.Error(t, err)
+	require.Nil(t, cfgAfter)
+	require.Equal(t, int32(1), callCount.Load(), "subsequent fetch should continue using cached error")
 }
 
 // / tiny helper to build a minimal SecurityPolicy

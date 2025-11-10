@@ -32,7 +32,9 @@ func TestPostRouteModify_WithInferencePool(t *testing.T) {
 			"namespace": "default",
 		},
 		"spec": map[string]interface{}{
-			"targetPortNumber": 8000,
+			"targetPorts": []map[string]interface{}{
+				{"number": 8000},
+			},
 			"selector": map[string]interface{}{
 				"app": "vllm-llama3-8b-instruct",
 			},
@@ -188,7 +190,9 @@ func TestPostClusterModify_WithInferencePool(t *testing.T) {
 			"namespace": "default",
 		},
 		"spec": map[string]interface{}{
-			"targetPortNumber": 8000,
+			"targetPorts": []map[string]interface{}{
+				{"number": 8000},
+			},
 			"selector": map[string]interface{}{
 				"app": "vllm-llama3-8b-instruct",
 			},

@@ -28,8 +28,7 @@ http:
     earlyAddRequestHeaders:
     - name: "some-header"
       value:
-      - "some-value1"
-      - "some-value2"
+      - "some-value1,some-value2"
       append: true
     - name: "some-header-2"
       value:

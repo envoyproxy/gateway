@@ -12,6 +12,8 @@ clientTrafficPolicies:
           value: my-added-header-value
         - name: my-added-header
           value: my-added-header-value
+        - name: my-multi-added-header
+          value: value1,value2
         remove:
         - my-removed-header
         - my-removed-header
@@ -35,6 +37,8 @@ clientTrafficPolicies:
           value: my-set-response-header-value
         - name: my-set-response-header
           value: my-set-response-header-value
+        - name: my-multi-set-response-header
+          value: value1,value2
       requestID: PreserveOrGenerate
       withUnderscoresAction: Allow
     targetRef:
@@ -184,6 +188,10 @@ xdsIR:
           name: my-added-header
           value:
           - my-added-header-value
+        - append: true
+          name: my-multi-added-header
+          value:
+          - value1,value2
         - append: false
           name: my-set-header
           value:
@@ -200,6 +208,10 @@ xdsIR:
           name: my-set-response-header
           value:
           - my-set-response-header-value
+        - append: false
+          name: my-multi-set-response-header
+          value:
+          - value1,value2
         lateRemoveResponseHeaders:
         - my-removed-response-header
         requestID: PreserveOrGenerate
@@ -225,6 +237,10 @@ xdsIR:
           name: my-added-header
           value:
           - my-added-header-value
+        - append: true
+          name: my-multi-added-header
+          value:
+          - value1,value2
         - append: false
           name: my-set-header
           value:
@@ -241,6 +257,10 @@ xdsIR:
           name: my-set-response-header
           value:
           - my-set-response-header-value
+        - append: false
+          name: my-multi-set-response-header
+          value:
+          - value1,value2
         lateRemoveResponseHeaders:
         - my-removed-response-header
         requestID: PreserveOrGenerate

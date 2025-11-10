@@ -14,7 +14,14 @@
 # https://news.ycombinator.com/item?id=16486331
 .SECONDARY:
 
-SHELL:=/bin/bash
+SHELL:=/usr/bin/env bash -euo pipefail
+
+GNU_SED := $(shell sed --version >/dev/null 2>&1 && echo "yes" || echo "no")
+ifeq ($(GNU_SED),yes)
+SED=sed -i
+else
+SED=sed -i ''
+endif
 
 # ====================================================================================================
 # ROOT Options:
