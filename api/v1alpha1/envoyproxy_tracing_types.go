@@ -94,11 +94,19 @@ const (
 	CustomTagTypeEnvironment CustomTagType = "Environment"
 	// CustomTagTypeRequestHeader adds value from request header to each span.
 	CustomTagTypeRequestHeader CustomTagType = "RequestHeader"
+	// CustomTagTypeFormatter adds value using formatter to each span.
+	CustomTagTypeFormatter CustomTagType = "Formatter"
 )
 
+// CustomTag defines a custom tag to add to each span.
+//
+// +kubebuilder:validation:XValidation:message="formatter cannot be null when using Formatter type.",rule="self.type != 'Formatter' || has(self.formatter)"
+// +kubebuilder:validation:XValidation:message="requestHeader cannot be null when using RequestHeader type.",rule="self.type != 'RequestHeader' || has(self.requestHeader)"
+// +kubebuilder:validation:XValidation:message="environment cannot be null when using Environment type.",rule="self.type != 'Environment' || has(self.environment)"
+// +kubebuilder:validation:XValidation:message="literal cannot be null when using Literal type.",rule="self.type != 'Literal' || has(self.literal)"
 type CustomTag struct {
 	// Type defines the type of custom tag.
-	// +kubebuilder:validation:Enum=Literal;Environment;RequestHeader
+	// +kubebuilder:validation:Enum=Literal;Environment;RequestHeader;Formatter
 	// +unionDiscriminator
 	// +kubebuilder:default=Literal
 	Type CustomTagType `json:"type"`
@@ -111,6 +119,10 @@ type CustomTag struct {
 	// RequestHeader adds value from request header to each span.
 	// It's required when the type is "RequestHeader".
 	RequestHeader *RequestHeaderCustomTag `json:"requestHeader,omitempty"`
+	// Formatter adds value using formatter to each span.
+	// It's required when the type is "Formatter".
+	// +optional
+	Formatter *FormatterCustomTag `json:"formatter,omitempty"`
 
 	// TODO: add support for Metadata tags in the future.
 	// EG currently doesn't support metadata for route or cluster.
@@ -138,6 +150,15 @@ type RequestHeaderCustomTag struct {
 	// DefaultValue defines the default value to use if the request header is not set.
 	// +optional
 	DefaultValue *string `json:"defaultValue,omitempty"`
+}
+
+type FormatterCustomTag struct {
+	// Values defines the formatter value to use,
+	// same formatter as HTTP access logging
+	// (e.g. %REQUESTED_SERVER_NAME%).
+	// Unknown specifier values are replaced
+	// with the empty string.
+	Value string `json:"value"`
 }
 
 // ZipkinTracingProvider defines the Zipkin tracing provider configuration.

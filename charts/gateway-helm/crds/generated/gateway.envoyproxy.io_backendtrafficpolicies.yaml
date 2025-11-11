@@ -2308,6 +2308,8 @@ spec:
                     properties:
                       customTags:
                         additionalProperties:
+                          description: CustomTag defines a custom tag to add to each
+                            span.
                           properties:
                             environment:
                               description: |-
@@ -2324,6 +2326,22 @@ spec:
                                   type: string
                               required:
                               - name
+                              type: object
+                            formatter:
+                              description: |-
+                                Formatter adds value using formatter to each span.
+                                It's required when the type is "Formatter".
+                              properties:
+                                value:
+                                  description: |-
+                                    Values defines the formatter value to use,
+                                    same formatter as HTTP access logging
+                                    (e.g. %REQUESTED_SERVER_NAME%).
+                                    Unknown specifier values are replaced
+                                    with the empty string.
+                                  type: string
+                              required:
+                              - value
                               type: object
                             literal:
                               description: |-
@@ -2360,10 +2378,23 @@ spec:
                               - Literal
                               - Environment
                               - RequestHeader
+                              - Formatter
                               type: string
                           required:
                           - type
                           type: object
+                          x-kubernetes-validations:
+                          - message: formatter cannot be null when using Formatter
+                              type.
+                            rule: self.type != 'Formatter' || has(self.formatter)
+                          - message: requestHeader cannot be null when using RequestHeader
+                              type.
+                            rule: self.type != 'RequestHeader' || has(self.requestHeader)
+                          - message: environment cannot be null when using Environment
+                              type.
+                            rule: self.type != 'Environment' || has(self.environment)
+                          - message: literal cannot be null when using Literal type.
+                            rule: self.type != 'Literal' || has(self.literal)
                         description: |-
                           CustomTags defines the custom tags to add to each span.
                           If provider is kubernetes, pod name and namespace are added by default.
