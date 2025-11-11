@@ -14,16 +14,15 @@ import (
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	client "sigs.k8s.io/controller-runtime/pkg/client"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapiv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
+	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/message"
-
-	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gwapiv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
-	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 )
 
 func TestNewOfflineGatewayAPIController(t *testing.T) {
@@ -246,5 +245,4 @@ func TestNewOfflineGatewayAPIControllerIndexRegistration(t *testing.T) {
 		err := cli.List(context.Background(), &gwapiv1b1.ReferenceGrantList{}, client.MatchingFields{targetRefGrantRouteIndex: "any"})
 		require.NoError(t, err)
 	})
-
 }
