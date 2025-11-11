@@ -2,7 +2,7 @@ date: Pending
 
 # Changes that are expected to cause an incompatibility with previous versions, such as deletions or modifications to existing APIs.
 breaking changes: |
-  Set HTTPRoute Accepted status to False when RequestMirror filter is used together with DirectResponse filter.
+  Set HTTPRoute Accepted status to False when RequestMirror filter is used together with DirectResponse or RequestRedirect filters.
 
 # Updates addressing vulnerabilities, security flaws, or compliance requirements.
 security updates: |
