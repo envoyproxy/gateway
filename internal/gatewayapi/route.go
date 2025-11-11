@@ -254,14 +254,15 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 				// This ensures requests are routed correctly between valid backends and the synthetic
 				// invalid-backend-cluster based on their respective weights.
 				ds = &ir.DestinationSetting{
-					Name: settingName,
+					Name:   settingName,
 					Weight: ptr.To(uint32(ptr.Deref(rule.BackendRefs[i].Weight, int32(1)))),
 				}
 			}
 			if unstructuredRef != nil {
 				backendCustomRefs = append(backendCustomRefs, unstructuredRef)
 			}
-			// ds can be nil if the backendRef weight is 0
+			// ds can be nil if the backendRef weight is 0.
+			// skip it as it does not affect the weight of invalid backends.
 			if ds == nil {
 				continue
 			}
@@ -303,9 +304,9 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 					"error", processDestinationError,
 				)
 			}
-		// return 503 if endpoints does not exist
+		// return 503 if no ready endpoints exist
 		// the error is already added to the error list when processing the destination
-		case failedNoReadyEndpoints && len(allDs) == 0:
+		case failedNoReadyEndpoints && destination.ToBackendWeights().Valid == 0:
 			routesWithDirectResponse := sets.New[string]()
 			for _, irRoute := range ruleRoutes {
 				// If the route already has a direct response or redirect configured, then it was from a filter so skip
@@ -340,8 +341,8 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 				t.Logger.Info("setting 500 direct response in routes due to all valid destinations having 0 weight",
 					"routes", sets.List(routesWithDirectResponse))
 			}
-			// A route can only have one destination if this destination is a dynamic resolver, because the behavior of
-			// multiple destinations with one being a dynamic resolver just doesn't make sense.
+		// A route can only have one destination if this destination is a dynamic resolver, because the behavior of
+		// multiple destinations with one being a dynamic resolver just doesn't make sense.
 		case hasDynamicResolver && len(rule.BackendRefs) > 1:
 			routesWithDirectResponse := sets.New[string]()
 			for _, irRoute := range ruleRoutes {
@@ -849,9 +850,17 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 					))
 					processDestinationError = err
 				}
-				continue
+				// Important: create a DestinationSetting with no endpoints to represent the invalid backendRef.
+				// This ensures requests are routed correctly between valid backends and the synthetic
+				// invalid-backend-cluster based on their respective weights.
+				ds = &ir.DestinationSetting{
+					Name:   settingName,
+					Weight: ptr.To(uint32(ptr.Deref(rule.BackendRefs[i].Weight, int32(1)))),
+				}
 			}
 
+			// ds can be nil if the backendRef weight is 0.
+			// skip it as it does not affect the weight of invalid backends.
 			if ds == nil {
 				continue
 			}
@@ -868,7 +877,7 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 		switch {
 		// return 500 if any destination setting is invalid
 		// the error is already added to the error list when processing the destination
-		case processDestinationError != nil:
+		case processDestinationError != nil && destination.ToBackendWeights().Valid == 0:
 			routesWithDirectResponse := sets.New[string]()
 			for _, irRoute := range ruleRoutes {
 				// If the route already has a direct response or redirect configured, then it was from a filter so skip
@@ -889,7 +898,7 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 			}
 		// return 503 if endpoints does not exist
 		// the error is already added to the error list when processing the destination
-		case failedNoReadyEndpoints && len(allDs) == 0:
+		case failedNoReadyEndpoints && destination.ToBackendWeights().Valid == 0:
 			routesWithDirectResponse := sets.New[string]()
 			for _, irRoute := range ruleRoutes {
 				// If the route already has a direct response or redirect configured, then it was from a filter so skip

@@ -10,7 +10,7 @@ security updates: |
 new features: |
 
 bug fixes: |
-
+  Fix 500 error on partial invalid BackendRefs; route traffic correctly between valid backends and 503 response based on their respective weights.
 # Enhancements that improve performance.
 performance improvements: |
 

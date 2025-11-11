@@ -1655,9 +1655,9 @@ func (r *RouteDestination) ToBackendWeights() *BackendWeights {
 			w.Valid += *s.Weight
 		case s.IsCustomBackend: // Custom backends has no endpoints
 			w.Valid += *s.Weight
-		case len(s.Endpoints) > 0:
+		case len(s.Endpoints) > 0: // All other cases should have endpoints
 			w.Valid += *s.Weight
-		default:
+		default: // DestinationSetting with no endpoints is considered invalid
 			w.Invalid += *s.Weight
 		}
 	}
