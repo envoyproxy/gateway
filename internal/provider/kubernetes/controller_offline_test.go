@@ -19,6 +19,11 @@ import (
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/message"
+
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapiv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
+	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 )
 
 func TestNewOfflineGatewayAPIController(t *testing.T) {
@@ -114,27 +119,132 @@ func TestNewOfflineGatewayAPIController(t *testing.T) {
 }
 
 func TestNewOfflineGatewayAPIControllerIndexRegistration(t *testing.T) {
-	t.Run("offline controller creation list index test", func(t *testing.T) {
-		cfg, err := config.New(os.Stdout, os.Stderr)
+	cfg, err := config.New(os.Stdout, os.Stderr)
+	require.NoError(t, err)
+
+	cfg.EnvoyGateway.Provider = &egv1a1.EnvoyGatewayProvider{
+		Type: egv1a1.ProviderTypeCustom,
+	}
+
+	pResources := new(message.ProviderResources)
+	reconciler, err := NewOfflineGatewayAPIController(context.Background(), cfg, nil, pResources)
+	require.NoError(t, err)
+	require.NotNil(t, reconciler)
+
+	// verify all indices registered by newOfflineGatewayAPIClient are usable via MatchingFields
+	cli := reconciler.Client
+
+	t.Run("Gateway indices", func(t *testing.T) {
+		err := cli.List(context.Background(), &gwapiv1.GatewayList{}, client.MatchingFields{classGatewayIndex: "any"})
 		require.NoError(t, err)
-
-		cfg.EnvoyGateway.Provider = &egv1a1.EnvoyGatewayProvider{
-			Type: egv1a1.ProviderTypeCustom,
-		}
-
-		pResources := new(message.ProviderResources)
-		reconciler, err := NewOfflineGatewayAPIController(context.Background(), cfg, nil, pResources)
-		require.NoError(t, err)
-		require.NotNil(t, reconciler)
-
-		// test an index that is registered by a "WithIndex" call
-		cli := reconciler.Client
-		// call client.List with a "matching field" list option that uses the index
-		err = cli.List(context.Background(), &egv1a1.EnvoyProxyList{}, client.MatchingFields{secretEnvoyProxyIndex: "any"})
-		require.NoError(t, err)
-
-		// test another index which exists in indexers.go but isn't registered
-		err = cli.List(context.Background(), &egv1a1.BackendList{}, client.MatchingFields{secretBackendIndex: "test"})
+		err = cli.List(context.Background(), &gwapiv1.GatewayList{}, client.MatchingFields{secretGatewayIndex: "any"})
 		require.NoError(t, err)
 	})
+
+	t.Run("HTTPRoute indices", func(t *testing.T) {
+		err := cli.List(context.Background(), &gwapiv1.HTTPRouteList{}, client.MatchingFields{gatewayHTTPRouteIndex: "any"})
+		require.NoError(t, err)
+		err = cli.List(context.Background(), &gwapiv1.HTTPRouteList{}, client.MatchingFields{backendHTTPRouteIndex: "any"})
+		require.NoError(t, err)
+		err = cli.List(context.Background(), &gwapiv1.HTTPRouteList{}, client.MatchingFields{httpRouteFilterHTTPRouteIndex: "any"})
+		require.NoError(t, err)
+	})
+
+	t.Run("GRPCRoute indices", func(t *testing.T) {
+		err := cli.List(context.Background(), &gwapiv1.GRPCRouteList{}, client.MatchingFields{gatewayGRPCRouteIndex: "any"})
+		require.NoError(t, err)
+		err = cli.List(context.Background(), &gwapiv1.GRPCRouteList{}, client.MatchingFields{backendGRPCRouteIndex: "any"})
+		require.NoError(t, err)
+	})
+
+	t.Run("TCPRoute indices", func(t *testing.T) {
+		err := cli.List(context.Background(), &gwapiv1a2.TCPRouteList{}, client.MatchingFields{gatewayTCPRouteIndex: "any"})
+		require.NoError(t, err)
+		err = cli.List(context.Background(), &gwapiv1a2.TCPRouteList{}, client.MatchingFields{backendTCPRouteIndex: "any"})
+		require.NoError(t, err)
+	})
+
+	t.Run("UDPRoute indices", func(t *testing.T) {
+		err := cli.List(context.Background(), &gwapiv1a2.UDPRouteList{}, client.MatchingFields{gatewayUDPRouteIndex: "any"})
+		require.NoError(t, err)
+		err = cli.List(context.Background(), &gwapiv1a2.UDPRouteList{}, client.MatchingFields{backendUDPRouteIndex: "any"})
+		require.NoError(t, err)
+	})
+
+	t.Run("TLSRoute indices", func(t *testing.T) {
+		err := cli.List(context.Background(), &gwapiv1a3.TLSRouteList{}, client.MatchingFields{gatewayTLSRouteIndex: "any"})
+		require.NoError(t, err)
+		err = cli.List(context.Background(), &gwapiv1a3.TLSRouteList{}, client.MatchingFields{backendTLSRouteIndex: "any"})
+		require.NoError(t, err)
+	})
+
+	t.Run("EnvoyProxy indices", func(t *testing.T) {
+		err := cli.List(context.Background(), &egv1a1.EnvoyProxyList{}, client.MatchingFields{backendEnvoyProxyTelemetryIndex: "any"})
+		require.NoError(t, err)
+		err = cli.List(context.Background(), &egv1a1.EnvoyProxyList{}, client.MatchingFields{secretEnvoyProxyIndex: "any"})
+		require.NoError(t, err)
+	})
+
+	t.Run("BackendTrafficPolicy index", func(t *testing.T) {
+		err := cli.List(context.Background(), &egv1a1.BackendTrafficPolicyList{}, client.MatchingFields{configMapBtpIndex: "any"})
+		require.NoError(t, err)
+	})
+
+	t.Run("ClientTrafficPolicy indices", func(t *testing.T) {
+		err := cli.List(context.Background(), &egv1a1.ClientTrafficPolicyList{}, client.MatchingFields{configMapCtpIndex: "any"})
+		require.NoError(t, err)
+		err = cli.List(context.Background(), &egv1a1.ClientTrafficPolicyList{}, client.MatchingFields{secretCtpIndex: "any"})
+		require.NoError(t, err)
+		err = cli.List(context.Background(), &egv1a1.ClientTrafficPolicyList{}, client.MatchingFields{clusterTrustBundleCtpIndex: "any"})
+		require.NoError(t, err)
+	})
+
+	t.Run("SecurityPolicy indices", func(t *testing.T) {
+		err := cli.List(context.Background(), &egv1a1.SecurityPolicyList{}, client.MatchingFields{secretSecurityPolicyIndex: "any"})
+		require.NoError(t, err)
+		err = cli.List(context.Background(), &egv1a1.SecurityPolicyList{}, client.MatchingFields{backendSecurityPolicyIndex: "any"})
+		require.NoError(t, err)
+		err = cli.List(context.Background(), &egv1a1.SecurityPolicyList{}, client.MatchingFields{configMapSecurityPolicyIndex: "any"})
+		require.NoError(t, err)
+	})
+
+	t.Run("EnvoyExtensionPolicy indices", func(t *testing.T) {
+		err := cli.List(context.Background(), &egv1a1.EnvoyExtensionPolicyList{}, client.MatchingFields{backendEnvoyExtensionPolicyIndex: "any"})
+		require.NoError(t, err)
+		err = cli.List(context.Background(), &egv1a1.EnvoyExtensionPolicyList{}, client.MatchingFields{secretEnvoyExtensionPolicyIndex: "any"})
+		require.NoError(t, err)
+		err = cli.List(context.Background(), &egv1a1.EnvoyExtensionPolicyList{}, client.MatchingFields{configMapEepIndex: "any"})
+		require.NoError(t, err)
+	})
+
+	t.Run("BackendTLSPolicy indices", func(t *testing.T) {
+		err := cli.List(context.Background(), &gwapiv1.BackendTLSPolicyList{}, client.MatchingFields{configMapBtlsIndex: "any"})
+		require.NoError(t, err)
+		err = cli.List(context.Background(), &gwapiv1.BackendTLSPolicyList{}, client.MatchingFields{secretBtlsIndex: "any"})
+		require.NoError(t, err)
+		err = cli.List(context.Background(), &gwapiv1.BackendTLSPolicyList{}, client.MatchingFields{clusterTrustBundleBtlsIndex: "any"})
+		require.NoError(t, err)
+	})
+
+	t.Run("Backend indices", func(t *testing.T) {
+		err := cli.List(context.Background(), &egv1a1.BackendList{}, client.MatchingFields{configMapBackendIndex: "any"})
+		require.NoError(t, err)
+		err = cli.List(context.Background(), &egv1a1.BackendList{}, client.MatchingFields{secretBackendIndex: "any"})
+		require.NoError(t, err)
+		err = cli.List(context.Background(), &egv1a1.BackendList{}, client.MatchingFields{clusterTrustBundleBackendIndex: "any"})
+		require.NoError(t, err)
+	})
+
+	t.Run("HTTPRouteFilter indices", func(t *testing.T) {
+		err := cli.List(context.Background(), &egv1a1.HTTPRouteFilterList{}, client.MatchingFields{configMapHTTPRouteFilterIndex: "any"})
+		require.NoError(t, err)
+		err = cli.List(context.Background(), &egv1a1.HTTPRouteFilterList{}, client.MatchingFields{secretHTTPRouteFilterIndex: "any"})
+		require.NoError(t, err)
+	})
+
+	t.Run("ReferenceGrant index", func(t *testing.T) {
+		err := cli.List(context.Background(), &gwapiv1b1.ReferenceGrantList{}, client.MatchingFields{targetRefGrantRouteIndex: "any"})
+		require.NoError(t, err)
+	})
+
 }
