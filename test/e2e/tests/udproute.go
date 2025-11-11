@@ -100,7 +100,6 @@ func GatewayAndUDPRoutesMustBeAccepted(t *testing.T, c client.Client, timeoutCon
 
 	if timeoutConfig == nil {
 		t.Fatalf("timeoutConfig cannot be nil")
-		return ""
 	}
 
 	gwAddr, err := kubernetes.WaitForGatewayAddress(t, c, *timeoutConfig, kubernetes.GatewayRef{
@@ -148,7 +147,6 @@ func UDPRouteMustHaveParents(t *testing.T, client client.Client, timeoutConfig *
 
 	if timeoutConfig == nil {
 		t.Fatalf("timeoutConfig cannot be nil")
-		return
 	}
 
 	var actual []gwapiv1.RouteParentStatus
