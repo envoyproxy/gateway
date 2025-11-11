@@ -250,7 +250,13 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 					))
 					processDestinationError = err
 				}
-				continue
+				// Important: create a DestinationSetting with no endpoints to represent the invalid backendRef.
+				// This ensures requests are routed correctly between valid backends and the synthetic
+				// invalid-backend-cluster based on their respective weights.
+				ds = &ir.DestinationSetting{
+					Name: settingName,
+					Weight: ptr.To(uint32(ptr.Deref(rule.BackendRefs[i].Weight, int32(1)))),
+				}
 			}
 			if unstructuredRef != nil {
 				backendCustomRefs = append(backendCustomRefs, unstructuredRef)
@@ -275,9 +281,9 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 			Metadata: routeRuleMetadata,
 		}
 		switch {
-		// return 500 if any destination setting is invalid
+		// return 500 if no valid destination settings exist
 		// the error is already added to the error list when processing the destination
-		case processDestinationError != nil:
+		case processDestinationError != nil && destination.ToBackendWeights().Valid == 0:
 			routesWithDirectResponse := sets.New[string]()
 			for _, irRoute := range ruleRoutes {
 				// If the route already has a direct response or redirect configured, then it was from a filter so skip

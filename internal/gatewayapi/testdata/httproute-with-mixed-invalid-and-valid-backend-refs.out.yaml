@@ -50,12 +50,14 @@ httpRoutes:
       namespace: envoy-gateway
     rules:
     - backendRefs:
-      - name: service-with-no-endpoints
+      - name: service-1
+        port: 8080
+      - name: service-not-exist
         port: 8080
       matches:
       - path:
           type: Exact
-          value: /
+          value: /exact
   status:
     parents:
     - conditions:
@@ -65,15 +67,10 @@ httpRoutes:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: 'Failed to find endpoints: no ready endpoints for the related Service
-          default/service-with-no-endpoints.'
-        reason: EndpointsNotFound
+        message: 'Failed to process route rule 0 backendRef 1: service default/service-not-exist
+          not found.'
+        reason: BackendNotFound
         status: "False"
-        type: BackendsAvailable
-      - lastTransitionTime: null
-        message: Resolved all the Object references for the Route
-        reason: ResolvedRefs
-        status: "True"
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
@@ -140,8 +137,26 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - directResponse:
-          statusCode: 500
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-1
+            namespace: default
+          name: httproute/default/httproute-1/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            metadata:
+              name: service-1
+              namespace: default
+              sectionName: "8080"
+            name: httproute/default/httproute-1/rule/0/backend/0
+            protocol: HTTP
+            weight: 1
+          - name: httproute/default/httproute-1/rule/0/backend/1
+            weight: 1
         hostname: '*'
         isHTTP2: false
         metadata:
@@ -151,7 +166,7 @@ xdsIR:
         name: httproute/default/httproute-1/rule/0/match/0/*
         pathMatch:
           distinct: false
-          exact: /
+          exact: /exact
           name: ""
     readyListener:
       address: 0.0.0.0
