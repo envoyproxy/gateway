@@ -233,6 +233,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 				BackendRef: &rule.BackendRefs[i].BackendRef,
 				Filters:    rule.BackendRefs[i].Filters,
 			}
+			// ds will never be nil here because processDestination returns an empty DestinationSetting for invalid backendRefs.
 			ds, unstructuredRef, err := t.processDestination(settingName, backendRefCtx, parentRef, httpRoute, resources)
 			if err != nil {
 				// Gateway API conformance: When backendRef Service exists but has no endpoints,
@@ -261,9 +262,8 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 			if unstructuredRef != nil {
 				backendCustomRefs = append(backendCustomRefs, unstructuredRef)
 			}
-			// ds can be nil if the backendRef weight is 0.
-			// skip it as it does not affect the weight of invalid backends.
-			if ds == nil {
+			// skip backendRefs with weight 0 as they do not affect the traffic distribution
+			if ds.Weight != nil && *ds.Weight == 0 {
 				continue
 			}
 			allDs = append(allDs, ds)
@@ -394,10 +394,6 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 				irRoute.Destination.StatName = ptr.To(buildStatName(pattern, httpRoute, rule.Name, ruleIdx, backendRefNames))
 			}
 		}
-
-		// TODO handle:
-		//	- sum of weights for valid backend refs is 0
-		//	- etc.
 
 		irRoutes = append(irRoutes, ruleRoutes...)
 	}
@@ -833,6 +829,7 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 				BackendRef: &rule.BackendRefs[i].BackendRef,
 				Filters:    rule.BackendRefs[i].Filters,
 			}
+			// ds will never be nil here because processDestination returns an empty DestinationSetting for invalid backendRefs.
 			ds, _, err := t.processDestination(settingName, backendRefCtx, parentRef, grpcRoute, resources)
 			if err != nil {
 				// Gateway API conformance: When backendRef Service exists but has no endpoints,
@@ -850,18 +847,10 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 					))
 					processDestinationError = err
 				}
-				// Important: create a DestinationSetting with no endpoints to represent the invalid backendRef.
-				// This ensures requests are routed correctly between valid backends and the synthetic
-				// invalid-backend-cluster based on their respective weights.
-				ds = &ir.DestinationSetting{
-					Name:   settingName,
-					Weight: ptr.To(uint32(ptr.Deref(rule.BackendRefs[i].Weight, int32(1)))),
-				}
 			}
 
-			// ds can be nil if the backendRef weight is 0.
-			// skip it as it does not affect the weight of invalid backends.
-			if ds == nil {
+			// skip backendRefs with weight 0 as they do not affect the traffic distribution
+			if ds.Weight != nil && *ds.Weight == 0 {
 				continue
 			}
 			allDs = append(allDs, ds)
@@ -959,10 +948,6 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 				irRoute.Destination.StatName = ptr.To(buildStatName(pattern, grpcRoute, rule.Name, ruleIdx, backendRefNames))
 			}
 		}
-
-		// TODO handle:
-		//	- sum of weights for valid backend refs is 0
-		//	- etc.
 
 		irRoutes = append(irRoutes, ruleRoutes...)
 	}
@@ -1210,12 +1195,14 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 			for i := range rule.BackendRefs {
 				settingName := irDestinationSettingName(destName, i)
 				backendRefCtx := DirectBackendRef{BackendRef: &rule.BackendRefs[i]}
+				// ds will never be nil here because processDestination returns an empty DestinationSetting for invalid backendRefs.
 				ds, _, err := t.processDestination(settingName, backendRefCtx, parentRef, tlsRoute, resources)
 				if err != nil {
 					resolveErrs.Add(err)
 					continue
 				}
-				if ds != nil {
+				// skip backendRefs with weight 0 as they do not affect the traffic distribution
+				if ds.Weight != nil && *ds.Weight > 0 {
 					destSettings = append(destSettings, ds)
 				}
 			}
@@ -1366,14 +1353,15 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 		for i := range udpRoute.Spec.Rules[0].BackendRefs {
 			settingName := irDestinationSettingName(destName, i)
 			backendRefCtx := DirectBackendRef{BackendRef: &udpRoute.Spec.Rules[0].BackendRefs[i]}
+			// ds will never be nil here because processDestination returns an empty DestinationSetting for invalid backendRefs.
 			ds, _, err := t.processDestination(settingName, backendRefCtx, parentRef, udpRoute, resources)
 			if err != nil {
 				resolveErrs.Add(err)
 				continue
 			}
 
-			// Skip nil destination settings
-			if ds != nil {
+			// skip backendRefs with weight 0 as they do not affect the traffic distribution
+			if ds.Weight != nil && *ds.Weight > 0 {
 				destSettings = append(destSettings, ds)
 			}
 		}
@@ -1522,8 +1510,8 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 				resolveErrs.Add(err)
 				continue
 			}
-			// Skip nil destination settings
-			if ds != nil {
+			// skip backendRefs with weight 0 as they do not affect the traffic distribution
+			if ds.Weight != nil && *ds.Weight > 0 {
 				destSettings = append(destSettings, ds)
 			}
 		}
@@ -1628,27 +1616,33 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 func (t *Translator) processDestination(name string, backendRefContext BackendRefContext,
 	parentRef *RouteParentContext, route RouteContext, resources *resource.Resources,
 ) (ds *ir.DestinationSetting, unstructuredRef *ir.UnstructuredRef, err status.Error) {
-	routeType := route.GetRouteType()
-	weight := uint32(1)
-	backendRef := backendRefContext.GetBackendRef()
-	if backendRef.Weight != nil {
-		weight = uint32(*backendRef.Weight)
+	var (
+		routeType  = route.GetRouteType()
+		weight     = (uint32(ptr.Deref(backendRefContext.GetBackendRef().Weight, int32(1))))
+		backendRef = backendRefContext.GetBackendRef()
+	)
+
+	// Create an empty DS without endpoints
+	// This represents an invalid DS.
+	emptyDS := &ir.DestinationSetting{
+		Name:   name,
+		Weight: &weight,
 	}
 
 	backendNamespace := NamespaceDerefOr(backendRef.Namespace, route.GetNamespace())
 	if !t.isCustomBackendResource(backendRef.Group, KindDerefOr(backendRef.Kind, resource.KindService)) {
 		err = t.validateBackendRef(backendRefContext, route, resources, backendNamespace, routeType)
 		{
-			// return with empty endpoint means the backend is invalid and an error to fail the associated route.
+			// Empty DS means the backend is invalid and an error to fail the associated route.
 			if err != nil {
-				return nil, nil, err
+				return emptyDS, nil, err
 			}
 		}
 	}
 
 	// Skip processing backends with 0 weight
 	if weight == 0 {
-		return nil, nil, nil
+		return emptyDS, nil, nil
 	}
 
 	var envoyProxy *egv1a1.EnvoyProxy
@@ -1675,19 +1669,19 @@ func (t *Translator) processDestination(name string, backendRefContext BackendRe
 		envoyProxy,
 	)
 	if tlsErr != nil {
-		return nil, nil, status.NewRouteStatusError(tlsErr, status.RouteReasonInvalidBackendTLS)
+		return emptyDS, nil, status.NewRouteStatusError(tlsErr, status.RouteReasonInvalidBackendTLS)
 	}
 
 	switch KindDerefOr(backendRef.Kind, resource.KindService) {
 	case resource.KindServiceImport:
 		ds, err = t.processServiceImportDestinationSetting(name, backendRef.BackendObjectReference, backendNamespace, protocol, resources, envoyProxy)
 		if err != nil {
-			return nil, nil, err
+			return emptyDS, nil, err
 		}
 	case resource.KindService:
 		ds, err = t.processServiceDestinationSetting(name, backendRef.BackendObjectReference, backendNamespace, protocol, resources, envoyProxy)
 		if err != nil {
-			return nil, nil, err
+			return emptyDS, nil, err
 		}
 		svc := resources.GetService(backendNamespace, string(backendRef.Name))
 		ds.IPFamily = getServiceIPFamily(svc)
@@ -1702,7 +1696,7 @@ func (t *Translator) processDestination(name string, backendRefContext BackendRe
 
 			// Check if the custom backend resource was found
 			if unstructuredRef == nil {
-				return nil, nil, status.NewRouteStatusError(
+				return emptyDS, nil, status.NewRouteStatusError(
 					fmt.Errorf("custom backend %s %s/%s not found",
 						KindDerefOr(backendRef.Kind, resource.KindService),
 						backendNamespace,
@@ -1724,11 +1718,11 @@ func (t *Translator) processDestination(name string, backendRefContext BackendRe
 	var filtersErr error
 	ds.Filters, filtersErr = t.processDestinationFilters(routeType, backendRefContext, parentRef, route, resources)
 	if filtersErr != nil {
-		return nil, nil, status.NewRouteStatusError(filtersErr, status.RouteReasonInvalidBackendFilters)
+		return emptyDS, nil, status.NewRouteStatusError(filtersErr, status.RouteReasonInvalidBackendFilters)
 	}
 
 	if err := validateDestinationSettings(ds, t.IsEnvoyServiceRouting(envoyProxy), backendRef.Kind); err != nil {
-		return nil, nil, err
+		return emptyDS, nil, err
 	}
 
 	ds.Weight = &weight
