@@ -251,13 +251,6 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 					))
 					processDestinationError = err
 				}
-				// Important: create a DestinationSetting with no endpoints to represent the invalid backendRef.
-				// This ensures requests are routed correctly between valid backends and the synthetic
-				// invalid-backend-cluster based on their respective weights.
-				ds = &ir.DestinationSetting{
-					Name:   settingName,
-					Weight: ptr.To(uint32(ptr.Deref(rule.BackendRefs[i].Weight, int32(1)))),
-				}
 			}
 			if unstructuredRef != nil {
 				backendCustomRefs = append(backendCustomRefs, unstructuredRef)
