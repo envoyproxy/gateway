@@ -31,8 +31,10 @@ httpRoutes:
       backendRefs:
       - name: service-1
         port: 8080
+        weight: 80
       - name: service-not-exist
         port: 8080
+        weight: 20
 services:
 - apiVersion: v1
   kind: Service

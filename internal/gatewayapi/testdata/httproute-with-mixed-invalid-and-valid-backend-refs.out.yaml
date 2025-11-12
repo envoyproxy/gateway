@@ -52,8 +52,10 @@ httpRoutes:
     - backendRefs:
       - name: service-1
         port: 8080
+        weight: 80
       - name: service-not-exist
         port: 8080
+        weight: 20
       matches:
       - path:
           type: Exact
@@ -154,9 +156,9 @@ xdsIR:
               sectionName: "8080"
             name: httproute/default/httproute-1/rule/0/backend/0
             protocol: HTTP
-            weight: 1
+            weight: 80
           - name: httproute/default/httproute-1/rule/0/backend/1
-            weight: 1
+            weight: 20
         hostname: '*'
         isHTTP2: false
         metadata:
