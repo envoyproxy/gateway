@@ -432,6 +432,153 @@ $ curl -v --header "Host: www.example.com" http://localhost:8888/
 ...
 ```
 
+### Customize Cluster
+
+The following examples show how to use [EnvoyPatchPolicy][] to modify Envoy `Cluster` resources using JSONPatch semantics.
+
+{{< tabpane text=true >}}
+{{% tab header="Add an external Cluster (from stdin)" %}}
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyPatchPolicy
+metadata:
+  name: add-external-cluster
+  namespace: default
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: Gateway
+    name: eg
+  type: JSONPatch
+  jsonPatches:
+    - type: "type.googleapis.com/envoy.config.cluster.v3.Cluster"
+      # Adds a new STRICT_DNS cluster named external-svc-cluster
+      name: external-svc-cluster
+      operation:
+        op: add
+        path: ""
+        value:
+          name: external-svc-cluster
+          type: STRICT_DNS
+          connect_timeout: 10s
+          lb_policy: ROUND_ROBIN
+          http2_protocol_options: {}
+          load_assignment:
+            cluster_name: external-svc-cluster
+            endpoints:
+              - lb_endpoints:
+                  - endpoint:
+                      address:
+                        socket_address:
+                          address: example.external.svc
+                          port_value: 8443
+EOF
+```
+
+{{% /tab %}}
+{{% tab header="Add an external Cluster (from file)" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyPatchPolicy
+metadata:
+  name: add-external-cluster
+  namespace: default
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: Gateway
+    name: eg
+  type: JSONPatch
+  jsonPatches:
+    - type: "type.googleapis.com/envoy.config.cluster.v3.Cluster"
+      # Adds a new STRICT_DNS cluster named external-svc-cluster
+      name: external-svc-cluster
+      operation:
+        op: add
+        path: ""
+        value:
+          name: external-svc-cluster
+          type: STRICT_DNS
+          connect_timeout: 10s
+          lb_policy: ROUND_ROBIN
+          http2_protocol_options: {}
+          load_assignment:
+            cluster_name: external-svc-cluster
+            endpoints:
+              - lb_endpoints:
+                  - endpoint:
+                      address:
+                        socket_address:
+                          address: example.external.svc
+                          port_value: 8443
+```
+
+{{% /tab %}}
+{{% tab header="Modify a route Cluster timeout (from stdin)" %}}
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyPatchPolicy
+metadata:
+  name: tweak-route-cluster-timeout
+  namespace: default
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: Gateway
+    name: eg
+  type: JSONPatch
+  jsonPatches:
+    - type: "type.googleapis.com/envoy.config.cluster.v3.Cluster"
+      # For clusters generated from HTTPRoute, the default name is:
+      # httproute/<NAMESPACE>/<NAME>/rule/<RULE_NUMBER>
+      # e.g. httproute/default/backend/rule/0
+      name: httproute/default/backend/rule/0
+      operation:
+        op: replace
+        path: "/connect_timeout"
+        value: "5s"
+EOF
+```
+
+{{% /tab %}}
+{{% tab header="Modify a route Cluster timeout (from file)" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyPatchPolicy
+metadata:
+  name: tweak-route-cluster-timeout
+  namespace: default
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: Gateway
+    name: eg
+  type: JSONPatch
+  jsonPatches:
+    - type: "type.googleapis.com/envoy.config.cluster.v3.Cluster"
+      # For clusters generated from HTTPRoute, the default name is:
+      # httproute/<NAMESPACE>/<NAME>/rule/<RULE_NUMBER>
+      # e.g. httproute/default/backend/rule/0
+      name: httproute/default/backend/rule/0
+      operation:
+        op: replace
+        path: "/connect_timeout"
+        value: "5s"
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
+
 ## Debugging
 
 ### Runtime
