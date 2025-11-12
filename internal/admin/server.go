@@ -21,6 +21,7 @@ import (
 type Config struct {
 	Server            config.Server
 	ProviderResources *message.ProviderResources
+	RunnerErrors      *message.RunnerErrors
 }
 
 type Runner struct {

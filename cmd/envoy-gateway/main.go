@@ -15,7 +15,7 @@ import (
 )
 
 func main() {
-	if err := root.GetRootCommand().ExecuteContext(ctrl.SetupSignalHandler()); err != nil {
+	if err := root.GetRootCommand(nil).ExecuteContext(ctrl.SetupSignalHandler()); err != nil {
 		_, _ = fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}

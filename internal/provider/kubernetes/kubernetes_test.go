@@ -68,7 +68,8 @@ func TestProvider(t *testing.T) {
 	svr.EnvoyGateway.Provider.Kubernetes.TopologyInjector = &egv1a1.EnvoyGatewayTopologyInjector{Disable: ptr.To(true)}
 	require.NoError(t, err)
 	resources := new(message.ProviderResources)
-	provider, err := New(context.Background(), cliCfg, svr, resources)
+	errNotifier := message.RunnerErrorNotifier{RunnerName: t.Name(), RunnerErrors: &message.RunnerErrors{}}
+	provider, err := New(context.Background(), cliCfg, svr, resources, errNotifier)
 	require.NoError(t, err)
 	ctx, cancel := context.WithCancel(ctrl.SetupSignalHandler())
 	go func() {
@@ -1255,7 +1256,8 @@ func TestNamespacedProvider(t *testing.T) {
 	svr.EnvoyGateway.Provider.Kubernetes.TopologyInjector = &egv1a1.EnvoyGatewayTopologyInjector{Disable: ptr.To(true)}
 
 	resources := new(message.ProviderResources)
-	provider, err := New(context.Background(), cliCfg, svr, resources)
+	errNotifier := message.RunnerErrorNotifier{RunnerName: t.Name(), RunnerErrors: &message.RunnerErrors{}}
+	provider, err := New(context.Background(), cliCfg, svr, resources, errNotifier)
 	require.NoError(t, err)
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
@@ -1319,7 +1321,8 @@ func TestNamespaceSelectorProvider(t *testing.T) {
 	svr.EnvoyGateway.Provider.Kubernetes.TopologyInjector = &egv1a1.EnvoyGatewayTopologyInjector{Disable: ptr.To(true)}
 
 	resources := new(message.ProviderResources)
-	provider, err := New(context.Background(), cliCfg, svr, resources)
+	errNotifier := message.RunnerErrorNotifier{RunnerName: t.Name(), RunnerErrors: &message.RunnerErrors{}}
+	provider, err := New(context.Background(), cliCfg, svr, resources, errNotifier)
 	require.NoError(t, err)
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
