@@ -687,6 +687,10 @@ func (c *CredentialInjection) Validate() error {
 // +k8s:deepcopy-gen=true
 type HealthCheckSettings egv1a1.HealthCheckSettings
 
+// RequestIDExtension defines configuration for the UUID request ID extension.
+// +k8s:deepcopy-gen=true
+type RequestIDExtensionSettings egv1a1.RequestIDExtensionSettings
+
 // HeaderSettings provides configuration related to header processing on the listener.
 // +k8s:deepcopy-gen=true
 type HeaderSettings struct {
@@ -725,6 +729,9 @@ type HeaderSettings struct {
 
 	// LateRemoveResponseHeaders defines headers that would be removed after envoy response processing.
 	LateRemoveResponseHeaders []string `json:"lateRemoveResponseHeaders,omitempty" yaml:"earlyRemoveRequestHeaders,omitempty"`
+
+	// RequestIDExtension defines configuration for the UUID request ID extension.
+	RequestIDExtension *RequestIDExtensionSettings `json:"requestIdExtension,omitempty" yaml:"requestIdExtension,omitempty"`
 }
 
 // ClientTimeout sets the timeout configuration for downstream connections

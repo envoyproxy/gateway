@@ -3751,6 +3751,34 @@ spec:
                     - Generate
                     - Disable
                     type: string
+                  requestIdExtension:
+                    description: RequestIDExtension defines configuration for Envoy's
+                      request ID extension.
+                    properties:
+                      packTraceReason:
+                        default: true
+                        description: |-
+                          PackTraceReason indicates whether the implementation alters the UUID
+                          to contain the trace sampling decision as per the UuidRequestIdConfig
+                          message documentation.
+
+                          Defaults to true. If disabled, no modification to the UUID will be
+                          performed. Note that if disabled, stable sampling of traces, access logs,
+                          etc. will no longer work and only random sampling will be possible.
+
+                          Corresponds to Envoy’s `pack_trace_reason`.
+                        type: boolean
+                      useRequestIDForTraceSampling:
+                        default: true
+                        description: |-
+                          UseRequestIDForTraceSampling sets whether to use x-request-id for
+                          sampling decisions. Defaults to true.
+
+                          See the Envoy context propagation overview for more information.
+
+                          Corresponds to Envoy’s `use_request_id_for_trace_sampling`.
+                        type: boolean
+                    type: object
                   withUnderscoresAction:
                     description: |-
                       WithUnderscoresAction configures the action to take when an HTTP header with underscores
