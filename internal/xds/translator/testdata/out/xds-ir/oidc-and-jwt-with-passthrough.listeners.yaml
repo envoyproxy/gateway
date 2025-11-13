@@ -58,6 +58,7 @@
               signoutPath:
                 path:
                   exact: /logout
+              statPrefix: securitypolicy/envoy-gateway/security-policy-1
               tokenEndpoint:
                 cluster: oauth_foo_com_443
                 timeout: 10s

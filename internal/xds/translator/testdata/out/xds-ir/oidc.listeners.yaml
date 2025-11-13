@@ -57,6 +57,7 @@
               signoutPath:
                 path:
                   exact: /foo/logout
+              statPrefix: securitypolicy/default/policy-for-first-route
               tokenEndpoint:
                 cluster: oauth_foo_com_443
                 timeout: 10s
@@ -121,6 +122,7 @@
               signoutPath:
                 path:
                   exact: /bar/logout
+              statPrefix: securitypolicy/default/policy-for-second-route
               tokenEndpoint:
                 cluster: oauth_bar_com_443
                 timeout: 10s
