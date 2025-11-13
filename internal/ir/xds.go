@@ -838,6 +838,11 @@ func (h *HTTPRoute) NeedsClusterPerSetting() bool {
 		h.Traffic.LoadBalancer.PreferLocal != nil {
 		return true
 	}
+	// When the destination has both valid and invalid backend weights, we use weighted clusters to distribute between
+	// valid backends and the `invalid-backend-cluster` for 500 responses according to their configured weights.
+	if h.Destination.ToBackendWeights().Invalid > 0 {
+		return true
+	}
 	return h.Destination.NeedsClusterPerSetting()
 }
 
@@ -1655,9 +1660,9 @@ func (r *RouteDestination) ToBackendWeights() *BackendWeights {
 			w.Valid += *s.Weight
 		case s.IsCustomBackend: // Custom backends has no endpoints
 			w.Valid += *s.Weight
-		case len(s.Endpoints) > 0:
+		case len(s.Endpoints) > 0: // All other cases should have endpoints
 			w.Valid += *s.Weight
-		default:
+		default: // DestinationSetting with no endpoints is considered invalid
 			w.Invalid += *s.Weight
 		}
 	}
