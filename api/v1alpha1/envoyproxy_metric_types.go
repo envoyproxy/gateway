@@ -98,6 +98,10 @@ type ProxyOpenTelemetrySink struct {
 	// +kubebuilder:validation:Maximum=65535
 	// +kubebuilder:default=4317
 	Port int32 `json:"port,omitempty"`
+	// Resources is a set of labels that describe the source of a metric, including envoy node info.
+	// It's recommended to follow [semantic conventions](https://opentelemetry.io/docs/reference/specification/resource/semantic_conventions/).
+	// +optional
+	Resources map[string]string `json:"resources,omitempty"`
 
 	// TODO: add support for customizing OpenTelemetry sink in https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/stat_sinks/open_telemetry/v3/open_telemetry.proto#envoy-v3-api-msg-extensions-stat-sinks-open-telemetry-v3-sinkconfig
 }

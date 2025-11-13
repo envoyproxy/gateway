@@ -42896,6 +42896,13 @@ spec:
                                   maximum: 65535
                                   minimum: 0
                                   type: integer
+                                resources:
+                                  additionalProperties:
+                                    type: string
+                                  description: |-
+                                    Resources is a set of labels that describe the source of a metric, including envoy node info.
+                                    It's recommended to follow [semantic conventions](https://opentelemetry.io/docs/reference/specification/resource/semantic_conventions/).
+                                  type: object
                               type: object
                               x-kubernetes-validations:
                               - message: host or backendRefs needs to be set
