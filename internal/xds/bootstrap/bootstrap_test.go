@@ -141,6 +141,40 @@ func TestGetRenderedBootstrapConfig(t *testing.T) {
 			},
 		},
 		{
+			name: "otel-metrics-resources",
+			opts: &RenderBootstrapConfigOptions{
+				ProxyMetrics: &egv1a1.ProxyMetrics{
+					Prometheus: &egv1a1.ProxyPrometheusProvider{
+						Disable: true,
+					},
+					Sinks: []egv1a1.ProxyMetricSink{
+						{
+							Type: egv1a1.MetricSinkTypeOpenTelemetry,
+							OpenTelemetry: &egv1a1.ProxyOpenTelemetrySink{
+								BackendCluster: egv1a1.BackendCluster{
+									BackendRefs: []egv1a1.BackendRef{
+										{
+											BackendObjectReference: gwapiv1.BackendObjectReference{
+												Name:      "otel-collector",
+												Namespace: ptr.To(gwapiv1.Namespace("monitoring")),
+												Port:      ptr.To(gwapiv1.PortNumber(4317)),
+											},
+										},
+									},
+								},
+								Resources: map[string]string{
+									"environment":  "production",
+									"service.name": "eg-gateway",
+									"team":         "marketing",
+								},
+							},
+						},
+					},
+				},
+				SdsConfig: sds,
+			},
+		},
+		{
 			name: "custom-stats-matcher",
 			opts: &RenderBootstrapConfigOptions{
 				ProxyMetrics: &egv1a1.ProxyMetrics{
