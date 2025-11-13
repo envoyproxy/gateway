@@ -65,6 +65,15 @@ stats_sinks:
     grpc_service:
       envoy_grpc:
         cluster_name: otel_metric_sink_{{ $idx }}
+    {{- if $sink.Resources }}
+    resource_attributes:
+      key_values:
+      {{- range $attr := $sink.Resources }}
+      - key: "{{ $attr.Key }}"
+        value:
+          string_value: "{{ $attr.Value }}"
+      {{- end }}
+    {{- end }}
 {{- end }}
 {{- end }}
 static_resources:

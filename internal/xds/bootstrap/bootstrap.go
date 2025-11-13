@@ -10,6 +10,7 @@ import (
 	_ "embed"
 	"fmt"
 	"net"
+	"sort"
 	"strconv"
 	"strings"
 	"text/template"
@@ -119,6 +120,13 @@ type metricSink struct {
 	Address string
 	// Port is the port of the XDS Server that Envoy is managed by.
 	Port uint32
+	// Resources is a sorted list of OpenTelemetry resource attributes.
+	Resources []keyValue
+}
+
+type keyValue struct {
+	Key   string
+	Value string
 }
 
 type adminServerParameters struct {
@@ -217,9 +225,11 @@ func GetRenderedBootstrapConfig(opts *RenderBootstrapConfigOptions) (string, err
 			}
 			addresses.Insert(addr)
 
+			resources := buildResourceAttributes(sink.OpenTelemetry.Resources)
 			metricSinks = append(metricSinks, metricSink{
-				Address: host,
-				Port:    port,
+				Address:   host,
+				Port:      port,
+				Resources: resources,
 			})
 		}
 
@@ -330,4 +340,24 @@ func GetRenderedBootstrapConfig(opts *RenderBootstrapConfigOptions) (string, err
 	}
 
 	return cfg.rendered, nil
+}
+
+// buildResourceAttributes produces a deterministically ordered slice for stable template rendering.
+func buildResourceAttributes(attrs map[string]string) []keyValue {
+	if len(attrs) == 0 {
+		return nil
+	}
+	keys := make([]string, 0, len(attrs))
+	for key := range attrs {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+
+	list := make([]keyValue, 0, len(keys))
+	for _, key := range keys {
+		value := attrs[key]
+		list = append(list, keyValue{Key: key, Value: value})
+	}
+
+	return list
 }
