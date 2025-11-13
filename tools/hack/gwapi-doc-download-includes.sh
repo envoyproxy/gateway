@@ -29,7 +29,14 @@ for file in $SYNC_FILES; do
   fi
 
   # Extract the path inside {% include 'path' %} and download each referenced file
-  includes=$($GREP -oP "{% include '\K[^']+" "$src" || true)
+  # Use perl if grep -P is not available (e.g., on macOS)
+  if $GREP -oP "test" <<< "test" >/dev/null 2>&1; then
+    includes=$($GREP -oP "{% include '\K[^']+" "$src" || true)
+  else
+    # Fallback to perl for systems without GNU grep (like macOS)
+    # Use the exact same regex pattern with \K (keep everything after this point)
+    includes=$(perl -ne 'print "$&\n" if /{% include '\''\K[^'\'']+/' "$src" || true)
+  fi
   for include_path in $includes; do
     filename=$(basename "$include_path")
     dest="$DOC_DEST_DIR/$filename"
@@ -40,6 +47,11 @@ for file in $SYNC_FILES; do
     curl -sSL -o "$dest" "$url"
 
     # Remove lines start with `#$`
-    $SED -i '/^#\$/d' "$dest"
+    # macOS sed requires an extension, so use empty string for in-place editing
+    if [[ "$(uname)" == "Darwin" ]]; then
+      $SED -i '' '/^#\$/d' "$dest"
+    else
+      $SED -i '/^#\$/d' "$dest"
+    fi
   done
 done
