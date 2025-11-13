@@ -39,29 +39,28 @@ gateways:
         kind: HTTPRoute
       - group: gateway.networking.k8s.io
         kind: GRPCRoute
-httpRoutes:
-- apiVersion: gateway.networking.k8s.io/v1
-  kind: HTTPRoute
+grpcRoutes:
+- apiVersion: gateway.networking.k8s.io/v1alpha2
+  kind: GRPCRoute
   metadata:
     creationTimestamp: null
-    name: httproute-1
+    name: grpcroute-1
     namespace: default
   spec:
     parentRefs:
     - name: gateway-1
       namespace: envoy-gateway
+      sectionName: http
     rules:
     - backendRefs:
-      - name: service-that-doesnt-exist
-        port: 8080
-      - name: service-that-doesnt-exist-2
-        port: 8080
       - name: service-1
         port: 8080
+      - name: service-not-exist
+        port: 8080
       matches:
-      - path:
+      - method:
+          method: ExampleExact
           type: Exact
-          value: /exact
   status:
     parents:
     - conditions:
@@ -71,9 +70,8 @@ httpRoutes:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: |-
-          Failed to process route rule 0 backendRef 0: service default/service-that-doesnt-exist not found.
-          Failed to process route rule 0 backendRef 1: service default/service-that-doesnt-exist-2 not found.
+        message: 'Failed to process route rule 0 backendRef 1: service default/service-not-exist
+          not found.'
         reason: BackendNotFound
         status: "False"
         type: ResolvedRefs
@@ -81,6 +79,7 @@ httpRoutes:
       parentRef:
         name: gateway-1
         namespace: envoy-gateway
+        sectionName: http
 infraIR:
   envoy-gateway/gateway-1:
     proxy:
@@ -126,7 +125,7 @@ xdsIR:
       externalPort: 80
       hostnames:
       - '*'
-      isHTTP2: false
+      isHTTP2: true
       metadata:
         kind: Gateway
         name: gateway-1
@@ -140,15 +139,11 @@ xdsIR:
       routes:
       - destination:
           metadata:
-            kind: HTTPRoute
-            name: httproute-1
+            kind: GRPCRoute
+            name: grpcroute-1
             namespace: default
-          name: httproute/default/httproute-1/rule/0
+          name: grpcroute/default/grpcroute-1/rule/0
           settings:
-          - name: httproute/default/httproute-1/rule/0/backend/0
-            weight: 1
-          - name: httproute/default/httproute-1/rule/0/backend/1
-            weight: 1
           - addressType: IP
             endpoints:
             - host: 7.7.7.7
@@ -157,20 +152,22 @@ xdsIR:
               name: service-1
               namespace: default
               sectionName: "8080"
-            name: httproute/default/httproute-1/rule/0/backend/2
-            protocol: HTTP
+            name: grpcroute/default/grpcroute-1/rule/0/backend/0
+            protocol: GRPC
             weight: 1
+          - name: grpcroute/default/grpcroute-1/rule/0/backend/1
+            weight: 1
+        headerMatches:
+        - distinct: false
+          name: :path
+          suffix: /ExampleExact
         hostname: '*'
-        isHTTP2: false
+        isHTTP2: true
         metadata:
-          kind: HTTPRoute
-          name: httproute-1
+          kind: GRPCRoute
+          name: grpcroute-1
           namespace: default
-        name: httproute/default/httproute-1/rule/0/match/0/*
-        pathMatch:
-          distinct: false
-          exact: /exact
-          name: ""
+        name: grpcroute/default/grpcroute-1/rule/0/match/0/*
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
