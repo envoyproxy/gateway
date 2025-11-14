@@ -231,11 +231,10 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 					err.Reason(),
 				))
 				failedProcessDestination = true
-				continue
 			}
 
-			// ds can be nil if the backendRef weight is 0
-			if ds == nil {
+			// skip backendRefs with weight 0 as they do not affect the traffic distribution
+			if ds.Weight != nil && *ds.Weight == 0 {
 				continue
 			}
 			allDs = append(allDs, ds)
@@ -258,7 +257,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 			case irRoute.DirectResponse != nil || irRoute.Redirect != nil:
 			// return 500 if any destination setting is invalid
 			// the error is already added to the error list when processing the destination
-			case failedProcessDestination:
+			case failedProcessDestination && destination.ToBackendWeights().Valid == 0:
 				irRoute.DirectResponse = &ir.CustomResponse{
 					StatusCode: ptr.To(uint32(500)),
 				}
@@ -662,10 +661,10 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 					err.Reason(),
 				))
 				failedProcessDestination = true
-				continue
 			}
 
-			if ds == nil {
+			// skip backendRefs with weight 0 as they do not affect the traffic distribution
+			if ds.Weight != nil && *ds.Weight == 0 {
 				continue
 			}
 			allDs = append(allDs, ds)
@@ -684,7 +683,7 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 			case irRoute.DirectResponse != nil || irRoute.Redirect != nil:
 			// return 500 if any destination setting is invalid
 			// the error is already added to the error list when processing the destination
-			case failedProcessDestination:
+			case failedProcessDestination && destination.ToBackendWeights().Valid == 0:
 				irRoute.DirectResponse = &ir.CustomResponse{
 					StatusCode: ptr.To(uint32(500)),
 				}
@@ -1100,7 +1099,7 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 			}
 
 			// Skip nil destination settings
-			if ds != nil {
+			if ds.Weight != nil && *ds.Weight > 0 {
 				destSettings = append(destSettings, ds)
 			}
 		}
@@ -1259,7 +1258,7 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 				continue
 			}
 			// Skip nil destination settings
-			if ds != nil {
+			if ds.Weight != nil && *ds.Weight > 0 {
 				destSettings = append(destSettings, ds)
 			}
 		}
@@ -1362,11 +1361,17 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 func (t *Translator) processDestination(name string, backendRefContext BackendRefContext,
 	parentRef *RouteParentContext, route RouteContext, resources *resource.Resources,
 ) (ds *ir.DestinationSetting, err status.Error) {
-	routeType := GetRouteType(route)
-	weight := uint32(1)
-	backendRef := GetBackendRef(backendRefContext)
-	if backendRef.Weight != nil {
-		weight = uint32(*backendRef.Weight)
+	var (
+		routeType  = GetRouteType(route)
+		backendRef = GetBackendRef(backendRefContext)
+		weight     = (uint32(ptr.Deref(backendRef.Weight, int32(1))))
+	)
+
+	// Create an empty DS without endpoints
+	// This represents an invalid DS.
+	emptyDS := &ir.DestinationSetting{
+		Name:   name,
+		Weight: &weight,
 	}
 
 	backendNamespace := NamespaceDerefOr(backendRef.Namespace, route.GetNamespace())
@@ -1374,13 +1379,13 @@ func (t *Translator) processDestination(name string, backendRefContext BackendRe
 	{
 		// return with empty endpoint means the backend is invalid and an error to fail the associated route.
 		if err != nil {
-			return nil, err
+			return emptyDS, err
 		}
 	}
 
 	// Skip processing backends with 0 weight
 	if weight == 0 {
-		return nil, nil
+		return emptyDS, nil
 	}
 
 	var envoyProxy *egv1a1.EnvoyProxy
@@ -1422,17 +1427,17 @@ func (t *Translator) processDestination(name string, backendRefContext BackendRe
 		ds.IsDynamicResolver,
 	)
 	if tlsErr != nil {
-		return nil, status.NewRouteStatusError(tlsErr, status.RouteReasonInvalidBackendTLS)
+		return emptyDS, status.NewRouteStatusError(tlsErr, status.RouteReasonInvalidBackendTLS)
 	}
 
 	var filtersErr error
 	ds.Filters, filtersErr = t.processDestinationFilters(routeType, backendRefContext, parentRef, route, resources)
 	if filtersErr != nil {
-		return nil, status.NewRouteStatusError(filtersErr, status.RouteReasonInvalidBackendFilters)
+		return emptyDS, status.NewRouteStatusError(filtersErr, status.RouteReasonInvalidBackendFilters)
 	}
 
 	if err := validateDestinationSettings(ds, t.IsEnvoyServiceRouting(envoyProxy), backendRef.Kind); err != nil {
-		return nil, err
+		return emptyDS, err
 	}
 
 	ds.Weight = &weight

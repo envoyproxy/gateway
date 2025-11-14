@@ -1502,6 +1502,12 @@ func (r *RouteDestination) Validate() error {
 }
 
 func (r *RouteDestination) NeedsClusterPerSetting() bool {
+	// When the destination has both valid and invalid backend weights, we use weighted clusters to distribute between
+	// valid backends and the `invalid-backend-cluster` for 500 responses according to their configured weights.
+	if r.ToBackendWeights().Invalid > 0 {
+		return true
+	}
+
 	return r.HasMixedEndpoints() ||
 		r.HasFiltersInSettings() ||
 		(len(r.Settings) > 1 && r.HasZoneAwareRouting())

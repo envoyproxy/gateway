@@ -19,7 +19,7 @@ import (
 )
 
 func init() {
-	ConformanceTests = append(ConformanceTests, WeightEqualTest, WeightBlueGreenTest, WeightCompleteRolloutTest)
+	ConformanceTests = append(ConformanceTests, WeightEqualTest, WeightBlueGreenTest, WeightCompleteRolloutTest, WeightMixedValidAndInvalidTest)
 }
 
 var WeightEqualTest = suite.ConformanceTest{
@@ -230,4 +230,50 @@ func ExtractPodNamePrefix(podName string) string {
 	}
 
 	return podName
+}
+
+var WeightMixedValidAndInvalidTest = suite.ConformanceTest{
+	ShortName:   "WeightMixedValidAndInvalid",
+	Description: "Requests should be distributed to valid and invalid backends according to their weights",
+	Manifests:   []string{"testdata/weighted-backend-mixed-valid-and-invalid.yaml"},
+	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
+		t.Run("all backends receive the complete rollout weight of traffic", func(t *testing.T) {
+			const sendRequests = 50
+
+			weightEqualRoute := types.NamespacedName{Name: "weight-mixed-valid-and-invalid-http-route", Namespace: ConformanceInfraNamespace}
+			gatewayRef := kubernetes.NewGatewayRef(SameNamespaceGateway)
+			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, gatewayRef, weightEqualRoute)
+
+			// Make sure all test resources are ready
+			kubernetes.NamespacesMustBeReady(t, suite.Client, suite.TimeoutConfig, []string{ConformanceInfraNamespace})
+
+			expectedResponse := http.ExpectedResponse{
+				Request: http.Request{
+					Path: "/mixed-valid-and-invalid",
+				},
+				Namespace: ConformanceInfraNamespace,
+			}
+			req := http.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
+
+			var (
+				successCount = 0
+				failCount    = 0
+			)
+			for range sendRequests {
+				_, response, err := suite.RoundTripper.CaptureRoundTrip(req)
+				if err != nil {
+					t.Errorf("failed to get expected response: %v", err)
+				}
+				if response.StatusCode == 200 {
+					successCount++
+				} else {
+					failCount++
+				}
+			}
+
+			if !AlmostEquals(successCount, 40, 3) { // The weight of valid backend is 80%, so the expected success count is 50*80%=40
+				t.Errorf("The actual success count is not within the expected range, success %d", successCount)
+			}
+		})
+	},
 }
