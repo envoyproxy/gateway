@@ -23469,7 +23469,7 @@ spec:
                                 value:
                                   description: |-
                                     Values defines the formatter value to use,
-                                    same formatter as HTTP access logging
+                                    same [formatter](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators) as HTTP access logging
                                     (e.g. %REQUESTED_SERVER_NAME%).
                                     Unknown specifier values are replaced
                                     with the empty string.
@@ -43212,7 +43212,7 @@ spec:
                                 value:
                                   description: |-
                                     Values defines the formatter value to use,
-                                    same formatter as HTTP access logging
+                                    same [formatter](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators) as HTTP access logging
                                     (e.g. %REQUESTED_SERVER_NAME%).
                                     Unknown specifier values are replaced
                                     with the empty string.
