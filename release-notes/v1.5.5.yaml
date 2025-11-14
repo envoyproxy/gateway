@@ -1,0 +1,31 @@
+date: October 20, 2025
+
+# Changes that are expected to cause an incompatibility with previous versions, such as deletions or modifications to existing APIs.
+breaking changes: |
+
+# Updates addressing vulnerabilities, security flaws, or compliance requirements.
+security updates: |
+
+# New features or capabilities added in this release.
+new features: |
+
+bug fixes: |
+  Fixed 500 errors caused by partially invalid BackendRefs; traffic is now correctly routed between valid backends and 500 responses according to their configured weights.
+  Fixed certificate SAN overlap detection in gateway listeners.
+  Fixed panic with request mirror with GRPCRoute.
+  Fixed listener port limit typo 65353 -> 65535.
+  Fixed issue where reloading invalid envoy gateway configuration.
+  Fixed missing JWT provider configuration when JWT authentication is configured on multiple HTTP listeners sharing the same port.
+  Fixed IP family not set in UDPListener.
+  Fixed issue where didn't watch change for the ca cert in the Backend.
+
+# Enhancements that improve performance.
+performance improvements: |
+  Fixed an memory leak issue where `watchable.Maps`` never closed when shutting down the provider.
+  Coalesced updates to reduce intermediate updates.
+
+# Deprecated features or APIs.
+deprecations: |
+
+# Other notable changes not covered by the above sections.
+Other changes: |
