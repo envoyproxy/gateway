@@ -120,7 +120,9 @@ func (*lua) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir.HTTPLi
 
 	for _, ep := range irRoute.EnvoyExtensions.Luas {
 		filterName := luaFilterName(ep)
-		if err := enableFilterOnRoute(route, filterName); err != nil {
+		if err := enableFilterOnRoute(route, filterName, &routev3.FilterConfig{
+			Config: &anypb.Any{},
+		}); err != nil {
 			return err
 		}
 	}
