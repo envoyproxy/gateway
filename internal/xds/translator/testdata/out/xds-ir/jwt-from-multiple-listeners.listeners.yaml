@@ -65,6 +65,7 @@
                 payloadInMetadata: jwt1
                 remoteJwks:
                   asyncFetch: {}
+                  cacheDuration: 300s
                   httpUri:
                     cluster: www_googleapis_com_443
                     timeout: 10s
@@ -80,6 +81,7 @@
                 payloadInMetadata: jwt2
                 remoteJwks:
                   asyncFetch: {}
+                  cacheDuration: 300s
                   httpUri:
                     cluster: www_googleapis_com_443
                     timeout: 10s
