@@ -1,6 +1,6 @@
 module github.com/exampleorg/envoygateway-extension
 
-go 1.24.9
+go 1.24.10
 
 require (
 	github.com/envoyproxy/gateway v1.3.1
