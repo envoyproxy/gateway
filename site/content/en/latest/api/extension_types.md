@@ -2160,7 +2160,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `value` | _string_ |  true  |  | Values defines the formatter value to use,<br />same formatter as HTTP access logging<br />(e.g. %REQUESTED_SERVER_NAME%).<br />Unknown specifier values are replaced<br />with the empty string. |
+| `value` | _string_ |  true  |  | Values defines the formatter value to use,<br />same [formatter](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators) as HTTP access logging<br />(e.g. %REQUESTED_SERVER_NAME%).<br />Unknown specifier values are replaced<br />with the empty string. |
 
 
 #### GRPCActiveHealthChecker
