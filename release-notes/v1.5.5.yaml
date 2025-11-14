@@ -14,7 +14,7 @@ bug fixes: |
   Fixed certificate SAN overlap detection in gateway listeners.
   Fixed panic with request mirror with GRPCRoute.
   Fixed listener port limit typo 65353 -> 65535.
-  Fixed issue that control plane didn't validate when reloading configuration.
+  Fixed validating EnvoyGateway configuration during a config update.
   Fixed missing JWT provider configuration when JWT authentication is configured on multiple HTTP listeners sharing the same port.
   Fixed IP family not set in UDPListener.
   Fixed issue where didn't watch change for the ca cert in the Backend.
