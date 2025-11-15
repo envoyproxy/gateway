@@ -1,0 +1,9 @@
+date: November 15, 2025
+
+bug fixes: |
+  Fixed 500 errors caused by partially invalid BackendRefs; traffic is now correctly routed between valid backends and 500 responses according to their configured weights.
+
+# Enhancements that improve performance.
+performance improvements: |
+  Fixed an memory leak issue where `watchable.Maps`` never closed when shutting down the provider.
+  Coalesced updates to reduce intermediate updates.
