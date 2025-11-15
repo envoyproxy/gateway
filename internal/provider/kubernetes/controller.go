@@ -1900,25 +1900,20 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		}
 	}
 
-	r.tlsRouteCRDExists = r.crdExists(mgr, resource.KindTLSRoute, gwapiv1a3.GroupVersion.String())
+	r.tlsRouteCRDExists = r.crdExists(mgr, resource.KindTLSRoute, gwapiv1a2.GroupVersion.String())
 	if !r.tlsRouteCRDExists {
-		// fallback with v1alpha2
-		if r.crdExists(mgr, resource.KindTLSRoute, gwapiv1a2.GroupVersion.String()) {
-			// TODO
-		} else {
-			r.log.Info("TLSRoute CRD not found, skipping TLSRoute watch")
-		}
+		r.log.Info("TLSRoute CRD not found, skipping TLSRoute watch")
 	} else {
 		// Watch TLSRoute CRUDs and process affected Gateways.
-		tlsrPredicates := commonPredicates[*gwapiv1a3.TLSRoute]()
+		tlsrPredicates := commonPredicates[*gwapiv1a2.TLSRoute]()
 		if r.namespaceLabel != nil {
-			tlsrPredicates = append(tlsrPredicates, predicate.NewTypedPredicateFuncs(func(route *gwapiv1a3.TLSRoute) bool {
+			tlsrPredicates = append(tlsrPredicates, predicate.NewTypedPredicateFuncs(func(route *gwapiv1a2.TLSRoute) bool {
 				return r.hasMatchingNamespaceLabels(route)
 			}))
 		}
 		if err := c.Watch(
-			source.Kind(mgr.GetCache(), &gwapiv1a3.TLSRoute{},
-				handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, route *gwapiv1a3.TLSRoute) []reconcile.Request {
+			source.Kind(mgr.GetCache(), &gwapiv1a2.TLSRoute{},
+				handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, route *gwapiv1a2.TLSRoute) []reconcile.Request {
 					return r.enqueueClass(ctx, route)
 				}),
 				tlsrPredicates...)); err != nil {
@@ -2299,23 +2294,23 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		}
 	}
 
-	r.bTLSPolicyCRDExists = r.crdExists(mgr, resource.KindBackendTLSPolicy, gwapiv1.GroupVersion.String())
+	r.bTLSPolicyCRDExists = r.crdExists(mgr, resource.KindBackendTLSPolicy, gwapiv1a3.GroupVersion.String())
 	if !r.bTLSPolicyCRDExists {
 		r.log.Info("BackendTLSPolicy CRD not found, skipping BackendTLSPolicy watch")
 	} else {
 		// Watch BackendTLSPolicy
-		btlsPredicates := []predicate.TypedPredicate[*gwapiv1.BackendTLSPolicy]{
-			predicate.TypedGenerationChangedPredicate[*gwapiv1.BackendTLSPolicy]{},
+		btlsPredicates := []predicate.TypedPredicate[*gwapiv1a3.BackendTLSPolicy]{
+			predicate.TypedGenerationChangedPredicate[*gwapiv1a3.BackendTLSPolicy]{},
 		}
 		if r.namespaceLabel != nil {
-			btlsPredicates = append(btlsPredicates, predicate.NewTypedPredicateFuncs(func(btp *gwapiv1.BackendTLSPolicy) bool {
+			btlsPredicates = append(btlsPredicates, predicate.NewTypedPredicateFuncs(func(btp *gwapiv1a3.BackendTLSPolicy) bool {
 				return r.hasMatchingNamespaceLabels(btp)
 			}))
 		}
 
 		if err := c.Watch(
-			source.Kind(mgr.GetCache(), &gwapiv1.BackendTLSPolicy{},
-				handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, btp *gwapiv1.BackendTLSPolicy) []reconcile.Request {
+			source.Kind(mgr.GetCache(), &gwapiv1a3.BackendTLSPolicy{},
+				handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, btp *gwapiv1a3.BackendTLSPolicy) []reconcile.Request {
 					return r.enqueueClass(ctx, btp)
 				}),
 				btlsPredicates...)); err != nil {

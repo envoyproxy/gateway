@@ -555,7 +555,7 @@ func addMissingServices(requiredServices map[string]*corev1.Service, obj interfa
 				refs = append(refs, rule.BackendRefs[i].BackendRef)
 			}
 		}
-	case *gwapiv1a3.TLSRoute:
+	case *gwapiv1a2.TLSRoute:
 		objNamespace = route.Namespace
 		for _, rule := range route.Spec.Rules {
 			refs = append(refs, rule.BackendRefs...)
