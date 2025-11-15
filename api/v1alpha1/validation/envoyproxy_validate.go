@@ -19,6 +19,8 @@ import (
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
 
+var statNameRegex = regexp.MustCompile("%[^%]*%")
+
 // ValidateEnvoyProxy validates the provided EnvoyProxy.
 func ValidateEnvoyProxy(proxy *egv1a1.EnvoyProxy) error {
 	var errs []error
@@ -213,8 +215,8 @@ func validateProxyTelemetry(spec *egv1a1.EnvoyProxySpec) []error {
 		}
 
 		if spec.Telemetry.Metrics.ClusterStatName != nil {
-			if clusterStatErrs := validateClusterStatName(*spec.Telemetry.Metrics.ClusterStatName); clusterStatErrs != nil {
-				errs = append(errs, clusterStatErrs...)
+			if clusterStatErr := ValidateClusterStatName(*spec.Telemetry.Metrics.ClusterStatName); clusterStatErr != nil {
+				errs = append(errs, clusterStatErr)
 			}
 		}
 	}
@@ -294,7 +296,22 @@ func validateFilterOrder(filterOrder []egv1a1.FilterPosition) error {
 	return nil
 }
 
-func validateClusterStatName(clusterStatName string) []error {
+func ValidateRouteStatName(routeStatName string) error {
+	supportedOperators := map[string]bool{
+		egv1a1.StatFormatterRouteName:      true,
+		egv1a1.StatFormatterRouteNamespace: true,
+		egv1a1.StatFormatterRouteKind:      true,
+		egv1a1.StatFormatterRouteRuleName:  true,
+	}
+
+	if err := validateStatName(routeStatName, supportedOperators); err != nil {
+		return fmt.Errorf("unable to configure Route Stat Name: %w", err)
+	}
+
+	return nil
+}
+
+func ValidateClusterStatName(clusterStatName string) error {
 	supportedOperators := map[string]bool{
 		egv1a1.StatFormatterRouteName:       true,
 		egv1a1.StatFormatterRouteNamespace:  true,
@@ -304,15 +321,25 @@ func validateClusterStatName(clusterStatName string) []error {
 		egv1a1.StatFormatterBackendRefs:     true,
 	}
 
-	var errs []error
-	re := regexp.MustCompile("%[^%]*%")
-	matches := re.FindAllString(clusterStatName, -1)
+	if err := validateStatName(clusterStatName, supportedOperators); err != nil {
+		return fmt.Errorf("unable to configure Cluster Stat Name: %w", err)
+	}
+
+	return nil
+}
+
+func validateStatName(statName string, supportedOperators map[string]bool) error {
+	var unsupportedOperators []string
+	matches := statNameRegex.FindAllString(statName, -1)
 	for _, operator := range matches {
 		if _, ok := supportedOperators[operator]; !ok {
-			err := fmt.Errorf("unable to configure Cluster Stat Name with unsupported operator: %s", operator)
-			errs = append(errs, err)
+			unsupportedOperators = append(unsupportedOperators, operator)
 		}
 	}
 
-	return errs
+	if len(unsupportedOperators) > 0 {
+		return fmt.Errorf("unsupported operators: %v", unsupportedOperators)
+	}
+
+	return nil
 }

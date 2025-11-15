@@ -389,6 +389,10 @@ xdsIR:
         loadBalancer:
           consistentHash:
             sourceIP: true
+        metadata:
+          kind: TCPRoute
+          name: tcp-app-1
+          namespace: default
         name: tcproute/default/tcp-app-1
         proxyProtocol:
           version: V2

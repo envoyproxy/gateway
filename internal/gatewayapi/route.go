@@ -1256,6 +1256,7 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 						Settings: destSettings,
 						Metadata: buildResourceMetadata(tlsRoute, nil),
 					},
+					Metadata: buildResourceMetadata(tlsRoute, nil),
 				}
 				irListener.Routes = append(irListener.Routes, irRoute)
 
@@ -1554,9 +1555,9 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 					Destination: &ir.RouteDestination{
 						Name:     destName,
 						Settings: destSettings,
-						// tcpRoute Must have a single rule, so can use index 0.
 						Metadata: buildResourceMetadata(tcpRoute, tcpRoute.Spec.Rules[0].Name),
 					},
+					Metadata: buildResourceMetadata(tcpRoute, nil),
 				}
 
 				if irListener.TLS != nil {
