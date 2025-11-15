@@ -203,13 +203,13 @@ func GetGRPCRoute(nsName types.NamespacedName, parent string, serviceName types.
 }
 
 // GetTLSRoute returns a sample TLSRoute with a parent reference.
-func GetTLSRoute(nsName types.NamespacedName, parent string, serviceName types.NamespacedName, port int32) *gwapiv1a3.TLSRoute {
-	return &gwapiv1a3.TLSRoute{
+func GetTLSRoute(nsName types.NamespacedName, parent string, serviceName types.NamespacedName, port int32) *gwapiv1a2.TLSRoute {
+	return &gwapiv1a2.TLSRoute{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: nsName.Namespace,
 			Name:      nsName.Name,
 		},
-		Spec: gwapiv1a3.TLSRouteSpec{
+		Spec: gwapiv1a2.TLSRouteSpec{
 			Hostnames: []gwapiv1a3.Hostname{"example.com"},
 			CommonRouteSpec: gwapiv1.CommonRouteSpec{
 				ParentRefs: []gwapiv1.ParentReference{

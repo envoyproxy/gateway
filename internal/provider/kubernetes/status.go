@@ -177,9 +177,9 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 				val := update.Value
 				r.statusUpdater.Send(Update{
 					NamespacedName: key,
-					Resource:       new(gwapiv1a3.TLSRoute),
+					Resource:       new(gwapiv1a2.TLSRoute),
 					Mutator: MutatorFunc(func(obj client.Object) client.Object {
-						t, ok := obj.(*gwapiv1a3.TLSRoute)
+						t, ok := obj.(*gwapiv1a2.TLSRoute)
 						if !ok {
 							err := fmt.Errorf("unsupported object type %T", obj)
 							errChan <- err
@@ -187,7 +187,7 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 						}
 						valCopy := val.DeepCopy()
 						setLastTransitionTimeInConditionsForRouteStatus(&valCopy.RouteStatus, metav1.Now())
-						tCopy := &gwapiv1a3.TLSRoute{
+						tCopy := &gwapiv1a2.TLSRoute{
 							TypeMeta:   t.TypeMeta,
 							ObjectMeta: t.ObjectMeta,
 							Spec:       t.Spec,
@@ -453,9 +453,9 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 				val := update.Value
 				r.statusUpdater.Send(Update{
 					NamespacedName: key,
-					Resource:       new(gwapiv1.BackendTLSPolicy),
+					Resource:       new(gwapiv1a3.BackendTLSPolicy),
 					Mutator: MutatorFunc(func(obj client.Object) client.Object {
-						t, ok := obj.(*gwapiv1.BackendTLSPolicy)
+						t, ok := obj.(*gwapiv1a3.BackendTLSPolicy)
 						if !ok {
 							err := fmt.Errorf("unsupported object type %T", obj)
 							errChan <- err
@@ -463,7 +463,7 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 						}
 						valCopy := val.DeepCopy()
 						setLastTransitionTimeInConditionsForPolicyStatus(valCopy, metav1.Now())
-						tCopy := &gwapiv1.BackendTLSPolicy{
+						tCopy := &gwapiv1a3.BackendTLSPolicy{
 							TypeMeta:   t.TypeMeta,
 							ObjectMeta: t.ObjectMeta,
 							Spec:       t.Spec,
