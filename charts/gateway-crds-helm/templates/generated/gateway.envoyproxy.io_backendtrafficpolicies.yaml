@@ -126,9 +126,19 @@ spec:
                     brotli:
                       description: The configuration for Brotli compressor.
                       type: object
+                    chooseFirst:
+                      description: |-
+                        ChooseFirst indicates whether the compressor is preferred when q-values in Accept-Encoding are equal.
+                        If multiple compressor filters set choose_first to true, the last one in the filter chain is chosen.
+                      type: boolean
                     gzip:
                       description: The configuration for GZIP compressor.
                       type: object
+                    removeAcceptEncodingHeader:
+                      description: |-
+                        RemoveAcceptEncodingHeader indicates whether to remove the
+                        Accept-Encoding header from the request before forwarding it to the upstream.
+                      type: boolean
                     type:
                       description: CompressorType defines the compressor type to use
                         for compression.
@@ -156,9 +166,19 @@ spec:
                     brotli:
                       description: The configuration for Brotli compressor.
                       type: object
+                    chooseFirst:
+                      description: |-
+                        ChooseFirst indicates whether the compressor is preferred when q-values in Accept-Encoding are equal.
+                        If multiple compressor filters set choose_first to true, the last one in the filter chain is chosen.
+                      type: boolean
                     gzip:
                       description: The configuration for GZIP compressor.
                       type: object
+                    removeAcceptEncodingHeader:
+                      description: |-
+                        RemoveAcceptEncodingHeader indicates whether to remove the
+                        Accept-Encoding header from the request before forwarding it to the upstream.
+                      type: boolean
                     type:
                       description: CompressorType defines the compressor type to use
                         for compression.

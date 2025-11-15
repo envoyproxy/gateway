@@ -121,22 +121,43 @@ static_resources:
             typed_config:
               "@type": type.googleapis.com/envoy.extensions.filters.http.compressor.v3.Compressor
               {{- if eq .PrometheusCompressionLibrary "Gzip"}}
+              {{- if .PrometheusCompressionChooseFirst }}
+              choose_first: true
+              {{- end }}
               compressor_library:
                 name: text_optimized
                 typed_config:
                   "@type": type.googleapis.com/envoy.extensions.compression.gzip.compressor.v3.Gzip
+              {{- if .PrometheusCompressionRemoveAcceptEncodingHeader }}
+              response_direction_config:
+                remove_accept_encoding_header: true
+              {{- end }}
               {{- end }}
               {{- if eq .PrometheusCompressionLibrary "Brotli"}}
+              {{- if .PrometheusCompressionChooseFirst }}
+              choose_first: true
+              {{- end }}
               compressor_library:
                 name: text_optimized
                 typed_config:
                   "@type": type.googleapis.com/envoy.extensions.compression.brotli.compressor.v3.Brotli
+              {{- if .PrometheusCompressionRemoveAcceptEncodingHeader }}
+              response_direction_config:
+                remove_accept_encoding_header: true
+              {{- end }}
               {{- end }}
               {{- if eq .PrometheusCompressionLibrary "Zstd"}}
+              {{- if .PrometheusCompressionChooseFirst }}
+              choose_first: true
+              {{- end }}
               compressor_library:
                 name: text_optimized
                 typed_config:
                   "@type": type.googleapis.com/envoy.extensions.compression.zstd.compressor.v3.Zstd
+              {{- if .PrometheusCompressionRemoveAcceptEncodingHeader }}
+              response_direction_config:
+                remove_accept_encoding_header: true
+              {{- end }}
               {{- end }}
           {{- end }}
           - name: envoy.filters.http.router

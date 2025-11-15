@@ -41,6 +41,18 @@ type Compression struct {
 	// +required
 	Type CompressorType `json:"type"`
 
+	// ChooseFirst indicates whether the compressor is preferred when q-values in Accept-Encoding are equal.
+	// If multiple compressor filters set choose_first to true, the last one in the filter chain is chosen.
+	//
+	// +optional
+	ChooseFirst bool `json:"chooseFirst,omitempty"`
+
+	// RemoveAcceptEncodingHeader indicates whether to remove the
+	// Accept-Encoding header from the request before forwarding it to the upstream.
+	//
+	// +optional
+	RemoveAcceptEncodingHeader bool `json:"removeAcceptEncodingHeader,omitempty"`
+
 	// The configuration for Brotli compressor.
 	//
 	// +optional

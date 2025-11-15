@@ -82,7 +82,9 @@ func TestGetRenderedBootstrapConfig(t *testing.T) {
 				ProxyMetrics: &egv1a1.ProxyMetrics{
 					Prometheus: &egv1a1.ProxyPrometheusProvider{
 						Compression: &egv1a1.Compression{
-							Type: egv1a1.ZstdCompressorType,
+							Type:                       egv1a1.ZstdCompressorType,
+							ChooseFirst:                true,
+							RemoveAcceptEncodingHeader: true,
 						},
 					},
 				},
