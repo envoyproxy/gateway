@@ -16,10 +16,10 @@ no_list: true
     </p>
     <div class="mt-5">
       <a class="btn btn-lg btn-glass me-3" href="/docs/tasks/quickstart/">
-        <i class="fas fa-rocket me-2"></i>Get Started
+        <i class="fas fa-rocket me-2"></i>Quickstart Guide
       </a>
       <a class="btn btn-lg btn-glass" href="https://github.com/envoyproxy/gateway">
-        <i class="fab fa-github me-2"></i>GitHub
+        <i class="fab fa-github me-2"></i>View on GitHub
       </a>
     </div>
     <!-- <div class="mt-4">
