@@ -1602,8 +1602,6 @@ _Appears in:_
 | `disabled` | _boolean_ |  false  |  |  |
 
 
-
-
 #### EnvoyJSONPatchConfig
 
 
