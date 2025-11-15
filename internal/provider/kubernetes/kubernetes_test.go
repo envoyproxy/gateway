@@ -1028,7 +1028,7 @@ func testTLSRoute(ctx context.Context, t *testing.T, provider *Provider, resourc
 					return false
 				}
 
-				routes := make([]string, 0, len(res.HTTPRoutes))
+				routes := make([]string, 0, len(res.TLSRoutes))
 				for _, r := range res.TLSRoutes {
 					routes = append(routes, utils.NamespacedName(r).String())
 				}

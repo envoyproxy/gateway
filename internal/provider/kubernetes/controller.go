@@ -1900,7 +1900,8 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		}
 	}
 
-	r.tlsRouteCRDExists = r.crdExists(mgr, resource.KindTLSRoute, gwapiv1a2.GroupVersion.String())
+	// Add multiple versions to pass `make kube-test`, setup-envtest install the storage version only?
+	r.tlsRouteCRDExists = r.crdExists(mgr, resource.KindTLSRoute, gwapiv1a2.GroupVersion.String(), gwapiv1a3.GroupVersion.String())
 	if !r.tlsRouteCRDExists {
 		r.log.Info("TLSRoute CRD not found, skipping TLSRoute watch")
 	} else {
@@ -2294,7 +2295,8 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		}
 	}
 
-	r.bTLSPolicyCRDExists = r.crdExists(mgr, resource.KindBackendTLSPolicy, gwapiv1a3.GroupVersion.String())
+	// Add multiple versions to pass `make kube-test`, setup-envtest install the storage version only?
+	r.bTLSPolicyCRDExists = r.crdExists(mgr, resource.KindBackendTLSPolicy, gwapiv1a3.GroupVersion.String(), gwapiv1.GroupVersion.String())
 	if !r.bTLSPolicyCRDExists {
 		r.log.Info("BackendTLSPolicy CRD not found, skipping BackendTLSPolicy watch")
 	} else {
@@ -2564,7 +2566,8 @@ func (r *gatewayAPIReconciler) processEnvoyProxy(ep *egv1a1.EnvoyProxy, resource
 }
 
 // crdExists checks for the existence of the CRD in k8s APIServer before watching it
-func (r *gatewayAPIReconciler) crdExists(mgr manager.Manager, kind, groupVersion string) bool {
+func (r *gatewayAPIReconciler) crdExists(mgr manager.Manager, kind string, groupVersion ...string) bool {
+	gvs := sets.New(groupVersion...)
 	discoveryClient, err := discovery.NewDiscoveryClientForConfig(mgr.GetConfig())
 	if err != nil {
 		r.log.Error(err, "failed to create discovery client")
@@ -2577,7 +2580,11 @@ func (r *gatewayAPIReconciler) crdExists(mgr manager.Manager, kind, groupVersion
 	for _, list := range apiResourceList {
 		for i := range list.APIResources {
 			res := &list.APIResources[i]
-			if list.GroupVersion == groupVersion && res.Kind == kind {
+			if res.Kind != kind {
+				continue
+			}
+
+			if gvs.Has(list.GroupVersion) {
 				found = true
 				break
 			}
