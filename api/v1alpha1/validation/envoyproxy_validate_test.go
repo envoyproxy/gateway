@@ -964,3 +964,39 @@ func TestGetEnvoyProxyComponentLevelArgs(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateClusterStatName(t *testing.T) {
+	testCases := []struct {
+		name     string
+		statName string
+		expected bool
+	}{
+		{
+			name:     "valid cluster stat name with supported operators",
+			statName: "%ROUTE_NAME%/%ROUTE_NAMESPACE%/%BACKEND_REFS%",
+			expected: true,
+		},
+		{
+			name:     "invalid cluster stat name with unsupported operators",
+			statName: "%ROUTE_NAME%/%FOO%/%BAR%",
+			expected: false,
+		},
+		{
+			name:     "invalid cluster stat name",
+			statName: "%ROUTE_NAME",
+			expected: false,
+		},
+	}
+
+	for i := range testCases {
+		tc := testCases[i]
+		t.Run(tc.name, func(t *testing.T) {
+			errs := validateClusterStatName(tc.statName)
+			if tc.expected {
+				require.Empty(t, errs)
+			} else {
+				require.NotEmpty(t, errs)
+			}
+		})
+	}
+}

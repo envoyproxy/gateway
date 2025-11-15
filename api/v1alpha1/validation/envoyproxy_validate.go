@@ -294,19 +294,22 @@ func validateFilterOrder(filterOrder []egv1a1.FilterPosition) error {
 	return nil
 }
 
-func validateClusterStatName(clusterStatName string) []error {
-	supportedOperators := map[string]bool{
-		egv1a1.StatFormatterRouteName:       true,
-		egv1a1.StatFormatterRouteNamespace:  true,
-		egv1a1.StatFormatterRouteKind:       true,
-		egv1a1.StatFormatterRouteRuleName:   true,
-		egv1a1.StatFormatterRouteRuleNumber: true,
-		egv1a1.StatFormatterBackendRefs:     true,
-	}
+var supportedOperators = map[string]bool{
+	egv1a1.StatFormatterRouteName:       true,
+	egv1a1.StatFormatterRouteNamespace:  true,
+	egv1a1.StatFormatterRouteKind:       true,
+	egv1a1.StatFormatterRouteRuleName:   true,
+	egv1a1.StatFormatterRouteRuleNumber: true,
+	egv1a1.StatFormatterBackendRefs:     true,
+}
 
+func validateClusterStatName(clusterStatName string) []error {
 	var errs []error
 	re := regexp.MustCompile("%[^%]*%")
 	matches := re.FindAllString(clusterStatName, -1)
+	if len(matches) == 0 {
+		errs = append(errs, fmt.Errorf("unable to configure Cluster Stat Name without any operator"))
+	}
 	for _, operator := range matches {
 		if _, ok := supportedOperators[operator]; !ok {
 			err := fmt.Errorf("unable to configure Cluster Stat Name with unsupported operator: %s", operator)
