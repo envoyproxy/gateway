@@ -244,6 +244,9 @@ const (
 	// EnvoyFilterFault defines the Envoy HTTP fault filter.
 	EnvoyFilterFault EnvoyFilter = "envoy.filters.http.fault"
 
+	// EnvoyFilterAdmissionControl defines the Envoy HTTP admission control filter.
+	EnvoyFilterAdmissionControl EnvoyFilter = "envoy.filters.http.admission_control"
+
 	// EnvoyFilterCORS defines the Envoy HTTP CORS filter.
 	EnvoyFilterCORS EnvoyFilter = "envoy.filters.http.cors"
 
