@@ -1743,7 +1743,7 @@ func (r *gatewayAPIReconciler) processSecurityPolicies(
 func (r *gatewayAPIReconciler) processBackendTLSPolicies(
 	ctx context.Context, resourceTree *resource.Resources, resourceMap *resourceMappings,
 ) error {
-	backendTLSPolicies := gwapiv1.BackendTLSPolicyList{}
+	backendTLSPolicies := gwapiv1a3.BackendTLSPolicyList{}
 	if err := r.client.List(ctx, &backendTLSPolicies); err != nil {
 		return fmt.Errorf("error listing BackendTLSPolicies: %w", err)
 	}
@@ -1902,7 +1902,12 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 
 	r.tlsRouteCRDExists = r.crdExists(mgr, resource.KindTLSRoute, gwapiv1a3.GroupVersion.String())
 	if !r.tlsRouteCRDExists {
-		r.log.Info("TLSRoute CRD not found, skipping TLSRoute watch")
+		// fallback with v1alpha2
+		if r.crdExists(mgr, resource.KindTLSRoute, gwapiv1a2.GroupVersion.String()) {
+			// TODO
+		} else {
+			r.log.Info("TLSRoute CRD not found, skipping TLSRoute watch")
+		}
 	} else {
 		// Watch TLSRoute CRUDs and process affected Gateways.
 		tlsrPredicates := commonPredicates[*gwapiv1a3.TLSRoute]()
@@ -2564,7 +2569,7 @@ func (r *gatewayAPIReconciler) processEnvoyProxy(ep *egv1a1.EnvoyProxy, resource
 }
 
 // crdExists checks for the existence of the CRD in k8s APIServer before watching it
-func (r *gatewayAPIReconciler) crdExists(mgr manager.Manager, kind, groupVersion string) bool {
+func (r *gatewayAPIReconciler) crdExists(mgr manager.Manager, kind string, groupVersion string) bool {
 	discoveryClient, err := discovery.NewDiscoveryClientForConfig(mgr.GetConfig())
 	if err != nil {
 		r.log.Error(err, "failed to create discovery client")
