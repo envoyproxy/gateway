@@ -13,14 +13,14 @@ import (
 
 	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/utils/ptr"
-	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+	gwapiv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/utils/net"
 )
 
-func (t *Translator) ProcessBackends(backends []*egv1a1.Backend, backendTLSPolicies []*gwapiv1.BackendTLSPolicy) []*egv1a1.Backend {
+func (t *Translator) ProcessBackends(backends []*egv1a1.Backend, backendTLSPolicies []*gwapiv1a3.BackendTLSPolicy) []*egv1a1.Backend {
 	res := make([]*egv1a1.Backend, 0, len(backends))
 	for _, backend := range backends {
 		// Ensure Backends are enabled
@@ -41,7 +41,7 @@ func (t *Translator) ProcessBackends(backends []*egv1a1.Backend, backendTLSPolic
 	return res
 }
 
-func validateBackend(backend *egv1a1.Backend, backendTLSPolicies []*gwapiv1.BackendTLSPolicy, runningOnHost bool) status.Error {
+func validateBackend(backend *egv1a1.Backend, backendTLSPolicies []*gwapiv1a3.BackendTLSPolicy, runningOnHost bool) status.Error {
 	if backend.Spec.Type != nil && *backend.Spec.Type == egv1a1.BackendTypeDynamicResolver {
 		if len(backend.Spec.Endpoints) > 0 {
 			return status.NewRouteStatusError(
@@ -87,7 +87,7 @@ func validateBackend(backend *egv1a1.Backend, backendTLSPolicies []*gwapiv1.Back
 }
 
 // validateBackendTLSSettings validates CACert is specified if InsecureSkipVerify is false
-func validateBackendTLSSettings(backend *egv1a1.Backend, backendTLSPolicies []*gwapiv1.BackendTLSPolicy) status.Error {
+func validateBackendTLSSettings(backend *egv1a1.Backend, backendTLSPolicies []*gwapiv1a3.BackendTLSPolicy) status.Error {
 	if backend.Spec.TLS == nil {
 		return nil
 	}

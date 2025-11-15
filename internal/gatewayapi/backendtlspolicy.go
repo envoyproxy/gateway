@@ -14,6 +14,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+	gwapiv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
@@ -26,10 +27,10 @@ var ErrBackendTLSPolicyInvalidKind = fmt.Errorf("no CA bundle found in reference
 
 // ProcessBackendTLSPolicyStatus is called to post-process Backend TLS Policy status
 // after they were applied in all relevant translations.
-func (t *Translator) ProcessBackendTLSPolicyStatus(btlsp []*gwapiv1.BackendTLSPolicy) {
-	targetRefs := map[string]*gwapiv1.BackendTLSPolicy{}
+func (t *Translator) ProcessBackendTLSPolicyStatus(btlsp []*gwapiv1a3.BackendTLSPolicy) {
+	targetRefs := map[string]*gwapiv1a3.BackendTLSPolicy{}
 	for _, policy := range btlsp {
-		conflicted, conflictPolicy := false, &gwapiv1.BackendTLSPolicy{}
+		conflicted, conflictPolicy := false, &gwapiv1a3.BackendTLSPolicy{}
 		for _, ref := range policy.Spec.TargetRefs {
 			key := localPolicyTargetReferenceWithSectionNameToKey(policy.Namespace, ref)
 			p, exists := targetRefs[key]
@@ -387,7 +388,7 @@ func (t *Translator) processClientTLSSettings(resources *resource.Resources, cli
 	return tlsConfig, nil
 }
 
-func backendTLSTargetMatched(policy *gwapiv1.BackendTLSPolicy, target gwapiv1.LocalPolicyTargetReferenceWithSectionName, backendNamespace string) bool {
+func backendTLSTargetMatched(policy *gwapiv1a3.BackendTLSPolicy, target gwapiv1.LocalPolicyTargetReferenceWithSectionName, backendNamespace string) bool {
 	for _, currTarget := range policy.Spec.TargetRefs {
 		if target.Group == currTarget.Group &&
 			target.Kind == currTarget.Kind &&
@@ -405,11 +406,11 @@ func backendTLSTargetMatched(policy *gwapiv1.BackendTLSPolicy, target gwapiv1.Lo
 }
 
 func getBackendTLSPolicy(
-	policies []*gwapiv1.BackendTLSPolicy,
+	policies []*gwapiv1a3.BackendTLSPolicy,
 	backendRef gwapiv1.BackendObjectReference,
 	backendNamespace string,
 	resources *resource.Resources,
-) *gwapiv1.BackendTLSPolicy {
+) *gwapiv1a3.BackendTLSPolicy {
 	// SectionName is port number for EG Backend object
 	target := getTargetBackendReference(backendRef, backendNamespace, resources)
 	for _, policy := range policies {
@@ -420,7 +421,7 @@ func getBackendTLSPolicy(
 	return nil
 }
 
-func getBackendTLSBundle(backendTLSPolicy *gwapiv1.BackendTLSPolicy, resources *resource.Resources) (*ir.TLSUpstreamConfig, error) {
+func getBackendTLSBundle(backendTLSPolicy *gwapiv1a3.BackendTLSPolicy, resources *resource.Resources) (*ir.TLSUpstreamConfig, error) {
 	// Translate SubjectAltNames from gwapiv1a3 to ir
 	subjectAltNames := make([]ir.SubjectAltName, 0, len(backendTLSPolicy.Spec.Validation.SubjectAltNames))
 	for _, san := range backendTLSPolicy.Spec.Validation.SubjectAltNames {
@@ -512,7 +513,7 @@ func getCaCertsFromCARefs(namespace string, caCertificates []gwapiv1.LocalObject
 	return []byte(ca), nil
 }
 
-func getAncestorRefs(policy *gwapiv1.BackendTLSPolicy) []*gwapiv1.ParentReference {
+func getAncestorRefs(policy *gwapiv1a3.BackendTLSPolicy) []*gwapiv1.ParentReference {
 	ret := make([]*gwapiv1.ParentReference, len(policy.Status.Ancestors))
 	for i, ancestor := range policy.Status.Ancestors {
 		ret[i] = &ancestor.AncestorRef

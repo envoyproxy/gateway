@@ -1743,7 +1743,7 @@ func (r *gatewayAPIReconciler) processSecurityPolicies(
 func (r *gatewayAPIReconciler) processBackendTLSPolicies(
 	ctx context.Context, resourceTree *resource.Resources, resourceMap *resourceMappings,
 ) error {
-	backendTLSPolicies := gwapiv1.BackendTLSPolicyList{}
+	backendTLSPolicies := gwapiv1a3.BackendTLSPolicyList{}
 	if err := r.client.List(ctx, &backendTLSPolicies); err != nil {
 		return fmt.Errorf("error listing BackendTLSPolicies: %w", err)
 	}
@@ -1900,20 +1900,21 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		}
 	}
 
-	r.tlsRouteCRDExists = r.crdExists(mgr, resource.KindTLSRoute, gwapiv1a3.GroupVersion.String())
+	// Add multiple versions to pass `make kube-test`, setup-envtest install the storage version only?
+	r.tlsRouteCRDExists = r.crdExists(mgr, resource.KindTLSRoute, gwapiv1a2.GroupVersion.String(), gwapiv1a3.GroupVersion.String())
 	if !r.tlsRouteCRDExists {
 		r.log.Info("TLSRoute CRD not found, skipping TLSRoute watch")
 	} else {
 		// Watch TLSRoute CRUDs and process affected Gateways.
-		tlsrPredicates := commonPredicates[*gwapiv1a3.TLSRoute]()
+		tlsrPredicates := commonPredicates[*gwapiv1a2.TLSRoute]()
 		if r.namespaceLabel != nil {
-			tlsrPredicates = append(tlsrPredicates, predicate.NewTypedPredicateFuncs(func(route *gwapiv1a3.TLSRoute) bool {
+			tlsrPredicates = append(tlsrPredicates, predicate.NewTypedPredicateFuncs(func(route *gwapiv1a2.TLSRoute) bool {
 				return r.hasMatchingNamespaceLabels(route)
 			}))
 		}
 		if err := c.Watch(
-			source.Kind(mgr.GetCache(), &gwapiv1a3.TLSRoute{},
-				handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, route *gwapiv1a3.TLSRoute) []reconcile.Request {
+			source.Kind(mgr.GetCache(), &gwapiv1a2.TLSRoute{},
+				handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, route *gwapiv1a2.TLSRoute) []reconcile.Request {
 					return r.enqueueClass(ctx, route)
 				}),
 				tlsrPredicates...)); err != nil {
@@ -2294,23 +2295,24 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		}
 	}
 
-	r.bTLSPolicyCRDExists = r.crdExists(mgr, resource.KindBackendTLSPolicy, gwapiv1.GroupVersion.String())
+	// Add multiple versions to pass `make kube-test`, setup-envtest install the storage version only?
+	r.bTLSPolicyCRDExists = r.crdExists(mgr, resource.KindBackendTLSPolicy, gwapiv1a3.GroupVersion.String(), gwapiv1.GroupVersion.String())
 	if !r.bTLSPolicyCRDExists {
 		r.log.Info("BackendTLSPolicy CRD not found, skipping BackendTLSPolicy watch")
 	} else {
 		// Watch BackendTLSPolicy
-		btlsPredicates := []predicate.TypedPredicate[*gwapiv1.BackendTLSPolicy]{
-			predicate.TypedGenerationChangedPredicate[*gwapiv1.BackendTLSPolicy]{},
+		btlsPredicates := []predicate.TypedPredicate[*gwapiv1a3.BackendTLSPolicy]{
+			predicate.TypedGenerationChangedPredicate[*gwapiv1a3.BackendTLSPolicy]{},
 		}
 		if r.namespaceLabel != nil {
-			btlsPredicates = append(btlsPredicates, predicate.NewTypedPredicateFuncs(func(btp *gwapiv1.BackendTLSPolicy) bool {
+			btlsPredicates = append(btlsPredicates, predicate.NewTypedPredicateFuncs(func(btp *gwapiv1a3.BackendTLSPolicy) bool {
 				return r.hasMatchingNamespaceLabels(btp)
 			}))
 		}
 
 		if err := c.Watch(
-			source.Kind(mgr.GetCache(), &gwapiv1.BackendTLSPolicy{},
-				handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, btp *gwapiv1.BackendTLSPolicy) []reconcile.Request {
+			source.Kind(mgr.GetCache(), &gwapiv1a3.BackendTLSPolicy{},
+				handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, btp *gwapiv1a3.BackendTLSPolicy) []reconcile.Request {
 					return r.enqueueClass(ctx, btp)
 				}),
 				btlsPredicates...)); err != nil {
@@ -2564,7 +2566,8 @@ func (r *gatewayAPIReconciler) processEnvoyProxy(ep *egv1a1.EnvoyProxy, resource
 }
 
 // crdExists checks for the existence of the CRD in k8s APIServer before watching it
-func (r *gatewayAPIReconciler) crdExists(mgr manager.Manager, kind, groupVersion string) bool {
+func (r *gatewayAPIReconciler) crdExists(mgr manager.Manager, kind string, groupVersion ...string) bool {
+	gvs := sets.New(groupVersion...)
 	discoveryClient, err := discovery.NewDiscoveryClientForConfig(mgr.GetConfig())
 	if err != nil {
 		r.log.Error(err, "failed to create discovery client")
@@ -2577,7 +2580,11 @@ func (r *gatewayAPIReconciler) crdExists(mgr manager.Manager, kind, groupVersion
 	for _, list := range apiResourceList {
 		for i := range list.APIResources {
 			res := &list.APIResources[i]
-			if list.GroupVersion == groupVersion && res.Kind == kind {
+			if res.Kind != kind {
+				continue
+			}
+
+			if gvs.Has(list.GroupVersion) {
 				found = true
 				break
 			}

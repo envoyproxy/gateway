@@ -149,15 +149,16 @@ kube-generate: kube-generate-clients ## Generate code containing DeepCopy, DeepC
 .PHONY: kube-test
 kube-test: manifests generate run-kube-test
 
-# KUBE_TEST_PACKAGE=./internal/provider/kubernetes/... make run-kube-tes
+# KUBE_TEST_PACKAGE=./internal/provider/kubernetes/... make run-kube-test
 KUBE_TEST_PACKAGE ?= ./...
 # KUBE_TEST_ARGS can be used to pass extra args to `go test`, e.g. -run ^TestNamespaceSelectorProvider
-KUBE_TEST_ARGS ?=
+KUBE_TEST_TAGS ?= integration,celvalidation
+KUBE_TEST_ARGS ?= --tags=$(KUBE_TEST_TAGS)
 
 .PHONY: run-kube-test
 run-kube-test: # Run Kubernetes provider tests.
 	@$(LOG_TARGET)
-	KUBEBUILDER_ASSETS="$(shell $(GO_TOOL) setup-envtest use $(ENVTEST_K8S_VERSION) -p path)" go test $(KUBE_TEST_ARGS) --tags=integration,celvalidation $(KUBE_TEST_PACKAGE) -coverprofile cover.out
+	KUBEBUILDER_ASSETS="$(shell $(GO_TOOL) setup-envtest use $(ENVTEST_K8S_VERSION) -p path)" go test $(KUBE_TEST_ARGS) $(KUBE_TEST_PACKAGE) -coverprofile cover.out
 
 ##@ Kubernetes Deployment
 

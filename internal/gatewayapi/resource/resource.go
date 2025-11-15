@@ -44,7 +44,7 @@ type Resources struct {
 	Gateways                []*gwapiv1.Gateway             `json:"gateways,omitempty" yaml:"gateways,omitempty"`
 	HTTPRoutes              []*gwapiv1.HTTPRoute           `json:"httpRoutes,omitempty" yaml:"httpRoutes,omitempty"`
 	GRPCRoutes              []*gwapiv1.GRPCRoute           `json:"grpcRoutes,omitempty" yaml:"grpcRoutes,omitempty"`
-	TLSRoutes               []*gwapiv1a3.TLSRoute          `json:"tlsRoutes,omitempty" yaml:"tlsRoutes,omitempty"`
+	TLSRoutes               []*gwapiv1a2.TLSRoute          `json:"tlsRoutes,omitempty" yaml:"tlsRoutes,omitempty"`
 	TCPRoutes               []*gwapiv1a2.TCPRoute          `json:"tcpRoutes,omitempty" yaml:"tcpRoutes,omitempty"`
 	UDPRoutes               []*gwapiv1a2.UDPRoute          `json:"udpRoutes,omitempty" yaml:"udpRoutes,omitempty"`
 	ReferenceGrants         []*gwapiv1b1.ReferenceGrant    `json:"referenceGrants,omitempty" yaml:"referenceGrants,omitempty"`
@@ -59,7 +59,7 @@ type Resources struct {
 	ClientTrafficPolicies   []*egv1a1.ClientTrafficPolicy  `json:"clientTrafficPolicies,omitempty" yaml:"clientTrafficPolicies,omitempty"`
 	BackendTrafficPolicies  []*egv1a1.BackendTrafficPolicy `json:"backendTrafficPolicies,omitempty" yaml:"backendTrafficPolicies,omitempty"`
 	SecurityPolicies        []*egv1a1.SecurityPolicy       `json:"securityPolicies,omitempty" yaml:"securityPolicies,omitempty"`
-	BackendTLSPolicies      []*gwapiv1.BackendTLSPolicy    `json:"backendTLSPolicies,omitempty" yaml:"backendTLSPolicies,omitempty"`
+	BackendTLSPolicies      []*gwapiv1a3.BackendTLSPolicy  `json:"backendTLSPolicies,omitempty" yaml:"backendTLSPolicies,omitempty"`
 	EnvoyExtensionPolicies  []*egv1a1.EnvoyExtensionPolicy `json:"envoyExtensionPolicies,omitempty" yaml:"envoyExtensionPolicies,omitempty"`
 	ExtensionServerPolicies []unstructured.Unstructured    `json:"extensionServerPolicies,omitempty" yaml:"extensionServerPolicies,omitempty"`
 	Backends                []*egv1a1.Backend              `json:"backends,omitempty" yaml:"backends,omitempty"`
@@ -73,7 +73,7 @@ func NewResources() *Resources {
 		Gateways:                []*gwapiv1.Gateway{},
 		HTTPRoutes:              []*gwapiv1.HTTPRoute{},
 		GRPCRoutes:              []*gwapiv1.GRPCRoute{},
-		TLSRoutes:               []*gwapiv1a3.TLSRoute{},
+		TLSRoutes:               []*gwapiv1a2.TLSRoute{},
 		Services:                []*corev1.Service{},
 		EndpointSlices:          []*discoveryv1.EndpointSlice{},
 		Secrets:                 []*corev1.Secret{},
@@ -85,7 +85,7 @@ func NewResources() *Resources {
 		ClientTrafficPolicies:   []*egv1a1.ClientTrafficPolicy{},
 		BackendTrafficPolicies:  []*egv1a1.BackendTrafficPolicy{},
 		SecurityPolicies:        []*egv1a1.SecurityPolicy{},
-		BackendTLSPolicies:      []*gwapiv1.BackendTLSPolicy{},
+		BackendTLSPolicies:      []*gwapiv1a3.BackendTLSPolicy{},
 		EnvoyExtensionPolicies:  []*egv1a1.EnvoyExtensionPolicy{},
 		ExtensionServerPolicies: []unstructured.Unstructured{},
 		Backends:                []*egv1a1.Backend{},
