@@ -20,4 +20,4 @@ spec:
     metrics:
       prometheus:
         compression:
-          type: Gzip  ## Supported types are Gzip, Brotli, and Zstd
+          type: Gzip ## Supported types are Gzip, Brotli, and Zstd

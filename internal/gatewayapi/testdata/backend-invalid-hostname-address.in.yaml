@@ -7,7 +7,7 @@ backends:
     spec:
       endpoints:
         - fqdn:
-            hostname: '*.foo.com'
+            hostname: "*.foo.com"
             port: 3000
   - apiVersion: gateway.envoyproxy.io/v1alpha1
     kind: Backend
@@ -17,7 +17,7 @@ backends:
     spec:
       endpoints:
         - fqdn:
-            hostname: 'localhost'
+            hostname: "localhost"
             port: 3000
   - apiVersion: gateway.envoyproxy.io/v1alpha1
     kind: Backend
@@ -27,7 +27,7 @@ backends:
     spec:
       endpoints:
         - ip:
-            address: '127.0.0.3'
+            address: "127.0.0.3"
             port: 3000
   - apiVersion: gateway.envoyproxy.io/v1alpha1
     kind: Backend

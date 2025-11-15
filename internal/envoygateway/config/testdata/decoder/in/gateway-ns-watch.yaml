@@ -8,5 +8,5 @@ provider:
     watch:
       type: Namespaces
       namespaces:
-      - ns-a
-      - ns-b
+        - ns-a
+        - ns-b
