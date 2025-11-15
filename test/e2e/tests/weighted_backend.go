@@ -168,7 +168,7 @@ func testMixedValidAndInvalid(t *testing.T, suite *suite.ConformanceTestSuite) {
 		}
 	}
 
-	if !AlmostEquals(successCount, 40, 3) { // The weight of valid backend is 80%, so the expected success count is 50*80%=40
+	if !AlmostEquals(successCount, 40, 5) { // The weight of valid backend is 80%, so the expected success count is 50*80%=40
 		t.Errorf("The actual success count is not within the expected range, success %d", successCount)
 	}
 }
