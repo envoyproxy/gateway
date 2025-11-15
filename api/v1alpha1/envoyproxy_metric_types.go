@@ -5,9 +5,7 @@
 
 package v1alpha1
 
-type (
-	MetricSinkType string
-)
+type MetricSinkType string
 
 const (
 	MetricSinkTypeOpenTelemetry MetricSinkType = "OpenTelemetry"

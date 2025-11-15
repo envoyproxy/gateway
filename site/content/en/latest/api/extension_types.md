@@ -1423,6 +1423,21 @@ _Appears in:_
 | `global-ratelimit` | LogComponentGlobalRateLimitRunner defines the "global-ratelimit" runner component.<br /> | 
 
 
+#### EnvoyGatewayLogEncoder
+
+_Underlying type:_ _string_
+
+
+
+_Appears in:_
+- [EnvoyGatewayLogging](#envoygatewaylogging)
+
+| Value | Description |
+| ----- | ----------- |
+| `Text` | EnvoyGatewayLogEncoderText defines the "Text" log encoder.<br /> | 
+| `JSON` | EnvoyGatewayLogEncoderJSON defines the "JSON" log encoder.<br /> | 
+
+
 #### EnvoyGatewayLogging
 
 
@@ -1436,6 +1451,7 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `level` | _object (keys:[EnvoyGatewayLogComponent](#envoygatewaylogcomponent), values:[LogLevel](#loglevel))_ |  true  | \{ default:info \} | Level is the logging level. If unspecified, defaults to "info".<br />EnvoyGatewayLogComponent options: default/provider/gateway-api/xds-translator/xds-server/infrastructure/global-ratelimit.<br />LogLevel options: debug/info/error/warn. |
+| `encoder` | _[EnvoyGatewayLogEncoder](#envoygatewaylogencoder)_ |  false  |  | Encoder defines the log encoder format.<br />If unspecified, defaults to "Text". |
 
 
 #### EnvoyGatewayMetricSink
@@ -1473,8 +1489,7 @@ _Appears in:_
 
 
 
-EnvoyGatewayOpenTelemetrySink defines the configuration for OpenTelemetry sink.
-This is shared between metrics and traces.
+
 
 _Appears in:_
 - [EnvoyGatewayMetricSink](#envoygatewaymetricsink)
@@ -1571,7 +1586,6 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `metrics` | _[EnvoyGatewayMetrics](#envoygatewaymetrics)_ |  true  |  | Metrics defines metrics configuration for envoy gateway. |
-| `traces` | _[EnvoyGatewayTracing](#envoygatewaytracing)_ |  true  |  |  |
 
 
 #### EnvoyGatewayTopologyInjector
@@ -1588,18 +1602,6 @@ _Appears in:_
 | `disabled` | _boolean_ |  false  |  |  |
 
 
-#### EnvoyGatewayTracing
-
-
-
-EnvoyGatewayTracing defines control plane tracing configurations.
-
-_Appears in:_
-- [EnvoyGatewayTelemetry](#envoygatewaytelemetry)
-
-| Field | Type | Required | Default | Description |
-| ---   | ---  | ---      | ---     | ---         |
-| `disable` | _boolean_ |  false  |  | Disable disables the traces. |
 
 
 #### EnvoyJSONPatchConfig

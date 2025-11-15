@@ -29,10 +29,6 @@ func New(cfg *config.Server) *Runner {
 }
 
 func (r *Runner) Start(ctx context.Context) error {
-	if r.cfg.EnvoyGateway.DisableTraces() {
-		return nil
-	}
-
 	// Create resource
 	res, err := resource.New(ctx,
 		resource.WithAttributes(

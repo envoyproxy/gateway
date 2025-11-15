@@ -28,8 +28,6 @@ type EnvoyGatewayMetricSink struct {
 	OpenTelemetry *EnvoyGatewayOpenTelemetrySink `json:"openTelemetry,omitempty"`
 }
 
-// EnvoyGatewayOpenTelemetrySink defines the configuration for OpenTelemetry sink.
-// This is shared between metrics and traces.
 type EnvoyGatewayOpenTelemetrySink struct {
 	// Host define the sink service hostname.
 	Host string `json:"host"`
