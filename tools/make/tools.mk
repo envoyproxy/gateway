@@ -55,3 +55,7 @@ tools.clean: # Remove all tools
 .PHONY: clean
 clean: ## Remove all files that are created during builds.
 clean: tools.clean
+
+.PHONY: reclaim-storage
+reclaim-storage: ## Removes unnecessary packages and artifacts from GitHub Actions Runner
+	bash ./tools/hack/reclaim-storage.sh
