@@ -210,7 +210,7 @@ jobs:
     - uses: ./tools/github-actions/setup-deps
 
     - name: Free Disk Space
-      run : |
+      run: |
         bash ./ci/utils/free_disk_space.sh
 
     - name: Download EG Binaries
