@@ -537,7 +537,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 								BlackoutPeriod:                     ptr.To(gwapiv1.Duration("10s")),
 								WeightUpdatePeriod:                 ptr.To(gwapiv1.Duration("10s")),
 								WeightExpirationPeriod:             ptr.To(gwapiv1.Duration("10s")),
-								ErrorUtilizationPenalty:            ptr.To[float32](0.5),
+								ErrorUtilizationPenalty:            ptr.To[uint32](50),
 								MetricNamesForComputingUtilization: []string{"metric1", "metric2"},
 							},
 						},

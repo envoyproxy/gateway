@@ -22,7 +22,7 @@ func TestBuildLoadBalancer_ClientSideWeightedRoundRobin(t *testing.T) {
 		BlackoutPeriod:                     ptr.To(gwapiv1.Duration("10s")),
 		WeightExpirationPeriod:             ptr.To(gwapiv1.Duration("3m")),
 		WeightUpdatePeriod:                 ptr.To(gwapiv1.Duration("1s")),
-		ErrorUtilizationPenalty:            ptr.To[float32](1.5),
+		ErrorUtilizationPenalty:            ptr.To[uint32](150),
 		MetricNamesForComputingUtilization: []string{"named_metrics.foo", "cpu_utilization"},
 	}
 

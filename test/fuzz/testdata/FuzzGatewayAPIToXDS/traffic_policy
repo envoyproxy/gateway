@@ -59,4 +59,4 @@ spec:
   loadBalancer:
     type: ClientSideWeightedRoundRobin
     clientSideWeightedRoundRobin:
-      errorUtilizationPenalty: 1.2
+      errorUtilizationPenalty: 120

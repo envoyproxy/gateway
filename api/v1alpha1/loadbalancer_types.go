@@ -161,11 +161,21 @@ type ClientSideWeightedRoundRobin struct {
 	// +optional
 	WeightUpdatePeriod *gwapiv1.Duration `json:"weightUpdatePeriod,omitempty"`
 
-	// The multiplier used to adjust endpoint weights with the error rate calculated as eps/qps.
-	// Must be non-negative. Default is 1.0.
+	// ErrorUtilizationPenalty adjusts endpoint weights based on the error rate (eps/qps).
+	// This is expressed as a percentage-based integer where 100 represents 1.0, 150 represents 1.5, etc.
+	//
+	// For example:
+	// - 100 => 1.0x
+	// - 120 => 1.2x
+	// - 200 => 2.0x
+	//
+	// Note: In the internal IR/XDS configuration this value is converted back to a
+	// floating point multiplier (value / 100.0).
+	//
+	// Must be non-negative.
 	// +kubebuilder:validation:Minimum=0
 	// +optional
-	ErrorUtilizationPenalty *float32 `json:"errorUtilizationPenalty,omitempty"`
+	ErrorUtilizationPenalty *uint32 `json:"errorUtilizationPenalty,omitempty"`
 
 	// Metric names used to compute utilization if application_utilization is not set.
 	// For map fields in ORCA proto, use the form "<map_field>.<key>", e.g., "named_metrics.foo".

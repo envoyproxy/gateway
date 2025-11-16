@@ -1246,10 +1246,21 @@ spec:
                                     type: string
                                   errorUtilizationPenalty:
                                     description: |-
-                                      The multiplier used to adjust endpoint weights with the error rate calculated as eps/qps.
-                                      Must be non-negative. Default is 1.0.
+                                      ErrorUtilizationPenalty adjusts endpoint weights based on the error rate (eps/qps).
+                                      This is expressed as a percentage-based integer where 100 represents 1.0, 150 represents 1.5, etc.
+
+                                      For example:
+                                      - 100 => 1.0x
+                                      - 120 => 1.2x
+                                      - 200 => 2.0x
+
+                                      Note: In the internal IR/XDS configuration this value is converted back to a
+                                      floating point multiplier (value / 100.0).
+
+                                      Must be non-negative.
+                                    format: int32
                                     minimum: 0
-                                    type: number
+                                    type: integer
                                   metricNamesForComputingUtilization:
                                     description: |-
                                       Metric names used to compute utilization if application_utilization is not set.
@@ -2387,10 +2398,21 @@ spec:
                                     type: string
                                   errorUtilizationPenalty:
                                     description: |-
-                                      The multiplier used to adjust endpoint weights with the error rate calculated as eps/qps.
-                                      Must be non-negative. Default is 1.0.
+                                      ErrorUtilizationPenalty adjusts endpoint weights based on the error rate (eps/qps).
+                                      This is expressed as a percentage-based integer where 100 represents 1.0, 150 represents 1.5, etc.
+
+                                      For example:
+                                      - 100 => 1.0x
+                                      - 120 => 1.2x
+                                      - 200 => 2.0x
+
+                                      Note: In the internal IR/XDS configuration this value is converted back to a
+                                      floating point multiplier (value / 100.0).
+
+                                      Must be non-negative.
+                                    format: int32
                                     minimum: 0
-                                    type: number
+                                    type: integer
                                   metricNamesForComputingUtilization:
                                     description: |-
                                       Metric names used to compute utilization if application_utilization is not set.
@@ -3739,10 +3761,21 @@ spec:
                                           type: string
                                         errorUtilizationPenalty:
                                           description: |-
-                                            The multiplier used to adjust endpoint weights with the error rate calculated as eps/qps.
-                                            Must be non-negative. Default is 1.0.
+                                            ErrorUtilizationPenalty adjusts endpoint weights based on the error rate (eps/qps).
+                                            This is expressed as a percentage-based integer where 100 represents 1.0, 150 represents 1.5, etc.
+
+                                            For example:
+                                            - 100 => 1.0x
+                                            - 120 => 1.2x
+                                            - 200 => 2.0x
+
+                                            Note: In the internal IR/XDS configuration this value is converted back to a
+                                            floating point multiplier (value / 100.0).
+
+                                            Must be non-negative.
+                                          format: int32
                                           minimum: 0
-                                          type: number
+                                          type: integer
                                         metricNamesForComputingUtilization:
                                           description: |-
                                             Metric names used to compute utilization if application_utilization is not set.
@@ -5151,10 +5184,21 @@ spec:
                                     type: string
                                   errorUtilizationPenalty:
                                     description: |-
-                                      The multiplier used to adjust endpoint weights with the error rate calculated as eps/qps.
-                                      Must be non-negative. Default is 1.0.
+                                      ErrorUtilizationPenalty adjusts endpoint weights based on the error rate (eps/qps).
+                                      This is expressed as a percentage-based integer where 100 represents 1.0, 150 represents 1.5, etc.
+
+                                      For example:
+                                      - 100 => 1.0x
+                                      - 120 => 1.2x
+                                      - 200 => 2.0x
+
+                                      Note: In the internal IR/XDS configuration this value is converted back to a
+                                      floating point multiplier (value / 100.0).
+
+                                      Must be non-negative.
+                                    format: int32
                                     minimum: 0
-                                    type: number
+                                    type: integer
                                   metricNamesForComputingUtilization:
                                     description: |-
                                       Metric names used to compute utilization if application_utilization is not set.

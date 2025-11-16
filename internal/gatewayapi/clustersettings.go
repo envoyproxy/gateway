@@ -362,7 +362,8 @@ func buildLoadBalancer(policy *egv1a1.ClusterSettings) (*ir.LoadBalancer, error)
 				}
 			}
 			if cswrr.ErrorUtilizationPenalty != nil {
-				lb.ClientSideWeightedRoundRobin.ErrorUtilizationPenalty = cswrr.ErrorUtilizationPenalty
+				v := float32(*cswrr.ErrorUtilizationPenalty) / 100.0
+				lb.ClientSideWeightedRoundRobin.ErrorUtilizationPenalty = &v
 			}
 			if len(cswrr.MetricNamesForComputingUtilization) > 0 {
 				lb.ClientSideWeightedRoundRobin.MetricNamesForComputingUtilization = append([]string(nil), cswrr.MetricNamesForComputingUtilization...)
