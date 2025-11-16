@@ -37,6 +37,7 @@ func hasSectionName(target *gwapiv1.LocalPolicyTargetReferenceWithSectionName) b
 }
 
 func (t *Translator) ProcessClientTrafficPolicies(
+	translatorContext *TranslatorContext,
 	resources *resource.Resources,
 	gateways []*GatewayContext,
 	xdsIR resource.XdsIRMap,
@@ -47,16 +48,12 @@ func (t *Translator) ProcessClientTrafficPolicies(
 	clientTrafficPolicies := resources.ClientTrafficPolicies
 	// ClientTrafficPolicies are already sorted by the provider layer
 
-	policyMap := make(map[types.NamespacedName]sets.Set[string])
+	gatewayMapSize := len(gateways)
+	policyMapSize := len(clientTrafficPolicies)
 
-	// Build a map out of gateways for faster lookup since users might have hundreds of gateway or more.
-	gatewayMap := map[types.NamespacedName]*policyGatewayTargetContext{}
-	for _, gw := range gateways {
-		key := utils.NamespacedName(gw)
-		gatewayMap[key] = &policyGatewayTargetContext{GatewayContext: gw}
-	}
+	policyMap := make(map[types.NamespacedName]sets.Set[string], gatewayMapSize)
+	handledPolicies := make(map[types.NamespacedName]*egv1a1.ClientTrafficPolicy, policyMapSize)
 
-	handledPolicies := make(map[types.NamespacedName]*egv1a1.ClientTrafficPolicy)
 	// Translate
 	// 1. First translate Policies with a sectionName set
 	// 2. Then loop again and translate the policies without a sectionName
@@ -77,7 +74,7 @@ func (t *Translator) ProcessClientTrafficPolicies(
 					res = append(res, policy)
 				}
 
-				gateway, resolveErr := resolveClientTrafficPolicyTargetRef(policy, &currTarget, gatewayMap)
+				gateway, resolveErr := resolveClientTrafficPolicyTargetRef(translatorContext, policy, &currTarget)
 
 				// Negative statuses have already been assigned so its safe to skip
 				if gateway == nil {
@@ -172,7 +169,7 @@ func (t *Translator) ProcessClientTrafficPolicies(
 					handledPolicies[policyName] = policy
 				}
 
-				gateway, resolveErr := resolveClientTrafficPolicyTargetRef(policy, &currTarget, gatewayMap)
+				gateway, resolveErr := resolveClientTrafficPolicyTargetRef(translatorContext, policy, &currTarget)
 
 				// Negative statuses have already been assigned so its safe to skip
 				if gateway == nil {
@@ -284,19 +281,19 @@ func (t *Translator) ProcessClientTrafficPolicies(
 }
 
 func resolveClientTrafficPolicyTargetRef(
+	translatorContext *TranslatorContext,
 	policy *egv1a1.ClientTrafficPolicy,
 	targetRef *gwapiv1.LocalPolicyTargetReferenceWithSectionName,
-	gateways map[types.NamespacedName]*policyGatewayTargetContext,
 ) (*GatewayContext, *status.PolicyResolveError) {
 	// Check if the gateway exists
 	key := types.NamespacedName{
 		Name:      string(targetRef.Name),
 		Namespace: policy.Namespace,
 	}
-	gateway, ok := gateways[key]
+	gateway := translatorContext.GetPolicyTargetGateway(key)
 
 	// Gateway not found
-	if !ok {
+	if gateway == nil {
 		return nil, nil
 	}
 

@@ -64,29 +64,11 @@ func (t *Translator) ProcessSecurityPolicies(
 
 	// SecurityPolicies are already sorted by the provider layer
 
-	// First build a map out of the routes and gateways for faster lookup since users might have thousands of routes or more.
-	// For gateways this probably isn't quite as necessary.
-	routeMapSize := len(routes)
 	gatewayMapSize := len(gateways)
 	policyMapSize := len(securityPolicies)
 
 	// Pre-allocate result slice and maps with estimated capacity to reduce memory allocations
 	res := make([]*egv1a1.SecurityPolicy, 0, len(securityPolicies))
-	routeMap := make(map[policyTargetRouteKey]*policyRouteTargetContext, routeMapSize)
-	for _, route := range routes {
-		key := policyTargetRouteKey{
-			Kind:      string(route.GetRouteType()),
-			Name:      route.GetName(),
-			Namespace: route.GetNamespace(),
-		}
-		routeMap[key] = &policyRouteTargetContext{RouteContext: route}
-	}
-
-	gatewayMap := make(map[types.NamespacedName]*policyGatewayTargetContext, gatewayMapSize)
-	for _, gw := range gateways {
-		key := utils.NamespacedName(gw)
-		gatewayMap[key] = &policyGatewayTargetContext{GatewayContext: gw}
-	}
 
 	// Map of Gateway to the routes attached to it.
 	// The routes are grouped by sectionNames of their targetRefs
@@ -115,7 +97,7 @@ func (t *Translator) ProcessSecurityPolicies(
 				}
 
 				t.processSecurityPolicyForRoute(translatorContext, resources, xdsIR,
-					routeMap, gatewayRouteMap, policy, currTarget)
+					gatewayRouteMap, policy, currTarget)
 			}
 		}
 	}
@@ -134,7 +116,7 @@ func (t *Translator) ProcessSecurityPolicies(
 				}
 
 				t.processSecurityPolicyForRoute(translatorContext, resources, xdsIR,
-					routeMap, gatewayRouteMap, policy, currTarget)
+					gatewayRouteMap, policy, currTarget)
 			}
 		}
 	}
@@ -153,7 +135,7 @@ func (t *Translator) ProcessSecurityPolicies(
 				}
 
 				t.processSecurityPolicyForGateway(translatorContext, resources, xdsIR,
-					gatewayMap, gatewayRouteMap, policy, currTarget)
+					gatewayRouteMap, policy, currTarget)
 			}
 		}
 	}
@@ -172,7 +154,7 @@ func (t *Translator) ProcessSecurityPolicies(
 				}
 
 				t.processSecurityPolicyForGateway(translatorContext, resources, xdsIR,
-					gatewayMap, gatewayRouteMap, policy, currTarget)
+					gatewayRouteMap, policy, currTarget)
 			}
 		}
 	}
@@ -190,7 +172,6 @@ func (t *Translator) processSecurityPolicyForRoute(
 	translatorContext *TranslatorContext,
 	resources *resource.Resources,
 	xdsIR resource.XdsIRMap,
-	routeMap map[policyTargetRouteKey]*policyRouteTargetContext,
 	gatewayRouteMap map[string]map[string]sets.Set[string],
 	policy *egv1a1.SecurityPolicy,
 	currTarget gwapiv1.LocalPolicyTargetReferenceWithSectionName,
@@ -201,7 +182,7 @@ func (t *Translator) processSecurityPolicyForRoute(
 		resolveErr     *status.PolicyResolveError
 	)
 
-	targetedRoute, resolveErr = resolveSecurityPolicyRouteTargetRef(policy, currTarget, routeMap)
+	targetedRoute, resolveErr = resolveSecurityPolicyRouteTargetRef(translatorContext, policy, currTarget)
 	// Skip if the route is not found
 	// It's not necessarily an error because the SecurityPolicy may be
 	// reconciled by multiple controllers. And the other controller may
@@ -292,7 +273,8 @@ func (t *Translator) processSecurityPolicyForRoute(
 		Name:      string(currTarget.Name),
 		Namespace: policy.Namespace,
 	}
-	overriddenTargetsMessage := getOverriddenTargetsMessageForRoute(routeMap[key], currTarget.SectionName)
+	overriddenTargetsMessage := getOverriddenTargetsMessageForRoute(
+		translatorContext.GetPolicyTargetRoute(key), currTarget.SectionName, egv1a1.KindSecurityPolicy)
 	if overriddenTargetsMessage != "" {
 		status.SetConditionForPolicyAncestors(&policy.Status,
 			parentGateways,
@@ -310,7 +292,6 @@ func (t *Translator) processSecurityPolicyForGateway(
 	translatorContext *TranslatorContext,
 	resources *resource.Resources,
 	xdsIR resource.XdsIRMap,
-	gatewayMap map[types.NamespacedName]*policyGatewayTargetContext,
 	gatewayRouteMap map[string]map[string]sets.Set[string],
 	policy *egv1a1.SecurityPolicy,
 	currTarget gwapiv1.LocalPolicyTargetReferenceWithSectionName,
@@ -320,7 +301,7 @@ func (t *Translator) processSecurityPolicyForGateway(
 		resolveErr      *status.PolicyResolveError
 	)
 
-	targetedGateway, resolveErr = resolveSecurityPolicyGatewayTargetRef(policy, currTarget, gatewayMap)
+	targetedGateway, resolveErr = resolveSecurityPolicyGatewayTargetRef(translatorContext, policy, currTarget)
 	// Skip if the gateway is not found
 	// It's not necessarily an error because the SecurityPolicy may be
 	// reconciled by multiple controllers. And the other controller may
@@ -359,7 +340,7 @@ func (t *Translator) processSecurityPolicyForGateway(
 
 	// Check if this policy is overridden by other policies targeting at route and listener levels
 	overriddenTargetsMessage := getOverriddenTargetsMessageForGateway(
-		gatewayMap[gatewayNN], gatewayRouteMap[gatewayNN.String()], currTarget.SectionName)
+		translatorContext.GetPolicyTargetGateway(gatewayNN), gatewayRouteMap[gatewayNN.String()], currTarget.SectionName, egv1a1.KindSecurityPolicy)
 	if overriddenTargetsMessage != "" {
 		status.SetConditionForPolicyAncestor(&policy.Status,
 			&parentGateway,
@@ -473,22 +454,22 @@ func validateBasicAuth(basicAuth *egv1a1.BasicAuth) error {
 }
 
 func resolveSecurityPolicyGatewayTargetRef(
+	translatorContext *TranslatorContext,
 	policy *egv1a1.SecurityPolicy,
 	target gwapiv1.LocalPolicyTargetReferenceWithSectionName,
-	gateways map[types.NamespacedName]*policyGatewayTargetContext,
 ) (*GatewayContext, *status.PolicyResolveError) {
 	// Find the Gateway
 	key := types.NamespacedName{
 		Name:      string(target.Name),
 		Namespace: policy.Namespace,
 	}
-	gateway, ok := gateways[key]
+	gateway := translatorContext.GetPolicyTargetGateway(key)
 
 	// Gateway not found
 	// It's not an error if the gateway is not found because the SecurityPolicy
 	// may be reconciled by multiple controllers, and the gateway may not be managed
 	// by this controller.
-	if !ok {
+	if gateway == nil {
 		return nil, nil
 	}
 
@@ -505,7 +486,7 @@ func resolveSecurityPolicyGatewayTargetRef(
 
 	if target.SectionName == nil {
 		// Check if another policy targeting the same Gateway exists
-		if gateway.attached {
+		if gateway.attached != nil && gateway.attached[egv1a1.KindSecurityPolicy] {
 			message := fmt.Sprintf("Unable to target Gateway %s, another SecurityPolicy has already attached to it",
 				string(target.Name))
 
@@ -514,10 +495,14 @@ func resolveSecurityPolicyGatewayTargetRef(
 				Message: message,
 			}
 		}
-		gateway.attached = true
+		if gateway.attached == nil {
+			gateway.attached = make(map[string]bool)
+		}
+		gateway.attached[egv1a1.KindSecurityPolicy] = true
 	} else {
 		listenerName := string(*target.SectionName)
-		if gateway.attachedToListeners != nil && gateway.attachedToListeners.Has(listenerName) {
+		if gateway.attachedToListeners != nil && gateway.attachedToListeners[egv1a1.KindSecurityPolicy] != nil &&
+			gateway.attachedToListeners[egv1a1.KindSecurityPolicy].Has(listenerName) {
 			message := fmt.Sprintf("Unable to target Listener %s/%s, another SecurityPolicy has already attached to it",
 				string(target.Name), listenerName)
 
@@ -527,20 +512,21 @@ func resolveSecurityPolicyGatewayTargetRef(
 			}
 		}
 		if gateway.attachedToListeners == nil {
-			gateway.attachedToListeners = make(sets.Set[string])
+			gateway.attachedToListeners = make(map[string]sets.Set[string])
 		}
-		gateway.attachedToListeners.Insert(listenerName)
+		if gateway.attachedToListeners[egv1a1.KindSecurityPolicy] == nil {
+			gateway.attachedToListeners[egv1a1.KindSecurityPolicy] = make(sets.Set[string])
+		}
+		gateway.attachedToListeners[egv1a1.KindSecurityPolicy].Insert(listenerName)
 	}
-
-	gateways[key] = gateway
 
 	return gateway.GatewayContext, nil
 }
 
 func resolveSecurityPolicyRouteTargetRef(
+	translatorContext *TranslatorContext,
 	policy *egv1a1.SecurityPolicy,
 	target gwapiv1.LocalPolicyTargetReferenceWithSectionName,
-	routes map[policyTargetRouteKey]*policyRouteTargetContext,
 ) (RouteContext, *status.PolicyResolveError) {
 	// Check if the route exists
 	key := policyTargetRouteKey{
@@ -548,13 +534,13 @@ func resolveSecurityPolicyRouteTargetRef(
 		Name:      string(target.Name),
 		Namespace: policy.Namespace,
 	}
-	route, ok := routes[key]
+	route := translatorContext.GetPolicyTargetRoute(key)
 
 	// Route not found
 	// It's not an error if the gateway is not found because the SecurityPolicy
 	// may be reconciled by multiple controllers, and the gateway may not be managed
 	// by this controller.
-	if !ok {
+	if route == nil {
 		return nil, nil
 	}
 
@@ -567,7 +553,7 @@ func resolveSecurityPolicyRouteTargetRef(
 
 	if target.SectionName == nil {
 		// Check if another policy targeting the same xRoute exists
-		if route.attached {
+		if route.attached != nil && route.attached[egv1a1.KindSecurityPolicy] {
 			message := fmt.Sprintf("Unable to target %s %s, another SecurityPolicy has already attached to it",
 				string(target.Kind), string(target.Name))
 
@@ -576,10 +562,14 @@ func resolveSecurityPolicyRouteTargetRef(
 				Message: message,
 			}
 		}
-		route.attached = true
+		if route.attached == nil {
+			route.attached = make(map[string]bool)
+		}
+		route.attached[egv1a1.KindSecurityPolicy] = true
 	} else {
 		routeRuleName := string(*target.SectionName)
-		if route.attachedToRouteRules != nil && route.attachedToRouteRules.Has(routeRuleName) {
+		if route.attachedToRouteRules != nil && route.attachedToRouteRules[egv1a1.KindSecurityPolicy] != nil &&
+			route.attachedToRouteRules[egv1a1.KindSecurityPolicy].Has(routeRuleName) {
 			message := fmt.Sprintf("Unable to target RouteRule %s/%s, another SecurityPolicy has already attached to it",
 				string(target.Name), routeRuleName)
 			return route.RouteContext, &status.PolicyResolveError{
@@ -588,12 +578,13 @@ func resolveSecurityPolicyRouteTargetRef(
 			}
 		}
 		if route.attachedToRouteRules == nil {
-			route.attachedToRouteRules = make(sets.Set[string])
+			route.attachedToRouteRules = make(map[string]sets.Set[string])
 		}
-		route.attachedToRouteRules.Insert(routeRuleName)
+		if route.attachedToRouteRules[egv1a1.KindSecurityPolicy] == nil {
+			route.attachedToRouteRules[egv1a1.KindSecurityPolicy] = make(sets.Set[string])
+		}
+		route.attachedToRouteRules[egv1a1.KindSecurityPolicy].Insert(routeRuleName)
 	}
-
-	routes[key] = route
 
 	return route.RouteContext, nil
 }

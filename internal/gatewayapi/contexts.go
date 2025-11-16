@@ -18,6 +18,7 @@ import (
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/utils"
 )
 
 // GatewayContext wraps a Gateway and provides helper methods for
@@ -663,7 +664,9 @@ func (d DirectBackendRef) GetFilters() any {
 }
 
 type TranslatorContext struct {
-	ServiceMap map[types.NamespacedName]*corev1.Service
+	ServiceMap             map[types.NamespacedName]*corev1.Service
+	PolicyTargetGatewayMap map[types.NamespacedName]*policyGatewayTargetContext
+	PolicyTargetRouteMap   map[policyTargetRouteKey]*policyRouteTargetContext
 }
 
 func (t *TranslatorContext) GetService(namespace, name string) *corev1.Service {
@@ -671,4 +674,51 @@ func (t *TranslatorContext) GetService(namespace, name string) *corev1.Service {
 		return svc
 	}
 	return nil
+}
+
+func (t *TranslatorContext) SetServices(svcs []*corev1.Service) {
+	serviceMap := make(map[types.NamespacedName]*corev1.Service, len(svcs))
+	for _, svc := range svcs {
+		serviceMap[utils.NamespacedName(svc)] = svc
+	}
+	t.ServiceMap = serviceMap
+}
+
+func (t *TranslatorContext) GetPolicyTargetGateway(nn types.NamespacedName) *policyGatewayTargetContext {
+	if ctx, ok := t.PolicyTargetGatewayMap[nn]; ok {
+		return ctx
+	}
+	return nil
+}
+
+func (t *TranslatorContext) SetPolicyTargetGateways(gatewayContexts []*GatewayContext) {
+	policyTargetGatewayMap := make(map[types.NamespacedName]*policyGatewayTargetContext, len(gatewayContexts))
+	for _, ctx := range gatewayContexts {
+		policyTargetGatewayMap[utils.NamespacedName(ctx.Gateway)] = &policyGatewayTargetContext{
+			GatewayContext: ctx,
+		}
+	}
+	t.PolicyTargetGatewayMap = policyTargetGatewayMap
+}
+
+func (t *TranslatorContext) GetPolicyTargetRoute(key policyTargetRouteKey) *policyRouteTargetContext {
+	if ctx, ok := t.PolicyTargetRouteMap[key]; ok {
+		return ctx
+	}
+	return nil
+}
+
+func (t *TranslatorContext) SetPolicyTargetRoutes(routeContexts []RouteContext) {
+	policyTargetRouteMap := make(map[policyTargetRouteKey]*policyRouteTargetContext, len(routeContexts))
+	for _, ctx := range routeContexts {
+		key := policyTargetRouteKey{
+			Kind:      string(ctx.GetRouteType()),
+			Name:      ctx.GetName(),
+			Namespace: ctx.GetNamespace(),
+		}
+		policyTargetRouteMap[key] = &policyRouteTargetContext{
+			RouteContext: ctx,
+		}
+	}
+	t.PolicyTargetRouteMap = policyTargetRouteMap
 }
