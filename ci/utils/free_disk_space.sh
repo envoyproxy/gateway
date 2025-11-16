@@ -23,16 +23,9 @@ for path in "${TO_DELETE[@]}"; do
 done
 
 log "Removing large packages..."
-APT_PATTERNS=(
-  "'^aspnetcore-.*'"
-  "'^dotnet-.*'"
-  "'php.*'"
-  "'^mongodb-.*'"
-  "'^mysql-.*'"
-)
 EXTRA_PKGS="azure-cli google-chrome-stable firefox powershell mono-devel libgl1-mesa-dri google-cloud-sdk google-cloud-cli"
 
-sudo apt-get remove -y ${APT_PATTERNS[*]} $EXTRA_PKGS --fix-missing || true
+sudo apt-get remove -y $EXTRA_PKGS --fix-missing || true
 sudo apt-get autoremove -y || true
 sudo apt-get clean || true
 
