@@ -206,7 +206,7 @@ resilience: create-cluster kube-install-image kube-install-examples-image kube-d
 .PHONY: e2e
 e2e: create-cluster kube-install-image kube-deploy \
 	install-ratelimit install-eg-addons kube-install-examples-image \
-	e2e-prepare setup-mac-net-connect run-e2e delete-cluster
+	e2e-prepare setup-mac-net-connect kube-clean-image run-e2e delete-cluster
 
 .PHONY: install-ratelimit
 install-ratelimit:
@@ -364,3 +364,9 @@ generate-artifacts: generate-manifests ## Generate release artifacts.
 	@$(LOG_TARGET)
 	cp -r $(ROOT_DIR)/release-notes/$(TAG).yaml $(OUTPUT_DIR)/release-notes.yaml
 	@$(call log, "Added: $(OUTPUT_DIR)/release-notes.yaml")
+
+.PHONY: kube-clean-image
+kube-clean-image: ## Clean up the images
+	@$(LOG_TARGET)
+	# rm all the image with envoyproxy/gateway prefix
+	docker images "envoyproxy/gateway*" -q | xargs docker rmi -f
