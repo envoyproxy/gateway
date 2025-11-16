@@ -19,7 +19,7 @@ permissions:
 jobs:
   # Check if there are changes that require running the test jobs
   changes:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     # Required permissions
     permissions:
       pull-requests: read
@@ -56,14 +56,14 @@ jobs:
     - run: make -k gen-check
 
   license-check:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8  # v5.0.0
     - uses: ./tools/github-actions/setup-deps
     - run: make -k licensecheck
 
   coverage-test:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     permissions:
       contents: read   #  for actions/checkout
       id-token: write  #  for fetching OIDC token
@@ -87,7 +87,7 @@ jobs:
         use_oidc: ${{ !(github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork) }}
 
   go-benchmark-test:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     needs:
     - changes
     if: ${{ github.event_name != 'pull_request' || needs.changes.outputs.run_test_workflow == 'true' }}
@@ -106,7 +106,7 @@ jobs:
         fi
 
   build:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     needs: [changes, lint, gen-check, license-check, coverage-test]
     if: ${{ github.event_name != 'pull_request' || needs.changes.outputs.run_test_workflow == 'true' }}
     steps:
@@ -123,7 +123,7 @@ jobs:
         path: bin/
 
   conformance-test:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     needs:
     - changes
     - build
@@ -176,7 +176,7 @@ jobs:
       run: make conformance
 
   e2e-test:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     needs:
     - changes
     - build
@@ -238,7 +238,7 @@ jobs:
       run: make e2e
 
   benchmark-test:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     needs:
     - build
     - changes
@@ -271,7 +271,7 @@ jobs:
         path: ./test/benchmark/benchmark_report/
 
   resilience-test:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     if: ${{ ! (startsWith(github.event_name, 'push') && needs.changes.outputs.skip_test_workflow != 'true') }}
     needs:
     - build
@@ -286,7 +286,7 @@ jobs:
       run: make resilience
 
   publish:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     needs: [conformance-test, e2e-test]
     steps:
     - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8  # v5.0.0
@@ -335,7 +335,7 @@ jobs:
 
   # Aggregate all the required jobs and make it easier to customize CI required jobs
   ci-checks:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     needs:
     - lint
     - gen-check
