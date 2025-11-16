@@ -178,6 +178,37 @@ spec:
     http:
       requestReceivedTimeout: 30s
 `
+	envoyExtensionPolicyYAML = `---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyExtensionPolicy
+metadata:
+  name: envoy-extension-policy
+  namespace: default
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: backend
+  extProc:
+    - backendRefs:
+        - kind: Service
+          name: myExtProc
+          port: 3000
+      messageTimeout: 5s
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: myExtProc
+  namespace: default
+spec:
+  clusterIP: 10.11.12.13
+  ports:
+    - port: 3000
+      name: http
+      protocol: TCP
+      targetPort: 3000
+`
 )
 
 // Helpers for benchmark policy generation.
@@ -228,6 +259,31 @@ spec:
   loadBalancer:
     type: RoundRobin
 `, i, i, 100+i*10, 50+i*5))
+	}
+	return sb.String()
+}
+
+func genEnvoyExtensionPolicies(n int) string {
+	var sb strings.Builder
+	for i := 0; i < n; i++ {
+		sb.WriteString(fmt.Sprintf(`---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyExtensionPolicy
+metadata:
+  name: envoy-extension-policy-%d
+  namespace: default
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: backend-%d
+  extProc:
+    - backendRefs:
+        - kind: Service
+          name: myExtProc
+          port: 3000
+      messageTimeout: 5s
+`, i, i))
 	}
 	return sb.String()
 }
@@ -334,24 +390,26 @@ func BenchmarkGatewayAPItoXDS(b *testing.B) {
 		yaml string
 	}
 	medium := baseYAML + backendYAML + tlsSecretYAML + clientTrafficPolicyYAML +
-		genHTTPRoutes(50) +
+		genHTTPRoutes(200) +
 		genGRPCRoutes(25) +
 		genUDPRoutes(10) +
 		genSecurityPolicies(50) +
 		genBackendTrafficPolicies(50) +
-		genService(50)
+		genEnvoyExtensionPolicies(50) +
+		genService(200)
 	large := baseYAML + backendYAML + tlsSecretYAML + clientTrafficPolicyYAML +
-		genHTTPRoutes(500) +
+		genHTTPRoutes(2000) +
 		genGRPCRoutes(250) +
 		genUDPRoutes(100) +
 		genSecurityPolicies(500) +
 		genBackendTrafficPolicies(500) +
-		genService(500)
+		genEnvoyExtensionPolicies(500) +
+		genService(2000)
 
 	cases := []benchCase{
 		{
 			name: "small",
-			yaml: baseYAML + httpRouteYAML + backendYAML + tlsSecretYAML + securityPolicyYAML + backendTrafficPolicyYAML + clientTrafficPolicyYAML,
+			yaml: baseYAML + httpRouteYAML + backendYAML + tlsSecretYAML + securityPolicyYAML + backendTrafficPolicyYAML + clientTrafficPolicyYAML + envoyExtensionPolicyYAML,
 		},
 		{
 			name: "medium",
