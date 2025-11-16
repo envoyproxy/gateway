@@ -18,14 +18,14 @@ TO_DELETE=(
 for path in "${TO_DELETE[@]}"; do
   if [ -d "$path" ]; then
     log "Removing $path"
-    sudo rm -rf $path
+    sudo rm -rf "$path"
   fi
 done
 
 log "Removing large packages..."
 EXTRA_PKGS="azure-cli google-chrome-stable firefox powershell mono-devel libgl1-mesa-dri google-cloud-sdk google-cloud-cli"
 
-sudo apt-get remove -y $EXTRA_PKGS --fix-missing || true
+sudo apt-get remove -y "$EXTRA_PKGS" --fix-missing || true
 sudo apt-get autoremove -y || true
 sudo apt-get clean || true
 
