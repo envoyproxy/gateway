@@ -102,27 +102,29 @@ func newOrderedHTTPFilter(filter *hcmv3.HttpFilter) *OrderedHTTPFilter {
 		order = 0
 	case isFilterType(filter, egv1a1.EnvoyFilterFault):
 		order = 1
-	case isFilterType(filter, egv1a1.EnvoyFilterCORS):
+	case isFilterType(filter, egv1a1.EnvoyFilterAdmissionControl):
 		order = 2
+	case isFilterType(filter, egv1a1.EnvoyFilterCORS):
+		order = 3
 	case isFilterType(filter, egv1a1.EnvoyFilterHeaderMutation):
 		// Ensure header mutation run before ext auth which might consume the header.
-		order = 3
-	case isFilterType(filter, egv1a1.EnvoyFilterExtAuthz):
 		order = 4
-	case isFilterType(filter, egv1a1.EnvoyFilterAPIKeyAuth):
+	case isFilterType(filter, egv1a1.EnvoyFilterExtAuthz):
 		order = 5
-	case isFilterType(filter, egv1a1.EnvoyFilterBasicAuth):
+	case isFilterType(filter, egv1a1.EnvoyFilterAPIKeyAuth):
 		order = 6
-	case isFilterType(filter, egv1a1.EnvoyFilterOAuth2):
+	case isFilterType(filter, egv1a1.EnvoyFilterBasicAuth):
 		order = 7
-	case isFilterType(filter, egv1a1.EnvoyFilterJWTAuthn):
+	case isFilterType(filter, egv1a1.EnvoyFilterOAuth2):
 		order = 8
-	case isFilterType(filter, egv1a1.EnvoyFilterSessionPersistence):
+	case isFilterType(filter, egv1a1.EnvoyFilterJWTAuthn):
 		order = 9
-	case isFilterType(filter, egv1a1.EnvoyFilterBuffer):
+	case isFilterType(filter, egv1a1.EnvoyFilterSessionPersistence):
 		order = 10
+	case isFilterType(filter, egv1a1.EnvoyFilterBuffer):
+		order = 11
 	case isFilterType(filter, egv1a1.EnvoyFilterLua):
-		order = 11 + mustGetFilterIndex(filter.Name)
+		order = 12 + mustGetFilterIndex(filter.Name)
 	case isFilterType(filter, egv1a1.EnvoyFilterExtProc):
 		order = 100 + mustGetFilterIndex(filter.Name)
 	case isFilterType(filter, egv1a1.EnvoyFilterWasm):
