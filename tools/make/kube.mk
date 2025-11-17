@@ -144,7 +144,7 @@ kube-generate-clients: ## Generate Kubernetes clients, informers, and listers
 kube-generate: kube-generate-clients ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
 # Note that the paths can't just be "./..." with the header file, or the tool will panic on run. Sorry.
 	@$(LOG_TARGET)
-	$(GO_TOOL) controller-gen $(CONTROLLERGEN_OBJECT_FLAGS) paths="{$(ROOT_DIR)/api/...,$(ROOT_DIR)/internal/gatewayapi/...}"
+	$(GO_TOOL) controller-gen $(CONTROLLERGEN_OBJECT_FLAGS) paths="{$(ROOT_DIR)/api/...,$(ROOT_DIR)/internal/ir/...,$(ROOT_DIR)/internal/gatewayapi/...}"
 
 .PHONY: kube-test
 kube-test: manifests generate run-kube-test
