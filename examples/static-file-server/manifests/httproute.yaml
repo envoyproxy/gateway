@@ -20,3 +20,4 @@ spec:
             type: PathPrefix
             value: /wasm
 ---
+

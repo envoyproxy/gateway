@@ -45,6 +45,8 @@ to the following guidelines for all code, APIs, and documentation:
 * Submit your PR.
 * Tests will automatically run for you.
 * We will **not** merge any PR that is not passing tests.
+* Before submitting, ensure YAML is formatted:
+  * Run `make format-yaml` to auto-format all tracked YAML files using go-prettier.
 * PRs are expected to have 100% test coverage for added code. This can be verified with a coverage
   build. If your PR cannot have 100% coverage for some reason please clearly explain why, when you
   open it.

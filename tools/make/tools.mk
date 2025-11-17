@@ -10,11 +10,23 @@ $(tools.bindir)/%: $(tools.srcdir)/%.sh
 	mkdir -p $(@D)
 	install $< $@
 
+# Go tools
+# ========
+# IMPORTANT: Must come before pip section to avoid pattern rule conflicts
+#
+tools/buf          = $(tools.bindir)/buf
+tools/kind         = $(tools.bindir)/kind
+tools/prettier     = $(tools.bindir)/prettier
+
+$(tools.bindir)/%: $(tools.srcdir)/go.mod $(tools.srcdir)/go.sum
+	@mkdir -p $(@D)
+	@echo "Installing Go tool: $*"
+	cd $(tools.srcdir) && GOBIN=$(CURDIR)/$(tools.bindir) go install $$(go list -m -f '{{.Path}}' all | grep '/$*$$' || go list -m -f '{{.Path}}/cmd/$*' all | grep '/cmd/$*$$')
+
 # `pip install`-able things
 # =========================
 #
 tools/codespell    = $(tools.bindir)/codespell
-tools/yamllint     = $(tools.bindir)/yamllint
 tools/sphinx-build = $(tools.bindir)/sphinx-build
 tools/release-notes-docs = $(tools.bindir)/release-notes-docs
 $(tools.bindir)/%.d/venv: $(tools.srcdir)/%/requirements.txt
