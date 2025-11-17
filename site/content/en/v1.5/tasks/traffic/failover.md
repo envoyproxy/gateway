@@ -441,7 +441,7 @@ spec:
 * Lets send 10 requests. You should see that they all go to the `active` backend.
 
 ```shell
-for i in {1..10; do curl --verbose --header "Host: www.example.com" http://$GATEWAY_HOST/test 2>/dev/null | jq .pod; done
+for i in {1..10}; do curl --verbose --header "Host: www.example.com" http://$GATEWAY_HOST/test 2>/dev/null | jq .pod; done
 ```
 
 ```console
