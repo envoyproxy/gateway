@@ -16283,9 +16283,6 @@ spec:
                         description: |-
                           SamplingFraction represents the fraction of requests that should be
                           selected for tracing if no prior sampling decision has been made.
-
-                          Only one of SamplingRate or SamplingFraction may be specified.
-                          If neither field is specified, all requests will be sampled.
                         properties:
                           denominator:
                             default: 100
@@ -16314,16 +16311,21 @@ spec:
                         maximum: 100
                         minimum: 0
                         type: integer
-                      tags:
-                        additionalProperties:
-                          type: string
-                        description: |-
-                          Tags defines the custom tags to add to each span.
-                          Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators) may be used in the value.
-                          The [format string documentation](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#config-access-log-format-strings) provides more information.
-                          If provider is kubernetes, pod name and namespace are added by default.
-
-                          Same keys take precedence over CustomTags.
+                      spanName:
+                        description: SpanName defines the name of the span which will
+                          be used for tracing.
+                        properties:
+                          client:
+                            description: Client defines operation name of the span
+                              which will be used for tracing.
+                            type: string
+                          server:
+                            description: Server defines the operation name of the
+                              upstream span which will be used for tracing.
+                            type: string
+                        required:
+                        - client
+                        - server
                         type: object
                     required:
                     - provider

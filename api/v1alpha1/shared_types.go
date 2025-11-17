@@ -854,12 +854,9 @@ type CustomResponseBody struct {
 }
 
 // Tracing defines the configuration for tracing.
-// TODO: we'd better deprecate SamplingRate in the EnvoyProxy spec, so that we can reuse the struct.
 type Tracing struct {
 	// SamplingFraction represents the fraction of requests that should be
 	// selected for tracing if no prior sampling decision has been made.
-	//
-	// This will take precedence over sampling fraction on EnvoyProxy if set.
 	//
 	// +optional
 	SamplingFraction *gwapiv1.Fraction `json:"samplingFraction,omitempty"`
@@ -868,6 +865,15 @@ type Tracing struct {
 	//
 	// +optional
 	CustomTags map[string]CustomTag `json:"customTags,omitempty"`
+	// SpanName defines the name of the span which will be used for tracing.
+	SpanName *TracingSpanName `json:"spanName,omitempty"`
+}
+
+type TracingSpanName struct {
+	// Client defines operation name of the span which will be used for tracing.
+	Client string `json:"client"`
+	// Server defines the operation name of the upstream span which will be used for tracing.
+	Server string `json:"server"`
 }
 
 // CustomRedirect contains configuration for returning a custom redirect.
