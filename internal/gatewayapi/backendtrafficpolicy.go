@@ -973,7 +973,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 			setIfNil(&r.TCPKeepalive, tf.TCPKeepalive)
 			setIfNil(&r.Timeout, tf.Timeout)
 			setIfNil(&r.DNS, tf.DNS)
-			r.StatName = buildRouteStatName(routeStatName, r.Metadata)
+			setIfNil(&r.StatName, buildRouteStatName(routeStatName, r.Metadata))
 		}
 	}
 
@@ -1021,7 +1021,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 				continue
 			}
 
-			r.StatName = buildRouteStatName(routeStatName, r.Metadata)
+			setIfNil(&r.StatName, buildRouteStatName(routeStatName, r.Metadata))
 			if errs != nil {
 				// Return a 500 direct response
 				r.DirectResponse = &ir.CustomResponse{
