@@ -24,6 +24,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/proxy"
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/message"
 	testutil "github.com/envoyproxy/gateway/internal/utils/test"
 )
 
@@ -264,7 +265,8 @@ func TestCreateOrUpdateProxyServiceAccount(t *testing.T) {
 					Build()
 			}
 
-			kube := NewInfra(cli, cfg)
+			errorNotifier := message.RunnerErrorNotifier{RunnerName: t.Name(), RunnerErrors: &message.RunnerErrors{}}
+			kube := NewInfra(cli, cfg, errorNotifier)
 			require.NoError(t, setupOwnerReferenceResources(ctx, kube.Client))
 			if tc.gatewayNamespaceMode {
 				kube.EnvoyGateway.Provider.Kubernetes.Deploy = &egv1a1.KubernetesDeployMode{

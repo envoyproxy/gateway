@@ -78,6 +78,7 @@ type Config struct {
 	XdsIR             *message.XdsIR
 	ExtensionManager  extension.Manager
 	ProviderResources *message.ProviderResources
+	RunnerErrors      *message.RunnerErrors
 	// Test-configurable TLS paths
 	TLSCertPath string
 	TLSKeyPath  string
