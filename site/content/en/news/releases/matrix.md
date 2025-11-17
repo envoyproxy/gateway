@@ -7,7 +7,7 @@ Envoy Gateway relies on the Envoy Proxy and the Gateway API, and runs within a K
 
 | Envoy Gateway version | Envoy Proxy version         | Rate Limit version | Gateway API version | Kubernetes version         | End of Life |
 | --------------------- | --------------------------- | ------------------ | ------------------- | -------------------------- | ----------- |
-| latest                | **dev-latest**              | **master**         | **v1.3.0**          | v1.30, v1.31, v1.32, v1.33 | n/a         |
+| latest                | **dev-latest**              | **master**         | **v1.4.0**          | v1.30, v1.31, v1.32, v1.33 | n/a         |
 | v1.6                  | **distroless-v1.36.2**      | **99d85510**       | **v1.4.0**          | v1.30, v1.31, v1.32, v1.33 | 2026/05/13  |
 | v1.5                  | **distroless-v1.35.0**      | **a90e0e5d**       | **v1.3.0**          | v1.30, v1.31, v1.32, v1.33 | 2026/02/13  |
 | v1.4                  | **distroless-v1.34.1**      | **3e085e5b**       | **v1.3.0**          | v1.30, v1.31, v1.32, v1.33 | 2025/11/13  |
