@@ -26,7 +26,6 @@ Create a Gateway and HTTPRoute to route proxy CONNECT requests to a Backend serv
 
 ```shell
 cat <<EOF | kubectl apply -f -
-# curl -ik -v -x 172.18.0.201:80 https://www.httpbin.org | grep -o "<title>.*</title>"
 apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
