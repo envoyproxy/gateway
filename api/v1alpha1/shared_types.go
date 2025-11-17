@@ -833,6 +833,9 @@ type Tracing struct {
 	//
 	// +optional
 	CustomTags map[string]CustomTag `json:"customTags,omitempty"`
+	// OperationName associated with the request matched to this route.
+	// If tracing is enabled, it will be used as the span name reported for this request.
+	OperationName *string `json:"OperationName,omitempty"`
 }
 
 // CustomRedirect contains configuration for returning a custom redirect.
