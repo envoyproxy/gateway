@@ -128,6 +128,24 @@ type BackendTelemetry struct {
 	//
 	// +optional
 	Tracing *Tracing `json:"tracing,omitempty"`
+	// Metrics defines metrics configuration for the backend or Route.
+	//
+	// +optional
+	Metrics *BackendMetrics `json:"metrics,omitempty"`
+}
+
+type BackendMetrics struct {
+	// RouteStatName defines the value of the Route stat_prefix, determining how the route stats are named.
+	// For more details, see envoy docs: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto#config-route-v3-route
+	// The supported operators for this pattern are:
+	// %ROUTE_NAME%: name of Gateway API xRoute resource
+	// %ROUTE_NAMESPACE%: namespace of Gateway API xRoute resource
+	// %ROUTE_KIND%: kind of Gateway API xRoute resource
+	// Example: %ROUTE_KIND%/%ROUTE_NAMESPACE%/%ROUTE_NAME% => httproute/my-ns/my-route
+	// Disabled by default.
+	//
+	// +optional
+	RouteStatName *string `json:"routeStatName,omitempty"`
 }
 
 // ProtocolUpgradeConfig specifies the configuration for protocol upgrades.

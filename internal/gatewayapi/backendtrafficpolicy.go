@@ -21,6 +21,7 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	egv1a1validation "github.com/envoyproxy/gateway/api/v1alpha1/validation"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -705,6 +706,11 @@ func (t *Translator) applyTrafficFeatureToRoute(route RouteContext,
 	x *ir.Xds,
 	policyTargetListener *gwapiv1.SectionName,
 ) {
+	routeStatName := ""
+	if tf.Telemetry != nil && tf.Telemetry.Metrics != nil {
+		routeStatName = ptr.Deref(tf.Telemetry.Metrics.RouteStatName, "")
+	}
+
 	prefix := irRoutePrefix(route)
 	for _, tcp := range x.TCP {
 		// if listenerName is not nil, only apply to the specific listener
@@ -728,6 +734,7 @@ func (t *Translator) applyTrafficFeatureToRoute(route RouteContext,
 				setIfNil(&r.Timeout, tf.Timeout)
 				setIfNil(&r.BackendConnection, tf.BackendConnection)
 				setIfNil(&r.DNS, tf.DNS)
+				setIfNil(&r.StatName, buildRouteStatName(routeStatName, r.Metadata))
 			}
 		}
 	}
@@ -773,6 +780,7 @@ func (t *Translator) applyTrafficFeatureToRoute(route RouteContext,
 					continue
 				}
 
+				r.StatName = buildRouteStatName(routeStatName, r.Metadata)
 				if errs != nil {
 					// Return a 500 direct response
 					r.DirectResponse = &ir.CustomResponse{
@@ -889,6 +897,11 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy, r
 		errs = errors.Join(errs, err)
 	}
 
+	if err = validateTelemetry(policy.Spec.Telemetry); err != nil {
+		err = perr.WithMessage(err, "Telemetry")
+		errs = errors.Join(errs, err)
+	}
+
 	cp = buildCompression(policy.Spec.Compression, policy.Spec.Compressor)
 	httpUpgrade = buildHTTPProtocolUpgradeConfig(policy.Spec.HTTPUpgrade)
 
@@ -925,6 +938,11 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 		return errs
 	}
 
+	routeStatName := ""
+	if tf.Telemetry != nil && tf.Telemetry.Metrics != nil {
+		routeStatName = ptr.Deref(tf.Telemetry.Metrics.RouteStatName, "")
+	}
+
 	// Apply IR to all the routes within the specific Gateway
 	// If the feature is already set, then skip it, since it must have
 	// set by a policy attaching to the route
@@ -955,6 +973,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 			setIfNil(&r.TCPKeepalive, tf.TCPKeepalive)
 			setIfNil(&r.Timeout, tf.Timeout)
 			setIfNil(&r.DNS, tf.DNS)
+			setIfNil(&r.StatName, buildRouteStatName(routeStatName, r.Metadata))
 		}
 	}
 
@@ -1002,6 +1021,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 				continue
 			}
 
+			setIfNil(&r.StatName, buildRouteStatName(routeStatName, r.Metadata))
 			if errs != nil {
 				// Return a 500 direct response
 				r.DirectResponse = &ir.CustomResponse{
@@ -1612,4 +1632,34 @@ func buildHTTPProtocolUpgradeConfig(cfgs []*egv1a1.ProtocolUpgradeConfig) []ir.H
 	}
 
 	return result
+}
+
+func validateTelemetry(telemetry *egv1a1.BackendTelemetry) error {
+	if telemetry == nil {
+		return nil
+	}
+
+	if telemetry.Metrics != nil && ptr.Deref(telemetry.Metrics.RouteStatName, "") != "" {
+		return egv1a1validation.ValidateRouteStatName(*telemetry.Metrics.RouteStatName)
+	}
+
+	return nil
+}
+
+func buildRouteStatName(routeStatName string, metadata *ir.ResourceMetadata) *string {
+	if routeStatName == "" || metadata == nil {
+		return nil
+	}
+
+	statName := strings.ReplaceAll(routeStatName, egv1a1.StatFormatterRouteName, metadata.Name)
+	statName = strings.ReplaceAll(statName, egv1a1.StatFormatterRouteNamespace, metadata.Namespace)
+	statName = strings.ReplaceAll(statName, egv1a1.StatFormatterRouteKind, metadata.Kind)
+
+	if metadata.SectionName == "" {
+		statName = strings.ReplaceAll(statName, egv1a1.StatFormatterRouteRuleName, "-")
+	} else {
+		statName = strings.ReplaceAll(statName, egv1a1.StatFormatterRouteRuleName, metadata.SectionName)
+	}
+
+	return &statName
 }

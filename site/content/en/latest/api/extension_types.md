@@ -368,6 +368,20 @@ _Appears in:_
 | `zone` | _string_ |  false  |  | Zone defines the service zone of the backend endpoint. |
 
 
+#### BackendMetrics
+
+
+
+
+
+_Appears in:_
+- [BackendTelemetry](#backendtelemetry)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `routeStatName` | _string_ |  false  |  | RouteStatName defines the value of the Route stat_prefix, determining how the route stats are named.<br />For more details, see envoy docs: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto#config-route-v3-route<br />The supported operators for this pattern are:<br />%ROUTE_NAME%: name of Gateway API xRoute resource<br />%ROUTE_NAMESPACE%: namespace of Gateway API xRoute resource<br />%ROUTE_KIND%: kind of Gateway API xRoute resource<br />Example: %ROUTE_KIND%/%ROUTE_NAMESPACE%/%ROUTE_NAME% => httproute/my-ns/my-route<br />Disabled by default. |
+
+
 #### BackendRef
 
 
@@ -478,6 +492,7 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `tracing` | _[Tracing](#tracing)_ |  false  |  | Tracing configures the tracing settings for the backend or HTTPRoute. |
+| `metrics` | _[BackendMetrics](#backendmetrics)_ |  false  |  | Metrics defines metrics configuration for the backend or Route. |
 
 
 #### BackendTrafficPolicy

@@ -1008,6 +1008,10 @@ xdsIR:
             name: tcproute/default/tcp-route-1/rule/-1/backend/0
             protocol: TCP
             weight: 1
+        metadata:
+          kind: TCPRoute
+          name: tcp-route-1
+          namespace: default
         name: tcproute/default/tcp-route-1
   default/gateway-2:
     accessLog:
