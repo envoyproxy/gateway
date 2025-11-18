@@ -213,7 +213,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 
 		destName := irRouteDestinationName(httpRoute, ruleIdx)
 		allDs := make([]*ir.DestinationSetting, 0, len(rule.BackendRefs))
-		failedProcessDestination := false
+		failedToProcessDestinationCount := 0
 		hasDynamicResolver := false
 		backendRefNames := make([]string, len(rule.BackendRefs))
 		backendCustomRefs := make([]*ir.UnstructuredRef, 0, len(rule.BackendRefs))
@@ -230,7 +230,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 					fmt.Errorf("failed to process route rule %d backendRef %d: %w", ruleIdx, i, err),
 					err.Reason(),
 				))
-				failedProcessDestination = true
+				failedToProcessDestinationCount++
 				continue
 			}
 			if unstructuredRef != nil {
@@ -266,7 +266,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 			case irRoute.DirectResponse != nil || irRoute.Redirect != nil:
 			// return 500 if any destination setting is invalid
 			// the error is already added to the error list when processing the destination
-			case failedProcessDestination:
+			case failedToProcessDestinationCount > 0:
 				irRoute.DirectResponse = &ir.CustomResponse{
 					StatusCode: ptr.To(uint32(500)),
 				}
@@ -282,6 +282,13 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 					StatusCode: ptr.To(uint32(500)),
 				}
 			default:
+				destination.Name = destName
+				destination.Settings = allDs
+				irRoute.Destination = destination
+			}
+
+			// If not all destination settings were invalid, we need to add the collected destination settings into the IR
+			if failedToProcessDestinationCount > 0 && failedToProcessDestinationCount < len(rule.BackendRefs) {
 				destination.Name = destName
 				destination.Settings = allDs
 				irRoute.Destination = destination
