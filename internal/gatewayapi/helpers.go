@@ -502,26 +502,14 @@ type policyTargetRouteKey struct {
 
 type policyRouteTargetContext struct {
 	RouteContext
-	// attached tracks whether each kind policy has been attached to this route.
-	// Key: policy kind (e.g. "BackendTrafficPolicy", "SecurityPolicy"...)
-	// Value: true if a policy is attached to the route level
-	attached map[string]bool
-	// attachedToRouteRules tracks whether each kind policy has been attached to this route rule.
-	// Key: policy kind (e.g. "BackendTrafficPolicy", "SecurityPolicy"...)
-	// Value: true if a policy is attached to the route rule level
-	attachedToRouteRules map[string]sets.Set[string]
+	attached             bool
+	attachedToRouteRules sets.Set[string]
 }
 
 type policyGatewayTargetContext struct {
 	*GatewayContext
-	// attached tracks whether each kind policy has been attached to this gateway.
-	// Key: policy kind (e.g. "BackendTrafficPolicy", "SecurityPolicy"...)
-	// Value: true if a policy is attached to the route level
-	attached map[string]bool
-	// attachedToListeners tracks whether each kind policy has been attached to this gateway listener.
-	// Key: policy kind (e.g. "BackendTrafficPolicy", "SecurityPolicy"...)
-	// Value: true if a policy is attached to the gateway listener level
-	attachedToListeners map[string]sets.Set[string]
+	attached            bool
+	attachedToListeners sets.Set[string]
 }
 
 // GatewayPolicyRouteMap tracks routes attached to Gateway Listener with an index for efficient lookups
@@ -764,12 +752,11 @@ func irStringMatch(name string, match egv1a1.StringMatch) *ir.StringMatch {
 func getOverriddenTargetsMessageForRoute(
 	targetContext *policyRouteTargetContext,
 	sectionName *gwapiv1.SectionName,
-	kind string,
 ) string {
 	var routes []string
 	if sectionName == nil {
 		if targetContext != nil {
-			routes = targetContext.attachedToRouteRules[kind].UnsortedList()
+			routes = targetContext.attachedToRouteRules.UnsortedList()
 		}
 	}
 	if len(routes) > 0 {
@@ -783,12 +770,11 @@ func getOverriddenTargetsMessageForGateway(
 	targetContext *policyGatewayTargetContext,
 	listenerRouteMap map[string]sets.Set[string],
 	sectionName *gwapiv1.SectionName,
-	kind string,
 ) string {
 	var listeners, routes []string
 	if sectionName == nil {
 		if targetContext != nil {
-			listeners = targetContext.attachedToListeners[kind].UnsortedList()
+			listeners = targetContext.attachedToListeners.UnsortedList()
 		}
 		for _, routeSet := range listenerRouteMap {
 			routes = append(routes, routeSet.UnsortedList()...)
@@ -823,7 +809,6 @@ func getOverriddenAndMergedTargetsMessageForGateway(
 	gatewayRouteMap *GatewayPolicyRouteMap,
 	gatewayPolicyMergedMap *GatewayPolicyRouteMap,
 	sectionName *gwapiv1.SectionName,
-	kind string,
 ) (string, string) {
 	var overrideListeners, overrideRoutes, mergedRoutes []string
 	var overrideMessage, mergedMessage string
@@ -864,7 +849,7 @@ func getOverriddenAndMergedTargetsMessageForGateway(
 	if gatewayRouteMap.Routes != nil {
 		if sectionName == nil {
 			if targetContext != nil {
-				overrideListeners = targetContext.attachedToListeners[kind].UnsortedList()
+				overrideListeners = targetContext.attachedToListeners.UnsortedList()
 			}
 			// When sectionName is nil, retrieve routes from all listeners including Gateway-level ("")
 			if gatewayRouteMap.SectionIndex != nil && gatewayRouteMap.SectionIndex[gwNN] != nil {

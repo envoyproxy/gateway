@@ -879,7 +879,6 @@ func hasParentFalseCondition(p *egv1a1.SecurityPolicy) bool {
 // --- TCP branch: validateSecurityPolicyForTCP(...) returns err -> SetTranslationErrorForPolicyAncestors(...) + return
 func Test_SecurityPolicy_TCP_Invalid_setsStatus_and_returns(t *testing.T) {
 	tr := &Translator{GatewayControllerName: "gateway.envoyproxy.io/gatewayclass-controller"}
-	trContext := &TranslatorContext{}
 
 	// Create an invalid TCP policy (has CORS which is not allowed for TCP)
 	policy := sp("default", "bad-tcp")
@@ -925,17 +924,22 @@ func Test_SecurityPolicy_TCP_Invalid_setsStatus_and_returns(t *testing.T) {
 		},
 	}
 
-	// Set route context to translator context
-	routeContexts := []RouteContext{tcpRoute}
-	trContext.SetPolicyTargetRoutes(routeContexts)
+	// Create route map
+	routeMap := make(map[policyTargetRouteKey]*policyRouteTargetContext)
+	key := policyTargetRouteKey{
+		Kind:      string(resource.KindTCPRoute),
+		Name:      "tcp-route",
+		Namespace: "default",
+	}
+	routeMap[key] = &policyRouteTargetContext{RouteContext: tcpRoute}
 
 	gatewayRouteMap := make(map[string]map[string]sets.Set[string])
 	resources := resource.NewResources()
 	xdsIR := make(resource.XdsIRMap)
-	trContext.SetServices(resources.Services)
+	translatorContext := tr.buildTranslatorContext(resources)
 
 	// Process the policy - this should set error status
-	tr.processSecurityPolicyForRoute(trContext, resources, xdsIR, gatewayRouteMap, policy, target)
+	tr.processSecurityPolicyForRoute(translatorContext, resources, xdsIR, routeMap, gatewayRouteMap, policy, target)
 
 	// Assert that the policy has a False condition (error was set)
 	require.True(t, hasParentFalseCondition(policy))
@@ -944,7 +948,6 @@ func Test_SecurityPolicy_TCP_Invalid_setsStatus_and_returns(t *testing.T) {
 // --- non-TCP branch: malformed CIDR should return err -> SetTranslationErrorForPolicyAncestors(...) + return
 func Test_SecurityPolicy_HTTP_Invalid_setsStatus_and_returns(t *testing.T) {
 	tr := &Translator{GatewayControllerName: "gateway.envoyproxy.io/gatewayclass-controller"}
-	trContext := &TranslatorContext{}
 
 	// Create an invalid HTTP policy (malformed CIDR)
 	policy := sp("default", "bad-http")
@@ -996,17 +999,22 @@ func Test_SecurityPolicy_HTTP_Invalid_setsStatus_and_returns(t *testing.T) {
 		},
 	}
 
-	// Set route context to translator context
-	routeContexts := []RouteContext{httpRoute}
-	trContext.SetPolicyTargetRoutes(routeContexts)
+	// Create route map
+	routeMap := make(map[policyTargetRouteKey]*policyRouteTargetContext)
+	key := policyTargetRouteKey{
+		Kind:      string(resource.KindHTTPRoute),
+		Name:      "http-route",
+		Namespace: "default",
+	}
+	routeMap[key] = &policyRouteTargetContext{RouteContext: httpRoute}
 
 	gatewayRouteMap := make(map[string]map[string]sets.Set[string])
 	resources := resource.NewResources()
 	xdsIR := make(resource.XdsIRMap)
-	trContext.SetServices(resources.Services)
+	translatorContext := tr.buildTranslatorContext(resources)
 
 	// Process the policy - this should set error status
-	tr.processSecurityPolicyForRoute(trContext, resources, xdsIR, gatewayRouteMap, policy, target)
+	tr.processSecurityPolicyForRoute(translatorContext, resources, xdsIR, routeMap, gatewayRouteMap, policy, target)
 
 	// Assert that the policy has a False condition (error was set)
 	require.True(t, hasParentFalseCondition(policy))

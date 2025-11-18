@@ -10,6 +10,7 @@ import (
 	"fmt"
 
 	"golang.org/x/exp/maps"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
@@ -220,12 +221,10 @@ func newTranslateResult(
 func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult, error) {
 	var errs error
 
-	translatorContext := &TranslatorContext{}
-	translatorContext.SetServices(resources.Services)
+	translatorContext := t.buildTranslatorContext(resources)
 
 	// Get Gateways belonging to our GatewayClass.
 	acceptedGateways, failedGateways := t.GetRelevantGateways(resources)
-	translatorContext.SetPolicyTargetGateways(acceptedGateways)
 
 	// Gateways are already sorted by the provider layer
 
@@ -260,7 +259,7 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 	udpRoutes := t.ProcessUDPRoutes(translatorContext, resources.UDPRoutes, acceptedGateways, resources, xdsIR)
 
 	// Process ClientTrafficPolicies
-	clientTrafficPolicies := t.ProcessClientTrafficPolicies(translatorContext, resources, acceptedGateways, xdsIR, infraIR)
+	clientTrafficPolicies := t.ProcessClientTrafficPolicies(resources, acceptedGateways, xdsIR, infraIR)
 
 	routes := make([]RouteContext, len(httpRoutes)+len(grpcRoutes)+len(tlsRoutes)+len(tcpRoutes)+len(udpRoutes))
 	offset := 0
@@ -283,10 +282,9 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 	for i := range udpRoutes {
 		routes[offset+i] = udpRoutes[i]
 	}
-	translatorContext.SetPolicyTargetRoutes(routes)
 
 	// Process BackendTrafficPolicies
-	backendTrafficPolicies := t.ProcessBackendTrafficPolicies(translatorContext,
+	backendTrafficPolicies := t.ProcessBackendTrafficPolicies(
 		resources, acceptedGateways, routes, xdsIR)
 
 	// Process SecurityPolicies
@@ -333,6 +331,16 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 		tcpRoutes, udpRoutes, clientTrafficPolicies, backendTrafficPolicies,
 		securityPolicies, resources.BackendTLSPolicies, envoyExtensionPolicies,
 		extServerPolicies, backends, xdsIR, infraIR), errs
+}
+
+func (t *Translator) buildTranslatorContext(resource *resource.Resources) *TranslatorContext {
+	serviceMap := make(map[types.NamespacedName]*corev1.Service, len(resource.Services))
+	for _, svc := range resource.Services {
+		serviceMap[utils.NamespacedName(svc)] = svc
+	}
+	return &TranslatorContext{
+		ServiceMap: serviceMap,
+	}
 }
 
 // GetRelevantGateways returns GatewayContexts, containing a copy of the original
