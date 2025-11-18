@@ -330,7 +330,6 @@ xdsIR:
             - host: 7.7.7.7
               port: 8080
             metadata:
-              kind: Service
               name: service-1
               namespace: default
               sectionName: "8080"
@@ -405,7 +404,6 @@ xdsIR:
             - host: 7.7.7.7
               port: 8080
             metadata:
-              kind: Service
               name: service-2
               namespace: default
               sectionName: "8080"
