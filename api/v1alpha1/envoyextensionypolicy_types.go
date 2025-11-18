@@ -21,6 +21,8 @@ const (
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
 
 // EnvoyExtensionPolicy allows the user to configure various envoy extensibility options for the Gateway.
+// +genclient
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 type EnvoyExtensionPolicy struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -68,6 +70,7 @@ type EnvoyExtensionPolicySpec struct {
 //+kubebuilder:object:root=true
 
 // EnvoyExtensionPolicyList contains a list of EnvoyExtensionPolicy resources.
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 type EnvoyExtensionPolicyList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
@@ -75,5 +78,5 @@ type EnvoyExtensionPolicyList struct {
 }
 
 func init() {
-	SchemeBuilder.Register(&EnvoyExtensionPolicy{}, &EnvoyExtensionPolicyList{})
+	localSchemeBuilder.Register(&EnvoyExtensionPolicy{}, &EnvoyExtensionPolicyList{})
 }

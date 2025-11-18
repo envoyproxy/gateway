@@ -108,8 +108,40 @@ generate-gwapi-manifests: ## Generate Gateway API manifests and make it consiste
 	@mv $(OUTPUT_DIR)/experimental-gatewayapi-crds.yaml charts/gateway-crds-helm/templates/experimental-gatewayapi-crds.yaml
 	@mv $(OUTPUT_DIR)/standard-gatewayapi-crds.yaml charts/gateway-crds-helm/templates/standard-gatewayapi-crds.yaml
 
+.PHONY: kube-generate-clients
+kube-generate-clients: ## Generate Kubernetes clients, informers, and listers
+	@$(LOG_TARGET)
+	@echo "Generating Kubernetes clients..."
+	@echo "Running client-gen..."
+	$(GO_TOOL) client-gen \
+		--clientset-name versioned \
+		--input-base "" \
+		--input github.com/envoyproxy/gateway/api/v1alpha1 \
+		--go-header-file "$(ROOT_DIR)/tools/boilerplate/boilerplate.generatego.txt" \
+		--output-pkg github.com/envoyproxy/gateway/pkg/client/clientset \
+		--output-dir "$(ROOT_DIR)/pkg/client/clientset" \
+		--plural-exceptions "EnvoyProxy:EnvoyProxies" \
+		github.com/envoyproxy/gateway/api/v1alpha1
+	@echo "Running lister-gen..."
+	$(GO_TOOL) lister-gen \
+		--go-header-file "$(ROOT_DIR)/tools/boilerplate/boilerplate.generatego.txt" \
+		--output-pkg github.com/envoyproxy/gateway/pkg/client/listers \
+		--output-dir "$(ROOT_DIR)/pkg/client/listers" \
+		--plural-exceptions "EnvoyProxy:EnvoyProxies" \
+		github.com/envoyproxy/gateway/api/v1alpha1
+	@echo "Running informer-gen..."
+	$(GO_TOOL) informer-gen \
+		--versioned-clientset-package github.com/envoyproxy/gateway/pkg/client/clientset/versioned \
+		--listers-package github.com/envoyproxy/gateway/pkg/client/listers \
+		--go-header-file "$(ROOT_DIR)/tools/boilerplate/boilerplate.generatego.txt" \
+		--output-pkg github.com/envoyproxy/gateway/pkg/client/informers \
+		--output-dir "$(ROOT_DIR)/pkg/client/informers" \
+		--plural-exceptions "EnvoyProxy:EnvoyProxies" \
+		github.com/envoyproxy/gateway/api/v1alpha1
+	@echo "Client generation complete!"
+
 .PHONY: kube-generate
-kube-generate: ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
+kube-generate: kube-generate-clients ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
 # Note that the paths can't just be "./..." with the header file, or the tool will panic on run. Sorry.
 	@$(LOG_TARGET)
 	$(GO_TOOL) controller-gen $(CONTROLLERGEN_OBJECT_FLAGS) paths="{$(ROOT_DIR)/api/...,$(ROOT_DIR)/internal/ir/...,$(ROOT_DIR)/internal/gatewayapi/...}"
