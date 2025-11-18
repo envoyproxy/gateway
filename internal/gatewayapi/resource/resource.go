@@ -113,16 +113,6 @@ func (r *Resources) GetEnvoyProxy(namespace, name string) *egv1a1.EnvoyProxy {
 	return nil
 }
 
-// GetService returns the Service with the given namespace and name.
-func (r *Resources) GetService(namespace, name string) *corev1.Service {
-	for _, svc := range r.Services {
-		if svc.Namespace == namespace && svc.Name == name {
-			return svc
-		}
-	}
-	return nil
-}
-
 // GetServiceByLabels returns the Service matching the given labels and namespace target.
 func (r *Resources) GetServiceByLabels(labels map[string]string, namespace string) *corev1.Service {
 	for _, svc := range r.Services {

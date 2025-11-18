@@ -18,6 +18,7 @@ import (
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/utils"
 )
 
 // GatewayContext wraps a Gateway and provides helper methods for
@@ -671,4 +672,12 @@ func (t *TranslatorContext) GetService(namespace, name string) *corev1.Service {
 		return svc
 	}
 	return nil
+}
+
+func (t *TranslatorContext) SetServices(svcs []*corev1.Service) {
+	serviceMap := make(map[types.NamespacedName]*corev1.Service, len(svcs))
+	for _, svc := range svcs {
+		serviceMap[utils.NamespacedName(svc)] = svc
+	}
+	t.ServiceMap = serviceMap
 }
