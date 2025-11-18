@@ -2,4 +2,4 @@ adopters:
   - name: "Tetrate Enterprise Gateway for Envoy"
     logo: "/logos/tetrate.svg"
     url: "https://tetrate.io/products/tetrate-enterprise-gateway-for-envoy"
-    description: "TEG(Tetrate Enterprise Gateway) provides a hardened, scalable ingress built on open source Envoy Gateway."
+    description: "TEG (Tetrate Enterprise Gateway for Envoy) offers a hardened and scalable ingress built on open source Envoy Gateway."
