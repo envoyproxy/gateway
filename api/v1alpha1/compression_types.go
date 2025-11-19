@@ -41,12 +41,6 @@ type Compression struct {
 	// +required
 	Type CompressorType `json:"type"`
 
-	// RemoveAcceptEncodingHeader indicates whether to remove the
-	// Accept-Encoding header from the request before forwarding it to the upstream.
-	//
-	// +optional
-	RemoveAcceptEncodingHeader bool `json:"removeAcceptEncodingHeader,omitempty"`
-
 	// The configuration for Brotli compressor.
 	//
 	// +optional
