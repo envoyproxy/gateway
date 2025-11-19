@@ -123,3 +123,115 @@ func TestExtractTargetRefs(t *testing.T) {
 		})
 	}
 }
+
+func TestMergeAncestorsForExtensionServerPolicies(t *testing.T) {
+	tests := []struct {
+		aggStatus *gwapiv1.PolicyStatus
+		newStatus *gwapiv1.PolicyStatus
+		noStatus  bool
+	}{
+		{
+			aggStatus: &gwapiv1.PolicyStatus{
+				Ancestors: []gwapiv1.PolicyAncestorStatus{
+					{
+						AncestorRef: gwapiv1.ParentReference{
+							Name: "gateway-1",
+						},
+					},
+				},
+			},
+			newStatus: &gwapiv1.PolicyStatus{
+				Ancestors: []gwapiv1.PolicyAncestorStatus{
+					{
+						AncestorRef: gwapiv1.ParentReference{
+							Name: "gateway-2",
+						},
+					},
+				},
+			},
+		},
+		{
+			aggStatus: &gwapiv1.PolicyStatus{},
+			newStatus: &gwapiv1.PolicyStatus{
+				Ancestors: []gwapiv1.PolicyAncestorStatus{
+					{
+						AncestorRef: gwapiv1.ParentReference{
+							Name: "gateway-2",
+						},
+					},
+				},
+			},
+		},
+		{
+			aggStatus: &gwapiv1.PolicyStatus{
+				Ancestors: []gwapiv1.PolicyAncestorStatus{
+					{
+						AncestorRef: gwapiv1.ParentReference{
+							Name: "gateway-1",
+						},
+					},
+				},
+			},
+			newStatus: &gwapiv1.PolicyStatus{},
+		},
+		{
+			aggStatus: &gwapiv1.PolicyStatus{},
+			newStatus: &gwapiv1.PolicyStatus{},
+		},
+		{
+			aggStatus: nil,
+			newStatus: &gwapiv1.PolicyStatus{
+				Ancestors: []gwapiv1.PolicyAncestorStatus{
+					{
+						AncestorRef: gwapiv1.ParentReference{
+							Name: "gateway-1",
+						},
+					},
+				},
+			},
+		},
+		{
+			aggStatus: &gwapiv1.PolicyStatus{
+				Ancestors: []gwapiv1.PolicyAncestorStatus{
+					{
+						AncestorRef: gwapiv1.ParentReference{
+							Name: "gateway-1",
+						},
+					},
+				},
+			},
+			newStatus: nil,
+		},
+		{
+			aggStatus: nil,
+			newStatus: nil,
+		},
+	}
+
+	for _, test := range tests {
+		aggPolicy := unstructured.Unstructured{Object: make(map[string]interface{})}
+		newPolicy := unstructured.Unstructured{Object: make(map[string]interface{})}
+		desiredMergedStatus := gwapiv1.PolicyStatus{}
+
+		// aggStatus == nil, means simulate not setting status at all within the policy.
+		if test.aggStatus != nil {
+			aggPolicy.Object["status"] = PolicyStatusToUnstructured(*test.aggStatus)
+			desiredMergedStatus.Ancestors = append(desiredMergedStatus.Ancestors, test.aggStatus.Ancestors...)
+		}
+
+		// newStatus == nil, means simulate not setting status at all within the policy.
+		if test.newStatus != nil {
+			newPolicy.Object["status"] = PolicyStatusToUnstructured(*test.newStatus)
+			desiredMergedStatus.Ancestors = append(desiredMergedStatus.Ancestors, test.newStatus.Ancestors...)
+		}
+
+		MergeAncestorsForExtensionServerPolicies(&aggPolicy, &newPolicy)
+
+		// The product object will always have an existing `status`, even if with 0 ancestors.
+		newAggPolicy := UnstructuredToPolicyStatus(aggPolicy.Object["status"].(map[string]any))
+		require.Len(t, newAggPolicy.Ancestors, len(desiredMergedStatus.Ancestors))
+		for i := range newAggPolicy.Ancestors {
+			require.Equal(t, desiredMergedStatus.Ancestors[i].AncestorRef.Name, newAggPolicy.Ancestors[i].AncestorRef.Name)
+		}
+	}
+}
