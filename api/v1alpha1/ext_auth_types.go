@@ -114,7 +114,7 @@ type ContextExtension struct {
 	//
 	// +optional
 	// +unionMember
-	Inline string `json:"inline"`
+	Inline *string `json:"inline,omitempty"`
 
 	// ValueRef for the context extension's value. Cannot be used if value is not empty.
 	//

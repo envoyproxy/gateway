@@ -1850,8 +1850,8 @@ func buildContextExtensions(contextExtensions []*egv1a1.ContextExtension, resour
 			if value, err = getContextExtensionValueFromRef(ext.ValueRef, resources, policyNs); err != nil {
 				return nil, err
 			}
-		} else {
-			value = ir.PrivateBytes(ext.Inline)
+		} else if ext.Inline != nil {
+			value = ir.PrivateBytes(*ext.Inline)
 		}
 
 		ctxExts[ext.Name] = value

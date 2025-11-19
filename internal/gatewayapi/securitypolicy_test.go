@@ -1113,14 +1113,14 @@ func Test_buildContextExtensions(t *testing.T) {
 		{
 			name: "TypeInline",
 			contextExtensions: []*egv1a1.ContextExtension{
-				{Name: "foo", Inline: "bar"},
+				{Name: "foo", Inline: ptr.To("bar")},
 			},
 			want: map[string]ir.PrivateBytes{"foo": ir.PrivateBytes("bar")},
 		},
 		{
 			name:              "TypeInlineEmpty",
 			contextExtensions: []*egv1a1.ContextExtension{{Name: "foo"}},
-			want:              map[string]ir.PrivateBytes{"foo": {}},
+			want:              map[string]ir.PrivateBytes{"foo": nil},
 		},
 		{
 			name: "TypeInlineExplicit",
@@ -1128,7 +1128,7 @@ func Test_buildContextExtensions(t *testing.T) {
 				{
 					Name:   "foo",
 					Type:   egv1a1.ContextExtensionValueTypeInline,
-					Inline: "bar",
+					Inline: ptr.To("bar"),
 				},
 			},
 			want: map[string]ir.PrivateBytes{"foo": ir.PrivateBytes("bar")},
