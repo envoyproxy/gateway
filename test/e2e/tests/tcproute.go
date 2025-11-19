@@ -44,7 +44,8 @@ var TCPRouteTest = suite.ConformanceTest{
 			ns := "gateway-conformance-infra"
 			routeNN := types.NamespacedName{Name: "tcp-app-1", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "my-tcp-gateway", Namespace: ns}
-			gwAddr := GatewayAndTCPRoutesMustBeAccepted(t, suite.Client, &suite.TimeoutConfig, suite.ControllerName, NewGatewayRef(gwNN), routeNN)
+			gwRefs := []GatewayRef{NewGatewayRef(gwNN)}
+			gwAddrs := GatewayAndTCPRoutesMustBeAccepted(t, suite.Client, &suite.TimeoutConfig, suite.ControllerName, gwRefs, routeNN)
 			OkResp := http.ExpectedResponse{
 				Request: http.Request{
 					Path: "/",
@@ -56,13 +57,15 @@ var TCPRouteTest = suite.ConformanceTest{
 			}
 
 			// Send a request to an valid path and expect a successful response
-			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, OkResp)
+			require.Len(t, gwAddrs, 1)
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddrs[0], OkResp)
 		})
 		t.Run("tcp-route-2", func(t *testing.T) {
 			ns := "gateway-conformance-infra"
 			routeNN := types.NamespacedName{Name: "tcp-app-2", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "my-tcp-gateway", Namespace: ns}
-			gwAddr := GatewayAndTCPRoutesMustBeAccepted(t, suite.Client, &suite.TimeoutConfig, suite.ControllerName, NewGatewayRef(gwNN), routeNN)
+			gwRefs := []GatewayRef{NewGatewayRef(gwNN)}
+			gwAddrs := GatewayAndTCPRoutesMustBeAccepted(t, suite.Client, &suite.TimeoutConfig, suite.ControllerName, gwRefs, routeNN)
 			OkResp := http.ExpectedResponse{
 				Request: http.Request{
 					Path: "/",
@@ -74,12 +77,13 @@ var TCPRouteTest = suite.ConformanceTest{
 			}
 
 			// Send a request to an valid path and expect a successful response
-			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, OkResp)
+			require.Len(t, gwAddrs, 1)
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddrs[0], OkResp)
 		})
 	},
 }
 
-func GatewayAndTCPRoutesMustBeAccepted(t *testing.T, c client.Client, timeoutConfig *config.TimeoutConfig, controllerName string, gw GatewayRef, routeNNs ...types.NamespacedName) string {
+func GatewayAndTCPRoutesMustBeAccepted(t *testing.T, c client.Client, timeoutConfig *config.TimeoutConfig, controllerName string, gws []GatewayRef, routeNNs ...types.NamespacedName) []string {
 	t.Helper()
 
 	if timeoutConfig == nil {
@@ -92,40 +96,42 @@ func GatewayAndTCPRoutesMustBeAccepted(t *testing.T, c client.Client, timeoutCon
 		tlog.Logf(t, "error fetching TCPRoute: %v", err)
 	}
 
-	gwAddr, err := WaitForGatewayAddress(t, c, timeoutConfig, gw.NamespacedName, string(*tcpRoute.Spec.ParentRefs[0].SectionName))
-	require.NoErrorf(t, err, "timed out waiting for Gateway address to be assigned")
-
-	ns := gwapiv1.Namespace(gw.Namespace)
-	kind := gwapiv1.Kind("Gateway")
+	gwAddrs := make([]string, 0, len(gws))
+	for _, gw := range gws {
+		gwAddr, err := WaitForGatewayAddress(t, c, timeoutConfig, gw.NamespacedName, string(*tcpRoute.Spec.ParentRefs[0].SectionName))
+		require.NoErrorf(t, err, "timed out waiting for Gateway address to be assigned")
+		gwAddrs = append(gwAddrs, gwAddr)
+	}
 
 	for _, routeNN := range routeNNs {
-		namespaceRequired := true
-		if routeNN.Namespace == gw.Namespace {
-			namespaceRequired = false
-		}
-
 		var parents []gwapiv1.RouteParentStatus
-		for _, listener := range gw.listenerNames {
-			parents = append(parents, gwapiv1.RouteParentStatus{
-				ParentRef: gwapiv1.ParentReference{
-					Group:       (*gwapiv1.Group)(&gwapiv1.GroupVersion.Group),
-					Kind:        &kind,
-					Name:        gwapiv1.ObjectName(gw.Name),
-					Namespace:   &ns,
-					SectionName: listener,
-				},
-				ControllerName: gwapiv1.GatewayController(controllerName),
-				Conditions: []metav1.Condition{{
-					Type:   string(gwapiv1.RouteConditionAccepted),
-					Status: metav1.ConditionTrue,
-					Reason: string(gwapiv1.RouteReasonAccepted),
-				}},
-			})
+		var namespaceRequired []bool
+		for _, gw := range gws {
+			ns := gwapiv1.Namespace(gw.Namespace)
+			kind := gwapiv1.Kind("Gateway")
+			namespaceRequired = append(namespaceRequired, routeNN.Namespace != gw.Namespace)
+			for _, listener := range gw.listenerNames {
+				parents = append(parents, gwapiv1.RouteParentStatus{
+					ParentRef: gwapiv1.ParentReference{
+						Group:       (*gwapiv1.Group)(&gwapiv1.GroupVersion.Group),
+						Kind:        &kind,
+						Name:        gwapiv1.ObjectName(gw.Name),
+						Namespace:   &ns,
+						SectionName: listener,
+					},
+					ControllerName: gwapiv1.GatewayController(controllerName),
+					Conditions: []metav1.Condition{{
+						Type:   string(gwapiv1.RouteConditionAccepted),
+						Status: metav1.ConditionTrue,
+						Reason: string(gwapiv1.RouteReasonAccepted),
+					}},
+				})
+			}
 		}
 		TCPRouteMustHaveParents(t, c, timeoutConfig, routeNN, parents, namespaceRequired)
 	}
 
-	return gwAddr
+	return gwAddrs
 }
 
 // WaitForGatewayAddress waits until at least one IP Address has been set in the
@@ -174,7 +180,7 @@ func WaitForGatewayAddress(t *testing.T, client client.Client, timeoutConfig *co
 	return net.JoinHostPort(ipAddr, port), waitErr
 }
 
-func TCPRouteMustHaveParents(t *testing.T, client client.Client, timeoutConfig *config.TimeoutConfig, routeName types.NamespacedName, parents []gwapiv1.RouteParentStatus, namespaceRequired bool) {
+func TCPRouteMustHaveParents(t *testing.T, client client.Client, timeoutConfig *config.TimeoutConfig, routeName types.NamespacedName, parents []gwapiv1.RouteParentStatus, namespaceRequired []bool) {
 	t.Helper()
 
 	if timeoutConfig == nil {
