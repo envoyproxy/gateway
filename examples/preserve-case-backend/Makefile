@@ -2,6 +2,7 @@
 IMAGE_PREFIX ?= envoyproxy/gateway-
 APP_NAME ?= preserve-case-backend
 TAG ?= latest
+GO_LDFLAGS ?=
 
 .PHONY: docker-buildx
 docker-buildx:

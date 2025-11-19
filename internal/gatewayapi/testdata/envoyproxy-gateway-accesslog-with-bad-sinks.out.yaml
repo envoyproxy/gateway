@@ -1,0 +1,31 @@
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    name: gateway-1
+    namespace: envoy-gateway
+  spec:
+    gatewayClassName: envoy-gateway-class
+    infrastructure:
+      parametersRef:
+        group: gateway.envoyproxy.io
+        kind: EnvoyProxy
+        name: test
+    listeners:
+    - allowedRoutes:
+        namespaces:
+          from: Same
+      name: http
+      port: 80
+      protocol: HTTP
+  status:
+    conditions:
+    - lastTransitionTime: null
+      message: 'Invalid parametersRef:: [unable to configure access log when using
+        File sink type but "file" field being empty, unable to configure access log
+        when using OpenTelemetry sink type but "openTelemetry" field being empty]'
+      reason: InvalidParameters
+      status: "False"
+      type: Accepted
+infraIR: {}
+xdsIR: {}

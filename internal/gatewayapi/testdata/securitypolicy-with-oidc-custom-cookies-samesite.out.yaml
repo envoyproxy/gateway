@@ -225,6 +225,7 @@ xdsIR:
               tokenEndpoint: https://oauth2.googleapis.com/token
             redirectPath: /bar/oauth2/callback
             redirectURL: https://www.example.com/bar/oauth2/callback
+            refreshToken: true
             scopes:
             - openid
     readyListener:

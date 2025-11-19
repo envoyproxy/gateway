@@ -147,8 +147,7 @@ xdsIR:
         - append: true
           name: my-header-multi-value
           value:
-          - foo
-          - bar
+          - foo,bar
         - append: true
           name: my-header
           value:

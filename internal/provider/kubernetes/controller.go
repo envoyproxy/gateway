@@ -41,7 +41,6 @@ import (
 	mcsapiv1a1 "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
-	"github.com/envoyproxy/gateway/api/v1alpha1/validation"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
@@ -52,7 +51,6 @@ import (
 	workqueuemetrics "github.com/envoyproxy/gateway/internal/metrics/workqueue"
 	"github.com/envoyproxy/gateway/internal/utils"
 	"github.com/envoyproxy/gateway/internal/utils/slice"
-	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
 )
 
 var skipNameValidation = func() *bool {
@@ -356,12 +354,12 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 
 				logger.Error(err, "failed to process ParametersRef for GatewayClass")
 				msg := fmt.Sprintf("%s: %v", status.MsgGatewayClassInvalidParams, err)
-				gc := status.SetGatewayClassAccepted(
-					managedGC.DeepCopy(),
+				status.SetGatewayClassAccepted(
+					managedGC,
 					false,
 					string(gwapiv1.GatewayClassReasonInvalidParameters),
 					msg)
-				r.resources.GatewayClassStatuses.Store(utils.NamespacedName(gc), &gc.Status)
+				r.resources.GatewayClassStatuses.Store(utils.NamespacedName(managedGC), &managedGC.Status)
 				message.PublishMetric(message.Metadata{
 					Runner:  string(egv1a1.LogComponentProviderRunner),
 					Message: message.GatewayClassStatusMessageName,
@@ -378,12 +376,12 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 			}
 
 			r.log.Error(err, "failed to process TLS SecretRef for EnvoyProxy for GatewayClass")
-			gc := status.SetGatewayClassAccepted(
-				managedGC.DeepCopy(),
+			status.SetGatewayClassAccepted(
+				managedGC,
 				false,
 				string(gwapiv1.GatewayClassReasonAccepted),
 				fmt.Sprintf("%s: %v", status.MsgGatewayClassInvalidParams, err))
-			r.resources.GatewayClassStatuses.Store(utils.NamespacedName(gc), &gc.Status)
+			r.resources.GatewayClassStatuses.Store(utils.NamespacedName(managedGC), &managedGC.Status)
 			message.PublishMetric(message.Metadata{
 				Runner:  string(egv1a1.LogComponentProviderRunner),
 				Message: message.GatewayClassStatusMessageName,
@@ -394,12 +392,12 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 		if !failToProcessGCParamsRef {
 			// GatewayClass is valid so far, mark it as accepted.
 			logger.V(6).Info("Set GatewayClass Accepted")
-			gc := status.SetGatewayClassAccepted(
-				managedGC.DeepCopy(),
+			status.SetGatewayClassAccepted(
+				managedGC,
 				true,
 				string(gwapiv1.GatewayClassReasonAccepted),
 				status.MsgValidGatewayClass)
-			r.resources.GatewayClassStatuses.Store(utils.NamespacedName(gc), &gc.Status)
+			r.resources.GatewayClassStatuses.Store(utils.NamespacedName(managedGC), &managedGC.Status)
 		}
 
 		// it's safe here to append gwcResource to gwcResources
@@ -754,6 +752,23 @@ func (r *gatewayAPIReconciler) processBackendRefs(ctx context.Context, gwcResour
 						}
 						logger.Error(err, "failed to process CACertificateRef for Backend",
 							"backend", backend, "caCertificateRef", caCertRef.Name)
+					}
+				}
+			}
+
+			if backend.Spec.TLS != nil && backend.Spec.TLS.BackendTLSConfig != nil && backend.Spec.TLS.ClientCertificateRef != nil {
+				certRef := *backend.Spec.TLS.ClientCertificateRef
+				if refsSecret(&certRef) {
+					if err := r.processSecretRef(
+						ctx, resourceMappings, gwcResource,
+						resource.KindBackend, backend.Namespace, backend.Name,
+						certRef); err != nil {
+						if isTransientError(err) {
+							return err
+						}
+						r.log.Error(err,
+							"failed to process ClientTLS secret for Backend",
+							"backend", backend, "clientCertificateRef", certRef.Name)
 					}
 				}
 			}
@@ -1455,7 +1470,7 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, managedGC *g
 	if r.isGatewayClassMerged(managedGC.Name) {
 		mergedGateways = true
 		// processGatewayClassParamsRef has been called for this GatewayClass, its EnvoyProxy should exist in resourceTree
-		r.processServiceClusterForGatewayClass(resourceTree.EnvoyProxyForGatewayClass, managedGC, resourceMap)
+		r.processServiceClusterForGatewayClass(ctx, resourceTree.EnvoyProxyForGatewayClass, managedGC, resourceMap)
 	}
 
 	for i := range gatewayList.Items {
@@ -1561,7 +1576,7 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, managedGC *g
 			if ep == nil && resourceTree.EnvoyProxyForGatewayClass != nil {
 				ep = resourceTree.EnvoyProxyForGatewayClass
 			}
-			r.processServiceClusterForGateway(ep, gtw, resourceMap)
+			r.processServiceClusterForGateway(ctx, ep, gtw, resourceMap)
 		}
 
 		if !resourceMap.allAssociatedGateways.Has(gtwNamespacedName) {
@@ -1574,7 +1589,7 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, managedGC *g
 }
 
 // Called on a GatewayClass when merged gateways mode is enabled for it.
-func (r *gatewayAPIReconciler) processServiceClusterForGatewayClass(ep *egv1a1.EnvoyProxy, gatewayClass *gwapiv1.GatewayClass, resourceMap *resourceMappings) {
+func (r *gatewayAPIReconciler) processServiceClusterForGatewayClass(ctx context.Context, ep *egv1a1.EnvoyProxy, gatewayClass *gwapiv1.GatewayClass, resourceMap *resourceMappings) {
 	// Skip processing if topology injector is disabled
 	if r.envoyGateway != nil && r.envoyGateway.TopologyInjectorDisabled() {
 		return
@@ -1590,15 +1605,11 @@ func (r *gatewayAPIReconciler) processServiceClusterForGatewayClass(ep *egv1a1.E
 		}
 	}
 
-	resourceMap.insertBackendRef(gwapiv1.BackendObjectReference{
-		Kind:      ptr.To(gwapiv1.Kind("Service")),
-		Namespace: gatewayapi.NamespacePtr(proxySvcNamespace),
-		Name:      gwapiv1.ObjectName(proxySvcName),
-	})
+	r.insertProxyServiceIfExists(ctx, proxySvcName, proxySvcNamespace, resourceMap)
 }
 
 // Called on a Gateway when merged gateways mode is not enabled for its parent GatewayClass.
-func (r *gatewayAPIReconciler) processServiceClusterForGateway(ep *egv1a1.EnvoyProxy, gateway *gwapiv1.Gateway, resourceMap *resourceMappings) {
+func (r *gatewayAPIReconciler) processServiceClusterForGateway(ctx context.Context, ep *egv1a1.EnvoyProxy, gateway *gwapiv1.Gateway, resourceMap *resourceMappings) {
 	// Skip processing if topology injector is disabled
 	if r.envoyGateway != nil && r.envoyGateway.TopologyInjectorDisabled() {
 		return
@@ -1619,10 +1630,24 @@ func (r *gatewayAPIReconciler) processServiceClusterForGateway(ep *egv1a1.EnvoyP
 		}
 	}
 
+	r.insertProxyServiceIfExists(ctx, proxySvcName, proxySvcNamespace, resourceMap)
+}
+
+func (r *gatewayAPIReconciler) insertProxyServiceIfExists(ctx context.Context, name, namespace string, resourceMap *resourceMappings) {
+	svcNN := types.NamespacedName{Name: name, Namespace: namespace}
+	svc := new(corev1.Service)
+	err := r.client.Get(ctx, svcNN, svc)
+	// Only insert if service exists
+	if err != nil {
+		if !kerrors.IsNotFound(err) {
+			r.log.Info("failed to get proxy service", "namespace", namespace, "name", name, "error", err)
+		}
+		return
+	}
 	resourceMap.insertBackendRef(gwapiv1.BackendObjectReference{
-		Kind:      ptr.To(gwapiv1.Kind("Service")),
-		Namespace: gatewayapi.NamespacePtr(proxySvcNamespace),
-		Name:      gwapiv1.ObjectName(proxySvcName),
+		Kind:      ptr.To(gwapiv1.Kind(resource.KindService)),
+		Namespace: gatewayapi.NamespacePtr(svc.Namespace),
+		Name:      gwapiv1.ObjectName(svc.Name),
 	})
 }
 
@@ -2491,13 +2516,6 @@ func (r *gatewayAPIReconciler) processEnvoyProxy(ep *egv1a1.EnvoyProxy, resource
 	}
 
 	r.log.Info("processing EnvoyProxy", "namespace", ep.Namespace, "name", ep.Name)
-
-	if err := validation.ValidateEnvoyProxy(ep); err != nil {
-		return fmt.Errorf("invalid EnvoyProxy: %w", err)
-	}
-	if err := bootstrap.Validate(ep.Spec.Bootstrap); err != nil {
-		return fmt.Errorf("invalid EnvoyProxy: %w", err)
-	}
 
 	if ep.Spec.Telemetry != nil {
 		var backendRefs []egv1a1.BackendRef

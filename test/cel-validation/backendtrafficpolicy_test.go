@@ -164,7 +164,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			},
 		},
 		{
-			desc: "sectionName disabled until supported",
+			desc: "sectionName supported",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
@@ -179,9 +179,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{
-				"spec: Invalid value: \"object\": this policy does not yet support the sectionName field",
-			},
+			wantErrors: []string{},
 		},
 		{
 			desc: "consistentHash field not nil when type is consistentHash",
@@ -1169,7 +1167,6 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 						},
 					},
 					RateLimit: &egv1a1.RateLimitSpec{
-						Type: egv1a1.GlobalRateLimitType,
 						Global: &egv1a1.GlobalRateLimit{
 							Rules: rules,
 						},
@@ -1203,7 +1200,6 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 						},
 					},
 					RateLimit: &egv1a1.RateLimitSpec{
-						Type: egv1a1.GlobalRateLimitType,
 						Global: &egv1a1.GlobalRateLimit{
 							Rules: rules,
 						},
@@ -1279,6 +1275,144 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			},
 			wantErrors: []string{
 				"spec.connection.bufferLimit: Invalid value: \"1m\": spec.connection.bufferLimit in body should match '^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$', <nil>: Invalid value: \"\"",
+			},
+		},
+		{
+			desc: "valid preconnect perEndpointPercent",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					ClusterSettings: egv1a1.ClusterSettings{
+						Connection: &egv1a1.BackendConnection{
+							Preconnect: &egv1a1.PreconnectPolicy{
+								PerEndpointPercent: ptr.To(uint32(100)),
+							},
+						},
+						LoadBalancer: &egv1a1.LoadBalancer{
+							Type: egv1a1.LeastRequestLoadBalancerType,
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "valid preconnect perEndpointPercent nil loadbalancer",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					ClusterSettings: egv1a1.ClusterSettings{
+						Connection: &egv1a1.BackendConnection{
+							Preconnect: &egv1a1.PreconnectPolicy{
+								PerEndpointPercent: ptr.To(uint32(100)),
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "valid preconnect PredictivePercent",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					ClusterSettings: egv1a1.ClusterSettings{
+						Connection: &egv1a1.BackendConnection{
+							Preconnect: &egv1a1.PreconnectPolicy{
+								PredictivePercent:  ptr.To(uint32(110)),
+								PerEndpointPercent: ptr.To(uint32(133)),
+							},
+						},
+						LoadBalancer: &egv1a1.LoadBalancer{
+							Type: egv1a1.RoundRobinLoadBalancerType,
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "invalid preconnect policy due to loadbalancer type",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					ClusterSettings: egv1a1.ClusterSettings{
+						Connection: &egv1a1.BackendConnection{
+							Preconnect: &egv1a1.PreconnectPolicy{
+								PredictivePercent:  ptr.To(uint32(133)),
+								PerEndpointPercent: ptr.To(uint32(150)),
+							},
+						},
+						LoadBalancer: &egv1a1.LoadBalancer{
+							Type: egv1a1.LeastRequestLoadBalancerType,
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				" Invalid value: \"object\": predictivePercent in preconnect policy only works with RoundRobin or Random load balancers",
+			},
+		},
+		{
+			desc: "invalid preconnect policy due to ratio values",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					ClusterSettings: egv1a1.ClusterSettings{
+						Connection: &egv1a1.BackendConnection{
+							Preconnect: &egv1a1.PreconnectPolicy{
+								PerEndpointPercent: ptr.To(uint32(305)),
+							},
+						},
+						LoadBalancer: &egv1a1.LoadBalancer{
+							Type: egv1a1.RandomLoadBalancerType,
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.connection.preconnect.perEndpointPercent: Invalid value: 305: spec.connection.preconnect.perEndpointPercent in body should be less than or equal to 300",
 			},
 		},
 		{
@@ -1825,7 +1959,6 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 						},
 					},
 					RateLimit: &egv1a1.RateLimitSpec{
-						Type: egv1a1.GlobalRateLimitType,
 						Global: &egv1a1.GlobalRateLimit{
 							Rules: rules,
 						},
@@ -1848,7 +1981,6 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 						},
 					},
 					RateLimit: &egv1a1.RateLimitSpec{
-						Type: egv1a1.GlobalRateLimitType,
 						Global: &egv1a1.GlobalRateLimit{
 							Rules: []egv1a1.RateLimitRule{
 								{
@@ -1884,7 +2016,6 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 						},
 					},
 					RateLimit: &egv1a1.RateLimitSpec{
-						Type: egv1a1.GlobalRateLimitType,
 						Local: &egv1a1.LocalRateLimit{
 							Rules: []egv1a1.RateLimitRule{
 								{
@@ -1900,6 +2031,37 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{`response cost is not supported for Local Rate Limits`},
+		},
+		{
+			desc: "invalid RateLimitSelectCondition with no selectors",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					RateLimit: &egv1a1.RateLimitSpec{
+						Global: &egv1a1.GlobalRateLimit{
+							Rules: []egv1a1.RateLimitRule{
+								{
+									ClientSelectors: []egv1a1.RateLimitSelectCondition{
+										{
+											// No headers, methods, path, or sourceCIDR specified
+										},
+									},
+									Limit: egv1a1.RateLimitValue{Requests: 10, Unit: "Minute"},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"at least one of headers, methods, path or sourceCIDR must be specified"},
 		},
 		{
 			desc: "panicThreshold is set",

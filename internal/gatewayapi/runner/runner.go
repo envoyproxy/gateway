@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"path/filepath"
 
 	"github.com/docker/docker/pkg/fileutils"
 	"github.com/telepresenceio/watchable"
@@ -29,6 +30,7 @@ import (
 	extension "github.com/envoyproxy/gateway/internal/extension/types"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
+	"github.com/envoyproxy/gateway/internal/infrastructure/host"
 	"github.com/envoyproxy/gateway/internal/message"
 	"github.com/envoyproxy/gateway/internal/utils"
 	"github.com/envoyproxy/gateway/internal/wasm"
@@ -40,15 +42,8 @@ const (
 	serveTLSKeyFilepath  = "/certs/tls.key"
 	serveTLSCaFilepath   = "/certs/ca.crt"
 
-	// TODO: Make these path configurable.
-	// Default certificates path for envoy-gateway with Host infrastructure provider.
-	localTLSCertFilepath = "/tmp/envoy-gateway/certs/envoy-gateway/tls.crt"
-	localTLSKeyFilepath  = "/tmp/envoy-gateway/certs/envoy-gateway/tls.key"
-	localTLSCaFilepath   = "/tmp/envoy-gateway/certs/envoy-gateway/ca.crt"
-
 	hmacSecretName = "envoy-oidc-hmac" // nolint: gosec
 	hmacSecretKey  = "hmac-secret"
-	hmacSecretPath = "/tmp/envoy-gateway/certs/envoy-oidc-hmac/hmac-secret" // nolint: gosec
 )
 
 type Config struct {
@@ -83,7 +78,7 @@ func (r *Runner) Name() string {
 }
 
 // Start starts the gateway-api translator runner
-func (r *Runner) Start(ctx context.Context) (err error) {
+func (r *Runner) Start(ctx context.Context) error {
 	r.Logger = r.Logger.WithName(r.Name()).WithValues("runner", r.Name())
 
 	go r.startWasmCache(ctx)
@@ -93,7 +88,7 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 
 	go r.subscribeAndTranslate(c)
 	r.Logger.Info("started")
-	return
+	return nil
 }
 
 func (r *Runner) startWasmCache(ctx context.Context) {
@@ -130,7 +125,7 @@ func (r *Runner) startWasmCache(ctx context.Context) {
 func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *resource.ControllerResources]) {
 	message.HandleSubscription(message.Metadata{Runner: r.Name(), Message: message.ProviderResourcesMessageName}, sub,
 		func(update message.Update[string, *resource.ControllerResources], errChan chan error) {
-			r.Logger.Info("received an update")
+			r.Logger.Info("received an update", "key", update.Key)
 			val := update.Value
 			// There is only 1 key which is the controller name
 			// so when a delete is triggered, delete all keys
@@ -151,16 +146,17 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 			for _, resources := range *val {
 				// Translate and publish IRs.
 				t := &gatewayapi.Translator{
-					GatewayControllerName:     r.EnvoyGateway.Gateway.ControllerName,
-					GatewayClassName:          gwapiv1.ObjectName(resources.GatewayClass.Name),
-					GlobalRateLimitEnabled:    r.EnvoyGateway.RateLimit != nil,
-					EnvoyPatchPolicyEnabled:   r.EnvoyGateway.ExtensionAPIs != nil && r.EnvoyGateway.ExtensionAPIs.EnableEnvoyPatchPolicy,
-					BackendEnabled:            r.EnvoyGateway.ExtensionAPIs != nil && r.EnvoyGateway.ExtensionAPIs.EnableBackend,
-					ControllerNamespace:       r.ControllerNamespace,
-					GatewayNamespaceMode:      r.EnvoyGateway.GatewayNamespaceMode(),
-					MergeGateways:             gatewayapi.IsMergeGatewaysEnabled(resources),
-					WasmCache:                 r.wasmCache,
-					ListenerPortShiftDisabled: r.EnvoyGateway.Provider != nil && r.EnvoyGateway.Provider.IsRunningOnHost(),
+					GatewayControllerName:   r.EnvoyGateway.Gateway.ControllerName,
+					GatewayClassName:        gwapiv1.ObjectName(resources.GatewayClass.Name),
+					GlobalRateLimitEnabled:  r.EnvoyGateway.RateLimit != nil,
+					EnvoyPatchPolicyEnabled: r.EnvoyGateway.ExtensionAPIs != nil && r.EnvoyGateway.ExtensionAPIs.EnableEnvoyPatchPolicy,
+					BackendEnabled:          r.EnvoyGateway.ExtensionAPIs != nil && r.EnvoyGateway.ExtensionAPIs.EnableBackend,
+					ControllerNamespace:     r.ControllerNamespace,
+					GatewayNamespaceMode:    r.EnvoyGateway.GatewayNamespaceMode(),
+					MergeGateways:           gatewayapi.IsMergeGatewaysEnabled(resources),
+					WasmCache:               r.wasmCache,
+					RunningOnHost:           r.EnvoyGateway.Provider != nil && r.EnvoyGateway.Provider.IsRunningOnHost(),
+					Logger:                  r.Logger,
 				}
 
 				// If an extension is loaded, pass its supported groups/kinds to the translator
@@ -217,6 +213,11 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 				}
 
 				// Update Status
+				if result.GatewayClass != nil {
+					key := utils.NamespacedName(result.GatewayClass)
+					r.ProviderResources.GatewayClassStatuses.Store(key, &result.GatewayClass.Status)
+				}
+
 				for _, gateway := range result.Gateways {
 					key := utils.NamespacedName(gateway)
 					r.ProviderResources.GatewayStatuses.Store(key, &gateway.Status)
@@ -339,6 +340,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 			// Publish aggregated metrics
 			message.PublishMetric(message.Metadata{Runner: r.Name(), Message: message.InfraIRMessageName}, infraIRCount)
 			message.PublishMetric(message.Metadata{Runner: r.Name(), Message: message.XDSIRMessageName}, xdsIRCount)
+			message.PublishMetric(message.Metadata{Runner: r.Name(), Message: message.GatewayClassStatusMessageName}, 1)
 			message.PublishMetric(message.Metadata{Runner: r.Name(), Message: message.GatewayStatusMessageName}, gatewayStatusCount)
 			message.PublishMetric(message.Metadata{Runner: r.Name(), Message: message.HTTPRouteStatusMessageName}, httpRouteStatusCount)
 			message.PublishMetric(message.Metadata{Runner: r.Name(), Message: message.GRPCRouteStatusMessageName}, grpcRouteStatusCount)
@@ -360,34 +362,54 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 	r.Logger.Info("shutting down")
 }
 
-func (r *Runner) loadTLSConfig(ctx context.Context) (tlsConfig *tls.Config, salt []byte, err error) {
+func (r *Runner) loadTLSConfig(ctx context.Context) (*tls.Config, []byte, error) {
 	switch {
 	case r.EnvoyGateway.Provider.IsRunningOnKubernetes():
-		salt, err = hmac(ctx, r.ControllerNamespace)
+		salt, err := hmac(ctx, r.ControllerNamespace)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to get hmac secret: %w", err)
 		}
 
-		tlsConfig, err = crypto.LoadTLSConfig(serveTLSCertFilepath, serveTLSKeyFilepath, serveTLSCaFilepath)
+		tlsConfig, err := crypto.LoadTLSConfig(serveTLSCertFilepath, serveTLSKeyFilepath, serveTLSCaFilepath)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to create tls config: %w", err)
 		}
+		return tlsConfig, salt, nil
 
 	case r.EnvoyGateway.Provider.IsRunningOnHost():
-		salt, err = os.ReadFile(hmacSecretPath)
+		// Get config
+		var hostCfg *egv1a1.EnvoyGatewayHostInfrastructureProvider
+		if p := r.EnvoyGateway.Provider; p != nil && p.Custom != nil &&
+			p.Custom.Infrastructure != nil && p.Custom.Infrastructure.Host != nil {
+			hostCfg = p.Custom.Infrastructure.Host
+		}
+
+		paths, err := host.GetPaths(hostCfg)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to determine paths: %w", err)
+		}
+
+		// Read HMAC secret
+		hmacPath := filepath.Join(paths.CertDir("envoy-oidc-hmac"), "hmac-secret")
+		salt, err := os.ReadFile(hmacPath)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to get hmac secret: %w", err)
 		}
 
-		tlsConfig, err = crypto.LoadTLSConfig(localTLSCertFilepath, localTLSKeyFilepath, localTLSCaFilepath)
+		certDir := paths.CertDir("envoy-gateway")
+		certPath := filepath.Join(certDir, "tls.crt")
+		keyPath := filepath.Join(certDir, "tls.key")
+		caPath := filepath.Join(certDir, "ca.crt")
+
+		tlsConfig, err := crypto.LoadTLSConfig(certPath, keyPath, caPath)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to create tls config: %w", err)
 		}
+		return tlsConfig, salt, nil
 
 	default:
 		return nil, nil, fmt.Errorf("no valid tls certificates")
 	}
-	return
 }
 
 func unstructuredToPolicyStatus(policyStatus map[string]any) gwapiv1.PolicyStatus {
@@ -663,7 +685,7 @@ func (r *Runner) deleteKeys(kc *KeyCache) {
 
 // hmac returns the HMAC secret generated by the CertGen job.
 // hmac will be used as a hash salt to generate unguessable downloading paths for Wasm modules.
-func hmac(ctx context.Context, namespace string) (hmac []byte, err error) {
+func hmac(ctx context.Context, namespace string) ([]byte, error) {
 	// Get the HMAC secret.
 	// HMAC secret is generated by the CertGen job and stored in a secret
 	cfg, err := ctrl.GetConfig()
@@ -686,5 +708,5 @@ func hmac(ctx context.Context, namespace string) (hmac []byte, err error) {
 		return nil, fmt.Errorf(
 			"HMAC secret not found in secret %s/%s", namespace, hmacSecretName)
 	}
-	return
+	return hmac, err
 }

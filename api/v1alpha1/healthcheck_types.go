@@ -52,7 +52,6 @@ type PassiveHealthCheck struct {
 
 	// ConsecutiveGatewayErrors sets the number of consecutive gateway errors triggering ejection.
 	//
-	// +kubebuilder:default=0
 	// +optional
 	ConsecutiveGatewayErrors *uint32 `json:"consecutiveGatewayErrors,omitempty"`
 

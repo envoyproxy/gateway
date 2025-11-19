@@ -81,3 +81,34 @@ spec:
       backendRefs:
         - name: infra-backend-v1
           port: 8080
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-with-multi-value-headers
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: same-namespace
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /multi-value-header
+      filters:
+        - type: RequestHeaderModifier
+          requestHeaderModifier:
+            add:
+              - name: custom-request-header
+                value: bar,baz
+        - type: ResponseHeaderModifier
+          responseHeaderModifier:
+            set:
+              - name: Cache-Control
+                value: private,no-store
+            add:
+              - name: custom-response-header
+                value: one,two
+      backendRefs:
+        - name: infra-backend-v1
+          port: 8080

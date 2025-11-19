@@ -1,0 +1,68 @@
+date: October 31, 2025
+
+# Changes that are expected to cause an incompatibility with previous versions, such as deletions or modifications to existing APIs.
+breaking changes: |
+  ALPNProtocols in EnvoyProxy Backend TLS settings now default to [h2, http/1.1] when not explicitly configured.
+  When a Backend resource specifies TLS settings and SNI is not specified or a BackendTLSPolicy is not attached to it, the upstream TLS SNI value is now automatically determined from the HTTP Host header.
+  When a Backend resource specifies TLS settings and SNI is not specified or a BackendTLSPolicy is not attached to it, upstream certificate validation now requires DNS SAN to match the SNI value that is sent.
+  When a MirrorPolicy is used, the shadow host suffix is no longer automatically appended to the mirrored cluster name.
+  When running `egctl experimental collect`, SDS (Secret Discovery Service) data is no longer included by default. To include SDS data, enable it by adding the `--sds true` flag.
+  When setting `consecutiveGatewayFailure`, `enforcingConsecutiveGatewayFailure` is automatically set to 100.
+  When the OIDC provider issues a refresh token, Envoy Gateway will now automatically use it to refresh access and ID tokens when they expire. To maintain the previous behavior (not using refresh tokens), set `refreshToken` to false in the OIDC authentication configuration. See https://gateway.envoyproxy.io/docs/api/extension_types/#securitypolicyspec for details.
+
+# Updates addressing vulnerabilities, security flaws, or compliance requirements.
+security updates: |
+
+# New features or capabilities added in this release.
+new features: |
+  Added support for mutual TLS (mTLS) configuration for ExtensionServer to enable secure communication between Envoy Gateway and extension servers.
+  Added support for configuring RetryPolicy in gRPC External Authentication callouts via SecurityPolicy backend settings fields, allowing fine-grained control over retry behavior for authentication requests.
+  Added support for configuring late response headers in ClientTrafficPolicy, enabling headers to be added to responses after the response body has started.
+  Added support for configuring maximum connection duration, stream duration, and maximum requests per connection in ClientTrafficPolicy to provide better control over connection lifecycle and resource usage.
+  Added PercentageEnabled configuration option to ZoneAware load balancing configuration, enabling gradual rollout of zone-aware routing.
+  Added cacheDuration configuration for remoteJWKS (Remote JSON Web Key Set) in SecurityPolicy, allowing customization of JWKS caching behavior for improved performance.
+  Added support for DisableTokenEncryption in OIDC authentication to disable encryption of ID and access tokens stored in cookies, providing flexibility for environments with alternative security mechanisms.
+  Added support for OCSP (Online Certificate Status Protocol) stapling in listener TLS certificates, improving TLS handshake performance and enabling real-time certificate revocation checking.
+  Added support for per-backend client TLS settings in Backend resources, enabling configuration of client certificates, ciphers, TLS versions, and ALPN protocols on a per-backend basis for granular TLS control.
+  Added support for returning HTTP 503 Service Unavailable responses when no valid backend endpoints exist, improving observability and user experience during service outages.
+  Added support for CSRFTokenTTL configuration in OIDC authentication to customize the lifetime of CSRF tokens used during the OAuth2 authorization code flow, enhancing security and session management.
+  Added support for HTTP/2 stream timeout configuration, providing control over stream-level timeouts in HTTP/2 connections.
+  Added support for Envoy PreconnectPolicy in BackendTrafficPolicy, enabling proactive connection establishment to backend services for reduced latency.
+  Added support for binaryData in ConfigMap referenced by HTTPRouteFilter for direct response, allowing binary content to be served directly from ConfigMaps.
+  Added support for PodDisruptionBudget (PDB) configuration for the rate limit service, improving availability during cluster maintenance operations.
+  Added automatic generation of TLS certificates in host mode when they do not exist, simplifying deployment and reducing manual certificate management overhead.
+  Added automatic implicit support for OPTIONS HTTP method when HTTPRoute CORS filter is used, simplifying CORS configuration for preflight requests.
+  Added support for rate limiting based on HTTP path and method in BackendTrafficPolicy, enabling more granular rate limiting policies.
+  Added support for Certificate Revocation Lists (CRLs) in ClientTrafficPolicy, enabling certificate revocation checking for enhanced security.
+
+bug fixes: |
+  Fixed %ROUTE_KIND% operator to be properly lower-cased when used by clusterStatName in EnvoyProxy API, ensuring consistent metric naming conventions.
+  Fixed maxAcceptPerSocketEvent configuration being ignored in ClientTrafficPolicy, now correctly applying the configured value to limit connections accepted per socket event.
+  Fixed an issue where topologyInjectorDisabled was enabled but the local cluster was not defined, causing configuration inconsistencies.
+  Fixed log formatting of improper key-value pairs to prevent DPANIC errors in controller-runtime logger, improving stability and log readability.
+  Fixed handling of context-related transient errors to prevent incorrect state reconciliation and unintended behavior during API server communication interruptions.
+  Fixed an issue where the controller could not read EnvoyProxy resources that are attached only to GatewayClass, improving resource discovery and reconciliation.
+  Fixed adding metadata for proxyService and OIDC xDS clusters, ensuring proper metadata propagation for service discovery and authentication.
+  Fixed handling of millisecond-level retry durations and token TTLs in OIDC authentication, ensuring precise time-based configuration values are correctly processed.
+  Fixed indexer and controller crashing when BackendTrafficPolicy has a redirect response override, improving stability during policy configuration updates.
+  Fixed Lua validator log level to be suppressed by default, reducing log noise and improving performance during Lua script validation.
+  Fixed ProxyTopologyInjector cache sync race condition that caused injection failures, ensuring reliable topology injection during concurrent operations.
+  Fixed validation for gRPC routes with extension reference filters, ensuring proper validation and processing of gRPC routes with extension integrations.
+  Fixed service account token handling in GatewayNamespaceMode to use SDS (Secret Discovery Service) for properly refreshing expired tokens, ensuring continuous service availability.
+  Fixed handling of regex meta characters in prefix match replace for URL rewrite, ensuring special characters are correctly processed during URL transformations.
+  Disabled the default emission of `x-envoy-ratelimited` headers from the rate limit filter to reduce header bloat. Re-enable with the `enableEnvoyHeaders` setting in ClientTrafficPolicy if needed.
+  Fixed a nil pointer panic in the XDS translator when building API key authentication filter configurations with `sanitize` enabled and no `forwardClientIDHeader` set, improving stability and error handling.
+  Truncated Gateway API status condition messages to stay within Kubernetes limits and prevent update failures, ensuring reliable status updates for large message payloads.
+  Fixed an issue in EnvoyPatchPolicy where it didn't match the target Gateway or GatewayClass due to an incorrect name reference, ensuring proper policy application.
+  Fixed certificate SAN (Subject Alternative Name) overlap detection in gateway listeners, improving TLS certificate validation and error reporting.
+  Fixed description and translation behavior for PreserveXRequestID configuration, ensuring consistent request ID preservation across HTTP requests.
+  Fixed race condition in proxy context map used in host mode, preventing concurrent access issues and ensuring reliable proxy context management.
+
+# Enhancements that improve performance.
+performance improvements: |
+
+# Deprecated features or APIs.
+deprecations: |
+
+# Other notable changes not covered by the above sections.
+Other changes: |

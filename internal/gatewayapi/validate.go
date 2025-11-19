@@ -253,7 +253,7 @@ func (t *Translator) validateBackendRefBackend(backendRef gwapiv1.BackendObjectR
 		)
 	}
 
-	if err := validateBackend(backend, resources.BackendTLSPolicies); err != nil {
+	if err := validateBackend(backend, resources.BackendTLSPolicies, t.RunningOnHost); err != nil {
 		return err
 	}
 
@@ -457,7 +457,7 @@ func (t *Translator) validateTerminateModeAndGetTLSSecrets(listener *ListenerCon
 		secrets = append(secrets, secret)
 	}
 
-	certs, err := validateTLSSecretsData(secrets)
+	certs, err := parseCertsFromTLSSecretsData(secrets)
 	if err != nil {
 		status.SetGatewayListenerStatusCondition(listener.gateway.Gateway,
 			listener.listenerStatusIdx,

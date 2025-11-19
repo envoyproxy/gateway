@@ -413,7 +413,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 			}
 
 			if httpListener.TLS.CACertificate != nil {
-				caSecret := buildXdsTLSCaCertSecret(httpListener.TLS.CACertificate)
+				caSecret := buildXdsTLSCaCertSecret(httpListener.TLS.CACertificate, httpListener.TLS.Crl)
 				if err = tCtx.AddXdsResource(resourcev3.SecretType, caSecret); err != nil {
 					errs = errors.Join(errs, err)
 				}
@@ -787,7 +787,7 @@ func (t *Translator) processTCPListenerXdsTranslation(
 					}
 				}
 				if route.TLS.Terminate.CACertificate != nil {
-					caSecret := buildXdsTLSCaCertSecret(route.TLS.Terminate.CACertificate)
+					caSecret := buildXdsTLSCaCertSecret(route.TLS.Terminate.CACertificate, route.TLS.Terminate.Crl)
 					if err := tCtx.AddXdsResource(resourcev3.SecretType, caSecret); err != nil {
 						errs = errors.Join(errs, err)
 					}
@@ -1177,7 +1177,10 @@ func buildValidationContext(tlsConfig *ir.TLSUpstreamConfig) (*tlsv3.CommonTlsCo
 	}
 	hasSANValidations := false
 
-	if tlsConfig.SNI != nil {
+	// 3. If SubjectAltNames are specified, Hostname can be used for certificate selection
+	//    but MUST NOT be used for authentication. If you want to use the value
+	//    of the Hostname field for authentication, you MUST add it to the SubjectAltNames list.
+	if tlsConfig.SNI != nil && len(tlsConfig.SubjectAltNames) == 0 {
 		validationContext.DefaultValidationContext.MatchTypedSubjectAltNames = []*tlsv3.SubjectAltNameMatcher{
 			{
 				SanType: tlsv3.SubjectAltNameMatcher_DNS,

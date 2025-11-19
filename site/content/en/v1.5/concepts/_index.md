@@ -76,9 +76,9 @@ For a deeper understanding of Envoy Gateway’s building blocks, you may also wi
 [2]:	https://gateway-api.sigs.k8s.io/api-types/gateway/
 [3]:	https://gateway-api.sigs.k8s.io/api-types/httproute/
 [4]:	https://gateway-api.sigs.k8s.io/api-types/grpcroute/
-[5]:	https://gateway-api.sigs.k8s.io/reference/spec#gateway.networking.k8s.io/v1alpha2.TLSRoute
-[6]:	https://gateway-api.sigs.k8s.io/reference/spec#gateway.networking.k8s.io/v1alpha2.TCPRoute
-[7]:	https://gateway-api.sigs.k8s.io/reference/spec#gateway.networking.k8s.io/v1alpha2.UDPRoute
+[5]:	https://gateway-api.sigs.k8s.io/reference/1.3/spec/#tlsroute
+[6]:	https://gateway-api.sigs.k8s.io/reference/1.3/spec#tcproute
+[7]:	https://gateway-api.sigs.k8s.io/reference/1.3/spec#udproute
 [8]:	../tasks/traffic/backend
 [9]:	../api/extension_types#clienttrafficpolicy
 [10]:	../api/extension_types#backendtrafficpolicy

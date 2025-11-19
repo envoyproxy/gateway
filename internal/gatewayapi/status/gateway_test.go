@@ -171,7 +171,7 @@ func TestUpdateGatewayStatusProgrammedCondition(t *testing.T) {
 					for i := 0; i < 20; i++ {
 						addr.IPv4 = append(addr.IPv4, strconv.Itoa(i))
 					}
-					return
+					return addr
 				}(),
 				svc: &corev1.Service{
 					TypeMeta:   metav1.TypeMeta{},
@@ -192,7 +192,7 @@ func TestUpdateGatewayStatusProgrammedCondition(t *testing.T) {
 						Value: strconv.Itoa(i),
 					})
 				}
-				return
+				return addr
 			}(),
 		},
 		{
@@ -377,14 +377,14 @@ func TestUpdateGatewayProgrammedCondition(t *testing.T) {
 			},
 		},
 		{
-			name:              "not ready gateway with too many addresses",
+			name:              "ready gateway with too many addresses",
 			serviceAddressNum: 17,
 			deploymentStatus:  appsv1.DeploymentStatus{AvailableReplicas: 1},
 			expectCondition: []metav1.Condition{
 				{
 					Type:    string(gwapiv1.GatewayConditionProgrammed),
-					Status:  metav1.ConditionFalse,
-					Reason:  string(gwapiv1.GatewayReasonInvalid),
+					Status:  metav1.ConditionTrue,
+					Reason:  string(gwapiv1.GatewayReasonProgrammed),
 					Message: fmt.Sprintf(messageFmtTooManyAddresses, 17),
 				},
 			},

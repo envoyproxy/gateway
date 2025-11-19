@@ -21,8 +21,7 @@ http:
     addRequestHeaders:
     - name: "some-header-multi-value"
       value:
-      - "some-value"
-      - "some-additional-value"
+      - "some-value,some-additional-value"
       append: true
     - name: "some-header"
       value:

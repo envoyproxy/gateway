@@ -15,22 +15,22 @@ render:
   knownTypes:
     - name: BackendObjectReference
       package: sigs.k8s.io/gateway-api/apis/v1
-      link: https://gateway-api.sigs.k8s.io/reference/spec/#backendobjectreference
+      link: https://gateway-api.sigs.k8s.io/reference/1.4/spec/#backendobjectreference
     - name: SecretObjectReference
       package: sigs.k8s.io/gateway-api/apis/v1
-      link: https://gateway-api.sigs.k8s.io/reference/spec/#secretobjectreference
+      link: https://gateway-api.sigs.k8s.io/reference/1.4/spec/#secretobjectreference
     - name: LocalPolicyTargetReferenceWithSectionName
       package: sigs.k8s.io/gateway-api/apis/v1alpha2
-      link: https://gateway-api.sigs.k8s.io/reference/spec/#localpolicytargetreferencewithsectionname
+      link: https://gateway-api.sigs.k8s.io/reference/1.4/spec/#localpolicytargetreferencewithsectionname
     - name: LocalPolicyTargetReference
       package: sigs.k8s.io/gateway-api/apis/v1
-      link: https://gateway-api.sigs.k8s.io/reference/spec/#localpolicytargetreference
+      link: https://gateway-api.sigs.k8s.io/reference/1.4/spec/#localpolicytargetreference
     - name: Duration
       package: sigs.k8s.io/gateway-api/apis/v1
-      link: https://gateway-api.sigs.k8s.io/reference/spec/#duration
+      link: https://gateway-api.sigs.k8s.io/reference/1.4/spec/#duration
     - name: PolicyStatus
       package: sigs.k8s.io/gateway-api/apis/v1
-      link: https://gateway-api.sigs.k8s.io/reference/spec/#policystatus
+      link: https://gateway-api.sigs.k8s.io/reference/1.4/spec/#policystatus
     - name: Fraction
       package: sigs.k8s.io/gateway-api/apis/v1
-      link: https://gateway-api.sigs.k8s.io/reference/spec/#fraction
+      link: https://gateway-api.sigs.k8s.io/reference/1.4/spec/#fraction

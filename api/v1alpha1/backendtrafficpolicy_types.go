@@ -23,6 +23,8 @@ const (
 // +kubebuilder:resource:categories=envoy-gateway,shortName=btp
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
+// +genclient
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 type BackendTrafficPolicy struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -39,10 +41,8 @@ type BackendTrafficPolicy struct {
 // +kubebuilder:validation:XValidation:rule="(has(self.targetRef) && !has(self.targetRefs)) || (!has(self.targetRef) && has(self.targetRefs)) || (has(self.targetSelectors) && self.targetSelectors.size() > 0) ", message="either targetRef or targetRefs must be used"
 // +kubebuilder:validation:XValidation:rule="has(self.targetRef) ? self.targetRef.group == 'gateway.networking.k8s.io' : true ", message="this policy can only have a targetRef.group of gateway.networking.k8s.io"
 // +kubebuilder:validation:XValidation:rule="has(self.targetRef) ? self.targetRef.kind in ['Gateway', 'HTTPRoute', 'GRPCRoute', 'UDPRoute', 'TCPRoute', 'TLSRoute'] : true", message="this policy can only have a targetRef.kind of Gateway/HTTPRoute/GRPCRoute/TCPRoute/UDPRoute/TLSRoute"
-// +kubebuilder:validation:XValidation:rule="has(self.targetRef) ? !has(self.targetRef.sectionName) : true",message="this policy does not yet support the sectionName field"
 // +kubebuilder:validation:XValidation:rule="has(self.targetRefs) ? self.targetRefs.all(ref, ref.group == 'gateway.networking.k8s.io') : true ", message="this policy can only have a targetRefs[*].group of gateway.networking.k8s.io"
 // +kubebuilder:validation:XValidation:rule="has(self.targetRefs) ? self.targetRefs.all(ref, ref.kind in ['Gateway', 'HTTPRoute', 'GRPCRoute', 'UDPRoute', 'TCPRoute', 'TLSRoute']) : true ", message="this policy can only have a targetRefs[*].kind of Gateway/HTTPRoute/GRPCRoute/TCPRoute/UDPRoute/TLSRoute"
-// +kubebuilder:validation:XValidation:rule="has(self.targetRefs) ? self.targetRefs.all(ref, !has(ref.sectionName)) : true",message="this policy does not yet support the sectionName field"
 // +kubebuilder:validation:XValidation:rule="!has(self.compression) || !has(self.compressor)", message="either compression or compressor can be set, not both"
 type BackendTrafficPolicySpec struct {
 	PolicyTargetReferences `json:",inline"`
@@ -128,6 +128,24 @@ type BackendTelemetry struct {
 	//
 	// +optional
 	Tracing *Tracing `json:"tracing,omitempty"`
+	// Metrics defines metrics configuration for the backend or Route.
+	//
+	// +optional
+	Metrics *BackendMetrics `json:"metrics,omitempty"`
+}
+
+type BackendMetrics struct {
+	// RouteStatName defines the value of the Route stat_prefix, determining how the route stats are named.
+	// For more details, see envoy docs: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto#config-route-v3-route
+	// The supported operators for this pattern are:
+	// %ROUTE_NAME%: name of Gateway API xRoute resource
+	// %ROUTE_NAMESPACE%: namespace of Gateway API xRoute resource
+	// %ROUTE_KIND%: kind of Gateway API xRoute resource
+	// Example: %ROUTE_KIND%/%ROUTE_NAMESPACE%/%ROUTE_NAME% => httproute/my-ns/my-route
+	// Disabled by default.
+	//
+	// +optional
+	RouteStatName *string `json:"routeStatName,omitempty"`
 }
 
 // ProtocolUpgradeConfig specifies the configuration for protocol upgrades.
@@ -167,6 +185,7 @@ type RequestBuffer struct {
 // BackendTrafficPolicyList contains a list of BackendTrafficPolicy resources.
 //
 // +kubebuilder:object:root=true
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 type BackendTrafficPolicyList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
@@ -174,5 +193,5 @@ type BackendTrafficPolicyList struct {
 }
 
 func init() {
-	SchemeBuilder.Register(&BackendTrafficPolicy{}, &BackendTrafficPolicyList{})
+	localSchemeBuilder.Register(&BackendTrafficPolicy{}, &BackendTrafficPolicyList{})
 }

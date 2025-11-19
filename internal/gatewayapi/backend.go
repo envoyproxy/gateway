@@ -17,6 +17,7 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
+	"github.com/envoyproxy/gateway/internal/utils/net"
 )
 
 func (t *Translator) ProcessBackends(backends []*egv1a1.Backend, backendTLSPolicies []*gwapiv1.BackendTLSPolicy) []*egv1a1.Backend {
@@ -27,7 +28,7 @@ func (t *Translator) ProcessBackends(backends []*egv1a1.Backend, backendTLSPolic
 			status.UpdateBackendStatusAcceptedCondition(backend, false,
 				"The Backend was not accepted since Backend is not enabled in Envoy Gateway Config")
 		} else {
-			if err := validateBackend(backend, backendTLSPolicies); err != nil {
+			if err := validateBackend(backend, backendTLSPolicies, t.RunningOnHost); err != nil {
 				status.UpdateBackendStatusAcceptedCondition(backend, false, fmt.Sprintf("The Backend was not accepted: %s", err.Error()))
 			} else {
 				status.UpdateBackendStatusAcceptedCondition(backend, true, "The Backend was accepted")
@@ -40,7 +41,7 @@ func (t *Translator) ProcessBackends(backends []*egv1a1.Backend, backendTLSPolic
 	return res
 }
 
-func validateBackend(backend *egv1a1.Backend, backendTLSPolicies []*gwapiv1.BackendTLSPolicy) status.Error {
+func validateBackend(backend *egv1a1.Backend, backendTLSPolicies []*gwapiv1.BackendTLSPolicy, runningOnHost bool) status.Error {
 	if backend.Spec.Type != nil && *backend.Spec.Type == egv1a1.BackendTypeDynamicResolver {
 		if len(backend.Spec.Endpoints) > 0 {
 			return status.NewRouteStatusError(
@@ -57,13 +58,13 @@ func validateBackend(backend *egv1a1.Backend, backendTLSPolicies []*gwapiv1.Back
 
 	for _, ep := range backend.Spec.Endpoints {
 		if ep.Hostname != nil {
-			routeErr := validateHostname(*ep.Hostname, "hostname")
+			routeErr := validateHostname(*ep.Hostname, "hostname", runningOnHost)
 			if routeErr != nil {
 				return routeErr
 			}
 		}
 		if ep.FQDN != nil {
-			routeErr := validateHostname(ep.FQDN.Hostname, "FQDN")
+			routeErr := validateHostname(ep.FQDN.Hostname, "FQDN", runningOnHost)
 			if routeErr != nil {
 				return routeErr
 			}
@@ -74,9 +75,9 @@ func validateBackend(backend *egv1a1.Backend, backendTLSPolicies []*gwapiv1.Back
 					fmt.Errorf("IP address %s is invalid", ep.IP.Address),
 					status.RouteReasonInvalidAddress,
 				)
-			} else if ip.IsLoopback() {
+			} else if ip.IsLoopback() && !runningOnHost {
 				return status.NewRouteStatusError(
-					fmt.Errorf("IP address %s in the loopback range is not supported", ep.IP.Address),
+					fmt.Errorf("IP address %s in the loopback range is only supported when using the Host infrastructure", ep.IP.Address),
 					status.RouteReasonInvalidAddress,
 				)
 			}
@@ -87,7 +88,11 @@ func validateBackend(backend *egv1a1.Backend, backendTLSPolicies []*gwapiv1.Back
 
 // validateBackendTLSSettings validates CACert is specified if InsecureSkipVerify is false
 func validateBackendTLSSettings(backend *egv1a1.Backend, backendTLSPolicies []*gwapiv1.BackendTLSPolicy) status.Error {
-	if backend.Spec.TLS != nil && !ptr.Deref(backend.Spec.TLS.InsecureSkipVerify, false) {
+	if backend.Spec.TLS == nil {
+		return nil
+	}
+
+	if !ptr.Deref(backend.Spec.TLS.InsecureSkipVerify, false) {
 		var (
 			backendTLSHasCACerts         bool
 			backendTLSPoliciesHasCACerts bool
@@ -152,10 +157,20 @@ func validateBackendTLSSettings(backend *egv1a1.Backend, backendTLSPolicies []*g
 			}
 		}
 	}
+
+	if backend.Spec.TLS.BackendTLSConfig != nil && backend.Spec.TLS.ClientCertificateRef != nil {
+		ns := string(ptr.Deref(backend.Spec.TLS.ClientCertificateRef.Namespace, "default"))
+		if ns != backend.Namespace {
+			return status.NewRouteStatusError(
+				fmt.Errorf("clientCertificateRef Secret is not located in the same namespace as Backend. Secret namespace: %s does not match Backend namespace: %s", ns, backend.Namespace),
+				status.RouteReasonInvalidBackendRef,
+			)
+		}
+	}
 	return nil
 }
 
-func validateHostname(hostname, typeName string) *status.RouteStatusError {
+func validateHostname(hostname, typeName string, allowLocalhost bool) *status.RouteStatusError {
 	// must be a valid hostname
 	if errs := validation.IsDNS1123Subdomain(hostname); errs != nil {
 		return status.NewRouteStatusError(
@@ -163,7 +178,8 @@ func validateHostname(hostname, typeName string) *status.RouteStatusError {
 			status.RouteReasonInvalidAddress,
 		)
 	}
-	if len(strings.Split(hostname, ".")) < 2 {
+	isLocalHostname := allowLocalhost && hostname == net.DefaultLocalAddress
+	if !isLocalHostname && len(strings.Split(hostname, ".")) < 2 {
 		return status.NewRouteStatusError(
 			fmt.Errorf("hostname %s should be a domain with at least two segments separated by dots", hostname),
 			status.RouteReasonInvalidAddress,

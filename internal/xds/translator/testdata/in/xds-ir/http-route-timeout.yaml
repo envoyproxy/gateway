@@ -14,6 +14,7 @@ http:
       timeout:
         http:
           requestTimeout: 5s
+          maxStreamDuration: 10s
     headerMatches:
     - name: user
       stringMatch:
@@ -31,6 +32,7 @@ http:
       timeout:
         http:
           requestTimeout: 4000s
+          maxStreamDuration: 0s
     destination:
       name: "second-route-dest"
       settings:

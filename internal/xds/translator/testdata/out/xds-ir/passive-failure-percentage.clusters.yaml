@@ -25,6 +25,7 @@
     consecutive5xx: 5
     consecutiveGatewayFailure: 0
     consecutiveLocalOriginFailure: 5
+    enforcingConsecutiveGatewayFailure: 100
     enforcingFailurePercentage: 100
     failurePercentageThreshold: 90
     interval: 5s

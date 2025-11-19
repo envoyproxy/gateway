@@ -629,17 +629,20 @@ func (t *Translator) addXdsTCPFilterChain(
 
 	isTLSPassthrough := irRoute.TLS != nil && irRoute.TLS.TLSInspectorConfig != nil
 	isTLSTerminate := irRoute.TLS != nil && irRoute.TLS.Terminate != nil
-	statPrefix := "tcp"
-	if isTLSPassthrough {
-		statPrefix = "tls-passthrough"
-	}
+	statPrefix := ptr.Deref(irRoute.StatName, "")
+	if statPrefix == "" {
+		statPrefix = "tcp"
+		if isTLSPassthrough {
+			statPrefix = "tls-passthrough"
+		}
 
-	if isTLSTerminate {
-		statPrefix = "tls-terminate"
-	}
+		if isTLSTerminate {
+			statPrefix = "tls-terminate"
+		}
 
-	// Append port to the statPrefix.
-	statPrefix = strings.Join([]string{statPrefix, strconv.Itoa(int(xdsListener.Address.GetSocketAddress().GetPortValue()))}, "-")
+		// Append port to the statPrefix.
+		statPrefix = strings.Join([]string{statPrefix, strconv.Itoa(int(xdsListener.Address.GetSocketAddress().GetPortValue()))}, "-")
+	}
 
 	filterChain, err := buildTCPFilterChain(
 		irRoute,
@@ -981,15 +984,22 @@ func buildXdsTLSCertSecret(tlsConfig *ir.TLSCertificate) *tlsv3.Secret {
 	}
 }
 
-func buildXdsTLSCaCertSecret(caCertificate *ir.TLSCACertificate) *tlsv3.Secret {
+func buildXdsTLSCaCertSecret(caCertificate *ir.TLSCACertificate, crl *ir.TLSCrl) *tlsv3.Secret {
+	validationContext := &tlsv3.CertificateValidationContext{
+		TrustedCa: &corev3.DataSource{
+			Specifier: &corev3.DataSource_InlineBytes{InlineBytes: caCertificate.Certificate},
+		},
+	}
+	if crl != nil {
+		validationContext.Crl = &corev3.DataSource{
+			Specifier: &corev3.DataSource_InlineBytes{InlineBytes: crl.Data},
+		}
+		validationContext.OnlyVerifyLeafCertCrl = crl.OnlyVerifyLeafCertificate
+	}
 	return &tlsv3.Secret{
 		Name: caCertificate.Name,
 		Type: &tlsv3.Secret_ValidationContext{
-			ValidationContext: &tlsv3.CertificateValidationContext{
-				TrustedCa: &corev3.DataSource{
-					Specifier: &corev3.DataSource_InlineBytes{InlineBytes: caCertificate.Certificate},
-				},
-			},
+			ValidationContext: validationContext,
 		},
 	}
 }

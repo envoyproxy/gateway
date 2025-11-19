@@ -105,7 +105,7 @@ func TestValidateTLSSecretsData(t *testing.T) {
 			CertFile:    "malformed-encoding.pem",
 			KeyFile:     "rsa-pkcs8.key",
 			Domain:      "*",
-			ExpectedErr: errors.New("test/secret must contain valid tls.crt and tls.key, unable to validate certificate in tls.crt: pem decode failed"),
+			ExpectedErr: errors.New("test/secret must contain valid tls.crt and tls.key, unable to validate certificate in tls.crt: unable to decode pem data for certificate"),
 		},
 		{
 			Name:        "malformed-key-pem-encoding",
@@ -155,7 +155,7 @@ func TestValidateTLSSecretsData(t *testing.T) {
 		t.Run(tc.Name, func(t *testing.T) {
 			secrets := createTestSecrets(t, tc.CertFile, tc.KeyFile)
 			require.NotNil(t, secrets)
-			_, err := validateTLSSecretsData(secrets)
+			_, err := parseCertsFromTLSSecretsData(secrets)
 			if tc.ExpectedErr == nil {
 				require.NoError(t, err)
 			} else {
@@ -199,7 +199,7 @@ func TestValidateCertificate(t *testing.T) {
 		t.Run(tc.Name, func(t *testing.T) {
 			certData, err := os.ReadFile(filepath.Join("testdata", "tls", tc.CertFile))
 			require.NoError(t, err)
-			err = validateCertificate(certData)
+			err = validateCertificates(certData)
 			if tc.ExpectedErr == nil {
 				require.NoError(t, err)
 			} else {

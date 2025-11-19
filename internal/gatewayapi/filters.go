@@ -439,7 +439,7 @@ func (t *Translator) processRequestHeaderModifierFilter(
 			newHeader := ir.AddHeader{
 				Name:   headerKey,
 				Append: true,
-				Value:  strings.Split(addHeader.Value, ","),
+				Value:  []string{addHeader.Value},
 			}
 
 			filterContext.AddRequestHeaders = append(filterContext.AddRequestHeaders, newHeader)
@@ -495,7 +495,7 @@ func (t *Translator) processRequestHeaderModifierFilter(
 			newHeader := ir.AddHeader{
 				Name:   string(setHeader.Name),
 				Append: false,
-				Value:  strings.Split(setHeader.Value, ","),
+				Value:  []string{setHeader.Value},
 			}
 
 			filterContext.AddRequestHeaders = append(filterContext.AddRequestHeaders, newHeader)
@@ -630,7 +630,7 @@ func (t *Translator) processResponseHeaderModifierFilter(
 			newHeader := ir.AddHeader{
 				Name:   headerKey,
 				Append: true,
-				Value:  strings.Split(addHeader.Value, ","),
+				Value:  []string{addHeader.Value},
 			}
 
 			filterContext.AddResponseHeaders = append(filterContext.AddResponseHeaders, newHeader)
@@ -685,7 +685,7 @@ func (t *Translator) processResponseHeaderModifierFilter(
 			newHeader := ir.AddHeader{
 				Name:   string(setHeader.Name),
 				Append: false,
-				Value:  strings.Split(setHeader.Value, ","),
+				Value:  []string{setHeader.Value},
 			}
 
 			filterContext.AddResponseHeaders = append(filterContext.AddResponseHeaders, newHeader)
@@ -1073,6 +1073,7 @@ func (t *Translator) processUnresolvedHTTPFilter(errMsg string, filterContext *H
 	filterContext.DirectResponse = &ir.CustomResponse{
 		StatusCode: ptr.To(uint32(500)),
 	}
+	t.Logger.Info("returning 500 response due to unresolved HTTP filter")
 }
 
 func (t *Translator) processUnsupportedHTTPFilter(filterType string, filterContext *HTTPFiltersContext) {
@@ -1081,13 +1082,14 @@ func (t *Translator) processUnsupportedHTTPFilter(filterType string, filterConte
 	filterContext.DirectResponse = &ir.CustomResponse{
 		StatusCode: ptr.To(uint32(500)),
 	}
+	t.Logger.Info("returning 500 response due to unsupported HTTP filter")
 }
 
 func (t *Translator) processInvalidHTTPFilter(filterType string, filterContext *HTTPFiltersContext, err error) {
-	updateRouteStatusForFilter(
-		filterContext,
-		fmt.Sprintf("Invalid filter %s: %v", filterType, err))
+	errMsg := fmt.Sprintf("Invalid filter %s: %v", filterType, err)
+	updateRouteStatusForFilter(filterContext, errMsg)
 	filterContext.DirectResponse = &ir.CustomResponse{
 		StatusCode: ptr.To(uint32(500)),
 	}
+	t.Logger.Info("returning 500 response due to invalid HTTP filter")
 }

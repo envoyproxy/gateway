@@ -22,6 +22,8 @@ const (
 
 // ClientTrafficPolicy allows the user to configure the behavior of the connection
 // between the downstream client and Envoy Proxy listener.
+// +genclient
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 type ClientTrafficPolicy struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -141,13 +143,14 @@ type HeaderSettings struct {
 	// PreserveXRequestID configures Envoy to keep the X-Request-ID header if passed for a request that is edge
 	// (Edge request is the request from external clients to front Envoy) and not reset it, which is the current Envoy behaviour.
 	// Defaults to false and cannot be combined with RequestID.
-	// Deprecated: use RequestID=Preserve instead
+	// Deprecated: use RequestID=PreserveOrGenerate instead
 	//
 	// +optional
 	PreserveXRequestID *bool `json:"preserveXRequestID,omitempty"`
 
 	// RequestID configures Envoy's behavior for handling the `X-Request-ID` header.
-	// Defaults to `Generate` and builds the `X-Request-ID` for every request and ignores pre-existing values from the edge.
+	// When omitted default behavior is `Generate` which builds the `X-Request-ID` for every request
+	//  and ignores pre-existing values from the edge.
 	// (An "edge request" refers to a request from an external client to the Envoy entrypoint.)
 	//
 	// +optional
@@ -182,7 +185,8 @@ const (
 	WithUnderscoresActionDropHeader WithUnderscoresAction = "DropHeader"
 )
 
-// RequestIDAction configures Envoy's behavior for handling the `X-Request-ID` header.
+// RequestIDAction configures Envoy's behavior for handling the `X-Request-ID` header at the edge.
+// An "edge request" refers to a request from an external client to the Envoy entrypoint.
 //
 // +kubebuilder:validation:Enum=PreserveOrGenerate;Preserve;Generate;Disable
 type RequestIDAction string
@@ -355,11 +359,19 @@ type HTTP1Settings struct {
 
 // HTTP10Settings provides HTTP/1.0 configuration on the listener.
 type HTTP10Settings struct {
-	// UseDefaultHost defines if the HTTP/1.0 request is missing the Host header,
-	// then the hostname associated with the listener should be injected into the
-	// request.
-	// If this is not set and an HTTP/1.0 request arrives without a host, then
-	// it will be rejected.
+	// UseDefaultHost specifies whether a default Host header should be injected
+	// into HTTP/1.0 requests that do not include one.
+	//
+	// When set to true, Envoy Gateway injects the hostname associated with the
+	// listener or route into the request, in the following order:
+	//
+	//   1. If the targeted listener has a non-wildcard hostname, use that hostname.
+	//   2. If there is exactly one HTTPRoute with a non-wildcard hostname under
+	//      the targeted listener, use that hostname.
+	//
+	//  Note: Setting this field to true without a non-wildcard hostname makes the
+	// ClientTrafficPolicy invalid.
+	//
 	// +optional
 	UseDefaultHost *bool `json:"useDefaultHost,omitempty"`
 }
@@ -394,6 +406,7 @@ type ProxyProtocolSettings struct {
 //+kubebuilder:object:root=true
 
 // ClientTrafficPolicyList contains a list of ClientTrafficPolicy resources.
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 type ClientTrafficPolicyList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
@@ -401,5 +414,5 @@ type ClientTrafficPolicyList struct {
 }
 
 func init() {
-	SchemeBuilder.Register(&ClientTrafficPolicy{}, &ClientTrafficPolicyList{})
+	localSchemeBuilder.Register(&ClientTrafficPolicy{}, &ClientTrafficPolicyList{})
 }

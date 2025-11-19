@@ -19,6 +19,16 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8  # v5.0.0
+      # We need to fetch tags so go binary will be built with the recent vX.Y.Z-rc.0 tag,
+      # which will help to avoid false positives in trivy scan.
+      # `fetch-tags: true` doesn't work: https://github.com/actions/checkout/issues/1471
+      # As a workaround `filter: tree:0` is used to create a treeless clone.
+      # See:
+      # https://github.com/actions/checkout/issues/1471#issuecomment-1755639487
+      # https://github.blog/open-source/git/get-up-to-speed-with-partial-clone-and-shallow-clone/
+      with:
+        fetch-depth: 0
+        filter: tree:0
 
     - name: Build an image from Dockerfile
       run: |

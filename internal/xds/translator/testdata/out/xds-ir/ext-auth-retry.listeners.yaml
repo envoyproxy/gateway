@@ -28,6 +28,12 @@
                   - exact: header2
                     ignoreCase: true
               pathPrefix: /auth
+              retryPolicy:
+                numRetries: 2
+                retryBackOff:
+                  baseInterval: 0.200s
+                  maxInterval: 3s
+                retryOn: 5xx,deadline-exceeded,internal,unavailable
               serverUri:
                 cluster: securitypolicy/default/policy-for-gateway-1/envoy-gateway/http-backend
                 timeout: 10s

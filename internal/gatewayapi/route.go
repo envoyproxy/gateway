@@ -6,6 +6,7 @@
 package gatewayapi
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"strconv"
@@ -15,6 +16,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -185,6 +187,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 
 	// process each HTTPRouteRule, generate a unique Xds IR HTTPRoute per match of the rule
 	for ruleIdx, rule := range httpRoute.Spec.Rules {
+		// process HTTP Route filters first, so that the filters can be applied to the IR route later
 		httpFiltersContext, err := t.ProcessHTTPFilters(parentRef, httpRoute, rule.Filters, ruleIdx, resources)
 		if err != nil {
 			// Some errors should be treated as ResolvedRefs condition type,
@@ -201,9 +204,11 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 			continue
 		}
 
+		// build the metadata for this route rule
 		routeRuleMetadata := buildResourceMetadata(httpRoute, rule.Name)
 
-		// The HTTPRouteRule matches are ORed, a rule is matched if any one of its matches is satisfied,
+		// process HTTP Route Rules
+		// the HTTPRouteRule matches are ORed, a rule is matched if any one of its matches is satisfied,
 		// so generate a unique Xds IR HTTPRoute per match.
 		ruleRoutes, err := t.processHTTPRouteRule(httpRoute, ruleIdx, httpFiltersContext, &rule, routeRuleMetadata)
 		if err != nil {
@@ -214,20 +219,21 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 			continue
 		}
 
+		// process each backendRef, and calculate the destination settings for this rule
 		destName := irRouteDestinationName(httpRoute, ruleIdx)
 		allDs := make([]*ir.DestinationSetting, 0, len(rule.BackendRefs))
-		failedProcessDestination := false
+		var processDestinationError error
 		failedNoReadyEndpoints := false
 		hasDynamicResolver := false
 		backendRefNames := make([]string, len(rule.BackendRefs))
 		backendCustomRefs := make([]*ir.UnstructuredRef, 0, len(rule.BackendRefs))
-		// process each backendRef, and calculate the destination settings for this rule
 		for i := range rule.BackendRefs {
 			settingName := irDestinationSettingName(destName, i)
 			backendRefCtx := BackendRefWithFilters{
 				BackendRef: &rule.BackendRefs[i].BackendRef,
 				Filters:    rule.BackendRefs[i].Filters,
 			}
+			// ds will never be nil here because processDestination returns an empty DestinationSetting for invalid backendRefs.
 			ds, unstructuredRef, err := t.processDestination(settingName, backendRefCtx, parentRef, httpRoute, resources)
 			if err != nil {
 				// Gateway API conformance: When backendRef Service exists but has no endpoints,
@@ -243,15 +249,14 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 						fmt.Errorf("failed to process route rule %d backendRef %d: %w", ruleIdx, i, err),
 						err.Reason(),
 					))
-					failedProcessDestination = true
+					processDestinationError = err
 				}
-				continue
 			}
 			if unstructuredRef != nil {
 				backendCustomRefs = append(backendCustomRefs, unstructuredRef)
 			}
-			// ds can be nil if the backendRef weight is 0
-			if ds == nil {
+			// skip backendRefs with weight 0 as they do not affect the traffic distribution
+			if ds.Weight != nil && *ds.Weight == 0 {
 				continue
 			}
 			allDs = append(allDs, ds)
@@ -264,66 +269,124 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 			backendRefNames[i] = fmt.Sprintf("%s/%s", backendNamespace, rule.BackendRefs[i].Name)
 		}
 
-		// process each ir route
-		for _, irRoute := range ruleRoutes {
-			if len(backendCustomRefs) > 0 {
-				irRoute.ExtensionRefs = append(irRoute.ExtensionRefs, backendCustomRefs...)
-			}
-			destination := &ir.RouteDestination{
-				Settings: allDs,
-				Metadata: routeRuleMetadata,
-			}
-
-			switch {
-			// If the route already has a direct response or redirect configured, then it was from a filter so skip
-			// processing any destinations for this route.
-			case irRoute.DirectResponse != nil || irRoute.Redirect != nil:
-			// return 500 if any destination setting is invalid
-			// the error is already added to the error list when processing the destination
-			case failedProcessDestination:
+		// process each IR route generated for this rule, and set its destination
+		destination := &ir.RouteDestination{
+			Settings: allDs,
+			Metadata: routeRuleMetadata,
+		}
+		switch {
+		// return 500 if no valid destination settings exist
+		// the error is already added to the error list when processing the destination
+		case processDestinationError != nil && destination.ToBackendWeights().Valid == 0:
+			routesWithDirectResponse := sets.New[string]()
+			for _, irRoute := range ruleRoutes {
+				// If the route already has a direct response or redirect configured, then it was from a filter so skip
+				// the direct response from errors.
+				if irRoute.DirectResponse != nil || irRoute.Redirect != nil {
+					continue
+				}
 				irRoute.DirectResponse = &ir.CustomResponse{
 					StatusCode: ptr.To(uint32(500)),
 				}
-			// return 503 if endpoints does not exist
-			// the error is already added to the error list when processing the destination
-			case failedNoReadyEndpoints && len(allDs) == 0:
+				routesWithDirectResponse.Insert(irRoute.Name)
+			}
+			if len(routesWithDirectResponse) > 0 {
+				t.Logger.Info(
+					"setting 500 direct response in routes due to errors in processing destinations",
+					"routes", sets.List(routesWithDirectResponse),
+					"error", processDestinationError,
+				)
+			}
+		// return 503 if no ready endpoints exist
+		// the error is already added to the error list when processing the destination
+		case failedNoReadyEndpoints && destination.ToBackendWeights().Valid == 0:
+			routesWithDirectResponse := sets.New[string]()
+			for _, irRoute := range ruleRoutes {
+				// If the route already has a direct response or redirect configured, then it was from a filter so skip
+				// the direct response from errors.
+				if irRoute.DirectResponse != nil || irRoute.Redirect != nil {
+					continue
+				}
 				irRoute.DirectResponse = &ir.CustomResponse{
 					StatusCode: ptr.To(uint32(503)),
 				}
-			// return 500 if the weight of all the valid destination settings(endpoints list is not empty) is 0
-			case destination.ToBackendWeights().Valid == 0:
+				routesWithDirectResponse.Insert(irRoute.Name)
+			}
+			if len(routesWithDirectResponse) > 0 {
+				t.Logger.Info("setting 503 direct response in routes due to no ready endpoints",
+					"routes", sets.List(routesWithDirectResponse))
+			}
+		// return 500 if the weight of all the valid destination settings(endpoints list is not empty) is 0
+		case destination.ToBackendWeights().Valid == 0:
+			routesWithDirectResponse := sets.New[string]()
+			for _, irRoute := range ruleRoutes {
+				// If the route already has a direct response or redirect configured, then it was from a filter so skip
+				// the direct response from errors.
+				if irRoute.DirectResponse != nil || irRoute.Redirect != nil {
+					continue
+				}
 				irRoute.DirectResponse = &ir.CustomResponse{
 					StatusCode: ptr.To(uint32(500)),
 				}
-				// A route can only have one destination if this destination is a dynamic resolver, because the behavior of
-				// multiple destinations with one being a dynamic resolver just doesn't make sense.
-			case hasDynamicResolver && len(rule.BackendRefs) > 1:
+				routesWithDirectResponse.Insert(irRoute.Name)
+			}
+			if len(routesWithDirectResponse) > 0 {
+				t.Logger.Info("setting 500 direct response in routes due to all valid destinations having 0 weight",
+					"routes", sets.List(routesWithDirectResponse))
+			}
+		// A route can only have one destination if this destination is a dynamic resolver, because the behavior of
+		// multiple destinations with one being a dynamic resolver just doesn't make sense.
+		case hasDynamicResolver && len(rule.BackendRefs) > 1:
+			routesWithDirectResponse := sets.New[string]()
+			for _, irRoute := range ruleRoutes {
+				// If the route already has a direct response or redirect configured, then it was from a filter so skip
+				// the direct response from errors.
+				if irRoute.DirectResponse != nil || irRoute.Redirect != nil {
+					continue
+				}
 				irRoute.DirectResponse = &ir.CustomResponse{
 					StatusCode: ptr.To(uint32(500)),
 				}
-			default:
-				destination.Name = destName
-				destination.Settings = allDs
-				irRoute.Destination = destination
+				routesWithDirectResponse.Insert(irRoute.Name)
 			}
-
-			if pattern != "" {
-				destination.StatName = ptr.To(buildStatName(pattern, httpRoute, rule.Name, ruleIdx, backendRefNames))
-			}
-		}
-
-		if hasDynamicResolver && len(rule.BackendRefs) > 1 {
 			errorCollector.Add(status.NewRouteStatusError(
 				fmt.Errorf(
 					"failed to process route rule %d: dynamic resolver is not supported for multiple backendRefs",
 					ruleIdx),
 				status.RouteReasonInvalidBackendRef,
 			))
+			if len(routesWithDirectResponse) > 0 {
+				t.Logger.Info("setting 500 direct response in routes due to dynamic resolver with multiple backendRefs",
+					"routes", sets.List(routesWithDirectResponse))
+			}
+		default:
+			for _, irRoute := range ruleRoutes {
+				// If the route already has a direct response or redirect configured, then it was from a filter so skip
+				// processing any destinations for this route.
+				if irRoute.DirectResponse != nil || irRoute.Redirect != nil {
+					continue
+				}
+				destination := &ir.RouteDestination{
+					Name:     destName,
+					Settings: allDs,
+					Metadata: routeRuleMetadata,
+				}
+				irRoute.Destination = destination
+			}
 		}
 
-		// TODO handle:
-		//	- sum of weights for valid backend refs is 0
-		//	- etc.
+		// finalize the IR routes for this rule
+		for _, irRoute := range ruleRoutes {
+			// add custom backend refs if any
+			if len(backendCustomRefs) > 0 {
+				irRoute.ExtensionRefs = append(irRoute.ExtensionRefs, backendCustomRefs...)
+			}
+
+			// set the stat name for this route
+			if irRoute.Destination != nil && pattern != "" {
+				irRoute.Destination.StatName = ptr.To(buildStatName(pattern, httpRoute, rule.Name, ruleIdx, backendRefNames))
+			}
+		}
 
 		irRoutes = append(irRoutes, ruleRoutes...)
 	}
@@ -556,6 +619,52 @@ func (t *Translator) processHTTPRouteRule(
 		}
 		applyHTTPFiltersContextToIRRoute(httpFiltersContext, irRoute)
 		ruleRoutes = append(ruleRoutes, irRoute)
+
+		// When using a CORS filter with method matching that excludes OPTIONS,
+		// users must explicitly specify OPTIONS method match to handle CORS preflight requests.
+		// - https://github.com/kubernetes-sigs/gateway-api/issues/3857
+		//
+		// Envoy Gateway improves user experience by implicitly creating the envoy route for CORS preflight.
+		if (httpFiltersContext != nil && httpFiltersContext.CORS != nil) &&
+			(match.Method != nil && string(*match.Method) != "OPTIONS") {
+			corsRoute := &ir.HTTPRoute{
+				Name:              irRouteName(httpRoute, ruleIdx, matchIdx) + "/cors-preflight",
+				Metadata:          routeRuleMetadata,
+				PathMatch:         irRoute.PathMatch,
+				QueryParamMatches: irRoute.QueryParamMatches,
+				CORS:              httpFiltersContext.CORS,
+			}
+
+			// Create header matches:
+			// copy original headers (excluding :method) + add CORS headers (:method=OPTIONS, origin, access-control-request-method)
+			headerMatches := make([]*ir.StringMatch, 0, len(irRoute.HeaderMatches)+2)
+			for _, headerMatch := range irRoute.HeaderMatches {
+				// Skip the original method match for CORS preflight route to avoid conflicting method requirements.
+				if headerMatch.Name == ":method" {
+					continue
+				}
+				headerMatches = append(headerMatches, headerMatch)
+			}
+
+			corsHeaders := []*ir.StringMatch{
+				{
+					Name:  ":method",
+					Exact: ptr.To("OPTIONS"),
+				},
+				{
+					Name:      "origin",
+					SafeRegex: ptr.To(".*"),
+				},
+				{
+					Name:      "access-control-request-method",
+					SafeRegex: ptr.To(".*"),
+				},
+			}
+			headerMatches = append(headerMatches, corsHeaders...)
+
+			corsRoute.HeaderMatches = headerMatches
+			ruleRoutes = append(ruleRoutes, corsRoute)
+		}
 	}
 
 	return ruleRoutes, nil
@@ -676,6 +785,8 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 	// compute matches, filters, backends
 	for ruleIdx := range grpcRoute.Spec.Rules {
 		rule := &grpcRoute.Spec.Rules[ruleIdx]
+
+		// process GRPC route filters first, so that the filters can be applied to the IR route later
 		httpFiltersContext, err := t.ProcessGRPCFilters(parentRef, grpcRoute, rule.Filters, resources)
 		if err != nil {
 			errorCollector.Add(status.NewRouteStatusError(
@@ -684,7 +795,9 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 			).WithType(gwapiv1.RouteConditionAccepted))
 			continue
 		}
-		// A rule is matched if any one of its matches
+
+		// process GRPC Route Rules
+		// a rule is matched if any one of its matches
 		// is satisfied (i.e. a logical "OR"), so generate
 		// a unique Xds IR HTTPRoute per match.
 		ruleRoutes, err := t.processGRPCRouteRule(grpcRoute, ruleIdx, httpFiltersContext, rule)
@@ -696,9 +809,10 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 			continue
 		}
 
+		// process each backendRef, and calculate the destination settings for this rule
 		destName := irRouteDestinationName(grpcRoute, ruleIdx)
 		allDs := make([]*ir.DestinationSetting, 0, len(rule.BackendRefs))
-		failedProcessDestination := false
+		var processDestinationError error
 		failedNoReadyEndpoints := false
 
 		backendRefNames := make([]string, len(rule.BackendRefs))
@@ -708,6 +822,7 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 				BackendRef: &rule.BackendRefs[i].BackendRef,
 				Filters:    rule.BackendRefs[i].Filters,
 			}
+			// ds will never be nil here because processDestination returns an empty DestinationSetting for invalid backendRefs.
 			ds, _, err := t.processDestination(settingName, backendRefCtx, parentRef, grpcRoute, resources)
 			if err != nil {
 				// Gateway API conformance: When backendRef Service exists but has no endpoints,
@@ -723,12 +838,12 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 						fmt.Errorf("failed to process route rule %d backendRef %d: %w", ruleIdx, i, err),
 						err.Reason(),
 					))
-					failedProcessDestination = true
+					processDestinationError = err
 				}
-				continue
 			}
 
-			if ds == nil {
+			// skip backendRefs with weight 0 as they do not affect the traffic distribution
+			if ds.Weight != nil && *ds.Weight == 0 {
 				continue
 			}
 			allDs = append(allDs, ds)
@@ -737,48 +852,95 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 		}
 
 		// process each ir route
-		for _, irRoute := range ruleRoutes {
-			irRoute.IsHTTP2 = true
-			destination := &ir.RouteDestination{
-				Settings: allDs,
-				Metadata: buildResourceMetadata(grpcRoute, rule.Name),
-			}
-
-			switch {
-			// If the route already has a direct response or redirect configured, then it was from a filter so skip
-			// processing any destinations for this route.
-			case irRoute.DirectResponse != nil || irRoute.Redirect != nil:
-			// return 500 if any destination setting is invalid
-			// the error is already added to the error list when processing the destination
-			case failedProcessDestination:
+		destination := &ir.RouteDestination{
+			Settings: allDs,
+			Metadata: buildResourceMetadata(grpcRoute, rule.Name),
+		}
+		switch {
+		// return 500 if any destination setting is invalid
+		// the error is already added to the error list when processing the destination
+		case processDestinationError != nil && destination.ToBackendWeights().Valid == 0:
+			routesWithDirectResponse := sets.New[string]()
+			for _, irRoute := range ruleRoutes {
+				// If the route already has a direct response or redirect configured, then it was from a filter so skip
+				// the direct response from errors.
+				if irRoute.DirectResponse != nil || irRoute.Redirect != nil {
+					continue
+				}
 				irRoute.DirectResponse = &ir.CustomResponse{
 					StatusCode: ptr.To(uint32(500)),
 				}
-			// return 503 if endpoints does not exist
-			// the error is already added to the error list when processing the destination
-			case failedNoReadyEndpoints && len(allDs) == 0:
+				routesWithDirectResponse.Insert(irRoute.Name)
+			}
+			if len(routesWithDirectResponse) > 0 {
+				t.Logger.Info("setting 500 direct response in routes due to errors in processing destinations",
+					"routes", sets.List(routesWithDirectResponse),
+					"error", processDestinationError,
+				)
+			}
+		// return 503 if endpoints does not exist
+		// the error is already added to the error list when processing the destination
+		case failedNoReadyEndpoints && destination.ToBackendWeights().Valid == 0:
+			routesWithDirectResponse := sets.New[string]()
+			for _, irRoute := range ruleRoutes {
+				// If the route already has a direct response or redirect configured, then it was from a filter so skip
+				// the direct response from errors.
+				if irRoute.DirectResponse != nil || irRoute.Redirect != nil {
+					continue
+				}
 				irRoute.DirectResponse = &ir.CustomResponse{
 					StatusCode: ptr.To(uint32(503)),
 				}
-			// return 500 if the weight of all the valid destination settings(endpoints list is not empty) is 0
-			case destination.ToBackendWeights().Valid == 0:
+				routesWithDirectResponse.Insert(irRoute.Name)
+			}
+			if len(routesWithDirectResponse) > 0 {
+				t.Logger.Info("setting 503 direct response in routes due to no ready endpoints",
+					"routes", sets.List(routesWithDirectResponse))
+			}
+		// return 500 if the weight of all the valid destination settings(endpoints list is not empty) is 0
+		case destination.ToBackendWeights().Valid == 0:
+			routesWithDirectResponse := sets.New[string]()
+			for _, irRoute := range ruleRoutes {
+				// If the route already has a direct response or redirect configured, then it was from a filter so skip
+				// the direct response from errors.
+				if irRoute.DirectResponse != nil || irRoute.Redirect != nil {
+					continue
+				}
 				irRoute.DirectResponse = &ir.CustomResponse{
 					StatusCode: ptr.To(uint32(500)),
 				}
-			default:
-				destination.Name = destName
-				destination.Settings = allDs
+				routesWithDirectResponse.Insert(irRoute.Name)
+			}
+			if len(routesWithDirectResponse) > 0 {
+				t.Logger.Error(errors.New("all valid destinations have 0 weight"), "setting 500 direct response in routes due to all valid destinations having 0 weight",
+					"routes", sets.List(routesWithDirectResponse))
+			}
+		default:
+			for _, irRoute := range ruleRoutes {
+				// If the route already has a direct response or redirect configured, then it was from a filter so skip
+				// processing any destinations for this route.
+				if irRoute.DirectResponse != nil || irRoute.Redirect != nil {
+					continue
+				}
+				destination := &ir.RouteDestination{
+					Name:     destName,
+					Settings: allDs,
+					Metadata: buildResourceMetadata(grpcRoute, rule.Name),
+				}
 				irRoute.Destination = destination
 			}
 
-			if pattern != "" {
-				destination.StatName = ptr.To(buildStatName(pattern, grpcRoute, rule.Name, ruleIdx, backendRefNames))
-			}
 		}
 
-		// TODO handle:
-		//	- sum of weights for valid backend refs is 0
-		//	- etc.
+		// finalize the IR routes for this rule
+		for _, irRoute := range ruleRoutes {
+			irRoute.IsHTTP2 = true
+
+			// set the stat name for this route
+			if irRoute.Destination != nil && pattern != "" {
+				irRoute.Destination.StatName = ptr.To(buildStatName(pattern, grpcRoute, rule.Name, ruleIdx, backendRefNames))
+			}
+		}
 
 		irRoutes = append(irRoutes, ruleRoutes...)
 	}
@@ -1026,12 +1188,14 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 			for i := range rule.BackendRefs {
 				settingName := irDestinationSettingName(destName, i)
 				backendRefCtx := DirectBackendRef{BackendRef: &rule.BackendRefs[i]}
+				// ds will never be nil here because processDestination returns an empty DestinationSetting for invalid backendRefs.
 				ds, _, err := t.processDestination(settingName, backendRefCtx, parentRef, tlsRoute, resources)
 				if err != nil {
 					resolveErrs.Add(err)
 					continue
 				}
-				if ds != nil {
+				// skip backendRefs with weight 0 as they do not affect the traffic distribution
+				if ds.Weight != nil && *ds.Weight > 0 {
 					destSettings = append(destSettings, ds)
 				}
 			}
@@ -1092,6 +1256,7 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 						Settings: destSettings,
 						Metadata: buildResourceMetadata(tlsRoute, nil),
 					},
+					Metadata: buildResourceMetadata(tlsRoute, nil),
 				}
 				irListener.Routes = append(irListener.Routes, irRoute)
 
@@ -1182,14 +1347,15 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 		for i := range udpRoute.Spec.Rules[0].BackendRefs {
 			settingName := irDestinationSettingName(destName, i)
 			backendRefCtx := DirectBackendRef{BackendRef: &udpRoute.Spec.Rules[0].BackendRefs[i]}
+			// ds will never be nil here because processDestination returns an empty DestinationSetting for invalid backendRefs.
 			ds, _, err := t.processDestination(settingName, backendRefCtx, parentRef, udpRoute, resources)
 			if err != nil {
 				resolveErrs.Add(err)
 				continue
 			}
 
-			// Skip nil destination settings
-			if ds != nil {
+			// skip backendRefs with weight 0 as they do not affect the traffic distribution
+			if ds.Weight != nil && *ds.Weight > 0 {
 				destSettings = append(destSettings, ds)
 			}
 		}
@@ -1338,8 +1504,8 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 				resolveErrs.Add(err)
 				continue
 			}
-			// Skip nil destination settings
-			if ds != nil {
+			// skip backendRefs with weight 0 as they do not affect the traffic distribution
+			if ds.Weight != nil && *ds.Weight > 0 {
 				destSettings = append(destSettings, ds)
 			}
 		}
@@ -1389,9 +1555,9 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 					Destination: &ir.RouteDestination{
 						Name:     destName,
 						Settings: destSettings,
-						// tcpRoute Must have a single rule, so can use index 0.
 						Metadata: buildResourceMetadata(tcpRoute, tcpRoute.Spec.Rules[0].Name),
 					},
+					Metadata: buildResourceMetadata(tcpRoute, nil),
 				}
 
 				if irListener.TLS != nil {
@@ -1444,27 +1610,33 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 func (t *Translator) processDestination(name string, backendRefContext BackendRefContext,
 	parentRef *RouteParentContext, route RouteContext, resources *resource.Resources,
 ) (ds *ir.DestinationSetting, unstructuredRef *ir.UnstructuredRef, err status.Error) {
-	routeType := route.GetRouteType()
-	weight := uint32(1)
-	backendRef := backendRefContext.GetBackendRef()
-	if backendRef.Weight != nil {
-		weight = uint32(*backendRef.Weight)
+	var (
+		routeType  = route.GetRouteType()
+		weight     = (uint32(ptr.Deref(backendRefContext.GetBackendRef().Weight, int32(1))))
+		backendRef = backendRefContext.GetBackendRef()
+	)
+
+	// Create an empty DS without endpoints
+	// This represents an invalid DS.
+	emptyDS := &ir.DestinationSetting{
+		Name:   name,
+		Weight: &weight,
 	}
 
 	backendNamespace := NamespaceDerefOr(backendRef.Namespace, route.GetNamespace())
 	if !t.isCustomBackendResource(backendRef.Group, KindDerefOr(backendRef.Kind, resource.KindService)) {
 		err = t.validateBackendRef(backendRefContext, route, resources, backendNamespace, routeType)
 		{
-			// return with empty endpoint means the backend is invalid and an error to fail the associated route.
+			// Empty DS means the backend is invalid and an error to fail the associated route.
 			if err != nil {
-				return nil, nil, err
+				return emptyDS, nil, err
 			}
 		}
 	}
 
 	// Skip processing backends with 0 weight
 	if weight == 0 {
-		return nil, nil, nil
+		return emptyDS, nil, nil
 	}
 
 	var envoyProxy *egv1a1.EnvoyProxy
@@ -1475,21 +1647,39 @@ func (t *Translator) processDestination(name string, backendRefContext BackendRe
 
 	protocol := inspectAppProtocolByRouteKind(routeType)
 
+	// Process BackendTLSPolicy first to ensure status is set.
+	tls, tlsErr := t.applyBackendTLSSetting(
+		backendRef.BackendObjectReference,
+		backendNamespace,
+		gwapiv1.ParentReference{
+			Group:       parentRef.Group,
+			Kind:        parentRef.Kind,
+			Namespace:   parentRef.Namespace,
+			Name:        parentRef.Name,
+			SectionName: parentRef.SectionName,
+			Port:        parentRef.Port,
+		},
+		resources,
+		envoyProxy,
+	)
+	if tlsErr != nil {
+		return emptyDS, nil, status.NewRouteStatusError(tlsErr, status.RouteReasonInvalidBackendTLS)
+	}
+
 	switch KindDerefOr(backendRef.Kind, resource.KindService) {
 	case resource.KindServiceImport:
 		ds, err = t.processServiceImportDestinationSetting(name, backendRef.BackendObjectReference, backendNamespace, protocol, resources, envoyProxy)
 		if err != nil {
-			return nil, nil, err
+			return emptyDS, nil, err
 		}
 	case resource.KindService:
 		ds, err = t.processServiceDestinationSetting(name, backendRef.BackendObjectReference, backendNamespace, protocol, resources, envoyProxy)
 		if err != nil {
-			return nil, nil, err
+			return emptyDS, nil, err
 		}
 		svc := resources.GetService(backendNamespace, string(backendRef.Name))
 		ds.IPFamily = getServiceIPFamily(svc)
 		ds.PreferLocal = processPreferLocalZone(svc)
-
 	case egv1a1.KindBackend:
 		ds = t.processBackendDestinationSetting(name, backendRef.BackendObjectReference, backendNamespace, protocol, resources)
 	default:
@@ -1500,7 +1690,7 @@ func (t *Translator) processDestination(name string, backendRefContext BackendRe
 
 			// Check if the custom backend resource was found
 			if unstructuredRef == nil {
-				return nil, nil, status.NewRouteStatusError(
+				return emptyDS, nil, status.NewRouteStatusError(
 					fmt.Errorf("custom backend %s %s/%s not found",
 						KindDerefOr(backendRef.Kind, resource.KindService),
 						backendNamespace,
@@ -1517,33 +1707,16 @@ func (t *Translator) processDestination(name string, backendRefContext BackendRe
 		}
 	}
 
-	var tlsErr error
-	ds.TLS, tlsErr = t.applyBackendTLSSetting(
-		backendRef.BackendObjectReference,
-		backendNamespace,
-		gwapiv1.ParentReference{
-			Group:       parentRef.Group,
-			Kind:        parentRef.Kind,
-			Namespace:   parentRef.Namespace,
-			Name:        parentRef.Name,
-			SectionName: parentRef.SectionName,
-			Port:        parentRef.Port,
-		},
-		resources,
-		envoyProxy,
-	)
-	if tlsErr != nil {
-		return nil, nil, status.NewRouteStatusError(tlsErr, status.RouteReasonInvalidBackendTLS)
-	}
+	ds.TLS = tls
 
 	var filtersErr error
 	ds.Filters, filtersErr = t.processDestinationFilters(routeType, backendRefContext, parentRef, route, resources)
 	if filtersErr != nil {
-		return nil, nil, status.NewRouteStatusError(filtersErr, status.RouteReasonInvalidBackendFilters)
+		return emptyDS, nil, status.NewRouteStatusError(filtersErr, status.RouteReasonInvalidBackendFilters)
 	}
 
 	if err := validateDestinationSettings(ds, t.IsEnvoyServiceRouting(envoyProxy), backendRef.Kind); err != nil {
-		return nil, nil, err
+		return emptyDS, nil, err
 	}
 
 	ds.Weight = &weight
@@ -1933,24 +2106,23 @@ func getIREndpointsFromEndpointSlice(endpointSlice *discoveryv1.EndpointSlice, p
 				continue
 			}
 			conditions := endpoint.Conditions
+
 			// Unknown Serving/Terminating (nil) should fall-back to Ready, see https://pkg.go.dev/k8s.io/api/discovery/v1#EndpointConditions
+			// So drain the endpoint if:
+			// 1. Both `Terminating` and `Serving` are != null, and either `Terminating=true` or `Serving=false`
+			// 2. Or `Ready=false`
+			var draining bool
 			if conditions.Serving != nil && conditions.Terminating != nil {
-				// Check if the endpoint is serving
-				if !*conditions.Serving {
-					continue
-				}
-				// Drain the endpoint if it is being terminated
-				draining := *conditions.Terminating
-				for _, address := range endpoint.Addresses {
-					ep := ir.NewDestEndpoint(nil, address, uint32(*endpointPort.Port), draining, endpoint.Zone)
-					endpoints = append(endpoints, ep)
-				}
-			} else if conditions.Ready == nil || *conditions.Ready {
-				for _, address := range endpoint.Addresses {
-					ep := ir.NewDestEndpoint(nil, address, uint32(*endpointPort.Port), false, endpoint.Zone)
-					endpoints = append(endpoints, ep)
-				}
+				draining = *conditions.Terminating || !*conditions.Serving
+			} else {
+				draining = conditions.Ready != nil && !*conditions.Ready
 			}
+
+			for _, address := range endpoint.Addresses {
+				ep := ir.NewDestEndpoint(nil, address, uint32(*endpointPort.Port), draining, endpoint.Zone)
+				endpoints = append(endpoints, ep)
+			}
+
 		}
 	}
 

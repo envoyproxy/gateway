@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"math"
 	"net"
+	"path/filepath"
 	"strconv"
 
 	discoveryv3 "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
@@ -25,6 +26,7 @@ import (
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/crypto"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
+	"github.com/envoyproxy/gateway/internal/infrastructure/host"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/ratelimit"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/message"
@@ -43,12 +45,6 @@ const (
 	rateLimitTLSKeyFilepath = "/certs/tls.key"
 	// rateLimitTLSCACertFilepath is the ratelimit ca cert file.
 	rateLimitTLSCACertFilepath = "/certs/ca.crt"
-
-	// TODO: Make these path configurable.
-	// Default certificates path for envoy-gateway with Host infrastructure provider.
-	localTLSCertFilepath = "/tmp/envoy-gateway/certs/envoy-gateway/tls.crt"
-	localTLSKeyFilepath  = "/tmp/envoy-gateway/certs/envoy-gateway/tls.key"
-	localTLSCaFilepath   = "/tmp/envoy-gateway/certs/envoy-gateway/ca.crt"
 )
 
 type Config struct {
@@ -76,7 +72,7 @@ func New(cfg *Config) *Runner {
 }
 
 // Start starts the infrastructure runner
-func (r *Runner) Start(ctx context.Context) (err error) {
+func (r *Runner) Start(ctx context.Context) error {
 	r.Logger = r.Logger.WithName(r.Name()).WithValues("runner", r.Name())
 
 	// Set up the gRPC server and register the xDS handler.
@@ -105,7 +101,7 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 	go r.translateFromSubscription(ctx, c)
 
 	r.Logger.Info("started")
-	return
+	return err
 }
 
 func (r *Runner) serveXdsConfigServer(ctx context.Context) {
@@ -215,22 +211,38 @@ func (r *Runner) addNewSnapshot(ctx context.Context, resource types.XdsResources
 	return nil
 }
 
-func (r *Runner) loadTLSConfig() (tlsConfig *tls.Config, err error) {
+func (r *Runner) loadTLSConfig() (*tls.Config, error) {
+	var certPath, keyPath, caPath string
+
 	switch {
 	case r.EnvoyGateway.Provider.IsRunningOnKubernetes():
-		tlsConfig, err = crypto.LoadTLSConfig(rateLimitTLSCertFilepath, rateLimitTLSKeyFilepath, rateLimitTLSCACertFilepath)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create tls config: %w", err)
-		}
-
+		certPath = rateLimitTLSCertFilepath
+		keyPath = rateLimitTLSKeyFilepath
+		caPath = rateLimitTLSCACertFilepath
 	case r.EnvoyGateway.Provider.IsRunningOnHost():
-		tlsConfig, err = crypto.LoadTLSConfig(localTLSCertFilepath, localTLSKeyFilepath, localTLSCaFilepath)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create tls config: %w", err)
+		// Get configuration from provider
+		var hostCfg *egv1a1.EnvoyGatewayHostInfrastructureProvider
+		if p := r.EnvoyGateway.Provider; p != nil && p.Custom != nil &&
+			p.Custom.Infrastructure != nil && p.Custom.Infrastructure.Host != nil {
+			hostCfg = p.Custom.Infrastructure.Host
 		}
 
+		paths, err := host.GetPaths(hostCfg)
+		if err != nil {
+			return nil, fmt.Errorf("failed to determine paths: %w", err)
+		}
+
+		certDir := paths.CertDir("envoy-gateway")
+		certPath = filepath.Join(certDir, "tls.crt")
+		keyPath = filepath.Join(certDir, "tls.key")
+		caPath = filepath.Join(certDir, "ca.crt")
 	default:
 		return nil, fmt.Errorf("no valid tls certificates")
 	}
-	return
+
+	tlsConfig, err := crypto.LoadTLSConfig(certPath, keyPath, caPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create tls config: %w", err)
+	}
+	return tlsConfig, err
 }

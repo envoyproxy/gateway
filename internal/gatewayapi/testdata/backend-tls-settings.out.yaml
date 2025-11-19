@@ -24,6 +24,11 @@ backendTLSPolicies:
         namespace: envoy-gateway
       conditions:
       - lastTransitionTime: null
+        message: Resolved all the Object references.
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      - lastTransitionTime: null
         message: Policy has been accepted.
         reason: Accepted
         status: "True"
@@ -48,6 +53,11 @@ backendTLSPolicies:
         name: gateway-1
         namespace: envoy-gateway
       conditions:
+      - lastTransitionTime: null
+        message: Resolved all the Object references.
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
       - lastTransitionTime: null
         message: Policy has been accepted.
         reason: Accepted
@@ -74,6 +84,11 @@ backendTLSPolicies:
         name: gateway-1
         namespace: envoy-gateway
       conditions:
+      - lastTransitionTime: null
+        message: Resolved all the Object references.
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
       - lastTransitionTime: null
         message: Policy has been accepted.
         reason: Accepted
@@ -217,6 +232,32 @@ backends:
       reason: Accepted
       status: "False"
       type: Invalid
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: Backend
+  metadata:
+    name: backend-7
+    namespace: default
+  spec:
+    endpoints:
+    - ip:
+        address: 3.3.3.3
+        port: 3001
+    tls:
+      alpnProtocols:
+      - HTTP/2
+      clientCertificateRef:
+        group: ""
+        kind: Secret
+        name: client-auth-override
+        namespace: default
+      wellKnownCACertificates: System
+  status:
+    conditions:
+    - lastTransitionTime: null
+      message: The Backend was accepted
+      reason: Accepted
+      status: "True"
+      type: Accepted
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
@@ -234,7 +275,7 @@ gateways:
       protocol: HTTP
   status:
     listeners:
-    - attachedRoutes: 6
+    - attachedRoutes: 7
       conditions:
       - lastTransitionTime: null
         message: Sending translated listener configuration to the data plane
@@ -463,6 +504,41 @@ httpRoutes:
           unset or false.'
         reason: InvalidBackendRef
         status: "False"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        namespace: envoy-gateway
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    name: httproute-7-override-client-tls-settings
+    namespace: default
+  spec:
+    parentRefs:
+    - name: gateway-1
+      namespace: envoy-gateway
+    rules:
+    - backendRefs:
+      - group: gateway.envoyproxy.io
+        kind: Backend
+        name: backend-7
+        port: 3001
+      matches:
+      - path:
+          value: /
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
@@ -790,6 +866,56 @@ xdsIR:
           name: httproute-6
           namespace: default
         name: httproute/default/httproute-6/rule/0/match/0/*
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-7-override-client-tls-settings
+            namespace: default
+          name: httproute/default/httproute-7-override-client-tls-settings/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 3.3.3.3
+              port: 3001
+            metadata:
+              kind: Backend
+              name: backend-7
+              namespace: default
+            name: httproute/default/httproute-7-override-client-tls-settings/rule/0/backend/0
+            protocol: HTTP
+            tls:
+              alpnProtocols:
+              - HTTP/2
+              caCertificate:
+                name: backend-7/default-ca
+              ciphers:
+              - ECDHE-RSA-AES128-GCM-SHA256
+              - ECDHE-ECDSA-AES256-GCM-SHA384
+              clientCertificates:
+              - certificate: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURKRENDQWd5Z0F3SUJBZ0lVU3JTYktMZjBiTEVHb2dXeC9nQ3cyR0N0dnhFd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0V6RVJNQThHQTFVRUF3d0lWR1Z6ZENCSmJtTXdIaGNOTWpRd01qSTVNRGt6TURFd1doY05NelF3TWpJMgpNRGt6TURFd1dqQVRNUkV3RHdZRFZRUUREQWhVWlhOMElFbHVZekNDQVNJd0RRWUpLb1pJaHZjTkFRRUJCUUFECmdnRVBBRENDQVFvQ2dnRUJBSzFKempQSWlXZzNxb0hTckFkZGtlSmphTVA5aXlNVGkvQlBvOWNKUG9SRThaaTcKV2FwVXJYTC85QTlyK2pITXlHSVpOWk5kY1o1Y1kyWHYwTFA4WnhWeTJsazArM3d0WXpIbnBHWUdWdHlxMnRldApEaEZzaVBsODJZUmpDMG16V2E0UU16NFNYekZITmdJRHBSZGhmcm92bXNldVdHUUU4cFY0VWQ5VUsvU0tpbE1PCnF0QjVKaXJMUDJWczVUMW9XaWNXTFF2ZmJHd3Y3c0ZEZHI5YkcwWHRTUXAxN0hTZ281MFNERTUrQmpTbXB0RncKMVZjS0xscWFoTVhCRERpb3Jnd2hJaEdHS3BFU2VNMFA3YkZoVm1rTTNhc2gyeFNUQnVGVUJEbEU0Sk9haHp3cwpEWHJ1cFVoRGRTMWhkYzJmUHJqaEZBbEpmV0VZWjZCbFpqeXNpVlVDQXdFQUFhTndNRzR3SFFZRFZSME9CQllFCkZCUXVmSzFMaWJ1Vm05VHMvVmpCeDhMM3VpTmVNQjhHQTFVZEl3UVlNQmFBRkJRdWZLMUxpYnVWbTlUcy9WakIKeDhMM3VpTmVNQThHQTFVZEV3RUIvd1FGTUFNQkFmOHdHd1lEVlIwUkJCUXdFb0lCS29JTktpNWxlR0Z0Y0d4bApMbU52YlRBTkJna3Foa2lHOXcwQkFRc0ZBQU9DQVFFQWZQUzQxYWdldldNVjNaWHQwQ09GRzN1WWZQRlhuVnc2ClA0MXA5TzZHa2RZc3VxRnZQZVR5eUgyL2RBSUtLd1N6TS9wdGhnOEtuOExabG1KeUZObkExc3RKeG41WGRiVjEKcFBxajhVdllDQnp5ak1JcW1SeW9peUxpUWxib2hNYTBVZEVCS2NIL1BkTEU5SzhUR0pyWmdvR1hxcTFXbWl0RAozdmNQalNlUEtFaVVKVlM5bENoeVNzMEtZNUIraFVRRDBKajZucEZENFprMHhxZHhoMHJXdWVDcXE3dmpxRVl6CnBqNFB3cnVmbjFQQlRtZnhNdVYvVUpWNWViaWtldVpQMzVrV3pMUjdaV0FMN3d1RGRXcC82bzR5azNRTGFuRFEKQ3dnQ0ZjWCtzcyswVnl1TTNZZXJUT1VVOFFWSkp4NFVaQU5aeDYrNDNwZEpaT2NudFBaNENBPT0KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
+                name: default/client-auth-override
+                privateKey: '[redacted]'
+              ecdhCurves:
+              - ECDHE-RSA-AES128-GCM-SHA256
+              - ECDHE-ECDSA-AES256-GCM-SHA384
+              maxVersion: tls1.3
+              minVersion: tls1.2
+              signatureAlgorithms:
+              - RSA-PSS-RSAE-SHA256
+              - ECDSA-SECP256R1-SHA256
+              useSystemTrustStore: true
+            weight: 1
+        hostname: '*'
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-7-override-client-tls-settings
+          namespace: default
+        name: httproute/default/httproute-7-override-client-tls-settings/rule/0/match/0/*
         pathMatch:
           distinct: false
           name: ""
