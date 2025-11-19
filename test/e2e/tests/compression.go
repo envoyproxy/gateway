@@ -128,7 +128,7 @@ func testCompression(t *testing.T, suite *suite.ConformanceTestSuite, compressio
 
 func testCompressionChooseFirst(t *testing.T, suite *suite.ConformanceTestSuite, compressionType egv1a1.CompressorType) {
 	ns := "gateway-conformance-infra"
-	routeNN := types.NamespacedName{Name: "compression-choose-first", Namespace: ns}
+	routeNN := types.NamespacedName{Name: "compression", Namespace: ns}
 	gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 	gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
 
@@ -138,12 +138,12 @@ func testCompressionChooseFirst(t *testing.T, suite *suite.ConformanceTestSuite,
 		Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
 		Name:      gwapiv1.ObjectName(gwNN.Name),
 	}
-	BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "compression-choose-first", Namespace: ns}, suite.ControllerName, ancestorRef)
+	BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "compression", Namespace: ns}, suite.ControllerName, ancestorRef)
 
 	encoding := ContentEncoding(compressionType)
 	expectedResponse := http.ExpectedResponse{
 		Request: http.Request{
-			Path: "/compression-choose-first",
+			Path: "/compression",
 			Headers: map[string]string{
 				"Accept-encoding": "gzip, br, zstd",
 			},
