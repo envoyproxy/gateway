@@ -74,7 +74,9 @@ httpRoutes:
     parents:
     - conditions:
       - lastTransitionTime: null
-        message: RequestHeaderModifier Filter cannot set a header with an empty name
+        message: |-
+          Failed to process route rule 0: RequestHeaderModifier Filter cannot add a header with an empty name
+          RequestHeaderModifier Filter cannot set a header with an empty name.
         reason: UnsupportedValue
         status: "False"
         type: Accepted

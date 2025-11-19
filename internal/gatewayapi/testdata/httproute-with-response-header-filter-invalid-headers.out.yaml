@@ -71,8 +71,9 @@ httpRoutes:
     parents:
     - conditions:
       - lastTransitionTime: null
-        message: 'Header: "example:1". The ResponseHeaderModifier filter cannot set
-          the Host header or headers with a ''/'' or '':'' character in them.'
+        message: 'Failed to process route rule 0: Header: "example:1". The ResponseHeaderModifier
+          filter cannot set the Host header or headers with a ''/'' or '':'' character
+          in them.'
         reason: UnsupportedValue
         status: "False"
         type: Accepted
@@ -117,8 +118,9 @@ httpRoutes:
     parents:
     - conditions:
       - lastTransitionTime: null
-        message: 'Header: "example/2". The ResponseHeaderModifier filter cannot remove
-          the Host header or headers with a ''/'' or '':'' character in them.'
+        message: 'Failed to process route rule 0: Header: "example/2". The ResponseHeaderModifier
+          filter cannot remove the Host header or headers with a ''/'' or '':'' character
+          in them.'
         reason: UnsupportedValue
         status: "False"
         type: Accepted
@@ -163,8 +165,9 @@ httpRoutes:
     parents:
     - conditions:
       - lastTransitionTime: null
-        message: 'Header: "host". The ResponseHeaderModifier filter cannot set the
-          Host header or headers with a ''/'' or '':'' character in them.'
+        message: 'Failed to process route rule 0: Header: "host". The ResponseHeaderModifier
+          filter cannot set the Host header or headers with a ''/'' or '':'' character
+          in them.'
         reason: UnsupportedValue
         status: "False"
         type: Accepted
