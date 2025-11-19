@@ -35,13 +35,7 @@ import (
 )
 
 func init() {
-	ConformanceTests = append(
-		ConformanceTests,
-		CompressionTest,
-		CompressionTestBrotliChooseFirst,
-		CompressionTestGzipChooseFirst,
-		CompressionTestZstdChooseFirst,
-	)
+	ConformanceTests = append(ConformanceTests, CompressionTest)
 }
 
 var CompressionTest = suite.ConformanceTest{
@@ -59,6 +53,10 @@ var CompressionTest = suite.ConformanceTest{
 
 		t.Run("HTTPRoute with zstd compression", func(t *testing.T) {
 			testCompression(t, suite, egv1a1.ZstdCompressorType)
+		})
+
+		t.Run("HTTPRoute with brotli compression chooseFirst", func(t *testing.T) {
+			testCompressionChooseFirst(t, suite, egv1a1.BrotliCompressorType)
 		})
 
 		t.Run("HTTPRoute without compression", func(t *testing.T) {
@@ -90,39 +88,6 @@ var CompressionTest = suite.ConformanceTest{
 			}
 
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
-		})
-	},
-}
-
-var CompressionTestBrotliChooseFirst = suite.ConformanceTest{
-	ShortName:   "Compression-Brotli-Choose-First",
-	Description: "Test brotli chooseFirst response compression on HTTPRoute",
-	Manifests:   []string{"testdata/compression-brotli-choose-first.yaml"},
-	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
-		t.Run("HTTPRoute with brotli compression chooseFirst", func(t *testing.T) {
-			testCompressionChooseFirst(t, suite, egv1a1.BrotliCompressorType)
-		})
-	},
-}
-
-var CompressionTestGzipChooseFirst = suite.ConformanceTest{
-	ShortName:   "Compression-Gzip-Choose-First",
-	Description: "Test gzip chooseFirst response compression on HTTPRoute",
-	Manifests:   []string{"testdata/compression-gzip-choose-first.yaml"},
-	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
-		t.Run("HTTPRoute with gzip compression chooseFirst", func(t *testing.T) {
-			testCompressionChooseFirst(t, suite, egv1a1.GzipCompressorType)
-		})
-	},
-}
-
-var CompressionTestZstdChooseFirst = suite.ConformanceTest{
-	ShortName:   "Compression-Zstd-Choose-First",
-	Description: "Test zstd chooseFirst response compression on HTTPRoute",
-	Manifests:   []string{"testdata/compression-zstd-choose-first.yaml"},
-	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
-		t.Run("HTTPRoute with zstd compression chooseFirst", func(t *testing.T) {
-			testCompressionChooseFirst(t, suite, egv1a1.ZstdCompressorType)
 		})
 	},
 }
