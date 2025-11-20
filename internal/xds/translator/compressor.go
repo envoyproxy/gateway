@@ -8,6 +8,7 @@ package translator
 import (
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
@@ -169,7 +170,9 @@ func (*compressor) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir
 	}
 
 	// Remove accept-encoding header to prevent double compression
-	route.RequestHeadersToRemove = append(route.RequestHeadersToRemove, "accept-encoding")
+	if !slices.Contains(route.RequestHeadersToRemove, "accept-encoding") {
+		route.RequestHeadersToRemove = append(route.RequestHeadersToRemove, "accept-encoding")
+	}
 
 	return nil
 }
