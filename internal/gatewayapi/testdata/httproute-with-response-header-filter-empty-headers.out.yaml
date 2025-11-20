@@ -75,7 +75,7 @@ httpRoutes:
     - conditions:
       - lastTransitionTime: null
         message: |-
-          Failed to process route rule 0: ResponseHeaderModifier Filter cannot add a header with an empty name
+          ResponseHeaderModifier Filter cannot add a header with an empty name
           ResponseHeaderModifier Filter cannot set a header with an empty name.
         reason: UnsupportedValue
         status: "False"

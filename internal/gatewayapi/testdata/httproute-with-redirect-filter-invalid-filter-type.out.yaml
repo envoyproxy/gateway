@@ -69,8 +69,7 @@ httpRoutes:
     parents:
     - conditions:
       - lastTransitionTime: null
-        message: 'Failed to process route rule 0: invalid filter ExtensionRef: unknown
-          kind unsupported.group.io/UnsupportedKind.'
+        message: 'Invalid filter ExtensionRef: unknown kind unsupported.group.io/UnsupportedKind.'
         reason: UnsupportedValue
         status: "False"
         type: Accepted
