@@ -114,7 +114,7 @@ func (t *Translator) processExtServiceDestination(
 			return nil, err
 		}
 	case resource.KindServiceImport:
-		ds, err = t.processServiceImportDestinationSetting(settingName, backendRef.BackendObjectReference, backendNamespace, protocol, resources, envoyProxy)
+		ds, err = t.processServiceImportDestinationSetting(translatorContext, settingName, backendRef.BackendObjectReference, backendNamespace, protocol, resources, envoyProxy)
 		if err != nil {
 			return nil, err
 		}
@@ -122,7 +122,7 @@ func (t *Translator) processExtServiceDestination(
 		if !t.BackendEnabled {
 			return nil, fmt.Errorf("resource %s of type Backend cannot be used since Backend is disabled in Envoy Gateway configuration", string(backendRef.Name))
 		}
-		ds = t.processBackendDestinationSetting(settingName, backendRef.BackendObjectReference, backendNamespace, protocol, resources)
+		ds = t.processBackendDestinationSetting(translatorContext, settingName, backendRef.BackendObjectReference, backendNamespace, protocol, resources)
 		// Dynamic resolver destinations are not supported for none-route destinations
 		if ds.IsDynamicResolver {
 			return nil, errors.New("dynamic resolver destinations are not supported")

@@ -41,7 +41,7 @@ func (t *Translator) ProcessGlobalResources(translatorContext *TranslatorContext
 
 	// Get the envoy client TLS secret. It is used for envoy to establish a TLS connection with control plane components,
 	// including the rate limit server and the wasm HTTP server.
-	envoyTLSSecret := resources.GetSecret(t.ControllerNamespace, envoyTLSSecretName)
+	envoyTLSSecret := translatorContext.GetSecret(t.ControllerNamespace, envoyTLSSecretName)
 	if envoyTLSSecret == nil {
 		return fmt.Errorf("envoy TLS secret %s/%s not found", t.ControllerNamespace, envoyTLSSecretName)
 	}

@@ -95,7 +95,7 @@ func (t *Translator) ProcessListeners(translatorContext *TranslatorContext, gate
 			t.validateAllowedNamespaces(listener)
 
 			// Process TLS configuration
-			t.validateTLSConfiguration(listener, resources)
+			t.validateTLSConfiguration(translatorContext, listener, resources)
 
 			// Process Hostname configuration
 			t.validateHostName(listener)
@@ -844,10 +844,10 @@ func (t *Translator) processBackendRefs(translatorContext *TranslatorContext, na
 			}
 			result = append(result, ds)
 		case resource.KindBackend:
-			if err := t.validateBackendRefBackend(ref.BackendObjectReference, resources, ns, true); err != nil {
+			if err := t.validateBackendRefBackend(translatorContext, ref.BackendObjectReference, resources, ns, true); err != nil {
 				return nil, nil, err
 			}
-			ds := t.processBackendDestinationSetting(name, ref.BackendObjectReference, ns, ir.TCP, resources)
+			ds := t.processBackendDestinationSetting(translatorContext, name, ref.BackendObjectReference, ns, ir.TCP, resources)
 			// Dynamic resolver destinations are not supported for none-route destinations
 			if ds.IsDynamicResolver {
 				return nil, nil, errors.New("dynamic resolver destinations are not supported")

@@ -68,7 +68,7 @@ func (t *Translator) ProcessHTTPRoutes(translatorContext *TranslatorContext, htt
 		// Find out if this route attaches to one of our Gateway's listeners,
 		// and if so, get the list of listeners that allow it to attach for each
 		// parentRef.
-		relevantRoute := t.processAllowedListenersForParentRefs(httpRoute, gateways, resources)
+		relevantRoute := t.processAllowedListenersForParentRefs(translatorContext, httpRoute, gateways, resources)
 		if !relevantRoute {
 			continue
 		}
@@ -95,7 +95,7 @@ func (t *Translator) ProcessGRPCRoutes(translatorContext *TranslatorContext, grp
 		// Find out if this route attaches to one of our Gateway's listeners,
 		// and if so, get the list of listeners that allow it to attach for each
 		// parentRef.
-		relevantRoute := t.processAllowedListenersForParentRefs(grpcRoute, gateways, resources)
+		relevantRoute := t.processAllowedListenersForParentRefs(translatorContext, grpcRoute, gateways, resources)
 		if !relevantRoute {
 			continue
 		}
@@ -1158,7 +1158,7 @@ func (t *Translator) ProcessTLSRoutes(translatorContext *TranslatorContext, tlsR
 		// Find out if this route attaches to one of our Gateway's listeners,
 		// and if so, get the list of listeners that allow it to attach for each
 		// parentRef.
-		relevantRoute := t.processAllowedListenersForParentRefs(tlsRoute, gateways, resources)
+		relevantRoute := t.processAllowedListenersForParentRefs(translatorContext, tlsRoute, gateways, resources)
 		if !relevantRoute {
 			continue
 		}
@@ -1305,7 +1305,7 @@ func (t *Translator) ProcessUDPRoutes(translatorContext *TranslatorContext, udpR
 		// Find out if this route attaches to one of our Gateway's listeners,
 		// and if so, get the list of listeners that allow it to attach for each
 		// parentRef.
-		relevantRoute := t.processAllowedListenersForParentRefs(udpRoute, gateways, resources)
+		relevantRoute := t.processAllowedListenersForParentRefs(translatorContext, udpRoute, gateways, resources)
 		if !relevantRoute {
 			continue
 		}
@@ -1456,7 +1456,7 @@ func (t *Translator) ProcessTCPRoutes(translatorContext *TranslatorContext, tcpR
 		// Find out if this route attaches to one of our Gateway's listeners,
 		// and if so, get the list of listeners that allow it to attach for each
 		// parentRef.
-		relevantRoute := t.processAllowedListenersForParentRefs(tcpRoute, gateways, resources)
+		relevantRoute := t.processAllowedListenersForParentRefs(translatorContext, tcpRoute, gateways, resources)
 		if !relevantRoute {
 			continue
 		}
@@ -1668,7 +1668,7 @@ func (t *Translator) processDestination(translatorContext *TranslatorContext, na
 
 	switch KindDerefOr(backendRef.Kind, resource.KindService) {
 	case resource.KindServiceImport:
-		ds, err = t.processServiceImportDestinationSetting(name, backendRef.BackendObjectReference, backendNamespace, protocol, resources, envoyProxy)
+		ds, err = t.processServiceImportDestinationSetting(translatorContext, name, backendRef.BackendObjectReference, backendNamespace, protocol, resources, envoyProxy)
 		if err != nil {
 			return emptyDS, nil, err
 		}
@@ -1681,7 +1681,7 @@ func (t *Translator) processDestination(translatorContext *TranslatorContext, na
 		ds.IPFamily = getServiceIPFamily(svc)
 		ds.PreferLocal = processPreferLocalZone(svc)
 	case egv1a1.KindBackend:
-		ds = t.processBackendDestinationSetting(name, backendRef.BackendObjectReference, backendNamespace, protocol, resources)
+		ds = t.processBackendDestinationSetting(translatorContext, name, backendRef.BackendObjectReference, backendNamespace, protocol, resources)
 	default:
 		// Handle custom backend resources defined in extension manager
 		if t.isCustomBackendResource(backendRef.Group, KindDerefOr(backendRef.Kind, resource.KindService)) {
@@ -1760,6 +1760,7 @@ func isHeadlessService(ds *ir.DestinationSetting) bool {
 }
 
 func (t *Translator) processServiceImportDestinationSetting(
+	translatorContext *TranslatorContext,
 	name string,
 	backendRef gwapiv1.BackendObjectReference,
 	backendNamespace string,
@@ -1772,7 +1773,7 @@ func (t *Translator) processServiceImportDestinationSetting(
 		addrType  *ir.DestinationAddressType
 	)
 
-	serviceImport := resources.GetServiceImport(backendNamespace, string(backendRef.Name))
+	serviceImport := translatorContext.GetServiceImport(backendNamespace, string(backendRef.Name))
 	var servicePort mcsapiv1a1.ServicePort
 	for _, port := range serviceImport.Spec.Ports {
 		if port.Port == *backendRef.Port {
@@ -1787,7 +1788,7 @@ func (t *Translator) processServiceImportDestinationSetting(
 
 	// Route to endpoints by default
 	if !t.IsEnvoyServiceRouting(envoyProxy) {
-		endpointSlices := resources.GetEndpointSlicesForBackend(backendNamespace, string(backendRef.Name), resource.KindServiceImport)
+		endpointSlices := translatorContext.GetEndpointSlicesForBackend(backendNamespace, string(backendRef.Name), resource.KindServiceImport)
 		endpoints, addrType = getIREndpointsFromEndpointSlices(endpointSlices, servicePort.Name, getServicePortProtocol(servicePort.Protocol))
 		if len(endpoints) == 0 {
 			return nil, status.NewRouteStatusError(
@@ -1797,7 +1798,7 @@ func (t *Translator) processServiceImportDestinationSetting(
 		}
 	} else {
 		// Fall back to Service ClusterIP routing
-		backendIps := resources.GetServiceImport(backendNamespace, string(backendRef.Name)).Spec.IPs
+		backendIps := translatorContext.GetServiceImport(backendNamespace, string(backendRef.Name)).Spec.IPs
 		for _, ip := range backendIps {
 			ep := ir.NewDestEndpoint(nil, ip, uint32(*backendRef.Port), false, nil)
 			endpoints = append(endpoints, ep)
@@ -1843,7 +1844,7 @@ func (t *Translator) processServiceDestinationSetting(
 
 	// Route to endpoints by default
 	if !t.IsEnvoyServiceRouting(envoyProxy) {
-		endpointSlices := resources.GetEndpointSlicesForBackend(backendNamespace, string(backendRef.Name), KindDerefOr(backendRef.Kind, resource.KindService))
+		endpointSlices := translatorContext.GetEndpointSlicesForBackend(backendNamespace, string(backendRef.Name), KindDerefOr(backendRef.Kind, resource.KindService))
 		endpoints, addrType = getIREndpointsFromEndpointSlices(endpointSlices, servicePort.Name, getServicePortProtocol(servicePort.Protocol))
 		if len(endpoints) == 0 {
 			return nil, status.NewRouteStatusError(
@@ -1978,7 +1979,12 @@ func inspectAppProtocolByRouteKind(kind gwapiv1.Kind) ir.AppProtocol {
 // processAllowedListenersForParentRefs finds out if the route attaches to one of our
 // Gateways' listeners, and if so, gets the list of listeners that allow it to
 // attach for each parentRef.
-func (t *Translator) processAllowedListenersForParentRefs(routeContext RouteContext, gateways []*GatewayContext, resources *resource.Resources) bool {
+func (t *Translator) processAllowedListenersForParentRefs(
+	translatorContext *TranslatorContext,
+	routeContext RouteContext,
+	gateways []*GatewayContext,
+	resources *resource.Resources,
+) bool {
 	var relevantRoute bool
 	ns := gwapiv1.Namespace(routeContext.GetNamespace())
 	for _, parentRef := range GetParentReferences(routeContext) {
@@ -2011,7 +2017,7 @@ func (t *Translator) processAllowedListenersForParentRefs(routeContext RouteCont
 		for _, listener := range selectedListeners {
 			acceptedKind := routeContext.GetRouteType()
 			if listener.AllowsKind(gwapiv1.RouteGroupKind{Group: GroupPtr(gwapiv1.GroupName), Kind: acceptedKind}) &&
-				listener.AllowsNamespace(resources.GetNamespace(routeContext.GetNamespace())) {
+				listener.AllowsNamespace(translatorContext.GetNamespace(routeContext.GetNamespace())) {
 				allowedListeners = append(allowedListeners, listener)
 			}
 		}
@@ -2207,7 +2213,7 @@ func getTargetBackendReference(
 		}
 
 	case *backendRef.Kind == resource.KindServiceImport:
-		if si := resources.GetServiceImport(backendNamespace, string(backendRef.Name)); si != nil {
+		if si := translatorContext.GetServiceImport(backendNamespace, string(backendRef.Name)); si != nil {
 			for _, port := range si.Spec.Ports {
 				if port.Port == *backendRef.Port {
 					if port.Name != "" {
@@ -2227,6 +2233,7 @@ func getTargetBackendReference(
 }
 
 func (t *Translator) processBackendDestinationSetting(
+	translatorContext *TranslatorContext,
 	name string,
 	backendRef gwapiv1.BackendObjectReference,
 	backendNamespace string,
@@ -2236,7 +2243,7 @@ func (t *Translator) processBackendDestinationSetting(
 	var dstAddrType *ir.DestinationAddressType
 
 	addrTypeMap := make(map[ir.DestinationAddressType]int)
-	backend := resources.GetBackend(backendNamespace, string(backendRef.Name))
+	backend := translatorContext.GetBackend(backendNamespace, string(backendRef.Name))
 	for _, ap := range backend.Spec.AppProtocols {
 		protocol = backendAppProtocolToIRAppProtocol(ap, protocol)
 	}

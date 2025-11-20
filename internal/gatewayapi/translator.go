@@ -259,7 +259,7 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 	udpRoutes := t.ProcessUDPRoutes(translatorContext, resources.UDPRoutes, acceptedGateways, resources, xdsIR)
 
 	// Process ClientTrafficPolicies
-	clientTrafficPolicies := t.ProcessClientTrafficPolicies(resources, acceptedGateways, xdsIR, infraIR)
+	clientTrafficPolicies := t.ProcessClientTrafficPolicies(translatorContext, resources, acceptedGateways, xdsIR, infraIR)
 
 	routes := make([]RouteContext, len(httpRoutes)+len(grpcRoutes)+len(tlsRoutes)+len(tcpRoutes)+len(udpRoutes))
 	offset := 0
@@ -284,7 +284,7 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 	}
 
 	// Process BackendTrafficPolicies
-	backendTrafficPolicies := t.ProcessBackendTrafficPolicies(
+	backendTrafficPolicies := t.ProcessBackendTrafficPolicies(translatorContext,
 		resources, acceptedGateways, routes, xdsIR)
 
 	// Process SecurityPolicies

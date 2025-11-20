@@ -109,7 +109,7 @@ func (t *Translator) ProcessHTTPFilters(translatorContext *TranslatorContext,
 		case gwapiv1.HTTPRouteFilterCORS:
 			t.processCORSFilter(filter.CORS, httpFiltersContext)
 		case gwapiv1.HTTPRouteFilterExtensionRef:
-			t.processExtensionRefHTTPFilter(filter.ExtensionRef, httpFiltersContext, resources)
+			t.processExtensionRefHTTPFilter(translatorContext, filter.ExtensionRef, httpFiltersContext, resources)
 		default:
 			t.processUnsupportedHTTPFilter(string(filter.Type), httpFiltersContext)
 		}
@@ -154,7 +154,7 @@ func (t *Translator) ProcessGRPCFilters(translatorContext *TranslatorContext,
 				return nil, err
 			}
 		case gwapiv1.GRPCRouteFilterExtensionRef:
-			t.processExtensionRefHTTPFilter(filter.ExtensionRef, httpFiltersContext, resources)
+			t.processExtensionRefHTTPFilter(translatorContext, filter.ExtensionRef, httpFiltersContext, resources)
 		default:
 			t.processUnsupportedHTTPFilter(string(filter.Type), httpFiltersContext)
 		}
@@ -742,7 +742,12 @@ func (t *Translator) processResponseHeaderModifierFilter(
 	}
 }
 
-func (t *Translator) processExtensionRefHTTPFilter(extFilter *gwapiv1.LocalObjectReference, filterContext *HTTPFiltersContext, resources *resource.Resources) {
+func (t *Translator) processExtensionRefHTTPFilter(
+	translatorContext *TranslatorContext,
+	extFilter *gwapiv1.LocalObjectReference,
+	filterContext *HTTPFiltersContext,
+	resources *resource.Resources,
+) {
 	// Make sure the config actually exists.
 	if extFilter == nil {
 		return
@@ -841,7 +846,7 @@ func (t *Translator) processExtensionRefHTTPFilter(extFilter *gwapiv1.LocalObjec
 					dr := &ir.CustomResponse{}
 					if hrf.Spec.DirectResponse.Body != nil {
 						var err error
-						if dr.Body, err = getCustomResponseBody(hrf.Spec.DirectResponse.Body, resources, filterNs); err != nil {
+						if dr.Body, err = getCustomResponseBody(translatorContext, hrf.Spec.DirectResponse.Body, resources, filterNs); err != nil {
 							t.processInvalidHTTPFilter(string(extFilter.Kind), filterContext, err)
 							return
 						}
@@ -885,6 +890,7 @@ func (t *Translator) processExtensionRefHTTPFilter(extFilter *gwapiv1.LocalObjec
 
 				if hrf.Spec.CredentialInjection != nil {
 					secret, err := t.validateSecretRef(
+						translatorContext,
 						false,
 						crossNamespaceFrom{
 							group:     egv1a1.GroupName,

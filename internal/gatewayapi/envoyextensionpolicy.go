@@ -469,7 +469,7 @@ func (t *Translator) translateEnvoyExtensionPolicyForRoute(
 		errs                              error
 	)
 
-	if wasms, wasmError, wasmFailOpen = t.buildWasms(policy, resources); wasmError != nil {
+	if wasms, wasmError, wasmFailOpen = t.buildWasms(translatorContext, policy, resources); wasmError != nil {
 		wasmError = perr.WithMessage(wasmError, "Wasm")
 		errs = errors.Join(errs, wasmError)
 	}
@@ -485,7 +485,7 @@ func (t *Translator) translateEnvoyExtensionPolicyForRoute(
 			continue
 		}
 
-		if luas, luaError = t.buildLuas(policy, resources, gtwCtx.envoyProxy); luaError != nil {
+		if luas, luaError = t.buildLuas(translatorContext, policy, resources, gtwCtx.envoyProxy); luaError != nil {
 			luaError = perr.WithMessage(luaError, "Lua")
 			errs = errors.Join(errs, luaError)
 		}
@@ -571,11 +571,11 @@ func (t *Translator) translateEnvoyExtensionPolicyForGateway(
 		extProcError = perr.WithMessage(extProcError, "ExtProc")
 		errs = errors.Join(errs, extProcError)
 	}
-	if wasms, wasmError, wasmFailOpen = t.buildWasms(policy, resources); wasmError != nil {
+	if wasms, wasmError, wasmFailOpen = t.buildWasms(translatorContext, policy, resources); wasmError != nil {
 		wasmError = perr.WithMessage(wasmError, "Wasm")
 		errs = errors.Join(errs, wasmError)
 	}
-	if luas, luaError = t.buildLuas(policy, resources, gateway.envoyProxy); luaError != nil {
+	if luas, luaError = t.buildLuas(translatorContext, policy, resources, gateway.envoyProxy); luaError != nil {
 		luaError = perr.WithMessage(luaError, "Lua")
 		errs = errors.Join(errs, luaError)
 	}
@@ -640,7 +640,12 @@ func (t *Translator) translateEnvoyExtensionPolicyForGateway(
 	return errs
 }
 
-func (t *Translator) buildLuas(policy *egv1a1.EnvoyExtensionPolicy, resources *resource.Resources, envoyProxy *egv1a1.EnvoyProxy) ([]ir.Lua, error) {
+func (t *Translator) buildLuas(
+	translatorContext *TranslatorContext,
+	policy *egv1a1.EnvoyExtensionPolicy,
+	resources *resource.Resources,
+	envoyProxy *egv1a1.EnvoyProxy,
+) ([]ir.Lua, error) {
 	if policy == nil {
 		return nil, nil
 	}
@@ -649,7 +654,7 @@ func (t *Translator) buildLuas(policy *egv1a1.EnvoyExtensionPolicy, resources *r
 
 	for idx, ep := range policy.Spec.Lua {
 		name := irConfigNameForLua(policy, idx)
-		luaIR, err := t.buildLua(name, policy, ep, resources, envoyProxy)
+		luaIR, err := t.buildLua(translatorContext, name, policy, ep, resources, envoyProxy)
 		if err != nil {
 			return nil, err
 		}
@@ -659,6 +664,7 @@ func (t *Translator) buildLuas(policy *egv1a1.EnvoyExtensionPolicy, resources *r
 }
 
 func (t *Translator) buildLua(
+	translatorContext *TranslatorContext,
 	name string,
 	policy *egv1a1.EnvoyExtensionPolicy,
 	lua egv1a1.Lua,
@@ -668,7 +674,7 @@ func (t *Translator) buildLua(
 	var luaCode *string
 	var err error
 	if lua.Type == egv1a1.LuaValueTypeValueRef {
-		luaCode, err = getLuaBodyFromLocalObjectReference(lua.ValueRef, resources, policy.Namespace)
+		luaCode, err = getLuaBodyFromLocalObjectReference(translatorContext, lua.ValueRef, resources, policy.Namespace)
 	} else {
 		luaCode = lua.Inline
 	}
@@ -686,8 +692,13 @@ func (t *Translator) buildLua(
 }
 
 // getLuaBodyFromLocalObjectReference assumes the local object reference points to a Kubernetes ConfigMap
-func getLuaBodyFromLocalObjectReference(valueRef *gwapiv1.LocalObjectReference, resources *resource.Resources, policyNs string) (*string, error) {
-	cm := resources.GetConfigMap(policyNs, string(valueRef.Name))
+func getLuaBodyFromLocalObjectReference(
+	translatorContext *TranslatorContext,
+	valueRef *gwapiv1.LocalObjectReference,
+	resources *resource.Resources,
+	policyNs string,
+) (*string, error) {
+	cm := translatorContext.GetConfigMap(policyNs, string(valueRef.Name))
 	if cm != nil {
 		b, dataOk := cm.Data["lua"]
 		switch {
@@ -852,6 +863,7 @@ func irConfigNameForLua(policy *egv1a1.EnvoyExtensionPolicy, index int) string {
 }
 
 func (t *Translator) buildWasms(
+	translatorContext *TranslatorContext,
 	policy *egv1a1.EnvoyExtensionPolicy,
 	resources *resource.Resources,
 ) ([]ir.Wasm, error, bool) {
@@ -877,7 +889,7 @@ func (t *Translator) buildWasms(
 	hasFailClose := false
 	for idx, wasm := range policy.Spec.Wasm {
 		name := irConfigNameForWasm(policy, idx)
-		wasmIR, err := t.buildWasm(name, &wasm, policy, idx, resources)
+		wasmIR, err := t.buildWasm(translatorContext, name, &wasm, policy, idx, resources)
 		if err != nil {
 			errs = errors.Join(errs, err)
 			if wasm.FailOpen == nil || !*wasm.FailOpen {
@@ -897,6 +909,7 @@ func (t *Translator) buildWasms(
 }
 
 func (t *Translator) buildWasm(
+	translatorContext *TranslatorContext,
 	name string,
 	config *egv1a1.Wasm,
 	policy *egv1a1.EnvoyExtensionPolicy,
@@ -981,7 +994,7 @@ func (t *Translator) buildWasm(
 				namespace: policy.Namespace,
 			}
 
-			if secret, err = t.validateSecretRef(
+			if secret, err = t.validateSecretRef(translatorContext,
 				false, from, *image.PullSecretRef, resources); err != nil {
 				return nil, err
 			}
