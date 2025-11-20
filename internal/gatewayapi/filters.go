@@ -82,6 +82,7 @@ func (t *Translator) ProcessHTTPFilters(parentRef *RouteParentContext,
 		RuleIdx:      ruleIdx,
 		HTTPFilterIR: &HTTPFilterIR{},
 	}
+	var errs status.MultiStatusError
 	for i := range filters {
 		filter := filters[i]
 		// If an invalid filter type has been configured then skip processing any more filters
@@ -89,42 +90,46 @@ func (t *Translator) ProcessHTTPFilters(parentRef *RouteParentContext,
 			break
 		}
 		if err := ValidateHTTPRouteFilter(&filter, t.ExtensionGroupKinds...); err != nil {
-			return nil, t.processInvalidHTTPFilter(string(filter.Type), httpFiltersContext, err)
+			errs.Add(t.processInvalidHTTPFilter(string(filter.Type), httpFiltersContext, err))
+			break
 		}
 
 		switch filter.Type {
 		case gwapiv1.HTTPRouteFilterURLRewrite:
 			if err := t.processURLRewriteFilter(filter.URLRewrite, httpFiltersContext); err != nil {
-				return nil, err
+				errs.Add(err)
 			}
 		case gwapiv1.HTTPRouteFilterRequestRedirect:
 			if err := t.processRedirectFilter(filter.RequestRedirect, httpFiltersContext); err != nil {
-				return nil, err
+				errs.Add(err)
 			}
 		case gwapiv1.HTTPRouteFilterRequestHeaderModifier:
 			err := t.processRequestHeaderModifierFilter(filter.RequestHeaderModifier, httpFiltersContext)
 			if err != nil {
-				return nil, err
+				errs.Add(err)
 			}
 		case gwapiv1.HTTPRouteFilterResponseHeaderModifier:
 			if err := t.processResponseHeaderModifierFilter(filter.ResponseHeaderModifier, httpFiltersContext); err != nil {
-				return nil, err
+				errs.Add(err)
 			}
 		case gwapiv1.HTTPRouteFilterRequestMirror:
 			if err := t.processRequestMirrorFilter(i, filter.RequestMirror, httpFiltersContext, resources); err != nil {
-				return nil, err
+				errs.Add(err)
 			}
 		case gwapiv1.HTTPRouteFilterCORS:
 			t.processCORSFilter(filter.CORS, httpFiltersContext)
 		case gwapiv1.HTTPRouteFilterExtensionRef:
 			if err := t.processExtensionRefHTTPFilter(filter.ExtensionRef, httpFiltersContext, resources); err != nil {
-				return nil, err
+				errs.Add(err)
 			}
 		default:
-			return nil, t.processUnsupportedHTTPFilter(string(filter.Type), httpFiltersContext)
+			errs.Add(t.processUnsupportedHTTPFilter(string(filter.Type), httpFiltersContext))
 		}
 	}
 
+	if !errs.Empty() {
+		return httpFiltersContext, &errs
+	}
 	return httpFiltersContext, nil
 }
 
@@ -141,6 +146,7 @@ func (t *Translator) ProcessGRPCFilters(parentRef *RouteParentContext,
 		HTTPFilterIR: &HTTPFilterIR{},
 	}
 
+	var errs status.MultiStatusError
 	for i := range filters {
 		filter := filters[i]
 		// If an invalid filter type has been configured then skip processing any more filters
@@ -148,31 +154,35 @@ func (t *Translator) ProcessGRPCFilters(parentRef *RouteParentContext,
 			break
 		}
 		if err := ValidateGRPCRouteFilter(&filter, t.ExtensionGroupKinds...); err != nil {
-			return nil, t.processInvalidHTTPFilter(string(filter.Type), httpFiltersContext, err)
+			errs.Add(t.processInvalidHTTPFilter(string(filter.Type), httpFiltersContext, err))
+			break
 		}
 
 		switch filter.Type {
 		case gwapiv1.GRPCRouteFilterRequestHeaderModifier:
 			if err := t.processRequestHeaderModifierFilter(filter.RequestHeaderModifier, httpFiltersContext); err != nil {
-				return nil, err
+				errs.Add(err)
 			}
 		case gwapiv1.GRPCRouteFilterResponseHeaderModifier:
 			if err := t.processResponseHeaderModifierFilter(filter.ResponseHeaderModifier, httpFiltersContext); err != nil {
-				return nil, err
+				errs.Add(err)
 			}
 		case gwapiv1.GRPCRouteFilterRequestMirror:
 			if err := t.processRequestMirrorFilter(i, filter.RequestMirror, httpFiltersContext, resources); err != nil {
-				return nil, err
+				errs.Add(err)
 			}
 		case gwapiv1.GRPCRouteFilterExtensionRef:
 			if err := t.processExtensionRefHTTPFilter(filter.ExtensionRef, httpFiltersContext, resources); err != nil {
-				return nil, err
+				errs.Add(err)
 			}
 		default:
-			return nil, t.processUnsupportedHTTPFilter(string(filter.Type), httpFiltersContext)
+			errs.Add(t.processUnsupportedHTTPFilter(string(filter.Type), httpFiltersContext))
 		}
 	}
 
+	if !errs.Empty() {
+		return httpFiltersContext, &errs
+	}
 	return httpFiltersContext, nil
 }
 
