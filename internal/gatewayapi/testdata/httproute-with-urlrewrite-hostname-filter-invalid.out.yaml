@@ -69,8 +69,7 @@ httpRoutes:
     parents:
     - conditions:
       - lastTransitionTime: null
-        message: 'Failed to process route rule 0: Header must be set when rewrite
-          path type is "Header".'
+        message: Header must be set when rewrite path type is "Header".
         reason: UnsupportedValue
         status: "False"
         type: Accepted
@@ -116,8 +115,7 @@ httpRoutes:
     parents:
     - conditions:
       - lastTransitionTime: null
-        message: 'Failed to process route rule 0: cannot configure multiple urlRewrite
-          filters for a single HTTPRouteRule.'
+        message: Cannot configure multiple urlRewrite filters for a single HTTPRouteRule.
         reason: UnsupportedValue
         status: "False"
         type: Accepted
@@ -163,8 +161,7 @@ httpRoutes:
     parents:
     - conditions:
       - lastTransitionTime: null
-        message: 'Failed to process route rule 0: cannot configure multiple urlRewrite
-          filters for a single HTTPRouteRule.'
+        message: Cannot configure multiple urlRewrite filters for a single HTTPRouteRule.
         reason: UnsupportedValue
         status: "False"
         type: Accepted
@@ -212,8 +209,7 @@ httpRoutes:
     parents:
     - conditions:
       - lastTransitionTime: null
-        message: 'Failed to process route rule 0: cannot configure multiple urlRewrite
-          filters for a single HTTPRouteRule.'
+        message: Cannot configure multiple urlRewrite filters for a single HTTPRouteRule.
         reason: UnsupportedValue
         status: "False"
         type: Accepted
@@ -261,8 +257,7 @@ httpRoutes:
     parents:
     - conditions:
       - lastTransitionTime: null
-        message: 'Failed to process route rule 0: cannot configure multiple urlRewrite
-          filters for a single HTTPRouteRule.'
+        message: Cannot configure multiple urlRewrite filters for a single HTTPRouteRule.
         reason: UnsupportedValue
         status: "False"
         type: Accepted
@@ -310,8 +305,7 @@ httpRoutes:
     parents:
     - conditions:
       - lastTransitionTime: null
-        message: 'Failed to process route rule 0: cannot configure multiple urlRewrite
-          filters for a single HTTPRouteRule.'
+        message: Cannot configure multiple urlRewrite filters for a single HTTPRouteRule.
         reason: UnsupportedValue
         status: "False"
         type: Accepted

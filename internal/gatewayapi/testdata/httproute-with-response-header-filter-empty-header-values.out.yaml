@@ -72,8 +72,8 @@ httpRoutes:
     parents:
     - conditions:
       - lastTransitionTime: null
-        message: 'Failed to process route rule 0: Header: "example-header-2". ResponseHeaderModifier
-          Filter cannot add a header with an invalid value.'
+        message: 'Header: "example-header-2". ResponseHeaderModifier Filter cannot
+          add a header with an invalid value.'
         reason: UnsupportedValue
         status: "False"
         type: Accepted

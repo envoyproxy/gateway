@@ -68,8 +68,7 @@ httpRoutes:
     parents:
     - conditions:
       - lastTransitionTime: null
-        message: 'Failed to process route rule 0: ReplacePrefixMatch must be set when
-          rewrite path type is "ReplacePrefixMatch".'
+        message: ReplacePrefixMatch must be set when rewrite path type is "ReplacePrefixMatch".
         reason: UnsupportedValue
         status: "False"
         type: Accepted

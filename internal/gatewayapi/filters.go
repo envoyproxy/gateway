@@ -75,14 +75,14 @@ func (t *Translator) ProcessHTTPFilters(parentRef *RouteParentContext,
 	filters []gwapiv1.HTTPRouteFilter,
 	ruleIdx int,
 	resources *resource.Resources,
-) (*HTTPFiltersContext, status.Error) {
+) (*HTTPFiltersContext, []status.Error) {
 	httpFiltersContext := &HTTPFiltersContext{
 		ParentRef:    parentRef,
 		Route:        route,
 		RuleIdx:      ruleIdx,
 		HTTPFilterIR: &HTTPFilterIR{},
 	}
-	var errs status.MultiStatusError
+	var errs status.TypedErrorCollector
 	for i := range filters {
 		filter := filters[i]
 		// If an invalid filter type has been configured then skip processing any more filters
@@ -128,7 +128,7 @@ func (t *Translator) ProcessHTTPFilters(parentRef *RouteParentContext,
 	}
 
 	if !errs.Empty() {
-		return httpFiltersContext, &errs
+		return httpFiltersContext, errs.GetAllErrors()
 	}
 	return httpFiltersContext, nil
 }
@@ -138,7 +138,7 @@ func (t *Translator) ProcessGRPCFilters(parentRef *RouteParentContext,
 	route RouteContext,
 	filters []gwapiv1.GRPCRouteFilter,
 	resources *resource.Resources,
-) (*HTTPFiltersContext, status.Error) {
+) (*HTTPFiltersContext, []status.Error) {
 	httpFiltersContext := &HTTPFiltersContext{
 		ParentRef: parentRef,
 		Route:     route,
@@ -146,7 +146,7 @@ func (t *Translator) ProcessGRPCFilters(parentRef *RouteParentContext,
 		HTTPFilterIR: &HTTPFilterIR{},
 	}
 
-	var errs status.MultiStatusError
+	var errs status.TypedErrorCollector
 	for i := range filters {
 		filter := filters[i]
 		// If an invalid filter type has been configured then skip processing any more filters
@@ -180,10 +180,7 @@ func (t *Translator) ProcessGRPCFilters(parentRef *RouteParentContext,
 		}
 	}
 
-	if !errs.Empty() {
-		return httpFiltersContext, &errs
-	}
-	return httpFiltersContext, nil
+	return httpFiltersContext, errs.GetAllErrors()
 }
 
 // Checks if the context and the rewrite both contain a core gw-api HTTP URL rewrite
@@ -1075,6 +1072,10 @@ func (t *Translator) processCORSFilter(
 	}
 }
 
+// Unresolvable or unsupported filters should be treated like other reference failures:
+// (`Accepted` will be set to true, `ResolvedRefs` to false with a `InvalidKind` Reason,
+// and traffic that would have matched the filter should receive a 500 error.)
+// ref: https://gateway-api.sigs.k8s.io/geps/gep-1364/#new-and-updated-conditions
 func (t *Translator) processUnresolvedHTTPFilter(errMsg string, filterContext *HTTPFiltersContext) status.Error {
 	t.Logger.Info("marking route unresolved due to HTTP filter error", "error", errMsg)
 	filterContext.DirectResponse = &ir.CustomResponse{
@@ -1083,9 +1084,13 @@ func (t *Translator) processUnresolvedHTTPFilter(errMsg string, filterContext *H
 	return status.NewRouteStatusError(
 		errors.New(errMsg),
 		gwapiv1.RouteReasonBackendNotFound,
-	).WithType(gwapiv1.RouteConditionAccepted)
+	).WithType(gwapiv1.RouteConditionResolvedRefs)
 }
 
+// Unresolvable or unsupported filters should be treated like other reference failures:
+// (`Accepted` will be set to true, `ResolvedRefs` to false with a `InvalidKind` Reason,
+// and traffic that would have matched the filter should receive a 500 error.)
+// ref: https://gateway-api.sigs.k8s.io/geps/gep-1364/#new-and-updated-conditions
 func (t *Translator) processUnsupportedHTTPFilter(filterType string, filterContext *HTTPFiltersContext) status.Error {
 	t.Logger.Info("marking route unsupported due to HTTP filter type", "filterType", filterType)
 	filterContext.DirectResponse = &ir.CustomResponse{
@@ -1094,7 +1099,7 @@ func (t *Translator) processUnsupportedHTTPFilter(filterType string, filterConte
 	return status.NewRouteStatusError(
 		fmt.Errorf("unsupported filter type: %s", filterType),
 		gwapiv1.RouteReasonUnsupportedValue,
-	).WithType(gwapiv1.RouteConditionAccepted)
+	).WithType(gwapiv1.RouteConditionResolvedRefs)
 }
 
 func (t *Translator) processInvalidHTTPFilter(filterType string, filterContext *HTTPFiltersContext, err error) status.Error {

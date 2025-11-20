@@ -69,8 +69,8 @@ httpRoutes:
     parents:
     - conditions:
       - lastTransitionTime: null
-        message: 'Failed to process route rule 0: RequestHeaderModifiegr Filter did
-          not provide valid configuration to add/set/remove any headers.'
+        message: RequestHeaderModifiegr Filter did not provide valid configuration
+          to add/set/remove any headers.
         reason: UnsupportedValue
         status: "False"
         type: Accepted

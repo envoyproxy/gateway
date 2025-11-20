@@ -75,8 +75,7 @@ httpRoutes:
     parents:
     - conditions:
       - lastTransitionTime: null
-        message: 'Failed to process route rule 0: cannot configure multiple urlRewrite
-          filters for a single HTTPRouteRule.'
+        message: Cannot configure multiple urlRewrite filters for a single HTTPRouteRule.
         reason: UnsupportedValue
         status: "False"
         type: Accepted

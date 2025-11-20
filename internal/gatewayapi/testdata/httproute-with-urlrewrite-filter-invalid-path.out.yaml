@@ -70,8 +70,7 @@ httpRoutes:
     parents:
     - conditions:
       - lastTransitionTime: null
-        message: 'Failed to process route rule 0: ReplaceFullPath cannot be set when
-          rewrite path type is "ReplacePrefixMatch".'
+        message: ReplaceFullPath cannot be set when rewrite path type is "ReplacePrefixMatch".
         reason: UnsupportedValue
         status: "False"
         type: Accepted

@@ -70,10 +70,10 @@ httpRoutes:
     parents:
     - conditions:
       - lastTransitionTime: null
-        message: 'Failed to process route rule 0: hostname "-rewrite.com" is invalid:
-          [a lowercase RFC 1123 subdomain must consist of lower case alphanumeric
-          characters, ''-'' or ''.'', and must start and end with an alphanumeric
-          character (e.g. ''example.com'', regex used for validation is ''[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*'')].'
+        message: 'Hostname "-rewrite.com" is invalid: [a lowercase RFC 1123 subdomain
+          must consist of lower case alphanumeric characters, ''-'' or ''.'', and
+          must start and end with an alphanumeric character (e.g. ''example.com'',
+          regex used for validation is ''[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*'')].'
         reason: UnsupportedValue
         status: "False"
         type: Accepted
