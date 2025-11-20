@@ -84,6 +84,7 @@ type BackendTrafficPolicySpec struct {
 
 	// The compressor config for the http streams.
 	// This provides more granular control over compression configuration.
+	// Order matters: The first compressor in the list is preferred when q-values in Accept-Encoding are equal.
 	//
 	// +patchMergeKey=type
 	// +patchStrategy=merge
