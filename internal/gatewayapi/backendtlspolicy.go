@@ -100,14 +100,14 @@ func (t *Translator) applyBackendTLSSetting(
 		}
 		if backend.Spec.TLS != nil {
 			// Get the server certificate validation settings from Backend resource.
-			if backendValidationTLSConfig, err = t.processServerValidationTLSSettings(translatorContext, backend, resources); err != nil {
+			if backendValidationTLSConfig, err = t.processServerValidationTLSSettings(translatorContext, backend); err != nil {
 				return nil, err
 			}
 
 			// Get the client certificate and common TLS settings from Backend resource.
 			if backend.Spec.TLS.BackendTLSConfig != nil {
 				if backendClientTLSConfig, err = t.processClientTLSSettings(translatorContext,
-					resources, backend.Spec.TLS.BackendTLSConfig, backend.Namespace, backend.Name, false); err != nil {
+					backend.Spec.TLS.BackendTLSConfig, backend.Namespace, backend.Name, false); err != nil {
 					return nil, err
 				}
 			}
@@ -135,7 +135,7 @@ func (t *Translator) applyBackendTLSSetting(
 	// Get the client certificate and common TLS settings from EnvoyProxy resource.
 	if envoyProxy != nil && envoyProxy.Spec.BackendTLS != nil {
 		if envoyProxyClientTLSConfig, err = t.processClientTLSSettings(translatorContext,
-			resources, envoyProxy.Spec.BackendTLS, envoyProxy.Namespace, envoyProxy.Name, true); err != nil {
+			envoyProxy.Spec.BackendTLS, envoyProxy.Namespace, envoyProxy.Name, true); err != nil {
 			return nil, err
 		}
 	}
@@ -243,7 +243,6 @@ func mergeClientTLSConfigs(
 func (t *Translator) processServerValidationTLSSettings(
 	translatorContext *TranslatorContext,
 	backend *egv1a1.Backend,
-	resources *resource.Resources,
 ) (*ir.TLSUpstreamConfig, error) {
 	tlsConfig := &ir.TLSUpstreamConfig{
 		InsecureSkipVerify: ptr.Deref(backend.Spec.TLS.InsecureSkipVerify, false),
@@ -261,7 +260,7 @@ func (t *Translator) processServerValidationTLSSettings(
 				Name: fmt.Sprintf("%s/%s-ca", backend.Name, backend.Namespace),
 			}
 		} else if len(backend.Spec.TLS.CACertificateRefs) > 0 {
-			caCert, err := getCaCertsFromCARefs(translatorContext, backend.Namespace, backend.Spec.TLS.CACertificateRefs, resources)
+			caCert, err := getCaCertsFromCARefs(translatorContext, backend.Namespace, backend.Spec.TLS.CACertificateRefs)
 			if err != nil {
 				return nil, err
 			}
@@ -281,12 +280,12 @@ func (t *Translator) processBackendTLSPolicy(
 	parent gwapiv1.ParentReference,
 	resources *resource.Resources,
 ) (*ir.TLSUpstreamConfig, error) {
-	policy := getBackendTLSPolicy(translatorContext, resources.BackendTLSPolicies, backendRef, backendNamespace, resources)
+	policy := getBackendTLSPolicy(translatorContext, resources.BackendTLSPolicies, backendRef, backendNamespace)
 	if policy == nil {
 		return nil, nil
 	}
 
-	tlsBundle, err := getBackendTLSBundle(translatorContext, policy, resources)
+	tlsBundle, err := getBackendTLSBundle(translatorContext, policy)
 	ancestorRefs := getAncestorRefs(policy)
 	ancestorRefs = append(ancestorRefs, &parent)
 
@@ -333,7 +332,6 @@ func (t *Translator) processBackendTLSPolicy(
 
 func (t *Translator) processClientTLSSettings(
 	translatorContext *TranslatorContext,
-	resources *resource.Resources,
 	clientTLS *egv1a1.BackendTLSConfig,
 	ownerNs, ownerName string,
 	fromEnvoyProxy bool,
@@ -420,10 +418,9 @@ func getBackendTLSPolicy(
 	policies []*gwapiv1.BackendTLSPolicy,
 	backendRef gwapiv1.BackendObjectReference,
 	backendNamespace string,
-	resources *resource.Resources,
 ) *gwapiv1.BackendTLSPolicy {
 	// SectionName is port number for EG Backend object
-	target := getTargetBackendReference(translatorContext, backendRef, backendNamespace, resources)
+	target := getTargetBackendReference(translatorContext, backendRef, backendNamespace)
 	for _, policy := range policies {
 		if backendTLSTargetMatched(policy, target, backendNamespace) {
 			return policy
@@ -432,7 +429,7 @@ func getBackendTLSPolicy(
 	return nil
 }
 
-func getBackendTLSBundle(translatorContext *TranslatorContext, backendTLSPolicy *gwapiv1.BackendTLSPolicy, resources *resource.Resources) (*ir.TLSUpstreamConfig, error) {
+func getBackendTLSBundle(translatorContext *TranslatorContext, backendTLSPolicy *gwapiv1.BackendTLSPolicy) (*ir.TLSUpstreamConfig, error) {
 	// Translate SubjectAltNames from gwapiv1a3 to ir
 	subjectAltNames := make([]ir.SubjectAltName, 0, len(backendTLSPolicy.Spec.Validation.SubjectAltNames))
 	for _, san := range backendTLSPolicy.Spec.Validation.SubjectAltNames {
@@ -461,7 +458,7 @@ func getBackendTLSBundle(translatorContext *TranslatorContext, backendTLSPolicy 
 	}
 
 	caCert, err := getCaCertsFromCARefs(translatorContext,
-		backendTLSPolicy.Namespace, backendTLSPolicy.Spec.Validation.CACertificateRefs, resources)
+		backendTLSPolicy.Namespace, backendTLSPolicy.Spec.Validation.CACertificateRefs)
 	if err != nil {
 		return nil, err
 	}
@@ -476,7 +473,6 @@ func getCaCertsFromCARefs(
 	translatorContext *TranslatorContext,
 	namespace string,
 	caCertificates []gwapiv1.LocalObjectReference,
-	resources *resource.Resources,
 ) ([]byte, error) {
 	ca := ""
 	for _, caRef := range caCertificates {

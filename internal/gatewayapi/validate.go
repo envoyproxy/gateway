@@ -59,7 +59,7 @@ func (t *Translator) validateBackendRef(translatorContext *TranslatorContext, ba
 			return err
 		}
 	case resource.KindServiceImport:
-		if err := t.validateBackendServiceImport(translatorContext, backendRef.BackendObjectReference, resources, backendNamespace, protocol); err != nil {
+		if err := t.validateBackendServiceImport(translatorContext, backendRef.BackendObjectReference, backendNamespace, protocol); err != nil {
 			return err
 		}
 	case egv1a1.KindBackend:
@@ -210,7 +210,6 @@ func validateBackendRefService(translatorContext *TranslatorContext, backendRef 
 func (t *Translator) validateBackendServiceImport(
 	translatorContext *TranslatorContext,
 	backendRef gwapiv1.BackendObjectReference,
-	resources *resource.Resources,
 	serviceImportNamespace string,
 	protocol corev1.Protocol,
 ) status.Error {

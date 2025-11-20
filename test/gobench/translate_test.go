@@ -557,7 +557,7 @@ func BenchmarkGatewayAPITranslator(b *testing.B) {
 				}
 				// gatewayapi.Translate errors are ignored in this benchmark,
 				// those errors are not relevant to the scope of the benchmark.
-				translator.Translate(rs)
+				_, _ = translator.Translate(rs)
 			}
 		})
 	}

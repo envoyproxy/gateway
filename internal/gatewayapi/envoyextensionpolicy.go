@@ -485,7 +485,7 @@ func (t *Translator) translateEnvoyExtensionPolicyForRoute(
 			continue
 		}
 
-		if luas, luaError = t.buildLuas(translatorContext, policy, resources, gtwCtx.envoyProxy); luaError != nil {
+		if luas, luaError = t.buildLuas(translatorContext, policy, gtwCtx.envoyProxy); luaError != nil {
 			luaError = perr.WithMessage(luaError, "Lua")
 			errs = errors.Join(errs, luaError)
 		}
@@ -575,7 +575,7 @@ func (t *Translator) translateEnvoyExtensionPolicyForGateway(
 		wasmError = perr.WithMessage(wasmError, "Wasm")
 		errs = errors.Join(errs, wasmError)
 	}
-	if luas, luaError = t.buildLuas(translatorContext, policy, resources, gateway.envoyProxy); luaError != nil {
+	if luas, luaError = t.buildLuas(translatorContext, policy, gateway.envoyProxy); luaError != nil {
 		luaError = perr.WithMessage(luaError, "Lua")
 		errs = errors.Join(errs, luaError)
 	}
@@ -643,7 +643,6 @@ func (t *Translator) translateEnvoyExtensionPolicyForGateway(
 func (t *Translator) buildLuas(
 	translatorContext *TranslatorContext,
 	policy *egv1a1.EnvoyExtensionPolicy,
-	resources *resource.Resources,
 	envoyProxy *egv1a1.EnvoyProxy,
 ) ([]ir.Lua, error) {
 	if policy == nil {
@@ -654,7 +653,7 @@ func (t *Translator) buildLuas(
 
 	for idx, ep := range policy.Spec.Lua {
 		name := irConfigNameForLua(policy, idx)
-		luaIR, err := t.buildLua(translatorContext, name, policy, ep, resources, envoyProxy)
+		luaIR, err := t.buildLua(translatorContext, name, policy, ep, envoyProxy)
 		if err != nil {
 			return nil, err
 		}
@@ -668,13 +667,12 @@ func (t *Translator) buildLua(
 	name string,
 	policy *egv1a1.EnvoyExtensionPolicy,
 	lua egv1a1.Lua,
-	resources *resource.Resources,
 	envoyProxy *egv1a1.EnvoyProxy,
 ) (*ir.Lua, error) {
 	var luaCode *string
 	var err error
 	if lua.Type == egv1a1.LuaValueTypeValueRef {
-		luaCode, err = getLuaBodyFromLocalObjectReference(translatorContext, lua.ValueRef, resources, policy.Namespace)
+		luaCode, err = getLuaBodyFromLocalObjectReference(translatorContext, lua.ValueRef, policy.Namespace)
 	} else {
 		luaCode = lua.Inline
 	}
@@ -695,7 +693,6 @@ func (t *Translator) buildLua(
 func getLuaBodyFromLocalObjectReference(
 	translatorContext *TranslatorContext,
 	valueRef *gwapiv1.LocalObjectReference,
-	resources *resource.Resources,
 	policyNs string,
 ) (*string, error) {
 	cm := translatorContext.GetConfigMap(policyNs, string(valueRef.Name))

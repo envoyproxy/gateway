@@ -846,7 +846,7 @@ func (t *Translator) processExtensionRefHTTPFilter(
 					dr := &ir.CustomResponse{}
 					if hrf.Spec.DirectResponse.Body != nil {
 						var err error
-						if dr.Body, err = getCustomResponseBody(translatorContext, hrf.Spec.DirectResponse.Body, resources, filterNs); err != nil {
+						if dr.Body, err = getCustomResponseBody(translatorContext, hrf.Spec.DirectResponse.Body, filterNs); err != nil {
 							t.processInvalidHTTPFilter(string(extFilter.Kind), filterContext, err)
 							return
 						}

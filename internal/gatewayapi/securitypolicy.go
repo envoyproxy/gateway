@@ -1043,7 +1043,7 @@ func (t *Translator) buildJWT(
 			}
 			provider.RemoteJWKS = remoteJWKS
 		} else {
-			localJWKS, err := t.buildLocalJWKS(translatorContext, policy, p.LocalJWKS, resources)
+			localJWKS, err := t.buildLocalJWKS(translatorContext, policy, p.LocalJWKS)
 			if err != nil {
 				return nil, err
 			}
@@ -1202,7 +1202,6 @@ func (t *Translator) buildLocalJWKS(
 	translatorContext *TranslatorContext,
 	policy *egv1a1.SecurityPolicy,
 	localJWKS *egv1a1.LocalJWKS,
-	resources *resource.Resources,
 ) (string, error) {
 	jwksType := egv1a1.LocalJWKSTypeInline
 	if localJWKS.Type != nil {
@@ -1865,7 +1864,7 @@ func (t *Translator) buildExtAuth(
 		// When translated to XDS, the authority is used on the filter level not on the cluster level.
 		// There's no way to translate to XDS and use a different authority for each backendref
 		if authority == "" {
-			authority = backendRefAuthority(translatorContext, resources, &backendRef.BackendObjectReference, policy)
+			authority = backendRefAuthority(translatorContext, &backendRef.BackendObjectReference, policy)
 		}
 	}
 
@@ -1920,7 +1919,6 @@ func parseExtAuthTimeout(timeout *gwapiv1.Duration) *metav1.Duration {
 
 func backendRefAuthority(
 	translatorContext *TranslatorContext,
-	resources *resource.Resources,
 	backendRef *gwapiv1.BackendObjectReference,
 	policy *egv1a1.SecurityPolicy,
 ) string {
