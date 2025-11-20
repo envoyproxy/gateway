@@ -62,7 +62,7 @@ httpRoutes:
           - name: X-Real-IP
             value: '%REQ(X-Real-IP?x-client-ip?CF-Connecting-IP)%'
           - name: X-Request-Start
-            value: 't=%START_TIME(%s.%6f)%'
+            value: t=%START_TIME(%s.%6f)%
         type: RequestHeaderModifier
       matches:
       - path:
@@ -152,4 +152,3 @@ xdsIR:
       ipFamily: IPv4
       path: /ready
       port: 19003
-

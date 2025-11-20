@@ -238,10 +238,8 @@ func TestValidateEnvoyFormatString(t *testing.T) {
 				if tt.errMsg != "" && !strings.Contains(err.Error(), tt.errMsg) {
 					t.Errorf("ValidateEnvoyFormatString() error = %v, want error containing %q", err, tt.errMsg)
 				}
-			} else {
-				if err != nil {
-					t.Errorf("ValidateEnvoyFormatString() unexpected error = %v", err)
-				}
+			} else if err != nil {
+				t.Errorf("ValidateEnvoyFormatString() unexpected error = %v", err)
 			}
 		})
 	}
