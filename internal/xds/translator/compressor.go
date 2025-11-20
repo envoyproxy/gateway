@@ -107,12 +107,6 @@ func buildCompressorFilter(compression *ir.Compression, chooseFirst bool) (*hcmv
 
 	if chooseFirst {
 		compressorProto.ChooseFirst = true
-
-		// This will remove the Accept-Encoding header from the request.
-		// It can only be set on the main compressor in the list.
-		compressorProto.ResponseDirectionConfig = &compressorv3.Compressor_ResponseDirectionConfig{
-			RemoveAcceptEncodingHeader: true,
-		}
 	}
 
 	if compressorAny, err = proto.ToAnyWithValidation(compressorProto); err != nil {
@@ -173,6 +167,9 @@ func (*compressor) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir
 
 		route.TypedPerFilterConfig[filterName] = compressorAny
 	}
+
+	// Remove accept-encoding header to prevent double compression
+	route.RequestHeadersToRemove = append(route.RequestHeadersToRemove, "accept-encoding")
 
 	return nil
 }
