@@ -91,7 +91,7 @@ func (t *Translator) ProcessHTTPFilters(parentRef *RouteParentContext,
 		}
 		if err := ValidateHTTPRouteFilter(&filter, t.ExtensionGroupKinds...); err != nil {
 			errs.Add(t.processInvalidHTTPFilter(string(filter.Type), httpFiltersContext, err))
-			break
+			continue
 		}
 
 		switch filter.Type {
