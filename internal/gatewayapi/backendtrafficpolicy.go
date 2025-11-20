@@ -106,7 +106,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(resources *resource.Resources
 				}
 
 				t.processBackendTrafficPolicyForRoute(resources, xdsIR,
-					routeMap, gatewayRouteMap, gatewayPolicyMerged, gatewayPolicyMap, policy, currTarget)
+					gatewayMap, routeMap, gatewayRouteMap, gatewayPolicyMerged, gatewayPolicyMap, policy, currTarget)
 			}
 		}
 	}
@@ -126,7 +126,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(resources *resource.Resources
 				}
 
 				t.processBackendTrafficPolicyForRoute(resources, xdsIR,
-					routeMap, gatewayRouteMap, gatewayPolicyMerged, gatewayPolicyMap, policy, currTarget)
+					gatewayMap, routeMap, gatewayRouteMap, gatewayPolicyMerged, gatewayPolicyMap, policy, currTarget)
 			}
 		}
 	}
@@ -225,6 +225,7 @@ func (t *Translator) buildGatewayPolicyMap(
 func (t *Translator) processBackendTrafficPolicyForRoute(
 	resources *resource.Resources,
 	xdsIR resource.XdsIRMap,
+	gatewayMap map[types.NamespacedName]*policyGatewayTargetContext,
 	routeMap map[policyTargetRouteKey]*policyRouteTargetContext,
 	gatewayRouteMap *GatewayPolicyRouteMap,
 	gatewayPolicyMergedMap *GatewayPolicyRouteMap,
@@ -254,12 +255,17 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 	// parentRefCtxs holds parent gateway/listener contexts for using in policy merge logic.
 	parentRefCtxs := make([]*RouteParentContext, 0, len(parentRefs))
 	for _, p := range parentRefs {
-		if p.Kind == nil || *p.Kind == resource.KindGateway {
-			namespace := targetedRoute.GetNamespace()
-			if p.Namespace != nil {
-				namespace = string(*p.Namespace)
-			}
-
+		namespace := targetedRoute.GetNamespace()
+		if p.Namespace != nil {
+			namespace = string(*p.Namespace)
+		}
+		gwNN := types.NamespacedName{
+			Namespace: namespace,
+			Name:      string(p.Name),
+		}
+		// Check if it's a gateway, and that it's a gateway that belongs to the gatewayclass we're processing.
+		// Otherwise it may belong to another gatewayclass or another controller.
+		if _, ok := gatewayMap[gwNN]; ok && (p.Kind == nil || *p.Kind == resource.KindGateway) {
 			mapKey := NamespacedNameWithSection{
 				NamespacedName: types.NamespacedName{
 					Name:      string(p.Name),
