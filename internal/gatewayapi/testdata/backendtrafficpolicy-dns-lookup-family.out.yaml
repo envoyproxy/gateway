@@ -80,23 +80,6 @@ backends:
       reason: Accepted
       status: "True"
       type: Accepted
-- apiVersion: gateway.envoyproxy.io/v1alpha1
-  kind: Backend
-  metadata:
-    name: backend-fqdn
-    namespace: default
-  spec:
-    endpoints:
-    - fqdn:
-        hostname: grpc-infra-backend-v1.gateway-conformance-infra.svc.cluster.local
-        port: 8080
-  status:
-    conditions:
-    - lastTransitionTime: null
-      message: The Backend was accepted
-      reason: Accepted
-      status: "True"
-      type: Accepted
 envoyExtensionPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: EnvoyExtensionPolicy

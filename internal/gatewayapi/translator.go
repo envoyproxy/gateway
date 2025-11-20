@@ -221,7 +221,14 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 	var errs error
 
 	translatorContext := &TranslatorContext{}
+	translatorContext.SetNamespaces(resources.Namespaces)
 	translatorContext.SetServices(resources.Services)
+	translatorContext.SetServiceImports(resources.ServiceImports)
+	translatorContext.SetBackends(resources.Backends)
+	translatorContext.SetSecrets(resources.Secrets)
+	translatorContext.SetConfigMaps(resources.ConfigMaps)
+	translatorContext.SetClusterTrustBundles(resources.ClusterTrustBundles)
+	translatorContext.SetEndpointSlicesForBackend(resources.EndpointSlices)
 
 	// Get Gateways belonging to our GatewayClass.
 	acceptedGateways, failedGateways := t.GetRelevantGateways(resources)

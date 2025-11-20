@@ -897,6 +897,7 @@ func TestProcessTracingServiceName(t *testing.T) {
 				},
 			)
 			translatorContext.SetServices(resources.Services)
+			translatorContext.SetEndpointSlicesForBackend(resources.EndpointSlices)
 
 			result, err := translator.processTracing(translatorContext, tc.gateway, tc.envoyProxy, tc.mergeGateways, resources)
 
