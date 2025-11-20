@@ -36,6 +36,8 @@ E2E_TIMEOUT ?= 20m
 # E2E_REDIRECT allow you specified a redirect when run e2e test locally, e.g. `>> test_output.out 2>&1`
 E2E_REDIRECT ?=
 E2E_TEST_ARGS ?= -v -tags e2e -timeout $(E2E_TIMEOUT)
+# If you want to skip crds version check, add `--allow-crds-mismatch` to E2E_TEST_SUITE_ARGS
+E2E_TEST_SUITE_ARGS ?= --debug=true
 
 CONFORMANCE_RUN_TEST ?=
 CONFORMANCE_TEST_ARGS ?= -v -tags conformance -timeout $(E2E_TIMEOUT)
@@ -272,17 +274,17 @@ setup-mac-net-connect:
 run-e2e: ## Run e2e tests
 	@$(LOG_TARGET)
 ifeq ($(E2E_RUN_TEST),)
-	go test $(E2E_TEST_ARGS) ./test/e2e --gateway-class=envoy-gateway --debug=true --cleanup-base-resources=false $(E2E_REDIRECT)
-	go test $(E2E_TEST_ARGS) ./test/e2e/merge_gateways --gateway-class=merge-gateways --debug=true --cleanup-base-resources=false
-	go test $(E2E_TEST_ARGS) ./test/e2e/multiple_gc --debug=true --cleanup-base-resources=true
-	LAST_VERSION_TAG=$(shell cat VERSION) go test $(E2E_TEST_ARGS) ./test/e2e/upgrade --gateway-class=upgrade --debug=true --cleanup-base-resources=$(E2E_CLEANUP)
+	go test $(E2E_TEST_ARGS) ./test/e2e $(E2E_TEST_SUITE_ARGS) --gateway-class=envoy-gateway  --cleanup-base-resources=false $(E2E_REDIRECT)
+	go test $(E2E_TEST_ARGS) ./test/e2e/merge_gateways $(E2E_TEST_SUITE_ARGS)  --gateway-class=merge-gateways --cleanup-base-resources=false
+	go test $(E2E_TEST_ARGS) ./test/e2e/multiple_gc $(E2E_TEST_SUITE_ARGS)  --cleanup-base-resources=true
+	LAST_VERSION_TAG=$(shell cat VERSION) go test $(E2E_TEST_ARGS) ./test/e2e/upgrade $(E2E_TEST_SUITE_ARGS) --gateway-class=upgrade --cleanup-base-resources=$(E2E_CLEANUP)
 else
-	go test $(E2E_TEST_ARGS) ./test/e2e --gateway-class=envoy-gateway --debug=true --cleanup-base-resources=$(E2E_CLEANUP) \
+	go test $(E2E_TEST_ARGS) ./test/e2e $(E2E_TEST_SUITE_ARGS) --gateway-class=envoy-gateway --cleanup-base-resources=$(E2E_CLEANUP) \
 		--run-test $(E2E_RUN_TEST) $(E2E_REDIRECT)
 endif
 
 run-e2e-upgrade:
-	go test $(E2E_TEST_ARGS) ./test/e2e/upgrade --gateway-class=upgrade --debug=true --cleanup-base-resources=$(E2E_CLEANUP)
+	go test $(E2E_TEST_ARGS) ./test/e2e/upgrade $(E2E_TEST_SUITE_ARGS) --gateway-class=upgrade --cleanup-base-resources=$(E2E_CLEANUP)
 
 .PHONY: run-resilience
 run-resilience: ## Run resilience tests
@@ -351,9 +353,9 @@ run-conformance: prepare-ip-family ## Run Gateway API conformance.
 	kubectl wait --timeout=$(WAIT_TIMEOUT) -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
 	kubectl apply -f test/config/gatewayclass.yaml
 ifeq ($(CONFORMANCE_RUN_TEST),)
-	go test $(CONFORMANCE_TEST_ARGS) ./test/conformance --gateway-class=envoy-gateway --debug=true $(E2E_REDIRECT)
+	go test $(CONFORMANCE_TEST_ARGS) ./test/conformance $(E2E_TEST_SUITE_ARGS) --gateway-class=envoy-gateway $(E2E_REDIRECT)
 else
-	go test $(CONFORMANCE_TEST_ARGS) ./test/conformance --gateway-class=envoy-gateway --debug=true --run-test $(CONFORMANCE_RUN_TEST) $(E2E_REDIRECT)
+	go test $(CONFORMANCE_TEST_ARGS) ./test/conformance $(E2E_TEST_SUITE_ARGS) --gateway-class=envoy-gateway --run-test $(CONFORMANCE_RUN_TEST) $(E2E_REDIRECT)
 endif
 
 CONFORMANCE_REPORT_PATH ?=
@@ -364,13 +366,13 @@ run-experimental-conformance: prepare-ip-family ## Run Experimental Gateway API 
 	kubectl wait --timeout=$(WAIT_TIMEOUT) -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
 	kubectl apply -f test/config/gatewayclass.yaml
 ifeq ($(CONFORMANCE_RUN_TEST),)
-	go test $(EXPERIMENTAL_CONFORMANCE_TEST_ARGS) ./test/conformance -run TestExperimentalConformance --gateway-class=envoy-gateway --debug=true \
+	go test $(EXPERIMENTAL_CONFORMANCE_TEST_ARGS) ./test/conformance -run TestExperimentalConformance $(E2E_TEST_SUITE_ARGS) --gateway-class=envoy-gateway \
 		--organization=envoyproxy --project=envoy-gateway --url=https://github.com/envoyproxy/gateway --version=latest \
 		--report-output="$(CONFORMANCE_REPORT_PATH)" --contact=https://github.com/envoyproxy/gateway/blob/main/GOVERNANCE.md \
 		--mode="$(KUBE_DEPLOY_PROFILE)" --version=$(TAG)
 else
     # we didn't care about output when running single test
-	go test $(EXPERIMENTAL_CONFORMANCE_TEST_ARGS) ./test/conformance -run TestExperimentalConformance --gateway-class=envoy-gateway --debug=true --run-test $(CONFORMANCE_RUN_TEST)
+	go test $(EXPERIMENTAL_CONFORMANCE_TEST_ARGS) ./test/conformance -run TestExperimentalConformance $(E2E_TEST_SUITE_ARGS) --gateway-class=envoy-gateway --run-test $(CONFORMANCE_RUN_TEST)
 endif
 
 
