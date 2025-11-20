@@ -16,6 +16,8 @@ endif
 
 GO_VERSION = $(shell grep -oE "^go [[:digit:]]*\.[[:digit:]]*" go.mod | cut -d' ' -f2)
 
+GO_BENCH_TESTNAME ?= ^BenchmarkGatewayAPItoXDS$$
+
 # Build the target binary in target platform.
 # The pattern of build.% is `build.{Platform}.{Command}`.
 # If we want to build envoy-gateway in linux amd64 platform,
@@ -84,7 +86,7 @@ go.test.cel: manifests # Run the CEL validation tests
 .PHONY: go.test.benchmark
 go.test.benchmark: ## Run benchmark tests for translation performance
 	@$(LOG_TARGET)
-	go test -timeout=15m -run='^$$' -bench=. -benchmem -benchtime=1x -count=6 ./test/gobench
+	go test -timeout=15m -run='^$$' -bench='$(GO_BENCH_TESTNAME)' -benchmem -benchtime=1x -count=6 ./test/gobench
 
 .PHONY: go.test.clean
 go.test.clean: # Clean go test cache
