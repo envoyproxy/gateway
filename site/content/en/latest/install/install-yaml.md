@@ -5,7 +5,7 @@ weight = -98
 
 This task walks you through installing Envoy Gateway in your Kubernetes cluster.
 
-The manual installation process does not allow for as much control over configuration(e.g. you are using a custom domain Kubernetes cluster)
+The manual installation process does not allow for as much configuration control (e.g. when you are using a custom domain Kubernetes cluster)
 as the [Helm install method](./install-helm), so if you need more control over your Envoy Gateway
 installation, it is recommended that you use helm.
 
