@@ -268,7 +268,8 @@ For latency-sensitive use cases, you can deploy the external processing gRPC ser
 This allows communication over `localhost`, which avoids pod-to-pod networking overhead.
 
 ### Step 1: Enable Extension APIs
-Enable the `EnvoyPatchPolicy` and `Backend` APIs in your Envoy Gateway configuration.
+
+Enable the `Backend` APIs in your Envoy Gateway configuration.
 This is done by editing the `envoy-gateway-config` ConfigMap in the `envoy-gateway-system` namespace.
 
 ```yaml
@@ -287,11 +288,11 @@ data:
     gateway:
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
     extensionApis:
-      enableEnvoyPatchPolicy: true
       enableBackend: true
 ```
 
 ### Step 2: Add the Sidecar Container with EnvoyProxy
+
 Use an `EnvoyProxy` resource to patch the Envoy Deployment and include your gRPC service container:
 
 ```yaml
