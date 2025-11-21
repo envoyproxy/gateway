@@ -69,7 +69,7 @@ httpRoutes:
     parents:
     - conditions:
       - lastTransitionTime: null
-        message: RequestHeaderModifiegr Filter did not provide valid configuration
+        message: RequestHeaderModifier Filter did not provide valid configuration
           to add/set/remove any headers.
         reason: UnsupportedValue
         status: "False"
