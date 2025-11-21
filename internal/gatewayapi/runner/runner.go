@@ -169,6 +169,10 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 					for _, gvk := range r.EnvoyGateway.ExtensionManager.BackendResources {
 						extGKs = append(extGKs, schema.GroupKind{Group: gvk.Group, Kind: gvk.Kind})
 					}
+					// Include policy resources so extension-defined custom policies are recognised.
+					for _, gvk := range r.EnvoyGateway.ExtensionManager.PolicyResources {
+						extGKs = append(extGKs, schema.GroupKind{Group: gvk.Group, Kind: gvk.Kind})
+					}
 					t.ExtensionGroupKinds = extGKs
 					r.Logger.Info("extension resources", "GVKs count", len(extGKs))
 				}

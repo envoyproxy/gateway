@@ -50,7 +50,7 @@ func runValidate(w io.Writer, inFile string) error {
 	noErr := true
 	_ = resource.IterYAMLBytes(inBytes, func(yamlByte []byte) error {
 		// Passing each resource as YAML string and get all their errors from local validator.
-		_, err = resource.LoadResourcesFromYAMLBytes(yamlByte, false)
+		_, err = resource.LoadResourcesFromYAMLBytes(yamlByte, false, nil)
 		if err != nil {
 			noErr = false
 			yamlRows := bytes.Split(yamlByte, []byte("\n"))
