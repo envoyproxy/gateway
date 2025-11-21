@@ -7,11 +7,17 @@ package fuzz
 
 import (
 	"fmt"
+	"io"
 	"strings"
 	"testing"
 
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/cmd/egctl"
+	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
+	"github.com/envoyproxy/gateway/internal/logging"
 )
 
 // Reused YAML snippets.
@@ -178,6 +184,37 @@ spec:
     http:
       requestReceivedTimeout: 30s
 `
+	envoyExtensionPolicyYAML = `---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyExtensionPolicy
+metadata:
+  name: envoy-extension-policy
+  namespace: default
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: backend
+  extProc:
+    - backendRefs:
+        - kind: Service
+          name: myExtProc
+          port: 3000
+      messageTimeout: 5s
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: myExtProc
+  namespace: default
+spec:
+  clusterIP: 10.11.12.13
+  ports:
+    - port: 3000
+      name: http
+      protocol: TCP
+      targetPort: 3000
+`
 )
 
 // Helpers for benchmark policy generation.
@@ -195,15 +232,17 @@ spec:
     - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: backend-%d
-  cors:
-    allowOrigins:
-      - "https://www.example-%d.com"
-    allowMethods:
-      - GET
-      - POST
-    allowHeaders:
-      - "Content-Type"
-`, i, i, i))
+  jwt:
+    providers:
+      - name: local-jwks-%d
+        issuer: https://one.example.com
+        localJWKS:
+          type: ValueRef
+          valueRef:
+            group: ""
+            kind: ConfigMap
+            name: jwks-cm-%d
+`, i, i, i, i))
 	}
 	return sb.String()
 }
@@ -232,6 +271,48 @@ spec:
 	return sb.String()
 }
 
+func genEnvoyExtensionPolicies(n int) string {
+	var sb strings.Builder
+	for i := 0; i < n; i++ {
+		sb.WriteString(fmt.Sprintf(`---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyExtensionPolicy
+metadata:
+  name: envoy-extension-policy-%d
+  namespace: default
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: backend-%d
+  extProc:
+    - backendRefs:
+        - kind: Service
+          name: myExtProc
+          port: 3000
+      messageTimeout: 5s
+`, i, i))
+	}
+	return sb.String()
+}
+
+// Helpers for benchmark Secret/ConfigMap generation.
+func genJWKSConfigMaps(n int) string {
+	var sb strings.Builder
+	for i := 0; i < n; i++ {
+		sb.WriteString(fmt.Sprintf(`---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: jwks-cm-%d
+  namespace: default
+data:
+  local.jwt: '{"keys": [{"kty": "RSA","n": "some-modulus","e": "AQAB","kid": "example1-key"}]}'
+`, i))
+	}
+	return sb.String()
+}
+
 // Helpers for benchmark route generation.
 func genHTTPRoutes(n int) string {
 	var sb strings.Builder
@@ -249,9 +330,9 @@ spec:
     - "www.example-%d.com"
   rules:
     - backendRefs:
-        - name: provided-backend
+        - name: service-backend-%d
           port: 8000
-`, i, i))
+`, i, i, i))
 	}
 	return sb.String()
 }
@@ -277,9 +358,9 @@ spec:
             service: com.example.Service%d
             method: Call
       backendRefs:
-        - name: provided-backend
+        - name: service-backend-%d
           port: 9000
-`, i, i, i))
+`, i, i, i, i))
 	}
 	return sb.String()
 }
@@ -299,9 +380,56 @@ spec:
       sectionName: udp
   rules:
     - backendRefs:
-        - name: provided-backend
+        - name: service-backend-%d
           port: %d
-`, i, 3000+i))
+`, i, i, 3000+i))
+	}
+	return sb.String()
+}
+
+func genService(n int) string {
+	var sb strings.Builder
+	for i := 0; i < n; i++ {
+		sb.WriteString(fmt.Sprintf(`---
+apiVersion: v1
+kind: Service
+metadata:
+  name: service-backend-%d
+  namespace: default
+spec:
+  clusterIP: 10.11.12.13
+  ports:
+    - port: 8000
+      name: http
+      protocol: TCP
+      targetPort: 8000
+`, i))
+	}
+	return sb.String()
+}
+
+func genEndpointSlice(n int) string {
+	var sb strings.Builder
+	for i := 0; i < n; i++ {
+		sb.WriteString(fmt.Sprintf(`---
+apiVersion: discovery.k8s.io/v1
+kind: EndpointSlice
+metadata:
+  name: service-backend-%d-slice
+  namespace: default
+  labels:
+    kubernetes.io/service-name: service-backend-%d
+addressType: IPv4
+ports:
+  - name: http
+    protocol: TCP
+    port: 8000
+endpoints:
+  - addresses:
+      - 192.168.1.1
+    conditions:
+      ready: true
+`, i, i))
 	}
 	return sb.String()
 }
@@ -313,22 +441,28 @@ func BenchmarkGatewayAPItoXDS(b *testing.B) {
 		yaml string
 	}
 	medium := baseYAML + backendYAML + tlsSecretYAML + clientTrafficPolicyYAML +
-		genHTTPRoutes(50) +
+		genHTTPRoutes(200) +
 		genGRPCRoutes(25) +
 		genUDPRoutes(10) +
+		genJWKSConfigMaps(50) +
 		genSecurityPolicies(50) +
-		genBackendTrafficPolicies(50)
+		genBackendTrafficPolicies(50) +
+		genEnvoyExtensionPolicies(50) +
+		genService(200)
 	large := baseYAML + backendYAML + tlsSecretYAML + clientTrafficPolicyYAML +
-		genHTTPRoutes(500) +
+		genHTTPRoutes(2000) +
 		genGRPCRoutes(250) +
 		genUDPRoutes(100) +
+		genJWKSConfigMaps(500) +
 		genSecurityPolicies(500) +
-		genBackendTrafficPolicies(500)
+		genBackendTrafficPolicies(500) +
+		genEnvoyExtensionPolicies(500) +
+		genService(2000)
 
 	cases := []benchCase{
 		{
 			name: "small",
-			yaml: baseYAML + httpRouteYAML + backendYAML + tlsSecretYAML + securityPolicyYAML + backendTrafficPolicyYAML + clientTrafficPolicyYAML,
+			yaml: baseYAML + httpRouteYAML + backendYAML + tlsSecretYAML + securityPolicyYAML + backendTrafficPolicyYAML + clientTrafficPolicyYAML + envoyExtensionPolicyYAML,
 		},
 		{
 			name: "medium",
@@ -353,6 +487,77 @@ func BenchmarkGatewayAPItoXDS(b *testing.B) {
 				if err != nil && strings.Contains(err.Error(), "failed to translate xds") {
 					b.Fatalf("%v", err)
 				}
+			}
+		})
+	}
+}
+
+// Benchmark cases: small / medium / large.
+// Focus on Gateway API translation performance.
+// Since endpoint retrieval can become a major bottleneck due to repeated calls,
+// perform translation which endpoint fetching is required.
+func BenchmarkGatewayAPITranslator(b *testing.B) {
+	type benchCase struct {
+		name string
+		yaml string
+	}
+	medium := baseYAML + backendYAML + tlsSecretYAML + clientTrafficPolicyYAML +
+		genHTTPRoutes(200) +
+		genGRPCRoutes(25) +
+		genUDPRoutes(10) +
+		genJWKSConfigMaps(50) +
+		genSecurityPolicies(50) +
+		genBackendTrafficPolicies(50) +
+		genEnvoyExtensionPolicies(50) +
+		genService(200) +
+		genEndpointSlice(200)
+	large := baseYAML + backendYAML + tlsSecretYAML + clientTrafficPolicyYAML +
+		genHTTPRoutes(2000) +
+		genGRPCRoutes(250) +
+		genUDPRoutes(100) +
+		genJWKSConfigMaps(500) +
+		genSecurityPolicies(500) +
+		genBackendTrafficPolicies(500) +
+		genEnvoyExtensionPolicies(500) +
+		genService(2000) +
+		genEndpointSlice(2000)
+
+	cases := []benchCase{
+		{
+			name: "small",
+			yaml: baseYAML + httpRouteYAML + backendYAML + tlsSecretYAML + securityPolicyYAML + backendTrafficPolicyYAML + clientTrafficPolicyYAML + envoyExtensionPolicyYAML,
+		},
+		{
+			name: "medium",
+			yaml: medium,
+		},
+		{
+			name: "large",
+			yaml: large,
+		},
+	}
+
+	for _, tc := range cases {
+		b.Run(tc.name, func(b *testing.B) {
+			rs, err := resource.LoadResourcesFromYAMLBytes([]byte(tc.yaml), true)
+			if err != nil {
+				b.Fatalf("load: %v", err)
+			}
+			b.ReportAllocs()
+			b.ResetTimer()
+			for i := 0; i < b.N; i++ {
+				translator := &gatewayapi.Translator{
+					GatewayControllerName:   string(rs.GatewayClass.Spec.ControllerName),
+					GatewayClassName:        gwapiv1.ObjectName(rs.GatewayClass.Name),
+					GlobalRateLimitEnabled:  true,
+					EndpointRoutingDisabled: false,
+					EnvoyPatchPolicyEnabled: true,
+					BackendEnabled:          true,
+					Logger:                  logging.DefaultLogger(io.Discard, egv1a1.LogLevelInfo),
+				}
+				// gatewayapi.Translate errors are ignored in this benchmark,
+				// those errors are not relevant to the scope of the benchmark.
+				_, _ = translator.Translate(rs)
 			}
 		})
 	}

@@ -23,6 +23,7 @@ import (
 
 // translateExtServiceBackendRefs translates external service backend references to route destinations.
 func (t *Translator) translateExtServiceBackendRefs(
+	translatorContext *TranslatorContext,
 	policy client.Object,
 	backendRefs []egv1a1.BackendRef,
 	protocol ir.AppProtocol,
@@ -46,6 +47,7 @@ func (t *Translator) translateExtServiceBackendRefs(
 	destName := irIndexedExtServiceDestinationName(pnn, policy.GetObjectKind().GroupVersionKind().Kind, configType, index)
 	for i, backendRef := range backendRefs {
 		if err = t.validateExtServiceBackendReference(
+			translatorContext,
 			&backendRef.BackendObjectReference,
 			policy.GetNamespace(),
 			policy.GetObjectKind().GroupVersionKind().Kind,
@@ -56,6 +58,7 @@ func (t *Translator) translateExtServiceBackendRefs(
 		settingName := irDestinationSettingName(destName, i)
 		var extServiceDest *ir.DestinationSetting
 		if extServiceDest, err = t.processExtServiceDestination(
+			translatorContext,
 			settingName,
 			&backendRef,
 			pnn,
@@ -87,6 +90,7 @@ func (t *Translator) translateExtServiceBackendRefs(
 }
 
 func (t *Translator) processExtServiceDestination(
+	translatorContext *TranslatorContext,
 	settingName string,
 	backendRef *egv1a1.BackendRef,
 	policyNamespacedName types.NamespacedName,
@@ -105,12 +109,12 @@ func (t *Translator) processExtServiceDestination(
 
 	switch KindDerefOr(backendRef.Kind, resource.KindService) {
 	case resource.KindService:
-		ds, err = t.processServiceDestinationSetting(settingName, backendRef.BackendObjectReference, backendNamespace, protocol, resources, envoyProxy)
+		ds, err = t.processServiceDestinationSetting(translatorContext, settingName, backendRef.BackendObjectReference, backendNamespace, protocol, envoyProxy)
 		if err != nil {
 			return nil, err
 		}
 	case resource.KindServiceImport:
-		ds, err = t.processServiceImportDestinationSetting(settingName, backendRef.BackendObjectReference, backendNamespace, protocol, resources, envoyProxy)
+		ds, err = t.processServiceImportDestinationSetting(translatorContext, settingName, backendRef.BackendObjectReference, backendNamespace, protocol, envoyProxy)
 		if err != nil {
 			return nil, err
 		}
@@ -118,7 +122,7 @@ func (t *Translator) processExtServiceDestination(
 		if !t.BackendEnabled {
 			return nil, fmt.Errorf("resource %s of type Backend cannot be used since Backend is disabled in Envoy Gateway configuration", string(backendRef.Name))
 		}
-		ds = t.processBackendDestinationSetting(settingName, backendRef.BackendObjectReference, backendNamespace, protocol, resources)
+		ds = t.processBackendDestinationSetting(translatorContext, settingName, backendRef.BackendObjectReference, backendNamespace, protocol)
 		// Dynamic resolver destinations are not supported for none-route destinations
 		if ds.IsDynamicResolver {
 			return nil, errors.New("dynamic resolver destinations are not supported")
@@ -137,6 +141,7 @@ func (t *Translator) processExtServiceDestination(
 	}
 
 	backendTLS, err = t.applyBackendTLSSetting(
+		translatorContext,
 		backendRef.BackendObjectReference,
 		backendNamespace,
 		// Gateway is not the appropriate parent reference here because the owner
