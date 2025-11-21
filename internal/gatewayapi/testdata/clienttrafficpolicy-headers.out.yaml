@@ -40,6 +40,9 @@ clientTrafficPolicies:
         - name: my-multi-set-response-header
           value: value1,value2
       requestID: PreserveOrGenerate
+      requestIdExtension:
+        packTraceReason: false
+        useRequestIDForTraceSampling: false
       withUnderscoresAction: Allow
     targetRef:
       group: gateway.networking.k8s.io
@@ -215,6 +218,9 @@ xdsIR:
         lateRemoveResponseHeaders:
         - my-removed-response-header
         requestID: PreserveOrGenerate
+        requestIdExtension:
+          packTraceReason: false
+          useRequestIDForTraceSampling: false
         withUnderscoresAction: Allow
       hostnames:
       - '*'
@@ -264,6 +270,9 @@ xdsIR:
         lateRemoveResponseHeaders:
         - my-removed-response-header
         requestID: PreserveOrGenerate
+        requestIdExtension:
+          packTraceReason: false
+          useRequestIDForTraceSampling: false
         withUnderscoresAction: Allow
       hostnames:
       - '*'
