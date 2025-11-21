@@ -1095,7 +1095,7 @@ _Appears in:_
 
 
 
-
+CustomTag defines a custom tag to add to each span.
 
 _Appears in:_
 - [ProxyTracing](#proxytracing)
@@ -1107,6 +1107,7 @@ _Appears in:_
 | `literal` | _[LiteralCustomTag](#literalcustomtag)_ |  true  |  | Literal adds hard-coded value to each span.<br />It's required when the type is "Literal". |
 | `environment` | _[EnvironmentCustomTag](#environmentcustomtag)_ |  true  |  | Environment adds value from environment variable to each span.<br />It's required when the type is "Environment". |
 | `requestHeader` | _[RequestHeaderCustomTag](#requestheadercustomtag)_ |  true  |  | RequestHeader adds value from request header to each span.<br />It's required when the type is "RequestHeader". |
+| `formatter` | _[FormatterCustomTag](#formattercustomtag)_ |  false  |  | Formatter adds value using formatter to each span.<br />It's required when the type is "Formatter". |
 
 
 #### CustomTagType
@@ -1123,6 +1124,7 @@ _Appears in:_
 | `Literal` | CustomTagTypeLiteral adds hard-coded value to each span.<br /> | 
 | `Environment` | CustomTagTypeEnvironment adds value from environment variable to each span.<br /> | 
 | `RequestHeader` | CustomTagTypeRequestHeader adds value from request header to each span.<br /> | 
+| `Formatter` | CustomTagTypeFormatter adds value using formatter to each span.<br /> | 
 
 
 #### DNS
@@ -2142,6 +2144,20 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
+
+
+#### FormatterCustomTag
+
+
+
+
+
+_Appears in:_
+- [CustomTag](#customtag)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `value` | _string_ |  true  |  | Values defines the formatter value to use,<br />same [formatter](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators) as HTTP access logging<br />(e.g. %REQUESTED_SERVER_NAME%).<br />Unknown specifier values are replaced<br />with the empty string. |
 
 
 #### GRPCActiveHealthChecker
