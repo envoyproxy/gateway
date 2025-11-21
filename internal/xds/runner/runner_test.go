@@ -23,6 +23,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/tsaarni/certyaml"
+	"go.opentelemetry.io/otel/trace"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -35,6 +36,15 @@ import (
 	"github.com/envoyproxy/gateway/internal/message"
 	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
 )
+
+func newTestTraceContext() context.Context {
+	sc := trace.NewSpanContext(trace.SpanContextConfig{
+		TraceID:    trace.TraceID{0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf, 0x0},
+		SpanID:     trace.SpanID{0xa, 0xb, 0xc, 0xd, 0xe, 0xf, 0x0, 0x1},
+		TraceFlags: trace.FlagsSampled,
+	})
+	return trace.ContextWithSpanContext(context.Background(), sc)
+}
 
 func TestTLSConfig(t *testing.T) {
 	// Create trusted CA, server and client certs.
@@ -259,7 +269,7 @@ func TestRunner(t *testing.T) {
 		TLSCaPath:         caFile,
 	})
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(newTestTraceContext())
 	defer cancel()
 
 	// Start
@@ -271,7 +281,7 @@ func TestRunner(t *testing.T) {
 	}()
 
 	// xDS is nil at start
-	require.Equal(t, map[string]*ir.Xds{}, xdsIR.LoadAll())
+	require.Equal(t, map[string]*message.XdsIRWithContext{}, xdsIR.LoadAll())
 
 	// test translation
 	path := "example"
@@ -308,7 +318,11 @@ func TestRunner(t *testing.T) {
 			},
 		},
 	}
-	xdsIR.Store("test", &res)
+	m := message.XdsIRWithContext{
+		XdsIR:   &res,
+		Context: newTestTraceContext(),
+	}
+	xdsIR.Store("test", &m)
 	require.Eventually(t, func() bool {
 		// Check that the cache has the snapshot for our test key
 		return r.cache.SnapshotHasIrKey("test")
@@ -348,7 +362,7 @@ func TestRunner_withExtensionManager_FailOpen(t *testing.T) {
 		TLSCaPath:         caFile,
 	})
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(newTestTraceContext())
 	defer cancel()
 
 	// Start
@@ -360,7 +374,7 @@ func TestRunner_withExtensionManager_FailOpen(t *testing.T) {
 	}()
 
 	// xDS is nil at start
-	require.Equal(t, map[string]*ir.Xds{}, xdsIR.LoadAll())
+	require.Equal(t, map[string]*message.XdsIRWithContext{}, xdsIR.LoadAll())
 
 	// test translation
 	path := "example"
@@ -397,7 +411,11 @@ func TestRunner_withExtensionManager_FailOpen(t *testing.T) {
 			},
 		},
 	}
-	xdsIR.Store("test", &res)
+	m := message.XdsIRWithContext{
+		XdsIR:   &res,
+		Context: newTestTraceContext(),
+	}
+	xdsIR.Store("test", &m)
 	require.Eventually(t, func() bool {
 		// Since the extension manager is configured to fail open, in an event of an error
 		// from the extension manager hooks, xds update should be published.
@@ -430,7 +448,7 @@ func TestRunner_withExtensionManager_FailClosed(t *testing.T) {
 		TLSCaPath:         caFile,
 	})
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(newTestTraceContext())
 	defer cancel()
 
 	// Start
@@ -442,7 +460,7 @@ func TestRunner_withExtensionManager_FailClosed(t *testing.T) {
 	}()
 
 	// xDS is nil at start
-	require.Equal(t, map[string]*ir.Xds{}, xdsIR.LoadAll())
+	require.Equal(t, map[string]*message.XdsIRWithContext{}, xdsIR.LoadAll())
 
 	// test translation
 	path := "example"
@@ -479,7 +497,11 @@ func TestRunner_withExtensionManager_FailClosed(t *testing.T) {
 			},
 		},
 	}
-	xdsIR.Store("test", &res)
+	m := message.XdsIRWithContext{
+		XdsIR:   &res,
+		Context: newTestTraceContext(),
+	}
+	xdsIR.Store("test", &m)
 	require.Never(t, func() bool {
 		// Since the extension manager is configured to fail closed, in an event of an error
 		// from the extension manager hooks, xds update should not be published.

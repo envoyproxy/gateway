@@ -6,12 +6,15 @@
 package logging
 
 import (
+	"bytes"
+	"context"
 	"errors"
 	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
@@ -103,4 +106,25 @@ func TestLoggerSugarName(t *testing.T) {
 	require.NoError(t, err)
 	capturedOutput := string(outputBytes)
 	assert.Contains(t, capturedOutput, "debugging message", logName)
+}
+
+func TestLoggerWithTrace(t *testing.T) {
+	buffer := &bytes.Buffer{}
+	logger := NewLogger(buffer, egv1a1.DefaultEnvoyGatewayLogging())
+
+	traceID := trace.TraceID{0xde, 0xad, 0xbe, 0xef, 0xca, 0xfe, 0xba, 0xbe, 0xfa, 0xce, 0xb0, 0x0c, 0x12, 0x34, 0x56, 0x78}
+	spanID := trace.SpanID{0xba, 0xad, 0xf0, 0x0d, 0xfe, 0xed, 0xfa, 0xce}
+	sc := trace.NewSpanContext(trace.SpanContextConfig{
+		TraceID:    traceID,
+		SpanID:     spanID,
+		TraceFlags: trace.FlagsSampled,
+	})
+	ctx := trace.ContextWithSpanContext(context.Background(), sc)
+
+	logger.WithTrace(ctx).Info("hello tracing")
+
+	output := buffer.String()
+	assert.Contains(t, output, traceID.String())
+	assert.Contains(t, output, spanID.String())
+	assert.Contains(t, output, trace.FlagsSampled.String())
 }

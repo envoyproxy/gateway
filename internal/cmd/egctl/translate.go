@@ -7,6 +7,7 @@ package egctl
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -291,7 +292,8 @@ func translateGatewayAPIToIR(resources *resource.Resources) (*gatewayapi.Transla
 		}
 	}
 
-	result, _ := t.Translate(resources)
+	ctx := context.Background()
+	result, _ := t.Translate(resources, ctx)
 
 	return result, nil
 }
@@ -311,7 +313,7 @@ func translateGatewayAPIToGatewayAPI(resources *resource.Resources) (resource.Re
 		BackendEnabled:          true,
 		Logger:                  logging.DefaultLogger(io.Discard, egv1a1.LogLevelInfo),
 	}
-	gRes, _ := gTranslator.Translate(resources)
+	gRes, _ := gTranslator.Translate(resources, context.Background())
 	// Update the status of the GatewayClass based on EnvoyProxy validation
 	epInvalid := false
 	if resources.EnvoyProxyForGatewayClass != nil {
@@ -351,7 +353,7 @@ func TranslateGatewayAPIToXds(namespace, dnsDomain, resourceType string, resourc
 		BackendEnabled:          true,
 		Logger:                  logging.DefaultLogger(io.Discard, egv1a1.LogLevelInfo),
 	}
-	gRes, _ := gTranslator.Translate(resources)
+	gRes, _ := gTranslator.Translate(resources, context.Background())
 
 	keys := []string{}
 	for key := range gRes.XdsIR {
@@ -374,7 +376,7 @@ func TranslateGatewayAPIToXds(namespace, dnsDomain, resourceType string, resourc
 		if resources.EnvoyProxyForGatewayClass != nil {
 			xTranslator.FilterOrder = resources.EnvoyProxyForGatewayClass.Spec.FilterOrder
 		}
-		xRes, err := xTranslator.Translate(val)
+		xRes, err := xTranslator.Translate(val, context.Background())
 		if err != nil {
 			return nil, fmt.Errorf("failed to translate xds ir for key %s value %+v, error:%w", key, val, err)
 		}
