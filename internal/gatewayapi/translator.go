@@ -544,8 +544,10 @@ func getAttributes(resources *resource.Resources) []attribute.KeyValue {
 	if resources.GatewayClass == nil {
 		return attrs
 	}
-	attrs = append(attrs, attribute.String("gateway-class", resources.GatewayClass.Name))
-	attrs = append(attrs, attribute.String("gateway-class-namespace", resources.GatewayClass.Namespace))
+	attrs = append(attrs,
+		attribute.String("gateway-class", resources.GatewayClass.Name),
+		attribute.String("gateway-class-namespace", resources.GatewayClass.Namespace),
+	)
 	if resources.GatewayClass.Spec.ControllerName != "" {
 		attrs = append(attrs, attribute.String("gateway-class-controller-name", string(resources.GatewayClass.Spec.ControllerName)))
 	}
