@@ -18,6 +18,7 @@ import (
 	"github.com/telepresenceio/watchable"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -144,7 +145,6 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 			// There is only 1 key which is the controller name
 			// so when a delete is triggered, delete all keys
 			if update.Delete || valWrapper == nil || valWrapper.Resources == nil {
-				span.AddEvent("delete_all_keys")
 				r.deleteAllKeys()
 				return
 			}
@@ -169,6 +169,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 			var backendTLSPolicyStatusCount, clientTrafficPolicyStatusCount, backendTrafficPolicyStatusCount int
 			var securityPolicyStatusCount, envoyExtensionPolicyStatusCount, backendStatusCount, extensionServerPolicyStatusCount int
 
+			span.AddEvent("gateway_resources_translation_cycle", trace.WithAttributes(attribute.Int("resources.count", len(*val))))
 			for _, resources := range *val {
 				// Translate and publish IRs.
 				t := &gatewayapi.Translator{
@@ -199,11 +200,13 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 					traceLogger.Info("extension resources", "GVKs count", len(extGKs))
 				}
 				// Translate to IR
-				result, err := t.Translate(resources)
+				_, translateToIRSpan := tracer.Start(parentCtx, "GatewayApiRunner.ResoureTranslationCycle.TranslateToIR")
+				result, err := t.Translate(resources, parentCtx)
 				if err != nil {
 					// Currently all errors that Translate returns should just be logged
 					traceLogger.Error(err, "errors detected during translation", "gateway-class", resources.GatewayClass.Name)
 				}
+				translateToIRSpan.End()
 
 				// Publish the IRs.
 				// Also validate the ir before sending it.
@@ -243,6 +246,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 				}
 
 				// Update Status
+				_, statusUpdateSpan := tracer.Start(parentCtx, "GatewayApiRunner.ResoureTranslationCycle.UpdateStatus")
 				if result.GatewayClass != nil {
 					key := utils.NamespacedName(result.GatewayClass)
 					r.ProviderResources.GatewayClassStatuses.Store(key, &result.GatewayClass.Status)
@@ -365,6 +369,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 					delete(keysToDelete.ExtensionServerPolicyStatus, key)
 					r.keyCache.ExtensionServerPolicyStatus[key] = true
 				}
+				statusUpdateSpan.End()
 			}
 
 			// Publish aggregated metrics

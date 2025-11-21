@@ -10334,7 +10334,7 @@ metadata:
     app.kubernetes.io/component: standalone-collector
     component: standalone-collector
 spec:
-  type: LoadBalancer
+  type: ClusterIP
   ports:
     
     - name: datadog

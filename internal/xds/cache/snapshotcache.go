@@ -35,7 +35,7 @@ import (
 
 var (
 	Hash   = cachev3.IDHash{}
-	tracer = otel.Tracer("envoy-gateway/gateway-api")
+	tracer = otel.Tracer("envoy-gateway/xds/snapshotcache")
 )
 
 // SnapshotCacheWithCallbacks uses the go-control-plane SimpleCache to store snapshots of

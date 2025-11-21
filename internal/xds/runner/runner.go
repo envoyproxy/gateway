@@ -66,7 +66,7 @@ const (
 	defaultMaxConnectionAgeGrace = 2 * time.Minute
 )
 
-var tracer = otel.Tracer("envoy-gateway/gateway-api")
+var tracer = otel.Tracer("envoy-gateway/xds")
 
 var maxConnectionAgeValues = []time.Duration{
 	10 * time.Hour,
@@ -316,7 +316,7 @@ func (r *Runner) translateFromSubscription(sub <-chan watchable.Snapshot[string,
 					}
 				}
 
-				result, err := t.Translate(val.XdsIR)
+				result, err := t.Translate(val.XdsIR, parentCtx)
 				if err != nil {
 					traceLogger.Error(err, "failed to translate xds ir")
 					errChan <- err

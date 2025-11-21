@@ -4,12 +4,5 @@ grafana:
   enabled: false
 opentelemetry-collector:
   enabled: true
-  mode: deployment
-  service:
-    type: LoadBalancer
 fluent-bit:
   enabled: false
-tempo:
-  enabled: true
-  service:
-    type: LoadBalancer

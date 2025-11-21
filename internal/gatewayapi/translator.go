@@ -6,9 +6,12 @@
 package gatewayapi
 
 import (
+	"context"
 	"errors"
 	"fmt"
 
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"golang.org/x/exp/maps"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -49,10 +52,13 @@ const (
 	wellKnownPortShift = 10000
 )
 
-var _ TranslatorManager = (*Translator)(nil)
+var (
+	_      TranslatorManager = (*Translator)(nil)
+	tracer                   = otel.Tracer("envoy-gateway/gateway-api/translator")
+)
 
 type TranslatorManager interface {
-	Translate(resources *resource.Resources) (*TranslateResult, error)
+	Translate(resources *resource.Resources, ctx context.Context) (*TranslateResult, error)
 	GetRelevantGateways(resources *resource.Resources) (acceptedGateways, failedGateways []*GatewayContext)
 
 	RoutesTranslator
@@ -217,7 +223,10 @@ func newTranslateResult(
 	return translateResult
 }
 
-func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult, error) {
+func (t *Translator) Translate(resources *resource.Resources, ctx context.Context) (*TranslateResult, error) {
+	_, span := tracer.Start(ctx, "Translator.Translate")
+	defer span.End()
+	span.SetAttributes(getAttributes(resources)...)
 	var errs error
 
 	// Get Gateways belonging to our GatewayClass.
@@ -528,4 +537,17 @@ func (t *Translator) IRKey(gatewayNN types.NamespacedName) string {
 		return string(t.GatewayClassName)
 	}
 	return irStringKey(gatewayNN.Namespace, gatewayNN.Name)
+}
+
+func getAttributes(resources *resource.Resources) []attribute.KeyValue {
+	attrs := []attribute.KeyValue{}
+	if resources.GatewayClass == nil {
+		return attrs
+	}
+	attrs = append(attrs, attribute.String("gateway-class", resources.GatewayClass.Name))
+	attrs = append(attrs, attribute.String("gateway-class-namespace", resources.GatewayClass.Namespace))
+	if resources.GatewayClass.Spec.ControllerName != "" {
+		attrs = append(attrs, attribute.String("gateway-class-controller-name", string(resources.GatewayClass.Spec.ControllerName)))
+	}
+	return attrs
 }

@@ -20,6 +20,8 @@ import (
 	resourcev3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	serverv3 "github.com/envoyproxy/go-control-plane/pkg/server/v3"
 	"github.com/telepresenceio/watchable"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 
@@ -46,6 +48,8 @@ const (
 	// rateLimitTLSCACertFilepath is the ratelimit ca cert file.
 	rateLimitTLSCACertFilepath = "/certs/ca.crt"
 )
+
+var tracer = otel.Tracer("envoy-gateway/global-rate-limit/runner")
 
 type Config struct {
 	config.Server
@@ -138,7 +142,20 @@ func (r *Runner) translateFromSubscription(ctx context.Context, c <-chan watchab
 
 	message.HandleSubscription(message.Metadata{Runner: r.Name(), Message: message.XDSIRMessageName}, c,
 		func(update message.Update[string, *message.XdsIRWithContext], errChan chan error) {
-			r.Logger.Info("received a notification")
+			parentCtx := context.Background()
+			if update.Value != nil && update.Value.Context != nil {
+				parentCtx = update.Value.Context
+			}
+			traceLogger := r.Logger.WithTrace(parentCtx)
+			traceLogger.Info("received a notification")
+
+			_, span := tracer.Start(parentCtx, "GlobalRateLimitRunner.translateFromSubscription")
+			defer span.End()
+
+			span.SetAttributes(
+				attribute.String("controller.key", update.Key),
+				attribute.Bool("update.delete", update.Delete),
+			)
 
 			if update.Delete {
 				delete(rateLimitConfigsCache, update.Key)
@@ -183,6 +200,9 @@ func (r *Runner) translate(xdsIR *ir.Xds) (*types.ResourceVersionTable, error) {
 }
 
 func (r *Runner) updateSnapshot(ctx context.Context, resource types.XdsResources) {
+	_, span := tracer.Start(ctx, "GlobalRateLimitRunner.updateSnapshot")
+	defer span.End()
+
 	if r.cache == nil {
 		r.Logger.Error(nil, "failed to init the snapshot cache")
 		return
