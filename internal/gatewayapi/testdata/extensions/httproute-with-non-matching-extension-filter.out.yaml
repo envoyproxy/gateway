@@ -69,12 +69,12 @@ httpRoutes:
     parents:
     - conditions:
       - lastTransitionTime: null
-        message: 'Reference default/example not found for filter type: Foo'
-        reason: UnsupportedValue
-        status: "False"
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: 'Reference default/example not found for filter type: Foo'
+        message: 'Reference default/example not found for filter type: Foo.'
         reason: BackendNotFound
         status: "False"
         type: ResolvedRefs
