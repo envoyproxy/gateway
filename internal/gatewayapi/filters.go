@@ -565,7 +565,7 @@ func (t *Translator) processRequestHeaderModifierFilter(
 	// Update the status if the filter failed to configure any valid headers to add/remove
 	if len(filterContext.AddRequestHeaders) == 0 && len(filterContext.RemoveRequestHeaders) == 0 && !emptyFilterConfig {
 		return status.NewRouteStatusError(
-			errors.New("RequestHeaderModifiegr Filter did not provide valid configuration to add/set/remove any headers"),
+			errors.New("RequestHeaderModifier Filter did not provide valid configuration to add/set/remove any headers"),
 			gwapiv1.RouteReasonUnsupportedValue,
 		).WithType(gwapiv1.RouteConditionAccepted)
 	}
