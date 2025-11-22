@@ -16,6 +16,7 @@ import (
 	"net"
 	nethttp "net/http"
 	"net/http/httputil"
+	"strings"
 	"testing"
 
 	"github.com/andybalholm/brotli"
@@ -61,7 +62,7 @@ var CompressionTest = suite.ConformanceTest{
 				suite,
 				egv1a1.BrotliCompressorType,
 				egv1a1.GzipCompressorType,
-				egv1a1.ZstdCompressorType
+				egv1a1.ZstdCompressorType,
 			)
 		})
 
