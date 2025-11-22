@@ -32,6 +32,8 @@ const (
 	dataPlaneMemQL             = `container_memory_working_set_bytes{namespace="envoy-gateway-system", container="envoy"}/1024/1024`
 	dataPlaneCPUQLFormat       = `rate(container_cpu_usage_seconds_total{namespace="envoy-gateway-system", container="envoy"}[%DURATIONs])*100`
 	DurationFormatter          = "%DURATION"
+
+	benchmarkCPURateWindow = 30 * time.Second
 )
 
 // BenchmarkMetricSample contains sampled metrics and profiles data.
@@ -136,6 +138,10 @@ func (r *BenchmarkReport) sampleMetrics(ctx context.Context, sample *BenchmarkMe
 
 	// Get duration
 	durationSeconds := int(time.Since(startTime).Seconds())
+	// Avoid reading values from previous test runs
+	if time.Since(startTime) < benchmarkCPURateWindow {
+		durationSeconds = int(time.Since(startTime).Seconds())
+	}
 	durationStr := fmt.Sprintf("%d", durationSeconds)
 	cpCPUQL := strings.ReplaceAll(controlPlaneCPUQL, DurationFormatter, durationStr)
 
