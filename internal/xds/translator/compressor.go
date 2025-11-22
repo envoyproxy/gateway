@@ -8,6 +8,7 @@ package translator
 import (
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
@@ -19,7 +20,6 @@ import (
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	protobuf "google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
-	"google.golang.org/protobuf/types/known/wrapperspb"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -151,6 +151,7 @@ func (*compressor) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir
 		route.TypedPerFilterConfig = make(map[string]*anypb.Any)
 	}
 
+	compressorProto := compressorPerRouteConfig()
 	for _, irComp := range irRoute.Traffic.Compression {
 		filterName := compressorFilterName(irComp.Type)
 		if _, ok := perFilterCfg[filterName]; ok {
@@ -160,7 +161,6 @@ func (*compressor) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir
 				filterName, route)
 		}
 
-		compressorProto := compressorPerRouteConfig(irComp)
 		if compressorAny, err = proto.ToAnyWithValidation(compressorProto); err != nil {
 			return err
 		}
@@ -168,23 +168,20 @@ func (*compressor) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir
 		route.TypedPerFilterConfig[filterName] = compressorAny
 	}
 
+	// Ensure accept-encoding from the request to prevent double compression.
+	if !slices.Contains(route.RequestHeadersToRemove, "accept-encoding") {
+		route.RequestHeadersToRemove = append(route.RequestHeadersToRemove, "accept-encoding")
+	}
+
 	return nil
 }
 
 // Enable compression on this route if compression is configured.
-func compressorPerRouteConfig(irComp *ir.Compression) *compressorv3.CompressorPerRoute {
-	responseDirectionConfig := &compressorv3.ResponseDirectionOverrides{}
-
-	// Remove the Accept-Encoding header to prevent double compression
-	// This is only required on the filter closest to the upstream
-	if irComp.ChooseFirst {
-		responseDirectionConfig.RemoveAcceptEncodingHeader = wrapperspb.Bool(true)
-	}
-
+func compressorPerRouteConfig() *compressorv3.CompressorPerRoute {
 	return &compressorv3.CompressorPerRoute{
 		Override: &compressorv3.CompressorPerRoute_Overrides{
 			Overrides: &compressorv3.CompressorOverrides{
-				ResponseDirectionConfig: responseDirectionConfig,
+				ResponseDirectionConfig: &compressorv3.ResponseDirectionOverrides{},
 			},
 		},
 	}
