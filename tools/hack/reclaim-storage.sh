@@ -7,6 +7,7 @@ log "Initial disk usage:"
 df -h || true
 
 # Remove large, unused language/tool runtimes
+# To figure out what to remove. We can SSH into the GitHub Actions runner using: https://github.com/mxschmitt/action-tmate and then run: df -h
 TO_DELETE=(
   /usr/local/lib/android
   /usr/share/dotnet
