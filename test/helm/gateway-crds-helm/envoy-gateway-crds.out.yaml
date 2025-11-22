@@ -2763,6 +2763,11 @@ spec:
                     description: Tracing configures the tracing settings for the backend
                       or HTTPRoute.
                     properties:
+                      OperationName:
+                        description: |-
+                          OperationName associated with the request matched to this route.
+                          If tracing is enabled, it will be used as the span name reported for this request.
+                        type: string
                       customTags:
                         additionalProperties:
                           properties:
