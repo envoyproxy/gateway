@@ -766,6 +766,8 @@ type HTTPClientTimeout struct {
 type HTTPRoute struct {
 	// Name of the HTTPRoute
 	Name string `json:"name" yaml:"name"`
+	// StatName is the name of the route used for statistics and metrics.
+	StatName *string `json:"statName,omitempty" yaml:"statName,omitempty"`
 	// Hostname that the route matches against
 	Hostname string `json:"hostname" yaml:"hostname,omitempty"`
 	// IsHTTP2 is set if the route is configured to serve HTTP2 traffic
@@ -2038,6 +2040,8 @@ type TCPListener struct {
 type TCPRoute struct {
 	// Name of the TCPRoute.
 	Name string `json:"name" yaml:"name"`
+	// StatName is the name of the route used for statistics and metrics.
+	StatName *string `json:"statName,omitempty" yaml:"statName,omitempty"`
 	// TLS holds information for configuring TLS on a listener
 	TLS *TLS `json:"tls,omitempty" yaml:"tls,omitempty"`
 	// Destinations associated with TCP traffic to the service.
@@ -2054,6 +2058,8 @@ type TCPRoute struct {
 	HealthCheck *HealthCheck `json:"healthCheck,omitempty" yaml:"healthCheck,omitempty"`
 	// Proxy Protocol Settings
 	ProxyProtocol *ProxyProtocol `json:"proxyProtocol,omitempty" yaml:"proxyProtocol,omitempty"`
+	// Metadata is used to enrich envoy route metadata with user and provider-specific information
+	Metadata *ResourceMetadata `json:"metadata,omitempty" yaml:"metadata,omitempty"`
 	// settings of upstream connection
 	BackendConnection *BackendConnection `json:"backendConnection,omitempty" yaml:"backendConnection,omitempty"`
 	// Preconnect configures preconnecting to upstream endpoints

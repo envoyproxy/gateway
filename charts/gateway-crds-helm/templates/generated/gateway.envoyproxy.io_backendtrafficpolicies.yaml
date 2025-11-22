@@ -148,6 +148,7 @@ spec:
                 description: |-
                   The compressor config for the http streams.
                   This provides more granular control over compression configuration.
+                  Order matters: The first compressor in the list is preferred when q-values in Accept-Encoding are equal.
                 items:
                   description: |-
                     Compression defines the config of enabling compression.
@@ -2265,6 +2266,22 @@ spec:
                   Telemetry configures the telemetry settings for the policy target (Gateway or xRoute).
                   This will override the telemetry settings in the EnvoyProxy resource.
                 properties:
+                  metrics:
+                    description: Metrics defines metrics configuration for the backend
+                      or Route.
+                    properties:
+                      routeStatName:
+                        description: |-
+                          RouteStatName defines the value of the Route stat_prefix, determining how the route stats are named.
+                          For more details, see envoy docs: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto#config-route-v3-route
+                          The supported operators for this pattern are:
+                          %ROUTE_NAME%: name of Gateway API xRoute resource
+                          %ROUTE_NAMESPACE%: namespace of Gateway API xRoute resource
+                          %ROUTE_KIND%: kind of Gateway API xRoute resource
+                          Example: %ROUTE_KIND%/%ROUTE_NAMESPACE%/%ROUTE_NAME% => httproute/my-ns/my-route
+                          Disabled by default.
+                        type: string
+                    type: object
                   tracing:
                     description: Tracing configures the tracing settings for the backend
                       or HTTPRoute.

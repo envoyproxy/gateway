@@ -297,14 +297,14 @@ export ENVOY_SERVICE=$(kubectl get svc -n envoy-gateway-system --selector=gatewa
 Port forward to the Envoy service:
 
 ```shell
-kubectl -n envoy-gateway-system port-forward service/${ENVOY_SERVICE} 80:80 &
+kubectl -n envoy-gateway-system port-forward service/${ENVOY_SERVICE} 8080:80 &
 ```
 
 Query the TLS-enabled backend through Envoy proxy:
 
 ```shell
-curl -v -HHost:www.example.com --resolve "www.example.com:80:127.0.0.1" \
-http://www.example.com:80/get
+curl -v -HHost:www.example.com --resolve "www.example.com:8080:127.0.0.1" \
+http://www.example.com:8080/get
 ```
 
 Inspect the output and see that the response contains the details of the TLS handshake between Envoy and the backend:
