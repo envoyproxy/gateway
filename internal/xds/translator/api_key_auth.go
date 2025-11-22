@@ -128,10 +128,10 @@ func buildAPIKeyAuthFilterConfig(apiKeyAuth *ir.APIKeyAuth) *apikeyauthv3.ApiKey
 	apiKeyAuthProto := &apikeyauthv3.ApiKeyAuth{
 		Credentials: make([]*apikeyauthv3.Credential, 0, len(apiKeyAuth.Credentials)),
 	}
-	for clientid, key := range apiKeyAuth.Credentials {
+	for _, cred := range apiKeyAuth.Credentials {
 		apiKeyAuthProto.Credentials = append(apiKeyAuthProto.Credentials, &apikeyauthv3.Credential{
-			Client: clientid,
-			Key:    string(key),
+			Client: string(cred.Client),
+			Key:    string(cred.Key),
 		})
 	}
 
