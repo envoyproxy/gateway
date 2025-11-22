@@ -7,6 +7,7 @@ package kubernetes
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"time"
 
@@ -99,7 +100,7 @@ func (u *UpdateHandler) apply(update Update) {
 			if kerrors.IsNotFound(err) {
 				return nil
 			}
-			return err
+			return fmt.Errorf("failed to get resource for status update: %w", err)
 		}
 
 		newObj := update.Mutator.Mutate(obj)
@@ -113,7 +114,11 @@ func (u *UpdateHandler) apply(update Update) {
 
 		newObj.SetUID(obj.GetUID())
 
-		return u.client.Status().Update(context.Background(), newObj)
+		err := u.client.Status().Update(context.Background(), newObj)
+		if err != nil {
+			return fmt.Errorf("failed to update status: %w", err)
+		}
+		return nil
 	}); err != nil {
 		log.Error(err, "unable to update status")
 
@@ -218,8 +223,8 @@ func isStatusEqual(objA, objB interface{}) bool {
 				return true
 			}
 		}
-	case *gwapiv1a3.TLSRoute:
-		if b, ok := objB.(*gwapiv1a3.TLSRoute); ok {
+	case *gwapiv1a2.TLSRoute:
+		if b, ok := objB.(*gwapiv1a2.TLSRoute); ok {
 			if cmp.Equal(a.Status, b.Status, opts) {
 				return true
 			}
@@ -266,8 +271,8 @@ func isStatusEqual(objA, objB interface{}) bool {
 				return true
 			}
 		}
-	case *gwapiv1.BackendTLSPolicy:
-		if b, ok := objB.(*gwapiv1.BackendTLSPolicy); ok {
+	case *gwapiv1a3.BackendTLSPolicy:
+		if b, ok := objB.(*gwapiv1a3.BackendTLSPolicy); ok {
 			if cmp.Equal(a.Status, b.Status, opts) {
 				return true
 			}
@@ -323,7 +328,7 @@ func KindOf(obj interface{}) string {
 		kind = resource.KindGateway
 	case *gwapiv1.HTTPRoute:
 		kind = resource.KindHTTPRoute
-	case *gwapiv1a3.TLSRoute:
+	case *gwapiv1a2.TLSRoute:
 		kind = resource.KindTLSRoute
 	case *gwapiv1a2.TCPRoute:
 		kind = resource.KindTCPRoute
@@ -341,7 +346,7 @@ func KindOf(obj interface{}) string {
 		kind = resource.KindSecurityPolicy
 	case *egv1a1.EnvoyExtensionPolicy:
 		kind = resource.KindEnvoyExtensionPolicy
-	case *gwapiv1.BackendTLSPolicy:
+	case *gwapiv1a3.BackendTLSPolicy:
 		kind = resource.KindBackendTLSPolicy
 	case *unstructured.Unstructured:
 		kind = o.GetKind()
