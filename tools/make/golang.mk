@@ -7,6 +7,8 @@ VERSION_PACKAGE := github.com/envoyproxy/gateway/internal/cmd/version
 GO_LDFLAGS += -X $(VERSION_PACKAGE).envoyGatewayVersion=$(shell cat VERSION) \
 	-X $(VERSION_PACKAGE).gitCommitID=$(GIT_COMMIT)
 
+GO_BUILD_FLAGS += -buildvcs=false
+
 GIT_COMMIT:=$(shell git rev-parse HEAD)
 
 GOPATH := $(shell go env GOPATH)
@@ -28,7 +30,7 @@ go.build.%:
 	$(eval OS := $(word 1,$(subst _, ,$(PLATFORM))))
 	$(eval ARCH := $(word 2,$(subst _, ,$(PLATFORM))))
 	@$(call log, "Building binary $(COMMAND) with commit $(REV) for $(OS) $(ARCH)")
-	CGO_ENABLED=0 GOOS=$(OS) GOARCH=$(ARCH) go build -o $(OUTPUT_DIR)/$(OS)/$(ARCH)/$(COMMAND) -ldflags "$(GO_LDFLAGS)" $(ROOT_PACKAGE)/cmd/$(COMMAND)
+	CGO_ENABLED=0 GOOS=$(OS) GOARCH=$(ARCH) go build $(GO_BUILD_FLAGS) -o $(OUTPUT_DIR)/$(OS)/$(ARCH)/$(COMMAND) -ldflags "$(GO_LDFLAGS)" $(ROOT_PACKAGE)/cmd/$(COMMAND)
 
 # Build the envoy-gateway binaries in the hosted platforms.
 .PHONY: go.build
