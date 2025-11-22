@@ -482,6 +482,11 @@ func (in *BackendMetrics) DeepCopy() *BackendMetrics {
 func (in *BackendRef) DeepCopyInto(out *BackendRef) {
 	*out = *in
 	in.BackendObjectReference.DeepCopyInto(&out.BackendObjectReference)
+	if in.Weight != nil {
+		in, out := &in.Weight, &out.Weight
+		*out = new(uint32)
+		**out = **in
+	}
 	if in.Fallback != nil {
 		in, out := &in.Fallback, &out.Fallback
 		*out = new(bool)

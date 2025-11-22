@@ -53,6 +53,11 @@ func (t *Translator) translateExtServiceBackendRefs(
 			return nil, err
 		}
 
+		// don't process backends with weight 0
+		if backendRef.Weight != nil && *backendRef.Weight == 0 {
+			continue
+		}
+
 		settingName := irDestinationSettingName(destName, i)
 		var extServiceDest *ir.DestinationSetting
 		if extServiceDest, err = t.processExtServiceDestination(
@@ -159,7 +164,13 @@ func (t *Translator) processExtServiceDestination(
 	ds.TLS = backendTLS
 
 	// TODO: support weighted non-xRoute backends
-	ds.Weight = ptr.To(uint32(1))
+	if backendRef.Weight != nil {
+		ds.Weight = backendRef.Weight
+	} else {
+		// set default weight to 1
+		ds.Weight = ptr.To(uint32(1))
+	}
+
 	if backendRef.Fallback != nil {
 		// set only the secondary priority, the backend defaults to a primary priority if unset.
 		if ptr.Deref(backendRef.Fallback, false) {
