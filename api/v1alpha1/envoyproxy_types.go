@@ -553,10 +553,6 @@ type EnvoyProxyStatus struct {
 }
 
 type EnvoyProxyAncestorStatus struct {
-	// AncestorRef corresponds a GatewayClass or Gateway use this EnvoyProxy with ParametersReference.
-	// +required
-	AncestorRef gwapiv1.ParentReference `json:"ancestorRef"`
-
 	// Conditions describes the status of the Policy with respect to the given Ancestor.
 	//
 	// +required
@@ -564,6 +560,10 @@ type EnvoyProxyAncestorStatus struct {
 	// +listMapKey=type
 	// +optional
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
+
+	// AncestorRef corresponds a GatewayClass or Gateway use this EnvoyProxy with ParametersReference.
+	// +required
+	AncestorRef gwapiv1.ParentReference `json:"ancestorRef"`
 }
 
 type EnvoyProxyConditionType string
