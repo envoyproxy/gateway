@@ -21998,6 +21998,30 @@ spec:
                             minimum: 0
                             type: integer
                         type: object
+                      weightedZones:
+                        description: |-
+                          WeightedZones configures weight-based traffic distribution across locality zones.
+                          Traffic is distributed proportionally based on the sum of all zone weights.
+                        items:
+                          description: WeightedZoneConfig defines the weight for a
+                            specific locality zone.
+                          properties:
+                            weight:
+                              description: |-
+                                Weight defines the weight for this locality.
+                                Higher values receive more traffic. The actual traffic distribution
+                                is proportional to this value relative to other localities.
+                              format: int32
+                              type: integer
+                            zone:
+                              description: |-
+                                Zone specifies the zone this weight applies to.
+                                Empty string means apply to all zones within the region.
+                              type: string
+                          required:
+                          - weight
+                          type: object
+                        type: array
                     type: object
                 required:
                 - type
@@ -22015,6 +22039,10 @@ spec:
                     Random, and RoundRobin load balancers.
                   rule: 'self.type == ''ConsistentHash'' ? !has(self.zoneAware) :
                     true '
+                - message: ZoneAware PreferLocal and WeightedZones cannot be specified
+                    together.
+                  rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal) &&
+                    has(self.zoneAware.weightedZones)) : true'
               mergeType:
                 description: |-
                   MergeType determines how this configuration is merged with existing BackendTrafficPolicy
@@ -26550,6 +26578,30 @@ spec:
                                       minimum: 0
                                       type: integer
                                   type: object
+                                weightedZones:
+                                  description: |-
+                                    WeightedZones configures weight-based traffic distribution across locality zones.
+                                    Traffic is distributed proportionally based on the sum of all zone weights.
+                                  items:
+                                    description: WeightedZoneConfig defines the weight
+                                      for a specific locality zone.
+                                    properties:
+                                      weight:
+                                        description: |-
+                                          Weight defines the weight for this locality.
+                                          Higher values receive more traffic. The actual traffic distribution
+                                          is proportional to this value relative to other localities.
+                                        format: int32
+                                        type: integer
+                                      zone:
+                                        description: |-
+                                          Zone specifies the zone this weight applies to.
+                                          Empty string means apply to all zones within the region.
+                                        type: string
+                                    required:
+                                    - weight
+                                    type: object
+                                  type: array
                               type: object
                           required:
                           - type
@@ -26567,6 +26619,10 @@ spec:
                               Random, and RoundRobin load balancers.
                             rule: 'self.type == ''ConsistentHash'' ? !has(self.zoneAware)
                               : true '
+                          - message: ZoneAware PreferLocal and WeightedZones cannot
+                              be specified together.
+                            rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal)
+                              && has(self.zoneAware.weightedZones)) : true'
                         proxyProtocol:
                           description: ProxyProtocol enables the Proxy Protocol when
                             communicating with the backend.
@@ -40195,6 +40251,31 @@ spec:
                                                         minimum: 0
                                                         type: integer
                                                     type: object
+                                                  weightedZones:
+                                                    description: |-
+                                                      WeightedZones configures weight-based traffic distribution across locality zones.
+                                                      Traffic is distributed proportionally based on the sum of all zone weights.
+                                                    items:
+                                                      description: WeightedZoneConfig
+                                                        defines the weight for a specific
+                                                        locality zone.
+                                                      properties:
+                                                        weight:
+                                                          description: |-
+                                                            Weight defines the weight for this locality.
+                                                            Higher values receive more traffic. The actual traffic distribution
+                                                            is proportional to this value relative to other localities.
+                                                          format: int32
+                                                          type: integer
+                                                        zone:
+                                                          description: |-
+                                                            Zone specifies the zone this weight applies to.
+                                                            Empty string means apply to all zones within the region.
+                                                          type: string
+                                                      required:
+                                                      - weight
+                                                      type: object
+                                                    type: array
                                                 type: object
                                             required:
                                             - type
@@ -40214,6 +40295,11 @@ spec:
                                                 and RoundRobin load balancers.
                                               rule: 'self.type == ''ConsistentHash''
                                                 ? !has(self.zoneAware) : true '
+                                            - message: ZoneAware PreferLocal and WeightedZones
+                                                cannot be specified together.
+                                              rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal)
+                                                && has(self.zoneAware.weightedZones))
+                                                : true'
                                           proxyProtocol:
                                             description: ProxyProtocol enables the
                                               Proxy Protocol when communicating with
@@ -41402,6 +41488,31 @@ spec:
                                                         minimum: 0
                                                         type: integer
                                                     type: object
+                                                  weightedZones:
+                                                    description: |-
+                                                      WeightedZones configures weight-based traffic distribution across locality zones.
+                                                      Traffic is distributed proportionally based on the sum of all zone weights.
+                                                    items:
+                                                      description: WeightedZoneConfig
+                                                        defines the weight for a specific
+                                                        locality zone.
+                                                      properties:
+                                                        weight:
+                                                          description: |-
+                                                            Weight defines the weight for this locality.
+                                                            Higher values receive more traffic. The actual traffic distribution
+                                                            is proportional to this value relative to other localities.
+                                                          format: int32
+                                                          type: integer
+                                                        zone:
+                                                          description: |-
+                                                            Zone specifies the zone this weight applies to.
+                                                            Empty string means apply to all zones within the region.
+                                                          type: string
+                                                      required:
+                                                      - weight
+                                                      type: object
+                                                    type: array
                                                 type: object
                                             required:
                                             - type
@@ -41421,6 +41532,11 @@ spec:
                                                 and RoundRobin load balancers.
                                               rule: 'self.type == ''ConsistentHash''
                                                 ? !has(self.zoneAware) : true '
+                                            - message: ZoneAware PreferLocal and WeightedZones
+                                                cannot be specified together.
+                                              rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal)
+                                                && has(self.zoneAware.weightedZones))
+                                                : true'
                                           proxyProtocol:
                                             description: ProxyProtocol enables the
                                               Proxy Protocol when communicating with
@@ -42696,6 +42812,31 @@ spec:
                                                   minimum: 0
                                                   type: integer
                                               type: object
+                                            weightedZones:
+                                              description: |-
+                                                WeightedZones configures weight-based traffic distribution across locality zones.
+                                                Traffic is distributed proportionally based on the sum of all zone weights.
+                                              items:
+                                                description: WeightedZoneConfig defines
+                                                  the weight for a specific locality
+                                                  zone.
+                                                properties:
+                                                  weight:
+                                                    description: |-
+                                                      Weight defines the weight for this locality.
+                                                      Higher values receive more traffic. The actual traffic distribution
+                                                      is proportional to this value relative to other localities.
+                                                    format: int32
+                                                    type: integer
+                                                  zone:
+                                                    description: |-
+                                                      Zone specifies the zone this weight applies to.
+                                                      Empty string means apply to all zones within the region.
+                                                    type: string
+                                                required:
+                                                - weight
+                                                type: object
+                                              type: array
                                           type: object
                                       required:
                                       - type
@@ -42714,6 +42855,11 @@ spec:
                                           load balancers.
                                         rule: 'self.type == ''ConsistentHash'' ? !has(self.zoneAware)
                                           : true '
+                                      - message: ZoneAware PreferLocal and WeightedZones
+                                          cannot be specified together.
+                                        rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal)
+                                          && has(self.zoneAware.weightedZones)) :
+                                          true'
                                     proxyProtocol:
                                       description: ProxyProtocol enables the Proxy
                                         Protocol when communicating with the backend.
@@ -43899,6 +44045,30 @@ spec:
                                             minimum: 0
                                             type: integer
                                         type: object
+                                      weightedZones:
+                                        description: |-
+                                          WeightedZones configures weight-based traffic distribution across locality zones.
+                                          Traffic is distributed proportionally based on the sum of all zone weights.
+                                        items:
+                                          description: WeightedZoneConfig defines
+                                            the weight for a specific locality zone.
+                                          properties:
+                                            weight:
+                                              description: |-
+                                                Weight defines the weight for this locality.
+                                                Higher values receive more traffic. The actual traffic distribution
+                                                is proportional to this value relative to other localities.
+                                              format: int32
+                                              type: integer
+                                            zone:
+                                              description: |-
+                                                Zone specifies the zone this weight applies to.
+                                                Empty string means apply to all zones within the region.
+                                              type: string
+                                          required:
+                                          - weight
+                                          type: object
+                                        type: array
                                     type: object
                                 required:
                                 - type
@@ -43916,6 +44086,10 @@ spec:
                                     LeastRequest, Random, and RoundRobin load balancers.
                                   rule: 'self.type == ''ConsistentHash'' ? !has(self.zoneAware)
                                     : true '
+                                - message: ZoneAware PreferLocal and WeightedZones
+                                    cannot be specified together.
+                                  rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal)
+                                    && has(self.zoneAware.weightedZones)) : true'
                               proxyProtocol:
                                 description: ProxyProtocol enables the Proxy Protocol
                                   when communicating with the backend.
@@ -46077,6 +46251,30 @@ spec:
                                         minimum: 0
                                         type: integer
                                     type: object
+                                  weightedZones:
+                                    description: |-
+                                      WeightedZones configures weight-based traffic distribution across locality zones.
+                                      Traffic is distributed proportionally based on the sum of all zone weights.
+                                    items:
+                                      description: WeightedZoneConfig defines the
+                                        weight for a specific locality zone.
+                                      properties:
+                                        weight:
+                                          description: |-
+                                            Weight defines the weight for this locality.
+                                            Higher values receive more traffic. The actual traffic distribution
+                                            is proportional to this value relative to other localities.
+                                          format: int32
+                                          type: integer
+                                        zone:
+                                          description: |-
+                                            Zone specifies the zone this weight applies to.
+                                            Empty string means apply to all zones within the region.
+                                          type: string
+                                      required:
+                                      - weight
+                                      type: object
+                                    type: array
                                 type: object
                             required:
                             - type
@@ -46094,6 +46292,10 @@ spec:
                                 Random, and RoundRobin load balancers.
                               rule: 'self.type == ''ConsistentHash'' ? !has(self.zoneAware)
                                 : true '
+                            - message: ZoneAware PreferLocal and WeightedZones cannot
+                                be specified together.
+                              rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal)
+                                && has(self.zoneAware.weightedZones)) : true'
                           proxyProtocol:
                             description: ProxyProtocol enables the Proxy Protocol
                               when communicating with the backend.
@@ -47174,6 +47376,30 @@ spec:
                                         minimum: 0
                                         type: integer
                                     type: object
+                                  weightedZones:
+                                    description: |-
+                                      WeightedZones configures weight-based traffic distribution across locality zones.
+                                      Traffic is distributed proportionally based on the sum of all zone weights.
+                                    items:
+                                      description: WeightedZoneConfig defines the
+                                        weight for a specific locality zone.
+                                      properties:
+                                        weight:
+                                          description: |-
+                                            Weight defines the weight for this locality.
+                                            Higher values receive more traffic. The actual traffic distribution
+                                            is proportional to this value relative to other localities.
+                                          format: int32
+                                          type: integer
+                                        zone:
+                                          description: |-
+                                            Zone specifies the zone this weight applies to.
+                                            Empty string means apply to all zones within the region.
+                                          type: string
+                                      required:
+                                      - weight
+                                      type: object
+                                    type: array
                                 type: object
                             required:
                             - type
@@ -47191,6 +47417,10 @@ spec:
                                 Random, and RoundRobin load balancers.
                               rule: 'self.type == ''ConsistentHash'' ? !has(self.zoneAware)
                                 : true '
+                            - message: ZoneAware PreferLocal and WeightedZones cannot
+                                be specified together.
+                              rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal)
+                                && has(self.zoneAware.weightedZones)) : true'
                           proxyProtocol:
                             description: ProxyProtocol enables the Proxy Protocol
                               when communicating with the backend.
@@ -48486,6 +48716,30 @@ spec:
                                               minimum: 0
                                               type: integer
                                           type: object
+                                        weightedZones:
+                                          description: |-
+                                            WeightedZones configures weight-based traffic distribution across locality zones.
+                                            Traffic is distributed proportionally based on the sum of all zone weights.
+                                          items:
+                                            description: WeightedZoneConfig defines
+                                              the weight for a specific locality zone.
+                                            properties:
+                                              weight:
+                                                description: |-
+                                                  Weight defines the weight for this locality.
+                                                  Higher values receive more traffic. The actual traffic distribution
+                                                  is proportional to this value relative to other localities.
+                                                format: int32
+                                                type: integer
+                                              zone:
+                                                description: |-
+                                                  Zone specifies the zone this weight applies to.
+                                                  Empty string means apply to all zones within the region.
+                                                type: string
+                                            required:
+                                            - weight
+                                            type: object
+                                          type: array
                                       type: object
                                   required:
                                   - type
@@ -48504,6 +48758,10 @@ spec:
                                       balancers.
                                     rule: 'self.type == ''ConsistentHash'' ? !has(self.zoneAware)
                                       : true '
+                                  - message: ZoneAware PreferLocal and WeightedZones
+                                      cannot be specified together.
+                                    rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal)
+                                      && has(self.zoneAware.weightedZones)) : true'
                                 proxyProtocol:
                                   description: ProxyProtocol enables the Proxy Protocol
                                     when communicating with the backend.
@@ -49848,6 +50106,30 @@ spec:
                                         minimum: 0
                                         type: integer
                                     type: object
+                                  weightedZones:
+                                    description: |-
+                                      WeightedZones configures weight-based traffic distribution across locality zones.
+                                      Traffic is distributed proportionally based on the sum of all zone weights.
+                                    items:
+                                      description: WeightedZoneConfig defines the
+                                        weight for a specific locality zone.
+                                      properties:
+                                        weight:
+                                          description: |-
+                                            Weight defines the weight for this locality.
+                                            Higher values receive more traffic. The actual traffic distribution
+                                            is proportional to this value relative to other localities.
+                                          format: int32
+                                          type: integer
+                                        zone:
+                                          description: |-
+                                            Zone specifies the zone this weight applies to.
+                                            Empty string means apply to all zones within the region.
+                                          type: string
+                                      required:
+                                      - weight
+                                      type: object
+                                    type: array
                                 type: object
                             required:
                             - type
@@ -49865,6 +50147,10 @@ spec:
                                 Random, and RoundRobin load balancers.
                               rule: 'self.type == ''ConsistentHash'' ? !has(self.zoneAware)
                                 : true '
+                            - message: ZoneAware PreferLocal and WeightedZones cannot
+                                be specified together.
+                              rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal)
+                                && has(self.zoneAware.weightedZones)) : true'
                           proxyProtocol:
                             description: ProxyProtocol enables the Proxy Protocol
                               when communicating with the backend.
