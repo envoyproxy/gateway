@@ -33,7 +33,8 @@ http:
           apiKeyAuth:
             name: securitypolicy/default/policy-for-http-route-1
             credentials:
-              client-1: "a2V5MQ=="
+              - client: "client-1"
+                key: "a2V5MQ=="
             extractFrom:
               - headers: ["X-API-KEY", "X-API-KEY-2"]
             forwardClientIDHeader: "X-API-KEY-CLIENT-ID"
@@ -62,7 +63,8 @@ http:
           apiKeyAuth:
             name: securitypolicy/default/policy-for-http-route-1
             credentials:
-              client-2: "a2V5Mg=="
+              - client: "client-2"
+                key: "a2V5Mg=="
             extractFrom:
               - params: ["X-API-KEY", "X-API-KEY-2"]
       - name: httproute/default/httproute-2/rule/0/match/0/www_bar_com
@@ -89,7 +91,8 @@ http:
           apiKeyAuth:
             name: securitypolicy/default/policy-for-http-route-1
             credentials:
-              client-3: "a2V5Mw=="
+              - client: "client-3"
+                key: "a2V5Mw=="
             extractFrom:
               - cookies: ["X-API-KEY", "X-API-KEY-2"]
       - name: httproute/default/httproute-2/rule/0/match/0/www_bar_com
@@ -116,7 +119,8 @@ http:
           apiKeyAuth:
             name: securitypolicy/default/policy-for-http-route-1
             credentials:
-              client-3: "a2V5Mw=="
+              - client: "client-3"
+                key: "a2V5Mw=="
             extractFrom:
               # multiple kind of extractFrom with multiple values
               - cookies: ["X-API-KEY", "X-API-KEY-2"]
