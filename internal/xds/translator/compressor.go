@@ -19,6 +19,7 @@ import (
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	protobuf "google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -106,11 +107,6 @@ func buildCompressorFilter(compression *ir.Compression) (*hcmv3.HttpFilter, erro
 
 	if compression.ChooseFirst {
 		compressorProto.ChooseFirst = true
-		// Remove the Accept-Encoding header to prevent double compression
-		// This is only required on the filter closest to the upstream
-		compressorProto.ResponseDirectionConfig = &compressorv3.Compressor_ResponseDirectionConfig{
-			RemoveAcceptEncodingHeader: true,
-		}
 	}
 
 	if compressorAny, err = proto.ToAnyWithValidation(compressorProto); err != nil {
@@ -164,7 +160,7 @@ func (*compressor) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir
 				filterName, route)
 		}
 
-		compressorProto := compressorPerRouteConfig()
+		compressorProto := compressorPerRouteConfig(irComp)
 		if compressorAny, err = proto.ToAnyWithValidation(compressorProto); err != nil {
 			return err
 		}
@@ -176,11 +172,19 @@ func (*compressor) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir
 }
 
 // Enable compression on this route if compression is configured.
-func compressorPerRouteConfig() *compressorv3.CompressorPerRoute {
+func compressorPerRouteConfig(irComp *ir.Compression) *compressorv3.CompressorPerRoute {
+	responseDirectionConfig := &compressorv3.ResponseDirectionOverrides{}
+
+	// Remove the Accept-Encoding header to prevent double compression
+	// This is only required on the filter closest to the upstream
+	if irComp.ChooseFirst {
+		responseDirectionConfig.RemoveAcceptEncodingHeader = wrapperspb.Bool(true)
+	}
+
 	return &compressorv3.CompressorPerRoute{
 		Override: &compressorv3.CompressorPerRoute_Overrides{
 			Overrides: &compressorv3.CompressorOverrides{
-				ResponseDirectionConfig: &compressorv3.ResponseDirectionOverrides{},
+				ResponseDirectionConfig: responseDirectionConfig,
 			},
 		},
 	}
