@@ -562,6 +562,7 @@ type EnvoyProxyAncestorStatus struct {
 	// +required
 	// +listType=map
 	// +listMapKey=type
+	// +optional
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 

@@ -16144,7 +16144,6 @@ spec:
                       x-kubernetes-list-type: map
                   required:
                   - ancestorRef
-                  - conditions
                   type: object
                 type: array
             type: object
