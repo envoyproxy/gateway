@@ -891,6 +891,8 @@ type HeaderBasedSessionPersistence struct {
 type Compression struct {
 	// Type of compression to be used.
 	Type egv1a1.CompressorType `json:"type" yaml:"type"`
+	// ChooseFirst indicates this compressor is preferred when q-values in Accept-Encoding are equal.
+	ChooseFirst bool `json:"chooseFirst,omitempty" yaml:"chooseFirst,omitempty"`
 }
 
 // TrafficFeatures holds the information associated with the Backend Traffic Policy.
