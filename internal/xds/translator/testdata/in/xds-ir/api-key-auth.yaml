@@ -33,7 +33,7 @@ http:
           apiKeyAuth:
             name: securitypolicy/default/policy-for-http-route-1
             credentials:
-              - client: "client-1"
+              - client: "Y2xpZW50LTE="
                 key: "a2V5MQ=="
             extractFrom:
               - headers: ["X-API-KEY", "X-API-KEY-2"]
@@ -63,7 +63,7 @@ http:
           apiKeyAuth:
             name: securitypolicy/default/policy-for-http-route-1
             credentials:
-              - client: "client-2"
+              - client: "Y2xpZW50LTI="
                 key: "a2V5Mg=="
             extractFrom:
               - params: ["X-API-KEY", "X-API-KEY-2"]
@@ -91,7 +91,7 @@ http:
           apiKeyAuth:
             name: securitypolicy/default/policy-for-http-route-1
             credentials:
-              - client: "client-3"
+              - client: "Y2xpZW50LTM="
                 key: "a2V5Mw=="
             extractFrom:
               - cookies: ["X-API-KEY", "X-API-KEY-2"]
@@ -119,7 +119,7 @@ http:
           apiKeyAuth:
             name: securitypolicy/default/policy-for-http-route-1
             credentials:
-              - client: "client-3"
+              - client: "Y2xpZW50LTM="
                 key: "a2V5Mw=="
             extractFrom:
               # multiple kind of extractFrom with multiple values
