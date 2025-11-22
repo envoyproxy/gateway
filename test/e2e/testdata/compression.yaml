@@ -43,7 +43,10 @@ spec:
     group: gateway.networking.k8s.io
     kind: HTTPRoute
     name: compression
-  compression:
+  compressor:
     - type: Brotli
+      brotli: {}
     - type: Gzip
+      gzip: {}
     - type: Zstd
+      zstd: {}
