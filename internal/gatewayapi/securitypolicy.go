@@ -1672,8 +1672,9 @@ func (t *Translator) buildAPIKeyAuth(
 		namespace: policy.Namespace,
 	}
 
-	credentials := make(map[string]ir.PrivateBytes)
+	credentials := make([]ir.Credential, 0)
 	seenKeys := make(sets.Set[string])
+	seenClients := make(sets.Set[string])
 
 	for _, ref := range policy.Spec.APIKeyAuth.CredentialRefs {
 		credentialsSecret, err := t.validateSecretRef(
@@ -1682,7 +1683,7 @@ func (t *Translator) buildAPIKeyAuth(
 			return nil, err
 		}
 		for clientid, key := range credentialsSecret.Data {
-			if _, ok := credentials[clientid]; ok {
+			if seenClients.Has(clientid) {
 				continue
 			}
 
@@ -1692,7 +1693,11 @@ func (t *Translator) buildAPIKeyAuth(
 			}
 
 			seenKeys.Insert(keyString)
-			credentials[clientid] = key
+			seenClients.Insert(clientid)
+			credentials = append(credentials, ir.Credential{
+				Client: []byte(clientid),
+				Key:    key,
+			})
 		}
 	}
 
