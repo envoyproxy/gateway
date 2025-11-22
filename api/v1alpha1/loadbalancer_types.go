@@ -11,15 +11,17 @@ import gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 // +union
 //
 // +kubebuilder:validation:XValidation:rule="self.type == 'ConsistentHash' ? has(self.consistentHash) : !has(self.consistentHash)",message="If LoadBalancer type is consistentHash, consistentHash field needs to be set."
-// +kubebuilder:validation:XValidation:rule="self.type in ['Random', 'ConsistentHash'] ? !has(self.slowStart) : true ",message="Currently SlowStart is only supported for RoundRobin and LeastRequest load balancers."
-// +kubebuilder:validation:XValidation:rule="self.type == 'ConsistentHash' ? !has(self.zoneAware) : true ",message="Currently ZoneAware is only supported for LeastRequest, Random, and RoundRobin load balancers."
+// +kubebuilder:validation:XValidation:rule="self.type == 'ClientSideWeightedRoundRobin' ? has(self.clientSideWeightedRoundRobin) : !has(self.clientSideWeightedRoundRobin)",message="If LoadBalancer type is ClientSideWeightedRoundRobin, clientSideWeightedRoundRobin field needs to be set."
+// +kubebuilder:validation:XValidation:rule="self.type in ['Random', 'ConsistentHash', 'ClientSideWeightedRoundRobin'] ? !has(self.slowStart) : true ",message="Currently SlowStart is only supported for RoundRobin and LeastRequest load balancers."
+// +kubebuilder:validation:XValidation:rule="self.type in ['ConsistentHash', 'ClientSideWeightedRoundRobin'] ? !has(self.zoneAware) : true ",message="Currently ZoneAware is only supported for LeastRequest, Random, and RoundRobin load balancers."
 type LoadBalancer struct {
 	// Type decides the type of Load Balancer policy.
 	// Valid LoadBalancerType values are
 	// "ConsistentHash",
 	// "LeastRequest",
 	// "Random",
-	// "RoundRobin".
+	// "RoundRobin",
+	// "ClientSideWeightedRoundRobin".
 	//
 	// +unionDiscriminator
 	Type LoadBalancerType `json:"type"`
@@ -28,6 +30,12 @@ type LoadBalancer struct {
 	//
 	// +optional
 	ConsistentHash *ConsistentHash `json:"consistentHash,omitempty"`
+
+	// ClientSideWeightedRoundRobin defines the configuration when the load balancer type is
+	// set to ClientSideWeightedRoundRobin.
+	//
+	// +optional
+	ClientSideWeightedRoundRobin *ClientSideWeightedRoundRobin `json:"clientSideWeightedRoundRobin,omitempty"`
 
 	// EndpointOverride defines the configuration for endpoint override.
 	// When specified, the load balancer will attempt to route requests to endpoints
@@ -51,7 +59,7 @@ type LoadBalancer struct {
 }
 
 // LoadBalancerType specifies the types of LoadBalancer.
-// +kubebuilder:validation:Enum=ConsistentHash;LeastRequest;Random;RoundRobin
+// +kubebuilder:validation:Enum=ConsistentHash;LeastRequest;Random;RoundRobin;ClientSideWeightedRoundRobin
 type LoadBalancerType string
 
 const (
@@ -63,6 +71,8 @@ const (
 	RandomLoadBalancerType LoadBalancerType = "Random"
 	// RoundRobinLoadBalancerType load balancer policy.
 	RoundRobinLoadBalancerType LoadBalancerType = "RoundRobin"
+	// ClientSideWeightedRoundRobinLoadBalancerType load balancer policy.
+	ClientSideWeightedRoundRobinLoadBalancerType LoadBalancerType = "ClientSideWeightedRoundRobin"
 )
 
 // ConsistentHash defines the configuration related to the consistent hash
@@ -132,6 +142,45 @@ type Cookie struct {
 	//
 	// +optional
 	Attributes map[string]string `json:"attributes,omitempty"`
+}
+
+// ClientSideWeightedRoundRobin defines configuration for Envoy's Client-Side Weighted Round Robin policy.
+// See Envoy proto: envoy.extensions.load_balancing_policies.client_side_weighted_round_robin.v3.ClientSideWeightedRoundRobin
+// Note: SlowStart is not supported for this policy in Envoy Gateway at this time.
+type ClientSideWeightedRoundRobin struct {
+	// A given endpoint must report load metrics continuously for at least this long before the endpoint weight will be used.
+	// Default is 10s.
+	// +optional
+	BlackoutPeriod *gwapiv1.Duration `json:"blackoutPeriod,omitempty"`
+
+	// If a given endpoint has not reported load metrics in this long, stop using the reported weight. Defaults to 3m.
+	// +optional
+	WeightExpirationPeriod *gwapiv1.Duration `json:"weightExpirationPeriod,omitempty"`
+
+	// How often endpoint weights are recalculated. Values less than 100ms are capped at 100ms. Default 1s.
+	// +optional
+	WeightUpdatePeriod *gwapiv1.Duration `json:"weightUpdatePeriod,omitempty"`
+
+	// ErrorUtilizationPenalty adjusts endpoint weights based on the error rate (eps/qps).
+	// This is expressed as a percentage-based integer where 100 represents 1.0, 150 represents 1.5, etc.
+	//
+	// For example:
+	// - 100 => 1.0x
+	// - 120 => 1.2x
+	// - 200 => 2.0x
+	//
+	// Note: In the internal IR/XDS configuration this value is converted back to a
+	// floating point multiplier (value / 100.0).
+	//
+	// Must be non-negative.
+	// +kubebuilder:validation:Minimum=0
+	// +optional
+	ErrorUtilizationPenalty *uint32 `json:"errorUtilizationPenalty,omitempty"`
+
+	// Metric names used to compute utilization if application_utilization is not set.
+	// For map fields in ORCA proto, use the form "<map_field>.<key>", e.g., "named_metrics.foo".
+	// +optional
+	MetricNamesForComputingUtilization []string `json:"metricNamesForComputingUtilization,omitempty"`
 }
 
 // ConsistentHashType defines the type of input to hash on.
