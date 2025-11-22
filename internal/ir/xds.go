@@ -2623,10 +2623,11 @@ type Random struct{}
 // +k8s:deepcopy-gen=true
 type ConsistentHash struct {
 	// Hash based on the Source IP Address
-	SourceIP  *bool            `json:"sourceIP,omitempty" yaml:"sourceIP,omitempty"`
-	Headers   []*egv1a1.Header `json:"headers,omitempty" yaml:"headers,omitempty"`
-	Cookie    *egv1a1.Cookie   `json:"cookie,omitempty" yaml:"cookie,omitempty"`
-	TableSize *uint64          `json:"tableSize,omitempty" yaml:"tableSize,omitempty"`
+	SourceIP   *bool              `json:"sourceIP,omitempty" yaml:"sourceIP,omitempty"`
+	Headers    []*egv1a1.Header   `json:"headers,omitempty" yaml:"headers,omitempty"`
+	Cookie     *egv1a1.Cookie     `json:"cookie,omitempty" yaml:"cookie,omitempty"`
+	QueryParam *egv1a1.QueryParam `json:"queryParam,omitempty" yaml:"queryParam,omitempty"`
+	TableSize  *uint64            `json:"tableSize,omitempty" yaml:"tableSize,omitempty"`
 }
 
 type ProxyProtocolVersion string

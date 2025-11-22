@@ -396,6 +396,8 @@ func buildConsistentHashLoadBalancer(policy egv1a1.LoadBalancer) (*ir.Consistent
 		consistentHash.Headers = headers
 	case egv1a1.CookieConsistentHashType:
 		consistentHash.Cookie = policy.ConsistentHash.Cookie
+	case egv1a1.QueryParamConsistentHashType:
+		consistentHash.QueryParam = policy.ConsistentHash.QueryParam
 	}
 
 	return consistentHash, nil

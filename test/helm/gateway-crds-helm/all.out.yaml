@@ -21870,6 +21870,10 @@ spec:
                           - name
                           type: object
                         type: array
+                      queryParam:
+                        description: QueryParam configures the query parameter hash
+                          policy when the consistent hash type is set to QueryParam.
+                        type: string
                       tableSize:
                         default: 65537
                         description: The table size for consistent hashing, must be
@@ -21885,11 +21889,13 @@ spec:
                           "Header",
                           "Headers",
                           "Cookie".
+                          "QueryParam".
                         enum:
                         - SourceIP
                         - Header
                         - Headers
                         - Cookie
+                        - QueryParam
                         type: string
                     required:
                     - type
@@ -21904,6 +21910,10 @@ spec:
                     - message: If consistent hash type is cookie, the cookie field
                         must be set.
                       rule: 'self.type == ''Cookie'' ? has(self.cookie) : !has(self.cookie)'
+                    - message: If consistent hash type is queryParam, the queryParam
+                        field must be set.
+                      rule: 'self.type == ''QueryParam'' ? has(self.queryParam) :
+                        !has(self.queryParam)'
                   endpointOverride:
                     description: |-
                       EndpointOverride defines the configuration for endpoint override.
@@ -26416,6 +26426,11 @@ spec:
                                     - name
                                     type: object
                                   type: array
+                                queryParam:
+                                  description: QueryParam configures the query parameter
+                                    hash policy when the consistent hash type is set
+                                    to QueryParam.
+                                  type: string
                                 tableSize:
                                   default: 65537
                                   description: The table size for consistent hashing,
@@ -26431,11 +26446,13 @@ spec:
                                     "Header",
                                     "Headers",
                                     "Cookie".
+                                    "QueryParam".
                                   enum:
                                   - SourceIP
                                   - Header
                                   - Headers
                                   - Cookie
+                                  - QueryParam
                                   type: string
                               required:
                               - type
@@ -26453,6 +26470,10 @@ spec:
                                   field must be set.
                                 rule: 'self.type == ''Cookie'' ? has(self.cookie)
                                   : !has(self.cookie)'
+                              - message: If consistent hash type is queryParam, the
+                                  queryParam field must be set.
+                                rule: 'self.type == ''QueryParam'' ? has(self.queryParam)
+                                  : !has(self.queryParam)'
                             endpointOverride:
                               description: |-
                                 EndpointOverride defines the configuration for endpoint override.
@@ -40049,6 +40070,12 @@ spec:
                                                       - name
                                                       type: object
                                                     type: array
+                                                  queryParam:
+                                                    description: QueryParam configures
+                                                      the query parameter hash policy
+                                                      when the consistent hash type
+                                                      is set to QueryParam.
+                                                    type: string
                                                   tableSize:
                                                     default: 65537
                                                     description: The table size for
@@ -40065,11 +40092,13 @@ spec:
                                                       "Header",
                                                       "Headers",
                                                       "Cookie".
+                                                      "QueryParam".
                                                     enum:
                                                     - SourceIP
                                                     - Header
                                                     - Headers
                                                     - Cookie
+                                                    - QueryParam
                                                     type: string
                                                 required:
                                                 - type
@@ -40090,6 +40119,11 @@ spec:
                                                     be set.
                                                   rule: 'self.type == ''Cookie'' ?
                                                     has(self.cookie) : !has(self.cookie)'
+                                                - message: If consistent hash type
+                                                    is queryParam, the queryParam
+                                                    field must be set.
+                                                  rule: 'self.type == ''QueryParam''
+                                                    ? has(self.queryParam) : !has(self.queryParam)'
                                               endpointOverride:
                                                 description: |-
                                                   EndpointOverride defines the configuration for endpoint override.
@@ -41256,6 +41290,12 @@ spec:
                                                       - name
                                                       type: object
                                                     type: array
+                                                  queryParam:
+                                                    description: QueryParam configures
+                                                      the query parameter hash policy
+                                                      when the consistent hash type
+                                                      is set to QueryParam.
+                                                    type: string
                                                   tableSize:
                                                     default: 65537
                                                     description: The table size for
@@ -41272,11 +41312,13 @@ spec:
                                                       "Header",
                                                       "Headers",
                                                       "Cookie".
+                                                      "QueryParam".
                                                     enum:
                                                     - SourceIP
                                                     - Header
                                                     - Headers
                                                     - Cookie
+                                                    - QueryParam
                                                     type: string
                                                 required:
                                                 - type
@@ -41297,6 +41339,11 @@ spec:
                                                     be set.
                                                   rule: 'self.type == ''Cookie'' ?
                                                     has(self.cookie) : !has(self.cookie)'
+                                                - message: If consistent hash type
+                                                    is queryParam, the queryParam
+                                                    field must be set.
+                                                  rule: 'self.type == ''QueryParam''
+                                                    ? has(self.queryParam) : !has(self.queryParam)'
                                               endpointOverride:
                                                 description: |-
                                                   EndpointOverride defines the configuration for endpoint override.
@@ -42555,6 +42602,11 @@ spec:
                                                 - name
                                                 type: object
                                               type: array
+                                            queryParam:
+                                              description: QueryParam configures the
+                                                query parameter hash policy when the
+                                                consistent hash type is set to QueryParam.
+                                              type: string
                                             tableSize:
                                               default: 65537
                                               description: The table size for consistent
@@ -42571,11 +42623,13 @@ spec:
                                                 "Header",
                                                 "Headers",
                                                 "Cookie".
+                                                "QueryParam".
                                               enum:
                                               - SourceIP
                                               - Header
                                               - Headers
                                               - Cookie
+                                              - QueryParam
                                               type: string
                                           required:
                                           - type
@@ -42593,6 +42647,10 @@ spec:
                                               the cookie field must be set.
                                             rule: 'self.type == ''Cookie'' ? has(self.cookie)
                                               : !has(self.cookie)'
+                                          - message: If consistent hash type is queryParam,
+                                              the queryParam field must be set.
+                                            rule: 'self.type == ''QueryParam'' ? has(self.queryParam)
+                                              : !has(self.queryParam)'
                                         endpointOverride:
                                           description: |-
                                             EndpointOverride defines the configuration for endpoint override.
@@ -43760,6 +43818,11 @@ spec:
                                           - name
                                           type: object
                                         type: array
+                                      queryParam:
+                                        description: QueryParam configures the query
+                                          parameter hash policy when the consistent
+                                          hash type is set to QueryParam.
+                                        type: string
                                       tableSize:
                                         default: 65537
                                         description: The table size for consistent
@@ -43776,11 +43839,13 @@ spec:
                                           "Header",
                                           "Headers",
                                           "Cookie".
+                                          "QueryParam".
                                         enum:
                                         - SourceIP
                                         - Header
                                         - Headers
                                         - Cookie
+                                        - QueryParam
                                         type: string
                                     required:
                                     - type
@@ -43798,6 +43863,10 @@ spec:
                                         the cookie field must be set.
                                       rule: 'self.type == ''Cookie'' ? has(self.cookie)
                                         : !has(self.cookie)'
+                                    - message: If consistent hash type is queryParam,
+                                        the queryParam field must be set.
+                                      rule: 'self.type == ''QueryParam'' ? has(self.queryParam)
+                                        : !has(self.queryParam)'
                                   endpointOverride:
                                     description: |-
                                       EndpointOverride defines the configuration for endpoint override.
@@ -45941,6 +46010,11 @@ spec:
                                       - name
                                       type: object
                                     type: array
+                                  queryParam:
+                                    description: QueryParam configures the query parameter
+                                      hash policy when the consistent hash type is
+                                      set to QueryParam.
+                                    type: string
                                   tableSize:
                                     default: 65537
                                     description: The table size for consistent hashing,
@@ -45956,11 +46030,13 @@ spec:
                                       "Header",
                                       "Headers",
                                       "Cookie".
+                                      "QueryParam".
                                     enum:
                                     - SourceIP
                                     - Header
                                     - Headers
                                     - Cookie
+                                    - QueryParam
                                     type: string
                                 required:
                                 - type
@@ -45978,6 +46054,10 @@ spec:
                                     cookie field must be set.
                                   rule: 'self.type == ''Cookie'' ? has(self.cookie)
                                     : !has(self.cookie)'
+                                - message: If consistent hash type is queryParam,
+                                    the queryParam field must be set.
+                                  rule: 'self.type == ''QueryParam'' ? has(self.queryParam)
+                                    : !has(self.queryParam)'
                               endpointOverride:
                                 description: |-
                                   EndpointOverride defines the configuration for endpoint override.
@@ -47038,6 +47118,11 @@ spec:
                                       - name
                                       type: object
                                     type: array
+                                  queryParam:
+                                    description: QueryParam configures the query parameter
+                                      hash policy when the consistent hash type is
+                                      set to QueryParam.
+                                    type: string
                                   tableSize:
                                     default: 65537
                                     description: The table size for consistent hashing,
@@ -47053,11 +47138,13 @@ spec:
                                       "Header",
                                       "Headers",
                                       "Cookie".
+                                      "QueryParam".
                                     enum:
                                     - SourceIP
                                     - Header
                                     - Headers
                                     - Cookie
+                                    - QueryParam
                                     type: string
                                 required:
                                 - type
@@ -47075,6 +47162,10 @@ spec:
                                     cookie field must be set.
                                   rule: 'self.type == ''Cookie'' ? has(self.cookie)
                                     : !has(self.cookie)'
+                                - message: If consistent hash type is queryParam,
+                                    the queryParam field must be set.
+                                  rule: 'self.type == ''QueryParam'' ? has(self.queryParam)
+                                    : !has(self.queryParam)'
                               endpointOverride:
                                 description: |-
                                   EndpointOverride defines the configuration for endpoint override.
@@ -48347,6 +48438,11 @@ spec:
                                             - name
                                             type: object
                                           type: array
+                                        queryParam:
+                                          description: QueryParam configures the query
+                                            parameter hash policy when the consistent
+                                            hash type is set to QueryParam.
+                                          type: string
                                         tableSize:
                                           default: 65537
                                           description: The table size for consistent
@@ -48363,11 +48459,13 @@ spec:
                                             "Header",
                                             "Headers",
                                             "Cookie".
+                                            "QueryParam".
                                           enum:
                                           - SourceIP
                                           - Header
                                           - Headers
                                           - Cookie
+                                          - QueryParam
                                           type: string
                                       required:
                                       - type
@@ -48385,6 +48483,10 @@ spec:
                                           the cookie field must be set.
                                         rule: 'self.type == ''Cookie'' ? has(self.cookie)
                                           : !has(self.cookie)'
+                                      - message: If consistent hash type is queryParam,
+                                          the queryParam field must be set.
+                                        rule: 'self.type == ''QueryParam'' ? has(self.queryParam)
+                                          : !has(self.queryParam)'
                                     endpointOverride:
                                       description: |-
                                         EndpointOverride defines the configuration for endpoint override.
@@ -49712,6 +49814,11 @@ spec:
                                       - name
                                       type: object
                                     type: array
+                                  queryParam:
+                                    description: QueryParam configures the query parameter
+                                      hash policy when the consistent hash type is
+                                      set to QueryParam.
+                                    type: string
                                   tableSize:
                                     default: 65537
                                     description: The table size for consistent hashing,
@@ -49727,11 +49834,13 @@ spec:
                                       "Header",
                                       "Headers",
                                       "Cookie".
+                                      "QueryParam".
                                     enum:
                                     - SourceIP
                                     - Header
                                     - Headers
                                     - Cookie
+                                    - QueryParam
                                     type: string
                                 required:
                                 - type
@@ -49749,6 +49858,10 @@ spec:
                                     cookie field must be set.
                                   rule: 'self.type == ''Cookie'' ? has(self.cookie)
                                     : !has(self.cookie)'
+                                - message: If consistent hash type is queryParam,
+                                    the queryParam field must be set.
+                                  rule: 'self.type == ''QueryParam'' ? has(self.queryParam)
+                                    : !has(self.queryParam)'
                               endpointOverride:
                                 description: |-
                                   EndpointOverride defines the configuration for endpoint override.
