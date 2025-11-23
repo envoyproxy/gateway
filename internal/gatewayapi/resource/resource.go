@@ -7,6 +7,7 @@ package resource
 
 import (
 	"context"
+	"reflect"
 	"sort"
 
 	certificatesv1b1 "k8s.io/api/certificates/v1beta1"
@@ -226,6 +227,24 @@ func (c *ControllerResourcesContext) DeepCopy() *ControllerResourcesContext {
 		Resources: c.Resources.DeepCopy(),
 		Context:   c.Context,
 	}
+}
+
+// Equal compares two Resources objects for equality.
+func (c *ControllerResourcesContext) Equal(other *ControllerResourcesContext) bool {
+	if c == nil && other == nil {
+		return true
+	}
+	if c == nil || other == nil {
+		return false
+	}
+	if c.Resources == nil && other.Resources == nil {
+		return true
+	}
+	if c.Resources == nil || other.Resources == nil {
+		return false
+	}
+
+	return reflect.DeepEqual(c.Resources, other.Resources)
 }
 
 // DeepCopy creates a new ControllerResources.

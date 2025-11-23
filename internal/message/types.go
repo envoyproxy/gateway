@@ -7,6 +7,7 @@ package message
 
 import (
 	"context"
+	"reflect"
 
 	"github.com/telepresenceio/watchable"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -148,6 +149,23 @@ func (x *XdsIRWithContext) DeepCopy() *XdsIRWithContext {
 		XdsIR:   x.XdsIR.DeepCopy(),
 		Context: x.Context,
 	}
+}
+
+func (x *XdsIRWithContext) Equal(other *XdsIRWithContext) bool {
+	if x == nil && other == nil {
+		return true
+	}
+	if x == nil || other == nil {
+		return false
+	}
+	if x.XdsIR == nil && other.XdsIR == nil {
+		return true
+	}
+	if x.XdsIR == nil || other.XdsIR == nil {
+		return false
+	}
+
+	return reflect.DeepEqual(x.XdsIR, other.XdsIR)
 }
 
 // XdsIR message

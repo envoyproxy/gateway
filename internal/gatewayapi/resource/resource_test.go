@@ -131,6 +131,38 @@ func TestEqualXds(t *testing.T) {
 	}
 }
 
+func TestEqualControllerResourcesContext(t *testing.T) {
+	c1 := context.Background()
+	c2 := context.TODO()
+	r1 := &ControllerResourcesContext{
+		Resources: &ControllerResources{
+			{
+				GatewayClass: &gwapiv1.GatewayClass{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "foo",
+					},
+				},
+			},
+		},
+		Context: c1,
+	}
+	r2 := &ControllerResourcesContext{
+		Resources: &ControllerResources{
+			{
+				GatewayClass: &gwapiv1.GatewayClass{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "foo",
+					},
+				},
+			},
+		},
+		Context: c2,
+	}
+
+	assert.True(t, r1.Equal(r2))
+	assert.True(t, r2.Equal(r1))
+}
+
 func TestGetEndpointSlicesForBackendDualStack(t *testing.T) {
 	// Test data setup
 	dualStackService := &discoveryv1.EndpointSlice{
