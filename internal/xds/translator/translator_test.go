@@ -6,7 +6,6 @@
 package translator
 
 import (
-	"context"
 	"embed"
 	"encoding/json"
 	"os"
@@ -181,7 +180,7 @@ func TestTranslateXds(t *testing.T) {
 				FilterOrder:  x.FilterOrder,
 				RuntimeFlags: cfg.runtimeFlags,
 			}
-			tCtx, err := tr.Translate(x, context.Background())
+			tCtx, err := tr.Translate(x)
 			if !strings.HasSuffix(inputFileName, "partial-invalid") && len(cfg.errMsg) == 0 {
 				t.Log(inputFileName)
 				require.NoError(t, err)
@@ -385,7 +384,7 @@ func TestTranslateXdsWithExtensionErrorsWhenFailOpen(t *testing.T) {
 			defer closeFunc()
 			tr.ExtensionManager = &extMgr
 
-			tCtx, err := tr.Translate(x, context.Background())
+			tCtx, err := tr.Translate(x)
 			if len(cfg.errMsg) > 0 {
 				require.EqualError(t, err, cfg.errMsg)
 			} else {
@@ -526,7 +525,7 @@ func TestTranslateXdsWithExtensionErrorsWhenFailClosed(t *testing.T) {
 			defer closeFunc()
 			tr.ExtensionManager = &extMgr
 
-			_, err = tr.Translate(x, context.Background())
+			_, err = tr.Translate(x)
 			require.EqualError(t, err, cfg.errMsg)
 		})
 	}

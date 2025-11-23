@@ -201,12 +201,12 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 				}
 				// Translate to IR
 				_, translateToIRSpan := tracer.Start(parentCtx, "GatewayApiRunner.ResoureTranslationCycle.TranslateToIR")
-				result, err := t.Translate(resources, parentCtx)
+				result, err := t.Translate(resources)
+				translateToIRSpan.End()
 				if err != nil {
 					// Currently all errors that Translate returns should just be logged
 					traceLogger.Error(err, "errors detected during translation", "gateway-class", resources.GatewayClass.Name)
 				}
-				translateToIRSpan.End()
 
 				// Publish the IRs.
 				// Also validate the ir before sending it.

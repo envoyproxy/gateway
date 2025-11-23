@@ -316,7 +316,9 @@ func (r *Runner) translateFromSubscription(sub <-chan watchable.Snapshot[string,
 					}
 				}
 
-				result, err := t.Translate(val.XdsIR, parentCtx)
+				_, translateSpan := tracer.Start(parentCtx, "Translator.Translate")
+				result, err := t.Translate(val.XdsIR)
+				translateSpan.End()
 				if err != nil {
 					traceLogger.Error(err, "failed to translate xds ir")
 					errChan <- err

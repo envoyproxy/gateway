@@ -6,7 +6,6 @@
 package translator
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"runtime"
@@ -23,7 +22,6 @@ import (
 	matcherv3 "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
 	resourcev3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
-	"go.opentelemetry.io/otel"
 	protobuf "google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
@@ -45,8 +43,6 @@ const (
 	// The dummy cluster name for TCP/UDP listeners that have no routes
 	emptyClusterName = "EmptyCluster"
 )
-
-var tracer = otel.Tracer("envoy-gateway/xds/translator")
 
 // The dummy cluster for TCP/UDP listeners that have no routes
 var emptyRouteCluster = &clusterv3.Cluster{
@@ -98,10 +94,7 @@ type GlobalRateLimitSettings struct {
 }
 
 // Translate translates the XDS IR into xDS resources
-func (t *Translator) Translate(xdsIR *ir.Xds, ctx context.Context) (*types.ResourceVersionTable, error) {
-	_, span := tracer.Start(ctx, "Translator.Translate")
-	defer span.End()
-
+func (t *Translator) Translate(xdsIR *ir.Xds) (*types.ResourceVersionTable, error) {
 	if xdsIR == nil {
 		return nil, errors.New("ir is nil")
 	}
