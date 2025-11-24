@@ -12,6 +12,7 @@ import (
 	_ "embed"
 	"fmt"
 	"math"
+	"strings"
 	"text/template"
 
 	"github.com/envoyproxy/gateway/test/benchmark/proto"
@@ -77,7 +78,56 @@ func convertToMarkdownResult(r *BenchmarkCaseReport) (MarkdownResult, MarkdownMe
 }
 
 func renderProtoResult(r *proto.Result) string {
-	return "TODO: render result"
+	// https://github.com/envoyproxy/nighthawk/blob/main/source/client/output_formatter_impl.cc#L160-L161
+	var sb strings.Builder
+	for _, stat := range r.Statistics {
+		if len(stat.GetPercentiles()) <= 1 {
+			continue
+		}
+		sb.WriteString(fmt.Sprintf("%s (%d samples)\n", statIdFriendlyStatName(stat.Id), stat.Count))
+		sb.WriteString(fmt.Sprintf("  min: %s | mean: %s | max: %s | pstdev: %s\n",
+			stat.GetMin().AsDuration(), stat.GetMean().AsDuration(), stat.GetMax().AsDuration(), stat.GetPstdev().AsDuration()))
+		sb.WriteString("\n")
+		sb.WriteString("  Percentile\tCount\t\tValue\n")
+
+		lastPercentile := float64(-1)
+		for _, p := range []float64{0.0, 0.5, 0.75, 0.8, 0.9, 0.95, 0.99, 0.999, 1.0} {
+			for _, percentile := range stat.Percentiles {
+				current := percentile.GetPercentile()
+				if current >= p && lastPercentile < current {
+					lastPercentile = current
+					if float64(current) > 0 && float64(current) < 1 {
+						sb.WriteString(fmt.Sprintf("  %f\t\t%d\t\t%s\n",
+							percentile.GetPercentile(), percentile.Count, percentile.GetDuration().AsDuration()))
+					}
+					break
+				}
+			}
+		}
+
+		sb.WriteString("\n")
+	}
+	return sb.String()
+}
+
+func statIdFriendlyStatName(statID string) string {
+	switch statID {
+	case "benchmark_http_client.queue_to_connect":
+		return "Queueing and connection setup latency"
+	case "benchmark_http_client.request_to_response":
+		return "Request start to response end"
+	case "sequencer.callback":
+		return "Initiation to completion"
+	case "sequencer.blocking":
+		return "Blocking. Results are skewed when significant numbers are reported here."
+	case "benchmark_http_client.response_body_size":
+		return "Response body size in bytes"
+	case "benchmark_http_client.response_header_size":
+		return "Response header size in bytes"
+
+	default:
+		return statID
+	}
 }
 
 type MarkdownOutput struct {
