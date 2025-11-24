@@ -127,10 +127,7 @@ func (t *Translator) ProcessHTTPFilters(parentRef *RouteParentContext,
 		}
 	}
 
-	if !errs.Empty() {
-		return httpFiltersContext, errs.GetAllErrors()
-	}
-	return httpFiltersContext, nil
+	return httpFiltersContext, errs.GetAllErrors()
 }
 
 // ProcessGRPCFilters translates gateway api grpc filters to IRs.
@@ -155,7 +152,7 @@ func (t *Translator) ProcessGRPCFilters(parentRef *RouteParentContext,
 		}
 		if err := ValidateGRPCRouteFilter(&filter, t.ExtensionGroupKinds...); err != nil {
 			errs.Add(t.processInvalidHTTPFilter(string(filter.Type), httpFiltersContext, err))
-			break
+			continue
 		}
 
 		switch filter.Type {
