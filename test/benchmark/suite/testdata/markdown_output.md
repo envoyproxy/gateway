@@ -4,7 +4,7 @@ Benchmark test settings:
 
 | RPS      | Connections     | Duration (Seconds) | CPU Limits (m) | Memory Limits (MiB) |
 |----------|-----------------|--------------------|----------------|---------------------|
-| {{.RPS}} | {{.Connection}} | {{.Duration}}      | {{.CPU}}       | {{.Memory}}         |
+| 1000 | 100 |       |        |          |
 
 ## Test: ScaleHTTPRoute
 
@@ -14,19 +14,16 @@ Fixed one Gateway and different scales of HTTPRoutes with different portion of h
 ### Results
 
 Expand to see the full results.
-
-{{- range .Results }}
 <details>
-<summary>{{.Summary}}</summary>
+<summary>case-title</summary>
 
 ```plaintext
 
-{{.Text}}
+TODO: render result
 
 ```
 
 </details>
-{{- end }}
 
 ### Metrics
 
@@ -34,9 +31,7 @@ The CPU usage statistics of both control-plane and data-plane are the CPU usage 
 
 | Test Name | Envoy Gateway Container Memory (MiB) <br> min/max/means | Envoy Gateway Process Memory (MiB) <br> min/max/means | Envoy Gateway CPU (%) <br> min/max/means | Averaged Envoy Proxy Memory (MiB) <br> min/max/means | Averaged Envoy Proxy CPU (%) <br> min/max/means |
 |-----------|---------------------------------------------------------|---------------------------------------------------------|------------------------------------------|------------------------------------------------------|-------------------------------------------------|
-{{- range .Metrics }}
-| {{.Name}} | {{.ControlPlaneContainerMemory}} | {{.ControlPlaneProcessMemory}} | {{.ControlPlaneCPU}} | {{.DataPlaneMemory}} | {{.DataPlaneCPU}} |  
-{{- end }}
+| case-title | 0.00 / 0.00 / 0.00 | 0.00 / 0.00 / 0.00 |  | 0.00 / 0.00 / 0.00 | 0.00 / 0.00 / 0.00 |
 
 ### Profiles
 
@@ -55,11 +50,6 @@ Currently, the supported profile types are:
 #### Heap
 
 The profiles were sampled when Envoy Gateway Memory is at its maximum.
+#### case-title.
 
-
-{{- range .Heaps }}
-#### {{.Title}}.
-
-![.Name]({{.URL}})
-
-{{- end }}
+![.Name](fake-image)

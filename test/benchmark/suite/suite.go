@@ -255,7 +255,10 @@ func (b *BenchmarkTestSuite) Run(t *testing.T, tests []BenchmarkTest) {
 
 	if len(b.ReportSaveDir) > 0 {
 		{
-			data, _ := ToMarkdown(suiteReport)
+			data, err := ToMarkdown(suiteReport)
+			if err != nil {
+				tlog.Logf(t, "Error converting benchmark report to markdown: %v", err)
+			}
 			reportPath := path.Join(b.ReportSaveDir, "benchmark_result.md")
 			if err := os.WriteFile(reportPath, data, 0o600); err != nil {
 				t.Errorf("Error writing markdown to path '%s': %v", reportPath, err)

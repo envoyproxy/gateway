@@ -48,6 +48,11 @@ func convertToMarkdownOutput(report *BenchmarkSuiteReport) *MarkdownOutput {
 			md, metric := convertToMarkdownResult(r)
 			out.Results = append(out.Results, md)
 			out.Metrics = append(out.Metrics, metric)
+			out.Heaps = append(out.Heaps, HeapResult{
+				Title: r.Title,
+				Name:  r.Title,
+				URL:   r.HeapProfileImage,
+			})
 		}
 	}
 
@@ -84,6 +89,13 @@ type MarkdownOutput struct {
 
 	Results []MarkdownResult
 	Metrics []MarkdownMetric
+	Heaps   []HeapResult
+}
+
+type HeapResult struct {
+	Title string
+	Name  string
+	URL   string
 }
 
 type MarkdownResult struct {
