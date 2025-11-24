@@ -32,6 +32,8 @@ const (
 	dataPlaneMemQL             = `container_memory_working_set_bytes{namespace="envoy-gateway-system", container="envoy"}/1024/1024`
 	dataPlaneCPUQLFormat       = `rate(container_cpu_usage_seconds_total{namespace="envoy-gateway-system", container="envoy"}[%DURATIONs])*100`
 	DurationFormatter          = "%DURATION"
+
+	benchmarkCPURateWindow = 30 * time.Second
 )
 
 // BenchmarkMetricSample contains sampled metrics and profiles data.
@@ -134,8 +136,15 @@ func (r *BenchmarkReport) sampleMetrics(ctx context.Context, sample *BenchmarkMe
 	}
 	// Sample cpu
 
-	// Get duration
-	durationSeconds := int(time.Since(startTime).Seconds())
+	// CPU usages is calculated based on the Kubernetes container_cpu_usage_seconds_total counter metric.
+	// We use a fixed window size of 30s for rate calculation. However, to ensure that we only capture
+	// metrics during the benchmark run period (and not before), if the benchmark run duration is
+	// less than the fixed window size,
+	durationSeconds := int(benchmarkCPURateWindow.Seconds())
+	elapsed := time.Since(startTime)
+	if elapsed < benchmarkCPURateWindow {
+		durationSeconds = int(elapsed.Seconds())
+	}
 	durationStr := fmt.Sprintf("%d", durationSeconds)
 	cpCPUQL := strings.ReplaceAll(controlPlaneCPUQL, DurationFormatter, durationStr)
 
