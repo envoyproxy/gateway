@@ -1672,7 +1672,8 @@ func (t *Translator) buildAPIKeyAuth(
 		namespace: policy.Namespace,
 	}
 
-	apiKeyCredentials := make([]ir.APIKeyCredential, 0)
+	expected := len(policy.Spec.APIKeyAuth.CredentialRefs)
+	apiKeyCredentials := make([]ir.APIKeyCredential, 0, expected)
 	seenKeys := make(sets.Set[string])
 	seenClients := make(sets.Set[string])
 
