@@ -2708,7 +2708,7 @@ func TestToMarkdown(t *testing.T) {
 	require.NotEmpty(t, out)
 
 	if test.OverrideTestData() {
-		_ = os.WriteFile("testdata/markdown_output.md", out, 0600)
+		_ = os.WriteFile("testdata/markdown_output.md", out, 0o600)
 		return
 	}
 

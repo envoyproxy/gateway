@@ -84,7 +84,7 @@ func renderProtoResult(r *proto.Result) string {
 		if len(stat.GetPercentiles()) <= 1 {
 			continue
 		}
-		sb.WriteString(fmt.Sprintf("%s (%d samples)\n", statIdFriendlyStatName(stat.Id), stat.Count))
+		sb.WriteString(fmt.Sprintf("%s (%d samples)\n", statIDFriendlyStatName(stat.Id), stat.Count))
 		sb.WriteString(fmt.Sprintf("  min: %s | mean: %s | max: %s | pstdev: %s\n",
 			stat.GetMin().AsDuration(), stat.GetMean().AsDuration(), stat.GetMax().AsDuration(), stat.GetPstdev().AsDuration()))
 		sb.WriteString("\n")
@@ -110,7 +110,7 @@ func renderProtoResult(r *proto.Result) string {
 	return sb.String()
 }
 
-func statIdFriendlyStatName(statID string) string {
+func statIDFriendlyStatName(statID string) string {
 	switch statID {
 	case "benchmark_http_client.queue_to_connect":
 		return "Queueing and connection setup latency"
