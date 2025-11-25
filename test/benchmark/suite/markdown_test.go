@@ -2697,7 +2697,7 @@ func TestToMarkdown(t *testing.T) {
 						RoutesPerHostname: 2,
 						Result:            fakeCaseResult(),
 						Phase:             "fake-phase",
-						HeapProfileImage:  "fake-image",
+						HeapProfileImage:  "fake-image.png",
 					},
 				},
 			},

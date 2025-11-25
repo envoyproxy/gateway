@@ -240,7 +240,7 @@ func (b *BenchmarkTestSuite) Run(t *testing.T, tests []BenchmarkTest) {
 				Result:            getGlobalResult(output),
 				RouteConvergence:  r.RouteConvergence,
 				Samples:           sortedSamples,
-				HeapProfileImage:  heapPprofPath,
+				HeapProfileImage:  strings.Replace(heapPprofPath, ".pprof", ".png", 1),
 			})
 		}
 

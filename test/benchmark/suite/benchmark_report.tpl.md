@@ -60,6 +60,6 @@ The profiles were sampled when Envoy Gateway Memory is at its maximum.
 {{- range .Heaps }}
 #### {{.Title}}.
 
-![.Name]({{.URL}})
+![{{.Name}}]({{.URL}})
 
 {{- end }}

@@ -262,13 +262,13 @@ jobs:
         BENCHMARK_CPU_LIMITS: 1000m
         BENCHMARK_MEMORY_LIMITS: 2000Mi
         BENCHMARK_REPORT_DIR: benchmark_report
-        BENCHMARK_RENDER_PNG: "false"
+        BENCHMARK_RENDER_PNG: "true"
       run: make benchmark
 
     - name: Upload Benchmark report
       uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4  # v5.0.0
       with:
-        name: benchmark-report
+        name: benchmark_report
         path: ./test/benchmark/benchmark_report/
 
   resilience-test:
