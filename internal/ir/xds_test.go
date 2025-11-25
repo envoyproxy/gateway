@@ -1410,7 +1410,7 @@ func TestRedaction(t *testing.T) {
 								HMACSecret:   []byte("secret"),
 							},
 							APIKeyAuth: &APIKeyAuth{
-								Credentials: []Credential{{Client: []byte("client-id"), Key: []byte("secret")}},
+								Credentials: []APIKeyCredential{{Client: []byte("client-id"), Key: []byte("secret")}},
 							},
 							BasicAuth: &BasicAuth{
 								Users: []byte("secret"),

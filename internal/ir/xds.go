@@ -1232,16 +1232,15 @@ type BasicAuth struct {
 	ForwardUsernameHeader *string `json:"forwardUsernameHeader,omitempty" yaml:"forwardUsernameHeader,omitempty"`
 }
 
-// Credential defines a single API key credential.
+// APIKeyCredential defines a single API key credential.
 //
 // +k8s:deepcopy-gen=true
-type Credential struct {
+type APIKeyCredential struct {
 	// Client is the client ID.
 	Client PrivateBytes `json:"client" yaml:"client"`
 	// Key is the API key associated with the client.
 	Key PrivateBytes `json:"key" yaml:"key"`
 }
-
 
 // APIKeyAuth defines the schema for the API Key Authentication.
 //
@@ -1249,7 +1248,7 @@ type Credential struct {
 type APIKeyAuth struct {
 	// Credentials is the list of API key credentials.
 	// Each credential contains a client ID and the associated API key.
-	Credentials []Credential `json:"credentials,omitempty" yaml:"credentials,omitempty"`
+	Credentials []APIKeyCredential `json:"credentials,omitempty" yaml:"credentials,omitempty"`
 
 	// ExtractFrom is where to fetch the key from the coming request.
 	// The value from the first source that has a key will be used.

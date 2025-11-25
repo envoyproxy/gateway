@@ -1672,7 +1672,7 @@ func (t *Translator) buildAPIKeyAuth(
 		namespace: policy.Namespace,
 	}
 
-	credentials := make([]ir.Credential, 0)
+	apiKeyCredentials := make([]ir.APIKeyCredential, 0)
 	seenKeys := make(sets.Set[string])
 	seenClients := make(sets.Set[string])
 
@@ -1694,7 +1694,7 @@ func (t *Translator) buildAPIKeyAuth(
 
 			seenKeys.Insert(keyString)
 			seenClients.Insert(clientid)
-			credentials = append(credentials, ir.Credential{
+			apiKeyCredentials = append(apiKeyCredentials, ir.APIKeyCredential{
 				Client: []byte(clientid),
 				Key:    key,
 			})
@@ -1711,7 +1711,7 @@ func (t *Translator) buildAPIKeyAuth(
 	}
 
 	return &ir.APIKeyAuth{
-		Credentials:           credentials,
+		Credentials:           apiKeyCredentials,
 		ExtractFrom:           extractFrom,
 		ForwardClientIDHeader: policy.Spec.APIKeyAuth.ForwardClientIDHeader,
 		Sanitize:              policy.Spec.APIKeyAuth.Sanitize,
