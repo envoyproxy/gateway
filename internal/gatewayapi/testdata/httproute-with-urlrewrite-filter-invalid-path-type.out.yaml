@@ -71,7 +71,7 @@ httpRoutes:
     - conditions:
       - lastTransitionTime: null
         message: 'Rewrite path type: ReplacePrefixMatches is invalid, only "ReplaceFullPath"
-          and "ReplacePrefixMatch" are supported'
+          and "ReplacePrefixMatch" are supported.'
         reason: UnsupportedValue
         status: "False"
         type: Accepted
