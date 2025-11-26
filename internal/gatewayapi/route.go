@@ -188,12 +188,13 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 	// process each HTTPRouteRule, generate a unique Xds IR HTTPRoute per match of the rule
 	for ruleIdx, rule := range httpRoute.Spec.Rules {
 		// process HTTP Route filters first, so that the filters can be applied to the IR route later
+		var processFilterError error
 		httpFiltersContext, errs := t.ProcessHTTPFilters(parentRef, httpRoute, rule.Filters, ruleIdx, resources)
 		if len(errs) > 0 {
 			for _, err := range errs {
 				errorCollector.Add(err)
+				processFilterError = errors.Join(processFilterError, err)
 			}
-			continue
 		}
 
 		// build the metadata for this route rule
@@ -267,6 +268,27 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 			Metadata: routeRuleMetadata,
 		}
 		switch {
+		// return 500 if any filter processing error occurred
+		case processFilterError != nil:
+			routesWithDirectResponse := sets.New[string]()
+			for _, irRoute := range ruleRoutes {
+				// If the route already has a direct response or redirect configured, then it was from a filter so skip
+				// the direct response from errors.
+				if irRoute.DirectResponse != nil || irRoute.Redirect != nil {
+					continue
+				}
+				irRoute.DirectResponse = &ir.CustomResponse{
+					StatusCode: ptr.To(uint32(500)),
+				}
+				routesWithDirectResponse.Insert(irRoute.Name)
+			}
+			if len(routesWithDirectResponse) > 0 {
+				t.Logger.Info(
+					"setting 500 direct response in routes due to errors in processing filters",
+					"routes", sets.List(routesWithDirectResponse),
+					"error", processFilterError,
+				)
+			}
 		// return 500 if no valid destination settings exist
 		// the error is already added to the error list when processing the destination
 		case processDestinationError != nil && destination.ToBackendWeights().Valid == 0:
@@ -774,12 +796,13 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 		rule := &grpcRoute.Spec.Rules[ruleIdx]
 
 		// process GRPC route filters first, so that the filters can be applied to the IR route later
+		var processFilterError error
 		httpFiltersContext, errs := t.ProcessGRPCFilters(parentRef, grpcRoute, rule.Filters, resources)
 		if len(errs) > 0 {
 			for _, err := range errs {
 				errorCollector.Add(err)
+				processFilterError = errors.Join(processFilterError, err)
 			}
-			continue
 		}
 
 		// process GRPC Route Rules
@@ -843,6 +866,26 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 			Metadata: buildResourceMetadata(grpcRoute, rule.Name),
 		}
 		switch {
+		// return 500 if any filter processing error occurred
+		case processFilterError != nil:
+			routesWithDirectResponse := sets.New[string]()
+			for _, irRoute := range ruleRoutes {
+				// If the route already has a direct response or redirect configured, then it was from a filter so skip
+				// the direct response from errors.
+				if irRoute.DirectResponse != nil || irRoute.Redirect != nil {
+					continue
+				}
+				irRoute.DirectResponse = &ir.CustomResponse{
+					StatusCode: ptr.To(uint32(500)),
+				}
+				routesWithDirectResponse.Insert(irRoute.Name)
+			}
+			if len(routesWithDirectResponse) > 0 {
+				t.Logger.Info("setting 500 direct response in routes due to errors in processing filters",
+					"routes", sets.List(routesWithDirectResponse),
+					"error", processFilterError,
+				)
+			}
 		// return 500 if any destination setting is invalid
 		// the error is already added to the error list when processing the destination
 		case processDestinationError != nil && destination.ToBackendWeights().Valid == 0:
