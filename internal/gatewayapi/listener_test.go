@@ -898,8 +898,9 @@ func TestProcessTracingServiceName(t *testing.T) {
 			)
 			translatorContext.SetServices(resources.Services)
 			translatorContext.SetEndpointSlicesForBackend(resources.EndpointSlices)
+			translator.TranslatorContext = translatorContext
 
-			result, err := translator.processTracing(translatorContext, tc.gateway, tc.envoyProxy, tc.mergeGateways, resources)
+			result, err := translator.processTracing(tc.gateway, tc.envoyProxy, tc.mergeGateways, resources)
 
 			if tc.expectError {
 				assert.Error(t, err)

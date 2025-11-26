@@ -19,11 +19,11 @@ import (
 const envoyTLSSecretName = "envoy"
 
 // ProcessGlobalResources processes global resources that are not tied to a specific listener or route
-func (t *Translator) ProcessGlobalResources(translatorContext *TranslatorContext, resources *resource.Resources, xdsIRs resource.XdsIRMap, gateways []*GatewayContext) error {
+func (t *Translator) ProcessGlobalResources(resources *resource.Resources, xdsIRs resource.XdsIRMap, gateways []*GatewayContext) error {
 	// Add the ProxyServiceCluster information for each gateway to the IR map
 	for _, gateway := range gateways {
 		// Get the gateway IR key and RouteDestination representing the ProxyServiceCluster
-		irKey, rDest := t.processServiceClusterForGateway(translatorContext, gateway, resources)
+		irKey, rDest := t.processServiceClusterForGateway(gateway, resources)
 
 		if xdsIRs[irKey] == nil {
 			continue
@@ -41,7 +41,7 @@ func (t *Translator) ProcessGlobalResources(translatorContext *TranslatorContext
 
 	// Get the envoy client TLS secret. It is used for envoy to establish a TLS connection with control plane components,
 	// including the rate limit server and the wasm HTTP server.
-	envoyTLSSecret := translatorContext.GetSecret(t.ControllerNamespace, envoyTLSSecretName)
+	envoyTLSSecret := t.TranslatorContext.GetSecret(t.ControllerNamespace, envoyTLSSecretName)
 	if envoyTLSSecret == nil {
 		return fmt.Errorf("envoy TLS secret %s/%s not found", t.ControllerNamespace, envoyTLSSecretName)
 	}
@@ -63,7 +63,7 @@ func (t *Translator) ProcessGlobalResources(translatorContext *TranslatorContext
 }
 
 // processServiceClusterForGateway returns the matching IR key for a gateway and builds a RouteDestination to represent the ProxyServiceCluster
-func (t *Translator) processServiceClusterForGateway(translatorContext *TranslatorContext, gateway *GatewayContext, resources *resource.Resources) (string, *ir.RouteDestination) {
+func (t *Translator) processServiceClusterForGateway(gateway *GatewayContext, resources *resource.Resources) (string, *ir.RouteDestination) {
 	irKey := t.getIRKey(gateway.Gateway)
 	labels := OwnerLabels(gateway.Gateway, t.MergeGateways)
 
@@ -85,7 +85,7 @@ func (t *Translator) processServiceClusterForGateway(translatorContext *Translat
 		Namespace: NamespacePtr(svcCluster.Namespace),
 		Port:      PortNumPtr(svcCluster.Spec.Ports[0].Port),
 	}
-	dst, err := t.processServiceDestinationSetting(translatorContext, irKey, bRef, svcCluster.Namespace, ir.AppProtocol(svcCluster.Spec.Ports[0].Protocol), resources.EnvoyProxyForGatewayClass)
+	dst, err := t.processServiceDestinationSetting(irKey, bRef, svcCluster.Namespace, ir.AppProtocol(svcCluster.Spec.Ports[0].Protocol), resources.EnvoyProxyForGatewayClass)
 	if err != nil {
 		return "", nil
 	}

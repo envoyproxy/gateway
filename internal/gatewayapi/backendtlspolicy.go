@@ -75,7 +75,6 @@ func localPolicyTargetReferenceWithSectionNameToKey(ns string, targetRef gwapiv1
 // applyBackendTLSSetting processes TLS settings from Backend resource, BackendTLSPolicy, and EnvoyProxy resource.
 // It merges the TLS settings from these resources and returns the final TLS config to be applied to the upstream cluster.
 func (t *Translator) applyBackendTLSSetting(
-	translatorContext *TranslatorContext,
 	backendRef gwapiv1.BackendObjectReference,
 	backendNamespace string,
 	parent gwapiv1.ParentReference,
@@ -94,19 +93,19 @@ func (t *Translator) applyBackendTLSSetting(
 
 	// If the backendRef is a Backend resource, we need to check if it has TLS settings.
 	if KindDerefOr(backendRef.Kind, resource.KindService) == egv1a1.KindBackend {
-		backend := translatorContext.GetBackend(backendNamespace, string(backendRef.Name))
+		backend := t.TranslatorContext.GetBackend(backendNamespace, string(backendRef.Name))
 		if backend == nil {
 			return nil, fmt.Errorf("backend %s not found", backendRef.Name)
 		}
 		if backend.Spec.TLS != nil {
 			// Get the server certificate validation settings from Backend resource.
-			if backendValidationTLSConfig, err = t.processServerValidationTLSSettings(translatorContext, backend); err != nil {
+			if backendValidationTLSConfig, err = t.processServerValidationTLSSettings(backend); err != nil {
 				return nil, err
 			}
 
 			// Get the client certificate and common TLS settings from Backend resource.
 			if backend.Spec.TLS.BackendTLSConfig != nil {
-				if backendClientTLSConfig, err = t.processClientTLSSettings(translatorContext,
+				if backendClientTLSConfig, err = t.processClientTLSSettings(
 					backend.Spec.TLS.BackendTLSConfig, backend.Namespace, backend.Name, false); err != nil {
 					return nil, err
 				}
@@ -115,7 +114,7 @@ func (t *Translator) applyBackendTLSSetting(
 	}
 
 	// Get the backend certificate validation settings from BackendTLSPolicy.
-	if btpValidationTLSConfig, err = t.processBackendTLSPolicy(translatorContext, backendRef, backendNamespace, parent, resources); err != nil {
+	if btpValidationTLSConfig, err = t.processBackendTLSPolicy(backendRef, backendNamespace, parent, resources); err != nil {
 		return nil, err
 	}
 
@@ -134,7 +133,7 @@ func (t *Translator) applyBackendTLSSetting(
 
 	// Get the client certificate and common TLS settings from EnvoyProxy resource.
 	if envoyProxy != nil && envoyProxy.Spec.BackendTLS != nil {
-		if envoyProxyClientTLSConfig, err = t.processClientTLSSettings(translatorContext,
+		if envoyProxyClientTLSConfig, err = t.processClientTLSSettings(
 			envoyProxy.Spec.BackendTLS, envoyProxy.Namespace, envoyProxy.Name, true); err != nil {
 			return nil, err
 		}
@@ -241,7 +240,6 @@ func mergeClientTLSConfigs(
 }
 
 func (t *Translator) processServerValidationTLSSettings(
-	translatorContext *TranslatorContext,
 	backend *egv1a1.Backend,
 ) (*ir.TLSUpstreamConfig, error) {
 	tlsConfig := &ir.TLSUpstreamConfig{
@@ -260,7 +258,7 @@ func (t *Translator) processServerValidationTLSSettings(
 				Name: fmt.Sprintf("%s/%s-ca", backend.Name, backend.Namespace),
 			}
 		} else if len(backend.Spec.TLS.CACertificateRefs) > 0 {
-			caCert, err := getCaCertsFromCARefs(translatorContext, backend.Namespace, backend.Spec.TLS.CACertificateRefs)
+			caCert, err := t.getCaCertsFromCARefs(backend.Namespace, backend.Spec.TLS.CACertificateRefs)
 			if err != nil {
 				return nil, err
 			}
@@ -274,18 +272,17 @@ func (t *Translator) processServerValidationTLSSettings(
 }
 
 func (t *Translator) processBackendTLSPolicy(
-	translatorContext *TranslatorContext,
 	backendRef gwapiv1.BackendObjectReference,
 	backendNamespace string,
 	parent gwapiv1.ParentReference,
 	resources *resource.Resources,
 ) (*ir.TLSUpstreamConfig, error) {
-	policy := getBackendTLSPolicy(translatorContext, resources.BackendTLSPolicies, backendRef, backendNamespace)
+	policy := t.getBackendTLSPolicy(resources.BackendTLSPolicies, backendRef, backendNamespace)
 	if policy == nil {
 		return nil, nil
 	}
 
-	tlsBundle, err := getBackendTLSBundle(translatorContext, policy)
+	tlsBundle, err := t.getBackendTLSBundle(policy)
 	ancestorRefs := getAncestorRefs(policy)
 	ancestorRefs = append(ancestorRefs, &parent)
 
@@ -331,7 +328,6 @@ func (t *Translator) processBackendTLSPolicy(
 }
 
 func (t *Translator) processClientTLSSettings(
-	translatorContext *TranslatorContext,
 	clientTLS *egv1a1.BackendTLSConfig,
 	ownerNs, ownerName string,
 	fromEnvoyProxy bool,
@@ -374,7 +370,7 @@ func (t *Translator) processClientTLSSettings(
 			err = fmt.Errorf("ClientCertificateRef Secret is not located in the same namespace as %s. Secret namespace: %s does not match %s namespace: %s", ownerResource, ns, ownerResource, ownerNs)
 			return tlsConfig, err
 		}
-		secret := translatorContext.GetSecret(ns, string(clientTLS.ClientCertificateRef.Name))
+		secret := t.TranslatorContext.GetSecret(ns, string(clientTLS.ClientCertificateRef.Name))
 		if secret == nil {
 			err = fmt.Errorf(
 				"failed to locate TLS secret for client auth: %s specified in %s %s",
@@ -413,14 +409,13 @@ func backendTLSTargetMatched(policy *gwapiv1.BackendTLSPolicy, target gwapiv1.Lo
 	return false
 }
 
-func getBackendTLSPolicy(
-	translatorContext *TranslatorContext,
+func (t *Translator) getBackendTLSPolicy(
 	policies []*gwapiv1.BackendTLSPolicy,
 	backendRef gwapiv1.BackendObjectReference,
 	backendNamespace string,
 ) *gwapiv1.BackendTLSPolicy {
 	// SectionName is port number for EG Backend object
-	target := getTargetBackendReference(translatorContext, backendRef, backendNamespace)
+	target := t.getTargetBackendReference(backendRef, backendNamespace)
 	for _, policy := range policies {
 		if backendTLSTargetMatched(policy, target, backendNamespace) {
 			return policy
@@ -429,7 +424,7 @@ func getBackendTLSPolicy(
 	return nil
 }
 
-func getBackendTLSBundle(translatorContext *TranslatorContext, backendTLSPolicy *gwapiv1.BackendTLSPolicy) (*ir.TLSUpstreamConfig, error) {
+func (t *Translator) getBackendTLSBundle(backendTLSPolicy *gwapiv1.BackendTLSPolicy) (*ir.TLSUpstreamConfig, error) {
 	// Translate SubjectAltNames from gwapiv1a3 to ir
 	subjectAltNames := make([]ir.SubjectAltName, 0, len(backendTLSPolicy.Spec.Validation.SubjectAltNames))
 	for _, san := range backendTLSPolicy.Spec.Validation.SubjectAltNames {
@@ -457,7 +452,7 @@ func getBackendTLSBundle(translatorContext *TranslatorContext, backendTLSPolicy 
 		return tlsBundle, nil
 	}
 
-	caCert, err := getCaCertsFromCARefs(translatorContext,
+	caCert, err := t.getCaCertsFromCARefs(
 		backendTLSPolicy.Namespace, backendTLSPolicy.Spec.Validation.CACertificateRefs)
 	if err != nil {
 		return nil, err
@@ -469,8 +464,7 @@ func getBackendTLSBundle(translatorContext *TranslatorContext, backendTLSPolicy 
 	return tlsBundle, nil
 }
 
-func getCaCertsFromCARefs(
-	translatorContext *TranslatorContext,
+func (t *Translator) getCaCertsFromCARefs(
 	namespace string,
 	caCertificates []gwapiv1.LocalObjectReference,
 ) ([]byte, error) {
@@ -480,7 +474,7 @@ func getCaCertsFromCARefs(
 
 		switch kind {
 		case resource.KindConfigMap:
-			cm := translatorContext.GetConfigMap(namespace, string(caRef.Name))
+			cm := t.TranslatorContext.GetConfigMap(namespace, string(caRef.Name))
 			if cm != nil {
 				if crt, dataOk := getOrFirstFromData(cm.Data, caCertKey); dataOk {
 					if ca != "" {
@@ -494,7 +488,7 @@ func getCaCertsFromCARefs(
 				return nil, fmt.Errorf("configmap %s not found in namespace %s", caRef.Name, namespace)
 			}
 		case resource.KindSecret:
-			secret := translatorContext.GetSecret(namespace, string(caRef.Name))
+			secret := t.TranslatorContext.GetSecret(namespace, string(caRef.Name))
 			if secret != nil {
 				if crt, dataOk := getOrFirstFromData(secret.Data, caCertKey); dataOk {
 					if ca != "" {
@@ -508,7 +502,7 @@ func getCaCertsFromCARefs(
 				return nil, fmt.Errorf("secret %s not found in namespace %s", caRef.Name, namespace)
 			}
 		case resource.KindClusterTrustBundle:
-			ctb := translatorContext.GetClusterTrustBundle(string(caRef.Name))
+			ctb := t.TranslatorContext.GetClusterTrustBundle(string(caRef.Name))
 			if ctb != nil {
 				if ca != "" {
 					ca += "\n"

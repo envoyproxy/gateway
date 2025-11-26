@@ -37,7 +37,6 @@ func hasSectionName(target *gwapiv1.LocalPolicyTargetReferenceWithSectionName) b
 }
 
 func (t *Translator) ProcessClientTrafficPolicies(
-	translatorContext *TranslatorContext,
 	resources *resource.Resources,
 	gateways []*GatewayContext,
 	xdsIR resource.XdsIRMap,
@@ -137,7 +136,7 @@ func (t *Translator) ProcessClientTrafficPolicies(
 					if string(l.Name) == section {
 						err = validatePortOverlapForClientTrafficPolicy(l, gwXdsIR, false)
 						if err == nil {
-							err = t.translateClientTrafficPolicyForListener(translatorContext, policy, l, xdsIR, infraIR, resources)
+							err = t.translateClientTrafficPolicyForListener(policy, l, xdsIR, infraIR, resources)
 						}
 						break
 					}
@@ -254,7 +253,7 @@ func (t *Translator) ProcessClientTrafficPolicies(
 					gwXdsIR := xdsIR[irKey]
 					if err := validatePortOverlapForClientTrafficPolicy(l, gwXdsIR, true); err != nil {
 						errs = errors.Join(errs, err)
-					} else if err := t.translateClientTrafficPolicyForListener(translatorContext, policy, l, xdsIR, infraIR, resources); err != nil {
+					} else if err := t.translateClientTrafficPolicyForListener(policy, l, xdsIR, infraIR, resources); err != nil {
 						errs = errors.Join(errs, err)
 					}
 				}
@@ -357,7 +356,6 @@ func validatePortOverlapForClientTrafficPolicy(l *ListenerContext, xds *ir.Xds, 
 }
 
 func (t *Translator) translateClientTrafficPolicyForListener(
-	translatorContext *TranslatorContext,
 	policy *egv1a1.ClientTrafficPolicy, l *ListenerContext,
 	xdsIR resource.XdsIRMap, infraIR resource.InfraIRMap, resources *resource.Resources,
 ) error {
@@ -479,7 +477,7 @@ func (t *Translator) translateClientTrafficPolicyForListener(
 		translateHealthCheckSettings(policy.Spec.HealthCheck, httpIR)
 
 		// Translate TLS parameters
-		tlsConfig, err = t.buildListenerTLSParameters(translatorContext, policy, httpIR.TLS, resources)
+		tlsConfig, err = t.buildListenerTLSParameters(policy, httpIR.TLS, resources)
 		if err != nil {
 			err = perr.WithMessage(err, "TLS")
 			errs = errors.Join(errs, err)
@@ -514,7 +512,7 @@ func (t *Translator) translateClientTrafficPolicyForListener(
 
 	if tcpIR != nil {
 		// Translate TLS parameters
-		tlsConfig, err = t.buildListenerTLSParameters(translatorContext, policy, tcpIR.TLS, resources)
+		tlsConfig, err = t.buildListenerTLSParameters(policy, tcpIR.TLS, resources)
 		if err != nil {
 			err = perr.WithMessage(err, "TLS")
 			errs = errors.Join(errs, err)
@@ -760,7 +758,6 @@ func translateHealthCheckSettings(healthCheckSettings *egv1a1.HealthCheckSetting
 }
 
 func (t *Translator) buildListenerTLSParameters(
-	translatorContext *TranslatorContext,
 	policy *egv1a1.ClientTrafficPolicy,
 	irTLSConfig *ir.TLSConfig, resources *resource.Resources,
 ) (*ir.TLSConfig, error) {
@@ -818,7 +815,7 @@ func (t *Translator) buildListenerTLSParameters(
 		}
 
 		for _, caCertRef := range tlsParams.ClientValidation.CACertificateRefs {
-			caCertBytes, err := t.validateAndGetDataAtKeyInRef(translatorContext, caCertRef, caCertKey, resources, from)
+			caCertBytes, err := t.validateAndGetDataAtKeyInRef(caCertRef, caCertKey, resources, from)
 			if err != nil {
 				return irTLSConfig, fmt.Errorf("failed to get certificate from ref: %w", err)
 			}
@@ -839,7 +836,7 @@ func (t *Translator) buildListenerTLSParameters(
 
 		if tlsParams.ClientValidation.Crl != nil {
 			for _, crlRef := range tlsParams.ClientValidation.Crl.Refs {
-				crlBytes, err := t.validateAndGetDataAtKeyInRef(translatorContext, crlRef, crlKey, resources, from)
+				crlBytes, err := t.validateAndGetDataAtKeyInRef(crlRef, crlKey, resources, from)
 				if err != nil {
 					return irTLSConfig, fmt.Errorf("failed to get crl from ref: %w", err)
 				}
@@ -871,7 +868,6 @@ func (t *Translator) buildListenerTLSParameters(
 
 // validateAndGetDataAtKeyInRef validates the secret object reference and gets the data at the key in the secret or configmap
 func (t *Translator) validateAndGetDataAtKeyInRef(
-	translatorContext *TranslatorContext,
 	ref gwapiv1.SecretObjectReference,
 	key string,
 	resources *resource.Resources,
@@ -880,7 +876,7 @@ func (t *Translator) validateAndGetDataAtKeyInRef(
 	refKind := string(ptr.Deref(ref.Kind, resource.KindSecret))
 	switch refKind {
 	case resource.KindSecret:
-		secret, err := t.validateSecretRef(translatorContext, false, from, ref, resources)
+		secret, err := t.validateSecretRef(false, from, ref, resources)
 		if err != nil {
 			return nil, err
 		}
@@ -891,7 +887,7 @@ func (t *Translator) validateAndGetDataAtKeyInRef(
 		}
 		return secretCertBytes, nil
 	case resource.KindConfigMap:
-		configMap, err := t.validateConfigMapRef(translatorContext, false, from, ref, resources)
+		configMap, err := t.validateConfigMapRef(false, from, ref, resources)
 		if err != nil {
 			return nil, err
 		}
@@ -902,7 +898,7 @@ func (t *Translator) validateAndGetDataAtKeyInRef(
 		}
 		return []byte(configMapData), nil
 	case resource.KindClusterTrustBundle:
-		trustBundle := translatorContext.GetClusterTrustBundle(string(ref.Name))
+		trustBundle := t.TranslatorContext.GetClusterTrustBundle(string(ref.Name))
 		if trustBundle == nil {
 			return nil, fmt.Errorf("ref ClusterTrustBundle [%s] not found", ref.Name)
 		}

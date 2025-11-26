@@ -51,7 +51,6 @@ const (
 )
 
 func (t *Translator) ProcessSecurityPolicies(
-	translatorContext *TranslatorContext,
 	securityPolicies []*egv1a1.SecurityPolicy,
 	gateways []*GatewayContext,
 	routes []RouteContext,
@@ -114,7 +113,7 @@ func (t *Translator) ProcessSecurityPolicies(
 					res = append(res, policy)
 				}
 
-				t.processSecurityPolicyForRoute(translatorContext, resources, xdsIR,
+				t.processSecurityPolicyForRoute(resources, xdsIR,
 					routeMap, gatewayRouteMap, policy, currTarget)
 			}
 		}
@@ -133,7 +132,7 @@ func (t *Translator) ProcessSecurityPolicies(
 					res = append(res, policy)
 				}
 
-				t.processSecurityPolicyForRoute(translatorContext, resources, xdsIR,
+				t.processSecurityPolicyForRoute(resources, xdsIR,
 					routeMap, gatewayRouteMap, policy, currTarget)
 			}
 		}
@@ -152,7 +151,7 @@ func (t *Translator) ProcessSecurityPolicies(
 					res = append(res, policy)
 				}
 
-				t.processSecurityPolicyForGateway(translatorContext, resources, xdsIR,
+				t.processSecurityPolicyForGateway(resources, xdsIR,
 					gatewayMap, gatewayRouteMap, policy, currTarget)
 			}
 		}
@@ -171,7 +170,7 @@ func (t *Translator) ProcessSecurityPolicies(
 					res = append(res, policy)
 				}
 
-				t.processSecurityPolicyForGateway(translatorContext, resources, xdsIR,
+				t.processSecurityPolicyForGateway(resources, xdsIR,
 					gatewayMap, gatewayRouteMap, policy, currTarget)
 			}
 		}
@@ -187,7 +186,6 @@ func (t *Translator) ProcessSecurityPolicies(
 }
 
 func (t *Translator) processSecurityPolicyForRoute(
-	translatorContext *TranslatorContext,
 	resources *resource.Resources,
 	xdsIR resource.XdsIRMap,
 	routeMap map[policyTargetRouteKey]*policyRouteTargetContext,
@@ -274,7 +272,7 @@ func (t *Translator) processSecurityPolicyForRoute(
 		return
 	}
 
-	if err := t.translateSecurityPolicyForRoute(translatorContext, policy, targetedRoute, currTarget, resources, xdsIR); err != nil {
+	if err := t.translateSecurityPolicyForRoute(policy, targetedRoute, currTarget, resources, xdsIR); err != nil {
 		status.SetTranslationErrorForPolicyAncestors(&policy.Status,
 			parentGateways,
 			t.GatewayControllerName,
@@ -307,7 +305,6 @@ func (t *Translator) processSecurityPolicyForRoute(
 }
 
 func (t *Translator) processSecurityPolicyForGateway(
-	translatorContext *TranslatorContext,
 	resources *resource.Resources,
 	xdsIR resource.XdsIRMap,
 	gatewayMap map[types.NamespacedName]*policyGatewayTargetContext,
@@ -345,7 +342,7 @@ func (t *Translator) processSecurityPolicyForGateway(
 		return
 	}
 
-	if err := t.translateSecurityPolicyForGateway(translatorContext, policy, targetedGateway, currTarget, resources, xdsIR); err != nil {
+	if err := t.translateSecurityPolicyForGateway(policy, targetedGateway, currTarget, resources, xdsIR); err != nil {
 		status.SetTranslationErrorForPolicyAncestor(&policy.Status,
 			&parentGateway,
 			t.GatewayControllerName,
@@ -599,7 +596,6 @@ func resolveSecurityPolicyRouteTargetRef(
 }
 
 func (t *Translator) translateSecurityPolicyForRoute(
-	translatorContext *TranslatorContext,
 	policy *egv1a1.SecurityPolicy,
 	route RouteContext,
 	target gwapiv1.LocalPolicyTargetReferenceWithSectionName,
@@ -621,7 +617,7 @@ func (t *Translator) translateSecurityPolicyForRoute(
 	}
 
 	if policy.Spec.BasicAuth != nil {
-		if basicAuth, err = t.buildBasicAuth(translatorContext,
+		if basicAuth, err = t.buildBasicAuth(
 			policy,
 			resources); err != nil {
 			err = perr.WithMessage(err, "BasicAuth")
@@ -630,7 +626,7 @@ func (t *Translator) translateSecurityPolicyForRoute(
 	}
 
 	if policy.Spec.APIKeyAuth != nil {
-		if apiKeyAuth, err = t.buildAPIKeyAuth(translatorContext,
+		if apiKeyAuth, err = t.buildAPIKeyAuth(
 			policy,
 			resources); err != nil {
 			err = perr.WithMessage(err, "APIKeyAuth")
@@ -662,7 +658,6 @@ func (t *Translator) translateSecurityPolicyForRoute(
 		var extAuthErr error
 		if policy.Spec.ExtAuth != nil {
 			if extAuth, extAuthErr = t.buildExtAuth(
-				translatorContext,
 				policy,
 				resources,
 				gtwCtx.envoyProxy); extAuthErr != nil {
@@ -674,7 +669,6 @@ func (t *Translator) translateSecurityPolicyForRoute(
 		var oidc *ir.OIDC
 		if policy.Spec.OIDC != nil {
 			if oidc, err = t.buildOIDC(
-				translatorContext,
 				policy,
 				resources,
 				gtwCtx.envoyProxy); err != nil {
@@ -687,7 +681,6 @@ func (t *Translator) translateSecurityPolicyForRoute(
 		var jwt *ir.JWT
 		if policy.Spec.JWT != nil {
 			if jwt, err = t.buildJWT(
-				translatorContext,
 				policy,
 				resources,
 				gtwCtx.envoyProxy); err != nil {
@@ -781,7 +774,6 @@ func (t *Translator) translateSecurityPolicyForRoute(
 }
 
 func (t *Translator) translateSecurityPolicyForGateway(
-	translatorContext *TranslatorContext,
 	policy *egv1a1.SecurityPolicy,
 	gateway *GatewayContext,
 	target gwapiv1.LocalPolicyTargetReferenceWithSectionName,
@@ -807,7 +799,6 @@ func (t *Translator) translateSecurityPolicyForGateway(
 
 	if policy.Spec.JWT != nil {
 		if jwt, err = t.buildJWT(
-			translatorContext,
 			policy,
 			resources,
 			gateway.envoyProxy); err != nil {
@@ -818,7 +809,6 @@ func (t *Translator) translateSecurityPolicyForGateway(
 
 	if policy.Spec.OIDC != nil {
 		if oidc, err = t.buildOIDC(
-			translatorContext,
 			policy,
 			resources,
 			gateway.envoyProxy); err != nil {
@@ -828,7 +818,7 @@ func (t *Translator) translateSecurityPolicyForGateway(
 	}
 
 	if policy.Spec.BasicAuth != nil {
-		if basicAuth, err = t.buildBasicAuth(translatorContext,
+		if basicAuth, err = t.buildBasicAuth(
 			policy,
 			resources); err != nil {
 			err = perr.WithMessage(err, "BasicAuth")
@@ -837,7 +827,7 @@ func (t *Translator) translateSecurityPolicyForGateway(
 	}
 
 	if policy.Spec.APIKeyAuth != nil {
-		if apiKeyAuth, err = t.buildAPIKeyAuth(translatorContext,
+		if apiKeyAuth, err = t.buildAPIKeyAuth(
 			policy,
 			resources); err != nil {
 			err = perr.WithMessage(err, "APIKeyAuth")
@@ -855,7 +845,6 @@ func (t *Translator) translateSecurityPolicyForGateway(
 
 	if policy.Spec.ExtAuth != nil {
 		if extAuth, extAuthErr = t.buildExtAuth(
-			translatorContext,
 			policy,
 			resources,
 			gateway.envoyProxy); extAuthErr != nil {
@@ -1017,7 +1006,6 @@ func wildcard2regex(wildcard string) string {
 }
 
 func (t *Translator) buildJWT(
-	translatorContext *TranslatorContext,
 	policy *egv1a1.SecurityPolicy,
 	resources *resource.Resources,
 	envoyProxy *egv1a1.EnvoyProxy,
@@ -1037,13 +1025,13 @@ func (t *Translator) buildJWT(
 			ExtractFrom:    p.ExtractFrom,
 		}
 		if p.RemoteJWKS != nil {
-			remoteJWKS, err := t.buildRemoteJWKS(translatorContext, policy, p.RemoteJWKS, i, resources, envoyProxy)
+			remoteJWKS, err := t.buildRemoteJWKS(policy, p.RemoteJWKS, i, resources, envoyProxy)
 			if err != nil {
 				return nil, err
 			}
 			provider.RemoteJWKS = remoteJWKS
 		} else {
-			localJWKS, err := t.buildLocalJWKS(translatorContext, policy, p.LocalJWKS)
+			localJWKS, err := t.buildLocalJWKS(policy, p.LocalJWKS)
 			if err != nil {
 				return nil, err
 			}
@@ -1143,7 +1131,6 @@ func validateJWTProvider(providers []egv1a1.JWTProvider) error {
 }
 
 func (t *Translator) buildRemoteJWKS(
-	translatorContext *TranslatorContext,
 	policy *egv1a1.SecurityPolicy,
 	remoteJWKS *egv1a1.RemoteJWKS,
 	index int,
@@ -1170,7 +1157,7 @@ func (t *Translator) buildRemoteJWKS(
 	}
 
 	if len(remoteJWKS.BackendRefs) > 0 {
-		if rd, err = t.translateExtServiceBackendRefs(translatorContext,
+		if rd, err = t.translateExtServiceBackendRefs(
 			policy, remoteJWKS.BackendRefs, protocol, resources, envoyProxy, "jwt", index); err != nil {
 			return nil, err
 		}
@@ -1199,7 +1186,6 @@ func (t *Translator) buildRemoteJWKS(
 }
 
 func (t *Translator) buildLocalJWKS(
-	translatorContext *TranslatorContext,
 	policy *egv1a1.SecurityPolicy,
 	localJWKS *egv1a1.LocalJWKS,
 ) (string, error) {
@@ -1209,7 +1195,7 @@ func (t *Translator) buildLocalJWKS(
 	}
 
 	if jwksType == egv1a1.LocalJWKSTypeValueRef {
-		cm := translatorContext.GetConfigMap(policy.Namespace, string(localJWKS.ValueRef.Name))
+		cm := t.TranslatorContext.GetConfigMap(policy.Namespace, string(localJWKS.ValueRef.Name))
 		if cm == nil {
 			return "", fmt.Errorf("local JWKS ConfigMap %s/%s not found", policy.Namespace, localJWKS.ValueRef.Name)
 		}
@@ -1234,7 +1220,6 @@ func (t *Translator) buildLocalJWKS(
 }
 
 func (t *Translator) buildOIDC(
-	translatorContext *TranslatorContext,
 	policy *egv1a1.SecurityPolicy,
 	resources *resource.Resources,
 	envoyProxy *egv1a1.EnvoyProxy,
@@ -1254,7 +1239,7 @@ func (t *Translator) buildOIDC(
 		err                    error
 	)
 
-	if provider, err = t.buildOIDCProvider(translatorContext, policy, resources, envoyProxy); err != nil {
+	if provider, err = t.buildOIDCProvider(policy, resources, envoyProxy); err != nil {
 		return nil, err
 	}
 
@@ -1270,7 +1255,7 @@ func (t *Translator) buildOIDC(
 		clientID = *oidc.ClientID
 	case oidc.ClientIDRef != nil:
 		var clientIDSecret *corev1.Secret
-		if clientIDSecret, err = t.validateSecretRef(translatorContext, false, from, *oidc.ClientIDRef, resources); err != nil {
+		if clientIDSecret, err = t.validateSecretRef(false, from, *oidc.ClientIDRef, resources); err != nil {
 			return nil, err
 		}
 		clientIDBytes, ok := clientIDSecret.Data[egv1a1.OIDCClientIDKey]
@@ -1283,7 +1268,7 @@ func (t *Translator) buildOIDC(
 		return nil, fmt.Errorf("client ID must be specified in OIDC policy %s/%s", policy.Namespace, policy.Name)
 	}
 
-	if clientSecret, err = t.validateSecretRef(translatorContext, false, from, oidc.ClientSecret, resources); err != nil {
+	if clientSecret, err = t.validateSecretRef(false, from, oidc.ClientSecret, resources); err != nil {
 		return nil, err
 	}
 
@@ -1330,7 +1315,7 @@ func (t *Translator) buildOIDC(
 	// HMAC secret is generated by the CertGen job and stored in a secret
 	// We need to rotate the HMAC secret in the future, probably the same
 	// way we rotate the certs generated by the CertGen job.
-	hmacSecret := translatorContext.GetSecret(t.ControllerNamespace, oidcHMACSecretName)
+	hmacSecret := t.TranslatorContext.GetSecret(t.ControllerNamespace, oidcHMACSecretName)
 	if hmacSecret == nil {
 		return nil, fmt.Errorf("HMAC secret %s/%s not found", t.ControllerNamespace, oidcHMACSecretName)
 	}
@@ -1390,7 +1375,6 @@ func (t *Translator) buildOIDC(
 }
 
 func (t *Translator) buildOIDCProvider(
-	translatorContext *TranslatorContext,
 	policy *egv1a1.SecurityPolicy,
 	resources *resource.Resources,
 	envoyProxy *egv1a1.EnvoyProxy,
@@ -1425,7 +1409,7 @@ func (t *Translator) buildOIDCProvider(
 	}
 
 	if len(provider.BackendRefs) > 0 {
-		if rd, err = t.translateExtServiceBackendRefs(translatorContext,
+		if rd, err = t.translateExtServiceBackendRefs(
 			policy, provider.BackendRefs, protocol, resources, envoyProxy, "oidc", 0); err != nil {
 			return nil, err
 		}
@@ -1678,7 +1662,6 @@ func validateTokenEndpoint(tokenEndpoint string) error {
 }
 
 func (t *Translator) buildAPIKeyAuth(
-	translatorContext *TranslatorContext,
 	policy *egv1a1.SecurityPolicy,
 	resources *resource.Resources,
 ) (*ir.APIKeyAuth, error) {
@@ -1692,8 +1675,7 @@ func (t *Translator) buildAPIKeyAuth(
 	seenKeys := make(sets.Set[string])
 
 	for _, ref := range policy.Spec.APIKeyAuth.CredentialRefs {
-		credentialsSecret, err := t.validateSecretRef(translatorContext,
-			false, from, ref, resources)
+		credentialsSecret, err := t.validateSecretRef(false, from, ref, resources)
 		if err != nil {
 			return nil, err
 		}
@@ -1730,7 +1712,6 @@ func (t *Translator) buildAPIKeyAuth(
 }
 
 func (t *Translator) buildBasicAuth(
-	translatorContext *TranslatorContext,
 	policy *egv1a1.SecurityPolicy,
 	resources *resource.Resources,
 ) (*ir.BasicAuth, error) {
@@ -1745,8 +1726,7 @@ func (t *Translator) buildBasicAuth(
 		kind:      resource.KindSecurityPolicy,
 		namespace: policy.Namespace,
 	}
-	if usersSecret, err = t.validateSecretRef(translatorContext,
-		false, from, basicAuth.Users, resources); err != nil {
+	if usersSecret, err = t.validateSecretRef(false, from, basicAuth.Users, resources); err != nil {
 		return nil, err
 	}
 
@@ -1793,7 +1773,6 @@ func validateHtpasswdFormat(data []byte) error {
 }
 
 func (t *Translator) buildExtAuth(
-	translatorContext *TranslatorContext,
 	policy *egv1a1.SecurityPolicy,
 	resources *resource.Resources,
 	envoyProxy *egv1a1.EnvoyProxy,
@@ -1853,7 +1832,7 @@ func (t *Translator) buildExtAuth(
 		}
 	}
 
-	if rd, err = t.translateExtServiceBackendRefs(translatorContext,
+	if rd, err = t.translateExtServiceBackendRefs(
 		policy, backendRefs, protocol, resources, envoyProxy, "extauth", 0); err != nil {
 		return nil, err
 	}
@@ -1864,7 +1843,7 @@ func (t *Translator) buildExtAuth(
 		// When translated to XDS, the authority is used on the filter level not on the cluster level.
 		// There's no way to translate to XDS and use a different authority for each backendref
 		if authority == "" {
-			authority = backendRefAuthority(translatorContext, &backendRef.BackendObjectReference, policy)
+			authority = t.backendRefAuthority(&backendRef.BackendObjectReference, policy)
 		}
 	}
 
@@ -1917,8 +1896,7 @@ func parseExtAuthTimeout(timeout *gwapiv1.Duration) *metav1.Duration {
 	}
 }
 
-func backendRefAuthority(
-	translatorContext *TranslatorContext,
+func (t *Translator) backendRefAuthority(
 	backendRef *gwapiv1.BackendObjectReference,
 	policy *egv1a1.SecurityPolicy,
 ) string {
@@ -1929,7 +1907,7 @@ func backendRefAuthority(
 	backendNamespace := NamespaceDerefOr(backendRef.Namespace, policy.Namespace)
 	backendKind := KindDerefOr(backendRef.Kind, resource.KindService)
 	if backendKind == resource.KindBackend {
-		backend := translatorContext.GetBackend(backendNamespace, string(backendRef.Name))
+		backend := t.TranslatorContext.GetBackend(backendNamespace, string(backendRef.Name))
 		if backend != nil {
 			// TODO: exists multi FQDN endpoints?
 			for _, ep := range backend.Spec.Endpoints {

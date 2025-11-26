@@ -64,6 +64,10 @@ type TranslatorManager interface {
 // Translator translates Gateway API resources to IRs and computes status
 // for Gateway API resources.
 type Translator struct {
+	// TranslatorContext holds pre-indexed resource maps for efficient lookup resources
+	// during translation operations.
+	TranslatorContext *TranslatorContext
+
 	// GatewayControllerName is the name of the Gateway API controller
 	GatewayControllerName string
 
@@ -220,6 +224,7 @@ func newTranslateResult(
 func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult, error) {
 	var errs error
 
+	// Preprocessing to improve get resources operations performance.
 	translatorContext := &TranslatorContext{}
 	translatorContext.SetNamespaces(resources.Namespaces)
 	translatorContext.SetServices(resources.Services)
@@ -230,6 +235,8 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 	translatorContext.SetClusterTrustBundles(resources.ClusterTrustBundles)
 	translatorContext.SetEndpointSlicesForBackend(resources.EndpointSlices)
 
+	t.TranslatorContext = translatorContext
+
 	// Get Gateways belonging to our GatewayClass.
 	acceptedGateways, failedGateways := t.GetRelevantGateways(resources)
 
@@ -239,7 +246,7 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 	xdsIR, infraIR := t.InitIRs(acceptedGateways)
 
 	// Process all Listeners for all relevant Gateways.
-	t.ProcessListeners(translatorContext, acceptedGateways, xdsIR, infraIR, resources)
+	t.ProcessListeners(acceptedGateways, xdsIR, infraIR, resources)
 
 	// Process EnvoyPatchPolicies
 	t.ProcessEnvoyPatchPolicies(resources.EnvoyPatchPolicies, xdsIR)
@@ -251,22 +258,22 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 	backends := t.ProcessBackends(resources.Backends, resources.BackendTLSPolicies)
 
 	// Process all relevant HTTPRoutes.
-	httpRoutes := t.ProcessHTTPRoutes(translatorContext, resources.HTTPRoutes, acceptedGateways, resources, xdsIR)
+	httpRoutes := t.ProcessHTTPRoutes(resources.HTTPRoutes, acceptedGateways, resources, xdsIR)
 
 	// Process all relevant GRPCRoutes.
-	grpcRoutes := t.ProcessGRPCRoutes(translatorContext, resources.GRPCRoutes, acceptedGateways, resources, xdsIR)
+	grpcRoutes := t.ProcessGRPCRoutes(resources.GRPCRoutes, acceptedGateways, resources, xdsIR)
 
 	// Process all relevant TLSRoutes.
-	tlsRoutes := t.ProcessTLSRoutes(translatorContext, resources.TLSRoutes, acceptedGateways, resources, xdsIR)
+	tlsRoutes := t.ProcessTLSRoutes(resources.TLSRoutes, acceptedGateways, resources, xdsIR)
 
 	// Process all relevant TCPRoutes.
-	tcpRoutes := t.ProcessTCPRoutes(translatorContext, resources.TCPRoutes, acceptedGateways, resources, xdsIR)
+	tcpRoutes := t.ProcessTCPRoutes(resources.TCPRoutes, acceptedGateways, resources, xdsIR)
 
 	// Process all relevant UDPRoutes.
-	udpRoutes := t.ProcessUDPRoutes(translatorContext, resources.UDPRoutes, acceptedGateways, resources, xdsIR)
+	udpRoutes := t.ProcessUDPRoutes(resources.UDPRoutes, acceptedGateways, resources, xdsIR)
 
 	// Process ClientTrafficPolicies
-	clientTrafficPolicies := t.ProcessClientTrafficPolicies(translatorContext, resources, acceptedGateways, xdsIR, infraIR)
+	clientTrafficPolicies := t.ProcessClientTrafficPolicies(resources, acceptedGateways, xdsIR, infraIR)
 
 	routes := make([]RouteContext, len(httpRoutes)+len(grpcRoutes)+len(tlsRoutes)+len(tcpRoutes)+len(udpRoutes))
 	offset := 0
@@ -291,15 +298,14 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 	}
 
 	// Process BackendTrafficPolicies
-	backendTrafficPolicies := t.ProcessBackendTrafficPolicies(translatorContext,
-		resources, acceptedGateways, routes, xdsIR)
+	backendTrafficPolicies := t.ProcessBackendTrafficPolicies(resources, acceptedGateways, routes, xdsIR)
 
 	// Process SecurityPolicies
-	securityPolicies := t.ProcessSecurityPolicies(translatorContext,
+	securityPolicies := t.ProcessSecurityPolicies(
 		resources.SecurityPolicies, acceptedGateways, routes, resources, xdsIR)
 
 	// Process EnvoyExtensionPolicies
-	envoyExtensionPolicies := t.ProcessEnvoyExtensionPolicies(translatorContext,
+	envoyExtensionPolicies := t.ProcessEnvoyExtensionPolicies(
 		resources.EnvoyExtensionPolicies, acceptedGateways, routes, resources, xdsIR)
 
 	extServerPolicies, err := t.ProcessExtensionServerPolicies(
@@ -309,7 +315,7 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 	}
 
 	// Process global resources that are not tied to a specific listener or route
-	if err := t.ProcessGlobalResources(translatorContext, resources, xdsIR, acceptedGateways); err != nil {
+	if err := t.ProcessGlobalResources(resources, xdsIR, acceptedGateways); err != nil {
 		errs = errors.Join(errs, err)
 	}
 

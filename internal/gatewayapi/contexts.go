@@ -803,10 +803,8 @@ func (t *TranslatorContext) GetEndpointSlicesForBackend(svcNamespace, svcName, b
 func (t *TranslatorContext) SetEndpointSlicesForBackend(slices []*discoveryv1.EndpointSlice) {
 	t.EndpointSliceMap = make(map[backendServiceKey][]*discoveryv1.EndpointSlice)
 
+	var kind, svcName string
 	for _, slice := range slices {
-		var kind string
-		var svcName string
-
 		if name, ok := slice.Labels[discoveryv1.LabelServiceName]; ok {
 			kind = resource.KindService
 			svcName = name

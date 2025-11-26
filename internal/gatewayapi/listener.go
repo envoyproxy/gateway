@@ -32,10 +32,10 @@ import (
 var _ ListenersTranslator = (*Translator)(nil)
 
 type ListenersTranslator interface {
-	ProcessListeners(translatorContext *TranslatorContext, gateways []*GatewayContext, xdsIR resource.XdsIRMap, infraIR resource.InfraIRMap, resources *resource.Resources)
+	ProcessListeners(gateways []*GatewayContext, xdsIR resource.XdsIRMap, infraIR resource.InfraIRMap, resources *resource.Resources)
 }
 
-func (t *Translator) ProcessListeners(translatorContext *TranslatorContext, gateways []*GatewayContext, xdsIR resource.XdsIRMap, infraIR resource.InfraIRMap, resources *resource.Resources) {
+func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource.XdsIRMap, infraIR resource.InfraIRMap, resources *resource.Resources) {
 	// Infra IR proxy ports must be unique.
 	foundPorts := make(map[string][]*protocolPort)
 	t.validateConflictedLayer7Listeners(gateways)
@@ -55,7 +55,7 @@ func (t *Translator) ProcessListeners(translatorContext *TranslatorContext, gate
 			infraIR[irKey].Proxy.Config = gateway.envoyProxy
 		}
 		t.processProxyReadyListener(xdsIR[irKey], gateway.envoyProxy)
-		t.processProxyObservability(translatorContext, gateway, xdsIR[irKey], infraIR[irKey].Proxy.Config, resources)
+		t.processProxyObservability(gateway, xdsIR[irKey], infraIR[irKey].Proxy.Config, resources)
 
 		for _, listener := range gateway.listeners {
 			// Process protocol & supported kinds
@@ -95,7 +95,7 @@ func (t *Translator) ProcessListeners(translatorContext *TranslatorContext, gate
 			t.validateAllowedNamespaces(listener)
 
 			// Process TLS configuration
-			t.validateTLSConfiguration(translatorContext, listener, resources)
+			t.validateTLSConfiguration(listener, resources)
 
 			// Process Hostname configuration
 			t.validateHostName(listener)
@@ -468,24 +468,24 @@ func (t *Translator) processProxyReadyListener(xdsIR *ir.Xds, envoyProxy *egv1a1
 	}
 }
 
-func (t *Translator) processProxyObservability(translatorContext *TranslatorContext, gwCtx *GatewayContext, xdsIR *ir.Xds, envoyProxy *egv1a1.EnvoyProxy, resources *resource.Resources) {
+func (t *Translator) processProxyObservability(gwCtx *GatewayContext, xdsIR *ir.Xds, envoyProxy *egv1a1.EnvoyProxy, resources *resource.Resources) {
 	var err error
 
-	xdsIR.AccessLog, err = t.processAccessLog(translatorContext, envoyProxy, resources)
+	xdsIR.AccessLog, err = t.processAccessLog(envoyProxy, resources)
 	if err != nil {
 		status.UpdateGatewayStatusNotAccepted(gwCtx.Gateway, gwapiv1.GatewayReasonInvalidParameters,
 			fmt.Sprintf("Invalid access log backendRefs in the referenced EnvoyProxy: %v", err))
 		return
 	}
 
-	xdsIR.Tracing, err = t.processTracing(translatorContext, gwCtx.Gateway, envoyProxy, t.MergeGateways, resources)
+	xdsIR.Tracing, err = t.processTracing(gwCtx.Gateway, envoyProxy, t.MergeGateways, resources)
 	if err != nil {
 		status.UpdateGatewayStatusNotAccepted(gwCtx.Gateway, gwapiv1.GatewayReasonInvalidParameters,
 			fmt.Sprintf("Invalid tracing backendRefs in the referenced EnvoyProxy: %v", err))
 		return
 	}
 
-	xdsIR.Metrics, err = t.processMetrics(translatorContext, envoyProxy, resources)
+	xdsIR.Metrics, err = t.processMetrics(envoyProxy, resources)
 	if err != nil {
 		status.UpdateGatewayStatusNotAccepted(gwCtx.Gateway, gwapiv1.GatewayReasonInvalidParameters,
 			fmt.Sprintf("Invalid metrics backendRefs in the referenced EnvoyProxy: %v", err))
@@ -523,7 +523,7 @@ func (t *Translator) processInfraIRListener(listener *ListenerContext, infraIR r
 	infraIR[irKey].Proxy.Listeners = append(infraIR[irKey].Proxy.Listeners, proxyListener)
 }
 
-func (t *Translator) processAccessLog(translatorContext *TranslatorContext, envoyproxy *egv1a1.EnvoyProxy, resources *resource.Resources) (*ir.AccessLog, error) {
+func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *resource.Resources) (*ir.AccessLog, error) {
 	if envoyproxy == nil ||
 		envoyproxy.Spec.Telemetry == nil ||
 		envoyproxy.Spec.Telemetry.AccessLog == nil ||
@@ -630,7 +630,7 @@ func (t *Translator) processAccessLog(translatorContext *TranslatorContext, envo
 				destName := fmt.Sprintf("accesslog_als_%d_%d", i, j)
 				settingName := irDestinationSettingName(destName, -1)
 				// TODO: how to get authority from the backendRefs?
-				ds, traffic, err := t.processBackendRefs(translatorContext, settingName, sink.ALS.BackendCluster, envoyproxy.Namespace, resources, envoyproxy)
+				ds, traffic, err := t.processBackendRefs(settingName, sink.ALS.BackendCluster, envoyproxy.Namespace, resources, envoyproxy)
 				if err != nil {
 					return nil, err
 				}
@@ -677,7 +677,7 @@ func (t *Translator) processAccessLog(translatorContext *TranslatorContext, envo
 				destName := fmt.Sprintf("accesslog_otel_%d_%d", i, j)
 				settingName := irDestinationSettingName(destName, -1)
 				// TODO: how to get authority from the backendRefs?
-				ds, traffic, err := t.processBackendRefs(translatorContext, settingName, sink.OpenTelemetry.BackendCluster, envoyproxy.Namespace, resources, envoyproxy)
+				ds, traffic, err := t.processBackendRefs(settingName, sink.OpenTelemetry.BackendCluster, envoyproxy.Namespace, resources, envoyproxy)
 				if err != nil {
 					return nil, err
 				}
@@ -719,7 +719,7 @@ func (t *Translator) processAccessLog(translatorContext *TranslatorContext, envo
 	return irAccessLog, nil
 }
 
-func (t *Translator) processTracing(translatorContext *TranslatorContext, gw *gwapiv1.Gateway, envoyproxy *egv1a1.EnvoyProxy,
+func (t *Translator) processTracing(gw *gwapiv1.Gateway, envoyproxy *egv1a1.EnvoyProxy,
 	mergeGateways bool, resources *resource.Resources,
 ) (*ir.Tracing, error) {
 	if envoyproxy == nil ||
@@ -733,7 +733,7 @@ func (t *Translator) processTracing(translatorContext *TranslatorContext, gw *gw
 	destName := "tracing"
 	settingName := irDestinationSettingName(destName, -1)
 	// TODO: how to get authority from the backendRefs?
-	ds, traffic, err := t.processBackendRefs(translatorContext, settingName, tracing.Provider.BackendCluster, envoyproxy.Namespace, resources, envoyproxy)
+	ds, traffic, err := t.processBackendRefs(settingName, tracing.Provider.BackendCluster, envoyproxy.Namespace, resources, envoyproxy)
 	if err != nil {
 		return nil, err
 	}
@@ -796,7 +796,7 @@ func proxySamplingRate(tracing *egv1a1.ProxyTracing) float64 {
 	return rate
 }
 
-func (t *Translator) processMetrics(translatorContext *TranslatorContext, envoyproxy *egv1a1.EnvoyProxy, resources *resource.Resources) (*ir.Metrics, error) {
+func (t *Translator) processMetrics(envoyproxy *egv1a1.EnvoyProxy, resources *resource.Resources) (*ir.Metrics, error) {
 	if envoyproxy == nil ||
 		envoyproxy.Spec.Telemetry == nil ||
 		envoyproxy.Spec.Telemetry.Metrics == nil {
@@ -808,7 +808,7 @@ func (t *Translator) processMetrics(translatorContext *TranslatorContext, envoyp
 			continue
 		}
 
-		_, _, err := t.processBackendRefs(translatorContext, "", sink.OpenTelemetry.BackendCluster, envoyproxy.Namespace, resources, envoyproxy)
+		_, _, err := t.processBackendRefs("", sink.OpenTelemetry.BackendCluster, envoyproxy.Namespace, resources, envoyproxy)
 		if err != nil {
 			return nil, err
 		}
@@ -821,7 +821,7 @@ func (t *Translator) processMetrics(translatorContext *TranslatorContext, envoyp
 	}, nil
 }
 
-func (t *Translator) processBackendRefs(translatorContext *TranslatorContext, name string, backendCluster egv1a1.BackendCluster, namespace string,
+func (t *Translator) processBackendRefs(name string, backendCluster egv1a1.BackendCluster, namespace string,
 	resources *resource.Resources, envoyProxy *egv1a1.EnvoyProxy,
 ) ([]*ir.DestinationSetting, *ir.TrafficFeatures, error) {
 	traffic, err := translateTrafficFeatures(backendCluster.BackendSettings)
@@ -835,19 +835,19 @@ func (t *Translator) processBackendRefs(translatorContext *TranslatorContext, na
 		kind := KindDerefOr(ref.Kind, resource.KindService)
 		switch kind {
 		case resource.KindService:
-			if err := validateBackendRefService(translatorContext, ref.BackendObjectReference, ns, corev1.ProtocolTCP); err != nil {
+			if err := t.validateBackendRefService(ref.BackendObjectReference, ns, corev1.ProtocolTCP); err != nil {
 				return nil, nil, err
 			}
-			ds, err := t.processServiceDestinationSetting(translatorContext, name, ref.BackendObjectReference, ns, ir.TCP, envoyProxy)
+			ds, err := t.processServiceDestinationSetting(name, ref.BackendObjectReference, ns, ir.TCP, envoyProxy)
 			if err != nil {
 				return nil, nil, err
 			}
 			result = append(result, ds)
 		case resource.KindBackend:
-			if err := t.validateBackendRefBackend(translatorContext, ref.BackendObjectReference, resources, ns, true); err != nil {
+			if err := t.validateBackendRefBackend(ref.BackendObjectReference, resources, ns, true); err != nil {
 				return nil, nil, err
 			}
-			ds := t.processBackendDestinationSetting(translatorContext, name, ref.BackendObjectReference, ns, ir.TCP)
+			ds := t.processBackendDestinationSetting(name, ref.BackendObjectReference, ns, ir.TCP)
 			// Dynamic resolver destinations are not supported for none-route destinations
 			if ds.IsDynamicResolver {
 				return nil, nil, errors.New("dynamic resolver destinations are not supported")
