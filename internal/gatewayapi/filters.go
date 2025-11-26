@@ -1082,7 +1082,7 @@ func (t *Translator) processUnresolvedHTTPFilter(errMsg string, filterContext *H
 	}
 	return status.NewRouteStatusError(
 		errors.New(errMsg),
-		gwapiv1.RouteReasonBackendNotFound,
+		gwapiv1.RouteReasonUnsupportedValue,
 	).WithType(gwapiv1.RouteConditionResolvedRefs)
 }
 

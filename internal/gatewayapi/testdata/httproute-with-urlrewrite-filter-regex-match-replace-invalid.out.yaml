@@ -305,7 +305,7 @@ httpRoutes:
         type: Accepted
       - lastTransitionTime: null
         message: 'Unable to translate HTTPRouteFilter: default/notfound.'
-        reason: BackendNotFound
+        reason: UnsupportedValue
         status: "False"
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
