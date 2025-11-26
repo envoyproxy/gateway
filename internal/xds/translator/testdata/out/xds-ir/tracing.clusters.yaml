@@ -64,16 +64,6 @@
     maxEjectionPercent: 10
   perConnectionBufferLimitBytes: 20971520
   respectDnsTtl: true
-  transportSocket:
-    name: envoy.transport_sockets.upstream_proxy_protocol
-    typedConfig:
-      '@type': type.googleapis.com/envoy.extensions.transport_sockets.proxy_protocol.v3.ProxyProtocolUpstreamTransport
-      config:
-        version: V2
-      transportSocket:
-        name: envoy.transport_sockets.raw_buffer
-        typedConfig:
-          '@type': type.googleapis.com/envoy.extensions.transport_sockets.raw_buffer.v3.RawBuffer
   type: STRICT_DNS
   typedExtensionProtocolOptions:
     envoy.extensions.upstreams.http.v3.HttpProtocolOptions:

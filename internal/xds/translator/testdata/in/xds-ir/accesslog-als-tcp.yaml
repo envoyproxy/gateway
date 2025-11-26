@@ -32,8 +32,6 @@ accesslog:
           interval: 5s
           maxEjectionPercent: 10
           splitExternalLocalOriginErrors: false
-      proxyProtocol:
-        version: V2
       tcpKeepalive:
         probes: 7
       timeout:

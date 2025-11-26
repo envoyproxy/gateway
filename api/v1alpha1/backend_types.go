@@ -29,6 +29,8 @@ const (
 	AppProtocolTypeWSS AppProtocolType = "gateway.envoyproxy.io/wss"
 )
 
+// +genclient
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // Backend allows the user to configure the endpoints of a backend and
 // the behavior of the connection from Envoy Proxy to the backend.
 //
@@ -281,6 +283,7 @@ type BackendStatus struct {
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // BackendList contains a list of Backend resources.
 //
 // +kubebuilder:object:root=true
@@ -291,5 +294,5 @@ type BackendList struct {
 }
 
 func init() {
-	SchemeBuilder.Register(&Backend{}, &BackendList{})
+	localSchemeBuilder.Register(&Backend{}, &BackendList{})
 }

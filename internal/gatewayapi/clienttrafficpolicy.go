@@ -1039,7 +1039,7 @@ func translateHeaderModifier(headerModifier *egv1a1.HTTPHeaderFilter, modType st
 			newHeader := ir.AddHeader{
 				Name:   headerKey,
 				Append: true,
-				Value:  strings.Split(addHeader.Value, ","),
+				Value:  []string{addHeader.Value},
 			}
 
 			AddRequestHeaders = append(AddRequestHeaders, newHeader)
@@ -1083,7 +1083,7 @@ func translateHeaderModifier(headerModifier *egv1a1.HTTPHeaderFilter, modType st
 			newHeader := ir.AddHeader{
 				Name:   string(setHeader.Name),
 				Append: false,
-				Value:  strings.Split(setHeader.Value, ","),
+				Value:  []string{setHeader.Value},
 			}
 
 			AddRequestHeaders = append(AddRequestHeaders, newHeader)

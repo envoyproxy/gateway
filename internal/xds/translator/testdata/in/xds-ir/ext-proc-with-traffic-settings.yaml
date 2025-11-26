@@ -89,8 +89,6 @@ http:
             roundRobin:
               slowStart:
                 window: 5s
-          proxyProtocol:
-            version: V2
           tcpKeepalive:
             probes: 7
           timeout:

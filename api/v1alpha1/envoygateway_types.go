@@ -199,7 +199,21 @@ type EnvoyGatewayLogging struct {
 	//
 	// +kubebuilder:default={default: info}
 	Level map[EnvoyGatewayLogComponent]LogLevel `json:"level,omitempty"`
+	// Encoder defines the log encoder format.
+	// If unspecified, defaults to "Text".
+	//
+	// +optional
+	Encoder *EnvoyGatewayLogEncoder `json:"encoder,omitempty"`
 }
+
+type EnvoyGatewayLogEncoder string
+
+const (
+	// EnvoyGatewayLogEncoderText defines the "Text" log encoder.
+	EnvoyGatewayLogEncoderText EnvoyGatewayLogEncoder = "Text"
+	// EnvoyGatewayLogEncoderJSON defines the "JSON" log encoder.
+	EnvoyGatewayLogEncoderJSON EnvoyGatewayLogEncoder = "JSON"
+)
 
 // EnvoyGatewayLogComponent defines a component that supports a configured logging level.
 // +kubebuilder:validation:Enum=default;provider;gateway-api;xds-translator;xds-server;xds;infrastructure;global-ratelimit
@@ -852,5 +866,5 @@ type EnvoyGatewayTopologyInjector struct {
 }
 
 func init() {
-	SchemeBuilder.Register(&EnvoyGateway{})
+	localSchemeBuilder.Register(&EnvoyGateway{})
 }

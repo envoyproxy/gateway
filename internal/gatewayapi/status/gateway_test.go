@@ -377,14 +377,14 @@ func TestUpdateGatewayProgrammedCondition(t *testing.T) {
 			},
 		},
 		{
-			name:              "not ready gateway with too many addresses",
+			name:              "ready gateway with too many addresses",
 			serviceAddressNum: 17,
 			deploymentStatus:  appsv1.DeploymentStatus{AvailableReplicas: 1},
 			expectCondition: []metav1.Condition{
 				{
 					Type:    string(gwapiv1.GatewayConditionProgrammed),
-					Status:  metav1.ConditionFalse,
-					Reason:  string(gwapiv1.GatewayReasonInvalid),
+					Status:  metav1.ConditionTrue,
+					Reason:  string(gwapiv1.GatewayReasonProgrammed),
 					Message: fmt.Sprintf(messageFmtTooManyAddresses, 17),
 				},
 			},

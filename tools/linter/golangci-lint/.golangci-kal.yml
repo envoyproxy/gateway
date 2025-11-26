@@ -1,0 +1,38 @@
+version: "2"
+run:
+  go: "1.24"
+  allow-parallel-runners: true
+  patterns:
+    - "api/**"
+linters:
+  default: none
+  enable:
+    - kubeapilinter  # linter for Kube API conventions
+  settings:
+    custom:
+      kubeapilinter:
+        path: ../../bin/kube-api-linter.so
+        description: Kube API Linter checks Kubernetes API.
+        original-url: sigs.k8s.io/kube-api-linter
+        settings:
+          linters:
+            enable:
+              - "conditions"
+              - "nodurations"
+              - "nonullable"
+              - "notimestamp"
+              - "statusoptional"
+            disable:
+              - "*"
+          lintersConfig:
+            conditions:
+              isFirstField: Warn
+              usePatchStrategy: Forbid
+              useProtobuf: Forbid
+
+  exclusions:
+    generated: strict
+
+issues:
+  max-same-issues: 0
+  max-issues-per-linter: 0

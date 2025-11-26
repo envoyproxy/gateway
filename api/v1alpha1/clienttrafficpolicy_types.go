@@ -22,6 +22,8 @@ const (
 
 // ClientTrafficPolicy allows the user to configure the behavior of the connection
 // between the downstream client and Envoy Proxy listener.
+// +genclient
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 type ClientTrafficPolicy struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -357,11 +359,19 @@ type HTTP1Settings struct {
 
 // HTTP10Settings provides HTTP/1.0 configuration on the listener.
 type HTTP10Settings struct {
-	// UseDefaultHost defines if the HTTP/1.0 request is missing the Host header,
-	// then the hostname associated with the listener should be injected into the
-	// request.
-	// If this is not set and an HTTP/1.0 request arrives without a host, then
-	// it will be rejected.
+	// UseDefaultHost specifies whether a default Host header should be injected
+	// into HTTP/1.0 requests that do not include one.
+	//
+	// When set to true, Envoy Gateway injects the hostname associated with the
+	// listener or route into the request, in the following order:
+	//
+	//   1. If the targeted listener has a non-wildcard hostname, use that hostname.
+	//   2. If there is exactly one HTTPRoute with a non-wildcard hostname under
+	//      the targeted listener, use that hostname.
+	//
+	//  Note: Setting this field to true without a non-wildcard hostname makes the
+	// ClientTrafficPolicy invalid.
+	//
 	// +optional
 	UseDefaultHost *bool `json:"useDefaultHost,omitempty"`
 }
@@ -396,6 +406,7 @@ type ProxyProtocolSettings struct {
 //+kubebuilder:object:root=true
 
 // ClientTrafficPolicyList contains a list of ClientTrafficPolicy resources.
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 type ClientTrafficPolicyList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
@@ -403,5 +414,5 @@ type ClientTrafficPolicyList struct {
 }
 
 func init() {
-	SchemeBuilder.Register(&ClientTrafficPolicy{}, &ClientTrafficPolicyList{})
+	localSchemeBuilder.Register(&ClientTrafficPolicy{}, &ClientTrafficPolicyList{})
 }

@@ -225,6 +225,16 @@ func (c *TypedErrorCollector) GetError(t gwapiv1.RouteConditionType) Error {
 	return NewRouteStatusError(errors.New(c.errs[t].Error()), c.errs[t].Reason()).WithType(t)
 }
 
+// GetAllErrors returns all collected errors as a slice of Error, one for each distinct condition type.
+func (c *TypedErrorCollector) GetAllErrors() []Error {
+	types := c.Types()
+	errs := make([]Error, 0, len(types))
+	for _, t := range types {
+		errs = append(errs, c.GetError(t))
+	}
+	return errs
+}
+
 func isAcceptedReason(reason gwapiv1.RouteConditionReason) bool {
 	return reason == gwapiv1.RouteReasonNotAllowedByListeners ||
 		reason == gwapiv1.RouteReasonNoMatchingListenerHostname ||

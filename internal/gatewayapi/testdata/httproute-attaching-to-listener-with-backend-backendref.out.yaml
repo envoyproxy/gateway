@@ -63,7 +63,7 @@ backends:
     conditions:
     - lastTransitionTime: null
       message: 'The Backend was not accepted: IP address 127.0.0.1 in the loopback
-        range is not supported'
+        range is only supported when using the Host infrastructure'
       reason: Accepted
       status: "False"
       type: Invalid
@@ -263,7 +263,7 @@ httpRoutes:
         type: Accepted
       - lastTransitionTime: null
         message: 'Failed to process route rule 0 backendRef 0: IP address 127.0.0.1
-          in the loopback range is not supported.'
+          in the loopback range is only supported when using the Host infrastructure.'
         reason: InvalidAddress
         status: "False"
         type: ResolvedRefs

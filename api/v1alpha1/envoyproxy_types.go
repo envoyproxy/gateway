@@ -20,6 +20,8 @@ const (
 // +kubebuilder:subresource:status
 
 // EnvoyProxy is the schema for the envoyproxies API.
+// +genclient
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 type EnvoyProxy struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -549,6 +551,7 @@ type EnvoyProxyStatus struct {
 // +kubebuilder:object:root=true
 
 // EnvoyProxyList contains a list of EnvoyProxy
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 type EnvoyProxyList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
@@ -570,5 +573,5 @@ const (
 )
 
 func init() {
-	SchemeBuilder.Register(&EnvoyProxy{}, &EnvoyProxyList{})
+	localSchemeBuilder.Register(&EnvoyProxy{}, &EnvoyProxyList{})
 }
