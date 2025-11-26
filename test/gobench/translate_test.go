@@ -7,17 +7,11 @@ package fuzz
 
 import (
 	"fmt"
-	"io"
 	"strings"
 	"testing"
 
-	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-
-	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/cmd/egctl"
-	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
-	"github.com/envoyproxy/gateway/internal/logging"
 )
 
 // Reused YAML snippets.
@@ -480,84 +474,20 @@ func BenchmarkGatewayAPItoXDS(b *testing.B) {
 			if err != nil {
 				b.Fatalf("load: %v", err)
 			}
+			opts := &egctl.TranslationOptions{
+				GlobalRateLimitEnabled:  true,
+				EndpointRoutingDisabled: false,
+				EnvoyPatchPolicyEnabled: true,
+				BackendEnabled:          true,
+			}
+
 			b.ReportAllocs()
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
-				_, err = egctl.TranslateGatewayAPIToXds("default", "cluster.local", "all", rs)
+				_, err = egctl.TranslateGatewayAPIToXds("default", "cluster.local", "all", rs, opts)
 				if err != nil && strings.Contains(err.Error(), "failed to translate xds") {
 					b.Fatalf("%v", err)
 				}
-			}
-		})
-	}
-}
-
-// Benchmark cases: small / medium / large.
-// Focus on Gateway API translation performance.
-// Since endpoint retrieval can become a major bottleneck due to repeated calls,
-// perform translation which endpoint fetching is required.
-func BenchmarkGatewayAPITranslator(b *testing.B) {
-	type benchCase struct {
-		name string
-		yaml string
-	}
-	medium := baseYAML + backendYAML + tlsSecretYAML + clientTrafficPolicyYAML +
-		genHTTPRoutes(200) +
-		genGRPCRoutes(25) +
-		genUDPRoutes(10) +
-		genJWKSConfigMaps(50) +
-		genSecurityPolicies(50) +
-		genBackendTrafficPolicies(50) +
-		genEnvoyExtensionPolicies(50) +
-		genService(200) +
-		genEndpointSlice(200)
-	large := baseYAML + backendYAML + tlsSecretYAML + clientTrafficPolicyYAML +
-		genHTTPRoutes(2000) +
-		genGRPCRoutes(250) +
-		genUDPRoutes(100) +
-		genJWKSConfigMaps(500) +
-		genSecurityPolicies(500) +
-		genBackendTrafficPolicies(500) +
-		genEnvoyExtensionPolicies(500) +
-		genService(2000) +
-		genEndpointSlice(2000)
-
-	cases := []benchCase{
-		{
-			name: "small",
-			yaml: baseYAML + httpRouteYAML + backendYAML + tlsSecretYAML + securityPolicyYAML + backendTrafficPolicyYAML + clientTrafficPolicyYAML + envoyExtensionPolicyYAML,
-		},
-		{
-			name: "medium",
-			yaml: medium,
-		},
-		{
-			name: "large",
-			yaml: large,
-		},
-	}
-
-	for _, tc := range cases {
-		b.Run(tc.name, func(b *testing.B) {
-			rs, err := resource.LoadResourcesFromYAMLBytes([]byte(tc.yaml), true)
-			if err != nil {
-				b.Fatalf("load: %v", err)
-			}
-			b.ReportAllocs()
-			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
-				translator := &gatewayapi.Translator{
-					GatewayControllerName:   string(rs.GatewayClass.Spec.ControllerName),
-					GatewayClassName:        gwapiv1.ObjectName(rs.GatewayClass.Name),
-					GlobalRateLimitEnabled:  true,
-					EndpointRoutingDisabled: false,
-					EnvoyPatchPolicyEnabled: true,
-					BackendEnabled:          true,
-					Logger:                  logging.DefaultLogger(io.Discard, egv1a1.LogLevelInfo),
-				}
-				// gatewayapi.Translate errors are ignored in this benchmark,
-				// those errors are not relevant to the scope of the benchmark.
-				_, _ = translator.Translate(rs)
 			}
 		})
 	}
