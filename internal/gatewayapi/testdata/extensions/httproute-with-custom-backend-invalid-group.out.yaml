@@ -69,14 +69,13 @@ httpRoutes:
     parents:
     - conditions:
       - lastTransitionTime: null
-        message: 'Unable to translate APIVersion for Extension Filter: kind: Foo,
-          default/test'
-        reason: UnsupportedValue
-        status: "False"
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
         type: Accepted
       - lastTransitionTime: null
         message: 'Unable to translate APIVersion for Extension Filter: kind: Foo,
-          default/test'
+          default/test.'
         reason: BackendNotFound
         status: "False"
         type: ResolvedRefs
