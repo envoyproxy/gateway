@@ -7,7 +7,6 @@ package egctl
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -15,12 +14,10 @@ import (
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/types"
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 
-	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
-	"github.com/envoyproxy/gateway/internal/envoygateway"
+	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/ratelimit"
 	"github.com/envoyproxy/gateway/internal/kubernetes"
 )
@@ -168,26 +165,14 @@ func checkEnableGlobalRateLimit(cli kubernetes.CLIClient) (bool, error) {
 		return false, err
 	}
 
-	config, ok := cm.Data[defaultConfigMapKey]
+	configData, ok := cm.Data[defaultConfigMapKey]
 	if !ok {
 		return false, fmt.Errorf("failed to get envoy-gateway configuration")
 	}
 
-	decoder := serializer.NewCodecFactory(envoygateway.GetScheme()).UniversalDeserializer()
-	obj, gvk, err := decoder.Decode([]byte(config), nil, nil)
+	eg, err := config.DecodeBytes([]byte(configData))
 	if err != nil {
 		return false, err
-	}
-
-	if gvk.Group != egv1a1.GroupVersion.Group ||
-		gvk.Version != egv1a1.GroupVersion.Version ||
-		gvk.Kind != egv1a1.KindEnvoyGateway {
-		return false, errors.New("failed to decode unmatched resource type")
-	}
-
-	eg, ok := obj.(*egv1a1.EnvoyGateway)
-	if !ok {
-		return false, errors.New("failed to convert object to EnvoyGateway type")
 	}
 
 	if eg.RateLimit == nil || eg.RateLimit.Backend.Redis == nil {

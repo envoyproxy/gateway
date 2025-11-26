@@ -114,12 +114,12 @@ httpRoutes:
     parents:
     - conditions:
       - lastTransitionTime: null
-        message: 'Unable to translate HTTPRouteFilter: default/direct-response-value-ref-not-found'
-        reason: UnsupportedValue
-        status: "False"
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: 'Unable to translate HTTPRouteFilter: default/direct-response-value-ref-not-found'
+        message: 'Unable to translate HTTPRouteFilter: default/direct-response-value-ref-not-found.'
         reason: BackendNotFound
         status: "False"
         type: ResolvedRefs
@@ -154,7 +154,7 @@ httpRoutes:
     - conditions:
       - lastTransitionTime: null
         message: 'Invalid filter HTTPRouteFilter: response.body size 4097 greater
-          than the max size 4096'
+          than the max size 4096.'
         reason: UnsupportedValue
         status: "False"
         type: Accepted

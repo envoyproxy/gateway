@@ -475,7 +475,12 @@ func (t *Translator) translateEnvoyExtensionPolicyForRoute(
 	parentRefs := GetParentReferences(route)
 	routesWithDirectResponse := sets.New[string]()
 	for _, p := range parentRefs {
-		parentRefCtx := GetRouteParentContext(route, p, t.GatewayControllerName)
+		// Skip if this parentRef was not processed by this translator
+		// (e.g., references a Gateway with a different GatewayClass)
+		parentRefCtx := route.GetRouteParentContext(p)
+		if parentRefCtx == nil {
+			continue
+		}
 		gtwCtx := parentRefCtx.GetGateway()
 		if gtwCtx == nil {
 			continue
