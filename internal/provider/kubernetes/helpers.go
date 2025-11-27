@@ -12,6 +12,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	mcsapiv1a1 "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
@@ -141,8 +142,9 @@ func classRefsEnvoyProxy(gc *gwapiv1.GatewayClass, ep *egv1a1.EnvoyProxy) bool {
 		return false
 	}
 
+	ns := ptr.Deref(gc.Spec.ParametersRef.Namespace, "default")
 	return refsEnvoyProxy(gc) &&
-		string(*gc.Spec.ParametersRef.Namespace) == ep.Namespace &&
+		string(ns) == ep.Namespace &&
 		gc.Spec.ParametersRef.Name == ep.Name
 }
 
@@ -155,7 +157,6 @@ func refsEnvoyProxy(gc *gwapiv1.GatewayClass) bool {
 	return gc.Spec.ParametersRef != nil &&
 		string(gc.Spec.ParametersRef.Group) == egv1a1.GroupVersion.Group &&
 		gc.Spec.ParametersRef.Kind == egv1a1.KindEnvoyProxy &&
-		gc.Spec.ParametersRef.Namespace != nil &&
 		len(gc.Spec.ParametersRef.Name) > 0
 }
 
