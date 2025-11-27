@@ -223,8 +223,12 @@ func (c *ControllerResourcesContext) DeepCopy() *ControllerResourcesContext {
 	if c == nil {
 		return nil
 	}
+	var resourcesCopy *ControllerResources
+	if c.Resources != nil {
+		resourcesCopy = c.Resources.DeepCopy()
+	}
 	return &ControllerResourcesContext{
-		Resources: c.Resources.DeepCopy(),
+		Resources: resourcesCopy,
 		Context:   c.Context,
 	}
 }

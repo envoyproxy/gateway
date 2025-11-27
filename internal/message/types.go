@@ -145,8 +145,12 @@ func (x *XdsIRWithContext) DeepCopy() *XdsIRWithContext {
 	if x == nil {
 		return nil
 	}
+	var xdsIRCopy *ir.Xds
+	if x.XdsIR != nil {
+		xdsIRCopy = x.XdsIR.DeepCopy()
+	}
 	return &XdsIRWithContext{
-		XdsIR:   x.XdsIR.DeepCopy(),
+		XdsIR:   xdsIRCopy,
 		Context: x.Context,
 	}
 }

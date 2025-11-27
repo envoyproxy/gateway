@@ -142,7 +142,7 @@ func (r *Runner) translateFromSubscription(ctx context.Context, c <-chan watchab
 
 	message.HandleSubscription(message.Metadata{Runner: r.Name(), Message: message.XDSIRMessageName}, c,
 		func(update message.Update[string, *message.XdsIRWithContext], errChan chan error) {
-			parentCtx := context.Background()
+			parentCtx := ctx
 			if update.Value != nil && update.Value.Context != nil {
 				parentCtx = update.Value.Context
 			}
