@@ -21,6 +21,7 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/envoyformatvalidator"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -1022,6 +1023,11 @@ func translateHeaderModifier(headerModifier *egv1a1.HTTPHeaderFilter, modType st
 				errs = errors.Join(errs, fmt.Errorf("%s cannot add a header with an invalid value. Header: '%q'", modType, string(addHeader.Name)))
 				continue
 			}
+			// Validate Envoy format strings in header value
+			if err := envoyformatvalidator.ValidateEnvoyFormatString(addHeader.Value); err != nil {
+				errs = errors.Join(errs, fmt.Errorf("%s cannot add a header with invalid Envoy format string. Header: '%q': %w", modType, string(addHeader.Name), err))
+				continue
+			}
 			// Check if the header is a duplicate
 			headerKey := string(addHeader.Name)
 			canAddHeader := true
@@ -1065,6 +1071,11 @@ func translateHeaderModifier(headerModifier *egv1a1.HTTPHeaderFilter, modType st
 			// Gateway API specification allows only valid value as defined by RFC 7230
 			if !HeaderValueRegexp.MatchString(setHeader.Value) {
 				errs = errors.Join(errs, fmt.Errorf("%s cannot set a header with an invalid value. Header: '%q'", modType, string(setHeader.Name)))
+				continue
+			}
+			// Validate Envoy format strings in header value
+			if err := envoyformatvalidator.ValidateEnvoyFormatString(setHeader.Value); err != nil {
+				errs = errors.Join(errs, fmt.Errorf("%s cannot set a header with invalid Envoy format string. Header: '%q': %w", modType, string(setHeader.Name), err))
 				continue
 			}
 

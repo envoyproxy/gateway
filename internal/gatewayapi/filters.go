@@ -16,6 +16,7 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/envoyformatvalidator"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -446,6 +447,16 @@ func (t *Translator) processRequestHeaderModifierFilter(
 				continue
 			}
 
+			// Validate Envoy format strings in header value
+			if err := envoyformatvalidator.ValidateEnvoyFormatString(addHeader.Value); err != nil {
+				updateRouteStatusForFilter(
+					filterContext,
+					fmt.Sprintf(
+						"Header: %q. RequestHeaderModifier Filter cannot add a header with invalid Envoy format string: %v",
+						string(addHeader.Name), err))
+				continue
+			}
+
 			// Check if the header is a duplicate
 			headerKey := string(addHeader.Name)
 			canAddHeader := true
@@ -496,6 +507,16 @@ func (t *Translator) processRequestHeaderModifierFilter(
 				errs = errors.Join(errs, fmt.Errorf(
 					"Header: %q. RequestHeaderModifier Filter cannot set a header with an invalid value.",
 					string(setHeader.Name)))
+				continue
+			}
+
+			// Validate Envoy format strings in header value
+			if err := envoyformatvalidator.ValidateEnvoyFormatString(setHeader.Value); err != nil {
+				updateRouteStatusForFilter(
+					filterContext,
+					fmt.Sprintf(
+						"Header: %q. RequestHeaderModifier Filter cannot set a header with invalid Envoy format string: %v",
+						string(setHeader.Name), err))
 				continue
 			}
 
@@ -623,6 +644,16 @@ func (t *Translator) processResponseHeaderModifierFilter(
 				continue
 			}
 
+			// Validate Envoy format strings in header value
+			if err := envoyformatvalidator.ValidateEnvoyFormatString(addHeader.Value); err != nil {
+				updateRouteStatusForFilter(
+					filterContext,
+					fmt.Sprintf(
+						"Header: %q. ResponseHeaderModifier Filter cannot add a header with invalid Envoy format string: %v",
+						string(addHeader.Name), err))
+				continue
+			}
+
 			// Check if the header is a duplicate
 			headerKey := string(addHeader.Name)
 			canAddHeader := true
@@ -673,6 +704,16 @@ func (t *Translator) processResponseHeaderModifierFilter(
 				errs = errors.Join(errs, fmt.Errorf(
 					"Header: %q. ResponseHeaderModifier Filter cannot set a header with an invalid value.",
 					string(setHeader.Name)))
+				continue
+			}
+
+			// Validate Envoy format strings in header value
+			if err := envoyformatvalidator.ValidateEnvoyFormatString(setHeader.Value); err != nil {
+				updateRouteStatusForFilter(
+					filterContext,
+					fmt.Sprintf(
+						"Header: %q. ResponseHeaderModifier Filter cannot set a header with invalid Envoy format string: %v",
+						string(setHeader.Name), err))
 				continue
 			}
 
