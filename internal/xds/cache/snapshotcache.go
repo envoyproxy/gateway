@@ -16,6 +16,7 @@ package cache
 import (
 	"context"
 	"fmt"
+	"math"
 	"strconv"
 	"sync"
 	"time"
@@ -69,6 +70,7 @@ type snapshotCache struct {
 	nodeFrequency       nodeFrequencyMap
 	streamDuration      streamDurationMap
 	deltaStreamDuration streamDurationMap
+	snapshotVersion     int64
 	lastSnapshot        snapshotMap
 	log                 *zap.SugaredLogger
 	mu                  sync.Mutex
@@ -85,6 +87,9 @@ func (s *snapshotCache) GenerateNewSnapshot(irKey string, resources types.XdsRes
 
 	sc := trace.SpanContextFromContext(ctx)
 	version := sc.TraceID().String()
+	if !sc.IsValid() {
+		version = s.newSnapshotVersion()
+	}
 
 	// Create a snapshot with all xDS resources.
 	snapshot, err := cachev3.NewSnapshot(
@@ -117,6 +122,19 @@ func (s *snapshotCache) GenerateNewSnapshot(irKey string, resources types.XdsRes
 	}
 
 	return nil
+}
+
+// newSnapshotVersion increments the current snapshotVersion
+// and returns as a string.
+func (s *snapshotCache) newSnapshotVersion() string {
+	// Reset the snapshotVersion if it ever hits max size.
+	if s.snapshotVersion == math.MaxInt64 {
+		s.snapshotVersion = 0
+	}
+
+	// Increment the snapshot version & return as string.
+	s.snapshotVersion++
+	return strconv.FormatInt(s.snapshotVersion, 10)
 }
 
 // NewSnapshotCache gives you a fresh SnapshotCache.

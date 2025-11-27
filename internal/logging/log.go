@@ -102,7 +102,6 @@ func (l Logger) WithTrace(ctx context.Context) Logger {
 	fields := []interface{}{
 		"trace_id", sc.TraceID().String(),
 		"span_id", sc.SpanID().String(),
-		"trace_flags", sc.TraceFlags().String(),
 	}
 
 	if ts := sc.TraceState(); ts.Len() > 0 {

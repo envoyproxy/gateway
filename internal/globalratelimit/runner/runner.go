@@ -146,20 +146,21 @@ func (r *Runner) translateFromSubscription(ctx context.Context, c <-chan watchab
 			if update.Value != nil && update.Value.Context != nil {
 				parentCtx = update.Value.Context
 			}
-			traceLogger := r.Logger.WithTrace(parentCtx)
-			traceLogger.Info("received a notification")
 
-			_, span := tracer.Start(parentCtx, "GlobalRateLimitRunner.translateFromSubscription")
+			traceCtx, span := tracer.Start(parentCtx, "GlobalRateLimitRunner.translateFromSubscription")
 			defer span.End()
 
+			traceLogger := r.Logger.WithTrace(traceCtx)
+			traceLogger.Info("received a notification")
+
 			span.SetAttributes(
-				attribute.String("controller.key", update.Key),
+				attribute.String("xds-ir.key", update.Key),
 				attribute.Bool("update.delete", update.Delete),
 			)
 
 			if update.Delete {
 				delete(rateLimitConfigsCache, update.Key)
-				r.updateSnapshot(ctx, buildXDSResourceFromCache(rateLimitConfigsCache))
+				r.updateSnapshot(traceCtx, buildXDSResourceFromCache(rateLimitConfigsCache))
 			} else {
 				// Translate to ratelimit xDS Config.
 				rvt, err := r.translate(update.Value.XdsIR)
@@ -172,7 +173,7 @@ func (r *Runner) translateFromSubscription(ctx context.Context, c <-chan watchab
 				if rvt != nil {
 					// Build XdsResources to use for the snapshot update from the cache.
 					rateLimitConfigsCache[update.Key] = rvt.XdsResources[resourcev3.RateLimitConfigType]
-					r.updateSnapshot(ctx, buildXDSResourceFromCache(rateLimitConfigsCache))
+					r.updateSnapshot(traceCtx, buildXDSResourceFromCache(rateLimitConfigsCache))
 				}
 			}
 		},

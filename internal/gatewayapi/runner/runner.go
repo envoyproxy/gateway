@@ -135,12 +135,11 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 				parentCtx = update.Value.Context
 			}
 
-			traceLogger := r.Logger.WithTrace(parentCtx)
-
+			traceCtx, span := tracer.Start(parentCtx, "GatewayApiRunner.subscribeAndTranslate")
+			defer span.End()
+			traceLogger := r.Logger.WithTrace(traceCtx)
 			traceLogger.Info("received an update", "key", update.Key)
 
-			_, span := tracer.Start(parentCtx, "GatewayApiRunner.subscribeAndTranslate")
-			defer span.End()
 			valWrapper := update.Value
 			// There is only 1 key which is the controller name
 			// so when a delete is triggered, delete all keys
@@ -169,7 +168,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 			var backendTLSPolicyStatusCount, clientTrafficPolicyStatusCount, backendTrafficPolicyStatusCount int
 			var securityPolicyStatusCount, envoyExtensionPolicyStatusCount, backendStatusCount, extensionServerPolicyStatusCount int
 
-			span.AddEvent("gateway_resources_translation_cycle", trace.WithAttributes(attribute.Int("resources.count", len(*val))))
+			span.AddEvent("translate", trace.WithAttributes(attribute.Int("resources.count", len(*val))))
 			for _, resources := range *val {
 				// Translate and publish IRs.
 				t := &gatewayapi.Translator{
@@ -200,7 +199,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 					traceLogger.Info("extension resources", "GVKs count", len(extGKs))
 				}
 				// Translate to IR
-				_, translateToIRSpan := tracer.Start(parentCtx, "GatewayApiRunner.ResoureTranslationCycle.TranslateToIR")
+				_, translateToIRSpan := tracer.Start(traceCtx, "GatewayApiRunner.ResoureTranslationCycle.TranslateToIR")
 				result, err := t.Translate(resources)
 				translateToIRSpan.End()
 				if err != nil {
@@ -238,7 +237,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 					} else {
 						m := message.XdsIRWithContext{
 							XdsIR:   val,
-							Context: parentCtx,
+							Context: traceCtx,
 						}
 						r.XdsIR.Store(key, &m)
 						xdsIRCount++
@@ -246,7 +245,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 				}
 
 				// Update Status
-				_, statusUpdateSpan := tracer.Start(parentCtx, "GatewayApiRunner.ResoureTranslationCycle.UpdateStatus")
+				_, statusUpdateSpan := tracer.Start(traceCtx, "GatewayApiRunner.ResoureTranslationCycle.UpdateStatus")
 				if result.GatewayClass != nil {
 					key := utils.NamespacedName(result.GatewayClass)
 					r.ProviderResources.GatewayClassStatuses.Store(key, &result.GatewayClass.Status)

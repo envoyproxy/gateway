@@ -265,23 +265,22 @@ func (r *Runner) translateFromSubscription(sub <-chan watchable.Snapshot[string,
 				parentCtx = update.Value.Context
 			}
 
-			traceLogger := r.Logger.WithTrace(parentCtx)
-			traceLogger.Info("received an update")
-
-			_, span := tracer.Start(parentCtx, "XdsRunner.subscribeAndTranslate")
+			traceCtx, span := tracer.Start(parentCtx, "XdsRunner.subscribeAndTranslate")
 			defer span.End()
+			traceLogger := r.Logger.WithTrace(traceCtx)
+			traceLogger.Info("received an update")
 
 			key := update.Key
 			val := update.Value
 
 			// Add span attributes for observability
 			span.SetAttributes(
-				attribute.String("controller.key", update.Key),
+				attribute.String("xds-ir.key", update.Key),
 				attribute.Bool("update.delete", update.Delete),
 			)
 
 			if update.Delete {
-				if err := r.cache.GenerateNewSnapshot(key, nil, parentCtx); err != nil {
+				if err := r.cache.GenerateNewSnapshot(key, nil, traceCtx); err != nil {
 					traceLogger.Error(err, "failed to delete the snapshot")
 					errChan <- err
 				}
@@ -316,7 +315,7 @@ func (r *Runner) translateFromSubscription(sub <-chan watchable.Snapshot[string,
 					}
 				}
 
-				_, translateSpan := tracer.Start(parentCtx, "Translator.Translate")
+				_, translateSpan := tracer.Start(traceCtx, "Translator.Translate")
 				result, err := t.Translate(val.XdsIR)
 				translateSpan.End()
 				if err != nil {
@@ -339,7 +338,7 @@ func (r *Runner) translateFromSubscription(sub <-chan watchable.Snapshot[string,
 							errChan <- err
 						} else {
 							// Update snapshot cache
-							if err := r.cache.GenerateNewSnapshot(key, result.XdsResources, parentCtx); err != nil {
+							if err := r.cache.GenerateNewSnapshot(key, result.XdsResources, traceCtx); err != nil {
 								r.Logger.Error(err, "failed to generate a snapshot")
 								errChan <- err
 							}

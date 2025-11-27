@@ -158,6 +158,10 @@ func startRunners(ctx context.Context, cfg *config.Server) (err error) {
 		runner Runner
 	}{
 		{
+			// Start the Traces Server
+			runner: traces.New(cfg),
+		},
+		{
 			// Start the Provider Service
 			// It fetches the resources from the configured provider type
 			// and publishes it.
@@ -213,10 +217,6 @@ func startRunners(ctx context.Context, cfg *config.Server) (err error) {
 			// Start the Metrics Server
 			// It provides metrics endpoints for monitoring.
 			runner: metrics.New(cfg),
-		},
-		{
-			// Start the Traces Server
-			runner: traces.New(cfg),
 		},
 	}
 
