@@ -58,6 +58,7 @@
               signoutPath:
                 path:
                   exact: /bar/logout
+              statPrefix: securitypolicy/envoy-gateway/policy-for-gateway
               tokenEndpoint:
                 cluster: securitypolicy/envoy-gateway/policy-for-gateway/0
                 timeout: 10s

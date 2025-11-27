@@ -282,7 +282,11 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 			ancestorRef := getAncestorRefForPolicy(mapKey.NamespacedName, p.SectionName)
 			ancestorRefs = append(ancestorRefs, &ancestorRef)
 
-			parentRefCtxs = append(parentRefCtxs, GetRouteParentContext(targetedRoute, p, t.GatewayControllerName))
+			// Only process parentRefs that were handled by this translator
+			// (skip those referencing Gateways with different GatewayClasses)
+			if parentRefCtx := targetedRoute.GetRouteParentContext(p); parentRefCtx != nil {
+				parentRefCtxs = append(parentRefCtxs, parentRefCtx)
+			}
 		}
 	}
 
