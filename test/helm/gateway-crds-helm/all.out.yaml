@@ -25888,6 +25888,26 @@ spec:
                             maximum: 65535
                             minimum: 1
                             type: integer
+                          weight:
+                            default: 1
+                            description: |-
+                              Weight specifies the proportion of requests forwarded to the referenced
+                              backend. This is computed as weight/(sum of all weights in this
+                              BackendRefs list). For non-zero values, there may be some epsilon from
+                              the exact proportion defined here depending on the precision an
+                              implementation supports. Weight is not a percentage and the sum of
+                              weights does not need to equal 100.
+
+                              If only one backend is specified and it has a weight greater than 0, 100%
+                              of the traffic is forwarded to that backend. If weight is set to 0, no
+                              traffic should be forwarded for this entry. If unspecified, weight
+                              defaults to 1.
+
+                              Support for this field varies based on the context where used.
+                            format: int32
+                            maximum: 1000000
+                            minimum: 0
+                            type: integer
                         required:
                         - name
                         type: object
@@ -39514,6 +39534,26 @@ spec:
                                               maximum: 65535
                                               minimum: 1
                                               type: integer
+                                            weight:
+                                              default: 1
+                                              description: |-
+                                                Weight specifies the proportion of requests forwarded to the referenced
+                                                backend. This is computed as weight/(sum of all weights in this
+                                                BackendRefs list). For non-zero values, there may be some epsilon from
+                                                the exact proportion defined here depending on the precision an
+                                                implementation supports. Weight is not a percentage and the sum of
+                                                weights does not need to equal 100.
+
+                                                If only one backend is specified and it has a weight greater than 0, 100%
+                                                of the traffic is forwarded to that backend. If weight is set to 0, no
+                                                traffic should be forwarded for this entry. If unspecified, weight
+                                                defaults to 1.
+
+                                                Support for this field varies based on the context where used.
+                                              format: int32
+                                              maximum: 1000000
+                                              minimum: 0
+                                              type: integer
                                           required:
                                           - name
                                           type: object
@@ -40770,6 +40810,26 @@ spec:
                                               format: int32
                                               maximum: 65535
                                               minimum: 1
+                                              type: integer
+                                            weight:
+                                              default: 1
+                                              description: |-
+                                                Weight specifies the proportion of requests forwarded to the referenced
+                                                backend. This is computed as weight/(sum of all weights in this
+                                                BackendRefs list). For non-zero values, there may be some epsilon from
+                                                the exact proportion defined here depending on the precision an
+                                                implementation supports. Weight is not a percentage and the sum of
+                                                weights does not need to equal 100.
+
+                                                If only one backend is specified and it has a weight greater than 0, 100%
+                                                of the traffic is forwarded to that backend. If weight is set to 0, no
+                                                traffic should be forwarded for this entry. If unspecified, weight
+                                                defaults to 1.
+
+                                                Support for this field varies based on the context where used.
+                                              format: int32
+                                              maximum: 1000000
+                                              minimum: 0
                                               type: integer
                                           required:
                                           - name
@@ -42144,6 +42204,26 @@ spec:
                                         maximum: 65535
                                         minimum: 1
                                         type: integer
+                                      weight:
+                                        default: 1
+                                        description: |-
+                                          Weight specifies the proportion of requests forwarded to the referenced
+                                          backend. This is computed as weight/(sum of all weights in this
+                                          BackendRefs list). For non-zero values, there may be some epsilon from
+                                          the exact proportion defined here depending on the precision an
+                                          implementation supports. Weight is not a percentage and the sum of
+                                          weights does not need to equal 100.
+
+                                          If only one backend is specified and it has a weight greater than 0, 100%
+                                          of the traffic is forwarded to that backend. If weight is set to 0, no
+                                          traffic should be forwarded for this entry. If unspecified, weight
+                                          defaults to 1.
+
+                                          Support for this field varies based on the context where used.
+                                        format: int32
+                                        maximum: 1000000
+                                        minimum: 0
+                                        type: integer
                                     required:
                                     - name
                                     type: object
@@ -43403,6 +43483,26 @@ spec:
                                   format: int32
                                   maximum: 65535
                                   minimum: 1
+                                  type: integer
+                                weight:
+                                  default: 1
+                                  description: |-
+                                    Weight specifies the proportion of requests forwarded to the referenced
+                                    backend. This is computed as weight/(sum of all weights in this
+                                    BackendRefs list). For non-zero values, there may be some epsilon from
+                                    the exact proportion defined here depending on the precision an
+                                    implementation supports. Weight is not a percentage and the sum of
+                                    weights does not need to equal 100.
+
+                                    If only one backend is specified and it has a weight greater than 0, 100%
+                                    of the traffic is forwarded to that backend. If weight is set to 0, no
+                                    traffic should be forwarded for this entry. If unspecified, weight
+                                    defaults to 1.
+
+                                    Support for this field varies based on the context where used.
+                                  format: int32
+                                  maximum: 1000000
+                                  minimum: 0
                                   type: integer
                               required:
                               - name
@@ -45644,6 +45744,26 @@ spec:
                               maximum: 65535
                               minimum: 1
                               type: integer
+                            weight:
+                              default: 1
+                              description: |-
+                                Weight specifies the proportion of requests forwarded to the referenced
+                                backend. This is computed as weight/(sum of all weights in this
+                                BackendRefs list). For non-zero values, there may be some epsilon from
+                                the exact proportion defined here depending on the precision an
+                                implementation supports. Weight is not a percentage and the sum of
+                                weights does not need to equal 100.
+
+                                If only one backend is specified and it has a weight greater than 0, 100%
+                                of the traffic is forwarded to that backend. If weight is set to 0, no
+                                traffic should be forwarded for this entry. If unspecified, weight
+                                defaults to 1.
+
+                                Support for this field varies based on the context where used.
+                              format: int32
+                              maximum: 1000000
+                              minimum: 0
+                              type: integer
                           required:
                           - name
                           type: object
@@ -46784,6 +46904,26 @@ spec:
                               format: int32
                               maximum: 65535
                               minimum: 1
+                              type: integer
+                            weight:
+                              default: 1
+                              description: |-
+                                Weight specifies the proportion of requests forwarded to the referenced
+                                backend. This is computed as weight/(sum of all weights in this
+                                BackendRefs list). For non-zero values, there may be some epsilon from
+                                the exact proportion defined here depending on the precision an
+                                implementation supports. Weight is not a percentage and the sum of
+                                weights does not need to equal 100.
+
+                                If only one backend is specified and it has a weight greater than 0, 100%
+                                of the traffic is forwarded to that backend. If weight is set to 0, no
+                                traffic should be forwarded for this entry. If unspecified, weight
+                                defaults to 1.
+
+                                Support for this field varies based on the context where used.
+                              format: int32
+                              maximum: 1000000
+                              minimum: 0
                               type: integer
                           required:
                           - name
@@ -48121,6 +48261,26 @@ spec:
                                     format: int32
                                     maximum: 65535
                                     minimum: 1
+                                    type: integer
+                                  weight:
+                                    default: 1
+                                    description: |-
+                                      Weight specifies the proportion of requests forwarded to the referenced
+                                      backend. This is computed as weight/(sum of all weights in this
+                                      BackendRefs list). For non-zero values, there may be some epsilon from
+                                      the exact proportion defined here depending on the precision an
+                                      implementation supports. Weight is not a percentage and the sum of
+                                      weights does not need to equal 100.
+
+                                      If only one backend is specified and it has a weight greater than 0, 100%
+                                      of the traffic is forwarded to that backend. If weight is set to 0, no
+                                      traffic should be forwarded for this entry. If unspecified, weight
+                                      defaults to 1.
+
+                                      Support for this field varies based on the context where used.
+                                    format: int32
+                                    maximum: 1000000
+                                    minimum: 0
                                     type: integer
                                 required:
                                 - name
@@ -49548,6 +49708,26 @@ spec:
                               format: int32
                               maximum: 65535
                               minimum: 1
+                              type: integer
+                            weight:
+                              default: 1
+                              description: |-
+                                Weight specifies the proportion of requests forwarded to the referenced
+                                backend. This is computed as weight/(sum of all weights in this
+                                BackendRefs list). For non-zero values, there may be some epsilon from
+                                the exact proportion defined here depending on the precision an
+                                implementation supports. Weight is not a percentage and the sum of
+                                weights does not need to equal 100.
+
+                                If only one backend is specified and it has a weight greater than 0, 100%
+                                of the traffic is forwarded to that backend. If weight is set to 0, no
+                                traffic should be forwarded for this entry. If unspecified, weight
+                                defaults to 1.
+
+                                Support for this field varies based on the context where used.
+                              format: int32
+                              maximum: 1000000
+                              minimum: 0
                               type: integer
                           required:
                           - name
