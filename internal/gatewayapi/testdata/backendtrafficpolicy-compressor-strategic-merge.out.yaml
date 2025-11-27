@@ -375,7 +375,8 @@ xdsIR:
           prefix: /admin
         traffic:
           compression:
-          - type: Gzip
+          - chooseFirst: true
+            type: Gzip
       - destination:
           metadata:
             kind: HTTPRoute
@@ -407,7 +408,8 @@ xdsIR:
           prefix: /api
         traffic:
           compression:
-          - type: Brotli
+          - chooseFirst: true
+            type: Brotli
       - destination:
           metadata:
             kind: HTTPRoute
@@ -439,7 +441,8 @@ xdsIR:
           prefix: /
         traffic:
           compression:
-          - type: Brotli
+          - chooseFirst: true
+            type: Brotli
           - type: Gzip
     readyListener:
       address: 0.0.0.0

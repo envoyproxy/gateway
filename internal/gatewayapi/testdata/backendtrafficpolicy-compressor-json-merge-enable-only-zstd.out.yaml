@@ -233,7 +233,8 @@ xdsIR:
           prefix: /
         traffic:
           compression:
-          - type: Zstd
+          - chooseFirst: true
+            type: Zstd
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
