@@ -355,7 +355,7 @@ func TestRefsEnvoyProxy(t *testing.T) {
 					},
 				},
 			},
-			expect: false,
+			expect: true,
 		},
 	}
 

@@ -2490,7 +2490,8 @@ func (r *gatewayAPIReconciler) processGatewayClassParamsRef(ctx context.Context,
 	}
 
 	ep := new(egv1a1.EnvoyProxy)
-	nn := types.NamespacedName{Namespace: string(*gc.Spec.ParametersRef.Namespace), Name: gc.Spec.ParametersRef.Name}
+	ns := ptr.Deref(gc.Spec.ParametersRef.Namespace, "default")
+	nn := types.NamespacedName{Namespace: string(ns), Name: gc.Spec.ParametersRef.Name}
 	if err := r.client.Get(ctx, nn, ep); err != nil {
 		return fmt.Errorf("failed to find envoyproxy %s/%s for GatewayClass %s: %w", nn.Namespace, nn.Name, gc.Name, err)
 	}
