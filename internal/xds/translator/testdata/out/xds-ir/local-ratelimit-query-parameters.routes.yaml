@@ -10,19 +10,6 @@
       name: first-route-ratelimit-query-parameters
       route:
         cluster: first-route-dest
-        rateLimits:
-        - actions:
-          - headerValueMatch:
-              descriptorKey: rule-0-match-0
-              descriptorValue: rule-0-match-0
-              expectMatch: true
-              headers:
-              - name: x-user-id
-                stringMatch:
-                  exact: one
-          - queryParameters:
-              descriptorKey: user
-              queryParameterName: user
         upgradeConfigs:
         - upgradeType: websocket
       typedPerFilterConfig:
@@ -45,6 +32,19 @@
           filterEnforced:
             defaultValue:
               numerator: 100
+          rateLimits:
+          - actions:
+            - headerValueMatch:
+                descriptorKey: rule-0-match-0
+                descriptorValue: rule-0-match-0
+                expectMatch: true
+                headers:
+                - name: x-user-id
+                  stringMatch:
+                    exact: one
+            - queryParameters:
+                descriptorKey: user
+                queryParameterName: user
           statPrefix: http_local_rate_limiter
           tokenBucket:
             fillInterval: 60s

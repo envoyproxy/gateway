@@ -21459,6 +21459,7 @@ spec:
                 description: |-
                   The compressor config for the http streams.
                   This provides more granular control over compression configuration.
+                  Order matters: The first compressor in the list is preferred when q-values in Accept-Encoding are equal.
                 items:
                   description: |-
                     Compression defines the config of enabling compression.
@@ -22294,7 +22295,7 @@ spec:
                                   RateLimitSelectCondition specifies the attributes within the traffic flow that can
                                   be used to select a subset of clients to be ratelimited.
                                   All the individual conditions must hold True for the overall condition to hold True.
-                                  And, at least one of headers, methods, path, sourceCIDR, or queryParams condition must be specified.
+                                  And, at least one of headers or methods or path or sourceCIDR condition must be specified.
                                 properties:
                                   headers:
                                     description: |-
@@ -22401,7 +22402,7 @@ spec:
                                     description: |-
                                       QueryParams is a list of query parameters to match. Multiple query parameter values are ANDed together,
                                       meaning, a request MUST match all the specified query parameters.
-                                      At least one of headers, methods, path, sourceCIDR, or queryParams condition must be specified.
+                                      At least one of headers, sourceCIDR, or queryParams condition must be specified.
                                     items:
                                       description: QueryParamMatch defines the match
                                         attributes within the query parameters of
@@ -22464,9 +22465,9 @@ spec:
                                 type: object
                                 x-kubernetes-validations:
                                 - message: at least one of headers, methods, path,
-                                    sourceCIDR, or queryParams must be specified
+                                    sourceCIDR or QueryParams must be specified
                                   rule: has(self.headers) || has(self.methods) ||
-                                    has(self.path) || has(self.sourceCIDR) || has(self.queryParams)
+                                    has(self.path) || has(self.sourceCIDR) || has(self.QueryParams)
                               maxItems: 8
                               type: array
                             cost:
@@ -22658,7 +22659,7 @@ spec:
                                   RateLimitSelectCondition specifies the attributes within the traffic flow that can
                                   be used to select a subset of clients to be ratelimited.
                                   All the individual conditions must hold True for the overall condition to hold True.
-                                  And, at least one of headers, methods, path, sourceCIDR, or queryParams condition must be specified.
+                                  And, at least one of headers or methods or path or sourceCIDR condition must be specified.
                                 properties:
                                   headers:
                                     description: |-
@@ -22765,7 +22766,7 @@ spec:
                                     description: |-
                                       QueryParams is a list of query parameters to match. Multiple query parameter values are ANDed together,
                                       meaning, a request MUST match all the specified query parameters.
-                                      At least one of headers, methods, path, sourceCIDR, or queryParams condition must be specified.
+                                      At least one of headers, sourceCIDR, or queryParams condition must be specified.
                                     items:
                                       description: QueryParamMatch defines the match
                                         attributes within the query parameters of
@@ -22828,9 +22829,9 @@ spec:
                                 type: object
                                 x-kubernetes-validations:
                                 - message: at least one of headers, methods, path,
-                                    sourceCIDR, or queryParams must be specified
+                                    sourceCIDR or QueryParams must be specified
                                   rule: has(self.headers) || has(self.methods) ||
-                                    has(self.path) || has(self.sourceCIDR) || has(self.queryParams)
+                                    has(self.path) || has(self.sourceCIDR) || has(self.QueryParams)
                               maxItems: 8
                               type: array
                             cost:
@@ -22996,12 +22997,12 @@ spec:
                     description: |-
                       Type decides the scope for the RateLimits.
                       Valid RateLimitType values are "Global" or "Local".
+
+                      Deprecated: Use Global and/or Local fields directly instead. Both can be specified simultaneously for combined rate limiting.
                     enum:
                     - Global
                     - Local
                     type: string
-                required:
-                - type
                 type: object
               requestBuffer:
                 description: |-
@@ -23724,6 +23725,22 @@ spec:
                   Telemetry configures the telemetry settings for the policy target (Gateway or xRoute).
                   This will override the telemetry settings in the EnvoyProxy resource.
                 properties:
+                  metrics:
+                    description: Metrics defines metrics configuration for the backend
+                      or Route.
+                    properties:
+                      routeStatName:
+                        description: |-
+                          RouteStatName defines the value of the Route stat_prefix, determining how the route stats are named.
+                          For more details, see envoy docs: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto#config-route-v3-route
+                          The supported operators for this pattern are:
+                          %ROUTE_NAME%: name of Gateway API xRoute resource
+                          %ROUTE_NAMESPACE%: namespace of Gateway API xRoute resource
+                          %ROUTE_KIND%: kind of Gateway API xRoute resource
+                          Example: %ROUTE_KIND%/%ROUTE_NAMESPACE%/%ROUTE_NAME% => httproute/my-ns/my-route
+                          Disabled by default.
+                        type: string
+                    type: object
                   tracing:
                     description: |-
                       Tracing configures the tracing settings for the backend or HTTPRoute.
@@ -25038,11 +25055,18 @@ spec:
                     properties:
                       useDefaultHost:
                         description: |-
-                          UseDefaultHost defines if the HTTP/1.0 request is missing the Host header,
-                          then the hostname associated with the listener should be injected into the
-                          request.
-                          If this is not set and an HTTP/1.0 request arrives without a host, then
-                          it will be rejected.
+                          UseDefaultHost specifies whether a default Host header should be injected
+                          into HTTP/1.0 requests that do not include one.
+
+                          When set to true, Envoy Gateway injects the hostname associated with the
+                          listener or route into the request, in the following order:
+
+                            1. If the targeted listener has a non-wildcard hostname, use that hostname.
+                            2. If there is exactly one HTTPRoute with a non-wildcard hostname under
+                               the targeted listener, use that hostname.
+
+                           Note: Setting this field to true without a non-wildcard hostname makes the
+                          ClientTrafficPolicy invalid.
                         type: boolean
                     type: object
                   preserveHeaderCase:
@@ -26369,6 +26393,26 @@ spec:
                             format: int32
                             maximum: 65535
                             minimum: 1
+                            type: integer
+                          weight:
+                            default: 1
+                            description: |-
+                              Weight specifies the proportion of requests forwarded to the referenced
+                              backend. This is computed as weight/(sum of all weights in this
+                              BackendRefs list). For non-zero values, there may be some epsilon from
+                              the exact proportion defined here depending on the precision an
+                              implementation supports. Weight is not a percentage and the sum of
+                              weights does not need to equal 100.
+
+                              If only one backend is specified and it has a weight greater than 0, 100%
+                              of the traffic is forwarded to that backend. If weight is set to 0, no
+                              traffic should be forwarded for this entry. If unspecified, weight
+                              defaults to 1.
+
+                              Support for this field varies based on the context where used.
+                            format: int32
+                            maximum: 1000000
+                            minimum: 0
                             type: integer
                         required:
                         - name
@@ -29119,6 +29163,8 @@ spec:
 
                   - envoy.filters.http.ext_authz
 
+                  - envoy.filters.http.api_key_auth
+
                   - envoy.filters.http.basic_auth
 
                   - envoy.filters.http.oauth2
@@ -29126,6 +29172,8 @@ spec:
                   - envoy.filters.http.jwt_authn
 
                   - envoy.filters.http.stateful_session
+
+                  - envoy.filters.http.buffer
 
                   - envoy.filters.http.lua
 
@@ -29174,6 +29222,7 @@ spec:
                       - envoy.filters.http.oauth2
                       - envoy.filters.http.jwt_authn
                       - envoy.filters.http.stateful_session
+                      - envoy.filters.http.buffer
                       - envoy.filters.http.lua
                       - envoy.filters.http.ext_proc
                       - envoy.filters.http.wasm
@@ -29203,6 +29252,7 @@ spec:
                       - envoy.filters.http.oauth2
                       - envoy.filters.http.jwt_authn
                       - envoy.filters.http.stateful_session
+                      - envoy.filters.http.buffer
                       - envoy.filters.http.lua
                       - envoy.filters.http.ext_proc
                       - envoy.filters.http.wasm
@@ -29230,6 +29280,7 @@ spec:
                       - envoy.filters.http.oauth2
                       - envoy.filters.http.jwt_authn
                       - envoy.filters.http.stateful_session
+                      - envoy.filters.http.buffer
                       - envoy.filters.http.lua
                       - envoy.filters.http.ext_proc
                       - envoy.filters.http.wasm
@@ -40054,6 +40105,26 @@ spec:
                                               maximum: 65535
                                               minimum: 1
                                               type: integer
+                                            weight:
+                                              default: 1
+                                              description: |-
+                                                Weight specifies the proportion of requests forwarded to the referenced
+                                                backend. This is computed as weight/(sum of all weights in this
+                                                BackendRefs list). For non-zero values, there may be some epsilon from
+                                                the exact proportion defined here depending on the precision an
+                                                implementation supports. Weight is not a percentage and the sum of
+                                                weights does not need to equal 100.
+
+                                                If only one backend is specified and it has a weight greater than 0, 100%
+                                                of the traffic is forwarded to that backend. If weight is set to 0, no
+                                                traffic should be forwarded for this entry. If unspecified, weight
+                                                defaults to 1.
+
+                                                Support for this field varies based on the context where used.
+                                              format: int32
+                                              maximum: 1000000
+                                              minimum: 0
+                                              type: integer
                                           required:
                                           - name
                                           type: object
@@ -41286,6 +41357,26 @@ spec:
                                               maximum: 65535
                                               minimum: 1
                                               type: integer
+                                            weight:
+                                              default: 1
+                                              description: |-
+                                                Weight specifies the proportion of requests forwarded to the referenced
+                                                backend. This is computed as weight/(sum of all weights in this
+                                                BackendRefs list). For non-zero values, there may be some epsilon from
+                                                the exact proportion defined here depending on the precision an
+                                                implementation supports. Weight is not a percentage and the sum of
+                                                weights does not need to equal 100.
+
+                                                If only one backend is specified and it has a weight greater than 0, 100%
+                                                of the traffic is forwarded to that backend. If weight is set to 0, no
+                                                traffic should be forwarded for this entry. If unspecified, weight
+                                                defaults to 1.
+
+                                                Support for this field varies based on the context where used.
+                                              format: int32
+                                              maximum: 1000000
+                                              minimum: 0
+                                              type: integer
                                           required:
                                           - name
                                           type: object
@@ -42415,15 +42506,15 @@ spec:
                           ClusterStatName defines the value of cluster alt_stat_name, determining how cluster stats are named.
                           For more details, see envoy docs: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto.html
                           The supported operators for this pattern are:
-                          %ROUTE_NAME%: name of Gateway API xRoute resource
-                          %ROUTE_NAMESPACE%: namespace of Gateway API xRoute resource
-                          %ROUTE_KIND%: kind of Gateway API xRoute resource
-                          %ROUTE_RULE_NAME%: name of the Gateway API xRoute section
-                          %ROUTE_RULE_NUMBER%: name of the Gateway API xRoute section
-                          %BACKEND_REFS%: names of all backends referenced in <NAMESPACE>/<NAME>|<NAMESPACE>/<NAME>|... format
+                          `%ROUTE_NAME%`: name of Gateway API xRoute resource
+                          `%ROUTE_NAMESPACE%`: namespace of Gateway API xRoute resource
+                          `%ROUTE_KIND%`: kind of Gateway API xRoute resource
+                          `%ROUTE_RULE_NAME%`: name of the Gateway API xRoute section
+                          `%ROUTE_RULE_NUMBER%`: name of the Gateway API xRoute section
+                          `%BACKEND_REFS%`: names of all backends referenced in `<NAMESPACE>/<NAME>|<NAMESPACE>/<NAME>|...` format
                           Only xDS Clusters created for HTTPRoute and GRPCRoute are currently supported.
-                          Default: %ROUTE_KIND%/%ROUTE_NAMESPACE%/%ROUTE_NAME%/rule/%ROUTE_RULE_NUMBER%
-                          Example: httproute/my-ns/my-route/rule/0
+                          Default: `%ROUTE_KIND%/%ROUTE_NAMESPACE%/%ROUTE_NAME%/rule/%ROUTE_RULE_NUMBER%`
+                          Example: `httproute/my-ns/my-route/rule/0`
                         type: string
                       enablePerEndpointStats:
                         description: |-
@@ -42683,6 +42774,26 @@ spec:
                                         format: int32
                                         maximum: 65535
                                         minimum: 1
+                                        type: integer
+                                      weight:
+                                        default: 1
+                                        description: |-
+                                          Weight specifies the proportion of requests forwarded to the referenced
+                                          backend. This is computed as weight/(sum of all weights in this
+                                          BackendRefs list). For non-zero values, there may be some epsilon from
+                                          the exact proportion defined here depending on the precision an
+                                          implementation supports. Weight is not a percentage and the sum of
+                                          weights does not need to equal 100.
+
+                                          If only one backend is specified and it has a weight greater than 0, 100%
+                                          of the traffic is forwarded to that backend. If weight is set to 0, no
+                                          traffic should be forwarded for this entry. If unspecified, weight
+                                          defaults to 1.
+
+                                          Support for this field varies based on the context where used.
+                                        format: int32
+                                        maximum: 1000000
+                                        minimum: 0
                                         type: integer
                                     required:
                                     - name
@@ -43986,6 +44097,26 @@ spec:
                                   format: int32
                                   maximum: 65535
                                   minimum: 1
+                                  type: integer
+                                weight:
+                                  default: 1
+                                  description: |-
+                                    Weight specifies the proportion of requests forwarded to the referenced
+                                    backend. This is computed as weight/(sum of all weights in this
+                                    BackendRefs list). For non-zero values, there may be some epsilon from
+                                    the exact proportion defined here depending on the precision an
+                                    implementation supports. Weight is not a percentage and the sum of
+                                    weights does not need to equal 100.
+
+                                    If only one backend is specified and it has a weight greater than 0, 100%
+                                    of the traffic is forwarded to that backend. If weight is set to 0, no
+                                    traffic should be forwarded for this entry. If unspecified, weight
+                                    defaults to 1.
+
+                                    Support for this field varies based on the context where used.
+                                  format: int32
+                                  maximum: 1000000
+                                  minimum: 0
                                   type: integer
                               required:
                               - name
@@ -46639,6 +46770,26 @@ spec:
                               maximum: 65535
                               minimum: 1
                               type: integer
+                            weight:
+                              default: 1
+                              description: |-
+                                Weight specifies the proportion of requests forwarded to the referenced
+                                backend. This is computed as weight/(sum of all weights in this
+                                BackendRefs list). For non-zero values, there may be some epsilon from
+                                the exact proportion defined here depending on the precision an
+                                implementation supports. Weight is not a percentage and the sum of
+                                weights does not need to equal 100.
+
+                                If only one backend is specified and it has a weight greater than 0, 100%
+                                of the traffic is forwarded to that backend. If weight is set to 0, no
+                                traffic should be forwarded for this entry. If unspecified, weight
+                                defaults to 1.
+
+                                Support for this field varies based on the context where used.
+                              format: int32
+                              maximum: 1000000
+                              minimum: 0
+                              type: integer
                           required:
                           - name
                           type: object
@@ -47758,6 +47909,26 @@ spec:
                               format: int32
                               maximum: 65535
                               minimum: 1
+                              type: integer
+                            weight:
+                              default: 1
+                              description: |-
+                                Weight specifies the proportion of requests forwarded to the referenced
+                                backend. This is computed as weight/(sum of all weights in this
+                                BackendRefs list). For non-zero values, there may be some epsilon from
+                                the exact proportion defined here depending on the precision an
+                                implementation supports. Weight is not a percentage and the sum of
+                                weights does not need to equal 100.
+
+                                If only one backend is specified and it has a weight greater than 0, 100%
+                                of the traffic is forwarded to that backend. If weight is set to 0, no
+                                traffic should be forwarded for this entry. If unspecified, weight
+                                defaults to 1.
+
+                                Support for this field varies based on the context where used.
+                              format: int32
+                              maximum: 1000000
+                              minimum: 0
                               type: integer
                           required:
                           - name
@@ -49074,6 +49245,26 @@ spec:
                                     format: int32
                                     maximum: 65535
                                     minimum: 1
+                                    type: integer
+                                  weight:
+                                    default: 1
+                                    description: |-
+                                      Weight specifies the proportion of requests forwarded to the referenced
+                                      backend. This is computed as weight/(sum of all weights in this
+                                      BackendRefs list). For non-zero values, there may be some epsilon from
+                                      the exact proportion defined here depending on the precision an
+                                      implementation supports. Weight is not a percentage and the sum of
+                                      weights does not need to equal 100.
+
+                                      If only one backend is specified and it has a weight greater than 0, 100%
+                                      of the traffic is forwarded to that backend. If weight is set to 0, no
+                                      traffic should be forwarded for this entry. If unspecified, weight
+                                      defaults to 1.
+
+                                      Support for this field varies based on the context where used.
+                                    format: int32
+                                    maximum: 1000000
+                                    minimum: 0
                                     type: integer
                                 required:
                                 - name
@@ -50478,6 +50669,26 @@ spec:
                               format: int32
                               maximum: 65535
                               minimum: 1
+                              type: integer
+                            weight:
+                              default: 1
+                              description: |-
+                                Weight specifies the proportion of requests forwarded to the referenced
+                                backend. This is computed as weight/(sum of all weights in this
+                                BackendRefs list). For non-zero values, there may be some epsilon from
+                                the exact proportion defined here depending on the precision an
+                                implementation supports. Weight is not a percentage and the sum of
+                                weights does not need to equal 100.
+
+                                If only one backend is specified and it has a weight greater than 0, 100%
+                                of the traffic is forwarded to that backend. If weight is set to 0, no
+                                traffic should be forwarded for this entry. If unspecified, weight
+                                defaults to 1.
+
+                                Support for this field varies based on the context where used.
+                              format: int32
+                              maximum: 1000000
+                              minimum: 0
                               type: integer
                           required:
                           - name

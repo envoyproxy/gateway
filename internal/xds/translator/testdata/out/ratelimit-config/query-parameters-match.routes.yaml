@@ -1,0 +1,24 @@
+costSpecified: false
+rateLimits:
+- actions:
+  - ActionSpecifier:
+      GenericKey:
+        descriptor_key: first-route
+        descriptor_value: first-route
+  - ActionSpecifier:
+      HeaderValueMatch:
+        descriptor_key: rule-0-match-0
+        descriptor_value: rule-0-match-0
+        expect_match:
+          value: true
+        headers:
+        - HeaderMatchSpecifier:
+            StringMatch:
+              MatchPattern:
+                Exact: one
+          name: x-user-id
+  - ActionSpecifier:
+      QueryParameters:
+        descriptor_key: user
+        query_parameter_name: user
+routeName: first-route
