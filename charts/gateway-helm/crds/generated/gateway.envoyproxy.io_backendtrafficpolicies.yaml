@@ -161,6 +161,7 @@ spec:
                 description: |-
                   The compressor config for the http streams.
                   This provides more granular control over compression configuration.
+                  Order matters: The first compressor in the list is preferred when q-values in Accept-Encoding are equal.
                 items:
                   description: |-
                     Compression defines the config of enabling compression.
@@ -996,7 +997,7 @@ spec:
                                   RateLimitSelectCondition specifies the attributes within the traffic flow that can
                                   be used to select a subset of clients to be ratelimited.
                                   All the individual conditions must hold True for the overall condition to hold True.
-                                  And, at least one of headers, methods, path, sourceCIDR, or queryParams condition must be specified.
+                                  And, at least one of headers or methods or path or sourceCIDR condition must be specified.
                                 properties:
                                   headers:
                                     description: |-
@@ -1103,7 +1104,7 @@ spec:
                                     description: |-
                                       QueryParams is a list of query parameters to match. Multiple query parameter values are ANDed together,
                                       meaning, a request MUST match all the specified query parameters.
-                                      At least one of headers, methods, path, sourceCIDR, or queryParams condition must be specified.
+                                      At least one of headers, sourceCIDR, or queryParams condition must be specified.
                                     items:
                                       description: QueryParamMatch defines the match
                                         attributes within the query parameters of
@@ -1166,7 +1167,7 @@ spec:
                                 type: object
                                 x-kubernetes-validations:
                                 - message: at least one of headers, methods, path,
-                                    sourceCIDR, or queryParams must be specified
+                                    sourceCIDR or QueryParams must be specified
                                   rule: has(self.headers) || has(self.methods) ||
                                     has(self.path) || has(self.sourceCIDR) || has(self.queryParams)
                               maxItems: 8
@@ -1360,7 +1361,7 @@ spec:
                                   RateLimitSelectCondition specifies the attributes within the traffic flow that can
                                   be used to select a subset of clients to be ratelimited.
                                   All the individual conditions must hold True for the overall condition to hold True.
-                                  And, at least one of headers, methods, path, sourceCIDR, or queryParams condition must be specified.
+                                  And, at least one of headers or methods or path or sourceCIDR condition must be specified.
                                 properties:
                                   headers:
                                     description: |-
@@ -1467,7 +1468,7 @@ spec:
                                     description: |-
                                       QueryParams is a list of query parameters to match. Multiple query parameter values are ANDed together,
                                       meaning, a request MUST match all the specified query parameters.
-                                      At least one of headers, methods, path, sourceCIDR, or queryParams condition must be specified.
+                                      At least one of headers, sourceCIDR, or queryParams condition must be specified.
                                     items:
                                       description: QueryParamMatch defines the match
                                         attributes within the query parameters of
@@ -1530,7 +1531,7 @@ spec:
                                 type: object
                                 x-kubernetes-validations:
                                 - message: at least one of headers, methods, path,
-                                    sourceCIDR, or queryParams must be specified
+                                    sourceCIDR or QueryParams must be specified
                                   rule: has(self.headers) || has(self.methods) ||
                                     has(self.path) || has(self.sourceCIDR) || has(self.queryParams)
                               maxItems: 8
@@ -1698,12 +1699,12 @@ spec:
                     description: |-
                       Type decides the scope for the RateLimits.
                       Valid RateLimitType values are "Global" or "Local".
+
+                      Deprecated: Use Global and/or Local fields directly instead. Both can be specified simultaneously for combined rate limiting.
                     enum:
                     - Global
                     - Local
                     type: string
-                required:
-                - type
                 type: object
               requestBuffer:
                 description: |-
@@ -2426,6 +2427,22 @@ spec:
                   Telemetry configures the telemetry settings for the policy target (Gateway or xRoute).
                   This will override the telemetry settings in the EnvoyProxy resource.
                 properties:
+                  metrics:
+                    description: Metrics defines metrics configuration for the backend
+                      or Route.
+                    properties:
+                      routeStatName:
+                        description: |-
+                          RouteStatName defines the value of the Route stat_prefix, determining how the route stats are named.
+                          For more details, see envoy docs: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto#config-route-v3-route
+                          The supported operators for this pattern are:
+                          %ROUTE_NAME%: name of Gateway API xRoute resource
+                          %ROUTE_NAMESPACE%: namespace of Gateway API xRoute resource
+                          %ROUTE_KIND%: kind of Gateway API xRoute resource
+                          Example: %ROUTE_KIND%/%ROUTE_NAMESPACE%/%ROUTE_NAME% => httproute/my-ns/my-route
+                          Disabled by default.
+                        type: string
+                    type: object
                   tracing:
                     description: |-
                       Tracing configures the tracing settings for the backend or HTTPRoute.

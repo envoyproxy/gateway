@@ -200,7 +200,7 @@ type RateLimitCostMetadata struct {
 // All the individual conditions must hold True for the overall condition to hold True.
 // And, at least one of headers or methods or path or sourceCIDR condition must be specified.
 //
-// +kubebuilder:validation:XValidation:rule="has(self.headers) || has(self.methods) || has(self.path) || has(self.sourceCIDR)",message="at least one of headers, methods, path or sourceCIDR must be specified"
+// +kubebuilder:validation:XValidation:rule="has(self.headers) || has(self.methods) || has(self.path) || has(self.sourceCIDR) || has(self.queryParams)",message="at least one of headers, methods, path, sourceCIDR or QueryParams must be specified"
 type RateLimitSelectCondition struct {
 	// Headers is a list of request headers to match. Multiple header values are ANDed together,
 	// meaning, a request MUST match all the specified headers.
