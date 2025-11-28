@@ -1428,15 +1428,42 @@ func (t *Translator) buildOIDCProvider(policy *egv1a1.SecurityPolicy, resources 
 	// Discover the token and authorization endpoints from the issuer's well-known url if not explicitly specified.
 	// EG assumes that the issuer url uses the same protocol and CA as the token endpoint.
 	// If we need to support different protocols or CAs, we need to add more fields to the OIDCProvider CRD.
-	if provider.TokenEndpoint == nil || provider.AuthorizationEndpoint == nil {
+	var (
+		userProvidedAuthorizationEndpoint = ptr.Deref(provider.AuthorizationEndpoint, "")
+		userProvidedTokenEndpoint         = ptr.Deref(provider.TokenEndpoint, "")
+		userProvidedEndSessionEndpoint    = ptr.Deref(provider.EndSessionEndpoint, "")
+	)
+
+	// Authorization endpoint and token endpoint are required fields.
+	// If either of them is not provided, we need to fetch them from the issuer's well-known url.
+	if userProvidedAuthorizationEndpoint == "" || userProvidedTokenEndpoint == "" {
+		// Fetch the endpoints from the issuer's well-known url.
 		discoveredConfig, err := t.fetchEndpointsFromIssuer(provider.Issuer, providerTLS)
 		if err != nil {
 			return nil, err
 		}
-		tokenEndpoint = discoveredConfig.TokenEndpoint
-		authorizationEndpoint = discoveredConfig.AuthorizationEndpoint
-		// endSessionEndpoint is optional, and we prioritize using the one provided in the well-known configuration.
-		if discoveredConfig.EndSessionEndpoint != nil && *discoveredConfig.EndSessionEndpoint != "" {
+
+		// Prioritize using the explicitly provided authorization endpoints if available.
+		// This allows users to add extra parameters to the authorization endpoint if needed.
+		if userProvidedAuthorizationEndpoint != "" {
+			authorizationEndpoint = userProvidedAuthorizationEndpoint
+		} else {
+			authorizationEndpoint = discoveredConfig.AuthorizationEndpoint
+		}
+
+		// Prioritize using the explicitly provided token endpoints if available.
+		// This may not be necessary, but we do it for consistency with authorization endpoint.
+		if userProvidedTokenEndpoint != "" {
+			tokenEndpoint = userProvidedTokenEndpoint
+		} else {
+			tokenEndpoint = discoveredConfig.TokenEndpoint
+		}
+
+		// Prioritize using the explicitly provided end session endpoints if available.
+		// This may not be necessary, but we do it for consistency with other endpoints.
+		if userProvidedEndSessionEndpoint != "" {
+			endSessionEndpoint = &userProvidedEndSessionEndpoint
+		} else {
 			endSessionEndpoint = discoveredConfig.EndSessionEndpoint
 		}
 	} else {
