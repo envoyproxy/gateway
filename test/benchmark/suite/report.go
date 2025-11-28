@@ -49,6 +49,9 @@ type BenchmarkMetricSample struct {
 
 type BenchmarkReport struct {
 	Name              string
+	Routes            int
+	RoutesPerHost     int
+	Phase             string
 	ProfilesOutputDir string
 	RouteConvergence  *PerfDuration
 	// Nighthawk benchmark result

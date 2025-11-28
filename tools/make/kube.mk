@@ -306,8 +306,8 @@ run-benchmark: install-benchmark-server prepare-ip-family ## Run benchmark tests
 .PHONY: install-benchmark-server
 install-benchmark-server: ## Install nighthawk server for benchmark test
 	@$(LOG_TARGET)
-	kubectl create namespace benchmark-test
-	kubectl -n benchmark-test create configmap test-server-config --from-file=test/benchmark/config/nighthawk-test-server-config.yaml -o yaml
+	kubectl create namespace benchmark-test --dry-run=client -o yaml | kubectl apply -f -
+	kubectl -n benchmark-test create configmap test-server-config --from-file=test/benchmark/config/nighthawk-test-server-config.yaml --dry-run=client -o yaml | kubectl apply -f -
 	kubectl apply -f test/benchmark/config/nighthawk-test-server.yaml
 
 .PHONY: uninstall-benchmark-server
