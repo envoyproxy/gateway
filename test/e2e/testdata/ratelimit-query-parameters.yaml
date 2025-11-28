@@ -13,10 +13,10 @@ spec:
     global:
       rules:
         - clientSelectors:
-                - queryParams:
-                    - name: user
-                      type: Exact
-                      value: alice
+            - queryParams:
+                - name: user
+                  type: Exact
+                  value: alice
           limit:
             requests: 3
             unit: Hour

@@ -2404,8 +2404,6 @@ type CIDRMatch struct {
 type QueryParamMatch struct {
 	// Name of the query parameter.
 	Name string `json:"name" yaml:"name"`
-	// DescriptorKey is the key to use when creating the rate limit descriptor entry.
-	DescriptorKey string `json:"descriptorKey" yaml:"descriptorKey"`
 	// StringMatch defines how to match against the value of the query parameter.
 	*StringMatch `json:",inline" yaml:",inline"`
 }
@@ -2413,7 +2411,6 @@ type QueryParamMatch struct {
 // TODO zhaohuabing: remove this function
 func (r *RateLimitRule) IsMatchSet() bool {
 	return len(r.HeaderMatches) != 0 || r.PathMatch != nil || len(r.MethodMatches) != 0 || r.CIDRMatch != nil || len(r.QueryParamMatches) != 0
-
 }
 
 type RateLimitUnit egv1a1.RateLimitUnit
