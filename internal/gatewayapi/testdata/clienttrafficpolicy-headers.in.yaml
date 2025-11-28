@@ -41,6 +41,9 @@ clientTrafficPolicies:
         remove:
         - "my-removed-response-header"
         - "my-removed-response-header"
+      requestIdExtension:
+        packTraceReason: false
+        useRequestIDForTraceSampling: false
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway
