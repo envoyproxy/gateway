@@ -2486,7 +2486,7 @@ func (r *gatewayAPIReconciler) processGatewayParamsRef(ctx context.Context, gtw 
 // processGatewayClassParamsRef processes the parametersRef of the provided GatewayClass.
 func (r *gatewayAPIReconciler) processGatewayClassParamsRef(ctx context.Context, gc *gwapiv1.GatewayClass, resourceMap *resourceMappings, resourceTree *resource.Resources) error {
 	if !refsEnvoyProxy(gc) {
-		return fmt.Errorf("unsupported parametersRef for gatewayclass %s", gc.Name)
+		return fmt.Errorf("unsupported parametersRef(invalid group, kind, name or namespace) for gatewayclass %s", gc.Name)
 	}
 
 	ep := new(egv1a1.EnvoyProxy)

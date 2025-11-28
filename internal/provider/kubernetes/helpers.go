@@ -12,7 +12,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	mcsapiv1a1 "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
@@ -134,18 +133,6 @@ func validateBackendRef(ref *gwapiv1.BackendRef) error {
 	}
 
 	return nil
-}
-
-// classRefsEnvoyProxy returns true if the provided GatewayClass references the provided EnvoyProxy.
-func classRefsEnvoyProxy(gc *gwapiv1.GatewayClass, ep *egv1a1.EnvoyProxy) bool {
-	if gc == nil || ep == nil {
-		return false
-	}
-
-	ns := ptr.Deref(gc.Spec.ParametersRef.Namespace, "default")
-	return refsEnvoyProxy(gc) &&
-		string(ns) == ep.Namespace &&
-		gc.Spec.ParametersRef.Name == ep.Name
 }
 
 // refsEnvoyProxy returns true if the provided GatewayClass references an EnvoyProxy.
