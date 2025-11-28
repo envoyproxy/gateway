@@ -5192,6 +5192,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `samplingFraction` | _[Fraction](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#fraction)_ |  false  |  | SamplingFraction represents the fraction of requests that should be<br />selected for tracing if no prior sampling decision has been made.<br />This will take precedence over sampling fraction on EnvoyProxy if set. |
 | `customTags` | _object (keys:string, values:[CustomTag](#customtag))_ |  false  |  | CustomTags defines the custom tags to add to each span.<br />If provider is kubernetes, pod name and namespace are added by default. |
+| `OperationName` | _string_ |  true  |  | OperationName associated with the request matched to this route.<br />If tracing is enabled, it will be used as the span name reported for this request. |
 
 
 #### TracingProvider
