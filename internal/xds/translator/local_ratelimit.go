@@ -441,7 +441,7 @@ func buildQueryParamMatchLocalRateLimitActions(
 ) {
 	for _, queryParam := range queryParamMatches {
 		queryParamAction := &routev3.RateLimit_Action_QueryParameters{}
-		queryParamAction.DescriptorKey = queryParam.DescriptorKey
+		queryParamAction.DescriptorKey = queryParam.Name
 		queryParamAction.QueryParameterName = queryParam.Name
 		action := &routev3.RateLimit_Action{
 			ActionSpecifier: &routev3.RateLimit_Action_QueryParameters_{
@@ -451,7 +451,7 @@ func buildQueryParamMatchLocalRateLimitActions(
 		*rlActions = append(*rlActions, action)
 
 		entry := &rlv3.RateLimitDescriptor_Entry{
-			Key: queryParam.DescriptorKey,
+			Key: queryParam.Name,
 		}
 		*descriptorEntries = append(*descriptorEntries, entry)
 	}

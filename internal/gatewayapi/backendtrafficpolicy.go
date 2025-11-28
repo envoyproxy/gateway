@@ -1260,7 +1260,6 @@ func buildRateLimitRule(rule egv1a1.RateLimitRule) (*ir.RateLimitRule, error) {
 			return nil, fmt.Errorf(
 				"unable to translate rateLimit. At least one of the" +
 					" header or method or path or sourceCIDR or queryParameters must be specified")
-
 		}
 		for _, header := range match.Headers {
 			switch {
@@ -1395,14 +1394,9 @@ func buildRateLimitRule(rule egv1a1.RateLimitRule) (*ir.RateLimitRule, error) {
 						"Type is not valid or the queryParam is missing a value")
 			}
 
-			// Generate descriptor key internally using the query parameter name
-			// The descriptor key is used to identify the rate limit rule in the rate limiting service.
-			descriptorKey := queryParam.Name
-
 			m := &ir.QueryParamMatch{
-				Name:          queryParam.Name,
-				DescriptorKey: descriptorKey,
-				StringMatch:   stringMatch,
+				Name:        queryParam.Name,
+				StringMatch: stringMatch,
 			}
 			irRule.QueryParamMatches = append(irRule.QueryParamMatches, m)
 		}
