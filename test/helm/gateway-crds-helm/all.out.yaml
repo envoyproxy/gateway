@@ -22254,7 +22254,7 @@ spec:
                                 - message: at least one of headers, methods, path,
                                     sourceCIDR or QueryParams must be specified
                                   rule: has(self.headers) || has(self.methods) ||
-                                    has(self.path) || has(self.sourceCIDR) || has(self.QueryParams)
+                                    has(self.path) || has(self.sourceCIDR) || has(self.queryParams)
                               maxItems: 8
                               type: array
                             cost:
@@ -22609,7 +22609,7 @@ spec:
                                 - message: at least one of headers, methods, path,
                                     sourceCIDR or QueryParams must be specified
                                   rule: has(self.headers) || has(self.methods) ||
-                                    has(self.path) || has(self.sourceCIDR) || has(self.QueryParams)
+                                    has(self.path) || has(self.sourceCIDR) || has(self.queryParams)
                               maxItems: 8
                               type: array
                             cost:

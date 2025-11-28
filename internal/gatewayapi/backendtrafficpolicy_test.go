@@ -312,8 +312,7 @@ func TestBuildRateLimitRuleQueryParams(t *testing.T) {
 			expected: &ir.RateLimitRule{
 				QueryParamMatches: []*ir.QueryParamMatch{
 					{
-						Name:          "user",
-						DescriptorKey: "user", // Generated internally from name
+						Name: "user",
 						StringMatch: &ir.StringMatch{
 							Exact:  ptr.To("alice"),
 							Invert: nil,
@@ -380,8 +379,7 @@ func TestBuildRateLimitRuleQueryParams(t *testing.T) {
 			expected: &ir.RateLimitRule{
 				QueryParamMatches: []*ir.QueryParamMatch{
 					{
-						Name:          "user",
-						DescriptorKey: "user", // Generated internally from name
+						Name: "user",
 						StringMatch: &ir.StringMatch{
 							Exact:  ptr.To("alice"),
 							Invert: nil,
@@ -430,8 +428,7 @@ func TestBuildRateLimitRuleQueryParams(t *testing.T) {
 			expected: &ir.RateLimitRule{
 				QueryParamMatches: []*ir.QueryParamMatch{
 					{
-						Name:          "user",
-						DescriptorKey: "user", // Generated internally from name
+						Name: "user",
 						StringMatch: &ir.StringMatch{
 							Exact:  ptr.To("alice"),
 							Invert: nil,
