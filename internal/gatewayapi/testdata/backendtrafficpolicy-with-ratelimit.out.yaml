@@ -500,6 +500,7 @@ xdsIR:
                   distinct: false
                   name: ""
                   safeRegex: ^/user(/.*|\?.*|#.*|;.*|$)
+                queryParamMatches: null
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
@@ -597,6 +598,7 @@ xdsIR:
                   distinct: false
                   name: ""
                   prefix: /
+                queryParamMatches: null
                 requestCost:
                   number: 1
                 responseCost:
@@ -693,6 +695,7 @@ xdsIR:
                   distinct: false
                   exact: /test
                   name: ""
+                queryParamMatches: null
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
