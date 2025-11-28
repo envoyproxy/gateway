@@ -38,54 +38,38 @@ gateways:
         kind: HTTPRoute
       - group: gateway.networking.k8s.io
         kind: GRPCRoute
-httpRoutes:
-- apiVersion: gateway.networking.k8s.io/v1
-  kind: HTTPRoute
+grpcRoutes:
+- apiVersion: gateway.networking.k8s.io/v1alpha2
+  kind: GRPCRoute
   metadata:
-    name: httproute-1
+    name: grpcroute-1
     namespace: default
   spec:
     parentRefs:
     - name: gateway-1
       namespace: envoy-gateway
+      sectionName: http
     rules:
     - backendRefs:
       - name: service-1
         port: 8080
+      filters:
+      - extensionRef:
+          group: unknown.group
+          kind: HTTPRouteFilter
+          name: invalid-filter
+        type: ExtensionRef
       matches:
-      - headers:
-        - name: Header-1
+      - method:
+          method: ExampleExact
           type: Exact
-          value: exact
-        path:
-          type: Exact
-          value: /exact
-        queryParams:
-        - name: QueryParam-1
-          type: Exact
-          value: exact
     - backendRefs:
       - name: service-2
         port: 8080
       matches:
-      - path:
-          type: PathPrefix
-          value: /prefix
-    - backendRefs:
-      - name: service-3
-        port: 8080
-      matches:
-      - headers:
-        - name: Header-1
+      - method:
+          method: FooBar[0-9]+
           type: RegularExpression
-          value: '*regex*'
-        path:
-          type: RegularExpression
-          value: '*regex*'
-        queryParams:
-        - name: QueryParam-1
-          type: RegularExpression
-          value: '*regex*'
   status:
     parents:
     - conditions:
@@ -95,8 +79,7 @@ httpRoutes:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: 'Failed to process route rule 2: regex "*regex*" is invalid: error
-          parsing regexp: missing argument to repetition operator: `*`.'
+        message: 'Invalid filter ExtensionRef: unknown kind unknown.group/HTTPRouteFilter.'
         reason: UnsupportedValue
         status: "True"
         type: PartiallyInvalid
@@ -109,6 +92,7 @@ httpRoutes:
       parentRef:
         name: gateway-1
         namespace: envoy-gateway
+        sectionName: http
 infraIR:
   envoy-gateway/gateway-1:
     proxy:
@@ -158,7 +142,7 @@ xdsIR:
       externalPort: 80
       hostnames:
       - '*'
-      isHTTP2: false
+      isHTTP2: true
       metadata:
         kind: Gateway
         name: gateway-1
@@ -172,47 +156,10 @@ xdsIR:
       routes:
       - destination:
           metadata:
-            kind: HTTPRoute
-            name: httproute-1
+            kind: GRPCRoute
+            name: grpcroute-1
             namespace: default
-          name: httproute/default/httproute-1/rule/0
-          settings:
-          - addressType: IP
-            endpoints:
-            - host: 7.7.7.7
-              port: 8080
-            metadata:
-              name: service-1
-              namespace: default
-              sectionName: "8080"
-            name: httproute/default/httproute-1/rule/0/backend/0
-            protocol: HTTP
-            weight: 1
-        headerMatches:
-        - distinct: false
-          exact: exact
-          name: Header-1
-        hostname: '*'
-        isHTTP2: false
-        metadata:
-          kind: HTTPRoute
-          name: httproute-1
-          namespace: default
-        name: httproute/default/httproute-1/rule/0/match/0/*
-        pathMatch:
-          distinct: false
-          exact: /exact
-          name: ""
-        queryParamMatches:
-        - distinct: false
-          exact: exact
-          name: QueryParam-1
-      - destination:
-          metadata:
-            kind: HTTPRoute
-            name: httproute-1
-            namespace: default
-          name: httproute/default/httproute-1/rule/1
+          name: grpcroute/default/grpcroute-1/rule/1
           settings:
           - addressType: IP
             endpoints:
@@ -222,20 +169,20 @@ xdsIR:
               name: service-2
               namespace: default
               sectionName: "8080"
-            name: httproute/default/httproute-1/rule/1/backend/0
-            protocol: HTTP
+            name: grpcroute/default/grpcroute-1/rule/1/backend/0
+            protocol: GRPC
             weight: 1
         hostname: '*'
-        isHTTP2: false
+        isHTTP2: true
         metadata:
-          kind: HTTPRoute
-          name: httproute-1
+          kind: GRPCRoute
+          name: grpcroute-1
           namespace: default
-        name: httproute/default/httproute-1/rule/1/match/0/*
+        name: grpcroute/default/grpcroute-1/rule/1/match/0/*
         pathMatch:
           distinct: false
           name: ""
-          prefix: /prefix
+          safeRegex: /(?i)\.?[a-z_][a-z_0-9]*(\.[a-z_][a-z_0-9]*)*/FooBar[0-9]+
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
