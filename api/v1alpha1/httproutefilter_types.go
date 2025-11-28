@@ -24,6 +24,9 @@ const (
 
 // HTTPRouteFilter is a custom Envoy Gateway HTTPRouteFilter which provides extended
 // traffic processing options such as path regex rewrite, direct response and more.
+// +genclient
+// +genclient:noStatus
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 type HTTPRouteFilter struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -188,6 +191,7 @@ type InjectedCredential struct {
 //+kubebuilder:object:root=true
 
 // HTTPRouteFilterList contains a list of HTTPRouteFilter resources.
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 type HTTPRouteFilterList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
@@ -195,5 +199,5 @@ type HTTPRouteFilterList struct {
 }
 
 func init() {
-	SchemeBuilder.Register(&HTTPRouteFilter{}, &HTTPRouteFilterList{})
+	localSchemeBuilder.Register(&HTTPRouteFilter{}, &HTTPRouteFilterList{})
 }

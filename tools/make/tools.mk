@@ -28,6 +28,14 @@ $(tools.bindir)/%: $(tools.bindir)/%.d/venv
 		ln -sf $*.d/venv/bin/$* $@; \
 	fi
 
+# kube-api-linter
+# ===============
+#
+tools/kube-api-linter = $(tools.bindir)/kube-api-linter
+$(tools/kube-api-linter):
+	cd $(CURDIR)/tools && \
+	go build -buildmode=plugin -o bin/kube-api-linter.so sigs.k8s.io/kube-api-linter/pkg/plugin
+
 ifneq ($(GOOS),windows)
 # Shellcheck
 # ==========
@@ -55,3 +63,7 @@ tools.clean: # Remove all tools
 .PHONY: clean
 clean: ## Remove all files that are created during builds.
 clean: tools.clean
+
+.PHONY: reclaim-storage
+reclaim-storage: ## Removes unnecessary packages and artifacts from GitHub Actions Runner
+	bash ./tools/hack/reclaim-storage.sh

@@ -160,4 +160,8 @@ xdsIR:
             name: tcproute/default/tcproute-1/rule/-1/backend/1
             protocol: TCP
             weight: 50
+        metadata:
+          kind: TCPRoute
+          name: tcproute-1
+          namespace: default
         name: tcproute/default/tcproute-1

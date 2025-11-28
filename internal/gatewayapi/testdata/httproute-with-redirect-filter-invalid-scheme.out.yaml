@@ -66,7 +66,7 @@ httpRoutes:
     - conditions:
       - lastTransitionTime: null
         message: 'Scheme: unknown is unsupported, only ''https'' and ''http'' are
-          supported'
+          supported.'
         reason: UnsupportedValue
         status: "False"
         type: Accepted

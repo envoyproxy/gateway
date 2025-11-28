@@ -664,6 +664,10 @@ xdsIR:
             name: tcproute/default/tcpr-app-mixed/rule/-1/backend/0
             protocol: TCP
             weight: 1
+        metadata:
+          kind: TCPRoute
+          name: tcpr-app-mixed
+          namespace: default
         name: tcproute/default/tcpr-app-mixed
   envoy-gateway/gateway-tcp:
     accessLog:
@@ -734,6 +738,10 @@ xdsIR:
             name: tcproute/default/tcpr-app-foo/rule/-1/backend/0
             protocol: TCP
             weight: 1
+        metadata:
+          kind: TCPRoute
+          name: tcpr-app-foo
+          namespace: default
         name: tcproute/default/tcpr-app-foo
     - address: 0.0.0.0
       externalPort: 8089
@@ -775,4 +783,8 @@ xdsIR:
             name: tcproute/default/tcpr-app-bar/rule/-1/backend/0
             protocol: TCP
             weight: 1
+        metadata:
+          kind: TCPRoute
+          name: tcpr-app-bar
+          namespace: default
         name: tcproute/default/tcpr-app-bar
