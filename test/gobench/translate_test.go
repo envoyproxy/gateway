@@ -442,7 +442,8 @@ func BenchmarkGatewayAPItoXDS(b *testing.B) {
 		genSecurityPolicies(50) +
 		genBackendTrafficPolicies(50) +
 		genEnvoyExtensionPolicies(50) +
-		genService(50)
+		genService(50) +
+		genEndpointSlice(50)
 	large := baseYAML + backendYAML + tlsSecretYAML + clientTrafficPolicyYAML +
 		genHTTPRoutes(500) +
 		genGRPCRoutes(250) +
@@ -451,7 +452,8 @@ func BenchmarkGatewayAPItoXDS(b *testing.B) {
 		genSecurityPolicies(500) +
 		genBackendTrafficPolicies(500) +
 		genEnvoyExtensionPolicies(500) +
-		genService(500)
+		genService(500) +
+		genEndpointSlice(500)
 
 	cases := []benchCase{
 		{
