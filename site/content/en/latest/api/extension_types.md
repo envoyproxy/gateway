@@ -4335,6 +4335,7 @@ _Appears in:_
 | `limit` | _[RateLimitValue](#ratelimitvalue)_ |  true  |  | Limit holds the rate limit values.<br />This limit is applied for traffic flows when the selectors<br />compute to True, causing the request to be counted towards the limit.<br />The limit is enforced and the request is ratelimited, i.e. a response with<br />429 HTTP status code is sent back to the client when<br />the selected requests have reached the limit. |
 | `cost` | _[RateLimitCost](#ratelimitcost)_ |  false  |  | Cost specifies the cost of requests and responses for the rule.<br />This is optional and if not specified, the default behavior is to reduce the rate limit counters by 1 on<br />the request path and do not reduce the rate limit counters on the response path. |
 | `shared` | _boolean_ |  false  |  | Shared determines whether this rate limit rule applies across all the policy targets.<br />If set to true, the rule is treated as a common bucket and is shared across all policy targets (xRoutes).<br />Default: false. |
+| `shadowMode` | _boolean_ |  false  |  | ShadowMode determines whether this rate limit rule enables shadow mode.<br />When enabled, rate limiting functions execute as normal (cache lookup, statistics),<br />but the result is always success regardless of whether the limit was exceeded.<br />Only supported for Global Rate Limits. |
 
 
 #### RateLimitSelectCondition
