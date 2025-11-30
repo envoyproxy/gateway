@@ -38,18 +38,18 @@ metadata:
   namespace: default
 spec:
   parentRefs:
-  - name: eg
-    namespace: default
+    - name: eg
+      namespace: default
   hostnames:
-  - "example.com"
+    - "example.com"
   rules:
-  - matches:
-    - path:
-        type: PathPrefix
-        value: /
-    backendRefs:
-    - name: backend-service
-      port: 80
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: backend-service
+          port: 80
 ---
 apiVersion: v1
 kind: Service
@@ -58,7 +58,7 @@ metadata:
   namespace: default
 spec:
   ports:
-  - port: 80
-    targetPort: 8080
+    - port: 80
+      targetPort: 8080
   selector:
     app: backend
