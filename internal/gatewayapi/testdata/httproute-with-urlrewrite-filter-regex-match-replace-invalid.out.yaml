@@ -69,7 +69,7 @@ httpRoutes:
     parents:
     - conditions:
       - lastTransitionTime: null
-        message: ReplaceRegexMatch must be a valid RE2 regular expression
+        message: ReplaceRegexMatch must be a valid RE2 regular expression.
         reason: UnsupportedValue
         status: "False"
         type: Accepted
@@ -112,7 +112,7 @@ httpRoutes:
     parents:
     - conditions:
       - lastTransitionTime: null
-        message: ReplaceRegexMatch Pattern must be set when rewrite path type is "ReplaceRegexMatch"
+        message: ReplaceRegexMatch Pattern must be set when rewrite path type is "ReplaceRegexMatch".
         reason: UnsupportedValue
         status: "False"
         type: Accepted
@@ -160,7 +160,7 @@ httpRoutes:
     parents:
     - conditions:
       - lastTransitionTime: null
-        message: Cannot configure multiple urlRewrite filters for a single HTTPRouteRule
+        message: Cannot configure multiple urlRewrite filters for a single HTTPRouteRule.
         reason: UnsupportedValue
         status: "False"
         type: Accepted
@@ -208,7 +208,7 @@ httpRoutes:
     parents:
     - conditions:
       - lastTransitionTime: null
-        message: Cannot configure multiple urlRewrite filters for a single HTTPRouteRule
+        message: Cannot configure multiple urlRewrite filters for a single HTTPRouteRule.
         reason: UnsupportedValue
         status: "False"
         type: Accepted
@@ -256,7 +256,7 @@ httpRoutes:
     parents:
     - conditions:
       - lastTransitionTime: null
-        message: Cannot configure multiple urlRewrite filters for a single HTTPRouteRule
+        message: Cannot configure multiple urlRewrite filters for a single HTTPRouteRule.
         reason: UnsupportedValue
         status: "False"
         type: Accepted
@@ -299,12 +299,12 @@ httpRoutes:
     parents:
     - conditions:
       - lastTransitionTime: null
-        message: 'Unable to translate HTTPRouteFilter: default/notfound'
-        reason: UnsupportedValue
-        status: "False"
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: 'Unable to translate HTTPRouteFilter: default/notfound'
+        message: 'Unable to translate HTTPRouteFilter: default/notfound.'
         reason: BackendNotFound
         status: "False"
         type: ResolvedRefs
