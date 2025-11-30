@@ -629,17 +629,20 @@ func (t *Translator) addXdsTCPFilterChain(
 
 	isTLSPassthrough := irRoute.TLS != nil && irRoute.TLS.TLSInspectorConfig != nil
 	isTLSTerminate := irRoute.TLS != nil && irRoute.TLS.Terminate != nil
-	statPrefix := "tcp"
-	if isTLSPassthrough {
-		statPrefix = "tls-passthrough"
-	}
+	statPrefix := ptr.Deref(irRoute.StatName, "")
+	if statPrefix == "" {
+		statPrefix = "tcp"
+		if isTLSPassthrough {
+			statPrefix = "tls-passthrough"
+		}
 
-	if isTLSTerminate {
-		statPrefix = "tls-terminate"
-	}
+		if isTLSTerminate {
+			statPrefix = "tls-terminate"
+		}
 
-	// Append port to the statPrefix.
-	statPrefix = strings.Join([]string{statPrefix, strconv.Itoa(int(xdsListener.Address.GetSocketAddress().GetPortValue()))}, "-")
+		// Append port to the statPrefix.
+		statPrefix = strings.Join([]string{statPrefix, strconv.Itoa(int(xdsListener.Address.GetSocketAddress().GetPortValue()))}, "-")
+	}
 
 	filterChain, err := buildTCPFilterChain(
 		irRoute,

@@ -188,17 +188,9 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 	// process each HTTPRouteRule, generate a unique Xds IR HTTPRoute per match of the rule
 	for ruleIdx, rule := range httpRoute.Spec.Rules {
 		// process HTTP Route filters first, so that the filters can be applied to the IR route later
-		httpFiltersContext, err := t.ProcessHTTPFilters(parentRef, httpRoute, rule.Filters, ruleIdx, resources)
-		if err != nil {
-			// Some errors should be treated as ResolvedRefs condition type,
-			// e.g. Failed to resolve the BackendRef in the RequestMirror filter.
-			// Other errors should be treated as Accepted condition type.
-			if err.Type() != gwapiv1.RouteConditionResolvedRefs {
-				errorCollector.Add(status.NewRouteStatusError(
-					fmt.Errorf("failed to process route rule %d: %w", ruleIdx, err),
-					status.ConvertToAcceptedReason(err.Reason()),
-				).WithType(gwapiv1.RouteConditionAccepted))
-			} else {
+		httpFiltersContext, errs := t.ProcessHTTPFilters(parentRef, httpRoute, rule.Filters, ruleIdx, resources)
+		if len(errs) > 0 {
+			for _, err := range errs {
 				errorCollector.Add(err)
 			}
 			continue
@@ -394,12 +386,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 		return irRoutes, nil
 	}
 
-	types := errorCollector.Types()
-	errs := make([]status.Error, 0, len(types))
-	for _, t := range types {
-		errs = append(errs, errorCollector.GetError(t))
-	}
-	return irRoutes, errs
+	return irRoutes, errorCollector.GetAllErrors()
 }
 
 func processRouteTrafficFeatures(irRoute *ir.HTTPRoute, rule *gwapiv1.HTTPRouteRule) {
@@ -787,12 +774,11 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 		rule := &grpcRoute.Spec.Rules[ruleIdx]
 
 		// process GRPC route filters first, so that the filters can be applied to the IR route later
-		httpFiltersContext, err := t.ProcessGRPCFilters(parentRef, grpcRoute, rule.Filters, resources)
-		if err != nil {
-			errorCollector.Add(status.NewRouteStatusError(
-				fmt.Errorf("failed to process route rule %d: %w", ruleIdx, err),
-				status.ConvertToAcceptedReason(err.Reason()),
-			).WithType(gwapiv1.RouteConditionAccepted))
+		httpFiltersContext, errs := t.ProcessGRPCFilters(parentRef, grpcRoute, rule.Filters, resources)
+		if len(errs) > 0 {
+			for _, err := range errs {
+				errorCollector.Add(err)
+			}
 			continue
 		}
 
@@ -949,12 +935,7 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 		return irRoutes, nil
 	}
 
-	types := errorCollector.Types()
-	errs := make([]status.Error, 0, len(types))
-	for _, t := range types {
-		errs = append(errs, errorCollector.GetError(t))
-	}
-	return irRoutes, errs
+	return irRoutes, errorCollector.GetAllErrors()
 }
 
 func (t *Translator) processGRPCRouteRule(grpcRoute *GRPCRouteContext, ruleIdx int, httpFiltersContext *HTTPFiltersContext, rule *gwapiv1.GRPCRouteRule) ([]*ir.HTTPRoute, status.Error) {
@@ -1256,6 +1237,7 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 						Settings: destSettings,
 						Metadata: buildResourceMetadata(tlsRoute, nil),
 					},
+					Metadata: buildResourceMetadata(tlsRoute, nil),
 				}
 				irListener.Routes = append(irListener.Routes, irRoute)
 
@@ -1554,9 +1536,9 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 					Destination: &ir.RouteDestination{
 						Name:     destName,
 						Settings: destSettings,
-						// tcpRoute Must have a single rule, so can use index 0.
 						Metadata: buildResourceMetadata(tcpRoute, tcpRoute.Spec.Rules[0].Name),
 					},
+					Metadata: buildResourceMetadata(tcpRoute, nil),
 				}
 
 				if irListener.TLS != nil {
@@ -1921,20 +1903,23 @@ func (t *Translator) processDestinationFilters(routeType gwapiv1.Kind, backendRe
 	var httpFiltersContext *HTTPFiltersContext
 	var destFilters ir.DestinationFilters
 
-	var err error
+	var errs []status.Error
 	switch filters := backendFilters.(type) {
 	case []gwapiv1.HTTPRouteFilter:
-		httpFiltersContext, err = t.ProcessHTTPFilters(parentRef, route, filters, 0, resources)
-
+		httpFiltersContext, errs = t.ProcessHTTPFilters(parentRef, route, filters, 0, resources)
 	case []gwapiv1.GRPCRouteFilter:
-		httpFiltersContext, err = t.ProcessGRPCFilters(parentRef, route, filters, resources)
-		if err != nil {
-			return &destFilters, err
+		httpFiltersContext, errs = t.ProcessGRPCFilters(parentRef, route, filters, resources)
+	}
+	if len(errs) > 0 {
+		var err error
+		for _, e := range errs {
+			err = errors.Join(err, e)
 		}
+		return nil, err
 	}
 	applyHTTPFiltersContextToDestinationFilters(httpFiltersContext, &destFilters)
 
-	return &destFilters, err
+	return &destFilters, nil
 }
 
 func applyHTTPFiltersContextToDestinationFilters(httpFiltersContext *HTTPFiltersContext, destFilters *ir.DestinationFilters) {

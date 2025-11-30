@@ -368,6 +368,20 @@ _Appears in:_
 | `zone` | _string_ |  false  |  | Zone defines the service zone of the backend endpoint. |
 
 
+#### BackendMetrics
+
+
+
+
+
+_Appears in:_
+- [BackendTelemetry](#backendtelemetry)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `routeStatName` | _string_ |  false  |  | RouteStatName defines the value of the Route stat_prefix, determining how the route stats are named.<br />For more details, see envoy docs: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto#config-route-v3-route<br />The supported operators for this pattern are:<br />%ROUTE_NAME%: name of Gateway API xRoute resource<br />%ROUTE_NAMESPACE%: namespace of Gateway API xRoute resource<br />%ROUTE_KIND%: kind of Gateway API xRoute resource<br />Example: %ROUTE_KIND%/%ROUTE_NAMESPACE%/%ROUTE_NAME% => httproute/my-ns/my-route<br />Disabled by default. |
+
+
 #### BackendRef
 
 
@@ -393,6 +407,7 @@ _Appears in:_
 | `name` | _[ObjectName](#objectname)_ |  true  |  | Name is the name of the referent. |
 | `namespace` | _[Namespace](#namespace)_ |  false  |  | Namespace is the namespace of the backend. When unspecified, the local<br />namespace is inferred.<br />Note that when a namespace different than the local namespace is specified,<br />a ReferenceGrant object is required in the referent namespace to allow that<br />namespace's owner to accept the reference. See the ReferenceGrant<br />documentation for details.<br />Support: Core |
 | `port` | _[PortNumber](#portnumber)_ |  false  |  | Port specifies the destination port number to use for this resource.<br />Port is required when the referent is a Kubernetes Service. In this<br />case, the port number is the service port number, not the target port.<br />For other resources, destination port might be derived from the referent<br />resource or this field. |
+| `weight` | _integer_ |  false  | 1 | Weight specifies the proportion of requests forwarded to the referenced<br />backend. This is computed as weight/(sum of all weights in this<br />BackendRefs list). For non-zero values, there may be some epsilon from<br />the exact proportion defined here depending on the precision an<br />implementation supports. Weight is not a percentage and the sum of<br />weights does not need to equal 100.<br />If only one backend is specified and it has a weight greater than 0, 100%<br />of the traffic is forwarded to that backend. If weight is set to 0, no<br />traffic should be forwarded for this entry. If unspecified, weight<br />defaults to 1.<br />Support for this field varies based on the context where used. |
 | `fallback` | _boolean_ |  false  |  | Fallback indicates whether the backend is designated as a fallback.<br />Multiple fallback backends can be configured.<br />It is highly recommended to configure active or passive health checks to ensure that failover can be detected<br />when the active backends become unhealthy and to automatically readjust once the primary backends are healthy again.<br />The overprovisioning factor is set to 1.4, meaning the fallback backends will only start receiving traffic when<br />the health of the active backends falls below 72%. |
 
 
@@ -478,6 +493,7 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `tracing` | _[Tracing](#tracing)_ |  false  |  | Tracing configures the tracing settings for the backend or HTTPRoute. |
+| `metrics` | _[BackendMetrics](#backendmetrics)_ |  false  |  | Metrics defines metrics configuration for the backend or Route. |
 
 
 #### BackendTrafficPolicy
@@ -527,7 +543,7 @@ _Appears in:_
 | `faultInjection` | _[FaultInjection](#faultinjection)_ |  false  |  | FaultInjection defines the fault injection policy to be applied. This configuration can be used to<br />inject delays and abort requests to mimic failure scenarios such as service failures and overloads |
 | `useClientProtocol` | _boolean_ |  false  |  | UseClientProtocol configures Envoy to prefer sending requests to backends using<br />the same HTTP protocol that the incoming request used. Defaults to false, which means<br />that Envoy will use the protocol indicated by the attached BackendRef. |
 | `compression` | _[Compression](#compression) array_ |  false  |  | The compression config for the http streams.<br />Deprecated: Use Compressor instead. |
-| `compressor` | _[Compression](#compression) array_ |  false  |  | The compressor config for the http streams.<br />This provides more granular control over compression configuration. |
+| `compressor` | _[Compression](#compression) array_ |  false  |  | The compressor config for the http streams.<br />This provides more granular control over compression configuration.<br />Order matters: The first compressor in the list is preferred when q-values in Accept-Encoding are equal. |
 | `responseOverride` | _[ResponseOverride](#responseoverride) array_ |  false  |  | ResponseOverride defines the configuration to override specific responses with a custom one.<br />If multiple configurations are specified, the first one to match wins. |
 | `httpUpgrade` | _[ProtocolUpgradeConfig](#protocolupgradeconfig) array_ |  false  |  | HTTPUpgrade defines the configuration for HTTP protocol upgrades.<br />If not specified, the default upgrade configuration(websocket) will be used. |
 | `requestBuffer` | _[RequestBuffer](#requestbuffer)_ |  false  |  | RequestBuffer allows the gateway to buffer and fully receive each request from a client before continuing to send the request<br />upstream to the backends. This can be helpful to shield your backend servers from slow clients, and also to enforce a maximum size per request<br />as any requests larger than the buffer size will be rejected.<br />This can have a negative performance impact so should only be enabled when necessary.<br />When enabling this option, you should also configure your connection buffer size to account for these request buffers. There will also be an<br />increase in memory usage for Envoy that should be accounted for in your deployment settings. |
@@ -936,10 +952,11 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `type` | _[ConsistentHashType](#consistenthashtype)_ |  true  |  | ConsistentHashType defines the type of input to hash on. Valid Type values are<br />"SourceIP",<br />"Header",<br />"Headers",<br />"Cookie". |
+| `type` | _[ConsistentHashType](#consistenthashtype)_ |  true  |  | ConsistentHashType defines the type of input to hash on. Valid Type values are<br />"SourceIP",<br />"Header",<br />"Headers",<br />"Cookie".<br />"QueryParams". |
 | `header` | _[Header](#header)_ |  false  |  | Header configures the header hash policy when the consistent hash type is set to Header.<br />Deprecated: use Headers instead |
 | `headers` | _[Header](#header) array_ |  false  |  | Headers configures the header hash policy for each header, when the consistent hash type is set to Headers. |
 | `cookie` | _[Cookie](#cookie)_ |  false  |  | Cookie configures the cookie hash policy when the consistent hash type is set to Cookie. |
+| `queryParams` | _[QueryParam](#queryparam) array_ |  false  |  | QueryParams configures the query parameter hash policy when the consistent hash type is set to QueryParams. |
 | `tableSize` | _integer_ |  false  | 65537 | The table size for consistent hashing, must be prime number limited to 5000011. |
 
 
@@ -958,6 +975,7 @@ _Appears in:_
 | `Header` | HeaderConsistentHashType hashes based on a request header.<br />Deprecated: use HeadersConsistentHashType instead<br /> | 
 | `Headers` | HeadersConsistentHashType hashes based on multiple request headers.<br /> | 
 | `Cookie` | CookieConsistentHashType hashes based on a cookie.<br /> | 
+| `QueryParams` | QueryParamsConsistentHashType hashes based on a multiple query parameter.<br /> | 
 
 
 #### Cookie
@@ -4013,7 +4031,7 @@ _Appears in:_
 | `enableVirtualHostStats` | _boolean_ |  false  |  | EnableVirtualHostStats enables envoy stat metrics for virtual hosts. |
 | `enablePerEndpointStats` | _boolean_ |  false  |  | EnablePerEndpointStats enables per endpoint envoy stats metrics.<br />Please use with caution. |
 | `enableRequestResponseSizesStats` | _boolean_ |  false  |  | EnableRequestResponseSizesStats enables publishing of histograms tracking header and body sizes of requests and responses. |
-| `clusterStatName` | _string_ |  false  |  | ClusterStatName defines the value of cluster alt_stat_name, determining how cluster stats are named.<br />For more details, see envoy docs: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto.html<br />The supported operators for this pattern are:<br />%ROUTE_NAME%: name of Gateway API xRoute resource<br />%ROUTE_NAMESPACE%: namespace of Gateway API xRoute resource<br />%ROUTE_KIND%: kind of Gateway API xRoute resource<br />%ROUTE_RULE_NAME%: name of the Gateway API xRoute section<br />%ROUTE_RULE_NUMBER%: name of the Gateway API xRoute section<br />%BACKEND_REFS%: names of all backends referenced in <NAMESPACE>/<NAME>\|<NAMESPACE>/<NAME>\|... format<br />Only xDS Clusters created for HTTPRoute and GRPCRoute are currently supported.<br />Default: %ROUTE_KIND%/%ROUTE_NAMESPACE%/%ROUTE_NAME%/rule/%ROUTE_RULE_NUMBER%<br />Example: httproute/my-ns/my-route/rule/0 |
+| `clusterStatName` | _string_ |  false  |  | ClusterStatName defines the value of cluster alt_stat_name, determining how cluster stats are named.<br />For more details, see envoy docs: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto.html<br />The supported operators for this pattern are:<br />`%ROUTE_NAME%`: name of Gateway API xRoute resource<br />`%ROUTE_NAMESPACE%`: namespace of Gateway API xRoute resource<br />`%ROUTE_KIND%`: kind of Gateway API xRoute resource<br />`%ROUTE_RULE_NAME%`: name of the Gateway API xRoute section<br />`%ROUTE_RULE_NUMBER%`: name of the Gateway API xRoute section<br />`%BACKEND_REFS%`: names of all backends referenced in `<NAMESPACE>/<NAME>\|<NAMESPACE>/<NAME>\|...` format<br />Only xDS Clusters created for HTTPRoute and GRPCRoute are currently supported.<br />Default: `%ROUTE_KIND%/%ROUTE_NAMESPACE%/%ROUTE_NAME%/rule/%ROUTE_RULE_NUMBER%`<br />Example: `httproute/my-ns/my-route/rule/0` |
 
 
 #### ProxyOpenTelemetrySink
@@ -4128,6 +4146,21 @@ _Appears in:_
 | `samplingFraction` | _[Fraction](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#fraction)_ |  false  |  | SamplingFraction represents the fraction of requests that should be<br />selected for tracing if no prior sampling decision has been made.<br />Only one of SamplingRate or SamplingFraction may be specified.<br />If neither field is specified, all requests will be sampled. |
 | `customTags` | _object (keys:string, values:[CustomTag](#customtag))_ |  false  |  | CustomTags defines the custom tags to add to each span.<br />If provider is kubernetes, pod name and namespace are added by default. |
 | `provider` | _[TracingProvider](#tracingprovider)_ |  true  |  | Provider defines the tracing provider. |
+
+
+#### QueryParam
+
+
+
+QueryParam defines the query parameter name hashing configuration for consistent hash based
+load balancing.
+
+_Appears in:_
+- [ConsistentHash](#consistenthash)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `name` | _string_ |  true  |  | Name of the query param to hash. |
 
 
 #### RateLimit

@@ -98,3 +98,7 @@ adopters:
     logo: "/logos/signal-ai.png"
     url: "https://www.signal-ai.com"
     description: "Signal AI uses Envoy Gateway for traffic management and OIDC authentication in Kubernetes, providing network routing and security for their AI-driven media monitoring platform."
+  - name: "Alauda"
+    logo: "/logos/alauda.svg"
+    url: "https://www.alauda.io/"
+    description: "Alauda integrates Envoy Gateway to provide users with a Gateway API implementation for Kubernetes ingress and traffic management."
