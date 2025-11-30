@@ -179,8 +179,6 @@ xdsIR:
           settings:
           - addressType: IP
             endpoints:
-            - host: 1.2.3.4
-              port: 8080
             - host: 7.7.7.7
               port: 8080
             metadata:

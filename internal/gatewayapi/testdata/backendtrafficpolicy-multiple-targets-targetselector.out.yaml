@@ -137,9 +137,10 @@ httpRoutes:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: Resolved all the Object references for the Route
-        reason: ResolvedRefs
-        status: "True"
+        message: 'Failed to process route rule 0 backendRef 0: service envoy-gateway/service-2
+          not found.'
+        reason: BackendNotFound
+        status: "False"
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
@@ -218,8 +219,6 @@ xdsIR:
           settings:
           - addressType: IP
             endpoints:
-            - host: 8.8.8.8
-              port: 8080
             - host: 7.7.7.7
               port: 8080
             metadata:
@@ -241,25 +240,8 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
-      - destination:
-          metadata:
-            kind: HTTPRoute
-            name: httproute
-            namespace: envoy-gateway
-          name: httproute/envoy-gateway/httproute/rule/0
-          settings:
-          - addressType: IP
-            endpoints:
-            - host: 8.8.8.8
-              port: 8080
-            metadata:
-              kind: Service
-              name: service-2
-              namespace: envoy-gateway
-              sectionName: "8080"
-            name: httproute/envoy-gateway/httproute/rule/0/backend/0
-            protocol: HTTP
-            weight: 1
+      - directResponse:
+          statusCode: 500
         hostname: gateway.envoyproxy.io
         isHTTP2: false
         metadata:

@@ -216,8 +216,6 @@ xdsIR:
           settings:
           - addressType: IP
             endpoints:
-            - host: 10.0.0.2
-              port: 8080
             - host: 7.7.7.7
               port: 8080
             metadata:
@@ -248,8 +246,6 @@ xdsIR:
           settings:
           - addressType: IP
             endpoints:
-            - host: 10.0.0.1
-              port: 8080
             - host: 7.7.7.7
               port: 8080
             metadata:
