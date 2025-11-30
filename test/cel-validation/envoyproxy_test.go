@@ -1886,6 +1886,107 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			},
 			wantErrors: []string{"ImageRepository must contain only allowed characters and must not include a tag."},
 		},
+		{
+			desc: "tracing-tags",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						Tracing: &egv1a1.ProxyTracing{
+							Provider: egv1a1.TracingProvider{
+								Type: egv1a1.TracingProviderTypeOpenTelemetry,
+								BackendCluster: egv1a1.BackendCluster{
+									BackendRefs: []egv1a1.BackendRef{
+										{
+											BackendObjectReference: gwapiv1.BackendObjectReference{
+												Name: "fake-service",
+												Kind: ptr.To(gwapiv1.Kind("Service")),
+												Port: ptr.To(gwapiv1.PortNumber(8080)),
+											},
+										},
+									},
+								},
+							},
+							CustomTags: map[string]egv1a1.CustomTag{
+								"literal-tag": {
+									Type:    egv1a1.CustomTagTypeLiteral,
+									Literal: &egv1a1.LiteralCustomTag{},
+								},
+								"environ-tag": {
+									Type: egv1a1.CustomTagTypeEnvironment,
+									Environment: &egv1a1.EnvironmentCustomTag{
+										Name: "SOME_ENV_VAR",
+									},
+								},
+								"req-tag": {
+									Type: egv1a1.CustomTagTypeRequestHeader,
+									RequestHeader: &egv1a1.RequestHeaderCustomTag{
+										Name: "request-header-1",
+									},
+								},
+								"formatter-tag": {
+									Type: egv1a1.CustomTagTypeFormatter,
+									Formatter: &egv1a1.FormatterCustomTag{
+										Value: "%REQ(req-header-1)%",
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "tracing-invalid-tags",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						Tracing: &egv1a1.ProxyTracing{
+							Provider: egv1a1.TracingProvider{
+								Type: egv1a1.TracingProviderTypeOpenTelemetry,
+								BackendCluster: egv1a1.BackendCluster{
+									BackendRefs: []egv1a1.BackendRef{
+										{
+											BackendObjectReference: gwapiv1.BackendObjectReference{
+												Name: "fake-service",
+												Kind: ptr.To(gwapiv1.Kind("Service")),
+												Port: ptr.To(gwapiv1.PortNumber(8080)),
+											},
+										},
+									},
+								},
+							},
+							CustomTags: map[string]egv1a1.CustomTag{
+								"literal-tag": {
+									Type: egv1a1.CustomTagTypeLiteral,
+									Environment: &egv1a1.EnvironmentCustomTag{
+										Name: "SOME_ENV_VAR",
+									},
+								},
+								"environ-tag": {
+									Type:    egv1a1.CustomTagTypeEnvironment,
+									Literal: &egv1a1.LiteralCustomTag{},
+								},
+								"req-tag": {
+									Type:    egv1a1.CustomTagTypeRequestHeader,
+									Literal: &egv1a1.LiteralCustomTag{},
+								},
+								"formatter-tag": {
+									Type:    egv1a1.CustomTagTypeFormatter,
+									Literal: &egv1a1.LiteralCustomTag{},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"formatter cannot be null when using Formatter type",
+				"requestHeader cannot be null when using RequestHeader type",
+				"environment cannot be null when using Environment type",
+				"literal cannot be null when using Literal type",
+			},
+		},
 	}
 
 	for _, tc := range cases {
