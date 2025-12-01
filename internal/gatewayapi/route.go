@@ -113,7 +113,7 @@ func (t *Translator) processHTTPRouteParentRefs(httpRoute *HTTPRouteContext, res
 		// Need to compute Route rules within the parentRef loop because
 		// any conditions that come out of it have to go on each RouteParentStatus,
 		// not on the Route as a whole.
-		routeRoutes, errs, unacceptedRulesCount := t.processHTTPRouteRules(httpRoute, parentRef, resources)
+		routeRoutes, errs, unacceptedRules := t.processHTTPRouteRules(httpRoute, parentRef, resources)
 		if len(errs) > 0 {
 			routeStatus := GetRouteStatus(httpRoute)
 			// errs are already grouped by condition type in TypedErrorCollector
@@ -125,7 +125,7 @@ func (t *Translator) processHTTPRouteParentRefs(httpRoute *HTTPRouteContext, res
 				// Ref: https://gateway-api.sigs.k8s.io/geps/gep-1364
 				if err.Type() == gwapiv1.RouteConditionAccepted {
 					// Set RouteConditionAccepted=False only when all rules have failed to be accepted.
-					if allRulesFailedAccepted := unacceptedRulesCount == len(httpRoute.Spec.Rules); allRulesFailedAccepted {
+					if allRulesFailedAccepted := len(unacceptedRules) == len(httpRoute.Spec.Rules); allRulesFailedAccepted {
 						status.SetRouteStatusCondition(routeStatus,
 							parentRef.routeParentStatusIdx,
 							httpRoute.GetGeneration(),
@@ -142,7 +142,7 @@ func (t *Translator) processHTTPRouteParentRefs(httpRoute *HTTPRouteContext, res
 							gwapiv1.RouteConditionPartiallyInvalid,
 							metav1.ConditionTrue,
 							err.Reason(),
-							status.Error2ConditionMsg(err),
+							formatDroppedRuleMessage(unacceptedRules, err),
 						)
 						// Set RouteConditionAccepted=True when some rules have succeeded.
 						status.SetRouteStatusCondition(routeStatus,
@@ -215,7 +215,14 @@ func (t *Translator) processHTTPRouteParentRefs(httpRoute *HTTPRouteContext, res
 	}
 }
 
-func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRef *RouteParentContext, resources *resource.Resources) ([]*ir.HTTPRoute, []status.Error, int) {
+func formatDroppedRuleMessage(unacceptedRules []int, err status.Error) string {
+	if len(unacceptedRules) == 0 {
+		return fmt.Sprintf("Dropped Rule(s): %s", status.Error2ConditionMsg(err))
+	}
+	return fmt.Sprintf("Dropped Rule(s) %v: %s", unacceptedRules, status.Error2ConditionMsg(err))
+}
+
+func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRef *RouteParentContext, resources *resource.Resources) ([]*ir.HTTPRoute, []status.Error, []int) {
 	var (
 		irRoutes       []*ir.HTTPRoute
 		errorCollector = &status.TypedErrorCollector{}
@@ -425,10 +432,10 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 		irRoutes = append(irRoutes, ruleRoutes...)
 	}
 	if errorCollector.Empty() {
-		return irRoutes, nil, 0
+		return irRoutes, nil, nil
 	}
 
-	return irRoutes, errorCollector.GetAllErrors(), unacceptedRules.Len()
+	return irRoutes, errorCollector.GetAllErrors(), unacceptedRules.List()
 }
 
 func processRouteTrafficFeatures(irRoute *ir.HTTPRoute, rule *gwapiv1.HTTPRouteRule) {
@@ -743,7 +750,7 @@ func (t *Translator) processGRPCRouteParentRefs(grpcRoute *GRPCRouteContext, res
 		// Need to compute Route rules within the parentRef loop because
 		// any conditions that come out of it have to go on each RouteParentStatus,
 		// not on the Route as a whole.
-		routeRoutes, errs, unacceptedRulesCount := t.processGRPCRouteRules(grpcRoute, parentRef, resources)
+		routeRoutes, errs, unacceptedRules := t.processGRPCRouteRules(grpcRoute, parentRef, resources)
 		if len(errs) > 0 {
 			routeStatus := GetRouteStatus(grpcRoute)
 			// errs are already grouped by condition type in TypedErrorCollector
@@ -755,7 +762,7 @@ func (t *Translator) processGRPCRouteParentRefs(grpcRoute *GRPCRouteContext, res
 				// Ref: https://gateway-api.sigs.k8s.io/geps/gep-1364
 				if err.Type() == gwapiv1.RouteConditionAccepted {
 					// Set RouteConditionAccepted=False only when all rules have failed.
-					if allRulesFailedAccepted := unacceptedRulesCount == len(grpcRoute.Spec.Rules); allRulesFailedAccepted {
+					if allRulesFailedAccepted := len(unacceptedRules) == len(grpcRoute.Spec.Rules); allRulesFailedAccepted {
 						status.SetRouteStatusCondition(routeStatus,
 							parentRef.routeParentStatusIdx,
 							grpcRoute.GetGeneration(),
@@ -772,7 +779,7 @@ func (t *Translator) processGRPCRouteParentRefs(grpcRoute *GRPCRouteContext, res
 							gwapiv1.RouteConditionPartiallyInvalid,
 							metav1.ConditionTrue,
 							err.Reason(),
-							status.Error2ConditionMsg(err),
+							formatDroppedRuleMessage(unacceptedRules, err),
 						)
 						// Set RouteConditionAccepted=True when some rules have succeeded.
 						status.SetRouteStatusCondition(routeStatus,
@@ -843,7 +850,7 @@ func (t *Translator) processGRPCRouteParentRefs(grpcRoute *GRPCRouteContext, res
 	}
 }
 
-func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRef *RouteParentContext, resources *resource.Resources) ([]*ir.HTTPRoute, []status.Error, int) {
+func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRef *RouteParentContext, resources *resource.Resources) ([]*ir.HTTPRoute, []status.Error, []int) {
 	var (
 		irRoutes       []*ir.HTTPRoute
 		errorCollector = &status.TypedErrorCollector{}
@@ -1018,10 +1025,10 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 	}
 
 	if errorCollector.Empty() {
-		return irRoutes, nil, 0
+		return irRoutes, nil, nil
 	}
 
-	return irRoutes, errorCollector.GetAllErrors(), unacceptedRules.Len()
+	return irRoutes, errorCollector.GetAllErrors(), unacceptedRules.List()
 }
 
 func (t *Translator) processGRPCRouteRule(grpcRoute *GRPCRouteContext, ruleIdx int, httpFiltersContext *HTTPFiltersContext, rule *gwapiv1.GRPCRouteRule) ([]*ir.HTTPRoute, status.Error) {

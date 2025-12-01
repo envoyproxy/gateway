@@ -70,6 +70,19 @@ grpcRoutes:
       - method:
           method: FooBar[0-9]+
           type: RegularExpression
+    - backendRefs:
+      - name: service-3
+        port: 8080
+      filters:
+      - extensionRef:
+          group: unknown.group
+          kind: HTTPRouteFilter
+          name: invalid-filter
+        type: ExtensionRef
+      matches:
+      - method:
+          method: ExampleExact
+          type: Exact
   status:
     parents:
     - conditions:
@@ -79,7 +92,9 @@ grpcRoutes:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: 'Invalid filter ExtensionRef: unknown kind unknown.group/HTTPRouteFilter.'
+        message: |-
+          Dropped Rule(s) [0 2]: Invalid filter ExtensionRef: unknown kind unknown.group/HTTPRouteFilter.
+          Invalid filter ExtensionRef: unknown kind unknown.group/HTTPRouteFilter.
         reason: UnsupportedValue
         status: "True"
         type: PartiallyInvalid

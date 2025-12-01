@@ -45,3 +45,16 @@ grpcRoutes:
       backendRefs:
       - name: service-2
         port: 8080
+    - matches:
+      - method:
+          method: ExampleExact
+          type: Exact
+      backendRefs:
+      - name: service-3
+        port: 8080
+      filters:
+      - type: ExtensionRef
+        extensionRef:
+          group: unknown.group
+          kind: HTTPRouteFilter
+          name: invalid-filter
