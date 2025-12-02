@@ -135,17 +135,6 @@ func validateBackendRef(ref *gwapiv1.BackendRef) error {
 	return nil
 }
 
-// classRefsEnvoyProxy returns true if the provided GatewayClass references the provided EnvoyProxy.
-func classRefsEnvoyProxy(gc *gwapiv1.GatewayClass, ep *egv1a1.EnvoyProxy) bool {
-	if gc == nil || ep == nil {
-		return false
-	}
-
-	return refsEnvoyProxy(gc) &&
-		string(*gc.Spec.ParametersRef.Namespace) == ep.Namespace &&
-		gc.Spec.ParametersRef.Name == ep.Name
-}
-
 // refsEnvoyProxy returns true if the provided GatewayClass references an EnvoyProxy.
 func refsEnvoyProxy(gc *gwapiv1.GatewayClass) bool {
 	if gc == nil {
@@ -155,7 +144,6 @@ func refsEnvoyProxy(gc *gwapiv1.GatewayClass) bool {
 	return gc.Spec.ParametersRef != nil &&
 		string(gc.Spec.ParametersRef.Group) == egv1a1.GroupVersion.Group &&
 		gc.Spec.ParametersRef.Kind == egv1a1.KindEnvoyProxy &&
-		gc.Spec.ParametersRef.Namespace != nil &&
 		len(gc.Spec.ParametersRef.Name) > 0
 }
 

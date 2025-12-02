@@ -74,16 +74,6 @@ services:
 - apiVersion: v1
   kind: Service
   metadata:
-    namespace: default
-    name: service-1
-  spec:
-    ports:
-    - port: 8080
-      name: http
-      protocol: TCP
-- apiVersion: v1
-  kind: Service
-  metadata:
     namespace: envoy-gateway
     name: service-2
   spec:
@@ -92,23 +82,6 @@ services:
       name: http
       protocol: TCP
 endpointSlices:
-- apiVersion: discovery.k8s.io/v1
-  kind: EndpointSlice
-  metadata:
-    name: endpointslice-service-1
-    namespace: default
-    labels:
-      kubernetes.io/service-name: service-1
-  addressType: IPv4
-  ports:
-  - name: http
-    protocol: TCP
-    port: 8080
-  endpoints:
-  - addresses:
-    - 8.8.8.8
-    conditions:
-      ready: true
 - apiVersion: discovery.k8s.io/v1
   kind: EndpointSlice
   metadata:
