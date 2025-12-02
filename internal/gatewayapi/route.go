@@ -216,9 +216,6 @@ func (t *Translator) processHTTPRouteParentRefs(httpRoute *HTTPRouteContext, res
 }
 
 func formatDroppedRuleMessage(unacceptedRules []int, err status.Error) string {
-	if len(unacceptedRules) == 0 {
-		return fmt.Sprintf("Dropped Rule(s): %s", status.Error2ConditionMsg(err))
-	}
 	return fmt.Sprintf("Dropped Rule(s) %v: %s", unacceptedRules, status.Error2ConditionMsg(err))
 }
 
