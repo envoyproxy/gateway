@@ -2332,8 +2332,11 @@ spec:
                                 It's required when the type is "Literal".
                               properties:
                                 value:
-                                  description: Value defines the hard-coded value
-                                    to add to each span.
+                                  description: |-
+                                    Value defines the hard-coded value to add to each span.
+
+                                    [Accesslog substitution formatters](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators) are also supported in this field.
+                                    For example, to add the upstream host as a custom tag, the value can be set to "%UPSTREAM_HOST%".
                                   type: string
                               required:
                               - value

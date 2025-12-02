@@ -88,7 +88,7 @@ type TracingProvider struct {
 type CustomTagType string
 
 const (
-	// CustomTagTypeLiteral adds hard-coded value to each span.
+	// CustomTagTypeLiteral adds hard-coded or accesslog substitution formatter value to each span.
 	CustomTagTypeLiteral CustomTagType = "Literal"
 	// CustomTagTypeEnvironment adds value from environment variable to each span.
 	CustomTagTypeEnvironment CustomTagType = "Environment"
@@ -113,11 +113,12 @@ type CustomTag struct {
 	RequestHeader *RequestHeaderCustomTag `json:"requestHeader,omitempty"`
 }
 
-// LiteralCustomTag adds hard-coded value to each span.
+// LiteralCustomTag adds hard-coded or accesslog substitution formatter value to each span.
 type LiteralCustomTag struct {
 	// Value defines the hard-coded value to add to each span.
 	//
-	// [Accesslog substitution formatter](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators) is supported.
+	// [Accesslog substitution formatters](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators) are also supported in this field.
+	// For example, to add the upstream host as a custom tag, the value can be set to "%UPSTREAM_HOST%".
 	//
 	Value string `json:"value"`
 }

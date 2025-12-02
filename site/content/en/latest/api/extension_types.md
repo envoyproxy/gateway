@@ -1123,7 +1123,7 @@ _Appears in:_
 
 | Value | Description |
 | ----- | ----------- |
-| `Literal` | CustomTagTypeLiteral adds hard-coded value to each span.<br /> | 
+| `Literal` | CustomTagTypeLiteral adds hard-coded or accesslog substitution formatter value to each span.<br /> | 
 | `Environment` | CustomTagTypeEnvironment adds value from environment variable to each span.<br /> | 
 | `RequestHeader` | CustomTagTypeRequestHeader adds value from request header to each span.<br /> | 
 
@@ -3230,14 +3230,14 @@ _Appears in:_
 
 
 
-LiteralCustomTag adds hard-coded value to each span.
+LiteralCustomTag adds hard-coded or accesslog substitution formatter value to each span.
 
 _Appears in:_
 - [CustomTag](#customtag)
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `value` | _string_ |  true  |  | Value defines the hard-coded value to add to each span. |
+| `value` | _string_ |  true  |  | Value defines the hard-coded value to add to each span.<br />[Accesslog substitution formatters](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators) are also supported in this field.<br />For example, to add the upstream host as a custom tag, the value can be set to "%UPSTREAM_HOST%". |
 
 
 #### LoadBalancer

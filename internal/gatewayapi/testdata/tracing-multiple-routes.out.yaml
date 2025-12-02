@@ -193,6 +193,25 @@ infraIR:
           logging: {}
           telemetry:
             tracing:
+              customTags:
+                env1:
+                  environment:
+                    defaultValue: '-'
+                    name: env1
+                  type: Environment
+                literal1:
+                  literal:
+                    value: value1
+                  type: Literal
+                literal2:
+                  literal:
+                    value: '%UPSTREAM_HOST%'
+                  type: Literal
+                req1:
+                  requestHeader:
+                    defaultValue: '-'
+                    name: X-Request-Id
+                  type: RequestHeader
               provider:
                 host: otel-collector.monitoring.svc.cluster.local
                 port: 4317
@@ -228,6 +247,25 @@ infraIR:
           logging: {}
           telemetry:
             tracing:
+              customTags:
+                env1:
+                  environment:
+                    defaultValue: '-'
+                    name: env1
+                  type: Environment
+                literal1:
+                  literal:
+                    value: value1
+                  type: Literal
+                literal2:
+                  literal:
+                    value: '%UPSTREAM_HOST%'
+                  type: Literal
+                req1:
+                  requestHeader:
+                    defaultValue: '-'
+                    name: X-Request-Id
+                  type: RequestHeader
               provider:
                 host: otel-collector.monitoring.svc.cluster.local
                 port: 4317
@@ -331,6 +369,25 @@ xdsIR:
       port: 19003
     tracing:
       authority: otel-collector.monitoring.svc.cluster.local
+      customTags:
+        env1:
+          environment:
+            defaultValue: '-'
+            name: env1
+          type: Environment
+        literal1:
+          literal:
+            value: value1
+          type: Literal
+        literal2:
+          literal:
+            value: '%UPSTREAM_HOST%'
+          type: Literal
+        req1:
+          requestHeader:
+            defaultValue: '-'
+            name: X-Request-Id
+          type: RequestHeader
       destination:
         metadata:
           kind: EnvoyProxy
@@ -445,6 +502,25 @@ xdsIR:
       port: 19003
     tracing:
       authority: otel-collector.monitoring.svc.cluster.local
+      customTags:
+        env1:
+          environment:
+            defaultValue: '-'
+            name: env1
+          type: Environment
+        literal1:
+          literal:
+            value: value1
+          type: Literal
+        literal2:
+          literal:
+            value: '%UPSTREAM_HOST%'
+          type: Literal
+        req1:
+          requestHeader:
+            defaultValue: '-'
+            name: X-Request-Id
+          type: RequestHeader
       destination:
         metadata:
           kind: EnvoyProxy
