@@ -155,6 +155,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 					ControllerNamespace:     r.ControllerNamespace,
 					GatewayNamespaceMode:    r.EnvoyGateway.GatewayNamespaceMode(),
 					MergeGateways:           gatewayapi.IsMergeGatewaysEnabled(resources),
+					MergeBackends:           gatewayapi.IsMergeBackendsEnabled(resources),
 					WasmCache:               r.wasmCache,
 					RunningOnHost:           r.EnvoyGateway.Provider != nil && r.EnvoyGateway.Provider.IsRunningOnHost(),
 					Logger:                  r.Logger,

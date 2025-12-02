@@ -468,6 +468,14 @@ spec:
                 - Strict
                 - Disabled
                 type: string
+              mergeBackends:
+                description: |-
+                  MergeBackends defines if backends with the same identity across different xRoutes
+                  should be merged to reduce the number of clusters in the Envoy configuration.
+                  When set to true, backends that share the same identity (i.e., same namespace and name)
+                  will be consolidated into a single cluster, even if they are referenced by different HTTPRoutes.
+                  This can help optimize resource usage and improve performance by minimizing redundant clusters.
+                type: boolean
               mergeGateways:
                 description: |-
                   MergeGateways defines if Gateway resources should be merged onto the same Envoy Proxy Infrastructure.

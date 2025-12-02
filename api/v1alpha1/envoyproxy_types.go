@@ -90,6 +90,15 @@ type EnvoyProxySpec struct {
 	// +optional
 	MergeGateways *bool `json:"mergeGateways,omitempty"`
 
+	// MergeBackends defines if backends with the same identity across different xRoutes
+	// should be merged to reduce the number of clusters in the Envoy configuration.
+	// When set to true, backends that share the same identity (i.e., same namespace and name)
+	// will be consolidated into a single cluster, even if they are referenced by different HTTPRoutes.
+	// This can help optimize resource usage and improve performance by minimizing redundant clusters.
+	//
+	// +optional
+	MergeBackends *bool `json:"mergeBackends,omitempty"`
+
 	// Shutdown defines configuration for graceful envoy shutdown process.
 	//
 	// +optional
