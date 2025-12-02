@@ -66,7 +66,7 @@ type TranslatorManager interface {
 type Translator struct {
 	// TranslatorContext holds pre-indexed resource maps for efficient lookup resources
 	// during translation operations.
-	TranslatorContext *TranslatorContext
+	*TranslatorContext
 
 	// GatewayControllerName is the name of the Gateway API controller
 	GatewayControllerName string

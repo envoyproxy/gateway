@@ -93,7 +93,7 @@ func (t *Translator) applyBackendTLSSetting(
 
 	// If the backendRef is a Backend resource, we need to check if it has TLS settings.
 	if KindDerefOr(backendRef.Kind, resource.KindService) == egv1a1.KindBackend {
-		backend := t.TranslatorContext.GetBackend(backendNamespace, string(backendRef.Name))
+		backend := t.GetBackend(backendNamespace, string(backendRef.Name))
 		if backend == nil {
 			return nil, fmt.Errorf("backend %s not found", backendRef.Name)
 		}
@@ -370,7 +370,7 @@ func (t *Translator) processClientTLSSettings(
 			err = fmt.Errorf("ClientCertificateRef Secret is not located in the same namespace as %s. Secret namespace: %s does not match %s namespace: %s", ownerResource, ns, ownerResource, ownerNs)
 			return tlsConfig, err
 		}
-		secret := t.TranslatorContext.GetSecret(ns, string(clientTLS.ClientCertificateRef.Name))
+		secret := t.GetSecret(ns, string(clientTLS.ClientCertificateRef.Name))
 		if secret == nil {
 			err = fmt.Errorf(
 				"failed to locate TLS secret for client auth: %s specified in %s %s",
@@ -474,7 +474,7 @@ func (t *Translator) getCaCertsFromCARefs(
 
 		switch kind {
 		case resource.KindConfigMap:
-			cm := t.TranslatorContext.GetConfigMap(namespace, string(caRef.Name))
+			cm := t.GetConfigMap(namespace, string(caRef.Name))
 			if cm != nil {
 				if crt, dataOk := getOrFirstFromData(cm.Data, caCertKey); dataOk {
 					if ca != "" {
@@ -488,7 +488,7 @@ func (t *Translator) getCaCertsFromCARefs(
 				return nil, fmt.Errorf("configmap %s not found in namespace %s", caRef.Name, namespace)
 			}
 		case resource.KindSecret:
-			secret := t.TranslatorContext.GetSecret(namespace, string(caRef.Name))
+			secret := t.GetSecret(namespace, string(caRef.Name))
 			if secret != nil {
 				if crt, dataOk := getOrFirstFromData(secret.Data, caCertKey); dataOk {
 					if ca != "" {
@@ -502,7 +502,7 @@ func (t *Translator) getCaCertsFromCARefs(
 				return nil, fmt.Errorf("secret %s not found in namespace %s", caRef.Name, namespace)
 			}
 		case resource.KindClusterTrustBundle:
-			ctb := t.TranslatorContext.GetClusterTrustBundle(string(caRef.Name))
+			ctb := t.GetClusterTrustBundle(string(caRef.Name))
 			if ctb != nil {
 				if ca != "" {
 					ca += "\n"

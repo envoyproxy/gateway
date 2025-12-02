@@ -693,7 +693,7 @@ func (t *Translator) getLuaBodyFromLocalObjectReference(
 	valueRef *gwapiv1.LocalObjectReference,
 	policyNs string,
 ) (*string, error) {
-	cm := t.TranslatorContext.GetConfigMap(policyNs, string(valueRef.Name))
+	cm := t.GetConfigMap(policyNs, string(valueRef.Name))
 	if cm != nil {
 		b, dataOk := cm.Data["lua"]
 		switch {

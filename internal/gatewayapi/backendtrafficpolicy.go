@@ -1538,7 +1538,7 @@ func (t *Translator) getCustomResponseBody(
 	policyNs string,
 ) ([]byte, error) {
 	if body != nil && body.Type != nil && *body.Type == egv1a1.ResponseValueTypeValueRef {
-		cm := t.TranslatorContext.GetConfigMap(policyNs, string(body.ValueRef.Name))
+		cm := t.GetConfigMap(policyNs, string(body.ValueRef.Name))
 		if cm != nil {
 			b, dataOk := cm.Data["response.body"]
 			switch {

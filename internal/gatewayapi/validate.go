@@ -184,7 +184,7 @@ func (t *Translator) validateBackendPort(backendRef *gwapiv1a2.BackendRef) statu
 func (t *Translator) validateBackendRefService(backendRef gwapiv1.BackendObjectReference,
 	serviceNamespace string, protocol corev1.Protocol,
 ) status.Error {
-	service := t.TranslatorContext.GetService(serviceNamespace, string(backendRef.Name))
+	service := t.GetService(serviceNamespace, string(backendRef.Name))
 	if service == nil {
 		return status.NewRouteStatusError(
 			fmt.Errorf("service %s/%s not found", serviceNamespace, string(backendRef.Name)),
@@ -212,7 +212,7 @@ func (t *Translator) validateBackendServiceImport(
 	serviceImportNamespace string,
 	protocol corev1.Protocol,
 ) status.Error {
-	serviceImport := t.TranslatorContext.GetServiceImport(serviceImportNamespace, string(backendRef.Name))
+	serviceImport := t.GetServiceImport(serviceImportNamespace, string(backendRef.Name))
 	if serviceImport == nil {
 		return status.NewRouteStatusError(
 			fmt.Errorf("service import %s/%s not found", serviceImportNamespace, backendRef.Name),
@@ -249,7 +249,7 @@ func (t *Translator) validateBackendRefBackend(
 		)
 	}
 
-	backend := t.TranslatorContext.GetBackend(backendNamespace, string(backendRef.Name))
+	backend := t.GetBackend(backendNamespace, string(backendRef.Name))
 	if backend == nil {
 		return status.NewRouteStatusError(
 			fmt.Errorf("Backend %s/%s not found", backendNamespace, backendRef.Name),
@@ -426,7 +426,7 @@ func (t *Translator) validateTerminateModeAndGetTLSSecrets(
 			secretNamespace = string(*certificateRef.Namespace)
 		}
 
-		secret := t.TranslatorContext.GetSecret(secretNamespace, string(certificateRef.Name))
+		secret := t.GetSecret(secretNamespace, string(certificateRef.Name))
 
 		if secret == nil {
 			status.SetGatewayListenerStatusCondition(listener.gateway.Gateway,
@@ -863,7 +863,7 @@ func (t *Translator) validateSecretRef(
 	if secretObjRef.Namespace != nil {
 		secretNamespace = string(*secretObjRef.Namespace)
 	}
-	secret := t.TranslatorContext.GetSecret(secretNamespace, string(secretObjRef.Name))
+	secret := t.GetSecret(secretNamespace, string(secretObjRef.Name))
 
 	if secret == nil {
 		return nil, fmt.Errorf(
@@ -887,7 +887,7 @@ func (t *Translator) validateConfigMapRef(
 	if secretObjRef.Namespace != nil {
 		configMapNamespace = string(*secretObjRef.Namespace)
 	}
-	configMap := t.TranslatorContext.GetConfigMap(configMapNamespace, string(secretObjRef.Name))
+	configMap := t.GetConfigMap(configMapNamespace, string(secretObjRef.Name))
 
 	if configMap == nil {
 		return nil, fmt.Errorf(
@@ -983,7 +983,7 @@ func (t *Translator) validateExtServiceBackendReference(
 	case resource.KindService:
 		// check if the service is valid
 		serviceNamespace := NamespaceDerefOr(backendRef.Namespace, ownerNamespace)
-		service := t.TranslatorContext.GetService(serviceNamespace, string(backendRef.Name))
+		service := t.GetService(serviceNamespace, string(backendRef.Name))
 		if service == nil {
 			return fmt.Errorf("service %s/%s not found", serviceNamespace, backendRef.Name)
 		}
@@ -1006,7 +1006,7 @@ func (t *Translator) validateExtServiceBackendReference(
 	case resource.KindServiceImport:
 		// check if the service import is valid
 		serviceImportNamespace := NamespaceDerefOr(backendRef.Namespace, ownerNamespace)
-		serviceImport := t.TranslatorContext.GetServiceImport(serviceImportNamespace, string(backendRef.Name))
+		serviceImport := t.GetServiceImport(serviceImportNamespace, string(backendRef.Name))
 		if serviceImport == nil {
 			return fmt.Errorf("serviceimport %s/%s not found", serviceImportNamespace, backendRef.Name)
 		}
@@ -1028,7 +1028,7 @@ func (t *Translator) validateExtServiceBackendReference(
 		}
 	case egv1a1.KindBackend:
 		backendNamespace := NamespaceDerefOr(backendRef.Namespace, ownerNamespace)
-		backend := t.TranslatorContext.GetBackend(backendNamespace, string(backendRef.Name))
+		backend := t.GetBackend(backendNamespace, string(backendRef.Name))
 		if backend == nil {
 			return fmt.Errorf("backend %s/%s not found", backendNamespace, backendRef.Name)
 		}

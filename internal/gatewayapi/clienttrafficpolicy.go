@@ -898,7 +898,7 @@ func (t *Translator) validateAndGetDataAtKeyInRef(
 		}
 		return []byte(configMapData), nil
 	case resource.KindClusterTrustBundle:
-		trustBundle := t.TranslatorContext.GetClusterTrustBundle(string(ref.Name))
+		trustBundle := t.GetClusterTrustBundle(string(ref.Name))
 		if trustBundle == nil {
 			return nil, fmt.Errorf("ref ClusterTrustBundle [%s] not found", ref.Name)
 		}

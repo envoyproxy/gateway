@@ -1658,7 +1658,7 @@ func (t *Translator) processDestination(name string, backendRefContext BackendRe
 		if err != nil {
 			return emptyDS, nil, err
 		}
-		svc := t.TranslatorContext.GetService(backendNamespace, string(backendRef.Name))
+		svc := t.GetService(backendNamespace, string(backendRef.Name))
 		ds.IPFamily = getServiceIPFamily(svc)
 		ds.PreferLocal = processPreferLocalZone(svc)
 	case egv1a1.KindBackend:
@@ -1752,7 +1752,7 @@ func (t *Translator) processServiceImportDestinationSetting(
 		addrType  *ir.DestinationAddressType
 	)
 
-	serviceImport := t.TranslatorContext.GetServiceImport(backendNamespace, string(backendRef.Name))
+	serviceImport := t.GetServiceImport(backendNamespace, string(backendRef.Name))
 	var servicePort mcsapiv1a1.ServicePort
 	for _, port := range serviceImport.Spec.Ports {
 		if port.Port == *backendRef.Port {
@@ -1767,7 +1767,7 @@ func (t *Translator) processServiceImportDestinationSetting(
 
 	// Route to endpoints by default
 	if !t.IsEnvoyServiceRouting(envoyProxy) {
-		endpointSlices := t.TranslatorContext.GetEndpointSlicesForBackend(backendNamespace, string(backendRef.Name), resource.KindServiceImport)
+		endpointSlices := t.GetEndpointSlicesForBackend(backendNamespace, string(backendRef.Name), resource.KindServiceImport)
 		endpoints, addrType = getIREndpointsFromEndpointSlices(endpointSlices, servicePort.Name, getServicePortProtocol(servicePort.Protocol))
 		if len(endpoints) == 0 {
 			return nil, status.NewRouteStatusError(
@@ -1777,7 +1777,7 @@ func (t *Translator) processServiceImportDestinationSetting(
 		}
 	} else {
 		// Fall back to Service ClusterIP routing
-		backendIps := t.TranslatorContext.GetServiceImport(backendNamespace, string(backendRef.Name)).Spec.IPs
+		backendIps := t.GetServiceImport(backendNamespace, string(backendRef.Name)).Spec.IPs
 		for _, ip := range backendIps {
 			ep := ir.NewDestEndpoint(nil, ip, uint32(*backendRef.Port), false, nil)
 			endpoints = append(endpoints, ep)
@@ -1805,7 +1805,7 @@ func (t *Translator) processServiceDestinationSetting(
 		addrType  *ir.DestinationAddressType
 	)
 
-	service := t.TranslatorContext.GetService(backendNamespace, string(backendRef.Name))
+	service := t.GetService(backendNamespace, string(backendRef.Name))
 	var servicePort corev1.ServicePort
 	for _, port := range service.Spec.Ports {
 		if port.Port == *backendRef.Port {
@@ -1821,7 +1821,7 @@ func (t *Translator) processServiceDestinationSetting(
 
 	// Route to endpoints by default
 	if !t.IsEnvoyServiceRouting(envoyProxy) {
-		endpointSlices := t.TranslatorContext.GetEndpointSlicesForBackend(backendNamespace, string(backendRef.Name), KindDerefOr(backendRef.Kind, resource.KindService))
+		endpointSlices := t.GetEndpointSlicesForBackend(backendNamespace, string(backendRef.Name), KindDerefOr(backendRef.Kind, resource.KindService))
 		endpoints, addrType = getIREndpointsFromEndpointSlices(endpointSlices, servicePort.Name, getServicePortProtocol(servicePort.Protocol))
 		if len(endpoints) == 0 {
 			return nil, status.NewRouteStatusError(
@@ -1995,7 +1995,7 @@ func (t *Translator) processAllowedListenersForParentRefs(
 		for _, listener := range selectedListeners {
 			acceptedKind := routeContext.GetRouteType()
 			if listener.AllowsKind(gwapiv1.RouteGroupKind{Group: GroupPtr(gwapiv1.GroupName), Kind: acceptedKind}) &&
-				listener.AllowsNamespace(t.TranslatorContext.GetNamespace(routeContext.GetNamespace())) {
+				listener.AllowsNamespace(t.GetNamespace(routeContext.GetNamespace())) {
 				allowedListeners = append(allowedListeners, listener)
 			}
 		}
@@ -2177,7 +2177,7 @@ func (t *Translator) getTargetBackendReference(
 
 	switch {
 	case backendRef.Kind == nil || *backendRef.Kind == resource.KindService:
-		if service := t.TranslatorContext.GetService(backendNamespace, string(backendRef.Name)); service != nil {
+		if service := t.GetService(backendNamespace, string(backendRef.Name)); service != nil {
 			for _, port := range service.Spec.Ports {
 				if port.Port == *backendRef.Port {
 					if port.Name != "" {
@@ -2189,7 +2189,7 @@ func (t *Translator) getTargetBackendReference(
 		}
 
 	case *backendRef.Kind == resource.KindServiceImport:
-		if si := t.TranslatorContext.GetServiceImport(backendNamespace, string(backendRef.Name)); si != nil {
+		if si := t.GetServiceImport(backendNamespace, string(backendRef.Name)); si != nil {
 			for _, port := range si.Spec.Ports {
 				if port.Port == *backendRef.Port {
 					if port.Name != "" {
@@ -2217,7 +2217,7 @@ func (t *Translator) processBackendDestinationSetting(
 	var dstAddrType *ir.DestinationAddressType
 
 	addrTypeMap := make(map[ir.DestinationAddressType]int)
-	backend := t.TranslatorContext.GetBackend(backendNamespace, string(backendRef.Name))
+	backend := t.GetBackend(backendNamespace, string(backendRef.Name))
 	for _, ap := range backend.Spec.AppProtocols {
 		protocol = backendAppProtocolToIRAppProtocol(ap, protocol)
 	}
