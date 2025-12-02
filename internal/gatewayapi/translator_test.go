@@ -131,6 +131,10 @@ func TestTranslate(t *testing.T) {
 				epSliceName := "endpointslice-" + strconv.Itoa(i)
 
 				svc := &corev1.Service{
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: "v1",
+						Kind:       "Service",
+					},
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "default",
 						Name:      svcName,
@@ -171,6 +175,10 @@ func TestTranslate(t *testing.T) {
 				resources.Services = append(resources.Services, svc)
 
 				endptSlice := &discoveryv1.EndpointSlice{
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: "discovery.k8s.io/v1",
+						Kind:       "EndpointSlice",
+					},
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      epSliceName,
 						Namespace: "default",
@@ -224,6 +232,10 @@ func TestTranslate(t *testing.T) {
 			}
 			resources.Services = append(resources.Services,
 				&corev1.Service{
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: "v1",
+						Kind:       "Service",
+					},
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "default",
 						Name:      "mirror-service",
@@ -243,6 +255,10 @@ func TestTranslate(t *testing.T) {
 			)
 			resources.EndpointSlices = append(resources.EndpointSlices,
 				&discoveryv1.EndpointSlice{
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: "discovery.k8s.io/v1",
+						Kind:       "EndpointSlice",
+					},
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "mirror-service-endpointslice",
 						Namespace: "default",
@@ -274,6 +290,10 @@ func TestTranslate(t *testing.T) {
 			// add otel-collector service
 			resources.Services = append(resources.Services,
 				&corev1.Service{
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: "v1",
+						Kind:       "Service",
+					},
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "monitoring",
 						Name:      "otel-collector",
@@ -300,6 +320,10 @@ func TestTranslate(t *testing.T) {
 			)
 			resources.EndpointSlices = append(resources.EndpointSlices,
 				&discoveryv1.EndpointSlice{
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: "discovery.k8s.io/v1",
+						Kind:       "EndpointSlice",
+					},
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "otel-collector-endpointslice",
 						Namespace: "monitoring",
@@ -334,6 +358,10 @@ func TestTranslate(t *testing.T) {
 			)
 
 			svc := corev1.Service{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "v1",
+					Kind:       "Service",
+				},
 				ObjectMeta: metav1.ObjectMeta{
 					// Matches proxy.ExpectedResourceHashedName()
 					Name:      fmt.Sprintf("%s-%s", config.EnvoyPrefix, utils.GetHashedName(string(translator.GatewayClassName), 48)),
@@ -354,6 +382,10 @@ func TestTranslate(t *testing.T) {
 			}
 
 			endPtSlice := discoveryv1.EndpointSlice{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "discovery.k8s.io/v1",
+					Kind:       "EndpointSlice",
+				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      svc.Name,
 					Namespace: svc.Namespace,
@@ -412,10 +444,18 @@ func TestTranslate(t *testing.T) {
 			}
 
 			resources.Namespaces = append(resources.Namespaces, &corev1.Namespace{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "v1",
+					Kind:       "Namespace",
+				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "envoy-gateway",
 				},
 			}, &corev1.Namespace{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "v1",
+					Kind:       "Namespace",
+				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "default",
 				},
@@ -481,6 +521,10 @@ func TestTranslateWithExtensionKinds(t *testing.T) {
 				epSliceName := "endpointslice-" + strconv.Itoa(i)
 				resources.Services = append(resources.Services,
 					&corev1.Service{
+						TypeMeta: metav1.TypeMeta{
+							APIVersion: "v1",
+							Kind:       "Service",
+						},
 						ObjectMeta: metav1.ObjectMeta{
 							Namespace: "default",
 							Name:      svcName,
@@ -518,6 +562,10 @@ func TestTranslateWithExtensionKinds(t *testing.T) {
 				)
 				resources.EndpointSlices = append(resources.EndpointSlices,
 					&discoveryv1.EndpointSlice{
+						TypeMeta: metav1.TypeMeta{
+							APIVersion: "discovery.k8s.io/v1",
+							Kind:       "EndpointSlice",
+						},
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      epSliceName,
 							Namespace: "default",
@@ -564,6 +612,10 @@ func TestTranslateWithExtensionKinds(t *testing.T) {
 
 			resources.Services = append(resources.Services,
 				&corev1.Service{
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: "v1",
+						Kind:       "Service",
+					},
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "default",
 						Name:      "mirror-service",
@@ -582,6 +634,10 @@ func TestTranslateWithExtensionKinds(t *testing.T) {
 			)
 			resources.EndpointSlices = append(resources.EndpointSlices,
 				&discoveryv1.EndpointSlice{
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: "discovery.k8s.io/v1",
+						Kind:       "EndpointSlice",
+					},
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "mirror-service-endpointslice",
 						Namespace: "default",
@@ -611,6 +667,10 @@ func TestTranslateWithExtensionKinds(t *testing.T) {
 			)
 
 			svc := corev1.Service{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "v1",
+					Kind:       "Service",
+				},
 				ObjectMeta: metav1.ObjectMeta{
 					// Matches proxy.ExpectedResourceHashedName()
 					Name:      fmt.Sprintf("%s-%s", config.EnvoyPrefix, utils.GetHashedName(string(translator.GatewayClassName), 48)),
@@ -631,6 +691,10 @@ func TestTranslateWithExtensionKinds(t *testing.T) {
 			}
 
 			endPtSlice := discoveryv1.EndpointSlice{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "discovery.k8s.io/v1",
+					Kind:       "EndpointSlice",
+				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      svc.Name,
 					Namespace: svc.Namespace,
@@ -687,10 +751,18 @@ func TestTranslateWithExtensionKinds(t *testing.T) {
 			}
 
 			resources.Namespaces = append(resources.Namespaces, &corev1.Namespace{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "v1",
+					Kind:       "Namespace",
+				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "envoy-gateway",
 				},
 			}, &corev1.Namespace{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "v1",
+					Kind:       "Namespace",
+				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "default",
 				},

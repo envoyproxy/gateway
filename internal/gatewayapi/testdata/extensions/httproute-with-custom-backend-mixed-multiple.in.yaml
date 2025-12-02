@@ -56,31 +56,6 @@ httpRoutes:
         port: 443
       - name: service-2
         port: 8080
-services:
-- apiVersion: v1
-  kind: Service
-  metadata:
-    namespace: default
-    name: service-1
-  spec:
-    clusterIP: 10.11.12.13
-    ports:
-    - port: 8080
-      name: http
-      protocol: TCP
-      targetPort: 3000
-- apiVersion: v1
-  kind: Service
-  metadata:
-    namespace: default
-    name: service-2
-  spec:
-    clusterIP: 10.11.12.14
-    ports:
-    - port: 8080
-      name: http
-      protocol: TCP
-      targetPort: 3000
 extensionRefFilters:
 - apiVersion: storage.example.io/v1alpha1
   kind: S3Backend
