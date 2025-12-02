@@ -49,27 +49,27 @@ func convertCaseReport(report *BenchmarkCaseReport) *JSONTestResult {
 		if stat.Id == "benchmark_http_client.latency_2xx" {
 			totalRequest = int(stat.Count)
 			throughput = float64(stat.Count) / float64(seconds)
-			latency.Pstdev = float64(stat.GetPstdev().Seconds * 1000)
-			latency.Max = float64(stat.GetMax().Seconds * 1000)
-			latency.Min = float64(stat.GetMin().Seconds * 1000)
-			latency.Mean = float64(stat.GetMean().Seconds * 1000)
+			latency.Pstdev = stat.GetPstdev().AsDuration().Seconds() * 1000
+			latency.Max = stat.GetMax().AsDuration().Seconds() * 1000
+			latency.Min = stat.GetMin().AsDuration().Seconds() * 1000
+			latency.Mean = stat.GetMean().AsDuration().Seconds() * 1000
 			latency.Percentiles = Percentiles{}
 			for _, p := range stat.Percentiles {
 				switch p.Percentile {
 				case 0.5:
-					latency.Percentiles.P50 = float64(p.GetDuration().Seconds * 1000)
+					latency.Percentiles.P50 = p.GetDuration().AsDuration().Seconds() * 1000
 				case 0.75:
-					latency.Percentiles.P75 = float64(p.GetDuration().Seconds * 1000)
+					latency.Percentiles.P75 = p.GetDuration().AsDuration().Seconds() * 1000
 				case 0.8:
-					latency.Percentiles.P80 = float64(p.GetDuration().Seconds * 1000)
+					latency.Percentiles.P80 = p.GetDuration().AsDuration().Seconds() * 1000
 				case 0.9:
-					latency.Percentiles.P90 = float64(p.GetDuration().Seconds * 1000)
+					latency.Percentiles.P90 = p.GetDuration().AsDuration().Seconds() * 1000
 				case 0.95:
-					latency.Percentiles.P95 = float64(p.GetDuration().Seconds * 1000)
+					latency.Percentiles.P95 = p.GetDuration().AsDuration().Seconds() * 1000
 				case 0.99:
-					latency.Percentiles.P99 = float64(p.GetDuration().Seconds * 1000)
+					latency.Percentiles.P99 = p.GetDuration().AsDuration().Seconds() * 1000
 				case 0.999:
-					latency.Percentiles.P999 = float64(p.GetDuration().Seconds * 1000)
+					latency.Percentiles.P999 = p.GetDuration().AsDuration().Seconds() * 1000
 				}
 			}
 		}
