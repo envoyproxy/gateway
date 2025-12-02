@@ -7,6 +7,10 @@ tracing:
       type: Literal
       literal:
         value: "value1"
+    "literal2":
+      type: Literal
+      literal:
+        value: "%UPSTREAM_HOST%"
     "env1":
       type: Environment
       environment:

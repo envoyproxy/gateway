@@ -36,9 +36,10 @@
               defaultValue: '-'
               name: env1
             tag: env1
-          - literal:
-              value: value1
-            tag: literal1
+          - tag: literal1
+            value: value1
+          - tag: literal2
+            value: '%UPSTREAM_HOST%'
           - requestHeader:
               defaultValue: '-'
               name: X-Request-Id

@@ -111,14 +111,14 @@ type CustomTag struct {
 	// RequestHeader adds value from request header to each span.
 	// It's required when the type is "RequestHeader".
 	RequestHeader *RequestHeaderCustomTag `json:"requestHeader,omitempty"`
-
-	// TODO: add support for Metadata tags in the future.
-	// EG currently doesn't support metadata for route or cluster.
 }
 
 // LiteralCustomTag adds hard-coded value to each span.
 type LiteralCustomTag struct {
 	// Value defines the hard-coded value to add to each span.
+	//
+	// [Accesslog substitution formatter](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators) is supported.
+	//
 	Value string `json:"value"`
 }
 

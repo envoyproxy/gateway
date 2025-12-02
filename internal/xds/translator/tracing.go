@@ -156,10 +156,8 @@ func buildTracingTags(tracingTags map[string]egv1a1.CustomTag) ([]*tracingtype.C
 		case egv1a1.CustomTagTypeLiteral:
 			tags = append(tags, &tracingtype.CustomTag{
 				Tag: k,
-				Type: &tracingtype.CustomTag_Literal_{
-					Literal: &tracingtype.CustomTag_Literal{
-						Value: v.Literal.Value,
-					},
+				Type: &tracingtype.CustomTag_Value{
+					Value: v.Literal.Value,
 				},
 			})
 		case egv1a1.CustomTagTypeEnvironment:
