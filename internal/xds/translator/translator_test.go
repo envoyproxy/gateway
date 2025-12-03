@@ -298,6 +298,7 @@ func TestTranslateXdsWithExtensionErrorsWhenFailOpen(t *testing.T) {
 		"http-route-extension-translate-error":             {},
 		"multiple-listeners-same-port-error":               {},
 		"http-route-custom-backend":                        {},
+		"http-route-custom-backend-tls":                    {},
 		"http-route-custom-backends-multiple":              {},
 		"http-route-custom-backends-partial":               {},
 		"http-route-custom-backend-error":                  {},

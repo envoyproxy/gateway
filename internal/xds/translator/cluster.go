@@ -249,7 +249,7 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 			matchName := fmt.Sprintf("%s/tls/%d", args.name, i)
 
 			// Dynamic resolver clusters have no endpoints, so we need to set the transport socket directly.
-			if args.endpointType == EndpointTypeDynamicResolver {
+			if args.endpointType == EndpointTypeDynamicResolver || ds.IsCustomBackend {
 				cluster.TransportSocket = socket
 			} else {
 				cluster.TransportSocketMatches = append(cluster.TransportSocketMatches, &clusterv3.Cluster_TransportSocketMatch{
