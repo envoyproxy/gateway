@@ -90,7 +90,7 @@ httpRoutes:
       - lastTransitionTime: null
         message: 'Dropped Rule(s) [0]: RequestMirror filter cannot be used when the
           rule also configures a DirectResponse filter.'
-        reason: UnsupportedValue
+        reason: IncompatibleFilters
         status: "True"
         type: PartiallyInvalid
       - lastTransitionTime: null
@@ -231,66 +231,31 @@ xdsIR:
           value:
           - text/plain
         directResponse:
-          body: YmxvY2tlZA==
-          statusCode: 404
+          statusCode: 500
         hostname: gateway.envoyproxy.io
         isHTTP2: false
         metadata:
           kind: HTTPRoute
           name: mirror-direct-response
           namespace: default
-        mirrors:
-        - destination:
-            name: httproute/default/mirror-direct-response/rule/0-mirror-0
-            settings:
-            - addressType: IP
-              endpoints:
-              - host: 7.7.7.7
-                port: 8080
-              metadata:
-                kind: Service
-                name: service-1
-                namespace: default
-                sectionName: "8080"
-              name: httproute/default/mirror-direct-response/rule/0-mirror-0/backend/-1
-              protocol: HTTP
-              weight: 1
         name: httproute/default/mirror-direct-response/rule/0/match/0/gateway_envoyproxy_io
         pathMatch:
           distinct: false
           name: ""
           prefix: /mirror-direct-response
-      - hostname: gateway.envoyproxy.io
+      - directResponse:
+          statusCode: 500
+        hostname: gateway.envoyproxy.io
         isHTTP2: false
         metadata:
           kind: HTTPRoute
           name: mirror-request-redirect
           namespace: default
-        mirrors:
-        - destination:
-            name: httproute/default/mirror-request-redirect/rule/0-mirror-0
-            settings:
-            - addressType: IP
-              endpoints:
-              - host: 7.7.7.7
-                port: 8080
-              metadata:
-                kind: Service
-                name: service-1
-                namespace: default
-                sectionName: "8080"
-              name: httproute/default/mirror-request-redirect/rule/0-mirror-0/backend/-1
-              protocol: HTTP
-              weight: 1
         name: httproute/default/mirror-request-redirect/rule/0/match/0/gateway_envoyproxy_io
         pathMatch:
           distinct: false
           name: ""
           prefix: /mirror-redirect
-        redirect:
-          port: 443
-          scheme: https
-          statusCode: 302
       - destination:
           metadata:
             kind: HTTPRoute
