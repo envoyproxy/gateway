@@ -135,12 +135,20 @@ func (t *Translator) ProcessHTTPFilters(
 
 	// Check for conflicts between RequestMirror and DirectResponse or RequestRedirect filters
 	if httpFiltersContext.DirectResponse != nil && len(httpFiltersContext.Mirrors) > 0 {
+		// Clear the DirectResponse to prevent it from being configured in the IR
+		httpFiltersContext.DirectResponse = nil
+		httpFiltersContext.Mirrors = nil
+
 		errs.Add(status.NewRouteStatusError(
 			errors.New(requestMirrorDirectResponseConflictMsg),
 			gwapiv1.RouteReasonIncompatibleFilters,
 		).WithType(gwapiv1.RouteConditionAccepted))
 	}
 	if httpFiltersContext.RedirectResponse != nil && len(httpFiltersContext.Mirrors) > 0 {
+		// Clear the RedirectResponse to prevent it from being configured in the IR
+		httpFiltersContext.RedirectResponse = nil
+		httpFiltersContext.Mirrors = nil
+		
 		errs.Add(status.NewRouteStatusError(
 			errors.New(requestMirrorRedirectConflictMsg),
 			gwapiv1.RouteReasonIncompatibleFilters,
