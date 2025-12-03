@@ -3587,7 +3587,7 @@ spec:
                       removeOnMatch:
                         description: |-
                           RemoveOnMatch removes headers whose names match the specified string matchers.
-                          Matching is performed on the header name (case-insensitive) before any add/set mutations.
+                          Matching is performed on the header name (case-insensitive).
                         items:
                           description: |-
                             StringMatch defines how to match any strings.
@@ -3752,7 +3752,7 @@ spec:
                       removeOnMatch:
                         description: |-
                           RemoveOnMatch removes headers whose names match the specified string matchers.
-                          Matching is performed on the header name (case-insensitive) before any add/set mutations.
+                          Matching is performed on the header name (case-insensitive).
                         items:
                           description: |-
                             StringMatch defines how to match any strings.
