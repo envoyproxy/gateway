@@ -120,7 +120,7 @@ httpRoutes:
         type: Accepted
       - lastTransitionTime: null
         message: 'Unable to translate HTTPRouteFilter: default/direct-response-value-ref-not-found.'
-        reason: BackendNotFound
+        reason: UnsupportedValue
         status: "False"
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller

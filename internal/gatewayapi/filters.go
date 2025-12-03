@@ -1072,8 +1072,8 @@ func (t *Translator) processCORSFilter(
 }
 
 // Unresolvable or unsupported filters should be treated like other reference failures:
-// (`Accepted` will be set to true, `ResolvedRefs` to false with a `InvalidKind` Reason,
-// and traffic that would have matched the filter should receive a 500 error.)
+// (`Accepted` will be set to true, `ResolvedRefs` to false, and traffic that would have
+// matched the filter should receive a 500 error.)
 // ref: https://gateway-api.sigs.k8s.io/geps/gep-1364/#new-and-updated-conditions
 func (t *Translator) processUnresolvedHTTPFilter(errMsg string, filterContext *HTTPFiltersContext) status.Error {
 	t.Logger.Info("marking route unresolved due to HTTP filter error", "error", errMsg)
@@ -1082,13 +1082,13 @@ func (t *Translator) processUnresolvedHTTPFilter(errMsg string, filterContext *H
 	}
 	return status.NewRouteStatusError(
 		errors.New(errMsg),
-		gwapiv1.RouteReasonBackendNotFound,
+		gwapiv1.RouteReasonUnsupportedValue,
 	).WithType(gwapiv1.RouteConditionResolvedRefs)
 }
 
 // Unresolvable or unsupported filters should be treated like other reference failures:
-// (`Accepted` will be set to true, `ResolvedRefs` to false with a `InvalidKind` Reason,
-// and traffic that would have matched the filter should receive a 500 error.)
+// (`Accepted` will be set to true, `ResolvedRefs` to false, and traffic that would have
+// matched the filter should receive a 500 error.)
 // ref: https://gateway-api.sigs.k8s.io/geps/gep-1364/#new-and-updated-conditions
 func (t *Translator) processUnsupportedHTTPFilter(filterType string, filterContext *HTTPFiltersContext) status.Error {
 	t.Logger.Info("marking route unsupported due to HTTP filter type", "filterType", filterType)
