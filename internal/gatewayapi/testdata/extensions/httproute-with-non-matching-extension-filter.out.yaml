@@ -75,7 +75,7 @@ httpRoutes:
         type: Accepted
       - lastTransitionTime: null
         message: 'Reference default/example not found for filter type: Foo.'
-        reason: BackendNotFound
+        reason: UnsupportedValue
         status: "False"
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
