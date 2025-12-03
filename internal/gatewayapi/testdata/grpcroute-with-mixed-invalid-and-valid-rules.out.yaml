@@ -201,6 +201,32 @@ xdsIR:
           distinct: false
           name: ""
           safeRegex: /(?i)\.?[a-z_][a-z_0-9]*(\.[a-z_][a-z_0-9]*)*/FooBar[0-9]+
+      - directResponse:
+          statusCode: 500
+        headerMatches:
+        - distinct: false
+          name: :path
+          suffix: /ExampleExact
+        hostname: '*'
+        isHTTP2: true
+        metadata:
+          kind: GRPCRoute
+          name: grpcroute-1
+          namespace: default
+        name: grpcroute/default/grpcroute-1/rule/0/match/0/*
+      - directResponse:
+          statusCode: 500
+        headerMatches:
+        - distinct: false
+          name: :path
+          suffix: /ExampleExact
+        hostname: '*'
+        isHTTP2: true
+        metadata:
+          kind: GRPCRoute
+          name: grpcroute-1
+          namespace: default
+        name: grpcroute/default/grpcroute-1/rule/2/match/0/*
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
