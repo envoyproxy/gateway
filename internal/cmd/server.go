@@ -56,7 +56,9 @@ func GetServerCommand(asyncErrHandler func(string, error)) *cobra.Command {
 			go message.HandleSubscription(message.Metadata{Runner: "runner-errors", Message: message.RunnerErrorsMessageName},
 				runnerErrors.Subscribe(cmd.Context()),
 				func(update message.Update[string, message.WatchableError], _ chan error) {
-					asyncErrHandler(update.Key, update.Value)
+					if asyncErrHandler != nil {
+						asyncErrHandler(update.Key, update.Value)
+					}
 				},
 			)
 			return server(cmd.Context(), cmd.OutOrStdout(), cmd.ErrOrStderr(), runnerErrors)
