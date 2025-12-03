@@ -116,7 +116,13 @@ spec:
 			return
 		}
 
-		_, err = egctl.TranslateGatewayAPIToXds("default", "cluster.local", "all", rs)
+		opts := &egctl.TranslationOptions{
+			GlobalRateLimitEnabled:  true,
+			EndpointRoutingDisabled: true,
+			EnvoyPatchPolicyEnabled: true,
+			BackendEnabled:          true,
+		}
+		_, err = egctl.TranslateGatewayAPIToXds("default", "cluster.local", "all", rs, opts)
 		if err != nil && strings.Contains(err.Error(), "failed to translate xds") {
 			t.Fatalf("%v", err)
 		}
