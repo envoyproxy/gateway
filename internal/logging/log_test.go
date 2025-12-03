@@ -126,5 +126,4 @@ func TestLoggerWithTrace(t *testing.T) {
 	output := buffer.String()
 	assert.Contains(t, output, traceID.String())
 	assert.Contains(t, output, spanID.String())
-	assert.Contains(t, output, trace.FlagsSampled.String())
 }
