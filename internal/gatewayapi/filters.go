@@ -70,7 +70,8 @@ type HTTPFilterIR struct {
 var HeaderValueRegexp = regexp.MustCompile(`^[!-~]+([\t ]?[!-~]+)*$`)
 
 // ProcessHTTPFilters translates gateway api http filters to IRs.
-func (t *Translator) ProcessHTTPFilters(parentRef *RouteParentContext,
+func (t *Translator) ProcessHTTPFilters(
+	parentRef *RouteParentContext,
 	route RouteContext,
 	filters []gwapiv1.HTTPRouteFilter,
 	ruleIdx int,
@@ -131,7 +132,8 @@ func (t *Translator) ProcessHTTPFilters(parentRef *RouteParentContext,
 }
 
 // ProcessGRPCFilters translates gateway api grpc filters to IRs.
-func (t *Translator) ProcessGRPCFilters(parentRef *RouteParentContext,
+func (t *Translator) ProcessGRPCFilters(
+	parentRef *RouteParentContext,
 	route RouteContext,
 	filters []gwapiv1.GRPCRouteFilter,
 	resources *resource.Resources,
@@ -853,7 +855,7 @@ func (t *Translator) processExtensionRefHTTPFilter(extFilter *gwapiv1.LocalObjec
 					dr := &ir.CustomResponse{}
 					if hrf.Spec.DirectResponse.Body != nil {
 						var err error
-						if dr.Body, err = getCustomResponseBody(hrf.Spec.DirectResponse.Body, resources, filterNs); err != nil {
+						if dr.Body, err = t.getCustomResponseBody(hrf.Spec.DirectResponse.Body, filterNs); err != nil {
 							return t.processInvalidHTTPFilter(string(extFilter.Kind), filterContext, err)
 						}
 					}
