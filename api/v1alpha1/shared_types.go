@@ -979,4 +979,11 @@ type HTTPHeaderFilter struct {
 	// +listType=set
 	// +kubebuilder:validation:MaxItems=64
 	Remove []string `json:"remove,omitempty"`
+
+	// RemoveOnMatch removes headers whose names match the specified string matchers.
+	// Matching is performed on the header name (case-insensitive) before any add/set mutations.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxItems=64
+	RemoveOnMatch []StringMatch `json:"removeOnMatch,omitempty"`
 }

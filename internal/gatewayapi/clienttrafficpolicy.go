@@ -668,21 +668,23 @@ func translateListenerHeaderSettings(headerSettings *egv1a1.HeaderSettings, http
 	var errs error
 
 	if headerSettings.EarlyRequestHeaders != nil {
-		headersToAdd, headersToRemove, err := translateHeaderModifier(headerSettings.EarlyRequestHeaders, "EarlyRequestHeaders")
+		headersToAdd, headersToRemove, removeOnMatch, err := translateHeaderModifier(headerSettings.EarlyRequestHeaders, "EarlyRequestHeaders")
 		if err != nil {
 			errs = errors.Join(errs, err)
 		}
 		httpIR.Headers.EarlyAddRequestHeaders = headersToAdd
 		httpIR.Headers.EarlyRemoveRequestHeaders = headersToRemove
+		httpIR.Headers.EarlyRemoveRequestHeadersOnMatch = removeOnMatch
 	}
 
 	if headerSettings.LateResponseHeaders != nil {
-		headersToAdd, headersToRemove, err := translateHeaderModifier(headerSettings.LateResponseHeaders, "LateResponseHeaders")
+		headersToAdd, headersToRemove, removeOnMatch, err := translateHeaderModifier(headerSettings.LateResponseHeaders, "LateResponseHeaders")
 		if err != nil {
 			errs = errors.Join(errs, err)
 		}
 		httpIR.Headers.LateAddResponseHeaders = headersToAdd
 		httpIR.Headers.LateRemoveResponseHeaders = headersToRemove
+		httpIR.Headers.LateRemoveResponseHeadersOnMatch = removeOnMatch
 	}
 
 	return errs
@@ -996,16 +998,17 @@ func buildConnection(connection *egv1a1.ClientConnection) (*ir.ClientConnection,
 	return irConnection, nil
 }
 
-func translateHeaderModifier(headerModifier *egv1a1.HTTPHeaderFilter, modType string) ([]ir.AddHeader, []string, error) {
+func translateHeaderModifier(headerModifier *egv1a1.HTTPHeaderFilter, modType string) ([]ir.AddHeader, []string, []*ir.StringMatch, error) {
 	// Make sure the header modifier config actually exists
 	if headerModifier == nil {
-		return nil, nil, nil
+		return nil, nil, nil, nil
 	}
 	var errs error
 	emptyFilterConfig := true // keep track of whether the provided config is empty or not
 
 	var AddRequestHeaders []ir.AddHeader
 	var RemoveRequestHeaders []string
+	var RemoveRequestHeadersOnMatch []*ir.StringMatch
 
 	// Add request headers
 	if headersToAdd := headerModifier.Add; headersToAdd != nil {
@@ -1125,10 +1128,24 @@ func translateHeaderModifier(headerModifier *egv1a1.HTTPHeaderFilter, modType st
 		}
 	}
 
+	if matches := headerModifier.RemoveOnMatch; matches != nil {
+		if len(matches) > 0 {
+			emptyFilterConfig = false
+		}
+		for _, match := range matches {
+			// This is just a sanity check, since the CRD validation should prevent this from happening
+			if match.Value == "" {
+				errs = errors.Join(errs, fmt.Errorf("%s cannot remove a header with an empty matcher value", modType))
+				continue
+			}
+			RemoveRequestHeadersOnMatch = append(RemoveRequestHeadersOnMatch, irStringMatch("", match))
+		}
+	}
+
 	// Update the status if the filter failed to configure any valid headers to add/remove
-	if len(AddRequestHeaders) == 0 && len(RemoveRequestHeaders) == 0 && !emptyFilterConfig {
+	if len(AddRequestHeaders) == 0 && len(RemoveRequestHeaders) == 0 && len(RemoveRequestHeadersOnMatch) == 0 && !emptyFilterConfig {
 		errs = errors.Join(errs, fmt.Errorf("%s did not provide valid configuration to add/set/remove any headers", modType))
 	}
 
-	return AddRequestHeaders, RemoveRequestHeaders, errs
+	return AddRequestHeaders, RemoveRequestHeaders, RemoveRequestHeadersOnMatch, errs
 }
