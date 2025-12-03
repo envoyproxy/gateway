@@ -1006,9 +1006,9 @@ func translateHeaderModifier(headerModifier *egv1a1.HTTPHeaderFilter, modType st
 	var errs error
 	emptyFilterConfig := true // keep track of whether the provided config is empty or not
 
-	var AddRequestHeaders []ir.AddHeader
-	var RemoveRequestHeaders []string
-	var RemoveRequestHeadersOnMatch []*ir.StringMatch
+	var addRequestHeaders []ir.AddHeader
+	var removeRequestHeaders []string
+	var removeRequestHeadersOnMatch []*ir.StringMatch
 
 	// Add request headers
 	if headersToAdd := headerModifier.Add; headersToAdd != nil {
@@ -1035,7 +1035,7 @@ func translateHeaderModifier(headerModifier *egv1a1.HTTPHeaderFilter, modType st
 			// Check if the header is a duplicate
 			headerKey := string(addHeader.Name)
 			canAddHeader := true
-			for _, h := range AddRequestHeaders {
+			for _, h := range addRequestHeaders {
 				if strings.EqualFold(h.Name, headerKey) {
 					canAddHeader = false
 					break
@@ -1052,7 +1052,7 @@ func translateHeaderModifier(headerModifier *egv1a1.HTTPHeaderFilter, modType st
 				Value:  []string{addHeader.Value},
 			}
 
-			AddRequestHeaders = append(AddRequestHeaders, newHeader)
+			addRequestHeaders = append(addRequestHeaders, newHeader)
 		}
 	}
 
@@ -1081,7 +1081,7 @@ func translateHeaderModifier(headerModifier *egv1a1.HTTPHeaderFilter, modType st
 			// Check if the header to be set has already been configured
 			headerKey := string(setHeader.Name)
 			canAddHeader := true
-			for _, h := range AddRequestHeaders {
+			for _, h := range addRequestHeaders {
 				if strings.EqualFold(h.Name, headerKey) {
 					canAddHeader = false
 					break
@@ -1096,7 +1096,7 @@ func translateHeaderModifier(headerModifier *egv1a1.HTTPHeaderFilter, modType st
 				Value:  []string{setHeader.Value},
 			}
 
-			AddRequestHeaders = append(AddRequestHeaders, newHeader)
+			addRequestHeaders = append(addRequestHeaders, newHeader)
 		}
 	}
 
@@ -1114,7 +1114,7 @@ func translateHeaderModifier(headerModifier *egv1a1.HTTPHeaderFilter, modType st
 			}
 
 			canRemHeader := true
-			for _, h := range RemoveRequestHeaders {
+			for _, h := range removeRequestHeaders {
 				if strings.EqualFold(h, removedHeader) {
 					canRemHeader = false
 					break
@@ -1124,7 +1124,7 @@ func translateHeaderModifier(headerModifier *egv1a1.HTTPHeaderFilter, modType st
 				continue
 			}
 
-			RemoveRequestHeaders = append(RemoveRequestHeaders, removedHeader)
+			removeRequestHeaders = append(removeRequestHeaders, removedHeader)
 		}
 	}
 
@@ -1138,14 +1138,14 @@ func translateHeaderModifier(headerModifier *egv1a1.HTTPHeaderFilter, modType st
 				errs = errors.Join(errs, fmt.Errorf("%s cannot remove a header with an empty matcher value", modType))
 				continue
 			}
-			RemoveRequestHeadersOnMatch = append(RemoveRequestHeadersOnMatch, irStringMatch("", match))
+			removeRequestHeadersOnMatch = append(removeRequestHeadersOnMatch, irStringMatch("", match))
 		}
 	}
 
 	// Update the status if the filter failed to configure any valid headers to add/remove
-	if len(AddRequestHeaders) == 0 && len(RemoveRequestHeaders) == 0 && len(RemoveRequestHeadersOnMatch) == 0 && !emptyFilterConfig {
+	if len(addRequestHeaders) == 0 && len(removeRequestHeaders) == 0 && len(removeRequestHeadersOnMatch) == 0 && !emptyFilterConfig {
 		errs = errors.Join(errs, fmt.Errorf("%s did not provide valid configuration to add/set/remove any headers", modType))
 	}
 
-	return AddRequestHeaders, RemoveRequestHeaders, RemoveRequestHeadersOnMatch, errs
+	return addRequestHeaders, removeRequestHeaders, removeRequestHeadersOnMatch, errs
 }
