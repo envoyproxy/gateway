@@ -15,6 +15,7 @@ new features: |
 bug fixes: |
   Fixed configured OIDC authorization endpoint being overridden by discovered endpoints from issuer's well-known URL.
   Fix 500 errors caused by partially invalid BackendRefs; traffic is now correctly routed between valid backends and 500 responses according to their configured weights.
+  Fixed Helm chart not applying global.imagePullSecrets to dynamically created Envoy Proxy deployments.
 
 # Enhancements that improve performance.
 performance improvements: |
