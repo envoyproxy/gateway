@@ -148,7 +148,7 @@ func (t *Translator) ProcessHTTPFilters(
 		// Clear the RedirectResponse to prevent it from being configured in the IR
 		httpFiltersContext.RedirectResponse = nil
 		httpFiltersContext.Mirrors = nil
-		
+
 		errs.Add(status.NewRouteStatusError(
 			errors.New(requestMirrorRedirectConflictMsg),
 			gwapiv1.RouteReasonIncompatibleFilters,
