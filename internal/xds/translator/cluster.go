@@ -249,6 +249,8 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 			matchName := fmt.Sprintf("%s/tls/%d", args.name, i)
 
 			// Dynamic resolver clusters have no endpoints, so we need to set the transport socket directly.
+			// Since not much is known about custom backends, we just provide a top-level transport socket directly.
+			// Extension servers can then either use or reference this transport socket to build their own configurations.
 			if args.endpointType == EndpointTypeDynamicResolver || ds.IsCustomBackend {
 				cluster.TransportSocket = socket
 			} else {
