@@ -335,7 +335,7 @@ func validateStatName(statName string, supportedOperators map[string]bool) error
 	var unsupportedOperators []string
 	matches := statNameRegex.FindAllString(statName, -1)
 	if len(matches) == 0 && strings.Contains(statName, "%") {
-		return fmt.Errorf("unable to configure Cluster Stat Name with invalid operator")
+		return fmt.Errorf("unable to configure stat name with invalid operator")
 	}
 	for _, operator := range matches {
 		if _, ok := supportedOperators[operator]; !ok {
