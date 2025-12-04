@@ -1,6 +1,6 @@
 module github.com/envoyproxy/gateway
 
-go 1.25.3
+go 1.25.5
 
 require (
 	fortio.org/fortio v1.73.0
@@ -82,7 +82,7 @@ require (
 	k8s.io/kubectl v0.34.2
 	k8s.io/utils v0.0.0-20250820121507-0af2bda4dd1d
 	sigs.k8s.io/controller-runtime v0.22.4
-	sigs.k8s.io/gateway-api v1.4.0
+	sigs.k8s.io/gateway-api v1.4.1
 	sigs.k8s.io/kubectl-validate v0.0.5-0.20250915070809-d2f2d68fba09
 	sigs.k8s.io/mcs-api v0.3.0
 	sigs.k8s.io/yaml v1.6.0

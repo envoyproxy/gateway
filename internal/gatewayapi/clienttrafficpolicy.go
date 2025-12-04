@@ -355,7 +355,8 @@ func validatePortOverlapForClientTrafficPolicy(l *ListenerContext, xds *ir.Xds, 
 	return nil
 }
 
-func (t *Translator) translateClientTrafficPolicyForListener(policy *egv1a1.ClientTrafficPolicy, l *ListenerContext,
+func (t *Translator) translateClientTrafficPolicyForListener(
+	policy *egv1a1.ClientTrafficPolicy, l *ListenerContext,
 	xdsIR resource.XdsIRMap, infraIR resource.InfraIRMap, resources *resource.Resources,
 ) error {
 	// Find IR
@@ -756,7 +757,8 @@ func translateHealthCheckSettings(healthCheckSettings *egv1a1.HealthCheckSetting
 	httpIR.HealthCheck = (*ir.HealthCheckSettings)(healthCheckSettings)
 }
 
-func (t *Translator) buildListenerTLSParameters(policy *egv1a1.ClientTrafficPolicy,
+func (t *Translator) buildListenerTLSParameters(
+	policy *egv1a1.ClientTrafficPolicy,
 	irTLSConfig *ir.TLSConfig, resources *resource.Resources,
 ) (*ir.TLSConfig, error) {
 	// Return if this listener isn't a TLS listener. There has to be
@@ -865,7 +867,12 @@ func (t *Translator) buildListenerTLSParameters(policy *egv1a1.ClientTrafficPoli
 }
 
 // validateAndGetDataAtKeyInRef validates the secret object reference and gets the data at the key in the secret or configmap
-func (t *Translator) validateAndGetDataAtKeyInRef(ref gwapiv1.SecretObjectReference, key string, resources *resource.Resources, from crossNamespaceFrom) ([]byte, error) {
+func (t *Translator) validateAndGetDataAtKeyInRef(
+	ref gwapiv1.SecretObjectReference,
+	key string,
+	resources *resource.Resources,
+	from crossNamespaceFrom,
+) ([]byte, error) {
 	refKind := string(ptr.Deref(ref.Kind, resource.KindSecret))
 	switch refKind {
 	case resource.KindSecret:
@@ -891,7 +898,7 @@ func (t *Translator) validateAndGetDataAtKeyInRef(ref gwapiv1.SecretObjectRefere
 		}
 		return []byte(configMapData), nil
 	case resource.KindClusterTrustBundle:
-		trustBundle := resources.GetClusterTrustBundle(string(ref.Name))
+		trustBundle := t.GetClusterTrustBundle(string(ref.Name))
 		if trustBundle == nil {
 			return nil, fmt.Errorf("ref ClusterTrustBundle [%s] not found", ref.Name)
 		}

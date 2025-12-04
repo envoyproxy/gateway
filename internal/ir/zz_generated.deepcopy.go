@@ -698,6 +698,17 @@ func (in *ConsistentHash) DeepCopyInto(out *ConsistentHash) {
 		*out = new(v1alpha1.Cookie)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.QueryParams != nil {
+		in, out := &in.QueryParams, &out.QueryParams
+		*out = make([]*v1alpha1.QueryParam, len(*in))
+		for i := range *in {
+			if (*in)[i] != nil {
+				in, out := &(*in)[i], &(*out)[i]
+				*out = new(v1alpha1.QueryParam)
+				**out = **in
+			}
+		}
+	}
 	if in.TableSize != nil {
 		in, out := &in.TableSize, &out.TableSize
 		*out = new(uint64)
