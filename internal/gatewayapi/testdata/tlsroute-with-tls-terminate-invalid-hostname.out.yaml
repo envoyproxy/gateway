@@ -1,0 +1,121 @@
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    name: gateway-1
+    namespace: envoy-gateway
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - allowedRoutes:
+        namespaces:
+          from: All
+      hostname: foo.example.com
+      name: tls
+      port: 90
+      protocol: TLS
+      tls:
+        certificateRefs:
+        - group: ""
+          kind: Secret
+          name: tls-secret-1
+        mode: Terminate
+  status:
+    listeners:
+    - attachedRoutes: 1
+      conditions:
+      - lastTransitionTime: null
+        message: 'Secret envoy-gateway/tls-secret-1 must contain valid tls.crt and
+          tls.key, unable to validate certificate in tls.crt: x509: malformed extensions.'
+        reason: InvalidCertificateRef
+        status: "False"
+        type: ResolvedRefs
+      - lastTransitionTime: null
+        message: Listener is invalid, see other Conditions for details.
+        reason: Invalid
+        status: "False"
+        type: Programmed
+      name: tls
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: TCPRoute
+      - group: gateway.networking.k8s.io
+        kind: TLSRoute
+infraIR:
+  envoy-gateway/gateway-1:
+    proxy:
+      metadata:
+        labels:
+          gateway.envoyproxy.io/owning-gateway-name: gateway-1
+          gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+        ownerReference:
+          kind: GatewayClass
+          name: envoy-gateway-class
+      name: envoy-gateway/gateway-1
+      namespace: envoy-gateway-system
+tlsRoutes:
+- apiVersion: gateway.networking.k8s.io/v1alpha2
+  kind: TLSRoute
+  metadata:
+    name: tlsroute-1
+    namespace: default
+  spec:
+    hostnames:
+    - bar.different.com
+    parentRefs:
+    - name: gateway-1
+      namespace: envoy-gateway
+      sectionName: tls
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8080
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: There are no ready listeners for this parent ref
+        reason: NoReadyListeners
+        status: "False"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: tls
+xdsIR:
+  envoy-gateway/gateway-1:
+    accessLog:
+      json:
+      - path: /dev/stdout
+    globalResources:
+      proxyServiceCluster:
+        metadata:
+          kind: Service
+          name: envoy-envoy-gateway-gateway-1-196ae069
+          namespace: envoy-gateway-system
+          sectionName: "8080"
+        name: envoy-gateway/gateway-1
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            kind: Service
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-1
+          protocol: TCP
+    readyListener:
+      address: 0.0.0.0
+      ipFamily: IPv4
+      path: /ready
+      port: 19003
