@@ -11,6 +11,7 @@ security updates: |
 # New features or capabilities added in this release.
 new features: |
   Added support for weight in BackendRef API to enable traffic splitting for non-x-route resources.
+  Added support for targeting custom backend refs managed by extension servers with configurations such as BackendTLSPolicy.
 
 bug fixes: |
   Fixed configured OIDC authorization endpoint being overridden by discovered endpoints from issuer's well-known URL.

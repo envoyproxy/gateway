@@ -1,0 +1,5 @@
+- clusterName: custom-backend-dest
+  endpoints:
+  - loadBalancingWeight: 1
+    locality:
+      region: custom-backend-dest/backend/0

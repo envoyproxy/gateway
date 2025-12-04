@@ -1780,6 +1780,7 @@ func (t *Translator) processDestination(name string, backendRefContext BackendRe
 		return emptyDS, nil, status.NewRouteStatusError(tlsErr, status.RouteReasonInvalidBackendTLS)
 	}
 
+	isCustomBackend := false
 	switch KindDerefOr(backendRef.Kind, resource.KindService) {
 	case resource.KindServiceImport:
 		ds, err = t.processServiceImportDestinationSetting(name, backendRef.BackendObjectReference, backendNamespace, protocol, envoyProxy)
@@ -1798,7 +1799,8 @@ func (t *Translator) processDestination(name string, backendRefContext BackendRe
 		ds = t.processBackendDestinationSetting(name, backendRef.BackendObjectReference, backendNamespace, protocol)
 	default:
 		// Handle custom backend resources defined in extension manager
-		if t.isCustomBackendResource(backendRef.Group, KindDerefOr(backendRef.Kind, resource.KindService)) {
+		isCustomBackend = t.isCustomBackendResource(backendRef.Group, KindDerefOr(backendRef.Kind, resource.KindService))
+		if isCustomBackend {
 			// Add the custom backend resource to ExtensionRefFilters so it can be processed by the extension system
 			unstructuredRef = t.processBackendExtensions(backendRef.BackendObjectReference, backendNamespace, resources)
 
@@ -1813,11 +1815,10 @@ func (t *Translator) processDestination(name string, backendRefContext BackendRe
 				).WithType(gwapiv1.RouteConditionResolvedRefs)
 			}
 
-			return &ir.DestinationSetting{
+			ds = &ir.DestinationSetting{
 				Name:            name,
-				Weight:          &weight,
 				IsCustomBackend: true,
-			}, unstructuredRef, nil
+			}
 		}
 	}
 
@@ -1829,11 +1830,16 @@ func (t *Translator) processDestination(name string, backendRefContext BackendRe
 		return emptyDS, nil, status.NewRouteStatusError(filtersErr, status.RouteReasonInvalidBackendFilters)
 	}
 
+	ds.Weight = &weight
+
+	if isCustomBackend {
+		return ds, unstructuredRef, nil
+	}
+
 	if err := validateDestinationSettings(ds, t.IsEnvoyServiceRouting(envoyProxy), backendRef.Kind); err != nil {
 		return emptyDS, nil, err
 	}
 
-	ds.Weight = &weight
 	return ds, nil, nil
 }
 
@@ -2334,7 +2340,7 @@ func (t *Translator) getTargetBackendReference(
 		}
 
 	default:
-		// Set the section name to the port number if the backend is a EG Backend
+		// Set the section name to the port number if the backend is a EG Backend or a custom backend
 		ref.SectionName = SectionNamePtr(strconv.Itoa(int(*backendRef.Port)))
 	}
 
