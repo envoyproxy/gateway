@@ -273,6 +273,7 @@ spec:
                           - value
                           type: object
                         maxItems: 64
+                        minItems: 1
                         type: array
                         x-kubernetes-list-map-keys:
                         - name
@@ -299,6 +300,7 @@ spec:
                         items:
                           type: string
                         maxItems: 64
+                        minItems: 1
                         type: array
                         x-kubernetes-list-type: set
                       removeOnMatch:
@@ -330,6 +332,7 @@ spec:
                           - value
                           type: object
                         maxItems: 64
+                        minItems: 1
                         type: array
                       set:
                         description: |-
@@ -377,6 +380,7 @@ spec:
                           - value
                           type: object
                         maxItems: 64
+                        minItems: 1
                         type: array
                         x-kubernetes-list-map-keys:
                         - name
@@ -438,6 +442,7 @@ spec:
                           - value
                           type: object
                         maxItems: 64
+                        minItems: 1
                         type: array
                         x-kubernetes-list-map-keys:
                         - name
@@ -464,6 +469,7 @@ spec:
                         items:
                           type: string
                         maxItems: 64
+                        minItems: 1
                         type: array
                         x-kubernetes-list-type: set
                       removeOnMatch:
@@ -495,6 +501,7 @@ spec:
                           - value
                           type: object
                         maxItems: 64
+                        minItems: 1
                         type: array
                       set:
                         description: |-
@@ -542,6 +549,7 @@ spec:
                           - value
                           type: object
                         maxItems: 64
+                        minItems: 1
                         type: array
                         x-kubernetes-list-map-keys:
                         - name

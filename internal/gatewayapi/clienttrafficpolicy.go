@@ -1004,7 +1004,6 @@ func translateHeaderModifier(headerModifier *egv1a1.HTTPHeaderFilter, modType st
 		return nil, nil, nil, nil
 	}
 	var errs error
-	emptyFilterConfig := true // keep track of whether the provided config is empty or not
 
 	var addRequestHeaders []ir.AddHeader
 	var removeRequestHeaders []string
@@ -1012,11 +1011,7 @@ func translateHeaderModifier(headerModifier *egv1a1.HTTPHeaderFilter, modType st
 
 	// Add request headers
 	if headersToAdd := headerModifier.Add; headersToAdd != nil {
-		if len(headersToAdd) > 0 {
-			emptyFilterConfig = false
-		}
 		for _, addHeader := range headersToAdd {
-			emptyFilterConfig = false
 			if addHeader.Name == "" {
 				errs = errors.Join(errs, fmt.Errorf("%s cannot add a header with an empty name", modType))
 				// try to process the rest of the headers and produce a valid config.
@@ -1058,9 +1053,6 @@ func translateHeaderModifier(headerModifier *egv1a1.HTTPHeaderFilter, modType st
 
 	// Set headers
 	if headersToSet := headerModifier.Set; headersToSet != nil {
-		if len(headersToSet) > 0 {
-			emptyFilterConfig = false
-		}
 		for _, setHeader := range headersToSet {
 
 			if setHeader.Name == "" {
@@ -1104,9 +1096,6 @@ func translateHeaderModifier(headerModifier *egv1a1.HTTPHeaderFilter, modType st
 	// As far as Envoy is concerned, it is ok to configure a header to be added/set and also in the list of
 	// headers to remove. It will remove the original header if present and then add/set the header after.
 	if headersToRemove := headerModifier.Remove; headersToRemove != nil {
-		if len(headersToRemove) > 0 {
-			emptyFilterConfig = false
-		}
 		for _, removedHeader := range headersToRemove {
 			if removedHeader == "" {
 				errs = errors.Join(errs, fmt.Errorf("%s cannot remove a header with an empty name", modType))
@@ -1129,9 +1118,6 @@ func translateHeaderModifier(headerModifier *egv1a1.HTTPHeaderFilter, modType st
 	}
 
 	if matches := headerModifier.RemoveOnMatch; matches != nil {
-		if len(matches) > 0 {
-			emptyFilterConfig = false
-		}
 		for _, match := range matches {
 			// This is just a sanity check, since the CRD validation should prevent this from happening
 			if match.Value == "" {
@@ -1143,7 +1129,7 @@ func translateHeaderModifier(headerModifier *egv1a1.HTTPHeaderFilter, modType st
 	}
 
 	// Update the status if the filter failed to configure any valid headers to add/remove
-	if len(addRequestHeaders) == 0 && len(removeRequestHeaders) == 0 && len(removeRequestHeadersOnMatch) == 0 && !emptyFilterConfig {
+	if len(addRequestHeaders) == 0 && len(removeRequestHeaders) == 0 && len(removeRequestHeadersOnMatch) == 0 {
 		errs = errors.Join(errs, fmt.Errorf("%s did not provide valid configuration to add/set/remove any headers", modType))
 	}
 
