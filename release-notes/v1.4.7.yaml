@@ -1,0 +1,5 @@
+date: December 4, 2025
+
+# Updates addressing vulnerabilities, security flaws, or compliance requirements.
+security updates: |
+  Patches for EnvoyProxy CVE-2025-64527, CVE-2025-66220, and CVE-2025-64763. Ref https://github.com/envoyproxy/envoy/releases/tag/v1.34.11
