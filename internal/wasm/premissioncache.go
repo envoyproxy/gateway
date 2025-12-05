@@ -163,20 +163,18 @@ func (p *permissionCache) Start(ctx context.Context) {
 								retry.DelayType(retry.BackOffDelay),
 								retry.Delay(retryDelay),
 								retry.Context(ctx),
-							).Do(
-								func() error {
-									err := p.checkAndUpdatePermission(ctx, e)
-									if err != nil && isRetriableError(err) {
-										p.logger.Error(
-											err,
-											"failed to check permission for image, will retry again",
-											"image",
-											e.image.String())
-										return err
-									}
-									return nil
-								},
-							)
+							).Do(func() error {
+								err := p.checkAndUpdatePermission(ctx, e)
+								if err != nil && isRetriableError(err) {
+									p.logger.Error(
+										err,
+										"failed to check permission for image, will retry again",
+										"image",
+										e.image.String())
+									return err
+								}
+								return nil
+							})
 							if err != nil {
 								p.logger.Error(
 									err,
