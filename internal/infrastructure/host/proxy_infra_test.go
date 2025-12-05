@@ -252,9 +252,9 @@ func TestInfra_DeleteProxyInfra(t *testing.T) {
 
 func TestExtractSemver(t *testing.T) {
 	tests := []struct {
-		image   string
-		want    string
-		wantErr bool
+		image       string
+		expected    string
+		expectError bool
 	}{
 		{"docker.io/envoyproxy/envoy:distroless-v1.35.0", "1.35.0", false},
 		{"envoyproxy/envoy:v1.28.1", "1.28.1", false},
@@ -267,13 +267,177 @@ func TestExtractSemver(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.image, func(t *testing.T) {
-			got, err := extractSemver(tc.image)
-			if tc.wantErr {
+			actual, err := extractSemver(tc.image)
+			if tc.expectError {
 				require.Error(t, err)
 			} else {
 				require.NoError(t, err)
-				require.Equal(t, tc.want, got)
+				require.Equal(t, tc.expected, actual)
 			}
+		})
+	}
+}
+
+func TestGetXdsServerHost(t *testing.T) {
+	tests := []struct {
+		name         string
+		envoyGateway *egv1a1.EnvoyGateway
+		expected     *string
+	}{
+		{
+			name:         "nil EnvoyGateway",
+			envoyGateway: nil,
+			expected:     ptr.To("0.0.0.0"),
+		},
+		{
+			name:         "nil XDSServer",
+			envoyGateway: &egv1a1.EnvoyGateway{},
+			expected:     ptr.To("0.0.0.0"),
+		},
+		{
+			name: "nil Address",
+			envoyGateway: &egv1a1.EnvoyGateway{
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					XDSServer: &egv1a1.XDSServer{},
+				},
+			},
+			expected: ptr.To("0.0.0.0"),
+		},
+		{
+			name: "valid address",
+			envoyGateway: &egv1a1.EnvoyGateway{
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					XDSServer: &egv1a1.XDSServer{
+						Address: ptr.To("0.0.0.0:19000"),
+					},
+				},
+			},
+			expected: ptr.To("0.0.0.0"),
+		},
+		{
+			name: "valid address with different host",
+			envoyGateway: &egv1a1.EnvoyGateway{
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					XDSServer: &egv1a1.XDSServer{
+						Address: ptr.To("127.0.0.1:18001"),
+					},
+				},
+			},
+			expected: ptr.To("127.0.0.1"),
+		},
+		{
+			name: "invalid address format",
+			envoyGateway: &egv1a1.EnvoyGateway{
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					XDSServer: &egv1a1.XDSServer{
+						Address: ptr.To("invalid"),
+					},
+				},
+			},
+			expected: ptr.To("0.0.0.0"),
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			i := &Infra{
+				EnvoyGateway: tc.envoyGateway,
+			}
+			actual := i.getXdsServerHost()
+			require.Equal(t, tc.expected, actual)
+		})
+	}
+}
+
+func TestGetXdsServerPort(t *testing.T) {
+	tests := []struct {
+		name         string
+		envoyGateway *egv1a1.EnvoyGateway
+		expected     *int32
+	}{
+		{
+			name:         "nil EnvoyGateway",
+			envoyGateway: nil,
+			expected:     nil,
+		},
+		{
+			name:         "nil XDSServer",
+			envoyGateway: &egv1a1.EnvoyGateway{},
+			expected:     nil,
+		},
+		{
+			name: "nil Address",
+			envoyGateway: &egv1a1.EnvoyGateway{
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					XDSServer: &egv1a1.XDSServer{},
+				},
+			},
+			expected: nil,
+		},
+		{
+			name: "valid address",
+			envoyGateway: &egv1a1.EnvoyGateway{
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					XDSServer: &egv1a1.XDSServer{
+						Address: ptr.To("0.0.0.0:19000"),
+					},
+				},
+			},
+			expected: ptr.To(int32(19000)),
+		},
+		{
+			name: "valid address with different port",
+			envoyGateway: &egv1a1.EnvoyGateway{
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					XDSServer: &egv1a1.XDSServer{
+						Address: ptr.To("127.0.0.1:18001"),
+					},
+				},
+			},
+			expected: ptr.To(int32(18001)),
+		},
+		{
+			name: "invalid address format",
+			envoyGateway: &egv1a1.EnvoyGateway{
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					XDSServer: &egv1a1.XDSServer{
+						Address: ptr.To("invalid"),
+					},
+				},
+			},
+			expected: nil,
+		},
+		{
+			name: "invalid port",
+			envoyGateway: &egv1a1.EnvoyGateway{
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					XDSServer: &egv1a1.XDSServer{
+						Address: ptr.To("0.0.0.0:notaport"),
+					},
+				},
+			},
+			expected: nil,
+		},
+		{
+			name: "port out of range",
+			envoyGateway: &egv1a1.EnvoyGateway{
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					XDSServer: &egv1a1.XDSServer{
+						Address: ptr.To("0.0.0.0:99999"),
+					},
+				},
+			},
+			expected: nil,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			i := &Infra{
+				EnvoyGateway: tc.envoyGateway,
+			}
+			actual := i.getXdsServerPort()
+			require.Equal(t, tc.expected, actual)
 		})
 	}
 }
@@ -423,19 +587,19 @@ func TestGetEnvoyVersion(t *testing.T) {
 		name         string
 		defaultImage string
 		provider     *egv1a1.EnvoyProxyProvider
-		want         string
+		expected     string
 	}{
 		{
 			name:         "k8s provider default release version",
 			defaultImage: "docker.io/envoyproxy/envoy:distroless-v1.35.0",
 			provider:     egv1a1.DefaultEnvoyProxyProvider(),
-			want:         "1.35.0",
+			expected:     "1.35.0",
 		},
 		{
 			name:         "k8s provider dev version",
 			defaultImage: "docker.io/envoyproxy/envoy:distroless-dev",
 			provider:     egv1a1.DefaultEnvoyProxyProvider(),
-			want:         "",
+			expected:     "",
 		},
 		{
 			name:         "host provider envoy version unset",
@@ -444,7 +608,7 @@ func TestGetEnvoyVersion(t *testing.T) {
 				Type: egv1a1.EnvoyProxyProviderTypeHost,
 				Host: &egv1a1.EnvoyProxyHostProvider{},
 			},
-			want: "1.35.0",
+			expected: "1.35.0",
 		},
 		{
 			name:         "host provider envoy version empty",
@@ -453,7 +617,7 @@ func TestGetEnvoyVersion(t *testing.T) {
 				Type: egv1a1.EnvoyProxyProviderTypeHost,
 				Host: &egv1a1.EnvoyProxyHostProvider{EnvoyVersion: ptr.To("")},
 			},
-			want: "1.35.0",
+			expected: "1.35.0",
 		},
 		{
 			name:         "host provider envoy version unset dev version",
@@ -462,7 +626,7 @@ func TestGetEnvoyVersion(t *testing.T) {
 				Type: egv1a1.EnvoyProxyProviderTypeHost,
 				Host: &egv1a1.EnvoyProxyHostProvider{},
 			},
-			want: "",
+			expected: "",
 		},
 		{
 			name:         "host provider envoy version empty dev version",
@@ -471,7 +635,7 @@ func TestGetEnvoyVersion(t *testing.T) {
 				Type: egv1a1.EnvoyProxyProviderTypeHost,
 				Host: &egv1a1.EnvoyProxyHostProvider{EnvoyVersion: ptr.To("")},
 			},
-			want: "",
+			expected: "",
 		},
 		{
 			name:         "host provider envoy version custom",
@@ -480,7 +644,7 @@ func TestGetEnvoyVersion(t *testing.T) {
 				Type: egv1a1.EnvoyProxyProviderTypeHost,
 				Host: &egv1a1.EnvoyProxyHostProvider{EnvoyVersion: ptr.To("1.2.3")},
 			},
-			want: "1.2.3",
+			expected: "1.2.3",
 		},
 	}
 
@@ -492,7 +656,7 @@ func TestGetEnvoyVersion(t *testing.T) {
 					Provider: tc.provider,
 				},
 			}
-			require.Equal(t, tc.want, infra.getEnvoyVersion(proxyConfig))
+			require.Equal(t, tc.expected, infra.getEnvoyVersion(proxyConfig))
 		})
 	}
 }

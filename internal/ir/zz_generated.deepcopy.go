@@ -2685,6 +2685,11 @@ func (in *OpenTelemetryAccessLog) DeepCopyInto(out *OpenTelemetryAccessLog) {
 			(*out)[key] = val
 		}
 	}
+	if in.Headers != nil {
+		in, out := &in.Headers, &out.Headers
+		*out = make([]apisv1.HTTPHeader, len(*in))
+		copy(*out, *in)
+	}
 	in.Destination.DeepCopyInto(&out.Destination)
 	if in.Traffic != nil {
 		in, out := &in.Traffic, &out.Traffic

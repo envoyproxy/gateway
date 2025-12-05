@@ -367,3 +367,29 @@ func newHTTPClient() *http.Client {
 		},
 	}
 }
+
+func TestSeverOptionsSetDefault(t *testing.T) {
+	tests := []struct {
+		name            string
+		options         SeverOptions
+		expectedAddress string
+	}{
+		{
+			name:            "default address when empty",
+			options:         SeverOptions{},
+			expectedAddress: fmt.Sprintf(":%d", serverPort),
+		},
+		{
+			name:            "custom address preserved",
+			options:         SeverOptions{Address: ":19002"},
+			expectedAddress: ":19002",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			tc.options.setDefault()
+			require.Equal(t, tc.expectedAddress, tc.options.Address)
+		})
+	}
+}

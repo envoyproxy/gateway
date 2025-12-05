@@ -103,6 +103,11 @@ type EnvoyGatewaySpec struct {
 	// RuntimeFlags defines the runtime flags for Envoy Gateway.
 	// Unlike ExtensionAPIs, these flags are temporary and will be removed in future releases once the related features are stable.
 	RuntimeFlags *RuntimeFlags `json:"runtimeFlags,omitempty"`
+
+	// WASMServer defines configuration for the WASM HTTP cache server.
+	//
+	// +optional
+	WASMServer *WASMServer `json:"wasmServer,omitempty"`
 }
 
 // RuntimeFlag defines a runtime flag used to guard breaking changes or risky experimental features in new Envoy Gateway releases.
@@ -148,6 +153,12 @@ type KubernetesClientRateLimit struct {
 
 // XDSServer defines configuration values for the xDS gRPC server.
 type XDSServer struct {
+	// Address is the xDS server bind address.
+	// Defaults to 0.0.0.0:18000.
+	//
+	// +optional
+	Address *string `json:"address,omitempty"`
+
 	// MaxConnectionAge is the maximum age of an active connection before Envoy Gateway will initiate a graceful close.
 	// If unspecified, Envoy Gateway randomly selects a value between 10h and 12h to stagger reconnects across replicas.
 	//
@@ -159,6 +170,15 @@ type XDSServer struct {
 	//
 	// +optional
 	MaxConnectionAgeGrace *gwapiv1.Duration `json:"maxConnectionAgeGrace,omitempty"`
+}
+
+// WASMServer defines configuration for the WASM HTTP cache server.
+type WASMServer struct {
+	// Address is the WASM cache server bind address.
+	// Defaults to 0.0.0.0:18002.
+	//
+	// +optional
+	Address *string `json:"address,omitempty"`
 }
 
 // LeaderElection defines the desired leader election settings.

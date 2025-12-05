@@ -9,8 +9,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -80,7 +82,8 @@ func (i *Infra) CreateOrUpdateProxyInfra(ctx context.Context, infra *ir.Infra) e
 			Certificate: filepath.Join(i.sdsConfigPath, common.SdsCertFilename),
 			TrustedCA:   filepath.Join(i.sdsConfigPath, common.SdsCAFilename),
 		},
-		XdsServerHost:   ptr.To("0.0.0.0"),
+		XdsServerHost:   i.getXdsServerHost(),
+		XdsServerPort:   i.getXdsServerPort(),
 		AdminServerPort: ptr.To(int32(0)),
 		StatsServerPort: ptr.To(int32(0)),
 		// Always disable the topology injector in standalone mode. The topology
@@ -166,6 +169,37 @@ func (i *Infra) getEnvoyVersion(proxyConfig *egv1a1.EnvoyProxy) string {
 	}
 
 	return version
+}
+
+// getXdsServerHost returns the XDS server host from configuration.
+// Returns the parsed host from Address if configured, otherwise defaults to "0.0.0.0" for standalone mode.
+// The xdsServer.address field is in the format "host:port".
+func (i *Infra) getXdsServerHost() *string {
+	if i.EnvoyGateway == nil || i.EnvoyGateway.XDSServer == nil || i.EnvoyGateway.XDSServer.Address == nil {
+		return ptr.To("0.0.0.0")
+	}
+	host, _, err := net.SplitHostPort(*i.EnvoyGateway.XDSServer.Address)
+	if err != nil {
+		return ptr.To("0.0.0.0")
+	}
+	return ptr.To(host)
+}
+
+// getXdsServerPort returns the XDS server port from configuration, or nil to use default.
+// The xdsServer.address field is in the format "host:port".
+func (i *Infra) getXdsServerPort() *int32 {
+	if i.EnvoyGateway == nil || i.EnvoyGateway.XDSServer == nil || i.EnvoyGateway.XDSServer.Address == nil {
+		return nil
+	}
+	_, portStr, err := net.SplitHostPort(*i.EnvoyGateway.XDSServer.Address)
+	if err != nil {
+		return nil
+	}
+	port, err := strconv.Atoi(portStr)
+	if err != nil || port < 0 || port > 65535 {
+		return nil
+	}
+	return ptr.To(int32(port)) //nolint:gosec // bounds checked above
 }
 
 // extractSemver takes an image reference like "docker.io/envoyproxy/envoy:distroless-v1.35.0"

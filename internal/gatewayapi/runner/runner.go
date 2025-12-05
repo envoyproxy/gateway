@@ -117,6 +117,7 @@ func (r *Runner) startWasmCache(ctx context.Context) {
 		wasm.SeverOptions{
 			Salt:      salt,
 			TLSConfig: tlsConfig,
+			Address:   r.wasmServerAddress(),
 		},
 		cacheOption, r.ControllerNamespace, r.Logger)
 	r.wasmCache.Start(ctx)
@@ -410,6 +411,14 @@ func (r *Runner) loadTLSConfig(ctx context.Context) (*tls.Config, []byte, error)
 	default:
 		return nil, nil, fmt.Errorf("no valid tls certificates")
 	}
+}
+
+// wasmServerAddress returns the configured WASM server address, or empty to use default.
+func (r *Runner) wasmServerAddress() string {
+	if r.EnvoyGateway.WASMServer != nil && r.EnvoyGateway.WASMServer.Address != nil {
+		return *r.EnvoyGateway.WASMServer.Address
+	}
+	return ""
 }
 
 func unstructuredToPolicyStatus(policyStatus map[string]any) gwapiv1.PolicyStatus {

@@ -604,3 +604,55 @@ func TestLoadTLSConfig_HostMode(t *testing.T) {
 	require.Equal(t, tls.RequireAndVerifyClientCert, tlsConfig.ClientAuth)
 	require.Equal(t, uint16(tls.VersionTLS13), tlsConfig.MinVersion)
 }
+
+func TestXdsServerAddress(t *testing.T) {
+	defaultAddr := net.JoinHostPort(XdsServerAddress, strconv.Itoa(bootstrap.DefaultXdsServerPort))
+
+	tests := []struct {
+		name      string
+		xdsServer *egv1a1.XDSServer
+		expected  string
+	}{
+		{
+			name:      "default address when XDSServer is nil",
+			xdsServer: nil,
+			expected:  defaultAddr,
+		},
+		{
+			name:      "default address when Address is nil",
+			xdsServer: &egv1a1.XDSServer{},
+			expected:  defaultAddr,
+		},
+		{
+			name:      "custom address",
+			xdsServer: &egv1a1.XDSServer{Address: ptrTo("0.0.0.0:19000")},
+			expected:  "0.0.0.0:19000",
+		},
+		{
+			name:      "custom address with different host",
+			xdsServer: &egv1a1.XDSServer{Address: ptrTo("127.0.0.1:18001")},
+			expected:  "127.0.0.1:18001",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			cfg, err := config.New(os.Stdout, os.Stderr)
+			require.NoError(t, err)
+			cfg.EnvoyGateway.XDSServer = tc.xdsServer
+
+			r := &Runner{
+				Config: Config{
+					Server: *cfg,
+				},
+			}
+
+			actual := r.xdsServerAddress()
+			require.Equal(t, tc.expected, actual)
+		})
+	}
+}
+
+func ptrTo[T any](v T) *T {
+	return &v
+}
