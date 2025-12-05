@@ -18,7 +18,6 @@
           name: envoy.filters.http.compressor.brotli
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.compressor.v3.Compressor
-            chooseFirst: true
             compressorLibrary:
               name: envoy.compression.brotli.compressor
               typedConfig:

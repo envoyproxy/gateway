@@ -238,7 +238,8 @@ xdsIR:
           prefix: /
         traffic:
           compression:
-          - type: Brotli
+          - chooseFirst: true
+            type: Brotli
           - type: Zstd
     readyListener:
       address: 0.0.0.0
