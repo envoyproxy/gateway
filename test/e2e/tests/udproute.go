@@ -136,13 +136,13 @@ func GatewayAndUDPRoutesMustBeAccepted(t *testing.T, c client.Client, timeoutCon
 				},
 			})
 		}
-		UDPRouteMustHaveParents(t, c, timeoutConfig, routeNN, parents, namespaceRequired)
+		UDPRouteMustHaveParents(t, c, timeoutConfig, routeNN, parents, []bool{namespaceRequired})
 	}
 
 	return gwAddr
 }
 
-func UDPRouteMustHaveParents(t *testing.T, client client.Client, timeoutConfig *config.TimeoutConfig, routeName types.NamespacedName, parents []gwapiv1.RouteParentStatus, namespaceRequired bool) {
+func UDPRouteMustHaveParents(t *testing.T, client client.Client, timeoutConfig *config.TimeoutConfig, routeName types.NamespacedName, parents []gwapiv1.RouteParentStatus, namespaceRequired []bool) {
 	t.Helper()
 
 	if timeoutConfig == nil {
@@ -163,7 +163,7 @@ func UDPRouteMustHaveParents(t *testing.T, client client.Client, timeoutConfig *
 	require.NoErrorf(t, waitErr, "error waiting for UDPRoute to have parents matching expectations")
 }
 
-func parentsForRouteMatch(t *testing.T, routeName types.NamespacedName, expected, actual []gwapiv1.RouteParentStatus, namespaceRequired bool) bool {
+func parentsForRouteMatch(t *testing.T, routeName types.NamespacedName, expected, actual []gwapiv1.RouteParentStatus, namespaceRequired []bool) bool {
 	t.Helper()
 
 	if len(expected) != len(actual) {
@@ -190,7 +190,7 @@ func parentsForRouteMatch(t *testing.T, routeName types.NamespacedName, expected
 			return false
 		}
 		if !reflect.DeepEqual(actualParent.ParentRef.Namespace, expectedParent.ParentRef.Namespace) {
-			if namespaceRequired || actualParent.ParentRef.Namespace != nil {
+			if namespaceRequired[i] || actualParent.ParentRef.Namespace != nil {
 				tlog.Logf(t, "Route %s/%s expected ParentReference.Namespace to be %v, got %v", routeName.Namespace, routeName.Name, expectedParent.ParentRef.Namespace, actualParent.ParentRef.Namespace)
 				return false
 			}
