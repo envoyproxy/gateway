@@ -44,6 +44,7 @@ func init() {
 		RateLimitGlobalSharedCidrMatchTest,
 		RateLimitGlobalSharedGatewayHeaderMatchTest,
 		RateLimitGlobalMergeTest,
+		RateLimitGlobalShadowModeTest,
 	)
 }
 
@@ -1274,6 +1275,51 @@ var RateLimitGlobalMergeTest = suite.ConformanceTest{
 
 			if err := GotExactExpectedResponse(t, 1, suite.RoundTripper, http.MakeRequest(t, &limit, gwAddr1, "HTTP", "http"), limit); err != nil {
 				t.Errorf("expected 429 for third request: %v", err)
+			}
+		})
+	},
+}
+
+var RateLimitGlobalShadowModeTest = suite.ConformanceTest{
+	ShortName:   "RateLimitGlobalShadowModeTest",
+	Description: "Limit requests with shadow mode enabled, verifying that requests are not actually limited",
+	Manifests:   []string{"testdata/ratelimit-global-shadow-mode.yaml"},
+	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
+		ns := "gateway-conformance-infra"
+		shadowRouteNN := types.NamespacedName{Name: "shadow-mode-ratelimit", Namespace: ns}
+		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
+		gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, shadowRouteNN)
+
+		t.Run("matched with shadow mode can't got limited", func(t *testing.T) {
+			ratelimitHeader := make(map[string]string)
+
+			expectOkResp := http.ExpectedResponse{
+				Request: http.Request{
+					Path:   "/shadow",
+					Method: "GET",
+				},
+				Response: http.Response{
+					StatusCode: 200,
+					Headers:    ratelimitHeader,
+				},
+				Namespace: ns,
+			}
+			expectOkResp.Response.Headers["X-Ratelimit-Limit"] = "3, 3;w=3600"
+			expectOkReq := http.MakeRequest(t, &expectOkResp, gwAddr, "HTTP", "http")
+
+			// In shadow mode, requests are never blocked even when exceeding the rate limit.
+			// The rate limit is set to 3 requests per window, but we send 5 total requests.
+			// Shadow mode ensures all requests return 200 (never 429)
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectOkResp)
+
+			// fire the next 2 requests (total: 3 requests, reaching the limit)
+			if err := GotExactExpectedResponse(t, 2, suite.RoundTripper, expectOkReq, expectOkResp); err != nil {
+				t.Errorf("failed to get expected response for the first three requests: %v", err)
+			}
+
+			// send 2 more requests that exceed the limit, but still expect 200 (not 429) due to shadow mode
+			if err := GotExactExpectedResponse(t, 2, suite.RoundTripper, expectOkReq, expectOkResp); err != nil {
+				t.Errorf("failed to get expected response for requests exceeding the limit: %v", err)
 			}
 		})
 	},

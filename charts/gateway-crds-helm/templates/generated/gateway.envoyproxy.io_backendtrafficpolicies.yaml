@@ -1235,6 +1235,14 @@ spec:
                               - requests
                               - unit
                               type: object
+                            shadowMode:
+                              description: |-
+                                ShadowMode determines whether this rate limit rule enables shadow mode.
+                                When enabled, rate limiting functions execute as normal (cache lookup, statistics),
+                                but the result is always success regardless of whether the limit was exceeded.
+
+                                Only supported for Global Rate Limits.
+                              type: boolean
                             shared:
                               description: |-
                                 Shared determines whether this rate limit rule applies across all the policy targets.
@@ -1547,6 +1555,14 @@ spec:
                               - requests
                               - unit
                               type: object
+                            shadowMode:
+                              description: |-
+                                ShadowMode determines whether this rate limit rule enables shadow mode.
+                                When enabled, rate limiting functions execute as normal (cache lookup, statistics),
+                                but the result is always success regardless of whether the limit was exceeded.
+
+                                Only supported for Global Rate Limits.
+                              type: boolean
                             shared:
                               description: |-
                                 Shared determines whether this rate limit rule applies across all the policy targets.
@@ -1561,6 +1577,8 @@ spec:
                         x-kubernetes-validations:
                         - message: response cost is not supported for Local Rate Limits
                           rule: self.all(foo, !has(foo.cost) || !has(foo.cost.response))
+                        - message: shadow mode is not supported for Local Rate Limits
+                          rule: self.all(foo, !has(foo.shadowMode))
                     type: object
                   type:
                     description: |-
