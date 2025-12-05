@@ -1,0 +1,30 @@
+date: December 4, 2025
+
+# Changes that are expected to cause an incompatibility with previous versions, such as deletions or modifications to existing APIs.
+breaking changes: |
+
+# Updates addressing vulnerabilities, security flaws, or compliance requirements.
+security updates: |
+  Patches for EnvoyProxy CVE-2025-64527, CVE-2025-66220, and CVE-2025-64763. Ref https://github.com/envoyproxy/envoy/releases/tag/v1.35.7
+
+# New features or capabilities added in this release.
+new features: |
+
+bug fixes: |
+  - Fixed xDS snapshot cache to clear snapshots when streams close, preventing proxies from receiving stale configuration after reconnection (#6618)
+  - Fixed OIDC authentication endpoint being overwritten by discovered value (#7460)
+  - Fixed findOwningGateway to return controller based on linked GatewayClass (#7611)
+  - Fixed default namespace handling when namespace is unset (#7612)
+  - Fixed skeleton route status entries being created for unmanaged GatewayClasses (#7536)
+  - Fixed gateway status to treat too many addresses as programmed (#7542)
+
+# Enhancements that improve performance.
+performance improvements: |
+
+# Deprecated features or APIs.
+deprecations: |
+
+# Other notable changes not covered by the above sections.
+Other changes: |
+  - Added disk space reclamation script for CI runners to prevent out-of-disk errors (#7534, #7587)
+  - Bumped golang.org/x/crypto dependency (#7588)
