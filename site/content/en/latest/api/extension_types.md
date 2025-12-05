@@ -2627,6 +2627,7 @@ _Appears in:_
 | `requestID` | _[RequestIDAction](#requestidaction)_ |  false  |  | RequestID configures Envoy's behavior for handling the `X-Request-ID` header.<br />When omitted default behavior is `Generate` which builds the `X-Request-ID` for every request<br /> and ignores pre-existing values from the edge.<br />(An "edge request" refers to a request from an external client to the Envoy entrypoint.) |
 | `earlyRequestHeaders` | _[HTTPHeaderFilter](#httpheaderfilter)_ |  false  |  | EarlyRequestHeaders defines settings for early request header modification, before envoy performs<br />routing, tracing and built-in header manipulation. |
 | `lateResponseHeaders` | _[HTTPHeaderFilter](#httpheaderfilter)_ |  false  |  | LateResponseHeaders defines settings for global response header modification. |
+| `requestIdExtension` | _[RequestIDExtensionSettings](#requestidextensionsettings)_ |  false  |  | RequestIDExtension defines configuration for Envoy's request ID extension. |
 
 
 #### HealthCheck
@@ -4571,6 +4572,21 @@ _Appears in:_
 | `Preserve` | Preserve `X-Request-ID` if already present, do not generate when empty<br /> | 
 | `Generate` | Always generate `X-Request-ID` header, do not preserve `X-Request-ID`<br />header if it exists. This is the default behavior.<br /> | 
 | `Disable` | Do not preserve or generate `X-Request-ID` header<br /> | 
+
+
+#### RequestIDExtensionSettings
+
+
+
+RequestIDExtension defines configuration for the UUID request ID extension.
+
+_Appears in:_
+- [HeaderSettings](#headersettings)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `packTraceReason` | _boolean_ |  false  | true | PackTraceReason indicates whether the implementation alters the UUID<br />to contain the trace sampling decision as per the UuidRequestIdConfig<br />message documentation.<br />Defaults to true. If disabled, no modification to the UUID will be<br />performed. Note that if disabled, stable sampling of traces, access logs,<br />etc. will no longer work and only random sampling will be possible.<br />Corresponds to Envoy’s `pack_trace_reason`. |
+| `useRequestIDForTraceSampling` | _boolean_ |  false  | true | UseRequestIDForTraceSampling sets whether to use x-request-id for<br />sampling decisions. Defaults to true.<br />See the Envoy context propagation overview for more information.<br />Corresponds to Envoy’s `use_request_id_for_trace_sampling`. |
 
 
 #### ResourceProviderType
