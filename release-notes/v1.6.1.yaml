@@ -5,17 +5,18 @@ breaking changes: |
 
 # Updates addressing vulnerabilities, security flaws, or compliance requirements.
 security updates: |
-  Bumped golang.org/x/crypto to 0.45.0 to address upstream security fixes.
-  Bumped Envoy to 1.36.3 to incorporate security patches.
+  Bumped Envoy to 1.36.3 to incorporate security patches, CVE-2025-64527, CVE-2025-66220, and CVE-2025-64763. Ref https://github.com/envoyproxy/envoy/releases/tag/v1.36.3
 
 # New features or capabilities added in this release.
 new features: |
 
 bug fixes: |
-  Owning Gateway resolution now validates the referenced GatewayClass controller to prevent cross-controller mutations.
-  Treat TooManyAddresses status as programmed so address overflows no longer block provisioning.
-  Avoid creating skeleton RouteParent status entries for parentRefs belonging to unmanaged GatewayClasses.
+  Fixed xDS snapshot cache to clear snapshots when streams close, preventing proxies from receiving stale configuration after reconnection.
   Fixed configured OIDC authorization endpoint being overridden by discovered endpoints from issuer's well-known URL.
+  Fixed an issue with gateway ownership tracking when running multiple controllers.
+  Fixed default namespace handling when namespace is unset.
+  Fixed a bug where HTTPRoutes referencing gateways with multiple different GatewayClasses would have incomplete status conditions.
+  Fixed gateway status to treat too many addresses as programmed.
   Fix 500 errors caused by partially invalid BackendRefs; traffic is now correctly routed between valid backends and 500 responses according to their configured weights.
 
 # Enhancements that improve performance.
@@ -26,5 +27,6 @@ deprecations: |
 
 # Other notable changes not covered by the above sections.
 Other changes: |
-  Bumped Gateway API to v1.4.1
-  Benchmark CPU sampling now uses a fixed duration for accurate CPU rate calculations.
+  Bumped Gateway API to v1.4.1.
+  Bumped golang.org/x/crypto dependency.
+  Added disk space reclamation script for CI runners to prevent out-of-disk errors.
