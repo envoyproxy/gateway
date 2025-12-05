@@ -151,7 +151,7 @@ func SetGatewayListenerStatusCondition(gateway *gwapiv1.Gateway, listenerStatusI
 
 const (
 	messageAddressNotAssigned  = "No addresses have been assigned to the Gateway"
-	messageFmtTooManyAddresses = "Too many addresses (%d) have been assigned to the Gateway, the maximum number of addresses is 16"
+	messageFmtTooManyAddresses = "Too many addresses (%d) have been assigned to the Gateway; only the first 16 are included in the status."
 	messageNoResources         = "Envoy replicas unavailable"
 	messageFmtProgrammed       = "Address assigned to the Gateway, %d/%d envoy replicas available"
 )
@@ -168,7 +168,7 @@ func updateGatewayProgrammedCondition(gw *gwapiv1.Gateway, envoyObj client.Objec
 
 	if len(gw.Status.Addresses) > 16 {
 		gw.Status.Conditions = MergeConditions(gw.Status.Conditions,
-			newCondition(string(gwapiv1.GatewayConditionProgrammed), metav1.ConditionFalse, string(gwapiv1.GatewayReasonInvalid),
+			newCondition(string(gwapiv1.GatewayConditionProgrammed), metav1.ConditionTrue, string(gwapiv1.GatewayReasonProgrammed),
 				fmt.Sprintf(messageFmtTooManyAddresses, len(gw.Status.Addresses)), time.Now(), gw.Generation))
 
 		// Truncate the addresses to 16

@@ -55,11 +55,14 @@ type snapshotMap map[string]*cachev3.Snapshot
 
 type nodeInfoMap map[int64]*corev3.Node
 
+type nodeFrequencyMap map[string]int
+
 type streamDurationMap map[int64]time.Time
 
 type snapshotCache struct {
 	cachev3.SnapshotCache
 	streamIDNodeInfo    nodeInfoMap
+	nodeFrequency       nodeFrequencyMap
 	streamDuration      streamDurationMap
 	deltaStreamDuration streamDurationMap
 	snapshotVersion     int64
@@ -133,6 +136,7 @@ func NewSnapshotCache(ads bool, logger logging.Logger) SnapshotCacheWithCallback
 		log:                 wrappedLogger,
 		lastSnapshot:        make(snapshotMap),
 		streamIDNodeInfo:    make(nodeInfoMap),
+		nodeFrequency:       make(nodeFrequencyMap),
 		streamDuration:      make(streamDurationMap),
 		deltaStreamDuration: make(streamDurationMap),
 	}
@@ -179,6 +183,15 @@ func (s *snapshotCache) OnStreamClosed(streamID int64, node *corev3.Node) {
 
 	delete(s.streamIDNodeInfo, streamID)
 	delete(s.streamDuration, streamID)
+
+	s.nodeFrequency[node.Id] -= 1
+	if s.nodeFrequency[node.Id] <= 0 {
+		delete(s.nodeFrequency, node.Id)
+
+		// Only snapshots for nodes with active connections are updated, we need to clear
+		// the snapshot for this node so it doesn't get stale data when it reconnects.
+		s.ClearSnapshot(node.Id)
+	}
 }
 
 func (s *snapshotCache) OnStreamRequest(streamID int64, req *discoveryv3.DiscoveryRequest) error {
@@ -196,6 +209,7 @@ func (s *snapshotCache) OnStreamRequest(streamID int64, req *discoveryv3.Discove
 		}
 		s.log.Debugf("First discovery request on stream %d, got nodeID %s", streamID, req.Node.Id)
 		s.streamIDNodeInfo[streamID] = req.Node
+		s.nodeFrequency[req.Node.Id] += 1
 	}
 	nodeID := s.streamIDNodeInfo[streamID].Id
 	cluster := s.streamIDNodeInfo[streamID].Cluster
@@ -286,6 +300,15 @@ func (s *snapshotCache) OnDeltaStreamClosed(streamID int64, node *corev3.Node) {
 
 	delete(s.streamIDNodeInfo, streamID)
 	delete(s.deltaStreamDuration, streamID)
+
+	s.nodeFrequency[node.Id] -= 1
+	if s.nodeFrequency[node.Id] <= 0 {
+		delete(s.nodeFrequency, node.Id)
+
+		// Only snapshots for nodes with active connections are updated, we need to clear
+		// the snapshot for this node so it doesn't get stale data when it reconnects.
+		s.ClearSnapshot(node.Id)
+	}
 }
 
 func (s *snapshotCache) OnStreamDeltaRequest(streamID int64, req *discoveryv3.DeltaDiscoveryRequest) error {
@@ -308,6 +331,7 @@ func (s *snapshotCache) OnStreamDeltaRequest(streamID int64, req *discoveryv3.De
 		}
 		s.log.Debugf("First incremental discovery request on stream %d, got nodeID %s", streamID, req.Node.Id)
 		s.streamIDNodeInfo[streamID] = req.Node
+		s.nodeFrequency[req.Node.Id] += 1
 	}
 	nodeID := s.streamIDNodeInfo[streamID].Id
 	cluster := s.streamIDNodeInfo[streamID].Cluster
