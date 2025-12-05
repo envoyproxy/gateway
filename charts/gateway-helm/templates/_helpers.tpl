@@ -156,6 +156,12 @@ The default Envoy Gateway configuration.
 provider:
   type: Kubernetes
   kubernetes:
+    {{- if .Values.global.imagePullSecrets }}
+    envoyDeployment:
+      pod:
+        imagePullSecrets:
+          {{- toYaml .Values.global.imagePullSecrets | nindent 10 }}
+    {{- end }}
     rateLimitDeployment:
       container:
         image: {{ include "eg.ratelimit.image" . }}
