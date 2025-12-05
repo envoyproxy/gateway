@@ -25,6 +25,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/proxy"
 	resource2 "github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/resource"
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/message"
 )
 
 func daemonsetWithImage(ds *appsv1.DaemonSet, image string) *appsv1.DaemonSet {
@@ -48,7 +49,7 @@ func daemonsetWithSelectorAndLabel(ds *appsv1.DaemonSet, selector *metav1.LabelS
 	return dCopy
 }
 
-func setupCreateOrUpdateProxyDaemonSet(gatewayNamespaceMode bool) (*appsv1.DaemonSet, *ir.Infra, *config.Server, error) {
+func setupCreateOrUpdateProxyDaemonSet(t *testing.T, gatewayNamespaceMode bool) (*appsv1.DaemonSet, *ir.Infra, *config.Server, error) {
 	ctx := context.Background()
 	cfg, err := config.New(os.Stdout, os.Stderr)
 	if err != nil {
@@ -77,7 +78,8 @@ func setupCreateOrUpdateProxyDaemonSet(gatewayNamespaceMode bool) (*appsv1.Daemo
 	cli := fakeclient.NewClientBuilder().
 		WithScheme(envoygateway.GetScheme()).
 		Build()
-	kube := NewInfra(cli, cfg)
+	errorNotifier := message.RunnerErrorNotifier{RunnerName: t.Name(), RunnerErrors: &message.RunnerErrors{}}
+	kube := NewInfra(cli, cfg, errorNotifier)
 	if err := setupOwnerReferenceResources(ctx, kube.Client); err != nil {
 		return nil, nil, nil, err
 	}
@@ -108,10 +110,10 @@ func setupCreateOrUpdateProxyDaemonSet(gatewayNamespaceMode bool) (*appsv1.Daemo
 }
 
 func TestCreateOrUpdateProxyDaemonSet(t *testing.T) {
-	ds, infra, cfg, err := setupCreateOrUpdateProxyDaemonSet(false)
+	ds, infra, cfg, err := setupCreateOrUpdateProxyDaemonSet(t, false)
 	require.NoError(t, err)
 
-	gwDs, gwInfra, gwCfg, err := setupCreateOrUpdateProxyDaemonSet(true)
+	gwDs, gwInfra, gwCfg, err := setupCreateOrUpdateProxyDaemonSet(t, true)
 	require.NoError(t, err)
 
 	testCases := []struct {
@@ -320,7 +322,8 @@ func TestCreateOrUpdateProxyDaemonSet(t *testing.T) {
 					Build()
 			}
 
-			kube := NewInfra(cli, tc.cfg)
+			errorNotifier := message.RunnerErrorNotifier{RunnerName: t.Name(), RunnerErrors: &message.RunnerErrors{}}
+			kube := NewInfra(cli, tc.cfg, errorNotifier)
 			require.NoError(t, setupOwnerReferenceResources(ctx, kube.Client))
 
 			r, err := proxy.NewResourceRender(ctx, kube, tc.in)
