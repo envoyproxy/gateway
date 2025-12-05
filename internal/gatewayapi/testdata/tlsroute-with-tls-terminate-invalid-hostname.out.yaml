@@ -25,16 +25,20 @@ gateways:
     - attachedRoutes: 1
       conditions:
       - lastTransitionTime: null
-        message: 'Secret envoy-gateway/tls-secret-1 must contain valid tls.crt and
-          tls.key, unable to validate certificate in tls.crt: x509: malformed extensions.'
-        reason: InvalidCertificateRef
-        status: "False"
-        type: ResolvedRefs
-      - lastTransitionTime: null
-        message: Listener is invalid, see other Conditions for details.
-        reason: Invalid
-        status: "False"
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
         type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
       name: tls
       supportedKinds:
       - group: gateway.networking.k8s.io
@@ -44,6 +48,14 @@ gateways:
 infraIR:
   envoy-gateway/gateway-1:
     proxy:
+      listeners:
+      - address: null
+        name: envoy-gateway/gateway-1/tls
+        ports:
+        - containerPort: 10090
+          name: tls-90
+          protocol: TLS
+          servicePort: 90
       metadata:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
@@ -74,8 +86,9 @@ tlsRoutes:
     parents:
     - conditions:
       - lastTransitionTime: null
-        message: There are no ready listeners for this parent ref
-        reason: NoReadyListeners
+        message: There were no hostname intersections between the TLSRoute and this
+          parent ref's Listener(s).
+        reason: NoMatchingListenerHostname
         status: "False"
         type: Accepted
       - lastTransitionTime: null
@@ -119,3 +132,19 @@ xdsIR:
       ipFamily: IPv4
       path: /ready
       port: 19003
+    tcp:
+    - address: 0.0.0.0
+      externalPort: 90
+      metadata:
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: tls
+      name: envoy-gateway/gateway-1/tls
+      port: 10090
+      tls:
+        alpnProtocols: []
+        certificates:
+        - certificate: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURGVENDQWYyZ0F3SUJBZ0lVRVZNTVA5ZUo5WEFCV2NRNVptbTZSWk5uQ2Nvd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0dqRVlNQllHQTFVRUF3d1BabTl2TG1WNFlXMXdiR1V1WTI5dE1CNFhEVEkxTVRJd05UQTRNemswTUZvWApEVE0xTVRJd016QTRNemswTUZvd0dqRVlNQllHQTFVRUF3d1BabTl2TG1WNFlXMXdiR1V1WTI5dE1JSUJJakFOCkJna3Foa2lHOXcwQkFRRUZBQU9DQVE4QU1JSUJDZ0tDQVFFQXVERTg4L1hQQzV4M2pGV3NjSjZRamxQSEplRHUKRVFRbXZnbU0vRnlKMzVSSjYra2J4ZDNYRVdrSFdBcWlYVWNZTHI5QTJOcE1RZnFCVDk2VU1yQmJJckRWdExJLwphNStnWnNRdlZSbU9FRzRZUTdhdkFDREJidENzcVh4QVVhNTB6WVIzU1NSUXFpSlJpcmFlZzVseFRTYWtMOERRCmZhT3lkSTFvQlJRWElHaWlOVHMweHJDNCtSSzBlVWc1aXhKVUNpNWt4TExPTEc1a1FSTzZrdXYvdlVVWmpBQ0EKU2FWVzZlbGJKQU1PeUZnb08yOW5IVldlcy9UUlIybE1LVFhSMng1SWszM21hekdHaFRocE5tUWpyaG1kUE4rZwo2Y1JlOS9lc0FuZFVDS0R6clpzRGE5MWkzUFozNTJRUFU2NHJ6THN5Zzg0c2I2RUhheVZ5YU1lcjJ3SURBUUFCCm8xTXdVVEFkQmdOVkhRNEVGZ1FVSWtsc1FMWkZrcFlrZGQxVTQ3N1FTazFMdjdzd0h3WURWUjBqQkJnd0ZvQVUKSWtsc1FMWkZrcFlrZGQxVTQ3N1FTazFMdjdzd0R3WURWUjBUQVFIL0JBVXdBd0VCL3pBTkJna3Foa2lHOXcwQgpBUXNGQUFPQ0FRRUFYRzAvUE1mUGdmYVZRRFo2K0ppS2UyQk40bzRTYTk0Si84V0IydFAwQXZtMEUrSXFDVExtCjhjazR2S2RXYTZLUE9YelRSazJiZWpBT2o4MFpLdTIvaDNDOWdObldwb1o3aCtZMXdIQXR0SWo1WEp0a0RBUFQKUHEyN2RCcnZMVUV2c24ydzR2NGsreVgyOHFGQndxSWgybUh4OG05VTJSYWFVV2xYWHNDbis2dGpnQ1NDNXhTOQplM3A5MVh3QllacmJJNVgvQVlsYm1YL2laZG81Snp1Y3Ryb3QzeFRaZGJOWU5CdEw0d2V0WGxGTHljS2c1NHd2CjVjYXNEcFB6V0MwQkhXV2RzK213TU1KalgxNDlXWE9tdXFibWo5QzV0cTBZei9DaE1mOFdjblhpODVDbUdBcUUKaUl0bGcvOVMvNC96bG1tMDJoVEp4S0o5OHNPOVJZVzI0QT09Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K
+          name: envoy-gateway/tls-secret-1
+          privateKey: '[redacted]'

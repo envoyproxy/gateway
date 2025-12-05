@@ -25,16 +25,20 @@ gateways:
     - attachedRoutes: 3
       conditions:
       - lastTransitionTime: null
-        message: 'Secret envoy-gateway/tls-secret-1 must contain valid tls.crt and
-          tls.key, unable to validate certificate in tls.crt: x509: malformed extensions.'
-        reason: InvalidCertificateRef
-        status: "False"
-        type: ResolvedRefs
-      - lastTransitionTime: null
-        message: Listener is invalid, see other Conditions for details.
-        reason: Invalid
-        status: "False"
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
         type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
       name: tls
       supportedKinds:
       - group: gateway.networking.k8s.io
@@ -44,6 +48,14 @@ gateways:
 infraIR:
   envoy-gateway/gateway-1:
     proxy:
+      listeners:
+      - address: null
+        name: envoy-gateway/gateway-1/tls
+        ports:
+        - containerPort: 10090
+          name: tls-90
+          protocol: TLS
+          servicePort: 90
       metadata:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
@@ -74,9 +86,9 @@ tlsRoutes:
     parents:
     - conditions:
       - lastTransitionTime: null
-        message: There are no ready listeners for this parent ref
-        reason: NoReadyListeners
-        status: "False"
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
         type: Accepted
       - lastTransitionTime: null
         message: Resolved all the Object references for the Route
@@ -108,9 +120,9 @@ tlsRoutes:
     parents:
     - conditions:
       - lastTransitionTime: null
-        message: There are no ready listeners for this parent ref
-        reason: NoReadyListeners
-        status: "False"
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
         type: Accepted
       - lastTransitionTime: null
         message: Resolved all the Object references for the Route
@@ -142,9 +154,9 @@ tlsRoutes:
     parents:
     - conditions:
       - lastTransitionTime: null
-        message: There are no ready listeners for this parent ref
-        reason: NoReadyListeners
-        status: "False"
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
         type: Accepted
       - lastTransitionTime: null
         message: Resolved all the Object references for the Route
@@ -187,3 +199,122 @@ xdsIR:
       ipFamily: IPv4
       path: /ready
       port: 19003
+    tcp:
+    - address: 0.0.0.0
+      externalPort: 90
+      metadata:
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: tls
+      name: envoy-gateway/gateway-1/tls
+      port: 10090
+      routes:
+      - destination:
+          metadata:
+            kind: TLSRoute
+            name: tlsroute-1
+            namespace: default
+          name: tlsroute/default/tlsroute-1/rule/-1
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            metadata:
+              kind: Service
+              name: service-1
+              namespace: default
+              sectionName: "8080"
+            name: tlsroute/default/tlsroute-1/rule/-1/backend/0
+            protocol: HTTPS
+            weight: 1
+        metadata:
+          kind: TLSRoute
+          name: tlsroute-1
+          namespace: default
+        name: tlsroute/default/tlsroute-1
+        tls:
+          inspector:
+            snis:
+            - foo.example.com
+          terminate:
+            alpnProtocols: []
+            certificates:
+            - certificate: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURZRENDQWtpZ0F3SUJBZ0lVRVZNTVA5ZUo5WEFCV2NRNVptbTZSWk5uQ2Nvd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0dERVdNQlFHQTFVRUF3d05LaTVsZUdGdGNHeGxMbU52YlRBZUZ3MHlOVEV5TURVd09EUXlNemhhRncwegpOVEV5TURNd09EUXlNemhhTUJneEZqQVVCZ05WQkFNTURTb3VaWGhoYlhCc1pTNWpiMjB3Z2dFaU1BMEdDU3FHClNJYjNEUUVCQVFVQUE0SUJEd0F3Z2dFS0FvSUJBUUM2YlBGT2pTWFB1dGxnUGQ5VlpwNkNxZitqVkpiTzlLUVoKTXBicmdPcmFraGt3NVp1NEJwZ2NjcUgxWENweEczVFRkTURreHJXOC9PLzFTY3dIeGtuTkp3aFdsZ3dIMDJWNQpZc3ptZmZnVkRrMVR0NXpTWXFOdWU0UUVEeVpncmhJNmRpbXBTVTFWbnRSbG5HY2ZFS05Zb0VMME9Kc2NjdlJXCkFGbjQ3dksxL3ZSWi82TFB1b0k4aGYwS0psU0Y3ZWJ3TEJnSmNEYmNtYURDR2NCc1ZyWnZkMnNHc0hWQ2pDOFAKZll5bEI5NkxaS0c3bjVkVlNDZm9tNEFucmtXbXZ4WHBjeXhveVhOTXR5cWZMNnppRnQyMTNYRDkyUnREQytvawp1Y29LL295N281V2JpN21mWGJoVXYrRVhjU3BXNXBDa2hFSTk0TFBmZ2p6TmFVeitjeER0QWdNQkFBR2pnYUV3CmdaNHdIUVlEVlIwT0JCWUVGR3gyVXZVMStpSFR3TzRoMU9zODJwb1o2SjJoTUI4R0ExVWRJd1FZTUJhQUZHeDIKVXZVMStpSFR3TzRoMU9zODJwb1o2SjJoTUE4R0ExVWRFd0VCL3dRRk1BTUJBZjh3U3dZRFZSMFJCRVF3UW9JTgpLaTVsZUdGdGNHeGxMbU52YllJUFptOXZMbVY0WVcxd2JHVXVZMjl0Z2c5aVlYSXVaWGhoYlhCc1pTNWpiMjJDCkQySmhlaTVsZUdGdGNHeGxMbU52YlRBTkJna3Foa2lHOXcwQkFRc0ZBQU9DQVFFQWdyNjZSVDJFaXZWenllZU8Kbk1pbytwN3VIUUM4dU1ldTNmTDAxcEU3V0ppZFR6OTFtUzdyekIrY3RFNytsZ2FVaGlFVzNyajVqOVZ2RjNVWQo2T0VVUEFCL1YrWUVrcUE3S0RpcHBNTDZMbW00MElaNXJ0N0tBZkhud0NmZnJMNk1WVmNQSlVaZytJTUJTVTNoCnU0M2p6Y3B5V1ZBenFGczM0TVBYMmZjN1VvZHh6UzFaVStPYnJsTTkvTGR2L2VJT2xqZ0tyVGt3MlAvd2Z6cm4KQmpYRFFTNGo5dm9hYmZhcjhuSWkvTHRGSTZCVG5SWUhBNkRkWWE0WXdqWTFrM3d1SDk4L2dYT3FQK0ZPVWlsSgpKYnI4cWNjZlY4bGZTL21JTG1jUitmenRDcVBTVWplK3Y3UW1yVmJuWS8wK1B4SUFxZklFcXZyTTZ3TXN5OXBuClIwS0ViUT09Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K
+              name: envoy-gateway/tls-secret-1
+              privateKey: '[redacted]'
+      - destination:
+          metadata:
+            kind: TLSRoute
+            name: tlsroute-2
+            namespace: default
+          name: tlsroute/default/tlsroute-2/rule/-1
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            metadata:
+              kind: Service
+              name: service-2
+              namespace: default
+              sectionName: "8080"
+            name: tlsroute/default/tlsroute-2/rule/-1/backend/0
+            protocol: HTTPS
+            weight: 1
+        metadata:
+          kind: TLSRoute
+          name: tlsroute-2
+          namespace: default
+        name: tlsroute/default/tlsroute-2
+        tls:
+          inspector:
+            snis:
+            - bar.example.com
+          terminate:
+            alpnProtocols: []
+            certificates:
+            - certificate: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURZRENDQWtpZ0F3SUJBZ0lVRVZNTVA5ZUo5WEFCV2NRNVptbTZSWk5uQ2Nvd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0dERVdNQlFHQTFVRUF3d05LaTVsZUdGdGNHeGxMbU52YlRBZUZ3MHlOVEV5TURVd09EUXlNemhhRncwegpOVEV5TURNd09EUXlNemhhTUJneEZqQVVCZ05WQkFNTURTb3VaWGhoYlhCc1pTNWpiMjB3Z2dFaU1BMEdDU3FHClNJYjNEUUVCQVFVQUE0SUJEd0F3Z2dFS0FvSUJBUUM2YlBGT2pTWFB1dGxnUGQ5VlpwNkNxZitqVkpiTzlLUVoKTXBicmdPcmFraGt3NVp1NEJwZ2NjcUgxWENweEczVFRkTURreHJXOC9PLzFTY3dIeGtuTkp3aFdsZ3dIMDJWNQpZc3ptZmZnVkRrMVR0NXpTWXFOdWU0UUVEeVpncmhJNmRpbXBTVTFWbnRSbG5HY2ZFS05Zb0VMME9Kc2NjdlJXCkFGbjQ3dksxL3ZSWi82TFB1b0k4aGYwS0psU0Y3ZWJ3TEJnSmNEYmNtYURDR2NCc1ZyWnZkMnNHc0hWQ2pDOFAKZll5bEI5NkxaS0c3bjVkVlNDZm9tNEFucmtXbXZ4WHBjeXhveVhOTXR5cWZMNnppRnQyMTNYRDkyUnREQytvawp1Y29LL295N281V2JpN21mWGJoVXYrRVhjU3BXNXBDa2hFSTk0TFBmZ2p6TmFVeitjeER0QWdNQkFBR2pnYUV3CmdaNHdIUVlEVlIwT0JCWUVGR3gyVXZVMStpSFR3TzRoMU9zODJwb1o2SjJoTUI4R0ExVWRJd1FZTUJhQUZHeDIKVXZVMStpSFR3TzRoMU9zODJwb1o2SjJoTUE4R0ExVWRFd0VCL3dRRk1BTUJBZjh3U3dZRFZSMFJCRVF3UW9JTgpLaTVsZUdGdGNHeGxMbU52YllJUFptOXZMbVY0WVcxd2JHVXVZMjl0Z2c5aVlYSXVaWGhoYlhCc1pTNWpiMjJDCkQySmhlaTVsZUdGdGNHeGxMbU52YlRBTkJna3Foa2lHOXcwQkFRc0ZBQU9DQVFFQWdyNjZSVDJFaXZWenllZU8Kbk1pbytwN3VIUUM4dU1ldTNmTDAxcEU3V0ppZFR6OTFtUzdyekIrY3RFNytsZ2FVaGlFVzNyajVqOVZ2RjNVWQo2T0VVUEFCL1YrWUVrcUE3S0RpcHBNTDZMbW00MElaNXJ0N0tBZkhud0NmZnJMNk1WVmNQSlVaZytJTUJTVTNoCnU0M2p6Y3B5V1ZBenFGczM0TVBYMmZjN1VvZHh6UzFaVStPYnJsTTkvTGR2L2VJT2xqZ0tyVGt3MlAvd2Z6cm4KQmpYRFFTNGo5dm9hYmZhcjhuSWkvTHRGSTZCVG5SWUhBNkRkWWE0WXdqWTFrM3d1SDk4L2dYT3FQK0ZPVWlsSgpKYnI4cWNjZlY4bGZTL21JTG1jUitmenRDcVBTVWplK3Y3UW1yVmJuWS8wK1B4SUFxZklFcXZyTTZ3TXN5OXBuClIwS0ViUT09Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K
+              name: envoy-gateway/tls-secret-1
+              privateKey: '[redacted]'
+      - destination:
+          metadata:
+            kind: TLSRoute
+            name: tlsroute-3
+            namespace: default
+          name: tlsroute/default/tlsroute-3/rule/-1
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            metadata:
+              kind: Service
+              name: service-3
+              namespace: default
+              sectionName: "8080"
+            name: tlsroute/default/tlsroute-3/rule/-1/backend/0
+            protocol: HTTPS
+            weight: 1
+        metadata:
+          kind: TLSRoute
+          name: tlsroute-3
+          namespace: default
+        name: tlsroute/default/tlsroute-3
+        tls:
+          inspector:
+            snis:
+            - baz.example.com
+          terminate:
+            alpnProtocols: []
+            certificates:
+            - certificate: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURZRENDQWtpZ0F3SUJBZ0lVRVZNTVA5ZUo5WEFCV2NRNVptbTZSWk5uQ2Nvd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0dERVdNQlFHQTFVRUF3d05LaTVsZUdGdGNHeGxMbU52YlRBZUZ3MHlOVEV5TURVd09EUXlNemhhRncwegpOVEV5TURNd09EUXlNemhhTUJneEZqQVVCZ05WQkFNTURTb3VaWGhoYlhCc1pTNWpiMjB3Z2dFaU1BMEdDU3FHClNJYjNEUUVCQVFVQUE0SUJEd0F3Z2dFS0FvSUJBUUM2YlBGT2pTWFB1dGxnUGQ5VlpwNkNxZitqVkpiTzlLUVoKTXBicmdPcmFraGt3NVp1NEJwZ2NjcUgxWENweEczVFRkTURreHJXOC9PLzFTY3dIeGtuTkp3aFdsZ3dIMDJWNQpZc3ptZmZnVkRrMVR0NXpTWXFOdWU0UUVEeVpncmhJNmRpbXBTVTFWbnRSbG5HY2ZFS05Zb0VMME9Kc2NjdlJXCkFGbjQ3dksxL3ZSWi82TFB1b0k4aGYwS0psU0Y3ZWJ3TEJnSmNEYmNtYURDR2NCc1ZyWnZkMnNHc0hWQ2pDOFAKZll5bEI5NkxaS0c3bjVkVlNDZm9tNEFucmtXbXZ4WHBjeXhveVhOTXR5cWZMNnppRnQyMTNYRDkyUnREQytvawp1Y29LL295N281V2JpN21mWGJoVXYrRVhjU3BXNXBDa2hFSTk0TFBmZ2p6TmFVeitjeER0QWdNQkFBR2pnYUV3CmdaNHdIUVlEVlIwT0JCWUVGR3gyVXZVMStpSFR3TzRoMU9zODJwb1o2SjJoTUI4R0ExVWRJd1FZTUJhQUZHeDIKVXZVMStpSFR3TzRoMU9zODJwb1o2SjJoTUE4R0ExVWRFd0VCL3dRRk1BTUJBZjh3U3dZRFZSMFJCRVF3UW9JTgpLaTVsZUdGdGNHeGxMbU52YllJUFptOXZMbVY0WVcxd2JHVXVZMjl0Z2c5aVlYSXVaWGhoYlhCc1pTNWpiMjJDCkQySmhlaTVsZUdGdGNHeGxMbU52YlRBTkJna3Foa2lHOXcwQkFRc0ZBQU9DQVFFQWdyNjZSVDJFaXZWenllZU8Kbk1pbytwN3VIUUM4dU1ldTNmTDAxcEU3V0ppZFR6OTFtUzdyekIrY3RFNytsZ2FVaGlFVzNyajVqOVZ2RjNVWQo2T0VVUEFCL1YrWUVrcUE3S0RpcHBNTDZMbW00MElaNXJ0N0tBZkhud0NmZnJMNk1WVmNQSlVaZytJTUJTVTNoCnU0M2p6Y3B5V1ZBenFGczM0TVBYMmZjN1VvZHh6UzFaVStPYnJsTTkvTGR2L2VJT2xqZ0tyVGt3MlAvd2Z6cm4KQmpYRFFTNGo5dm9hYmZhcjhuSWkvTHRGSTZCVG5SWUhBNkRkWWE0WXdqWTFrM3d1SDk4L2dYT3FQK0ZPVWlsSgpKYnI4cWNjZlY4bGZTL21JTG1jUitmenRDcVBTVWplK3Y3UW1yVmJuWS8wK1B4SUFxZklFcXZyTTZ3TXN5OXBuClIwS0ViUT09Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K
+              name: envoy-gateway/tls-secret-1
+              privateKey: '[redacted]'
+      tls:
+        alpnProtocols: []
+        certificates:
+        - certificate: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURZRENDQWtpZ0F3SUJBZ0lVRVZNTVA5ZUo5WEFCV2NRNVptbTZSWk5uQ2Nvd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0dERVdNQlFHQTFVRUF3d05LaTVsZUdGdGNHeGxMbU52YlRBZUZ3MHlOVEV5TURVd09EUXlNemhhRncwegpOVEV5TURNd09EUXlNemhhTUJneEZqQVVCZ05WQkFNTURTb3VaWGhoYlhCc1pTNWpiMjB3Z2dFaU1BMEdDU3FHClNJYjNEUUVCQVFVQUE0SUJEd0F3Z2dFS0FvSUJBUUM2YlBGT2pTWFB1dGxnUGQ5VlpwNkNxZitqVkpiTzlLUVoKTXBicmdPcmFraGt3NVp1NEJwZ2NjcUgxWENweEczVFRkTURreHJXOC9PLzFTY3dIeGtuTkp3aFdsZ3dIMDJWNQpZc3ptZmZnVkRrMVR0NXpTWXFOdWU0UUVEeVpncmhJNmRpbXBTVTFWbnRSbG5HY2ZFS05Zb0VMME9Kc2NjdlJXCkFGbjQ3dksxL3ZSWi82TFB1b0k4aGYwS0psU0Y3ZWJ3TEJnSmNEYmNtYURDR2NCc1ZyWnZkMnNHc0hWQ2pDOFAKZll5bEI5NkxaS0c3bjVkVlNDZm9tNEFucmtXbXZ4WHBjeXhveVhOTXR5cWZMNnppRnQyMTNYRDkyUnREQytvawp1Y29LL295N281V2JpN21mWGJoVXYrRVhjU3BXNXBDa2hFSTk0TFBmZ2p6TmFVeitjeER0QWdNQkFBR2pnYUV3CmdaNHdIUVlEVlIwT0JCWUVGR3gyVXZVMStpSFR3TzRoMU9zODJwb1o2SjJoTUI4R0ExVWRJd1FZTUJhQUZHeDIKVXZVMStpSFR3TzRoMU9zODJwb1o2SjJoTUE4R0ExVWRFd0VCL3dRRk1BTUJBZjh3U3dZRFZSMFJCRVF3UW9JTgpLaTVsZUdGdGNHeGxMbU52YllJUFptOXZMbVY0WVcxd2JHVXVZMjl0Z2c5aVlYSXVaWGhoYlhCc1pTNWpiMjJDCkQySmhlaTVsZUdGdGNHeGxMbU52YlRBTkJna3Foa2lHOXcwQkFRc0ZBQU9DQVFFQWdyNjZSVDJFaXZWenllZU8Kbk1pbytwN3VIUUM4dU1ldTNmTDAxcEU3V0ppZFR6OTFtUzdyekIrY3RFNytsZ2FVaGlFVzNyajVqOVZ2RjNVWQo2T0VVUEFCL1YrWUVrcUE3S0RpcHBNTDZMbW00MElaNXJ0N0tBZkhud0NmZnJMNk1WVmNQSlVaZytJTUJTVTNoCnU0M2p6Y3B5V1ZBenFGczM0TVBYMmZjN1VvZHh6UzFaVStPYnJsTTkvTGR2L2VJT2xqZ0tyVGt3MlAvd2Z6cm4KQmpYRFFTNGo5dm9hYmZhcjhuSWkvTHRGSTZCVG5SWUhBNkRkWWE0WXdqWTFrM3d1SDk4L2dYT3FQK0ZPVWlsSgpKYnI4cWNjZlY4bGZTL21JTG1jUitmenRDcVBTVWplK3Y3UW1yVmJuWS8wK1B4SUFxZklFcXZyTTZ3TXN5OXBuClIwS0ViUT09Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K
+          name: envoy-gateway/tls-secret-1
+          privateKey: '[redacted]'
