@@ -2102,3 +2102,641 @@ func writeTestDataToFile(filename string, resources []any) error {
 
 	return os.WriteFile(filename, combinedYAML, 0o600)
 }
+
+func TestMergeContainerDefaults(t *testing.T) {
+	tests := []struct {
+		name          string
+		envoyGateway  *egv1a1.EnvoyGateway
+		containerSpec *egv1a1.KubernetesContainerSpec
+		expected      *egv1a1.KubernetesContainerSpec
+	}{
+		{
+			name: "no global defaults configured",
+			envoyGateway: &egv1a1.EnvoyGateway{
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					Provider: &egv1a1.EnvoyGatewayProvider{
+						Type:       egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{},
+					},
+				},
+			},
+			containerSpec: &egv1a1.KubernetesContainerSpec{
+				Image: ptr.To("custom/image:v1.0.0"),
+			},
+			expected: &egv1a1.KubernetesContainerSpec{
+				Image: ptr.To("custom/image:v1.0.0"),
+			},
+		},
+		{
+			name: "only global defaults configured, no container spec",
+			envoyGateway: &egv1a1.EnvoyGateway{
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					Provider: &egv1a1.EnvoyGatewayProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
+							EnvoyProxyTemplate: &egv1a1.EnvoyProxySpec{
+								Provider: &egv1a1.EnvoyProxyProvider{
+									Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+									Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+										EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
+											Container: &egv1a1.KubernetesContainerSpec{
+												Image:           ptr.To("global/proxy:v2.0.0"),
+												ImagePullPolicy: ptr.To(corev1.PullAlways),
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			containerSpec: nil,
+			expected: &egv1a1.KubernetesContainerSpec{
+				Image:           ptr.To("global/proxy:v2.0.0"),
+				ImagePullPolicy: ptr.To(corev1.PullAlways),
+			},
+		},
+		{
+			name: "container spec overrides global defaults for image",
+			envoyGateway: &egv1a1.EnvoyGateway{
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					Provider: &egv1a1.EnvoyGatewayProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
+							EnvoyProxyTemplate: &egv1a1.EnvoyProxySpec{
+								Provider: &egv1a1.EnvoyProxyProvider{
+									Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+									Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+										EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
+											Container: &egv1a1.KubernetesContainerSpec{
+												Image:           ptr.To("global/proxy:v2.0.0"),
+												ImagePullPolicy: ptr.To(corev1.PullAlways),
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			containerSpec: &egv1a1.KubernetesContainerSpec{
+				Image: ptr.To("specific/proxy:v3.0.0"),
+			},
+			expected: &egv1a1.KubernetesContainerSpec{
+				Image:           ptr.To("specific/proxy:v3.0.0"),
+				ImagePullPolicy: ptr.To(corev1.PullAlways),
+			},
+		},
+		{
+			name: "container spec overrides global defaults for imagePullPolicy",
+			envoyGateway: &egv1a1.EnvoyGateway{
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					Provider: &egv1a1.EnvoyGatewayProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
+							EnvoyProxyTemplate: &egv1a1.EnvoyProxySpec{
+								Provider: &egv1a1.EnvoyProxyProvider{
+									Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+									Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+										EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
+											Container: &egv1a1.KubernetesContainerSpec{
+												Image:           ptr.To("global/proxy:v2.0.0"),
+												ImagePullPolicy: ptr.To(corev1.PullAlways),
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			containerSpec: &egv1a1.KubernetesContainerSpec{
+				ImagePullPolicy: ptr.To(corev1.PullNever),
+			},
+			expected: &egv1a1.KubernetesContainerSpec{
+				Image:           ptr.To("global/proxy:v2.0.0"),
+				ImagePullPolicy: ptr.To(corev1.PullNever),
+			},
+		},
+		{
+			name: "imageRepository in defaults, image in container spec takes precedence",
+			envoyGateway: &egv1a1.EnvoyGateway{
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					Provider: &egv1a1.EnvoyGatewayProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
+							EnvoyProxyTemplate: &egv1a1.EnvoyProxySpec{
+								Provider: &egv1a1.EnvoyProxyProvider{
+									Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+									Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+										EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
+											Container: &egv1a1.KubernetesContainerSpec{
+												ImageRepository: ptr.To("global/repo"),
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			containerSpec: &egv1a1.KubernetesContainerSpec{
+				Image: ptr.To("specific/image:v1.0.0"),
+			},
+			expected: &egv1a1.KubernetesContainerSpec{
+				Image:           ptr.To("specific/image:v1.0.0"),
+				ImageRepository: ptr.To("global/repo"),
+			},
+		},
+		{
+			name: "env vars from global defaults used when not specified",
+			envoyGateway: &egv1a1.EnvoyGateway{
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					Provider: &egv1a1.EnvoyGatewayProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
+							EnvoyProxyTemplate: &egv1a1.EnvoyProxySpec{
+								Provider: &egv1a1.EnvoyProxyProvider{
+									Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+									Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+										EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
+											Container: &egv1a1.KubernetesContainerSpec{
+												Env: []corev1.EnvVar{
+													{Name: "GLOBAL_VAR", Value: "global"},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			containerSpec: &egv1a1.KubernetesContainerSpec{
+				Image: ptr.To("specific/image:v1.0.0"),
+			},
+			expected: &egv1a1.KubernetesContainerSpec{
+				Image: ptr.To("specific/image:v1.0.0"),
+				Env: []corev1.EnvVar{
+					{Name: "GLOBAL_VAR", Value: "global"},
+				},
+			},
+		},
+		{
+			name: "container spec env vars merged with global defaults",
+			envoyGateway: &egv1a1.EnvoyGateway{
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					Provider: &egv1a1.EnvoyGatewayProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
+							EnvoyProxyTemplate: &egv1a1.EnvoyProxySpec{
+								Provider: &egv1a1.EnvoyProxyProvider{
+									Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+									Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+										EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
+											Container: &egv1a1.KubernetesContainerSpec{
+												Env: []corev1.EnvVar{
+													{Name: "GLOBAL_VAR", Value: "global"},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			containerSpec: &egv1a1.KubernetesContainerSpec{
+				Env: []corev1.EnvVar{
+					{Name: "SPECIFIC_VAR", Value: "specific"},
+				},
+			},
+			expected: &egv1a1.KubernetesContainerSpec{
+				Env: []corev1.EnvVar{
+					{Name: "GLOBAL_VAR", Value: "global"},
+					{Name: "SPECIFIC_VAR", Value: "specific"},
+				},
+			},
+		},
+		{
+			name: "resources from global defaults used when not specified",
+			envoyGateway: &egv1a1.EnvoyGateway{
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					Provider: &egv1a1.EnvoyGatewayProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
+							EnvoyProxyTemplate: &egv1a1.EnvoyProxySpec{
+								Provider: &egv1a1.EnvoyProxyProvider{
+									Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+									Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+										EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
+											Container: &egv1a1.KubernetesContainerSpec{
+												Resources: &corev1.ResourceRequirements{
+													Limits: corev1.ResourceList{
+														corev1.ResourceCPU:    resource.MustParse("500m"),
+														corev1.ResourceMemory: resource.MustParse("1Gi"),
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			containerSpec: &egv1a1.KubernetesContainerSpec{
+				Image: ptr.To("specific/image:v1.0.0"),
+			},
+			expected: &egv1a1.KubernetesContainerSpec{
+				Image: ptr.To("specific/image:v1.0.0"),
+				Resources: &corev1.ResourceRequirements{
+					Limits: corev1.ResourceList{
+						corev1.ResourceCPU:    resource.MustParse("500m"),
+						corev1.ResourceMemory: resource.MustParse("1Gi"),
+					},
+				},
+			},
+		},
+		{
+			name:          "nil envoyGateway returns containerSpec as-is",
+			envoyGateway:  nil,
+			containerSpec: &egv1a1.KubernetesContainerSpec{Image: ptr.To("test:v1")},
+			expected:      &egv1a1.KubernetesContainerSpec{Image: ptr.To("test:v1")},
+		},
+		{
+			name: "empty container spec with global defaults returns defaults",
+			envoyGateway: &egv1a1.EnvoyGateway{
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					Provider: &egv1a1.EnvoyGatewayProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
+							EnvoyProxyTemplate: &egv1a1.EnvoyProxySpec{
+								Provider: &egv1a1.EnvoyProxyProvider{
+									Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+									Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+										EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
+											Container: &egv1a1.KubernetesContainerSpec{
+												Image:           ptr.To("global/proxy:v2.0.0"),
+												ImagePullPolicy: ptr.To(corev1.PullAlways),
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			containerSpec: &egv1a1.KubernetesContainerSpec{},
+			expected: &egv1a1.KubernetesContainerSpec{
+				Image:           ptr.To("global/proxy:v2.0.0"),
+				ImagePullPolicy: ptr.To(corev1.PullAlways),
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// Create a fresh config for each test
+			testCfg, err := config.New(os.Stdout, os.Stderr)
+			require.NoError(t, err)
+
+			if tc.envoyGateway != nil {
+				testCfg.EnvoyGateway = tc.envoyGateway
+			}
+
+			infra := newTestInfra()
+			r, err := NewResourceRender(context.Background(), newFakeKubernetesInfraProvider(testCfg), infra)
+			require.NoError(t, err)
+
+			got := r.mergeContainerDefaults(tc.containerSpec)
+			require.Equal(t, tc.expected, got)
+		})
+	}
+}
+
+func TestMergePodDefaults(t *testing.T) {
+	tests := []struct {
+		name         string
+		envoyGateway *egv1a1.EnvoyGateway
+		podSpec      *egv1a1.KubernetesPodSpec
+		expected     *egv1a1.KubernetesPodSpec
+	}{
+		{
+			name: "no global defaults configured",
+			envoyGateway: &egv1a1.EnvoyGateway{
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					Provider: &egv1a1.EnvoyGatewayProvider{
+						Type:       egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{},
+					},
+				},
+			},
+			podSpec: &egv1a1.KubernetesPodSpec{
+				Tolerations: []corev1.Toleration{
+					{Key: "custom", Operator: corev1.TolerationOpEqual, Value: "value"},
+				},
+			},
+			expected: &egv1a1.KubernetesPodSpec{
+				Tolerations: []corev1.Toleration{
+					{Key: "custom", Operator: corev1.TolerationOpEqual, Value: "value"},
+				},
+			},
+		},
+		{
+			name: "only global defaults configured, no pod spec",
+			envoyGateway: &egv1a1.EnvoyGateway{
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					Provider: &egv1a1.EnvoyGatewayProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
+							EnvoyProxyTemplate: &egv1a1.EnvoyProxySpec{
+								Provider: &egv1a1.EnvoyProxyProvider{
+									Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+									Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+										EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
+											Pod: &egv1a1.KubernetesPodSpec{
+												Tolerations: []corev1.Toleration{
+													{Key: "arch", Operator: corev1.TolerationOpEqual, Value: "arm64"},
+												},
+												NodeSelector: map[string]string{"disk": "ssd"},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			podSpec: nil,
+			expected: &egv1a1.KubernetesPodSpec{
+				Tolerations: []corev1.Toleration{
+					{Key: "arch", Operator: corev1.TolerationOpEqual, Value: "arm64"},
+				},
+				NodeSelector: map[string]string{"disk": "ssd"},
+			},
+		},
+		{
+			name: "pod spec tolerations merged with global defaults",
+			envoyGateway: &egv1a1.EnvoyGateway{
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					Provider: &egv1a1.EnvoyGatewayProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
+							EnvoyProxyTemplate: &egv1a1.EnvoyProxySpec{
+								Provider: &egv1a1.EnvoyProxyProvider{
+									Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+									Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+										EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
+											Pod: &egv1a1.KubernetesPodSpec{
+												Tolerations: []corev1.Toleration{
+													{Key: "arch", Operator: corev1.TolerationOpEqual, Value: "arm64"},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			podSpec: &egv1a1.KubernetesPodSpec{
+				Tolerations: []corev1.Toleration{
+					{Key: "custom", Operator: corev1.TolerationOpEqual, Value: "override"},
+				},
+			},
+			expected: &egv1a1.KubernetesPodSpec{
+				Tolerations: []corev1.Toleration{
+					{Key: "arch", Operator: corev1.TolerationOpEqual, Value: "arm64"},
+					{Key: "custom", Operator: corev1.TolerationOpEqual, Value: "override"},
+				},
+			},
+		},
+		{
+			name: "nodeSelector from global defaults used when not specified",
+			envoyGateway: &egv1a1.EnvoyGateway{
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					Provider: &egv1a1.EnvoyGatewayProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
+							EnvoyProxyTemplate: &egv1a1.EnvoyProxySpec{
+								Provider: &egv1a1.EnvoyProxyProvider{
+									Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+									Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+										EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
+											Pod: &egv1a1.KubernetesPodSpec{
+												NodeSelector: map[string]string{"disk": "ssd"},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			podSpec: &egv1a1.KubernetesPodSpec{
+				Tolerations: []corev1.Toleration{
+					{Key: "specific", Operator: corev1.TolerationOpEqual, Value: "value"},
+				},
+			},
+			expected: &egv1a1.KubernetesPodSpec{
+				Tolerations: []corev1.Toleration{
+					{Key: "specific", Operator: corev1.TolerationOpEqual, Value: "value"},
+				},
+				NodeSelector: map[string]string{"disk": "ssd"},
+			},
+		},
+		{
+			name:         "nil envoyGateway returns podSpec as-is",
+			envoyGateway: nil,
+			podSpec: &egv1a1.KubernetesPodSpec{
+				NodeSelector: map[string]string{"test": "value"},
+			},
+			expected: &egv1a1.KubernetesPodSpec{
+				NodeSelector: map[string]string{"test": "value"},
+			},
+		},
+		{
+			name: "all pod settings merged correctly",
+			envoyGateway: &egv1a1.EnvoyGateway{
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					Provider: &egv1a1.EnvoyGatewayProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
+							EnvoyProxyTemplate: &egv1a1.EnvoyProxySpec{
+								Provider: &egv1a1.EnvoyProxyProvider{
+									Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+									Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+										EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
+											Pod: &egv1a1.KubernetesPodSpec{
+												Annotations: map[string]string{"default-key": "default-value"},
+												Labels:      map[string]string{"default-label": "default"},
+												Tolerations: []corev1.Toleration{
+													{Key: "arch", Operator: corev1.TolerationOpEqual, Value: "arm64"},
+												},
+												NodeSelector: map[string]string{"disk": "ssd"},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			podSpec: &egv1a1.KubernetesPodSpec{
+				Tolerations: []corev1.Toleration{
+					{Key: "custom", Operator: corev1.TolerationOpEqual, Value: "specific"},
+				},
+			},
+			expected: &egv1a1.KubernetesPodSpec{
+				Annotations: map[string]string{"default-key": "default-value"},
+				Labels:      map[string]string{"default-label": "default"},
+				Tolerations: []corev1.Toleration{
+					{Key: "arch", Operator: corev1.TolerationOpEqual, Value: "arm64"},
+					{Key: "custom", Operator: corev1.TolerationOpEqual, Value: "specific"},
+				},
+				NodeSelector: map[string]string{"disk": "ssd"},
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// Create a fresh config for each test
+			testCfg, err := config.New(os.Stdout, os.Stderr)
+			require.NoError(t, err)
+
+			if tc.envoyGateway != nil {
+				testCfg.EnvoyGateway = tc.envoyGateway
+			}
+
+			infra := newTestInfra()
+			r, err := NewResourceRender(context.Background(), newFakeKubernetesInfraProvider(testCfg), infra)
+			require.NoError(t, err)
+
+			got := r.mergePodDefaults(tc.podSpec)
+			require.Equal(t, tc.expected, got)
+		})
+	}
+}
+
+func TestMergePodDefaults_LinkerdAnnotations(t *testing.T) {
+	testCfg, err := config.New(os.Stdout, os.Stderr)
+	require.NoError(t, err)
+
+	// Configure global defaults with Linkerd injection annotation
+	testCfg.EnvoyGateway = &egv1a1.EnvoyGateway{
+		EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+			Provider: &egv1a1.EnvoyGatewayProvider{
+				Type: egv1a1.ProviderTypeKubernetes,
+				Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
+					EnvoyProxyTemplate: &egv1a1.EnvoyProxySpec{
+						Provider: &egv1a1.EnvoyProxyProvider{
+							Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+							Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+								EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
+									Pod: &egv1a1.KubernetesPodSpec{
+										Annotations: map[string]string{
+											"linkerd.io/inject": "enabled",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	infra := newTestInfra()
+	r, err := NewResourceRender(context.Background(), newFakeKubernetesInfraProvider(testCfg), infra)
+	require.NoError(t, err)
+
+	// Test 1: Empty pod spec gets Linkerd annotation from defaults
+	result1 := r.mergePodDefaults(&egv1a1.KubernetesPodSpec{})
+	require.NotNil(t, result1)
+	require.Equal(t, "enabled", result1.Annotations["linkerd.io/inject"])
+
+	// Test 2: Nil pod spec gets Linkerd annotation from defaults
+	result2 := r.mergePodDefaults(nil)
+	require.NotNil(t, result2)
+	require.Equal(t, "enabled", result2.Annotations["linkerd.io/inject"])
+
+	// Test 3: Pod spec with other annotations merges with defaults
+	result3 := r.mergePodDefaults(&egv1a1.KubernetesPodSpec{
+		Annotations: map[string]string{
+			"custom": "annotation",
+		},
+	})
+	require.NotNil(t, result3)
+	require.Equal(t, "annotation", result3.Annotations["custom"])
+	require.Equal(t, "enabled", result3.Annotations["linkerd.io/inject"], "specific annotations merge with defaults")
+}
+
+func TestMergeContainerDefaults_Image(t *testing.T) {
+	customImage := "custom.registry.com/envoy:v1.36.3"
+
+	testCfg, err := config.New(os.Stdout, os.Stderr)
+	require.NoError(t, err)
+
+	// Configure global defaults with custom image
+	testCfg.EnvoyGateway = &egv1a1.EnvoyGateway{
+		EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+			Provider: &egv1a1.EnvoyGatewayProvider{
+				Type: egv1a1.ProviderTypeKubernetes,
+				Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
+					EnvoyProxyTemplate: &egv1a1.EnvoyProxySpec{
+						Provider: &egv1a1.EnvoyProxyProvider{
+							Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+							Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+								EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
+									Container: &egv1a1.KubernetesContainerSpec{
+										Image: &customImage,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	infra := newTestInfra()
+	r, err := NewResourceRender(context.Background(), newFakeKubernetesInfraProvider(testCfg), infra)
+	require.NoError(t, err)
+
+	// Test 1: Nil container spec gets image from defaults
+	result1 := r.mergeContainerDefaults(nil)
+	require.NotNil(t, result1)
+	require.NotNil(t, result1.Image)
+	require.Equal(t, customImage, *result1.Image)
+
+	// Test 2: Empty container spec gets image from defaults
+	result2 := r.mergeContainerDefaults(&egv1a1.KubernetesContainerSpec{})
+	require.NotNil(t, result2)
+	require.NotNil(t, result2.Image)
+	require.Equal(t, customImage, *result2.Image)
+
+	// Test 3: Container spec with specific image overrides default
+	specificImage := "specific.registry.com/envoy:v1.37.0"
+	result3 := r.mergeContainerDefaults(&egv1a1.KubernetesContainerSpec{
+		Image: &specificImage,
+	})
+	require.NotNil(t, result3)
+	require.NotNil(t, result3.Image)
+	require.Equal(t, specificImage, *result3.Image)
+}

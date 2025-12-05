@@ -148,6 +148,35 @@ imagePullSecrets: {{ toYaml list }}
 {{- end }}
 {{- end }}
 
+{{/*
+Resolve the Envoy Proxy image.
+*/}}
+{{- define "eg.envoyProxy.image" -}}
+{{-   $imageParts := splitn "/" 2 .Values.global.images.envoyProxy.image -}}
+{{/*    if global.imageRegistry is defined, it takes precedence always */}}
+{{-   $registryName := default $imageParts._0 .Values.global.imageRegistry -}}
+{{-   $repositoryTag := $imageParts._1 -}}
+{{-   $repositoryParts := splitn ":" 2 $repositoryTag -}}
+{{-   $repositoryName := $repositoryParts._0 -}}
+{{-   $imageTag := default "distroless-dev" $repositoryParts._1 -}}
+{{-   printf "%s/%s:%s" $registryName $repositoryName $imageTag -}}
+{{- end -}}
+
+{{/*
+Resolve the Envoy Proxy image pull secrets.
+*/}}
+{{- define "eg.envoyProxy.image.pullSecrets" -}}
+{{- if .Values.global.imagePullSecrets }}
+imagePullSecrets:
+{{ toYaml .Values.global.imagePullSecrets }}
+{{- else if .Values.global.images.envoyProxy.pullSecrets -}}
+imagePullSecrets:
+{{ toYaml .Values.global.images.envoyProxy.pullSecrets }}
+{{- else }}
+imagePullSecrets: {{ toYaml list }}
+{{- end }}
+{{- end }}
+
 
 {{/*
 The default Envoy Gateway configuration.
@@ -176,6 +205,18 @@ provider:
       {{- end }}
     shutdownManager:
       image: {{ include "eg.image" . }}
+    {{- if .Values.global.images.envoyProxy.image }}
+    envoyProxyTemplate:
+      provider:
+        type: Kubernetes
+        kubernetes:
+          envoyDeployment:
+            container:
+              image: {{ include "eg.envoyProxy.image" . }}
+              {{- with .Values.global.images.envoyProxy.pullPolicy }}
+              imagePullPolicy: {{ . }}
+              {{- end }}
+    {{- end }}
 {{- with .Values.config.envoyGateway.extensionApis }}
 extensionApis:
   {{- toYaml . | nindent 2 }}

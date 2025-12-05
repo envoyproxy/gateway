@@ -27,7 +27,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	gwapiresource "github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/infrastructure/common"
-	infracommon "github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/common"
+	kubecommon "github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/common"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/resource"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils"
@@ -71,6 +71,9 @@ type ResourceRender struct {
 
 	GatewayNamespaceMode bool
 
+	// envoyProxyTemplate contains the global default EnvoyProxyTemplate settings
+	envoyProxyTemplate *egv1a1.EnvoyProxySpec
+
 	// ownerReferenceUID store the uid of its owner reference. Key is the kind of owner resource.
 	// - GatewayClass when enabled ControllerNamespaceMode, merged Gateway...
 	// - Gateway when enabled GatewayNamespaceMode
@@ -92,16 +95,51 @@ func NewResourceRender(ctx context.Context, kubeInfra KubernetesInfraProvider, i
 		return nil, err
 	}
 
+	eg := kubeInfra.GetEnvoyGateway()
+
 	return &ResourceRender{
 		envoyNamespace:           kubeInfra.GetResourceNamespace(infra),
 		controllerNamespace:      kubeInfra.GetControllerNamespace(),
 		DNSDomain:                kubeInfra.GetDNSDomain(),
 		infra:                    infra.GetProxyInfra(),
-		ShutdownManager:          kubeInfra.GetEnvoyGateway().GetEnvoyGatewayProvider().GetEnvoyGatewayKubeProvider().ShutdownManager,
-		TopologyInjectorDisabled: kubeInfra.GetEnvoyGateway().TopologyInjectorDisabled(),
-		GatewayNamespaceMode:     kubeInfra.GetEnvoyGateway().GatewayNamespaceMode(),
+		ShutdownManager:          eg.GetEnvoyGatewayProvider().GetEnvoyGatewayKubeProvider().ShutdownManager,
+		TopologyInjectorDisabled: eg.TopologyInjectorDisabled(),
+		GatewayNamespaceMode:     eg.GatewayNamespaceMode(),
+		envoyProxyTemplate:       eg.GetEnvoyProxyTemplate(),
 		ownerReferenceUID:        ownerReference,
 	}, nil
+}
+
+// mergeContainerDefaults merges EnvoyProxyTemplate with EnvoyProxy-specific container config.
+// EnvoyProxy-specific config takes precedence over global defaults.  The default proxy image
+// is passed as MergeContainerDefaults will override that image with that specified on the
+// template.
+func (r *ResourceRender) mergeContainerDefaults(containerSpec *egv1a1.KubernetesContainerSpec) *egv1a1.KubernetesContainerSpec {
+	// If no global defaults are configured, return containerSpec as-is
+	if r.envoyProxyTemplate == nil ||
+		r.envoyProxyTemplate.Provider == nil ||
+		r.envoyProxyTemplate.Provider.Kubernetes == nil ||
+		r.envoyProxyTemplate.Provider.Kubernetes.EnvoyDeployment == nil ||
+		r.envoyProxyTemplate.Provider.Kubernetes.EnvoyDeployment.Container == nil {
+		return containerSpec
+	}
+
+	return kubecommon.MergeContainerDefaults(r.envoyProxyTemplate.Provider.Kubernetes.EnvoyDeployment.Container, containerSpec, egv1a1.DefaultEnvoyProxyImage)
+}
+
+// mergePodDefaults merges EnvoyProxyTemplate with EnvoyProxy-specific pod config.
+// EnvoyProxy-specific config takes precedence over global defaults.
+func (r *ResourceRender) mergePodDefaults(podSpec *egv1a1.KubernetesPodSpec) *egv1a1.KubernetesPodSpec {
+	// If no global defaults are configured, return podSpec as-is
+	if r.envoyProxyTemplate == nil ||
+		r.envoyProxyTemplate.Provider == nil ||
+		r.envoyProxyTemplate.Provider.Kubernetes == nil ||
+		r.envoyProxyTemplate.Provider.Kubernetes.EnvoyDeployment == nil ||
+		r.envoyProxyTemplate.Provider.Kubernetes.EnvoyDeployment.Pod == nil {
+		return podSpec
+	}
+
+	return kubecommon.MergePodDefaults(r.envoyProxyTemplate.Provider.Kubernetes.EnvoyDeployment.Pod, podSpec)
 }
 
 func (r *ResourceRender) serviceAccountName() string {
@@ -378,14 +416,20 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 		return nil, nil
 	}
 
+	// Merge global defaults with EnvoyProxy-specific container config
+	mergedContainerSpec := r.mergeContainerDefaults(deploymentConfig.Container)
+
+	// Merge global defaults with EnvoyProxy-specific pod config
+	mergedPodSpec := r.mergePodDefaults(deploymentConfig.Pod)
+
 	// Get expected bootstrap configurations rendered ProxyContainers
-	containers, err := expectedProxyContainers(r.infra, deploymentConfig.Container, proxyConfig.Spec.Shutdown, r.ShutdownManager, r.TopologyInjectorDisabled, r.ControllerNamespace(), r.DNSDomain, r.GatewayNamespaceMode)
+	containers, err := expectedProxyContainers(r.infra, mergedContainerSpec, proxyConfig.Spec.Shutdown, r.ShutdownManager, r.TopologyInjectorDisabled, r.ControllerNamespace(), r.DNSDomain, r.GatewayNamespaceMode)
 	if err != nil {
 		return nil, err
 	}
 
 	dpAnnotations := r.infra.GetProxyMetadata().Annotations
-	podAnnotations := r.getPodAnnotations(dpAnnotations, deploymentConfig.Pod)
+	podAnnotations := r.getPodAnnotations(dpAnnotations, mergedPodSpec)
 
 	// Set the labels based on the owning gateway name.
 	dpLabels, err := r.getLabels()
@@ -411,7 +455,7 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 			Selector: r.stableSelector(),
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels:      r.getPodLabels(deploymentConfig.Pod),
+					Labels:      r.getPodLabels(mergedPodSpec),
 					Annotations: podAnnotations,
 				},
 				Spec: corev1.PodSpec{
@@ -423,13 +467,13 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 					DNSPolicy:                     corev1.DNSClusterFirst,
 					RestartPolicy:                 corev1.RestartPolicyAlways,
 					SchedulerName:                 "default-scheduler",
-					SecurityContext:               deploymentConfig.Pod.SecurityContext,
-					Affinity:                      deploymentConfig.Pod.Affinity,
-					Tolerations:                   deploymentConfig.Pod.Tolerations,
-					Volumes:                       r.expectedVolumes(deploymentConfig.Pod),
-					ImagePullSecrets:              deploymentConfig.Pod.ImagePullSecrets,
-					NodeSelector:                  deploymentConfig.Pod.NodeSelector,
-					TopologySpreadConstraints:     deploymentConfig.Pod.TopologySpreadConstraints,
+					SecurityContext:               mergedPodSpec.SecurityContext,
+					Affinity:                      mergedPodSpec.Affinity,
+					Tolerations:                   mergedPodSpec.Tolerations,
+					Volumes:                       r.expectedVolumes(mergedPodSpec),
+					ImagePullSecrets:              mergedPodSpec.ImagePullSecrets,
+					NodeSelector:                  mergedPodSpec.NodeSelector,
+					TopologySpreadConstraints:     mergedPodSpec.TopologySpreadConstraints,
 				},
 			},
 			RevisionHistoryLimit:    ptr.To[int32](10),
@@ -468,14 +512,20 @@ func (r *ResourceRender) DaemonSet() (*appsv1.DaemonSet, error) {
 		return nil, nil
 	}
 
+	// Merge global defaults with EnvoyProxy-specific container config
+	mergedContainerSpec := r.mergeContainerDefaults(daemonSetConfig.Container)
+
+	// Merge global defaults with EnvoyProxy-specific pod config
+	mergedPodSpec := r.mergePodDefaults(daemonSetConfig.Pod)
+
 	// Get expected bootstrap configurations rendered ProxyContainers
-	containers, err := expectedProxyContainers(r.infra, daemonSetConfig.Container, proxyConfig.Spec.Shutdown, r.ShutdownManager, r.TopologyInjectorDisabled, r.ControllerNamespace(), r.DNSDomain, r.GatewayNamespaceMode)
+	containers, err := expectedProxyContainers(r.infra, mergedContainerSpec, proxyConfig.Spec.Shutdown, r.ShutdownManager, r.TopologyInjectorDisabled, r.ControllerNamespace(), r.DNSDomain, r.GatewayNamespaceMode)
 	if err != nil {
 		return nil, err
 	}
 
 	dsAnnotations := r.infra.GetProxyMetadata().Annotations
-	podAnnotations := r.getPodAnnotations(dsAnnotations, daemonSetConfig.Pod)
+	podAnnotations := r.getPodAnnotations(dsAnnotations, mergedPodSpec)
 
 	// Set the labels based on the owning gateway name.
 	dsLabels, err := r.getLabels()
@@ -500,10 +550,10 @@ func (r *ResourceRender) DaemonSet() (*appsv1.DaemonSet, error) {
 			UpdateStrategy: *daemonSetConfig.Strategy,
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels:      r.getPodLabels(daemonSetConfig.Pod),
+					Labels:      r.getPodLabels(mergedPodSpec),
 					Annotations: podAnnotations,
 				},
-				Spec: r.getPodSpec(containers, nil, daemonSetConfig.Pod, proxyConfig),
+				Spec: r.getPodSpec(containers, nil, mergedPodSpec, proxyConfig),
 			},
 		},
 	}
@@ -550,7 +600,7 @@ func (r *ResourceRender) PodDisruptionBudget() (*policyv1.PodDisruptionBudget, e
 		resourceName = *pdb.Name
 	}
 
-	return infracommon.GetPodDisruptionBudget(pdb, r.stableSelector(), &types.NamespacedName{Name: resourceName, Namespace: r.Namespace()}, r.ownerReferences())
+	return kubecommon.GetPodDisruptionBudget(pdb, r.stableSelector(), &types.NamespacedName{Name: resourceName, Namespace: r.Namespace()}, r.ownerReferences())
 }
 
 func (r *ResourceRender) HorizontalPodAutoscaler() (*autoscalingv2.HorizontalPodAutoscaler, error) {

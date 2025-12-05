@@ -123,6 +123,15 @@ func (e *EnvoyGateway) TopologyInjectorDisabled() bool {
 	return false
 }
 
+// GetEnvoyProxyTemplate returns the EnvoyProxyTemplate if configured, nil otherwise.
+func (e *EnvoyGateway) GetEnvoyProxyTemplate() *EnvoyProxySpec {
+	if e.Provider != nil &&
+		e.Provider.Kubernetes != nil {
+		return e.Provider.Kubernetes.EnvoyProxyTemplate
+	}
+	return nil
+}
+
 // defaultRuntimeFlags are the default runtime flags for Envoy Gateway.
 var defaultRuntimeFlags = map[RuntimeFlag]bool{
 	XDSNameSchemeV2: false,

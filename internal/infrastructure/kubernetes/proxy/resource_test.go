@@ -183,3 +183,50 @@ func TestGetImageTag(t *testing.T) {
 		})
 	}
 }
+
+func TestResolvePullPolicy(t *testing.T) {
+	tests := []struct {
+		name          string
+		containerSpec *egv1a1.KubernetesContainerSpec
+		expected      corev1.PullPolicy
+	}{
+		{
+			name:          "nil containerSpec returns default",
+			containerSpec: nil,
+			expected:      corev1.PullIfNotPresent,
+		},
+		{
+			name:          "containerSpec without pull policy returns default",
+			containerSpec: &egv1a1.KubernetesContainerSpec{},
+			expected:      corev1.PullIfNotPresent,
+		},
+		{
+			name: "Always pull policy",
+			containerSpec: &egv1a1.KubernetesContainerSpec{
+				ImagePullPolicy: ptr.To(corev1.PullAlways),
+			},
+			expected: corev1.PullAlways,
+		},
+		{
+			name: "Never pull policy",
+			containerSpec: &egv1a1.KubernetesContainerSpec{
+				ImagePullPolicy: ptr.To(corev1.PullNever),
+			},
+			expected: corev1.PullNever,
+		},
+		{
+			name: "IfNotPresent pull policy",
+			containerSpec: &egv1a1.KubernetesContainerSpec{
+				ImagePullPolicy: ptr.To(corev1.PullIfNotPresent),
+			},
+			expected: corev1.PullIfNotPresent,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got := resolvePullPolicy(tc.containerSpec)
+			require.Equal(t, tc.expected, got)
+		})
+	}
+}

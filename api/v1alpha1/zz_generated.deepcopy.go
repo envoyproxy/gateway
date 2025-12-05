@@ -2068,6 +2068,11 @@ func (in *EnvoyGatewayKubernetesProvider) DeepCopyInto(out *EnvoyGatewayKubernet
 		*out = new(KubernetesPodDisruptionBudgetSpec)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.EnvoyProxyTemplate != nil {
+		in, out := &in.EnvoyProxyTemplate, &out.EnvoyProxyTemplate
+		*out = new(EnvoyProxySpec)
+		(*in).DeepCopyInto(*out)
+	}
 	if in.Watch != nil {
 		in, out := &in.Watch, &out.Watch
 		*out = new(KubernetesWatchMode)
@@ -4317,6 +4322,11 @@ func (in *KubernetesContainerSpec) DeepCopyInto(out *KubernetesContainerSpec) {
 	if in.ImageRepository != nil {
 		in, out := &in.ImageRepository, &out.ImageRepository
 		*out = new(string)
+		**out = **in
+	}
+	if in.ImagePullPolicy != nil {
+		in, out := &in.ImagePullPolicy, &out.ImagePullPolicy
+		*out = new(corev1.PullPolicy)
 		**out = **in
 	}
 	if in.VolumeMounts != nil {
