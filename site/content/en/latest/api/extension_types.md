@@ -1303,6 +1303,7 @@ EnvoyGateway is the schema for the envoygateways API.
 | `extensionManager` | _[ExtensionManager](#extensionmanager)_ |  false  |  | ExtensionManager defines an extension manager to register for the Envoy Gateway Control Plane. |
 | `extensionApis` | _[ExtensionAPISettings](#extensionapisettings)_ |  false  |  | ExtensionAPIs defines the settings related to specific Gateway API Extensions<br />implemented by Envoy Gateway |
 | `runtimeFlags` | _[RuntimeFlags](#runtimeflags)_ |  true  |  | RuntimeFlags defines the runtime flags for Envoy Gateway.<br />Unlike ExtensionAPIs, these flags are temporary and will be removed in future releases once the related features are stable. |
+| `wasmServer` | _[WASMServer](#wasmserver)_ |  false  |  | WASMServer defines configuration for the WASM HTTP cache server. |
 
 
 #### EnvoyGatewayAdmin
@@ -1588,6 +1589,7 @@ _Appears in:_
 | `extensionManager` | _[ExtensionManager](#extensionmanager)_ |  false  |  | ExtensionManager defines an extension manager to register for the Envoy Gateway Control Plane. |
 | `extensionApis` | _[ExtensionAPISettings](#extensionapisettings)_ |  false  |  | ExtensionAPIs defines the settings related to specific Gateway API Extensions<br />implemented by Envoy Gateway |
 | `runtimeFlags` | _[RuntimeFlags](#runtimeflags)_ |  true  |  | RuntimeFlags defines the runtime flags for Envoy Gateway.<br />Unlike ExtensionAPIs, these flags are temporary and will be removed in future releases once the related features are stable. |
+| `wasmServer` | _[WASMServer](#wasmserver)_ |  false  |  | WASMServer defines configuration for the WASM HTTP cache server. |
 
 
 #### EnvoyGatewayTelemetry
@@ -3562,6 +3564,7 @@ _Appears in:_
 | `host` | _string_ |  false  |  | Host define the extension service hostname.<br />Deprecated: Use BackendRefs instead. |
 | `port` | _integer_ |  false  | 4317 | Port defines the port the extension service is exposed on.<br />Deprecated: Use BackendRefs instead. |
 | `resources` | _object (keys:string, values:string)_ |  false  |  | Resources is a set of labels that describe the source of a log entry, including envoy node info.<br />It's recommended to follow [semantic conventions](https://opentelemetry.io/docs/reference/specification/resource/semantic_conventions/). |
+| `headers` | _[HTTPHeader](#httpheader) array_ |  false  |  | Headers is a list of additional headers to send with OTLP export requests.<br />These headers are added as gRPC initial metadata for the OTLP gRPC service. |
 
 
 #### Operation
@@ -5308,6 +5311,21 @@ _Appears in:_
 | `path` | _string_ |  true  |  | Path defines the unix domain socket path of the backend endpoint.<br />The path length must not exceed 108 characters. |
 
 
+#### WASMServer
+
+
+
+WASMServer defines configuration for the WASM HTTP cache server.
+
+_Appears in:_
+- [EnvoyGateway](#envoygateway)
+- [EnvoyGatewaySpec](#envoygatewayspec)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `address` | _string_ |  false  |  | Address is the WASM cache server bind address.<br />Defaults to 0.0.0.0:18002. |
+
+
 #### Wasm
 
 
@@ -5420,6 +5438,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
+| `address` | _string_ |  false  |  | Address is the xDS server bind address.<br />Defaults to 0.0.0.0:18000. |
 | `maxConnectionAge` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#duration)_ |  false  |  | MaxConnectionAge is the maximum age of an active connection before Envoy Gateway will initiate a graceful close.<br />If unspecified, Envoy Gateway randomly selects a value between 10h and 12h to stagger reconnects across replicas. |
 | `maxConnectionAgeGrace` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#duration)_ |  false  |  | MaxConnectionAgeGrace is the grace period granted after reaching MaxConnectionAge before the connection is forcibly closed.<br />The default grace period is 2m. |
 

@@ -1,0 +1,16 @@
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: otel-headers
+spec:
+  telemetry:
+    accessLog:
+      settings:
+        - sinks:
+            - type: OpenTelemetry
+              openTelemetry:
+                host: 127.0.0.1
+                port: 4317
+                headers:
+                  - name: Authorization
+                    value: Bearer test-api-key

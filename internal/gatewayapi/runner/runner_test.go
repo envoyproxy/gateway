@@ -239,6 +239,71 @@ func TestDeleteAllKeys(t *testing.T) {
 	require.Empty(t, r.keyCache.EnvoyExtensionPolicyStatus)
 }
 
+func TestWasmServerAddress(t *testing.T) {
+	tests := []struct {
+		name         string
+		envoyGateway *egv1a1.EnvoyGateway
+		expected     string
+	}{
+		{
+			name:         "nil WASMServer",
+			envoyGateway: &egv1a1.EnvoyGateway{},
+			expected:     "",
+		},
+		{
+			name: "nil Address",
+			envoyGateway: &egv1a1.EnvoyGateway{
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					WASMServer: &egv1a1.WASMServer{},
+				},
+			},
+			expected: "",
+		},
+		{
+			name: "valid address",
+			envoyGateway: &egv1a1.EnvoyGateway{
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					WASMServer: &egv1a1.WASMServer{
+						Address: ptrTo("0.0.0.0:19002"),
+					},
+				},
+			},
+			expected: "0.0.0.0:19002",
+		},
+		{
+			name: "valid address with different port",
+			envoyGateway: &egv1a1.EnvoyGateway{
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					WASMServer: &egv1a1.WASMServer{
+						Address: ptrTo("127.0.0.1:18003"),
+					},
+				},
+			},
+			expected: "127.0.0.1:18003",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			cfg, err := config.New(os.Stdout, os.Stderr)
+			require.NoError(t, err)
+			cfg.EnvoyGateway = tc.envoyGateway
+
+			r := &Runner{
+				Config: Config{
+					Server: *cfg,
+				},
+			}
+			actual := r.wasmServerAddress()
+			require.Equal(t, tc.expected, actual)
+		})
+	}
+}
+
+func ptrTo[T any](v T) *T {
+	return &v
+}
+
 func TestLoadTLSConfig_HostMode(t *testing.T) {
 	// Create temporary directory structure for certs using t.TempDir()
 	configHome := t.TempDir()

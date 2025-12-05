@@ -218,7 +218,7 @@ func (r *Runner) Start(ctx context.Context) error {
 }
 
 func (r *Runner) serveXdsServer(ctx context.Context) {
-	addr := net.JoinHostPort(XdsServerAddress, strconv.Itoa(bootstrap.DefaultXdsServerPort))
+	addr := r.xdsServerAddress()
 	l, err := net.Listen("tcp", addr)
 	if err != nil {
 		r.Logger.Error(err, "failed to listen on address", "address", addr)
@@ -238,6 +238,15 @@ func (r *Runner) serveXdsServer(ctx context.Context) {
 	if err = r.grpc.Serve(l); err != nil {
 		r.Logger.Error(err, "failed to start grpc based xds server")
 	}
+}
+
+// xdsServerAddress returns the xDS server address from configuration,
+// or the default address if not configured.
+func (r *Runner) xdsServerAddress() string {
+	if r.EnvoyGateway.XDSServer != nil && r.EnvoyGateway.XDSServer.Address != nil {
+		return *r.EnvoyGateway.XDSServer.Address
+	}
+	return net.JoinHostPort(XdsServerAddress, strconv.Itoa(bootstrap.DefaultXdsServerPort))
 }
 
 // registerServer registers the given xDS protocol Server with the gRPC

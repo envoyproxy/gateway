@@ -34,7 +34,9 @@ type SeverOptions struct {
 	// Salt is used as a hash salt to generate an unguessable path for the Wasm module.
 	Salt []byte
 	// TLSConfig is the TLS configuration for the HTTP server.
-	TLSConfig                   *tls.Config
+	TLSConfig *tls.Config
+	// Address is the HTTP server bind address. Defaults to :18002 if empty.
+	Address                     string
 	MaxFailedAttempts           int
 	FailedAttemptsResetInterval time.Duration
 	FailedAttemptResetDelay     time.Duration
@@ -42,6 +44,9 @@ type SeverOptions struct {
 
 // setDefault sets the default values for the server options if they are not set.
 func (o *SeverOptions) setDefault() {
+	if o.Address == "" {
+		o.Address = fmt.Sprintf(":%d", serverPort)
+	}
 	if o.MaxFailedAttempts == 0 {
 		o.MaxFailedAttempts = defaultMaxFailedAttempts
 	}
@@ -111,13 +116,13 @@ func NewHTTPServerWithFileCache(serverOptions SeverOptions, cacheOptions CacheOp
 }
 
 func (s *HTTPServer) Start(ctx context.Context) {
-	s.logger.Info(fmt.Sprintf("Listening on :%d", serverPort))
+	s.logger.Info(fmt.Sprintf("Listening on %s", s.Address))
 
 	handler := http.NewServeMux()
 	handler.Handle("/", s)
 
 	s.server = &http.Server{
-		Addr:              fmt.Sprintf(":%d", serverPort),
+		Addr:              s.Address,
 		Handler:           handler,
 		TLSConfig:         s.TLSConfig,
 		ReadHeaderTimeout: 15 * time.Second,

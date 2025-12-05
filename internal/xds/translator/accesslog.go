@@ -21,6 +21,7 @@ import (
 	otlpcommonv1 "go.opentelemetry.io/proto/otlp/common/v1"
 	"golang.org/x/exp/maps"
 	"google.golang.org/protobuf/types/known/structpb"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -298,6 +299,7 @@ func buildXdsAccessLog(al *ir.AccessLog, accessLogType ir.ProxyAccessLogType) ([
 							Authority:   otel.Authority,
 						},
 					},
+					InitialMetadata: buildGrpcInitialMetadata(otel.Headers),
 				},
 				TransportApiVersion: cfgcore.ApiVersion_V3,
 			},
@@ -571,4 +573,19 @@ func processClusterForAccessLog(tCtx *types.ResourceVersionTable, al *ir.AccessL
 	}
 
 	return nil
+}
+
+// buildGrpcInitialMetadata converts HTTP headers to gRPC initial metadata.
+func buildGrpcInitialMetadata(headers []gwapiv1.HTTPHeader) []*cfgcore.HeaderValue {
+	if len(headers) == 0 {
+		return nil
+	}
+	result := make([]*cfgcore.HeaderValue, len(headers))
+	for i, h := range headers {
+		result[i] = &cfgcore.HeaderValue{
+			Key:   string(h.Name),
+			Value: h.Value,
+		}
+	}
+	return result
 }
