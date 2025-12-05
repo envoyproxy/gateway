@@ -738,7 +738,8 @@ func (r *gatewayAPIReconciler) envoyServiceForGateway(ctx context.Context, gatew
 	return &services.Items[0], nil
 }
 
-// findOwningGateway attempts finds a Gateway using "labels".
+// findOwningGateway finds a Gateway using the provided labels.
+// Returns the Gateway only if it belongs to this controller, or nil otherwise.
 func (r *gatewayAPIReconciler) findOwningGateway(ctx context.Context, labels map[string]string) *gwapiv1.Gateway {
 	gwName, ok := labels[gatewayapi.OwningGatewayNameLabel]
 	if !ok {
@@ -754,6 +755,10 @@ func (r *gatewayAPIReconciler) findOwningGateway(ctx context.Context, labels map
 	gtw := new(gwapiv1.Gateway)
 	if err := r.client.Get(ctx, gatewayKey, gtw); err != nil {
 		r.log.Info("gateway not found", "namespace", gtw.Namespace, "name", gtw.Name)
+		return nil
+	}
+
+	if !r.validateGatewayForReconcile(gtw) {
 		return nil
 	}
 

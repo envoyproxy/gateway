@@ -6,6 +6,7 @@
 package kubernetes
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"testing"
@@ -173,6 +174,90 @@ func TestValidateGatewayForReconcile(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			res := r.validateGatewayForReconcile(tc.gateway)
 			require.Equal(t, tc.expect, res)
+		})
+	}
+}
+
+func TestFindOwningGateway(t *testing.T) {
+	controllerName := gwapiv1.GatewayController("example.com/foo")
+	otherControllerName := gwapiv1.GatewayController("example.com/bar")
+
+	testCases := []struct {
+		name    string
+		configs []client.Object
+		labels  map[string]string
+		expect  *gwapiv1.Gateway
+	}{
+		{
+			name: "returns Gateway when it belongs to this controller",
+			configs: []client.Object{
+				test.GetGatewayClass("test-gc", controllerName, nil),
+				test.GetGateway(types.NamespacedName{Namespace: "default", Name: "test-gw"}, "test-gc", 8080),
+			},
+			labels: map[string]string{
+				gatewayapi.OwningGatewayNameLabel:      "test-gw",
+				gatewayapi.OwningGatewayNamespaceLabel: "default",
+			},
+			expect: test.GetGateway(types.NamespacedName{Namespace: "default", Name: "test-gw"}, "test-gc", 8080),
+		},
+		{
+			name: "returns nil when Gateway belongs to different controller",
+			configs: []client.Object{
+				test.GetGatewayClass("test-gc", otherControllerName, nil),
+				test.GetGateway(types.NamespacedName{Namespace: "default", Name: "test-gw"}, "test-gc", 8080),
+			},
+			labels: map[string]string{
+				gatewayapi.OwningGatewayNameLabel:      "test-gw",
+				gatewayapi.OwningGatewayNamespaceLabel: "default",
+			},
+			expect: nil,
+		},
+		{
+			name:    "returns nil when Gateway name label is missing",
+			configs: []client.Object{},
+			labels: map[string]string{
+				gatewayapi.OwningGatewayNamespaceLabel: "default",
+			},
+			expect: nil,
+		},
+		{
+			name:    "returns nil when Gateway namespace label is missing",
+			configs: []client.Object{},
+			labels: map[string]string{
+				gatewayapi.OwningGatewayNameLabel: "test-gw",
+			},
+			expect: nil,
+		},
+		{
+			name:    "returns nil when Gateway does not exist",
+			configs: []client.Object{},
+			labels: map[string]string{
+				gatewayapi.OwningGatewayNameLabel:      "non-existent",
+				gatewayapi.OwningGatewayNamespaceLabel: "default",
+			},
+			expect: nil,
+		},
+	}
+
+	logger := logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo)
+
+	r := gatewayAPIReconciler{
+		classController: controllerName,
+		log:             logger,
+	}
+
+	for _, tc := range testCases {
+		r.client = fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects(tc.configs...).Build()
+		t.Run(tc.name, func(t *testing.T) {
+			ctx := context.Background()
+			res := r.findOwningGateway(ctx, tc.labels)
+			if tc.expect == nil {
+				require.Nil(t, res)
+			} else {
+				require.NotNil(t, res)
+				require.Equal(t, tc.expect.Name, res.Name)
+				require.Equal(t, tc.expect.Namespace, res.Namespace)
+			}
 		})
 	}
 }
