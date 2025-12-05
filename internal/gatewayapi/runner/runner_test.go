@@ -41,6 +41,7 @@ func TestRunner(t *testing.T) {
 	r := New(&Config{
 		Server:            *cfg,
 		ProviderResources: pResources,
+		RunnerErrors:      new(message.RunnerErrors),
 		XdsIR:             xdsIR,
 		InfraIR:           infraIR,
 		ExtensionManager:  extMgr,
@@ -82,6 +83,7 @@ func setupTestRunner(t *testing.T) (*Runner, []types.NamespacedName) {
 	r := New(&Config{
 		Server:            *cfg,
 		ProviderResources: pResources,
+		RunnerErrors:      new(message.RunnerErrors),
 		XdsIR:             xdsIR,
 		InfraIR:           infraIR,
 		ExtensionManager:  extMgr,

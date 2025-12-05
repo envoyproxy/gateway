@@ -25,6 +25,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/infrastructure/common"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/logging"
+	"github.com/envoyproxy/gateway/internal/message"
 	"github.com/envoyproxy/gateway/internal/utils"
 	"github.com/envoyproxy/gateway/internal/utils/file"
 	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
@@ -68,7 +69,9 @@ func newMockInfra(t *testing.T, cfg *config.Server) *Infra {
 			<-ctx.Done()
 			return ctx.Err()
 		},
+		errors: message.RunnerErrorNotifier{RunnerName: t.Name(), RunnerErrors: &message.RunnerErrors{}},
 	}
+
 	return infra
 }
 
@@ -310,7 +313,8 @@ func TestInfra_runEnvoy_integration(t *testing.T) {
 		},
 	}
 
-	i, err := NewInfra(t.Context(), cfg, logging.DefaultLogger(stdout, egv1a1.LogLevelInfo))
+	errNotifier := message.RunnerErrorNotifier{RunnerName: t.Name(), RunnerErrors: &message.RunnerErrors{}}
+	i, err := NewInfra(t.Context(), cfg, logging.DefaultLogger(stdout, egv1a1.LogLevelInfo), errNotifier)
 	require.NoError(t, err)
 
 	// Run envoy once to let func-e set up all XDG directories
@@ -505,7 +509,8 @@ func TestNewInfra(t *testing.T) {
 	cfg, err := config.New(io.Discard, io.Discard)
 	require.NoError(t, err)
 
-	actual, err := NewInfra(t.Context(), cfg, logging.DefaultLogger(io.Discard, egv1a1.LogLevelInfo))
+	errNotifier := message.RunnerErrorNotifier{RunnerName: t.Name(), RunnerErrors: &message.RunnerErrors{}}
+	actual, err := NewInfra(t.Context(), cfg, logging.DefaultLogger(io.Discard, egv1a1.LogLevelInfo), errNotifier)
 	require.NoError(t, err)
 	require.NotNil(t, actual)
 	require.NotNil(t, actual.Paths)
@@ -516,6 +521,7 @@ func TestNewInfra(t *testing.T) {
 	require.NotNil(t, actual.Stdout)
 	require.NotNil(t, actual.Stderr)
 	require.NotNil(t, actual.envoyRunner)
+	require.NotNil(t, actual.errors)
 }
 
 func TestTopologyInjectorDisabledInHostMode(t *testing.T) {
