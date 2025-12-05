@@ -6,6 +6,8 @@
 package resource
 
 import (
+	"context"
+	"reflect"
 	"sort"
 
 	certificatesv1b1 "k8s.io/api/certificates/v1beta1"
@@ -140,6 +142,47 @@ func (r *Resources) GetEndpointSlicesForBackend(svcNamespace, svcName, backendKi
 
 // ControllerResources holds all the GatewayAPI resources per GatewayClass
 type ControllerResources []*Resources
+
+// ControllerResourcesContext wraps ControllerResources with trace context
+// for propagating spans across async message boundaries
+type ControllerResourcesContext struct {
+	Resources *ControllerResources
+	Context   context.Context
+}
+
+// DeepCopy creates a new ControllerResourcesContext.
+// The Context field is preserved (not deep copied) since contexts are meant to be passed around.
+func (c *ControllerResourcesContext) DeepCopy() *ControllerResourcesContext {
+	if c == nil {
+		return nil
+	}
+	var resourcesCopy *ControllerResources
+	if c.Resources != nil {
+		resourcesCopy = c.Resources.DeepCopy()
+	}
+	return &ControllerResourcesContext{
+		Resources: resourcesCopy,
+		Context:   c.Context,
+	}
+}
+
+// Equal compares two Resources objects for equality.
+func (c *ControllerResourcesContext) Equal(other *ControllerResourcesContext) bool {
+	if c == nil && other == nil {
+		return true
+	}
+	if c == nil || other == nil {
+		return false
+	}
+	if c.Resources == nil && other.Resources == nil {
+		return true
+	}
+	if c.Resources == nil || other.Resources == nil {
+		return false
+	}
+
+	return reflect.DeepEqual(c.Resources, other.Resources)
+}
 
 // DeepCopy creates a new ControllerResources.
 // It is handwritten since the tooling was unable to copy into a new slice

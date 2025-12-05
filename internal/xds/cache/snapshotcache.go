@@ -25,6 +25,8 @@ import (
 	discoveryv3 "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
 	cachev3 "github.com/envoyproxy/go-control-plane/pkg/cache/v3"
 	serverv3 "github.com/envoyproxy/go-control-plane/pkg/server/v3"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 
 	"github.com/envoyproxy/gateway/internal/logging"
@@ -32,7 +34,10 @@ import (
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
-var Hash = cachev3.IDHash{}
+var (
+	Hash   = cachev3.IDHash{}
+	tracer = otel.Tracer("envoy-gateway/xds/snapshotcache")
+)
 
 // SnapshotCacheWithCallbacks uses the go-control-plane SimpleCache to store snapshots of
 // Envoy resources, sliced by Node ID so that we can do incremental xDS properly.
@@ -46,7 +51,7 @@ var Hash = cachev3.IDHash{}
 type SnapshotCacheWithCallbacks interface {
 	cachev3.SnapshotCache
 	serverv3.Callbacks
-	GenerateNewSnapshot(string, types.XdsResources) error
+	GenerateNewSnapshot(string, types.XdsResources, context.Context) error
 	SnapshotHasIrKey(string) bool
 	GetIrKeys() []string
 }
@@ -73,11 +78,18 @@ type snapshotCache struct {
 
 // GenerateNewSnapshot takes a table of resources (the output from the IR->xDS
 // translator) and updates the snapshot version.
-func (s *snapshotCache) GenerateNewSnapshot(irKey string, resources types.XdsResources) error {
+func (s *snapshotCache) GenerateNewSnapshot(irKey string, resources types.XdsResources, ctx context.Context) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	version := s.newSnapshotVersion()
+	_, span := tracer.Start(ctx, "SnapshotCache.GenerateNewSnapshot")
+	defer span.End()
+
+	sc := trace.SpanContextFromContext(ctx)
+	version := sc.TraceID().String()
+	if !sc.IsValid() {
+		version = s.newSnapshotVersion()
+	}
 
 	// Create a snapshot with all xDS resources.
 	snapshot, err := cachev3.NewSnapshot(
