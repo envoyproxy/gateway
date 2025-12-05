@@ -38,7 +38,7 @@ var TLSRouteTLSTerminationTest = suite.ConformanceTest{
 			gwAddr, _ := kubernetes.GatewayAndTLSRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN, "tls"), routeNN)
 
 			certNN := types.NamespacedName{Name: "tls-termination-certificate", Namespace: ns}
-			cPem, _, caCertPem, err := GetTLSSecret(suite.Client, certNN)
+			cPem, keyPem, caCertPem, err := GetTLSSecret(suite.Client, certNN)
 			if err != nil {
 				t.Fatalf("unexpected error finding TLS secret: %v", err)
 			}
@@ -65,6 +65,7 @@ var TLSRouteTLSTerminationTest = suite.ConformanceTest{
 				suite.TimeoutConfig.RequiredConsecutiveSuccesses,
 				suite.TimeoutConfig.MaxTimeToConsistency,
 				cPem,
+				keyPem,
 				caCertPem,
 				"foo.example.com")
 		})
@@ -74,7 +75,7 @@ var TLSRouteTLSTerminationTest = suite.ConformanceTest{
 			gwAddr, _ := kubernetes.GatewayAndTLSRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN, "tls"), routeNN)
 
 			certNN := types.NamespacedName{Name: "tls-termination-certificate", Namespace: ns}
-			cPem, _, caCertPem, err := GetTLSSecret(suite.Client, certNN)
+			cPem, keyPem, caCertPem, err := GetTLSSecret(suite.Client, certNN)
 			if err != nil {
 				t.Fatalf("unexpected error finding TLS secret: %v", err)
 			}
@@ -100,6 +101,7 @@ var TLSRouteTLSTerminationTest = suite.ConformanceTest{
 				suite.TimeoutConfig.RequiredConsecutiveSuccesses,
 				suite.TimeoutConfig.MaxTimeToConsistency,
 				cPem,
+				keyPem,
 				caCertPem,
 				"bar.example.com")
 		})
@@ -109,7 +111,7 @@ var TLSRouteTLSTerminationTest = suite.ConformanceTest{
 			gwAddr, _ := kubernetes.GatewayAndTLSRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN, "tls"), routeNN)
 
 			certNN := types.NamespacedName{Name: "tls-termination-certificate", Namespace: ns}
-			cPem, _, caCertPem, err := GetTLSSecret(suite.Client, certNN)
+			cPem, keyPem, caCertPem, err := GetTLSSecret(suite.Client, certNN)
 			if err != nil {
 				t.Fatalf("unexpected error finding TLS secret: %v", err)
 			}
@@ -135,6 +137,7 @@ var TLSRouteTLSTerminationTest = suite.ConformanceTest{
 				suite.TimeoutConfig.RequiredConsecutiveSuccesses,
 				suite.TimeoutConfig.MaxTimeToConsistency,
 				cPem,
+				keyPem,
 				caCertPem,
 				"baz.example.com")
 		})
@@ -142,7 +145,7 @@ var TLSRouteTLSTerminationTest = suite.ConformanceTest{
 }
 
 // WaitForConsistentResponseWithCA makes requests with TLS using a CA certificate to verify the server
-func WaitForConsistentResponseWithCA(t *testing.T, r roundtripper.RoundTripper, req *roundtripper.Request, expected *http.ExpectedResponse, threshold int, maxTimeToConsistency time.Duration, certPem, caCertPem []byte, serverName string) {
+func WaitForConsistentResponseWithCA(t *testing.T, r roundtripper.RoundTripper, req *roundtripper.Request, expected *http.ExpectedResponse, threshold int, maxTimeToConsistency time.Duration, certPem, keyPem, caCertPem []byte, serverName string) {
 	if req == nil {
 		t.Fatalf("request cannot be nil")
 	}
@@ -153,8 +156,9 @@ func WaitForConsistentResponseWithCA(t *testing.T, r roundtripper.RoundTripper, 
 	http.AwaitConvergence(t, threshold, maxTimeToConsistency, func(elapsed time.Duration) bool {
 		updatedReq := *req
 		updatedReq.Server = serverName
-		// Use the certificate as CA for validation (self-signed cert)
+		// Use the certificate and key for TLS setup, CA cert for validation (self-signed cert)
 		updatedReq.CertPem = caCertPem
+		updatedReq.KeyPem = keyPem
 
 		cReq, cRes, err := r.CaptureRoundTrip(updatedReq)
 		if err != nil {
