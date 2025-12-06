@@ -45,3 +45,10 @@ name = "stdlib"
 ecosystem = "Go"
 license.override = ["BSD-3-Clause"]
 reason = "Go stdlib is licensed under BSD-3-Clause, see https://go.dev/LICENSE"
+
+# Remove this after CNCF allowlist update
+[[PackageOverrides]]
+name = "github.com/cyphar/filepath-securejoin"
+ecosystem = "Go"
+license.override = ["BSD-3-Clause"]
+reason = "https://github.com/cncf/foundation/issues/1154"
