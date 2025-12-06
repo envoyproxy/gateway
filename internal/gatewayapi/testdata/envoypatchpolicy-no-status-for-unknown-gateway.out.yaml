@@ -1,2 +1,30 @@
+envoyPatchPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyPatchPolicy
+  metadata:
+    name: target-unknown-gateway
+    namespace: envoy-gateway
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: unknown-gateway
+    type: JSONPatch
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: unknown-gateway
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: TargetRef.Group:gateway.networking.k8s.io TargetRef.Kind:Gateway
+          TargetRef.Namespace:envoy-gateway TargetRef.Name:unknown-gateway not found
+          or not accepted (MergeGateways=false).
+        reason: Invalid
+        status: "False"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
 infraIR: {}
 xdsIR: {}
