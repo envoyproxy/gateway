@@ -66,7 +66,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 					case gwapiv1.TLSModePassthrough:
 						t.validateAllowedRoutes(listener, resource.KindTLSRoute)
 					case gwapiv1.TLSModeTerminate:
-						t.validateAllowedRoutes(listener, resource.KindTCPRoute)
+						t.validateAllowedRoutes(listener, resource.KindTCPRoute, resource.KindTLSRoute)
 					default:
 						t.validateAllowedRoutes(listener, resource.KindTCPRoute, resource.KindTLSRoute)
 					}
