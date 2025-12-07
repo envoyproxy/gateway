@@ -285,6 +285,7 @@ xdsIR:
     globalResources:
       proxyServiceCluster:
         metadata:
+          kind: Service
           name: gateway-1
           namespace: default
           sectionName: "8080"
@@ -296,6 +297,7 @@ xdsIR:
             port: 8080
             zone: zone1
           metadata:
+            kind: Service
             name: gateway-1
             namespace: default
             sectionName: "8080"
@@ -360,6 +362,7 @@ xdsIR:
     globalResources:
       proxyServiceCluster:
         metadata:
+          kind: Service
           name: gateway-2
           namespace: default
           sectionName: "8080"
@@ -371,6 +374,7 @@ xdsIR:
             port: 8080
             zone: zone1
           metadata:
+            kind: Service
             name: gateway-2
             namespace: default
             sectionName: "8080"
@@ -435,6 +439,7 @@ xdsIR:
     globalResources:
       proxyServiceCluster:
         metadata:
+          kind: Service
           name: gateway-3
           namespace: test-ns
           sectionName: "8080"
@@ -446,6 +451,7 @@ xdsIR:
             port: 8080
             zone: zone1
           metadata:
+            kind: Service
             name: gateway-3
             namespace: test-ns
             sectionName: "8080"

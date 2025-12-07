@@ -2406,6 +2406,7 @@ _Appears in:_
 | `set` | _[HTTPHeader](#httpheader) array_ |  false  |  | Set overwrites the request with the given header (name, value)<br />before the action.<br />Input:<br />  GET /foo HTTP/1.1<br />  my-header: foo<br />Config:<br />  set:<br />  - name: "my-header"<br />    value: "bar"<br />Output:<br />  GET /foo HTTP/1.1<br />  my-header: bar |
 | `add` | _[HTTPHeader](#httpheader) array_ |  false  |  | Add adds the given header(s) (name, value) to the request<br />before the action. It appends to any existing values associated<br />with the header name.<br />Input:<br />  GET /foo HTTP/1.1<br />  my-header: foo<br />Config:<br />  add:<br />  - name: "my-header"<br />    value: "bar,baz"<br />Output:<br />  GET /foo HTTP/1.1<br />  my-header: foo,bar,baz |
 | `remove` | _string array_ |  false  |  | Remove the given header(s) from the HTTP request before the action. The<br />value of Remove is a list of HTTP header names. Note that the header<br />names are case-insensitive (see<br />https://datatracker.ietf.org/doc/html/rfc2616#section-4.2).<br />Input:<br />  GET /foo HTTP/1.1<br />  my-header1: foo<br />  my-header2: bar<br />  my-header3: baz<br />Config:<br />  remove: ["my-header1", "my-header3"]<br />Output:<br />  GET /foo HTTP/1.1<br />  my-header2: bar |
+| `removeOnMatch` | _[StringMatch](#stringmatch) array_ |  false  |  | RemoveOnMatch removes headers whose names match the specified string matchers.<br />Matching is performed on the header name (case-insensitive). |
 
 
 #### HTTPHostnameModifier
@@ -5010,6 +5011,7 @@ This is a general purpose match condition that can be used by other EG APIs
 that need to match against a string.
 
 _Appears in:_
+- [HTTPHeaderFilter](#httpheaderfilter)
 - [OIDCDenyRedirectHeader](#oidcdenyredirectheader)
 - [OtherSANMatch](#othersanmatch)
 - [ProxyMetrics](#proxymetrics)

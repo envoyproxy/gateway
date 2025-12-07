@@ -931,6 +931,7 @@ type HTTPHeaderFilter struct {
 	// +optional
 	// +listType=map
 	// +listMapKey=name
+	// +kubebuilder:validation:MinItems=1
 	// +kubebuilder:validation:MaxItems=64
 	Set []gwapiv1.HTTPHeader `json:"set,omitempty"`
 
@@ -954,6 +955,7 @@ type HTTPHeaderFilter struct {
 	// +optional
 	// +listType=map
 	// +listMapKey=name
+	// +kubebuilder:validation:MinItems=1
 	// +kubebuilder:validation:MaxItems=64
 	Add []gwapiv1.HTTPHeader `json:"add,omitempty"`
 
@@ -977,6 +979,15 @@ type HTTPHeaderFilter struct {
 	//
 	// +optional
 	// +listType=set
+	// +kubebuilder:validation:MinItems=1
 	// +kubebuilder:validation:MaxItems=64
 	Remove []string `json:"remove,omitempty"`
+
+	// RemoveOnMatch removes headers whose names match the specified string matchers.
+	// Matching is performed on the header name (case-insensitive).
+	//
+	// +optional
+	// +kubebuilder:validation:MinItems=1
+	// +kubebuilder:validation:MaxItems=64
+	RemoveOnMatch []StringMatch `json:"removeOnMatch,omitempty"`
 }
