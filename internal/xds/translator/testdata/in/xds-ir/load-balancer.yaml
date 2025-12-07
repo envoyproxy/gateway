@@ -210,7 +210,7 @@ http:
           blackoutPeriod: 30s
           weightExpirationPeriod: 60s
           weightUpdatePeriod: 10s
-          errorUtilizationPenalty: 1
+          errorUtilizationPenalty: 100
           metricNamesForComputingUtilization:
           - "cpu_utilization"
     destination:

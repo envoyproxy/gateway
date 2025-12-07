@@ -705,7 +705,7 @@ xdsIR:
           loadBalancer:
             clientSideWeightedRoundRobin:
               blackoutPeriod: 10s
-              errorUtilizationPenalty: 1
+              errorUtilizationPenalty: 100
               metricNamesForComputingUtilization:
               - cpu_utilization
               weightExpirationPeriod: 1m0s

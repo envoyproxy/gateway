@@ -2640,7 +2640,7 @@ type ClientSideWeightedRoundRobin struct {
 	BlackoutPeriod                     *metav1.Duration `json:"blackoutPeriod,omitempty" yaml:"blackoutPeriod,omitempty"`
 	WeightExpirationPeriod             *metav1.Duration `json:"weightExpirationPeriod,omitempty" yaml:"weightExpirationPeriod,omitempty"`
 	WeightUpdatePeriod                 *metav1.Duration `json:"weightUpdatePeriod,omitempty" yaml:"weightUpdatePeriod,omitempty"`
-	ErrorUtilizationPenalty            *float32         `json:"errorUtilizationPenalty,omitempty" yaml:"errorUtilizationPenalty,omitempty"`
+	ErrorUtilizationPenalty            *uint32          `json:"errorUtilizationPenalty,omitempty" yaml:"errorUtilizationPenalty,omitempty"`
 	MetricNamesForComputingUtilization []string         `json:"metricNamesForComputingUtilization,omitempty" yaml:"metricNamesForComputingUtilization,omitempty"`
 }
 

@@ -623,7 +623,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			},
 		},
 		{
-			desc: "cswrr with negative penalty is invalid",
+			desc: "cswrr with zero penalty is valid",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
@@ -638,14 +638,12 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 					ClusterSettings: egv1a1.ClusterSettings{
 						LoadBalancer: &egv1a1.LoadBalancer{
 							Type:                         egv1a1.ClientSideWeightedRoundRobinLoadBalancerType,
-							ClientSideWeightedRoundRobin: &egv1a1.ClientSideWeightedRoundRobin{ErrorUtilizationPenalty: ptr.To[float32](-1)},
+							ClientSideWeightedRoundRobin: &egv1a1.ClientSideWeightedRoundRobin{ErrorUtilizationPenalty: ptr.To[uint32](0)},
 						},
 					},
 				}
 			},
-			wantErrors: []string{
-				"Invalid value: -1: spec.loadBalancer.clientSideWeightedRoundRobin.errorUtilizationPenalty in body should be greater than or equal to 0",
-			},
+			wantErrors: []string{},
 		},
 		{
 			desc: "Using both httpStatus and grpcStatus in abort fault injection",

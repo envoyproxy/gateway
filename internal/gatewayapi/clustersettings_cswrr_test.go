@@ -43,6 +43,6 @@ func TestBuildLoadBalancer_ClientSideWeightedRoundRobin(t *testing.T) {
 	require.Equal(t, ptr.To(metav1.Duration{Duration: 3 * time.Minute}), got.WeightExpirationPeriod)
 	require.Equal(t, ptr.To(metav1.Duration{Duration: 1 * time.Second}), got.WeightUpdatePeriod)
 	require.NotNil(t, got.ErrorUtilizationPenalty)
-	require.InDelta(t, 1.5, *got.ErrorUtilizationPenalty, 0.0001)
+	require.EqualValues(t, 150, *got.ErrorUtilizationPenalty)
 	require.Equal(t, []string{"named_metrics.foo", "cpu_utilization"}, got.MetricNamesForComputingUtilization)
 }

@@ -599,7 +599,7 @@ func (in *ClientSideWeightedRoundRobin) DeepCopyInto(out *ClientSideWeightedRoun
 	}
 	if in.ErrorUtilizationPenalty != nil {
 		in, out := &in.ErrorUtilizationPenalty, &out.ErrorUtilizationPenalty
-		*out = new(float32)
+		*out = new(uint32)
 		**out = **in
 	}
 	if in.MetricNamesForComputingUtilization != nil {
