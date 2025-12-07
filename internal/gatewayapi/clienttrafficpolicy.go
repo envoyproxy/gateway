@@ -961,7 +961,7 @@ func buildConnection(connection *egv1a1.ClientConnection) (*ir.ClientConnection,
 			if err != nil {
 				return nil, fmt.Errorf("invalid MaxConnectionDuration value %s", *connection.ConnectionLimit.MaxConnectionDuration)
 			}
-			irConnectionLimit.MaxConnectionDuration = ptr.To(metav1.Duration{Duration: d})
+			irConnectionLimit.MaxConnectionDuration = ir.MetaV1DurationPtr(d)
 		}
 
 		if connection.ConnectionLimit.MaxRequestsPerConnection != nil {
@@ -973,7 +973,7 @@ func buildConnection(connection *egv1a1.ClientConnection) (*ir.ClientConnection,
 			if err != nil {
 				return nil, fmt.Errorf("invalid MaxStreamDuration value %s", *connection.ConnectionLimit.MaxStreamDuration)
 			}
-			irConnectionLimit.MaxStreamDuration = ptr.To(metav1.Duration{Duration: d})
+			irConnectionLimit.MaxStreamDuration = ir.MetaV1DurationPtr(d)
 		}
 
 		irConnection.ConnectionLimit = irConnectionLimit

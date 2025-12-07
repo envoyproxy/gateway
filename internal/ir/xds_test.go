@@ -14,7 +14,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
@@ -1342,9 +1341,9 @@ func TestValidateLoadBalancer(t *testing.T) {
 			name: "client side wrr set",
 			input: LoadBalancer{
 				ClientSideWeightedRoundRobin: &ClientSideWeightedRoundRobin{
-					BlackoutPeriod:                     ptr.To(metav1.Duration{Duration: 30 * time.Second}),
-					WeightExpirationPeriod:             ptr.To(metav1.Duration{Duration: 10 * time.Second}),
-					WeightUpdatePeriod:                 ptr.To(metav1.Duration{Duration: 1 * time.Second}),
+					BlackoutPeriod:                     MetaV1DurationPtr(30 * time.Second),
+					WeightExpirationPeriod:             MetaV1DurationPtr(10 * time.Second),
+					WeightUpdatePeriod:                 MetaV1DurationPtr(1 * time.Second),
 					MetricNamesForComputingUtilization: []string{"named_metrics.foo"},
 				},
 			},

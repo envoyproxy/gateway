@@ -17,7 +17,6 @@ import (
 	"google.golang.org/protobuf/testing/protocmp"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/yaml"
 
@@ -91,8 +90,8 @@ func TestBuildXdsOutlierDetection(t *testing.T) {
 		{
 			name: "basic outlier detection",
 			input: &ir.OutlierDetection{
-				Interval:             ptr.To(metav1.Duration{Duration: 10 * time.Second}),
-				BaseEjectionTime:     ptr.To(metav1.Duration{Duration: 30 * time.Second}),
+				Interval:             ir.MetaV1DurationPtr(10 * time.Second),
+				BaseEjectionTime:     ir.MetaV1DurationPtr(30 * time.Second),
 				MaxEjectionPercent:   ptr.To[int32](10),
 				Consecutive5xxErrors: ptr.To[uint32](5),
 			},
@@ -106,8 +105,8 @@ func TestBuildXdsOutlierDetection(t *testing.T) {
 		{
 			name: "outlier detection with failure percentage threshold",
 			input: &ir.OutlierDetection{
-				Interval:                   ptr.To(metav1.Duration{Duration: 10 * time.Second}),
-				BaseEjectionTime:           ptr.To(metav1.Duration{Duration: 30 * time.Second}),
+				Interval:                   ir.MetaV1DurationPtr(10 * time.Second),
+				BaseEjectionTime:           ir.MetaV1DurationPtr(30 * time.Second),
 				MaxEjectionPercent:         ptr.To[int32](10),
 				Consecutive5xxErrors:       ptr.To[uint32](5),
 				FailurePercentageThreshold: ptr.To[uint32](90),
@@ -125,11 +124,11 @@ func TestBuildXdsOutlierDetection(t *testing.T) {
 			name: "outlier detection with all fields",
 			input: &ir.OutlierDetection{
 				SplitExternalLocalOriginErrors: ptr.To(true),
-				Interval:                       ptr.To(metav1.Duration{Duration: 10 * time.Second}),
+				Interval:                       ir.MetaV1DurationPtr(10 * time.Second),
 				ConsecutiveLocalOriginFailures: ptr.To[uint32](3),
 				ConsecutiveGatewayErrors:       ptr.To[uint32](2),
 				Consecutive5xxErrors:           ptr.To[uint32](5),
-				BaseEjectionTime:               ptr.To(metav1.Duration{Duration: 30 * time.Second}),
+				BaseEjectionTime:               ir.MetaV1DurationPtr(30 * time.Second),
 				MaxEjectionPercent:             ptr.To[int32](10),
 				FailurePercentageThreshold:     ptr.To[uint32](85),
 			},

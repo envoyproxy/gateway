@@ -147,7 +147,7 @@ func buildClusterSettingsTimeout(policy *egv1a1.ClusterSettings) (*ir.Timeout, e
 			if err != nil {
 				errs = errors.Join(errs, fmt.Errorf("invalid MaxStreamDuration value %s", *pto.HTTP.MaxStreamDuration))
 			} else {
-				msd = ptr.To(metav1.Duration{Duration: d})
+				msd = ir.MetaV1DurationPtr(d)
 			}
 		}
 

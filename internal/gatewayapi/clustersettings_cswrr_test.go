@@ -10,11 +10,11 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/ir"
 )
 
 func TestBuildLoadBalancer_ClientSideWeightedRoundRobin(t *testing.T) {
@@ -39,9 +39,9 @@ func TestBuildLoadBalancer_ClientSideWeightedRoundRobin(t *testing.T) {
 	require.NotNil(t, lb.ClientSideWeightedRoundRobin)
 
 	got := lb.ClientSideWeightedRoundRobin
-	require.Equal(t, ptr.To(metav1.Duration{Duration: 10 * time.Second}), got.BlackoutPeriod)
-	require.Equal(t, ptr.To(metav1.Duration{Duration: 3 * time.Minute}), got.WeightExpirationPeriod)
-	require.Equal(t, ptr.To(metav1.Duration{Duration: 1 * time.Second}), got.WeightUpdatePeriod)
+	require.Equal(t, ir.MetaV1DurationPtr(10*time.Second), got.BlackoutPeriod)
+	require.Equal(t, ir.MetaV1DurationPtr(3*time.Minute), got.WeightExpirationPeriod)
+	require.Equal(t, ir.MetaV1DurationPtr(1*time.Second), got.WeightUpdatePeriod)
 	require.NotNil(t, got.ErrorUtilizationPenalty)
 	require.EqualValues(t, 150, *got.ErrorUtilizationPenalty)
 	require.Equal(t, []string{"named_metrics.foo", "cpu_utilization"}, got.MetricNamesForComputingUtilization)
