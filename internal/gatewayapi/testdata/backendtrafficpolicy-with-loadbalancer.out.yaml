@@ -134,6 +134,8 @@ backendTrafficPolicies:
         - cpu_utilization
         weightExpirationPeriod: 60s
         weightUpdatePeriod: 10s
+      slowStart:
+        window: 300s
       type: ClientSideWeightedRoundRobin
     targetRef:
       group: gateway.networking.k8s.io
@@ -819,6 +821,8 @@ xdsIR:
               errorUtilizationPenalty: 100
               metricNamesForComputingUtilization:
               - cpu_utilization
+              slowStart:
+                window: 5m0s
               weightExpirationPeriod: 1m0s
               weightUpdatePeriod: 10s
       - destination:

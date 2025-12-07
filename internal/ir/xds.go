@@ -2648,6 +2648,7 @@ type ClientSideWeightedRoundRobin struct {
 	WeightUpdatePeriod                 *metav1.Duration `json:"weightUpdatePeriod,omitempty" yaml:"weightUpdatePeriod,omitempty"`
 	ErrorUtilizationPenalty            *uint32          `json:"errorUtilizationPenalty,omitempty" yaml:"errorUtilizationPenalty,omitempty"`
 	MetricNamesForComputingUtilization []string         `json:"metricNamesForComputingUtilization,omitempty" yaml:"metricNamesForComputingUtilization,omitempty"`
+	SlowStart                          *SlowStart       `json:"slowStart,omitempty" yaml:"slowStart,omitempty"`
 }
 
 // ConsistentHash load balancer settings

@@ -727,7 +727,6 @@ _Appears in:_
 
 ClientSideWeightedRoundRobin defines configuration for Envoy's Client-Side Weighted Round Robin policy.
 See Envoy proto: envoy.extensions.load_balancing_policies.client_side_weighted_round_robin.v3.ClientSideWeightedRoundRobin
-Note: SlowStart is not supported for this policy in Envoy Gateway at this time.
 
 _Appears in:_
 - [LoadBalancer](#loadbalancer)
@@ -3277,7 +3276,7 @@ _Appears in:_
 | `consistentHash` | _[ConsistentHash](#consistenthash)_ |  false  |  | ConsistentHash defines the configuration when the load balancer type is<br />set to ConsistentHash |
 | `clientSideWeightedRoundRobin` | _[ClientSideWeightedRoundRobin](#clientsideweightedroundrobin)_ |  false  |  | ClientSideWeightedRoundRobin defines the configuration when the load balancer type is<br />set to ClientSideWeightedRoundRobin. |
 | `endpointOverride` | _[EndpointOverride](#endpointoverride)_ |  false  |  | EndpointOverride defines the configuration for endpoint override.<br />When specified, the load balancer will attempt to route requests to endpoints<br />based on the override information extracted from request headers or metadata.<br /> If the override endpoints are not available, the configured load balancer policy will be used as fallback. |
-| `slowStart` | _[SlowStart](#slowstart)_ |  false  |  | SlowStart defines the configuration related to the slow start load balancer policy.<br />If set, during slow start window, traffic sent to the newly added hosts will gradually increase.<br />Currently this is only supported for RoundRobin and LeastRequest load balancers |
+| `slowStart` | _[SlowStart](#slowstart)_ |  false  |  | SlowStart defines the configuration related to the slow start load balancer policy.<br />If set, during slow start window, traffic sent to the newly added hosts will gradually increase.<br />Supported for RoundRobin, LeastRequest, and ClientSideWeightedRoundRobin load balancers. |
 | `zoneAware` | _[ZoneAware](#zoneaware)_ |  false  |  | ZoneAware defines the configuration related to the distribution of requests between locality zones. |
 
 

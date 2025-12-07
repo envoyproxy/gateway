@@ -487,7 +487,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				"spec.loadBalancer: Invalid value: \"object\": Currently SlowStart is only supported for RoundRobin and LeastRequest load balancers.",
+				"spec.loadBalancer: Invalid value: \"object\": Currently SlowStart is only supported for RoundRobin, LeastRequest, and ClientSideWeightedRoundRobin load balancers.",
 			},
 		},
 		{
@@ -514,7 +514,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				"spec.loadBalancer: Invalid value: \"object\": Currently SlowStart is only supported for RoundRobin and LeastRequest load balancers.",
+				"spec.loadBalancer: Invalid value: \"object\": Currently SlowStart is only supported for RoundRobin, LeastRequest, and ClientSideWeightedRoundRobin load balancers.",
 			},
 		},
 		{
@@ -592,9 +592,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{
-				"spec.loadBalancer: Invalid value: \"object\": Currently SlowStart is only supported for RoundRobin and LeastRequest load balancers.",
-			},
+			wantErrors: []string{},
 		},
 		{
 			desc: "cswrr with ZoneAware is set",

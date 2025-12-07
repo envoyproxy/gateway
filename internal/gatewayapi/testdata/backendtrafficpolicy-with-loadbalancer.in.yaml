@@ -244,6 +244,8 @@ backendTrafficPolicies:
         name: httproute-5
       loadBalancer:
         type: ClientSideWeightedRoundRobin
+        slowStart:
+          window: 300s
         clientSideWeightedRoundRobin:
           blackoutPeriod: 10s
           weightExpirationPeriod: 60s

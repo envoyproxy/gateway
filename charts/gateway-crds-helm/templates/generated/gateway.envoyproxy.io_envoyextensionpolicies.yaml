@@ -936,7 +936,7 @@ spec:
                               description: |-
                                 SlowStart defines the configuration related to the slow start load balancer policy.
                                 If set, during slow start window, traffic sent to the newly added hosts will gradually increase.
-                                Currently this is only supported for RoundRobin and LeastRequest load balancers
+                                Supported for RoundRobin, LeastRequest, and ClientSideWeightedRoundRobin load balancers.
                               properties:
                                 window:
                                   description: |-
@@ -1015,10 +1015,11 @@ spec:
                               clientSideWeightedRoundRobin field needs to be set.
                             rule: 'self.type == ''ClientSideWeightedRoundRobin'' ?
                               has(self.clientSideWeightedRoundRobin) : !has(self.clientSideWeightedRoundRobin)'
-                          - message: Currently SlowStart is only supported for RoundRobin
-                              and LeastRequest load balancers.
-                            rule: 'self.type in [''Random'', ''ConsistentHash'', ''ClientSideWeightedRoundRobin'']
-                              ? !has(self.slowStart) : true '
+                          - message: Currently SlowStart is only supported for RoundRobin,
+                              LeastRequest, and ClientSideWeightedRoundRobin load
+                              balancers.
+                            rule: 'self.type in [''Random'', ''ConsistentHash''] ?
+                              !has(self.slowStart) : true '
                           - message: Currently ZoneAware is only supported for LeastRequest,
                               Random, and RoundRobin load balancers.
                             rule: 'self.type in [''ConsistentHash'', ''ClientSideWeightedRoundRobin'']

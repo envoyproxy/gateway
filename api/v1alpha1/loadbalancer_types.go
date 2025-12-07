@@ -12,7 +12,7 @@ import gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 //
 // +kubebuilder:validation:XValidation:rule="self.type == 'ConsistentHash' ? has(self.consistentHash) : !has(self.consistentHash)",message="If LoadBalancer type is consistentHash, consistentHash field needs to be set."
 // +kubebuilder:validation:XValidation:rule="self.type == 'ClientSideWeightedRoundRobin' ? has(self.clientSideWeightedRoundRobin) : !has(self.clientSideWeightedRoundRobin)",message="If LoadBalancer type is ClientSideWeightedRoundRobin, clientSideWeightedRoundRobin field needs to be set."
-// +kubebuilder:validation:XValidation:rule="self.type in ['Random', 'ConsistentHash', 'ClientSideWeightedRoundRobin'] ? !has(self.slowStart) : true ",message="Currently SlowStart is only supported for RoundRobin and LeastRequest load balancers."
+// +kubebuilder:validation:XValidation:rule="self.type in ['Random', 'ConsistentHash'] ? !has(self.slowStart) : true ",message="Currently SlowStart is only supported for RoundRobin, LeastRequest, and ClientSideWeightedRoundRobin load balancers."
 // +kubebuilder:validation:XValidation:rule="self.type in ['ConsistentHash', 'ClientSideWeightedRoundRobin'] ? !has(self.zoneAware) : true ",message="Currently ZoneAware is only supported for LeastRequest, Random, and RoundRobin load balancers."
 type LoadBalancer struct {
 	// Type decides the type of Load Balancer policy.
@@ -47,7 +47,7 @@ type LoadBalancer struct {
 
 	// SlowStart defines the configuration related to the slow start load balancer policy.
 	// If set, during slow start window, traffic sent to the newly added hosts will gradually increase.
-	// Currently this is only supported for RoundRobin and LeastRequest load balancers
+	// Supported for RoundRobin, LeastRequest, and ClientSideWeightedRoundRobin load balancers.
 	//
 	// +optional
 	SlowStart *SlowStart `json:"slowStart,omitempty"`
@@ -160,7 +160,6 @@ type Cookie struct {
 
 // ClientSideWeightedRoundRobin defines configuration for Envoy's Client-Side Weighted Round Robin policy.
 // See Envoy proto: envoy.extensions.load_balancing_policies.client_side_weighted_round_robin.v3.ClientSideWeightedRoundRobin
-// Note: SlowStart is not supported for this policy in Envoy Gateway at this time.
 type ClientSideWeightedRoundRobin struct {
 	// A given endpoint must report load metrics continuously for at least this long before the endpoint weight will be used.
 	// Default is 10s.

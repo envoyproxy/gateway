@@ -387,6 +387,8 @@
           errorUtilizationPenalty: 1
           metricNamesForComputingUtilization:
           - cpu_utilization
+          slowStartConfig:
+            slowStartWindow: 45s
           weightExpirationPeriod: 60s
           weightUpdatePeriod: 10s
   name: sixteenth-route-dest

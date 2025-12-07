@@ -368,6 +368,15 @@ func buildLoadBalancer(policy *egv1a1.ClusterSettings) (*ir.LoadBalancer, error)
 				lb.ClientSideWeightedRoundRobin.MetricNamesForComputingUtilization = append([]string(nil), cswrr.MetricNamesForComputingUtilization...)
 			}
 		}
+		if policy.LoadBalancer.SlowStart != nil && policy.LoadBalancer.SlowStart.Window != nil {
+			d, err := time.ParseDuration(string(*policy.LoadBalancer.SlowStart.Window))
+			if err != nil {
+				return nil, err
+			}
+			lb.ClientSideWeightedRoundRobin.SlowStart = &ir.SlowStart{
+				Window: ir.MetaV1DurationPtr(d),
+			}
+		}
 	}
 
 	// Add ZoneAware loadbalancer settings

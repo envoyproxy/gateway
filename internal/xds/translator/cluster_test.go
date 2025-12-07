@@ -11,6 +11,7 @@ import (
 
 	bootstrapv3 "github.com/envoyproxy/go-control-plane/envoy/config/bootstrap/v3"
 	clusterv3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
+	cswrrv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/load_balancing_policies/client_side_weighted_round_robin/v3"
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/encoding/protojson"
@@ -184,4 +185,39 @@ func TestBuildCluster_WithClientSideWeightedRoundRobin(t *testing.T) {
 	require.Equal(t, "envoy.load_balancing_policies.client_side_weighted_round_robin", policy.TypedExtensionConfig.Name)
 	require.NotNil(t, policy.TypedExtensionConfig.TypedConfig)
 	require.Equal(t, "type.googleapis.com/envoy.extensions.load_balancing_policies.client_side_weighted_round_robin.v3.ClientSideWeightedRoundRobin", policy.TypedExtensionConfig.TypedConfig.TypeUrl)
+}
+
+func TestBuildCluster_WithClientSideWeightedRoundRobin_SlowStart(t *testing.T) {
+	window := 5 * time.Second
+	args := &xdsClusterArgs{
+		name:         "test-cluster-cswrr-ss",
+		endpointType: EndpointTypeStatic,
+		settings: []*ir.DestinationSetting{{
+			Endpoints: []*ir.DestinationEndpoint{{Host: "127.0.0.1", Port: 8080}},
+		}},
+		loadBalancer: &ir.LoadBalancer{ClientSideWeightedRoundRobin: &ir.ClientSideWeightedRoundRobin{
+			SlowStart: &ir.SlowStart{Window: ir.MetaV1DurationPtr(window)},
+		}},
+	}
+
+	result, err := buildXdsCluster(args)
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	cluster := result.cluster
+	require.NotNil(t, cluster)
+
+	require.NotNil(t, cluster.LoadBalancingPolicy)
+	require.Len(t, cluster.LoadBalancingPolicy.Policies, 1)
+	policy := cluster.LoadBalancingPolicy.Policies[0]
+	require.NotNil(t, policy)
+	require.NotNil(t, policy.TypedExtensionConfig)
+	require.Equal(t, "envoy.load_balancing_policies.client_side_weighted_round_robin", policy.TypedExtensionConfig.Name)
+
+	// Unmarshal and verify SlowStartConfig is present
+	cswrr := &cswrrv3.ClientSideWeightedRoundRobin{}
+	err = policy.TypedExtensionConfig.TypedConfig.UnmarshalTo(cswrr)
+	require.NoError(t, err)
+	require.NotNil(t, cswrr.SlowStartConfig)
+	require.NotNil(t, cswrr.SlowStartConfig.SlowStartWindow)
+	require.Equal(t, window, cswrr.SlowStartConfig.SlowStartWindow.AsDuration())
 }

@@ -412,6 +412,12 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 			if v.WeightUpdatePeriod != nil && v.WeightUpdatePeriod.Duration > 0 {
 				cswrr.WeightUpdatePeriod = durationpb.New(v.WeightUpdatePeriod.Duration)
 			}
+			// Map SlowStart for CSWRR if configured in IR
+			if v.SlowStart != nil && v.SlowStart.Window != nil && v.SlowStart.Window.Duration > 0 {
+				cswrr.SlowStartConfig = &commonv3.SlowStartConfig{
+					SlowStartWindow: durationpb.New(v.SlowStart.Window.Duration),
+				}
+			}
 			if v.ErrorUtilizationPenalty != nil {
 				cswrr.ErrorUtilizationPenalty = wrapperspb.Float(float32(*v.ErrorUtilizationPenalty) / 100.0)
 			}
