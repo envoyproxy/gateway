@@ -111,9 +111,10 @@ type RateLimitRule struct {
 	//
 	// +optional
 	Shared *bool `json:"shared,omitempty"`
-	// ShadowMode determines whether this rate limit rule enables shadow mode.
-	// When enabled, rate limiting functions execute as normal (cache lookup, statistics),
-	// but the result is always success regardless of whether the limit was exceeded.
+	// ShadowMode indicates whether this rate-limit rule runs in shadow mode.
+	// When enabled, all rate-limiting operations are performed (cache lookups,
+	// counter updates, telemetry generation), but the outcome is never enforced.
+	// The request always succeeds, even if the configured limit is exceeded.
 	//
 	// Only supported for Global Rate Limits.
 	//
