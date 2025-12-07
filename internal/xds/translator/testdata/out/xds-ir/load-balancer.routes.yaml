@@ -128,6 +128,11 @@
       name: fifteenth-route
       route:
         cluster: fifteenth-route-dest
+        hashPolicy:
+        - queryParameter:
+            name: name
+        - queryParameter:
+            name: bar
         upgradeConfigs:
         - upgradeType: websocket
     - match:
@@ -135,5 +140,12 @@
       name: sixteenth-route
       route:
         cluster: sixteenth-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket
+    - match:
+        prefix: /
+      name: seventeenth-route
+      route:
+        cluster: seventeenth-route-dest
         upgradeConfigs:
         - upgradeType: websocket

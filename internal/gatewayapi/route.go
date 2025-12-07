@@ -68,7 +68,7 @@ func (t *Translator) ProcessHTTPRoutes(httpRoutes []*gwapiv1.HTTPRoute, gateways
 		// Find out if this route attaches to one of our Gateway's listeners,
 		// and if so, get the list of listeners that allow it to attach for each
 		// parentRef.
-		relevantRoute := t.processAllowedListenersForParentRefs(httpRoute, gateways, resources)
+		relevantRoute := t.processAllowedListenersForParentRefs(httpRoute, gateways)
 		if !relevantRoute {
 			continue
 		}
@@ -95,7 +95,7 @@ func (t *Translator) ProcessGRPCRoutes(grpcRoutes []*gwapiv1.GRPCRoute, gateways
 		// Find out if this route attaches to one of our Gateway's listeners,
 		// and if so, get the list of listeners that allow it to attach for each
 		// parentRef.
-		relevantRoute := t.processAllowedListenersForParentRefs(grpcRoute, gateways, resources)
+		relevantRoute := t.processAllowedListenersForParentRefs(grpcRoute, gateways)
 		if !relevantRoute {
 			continue
 		}
@@ -113,20 +113,57 @@ func (t *Translator) processHTTPRouteParentRefs(httpRoute *HTTPRouteContext, res
 		// Need to compute Route rules within the parentRef loop because
 		// any conditions that come out of it have to go on each RouteParentStatus,
 		// not on the Route as a whole.
-		routeRoutes, errs := t.processHTTPRouteRules(httpRoute, parentRef, resources)
-		// TODO: zhaohuabing: according to the gateway api, the RouteConditionPartiallyInvalid condition should be set
-		// to true when an HTTPRoute contains a combination of both valid and invalid rules.
+		routeRoutes, errs, unacceptedRules := t.processHTTPRouteRules(httpRoute, parentRef, resources)
 		if len(errs) > 0 {
 			routeStatus := GetRouteStatus(httpRoute)
+			// errs are already grouped by condition type in TypedErrorCollector
 			for _, err := range errs {
-				status.SetRouteStatusCondition(routeStatus,
-					parentRef.routeParentStatusIdx,
-					httpRoute.GetGeneration(),
-					err.Type(),
-					metav1.ConditionFalse,
-					err.Reason(),
-					status.Error2ConditionMsg(err),
-				)
+				// According to the Gateway API spec:
+				// * RouteConditionAccepted=False should be set when all rules have failed to be accepted.'
+				// * When an HTTPRoute contains a combination of both valid and invalid rules, the RouteConditionAccepted
+				//   should be set to True and a RouteConditionPartiallyInvalid condition should be added with status=True.
+				// Ref: https://gateway-api.sigs.k8s.io/geps/gep-1364
+				if err.Type() == gwapiv1.RouteConditionAccepted {
+					// Set RouteConditionAccepted=False only when all rules have failed to be accepted.
+					if allRulesFailedAccepted := len(unacceptedRules) == len(httpRoute.Spec.Rules); allRulesFailedAccepted {
+						status.SetRouteStatusCondition(routeStatus,
+							parentRef.routeParentStatusIdx,
+							httpRoute.GetGeneration(),
+							gwapiv1.RouteConditionAccepted,
+							metav1.ConditionFalse,
+							err.Reason(),
+							status.Error2ConditionMsg(err),
+						)
+					} else {
+						// Set RouteConditionPartiallyInvalid=True when some rules have failed.
+						status.SetRouteStatusCondition(routeStatus,
+							parentRef.routeParentStatusIdx,
+							httpRoute.GetGeneration(),
+							gwapiv1.RouteConditionPartiallyInvalid,
+							metav1.ConditionTrue,
+							err.Reason(),
+							formatDroppedRuleMessage(unacceptedRules, err),
+						)
+						// Set RouteConditionAccepted=True when some rules have succeeded.
+						status.SetRouteStatusCondition(routeStatus,
+							parentRef.routeParentStatusIdx,
+							httpRoute.GetGeneration(),
+							gwapiv1.RouteConditionAccepted,
+							metav1.ConditionTrue,
+							gwapiv1.RouteReasonAccepted,
+							"Route is accepted",
+						)
+					}
+				} else {
+					status.SetRouteStatusCondition(routeStatus,
+						parentRef.routeParentStatusIdx,
+						httpRoute.GetGeneration(),
+						err.Type(),
+						metav1.ConditionFalse,
+						err.Reason(),
+						status.Error2ConditionMsg(err),
+					)
+				}
 			}
 		}
 
@@ -178,7 +215,11 @@ func (t *Translator) processHTTPRouteParentRefs(httpRoute *HTTPRouteContext, res
 	}
 }
 
-func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRef *RouteParentContext, resources *resource.Resources) ([]*ir.HTTPRoute, []status.Error) {
+func formatDroppedRuleMessage(unacceptedRules []int, err status.Error) string {
+	return fmt.Sprintf("Dropped Rule(s) %v: %s", unacceptedRules, status.Error2ConditionMsg(err))
+}
+
+func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRef *RouteParentContext, resources *resource.Resources) ([]*ir.HTTPRoute, []status.Error, []int) {
 	var (
 		irRoutes       []*ir.HTTPRoute
 		errorCollector = &status.TypedErrorCollector{}
@@ -186,14 +227,19 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 	pattern := getStatPattern(httpRoute, parentRef, t.GatewayControllerName)
 
 	// process each HTTPRouteRule, generate a unique Xds IR HTTPRoute per match of the rule
+	unacceptedRules := sets.NewInt()
 	for ruleIdx, rule := range httpRoute.Spec.Rules {
 		// process HTTP Route filters first, so that the filters can be applied to the IR route later
+		var processFilterError error
 		httpFiltersContext, errs := t.ProcessHTTPFilters(parentRef, httpRoute, rule.Filters, ruleIdx, resources)
 		if len(errs) > 0 {
 			for _, err := range errs {
 				errorCollector.Add(err)
+				processFilterError = errors.Join(processFilterError, err)
+				if err.Type() == gwapiv1.RouteConditionAccepted {
+					unacceptedRules.Insert(ruleIdx)
+				}
 			}
-			continue
 		}
 
 		// build the metadata for this route rule
@@ -208,6 +254,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 				fmt.Errorf("failed to process route rule %d: %w", ruleIdx, err),
 				status.ConvertToAcceptedReason(err.Reason()),
 			).WithType(gwapiv1.RouteConditionAccepted))
+			unacceptedRules.Insert(ruleIdx)
 			continue
 		}
 
@@ -267,6 +314,27 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 			Metadata: routeRuleMetadata,
 		}
 		switch {
+		// return 500 if any filter processing error occurred
+		case processFilterError != nil:
+			routesWithDirectResponse := sets.New[string]()
+			for _, irRoute := range ruleRoutes {
+				// If the route already has a direct response or redirect configured, then it was from a filter so skip
+				// the direct response from errors.
+				if irRoute.DirectResponse != nil || irRoute.Redirect != nil {
+					continue
+				}
+				irRoute.DirectResponse = &ir.CustomResponse{
+					StatusCode: ptr.To(uint32(500)),
+				}
+				routesWithDirectResponse.Insert(irRoute.Name)
+			}
+			if len(routesWithDirectResponse) > 0 {
+				t.Logger.Info(
+					"setting 500 direct response in routes due to errors in processing filters",
+					"routes", sets.List(routesWithDirectResponse),
+					"error", processFilterError,
+				)
+			}
 		// return 500 if no valid destination settings exist
 		// the error is already added to the error list when processing the destination
 		case processDestinationError != nil && destination.ToBackendWeights().Valid == 0:
@@ -383,10 +451,10 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 		irRoutes = append(irRoutes, ruleRoutes...)
 	}
 	if errorCollector.Empty() {
-		return irRoutes, nil
+		return irRoutes, nil, nil
 	}
 
-	return irRoutes, errorCollector.GetAllErrors()
+	return irRoutes, errorCollector.GetAllErrors(), unacceptedRules.List()
 }
 
 func processRouteTrafficFeatures(irRoute *ir.HTTPRoute, rule *gwapiv1.HTTPRouteRule) {
@@ -701,18 +769,57 @@ func (t *Translator) processGRPCRouteParentRefs(grpcRoute *GRPCRouteContext, res
 		// Need to compute Route rules within the parentRef loop because
 		// any conditions that come out of it have to go on each RouteParentStatus,
 		// not on the Route as a whole.
-		routeRoutes, errs := t.processGRPCRouteRules(grpcRoute, parentRef, resources)
+		routeRoutes, errs, unacceptedRules := t.processGRPCRouteRules(grpcRoute, parentRef, resources)
 		if len(errs) > 0 {
 			routeStatus := GetRouteStatus(grpcRoute)
+			// errs are already grouped by condition type in TypedErrorCollector
 			for _, err := range errs {
-				status.SetRouteStatusCondition(routeStatus,
-					parentRef.routeParentStatusIdx,
-					grpcRoute.GetGeneration(),
-					err.Type(),
-					metav1.ConditionFalse,
-					err.Reason(),
-					status.Error2ConditionMsg(err),
-				)
+				// According to the Gateway API spec:
+				// * RouteConditionAccepted=False should be set when all rules have failed to be accepted.'
+				// * When an HTTPRoute contains a combination of both valid and invalid rules, the RouteConditionAccepted
+				//   should be set to True and a RouteConditionPartiallyInvalid condition should be added with status=True.
+				// Ref: https://gateway-api.sigs.k8s.io/geps/gep-1364
+				if err.Type() == gwapiv1.RouteConditionAccepted {
+					// Set RouteConditionAccepted=False only when all rules have failed.
+					if allRulesFailedAccepted := len(unacceptedRules) == len(grpcRoute.Spec.Rules); allRulesFailedAccepted {
+						status.SetRouteStatusCondition(routeStatus,
+							parentRef.routeParentStatusIdx,
+							grpcRoute.GetGeneration(),
+							gwapiv1.RouteConditionAccepted,
+							metav1.ConditionFalse,
+							err.Reason(),
+							status.Error2ConditionMsg(err),
+						)
+					} else {
+						// Set RouteConditionPartiallyInvalid=True when some rules have failed.
+						status.SetRouteStatusCondition(routeStatus,
+							parentRef.routeParentStatusIdx,
+							grpcRoute.GetGeneration(),
+							gwapiv1.RouteConditionPartiallyInvalid,
+							metav1.ConditionTrue,
+							err.Reason(),
+							formatDroppedRuleMessage(unacceptedRules, err),
+						)
+						// Set RouteConditionAccepted=True when some rules have succeeded.
+						status.SetRouteStatusCondition(routeStatus,
+							parentRef.routeParentStatusIdx,
+							grpcRoute.GetGeneration(),
+							gwapiv1.RouteConditionAccepted,
+							metav1.ConditionTrue,
+							gwapiv1.RouteReasonAccepted,
+							"Route is accepted",
+						)
+					}
+				} else {
+					status.SetRouteStatusCondition(routeStatus,
+						parentRef.routeParentStatusIdx,
+						grpcRoute.GetGeneration(),
+						err.Type(),
+						metav1.ConditionFalse,
+						err.Reason(),
+						status.Error2ConditionMsg(err),
+					)
+				}
 			}
 		}
 
@@ -762,7 +869,7 @@ func (t *Translator) processGRPCRouteParentRefs(grpcRoute *GRPCRouteContext, res
 	}
 }
 
-func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRef *RouteParentContext, resources *resource.Resources) ([]*ir.HTTPRoute, []status.Error) {
+func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRef *RouteParentContext, resources *resource.Resources) ([]*ir.HTTPRoute, []status.Error, []int) {
 	var (
 		irRoutes       []*ir.HTTPRoute
 		errorCollector = &status.TypedErrorCollector{}
@@ -770,16 +877,21 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 	pattern := getStatPattern(grpcRoute, parentRef, t.GatewayControllerName)
 
 	// compute matches, filters, backends
+	unacceptedRules := sets.NewInt()
 	for ruleIdx := range grpcRoute.Spec.Rules {
 		rule := &grpcRoute.Spec.Rules[ruleIdx]
 
 		// process GRPC route filters first, so that the filters can be applied to the IR route later
+		var processFilterError error
 		httpFiltersContext, errs := t.ProcessGRPCFilters(parentRef, grpcRoute, rule.Filters, resources)
 		if len(errs) > 0 {
 			for _, err := range errs {
 				errorCollector.Add(err)
+				processFilterError = errors.Join(processFilterError, err)
+				if err.Type() == gwapiv1.RouteConditionAccepted {
+					unacceptedRules.Insert(ruleIdx)
+				}
 			}
-			continue
 		}
 
 		// process GRPC Route Rules
@@ -788,6 +900,7 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 		// a unique Xds IR HTTPRoute per match.
 		ruleRoutes, err := t.processGRPCRouteRule(grpcRoute, ruleIdx, httpFiltersContext, rule)
 		if err != nil {
+			unacceptedRules.Insert(ruleIdx)
 			errorCollector.Add(status.NewRouteStatusError(
 				fmt.Errorf("failed to process route rule %d: %w", ruleIdx, err),
 				status.ConvertToAcceptedReason(err.Reason()),
@@ -843,6 +956,26 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 			Metadata: buildResourceMetadata(grpcRoute, rule.Name),
 		}
 		switch {
+		// return 500 if any filter processing error occurred
+		case processFilterError != nil:
+			routesWithDirectResponse := sets.New[string]()
+			for _, irRoute := range ruleRoutes {
+				// If the route already has a direct response or redirect configured, then it was from a filter so skip
+				// the direct response from errors.
+				if irRoute.DirectResponse != nil || irRoute.Redirect != nil {
+					continue
+				}
+				irRoute.DirectResponse = &ir.CustomResponse{
+					StatusCode: ptr.To(uint32(500)),
+				}
+				routesWithDirectResponse.Insert(irRoute.Name)
+			}
+			if len(routesWithDirectResponse) > 0 {
+				t.Logger.Info("setting 500 direct response in routes due to errors in processing filters",
+					"routes", sets.List(routesWithDirectResponse),
+					"error", processFilterError,
+				)
+			}
 		// return 500 if any destination setting is invalid
 		// the error is already added to the error list when processing the destination
 		case processDestinationError != nil && destination.ToBackendWeights().Valid == 0:
@@ -932,10 +1065,10 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 	}
 
 	if errorCollector.Empty() {
-		return irRoutes, nil
+		return irRoutes, nil, nil
 	}
 
-	return irRoutes, errorCollector.GetAllErrors()
+	return irRoutes, errorCollector.GetAllErrors(), unacceptedRules.List()
 }
 
 func (t *Translator) processGRPCRouteRule(grpcRoute *GRPCRouteContext, ruleIdx int, httpFiltersContext *HTTPFiltersContext, rule *gwapiv1.GRPCRouteRule) ([]*ir.HTTPRoute, status.Error) {
@@ -1139,7 +1272,7 @@ func (t *Translator) ProcessTLSRoutes(tlsRoutes []*gwapiv1a3.TLSRoute, gateways 
 		// Find out if this route attaches to one of our Gateway's listeners,
 		// and if so, get the list of listeners that allow it to attach for each
 		// parentRef.
-		relevantRoute := t.processAllowedListenersForParentRefs(tlsRoute, gateways, resources)
+		relevantRoute := t.processAllowedListenersForParentRefs(tlsRoute, gateways)
 		if !relevantRoute {
 			continue
 		}
@@ -1287,7 +1420,7 @@ func (t *Translator) ProcessUDPRoutes(udpRoutes []*gwapiv1a2.UDPRoute, gateways 
 		// Find out if this route attaches to one of our Gateway's listeners,
 		// and if so, get the list of listeners that allow it to attach for each
 		// parentRef.
-		relevantRoute := t.processAllowedListenersForParentRefs(udpRoute, gateways, resources)
+		relevantRoute := t.processAllowedListenersForParentRefs(udpRoute, gateways)
 		if !relevantRoute {
 			continue
 		}
@@ -1438,7 +1571,7 @@ func (t *Translator) ProcessTCPRoutes(tcpRoutes []*gwapiv1a2.TCPRoute, gateways 
 		// Find out if this route attaches to one of our Gateway's listeners,
 		// and if so, get the list of listeners that allow it to attach for each
 		// parentRef.
-		relevantRoute := t.processAllowedListenersForParentRefs(tcpRoute, gateways, resources)
+		relevantRoute := t.processAllowedListenersForParentRefs(tcpRoute, gateways)
 		if !relevantRoute {
 			continue
 		}
@@ -1649,20 +1782,20 @@ func (t *Translator) processDestination(name string, backendRefContext BackendRe
 
 	switch KindDerefOr(backendRef.Kind, resource.KindService) {
 	case resource.KindServiceImport:
-		ds, err = t.processServiceImportDestinationSetting(name, backendRef.BackendObjectReference, backendNamespace, protocol, resources, envoyProxy)
+		ds, err = t.processServiceImportDestinationSetting(name, backendRef.BackendObjectReference, backendNamespace, protocol, envoyProxy)
 		if err != nil {
 			return emptyDS, nil, err
 		}
 	case resource.KindService:
-		ds, err = t.processServiceDestinationSetting(name, backendRef.BackendObjectReference, backendNamespace, protocol, resources, envoyProxy)
+		ds, err = t.processServiceDestinationSetting(name, backendRef.BackendObjectReference, backendNamespace, protocol, envoyProxy)
 		if err != nil {
 			return emptyDS, nil, err
 		}
-		svc := resources.GetService(backendNamespace, string(backendRef.Name))
+		svc := t.GetService(backendNamespace, string(backendRef.Name))
 		ds.IPFamily = getServiceIPFamily(svc)
 		ds.PreferLocal = processPreferLocalZone(svc)
 	case egv1a1.KindBackend:
-		ds = t.processBackendDestinationSetting(name, backendRef.BackendObjectReference, backendNamespace, protocol, resources)
+		ds = t.processBackendDestinationSetting(name, backendRef.BackendObjectReference, backendNamespace, protocol)
 	default:
 		// Handle custom backend resources defined in extension manager
 		if t.isCustomBackendResource(backendRef.Group, KindDerefOr(backendRef.Kind, resource.KindService)) {
@@ -1745,7 +1878,6 @@ func (t *Translator) processServiceImportDestinationSetting(
 	backendRef gwapiv1.BackendObjectReference,
 	backendNamespace string,
 	protocol ir.AppProtocol,
-	resources *resource.Resources,
 	envoyProxy *egv1a1.EnvoyProxy,
 ) (*ir.DestinationSetting, status.Error) {
 	var (
@@ -1753,7 +1885,7 @@ func (t *Translator) processServiceImportDestinationSetting(
 		addrType  *ir.DestinationAddressType
 	)
 
-	serviceImport := resources.GetServiceImport(backendNamespace, string(backendRef.Name))
+	serviceImport := t.GetServiceImport(backendNamespace, string(backendRef.Name))
 	var servicePort mcsapiv1a1.ServicePort
 	for _, port := range serviceImport.Spec.Ports {
 		if port.Port == *backendRef.Port {
@@ -1768,7 +1900,7 @@ func (t *Translator) processServiceImportDestinationSetting(
 
 	// Route to endpoints by default
 	if !t.IsEnvoyServiceRouting(envoyProxy) {
-		endpointSlices := resources.GetEndpointSlicesForBackend(backendNamespace, string(backendRef.Name), resource.KindServiceImport)
+		endpointSlices := t.GetEndpointSlicesForBackend(backendNamespace, string(backendRef.Name), resource.KindServiceImport)
 		endpoints, addrType = getIREndpointsFromEndpointSlices(endpointSlices, servicePort.Name, getServicePortProtocol(servicePort.Protocol))
 		if len(endpoints) == 0 {
 			return nil, status.NewRouteStatusError(
@@ -1778,7 +1910,7 @@ func (t *Translator) processServiceImportDestinationSetting(
 		}
 	} else {
 		// Fall back to Service ClusterIP routing
-		backendIps := resources.GetServiceImport(backendNamespace, string(backendRef.Name)).Spec.IPs
+		backendIps := t.GetServiceImport(backendNamespace, string(backendRef.Name)).Spec.IPs
 		for _, ip := range backendIps {
 			ep := ir.NewDestEndpoint(nil, ip, uint32(*backendRef.Port), false, nil)
 			endpoints = append(endpoints, ep)
@@ -1799,7 +1931,6 @@ func (t *Translator) processServiceDestinationSetting(
 	backendRef gwapiv1.BackendObjectReference,
 	backendNamespace string,
 	protocol ir.AppProtocol,
-	resources *resource.Resources,
 	envoyProxy *egv1a1.EnvoyProxy,
 ) (*ir.DestinationSetting, status.Error) {
 	var (
@@ -1807,7 +1938,7 @@ func (t *Translator) processServiceDestinationSetting(
 		addrType  *ir.DestinationAddressType
 	)
 
-	service := resources.GetService(backendNamespace, string(backendRef.Name))
+	service := t.GetService(backendNamespace, string(backendRef.Name))
 	var servicePort corev1.ServicePort
 	for _, port := range service.Spec.Ports {
 		if port.Port == *backendRef.Port {
@@ -1823,7 +1954,7 @@ func (t *Translator) processServiceDestinationSetting(
 
 	// Route to endpoints by default
 	if !t.IsEnvoyServiceRouting(envoyProxy) {
-		endpointSlices := resources.GetEndpointSlicesForBackend(backendNamespace, string(backendRef.Name), KindDerefOr(backendRef.Kind, resource.KindService))
+		endpointSlices := t.GetEndpointSlicesForBackend(backendNamespace, string(backendRef.Name), KindDerefOr(backendRef.Kind, resource.KindService))
 		endpoints, addrType = getIREndpointsFromEndpointSlices(endpointSlices, servicePort.Name, getServicePortProtocol(servicePort.Protocol))
 		if len(endpoints) == 0 {
 			return nil, status.NewRouteStatusError(
@@ -1961,7 +2092,10 @@ func inspectAppProtocolByRouteKind(kind gwapiv1.Kind) ir.AppProtocol {
 // processAllowedListenersForParentRefs finds out if the route attaches to one of our
 // Gateways' listeners, and if so, gets the list of listeners that allow it to
 // attach for each parentRef.
-func (t *Translator) processAllowedListenersForParentRefs(routeContext RouteContext, gateways []*GatewayContext, resources *resource.Resources) bool {
+func (t *Translator) processAllowedListenersForParentRefs(
+	routeContext RouteContext,
+	gateways []*GatewayContext,
+) bool {
 	var relevantRoute bool
 	ns := gwapiv1.Namespace(routeContext.GetNamespace())
 	for _, parentRef := range GetParentReferences(routeContext) {
@@ -1994,7 +2128,7 @@ func (t *Translator) processAllowedListenersForParentRefs(routeContext RouteCont
 		for _, listener := range selectedListeners {
 			acceptedKind := routeContext.GetRouteType()
 			if listener.AllowsKind(gwapiv1.RouteGroupKind{Group: GroupPtr(gwapiv1.GroupName), Kind: acceptedKind}) &&
-				listener.AllowsNamespace(resources.GetNamespace(routeContext.GetNamespace())) {
+				listener.AllowsNamespace(t.GetNamespace(routeContext.GetNamespace())) {
 				allowedListeners = append(allowedListeners, listener)
 			}
 		}
@@ -2149,7 +2283,10 @@ func (t *Translator) processBackendExtensions(
 	return nil
 }
 
-func getTargetBackendReference(backendRef gwapiv1.BackendObjectReference, backendNamespace string, resources *resource.Resources) gwapiv1.LocalPolicyTargetReferenceWithSectionName {
+func (t *Translator) getTargetBackendReference(
+	backendRef gwapiv1.BackendObjectReference,
+	backendNamespace string,
+) gwapiv1.LocalPolicyTargetReferenceWithSectionName {
 	ref := gwapiv1.LocalPolicyTargetReferenceWithSectionName{
 		LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 			Group: func() gwapiv1.Group {
@@ -2173,7 +2310,7 @@ func getTargetBackendReference(backendRef gwapiv1.BackendObjectReference, backen
 
 	switch {
 	case backendRef.Kind == nil || *backendRef.Kind == resource.KindService:
-		if service := resources.GetService(backendNamespace, string(backendRef.Name)); service != nil {
+		if service := t.GetService(backendNamespace, string(backendRef.Name)); service != nil {
 			for _, port := range service.Spec.Ports {
 				if port.Port == *backendRef.Port {
 					if port.Name != "" {
@@ -2185,7 +2322,7 @@ func getTargetBackendReference(backendRef gwapiv1.BackendObjectReference, backen
 		}
 
 	case *backendRef.Kind == resource.KindServiceImport:
-		if si := resources.GetServiceImport(backendNamespace, string(backendRef.Name)); si != nil {
+		if si := t.GetServiceImport(backendNamespace, string(backendRef.Name)); si != nil {
 			for _, port := range si.Spec.Ports {
 				if port.Port == *backendRef.Port {
 					if port.Name != "" {
@@ -2209,12 +2346,11 @@ func (t *Translator) processBackendDestinationSetting(
 	backendRef gwapiv1.BackendObjectReference,
 	backendNamespace string,
 	protocol ir.AppProtocol,
-	resources *resource.Resources,
 ) *ir.DestinationSetting {
 	var dstAddrType *ir.DestinationAddressType
 
 	addrTypeMap := make(map[ir.DestinationAddressType]int)
-	backend := resources.GetBackend(backendNamespace, string(backendRef.Name))
+	backend := t.GetBackend(backendNamespace, string(backendRef.Name))
 	for _, ap := range backend.Spec.AppProtocols {
 		protocol = backendAppProtocolToIRAppProtocol(ap, protocol)
 	}

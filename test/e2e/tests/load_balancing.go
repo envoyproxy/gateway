@@ -44,6 +44,7 @@ func init() {
 		ConsistentHashCookieLoadBalancingTest,
 		EndpointOverrideLoadBalancingTest,
 		MultiHeaderConsistentHashHeaderLoadBalancingTest,
+		ConsistentHashQueryParamsLoadBalancingTest,
 		ClientSideWeightedRoundRobinLoadBalancingTest,
 	)
 }
@@ -489,6 +490,64 @@ var ConsistentHashCookieLoadBalancingTest = suite.ConformanceTest{
 			})
 			require.NoError(t, waitErr)
 		})
+	},
+}
+
+var ConsistentHashQueryParamsLoadBalancingTest = suite.ConformanceTest{
+	ShortName:   "QueryParamsBasedConsistentHashLoadBalancing",
+	Description: "Test for multiple query parameter based consistent hash load balancing type",
+	Manifests:   []string{"testdata/load_balancing_consistent_hash_query_parameter.yaml"},
+	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
+		const sendRequests = 10
+
+		ns := "gateway-conformance-infra"
+		routeNN := types.NamespacedName{Name: "query-parameter-lb-route", Namespace: ns}
+		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
+
+		ancestorRef := gwapiv1.ParentReference{
+			Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
+			Kind:      gatewayapi.KindPtr(resource.KindGateway),
+			Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
+			Name:      gwapiv1.ObjectName(gwNN.Name),
+		}
+		BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "query-parameter-lb-policy", Namespace: ns}, suite.ControllerName, ancestorRef)
+		WaitForPods(t, suite.Client, ns, map[string]string{"app": "lb-backend-query-parameter"}, corev1.PodRunning, &PodReady)
+
+		gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
+		// Test with different combinations of multiple queries
+		queryCombinations := []struct {
+			name   string
+			query1 string
+			query2 string
+		}{
+			{"combo1", "value-a", "value-b"},
+			{"combo2", "value-x", "value-y"},
+			{"combo3", "test1", "test2"},
+			{"combo4", "foo", "bar"},
+			{"combo5", "alpha", "beta"},
+		}
+		for _, queryCombination := range queryCombinations {
+			t.Run(queryCombination.name, func(t *testing.T) {
+				expectedResponse := http.ExpectedResponse{
+					Request: http.Request{
+						Path: fmt.Sprintf("/query-parameter?lb-query-parameter-first=%s&lb-query-parameter-second=%s", queryCombination.query1, queryCombination.query2),
+					},
+					Response: http.Response{
+						StatusCodes: []int{200},
+					},
+					Namespace: ns,
+				}
+
+				req := http.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
+				got := runTrafficTest(t, suite, &req, &expectedResponse, sendRequests, func(trafficMap map[string]int) bool {
+					// All traffic should be routed to the same pod.
+					return len(trafficMap) == 1
+				})
+
+				require.True(t, got, "Expected all requests with query parameter lb-query-parameter-first=%s&lb-query-parameter-second=%s route to the same pod",
+					queryCombination.query1, queryCombination.query2)
+			})
+		}
 	},
 }
 

@@ -206,13 +206,10 @@ http:
     hostname: "*"
     traffic:
       loadBalancer:
-        clientSideWeightedRoundRobin:
-          blackoutPeriod: 30s
-          weightExpirationPeriod: 60s
-          weightUpdatePeriod: 10s
-          errorUtilizationPenalty: 100
-          metricNamesForComputingUtilization:
-          - "cpu_utilization"
+        consistentHash:
+          queryParams:
+          - name: "name"
+          - name: "bar"
     destination:
       name: "fifteenth-route-dest"
       settings:
@@ -228,8 +225,9 @@ http:
           blackoutPeriod: 30s
           weightExpirationPeriod: 60s
           weightUpdatePeriod: 10s
+          errorUtilizationPenalty: 100
           metricNamesForComputingUtilization:
-          - "named_metric.foo"
+          - "cpu_utilization"
     destination:
       name: "sixteenth-route-dest"
       settings:
@@ -237,3 +235,20 @@ http:
         - host: "1.2.3.4"
           port: 50000
         name: "sixteenth-route-dest/backend/0"
+  - name: "seventeenth-route"
+    hostname: "*"
+    traffic:
+      loadBalancer:
+        clientSideWeightedRoundRobin:
+          blackoutPeriod: 30s
+          weightExpirationPeriod: 60s
+          weightUpdatePeriod: 10s
+          metricNamesForComputingUtilization:
+          - "named_metric.foo"
+    destination:
+      name: "seventeenth-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "seventeenth-route-dest/backend/0"

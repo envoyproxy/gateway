@@ -738,6 +738,17 @@ func (in *ConsistentHash) DeepCopyInto(out *ConsistentHash) {
 		*out = new(v1alpha1.Cookie)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.QueryParams != nil {
+		in, out := &in.QueryParams, &out.QueryParams
+		*out = make([]*v1alpha1.QueryParam, len(*in))
+		for i := range *in {
+			if (*in)[i] != nil {
+				in, out := &(*in)[i], &(*out)[i]
+				*out = new(v1alpha1.QueryParam)
+				**out = **in
+			}
+		}
+	}
 	if in.TableSize != nil {
 		in, out := &in.TableSize, &out.TableSize
 		*out = new(uint64)
@@ -2121,6 +2132,17 @@ func (in *HeaderSettings) DeepCopyInto(out *HeaderSettings) {
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}
+	if in.EarlyRemoveRequestHeadersOnMatch != nil {
+		in, out := &in.EarlyRemoveRequestHeadersOnMatch, &out.EarlyRemoveRequestHeadersOnMatch
+		*out = make([]*StringMatch, len(*in))
+		for i := range *in {
+			if (*in)[i] != nil {
+				in, out := &(*in)[i], &(*out)[i]
+				*out = new(StringMatch)
+				(*in).DeepCopyInto(*out)
+			}
+		}
+	}
 	if in.LateAddResponseHeaders != nil {
 		in, out := &in.LateAddResponseHeaders, &out.LateAddResponseHeaders
 		*out = make([]AddHeader, len(*in))
@@ -2132,6 +2154,17 @@ func (in *HeaderSettings) DeepCopyInto(out *HeaderSettings) {
 		in, out := &in.LateRemoveResponseHeaders, &out.LateRemoveResponseHeaders
 		*out = make([]string, len(*in))
 		copy(*out, *in)
+	}
+	if in.LateRemoveResponseHeadersOnMatch != nil {
+		in, out := &in.LateRemoveResponseHeadersOnMatch, &out.LateRemoveResponseHeadersOnMatch
+		*out = make([]*StringMatch, len(*in))
+		for i := range *in {
+			if (*in)[i] != nil {
+				in, out := &(*in)[i], &(*out)[i]
+				*out = new(StringMatch)
+				(*in).DeepCopyInto(*out)
+			}
+		}
 	}
 }
 

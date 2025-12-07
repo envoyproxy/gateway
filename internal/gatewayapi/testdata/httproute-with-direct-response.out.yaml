@@ -120,7 +120,7 @@ httpRoutes:
         type: Accepted
       - lastTransitionTime: null
         message: 'Unable to translate HTTPRouteFilter: default/direct-response-value-ref-not-found.'
-        reason: BackendNotFound
+        reason: UnsupportedValue
         status: "False"
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
@@ -235,6 +235,7 @@ xdsIR:
     globalResources:
       proxyServiceCluster:
         metadata:
+          kind: Service
           name: envoy-envoy-gateway-gateway-1-196ae069
           namespace: envoy-gateway-system
           sectionName: "8080"
@@ -246,6 +247,7 @@ xdsIR:
             port: 8080
             zone: zone1
           metadata:
+            kind: Service
             name: envoy-envoy-gateway-gateway-1-196ae069
             namespace: envoy-gateway-system
             sectionName: "8080"
@@ -268,6 +270,19 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
+      - directResponse:
+          statusCode: 500
+        hostname: '*.envoyproxy.io'
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: direct-response-with-value-not-found
+          namespace: default
+        name: httproute/default/direct-response-with-value-not-found/rule/0/match/0/*_envoyproxy_io
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /value-ref-not-found
       - addResponseHeaders:
         - append: false
           name: Content-Type

@@ -355,18 +355,13 @@
       resourceApiVersion: V3
     serviceName: fifteenth-route-dest
   ignoreHealthOnHostRemoval: true
+  lbPolicy: MAGLEV
   loadBalancingPolicy:
     policies:
     - typedExtensionConfig:
-        name: envoy.load_balancing_policies.client_side_weighted_round_robin
+        name: envoy.load_balancing_policies.maglev
         typedConfig:
-          '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.client_side_weighted_round_robin.v3.ClientSideWeightedRoundRobin
-          blackoutPeriod: 30s
-          errorUtilizationPenalty: 1
-          metricNamesForComputingUtilization:
-          - cpu_utilization
-          weightExpirationPeriod: 60s
-          weightUpdatePeriod: 10s
+          '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.maglev.v3.Maglev
   name: fifteenth-route-dest
   perConnectionBufferLimitBytes: 32768
   type: EDS
@@ -389,10 +384,37 @@
         typedConfig:
           '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.client_side_weighted_round_robin.v3.ClientSideWeightedRoundRobin
           blackoutPeriod: 30s
+          errorUtilizationPenalty: 1
+          metricNamesForComputingUtilization:
+          - cpu_utilization
+          weightExpirationPeriod: 60s
+          weightUpdatePeriod: 10s
+  name: sixteenth-route-dest
+  perConnectionBufferLimitBytes: 32768
+  type: EDS
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_PREFERRED
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
+    serviceName: seventeenth-route-dest
+  ignoreHealthOnHostRemoval: true
+  loadBalancingPolicy:
+    policies:
+    - typedExtensionConfig:
+        name: envoy.load_balancing_policies.client_side_weighted_round_robin
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.client_side_weighted_round_robin.v3.ClientSideWeightedRoundRobin
+          blackoutPeriod: 30s
           metricNamesForComputingUtilization:
           - named_metric.foo
           weightExpirationPeriod: 60s
           weightUpdatePeriod: 10s
-  name: sixteenth-route-dest
+  name: seventeenth-route-dest
   perConnectionBufferLimitBytes: 32768
   type: EDS

@@ -1,218 +1,253 @@
 gateways:
-- apiVersion: gateway.networking.k8s.io/v1
-  kind: Gateway
-  metadata:
-    namespace: envoy-gateway
-    name: gateway-1
-  spec:
-    gatewayClassName: envoy-gateway-class
-    listeners:
-    - name: http
-      protocol: HTTP
-      port: 80
-      allowedRoutes:
-        namespaces:
-          from: All
-- apiVersion: gateway.networking.k8s.io/v1
-  kind: Gateway
-  metadata:
-    namespace: envoy-gateway
-    name: gateway-2
-  spec:
-    gatewayClassName: envoy-gateway-class
-    listeners:
-    - name: http
-      protocol: HTTP
-      port: 80
-      allowedRoutes:
-        namespaces:
-          from: All
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: Gateway
+    metadata:
+      namespace: envoy-gateway
+      name: gateway-1
+    spec:
+      gatewayClassName: envoy-gateway-class
+      listeners:
+        - name: http
+          protocol: HTTP
+          port: 80
+          allowedRoutes:
+            namespaces:
+              from: All
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: Gateway
+    metadata:
+      namespace: envoy-gateway
+      name: gateway-2
+    spec:
+      gatewayClassName: envoy-gateway-class
+      listeners:
+        - name: http
+          protocol: HTTP
+          port: 80
+          allowedRoutes:
+            namespaces:
+              from: All
 grpcRoutes:
-- apiVersion: gateway.networking.k8s.io/v1alpha2
-  kind: GRPCRoute
-  metadata:
-    namespace: default
-    name: grpcroute-1
-  spec:
-    parentRefs:
-    - namespace: envoy-gateway
-      name: gateway-1
-      sectionName: http
-    rules:
-    - backendRefs:
-      - name: service-1
-        port: 8080
+  - apiVersion: gateway.networking.k8s.io/v1alpha2
+    kind: GRPCRoute
+    metadata:
+      namespace: default
+      name: grpcroute-1
+    spec:
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+          sectionName: http
+      rules:
+        - backendRefs:
+            - name: service-1
+              port: 8080
 httpRoutes:
-- apiVersion: gateway.networking.k8s.io/v1
-  kind: HTTPRoute
-  metadata:
-    namespace: default
-    name: httproute-1
-  spec:
-    hostnames:
-    - gateway.envoyproxy.io
-    parentRefs:
-    - namespace: envoy-gateway
-      name: gateway-2
-      sectionName: http
-    rules:
-    - matches:
-      - path:
-          value: "/"
-      backendRefs:
-      - name: service-1
-        port: 8080
-- apiVersion: gateway.networking.k8s.io/v1
-  kind: HTTPRoute
-  metadata:
-    namespace: default
-    name: httproute-2
-  spec:
-    hostnames:
-    - gateway.envoyproxy.io
-    parentRefs:
-    - namespace: envoy-gateway
-      name: gateway-2
-      sectionName: http
-    rules:
-    - matches:
-      - path:
-          value: "/test2"
-      backendRefs:
-      - name: service-2
-        port: 8080
-- apiVersion: gateway.networking.k8s.io/v1
-  kind: HTTPRoute
-  metadata:
-    namespace: default
-    name: httproute-3
-  spec:
-    hostnames:
-    - gateway.envoyproxy.io
-    parentRefs:
-    - namespace: envoy-gateway
-      name: gateway-2
-      sectionName: http
-    rules:
-    - matches:
-      - path:
-          value: "/test3"
-      backendRefs:
-      - name: service-2
-        port: 8080
-- apiVersion: gateway.networking.k8s.io/v1
-  kind: HTTPRoute
-  metadata:
-    namespace: default
-    name: httproute-4
-  spec:
-    hostnames:
-    - gateway.envoyproxy.io
-    parentRefs:
-    - namespace: envoy-gateway
-      name: gateway-2
-      sectionName: http
-    rules:
-    - matches:
-      - path:
-          value: "/test4"
-      backendRefs:
-      - name: service-2
-        port: 8080
-backendTrafficPolicies:
-- apiVersion: gateway.envoyproxy.io/v1alpha1
-  kind: BackendTrafficPolicy
-  metadata:
-    namespace: envoy-gateway
-    name: policy-for-gateway
-  spec:
-    targetRef:
-      group: gateway.networking.k8s.io
-      kind: Gateway
-      name: gateway-1
-    loadBalancer:
-      type: Random
-- apiVersion: gateway.envoyproxy.io/v1alpha1
-  kind: BackendTrafficPolicy
-  metadata:
-    namespace: default
-    name: policy-for-route
-  spec:
-    targetRef:
-      group: gateway.networking.k8s.io
-      kind: HTTPRoute
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: default
       name: httproute-1
-    loadBalancer:
-      type: ConsistentHash
-      consistentHash:
-        type: SourceIP
-        tableSize: 524287
-- apiVersion: gateway.envoyproxy.io/v1alpha1
-  kind: BackendTrafficPolicy
-  metadata:
-    namespace: envoy-gateway
-    name: policy-for-gateway2
-  spec:
-    targetRef:
-      group: gateway.networking.k8s.io
-      kind: Gateway
-      name: gateway-2
-    loadBalancer:
-      type: RoundRobin
-      slowStart:
-        window: 300s
-      zoneAware:
-        preferLocal:
-          force:
-            minEndpointsInZoneThreshold: 1
-          minEndpointsThreshold: 1
-          percentageEnabled: 50
-- apiVersion: gateway.envoyproxy.io/v1alpha1
-  kind: BackendTrafficPolicy
-  metadata:
-    namespace: default
-    name: policy-for-route2
-  spec:
-    targetRef:
-      group: gateway.networking.k8s.io
-      kind: HTTPRoute
+    spec:
+      hostnames:
+        - gateway.envoyproxy.io
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-2
+          sectionName: http
+      rules:
+        - matches:
+            - path:
+                value: "/"
+          backendRefs:
+            - name: service-1
+              port: 8080
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: default
       name: httproute-2
-    loadBalancer:
-      type: LeastRequest
-      slowStart:
-        window: 300s
-- apiVersion: gateway.envoyproxy.io/v1alpha1
-  kind: BackendTrafficPolicy
-  metadata:
-    namespace: default
-    name: policy-for-route3
-  spec:
-    targetRef:
-      group: gateway.networking.k8s.io
-      kind: HTTPRoute
+    spec:
+      hostnames:
+        - gateway.envoyproxy.io
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-2
+          sectionName: http
+      rules:
+        - matches:
+            - path:
+                value: "/test2"
+          backendRefs:
+            - name: service-2
+              port: 8080
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: default
       name: httproute-3
-    loadBalancer:
-      type: ConsistentHash
-      consistentHash:
-        type: Cookie
-        cookie:
-          name: "test"
-- apiVersion: gateway.envoyproxy.io/v1alpha1
-  kind: BackendTrafficPolicy
-  metadata:
-    namespace: default
-    name: policy-for-route4
-  spec:
-    targetRef:
-      group: gateway.networking.k8s.io
-      kind: HTTPRoute
+    spec:
+      hostnames:
+        - gateway.envoyproxy.io
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-2
+          sectionName: http
+      rules:
+        - matches:
+            - path:
+                value: "/test3"
+          backendRefs:
+            - name: service-2
+              port: 8080
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: default
       name: httproute-4
-    loadBalancer:
-      type: ClientSideWeightedRoundRobin
-      clientSideWeightedRoundRobin:
-        blackoutPeriod: 10s
-        weightExpirationPeriod: 60s
-        weightUpdatePeriod: 10s
-        errorUtilizationPenalty: 100
-        metricNamesForComputingUtilization:
-        - "cpu_utilization"
+    spec:
+      hostnames:
+        - gateway.envoyproxy.io
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-2
+          sectionName: http
+      rules:
+        - matches:
+            - path:
+                value: "/test4"
+          backendRefs:
+            - name: service-2
+              port: 8080
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: default
+      name: httproute-5
+    spec:
+      hostnames:
+        - gateway.envoyproxy.io
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-2
+          sectionName: http
+      rules:
+        - matches:
+            - path:
+                value: "/test5"
+          backendRefs:
+            - name: service-2
+              port: 8080
+backendTrafficPolicies:
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: BackendTrafficPolicy
+    metadata:
+      namespace: envoy-gateway
+      name: policy-for-gateway
+    spec:
+      targetRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+      loadBalancer:
+        type: Random
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: BackendTrafficPolicy
+    metadata:
+      namespace: default
+      name: policy-for-route
+    spec:
+      targetRef:
+        group: gateway.networking.k8s.io
+        kind: HTTPRoute
+        name: httproute-1
+      loadBalancer:
+        type: ConsistentHash
+        consistentHash:
+          type: SourceIP
+          tableSize: 524287
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: BackendTrafficPolicy
+    metadata:
+      namespace: envoy-gateway
+      name: policy-for-gateway2
+    spec:
+      targetRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-2
+      loadBalancer:
+        type: RoundRobin
+        slowStart:
+          window: 300s
+        zoneAware:
+          preferLocal:
+            force:
+              minEndpointsInZoneThreshold: 1
+            minEndpointsThreshold: 1
+            percentageEnabled: 50
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: BackendTrafficPolicy
+    metadata:
+      namespace: default
+      name: policy-for-route2
+    spec:
+      targetRef:
+        group: gateway.networking.k8s.io
+        kind: HTTPRoute
+        name: httproute-2
+      loadBalancer:
+        type: LeastRequest
+        slowStart:
+          window: 300s
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: BackendTrafficPolicy
+    metadata:
+      namespace: default
+      name: policy-for-route3
+    spec:
+      targetRef:
+        group: gateway.networking.k8s.io
+        kind: HTTPRoute
+        name: httproute-3
+      loadBalancer:
+        type: ConsistentHash
+        consistentHash:
+          type: Cookie
+          cookie:
+            name: "test"
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: BackendTrafficPolicy
+    metadata:
+      namespace: default
+      name: policy-for-route4
+    spec:
+      targetRef:
+        group: gateway.networking.k8s.io
+        kind: HTTPRoute
+        name: httproute-4
+      loadBalancer:
+        type: ConsistentHash
+        consistentHash:
+          type: QueryParams
+          queryParams:
+            - name: "test"
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: BackendTrafficPolicy
+    metadata:
+      namespace: default
+      name: policy-for-route5
+    spec:
+      targetRef:
+        group: gateway.networking.k8s.io
+        kind: HTTPRoute
+        name: httproute-5
+      loadBalancer:
+        type: ClientSideWeightedRoundRobin
+        clientSideWeightedRoundRobin:
+          blackoutPeriod: 10s
+          weightExpirationPeriod: 60s
+          weightUpdatePeriod: 10s
+          errorUtilizationPenalty: 100
+          metricNamesForComputingUtilization:
+            - "cpu_utilization"

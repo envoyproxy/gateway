@@ -8,7 +8,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/3328
-    gateway.networking.k8s.io/bundle-version: v1.4.0
+    gateway.networking.k8s.io/bundle-version: v1.4.1
     gateway.networking.k8s.io/channel: experimental
   labels:
     gateway.networking.k8s.io/policy: Direct
@@ -112,6 +112,12 @@ spec:
                   For any BackendTLSPolicy that does not take precedence, the
                   implementation MUST ensure the `Accepted` Condition is set to
                   `status: False`, with Reason `Conflicted`.
+
+                  Implementations SHOULD NOT support more than one targetRef at this
+                  time. Although the API technically allows for this, the current guidance
+                  for conflict resolution and status handling is lacking. Until that can be
+                  clarified in a future release, the safest approach is to support a single
+                  targetRef.
 
                   Support: Extended for Kubernetes Service
 
@@ -776,6 +782,12 @@ spec:
                   implementation MUST ensure the `Accepted` Condition is set to
                   `status: False`, with Reason `Conflicted`.
 
+                  Implementations SHOULD NOT support more than one targetRef at this
+                  time. Although the API technically allows for this, the current guidance
+                  for conflict resolution and status handling is lacking. Until that can be
+                  clarified in a future release, the safest approach is to support a single
+                  targetRef.
+
                   Support: Extended for Kubernetes Service
 
                   Support: Implementation-specific for any other resource
@@ -1351,6 +1363,8 @@ spec:
         type: object
     served: true
     storage: false
+    subresources:
+      status: {}
 status:
   acceptedNames:
     kind: ""
@@ -1367,7 +1381,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/3328
-    gateway.networking.k8s.io/bundle-version: v1.4.0
+    gateway.networking.k8s.io/bundle-version: v1.4.1
     gateway.networking.k8s.io/channel: experimental
   name: gatewayclasses.gateway.networking.k8s.io
 spec:
@@ -1887,7 +1901,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/3328
-    gateway.networking.k8s.io/bundle-version: v1.4.0
+    gateway.networking.k8s.io/bundle-version: v1.4.1
     gateway.networking.k8s.io/channel: experimental
   name: gateways.gateway.networking.k8s.io
 spec:
@@ -2831,19 +2845,30 @@ spec:
                     properties:
                       clientCertificateRef:
                         description: |-
-                          ClientCertificateRef is a reference to an object that contains a Client
-                          Certificate and the associated private key.
+                          ClientCertificateRef references an object that contains a client certificate
+                          and its associated private key. It can reference standard Kubernetes resources,
+                          i.e., Secret, or implementation-specific custom resources.
 
-                          References to a resource in different namespace are invalid UNLESS there
-                          is a ReferenceGrant in the target namespace that allows the certificate
-                          to be attached. If a ReferenceGrant does not allow this reference, the
-                          "ResolvedRefs" condition MUST be set to False for this listener with the
-                          "RefNotPermitted" reason.
+                          A ClientCertificateRef is considered invalid if:
 
-                          ClientCertificateRef can reference to standard Kubernetes resources, i.e.
-                          Secret, or implementation-specific custom resources.
+                          * It refers to a resource that cannot be resolved (e.g., the referenced resource
+                            does not exist) or is misconfigured (e.g., a Secret does not contain the keys
+                            named `tls.crt` and `tls.key`). In this case, the `ResolvedRefs` condition
+                            on the Gateway MUST be set to False with the Reason `InvalidClientCertificateRef`
+                            and the Message of the Condition MUST indicate why the reference is invalid.
 
-                          Support: Core
+                          * It refers to a resource in another namespace UNLESS there is a ReferenceGrant
+                            in the target namespace that allows the certificate to be attached.
+                            If a ReferenceGrant does not allow this reference, the `ResolvedRefs` condition
+                            on the Gateway MUST be set to False with the Reason `RefNotPermitted`.
+
+                          Implementations MAY choose to perform further validation of the certificate
+                          content (e.g., checking expiry or enforcing specific formats). In such cases,
+                          an implementation-specific Reason and Message MUST be set.
+
+                          Support: Core - Reference to a Kubernetes TLS Secret (with the type `kubernetes.io/tls`).
+                          Support: Implementation-specific - Other resource kinds or Secrets with a
+                          different type (e.g., `Opaque`).
                         properties:
                           group:
                             default: ""
@@ -4408,19 +4433,30 @@ spec:
                     properties:
                       clientCertificateRef:
                         description: |-
-                          ClientCertificateRef is a reference to an object that contains a Client
-                          Certificate and the associated private key.
+                          ClientCertificateRef references an object that contains a client certificate
+                          and its associated private key. It can reference standard Kubernetes resources,
+                          i.e., Secret, or implementation-specific custom resources.
 
-                          References to a resource in different namespace are invalid UNLESS there
-                          is a ReferenceGrant in the target namespace that allows the certificate
-                          to be attached. If a ReferenceGrant does not allow this reference, the
-                          "ResolvedRefs" condition MUST be set to False for this listener with the
-                          "RefNotPermitted" reason.
+                          A ClientCertificateRef is considered invalid if:
 
-                          ClientCertificateRef can reference to standard Kubernetes resources, i.e.
-                          Secret, or implementation-specific custom resources.
+                          * It refers to a resource that cannot be resolved (e.g., the referenced resource
+                            does not exist) or is misconfigured (e.g., a Secret does not contain the keys
+                            named `tls.crt` and `tls.key`). In this case, the `ResolvedRefs` condition
+                            on the Gateway MUST be set to False with the Reason `InvalidClientCertificateRef`
+                            and the Message of the Condition MUST indicate why the reference is invalid.
 
-                          Support: Core
+                          * It refers to a resource in another namespace UNLESS there is a ReferenceGrant
+                            in the target namespace that allows the certificate to be attached.
+                            If a ReferenceGrant does not allow this reference, the `ResolvedRefs` condition
+                            on the Gateway MUST be set to False with the Reason `RefNotPermitted`.
+
+                          Implementations MAY choose to perform further validation of the certificate
+                          content (e.g., checking expiry or enforcing specific formats). In such cases,
+                          an implementation-specific Reason and Message MUST be set.
+
+                          Support: Core - Reference to a Kubernetes TLS Secret (with the type `kubernetes.io/tls`).
+                          Support: Implementation-specific - Other resource kinds or Secrets with a
+                          different type (e.g., `Opaque`).
                         properties:
                           group:
                             default: ""
@@ -5073,7 +5109,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/3328
-    gateway.networking.k8s.io/bundle-version: v1.4.0
+    gateway.networking.k8s.io/bundle-version: v1.4.1
     gateway.networking.k8s.io/channel: experimental
   name: grpcroutes.gateway.networking.k8s.io
 spec:
@@ -5615,10 +5651,14 @@ spec:
                                             pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
                                             type: string
                                           value:
-                                            description: Value is the value of HTTP
-                                              Header to be matched.
+                                            description: |-
+                                              Value is the value of HTTP Header to be matched.
+
+                                              Must consist of printable US-ASCII characters, optionally separated
+                                              by single tabs or spaces. See: https://tools.ietf.org/html/rfc7230#section-3.2
                                             maxLength: 4096
                                             minLength: 1
+                                            pattern: ^[!-~]+([\t ]?[!-~]+)*$
                                             type: string
                                         required:
                                         - name
@@ -5690,10 +5730,14 @@ spec:
                                             pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
                                             type: string
                                           value:
-                                            description: Value is the value of HTTP
-                                              Header to be matched.
+                                            description: |-
+                                              Value is the value of HTTP Header to be matched.
+
+                                              Must consist of printable US-ASCII characters, optionally separated
+                                              by single tabs or spaces. See: https://tools.ietf.org/html/rfc7230#section-3.2
                                             maxLength: 4096
                                             minLength: 1
+                                            pattern: ^[!-~]+([\t ]?[!-~]+)*$
                                             type: string
                                         required:
                                         - name
@@ -5898,10 +5942,14 @@ spec:
                                             pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
                                             type: string
                                           value:
-                                            description: Value is the value of HTTP
-                                              Header to be matched.
+                                            description: |-
+                                              Value is the value of HTTP Header to be matched.
+
+                                              Must consist of printable US-ASCII characters, optionally separated
+                                              by single tabs or spaces. See: https://tools.ietf.org/html/rfc7230#section-3.2
                                             maxLength: 4096
                                             minLength: 1
+                                            pattern: ^[!-~]+([\t ]?[!-~]+)*$
                                             type: string
                                         required:
                                         - name
@@ -5973,10 +6021,14 @@ spec:
                                             pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
                                             type: string
                                           value:
-                                            description: Value is the value of HTTP
-                                              Header to be matched.
+                                            description: |-
+                                              Value is the value of HTTP Header to be matched.
+
+                                              Must consist of printable US-ASCII characters, optionally separated
+                                              by single tabs or spaces. See: https://tools.ietf.org/html/rfc7230#section-3.2
                                             maxLength: 4096
                                             minLength: 1
+                                            pattern: ^[!-~]+([\t ]?[!-~]+)*$
                                             type: string
                                         required:
                                         - name
@@ -6267,10 +6319,14 @@ spec:
                                       pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
                                       type: string
                                     value:
-                                      description: Value is the value of HTTP Header
-                                        to be matched.
+                                      description: |-
+                                        Value is the value of HTTP Header to be matched.
+
+                                        Must consist of printable US-ASCII characters, optionally separated
+                                        by single tabs or spaces. See: https://tools.ietf.org/html/rfc7230#section-3.2
                                       maxLength: 4096
                                       minLength: 1
+                                      pattern: ^[!-~]+([\t ]?[!-~]+)*$
                                       type: string
                                   required:
                                   - name
@@ -6341,10 +6397,14 @@ spec:
                                       pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
                                       type: string
                                     value:
-                                      description: Value is the value of HTTP Header
-                                        to be matched.
+                                      description: |-
+                                        Value is the value of HTTP Header to be matched.
+
+                                        Must consist of printable US-ASCII characters, optionally separated
+                                        by single tabs or spaces. See: https://tools.ietf.org/html/rfc7230#section-3.2
                                       maxLength: 4096
                                       minLength: 1
+                                      pattern: ^[!-~]+([\t ]?[!-~]+)*$
                                       type: string
                                   required:
                                   - name
@@ -6548,10 +6608,14 @@ spec:
                                       pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
                                       type: string
                                     value:
-                                      description: Value is the value of HTTP Header
-                                        to be matched.
+                                      description: |-
+                                        Value is the value of HTTP Header to be matched.
+
+                                        Must consist of printable US-ASCII characters, optionally separated
+                                        by single tabs or spaces. See: https://tools.ietf.org/html/rfc7230#section-3.2
                                       maxLength: 4096
                                       minLength: 1
+                                      pattern: ^[!-~]+([\t ]?[!-~]+)*$
                                       type: string
                                   required:
                                   - name
@@ -6622,10 +6686,14 @@ spec:
                                       pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
                                       type: string
                                     value:
-                                      description: Value is the value of HTTP Header
-                                        to be matched.
+                                      description: |-
+                                        Value is the value of HTTP Header to be matched.
+
+                                        Must consist of printable US-ASCII characters, optionally separated
+                                        by single tabs or spaces. See: https://tools.ietf.org/html/rfc7230#section-3.2
                                       maxLength: 4096
                                       minLength: 1
+                                      pattern: ^[!-~]+([\t ]?[!-~]+)*$
                                       type: string
                                   required:
                                   - name
@@ -7323,7 +7391,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/3328
-    gateway.networking.k8s.io/bundle-version: v1.4.0
+    gateway.networking.k8s.io/bundle-version: v1.4.1
     gateway.networking.k8s.io/channel: experimental
   name: httproutes.gateway.networking.k8s.io
 spec:
@@ -8235,6 +8303,7 @@ spec:
                                             If the list has entries, only those entries must be sent.
                                           items:
                                             type: string
+                                          maxItems: 64
                                           type: array
                                           x-kubernetes-list-type: set
                                       type: object
@@ -8273,6 +8342,7 @@ spec:
                                             request must be set to the actual number of bytes forwarded.
                                           items:
                                             type: string
+                                          maxItems: 64
                                           type: array
                                           x-kubernetes-list-type: set
                                         allowedResponseHeaders:
@@ -8284,6 +8354,7 @@ spec:
                                             except Authority or Host must be copied.
                                           items:
                                             type: string
+                                          maxItems: 64
                                           type: array
                                           x-kubernetes-list-type: set
                                         path:
@@ -8388,10 +8459,14 @@ spec:
                                             pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
                                             type: string
                                           value:
-                                            description: Value is the value of HTTP
-                                              Header to be matched.
+                                            description: |-
+                                              Value is the value of HTTP Header to be matched.
+
+                                              Must consist of printable US-ASCII characters, optionally separated
+                                              by single tabs or spaces. See: https://tools.ietf.org/html/rfc7230#section-3.2
                                             maxLength: 4096
                                             minLength: 1
+                                            pattern: ^[!-~]+([\t ]?[!-~]+)*$
                                             type: string
                                         required:
                                         - name
@@ -8463,10 +8538,14 @@ spec:
                                             pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
                                             type: string
                                           value:
-                                            description: Value is the value of HTTP
-                                              Header to be matched.
+                                            description: |-
+                                              Value is the value of HTTP Header to be matched.
+
+                                              Must consist of printable US-ASCII characters, optionally separated
+                                              by single tabs or spaces. See: https://tools.ietf.org/html/rfc7230#section-3.2
                                             maxLength: 4096
                                             minLength: 1
+                                            pattern: ^[!-~]+([\t ]?[!-~]+)*$
                                             type: string
                                         required:
                                         - name
@@ -8777,6 +8856,9 @@ spec:
                                       enum:
                                       - 301
                                       - 302
+                                      - 303
+                                      - 307
+                                      - 308
                                       type: integer
                                   type: object
                                 responseHeaderModifier:
@@ -8824,10 +8906,14 @@ spec:
                                             pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
                                             type: string
                                           value:
-                                            description: Value is the value of HTTP
-                                              Header to be matched.
+                                            description: |-
+                                              Value is the value of HTTP Header to be matched.
+
+                                              Must consist of printable US-ASCII characters, optionally separated
+                                              by single tabs or spaces. See: https://tools.ietf.org/html/rfc7230#section-3.2
                                             maxLength: 4096
                                             minLength: 1
+                                            pattern: ^[!-~]+([\t ]?[!-~]+)*$
                                             type: string
                                         required:
                                         - name
@@ -8899,10 +8985,14 @@ spec:
                                             pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
                                             type: string
                                           value:
-                                            description: Value is the value of HTTP
-                                              Header to be matched.
+                                            description: |-
+                                              Value is the value of HTTP Header to be matched.
+
+                                              Must consist of printable US-ASCII characters, optionally separated
+                                              by single tabs or spaces. See: https://tools.ietf.org/html/rfc7230#section-3.2
                                             maxLength: 4096
                                             minLength: 1
+                                            pattern: ^[!-~]+([\t ]?[!-~]+)*$
                                             type: string
                                         required:
                                         - name
@@ -9715,6 +9805,7 @@ spec:
                                       If the list has entries, only those entries must be sent.
                                     items:
                                       type: string
+                                    maxItems: 64
                                     type: array
                                     x-kubernetes-list-type: set
                                 type: object
@@ -9753,6 +9844,7 @@ spec:
                                       request must be set to the actual number of bytes forwarded.
                                     items:
                                       type: string
+                                    maxItems: 64
                                     type: array
                                     x-kubernetes-list-type: set
                                   allowedResponseHeaders:
@@ -9764,6 +9856,7 @@ spec:
                                       except Authority or Host must be copied.
                                     items:
                                       type: string
+                                    maxItems: 64
                                     type: array
                                     x-kubernetes-list-type: set
                                   path:
@@ -9865,10 +9958,14 @@ spec:
                                       pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
                                       type: string
                                     value:
-                                      description: Value is the value of HTTP Header
-                                        to be matched.
+                                      description: |-
+                                        Value is the value of HTTP Header to be matched.
+
+                                        Must consist of printable US-ASCII characters, optionally separated
+                                        by single tabs or spaces. See: https://tools.ietf.org/html/rfc7230#section-3.2
                                       maxLength: 4096
                                       minLength: 1
+                                      pattern: ^[!-~]+([\t ]?[!-~]+)*$
                                       type: string
                                   required:
                                   - name
@@ -9939,10 +10036,14 @@ spec:
                                       pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
                                       type: string
                                     value:
-                                      description: Value is the value of HTTP Header
-                                        to be matched.
+                                      description: |-
+                                        Value is the value of HTTP Header to be matched.
+
+                                        Must consist of printable US-ASCII characters, optionally separated
+                                        by single tabs or spaces. See: https://tools.ietf.org/html/rfc7230#section-3.2
                                       maxLength: 4096
                                       minLength: 1
+                                      pattern: ^[!-~]+([\t ]?[!-~]+)*$
                                       type: string
                                   required:
                                   - name
@@ -10253,6 +10354,9 @@ spec:
                                 enum:
                                 - 301
                                 - 302
+                                - 303
+                                - 307
+                                - 308
                                 type: integer
                             type: object
                           responseHeaderModifier:
@@ -10299,10 +10403,14 @@ spec:
                                       pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
                                       type: string
                                     value:
-                                      description: Value is the value of HTTP Header
-                                        to be matched.
+                                      description: |-
+                                        Value is the value of HTTP Header to be matched.
+
+                                        Must consist of printable US-ASCII characters, optionally separated
+                                        by single tabs or spaces. See: https://tools.ietf.org/html/rfc7230#section-3.2
                                       maxLength: 4096
                                       minLength: 1
+                                      pattern: ^[!-~]+([\t ]?[!-~]+)*$
                                       type: string
                                   required:
                                   - name
@@ -10373,10 +10481,14 @@ spec:
                                       pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
                                       type: string
                                     value:
-                                      description: Value is the value of HTTP Header
-                                        to be matched.
+                                      description: |-
+                                        Value is the value of HTTP Header to be matched.
+
+                                        Must consist of printable US-ASCII characters, optionally separated
+                                        by single tabs or spaces. See: https://tools.ietf.org/html/rfc7230#section-3.2
                                       maxLength: 4096
                                       minLength: 1
+                                      pattern: ^[!-~]+([\t ]?[!-~]+)*$
                                       type: string
                                   required:
                                   - name
@@ -10710,10 +10822,14 @@ spec:
                                   - RegularExpression
                                   type: string
                                 value:
-                                  description: Value is the value of HTTP Header to
-                                    be matched.
+                                  description: |-
+                                    Value is the value of HTTP Header to be matched.
+
+                                    Must consist of printable US-ASCII characters, optionally separated
+                                    by single tabs or spaces. See: https://tools.ietf.org/html/rfc7230#section-3.2
                                   maxLength: 4096
                                   minLength: 1
+                                  pattern: ^[!-~]+([\t ]?[!-~]+)*$
                                   type: string
                               required:
                               - name
@@ -12393,6 +12509,7 @@ spec:
                                             If the list has entries, only those entries must be sent.
                                           items:
                                             type: string
+                                          maxItems: 64
                                           type: array
                                           x-kubernetes-list-type: set
                                       type: object
@@ -12431,6 +12548,7 @@ spec:
                                             request must be set to the actual number of bytes forwarded.
                                           items:
                                             type: string
+                                          maxItems: 64
                                           type: array
                                           x-kubernetes-list-type: set
                                         allowedResponseHeaders:
@@ -12442,6 +12560,7 @@ spec:
                                             except Authority or Host must be copied.
                                           items:
                                             type: string
+                                          maxItems: 64
                                           type: array
                                           x-kubernetes-list-type: set
                                         path:
@@ -12546,10 +12665,14 @@ spec:
                                             pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
                                             type: string
                                           value:
-                                            description: Value is the value of HTTP
-                                              Header to be matched.
+                                            description: |-
+                                              Value is the value of HTTP Header to be matched.
+
+                                              Must consist of printable US-ASCII characters, optionally separated
+                                              by single tabs or spaces. See: https://tools.ietf.org/html/rfc7230#section-3.2
                                             maxLength: 4096
                                             minLength: 1
+                                            pattern: ^[!-~]+([\t ]?[!-~]+)*$
                                             type: string
                                         required:
                                         - name
@@ -12621,10 +12744,14 @@ spec:
                                             pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
                                             type: string
                                           value:
-                                            description: Value is the value of HTTP
-                                              Header to be matched.
+                                            description: |-
+                                              Value is the value of HTTP Header to be matched.
+
+                                              Must consist of printable US-ASCII characters, optionally separated
+                                              by single tabs or spaces. See: https://tools.ietf.org/html/rfc7230#section-3.2
                                             maxLength: 4096
                                             minLength: 1
+                                            pattern: ^[!-~]+([\t ]?[!-~]+)*$
                                             type: string
                                         required:
                                         - name
@@ -12935,6 +13062,9 @@ spec:
                                       enum:
                                       - 301
                                       - 302
+                                      - 303
+                                      - 307
+                                      - 308
                                       type: integer
                                   type: object
                                 responseHeaderModifier:
@@ -12982,10 +13112,14 @@ spec:
                                             pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
                                             type: string
                                           value:
-                                            description: Value is the value of HTTP
-                                              Header to be matched.
+                                            description: |-
+                                              Value is the value of HTTP Header to be matched.
+
+                                              Must consist of printable US-ASCII characters, optionally separated
+                                              by single tabs or spaces. See: https://tools.ietf.org/html/rfc7230#section-3.2
                                             maxLength: 4096
                                             minLength: 1
+                                            pattern: ^[!-~]+([\t ]?[!-~]+)*$
                                             type: string
                                         required:
                                         - name
@@ -13057,10 +13191,14 @@ spec:
                                             pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
                                             type: string
                                           value:
-                                            description: Value is the value of HTTP
-                                              Header to be matched.
+                                            description: |-
+                                              Value is the value of HTTP Header to be matched.
+
+                                              Must consist of printable US-ASCII characters, optionally separated
+                                              by single tabs or spaces. See: https://tools.ietf.org/html/rfc7230#section-3.2
                                             maxLength: 4096
                                             minLength: 1
+                                            pattern: ^[!-~]+([\t ]?[!-~]+)*$
                                             type: string
                                         required:
                                         - name
@@ -13873,6 +14011,7 @@ spec:
                                       If the list has entries, only those entries must be sent.
                                     items:
                                       type: string
+                                    maxItems: 64
                                     type: array
                                     x-kubernetes-list-type: set
                                 type: object
@@ -13911,6 +14050,7 @@ spec:
                                       request must be set to the actual number of bytes forwarded.
                                     items:
                                       type: string
+                                    maxItems: 64
                                     type: array
                                     x-kubernetes-list-type: set
                                   allowedResponseHeaders:
@@ -13922,6 +14062,7 @@ spec:
                                       except Authority or Host must be copied.
                                     items:
                                       type: string
+                                    maxItems: 64
                                     type: array
                                     x-kubernetes-list-type: set
                                   path:
@@ -14023,10 +14164,14 @@ spec:
                                       pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
                                       type: string
                                     value:
-                                      description: Value is the value of HTTP Header
-                                        to be matched.
+                                      description: |-
+                                        Value is the value of HTTP Header to be matched.
+
+                                        Must consist of printable US-ASCII characters, optionally separated
+                                        by single tabs or spaces. See: https://tools.ietf.org/html/rfc7230#section-3.2
                                       maxLength: 4096
                                       minLength: 1
+                                      pattern: ^[!-~]+([\t ]?[!-~]+)*$
                                       type: string
                                   required:
                                   - name
@@ -14097,10 +14242,14 @@ spec:
                                       pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
                                       type: string
                                     value:
-                                      description: Value is the value of HTTP Header
-                                        to be matched.
+                                      description: |-
+                                        Value is the value of HTTP Header to be matched.
+
+                                        Must consist of printable US-ASCII characters, optionally separated
+                                        by single tabs or spaces. See: https://tools.ietf.org/html/rfc7230#section-3.2
                                       maxLength: 4096
                                       minLength: 1
+                                      pattern: ^[!-~]+([\t ]?[!-~]+)*$
                                       type: string
                                   required:
                                   - name
@@ -14411,6 +14560,9 @@ spec:
                                 enum:
                                 - 301
                                 - 302
+                                - 303
+                                - 307
+                                - 308
                                 type: integer
                             type: object
                           responseHeaderModifier:
@@ -14457,10 +14609,14 @@ spec:
                                       pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
                                       type: string
                                     value:
-                                      description: Value is the value of HTTP Header
-                                        to be matched.
+                                      description: |-
+                                        Value is the value of HTTP Header to be matched.
+
+                                        Must consist of printable US-ASCII characters, optionally separated
+                                        by single tabs or spaces. See: https://tools.ietf.org/html/rfc7230#section-3.2
                                       maxLength: 4096
                                       minLength: 1
+                                      pattern: ^[!-~]+([\t ]?[!-~]+)*$
                                       type: string
                                   required:
                                   - name
@@ -14531,10 +14687,14 @@ spec:
                                       pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
                                       type: string
                                     value:
-                                      description: Value is the value of HTTP Header
-                                        to be matched.
+                                      description: |-
+                                        Value is the value of HTTP Header to be matched.
+
+                                        Must consist of printable US-ASCII characters, optionally separated
+                                        by single tabs or spaces. See: https://tools.ietf.org/html/rfc7230#section-3.2
                                       maxLength: 4096
                                       minLength: 1
+                                      pattern: ^[!-~]+([\t ]?[!-~]+)*$
                                       type: string
                                   required:
                                   - name
@@ -14868,10 +15028,14 @@ spec:
                                   - RegularExpression
                                   type: string
                                 value:
-                                  description: Value is the value of HTTP Header to
-                                    be matched.
+                                  description: |-
+                                    Value is the value of HTTP Header to be matched.
+
+                                    Must consist of printable US-ASCII characters, optionally separated
+                                    by single tabs or spaces. See: https://tools.ietf.org/html/rfc7230#section-3.2
                                   maxLength: 4096
                                   minLength: 1
+                                  pattern: ^[!-~]+([\t ]?[!-~]+)*$
                                   type: string
                               required:
                               - name
@@ -15669,7 +15833,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/3328
-    gateway.networking.k8s.io/bundle-version: v1.4.0
+    gateway.networking.k8s.io/bundle-version: v1.4.1
     gateway.networking.k8s.io/channel: experimental
   name: referencegrants.gateway.networking.k8s.io
 spec:
@@ -15864,7 +16028,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/3328
-    gateway.networking.k8s.io/bundle-version: v1.4.0
+    gateway.networking.k8s.io/bundle-version: v1.4.1
     gateway.networking.k8s.io/channel: experimental
   name: tcproutes.gateway.networking.k8s.io
 spec:
@@ -16625,7 +16789,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/3328
-    gateway.networking.k8s.io/bundle-version: v1.4.0
+    gateway.networking.k8s.io/bundle-version: v1.4.1
     gateway.networking.k8s.io/channel: experimental
   name: tlsroutes.gateway.networking.k8s.io
 spec:
@@ -18247,7 +18411,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/3328
-    gateway.networking.k8s.io/bundle-version: v1.4.0
+    gateway.networking.k8s.io/bundle-version: v1.4.1
     gateway.networking.k8s.io/channel: experimental
   name: udproutes.gateway.networking.k8s.io
 spec:
@@ -19008,7 +19172,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/3328
-    gateway.networking.k8s.io/bundle-version: v1.4.0
+    gateway.networking.k8s.io/bundle-version: v1.4.1
     gateway.networking.k8s.io/channel: experimental
   labels:
     gateway.networking.k8s.io/policy: Direct
@@ -19619,7 +19783,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/3328
-    gateway.networking.k8s.io/bundle-version: v1.4.0
+    gateway.networking.k8s.io/bundle-version: v1.4.1
     gateway.networking.k8s.io/channel: experimental
   name: xlistenersets.gateway.networking.x-k8s.io
 spec:
@@ -20411,7 +20575,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/3328
-    gateway.networking.k8s.io/bundle-version: v1.4.0
+    gateway.networking.k8s.io/bundle-version: v1.4.1
     gateway.networking.k8s.io/channel: experimental
   name: xmeshes.gateway.networking.x-k8s.io
 spec:
@@ -21917,6 +22081,21 @@ spec:
                           - name
                           type: object
                         type: array
+                      queryParams:
+                        description: QueryParams configures the query parameter hash
+                          policy when the consistent hash type is set to QueryParams.
+                        items:
+                          description: |-
+                            QueryParam defines the query parameter name hashing configuration for consistent hash based
+                            load balancing.
+                          properties:
+                            name:
+                              description: Name of the query param to hash.
+                              type: string
+                          required:
+                          - name
+                          type: object
+                        type: array
                       tableSize:
                         default: 65537
                         description: The table size for consistent hashing, must be
@@ -21932,11 +22111,13 @@ spec:
                           "Header",
                           "Headers",
                           "Cookie".
+                          "QueryParams".
                         enum:
                         - SourceIP
                         - Header
                         - Headers
                         - Cookie
+                        - QueryParams
                         type: string
                     required:
                     - type
@@ -21951,6 +22132,10 @@ spec:
                     - message: If consistent hash type is cookie, the cookie field
                         must be set.
                       rule: 'self.type == ''Cookie'' ? has(self.cookie) : !has(self.cookie)'
+                    - message: If consistent hash type is queryParams, the queryParams
+                        field must be set.
+                      rule: 'self.type == ''QueryParams'' ? has(self.queryParams)
+                        : !has(self.queryParams)'
                   endpointOverride:
                     description: |-
                       EndpointOverride defines the configuration for endpoint override.
@@ -24244,6 +24429,7 @@ spec:
                           - value
                           type: object
                         maxItems: 64
+                        minItems: 1
                         type: array
                         x-kubernetes-list-map-keys:
                         - name
@@ -24270,8 +24456,40 @@ spec:
                         items:
                           type: string
                         maxItems: 64
+                        minItems: 1
                         type: array
                         x-kubernetes-list-type: set
+                      removeOnMatch:
+                        description: |-
+                          RemoveOnMatch removes headers whose names match the specified string matchers.
+                          Matching is performed on the header name (case-insensitive).
+                        items:
+                          description: |-
+                            StringMatch defines how to match any strings.
+                            This is a general purpose match condition that can be used by other EG APIs
+                            that need to match against a string.
+                          properties:
+                            type:
+                              default: Exact
+                              description: Type specifies how to match against a string.
+                              enum:
+                              - Exact
+                              - Prefix
+                              - Suffix
+                              - RegularExpression
+                              type: string
+                            value:
+                              description: Value specifies the string value that the
+                                match must have.
+                              maxLength: 1024
+                              minLength: 1
+                              type: string
+                          required:
+                          - value
+                          type: object
+                        maxItems: 64
+                        minItems: 1
+                        type: array
                       set:
                         description: |-
                           Set overwrites the request with the given header (name, value)
@@ -24318,6 +24536,7 @@ spec:
                           - value
                           type: object
                         maxItems: 64
+                        minItems: 1
                         type: array
                         x-kubernetes-list-map-keys:
                         - name
@@ -24379,6 +24598,7 @@ spec:
                           - value
                           type: object
                         maxItems: 64
+                        minItems: 1
                         type: array
                         x-kubernetes-list-map-keys:
                         - name
@@ -24405,8 +24625,40 @@ spec:
                         items:
                           type: string
                         maxItems: 64
+                        minItems: 1
                         type: array
                         x-kubernetes-list-type: set
+                      removeOnMatch:
+                        description: |-
+                          RemoveOnMatch removes headers whose names match the specified string matchers.
+                          Matching is performed on the header name (case-insensitive).
+                        items:
+                          description: |-
+                            StringMatch defines how to match any strings.
+                            This is a general purpose match condition that can be used by other EG APIs
+                            that need to match against a string.
+                          properties:
+                            type:
+                              default: Exact
+                              description: Type specifies how to match against a string.
+                              enum:
+                              - Exact
+                              - Prefix
+                              - Suffix
+                              - RegularExpression
+                              type: string
+                            value:
+                              description: Value specifies the string value that the
+                                match must have.
+                              maxLength: 1024
+                              minLength: 1
+                              type: string
+                          required:
+                          - value
+                          type: object
+                        maxItems: 64
+                        minItems: 1
+                        type: array
                       set:
                         description: |-
                           Set overwrites the request with the given header (name, value)
@@ -24453,6 +24705,7 @@ spec:
                           - value
                           type: object
                         maxItems: 64
+                        minItems: 1
                         type: array
                         x-kubernetes-list-map-keys:
                         - name
@@ -26537,6 +26790,22 @@ spec:
                                     - name
                                     type: object
                                   type: array
+                                queryParams:
+                                  description: QueryParams configures the query parameter
+                                    hash policy when the consistent hash type is set
+                                    to QueryParams.
+                                  items:
+                                    description: |-
+                                      QueryParam defines the query parameter name hashing configuration for consistent hash based
+                                      load balancing.
+                                    properties:
+                                      name:
+                                        description: Name of the query param to hash.
+                                        type: string
+                                    required:
+                                    - name
+                                    type: object
+                                  type: array
                                 tableSize:
                                   default: 65537
                                   description: The table size for consistent hashing,
@@ -26552,11 +26821,13 @@ spec:
                                     "Header",
                                     "Headers",
                                     "Cookie".
+                                    "QueryParams".
                                   enum:
                                   - SourceIP
                                   - Header
                                   - Headers
                                   - Cookie
+                                  - QueryParams
                                   type: string
                               required:
                               - type
@@ -26574,6 +26845,10 @@ spec:
                                   field must be set.
                                 rule: 'self.type == ''Cookie'' ? has(self.cookie)
                                   : !has(self.cookie)'
+                              - message: If consistent hash type is queryParams, the
+                                  queryParams field must be set.
+                                rule: 'self.type == ''QueryParams'' ? has(self.queryParams)
+                                  : !has(self.queryParams)'
                             endpointOverride:
                               description: |-
                                 EndpointOverride defines the configuration for endpoint override.
@@ -40247,6 +40522,24 @@ spec:
                                                       - name
                                                       type: object
                                                     type: array
+                                                  queryParams:
+                                                    description: QueryParams configures
+                                                      the query parameter hash policy
+                                                      when the consistent hash type
+                                                      is set to QueryParams.
+                                                    items:
+                                                      description: |-
+                                                        QueryParam defines the query parameter name hashing configuration for consistent hash based
+                                                        load balancing.
+                                                      properties:
+                                                        name:
+                                                          description: Name of the
+                                                            query param to hash.
+                                                          type: string
+                                                      required:
+                                                      - name
+                                                      type: object
+                                                    type: array
                                                   tableSize:
                                                     default: 65537
                                                     description: The table size for
@@ -40263,11 +40556,13 @@ spec:
                                                       "Header",
                                                       "Headers",
                                                       "Cookie".
+                                                      "QueryParams".
                                                     enum:
                                                     - SourceIP
                                                     - Header
                                                     - Headers
                                                     - Cookie
+                                                    - QueryParams
                                                     type: string
                                                 required:
                                                 - type
@@ -40288,6 +40583,11 @@ spec:
                                                     be set.
                                                   rule: 'self.type == ''Cookie'' ?
                                                     has(self.cookie) : !has(self.cookie)'
+                                                - message: If consistent hash type
+                                                    is queryParams, the queryParams
+                                                    field must be set.
+                                                  rule: 'self.type == ''QueryParams''
+                                                    ? has(self.queryParams) : !has(self.queryParams)'
                                               endpointOverride:
                                                 description: |-
                                                   EndpointOverride defines the configuration for endpoint override.
@@ -41535,6 +41835,24 @@ spec:
                                                       - name
                                                       type: object
                                                     type: array
+                                                  queryParams:
+                                                    description: QueryParams configures
+                                                      the query parameter hash policy
+                                                      when the consistent hash type
+                                                      is set to QueryParams.
+                                                    items:
+                                                      description: |-
+                                                        QueryParam defines the query parameter name hashing configuration for consistent hash based
+                                                        load balancing.
+                                                      properties:
+                                                        name:
+                                                          description: Name of the
+                                                            query param to hash.
+                                                          type: string
+                                                      required:
+                                                      - name
+                                                      type: object
+                                                    type: array
                                                   tableSize:
                                                     default: 65537
                                                     description: The table size for
@@ -41551,11 +41869,13 @@ spec:
                                                       "Header",
                                                       "Headers",
                                                       "Cookie".
+                                                      "QueryParams".
                                                     enum:
                                                     - SourceIP
                                                     - Header
                                                     - Headers
                                                     - Cookie
+                                                    - QueryParams
                                                     type: string
                                                 required:
                                                 - type
@@ -41576,6 +41896,11 @@ spec:
                                                     be set.
                                                   rule: 'self.type == ''Cookie'' ?
                                                     has(self.cookie) : !has(self.cookie)'
+                                                - message: If consistent hash type
+                                                    is queryParams, the queryParams
+                                                    field must be set.
+                                                  rule: 'self.type == ''QueryParams''
+                                                    ? has(self.queryParams) : !has(self.queryParams)'
                                               endpointOverride:
                                                 description: |-
                                                   EndpointOverride defines the configuration for endpoint override.
@@ -41993,15 +42318,15 @@ spec:
                           ClusterStatName defines the value of cluster alt_stat_name, determining how cluster stats are named.
                           For more details, see envoy docs: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto.html
                           The supported operators for this pattern are:
-                          %ROUTE_NAME%: name of Gateway API xRoute resource
-                          %ROUTE_NAMESPACE%: namespace of Gateway API xRoute resource
-                          %ROUTE_KIND%: kind of Gateway API xRoute resource
-                          %ROUTE_RULE_NAME%: name of the Gateway API xRoute section
-                          %ROUTE_RULE_NUMBER%: name of the Gateway API xRoute section
-                          %BACKEND_REFS%: names of all backends referenced in <NAMESPACE>/<NAME>|<NAMESPACE>/<NAME>|... format
+                          `%ROUTE_NAME%`: name of Gateway API xRoute resource
+                          `%ROUTE_NAMESPACE%`: namespace of Gateway API xRoute resource
+                          `%ROUTE_KIND%`: kind of Gateway API xRoute resource
+                          `%ROUTE_RULE_NAME%`: name of the Gateway API xRoute section
+                          `%ROUTE_RULE_NUMBER%`: name of the Gateway API xRoute section
+                          `%BACKEND_REFS%`: names of all backends referenced in `<NAMESPACE>/<NAME>|<NAMESPACE>/<NAME>|...` format
                           Only xDS Clusters created for HTTPRoute and GRPCRoute are currently supported.
-                          Default: %ROUTE_KIND%/%ROUTE_NAMESPACE%/%ROUTE_NAME%/rule/%ROUTE_RULE_NUMBER%
-                          Example: httproute/my-ns/my-route/rule/0
+                          Default: `%ROUTE_KIND%/%ROUTE_NAMESPACE%/%ROUTE_NAME%/rule/%ROUTE_RULE_NUMBER%`
+                          Example: `httproute/my-ns/my-route/rule/0`
                         type: string
                       enablePerEndpointStats:
                         description: |-
@@ -42914,6 +43239,24 @@ spec:
                                                 - name
                                                 type: object
                                               type: array
+                                            queryParams:
+                                              description: QueryParams configures
+                                                the query parameter hash policy when
+                                                the consistent hash type is set to
+                                                QueryParams.
+                                              items:
+                                                description: |-
+                                                  QueryParam defines the query parameter name hashing configuration for consistent hash based
+                                                  load balancing.
+                                                properties:
+                                                  name:
+                                                    description: Name of the query
+                                                      param to hash.
+                                                    type: string
+                                                required:
+                                                - name
+                                                type: object
+                                              type: array
                                             tableSize:
                                               default: 65537
                                               description: The table size for consistent
@@ -42930,11 +43273,13 @@ spec:
                                                 "Header",
                                                 "Headers",
                                                 "Cookie".
+                                                "QueryParams".
                                               enum:
                                               - SourceIP
                                               - Header
                                               - Headers
                                               - Cookie
+                                              - QueryParams
                                               type: string
                                           required:
                                           - type
@@ -42952,6 +43297,10 @@ spec:
                                               the cookie field must be set.
                                             rule: 'self.type == ''Cookie'' ? has(self.cookie)
                                               : !has(self.cookie)'
+                                          - message: If consistent hash type is queryParams,
+                                              the queryParams field must be set.
+                                            rule: 'self.type == ''QueryParams'' ?
+                                              has(self.queryParams) : !has(self.queryParams)'
                                         endpointOverride:
                                           description: |-
                                             EndpointOverride defines the configuration for endpoint override.
@@ -44196,6 +44545,23 @@ spec:
                                           - name
                                           type: object
                                         type: array
+                                      queryParams:
+                                        description: QueryParams configures the query
+                                          parameter hash policy when the consistent
+                                          hash type is set to QueryParams.
+                                        items:
+                                          description: |-
+                                            QueryParam defines the query parameter name hashing configuration for consistent hash based
+                                            load balancing.
+                                          properties:
+                                            name:
+                                              description: Name of the query param
+                                                to hash.
+                                              type: string
+                                          required:
+                                          - name
+                                          type: object
+                                        type: array
                                       tableSize:
                                         default: 65537
                                         description: The table size for consistent
@@ -44212,11 +44578,13 @@ spec:
                                           "Header",
                                           "Headers",
                                           "Cookie".
+                                          "QueryParams".
                                         enum:
                                         - SourceIP
                                         - Header
                                         - Headers
                                         - Cookie
+                                        - QueryParams
                                         type: string
                                     required:
                                     - type
@@ -44234,6 +44602,10 @@ spec:
                                         the cookie field must be set.
                                       rule: 'self.type == ''Cookie'' ? has(self.cookie)
                                         : !has(self.cookie)'
+                                    - message: If consistent hash type is queryParams,
+                                        the queryParams field must be set.
+                                      rule: 'self.type == ''QueryParams'' ? has(self.queryParams)
+                                        : !has(self.queryParams)'
                                   endpointOverride:
                                     description: |-
                                       EndpointOverride defines the configuration for endpoint override.
@@ -46453,6 +46825,23 @@ spec:
                                       - name
                                       type: object
                                     type: array
+                                  queryParams:
+                                    description: QueryParams configures the query
+                                      parameter hash policy when the consistent hash
+                                      type is set to QueryParams.
+                                    items:
+                                      description: |-
+                                        QueryParam defines the query parameter name hashing configuration for consistent hash based
+                                        load balancing.
+                                      properties:
+                                        name:
+                                          description: Name of the query param to
+                                            hash.
+                                          type: string
+                                      required:
+                                      - name
+                                      type: object
+                                    type: array
                                   tableSize:
                                     default: 65537
                                     description: The table size for consistent hashing,
@@ -46468,11 +46857,13 @@ spec:
                                       "Header",
                                       "Headers",
                                       "Cookie".
+                                      "QueryParams".
                                     enum:
                                     - SourceIP
                                     - Header
                                     - Headers
                                     - Cookie
+                                    - QueryParams
                                     type: string
                                 required:
                                 - type
@@ -46490,6 +46881,10 @@ spec:
                                     cookie field must be set.
                                   rule: 'self.type == ''Cookie'' ? has(self.cookie)
                                     : !has(self.cookie)'
+                                - message: If consistent hash type is queryParams,
+                                    the queryParams field must be set.
+                                  rule: 'self.type == ''QueryParams'' ? has(self.queryParams)
+                                    : !has(self.queryParams)'
                               endpointOverride:
                                 description: |-
                                   EndpointOverride defines the configuration for endpoint override.
@@ -47625,6 +48020,23 @@ spec:
                                       - name
                                       type: object
                                     type: array
+                                  queryParams:
+                                    description: QueryParams configures the query
+                                      parameter hash policy when the consistent hash
+                                      type is set to QueryParams.
+                                    items:
+                                      description: |-
+                                        QueryParam defines the query parameter name hashing configuration for consistent hash based
+                                        load balancing.
+                                      properties:
+                                        name:
+                                          description: Name of the query param to
+                                            hash.
+                                          type: string
+                                      required:
+                                      - name
+                                      type: object
+                                    type: array
                                   tableSize:
                                     default: 65537
                                     description: The table size for consistent hashing,
@@ -47640,11 +48052,13 @@ spec:
                                       "Header",
                                       "Headers",
                                       "Cookie".
+                                      "QueryParams".
                                     enum:
                                     - SourceIP
                                     - Header
                                     - Headers
                                     - Cookie
+                                    - QueryParams
                                     type: string
                                 required:
                                 - type
@@ -47662,6 +48076,10 @@ spec:
                                     cookie field must be set.
                                   rule: 'self.type == ''Cookie'' ? has(self.cookie)
                                     : !has(self.cookie)'
+                                - message: If consistent hash type is queryParams,
+                                    the queryParams field must be set.
+                                  rule: 'self.type == ''QueryParams'' ? has(self.queryParams)
+                                    : !has(self.queryParams)'
                               endpointOverride:
                                 description: |-
                                   EndpointOverride defines the configuration for endpoint override.
@@ -49010,6 +49428,23 @@ spec:
                                             - name
                                             type: object
                                           type: array
+                                        queryParams:
+                                          description: QueryParams configures the
+                                            query parameter hash policy when the consistent
+                                            hash type is set to QueryParams.
+                                          items:
+                                            description: |-
+                                              QueryParam defines the query parameter name hashing configuration for consistent hash based
+                                              load balancing.
+                                            properties:
+                                              name:
+                                                description: Name of the query param
+                                                  to hash.
+                                                type: string
+                                            required:
+                                            - name
+                                            type: object
+                                          type: array
                                         tableSize:
                                           default: 65537
                                           description: The table size for consistent
@@ -49026,11 +49461,13 @@ spec:
                                             "Header",
                                             "Headers",
                                             "Cookie".
+                                            "QueryParams".
                                           enum:
                                           - SourceIP
                                           - Header
                                           - Headers
                                           - Cookie
+                                          - QueryParams
                                           type: string
                                       required:
                                       - type
@@ -49048,6 +49485,10 @@ spec:
                                           the cookie field must be set.
                                         rule: 'self.type == ''Cookie'' ? has(self.cookie)
                                           : !has(self.cookie)'
+                                      - message: If consistent hash type is queryParams,
+                                          the queryParams field must be set.
+                                        rule: 'self.type == ''QueryParams'' ? has(self.queryParams)
+                                          : !has(self.queryParams)'
                                     endpointOverride:
                                       description: |-
                                         EndpointOverride defines the configuration for endpoint override.
@@ -50451,6 +50892,23 @@ spec:
                                       - name
                                       type: object
                                     type: array
+                                  queryParams:
+                                    description: QueryParams configures the query
+                                      parameter hash policy when the consistent hash
+                                      type is set to QueryParams.
+                                    items:
+                                      description: |-
+                                        QueryParam defines the query parameter name hashing configuration for consistent hash based
+                                        load balancing.
+                                      properties:
+                                        name:
+                                          description: Name of the query param to
+                                            hash.
+                                          type: string
+                                      required:
+                                      - name
+                                      type: object
+                                    type: array
                                   tableSize:
                                     default: 65537
                                     description: The table size for consistent hashing,
@@ -50466,11 +50924,13 @@ spec:
                                       "Header",
                                       "Headers",
                                       "Cookie".
+                                      "QueryParams".
                                     enum:
                                     - SourceIP
                                     - Header
                                     - Headers
                                     - Cookie
+                                    - QueryParams
                                     type: string
                                 required:
                                 - type
@@ -50488,6 +50948,10 @@ spec:
                                     cookie field must be set.
                                   rule: 'self.type == ''Cookie'' ? has(self.cookie)
                                     : !has(self.cookie)'
+                                - message: If consistent hash type is queryParams,
+                                    the queryParams field must be set.
+                                  rule: 'self.type == ''QueryParams'' ? has(self.queryParams)
+                                    : !has(self.queryParams)'
                               endpointOverride:
                                 description: |-
                                   EndpointOverride defines the configuration for endpoint override.
