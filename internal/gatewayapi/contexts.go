@@ -6,7 +6,9 @@
 package gatewayapi
 
 import (
+	certificatesv1b1 "k8s.io/api/certificates/v1beta1"
 	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
@@ -14,10 +16,12 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwapiv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
+	mcsapiv1a1 "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/utils"
 )
 
 // GatewayContext wraps a Gateway and provides helper methods for
@@ -660,4 +664,162 @@ func (d DirectBackendRef) GetBackendRef() *gwapiv1.BackendRef {
 
 func (d DirectBackendRef) GetFilters() any {
 	return nil
+}
+
+type backendServiceKey struct {
+	kind      string
+	namespace string
+	name      string
+}
+
+type TranslatorContext struct {
+	NamespaceMap          map[types.NamespacedName]*corev1.Namespace
+	ServiceMap            map[types.NamespacedName]*corev1.Service
+	ServiceImportMap      map[types.NamespacedName]*mcsapiv1a1.ServiceImport
+	BackendMap            map[types.NamespacedName]*egv1a1.Backend
+	SecretMap             map[types.NamespacedName]*corev1.Secret
+	ConfigMapMap          map[types.NamespacedName]*corev1.ConfigMap
+	ClusterTrustBundleMap map[types.NamespacedName]*certificatesv1b1.ClusterTrustBundle
+	EndpointSliceMap      map[backendServiceKey][]*discoveryv1.EndpointSlice
+}
+
+func (t *TranslatorContext) GetNamespace(name string) *corev1.Namespace {
+	if ns, ok := t.NamespaceMap[types.NamespacedName{Name: name}]; ok {
+		return ns
+	}
+	return nil
+}
+
+func (t *TranslatorContext) SetNamespaces(namespaces []*corev1.Namespace) {
+	namespaceMap := make(map[types.NamespacedName]*corev1.Namespace, len(namespaces))
+	for _, ns := range namespaces {
+		namespaceMap[types.NamespacedName{Name: ns.Name}] = ns
+	}
+	t.NamespaceMap = namespaceMap
+}
+
+func (t *TranslatorContext) GetService(namespace, name string) *corev1.Service {
+	if svc, ok := t.ServiceMap[types.NamespacedName{Namespace: namespace, Name: name}]; ok {
+		return svc
+	}
+	return nil
+}
+
+func (t *TranslatorContext) SetServices(svcs []*corev1.Service) {
+	serviceMap := make(map[types.NamespacedName]*corev1.Service, len(svcs))
+	for _, svc := range svcs {
+		serviceMap[utils.NamespacedName(svc)] = svc
+	}
+	t.ServiceMap = serviceMap
+}
+
+func (t *TranslatorContext) GetServiceImport(namespace, name string) *mcsapiv1a1.ServiceImport {
+	if svcImp, ok := t.ServiceImportMap[types.NamespacedName{Namespace: namespace, Name: name}]; ok {
+		return svcImp
+	}
+	return nil
+}
+
+func (t *TranslatorContext) SetServiceImports(svcImps []*mcsapiv1a1.ServiceImport) {
+	serviceImportMap := make(map[types.NamespacedName]*mcsapiv1a1.ServiceImport, len(svcImps))
+	for _, svcImp := range svcImps {
+		serviceImportMap[utils.NamespacedName(svcImp)] = svcImp
+	}
+	t.ServiceImportMap = serviceImportMap
+}
+
+func (t *TranslatorContext) GetBackend(namespace, name string) *egv1a1.Backend {
+	if backend, ok := t.BackendMap[types.NamespacedName{Namespace: namespace, Name: name}]; ok {
+		return backend
+	}
+	return nil
+}
+
+func (t *TranslatorContext) SetBackends(backends []*egv1a1.Backend) {
+	backendMap := make(map[types.NamespacedName]*egv1a1.Backend, len(backends))
+	for _, backend := range backends {
+		backendMap[utils.NamespacedName(backend)] = backend
+	}
+	t.BackendMap = backendMap
+}
+
+func (t *TranslatorContext) GetSecret(namespace, name string) *corev1.Secret {
+	if secret, ok := t.SecretMap[types.NamespacedName{Namespace: namespace, Name: name}]; ok {
+		return secret
+	}
+	return nil
+}
+
+func (t *TranslatorContext) SetSecrets(secrets []*corev1.Secret) {
+	secretMap := make(map[types.NamespacedName]*corev1.Secret, len(secrets))
+	for _, secret := range secrets {
+		secretMap[utils.NamespacedName(secret)] = secret
+	}
+	t.SecretMap = secretMap
+}
+
+func (t *TranslatorContext) GetConfigMap(namespace, name string) *corev1.ConfigMap {
+	if configMap, ok := t.ConfigMapMap[types.NamespacedName{Namespace: namespace, Name: name}]; ok {
+		return configMap
+	}
+	return nil
+}
+
+func (t *TranslatorContext) SetConfigMaps(configMaps []*corev1.ConfigMap) {
+	configMapMap := make(map[types.NamespacedName]*corev1.ConfigMap, len(configMaps))
+	for _, configMap := range configMaps {
+		configMapMap[utils.NamespacedName(configMap)] = configMap
+	}
+	t.ConfigMapMap = configMapMap
+}
+
+func (t *TranslatorContext) GetClusterTrustBundle(name string) *certificatesv1b1.ClusterTrustBundle {
+	if ctb, ok := t.ClusterTrustBundleMap[types.NamespacedName{Name: name}]; ok {
+		return ctb
+	}
+	return nil
+}
+
+func (t *TranslatorContext) SetClusterTrustBundles(ctbs []*certificatesv1b1.ClusterTrustBundle) {
+	ctbMap := make(map[types.NamespacedName]*certificatesv1b1.ClusterTrustBundle, len(ctbs))
+	for _, ctb := range ctbs {
+		ctbMap[types.NamespacedName{Name: ctb.Name}] = ctb
+	}
+	t.ClusterTrustBundleMap = ctbMap
+}
+
+func (t *TranslatorContext) GetEndpointSlicesForBackend(svcNamespace, svcName, backendKind string) []*discoveryv1.EndpointSlice {
+	key := backendServiceKey{
+		kind:      backendKind,
+		namespace: svcNamespace,
+		name:      svcName,
+	}
+	if slices, ok := t.EndpointSliceMap[key]; ok {
+		return slices
+	}
+	return nil
+}
+
+func (t *TranslatorContext) SetEndpointSlicesForBackend(slices []*discoveryv1.EndpointSlice) {
+	t.EndpointSliceMap = make(map[backendServiceKey][]*discoveryv1.EndpointSlice)
+
+	var kind, svcName string
+	for _, slice := range slices {
+		if name, ok := slice.Labels[discoveryv1.LabelServiceName]; ok {
+			kind = resource.KindService
+			svcName = name
+		} else if name, ok := slice.Labels[mcsapiv1a1.LabelServiceName]; ok {
+			kind = resource.KindServiceImport
+			svcName = name
+		} else {
+			continue
+		}
+
+		key := backendServiceKey{
+			kind:      kind,
+			namespace: slice.Namespace,
+			name:      svcName,
+		}
+		t.EndpointSliceMap[key] = append(t.EndpointSliceMap[key], slice)
+	}
 }

@@ -80,6 +80,19 @@
                 keepEmptyValue: true
             - remove: some-header5
             - remove: some-header6
+            - removeOnMatch:
+                keyMatcher:
+                  exact: my-removed-header-value
+            - removeOnMatch:
+                keyMatcher:
+                  prefix: removed-prefix-
+            - removeOnMatch:
+                keyMatcher:
+                  suffix: -removed-suffix
+            - removeOnMatch:
+                keyMatcher:
+                  safeRegex:
+                    regex: removed-regex-.*
         http2ProtocolOptions:
           initialConnectionWindowSize: 1048576
           initialStreamWindowSize: 65536

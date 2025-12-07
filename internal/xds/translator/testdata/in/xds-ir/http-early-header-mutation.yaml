@@ -48,6 +48,19 @@ http:
     earlyRemoveRequestHeaders:
     - "some-header5"
     - "some-header6"
+    earlyRemoveRequestHeadersOnMatch:
+    - distinct: false
+      exact: my-removed-header-value
+      name: ""
+    - distinct: false
+      name: ""
+      prefix: removed-prefix-
+    - distinct: false
+      name: ""
+      suffix: -removed-suffix
+    - distinct: false
+      name: ""
+      safeRegex: removed-regex-.*
   routes:
   - name: "second-route"
     hostname: "*"

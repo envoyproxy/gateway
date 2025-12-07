@@ -10,7 +10,6 @@ gateways:
     - allowedRoutes:
         namespaces:
           from: All
-      hostname: '*.envoyproxy.io'
       name: http
       port: 80
       protocol: HTTP
@@ -39,15 +38,13 @@ gateways:
         kind: HTTPRoute
       - group: gateway.networking.k8s.io
         kind: GRPCRoute
-httpRoutes:
-- apiVersion: gateway.networking.k8s.io/v1
-  kind: HTTPRoute
+grpcRoutes:
+- apiVersion: gateway.networking.k8s.io/v1alpha2
+  kind: GRPCRoute
   metadata:
-    name: httproute-1
+    name: grpcroute-1
     namespace: default
   spec:
-    hostnames:
-    - gateway.envoyproxy.io
     parentRefs:
     - name: gateway-1
       namespace: envoy-gateway
@@ -58,13 +55,34 @@ httpRoutes:
         port: 8080
       filters:
       - extensionRef:
-          group: foo.example.io
-          kind: Foo
-          name: example
+          group: unknown.group
+          kind: HTTPRouteFilter
+          name: invalid-filter
         type: ExtensionRef
       matches:
-      - path:
-          value: /
+      - method:
+          method: ExampleExact
+          type: Exact
+    - backendRefs:
+      - name: service-2
+        port: 8080
+      matches:
+      - method:
+          method: FooBar[0-9]+
+          type: RegularExpression
+    - backendRefs:
+      - name: service-3
+        port: 8080
+      filters:
+      - extensionRef:
+          group: unknown.group
+          kind: HTTPRouteFilter
+          name: invalid-filter
+        type: ExtensionRef
+      matches:
+      - method:
+          method: ExampleExact
+          type: Exact
   status:
     parents:
     - conditions:
@@ -74,9 +92,16 @@ httpRoutes:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: 'Reference default/example not found for filter type: Foo.'
+        message: |-
+          Dropped Rule(s) [0 2]: Invalid filter ExtensionRef: unknown kind unknown.group/HTTPRouteFilter.
+          Invalid filter ExtensionRef: unknown kind unknown.group/HTTPRouteFilter.
         reason: UnsupportedValue
-        status: "False"
+        status: "True"
+        type: PartiallyInvalid
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
@@ -102,7 +127,7 @@ infraIR:
           kind: GatewayClass
           name: envoy-gateway-class
       name: envoy-gateway/gateway-1
-      namespace: ""
+      namespace: envoy-gateway-system
 xdsIR:
   envoy-gateway/gateway-1:
     accessLog:
@@ -113,6 +138,7 @@ xdsIR:
         metadata:
           kind: Service
           name: envoy-envoy-gateway-gateway-1-196ae069
+          namespace: envoy-gateway-system
           sectionName: "8080"
         name: envoy-gateway/gateway-1
         settings:
@@ -124,6 +150,7 @@ xdsIR:
           metadata:
             kind: Service
             name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
             sectionName: "8080"
           name: envoy-gateway/gateway-1
           protocol: TCP
@@ -131,8 +158,8 @@ xdsIR:
     - address: 0.0.0.0
       externalPort: 80
       hostnames:
-      - '*.envoyproxy.io'
-      isHTTP2: false
+      - '*'
+      isHTTP2: true
       metadata:
         kind: Gateway
         name: gateway-1
@@ -144,19 +171,62 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - directResponse:
-          statusCode: 500
-        hostname: gateway.envoyproxy.io
-        isHTTP2: false
+      - destination:
+          metadata:
+            kind: GRPCRoute
+            name: grpcroute-1
+            namespace: default
+          name: grpcroute/default/grpcroute-1/rule/1
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            metadata:
+              kind: Service
+              name: service-2
+              namespace: default
+              sectionName: "8080"
+            name: grpcroute/default/grpcroute-1/rule/1/backend/0
+            protocol: GRPC
+            weight: 1
+        hostname: '*'
+        isHTTP2: true
         metadata:
-          kind: HTTPRoute
-          name: httproute-1
+          kind: GRPCRoute
+          name: grpcroute-1
           namespace: default
-        name: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
+        name: grpcroute/default/grpcroute-1/rule/1/match/0/*
         pathMatch:
           distinct: false
           name: ""
-          prefix: /
+          safeRegex: /(?i)\.?[a-z_][a-z_0-9]*(\.[a-z_][a-z_0-9]*)*/FooBar[0-9]+
+      - directResponse:
+          statusCode: 500
+        headerMatches:
+        - distinct: false
+          name: :path
+          suffix: /ExampleExact
+        hostname: '*'
+        isHTTP2: true
+        metadata:
+          kind: GRPCRoute
+          name: grpcroute-1
+          namespace: default
+        name: grpcroute/default/grpcroute-1/rule/0/match/0/*
+      - directResponse:
+          statusCode: 500
+        headerMatches:
+        - distinct: false
+          name: :path
+          suffix: /ExampleExact
+        hostname: '*'
+        isHTTP2: true
+        metadata:
+          kind: GRPCRoute
+          name: grpcroute-1
+          namespace: default
+        name: grpcroute/default/grpcroute-1/rule/2/match/0/*
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

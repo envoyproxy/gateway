@@ -720,11 +720,17 @@ type HeaderSettings struct {
 	// EarlyRemoveRequestHeaders defines headers that would be removed before envoy request processing.
 	EarlyRemoveRequestHeaders []string `json:"earlyRemoveRequestHeaders,omitempty" yaml:"earlyRemoveRequestHeaders,omitempty"`
 
+	// EarlyRemoveRequestHeadersOnMatch defines header name matchers that would remove headers before envoy request processing.
+	EarlyRemoveRequestHeadersOnMatch []*StringMatch `json:"earlyRemoveRequestHeadersOnMatch,omitempty" yaml:"earlyRemoveRequestHeadersOnMatch,omitempty"`
+
 	// LateAddResponseHeaders defines headers that would be added after envoy response processing.
 	LateAddResponseHeaders []AddHeader `json:"lateAddResponseHeaders,omitempty" yaml:"earlyAddRequestHeaders,omitempty"`
 
 	// LateRemoveResponseHeaders defines headers that would be removed after envoy response processing.
 	LateRemoveResponseHeaders []string `json:"lateRemoveResponseHeaders,omitempty" yaml:"earlyRemoveRequestHeaders,omitempty"`
+
+	// LateRemoveResponseHeadersOnMatch defines header name matchers that would remove headers after envoy response processing.
+	LateRemoveResponseHeadersOnMatch []*StringMatch `json:"lateRemoveResponseHeadersOnMatch,omitempty" yaml:"lateRemoveResponseHeadersOnMatch,omitempty"`
 }
 
 // ClientTimeout sets the timeout configuration for downstream connections

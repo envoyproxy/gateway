@@ -879,6 +879,7 @@ func hasParentFalseCondition(p *egv1a1.SecurityPolicy) bool {
 // --- TCP branch: validateSecurityPolicyForTCP(...) returns err -> SetTranslationErrorForPolicyAncestors(...) + return
 func Test_SecurityPolicy_TCP_Invalid_setsStatus_and_returns(t *testing.T) {
 	tr := &Translator{GatewayControllerName: "gateway.envoyproxy.io/gatewayclass-controller"}
+	trContext := &TranslatorContext{}
 
 	// Create an invalid TCP policy (has CORS which is not allowed for TCP)
 	policy := sp("default", "bad-tcp")
@@ -936,6 +937,8 @@ func Test_SecurityPolicy_TCP_Invalid_setsStatus_and_returns(t *testing.T) {
 	gatewayRouteMap := make(map[string]map[string]sets.Set[string])
 	resources := resource.NewResources()
 	xdsIR := make(resource.XdsIRMap)
+	trContext.SetServices(resources.Services)
+	tr.TranslatorContext = trContext
 
 	// Process the policy - this should set error status
 	tr.processSecurityPolicyForRoute(resources, xdsIR, routeMap, gatewayRouteMap, policy, target)
@@ -947,6 +950,7 @@ func Test_SecurityPolicy_TCP_Invalid_setsStatus_and_returns(t *testing.T) {
 // --- non-TCP branch: malformed CIDR should return err -> SetTranslationErrorForPolicyAncestors(...) + return
 func Test_SecurityPolicy_HTTP_Invalid_setsStatus_and_returns(t *testing.T) {
 	tr := &Translator{GatewayControllerName: "gateway.envoyproxy.io/gatewayclass-controller"}
+	trContext := &TranslatorContext{}
 
 	// Create an invalid HTTP policy (malformed CIDR)
 	policy := sp("default", "bad-http")
@@ -1010,6 +1014,8 @@ func Test_SecurityPolicy_HTTP_Invalid_setsStatus_and_returns(t *testing.T) {
 	gatewayRouteMap := make(map[string]map[string]sets.Set[string])
 	resources := resource.NewResources()
 	xdsIR := make(resource.XdsIRMap)
+	trContext.SetServices(resources.Services)
+	tr.TranslatorContext = trContext
 
 	// Process the policy - this should set error status
 	tr.processSecurityPolicyForRoute(resources, xdsIR, routeMap, gatewayRouteMap, policy, target)

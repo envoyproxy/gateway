@@ -64,6 +64,10 @@ type TranslatorManager interface {
 // Translator translates Gateway API resources to IRs and computes status
 // for Gateway API resources.
 type Translator struct {
+	// TranslatorContext holds pre-indexed resource maps for efficient lookup resources
+	// during translation operations.
+	*TranslatorContext
+
 	// GatewayControllerName is the name of the Gateway API controller
 	GatewayControllerName string
 
@@ -220,6 +224,19 @@ func newTranslateResult(
 func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult, error) {
 	var errs error
 
+	// Preprocessing to improve get resources operations performance.
+	translatorContext := &TranslatorContext{}
+	translatorContext.SetNamespaces(resources.Namespaces)
+	translatorContext.SetServices(resources.Services)
+	translatorContext.SetServiceImports(resources.ServiceImports)
+	translatorContext.SetBackends(resources.Backends)
+	translatorContext.SetSecrets(resources.Secrets)
+	translatorContext.SetConfigMaps(resources.ConfigMaps)
+	translatorContext.SetClusterTrustBundles(resources.ClusterTrustBundles)
+	translatorContext.SetEndpointSlicesForBackend(resources.EndpointSlices)
+
+	t.TranslatorContext = translatorContext
+
 	// Get Gateways belonging to our GatewayClass.
 	acceptedGateways, failedGateways := t.GetRelevantGateways(resources)
 
@@ -281,8 +298,7 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 	}
 
 	// Process BackendTrafficPolicies
-	backendTrafficPolicies := t.ProcessBackendTrafficPolicies(
-		resources, acceptedGateways, routes, xdsIR)
+	backendTrafficPolicies := t.ProcessBackendTrafficPolicies(resources, acceptedGateways, routes, xdsIR)
 
 	// Process SecurityPolicies
 	securityPolicies := t.ProcessSecurityPolicies(
