@@ -22522,6 +22522,17 @@ spec:
                                   maximum: 65535
                                   minimum: 0
                                   type: integer
+                                reportCountersAsDeltas:
+                                  description: |-
+                                    ReportCountersAsDeltas configures the OpenTelemetry sink to report
+                                    counters as delta temporality instead of cumulative.
+                                  type: boolean
+                                reportHistogramsAsDeltas:
+                                  description: |-
+                                    ReportHistogramsAsDeltas configures the OpenTelemetry sink to report
+                                    histograms as delta temporality instead of cumulative.
+                                    Required for backends like Elastic that drop cumulative histograms.
+                                  type: boolean
                               type: object
                               x-kubernetes-validations:
                               - message: host or backendRefs needs to be set
