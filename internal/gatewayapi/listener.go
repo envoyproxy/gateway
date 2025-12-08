@@ -738,6 +738,13 @@ func (t *Translator) processTracing(gw *gwapiv1.Gateway, envoyproxy *egv1a1.Envo
 		return nil, err
 	}
 
+	// EG currently support OTel tracing only, change protocol to GRPC.
+	if tracing.Provider.Type == egv1a1.TracingProviderTypeOpenTelemetry {
+		for _, d := range ds {
+			d.Protocol = ir.GRPC
+		}
+	}
+
 	var authority string
 
 	// fallback to host and port
