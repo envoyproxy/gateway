@@ -128,7 +128,7 @@ spec:
       targetPort: 9411
       protocol: TCP
   selector:
+    app.kubernetes.io/instance: eg-addons
     app.kubernetes.io/name: opentelemetry-collector
-    app.kubernetes.io/instance: gateway-addons-helm
     component: standalone-collector
   internalTrafficPolicy: Cluster
