@@ -28,6 +28,7 @@ import (
 )
 
 type Runner interface {
+	// Start the runner.
 	Start(context.Context) error
 	Name() string
 	// Close closes the runner when the server is shutting down.
@@ -39,23 +40,37 @@ type Runner interface {
 var cfgPath string
 
 // GetServerCommand returns the server cobra command to be executed.
-func GetServerCommand() *cobra.Command {
+// This command receives an async error handler to let the main process decide how to
+// handle critical errors that may happen in the runners that may prevent Envoy Gateway from
+// functioning properly.
+// The Envoy AI Gateway CLI is an example use case of this function, where it needs to terminate
+// if the infra runner fails to start the Envoy process.
+func GetServerCommand(asyncErrHandler func(string, error)) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "server",
 		Aliases: []string{"serve"},
 		Short:   "Serve Envoy Gateway",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return server(cmd.Context(), cmd.OutOrStdout(), cmd.ErrOrStderr())
+			runnerErrors := &message.RunnerErrors{}
+			defer runnerErrors.Close()
+			go message.HandleSubscription(message.Metadata{Runner: "runner-errors", Message: message.RunnerErrorsMessageName},
+				runnerErrors.Subscribe(cmd.Context()),
+				func(update message.Update[string, message.WatchableError], _ chan error) {
+					if asyncErrHandler != nil {
+						asyncErrHandler(update.Key, update.Value)
+					}
+				},
+			)
+			return server(cmd.Context(), cmd.OutOrStdout(), cmd.ErrOrStderr(), runnerErrors)
 		},
 	}
 	cmd.PersistentFlags().StringVarP(&cfgPath, "config-path", "c", "",
 		"The path to the configuration file.")
-
 	return cmd
 }
 
 // server serves Envoy Gateway.
-func server(ctx context.Context, stdout, stderr io.Writer) error {
+func server(ctx context.Context, stdout, stderr io.Writer, asyncErrorNotifier *message.RunnerErrors) error {
 	cfg, err := getConfig(stdout, stderr)
 	if err != nil {
 		return err
@@ -64,7 +79,7 @@ func server(ctx context.Context, stdout, stderr io.Writer) error {
 	runnersDone := make(chan struct{})
 	hook := func(c context.Context, cfg *config.Server) error {
 		cfg.Logger.Info("Start runners")
-		if err := startRunners(c, cfg); err != nil {
+		if err := startRunners(c, cfg, asyncErrorNotifier); err != nil {
 			cfg.Logger.Error(err, "failed to start runners")
 			return err
 		}
@@ -132,7 +147,7 @@ func getConfigByPath(stdout, stderr io.Writer, cfgPath string) (*config.Server, 
 //
 // This will block until the context is done, and returns after synchronously
 // closing all the runners.
-func startRunners(ctx context.Context, cfg *config.Server) (err error) {
+func startRunners(ctx context.Context, cfg *config.Server, runnerErrors *message.RunnerErrors) (err error) {
 	channels := struct {
 		pResources *message.ProviderResources
 		xdsIR      *message.XdsIR
@@ -165,6 +180,7 @@ func startRunners(ctx context.Context, cfg *config.Server) (err error) {
 			runner: providerrunner.New(&providerrunner.Config{
 				Server:            *cfg,
 				ProviderResources: channels.pResources,
+				RunnerErrors:      runnerErrors,
 			}),
 		},
 		{
@@ -174,6 +190,7 @@ func startRunners(ctx context.Context, cfg *config.Server) (err error) {
 			runner: gatewayapirunner.New(&gatewayapirunner.Config{
 				Server:            *cfg,
 				ProviderResources: channels.pResources,
+				RunnerErrors:      runnerErrors,
 				XdsIR:             channels.xdsIR,
 				InfraIR:           channels.infraIR,
 				ExtensionManager:  extMgr,
@@ -189,6 +206,7 @@ func startRunners(ctx context.Context, cfg *config.Server) (err error) {
 				XdsIR:             channels.xdsIR,
 				ExtensionManager:  extMgr,
 				ProviderResources: channels.pResources,
+				RunnerErrors:      runnerErrors,
 			}),
 		},
 		{
@@ -196,8 +214,9 @@ func startRunners(ctx context.Context, cfg *config.Server) (err error) {
 			// It subscribes to the infraIR, translates it into Envoy Proxy infrastructure
 			// resources such as K8s deployment and services.
 			runner: infrarunner.New(&infrarunner.Config{
-				Server:  *cfg,
-				InfraIR: channels.infraIR,
+				Server:       *cfg,
+				InfraIR:      channels.infraIR,
+				RunnerErrors: runnerErrors,
 			}),
 		},
 		{
@@ -206,6 +225,7 @@ func startRunners(ctx context.Context, cfg *config.Server) (err error) {
 			runner: admin.New(&admin.Config{
 				Server:            *cfg,
 				ProviderResources: channels.pResources,
+				RunnerErrors:      runnerErrors,
 			}),
 		},
 		{
@@ -226,8 +246,9 @@ func startRunners(ctx context.Context, cfg *config.Server) (err error) {
 		// Start the Global RateLimit xDS Server
 		// It subscribes to the xds Resources and translates it to Envoy Ratelimit configuration.
 		rateLimitRunner := ratelimitrunner.New(&ratelimitrunner.Config{
-			Server: *cfg,
-			XdsIR:  channels.xdsIR,
+			Server:       *cfg,
+			XdsIR:        channels.xdsIR,
+			RunnerErrors: runnerErrors,
 		})
 		if err = startRunner(ctx, cfg, rateLimitRunner); err != nil {
 			return err

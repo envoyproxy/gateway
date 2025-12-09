@@ -17,6 +17,15 @@ clientTrafficPolicies:
         remove:
         - my-removed-header
         - my-removed-header
+        removeOnMatch:
+        - type: Exact
+          value: my-removed-header-value
+        - type: Prefix
+          value: removed-prefix-
+        - type: Suffix
+          value: -removed-suffix
+        - type: RegularExpression
+          value: removed-regex-.*
         set:
         - name: my-set-header
           value: my-set-header-value
@@ -32,6 +41,15 @@ clientTrafficPolicies:
         remove:
         - my-removed-response-header
         - my-removed-response-header
+        removeOnMatch:
+        - type: Exact
+          value: my-removed-response-header-value
+        - type: Prefix
+          value: removed-response-prefix-
+        - type: Suffix
+          value: -removed-response-suffix
+        - type: RegularExpression
+          value: removed-response-regex-.*
         set:
         - name: my-set-response-header
           value: my-set-response-header-value
@@ -200,6 +218,19 @@ xdsIR:
           - my-set-header-value
         earlyRemoveRequestHeaders:
         - my-removed-header
+        earlyRemoveRequestHeadersOnMatch:
+        - distinct: false
+          exact: my-removed-header-value
+          name: ""
+        - distinct: false
+          name: ""
+          prefix: removed-prefix-
+        - distinct: false
+          name: ""
+          suffix: -removed-suffix
+        - distinct: false
+          name: ""
+          safeRegex: removed-regex-.*
         enableEnvoyHeaders: true
         lateAddResponseHeaders:
         - append: true
@@ -216,6 +247,19 @@ xdsIR:
           - value1,value2
         lateRemoveResponseHeaders:
         - my-removed-response-header
+        lateRemoveResponseHeadersOnMatch:
+        - distinct: false
+          exact: my-removed-response-header-value
+          name: ""
+        - distinct: false
+          name: ""
+          prefix: removed-response-prefix-
+        - distinct: false
+          name: ""
+          suffix: -removed-response-suffix
+        - distinct: false
+          name: ""
+          safeRegex: removed-response-regex-.*
         requestID: PreserveOrGenerate
         withUnderscoresAction: Allow
       hostnames:
@@ -249,6 +293,19 @@ xdsIR:
           - my-set-header-value
         earlyRemoveRequestHeaders:
         - my-removed-header
+        earlyRemoveRequestHeadersOnMatch:
+        - distinct: false
+          exact: my-removed-header-value
+          name: ""
+        - distinct: false
+          name: ""
+          prefix: removed-prefix-
+        - distinct: false
+          name: ""
+          suffix: -removed-suffix
+        - distinct: false
+          name: ""
+          safeRegex: removed-regex-.*
         enableEnvoyHeaders: true
         lateAddResponseHeaders:
         - append: true
@@ -265,6 +322,19 @@ xdsIR:
           - value1,value2
         lateRemoveResponseHeaders:
         - my-removed-response-header
+        lateRemoveResponseHeadersOnMatch:
+        - distinct: false
+          exact: my-removed-response-header-value
+          name: ""
+        - distinct: false
+          name: ""
+          prefix: removed-response-prefix-
+        - distinct: false
+          name: ""
+          suffix: -removed-response-suffix
+        - distinct: false
+          name: ""
+          safeRegex: removed-response-regex-.*
         requestID: PreserveOrGenerate
         withUnderscoresAction: Allow
       hostnames:
