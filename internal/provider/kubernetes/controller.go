@@ -58,7 +58,7 @@ var skipNameValidation = func() *bool {
 	return ptr.To(false)
 }
 
-var tracer = otel.Tracer("envoy-gateway/reconciliation")
+var tracer = otel.Tracer("envoy-gateway/provider/runner")
 
 type gatewayAPIReconciler struct {
 	client               client.Client
