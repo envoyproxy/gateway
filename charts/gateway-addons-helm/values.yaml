@@ -668,6 +668,8 @@ loki:
     memberlist: "loki-memberlist"
     commonConfig:
       replication_factor: 1
+    # Use the built-in test schema to avoid requiring a custom schema_config for templating
+    useTestSchema: true
     storage:
       type: "filesystem"
     rulerConfig:
