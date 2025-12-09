@@ -24,6 +24,8 @@ import (
 	secretv3 "github.com/envoyproxy/go-control-plane/envoy/service/secret/v3"
 	serverv3 "github.com/envoyproxy/go-control-plane/pkg/server/v3"
 	"github.com/telepresenceio/watchable"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/keepalive"
@@ -35,7 +37,6 @@ import (
 	extension "github.com/envoyproxy/gateway/internal/extension/types"
 	"github.com/envoyproxy/gateway/internal/infrastructure/host"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/ratelimit"
-	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/message"
 	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
 	"github.com/envoyproxy/gateway/internal/xds/cache"
@@ -64,6 +65,8 @@ const (
 
 	defaultMaxConnectionAgeGrace = 2 * time.Minute
 )
+
+var tracer = otel.Tracer("envoy-gateway/xds")
 
 var maxConnectionAgeValues = []time.Duration{
 	10 * time.Hour,
@@ -254,26 +257,41 @@ func registerServer(srv serverv3.Server, g *grpc.Server) {
 	runtimev3.RegisterRuntimeDiscoveryServiceServer(g, srv)
 }
 
-func (r *Runner) translateFromSubscription(sub <-chan watchable.Snapshot[string, *ir.Xds]) {
+func (r *Runner) translateFromSubscription(sub <-chan watchable.Snapshot[string, *message.XdsIRWithContext]) {
 	// Subscribe to resources
 	message.HandleSubscription(message.Metadata{Runner: r.Name(), Message: message.XDSIRMessageName}, sub,
-		func(update message.Update[string, *ir.Xds], errChan chan error) {
-			r.Logger.Info("received an update")
+		func(update message.Update[string, *message.XdsIRWithContext], errChan chan error) {
+			parentCtx := context.Background()
+			if update.Value != nil && update.Value.Context != nil {
+				parentCtx = update.Value.Context
+			}
+
+			traceCtx, span := tracer.Start(parentCtx, "XdsRunner.subscribeAndTranslate")
+			defer span.End()
+			traceLogger := r.Logger.WithTrace(traceCtx)
+			traceLogger.Info("received an update")
+
 			key := update.Key
 			val := update.Value
 
+			// Add span attributes for observability
+			span.SetAttributes(
+				attribute.String("xds-ir.key", update.Key),
+				attribute.Bool("update.delete", update.Delete),
+			)
+
 			if update.Delete {
-				if err := r.cache.GenerateNewSnapshot(key, nil); err != nil {
-					r.Logger.Error(err, "failed to delete the snapshot")
+				if err := r.cache.GenerateNewSnapshot(key, nil, traceCtx); err != nil {
+					traceLogger.Error(err, "failed to delete the snapshot")
 					errChan <- err
 				}
 			} else {
 				// Translate to xds resources
 				t := &translator.Translator{
 					ControllerNamespace: r.ControllerNamespace,
-					FilterOrder:         val.FilterOrder,
+					FilterOrder:         val.XdsIR.FilterOrder,
 					RuntimeFlags:        r.EnvoyGateway.RuntimeFlags,
-					Logger:              r.Logger,
+					Logger:              traceLogger,
 				}
 
 				// Set the extension manager if an extension is loaded
@@ -290,7 +308,7 @@ func (r *Runner) translateFromSubscription(sub <-chan watchable.Snapshot[string,
 					if r.EnvoyGateway.RateLimit.Timeout != nil {
 						d, err := time.ParseDuration(string(*r.EnvoyGateway.RateLimit.Timeout))
 						if err != nil {
-							r.Logger.Error(err, "invalid rateLimit timeout")
+							traceLogger.Error(err, "invalid rateLimit timeout")
 							errChan <- err
 						} else {
 							t.GlobalRateLimit.Timeout = d
@@ -298,16 +316,18 @@ func (r *Runner) translateFromSubscription(sub <-chan watchable.Snapshot[string,
 					}
 				}
 
-				result, err := t.Translate(val)
+				_, translateSpan := tracer.Start(traceCtx, "Translator.Translate")
+				result, err := t.Translate(val.XdsIR)
+				translateSpan.End()
 				if err != nil {
-					r.Logger.Error(err, "failed to translate xds ir")
+					traceLogger.Error(err, "failed to translate xds ir")
 					errChan <- err
 				}
 
 				// xDS translation is done in a best-effort manner, so the result
 				// may contain partial resources even if there are errors.
 				if result == nil {
-					r.Logger.Info("no xds resources to publish")
+					traceLogger.Info("no xds resources to publish")
 					return
 				}
 
@@ -319,7 +339,7 @@ func (r *Runner) translateFromSubscription(sub <-chan watchable.Snapshot[string,
 							errChan <- err
 						} else {
 							// Update snapshot cache
-							if err := r.cache.GenerateNewSnapshot(key, result.XdsResources); err != nil {
+							if err := r.cache.GenerateNewSnapshot(key, result.XdsResources, traceCtx); err != nil {
 								r.Logger.Error(err, "failed to generate a snapshot")
 								errChan <- err
 							}

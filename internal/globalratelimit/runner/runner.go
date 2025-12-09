@@ -20,6 +20,8 @@ import (
 	resourcev3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	serverv3 "github.com/envoyproxy/go-control-plane/pkg/server/v3"
 	"github.com/telepresenceio/watchable"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 
@@ -46,6 +48,8 @@ const (
 	// rateLimitTLSCACertFilepath is the ratelimit ca cert file.
 	rateLimitTLSCACertFilepath = "/certs/ca.crt"
 )
+
+var tracer = otel.Tracer("envoy-gateway/global-rate-limit/runner")
 
 type Config struct {
 	config.Server
@@ -133,20 +137,36 @@ func buildXDSResourceFromCache(rateLimitConfigsCache map[string][]cachetype.Reso
 	return xdsResourcesToUpdate
 }
 
-func (r *Runner) translateFromSubscription(ctx context.Context, c <-chan watchable.Snapshot[string, *ir.Xds]) {
+func (r *Runner) translateFromSubscription(ctx context.Context, c <-chan watchable.Snapshot[string, *message.XdsIRWithContext]) {
 	// rateLimitConfigsCache is a cache of the rate limit config, which is keyed by the xdsIR key.
 	rateLimitConfigsCache := map[string][]cachetype.Resource{}
 
 	message.HandleSubscription(message.Metadata{Runner: r.Name(), Message: message.XDSIRMessageName}, c,
-		func(update message.Update[string, *ir.Xds], errChan chan error) {
-			r.Logger.Info("received a notification")
+		func(update message.Update[string, *message.XdsIRWithContext], errChan chan error) {
+			parentCtx := ctx
+			if update.Value != nil && update.Value.Context != nil {
+				parentCtx = update.Value.Context
+			}
+
+			traceCtx, span := tracer.Start(parentCtx, "GlobalRateLimitRunner.translateFromSubscription")
+			defer span.End()
+
+			traceLogger := r.Logger.WithTrace(traceCtx)
+			traceLogger.Info("received a notification")
+
+			span.SetAttributes(
+				attribute.String("xds-ir.key", update.Key),
+				attribute.Bool("update.delete", update.Delete),
+			)
 
 			if update.Delete {
 				delete(rateLimitConfigsCache, update.Key)
-				r.updateSnapshot(ctx, buildXDSResourceFromCache(rateLimitConfigsCache))
+				r.updateSnapshot(traceCtx, buildXDSResourceFromCache(rateLimitConfigsCache))
 			} else {
 				// Translate to ratelimit xDS Config.
-				rvt, err := r.translate(update.Value)
+				_, tSpan := tracer.Start(traceCtx, "Translator.Translate")
+				rvt, err := r.translate(update.Value.XdsIR)
+				tSpan.End()
 				if err != nil {
 					r.Logger.Error(err, "failed to translate an updated xds-ir to ratelimit xDS Config")
 					errChan <- err
@@ -156,7 +176,7 @@ func (r *Runner) translateFromSubscription(ctx context.Context, c <-chan watchab
 				if rvt != nil {
 					// Build XdsResources to use for the snapshot update from the cache.
 					rateLimitConfigsCache[update.Key] = rvt.XdsResources[resourcev3.RateLimitConfigType]
-					r.updateSnapshot(ctx, buildXDSResourceFromCache(rateLimitConfigsCache))
+					r.updateSnapshot(traceCtx, buildXDSResourceFromCache(rateLimitConfigsCache))
 				}
 			}
 		},
@@ -184,6 +204,9 @@ func (r *Runner) translate(xdsIR *ir.Xds) (*types.ResourceVersionTable, error) {
 }
 
 func (r *Runner) updateSnapshot(ctx context.Context, resource types.XdsResources) {
+	_, span := tracer.Start(ctx, "GlobalRateLimitRunner.updateSnapshot")
+	defer span.End()
+
 	if r.cache == nil {
 		r.Logger.Error(nil, "failed to init the snapshot cache")
 		return
