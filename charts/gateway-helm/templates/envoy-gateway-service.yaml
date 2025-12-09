@@ -28,3 +28,4 @@ spec:
   {{- with .Values.service.trafficDistribution }}
   trafficDistribution: {{ . }}
   {{- end }}
+
