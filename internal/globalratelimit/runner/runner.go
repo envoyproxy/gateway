@@ -54,6 +54,7 @@ var tracer = otel.Tracer("envoy-gateway/global-rate-limit/runner")
 type Config struct {
 	config.Server
 	XdsIR           *message.XdsIR
+	RunnerErrors    *message.RunnerErrors
 	grpc            *grpc.Server
 	cache           cachev3.SnapshotCache
 	snapshotVersion int64

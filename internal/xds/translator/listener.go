@@ -541,12 +541,12 @@ func tlsListenerFilterChainName(irRoute *ir.TCPRoute) string {
 }
 
 func buildEarlyHeaderMutation(headers *ir.HeaderSettings) []*corev3.TypedExtensionConfig {
-	if headers == nil || (len(headers.EarlyAddRequestHeaders) == 0 && len(headers.EarlyRemoveRequestHeaders) == 0) {
+	if headers == nil || (len(headers.EarlyAddRequestHeaders) == 0 && len(headers.EarlyRemoveRequestHeaders) == 0 && len(headers.EarlyRemoveRequestHeadersOnMatch) == 0) {
 		return nil
 	}
 
 	earlyHeaderMutationAny, _ := proto.ToAnyWithValidation(&early_header_mutationv3.HeaderMutation{
-		Mutations: buildHeaderMutationRules(headers.EarlyAddRequestHeaders, headers.EarlyRemoveRequestHeaders),
+		Mutations: buildHeaderMutationRules(headers.EarlyAddRequestHeaders, headers.EarlyRemoveRequestHeaders, headers.EarlyRemoveRequestHeadersOnMatch),
 	})
 
 	return []*corev3.TypedExtensionConfig{
@@ -629,17 +629,20 @@ func (t *Translator) addXdsTCPFilterChain(
 
 	isTLSPassthrough := irRoute.TLS != nil && irRoute.TLS.TLSInspectorConfig != nil
 	isTLSTerminate := irRoute.TLS != nil && irRoute.TLS.Terminate != nil
-	statPrefix := "tcp"
-	if isTLSPassthrough {
-		statPrefix = "tls-passthrough"
-	}
+	statPrefix := ptr.Deref(irRoute.StatName, "")
+	if statPrefix == "" {
+		statPrefix = "tcp"
+		if isTLSPassthrough {
+			statPrefix = "tls-passthrough"
+		}
 
-	if isTLSTerminate {
-		statPrefix = "tls-terminate"
-	}
+		if isTLSTerminate {
+			statPrefix = "tls-terminate"
+		}
 
-	// Append port to the statPrefix.
-	statPrefix = strings.Join([]string{statPrefix, strconv.Itoa(int(xdsListener.Address.GetSocketAddress().GetPortValue()))}, "-")
+		// Append port to the statPrefix.
+		statPrefix = strings.Join([]string{statPrefix, strconv.Itoa(int(xdsListener.Address.GetSocketAddress().GetPortValue()))}, "-")
+	}
 
 	filterChain, err := buildTCPFilterChain(
 		irRoute,

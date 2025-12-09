@@ -535,6 +535,7 @@ xdsIR:
     globalResources:
       proxyServiceCluster:
         metadata:
+          kind: Service
           name: envoy-envoy-gateway-gateway-mixed-94aaf8eb
           namespace: envoy-gateway-system
           sectionName: "8080"
@@ -546,6 +547,7 @@ xdsIR:
             port: 8080
             zone: zone1
           metadata:
+            kind: Service
             name: envoy-envoy-gateway-gateway-mixed-94aaf8eb
             namespace: envoy-gateway-system
             sectionName: "8080"
@@ -580,6 +582,7 @@ xdsIR:
             - host: 7.7.7.7
               port: 8080
             metadata:
+              kind: Service
               name: service-1
               namespace: default
               sectionName: "8080"
@@ -658,12 +661,17 @@ xdsIR:
             - host: 7.7.7.7
               port: 8163
             metadata:
+              kind: Service
               name: service-1
               namespace: default
               sectionName: "8163"
             name: tcproute/default/tcpr-app-mixed/rule/-1/backend/0
             protocol: TCP
             weight: 1
+        metadata:
+          kind: TCPRoute
+          name: tcpr-app-mixed
+          namespace: default
         name: tcproute/default/tcpr-app-mixed
   envoy-gateway/gateway-tcp:
     accessLog:
@@ -672,6 +680,7 @@ xdsIR:
     globalResources:
       proxyServiceCluster:
         metadata:
+          kind: Service
           name: envoy-envoy-gateway-gateway-tcp-093cb215
           namespace: envoy-gateway-system
           sectionName: "8080"
@@ -683,6 +692,7 @@ xdsIR:
             port: 8080
             zone: zone1
           metadata:
+            kind: Service
             name: envoy-envoy-gateway-gateway-tcp-093cb215
             namespace: envoy-gateway-system
             sectionName: "8080"
@@ -728,12 +738,17 @@ xdsIR:
             - host: 7.7.7.7
               port: 8163
             metadata:
+              kind: Service
               name: service-1
               namespace: default
               sectionName: "8163"
             name: tcproute/default/tcpr-app-foo/rule/-1/backend/0
             protocol: TCP
             weight: 1
+        metadata:
+          kind: TCPRoute
+          name: tcpr-app-foo
+          namespace: default
         name: tcproute/default/tcpr-app-foo
     - address: 0.0.0.0
       externalPort: 8089
@@ -769,10 +784,15 @@ xdsIR:
             - host: 7.7.7.7
               port: 8163
             metadata:
+              kind: Service
               name: service-1
               namespace: default
               sectionName: "8163"
             name: tcproute/default/tcpr-app-bar/rule/-1/backend/0
             protocol: TCP
             weight: 1
+        metadata:
+          kind: TCPRoute
+          name: tcpr-app-bar
+          namespace: default
         name: tcproute/default/tcpr-app-bar

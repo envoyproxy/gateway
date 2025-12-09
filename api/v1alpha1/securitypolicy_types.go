@@ -15,6 +15,8 @@ const (
 	KindSecurityPolicy = "SecurityPolicy"
 )
 
+// +genclient
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:categories=envoy-gateway,shortName=sp
 // +kubebuilder:subresource:status
@@ -86,7 +88,8 @@ type SecurityPolicySpec struct {
 	Authorization *Authorization `json:"authorization,omitempty"`
 }
 
-//+kubebuilder:object:root=true
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:object:root=true
 
 // SecurityPolicyList contains a list of SecurityPolicy resources.
 type SecurityPolicyList struct {
@@ -96,5 +99,5 @@ type SecurityPolicyList struct {
 }
 
 func init() {
-	SchemeBuilder.Register(&SecurityPolicy{}, &SecurityPolicyList{})
+	localSchemeBuilder.Register(&SecurityPolicy{}, &SecurityPolicyList{})
 }

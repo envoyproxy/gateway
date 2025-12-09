@@ -99,6 +99,7 @@ xdsIR:
     globalResources:
       proxyServiceCluster:
         metadata:
+          kind: Service
           name: envoy-envoy-gateway-gateway-1-196ae069
           namespace: envoy-gateway-system
           sectionName: "8080"
@@ -110,6 +111,7 @@ xdsIR:
             port: 8080
             zone: zone1
           metadata:
+            kind: Service
             name: envoy-envoy-gateway-gateway-1-196ae069
             namespace: envoy-gateway-system
             sectionName: "8080"
@@ -143,6 +145,7 @@ xdsIR:
             - host: 7.7.7.7
               port: 8080
             metadata:
+              kind: Service
               name: service-1
               namespace: default
               sectionName: "8080"
@@ -154,10 +157,15 @@ xdsIR:
             - host: 7.7.7.7
               port: 8080
             metadata:
+              kind: Service
               name: service-2
               namespace: default
               sectionName: "8080"
             name: tcproute/default/tcproute-1/rule/-1/backend/1
             protocol: TCP
             weight: 50
+        metadata:
+          kind: TCPRoute
+          name: tcproute-1
+          namespace: default
         name: tcproute/default/tcproute-1

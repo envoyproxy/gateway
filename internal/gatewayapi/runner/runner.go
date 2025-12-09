@@ -54,6 +54,7 @@ var tracer = otel.Tracer("envoy-gateway/gateway-api")
 type Config struct {
 	config.Server
 	ProviderResources *message.ProviderResources
+	RunnerErrors      *message.RunnerErrors
 	XdsIR             *message.XdsIR
 	InfraIR           *message.InfraIR
 	ExtensionManager  extension.Manager
@@ -205,6 +206,9 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 				if err != nil {
 					// Currently all errors that Translate returns should just be logged
 					traceLogger.Error(err, "errors detected during translation", "gateway-class", resources.GatewayClass.Name)
+					// Notify the main control loop about translation errors. This may be a critical error in standalone mode, so
+					// notify the control loop in case this needs to be handled.
+					r.RunnerErrors.Store(r.Name(), message.NewWatchableError(err))
 				}
 
 				// Publish the IRs.

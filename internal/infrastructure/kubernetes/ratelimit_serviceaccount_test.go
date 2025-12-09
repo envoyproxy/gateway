@@ -22,6 +22,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/ratelimit"
+	"github.com/envoyproxy/gateway/internal/message"
 	testutil "github.com/envoyproxy/gateway/internal/utils/test"
 )
 
@@ -109,7 +110,8 @@ func TestCreateOrUpdateRateLimitServiceAccount(t *testing.T) {
 			require.NoError(t, err)
 			cfg.ControllerNamespace = tc.ns
 
-			kube := NewInfra(cli, cfg)
+			errorNotifier := message.RunnerErrorNotifier{RunnerName: t.Name(), RunnerErrors: &message.RunnerErrors{}}
+			kube := NewInfra(cli, cfg, errorNotifier)
 			kube.EnvoyGateway.RateLimit = rl
 
 			ownerReferenceUID := map[string]types.UID{
