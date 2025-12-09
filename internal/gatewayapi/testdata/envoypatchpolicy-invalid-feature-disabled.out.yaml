@@ -1,3 +1,35 @@
+envoyPatchPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyPatchPolicy
+  metadata:
+    name: edit-conn-buffer-bytes
+    namespace: envoy-gateway
+  spec:
+    jsonPatches:
+    - name: envoy-gateway-gateway-1-http
+      operation:
+        op: replace
+        path: /per_connection_buffer_limit_bytes
+        value: "1024"
+      type: type.googleapis.com/envoy.config.listener.v3.Listener
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: GatewayClass
+      name: envoy-gateway-class
+    type: JSONPatch
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: GatewayClass
+        name: envoy-gateway-class
+      conditions:
+      - lastTransitionTime: null
+        message: EnvoyPatchPolicy is disabled in the EnvoyGateway configuration
+        reason: Disabled
+        status: "False"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
