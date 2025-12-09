@@ -15,8 +15,18 @@ cluster_manager:
 node:
   locality:
     zone: $(ENVOY_SERVICE_ZONE)
-{{- if .StatsMatcher  }}
 stats_config:
+  use_all_default_tags: true
+  stats_tags:
+    - regex: \.zone(\.(([^\.]+)\.))
+      tag_name: from_zone
+    - regex: \.zone\.[^\.]+\.(([^\.]+)\.)
+      tag_name: to_zone
+    - regex: "^cluster(\\..+\\.(.+))\\.total_match_count$"
+      tag_name: socket_match_name
+    - regex: "circuit_breakers\\.((.+?)\\.).+"
+      tag_name: priority
+{{- if .StatsMatcher  }}
   stats_matcher:
     inclusion_list:
       patterns:
