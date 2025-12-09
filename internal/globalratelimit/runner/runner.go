@@ -164,7 +164,9 @@ func (r *Runner) translateFromSubscription(ctx context.Context, c <-chan watchab
 				r.updateSnapshot(traceCtx, buildXDSResourceFromCache(rateLimitConfigsCache))
 			} else {
 				// Translate to ratelimit xDS Config.
+				_, tSpan := tracer.Start(traceCtx, "Translator.Translate")
 				rvt, err := r.translate(update.Value.XdsIR)
+				tSpan.End()
 				if err != nil {
 					r.Logger.Error(err, "failed to translate an updated xds-ir to ratelimit xDS Config")
 					errChan <- err
