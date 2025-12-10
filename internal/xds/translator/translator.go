@@ -488,10 +488,11 @@ func (t *Translator) addRouteToRouteConfig(
 	http3Settings *ir.HTTP3Settings,
 ) error {
 	var (
-		vHosts    = map[string]*routev3.VirtualHost{} // store virtual hosts by domain
-		vHostList []*routev3.VirtualHost              // keep track of order by using a list as well as the map
-		errs      error                               // the accumulated errors
-		err       error
+		vHosts                    = map[string]*routev3.VirtualHost{} // store virtual hosts by domain
+		vHostList                 []*routev3.VirtualHost              // keep track of order by using a list as well as the map
+		errs                      error                               // the accumulated errors
+		err                       error
+		maxDirectResponseBodySize uint32 = 0
 	)
 
 	// Check if an extension is loaded that wants to modify xDS Routes after they have been generated
@@ -529,6 +530,11 @@ func (t *Translator) addRouteToRouteConfig(
 			}
 			vHosts[httpRoute.Hostname] = vHost
 			vHostList = append(vHostList, vHost)
+		}
+
+		if httpRoute.DirectResponse != nil {
+			target := ptr.Deref(httpRoute.DirectResponse.MaxSize, 0)
+			maxDirectResponseBodySize = max(target, maxDirectResponseBodySize)
 		}
 
 		var xdsRoute *routev3.Route
@@ -653,6 +659,10 @@ func (t *Translator) addRouteToRouteConfig(
 		}
 	}
 	xdsRouteCfg.VirtualHosts = append(xdsRouteCfg.VirtualHosts, vHostList...)
+	if maxDirectResponseBodySize > 0 {
+		xdsRouteCfg.MaxDirectResponseBodySizeBytes = wrapperspb.UInt32(maxDirectResponseBodySize)
+	}
+
 	return errs
 }
 

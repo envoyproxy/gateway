@@ -854,10 +854,12 @@ func (t *Translator) processExtensionRefHTTPFilter(extFilter *gwapiv1.LocalObjec
 				if hrf.Spec.DirectResponse != nil {
 					dr := &ir.CustomResponse{}
 					if hrf.Spec.DirectResponse.Body != nil {
+						body := hrf.Spec.DirectResponse.Body
 						var err error
-						if dr.Body, err = t.getCustomResponseBody(hrf.Spec.DirectResponse.Body, filterNs); err != nil {
+						if dr.Body, err = t.getCustomResponseBody(body, filterNs); err != nil {
 							return t.processInvalidHTTPFilter(string(extFilter.Kind), filterContext, err)
 						}
+						dr.MaxSize = getCustomResponseBodySize(body)
 					}
 
 					if hrf.Spec.DirectResponse.StatusCode != nil {
@@ -963,6 +965,16 @@ func (t *Translator) processExtensionRefHTTPFilter(extFilter *gwapiv1.LocalObjec
 	errMsg := fmt.Sprintf("Reference %s/%s not found for filter type: %v", filterNs,
 		extFilter.Name, extFilter.Kind)
 	return t.processUnresolvedHTTPFilter(errMsg, filterContext)
+}
+
+func getCustomResponseBodySize(body *egv1a1.CustomResponseBody) *uint32 {
+	if body != nil && body.MaxSize != nil {
+		maxSize := *body.MaxSize
+		if maxSize > 0 {
+			return ptr.To(uint32(maxSize))
+		}
+	}
+	return nil
 }
 
 func (t *Translator) processRequestMirrorFilter(
