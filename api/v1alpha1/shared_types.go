@@ -835,6 +835,12 @@ type CustomResponseBody struct {
 	//
 	// +optional
 	ValueRef *gwapiv1.LocalObjectReference `json:"valueRef,omitempty"`
+
+	// MaxSize is the maximum size of the body in bytes.
+	// If not specified the default is 4096.
+	//
+	// +optional
+	MaxSize *int `json:"maxSize,omitempty"`
 }
 
 // Tracing defines the configuration for tracing.

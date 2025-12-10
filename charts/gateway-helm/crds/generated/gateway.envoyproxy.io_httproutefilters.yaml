@@ -133,6 +133,11 @@ spec:
                       inline:
                         description: Inline contains the value as an inline string.
                         type: string
+                      maxSize:
+                        description: |-
+                          MaxSize is the maximum size of the body in bytes.
+                          If not specified the default is 4096.
+                        type: integer
                       type:
                         allOf:
                         - enum:
