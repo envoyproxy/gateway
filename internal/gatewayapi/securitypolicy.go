@@ -2072,16 +2072,10 @@ func (t *Translator) processCORSPreflight(irListener *ir.HTTPListener, prefix st
 				continue
 			}
 
-			// Create preflight route
-			preRoute := &ir.HTTPRoute{
-				Name:              preflightName,
-				PathMatch:         r.PathMatch,
-				QueryParamMatches: r.QueryParamMatches,
-				Destination:       r.Destination,
-				Metadata:          r.Metadata,
-				Security: &ir.SecurityFeatures{
-					CORS: t.buildCORS(cors),
-				},
+			preRoute := r.DeepCopy()
+			preRoute.Name = preflightName
+			preRoute.Security = &ir.SecurityFeatures{
+				CORS: t.buildCORS(cors),
 			}
 
 			// Create header matches:
