@@ -70,7 +70,7 @@ func New(ctx context.Context, svr *config.Server, resources *message.ProviderRes
 		store:        newResourcesStore(svr.EnvoyGateway.Gateway.ControllerName, reconciler.Client, resources, logger),
 		status:       statusHandler,
 		envoyGateway: svr.EnvoyGateway,
-		errors:     errors,
+		errors:       errors,
 	}, nil
 }
 
