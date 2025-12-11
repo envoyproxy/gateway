@@ -236,7 +236,7 @@ xdsIR:
             name: datadog-svc
             namespace: envoy-gateway-system
           name: tracing/backend/-1
-          protocol: TCP
+          protocol: GRPC
       provider:
         backendRefs:
         - group: gateway.envoyproxy.io
