@@ -1,0 +1,23 @@
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyGateway
+gateway:
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller
+provider:
+  type: Custom
+  custom:
+    resource:
+      type: File
+      file:
+        paths: ["./resources"]
+    infrastructure:
+      type: Host
+      host: {}
+logging:
+  level:
+    default: info
+extensionApis:
+  enableBackend: true
+admin:
+  address:
+    host: 127.0.0.1
+    port: 19000

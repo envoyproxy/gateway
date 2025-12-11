@@ -92,6 +92,12 @@ type TracingProvider struct {
 	// Zipkin defines the Zipkin tracing provider configuration
 	// +optional
 	Zipkin *ZipkinTracingProvider `json:"zipkin,omitempty"`
+	// Headers is a list of additional headers to send with OTLP export requests.
+	// These headers are added as gRPC initial metadata for the OTLP gRPC service.
+	// +optional
+	// +kubebuilder:validation:MinItems=1
+	// +kubebuilder:validation:MaxItems=32
+	Headers []gwapiv1.HTTPHeader `json:"headers,omitempty"`
 }
 
 type CustomTagType string

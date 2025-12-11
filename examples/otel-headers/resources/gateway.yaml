@@ -1,0 +1,108 @@
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: otel-example
+spec:
+  telemetry:
+    metrics:
+      # TODO: Metrics will have the wrong service name until EG exposes
+      # resource_detectors present in Envoy.
+      sinks:
+        - type: OpenTelemetry
+          openTelemetry:
+            host: localhost
+            port: 4317
+            # Delta temporality required for backends like otel-tui and Elastic
+            reportCountersAsDeltas: true
+            reportHistogramsAsDeltas: true
+            # Authorization header sent as gRPC initial metadata
+            headers:
+              - name: Authorization
+                value: Bearer fake
+    tracing:
+      samplingRate: 100
+      provider:
+        type: OpenTelemetry
+        host: localhost
+        port: 4317
+        # Authorization header sent as gRPC initial metadata
+        headers:
+          - name: Authorization
+            value: Bearer fake
+    accessLog:
+      settings:
+        - format:
+            # Text format becomes the OTLP log body
+            text: "%REQ(:METHOD)% %REQ(:PATH)% %PROTOCOL% %RESPONSE_CODE%"
+            # JSON format becomes OTLP log attributes
+            json:
+              response_code_details: "%RESPONSE_CODE_DETAILS%"
+              upstream_host: "%UPSTREAM_HOST%"
+              upstream_cluster: "%UPSTREAM_CLUSTER%"
+              upstream_transport_failure_reason: "%UPSTREAM_TRANSPORT_FAILURE_REASON%"
+              response_flags: "%RESPONSE_FLAGS%"
+              connection_termination_details: "%CONNECTION_TERMINATION_DETAILS%"
+          sinks:
+            - type: OpenTelemetry
+              openTelemetry:
+                host: localhost
+                port: 4317
+                resources:
+                  service.name: envoy-gateway-example
+                # Authorization header sent as gRPC initial metadata
+                headers:
+                  - name: Authorization
+                    value: Bearer fake
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: eg
+spec:
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: eg
+spec:
+  gatewayClassName: eg
+  infrastructure:
+    parametersRef:
+      group: gateway.envoyproxy.io
+      kind: EnvoyProxy
+      name: otel-example
+  listeners:
+    - name: http
+      protocol: HTTP
+      port: 10080
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: backend
+spec:
+  parentRefs:
+    - name: eg
+  rules:
+    - backendRefs:
+        - group: gateway.envoyproxy.io
+          kind: Backend
+          name: httpbin
+      matches:
+        - path:
+            type: PathPrefix
+            value: /
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: Backend
+metadata:
+  name: httpbin
+spec:
+  endpoints:
+    - fqdn:
+        hostname: httpbingo.org
+        port: 443
+  tls:
+    sni: httpbingo.org
+    wellKnownCACertificates: System
