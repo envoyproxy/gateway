@@ -117,6 +117,10 @@ type Translator struct {
 	// the cluster environment and the related security risk is not applicable.
 	RunningOnHost bool
 
+	// Default settings for all envoy proxy instances, which can be overridden by proxy settings
+	// attached to GatewayClass and/or Gateway resources.
+	EnvoyProxyTemplate *egv1a1.EnvoyProxySpec
+
 	// oidcDiscoveryCache is the cache for OIDC configurations discovered from issuer's well-known URL.
 	oidcDiscoveryCache *oidcDiscoveryCache
 
@@ -408,7 +412,7 @@ func (t *Translator) GetRelevantGateways(resources *resource.Resources) (
 		gCtx := &GatewayContext{
 			Gateway: gateway,
 		}
-		gCtx.attachEnvoyProxy(resources, envoyproxyMap)
+		gCtx.attachEnvoyProxy(resources, envoyproxyMap, t.EnvoyProxyTemplate)
 
 		// Gateways that are not accepted by the controller because they reference an invalid EnvoyProxy.
 		if status.GatewayNotAccepted(gCtx.Gateway) {

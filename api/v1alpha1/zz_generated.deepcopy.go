@@ -2068,6 +2068,11 @@ func (in *EnvoyGatewayKubernetesProvider) DeepCopyInto(out *EnvoyGatewayKubernet
 		*out = new(KubernetesPodDisruptionBudgetSpec)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.EnvoyProxyTemplate != nil {
+		in, out := &in.EnvoyProxyTemplate, &out.EnvoyProxyTemplate
+		*out = new(EnvoyProxySpec)
+		(*in).DeepCopyInto(*out)
+	}
 	if in.Watch != nil {
 		in, out := &in.Watch, &out.Watch
 		*out = new(KubernetesWatchMode)

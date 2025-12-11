@@ -38,6 +38,8 @@ charts/gateway-addons-helm/charts/
 # vendor for grafonnet
 charts/gateway-addons-helm/dashboards/vendor/
 
+charts/gateway-addons-helm/tmpcharts-*/
+
 # VIM
 .*.swp
 

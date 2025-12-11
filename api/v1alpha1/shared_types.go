@@ -180,8 +180,10 @@ type KubernetesPodSpec struct {
 	// Volumes that can be mounted by containers belonging to the pod.
 	// More info: https://kubernetes.io/docs/concepts/storage/volumes
 	//
+	// +patchMergeKey=name
+	// +patchStrategy=merge
 	// +optional
-	Volumes []corev1.Volume `json:"volumes,omitempty"`
+	Volumes []corev1.Volume `json:"volumes,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
 
 	// ImagePullSecrets is an optional list of references to secrets
 	// in the same namespace to use for pulling any of the images used by this PodSpec.
@@ -218,8 +220,10 @@ type KubernetesPodSpec struct {
 type KubernetesContainerSpec struct {
 	// List of environment variables to set in the container.
 	//
+	// +patchMergeKey=name
+	// +patchStrategy=merge
 	// +optional
-	Env []corev1.EnvVar `json:"env,omitempty"`
+	Env []corev1.EnvVar `json:"env,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
 
 	// Resources required by this container.
 	// More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
@@ -252,8 +256,10 @@ type KubernetesContainerSpec struct {
 	// VolumeMounts are volumes to mount into the container's filesystem.
 	// Cannot be updated.
 	//
+	// +patchMergeKey=mountPath
+	// +patchStrategy=merge
 	// +optional
-	VolumeMounts []corev1.VolumeMount `json:"volumeMounts,omitempty"`
+	VolumeMounts []corev1.VolumeMount `json:"volumeMounts,omitempty" patchStrategy:"merge" patchMergeKey:"mountPath"`
 }
 
 // ServiceType string describes ingress methods for a service
