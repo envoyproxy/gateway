@@ -440,7 +440,7 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 			return nil, err
 		}
 		cluster.ClusterDiscoveryType = &clusterv3.Cluster_ClusterType{ClusterType: &clusterv3.Cluster_CustomClusterType{
-			Name:        args.name,
+			Name:        egv1a1.EnvoyClusterTypeDynamicForwardProxy,
 			TypedConfig: dfpAny,
 		}}
 		cluster.LbPolicy = clusterv3.Cluster_CLUSTER_PROVIDED

@@ -4,6 +4,7 @@ date: Pending
 breaking changes: |
   The SecurityPolicy name has been added to the stat prefix for aouth2 filter metrics to provide better granularity. Example: http.https-10443.securitypolicy/default/oidc-example.oauth_success: 0.
   Returning 500 direct responses for HTTPRoute and GRPCRoute with invalid filters.
+  When using a Host header rewrite to a literal or header-based value and routing to a Dynamic Resolver backend, the host header is rewrittne before
 
 # Updates addressing vulnerabilities, security flaws, or compliance requirements.
 security updates: |

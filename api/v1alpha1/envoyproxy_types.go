@@ -310,6 +310,12 @@ const (
 	// EnvoyFilterHeaderMutation defines the Envoy HTTP header mutation filter
 	EnvoyFilterHeaderMutation EnvoyFilter = "envoy.filters.http.header_mutation"
 
+	// EnvoyFilterDynamicForwardProxy defines the Envoy Dynamic Forward Proxy filter
+	EnvoyFilterDynamicForwardProxy EnvoyFilter = "envoy.filters.http.dynamic_forward_proxy"
+
+	// EnvoyClusterTypeDynamicForwardProxy defines the Envoy Dynamic Forward Proxy cluster type
+	EnvoyClusterTypeDynamicForwardProxy string = "envoy.clusters.dynamic_forward_proxy"
+
 	// StatFormatterRouteName defines the Route Name formatter for stats
 	StatFormatterRouteName string = "%ROUTE_NAME%"
 

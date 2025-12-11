@@ -854,6 +854,11 @@ func (h *HTTPRoute) NeedsClusterPerSetting() bool {
 	return h.Destination.NeedsClusterPerSetting()
 }
 
+func (h *HTTPRoute) IsDynamicResolverRoute() bool {
+	// If using a dynamic resolver, only a single destination setting is expected and enforced during IR translation
+	return h.Destination != nil && len(h.Destination.Settings) == 1 && h.Destination.Settings[0].IsDynamicResolver
+}
+
 // DNS contains configuration options for DNS resolution.
 // +k8s:deepcopy-gen=true
 type DNS struct {

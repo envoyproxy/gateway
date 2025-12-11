@@ -36,7 +36,6 @@ var DynamicResolverBackendTest = suite.ConformanceTest{
 		routeNN := types.NamespacedName{Name: "httproute-with-dynamic-resolver-backend", Namespace: ConformanceInfraNamespace}
 		gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
 		BackendMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "backend-dynamic-resolver", Namespace: ConformanceInfraNamespace})
-
 		t.Run("route to service foo", func(t *testing.T) {
 			expectedResponse := http.ExpectedResponse{
 				Request: http.Request{
@@ -56,6 +55,49 @@ var DynamicResolverBackendTest = suite.ConformanceTest{
 				Request: http.Request{
 					Host: "test-service-bar.gateway-conformance-infra.svc.cluster.local",
 					Path: "/",
+				},
+				Response: http.Response{
+					StatusCodes: []int{200},
+				},
+				Namespace: ConformanceInfraNamespace,
+			}
+
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
+		})
+		t.Run("route to service foo with header rewrite", func(t *testing.T) {
+			expectedResponse := http.ExpectedResponse{
+				Request: http.Request{
+					Host: "rewrite.me.or.fail",
+					Path: "/header-rewrite",
+					Headers: map[string]string{
+						"X-Custom-Host": "test-service-bar.gateway-conformance-infra.svc.cluster.local",
+					},
+				},
+				ExpectedRequest: &http.ExpectedRequest{
+					Request: http.Request{
+						Host: "test-service-bar.gateway-conformance-infra.svc.cluster.local",
+						Path: "/header-rewrite",
+					},
+				},
+				Response: http.Response{
+					StatusCodes: []int{200},
+				},
+				Namespace: ConformanceInfraNamespace,
+			}
+
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
+		})
+		t.Run("route to service foo with header literal rewrite", func(t *testing.T) {
+			expectedResponse := http.ExpectedResponse{
+				Request: http.Request{
+					Host: "rewrite.me.or.fail",
+					Path: "/literal-rewrite",
+				},
+				ExpectedRequest: &http.ExpectedRequest{
+					Request: http.Request{
+						Host: "test-service-bar.gateway-conformance-infra.svc.cluster.local",
+						Path: "/literal-rewrite",
+					},
 				},
 				Response: http.Response{
 					StatusCodes: []int{200},
