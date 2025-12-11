@@ -1,0 +1,42 @@
+name: "tracing-otel-headers"
+tracing:
+  serviceName: "fake-name.fake-ns"
+  samplingRate: 90
+  authority: "otel-collector.default.svc.cluster.local"
+  headers:
+  - name: Authorization
+    value: Bearer my-api-key
+  - name: X-Tenant-ID
+    value: tenant-123
+  destination:
+    name: "tracing-0"
+    settings:
+    - endpoints:
+      - host: "otel-collector.default.svc.cluster.local"
+        port: 4317
+      protocol: "GRPC"
+      addressType: FQDN
+      name: "tracing-0/backend/0"
+  provider:
+    host: otel-collector.monitoring.svc.cluster.local
+    port: 4317
+    type: OpenTelemetry
+http:
+- name: "first-listener"
+  address: "::"
+  port: 10080
+  hostnames:
+  - "*"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  routes:
+  - name: "direct-route"
+    hostname: "*"
+    destination:
+      name: "direct-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "direct-route-dest/backend/0"
