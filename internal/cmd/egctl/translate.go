@@ -233,7 +233,7 @@ func translate(w io.Writer, inFile, inType string, outTypes []string, output, re
 
 	if inType == gatewayAPIType {
 		// Unmarshal input
-		resources, err := resource.LoadResourcesFromYAMLBytes(inBytes, addMissingResources)
+		resources, err := resource.LoadResourcesFromYAMLBytes(inBytes, addMissingResources, nil)
 		if err != nil {
 			return fmt.Errorf("unable to unmarshal input: %w", err)
 		}
