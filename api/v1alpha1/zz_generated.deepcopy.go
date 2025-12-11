@@ -5173,6 +5173,11 @@ func (in *OpenTelemetryEnvoyProxyAccessLog) DeepCopyInto(out *OpenTelemetryEnvoy
 			(*out)[key] = val
 		}
 	}
+	if in.Headers != nil {
+		in, out := &in.Headers, &out.Headers
+		*out = make([]v1.HTTPHeader, len(*in))
+		copy(*out, *in)
+	}
 	if in.Text != nil {
 		in, out := &in.Text, &out.Text
 		*out = new(string)
@@ -5816,6 +5821,11 @@ func (in *ProxyOpenTelemetrySink) DeepCopyInto(out *ProxyOpenTelemetrySink) {
 		in, out := &in.ReportHistogramsAsDeltas, &out.ReportHistogramsAsDeltas
 		*out = new(bool)
 		**out = **in
+	}
+	if in.Headers != nil {
+		in, out := &in.Headers, &out.Headers
+		*out = make([]v1.HTTPHeader, len(*in))
+		copy(*out, *in)
 	}
 }
 
@@ -7187,6 +7197,11 @@ func (in *TracingProvider) DeepCopyInto(out *TracingProvider) {
 		in, out := &in.Zipkin, &out.Zipkin
 		*out = new(ZipkinTracingProvider)
 		(*in).DeepCopyInto(*out)
+	}
+	if in.Headers != nil {
+		in, out := &in.Headers, &out.Headers
+		*out = make([]v1.HTTPHeader, len(*in))
+		copy(*out, *in)
 	}
 }
 
