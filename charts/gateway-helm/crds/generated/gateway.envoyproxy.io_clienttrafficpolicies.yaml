@@ -272,6 +272,7 @@ spec:
                           - value
                           type: object
                         maxItems: 64
+                        minItems: 1
                         type: array
                         x-kubernetes-list-map-keys:
                         - name
@@ -298,8 +299,40 @@ spec:
                         items:
                           type: string
                         maxItems: 64
+                        minItems: 1
                         type: array
                         x-kubernetes-list-type: set
+                      removeOnMatch:
+                        description: |-
+                          RemoveOnMatch removes headers whose names match the specified string matchers.
+                          Matching is performed on the header name (case-insensitive).
+                        items:
+                          description: |-
+                            StringMatch defines how to match any strings.
+                            This is a general purpose match condition that can be used by other EG APIs
+                            that need to match against a string.
+                          properties:
+                            type:
+                              default: Exact
+                              description: Type specifies how to match against a string.
+                              enum:
+                              - Exact
+                              - Prefix
+                              - Suffix
+                              - RegularExpression
+                              type: string
+                            value:
+                              description: Value specifies the string value that the
+                                match must have.
+                              maxLength: 1024
+                              minLength: 1
+                              type: string
+                          required:
+                          - value
+                          type: object
+                        maxItems: 64
+                        minItems: 1
+                        type: array
                       set:
                         description: |-
                           Set overwrites the request with the given header (name, value)
@@ -346,6 +379,7 @@ spec:
                           - value
                           type: object
                         maxItems: 64
+                        minItems: 1
                         type: array
                         x-kubernetes-list-map-keys:
                         - name
@@ -407,6 +441,7 @@ spec:
                           - value
                           type: object
                         maxItems: 64
+                        minItems: 1
                         type: array
                         x-kubernetes-list-map-keys:
                         - name
@@ -433,8 +468,40 @@ spec:
                         items:
                           type: string
                         maxItems: 64
+                        minItems: 1
                         type: array
                         x-kubernetes-list-type: set
+                      removeOnMatch:
+                        description: |-
+                          RemoveOnMatch removes headers whose names match the specified string matchers.
+                          Matching is performed on the header name (case-insensitive).
+                        items:
+                          description: |-
+                            StringMatch defines how to match any strings.
+                            This is a general purpose match condition that can be used by other EG APIs
+                            that need to match against a string.
+                          properties:
+                            type:
+                              default: Exact
+                              description: Type specifies how to match against a string.
+                              enum:
+                              - Exact
+                              - Prefix
+                              - Suffix
+                              - RegularExpression
+                              type: string
+                            value:
+                              description: Value specifies the string value that the
+                                match must have.
+                              maxLength: 1024
+                              minLength: 1
+                              type: string
+                          required:
+                          - value
+                          type: object
+                        maxItems: 64
+                        minItems: 1
+                        type: array
                       set:
                         description: |-
                           Set overwrites the request with the given header (name, value)
@@ -481,6 +548,7 @@ spec:
                           - value
                           type: object
                         maxItems: 64
+                        minItems: 1
                         type: array
                         x-kubernetes-list-map-keys:
                         - name

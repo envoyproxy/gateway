@@ -29,7 +29,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/avast/retry-go"
+	"github.com/avast/retry-go/v5"
 	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 
 	"github.com/envoyproxy/gateway/internal/logging"
@@ -158,24 +158,23 @@ func (p *permissionCache) Start(ctx context.Context) {
 							const retryAttempts = 3
 							const retryDelay = 1 * time.Second
 							p.logger.Info("rechecking permission for image", "image", e.image.String())
-							err := retry.Do(
-								func() error {
-									err := p.checkAndUpdatePermission(ctx, e)
-									if err != nil && isRetriableError(err) {
-										p.logger.Error(
-											err,
-											"failed to check permission for image, will retry again",
-											"image",
-											e.image.String())
-										return err
-									}
-									return nil
-								},
+							err := retry.New(
 								retry.Attempts(retryAttempts),
 								retry.DelayType(retry.BackOffDelay),
 								retry.Delay(retryDelay),
 								retry.Context(ctx),
-							)
+							).Do(func() error {
+								err := p.checkAndUpdatePermission(ctx, e)
+								if err != nil && isRetriableError(err) {
+									p.logger.Error(
+										err,
+										"failed to check permission for image, will retry again",
+										"image",
+										e.image.String())
+									return err
+								}
+								return nil
+							})
 							if err != nil {
 								p.logger.Error(
 									err,

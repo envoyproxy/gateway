@@ -141,6 +141,28 @@ func TestGetRenderedBootstrapConfig(t *testing.T) {
 			},
 		},
 		{
+			name: "otel-metrics-delta-temporality",
+			opts: &RenderBootstrapConfigOptions{
+				ProxyMetrics: &egv1a1.ProxyMetrics{
+					Prometheus: &egv1a1.ProxyPrometheusProvider{
+						Disable: true,
+					},
+					Sinks: []egv1a1.ProxyMetricSink{
+						{
+							Type: egv1a1.MetricSinkTypeOpenTelemetry,
+							OpenTelemetry: &egv1a1.ProxyOpenTelemetrySink{
+								Host:                     ptr.To("otel-collector.monitoring.svc"),
+								Port:                     4317,
+								ReportCountersAsDeltas:   ptr.To(true),
+								ReportHistogramsAsDeltas: ptr.To(true),
+							},
+						},
+					},
+				},
+				SdsConfig: sds,
+			},
+		},
+		{
 			name: "custom-stats-matcher",
 			opts: &RenderBootstrapConfigOptions{
 				ProxyMetrics: &egv1a1.ProxyMetrics{

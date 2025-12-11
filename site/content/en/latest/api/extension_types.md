@@ -952,10 +952,11 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `type` | _[ConsistentHashType](#consistenthashtype)_ |  true  |  | ConsistentHashType defines the type of input to hash on. Valid Type values are<br />"SourceIP",<br />"Header",<br />"Headers",<br />"Cookie". |
+| `type` | _[ConsistentHashType](#consistenthashtype)_ |  true  |  | ConsistentHashType defines the type of input to hash on. Valid Type values are<br />"SourceIP",<br />"Header",<br />"Headers",<br />"Cookie".<br />"QueryParams". |
 | `header` | _[Header](#header)_ |  false  |  | Header configures the header hash policy when the consistent hash type is set to Header.<br />Deprecated: use Headers instead |
 | `headers` | _[Header](#header) array_ |  false  |  | Headers configures the header hash policy for each header, when the consistent hash type is set to Headers. |
 | `cookie` | _[Cookie](#cookie)_ |  false  |  | Cookie configures the cookie hash policy when the consistent hash type is set to Cookie. |
+| `queryParams` | _[QueryParam](#queryparam) array_ |  false  |  | QueryParams configures the query parameter hash policy when the consistent hash type is set to QueryParams. |
 | `tableSize` | _integer_ |  false  | 65537 | The table size for consistent hashing, must be prime number limited to 5000011. |
 
 
@@ -974,6 +975,7 @@ _Appears in:_
 | `Header` | HeaderConsistentHashType hashes based on a request header.<br />Deprecated: use HeadersConsistentHashType instead<br /> | 
 | `Headers` | HeadersConsistentHashType hashes based on multiple request headers.<br /> | 
 | `Cookie` | CookieConsistentHashType hashes based on a cookie.<br /> | 
+| `QueryParams` | QueryParamsConsistentHashType hashes based on a multiple query parameter.<br /> | 
 
 
 #### Cookie
@@ -2404,6 +2406,7 @@ _Appears in:_
 | `set` | _[HTTPHeader](#httpheader) array_ |  false  |  | Set overwrites the request with the given header (name, value)<br />before the action.<br />Input:<br />  GET /foo HTTP/1.1<br />  my-header: foo<br />Config:<br />  set:<br />  - name: "my-header"<br />    value: "bar"<br />Output:<br />  GET /foo HTTP/1.1<br />  my-header: bar |
 | `add` | _[HTTPHeader](#httpheader) array_ |  false  |  | Add adds the given header(s) (name, value) to the request<br />before the action. It appends to any existing values associated<br />with the header name.<br />Input:<br />  GET /foo HTTP/1.1<br />  my-header: foo<br />Config:<br />  add:<br />  - name: "my-header"<br />    value: "bar,baz"<br />Output:<br />  GET /foo HTTP/1.1<br />  my-header: foo,bar,baz |
 | `remove` | _string array_ |  false  |  | Remove the given header(s) from the HTTP request before the action. The<br />value of Remove is a list of HTTP header names. Note that the header<br />names are case-insensitive (see<br />https://datatracker.ietf.org/doc/html/rfc2616#section-4.2).<br />Input:<br />  GET /foo HTTP/1.1<br />  my-header1: foo<br />  my-header2: bar<br />  my-header3: baz<br />Config:<br />  remove: ["my-header1", "my-header3"]<br />Output:<br />  GET /foo HTTP/1.1<br />  my-header2: bar |
+| `removeOnMatch` | _[StringMatch](#stringmatch) array_ |  false  |  | RemoveOnMatch removes headers whose names match the specified string matchers.<br />Matching is performed on the header name (case-insensitive). |
 
 
 #### HTTPHostnameModifier
@@ -4048,6 +4051,8 @@ _Appears in:_
 | `backendSettings` | _[ClusterSettings](#clustersettings)_ |  false  |  | BackendSettings holds configuration for managing the connection<br />to the backend. |
 | `host` | _string_ |  false  |  | Host define the service hostname.<br />Deprecated: Use BackendRefs instead. |
 | `port` | _integer_ |  false  | 4317 | Port defines the port the service is exposed on.<br />Deprecated: Use BackendRefs instead. |
+| `reportCountersAsDeltas` | _boolean_ |  false  |  | ReportCountersAsDeltas configures the OpenTelemetry sink to report<br />counters as delta temporality instead of cumulative. |
+| `reportHistogramsAsDeltas` | _boolean_ |  false  |  | ReportHistogramsAsDeltas configures the OpenTelemetry sink to report<br />histograms as delta temporality instead of cumulative.<br />Required for backends like Elastic that drop cumulative histograms. |
 
 
 #### ProxyPrometheusProvider
@@ -4178,6 +4183,20 @@ _Appears in:_
 | `Exact` | QueryParamMatchExact matches the exact value of the Value field against the value of<br />the specified query parameter.<br /> | 
 | `RegularExpression` | QueryParamMatchRegularExpression matches a regular expression against the value of the<br />specified query parameter. The regex string must adhere to the syntax documented in<br />https://github.com/google/re2/wiki/Syntax.<br /> | 
 | `Distinct` | QueryParamMatchDistinct matches any and all possible unique values encountered in the<br />specified query parameter. Note that each unique value will receive its own rate limit<br />bucket.<br /> | 
+
+#### QueryParam
+
+
+ 
+QueryParam defines the query parameter name hashing configuration for consistent hash based
+load balancing.
+
+_Appears in:_
+- [ConsistentHash](#consistenthash)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `name` | _string_ |  true  |  | Name of the query param to hash. |
 
 
 #### RateLimit
@@ -5027,6 +5046,7 @@ This is a general purpose match condition that can be used by other EG APIs
 that need to match against a string.
 
 _Appears in:_
+- [HTTPHeaderFilter](#httpheaderfilter)
 - [OIDCDenyRedirectHeader](#oidcdenyredirectheader)
 - [OtherSANMatch](#othersanmatch)
 - [ProxyMetrics](#proxymetrics)

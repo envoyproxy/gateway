@@ -25,6 +25,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/proxy"
 	resource2 "github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/resource"
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/message"
 )
 
 const (
@@ -53,7 +54,7 @@ func deploymentWithSelectorAndLabel(deploy *appsv1.Deployment, selector *metav1.
 	return dCopy
 }
 
-func setupCreateOrUpdateProxyDeployment(gatewayNamespaceMode bool) (*appsv1.Deployment, *ir.Infra, *config.Server, error) {
+func setupCreateOrUpdateProxyDeployment(t *testing.T, gatewayNamespaceMode bool) (*appsv1.Deployment, *ir.Infra, *config.Server, error) {
 	ctx := context.Background()
 	cfg, err := config.New(os.Stdout, os.Stderr)
 	if err != nil {
@@ -70,7 +71,8 @@ func setupCreateOrUpdateProxyDeployment(gatewayNamespaceMode bool) (*appsv1.Depl
 	cli := fakeclient.NewClientBuilder().
 		WithScheme(envoygateway.GetScheme()).
 		Build()
-	kube := NewInfra(cli, cfg)
+	errorNotifier := message.RunnerErrorNotifier{RunnerName: t.Name(), RunnerErrors: &message.RunnerErrors{}}
+	kube := NewInfra(cli, cfg, errorNotifier)
 	if err := setupOwnerReferenceResources(ctx, kube.Client); err != nil {
 		return nil, nil, nil, err
 	}
@@ -101,10 +103,10 @@ func setupCreateOrUpdateProxyDeployment(gatewayNamespaceMode bool) (*appsv1.Depl
 }
 
 func TestCreateOrUpdateProxyDeployment(t *testing.T) {
-	deploy, infra, cfg, err := setupCreateOrUpdateProxyDeployment(false)
+	deploy, infra, cfg, err := setupCreateOrUpdateProxyDeployment(t, false)
 	require.NoError(t, err)
 
-	gwDeploy, gwInfra, gwCfg, err := setupCreateOrUpdateProxyDeployment(true)
+	gwDeploy, gwInfra, gwCfg, err := setupCreateOrUpdateProxyDeployment(t, true)
 	require.NoError(t, err)
 
 	testCases := []struct {
@@ -313,7 +315,8 @@ func TestCreateOrUpdateProxyDeployment(t *testing.T) {
 					Build()
 			}
 
-			kube := NewInfra(cli, tc.cfg)
+			errorNotifier := message.RunnerErrorNotifier{RunnerName: t.Name(), RunnerErrors: &message.RunnerErrors{}}
+			kube := NewInfra(cli, tc.cfg, errorNotifier)
 			require.NoError(t, setupOwnerReferenceResources(ctx, kube.Client))
 
 			r, err := proxy.NewResourceRender(ctx, kube, tc.in)
@@ -360,7 +363,8 @@ func TestDeleteProxyDeployment(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			ctx := context.Background()
-			kube := NewInfra(cli, cfg)
+			errorNotifier := message.RunnerErrorNotifier{RunnerName: t.Name(), RunnerErrors: &message.RunnerErrors{}}
+			kube := NewInfra(cli, cfg, errorNotifier)
 			require.NoError(t, setupOwnerReferenceResources(ctx, kube.Client))
 
 			infra := ir.NewInfra()

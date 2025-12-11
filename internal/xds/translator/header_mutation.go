@@ -68,13 +68,14 @@ func buildHeaderMutationFilter(headers *ir.HeaderSettings) (*hcmv3.HttpFilter, e
 
 	addHeaders := headers.LateAddResponseHeaders
 	removeHeaders := headers.LateRemoveResponseHeaders
-	if len(addHeaders) == 0 && len(removeHeaders) == 0 {
+	removeOnMatch := headers.LateRemoveResponseHeadersOnMatch
+	if len(addHeaders) == 0 && len(removeHeaders) == 0 && len(removeOnMatch) == 0 {
 		return nil, nil
 	}
 
 	mutationProto := &mutationv3.HeaderMutation{
 		Mutations: &mutationv3.Mutations{
-			ResponseMutations: buildHeaderMutationRules(addHeaders, removeHeaders),
+			ResponseMutations: buildHeaderMutationRules(addHeaders, removeHeaders, removeOnMatch),
 		},
 	}
 
@@ -91,8 +92,8 @@ func buildHeaderMutationFilter(headers *ir.HeaderSettings) (*hcmv3.HttpFilter, e
 	}, nil
 }
 
-func buildHeaderMutationRules(addHeaders []ir.AddHeader, removeHeaders []string) []*mutation_rulesv3.HeaderMutation {
-	mutationRules := make([]*mutation_rulesv3.HeaderMutation, 0, len(addHeaders)+len(removeHeaders))
+func buildHeaderMutationRules(addHeaders []ir.AddHeader, removeHeaders []string, removeOnMatch []*ir.StringMatch) []*mutation_rulesv3.HeaderMutation {
+	mutationRules := make([]*mutation_rulesv3.HeaderMutation, 0, len(addHeaders)+len(removeHeaders)+len(removeOnMatch))
 
 	for _, header := range addHeaders {
 		var appendAction corev3.HeaderValueOption_HeaderAppendAction
@@ -136,6 +137,21 @@ func buildHeaderMutationRules(addHeaders []ir.AddHeader, removeHeaders []string)
 		mr := &mutation_rulesv3.HeaderMutation{
 			Action: &mutation_rulesv3.HeaderMutation_Remove{
 				Remove: header,
+			},
+		}
+		mutationRules = append(mutationRules, mr)
+	}
+
+	for _, matcher := range removeOnMatch {
+		sm := buildXdsStringMatcher(matcher)
+		if sm == nil {
+			continue
+		}
+		mr := &mutation_rulesv3.HeaderMutation{
+			Action: &mutation_rulesv3.HeaderMutation_RemoveOnMatch_{
+				RemoveOnMatch: &mutation_rulesv3.HeaderMutation_RemoveOnMatch{
+					KeyMatcher: sm,
+				},
 			},
 		}
 		mutationRules = append(mutationRules, mr)

@@ -41,7 +41,7 @@ func (t *Translator) ProcessGlobalResources(resources *resource.Resources, xdsIR
 
 	// Get the envoy client TLS secret. It is used for envoy to establish a TLS connection with control plane components,
 	// including the rate limit server and the wasm HTTP server.
-	envoyTLSSecret := resources.GetSecret(t.ControllerNamespace, envoyTLSSecretName)
+	envoyTLSSecret := t.GetSecret(t.ControllerNamespace, envoyTLSSecretName)
 	if envoyTLSSecret == nil {
 		return fmt.Errorf("envoy TLS secret %s/%s not found", t.ControllerNamespace, envoyTLSSecretName)
 	}
@@ -85,7 +85,7 @@ func (t *Translator) processServiceClusterForGateway(gateway *GatewayContext, re
 		Namespace: NamespacePtr(svcCluster.Namespace),
 		Port:      PortNumPtr(svcCluster.Spec.Ports[0].Port),
 	}
-	dst, err := t.processServiceDestinationSetting(irKey, bRef, svcCluster.Namespace, ir.AppProtocol(svcCluster.Spec.Ports[0].Protocol), resources, resources.EnvoyProxyForGatewayClass)
+	dst, err := t.processServiceDestinationSetting(irKey, bRef, svcCluster.Namespace, ir.AppProtocol(svcCluster.Spec.Ports[0].Protocol), resources.EnvoyProxyForGatewayClass)
 	if err != nil {
 		return "", nil
 	}
