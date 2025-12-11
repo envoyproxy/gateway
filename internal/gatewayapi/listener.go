@@ -681,7 +681,12 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 				if err != nil {
 					return nil, err
 				}
-				// TODO: remove support for Host/Port in v1.2
+
+				// EG currently support GRPC OTel only, change protocol to GRPC.
+				for _, d := range ds {
+					d.Protocol = ir.GRPC
+				}
+
 				al := &ir.OpenTelemetryAccessLog{
 					CELMatches: validExprs,
 					Resources:  sink.OpenTelemetry.Resources,
