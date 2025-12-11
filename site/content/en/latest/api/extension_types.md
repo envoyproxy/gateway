@@ -4151,6 +4151,21 @@ _Appears in:_
 | `provider` | _[TracingProvider](#tracingprovider)_ |  true  |  | Provider defines the tracing provider. |
 
 
+#### QueryParam
+
+
+
+QueryParam defines the query parameter name hashing configuration for consistent hash based
+load balancing.
+
+_Appears in:_
+- [ConsistentHash](#consistenthash)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `name` | _string_ |  true  |  | Name of the query param to hash. |
+
+
 #### QueryParamMatch
 
 
@@ -4183,20 +4198,6 @@ _Appears in:_
 | `Exact` | QueryParamMatchExact matches the exact value of the Value field against the value of<br />the specified query parameter.<br /> | 
 | `RegularExpression` | QueryParamMatchRegularExpression matches a regular expression against the value of the<br />specified query parameter. The regex string must adhere to the syntax documented in<br />https://github.com/google/re2/wiki/Syntax.<br /> | 
 | `Distinct` | QueryParamMatchDistinct matches any and all possible unique values encountered in the<br />specified query parameter. Note that each unique value will receive its own rate limit<br />bucket.<br /> | 
-
-#### QueryParam
-
-
- 
-QueryParam defines the query parameter name hashing configuration for consistent hash based
-load balancing.
-
-_Appears in:_
-- [ConsistentHash](#consistenthash)
-
-| Field | Type | Required | Default | Description |
-| ---   | ---  | ---      | ---     | ---         |
-| `name` | _string_ |  true  |  | Name of the query param to hash. |
 
 
 #### RateLimit
