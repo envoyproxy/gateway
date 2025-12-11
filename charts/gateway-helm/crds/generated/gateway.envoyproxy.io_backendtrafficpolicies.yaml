@@ -1792,7 +1792,7 @@ spec:
                               type: string
                             maxSize:
                               description: |-
-                                MaxSize is the maximum size of the body in bytes.
+                                MaxSize is the maximum size of the response body in bytes.
                                 If not specified the default is 4096.
                               type: integer
                             type:

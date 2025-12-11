@@ -1078,7 +1078,7 @@ _Appears in:_
 | `type` | _[ResponseValueType](#responsevaluetype)_ |  true  | Inline | Type is the type of method to use to read the body value.<br />Valid values are Inline and ValueRef, default is Inline. |
 | `inline` | _string_ |  false  |  | Inline contains the value as an inline string. |
 | `valueRef` | _[LocalObjectReference](#localobjectreference)_ |  false  |  | ValueRef contains the contents of the body<br />specified as a local object reference.<br />Only a reference to ConfigMap is supported.<br />The value of key `response.body` in the ConfigMap will be used as the response body.<br />If the key is not found, the first value in the ConfigMap will be used. |
-| `maxSize` | _integer_ |  false  |  | MaxSize is the maximum size of the body in bytes.<br />If not specified the default is 4096. |
+| `maxSize` | _integer_ |  false  |  | MaxSize is the maximum size of the response body in bytes.<br />If not specified the default is 4096. |
 
 
 #### CustomResponseMatch
