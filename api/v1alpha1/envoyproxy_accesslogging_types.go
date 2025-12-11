@@ -206,6 +206,16 @@ type OpenTelemetryEnvoyProxyAccessLog struct {
 	// It's recommended to follow [semantic conventions](https://opentelemetry.io/docs/reference/specification/resource/semantic_conventions/).
 	// +optional
 	Resources map[string]string `json:"resources,omitempty"`
+	// Text defines the body of the OpenTelemetry LogRecord.
+	// Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators) may be used in the format.
+	// When specified, this takes precedence over the setting-level format for this sink.
+	// +optional
+	Text *string `json:"text,omitempty"`
+	// Attributes defines key-value pairs to include in the OpenTelemetry LogRecord attributes.
+	// Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators)
+	// can be used as values. When specified, this takes precedence over the setting-level format for this sink.
+	// +optional
+	Attributes map[string]string `json:"attributes,omitempty"`
 
 	// TODO: support more OpenTelemetry accesslog options(e.g. TLS, auth etc.) in the future.
 }
