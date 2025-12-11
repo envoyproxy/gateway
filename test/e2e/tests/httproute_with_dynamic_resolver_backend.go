@@ -98,6 +98,29 @@ var DynamicResolverBackendTest = suite.ConformanceTest{
 				},
 			}, suite.TimeoutConfig.RequiredConsecutiveSuccesses, suite.TimeoutConfig.MaxTimeToConsistency)
 		})
+		t.Run("host rewrite to header", func(t *testing.T) {
+			expectedResponse := http.ExpectedResponse{
+				Request: http.Request{
+					Host: "non-existent-host",
+					Path: "/host-rewrite",
+					Headers: map[string]string{
+						"x-dynamic-host-header": "test-service-foo.gateway-conformance-infra.svc.cluster.local",
+					},
+				},
+				ExpectedRequest: &http.ExpectedRequest{
+					Request: http.Request{
+						Host: "test-service-foo.gateway-conformance-infra.svc.cluster.local",
+						Path: "/host-rewrite",
+					},
+				},
+				Response: http.Response{
+					StatusCodes: []int{200},
+				},
+				Namespace: ConformanceInfraNamespace,
+			}
+
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
+		})
 	},
 }
 

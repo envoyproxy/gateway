@@ -53,6 +53,8 @@ const (
 	// https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto#envoy-v3-api-field-config-cluster-v3-cluster-per-connection-buffer-limit-bytes
 	tcpClusterPerConnectionBufferLimitBytes = 32768
 	tcpClusterPerConnectTimeout             = 10 * time.Second
+	dynamicForwardProxyClusterTypeName      = "envoy.clusters.dynamic_forward_proxy"
+	dynamicForwardProxyDNSCacheName         = "envoy-gateway-dfp-cache"
 )
 
 type xdsClusterArgs struct {
@@ -126,17 +128,12 @@ func buildEndpointType(settings []*ir.DestinationSetting) EndpointType {
 	return EndpointTypeStatic
 }
 
-type buildClusterResult struct {
-	cluster *clusterv3.Cluster
-	secrets []*tlsv3.Secret // Secrets used in the cluster filters, we may need to add other types of resources in the future.
-}
-
-func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
+func computeDNSLookupFamily(ipFamily *egv1a1.IPFamily, dns *ir.DNS) clusterv3.Cluster_DnsLookupFamily {
 	dnsLookupFamily := clusterv3.Cluster_V4_PREFERRED
-	customDNSPolicy := args.dns != nil && args.dns.LookupFamily != nil
+	customDNSPolicy := dns != nil && dns.LookupFamily != nil
 	// apply DNS lookup family if custom DNS traffic policy is set
 	if customDNSPolicy {
-		switch *args.dns.LookupFamily {
+		switch *dns.LookupFamily {
 		case egv1a1.IPv4DNSLookupFamily:
 			dnsLookupFamily = clusterv3.Cluster_V4_ONLY
 		case egv1a1.IPv6DNSLookupFamily:
@@ -149,8 +146,8 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 	}
 
 	// Ensure to override if a specific IP family is set.
-	if args.ipFamily != nil {
-		switch *args.ipFamily {
+	if ipFamily != nil {
+		switch *ipFamily {
 		case egv1a1.IPv4:
 			dnsLookupFamily = clusterv3.Cluster_V4_ONLY
 		case egv1a1.IPv6:
@@ -162,6 +159,31 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 			}
 		}
 	}
+
+	return dnsLookupFamily
+}
+
+func buildDynamicForwardProxyDNSCacheConfig(dns *ir.DNS, dnsLookupFamily clusterv3.Cluster_DnsLookupFamily) *commondfpv3.DnsCacheConfig {
+	dnsCacheConfig := &commondfpv3.DnsCacheConfig{
+		Name:            dynamicForwardProxyDNSCacheName,
+		DnsLookupFamily: dnsLookupFamily,
+		DnsRefreshRate:  durationpb.New(30 * time.Second),
+	}
+
+	if dns != nil && dns.DNSRefreshRate != nil && dns.DNSRefreshRate.Duration > 0 {
+		dnsCacheConfig.DnsRefreshRate = durationpb.New(dns.DNSRefreshRate.Duration)
+	}
+
+	return dnsCacheConfig
+}
+
+type buildClusterResult struct {
+	cluster *clusterv3.Cluster
+	secrets []*tlsv3.Secret // Secrets used in the cluster filters, we may need to add other types of resources in the future.
+}
+
+func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
+	dnsLookupFamily := computeDNSLookupFamily(args.ipFamily, args.dns)
 
 	cluster := &clusterv3.Cluster{
 		Name:                          args.name,
@@ -417,18 +439,7 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 
 	switch args.endpointType {
 	case EndpointTypeDynamicResolver:
-		dnsCacheConfig := &commondfpv3.DnsCacheConfig{
-			Name:            args.name,
-			DnsLookupFamily: dnsLookupFamily,
-		}
-		dnsCacheConfig.DnsRefreshRate = durationpb.New(30 * time.Second)
-		if args.dns != nil {
-			if args.dns.DNSRefreshRate != nil {
-				if args.dns.DNSRefreshRate.Duration > 0 {
-					dnsCacheConfig.DnsRefreshRate = durationpb.New(args.dns.DNSRefreshRate.Duration)
-				}
-			}
-		}
+		dnsCacheConfig := buildDynamicForwardProxyDNSCacheConfig(args.dns, dnsLookupFamily)
 
 		dfp := &dfpv3.ClusterConfig{
 			ClusterImplementationSpecifier: &dfpv3.ClusterConfig_DnsCacheConfig{
@@ -440,7 +451,7 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 			return nil, err
 		}
 		cluster.ClusterDiscoveryType = &clusterv3.Cluster_ClusterType{ClusterType: &clusterv3.Cluster_CustomClusterType{
-			Name:        args.name,
+			Name:        dynamicForwardProxyClusterTypeName,
 			TypedConfig: dfpAny,
 		}}
 		cluster.LbPolicy = clusterv3.Cluster_CLUSTER_PROVIDED

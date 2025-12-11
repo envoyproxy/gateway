@@ -5,12 +5,12 @@ metadata:
   namespace: gateway-conformance-infra
 spec:
   parentRefs:
-  - name: same-namespace
+    - name: same-namespace
   rules:
-  - backendRefs:
-    - group: gateway.envoyproxy.io
-      kind: Backend
-      name: backend-dynamic-resolver
+    - backendRefs:
+        - group: gateway.envoyproxy.io
+          kind: Backend
+          name: backend-dynamic-resolver
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
@@ -19,16 +19,51 @@ metadata:
   namespace: gateway-conformance-infra
 spec:
   parentRefs:
-  - name: same-namespace
+    - name: same-namespace
   rules:
-  - backendRefs:
-    - group: gateway.envoyproxy.io
-      kind: Backend
-      name: backend-dynamic-resolver-with-app-protocol
-    matches:
-    - path:
-        type: PathPrefix
-        value: /status
+    - backendRefs:
+        - group: gateway.envoyproxy.io
+          kind: Backend
+          name: backend-dynamic-resolver-with-app-protocol
+      matches:
+        - path:
+            type: PathPrefix
+            value: /status
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: httproute-with-dynamic-resolver-backend-host-rewrite
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: same-namespace
+  rules:
+    - backendRefs:
+        - group: gateway.envoyproxy.io
+          kind: Backend
+          name: backend-dynamic-resolver
+      filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: gateway.envoyproxy.io
+            kind: HTTPRouteFilter
+            name: host-rewrite-from-header
+      matches:
+        - path:
+            type: PathPrefix
+            value: /host-rewrite
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: HTTPRouteFilter
+metadata:
+  name: host-rewrite-from-header
+  namespace: gateway-conformance-infra
+spec:
+  urlRewrite:
+    hostname:
+      type: Header
+      header: x-dynamic-host-header
 ---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: Backend
@@ -46,7 +81,7 @@ metadata:
 spec:
   type: DynamicResolver
   appProtocols:
-  - gateway.envoyproxy.io/h2c
+    - gateway.envoyproxy.io/h2c
 ---
 apiVersion: v1
 kind: Service
@@ -57,10 +92,10 @@ spec:
   selector:
     app: infra-backend-v1
   ports:
-  - protocol: TCP
-    port: 80
-    name: http11
-    targetPort: 3000
+    - protocol: TCP
+      port: 80
+      name: http11
+      targetPort: 3000
 ---
 apiVersion: v1
 kind: Service
@@ -71,7 +106,7 @@ spec:
   selector:
     app: infra-backend-v1
   ports:
-  - protocol: TCP
-    port: 80
-    name: http11
-    targetPort: 3000
+    - protocol: TCP
+      port: 80
+      name: http11
+      targetPort: 3000

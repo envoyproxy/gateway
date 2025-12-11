@@ -1,0 +1,93 @@
+gateways:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: Gateway
+    metadata:
+      namespace: envoy-gateway
+      name: gateway-1
+    spec:
+      gatewayClassName: envoy-gateway-class
+      listeners:
+        - name: http
+          protocol: HTTP
+          port: 80
+          allowedRoutes:
+            namespaces:
+              from: All
+httpRoutes:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: default
+      name: httproute-1
+    spec:
+      hostnames:
+        - gateway.envoyproxy.io
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+          sectionName: http
+      rules:
+        - matches:
+            - path:
+                value: "/foo"
+          backendRefs:
+            - group: gateway.envoyproxy.io
+              kind: Backend
+              name: backend-plain-http
+          filters:
+            - type: ExtensionRef
+              extensionRef:
+                group: gateway.envoyproxy.io
+                kind: HTTPRouteFilter
+                name: host-rewrite-from-header-1
+        - matches:
+            - path:
+                value: "/bar"
+          backendRefs:
+            - group: gateway.envoyproxy.io
+              kind: Backend
+              name: backend-with-system-ca
+          filters:
+            - type: ExtensionRef
+              extensionRef:
+                group: gateway.envoyproxy.io
+                kind: HTTPRouteFilter
+                name: host-rewrite-from-header-2
+backends:
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: Backend
+    metadata:
+      name: backend-plain-http
+      namespace: default
+    spec:
+      type: DynamicResolver
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: Backend
+    metadata:
+      name: backend-with-system-ca
+      namespace: default
+    spec:
+      type: DynamicResolver
+      tls:
+        wellKnownCACertificates: "System"
+httpFilters:
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: HTTPRouteFilter
+    metadata:
+      name: host-rewrite-from-header-1
+      namespace: default
+    spec:
+      urlRewrite:
+        hostname:
+          type: Header
+          header: x-dynamic-host-header-1
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: HTTPRouteFilter
+    metadata:
+      name: host-rewrite-from-header-2
+      namespace: default
+    spec:
+      urlRewrite:
+        hostname:
+          type: Header
+          header: x-dynamic-host-header-2

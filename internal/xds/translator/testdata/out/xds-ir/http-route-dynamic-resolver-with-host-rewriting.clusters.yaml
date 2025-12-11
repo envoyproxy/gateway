@@ -20,7 +20,45 @@
         name: envoy.load_balancing_policies.cluster_provided
         typedConfig:
           '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.cluster_provided.v3.ClusterProvided
+  metadata:
+    filterMetadata:
+      envoy-gateway:
+        resources:
+        - kind: HTTPRoute
+          name: httproute-1
+          namespace: default
   name: httproute/default/httproute-1/rule/0
+  perConnectionBufferLimitBytes: 32768
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  clusterType:
+    name: envoy.clusters.dynamic_forward_proxy
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.clusters.dynamic_forward_proxy.v3.ClusterConfig
+      dnsCacheConfig:
+        dnsLookupFamily: V4_PREFERRED
+        dnsRefreshRate: 30s
+        name: envoy-gateway-dfp-cache
+  commonLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_PREFERRED
+  ignoreHealthOnHostRemoval: true
+  lbPolicy: CLUSTER_PROVIDED
+  loadBalancingPolicy:
+    policies:
+    - typedExtensionConfig:
+        name: envoy.load_balancing_policies.cluster_provided
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.cluster_provided.v3.ClusterProvided
+  metadata:
+    filterMetadata:
+      envoy-gateway:
+        resources:
+        - kind: HTTPRoute
+          name: httproute-1
+          namespace: default
+  name: httproute/default/httproute-1/rule/1
   perConnectionBufferLimitBytes: 32768
   transportSocket:
     name: envoy.transport_sockets.tls
@@ -30,17 +68,18 @@
         combinedValidationContext:
           defaultValidationContext: {}
           validationContextSdsSecretConfig:
-            name: backend-1/default-ca
+            name: backend-with-system-ca/default-ca
             sdsConfig:
               ads: {}
               resourceApiVersion: V3
   typedExtensionProtocolOptions:
     envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
       '@type': type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
-      explicitHttpConfig:
+      autoConfig:
         http2ProtocolOptions:
           initialConnectionWindowSize: 1048576
           initialStreamWindowSize: 65536
+        httpProtocolOptions: {}
       upstreamHttpProtocolOptions:
         autoSanValidation: true
         autoSni: true
