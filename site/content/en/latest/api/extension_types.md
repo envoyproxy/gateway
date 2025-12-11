@@ -3563,6 +3563,8 @@ _Appears in:_
 | `host` | _string_ |  false  |  | Host define the extension service hostname.<br />Deprecated: Use BackendRefs instead. |
 | `port` | _integer_ |  false  | 4317 | Port defines the port the extension service is exposed on.<br />Deprecated: Use BackendRefs instead. |
 | `resources` | _object (keys:string, values:string)_ |  false  |  | Resources is a set of labels that describe the source of a log entry, including envoy node info.<br />It's recommended to follow [semantic conventions](https://opentelemetry.io/docs/reference/specification/resource/semantic_conventions/). |
+| `text` | _string_ |  false  |  | Text defines the body of the OpenTelemetry LogRecord.<br />Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators) may be used in the format.<br />When specified, this takes precedence over the setting-level format for this sink. |
+| `attributes` | _object (keys:string, values:string)_ |  false  |  | Attributes defines key-value pairs to include in the OpenTelemetry LogRecord attributes.<br />Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators)<br />can be used as values. When specified, this takes precedence over the setting-level format for this sink. |
 
 
 #### Operation

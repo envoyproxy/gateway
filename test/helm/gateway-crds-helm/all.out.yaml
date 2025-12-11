@@ -40824,6 +40824,14 @@ spec:
                                     description: OpenTelemetry defines the OpenTelemetry
                                       accesslog sink.
                                     properties:
+                                      attributes:
+                                        additionalProperties:
+                                          type: string
+                                        description: |-
+                                          Attributes defines key-value pairs to include in the OpenTelemetry LogRecord attributes.
+                                          Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators)
+                                          can be used as values. When specified, this takes precedence over the setting-level format for this sink.
+                                        type: object
                                       backendRef:
                                         description: |-
                                           BackendRef references a Kubernetes object that represents the
@@ -42020,6 +42028,12 @@ spec:
                                           Resources is a set of labels that describe the source of a log entry, including envoy node info.
                                           It's recommended to follow [semantic conventions](https://opentelemetry.io/docs/reference/specification/resource/semantic_conventions/).
                                         type: object
+                                      text:
+                                        description: |-
+                                          Text defines the body of the OpenTelemetry LogRecord.
+                                          Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators) may be used in the format.
+                                          When specified, this takes precedence over the setting-level format for this sink.
+                                        type: string
                                     type: object
                                     x-kubernetes-validations:
                                     - message: host or backendRefs needs to be set
