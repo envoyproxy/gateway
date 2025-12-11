@@ -639,9 +639,7 @@ type CustomResponse struct {
 
 	// Body of the Custom Response
 	Body []byte `json:"body,omitempty"`
-
-	MaxSize *uint32 `json:"maxSize,omitempty"`
-
+	
 	// StatusCode will be used for the response's status code.
 	StatusCode *uint32 `json:"statusCode,omitempty"`
 

@@ -23088,11 +23088,6 @@ spec:
                               description: Inline contains the value as an inline
                                 string.
                               type: string
-                            maxSize:
-                              description: |-
-                                MaxSize is the maximum size of the response body in bytes.
-                                If not specified the default is 4096.
-                              type: integer
                             type:
                               allOf:
                               - enum:
@@ -44841,11 +44836,6 @@ spec:
                       inline:
                         description: Inline contains the value as an inline string.
                         type: string
-                      maxSize:
-                        description: |-
-                          MaxSize is the maximum size of the response body in bytes.
-                          If not specified the default is 4096.
-                        type: integer
                       type:
                         allOf:
                         - enum:

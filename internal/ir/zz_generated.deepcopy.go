@@ -825,11 +825,6 @@ func (in *CustomResponse) DeepCopyInto(out *CustomResponse) {
 		*out = make([]byte, len(*in))
 		copy(*out, *in)
 	}
-	if in.MaxSize != nil {
-		in, out := &in.MaxSize, &out.MaxSize
-		*out = new(uint32)
-		**out = **in
-	}
 	if in.StatusCode != nil {
 		in, out := &in.StatusCode, &out.StatusCode
 		*out = new(uint32)

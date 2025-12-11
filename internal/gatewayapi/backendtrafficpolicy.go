@@ -1489,7 +1489,6 @@ func (t *Translator) buildResponseOverride(policy *egv1a1.BackendTrafficPolicy) 
 			if err != nil {
 				return nil, err
 			}
-			response.MaxSize = getCustomResponseBodySize(ro.Response.Body)
 
 			rhm := ro.Response.Header
 			if rhm != nil {
@@ -1522,31 +1521,12 @@ func (t *Translator) buildResponseOverride(policy *egv1a1.BackendTrafficPolicy) 
 	}, nil
 }
 
-func checkResponseBodySize(b []byte, maxSize int) error {
-	// Make this configurable in the future
-	// https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route.proto.html#max_direct_response_body_size_bytes
-	maxDirectResponseSize := maxSize
-	lenB := len(b)
-	if lenB > maxDirectResponseSize {
-		return fmt.Errorf("response.body size %d greater than the max size %d", lenB, maxDirectResponseSize)
-	}
-
-	return nil
-}
-
-const defaultMaxBodySize = 4096
-
 func (t *Translator) getCustomResponseBody(
 	body *egv1a1.CustomResponseBody,
 	policyNs string,
 ) ([]byte, error) {
 	if body == nil {
 		return nil, nil
-	}
-
-	maxBodySize := ptr.Deref(body.MaxSize, defaultMaxBodySize)
-	if maxBodySize <= 0 {
-		maxBodySize = defaultMaxBodySize
 	}
 
 	if body.Type != nil && *body.Type == egv1a1.ResponseValueTypeValueRef {
@@ -1556,23 +1536,14 @@ func (t *Translator) getCustomResponseBody(
 			switch {
 			case dataOk:
 				data := []byte(b)
-				if err := checkResponseBodySize(data, maxBodySize); err != nil {
-					return nil, err
-				}
 				return data, nil
 			case len(cm.Data) > 0: // Fallback to the first key if response.body is not found
 				for _, value := range cm.Data {
 					data := []byte(value)
-					if err := checkResponseBodySize(data, maxBodySize); err != nil {
-						return nil, err
-					}
 					return data, nil
 				}
 			case len(cm.BinaryData) > 0:
 				for _, binData := range cm.BinaryData {
-					if err := checkResponseBodySize(binData, maxBodySize); err != nil {
-						return nil, err
-					}
 					return binData, nil
 				}
 			default:
@@ -1583,9 +1554,6 @@ func (t *Translator) getCustomResponseBody(
 		}
 	} else if body.Inline != nil {
 		inlineValue := []byte(*body.Inline)
-		if err := checkResponseBodySize(inlineValue, maxBodySize); err != nil {
-			return nil, err
-		}
 		return inlineValue, nil
 	}
 
