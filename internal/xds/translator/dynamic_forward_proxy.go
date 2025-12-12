@@ -142,15 +142,7 @@ func routeRequireDFP(route *ir.HTTPRoute) bool {
 		return false
 	}
 
-	routeHasDynamicResolver := false
-	for _, setting := range route.Destination.Settings {
-		if setting != nil && setting.IsDynamicResolver {
-			routeHasDynamicResolver = true
-			break
-		}
-	}
-
-	if !routeHasDynamicResolver {
+	if !route.IsDynamicResolverRoute() {
 		return false
 	}
 
