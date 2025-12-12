@@ -20,3 +20,4 @@ deprecations: |
 
 # Other notable changes not covered by the above sections.
 Other changes: |
+  Removes Accept-Encoding header from requests to backends when compression is enabled to avoid double compression issues.
