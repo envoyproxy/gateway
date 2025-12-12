@@ -151,7 +151,7 @@ func TestLoadConfigDumpWithData(t *testing.T) {
 	// This test focuses on the basic functionality
 	providerRes := &message.ProviderResources{}
 	// Initialize empty watchable map
-	providerRes.GatewayAPIResources = watchable.Map[string, *resource.ControllerResources]{}
+	providerRes.GatewayAPIResources = watchable.Map[string, *resource.ControllerResourcesContext]{}
 
 	// Skip storing to avoid watchable copy issues
 	// providerResources.Store("test", providerRes)
