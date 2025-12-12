@@ -78,6 +78,28 @@ spec:
             type: PathPrefix
             value: /host-rewrite-custom-dns-cache
 ---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: httproute-with-dynamic-resolver-backend-host-rewrite-literal-name
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: same-namespace
+  rules:
+    - backendRefs:
+        - group: gateway.envoyproxy.io
+          kind: Backend
+          name: backend-dynamic-resolver
+      filters:
+        - type: URLRewrite
+          urlRewrite:
+            hostname: "test-service-foo.gateway-conformance-infra.svc.cluster.local"
+      matches:
+        - path:
+            type: PathPrefix
+            value: /host-rewrite-literal-name
+---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: BackendTrafficPolicy
 metadata:

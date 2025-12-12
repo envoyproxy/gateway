@@ -182,6 +182,17 @@ httpRoutes:
       matches:
       - path:
           value: /baz
+    - backendRefs:
+      - group: gateway.envoyproxy.io
+        kind: Backend
+        name: backend-plain-http
+      filters:
+      - type: URLRewrite
+        urlRewrite:
+          hostname: rewrite.com
+      matches:
+      - path:
+          value: /qux
   status:
     parents:
     - conditions:
@@ -347,6 +358,35 @@ xdsIR:
         urlRewrite:
           host:
             header: x-dynamic-host-header-3
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-2
+            namespace: default
+          name: httproute/default/httproute-2/rule/1
+          settings:
+          - isDynamicResolver: true
+            name: httproute/default/httproute-2/rule/1/backend/0
+            protocol: HTTP
+            weight: 1
+        hostname: gateway.envoyproxy.io
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-2
+          namespace: default
+        name: httproute/default/httproute-2/rule/1/match/0/gateway_envoyproxy_io
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /qux
+        traffic:
+          dns:
+            dnsRefreshRate: 1s
+            lookupFamily: IPv4AndIPv6
+        urlRewrite:
+          host:
+            name: rewrite.com
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

@@ -114,3 +114,34 @@
           namespace: default
   name: httproute/default/httproute-2/rule/0
   perConnectionBufferLimitBytes: 32768
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  clusterType:
+    name: envoy.clusters.dynamic_forward_proxy
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.clusters.dynamic_forward_proxy.v3.ClusterConfig
+      dnsCacheConfig:
+        dnsLookupFamily: ALL
+        dnsRefreshRate: 1s
+        name: envoy-gateway-dfp-cache-all-1000ms
+  commonLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: ALL
+  ignoreHealthOnHostRemoval: true
+  lbPolicy: CLUSTER_PROVIDED
+  loadBalancingPolicy:
+    policies:
+    - typedExtensionConfig:
+        name: envoy.load_balancing_policies.cluster_provided
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.cluster_provided.v3.ClusterProvided
+  metadata:
+    filterMetadata:
+      envoy-gateway:
+        resources:
+        - kind: HTTPRoute
+          name: httproute-2
+          namespace: default
+  name: httproute/default/httproute-2/rule/1
+  perConnectionBufferLimitBytes: 32768

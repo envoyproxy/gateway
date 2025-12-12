@@ -71,6 +71,7 @@ func (*dynamicForwardProxy) patchHCM(mgr *hcmv3.HttpConnectionManager, irListene
 			ConfigType: &hcmv3.HttpFilter_TypedConfig{
 				TypedConfig: filterAny,
 			},
+			Disabled: true,
 		})
 	}
 
@@ -135,7 +136,7 @@ func listenerRequireDFP(listener *ir.HTTPListener) bool {
 // routeRequireDFP check if a given route requires the dynamic forward proxy filter.
 // A dynamic forward proxy is required when:
 // * The route has a dynamic resolver backend.
-// * The route needs DFP to rewrite the host header using a header value.
+// * The route needs DFP to rewrite the host header based on a header or literal name.
 func routeRequireDFP(route *ir.HTTPRoute) bool {
 	if route == nil || route.Destination == nil {
 		return false
@@ -153,7 +154,8 @@ func routeRequireDFP(route *ir.HTTPRoute) bool {
 		return false
 	}
 
-	if route.URLRewrite != nil && route.URLRewrite.Host != nil && route.URLRewrite.Host.Header != nil {
+	if route.URLRewrite != nil && route.URLRewrite.Host != nil &&
+		(route.URLRewrite.Host.Header != nil || route.URLRewrite.Host.Name != nil) {
 		return true
 	}
 
@@ -198,14 +200,24 @@ func dynamicForwardProxyCacheConfigs(routes []*ir.HTTPRoute) []*commondfpv3.DnsC
 }
 
 func buildDynamicForwardProxyPerRouteConfig(irRoute *ir.HTTPRoute) *dfpv3.PerRouteConfig {
-	if irRoute.URLRewrite == nil || irRoute.URLRewrite.Host == nil || irRoute.URLRewrite.Host.Header == nil {
+	switch {
+	case irRoute.URLRewrite == nil || irRoute.URLRewrite.Host == nil:
 		return nil
-	}
+	case irRoute.URLRewrite.Host.Header != nil:
+		return &dfpv3.PerRouteConfig{
+			HostRewriteSpecifier: &dfpv3.PerRouteConfig_HostRewriteHeader{
+				HostRewriteHeader: *irRoute.URLRewrite.Host.Header,
+			},
+		}
+	case irRoute.URLRewrite.Host.Name != nil:
+		return &dfpv3.PerRouteConfig{
+			HostRewriteSpecifier: &dfpv3.PerRouteConfig_HostRewriteLiteral{
+				HostRewriteLiteral: *irRoute.URLRewrite.Host.Name,
+			},
+		}
+	default:
+		return nil
 
-	return &dfpv3.PerRouteConfig{
-		HostRewriteSpecifier: &dfpv3.PerRouteConfig_HostRewriteHeader{
-			HostRewriteHeader: *irRoute.URLRewrite.Host.Header,
-		},
 	}
 }
 

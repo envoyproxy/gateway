@@ -79,6 +79,17 @@ httpRoutes:
                 group: gateway.envoyproxy.io
                 kind: HTTPRouteFilter
                 name: host-rewrite-from-header-3
+        - matches:
+            - path:
+                value: "/qux"
+          backendRefs:
+            - group: gateway.envoyproxy.io
+              kind: Backend
+              name: backend-plain-http
+          filters:
+            - type: URLRewrite
+              urlRewrite:
+                hostname: "rewrite.com"
 backends:
   - apiVersion: gateway.envoyproxy.io/v1alpha1
     kind: Backend
