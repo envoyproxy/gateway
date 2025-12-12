@@ -62,18 +62,21 @@ const (
 	ProxyAccessLogFormatTypeText ProxyAccessLogFormatType = "Text"
 	// ProxyAccessLogFormatTypeJSON defines the JSON accesslog format.
 	ProxyAccessLogFormatTypeJSON ProxyAccessLogFormatType = "JSON"
-	// TODO: support format type "mix" in the future.
+	// ProxyAccessLogFormatTypeMix defines the mixed accesslog format with both text and JSON.
+	// For OpenTelemetry sinks, text becomes the OTLP body and JSON becomes attributes.
+	ProxyAccessLogFormatTypeMix ProxyAccessLogFormatType = "Mix"
 )
 
 // ProxyAccessLogFormat defines the format of accesslog.
 // By default accesslogs are written to standard output.
 // +union
 //
-// +kubebuilder:validation:XValidation:rule="self.type == 'Text' ? has(self.text) : !has(self.text)",message="If AccessLogFormat type is Text, text field needs to be set."
-// +kubebuilder:validation:XValidation:rule="self.type == 'JSON' ? has(self.json) : !has(self.json)",message="If AccessLogFormat type is JSON, json field needs to be set."
+// +kubebuilder:validation:XValidation:rule="self.type == 'Text' ? has(self.text) : (self.type == 'Mix' || !has(self.text))",message="If AccessLogFormat type is Text, text field needs to be set."
+// +kubebuilder:validation:XValidation:rule="self.type == 'JSON' ? has(self.json) : (self.type == 'Mix' || !has(self.json))",message="If AccessLogFormat type is JSON, json field needs to be set."
+// +kubebuilder:validation:XValidation:rule="self.type == 'Mix' ? (has(self.text) || has(self.json)) : true",message="If AccessLogFormat type is Mix, at least one of text or json must be set."
 type ProxyAccessLogFormat struct {
 	// Type defines the type of accesslog format.
-	// +kubebuilder:validation:Enum=Text;JSON
+	// +kubebuilder:validation:Enum=Text;JSON;Mix
 	// +unionDiscriminator
 	Type ProxyAccessLogFormatType `json:"type,omitempty"`
 	// Text defines the text accesslog format, following Envoy accesslog formatting,
@@ -206,16 +209,6 @@ type OpenTelemetryEnvoyProxyAccessLog struct {
 	// It's recommended to follow [semantic conventions](https://opentelemetry.io/docs/reference/specification/resource/semantic_conventions/).
 	// +optional
 	Resources map[string]string `json:"resources,omitempty"`
-	// Text defines the body of the OpenTelemetry LogRecord.
-	// Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators) may be used in the format.
-	// When specified, this takes precedence over the setting-level format for this sink.
-	// +optional
-	Text *string `json:"text,omitempty"`
-	// Attributes defines key-value pairs to include in the OpenTelemetry LogRecord attributes.
-	// Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators)
-	// can be used as values. When specified, this takes precedence over the setting-level format for this sink.
-	// +optional
-	Attributes map[string]string `json:"attributes,omitempty"`
 
 	// TODO: support more OpenTelemetry accesslog options(e.g. TLS, auth etc.) in the future.
 }

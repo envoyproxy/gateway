@@ -10975,15 +10975,22 @@ spec:
                                   enum:
                                   - Text
                                   - JSON
+                                  - Mix
                                   type: string
                               type: object
                               x-kubernetes-validations:
                               - message: If AccessLogFormat type is Text, text field
                                   needs to be set.
-                                rule: 'self.type == ''Text'' ? has(self.text) : !has(self.text)'
+                                rule: 'self.type == ''Text'' ? has(self.text) : (self.type
+                                  == ''Mix'' || !has(self.text))'
                               - message: If AccessLogFormat type is JSON, json field
                                   needs to be set.
-                                rule: 'self.type == ''JSON'' ? has(self.json) : !has(self.json)'
+                                rule: 'self.type == ''JSON'' ? has(self.json) : (self.type
+                                  == ''Mix'' || !has(self.json))'
+                              - message: If AccessLogFormat type is Mix, at least
+                                  one of text or json must be set.
+                                rule: 'self.type == ''Mix'' ? (has(self.text) || has(self.json))
+                                  : true'
                             matches:
                               description: |-
                                 Matches defines the match conditions for accesslog in CEL expression.
@@ -12255,14 +12262,6 @@ spec:
                                     description: OpenTelemetry defines the OpenTelemetry
                                       accesslog sink.
                                     properties:
-                                      attributes:
-                                        additionalProperties:
-                                          type: string
-                                        description: |-
-                                          Attributes defines key-value pairs to include in the OpenTelemetry LogRecord attributes.
-                                          Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators)
-                                          can be used as values. When specified, this takes precedence over the setting-level format for this sink.
-                                        type: object
                                       backendRef:
                                         description: |-
                                           BackendRef references a Kubernetes object that represents the
@@ -13459,12 +13458,6 @@ spec:
                                           Resources is a set of labels that describe the source of a log entry, including envoy node info.
                                           It's recommended to follow [semantic conventions](https://opentelemetry.io/docs/reference/specification/resource/semantic_conventions/).
                                         type: object
-                                      text:
-                                        description: |-
-                                          Text defines the body of the OpenTelemetry LogRecord.
-                                          Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators) may be used in the format.
-                                          When specified, this takes precedence over the setting-level format for this sink.
-                                        type: string
                                     type: object
                                     x-kubernetes-validations:
                                     - message: host or backendRefs needs to be set

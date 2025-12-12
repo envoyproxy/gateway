@@ -710,17 +710,14 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 					al.Authority = host
 				}
 
-				// For OpenTelemetry, text (body) and attributes can be used together.
-				// Prefer sink-level fields, fall back to setting-level format.
-				if sink.OpenTelemetry.Text != nil {
-					al.Text = sink.OpenTelemetry.Text
-				} else if format.Type == egv1a1.ProxyAccessLogFormatTypeText {
+				switch format.Type {
+				case egv1a1.ProxyAccessLogFormatTypeJSON:
+					al.Attributes = format.JSON
+				case egv1a1.ProxyAccessLogFormatTypeText:
 					al.Text = format.Text
-				}
-
-				if len(sink.OpenTelemetry.Attributes) > 0 {
-					al.Attributes = sink.OpenTelemetry.Attributes
-				} else if format.Type == egv1a1.ProxyAccessLogFormatTypeJSON {
+				case egv1a1.ProxyAccessLogFormatTypeMix:
+					// Mix format allows both text (becomes OTLP body) and JSON (becomes OTLP attributes)
+					al.Text = format.Text
 					al.Attributes = format.JSON
 				}
 

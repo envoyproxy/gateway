@@ -56,20 +56,17 @@ infraIR:
               settings:
               - format:
                   json:
-                    method: '%REQ(:METHOD)%'
-                    start_time: '%START_TIME%'
-                  type: JSON
+                    response_code_details: '%RESPONSE_CODE_DETAILS%'
+                    upstream_cluster: '%UPSTREAM_CLUSTER%'
+                    upstream_host: '%UPSTREAM_HOST%'
+                  text: '%REQ(:METHOD)% %REQ(:PATH)% %PROTOCOL% %RESPONSE_CODE%'
+                  type: Mix
                 sinks:
                 - openTelemetry:
-                    attributes:
-                      response_code_details: '%RESPONSE_CODE_DETAILS%'
-                      upstream_cluster: '%UPSTREAM_CLUSTER%'
-                      upstream_host: '%UPSTREAM_HOST%'
                     host: otel-collector.monitoring.svc.cluster.local
                     port: 4317
                     resources:
                       k8s.cluster.name: cluster-1
-                    text: '%REQ(:METHOD)% %REQ(:PATH)% %PROTOCOL% %RESPONSE_CODE%'
                   type: OpenTelemetry
         status: {}
       listeners:
