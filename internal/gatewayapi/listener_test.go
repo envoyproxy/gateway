@@ -919,3 +919,111 @@ func TestProcessTracingServiceName(t *testing.T) {
 		})
 	}
 }
+
+func TestProcessAccessLogOTelFormatType(t *testing.T) {
+	textFormat := "%REQ(:METHOD)% %REQ(:PATH)%"
+	jsonFormat := map[string]string{
+		"method": "%REQ(:METHOD)%",
+		"path":   "%REQ(:PATH)%",
+	}
+
+	cases := []struct {
+		name               string
+		formatType         egv1a1.ProxyAccessLogFormatType
+		text               *string
+		json               map[string]string
+		expectedText       *string
+		expectedAttributes map[string]string
+	}{
+		{
+			name:               "Text format sets body only",
+			formatType:         egv1a1.ProxyAccessLogFormatTypeText,
+			text:               &textFormat,
+			json:               nil,
+			expectedText:       &textFormat,
+			expectedAttributes: nil,
+		},
+		{
+			name:               "JSON format sets attributes only",
+			formatType:         egv1a1.ProxyAccessLogFormatTypeJSON,
+			text:               nil,
+			json:               jsonFormat,
+			expectedText:       nil,
+			expectedAttributes: jsonFormat,
+		},
+		{
+			name:               "Mix format with both text and json",
+			formatType:         egv1a1.ProxyAccessLogFormatTypeMix,
+			text:               &textFormat,
+			json:               jsonFormat,
+			expectedText:       &textFormat,
+			expectedAttributes: jsonFormat,
+		},
+		{
+			name:               "Mix format with text only",
+			formatType:         egv1a1.ProxyAccessLogFormatTypeMix,
+			text:               &textFormat,
+			json:               nil,
+			expectedText:       &textFormat,
+			expectedAttributes: nil,
+		},
+		{
+			name:               "Mix format with json only",
+			formatType:         egv1a1.ProxyAccessLogFormatTypeMix,
+			text:               nil,
+			json:               jsonFormat,
+			expectedText:       nil,
+			expectedAttributes: jsonFormat,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			envoyProxy := &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-proxy",
+					Namespace: "test-namespace",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						AccessLog: &egv1a1.ProxyAccessLog{
+							Settings: []egv1a1.ProxyAccessLogSetting{
+								{
+									Format: &egv1a1.ProxyAccessLogFormat{
+										Type: tc.formatType,
+										Text: tc.text,
+										JSON: tc.json,
+									},
+									Sinks: []egv1a1.ProxyAccessLogSink{
+										{
+											Type: egv1a1.ProxyAccessLogSinkTypeOpenTelemetry,
+											OpenTelemetry: &egv1a1.OpenTelemetryEnvoyProxyAccessLog{
+												Host: ptr.To("otel-collector"),
+												Port: 4317,
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			}
+
+			translator := &Translator{}
+			translatorContext := &TranslatorContext{}
+			resources := &resource.Resources{}
+			translator.TranslatorContext = translatorContext
+
+			result, err := translator.processAccessLog(envoyProxy, resources)
+			require.NoError(t, err)
+			require.NotNil(t, result)
+			require.Len(t, result.OpenTelemetry, 1)
+
+			otelLog := result.OpenTelemetry[0]
+
+			require.Equal(t, tc.expectedText, otelLog.Text)
+			require.Equal(t, tc.expectedAttributes, otelLog.Attributes)
+		})
+	}
+}

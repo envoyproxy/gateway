@@ -9,10 +9,12 @@ envoyProxyForGatewayClass:
       accessLog:
         settings:
         - format:
-            type: JSON
+            type: Mix
+            text: "%REQ(:METHOD)% %REQ(:PATH)% %PROTOCOL% %RESPONSE_CODE%"
             json:
-              start_time: "%START_TIME%"
-              method: "%REQ(:METHOD)%"
+              response_code_details: "%RESPONSE_CODE_DETAILS%"
+              upstream_host: "%UPSTREAM_HOST%"
+              upstream_cluster: "%UPSTREAM_CLUSTER%"
           sinks:
           - type: OpenTelemetry
             openTelemetry:
@@ -20,11 +22,6 @@ envoyProxyForGatewayClass:
               port: 4317
               resources:
                 k8s.cluster.name: "cluster-1"
-              text: "%REQ(:METHOD)% %REQ(:PATH)% %PROTOCOL% %RESPONSE_CODE%"
-              attributes:
-                response_code_details: "%RESPONSE_CODE_DETAILS%"
-                upstream_host: "%UPSTREAM_HOST%"
-                upstream_cluster: "%UPSTREAM_CLUSTER%"
     provider:
       type: Kubernetes
 gateways:
