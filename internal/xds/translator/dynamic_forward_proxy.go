@@ -8,12 +8,12 @@ package translator
 import (
 	"errors"
 	"fmt"
+	"sort"
 
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	commondfpv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/common/dynamic_forward_proxy/v3"
 	dfpv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/dynamic_forward_proxy/v3"
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
-	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -43,32 +43,44 @@ func (*dynamicForwardProxy) patchHCM(mgr *hcmv3.HttpConnectionManager, irListene
 		return nil
 	}
 
-	if hcmContainsFilter(mgr, string(egv1a1.EnvoyFilterDynamicForwardProxy)) {
-		return nil
-	}
-
-	cacheCfg, err := dynamicForwardProxyCacheConfig(irListener.Routes)
+	// Create a DFP filter for each unique DNS cache config needed by the listener's routes.
+	// This is because DFP filter and Cluster must have consistent cache config.
+	// Reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/clusters/dynamic_forward_proxy/v3/cluster.proto
+	cacheCfgs, err := dynamicForwardProxyCacheConfigs(irListener.Routes)
 	if err != nil {
 		return err
 	}
 
-	filterCfg := &dfpv3.FilterConfig{
-		ImplementationSpecifier: &dfpv3.FilterConfig_DnsCacheConfig{
-			DnsCacheConfig: cacheCfg,
-		},
+	names := make([]string, 0, len(cacheCfgs))
+	for name := range cacheCfgs {
+		names = append(names, name)
 	}
+	sort.Strings(names)
 
-	filterAny, err := anypb.New(filterCfg)
-	if err != nil {
-		return err
+	for _, cacheName := range names {
+		filterName := dynamicForwardProxyFilterName(cacheName)
+		if hcmContainsFilter(mgr, filterName) {
+			continue
+		}
+
+		filterCfg := &dfpv3.FilterConfig{
+			ImplementationSpecifier: &dfpv3.FilterConfig_DnsCacheConfig{
+				DnsCacheConfig: cacheCfgs[cacheName],
+			},
+		}
+
+		filterAny, err := anypb.New(filterCfg)
+		if err != nil {
+			return err
+		}
+
+		mgr.HttpFilters = append(mgr.HttpFilters, &hcmv3.HttpFilter{
+			Name: filterName,
+			ConfigType: &hcmv3.HttpFilter_TypedConfig{
+				TypedConfig: filterAny,
+			},
+		})
 	}
-
-	mgr.HttpFilters = append(mgr.HttpFilters, &hcmv3.HttpFilter{
-		Name: string(egv1a1.EnvoyFilterDynamicForwardProxy),
-		ConfigType: &hcmv3.HttpFilter_TypedConfig{
-			TypedConfig: filterAny,
-		},
-	})
 
 	return nil
 }
@@ -101,7 +113,8 @@ func (*dynamicForwardProxy) patchRoute(route *routev3.Route, irRoute *ir.HTTPRou
 	if route.TypedPerFilterConfig == nil {
 		route.TypedPerFilterConfig = make(map[string]*anypb.Any)
 	}
-	route.TypedPerFilterConfig[string(egv1a1.EnvoyFilterDynamicForwardProxy)] = perRouteAny
+	filterName := dynamicForwardProxyFilterName(dynamicForwardProxyCacheName(determineIPFamily(irRoute.Destination.Settings), routeDNS(irRoute)))
+	route.TypedPerFilterConfig[filterName] = perRouteAny
 
 	// Clear out any existing host rewrite specifier to avoid conflicts.
 	routeAction := route.GetRoute()
@@ -155,34 +168,27 @@ func routeRequireDFP(route *ir.HTTPRoute) bool {
 	return false
 }
 
-func dynamicForwardProxyCacheConfig(routes []*ir.HTTPRoute) (*commondfpv3.DnsCacheConfig, error) {
-	var cacheCfg *commondfpv3.DnsCacheConfig
+// dynamicForwardProxyCacheConfigs builds a map of unique DFP DNS cache configs needed by the given routes.
+func dynamicForwardProxyCacheConfigs(routes []*ir.HTTPRoute) (map[string]*commondfpv3.DnsCacheConfig, error) {
+	cacheCfgs := make(map[string]*commondfpv3.DnsCacheConfig)
 
 	for _, route := range routes {
 		if !routeRequireDFP(route) {
 			continue
 		}
 
-		var dns *ir.DNS
-		if route.Traffic != nil {
-			dns = route.Traffic.DNS
-		}
-
+		dns := routeDNS(route)
 		ipFamily := determineIPFamily(route.Destination.Settings)
-		routeCfg := buildDynamicForwardProxyDNSCacheConfig(dns, computeDNSLookupFamily(ipFamily, dns))
-		if cacheCfg == nil {
-			cacheCfg = routeCfg
+		cacheName := dynamicForwardProxyCacheName(ipFamily, dns)
+		if _, existing := cacheCfgs[cacheName]; existing {
 			continue
 		}
 
-		// TODO: better check this at the Gateway API validation layer.
-		// Ensure all routes with dynamic resolver backends under this listener have consistent DNS cache settings.
-		if !proto.Equal(cacheCfg, routeCfg) {
-			return nil, fmt.Errorf("dynamic forward proxy requires consistent DNS cache settings per listener: %v vs %v", cacheCfg, routeCfg)
-		}
+		routeCfg := buildDynamicForwardProxyDNSCacheConfig(cacheName, dns, computeDNSLookupFamily(ipFamily, dns))
+		cacheCfgs[cacheName] = routeCfg
 	}
 
-	return cacheCfg, nil
+	return cacheCfgs, nil
 }
 
 func buildDynamicForwardProxyPerRouteConfig(irRoute *ir.HTTPRoute) *dfpv3.PerRouteConfig {
@@ -195,4 +201,15 @@ func buildDynamicForwardProxyPerRouteConfig(irRoute *ir.HTTPRoute) *dfpv3.PerRou
 			HostRewriteHeader: *irRoute.URLRewrite.Host.Header,
 		},
 	}
+}
+
+func routeDNS(route *ir.HTTPRoute) *ir.DNS {
+	if route == nil || route.Traffic == nil {
+		return nil
+	}
+	return route.Traffic.DNS
+}
+
+func dynamicForwardProxyFilterName(cacheName string) string {
+	return fmt.Sprintf("%s.%s", string(egv1a1.EnvoyFilterDynamicForwardProxy), cacheName)
 }

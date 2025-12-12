@@ -22,13 +22,13 @@
             - kind: HTTPRoute
               name: httproute-1
               namespace: default
-      name: httproute/default/httproute-1/rule/0/match/-1/gateway_envoyproxy_io
+      name: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
       route:
         cluster: httproute/default/httproute-1/rule/0
         upgradeConfigs:
         - upgradeType: websocket
       typedPerFilterConfig:
-        envoy.filters.http.dynamic_forward_proxy:
+        envoy.filters.http.dynamic_forward_proxy.envoy-gateway-dfp-cache-v4_preferred-30000ms:
           '@type': type.googleapis.com/envoy.extensions.filters.http.dynamic_forward_proxy.v3.PerRouteConfig
           hostRewriteHeader: x-dynamic-host-header-1
     - match:
@@ -40,12 +40,30 @@
             - kind: HTTPRoute
               name: httproute-1
               namespace: default
-      name: httproute/default/httproute-1/rule/1/match/-1/gateway_envoyproxy_io
+      name: httproute/default/httproute-1/rule/1/match/0/gateway_envoyproxy_io
       route:
         cluster: httproute/default/httproute-1/rule/1
         upgradeConfigs:
         - upgradeType: websocket
       typedPerFilterConfig:
-        envoy.filters.http.dynamic_forward_proxy:
+        envoy.filters.http.dynamic_forward_proxy.envoy-gateway-dfp-cache-v4_preferred-30000ms:
           '@type': type.googleapis.com/envoy.extensions.filters.http.dynamic_forward_proxy.v3.PerRouteConfig
           hostRewriteHeader: x-dynamic-host-header-2
+    - match:
+        pathSeparatedPrefix: /baz
+      metadata:
+        filterMetadata:
+          envoy-gateway:
+            resources:
+            - kind: HTTPRoute
+              name: httproute-2
+              namespace: default
+      name: httproute/default/httproute-2/rule/0/match/0/gateway_envoyproxy_io
+      route:
+        cluster: httproute/default/httproute-2/rule/0
+        upgradeConfigs:
+        - upgradeType: websocket
+      typedPerFilterConfig:
+        envoy.filters.http.dynamic_forward_proxy.envoy-gateway-dfp-cache-all-1000ms:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.dynamic_forward_proxy.v3.PerRouteConfig
+          hostRewriteHeader: x-dynamic-host-header-3

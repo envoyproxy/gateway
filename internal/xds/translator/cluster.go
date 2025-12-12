@@ -9,6 +9,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"sort"
+	"strings"
 	"time"
 
 	clusterv3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
@@ -163,9 +164,19 @@ func computeDNSLookupFamily(ipFamily *egv1a1.IPFamily, dns *ir.DNS) clusterv3.Cl
 	return dnsLookupFamily
 }
 
-func buildDynamicForwardProxyDNSCacheConfig(dns *ir.DNS, dnsLookupFamily clusterv3.Cluster_DnsLookupFamily) *commondfpv3.DnsCacheConfig {
+func dynamicForwardProxyCacheName(ipFamily *egv1a1.IPFamily, dns *ir.DNS) string {
+	refresh := 30 * time.Second
+	if dns != nil && dns.DNSRefreshRate != nil && dns.DNSRefreshRate.Duration > 0 {
+		refresh = dns.DNSRefreshRate.Duration
+	}
+
+	dnsLookupFamily := computeDNSLookupFamily(ipFamily, dns)
+	return fmt.Sprintf("%s-%s-%dms", dynamicForwardProxyDNSCacheName, strings.ToLower(dnsLookupFamily.String()), refresh/time.Millisecond)
+}
+
+func buildDynamicForwardProxyDNSCacheConfig(name string, dns *ir.DNS, dnsLookupFamily clusterv3.Cluster_DnsLookupFamily) *commondfpv3.DnsCacheConfig {
 	dnsCacheConfig := &commondfpv3.DnsCacheConfig{
-		Name:            dynamicForwardProxyDNSCacheName,
+		Name:            name,
 		DnsLookupFamily: dnsLookupFamily,
 		DnsRefreshRate:  durationpb.New(30 * time.Second),
 	}
@@ -439,7 +450,8 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 
 	switch args.endpointType {
 	case EndpointTypeDynamicResolver:
-		dnsCacheConfig := buildDynamicForwardProxyDNSCacheConfig(args.dns, dnsLookupFamily)
+		cacheName := dynamicForwardProxyCacheName(args.ipFamily, args.dns)
+		dnsCacheConfig := buildDynamicForwardProxyDNSCacheConfig(cacheName, args.dns, dnsLookupFamily)
 
 		dfp := &dfpv3.ClusterConfig{
 			ClusterImplementationSpecifier: &dfpv3.ClusterConfig_DnsCacheConfig{

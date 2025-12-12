@@ -53,6 +53,32 @@ httpRoutes:
                 group: gateway.envoyproxy.io
                 kind: HTTPRouteFilter
                 name: host-rewrite-from-header-2
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: default
+      name: httproute-2   # test DynamicResolver backend with host rewriting filter with different DNS cache config
+    spec:
+      hostnames:
+        - gateway.envoyproxy.io
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+          sectionName: http
+      rules:
+        - matches:
+            - path:
+                value: "/baz"
+          backendRefs:
+            - group: gateway.envoyproxy.io
+              kind: Backend
+              name: backend-plain-http
+          filters:
+            - type: ExtensionRef
+              extensionRef:
+                group: gateway.envoyproxy.io
+                kind: HTTPRouteFilter
+                name: host-rewrite-from-header-3
 backends:
   - apiVersion: gateway.envoyproxy.io/v1alpha1
     kind: Backend
@@ -91,3 +117,27 @@ httpFilters:
         hostname:
           type: Header
           header: x-dynamic-host-header-2
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: HTTPRouteFilter
+    metadata:
+      name: host-rewrite-from-header-3
+      namespace: default
+    spec:
+      urlRewrite:
+        hostname:
+          type: Header
+          header: x-dynamic-host-header-3
+backendTrafficPolicies:
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: BackendTrafficPolicy
+    metadata:
+      namespace: default
+      name: dns-policy-for-httproute-2
+    spec:
+      targetRef:
+        group: gateway.networking.k8s.io
+        kind: HTTPRoute
+        name: httproute-2
+      dns:
+        dnsRefreshRate: "1s"
+        lookupFamily: IPv4AndIPv6
