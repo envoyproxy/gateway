@@ -53,6 +53,11 @@ func (t *Translator) translateExtServiceBackendRefs(
 			return nil, err
 		}
 
+		// don't process backends with weight 0
+		if backendRef.Weight != nil && *backendRef.Weight == 0 {
+			continue
+		}
+
 		settingName := irDestinationSettingName(destName, i)
 		var extServiceDest *ir.DestinationSetting
 		if extServiceDest, err = t.processExtServiceDestination(
@@ -105,12 +110,12 @@ func (t *Translator) processExtServiceDestination(
 
 	switch KindDerefOr(backendRef.Kind, resource.KindService) {
 	case resource.KindService:
-		ds, err = t.processServiceDestinationSetting(settingName, backendRef.BackendObjectReference, backendNamespace, protocol, resources, envoyProxy)
+		ds, err = t.processServiceDestinationSetting(settingName, backendRef.BackendObjectReference, backendNamespace, protocol, envoyProxy)
 		if err != nil {
 			return nil, err
 		}
 	case resource.KindServiceImport:
-		ds, err = t.processServiceImportDestinationSetting(settingName, backendRef.BackendObjectReference, backendNamespace, protocol, resources, envoyProxy)
+		ds, err = t.processServiceImportDestinationSetting(settingName, backendRef.BackendObjectReference, backendNamespace, protocol, envoyProxy)
 		if err != nil {
 			return nil, err
 		}
@@ -118,7 +123,7 @@ func (t *Translator) processExtServiceDestination(
 		if !t.BackendEnabled {
 			return nil, fmt.Errorf("resource %s of type Backend cannot be used since Backend is disabled in Envoy Gateway configuration", string(backendRef.Name))
 		}
-		ds = t.processBackendDestinationSetting(settingName, backendRef.BackendObjectReference, backendNamespace, protocol, resources)
+		ds = t.processBackendDestinationSetting(settingName, backendRef.BackendObjectReference, backendNamespace, protocol)
 		// Dynamic resolver destinations are not supported for none-route destinations
 		if ds.IsDynamicResolver {
 			return nil, errors.New("dynamic resolver destinations are not supported")
@@ -159,7 +164,13 @@ func (t *Translator) processExtServiceDestination(
 	ds.TLS = backendTLS
 
 	// TODO: support weighted non-xRoute backends
-	ds.Weight = ptr.To(uint32(1))
+	if backendRef.Weight != nil {
+		ds.Weight = backendRef.Weight
+	} else {
+		// set default weight to 1
+		ds.Weight = ptr.To(uint32(1))
+	}
+
 	if backendRef.Fallback != nil {
 		// set only the secondary priority, the backend defaults to a primary priority if unset.
 		if ptr.Deref(backendRef.Fallback, false) {

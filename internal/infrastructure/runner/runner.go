@@ -20,7 +20,8 @@ import (
 
 type Config struct {
 	config.Server
-	InfraIR *message.InfraIR
+	InfraIR      *message.InfraIR
+	RunnerErrors *message.RunnerErrors
 }
 
 type Runner struct {
@@ -50,8 +51,8 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 		r.Logger.Info("provider is not specified, no infrastructure is available")
 		return nil
 	}
-
-	r.mgr, err = infrastructure.NewManager(ctx, &r.Server, r.Logger)
+	errNotifier := message.RunnerErrorNotifier{RunnerName: r.Name(), RunnerErrors: r.RunnerErrors}
+	r.mgr, err = infrastructure.NewManager(ctx, &r.Server, r.Logger, errNotifier)
 	if err != nil {
 		r.Logger.Error(err, "failed to create new manager")
 		return err

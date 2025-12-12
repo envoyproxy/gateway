@@ -407,6 +407,7 @@ _Appears in:_
 | `name` | _[ObjectName](#objectname)_ |  true  |  | Name is the name of the referent. |
 | `namespace` | _[Namespace](#namespace)_ |  false  |  | Namespace is the namespace of the backend. When unspecified, the local<br />namespace is inferred.<br />Note that when a namespace different than the local namespace is specified,<br />a ReferenceGrant object is required in the referent namespace to allow that<br />namespace's owner to accept the reference. See the ReferenceGrant<br />documentation for details.<br />Support: Core |
 | `port` | _[PortNumber](#portnumber)_ |  false  |  | Port specifies the destination port number to use for this resource.<br />Port is required when the referent is a Kubernetes Service. In this<br />case, the port number is the service port number, not the target port.<br />For other resources, destination port might be derived from the referent<br />resource or this field. |
+| `weight` | _integer_ |  false  | 1 | Weight specifies the proportion of requests forwarded to the referenced<br />backend. This is computed as weight/(sum of all weights in this<br />BackendRefs list). For non-zero values, there may be some epsilon from<br />the exact proportion defined here depending on the precision an<br />implementation supports. Weight is not a percentage and the sum of<br />weights does not need to equal 100.<br />If only one backend is specified and it has a weight greater than 0, 100%<br />of the traffic is forwarded to that backend. If weight is set to 0, no<br />traffic should be forwarded for this entry. If unspecified, weight<br />defaults to 1.<br />Support for this field varies based on the context where used. |
 | `fallback` | _boolean_ |  false  |  | Fallback indicates whether the backend is designated as a fallback.<br />Multiple fallback backends can be configured.<br />It is highly recommended to configure active or passive health checks to ensure that failover can be detected<br />when the active backends become unhealthy and to automatically readjust once the primary backends are healthy again.<br />The overprovisioning factor is set to 1.4, meaning the fallback backends will only start receiving traffic when<br />the health of the active backends falls below 72%. |
 
 
@@ -951,10 +952,11 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `type` | _[ConsistentHashType](#consistenthashtype)_ |  true  |  | ConsistentHashType defines the type of input to hash on. Valid Type values are<br />"SourceIP",<br />"Header",<br />"Headers",<br />"Cookie". |
+| `type` | _[ConsistentHashType](#consistenthashtype)_ |  true  |  | ConsistentHashType defines the type of input to hash on. Valid Type values are<br />"SourceIP",<br />"Header",<br />"Headers",<br />"Cookie".<br />"QueryParams". |
 | `header` | _[Header](#header)_ |  false  |  | Header configures the header hash policy when the consistent hash type is set to Header.<br />Deprecated: use Headers instead |
 | `headers` | _[Header](#header) array_ |  false  |  | Headers configures the header hash policy for each header, when the consistent hash type is set to Headers. |
 | `cookie` | _[Cookie](#cookie)_ |  false  |  | Cookie configures the cookie hash policy when the consistent hash type is set to Cookie. |
+| `queryParams` | _[QueryParam](#queryparam) array_ |  false  |  | QueryParams configures the query parameter hash policy when the consistent hash type is set to QueryParams. |
 | `tableSize` | _integer_ |  false  | 65537 | The table size for consistent hashing, must be prime number limited to 5000011. |
 
 
@@ -973,6 +975,7 @@ _Appears in:_
 | `Header` | HeaderConsistentHashType hashes based on a request header.<br />Deprecated: use HeadersConsistentHashType instead<br /> | 
 | `Headers` | HeadersConsistentHashType hashes based on multiple request headers.<br /> | 
 | `Cookie` | CookieConsistentHashType hashes based on a cookie.<br /> | 
+| `QueryParams` | QueryParamsConsistentHashType hashes based on a multiple query parameter.<br /> | 
 
 
 #### Cookie
@@ -2403,6 +2406,7 @@ _Appears in:_
 | `set` | _[HTTPHeader](#httpheader) array_ |  false  |  | Set overwrites the request with the given header (name, value)<br />before the action.<br />Input:<br />  GET /foo HTTP/1.1<br />  my-header: foo<br />Config:<br />  set:<br />  - name: "my-header"<br />    value: "bar"<br />Output:<br />  GET /foo HTTP/1.1<br />  my-header: bar |
 | `add` | _[HTTPHeader](#httpheader) array_ |  false  |  | Add adds the given header(s) (name, value) to the request<br />before the action. It appends to any existing values associated<br />with the header name.<br />Input:<br />  GET /foo HTTP/1.1<br />  my-header: foo<br />Config:<br />  add:<br />  - name: "my-header"<br />    value: "bar,baz"<br />Output:<br />  GET /foo HTTP/1.1<br />  my-header: foo,bar,baz |
 | `remove` | _string array_ |  false  |  | Remove the given header(s) from the HTTP request before the action. The<br />value of Remove is a list of HTTP header names. Note that the header<br />names are case-insensitive (see<br />https://datatracker.ietf.org/doc/html/rfc2616#section-4.2).<br />Input:<br />  GET /foo HTTP/1.1<br />  my-header1: foo<br />  my-header2: bar<br />  my-header3: baz<br />Config:<br />  remove: ["my-header1", "my-header3"]<br />Output:<br />  GET /foo HTTP/1.1<br />  my-header2: bar |
+| `removeOnMatch` | _[StringMatch](#stringmatch) array_ |  false  |  | RemoveOnMatch removes headers whose names match the specified string matchers.<br />Matching is performed on the header name (case-insensitive). |
 
 
 #### HTTPHostnameModifier
@@ -4028,7 +4032,7 @@ _Appears in:_
 | `enableVirtualHostStats` | _boolean_ |  false  |  | EnableVirtualHostStats enables envoy stat metrics for virtual hosts. |
 | `enablePerEndpointStats` | _boolean_ |  false  |  | EnablePerEndpointStats enables per endpoint envoy stats metrics.<br />Please use with caution. |
 | `enableRequestResponseSizesStats` | _boolean_ |  false  |  | EnableRequestResponseSizesStats enables publishing of histograms tracking header and body sizes of requests and responses. |
-| `clusterStatName` | _string_ |  false  |  | ClusterStatName defines the value of cluster alt_stat_name, determining how cluster stats are named.<br />For more details, see envoy docs: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto.html<br />The supported operators for this pattern are:<br />%ROUTE_NAME%: name of Gateway API xRoute resource<br />%ROUTE_NAMESPACE%: namespace of Gateway API xRoute resource<br />%ROUTE_KIND%: kind of Gateway API xRoute resource<br />%ROUTE_RULE_NAME%: name of the Gateway API xRoute section<br />%ROUTE_RULE_NUMBER%: name of the Gateway API xRoute section<br />%BACKEND_REFS%: names of all backends referenced in <NAMESPACE>/<NAME>\|<NAMESPACE>/<NAME>\|... format<br />Only xDS Clusters created for HTTPRoute and GRPCRoute are currently supported.<br />Default: %ROUTE_KIND%/%ROUTE_NAMESPACE%/%ROUTE_NAME%/rule/%ROUTE_RULE_NUMBER%<br />Example: httproute/my-ns/my-route/rule/0 |
+| `clusterStatName` | _string_ |  false  |  | ClusterStatName defines the value of cluster alt_stat_name, determining how cluster stats are named.<br />For more details, see envoy docs: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto.html<br />The supported operators for this pattern are:<br />`%ROUTE_NAME%`: name of Gateway API xRoute resource<br />`%ROUTE_NAMESPACE%`: namespace of Gateway API xRoute resource<br />`%ROUTE_KIND%`: kind of Gateway API xRoute resource<br />`%ROUTE_RULE_NAME%`: name of the Gateway API xRoute section<br />`%ROUTE_RULE_NUMBER%`: name of the Gateway API xRoute section<br />`%BACKEND_REFS%`: names of all backends referenced in `<NAMESPACE>/<NAME>\|<NAMESPACE>/<NAME>\|...` format<br />Only xDS Clusters created for HTTPRoute and GRPCRoute are currently supported.<br />Default: `%ROUTE_KIND%/%ROUTE_NAMESPACE%/%ROUTE_NAME%/rule/%ROUTE_RULE_NUMBER%`<br />Example: `httproute/my-ns/my-route/rule/0` |
 
 
 #### ProxyOpenTelemetrySink
@@ -4047,6 +4051,8 @@ _Appears in:_
 | `backendSettings` | _[ClusterSettings](#clustersettings)_ |  false  |  | BackendSettings holds configuration for managing the connection<br />to the backend. |
 | `host` | _string_ |  false  |  | Host define the service hostname.<br />Deprecated: Use BackendRefs instead. |
 | `port` | _integer_ |  false  | 4317 | Port defines the port the service is exposed on.<br />Deprecated: Use BackendRefs instead. |
+| `reportCountersAsDeltas` | _boolean_ |  false  |  | ReportCountersAsDeltas configures the OpenTelemetry sink to report<br />counters as delta temporality instead of cumulative. |
+| `reportHistogramsAsDeltas` | _boolean_ |  false  |  | ReportHistogramsAsDeltas configures the OpenTelemetry sink to report<br />histograms as delta temporality instead of cumulative.<br />Required for backends like Elastic that drop cumulative histograms. |
 
 
 #### ProxyPrometheusProvider
@@ -4143,6 +4149,21 @@ _Appears in:_
 | `samplingFraction` | _[Fraction](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#fraction)_ |  false  |  | SamplingFraction represents the fraction of requests that should be<br />selected for tracing if no prior sampling decision has been made.<br />Only one of SamplingRate or SamplingFraction may be specified.<br />If neither field is specified, all requests will be sampled. |
 | `customTags` | _object (keys:string, values:[CustomTag](#customtag))_ |  false  |  | CustomTags defines the custom tags to add to each span.<br />If provider is kubernetes, pod name and namespace are added by default. |
 | `provider` | _[TracingProvider](#tracingprovider)_ |  true  |  | Provider defines the tracing provider. |
+
+
+#### QueryParam
+
+
+
+QueryParam defines the query parameter name hashing configuration for consistent hash based
+load balancing.
+
+_Appears in:_
+- [ConsistentHash](#consistenthash)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `name` | _string_ |  true  |  | Name of the query param to hash. |
 
 
 #### RateLimit
@@ -4991,6 +5012,7 @@ This is a general purpose match condition that can be used by other EG APIs
 that need to match against a string.
 
 _Appears in:_
+- [HTTPHeaderFilter](#httpheaderfilter)
 - [OIDCDenyRedirectHeader](#oidcdenyredirectheader)
 - [OtherSANMatch](#othersanmatch)
 - [ProxyMetrics](#proxymetrics)

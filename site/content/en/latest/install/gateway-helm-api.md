@@ -79,7 +79,7 @@ The Helm chart for Envoy Gateway
 | podDisruptionBudget.minAvailable | int | `0` |  |
 | service.annotations | object | `{}` |  |
 | service.trafficDistribution | string | `""` |  |
-| service.type | string | `"ClusterIP"` |  |
+| service.type | string | `"ClusterIP"` | Service type. Can be set to LoadBalancer with specific IP, e.g.: type: LoadBalancer loadBalancerIP: 10.236.90.20 |
 | topologyInjector.annotations | object | `{}` |  |
 | topologyInjector.enabled | bool | `true` |  |
 
