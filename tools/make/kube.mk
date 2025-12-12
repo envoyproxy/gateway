@@ -170,7 +170,7 @@ endif
 .PHONY: kube-deploy
 kube-deploy: manifests helm-generate.gateway-helm ## Install Envoy Gateway into the Kubernetes cluster specified in ~/.kube/config.
 	@$(LOG_TARGET)
-	helm install eg charts/gateway-helm \
+	@GO_TOOL helm install eg charts/gateway-helm \
 		--set deployment.envoyGateway.imagePullPolicy=$(IMAGE_PULL_POLICY) \
 		-n envoy-gateway-system --create-namespace \
 		--debug --timeout='$(WAIT_TIMEOUT)' \
@@ -181,13 +181,13 @@ kube-deploy: manifests helm-generate.gateway-helm ## Install Envoy Gateway into 
 kube-deploy-for-benchmark-test: manifests helm-generate ## Install Envoy Gateway and prometheus-server for benchmark test purpose only.
 	@$(LOG_TARGET)
 	# Install Envoy Gateway
-	helm install eg charts/gateway-helm --set deployment.envoyGateway.imagePullPolicy=$(IMAGE_PULL_POLICY) \
+	@GO_TOOL helm install eg charts/gateway-helm --set deployment.envoyGateway.imagePullPolicy=$(IMAGE_PULL_POLICY) \
 		--set deployment.envoyGateway.resources.limits.cpu=$(BENCHMARK_CPU_LIMITS) \
 		--set deployment.envoyGateway.resources.limits.memory=$(BENCHMARK_MEMORY_LIMITS) \
 		--set config.envoyGateway.admin.enablePprof=true \
 		-n envoy-gateway-system --create-namespace --debug --timeout='$(WAIT_TIMEOUT)' --wait --wait-for-jobs
 	# Install Prometheus-server only
-	helm install eg-addons charts/gateway-addons-helm --set loki.enabled=false \
+	@GO_TOOL helm install eg-addons charts/gateway-addons-helm --set loki.enabled=false \
 		--set tempo.enabled=false \
 		--set grafana.enabled=false \
 		--set fluent-bit.enabled=false \
@@ -198,7 +198,7 @@ kube-deploy-for-benchmark-test: manifests helm-generate ## Install Envoy Gateway
 .PHONY: kube-undeploy
 kube-undeploy: manifests ## Uninstall the Envoy Gateway into the Kubernetes cluster specified in ~/.kube/config.
 	@$(LOG_TARGET)
-	helm uninstall eg -n envoy-gateway-system
+	@GO_TOOL helm uninstall eg -n envoy-gateway-system
 
 .PHONY: kube-demo-prepare
 kube-demo-prepare:
@@ -321,7 +321,7 @@ uninstall-benchmark-server: ## Uninstall nighthawk server for benchmark test
 .PHONY: install-eg-addons
 install-eg-addons: helm-generate.gateway-addons-helm
 	@$(LOG_TARGET)
-	helm upgrade -i eg-addons charts/gateway-addons-helm -f test/helm/gateway-addons-helm/e2e.in.yaml -n monitoring --create-namespace --timeout='$(WAIT_TIMEOUT)' --wait --wait-for-jobs
+	@GO_TOOL helm upgrade -i eg-addons charts/gateway-addons-helm -f test/helm/gateway-addons-helm/e2e.in.yaml -n monitoring --create-namespace --timeout='$(WAIT_TIMEOUT)' --wait --wait-for-jobs
 	# Change loki service type from ClusterIP to LoadBalancer
 	kubectl patch service loki -n monitoring -p '{"spec": {"type": "LoadBalancer"}}'
 	# Wait service Ready
@@ -386,7 +386,7 @@ generate-manifests: helm-generate.gateway-helm ## Generate Kubernetes release ma
 	@$(LOG_TARGET)
 	@$(call log, "Generating kubernetes manifests")
 	mkdir -p $(OUTPUT_DIR)/
-	helm template --set createNamespace=true eg charts/gateway-helm --include-crds --namespace envoy-gateway-system > $(OUTPUT_DIR)/install.yaml
+	@GO_TOOL helm template --set createNamespace=true eg charts/gateway-helm --include-crds --namespace envoy-gateway-system > $(OUTPUT_DIR)/install.yaml
 	@$(call log, "Added: $(OUTPUT_DIR)/install.yaml")
 	cp examples/kubernetes/quickstart.yaml $(OUTPUT_DIR)/quickstart.yaml
 	@$(call log, "Added: $(OUTPUT_DIR)/quickstart.yaml")
