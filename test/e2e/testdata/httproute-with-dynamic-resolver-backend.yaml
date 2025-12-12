@@ -33,7 +33,7 @@ spec:
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
-  name: httproute-with-dynamic-resolver-backend-host-rewrite
+  name: httproute-with-dynamic-resolver-backend-host-rewrite-default-dns-cache
   namespace: gateway-conformance-infra
 spec:
   parentRefs:
@@ -48,22 +48,71 @@ spec:
           extensionRef:
             group: gateway.envoyproxy.io
             kind: HTTPRouteFilter
-            name: host-rewrite-from-header
+            name: host-rewrite-from-header-default-dns-cache
       matches:
         - path:
             type: PathPrefix
-            value: /host-rewrite
+            value: /host-rewrite-default-dns-cache
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: httproute-with-dynamic-resolver-backend-host-rewrite-custom-dns-cache
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: same-namespace
+  rules:
+    - backendRefs:
+        - group: gateway.envoyproxy.io
+          kind: Backend
+          name: backend-dynamic-resolver
+      filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: gateway.envoyproxy.io
+            kind: HTTPRouteFilter
+            name: host-rewrite-from-header-custom-dns-cache
+      matches:
+        - path:
+            type: PathPrefix
+            value: /host-rewrite-custom-dns-cache
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: dns-policy-custom-dns
+  namespace: gateway-conformance-infra
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: httproute-with-dynamic-resolver-backend-host-rewrite-custom-dns-cache
+  dns:
+    dnsRefreshRate: "1s"
+    lookupFamily: IPv4AndIPv6
 ---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: HTTPRouteFilter
 metadata:
-  name: host-rewrite-from-header
+  name: host-rewrite-from-header-default-dns-cache
   namespace: gateway-conformance-infra
 spec:
   urlRewrite:
     hostname:
       type: Header
-      header: x-dynamic-host-header
+      header: x-dynamic-host-header-1
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: HTTPRouteFilter
+metadata:
+  name: host-rewrite-from-header-custom-dns-cache
+  namespace: gateway-conformance-infra
+spec:
+  urlRewrite:
+    hostname:
+      type: Header
+      header: x-dynamic-host-header-2
 ---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: Backend

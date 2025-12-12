@@ -15,7 +15,7 @@ http:
       mergeSlashes: true
     port: 10080
     routes:
-      - destination:
+      - destination:   # test DynamicResolver backend with host rewriting filter with default DNS cache config, rewrite from header x-dynamic-host-header-1
           metadata:
             kind: HTTPRoute
             name: httproute-1
@@ -40,7 +40,7 @@ http:
         urlRewrite:
           host:
             header: x-dynamic-host-header-1
-      - destination:
+      - destination:    # test DynamicResolver backend with host rewriting filter with default DNS cache config, rewrite from header x-dynamic-host-header-2
           metadata:
             kind: HTTPRoute
             name: httproute-1
@@ -70,7 +70,7 @@ http:
         urlRewrite:
           host:
             header: x-dynamic-host-header-2
-      - destination:
+      - destination:     # test DynamicResolver backend with host rewriting filter with custom DNS cache config
           metadata:
             kind: HTTPRoute
             name: httproute-2

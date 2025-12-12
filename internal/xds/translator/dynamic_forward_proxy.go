@@ -46,18 +46,10 @@ func (*dynamicForwardProxy) patchHCM(mgr *hcmv3.HttpConnectionManager, irListene
 	// Create a DFP filter for each unique DNS cache config needed by the listener's routes.
 	// This is because DFP filter and Cluster must have consistent cache config.
 	// Reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/clusters/dynamic_forward_proxy/v3/cluster.proto
-	cacheCfgs, err := dynamicForwardProxyCacheConfigs(irListener.Routes)
-	if err != nil {
-		return err
-	}
+	cacheCfgs := dynamicForwardProxyCacheConfigs(irListener.Routes)
 
-	names := make([]string, 0, len(cacheCfgs))
-	for name := range cacheCfgs {
-		names = append(names, name)
-	}
-	sort.Strings(names)
-
-	for _, cacheName := range names {
+	for _, cacheCfg := range cacheCfgs {
+		cacheName := cacheCfg.GetName()
 		filterName := dynamicForwardProxyFilterName(cacheName)
 		if hcmContainsFilter(mgr, filterName) {
 			continue
@@ -65,7 +57,7 @@ func (*dynamicForwardProxy) patchHCM(mgr *hcmv3.HttpConnectionManager, irListene
 
 		filterCfg := &dfpv3.FilterConfig{
 			ImplementationSpecifier: &dfpv3.FilterConfig_DnsCacheConfig{
-				DnsCacheConfig: cacheCfgs[cacheName],
+				DnsCacheConfig: cacheCfg,
 			},
 		}
 
@@ -168,8 +160,8 @@ func routeRequireDFP(route *ir.HTTPRoute) bool {
 	return false
 }
 
-// dynamicForwardProxyCacheConfigs builds a map of unique DFP DNS cache configs needed by the given routes.
-func dynamicForwardProxyCacheConfigs(routes []*ir.HTTPRoute) (map[string]*commondfpv3.DnsCacheConfig, error) {
+// dynamicForwardProxyCacheConfigs builds a sorted list of unique DFP DNS cache configs needed by the given routes.
+func dynamicForwardProxyCacheConfigs(routes []*ir.HTTPRoute) []*commondfpv3.DnsCacheConfig {
 	cacheCfgs := make(map[string]*commondfpv3.DnsCacheConfig)
 
 	for _, route := range routes {
@@ -188,7 +180,21 @@ func dynamicForwardProxyCacheConfigs(routes []*ir.HTTPRoute) (map[string]*common
 		cacheCfgs[cacheName] = routeCfg
 	}
 
-	return cacheCfgs, nil
+	if len(cacheCfgs) == 0 {
+		return nil
+	}
+
+	cfgs := make([]*commondfpv3.DnsCacheConfig, 0, len(cacheCfgs))
+	for _, cfg := range cacheCfgs {
+		cfgs = append(cfgs, cfg)
+	}
+
+	// Sort the configs by name to ensure deterministic order for xDS generation.
+	sort.Slice(cfgs, func(i, j int) bool {
+		return cfgs[i].GetName() < cfgs[j].GetName()
+	})
+
+	return cfgs
 }
 
 func buildDynamicForwardProxyPerRouteConfig(irRoute *ir.HTTPRoute) *dfpv3.PerRouteConfig {

@@ -18,7 +18,7 @@ httpRoutes:
     kind: HTTPRoute
     metadata:
       namespace: default
-      name: httproute-1
+      name: httproute-1    # test DynamicResolver backend with host rewriting filter with default DNS cache config
     spec:
       hostnames:
         - gateway.envoyproxy.io
@@ -57,7 +57,7 @@ httpRoutes:
     kind: HTTPRoute
     metadata:
       namespace: default
-      name: httproute-2   # test DynamicResolver backend with host rewriting filter with different DNS cache config
+      name: httproute-2   # test DynamicResolver backend with host rewriting filter with custom DNS cache config
     spec:
       hostnames:
         - gateway.envoyproxy.io

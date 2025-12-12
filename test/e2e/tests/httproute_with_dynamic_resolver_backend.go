@@ -98,19 +98,42 @@ var DynamicResolverBackendTest = suite.ConformanceTest{
 				},
 			}, suite.TimeoutConfig.RequiredConsecutiveSuccesses, suite.TimeoutConfig.MaxTimeToConsistency)
 		})
-		t.Run("host rewrite to header", func(t *testing.T) {
+		t.Run("host rewrite to header with default dns cache", func(t *testing.T) {
 			expectedResponse := http.ExpectedResponse{
 				Request: http.Request{
 					Host: "non-existent-host",
-					Path: "/host-rewrite",
+					Path: "/host-rewrite-default-dns-cache",
 					Headers: map[string]string{
-						"x-dynamic-host-header": "test-service-foo.gateway-conformance-infra.svc.cluster.local",
+						"x-dynamic-host-header-1": "test-service-foo.gateway-conformance-infra.svc.cluster.local",
 					},
 				},
 				ExpectedRequest: &http.ExpectedRequest{
 					Request: http.Request{
 						Host: "test-service-foo.gateway-conformance-infra.svc.cluster.local",
-						Path: "/host-rewrite",
+						Path: "/host-rewrite-default-dns-cache",
+					},
+				},
+				Response: http.Response{
+					StatusCodes: []int{200},
+				},
+				Namespace: ConformanceInfraNamespace,
+			}
+
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
+		})
+		t.Run("host rewrite to header with custom dns cache", func(t *testing.T) {
+			expectedResponse := http.ExpectedResponse{
+				Request: http.Request{
+					Host: "non-existent-host",
+					Path: "/host-rewrite-custom-dns-cache",
+					Headers: map[string]string{
+						"x-dynamic-host-header-2": "test-service-bar.gateway-conformance-infra.svc.cluster.local",
+					},
+				},
+				ExpectedRequest: &http.ExpectedRequest{
+					Request: http.Request{
+						Host: "test-service-bar.gateway-conformance-infra.svc.cluster.local",
+						Path: "/host-rewrite-custom-dns-cache",
 					},
 				},
 				Response: http.Response{
