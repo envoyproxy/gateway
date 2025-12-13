@@ -18724,15 +18724,22 @@ spec:
                                   enum:
                                   - Text
                                   - JSON
+                                  - Mix
                                   type: string
                               type: object
                               x-kubernetes-validations:
                               - message: If AccessLogFormat type is Text, text field
                                   needs to be set.
-                                rule: 'self.type == ''Text'' ? has(self.text) : !has(self.text)'
+                                rule: 'self.type == ''Text'' ? has(self.text) : (self.type
+                                  == ''Mix'' || !has(self.text))'
                               - message: If AccessLogFormat type is JSON, json field
                                   needs to be set.
-                                rule: 'self.type == ''JSON'' ? has(self.json) : !has(self.json)'
+                                rule: 'self.type == ''JSON'' ? has(self.json) : (self.type
+                                  == ''Mix'' || !has(self.json))'
+                              - message: If AccessLogFormat type is Mix, at least
+                                  one of text or json must be set.
+                                rule: 'self.type == ''Mix'' ? (has(self.text) || has(self.json))
+                                  : true'
                             matches:
                               description: |-
                                 Matches defines the match conditions for accesslog in CEL expression.

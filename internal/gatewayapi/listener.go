@@ -715,6 +715,10 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 					al.Attributes = format.JSON
 				case egv1a1.ProxyAccessLogFormatTypeText:
 					al.Text = format.Text
+				case egv1a1.ProxyAccessLogFormatTypeMix:
+					// Mix format allows both text (becomes OTLP body) and JSON (becomes OTLP attributes)
+					al.Text = format.Text
+					al.Attributes = format.JSON
 				}
 
 				irAccessLog.OpenTelemetry = append(irAccessLog.OpenTelemetry, al)

@@ -3879,6 +3879,7 @@ _Appears in:_
 | ----- | ----------- |
 | `Text` | ProxyAccessLogFormatTypeText defines the text accesslog format.<br /> | 
 | `JSON` | ProxyAccessLogFormatTypeJSON defines the JSON accesslog format.<br /> | 
+| `Mix` | ProxyAccessLogFormatTypeMix defines the mixed accesslog format with both text and JSON.<br />For OpenTelemetry sinks, text becomes the OTLP body and JSON becomes attributes.<br /> | 
 
 
 #### ProxyAccessLogSetting
