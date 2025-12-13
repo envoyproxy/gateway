@@ -25,6 +25,15 @@ global:
       pullPolicy: IfNotPresent
       # List of secrets in the same namespace of the component that can be used to pull images from private repositories.
       pullSecrets: []
+    envoyProxy:
+      # This is the full image name including the hub, repo, and tag for the Envoy Proxy data plane.
+      # If not specified, uses the default image.
+      image: ""
+      # Specify image pull policy if default behavior isn't desired.
+      # Default behavior: IfNotPresent.
+      pullPolicy: ""
+      # List of secrets in the same namespace of the component that can be used to pull images from private repositories.
+      pullSecrets: []
 
 podDisruptionBudget:
   minAvailable: 0

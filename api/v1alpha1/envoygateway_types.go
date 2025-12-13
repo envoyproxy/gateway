@@ -309,6 +309,17 @@ type EnvoyGatewayKubernetesProvider struct {
 	// +optional
 	RateLimitPDB *KubernetesPodDisruptionBudgetSpec `json:"rateLimitPDB,omitempty"`
 
+	// EnvoyProxyTemplate defines default settings applied to all Envoy Proxy resources.
+	// Settings from EnvoyProxy resources referenced by GatewayClass or Gateway are merged
+	// with these defaults, with the EnvoyProxy-specific values taking precedence for
+	// explicitly set fields. Unset fields inherit from the template. Array fields
+	// (e.g., env vars, volumes) are combined from both sources.
+	// Note: Currently only Provider.Kubernetes fields (EnvoyDeployment/EnvoyDaemonSet configuration)
+	// are supported in the template.
+	//
+	// +optional
+	EnvoyProxyTemplate *EnvoyProxySpec `json:"envoyProxyTemplate,omitempty"`
+
 	// Watch holds configuration of which input resources should be watched and reconciled.
 	// +optional
 	Watch *KubernetesWatchMode `json:"watch,omitempty"`

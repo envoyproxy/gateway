@@ -133,7 +133,7 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 		{
 			Name:                     envoyContainerName,
 			Image:                    proxyImage,
-			ImagePullPolicy:          corev1.PullIfNotPresent,
+			ImagePullPolicy:          resolvePullPolicy(containerSpec),
 			Command:                  []string{"envoy"},
 			Args:                     args,
 			Env:                      expectedContainerEnv(containerSpec),
@@ -530,6 +530,14 @@ func resolveProxyImage(containerSpec *egv1a1.KubernetesContainerSpec) (string, e
 	}
 
 	return egv1a1.DefaultEnvoyProxyImage, nil
+}
+
+// resolvePullPolicy returns the image pull policy from the container spec, or the default if not specified.
+func resolvePullPolicy(containerSpec *egv1a1.KubernetesContainerSpec) corev1.PullPolicy {
+	if containerSpec != nil && containerSpec.ImagePullPolicy != nil {
+		return *containerSpec.ImagePullPolicy
+	}
+	return corev1.PullIfNotPresent
 }
 
 // getImageTag parses a Docker/OCI image reference and returns the tag if present.
