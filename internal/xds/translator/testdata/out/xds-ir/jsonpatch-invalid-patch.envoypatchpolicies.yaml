@@ -1,4 +1,5 @@
-- name: first-policy
+- generation: 1
+  name: first-policy
   namespace: default
   status:
     ancestors:
@@ -9,8 +10,9 @@
         namespace: default
       conditions:
       - lastTransitionTime: null
-        message: 'Unable to unmarshal xds resource {"name":"first-listener","address":{"socket_address":{"address":"0.0.0.0","port_value":10080}},"default_filter_chain":{"filters":[{"name":"envoy.filters.network.http_connection_manager","typed_config":{"@type":"type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager","stat_prefix":"http","rds":{"config_source":{"ads":{},"resource_api_version":"V3"},"route_config_name":"first-listener"},"http_filters":[{"name":"envoy.filters.http.router","typed_config":{"@type":"type.googleapis.com/envoy.extensions.filters.http.router.v3.Router","suppress_envoy_headers":true}}],"common_http_protocol_options":{"headers_with_underscores_action":"REJECT_REQUEST"},"http2_protocol_options":{"max_concurrent_streams":100,"initial_stream_window_size":65536,"initial_connection_window_size":1048576},"server_header_transformation":"PASS_THROUGH","use_remote_address":true,"normalize_path":true,"merge_slashes":true,"path_with_escaped_slashes_action":"UNESCAPE_AND_REDIRECT"}}]},"per_connection_buffer_limit_bytes":32768,"drain_type":"MODIFY_ONLY","this":{"path":{"never":{"existed":{"name":"envoy.filters.http.ratelimit","typed_config":{"@type":"type.googleapis.com/envoy.extensions.filters.http.ratelimit.v3.RateLimit","domain":"eg-ratelimit","failure_mode_deny":true,"rate_limit_service":{"grpc_service":{"envoy_grpc":{"cluster_name":"rate-limit-cluster"}},"transport_api_version":"V3"},"timeout":"1s"}}}}}},
-          err:proto: (line 1:1077): unknown field "this"'
+        message: 'Unable to unmarshal xds resource {"name":"first-listener","address":{"socket_address":{"address":"::","port_value":10080}},"default_filter_chain":{"filters":[{"name":"envoy.filters.network.http_connection_manager","typed_config":{"@type":"type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager","stat_prefix":"http-10080","rds":{"config_source":{"ads":{},"resource_api_version":"V3"},"route_config_name":"first-listener"},"http_filters":[{"name":"envoy.filters.http.router","typed_config":{"@type":"type.googleapis.com/envoy.extensions.filters.http.router.v3.Router","suppress_envoy_headers":true}}],"common_http_protocol_options":{"headers_with_underscores_action":"REJECT_REQUEST"},"http2_protocol_options":{"max_concurrent_streams":100,"initial_stream_window_size":65536,"initial_connection_window_size":1048576},"server_header_transformation":"PASS_THROUGH","use_remote_address":true,"normalize_path":true,"merge_slashes":true,"path_with_escaped_slashes_action":"UNESCAPE_AND_REDIRECT"}}],"name":"first-listener"},"per_connection_buffer_limit_bytes":32768,"max_connections_to_accept_per_socket_event":1,"this":{"path":{"never":{"existed":{"name":"envoy.filters.http.ratelimit","typed_config":{"@type":"type.googleapis.com/envoy.extensions.filters.http.ratelimit.v3.RateLimit","domain":"eg-ratelimit","failure_mode_deny":true,"rate_limit_service":{"grpc_service":{"envoy_grpc":{"cluster_name":"rate-limit-cluster"}},"transport_api_version":"V3"},"timeout":"1s"}}}}}},
+          err:proto: (line 1:1122): unknown field "this".'
+        observedGeneration: 1
         reason: Invalid
         status: "False"
         type: Programmed
