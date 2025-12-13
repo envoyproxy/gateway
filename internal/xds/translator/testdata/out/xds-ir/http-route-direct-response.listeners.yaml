@@ -1,6 +1,6 @@
 - address:
     socketAddress:
-      address: '::'
+      address: 0.0.0.0
       portValue: 10080
   defaultFilterChain:
     filters:
@@ -25,11 +25,11 @@
           configSource:
             ads: {}
             resourceApiVersion: V3
-          routeConfigName: first-listener
+          routeConfigName: envoy-gateway/gateway-1/http
         serverHeaderTransformation: PASS_THROUGH
         statPrefix: http-10080
         useRemoteAddress: true
-    name: first-listener
+    name: envoy-gateway/gateway-1/http
   maxConnectionsToAcceptPerSocketEvent: 1
-  name: first-listener
+  name: envoy-gateway/gateway-1/http
   perConnectionBufferLimitBytes: 32768
