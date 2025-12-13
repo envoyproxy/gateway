@@ -297,7 +297,7 @@ curl -HHost:httpbin.org http://${GATEWAY_HOST}/get
 [Backend]: ../../../api/extension_types#backend
 [routing to cluster-external backends]: ./../../tasks/traffic/routing-outside-kubernetes.md
 [BackendObjectReference]: https://gateway-api.sigs.k8s.io/reference/1.3/spec#backendobjectreference
-[extension resource]: https://gateway-api.sigs.k8s.io/guides/migrating-from-ingress/#approach-to-extensibility
+[extension resource]: https://gateway-api.sigs.k8s.io/guides/getting-started/migrating-from-ingress/#approach-to-extensibility
 [CVE-2021-25740]: https://nvd.nist.gov/vuln/detail/CVE-2021-25740
 [upstream recommendations]: https://github.com/kubernetes/kubernetes/issues/103675
 [HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute
