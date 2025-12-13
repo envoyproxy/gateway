@@ -21,13 +21,13 @@ An Add-ons Helm chart for Envoy Gateway
 
 | Repository | Name | Version |
 |------------|------|---------|
-| https://fluent.github.io/helm-charts | fluent-bit | 0.30.4 |
-| https://grafana.github.io/helm-charts | alloy | 0.9.2 |
-| https://grafana.github.io/helm-charts | grafana | 8.0.0 |
-| https://grafana.github.io/helm-charts | loki | 4.8.0 |
-| https://grafana.github.io/helm-charts | tempo | 1.3.1 |
-| https://open-telemetry.github.io/opentelemetry-helm-charts | opentelemetry-collector | 0.117.3 |
-| https://prometheus-community.github.io/helm-charts | prometheus | 25.21.0 |
+| https://fluent.github.io/helm-charts | fluent-bit | 0.54.0 |
+| https://grafana.github.io/helm-charts | alloy | 1.5.0 |
+| https://grafana.github.io/helm-charts | grafana | 10.3.0 |
+| https://grafana.github.io/helm-charts | loki | 6.46.0 |
+| https://grafana.github.io/helm-charts | tempo | 1.24.1 |
+| https://open-telemetry.github.io/opentelemetry-helm-charts | opentelemetry-collector | 0.141.0 |
+| https://prometheus-community.github.io/helm-charts | prometheus | 27.50.0 |
 
 ## Usage
 
@@ -102,6 +102,7 @@ helm uninstall eg-addons -n monitoring
 | loki.loki.memberlist | string | `"loki-memberlist"` |  |
 | loki.loki.rulerConfig.storage.type | string | `"local"` |  |
 | loki.loki.storage.type | string | `"filesystem"` |  |
+| loki.loki.useTestSchema | bool | `true` |  |
 | loki.monitoring.lokiCanary.enabled | bool | `false` |  |
 | loki.monitoring.selfMonitoring.enabled | bool | `false` |  |
 | loki.monitoring.selfMonitoring.grafanaAgent.installOperator | bool | `false` |  |
