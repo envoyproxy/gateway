@@ -4166,6 +4166,40 @@ _Appears in:_
 | `name` | _string_ |  true  |  | Name of the query param to hash. |
 
 
+#### QueryParamMatch
+
+
+
+QueryParamMatch defines the match attributes within the query parameters of the request.
+
+_Appears in:_
+- [RateLimitSelectCondition](#ratelimitselectcondition)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `type` | _[QueryParamMatchType](#queryparammatchtype)_ |  false  | Exact | Type specifies how to match against the value of the query parameter. |
+| `name` | _string_ |  true  |  | Name of the query parameter. |
+| `value` | _string_ |  false  |  | Value within the query parameter.<br />Do not set this field when Type="Distinct", implying matching on any/all unique<br />values within the query parameter. |
+| `invert` | _boolean_ |  false  | false | Invert specifies whether the value match result will be inverted.<br />Do not set this field when Type="Distinct", implying matching on any/all unique<br />values within the query parameter. |
+
+
+#### QueryParamMatchType
+
+_Underlying type:_ _string_
+
+QueryParamMatchType specifies the semantics of how query parameter values should be compared.
+Valid QueryParamMatchType values are "Exact", "RegularExpression", and "Distinct".
+
+_Appears in:_
+- [QueryParamMatch](#queryparammatch)
+
+| Value | Description |
+| ----- | ----------- |
+| `Exact` | QueryParamMatchExact matches the exact value of the Value field against the value of<br />the specified query parameter.<br /> | 
+| `RegularExpression` | QueryParamMatchRegularExpression matches a regular expression against the value of the<br />specified query parameter. The regex string must adhere to the syntax documented in<br />https://github.com/google/re2/wiki/Syntax.<br /> | 
+| `Distinct` | QueryParamMatchDistinct matches any and all possible unique values encountered in the<br />specified query parameter. Note that each unique value will receive its own rate limit<br />bucket.<br /> | 
+
+
 #### RateLimit
 
 
@@ -4358,6 +4392,7 @@ _Appears in:_
 | `methods` | _[MethodMatch](#methodmatch) array_ |  false  |  | Methods is a list of request methods to match. Multiple method values are ORed together,<br />meaning, a request can match any one of the specified methods. If not specified, it matches all methods. |
 | `path` | _[PathMatch](#pathmatch)_ |  false  |  | Path is the request path to match.<br />Support Exact, PathPrefix and RegularExpression match types. |
 | `sourceCIDR` | _[SourceMatch](#sourcematch)_ |  false  |  | SourceCIDR is the client IP Address range to match on. |
+| `queryParams` | _[QueryParamMatch](#queryparammatch) array_ |  false  |  | QueryParams is a list of query parameters to match. Multiple query parameter values are ANDed together,<br />meaning, a request MUST match all the specified query parameters.<br />At least one of headers, sourceCIDR, or queryParams condition must be specified. |
 
 
 #### RateLimitSpec

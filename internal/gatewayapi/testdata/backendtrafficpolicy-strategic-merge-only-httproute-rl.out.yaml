@@ -381,6 +381,7 @@ xdsIR:
                   requests: 5
                   unit: Hour
                 name: default/policy-for-route/rule/0
+                queryParamMatches: null
                 shared: true
               - headerMatches:
                 - distinct: false
@@ -390,6 +391,7 @@ xdsIR:
                   requests: 5
                   unit: Hour
                 name: default/policy-for-route/rule/1
+                queryParamMatches: null
                 shared: true
           timeout:
             http:
@@ -497,6 +499,7 @@ xdsIR:
                   requests: 5
                   unit: Hour
                 name: default/policy-for-route/rule/0
+                queryParamMatches: null
                 shared: true
               - headerMatches:
                 - distinct: false
@@ -506,6 +509,7 @@ xdsIR:
                   requests: 5
                   unit: Hour
                 name: default/policy-for-route/rule/1
+                queryParamMatches: null
                 shared: true
           timeout:
             tcp:

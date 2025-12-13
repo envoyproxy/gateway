@@ -1215,10 +1215,10 @@ func buildRateLimitRule(rule egv1a1.RateLimitRule) (*ir.RateLimitRule, error) {
 
 	for _, match := range rule.ClientSelectors {
 		if len(match.Headers) == 0 && len(match.Methods) == 0 &&
-			match.Path == nil && match.SourceCIDR == nil {
+			match.Path == nil && match.SourceCIDR == nil && len(match.QueryParams) == 0 {
 			return nil, fmt.Errorf(
 				"unable to translate rateLimit. At least one of the" +
-					" header or method or path or sourceCIDR must be specified")
+					" header or method or path or sourceCIDR or queryParameters must be specified")
 		}
 		for _, header := range match.Headers {
 			switch {
@@ -1314,6 +1314,50 @@ func buildRateLimitRule(rule egv1a1.RateLimitRule) (*ir.RateLimitRule, error) {
 			}
 			cidrMatch.Distinct = distinct
 			irRule.CIDRMatch = cidrMatch
+		}
+
+		for _, queryParam := range match.QueryParams {
+			// Validate QueryParamMatch
+			if queryParam.Name == "" {
+				return nil, fmt.Errorf("name is required when QueryParamMatch is specified")
+			}
+
+			var stringMatch *ir.StringMatch
+			switch {
+			case queryParam.Type == nil && queryParam.Value != nil:
+				fallthrough
+			case *queryParam.Type == egv1a1.QueryParamMatchExact && queryParam.Value != nil:
+				stringMatch = &ir.StringMatch{
+					Exact:  queryParam.Value,
+					Invert: queryParam.Invert,
+				}
+			case *queryParam.Type == egv1a1.QueryParamMatchRegularExpression && queryParam.Value != nil:
+				if err := regex.Validate(*queryParam.Value); err != nil {
+					return nil, err
+				}
+				stringMatch = &ir.StringMatch{
+					SafeRegex: queryParam.Value,
+					Invert:    queryParam.Invert,
+				}
+			case *queryParam.Type == egv1a1.QueryParamMatchDistinct && queryParam.Value == nil:
+				if queryParam.Invert != nil && *queryParam.Invert {
+					return nil, fmt.Errorf("unable to translate rateLimit." +
+						"Invert is not applicable for distinct query parameter match type")
+				}
+				stringMatch = &ir.StringMatch{
+					Distinct: true,
+				}
+			default:
+				return nil, fmt.Errorf(
+					"unable to translate rateLimit. Either the queryParam." +
+						"Type is not valid or the queryParam is missing a value")
+			}
+
+			m := &ir.QueryParamMatch{
+				Name:        queryParam.Name,
+				StringMatch: stringMatch,
+			}
+			irRule.QueryParamMatches = append(irRule.QueryParamMatches, m)
 		}
 	}
 
