@@ -147,7 +147,7 @@ func buildClusterSettingsTimeout(policy *egv1a1.ClusterSettings) (*ir.Timeout, e
 			if err != nil {
 				errs = errors.Join(errs, fmt.Errorf("invalid MaxStreamDuration value %s", *pto.HTTP.MaxStreamDuration))
 			} else {
-				msd = ptr.To(metav1.Duration{Duration: d})
+				msd = ir.MetaV1DurationPtr(d)
 			}
 		}
 
@@ -337,6 +337,43 @@ func buildLoadBalancer(policy *egv1a1.ClusterSettings) (*ir.LoadBalancer, error)
 				return nil, err
 			}
 			lb.RoundRobin.SlowStart = &ir.SlowStart{
+				Window: ir.MetaV1DurationPtr(d),
+			}
+		}
+	case egv1a1.ClientSideWeightedRoundRobinLoadBalancerType:
+		lb = &ir.LoadBalancer{
+			ClientSideWeightedRoundRobin: &ir.ClientSideWeightedRoundRobin{},
+		}
+		cswrr := policy.LoadBalancer.ClientSideWeightedRoundRobin
+		if cswrr != nil {
+			if cswrr.BlackoutPeriod != nil {
+				if d, err := time.ParseDuration(string(*cswrr.BlackoutPeriod)); err == nil {
+					lb.ClientSideWeightedRoundRobin.BlackoutPeriod = ir.MetaV1DurationPtr(d)
+				}
+			}
+			if cswrr.WeightExpirationPeriod != nil {
+				if d, err := time.ParseDuration(string(*cswrr.WeightExpirationPeriod)); err == nil {
+					lb.ClientSideWeightedRoundRobin.WeightExpirationPeriod = ir.MetaV1DurationPtr(d)
+				}
+			}
+			if cswrr.WeightUpdatePeriod != nil {
+				if d, err := time.ParseDuration(string(*cswrr.WeightUpdatePeriod)); err == nil {
+					lb.ClientSideWeightedRoundRobin.WeightUpdatePeriod = ir.MetaV1DurationPtr(d)
+				}
+			}
+			if cswrr.ErrorUtilizationPenalty != nil {
+				lb.ClientSideWeightedRoundRobin.ErrorUtilizationPenalty = ptr.To(*cswrr.ErrorUtilizationPenalty)
+			}
+			if len(cswrr.MetricNamesForComputingUtilization) > 0 {
+				lb.ClientSideWeightedRoundRobin.MetricNamesForComputingUtilization = append([]string(nil), cswrr.MetricNamesForComputingUtilization...)
+			}
+		}
+		if policy.LoadBalancer.SlowStart != nil && policy.LoadBalancer.SlowStart.Window != nil {
+			d, err := time.ParseDuration(string(*policy.LoadBalancer.SlowStart.Window))
+			if err != nil {
+				return nil, err
+			}
+			lb.ClientSideWeightedRoundRobin.SlowStart = &ir.SlowStart{
 				Window: ir.MetaV1DurationPtr(d),
 			}
 		}
