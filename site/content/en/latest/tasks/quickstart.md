@@ -4,7 +4,30 @@ weight: 1
 description: Get started with Envoy Gateway in a few simple steps.
 ---
 
-This "quick start" will help you get started with Envoy Gateway in a few simple steps.
+# Quickstart
+
+Welcome! This guide will help you get Envoy Gateway up and running in a few minutes.
+
+If you’re new to Envoy Gateway, take a moment to understand why it exists and what it is.
+
+
+## Why Envoy Gateway?
+
+Modern teams need a simpler way to manage how traffic flows into their applications without sacrificing security, reliability, or visibility. That’s why **Envoy Gateway** exists: to make powerful gateway capabilities accessible to both developers and platform engineers.
+
+It achieves this by building on the proven foundation of [Envoy Proxy](https://www.envoyproxy.io/) and packaging it into a **Kubernetes-native API gateway** experience. Envoy Gateway integrates cleanly with Kubernetes through standard resources like `Gateway`, `HTTPRoute`, and `GatewayClass`, so teams can configure traffic and security policies declaratively—no complex Envoy configuration required.
+
+## What Is Envoy Gateway?
+
+At its core, Envoy Gateway is an open-source project that uses Envoy Proxy to implement the Kubernetes Gateway API. It acts as a full-featured, Kubernetes-native API gateway, providing out-of-the-box support for essential functions such as:
+
+- **Traffic Management**: Advanced routing, traffic splitting, and retries.
+- **Security**: TLS termination, authentication, and authorization policies.
+- **Observability**: Rich metrics, logs, and traces for monitoring traffic.
+- **Extensibility**: Support for custom filters to inject your own logic.
+
+In short, it’s simple for developers, powerful for platform engineers, and ready for production at scale.
+
 
 ## Prerequisites
 
