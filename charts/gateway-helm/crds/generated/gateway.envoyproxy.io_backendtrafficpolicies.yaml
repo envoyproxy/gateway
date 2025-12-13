@@ -2303,14 +2303,24 @@ spec:
                         type: string
                     type: object
                   tracing:
-                    description: Tracing configures the tracing settings for the backend
-                      or HTTPRoute.
+                    description: |-
+                      Tracing configures the tracing settings for the backend or HTTPRoute.
+
+                      This will take precedence over tracing on EnvoyProxy if set.
                     properties:
-                      OperationName:
-                        description: |-
-                          OperationName associated with the request matched to this route.
-                          If tracing is enabled, it will be used as the span name reported for this request.
-                        type: string
+                      Operation:
+                        description: Operation defines operation name of the span
+                          which will be used for tracing.
+                        properties:
+                          client:
+                            description: Client defines operation name of the span
+                              which will be used for tracing.
+                            type: string
+                          server:
+                            description: Server defines the operation name of the
+                              upstream span which will be used for tracing.
+                            type: string
+                        type: object
                       customTags:
                         additionalProperties:
                           properties:
@@ -2377,8 +2387,6 @@ spec:
                         description: |-
                           SamplingFraction represents the fraction of requests that should be
                           selected for tracing if no prior sampling decision has been made.
-
-                          This will take precedence over sampling fraction on EnvoyProxy if set.
                         properties:
                           denominator:
                             default: 100

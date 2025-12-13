@@ -53,8 +53,10 @@ func TestProxySamplingRate(t *testing.T) {
 		{
 			name: "fraction numerator only",
 			tracing: &egv1a1.ProxyTracing{
-				SamplingFraction: &gwapiv1.Fraction{
-					Numerator: 100,
+				Tracing: egv1a1.Tracing{
+					SamplingFraction: &gwapiv1.Fraction{
+						Numerator: 100,
+					},
 				},
 			},
 			expected: 1.0,
@@ -62,9 +64,11 @@ func TestProxySamplingRate(t *testing.T) {
 		{
 			name: "fraction",
 			tracing: &egv1a1.ProxyTracing{
-				SamplingFraction: &gwapiv1.Fraction{
-					Numerator:   1,
-					Denominator: ptr.To[int32](10),
+				Tracing: egv1a1.Tracing{
+					SamplingFraction: &gwapiv1.Fraction{
+						Numerator:   1,
+						Denominator: ptr.To[int32](10),
+					},
 				},
 			},
 			expected: 0.1,
@@ -72,9 +76,11 @@ func TestProxySamplingRate(t *testing.T) {
 		{
 			name: "less than zero",
 			tracing: &egv1a1.ProxyTracing{
-				SamplingFraction: &gwapiv1.Fraction{
-					Numerator:   1,
-					Denominator: ptr.To[int32](-1),
+				Tracing: egv1a1.Tracing{
+					SamplingFraction: &gwapiv1.Fraction{
+						Numerator:   1,
+						Denominator: ptr.To[int32](-1),
+					},
 				},
 			},
 			expected: 0,
@@ -82,9 +88,11 @@ func TestProxySamplingRate(t *testing.T) {
 		{
 			name: "greater than 100",
 			tracing: &egv1a1.ProxyTracing{
-				SamplingFraction: &gwapiv1.Fraction{
-					Numerator:   101,
-					Denominator: ptr.To[int32](1),
+				Tracing: egv1a1.Tracing{
+					SamplingFraction: &gwapiv1.Fraction{
+						Numerator:   101,
+						Denominator: ptr.To[int32](1),
+					},
 				},
 			},
 			expected: 100,
