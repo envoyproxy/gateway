@@ -298,6 +298,7 @@ func buildXdsAccessLog(al *ir.AccessLog, accessLogType ir.ProxyAccessLogType) ([
 							Authority:   otel.Authority,
 						},
 					},
+					InitialMetadata: buildGrpcInitialMetadata(otel.Headers),
 				},
 				TransportApiVersion: cfgcore.ApiVersion_V3,
 			},

@@ -3563,6 +3563,9 @@ _Appears in:_
 | `host` | _string_ |  false  |  | Host define the extension service hostname.<br />Deprecated: Use BackendRefs instead. |
 | `port` | _integer_ |  false  | 4317 | Port defines the port the extension service is exposed on.<br />Deprecated: Use BackendRefs instead. |
 | `resources` | _object (keys:string, values:string)_ |  false  |  | Resources is a set of labels that describe the source of a log entry, including envoy node info.<br />It's recommended to follow [semantic conventions](https://opentelemetry.io/docs/reference/specification/resource/semantic_conventions/). |
+| `headers` | _[HTTPHeader](#httpheader) array_ |  false  |  | Headers is a list of additional headers to send with OTLP export requests.<br />These headers are added as gRPC initial metadata for the OTLP gRPC service. |
+| `text` | _string_ |  false  |  | Text defines the body of the OpenTelemetry LogRecord.<br />Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators) may be used in the format.<br />When specified, this takes precedence over the setting-level format for this sink. |
+| `attributes` | _object (keys:string, values:string)_ |  false  |  | Attributes defines key-value pairs to include in the OpenTelemetry LogRecord attributes.<br />Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators)<br />can be used as values. When specified, this takes precedence over the setting-level format for this sink. |
 
 
 #### Operation
@@ -4053,6 +4056,7 @@ _Appears in:_
 | `port` | _integer_ |  false  | 4317 | Port defines the port the service is exposed on.<br />Deprecated: Use BackendRefs instead. |
 | `reportCountersAsDeltas` | _boolean_ |  false  |  | ReportCountersAsDeltas configures the OpenTelemetry sink to report<br />counters as delta temporality instead of cumulative. |
 | `reportHistogramsAsDeltas` | _boolean_ |  false  |  | ReportHistogramsAsDeltas configures the OpenTelemetry sink to report<br />histograms as delta temporality instead of cumulative.<br />Required for backends like Elastic that drop cumulative histograms. |
+| `headers` | _[HTTPHeader](#httpheader) array_ |  false  |  | Headers is a list of additional headers to send with OTLP export requests.<br />These headers are added as gRPC initial metadata for the OTLP gRPC service. |
 
 
 #### ProxyPrometheusProvider
@@ -5234,6 +5238,7 @@ _Appears in:_
 | `port` | _integer_ |  false  | 4317 | Port defines the port the provider service is exposed on.<br />Deprecated: Use BackendRefs instead. |
 | `serviceName` | _string_ |  false  |  | ServiceName defines the service name to use in tracing configuration.<br />If not set, Envoy Gateway will use a default service name set as<br />"name.namespace" (e.g., "my-gateway.default").<br />Note: This field is only supported for OpenTelemetry and Datadog tracing providers.<br />For Zipkin, the service name in traces is always derived from the Envoy --service-cluster flag<br />(typically "namespace/name" format). Setting this field has no effect for Zipkin. |
 | `zipkin` | _[ZipkinTracingProvider](#zipkintracingprovider)_ |  false  |  | Zipkin defines the Zipkin tracing provider configuration |
+| `headers` | _[HTTPHeader](#httpheader) array_ |  false  |  | Headers is a list of additional headers to send with OTLP export requests.<br />These headers are added as gRPC initial metadata for the OTLP gRPC service. |
 
 
 #### TracingProviderType
