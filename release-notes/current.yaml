@@ -4,6 +4,7 @@ date: Pending
 breaking changes: |
   The SecurityPolicy name has been added to the stat prefix for aouth2 filter metrics to provide better granularity. Example: http.https-10443.securitypolicy/default/oidc-example.oauth_success: 0.
   Returning 500 direct responses for HTTPRoute and GRPCRoute with invalid filters.
+  Removed Accept-Encoding header from requests to backends when compression is enabled to avoid double compression issues.
 
 # Updates addressing vulnerabilities, security flaws, or compliance requirements.
 security updates: |
@@ -25,4 +26,3 @@ deprecations: |
 
 # Other notable changes not covered by the above sections.
 Other changes: |
-  Removed Accept-Encoding header from requests to backends when compression is enabled to avoid double compression issues.
