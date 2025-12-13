@@ -55,8 +55,8 @@ helm-generate.%:
   		GatewayImage=${IMAGE}:${TAG} GatewayImagePullPolicy=${IMAGE_PULL_POLICY} \
   		envsubst < charts/${CHART_NAME}/values.tmpl.yaml > ./charts/${CHART_NAME}/values.yaml; \
   	fi
-	helm dependency update charts/${CHART_NAME}
-	helm lint charts/${CHART_NAME} || exit 1
+	$(GO_TOOL) helm dependency update charts/${CHART_NAME}
+	$(GO_TOOL) helm lint charts/${CHART_NAME} || exit 1
 
 	# The jb does not support self-assigned jsonnetfile, so entering working dir before executing jb.
 	@if [ ${CHART_NAME} == "gateway-addons-helm" ]; then \
@@ -74,10 +74,10 @@ helm-generate.%:
   		filename=$$(basename $${file}); \
   		output="$${filename%.in.*}.out.yaml"; \
         if [ ${CHART_NAME} == "gateway-addons-helm" ]; then \
-			helm template ${CHART_NAME} charts/${CHART_NAME} -f $${file} > test/helm/${CHART_NAME}/$$output --namespace=monitoring || exit 1; \
+			$(GO_TOOL) helm template ${CHART_NAME} charts/${CHART_NAME} -f $${file} > test/helm/${CHART_NAME}/$$output --namespace=monitoring || exit 1; \
         elif [ ${CHART_NAME} == "gateway-crds-helm" ]; then \
-			helm template ${CHART_NAME} charts/${CHART_NAME} -f $${file} > test/helm/${CHART_NAME}/$$output || exit 1; \
+			$(GO_TOOL) helm template ${CHART_NAME} charts/${CHART_NAME} -f $${file} > test/helm/${CHART_NAME}/$$output || exit 1; \
         else \
-			helm template ${CHART_NAME} charts/${CHART_NAME} -f $${file} > test/helm/${CHART_NAME}/$$output --namespace=envoy-gateway-system || exit 1; \
+			$(GO_TOOL) helm template ${CHART_NAME} charts/${CHART_NAME} -f $${file} > test/helm/${CHART_NAME}/$$output --namespace=envoy-gateway-system || exit 1; \
   	  	fi; \
 	done
