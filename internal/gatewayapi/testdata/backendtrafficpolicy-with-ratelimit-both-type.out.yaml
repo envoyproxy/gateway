@@ -226,7 +226,6 @@ xdsIR:
                   requests: 20
                   unit: Hour
                 name: default/policy-for-grcp-route/rule/0
-                queryParamMatches: null
             local:
               default:
                 requests: 4294967295
@@ -243,7 +242,6 @@ xdsIR:
                   requests: 10
                   unit: Hour
                 name: default/policy-for-grcp-route/rule/0
-                queryParamMatches: null
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

@@ -383,7 +383,6 @@ xdsIR:
                   requests: 5
                   unit: Hour
                 name: default/policy-for-route/rule/0
-                queryParamMatches: null
                 shared: true
               - headerMatches:
                 - distinct: false
@@ -393,7 +392,6 @@ xdsIR:
                   requests: 5
                   unit: Hour
                 name: envoy-gateway/policy-for-gateway1/rule/0
-                queryParamMatches: null
                 shared: true
           timeout:
             http:
@@ -498,7 +496,6 @@ xdsIR:
                   requests: 5
                   unit: Hour
                 name: default/policy-for-route/rule/0
-                queryParamMatches: null
                 shared: true
           timeout:
             tcp:

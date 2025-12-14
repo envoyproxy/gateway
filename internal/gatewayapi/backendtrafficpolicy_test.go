@@ -313,7 +313,7 @@ func TestBuildRateLimitRuleQueryParams(t *testing.T) {
 				QueryParamMatches: []*ir.QueryParamMatch{
 					{
 						Name: "user",
-						StringMatch: &ir.StringMatch{
+						StringMatch: ir.StringMatch{
 							Exact:  ptr.To("alice"),
 							Invert: nil,
 						},
@@ -380,7 +380,7 @@ func TestBuildRateLimitRuleQueryParams(t *testing.T) {
 				QueryParamMatches: []*ir.QueryParamMatch{
 					{
 						Name: "user",
-						StringMatch: &ir.StringMatch{
+						StringMatch: ir.StringMatch{
 							Exact:  ptr.To("alice"),
 							Invert: nil,
 						},
@@ -429,7 +429,7 @@ func TestBuildRateLimitRuleQueryParams(t *testing.T) {
 				QueryParamMatches: []*ir.QueryParamMatch{
 					{
 						Name: "user",
-						StringMatch: &ir.StringMatch{
+						StringMatch: ir.StringMatch{
 							Exact:  ptr.To("alice"),
 							Invert: nil,
 						},

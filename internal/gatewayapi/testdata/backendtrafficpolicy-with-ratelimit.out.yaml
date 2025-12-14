@@ -805,7 +805,6 @@ xdsIR:
                   distinct: false
                   exact: /test
                   name: ""
-                queryParamMatches: null
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

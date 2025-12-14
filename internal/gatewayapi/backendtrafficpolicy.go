@@ -1322,12 +1322,12 @@ func buildRateLimitRule(rule egv1a1.RateLimitRule) (*ir.RateLimitRule, error) {
 				return nil, fmt.Errorf("name is required when QueryParamMatch is specified")
 			}
 
-			var stringMatch *ir.StringMatch
+			var stringMatch ir.StringMatch
 			switch {
 			case queryParam.Type == nil && queryParam.Value != nil:
 				fallthrough
 			case *queryParam.Type == egv1a1.QueryParamMatchExact && queryParam.Value != nil:
-				stringMatch = &ir.StringMatch{
+				stringMatch = ir.StringMatch{
 					Exact:  queryParam.Value,
 					Invert: queryParam.Invert,
 				}
@@ -1335,7 +1335,7 @@ func buildRateLimitRule(rule egv1a1.RateLimitRule) (*ir.RateLimitRule, error) {
 				if err := regex.Validate(*queryParam.Value); err != nil {
 					return nil, err
 				}
-				stringMatch = &ir.StringMatch{
+				stringMatch = ir.StringMatch{
 					SafeRegex: queryParam.Value,
 					Invert:    queryParam.Invert,
 				}
@@ -1344,7 +1344,7 @@ func buildRateLimitRule(rule egv1a1.RateLimitRule) (*ir.RateLimitRule, error) {
 					return nil, fmt.Errorf("unable to translate rateLimit." +
 						"Invert is not applicable for distinct query parameter match type")
 				}
-				stringMatch = &ir.StringMatch{
+				stringMatch = ir.StringMatch{
 					Distinct: true,
 				}
 			default:
