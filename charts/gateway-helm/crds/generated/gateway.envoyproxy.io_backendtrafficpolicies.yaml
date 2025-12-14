@@ -1167,7 +1167,7 @@ spec:
                                 type: object
                                 x-kubernetes-validations:
                                 - message: at least one of headers, methods, path,
-                                    sourceCIDR or QueryParams must be specified
+                                    sourceCIDR or queryParams must be specified
                                   rule: has(self.headers) || has(self.methods) ||
                                     has(self.path) || has(self.sourceCIDR) || has(self.queryParams)
                               maxItems: 8
@@ -1531,7 +1531,7 @@ spec:
                                 type: object
                                 x-kubernetes-validations:
                                 - message: at least one of headers, methods, path,
-                                    sourceCIDR or QueryParams must be specified
+                                    sourceCIDR or queryParams must be specified
                                   rule: has(self.headers) || has(self.methods) ||
                                     has(self.path) || has(self.sourceCIDR) || has(self.queryParams)
                               maxItems: 8

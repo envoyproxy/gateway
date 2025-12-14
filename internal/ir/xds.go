@@ -2359,7 +2359,7 @@ type RateLimitRule struct {
 	// CIDRMatch define the match conditions on the source IP's CIDR for this route.
 	CIDRMatch *CIDRMatch `json:"cidrMatch,omitempty" yaml:"cidrMatch,omitempty"`
 	// QueryParamMatches define the match conditions on the request query parameters for this route.
-	QueryParamMatches []*QueryParamMatch `json:"queryParamMatches" yaml:"queryParamMatches"`
+	QueryParamMatches []*QueryParamMatch `json:"queryParamMatches,omitempty" yaml:"queryParamMatches,omitempty"`
 	// Limit holds the rate limit values.
 	Limit RateLimitValue `json:"limit,omitempty" yaml:"limit,omitempty"`
 	// RequestCost specifies the cost of the request.
@@ -2405,7 +2405,7 @@ type QueryParamMatch struct {
 	// Name of the query parameter.
 	Name string `json:"name" yaml:"name"`
 	// StringMatch defines how to match against the value of the query parameter.
-	*StringMatch `json:",inline" yaml:",inline"`
+	StringMatch `json:",inline" yaml:",inline"`
 }
 
 // TODO zhaohuabing: remove this function

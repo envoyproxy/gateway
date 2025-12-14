@@ -244,7 +244,6 @@ xdsIR:
                   requests: 10
                   unit: Hour
                 name: envoy-gateway/policy-for-gateway/rule/0
-                queryParamMatches: null
               - cidrMatch:
                   cidr: 192.168.0.0/16
                   distinct: false
@@ -262,7 +261,6 @@ xdsIR:
                   requests: 10
                   unit: Minute
                 name: envoy-gateway/policy-for-gateway/rule/1
-                queryParamMatches: null
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
