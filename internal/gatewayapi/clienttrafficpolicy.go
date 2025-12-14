@@ -821,10 +821,11 @@ func (t *Translator) buildListenerTLSParameters(
 			if err != nil {
 				return irTLSConfig, fmt.Errorf("failed to get certificate from ref: %w", err)
 			}
-			if err := validateCertificates(caCertBytes); err != nil {
+			validCaCertBytes, err := filterValidCertificates(caCertBytes)
+			if err != nil {
 				return irTLSConfig, fmt.Errorf("invalid certificate in %s: %w", caCertRef.Name, err)
 			}
-			irCACert.Certificate = append(irCACert.Certificate, caCertBytes...)
+			irCACert.Certificate = append(irCACert.Certificate, validCaCertBytes...)
 		}
 		if len(irCACert.Certificate) > 0 {
 			irTLSConfig.CACertificate = irCACert

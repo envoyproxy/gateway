@@ -165,33 +165,60 @@ func TestValidateTLSSecretsData(t *testing.T) {
 	}
 }
 
-func TestValidateCertificate(t *testing.T) {
+func TestFilterValidCertificates(t *testing.T) {
 	type testCase struct {
-		Name        string
-		CertFile    string
-		ExpectedErr error
+		Name             string
+		CertFile         string
+		ExpectedErr      error
+		ExpectedDataFile string // File containing expected filtered certificate data
 	}
 
 	testCases := []testCase{
 		{
-			Name:        "valid-rsa-cert",
-			CertFile:    "rsa-cert.pem",
-			ExpectedErr: nil,
+			Name:             "valid-rsa-cert",
+			CertFile:         "rsa-cert.pem",
+			ExpectedErr:      nil,
+			ExpectedDataFile: "rsa-cert.pem", // Same as input for valid cert
 		},
 		{
-			Name:        "valid-ecdsa-p256-cert",
-			CertFile:    "ecdsa-p256-cert.pem",
-			ExpectedErr: nil,
+			Name:             "valid-ecdsa-p256-cert",
+			CertFile:         "ecdsa-p256-cert.pem",
+			ExpectedErr:      nil,
+			ExpectedDataFile: "ecdsa-p256-cert.pem", // Same as input
 		},
 		{
-			Name:        "valid-ecdsa-p384-cert",
-			CertFile:    "ecdsa-p384-cert.pem",
-			ExpectedErr: nil,
+			Name:             "valid-ecdsa-p384-cert",
+			CertFile:         "ecdsa-p384-cert.pem",
+			ExpectedErr:      nil,
+			ExpectedDataFile: "ecdsa-p384-cert.pem", // Same as input
 		},
 		{
 			Name:        "malformed-cert",
 			CertFile:    "malformed-cert.pem",
 			ExpectedErr: errors.New("x509: malformed certificate"),
+		},
+		{
+			Name:             "bundle-both-valid",
+			CertFile:         "bundle-both-valid.pem",
+			ExpectedErr:      nil,
+			ExpectedDataFile: "bundle-both-valid.pem", // All certs are valid
+		},
+		{
+			Name:             "bundle-first-valid",
+			CertFile:         "bundle-first-valid.pem", // rsa-cert.pem + malformed-cert.pem
+			ExpectedErr:      nil,
+			ExpectedDataFile: "rsa-cert.pem", // Only first cert
+		},
+		{
+			Name:             "bundle-first-invalid",
+			CertFile:         "bundle-first-invalid.pem", // malformed-cert.pem + rsa-cert.pem
+			ExpectedErr:      nil,
+			ExpectedDataFile: "rsa-cert.pem", // Only second cert
+		},
+		{
+			Name:        "bundle-both-invalid",
+			CertFile:    "bundle-both-invalid.pem",
+			ExpectedErr: errors.New("x509: malformed certificate\nx509: malformed certificate"),
 		},
 	}
 
@@ -199,11 +226,22 @@ func TestValidateCertificate(t *testing.T) {
 		t.Run(tc.Name, func(t *testing.T) {
 			certData, err := os.ReadFile(filepath.Join("testdata", "tls", tc.CertFile))
 			require.NoError(t, err)
-			err = validateCertificates(certData)
+
+			result, err := filterValidCertificates(certData)
+
 			if tc.ExpectedErr == nil {
 				require.NoError(t, err)
+				require.NotNil(t, result)
+
+				// If ExpectedDataFile is provided, compare with expected data
+				if tc.ExpectedDataFile != "" {
+					expectedData, err := os.ReadFile(filepath.Join("testdata", "tls", tc.ExpectedDataFile))
+					require.NoError(t, err)
+					require.Equal(t, expectedData, result, "filtered certificate data should match expected value")
+				}
 			} else {
 				require.EqualError(t, err, tc.ExpectedErr.Error())
+				require.Nil(t, result)
 			}
 		})
 	}
