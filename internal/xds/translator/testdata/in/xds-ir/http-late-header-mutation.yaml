@@ -48,6 +48,19 @@ http:
     lateRemoveResponseHeaders:
     - "some-header5"
     - "some-header6"
+    lateRemoveResponseHeadersOnMatch:
+    - distinct: false
+      exact: my-removed-response-header-value
+      name: ""
+    - distinct: false
+      name: ""
+      prefix: removed-response-prefix-
+    - distinct: false
+      name: ""
+      suffix: -removed-response-suffix
+    - distinct: false
+      name: ""
+      safeRegex: removed-response-regex-.*
   routes:
   - name: "second-route"
     hostname: "*"

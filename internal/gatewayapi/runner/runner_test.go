@@ -52,7 +52,7 @@ func TestRunner(t *testing.T) {
 	require.NoError(t, err)
 
 	// IR is nil at start
-	require.Equal(t, map[string]*ir.Xds{}, xdsIR.LoadAll())
+	require.Equal(t, map[string]*message.XdsIRWithContext{}, xdsIR.LoadAll())
 	require.Equal(t, map[string]*ir.Infra{}, infraIR.LoadAll())
 
 	// TODO: pass valid provider resources
@@ -65,7 +65,7 @@ func TestRunner(t *testing.T) {
 			return false
 		}
 		// Ensure ir is empty
-		return (reflect.DeepEqual(xdsIR.LoadAll(), map[string]*ir.Xds{})) && (reflect.DeepEqual(infraIR.LoadAll(), map[string]*ir.Infra{}))
+		return (reflect.DeepEqual(xdsIR.LoadAll(), map[string]*message.XdsIRWithContext{})) && (reflect.DeepEqual(infraIR.LoadAll(), map[string]*ir.Infra{}))
 	}, time.Second*1, time.Millisecond*20)
 }
 

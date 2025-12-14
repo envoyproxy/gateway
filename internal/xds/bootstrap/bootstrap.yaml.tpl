@@ -65,6 +65,12 @@ stats_sinks:
     grpc_service:
       envoy_grpc:
         cluster_name: otel_metric_sink_{{ $idx }}
+    {{- if $sink.ReportCountersAsDeltas }}
+    report_counters_as_deltas: true
+    {{- end }}
+    {{- if $sink.ReportHistogramsAsDeltas }}
+    report_histograms_as_deltas: true
+    {{- end }}
 {{- end }}
 {{- end }}
 static_resources:

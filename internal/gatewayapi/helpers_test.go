@@ -881,7 +881,10 @@ func TestIrStringMatch(t *testing.T) {
 				Type:  ptr.To(stringMatchUnknown),
 				Value: matchValue,
 			},
-			expected: nil,
+			expected: &ir.StringMatch{
+				Name:  matchName,
+				Exact: &matchValue,
+			},
 		},
 	}
 

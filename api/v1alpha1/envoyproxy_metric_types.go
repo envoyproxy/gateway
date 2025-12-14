@@ -98,8 +98,17 @@ type ProxyOpenTelemetrySink struct {
 	// +kubebuilder:validation:Maximum=65535
 	// +kubebuilder:default=4317
 	Port int32 `json:"port,omitempty"`
-
-	// TODO: add support for customizing OpenTelemetry sink in https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/stat_sinks/open_telemetry/v3/open_telemetry.proto#envoy-v3-api-msg-extensions-stat-sinks-open-telemetry-v3-sinkconfig
+	// ReportCountersAsDeltas configures the OpenTelemetry sink to report
+	// counters as delta temporality instead of cumulative.
+	//
+	// +optional
+	ReportCountersAsDeltas *bool `json:"reportCountersAsDeltas,omitempty"`
+	// ReportHistogramsAsDeltas configures the OpenTelemetry sink to report
+	// histograms as delta temporality instead of cumulative.
+	// Required for backends like Elastic that drop cumulative histograms.
+	//
+	// +optional
+	ReportHistogramsAsDeltas *bool `json:"reportHistogramsAsDeltas,omitempty"`
 }
 
 type ProxyPrometheusProvider struct {
