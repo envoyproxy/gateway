@@ -1527,46 +1527,29 @@ func (t *Translator) buildResponseOverride(policy *egv1a1.BackendTrafficPolicy) 
 	}, nil
 }
 
-func checkResponseBodySize(b []byte) error {
-	// Make this configurable in the future
-	// https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route.proto.html#max_direct_response_body_size_bytes
-	maxDirectResponseSize := 4096
-	lenB := len(b)
-	if lenB > maxDirectResponseSize {
-		return fmt.Errorf("response.body size %d greater than the max size %d", lenB, maxDirectResponseSize)
-	}
-
-	return nil
-}
-
 func (t *Translator) getCustomResponseBody(
 	body *egv1a1.CustomResponseBody,
 	policyNs string,
 ) ([]byte, error) {
-	if body != nil && body.Type != nil && *body.Type == egv1a1.ResponseValueTypeValueRef {
+	if body == nil {
+		return nil, nil
+	}
+
+	if body.Type != nil && *body.Type == egv1a1.ResponseValueTypeValueRef {
 		cm := t.GetConfigMap(policyNs, string(body.ValueRef.Name))
 		if cm != nil {
 			b, dataOk := cm.Data["response.body"]
 			switch {
 			case dataOk:
-				body := []byte(b)
-				if err := checkResponseBodySize(body); err != nil {
-					return nil, err
-				}
-				return body, nil
+				data := []byte(b)
+				return data, nil
 			case len(cm.Data) > 0: // Fallback to the first key if response.body is not found
 				for _, value := range cm.Data {
-					body := []byte(value)
-					if err := checkResponseBodySize(body); err != nil {
-						return nil, err
-					}
-					return body, nil
+					data := []byte(value)
+					return data, nil
 				}
 			case len(cm.BinaryData) > 0:
 				for _, binData := range cm.BinaryData {
-					if err := checkResponseBodySize(binData); err != nil {
-						return nil, err
-					}
 					return binData, nil
 				}
 			default:
@@ -1575,11 +1558,8 @@ func (t *Translator) getCustomResponseBody(
 		} else {
 			return nil, fmt.Errorf("can't find the referenced configmap %s", body.ValueRef.Name)
 		}
-	} else if body != nil && body.Inline != nil {
+	} else if body.Inline != nil {
 		inlineValue := []byte(*body.Inline)
-		if err := checkResponseBodySize(inlineValue); err != nil {
-			return nil, err
-		}
 		return inlineValue, nil
 	}
 
