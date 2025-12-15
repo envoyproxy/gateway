@@ -854,8 +854,9 @@ func (t *Translator) processExtensionRefHTTPFilter(extFilter *gwapiv1.LocalObjec
 				if hrf.Spec.DirectResponse != nil {
 					dr := &ir.CustomResponse{}
 					if hrf.Spec.DirectResponse.Body != nil {
+						body := hrf.Spec.DirectResponse.Body
 						var err error
-						if dr.Body, err = t.getCustomResponseBody(hrf.Spec.DirectResponse.Body, filterNs); err != nil {
+						if dr.Body, err = t.getCustomResponseBody(body, filterNs); err != nil {
 							return t.processInvalidHTTPFilter(string(extFilter.Kind), filterContext, err)
 						}
 					}
