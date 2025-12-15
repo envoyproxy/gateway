@@ -320,8 +320,8 @@ func buildDFPLoopbackRBACPerRoute(irRoute *ir.HTTPRoute) (*rbacv3.RBACPerRoute, 
 		return nil, err
 	}
 
-	hostFromCustomHeader := irRoute.URLRewrite != nil && irRoute.URLRewrite.Host != nil && irRoute.URLRewrite.Host.Header != nil
 	headerToCheck := ":authority"
+	hostFromCustomHeader := irRoute.URLRewrite != nil && irRoute.URLRewrite.Host != nil && irRoute.URLRewrite.Host.Header != nil
 	if hostFromCustomHeader {
 		headerToCheck = *irRoute.URLRewrite.Host.Header
 	}

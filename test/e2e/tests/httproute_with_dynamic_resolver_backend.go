@@ -98,6 +98,20 @@ var DynamicResolverBackendTest = suite.ConformanceTest{
 				},
 			}, suite.TimeoutConfig.RequiredConsecutiveSuccesses, suite.TimeoutConfig.MaxTimeToConsistency)
 		})
+		t.Run("route to loopback address should be blocked", func(t *testing.T) {
+			expectedResponse := http.ExpectedResponse{
+				Request: http.Request{
+					Host: "127.0.0.1",
+					Path: "/",
+				},
+				Response: http.Response{
+					StatusCodes: []int{403},
+				},
+				Namespace: ConformanceInfraNamespace,
+			}
+
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
+		})
 		t.Run("host rewrite to header with default dns cache", func(t *testing.T) {
 			expectedResponse := http.ExpectedResponse{
 				Request: http.Request{
@@ -164,7 +178,7 @@ var DynamicResolverBackendTest = suite.ConformanceTest{
 
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 		})
-		t.Run("host rewrite to lookup address at a specific port should be blocked", func(t *testing.T) {
+		t.Run("host rewrite to loopback address at a specific port should be blocked", func(t *testing.T) {
 			expectedResponse := http.ExpectedResponse{
 				Request: http.Request{
 					Host: "non-existent-host",
@@ -181,7 +195,7 @@ var DynamicResolverBackendTest = suite.ConformanceTest{
 
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 		})
-		t.Run("host rewrite to lookup address at the default port should be blocked", func(t *testing.T) {
+		t.Run("host rewrite to loopback address at the default port should be blocked", func(t *testing.T) {
 			expectedResponse := http.ExpectedResponse{
 				Request: http.Request{
 					Host: "non-existent-host",
