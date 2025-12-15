@@ -27,3 +27,42 @@
         cluster: httproute/default/httproute-1/rule/0
         upgradeConfigs:
         - upgradeType: websocket
+      typedPerFilterConfig:
+        envoy.filters.http.rbac.dfp_loopback_deny:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.rbac.v3.RBACPerRoute
+          rbac:
+            rules:
+              action: DENY
+              policies:
+                deny-loopback-host:
+                  permissions:
+                  - header:
+                      name: :authority
+                      safeRegexMatch:
+                        regex: ^127\.0\.0\.1(?::\d+)?$
+                  - header:
+                      name: :authority
+                      safeRegexMatch:
+                        regex: ^localhost(?::\d+)?$
+                  - header:
+                      name: :authority
+                      safeRegexMatch:
+                        regex: ^localhost\.localdomain(?::\d+)?$
+                  - header:
+                      name: :authority
+                      safeRegexMatch:
+                        regex: ^ip6-localhost(?::\d+)?$
+                  - header:
+                      name: :authority
+                      safeRegexMatch:
+                        regex: ^ip6-loopback(?::\d+)?$
+                  - header:
+                      name: :authority
+                      safeRegexMatch:
+                        regex: ^\[::1\](?::\d+)?$
+                  - header:
+                      name: :authority
+                      safeRegexMatch:
+                        regex: ^::1(?::\d+)?$
+                  principals:
+                  - any: true

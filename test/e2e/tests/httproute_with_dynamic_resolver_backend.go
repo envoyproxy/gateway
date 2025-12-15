@@ -164,6 +164,57 @@ var DynamicResolverBackendTest = suite.ConformanceTest{
 
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 		})
+		t.Run("host rewrite to lookup address at a specific port should be blocked", func(t *testing.T) {
+			expectedResponse := http.ExpectedResponse{
+				Request: http.Request{
+					Host: "non-existent-host",
+					Path: "/host-rewrite-default-dns-cache",
+					Headers: map[string]string{
+						"x-dynamic-host-header-1": "127.0.0.1:19002",
+					},
+				},
+				Response: http.Response{
+					StatusCodes: []int{403},
+				},
+				Namespace: ConformanceInfraNamespace,
+			}
+
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
+		})
+		t.Run("host rewrite to lookup address at the default port should be blocked", func(t *testing.T) {
+			expectedResponse := http.ExpectedResponse{
+				Request: http.Request{
+					Host: "non-existent-host",
+					Path: "/host-rewrite-custom-dns-cache",
+					Headers: map[string]string{
+						"x-dynamic-host-header-2": "localhost",
+					},
+				},
+				Response: http.Response{
+					StatusCodes: []int{403},
+				},
+				Namespace: ConformanceInfraNamespace,
+			}
+
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
+		})
+		t.Run("host rewrite to forbidden hosts should be blocked", func(t *testing.T) {
+			expectedResponse := http.ExpectedResponse{
+				Request: http.Request{
+					Host: "non-existent-host",
+					Path: "/host-rewrite-custom-dns-cache",
+					Headers: map[string]string{
+						"x-dynamic-host-header-2": "forbidden.com",
+					},
+				},
+				Response: http.Response{
+					StatusCodes: []int{403},
+				},
+				Namespace: ConformanceInfraNamespace,
+			}
+
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
+		})
 	},
 }
 

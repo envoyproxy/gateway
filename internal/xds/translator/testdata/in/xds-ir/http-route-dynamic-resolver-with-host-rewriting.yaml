@@ -15,7 +15,8 @@ http:
       mergeSlashes: true
     port: 10080
     routes:
-      - destination:     # test DynamicResolver backend with host rewriting filter with default DNS cache config, rewrite from header x-dynamic-host-header-1
+      # test DynamicResolver backend with host rewriting filter with default DNS cache config, rewrite from header x-dynamic-host-header-1
+      - destination:
           metadata:
             kind: HTTPRoute
             name: httproute-1
@@ -40,7 +41,8 @@ http:
         urlRewrite:
           host:
             header: x-dynamic-host-header-1
-      - destination:     # test DynamicResolver backend with host rewriting filter with default DNS cache config, rewrite from header x-dynamic-host-header-2
+      # test DynamicResolver backend with host rewriting filter with default DNS cache config, rewrite from header x-dynamic-host-header-2
+      - destination:
           metadata:
             kind: HTTPRoute
             name: httproute-1
@@ -70,7 +72,8 @@ http:
         urlRewrite:
           host:
             header: x-dynamic-host-header-2
-      - destination:     # test DynamicResolver backend with host rewriting filter with custom DNS cache config
+      # test DynamicResolver backend with host rewriting filter with custom DNS cache config
+      - destination:
           metadata:
             kind: HTTPRoute
             name: httproute-2
@@ -99,7 +102,20 @@ http:
         urlRewrite:
           host:
             header: x-dynamic-host-header-3
-      - destination:     # test DynamicResolver backend with host rewriting filter with custom DNS cache config, rewrite to literal name
+        # test denying requests with forbidden host rewrite header values
+        security:
+          authorization:
+            defaultAction: Allow
+            rules:
+              - action: Deny
+                name: disallow-forbidden-hosts
+                principal:
+                  headers:
+                    - name: x-dynamic-host-header-3
+                      values:
+                        - forbidden.com
+      # test DynamicResolver backend with host rewriting filter with custom DNS cache config, rewrite to literal name
+      - destination:
           metadata:
             kind: HTTPRoute
             name: httproute-2

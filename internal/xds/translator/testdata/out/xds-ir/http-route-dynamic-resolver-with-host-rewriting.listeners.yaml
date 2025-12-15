@@ -14,6 +14,12 @@
           initialStreamWindowSize: 65536
           maxConcurrentStreams: 100
         httpFilters:
+        - name: envoy.filters.http.rbac
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.rbac.v3.RBAC
+        - name: envoy.filters.http.rbac.dfp_loopback_deny
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.rbac.v3.RBAC
         - disabled: true
           name: envoy.filters.http.dynamic_forward_proxy.envoy-gateway-dfp-cache-all-1000ms
           typedConfig:

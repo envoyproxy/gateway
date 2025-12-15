@@ -154,6 +154,28 @@ spec:
   appProtocols:
     - gateway.envoyproxy.io/h2c
 ---
+# Test SecurityPolicy to deny requests with forbidden host rewrite header values
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: authorization-disallow-hosts
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-with-dynamic-resolver-backend-host-rewrite-custom-dns-cache
+  authorization:
+    defaultAction: Allow
+    rules:
+      - name: "disallow-forbidden-hosts"
+        action: Deny
+        principal:
+          headers:
+            - name: x-dynamic-host-header-2
+              values:
+                - forbidden.com
+---
 apiVersion: v1
 kind: Service
 metadata:

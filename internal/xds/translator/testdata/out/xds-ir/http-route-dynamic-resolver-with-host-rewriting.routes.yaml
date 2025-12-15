@@ -31,6 +31,44 @@
         envoy.filters.http.dynamic_forward_proxy.envoy-gateway-dfp-cache-v4_preferred-30000ms:
           '@type': type.googleapis.com/envoy.extensions.filters.http.dynamic_forward_proxy.v3.PerRouteConfig
           hostRewriteHeader: x-dynamic-host-header-1
+        envoy.filters.http.rbac.dfp_loopback_deny:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.rbac.v3.RBACPerRoute
+          rbac:
+            rules:
+              action: DENY
+              policies:
+                deny-loopback-host:
+                  permissions:
+                  - header:
+                      name: x-dynamic-host-header-1
+                      safeRegexMatch:
+                        regex: ^127\.0\.0\.1(?::\d+)?$
+                  - header:
+                      name: x-dynamic-host-header-1
+                      safeRegexMatch:
+                        regex: ^localhost(?::\d+)?$
+                  - header:
+                      name: x-dynamic-host-header-1
+                      safeRegexMatch:
+                        regex: ^localhost\.localdomain(?::\d+)?$
+                  - header:
+                      name: x-dynamic-host-header-1
+                      safeRegexMatch:
+                        regex: ^ip6-localhost(?::\d+)?$
+                  - header:
+                      name: x-dynamic-host-header-1
+                      safeRegexMatch:
+                        regex: ^ip6-loopback(?::\d+)?$
+                  - header:
+                      name: x-dynamic-host-header-1
+                      safeRegexMatch:
+                        regex: ^\[::1\](?::\d+)?$
+                  - header:
+                      name: x-dynamic-host-header-1
+                      safeRegexMatch:
+                        regex: ^::1(?::\d+)?$
+                  principals:
+                  - any: true
     - match:
         pathSeparatedPrefix: /bar
       metadata:
@@ -49,6 +87,44 @@
         envoy.filters.http.dynamic_forward_proxy.envoy-gateway-dfp-cache-v4_preferred-30000ms:
           '@type': type.googleapis.com/envoy.extensions.filters.http.dynamic_forward_proxy.v3.PerRouteConfig
           hostRewriteHeader: x-dynamic-host-header-2
+        envoy.filters.http.rbac.dfp_loopback_deny:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.rbac.v3.RBACPerRoute
+          rbac:
+            rules:
+              action: DENY
+              policies:
+                deny-loopback-host:
+                  permissions:
+                  - header:
+                      name: x-dynamic-host-header-2
+                      safeRegexMatch:
+                        regex: ^127\.0\.0\.1(?::\d+)?$
+                  - header:
+                      name: x-dynamic-host-header-2
+                      safeRegexMatch:
+                        regex: ^localhost(?::\d+)?$
+                  - header:
+                      name: x-dynamic-host-header-2
+                      safeRegexMatch:
+                        regex: ^localhost\.localdomain(?::\d+)?$
+                  - header:
+                      name: x-dynamic-host-header-2
+                      safeRegexMatch:
+                        regex: ^ip6-localhost(?::\d+)?$
+                  - header:
+                      name: x-dynamic-host-header-2
+                      safeRegexMatch:
+                        regex: ^ip6-loopback(?::\d+)?$
+                  - header:
+                      name: x-dynamic-host-header-2
+                      safeRegexMatch:
+                        regex: ^\[::1\](?::\d+)?$
+                  - header:
+                      name: x-dynamic-host-header-2
+                      safeRegexMatch:
+                        regex: ^::1(?::\d+)?$
+                  principals:
+                  - any: true
     - match:
         pathSeparatedPrefix: /baz
       metadata:
@@ -67,6 +143,72 @@
         envoy.filters.http.dynamic_forward_proxy.envoy-gateway-dfp-cache-all-1000ms:
           '@type': type.googleapis.com/envoy.extensions.filters.http.dynamic_forward_proxy.v3.PerRouteConfig
           hostRewriteHeader: x-dynamic-host-header-3
+        envoy.filters.http.rbac:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.rbac.v3.RBACPerRoute
+          rbac:
+            matcher:
+              matcherList:
+                matchers:
+                - onMatch:
+                    action:
+                      name: disallow-forbidden-hosts
+                      typedConfig:
+                        '@type': type.googleapis.com/envoy.config.rbac.v3.Action
+                        action: DENY
+                        name: DENY
+                  predicate:
+                    singlePredicate:
+                      input:
+                        name: http_header
+                        typedConfig:
+                          '@type': type.googleapis.com/envoy.type.matcher.v3.HttpRequestHeaderMatchInput
+                          headerName: x-dynamic-host-header-3
+                      valueMatch:
+                        exact: forbidden.com
+              onNoMatch:
+                action:
+                  name: default
+                  typedConfig:
+                    '@type': type.googleapis.com/envoy.config.rbac.v3.Action
+                    name: ALLOW
+        envoy.filters.http.rbac.dfp_loopback_deny:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.rbac.v3.RBACPerRoute
+          rbac:
+            rules:
+              action: DENY
+              policies:
+                deny-loopback-host:
+                  permissions:
+                  - header:
+                      name: x-dynamic-host-header-3
+                      safeRegexMatch:
+                        regex: ^127\.0\.0\.1(?::\d+)?$
+                  - header:
+                      name: x-dynamic-host-header-3
+                      safeRegexMatch:
+                        regex: ^localhost(?::\d+)?$
+                  - header:
+                      name: x-dynamic-host-header-3
+                      safeRegexMatch:
+                        regex: ^localhost\.localdomain(?::\d+)?$
+                  - header:
+                      name: x-dynamic-host-header-3
+                      safeRegexMatch:
+                        regex: ^ip6-localhost(?::\d+)?$
+                  - header:
+                      name: x-dynamic-host-header-3
+                      safeRegexMatch:
+                        regex: ^ip6-loopback(?::\d+)?$
+                  - header:
+                      name: x-dynamic-host-header-3
+                      safeRegexMatch:
+                        regex: ^\[::1\](?::\d+)?$
+                  - header:
+                      name: x-dynamic-host-header-3
+                      safeRegexMatch:
+                        regex: ^::1(?::\d+)?$
+                  principals:
+                  - any: true
     - match:
         pathSeparatedPrefix: /qux
       metadata:

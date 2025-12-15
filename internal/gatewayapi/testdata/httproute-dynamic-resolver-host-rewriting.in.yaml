@@ -14,11 +14,12 @@ gateways:
             namespaces:
               from: All
 httpRoutes:
+  # test DynamicResolver backend with host rewriting filter with default DNS cache config
   - apiVersion: gateway.networking.k8s.io/v1
     kind: HTTPRoute
     metadata:
       namespace: default
-      name: httproute-1    # test DynamicResolver backend with host rewriting filter with default DNS cache config
+      name: httproute-1
     spec:
       hostnames:
         - gateway.envoyproxy.io
@@ -53,11 +54,12 @@ httpRoutes:
                 group: gateway.envoyproxy.io
                 kind: HTTPRouteFilter
                 name: host-rewrite-from-header-2
+  # test DynamicResolver backend with host rewriting filter with custom DNS cache config
   - apiVersion: gateway.networking.k8s.io/v1
     kind: HTTPRoute
     metadata:
       namespace: default
-      name: httproute-2   # test DynamicResolver backend with host rewriting filter with custom DNS cache config
+      name: httproute-2
     spec:
       hostnames:
         - gateway.envoyproxy.io
@@ -152,3 +154,25 @@ backendTrafficPolicies:
       dns:
         dnsRefreshRate: "1s"
         lookupFamily: IPv4AndIPv6
+SecurityPolicies:
+  # test denying requests with forbidden host rewrite header values
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: SecurityPolicy
+    metadata:
+      name: authorization-disallow-hosts
+      namespace: default
+    spec:
+      targetRefs:
+        - group: gateway.networking.k8s.io
+          kind: HTTPRoute
+          name: httproute-2
+      authorization:
+        defaultAction: Allow
+        rules:
+          - name: "disallow-forbidden-hosts"
+            action: Deny
+            principal:
+              headers:
+                - name: x-dynamic-host-header-3
+                  values:
+                    - forbidden.com
