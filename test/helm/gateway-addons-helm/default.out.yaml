@@ -70,25 +70,6 @@ metadata:
     app.kubernetes.io/managed-by: Helm
 automountServiceAccountToken: true
 ---
-# Source: gateway-addons-helm/charts/grafana/templates/secret.yaml
-apiVersion: v1
-kind: Secret
-metadata:
-  name: grafana
-  namespace: monitoring
-  labels:
-    helm.sh/chart: grafana-8.0.0
-    app.kubernetes.io/name: grafana
-    app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "11.0.0"
-    app.kubernetes.io/managed-by: Helm
-type: Opaque
-data:
-  
-  admin-user: "YWRtaW4="
-  admin-password: "YWRtaW4="
-  ldap-toml: ""
----
 # Source: gateway-addons-helm/charts/fluent-bit/templates/configmap.yaml
 apiVersion: v1
 kind: ConfigMap
@@ -188,9 +169,18 @@ data:
   datasources.yaml: |
     apiVersion: 1
     datasources:
-    - name: Prometheus
+    - editable: true
+      name: Prometheus
       type: prometheus
       url: http://prometheus
+    - editable: true
+      name: Tempo
+      type: tempo
+      url: http://tempo:3100
+    - editable: true
+      name: Loki
+      type: loki
+      url: http://loki:3100
   dashboardproviders.yaml: |
     apiVersion: 1
     providers:
@@ -10429,9 +10419,8 @@ spec:
         app.kubernetes.io/name: grafana
         app.kubernetes.io/instance: gateway-addons-helm
       annotations:
-        checksum/config: fb83d9a834484a53eeac493c30f6d1f333707950c42350afddcbc340c63abaf9
+        checksum/config: d622e7e4744a86485b5271ba5a611ad70d68878e6cbf7838513973bdf7bd5f45
         checksum/sc-dashboard-provider-config: 593c0a8778b83f11fe80ccb21dfb20bc46705e2be3178df1dc4c89d164c8cd9c
-        checksum/secret: bed677784356b2af7fb0d87455db21f077853059b594101a4f6532bfbd962a7f
         kubectl.kubernetes.io/default-container: grafana
     spec:
       
@@ -10483,16 +10472,6 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: status.podIP
-            - name: GF_SECURITY_ADMIN_USER
-              valueFrom:
-                secretKeyRef:
-                  name: grafana
-                  key: admin-user
-            - name: GF_SECURITY_ADMIN_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: grafana
-                  key: admin-password
             - name: GF_PATHS_DATA
               value: /var/lib/grafana/
             - name: GF_PATHS_LOGS
@@ -10501,6 +10480,16 @@ spec:
               value: /var/lib/grafana/plugins
             - name: GF_PATHS_PROVISIONING
               value: /etc/grafana/provisioning
+            - name: "GF_AUTH_ANONYMOUS_ENABLED"
+              value: "true"
+            - name: "GF_AUTH_ANONYMOUS_ORG_ROLE"
+              value: "Admin"
+            - name: "GF_AUTH_BASIC_ENABLED"
+              value: "false"
+            - name: "GF_SECURITY_ADMIN_PASSWORD"
+              value: "admin"
+            - name: "GF_SECURITY_ADMIN_USER"
+              value: "admin"
           livenessProbe:
             failureThreshold: 10
             httpGet:
