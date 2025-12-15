@@ -347,6 +347,9 @@ func buildDFPLoopbackRBACPerRoute(irRoute *ir.HTTPRoute) (*rbacv3.RBACPerRoute, 
 						ValueMatch: &matcherv3.StringMatcher{
 							MatchPattern: &matcherv3.StringMatcher_SafeRegex{
 								SafeRegex: &matcherv3.RegexMatcher{
+									EngineType: &matcherv3.RegexMatcher_GoogleRe2{
+										GoogleRe2: &matcherv3.RegexMatcher_GoogleRE2{},
+									},
 									Regex: pattern,
 								},
 							},

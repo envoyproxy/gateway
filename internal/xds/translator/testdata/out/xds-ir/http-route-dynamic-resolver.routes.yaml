@@ -52,6 +52,7 @@
                               headerName: :authority
                           valueMatch:
                             safeRegex:
+                              googleRe2: {}
                               regex: ^127\.0\.0\.1(?::\d+)?$
                       - singlePredicate:
                           input:
@@ -61,6 +62,7 @@
                               headerName: :authority
                           valueMatch:
                             safeRegex:
+                              googleRe2: {}
                               regex: ^localhost(?::\d+)?$
                       - singlePredicate:
                           input:
@@ -70,6 +72,7 @@
                               headerName: :authority
                           valueMatch:
                             safeRegex:
+                              googleRe2: {}
                               regex: ^localhost\.localdomain(?::\d+)?$
                       - singlePredicate:
                           input:
@@ -79,6 +82,7 @@
                               headerName: :authority
                           valueMatch:
                             safeRegex:
+                              googleRe2: {}
                               regex: ^ip6-localhost(?::\d+)?$
                       - singlePredicate:
                           input:
@@ -88,6 +92,7 @@
                               headerName: :authority
                           valueMatch:
                             safeRegex:
+                              googleRe2: {}
                               regex: ^ip6-loopback(?::\d+)?$
                       - singlePredicate:
                           input:
@@ -97,6 +102,7 @@
                               headerName: :authority
                           valueMatch:
                             safeRegex:
+                              googleRe2: {}
                               regex: ^\[::1\](?::\d+)?$
                       - singlePredicate:
                           input:
@@ -106,6 +112,7 @@
                               headerName: :authority
                           valueMatch:
                             safeRegex:
+                              googleRe2: {}
                               regex: ^::1(?::\d+)?$
               onNoMatch:
                 action:

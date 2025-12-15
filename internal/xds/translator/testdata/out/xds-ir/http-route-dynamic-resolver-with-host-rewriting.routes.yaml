@@ -55,6 +55,7 @@
                               headerName: x-dynamic-host-header-1
                           valueMatch:
                             safeRegex:
+                              googleRe2: {}
                               regex: ^127\.0\.0\.1(?::\d+)?$
                       - singlePredicate:
                           input:
@@ -64,6 +65,7 @@
                               headerName: x-dynamic-host-header-1
                           valueMatch:
                             safeRegex:
+                              googleRe2: {}
                               regex: ^localhost(?::\d+)?$
                       - singlePredicate:
                           input:
@@ -73,6 +75,7 @@
                               headerName: x-dynamic-host-header-1
                           valueMatch:
                             safeRegex:
+                              googleRe2: {}
                               regex: ^localhost\.localdomain(?::\d+)?$
                       - singlePredicate:
                           input:
@@ -82,6 +85,7 @@
                               headerName: x-dynamic-host-header-1
                           valueMatch:
                             safeRegex:
+                              googleRe2: {}
                               regex: ^ip6-localhost(?::\d+)?$
                       - singlePredicate:
                           input:
@@ -91,6 +95,7 @@
                               headerName: x-dynamic-host-header-1
                           valueMatch:
                             safeRegex:
+                              googleRe2: {}
                               regex: ^ip6-loopback(?::\d+)?$
                       - singlePredicate:
                           input:
@@ -100,6 +105,7 @@
                               headerName: x-dynamic-host-header-1
                           valueMatch:
                             safeRegex:
+                              googleRe2: {}
                               regex: ^\[::1\](?::\d+)?$
                       - singlePredicate:
                           input:
@@ -109,6 +115,7 @@
                               headerName: x-dynamic-host-header-1
                           valueMatch:
                             safeRegex:
+                              googleRe2: {}
                               regex: ^::1(?::\d+)?$
               onNoMatch:
                 action:
@@ -158,6 +165,7 @@
                               headerName: x-dynamic-host-header-2
                           valueMatch:
                             safeRegex:
+                              googleRe2: {}
                               regex: ^127\.0\.0\.1(?::\d+)?$
                       - singlePredicate:
                           input:
@@ -167,6 +175,7 @@
                               headerName: x-dynamic-host-header-2
                           valueMatch:
                             safeRegex:
+                              googleRe2: {}
                               regex: ^localhost(?::\d+)?$
                       - singlePredicate:
                           input:
@@ -176,6 +185,7 @@
                               headerName: x-dynamic-host-header-2
                           valueMatch:
                             safeRegex:
+                              googleRe2: {}
                               regex: ^localhost\.localdomain(?::\d+)?$
                       - singlePredicate:
                           input:
@@ -185,6 +195,7 @@
                               headerName: x-dynamic-host-header-2
                           valueMatch:
                             safeRegex:
+                              googleRe2: {}
                               regex: ^ip6-localhost(?::\d+)?$
                       - singlePredicate:
                           input:
@@ -194,6 +205,7 @@
                               headerName: x-dynamic-host-header-2
                           valueMatch:
                             safeRegex:
+                              googleRe2: {}
                               regex: ^ip6-loopback(?::\d+)?$
                       - singlePredicate:
                           input:
@@ -203,6 +215,7 @@
                               headerName: x-dynamic-host-header-2
                           valueMatch:
                             safeRegex:
+                              googleRe2: {}
                               regex: ^\[::1\](?::\d+)?$
                       - singlePredicate:
                           input:
@@ -212,6 +225,7 @@
                               headerName: x-dynamic-host-header-2
                           valueMatch:
                             safeRegex:
+                              googleRe2: {}
                               regex: ^::1(?::\d+)?$
               onNoMatch:
                 action:
@@ -289,6 +303,7 @@
                               headerName: x-dynamic-host-header-3
                           valueMatch:
                             safeRegex:
+                              googleRe2: {}
                               regex: ^127\.0\.0\.1(?::\d+)?$
                       - singlePredicate:
                           input:
@@ -298,6 +313,7 @@
                               headerName: x-dynamic-host-header-3
                           valueMatch:
                             safeRegex:
+                              googleRe2: {}
                               regex: ^localhost(?::\d+)?$
                       - singlePredicate:
                           input:
@@ -307,6 +323,7 @@
                               headerName: x-dynamic-host-header-3
                           valueMatch:
                             safeRegex:
+                              googleRe2: {}
                               regex: ^localhost\.localdomain(?::\d+)?$
                       - singlePredicate:
                           input:
@@ -316,6 +333,7 @@
                               headerName: x-dynamic-host-header-3
                           valueMatch:
                             safeRegex:
+                              googleRe2: {}
                               regex: ^ip6-localhost(?::\d+)?$
                       - singlePredicate:
                           input:
@@ -325,6 +343,7 @@
                               headerName: x-dynamic-host-header-3
                           valueMatch:
                             safeRegex:
+                              googleRe2: {}
                               regex: ^ip6-loopback(?::\d+)?$
                       - singlePredicate:
                           input:
@@ -334,6 +353,7 @@
                               headerName: x-dynamic-host-header-3
                           valueMatch:
                             safeRegex:
+                              googleRe2: {}
                               regex: ^\[::1\](?::\d+)?$
                       - singlePredicate:
                           input:
@@ -343,6 +363,7 @@
                               headerName: x-dynamic-host-header-3
                           valueMatch:
                             safeRegex:
+                              googleRe2: {}
                               regex: ^::1(?::\d+)?$
               onNoMatch:
                 action:
