@@ -4,6 +4,7 @@ date: Pending
 breaking changes: |
   The SecurityPolicy name has been added to the stat prefix for aouth2 filter metrics to provide better granularity. Example: http.https-10443.securitypolicy/default/oidc-example.oauth_success: 0.
   Returning 500 direct responses for HTTPRoute and GRPCRoute with invalid filters.
+  Set HTTPRoute Accepted status to False when RequestMirror filter is used together with DirectResponse or RequestRedirect filters.
 
 # Updates addressing vulnerabilities, security flaws, or compliance requirements.
 security updates: |
