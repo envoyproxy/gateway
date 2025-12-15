@@ -34,41 +34,88 @@
         envoy.filters.http.rbac.dfp_loopback_deny:
           '@type': type.googleapis.com/envoy.extensions.filters.http.rbac.v3.RBACPerRoute
           rbac:
-            rules:
-              action: DENY
-              policies:
-                deny-loopback-host:
-                  permissions:
-                  - header:
-                      name: x-dynamic-host-header-1
-                      safeRegexMatch:
-                        regex: ^127\.0\.0\.1(?::\d+)?$
-                  - header:
-                      name: x-dynamic-host-header-1
-                      safeRegexMatch:
-                        regex: ^localhost(?::\d+)?$
-                  - header:
-                      name: x-dynamic-host-header-1
-                      safeRegexMatch:
-                        regex: ^localhost\.localdomain(?::\d+)?$
-                  - header:
-                      name: x-dynamic-host-header-1
-                      safeRegexMatch:
-                        regex: ^ip6-localhost(?::\d+)?$
-                  - header:
-                      name: x-dynamic-host-header-1
-                      safeRegexMatch:
-                        regex: ^ip6-loopback(?::\d+)?$
-                  - header:
-                      name: x-dynamic-host-header-1
-                      safeRegexMatch:
-                        regex: ^\[::1\](?::\d+)?$
-                  - header:
-                      name: x-dynamic-host-header-1
-                      safeRegexMatch:
-                        regex: ^::1(?::\d+)?$
-                  principals:
-                  - any: true
+            matcher:
+              matcherList:
+                matchers:
+                - onMatch:
+                    action:
+                      name: deny-loopback-host
+                      typedConfig:
+                        '@type': type.googleapis.com/envoy.config.rbac.v3.Action
+                        action: DENY
+                        name: DENY
+                  predicate:
+                    orMatcher:
+                      predicate:
+                      - singlePredicate:
+                          input:
+                            name: http_header
+                            typedConfig:
+                              '@type': type.googleapis.com/envoy.type.matcher.v3.HttpRequestHeaderMatchInput
+                              headerName: x-dynamic-host-header-1
+                          valueMatch:
+                            safeRegex:
+                              regex: ^127\.0\.0\.1(?::\d+)?$
+                      - singlePredicate:
+                          input:
+                            name: http_header
+                            typedConfig:
+                              '@type': type.googleapis.com/envoy.type.matcher.v3.HttpRequestHeaderMatchInput
+                              headerName: x-dynamic-host-header-1
+                          valueMatch:
+                            safeRegex:
+                              regex: ^localhost(?::\d+)?$
+                      - singlePredicate:
+                          input:
+                            name: http_header
+                            typedConfig:
+                              '@type': type.googleapis.com/envoy.type.matcher.v3.HttpRequestHeaderMatchInput
+                              headerName: x-dynamic-host-header-1
+                          valueMatch:
+                            safeRegex:
+                              regex: ^localhost\.localdomain(?::\d+)?$
+                      - singlePredicate:
+                          input:
+                            name: http_header
+                            typedConfig:
+                              '@type': type.googleapis.com/envoy.type.matcher.v3.HttpRequestHeaderMatchInput
+                              headerName: x-dynamic-host-header-1
+                          valueMatch:
+                            safeRegex:
+                              regex: ^ip6-localhost(?::\d+)?$
+                      - singlePredicate:
+                          input:
+                            name: http_header
+                            typedConfig:
+                              '@type': type.googleapis.com/envoy.type.matcher.v3.HttpRequestHeaderMatchInput
+                              headerName: x-dynamic-host-header-1
+                          valueMatch:
+                            safeRegex:
+                              regex: ^ip6-loopback(?::\d+)?$
+                      - singlePredicate:
+                          input:
+                            name: http_header
+                            typedConfig:
+                              '@type': type.googleapis.com/envoy.type.matcher.v3.HttpRequestHeaderMatchInput
+                              headerName: x-dynamic-host-header-1
+                          valueMatch:
+                            safeRegex:
+                              regex: ^\[::1\](?::\d+)?$
+                      - singlePredicate:
+                          input:
+                            name: http_header
+                            typedConfig:
+                              '@type': type.googleapis.com/envoy.type.matcher.v3.HttpRequestHeaderMatchInput
+                              headerName: x-dynamic-host-header-1
+                          valueMatch:
+                            safeRegex:
+                              regex: ^::1(?::\d+)?$
+              onNoMatch:
+                action:
+                  name: default
+                  typedConfig:
+                    '@type': type.googleapis.com/envoy.config.rbac.v3.Action
+                    name: ALLOW
     - match:
         pathSeparatedPrefix: /bar
       metadata:
@@ -90,41 +137,88 @@
         envoy.filters.http.rbac.dfp_loopback_deny:
           '@type': type.googleapis.com/envoy.extensions.filters.http.rbac.v3.RBACPerRoute
           rbac:
-            rules:
-              action: DENY
-              policies:
-                deny-loopback-host:
-                  permissions:
-                  - header:
-                      name: x-dynamic-host-header-2
-                      safeRegexMatch:
-                        regex: ^127\.0\.0\.1(?::\d+)?$
-                  - header:
-                      name: x-dynamic-host-header-2
-                      safeRegexMatch:
-                        regex: ^localhost(?::\d+)?$
-                  - header:
-                      name: x-dynamic-host-header-2
-                      safeRegexMatch:
-                        regex: ^localhost\.localdomain(?::\d+)?$
-                  - header:
-                      name: x-dynamic-host-header-2
-                      safeRegexMatch:
-                        regex: ^ip6-localhost(?::\d+)?$
-                  - header:
-                      name: x-dynamic-host-header-2
-                      safeRegexMatch:
-                        regex: ^ip6-loopback(?::\d+)?$
-                  - header:
-                      name: x-dynamic-host-header-2
-                      safeRegexMatch:
-                        regex: ^\[::1\](?::\d+)?$
-                  - header:
-                      name: x-dynamic-host-header-2
-                      safeRegexMatch:
-                        regex: ^::1(?::\d+)?$
-                  principals:
-                  - any: true
+            matcher:
+              matcherList:
+                matchers:
+                - onMatch:
+                    action:
+                      name: deny-loopback-host
+                      typedConfig:
+                        '@type': type.googleapis.com/envoy.config.rbac.v3.Action
+                        action: DENY
+                        name: DENY
+                  predicate:
+                    orMatcher:
+                      predicate:
+                      - singlePredicate:
+                          input:
+                            name: http_header
+                            typedConfig:
+                              '@type': type.googleapis.com/envoy.type.matcher.v3.HttpRequestHeaderMatchInput
+                              headerName: x-dynamic-host-header-2
+                          valueMatch:
+                            safeRegex:
+                              regex: ^127\.0\.0\.1(?::\d+)?$
+                      - singlePredicate:
+                          input:
+                            name: http_header
+                            typedConfig:
+                              '@type': type.googleapis.com/envoy.type.matcher.v3.HttpRequestHeaderMatchInput
+                              headerName: x-dynamic-host-header-2
+                          valueMatch:
+                            safeRegex:
+                              regex: ^localhost(?::\d+)?$
+                      - singlePredicate:
+                          input:
+                            name: http_header
+                            typedConfig:
+                              '@type': type.googleapis.com/envoy.type.matcher.v3.HttpRequestHeaderMatchInput
+                              headerName: x-dynamic-host-header-2
+                          valueMatch:
+                            safeRegex:
+                              regex: ^localhost\.localdomain(?::\d+)?$
+                      - singlePredicate:
+                          input:
+                            name: http_header
+                            typedConfig:
+                              '@type': type.googleapis.com/envoy.type.matcher.v3.HttpRequestHeaderMatchInput
+                              headerName: x-dynamic-host-header-2
+                          valueMatch:
+                            safeRegex:
+                              regex: ^ip6-localhost(?::\d+)?$
+                      - singlePredicate:
+                          input:
+                            name: http_header
+                            typedConfig:
+                              '@type': type.googleapis.com/envoy.type.matcher.v3.HttpRequestHeaderMatchInput
+                              headerName: x-dynamic-host-header-2
+                          valueMatch:
+                            safeRegex:
+                              regex: ^ip6-loopback(?::\d+)?$
+                      - singlePredicate:
+                          input:
+                            name: http_header
+                            typedConfig:
+                              '@type': type.googleapis.com/envoy.type.matcher.v3.HttpRequestHeaderMatchInput
+                              headerName: x-dynamic-host-header-2
+                          valueMatch:
+                            safeRegex:
+                              regex: ^\[::1\](?::\d+)?$
+                      - singlePredicate:
+                          input:
+                            name: http_header
+                            typedConfig:
+                              '@type': type.googleapis.com/envoy.type.matcher.v3.HttpRequestHeaderMatchInput
+                              headerName: x-dynamic-host-header-2
+                          valueMatch:
+                            safeRegex:
+                              regex: ^::1(?::\d+)?$
+              onNoMatch:
+                action:
+                  name: default
+                  typedConfig:
+                    '@type': type.googleapis.com/envoy.config.rbac.v3.Action
+                    name: ALLOW
     - match:
         pathSeparatedPrefix: /baz
       metadata:
@@ -174,41 +268,88 @@
         envoy.filters.http.rbac.dfp_loopback_deny:
           '@type': type.googleapis.com/envoy.extensions.filters.http.rbac.v3.RBACPerRoute
           rbac:
-            rules:
-              action: DENY
-              policies:
-                deny-loopback-host:
-                  permissions:
-                  - header:
-                      name: x-dynamic-host-header-3
-                      safeRegexMatch:
-                        regex: ^127\.0\.0\.1(?::\d+)?$
-                  - header:
-                      name: x-dynamic-host-header-3
-                      safeRegexMatch:
-                        regex: ^localhost(?::\d+)?$
-                  - header:
-                      name: x-dynamic-host-header-3
-                      safeRegexMatch:
-                        regex: ^localhost\.localdomain(?::\d+)?$
-                  - header:
-                      name: x-dynamic-host-header-3
-                      safeRegexMatch:
-                        regex: ^ip6-localhost(?::\d+)?$
-                  - header:
-                      name: x-dynamic-host-header-3
-                      safeRegexMatch:
-                        regex: ^ip6-loopback(?::\d+)?$
-                  - header:
-                      name: x-dynamic-host-header-3
-                      safeRegexMatch:
-                        regex: ^\[::1\](?::\d+)?$
-                  - header:
-                      name: x-dynamic-host-header-3
-                      safeRegexMatch:
-                        regex: ^::1(?::\d+)?$
-                  principals:
-                  - any: true
+            matcher:
+              matcherList:
+                matchers:
+                - onMatch:
+                    action:
+                      name: deny-loopback-host
+                      typedConfig:
+                        '@type': type.googleapis.com/envoy.config.rbac.v3.Action
+                        action: DENY
+                        name: DENY
+                  predicate:
+                    orMatcher:
+                      predicate:
+                      - singlePredicate:
+                          input:
+                            name: http_header
+                            typedConfig:
+                              '@type': type.googleapis.com/envoy.type.matcher.v3.HttpRequestHeaderMatchInput
+                              headerName: x-dynamic-host-header-3
+                          valueMatch:
+                            safeRegex:
+                              regex: ^127\.0\.0\.1(?::\d+)?$
+                      - singlePredicate:
+                          input:
+                            name: http_header
+                            typedConfig:
+                              '@type': type.googleapis.com/envoy.type.matcher.v3.HttpRequestHeaderMatchInput
+                              headerName: x-dynamic-host-header-3
+                          valueMatch:
+                            safeRegex:
+                              regex: ^localhost(?::\d+)?$
+                      - singlePredicate:
+                          input:
+                            name: http_header
+                            typedConfig:
+                              '@type': type.googleapis.com/envoy.type.matcher.v3.HttpRequestHeaderMatchInput
+                              headerName: x-dynamic-host-header-3
+                          valueMatch:
+                            safeRegex:
+                              regex: ^localhost\.localdomain(?::\d+)?$
+                      - singlePredicate:
+                          input:
+                            name: http_header
+                            typedConfig:
+                              '@type': type.googleapis.com/envoy.type.matcher.v3.HttpRequestHeaderMatchInput
+                              headerName: x-dynamic-host-header-3
+                          valueMatch:
+                            safeRegex:
+                              regex: ^ip6-localhost(?::\d+)?$
+                      - singlePredicate:
+                          input:
+                            name: http_header
+                            typedConfig:
+                              '@type': type.googleapis.com/envoy.type.matcher.v3.HttpRequestHeaderMatchInput
+                              headerName: x-dynamic-host-header-3
+                          valueMatch:
+                            safeRegex:
+                              regex: ^ip6-loopback(?::\d+)?$
+                      - singlePredicate:
+                          input:
+                            name: http_header
+                            typedConfig:
+                              '@type': type.googleapis.com/envoy.type.matcher.v3.HttpRequestHeaderMatchInput
+                              headerName: x-dynamic-host-header-3
+                          valueMatch:
+                            safeRegex:
+                              regex: ^\[::1\](?::\d+)?$
+                      - singlePredicate:
+                          input:
+                            name: http_header
+                            typedConfig:
+                              '@type': type.googleapis.com/envoy.type.matcher.v3.HttpRequestHeaderMatchInput
+                              headerName: x-dynamic-host-header-3
+                          valueMatch:
+                            safeRegex:
+                              regex: ^::1(?::\d+)?$
+              onNoMatch:
+                action:
+                  name: default
+                  typedConfig:
+                    '@type': type.googleapis.com/envoy.config.rbac.v3.Action
+                    name: ALLOW
     - match:
         pathSeparatedPrefix: /qux
       metadata:

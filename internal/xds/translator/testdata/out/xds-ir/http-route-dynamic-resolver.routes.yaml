@@ -31,38 +31,85 @@
         envoy.filters.http.rbac.dfp_loopback_deny:
           '@type': type.googleapis.com/envoy.extensions.filters.http.rbac.v3.RBACPerRoute
           rbac:
-            rules:
-              action: DENY
-              policies:
-                deny-loopback-host:
-                  permissions:
-                  - header:
-                      name: :authority
-                      safeRegexMatch:
-                        regex: ^127\.0\.0\.1(?::\d+)?$
-                  - header:
-                      name: :authority
-                      safeRegexMatch:
-                        regex: ^localhost(?::\d+)?$
-                  - header:
-                      name: :authority
-                      safeRegexMatch:
-                        regex: ^localhost\.localdomain(?::\d+)?$
-                  - header:
-                      name: :authority
-                      safeRegexMatch:
-                        regex: ^ip6-localhost(?::\d+)?$
-                  - header:
-                      name: :authority
-                      safeRegexMatch:
-                        regex: ^ip6-loopback(?::\d+)?$
-                  - header:
-                      name: :authority
-                      safeRegexMatch:
-                        regex: ^\[::1\](?::\d+)?$
-                  - header:
-                      name: :authority
-                      safeRegexMatch:
-                        regex: ^::1(?::\d+)?$
-                  principals:
-                  - any: true
+            matcher:
+              matcherList:
+                matchers:
+                - onMatch:
+                    action:
+                      name: deny-loopback-host
+                      typedConfig:
+                        '@type': type.googleapis.com/envoy.config.rbac.v3.Action
+                        action: DENY
+                        name: DENY
+                  predicate:
+                    orMatcher:
+                      predicate:
+                      - singlePredicate:
+                          input:
+                            name: http_header
+                            typedConfig:
+                              '@type': type.googleapis.com/envoy.type.matcher.v3.HttpRequestHeaderMatchInput
+                              headerName: :authority
+                          valueMatch:
+                            safeRegex:
+                              regex: ^127\.0\.0\.1(?::\d+)?$
+                      - singlePredicate:
+                          input:
+                            name: http_header
+                            typedConfig:
+                              '@type': type.googleapis.com/envoy.type.matcher.v3.HttpRequestHeaderMatchInput
+                              headerName: :authority
+                          valueMatch:
+                            safeRegex:
+                              regex: ^localhost(?::\d+)?$
+                      - singlePredicate:
+                          input:
+                            name: http_header
+                            typedConfig:
+                              '@type': type.googleapis.com/envoy.type.matcher.v3.HttpRequestHeaderMatchInput
+                              headerName: :authority
+                          valueMatch:
+                            safeRegex:
+                              regex: ^localhost\.localdomain(?::\d+)?$
+                      - singlePredicate:
+                          input:
+                            name: http_header
+                            typedConfig:
+                              '@type': type.googleapis.com/envoy.type.matcher.v3.HttpRequestHeaderMatchInput
+                              headerName: :authority
+                          valueMatch:
+                            safeRegex:
+                              regex: ^ip6-localhost(?::\d+)?$
+                      - singlePredicate:
+                          input:
+                            name: http_header
+                            typedConfig:
+                              '@type': type.googleapis.com/envoy.type.matcher.v3.HttpRequestHeaderMatchInput
+                              headerName: :authority
+                          valueMatch:
+                            safeRegex:
+                              regex: ^ip6-loopback(?::\d+)?$
+                      - singlePredicate:
+                          input:
+                            name: http_header
+                            typedConfig:
+                              '@type': type.googleapis.com/envoy.type.matcher.v3.HttpRequestHeaderMatchInput
+                              headerName: :authority
+                          valueMatch:
+                            safeRegex:
+                              regex: ^\[::1\](?::\d+)?$
+                      - singlePredicate:
+                          input:
+                            name: http_header
+                            typedConfig:
+                              '@type': type.googleapis.com/envoy.type.matcher.v3.HttpRequestHeaderMatchInput
+                              headerName: :authority
+                          valueMatch:
+                            safeRegex:
+                              regex: ^::1(?::\d+)?$
+              onNoMatch:
+                action:
+                  name: default
+                  typedConfig:
+                    '@type': type.googleapis.com/envoy.config.rbac.v3.Action
+                    name: ALLOW

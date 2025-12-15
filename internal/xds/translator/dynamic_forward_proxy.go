@@ -10,6 +10,8 @@ import (
 	"fmt"
 	"sort"
 
+	cncfv3 "github.com/cncf/xds/go/xds/core/v3"
+	matcherv3 "github.com/cncf/xds/go/xds/type/matcher/v3"
 	rbacconfigv3 "github.com/envoyproxy/go-control-plane/envoy/config/rbac/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	commondfpv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/common/dynamic_forward_proxy/v3"
@@ -21,6 +23,7 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/utils/proto"
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
@@ -110,11 +113,13 @@ func (*dynamicForwardProxy) patchRoute(route *routev3.Route, irRoute *ir.HTTPRou
 	// Add per-route RBAC config to deny loopback addresses when DFP is used.
 	if irRoute.IsDynamicResolverRoute() {
 		hostFromLiteral := irRoute.URLRewrite != nil && irRoute.URLRewrite.Host != nil && irRoute.URLRewrite.Host.Name != nil
-		hostFromHostHeaderOrCustomHeader := !hostFromLiteral
 		// We don't enforce check for host rewrite from literal since it's static and known at config time.
 		// The loopback check is mainly to prevent dynamic hostnames that may resolve to loopback addresses.
-		if hostFromHostHeaderOrCustomHeader {
-			rbacPerRouteCfg := buildDFPLoopbackRBACPerRoute(irRoute)
+		if !hostFromLiteral {
+			rbacPerRouteCfg, err := buildDFPLoopbackRBACPerRoute(irRoute)
+			if err != nil {
+				return err
+			}
 			rbacAny, err := anypb.New(rbacPerRouteCfg)
 			if err != nil {
 				return err
@@ -289,7 +294,7 @@ func buildDFPLoopbackRBAC() (*hcmv3.HttpFilter, error) {
 	}, nil
 }
 
-func buildDFPLoopbackRBACPerRoute(irRoute *ir.HTTPRoute) *rbacv3.RBACPerRoute {
+func buildDFPLoopbackRBACPerRoute(irRoute *ir.HTTPRoute) (*rbacv3.RBACPerRoute, error) {
 	loopbackPatterns := []string{
 		`^127\.0\.0\.1(?::\d+)?$`,
 		`^localhost(?::\d+)?$`,
@@ -300,51 +305,100 @@ func buildDFPLoopbackRBACPerRoute(irRoute *ir.HTTPRoute) *rbacv3.RBACPerRoute {
 		`^::1(?::\d+)?$`,
 	}
 
-	permissions := make([]*rbacconfigv3.Permission, 0, len(loopbackPatterns))
-
-	hostFromCustomHeader := irRoute.URLRewrite != nil && irRoute.URLRewrite.Host != nil && irRoute.URLRewrite.Host.Header != nil
-	if hostFromCustomHeader {
-		for _, pattern := range loopbackPatterns {
-			permissions = append(permissions, buildHeaderPermissionRegex(*irRoute.URLRewrite.Host.Header, pattern))
-		}
-	} else {
-		for _, pattern := range loopbackPatterns {
-			permissions = append(permissions, buildHeaderPermissionRegex(":authority", pattern))
-		}
+	denyAction, err := proto.ToAnyWithValidation(&rbacconfigv3.Action{
+		Name:   "DENY",
+		Action: rbacconfigv3.RBAC_DENY,
+	})
+	if err != nil {
+		return nil, err
 	}
 
-	return &rbacv3.RBACPerRoute{
-		Rbac: &rbacv3.RBAC{
-			Rules: &rbacconfigv3.RBAC{
-				Action: rbacconfigv3.RBAC_DENY,
-				Policies: map[string]*rbacconfigv3.Policy{
-					"deny-loopback-host": {
-						Permissions: permissions,
-						Principals: []*rbacconfigv3.Principal{
-							{
-								Identifier: &rbacconfigv3.Principal_Any{
-									Any: true,
+	allowAction, err := proto.ToAnyWithValidation(&rbacconfigv3.Action{
+		Name: "ALLOW",
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	hostFromCustomHeader := irRoute.URLRewrite != nil && irRoute.URLRewrite.Host != nil && irRoute.URLRewrite.Host.Header != nil
+	headerToCheck := ":authority"
+	if hostFromCustomHeader {
+		headerToCheck = *irRoute.URLRewrite.Host.Header
+	}
+
+	predicates := make([]*matcherv3.Matcher_MatcherList_Predicate, 0, len(loopbackPatterns))
+
+	headerInput, err := proto.ToAnyWithValidation(&envoymatcherv3.HttpRequestHeaderMatchInput{
+		HeaderName: headerToCheck,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	for _, pattern := range loopbackPatterns {
+		predicates = append(predicates, &matcherv3.Matcher_MatcherList_Predicate{
+			MatchType: &matcherv3.Matcher_MatcherList_Predicate_SinglePredicate_{
+				SinglePredicate: &matcherv3.Matcher_MatcherList_Predicate_SinglePredicate{
+					Input: &cncfv3.TypedExtensionConfig{
+						Name:        "http_header",
+						TypedConfig: headerInput,
+					},
+					Matcher: &matcherv3.Matcher_MatcherList_Predicate_SinglePredicate_ValueMatch{
+						ValueMatch: &matcherv3.StringMatcher{
+							MatchPattern: &matcherv3.StringMatcher_SafeRegex{
+								SafeRegex: &matcherv3.RegexMatcher{
+									Regex: pattern,
 								},
 							},
 						},
 					},
 				},
 			},
-		},
+		})
 	}
-}
 
-func buildHeaderPermissionRegex(name, pattern string) *rbacconfigv3.Permission {
-	return &rbacconfigv3.Permission{
-		Rule: &rbacconfigv3.Permission_Header{
-			Header: &routev3.HeaderMatcher{
-				Name: name,
-				HeaderMatchSpecifier: &routev3.HeaderMatcher_SafeRegexMatch{
-					SafeRegexMatch: &envoymatcherv3.RegexMatcher{
-						Regex: pattern,
+	var predicate *matcherv3.Matcher_MatcherList_Predicate
+	if len(predicates) == 1 {
+		predicate = predicates[0]
+	} else {
+		predicate = &matcherv3.Matcher_MatcherList_Predicate{
+			MatchType: &matcherv3.Matcher_MatcherList_Predicate_OrMatcher{
+				OrMatcher: &matcherv3.Matcher_MatcherList_Predicate_PredicateList{
+					Predicate: predicates,
+				},
+			},
+		}
+	}
+
+	return &rbacv3.RBACPerRoute{
+		Rbac: &rbacv3.RBAC{
+			Matcher: &matcherv3.Matcher{
+				MatcherType: &matcherv3.Matcher_MatcherList_{
+					MatcherList: &matcherv3.Matcher_MatcherList{
+						Matchers: []*matcherv3.Matcher_MatcherList_FieldMatcher{
+							{
+								Predicate: predicate,
+								OnMatch: &matcherv3.Matcher_OnMatch{
+									OnMatch: &matcherv3.Matcher_OnMatch_Action{
+										Action: &cncfv3.TypedExtensionConfig{
+											Name:        "deny-loopback-host",
+											TypedConfig: denyAction,
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+				OnNoMatch: &matcherv3.Matcher_OnMatch{
+					OnMatch: &matcherv3.Matcher_OnMatch_Action{
+						Action: &cncfv3.TypedExtensionConfig{
+							Name:        "default",
+							TypedConfig: allowAction,
+						},
 					},
 				},
 			},
 		},
-	}
+	}, nil
 }
