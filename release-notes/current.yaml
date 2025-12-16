@@ -21,6 +21,7 @@ bug fixes: |
 
 # Enhancements that improve performance.
 performance improvements: |
+  Clean up stale xDS streams periodically to reduce memory usage in SnapshotCache.
 
 # Deprecated features or APIs.
 deprecations: |

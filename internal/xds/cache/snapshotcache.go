@@ -70,11 +70,20 @@ type snapshotCache struct {
 	nodeFrequency       nodeFrequencyMap
 	streamDuration      streamDurationMap
 	deltaStreamDuration streamDurationMap
+	streamLastActivity  streamDurationMap
+	deltaLastActivity   streamDurationMap
 	snapshotVersion     int64
 	lastSnapshot        snapshotMap
 	log                 *zap.SugaredLogger
 	mu                  sync.Mutex
 }
+
+const (
+	// staleStreamThreshold is the inactivity window used to prune streams when the stream shows no activity (requests)
+	// for a long period. Streams are expected to be long-lived, so we prune conservatively based on last activity time
+	// to avoid evicting active streams that are simply idle.
+	staleStreamThreshold = 6 * time.Hour // TODO: maybe make this configurable in the XDSServer API.
+)
 
 // GenerateNewSnapshot takes a table of resources (the output from the IR->xDS
 // translator) and updates the snapshot version.
@@ -151,6 +160,8 @@ func NewSnapshotCache(ads bool, logger logging.Logger) SnapshotCacheWithCallback
 		nodeFrequency:       make(nodeFrequencyMap),
 		streamDuration:      make(streamDurationMap),
 		deltaStreamDuration: make(streamDurationMap),
+		streamLastActivity:  make(streamDurationMap),
+		deltaLastActivity:   make(streamDurationMap),
 	}
 }
 
@@ -175,6 +186,8 @@ func (s *snapshotCache) OnStreamOpen(_ context.Context, streamID int64, _ string
 
 	s.streamIDNodeInfo[streamID] = nil
 	s.streamDuration[streamID] = time.Now()
+	s.streamLastActivity[streamID] = time.Now()
+	s.pruneStaleStreams(time.Now())
 
 	return nil
 }
@@ -195,15 +208,9 @@ func (s *snapshotCache) OnStreamClosed(streamID int64, node *corev3.Node) {
 
 	delete(s.streamIDNodeInfo, streamID)
 	delete(s.streamDuration, streamID)
+	delete(s.streamLastActivity, streamID)
 
-	s.nodeFrequency[node.Id] -= 1
-	if s.nodeFrequency[node.Id] <= 0 {
-		delete(s.nodeFrequency, node.Id)
-
-		// Only snapshots for nodes with active connections are updated, we need to clear
-		// the snapshot for this node so it doesn't get stale data when it reconnects.
-		s.ClearSnapshot(node.Id)
-	}
+	s.releaseNodeSnapshot(node.Id)
 }
 
 func (s *snapshotCache) OnStreamRequest(streamID int64, req *discoveryv3.DiscoveryRequest) error {
@@ -223,6 +230,7 @@ func (s *snapshotCache) OnStreamRequest(streamID int64, req *discoveryv3.Discove
 		s.streamIDNodeInfo[streamID] = req.Node
 		s.nodeFrequency[req.Node.Id] += 1
 	}
+	s.streamLastActivity[streamID] = time.Now()
 	nodeID := s.streamIDNodeInfo[streamID].Id
 	cluster := s.streamIDNodeInfo[streamID].Cluster
 
@@ -292,6 +300,8 @@ func (s *snapshotCache) OnDeltaStreamOpen(_ context.Context, streamID int64, _ s
 	// Ensure that we're adding the streamID to the Node ID list.
 	s.streamIDNodeInfo[streamID] = nil
 	s.deltaStreamDuration[streamID] = time.Now()
+	s.deltaLastActivity[streamID] = time.Now()
+	s.pruneStaleStreams(time.Now())
 
 	return nil
 }
@@ -312,14 +322,55 @@ func (s *snapshotCache) OnDeltaStreamClosed(streamID int64, node *corev3.Node) {
 
 	delete(s.streamIDNodeInfo, streamID)
 	delete(s.deltaStreamDuration, streamID)
+	delete(s.deltaLastActivity, streamID)
 
-	s.nodeFrequency[node.Id] -= 1
-	if s.nodeFrequency[node.Id] <= 0 {
-		delete(s.nodeFrequency, node.Id)
+	s.releaseNodeSnapshot(node.Id)
+}
 
+func (s *snapshotCache) releaseNodeSnapshot(nodeID string) {
+	if nodeID == "" {
+		return
+	}
+	s.nodeFrequency[nodeID]--
+	if s.nodeFrequency[nodeID] <= 0 {
+		delete(s.nodeFrequency, nodeID)
 		// Only snapshots for nodes with active connections are updated, we need to clear
 		// the snapshot for this node so it doesn't get stale data when it reconnects.
-		s.ClearSnapshot(node.Id)
+		s.ClearSnapshot(nodeID)
+	}
+}
+
+func (s *snapshotCache) pruneStaleStreams(now time.Time) {
+	for id := range s.streamIDNodeInfo {
+		last := s.streamLastActivity[id]
+		if last.IsZero() || now.Sub(last) < staleStreamThreshold {
+			continue
+		}
+
+		node := s.streamIDNodeInfo[id]
+		delete(s.streamIDNodeInfo, id)
+		delete(s.streamDuration, id)
+		delete(s.streamLastActivity, id)
+		if node != nil {
+			s.log.Debugf("Pruning stale xDS stream %d for node %s due to inactivity", id, node.Id)
+			s.releaseNodeSnapshot(node.Id)
+		}
+	}
+
+	for id := range s.deltaStreamDuration {
+		last := s.deltaLastActivity[id]
+		if last.IsZero() || now.Sub(last) < staleStreamThreshold {
+			continue
+		}
+
+		node := s.streamIDNodeInfo[id]
+		delete(s.streamIDNodeInfo, id)
+		delete(s.deltaStreamDuration, id)
+		delete(s.deltaLastActivity, id)
+		if node != nil {
+			s.log.Debugf("Pruning stale delta xDS stream %d for node %s due to inactivity", id, node.Id)
+			s.releaseNodeSnapshot(node.Id)
+		}
 	}
 }
 
@@ -345,6 +396,7 @@ func (s *snapshotCache) OnStreamDeltaRequest(streamID int64, req *discoveryv3.De
 		s.streamIDNodeInfo[streamID] = req.Node
 		s.nodeFrequency[req.Node.Id] += 1
 	}
+	s.deltaLastActivity[streamID] = time.Now()
 	nodeID := s.streamIDNodeInfo[streamID].Id
 	cluster := s.streamIDNodeInfo[streamID].Cluster
 
