@@ -196,14 +196,7 @@ func (s *snapshotCache) OnStreamClosed(streamID int64, node *corev3.Node) {
 	delete(s.streamIDNodeInfo, streamID)
 	delete(s.streamDuration, streamID)
 
-	s.nodeFrequency[node.Id] -= 1
-	if s.nodeFrequency[node.Id] <= 0 {
-		delete(s.nodeFrequency, node.Id)
-
-		// Only snapshots for nodes with active connections are updated, we need to clear
-		// the snapshot for this node so it doesn't get stale data when it reconnects.
-		s.ClearSnapshot(node.Id)
-	}
+	s.clearNodeSnapShot(node)
 }
 
 func (s *snapshotCache) OnStreamRequest(streamID int64, req *discoveryv3.DiscoveryRequest) error {
@@ -313,10 +306,14 @@ func (s *snapshotCache) OnDeltaStreamClosed(streamID int64, node *corev3.Node) {
 	delete(s.streamIDNodeInfo, streamID)
 	delete(s.deltaStreamDuration, streamID)
 
+	s.clearNodeSnapShot(node)
+}
+
+func (s *snapshotCache) clearNodeSnapShot(node *corev3.Node) {
 	s.nodeFrequency[node.Id] -= 1
 	if s.nodeFrequency[node.Id] <= 0 {
 		delete(s.nodeFrequency, node.Id)
-
+		delete(s.lastSnapshot, node.Cluster)
 		// Only snapshots for nodes with active connections are updated, we need to clear
 		// the snapshot for this node so it doesn't get stale data when it reconnects.
 		s.ClearSnapshot(node.Id)
