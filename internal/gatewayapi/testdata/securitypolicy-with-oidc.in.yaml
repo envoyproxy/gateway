@@ -17,6 +17,13 @@ secrets:
 - apiVersion: v1
   kind: Secret
   metadata:
+    namespace: default
+    name: client3-secret
+  data:
+    client-secret: Y2xpZW50MTpzZWNyZXQK
+- apiVersion: v1
+  kind: Secret
+  metadata:
     namespace: envoy-gateway-system
     name: envoy-oidc-hmac
   data:
@@ -75,6 +82,25 @@ httpRoutes:
       backendRefs:
       - name: service-1
         port: 8080
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-3
+  spec:
+    hostnames:
+    - www.example.com
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: "/baz"
+      backendRefs:
+      - name: service-1
+        port: 8080
 securityPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: SecurityPolicy
@@ -130,3 +156,27 @@ securityPolicies:
       defaultRefreshTokenTTL: 48h
       cookieDomain: "example.com"
       disableTokenEncryption: true
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    namespace: default
+    name: policy-for-http-route-3
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-3
+    oidc:
+      provider:
+        issuer: "https://accounts.google.com"
+        authorizationEndpoint: "https://accounts.google.com/o/oauth2/v2/auth?foo=bar"       # custom auth endpoint with query params, should be used as is
+      clientID: "client1.apps.googleusercontent.com"
+      clientSecret:
+        name: "client3-secret"
+      redirectURL: "https://www.example.com/bar/oauth2/callback"
+      logoutPath: "/bar/logout"
+      forwardAccessToken: true
+      defaultTokenTTL: 30m
+      refreshToken: true
+      defaultRefreshTokenTTL: 24h
+      csrfTokenTTL: 35m

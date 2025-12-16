@@ -681,7 +681,12 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 				if err != nil {
 					return nil, err
 				}
-				// TODO: remove support for Host/Port in v1.2
+
+				// EG currently support GRPC OTel only, change protocol to GRPC.
+				for _, d := range ds {
+					d.Protocol = ir.GRPC
+				}
+
 				al := &ir.OpenTelemetryAccessLog{
 					CELMatches: validExprs,
 					Resources:  sink.OpenTelemetry.Resources,
@@ -736,6 +741,13 @@ func (t *Translator) processTracing(gw *gwapiv1.Gateway, envoyproxy *egv1a1.Envo
 	ds, traffic, err := t.processBackendRefs(settingName, tracing.Provider.BackendCluster, envoyproxy.Namespace, resources, envoyproxy)
 	if err != nil {
 		return nil, err
+	}
+
+	// EG currently support OTel tracing only, change protocol to GRPC.
+	if tracing.Provider.Type == egv1a1.TracingProviderTypeOpenTelemetry {
+		for _, d := range ds {
+			d.Protocol = ir.GRPC
+		}
 	}
 
 	var authority string
@@ -835,10 +847,10 @@ func (t *Translator) processBackendRefs(name string, backendCluster egv1a1.Backe
 		kind := KindDerefOr(ref.Kind, resource.KindService)
 		switch kind {
 		case resource.KindService:
-			if err := validateBackendRefService(ref.BackendObjectReference, resources, ns, corev1.ProtocolTCP); err != nil {
+			if err := t.validateBackendRefService(ref.BackendObjectReference, ns, corev1.ProtocolTCP); err != nil {
 				return nil, nil, err
 			}
-			ds, err := t.processServiceDestinationSetting(name, ref.BackendObjectReference, ns, ir.TCP, resources, envoyProxy)
+			ds, err := t.processServiceDestinationSetting(name, ref.BackendObjectReference, ns, ir.TCP, envoyProxy)
 			if err != nil {
 				return nil, nil, err
 			}
@@ -847,7 +859,7 @@ func (t *Translator) processBackendRefs(name string, backendCluster egv1a1.Backe
 			if err := t.validateBackendRefBackend(ref.BackendObjectReference, resources, ns, true); err != nil {
 				return nil, nil, err
 			}
-			ds := t.processBackendDestinationSetting(name, ref.BackendObjectReference, ns, ir.TCP, resources)
+			ds := t.processBackendDestinationSetting(name, ref.BackendObjectReference, ns, ir.TCP)
 			// Dynamic resolver destinations are not supported for none-route destinations
 			if ds.IsDynamicResolver {
 				return nil, nil, errors.New("dynamic resolver destinations are not supported")

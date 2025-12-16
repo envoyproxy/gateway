@@ -36,8 +36,8 @@ const dummyClusterIP = "1.2.3.4"
 
 // LoadResourcesFromYAMLBytes will load Resources from given Kubernetes YAML string.
 // TODO: This function should be able to process arbitrary number of resources, tracked by https://github.com/envoyproxy/gateway/issues/3207.
-func LoadResourcesFromYAMLBytes(yamlBytes []byte, addMissingResources bool) (*Resources, error) {
-	r, err := loadKubernetesYAMLToResources(yamlBytes, addMissingResources)
+func LoadResourcesFromYAMLBytes(yamlBytes []byte, addMissingResources bool, envoyGateway *egv1a1.EnvoyGateway) (*Resources, error) {
+	r, err := loadKubernetesYAMLToResources(yamlBytes, addMissingResources, envoyGateway)
 	if err != nil {
 		return nil, err
 	}
@@ -53,7 +53,7 @@ func LoadResourcesFromYAMLBytes(yamlBytes []byte, addMissingResources bool) (*Re
 }
 
 // loadKubernetesYAMLToResources converts a Kubernetes YAML string into GatewayAPI Resources.
-func loadKubernetesYAMLToResources(input []byte, addMissingResources bool) (*Resources, error) {
+func loadKubernetesYAMLToResources(input []byte, addMissingResources bool, envoyGateway *egv1a1.EnvoyGateway) (*Resources, error) {
 	resources := NewResources()
 	var useDefaultNamespace bool
 	providedNamespaceMap := sets.New[string]()
@@ -61,6 +61,30 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool) (*Res
 	combinedScheme := envoygateway.GetScheme()
 	defaulter := GetGatewaySchemaDefaulter()
 	validator := GetDefaultValidator()
+
+	// Build a map of extension-managed resources (by Group/Version/Kind)
+	type extCategory int
+	const (
+		extNone extCategory = iota
+		extFilter
+		extPolicy
+		extBackend
+	)
+	extGVKMap := map[string]extCategory{}
+	if envoyGateway != nil && envoyGateway.ExtensionManager != nil {
+		for _, gvk := range envoyGateway.ExtensionManager.Resources {
+			key := fmt.Sprintf("%s/%s/%s", gvk.Group, gvk.Version, gvk.Kind)
+			extGVKMap[key] = extFilter
+		}
+		for _, gvk := range envoyGateway.ExtensionManager.PolicyResources {
+			key := fmt.Sprintf("%s/%s/%s", gvk.Group, gvk.Version, gvk.Kind)
+			extGVKMap[key] = extPolicy
+		}
+		for _, gvk := range envoyGateway.ExtensionManager.BackendResources {
+			key := fmt.Sprintf("%s/%s/%s", gvk.Group, gvk.Version, gvk.Kind)
+			extGVKMap[key] = extBackend
+		}
+	}
 
 	if err := IterYAMLBytes(input, func(yamlByte []byte) error {
 		var obj map[string]interface{}
@@ -116,6 +140,21 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool) (*Res
 		spec := kobjVal.FieldByName("Spec")
 		data := kobjVal.FieldByName("Data")
 		stringData := kobjVal.FieldByName("StringData")
+
+		// Check if this resource is managed by the ExtensionManager and if so, classify it
+		if len(extGVKMap) > 0 {
+			key := fmt.Sprintf("%s/%s/%s", gvk.Group, gvk.Version, gvk.Kind)
+			if category, ok := extGVKMap[key]; ok {
+				un.SetNamespace(namespace)
+				switch category {
+				case extFilter, extBackend:
+					resources.ExtensionRefFilters = append(resources.ExtensionRefFilters, *un)
+				case extPolicy:
+					resources.ExtensionServerPolicies = append(resources.ExtensionServerPolicies, *un)
+				}
+				return nil
+			}
+		}
 
 		switch gvk.Kind {
 		case KindEnvoyProxy:

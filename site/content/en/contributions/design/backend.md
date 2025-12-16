@@ -144,7 +144,7 @@ spec:
 * Users can leverage the existing [Envoy Patch Policy][] or [Envoy Extension Manager][] to inject custom envoy clusters
   and route configuration. However, these features require a high level of envoy expertise, investment and maintenance. 
 
-[BackendObjectReference Extension]: https://gateway-api.sigs.k8s.io/guides/migrating-from-ingress/?h=extensi#approach-to-extensibility
+[BackendObjectReference Extension]: https://gateway-api.sigs.k8s.io/guides/getting-started/migrating-from-ingress/?h=extensi#approach-to-extensibility
 [internal listeners]: https://www.envoyproxy.io/docs/envoy/latest/configuration/other_features/internal_listener
 [unix domain sockets]: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/address.proto#envoy-v3-api-msg-config-core-v3-pipe
 [Resource Backends]: https://kubernetes.io/docs/concepts/services-networking/ingress/#resource-backend

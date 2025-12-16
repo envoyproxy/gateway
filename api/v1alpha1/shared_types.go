@@ -547,6 +547,25 @@ type BackendRef struct {
 	// BackendObjectReference references a Kubernetes object that represents the backend.
 	// Only Service kind is supported for now.
 	gwapiv1.BackendObjectReference `json:",inline"`
+	// Weight specifies the proportion of requests forwarded to the referenced
+	// backend. This is computed as weight/(sum of all weights in this
+	// BackendRefs list). For non-zero values, there may be some epsilon from
+	// the exact proportion defined here depending on the precision an
+	// implementation supports. Weight is not a percentage and the sum of
+	// weights does not need to equal 100.
+	//
+	// If only one backend is specified and it has a weight greater than 0, 100%
+	// of the traffic is forwarded to that backend. If weight is set to 0, no
+	// traffic should be forwarded for this entry. If unspecified, weight
+	// defaults to 1.
+	//
+	// Support for this field varies based on the context where used.
+	//
+	// +optional
+	// +kubebuilder:default=1
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=1000000
+	Weight *uint32 `json:"weight,omitempty"`
 	// Fallback indicates whether the backend is designated as a fallback.
 	// Multiple fallback backends can be configured.
 	// It is highly recommended to configure active or passive health checks to ensure that failover can be detected
@@ -912,6 +931,7 @@ type HTTPHeaderFilter struct {
 	// +optional
 	// +listType=map
 	// +listMapKey=name
+	// +kubebuilder:validation:MinItems=1
 	// +kubebuilder:validation:MaxItems=64
 	Set []gwapiv1.HTTPHeader `json:"set,omitempty"`
 
@@ -935,6 +955,7 @@ type HTTPHeaderFilter struct {
 	// +optional
 	// +listType=map
 	// +listMapKey=name
+	// +kubebuilder:validation:MinItems=1
 	// +kubebuilder:validation:MaxItems=64
 	Add []gwapiv1.HTTPHeader `json:"add,omitempty"`
 
@@ -958,6 +979,15 @@ type HTTPHeaderFilter struct {
 	//
 	// +optional
 	// +listType=set
+	// +kubebuilder:validation:MinItems=1
 	// +kubebuilder:validation:MaxItems=64
 	Remove []string `json:"remove,omitempty"`
+
+	// RemoveOnMatch removes headers whose names match the specified string matchers.
+	// Matching is performed on the header name (case-insensitive).
+	//
+	// +optional
+	// +kubebuilder:validation:MinItems=1
+	// +kubebuilder:validation:MaxItems=64
+	RemoveOnMatch []StringMatch `json:"removeOnMatch,omitempty"`
 }

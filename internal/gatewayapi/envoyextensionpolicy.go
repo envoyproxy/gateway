@@ -33,7 +33,8 @@ import (
 // oci URL prefix
 const ociURLPrefix = "oci://"
 
-func (t *Translator) ProcessEnvoyExtensionPolicies(envoyExtensionPolicies []*egv1a1.EnvoyExtensionPolicy,
+func (t *Translator) ProcessEnvoyExtensionPolicies(
+	envoyExtensionPolicies []*egv1a1.EnvoyExtensionPolicy,
 	gateways []*GatewayContext,
 	routes []RouteContext,
 	resources *resource.Resources,
@@ -486,7 +487,7 @@ func (t *Translator) translateEnvoyExtensionPolicyForRoute(
 			continue
 		}
 
-		if luas, luaError = t.buildLuas(policy, resources, gtwCtx.envoyProxy); luaError != nil {
+		if luas, luaError = t.buildLuas(policy, gtwCtx.envoyProxy); luaError != nil {
 			luaError = perr.WithMessage(luaError, "Lua")
 			errs = errors.Join(errs, luaError)
 		}
@@ -575,7 +576,7 @@ func (t *Translator) translateEnvoyExtensionPolicyForGateway(
 		wasmError = perr.WithMessage(wasmError, "Wasm")
 		errs = errors.Join(errs, wasmError)
 	}
-	if luas, luaError = t.buildLuas(policy, resources, gateway.envoyProxy); luaError != nil {
+	if luas, luaError = t.buildLuas(policy, gateway.envoyProxy); luaError != nil {
 		luaError = perr.WithMessage(luaError, "Lua")
 		errs = errors.Join(errs, luaError)
 	}
@@ -640,7 +641,10 @@ func (t *Translator) translateEnvoyExtensionPolicyForGateway(
 	return errs
 }
 
-func (t *Translator) buildLuas(policy *egv1a1.EnvoyExtensionPolicy, resources *resource.Resources, envoyProxy *egv1a1.EnvoyProxy) ([]ir.Lua, error) {
+func (t *Translator) buildLuas(
+	policy *egv1a1.EnvoyExtensionPolicy,
+	envoyProxy *egv1a1.EnvoyProxy,
+) ([]ir.Lua, error) {
 	if policy == nil {
 		return nil, nil
 	}
@@ -649,7 +653,7 @@ func (t *Translator) buildLuas(policy *egv1a1.EnvoyExtensionPolicy, resources *r
 
 	for idx, ep := range policy.Spec.Lua {
 		name := irConfigNameForLua(policy, idx)
-		luaIR, err := t.buildLua(name, policy, ep, resources, envoyProxy)
+		luaIR, err := t.buildLua(name, policy, ep, envoyProxy)
 		if err != nil {
 			return nil, err
 		}
@@ -662,13 +666,12 @@ func (t *Translator) buildLua(
 	name string,
 	policy *egv1a1.EnvoyExtensionPolicy,
 	lua egv1a1.Lua,
-	resources *resource.Resources,
 	envoyProxy *egv1a1.EnvoyProxy,
 ) (*ir.Lua, error) {
 	var luaCode *string
 	var err error
 	if lua.Type == egv1a1.LuaValueTypeValueRef {
-		luaCode, err = getLuaBodyFromLocalObjectReference(lua.ValueRef, resources, policy.Namespace)
+		luaCode, err = t.getLuaBodyFromLocalObjectReference(lua.ValueRef, policy.Namespace)
 	} else {
 		luaCode = lua.Inline
 	}
@@ -686,8 +689,11 @@ func (t *Translator) buildLua(
 }
 
 // getLuaBodyFromLocalObjectReference assumes the local object reference points to a Kubernetes ConfigMap
-func getLuaBodyFromLocalObjectReference(valueRef *gwapiv1.LocalObjectReference, resources *resource.Resources, policyNs string) (*string, error) {
-	cm := resources.GetConfigMap(policyNs, string(valueRef.Name))
+func (t *Translator) getLuaBodyFromLocalObjectReference(
+	valueRef *gwapiv1.LocalObjectReference,
+	policyNs string,
+) (*string, error) {
+	cm := t.GetConfigMap(policyNs, string(valueRef.Name))
 	if cm != nil {
 		b, dataOk := cm.Data["lua"]
 		switch {

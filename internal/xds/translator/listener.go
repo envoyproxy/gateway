@@ -541,12 +541,12 @@ func tlsListenerFilterChainName(irRoute *ir.TCPRoute) string {
 }
 
 func buildEarlyHeaderMutation(headers *ir.HeaderSettings) []*corev3.TypedExtensionConfig {
-	if headers == nil || (len(headers.EarlyAddRequestHeaders) == 0 && len(headers.EarlyRemoveRequestHeaders) == 0) {
+	if headers == nil || (len(headers.EarlyAddRequestHeaders) == 0 && len(headers.EarlyRemoveRequestHeaders) == 0 && len(headers.EarlyRemoveRequestHeadersOnMatch) == 0) {
 		return nil
 	}
 
 	earlyHeaderMutationAny, _ := proto.ToAnyWithValidation(&early_header_mutationv3.HeaderMutation{
-		Mutations: buildHeaderMutationRules(headers.EarlyAddRequestHeaders, headers.EarlyRemoveRequestHeaders),
+		Mutations: buildHeaderMutationRules(headers.EarlyAddRequestHeaders, headers.EarlyRemoveRequestHeaders, headers.EarlyRemoveRequestHeadersOnMatch),
 	})
 
 	return []*corev3.TypedExtensionConfig{

@@ -343,3 +343,25 @@
   name: fourteenth-route-dest
   perConnectionBufferLimitBytes: 32768
   type: EDS
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_PREFERRED
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
+    serviceName: fifteenth-route-dest
+  ignoreHealthOnHostRemoval: true
+  lbPolicy: MAGLEV
+  loadBalancingPolicy:
+    policies:
+    - typedExtensionConfig:
+        name: envoy.load_balancing_policies.maglev
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.maglev.v3.Maglev
+  name: fifteenth-route-dest
+  perConnectionBufferLimitBytes: 32768
+  type: EDS
