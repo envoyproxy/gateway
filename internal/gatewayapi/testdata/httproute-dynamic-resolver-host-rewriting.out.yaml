@@ -402,6 +402,7 @@ xdsIR:
           dns:
             dnsRefreshRate: 1s
             lookupFamily: IPv4AndIPv6
+            name: default/dns-policy-for-httproute-2
         urlRewrite:
           host:
             header: x-dynamic-host-header-3
@@ -442,6 +443,7 @@ xdsIR:
           dns:
             dnsRefreshRate: 1s
             lookupFamily: IPv4AndIPv6
+            name: default/dns-policy-for-httproute-2
         urlRewrite:
           host:
             name: rewrite.com

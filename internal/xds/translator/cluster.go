@@ -171,7 +171,13 @@ func dfpCacheName(ipFamily *egv1a1.IPFamily, dns *ir.DNS) string {
 	}
 
 	dnsLookupFamily := computeDNSLookupFamily(ipFamily, dns)
-	return fmt.Sprintf("%s-%s-%dms", dfpDNSCacheName, strings.ToLower(dnsLookupFamily.String()), refresh/time.Millisecond)
+	base := fmt.Sprintf("%s-%s-%dms", dfpDNSCacheName, strings.ToLower(dnsLookupFamily.String()), refresh/time.Millisecond)
+	suffix := "default"
+	if dns != nil && dns.Name != "" {
+		suffix = dns.Name
+	}
+	// Hash to keep names short and avoid collisions when new DNS settings are added.
+	return fmt.Sprintf("%s-%s", base, suffix)
 }
 
 func buildDFPDNSCacheConfig(name string, dns *ir.DNS, dnsLookupFamily clusterv3.Cluster_DnsLookupFamily) *commondfpv3.DnsCacheConfig {

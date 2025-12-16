@@ -8,7 +8,7 @@
       dnsCacheConfig:
         dnsLookupFamily: V4_PREFERRED
         dnsRefreshRate: 30s
-        name: envoy-gateway-dfp-cache-v4_preferred-30000ms
+        name: envoy-gateway-dfp-cache-v4_preferred-30000ms-default
   commonLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_PREFERRED

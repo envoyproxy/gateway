@@ -8,7 +8,7 @@
       dnsCacheConfig:
         dnsLookupFamily: V4_PREFERRED
         dnsRefreshRate: 30s
-        name: envoy-gateway-dfp-cache-v4_preferred-30000ms
+        name: envoy-gateway-dfp-cache-v4_preferred-30000ms-default
   commonLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_PREFERRED
@@ -39,7 +39,7 @@
       dnsCacheConfig:
         dnsLookupFamily: V4_PREFERRED
         dnsRefreshRate: 30s
-        name: envoy-gateway-dfp-cache-v4_preferred-30000ms
+        name: envoy-gateway-dfp-cache-v4_preferred-30000ms-default
   commonLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_PREFERRED
@@ -93,7 +93,7 @@
       dnsCacheConfig:
         dnsLookupFamily: ALL
         dnsRefreshRate: 1s
-        name: envoy-gateway-dfp-cache-all-1000ms
+        name: envoy-gateway-dfp-cache-all-1000ms-default/dns-policy-for-httproute-2
   commonLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: ALL
@@ -124,7 +124,7 @@
       dnsCacheConfig:
         dnsLookupFamily: ALL
         dnsRefreshRate: 1s
-        name: envoy-gateway-dfp-cache-all-1000ms
+        name: envoy-gateway-dfp-cache-all-1000ms-default/dns-policy-for-httproute-2
   commonLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: ALL

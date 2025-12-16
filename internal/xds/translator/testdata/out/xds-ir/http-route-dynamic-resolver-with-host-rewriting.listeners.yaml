@@ -21,21 +21,21 @@
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.rbac.v3.RBAC
         - disabled: true
-          name: envoy.filters.http.dynamic_forward_proxy.envoy-gateway-dfp-cache-all-1000ms
+          name: envoy.filters.http.dynamic_forward_proxy.envoy-gateway-dfp-cache-all-1000ms-default/dns-policy-for-httproute-2
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.dynamic_forward_proxy.v3.FilterConfig
             dnsCacheConfig:
               dnsLookupFamily: ALL
               dnsRefreshRate: 1s
-              name: envoy-gateway-dfp-cache-all-1000ms
+              name: envoy-gateway-dfp-cache-all-1000ms-default/dns-policy-for-httproute-2
         - disabled: true
-          name: envoy.filters.http.dynamic_forward_proxy.envoy-gateway-dfp-cache-v4_preferred-30000ms
+          name: envoy.filters.http.dynamic_forward_proxy.envoy-gateway-dfp-cache-v4_preferred-30000ms-default
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.dynamic_forward_proxy.v3.FilterConfig
             dnsCacheConfig:
               dnsLookupFamily: V4_PREFERRED
               dnsRefreshRate: 30s
-              name: envoy-gateway-dfp-cache-v4_preferred-30000ms
+              name: envoy-gateway-dfp-cache-v4_preferred-30000ms-default
         - name: envoy.filters.http.router
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router

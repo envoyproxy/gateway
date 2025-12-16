@@ -99,10 +99,11 @@ http:
           dns:
             dnsRefreshRate: 1s
             lookupFamily: IPv4AndIPv6
+            name: default/dns-policy-for-httproute-2
         urlRewrite:
           host:
             header: x-dynamic-host-header-3
-        # test denying requests with forbidden host rewrite header values
+        # test denying requests with forbiddena host rewrite header values
         security:
           authorization:
             defaultAction: Allow
@@ -141,6 +142,7 @@ http:
           dns:
             dnsRefreshRate: 1s
             lookupFamily: IPv4AndIPv6
+            name: default/dns-policy-for-httproute-2
         urlRewrite:
           host:
             name: rewrite.com

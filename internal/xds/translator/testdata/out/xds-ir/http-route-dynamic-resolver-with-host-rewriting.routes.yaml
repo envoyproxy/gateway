@@ -28,7 +28,7 @@
         upgradeConfigs:
         - upgradeType: websocket
       typedPerFilterConfig:
-        envoy.filters.http.dynamic_forward_proxy.envoy-gateway-dfp-cache-v4_preferred-30000ms:
+        envoy.filters.http.dynamic_forward_proxy.envoy-gateway-dfp-cache-v4_preferred-30000ms-default:
           '@type': type.googleapis.com/envoy.extensions.filters.http.dynamic_forward_proxy.v3.PerRouteConfig
           hostRewriteHeader: x-dynamic-host-header-1
         envoy.filters.http.rbac.dfp_loopback_deny:
@@ -138,7 +138,7 @@
         upgradeConfigs:
         - upgradeType: websocket
       typedPerFilterConfig:
-        envoy.filters.http.dynamic_forward_proxy.envoy-gateway-dfp-cache-v4_preferred-30000ms:
+        envoy.filters.http.dynamic_forward_proxy.envoy-gateway-dfp-cache-v4_preferred-30000ms-default:
           '@type': type.googleapis.com/envoy.extensions.filters.http.dynamic_forward_proxy.v3.PerRouteConfig
           hostRewriteHeader: x-dynamic-host-header-2
         envoy.filters.http.rbac.dfp_loopback_deny:
@@ -248,7 +248,7 @@
         upgradeConfigs:
         - upgradeType: websocket
       typedPerFilterConfig:
-        envoy.filters.http.dynamic_forward_proxy.envoy-gateway-dfp-cache-all-1000ms:
+        envoy.filters.http.dynamic_forward_proxy.envoy-gateway-dfp-cache-all-1000ms-default/dns-policy-for-httproute-2:
           '@type': type.googleapis.com/envoy.extensions.filters.http.dynamic_forward_proxy.v3.PerRouteConfig
           hostRewriteHeader: x-dynamic-host-header-3
         envoy.filters.http.rbac:
@@ -386,6 +386,6 @@
         upgradeConfigs:
         - upgradeType: websocket
       typedPerFilterConfig:
-        envoy.filters.http.dynamic_forward_proxy.envoy-gateway-dfp-cache-all-1000ms:
+        envoy.filters.http.dynamic_forward_proxy.envoy-gateway-dfp-cache-all-1000ms-default/dns-policy-for-httproute-2:
           '@type': type.googleapis.com/envoy.extensions.filters.http.dynamic_forward_proxy.v3.PerRouteConfig
           hostRewriteLiteral: rewrite.com
