@@ -33,6 +33,17 @@ const ResourcesTab = ({ resourceTrends, benchmarkResults }: ResourcesTabProps) =
       proxyMax: Number(item.resources.envoyProxy.cpu.max.toFixed(1))
     }));
 
+  // Proxy CPU usage by traffic load
+  const proxyCpuByTraffic = benchmarkResults
+    .filter(item => item.phase === 'scaling-up')
+    .map(item => ({
+      totalRequests: item.totalRequests,
+      proxyMean: Number(item.resources.envoyProxy.cpu.mean.toFixed(1)),
+      proxyMax: Number(item.resources.envoyProxy.cpu.max.toFixed(1)),
+      routes: item.routes // for tooltip context
+    }))
+    .sort((a, b) => a.totalRequests - b.totalRequests);
+
   // Resource efficiency data with proper numeric scaling
   const efficiencyData = memoryData.map(item => ({
     routes: item.routes, // Use actual route values
@@ -341,9 +352,9 @@ const ResourcesTab = ({ resourceTrends, benchmarkResults }: ResourcesTabProps) =
         {/* CPU Usage */}
         <Card>
           <CardHeader>
-            <CardTitle>CPU Usage Patterns</CardTitle>
+            <CardTitle>Gateway CPU Usage Patterns</CardTitle>
             <CardDescription>
-              Mean vs peak CPU usage showing burst characteristics.
+              Gateway mean vs peak CPU usage showing burst characteristics.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -383,6 +394,64 @@ const ResourcesTab = ({ resourceTrends, benchmarkResults }: ResourcesTabProps) =
                     strokeWidth={1}
                     strokeDasharray="2 2"
                   />
+                  <Line
+                    dataKey="gatewayMean"
+                    type="monotone"
+                    stroke="#8b5cf6"
+                    strokeWidth={3}
+                    dot={{ fill: "#8b5cf6", strokeWidth: 2, r: 4 }}
+                  />
+                </ComposedChart>
+              </ChartContainer>
+              </div>
+            ) : (
+              <ChartPlaceholder />
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Proxy CPU vs Traffic Load */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Proxy CPU vs Traffic Load</CardTitle>
+            <CardDescription>
+              How proxy CPU usage correlates with request throughput
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {proxyCpuByTraffic && proxyCpuByTraffic.length > 0 ? (
+              <div className="relative">
+                <ChartWatermark />
+                <ChartContainer config={chartConfig}>
+                <ComposedChart data={proxyCpuByTraffic}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis
+                    dataKey="totalRequests"
+                    type="number"
+                    scale="linear"
+                    tickLine={false}
+                    axisLine={false}
+                    tickMargin={8}
+                    tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`}
+                  />
+                  <YAxis
+                    tickLine={false}
+                    axisLine={false}
+                    tickMargin={8}
+                    tickFormatter={(value) => `${value}%`}
+                  />
+                  <ChartTooltip
+                    content={<ChartTooltipContent
+                      formatter={(value, name) => [
+                        `${value}%`,
+                        name === 'proxyMean' ? 'Mean CPU' : 'Peak CPU'
+                      ]}
+                      labelFormatter={(value, payload) => {
+                        const routes = payload?.[0]?.payload?.routes;
+                        return `${(value / 1000).toFixed(1)}k requests${routes ? ` (${routes} routes)` : ''}`;
+                      }}
+                    />}
+                  />
                   <Area
                     dataKey="proxyMax"
                     type="monotone"
@@ -391,13 +460,6 @@ const ResourcesTab = ({ resourceTrends, benchmarkResults }: ResourcesTabProps) =
                     stroke="#818cf8"
                     strokeWidth={1}
                     strokeDasharray="2 2"
-                  />
-                  <Line
-                    dataKey="gatewayMean"
-                    type="monotone"
-                    stroke="#8b5cf6"
-                    strokeWidth={3}
-                    dot={{ fill: "#8b5cf6", strokeWidth: 2, r: 4 }}
                   />
                   <Line
                     dataKey="proxyMean"
