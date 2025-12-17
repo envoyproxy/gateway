@@ -6,7 +6,7 @@ import {
   LatencyComparison,
   ResourceComparison
 } from './types';
-import { benchmarkData as v160TestSuite } from './versions/v1.6.0';
+import { benchmarkData as v161TestSuite } from './versions/v1.6.1';
 import { benchmarkData as v155TestSuite } from './versions/v1.5.5';
 import { benchmarkData as v154TestSuite } from './versions/v1.5.4';
 import { benchmarkData as v153TestSuite } from './versions/v1.5.3';
@@ -39,7 +39,7 @@ import { benchmarkData as v110TestSuite } from './versions/v1.1.0';
 
 // Import all version data
 export const allTestSuites: TestSuite[] = [
-  v160TestSuite,
+  v161TestSuite,
   v155TestSuite,
   v154TestSuite,
   v153TestSuite,
