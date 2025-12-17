@@ -51,5 +51,5 @@ dependencies:
     condition: tempo.enabled
   - name: opentelemetry-collector
     repository: https://open-telemetry.github.io/opentelemetry-helm-charts
-    version: 0.117.3
+    version: 0.141.1
     condition: opentelemetry-collector.enabled
