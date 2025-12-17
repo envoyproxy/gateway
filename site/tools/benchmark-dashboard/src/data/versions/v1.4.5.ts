@@ -8,7 +8,7 @@ export const benchmarkData: TestSuite = {
     "version": "1.4.5",
     "runId": "1.4.5-1763692911330",
     "date": "2025-11-21T02:41:51.330Z",
-    "environment": "production",
+    "environment": "GitHub CI",
     "description": "Benchmark results for version 1.4.5",
     "testConfiguration": {
       "rps": 10000,
