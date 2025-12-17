@@ -1,0 +1,47 @@
+http:
+- name: "custom-backend-weighted-listener"
+  address: "0.0.0.0"
+  port: 10080
+  hostnames:
+  - "*"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  routes:
+  - name: "httproute/default/httproute-1/rule/0/match/0/*"
+    hostname: "*"
+    pathMatch:
+      prefix: "/"
+    destination:
+      name: "httproute/default/httproute-1/rule/0"
+      settings:
+      - isCustomBackend: true
+        weight: 8
+        name: "httproute/default/httproute-1/rule/0/backend/0"
+      - isCustomBackend: true
+        weight: 2
+        name: "httproute/default/httproute-1/rule/0/backend/1"
+    extensionRefs:
+    - object:
+        apiVersion: inference.networking.x-k8s.io/v1alpha2
+        kind: InferencePool
+        metadata:
+          name: inference-pool-0
+        spec:
+          targetPortNumber: 8000
+          selector:
+            app: vllm-llama3-8b-instruct
+          extensionRef:
+            name: vllm-llama3-8b-instruct-epp
+    - object:
+        apiVersion: inference.networking.x-k8s.io/v1alpha2
+        kind: InferencePool
+        metadata:
+          name: inference-pool-1
+        spec:
+          targetPortNumber: 8080
+          selector:
+            app: vllm-llama3-8b-instruct
+          extensionRef:
+            name: vllm-llama3-8b-instruct-epp
+

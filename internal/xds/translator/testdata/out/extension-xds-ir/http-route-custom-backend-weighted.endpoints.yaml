@@ -1,0 +1,10 @@
+- clusterName: httproute/default/httproute-1/rule/0/backend/0
+  endpoints:
+  - loadBalancingWeight: 8
+    locality:
+      region: httproute/default/httproute-1/rule/0/backend/0
+- clusterName: httproute/default/httproute-1/rule/0/backend/1
+  endpoints:
+  - loadBalancingWeight: 2
+    locality:
+      region: httproute/default/httproute-1/rule/0/backend/1

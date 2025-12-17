@@ -1628,7 +1628,18 @@ func (r *RouteDestination) Validate() error {
 func (r *RouteDestination) NeedsClusterPerSetting() bool {
 	return r.HasMixedEndpoints() ||
 		r.HasFiltersInSettings() ||
+		r.HasCustomBackendInSettings() ||
 		(len(r.Settings) > 1 && r.HasPreferLocalZone())
+}
+
+// HasCustomBackendInSettings returns true if any setting in the destination has a custom backend
+func (r *RouteDestination) HasCustomBackendInSettings() bool {
+	for _, setting := range r.Settings {
+		if setting.IsCustomBackend {
+			return true
+		}
+	}
+	return false
 }
 
 // HasMixedEndpoints returns true if the RouteDestination has endpoints of multiple types
