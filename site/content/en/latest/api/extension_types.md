@@ -3532,6 +3532,14 @@ _Appears in:_
 
 OIDCProvider defines the OIDC Provider configuration.
 
+BackendRefs is used to specify the address of the OIDC Provider.
+If the BackendRefs is not specified, The host and port of the OIDC Provider's token endpoint
+will be used as the address of the OIDC Provider.
+
+TLS configuration can be specified in a BackendTLSConfig resource and target the BackendRefs.
+
+Other settings for the connection to the OIDC Provider can be specified in the BackendSettings resource.
+
 _Appears in:_
 - [OIDC](#oidc)
 
