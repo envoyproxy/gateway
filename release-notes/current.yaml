@@ -18,6 +18,7 @@ new features: |
 bug fixes: |
   Fixed configured OIDC authorization endpoint being overridden by discovered endpoints from issuer's well-known URL.
   Fix 500 errors caused by partially invalid BackendRefs; traffic is now correctly routed between valid backends and 500 responses according to their configured weights.
+  Fixed an issue where BackendTrafficPolicy does not validate maximum value of requestBuffer limit.
   Fixed an issue where observedGeneration is missing from the EnvoyPatchPolicy status.
 
 # Enhancements that improve performance.
