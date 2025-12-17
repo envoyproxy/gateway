@@ -39,7 +39,7 @@ dependencies:
     condition: fluent-bit.enabled
   - name: alloy
     repository: https://grafana.github.io/helm-charts
-    version: 0.9.2
+    version: 1.5.1
     condition: alloy.enabled
   - name: loki
     version: 4.8.0
