@@ -242,6 +242,14 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 					}
 				}
 
+				// For https://github.com/envoyproxy/gateway/issues/7735, if a gateway/gatewayclass
+				// referenced an invalid EnvoyProxy, it's part of failed gateways, we shouldn't delete
+				// the IR.
+				for _, gtw := range result.Gateways {
+					irKey := t.IRKey(types.NamespacedName{Namespace: gtw.Namespace, Name: gtw.Name})
+					delete(keysToDelete.IR, irKey)
+				}
+
 				for key, val := range result.XdsIR {
 					logV := traceLogger.V(1).WithValues(string(message.XDSIRMessageName), key)
 					if logV.Enabled() {
