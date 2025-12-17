@@ -1097,7 +1097,7 @@ func Test_buildContextExtensions(t *testing.T) {
 		name              string
 		contextExtensions []*egv1a1.ContextExtension
 		resources         *resource.Resources
-		want              map[string]ir.PrivateBytes
+		want              []*ir.ContextExtention
 		wantErr           bool
 	}{
 		{
@@ -1115,12 +1115,12 @@ func Test_buildContextExtensions(t *testing.T) {
 			contextExtensions: []*egv1a1.ContextExtension{
 				{Name: "foo", Inline: ptr.To("bar")},
 			},
-			want: map[string]ir.PrivateBytes{"foo": ir.PrivateBytes("bar")},
+			want: []*ir.ContextExtention{{Name: "foo", Value: ir.PrivateBytes("bar")}},
 		},
 		{
 			name:              "TypeInlineEmpty",
 			contextExtensions: []*egv1a1.ContextExtension{{Name: "foo"}},
-			want:              map[string]ir.PrivateBytes{"foo": nil},
+			want:              []*ir.ContextExtention{{Name: "foo", Value: nil}},
 		},
 		{
 			name: "TypeInlineExplicit",
@@ -1131,7 +1131,7 @@ func Test_buildContextExtensions(t *testing.T) {
 					Inline: ptr.To("bar"),
 				},
 			},
-			want: map[string]ir.PrivateBytes{"foo": ir.PrivateBytes("bar")},
+			want: []*ir.ContextExtention{{Name: "foo", Value: ir.PrivateBytes("bar")}},
 		},
 		{
 			name: "TypeValueRefNil",
@@ -1201,7 +1201,7 @@ func Test_buildContextExtensions(t *testing.T) {
 					Data: map[string]string{"test-key": "bar"},
 				}},
 			},
-			want: map[string]ir.PrivateBytes{"foo": ir.PrivateBytes("bar")},
+			want: []*ir.ContextExtention{{Name: "foo", Value: ir.PrivateBytes("bar")}},
 		},
 		{
 			name: "TypeValueRefSecretNotFound",
@@ -1264,7 +1264,7 @@ func Test_buildContextExtensions(t *testing.T) {
 					Data: map[string][]byte{"test-key": []byte("YmFy")},
 				}},
 			},
-			want: map[string]ir.PrivateBytes{"foo": ir.PrivateBytes("bar")},
+			want: []*ir.ContextExtention{{Name: "foo", Value: ir.PrivateBytes("bar")}},
 		},
 		{
 			name: "TypeValueRefUnexpectedKind",

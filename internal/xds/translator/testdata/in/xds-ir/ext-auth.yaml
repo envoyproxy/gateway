@@ -56,7 +56,8 @@ http:
               - header1
               - header2
             contextExtensions:
-              foo: YmFy
+              - name: foo
+                value: YmFy
       - name: httproute/default/httproute-1/rule/1/match/0/www_foo_com
         hostname: www.foo.com
         isHTTP2: false
@@ -97,7 +98,8 @@ http:
               - header1
               - header2
             contextExtensions:
-              foo: YmFy
+              - name: foo
+                value: YmFy
       - name: httproute/default/httproute-2/rule/0/match/0/www_bar_com
         hostname: www.bar.com
         isHTTP2: false

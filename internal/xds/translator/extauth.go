@@ -291,14 +291,16 @@ func (*extAuth) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir.HT
 
 // convertContextExtensions converts the provided context extensions
 // [ir.PrivateBytes] values to regular string values.
-func convertContextExtensions(privateCtxExts map[string]ir.PrivateBytes) map[string]string {
-	if privateCtxExts == nil {
+func convertContextExtensions(irCtxExts []*ir.ContextExtention) map[string]string {
+	if irCtxExts == nil {
 		return nil
 	}
 
-	ctxExts := make(map[string]string, len(privateCtxExts))
-	for name, value := range privateCtxExts {
-		ctxExts[name] = string(value)
+	ctxExts := make(map[string]string, len(irCtxExts))
+	for _, ext := range irCtxExts {
+		if ext != nil {
+			ctxExts[ext.Name] = string(ext.Value)
+		}
 	}
 
 	return ctxExts

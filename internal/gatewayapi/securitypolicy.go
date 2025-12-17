@@ -1722,7 +1722,7 @@ func (t *Translator) buildExtAuth(
 		authority         string
 		err               error
 		traffic           *ir.TrafficFeatures
-		contextExtensions map[string]ir.PrivateBytes
+		contextExtensions []*ir.ContextExtention
 	)
 
 	// These are sanity checks, they should never happen because the API server
@@ -1837,12 +1837,12 @@ func parseExtAuthTimeout(timeout *gwapiv1.Duration) *metav1.Duration {
 	}
 }
 
-func buildContextExtensions(contextExtensions []*egv1a1.ContextExtension, resources *resource.Resources, policyNs string) (map[string]ir.PrivateBytes, error) {
+func buildContextExtensions(contextExtensions []*egv1a1.ContextExtension, resources *resource.Resources, policyNs string) ([]*ir.ContextExtention, error) {
 	if len(contextExtensions) == 0 {
 		return nil, nil
 	}
 
-	ctxExts := make(map[string]ir.PrivateBytes, len(contextExtensions))
+	ctxExts := make([]*ir.ContextExtention, 0, len(contextExtensions))
 	for _, ext := range contextExtensions {
 		var value ir.PrivateBytes
 		if ext.Type == egv1a1.ContextExtensionValueTypeValueRef {
@@ -1854,7 +1854,7 @@ func buildContextExtensions(contextExtensions []*egv1a1.ContextExtension, resour
 			value = ir.PrivateBytes(*ext.Inline)
 		}
 
-		ctxExts[ext.Name] = value
+		ctxExts = append(ctxExts, &ir.ContextExtention{Name: ext.Name, Value: value})
 	}
 
 	return ctxExts, nil
