@@ -343,7 +343,7 @@ const ResourcesTab = ({ resourceTrends, benchmarkResults }: ResourcesTabProps) =
           <CardHeader>
             <CardTitle>Gateway CPU Usage Patterns</CardTitle>
             <CardDescription>
-              Gateway mean vs peak CPU usage.
+              Gateway mean vs peak CPU usage. Shows how Gateway CPU usage is affected by scaling up routes.
             </CardDescription>
           </CardHeader>
           <CardContent>
