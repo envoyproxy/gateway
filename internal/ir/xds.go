@@ -393,6 +393,8 @@ type TLSConfig struct {
 	VerifyCertificateSpki []string `json:"verifyCertificateSpki,omitempty" yaml:"verifyCertificateSpki,omitempty"`
 	// A list of allowed hex-encoded SHA-256 hashes of the DER-encoded certificate
 	VerifyCertificateHash []string `json:"verifyCertificateHash,omitempty" yaml:"verifyCertificateHash,omitempty"`
+	// CRL to verify the client certificates
+	Crl *TLSCrl `json:"crl,omitempty" yaml:"crl,omitempty"`
 	// A list of Subject Alternative name matchers
 	MatchTypedSubjectAltNames []*StringMatch `json:"matchTypedSubjectAltNames,omitempty" yaml:"matchTypedSubjectAltNames,omitempty"`
 	// MinVersion defines the minimal version of the TLS protocol supported by this listener.
@@ -424,6 +426,17 @@ type TLSCertificate struct {
 	PrivateKey PrivateBytes `json:"privateKey,omitempty" yaml:"privateKey,omitempty"`
 	// OCSPStaple contains the stapled OCSP response associated with the certificate, if provided.
 	OCSPStaple []byte `json:"ocspStaple,omitempty" yaml:"ocspStaple,omitempty"`
+}
+
+// TLSCrl holds a single CRL's details
+// +k8s:deepcopy-gen=true
+type TLSCrl struct {
+	// Name of the Secret object.
+	Name string `json:"name" yaml:"name"`
+	// CRL content.
+	Data []byte `json:"data,omitempty" yaml:"data,omitempty"`
+	// OnlyVerifyLeafCertificate to verify the leaf certificate against the CRL
+	OnlyVerifyLeafCertificate bool `json:"onlyVerifyLeafCertificate,omitempty" yaml:"onlyVerifyLeafCertificate,omitempty"`
 }
 
 // TLSCACertificate holds CA Certificate to validate clients
@@ -707,11 +720,17 @@ type HeaderSettings struct {
 	// EarlyRemoveRequestHeaders defines headers that would be removed before envoy request processing.
 	EarlyRemoveRequestHeaders []string `json:"earlyRemoveRequestHeaders,omitempty" yaml:"earlyRemoveRequestHeaders,omitempty"`
 
+	// EarlyRemoveRequestHeadersOnMatch defines header name matchers that would remove headers before envoy request processing.
+	EarlyRemoveRequestHeadersOnMatch []*StringMatch `json:"earlyRemoveRequestHeadersOnMatch,omitempty" yaml:"earlyRemoveRequestHeadersOnMatch,omitempty"`
+
 	// LateAddResponseHeaders defines headers that would be added after envoy response processing.
 	LateAddResponseHeaders []AddHeader `json:"lateAddResponseHeaders,omitempty" yaml:"earlyAddRequestHeaders,omitempty"`
 
 	// LateRemoveResponseHeaders defines headers that would be removed after envoy response processing.
 	LateRemoveResponseHeaders []string `json:"lateRemoveResponseHeaders,omitempty" yaml:"earlyRemoveRequestHeaders,omitempty"`
+
+	// LateRemoveResponseHeadersOnMatch defines header name matchers that would remove headers after envoy response processing.
+	LateRemoveResponseHeadersOnMatch []*StringMatch `json:"lateRemoveResponseHeadersOnMatch,omitempty" yaml:"lateRemoveResponseHeadersOnMatch,omitempty"`
 }
 
 // ClientTimeout sets the timeout configuration for downstream connections
@@ -753,6 +772,8 @@ type HTTPClientTimeout struct {
 type HTTPRoute struct {
 	// Name of the HTTPRoute
 	Name string `json:"name" yaml:"name"`
+	// StatName is the name of the route used for statistics and metrics.
+	StatName *string `json:"statName,omitempty" yaml:"statName,omitempty"`
 	// Hostname that the route matches against
 	Hostname string `json:"hostname" yaml:"hostname,omitempty"`
 	// IsHTTP2 is set if the route is configured to serve HTTP2 traffic
@@ -823,6 +844,11 @@ func (h *HTTPRoute) NeedsClusterPerSetting() bool {
 	if h.Traffic != nil &&
 		h.Traffic.LoadBalancer != nil &&
 		h.Traffic.LoadBalancer.PreferLocal != nil {
+		return true
+	}
+	// When the destination has both valid and invalid backend weights, we use weighted clusters to distribute between
+	// valid backends and the `invalid-backend-cluster` for 500 responses according to their configured weights.
+	if h.Destination.ToBackendWeights().Invalid > 0 {
 		return true
 	}
 	return h.Destination.NeedsClusterPerSetting()
@@ -1212,13 +1238,23 @@ type BasicAuth struct {
 	ForwardUsernameHeader *string `json:"forwardUsernameHeader,omitempty" yaml:"forwardUsernameHeader,omitempty"`
 }
 
+// APIKeyCredential defines a single API key credential.
+//
+// +k8s:deepcopy-gen=true
+type APIKeyCredential struct {
+	// Client is the client ID.
+	Client PrivateBytes `json:"client" yaml:"client"`
+	// Key is the API key associated with the client.
+	Key PrivateBytes `json:"key" yaml:"key"`
+}
+
 // APIKeyAuth defines the schema for the API Key Authentication.
 //
 // +k8s:deepcopy-gen=true
 type APIKeyAuth struct {
-	// The API key to be used for authentication.
-	// Key is the client id and the value is the API key to be used for authentication.
-	Credentials map[string]PrivateBytes `json:"credentials,omitempty" yaml:"credentials,omitempty"`
+	// Credentials is the list of API key credentials.
+	// Each credential contains a client ID and the associated API key.
+	Credentials []APIKeyCredential `json:"credentials,omitempty" yaml:"credentials,omitempty"`
 
 	// ExtractFrom is where to fetch the key from the coming request.
 	// The value from the first source that has a key will be used.
@@ -1665,9 +1701,9 @@ func (r *RouteDestination) ToBackendWeights() *BackendWeights {
 			w.Valid += *s.Weight
 		case s.IsCustomBackend: // Custom backends has no endpoints
 			w.Valid += *s.Weight
-		case len(s.Endpoints) > 0:
+		case len(s.Endpoints) > 0: // All other cases should have endpoints
 			w.Valid += *s.Weight
-		default:
+		default: // DestinationSetting with no endpoints is considered invalid
 			w.Invalid += *s.Weight
 		}
 	}
@@ -2043,6 +2079,8 @@ type TCPListener struct {
 type TCPRoute struct {
 	// Name of the TCPRoute.
 	Name string `json:"name" yaml:"name"`
+	// StatName is the name of the route used for statistics and metrics.
+	StatName *string `json:"statName,omitempty" yaml:"statName,omitempty"`
 	// TLS holds information for configuring TLS on a listener
 	TLS *TLS `json:"tls,omitempty" yaml:"tls,omitempty"`
 	// Destinations associated with TCP traffic to the service.
@@ -2059,6 +2097,8 @@ type TCPRoute struct {
 	HealthCheck *HealthCheck `json:"healthCheck,omitempty" yaml:"healthCheck,omitempty"`
 	// Proxy Protocol Settings
 	ProxyProtocol *ProxyProtocol `json:"proxyProtocol,omitempty" yaml:"proxyProtocol,omitempty"`
+	// Metadata is used to enrich envoy route metadata with user and provider-specific information
+	Metadata *ResourceMetadata `json:"metadata,omitempty" yaml:"metadata,omitempty"`
 	// settings of upstream connection
 	BackendConnection *BackendConnection `json:"backendConnection,omitempty" yaml:"backendConnection,omitempty"`
 	// Preconnect configures preconnecting to upstream endpoints
@@ -2409,8 +2449,9 @@ type EnvoyPatchPolicy struct {
 // EnvoyPatchPolicyStatus defines the status reference for the EnvoyPatchPolicy resource
 // +k8s:deepcopy-gen=true
 type EnvoyPatchPolicyStatus struct {
-	Name      string `json:"name,omitempty" yaml:"name"`
-	Namespace string `json:"namespace,omitempty" yaml:"namespace"`
+	Name       string `json:"name,omitempty" yaml:"name"`
+	Namespace  string `json:"namespace,omitempty" yaml:"namespace"`
+	Generation int64  `json:"generation,omitempty" yaml:"generation"`
 	// Status of the EnvoyPatchPolicy
 	Status *gwapiv1.PolicyStatus `json:"status,omitempty" yaml:"status,omitempty"`
 }
@@ -2622,10 +2663,11 @@ type Random struct{}
 // +k8s:deepcopy-gen=true
 type ConsistentHash struct {
 	// Hash based on the Source IP Address
-	SourceIP  *bool            `json:"sourceIP,omitempty" yaml:"sourceIP,omitempty"`
-	Headers   []*egv1a1.Header `json:"headers,omitempty" yaml:"headers,omitempty"`
-	Cookie    *egv1a1.Cookie   `json:"cookie,omitempty" yaml:"cookie,omitempty"`
-	TableSize *uint64          `json:"tableSize,omitempty" yaml:"tableSize,omitempty"`
+	SourceIP    *bool                `json:"sourceIP,omitempty" yaml:"sourceIP,omitempty"`
+	Headers     []*egv1a1.Header     `json:"headers,omitempty" yaml:"headers,omitempty"`
+	Cookie      *egv1a1.Cookie       `json:"cookie,omitempty" yaml:"cookie,omitempty"`
+	QueryParams []*egv1a1.QueryParam `json:"queryParams,omitempty" yaml:"queryParams,omitempty"`
+	TableSize   *uint64              `json:"tableSize,omitempty" yaml:"tableSize,omitempty"`
 }
 
 type ProxyProtocolVersion string

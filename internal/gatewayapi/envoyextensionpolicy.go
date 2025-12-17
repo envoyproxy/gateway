@@ -33,7 +33,8 @@ import (
 // oci URL prefix
 const ociURLPrefix = "oci://"
 
-func (t *Translator) ProcessEnvoyExtensionPolicies(envoyExtensionPolicies []*egv1a1.EnvoyExtensionPolicy,
+func (t *Translator) ProcessEnvoyExtensionPolicies(
+	envoyExtensionPolicies []*egv1a1.EnvoyExtensionPolicy,
 	gateways []*GatewayContext,
 	routes []RouteContext,
 	resources *resource.Resources,
@@ -85,7 +86,7 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(envoyExtensionPolicies []*egv
 					handledPolicies[policyName] = policy
 				}
 
-				t.processEEPolicyForRoute(resources, xdsIR,
+				t.processEnvoyExtensionPolicyForRoute(resources, xdsIR,
 					routeMap, gatewayRouteMap, policy, currTarget)
 			}
 		}
@@ -105,7 +106,7 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(envoyExtensionPolicies []*egv
 					handledPolicies[policyName] = policy
 				}
 
-				t.processEEPolicyForRoute(resources, xdsIR,
+				t.processEnvoyExtensionPolicyForRoute(resources, xdsIR,
 					routeMap, gatewayRouteMap, policy, currTarget)
 			}
 		}
@@ -125,7 +126,7 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(envoyExtensionPolicies []*egv
 					handledPolicies[policyName] = policy
 				}
 
-				t.processEEPolicyForGateway(resources, xdsIR,
+				t.processEnvoyExtensionPolicyForGateway(resources, xdsIR,
 					gatewayMap, gatewayRouteMap, policy, currTarget)
 			}
 		}
@@ -145,7 +146,7 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(envoyExtensionPolicies []*egv
 					handledPolicies[policyName] = policy
 				}
 
-				t.processEEPolicyForGateway(resources, xdsIR,
+				t.processEnvoyExtensionPolicyForGateway(resources, xdsIR,
 					gatewayMap, gatewayRouteMap, policy, currTarget)
 			}
 		}
@@ -160,7 +161,7 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(envoyExtensionPolicies []*egv
 	return res
 }
 
-func (t *Translator) processEEPolicyForRoute(
+func (t *Translator) processEnvoyExtensionPolicyForRoute(
 	resources *resource.Resources,
 	xdsIR resource.XdsIRMap,
 	routeMap map[policyTargetRouteKey]*policyRouteTargetContext,
@@ -174,7 +175,7 @@ func (t *Translator) processEEPolicyForRoute(
 		resolveErr    *status.PolicyResolveError
 	)
 
-	targetedRoute, resolveErr = resolveEEPolicyRouteTargetRef(policy, currTarget, routeMap)
+	targetedRoute, resolveErr = resolveEnvoyExtensionPolicyRouteTargetRef(policy, currTarget, routeMap)
 	// Skip if the route is not found
 	// It's not necessarily an error because the EnvoyExtensionPolicy may be
 	// reconciled by multiple controllers. And the other controller may
@@ -262,7 +263,7 @@ func (t *Translator) processEEPolicyForRoute(
 	}
 }
 
-func (t *Translator) processEEPolicyForGateway(
+func (t *Translator) processEnvoyExtensionPolicyForGateway(
 	resources *resource.Resources,
 	xdsIR resource.XdsIRMap,
 	gatewayMap map[types.NamespacedName]*policyGatewayTargetContext,
@@ -275,7 +276,7 @@ func (t *Translator) processEEPolicyForGateway(
 		resolveErr      *status.PolicyResolveError
 	)
 
-	targetedGateway, resolveErr = resolveEEPolicyGatewayTargetRef(policy, currTarget, gatewayMap)
+	targetedGateway, resolveErr = resolveEnvoyExtensionPolicyGatewayTargetRef(policy, currTarget, gatewayMap)
 	// Skip if the gateway is not found
 	// It's not necessarily an error because the EnvoyExtensionPolicy may be
 	// reconciled by multiple controllers. And the other controller may
@@ -329,7 +330,7 @@ func (t *Translator) processEEPolicyForGateway(
 	}
 }
 
-func resolveEEPolicyGatewayTargetRef(
+func resolveEnvoyExtensionPolicyGatewayTargetRef(
 	policy *egv1a1.EnvoyExtensionPolicy,
 	target gwapiv1.LocalPolicyTargetReferenceWithSectionName,
 	gateways map[types.NamespacedName]*policyGatewayTargetContext,
@@ -391,7 +392,7 @@ func resolveEEPolicyGatewayTargetRef(
 	return gateway.GatewayContext, nil
 }
 
-func resolveEEPolicyRouteTargetRef(
+func resolveEnvoyExtensionPolicyRouteTargetRef(
 	policy *egv1a1.EnvoyExtensionPolicy,
 	target gwapiv1.LocalPolicyTargetReferenceWithSectionName,
 	routes map[policyTargetRouteKey]*policyRouteTargetContext,
@@ -475,13 +476,18 @@ func (t *Translator) translateEnvoyExtensionPolicyForRoute(
 	parentRefs := GetParentReferences(route)
 	routesWithDirectResponse := sets.New[string]()
 	for _, p := range parentRefs {
-		parentRefCtx := GetRouteParentContext(route, p, t.GatewayControllerName)
+		// Skip if this parentRef was not processed by this translator
+		// (e.g., references a Gateway with a different GatewayClass)
+		parentRefCtx := route.GetRouteParentContext(p)
+		if parentRefCtx == nil {
+			continue
+		}
 		gtwCtx := parentRefCtx.GetGateway()
 		if gtwCtx == nil {
 			continue
 		}
 
-		if luas, luaError = t.buildLuas(policy, resources, gtwCtx.envoyProxy); luaError != nil {
+		if luas, luaError = t.buildLuas(policy, gtwCtx.envoyProxy); luaError != nil {
 			luaError = perr.WithMessage(luaError, "Lua")
 			errs = errors.Join(errs, luaError)
 		}
@@ -570,7 +576,7 @@ func (t *Translator) translateEnvoyExtensionPolicyForGateway(
 		wasmError = perr.WithMessage(wasmError, "Wasm")
 		errs = errors.Join(errs, wasmError)
 	}
-	if luas, luaError = t.buildLuas(policy, resources, gateway.envoyProxy); luaError != nil {
+	if luas, luaError = t.buildLuas(policy, gateway.envoyProxy); luaError != nil {
 		luaError = perr.WithMessage(luaError, "Lua")
 		errs = errors.Join(errs, luaError)
 	}
@@ -635,7 +641,10 @@ func (t *Translator) translateEnvoyExtensionPolicyForGateway(
 	return errs
 }
 
-func (t *Translator) buildLuas(policy *egv1a1.EnvoyExtensionPolicy, resources *resource.Resources, envoyProxy *egv1a1.EnvoyProxy) ([]ir.Lua, error) {
+func (t *Translator) buildLuas(
+	policy *egv1a1.EnvoyExtensionPolicy,
+	envoyProxy *egv1a1.EnvoyProxy,
+) ([]ir.Lua, error) {
 	if policy == nil {
 		return nil, nil
 	}
@@ -644,7 +653,7 @@ func (t *Translator) buildLuas(policy *egv1a1.EnvoyExtensionPolicy, resources *r
 
 	for idx, ep := range policy.Spec.Lua {
 		name := irConfigNameForLua(policy, idx)
-		luaIR, err := t.buildLua(name, policy, ep, resources, envoyProxy)
+		luaIR, err := t.buildLua(name, policy, ep, envoyProxy)
 		if err != nil {
 			return nil, err
 		}
@@ -657,13 +666,12 @@ func (t *Translator) buildLua(
 	name string,
 	policy *egv1a1.EnvoyExtensionPolicy,
 	lua egv1a1.Lua,
-	resources *resource.Resources,
 	envoyProxy *egv1a1.EnvoyProxy,
 ) (*ir.Lua, error) {
 	var luaCode *string
 	var err error
 	if lua.Type == egv1a1.LuaValueTypeValueRef {
-		luaCode, err = getLuaBodyFromLocalObjectReference(lua.ValueRef, resources, policy.Namespace)
+		luaCode, err = t.getLuaBodyFromLocalObjectReference(lua.ValueRef, policy.Namespace)
 	} else {
 		luaCode = lua.Inline
 	}
@@ -681,8 +689,11 @@ func (t *Translator) buildLua(
 }
 
 // getLuaBodyFromLocalObjectReference assumes the local object reference points to a Kubernetes ConfigMap
-func getLuaBodyFromLocalObjectReference(valueRef *gwapiv1.LocalObjectReference, resources *resource.Resources, policyNs string) (*string, error) {
-	cm := resources.GetConfigMap(policyNs, string(valueRef.Name))
+func (t *Translator) getLuaBodyFromLocalObjectReference(
+	valueRef *gwapiv1.LocalObjectReference,
+	policyNs string,
+) (*string, error) {
+	cm := t.GetConfigMap(policyNs, string(valueRef.Name))
 	if cm != nil {
 		b, dataOk := cm.Data["lua"]
 		switch {

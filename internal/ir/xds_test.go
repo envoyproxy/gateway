@@ -1410,7 +1410,7 @@ func TestRedaction(t *testing.T) {
 								HMACSecret:   []byte("secret"),
 							},
 							APIKeyAuth: &APIKeyAuth{
-								Credentials: map[string]PrivateBytes{"client-id": []byte("secret")},
+								Credentials: []APIKeyCredential{{Client: []byte("client-id"), Key: []byte("secret")}},
 							},
 							BasicAuth: &BasicAuth{
 								Users: []byte("secret"),
@@ -1430,7 +1430,7 @@ func TestRedaction(t *testing.T) {
 				`"routes":[{` +
 				`"name":"","hostname":"","isHTTP2":false,"security":{` +
 				`"oidc":{"name":"","provider":{"authorizationEndpoint":"","tokenEndpoint":""},"clientID":"","clientSecret":"[redacted]","hmacSecret":"[redacted]"},` +
-				`"apiKeyAuth":{"credentials":{"client-id":"[redacted]"},"extractFrom":null},` +
+				`"apiKeyAuth":{"credentials":[{"client":"[redacted]","key":"[redacted]"}],"extractFrom":null},` +
 				`"basicAuth":{"name":"","users":"[redacted]"},` +
 				`"extAuth":{"name":"","contextExtensions":[{"name":"key","value":"[redacted]"}]}` +
 				`}}],` +

@@ -20,7 +20,8 @@ import (
 
 type Config struct {
 	config.Server
-	InfraIR *message.InfraIR
+	InfraIR      *message.InfraIR
+	RunnerErrors *message.RunnerErrors
 }
 
 type Runner struct {
@@ -50,8 +51,8 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 		r.Logger.Info("provider is not specified, no infrastructure is available")
 		return nil
 	}
-
-	r.mgr, err = infrastructure.NewManager(ctx, &r.Server, r.Logger)
+	errNotifier := message.RunnerErrorNotifier{RunnerName: r.Name(), RunnerErrors: r.RunnerErrors}
+	r.mgr, err = infrastructure.NewManager(ctx, &r.Server, r.Logger, errNotifier)
 	if err != nil {
 		r.Logger.Error(err, "failed to create new manager")
 		return err
@@ -99,14 +100,14 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 		// Since leader election is disabled subscribe to infraIR to initialize the infrastructure and Close when the context is done.
 		go subscribeInitInfraAndCloseInfraIRMessage()
 	}
-	return
+	return err
 }
 
 func (r *Runner) updateProxyInfraFromSubscription(ctx context.Context, sub <-chan watchable.Snapshot[string, *ir.Infra]) {
 	// Subscribe to resources
 	message.HandleSubscription(message.Metadata{Runner: r.Name(), Message: message.InfraIRMessageName}, sub,
 		func(update message.Update[string, *ir.Infra], errChan chan error) {
-			r.Logger.Info("received an update")
+			r.Logger.Info("received an update", "key", update.Key, "delete", update.Delete)
 			val := update.Value
 
 			if update.Delete {

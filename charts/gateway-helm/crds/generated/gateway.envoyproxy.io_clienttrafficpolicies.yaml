@@ -272,6 +272,7 @@ spec:
                           - value
                           type: object
                         maxItems: 64
+                        minItems: 1
                         type: array
                         x-kubernetes-list-map-keys:
                         - name
@@ -298,8 +299,40 @@ spec:
                         items:
                           type: string
                         maxItems: 64
+                        minItems: 1
                         type: array
                         x-kubernetes-list-type: set
+                      removeOnMatch:
+                        description: |-
+                          RemoveOnMatch removes headers whose names match the specified string matchers.
+                          Matching is performed on the header name (case-insensitive).
+                        items:
+                          description: |-
+                            StringMatch defines how to match any strings.
+                            This is a general purpose match condition that can be used by other EG APIs
+                            that need to match against a string.
+                          properties:
+                            type:
+                              default: Exact
+                              description: Type specifies how to match against a string.
+                              enum:
+                              - Exact
+                              - Prefix
+                              - Suffix
+                              - RegularExpression
+                              type: string
+                            value:
+                              description: Value specifies the string value that the
+                                match must have.
+                              maxLength: 1024
+                              minLength: 1
+                              type: string
+                          required:
+                          - value
+                          type: object
+                        maxItems: 64
+                        minItems: 1
+                        type: array
                       set:
                         description: |-
                           Set overwrites the request with the given header (name, value)
@@ -346,6 +379,7 @@ spec:
                           - value
                           type: object
                         maxItems: 64
+                        minItems: 1
                         type: array
                         x-kubernetes-list-map-keys:
                         - name
@@ -407,6 +441,7 @@ spec:
                           - value
                           type: object
                         maxItems: 64
+                        minItems: 1
                         type: array
                         x-kubernetes-list-map-keys:
                         - name
@@ -433,8 +468,40 @@ spec:
                         items:
                           type: string
                         maxItems: 64
+                        minItems: 1
                         type: array
                         x-kubernetes-list-type: set
+                      removeOnMatch:
+                        description: |-
+                          RemoveOnMatch removes headers whose names match the specified string matchers.
+                          Matching is performed on the header name (case-insensitive).
+                        items:
+                          description: |-
+                            StringMatch defines how to match any strings.
+                            This is a general purpose match condition that can be used by other EG APIs
+                            that need to match against a string.
+                          properties:
+                            type:
+                              default: Exact
+                              description: Type specifies how to match against a string.
+                              enum:
+                              - Exact
+                              - Prefix
+                              - Suffix
+                              - RegularExpression
+                              type: string
+                            value:
+                              description: Value specifies the string value that the
+                                match must have.
+                              maxLength: 1024
+                              minLength: 1
+                              type: string
+                          required:
+                          - value
+                          type: object
+                        maxItems: 64
+                        minItems: 1
+                        type: array
                       set:
                         description: |-
                           Set overwrites the request with the given header (name, value)
@@ -481,6 +548,7 @@ spec:
                           - value
                           type: object
                         maxItems: 64
+                        minItems: 1
                         type: array
                         x-kubernetes-list-map-keys:
                         - name
@@ -603,11 +671,18 @@ spec:
                     properties:
                       useDefaultHost:
                         description: |-
-                          UseDefaultHost defines if the HTTP/1.0 request is missing the Host header,
-                          then the hostname associated with the listener should be injected into the
-                          request.
-                          If this is not set and an HTTP/1.0 request arrives without a host, then
-                          it will be rejected.
+                          UseDefaultHost specifies whether a default Host header should be injected
+                          into HTTP/1.0 requests that do not include one.
+
+                          When set to true, Envoy Gateway injects the hostname associated with the
+                          listener or route into the request, in the following order:
+
+                            1. If the targeted listener has a non-wildcard hostname, use that hostname.
+                            2. If there is exactly one HTTPRoute with a non-wildcard hostname under
+                               the targeted listener, use that hostname.
+
+                           Note: Setting this field to true without a non-wildcard hostname makes the
+                          ClientTrafficPolicy invalid.
                         type: boolean
                     type: object
                   preserveHeaderCase:

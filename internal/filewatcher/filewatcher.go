@@ -175,12 +175,12 @@ func (fw *fileWatcher) findWorker(path string) (*workerState, string, error) {
 	return ws, cleanedPath, nil
 }
 
-func getPath(path string) (cleanedPath, parentPath string) {
-	cleanedPath = filepath.Clean(path)
-	parentPath, _ = filepath.Split(cleanedPath)
+func getPath(path string) (string, string) {
+	cleanedPath := filepath.Clean(path)
+	parentPath, _ := filepath.Split(cleanedPath)
 	if f, err := os.Lstat(cleanedPath); err == nil && f.IsDir() {
 		parentPath = cleanedPath
 	}
 
-	return
+	return cleanedPath, parentPath
 }

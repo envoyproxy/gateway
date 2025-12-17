@@ -70,7 +70,7 @@ httpRoutes:
     parents:
     - conditions:
       - lastTransitionTime: null
-        message: ReplaceFullPath cannot be set when rewrite path type is "ReplacePrefixMatch"
+        message: ReplaceFullPath cannot be set when rewrite path type is "ReplacePrefixMatch".
         reason: UnsupportedValue
         status: "False"
         type: Accepted
@@ -112,6 +112,7 @@ xdsIR:
     globalResources:
       proxyServiceCluster:
         metadata:
+          kind: Service
           name: envoy-envoy-gateway-gateway-1-196ae069
           namespace: envoy-gateway-system
           sectionName: "8080"
@@ -123,6 +124,7 @@ xdsIR:
             port: 8080
             zone: zone1
           metadata:
+            kind: Service
             name: envoy-envoy-gateway-gateway-1-196ae069
             namespace: envoy-gateway-system
             sectionName: "8080"

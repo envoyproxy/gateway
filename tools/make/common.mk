@@ -14,7 +14,14 @@
 # https://news.ycombinator.com/item?id=16486331
 .SECONDARY:
 
-SHELL:=/bin/bash
+SHELL:=/usr/bin/env bash -euo pipefail
+
+GNU_SED := $(shell sed --version >/dev/null 2>&1 && echo "yes" || echo "no")
+ifeq ($(GNU_SED),yes)
+SED=sed -i
+else
+SED=sed -i ''
+endif
 
 # ====================================================================================================
 # ROOT Options:
@@ -35,7 +42,7 @@ OUTPUT_DIR := $(ROOT_DIR)/bin
 endif
 
 # Common Go tool command including the custom -modfile flag for tools dependencies
-GO_TOOL = go tool -modfile=tools/go.mod
+GO_TOOL = go tool -modfile=$(ROOT_DIR)/tools/go.mod
 
 # REV is the short git sha of latest commit.
 REV=$(shell git rev-parse --short HEAD)

@@ -14,9 +14,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-// validateTLSSecretData ensures the cert and key provided in a secret
-// is not malformed and can be properly parsed
-func validateTLSSecretsData(secrets []*corev1.Secret) ([]*x509.Certificate, error) {
+// parseCertsFromTLSSecretsData parses the cert and key provided in a secret
+// and ensures that they are not malformed and can be properly parsed
+func parseCertsFromTLSSecretsData(secrets []*corev1.Secret) ([]*x509.Certificate, error) {
 	var publicKeyAlgorithm string
 	var parseErr error
 	certs := make([]*x509.Certificate, 0, len(secrets))
@@ -25,7 +25,7 @@ func validateTLSSecretsData(secrets []*corev1.Secret) ([]*x509.Certificate, erro
 	for _, secret := range secrets {
 		certData := secret.Data[corev1.TLSCertKey]
 
-		if err := validateCertificate(certData); err != nil {
+		if err := validateCertificates(certData); err != nil {
 			return nil, fmt.Errorf("%s/%s must contain valid %s and %s, unable to validate certificate in %s: %w", secret.Namespace, secret.Name, corev1.TLSCertKey, corev1.TLSPrivateKeyKey, corev1.TLSCertKey, err)
 		}
 
@@ -96,10 +96,11 @@ func validateTLSSecretsData(secrets []*corev1.Secret) ([]*x509.Certificate, erro
 	return certs, parseErr
 }
 
-func validateCertificate(data []byte) error {
+// validateCertificate validates all certificates in PEM encoded data.
+func validateCertificates(data []byte) error {
 	block, _ := pem.Decode(data)
 	if block == nil {
-		return fmt.Errorf("pem decode failed")
+		return fmt.Errorf("unable to decode pem data for certificate")
 	}
 	certs, err := x509.ParseCertificates(block.Bytes)
 	if err != nil {
@@ -108,11 +109,31 @@ func validateCertificate(data []byte) error {
 	now := time.Now()
 	for _, cert := range certs {
 		if now.After(cert.NotAfter) {
-			return fmt.Errorf("certificate is expired")
+			return fmt.Errorf("certificate %s has expired since %v", cert.Subject.CommonName, cert.NotAfter)
 		}
 		if now.Before(cert.NotBefore) {
-			return fmt.Errorf("certificate is not yet valid")
+			return fmt.Errorf("certificate %s will be valid after %v", cert.Subject.CommonName, cert.NotBefore)
 		}
+	}
+	return nil
+}
+
+// validateCrl validates a CRL in PEM encoded data.
+func validateCrl(data []byte) error {
+	block, _ := pem.Decode(data)
+	if block == nil {
+		return fmt.Errorf("unable to decode pem data for CRL")
+	}
+	crl, err := x509.ParseRevocationList(block.Bytes)
+	if err != nil {
+		return fmt.Errorf("failed to parse CRL: %w", err)
+	}
+	now := time.Now()
+	if !crl.NextUpdate.IsZero() && now.After(crl.NextUpdate) {
+		return fmt.Errorf("CRL is expired (next update was due at %v)", crl.NextUpdate)
+	}
+	if now.Before(crl.ThisUpdate) {
+		return fmt.Errorf("CRL is not yet valid (this update starts at %v)", crl.ThisUpdate)
 	}
 	return nil
 }

@@ -757,7 +757,7 @@ func TestGetCaCertFromConfigMap(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got, found := getCaCertFromConfigMap(tc.cm)
+			got, found := getOrFirstFromData(tc.cm.Data, caCertKey)
 			require.Equal(t, tc.expectedFound, found)
 			require.Equal(t, tc.expected, got)
 		})
@@ -803,7 +803,7 @@ func TestGetCaCertFromSecret(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got, found := getCaCertFromSecret(tc.s)
+			got, found := getOrFirstFromData(tc.s.Data, caCertKey)
 			require.Equal(t, tc.expectedFound, found)
 			require.Equal(t, tc.expected, string(got))
 		})
@@ -881,7 +881,10 @@ func TestIrStringMatch(t *testing.T) {
 				Type:  ptr.To(stringMatchUnknown),
 				Value: matchValue,
 			},
-			expected: nil,
+			expected: &ir.StringMatch{
+				Name:  matchName,
+				Exact: &matchValue,
+			},
 		},
 	}
 

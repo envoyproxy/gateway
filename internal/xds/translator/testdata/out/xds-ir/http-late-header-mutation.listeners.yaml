@@ -63,11 +63,7 @@
               - append:
                   header:
                     key: some-header
-                    value: some-value1
-              - append:
-                  header:
-                    key: some-header
-                    value: some-value2
+                    value: some-value1,some-value2
               - append:
                   header:
                     key: some-header-2
@@ -89,6 +85,19 @@
                   keepEmptyValue: true
               - remove: some-header5
               - remove: some-header6
+              - removeOnMatch:
+                  keyMatcher:
+                    exact: my-removed-response-header-value
+              - removeOnMatch:
+                  keyMatcher:
+                    prefix: removed-response-prefix-
+              - removeOnMatch:
+                  keyMatcher:
+                    suffix: -removed-response-suffix
+              - removeOnMatch:
+                  keyMatcher:
+                    safeRegex:
+                      regex: removed-response-regex-.*
         - name: envoy.filters.http.router
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router

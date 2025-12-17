@@ -11,6 +11,10 @@ metadata:
     control-plane: envoy-gateway
   {{- include "eg.labels" . | nindent 4 }}
 spec:
+  type: {{ .Values.service.type }}
+  {{- if and (eq .Values.service.type "LoadBalancer") .Values.service.loadBalancerIP }}
+  loadBalancerIP: {{ .Values.service.loadBalancerIP }}
+  {{- end }}
   selector:
     control-plane: envoy-gateway
   {{- include "eg.selectorLabels" . | nindent 4 }}

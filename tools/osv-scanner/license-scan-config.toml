@@ -39,8 +39,16 @@ ecosystem = "Go"
 license.override = ["Apache-2.0"]
 reason = "This package is dual-licensed: the code under the Apache 2.0 license and the documentation under the CC-BY-SA-4.0 license"
 
+# Remove this once OSV image updated
 [[PackageOverrides]]
 name = "stdlib"
 ecosystem = "Go"
 license.override = ["BSD-3-Clause"]
-reason = "Unidentified license, remove once https://github.com/google/deps.dev/issues/86 is resolved"
+reason = "Go stdlib is licensed under BSD-3-Clause, see https://go.dev/LICENSE"
+
+# Remove this after CNCF allowlist update
+[[PackageOverrides]]
+name = "github.com/cyphar/filepath-securejoin"
+ecosystem = "Go"
+license.override = ["BSD-3-Clause"]
+reason = "https://github.com/cncf/foundation/issues/1154"

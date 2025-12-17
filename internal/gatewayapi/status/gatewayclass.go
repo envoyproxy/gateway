@@ -14,8 +14,6 @@
 package status
 
 import (
-	"time"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -35,13 +33,12 @@ const (
 
 // SetGatewayClassAccepted inserts or updates the Accepted condition
 // for the provided GatewayClass.
-func SetGatewayClassAccepted(gc *gwapiv1.GatewayClass, accepted bool, reason, msg string) *gwapiv1.GatewayClass {
+func SetGatewayClassAccepted(gc *gwapiv1.GatewayClass, accepted bool, reason, msg string) {
 	gc.Status.Conditions = MergeConditions(gc.Status.Conditions, computeGatewayClassAcceptedCondition(gc, accepted, reason, msg))
 	// Disable SupportedFeatures until the field moves from experimental to stable to avoid
 	// status failures due to changes in the datatype. This can occur because we cannot control
 	// how a CRD is installed in the cluster
 	// gc.Status.SupportedFeatures = GatewaySupportedFeatures
-	return gc
 }
 
 // computeGatewayClassAcceptedCondition computes the GatewayClass Accepted status condition.
@@ -57,7 +54,6 @@ func computeGatewayClassAcceptedCondition(gatewayClass *gwapiv1.GatewayClass,
 			Reason:             reason,
 			Message:            msg,
 			ObservedGeneration: gatewayClass.Generation,
-			LastTransitionTime: metav1.NewTime(time.Now()),
 		}
 	default:
 		return metav1.Condition{
@@ -66,7 +62,6 @@ func computeGatewayClassAcceptedCondition(gatewayClass *gwapiv1.GatewayClass,
 			Reason:             reason,
 			Message:            msg,
 			ObservedGeneration: gatewayClass.Generation,
-			LastTransitionTime: metav1.NewTime(time.Now()),
 		}
 	}
 }

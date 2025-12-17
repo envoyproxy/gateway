@@ -140,16 +140,6 @@ backends:
         - fqdn:
             hostname: backend-v3.gateway-conformance-infra.svc.cluster.local
             port: 8080
-  - apiVersion: gateway.envoyproxy.io/v1alpha1
-    kind: Backend
-    metadata:
-      name: backend-fqdn
-      namespace: default
-    spec:
-      endpoints:
-        - fqdn:
-            hostname: grpc-infra-backend-v1.gateway-conformance-infra.svc.cluster.local
-            port: 8080
 backendTrafficPolicies:
   - apiVersion: gateway.envoyproxy.io/v1alpha1
     kind: BackendTrafficPolicy

@@ -58,11 +58,12 @@
               signoutPath:
                 path:
                   exact: /logout
+              statPrefix: securitypolicy/envoy-gateway/security-policy-1
               tokenEndpoint:
                 cluster: oauth_foo_com_443
                 timeout: 10s
                 uri: https://oauth.foo.com/token
-              useRefreshToken: false
+              useRefreshToken: true
         - name: envoy.filters.http.jwt_authn
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.JwtAuthentication

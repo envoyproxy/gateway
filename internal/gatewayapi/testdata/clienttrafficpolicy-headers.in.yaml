@@ -15,6 +15,8 @@ clientTrafficPolicies:
           value: "my-added-header-value"
         - name: "my-added-header"
           value: "my-added-header-value"
+        - name: "my-multi-added-header"
+          value: "value1,value2"
         set:
         - name: "my-set-header"
           value: "my-set-header-value"
@@ -23,6 +25,15 @@ clientTrafficPolicies:
         remove:
         - "my-removed-header"
         - "my-removed-header"
+        removeOnMatch:
+        - value: "my-removed-header-value"
+          type: Exact
+        - value: "removed-prefix-"
+          type: Prefix
+        - value: "-removed-suffix"
+          type: Suffix
+        - value: "removed-regex-.*"
+          type: RegularExpression
       lateResponseHeaders:
         add:
         - name: "my-added-response-header"
@@ -34,9 +45,20 @@ clientTrafficPolicies:
           value: "my-set-response-header-value"
         - name: "my-set-response-header"
           value: "my-set-response-header-value"
+        - name: "my-multi-set-response-header"
+          value: "value1,value2"
         remove:
         - "my-removed-response-header"
         - "my-removed-response-header"
+        removeOnMatch:
+        - value: "my-removed-response-header-value"
+          type: Exact
+        - value: "removed-response-prefix-"
+          type: Prefix
+        - value: "-removed-response-suffix"
+          type: Suffix
+        - value: "removed-response-regex-.*"
+          type: RegularExpression
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway

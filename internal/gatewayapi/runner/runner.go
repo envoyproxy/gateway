@@ -16,6 +16,9 @@ import (
 
 	"github.com/docker/docker/pkg/fileutils"
 	"github.com/telepresenceio/watchable"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -46,9 +49,12 @@ const (
 	hmacSecretKey  = "hmac-secret"
 )
 
+var tracer = otel.Tracer("envoy-gateway/gateway-api")
+
 type Config struct {
 	config.Server
 	ProviderResources *message.ProviderResources
+	RunnerErrors      *message.RunnerErrors
 	XdsIR             *message.XdsIR
 	InfraIR           *message.InfraIR
 	ExtensionManager  extension.Manager
@@ -78,7 +84,7 @@ func (r *Runner) Name() string {
 }
 
 // Start starts the gateway-api translator runner
-func (r *Runner) Start(ctx context.Context) (err error) {
+func (r *Runner) Start(ctx context.Context) error {
 	r.Logger = r.Logger.WithName(r.Name()).WithValues("runner", r.Name())
 
 	go r.startWasmCache(ctx)
@@ -88,7 +94,7 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 
 	go r.subscribeAndTranslate(c)
 	r.Logger.Info("started")
-	return
+	return nil
 }
 
 func (r *Runner) startWasmCache(ctx context.Context) {
@@ -122,16 +128,36 @@ func (r *Runner) startWasmCache(ctx context.Context) {
 	r.wasmCache.Start(ctx)
 }
 
-func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *resource.ControllerResources]) {
+func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *resource.ControllerResourcesContext]) {
 	message.HandleSubscription(message.Metadata{Runner: r.Name(), Message: message.ProviderResourcesMessageName}, sub,
-		func(update message.Update[string, *resource.ControllerResources], errChan chan error) {
-			r.Logger.Info("received an update")
-			val := update.Value
+		func(update message.Update[string, *resource.ControllerResourcesContext], errChan chan error) {
+			parentCtx := context.Background()
+			if update.Value != nil && update.Value.Context != nil {
+				parentCtx = update.Value.Context
+			}
+
+			traceCtx, span := tracer.Start(parentCtx, "GatewayApiRunner.subscribeAndTranslate")
+			defer span.End()
+			traceLogger := r.Logger.WithTrace(traceCtx)
+			traceLogger.Info("received an update", "key", update.Key)
+
+			valWrapper := update.Value
 			// There is only 1 key which is the controller name
 			// so when a delete is triggered, delete all keys
-			if update.Delete || val == nil {
+			if update.Delete || valWrapper == nil || valWrapper.Resources == nil {
 				r.deleteAllKeys()
 				return
+			}
+
+			val := valWrapper.Resources
+
+			// Add span attributes for observability
+			span.SetAttributes(
+				attribute.String("controller.key", update.Key),
+				attribute.Bool("update.delete", update.Delete),
+			)
+			if val != nil {
+				span.SetAttributes(attribute.Int("resources.count", len(*val)))
 			}
 
 			// Initialize keysToDelete with tracked keys (mark and sweep approach)
@@ -143,20 +169,21 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 			var backendTLSPolicyStatusCount, clientTrafficPolicyStatusCount, backendTrafficPolicyStatusCount int
 			var securityPolicyStatusCount, envoyExtensionPolicyStatusCount, backendStatusCount, extensionServerPolicyStatusCount int
 
+			span.AddEvent("translate", trace.WithAttributes(attribute.Int("resources.count", len(*val))))
 			for _, resources := range *val {
 				// Translate and publish IRs.
 				t := &gatewayapi.Translator{
-					GatewayControllerName:     r.EnvoyGateway.Gateway.ControllerName,
-					GatewayClassName:          gwapiv1.ObjectName(resources.GatewayClass.Name),
-					GlobalRateLimitEnabled:    r.EnvoyGateway.RateLimit != nil,
-					EnvoyPatchPolicyEnabled:   r.EnvoyGateway.ExtensionAPIs != nil && r.EnvoyGateway.ExtensionAPIs.EnableEnvoyPatchPolicy,
-					BackendEnabled:            r.EnvoyGateway.ExtensionAPIs != nil && r.EnvoyGateway.ExtensionAPIs.EnableBackend,
-					ControllerNamespace:       r.ControllerNamespace,
-					GatewayNamespaceMode:      r.EnvoyGateway.GatewayNamespaceMode(),
-					MergeGateways:             gatewayapi.IsMergeGatewaysEnabled(resources),
-					WasmCache:                 r.wasmCache,
-					ListenerPortShiftDisabled: r.EnvoyGateway.Provider != nil && r.EnvoyGateway.Provider.IsRunningOnHost(),
-					Logger:                    r.Logger,
+					GatewayControllerName:   r.EnvoyGateway.Gateway.ControllerName,
+					GatewayClassName:        gwapiv1.ObjectName(resources.GatewayClass.Name),
+					GlobalRateLimitEnabled:  r.EnvoyGateway.RateLimit != nil,
+					EnvoyPatchPolicyEnabled: r.EnvoyGateway.ExtensionAPIs != nil && r.EnvoyGateway.ExtensionAPIs.EnableEnvoyPatchPolicy,
+					BackendEnabled:          r.EnvoyGateway.ExtensionAPIs != nil && r.EnvoyGateway.ExtensionAPIs.EnableBackend,
+					ControllerNamespace:     r.ControllerNamespace,
+					GatewayNamespaceMode:    r.EnvoyGateway.GatewayNamespaceMode(),
+					MergeGateways:           gatewayapi.IsMergeGatewaysEnabled(resources),
+					WasmCache:               r.wasmCache,
+					RunningOnHost:           r.EnvoyGateway.Provider != nil && r.EnvoyGateway.Provider.IsRunningOnHost(),
+					Logger:                  traceLogger,
 				}
 
 				// If an extension is loaded, pass its supported groups/kinds to the translator
@@ -170,24 +197,29 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 						extGKs = append(extGKs, schema.GroupKind{Group: gvk.Group, Kind: gvk.Kind})
 					}
 					t.ExtensionGroupKinds = extGKs
-					r.Logger.Info("extension resources", "GVKs count", len(extGKs))
+					traceLogger.Info("extension resources", "GVKs count", len(extGKs))
 				}
 				// Translate to IR
+				_, translateToIRSpan := tracer.Start(traceCtx, "GatewayApiRunner.ResoureTranslationCycle.TranslateToIR")
 				result, err := t.Translate(resources)
+				translateToIRSpan.End()
 				if err != nil {
 					// Currently all errors that Translate returns should just be logged
-					r.Logger.Error(err, "errors detected during translation", "gateway-class", resources.GatewayClass.Name)
+					traceLogger.Error(err, "errors detected during translation", "gateway-class", resources.GatewayClass.Name)
+					// Notify the main control loop about translation errors. This may be a critical error in standalone mode, so
+					// notify the control loop in case this needs to be handled.
+					r.RunnerErrors.Store(r.Name(), message.NewWatchableError(err))
 				}
 
 				// Publish the IRs.
 				// Also validate the ir before sending it.
 				for key, val := range result.InfraIR {
-					logger := r.Logger.V(1).WithValues(string(message.InfraIRMessageName), key)
-					if logger.Enabled() {
-						logger.Info(val.JSONString())
+					logV := traceLogger.V(1).WithValues(string(message.InfraIRMessageName), key)
+					if logV.Enabled() {
+						logV.Info(val.JSONString())
 					}
 					if err := val.Validate(); err != nil {
-						r.Logger.Error(err, "unable to validate infra ir, skipped sending it")
+						traceLogger.Error(err, "unable to validate infra ir, skipped sending it")
 						errChan <- err
 					} else {
 						r.InfraIR.Store(key, val)
@@ -199,20 +231,30 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 				}
 
 				for key, val := range result.XdsIR {
-					logger := r.Logger.V(1).WithValues(string(message.XDSIRMessageName), key)
-					if logger.Enabled() {
-						logger.Info(val.JSONString())
+					logV := traceLogger.V(1).WithValues(string(message.XDSIRMessageName), key)
+					if logV.Enabled() {
+						logV.Info(val.JSONString())
 					}
 					if err := val.Validate(); err != nil {
-						r.Logger.Error(err, "unable to validate xds ir, skipped sending it")
+						traceLogger.Error(err, "unable to validate xds ir, skipped sending it")
 						errChan <- err
 					} else {
-						r.XdsIR.Store(key, val)
+						m := message.XdsIRWithContext{
+							XdsIR:   val,
+							Context: traceCtx,
+						}
+						r.XdsIR.Store(key, &m)
 						xdsIRCount++
 					}
 				}
 
 				// Update Status
+				_, statusUpdateSpan := tracer.Start(traceCtx, "GatewayApiRunner.ResoureTranslationCycle.UpdateStatus")
+				if result.GatewayClass != nil {
+					key := utils.NamespacedName(result.GatewayClass)
+					r.ProviderResources.GatewayClassStatuses.Store(key, &result.GatewayClass.Status)
+				}
+
 				for _, gateway := range result.Gateways {
 					key := utils.NamespacedName(gateway)
 					r.ProviderResources.GatewayStatuses.Store(key, &gateway.Status)
@@ -330,11 +372,13 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 					delete(keysToDelete.ExtensionServerPolicyStatus, key)
 					r.keyCache.ExtensionServerPolicyStatus[key] = true
 				}
+				statusUpdateSpan.End()
 			}
 
 			// Publish aggregated metrics
 			message.PublishMetric(message.Metadata{Runner: r.Name(), Message: message.InfraIRMessageName}, infraIRCount)
 			message.PublishMetric(message.Metadata{Runner: r.Name(), Message: message.XDSIRMessageName}, xdsIRCount)
+			message.PublishMetric(message.Metadata{Runner: r.Name(), Message: message.GatewayClassStatusMessageName}, 1)
 			message.PublishMetric(message.Metadata{Runner: r.Name(), Message: message.GatewayStatusMessageName}, gatewayStatusCount)
 			message.PublishMetric(message.Metadata{Runner: r.Name(), Message: message.HTTPRouteStatusMessageName}, httpRouteStatusCount)
 			message.PublishMetric(message.Metadata{Runner: r.Name(), Message: message.GRPCRouteStatusMessageName}, grpcRouteStatusCount)
@@ -356,18 +400,19 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 	r.Logger.Info("shutting down")
 }
 
-func (r *Runner) loadTLSConfig(ctx context.Context) (tlsConfig *tls.Config, salt []byte, err error) {
+func (r *Runner) loadTLSConfig(ctx context.Context) (*tls.Config, []byte, error) {
 	switch {
 	case r.EnvoyGateway.Provider.IsRunningOnKubernetes():
-		salt, err = hmac(ctx, r.ControllerNamespace)
+		salt, err := hmac(ctx, r.ControllerNamespace)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to get hmac secret: %w", err)
 		}
 
-		tlsConfig, err = crypto.LoadTLSConfig(serveTLSCertFilepath, serveTLSKeyFilepath, serveTLSCaFilepath)
+		tlsConfig, err := crypto.LoadTLSConfig(serveTLSCertFilepath, serveTLSKeyFilepath, serveTLSCaFilepath)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to create tls config: %w", err)
 		}
+		return tlsConfig, salt, nil
 
 	case r.EnvoyGateway.Provider.IsRunningOnHost():
 		// Get config
@@ -384,7 +429,7 @@ func (r *Runner) loadTLSConfig(ctx context.Context) (tlsConfig *tls.Config, salt
 
 		// Read HMAC secret
 		hmacPath := filepath.Join(paths.CertDir("envoy-oidc-hmac"), "hmac-secret")
-		salt, err = os.ReadFile(hmacPath)
+		salt, err := os.ReadFile(hmacPath)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to get hmac secret: %w", err)
 		}
@@ -394,15 +439,15 @@ func (r *Runner) loadTLSConfig(ctx context.Context) (tlsConfig *tls.Config, salt
 		keyPath := filepath.Join(certDir, "tls.key")
 		caPath := filepath.Join(certDir, "ca.crt")
 
-		tlsConfig, err = crypto.LoadTLSConfig(certPath, keyPath, caPath)
+		tlsConfig, err := crypto.LoadTLSConfig(certPath, keyPath, caPath)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to create tls config: %w", err)
 		}
+		return tlsConfig, salt, nil
 
 	default:
 		return nil, nil, fmt.Errorf("no valid tls certificates")
 	}
-	return
 }
 
 func unstructuredToPolicyStatus(policyStatus map[string]any) gwapiv1.PolicyStatus {
@@ -678,7 +723,7 @@ func (r *Runner) deleteKeys(kc *KeyCache) {
 
 // hmac returns the HMAC secret generated by the CertGen job.
 // hmac will be used as a hash salt to generate unguessable downloading paths for Wasm modules.
-func hmac(ctx context.Context, namespace string) (hmac []byte, err error) {
+func hmac(ctx context.Context, namespace string) ([]byte, error) {
 	// Get the HMAC secret.
 	// HMAC secret is generated by the CertGen job and stored in a secret
 	cfg, err := ctrl.GetConfig()
@@ -701,5 +746,5 @@ func hmac(ctx context.Context, namespace string) (hmac []byte, err error) {
 		return nil, fmt.Errorf(
 			"HMAC secret not found in secret %s/%s", namespace, hmacSecretName)
 	}
-	return
+	return hmac, err
 }

@@ -47,18 +47,20 @@ var HeaderSettingsTest = suite.ConformanceTest{
 				Request: http.Request{
 					Path: "/early-header",
 					Headers: map[string]string{
-						"early-added-header":   "client",
-						"early-set-header":     "client",
-						"early-removed-header": "client",
+						"early-added-header":         "client",
+						"early-set-header":           "client",
+						"early-removed-header":       "client",
+						"early-removed-regex-header": "client",
 					},
 				},
 				ExpectedRequest: &http.ExpectedRequest{
 					Request: http.Request{
 						Path: "/early-header",
 						Headers: map[string]string{
-							"early-added-header":   "client,early,late", // client, early and late are all added to header
-							"early-set-header":     "early,late",        // early set overwrites client value
-							"early-removed-header": "late",              // removed by early, so only late value exists
+							"early-added-header":         "client,early,late", // client, early and late are all added to header
+							"early-set-header":           "early,late",        // early set overwrites client value
+							"early-removed-header":       "late",              // removed by early, so only late value exists
+							"early-removed-regex-header": "late",              // removed by early, so only late value exists
 						},
 					},
 				},
@@ -90,9 +92,10 @@ var HeaderSettingsTest = suite.ConformanceTest{
 					Path: "/late-header",
 				},
 				BackendSetResponseHeaders: map[string]string{
-					"late-added-header":   "backend",
-					"late-set-header":     "backend",
-					"late-removed-header": "backend",
+					"late-added-header":         "backend",
+					"late-set-header":           "backend",
+					"late-removed-header":       "backend",
+					"late-removed-regex-header": "backend",
 				},
 				Response: http.Response{
 					StatusCodes: []int{200},
@@ -102,6 +105,43 @@ var HeaderSettingsTest = suite.ConformanceTest{
 					},
 					AbsentHeaders: []string{
 						"late-removed-header",
+						"late-removed-regex-header",
+					},
+				},
+				Namespace: ns,
+			}
+
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expected)
+		})
+
+		t.Run("Multi value header modifications should apply", func(t *testing.T) {
+			ns := "gateway-conformance-infra"
+			routeNN := types.NamespacedName{Name: "http-with-multi-value-headers", Namespace: ns}
+			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
+			gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
+
+			// This testcase verifies that comma-separated values in header modifications work correctly.
+			expected := http.ExpectedResponse{
+				Request: http.Request{
+					Path: "/multi-value-header",
+					Headers: map[string]string{
+						"custom-request-header": "foo",
+					},
+				},
+				ExpectedRequest: &http.ExpectedRequest{
+					Request: http.Request{
+						Path: "/multi-value-header",
+						Headers: map[string]string{
+							// Add operation: "bar,baz" is appended to client's "foo" value
+							"custom-request-header": "foo,bar,baz",
+						},
+					},
+				},
+				Response: http.Response{
+					StatusCodes: []int{200},
+					Headers: map[string]string{
+						"Cache-Control":          "private,no-store",
+						"custom-response-header": "one,two",
 					},
 				},
 				Namespace: ns,

@@ -6,11 +6,13 @@
 package logging
 
 import (
+	"context"
 	"io"
 	"os"
 
 	"github.com/go-logr/logr"
 	"github.com/go-logr/zapr"
+	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
@@ -88,6 +90,27 @@ func (l Logger) WithValues(keysAndValues ...interface{}) Logger {
 	return l
 }
 
+// WithTrace returns a new Logger that includes basic OpenTelemetry metadata
+// extracted from the provided context. If the context does not contain a valid
+// span, the original Logger is returned unchanged.
+func (l Logger) WithTrace(ctx context.Context) Logger {
+	sc := trace.SpanContextFromContext(ctx)
+	if !sc.IsValid() {
+		return l
+	}
+
+	fields := []interface{}{
+		"trace_id", sc.TraceID().String(),
+		"span_id", sc.SpanID().String(),
+	}
+
+	if ts := sc.TraceState(); ts.Len() > 0 {
+		fields = append(fields, "trace_state", ts.String())
+	}
+
+	return l.WithValues(fields...)
+}
+
 // A Sugar wraps the base Logger functionality in a slower, but less
 // verbose, API. Any Logger can be converted to a SugaredLogger with its Sugar
 // method.
@@ -112,7 +135,21 @@ func (l Logger) Sugar() *zap.SugaredLogger {
 
 func initZapLogger(w io.Writer, logging *egv1a1.EnvoyGatewayLogging, level egv1a1.LogLevel) *zap.Logger {
 	parseLevel, _ := zapcore.ParseLevel(string(logging.DefaultEnvoyGatewayLoggingLevel(level)))
-	core := zapcore.NewCore(zapcore.NewConsoleEncoder(zap.NewDevelopmentEncoderConfig()), zapcore.AddSync(w), zap.NewAtomicLevelAt(parseLevel))
+	cfg := zap.NewDevelopmentEncoderConfig()
+	var encoder zapcore.Encoder
+	logEncoder := egv1a1.EnvoyGatewayLogEncoderText
+	if logging != nil && logging.Encoder != nil {
+		logEncoder = *logging.Encoder
+	}
+
+	switch logEncoder {
+	case egv1a1.EnvoyGatewayLogEncoderJSON:
+		encoder = zapcore.NewJSONEncoder(cfg)
+	default:
+		encoder = zapcore.NewConsoleEncoder(cfg)
+	}
+
+	core := zapcore.NewCore(encoder, zapcore.AddSync(w), zap.NewAtomicLevelAt(parseLevel))
 
 	return zap.New(core, zap.AddCaller())
 }

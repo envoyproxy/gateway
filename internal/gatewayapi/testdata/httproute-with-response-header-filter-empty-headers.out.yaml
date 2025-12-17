@@ -74,7 +74,9 @@ httpRoutes:
     parents:
     - conditions:
       - lastTransitionTime: null
-        message: ResponseHeaderModifier Filter cannot set a header with an empty name
+        message: |-
+          ResponseHeaderModifier Filter cannot add a header with an empty name
+          ResponseHeaderModifier Filter cannot set a header with an empty name.
         reason: UnsupportedValue
         status: "False"
         type: Accepted
@@ -116,6 +118,7 @@ xdsIR:
     globalResources:
       proxyServiceCluster:
         metadata:
+          kind: Service
           name: envoy-envoy-gateway-gateway-1-196ae069
           namespace: envoy-gateway-system
           sectionName: "8080"
@@ -127,6 +130,7 @@ xdsIR:
             port: 8080
             zone: zone1
           metadata:
+            kind: Service
             name: envoy-envoy-gateway-gateway-1-196ae069
             namespace: envoy-gateway-system
             sectionName: "8080"

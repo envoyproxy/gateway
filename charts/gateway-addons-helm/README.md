@@ -23,7 +23,7 @@ An Add-ons Helm chart for Envoy Gateway
 |------------|------|---------|
 | https://fluent.github.io/helm-charts | fluent-bit | 0.30.4 |
 | https://grafana.github.io/helm-charts | alloy | 0.9.2 |
-| https://grafana.github.io/helm-charts | grafana | 8.0.0 |
+| https://grafana.github.io/helm-charts | grafana | 10.3.1 |
 | https://grafana.github.io/helm-charts | loki | 4.8.0 |
 | https://grafana.github.io/helm-charts | tempo | 1.3.1 |
 | https://open-telemetry.github.io/opentelemetry-helm-charts | opentelemetry-collector | 0.117.3 |
@@ -84,10 +84,24 @@ helm uninstall eg-addons -n monitoring
 | grafana.dashboardProviders."dashboardproviders.yaml".providers[0].type | string | `"file"` |  |
 | grafana.dashboardsConfigMaps.envoy-gateway | string | `"grafana-dashboards"` |  |
 | grafana.datasources."datasources.yaml".apiVersion | int | `1` |  |
+| grafana.datasources."datasources.yaml".datasources[0].editable | bool | `true` |  |
 | grafana.datasources."datasources.yaml".datasources[0].name | string | `"Prometheus"` |  |
 | grafana.datasources."datasources.yaml".datasources[0].type | string | `"prometheus"` |  |
 | grafana.datasources."datasources.yaml".datasources[0].url | string | `"http://prometheus"` |  |
+| grafana.datasources."datasources.yaml".datasources[1].editable | bool | `true` |  |
+| grafana.datasources."datasources.yaml".datasources[1].name | string | `"Tempo"` |  |
+| grafana.datasources."datasources.yaml".datasources[1].type | string | `"tempo"` |  |
+| grafana.datasources."datasources.yaml".datasources[1].url | string | `"http://tempo:3100"` |  |
+| grafana.datasources."datasources.yaml".datasources[2].editable | bool | `true` |  |
+| grafana.datasources."datasources.yaml".datasources[2].name | string | `"Loki"` |  |
+| grafana.datasources."datasources.yaml".datasources[2].type | string | `"loki"` |  |
+| grafana.datasources."datasources.yaml".datasources[2].url | string | `"http://loki:3100"` |  |
 | grafana.enabled | bool | `true` |  |
+| grafana.env.GF_AUTH_ANONYMOUS_ENABLED | string | `"true"` |  |
+| grafana.env.GF_AUTH_ANONYMOUS_ORG_ROLE | string | `"Admin"` |  |
+| grafana.env.GF_AUTH_BASIC_ENABLED | string | `"false"` |  |
+| grafana.env.GF_SECURITY_ADMIN_PASSWORD | string | `"admin"` |  |
+| grafana.env.GF_SECURITY_ADMIN_USER | string | `"admin"` |  |
 | grafana.fullnameOverride | string | `"grafana"` |  |
 | grafana.service.type | string | `"LoadBalancer"` |  |
 | grafana.testFramework.enabled | bool | `false` |  |
