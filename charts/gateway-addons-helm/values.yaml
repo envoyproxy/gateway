@@ -678,6 +678,7 @@ loki:
   deploymentMode: SingleBinary
   fullnameOverride: loki
   loki:
+    useTestSchema: true
     auth_enabled: false
     compactorAddress: "loki"
     memberlist: "loki-memberlist"
