@@ -755,7 +755,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				`spec.HealthCheck.active.http.path: Invalid value: "": spec.HealthCheck.active.http.path in body should be at least 0 chars long`,
+				`spec.HealthCheck.active.http.path: Invalid value: "": spec.HealthCheck.active.http.path in body should be at least 1 chars long`,
 			},
 		},
 		{
