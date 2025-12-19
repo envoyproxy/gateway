@@ -482,6 +482,7 @@ xdsIR:
           dns:
             dnsRefreshRate: 5s
             lookupFamily: IPv6
+            name: default/backend-traffic-policy
             respectDnsTtl: false
       - destination:
           metadata:
@@ -543,6 +544,7 @@ xdsIR:
           dns:
             dnsRefreshRate: 5s
             lookupFamily: IPv6
+            name: default/backend-traffic-policy
             respectDnsTtl: false
     readyListener:
       address: 0.0.0.0
