@@ -4,6 +4,7 @@ breaking:
     - FILE
 deps:
   - buf.build/envoyproxy/envoy:v1.33.0
+  - buf.build/protocolbuffers/wellknowntypes
 lint:
   use:
     - DEFAULT
