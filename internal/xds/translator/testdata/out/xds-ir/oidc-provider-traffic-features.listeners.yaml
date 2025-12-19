@@ -1,6 +1,6 @@
 - address:
     socketAddress:
-      address: '::'
+      address: 0.0.0.0
       portValue: 10080
   defaultFilterChain:
     filters:
@@ -52,7 +52,7 @@
               retryPolicy:
                 numRetries: 3
                 retryBackOff:
-                  baseInterval: 0.500s
+                  baseInterval: 1s
                   maxInterval: 5s
                 retryOn: 5xx,gateway-error,reset
               signoutPath:
@@ -60,7 +60,7 @@
                   exact: /bar/logout
               statPrefix: securitypolicy/envoy-gateway/policy-for-gateway
               tokenEndpoint:
-                cluster: securitypolicy/envoy-gateway/policy-for-gateway/0
+                cluster: oauth_foo_com_443
                 timeout: 5s
                 uri: https://oauth.foo.com/token
               useRefreshToken: true
@@ -75,11 +75,11 @@
           configSource:
             ads: {}
             resourceApiVersion: V3
-          routeConfigName: first-listener
+          routeConfigName: envoy-gateway/gateway-1/http
         serverHeaderTransformation: PASS_THROUGH
         statPrefix: http-10080
         useRemoteAddress: true
-    name: first-listener
+    name: envoy-gateway/gateway-1/http
   maxConnectionsToAcceptPerSocketEvent: 1
-  name: first-listener
+  name: envoy-gateway/gateway-1/http
   perConnectionBufferLimitBytes: 32768
