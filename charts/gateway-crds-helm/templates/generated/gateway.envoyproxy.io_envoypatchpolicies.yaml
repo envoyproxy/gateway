@@ -20,15 +20,15 @@ spec:
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
-    - name: Accepted
+    - jsonPath: .status.ancestors[0].conditions[?(@.type=="Accepted")].status
+      name: Accepted
       type: string
-      jsonPath: .status.ancestors[0].conditions[?(@.type=="Accepted")].status
-    - name: Programmed
+    - jsonPath: .status.ancestors[0].conditions[?(@.type=="Programmed")].status
+      name: Programmed
       type: string
-      jsonPath: .status.ancestors[0].conditions[?(@.type=="Programmed")].status
-    - name: Age
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
       type: date
-      jsonPath: .metadata.creationTimestamp
     name: v1alpha1
     schema:
       openAPIV3Schema:
