@@ -236,7 +236,8 @@ xdsIR:
           prefix: /
         traffic:
           compression:
-          - type: Gzip
+          - chooseFirst: true
+            type: Gzip
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
