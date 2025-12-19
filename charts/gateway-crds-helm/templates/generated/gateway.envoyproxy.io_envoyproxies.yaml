@@ -2035,6 +2035,12 @@ spec:
                                   Selector which must match a node's labels for the pod to be scheduled on that node.
                                   More info: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/
                                 type: object
+                              priorityClassName:
+                                description: |-
+                                  PriorityClassName indicates the importance of a Pod relative to other Pods.
+                                  If a PriorityClassName is not specified, the pod priority will be default or zero if there is no default.
+                                  More info: https://kubernetes.io/docs/concepts/scheduling-eviction/pod-priority-preemption/
+                                type: string
                               securityContext:
                                 description: |-
                                   SecurityContext holds pod-level security attributes and common container settings.
@@ -7568,6 +7574,12 @@ spec:
                                   Selector which must match a node's labels for the pod to be scheduled on that node.
                                   More info: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/
                                 type: object
+                              priorityClassName:
+                                description: |-
+                                  PriorityClassName indicates the importance of a Pod relative to other Pods.
+                                  If a PriorityClassName is not specified, the pod priority will be default or zero if there is no default.
+                                  More info: https://kubernetes.io/docs/concepts/scheduling-eviction/pod-priority-preemption/
+                                type: string
                               securityContext:
                                 description: |-
                                   SecurityContext holds pod-level security attributes and common container settings.
