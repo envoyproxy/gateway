@@ -771,7 +771,7 @@ func (t *Translator) applyTrafficFeatureToRoute(route RouteContext,
 		}
 		for _, r := range http.Routes {
 			// If specified the sectionName in policy target, must match route rule from ir route metadata.
-			if target.SectionName != nil && string(*target.SectionName) != r.Destination.Metadata.SectionName {
+			if target.SectionName != nil && string(*target.SectionName) != r.Metadata.SectionName {
 				continue
 			}
 			// Apply if there is a match
