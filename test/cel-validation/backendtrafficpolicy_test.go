@@ -1176,7 +1176,9 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				`[spec.rateLimit.global.rules: Too many: 129: must have at most 128 items, <nil>: Invalid value: "null": some validation rules were not checked because the object was invalid; correct the existing errors to complete validation]`,
+				`[spec.rateLimit.global.rules: Too many: 129: must have at most 128 items, <nil>: Invalid value:`,
+				`null`,
+				`some validation rules were not checked because the object was invalid; correct the existing errors to complete validation]`,
 			},
 		},
 		{

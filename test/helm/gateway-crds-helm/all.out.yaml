@@ -28915,6 +28915,8 @@ spec:
 
                   - envoy.filters.http.compressor
 
+                  - envoy.filters.http.dynamic_forward_proxy
+
                   - envoy.filters.http.router
 
                   Note: "envoy.filters.http.router" cannot be reordered, it's always the last filter in the chain.
@@ -28948,6 +28950,7 @@ spec:
                       - envoy.filters.http.custom_response
                       - envoy.filters.http.credential_injector
                       - envoy.filters.http.compressor
+                      - envoy.filters.http.dynamic_forward_proxy
                       type: string
                     before:
                       description: |-
@@ -28975,6 +28978,7 @@ spec:
                       - envoy.filters.http.custom_response
                       - envoy.filters.http.credential_injector
                       - envoy.filters.http.compressor
+                      - envoy.filters.http.dynamic_forward_proxy
                       type: string
                     name:
                       description: Name of the filter.
@@ -29000,6 +29004,7 @@ spec:
                       - envoy.filters.http.custom_response
                       - envoy.filters.http.credential_injector
                       - envoy.filters.http.compressor
+                      - envoy.filters.http.dynamic_forward_proxy
                       type: string
                   required:
                   - name
