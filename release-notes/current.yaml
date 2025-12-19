@@ -6,6 +6,7 @@ breaking changes: |
   Returning 500 direct responses for HTTPRoute and GRPCRoute with invalid filters.
   When an HTTPRoute rule is configured with host-rewrite filters and routes to a Dynamic Resolver backend, the rewritten Host header is used for both DNS resolution and as the Host header in upstream requests.
   Set HTTPRoute Accepted status to False when RequestMirror filter is used together with DirectResponse or RequestRedirect filters.
+  Removed Accept-Encoding header from requests to backends when compression is enabled to avoid double compression issues.
 
 # Updates addressing vulnerabilities, security flaws, or compliance requirements.
 security updates: |
