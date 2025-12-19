@@ -690,6 +690,7 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 				al := &ir.OpenTelemetryAccessLog{
 					CELMatches: validExprs,
 					Resources:  sink.OpenTelemetry.Resources,
+					Headers:    sink.OpenTelemetry.Headers,
 					Destination: ir.RouteDestination{
 						Name:     destName,
 						Settings: ds,
@@ -715,6 +716,10 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 					al.Attributes = format.JSON
 				case egv1a1.ProxyAccessLogFormatTypeText:
 					al.Text = format.Text
+				case egv1a1.ProxyAccessLogFormatTypeMix:
+					// Mix format allows both text (becomes OTLP body) and JSON (becomes OTLP attributes)
+					al.Text = format.Text
+					al.Attributes = format.JSON
 				}
 
 				irAccessLog.OpenTelemetry = append(irAccessLog.OpenTelemetry, al)
@@ -786,6 +791,7 @@ func (t *Translator) processTracing(gw *gwapiv1.Gateway, envoyproxy *egv1a1.Envo
 		},
 		Provider: tracing.Provider,
 		Traffic:  traffic,
+		Headers:  tracing.Provider.Headers,
 	}, nil
 }
 

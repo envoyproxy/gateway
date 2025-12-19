@@ -16,6 +16,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	netutils "github.com/envoyproxy/gateway/internal/utils/net"
@@ -124,6 +125,13 @@ type metricSink struct {
 	ReportCountersAsDeltas bool
 	// ReportHistogramsAsDeltas configures histograms to use delta temporality.
 	ReportHistogramsAsDeltas bool
+	// Headers is a list of headers to send with OTLP export requests.
+	Headers []header
+}
+
+type header struct {
+	Key   string
+	Value string
 }
 
 type adminServerParameters struct {
@@ -227,6 +235,7 @@ func GetRenderedBootstrapConfig(opts *RenderBootstrapConfigOptions) (string, err
 				Port:                     port,
 				ReportCountersAsDeltas:   ptr.Deref(sink.OpenTelemetry.ReportCountersAsDeltas, false),
 				ReportHistogramsAsDeltas: ptr.Deref(sink.OpenTelemetry.ReportHistogramsAsDeltas, false),
+				Headers:                  convertHeaders(sink.OpenTelemetry.Headers),
 			})
 		}
 
@@ -337,4 +346,16 @@ func GetRenderedBootstrapConfig(opts *RenderBootstrapConfigOptions) (string, err
 	}
 
 	return cfg.rendered, nil
+}
+
+// convertHeaders converts gateway-api HTTPHeaders to bootstrap header format.
+func convertHeaders(headers []gwapiv1.HTTPHeader) []header {
+	if len(headers) == 0 {
+		return nil
+	}
+	result := make([]header, len(headers))
+	for i, h := range headers {
+		result[i] = header{Key: string(h.Name), Value: h.Value}
+	}
+	return result
 }

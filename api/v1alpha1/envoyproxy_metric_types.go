@@ -5,6 +5,8 @@
 
 package v1alpha1
 
+import gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+
 type MetricSinkType string
 
 const (
@@ -109,6 +111,12 @@ type ProxyOpenTelemetrySink struct {
 	//
 	// +optional
 	ReportHistogramsAsDeltas *bool `json:"reportHistogramsAsDeltas,omitempty"`
+	// Headers is a list of additional headers to send with OTLP export requests.
+	// These headers are added as gRPC initial metadata for the OTLP gRPC service.
+	// +optional
+	// +kubebuilder:validation:MinItems=1
+	// +kubebuilder:validation:MaxItems=32
+	Headers []gwapiv1.HTTPHeader `json:"headers,omitempty"`
 }
 
 type ProxyPrometheusProvider struct {
