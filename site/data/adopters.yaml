@@ -106,3 +106,7 @@ adopters:
     logo: "/logos/zapier.png"
     url: "https://zapier.com"
     description: "Zapier uses Envoy Gateway as a modern replacement for Kubernetes Ingress to manage and evolve ingress traffic at scale."
+  - name: "Giant Swarm"
+    logo: "/logos/giantswarm.svg"
+    url: "https://www.giantswarm.io/"
+    description: "Giant Swarm integrates Envoy Gateway into their managed Kubernetes platform to provide traffic management capabilities for platform and application teams."
