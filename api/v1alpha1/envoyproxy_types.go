@@ -23,12 +23,14 @@ const (
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 type EnvoyProxy struct {
-	metav1.TypeMeta   `json:",inline"`
+	metav1.TypeMeta `json:",inline"`
+	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
 	// EnvoyProxySpec defines the desired state of EnvoyProxy.
-	Spec EnvoyProxySpec `json:"spec,omitempty"`
+	Spec EnvoyProxySpec `json:"spec"`
 	// EnvoyProxyStatus defines the actual state of EnvoyProxy.
+	// +optional
 	Status EnvoyProxyStatus `json:"status,omitempty"`
 }
 
@@ -546,12 +548,42 @@ const (
 	BootstrapTypeJSONPatch BootstrapType = "JSONPatch"
 )
 
-// EnvoyProxyStatus defines the observed state of EnvoyProxy. This type is not implemented
-// until https://github.com/envoyproxy/gateway/issues/1007 is fixed.
+// EnvoyProxyStatus defines the observed state of EnvoyProxy.
 type EnvoyProxyStatus struct {
-	// INSERT ADDITIONAL STATUS FIELDS - define observed state of cluster.
-	// Important: Run "make" to regenerate code after modifying this file.
+	// Ancestors represent the status information for all the GatewayClass or Gateway
+	// reference this EnvoyProxy with ParametersReference.
+	//
+	// +optional
+	Ancestors []EnvoyProxyAncestorStatus `json:"ancestors,omitempty"`
 }
+
+type EnvoyProxyAncestorStatus struct {
+	// Conditions describes the status of the Policy with respect to the given Ancestor.
+	//
+	// +required
+	// +listType=map
+	// +listMapKey=type
+	// +optional
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
+
+	// AncestorRef corresponds a GatewayClass or Gateway use this EnvoyProxy with ParametersReference.
+	// +required
+	AncestorRef gwapiv1.ParentReference `json:"ancestorRef"`
+}
+
+type EnvoyProxyConditionType string
+
+const (
+	EnvoyProxyConditionAccepted EnvoyProxyConditionType = "Accepted"
+)
+
+type EnvoyProxyConditionReason string
+
+const (
+	EnvoyProxyReasonAccepted EnvoyProxyConditionReason = "Accepted"
+
+	EnvoyProxyReasonInvalidParameters EnvoyProxyConditionReason = "InvalidParameters"
+)
 
 // +kubebuilder:object:root=true
 
