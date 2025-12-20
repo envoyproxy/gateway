@@ -204,6 +204,13 @@ type KubernetesPodSpec struct {
 	//
 	// +optional
 	TopologySpreadConstraints []corev1.TopologySpreadConstraint `json:"topologySpreadConstraints,omitempty"`
+
+	// PriorityClassName indicates the importance of a Pod relative to other Pods.
+	// If a PriorityClassName is not specified, the pod priority will be default or zero if there is no default.
+	// More info: https://kubernetes.io/docs/concepts/scheduling-eviction/pod-priority-preemption/
+	//
+	// +optional
+	PriorityClassName *string `json:"priorityClassName,omitempty"`
 }
 
 // KubernetesContainerSpec defines the desired state of the Kubernetes container resource.
