@@ -15,6 +15,7 @@ security updates: |
 new features: |
   Added support for weight in BackendRef API to enable traffic splitting for non-x-route resources.
   Added support for removing headers based on matching criteria (Exact, Prefix, Suffix, RegularExpression) in ClientTrafficPolicy EarlyRequestHeaders and LateResponseHeaders.
+  Added support for priorityClassName in KubernetesPodSpec for Envoy Proxy pods.
 
 bug fixes: |
   Fixed configured OIDC authorization endpoint being overridden by discovered endpoints from issuer's well-known URL.
