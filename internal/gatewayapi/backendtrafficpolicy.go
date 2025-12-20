@@ -771,7 +771,7 @@ func (t *Translator) applyTrafficFeatureToRoute(route RouteContext,
 		}
 		for _, r := range http.Routes {
 			// If specified the sectionName in policy target, must match route rule from ir route metadata.
-			if target.SectionName != nil && string(*target.SectionName) != r.Destination.Metadata.SectionName {
+			if target.SectionName != nil && string(*target.SectionName) != r.Metadata.SectionName {
 				continue
 			}
 			// Apply if there is a match
@@ -907,7 +907,7 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy) (
 	cp = buildCompression(policy.Spec.Compression, policy.Spec.Compressor)
 	httpUpgrade = buildHTTPProtocolUpgradeConfig(policy.Spec.HTTPUpgrade)
 
-	ds = translateDNS(&policy.Spec.ClusterSettings)
+	ds = translateDNS(&policy.Spec.ClusterSettings, utils.NamespacedName(policy).String())
 
 	return &ir.TrafficFeatures{
 		RateLimit:         rl,
@@ -1577,13 +1577,14 @@ func buildCompression(compression, compressor []*egv1a1.Compression) []*ir.Compr
 	// Handle the Compressor field first (higher priority)
 	if len(compressor) > 0 {
 		irCompression := make([]*ir.Compression, 0, len(compressor))
-		for _, c := range compressor {
+		for i, c := range compressor {
 			// Only add compression if the corresponding compressor not null
 			if (c.Type == egv1a1.GzipCompressorType && c.Gzip != nil) ||
 				(c.Type == egv1a1.BrotliCompressorType && c.Brotli != nil) ||
 				(c.Type == egv1a1.ZstdCompressorType && c.Zstd != nil) {
 				irCompression = append(irCompression, &ir.Compression{
-					Type: c.Type,
+					Type:        c.Type,
+					ChooseFirst: i == 0, // only the first compressor is marked as ChooseFirst
 				})
 			}
 		}
@@ -1595,9 +1596,10 @@ func buildCompression(compression, compressor []*egv1a1.Compression) []*ir.Compr
 		return nil
 	}
 	irCompression := make([]*ir.Compression, 0, len(compression))
-	for _, c := range compression {
+	for i, c := range compression {
 		irCompression = append(irCompression, &ir.Compression{
-			Type: c.Type,
+			Type:        c.Type,
+			ChooseFirst: i == 0, // only the first compressor is marked as ChooseFirst
 		})
 	}
 
