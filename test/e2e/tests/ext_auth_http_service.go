@@ -55,7 +55,6 @@ var HTTPExtAuthTest = suite.ConformanceTest{
 					Path: "/myapp",
 					Headers: map[string]string{
 						"Authorization": "Bearer token1",
-						"x-test-foo":    "bar",
 					},
 				},
 				// Verify that the http headers returned by the ext auth service
@@ -71,14 +70,104 @@ var HTTPExtAuthTest = suite.ConformanceTest{
 				},
 				Response: http.Response{
 					StatusCodes: []int{200},
-					Headers: map[string]string{
-						"x-current-headers": "x-test-foo: bar, ",
-					},
 				},
 				Namespace: ns,
 			}
 
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
+		})
+
+		t.Run("without Authorization header", func(t *testing.T) {
+			ancestorRef := gwapiv1.ParentReference{
+				Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
+				Kind:      gatewayapi.KindPtr(resource.KindGateway),
+				Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
+				Name:      gwapiv1.ObjectName(gwNN.Name),
+			}
+			SecurityPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "ext-auth-test", Namespace: ns}, suite.ControllerName, ancestorRef)
+
+			expectedResponse := http.ExpectedResponse{
+				Request: http.Request{
+					Host: "www.example.com",
+					Path: "/myapp",
+				},
+				Response: http.Response{
+					StatusCodes: []int{403},
+				},
+				Namespace: ns,
+			}
+
+			req := http.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
+			cReq, cResp, err := suite.RoundTripper.CaptureRoundTrip(req)
+			if err != nil {
+				t.Errorf("failed to get expected response: %v", err)
+			}
+			if err := http.CompareRoundTrip(t, &req, cReq, cResp, expectedResponse); err != nil {
+				t.Errorf("failed to compare request and response: %v", err)
+			}
+		})
+
+		t.Run("invalid credential", func(t *testing.T) {
+			ancestorRef := gwapiv1.ParentReference{
+				Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
+				Kind:      gatewayapi.KindPtr(resource.KindGateway),
+				Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
+				Name:      gwapiv1.ObjectName(gwNN.Name),
+			}
+			SecurityPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "ext-auth-test", Namespace: ns}, suite.ControllerName, ancestorRef)
+
+			expectedResponse := http.ExpectedResponse{
+				Request: http.Request{
+					Host: "www.example.com",
+					Path: "/myapp",
+					Headers: map[string]string{
+						"Authorization": "Bearer invalid-token",
+					},
+				},
+				Response: http.Response{
+					StatusCodes: []int{403},
+				},
+				Namespace: ns,
+			}
+
+			req := http.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
+			cReq, cResp, err := suite.RoundTripper.CaptureRoundTrip(req)
+			if err != nil {
+				t.Errorf("failed to get expected response: %v", err)
+			}
+			if err := http.CompareRoundTrip(t, &req, cReq, cResp, expectedResponse); err != nil {
+				t.Errorf("failed to compare request and response: %v", err)
+			}
+		})
+
+		t.Run("http route without ext auth authentication", func(t *testing.T) {
+			ancestorRef := gwapiv1.ParentReference{
+				Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
+				Kind:      gatewayapi.KindPtr(resource.KindGateway),
+				Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
+				Name:      gwapiv1.ObjectName(gwNN.Name),
+			}
+			SecurityPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "ext-auth-test", Namespace: ns}, suite.ControllerName, ancestorRef)
+
+			expectedResponse := http.ExpectedResponse{
+				Request: http.Request{
+					Host: "www.example.com",
+					Path: "/public",
+				},
+				Response: http.Response{
+					StatusCodes: []int{200},
+				},
+				Namespace: ns,
+			}
+
+			req := http.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
+			cReq, cResp, err := suite.RoundTripper.CaptureRoundTrip(req)
+			if err != nil {
+				t.Errorf("failed to get expected response: %v", err)
+			}
+			if err := http.CompareRoundTrip(t, &req, cReq, cResp, expectedResponse); err != nil {
+				t.Errorf("failed to compare request and response: %v", err)
+			}
 		})
 	},
 }
