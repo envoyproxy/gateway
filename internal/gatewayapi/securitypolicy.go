@@ -1889,12 +1889,13 @@ func (t *Translator) buildExtAuth(
 		return nil, err
 	}
 	extAuth := &ir.ExtAuth{
-		Name:             irConfigName(policy),
-		HeadersToExtAuth: policy.Spec.ExtAuth.HeadersToExtAuth,
-		FailOpen:         policy.Spec.ExtAuth.FailOpen,
-		Traffic:          traffic,
-		RecomputeRoute:   policy.Spec.ExtAuth.RecomputeRoute,
-		Timeout:          parseExtAuthTimeout(policy.Spec.ExtAuth.Timeout),
+		Name:                    irConfigName(policy),
+		HeadersToExtAuth:        policy.Spec.ExtAuth.HeadersToExtAuth,
+		HeadersToExtAuthOnMatch: policy.Spec.ExtAuth.HeadersToExtAuthOnMatch,
+		FailOpen:                policy.Spec.ExtAuth.FailOpen,
+		Traffic:                 traffic,
+		RecomputeRoute:          policy.Spec.ExtAuth.RecomputeRoute,
+		Timeout:                 parseExtAuthTimeout(policy.Spec.ExtAuth.Timeout),
 	}
 
 	if http != nil {

@@ -107,7 +107,7 @@ func extAuthConfig(extAuth *ir.ExtAuth) (*extauthv3.ExtAuthz, error) {
 		config.ClearRouteCache = *extAuth.RecomputeRoute
 	}
 
-	headersToExtAuth := make([]*matcherv3.StringMatcher, 0, len(extAuth.HeadersToExtAuth))
+	headersToExtAuth := make([]*matcherv3.StringMatcher, 0, len(extAuth.HeadersToExtAuth)+len(extAuth.HeadersToExtAuthOnMatch))
 	for _, header := range extAuth.HeadersToExtAuth {
 		headersToExtAuth = append(headersToExtAuth, &matcherv3.StringMatcher{
 			MatchPattern: &matcherv3.StringMatcher_Exact{
@@ -115,6 +115,47 @@ func extAuthConfig(extAuth *ir.ExtAuth) (*extauthv3.ExtAuthz, error) {
 			},
 			IgnoreCase: true,
 		})
+	}
+
+	for _, header := range extAuth.HeadersToExtAuthOnMatch {
+		var mp *matcherv3.StringMatcher
+		switch *header.Type {
+		case egv1a1.StringMatchExact:
+			mp = &matcherv3.StringMatcher{
+				MatchPattern: &matcherv3.StringMatcher_Exact{
+					Exact: header.Value,
+				},
+				IgnoreCase: true,
+			}
+		case egv1a1.StringMatchPrefix:
+			mp = &matcherv3.StringMatcher{
+				MatchPattern: &matcherv3.StringMatcher_Prefix{
+					Prefix: header.Value,
+				},
+				IgnoreCase: true,
+			}
+		case egv1a1.StringMatchSuffix:
+			mp = &matcherv3.StringMatcher{
+				MatchPattern: &matcherv3.StringMatcher_Suffix{
+					Suffix: header.Value,
+				},
+				IgnoreCase: true,
+			}
+		case egv1a1.StringMatchRegularExpression:
+			mp = &matcherv3.StringMatcher{
+				MatchPattern: &matcherv3.StringMatcher_SafeRegex{
+					SafeRegex: &matcherv3.RegexMatcher{
+						EngineType: &matcherv3.RegexMatcher_GoogleRe2{
+							GoogleRe2: &matcherv3.RegexMatcher_GoogleRE2{},
+						},
+						Regex: header.Value,
+					},
+				},
+			}
+		default:
+			return nil, fmt.Errorf("unknown string match type: %s", *header.Type)
+		}
+		headersToExtAuth = append(headersToExtAuth, mp)
 	}
 
 	if extAuth.BodyToExtAuth != nil {
