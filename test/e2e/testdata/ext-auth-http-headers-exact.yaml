@@ -54,5 +54,5 @@ spec:
         port: 8080
       headersToBackend: ["x-current-user", "x-current-headers"]
     headersToExtAuthOnMatch:
-      - type: Exact
-        value: "x-test-foo"
+    - type: Exact
+      value: "x-test-foo"

@@ -36,5 +36,5 @@ spec:
         port: 8080
       headersToBackend: ["x-current-user", "x-current-headers"]
     headersToExtAuthOnMatch:
-      - type: Prefix
-        value: "x-prefix-"
+    - type: Prefix
+      value: "x-prefix-"
