@@ -70,7 +70,7 @@ spec:
           command:
             - /envoy-ext-auth
             - "--certPath=/app/certs"
-          image: envoy-ext-auth-headers-testing
+          image: envoyproxy/gateway-envoy-ext-auth:latest
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8000
