@@ -52,4 +52,7 @@ spec:
         name: envoy-ext-auth
         namespace: gateway-conformance-infra
         port: 8080
+      headersToExtAuthOnMatch:
+        - type: Exact
+          value: "x-test-foo"
       headersToBackend: ["x-current-user"]
