@@ -95,11 +95,6 @@ func (s *authServer) Check(
 	authorization := req.Attributes.Request.Http.Headers["authorization"]
 	log.Println("GRPC check auth: ", authorization)
 
-	headersAsString := ""
-	for k, v := range req.Attributes.Request.Http.Headers {
-		headersAsString += fmt.Sprintf("%s: %s, ", k, v)
-	}
-
 	extracted := strings.Fields(authorization)
 	if len(extracted) == 2 && extracted[0] == "Bearer" {
 		valid, user := s.users.Check(extracted[1])
@@ -165,7 +160,6 @@ func authCheckerHandler(w http.ResponseWriter, req *http.Request) {
 		sb.WriteString(strings.Join(v, ";"))
 	}
 	headersAsString := sb.String()
-	log.Println("HTTP got headers: ", headersAsString)
 
 	extracted := strings.Split(authorization, " ")
 	if len(extracted) == 2 && extracted[0] == "Bearer" {
