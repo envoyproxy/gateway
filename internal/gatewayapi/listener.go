@@ -681,7 +681,12 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 				if err != nil {
 					return nil, err
 				}
-				// TODO: remove support for Host/Port in v1.2
+
+				// EG currently support GRPC OTel only, change protocol to GRPC.
+				for _, d := range ds {
+					d.Protocol = ir.GRPC
+				}
+
 				al := &ir.OpenTelemetryAccessLog{
 					CELMatches: validExprs,
 					Resources:  sink.OpenTelemetry.Resources,
@@ -736,6 +741,13 @@ func (t *Translator) processTracing(gw *gwapiv1.Gateway, envoyproxy *egv1a1.Envo
 	ds, traffic, err := t.processBackendRefs(settingName, tracing.Provider.BackendCluster, envoyproxy.Namespace, resources, envoyproxy)
 	if err != nil {
 		return nil, err
+	}
+
+	// EG currently support OTel tracing only, change protocol to GRPC.
+	if tracing.Provider.Type == egv1a1.TracingProviderTypeOpenTelemetry {
+		for _, d := range ds {
+			d.Protocol = ir.GRPC
+		}
 	}
 
 	var authority string

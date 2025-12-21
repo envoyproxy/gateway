@@ -114,6 +114,9 @@ var ScaleHTTPRoutes = suite.BenchmarkTest{
 					report, err := bSuite.Benchmark(t, ctx, jobName, testName, gatewayAddr, routeHostnameFormat, int(totalHosts), startTime)
 					require.NoError(t, err)
 					report.RouteConvergence = getRouteConvergenceDuration(convergenceTimeByHost)
+					report.RoutesPerHost = int(routePerHost)
+					report.Routes = int(scale)
+					report.Phase = "scaling-up"
 
 					reports = append(reports, report)
 				})
@@ -148,6 +151,9 @@ var ScaleHTTPRoutes = suite.BenchmarkTest{
 					jobName := fmt.Sprintf("scale-down-httproutes-%d", scale)
 					report, err := bSuite.Benchmark(t, ctx, jobName, testName, gatewayAddr, routeHostnameFormat, int(totalHosts), startTime)
 					require.NoError(t, err)
+					report.RoutesPerHost = int(routePerHost)
+					report.Routes = int(scale)
+					report.Phase = "scaling-down"
 
 					reports = append(reports, report)
 				})

@@ -15,6 +15,7 @@ import (
 	"text/template"
 
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	netutils "github.com/envoyproxy/gateway/internal/utils/net"
@@ -119,6 +120,10 @@ type metricSink struct {
 	Address string
 	// Port is the port of the XDS Server that Envoy is managed by.
 	Port uint32
+	// ReportCountersAsDeltas configures counters to use delta temporality.
+	ReportCountersAsDeltas bool
+	// ReportHistogramsAsDeltas configures histograms to use delta temporality.
+	ReportHistogramsAsDeltas bool
 }
 
 type adminServerParameters struct {
@@ -218,8 +223,10 @@ func GetRenderedBootstrapConfig(opts *RenderBootstrapConfigOptions) (string, err
 			addresses.Insert(addr)
 
 			metricSinks = append(metricSinks, metricSink{
-				Address: host,
-				Port:    port,
+				Address:                  host,
+				Port:                     port,
+				ReportCountersAsDeltas:   ptr.Deref(sink.OpenTelemetry.ReportCountersAsDeltas, false),
+				ReportHistogramsAsDeltas: ptr.Deref(sink.OpenTelemetry.ReportHistogramsAsDeltas, false),
 			})
 		}
 
