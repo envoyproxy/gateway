@@ -7,6 +7,7 @@ breaking changes: |
   When an HTTPRoute rule is configured with host-rewrite filters and routes to a Dynamic Resolver backend, the rewritten Host header is used for both DNS resolution and as the Host header in upstream requests.
   Set HTTPRoute Accepted status to False when RequestMirror filter is used together with DirectResponse or RequestRedirect filters.
   Removed Accept-Encoding header from requests to backends when compression is enabled to avoid double compression issues.
+  The default value `stats_tags` has been changed to improve the prometheus metrics output. Following metrics are affected: `envoy_cluster_*_rq_time_count`, `envoy_cluster_*_total_match_count`, `envoy_cluster_circuit_breakers_*_cx_open`.
 
 # Updates addressing vulnerabilities, security flaws, or compliance requirements.
 security updates: |
