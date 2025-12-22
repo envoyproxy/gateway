@@ -32,6 +32,7 @@ func TestEnvoyProxyMerge(t *testing.T) {
 		// Extract test name from file path
 		testName := filepath.Base(inputFile)
 		testName = testName[:len(testName)-len(".in.yaml")]
+		println(testName)
 
 		t.Run(testName, func(t *testing.T) {
 			// Read input file
@@ -53,19 +54,16 @@ func TestEnvoyProxyMerge(t *testing.T) {
 			err = yaml.UnmarshalStrict(outputData, expected)
 			require.NoError(t, err)
 
-			// Extract template from EnvoyGateway config
-			var template *egv1a1.EnvoyProxySpec
+			var template *egv1a1.EnvoyProxyTemplateSpec
 			if input.EnvoyGateway != nil && input.EnvoyGateway.GetEnvoyProxyTemplate() != nil {
 				template = input.EnvoyGateway.GetEnvoyProxyTemplate()
 			}
 
-			// Get Gateway-level EnvoyProxy (use first one if multiple)
 			var gatewayProxy *egv1a1.EnvoyProxy
 			if len(input.EnvoyProxiesForGateways) > 0 {
 				gatewayProxy = input.EnvoyProxiesForGateways[0]
 			}
 
-			// Perform the 3-level merge
 			actual, err := MergeEnvoyProxyConfigs(
 				template,
 				input.EnvoyProxyForGatewayClass,
@@ -73,8 +71,6 @@ func TestEnvoyProxyMerge(t *testing.T) {
 			)
 			require.NoError(t, err)
 
-			// Compare actual vs expected
-			// Note: We only compare the Spec since metadata might differ
 			require.Equal(t, expected.Spec, actual.Spec, "EnvoyProxy specs should match")
 		})
 	}

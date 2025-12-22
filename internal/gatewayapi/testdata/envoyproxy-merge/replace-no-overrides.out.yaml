@@ -5,16 +5,16 @@ spec:
     type: Kubernetes
     kubernetes:
       envoyDeployment:
-        replicas: 3
+        replicas: 10
         container:
-          image: "envoyproxy/envoy:testing"
           env:
           - name: TEMPLATE_ENV
-            value: template_value
-          resources:
-            requests:
-              cpu: 200m
-              memory: 1Gi
+            value: from_template
+          - name: ANOTHER_VAR
+            value: also_from_template
+          image: "envoyproxy/envoy:template-version"
         pod:
           annotations:
             template-annotation: template-value
+      envoyService:
+        type: NodePort

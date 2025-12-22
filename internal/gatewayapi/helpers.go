@@ -471,15 +471,15 @@ func irTLSCrlName(namespace, name string) string {
 	return fmt.Sprintf("%s/%s/%s", namespace, name, crlKey)
 }
 
-func IsMergeGatewaysEnabled(resources *resource.Resources, template *egv1a1.EnvoyProxySpec) bool {
+func IsMergeGatewaysEnabled(resources *resource.Resources, template *egv1a1.EnvoyProxyTemplateSpec) bool {
 	if resources.EnvoyProxyForGatewayClass != nil &&
 		resources.EnvoyProxyForGatewayClass.Spec.MergeGateways != nil {
 		return *resources.EnvoyProxyForGatewayClass.Spec.MergeGateways
 	}
 
 	// Fall back to the template
-	if template != nil && template.MergeGateways != nil {
-		return *template.MergeGateways
+	if template != nil && template.Spec != nil && template.Spec.MergeGateways != nil {
+		return *template.Spec.MergeGateways
 	}
 
 	return false

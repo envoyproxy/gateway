@@ -184,7 +184,7 @@ func TestAttachEnvoyProxy(t *testing.T) {
 		gateway           *gwapiv1.Gateway
 		gatewayClassProxy *egv1a1.EnvoyProxy
 		gatewayProxy      *egv1a1.EnvoyProxy
-		template          *egv1a1.EnvoyProxySpec
+		template          *egv1a1.EnvoyProxyTemplateSpec
 		expectedReplicas  *int32
 	}{
 		{
@@ -200,12 +200,14 @@ func TestAttachEnvoyProxy(t *testing.T) {
 			gateway:           defaultGateway,
 			gatewayClassProxy: nil,
 			gatewayProxy:      nil,
-			template: &egv1a1.EnvoyProxySpec{
-				Provider: &egv1a1.EnvoyProxyProvider{
-					Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
-					Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
-						EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
-							Replicas: ptr.To(int32(2)),
+			template: &egv1a1.EnvoyProxyTemplateSpec{
+				Spec: &egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
+								Replicas: ptr.To(int32(2)),
+							},
 						},
 					},
 				},
@@ -228,17 +230,19 @@ func TestAttachEnvoyProxy(t *testing.T) {
 				},
 			},
 			gatewayProxy: nil,
-			template: &egv1a1.EnvoyProxySpec{
-				Provider: &egv1a1.EnvoyProxyProvider{
-					Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
-					Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
-						EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
-							Replicas: ptr.To(int32(2)),
+			template: &egv1a1.EnvoyProxyTemplateSpec{
+				Spec: &egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
+								Replicas: ptr.To(int32(2)),
+							},
 						},
 					},
 				},
 			},
-			expectedReplicas: ptr.To(int32(3)), // GatewayClass overrides template
+			expectedReplicas: ptr.To(int32(3)), // GatewayClass overrides template with Replace strategy
 		},
 		{
 			name: "gateway overrides gatewayClass and template",
@@ -285,17 +289,19 @@ func TestAttachEnvoyProxy(t *testing.T) {
 					},
 				},
 			},
-			template: &egv1a1.EnvoyProxySpec{
-				Provider: &egv1a1.EnvoyProxyProvider{
-					Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
-					Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
-						EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
-							Replicas: ptr.To(int32(2)),
+			template: &egv1a1.EnvoyProxyTemplateSpec{
+				Spec: &egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
+								Replicas: ptr.To(int32(2)),
+							},
 						},
 					},
 				},
 			},
-			expectedReplicas: ptr.To(int32(5)), // Gateway has highest priority
+			expectedReplicas: ptr.To(int32(5)), // Gateway has highest priority with Replace strategy
 		},
 		{
 			name: "gatewayclass used with MergeGateways enabled",
@@ -362,13 +368,15 @@ func TestAttachEnvoyProxy(t *testing.T) {
 					},
 				},
 			},
-			template: &egv1a1.EnvoyProxySpec{
-				MergeGateways: ptr.To(true),
-				Provider: &egv1a1.EnvoyProxyProvider{
-					Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
-					Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
-						EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
-							Replicas: ptr.To(int32(2)),
+			template: &egv1a1.EnvoyProxyTemplateSpec{
+				Spec: &egv1a1.EnvoyProxySpec{
+					MergeGateways: ptr.To(true),
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
+								Replicas: ptr.To(int32(2)),
+							},
 						},
 					},
 				},

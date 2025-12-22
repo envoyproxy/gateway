@@ -119,7 +119,7 @@ type Translator struct {
 
 	// Default settings for all envoy proxy instances, which can be overridden by proxy settings
 	// attached to GatewayClass and/or Gateway resources.
-	EnvoyProxyTemplate *egv1a1.EnvoyProxySpec
+	EnvoyProxyTemplate *egv1a1.EnvoyProxyTemplateSpec
 
 	// oidcDiscoveryCache is the cache for OIDC configurations discovered from issuer's well-known URL.
 	oidcDiscoveryCache *oidcDiscoveryCache

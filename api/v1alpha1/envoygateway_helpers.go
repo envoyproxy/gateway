@@ -124,7 +124,7 @@ func (e *EnvoyGateway) TopologyInjectorDisabled() bool {
 }
 
 // GetEnvoyProxyTemplate returns the EnvoyProxyTemplate if configured, nil otherwise.
-func (e *EnvoyGateway) GetEnvoyProxyTemplate() *EnvoyProxySpec {
+func (e *EnvoyGateway) GetEnvoyProxyTemplate() *EnvoyProxyTemplateSpec {
 	if e.Provider != nil &&
 		e.Provider.Kubernetes != nil {
 		return e.Provider.Kubernetes.EnvoyProxyTemplate

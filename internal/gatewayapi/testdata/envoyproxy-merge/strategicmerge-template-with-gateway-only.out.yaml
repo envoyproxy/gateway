@@ -14,10 +14,10 @@ spec:
         replicas: 3
         container:
           env:
-          - name: GATEWAY_ENV
-            value: gateway_value
-          - name: TEMPLATE_ENV
-            value: template_value
+            - name: GATEWAY_ENV
+              value: gateway_value
+            - name: TEMPLATE_ENV
+              value: template_value
           resources:
             requests:
               cpu: 200m
