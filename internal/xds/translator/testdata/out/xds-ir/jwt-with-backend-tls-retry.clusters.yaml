@@ -24,13 +24,31 @@
   type: EDS
 - circuitBreakers:
     thresholds:
-    - maxRetries: 1024
+    - maxConnections: 2048
+      maxPendingRequests: 1
+      maxRequests: 4294967295
+      maxRetries: 1024
   commonLbConfig: {}
-  connectTimeout: 10s
-  dnsLookupFamily: V4_PREFERRED
+  connectTimeout: 15s
+  dnsLookupFamily: ALL
   dnsRefreshRate: 30s
+  healthChecks:
+  - healthyThreshold: 1
+    httpHealthCheck:
+      expectedStatuses:
+      - end: "201"
+        start: "200"
+      - end: "301"
+        start: "300"
+      method: GET
+      path: /healthz
+      receive:
+      - binary: RXZlcnl0aGluZyBPSw==
+    interval: 3s
+    timeout: 0.500s
+    unhealthyThreshold: 3
   ignoreHealthOnHostRemoval: true
-  lbPolicy: LEAST_REQUEST
+  lbPolicy: MAGLEV
   loadAssignment:
     clusterName: securitypolicy/default/policy-for-route/jwt/0
     endpoints:
@@ -51,13 +69,19 @@
   loadBalancingPolicy:
     policies:
     - typedExtensionConfig:
-        name: envoy.load_balancing_policies.least_request
+        name: envoy.load_balancing_policies.maglev
         typedConfig:
-          '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
-          localityLbConfig:
-            localityWeightedLbConfig: {}
+          '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.maglev.v3.Maglev
   name: securitypolicy/default/policy-for-route/jwt/0
-  perConnectionBufferLimitBytes: 32768
+  outlierDetection:
+    baseEjectionTime: 160s
+    consecutive5xx: 5
+    consecutiveGatewayFailure: 0
+    consecutiveLocalOriginFailure: 5
+    enforcingConsecutiveGatewayFailure: 100
+    interval: 2s
+    maxEjectionPercent: 100
+  perConnectionBufferLimitBytes: 100000000
   respectDnsTtl: true
   transportSocket:
     name: dummy.transport_socket
@@ -94,3 +118,12 @@
           initialConnectionWindowSize: 1048576
           initialStreamWindowSize: 65536
         httpProtocolOptions: {}
+      commonHttpProtocolOptions:
+        idleTimeout: 16s
+        maxConnectionDuration: 17s
+        maxRequestsPerConnection: 1
+  upstreamConnectionOptions:
+    tcpKeepalive:
+      keepaliveInterval: 60
+      keepaliveProbes: 3
+      keepaliveTime: 1200
