@@ -1958,8 +1958,8 @@ func (t *Translator) buildContextExtensions(
 			if value, err = t.getContextExtensionValueFromRef(ext.ValueRef, policyNs); err != nil {
 				return nil, err
 			}
-		} else if ext.Inline != nil {
-			value = ir.PrivateBytes(*ext.Inline)
+		} else if ext.Value != nil {
+			value = ir.PrivateBytes(*ext.Value)
 		}
 
 		ctxExts = append(ctxExts, &ir.ContextExtention{Name: ext.Name, Value: value})

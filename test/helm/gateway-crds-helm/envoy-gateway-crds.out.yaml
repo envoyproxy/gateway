@@ -25144,24 +25144,23 @@ spec:
                         without modifying the proto definition. It maps to the internal opaque
                         context in the filter chain.
                       properties:
-                        inline:
-                          description: Value of the context extension.
-                          type: string
                         name:
                           description: Name of the context extension.
                           type: string
                         type:
-                          default: Inline
+                          default: Value
                           description: |-
                             Type is the type of method to use to read the ContextExtension value.
-                            Valid values are Inline and ValueRef, default is Inline.
+                            Valid values are Value and ValueRef, default is Value.
                           enum:
-                          - Inline
+                          - Value
                           - ValueRef
+                          type: string
+                        value:
+                          description: Value of the context extension.
                           type: string
                         valueRef:
                           description: ValueRef for the context extension's value.
-                            Cannot be used if value is not empty.
                           properties:
                             group:
                               description: |-
@@ -25201,10 +25200,10 @@ spec:
                       - type
                       type: object
                       x-kubernetes-validations:
-                      - message: Exactly one of inline or valueRef must be set with
+                      - message: Exactly one of value or valueRef must be set with
                           correct type.
-                        rule: (self.type == 'Inline' && has(self.inline) && !has(self.valueRef))
-                          || (self.type == 'ValueRef' && !has(self.inline) && has(self.valueRef))
+                        rule: (self.type == 'Value' && has(self.value) && !has(self.valueRef))
+                          || (self.type == 'ValueRef' && !has(self.value) && has(self.valueRef))
                     type: array
                     x-kubernetes-list-map-keys:
                     - name

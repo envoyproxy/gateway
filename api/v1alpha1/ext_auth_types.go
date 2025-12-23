@@ -80,12 +80,12 @@ type ExtAuth struct {
 
 // ContextExtensionValueType defines the types of values for ContextExtension supported by Envoy Gateway.
 //
-// +kubebuilder:validation:Enum=Inline;ValueRef
+// +kubebuilder:validation:Enum=Value;ValueRef
 type ContextExtensionValueType string
 
 const (
-	// ContextExtensionValueTypeInline defines the "Inline" ContextExtension type.
-	ContextExtensionValueTypeInline ContextExtensionValueType = "Inline"
+	// ContextExtensionValueTypeValue defines the "Value" ContextExtension type.
+	ContextExtensionValueTypeValue ContextExtensionValueType = "Value"
 
 	// ContextExtensionValueTypeValueRef defines the "ValueRef" ContextExtension type.
 	ContextExtensionValueTypeValueRef ContextExtensionValueType = "ValueRef"
@@ -97,15 +97,15 @@ const (
 // without modifying the proto definition. It maps to the internal opaque
 // context in the filter chain.
 //
-// +kubebuilder:validation:XValidation:rule="(self.type == 'Inline' && has(self.inline) && !has(self.valueRef)) || (self.type == 'ValueRef' && !has(self.inline) && has(self.valueRef))",message="Exactly one of inline or valueRef must be set with correct type."
+// +kubebuilder:validation:XValidation:rule="(self.type == 'Value' && has(self.value) && !has(self.valueRef)) || (self.type == 'ValueRef' && !has(self.value) && has(self.valueRef))",message="Exactly one of value or valueRef must be set with correct type."
 type ContextExtension struct {
 	// Name of the context extension.
 	Name string `json:"name"`
 
 	// Type is the type of method to use to read the ContextExtension value.
-	// Valid values are Inline and ValueRef, default is Inline.
+	// Valid values are Value and ValueRef, default is Value.
 	//
-	// +kubebuilder:default=Inline
+	// +kubebuilder:default=Value
 	// +unionDiscriminator
 	// +required
 	Type ContextExtensionValueType `json:"type"`
@@ -114,9 +114,9 @@ type ContextExtension struct {
 	//
 	// +optional
 	// +unionMember
-	Inline *string `json:"inline,omitempty"`
+	Value *string `json:"value,omitempty"`
 
-	// ValueRef for the context extension's value. Cannot be used if value is not empty.
+	// ValueRef for the context extension's value.
 	//
 	// +kubebuilder:validation:XValidation:rule="self.kind in ['ConfigMap', 'Secret'] && self.group in ['', 'v1']",message="Only a reference to an object of kind ConfigMap or Secret belonging to default v1 API group is supported."
 	// +optional

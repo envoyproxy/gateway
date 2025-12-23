@@ -994,9 +994,9 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `name` | _string_ |  true  |  | Name of the context extension. |
-| `type` | _[ContextExtensionValueType](#contextextensionvaluetype)_ |  true  | Inline | Type is the type of method to use to read the ContextExtension value.<br />Valid values are Inline and ValueRef, default is Inline. |
-| `inline` | _string_ |  false  |  | Value of the context extension. |
-| `valueRef` | _[LocalObjectKeyReference](#localobjectkeyreference)_ |  false  |  | ValueRef for the context extension's value. Cannot be used if value is not empty. |
+| `type` | _[ContextExtensionValueType](#contextextensionvaluetype)_ |  true  | Value | Type is the type of method to use to read the ContextExtension value.<br />Valid values are Value and ValueRef, default is Value. |
+| `value` | _string_ |  false  |  | Value of the context extension. |
+| `valueRef` | _[LocalObjectKeyReference](#localobjectkeyreference)_ |  false  |  | ValueRef for the context extension's value. |
 
 
 #### ContextExtensionValueType
@@ -1010,7 +1010,7 @@ _Appears in:_
 
 | Value | Description |
 | ----- | ----------- |
-| `Inline` | ContextExtensionValueTypeInline defines the "Inline" ContextExtension type.<br /> | 
+| `Value` | ContextExtensionValueTypeValue defines the "Value" ContextExtension type.<br /> | 
 | `ValueRef` | ContextExtensionValueTypeValueRef defines the "ValueRef" ContextExtension type.<br /> | 
 
 
