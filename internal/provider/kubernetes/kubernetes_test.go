@@ -22,7 +22,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
 	"k8s.io/utils/ptr"
-	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -78,9 +77,9 @@ func TestProvider(t *testing.T) {
 	require.NoError(t, err)
 	resources := new(message.ProviderResources)
 	errNotifier := message.RunnerErrorNotifier{RunnerName: t.Name(), RunnerErrors: &message.RunnerErrors{}}
-	provider, err := newProviderWithMetricsServerDisabled(context.Background(), cliCfg, svr, resources, errNotifier)
+	provider, err := newProviderWithMetricsServerDisabled(t.Context(), cliCfg, svr, resources, errNotifier)
 	require.NoError(t, err)
-	ctx, cancel := context.WithCancel(ctrl.SetupSignalHandler())
+	ctx, cancel := context.WithCancel(t.Context())
 	go func() {
 		require.NoError(t, provider.Start(ctx))
 	}()
@@ -1265,9 +1264,9 @@ func TestNamespacedProvider(t *testing.T) {
 
 	resources := new(message.ProviderResources)
 	errNotifier := message.RunnerErrorNotifier{RunnerName: t.Name(), RunnerErrors: &message.RunnerErrors{}}
-	provider, err := newProviderWithMetricsServerDisabled(context.Background(), cliCfg, svr, resources, errNotifier)
+	provider, err := newProviderWithMetricsServerDisabled(t.Context(), cliCfg, svr, resources, errNotifier)
 	require.NoError(t, err)
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	go func() {
 		require.NoError(t, provider.Start(ctx))
 	}()
@@ -1323,16 +1322,15 @@ func TestNamespaceSelectorProvider(t *testing.T) {
 		},
 		LeaderElection: egv1a1.DefaultLeaderElection(),
 		Client:         egv1a1.DefaultKubernetesClient(),
+		// Disable webhook server for provider test to avoid non-existent cert errors
+		TopologyInjector: &egv1a1.EnvoyGatewayTopologyInjector{Disable: ptr.To(true)},
 	}
-
-	// Disable webhook server for provider test to avoid non-existent cert errors
-	svr.EnvoyGateway.Provider.Kubernetes.TopologyInjector = &egv1a1.EnvoyGatewayTopologyInjector{Disable: ptr.To(true)}
 
 	resources := new(message.ProviderResources)
 	errNotifier := message.RunnerErrorNotifier{RunnerName: t.Name(), RunnerErrors: &message.RunnerErrors{}}
-	provider, err := New(context.Background(), cliCfg, svr, resources, errNotifier)
+	provider, err := newProviderWithMetricsServerDisabled(t.Context(), cliCfg, svr, resources, errNotifier)
 	require.NoError(t, err)
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	go func() {
 		require.NoError(t, provider.Start(ctx))
 	}()
