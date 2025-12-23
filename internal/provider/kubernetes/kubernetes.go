@@ -75,7 +75,8 @@ func New(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server,
 // newProvider creates a new Provider from the provided EnvoyGateway.
 func newProvider(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server,
 	metricsOpts *metricsserver.Options,
-	resources *message.ProviderResources, _ message.RunnerErrorNotifier) (*Provider, error) {
+	resources *message.ProviderResources, _ message.RunnerErrorNotifier,
+) (*Provider, error) {
 	// TODO: Decide which mgr opts should be exposed through envoygateway.provider.kubernetes API.
 	mgrOpts := manager.Options{
 		Scheme:                  envoygateway.GetScheme(),
