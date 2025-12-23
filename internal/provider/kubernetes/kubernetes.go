@@ -24,6 +24,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
@@ -65,16 +66,26 @@ var (
 	webhookTLSPort = 9443
 )
 
-// New creates a new Provider from the provided EnvoyGateway.
-func New(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server, resources *message.ProviderResources, _ message.RunnerErrorNotifier) (*Provider, error) {
-	// TODO: Decide which mgr opts should be exposed through envoygateway.provider.kubernetes API.
+func New(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server,
+	resources *message.ProviderResources, errNotifier message.RunnerErrorNotifier) (*Provider, error) {
+	return newProvider(ctx, restCfg, svrCfg, nil, resources, errNotifier)
+}
 
+// newProvider creates a new Provider from the provided EnvoyGateway.
+func newProvider(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server,
+	metricsOpts *metricsserver.Options,
+	resources *message.ProviderResources, _ message.RunnerErrorNotifier) (*Provider, error) {
+	// TODO: Decide which mgr opts should be exposed through envoygateway.provider.kubernetes API.
 	mgrOpts := manager.Options{
 		Scheme:                  envoygateway.GetScheme(),
 		Logger:                  svrCfg.Logger.Logger,
 		HealthProbeBindAddress:  healthProbeBindAddress,
 		LeaderElectionID:        "5b9825d2.gateway.envoyproxy.io",
 		LeaderElectionNamespace: svrCfg.ControllerNamespace,
+	}
+
+	if metricsOpts != nil {
+		mgrOpts.Metrics = *metricsOpts
 	}
 
 	log.SetLogger(mgrOpts.Logger)
