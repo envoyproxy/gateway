@@ -67,7 +67,8 @@ var (
 )
 
 func New(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server,
-	resources *message.ProviderResources, errNotifier message.RunnerErrorNotifier) (*Provider, error) {
+	resources *message.ProviderResources, errNotifier message.RunnerErrorNotifier,
+) (*Provider, error) {
 	return newProvider(ctx, restCfg, svrCfg, nil, resources, errNotifier)
 }
 

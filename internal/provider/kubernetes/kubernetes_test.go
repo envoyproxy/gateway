@@ -34,7 +34,6 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
-	ec "github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/message"
@@ -57,8 +56,9 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
-func newProviderWithMetricsServerDisabled(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server,
-	resources *message.ProviderResources, errNotifier message.RunnerErrorNotifier) (*Provider, error) {
+func newProviderWithMetricsServerDisabled(ctx context.Context, restCfg *rest.Config, svrCfg *config.Server,
+	resources *message.ProviderResources, errNotifier message.RunnerErrorNotifier,
+) (*Provider, error) {
 	return newProvider(ctx, restCfg, svrCfg, &metricsserver.Options{
 		BindAddress: "0",
 	}, resources, errNotifier)
