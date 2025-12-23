@@ -29,27 +29,21 @@ func TestEnvoyProxyMerge(t *testing.T) {
 	require.NotEmpty(t, inputFiles, "No test input files found in testdata/envoyproxy-merge/")
 
 	for _, inputFile := range inputFiles {
-		// Extract test name from file path
 		testName := filepath.Base(inputFile)
 		testName = testName[:len(testName)-len(".in.yaml")]
-		println(testName)
 
 		t.Run(testName, func(t *testing.T) {
-			// Read input file
 			inputData, err := os.ReadFile(inputFile)
 			require.NoError(t, err)
 
-			// Parse input
 			input := &EnvoyProxyTemplateTestInput{}
 			err = yaml.UnmarshalStrict(inputData, input)
 			require.NoError(t, err)
 
-			// Read expected output file
 			outputFile := filepath.Join("testdata", "envoyproxy-merge", testName+".out.yaml")
 			outputData, err := os.ReadFile(outputFile)
 			require.NoError(t, err)
 
-			// Parse expected output
 			expected := &egv1a1.EnvoyProxy{}
 			err = yaml.UnmarshalStrict(outputData, expected)
 			require.NoError(t, err)
