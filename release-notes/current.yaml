@@ -4,7 +4,10 @@ date: Pending
 breaking changes: |
   The SecurityPolicy name has been added to the stat prefix for aouth2 filter metrics to provide better granularity. Example: http.https-10443.securitypolicy/default/oidc-example.oauth_success: 0.
   Returning 500 direct responses for HTTPRoute and GRPCRoute with invalid filters.
+  When an HTTPRoute rule is configured with host-rewrite filters and routes to a Dynamic Resolver backend, the rewritten Host header is used for both DNS resolution and as the Host header in upstream requests.
   Set HTTPRoute Accepted status to False when RequestMirror filter is used together with DirectResponse or RequestRedirect filters.
+  Removed Accept-Encoding header from requests to backends when compression is enabled to avoid double compression issues.
+  The default value `stats_tags` has been changed to improve the prometheus metrics output. Following metrics are affected: `envoy_cluster_*_rq_time_count`, `envoy_cluster_*_total_match_count`, `envoy_cluster_circuit_breakers_*_cx_open`.
 
 # Updates addressing vulnerabilities, security flaws, or compliance requirements.
 security updates: |
@@ -13,12 +16,14 @@ security updates: |
 new features: |
   Added support for weight in BackendRef API to enable traffic splitting for non-x-route resources.
   Added support for removing headers based on matching criteria (Exact, Prefix, Suffix, RegularExpression) in ClientTrafficPolicy EarlyRequestHeaders and LateResponseHeaders.
+  Added support for priorityClassName in KubernetesPodSpec for Envoy Proxy pods.
 
 bug fixes: |
   Fixed configured OIDC authorization endpoint being overridden by discovered endpoints from issuer's well-known URL.
   Fix 500 errors caused by partially invalid BackendRefs; traffic is now correctly routed between valid backends and 500 responses according to their configured weights.
   Fixed an issue where BackendTrafficPolicy does not validate maximum value of requestBuffer limit.
   Fixed an issue where observedGeneration is missing from the EnvoyPatchPolicy status.
+  Fixed a nil pointer error when applying BackendTrafficPolicy to HTTPRoutes with no backendRefs.
 
 # Enhancements that improve performance.
 performance improvements: |
