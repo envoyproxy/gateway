@@ -314,7 +314,7 @@ func trimNighthawkResult(result []byte) []byte {
 // consider switching to gRPC nighthawk-service for benchmark test.
 // ref: https://github.com/envoyproxy/nighthawk/blob/main/api/client/service.proto
 func (b *BenchmarkTestSuite) Benchmark(t *testing.T, ctx context.Context,
-	jobName, resultTitle, gatewayHostPort, hostnamePattern string, host int,
+	jobName, resultTitle, gatewayHostPort, hostnamePattern string, host int, rps string,
 	startAt time.Time,
 ) (*BenchmarkReport, error) {
 	tlog.Logf(t, "Running benchmark test: %s, start at %s", resultTitle, startAt)
@@ -323,7 +323,7 @@ func (b *BenchmarkTestSuite) Benchmark(t *testing.T, ctx context.Context,
 	for i := 1; i <= host; i++ {
 		requestHeaders = append(requestHeaders, "Host: "+fmt.Sprintf(hostnamePattern, i))
 	}
-	jobNN, err := b.createBenchmarkClientJob(t, jobName, gatewayHostPort, requestHeaders)
+	jobNN, err := b.createBenchmarkClientJob(t, jobName, gatewayHostPort, requestHeaders, rps)
 	if err != nil {
 		return nil, err
 	}
@@ -383,14 +383,14 @@ func (b *BenchmarkTestSuite) Benchmark(t *testing.T, ctx context.Context,
 	return report, nil
 }
 
-func (b *BenchmarkTestSuite) createBenchmarkClientJob(t *testing.T, name, gatewayHostPort string, requestHeaders []string) (*types.NamespacedName, error) {
+func (b *BenchmarkTestSuite) createBenchmarkClientJob(t *testing.T, name, gatewayHostPort string, requestHeaders []string, rps string) (*types.NamespacedName, error) {
 	job := b.BenchmarkClientJob.DeepCopy()
 	job.SetName(name)
 	job.SetLabels(map[string]string{
 		BenchmarkTestClientKey: "true",
 	})
 
-	runtimeArgs := prepareBenchmarkClientRuntimeArgs(gatewayHostPort, requestHeaders)
+	runtimeArgs := prepareBenchmarkClientRuntimeArgs(gatewayHostPort, requestHeaders, rps)
 	container := &job.Spec.Template.Spec.Containers[0]
 	container.Args = append(container.Args, runtimeArgs...)
 
@@ -404,7 +404,6 @@ func (b *BenchmarkTestSuite) createBenchmarkClientJob(t *testing.T, name, gatewa
 
 func prepareBenchmarkClientStaticArgs(options BenchmarkOptions) []string {
 	staticArgs := []string{
-		"--rps", options.RPS,
 		"--connections", options.Connections,
 		"--duration", options.Duration,
 		"--concurrency", options.Concurrency,
@@ -413,13 +412,13 @@ func prepareBenchmarkClientStaticArgs(options BenchmarkOptions) []string {
 	return staticArgs
 }
 
-func prepareBenchmarkClientRuntimeArgs(gatewayHostPort string, requestHeaders []string) []string {
-	args := make([]string, 0, len(requestHeaders)*2+1)
+func prepareBenchmarkClientRuntimeArgs(gatewayHostPort string, requestHeaders []string, rps string) []string {
+	args := make([]string, 0, len(requestHeaders)*2+3)
 
 	for _, reqHeader := range requestHeaders {
 		args = append(args, "--request-header", reqHeader)
 	}
-	args = append(args, "http://"+gatewayHostPort)
+	args = append(args, "--rps", rps, "http://"+gatewayHostPort)
 
 	return args
 }
