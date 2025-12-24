@@ -259,7 +259,7 @@ jobs:
         # Args for benchmark test
         BENCHMARK_RPS: 1000
         BENCHMARK_CONNECTIONS: 100
-        BENCHMARK_DURATION: 60
+        BENCHMARK_DURATION: 120
         BENCHMARK_CPU_LIMITS: 1000m
         BENCHMARK_MEMORY_LIMITS: 2000Mi
         BENCHMARK_REPORT_DIR: benchmark_report

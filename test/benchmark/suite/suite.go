@@ -332,6 +332,7 @@ func (b *BenchmarkTestSuite) Benchmark(t *testing.T, ctx context.Context,
 	if err != nil {
 		return nil, err
 	}
+	benchmarkEnd := startAt.Add(time.Duration(duration) * time.Second)
 
 	profilesOutputDir := path.Join(b.ReportSaveDir, "profiles")
 	if err := createDirIfNotExist(profilesOutputDir); err != nil {
@@ -361,9 +362,13 @@ func (b *BenchmarkTestSuite) Benchmark(t *testing.T, ctx context.Context,
 		tlog.Logf(t, "Job %s still not complete", jobName)
 
 		// Sample the metrics and profiles at runtime.
-		// Do not consider it as an error, fail sampling should not affect test running.
-		if err := report.Sample(t, ctx, startAt); err != nil {
-			tlog.Logf(t, "Error occurs while sampling metrics or profiles, the sampling will be skipped: %v", err)
+		if time.Now().Before(benchmarkEnd) {
+			if err := report.Sample(t, ctx, startAt); err != nil {
+				tlog.Logf(t, "Error occurs while sampling metrics or profiles, the sampling will be skipped: %v", err)
+			}
+		} else {
+			// Skip sampling after benchmark duration, otherwise the sampling data would be incorrect.
+			tlog.Logf(t, "Skipping sampling; benchmark traffic window (%ds) has ended", duration)
 		}
 
 		return false, nil
