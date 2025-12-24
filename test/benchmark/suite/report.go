@@ -89,7 +89,7 @@ func NewBenchmarkReport(name, profilesOutputDir string, kubeClient kube.CLIClien
 	}
 }
 
-func (r *BenchmarkReport) Sample(t *testing.T,ctx context.Context, startTime time.Time) (err error) {
+func (r *BenchmarkReport) Sample(t *testing.T, ctx context.Context, startTime time.Time) (err error) {
 	sample := BenchmarkMetricSample{}
 
 	if mErr := r.sampleMetrics(ctx, &sample, startTime); mErr != nil {
@@ -101,7 +101,12 @@ func (r *BenchmarkReport) Sample(t *testing.T,ctx context.Context, startTime tim
 	}
 	tlog.Logf(t, "Sampled metrics: %s", sample.String())
 
-	r.Samples = append(r.Samples, sample)
+	// If we add sample when error occurs during sampling, the report would be incorrect.
+	// For example, cpu/mem would be zero if query fails, and it would affect the calculation of
+	// average/max values later.
+	if err == nil {
+		r.Samples = append(r.Samples, sample)
+	}
 	return err
 }
 
