@@ -362,7 +362,7 @@ func (b *BenchmarkTestSuite) Benchmark(t *testing.T, ctx context.Context,
 
 		// Sample the metrics and profiles at runtime.
 		// Do not consider it as an error, fail sampling should not affect test running.
-		if err := report.Sample(ctx, startAt); err != nil {
+		if err := report.Sample(t, ctx, startAt); err != nil {
 			tlog.Logf(t, "Error occurs while sampling metrics or profiles: %v", err)
 		}
 

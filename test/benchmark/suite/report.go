@@ -14,11 +14,13 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"testing"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/gateway-api/conformance/utils/tlog"
 
 	kube "github.com/envoyproxy/gateway/internal/kubernetes"
 	"github.com/envoyproxy/gateway/internal/troubleshoot/collect"
@@ -45,6 +47,15 @@ type BenchmarkMetricSample struct {
 	DataPlaneCPU             float64
 
 	HeapProfile []byte
+}
+
+func (s *BenchmarkMetricSample) String() string {
+	return fmt.Sprintf("ControlPlaneContainerMem: %.2f MiB, ControlPlaneProcessMem: %.2f MiB, ControlPlaneCPU: %.2f%%, DataPlaneMem: %.2f MiB, DataPlaneCPU: %.2f%%",
+		s.ControlPlaneContainerMem,
+		s.ControlPlaneProcessMem,
+		s.ControlPlaneCPU,
+		s.DataPlaneMem,
+		s.DataPlaneCPU)
 }
 
 type BenchmarkReport struct {
@@ -78,7 +89,7 @@ func NewBenchmarkReport(name, profilesOutputDir string, kubeClient kube.CLIClien
 	}
 }
 
-func (r *BenchmarkReport) Sample(ctx context.Context, startTime time.Time) (err error) {
+func (r *BenchmarkReport) Sample(t *testing.T,ctx context.Context, startTime time.Time) (err error) {
 	sample := BenchmarkMetricSample{}
 
 	if mErr := r.sampleMetrics(ctx, &sample, startTime); mErr != nil {
@@ -88,6 +99,7 @@ func (r *BenchmarkReport) Sample(ctx context.Context, startTime time.Time) (err 
 	if pErr := r.sampleProfiles(ctx, &sample); pErr != nil {
 		err = errors.Join(err, pErr)
 	}
+	tlog.Logf(t, "Sampled metrics: %s", sample.String())
 
 	r.Samples = append(r.Samples, sample)
 	return err
@@ -147,6 +159,9 @@ func (r *BenchmarkReport) sampleMetrics(ctx context.Context, sample *BenchmarkMe
 	elapsed := time.Since(startTime)
 	if elapsed < benchmarkCPURateWindow {
 		durationSeconds = int(elapsed.Seconds())
+		if durationSeconds < 1 {
+			durationSeconds = 1
+		}
 	}
 	durationStr := fmt.Sprintf("%d", durationSeconds)
 	cpCPUQL := strings.ReplaceAll(controlPlaneCPUQL, DurationFormatter, durationStr)
