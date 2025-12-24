@@ -100,13 +100,14 @@ func (r *BenchmarkReport) Sample(t *testing.T, ctx context.Context, startTime ti
 		err = errors.Join(err, pErr)
 	}
 
-	// If we add sample when error occurs during sampling, the report would be incorrect.
-	// For example, cpu/mem would be zero if query fails, and it would affect the calculation of
-	// average/max values later.
-	if err == nil {
-		tlog.Logf(t, "Sampled metrics: %s", sample.String())
-		r.Samples = append(r.Samples, sample)
-	}
+	tlog.Logf(t, "Sampled metrics: %s", sample.String())
+	// We still append the sample even if there is error during sampling, because some of the metrics
+	// could be collected successfully.
+	// The observed errors is the data plane cpu query failure due to no data plane traffic during sampling, but
+	// control plane metrics are collected successfully. We want to keep the collected metrics for control plane
+	// because control plane cpu metrics changes during routes scaling, before traffic is sent to data plane.
+	// Those data plane cpu samples with error will be ignored during report generation.
+	r.Samples = append(r.Samples, sample)
 	return err
 }
 
@@ -141,20 +142,29 @@ func (r *BenchmarkReport) GetResult(ctx context.Context, job *types.NamespacedNa
 }
 
 func (r *BenchmarkReport) sampleMetrics(ctx context.Context, sample *BenchmarkMetricSample, startTime time.Time) (err error) {
-	// Sample memory
-	cpcMem, qErr := r.promClient.QuerySum(ctx, controlPlaneContainerMemQL)
-	if qErr != nil {
+	var (
+		cpcMem     = -1.0
+		cppMem     = -1.0
+		dpMem      = -1.0
+		dpCPUValue = -1.0
+		cpCPUValue = -1.0
+	)
+
+	if v, qErr := r.promClient.QuerySum(ctx, controlPlaneContainerMemQL); qErr != nil {
 		err = errors.Join(fmt.Errorf("failed to query control plane container memory: %w", qErr))
+	} else {
+		cpcMem = v
 	}
-	cppMem, qErr := r.promClient.QuerySum(ctx, controlPlaneProcessMemQL)
-	if qErr != nil {
+	if v, qErr := r.promClient.QuerySum(ctx, controlPlaneProcessMemQL); qErr != nil {
 		err = errors.Join(fmt.Errorf("failed to query control plane process memory: %w", qErr))
+	} else {
+		cppMem = v
 	}
-	dpMem, qErr := r.promClient.QueryAvg(ctx, dataPlaneMemQL)
-	if qErr != nil {
+	if v, qErr := r.promClient.QueryAvg(ctx, dataPlaneMemQL); qErr != nil {
 		err = errors.Join(err, fmt.Errorf("failed to query data plane memory: %w", qErr))
+	} else {
+		dpMem = v
 	}
-	// Sample cpu
 
 	// CPU usages is calculated based on the Kubernetes container_cpu_usage_seconds_total counter metric.
 	// We use a fixed window size of 30s for rate calculation. However, to ensure that we only capture
@@ -171,22 +181,25 @@ func (r *BenchmarkReport) sampleMetrics(ctx context.Context, sample *BenchmarkMe
 	durationStr := fmt.Sprintf("%d", durationSeconds)
 	cpCPUQL := strings.ReplaceAll(controlPlaneCPUQL, DurationFormatter, durationStr)
 
-	cpCPU, qErr := r.promClient.QuerySum(ctx, cpCPUQL)
-	if qErr != nil {
+	if v, qErr := r.promClient.QuerySum(ctx, cpCPUQL); qErr != nil {
 		err = errors.Join(err, fmt.Errorf("failed to query control plane cpu: %w", qErr))
+	} else {
+		cpCPUValue = v
 	}
 
 	dpCPUQL := strings.ReplaceAll(dataPlaneCPUQLFormat, DurationFormatter, durationStr)
 	dpCPU, qErr := r.promClient.QueryAvg(ctx, dpCPUQL)
 	if qErr != nil {
 		err = errors.Join(err, fmt.Errorf("failed to query data plane cpu: %w", qErr))
+	} else {
+		dpCPUValue = dpCPU
 	}
 
 	sample.ControlPlaneContainerMem = cpcMem
 	sample.ControlPlaneProcessMem = cppMem
-	sample.ControlPlaneCPU = cpCPU
+	sample.ControlPlaneCPU = cpCPUValue
 	sample.DataPlaneMem = dpMem
-	sample.DataPlaneCPU = dpCPU
+	sample.DataPlaneCPU = dpCPUValue
 	return err
 }
 
