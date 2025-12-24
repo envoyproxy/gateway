@@ -99,12 +99,12 @@ func (r *BenchmarkReport) Sample(t *testing.T, ctx context.Context, startTime ti
 	if pErr := r.sampleProfiles(ctx, &sample); pErr != nil {
 		err = errors.Join(err, pErr)
 	}
-	tlog.Logf(t, "Sampled metrics: %s", sample.String())
 
 	// If we add sample when error occurs during sampling, the report would be incorrect.
 	// For example, cpu/mem would be zero if query fails, and it would affect the calculation of
 	// average/max values later.
 	if err == nil {
+		tlog.Logf(t, "Sampled metrics: %s", sample.String())
 		r.Samples = append(r.Samples, sample)
 	}
 	return err
