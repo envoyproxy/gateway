@@ -478,10 +478,13 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 	return errs
 }
 
-// DefaultMaxDirectResponseBodySize is 4KB
-// https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route.proto.html#max_direct_response_body_size_bytes
-const DefaultMaxDirectResponseBodySize = 4 * 1024
-const DefaultCRDMaxSize = 1024 * 1024 // 1MB
+const (
+	// DefaultMaxDirectResponseBodySize is 4KB
+	// https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route.proto.html#max_direct_response_body_size_bytes
+	DefaultMaxDirectResponseBodySize = 4 * 1024
+
+	DefaultCRDMaxSize = 1024 * 1024 // 1MB
+)
 
 // addRouteToRouteConfig generates xDS virtual hosts and routes for the given HTTPListener,
 // and adds them to the provided xDS route config.
