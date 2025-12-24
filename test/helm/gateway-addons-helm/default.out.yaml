@@ -10603,7 +10603,6 @@ spec:
       
       securityContext:
         fsGroup: 10001
-        fsGroupChangePolicy: OnRootMismatch
         runAsGroup: 10001
         runAsNonRoot: true
         runAsUser: 10001
@@ -11187,7 +11186,6 @@ spec:
       
       securityContext:
         fsGroup: 10001
-        fsGroupChangePolicy: OnRootMismatch
         runAsGroup: 10001
         runAsNonRoot: true
         runAsUser: 10001
