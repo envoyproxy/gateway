@@ -47,6 +47,46 @@ func TestAddServerNamesMatch(t *testing.T) {
 				},
 			},
 			hostnames:          []string{"example.com"},
+			expectFilterChain:  true,
+			expectTLSInspector: false,
+			expectServerNames:  []string{"example.com"},
+		},
+		{
+			name: "UDP (QUIC) listener with multiple hostnames",
+			xdsListener: &listenerv3.Listener{
+				Address: &corev3.Address{
+					Address: &corev3.Address_SocketAddress{
+						SocketAddress: &corev3.SocketAddress{
+							Protocol: corev3.SocketAddress_UDP,
+							Address:  "0.0.0.0",
+							PortSpecifier: &corev3.SocketAddress_PortValue{
+								PortValue: 443,
+							},
+						},
+					},
+				},
+			},
+			hostnames:          []string{"example.com", "api.example.com"},
+			expectFilterChain:  true,
+			expectTLSInspector: false,
+			expectServerNames:  []string{"example.com", "api.example.com"},
+		},
+		{
+			name: "UDP (QUIC) listener with wildcard hostname",
+			xdsListener: &listenerv3.Listener{
+				Address: &corev3.Address{
+					Address: &corev3.Address_SocketAddress{
+						SocketAddress: &corev3.SocketAddress{
+							Protocol: corev3.SocketAddress_UDP,
+							Address:  "0.0.0.0",
+							PortSpecifier: &corev3.SocketAddress_PortValue{
+								PortValue: 443,
+							},
+						},
+					},
+				},
+			},
+			hostnames:          []string{"*"},
 			expectFilterChain:  false,
 			expectTLSInspector: false,
 			expectServerNames:  nil,
