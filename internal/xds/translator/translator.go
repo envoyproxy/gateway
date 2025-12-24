@@ -480,7 +480,8 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 
 // DefaultMaxDirectResponseBodySize is 4KB
 // https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route.proto.html#max_direct_response_body_size_bytes
-const DefaultMaxDirectResponseBodySize = 4096
+const DefaultMaxDirectResponseBodySize = 4 * 1024
+const DefaultCRDMaxSize = 1024 * 1024 // 1MB
 
 // addRouteToRouteConfig generates xDS virtual hosts and routes for the given HTTPListener,
 // and adds them to the provided xDS route config.
@@ -667,7 +668,10 @@ func (t *Translator) addRouteToRouteConfig(
 	if maxDirectResponseBodySize > DefaultMaxDirectResponseBodySize {
 		// this's fine for most of the case, because EG read the body from ConfigMap/Secret,
 		// which usually has a size limit less than 1MB.
-		xdsRouteCfg.MaxDirectResponseBodySizeBytes = wrapperspb.UInt32(maxDirectResponseBodySize)
+		if maxDirectResponseBodySize > DefaultCRDMaxSize {
+			xdsRouteCfg.MaxDirectResponseBodySizeBytes = wrapperspb.UInt32(maxDirectResponseBodySize)
+		}
+		xdsRouteCfg.MaxDirectResponseBodySizeBytes = wrapperspb.UInt32(DefaultCRDMaxSize)
 	}
 
 	return errs
