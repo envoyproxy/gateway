@@ -113,5 +113,5 @@ adopters:
   - name: "Tasrie IT Services"
     logo: "/logos/tasrie-it-services.png"
     url: "https://tasrieit.com"
-    description: "Tasrie IT Services adopts Envoy Gateway as part of its cloud-native architecture to standardize ingress, improve observability, and enforce traffic policies in Kubernetes environments."
+    description: "Tasrie IT Services leverages Envoy Gateway for standardized ingress management and traffic policy enforcement in cloud-native Kubernetes environments."
 
