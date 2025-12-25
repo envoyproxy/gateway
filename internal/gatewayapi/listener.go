@@ -789,6 +789,7 @@ func (t *Translator) processTracing(gw *gwapiv1.Gateway, envoyproxy *egv1a1.Envo
 		},
 		Provider: tracing.Provider,
 		Traffic:  traffic,
+		SpanName: tracing.SpanName,
 	}, nil
 }
 
