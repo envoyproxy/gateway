@@ -22,11 +22,11 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
 	"k8s.io/utils/ptr"
-	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwapiv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
@@ -55,6 +55,14 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
+func newProviderWithMetricsServerDisabled(ctx context.Context, restCfg *rest.Config, svrCfg *config.Server,
+	resources *message.ProviderResources, errNotifier message.RunnerErrorNotifier,
+) (*Provider, error) {
+	return newProvider(ctx, restCfg, svrCfg, &metricsserver.Options{
+		BindAddress: "0",
+	}, resources, errNotifier)
+}
+
 func TestProvider(t *testing.T) {
 	// Setup the test environment.
 	testEnv, cliCfg, err := startEnv()
@@ -69,9 +77,9 @@ func TestProvider(t *testing.T) {
 	require.NoError(t, err)
 	resources := new(message.ProviderResources)
 	errNotifier := message.RunnerErrorNotifier{RunnerName: t.Name(), RunnerErrors: &message.RunnerErrors{}}
-	provider, err := New(context.Background(), cliCfg, svr, resources, errNotifier)
+	provider, err := newProviderWithMetricsServerDisabled(t.Context(), cliCfg, svr, resources, errNotifier)
 	require.NoError(t, err)
-	ctx, cancel := context.WithCancel(ctrl.SetupSignalHandler())
+	ctx, cancel := context.WithCancel(t.Context())
 	go func() {
 		require.NoError(t, provider.Start(ctx))
 	}()
@@ -1250,16 +1258,15 @@ func TestNamespacedProvider(t *testing.T) {
 		},
 		LeaderElection: egv1a1.DefaultLeaderElection(),
 		Client:         egv1a1.DefaultKubernetesClient(),
+		// Disable webhook server for provider test to avoid non-existent cert errors
+		TopologyInjector: &egv1a1.EnvoyGatewayTopologyInjector{Disable: ptr.To(true)},
 	}
-
-	// Disable webhook server for provider test to avoid non-existent cert errors
-	svr.EnvoyGateway.Provider.Kubernetes.TopologyInjector = &egv1a1.EnvoyGatewayTopologyInjector{Disable: ptr.To(true)}
 
 	resources := new(message.ProviderResources)
 	errNotifier := message.RunnerErrorNotifier{RunnerName: t.Name(), RunnerErrors: &message.RunnerErrors{}}
-	provider, err := New(context.Background(), cliCfg, svr, resources, errNotifier)
+	provider, err := newProviderWithMetricsServerDisabled(t.Context(), cliCfg, svr, resources, errNotifier)
 	require.NoError(t, err)
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	go func() {
 		require.NoError(t, provider.Start(ctx))
 	}()
@@ -1315,16 +1322,15 @@ func TestNamespaceSelectorProvider(t *testing.T) {
 		},
 		LeaderElection: egv1a1.DefaultLeaderElection(),
 		Client:         egv1a1.DefaultKubernetesClient(),
+		// Disable webhook server for provider test to avoid non-existent cert errors
+		TopologyInjector: &egv1a1.EnvoyGatewayTopologyInjector{Disable: ptr.To(true)},
 	}
-
-	// Disable webhook server for provider test to avoid non-existent cert errors
-	svr.EnvoyGateway.Provider.Kubernetes.TopologyInjector = &egv1a1.EnvoyGatewayTopologyInjector{Disable: ptr.To(true)}
 
 	resources := new(message.ProviderResources)
 	errNotifier := message.RunnerErrorNotifier{RunnerName: t.Name(), RunnerErrors: &message.RunnerErrors{}}
-	provider, err := New(context.Background(), cliCfg, svr, resources, errNotifier)
+	provider, err := newProviderWithMetricsServerDisabled(t.Context(), cliCfg, svr, resources, errNotifier)
 	require.NoError(t, err)
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	go func() {
 		require.NoError(t, provider.Start(ctx))
 	}()
