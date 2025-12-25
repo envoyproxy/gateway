@@ -671,10 +671,12 @@ func (t *Translator) addRouteToRouteConfig(
 	if maxDirectResponseBodySize > DefaultMaxDirectResponseBodySize {
 		// this's fine for most of the case, because EG read the body from ConfigMap/Secret,
 		// which usually has a size limit less than 1MB.
+
 		if maxDirectResponseBodySize > DefaultCRDMaxSize {
 			xdsRouteCfg.MaxDirectResponseBodySizeBytes = wrapperspb.UInt32(maxDirectResponseBodySize)
+		} else {
+			xdsRouteCfg.MaxDirectResponseBodySizeBytes = wrapperspb.UInt32(DefaultCRDMaxSize)
 		}
-		xdsRouteCfg.MaxDirectResponseBodySizeBytes = wrapperspb.UInt32(DefaultCRDMaxSize)
 	}
 
 	return errs
