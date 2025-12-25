@@ -1,0 +1,139 @@
+http:
+  - address: 0.0.0.0
+    externalPort: 80
+    hostnames:
+      - '*.envoyproxy.io'
+    isHTTP2: false
+    metadata:
+      kind: Gateway
+      name: gateway-1
+      namespace: envoy-gateway
+      sectionName: http
+    name: envoy-gateway/gateway-1/http
+    path:
+      escapedSlashesAction: UnescapeAndRedirect
+      mergeSlashes: true
+    port: 10080
+    routes:
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-1
+            namespace: default
+          name: httproute/default/httproute-1/rule/0
+          settings:
+            - addressType: IP
+              endpoints:
+                - host: 7.7.7.7
+                  port: 8080
+              metadata:
+                kind: Service
+                name: service-1
+                namespace: default
+                sectionName: "8080"
+              name: httproute/default/httproute-1/rule/0/backend/0
+              protocol: HTTP
+              weight: 1
+        hostname: gateway.envoyproxy.io
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-1
+          namespace: default
+        name: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /
+        traffic:
+          telemetry:
+            tracing:
+              spanName:
+                client: custom-client-span-%REQ(X-CUSTOM-HEADER)%
+                server: custom-server-span-%UPSTREAM_HOST%
+  - address: 0.0.0.0
+    externalPort: 8888
+    hostnames:
+      - '*'
+    isHTTP2: false
+    metadata:
+      kind: Gateway
+      name: gateway-2
+      namespace: envoy-gateway
+      sectionName: http-2
+    name: envoy-gateway/gateway-2/http-2
+    path:
+      escapedSlashesAction: UnescapeAndRedirect
+      mergeSlashes: true
+    port: 8888
+  - address: 0.0.0.0
+    externalPort: 8888
+    hostnames:
+      - example.com
+    isHTTP2: false
+    metadata:
+      kind: Gateway
+      name: gateway-2
+      namespace: envoy-gateway
+      sectionName: http-3
+    name: envoy-gateway/gateway-2/http-3
+    path:
+      escapedSlashesAction: UnescapeAndRedirect
+      mergeSlashes: true
+    port: 8888
+    routes:
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-2
+            namespace: default
+          name: httproute/default/httproute-2/rule/0
+          settings:
+            - addressType: IP
+              endpoints:
+                - host: 7.7.7.7
+                  port: 8080
+              metadata:
+                kind: Service
+                name: service-2
+                namespace: default
+                sectionName: "8080"
+              name: httproute/default/httproute-2/rule/0/backend/0
+              protocol: HTTP
+              weight: 1
+        hostname: example.com
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-2
+          namespace: default
+        name: httproute/default/httproute-2/rule/0/match/0/example_com
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /
+tracing:
+  authority: otel-collector.monitoring.svc.cluster.local
+  destination:
+    metadata:
+      kind: EnvoyProxy
+      name: test
+      namespace: envoy-gateway
+    name: tracing
+    settings:
+      - addressType: FQDN
+        endpoints:
+          - host: otel-collector.monitoring.svc.cluster.local
+            port: 4317
+        name: tracing/backend/-1
+        protocol: GRPC
+        weight: 1
+  provider:
+    host: otel-collector.monitoring.svc.cluster.local
+    port: 4317
+    type: OpenTelemetry
+  samplingRate: 100
+  serviceName: envoy-gateway-class
+  spanName:
+    client: '%REQ(X-ENVOY-ORIGINAL-HOST)%%PATH(NQ:ORIG)%'
+    server: '%UPSTREAM_HOST_NAME%%PATH(NQ:PATH)%'
