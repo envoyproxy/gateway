@@ -339,7 +339,8 @@ func (b *BenchmarkTestSuite) Benchmark(t *testing.T, ctx context.Context,
 	}
 
 	// Wait from benchmark test job to complete.
-	benchmarkEnd := time.Now().Add(time.Duration(duration) * time.Second)
+	trafficStartAt := time.Now()
+	trafficEndTime := trafficStartAt.Add(time.Duration(duration) * time.Second)
 	report := NewBenchmarkReport(resultTitle, profilesOutputDir, b.kubeClient, b.promClient)
 	if err = wait.PollUntilContextTimeout(ctx, BenchmarkMetricsSampleTick, time.Duration(duration*10)*time.Second, true, func(ctx context.Context) (bool, error) {
 		job := new(batchv1.Job)
@@ -362,8 +363,8 @@ func (b *BenchmarkTestSuite) Benchmark(t *testing.T, ctx context.Context,
 		tlog.Logf(t, "Job %s still not complete", jobName)
 
 		// Sample the metrics and profiles at runtime.
-		if time.Now().Before(benchmarkEnd) {
-			if err := report.Sample(t, ctx, startAt); err != nil {
+		if time.Now().Before(trafficEndTime) {
+			if err := report.Sample(t, ctx, startAt, trafficStartAt); err != nil {
 				tlog.Logf(t, "Error occurs while sampling metrics or profiles, the sampling will be skipped: %v", err)
 			}
 		} else {
