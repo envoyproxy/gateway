@@ -125,9 +125,9 @@ helm uninstall eg-addons -n monitoring
 | loki.test.enabled | bool | `false` |  |
 | loki.write.replicas | int | `0` |  |
 | opentelemetry-collector.config.exporters.debug.verbosity | string | `"detailed"` |  |
-| opentelemetry-collector.config.exporters.loki.endpoint | string | `"http://loki.monitoring.svc:3100/loki/api/v1/push"` |  |
 | opentelemetry-collector.config.exporters.otlp.endpoint | string | `"tempo.monitoring.svc:4317"` |  |
 | opentelemetry-collector.config.exporters.otlp.tls.insecure | bool | `true` |  |
+| opentelemetry-collector.config.exporters.otlphttp.endpoint | string | `"http://loki.monitoring.svc:3100/otlp"` |  |
 | opentelemetry-collector.config.exporters.prometheus.endpoint | string | `"[${env:MY_POD_IP}]:19001"` |  |
 | opentelemetry-collector.config.extensions.health_check.endpoint | string | `"[${env:MY_POD_IP}]:13133"` |  |
 | opentelemetry-collector.config.processors.attributes.actions[0].action | string | `"insert"` |  |
@@ -145,7 +145,7 @@ helm uninstall eg-addons -n monitoring
 | opentelemetry-collector.config.receivers.prometheus.config.scrape_configs[0].static_configs[0].targets[0] | string | `"[${env:MY_POD_IP}]:8888"` |  |
 | opentelemetry-collector.config.receivers.zipkin.endpoint | string | `"[${env:MY_POD_IP}]:9411"` |  |
 | opentelemetry-collector.config.service.extensions[0] | string | `"health_check"` |  |
-| opentelemetry-collector.config.service.pipelines.logs.exporters[0] | string | `"loki"` |  |
+| opentelemetry-collector.config.service.pipelines.logs.exporters[0] | string | `"otlphttp"` |  |
 | opentelemetry-collector.config.service.pipelines.logs.processors[0] | string | `"attributes"` |  |
 | opentelemetry-collector.config.service.pipelines.logs.receivers[0] | string | `"otlp"` |  |
 | opentelemetry-collector.config.service.pipelines.logs.receivers[1] | string | `"envoyals"` |  |
@@ -156,7 +156,6 @@ helm uninstall eg-addons -n monitoring
 | opentelemetry-collector.config.service.pipelines.traces.receivers[0] | string | `"datadog"` |  |
 | opentelemetry-collector.config.service.pipelines.traces.receivers[1] | string | `"otlp"` |  |
 | opentelemetry-collector.config.service.pipelines.traces.receivers[2] | string | `"zipkin"` |  |
-| opentelemetry-collector.config.service.telemetry.metrics.address | string | `nil` |  |
 | opentelemetry-collector.config.service.telemetry.metrics.level | string | `"none"` |  |
 | opentelemetry-collector.config.service.telemetry.metrics.readers[0].pull.exporter.prometheus.host | string | `"localhost"` |  |
 | opentelemetry-collector.config.service.telemetry.metrics.readers[0].pull.exporter.prometheus.port | int | `8888` |  |

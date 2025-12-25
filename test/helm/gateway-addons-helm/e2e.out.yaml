@@ -351,12 +351,12 @@ data:
     exporters:
       debug:
         verbosity: detailed
-      loki:
-        endpoint: http://loki.monitoring.svc:3100/loki/api/v1/push
       otlp:
         endpoint: tempo.monitoring.svc:4317
         tls:
           insecure: true
+      otlphttp:
+        endpoint: http://loki.monitoring.svc:3100/otlp
       prometheus:
         endpoint: '[${env:MY_POD_IP}]:19001'
     extensions:
@@ -408,7 +408,7 @@ data:
       pipelines:
         logs:
           exporters:
-          - loki
+          - otlphttp
           processors:
           - attributes
           receivers:
@@ -435,7 +435,6 @@ data:
           - zipkin
       telemetry:
         metrics:
-          address: null
           level: none
           readers:
           - pull:
@@ -10839,7 +10838,7 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/config: 9204199115bc4e480ee9da48164af2a4d699954a82677d0bfa808d251a6c6efa
+        checksum/config: 74e10a82fbbf021c210510413cd0094735a8491f882a31b30d844b1a4e035343
         
       labels:
         app.kubernetes.io/name: opentelemetry-collector

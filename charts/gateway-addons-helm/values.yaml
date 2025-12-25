@@ -848,8 +848,8 @@ opentelemetry-collector:
         endpoint: "[${env:MY_POD_IP}]:19001"
       debug:
         verbosity: detailed
-      loki:
-        endpoint: "http://loki.monitoring.svc:3100/loki/api/v1/push"
+      otlphttp:
+        endpoint: "http://loki.monitoring.svc:3100/otlp"
       otlp:
         endpoint: tempo.monitoring.svc:4317
         tls:
@@ -898,7 +898,6 @@ opentelemetry-collector:
       telemetry:
         metrics:
           level: none
-          address: null # Disable the deprecated setting
           readers:
             - pull:
                 exporter:
@@ -916,7 +915,7 @@ opentelemetry-collector:
             - otlp
         logs:
           exporters:
-            - loki
+            - otlphttp
           processors:
             - attributes
           receivers:
