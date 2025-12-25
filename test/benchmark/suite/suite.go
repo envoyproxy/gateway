@@ -332,7 +332,6 @@ func (b *BenchmarkTestSuite) Benchmark(t *testing.T, ctx context.Context,
 	if err != nil {
 		return nil, err
 	}
-	benchmarkEnd := startAt.Add(time.Duration(duration) * time.Second)
 
 	profilesOutputDir := path.Join(b.ReportSaveDir, "profiles")
 	if err := createDirIfNotExist(profilesOutputDir); err != nil {
@@ -340,6 +339,7 @@ func (b *BenchmarkTestSuite) Benchmark(t *testing.T, ctx context.Context,
 	}
 
 	// Wait from benchmark test job to complete.
+	benchmarkEnd := time.Now().Add(time.Duration(duration) * time.Second)
 	report := NewBenchmarkReport(resultTitle, profilesOutputDir, b.kubeClient, b.promClient)
 	if err = wait.PollUntilContextTimeout(ctx, BenchmarkMetricsSampleTick, time.Duration(duration*10)*time.Second, true, func(ctx context.Context) (bool, error) {
 		job := new(batchv1.Job)
@@ -367,7 +367,8 @@ func (b *BenchmarkTestSuite) Benchmark(t *testing.T, ctx context.Context,
 				tlog.Logf(t, "Error occurs while sampling metrics or profiles, the sampling will be skipped: %v", err)
 			}
 		} else {
-			// Skip sampling after benchmark duration, otherwise the sampling data would be incorrect.
+			// Skip sampling after benchmark duration, otherwise we may get sampling data that is out of benchmark traffic window.
+			// These sampling data will lower the min/avg values of the benchmark result.
 			tlog.Logf(t, "Skipping sampling; benchmark traffic window (%ds) has ended", duration)
 		}
 
