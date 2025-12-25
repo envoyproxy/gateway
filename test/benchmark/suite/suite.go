@@ -181,7 +181,7 @@ func (b *BenchmarkTestSuite) Run(t *testing.T, tests []BenchmarkTest) {
 	suiteReport := &BenchmarkSuiteReport{
 		Title: "Benchmark Report",
 		Settings: map[string]string{
-			"rps":         os.Getenv("BENCHMARK_RPS"),
+			"rps":         os.Getenv("BENCHMARK_BASELINE_RPS"),
 			"connections": os.Getenv("BENCHMARK_CONNECTIONS"),
 			"duration":    os.Getenv("BENCHMARK_DURATION"),
 			"cpu":         os.Getenv("BENCHMARK_CPU_LIMITS"),

@@ -257,7 +257,7 @@ jobs:
       env:
         IMAGE_PULL_POLICY: IfNotPresent
         # Args for benchmark test
-        BENCHMARK_RPS: 1000
+        BENCHMARK_BASELINE_RPS: 100
         BENCHMARK_CONNECTIONS: 100
         BENCHMARK_DURATION: 90
         BENCHMARK_CPU_LIMITS: 1000m
