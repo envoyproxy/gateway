@@ -51,7 +51,7 @@ var ScaleHTTPRoutes = suite.BenchmarkTest{
 		routeNameFormat := "benchmark-route-%d"
 		routeHostnameFormat := "www.benchmark-%d.com"
 		routeScales := []uint16{10, 50, 100, 300, 500, 1000}
-		rpsScales := []uint16{1, 2, 3, 4, 5, 6}
+		rpsScales := []uint16{1, 3, 5, 8, 10, 20}
 		routeScalesN := len(routeScales)
 		routeNNs := make([]types.NamespacedName, 0, routeScales[routeScalesN-1])
 
