@@ -89,10 +89,10 @@ func NewBenchmarkReport(name, profilesOutputDir string, kubeClient kube.CLIClien
 	}
 }
 
-func (r *BenchmarkReport) Sample(t *testing.T, ctx context.Context, startTime time.Time) (err error) {
+func (r *BenchmarkReport) Sample(t *testing.T, ctx context.Context, testStartTime, trafficStartTime time.Time) (err error) {
 	sample := BenchmarkMetricSample{}
 
-	if mErr := r.sampleMetrics(ctx, &sample, startTime); mErr != nil {
+	if mErr := r.sampleMetrics(ctx, &sample, testStartTime, trafficStartTime); mErr != nil {
 		err = errors.Join(mErr)
 	}
 
@@ -141,7 +141,7 @@ func (r *BenchmarkReport) GetResult(ctx context.Context, job *types.NamespacedNa
 	return nil
 }
 
-func (r *BenchmarkReport) sampleMetrics(ctx context.Context, sample *BenchmarkMetricSample, startTime time.Time) (err error) {
+func (r *BenchmarkReport) sampleMetrics(ctx context.Context, sample *BenchmarkMetricSample, testStartTime, trafficStartTime time.Time) (err error) {
 	var (
 		cpcMem     = -1.0
 		cppMem     = -1.0
@@ -171,7 +171,7 @@ func (r *BenchmarkReport) sampleMetrics(ctx context.Context, sample *BenchmarkMe
 	// metrics during the benchmark run period (and not before), if the benchmark run duration is
 	// less than the fixed window size,
 	durationSeconds := int(benchmarkCPURateWindow.Seconds())
-	elapsed := time.Since(startTime)
+	elapsed := time.Since(testStartTime)
 	if elapsed < benchmarkCPURateWindow {
 		durationSeconds = int(elapsed.Seconds())
 		if durationSeconds < 1 {
@@ -187,6 +187,15 @@ func (r *BenchmarkReport) sampleMetrics(ctx context.Context, sample *BenchmarkMe
 		cpCPUValue = v
 	}
 
+	// We should only capture data plane cpu metrics during the benchmark traffic sending period.
+	elapsed = time.Since(trafficStartTime)
+	if elapsed < benchmarkCPURateWindow {
+		durationSeconds = int(elapsed.Seconds())
+		if durationSeconds < 1 {
+			durationSeconds = 1
+		}
+	}
+	durationStr = fmt.Sprintf("%d", durationSeconds)
 	dpCPUQL := strings.ReplaceAll(dataPlaneCPUQLFormat, DurationFormatter, durationStr)
 	dpCPU, qErr := r.promClient.QueryAvg(ctx, dpCPUQL)
 	if qErr != nil {
