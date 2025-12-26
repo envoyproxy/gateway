@@ -115,12 +115,14 @@ var ZipkinTracingTest = suite.ConformanceTest{
 		})
 
 		t.Run("SpanName", func(t *testing.T) {
-			if IPFamily == "ipv6" {
-				t.Skip("Skipping test as IP_FAMILY is IPv6")
-			}
 			routeNN := types.NamespacedName{Name: "tracing-span-name", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "tracing-span-name", Namespace: ns}
 			gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
+			requestServerName := gwAddr
+			if IPFamily == "ipv6" {
+				// similar to net.JoinHostPort
+				requestServerName = fmt.Sprintf("[%s]", gwAddr)
+			}
 			reqPath := "/span-name"
 			expectedResponse := httputils.ExpectedResponse{
 				Request: httputils.Request{
@@ -137,7 +139,7 @@ var ZipkinTracingTest = suite.ConformanceTest{
 			tags := map[string]string{
 				"component": "proxy",
 				"provider":  "zipkin",
-				"name":      fmt.Sprintf("%s%s", gwAddr, reqPath),
+				"name":      fmt.Sprintf("%s%s", requestServerName, reqPath),
 				// TODO: this came from --service-cluster, which is different from OTel,
 				// should make them kept consistent
 				"service.name": fmt.Sprintf("%s/%s", gwNN.Namespace, gwNN.Name),
