@@ -16,6 +16,7 @@ import (
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/utils"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func (r *gatewayAPIReconciler) getExtensionRefFilters(ctx context.Context) ([]unstructured.Unstructured, error) {
@@ -23,7 +24,7 @@ func (r *gatewayAPIReconciler) getExtensionRefFilters(ctx context.Context) ([]un
 	for _, gvk := range r.extGVKs {
 		uExtResourceList := &unstructured.UnstructuredList{}
 		uExtResourceList.SetGroupVersionKind(gvk)
-		if err := r.client.List(ctx, uExtResourceList); err != nil {
+		if err := r.client.List(ctx, uExtResourceList, client.UnsafeDisableDeepCopy); err != nil {
 			r.log.Info("no associated resources found", "GVK", gvk.String())
 			return nil, fmt.Errorf("failed to list %s: %w", gvk.String(), err)
 		}
@@ -56,7 +57,7 @@ func (r *gatewayAPIReconciler) getExtensionBackendResources(ctx context.Context)
 	for _, gvk := range r.extBackendGVKs {
 		uExtResourceList := &unstructured.UnstructuredList{}
 		uExtResourceList.SetGroupVersionKind(gvk)
-		if err := r.client.List(ctx, uExtResourceList); err != nil {
+		if err := r.client.List(ctx, uExtResourceList, client.UnsafeDisableDeepCopy); err != nil {
 			r.log.Info("no associated backend resources found", "GVK", gvk.String())
 			return nil, fmt.Errorf("failed to list %s: %w", gvk.String(), err)
 		}
