@@ -37,6 +37,17 @@ import (
 	"github.com/envoyproxy/gateway/internal/utils"
 )
 
+// newTestScheme returns a scheme seeded with the common types used across tests.
+func newTestScheme() *runtime.Scheme {
+	scheme := runtime.NewScheme()
+	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
+	utilruntime.Must(egv1a1.AddToScheme(scheme))
+	utilruntime.Must(gwapischeme.AddToScheme(scheme))
+	utilruntime.Must(mcsapiv1a1.AddToScheme(scheme))
+	utilruntime.Must(apiextensionsv1.AddToScheme(scheme))
+	return scheme
+}
+
 func TestProcessHTTPRoutes(t *testing.T) {
 	const (
 		defaultWait = time.Second * 10
@@ -1285,12 +1296,7 @@ func TestProcessHTTPRoutesWithCustomBackends(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			// Use an isolated scheme and register custom backend GVKs up front to avoid
 			// lazy registration (and concurrent mutation) inside the fake client.
-			scheme := runtime.NewScheme()
-			utilruntime.Must(clientgoscheme.AddToScheme(scheme))
-			utilruntime.Must(egv1a1.AddToScheme(scheme))
-			utilruntime.Must(gwapischeme.AddToScheme(scheme))
-			utilruntime.Must(mcsapiv1a1.AddToScheme(scheme))
-			utilruntime.Must(apiextensionsv1.AddToScheme(scheme))
+			scheme := newTestScheme()
 			for _, gvk := range tc.extBackendGVKs {
 				scheme.AddKnownTypeWithName(gvk, &unstructured.Unstructured{})
 				scheme.AddKnownTypeWithName(gvk.GroupVersion().WithKind(gvk.Kind+"List"), &unstructured.UnstructuredList{})
