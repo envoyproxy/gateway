@@ -6,7 +6,6 @@
 package kubernetes
 
 import (
-	"context"
 	"os"
 	"testing"
 
@@ -23,8 +22,6 @@ import (
 )
 
 func TestGetExtensionRefFilters(t *testing.T) {
-	ctx := context.Background()
-
 	// Create test extension resources
 	s3Backend := &unstructured.Unstructured{
 		Object: map[string]any{
@@ -174,7 +171,7 @@ func TestGetExtensionRefFilters(t *testing.T) {
 			}
 
 			// Call the function under test
-			result, err := r.getExtensionRefFilters(ctx)
+			result, err := r.getExtensionRefFilters(t.Context())
 
 			// Verify results
 			if tc.expectedError {
@@ -188,8 +185,6 @@ func TestGetExtensionRefFilters(t *testing.T) {
 }
 
 func TestGetExtensionBackendResources(t *testing.T) {
-	ctx := context.Background()
-
 	// Create test custom backend resources
 	s3Backend := &unstructured.Unstructured{
 		Object: map[string]any{
@@ -339,7 +334,7 @@ func TestGetExtensionBackendResources(t *testing.T) {
 			}
 
 			// Call the function under test
-			result, err := r.getExtensionBackendResources(ctx)
+			result, err := r.getExtensionBackendResources(t.Context())
 
 			// Verify results
 			if tc.expectedError {

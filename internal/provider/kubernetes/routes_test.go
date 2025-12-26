@@ -1145,8 +1145,6 @@ func TestValidateHTTPRouteParentRefs(t *testing.T) {
 }
 
 func TestProcessHTTPRoutesWithCustomBackends(t *testing.T) {
-	ctx := context.Background()
-
 	// Create test custom backend resources
 	s3Backend := &unstructured.Unstructured{
 		Object: map[string]any{
@@ -1322,7 +1320,7 @@ func TestProcessHTTPRoutesWithCustomBackends(t *testing.T) {
 			resourceTree.GatewayClass = gatewayClass
 
 			// Call the function under test
-			err := r.processHTTPRoutes(ctx, "default/test-gateway", resourceMap, resourceTree)
+			err := r.processHTTPRoutes(t.Context(), "default/test-gateway", resourceMap, resourceTree)
 
 			// Verify results
 			require.NoError(t, err)
