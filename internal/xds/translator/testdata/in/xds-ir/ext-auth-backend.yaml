@@ -133,3 +133,6 @@ http:
                 - header1
                 - header2
               path: /auth
+            headersToExtAuthOnMatch:
+              - type: Exact
+                value: "x-test-foo"
