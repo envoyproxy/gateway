@@ -737,6 +737,7 @@ func (t *Translator) applyTrafficFeatureToRoute(route RouteContext,
 				setIfNil(&r.BackendConnection, tf.BackendConnection)
 				setIfNil(&r.DNS, tf.DNS)
 				setIfNil(&r.StatName, buildRouteStatName(routeStatName, r.Metadata))
+				appendTrafficPolicyMetadata(r.Metadata, policy)
 			}
 		}
 	}
@@ -804,6 +805,7 @@ func (t *Translator) applyTrafficFeatureToRoute(route RouteContext,
 				if policy.Spec.UseClientProtocol != nil {
 					r.UseClientProtocol = policy.Spec.UseClientProtocol
 				}
+				appendTrafficPolicyMetadata(r.Metadata, policy)
 			}
 		}
 	}
@@ -976,6 +978,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 			setIfNil(&r.Timeout, tf.Timeout)
 			setIfNil(&r.DNS, tf.DNS)
 			setIfNil(&r.StatName, buildRouteStatName(routeStatName, r.Metadata))
+			appendTrafficPolicyMetadata(r.Metadata, policy)
 		}
 	}
 
@@ -1034,7 +1037,6 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 			}
 
 			r.Traffic = tf.DeepCopy()
-
 			if localTo, err := buildClusterSettingsTimeout(&policy.Spec.ClusterSettings); err == nil {
 				r.Traffic.Timeout = localTo
 			}
@@ -1045,6 +1047,8 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 			if policy.Spec.UseClientProtocol != nil {
 				r.UseClientProtocol = policy.Spec.UseClientProtocol
 			}
+
+			appendTrafficPolicyMetadata(r.Metadata, policy)
 		}
 	}
 	if len(routesWithDirectResponse) > 0 {
@@ -1056,6 +1060,17 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 	}
 
 	return errs
+}
+
+func appendTrafficPolicyMetadata(md *ir.ResourceMetadata, policy *egv1a1.BackendTrafficPolicy) {
+	if md == nil || policy == nil {
+		return
+	}
+
+	md.TrafficPolicy = &types.NamespacedName{
+		Name:      policy.Name,
+		Namespace: policy.Namespace,
+	}
 }
 
 func (t *Translator) buildRateLimit(policy *egv1a1.BackendTrafficPolicy) (*ir.RateLimit, error) {

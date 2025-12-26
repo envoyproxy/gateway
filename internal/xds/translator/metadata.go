@@ -8,6 +8,7 @@ package translator
 import (
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	"google.golang.org/protobuf/types/known/structpb"
+	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/envoyproxy/gateway/internal/ir"
 )
@@ -20,6 +21,7 @@ const (
 	envoyGatewayXdsMetadataKeyAnnotations = "annotations"
 	envoyGatewayXdsMetadataKeySectionName = "sectionName"
 	envoyGatewayMetadataKeyResources      = "resources"
+	envoyGatewayMetadataKeyPolicies       = "policies"
 )
 
 func buildXdsMetadata(metadata *ir.ResourceMetadata) *corev3.Metadata {
@@ -30,7 +32,7 @@ func buildXdsMetadata(metadata *ir.ResourceMetadata) *corev3.Metadata {
 	resourcesList := &structpb.ListValue{}
 	resourcesList.Values = append(resourcesList.Values, buildResourceMetadata(metadata))
 
-	return &corev3.Metadata{
+	md := &corev3.Metadata{
 		FilterMetadata: map[string]*structpb.Struct{
 			envoyGatewayXdsMetadataNamespace: {
 				Fields: map[string]*structpb.Value{
@@ -40,6 +42,49 @@ func buildXdsMetadata(metadata *ir.ResourceMetadata) *corev3.Metadata {
 						},
 					},
 				},
+			},
+		},
+	}
+
+	policyList := &structpb.ListValue{}
+	if metadata.TrafficPolicy != nil {
+		policyList.Values = append(policyList.Values, buildTrafficPolicyMetadata(metadata.TrafficPolicy))
+	}
+
+	if len(policyList.Values) > 0 {
+		md.FilterMetadata[envoyGatewayXdsMetadataNamespace].Fields[envoyGatewayMetadataKeyPolicies] = &structpb.Value{
+			Kind: &structpb.Value_ListValue{
+				ListValue: policyList,
+			},
+		}
+	}
+
+	return md
+}
+
+func buildTrafficPolicyMetadata(nn *types.NamespacedName) *structpb.Value {
+	routeResourceFields := map[string]*structpb.Value{
+		envoyGatewayXdsMetadataKeyKind: {
+			Kind: &structpb.Value_StringValue{
+				StringValue: "BackendTrafficPolicy",
+			},
+		},
+		envoyGatewayXdsMetadataKeyName: {
+			Kind: &structpb.Value_StringValue{
+				StringValue: nn.Name,
+			},
+		},
+		envoyGatewayXdsMetadataKeyNamespace: {
+			Kind: &structpb.Value_StringValue{
+				StringValue: nn.Namespace,
+			},
+		},
+	}
+
+	return &structpb.Value{
+		Kind: &structpb.Value_StructValue{
+			StructValue: &structpb.Struct{
+				Fields: routeResourceFields,
 			},
 		},
 	}
