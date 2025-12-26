@@ -151,12 +151,7 @@ func TestGetExtensionRefFilters(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			// Create fake client with test objects
-			scheme := newTestScheme()
-			for _, gvk := range tc.extGVKs {
-				scheme.AddKnownTypeWithName(gvk, &unstructured.Unstructured{})
-				scheme.AddKnownTypeWithName(gvk.GroupVersion().WithKind(gvk.Kind+"List"), &unstructured.UnstructuredList{})
-			}
-
+			scheme := newTestScheme(tc.extGVKs...)
 			fakeClient := fakeclient.NewClientBuilder().
 				WithScheme(scheme).
 				WithObjects(tc.objects...).
@@ -314,11 +309,7 @@ func TestGetExtensionBackendResources(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			// Create fake client with test objects
-			scheme := newTestScheme()
-			for _, gvk := range tc.extBackendGVKs {
-				scheme.AddKnownTypeWithName(gvk, &unstructured.Unstructured{})
-				scheme.AddKnownTypeWithName(gvk.GroupVersion().WithKind(gvk.Kind+"List"), &unstructured.UnstructuredList{})
-			}
+			scheme := newTestScheme(tc.extBackendGVKs...)
 
 			fakeClient := fakeclient.NewClientBuilder().
 				WithScheme(scheme).
