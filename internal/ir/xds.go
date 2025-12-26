@@ -3278,6 +3278,8 @@ type DestinationFilters struct {
 	RemoveResponseHeaders []string `json:"removeResponseHeaders,omitempty" yaml:"removeResponseHeaders,omitempty"`
 	// CredentialInjection defines the credential injection configuration.
 	CredentialInjection *CredentialInjection `json:"credentialInjection,omitempty" yaml:"credentialInjection,omitempty"`
+	// URLRewrite defines the URL rewrite configuration for the backend.
+	URLRewrite *URLRewrite `json:"urlRewrite,omitempty" yaml:"urlRewrite,omitempty"`
 }
 
 // ResourceMetadata is metadata from the provider resource that is translated to an envoy resource
