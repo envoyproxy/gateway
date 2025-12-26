@@ -215,6 +215,9 @@ xdsIR:
           kind: GRPCRoute
           name: grpcroute-1
           namespace: default
+          trafficPolicy:
+            Name: policy-for-grcp-route
+            Namespace: default
         name: grpcroute/default/grpcroute-1/rule/0/match/-1/*
         traffic:
           rateLimit:
