@@ -242,8 +242,6 @@ jobs:
   benchmark-test:
     runs-on: ubuntu-latest
     needs:
-    - build
-    - changes
     # There's a different workflow for benchmark-test on push.
     # So we need to check if this is a pull request and changes.
     if: ${{ github.event_name == 'pull_request' && needs.changes.outputs.run_test_workflow == 'true' }}
