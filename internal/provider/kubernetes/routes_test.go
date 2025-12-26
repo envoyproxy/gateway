@@ -14,14 +14,20 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+	gwapischeme "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned/scheme"
+	mcsapiv1a1 "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway"
@@ -1277,9 +1283,22 @@ func TestProcessHTTPRoutesWithCustomBackends(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			// Use an isolated scheme and register custom backend GVKs up front to avoid
+			// lazy registration (and concurrent mutation) inside the fake client.
+			scheme := runtime.NewScheme()
+			utilruntime.Must(clientgoscheme.AddToScheme(scheme))
+			utilruntime.Must(egv1a1.AddToScheme(scheme))
+			utilruntime.Must(gwapischeme.AddToScheme(scheme))
+			utilruntime.Must(mcsapiv1a1.AddToScheme(scheme))
+			utilruntime.Must(apiextensionsv1.AddToScheme(scheme))
+			for _, gvk := range tc.extBackendGVKs {
+				scheme.AddKnownTypeWithName(gvk, &unstructured.Unstructured{})
+				scheme.AddKnownTypeWithName(gvk.GroupVersion().WithKind(gvk.Kind+"List"), &unstructured.UnstructuredList{})
+			}
+
 			// Create fake client with test objects
 			fakeClient := fakeclient.NewClientBuilder().
-				WithScheme(envoygateway.GetScheme()).
+				WithScheme(scheme).
 				WithObjects(tc.objects...).
 				WithIndex(&gwapiv1.HTTPRoute{}, gatewayHTTPRouteIndex, gatewayHTTPRouteIndexFunc).
 				Build()
