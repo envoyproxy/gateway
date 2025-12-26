@@ -55,12 +55,11 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
-func newProviderWithMetricsServerDisabled(ctx context.Context, restCfg *rest.Config, svrCfg *config.Server,
-	resources *message.ProviderResources, errNotifier message.RunnerErrorNotifier,
-) (*Provider, error) {
-	return newProvider(ctx, restCfg, svrCfg, &metricsserver.Options{
-		BindAddress: "0",
-	}, resources, errNotifier)
+func newProviderWithMetricsServerDisabled(t *testing.T, restCfg *rest.Config, svrCfg *config.Server) (*message.ProviderResources, *Provider, error) {
+	resources := new(message.ProviderResources)
+	errNotifier := message.RunnerErrorNotifier{RunnerName: t.Name(), RunnerErrors: &message.RunnerErrors{}}
+	p, err := newProvider(t.Context(), restCfg, svrCfg, &metricsserver.Options{BindAddress: "0"}, resources, errNotifier)
+	return resources, p, err
 }
 
 func TestProvider(t *testing.T) {
@@ -75,9 +74,7 @@ func TestProvider(t *testing.T) {
 	// Disable webhook server for provider test to avoid non-existent cert errors
 	svr.EnvoyGateway.Provider.Kubernetes.TopologyInjector = &egv1a1.EnvoyGatewayTopologyInjector{Disable: ptr.To(true)}
 	require.NoError(t, err)
-	resources := new(message.ProviderResources)
-	errNotifier := message.RunnerErrorNotifier{RunnerName: t.Name(), RunnerErrors: &message.RunnerErrors{}}
-	provider, err := newProviderWithMetricsServerDisabled(t.Context(), cliCfg, svr, resources, errNotifier)
+	resources, provider, err := newProviderWithMetricsServerDisabled(t, cliCfg, svr)
 	require.NoError(t, err)
 	ctx, cancel := context.WithCancel(t.Context())
 	go func() {
@@ -90,10 +87,10 @@ func TestProvider(t *testing.T) {
 	require.NoError(t, cli.Create(ctx, ns))
 
 	// Stop the kube provider.
-	defer func() {
+	t.Cleanup(func() {
 		cancel()
-		require.NoError(t, testEnv.Stop())
-	}()
+		_ = testEnv.Stop()
+	})
 
 	testcases := map[string]func(context.Context, *testing.T, *Provider, *message.ProviderResources){
 		"gatewayclass controller name":         testGatewayClassController,
@@ -1262,19 +1259,17 @@ func TestNamespacedProvider(t *testing.T) {
 		TopologyInjector: &egv1a1.EnvoyGatewayTopologyInjector{Disable: ptr.To(true)},
 	}
 
-	resources := new(message.ProviderResources)
-	errNotifier := message.RunnerErrorNotifier{RunnerName: t.Name(), RunnerErrors: &message.RunnerErrors{}}
-	provider, err := newProviderWithMetricsServerDisabled(t.Context(), cliCfg, svr, resources, errNotifier)
+	resources, provider, err := newProviderWithMetricsServerDisabled(t, cliCfg, svr)
 	require.NoError(t, err)
 	ctx, cancel := context.WithCancel(t.Context())
 	go func() {
 		require.NoError(t, provider.Start(ctx))
 	}()
 	// Stop the kube provider.
-	defer func() {
+	t.Cleanup(func() {
 		cancel()
-		require.NoError(t, testEnv.Stop())
-	}()
+		_ = testEnv.Stop()
+	})
 
 	// Make sure a cluster scoped gatewayclass can be reconciled
 	testGatewayClassController(ctx, t, provider, resources)
@@ -1326,24 +1321,22 @@ func TestNamespaceSelectorProvider(t *testing.T) {
 		TopologyInjector: &egv1a1.EnvoyGatewayTopologyInjector{Disable: ptr.To(true)},
 	}
 
-	resources := new(message.ProviderResources)
-	errNotifier := message.RunnerErrorNotifier{RunnerName: t.Name(), RunnerErrors: &message.RunnerErrors{}}
-	provider, err := newProviderWithMetricsServerDisabled(t.Context(), cliCfg, svr, resources, errNotifier)
+	resources, provider, err := newProviderWithMetricsServerDisabled(t, cliCfg, svr)
 	require.NoError(t, err)
 	ctx, cancel := context.WithCancel(t.Context())
 	go func() {
 		require.NoError(t, provider.Start(ctx))
 	}()
+	// Stop the kube provider.
+	t.Cleanup(func() {
+		cancel()
+		_ = testEnv.Stop()
+	})
 
 	testNs := config.DefaultNamespace
 	cli := provider.manager.GetClient()
 	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: testNs}}
 	require.NoError(t, cli.Create(ctx, ns))
-
-	defer func() {
-		cancel()
-		require.NoError(t, testEnv.Stop())
-	}()
 
 	watchedNS := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{
 		Name:   "watched-ns",
