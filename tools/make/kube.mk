@@ -154,7 +154,7 @@ kube-test: manifests generate run-kube-test
 # KUBE_TEST_PACKAGE=./internal/provider/kubernetes/... make run-kube-tes
 KUBE_TEST_PACKAGE ?= ./...
 # KUBE_TEST_ARGS can be used to pass extra args to `go test`, e.g. -run ^TestNamespaceSelectorProvider
-KUBE_TEST_ARGS ?=
+KUBE_TEST_ARGS ?= -race
 
 .PHONY: run-kube-test
 run-kube-test: # Run Kubernetes provider tests.
