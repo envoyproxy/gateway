@@ -32,7 +32,9 @@ spec:
     tracing:
       spanName:
         client: "%REQUESTED_SERVER_NAME(HOST_FIRST:ORIG_OR_HOST)%%PATH(NQ:ORIG)%"
-        server: "%REQUESTED_SERVER_NAME(HOST_FIRST:ORIG_OR_HOST)%%PATH(NQ:PATH)%"
+        # Use HOST_FIRST to prefer :authority over x-envoy-original-host for span names
+        # because host/path could be re-written
+        server: "%REQUESTED_SERVER_NAME(HOST_FIRST:HOST)%%PATH(NQ:PATH)%"
       provider:
         samplingFraction:
           number: 100
