@@ -14,7 +14,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -320,8 +319,11 @@ func TestGetExtensionBackendResources(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			// Create fake client with test objects
-			scheme := runtime.NewScheme()
-			require.NoError(t, corev1.AddToScheme(scheme))
+			scheme := newTestScheme()
+			for _, gvk := range tc.extBackendGVKs {
+				scheme.AddKnownTypeWithName(gvk, &unstructured.Unstructured{})
+				scheme.AddKnownTypeWithName(gvk.GroupVersion().WithKind(gvk.Kind+"List"), &unstructured.UnstructuredList{})
+			}
 
 			fakeClient := fakeclient.NewClientBuilder().
 				WithScheme(scheme).
