@@ -1,0 +1,64 @@
+- ignorePortInHostMatching: true
+  name: envoy-gateway/gateway-1/http
+  virtualHosts:
+  - domains:
+    - '*'
+    metadata:
+      filterMetadata:
+        envoy-gateway:
+          resources:
+          - kind: Gateway
+            name: gateway-1
+            namespace: envoy-gateway
+            sectionName: http
+    name: envoy-gateway/gateway-1/http/*
+    routes:
+    - match:
+        prefix: /
+      metadata:
+        filterMetadata:
+          envoy-gateway:
+            policies:
+            - kind: BackendTrafficPolicy
+              name: policy-for-gateway
+              namespace: envoy-gateway
+            resources:
+            - kind: GRPCRoute
+              name: grpcroute-1
+              namespace: default
+      name: grpcroute/default/grpcroute-1/rule/0/match/-1/*
+      route:
+        cluster: grpcroute/default/grpcroute-1/rule/0
+        rateLimits:
+        - actions:
+          - genericKey:
+              descriptorKey: grpcroute/default/grpcroute-1/rule/0/match/-1/*
+              descriptorValue: grpcroute/default/grpcroute-1/rule/0/match/-1/*
+          - headerValueMatch:
+              descriptorKey: rule-0-match-0
+              descriptorValue: rule-0-match-0
+              expectMatch: true
+              headers:
+              - name: x-user-id
+                stringMatch:
+                  exact: one
+          - requestHeaders:
+              descriptorKey: rule-0-match-1
+              headerName: x-org-id
+          - headerValueMatch:
+              descriptorKey: rule-0-match-2
+              descriptorValue: rule-0-match-2
+              expectMatch: false
+              headers:
+              - name: x-org-id
+                stringMatch:
+                  exact: admin
+          - headerValueMatch:
+              descriptorKey: rule-0-path
+              descriptorValue: rule-0-path
+              expectMatch: true
+              headers:
+              - name: :path
+                stringMatch:
+                  safeRegex:
+                    regex: ^/user(/.*|\?.*|#.*|;.*|$)

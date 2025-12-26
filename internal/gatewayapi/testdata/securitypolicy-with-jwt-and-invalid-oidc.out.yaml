@@ -173,7 +173,8 @@ securityPolicies:
         sectionName: http
       conditions:
       - lastTransitionTime: null
-        message: 'OIDC: secret default/client2-secret does not exist.'
+        message: 'OIDC: Get "https://accounts.google.com/.well-known/openid-configuration":
+          context deadline exceeded (Client.Timeout exceeded while awaiting headers).'
         reason: Invalid
         status: "False"
         type: Accepted
@@ -221,7 +222,8 @@ securityPolicies:
         namespace: envoy-gateway
       conditions:
       - lastTransitionTime: null
-        message: 'OIDC: secret envoy-gateway/client1-secret does not exist.'
+        message: 'OIDC: Get "https://accounts.google.com/.well-known/openid-configuration":
+          context deadline exceeded (Client.Timeout exceeded while awaiting headers).'
         reason: Invalid
         status: "False"
         type: Accepted

@@ -329,6 +329,9 @@ xdsIR:
           kind: TCPRoute
           name: tls-app-1
           namespace: default
+          trafficPolicy:
+            Name: policy-for-gateway
+            Namespace: default
         name: tcproute/default/tls-app-1
         proxyProtocol:
           version: V2
