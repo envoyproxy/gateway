@@ -115,6 +115,9 @@ var ZipkinTracingTest = suite.ConformanceTest{
 		})
 
 		t.Run("SpanName", func(t *testing.T) {
+			if IPFamily == "ipv6" {
+				t.Skip("Skipping test as IP_FAMILY is IPv6")
+			}
 			routeNN := types.NamespacedName{Name: "tracing-span-name", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "tracing-span-name", Namespace: ns}
 			gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
