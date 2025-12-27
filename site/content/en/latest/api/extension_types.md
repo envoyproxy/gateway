@@ -492,7 +492,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `tracing` | _[Tracing](#tracing)_ |  false  |  | Tracing configures the tracing settings for the backend or HTTPRoute. |
+| `tracing` | _[Tracing](#tracing)_ |  false  |  | Tracing configures the tracing settings for the backend or HTTPRoute.<br />This will take precedence over tracing on EnvoyProxy if set. |
 | `metrics` | _[BackendMetrics](#backendmetrics)_ |  false  |  | Metrics defines metrics configuration for the backend or Route. |
 
 
@@ -4230,10 +4230,11 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `samplingRate` | _integer_ |  false  |  | SamplingRate controls the rate at which traffic will be<br />selected for tracing if no prior sampling decision has been made.<br />Defaults to 100, valid values [0-100]. 100 indicates 100% sampling.<br />Only one of SamplingRate or SamplingFraction may be specified.<br />If neither field is specified, all requests will be sampled. |
-| `samplingFraction` | _[Fraction](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#fraction)_ |  false  |  | SamplingFraction represents the fraction of requests that should be<br />selected for tracing if no prior sampling decision has been made.<br />Only one of SamplingRate or SamplingFraction may be specified.<br />If neither field is specified, all requests will be sampled. |
-| `customTags` | _object (keys:string, values:[CustomTag](#customtag))_ |  false  |  | CustomTags defines the custom tags to add to each span.<br />If provider is kubernetes, pod name and namespace are added by default. |
+| `samplingFraction` | _[Fraction](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#fraction)_ |  false  |  | SamplingFraction represents the fraction of requests that should be<br />selected for tracing if no prior sampling decision has been made. |
+| `customTags` | _object (keys:string, values:[CustomTag](#customtag))_ |  false  |  | CustomTags defines the custom tags to add to each span.<br />If provider is kubernetes, pod name and namespace are added by default.<br />Deprecated: Use Tags instead. |
 | `tags` | _object (keys:string, values:string)_ |  false  |  | Tags defines the custom tags to add to each span.<br />Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators) may be used in the value.<br />The [format string documentation](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#config-access-log-format-strings) provides more information.<br />If provider is kubernetes, pod name and namespace are added by default.<br />Same keys take precedence over CustomTags. |
+| `spanName` | _[TracingSpanName](#tracingspanname)_ |  true  |  | SpanName defines the name of the span which will be used for tracing. |
+| `samplingRate` | _integer_ |  false  |  | SamplingRate controls the rate at which traffic will be<br />selected for tracing if no prior sampling decision has been made.<br />Defaults to 100, valid values [0-100]. 100 indicates 100% sampling.<br />Only one of SamplingRate or SamplingFraction may be specified.<br />If neither field is specified, all requests will be sampled. |
 | `provider` | _[TracingProvider](#tracingprovider)_ |  true  |  | Provider defines the tracing provider. |
 
 
@@ -5302,11 +5303,14 @@ Tracing defines the configuration for tracing.
 
 _Appears in:_
 - [BackendTelemetry](#backendtelemetry)
+- [ProxyTracing](#proxytracing)
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `samplingFraction` | _[Fraction](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#fraction)_ |  false  |  | SamplingFraction represents the fraction of requests that should be<br />selected for tracing if no prior sampling decision has been made.<br />This will take precedence over sampling fraction on EnvoyProxy if set. |
-| `customTags` | _object (keys:string, values:[CustomTag](#customtag))_ |  false  |  | CustomTags defines the custom tags to add to each span.<br />If provider is kubernetes, pod name and namespace are added by default. |
+| `samplingFraction` | _[Fraction](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#fraction)_ |  false  |  | SamplingFraction represents the fraction of requests that should be<br />selected for tracing if no prior sampling decision has been made. |
+| `customTags` | _object (keys:string, values:[CustomTag](#customtag))_ |  false  |  | CustomTags defines the custom tags to add to each span.<br />If provider is kubernetes, pod name and namespace are added by default.<br />Deprecated: Use Tags instead. |
+| `tags` | _object (keys:string, values:string)_ |  false  |  | Tags defines the custom tags to add to each span.<br />Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators) may be used in the value.<br />The [format string documentation](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#config-access-log-format-strings) provides more information.<br />If provider is kubernetes, pod name and namespace are added by default.<br />Same keys take precedence over CustomTags. |
+| `spanName` | _[TracingSpanName](#tracingspanname)_ |  true  |  | SpanName defines the name of the span which will be used for tracing. |
 
 
 #### TracingProvider
@@ -5345,6 +5349,22 @@ _Appears in:_
 | `OpenTelemetry` |  | 
 | `Zipkin` |  | 
 | `Datadog` |  | 
+
+
+#### TracingSpanName
+
+
+
+
+
+_Appears in:_
+- [ProxyTracing](#proxytracing)
+- [Tracing](#tracing)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `client` | _string_ |  true  |  | Client defines operation name of the span which will be used for tracing. |
+| `server` | _string_ |  true  |  | Server defines the operation name of the upstream span which will be used for tracing. |
 
 
 #### TranslationConfig

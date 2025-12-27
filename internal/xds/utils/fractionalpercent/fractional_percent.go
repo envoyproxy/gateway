@@ -39,6 +39,10 @@ const (
 
 // FromFraction translates a gwapiv1.Fraction instance to envoy.type.FractionalPercent.
 func FromFraction(fraction *gwapiv1.Fraction) *xdstype.FractionalPercent {
+	if fraction == nil {
+		return nil
+	}
+
 	if fraction.Denominator == nil {
 		return &xdstype.FractionalPercent{
 			Numerator:   uint32(fraction.Numerator),
