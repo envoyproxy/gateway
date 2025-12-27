@@ -4533,6 +4533,13 @@ _Appears in:_
 
 RemoteJWKS defines how to fetch and cache JSON Web Key Sets (JWKS) from a remote HTTP/HTTPS endpoint.
 
+BackendRefs is used to specify the address of the Remote JWKS.
+If the BackendRefs is not specified, the URI field is used to determine the address of the Remote JWKS.
+
+TLS configuration can be specified in a BackendTLSConfig resource and target the BackendRefs.
+
+Other settings for the connection to the remote JWKS can be specified in the BackendSettings resource.
+
 _Appears in:_
 - [JWTProvider](#jwtprovider)
 
