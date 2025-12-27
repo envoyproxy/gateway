@@ -180,8 +180,23 @@ provider:
 extensionApis:
   {{- toYaml . | nindent 2 }}
 {{- end }}
-{{- if not .Values.topologyInjector.enabled }}
+{{- if or (eq (include "eg.isKube135OrHigher" .) "true") (not .Values.topologyInjector.enabled) }}
 proxyTopologyInjector:
   disabled: true
 {{- end }}
 {{- end }}
+
+{{/*
+Check if Kubernetes version is 1.35 or higher
+*/}}
+{{- define "eg.isKube135OrHigher" -}}
+{{- if .Capabilities.KubeVersion.GitVersion -}}
+{{- if semverCompare ">=1.35.0-0" .Capabilities.KubeVersion.GitVersion -}}
+true
+{{- else -}}
+false
+{{- end -}}
+{{- else -}}
+false
+{{- end -}}
+{{- end -}}

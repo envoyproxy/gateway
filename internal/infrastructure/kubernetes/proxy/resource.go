@@ -136,7 +136,7 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 			ImagePullPolicy:          corev1.PullIfNotPresent,
 			Command:                  []string{"envoy"},
 			Args:                     args,
-			Env:                      expectedContainerEnv(containerSpec),
+			Env:                      expectedContainerEnv(containerSpec, topologyInjectorDisabled),
 			Resources:                *containerSpec.Resources,
 			SecurityContext:          expectedEnvoySecurityContext(containerSpec),
 			Ports:                    ports,
@@ -198,7 +198,7 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 			ImagePullPolicy:          corev1.PullIfNotPresent,
 			Command:                  []string{"envoy-gateway"},
 			Args:                     expectedShutdownManagerArgs(shutdownConfig),
-			Env:                      expectedContainerEnv(nil),
+			Env:                      expectedContainerEnv(nil, topologyInjectorDisabled),
 			Resources:                *egv1a1.DefaultShutdownManagerContainerResourceRequirements(),
 			TerminationMessagePolicy: corev1.TerminationMessageReadFile,
 			TerminationMessagePath:   "/dev/termination-log",
@@ -424,7 +424,7 @@ func sdsConfigMapItems(gatewayNamespaceMode bool) []corev1.KeyToPath {
 }
 
 // expectedContainerEnv returns expected proxy container envs.
-func expectedContainerEnv(containerSpec *egv1a1.KubernetesContainerSpec) []corev1.EnvVar {
+func expectedContainerEnv(containerSpec *egv1a1.KubernetesContainerSpec, topologyInjectorDisabled bool) []corev1.EnvVar {
 	env := []corev1.EnvVar{
 		{
 			Name: envoyNsEnvVar,
@@ -449,7 +449,7 @@ func expectedContainerEnv(containerSpec *egv1a1.KubernetesContainerSpec) []corev
 			ValueFrom: &corev1.EnvVarSource{
 				FieldRef: &corev1.ObjectFieldSelector{
 					APIVersion: "v1",
-					FieldPath:  fmt.Sprintf("metadata.annotations['%s']", corev1.LabelTopologyZone),
+					FieldPath:  expectedZoneFieldPath(topologyInjectorDisabled),
 				},
 			},
 		},
@@ -460,6 +460,19 @@ func expectedContainerEnv(containerSpec *egv1a1.KubernetesContainerSpec) []corev
 	} else {
 		return env
 	}
+}
+
+// expectedZoneFieldPath returns the fieldPath for the zone environment variable
+// based on whether the topology injector is enabled or disabled.
+// - When topology injector is enabled (disabled=false): zone is in annotations (custom webhook)
+// - When topology injector is disabled (disabled=true): zone is in labels (K8s 1.35+ PodTopologyLabels)
+func expectedZoneFieldPath(topologyInjectorDisabled bool) string {
+	if topologyInjectorDisabled {
+		// K8s 1.35+ PodTopologyLabels: zone is in pod labels
+		return fmt.Sprintf("metadata.labels['%s']", corev1.LabelTopologyZone)
+	}
+	// Custom topology injector: zone is in pod annotations
+	return fmt.Sprintf("metadata.annotations['%s']", corev1.LabelTopologyZone)
 }
 
 // calculateMaxHeapSizeBytes calculates the maximum heap size in bytes as 80% of Envoy container memory limits.

@@ -9,7 +9,7 @@ All namespaced resources for Envoy Gateway RBAC.
 - {{ include "eg.rbac.namespaced.gateway.envoyproxy.status" . | nindent 2 | trim }}
 - {{ include "eg.rbac.namespaced.gateway.networking" . | nindent 2 | trim }}
 - {{ include "eg.rbac.namespaced.gateway.networking.status" . | nindent 2 | trim }}
-{{- if .Values.topologyInjector.enabled }}
+{{- if and .Values.topologyInjector.enabled (not (eq (include "eg.isKube135OrHigher" .) "true")) }}
 - {{ include "eg.rbac.namespaced.topologyinjector" . | nindent 2 | trim }}
 {{- end }}
 {{- end }}

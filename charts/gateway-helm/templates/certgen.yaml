@@ -28,7 +28,7 @@ spec:
     spec:
       containers:
       {{- $args := .Values.certgen.job.args }}
-      {{- if not .Values.topologyInjector.enabled }}
+      {{- if or (not .Values.topologyInjector.enabled) (eq (include "eg.isKube135OrHigher" .) "true") }}
         {{- $args = append $args "--disable-topology-injector" }}
       {{- end }}
       {{- if $args }}
