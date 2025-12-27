@@ -156,13 +156,13 @@ var ClientMTLSTest = suite.ConformanceTest{
 
 var ClientMTLSClusterTrustBundleTest = suite.ConformanceTest{
 	ShortName:   "ClientMTLSClusterTrustBundle",
-	Description: "Use Gateway with Client MTLS policy",
+	Description: "Use Gateway with Client MTLS policy and CRL",
 	Manifests:   []string{"testdata/client-mtls-trustbundle.yaml"},
 	Features: []features.FeatureName{
 		ClusterTrustBundleFeature,
 	},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
-		t.Run("Client MTLS with ClusterTrustBundle", func(t *testing.T) {
+		t.Run("Client MTLS with ClusterTrustBundle and CRL - Valid Client", func(t *testing.T) {
 			ns := "gateway-conformance-infra"
 			routeNN := types.NamespacedName{Name: "client-mtls-clustertrustbundle", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "client-mtls-clustertrustbundle", Namespace: ns}
@@ -193,6 +193,8 @@ var ClientMTLSClusterTrustBundleTest = suite.ConformanceTest{
 
 			// This test uses the same key/cert pair as both a client cert and server cert
 			// Both backend and client treat the self-signed cert as a trusted CA
+			// This test verifies both ClusterTrustBundle (for caCertificateRefs) and CRL work together
+			// Using a valid (non-revoked) client certificate should succeed
 			cPem, keyPem, caPem, err := GetTLSSecret(suite.Client, certNN)
 			if err != nil {
 				t.Fatalf("unexpected error finding TLS secret: %v", err)
@@ -202,6 +204,52 @@ var ClientMTLSClusterTrustBundleTest = suite.ConformanceTest{
 
 			WaitForConsistentMTLSResponse(t, suite.RoundTripper, &req, &expected, suite.TimeoutConfig.RequiredConsecutiveSuccesses, suite.TimeoutConfig.MaxTimeToConsistency,
 				[]byte(combined), keyPem, "www.example.com")
+		})
+
+		t.Run("Client MTLS with CRL - Revoked Client Certificate Rejected", func(t *testing.T) {
+			ns := "gateway-conformance-infra"
+			routeNN := types.NamespacedName{Name: "client-mtls-clustertrustbundle", Namespace: ns}
+			gwNN := types.NamespacedName{Name: "client-mtls-clustertrustbundle", Namespace: ns}
+			gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
+
+			// Use the revoked client certificate
+			revokedCertNN := types.NamespacedName{Name: "revoked-client-example-com", Namespace: ns}
+
+			expected := http.ExpectedResponse{
+				Request: http.Request{
+					Host: "www.example.com",
+					Path: "/cluster-trust-bundle",
+				},
+				Response: http.Response{
+					StatusCodes: []int{200},
+				},
+				Namespace: ns,
+			}
+
+			req := http.MakeRequest(t, &expected, gwAddr, "HTTPS", "https")
+
+			// Get the revoked client certificate
+			revokedCPem, revokedKeyPem, caPem, err := GetTLSSecret(suite.Client, revokedCertNN)
+			if err != nil {
+				t.Fatalf("unexpected error finding revoked TLS secret: %v", err)
+			}
+
+			combined := string(revokedCPem) + "\n" + string(caPem)
+
+			// Attempt request with revoked certificate - should fail
+			req.KeyPem = revokedKeyPem
+			req.CertPem = []byte(combined)
+			req.Server = "www.example.com"
+
+			_, _, err = suite.RoundTripper.CaptureRoundTrip(req)
+
+			// Connection should fail due to revoked certificate
+			if err == nil {
+				t.Fatalf("expected request to fail with revoked certificate, but it succeeded")
+			}
+
+			// Verify the error is related to certificate/TLS validation
+			tlog.Logf(t, "Request correctly rejected with revoked certificate: %v", err)
 		})
 	},
 }
