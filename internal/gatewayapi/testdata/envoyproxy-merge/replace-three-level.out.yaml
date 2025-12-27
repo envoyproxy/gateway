@@ -1,0 +1,14 @@
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: gateway-proxy
+  namespace: default
+spec:
+  logging:
+    level:
+      default: info
+  provider:
+    type: Kubernetes
+    kubernetes:
+      envoyDeployment:
+        replicas: 7

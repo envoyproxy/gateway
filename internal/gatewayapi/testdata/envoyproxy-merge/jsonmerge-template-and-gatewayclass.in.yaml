@@ -1,0 +1,47 @@
+envoyGateway:
+  apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyGateway
+  gateway:
+    controllerName: gateway.envoyproxy.io/gatewayclass-controller
+  provider:
+    type: Kubernetes
+    kubernetes:
+      envoyProxyTemplate:
+        mergeType: JSONMerge
+        spec:
+          provider:
+            type: Kubernetes
+            kubernetes:
+              envoyDeployment:
+                replicas: 2
+                container:
+                  env:
+                    - name: TEMPLATE_ENV
+                      value: template_value
+                  resources:
+                    requests:
+                      cpu: 100m
+                      memory: 512Mi
+                pod:
+                  annotations:
+                    template-annotation: template-value
+
+envoyProxyForGatewayClass:
+  apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyProxy
+  metadata:
+    name: gatewayclass-proxy
+    namespace: envoy-gateway-system
+  spec:
+    provider:
+      type: Kubernetes
+      kubernetes:
+        envoyDeployment:
+          replicas: 4
+          container:
+            env:
+              - name: GATEWAYCLASS_ENV
+                value: gatewayclass_value
+          pod:
+            annotations:
+              gatewayclass-annotation: gatewayclass-value

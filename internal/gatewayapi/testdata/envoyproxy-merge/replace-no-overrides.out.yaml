@@ -1,0 +1,20 @@
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+spec:
+  provider:
+    type: Kubernetes
+    kubernetes:
+      envoyDeployment:
+        replicas: 10
+        container:
+          env:
+          - name: TEMPLATE_ENV
+            value: from_template
+          - name: ANOTHER_VAR
+            value: also_from_template
+          image: "envoyproxy/envoy:template-version"
+        pod:
+          annotations:
+            template-annotation: template-value
+      envoyService:
+        type: NodePort

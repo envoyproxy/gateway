@@ -1,0 +1,16 @@
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: gatewayclass-proxy
+  namespace: envoy-gateway-system
+spec:
+  provider:
+    type: Kubernetes
+    kubernetes:
+      envoyDeployment:
+        replicas: 5
+        container:
+          env:
+            - name: GATEWAYCLASS_ENV
+              value: gatewayclass_value
+          image: "envoyproxy/envoy:v1.29.0"

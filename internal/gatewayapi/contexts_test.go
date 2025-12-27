@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -168,4 +169,285 @@ func TestContextsStaleListener(t *testing.T) {
 	// Ensure that the listeners within GatewayContext have been properly updated.
 	expectedGCtxListeners := []*ListenerContext{httpsListenerCtx}
 	require.Equal(t, expectedGCtxListeners, gCtx.listeners)
+}
+
+func TestAttachEnvoyProxy(t *testing.T) {
+	defaultGateway := &gwapiv1.Gateway{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "default",
+			Name:      "gateway-1",
+		},
+	}
+
+	tests := []struct {
+		name              string
+		gateway           *gwapiv1.Gateway
+		gatewayClassProxy *egv1a1.EnvoyProxy
+		gatewayProxy      *egv1a1.EnvoyProxy
+		template          *egv1a1.EnvoyProxyTemplateSpec
+		expectedReplicas  *int32
+	}{
+		{
+			name:              "no envoy proxy configs - should have nil envoyProxy",
+			gateway:           defaultGateway,
+			gatewayClassProxy: nil,
+			gatewayProxy:      nil,
+			template:          nil,
+			expectedReplicas:  nil,
+		},
+		{
+			name:              "template only",
+			gateway:           defaultGateway,
+			gatewayClassProxy: nil,
+			gatewayProxy:      nil,
+			template: &egv1a1.EnvoyProxyTemplateSpec{
+				Spec: &egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
+								Replicas: ptr.To(int32(2)),
+							},
+						},
+					},
+				},
+			},
+			expectedReplicas: ptr.To(int32(2)),
+		},
+		{
+			name:    "template merged with gatewayClass",
+			gateway: defaultGateway,
+			gatewayClassProxy: &egv1a1.EnvoyProxy{
+				Spec: egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
+								Replicas: ptr.To(int32(3)),
+							},
+						},
+					},
+				},
+			},
+			gatewayProxy: nil,
+			template: &egv1a1.EnvoyProxyTemplateSpec{
+				Spec: &egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
+								Replicas: ptr.To(int32(2)),
+							},
+						},
+					},
+				},
+			},
+			expectedReplicas: ptr.To(int32(3)), // GatewayClass overrides template with Replace strategy
+		},
+		{
+			name: "gateway overrides gatewayClass and template",
+			gateway: &gwapiv1.Gateway{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "gateway-1",
+				},
+				Spec: gwapiv1.GatewaySpec{
+					Infrastructure: &gwapiv1.GatewayInfrastructure{
+						ParametersRef: &gwapiv1.LocalParametersReference{
+							Group: gwapiv1.Group(egv1a1.GroupVersion.Group),
+							Kind:  gwapiv1.Kind(egv1a1.KindEnvoyProxy),
+							Name:  "gateway-proxy",
+						},
+					},
+				},
+			},
+			gatewayClassProxy: &egv1a1.EnvoyProxy{
+				Spec: egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
+								Replicas: ptr.To(int32(3)),
+							},
+						},
+					},
+				},
+			},
+			gatewayProxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "gateway-proxy",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
+								Replicas: ptr.To(int32(5)),
+							},
+						},
+					},
+				},
+			},
+			template: &egv1a1.EnvoyProxyTemplateSpec{
+				Spec: &egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
+								Replicas: ptr.To(int32(2)),
+							},
+						},
+					},
+				},
+			},
+			expectedReplicas: ptr.To(int32(5)), // Gateway has highest priority with Replace strategy
+		},
+		{
+			name: "gatewayclass used with MergeGateways enabled",
+			gateway: &gwapiv1.Gateway{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "gateway-1",
+				},
+				Spec: gwapiv1.GatewaySpec{
+					Infrastructure: &gwapiv1.GatewayInfrastructure{
+						ParametersRef: &gwapiv1.LocalParametersReference{
+							Group: gwapiv1.Group(egv1a1.GroupVersion.Group),
+							Kind:  gwapiv1.Kind(egv1a1.KindEnvoyProxy),
+							Name:  "gateway-proxy",
+						},
+					},
+				},
+			},
+			gatewayClassProxy: &egv1a1.EnvoyProxy{
+				Spec: egv1a1.EnvoyProxySpec{
+					MergeGateways: ptr.To(true),
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
+								Replicas: ptr.To(int32(3)),
+							},
+						},
+					},
+				},
+			},
+			gatewayProxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "gateway-proxy",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
+								Replicas: ptr.To(int32(5)),
+							},
+						},
+					},
+				},
+			},
+			expectedReplicas: ptr.To(int32(3)), // Should use GatewayClass (3), NOT Gateway (5)
+		},
+		{
+			name: "gatewayclass used with MergeGateways enabled on template",
+			gateway: &gwapiv1.Gateway{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "gateway-1",
+				},
+				Spec: gwapiv1.GatewaySpec{
+					Infrastructure: &gwapiv1.GatewayInfrastructure{
+						ParametersRef: &gwapiv1.LocalParametersReference{
+							Group: gwapiv1.Group(egv1a1.GroupVersion.Group),
+							Kind:  gwapiv1.Kind(egv1a1.KindEnvoyProxy),
+							Name:  "gateway-proxy",
+						},
+					},
+				},
+			},
+			template: &egv1a1.EnvoyProxyTemplateSpec{
+				Spec: &egv1a1.EnvoyProxySpec{
+					MergeGateways: ptr.To(true),
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
+								Replicas: ptr.To(int32(2)),
+							},
+						},
+					},
+				},
+			},
+			gatewayClassProxy: &egv1a1.EnvoyProxy{
+				Spec: egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
+								Replicas: ptr.To(int32(3)),
+							},
+						},
+					},
+				},
+			},
+			gatewayProxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "gateway-proxy",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
+								Replicas: ptr.To(int32(5)),
+							},
+						},
+					},
+				},
+			},
+			expectedReplicas: ptr.To(int32(3)), // Should use GatewayClass (3), NOT Gateway (5)
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Setup resources
+			resources := &resource.Resources{
+				EnvoyProxyForGatewayClass: tt.gatewayClassProxy,
+			}
+
+			epMap := map[types.NamespacedName]*egv1a1.EnvoyProxy{}
+
+			if tt.gatewayProxy != nil {
+				// Setup envoyproxy map
+				epMap[types.NamespacedName{
+					Namespace: tt.gatewayProxy.Namespace,
+					Name:      tt.gatewayProxy.Name,
+				}] = tt.gatewayProxy
+			}
+
+			// Create gateway context
+			gctx := &GatewayContext{
+				Gateway: tt.gateway,
+			}
+
+			// Call attachEnvoyProxy
+			gctx.attachEnvoyProxy(resources, epMap, tt.template)
+
+			// Verify the envoyProxy field was set correctly
+			if tt.expectedReplicas == nil {
+				require.Nil(t, gctx.envoyProxy)
+			} else {
+				require.NotNil(t, gctx.envoyProxy)
+				require.NotNil(t, gctx.envoyProxy.Spec.Provider)
+				require.NotNil(t, gctx.envoyProxy.Spec.Provider.Kubernetes)
+				require.NotNil(t, gctx.envoyProxy.Spec.Provider.Kubernetes.EnvoyDeployment)
+				require.Equal(t, *tt.expectedReplicas, *gctx.envoyProxy.Spec.Provider.Kubernetes.EnvoyDeployment.Replicas)
+			}
+		})
+	}
 }
