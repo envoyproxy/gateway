@@ -7,12 +7,17 @@ package translator
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"google.golang.org/protobuf/types/known/durationpb"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
 func TestDetermineIPFamily(t *testing.T) {
@@ -109,4 +114,22 @@ func TestDetermineIPFamily(t *testing.T) {
 			assert.Equal(t, tt.want, got)
 		})
 	}
+}
+
+func TestAddClusterFromURLWithTraffic(t *testing.T) {
+	tCtx := &types.ResourceVersionTable{}
+	traffic := &ir.TrafficFeatures{
+		Timeout: &ir.Timeout{
+			TCP: &ir.TCPTimeout{
+				ConnectTimeout: &metav1.Duration{Duration: 2 * time.Second},
+			},
+		},
+	}
+
+	err := addClusterFromURL("https://example.com/jwks.json", traffic, tCtx)
+	require.NoError(t, err)
+
+	cluster := findXdsCluster(tCtx, "example_com_443")
+	require.NotNil(t, cluster)
+	require.Equal(t, durationpb.New(2*time.Second), cluster.ConnectTimeout)
 }

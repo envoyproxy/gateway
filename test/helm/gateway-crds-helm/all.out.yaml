@@ -22532,6 +22532,15 @@ spec:
                               - requests
                               - unit
                               type: object
+                            shadowMode:
+                              description: |-
+                                ShadowMode indicates whether this rate-limit rule runs in shadow mode.
+                                When enabled, all rate-limiting operations are performed (cache lookups,
+                                counter updates, telemetry generation), but the outcome is never enforced.
+                                The request always succeeds, even if the configured limit is exceeded.
+
+                                Only supported for Global Rate Limits.
+                              type: boolean
                             shared:
                               description: |-
                                 Shared determines whether this rate limit rule applies across all the policy targets.
@@ -22844,6 +22853,15 @@ spec:
                               - requests
                               - unit
                               type: object
+                            shadowMode:
+                              description: |-
+                                ShadowMode indicates whether this rate-limit rule runs in shadow mode.
+                                When enabled, all rate-limiting operations are performed (cache lookups,
+                                counter updates, telemetry generation), but the outcome is never enforced.
+                                The request always succeeds, even if the configured limit is exceeded.
+
+                                Only supported for Global Rate Limits.
+                              type: boolean
                             shared:
                               description: |-
                                 Shared determines whether this rate limit rule applies across all the policy targets.
@@ -22858,6 +22876,8 @@ spec:
                         x-kubernetes-validations:
                         - message: response cost is not supported for Local Rate Limits
                           rule: self.all(foo, !has(foo.cost) || !has(foo.cost.response))
+                        - message: shadow mode is not supported for Local Rate Limits
+                          rule: self.all(foo, !has(foo.shadowMode))
                     type: object
                   type:
                     description: |-
@@ -28081,8 +28101,11 @@ spec:
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
-    - jsonPath: .status.conditions[?(@.type=="Programmed")].reason
-      name: Status
+    - jsonPath: .status.ancestors[0].conditions[?(@.type=="Accepted")].status
+      name: Accepted
+      type: string
+    - jsonPath: .status.ancestors[0].conditions[?(@.type=="Programmed")].status
+      name: Programmed
       type: string
     - jsonPath: .metadata.creationTimestamp
       name: Age
@@ -30609,6 +30632,12 @@ spec:
                                   Selector which must match a node's labels for the pod to be scheduled on that node.
                                   More info: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/
                                 type: object
+                              priorityClassName:
+                                description: |-
+                                  PriorityClassName indicates the importance of a Pod relative to other Pods.
+                                  If a PriorityClassName is not specified, the pod priority will be default or zero if there is no default.
+                                  More info: https://kubernetes.io/docs/concepts/scheduling-eviction/pod-priority-preemption/
+                                type: string
                               securityContext:
                                 description: |-
                                   SecurityContext holds pod-level security attributes and common container settings.
@@ -30864,9 +30893,10 @@ spec:
                                     operator:
                                       description: |-
                                         Operator represents a key's relationship to the value.
-                                        Valid operators are Exists and Equal. Defaults to Equal.
+                                        Valid operators are Exists, Equal, Lt, and Gt. Defaults to Equal.
                                         Exists is equivalent to wildcard for value, so that a pod can
                                         tolerate all taints of a particular category.
+                                        Lt and Gt perform numeric comparisons (requires feature gate TaintTolerationComparisonOperators).
                                       type: string
                                     tolerationSeconds:
                                       description: |-
@@ -31666,7 +31696,7 @@ spec:
                                                 resources:
                                                   description: |-
                                                     resources represents the minimum resources the volume should have.
-                                                    If RecoverVolumeExpansionFailure feature is enabled users are allowed to specify resource requirements
+                                                    Users are allowed to specify resource requirements
                                                     that are lower than previous value but must still be higher than capacity recorded in the
                                                     status field of the claim.
                                                     More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#resources
@@ -32576,6 +32606,24 @@ spec:
                                                       CSRs will be addressed to this
                                                       signer.
                                                     type: string
+                                                  userAnnotations:
+                                                    additionalProperties:
+                                                      type: string
+                                                    description: |-
+                                                      userAnnotations allow pod authors to pass additional information to
+                                                      the signer implementation.  Kubernetes does not restrict or validate this
+                                                      metadata in any way.
+
+                                                      These values are copied verbatim into the `spec.unverifiedUserAnnotations` field of
+                                                      the PodCertificateRequest objects that Kubelet creates.
+
+                                                      Entries are subject to the same validation as object metadata annotations,
+                                                      with the addition that all keys must be domain-prefixed. No restrictions
+                                                      are placed on values, except an overall size limitation on the entire field.
+
+                                                      Signers should document the keys and values they support. Signers should
+                                                      deny requests that contain keys they do not recognize.
+                                                    type: object
                                                 required:
                                                 - keyType
                                                 - signerName
@@ -34475,7 +34523,9 @@ spec:
                                       type: integer
                                   type: object
                                 resizePolicy:
-                                  description: Resources resize policy for the container.
+                                  description: |-
+                                    Resources resize policy for the container.
+                                    This field cannot be set on ephemeral containers.
                                   items:
                                     description: ContainerResizePolicy represents
                                       resource resize policy for the container.
@@ -36142,6 +36192,12 @@ spec:
                                   Selector which must match a node's labels for the pod to be scheduled on that node.
                                   More info: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/
                                 type: object
+                              priorityClassName:
+                                description: |-
+                                  PriorityClassName indicates the importance of a Pod relative to other Pods.
+                                  If a PriorityClassName is not specified, the pod priority will be default or zero if there is no default.
+                                  More info: https://kubernetes.io/docs/concepts/scheduling-eviction/pod-priority-preemption/
+                                type: string
                               securityContext:
                                 description: |-
                                   SecurityContext holds pod-level security attributes and common container settings.
@@ -36397,9 +36453,10 @@ spec:
                                     operator:
                                       description: |-
                                         Operator represents a key's relationship to the value.
-                                        Valid operators are Exists and Equal. Defaults to Equal.
+                                        Valid operators are Exists, Equal, Lt, and Gt. Defaults to Equal.
                                         Exists is equivalent to wildcard for value, so that a pod can
                                         tolerate all taints of a particular category.
+                                        Lt and Gt perform numeric comparisons (requires feature gate TaintTolerationComparisonOperators).
                                       type: string
                                     tolerationSeconds:
                                       description: |-
@@ -37199,7 +37256,7 @@ spec:
                                                 resources:
                                                   description: |-
                                                     resources represents the minimum resources the volume should have.
-                                                    If RecoverVolumeExpansionFailure feature is enabled users are allowed to specify resource requirements
+                                                    Users are allowed to specify resource requirements
                                                     that are lower than previous value but must still be higher than capacity recorded in the
                                                     status field of the claim.
                                                     More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#resources
@@ -38109,6 +38166,24 @@ spec:
                                                       CSRs will be addressed to this
                                                       signer.
                                                     type: string
+                                                  userAnnotations:
+                                                    additionalProperties:
+                                                      type: string
+                                                    description: |-
+                                                      userAnnotations allow pod authors to pass additional information to
+                                                      the signer implementation.  Kubernetes does not restrict or validate this
+                                                      metadata in any way.
+
+                                                      These values are copied verbatim into the `spec.unverifiedUserAnnotations` field of
+                                                      the PodCertificateRequest objects that Kubelet creates.
+
+                                                      Entries are subject to the same validation as object metadata annotations,
+                                                      with the addition that all keys must be domain-prefixed. No restrictions
+                                                      are placed on values, except an overall size limitation on the entire field.
+
+                                                      Signers should document the keys and values they support. Signers should
+                                                      deny requests that contain keys they do not recognize.
+                                                    type: object
                                                 required:
                                                 - keyType
                                                 - signerName
@@ -38674,8 +38749,8 @@ spec:
                                       and scale-down and scale-up tolerances of 5% and 1% respectively, scaling will be
                                       triggered when the actual consumption falls below 95Mi or exceeds 101Mi.
 
-                                      This is an alpha field and requires enabling the HPAConfigurableTolerance
-                                      feature gate.
+                                      This is an beta field and requires the HPAConfigurableTolerance feature
+                                      gate to be enabled.
                                     pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                                     x-kubernetes-int-or-string: true
                                 type: object
@@ -38750,8 +38825,8 @@ spec:
                                       and scale-down and scale-up tolerances of 5% and 1% respectively, scaling will be
                                       triggered when the actual consumption falls below 95Mi or exceeds 101Mi.
 
-                                      This is an alpha field and requires enabling the HPAConfigurableTolerance
-                                      feature gate.
+                                      This is an beta field and requires the HPAConfigurableTolerance feature
+                                      gate to be enabled.
                                     pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                                     x-kubernetes-int-or-string: true
                                 type: object
@@ -39544,8 +39619,9 @@ spec:
                                     The [format string documentation](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#config-access-log-format-strings) provides more information.
                                   type: string
                                 type:
-                                  description: Type defines the type of accesslog
-                                    format.
+                                  description: |-
+                                    Type defines the type of accesslog format.
+                                    When unset, both text and json can be specified.
                                   enum:
                                   - Text
                                   - JSON
@@ -39554,10 +39630,24 @@ spec:
                               x-kubernetes-validations:
                               - message: If AccessLogFormat type is Text, text field
                                   needs to be set.
-                                rule: 'self.type == ''Text'' ? has(self.text) : !has(self.text)'
+                                rule: 'has(self.type) && self.type == ''Text'' ? has(self.text)
+                                  : true'
+                              - message: If AccessLogFormat type is Text, json field
+                                  must not be set.
+                                rule: 'has(self.type) && self.type == ''Text'' ? !has(self.json)
+                                  : true'
                               - message: If AccessLogFormat type is JSON, json field
                                   needs to be set.
-                                rule: 'self.type == ''JSON'' ? has(self.json) : !has(self.json)'
+                                rule: 'has(self.type) && self.type == ''JSON'' ? has(self.json)
+                                  : true'
+                              - message: If AccessLogFormat type is JSON, text field
+                                  must not be set.
+                                rule: 'has(self.type) && self.type == ''JSON'' ? !has(self.text)
+                                  : true'
+                              - message: If AccessLogFormat type is unset, at least
+                                  one of text or json must be set.
+                                rule: '!has(self.type) ? (has(self.text) || has(self.json))
+                                  : true'
                             matches:
                               description: |-
                                 Matches defines the match conditions for accesslog in CEL expression.
@@ -44688,6 +44778,17 @@ spec:
                         maximum: 100
                         minimum: 0
                         type: integer
+                      tags:
+                        additionalProperties:
+                          type: string
+                        description: |-
+                          Tags defines the custom tags to add to each span.
+                          Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators) may be used in the value.
+                          The [format string documentation](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#config-access-log-format-strings) provides more information.
+                          If provider is kubernetes, pod name and namespace are added by default.
+
+                          Same keys take precedence over CustomTags.
+                        type: object
                     required:
                     - provider
                     type: object
@@ -44699,7 +44800,218 @@ spec:
             type: object
           status:
             description: EnvoyProxyStatus defines the actual state of EnvoyProxy.
+            properties:
+              ancestors:
+                description: |-
+                  Ancestors represent the status information for all the GatewayClass or Gateway
+                  reference this EnvoyProxy with ParametersReference.
+                items:
+                  properties:
+                    ancestorRef:
+                      description: AncestorRef corresponds a GatewayClass or Gateway
+                        use this EnvoyProxy with ParametersReference.
+                      properties:
+                        group:
+                          default: gateway.networking.k8s.io
+                          description: |-
+                            Group is the group of the referent.
+                            When unspecified, "gateway.networking.k8s.io" is inferred.
+                            To set the core API group (such as for a "Service" kind referent),
+                            Group must be explicitly set to "" (empty string).
+
+                            Support: Core
+                          maxLength: 253
+                          pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                          type: string
+                        kind:
+                          default: Gateway
+                          description: |-
+                            Kind is kind of the referent.
+
+                            There are two kinds of parent resources with "Core" support:
+
+                            * Gateway (Gateway conformance profile)
+                            * Service (Mesh conformance profile, ClusterIP Services only)
+
+                            Support for other resources is Implementation-Specific.
+                          maxLength: 63
+                          minLength: 1
+                          pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
+                          type: string
+                        name:
+                          description: |-
+                            Name is the name of the referent.
+
+                            Support: Core
+                          maxLength: 253
+                          minLength: 1
+                          type: string
+                        namespace:
+                          description: |-
+                            Namespace is the namespace of the referent. When unspecified, this refers
+                            to the local namespace of the Route.
+
+                            Note that there are specific rules for ParentRefs which cross namespace
+                            boundaries. Cross-namespace references are only valid if they are explicitly
+                            allowed by something in the namespace they are referring to. For example:
+                            Gateway has the AllowedRoutes field, and ReferenceGrant provides a
+                            generic way to enable any other kind of cross-namespace reference.
+
+                            <gateway:experimental:description>
+                            ParentRefs from a Route to a Service in the same namespace are "producer"
+                            routes, which apply default routing rules to inbound connections from
+                            any namespace to the Service.
+
+                            ParentRefs from a Route to a Service in a different namespace are
+                            "consumer" routes, and these routing rules are only applied to outbound
+                            connections originating from the same namespace as the Route, for which
+                            the intended destination of the connections are a Service targeted as a
+                            ParentRef of the Route.
+                            </gateway:experimental:description>
+
+                            Support: Core
+                          maxLength: 63
+                          minLength: 1
+                          pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                          type: string
+                        port:
+                          description: |-
+                            Port is the network port this Route targets. It can be interpreted
+                            differently based on the type of parent resource.
+
+                            When the parent resource is a Gateway, this targets all listeners
+                            listening on the specified port that also support this kind of Route(and
+                            select this Route). It's not recommended to set `Port` unless the
+                            networking behaviors specified in a Route must apply to a specific port
+                            as opposed to a listener(s) whose port(s) may be changed. When both Port
+                            and SectionName are specified, the name and port of the selected listener
+                            must match both specified values.
+
+                            <gateway:experimental:description>
+                            When the parent resource is a Service, this targets a specific port in the
+                            Service spec. When both Port (experimental) and SectionName are specified,
+                            the name and port of the selected port must match both specified values.
+                            </gateway:experimental:description>
+
+                            Implementations MAY choose to support other parent resources.
+                            Implementations supporting other types of parent resources MUST clearly
+                            document how/if Port is interpreted.
+
+                            For the purpose of status, an attachment is considered successful as
+                            long as the parent resource accepts it partially. For example, Gateway
+                            listeners can restrict which Routes can attach to them by Route kind,
+                            namespace, or hostname. If 1 of 2 Gateway listeners accept attachment
+                            from the referencing Route, the Route MUST be considered successfully
+                            attached. If no Gateway listeners accept attachment from this Route,
+                            the Route MUST be considered detached from the Gateway.
+
+                            Support: Extended
+                          format: int32
+                          maximum: 65535
+                          minimum: 1
+                          type: integer
+                        sectionName:
+                          description: |-
+                            SectionName is the name of a section within the target resource. In the
+                            following resources, SectionName is interpreted as the following:
+
+                            * Gateway: Listener name. When both Port (experimental) and SectionName
+                            are specified, the name and port of the selected listener must match
+                            both specified values.
+                            * Service: Port name. When both Port (experimental) and SectionName
+                            are specified, the name and port of the selected listener must match
+                            both specified values.
+
+                            Implementations MAY choose to support attaching Routes to other resources.
+                            If that is the case, they MUST clearly document how SectionName is
+                            interpreted.
+
+                            When unspecified (empty string), this will reference the entire resource.
+                            For the purpose of status, an attachment is considered successful if at
+                            least one section in the parent resource accepts it. For example, Gateway
+                            listeners can restrict which Routes can attach to them by Route kind,
+                            namespace, or hostname. If 1 of 2 Gateway listeners accept attachment from
+                            the referencing Route, the Route MUST be considered successfully
+                            attached. If no Gateway listeners accept attachment from this Route, the
+                            Route MUST be considered detached from the Gateway.
+
+                            Support: Core
+                          maxLength: 253
+                          minLength: 1
+                          pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                          type: string
+                      required:
+                      - name
+                      type: object
+                    conditions:
+                      description: Conditions describes the status of the Policy with
+                        respect to the given Ancestor.
+                      items:
+                        description: Condition contains details for one aspect of
+                          the current state of this API Resource.
+                        properties:
+                          lastTransitionTime:
+                            description: |-
+                              lastTransitionTime is the last time the condition transitioned from one status to another.
+                              This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                            format: date-time
+                            type: string
+                          message:
+                            description: |-
+                              message is a human readable message indicating details about the transition.
+                              This may be an empty string.
+                            maxLength: 32768
+                            type: string
+                          observedGeneration:
+                            description: |-
+                              observedGeneration represents the .metadata.generation that the condition was set based upon.
+                              For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                              with respect to the current state of the instance.
+                            format: int64
+                            minimum: 0
+                            type: integer
+                          reason:
+                            description: |-
+                              reason contains a programmatic identifier indicating the reason for the condition's last transition.
+                              Producers of specific condition types may define expected values and meanings for this field,
+                              and whether the values are considered a guaranteed API.
+                              The value should be a CamelCase string.
+                              This field may not be empty.
+                            maxLength: 1024
+                            minLength: 1
+                            pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                            type: string
+                          status:
+                            description: status of the condition, one of True, False,
+                              Unknown.
+                            enum:
+                            - "True"
+                            - "False"
+                            - Unknown
+                            type: string
+                          type:
+                            description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                            maxLength: 316
+                            pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                            type: string
+                        required:
+                        - lastTransitionTime
+                        - message
+                        - reason
+                        - status
+                        - type
+                        type: object
+                      type: array
+                      x-kubernetes-list-map-keys:
+                      - type
+                      x-kubernetes-list-type: map
+                  required:
+                  - ancestorRef
+                  type: object
+                type: array
             type: object
+        required:
+        - spec
         type: object
     served: true
     storage: true
@@ -45686,6 +45998,85 @@ spec:
                     required:
                     - maxRequestBytes
                     type: object
+                  contextExtensions:
+                    description: |-
+                      ContextExtensions are analogous to http_request.headers, however these
+                      contents will not be sent to the upstream server. This provides an
+                      extension mechanism for sending additional information to the auth server
+                      without modifying the proto definition. It maps to the internal opaque
+                      context in the filter chain.
+                    items:
+                      description: |-
+                        ContextExtension is analogous to http_request.headers, however these
+                        contents will not be sent to the upstream server. This provides an
+                        extension mechanism for sending additional information to the auth server
+                        without modifying the proto definition. It maps to the internal opaque
+                        context in the filter chain.
+                      properties:
+                        name:
+                          description: Name of the context extension.
+                          type: string
+                        type:
+                          default: Value
+                          description: |-
+                            Type is the type of method to use to read the ContextExtension value.
+                            Valid values are Value and ValueRef, default is Value.
+                          enum:
+                          - Value
+                          - ValueRef
+                          type: string
+                        value:
+                          description: Value of the context extension.
+                          type: string
+                        valueRef:
+                          description: ValueRef for the context extension's value.
+                          properties:
+                            group:
+                              description: |-
+                                Group is the group of the referent. For example, "gateway.networking.k8s.io".
+                                When unspecified or empty string, core API group is inferred.
+                              maxLength: 253
+                              pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                              type: string
+                            key:
+                              description: The key to select.
+                              type: string
+                            kind:
+                              description: Kind is kind of the referent. For example
+                                "HTTPRoute" or "Service".
+                              maxLength: 63
+                              minLength: 1
+                              pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
+                              type: string
+                            name:
+                              description: Name is the name of the referent.
+                              maxLength: 253
+                              minLength: 1
+                              type: string
+                          required:
+                          - group
+                          - key
+                          - kind
+                          - name
+                          type: object
+                          x-kubernetes-validations:
+                          - message: Only a reference to an object of kind ConfigMap
+                              or Secret belonging to default v1 API group is supported.
+                            rule: self.kind in ['ConfigMap', 'Secret'] && self.group
+                              in ['', 'v1']
+                      required:
+                      - name
+                      - type
+                      type: object
+                      x-kubernetes-validations:
+                      - message: Exactly one of value or valueRef must be set with
+                          correct type.
+                        rule: (self.type == 'Value' && has(self.value) && !has(self.valueRef))
+                          || (self.type == 'ValueRef' && !has(self.value) && has(self.valueRef))
+                    type: array
+                    x-kubernetes-list-map-keys:
+                    - name
+                    x-kubernetes-list-type: map
                   failOpen:
                     default: false
                     description: |-
