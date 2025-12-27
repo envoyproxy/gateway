@@ -13,7 +13,9 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/rest"
 	"k8s.io/klog/v2"
 	"k8s.io/utils/ptr"
@@ -64,6 +66,12 @@ var (
 	webhookTLSCertDir = "/certs"
 	// webhookTLSPort is the port for the webhook server to listen on.
 	webhookTLSPort = 9443
+	// Supported Gateway API GVKs
+	// controller-runtime cache requires concrete GVKs.
+	// Unstructured caching is enabled per GVK using unstructured.Unstructured
+	gatewayAPIGVKs = []schema.GroupVersionKind{
+		{Group: "gateway.networking.k8s.io", Version: "v1beta1", Kind: "Gateway"},
+	}
 )
 
 func New(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server,
@@ -84,6 +92,11 @@ func newProvider(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server,
 		HealthProbeBindAddress:  healthProbeBindAddress,
 		LeaderElectionID:        "5b9825d2.gateway.envoyproxy.io",
 		LeaderElectionNamespace: svrCfg.ControllerNamespace,
+		Client: client.Options{
+			Cache: &client.CacheOptions{
+				Unstructured: true,
+			},
+		},
 	}
 
 	if metricsOpts != nil {
@@ -159,6 +172,14 @@ func newProvider(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server,
 			&appsv1.DaemonSet{}: {
 				UnsafeDisableDeepCopy: ptr.To(true),
 			},
+		}
+	}
+
+	for _, gvk := range gatewayAPIGVKs {
+		u := &unstructured.Unstructured{}
+		u.SetGroupVersionKind(gvk)
+		mgrOpts.Cache.ByObject[u] = cache.ByObject{
+			UnsafeDisableDeepCopy: ptr.To(true),
 		}
 	}
 	// ProxyTopologyInjector is the only component that interacts with Pods.
