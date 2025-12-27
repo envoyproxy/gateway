@@ -7261,6 +7261,13 @@ func (in *Tracing) DeepCopyInto(out *Tracing) {
 			(*out)[key] = *val.DeepCopy()
 		}
 	}
+	if in.Tags != nil {
+		in, out := &in.Tags, &out.Tags
+		*out = make(map[string]string, len(*in))
+		for key, val := range *in {
+			(*out)[key] = val
+		}
+	}
 	if in.SpanName != nil {
 		in, out := &in.SpanName, &out.SpanName
 		*out = new(TracingSpanName)
