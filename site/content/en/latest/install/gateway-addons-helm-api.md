@@ -585,7 +585,7 @@ An Add-ons Helm chart for Envoy Gateway
 | prometheus.prometheus-node-exporter.enabled | bool | `false` |  |
 | prometheus.prometheus-pushgateway.enabled | bool | `false` |  |
 | prometheus.server.fullnameOverride | string | `"prometheus"` |  |
-| prometheus.server.global.scrape_interval | string | `"15s"` |  |
+| prometheus.server.global.scrape_interval | string | `"10s"` |  |
 | prometheus.server.image.repository | string | `"prom/prometheus"` |  |
 | prometheus.server.persistentVolume.enabled | bool | `false` |  |
 | prometheus.server.readinessProbeInitialDelay | int | `0` |  |
