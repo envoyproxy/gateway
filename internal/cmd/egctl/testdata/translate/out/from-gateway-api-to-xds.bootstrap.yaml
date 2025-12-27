@@ -150,3 +150,14 @@ xds:
                         cluster: prometheus_stats
                 statPrefix: eg-stats-http
           name: envoy-gateway-proxy-stats-0.0.0.0-19001
+      statsConfig:
+        statsTags:
+        - regex: \.zone(\.(([^\.]+)\.))
+          tagName: from_zone
+        - regex: \.zone\.[^\.]+\.(([^\.]+)\.)
+          tagName: to_zone
+        - regex: ^cluster(\..+\.(.+))\.total_match_count$
+          tagName: socket_match_name
+        - regex: circuit_breakers\.((.+?)\.).+
+          tagName: priority
+        useAllDefaultTags: true

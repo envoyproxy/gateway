@@ -189,7 +189,9 @@ func (*wasm) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir.HTTPL
 
 	for _, ep := range irRoute.EnvoyExtensions.Wasms {
 		filterName := wasmFilterName(&ep)
-		if err := enableFilterOnRoute(route, filterName); err != nil {
+		if err := enableFilterOnRoute(route, filterName, &routev3.FilterConfig{
+			Config: &anypb.Any{},
+		}); err != nil {
 			return err
 		}
 	}

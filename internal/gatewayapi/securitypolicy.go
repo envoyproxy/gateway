@@ -7,6 +7,7 @@ package gatewayapi
 
 import (
 	"crypto/tls"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -1816,15 +1817,16 @@ func (t *Translator) buildExtAuth(
 	envoyProxy *egv1a1.EnvoyProxy,
 ) (*ir.ExtAuth, error) {
 	var (
-		http            = policy.Spec.ExtAuth.HTTP
-		grpc            = policy.Spec.ExtAuth.GRPC
-		backendRefs     []egv1a1.BackendRef
-		backendSettings *egv1a1.ClusterSettings
-		protocol        ir.AppProtocol
-		rd              *ir.RouteDestination
-		authority       string
-		err             error
-		traffic         *ir.TrafficFeatures
+		http              = policy.Spec.ExtAuth.HTTP
+		grpc              = policy.Spec.ExtAuth.GRPC
+		backendRefs       []egv1a1.BackendRef
+		backendSettings   *egv1a1.ClusterSettings
+		protocol          ir.AppProtocol
+		rd                *ir.RouteDestination
+		authority         string
+		err               error
+		traffic           *ir.TrafficFeatures
+		contextExtensions []*ir.ContextExtention
 	)
 
 	// These are sanity checks, they should never happen because the API server
@@ -1888,13 +1890,19 @@ func (t *Translator) buildExtAuth(
 	if traffic, err = translateTrafficFeatures(backendSettings); err != nil {
 		return nil, err
 	}
+
+	if contextExtensions, err = t.buildContextExtensions(policy.Spec.ExtAuth.ContextExtensions, policy.Namespace); err != nil {
+		return nil, err
+	}
+
 	extAuth := &ir.ExtAuth{
-		Name:             irConfigName(policy),
-		HeadersToExtAuth: policy.Spec.ExtAuth.HeadersToExtAuth,
-		FailOpen:         policy.Spec.ExtAuth.FailOpen,
-		Traffic:          traffic,
-		RecomputeRoute:   policy.Spec.ExtAuth.RecomputeRoute,
-		Timeout:          parseExtAuthTimeout(policy.Spec.ExtAuth.Timeout),
+		Name:              irConfigName(policy),
+		HeadersToExtAuth:  policy.Spec.ExtAuth.HeadersToExtAuth,
+		ContextExtensions: contextExtensions,
+		FailOpen:          policy.Spec.ExtAuth.FailOpen,
+		Traffic:           traffic,
+		RecomputeRoute:    policy.Spec.ExtAuth.RecomputeRoute,
+		Timeout:           parseExtAuthTimeout(policy.Spec.ExtAuth.Timeout),
 	}
 
 	if http != nil {
@@ -1932,6 +1940,72 @@ func parseExtAuthTimeout(timeout *gwapiv1.Duration) *metav1.Duration {
 	return &metav1.Duration{
 		Duration: d,
 	}
+}
+
+func (t *Translator) buildContextExtensions(
+	contextExtensions []*egv1a1.ContextExtension,
+	policyNs string,
+) ([]*ir.ContextExtention, error) {
+	if len(contextExtensions) == 0 {
+		return nil, nil
+	}
+
+	ctxExts := make([]*ir.ContextExtention, 0, len(contextExtensions))
+	for _, ext := range contextExtensions {
+		var value ir.PrivateBytes
+		if ext.Type == egv1a1.ContextExtensionValueTypeValueRef {
+			var err error
+			if value, err = t.getContextExtensionValueFromRef(ext.ValueRef, policyNs); err != nil {
+				return nil, err
+			}
+		} else if ext.Value != nil {
+			value = ir.PrivateBytes(*ext.Value)
+		}
+
+		ctxExts = append(ctxExts, &ir.ContextExtention{Name: ext.Name, Value: value})
+	}
+
+	return ctxExts, nil
+}
+
+// getContextExtensionValueFromRef assumes the local object reference points to
+// a Kubernetes ConfigMap or Secret.
+func (t *Translator) getContextExtensionValueFromRef(
+	valueRef *egv1a1.LocalObjectKeyReference,
+	policyNs string,
+) (ir.PrivateBytes, error) {
+	if valueRef == nil {
+		return nil, errors.New("unexpected nil reference")
+	}
+
+	switch valueRef.Kind {
+	case resource.KindConfigMap:
+		cm := t.GetConfigMap(policyNs, string(valueRef.Name))
+		if cm != nil {
+			s, dataOk := cm.Data[valueRef.Key]
+			if !dataOk {
+				return nil, fmt.Errorf("can't find the key %q in the referenced configmap %q", valueRef.Key, valueRef.Name)
+			}
+			return ir.PrivateBytes(s), nil
+		}
+		return nil, fmt.Errorf("can't find the referenced configmap %q in namespace %q", valueRef.Name, policyNs)
+	case resource.KindSecret:
+		sec := t.GetSecret(policyNs, string(valueRef.Name))
+		if sec != nil {
+			b, dataOk := sec.Data[valueRef.Key]
+			if !dataOk {
+				return nil, fmt.Errorf("can't find the key %q in the referenced secret %q", valueRef.Key, valueRef.Name)
+			}
+			dbuf := make([]byte, base64.StdEncoding.DecodedLen(len(b)))
+			n, err := base64.StdEncoding.Decode(dbuf, b)
+			if err != nil {
+				return nil, fmt.Errorf("error decoding the base64 value of the key %q in the referenced secret %q: %w", valueRef.Key, valueRef.Name, err)
+			}
+			return ir.PrivateBytes(dbuf[:n]), nil
+		}
+		return nil, fmt.Errorf("can't find the referenced secret %q in namespace %q", valueRef.Name, policyNs)
+	}
+	return nil, fmt.Errorf("unexpected reference to kind %q", valueRef.Kind)
 }
 
 func (t *Translator) backendRefAuthority(
