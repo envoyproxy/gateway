@@ -3892,7 +3892,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `type` | _[ProxyAccessLogFormatType](#proxyaccesslogformattype)_ |  true  |  | Type defines the type of accesslog format. |
+| `type` | _[ProxyAccessLogFormatType](#proxyaccesslogformattype)_ |  false  |  | Type defines the type of accesslog format.<br />When unset, both text and json can be specified. |
 | `text` | _string_ |  false  |  | Text defines the text accesslog format, following Envoy accesslog formatting,<br />It's required when the format type is "Text".<br />Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators) may be used in the format.<br />The [format string documentation](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#config-access-log-format-strings) provides more information. |
 | `json` | _object (keys:string, values:string)_ |  false  |  | JSON is additional attributes that describe the specific event occurrence.<br />Structured format for the envoy access logs. Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators)<br />can be used as values for fields within the Struct.<br />It's required when the format type is "JSON". |
 
