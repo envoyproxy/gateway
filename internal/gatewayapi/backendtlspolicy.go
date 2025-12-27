@@ -6,7 +6,6 @@
 package gatewayapi
 
 import (
-	"errors"
 	"fmt"
 	"reflect"
 
@@ -298,9 +297,6 @@ func (t *Translator) processBackendTLSPolicy(
 		)
 
 		reason := gwapiv1.BackendTLSPolicyReasonInvalidCACertificateRef
-		if errors.Is(err, ErrBackendTLSPolicyInvalidKind) {
-			reason = gwapiv1.BackendTLSPolicyReasonInvalidKind
-		}
 
 		status.SetConditionForPolicyAncestors(&policy.Status,
 			ancestorRefs,
