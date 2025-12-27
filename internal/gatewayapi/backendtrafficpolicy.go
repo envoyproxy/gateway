@@ -1583,8 +1583,9 @@ func buildCompression(compression, compressor []*egv1a1.Compression) []*ir.Compr
 				(c.Type == egv1a1.BrotliCompressorType && c.Brotli != nil) ||
 				(c.Type == egv1a1.ZstdCompressorType && c.Zstd != nil) {
 				irCompression = append(irCompression, &ir.Compression{
-					Type:        c.Type,
-					ChooseFirst: i == 0, // only the first compressor is marked as ChooseFirst
+					Type:             c.Type,
+					ChooseFirst:      i == 0, // only the first compressor is marked as ChooseFirst
+					MinContentLength: c.MinContentLength,
 				})
 			}
 		}
@@ -1598,8 +1599,9 @@ func buildCompression(compression, compressor []*egv1a1.Compression) []*ir.Compr
 	irCompression := make([]*ir.Compression, 0, len(compression))
 	for i, c := range compression {
 		irCompression = append(irCompression, &ir.Compression{
-			Type:        c.Type,
-			ChooseFirst: i == 0, // only the first compressor is marked as ChooseFirst
+			Type:             c.Type,
+			ChooseFirst:      i == 0, // only the first compressor is marked as ChooseFirst
+			MinContentLength: c.MinContentLength,
 		})
 	}
 

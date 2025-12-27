@@ -55,4 +55,13 @@ type Compression struct {
 	//
 	// +optional
 	Zstd *ZstdCompressor `json:"zstd,omitempty"`
+
+	// MinContentLength defines the minimum response size in bytes to apply compression.
+	// Responses smaller than this threshold will not be compressed.
+	// If not specified, Envoy's default of 30 bytes is used.
+	// Must be at least 30 bytes as enforced by Envoy Proxy.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=30
+	MinContentLength *uint32 `json:"minContentLength,omitempty"`
 }
