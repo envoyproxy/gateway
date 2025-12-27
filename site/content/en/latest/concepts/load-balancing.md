@@ -23,6 +23,7 @@ Envoy Gateway supports several load balancing strategies that determine how traf
 - **Random** – Chooses a backend at random to balance load
 - **Least Request** – Sends the request to the backend with the fewest active requests (this is the default)
 - **Consistent Hash** – Routes requests based on a hash (e.g., client IP or header), which helps keep repeat requests going to the same backend (useful for session affinity)
+- **Client-Side Weighted Round Robin (CS-WRR)** – Uses client-observed load reports (e.g., ORCA metrics) to dynamically weight endpoints; if no metrics are available, it behaves similar to even-weight round robin
 
 If no load balancing strategy is specified, Envoy Gateway uses **Least Request** by default.
 
