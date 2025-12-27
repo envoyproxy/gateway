@@ -23752,6 +23752,17 @@ spec:
                         - client
                         - server
                         type: object
+                      tags:
+                        additionalProperties:
+                          type: string
+                        description: |-
+                          Tags defines the custom tags to add to each span.
+                          Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators) may be used in the value.
+                          The [format string documentation](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#config-access-log-format-strings) provides more information.
+                          If provider is kubernetes, pod name and namespace are added by default.
+
+                          Same keys take precedence over CustomTags.
+                        type: object
                     type: object
                 type: object
               timeout:
@@ -44963,6 +44974,17 @@ spec:
                         required:
                         - client
                         - server
+                        type: object
+                      tags:
+                        additionalProperties:
+                          type: string
+                        description: |-
+                          Tags defines the custom tags to add to each span.
+                          Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators) may be used in the value.
+                          The [format string documentation](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#config-access-log-format-strings) provides more information.
+                          If provider is kubernetes, pod name and namespace are added by default.
+
+                          Same keys take precedence over CustomTags.
                         type: object
                     required:
                     - provider
