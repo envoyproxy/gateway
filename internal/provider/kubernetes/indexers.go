@@ -612,6 +612,22 @@ func secretSecurityPolicyIndexFunc(rawObj client.Object) []string {
 			}.String(),
 		)
 	}
+
+	if securityPolicy.Spec.ExtAuth != nil && len(securityPolicy.Spec.ExtAuth.ContextExtensions) > 0 {
+		for _, ctxExt := range securityPolicy.Spec.ExtAuth.ContextExtensions {
+			if ctxExt.Type == egv1a1.ContextExtensionValueTypeValueRef &&
+				ctxExt.ValueRef != nil &&
+				ctxExt.ValueRef.Kind == resource.KindSecret {
+				values = append(values,
+					types.NamespacedName{
+						Namespace: securityPolicy.Namespace,
+						Name:      string(ctxExt.ValueRef.Name),
+					}.String(),
+				)
+			}
+		}
+	}
+
 	return values
 }
 
@@ -665,23 +681,39 @@ func backendSecurityPolicyIndexFunc(rawObj client.Object) []string {
 
 func configMapSecurityPolicyIndexFunc(rawObj client.Object) []string {
 	securityPolicy := rawObj.(*egv1a1.SecurityPolicy)
+	values := []string{}
 
 	if securityPolicy.Spec.JWT != nil {
 		for _, provider := range securityPolicy.Spec.JWT.Providers {
 			if provider.LocalJWKS != nil &&
 				provider.LocalJWKS.Type != nil &&
 				*provider.LocalJWKS.Type == egv1a1.LocalJWKSTypeValueRef {
-				return []string{
+				values = append(values,
 					types.NamespacedName{
 						Namespace: securityPolicy.Namespace,
 						Name:      string(provider.LocalJWKS.ValueRef.Name),
 					}.String(),
-				}
+				)
 			}
 		}
 	}
 
-	return []string{}
+	if securityPolicy.Spec.ExtAuth != nil && len(securityPolicy.Spec.ExtAuth.ContextExtensions) > 0 {
+		for _, ctxExt := range securityPolicy.Spec.ExtAuth.ContextExtensions {
+			if ctxExt.Type == egv1a1.ContextExtensionValueTypeValueRef &&
+				ctxExt.ValueRef != nil &&
+				ctxExt.ValueRef.Kind == resource.KindConfigMap {
+				values = append(values,
+					types.NamespacedName{
+						Namespace: securityPolicy.Namespace,
+						Name:      string(ctxExt.ValueRef.Name),
+					}.String(),
+				)
+			}
+		}
+	}
+
+	return values
 }
 
 // addCtpIndexers adds indexing on ClientTrafficPolicy, for ConfigMap or Secret objects that are
