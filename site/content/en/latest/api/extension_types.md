@@ -475,7 +475,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `caCertificateRefs` | _LocalObjectReference array_ |  false  |  | CACertificateRefs contains one or more references to Kubernetes objects that<br />contain TLS certificates of the Certificate Authorities that can be used<br />as a trust anchor to validate the certificates presented by the backend.<br />A single reference to a Kubernetes ConfigMap or a Kubernetes Secret,<br />with the CA certificate in a key named `ca.crt` is currently supported.<br />If CACertificateRefs is empty or unspecified, then WellKnownCACertificates must be<br />specified. Only one of CACertificateRefs or WellKnownCACertificates may be specified,<br />not both. |
+| `caCertificateRefs` | _[LocalObjectReference](#localobjectreference) array_ |  false  |  | CACertificateRefs contains one or more references to Kubernetes objects that<br />contain TLS certificates of the Certificate Authorities that can be used<br />as a trust anchor to validate the certificates presented by the backend.<br />A single reference to a Kubernetes ConfigMap or a Kubernetes Secret,<br />with the CA certificate in a key named `ca.crt` is currently supported.<br />If CACertificateRefs is empty or unspecified, then WellKnownCACertificates must be<br />specified. Only one of CACertificateRefs or WellKnownCACertificates may be specified,<br />not both. |
 | `wellKnownCACertificates` | _[WellKnownCACertificatesType](#wellknowncacertificatestype)_ |  false  |  | WellKnownCACertificates specifies whether system CA certificates may be used in<br />the TLS handshake between the gateway and backend pod.<br />If WellKnownCACertificates is unspecified or empty (""), then CACertificateRefs<br />must be specified with at least one entry for a valid configuration. Only one of<br />CACertificateRefs or WellKnownCACertificates may be specified, not both. |
 | `insecureSkipVerify` | _boolean_ |  false  | false | InsecureSkipVerify indicates whether the upstream's certificate verification<br />should be skipped. Defaults to "false". |
 | `sni` | _[PreciseHostname](#precisehostname)_ |  false  |  | SNI is specifies the SNI value used when establishing an upstream TLS connection to the backend.<br />Envoy Gateway will use the HTTP host header value for SNI, when all resources referenced in BackendRefs are:<br />1. Backend resources that do not set SNI, or<br />2. Service/ServiceImport resources that do not have a BackendTLSPolicy attached to them<br />When a BackendTLSPolicy attaches to a Backend resource, the BackendTLSPolicy's Hostname value takes precedence<br />over this value. |
@@ -976,6 +976,42 @@ _Appears in:_
 | `Headers` | HeadersConsistentHashType hashes based on multiple request headers.<br /> | 
 | `Cookie` | CookieConsistentHashType hashes based on a cookie.<br /> | 
 | `QueryParams` | QueryParamsConsistentHashType hashes based on a multiple query parameter.<br /> | 
+
+
+#### ContextExtension
+
+
+
+ContextExtension is analogous to http_request.headers, however these
+contents will not be sent to the upstream server. This provides an
+extension mechanism for sending additional information to the auth server
+without modifying the proto definition. It maps to the internal opaque
+context in the filter chain.
+
+_Appears in:_
+- [ExtAuth](#extauth)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `name` | _string_ |  true  |  | Name of the context extension. |
+| `type` | _[ContextExtensionValueType](#contextextensionvaluetype)_ |  true  | Value | Type is the type of method to use to read the ContextExtension value.<br />Valid values are Value and ValueRef, default is Value. |
+| `value` | _string_ |  false  |  | Value of the context extension. |
+| `valueRef` | _[LocalObjectKeyReference](#localobjectkeyreference)_ |  false  |  | ValueRef for the context extension's value. |
+
+
+#### ContextExtensionValueType
+
+_Underlying type:_ _string_
+
+ContextExtensionValueType defines the types of values for ContextExtension supported by Envoy Gateway.
+
+_Appears in:_
+- [ContextExtension](#contextextension)
+
+| Value | Description |
+| ----- | ----------- |
+| `Value` | ContextExtensionValueTypeValue defines the "Value" ContextExtension type.<br /> | 
+| `ValueRef` | ContextExtensionValueTypeValueRef defines the "ValueRef" ContextExtension type.<br /> | 
 
 
 #### Cookie
@@ -1866,6 +1902,7 @@ _Appears in:_
 | `timeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#duration)_ |  false  |  | Timeout defines the timeout for requests to the external authorization service.<br />If not specified, defaults to 10 seconds. |
 | `failOpen` | _boolean_ |  false  | false | FailOpen is a switch used to control the behavior when a response from the External Authorization service cannot be obtained.<br />If FailOpen is set to true, the system allows the traffic to pass through.<br />Otherwise, if it is set to false or not set (defaulting to false),<br />the system blocks the traffic and returns a HTTP 5xx error, reflecting a fail-closed approach.<br />This setting determines whether to prioritize accessibility over strict security in case of authorization service failure.<br />If set to true, the External Authorization will also be bypassed if its configuration is invalid. |
 | `recomputeRoute` | _boolean_ |  false  |  | RecomputeRoute clears the route cache and recalculates the routing decision.<br />This field must be enabled if the headers added or modified by the ExtAuth are used for<br />route matching decisions. If the recomputation selects a new route, features targeting<br />the new matched route will be applied. |
+| `contextExtensions` | _[ContextExtension](#contextextension) array_ |  false  |  | ContextExtensions are analogous to http_request.headers, however these<br />contents will not be sent to the upstream server. This provides an<br />extension mechanism for sending additional information to the auth server<br />without modifying the proto definition. It maps to the internal opaque<br />context in the filter chain. |
 
 
 #### ExtProc
@@ -3329,6 +3366,23 @@ _Appears in:_
 | ----- | ----------- |
 | `Inline` | LocalJWKSTypeInline defines the "Inline" LocalJWKS type.<br /> | 
 | `ValueRef` | LocalJWKSTypeValueRef defines the "ValueRef" LocalJWKS type.<br /> | 
+
+
+#### LocalObjectKeyReference
+
+
+
+LocalObjectKeyReference selects a key from a local object.
+
+_Appears in:_
+- [ContextExtension](#contextextension)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `group` | _[Group](#group)_ |  true  |  | Group is the group of the referent. For example, "gateway.networking.k8s.io".<br />When unspecified or empty string, core API group is inferred. |
+| `kind` | _[Kind](#kind)_ |  true  |  | Kind is kind of the referent. For example "HTTPRoute" or "Service". |
+| `name` | _[ObjectName](#objectname)_ |  true  |  | Name is the name of the referent. |
+| `key` | _string_ |  true  |  | The key to select. |
 
 
 #### LocalRateLimit
