@@ -558,8 +558,9 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 		if accessLog.Format != nil {
 			format = *accessLog.Format
 		} else {
+			defaultType := egv1a1.ProxyAccessLogFormatTypeJSON
 			format = egv1a1.ProxyAccessLogFormat{
-				Type: egv1a1.ProxyAccessLogFormatTypeJSON,
+				Type: &defaultType,
 				// Empty means default format
 			}
 		}
@@ -596,8 +597,7 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 					continue
 				}
 
-				switch format.Type {
-				case egv1a1.ProxyAccessLogFormatTypeText:
+				if format.Type != nil && *format.Type == egv1a1.ProxyAccessLogFormatTypeText {
 					al := &ir.TextAccessLog{
 						Format:     format.Text,
 						Path:       sink.File.Path,
@@ -605,7 +605,8 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 						LogType:    accessLogType,
 					}
 					irAccessLog.Text = append(irAccessLog.Text, al)
-				case egv1a1.ProxyAccessLogFormatTypeJSON:
+				} else {
+					// Default to JSON format if type is nil or JSON
 					al := &ir.JSONAccessLog{
 						JSON:       format.JSON,
 						Path:       sink.File.Path,
@@ -660,11 +661,11 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 					}
 					al.HTTP = http
 				}
-				switch format.Type {
-				case egv1a1.ProxyAccessLogFormatTypeJSON:
-					al.Attributes = format.JSON
-				case egv1a1.ProxyAccessLogFormatTypeText:
+				if format.Type != nil && *format.Type == egv1a1.ProxyAccessLogFormatTypeText {
 					al.Text = format.Text
+				} else {
+					// Default to JSON format if type is nil or JSON
+					al.Attributes = format.JSON
 				}
 
 				irAccessLog.ALS = append(irAccessLog.ALS, al)
@@ -710,11 +711,13 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 					al.Authority = host
 				}
 
-				switch format.Type {
-				case egv1a1.ProxyAccessLogFormatTypeJSON:
-					al.Attributes = format.JSON
-				case egv1a1.ProxyAccessLogFormatTypeText:
+				// For OpenTelemetry, text (body) and attributes can be used together.
+				// When format.Type is nil, both text and json from format can be used.
+				if format.Type == nil || *format.Type == egv1a1.ProxyAccessLogFormatTypeText {
 					al.Text = format.Text
+				}
+				if format.Type == nil || *format.Type == egv1a1.ProxyAccessLogFormatTypeJSON {
+					al.Attributes = format.JSON
 				}
 
 				irAccessLog.OpenTelemetry = append(irAccessLog.OpenTelemetry, al)

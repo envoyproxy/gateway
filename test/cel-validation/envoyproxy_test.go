@@ -14,6 +14,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/ptr"
@@ -307,13 +308,14 @@ func TestEnvoyProxyProvider(t *testing.T) {
 		{
 			desc: "invalid-ProxyAccessLogFormat",
 			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				invalidType := egv1a1.ProxyAccessLogFormatType("foo")
 				envoy.Spec = egv1a1.EnvoyProxySpec{
 					Telemetry: &egv1a1.ProxyTelemetry{
 						AccessLog: &egv1a1.ProxyAccessLog{
 							Settings: []egv1a1.ProxyAccessLogSetting{
 								{
 									Format: &egv1a1.ProxyAccessLogFormat{
-										Type: "foo",
+										Type: &invalidType,
 									},
 								},
 							},
@@ -332,7 +334,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 							Settings: []egv1a1.ProxyAccessLogSetting{
 								{
 									Format: &egv1a1.ProxyAccessLogFormat{
-										Type: egv1a1.ProxyAccessLogFormatTypeText,
+										Type: ptr.To(egv1a1.ProxyAccessLogFormatTypeText),
 									},
 									Sinks: []egv1a1.ProxyAccessLogSink{
 										{
@@ -359,7 +361,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 							Settings: []egv1a1.ProxyAccessLogSetting{
 								{
 									Format: &egv1a1.ProxyAccessLogFormat{
-										Type: egv1a1.ProxyAccessLogFormatTypeJSON,
+										Type: ptr.To(egv1a1.ProxyAccessLogFormatTypeJSON),
 									},
 									Sinks: []egv1a1.ProxyAccessLogSink{
 										{
@@ -386,7 +388,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 							Settings: []egv1a1.ProxyAccessLogSetting{
 								{
 									Format: &egv1a1.ProxyAccessLogFormat{
-										Type: egv1a1.ProxyAccessLogFormatTypeJSON,
+										Type: ptr.To(egv1a1.ProxyAccessLogFormatTypeJSON),
 										Text: ptr.To("[%START_TIME%]"),
 									},
 									Sinks: []egv1a1.ProxyAccessLogSink{
@@ -414,7 +416,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 							Settings: []egv1a1.ProxyAccessLogSetting{
 								{
 									Format: &egv1a1.ProxyAccessLogFormat{
-										Type: egv1a1.ProxyAccessLogFormatTypeJSON,
+										Type: ptr.To(egv1a1.ProxyAccessLogFormatTypeJSON),
 										JSON: map[string]string{
 											"foo": "bar",
 										},
@@ -441,7 +443,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 							Settings: []egv1a1.ProxyAccessLogSetting{
 								{
 									Format: &egv1a1.ProxyAccessLogFormat{
-										Type: egv1a1.ProxyAccessLogFormatTypeText,
+										Type: ptr.To(egv1a1.ProxyAccessLogFormatTypeText),
 										Text: ptr.To("[%START_TIME%]"),
 									},
 									Sinks: []egv1a1.ProxyAccessLogSink{
@@ -466,7 +468,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 							Settings: []egv1a1.ProxyAccessLogSetting{
 								{
 									Format: &egv1a1.ProxyAccessLogFormat{
-										Type: egv1a1.ProxyAccessLogFormatTypeText,
+										Type: ptr.To(egv1a1.ProxyAccessLogFormatTypeText),
 										Text: ptr.To("[%START_TIME%]"),
 									},
 									Sinks: []egv1a1.ProxyAccessLogSink{
@@ -491,7 +493,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 							Settings: []egv1a1.ProxyAccessLogSetting{
 								{
 									Format: &egv1a1.ProxyAccessLogFormat{
-										Type: egv1a1.ProxyAccessLogFormatTypeText,
+										Type: ptr.To(egv1a1.ProxyAccessLogFormatTypeText),
 										Text: ptr.To("[%START_TIME%]"),
 									},
 									Sinks: []egv1a1.ProxyAccessLogSink{
@@ -706,15 +708,23 @@ func TestEnvoyProxyProvider(t *testing.T) {
 							Settings: []egv1a1.ProxyAccessLogSetting{
 								{
 									Format: &egv1a1.ProxyAccessLogFormat{
-										Type: "Text",
+										Type: ptr.To(egv1a1.ProxyAccessLogFormatTypeText),
 										Text: ptr.To("[%START_TIME%]"),
 									},
 									Sinks: []egv1a1.ProxyAccessLogSink{
 										{
 											Type: egv1a1.ProxyAccessLogSinkTypeOpenTelemetry,
 											OpenTelemetry: &egv1a1.OpenTelemetryEnvoyProxyAccessLog{
-												Host: ptr.To("0.0.0.0"),
-												Port: 8080,
+												BackendCluster: egv1a1.BackendCluster{
+													BackendRefs: []egv1a1.BackendRef{
+														{
+															BackendObjectReference: gwapiv1.BackendObjectReference{
+																Name: "otel-collector",
+																Port: ptr.To(gwapiv1.PortNumber(4317)),
+															},
+														},
+													},
+												},
 											},
 										},
 									},
@@ -734,7 +744,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 							Settings: []egv1a1.ProxyAccessLogSetting{
 								{
 									Format: &egv1a1.ProxyAccessLogFormat{
-										Type: "Text",
+										Type: ptr.To(egv1a1.ProxyAccessLogFormatTypeText),
 										Text: ptr.To("[%START_TIME%]"),
 									},
 									Sinks: []egv1a1.ProxyAccessLogSink{
@@ -771,7 +781,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 							Settings: []egv1a1.ProxyAccessLogSetting{
 								{
 									Format: &egv1a1.ProxyAccessLogFormat{
-										Type: "Text",
+										Type: ptr.To(egv1a1.ProxyAccessLogFormatTypeText),
 										Text: ptr.To("[%START_TIME%]"),
 									},
 									Sinks: []egv1a1.ProxyAccessLogSink{
@@ -808,7 +818,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 							Settings: []egv1a1.ProxyAccessLogSetting{
 								{
 									Format: &egv1a1.ProxyAccessLogFormat{
-										Type: "Text",
+										Type: ptr.To(egv1a1.ProxyAccessLogFormatTypeText),
 										Text: ptr.To("[%START_TIME%]"),
 									},
 									Sinks: []egv1a1.ProxyAccessLogSink{
@@ -845,7 +855,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 							Settings: []egv1a1.ProxyAccessLogSetting{
 								{
 									Format: &egv1a1.ProxyAccessLogFormat{
-										Type: "Text",
+										Type: ptr.To(egv1a1.ProxyAccessLogFormatTypeText),
 										Text: ptr.To("[%START_TIME%]"),
 									},
 									Sinks: []egv1a1.ProxyAccessLogSink{
@@ -881,7 +891,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 							Settings: []egv1a1.ProxyAccessLogSetting{
 								{
 									Format: &egv1a1.ProxyAccessLogFormat{
-										Type: "Text",
+										Type: ptr.To(egv1a1.ProxyAccessLogFormatTypeText),
 										Text: ptr.To("[%START_TIME%]"),
 									},
 									Sinks: []egv1a1.ProxyAccessLogSink{
@@ -925,8 +935,16 @@ func TestEnvoyProxyProvider(t *testing.T) {
 								{
 									Type: egv1a1.MetricSinkTypeOpenTelemetry,
 									OpenTelemetry: &egv1a1.ProxyOpenTelemetrySink{
-										Host: ptr.To("0.0.0.0"),
-										Port: 3217,
+										BackendCluster: egv1a1.BackendCluster{
+											BackendRefs: []egv1a1.BackendRef{
+												{
+													BackendObjectReference: gwapiv1.BackendObjectReference{
+														Name: "otel-collector",
+														Port: ptr.To(gwapiv1.PortNumber(4317)),
+													},
+												},
+											},
+										},
 									},
 								},
 							},
@@ -1915,6 +1933,106 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			}
 			if len(missingErrorStrings) != 0 {
 				t.Errorf("Unexpected response while creating EnvoyProxy; got err=\n%v\n;missing strings within error=%q", err, missingErrorStrings)
+			}
+		})
+	}
+}
+
+func TestProxyAccessLogFormatNoType(t *testing.T) {
+	tests := []struct {
+		name          string
+		text          *string
+		json          map[string]string
+		sinkType      egv1a1.ProxyAccessLogSinkType
+		expectedError string
+	}{
+		{
+			name:     "no type with both text and json for OpenTelemetry sink",
+			text:     ptr.To("[%START_TIME%]"),
+			json:     map[string]string{"foo": "bar"},
+			sinkType: egv1a1.ProxyAccessLogSinkTypeOpenTelemetry,
+		},
+		{
+			name:     "no type with text only for OpenTelemetry sink",
+			text:     ptr.To("[%START_TIME%]"),
+			sinkType: egv1a1.ProxyAccessLogSinkTypeOpenTelemetry,
+		},
+		{
+			name:     "no type with json only for OpenTelemetry sink",
+			json:     map[string]string{"foo": "bar"},
+			sinkType: egv1a1.ProxyAccessLogSinkTypeOpenTelemetry,
+		},
+		{
+			name:          "no type with neither text nor json",
+			sinkType:      egv1a1.ProxyAccessLogSinkTypeOpenTelemetry,
+			expectedError: "at least one of text or json must be set",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var sinks []egv1a1.ProxyAccessLogSink
+			switch tt.sinkType {
+			case egv1a1.ProxyAccessLogSinkTypeOpenTelemetry:
+				sinks = []egv1a1.ProxyAccessLogSink{
+					{
+						Type: egv1a1.ProxyAccessLogSinkTypeOpenTelemetry,
+						OpenTelemetry: &egv1a1.OpenTelemetryEnvoyProxyAccessLog{
+							BackendCluster: egv1a1.BackendCluster{
+								BackendRefs: []egv1a1.BackendRef{
+									{
+										BackendObjectReference: gwapiv1.BackendObjectReference{
+											Name: "otel-collector",
+											Port: ptr.To(gwapiv1.PortNumber(4317)),
+										},
+									},
+								},
+							},
+						},
+					},
+				}
+			case egv1a1.ProxyAccessLogSinkTypeFile:
+				sinks = []egv1a1.ProxyAccessLogSink{
+					{
+						Type: egv1a1.ProxyAccessLogSinkTypeFile,
+						File: &egv1a1.FileEnvoyProxyAccessLog{Path: "/dev/stdout"},
+					},
+				}
+			}
+
+			proxy := &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      fmt.Sprintf("proxy-%v", time.Now().UnixNano()),
+					Namespace: metav1.NamespaceDefault,
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						AccessLog: &egv1a1.ProxyAccessLog{
+							Settings: []egv1a1.ProxyAccessLogSetting{
+								{
+									Format: &egv1a1.ProxyAccessLogFormat{
+										// Type is nil (unset) - non-discriminated mode
+										Text: tt.text,
+										JSON: tt.json,
+									},
+									Sinks: sinks,
+								},
+							},
+						},
+					},
+				},
+			}
+
+			err := c.Create(t.Context(), proxy)
+			t.Cleanup(func() {
+				_ = c.Delete(t.Context(), proxy)
+			})
+
+			if tt.expectedError == "" {
+				require.NoError(t, err)
+			} else {
+				require.Error(t, err)
+				require.Contains(t, strings.ToLower(err.Error()), strings.ToLower(tt.expectedError))
 			}
 		})
 	}
