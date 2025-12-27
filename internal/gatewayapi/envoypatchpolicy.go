@@ -26,9 +26,11 @@ func (t *Translator) ProcessEnvoyPatchPolicies(envoyPatchPolicies []*egv1a1.Envo
 			resolveErr  *status.PolicyResolveError
 			targetKind  string
 			irKey       string
+			gwXdsIR     *ir.Xds
+			ok          bool
 		)
 
-		refKind, refName := policy.Spec.TargetRef.Kind, policy.Spec.TargetRef.Name
+		refGroup, refKind, refName := policy.Spec.TargetRef.Group, policy.Spec.TargetRef.Kind, policy.Spec.TargetRef.Name
 		if t.MergeGateways {
 			targetKind = resource.KindGatewayClass
 			// if ref GatewayClass name is not same as t.GatewayClassName, it will be skipped in L53.
@@ -39,6 +41,26 @@ func (t *Translator) ProcessEnvoyPatchPolicies(envoyPatchPolicies []*egv1a1.Envo
 				Name:  refName,
 			}
 
+			gwXdsIR, ok = xdsIR[irKey]
+			if !ok {
+				// The TargetRef Gateway is not an accepted Gateway, then skip processing.
+				message := fmt.Sprintf(
+					"TargetRef.Group:%s TargetRef.Kind:%s TargetRef.Namespace:%s TargetRef.Name:%s not found or not accepted (MergeGateways=%t).",
+					refGroup, refKind, policy.Namespace, string(refName), t.MergeGateways,
+				)
+				resolveErr = &status.PolicyResolveError{
+					Reason:  gwapiv1.PolicyReasonInvalid,
+					Message: message,
+				}
+				status.SetResolveErrorForPolicyAncestor(&policy.Status,
+					&ancestorRef,
+					t.GatewayControllerName,
+					policy.Generation,
+					resolveErr,
+				)
+				continue
+			}
+
 		} else {
 			targetKind = resource.KindGateway
 			gatewayNN := types.NamespacedName{
@@ -47,12 +69,11 @@ func (t *Translator) ProcessEnvoyPatchPolicies(envoyPatchPolicies []*egv1a1.Envo
 			}
 			irKey = t.IRKey(gatewayNN)
 			ancestorRef = getAncestorRefForPolicy(gatewayNN, nil)
-		}
 
-		gwXdsIR, ok := xdsIR[irKey]
-		if !ok {
-			// The TargetRef Gateway is not an accepted Gateway, then skip processing.
-			continue
+			gwXdsIR, ok = xdsIR[irKey]
+			if !ok {
+				continue
+			}
 		}
 
 		// Create the IR with the context need to publish the status later
@@ -82,9 +103,9 @@ func (t *Translator) ProcessEnvoyPatchPolicies(envoyPatchPolicies []*egv1a1.Envo
 		}
 
 		// Ensure EnvoyPatchPolicy is targeting to a support type
-		if policy.Spec.TargetRef.Group != gwapiv1.GroupName || string(refKind) != targetKind {
+		if refGroup != gwapiv1.GroupName || string(refKind) != targetKind {
 			message := fmt.Sprintf("TargetRef.Group:%s TargetRef.Kind:%s, only TargetRef.Group:%s and TargetRef.Kind:%s is supported.",
-				policy.Spec.TargetRef.Group, policy.Spec.TargetRef.Kind, gwapiv1.GroupName, targetKind)
+				refGroup, policy.Spec.TargetRef.Kind, gwapiv1.GroupName, targetKind)
 
 			resolveErr = &status.PolicyResolveError{
 				Reason:  gwapiv1.PolicyReasonInvalid,
