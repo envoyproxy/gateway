@@ -5957,6 +5957,13 @@ func (in *ProxyTracing) DeepCopyInto(out *ProxyTracing) {
 			(*out)[key] = *val.DeepCopy()
 		}
 	}
+	if in.Tags != nil {
+		in, out := &in.Tags, &out.Tags
+		*out = make(map[string]string, len(*in))
+		for key, val := range *in {
+			(*out)[key] = val
+		}
+	}
 	in.Provider.DeepCopyInto(&out.Provider)
 }
 
