@@ -347,5 +347,37 @@ spec:
 EOF
 ```
 
+### Custom Tags
+
+You can add custom tags to the traces by setting the `telemetry.tracing.tags` in the [EnvoyProxy][envoy-proxy-crd] CRD.
+You can use the same format as Envoy's [access log command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators) to define the tag values.
+The following configurations show how to apply proxy with custom tags:
+
+```shell
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: otel
+  namespace: envoy-gateway-system
+spec:
+  telemetry:
+    tracing:
+      # sample 100% of requests
+      samplingRate: 100
+      provider:
+        backendRefs:
+        - name: otel-collector
+          namespace: monitoring
+          port: 4317
+        type: OpenTelemetry
+      tags:
+        # This is an example of using a literal as a tag value
+        provider: "otel"
+        "k8s.pod.name": "%ENVIRONMENT(ENVOY_POD_NAME)%"
+        "k8s.namespace.name": "%ENVIRONMENT(ENVOY_POD_NAMESPACE)%"
+        # This is an example of using a header value as a tag value
+        "header1": "%REQUEST_HEADER(X-Header-1)%"
+        "requestedServerName": "%REQUESTED_SERVER_NAME%
+```
 
 [envoy-proxy-crd]: ../../api/extension_types#envoyproxy

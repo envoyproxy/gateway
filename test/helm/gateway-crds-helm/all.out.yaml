@@ -23687,6 +23687,8 @@ spec:
                         description: |-
                           CustomTags defines the custom tags to add to each span.
                           If provider is kubernetes, pod name and namespace are added by default.
+
+                          Deprecated: Use Tags instead.
                         type: object
                       samplingFraction:
                         description: |-
@@ -43578,6 +43580,8 @@ spec:
                         description: |-
                           CustomTags defines the custom tags to add to each span.
                           If provider is kubernetes, pod name and namespace are added by default.
+
+                          Deprecated: Use Tags instead.
                         type: object
                       provider:
                         description: Provider defines the tracing provider.
