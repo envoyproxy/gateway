@@ -16,8 +16,8 @@ const (
 	KindBackendTrafficPolicy = "BackendTrafficPolicy"
 )
 
-// BackendTrafficPolicy allows the user to configure the behavior of the connection
-// between the Envoy Proxy listener and the backend service.
+// BackendTrafficPolicy allows the user to override the behavior of the connection
+// between the Envoy Proxy listener and the backend service for a specific xRoute.
 //
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:categories=envoy-gateway,shortName=btp
