@@ -26,6 +26,7 @@ bug fixes: |
   Fixed an issue where BackendTrafficPolicy does not validate maximum value of requestBuffer limit.
   Fixed an issue where observedGeneration is missing from the EnvoyPatchPolicy status.
   Fixed a nil pointer error when applying BackendTrafficPolicy to HTTPRoutes with no backendRefs.
+  Fixed ExternalTrafficPolicy not being applied to Envoy Service when ServiceType is NodePort.
 
 # Enhancements that improve performance.
 performance improvements: |
