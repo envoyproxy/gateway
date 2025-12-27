@@ -36,6 +36,21 @@ func hasSectionName(target *gwapiv1.LocalPolicyTargetReferenceWithSectionName) b
 	return target.SectionName != nil
 }
 
+// deprecatedFieldsUsedInClientTrafficPolicy returns a map of deprecated field paths to their alternatives.
+func deprecatedFieldsUsedInClientTrafficPolicy(policy *egv1a1.ClientTrafficPolicy) map[string]string {
+	deprecatedFields := make(map[string]string)
+	if policy.Spec.EnableProxyProtocol != nil {
+		deprecatedFields["spec.enableProxyProtocol"] = "spec.proxyProtocol"
+	}
+	if policy.Spec.Headers != nil && policy.Spec.Headers.PreserveXRequestID != nil {
+		deprecatedFields["spec.headers.preserveXRequestID"] = "spec.headers.requestID"
+	}
+	if policy.Spec.TargetRef != nil {
+		deprecatedFields["spec.targetRef"] = "spec.targetRefs"
+	}
+	return deprecatedFields
+}
+
 func (t *Translator) ProcessClientTrafficPolicies(
 	resources *resource.Resources,
 	gateways []*GatewayContext,
@@ -270,6 +285,11 @@ func (t *Translator) ProcessClientTrafficPolicies(
 
 				// Set Accepted condition if it is unset
 				status.SetAcceptedForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName, policy.Generation)
+
+				// Check for deprecated fields and set warning if any are found
+				if deprecatedFields := deprecatedFieldsUsedInClientTrafficPolicy(policy); len(deprecatedFields) > 0 {
+					status.SetDeprecatedFieldsWarningForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName, policy.Generation, deprecatedFields)
+				}
 			}
 		}
 	}
