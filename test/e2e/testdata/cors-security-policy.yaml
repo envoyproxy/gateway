@@ -11,6 +11,7 @@ spec:
     - path:
         type: PathPrefix
         value: /cors-exact
+      method: GET
     backendRefs:
     - name: infra-backend-v1
       port: 8080
@@ -57,6 +58,7 @@ spec:
     - path:
         type: PathPrefix
         value: /cors-wildcard
+      method: GET
     backendRefs:
     - name: infra-backend-v1
       port: 8080
