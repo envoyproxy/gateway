@@ -68,6 +68,7 @@ type LocalRateLimit struct {
 	// +optional
 	// +kubebuilder:validation:MaxItems=16
 	// +kubebuilder:validation:XValidation:rule="self.all(foo, !has(foo.cost) || !has(foo.cost.response))", message="response cost is not supported for Local Rate Limits"
+	// +kubebuilder:validation:XValidation:rule="self.all(foo, !has(foo.shadowMode))", message="shadow mode is not supported for Local Rate Limits"
 	Rules []RateLimitRule `json:"rules"`
 }
 
@@ -110,6 +111,15 @@ type RateLimitRule struct {
 	//
 	// +optional
 	Shared *bool `json:"shared,omitempty"`
+	// ShadowMode indicates whether this rate-limit rule runs in shadow mode.
+	// When enabled, all rate-limiting operations are performed (cache lookups,
+	// counter updates, telemetry generation), but the outcome is never enforced.
+	// The request always succeeds, even if the configured limit is exceeded.
+	//
+	// Only supported for Global Rate Limits.
+	//
+	// +optional
+	ShadowMode *bool `json:"shadowMode,omitempty"`
 }
 
 type RateLimitCost struct {
