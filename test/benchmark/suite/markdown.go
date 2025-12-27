@@ -70,7 +70,8 @@ func convertToMarkdownResult(r *BenchmarkCaseReport) (MarkdownResult, MarkdownMe
 	mm.Name = r.Title
 	metrics := getSamplesMinMaxMeans(r.Samples)
 	mm.ControlPlaneContainerMemory = metrics[0]
-	mm.ControlPlaneProcessMemory = metrics[2]
+	mm.ControlPlaneProcessMemory = metrics[1]
+	mm.ControlPlaneCPU = metrics[2]
 	mm.DataPlaneMemory = metrics[3]
 	mm.DataPlaneCPU = metrics[4]
 

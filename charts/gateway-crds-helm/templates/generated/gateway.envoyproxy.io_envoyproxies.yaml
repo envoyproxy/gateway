@@ -11027,8 +11027,9 @@ spec:
                                     The [format string documentation](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#config-access-log-format-strings) provides more information.
                                   type: string
                                 type:
-                                  description: Type defines the type of accesslog
-                                    format.
+                                  description: |-
+                                    Type defines the type of accesslog format.
+                                    When unset, both text and json can be specified.
                                   enum:
                                   - Text
                                   - JSON
@@ -11037,10 +11038,24 @@ spec:
                               x-kubernetes-validations:
                               - message: If AccessLogFormat type is Text, text field
                                   needs to be set.
-                                rule: 'self.type == ''Text'' ? has(self.text) : !has(self.text)'
+                                rule: 'has(self.type) && self.type == ''Text'' ? has(self.text)
+                                  : true'
+                              - message: If AccessLogFormat type is Text, json field
+                                  must not be set.
+                                rule: 'has(self.type) && self.type == ''Text'' ? !has(self.json)
+                                  : true'
                               - message: If AccessLogFormat type is JSON, json field
                                   needs to be set.
-                                rule: 'self.type == ''JSON'' ? has(self.json) : !has(self.json)'
+                                rule: 'has(self.type) && self.type == ''JSON'' ? has(self.json)
+                                  : true'
+                              - message: If AccessLogFormat type is JSON, text field
+                                  must not be set.
+                                rule: 'has(self.type) && self.type == ''JSON'' ? !has(self.text)
+                                  : true'
+                              - message: If AccessLogFormat type is unset, at least
+                                  one of text or json must be set.
+                                rule: '!has(self.type) ? (has(self.text) || has(self.json))
+                                  : true'
                             matches:
                               description: |-
                                 Matches defines the match conditions for accesslog in CEL expression.
@@ -16171,6 +16186,17 @@ spec:
                         maximum: 100
                         minimum: 0
                         type: integer
+                      tags:
+                        additionalProperties:
+                          type: string
+                        description: |-
+                          Tags defines the custom tags to add to each span.
+                          Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators) may be used in the value.
+                          The [format string documentation](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#config-access-log-format-strings) provides more information.
+                          If provider is kubernetes, pod name and namespace are added by default.
+
+                          Same keys take precedence over CustomTags.
+                        type: object
                     required:
                     - provider
                     type: object
