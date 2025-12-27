@@ -558,23 +558,27 @@ func buildEarlyHeaderMutation(headers *ir.HeaderSettings) []*corev3.TypedExtensi
 }
 
 func addServerNamesMatch(xdsListener *listenerv3.Listener, filterChain *listenerv3.FilterChain, hostnames []string) error {
-	// Skip adding ServerNames match for:
-	// 1. nil listeners
-	// 2. UDP (QUIC) listeners used for HTTP3
-	// 3. wildcard hostnames
-	// TODO(zhaohuabing): https://github.com/envoyproxy/gateway/issues/5660#issuecomment-3130314740
-	if xdsListener == nil || (xdsListener.GetAddress() != nil &&
-		xdsListener.GetAddress().GetSocketAddress() != nil &&
-		xdsListener.GetAddress().GetSocketAddress().GetProtocol() == corev3.SocketAddress_UDP) {
+	// Skip for nil listeners
+	if xdsListener == nil {
 		return nil
 	}
 
-	// Dont add a filter chain match if the hostname is a wildcard character.
-	if len(hostnames) > 0 && hostnames[0] != "*" {
-		filterChain.FilterChainMatch = &listenerv3.FilterChainMatch{
-			ServerNames: hostnames,
-		}
+	// Skip if the hostname is a wildcard character - no filter chain match needed
+	if len(hostnames) == 0 || hostnames[0] == "*" {
+		return nil
+	}
 
+	// Add ServerNames to FilterChainMatch for both TCP and QUIC listeners.
+	filterChain.FilterChainMatch = &listenerv3.FilterChainMatch{
+		ServerNames: hostnames,
+	}
+
+	// QUIC/UDP listeners don't need TLS Inspector as they extract SNI from the QUIC handshake.
+	isUDP := xdsListener.GetAddress() != nil &&
+		xdsListener.GetAddress().GetSocketAddress() != nil &&
+		xdsListener.GetAddress().GetSocketAddress().GetProtocol() == corev3.SocketAddress_UDP
+
+	if !isUDP {
 		if err := addXdsTLSInspectorFilter(xdsListener); err != nil {
 			return err
 		}
