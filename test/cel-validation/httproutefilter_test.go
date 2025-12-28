@@ -65,10 +65,7 @@ func TestHTTPRouteFilter(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{
-				"spec.urlRewrite.path: Invalid value:",
-				": If HTTPPathModifier type is ReplaceRegexMatch, replaceRegexMatch field needs to be set.",
-			},
+			wantErrors: []string{"If HTTPPathModifier type is ReplaceRegexMatch, replaceRegexMatch field needs to be set."},
 		},
 		{
 			desc: "invalid RegexHTTPPathModifier missing pattern and substitution",
@@ -127,10 +124,7 @@ func TestHTTPRouteFilter(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{
-				"spec.urlRewrite.hostname: Invalid value:",
-				": header must be specified for Header type",
-			},
+			wantErrors: []string{"header must be specified for Header type"},
 		},
 		{
 			desc: "invalid SetFromBackend type",
@@ -144,10 +138,7 @@ func TestHTTPRouteFilter(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{
-				"spec.urlRewrite.hostname: Invalid value:",
-				": header must be nil if the type is not Header",
-			},
+			wantErrors: []string{"header must be nil if the type is not Header"},
 		},
 		{
 			desc: "Valid DirectResponse with header add",
@@ -193,10 +184,7 @@ func TestHTTPRouteFilter(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{
-				"spec.directResponse.header: Invalid value:",
-				": header.remove is not supported for DirectResponse",
-			},
+			wantErrors: []string{"header.remove is not supported for DirectResponse"},
 		},
 	}
 

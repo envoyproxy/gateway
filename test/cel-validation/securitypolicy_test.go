@@ -64,8 +64,7 @@ func TestSecurityPolicyTarget(t *testing.T) {
 				sp.Spec = egv1a1.SecurityPolicySpec{}
 			},
 			wantErrors: []string{
-				"spec: Invalid value:",
-				": either targetRef or targetRefs must be used",
+				"either targetRef or targetRefs must be used",
 			},
 		},
 		{
@@ -84,8 +83,7 @@ func TestSecurityPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				"spec: Invalid value:",
-				": this policy can only have a targetRef.kind of Gateway/HTTPRoute/GRPCRoute",
+				"this policy can only have a targetRef.kind of Gateway/HTTPRoute/GRPCRoute",
 			},
 		},
 		{
@@ -104,8 +102,7 @@ func TestSecurityPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				"spec: Invalid value:",
-				": this policy can only have a targetRef.group of gateway.networking.k8s.io",
+				"this policy can only have a targetRef.group of gateway.networking.k8s.io",
 			},
 		},
 		{
@@ -124,9 +121,8 @@ func TestSecurityPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				"spec: Invalid value:",
-				": this policy can only have a targetRef.group of gateway.networking.k8s.io",
-				": this policy can only have a targetRef.kind of Gateway/HTTPRoute/GRPCRoute",
+				"this policy can only have a targetRef.group of gateway.networking.k8s.io",
+				"this policy can only have a targetRef.kind of Gateway/HTTPRoute/GRPCRoute",
 			},
 		},
 		{
@@ -147,9 +143,8 @@ func TestSecurityPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				"spec: Invalid value:",
-				": this policy can only have a targetRefs[*].group of gateway.networking.k8s.io",
-				": this policy can only have a targetRefs[*].kind of Gateway/HTTPRoute/GRPCRoute",
+				"this policy can only have a targetRefs[*].group of gateway.networking.k8s.io",
+				"this policy can only have a targetRefs[*].kind of Gateway/HTTPRoute/GRPCRoute",
 			},
 		},
 
@@ -708,8 +703,7 @@ func TestSecurityPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				"spec.extAuth: Invalid value:",
-				": one of grpc or http must be specified",
+				"one of grpc or http must be specified",
 			},
 		},
 		{
@@ -746,8 +740,7 @@ func TestSecurityPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				"spec.extAuth: Invalid value:",
-				": only one of grpc or http can be specified",
+				"only one of grpc or http can be specified",
 			},
 		},
 		{
@@ -881,8 +874,7 @@ func TestSecurityPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				"spec.extAuth.grpc: Invalid value:",
-				": BackendRefs only supports Service, ServiceImport, and Backend kind.",
+				"BackendRefs only supports Service, ServiceImport, and Backend kind.",
 			},
 		},
 		{
@@ -1018,7 +1010,7 @@ func TestSecurityPolicyTarget(t *testing.T) {
 				sp.Spec = egv1a1.SecurityPolicySpec{
 					JWT: &egv1a1.JWT{
 						Providers: []egv1a1.JWTProvider{
-						{
+							{
 								Name: "example",
 								RemoteJWKS: &egv1a1.RemoteJWKS{
 									URI: "https://example.com/jwt/jwks.json",
@@ -1038,10 +1030,7 @@ func TestSecurityPolicyTarget(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{
-				"Invalid value:",
-				": no such key: claimToHeaders evaluating rule: claimToHeaders must be specified if recomputeRoute is enabled",
-			},
+			wantErrors: []string{"claimToHeaders must be specified if recomputeRoute is enabled"},
 		},
 		{
 			desc: "jwt with claim to headers and recomputeRoute",

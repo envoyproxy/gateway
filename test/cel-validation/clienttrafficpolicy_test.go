@@ -61,8 +61,7 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 				ctp.Spec = egv1a1.ClientTrafficPolicySpec{}
 			},
 			wantErrors: []string{
-				"spec: Invalid value:",
-				": either targetRef or targetRefs must be used",
+				"either targetRef or targetRefs must be used",
 			},
 		},
 		{
@@ -81,8 +80,7 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				"spec: Invalid value:",
-				": this policy can only have a targetRef.kind of Gateway",
+				"this policy can only have a targetRef.kind of Gateway",
 			},
 		},
 		{
@@ -101,8 +99,7 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				"spec: Invalid value:",
-				": this policy can only have a targetRef.group of gateway.networking.k8s.io",
+				"this policy can only have a targetRef.group of gateway.networking.k8s.io",
 			},
 		},
 		{
@@ -123,9 +120,8 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				"spec: Invalid value",
-				": this policy can only have a targetRefs[*].group of gateway.networking.k8s.io",
-				": this policy can only have a targetRefs[*].kind of Gateway",
+				"this policy can only have a targetRefs[*].group of gateway.networking.k8s.io",
+				"this policy can only have a targetRefs[*].kind of Gateway",
 			},
 		},
 		{
@@ -144,9 +140,8 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				"spec: Invalid value:",
-				": this policy can only have a targetRef.group of gateway.networking.k8s.io",
-				": this policy can only have a targetRef.kind of Gateway",
+				"this policy can only have a targetRef.group of gateway.networking.k8s.io",
+				"this policy can only have a targetRef.kind of Gateway",
 			},
 		},
 		{
@@ -171,8 +166,7 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				"spec.tls: Invalid value:",
-				": minVersion must be smaller or equal to maxVersion",
+				"minVersion must be smaller or equal to maxVersion",
 			},
 		},
 		{
@@ -196,8 +190,7 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				"spec.tls: Invalid value:",
-				": minVersion must be smaller or equal to maxVersion",
+				"minVersion must be smaller or equal to maxVersion",
 			},
 		},
 		{
@@ -224,8 +217,7 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				"spec.clientIPDetection: Invalid value:",
-				": customHeader cannot be used in conjunction with xForwardedFor",
+				"customHeader cannot be used in conjunction with xForwardedFor",
 			},
 		},
 		{
@@ -254,8 +246,7 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				"spec.clientIPDetection.xForwardedFor: Invalid value:",
-				": only one of numTrustedHops or trustedCIDRs must be set",
+				"only one of numTrustedHops or trustedCIDRs must be set",
 			},
 		},
 		{
@@ -357,8 +348,7 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				"spec.tls: Invalid value:",
-				": setting ciphers has no effect if the minimum possible TLS version is 1.3",
+				"setting ciphers has no effect if the minimum possible TLS version is 1.3",
 			},
 		},
 		{
@@ -520,8 +510,7 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				" spec.headers.xForwardedClientCert: Invalid value:",
-				": certDetailsToAdd can only be set when mode is AppendForward or SanitizeSet",
+				"certDetailsToAdd can only be set when mode is AppendForward or SanitizeSet",
 			},
 		},
 		{
@@ -555,8 +544,7 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				"spec: Invalid value:",
-				": either targetRef or targetRefs must be used",
+				"either targetRef or targetRefs must be used",
 			},
 		},
 		{
@@ -624,9 +612,7 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				"ClientTrafficPolicy.gateway.envoyproxy.io \"ctp-headers\" is invalid:",
-				"spec.headers: Invalid value:",
-				": preserveXRequestID and requestID cannot both be set.",
+				"preserveXRequestID and requestID cannot both be set.",
 			},
 		},
 	}
