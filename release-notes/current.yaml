@@ -27,6 +27,7 @@ bug fixes: |
   Fixed an issue where observedGeneration is missing from the EnvoyPatchPolicy status.
   Fixed a nil pointer error when applying BackendTrafficPolicy to HTTPRoutes with no backendRefs.
   Fixed ExternalTrafficPolicy not being applied to Envoy Service when ServiceType is NodePort.
+  Fixed bug where disabling proxyTopologyInjector via Helm wasn't working
 
 # Enhancements that improve performance.
 performance improvements: |
