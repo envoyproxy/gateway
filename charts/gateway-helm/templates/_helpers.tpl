@@ -176,13 +176,13 @@ provider:
       {{- end }}
     shutdownManager:
       image: {{ include "eg.image" . }}
+{{- if or (eq (include "eg.isKube135OrHigher" .) "true") (not .Values.topologyInjector.enabled) }}
+    proxyTopologyInjector:
+      disabled: true
+{{- end }}
 {{- with .Values.config.envoyGateway.extensionApis }}
 extensionApis:
   {{- toYaml . | nindent 2 }}
-{{- end }}
-{{- if or (eq (include "eg.isKube135OrHigher" .) "true") (not .Values.topologyInjector.enabled) }}
-proxyTopologyInjector:
-  disabled: true
 {{- end }}
 {{- end }}
 
