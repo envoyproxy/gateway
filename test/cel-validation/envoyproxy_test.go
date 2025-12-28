@@ -612,7 +612,10 @@ func TestEnvoyProxyProvider(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{"BackendRefs only support Service and Backend kind."},
+			wantErrors: []string{
+				"Invalid value:",
+				": BackendRefs only support Service and Backend kind.",
+			},
 		},
 		{
 			desc: "invalid-accesslog-ALS-backendrefs-group",
@@ -670,7 +673,10 @@ func TestEnvoyProxyProvider(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{"must have at least one backend in backendRefs"},
+			wantErrors: []string{
+				"Invalid value:",
+				": must have at least one backend in backendRefs",
+			},
 		},
 		{
 			desc: "invalid-accesslog-ALS-empty-backendrefs",
@@ -770,7 +776,10 @@ func TestEnvoyProxyProvider(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{"BackendRefs only support Service and Backend kind."},
+			wantErrors: []string{
+				"Invalid value:",
+				": BackendRefs only support Service and Backend kind.",
+			},
 		},
 		{
 			desc: "invalid-accesslog-backendref-group",

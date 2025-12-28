@@ -99,7 +99,8 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				"either targetRef or targetRefs must be used",
+				"spec: Invalid value:",
+				": either targetRef or targetRefs must be used",
 			},
 		},
 		{
@@ -108,7 +109,8 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 				eep.Spec = egv1a1.EnvoyExtensionPolicySpec{}
 			},
 			wantErrors: []string{
-				"either targetRef or targetRefs must be used",
+				"spec: Invalid value:",
+				": either targetRef or targetRefs must be used",
 			},
 		},
 		{
@@ -127,7 +129,8 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				"this policy can only have a targetRef.kind of Gateway/HTTPRoute/GRPCRoute/TCPRoute/UDPRoute/TLSRoute",
+				"spec: Invalid value:",
+				": this policy can only have a targetRef.kind of Gateway/HTTPRoute/GRPCRoute/TCPRoute/UDPRoute/TLSRoute",
 			},
 		},
 		{
@@ -148,7 +151,8 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				"this policy can only have a targetRefs[*].kind of Gateway/HTTPRoute/GRPCRoute/TCPRoute/UDPRoute/TLSRoute",
+				"spec: Invalid value:",
+				": this policy can only have a targetRefs[*].kind of Gateway/HTTPRoute/GRPCRoute/TCPRoute/UDPRoute/TLSRoute",
 			},
 		},
 		{
@@ -167,7 +171,8 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				"this policy can only have a targetRef.group of gateway.networking.k8s.io",
+				"spec: Invalid value:",
+				": this policy can only have a targetRef.group of gateway.networking.k8s.io",
 			},
 		},
 		{
@@ -188,7 +193,8 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				"this policy can only have a targetRefs[*].group of gateway.networking.k8s.io",
+				"spec: Invalid value:",
+				": this policy can only have a targetRefs[*].group of gateway.networking.k8s.io",
 			},
 		},
 		{
@@ -207,8 +213,9 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				"this policy can only have a targetRef.group of gateway.networking.k8s.io",
-				"this policy can only have a targetRef.kind of Gateway/HTTPRoute/GRPCRoute/TCPRoute/UDPRoute/TLSRoute",
+				"spec: Invalid value:",
+				": this policy can only have a targetRef.group of gateway.networking.k8s.io",
+				": this policy can only have a targetRef.kind of Gateway/HTTPRoute/GRPCRoute/TCPRoute/UDPRoute/TLSRoute",
 			},
 		},
 		{
@@ -229,8 +236,9 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				"this policy can only have a targetRefs[*].group of gateway.networking.k8s.io",
-				"this policy can only have a targetRefs[*].kind of Gateway/HTTPRoute/GRPCRoute/TCPRoute/UDPRoute/TLSRoute",
+				"spec: Invalid value:",
+				": this policy can only have a targetRefs[*].group of gateway.networking.k8s.io",
+				": this policy can only have a targetRefs[*].kind of Gateway/HTTPRoute/GRPCRoute/TCPRoute/UDPRoute/TLSRoute",
 			},
 		},
 		{
@@ -367,7 +375,10 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{"BackendRefs only supports Core, multicluster.x-k8s.io, and gateway.envoyproxy.io groups"},
+			wantErrors: []string{
+				"spec.extProc[0]: Invalid value:",
+				": BackendRefs only supports Core, multicluster.x-k8s.io, and gateway.envoyproxy.io groups",
+			},
 		},
 		{
 			desc: "ExtProc with invalid BackendRef Kind",
@@ -399,7 +410,10 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{"BackendRefs only supports Service, ServiceImport, and Backend kind"},
+			wantErrors: []string{
+				"spec.extProc[0]: Invalid value:",
+				": BackendRefs only supports Service, ServiceImport, and Backend kind",
+			},
 		},
 		{
 			desc: "ExtProc with invalid fields",
@@ -707,7 +721,8 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				"If FullDuplexStreamed body processing mode is used, FailOpen must be false.",
+				"spec.extProc[0]: Invalid value:",
+				": If FullDuplexStreamed body processing mode is used, FailOpen must be false.",
 			},
 		},
 		{
@@ -749,7 +764,8 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				"If FullDuplexStreamed body processing mode is used, FailOpen must be false.",
+				"spec.extProc[0]: Invalid value:",
+				": If FullDuplexStreamed body processing mode is used, FailOpen must be false.",
 			},
 		},
 		{
@@ -828,7 +844,8 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				"Exactly one of inline or valueRef must be set with correct type.",
+				"spec.lua[0]: Invalid value:",
+				": Exactly one of inline or valueRef must be set with correct type.",
 			},
 		},
 		{
@@ -853,7 +870,8 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				"Exactly one of inline or valueRef must be set with correct type.",
+				"spec.lua[0]: Invalid value:",
+				": Exactly one of inline or valueRef must be set with correct type.",
 			},
 		},
 		{
@@ -882,7 +900,8 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				"Only a reference to an object of kind ConfigMap belonging to default v1 API group is supported.",
+				"spec.lua[0].valueRef: Invalid value:",
+				": Only a reference to an object of kind ConfigMap belonging to default v1 API group is supported.",
 			},
 		},
 		{
@@ -911,7 +930,8 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				"Only a reference to an object of kind ConfigMap belonging to default v1 API group is supported.",
+				"spec.lua[0].valueRef: Invalid value:",
+				": Only a reference to an object of kind ConfigMap belonging to default v1 API group is supported.",
 			},
 		},
 		{
@@ -941,7 +961,8 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				"Exactly one of inline or valueRef must be set with correct type.",
+				"spec.lua[0]: Invalid value:",
+				": Exactly one of inline or valueRef must be set with correct type.",
 			},
 		},
 		{
@@ -1150,7 +1171,8 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				"writableNamespaces cannot contain well-known Envoy HTTP filter namespaces",
+				"spec.extProc[0].metadata.writableNamespaces: Invalid value:",
+				": writableNamespaces cannot contain well-known Envoy HTTP filter namespaces",
 			},
 		},
 		{
