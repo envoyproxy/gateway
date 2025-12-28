@@ -18,7 +18,15 @@ rateLimits:
                 Exact: one
           name: x-user-id
   - ActionSpecifier:
-      QueryParameters:
+      QueryParameterValueMatch:
         descriptor_key: user
-        query_parameter_name: user
+        descriptor_value: user
+        expect_match:
+          value: true
+        query_parameters:
+        - QueryParameterMatchSpecifier:
+            StringMatch:
+              MatchPattern:
+                Exact: alice
+          name: user
 routeName: first-route
