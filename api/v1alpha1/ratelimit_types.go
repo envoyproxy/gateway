@@ -236,34 +236,35 @@ type RateLimitSelectCondition struct {
 }
 
 // QueryParamMatch defines the match attributes within the query parameters of the request.
+// Note: For Distinct match type, use the MatchType field (not StringMatch.Type) and leave StringMatch.Value empty.
 type QueryParamMatch struct {
-	// Type specifies how to match against the value of the query parameter.
-	//
-	// +optional
-	// +kubebuilder:default=Exact
-	Type *QueryParamMatchType `json:"type,omitempty"`
-
 	// Name of the query parameter.
 	//
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=256
 	Name string `json:"name"`
 
-	// Value within the query parameter.
-	// Do not set this field when Type="Distinct", implying matching on any/all unique
-	// values within the query parameter.
+	// StringMatch defines how to match against the value of the query parameter.
+	// Use this for Exact and RegularExpression match types.
+	// For Distinct match type, leave this empty and use the MatchType field instead.
 	//
 	// +optional
-	// +kubebuilder:validation:MaxLength=1024
-	Value *string `json:"value,omitempty"`
+	StringMatch `json:",inline"`
 
 	// Invert specifies whether the value match result will be inverted.
-	// Do not set this field when Type="Distinct", implying matching on any/all unique
+	// Do not set this field when MatchType="Distinct", implying matching on any/all unique
 	// values within the query parameter.
 	//
 	// +optional
 	// +kubebuilder:default=false
 	Invert *bool `json:"invert,omitempty"`
+
+	// MatchType specifies how to match against the value of the query parameter.
+	// Use this field only when MatchType="Distinct" (which is not part of StringMatchType).
+	// For Exact and RegularExpression, use StringMatch.Type instead.
+	//
+	// +optional
+	MatchType *QueryParamMatchType `json:"matchType,omitempty"`
 }
 
 // QueryParamMatchType specifies the semantics of how query parameter values should be compared.

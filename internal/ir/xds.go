@@ -2402,9 +2402,8 @@ type CIDRMatch struct {
 // QueryParamMatch defines the match attributes within the query parameters of the request.
 // +k8s:deepcopy-gen=true
 type QueryParamMatch struct {
-	// Name of the query parameter.
-	Name string `json:"name" yaml:"name"`
 	// StringMatch defines how to match against the value of the query parameter.
+	// The Name field within StringMatch is used for the query parameter name.
 	StringMatch `json:",inline" yaml:",inline"`
 }
 
