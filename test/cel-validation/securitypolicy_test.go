@@ -1018,7 +1018,7 @@ func TestSecurityPolicyTarget(t *testing.T) {
 				sp.Spec = egv1a1.SecurityPolicySpec{
 					JWT: &egv1a1.JWT{
 						Providers: []egv1a1.JWTProvider{
-						{
+							{
 								Name: "example",
 								RemoteJWKS: &egv1a1.RemoteJWKS{
 									URI: "https://example.com/jwt/jwks.json",
