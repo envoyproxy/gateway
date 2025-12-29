@@ -16,6 +16,7 @@ import (
 	tlsv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 	matcherv3 "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
 	"github.com/golang/protobuf/ptypes/wrappers"
+	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"k8s.io/utils/ptr"
 
@@ -596,7 +597,9 @@ func (*oidc) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir.HTTPL
 		return nil
 	}
 	filterName := oauth2FilterName(irRoute.Security.OIDC)
-	if err := enableFilterOnRoute(route, filterName); err != nil {
+	if err := enableFilterOnRoute(route, filterName, &routev3.FilterConfig{
+		Config: &anypb.Any{},
+	}); err != nil {
 		return err
 	}
 	return nil

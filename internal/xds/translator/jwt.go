@@ -161,6 +161,14 @@ func buildJWTAuthn(irListener *ir.HTTPListener, jwtAuthn *jwtauthnv3.JwtAuthenti
 					jwksCluster = cluster.name
 				}
 
+				jwksTimeout := durationpb.New(defaultExtServiceRequestTimeout)
+				if jwks.Traffic != nil &&
+					jwks.Traffic.Timeout != nil &&
+					jwks.Traffic.Timeout.HTTP != nil &&
+					jwks.Traffic.Timeout.HTTP.RequestTimeout != nil {
+					jwksTimeout = durationpb.New(jwks.Traffic.Timeout.HTTP.RequestTimeout.Duration)
+				}
+
 				remote := &jwtauthnv3.JwtProvider_RemoteJwks{
 					RemoteJwks: &jwtauthnv3.RemoteJwks{
 						HttpUri: &corev3.HttpUri{
@@ -168,7 +176,7 @@ func buildJWTAuthn(irListener *ir.HTTPListener, jwtAuthn *jwtauthnv3.JwtAuthenti
 							HttpUpstreamType: &corev3.HttpUri_Cluster{
 								Cluster: jwksCluster,
 							},
-							Timeout: durationpb.New(defaultExtServiceRequestTimeout),
+							Timeout: jwksTimeout,
 						},
 
 						AsyncFetch: &jwtauthnv3.JwksAsyncFetch{},
@@ -324,7 +332,7 @@ func (*jwt) patchResources(tCtx *types.ResourceVersionTable, routes []*ir.HTTPRo
 				}
 			} else {
 				// Create a cluster with the token endpoint url.
-				if err := addClusterFromURL(jwks.URI, tCtx); err != nil {
+				if err := addClusterFromURL(jwks.URI, jwks.Traffic, tCtx); err != nil {
 					errs = errors.Join(errs, err)
 				}
 			}

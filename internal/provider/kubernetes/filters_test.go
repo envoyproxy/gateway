@@ -6,7 +6,6 @@
 package kubernetes
 
 import (
-	"context"
 	"os"
 	"testing"
 
@@ -14,7 +13,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -24,8 +22,6 @@ import (
 )
 
 func TestGetExtensionRefFilters(t *testing.T) {
-	ctx := context.Background()
-
 	// Create test extension resources
 	s3Backend := &unstructured.Unstructured{
 		Object: map[string]any{
@@ -155,9 +151,7 @@ func TestGetExtensionRefFilters(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			// Create fake client with test objects
-			scheme := runtime.NewScheme()
-			require.NoError(t, corev1.AddToScheme(scheme))
-
+			scheme := newTestScheme(tc.extGVKs...)
 			fakeClient := fakeclient.NewClientBuilder().
 				WithScheme(scheme).
 				WithObjects(tc.objects...).
@@ -172,7 +166,7 @@ func TestGetExtensionRefFilters(t *testing.T) {
 			}
 
 			// Call the function under test
-			result, err := r.getExtensionRefFilters(ctx)
+			result, err := r.getExtensionRefFilters(t.Context())
 
 			// Verify results
 			if tc.expectedError {
@@ -186,8 +180,6 @@ func TestGetExtensionRefFilters(t *testing.T) {
 }
 
 func TestGetExtensionBackendResources(t *testing.T) {
-	ctx := context.Background()
-
 	// Create test custom backend resources
 	s3Backend := &unstructured.Unstructured{
 		Object: map[string]any{
@@ -317,8 +309,7 @@ func TestGetExtensionBackendResources(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			// Create fake client with test objects
-			scheme := runtime.NewScheme()
-			require.NoError(t, corev1.AddToScheme(scheme))
+			scheme := newTestScheme(tc.extBackendGVKs...)
 
 			fakeClient := fakeclient.NewClientBuilder().
 				WithScheme(scheme).
@@ -334,7 +325,7 @@ func TestGetExtensionBackendResources(t *testing.T) {
 			}
 
 			// Call the function under test
-			result, err := r.getExtensionBackendResources(ctx)
+			result, err := r.getExtensionBackendResources(t.Context())
 
 			// Verify results
 			if tc.expectedError {

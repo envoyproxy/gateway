@@ -173,6 +173,47 @@ securityPolicies:
             name: backend-fqdn
             port: 443
           backendSettings:
+            circuitBreaker:
+              maxConnections: 2048
+              maxParallelRequests: 4294967295
+              maxParallelRetries: 1024
+              maxPendingRequests: 1
+              maxRequestsPerConnection: 1
+            connection:
+              bufferLimit: 100M
+            dns:
+              dnsRefreshRate: 30s
+              lookupFamily: IPv4AndIPv6
+            healthCheck:
+              active:
+                healthyThreshold: 1
+                http:
+                  expectedResponse:
+                    binary: RXZlcnl0aGluZyBPSw==
+                    type: Binary
+                  expectedStatuses:
+                  - 200
+                  - 300
+                  method: GET
+                  path: /healthz
+                interval: 3s
+                timeout: 500ms
+                type: HTTP
+                unhealthyThreshold: 3
+              passive:
+                baseEjectionTime: 160s
+                consecutive5XxErrors: 5
+                consecutiveGatewayErrors: 0
+                consecutiveLocalOriginFailures: 5
+                interval: 2s
+                maxEjectionPercent: 100
+                splitExternalLocalOriginErrors: false
+            loadBalancer:
+              consistentHash:
+                type: SourceIP
+              type: ConsistentHash
+            proxyProtocol:
+              version: V2
             retry:
               numRetries: 3
               perRetry:
@@ -184,6 +225,17 @@ securityPolicies:
                 - 5xx
                 - gateway-error
                 - reset
+            tcpKeepalive:
+              idleTime: 20m
+              interval: 60s
+              probes: 3
+            timeout:
+              http:
+                connectionIdleTimeout: 16s
+                maxConnectionDuration: 17s
+                requestTimeout: 5s
+              tcp:
+                connectTimeout: 15s
           uri: https://foo.bar.com/jwt/public-key/jwks.json
     targetRef:
       group: gateway.networking.k8s.io
@@ -313,6 +365,45 @@ xdsIR:
                       sni: foo.bar.com
                     weight: 1
                 traffic:
+                  backendConnection:
+                    bufferLimit: 100000000
+                  circuitBreaker:
+                    maxConnections: 2048
+                    maxParallelRequests: 4294967295
+                    maxParallelRetries: 1024
+                    maxPendingRequests: 1
+                    maxRequestsPerConnection: 1
+                  dns:
+                    dnsRefreshRate: 30s
+                    lookupFamily: IPv4AndIPv6
+                  healthCheck:
+                    active:
+                      healthyThreshold: 1
+                      http:
+                        expectedResponse:
+                          binary: RXZlcnl0aGluZyBPSw==
+                        expectedStatuses:
+                        - 200
+                        - 300
+                        host: ""
+                        method: GET
+                        path: /healthz
+                      interval: 3s
+                      timeout: 500ms
+                      unhealthyThreshold: 3
+                    passive:
+                      baseEjectionTime: 2m40s
+                      consecutive5XxErrors: 5
+                      consecutiveGatewayErrors: 0
+                      consecutiveLocalOriginFailures: 5
+                      interval: 2s
+                      maxEjectionPercent: 100
+                      splitExternalLocalOriginErrors: false
+                  loadBalancer:
+                    consistentHash:
+                      sourceIP: true
+                  proxyProtocol:
+                    version: V2
                   retry:
                     numRetries: 3
                     perRetry:
@@ -324,6 +415,17 @@ xdsIR:
                       - 5xx
                       - gateway-error
                       - reset
+                  tcpKeepalive:
+                    idleTime: 1200
+                    interval: 60
+                    probes: 3
+                  timeout:
+                    http:
+                      connectionIdleTimeout: 16s
+                      maxConnectionDuration: 17s
+                      requestTimeout: 5s
+                    tcp:
+                      connectTimeout: 15s
                 uri: https://foo.bar.com/jwt/public-key/jwks.json
     readyListener:
       address: 0.0.0.0

@@ -551,6 +551,85 @@ spec:
                     required:
                     - maxRequestBytes
                     type: object
+                  contextExtensions:
+                    description: |-
+                      ContextExtensions are analogous to http_request.headers, however these
+                      contents will not be sent to the upstream server. This provides an
+                      extension mechanism for sending additional information to the auth server
+                      without modifying the proto definition. It maps to the internal opaque
+                      context in the filter chain.
+                    items:
+                      description: |-
+                        ContextExtension is analogous to http_request.headers, however these
+                        contents will not be sent to the upstream server. This provides an
+                        extension mechanism for sending additional information to the auth server
+                        without modifying the proto definition. It maps to the internal opaque
+                        context in the filter chain.
+                      properties:
+                        name:
+                          description: Name of the context extension.
+                          type: string
+                        type:
+                          default: Value
+                          description: |-
+                            Type is the type of method to use to read the ContextExtension value.
+                            Valid values are Value and ValueRef, default is Value.
+                          enum:
+                          - Value
+                          - ValueRef
+                          type: string
+                        value:
+                          description: Value of the context extension.
+                          type: string
+                        valueRef:
+                          description: ValueRef for the context extension's value.
+                          properties:
+                            group:
+                              description: |-
+                                Group is the group of the referent. For example, "gateway.networking.k8s.io".
+                                When unspecified or empty string, core API group is inferred.
+                              maxLength: 253
+                              pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                              type: string
+                            key:
+                              description: The key to select.
+                              type: string
+                            kind:
+                              description: Kind is kind of the referent. For example
+                                "HTTPRoute" or "Service".
+                              maxLength: 63
+                              minLength: 1
+                              pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
+                              type: string
+                            name:
+                              description: Name is the name of the referent.
+                              maxLength: 253
+                              minLength: 1
+                              type: string
+                          required:
+                          - group
+                          - key
+                          - kind
+                          - name
+                          type: object
+                          x-kubernetes-validations:
+                          - message: Only a reference to an object of kind ConfigMap
+                              or Secret belonging to default v1 API group is supported.
+                            rule: self.kind in ['ConfigMap', 'Secret'] && self.group
+                              in ['', 'v1']
+                      required:
+                      - name
+                      - type
+                      type: object
+                      x-kubernetes-validations:
+                      - message: Exactly one of value or valueRef must be set with
+                          correct type.
+                        rule: (self.type == 'Value' && has(self.value) && !has(self.valueRef))
+                          || (self.type == 'ValueRef' && !has(self.value) && has(self.valueRef))
+                    type: array
+                    x-kubernetes-list-map-keys:
+                    - name
+                    x-kubernetes-list-type: map
                   failOpen:
                     default: false
                     description: |-

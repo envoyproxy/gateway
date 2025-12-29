@@ -3,3 +3,8 @@ adopters:
     logo: "/logos/tetrate.svg"
     url: "https://tetrate.io/products/tetrate-enterprise-gateway-for-envoy"
     description: "TEG (Tetrate Enterprise Gateway for Envoy) offers a hardened and scalable ingress built on open source Envoy Gateway."
+  - name: "Tasrie IT Services – Enterprise Support for Envoy Gateway"
+    logo: "/logos/tasrie-it-services.png"
+    url: "https://tasrieit.com"
+    description: "Enterprise support and consulting for Envoy Gateway and Envoy-based ingress on Kubernetes."
+

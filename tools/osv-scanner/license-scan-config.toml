@@ -52,3 +52,10 @@ name = "github.com/cyphar/filepath-securejoin"
 ecosystem = "Go"
 license.override = ["BSD-3-Clause"]
 reason = "https://github.com/cncf/foundation/issues/1154"
+
+# Remove this after CNCF allowlist update
+[[PackageOverrides]]
+name = "cyphar.com/go-pathrs"
+ecosystem = "Go"
+license.ignore = true
+reason = "https://github.com/cncf/foundation/issues/1154"

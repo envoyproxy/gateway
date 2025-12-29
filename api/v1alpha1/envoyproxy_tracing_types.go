@@ -34,6 +34,15 @@ type ProxyTracing struct {
 	//
 	// +optional
 	CustomTags map[string]CustomTag `json:"customTags,omitempty"`
+	// Tags defines the custom tags to add to each span.
+	// Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators) may be used in the value.
+	// The [format string documentation](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#config-access-log-format-strings) provides more information.
+	// If provider is kubernetes, pod name and namespace are added by default.
+	//
+	// Same keys take precedence over CustomTags.
+	//
+	// +optional
+	Tags map[string]string `json:"tags,omitempty"`
 	// Provider defines the tracing provider.
 	Provider TracingProvider `json:"provider"`
 }
@@ -111,9 +120,6 @@ type CustomTag struct {
 	// RequestHeader adds value from request header to each span.
 	// It's required when the type is "RequestHeader".
 	RequestHeader *RequestHeaderCustomTag `json:"requestHeader,omitempty"`
-
-	// TODO: add support for Metadata tags in the future.
-	// EG currently doesn't support metadata for route or cluster.
 }
 
 // LiteralCustomTag adds hard-coded value to each span.

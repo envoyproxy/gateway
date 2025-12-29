@@ -843,7 +843,7 @@ func (r *gatewayAPIReconciler) processBackendRefs(ctx context.Context, gwcResour
 // to the resourceTree
 // - BackendRefs and Secrets for OIDC
 // - Secrets for BasicAuth
-// - BackendRefs for ExAuth
+// - BackendRefs, ConfigMaps, and Secrets for ExAuth
 func (r *gatewayAPIReconciler) processSecurityPolicyObjectRefs(
 	ctx context.Context, resourceTree *resource.Resources, resourceMap *resourceMappings,
 ) error {
@@ -973,6 +973,65 @@ func (r *gatewayAPIReconciler) processSecurityPolicyObjectRefs(
 						backendRef); err != nil {
 						r.log.Error(err, "failed to process ExtAuth BackendRef for SecurityPolicy",
 							"policy", policy, "backendRef", backendRef)
+					}
+				}
+			}
+
+			if len(extAuth.ContextExtensions) > 0 {
+				for _, ctxExt := range extAuth.ContextExtensions {
+					if ctxExt.Type != egv1a1.ContextExtensionValueTypeValueRef {
+						continue
+					}
+
+					if ctxExt.ValueRef == nil {
+						continue
+					}
+
+					switch ctxExt.ValueRef.Kind {
+					case resource.KindConfigMap:
+						configMap := new(corev1.ConfigMap)
+						err := r.client.Get(ctx,
+							types.NamespacedName{Namespace: policy.Namespace, Name: string(ctxExt.ValueRef.Name)},
+							configMap,
+						)
+						if err != nil {
+							// If the error is transient, we return it to retry later
+							if isTransientError(err) {
+								return err
+							}
+							r.log.Error(err,
+								"failed to process ExtAuth ContextExtension ValueRef for SecurityPolicy",
+								"policy", policy, "ValueRef", ctxExt.ValueRef)
+						}
+
+						resourceMap.allAssociatedNamespaces.Insert(policy.Namespace)
+						if !resourceMap.allAssociatedConfigMaps.Has(utils.NamespacedName(configMap).String()) {
+							resourceMap.allAssociatedConfigMaps.Insert(utils.NamespacedName(configMap).String())
+							resourceTree.ConfigMaps = append(resourceTree.ConfigMaps, configMap)
+							r.log.Info("processing ConfigMap", "namespace", policy.Namespace, "name", string(ctxExt.ValueRef.Name))
+						}
+					case resource.KindSecret:
+						secret := new(corev1.Secret)
+						err := r.client.Get(ctx,
+							types.NamespacedName{Namespace: policy.Namespace, Name: string(ctxExt.ValueRef.Name)},
+							secret,
+						)
+						if err != nil {
+							// If the error is transient, we return it to retry later
+							if isTransientError(err) {
+								return err
+							}
+							r.log.Error(err,
+								"failed to process ExtAuth ContextExtension ValueRef for SecurityPolicy",
+								"policy", policy, "ValueRef", ctxExt.ValueRef)
+						}
+
+						resourceMap.allAssociatedNamespaces.Insert(policy.Namespace)
+						if !resourceMap.allAssociatedSecrets.Has(utils.NamespacedName(secret).String()) {
+							resourceMap.allAssociatedSecrets.Insert(utils.NamespacedName(secret).String())
+							resourceTree.Secrets = append(resourceTree.Secrets, secret)
+							r.log.Info("processing Secret", "namespace", policy.Namespace, "name", string(ctxExt.ValueRef.Name))
+						}
 					}
 				}
 			}
@@ -1240,7 +1299,45 @@ func (r *gatewayAPIReconciler) processClusterTrustBundleRef(
 	return nil
 }
 
-// processCtpConfigMapRefs adds the referenced ConfigMaps in ClientTrafficPolicies
+// processSecretObjectRef is a helper to abstract the logic of handling
+// of SecretObjectReferences - Secret, ConfigMap, and ClusterTrustBundle.
+func (r *gatewayAPIReconciler) processSecretObjectRef(
+	ctx context.Context,
+	resourceMap *resourceMappings,
+	resourceTree *resource.Resources,
+	ownerKind string,
+	ownerNS string,
+	ownerName string,
+	ref gwapiv1.SecretObjectReference,
+	refKind string,
+) error {
+	switch refKind {
+	case resource.KindConfigMap:
+		return r.processConfigMapRef(
+			ctx,
+			resourceMap,
+			resourceTree,
+			ownerKind,
+			ownerNS,
+			ownerName,
+			ref)
+	case resource.KindSecret:
+		return r.processSecretRef(
+			ctx,
+			resourceMap,
+			resourceTree,
+			ownerKind,
+			ownerNS,
+			ownerName,
+			ref)
+	case resource.KindClusterTrustBundle:
+		return r.processClusterTrustBundleRef(ctx, resourceMap, resourceTree, ref)
+	default:
+		return fmt.Errorf("unsupported ref kind: %s", refKind)
+	}
+}
+
+// processCTPCACertificateRefs adds the referenced CACertificates in ClientTrafficPolicies
 // to the resourceTree
 func (r *gatewayAPIReconciler) processCTPCACertificateRefs(
 	ctx context.Context, resourceTree *resource.Resources, resourceMap *resourceMappings,
@@ -1250,31 +1347,16 @@ func (r *gatewayAPIReconciler) processCTPCACertificateRefs(
 
 		if tls != nil && tls.ClientValidation != nil {
 			for _, caCertRef := range tls.ClientValidation.CACertificateRefs {
-				caCertRefKind := ptr.Deref(caCertRef.Kind, resource.KindSecret)
-				var err error
-				switch caCertRefKind {
-				case resource.KindConfigMap:
-					err = r.processConfigMapRef(
-						ctx,
-						resourceMap,
-						resourceTree,
-						resource.KindClientTrafficPolicy,
-						policy.Namespace,
-						policy.Name,
-						caCertRef)
-				case resource.KindSecret:
-					err = r.processSecretRef(
-						ctx,
-						resourceMap,
-						resourceTree,
-						resource.KindClientTrafficPolicy,
-						policy.Namespace,
-						policy.Name,
-						caCertRef)
-				case resource.KindClusterTrustBundle:
-					err = r.processClusterTrustBundleRef(ctx, resourceMap, resourceTree, caCertRef)
-				}
-
+				caCertRefKind := string(ptr.Deref(caCertRef.Kind, resource.KindSecret))
+				err := r.processSecretObjectRef(
+					ctx,
+					resourceMap,
+					resourceTree,
+					resource.KindClientTrafficPolicy,
+					policy.Namespace,
+					policy.Name,
+					caCertRef,
+					caCertRefKind)
 				if err != nil {
 					// we don't return an error here, because we want to continue
 					// reconciling the rest of the ClientTrafficPolicies despite that this
@@ -1290,6 +1372,48 @@ func (r *gatewayAPIReconciler) processCTPCACertificateRefs(
 					r.log.Error(err,
 						"failed to process CACertificateRef for ClientTrafficPolicy",
 						"policy", policy, "caCertificateRef", caCertRef.Name, "kind", caCertRefKind)
+				}
+			}
+		}
+	}
+	return nil
+}
+
+// processCTPCrlRefs adds the referenced CRLs in ClientTrafficPolicies
+// to the resourceTree
+func (r *gatewayAPIReconciler) processCTPCrlRefs(
+	ctx context.Context, resourceTree *resource.Resources, resourceMap *resourceMappings,
+) error {
+	for _, policy := range resourceTree.ClientTrafficPolicies {
+		tls := policy.Spec.TLS
+
+		if tls != nil && tls.ClientValidation != nil && tls.ClientValidation.Crl != nil {
+			for _, crlRef := range tls.ClientValidation.Crl.Refs {
+				crlRefKind := string(ptr.Deref(crlRef.Kind, resource.KindSecret))
+				err := r.processSecretObjectRef(
+					ctx,
+					resourceMap,
+					resourceTree,
+					resource.KindClientTrafficPolicy,
+					policy.Namespace,
+					policy.Name,
+					crlRef,
+					crlRefKind)
+				if err != nil {
+					// we don't return an error here, because we want to continue
+					// reconciling the rest of the ClientTrafficPolicies despite that this
+					// reference is invalid.
+					// This ClientTrafficPolicy will be marked as invalid in its status
+					// when translating to IR because the referenced configmap can't be
+					// found.
+
+					// If the error is transient, we return it to allow Reconcile to retry.
+					if isTransientError(err) {
+						return err
+					}
+					r.log.Error(err,
+						"failed to process CRLRef for ClientTrafficPolicy",
+						"policy", policy, "crlRef", crlRef.Name, "kind", crlRefKind)
 				}
 			}
 		}
@@ -1701,7 +1825,10 @@ func (r *gatewayAPIReconciler) processClientTrafficPolicies(
 		}
 	}
 
-	return r.processCTPCACertificateRefs(ctx, resourceTree, resourceMap)
+	if err := r.processCTPCACertificateRefs(ctx, resourceTree, resourceMap); err != nil {
+		return err
+	}
+	return r.processCTPCrlRefs(ctx, resourceTree, resourceMap)
 }
 
 // processBackendTrafficPolicies adds BackendTrafficPolicies to the resourceTree

@@ -66,6 +66,7 @@ backendTrafficPolicies:
           limit:
             requests: 30
             unit: Hour
+          shadowMode: true
       type: Global
     targetRef:
       group: gateway.networking.k8s.io
@@ -702,6 +703,7 @@ xdsIR:
                   distinct: false
                   exact: /test
                   name: ""
+                shadowMode: true
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

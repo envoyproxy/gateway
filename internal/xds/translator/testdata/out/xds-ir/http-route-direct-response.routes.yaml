@@ -1,5 +1,5 @@
 - ignorePortInHostMatching: true
-  maxDirectResponseBodySizeBytes: 4097
+  maxDirectResponseBodySizeBytes: 1048576
   name: envoy-gateway/gateway-1/http
   virtualHosts:
   - domains:

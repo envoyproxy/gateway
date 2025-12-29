@@ -19,7 +19,8 @@ const (
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:categories=envoy-gateway,shortName=epp
 // +kubebuilder:subresource:status
-// +kubebuilder:printcolumn:name="Status",type=string,JSONPath=`.status.conditions[?(@.type=="Programmed")].reason`
+// +kubebuilder:printcolumn:name="Accepted",type=string,JSONPath=`.status.ancestors[0].conditions[?(@.type=="Accepted")].status`
+// +kubebuilder:printcolumn:name="Programmed",type=string,JSONPath=`.status.ancestors[0].conditions[?(@.type=="Programmed")].status`
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
 
 // EnvoyPatchPolicy allows the user to modify the generated Envoy xDS
