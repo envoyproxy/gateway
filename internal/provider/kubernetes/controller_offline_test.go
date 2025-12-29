@@ -171,9 +171,9 @@ func TestNewOfflineGatewayAPIControllerIndexRegistration(t *testing.T) {
 	})
 
 	t.Run("TLSRoute indices", func(t *testing.T) {
-		err := cli.List(context.Background(), &gwapiv1a3.TLSRouteList{}, client.MatchingFields{gatewayTLSRouteIndex: "any"})
+		err := cli.List(context.Background(), &gwapiv1a2.TLSRouteList{}, client.MatchingFields{gatewayTLSRouteIndex: "any"})
 		require.NoError(t, err)
-		err = cli.List(context.Background(), &gwapiv1a3.TLSRouteList{}, client.MatchingFields{backendTLSRouteIndex: "any"})
+		err = cli.List(context.Background(), &gwapiv1a2.TLSRouteList{}, client.MatchingFields{backendTLSRouteIndex: "any"})
 		require.NoError(t, err)
 	})
 
@@ -217,11 +217,11 @@ func TestNewOfflineGatewayAPIControllerIndexRegistration(t *testing.T) {
 	})
 
 	t.Run("BackendTLSPolicy indices", func(t *testing.T) {
-		err := cli.List(context.Background(), &gwapiv1.BackendTLSPolicyList{}, client.MatchingFields{configMapBtlsIndex: "any"})
+		err := cli.List(context.Background(), &gwapiv1a3.BackendTLSPolicyList{}, client.MatchingFields{configMapBtlsIndex: "any"})
 		require.NoError(t, err)
-		err = cli.List(context.Background(), &gwapiv1.BackendTLSPolicyList{}, client.MatchingFields{secretBtlsIndex: "any"})
+		err = cli.List(context.Background(), &gwapiv1a3.BackendTLSPolicyList{}, client.MatchingFields{secretBtlsIndex: "any"})
 		require.NoError(t, err)
-		err = cli.List(context.Background(), &gwapiv1.BackendTLSPolicyList{}, client.MatchingFields{clusterTrustBundleBtlsIndex: "any"})
+		err = cli.List(context.Background(), &gwapiv1a3.BackendTLSPolicyList{}, client.MatchingFields{clusterTrustBundleBtlsIndex: "any"})
 		require.NoError(t, err)
 	})
 
