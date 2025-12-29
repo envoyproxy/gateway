@@ -630,7 +630,7 @@ func TestBuildRateLimitRuleQueryParams(t *testing.T) {
 					{
 						QueryParams: []egv1a1.QueryParamMatch{
 							{
-								Name:     "user",
+								Name:      "user",
 								MatchType: ptr.To(egv1a1.QueryParamMatchDistinct),
 							},
 						},
@@ -734,9 +734,9 @@ func TestBuildRateLimitRuleQueryParams(t *testing.T) {
 					{
 						QueryParams: []egv1a1.QueryParamMatch{
 							{
-								Name:     "user",
+								Name:      "user",
 								MatchType: ptr.To(egv1a1.QueryParamMatchDistinct),
-								Invert:   ptr.To(true),
+								Invert:    ptr.To(true),
 							},
 						},
 					},
