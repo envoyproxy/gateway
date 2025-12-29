@@ -410,11 +410,10 @@ func backendTLSTargetMatched(policy *gwapiv1a3.BackendTLSPolicy, target gwapiv1.
 	return false
 }
 
-func getBackendTLSPolicy(
+func (t *Translator) getBackendTLSPolicy(
 	policies []*gwapiv1a3.BackendTLSPolicy,
 	backendRef gwapiv1.BackendObjectReference,
 	backendNamespace string,
-	resources *resource.Resources,
 ) *gwapiv1a3.BackendTLSPolicy {
 	// SectionName is port number for EG Backend object
 	target := t.getTargetBackendReference(backendRef, backendNamespace)
