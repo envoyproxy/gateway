@@ -626,6 +626,9 @@ func runQueryParametersRateLimitTest(t *testing.T, suite *suite.ConformanceTestS
 	})
 
 	t.Run(fmt.Sprintf("different_query_parameter_values_should_not_be_limited-%s", caseSuffix), func(t *testing.T) {
+		// Requests with ?user=bob don't match the selector (user=alice).
+		// With QueryParameterValueMatch action, non-matching values don't create a descriptor entry,
+		// so they fall through to the default bucket (unlimited). We verify they succeed and aren't rate limited.
 		okResponse := http.ExpectedResponse{
 			Request: http.Request{
 				Path: "/query-ratelimit?user=bob",
@@ -635,19 +638,13 @@ func runQueryParametersRateLimitTest(t *testing.T, suite *suite.ConformanceTestS
 			},
 			Namespace: ns,
 		}
-		if !disableHeader {
-			okResponse.Response.Headers = map[string]string{
-				RatelimitLimitHeaderName:     "3",
-				RatelimitRemainingHeaderName: "2",
-				RatelimitResetHeaderName:     "0",
-			}
-		} else {
+		if disableHeader {
 			okResponse.Response.AbsentHeaders = allRateLimitHeaders
 		}
 		// Keep sending requests till get 200 first, that will cost one 200
 		http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, okResponse)
 
-		// Send 2 more requests that should succeed
+		// Send multiple requests that should all succeed (default bucket is unlimited)
 		okResponse2 := http.ExpectedResponse{
 			Request: http.Request{
 				Path: "/query-ratelimit?user=bob",
@@ -657,13 +654,7 @@ func runQueryParametersRateLimitTest(t *testing.T, suite *suite.ConformanceTestS
 			},
 			Namespace: ns,
 		}
-		if !disableHeader {
-			okResponse2.Response.Headers = map[string]string{
-				RatelimitLimitHeaderName:     "3",
-				RatelimitRemainingHeaderName: "1",
-				RatelimitResetHeaderName:     "0",
-			}
-		} else {
+		if disableHeader {
 			okResponse2.Response.AbsentHeaders = allRateLimitHeaders
 		}
 		http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, okResponse2)
@@ -677,13 +668,7 @@ func runQueryParametersRateLimitTest(t *testing.T, suite *suite.ConformanceTestS
 			},
 			Namespace: ns,
 		}
-		if !disableHeader {
-			okResponse3.Response.Headers = map[string]string{
-				RatelimitLimitHeaderName:     "3",
-				RatelimitRemainingHeaderName: "0",
-				RatelimitResetHeaderName:     "0",
-			}
-		} else {
+		if disableHeader {
 			okResponse3.Response.AbsentHeaders = allRateLimitHeaders
 		}
 		http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, okResponse3)
