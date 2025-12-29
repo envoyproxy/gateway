@@ -26,7 +26,6 @@ metadata:
   name: backend-tls-ca
   namespace: gateway-conformance-infra
 ---
-# keep this v1alpha3 to verify EG worked for both v1alpha3 and v1
 apiVersion: gateway.networking.k8s.io/v1alpha3
 kind: BackendTLSPolicy
 metadata:
@@ -92,7 +91,7 @@ spec:
         - name: tls-backend-2-no-policy
           port: 443
 ---
-apiVersion: gateway.networking.k8s.io/v1
+apiVersion: gateway.networking.k8s.io/v1alpha3
 kind: BackendTLSPolicy
 metadata:
   name: policy-btls-trust-store
@@ -137,7 +136,7 @@ spec:
         hostname: gateway.envoyproxy.io
         port: 443
 ---
-apiVersion: gateway.networking.k8s.io/v1
+apiVersion: gateway.networking.k8s.io/v1alpha3
 kind: BackendTLSPolicy
 metadata:
   name: policy-btls-ca-mismatch

@@ -54,6 +54,7 @@ var (
 	IPFamily                  = os.Getenv("IP_FAMILY")
 	DeployProfile             = os.Getenv("KUBE_DEPLOY_PROFILE")
 	enabledClusterTrustBundle = os.Getenv("ENABLE_CLUSTER_TRUST_BUNDLE")
+	gatewayAPIVersion         = os.Getenv("E2E_GATEWAY_API_VERSION")
 
 	SameNamespaceGateway    = types.NamespacedName{Name: "same-namespace", Namespace: ConformanceInfraNamespace}
 	SameNamespaceGatewayRef = k8sutils.NewGatewayRef(SameNamespaceGateway)
@@ -749,6 +750,10 @@ func IsGatewayNamespaceMode() bool {
 // TODO(zhaohuabing) remove this after the feature flag is removed.
 func XDSNameSchemeV2() bool {
 	return DeployProfile == "xds-name-scheme-v2"
+}
+
+func IsBTLSPolicyV1alpha3() bool {
+	return gatewayAPIVersion == "v1.3.0"
 }
 
 func GetGatewayResourceNamespace() string {

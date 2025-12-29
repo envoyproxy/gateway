@@ -36,7 +36,13 @@ E2E_TIMEOUT ?= 20m
 # E2E_REDIRECT allow you specified a redirect when run e2e test locally, e.g. `>> test_output.out 2>&1`
 E2E_REDIRECT ?=
 E2E_TEST_ARGS ?= -v -tags e2e -timeout $(E2E_TIMEOUT)
+# If you want to skip CRD version check, add `--allow-crds-mismatch` to E2E_TEST_SUITE_ARGS.
+# This flag is added automatically when E2E_GATEWAY_API_VERSION is set.
 E2E_TEST_SUITE_ARGS ?= --debug=true
+# Add allow-crds-mismatch flag when E2E_GATEWAY_API_VERSION is set to allow testing with different Gateway API versions.
+ifneq ($(strip $(E2E_GATEWAY_API_VERSION)),)
+E2E_TEST_SUITE_ARGS += --allow-crds-mismatch
+endif
 
 CONFORMANCE_RUN_TEST ?=
 CONFORMANCE_TEST_ARGS ?= -v -tags conformance -timeout $(E2E_TIMEOUT)
