@@ -21,7 +21,9 @@ import (
 	"github.com/envoyproxy/gateway/internal/utils"
 )
 
-var ErrBackendTLSPolicyInvalidKind = fmt.Errorf("no CA bundle found in referenced ConfigMap, Secret, or ClusterTrustBundle")
+var ErrBackendTLSPolicyNoValidCACertificate = fmt.Errorf(
+	"no CA bundle found in referenced ConfigMap, Secret, or ClusterTrustBundle",
+)
 
 // ProcessBackendTLSPolicyStatus is called to post-process Backend TLS Policy status
 // after they were applied in all relevant translations.
@@ -511,7 +513,7 @@ func (t *Translator) getCaCertsFromCARefs(
 	}
 
 	if ca == "" {
-		return nil, ErrBackendTLSPolicyInvalidKind
+		return nil, ErrBackendTLSPolicyNoValidCACertificate
 	}
 	return []byte(ca), nil
 }
