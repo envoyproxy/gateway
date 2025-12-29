@@ -1008,7 +1008,23 @@ func secretRouteFilterIndexFunc(rawObj client.Object) []string {
 // addBtlsIndexers adds indexing on BackendTLSPolicy, for ConfigMap and Secret objects that are
 // referenced in BackendTLSPolicy objects. This helps in querying for BackendTLSPolicies that are
 // affected by a particular ConfigMap CRUD.
-func addBtlsIndexers(ctx context.Context, mgr manager.Manager) error {
+func addBtlsIndexers(ctx context.Context, mgr manager.Manager, useV1Alpha3 bool) error {
+	if useV1Alpha3 {
+		if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1a3.BackendTLSPolicy{}, configMapBtlsIndex, configMapBtlsIndexFuncV1Alpha3); err != nil {
+			return err
+		}
+
+		if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1a3.BackendTLSPolicy{}, secretBtlsIndex, secretBtlsIndexFuncV1Alpha3); err != nil {
+			return err
+		}
+
+		if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1a3.BackendTLSPolicy{}, clusterTrustBundleBtlsIndex, clusterTrustBundleBtlsIndexFuncV1Alpha3); err != nil {
+			return err
+		}
+
+		return nil
+	}
+
 	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1.BackendTLSPolicy{}, configMapBtlsIndex, configMapBtlsIndexFunc); err != nil {
 		return err
 	}
@@ -1062,6 +1078,53 @@ func secretBtlsIndexFunc(rawObj client.Object) []string {
 
 func clusterTrustBundleBtlsIndexFunc(rawObj client.Object) []string {
 	btls := rawObj.(*gwapiv1.BackendTLSPolicy)
+	var refs []string
+	for _, caCertRef := range btls.Spec.Validation.CACertificateRefs {
+		if string(caCertRef.Kind) == resource.KindClusterTrustBundle {
+			refs = append(refs, string(caCertRef.Name))
+		}
+	}
+	return refs
+}
+
+func configMapBtlsIndexFuncV1Alpha3(rawObj client.Object) []string {
+	btls := rawObj.(*gwapiv1a3.BackendTLSPolicy)
+	var configMapReferences []string
+	if btls.Spec.Validation.CACertificateRefs != nil {
+		for _, caCertRef := range btls.Spec.Validation.CACertificateRefs {
+			if string(caCertRef.Kind) == resource.KindConfigMap {
+				configMapReferences = append(configMapReferences,
+					types.NamespacedName{
+						Namespace: btls.Namespace,
+						Name:      string(caCertRef.Name),
+					}.String(),
+				)
+			}
+		}
+	}
+	return configMapReferences
+}
+
+func secretBtlsIndexFuncV1Alpha3(rawObj client.Object) []string {
+	btls := rawObj.(*gwapiv1a3.BackendTLSPolicy)
+	var secretReferences []string
+	if btls.Spec.Validation.CACertificateRefs != nil {
+		for _, caCertRef := range btls.Spec.Validation.CACertificateRefs {
+			if string(caCertRef.Kind) == resource.KindSecret {
+				secretReferences = append(secretReferences,
+					types.NamespacedName{
+						Namespace: btls.Namespace,
+						Name:      string(caCertRef.Name),
+					}.String(),
+				)
+			}
+		}
+	}
+	return secretReferences
+}
+
+func clusterTrustBundleBtlsIndexFuncV1Alpha3(rawObj client.Object) []string {
+	btls := rawObj.(*gwapiv1a3.BackendTLSPolicy)
 	var refs []string
 	for _, caCertRef := range btls.Spec.Validation.CACertificateRefs {
 		if string(caCertRef.Kind) == resource.KindClusterTrustBundle {

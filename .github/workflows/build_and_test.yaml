@@ -152,6 +152,7 @@ jobs:
         - version: v1.34.2
           ipFamily: ipv4
           profile: xds-name-scheme-v2
+          gatewayApiVersion: v1.3.0
     steps:
     - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
     - uses: ./tools/github-actions/setup-deps
@@ -174,6 +175,7 @@ jobs:
         IMAGE_PULL_POLICY: IfNotPresent
         IP_FAMILY: ${{ matrix.target.ipFamily }}
         KUBE_DEPLOY_PROFILE: ${{ matrix.target.profile }}
+        E2E_GATEWAY_API_VERSION: ${{ matrix.target.gatewayApiVersion }}
       run: make conformance
 
   e2e-test:
@@ -205,6 +207,7 @@ jobs:
         - version: v1.34.2
           ipFamily: ipv4
           profile: xds-name-scheme-v2
+          gatewayApiVersion: v1.3.0
 
     steps:
     - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
@@ -229,6 +232,7 @@ jobs:
         IMAGE_PULL_POLICY: IfNotPresent
         IP_FAMILY: ${{ matrix.target.ipFamily }}
         KUBE_DEPLOY_PROFILE: ${{ matrix.target.profile }}
+        E2E_GATEWAY_API_VERSION: ${{ matrix.target.gatewayApiVersion }}
         E2E_TIMEOUT: 1h
         NUM_WORKERS: 2
         # QPS more than 3000 may cause e2e flaky test.
@@ -242,6 +246,8 @@ jobs:
   benchmark-test:
     runs-on: ubuntu-latest
     needs:
+    - build
+    - changes
     # There's a different workflow for benchmark-test on push.
     # So we need to check if this is a pull request and changes.
     if: ${{ github.event_name == 'pull_request' && needs.changes.outputs.run_test_workflow == 'true' }}

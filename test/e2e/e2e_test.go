@@ -90,7 +90,7 @@ func TestE2E(t *testing.T) {
 		// All e2e tests should leave Features empty.
 		SupportedFeatures: enabledFeatures,
 		SkipTests:         skipTests,
-		AllowCRDsMismatch: *flags.AllowCRDsMismatch,
+		AllowCRDsMismatch: true,
 		Hook:              Hook,
 	})
 	if err != nil {

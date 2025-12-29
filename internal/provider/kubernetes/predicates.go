@@ -253,19 +253,15 @@ func (r *gatewayAPIReconciler) isBackendReferencingClusterTrustBundle(ctb *certi
 }
 
 func (r *gatewayAPIReconciler) isBackendTLSPolicyReferencingClusterTrustBundle(ctb *certificatesv1b1.ClusterTrustBundle) bool {
-	btlsList := &gwapiv1.BackendTLSPolicyList{}
-	if err := r.client.List(context.Background(), btlsList, &client.ListOptions{
+	btlsList, err := r.listBackendTLSPolicies(context.Background(), &client.ListOptions{
 		FieldSelector: fields.OneTermEqualSelector(clusterTrustBundleBtlsIndex, ctb.Name),
-	}); err != nil {
+	})
+	if err != nil {
 		r.log.Error(err, "unable to find associated BackendTLSPolicy")
 		return false
 	}
 
-	if len(btlsList.Items) > 0 {
-		return true
-	}
-
-	return false
+	return len(btlsList) > 0
 }
 
 func (r *gatewayAPIReconciler) isHTTPRouteFilterReferencingSecret(nsName *types.NamespacedName) bool {
@@ -285,19 +281,15 @@ func (r *gatewayAPIReconciler) isHTTPRouteFilterReferencingSecret(nsName *types.
 }
 
 func (r *gatewayAPIReconciler) isBackendTLSPolicyReferencingSecret(nsName *types.NamespacedName) bool {
-	btlsList := &gwapiv1.BackendTLSPolicyList{}
-	if err := r.client.List(context.Background(), btlsList, &client.ListOptions{
+	btlsList, err := r.listBackendTLSPolicies(context.Background(), &client.ListOptions{
 		FieldSelector: fields.OneTermEqualSelector(secretBtlsIndex, nsName.String()),
-	}); err != nil {
+	})
+	if err != nil {
 		r.log.Error(err, "unable to find associated BackendTLSPolicy")
 		return false
 	}
 
-	if len(btlsList.Items) > 0 {
-		return true
-	}
-
-	return false
+	return len(btlsList) > 0
 }
 
 func (r *gatewayAPIReconciler) isEnvoyProxyReferencingSecret(nsName *types.NamespacedName) bool {

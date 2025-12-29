@@ -105,7 +105,7 @@ spec:
         hostname: envoy-gateway-conformance-infra-proxy-protocol-gtw-4aabe705.envoy-gateway-system.svc
         port: 443
 ---
-apiVersion: gateway.networking.k8s.io/v1
+apiVersion: gateway.networking.k8s.io/v1alpha3
 kind: BackendTLSPolicy
 metadata:
   name: btls-proxy-protocol-backend
@@ -165,4 +165,3 @@ metadata:
   name: example-ca
   namespace: gateway-conformance-infra
 ---
-

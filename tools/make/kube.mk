@@ -36,7 +36,6 @@ E2E_TIMEOUT ?= 20m
 # E2E_REDIRECT allow you specified a redirect when run e2e test locally, e.g. `>> test_output.out 2>&1`
 E2E_REDIRECT ?=
 E2E_TEST_ARGS ?= -v -tags e2e -timeout $(E2E_TIMEOUT)
-# If you want to skip crds version check, add `--allow-crds-mismatch` to E2E_TEST_SUITE_ARGS
 E2E_TEST_SUITE_ARGS ?= --debug=true
 
 CONFORMANCE_RUN_TEST ?=
@@ -170,7 +169,17 @@ endif
 .PHONY: kube-deploy
 kube-deploy: manifests helm-generate.gateway-helm ## Install Envoy Gateway into the Kubernetes cluster specified in ~/.kube/config.
 	@$(LOG_TARGET)
-	$(GO_TOOL) helm install eg charts/gateway-helm \
+	@set -e; \
+	HELM_SKIP_CRDS=""; \
+	if [ -n "$(strip $(E2E_GATEWAY_API_VERSION))" ]; then \
+		GWAPI_VER="$(strip $(E2E_GATEWAY_API_VERSION))"; \
+		GWAPI_URL="https://github.com/kubernetes-sigs/gateway-api/releases/download/$${GWAPI_VER}/experimental-install.yaml"; \
+		echo "Installing Gateway API CRDs from $${GWAPI_URL}"; \
+		kubectl create -f "$${GWAPI_URL}"; \
+		kubectl create -f charts/gateway-helm/crds/generated; \
+		HELM_SKIP_CRDS="--skip-crds"; \
+	fi; \
+	$(GO_TOOL) helm install $$HELM_SKIP_CRDS eg charts/gateway-helm \
 		--set deployment.envoyGateway.imagePullPolicy=$(IMAGE_PULL_POLICY) \
 		-n envoy-gateway-system --create-namespace \
 		--debug --timeout='$(WAIT_TIMEOUT)' \
