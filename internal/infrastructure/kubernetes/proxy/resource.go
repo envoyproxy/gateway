@@ -463,15 +463,15 @@ func expectedContainerEnv(containerSpec *egv1a1.KubernetesContainerSpec, topolog
 }
 
 // expectedZoneFieldPath returns the fieldPath for the zone environment variable
-// based on whether the topology injector is enabled or disabled.
-// - When topology injector is enabled (disabled=false): zone is in annotations (custom webhook)
+// based on whether the topology injector MutatingWebhookConfiguration is enabled or disabled.
+// - When topology injector is enabled (disabled=false): zone is in annotations
 // - When topology injector is disabled (disabled=true): zone is in labels (K8s 1.35+ PodTopologyLabels)
 func expectedZoneFieldPath(topologyInjectorDisabled bool) string {
 	if topologyInjectorDisabled {
 		// K8s 1.35+ PodTopologyLabels: zone is in pod labels
 		return fmt.Sprintf("metadata.labels['%s']", corev1.LabelTopologyZone)
 	}
-	// Custom topology injector: zone is in pod annotations
+	// Topology injector webhook: zone is in pod annotations
 	return fmt.Sprintf("metadata.annotations['%s']", corev1.LabelTopologyZone)
 }
 
