@@ -592,7 +592,7 @@ prometheus:
     readinessProbeInitialDelay: 0
     global:
       # Speed up scraping a bit from the default
-      scrape_interval: 10s
+      scrape_interval: 15s
     service:
       # use LoadBalancer to expose prometheus
       type: LoadBalancer
