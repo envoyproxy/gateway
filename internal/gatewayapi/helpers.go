@@ -745,7 +745,7 @@ func irStringMatch(name string, match egv1a1.StringMatch) *ir.StringMatch {
 	case egv1a1.StringMatchRegularExpression:
 		return &ir.StringMatch{Name: name, SafeRegex: &match.Value}
 	default:
-		return nil
+		return &ir.StringMatch{Name: name, Exact: &match.Value}
 	}
 }
 

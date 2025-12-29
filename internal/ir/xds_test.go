@@ -1410,10 +1410,13 @@ func TestRedaction(t *testing.T) {
 								HMACSecret:   []byte("secret"),
 							},
 							APIKeyAuth: &APIKeyAuth{
-								Credentials: map[string]PrivateBytes{"client-id": []byte("secret")},
+								Credentials: []APIKeyCredential{{Client: []byte("client-id"), Key: []byte("secret")}},
 							},
 							BasicAuth: &BasicAuth{
 								Users: []byte("secret"),
+							},
+							ExtAuth: &ExtAuth{
+								ContextExtensions: []*ContextExtention{{Name: "key", Value: []byte("secret")}},
 							},
 						},
 					}},
@@ -1427,8 +1430,9 @@ func TestRedaction(t *testing.T) {
 				`"routes":[{` +
 				`"name":"","hostname":"","isHTTP2":false,"security":{` +
 				`"oidc":{"name":"","provider":{"authorizationEndpoint":"","tokenEndpoint":""},"clientID":"","clientSecret":"[redacted]","hmacSecret":"[redacted]"},` +
-				`"apiKeyAuth":{"credentials":{"client-id":"[redacted]"},"extractFrom":null},` +
-				`"basicAuth":{"name":"","users":"[redacted]"}` +
+				`"apiKeyAuth":{"credentials":[{"client":"[redacted]","key":"[redacted]"}],"extractFrom":null},` +
+				`"basicAuth":{"name":"","users":"[redacted]"},` +
+				`"extAuth":{"name":"","contextExtensions":[{"name":"key","value":"[redacted]"}]}` +
 				`}}],` +
 				`"isHTTP2":false,"path":{"mergeSlashes":false,"escapedSlashesAction":""}}],` +
 				`"globalResources":{"envoyClientCertificate":{"name":"test","certificate":"Q2VydGlmaWNhdGU=","privateKey":"[redacted]"}}}`,

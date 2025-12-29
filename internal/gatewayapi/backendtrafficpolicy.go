@@ -34,7 +34,8 @@ const (
 	MaxConsistentHashTableSize = 5000011 // https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto#config-cluster-v3-cluster-maglevlbconfig
 )
 
-func (t *Translator) ProcessBackendTrafficPolicies(resources *resource.Resources,
+func (t *Translator) ProcessBackendTrafficPolicies(
+	resources *resource.Resources,
 	gateways []*GatewayContext,
 	routes []RouteContext,
 	xdsIR resource.XdsIRMap,
@@ -105,7 +106,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(resources *resource.Resources
 					res = append(res, policy)
 				}
 
-				t.processBackendTrafficPolicyForRoute(resources, xdsIR,
+				t.processBackendTrafficPolicyForRoute(xdsIR,
 					routeMap, gatewayRouteMap, gatewayPolicyMerged, gatewayPolicyMap, policy, currTarget)
 			}
 		}
@@ -125,7 +126,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(resources *resource.Resources
 					res = append(res, policy)
 				}
 
-				t.processBackendTrafficPolicyForRoute(resources, xdsIR,
+				t.processBackendTrafficPolicyForRoute(xdsIR,
 					routeMap, gatewayRouteMap, gatewayPolicyMerged, gatewayPolicyMap, policy, currTarget)
 			}
 		}
@@ -144,7 +145,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(resources *resource.Resources
 					handledPolicies[policyName] = policy
 					res = append(res, policy)
 				}
-				t.processBackendTrafficPolicyForGateway(resources, xdsIR,
+				t.processBackendTrafficPolicyForGateway(xdsIR,
 					gatewayMap, gatewayRouteMap, gatewayPolicyMerged, policy, currTarget)
 			}
 		}
@@ -163,7 +164,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(resources *resource.Resources
 					handledPolicies[policyName] = policy
 					res = append(res, policy)
 				}
-				t.processBackendTrafficPolicyForGateway(resources, xdsIR,
+				t.processBackendTrafficPolicyForGateway(xdsIR,
 					gatewayMap, gatewayRouteMap, gatewayPolicyMerged, policy, currTarget)
 			}
 		}
@@ -223,7 +224,6 @@ func (t *Translator) buildGatewayPolicyMap(
 }
 
 func (t *Translator) processBackendTrafficPolicyForRoute(
-	resources *resource.Resources,
 	xdsIR resource.XdsIRMap,
 	routeMap map[policyTargetRouteKey]*policyRouteTargetContext,
 	gatewayRouteMap *GatewayPolicyRouteMap,
@@ -282,7 +282,11 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 			ancestorRef := getAncestorRefForPolicy(mapKey.NamespacedName, p.SectionName)
 			ancestorRefs = append(ancestorRefs, &ancestorRef)
 
-			parentRefCtxs = append(parentRefCtxs, GetRouteParentContext(targetedRoute, p, t.GatewayControllerName))
+			// Only process parentRefs that were handled by this translator
+			// (skip those referencing Gateways with different GatewayClasses)
+			if parentRefCtx := targetedRoute.GetRouteParentContext(p); parentRefCtx != nil {
+				parentRefCtxs = append(parentRefCtxs, parentRefCtx)
+			}
 		}
 	}
 
@@ -299,7 +303,7 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 
 	if policy.Spec.MergeType == nil {
 		// Set conditions for translation error if it got any
-		if err := t.translateBackendTrafficPolicyForRoute(policy, targetedRoute, currTarget, xdsIR, resources, nil, nil); err != nil {
+		if err := t.translateBackendTrafficPolicyForRoute(policy, targetedRoute, currTarget, xdsIR, nil, nil); err != nil {
 			status.SetTranslationErrorForPolicyAncestors(&policy.Status,
 				ancestorRefs,
 				t.GatewayControllerName,
@@ -327,7 +331,7 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 				gwPolicy := gatewayPolicyMap[gwMapKey]
 				if gwPolicy == nil && listenerPolicy == nil {
 					// not found, fall back to the current policy
-					if err := t.translateBackendTrafficPolicyForRoute(policy, targetedRoute, currTarget, xdsIR, resources, &gwNN, &listener.Name); err != nil {
+					if err := t.translateBackendTrafficPolicyForRoute(policy, targetedRoute, currTarget, xdsIR, &gwNN, &listener.Name); err != nil {
 						status.SetConditionForPolicyAncestor(&policy.Status,
 							&ancestorRef,
 							t.GatewayControllerName,
@@ -347,7 +351,7 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 				// merge with parent policy
 				if err := t.translateBackendTrafficPolicyForRouteWithMerge(
 					policy, parentPolicy, currTarget, gwNN, &listener.Name,
-					targetedRoute, xdsIR, resources,
+					targetedRoute, xdsIR,
 				); err != nil {
 					status.SetConditionForPolicyAncestor(&policy.Status,
 						&ancestorRef,
@@ -414,7 +418,6 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 }
 
 func (t *Translator) processBackendTrafficPolicyForGateway(
-	resources *resource.Resources,
 	xdsIR resource.XdsIRMap,
 	gatewayMap map[types.NamespacedName]*policyGatewayTargetContext,
 	gatewayRouteMap *GatewayPolicyRouteMap,
@@ -449,7 +452,7 @@ func (t *Translator) processBackendTrafficPolicyForGateway(
 	}
 
 	// Set conditions for translation error if it got any
-	if err := t.translateBackendTrafficPolicyForGateway(policy, currTarget, targetedGateway, xdsIR, resources); err != nil {
+	if err := t.translateBackendTrafficPolicyForGateway(policy, currTarget, targetedGateway, xdsIR); err != nil {
 		status.SetTranslationErrorForPolicyAncestor(&policy.Status,
 			&ancestorRef,
 			t.GatewayControllerName,
@@ -616,11 +619,10 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(
 	route RouteContext,
 	target gwapiv1.LocalPolicyTargetReferenceWithSectionName,
 	xdsIR resource.XdsIRMap,
-	resources *resource.Resources,
 	policyTargetGatewayNN *types.NamespacedName,
 	policyTargetListener *gwapiv1.SectionName,
 ) error {
-	tf, errs := t.buildTrafficFeatures(policy, resources)
+	tf, errs := t.buildTrafficFeatures(policy)
 	if tf == nil {
 		// should not happen
 		return nil
@@ -643,7 +645,7 @@ func (t *Translator) translateBackendTrafficPolicyForRouteWithMerge(
 	policy, parentPolicy *egv1a1.BackendTrafficPolicy,
 	target gwapiv1.LocalPolicyTargetReferenceWithSectionName,
 	policyTargetGatewayNN types.NamespacedName, policyTargetListener *gwapiv1.SectionName, route RouteContext,
-	xdsIR resource.XdsIRMap, resources *resource.Resources,
+	xdsIR resource.XdsIRMap,
 ) error {
 	mergedPolicy, err := mergeBackendTrafficPolicy(policy, parentPolicy)
 	if err != nil {
@@ -651,7 +653,7 @@ func (t *Translator) translateBackendTrafficPolicyForRouteWithMerge(
 	}
 
 	// Build traffic features from the merged policy
-	tf, errs := t.buildTrafficFeatures(mergedPolicy, resources)
+	tf, errs := t.buildTrafficFeatures(mergedPolicy)
 	if tf == nil {
 		// should not happen
 		return nil
@@ -666,8 +668,8 @@ func (t *Translator) translateBackendTrafficPolicyForRouteWithMerge(
 	// 2. Only gateway policy has rate limits - preserve gateway policy's rule names
 	// 3. Only route policy has rate limits - use route policy's rule names (default behavior)
 	if policy.Spec.RateLimit != nil && parentPolicy.Spec.RateLimit != nil {
-		tfGW, _ := t.buildTrafficFeatures(parentPolicy, resources)
-		tfRoute, _ := t.buildTrafficFeatures(policy, resources)
+		tfGW, _ := t.buildTrafficFeatures(parentPolicy)
+		tfRoute, _ := t.buildTrafficFeatures(policy)
 
 		if tfGW != nil && tfRoute != nil &&
 			tfGW.RateLimit != nil && tfRoute.RateLimit != nil {
@@ -681,7 +683,7 @@ func (t *Translator) translateBackendTrafficPolicyForRouteWithMerge(
 		}
 	} else if policy.Spec.RateLimit == nil && parentPolicy.Spec.RateLimit != nil {
 		// Case 2: Only gateway policy has rate limits - preserve gateway policy's rule names
-		tfGW, _ := t.buildTrafficFeatures(parentPolicy, resources)
+		tfGW, _ := t.buildTrafficFeatures(parentPolicy)
 		if tfGW != nil && tfGW.RateLimit != nil {
 			// Use the gateway policy's rate limit with its original rule names
 			tf.RateLimit = tfGW.RateLimit
@@ -769,7 +771,7 @@ func (t *Translator) applyTrafficFeatureToRoute(route RouteContext,
 		}
 		for _, r := range http.Routes {
 			// If specified the sectionName in policy target, must match route rule from ir route metadata.
-			if target.SectionName != nil && string(*target.SectionName) != r.Destination.Metadata.SectionName {
+			if target.SectionName != nil && string(*target.SectionName) != r.Metadata.SectionName {
 				continue
 			}
 			// Apply if there is a match
@@ -822,7 +824,7 @@ func mergeBackendTrafficPolicy(routePolicy, gwPolicy *egv1a1.BackendTrafficPolic
 	return utils.Merge[*egv1a1.BackendTrafficPolicy](gwPolicy, routePolicy, *routePolicy.Spec.MergeType)
 }
 
-func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy, resources *resource.Resources) (*ir.TrafficFeatures, error) {
+func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy) (*ir.TrafficFeatures, error) {
 	var (
 		rl          *ir.RateLimit
 		lb          *ir.LoadBalancer
@@ -887,7 +889,7 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy, r
 		errs = errors.Join(errs, err)
 	}
 
-	if ro, err = buildResponseOverride(policy, resources); err != nil {
+	if ro, err = t.buildResponseOverride(policy); err != nil {
 		err = perr.WithMessage(err, "ResponseOverride")
 		errs = errors.Join(errs, err)
 	}
@@ -905,7 +907,7 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy, r
 	cp = buildCompression(policy.Spec.Compression, policy.Spec.Compressor)
 	httpUpgrade = buildHTTPProtocolUpgradeConfig(policy.Spec.HTTPUpgrade)
 
-	ds = translateDNS(&policy.Spec.ClusterSettings)
+	ds = translateDNS(&policy.Spec.ClusterSettings, utils.NamespacedName(policy).String())
 
 	return &ir.TrafficFeatures{
 		RateLimit:         rl,
@@ -930,9 +932,9 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy, r
 
 func (t *Translator) translateBackendTrafficPolicyForGateway(
 	policy *egv1a1.BackendTrafficPolicy, target gwapiv1.LocalPolicyTargetReferenceWithSectionName,
-	gateway *GatewayContext, xdsIR resource.XdsIRMap, resources *resource.Resources,
+	gateway *GatewayContext, xdsIR resource.XdsIRMap,
 ) error {
-	tf, errs := t.buildTrafficFeatures(policy, resources)
+	tf, errs := t.buildTrafficFeatures(policy)
 	if tf == nil {
 		// should not happen
 		return errs
@@ -1209,6 +1211,7 @@ func buildRateLimitRule(rule egv1a1.RateLimitRule) (*ir.RateLimitRule, error) {
 		HeaderMatches: make([]*ir.StringMatch, 0),
 		MethodMatches: make([]*ir.StringMatch, 0),
 		Shared:        rule.Shared,
+		ShadowMode:    rule.ShadowMode,
 	}
 
 	for _, match := range rule.ClientSelectors {
@@ -1413,8 +1416,14 @@ func buildRequestBuffer(spec *egv1a1.RequestBuffer) (*ir.RequestBuffer, error) {
 		return nil, nil
 	}
 
-	if _, ok := spec.Limit.AsInt64(); !ok {
+	maxBytes, ok := spec.Limit.AsInt64()
+	if !ok {
 		return nil, fmt.Errorf("limit must be convertible to an int64")
+	}
+
+	if maxBytes < 0 || maxBytes > math.MaxUint32 {
+		return nil, fmt.Errorf("limit value %s is out of range, must be between 0 and %d",
+			spec.Limit.String(), math.MaxUint32)
 	}
 
 	return &ir.RequestBuffer{
@@ -1422,7 +1431,7 @@ func buildRequestBuffer(spec *egv1a1.RequestBuffer) (*ir.RequestBuffer, error) {
 	}, nil
 }
 
-func buildResponseOverride(policy *egv1a1.BackendTrafficPolicy, resources *resource.Resources) (*ir.ResponseOverride, error) {
+func (t *Translator) buildResponseOverride(policy *egv1a1.BackendTrafficPolicy) (*ir.ResponseOverride, error) {
 	if len(policy.Spec.ResponseOverride) == 0 {
 		return nil, nil
 	}
@@ -1483,7 +1492,7 @@ func buildResponseOverride(policy *egv1a1.BackendTrafficPolicy, resources *resou
 			}
 
 			var err error
-			response.Body, err = getCustomResponseBody(ro.Response.Body, resources, policy.Namespace)
+			response.Body, err = t.getCustomResponseBody(ro.Response.Body, policy.Namespace)
 			if err != nil {
 				return nil, err
 			}
@@ -1519,43 +1528,29 @@ func buildResponseOverride(policy *egv1a1.BackendTrafficPolicy, resources *resou
 	}, nil
 }
 
-func checkResponseBodySize(b []byte) error {
-	// Make this configurable in the future
-	// https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route.proto.html#max_direct_response_body_size_bytes
-	maxDirectResponseSize := 4096
-	lenB := len(b)
-	if lenB > maxDirectResponseSize {
-		return fmt.Errorf("response.body size %d greater than the max size %d", lenB, maxDirectResponseSize)
+func (t *Translator) getCustomResponseBody(
+	body *egv1a1.CustomResponseBody,
+	policyNs string,
+) ([]byte, error) {
+	if body == nil {
+		return nil, nil
 	}
 
-	return nil
-}
-
-func getCustomResponseBody(body *egv1a1.CustomResponseBody, resources *resource.Resources, policyNs string) ([]byte, error) {
-	if body != nil && body.Type != nil && *body.Type == egv1a1.ResponseValueTypeValueRef {
-		cm := resources.GetConfigMap(policyNs, string(body.ValueRef.Name))
+	if body.Type != nil && *body.Type == egv1a1.ResponseValueTypeValueRef {
+		cm := t.GetConfigMap(policyNs, string(body.ValueRef.Name))
 		if cm != nil {
 			b, dataOk := cm.Data["response.body"]
 			switch {
 			case dataOk:
-				body := []byte(b)
-				if err := checkResponseBodySize(body); err != nil {
-					return nil, err
-				}
-				return body, nil
+				data := []byte(b)
+				return data, nil
 			case len(cm.Data) > 0: // Fallback to the first key if response.body is not found
 				for _, value := range cm.Data {
-					body := []byte(value)
-					if err := checkResponseBodySize(body); err != nil {
-						return nil, err
-					}
-					return body, nil
+					data := []byte(value)
+					return data, nil
 				}
 			case len(cm.BinaryData) > 0:
 				for _, binData := range cm.BinaryData {
-					if err := checkResponseBodySize(binData); err != nil {
-						return nil, err
-					}
 					return binData, nil
 				}
 			default:
@@ -1564,11 +1559,8 @@ func getCustomResponseBody(body *egv1a1.CustomResponseBody, resources *resource.
 		} else {
 			return nil, fmt.Errorf("can't find the referenced configmap %s", body.ValueRef.Name)
 		}
-	} else if body != nil && body.Inline != nil {
+	} else if body.Inline != nil {
 		inlineValue := []byte(*body.Inline)
-		if err := checkResponseBodySize(inlineValue); err != nil {
-			return nil, err
-		}
 		return inlineValue, nil
 	}
 
@@ -1586,13 +1578,14 @@ func buildCompression(compression, compressor []*egv1a1.Compression) []*ir.Compr
 	// Handle the Compressor field first (higher priority)
 	if len(compressor) > 0 {
 		irCompression := make([]*ir.Compression, 0, len(compressor))
-		for _, c := range compressor {
+		for i, c := range compressor {
 			// Only add compression if the corresponding compressor not null
 			if (c.Type == egv1a1.GzipCompressorType && c.Gzip != nil) ||
 				(c.Type == egv1a1.BrotliCompressorType && c.Brotli != nil) ||
 				(c.Type == egv1a1.ZstdCompressorType && c.Zstd != nil) {
 				irCompression = append(irCompression, &ir.Compression{
-					Type: c.Type,
+					Type:        c.Type,
+					ChooseFirst: i == 0, // only the first compressor is marked as ChooseFirst
 				})
 			}
 		}
@@ -1604,9 +1597,10 @@ func buildCompression(compression, compressor []*egv1a1.Compression) []*ir.Compr
 		return nil
 	}
 	irCompression := make([]*ir.Compression, 0, len(compression))
-	for _, c := range compression {
+	for i, c := range compression {
 		irCompression = append(irCompression, &ir.Compression{
-			Type: c.Type,
+			Type:        c.Type,
+			ChooseFirst: i == 0, // only the first compressor is marked as ChooseFirst
 		})
 	}
 

@@ -181,6 +181,27 @@ func TestTranslateXds(t *testing.T) {
 				RuntimeFlags: cfg.runtimeFlags,
 			}
 			tCtx, err := tr.Translate(x)
+
+			// Handle EnvoyPatchPolicy statuses first, even if there are errors
+			// because errors are captured in the policy status conditions
+			if cfg.requireEnvoyPatchPolicies {
+				got := tCtx.EnvoyPatchPolicyStatuses
+				for _, e := range got {
+					require.NoError(t, field.SetValue(e, "LastTransitionTime", metav1.NewTime(time.Time{})))
+				}
+				if test.OverrideTestData() {
+					out, err := yaml.Marshal(got)
+					require.NoError(t, err)
+					require.NoError(t, file.Write(string(out), filepath.Join("testdata", "out", "xds-ir", inputFileName+".envoypatchpolicies.yaml")))
+				}
+
+				in := requireTestDataOutFile(t, "xds-ir", inputFileName+".envoypatchpolicies.yaml")
+				want := xtypes.EnvoyPatchPolicyStatuses{}
+				require.NoError(t, yaml.Unmarshal([]byte(in), &want))
+				opts := cmpopts.IgnoreFields(metav1.Condition{}, "LastTransitionTime")
+				require.Empty(t, cmp.Diff(want, got, opts))
+			}
+
 			if !strings.HasSuffix(inputFileName, "partial-invalid") && len(cfg.errMsg) == 0 {
 				t.Log(inputFileName)
 				require.NoError(t, err)
@@ -211,24 +232,6 @@ func TestTranslateXds(t *testing.T) {
 					require.NoError(t, file.Write(requireResourcesToYAMLString(t, secrets), filepath.Join("testdata", "out", "xds-ir", inputFileName+".secrets.yaml")))
 				}
 				require.Equal(t, requireTestDataOutFile(t, "xds-ir", inputFileName+".secrets.yaml"), requireResourcesToYAMLString(t, secrets))
-			}
-
-			if cfg.requireEnvoyPatchPolicies {
-				got := tCtx.EnvoyPatchPolicyStatuses
-				for _, e := range got {
-					require.NoError(t, field.SetValue(e, "LastTransitionTime", metav1.NewTime(time.Time{})))
-				}
-				if test.OverrideTestData() {
-					out, err := yaml.Marshal(got)
-					require.NoError(t, err)
-					require.NoError(t, file.Write(string(out), filepath.Join("testdata", "out", "xds-ir", inputFileName+".envoypatchpolicies.yaml")))
-				}
-
-				in := requireTestDataOutFile(t, "xds-ir", inputFileName+".envoypatchpolicies.yaml")
-				want := xtypes.EnvoyPatchPolicyStatuses{}
-				require.NoError(t, yaml.Unmarshal([]byte(in), &want))
-				opts := cmpopts.IgnoreFields(metav1.Condition{}, "LastTransitionTime")
-				require.Empty(t, cmp.Diff(want, got, opts))
 			}
 		})
 	}

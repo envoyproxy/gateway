@@ -349,7 +349,7 @@ func TestValidateEnvoyProxy(t *testing.T) {
 							Settings: []egv1a1.ProxyAccessLogSetting{
 								{
 									Format: &egv1a1.ProxyAccessLogFormat{
-										Type: egv1a1.ProxyAccessLogFormatTypeText,
+										Type: ptr.To(egv1a1.ProxyAccessLogFormatTypeText),
 									},
 								},
 							},
@@ -372,7 +372,7 @@ func TestValidateEnvoyProxy(t *testing.T) {
 							Settings: []egv1a1.ProxyAccessLogSetting{
 								{
 									Format: &egv1a1.ProxyAccessLogFormat{
-										Type: egv1a1.ProxyAccessLogFormatTypeText,
+										Type: ptr.To(egv1a1.ProxyAccessLogFormatTypeText),
 										Text: ptr.To("[%START_TIME%]"),
 									},
 									Sinks: []egv1a1.ProxyAccessLogSink{
@@ -961,6 +961,156 @@ func TestGetEnvoyProxyComponentLevelArgs(t *testing.T) {
 		t.Run("", func(t *testing.T) {
 			got := tc.logging.GetEnvoyProxyComponentLevel()
 			require.Equal(t, tc.expected, got)
+		})
+	}
+}
+
+func TestValidateClusterStatName(t *testing.T) {
+	testCases := []struct {
+		name     string
+		statName string
+		expected bool
+	}{
+		{
+			name:     "valid cluster stat name with supported operators",
+			statName: "%ROUTE_NAME%/%ROUTE_NAMESPACE%/%BACKEND_REFS%",
+			expected: true,
+		},
+		{
+			name:     "invalid cluster stat name with unsupported operators",
+			statName: "%ROUTE_NAME%/%FOO%/%BAR%",
+			expected: false,
+		},
+		{
+			name:     "valid cluster stat name",
+			statName: "any_custom_name",
+			expected: true,
+		},
+		{
+			name:     "invalid cluster stat name",
+			statName: "%ROUTE_NAME",
+			expected: false,
+		},
+	}
+
+	for i := range testCases {
+		tc := testCases[i]
+		t.Run(tc.name, func(t *testing.T) {
+			errs := ValidateClusterStatName(tc.statName)
+			if tc.expected {
+				require.NoError(t, errs)
+			} else {
+				require.Error(t, errs)
+			}
+		})
+	}
+}
+
+func TestValidateProxyAccessLog(t *testing.T) {
+	tests := []struct {
+		name      string
+		accessLog *egv1a1.ProxyAccessLog
+		expected  []error
+	}{
+		{
+			name: "nil format type with text only",
+			accessLog: &egv1a1.ProxyAccessLog{
+				Settings: []egv1a1.ProxyAccessLogSetting{
+					{
+						Format: &egv1a1.ProxyAccessLogFormat{
+							Text: ptr.To("[%START_TIME%]"),
+						},
+						Sinks: []egv1a1.ProxyAccessLogSink{
+							{
+								Type: egv1a1.ProxyAccessLogSinkTypeFile,
+								File: &egv1a1.FileEnvoyProxyAccessLog{Path: "/dev/stdout"},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "nil format type with json only",
+			accessLog: &egv1a1.ProxyAccessLog{
+				Settings: []egv1a1.ProxyAccessLogSetting{
+					{
+						Format: &egv1a1.ProxyAccessLogFormat{
+							JSON: map[string]string{"start_time": "%START_TIME%"},
+						},
+						Sinks: []egv1a1.ProxyAccessLogSink{
+							{
+								Type: egv1a1.ProxyAccessLogSinkTypeFile,
+								File: &egv1a1.FileEnvoyProxyAccessLog{Path: "/dev/stdout"},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "nil format type with both text and json",
+			accessLog: &egv1a1.ProxyAccessLog{
+				Settings: []egv1a1.ProxyAccessLogSetting{
+					{
+						Format: &egv1a1.ProxyAccessLogFormat{
+							Text: ptr.To("[%START_TIME%]"),
+							JSON: map[string]string{"start_time": "%START_TIME%"},
+						},
+						Sinks: []egv1a1.ProxyAccessLogSink{
+							{
+								Type: egv1a1.ProxyAccessLogSinkTypeFile,
+								File: &egv1a1.FileEnvoyProxyAccessLog{Path: "/dev/stdout"},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "Text type without text field",
+			accessLog: &egv1a1.ProxyAccessLog{
+				Settings: []egv1a1.ProxyAccessLogSetting{
+					{
+						Format: &egv1a1.ProxyAccessLogFormat{
+							Type: ptr.To(egv1a1.ProxyAccessLogFormatTypeText),
+						},
+						Sinks: []egv1a1.ProxyAccessLogSink{
+							{
+								Type: egv1a1.ProxyAccessLogSinkTypeFile,
+								File: &egv1a1.FileEnvoyProxyAccessLog{Path: "/dev/stdout"},
+							},
+						},
+					},
+				},
+			},
+			expected: []error{fmt.Errorf("unable to configure access log when using Text format but \"text\" field being empty")},
+		},
+		{
+			name: "File sink without file field",
+			accessLog: &egv1a1.ProxyAccessLog{
+				Settings: []egv1a1.ProxyAccessLogSetting{
+					{
+						Format: &egv1a1.ProxyAccessLogFormat{
+							Type: ptr.To(egv1a1.ProxyAccessLogFormatTypeText),
+							Text: ptr.To("[%START_TIME%]"),
+						},
+						Sinks: []egv1a1.ProxyAccessLogSink{
+							{
+								Type: egv1a1.ProxyAccessLogSinkTypeFile,
+							},
+						},
+					},
+				},
+			},
+			expected: []error{fmt.Errorf("unable to configure access log when using File sink type but \"file\" field being empty")},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			actual := validateProxyAccessLog(tc.accessLog)
+			require.Equal(t, tc.expected, actual)
 		})
 	}
 }

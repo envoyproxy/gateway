@@ -551,6 +551,85 @@ spec:
                     required:
                     - maxRequestBytes
                     type: object
+                  contextExtensions:
+                    description: |-
+                      ContextExtensions are analogous to http_request.headers, however these
+                      contents will not be sent to the upstream server. This provides an
+                      extension mechanism for sending additional information to the auth server
+                      without modifying the proto definition. It maps to the internal opaque
+                      context in the filter chain.
+                    items:
+                      description: |-
+                        ContextExtension is analogous to http_request.headers, however these
+                        contents will not be sent to the upstream server. This provides an
+                        extension mechanism for sending additional information to the auth server
+                        without modifying the proto definition. It maps to the internal opaque
+                        context in the filter chain.
+                      properties:
+                        name:
+                          description: Name of the context extension.
+                          type: string
+                        type:
+                          default: Value
+                          description: |-
+                            Type is the type of method to use to read the ContextExtension value.
+                            Valid values are Value and ValueRef, default is Value.
+                          enum:
+                          - Value
+                          - ValueRef
+                          type: string
+                        value:
+                          description: Value of the context extension.
+                          type: string
+                        valueRef:
+                          description: ValueRef for the context extension's value.
+                          properties:
+                            group:
+                              description: |-
+                                Group is the group of the referent. For example, "gateway.networking.k8s.io".
+                                When unspecified or empty string, core API group is inferred.
+                              maxLength: 253
+                              pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                              type: string
+                            key:
+                              description: The key to select.
+                              type: string
+                            kind:
+                              description: Kind is kind of the referent. For example
+                                "HTTPRoute" or "Service".
+                              maxLength: 63
+                              minLength: 1
+                              pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
+                              type: string
+                            name:
+                              description: Name is the name of the referent.
+                              maxLength: 253
+                              minLength: 1
+                              type: string
+                          required:
+                          - group
+                          - key
+                          - kind
+                          - name
+                          type: object
+                          x-kubernetes-validations:
+                          - message: Only a reference to an object of kind ConfigMap
+                              or Secret belonging to default v1 API group is supported.
+                            rule: self.kind in ['ConfigMap', 'Secret'] && self.group
+                              in ['', 'v1']
+                      required:
+                      - name
+                      - type
+                      type: object
+                      x-kubernetes-validations:
+                      - message: Exactly one of value or valueRef must be set with
+                          correct type.
+                        rule: (self.type == 'Value' && has(self.value) && !has(self.valueRef))
+                          || (self.type == 'ValueRef' && !has(self.value) && has(self.valueRef))
+                    type: array
+                    x-kubernetes-list-map-keys:
+                    - name
+                    x-kubernetes-list-type: map
                   failOpen:
                     default: false
                     description: |-
@@ -718,6 +797,26 @@ spec:
                               format: int32
                               maximum: 65535
                               minimum: 1
+                              type: integer
+                            weight:
+                              default: 1
+                              description: |-
+                                Weight specifies the proportion of requests forwarded to the referenced
+                                backend. This is computed as weight/(sum of all weights in this
+                                BackendRefs list). For non-zero values, there may be some epsilon from
+                                the exact proportion defined here depending on the precision an
+                                implementation supports. Weight is not a percentage and the sum of
+                                weights does not need to equal 100.
+
+                                If only one backend is specified and it has a weight greater than 0, 100%
+                                of the traffic is forwarded to that backend. If weight is set to 0, no
+                                traffic should be forwarded for this entry. If unspecified, weight
+                                defaults to 1.
+
+                                Support for this field varies based on the context where used.
+                              format: int32
+                              maximum: 1000000
+                              minimum: 0
                               type: integer
                           required:
                           - name
@@ -1294,6 +1393,23 @@ spec:
                                       - name
                                       type: object
                                     type: array
+                                  queryParams:
+                                    description: QueryParams configures the query
+                                      parameter hash policy when the consistent hash
+                                      type is set to QueryParams.
+                                    items:
+                                      description: |-
+                                        QueryParam defines the query parameter name hashing configuration for consistent hash based
+                                        load balancing.
+                                      properties:
+                                        name:
+                                          description: Name of the query param to
+                                            hash.
+                                          type: string
+                                      required:
+                                      - name
+                                      type: object
+                                    type: array
                                   tableSize:
                                     default: 65537
                                     description: The table size for consistent hashing,
@@ -1309,11 +1425,13 @@ spec:
                                       "Header",
                                       "Headers",
                                       "Cookie".
+                                      "QueryParams".
                                     enum:
                                     - SourceIP
                                     - Header
                                     - Headers
                                     - Cookie
+                                    - QueryParams
                                     type: string
                                 required:
                                 - type
@@ -1331,6 +1449,10 @@ spec:
                                     cookie field must be set.
                                   rule: 'self.type == ''Cookie'' ? has(self.cookie)
                                     : !has(self.cookie)'
+                                - message: If consistent hash type is queryParams,
+                                    the queryParams field must be set.
+                                  rule: 'self.type == ''QueryParams'' ? has(self.queryParams)
+                                    : !has(self.queryParams)'
                               endpointOverride:
                                 description: |-
                                   EndpointOverride defines the configuration for endpoint override.
@@ -1816,6 +1938,26 @@ spec:
                               maximum: 65535
                               minimum: 1
                               type: integer
+                            weight:
+                              default: 1
+                              description: |-
+                                Weight specifies the proportion of requests forwarded to the referenced
+                                backend. This is computed as weight/(sum of all weights in this
+                                BackendRefs list). For non-zero values, there may be some epsilon from
+                                the exact proportion defined here depending on the precision an
+                                implementation supports. Weight is not a percentage and the sum of
+                                weights does not need to equal 100.
+
+                                If only one backend is specified and it has a weight greater than 0, 100%
+                                of the traffic is forwarded to that backend. If weight is set to 0, no
+                                traffic should be forwarded for this entry. If unspecified, weight
+                                defaults to 1.
+
+                                Support for this field varies based on the context where used.
+                              format: int32
+                              maximum: 1000000
+                              minimum: 0
+                              type: integer
                           required:
                           - name
                           type: object
@@ -2391,6 +2533,23 @@ spec:
                                       - name
                                       type: object
                                     type: array
+                                  queryParams:
+                                    description: QueryParams configures the query
+                                      parameter hash policy when the consistent hash
+                                      type is set to QueryParams.
+                                    items:
+                                      description: |-
+                                        QueryParam defines the query parameter name hashing configuration for consistent hash based
+                                        load balancing.
+                                      properties:
+                                        name:
+                                          description: Name of the query param to
+                                            hash.
+                                          type: string
+                                      required:
+                                      - name
+                                      type: object
+                                    type: array
                                   tableSize:
                                     default: 65537
                                     description: The table size for consistent hashing,
@@ -2406,11 +2565,13 @@ spec:
                                       "Header",
                                       "Headers",
                                       "Cookie".
+                                      "QueryParams".
                                     enum:
                                     - SourceIP
                                     - Header
                                     - Headers
                                     - Cookie
+                                    - QueryParams
                                     type: string
                                 required:
                                 - type
@@ -2428,6 +2589,10 @@ spec:
                                     cookie field must be set.
                                   rule: 'self.type == ''Cookie'' ? has(self.cookie)
                                     : !has(self.cookie)'
+                                - message: If consistent hash type is queryParams,
+                                    the queryParams field must be set.
+                                  rule: 'self.type == ''QueryParams'' ? has(self.queryParams)
+                                    : !has(self.queryParams)'
                               endpointOverride:
                                 description: |-
                                   EndpointOverride defines the configuration for endpoint override.
@@ -3109,6 +3274,26 @@ spec:
                                     maximum: 65535
                                     minimum: 1
                                     type: integer
+                                  weight:
+                                    default: 1
+                                    description: |-
+                                      Weight specifies the proportion of requests forwarded to the referenced
+                                      backend. This is computed as weight/(sum of all weights in this
+                                      BackendRefs list). For non-zero values, there may be some epsilon from
+                                      the exact proportion defined here depending on the precision an
+                                      implementation supports. Weight is not a percentage and the sum of
+                                      weights does not need to equal 100.
+
+                                      If only one backend is specified and it has a weight greater than 0, 100%
+                                      of the traffic is forwarded to that backend. If weight is set to 0, no
+                                      traffic should be forwarded for this entry. If unspecified, weight
+                                      defaults to 1.
+
+                                      Support for this field varies based on the context where used.
+                                    format: int32
+                                    maximum: 1000000
+                                    minimum: 0
+                                    type: integer
                                 required:
                                 - name
                                 type: object
@@ -3700,6 +3885,23 @@ spec:
                                             - name
                                             type: object
                                           type: array
+                                        queryParams:
+                                          description: QueryParams configures the
+                                            query parameter hash policy when the consistent
+                                            hash type is set to QueryParams.
+                                          items:
+                                            description: |-
+                                              QueryParam defines the query parameter name hashing configuration for consistent hash based
+                                              load balancing.
+                                            properties:
+                                              name:
+                                                description: Name of the query param
+                                                  to hash.
+                                                type: string
+                                            required:
+                                            - name
+                                            type: object
+                                          type: array
                                         tableSize:
                                           default: 65537
                                           description: The table size for consistent
@@ -3716,11 +3918,13 @@ spec:
                                             "Header",
                                             "Headers",
                                             "Cookie".
+                                            "QueryParams".
                                           enum:
                                           - SourceIP
                                           - Header
                                           - Headers
                                           - Cookie
+                                          - QueryParams
                                           type: string
                                       required:
                                       - type
@@ -3738,6 +3942,10 @@ spec:
                                           the cookie field must be set.
                                         rule: 'self.type == ''Cookie'' ? has(self.cookie)
                                           : !has(self.cookie)'
+                                      - message: If consistent hash type is queryParams,
+                                          the queryParams field must be set.
+                                        rule: 'self.type == ''QueryParams'' ? has(self.queryParams)
+                                          : !has(self.queryParams)'
                                     endpointOverride:
                                       description: |-
                                         EndpointOverride defines the configuration for endpoint override.
@@ -4490,6 +4698,26 @@ spec:
                               maximum: 65535
                               minimum: 1
                               type: integer
+                            weight:
+                              default: 1
+                              description: |-
+                                Weight specifies the proportion of requests forwarded to the referenced
+                                backend. This is computed as weight/(sum of all weights in this
+                                BackendRefs list). For non-zero values, there may be some epsilon from
+                                the exact proportion defined here depending on the precision an
+                                implementation supports. Weight is not a percentage and the sum of
+                                weights does not need to equal 100.
+
+                                If only one backend is specified and it has a weight greater than 0, 100%
+                                of the traffic is forwarded to that backend. If weight is set to 0, no
+                                traffic should be forwarded for this entry. If unspecified, weight
+                                defaults to 1.
+
+                                Support for this field varies based on the context where used.
+                              format: int32
+                              maximum: 1000000
+                              minimum: 0
+                              type: integer
                           required:
                           - name
                           type: object
@@ -5065,6 +5293,23 @@ spec:
                                       - name
                                       type: object
                                     type: array
+                                  queryParams:
+                                    description: QueryParams configures the query
+                                      parameter hash policy when the consistent hash
+                                      type is set to QueryParams.
+                                    items:
+                                      description: |-
+                                        QueryParam defines the query parameter name hashing configuration for consistent hash based
+                                        load balancing.
+                                      properties:
+                                        name:
+                                          description: Name of the query param to
+                                            hash.
+                                          type: string
+                                      required:
+                                      - name
+                                      type: object
+                                    type: array
                                   tableSize:
                                     default: 65537
                                     description: The table size for consistent hashing,
@@ -5080,11 +5325,13 @@ spec:
                                       "Header",
                                       "Headers",
                                       "Cookie".
+                                      "QueryParams".
                                     enum:
                                     - SourceIP
                                     - Header
                                     - Headers
                                     - Cookie
+                                    - QueryParams
                                     type: string
                                 required:
                                 - type
@@ -5102,6 +5349,10 @@ spec:
                                     cookie field must be set.
                                   rule: 'self.type == ''Cookie'' ? has(self.cookie)
                                     : !has(self.cookie)'
+                                - message: If consistent hash type is queryParams,
+                                    the queryParams field must be set.
+                                  rule: 'self.type == ''QueryParams'' ? has(self.queryParams)
+                                    : !has(self.queryParams)'
                               endpointOverride:
                                 description: |-
                                   EndpointOverride defines the configuration for endpoint override.

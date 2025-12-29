@@ -480,7 +480,9 @@ func (c *customResponse) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute,
 		return nil
 	}
 	filterName := c.customResponseFilterName(irRoute.Traffic.ResponseOverride)
-	if err := enableFilterOnRoute(route, filterName); err != nil {
+	if err := enableFilterOnRoute(route, filterName, &routev3.FilterConfig{
+		Config: &anypb.Any{},
+	}); err != nil {
 		return err
 	}
 	return nil

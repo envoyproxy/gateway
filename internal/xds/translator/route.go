@@ -512,19 +512,24 @@ func buildXdsURLRewriteAction(route *ir.HTTPRoute, urlRewrite *ir.URLRewrite, pa
 	}
 
 	if urlRewrite.Host != nil {
-
-		switch {
-		case urlRewrite.Host.Name != nil:
-			routeAction.HostRewriteSpecifier = &routev3.RouteAction_HostRewriteLiteral{
-				HostRewriteLiteral: *urlRewrite.Host.Name,
-			}
-		case urlRewrite.Host.Header != nil:
-			routeAction.HostRewriteSpecifier = &routev3.RouteAction_HostRewriteHeader{
-				HostRewriteHeader: *urlRewrite.Host.Header,
-			}
-		case urlRewrite.Host.Backend != nil:
-			routeAction.HostRewriteSpecifier = &routev3.RouteAction_AutoHostRewrite{
-				AutoHostRewrite: wrapperspb.Bool(true),
+		// For DFP use cases, route-level host literal/header rewrites are not used, and instead DFP per-filter config is used, see here:
+		// https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/dynamic_forward_proxy/v3/dynamic_forward_proxy.proto#envoy-v3-api-msg-extensions-filters-http-dynamic-forward-proxy-v3-perrouteconfig
+		// Auto Host rewrites are only supported for strict/logical DNS clusters, so not relevant for DFP, see here:
+		// https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto#envoy-v3-api-field-config-route-v3-routeaction-auto-host-rewrite
+		if !route.IsDynamicResolverRoute() {
+			switch {
+			case urlRewrite.Host.Name != nil:
+				routeAction.HostRewriteSpecifier = &routev3.RouteAction_HostRewriteLiteral{
+					HostRewriteLiteral: *urlRewrite.Host.Name,
+				}
+			case urlRewrite.Host.Header != nil:
+				routeAction.HostRewriteSpecifier = &routev3.RouteAction_HostRewriteHeader{
+					HostRewriteHeader: *urlRewrite.Host.Header,
+				}
+			case urlRewrite.Host.Backend != nil:
+				routeAction.HostRewriteSpecifier = &routev3.RouteAction_AutoHostRewrite{
+					AutoHostRewrite: wrapperspb.Bool(true),
+				}
 			}
 		}
 
@@ -687,6 +692,22 @@ func buildHashPolicy(httpRoute *ir.HTTPRoute) []*routev3.RouteAction_HashPolicy 
 			},
 		}
 		return []*routev3.RouteAction_HashPolicy{hashPolicy}
+	case ch.QueryParams != nil:
+		hps := make([]*routev3.RouteAction_HashPolicy, 0, len(ch.QueryParams))
+		for _, q := range ch.QueryParams {
+			if q == nil {
+				continue
+			}
+			hp := &routev3.RouteAction_HashPolicy{
+				PolicySpecifier: &routev3.RouteAction_HashPolicy_QueryParameter_{
+					QueryParameter: &routev3.RouteAction_HashPolicy_QueryParameter{
+						Name: q.Name,
+					},
+				},
+			}
+			hps = append(hps, hp)
+		}
+		return hps
 	default:
 		return nil
 	}

@@ -80,23 +80,6 @@ backends:
       reason: Accepted
       status: "True"
       type: Accepted
-- apiVersion: gateway.envoyproxy.io/v1alpha1
-  kind: Backend
-  metadata:
-    name: backend-fqdn
-    namespace: default
-  spec:
-    endpoints:
-    - fqdn:
-        hostname: grpc-infra-backend-v1.gateway-conformance-infra.svc.cluster.local
-        port: 8080
-  status:
-    conditions:
-    - lastTransitionTime: null
-      message: The Backend was accepted
-      reason: Accepted
-      status: "True"
-      type: Accepted
 envoyExtensionPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: EnvoyExtensionPolicy
@@ -358,7 +341,7 @@ xdsIR:
               namespace: default
               sectionName: "8080"
             name: accesslog_otel_0_1/backend/-1
-            protocol: TCP
+            protocol: GRPC
         resources:
           k8s.cluster.name: cluster-1
         text: |
@@ -374,6 +357,7 @@ xdsIR:
     globalResources:
       proxyServiceCluster:
         metadata:
+          kind: Service
           name: envoy-envoy-gateway-gateway-1-196ae069
           namespace: envoy-gateway-system
           sectionName: "8080"
@@ -385,6 +369,7 @@ xdsIR:
             port: 8080
             zone: zone1
           metadata:
+            kind: Service
             name: envoy-envoy-gateway-gateway-1-196ae069
             namespace: envoy-gateway-system
             sectionName: "8080"
@@ -497,6 +482,7 @@ xdsIR:
           dns:
             dnsRefreshRate: 5s
             lookupFamily: IPv6
+            name: default/backend-traffic-policy
             respectDnsTtl: false
       - destination:
           metadata:
@@ -558,6 +544,7 @@ xdsIR:
           dns:
             dnsRefreshRate: 5s
             lookupFamily: IPv6
+            name: default/backend-traffic-policy
             respectDnsTtl: false
     readyListener:
       address: 0.0.0.0

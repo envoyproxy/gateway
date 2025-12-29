@@ -720,11 +720,17 @@ type HeaderSettings struct {
 	// EarlyRemoveRequestHeaders defines headers that would be removed before envoy request processing.
 	EarlyRemoveRequestHeaders []string `json:"earlyRemoveRequestHeaders,omitempty" yaml:"earlyRemoveRequestHeaders,omitempty"`
 
+	// EarlyRemoveRequestHeadersOnMatch defines header name matchers that would remove headers before envoy request processing.
+	EarlyRemoveRequestHeadersOnMatch []*StringMatch `json:"earlyRemoveRequestHeadersOnMatch,omitempty" yaml:"earlyRemoveRequestHeadersOnMatch,omitempty"`
+
 	// LateAddResponseHeaders defines headers that would be added after envoy response processing.
 	LateAddResponseHeaders []AddHeader `json:"lateAddResponseHeaders,omitempty" yaml:"earlyAddRequestHeaders,omitempty"`
 
 	// LateRemoveResponseHeaders defines headers that would be removed after envoy response processing.
 	LateRemoveResponseHeaders []string `json:"lateRemoveResponseHeaders,omitempty" yaml:"earlyRemoveRequestHeaders,omitempty"`
+
+	// LateRemoveResponseHeadersOnMatch defines header name matchers that would remove headers after envoy response processing.
+	LateRemoveResponseHeadersOnMatch []*StringMatch `json:"lateRemoveResponseHeadersOnMatch,omitempty" yaml:"lateRemoveResponseHeadersOnMatch,omitempty"`
 }
 
 // ClientTimeout sets the timeout configuration for downstream connections
@@ -848,6 +854,11 @@ func (h *HTTPRoute) NeedsClusterPerSetting() bool {
 	return h.Destination.NeedsClusterPerSetting()
 }
 
+func (h *HTTPRoute) IsDynamicResolverRoute() bool {
+	// If using a dynamic resolver, only a single destination setting is expected and enforced during IR translation
+	return h.Destination != nil && len(h.Destination.Settings) == 1 && h.Destination.Settings[0].IsDynamicResolver
+}
+
 // DNS contains configuration options for DNS resolution.
 // +k8s:deepcopy-gen=true
 type DNS struct {
@@ -857,6 +868,8 @@ type DNS struct {
 	RespectDNSTTL *bool `json:"respectDnsTtl,omitempty"`
 	// LookupFamily allows to configure the dns lookup policy
 	LookupFamily *egv1a1.DNSLookupFamily `json:"lookupFamily,omitempty"`
+	// Name is a unique name for a DNS configuration.
+	Name string `json:"name,omitempty" yaml:"name,omitempty"`
 }
 
 // SessionPersistence defines the desired state of SessionPersistence.
@@ -891,6 +904,8 @@ type HeaderBasedSessionPersistence struct {
 type Compression struct {
 	// Type of compression to be used.
 	Type egv1a1.CompressorType `json:"type" yaml:"type"`
+	// ChooseFirst indicates this compressor is preferred when q-values in Accept-Encoding are equal.
+	ChooseFirst bool `json:"chooseFirst,omitempty" yaml:"chooseFirst,omitempty"`
 }
 
 // TrafficFeatures holds the information associated with the Backend Traffic Policy.
@@ -1232,13 +1247,23 @@ type BasicAuth struct {
 	ForwardUsernameHeader *string `json:"forwardUsernameHeader,omitempty" yaml:"forwardUsernameHeader,omitempty"`
 }
 
+// APIKeyCredential defines a single API key credential.
+//
+// +k8s:deepcopy-gen=true
+type APIKeyCredential struct {
+	// Client is the client ID.
+	Client PrivateBytes `json:"client" yaml:"client"`
+	// Key is the API key associated with the client.
+	Key PrivateBytes `json:"key" yaml:"key"`
+}
+
 // APIKeyAuth defines the schema for the API Key Authentication.
 //
 // +k8s:deepcopy-gen=true
 type APIKeyAuth struct {
-	// The API key to be used for authentication.
-	// Key is the client id and the value is the API key to be used for authentication.
-	Credentials map[string]PrivateBytes `json:"credentials,omitempty" yaml:"credentials,omitempty"`
+	// Credentials is the list of API key credentials.
+	// Each credential contains a client ID and the associated API key.
+	Credentials []APIKeyCredential `json:"credentials,omitempty" yaml:"credentials,omitempty"`
 
 	// ExtractFrom is where to fetch the key from the coming request.
 	// The value from the first source that has a key will be used.
@@ -1335,6 +1360,14 @@ type ExtAuth struct {
 	// the new matched route will be applied.
 	// +optional
 	RecomputeRoute *bool `json:"recomputeRoute,omitempty"`
+
+	// ContextExtensions are analogous to http_request.headers, however these
+	// contents will not be sent to the upstream server. This provides an
+	// extension mechanism for sending additional information to the auth server
+	// without modifying the proto definition. It maps to the internal opaque
+	// context in the filter chain.
+	// +optional
+	ContextExtensions []*ContextExtention `json:"contextExtensions,omitempty"`
 }
 
 // BodyToExtAuth defines the Body to Ext Auth configuration
@@ -1345,6 +1378,21 @@ type BodyToExtAuth struct {
 	// reaches the number set in this field.
 	// Note that this setting will have precedence over failOpen mode.
 	MaxRequestBytes uint32 `json:"maxRequestBytes"`
+}
+
+// ContextExtension is analogous to http_request.headers, however these
+// contents will not be sent to the upstream server. This provides an
+// extension mechanism for sending additional information to the auth server
+// without modifying the proto definition. It maps to the internal opaque
+// context in the filter chain.
+//
+// +k8s:deepcopy-gen=true
+type ContextExtention struct {
+	// Name of the context extension.
+	Name string `json:"name"`
+
+	// Value of the context extension.
+	Value PrivateBytes `json:"value"`
 }
 
 // HTTPExtAuthService defines the HTTP External Authorization service
@@ -1939,6 +1987,7 @@ func (r ExtendedHTTPPathModifier) Validate() error {
 // with both core gateway-api and extended envoy gateway capabilities
 // +k8s:deepcopy-gen=true
 type HTTPHostModifier struct {
+	// Name provides a string to replace the host of the request.
 	Name    *string `json:"name,omitempty" yaml:"name,omitempty"`
 	Header  *string `json:"header,omitempty" yaml:"header,omitempty"`
 	Backend *bool   `json:"backend,omitempty" yaml:"backend,omitempty"`
@@ -2283,6 +2332,11 @@ type RateLimitRule struct {
 	//
 	// +optional
 	Shared *bool `json:"shared,omitempty" yaml:"shared,omitempty"`
+	// ShadowMode determines whether this rate limit rule enables shadow mode.
+	// When enabled, rate limiting functions execute as normal (cache lookup, statistics),
+	// but the result is always success regardless of whether the limit was exceeded.
+	// +optional
+	ShadowMode *bool `json:"shadowMode,omitempty" yaml:"shadowMode,omitempty"`
 	// Name is a unique identifier for this rule, set as <policy-ns>/<policy-name>/rule/<rule-index>.
 	Name string `json:"name,omitempty" yaml:"name,omitempty"`
 }
@@ -2410,8 +2464,9 @@ type EnvoyPatchPolicy struct {
 // EnvoyPatchPolicyStatus defines the status reference for the EnvoyPatchPolicy resource
 // +k8s:deepcopy-gen=true
 type EnvoyPatchPolicyStatus struct {
-	Name      string `json:"name,omitempty" yaml:"name"`
-	Namespace string `json:"namespace,omitempty" yaml:"namespace"`
+	Name       string `json:"name,omitempty" yaml:"name"`
+	Namespace  string `json:"namespace,omitempty" yaml:"namespace"`
+	Generation int64  `json:"generation,omitempty" yaml:"generation"`
 	// Status of the EnvoyPatchPolicy
 	Status *gwapiv1.PolicyStatus `json:"status,omitempty" yaml:"status,omitempty"`
 }
@@ -2623,10 +2678,11 @@ type Random struct{}
 // +k8s:deepcopy-gen=true
 type ConsistentHash struct {
 	// Hash based on the Source IP Address
-	SourceIP  *bool            `json:"sourceIP,omitempty" yaml:"sourceIP,omitempty"`
-	Headers   []*egv1a1.Header `json:"headers,omitempty" yaml:"headers,omitempty"`
-	Cookie    *egv1a1.Cookie   `json:"cookie,omitempty" yaml:"cookie,omitempty"`
-	TableSize *uint64          `json:"tableSize,omitempty" yaml:"tableSize,omitempty"`
+	SourceIP    *bool                `json:"sourceIP,omitempty" yaml:"sourceIP,omitempty"`
+	Headers     []*egv1a1.Header     `json:"headers,omitempty" yaml:"headers,omitempty"`
+	Cookie      *egv1a1.Cookie       `json:"cookie,omitempty" yaml:"cookie,omitempty"`
+	QueryParams []*egv1a1.QueryParam `json:"queryParams,omitempty" yaml:"queryParams,omitempty"`
+	TableSize   *uint64              `json:"tableSize,omitempty" yaml:"tableSize,omitempty"`
 }
 
 type ProxyProtocolVersion string

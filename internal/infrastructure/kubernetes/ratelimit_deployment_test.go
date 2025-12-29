@@ -21,6 +21,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/ratelimit"
+	"github.com/envoyproxy/gateway/internal/message"
 )
 
 func TestCreateOrUpdateRateLimitDeployment(t *testing.T) {
@@ -80,7 +81,8 @@ func TestCreateOrUpdateRateLimitDeployment(t *testing.T) {
 					Build()
 			}
 
-			kube := NewInfra(cli, cfg)
+			errorNotifier := message.RunnerErrorNotifier{RunnerName: t.Name(), RunnerErrors: &message.RunnerErrors{}}
+			kube := NewInfra(cli, cfg, errorNotifier)
 			kube.EnvoyGateway.RateLimit = cfg.EnvoyGateway.RateLimit
 			r := ratelimit.NewResourceRender(kube.ControllerNamespace, kube.EnvoyGateway, ownerReferenceUID)
 			err := kube.createOrUpdateDeployment(context.Background(), r)

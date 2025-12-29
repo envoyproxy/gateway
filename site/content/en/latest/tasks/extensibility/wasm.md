@@ -83,7 +83,7 @@ spec:
 Verify the EnvoyExtensionPolicy status:
 
 ```shell
-kubectl get envoyextensionpolicy/http-wasm-source-test -o yaml
+kubectl get envoyextensionpolicy/wasm-test -o yaml
 ```
 
 ### Image Wasm Extension
@@ -144,7 +144,7 @@ spec:
 Verify the EnvoyExtensionPolicy status:
 
 ```shell
-kubectl get envoyextensionpolicy/http-wasm-source-test -o yaml
+kubectl get envoyextensionpolicy/wasm-test -o yaml
 ```
 
 ### Testing

@@ -2,13 +2,13 @@
     thresholds:
     - maxRetries: 1024
   clusterType:
-    name: httproute/default/httproute-1/rule/0
+    name: envoy.clusters.dynamic_forward_proxy
     typedConfig:
       '@type': type.googleapis.com/envoy.extensions.clusters.dynamic_forward_proxy.v3.ClusterConfig
       dnsCacheConfig:
         dnsLookupFamily: V4_PREFERRED
         dnsRefreshRate: 30s
-        name: httproute/default/httproute-1/rule/0
+        name: envoy-gateway-dfp-cache-v4_preferred-30000ms-default
   commonLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_PREFERRED

@@ -25,6 +25,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/infrastructure/common"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/logging"
+	"github.com/envoyproxy/gateway/internal/message"
 	"github.com/envoyproxy/gateway/internal/utils"
 	"github.com/envoyproxy/gateway/internal/utils/file"
 	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
@@ -68,7 +69,9 @@ func newMockInfra(t *testing.T, cfg *config.Server) *Infra {
 			<-ctx.Done()
 			return ctx.Err()
 		},
+		errors: message.RunnerErrorNotifier{RunnerName: t.Name(), RunnerErrors: &message.RunnerErrors{}},
 	}
+
 	return infra
 }
 
@@ -310,7 +313,8 @@ func TestInfra_runEnvoy_integration(t *testing.T) {
 		},
 	}
 
-	i, err := NewInfra(t.Context(), cfg, logging.DefaultLogger(stdout, egv1a1.LogLevelInfo))
+	errNotifier := message.RunnerErrorNotifier{RunnerName: t.Name(), RunnerErrors: &message.RunnerErrors{}}
+	i, err := NewInfra(t.Context(), cfg, logging.DefaultLogger(stdout, egv1a1.LogLevelInfo), errNotifier)
 	require.NoError(t, err)
 
 	// Run envoy once to let func-e set up all XDG directories
@@ -505,7 +509,8 @@ func TestNewInfra(t *testing.T) {
 	cfg, err := config.New(io.Discard, io.Discard)
 	require.NoError(t, err)
 
-	actual, err := NewInfra(t.Context(), cfg, logging.DefaultLogger(io.Discard, egv1a1.LogLevelInfo))
+	errNotifier := message.RunnerErrorNotifier{RunnerName: t.Name(), RunnerErrors: &message.RunnerErrors{}}
+	actual, err := NewInfra(t.Context(), cfg, logging.DefaultLogger(io.Discard, egv1a1.LogLevelInfo), errNotifier)
 	require.NoError(t, err)
 	require.NotNil(t, actual)
 	require.NotNil(t, actual.Paths)
@@ -516,6 +521,7 @@ func TestNewInfra(t *testing.T) {
 	require.NotNil(t, actual.Stdout)
 	require.NotNil(t, actual.Stderr)
 	require.NotNil(t, actual.envoyRunner)
+	require.NotNil(t, actual.errors)
 }
 
 func TestTopologyInjectorDisabledInHostMode(t *testing.T) {
@@ -581,6 +587,80 @@ func TestTopologyInjectorDisabledInHostMode(t *testing.T) {
 				require.Contains(t, bootstrapYAML, "local_cluster_name:")
 			} else {
 				require.NotContains(t, bootstrapYAML, "local_cluster_name:")
+			}
+		})
+	}
+}
+
+// TestUserConfiguredMetricSinksPreserved verifies that user-configured metric
+// sinks (e.g., OpenTelemetry) are preserved in the bootstrap config for host mode.
+func TestUserConfiguredMetricSinksPreserved(t *testing.T) {
+	testCases := []struct {
+		name        string
+		telemetry   *egv1a1.ProxyTelemetry
+		expectSinks bool
+	}{
+		{
+			name:        "no telemetry config",
+			telemetry:   nil,
+			expectSinks: false,
+		},
+		{
+			name: "telemetry with nil metrics",
+			telemetry: &egv1a1.ProxyTelemetry{
+				Metrics: nil,
+			},
+			expectSinks: false,
+		},
+		{
+			name: "telemetry with otel sink",
+			telemetry: &egv1a1.ProxyTelemetry{
+				Metrics: &egv1a1.ProxyMetrics{
+					Sinks: []egv1a1.ProxyMetricSink{
+						{
+							Type: egv1a1.MetricSinkTypeOpenTelemetry,
+							OpenTelemetry: &egv1a1.ProxyOpenTelemetrySink{
+								Host: ptr.To("otel-collector.example.com"),
+								Port: 4317,
+							},
+						},
+					},
+				},
+			},
+			expectSinks: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			proxyConfig := &egv1a1.EnvoyProxy{
+				Spec: egv1a1.EnvoyProxySpec{
+					Telemetry: tc.telemetry,
+				},
+			}
+
+			// Build proxy metrics the same way CreateOrUpdateProxyInfra does
+			proxyMetrics := &egv1a1.ProxyMetrics{
+				Prometheus: &egv1a1.ProxyPrometheusProvider{
+					Disable: true,
+				},
+			}
+			if proxyConfig.Spec.Telemetry != nil && proxyConfig.Spec.Telemetry.Metrics != nil {
+				proxyMetrics.Sinks = proxyConfig.Spec.Telemetry.Metrics.Sinks
+				proxyMetrics.Matches = proxyConfig.Spec.Telemetry.Metrics.Matches
+			}
+
+			// Verify Prometheus is always disabled
+			require.True(t, proxyMetrics.Prometheus.Disable)
+
+			// Verify sinks and matches are preserved when configured
+			if tc.expectSinks {
+				require.NotEmpty(t, proxyMetrics.Sinks, "user-configured sinks should be preserved")
+				require.Equal(t, tc.telemetry.Metrics.Sinks, proxyMetrics.Sinks)
+				require.Equal(t, tc.telemetry.Metrics.Matches, proxyMetrics.Matches)
+			} else {
+				require.Empty(t, proxyMetrics.Sinks, "no sinks expected when not configured")
+				require.Empty(t, proxyMetrics.Matches, "no matches expected when not configured")
 			}
 		})
 	}

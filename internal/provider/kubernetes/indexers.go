@@ -612,6 +612,22 @@ func secretSecurityPolicyIndexFunc(rawObj client.Object) []string {
 			}.String(),
 		)
 	}
+
+	if securityPolicy.Spec.ExtAuth != nil && len(securityPolicy.Spec.ExtAuth.ContextExtensions) > 0 {
+		for _, ctxExt := range securityPolicy.Spec.ExtAuth.ContextExtensions {
+			if ctxExt.Type == egv1a1.ContextExtensionValueTypeValueRef &&
+				ctxExt.ValueRef != nil &&
+				ctxExt.ValueRef.Kind == resource.KindSecret {
+				values = append(values,
+					types.NamespacedName{
+						Namespace: securityPolicy.Namespace,
+						Name:      string(ctxExt.ValueRef.Name),
+					}.String(),
+				)
+			}
+		}
+	}
+
 	return values
 }
 
@@ -665,23 +681,39 @@ func backendSecurityPolicyIndexFunc(rawObj client.Object) []string {
 
 func configMapSecurityPolicyIndexFunc(rawObj client.Object) []string {
 	securityPolicy := rawObj.(*egv1a1.SecurityPolicy)
+	values := []string{}
 
 	if securityPolicy.Spec.JWT != nil {
 		for _, provider := range securityPolicy.Spec.JWT.Providers {
 			if provider.LocalJWKS != nil &&
 				provider.LocalJWKS.Type != nil &&
 				*provider.LocalJWKS.Type == egv1a1.LocalJWKSTypeValueRef {
-				return []string{
+				values = append(values,
 					types.NamespacedName{
 						Namespace: securityPolicy.Namespace,
 						Name:      string(provider.LocalJWKS.ValueRef.Name),
 					}.String(),
-				}
+				)
 			}
 		}
 	}
 
-	return []string{}
+	if securityPolicy.Spec.ExtAuth != nil && len(securityPolicy.Spec.ExtAuth.ContextExtensions) > 0 {
+		for _, ctxExt := range securityPolicy.Spec.ExtAuth.ContextExtensions {
+			if ctxExt.Type == egv1a1.ContextExtensionValueTypeValueRef &&
+				ctxExt.ValueRef != nil &&
+				ctxExt.ValueRef.Kind == resource.KindConfigMap {
+				values = append(values,
+					types.NamespacedName{
+						Namespace: securityPolicy.Namespace,
+						Name:      string(ctxExt.ValueRef.Name),
+					}.String(),
+				)
+			}
+		}
+	}
+
+	return values
 }
 
 // addCtpIndexers adds indexing on ClientTrafficPolicy, for ConfigMap or Secret objects that are
@@ -717,6 +749,19 @@ func configMapCtpIndexFunc(rawObj client.Object) []string {
 				)
 			}
 		}
+		// Add CRL ConfigMap references
+		if ctp.Spec.TLS.ClientValidation.Crl != nil {
+			for _, crlRef := range ctp.Spec.TLS.ClientValidation.Crl.Refs {
+				if crlRef.Kind != nil && string(*crlRef.Kind) == resource.KindConfigMap {
+					configMapReferences = append(configMapReferences,
+						types.NamespacedName{
+							Namespace: gatewayapi.NamespaceDerefOr(crlRef.Namespace, ctp.Namespace),
+							Name:      string(crlRef.Name),
+						}.String(),
+					)
+				}
+			}
+		}
 	}
 	return configMapReferences
 }
@@ -737,6 +782,19 @@ func secretCtpIndexFunc(rawObj client.Object) []string {
 				)
 			}
 		}
+		// Add CRL Secret references
+		if ctp.Spec.TLS.ClientValidation.Crl != nil {
+			for _, crlRef := range ctp.Spec.TLS.ClientValidation.Crl.Refs {
+				if crlRef.Kind == nil || (string(*crlRef.Kind) == resource.KindSecret) {
+					secretReferences = append(secretReferences,
+						types.NamespacedName{
+							Namespace: gatewayapi.NamespaceDerefOr(crlRef.Namespace, ctp.Namespace),
+							Name:      string(crlRef.Name),
+						}.String(),
+					)
+				}
+			}
+		}
 	}
 	return secretReferences
 }
@@ -748,6 +806,14 @@ func clusterTrustBundleCtpIndexFunc(rawObj client.Object) []string {
 		for _, caCertRef := range ctp.Spec.TLS.ClientValidation.CACertificateRefs {
 			if caCertRef.Kind != nil || (string(*caCertRef.Kind) == resource.KindClusterTrustBundle) {
 				refs = append(refs, string(caCertRef.Name))
+			}
+		}
+		// Add CRL ClusterTrustBundle references
+		if ctp.Spec.TLS.ClientValidation.Crl != nil {
+			for _, crlRef := range ctp.Spec.TLS.ClientValidation.Crl.Refs {
+				if crlRef.Kind != nil || (string(*crlRef.Kind) == resource.KindClusterTrustBundle) {
+					refs = append(refs, string(crlRef.Name))
+				}
 			}
 		}
 	}
