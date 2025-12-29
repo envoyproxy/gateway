@@ -749,6 +749,19 @@ func configMapCtpIndexFunc(rawObj client.Object) []string {
 				)
 			}
 		}
+		// Add CRL ConfigMap references
+		if ctp.Spec.TLS.ClientValidation.Crl != nil {
+			for _, crlRef := range ctp.Spec.TLS.ClientValidation.Crl.Refs {
+				if crlRef.Kind != nil && string(*crlRef.Kind) == resource.KindConfigMap {
+					configMapReferences = append(configMapReferences,
+						types.NamespacedName{
+							Namespace: gatewayapi.NamespaceDerefOr(crlRef.Namespace, ctp.Namespace),
+							Name:      string(crlRef.Name),
+						}.String(),
+					)
+				}
+			}
+		}
 	}
 	return configMapReferences
 }
@@ -769,6 +782,19 @@ func secretCtpIndexFunc(rawObj client.Object) []string {
 				)
 			}
 		}
+		// Add CRL Secret references
+		if ctp.Spec.TLS.ClientValidation.Crl != nil {
+			for _, crlRef := range ctp.Spec.TLS.ClientValidation.Crl.Refs {
+				if crlRef.Kind == nil || (string(*crlRef.Kind) == resource.KindSecret) {
+					secretReferences = append(secretReferences,
+						types.NamespacedName{
+							Namespace: gatewayapi.NamespaceDerefOr(crlRef.Namespace, ctp.Namespace),
+							Name:      string(crlRef.Name),
+						}.String(),
+					)
+				}
+			}
+		}
 	}
 	return secretReferences
 }
@@ -780,6 +806,14 @@ func clusterTrustBundleCtpIndexFunc(rawObj client.Object) []string {
 		for _, caCertRef := range ctp.Spec.TLS.ClientValidation.CACertificateRefs {
 			if caCertRef.Kind != nil || (string(*caCertRef.Kind) == resource.KindClusterTrustBundle) {
 				refs = append(refs, string(caCertRef.Name))
+			}
+		}
+		// Add CRL ClusterTrustBundle references
+		if ctp.Spec.TLS.ClientValidation.Crl != nil {
+			for _, crlRef := range ctp.Spec.TLS.ClientValidation.Crl.Refs {
+				if crlRef.Kind != nil || (string(*crlRef.Kind) == resource.KindClusterTrustBundle) {
+					refs = append(refs, string(crlRef.Name))
+				}
 			}
 		}
 	}
