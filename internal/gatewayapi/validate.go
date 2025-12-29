@@ -107,7 +107,8 @@ func (t *Translator) validateBackendRefFilters(backendRef BackendRefContext, rou
 			}
 			if filter.Type != gwapiv1.HTTPRouteFilterRequestHeaderModifier &&
 				filter.Type != gwapiv1.HTTPRouteFilterResponseHeaderModifier &&
-				filter.Type != gwapiv1.HTTPRouteFilterExtensionRef {
+				filter.Type != gwapiv1.HTTPRouteFilterExtensionRef &&
+				filter.Type != gwapiv1.HTTPRouteFilterURLRewrite {
 				unsupportedFilters = true
 			}
 		}
@@ -123,7 +124,7 @@ func (t *Translator) validateBackendRefFilters(backendRef BackendRefContext, rou
 	}
 
 	if unsupportedFilters {
-		message := "Specific filter is not supported within BackendRef, only RequestHeaderModifier, ResponseHeaderModifier and gateway.envoyproxy.io/HTTPRouteFilter are supported"
+		message := "Specific filter is not supported within BackendRef, only RequestHeaderModifier, ResponseHeaderModifier, URLRewrite and gateway.envoyproxy.io/HTTPRouteFilter are supported"
 		if routeKind == resource.KindGRPCRoute {
 			message = "Specific filter is not supported within BackendRef, only RequestHeaderModifier and ResponseHeaderModifier are supported"
 		}
