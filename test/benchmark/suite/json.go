@@ -133,16 +133,23 @@ func getResourceMetrics(samples []BenchmarkMetricSample) (ResourceMetrics, Resou
 
 func getResourceUsage(metrics []float64) *ResourceUsage {
 	var minVal, maxVal, avg float64 = math.MaxFloat64, 0, 0
+	count := 0.0
 	for _, v := range metrics {
+		if v < 0 {
+			continue
+		}
 		minVal = math.Min(v, minVal)
 		maxVal = math.Max(v, maxVal)
 		avg += v
+		count++
 	}
 	if minVal == math.MaxFloat64 {
 		minVal = 0
 	}
-	if len(metrics) > 0 {
-		avg /= float64(len(metrics))
+	if count > 0 {
+		avg /= count
+	} else {
+		maxVal = 0
 	}
 
 	return &ResourceUsage{
