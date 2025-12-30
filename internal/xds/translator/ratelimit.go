@@ -167,12 +167,8 @@ func patchRouteWithRateLimit(route *routev3.Route, irRoute *ir.HTTPRoute) error 
 	if !isValidGlobalRateLimit(irRoute) || xdsRouteAction == nil {
 		return nil
 	}
-	rateLimits, costSpecified := buildRouteRateLimits(irRoute)
-	if costSpecified {
-		return patchRouteWithRateLimitOnTypedFilterConfig(route, rateLimits, irRoute)
-	}
-	xdsRouteAction.RateLimits = rateLimits
-	return nil
+	rateLimits := buildRouteRateLimits(irRoute)
+	return patchRouteWithRateLimitOnTypedFilterConfig(route, rateLimits, irRoute)
 }
 
 // patchRouteWithRateLimitOnTypedFilterConfig builds rate limit actions and appends to the route via
@@ -202,10 +198,10 @@ func patchRouteWithRateLimitOnTypedFilterConfig(route *routev3.Route, rateLimits
 }
 
 // buildRouteRateLimits constructs rate limit actions for a given route based on the global rate limit configuration.
-func buildRouteRateLimits(route *ir.HTTPRoute) (rateLimits []*routev3.RateLimit, costSpecified bool) {
+func buildRouteRateLimits(route *ir.HTTPRoute) (rateLimits []*routev3.RateLimit) {
 	// Ensure route has rate limit config
 	if !isValidGlobalRateLimit(route) {
-		return nil, false
+		return nil
 	}
 
 	// Get the global rate limit configuration
@@ -284,7 +280,6 @@ func buildRouteRateLimits(route *ir.HTTPRoute) (rateLimits []*routev3.RateLimit,
 			if c := rule.RequestCost; c != nil {
 				// Set the hits addend for the request cost if specified.
 				rateLimit.HitsAddend = rateLimitCostToHitsAddend(c)
-				costSpecified = true
 			}
 			// Add the rate limit to the list of rate limits.
 			rateLimits = append(rateLimits, rateLimit)
@@ -294,11 +289,10 @@ func buildRouteRateLimits(route *ir.HTTPRoute) (rateLimits []*routev3.RateLimit,
 				responseRule := &routev3.RateLimit{Actions: rlActions, ApplyOnStreamDone: true}
 				responseRule.HitsAddend = rateLimitCostToHitsAddend(c)
 				rateLimits = append(rateLimits, responseRule)
-				costSpecified = true
 			}
 		}
 	}
-	return rateLimits, costSpecified
+	return rateLimits
 }
 
 func buildHeaderMatchRateLimitActions(

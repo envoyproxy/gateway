@@ -273,12 +273,11 @@ func TestBuildRouteRateLimits(t *testing.T) {
 			// Process each route to get rate limit actions
 			for _, listener := range listeners {
 				for _, route := range listener.Routes {
-					rateLimits, costSpecified := buildRouteRateLimits(route)
+					rateLimits := buildRouteRateLimits(route)
 
 					output := rateLimitOutput{
-						RouteName:     route.Name,
-						RateLimits:    rateLimits,
-						CostSpecified: costSpecified,
+						RouteName:  route.Name,
+						RateLimits: rateLimits,
 					}
 					outputs = append(outputs, output)
 				}

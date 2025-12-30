@@ -10,70 +10,79 @@
       name: first-route
       route:
         cluster: first-route-dest
-        rateLimits:
-        - actions:
-          - genericKey:
-              descriptorKey: test-namespace/test-policy-1/rule/0
-              descriptorValue: test-namespace/test-policy-1/rule/0
-          - headerValueMatch:
-              descriptorKey: rule-0-match-0
-              descriptorValue: rule-0-match-0
-              expectMatch: true
-              headers:
-              - name: x-user-id
-                stringMatch:
-                  exact: one
         upgradeConfigs:
         - upgradeType: websocket
+      typedPerFilterConfig:
+        envoy.filters.http.ratelimit/test-namespace/test-policy-1:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.ratelimit.v3.RateLimitPerRoute
+          rateLimits:
+          - actions:
+            - genericKey:
+                descriptorKey: test-namespace/test-policy-1/rule/0
+                descriptorValue: test-namespace/test-policy-1/rule/0
+            - headerValueMatch:
+                descriptorKey: rule-0-match-0
+                descriptorValue: rule-0-match-0
+                expectMatch: true
+                headers:
+                - name: x-user-id
+                  stringMatch:
+                    exact: one
     - match:
         path: foo/baz
       name: second-route
       route:
         cluster: second-route-dest
-        rateLimits:
-        - actions:
-          - genericKey:
-              descriptorKey: test-namespace/test-policy-1/rule/0
-              descriptorValue: test-namespace/test-policy-1/rule/0
-          - headerValueMatch:
-              descriptorKey: rule-0-match-0
-              descriptorValue: rule-0-match-0
-              expectMatch: true
-              headers:
-              - name: x-user-id
-                stringMatch:
-                  exact: one
         upgradeConfigs:
         - upgradeType: websocket
+      typedPerFilterConfig:
+        envoy.filters.http.ratelimit/test-namespace/test-policy-1:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.ratelimit.v3.RateLimitPerRoute
+          rateLimits:
+          - actions:
+            - genericKey:
+                descriptorKey: test-namespace/test-policy-1/rule/0
+                descriptorValue: test-namespace/test-policy-1/rule/0
+            - headerValueMatch:
+                descriptorKey: rule-0-match-0
+                descriptorValue: rule-0-match-0
+                expectMatch: true
+                headers:
+                - name: x-user-id
+                  stringMatch:
+                    exact: one
     - match:
         path: test
       name: third-route
       route:
         cluster: third-route-dest
-        rateLimits:
-        - actions:
-          - genericKey:
-              descriptorKey: test-namespace/test-policy-2/rule/0
-              descriptorValue: test-namespace/test-policy-2/rule/0
-          - headerValueMatch:
-              descriptorKey: rule-0-match-0
-              descriptorValue: rule-0-match-0
-              expectMatch: true
-              headers:
-              - name: x-user-id
-                stringMatch:
-                  exact: two
-        - actions:
-          - genericKey:
-              descriptorKey: test-namespace/test-policy-2/rule/1
-              descriptorValue: test-namespace/test-policy-2/rule/1
-          - headerValueMatch:
-              descriptorKey: rule-1-match-0
-              descriptorValue: rule-1-match-0
-              expectMatch: true
-              headers:
-              - name: x-user-id
-                stringMatch:
-                  exact: two
         upgradeConfigs:
         - upgradeType: websocket
+      typedPerFilterConfig:
+        envoy.filters.http.ratelimit/test-namespace/test-policy-2:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.ratelimit.v3.RateLimitPerRoute
+          rateLimits:
+          - actions:
+            - genericKey:
+                descriptorKey: test-namespace/test-policy-2/rule/0
+                descriptorValue: test-namespace/test-policy-2/rule/0
+            - headerValueMatch:
+                descriptorKey: rule-0-match-0
+                descriptorValue: rule-0-match-0
+                expectMatch: true
+                headers:
+                - name: x-user-id
+                  stringMatch:
+                    exact: two
+          - actions:
+            - genericKey:
+                descriptorKey: test-namespace/test-policy-2/rule/1
+                descriptorValue: test-namespace/test-policy-2/rule/1
+            - headerValueMatch:
+                descriptorKey: rule-1-match-0
+                descriptorValue: rule-1-match-0
+                expectMatch: true
+                headers:
+                - name: x-user-id
+                  stringMatch:
+                    exact: two
