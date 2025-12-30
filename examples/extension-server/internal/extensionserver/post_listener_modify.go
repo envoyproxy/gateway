@@ -19,7 +19,7 @@ import (
 	"github.com/exampleorg/envoygateway-extension/api/v1alpha1"
 	"google.golang.org/protobuf/types/known/anypb"
 
-	pb "github.com/envoyproxy/gateway/proto/extension"
+	pb "github.com/envoyproxy/gateway/envoygateway/extension/v1"
 )
 
 // PostHTTPListenerModify is called after Envoy Gateway is done generating a

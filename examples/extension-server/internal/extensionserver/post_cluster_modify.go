@@ -14,7 +14,7 @@ import (
 	"google.golang.org/protobuf/types/known/durationpb"
 	inferencev1 "sigs.k8s.io/gateway-api-inference-extension/api/v1"
 
-	pb "github.com/envoyproxy/gateway/proto/extension"
+	pb "github.com/envoyproxy/gateway/envoygateway/extension/v1"
 )
 
 // PostClusterModify is called after Envoy Gateway is done generating

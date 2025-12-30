@@ -20,7 +20,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	pb "github.com/envoyproxy/gateway/proto/extension"
+	pb "github.com/envoyproxy/gateway/envoygateway/extension/v1"
 )
 
 func main() {
@@ -94,12 +94,12 @@ func startExtensionServer(cCtx *cli.Context) error {
 	var opts []grpc.ServerOption
 	grpcServer = grpc.NewServer(opts...)
 	sig := make(chan int, 1)
-	pb.RegisterEnvoyGatewayExtensionServer(grpcServer, New(logger, sig))
+	pb.RegisterEnvoyGatewayExtensionServiceServer(grpcServer, New(logger, sig))
 	return grpcServer.Serve(lis)
 }
 
 type Server struct {
-	pb.UnimplementedEnvoyGatewayExtensionServer
+	pb.UnimplementedEnvoyGatewayExtensionServiceServer
 	sig chan int
 	log *slog.Logger
 }

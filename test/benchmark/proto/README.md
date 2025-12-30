@@ -1,1 +1,0 @@
-Proto files here copied from the [nighthawk](https://github.com/envoyproxy/nighthawk) repository to make sure the unmarshaling easier.
