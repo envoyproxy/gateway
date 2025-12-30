@@ -133,23 +133,23 @@ jobs:
       fail-fast: false
       matrix:
         target:
-        - version: v1.30.13
+        - version: v1.32.11
           ipFamily: ipv4
           profile: default
-        - version: v1.31.9
+        - version: v1.33.7
           ipFamily: ipv4
           profile: default
-        - version: v1.32.5
+        - version: v1.34.3
           ipFamily: ipv6  # only run ipv6 test on this version to save time
           profile: default
         # TODO: this's IPv4 first, need a way to test IPv6 first.
-        - version: v1.33.1
+        - version: v1.35.0
           ipFamily: dual  # only run dual test on latest version to save time
           profile: default
-        - version: v1.33.1
+        - version: v1.35.0
           ipFamily: dual  # only run dual test on latest version to save time
           profile: gateway-namespace-mode
-        - version: v1.33.1
+        - version: v1.35.0
           ipFamily: ipv4
           profile: xds-name-scheme-v2
     steps:
@@ -186,23 +186,23 @@ jobs:
       fail-fast: false
       matrix:
         target:
-        - version: v1.30.13
+        - version: v1.32.11
           ipFamily: ipv4
           profile: default
-        - version: v1.31.9
+        - version: v1.33.7
           ipFamily: ipv4
           profile: default
-        - version: v1.32.5
+        - version: v1.34.3
           ipFamily: ipv6  # only run ipv6 test on this version to save time
           profile: default
         # TODO: this's IPv4 first, need a way to test IPv6 first.
-        - version: v1.33.1
+        - version: v1.35.0
           ipFamily: dual  # only run dual test on latest version to save time
           profile: default
-        - version: v1.33.1
+        - version: v1.35.0
           ipFamily: dual  # only run dual test on latest version to save time
           profile: gateway-namespace-mode
-        - version: v1.33.1
+        - version: v1.35.0
           ipFamily: ipv4
           profile: xds-name-scheme-v2
 
@@ -257,9 +257,9 @@ jobs:
       env:
         IMAGE_PULL_POLICY: IfNotPresent
         # Args for benchmark test
-        BENCHMARK_RPS: 10000
+        BENCHMARK_BASELINE_RPS: 100
         BENCHMARK_CONNECTIONS: 100
-        BENCHMARK_DURATION: 30
+        BENCHMARK_DURATION: 90
         BENCHMARK_CPU_LIMITS: 1000m
         BENCHMARK_MEMORY_LIMITS: 2000Mi
         BENCHMARK_REPORT_DIR: benchmark_report
@@ -269,7 +269,7 @@ jobs:
     - name: Upload Benchmark report
       uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f  # v6.0.0
       with:
-        name: benchmark-report
+        name: benchmark_report
         path: ./test/benchmark/benchmark_report/
 
   resilience-test:

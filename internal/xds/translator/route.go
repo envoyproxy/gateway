@@ -348,6 +348,14 @@ func buildXdsWeightedRouteAction(backendWeights *ir.BackendWeights, settings []*
 				if len(destinationSetting.Filters.RemoveResponseHeaders) > 0 {
 					validCluster.ResponseHeadersToRemove = append(validCluster.ResponseHeadersToRemove, destinationSetting.Filters.RemoveResponseHeaders...)
 				}
+
+				if destinationSetting.Filters.URLRewrite != nil &&
+					destinationSetting.Filters.URLRewrite.Host != nil &&
+					destinationSetting.Filters.URLRewrite.Host.Name != nil {
+					validCluster.HostRewriteSpecifier = &routev3.WeightedCluster_ClusterWeight_HostRewriteLiteral{
+						HostRewriteLiteral: *destinationSetting.Filters.URLRewrite.Host.Name,
+					}
+				}
 			}
 
 			weightedClusters = append(weightedClusters, validCluster)
@@ -512,19 +520,24 @@ func buildXdsURLRewriteAction(route *ir.HTTPRoute, urlRewrite *ir.URLRewrite, pa
 	}
 
 	if urlRewrite.Host != nil {
-
-		switch {
-		case urlRewrite.Host.Name != nil:
-			routeAction.HostRewriteSpecifier = &routev3.RouteAction_HostRewriteLiteral{
-				HostRewriteLiteral: *urlRewrite.Host.Name,
-			}
-		case urlRewrite.Host.Header != nil:
-			routeAction.HostRewriteSpecifier = &routev3.RouteAction_HostRewriteHeader{
-				HostRewriteHeader: *urlRewrite.Host.Header,
-			}
-		case urlRewrite.Host.Backend != nil:
-			routeAction.HostRewriteSpecifier = &routev3.RouteAction_AutoHostRewrite{
-				AutoHostRewrite: wrapperspb.Bool(true),
+		// For DFP use cases, route-level host literal/header rewrites are not used, and instead DFP per-filter config is used, see here:
+		// https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/dynamic_forward_proxy/v3/dynamic_forward_proxy.proto#envoy-v3-api-msg-extensions-filters-http-dynamic-forward-proxy-v3-perrouteconfig
+		// Auto Host rewrites are only supported for strict/logical DNS clusters, so not relevant for DFP, see here:
+		// https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto#envoy-v3-api-field-config-route-v3-routeaction-auto-host-rewrite
+		if !route.IsDynamicResolverRoute() {
+			switch {
+			case urlRewrite.Host.Name != nil:
+				routeAction.HostRewriteSpecifier = &routev3.RouteAction_HostRewriteLiteral{
+					HostRewriteLiteral: *urlRewrite.Host.Name,
+				}
+			case urlRewrite.Host.Header != nil:
+				routeAction.HostRewriteSpecifier = &routev3.RouteAction_HostRewriteHeader{
+					HostRewriteHeader: *urlRewrite.Host.Header,
+				}
+			case urlRewrite.Host.Backend != nil:
+				routeAction.HostRewriteSpecifier = &routev3.RouteAction_AutoHostRewrite{
+					AutoHostRewrite: wrapperspb.Bool(true),
+				}
 			}
 		}
 

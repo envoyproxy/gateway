@@ -61,7 +61,7 @@
               statPrefix: securitypolicy/envoy-gateway/policy-for-gateway
               tokenEndpoint:
                 cluster: securitypolicy/envoy-gateway/policy-for-gateway/0
-                timeout: 10s
+                timeout: 5s
                 uri: https://oauth.foo.com/token
               useRefreshToken: true
         - name: envoy.filters.http.router

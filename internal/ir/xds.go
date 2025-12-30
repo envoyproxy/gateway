@@ -854,6 +854,11 @@ func (h *HTTPRoute) NeedsClusterPerSetting() bool {
 	return h.Destination.NeedsClusterPerSetting()
 }
 
+func (h *HTTPRoute) IsDynamicResolverRoute() bool {
+	// If using a dynamic resolver, only a single destination setting is expected and enforced during IR translation
+	return h.Destination != nil && len(h.Destination.Settings) == 1 && h.Destination.Settings[0].IsDynamicResolver
+}
+
 // DNS contains configuration options for DNS resolution.
 // +k8s:deepcopy-gen=true
 type DNS struct {
@@ -863,6 +868,8 @@ type DNS struct {
 	RespectDNSTTL *bool `json:"respectDnsTtl,omitempty"`
 	// LookupFamily allows to configure the dns lookup policy
 	LookupFamily *egv1a1.DNSLookupFamily `json:"lookupFamily,omitempty"`
+	// Name is a unique name for a DNS configuration.
+	Name string `json:"name,omitempty" yaml:"name,omitempty"`
 }
 
 // SessionPersistence defines the desired state of SessionPersistence.
@@ -897,6 +904,8 @@ type HeaderBasedSessionPersistence struct {
 type Compression struct {
 	// Type of compression to be used.
 	Type egv1a1.CompressorType `json:"type" yaml:"type"`
+	// ChooseFirst indicates this compressor is preferred when q-values in Accept-Encoding are equal.
+	ChooseFirst bool `json:"chooseFirst,omitempty" yaml:"chooseFirst,omitempty"`
 }
 
 // TrafficFeatures holds the information associated with the Backend Traffic Policy.
@@ -1351,6 +1360,14 @@ type ExtAuth struct {
 	// the new matched route will be applied.
 	// +optional
 	RecomputeRoute *bool `json:"recomputeRoute,omitempty"`
+
+	// ContextExtensions are analogous to http_request.headers, however these
+	// contents will not be sent to the upstream server. This provides an
+	// extension mechanism for sending additional information to the auth server
+	// without modifying the proto definition. It maps to the internal opaque
+	// context in the filter chain.
+	// +optional
+	ContextExtensions []*ContextExtention `json:"contextExtensions,omitempty"`
 }
 
 // BodyToExtAuth defines the Body to Ext Auth configuration
@@ -1361,6 +1378,21 @@ type BodyToExtAuth struct {
 	// reaches the number set in this field.
 	// Note that this setting will have precedence over failOpen mode.
 	MaxRequestBytes uint32 `json:"maxRequestBytes"`
+}
+
+// ContextExtension is analogous to http_request.headers, however these
+// contents will not be sent to the upstream server. This provides an
+// extension mechanism for sending additional information to the auth server
+// without modifying the proto definition. It maps to the internal opaque
+// context in the filter chain.
+//
+// +k8s:deepcopy-gen=true
+type ContextExtention struct {
+	// Name of the context extension.
+	Name string `json:"name"`
+
+	// Value of the context extension.
+	Value PrivateBytes `json:"value"`
 }
 
 // HTTPExtAuthService defines the HTTP External Authorization service
@@ -1955,6 +1987,7 @@ func (r ExtendedHTTPPathModifier) Validate() error {
 // with both core gateway-api and extended envoy gateway capabilities
 // +k8s:deepcopy-gen=true
 type HTTPHostModifier struct {
+	// Name provides a string to replace the host of the request.
 	Name    *string `json:"name,omitempty" yaml:"name,omitempty"`
 	Header  *string `json:"header,omitempty" yaml:"header,omitempty"`
 	Backend *bool   `json:"backend,omitempty" yaml:"backend,omitempty"`
@@ -2299,6 +2332,11 @@ type RateLimitRule struct {
 	//
 	// +optional
 	Shared *bool `json:"shared,omitempty" yaml:"shared,omitempty"`
+	// ShadowMode determines whether this rate limit rule enables shadow mode.
+	// When enabled, rate limiting functions execute as normal (cache lookup, statistics),
+	// but the result is always success regardless of whether the limit was exceeded.
+	// +optional
+	ShadowMode *bool `json:"shadowMode,omitempty" yaml:"shadowMode,omitempty"`
 	// Name is a unique identifier for this rule, set as <policy-ns>/<policy-name>/rule/<rule-index>.
 	Name string `json:"name,omitempty" yaml:"name,omitempty"`
 }
@@ -3268,6 +3306,8 @@ type DestinationFilters struct {
 	RemoveResponseHeaders []string `json:"removeResponseHeaders,omitempty" yaml:"removeResponseHeaders,omitempty"`
 	// CredentialInjection defines the credential injection configuration.
 	CredentialInjection *CredentialInjection `json:"credentialInjection,omitempty" yaml:"credentialInjection,omitempty"`
+	// URLRewrite defines the URL rewrite configuration for the backend.
+	URLRewrite *URLRewrite `json:"urlRewrite,omitempty" yaml:"urlRewrite,omitempty"`
 }
 
 // ResourceMetadata is metadata from the provider resource that is translated to an envoy resource
