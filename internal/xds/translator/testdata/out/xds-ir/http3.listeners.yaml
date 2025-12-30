@@ -30,6 +30,8 @@
             ads: {}
             resourceApiVersion: V3
           routeConfigName: envoy-gateway/gateway-1/tls
+        schemeHeaderTransformation:
+          matchUpstream: true
         serverHeaderTransformation: PASS_THROUGH
         statPrefix: https-10443
         useRemoteAddress: true
@@ -81,6 +83,8 @@
             ads: {}
             resourceApiVersion: V3
           routeConfigName: envoy-gateway/gateway-1/tls
+        schemeHeaderTransformation:
+          matchUpstream: true
         serverHeaderTransformation: PASS_THROUGH
         statPrefix: https-10443
         useRemoteAddress: true

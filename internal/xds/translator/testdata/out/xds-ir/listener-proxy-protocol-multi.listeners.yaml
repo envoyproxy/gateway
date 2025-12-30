@@ -30,6 +30,8 @@
             ads: {}
             resourceApiVersion: V3
           routeConfigName: listener
+        schemeHeaderTransformation:
+          matchUpstream: true
         serverHeaderTransformation: PASS_THROUGH
         statPrefix: https-10080
         useRemoteAddress: true

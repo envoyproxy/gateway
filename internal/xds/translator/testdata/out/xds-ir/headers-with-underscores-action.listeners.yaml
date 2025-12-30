@@ -24,6 +24,8 @@
             ads: {}
             resourceApiVersion: V3
           routeConfigName: first-listener
+        schemeHeaderTransformation:
+          matchUpstream: true
         serverHeaderTransformation: PASS_THROUGH
         statPrefix: http-8081
         useRemoteAddress: true
@@ -56,6 +58,8 @@
             ads: {}
             resourceApiVersion: V3
           routeConfigName: second-listener
+        schemeHeaderTransformation:
+          matchUpstream: true
         serverHeaderTransformation: PASS_THROUGH
         statPrefix: http-8082
         useRemoteAddress: true
@@ -89,6 +93,8 @@
             ads: {}
             resourceApiVersion: V3
           routeConfigName: third-listener
+        schemeHeaderTransformation:
+          matchUpstream: true
         serverHeaderTransformation: PASS_THROUGH
         statPrefix: http-8083
         useRemoteAddress: true
@@ -122,6 +128,8 @@
             ads: {}
             resourceApiVersion: V3
           routeConfigName: fourth-listener
+        schemeHeaderTransformation:
+          matchUpstream: true
         serverHeaderTransformation: PASS_THROUGH
         statPrefix: http-8084
         useRemoteAddress: true

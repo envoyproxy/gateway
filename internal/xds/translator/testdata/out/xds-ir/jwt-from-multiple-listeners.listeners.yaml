@@ -107,6 +107,8 @@
             ads: {}
             resourceApiVersion: V3
           routeConfigName: envoy-gateway-system/external-gateway/domain1-example-com-http
+        schemeHeaderTransformation:
+          matchUpstream: true
         serverHeaderTransformation: PASS_THROUGH
         statPrefix: http-10080
         useRemoteAddress: true

@@ -29,6 +29,8 @@
             ads: {}
             resourceApiVersion: V3
           routeConfigName: envoy-gateway/gateway-1/https-1
+        schemeHeaderTransformation:
+          matchUpstream: true
         serverHeaderTransformation: PASS_THROUGH
         statPrefix: https-10443
         useRemoteAddress: true
@@ -73,6 +75,8 @@
             ads: {}
             resourceApiVersion: V3
           routeConfigName: envoy-gateway/gateway-1/https-2
+        schemeHeaderTransformation:
+          matchUpstream: true
         serverHeaderTransformation: PASS_THROUGH
         statPrefix: https-10443
         useRemoteAddress: true
@@ -129,6 +133,8 @@
             ads: {}
             resourceApiVersion: V3
           routeConfigName: envoy-gateway/gateway-1/https-3
+        schemeHeaderTransformation:
+          matchUpstream: true
         serverHeaderTransformation: PASS_THROUGH
         statPrefix: https-8443
         useRemoteAddress: true

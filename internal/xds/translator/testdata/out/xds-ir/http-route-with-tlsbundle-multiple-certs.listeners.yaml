@@ -26,6 +26,8 @@
             ads: {}
             resourceApiVersion: V3
           routeConfigName: envoy-gateway/gateway-btls/http
+        schemeHeaderTransformation:
+          matchUpstream: true
         serverHeaderTransformation: PASS_THROUGH
         statPrefix: http-10080
         useRemoteAddress: true
@@ -61,6 +63,8 @@
             ads: {}
             resourceApiVersion: V3
           routeConfigName: envoy-gateway/gateway-btls-2/http
+        schemeHeaderTransformation:
+          matchUpstream: true
         serverHeaderTransformation: PASS_THROUGH
         statPrefix: http-10081
         useRemoteAddress: true

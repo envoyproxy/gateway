@@ -28,3 +28,4 @@ deprecations: |
 
 # Other notable changes not covered by the above sections.
 Other changes: |
+  Enables scheme header transformation to match upstream scheme such that gateways with HTTP listeners can proxy to HTTPS services without protocol errors
