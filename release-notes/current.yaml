@@ -36,8 +36,8 @@ performance improvements: |
 
 # Deprecated features or APIs.
 deprecations: |
-  Disables TopologyInjector Admission Webhook for K8s v1.35+ since topology info is now automatically injected
+  Disables TopologyInjector Admission Webhook for K8s v1.35+ since topology info is now automatically injected by Kubernetes directly
 
 # Other notable changes not covered by the above sections.
 Other changes: |
-  Added Kubernetes v1.35 support
+
