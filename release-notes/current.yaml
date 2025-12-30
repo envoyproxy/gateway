@@ -19,6 +19,7 @@ new features: |
   Added support for priorityClassName in KubernetesPodSpec for Envoy Proxy pods.
   Added support for Global rate limit shadow mode.
   Added support for specifying both text (body) and attributes in access log format by making the type field optional.
+  Added support for URLRewrite filter on individual backendRefs.
 
 bug fixes: |
   Fixed configured OIDC authorization endpoint being overridden by discovered endpoints from issuer's well-known URL.

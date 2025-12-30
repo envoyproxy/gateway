@@ -123,7 +123,7 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				"spec: Invalid value:",
+				"spec: Invalid value",
 				": this policy can only have a targetRefs[*].group of gateway.networking.k8s.io",
 				": this policy can only have a targetRefs[*].kind of Gateway",
 			},
@@ -520,7 +520,7 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				"spec.headers.xForwardedClientCert: Invalid value:",
+				" spec.headers.xForwardedClientCert: Invalid value:",
 				": certDetailsToAdd can only be set when mode is AppendForward or SanitizeSet",
 			},
 		},
@@ -555,7 +555,7 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				"Invalid value:",
+				"spec: Invalid value:",
 				": either targetRef or targetRefs must be used",
 			},
 		},
@@ -624,6 +624,7 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
+				"ClientTrafficPolicy.gateway.envoyproxy.io \"ctp-headers\" is invalid:",
 				"spec.headers: Invalid value:",
 				": preserveXRequestID and requestID cannot both be set.",
 			},

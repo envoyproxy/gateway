@@ -1040,7 +1040,7 @@ func TestSecurityPolicyTarget(t *testing.T) {
 			},
 			wantErrors: []string{
 				"Invalid value:",
-				"no such key: claimToHeaders evaluating rule: claimToHeaders must be specified if recomputeRoute is enabled",
+				": no such key: claimToHeaders evaluating rule: claimToHeaders must be specified if recomputeRoute is enabled",
 			},
 		},
 		{

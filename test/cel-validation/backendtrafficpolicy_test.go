@@ -843,7 +843,8 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			},
 			wantErrors: []string{
 				"spec.HealthCheck.active: Invalid value:",
-				": If Health Checker type is HTTP, http field needs to be set.",
+				": If Health Checker type is HTTP, http field needs to be set.,",
+				"spec.HealthCheck.active: Invalid value:",
 				": If Health Checker type is TCP, tcp field needs to be set",
 			},
 		},
@@ -994,9 +995,10 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
+				"[spec.HealthCheck.active.http.expectedResponse: Invalid value:",
+				": If payload type is Text, text field needs to be set.,",
 				"spec.HealthCheck.active.http.expectedResponse: Invalid value:",
-				": If payload type is Text, text field needs to be set.",
-				": If payload type is Binary, binary field needs to be set.",
+				"If payload type is Binary, binary field needs to be set.]",
 			},
 		},
 		{
@@ -1029,9 +1031,10 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
+				"[spec.HealthCheck.active.http.expectedResponse: Invalid value:",
+				"If payload type is Text, text field needs to be set.,",
 				"spec.HealthCheck.active.http.expectedResponse: Invalid value:",
-				": If payload type is Text, text field needs to be set.",
-				": If payload type is Binary, binary field needs to be set.",
+				": If payload type is Binary, binary field needs to be set.]",
 			},
 		},
 		{
@@ -1068,7 +1071,8 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			},
 			wantErrors: []string{
 				"spec.HealthCheck.active.tcp.send: Invalid value:",
-				": If payload type is Text, text field needs to be set.",
+				"If payload type is Text, text field needs to be set.,",
+				"spec.HealthCheck.active.tcp.send: Invalid value:",
 				": If payload type is Binary, binary field needs to be set.",
 			},
 		},
@@ -1105,9 +1109,10 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
+				"[spec.HealthCheck.active.tcp.receive: Invalid value:",
+				": If payload type is Text, text field needs to be set.,",
 				"spec.HealthCheck.active.tcp.receive: Invalid value:",
-				": If payload type is Text, text field needs to be set.",
-				": If payload type is Binary, binary field needs to be set.",
+				": If payload type is Binary, binary field needs to be set.]",
 			},
 		},
 		{

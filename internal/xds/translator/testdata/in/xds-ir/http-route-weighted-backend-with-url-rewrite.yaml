@@ -1,0 +1,40 @@
+http:
+  - name: "first-listener"
+    address: "::"
+    hostnames:
+      - '*'
+    path:
+      escapedSlashesAction: UnescapeAndRedirect
+      mergeSlashes: true
+    port: 10080
+    routes:
+      - destination:
+          name: "url-rewrite-route-dest"
+          settings:
+            - addressType: IP
+              endpoints:
+                - host: 1.1.1.1
+                  port: 8080
+              name: "url-rewrite-route-dest/backend/0"
+              filters:
+                urlRewrite:
+                  host:
+                    name: "backend-1.example.com"
+              protocol: HTTP
+              weight: 50
+            - addressType: IP
+              endpoints:
+                - host: 2.2.2.2
+                  port: 8080
+              name: "url-rewrite-route-dest/backend/1"
+              filters:
+                urlRewrite:
+                  host:
+                    name: "backend-2.example.com"
+              protocol: HTTP
+              weight: 50
+        hostname: '*'
+        name: "url-rewrite-route"
+        pathMatch:
+          prefix: /
+
