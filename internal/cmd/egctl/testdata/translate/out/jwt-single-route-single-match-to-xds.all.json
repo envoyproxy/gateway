@@ -701,6 +701,9 @@
                             },
                             "routeConfigName": "envoy-gateway-system/eg/http"
                           },
+                          "schemeHeaderTransformation": {
+                            "matchUpstream": true
+                          },
                           "serverHeaderTransformation": "PASS_THROUGH",
                           "statPrefix": "http-10080",
                           "useRemoteAddress": true
