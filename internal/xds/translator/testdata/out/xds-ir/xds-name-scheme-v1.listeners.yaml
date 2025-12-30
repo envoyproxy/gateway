@@ -141,6 +141,25 @@
       portValue: 11443
       protocol: UDP
   drainType: MODIFY_ONLY
+  filterChainMatcher:
+    matcherList:
+      matchers:
+      - onMatch:
+          action:
+            name: envoy-gateway/gateway-2/https-http3
+            typedConfig:
+              '@type': type.googleapis.com/google.protobuf.StringValue
+              value: envoy-gateway/gateway-2/https-http3
+        predicate:
+          singlePredicate:
+            input:
+              name: envoy.matching.inputs.server_name
+              typedConfig:
+                '@type': type.googleapis.com/envoy.extensions.matching.common_inputs.network.v3.ServerNameInput
+            valueMatch:
+              safeRegex:
+                googleRe2: {}
+                regex: .*
   filterChains:
   - filters:
     - name: envoy.filters.network.http_connection_manager
