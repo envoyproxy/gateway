@@ -7,13 +7,13 @@ package message
 
 import (
 	"context"
-	"reflect"
-
 	"github.com/telepresenceio/watchable"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	"reflect"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	"sort"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
@@ -118,6 +118,61 @@ type PolicyStatuses struct {
 // ExtensionStatuses contains statuses related to gw-api extension resources
 type ExtensionStatuses struct {
 	BackendStatuses watchable.Map[types.NamespacedName, *egv1a1.BackendStatus]
+}
+
+// Deterministic entries for IR map comparison
+type XdsIREntry struct {
+	Name string
+	IR   *XdsIRWithContext
+}
+
+type InfraIREntry struct {
+	Name string
+	IR   *ir.Infra
+}
+
+// SortedXdsIRMap converts an XdsIR map into a deterministically ordered slice.
+// This is required for stable comparisons in tests.
+func SortedXdsIRMap(in map[string]*XdsIRWithContext) []XdsIRWithContext {
+	if in == nil {
+		return nil
+	}
+
+	keys := make([]string, 0, len(in))
+	for k := range in {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	out := make([]XdsIRWithContext, 0, len(keys))
+	for _, k := range keys {
+		if v := in[k]; v != nil {
+			out = append(out, *v)
+		} else {
+			out = append(out, XdsIRWithContext{})
+		}
+	}
+	return out
+}
+
+// SortedInfraIRMap converts an InfraIR map into a deterministically ordered slice.
+// This is required for stable comparisons in tests.
+func SortedInfraIRMap(in map[string]*ir.Infra) []*ir.Infra {
+	if in == nil {
+		return nil
+	}
+
+	keys := make([]string, 0, len(in))
+	for k := range in {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	out := make([]*ir.Infra, 0, len(keys))
+	for _, k := range keys {
+		out = append(out, in[k])
+	}
+	return out
 }
 
 func (p *PolicyStatuses) Close() {
