@@ -86,13 +86,16 @@ func TestSortedXdsIRMap(t *testing.T) {
 	in := map[string]*message.XdsIRWithContext{
 		"b": {XdsIR: &ir.Xds{}},
 		"a": {XdsIR: &ir.Xds{}},
+		"c": {XdsIR: &ir.Xds{}},
 	}
 
 	out := message.SortedXdsIRMap(in)
 
-	assert.Len(t, out, 2)
+	assert.Len(t, out, 3)
+	// Keys should be ordered lexicographically: a, b, c
 	assert.NotNil(t, out[0].XdsIR)
 	assert.NotNil(t, out[1].XdsIR)
+	assert.NotNil(t, out[2].XdsIR)
 }
 
 func TestSortedXdsIRMapNil(t *testing.T) {
@@ -103,11 +106,12 @@ func TestSortedInfraIRMap(t *testing.T) {
 	in := map[string]*ir.Infra{
 		"b": {},
 		"a": {},
+		"c": {},
 	}
 
 	out := message.SortedInfraIRMap(in)
 
-	assert.Len(t, out, 2)
+	assert.Len(t, out, 3)
 }
 
 func TestSortedInfraIRMapNil(t *testing.T) {
