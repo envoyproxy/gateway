@@ -6,4 +6,4 @@ GO_LDFLAGS ?=
 
 .PHONY: docker-buildx
 docker-buildx:
-	docker buildx build ../.. -f Dockerfile -t $(IMAGE_PREFIX)$(APP_NAME):$(TAG) --build-arg GO_LDFLAGS="$(GO_LDFLAGS)" --load
+	docker buildx build . -t $(IMAGE_PREFIX)$(APP_NAME):$(TAG) --build-arg GO_LDFLAGS="$(GO_LDFLAGS)" --load
