@@ -29,7 +29,7 @@ bug fixes: |
   Fixed a nil pointer error when applying BackendTrafficPolicy to HTTPRoutes with no backendRefs.
   Fixed ExternalTrafficPolicy not being applied to Envoy Service when ServiceType is NodePort.
   Fixed CRL ref not processed by gateway controller.
-  Added HTTP/3 filter chain matcher support so QUIC listeners honor multiple hostnames/certificates (SNI) like TCP/TLS listeners.
+  Fixed an issue where HTTP/3 listeners could not handle multiple hostnames.
 
 # Enhancements that improve performance.
 performance improvements: |

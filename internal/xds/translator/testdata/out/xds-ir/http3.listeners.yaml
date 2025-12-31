@@ -4,57 +4,11 @@
       portValue: 10443
       protocol: UDP
   drainType: MODIFY_ONLY
-  filterChainMatcher:
-    matcherList:
-      matchers:
-      - onMatch:
-          action:
-            name: envoy-gateway/gateway-1/https-foo
-            typedConfig:
-              '@type': type.googleapis.com/google.protobuf.StringValue
-              value: envoy-gateway/gateway-1/https-foo
-        predicate:
-          singlePredicate:
-            input:
-              name: envoy.matching.inputs.server_name
-              typedConfig:
-                '@type': type.googleapis.com/envoy.extensions.matching.common_inputs.network.v3.ServerNameInput
-            valueMatch:
-              exact: foo.example.com
-              ignoreCase: true
-      - onMatch:
-          action:
-            name: envoy-gateway/gateway-1/https-bar
-            typedConfig:
-              '@type': type.googleapis.com/google.protobuf.StringValue
-              value: envoy-gateway/gateway-1/https-bar
-        predicate:
-          singlePredicate:
-            input:
-              name: envoy.matching.inputs.server_name
-              typedConfig:
-                '@type': type.googleapis.com/envoy.extensions.matching.common_inputs.network.v3.ServerNameInput
-            valueMatch:
-              exact: bar.example.com
-              ignoreCase: true
-      - onMatch:
-          action:
-            name: envoy-gateway/gateway-1/https-wildcard
-            typedConfig:
-              '@type': type.googleapis.com/google.protobuf.StringValue
-              value: envoy-gateway/gateway-1/https-wildcard
-        predicate:
-          singlePredicate:
-            input:
-              name: envoy.matching.inputs.server_name
-              typedConfig:
-                '@type': type.googleapis.com/envoy.extensions.matching.common_inputs.network.v3.ServerNameInput
-            valueMatch:
-              safeRegex:
-                googleRe2: {}
-                regex: (?i)^[^.]+\.example\.com$
   filterChains:
-  - filters:
+  - filterChainMatch:
+      serverNames:
+      - '*.example.com'
+    filters:
     - name: envoy.filters.network.http_connection_manager
       typedConfig:
         '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
@@ -101,7 +55,10 @@
               tlsMinimumProtocolVersion: TLSv1_2
           disableStatefulSessionResumption: true
           disableStatelessSessionResumption: true
-  - filters:
+  - filterChainMatch:
+      serverNames:
+      - foo.example.com
+    filters:
     - name: envoy.filters.network.http_connection_manager
       typedConfig:
         '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
@@ -148,7 +105,10 @@
               tlsMinimumProtocolVersion: TLSv1_2
           disableStatefulSessionResumption: true
           disableStatelessSessionResumption: true
-  - filters:
+  - filterChainMatch:
+      serverNames:
+      - bar.example.com
+    filters:
     - name: envoy.filters.network.http_connection_manager
       typedConfig:
         '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager

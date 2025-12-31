@@ -9,8 +9,6 @@ import (
 	"errors"
 	"fmt"
 	"net"
-	"regexp"
-	"sort"
 	"strconv"
 	"strings"
 
@@ -27,7 +25,6 @@ import (
 	preservecasev3 "github.com/envoyproxy/go-control-plane/envoy/extensions/http/header_formatters/preserve_case/v3"
 	customheaderv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/http/original_ip_detection/custom_header/v3"
 	xffv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/http/original_ip_detection/xff/v3"
-	networkinputsv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/matching/common_inputs/network/v3"
 	quicv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/quic/v3"
 	tlsv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 	typev3 "github.com/envoyproxy/go-control-plane/envoy/type/v3"
@@ -463,16 +460,10 @@ func (t *Translator) addHCMToXDSListener(
 	}
 
 	if irListener.TLS != nil {
-		if http3Listener {
-			tSocket, err := buildDownstreamQUICTransportSocket(irListener.TLS)
-			if err != nil {
-				return err
-			}
-			filterChain.TransportSocket = tSocket
+		var tSocket *corev3.TransportSocket
 
-			if err := addServerNamesFilterChainMatcher(xdsListener, filterChain, irListener.Hostnames); err != nil {
-				return err
-			}
+		if http3Listener {
+			tSocket, err = buildDownstreamQUICTransportSocket(irListener.TLS)
 		} else {
 			config := irListener.TLS.DeepCopy()
 			// If the listener has overlapping TLS config with other listeners, we need to disable HTTP/2
@@ -481,15 +472,15 @@ func (t *Translator) addHCMToXDSListener(
 			if irListener.TLSOverlaps && config.ALPNProtocols == nil {
 				config.ALPNProtocols = []string{"http/1.1"}
 			}
-			tSocket, err := buildXdsDownstreamTLSSocket(config)
-			if err != nil {
-				return err
-			}
-			filterChain.TransportSocket = tSocket
+			tSocket, err = buildXdsDownstreamTLSSocket(config)
+		}
+		if err != nil {
+			return err
+		}
+		filterChain.TransportSocket = tSocket
 
-			if err := addServerNamesMatch(xdsListener, filterChain, irListener.Hostnames); err != nil {
-				return err
-			}
+		if err := addServerNamesMatch(xdsListener, filterChain, irListener.Hostnames); err != nil {
+			return err
 		}
 		xdsListener.FilterChains = append(xdsListener.FilterChains, filterChain)
 	} else {
@@ -564,14 +555,7 @@ func buildEarlyHeaderMutation(headers *ir.HeaderSettings) []*corev3.TypedExtensi
 }
 
 func addServerNamesMatch(xdsListener *listenerv3.Listener, filterChain *listenerv3.FilterChain, hostnames []string) error {
-	// Skip adding ServerNames match for:
-	// 1. nil listeners
-	// 2. UDP (QUIC) listeners used for HTTP3
-	// 3. wildcard hostnames
-	// TODO(zhaohuabing): https://github.com/envoyproxy/gateway/issues/5660#issuecomment-3130314740
-	if xdsListener == nil || (xdsListener.GetAddress() != nil &&
-		xdsListener.GetAddress().GetSocketAddress() != nil &&
-		xdsListener.GetAddress().GetSocketAddress().GetProtocol() == corev3.SocketAddress_UDP) {
+	if xdsListener == nil {
 		return nil
 	}
 
@@ -581,138 +565,20 @@ func addServerNamesMatch(xdsListener *listenerv3.Listener, filterChain *listener
 			ServerNames: hostnames,
 		}
 
-		if err := addXdsTLSInspectorFilter(xdsListener); err != nil {
-			return err
+		isQUICListener := xdsListener.GetAddress() != nil &&
+			xdsListener.GetAddress().GetSocketAddress() != nil &&
+			xdsListener.GetAddress().GetSocketAddress().GetProtocol() == corev3.SocketAddress_UDP
+
+		// Envoy’s QUIC stack parses SNI itself, so filter_chain_match.server_names works without TLS Inspector.
+		// TLS Inspector is only needed for TCP/TLS listeners.
+		if !isQUICListener {
+			if err := addXdsTLSInspectorFilter(xdsListener); err != nil {
+				return err
+			}
 		}
 	}
 
 	return nil
-}
-
-func addServerNamesFilterChainMatcher(
-	xdsListener *listenerv3.Listener,
-	filterChain *listenerv3.FilterChain,
-	hostnames []string,
-) error {
-	if xdsListener.FilterChainMatcher == nil {
-		xdsListener.FilterChainMatcher = &matcher.Matcher{
-			MatcherType: &matcher.Matcher_MatcherList_{
-				MatcherList: &matcher.Matcher_MatcherList{},
-			},
-		}
-	}
-
-	mList := xdsListener.FilterChainMatcher.GetMatcherList()
-
-	serverNameInput, err := proto.ToAnyWithValidation(&networkinputsv3.ServerNameInput{})
-	if err != nil {
-		return err
-	}
-
-	if len(hostnames) == 0 {
-		hostnames = []string{"*"}
-	}
-
-	for _, hostname := range hostnames {
-		fm, err := buildFilterChainFieldMatcher(serverNameInput, hostname, filterChain.Name)
-		if err != nil {
-			return err
-		}
-		mList.Matchers = append(mList.Matchers, fm)
-	}
-
-	// Sort filter chain matchers so that more specific matchers are evaluated first.
-	sortMatcherListByServerName(mList.Matchers)
-
-	return nil
-}
-
-func buildFilterChainFieldMatcher(
-	serverNameInput *anypb.Any,
-	hostname string,
-	chainName string,
-) (*matcher.Matcher_MatcherList_FieldMatcher, error) {
-	actionCfg, err := anypb.New(wrapperspb.String(chainName))
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal filter chain matcher action: %w", err)
-	}
-
-	onMatch := &matcher.Matcher_OnMatch{
-		OnMatch: &matcher.Matcher_OnMatch_Action{
-			Action: &xdscore.TypedExtensionConfig{
-				Name:        chainName,
-				TypedConfig: actionCfg,
-			},
-		},
-	}
-
-	return &matcher.Matcher_MatcherList_FieldMatcher{
-		Predicate: &matcher.Matcher_MatcherList_Predicate{
-			MatchType: &matcher.Matcher_MatcherList_Predicate_SinglePredicate_{
-				SinglePredicate: &matcher.Matcher_MatcherList_Predicate_SinglePredicate{
-					Input: &xdscore.TypedExtensionConfig{
-						Name:        "envoy.matching.inputs.server_name",
-						TypedConfig: serverNameInput,
-					},
-					Matcher: &matcher.Matcher_MatcherList_Predicate_SinglePredicate_ValueMatch{
-						ValueMatch: buildServerNameStringMatcher(hostname),
-					},
-				},
-			},
-		},
-		OnMatch: onMatch,
-	}, nil
-}
-
-func sortMatcherListByServerName(matchers []*matcher.Matcher_MatcherList_FieldMatcher) {
-	sort.SliceStable(matchers, func(i, j int) bool {
-		return matcherSpecificity(matchers[i]) > matcherSpecificity(matchers[j])
-	})
-}
-
-func matcherSpecificity(fm *matcher.Matcher_MatcherList_FieldMatcher) int {
-	sm := fm.GetPredicate().GetSinglePredicate().GetValueMatch()
-	switch mt := sm.MatchPattern.(type) {
-	case *matcher.StringMatcher_Exact:
-		// Exact matches should always outrank wildcards, so offset them.
-		return 1000 + len(mt.Exact)
-	case *matcher.StringMatcher_SafeRegex:
-		regex := mt.SafeRegex.GetRegex()
-		regex = strings.TrimPrefix(regex, "(?i)")
-		regex = strings.TrimPrefix(regex, "^")
-		regex = strings.TrimSuffix(regex, "$")
-		regex = strings.ReplaceAll(regex, ".*", "")
-		regex = strings.ReplaceAll(regex, "\\", "")
-		return len(regex)
-	default:
-		return 0
-	}
-}
-
-func buildServerNameStringMatcher(hostname string) *matcher.StringMatcher {
-	if strings.Contains(hostname, "*") {
-		var regexStr string
-		if hostname == "*" {
-			regexStr = ".*"
-		} else {
-			regexStr = "(?i)^" + strings.ReplaceAll(regexp.QuoteMeta(hostname), "\\*", "[^.]+") + "$"
-		}
-		return &matcher.StringMatcher{
-			MatchPattern: &matcher.StringMatcher_SafeRegex{
-				SafeRegex: &matcher.RegexMatcher{
-					EngineType: &matcher.RegexMatcher_GoogleRe2{GoogleRe2: &matcher.RegexMatcher_GoogleRE2{}},
-					Regex:      regexStr,
-				},
-			},
-		}
-	}
-
-	return &matcher.StringMatcher{
-		MatchPattern: &matcher.StringMatcher_Exact{
-			Exact: hostname,
-		},
-		IgnoreCase: true,
-	}
 }
 
 // findXdsHTTPRouteConfigName finds the name of the route config associated with the
