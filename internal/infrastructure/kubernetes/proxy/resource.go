@@ -343,7 +343,7 @@ func (r *ResourceRender) expectedVolumes(pod *egv1a1.KubernetesPodSpec) []corev1
 			VolumeSource: corev1.VolumeSource{
 				ConfigMap: &corev1.ConfigMapVolumeSource{
 					LocalObjectReference: corev1.LocalObjectReference{
-						Name: r.Name(),
+						Name: r.configMapName(),
 					},
 					Items: []corev1.KeyToPath{
 						{
@@ -384,7 +384,7 @@ func (r *ResourceRender) expectedVolumes(pod *egv1a1.KubernetesPodSpec) []corev1
 		VolumeSource: corev1.VolumeSource{
 			ConfigMap: &corev1.ConfigMapVolumeSource{
 				LocalObjectReference: corev1.LocalObjectReference{
-					Name: r.Name(),
+					Name: r.configMapName(),
 				},
 				Items:       sdsConfigMapItems(r.GatewayNamespaceMode),
 				DefaultMode: ptr.To[int32](420),
