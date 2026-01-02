@@ -51,9 +51,17 @@ export interface TestResult {
   // Resource usage
   resources: ResourceMetrics;
 
-  // Additional counters
+  // Additional counters (legacy fields for backwards compatibility)
   poolOverflow: number;
   upstreamConnections: number;
+
+  // Comprehensive counter metrics from benchmark output
+  counters?: {
+    [counterName: string]: {
+      value: number;      // The absolute value
+      perSecond: number;  // The per-second rate
+    };
+  };
 }
 
 // NEW: Version/Run metadata

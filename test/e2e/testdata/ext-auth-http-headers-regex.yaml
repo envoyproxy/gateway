@@ -36,5 +36,5 @@ spec:
         port: 8080
       headersToBackend: ["x-current-user", "x-current-headers"]
     headersToExtAuthOnMatch:
-      - type: RegularExpression
-        value: "^x-custom-[a-z]+-header$"
+    - type: RegularExpression
+      value: "^x-custom-[a-z]+-header$"

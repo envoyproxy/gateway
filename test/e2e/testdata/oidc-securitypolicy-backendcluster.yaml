@@ -74,6 +74,8 @@ spec:
               maxInterval: 5s
           retryOn:
             triggers: ["5xx", "gateway-error", "reset"]
+          tcpKeepalive:
+            idleTime: 300s
       issuer: "https://keycloak.gateway-conformance-infra/realms/master"   # Test fetching auth endpoint from the issuer url
     clientIDRef:
       name: "oidctest-client-id"

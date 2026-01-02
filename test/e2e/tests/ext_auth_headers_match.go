@@ -27,20 +27,17 @@ import (
 
 func init() {
 	ConformanceTests = append(ConformanceTests,
-		HTTPExtAuthTest,
+		HTTPExtAuthTestExact,
 		HTTPExtAuthHeadersPrefixTest,
 		HTTPExtAuthHeadersSuffixTest,
 		HTTPExtAuthHeadersRegexTest,
 	)
 }
 
-// HTTPExtAuthTest tests ExtAuth authentication for an http route with ExtAuth configured.
-// The http route points to an application to verify that ExtAuth authentication works on application/http path level.
-// The ExtAuth service is an HTTP service.
-var HTTPExtAuthTest = suite.ConformanceTest{
-	ShortName:   "HTTPExtAuth",
+var HTTPExtAuthTestExact = suite.ConformanceTest{
+	ShortName:   "HTTPExtAuthExact",
 	Description: "Test HTTP ExtAuth authentication",
-	Manifests:   []string{"testdata/ext-auth-service.yaml", "testdata/ext-auth-http-securitypolicy.yaml"},
+	Manifests:   []string{"testdata/ext-auth-http-headers-exact.yaml", "testdata/ext-auth-http-securitypolicy.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		ns := "gateway-conformance-infra"
 		routeNN := types.NamespacedName{Name: "http-with-ext-auth", Namespace: ns}

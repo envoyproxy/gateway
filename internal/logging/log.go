@@ -6,11 +6,13 @@
 package logging
 
 import (
+	"context"
 	"io"
 	"os"
 
 	"github.com/go-logr/logr"
 	"github.com/go-logr/zapr"
+	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
@@ -86,6 +88,27 @@ func (l Logger) WithName(name string) Logger {
 func (l Logger) WithValues(keysAndValues ...interface{}) Logger {
 	l.Logger = l.Logger.WithValues(keysAndValues...)
 	return l
+}
+
+// WithTrace returns a new Logger that includes basic OpenTelemetry metadata
+// extracted from the provided context. If the context does not contain a valid
+// span, the original Logger is returned unchanged.
+func (l Logger) WithTrace(ctx context.Context) Logger {
+	sc := trace.SpanContextFromContext(ctx)
+	if !sc.IsValid() {
+		return l
+	}
+
+	fields := []interface{}{
+		"trace_id", sc.TraceID().String(),
+		"span_id", sc.SpanID().String(),
+	}
+
+	if ts := sc.TraceState(); ts.Len() > 0 {
+		fields = append(fields, "trace_state", ts.String())
+	}
+
+	return l.WithValues(fields...)
 }
 
 // A Sugar wraps the base Logger functionality in a slower, but less

@@ -231,7 +231,11 @@ func Test_subscribeAndTranslate(t *testing.T) {
 					xdsIR.Delete(xds.Key)
 					continue
 				}
-				xdsIR.Store(xds.Key, xds.Value)
+				m := message.XdsIRWithContext{
+					XdsIR:   xds.Value,
+					Context: context.Background(),
+				}
+				xdsIR.Store(xds.Key, &m)
 			}
 
 			diff := ""

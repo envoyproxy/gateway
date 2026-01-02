@@ -2099,6 +2099,17 @@ func (in *HeaderSettings) DeepCopyInto(out *HeaderSettings) {
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}
+	if in.EarlyRemoveRequestHeadersOnMatch != nil {
+		in, out := &in.EarlyRemoveRequestHeadersOnMatch, &out.EarlyRemoveRequestHeadersOnMatch
+		*out = make([]*StringMatch, len(*in))
+		for i := range *in {
+			if (*in)[i] != nil {
+				in, out := &(*in)[i], &(*out)[i]
+				*out = new(StringMatch)
+				(*in).DeepCopyInto(*out)
+			}
+		}
+	}
 	if in.LateAddResponseHeaders != nil {
 		in, out := &in.LateAddResponseHeaders, &out.LateAddResponseHeaders
 		*out = make([]AddHeader, len(*in))
@@ -2110,6 +2121,17 @@ func (in *HeaderSettings) DeepCopyInto(out *HeaderSettings) {
 		in, out := &in.LateRemoveResponseHeaders, &out.LateRemoveResponseHeaders
 		*out = make([]string, len(*in))
 		copy(*out, *in)
+	}
+	if in.LateRemoveResponseHeadersOnMatch != nil {
+		in, out := &in.LateRemoveResponseHeadersOnMatch, &out.LateRemoveResponseHeadersOnMatch
+		*out = make([]*StringMatch, len(*in))
+		for i := range *in {
+			if (*in)[i] != nil {
+				in, out := &(*in)[i], &(*out)[i]
+				*out = new(StringMatch)
+				(*in).DeepCopyInto(*out)
+			}
+		}
 	}
 }
 

@@ -210,6 +210,8 @@ In the following example, we will create a `HTTPRoute` that references a `Backen
 This setup allows Envoy Gateway to dynamically resolve the hostname in the request and forward the traffic to the original
 destination of the request.
 
+#### Forwarding Based on the Original Host
+
 Note: the TLS configuration in the following example is optional. It's only required if you want to use TLS to connect
 to the backend service. The example uses the system well-known CA certificate to validate the backend service's certificate.
 You can also use a custom CA certificate by specifying the `caCertificate` field in the `tls` section.
@@ -294,10 +296,73 @@ You can also send a request to any other domain, and Envoy Gateway will resolve 
 curl -HHost:httpbin.org http://${GATEWAY_HOST}/get
 ```
 
+#### Host Rewriting from a Custom Header
+
+You can rewrite the host using a request header while still relying on the DynamicResolver backend to resolve that host.
+Loopback hostnames/addresses (for example `localhost`, `127.0.0.1`, `::1`) are denied by default so rewritten hosts cannot
+route to the proxy's own loopback interface. Add explicit allow/deny rules for other destinations with [SecurityPolicy][]
+authorization when you want tighter controls.
+
+Example: rewrite from a custom header and deny rewrites to `forbidden.com`.
+
+```yaml
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: HTTPRouteFilter
+metadata:
+  name: host-rewrite-from-header
+  namespace: default
+spec:
+  urlRewrite:
+    hostname:
+      type: Header
+      header: x-dynamic-host-header
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: my-dynamic-resolver-route
+  namespace: default
+spec:
+  parentRefs:
+    - name: eg
+  rules:
+    - backendRefs:
+        - group: gateway.envoyproxy.io
+          kind: Backend
+          name: backend-dynamic-resolver
+      filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: gateway.envoyproxy.io
+            kind: HTTPRouteFilter
+            name: host-rewrite-from-header
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: deny-forbidden-rewrites
+  namespace: default
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: my-dynamic-resolver-route
+  authorization:
+    defaultAction: Allow
+    rules:
+      - name: disallow-forbidden-hosts
+        action: Deny
+        principal:
+          headers:
+            - name: x-dynamic-host-header
+              values:
+                - forbidden.com
+```
+
 [Backend]: ../../../api/extension_types#backend
 [routing to cluster-external backends]: ./../../tasks/traffic/routing-outside-kubernetes.md
 [BackendObjectReference]: https://gateway-api.sigs.k8s.io/reference/1.4/spec#backendobjectreference
-[extension resource]: https://gateway-api.sigs.k8s.io/guides/migrating-from-ingress/#approach-to-extensibility
+[extension resource]: https://gateway-api.sigs.k8s.io/guides/getting-started/migrating-from-ingress/#approach-to-extensibility
 [CVE-2021-25740]: https://nvd.nist.gov/vuln/detail/CVE-2021-25740
 [upstream recommendations]: https://github.com/kubernetes/kubernetes/issues/103675
 [HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute
@@ -307,3 +372,4 @@ curl -HHost:httpbin.org http://${GATEWAY_HOST}/get
 [Backend TLS Policy]: https://gateway-api.sigs.k8s.io/api-types/backendtlspolicy/
 [EnvoyProxy]: ../../../api/extension_types#envoyproxy
 [EnvoyGateway]: ../../../api/extension_types#envoygateway
+[SecurityPolicy]: ../../../api/extension_types#securitypolicy
