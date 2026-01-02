@@ -1358,8 +1358,8 @@ func (in *Compression) DeepCopyInto(out *Compression) {
 	}
 	if in.MinContentLength != nil {
 		in, out := &in.MinContentLength, &out.MinContentLength
-		*out = new(uint32)
-		**out = **in
+		x := (*in).DeepCopy()
+		*out = &x
 	}
 }
 

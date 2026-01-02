@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -317,7 +318,7 @@ func TestBuildCompression(t *testing.T) {
 				{
 					Type:             egv1a1.GzipCompressorType,
 					Gzip:             &egv1a1.GzipCompressor{},
-					MinContentLength: ptr.To[uint32](100),
+					MinContentLength: ptr.To(resource.MustParse("100")),
 				},
 			},
 			expected: []*ir.Compression{
@@ -334,7 +335,7 @@ func TestBuildCompression(t *testing.T) {
 				{
 					Type:             egv1a1.BrotliCompressorType,
 					Brotli:           &egv1a1.BrotliCompressor{},
-					MinContentLength: ptr.To[uint32](200),
+					MinContentLength: ptr.To(resource.MustParse("200")),
 				},
 			},
 			expected: []*ir.Compression{
@@ -351,12 +352,12 @@ func TestBuildCompression(t *testing.T) {
 				{
 					Type:             egv1a1.BrotliCompressorType,
 					Brotli:           &egv1a1.BrotliCompressor{},
-					MinContentLength: ptr.To[uint32](50),
+					MinContentLength: ptr.To(resource.MustParse("50")),
 				},
 				{
 					Type:             egv1a1.GzipCompressorType,
 					Gzip:             &egv1a1.GzipCompressor{},
-					MinContentLength: ptr.To[uint32](100),
+					MinContentLength: ptr.To(resource.MustParse("100")),
 				},
 			},
 			expected: []*ir.Compression{
@@ -378,14 +379,14 @@ func TestBuildCompression(t *testing.T) {
 				{
 					Type:             egv1a1.GzipCompressorType,
 					Gzip:             &egv1a1.GzipCompressor{},
-					MinContentLength: ptr.To[uint32](100),
+					MinContentLength: ptr.To(resource.MustParse("100")),
 				},
 			},
 			compressor: []*egv1a1.Compression{
 				{
 					Type:             egv1a1.BrotliCompressorType,
 					Brotli:           &egv1a1.BrotliCompressor{},
-					MinContentLength: ptr.To[uint32](200),
+					MinContentLength: ptr.To(resource.MustParse("200")),
 				},
 			},
 			expected: []*ir.Compression{

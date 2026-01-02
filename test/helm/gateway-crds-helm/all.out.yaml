@@ -21427,14 +21427,19 @@ spec:
                       description: The configuration for GZIP compressor.
                       type: object
                     minContentLength:
+                      allOf:
+                      - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                      - pattern: ^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$
+                      anyOf:
+                      - type: integer
+                      - type: string
                       description: |-
                         MinContentLength defines the minimum response size in bytes to apply compression.
                         Responses smaller than this threshold will not be compressed.
-                        If not specified, Envoy's default of 30 bytes is used.
                         Must be at least 30 bytes as enforced by Envoy Proxy.
-                      format: int32
-                      minimum: 30
-                      type: integer
+                        Note that when the suffix is not provided, the value is interpreted as bytes.
+                        Default: 30 bytes
+                      x-kubernetes-int-or-string: true
                     type:
                       description: CompressorType defines the compressor type to use
                         for compression.
@@ -21467,14 +21472,19 @@ spec:
                       description: The configuration for GZIP compressor.
                       type: object
                     minContentLength:
+                      allOf:
+                      - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                      - pattern: ^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$
+                      anyOf:
+                      - type: integer
+                      - type: string
                       description: |-
                         MinContentLength defines the minimum response size in bytes to apply compression.
                         Responses smaller than this threshold will not be compressed.
-                        If not specified, Envoy's default of 30 bytes is used.
                         Must be at least 30 bytes as enforced by Envoy Proxy.
-                      format: int32
-                      minimum: 30
-                      type: integer
+                        Note that when the suffix is not provided, the value is interpreted as bytes.
+                        Default: 30 bytes
+                      x-kubernetes-int-or-string: true
                     type:
                       description: CompressorType defines the compressor type to use
                         for compression.
@@ -42238,14 +42248,19 @@ spec:
                                 description: The configuration for GZIP compressor.
                                 type: object
                               minContentLength:
+                                allOf:
+                                - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                - pattern: ^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$
+                                anyOf:
+                                - type: integer
+                                - type: string
                                 description: |-
                                   MinContentLength defines the minimum response size in bytes to apply compression.
                                   Responses smaller than this threshold will not be compressed.
-                                  If not specified, Envoy's default of 30 bytes is used.
                                   Must be at least 30 bytes as enforced by Envoy Proxy.
-                                format: int32
-                                minimum: 30
-                                type: integer
+                                  Note that when the suffix is not provided, the value is interpreted as bytes.
+                                  Default: 30 bytes
+                                x-kubernetes-int-or-string: true
                               type:
                                 description: CompressorType defines the compressor
                                   type to use for compression.

@@ -5,6 +5,8 @@
 
 package v1alpha1
 
+import "k8s.io/apimachinery/pkg/api/resource"
+
 // CompressorType defines the types of compressor library supported by Envoy Gateway.
 //
 // +kubebuilder:validation:Enum=Gzip;Brotli;Zstd
@@ -58,10 +60,12 @@ type Compression struct {
 
 	// MinContentLength defines the minimum response size in bytes to apply compression.
 	// Responses smaller than this threshold will not be compressed.
-	// If not specified, Envoy's default of 30 bytes is used.
 	// Must be at least 30 bytes as enforced by Envoy Proxy.
+	// Note that when the suffix is not provided, the value is interpreted as bytes.
+	// Default: 30 bytes
 	//
 	// +optional
-	// +kubebuilder:validation:Minimum=30
-	MinContentLength *uint32 `json:"minContentLength,omitempty"`
+	// +kubebuilder:validation:XIntOrString
+	// +kubebuilder:validation:Pattern="^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$"
+	MinContentLength *resource.Quantity `json:"minContentLength,omitempty"`
 }
