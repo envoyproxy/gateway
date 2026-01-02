@@ -2072,40 +2072,20 @@ func (t *Translator) processCORSPreflight(irListener *ir.HTTPListener, prefix st
 				continue
 			}
 
-			preRoute := r.DeepCopy()
-			preRoute.Name = preflightName
-			preRoute.Security = &ir.SecurityFeatures{
-				CORS: t.buildCORS(cors),
+			preRoute := &ir.HTTPRoute{
+				Security: &ir.SecurityFeatures{
+					CORS: t.buildCORS(cors),
+				},
+				Name:              preflightName,
+				Metadata:          r.Metadata,
+				PathMatch:         r.PathMatch,
+				QueryParamMatches: r.QueryParamMatches,
+				CORS:              r.CORS,
+				Hostname:          r.Hostname,
+				Destination:       r.Destination,
 			}
 
-			// Create header matches:
-			// copy original headers (excluding :method) + add CORS headers (:method=OPTIONS, origin, access-control-request-method)
-			headerMatches := make([]*ir.StringMatch, 0, len(r.HeaderMatches)+2)
-			for _, headerMatch := range r.HeaderMatches {
-				// Skip the original method match for CORS preflight route to avoid conflicting method requirements.
-				if headerMatch.Name == ":method" {
-					continue
-				}
-				headerMatches = append(headerMatches, headerMatch)
-			}
-
-			corsHeaders := []*ir.StringMatch{
-				{
-					Name:  ":method",
-					Exact: ptr.To("OPTIONS"),
-				},
-				{
-					Name:      "origin",
-					SafeRegex: ptr.To(".*"),
-				},
-				{
-					Name:      "access-control-request-method",
-					SafeRegex: ptr.To(".*"),
-				},
-			}
-			headerMatches = append(headerMatches, corsHeaders...)
-			preRoute.HeaderMatches = headerMatches
-
+			preRoute.HeaderMatches = buildHeaderMatches(r)
 			preflightRoutes = append(preflightRoutes, preRoute)
 		}
 	}

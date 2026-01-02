@@ -690,34 +690,7 @@ func (t *Translator) processHTTPRouteRule(
 				CORS:              httpFiltersContext.CORS,
 			}
 
-			// Create header matches:
-			// copy original headers (excluding :method) + add CORS headers (:method=OPTIONS, origin, access-control-request-method)
-			headerMatches := make([]*ir.StringMatch, 0, len(irRoute.HeaderMatches)+2)
-			for _, headerMatch := range irRoute.HeaderMatches {
-				// Skip the original method match for CORS preflight route to avoid conflicting method requirements.
-				if headerMatch.Name == ":method" {
-					continue
-				}
-				headerMatches = append(headerMatches, headerMatch)
-			}
-
-			corsHeaders := []*ir.StringMatch{
-				{
-					Name:  ":method",
-					Exact: ptr.To("OPTIONS"),
-				},
-				{
-					Name:      "origin",
-					SafeRegex: ptr.To(".*"),
-				},
-				{
-					Name:      "access-control-request-method",
-					SafeRegex: ptr.To(".*"),
-				},
-			}
-			headerMatches = append(headerMatches, corsHeaders...)
-
-			corsRoute.HeaderMatches = headerMatches
+			corsRoute.HeaderMatches = buildHeaderMatches(irRoute)
 			ruleRoutes = append(ruleRoutes, corsRoute)
 		}
 	}
