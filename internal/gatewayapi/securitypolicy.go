@@ -51,6 +51,23 @@ const (
 	oidcHMACSecretKey  = "hmac-secret"
 )
 
+// deprecatedFieldsUsedInSecurityPolicy returns a map of deprecated field paths to their alternatives.
+func deprecatedFieldsUsedInSecurityPolicy(policy *egv1a1.SecurityPolicy) map[string]string {
+	deprecatedFields := make(map[string]string)
+	if policy.Spec.TargetRef != nil {
+		deprecatedFields["spec.targetRef"] = "spec.targetRefs"
+	}
+	if policy.Spec.ExtAuth != nil {
+		if policy.Spec.ExtAuth.GRPC != nil && policy.Spec.ExtAuth.GRPC.BackendRef != nil {
+			deprecatedFields["spec.extAuth.grpc.backendRef"] = "spec.extAuth.grpc.backendRefs"
+		}
+		if policy.Spec.ExtAuth.HTTP != nil && policy.Spec.ExtAuth.HTTP.BackendRef != nil {
+			deprecatedFields["spec.extAuth.http.backendRef"] = "spec.extAuth.http.backendRefs"
+		}
+	}
+	return deprecatedFields
+}
+
 func (t *Translator) ProcessSecurityPolicies(
 	securityPolicies []*egv1a1.SecurityPolicy,
 	gateways []*GatewayContext,
@@ -284,6 +301,11 @@ func (t *Translator) processSecurityPolicyForRoute(
 
 	// Set Accepted condition if it is unset
 	status.SetAcceptedForPolicyAncestors(&policy.Status, parentGateways, t.GatewayControllerName, policy.Generation)
+
+	// Check for deprecated fields and set warning if any are found
+	if deprecatedFields := deprecatedFieldsUsedInSecurityPolicy(policy); len(deprecatedFields) > 0 {
+		status.SetDeprecatedFieldsWarningForPolicyAncestors(&policy.Status, parentGateways, t.GatewayControllerName, policy.Generation, deprecatedFields)
+	}
 
 	// Check if this policy is overridden by other policies targeting at route rule levels
 	key := policyTargetRouteKey{
