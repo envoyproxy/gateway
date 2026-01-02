@@ -23652,7 +23652,7 @@ spec:
                     description: |-
                       Tracing configures the tracing settings for the backend or HTTPRoute.
 
-                      This will take precedence over tracing on EnvoyProxy if set.
+                      This takes precedence over EnvoyProxy tracing when set.
                     properties:
                       customTags:
                         additionalProperties:
