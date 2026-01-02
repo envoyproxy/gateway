@@ -492,7 +492,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `tracing` | _[Tracing](#tracing)_ |  false  |  | Tracing configures the tracing settings for the backend or HTTPRoute.<br />This will take precedence over tracing on EnvoyProxy if set. |
+| `tracing` | _[Tracing](#tracing)_ |  false  |  | Tracing configures the tracing settings for the backend or HTTPRoute.<br />This takes precedence over EnvoyProxy tracing when set. |
 | `metrics` | _[BackendMetrics](#backendmetrics)_ |  false  |  | Metrics defines metrics configuration for the backend or Route. |
 
 
