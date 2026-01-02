@@ -790,7 +790,7 @@ func (t *Translator) processTracing(gw *gwapiv1.Gateway, envoyproxy *egv1a1.Envo
 		},
 		Provider: tracing.Provider,
 		Traffic:  traffic,
-		Headers:  tracing.Provider.Headers,
+		Headers:  getOpenTelemetryTracingHeaders(&tracing.Provider),
 	}, nil
 }
 
@@ -811,6 +811,13 @@ func proxySamplingRate(tracing *egv1a1.ProxyTracing) float64 {
 		rate = math.Min(100, rate)
 	}
 	return rate
+}
+
+func getOpenTelemetryTracingHeaders(provider *egv1a1.TracingProvider) []gwapiv1.HTTPHeader {
+	if provider != nil && provider.OpenTelemetry != nil {
+		return provider.OpenTelemetry.Headers
+	}
+	return nil
 }
 
 func (t *Translator) processMetrics(envoyproxy *egv1a1.EnvoyProxy, resources *resource.Resources) (*ir.Metrics, error) {

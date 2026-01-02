@@ -26,9 +26,10 @@ spec:
         host: localhost
         port: 4317
         # Authorization header sent as gRPC initial metadata
-        headers:
-          - name: Authorization
-            value: Bearer fake
+        openTelemetry:
+          headers:
+            - name: Authorization
+              value: Bearer fake
     accessLog:
       settings:
         - format:

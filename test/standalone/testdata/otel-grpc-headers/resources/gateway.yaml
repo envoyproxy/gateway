@@ -19,9 +19,10 @@ spec:
         type: OpenTelemetry
         host: 127.0.0.1
         port: 4317
-        headers:
-          - name: Authorization
-            value: Bearer test-api-key
+        openTelemetry:
+          headers:
+            - name: Authorization
+              value: Bearer test-api-key
     accessLog:
       settings:
         - format:
