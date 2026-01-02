@@ -109,8 +109,8 @@ securityPolicies:
       - GET
       allowOrigins:
       - https://*.test.com:8080
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
   status:
