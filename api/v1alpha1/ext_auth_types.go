@@ -63,6 +63,65 @@ type ExtAuth struct {
 	//
 	// +optional
 	RecomputeRoute *bool `json:"recomputeRoute,omitempty"`
+
+	// ContextExtensions are analogous to http_request.headers, however these
+	// contents will not be sent to the upstream server. This provides an
+	// extension mechanism for sending additional information to the auth server
+	// without modifying the proto definition. It maps to the internal opaque
+	// context in the filter chain.
+	//
+	// +optional
+	// +patchMergeKey=name
+	// +patchStrategy=merge
+	// +listType=map
+	// +listMapKey=name
+	ContextExtensions []*ContextExtension `json:"contextExtensions,omitempty"`
+}
+
+// ContextExtensionValueType defines the types of values for ContextExtension supported by Envoy Gateway.
+//
+// +kubebuilder:validation:Enum=Value;ValueRef
+type ContextExtensionValueType string
+
+const (
+	// ContextExtensionValueTypeValue defines the "Value" ContextExtension type.
+	ContextExtensionValueTypeValue ContextExtensionValueType = "Value"
+
+	// ContextExtensionValueTypeValueRef defines the "ValueRef" ContextExtension type.
+	ContextExtensionValueTypeValueRef ContextExtensionValueType = "ValueRef"
+)
+
+// ContextExtension is analogous to http_request.headers, however these
+// contents will not be sent to the upstream server. This provides an
+// extension mechanism for sending additional information to the auth server
+// without modifying the proto definition. It maps to the internal opaque
+// context in the filter chain.
+//
+// +kubebuilder:validation:XValidation:rule="(self.type == 'Value' && has(self.value) && !has(self.valueRef)) || (self.type == 'ValueRef' && !has(self.value) && has(self.valueRef))",message="Exactly one of value or valueRef must be set with correct type."
+type ContextExtension struct {
+	// Name of the context extension.
+	Name string `json:"name"`
+
+	// Type is the type of method to use to read the ContextExtension value.
+	// Valid values are Value and ValueRef, default is Value.
+	//
+	// +kubebuilder:default=Value
+	// +unionDiscriminator
+	// +required
+	Type ContextExtensionValueType `json:"type"`
+
+	// Value of the context extension.
+	//
+	// +optional
+	// +unionMember
+	Value *string `json:"value,omitempty"`
+
+	// ValueRef for the context extension's value.
+	//
+	// +kubebuilder:validation:XValidation:rule="self.kind in ['ConfigMap', 'Secret'] && self.group in ['', 'v1']",message="Only a reference to an object of kind ConfigMap or Secret belonging to default v1 API group is supported."
+	// +optional
+	// +unionMember
+	ValueRef *LocalObjectKeyReference `json:"valueRef,omitempty"`
 }
 
 // GRPCExtAuthService defines the gRPC External Authorization service

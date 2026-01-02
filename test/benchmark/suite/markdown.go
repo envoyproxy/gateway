@@ -70,7 +70,8 @@ func convertToMarkdownResult(r *BenchmarkCaseReport) (MarkdownResult, MarkdownMe
 	mm.Name = r.Title
 	metrics := getSamplesMinMaxMeans(r.Samples)
 	mm.ControlPlaneContainerMemory = metrics[0]
-	mm.ControlPlaneProcessMemory = metrics[2]
+	mm.ControlPlaneProcessMemory = metrics[1]
+	mm.ControlPlaneCPU = metrics[2]
 	mm.DataPlaneMemory = metrics[3]
 	mm.DataPlaneCPU = metrics[4]
 
@@ -188,16 +189,23 @@ func getSamplesMinMaxMeans(samples []BenchmarkMetricSample) []string {
 
 func getMetricsMinMaxMeans(metrics []float64) string {
 	var minV, maxV, avg float64 = math.MaxFloat64, 0, 0
+	count := 0.0
 	for _, v := range metrics {
+		if v < 0 {
+			continue
+		}
 		minV = math.Min(v, minV)
 		maxV = math.Max(v, maxV)
 		avg += v
+		count++
 	}
 	if minV == math.MaxFloat64 {
 		minV = 0
 	}
-	if len(metrics) > 0 {
-		avg /= float64(len(metrics))
+	if count > 0 {
+		avg /= count
+	} else {
+		maxV = 0
 	}
 
 	return fmt.Sprintf("%.2f / %.2f / %.2f", minV, maxV, avg)

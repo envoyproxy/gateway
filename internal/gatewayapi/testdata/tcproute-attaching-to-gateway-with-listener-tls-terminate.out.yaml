@@ -55,6 +55,8 @@ gateways:
       supportedKinds:
       - group: gateway.networking.k8s.io
         kind: TCPRoute
+      - group: gateway.networking.k8s.io
+        kind: TLSRoute
     - attachedRoutes: 1
       conditions:
       - lastTransitionTime: null
@@ -76,6 +78,8 @@ gateways:
       supportedKinds:
       - group: gateway.networking.k8s.io
         kind: TCPRoute
+      - group: gateway.networking.k8s.io
+        kind: TLSRoute
 infraIR:
   envoy-gateway/gateway-1:
     proxy:
