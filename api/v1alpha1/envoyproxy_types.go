@@ -462,7 +462,6 @@ type KubernetesConfigMapSpec struct {
 	Name *string `json:"name,omitempty"`
 }
 
-
 // EnvoyProxyHostProvider defines configuration for the "Host" resource provider.
 type EnvoyProxyHostProvider struct {
 	// EnvoyVersion is the version of Envoy to use. If unspecified, the version

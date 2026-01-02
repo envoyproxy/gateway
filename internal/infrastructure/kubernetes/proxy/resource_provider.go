@@ -360,7 +360,6 @@ func (r *ResourceRender) ConfigMap(cert string) (*corev1.ConfigMap, error) {
 	}, nil
 }
 
-
 // stableSelector returns a stable selector based on the owning gateway labels.
 // "stable" here means the selector doesn't change when the infra is updated.
 func (r *ResourceRender) stableSelector() *metav1.LabelSelector {
