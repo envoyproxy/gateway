@@ -41,10 +41,10 @@ securityPolicies:
     namespace: default
     name: policy-for-route-1
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
-      kind: HTTPRoute
-      name: httproute-1
+    targetRefs:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+        name: httproute-1
     cors:
       allowOrigins:
       - "https://*.test.com:8080"
