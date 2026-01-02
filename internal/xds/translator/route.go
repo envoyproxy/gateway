@@ -807,14 +807,18 @@ func buildRouteTracing(httpRoute *ir.HTTPRoute) (*routev3.Tracing, error) {
 	}
 
 	tracing := httpRoute.Traffic.Telemetry.Tracing
-	tags, err := buildTracingTags(tracing.CustomTags)
+	tags, err := buildTracingTags(tracing.CustomTags, tracing.Tags)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build route tracing tags:%w", err)
 	}
 
+	op, upstreamOp := buildTracingOperation(tracing.SpanName)
+
 	return &routev3.Tracing{
-		RandomSampling: fractionalpercent.FromFraction(tracing.SamplingFraction),
-		CustomTags:     tags,
+		RandomSampling:    fractionalpercent.FromFraction(tracing.SamplingFraction),
+		CustomTags:        tags,
+		Operation:         op,
+		UpstreamOperation: upstreamOp,
 	}, nil
 }
 
