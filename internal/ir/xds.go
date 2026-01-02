@@ -720,11 +720,17 @@ type HeaderSettings struct {
 	// EarlyRemoveRequestHeaders defines headers that would be removed before envoy request processing.
 	EarlyRemoveRequestHeaders []string `json:"earlyRemoveRequestHeaders,omitempty" yaml:"earlyRemoveRequestHeaders,omitempty"`
 
+	// EarlyRemoveRequestHeadersOnMatch defines header name matchers that would remove headers before envoy request processing.
+	EarlyRemoveRequestHeadersOnMatch []*StringMatch `json:"earlyRemoveRequestHeadersOnMatch,omitempty" yaml:"earlyRemoveRequestHeadersOnMatch,omitempty"`
+
 	// LateAddResponseHeaders defines headers that would be added after envoy response processing.
 	LateAddResponseHeaders []AddHeader `json:"lateAddResponseHeaders,omitempty" yaml:"earlyAddRequestHeaders,omitempty"`
 
 	// LateRemoveResponseHeaders defines headers that would be removed after envoy response processing.
 	LateRemoveResponseHeaders []string `json:"lateRemoveResponseHeaders,omitempty" yaml:"earlyRemoveRequestHeaders,omitempty"`
+
+	// LateRemoveResponseHeadersOnMatch defines header name matchers that would remove headers after envoy response processing.
+	LateRemoveResponseHeadersOnMatch []*StringMatch `json:"lateRemoveResponseHeadersOnMatch,omitempty" yaml:"lateRemoveResponseHeadersOnMatch,omitempty"`
 }
 
 // ClientTimeout sets the timeout configuration for downstream connections
@@ -848,6 +854,11 @@ func (h *HTTPRoute) NeedsClusterPerSetting() bool {
 	return h.Destination.NeedsClusterPerSetting()
 }
 
+func (h *HTTPRoute) IsDynamicResolverRoute() bool {
+	// If using a dynamic resolver, only a single destination setting is expected and enforced during IR translation
+	return h.Destination != nil && len(h.Destination.Settings) == 1 && h.Destination.Settings[0].IsDynamicResolver
+}
+
 // DNS contains configuration options for DNS resolution.
 // +k8s:deepcopy-gen=true
 type DNS struct {
@@ -857,6 +868,8 @@ type DNS struct {
 	RespectDNSTTL *bool `json:"respectDnsTtl,omitempty"`
 	// LookupFamily allows to configure the dns lookup policy
 	LookupFamily *egv1a1.DNSLookupFamily `json:"lookupFamily,omitempty"`
+	// Name is a unique name for a DNS configuration.
+	Name string `json:"name,omitempty" yaml:"name,omitempty"`
 }
 
 // SessionPersistence defines the desired state of SessionPersistence.
@@ -891,6 +904,8 @@ type HeaderBasedSessionPersistence struct {
 type Compression struct {
 	// Type of compression to be used.
 	Type egv1a1.CompressorType `json:"type" yaml:"type"`
+	// ChooseFirst indicates this compressor is preferred when q-values in Accept-Encoding are equal.
+	ChooseFirst bool `json:"chooseFirst,omitempty" yaml:"chooseFirst,omitempty"`
 }
 
 // TrafficFeatures holds the information associated with the Backend Traffic Policy.
@@ -1949,6 +1964,7 @@ func (r ExtendedHTTPPathModifier) Validate() error {
 // with both core gateway-api and extended envoy gateway capabilities
 // +k8s:deepcopy-gen=true
 type HTTPHostModifier struct {
+	// Name provides a string to replace the host of the request.
 	Name    *string `json:"name,omitempty" yaml:"name,omitempty"`
 	Header  *string `json:"header,omitempty" yaml:"header,omitempty"`
 	Backend *bool   `json:"backend,omitempty" yaml:"backend,omitempty"`
@@ -2420,8 +2436,9 @@ type EnvoyPatchPolicy struct {
 // EnvoyPatchPolicyStatus defines the status reference for the EnvoyPatchPolicy resource
 // +k8s:deepcopy-gen=true
 type EnvoyPatchPolicyStatus struct {
-	Name      string `json:"name,omitempty" yaml:"name"`
-	Namespace string `json:"namespace,omitempty" yaml:"namespace"`
+	Name       string `json:"name,omitempty" yaml:"name"`
+	Namespace  string `json:"namespace,omitempty" yaml:"namespace"`
+	Generation int64  `json:"generation,omitempty" yaml:"generation"`
 	// Status of the EnvoyPatchPolicy
 	Status *gwapiv1.PolicyStatus `json:"status,omitempty" yaml:"status,omitempty"`
 }

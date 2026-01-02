@@ -24,6 +24,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/message"
 	"github.com/envoyproxy/gateway/internal/metrics"
 	providerrunner "github.com/envoyproxy/gateway/internal/provider/runner"
+	"github.com/envoyproxy/gateway/internal/traces"
 	xdsrunner "github.com/envoyproxy/gateway/internal/xds/runner"
 )
 
@@ -171,6 +172,10 @@ func startRunners(ctx context.Context, cfg *config.Server, runnerErrors *message
 	runners := []struct {
 		runner Runner
 	}{
+		{
+			// Start the Traces Server
+			runner: traces.New(cfg),
+		},
 		{
 			// Start the Provider Service
 			// It fetches the resources from the configured provider type

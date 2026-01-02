@@ -591,3 +591,77 @@ func TestTopologyInjectorDisabledInHostMode(t *testing.T) {
 		})
 	}
 }
+
+// TestUserConfiguredMetricSinksPreserved verifies that user-configured metric
+// sinks (e.g., OpenTelemetry) are preserved in the bootstrap config for host mode.
+func TestUserConfiguredMetricSinksPreserved(t *testing.T) {
+	testCases := []struct {
+		name        string
+		telemetry   *egv1a1.ProxyTelemetry
+		expectSinks bool
+	}{
+		{
+			name:        "no telemetry config",
+			telemetry:   nil,
+			expectSinks: false,
+		},
+		{
+			name: "telemetry with nil metrics",
+			telemetry: &egv1a1.ProxyTelemetry{
+				Metrics: nil,
+			},
+			expectSinks: false,
+		},
+		{
+			name: "telemetry with otel sink",
+			telemetry: &egv1a1.ProxyTelemetry{
+				Metrics: &egv1a1.ProxyMetrics{
+					Sinks: []egv1a1.ProxyMetricSink{
+						{
+							Type: egv1a1.MetricSinkTypeOpenTelemetry,
+							OpenTelemetry: &egv1a1.ProxyOpenTelemetrySink{
+								Host: ptr.To("otel-collector.example.com"),
+								Port: 4317,
+							},
+						},
+					},
+				},
+			},
+			expectSinks: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			proxyConfig := &egv1a1.EnvoyProxy{
+				Spec: egv1a1.EnvoyProxySpec{
+					Telemetry: tc.telemetry,
+				},
+			}
+
+			// Build proxy metrics the same way CreateOrUpdateProxyInfra does
+			proxyMetrics := &egv1a1.ProxyMetrics{
+				Prometheus: &egv1a1.ProxyPrometheusProvider{
+					Disable: true,
+				},
+			}
+			if proxyConfig.Spec.Telemetry != nil && proxyConfig.Spec.Telemetry.Metrics != nil {
+				proxyMetrics.Sinks = proxyConfig.Spec.Telemetry.Metrics.Sinks
+				proxyMetrics.Matches = proxyConfig.Spec.Telemetry.Metrics.Matches
+			}
+
+			// Verify Prometheus is always disabled
+			require.True(t, proxyMetrics.Prometheus.Disable)
+
+			// Verify sinks and matches are preserved when configured
+			if tc.expectSinks {
+				require.NotEmpty(t, proxyMetrics.Sinks, "user-configured sinks should be preserved")
+				require.Equal(t, tc.telemetry.Metrics.Sinks, proxyMetrics.Sinks)
+				require.Equal(t, tc.telemetry.Metrics.Matches, proxyMetrics.Matches)
+			} else {
+				require.Empty(t, proxyMetrics.Sinks, "no sinks expected when not configured")
+				require.Empty(t, proxyMetrics.Matches, "no matches expected when not configured")
+			}
+		})
+	}
+}

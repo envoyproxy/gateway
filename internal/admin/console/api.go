@@ -260,14 +260,14 @@ func (h *Handler) loadConfigDump() ConfigDumpInfo {
 
 	if h.providerResources != nil {
 		// Load controller resources directly from the provider resources
-		controllerResources := h.providerResources.GatewayAPIResources.LoadAll()
+		controllerResourcesContext := h.providerResources.GatewayAPIResources.LoadAll()
 
-		for _, resources := range controllerResources {
-			if resources == nil {
+		for _, resourcesContext := range controllerResourcesContext {
+			if resourcesContext == nil {
 				continue
 			}
 
-			for _, res := range *resources {
+			for _, res := range *resourcesContext.Resources {
 				if res == nil {
 					continue
 				}

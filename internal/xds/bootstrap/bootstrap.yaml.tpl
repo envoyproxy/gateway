@@ -15,8 +15,18 @@ cluster_manager:
 node:
   locality:
     zone: $(ENVOY_SERVICE_ZONE)
-{{- if .StatsMatcher  }}
 stats_config:
+  use_all_default_tags: true
+  stats_tags:
+  - regex: \.zone(\.(([^\.]+)\.))
+    tag_name: from_zone
+  - regex: \.zone\.[^\.]+\.(([^\.]+)\.)
+    tag_name: to_zone
+  - regex: "^cluster(\\..+\\.(.+))\\.total_match_count$"
+    tag_name: socket_match_name
+  - regex: "circuit_breakers\\.((.+?)\\.).+"
+    tag_name: priority
+{{- if .StatsMatcher  }}
   stats_matcher:
     inclusion_list:
       patterns:
@@ -65,6 +75,12 @@ stats_sinks:
     grpc_service:
       envoy_grpc:
         cluster_name: otel_metric_sink_{{ $idx }}
+    {{- if $sink.ReportCountersAsDeltas }}
+    report_counters_as_deltas: true
+    {{- end }}
+    {{- if $sink.ReportHistogramsAsDeltas }}
+    report_histograms_as_deltas: true
+    {{- end }}
 {{- end }}
 {{- end }}
 static_resources:

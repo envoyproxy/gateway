@@ -31,7 +31,7 @@ dependencies:
     condition: prometheus.enabled
   - name: grafana
     repository: https://grafana.github.io/helm-charts
-    version: 8.0.0
+    version: 10.3.1
     condition: grafana.enabled
   - name: fluent-bit
     repository: https://fluent.github.io/helm-charts

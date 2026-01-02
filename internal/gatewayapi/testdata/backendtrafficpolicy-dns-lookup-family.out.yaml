@@ -341,7 +341,7 @@ xdsIR:
               namespace: default
               sectionName: "8080"
             name: accesslog_otel_0_1/backend/-1
-            protocol: TCP
+            protocol: GRPC
         resources:
           k8s.cluster.name: cluster-1
         text: |
@@ -482,6 +482,7 @@ xdsIR:
           dns:
             dnsRefreshRate: 5s
             lookupFamily: IPv6
+            name: default/backend-traffic-policy
             respectDnsTtl: false
       - destination:
           metadata:
@@ -543,6 +544,7 @@ xdsIR:
           dns:
             dnsRefreshRate: 5s
             lookupFamily: IPv6
+            name: default/backend-traffic-policy
             respectDnsTtl: false
     readyListener:
       address: 0.0.0.0

@@ -31,13 +31,14 @@ import (
 )
 
 type Provider struct {
-	paths      []string
-	logger     logr.Logger
-	watcher    filewatcher.FileWatcher
-	resources  *message.ProviderResources
-	reconciler *kubernetes.OfflineGatewayAPIReconciler
-	store      *resourcesStore
-	status     *StatusHandler
+	paths        []string
+	logger       logr.Logger
+	watcher      filewatcher.FileWatcher
+	resources    *message.ProviderResources
+	reconciler   *kubernetes.OfflineGatewayAPIReconciler
+	store        *resourcesStore
+	status       *StatusHandler
+	envoyGateway *egv1a1.EnvoyGateway
 
 	// ready indicates whether the provider can start watching filesystem events.
 	ready atomic.Bool
@@ -61,14 +62,15 @@ func New(ctx context.Context, svr *config.Server, resources *message.ProviderRes
 	}
 
 	return &Provider{
-		paths:      paths.UnsortedList(),
-		logger:     logger,
-		watcher:    filewatcher.NewWatcher(),
-		resources:  resources,
-		reconciler: reconciler,
-		store:      newResourcesStore(svr.EnvoyGateway.Gateway.ControllerName, reconciler.Client, resources, logger),
-		status:     statusHandler,
-		errors:     errors,
+		paths:        paths.UnsortedList(),
+		logger:       logger,
+		watcher:      filewatcher.NewWatcher(),
+		resources:    resources,
+		reconciler:   reconciler,
+		store:        newResourcesStore(svr.EnvoyGateway.Gateway.ControllerName, reconciler.Client, resources, logger),
+		status:       statusHandler,
+		envoyGateway: svr.EnvoyGateway,
+		errors:       errors,
 	}, nil
 }
 
@@ -100,7 +102,7 @@ func (p *Provider) Start(ctx context.Context) error {
 
 	initDirs, initFiles := path.ListDirsAndFiles(p.paths)
 	// Initially load resources.
-	if err := p.store.ReloadAll(ctx, initFiles.UnsortedList(), initDirs.UnsortedList()); err != nil {
+	if err := p.store.ReloadAll(ctx, initFiles.UnsortedList(), initDirs.UnsortedList(), p.envoyGateway); err != nil {
 		p.logger.Error(err, "failed to reload resources initially")
 		// Notify the error so that the main control loop can properly handle it.
 		// This may be an unrecoverable error in some cases if configs are wrong in standalone mode, so let's
@@ -178,7 +180,7 @@ func (p *Provider) Start(ctx context.Context) error {
 			p.logger.Info("file changed", "op", event.Op, "name", event.Name, "dir", filepath.Dir(event.Name))
 
 		handle:
-			if err := p.store.ReloadAll(ctx, curFiles.UnsortedList(), curDirs.UnsortedList()); err != nil {
+			if err := p.store.ReloadAll(ctx, curFiles.UnsortedList(), curDirs.UnsortedList(), p.envoyGateway); err != nil {
 				p.logger.Error(err, "error when reload resources", "op", event.Op, "name", event.Name)
 				// Notify the error so that the main control loop can properly handle it.
 				// This may be an unrecoverable error in some cases if configs are wrong in standalone mode, so let's
