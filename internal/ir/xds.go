@@ -1360,6 +1360,14 @@ type ExtAuth struct {
 	// the new matched route will be applied.
 	// +optional
 	RecomputeRoute *bool `json:"recomputeRoute,omitempty"`
+
+	// ContextExtensions are analogous to http_request.headers, however these
+	// contents will not be sent to the upstream server. This provides an
+	// extension mechanism for sending additional information to the auth server
+	// without modifying the proto definition. It maps to the internal opaque
+	// context in the filter chain.
+	// +optional
+	ContextExtensions []*ContextExtention `json:"contextExtensions,omitempty"`
 }
 
 // BodyToExtAuth defines the Body to Ext Auth configuration
@@ -1370,6 +1378,21 @@ type BodyToExtAuth struct {
 	// reaches the number set in this field.
 	// Note that this setting will have precedence over failOpen mode.
 	MaxRequestBytes uint32 `json:"maxRequestBytes"`
+}
+
+// ContextExtension is analogous to http_request.headers, however these
+// contents will not be sent to the upstream server. This provides an
+// extension mechanism for sending additional information to the auth server
+// without modifying the proto definition. It maps to the internal opaque
+// context in the filter chain.
+//
+// +k8s:deepcopy-gen=true
+type ContextExtention struct {
+	// Name of the context extension.
+	Name string `json:"name"`
+
+	// Value of the context extension.
+	Value PrivateBytes `json:"value"`
 }
 
 // HTTPExtAuthService defines the HTTP External Authorization service
@@ -2309,6 +2332,11 @@ type RateLimitRule struct {
 	//
 	// +optional
 	Shared *bool `json:"shared,omitempty" yaml:"shared,omitempty"`
+	// ShadowMode determines whether this rate limit rule enables shadow mode.
+	// When enabled, rate limiting functions execute as normal (cache lookup, statistics),
+	// but the result is always success regardless of whether the limit was exceeded.
+	// +optional
+	ShadowMode *bool `json:"shadowMode,omitempty" yaml:"shadowMode,omitempty"`
 	// Name is a unique identifier for this rule, set as <policy-ns>/<policy-name>/rule/<rule-index>.
 	Name string `json:"name,omitempty" yaml:"name,omitempty"`
 }
@@ -3278,6 +3306,8 @@ type DestinationFilters struct {
 	RemoveResponseHeaders []string `json:"removeResponseHeaders,omitempty" yaml:"removeResponseHeaders,omitempty"`
 	// CredentialInjection defines the credential injection configuration.
 	CredentialInjection *CredentialInjection `json:"credentialInjection,omitempty" yaml:"credentialInjection,omitempty"`
+	// URLRewrite defines the URL rewrite configuration for the backend.
+	URLRewrite *URLRewrite `json:"urlRewrite,omitempty" yaml:"urlRewrite,omitempty"`
 }
 
 // ResourceMetadata is metadata from the provider resource that is translated to an envoy resource

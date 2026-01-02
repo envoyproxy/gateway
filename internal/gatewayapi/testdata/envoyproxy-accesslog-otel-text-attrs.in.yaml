@@ -1,0 +1,41 @@
+envoyProxyForGatewayClass:
+  apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyProxy
+  metadata:
+    namespace: envoy-gateway-system
+    name: test
+  spec:
+    telemetry:
+      accessLog:
+        settings:
+        - format:
+            # type is omitted - allows both text and json for OpenTelemetry
+            text: "%REQ(:METHOD)% %REQ(:PATH)% %PROTOCOL% %RESPONSE_CODE%"
+            json:
+              response_code_details: "%RESPONSE_CODE_DETAILS%"
+              upstream_host: "%UPSTREAM_HOST%"
+              upstream_cluster: "%UPSTREAM_CLUSTER%"
+          sinks:
+          - type: OpenTelemetry
+            openTelemetry:
+              host: otel-collector.monitoring.svc.cluster.local
+              port: 4317
+              resources:
+                k8s.cluster.name: "cluster-1"
+    provider:
+      type: Kubernetes
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-1
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: Same

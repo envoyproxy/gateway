@@ -26,8 +26,8 @@
         - upgradeType: websocket
       typedPerFilterConfig:
         envoy.filters.http.ext_authz/securitypolicy/default/policy-for-http-route-2:
-          '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
-          config: {}
+          '@type': type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute
+          checkSettings: {}
   - domains:
     - www.bar.com
     name: default/gateway-2/http/www_bar_com
