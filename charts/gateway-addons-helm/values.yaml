@@ -6,6 +6,12 @@ dashboard:
 grafana:
   enabled: true
   fullnameOverride: grafana
+  env:
+    GF_SECURITY_ADMIN_USER: "admin"
+    GF_SECURITY_ADMIN_PASSWORD: "admin"
+    GF_AUTH_BASIC_ENABLED: "false"
+    GF_AUTH_ANONYMOUS_ENABLED: "true"
+    GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
   datasources:
     datasources.yaml:
       apiVersion: 1
@@ -13,6 +19,15 @@ grafana:
         - name: Prometheus
           type: prometheus
           url: http://prometheus
+          editable: true
+        - name: Tempo
+          type: tempo
+          url: http://tempo:3100
+          editable: true
+        - name: Loki
+          type: loki
+          url: http://loki:3100
+          editable: true
   adminPassword: admin
   testFramework:
     enabled: false

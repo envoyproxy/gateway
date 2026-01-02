@@ -388,6 +388,7 @@ xdsIR:
         traffic:
           dns:
             dnsRefreshRate: 10s
+            name: envoy-gateway/policy-for-all-routes-in-gateway-1
             respectDnsTtl: true
     readyListener:
       address: 0.0.0.0
@@ -469,6 +470,7 @@ xdsIR:
         traffic:
           dns:
             dnsRefreshRate: 5s
+            name: default/policy-for-route-2
             respectDnsTtl: false
       - destination:
           metadata:
@@ -503,6 +505,7 @@ xdsIR:
         traffic:
           dns:
             dnsRefreshRate: 1s
+            name: default/policy-for-route-1
             respectDnsTtl: true
     readyListener:
       address: 0.0.0.0

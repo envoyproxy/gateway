@@ -72,16 +72,16 @@ require (
 	google.golang.org/protobuf v1.36.10
 	gopkg.in/yaml.v3 v3.0.1
 	helm.sh/helm/v3 v3.19.0
-	k8s.io/api v0.34.2
-	k8s.io/apiextensions-apiserver v0.34.2
-	k8s.io/apimachinery v0.34.2
-	k8s.io/apiserver v0.34.2
-	k8s.io/cli-runtime v0.34.2
-	k8s.io/client-go v0.34.2
+	k8s.io/api v0.35.0
+	k8s.io/apiextensions-apiserver v0.35.0
+	k8s.io/apimachinery v0.35.0
+	k8s.io/apiserver v0.35.0
+	k8s.io/cli-runtime v0.35.0
+	k8s.io/client-go v0.35.0
 	k8s.io/klog/v2 v2.130.1
-	k8s.io/kube-openapi v0.0.0-20250814151709-d7b6acb124c3
-	k8s.io/kubectl v0.34.2
-	k8s.io/utils v0.0.0-20250820121507-0af2bda4dd1d
+	k8s.io/kube-openapi v0.0.0-20250910181357-589584f1c912
+	k8s.io/kubectl v0.35.0
+	k8s.io/utils v0.0.0-20251002143259-bc988d571ff4
 	sigs.k8s.io/controller-runtime v0.22.4
 	sigs.k8s.io/gateway-api v1.4.1
 	sigs.k8s.io/kubectl-validate v0.0.5-0.20250915070809-d2f2d68fba09
@@ -239,8 +239,6 @@ require (
 	github.com/mxk/go-flowrate v0.0.0-20140419014527-cca7078d478f // indirect
 	github.com/oklog/ulid v1.3.1 // indirect
 	github.com/onsi/ginkgo v1.16.5 // indirect
-	github.com/onsi/ginkgo/v2 v2.23.4 // indirect
-	github.com/onsi/gomega v1.37.0 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.1.1 // indirect
 	github.com/opencontainers/runtime-spec v1.2.1 // indirect
@@ -281,9 +279,9 @@ require (
 	github.com/xlab/treeprint v1.2.0 // indirect
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
 	github.com/zeebo/errs v1.4.0 // indirect
-	go.etcd.io/etcd/api/v3 v3.6.4 // indirect
-	go.etcd.io/etcd/client/pkg/v3 v3.6.4 // indirect
-	go.etcd.io/etcd/client/v3 v3.6.4 // indirect
+	go.etcd.io/etcd/api/v3 v3.6.5 // indirect
+	go.etcd.io/etcd/client/pkg/v3 v3.6.5 // indirect
+	go.etcd.io/etcd/client/v3 v3.6.5 // indirect
 	go.mongodb.org/mongo-driver v1.17.6 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	go.opentelemetry.io/auto/sdk v1.1.0 // indirect
@@ -308,8 +306,8 @@ require (
 	gopkg.in/evanphx/json-patch.v4 v4.13.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
-	k8s.io/component-base v0.34.2 // indirect
-	k8s.io/metrics v0.34.2 // indirect
+	k8s.io/component-base v0.35.0 // indirect
+	k8s.io/metrics v0.35.0 // indirect
 	oras.land/oras-go/v2 v2.6.0 // indirect
 	periph.io/x/host/v3 v3.8.5 // indirect
 	sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.31.2 // indirect
