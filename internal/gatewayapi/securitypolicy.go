@@ -1918,7 +1918,7 @@ func (t *Translator) buildExtAuth(
 	}
 
 	// Convert HeadersToExtAuthOnMatch to IR StringMatch format
-	var headersToExtAuthOnMatch []*ir.StringMatch
+	headersToExtAuthOnMatch := make([]*ir.StringMatch, 0, len(policy.Spec.ExtAuth.HeadersToExtAuthOnMatch))
 	for _, match := range policy.Spec.ExtAuth.HeadersToExtAuthOnMatch {
 		// For header name matching, we don't need a Name field - just the pattern
 		headersToExtAuthOnMatch = append(headersToExtAuthOnMatch, irStringMatch("", match))

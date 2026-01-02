@@ -119,28 +119,29 @@ func extAuthConfig(extAuth *ir.ExtAuth) (*extauthv3.ExtAuthz, error) {
 
 	for _, header := range extAuth.HeadersToExtAuthOnMatch {
 		var mp *matcherv3.StringMatcher
-		if header.Exact != nil {
+		switch {
+		case header.Exact != nil:
 			mp = &matcherv3.StringMatcher{
 				MatchPattern: &matcherv3.StringMatcher_Exact{
 					Exact: *header.Exact,
 				},
 				IgnoreCase: true,
 			}
-		} else if header.Prefix != nil {
+		case header.Prefix != nil:
 			mp = &matcherv3.StringMatcher{
 				MatchPattern: &matcherv3.StringMatcher_Prefix{
 					Prefix: *header.Prefix,
 				},
 				IgnoreCase: true,
 			}
-		} else if header.Suffix != nil {
+		case header.Suffix != nil:
 			mp = &matcherv3.StringMatcher{
 				MatchPattern: &matcherv3.StringMatcher_Suffix{
 					Suffix: *header.Suffix,
 				},
 				IgnoreCase: true,
 			}
-		} else if header.SafeRegex != nil {
+		case header.SafeRegex != nil:
 			mp = &matcherv3.StringMatcher{
 				MatchPattern: &matcherv3.StringMatcher_SafeRegex{
 					SafeRegex: &matcherv3.RegexMatcher{
@@ -151,7 +152,7 @@ func extAuthConfig(extAuth *ir.ExtAuth) (*extauthv3.ExtAuthz, error) {
 					},
 				},
 			}
-		} else {
+		default:
 			continue // Skip invalid matches
 		}
 		headersToExtAuth = append(headersToExtAuth, mp)
