@@ -60,12 +60,12 @@ backendTLSPolicies:
       conditions:
       - lastTransitionTime: null
         message: No CA bundle found in referenced ConfigMap, Secret, or ClusterTrustBundle.
-        reason: NoValidCACertificate
+        reason: InvalidKind
         status: "False"
         type: Accepted
       - lastTransitionTime: null
         message: No CA bundle found in referenced ConfigMap, Secret, or ClusterTrustBundle.
-        reason: InvalidCACertificateRef
+        reason: InvalidKind
         status: "False"
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
