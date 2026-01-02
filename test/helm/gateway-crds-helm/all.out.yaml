@@ -22532,6 +22532,15 @@ spec:
                               - requests
                               - unit
                               type: object
+                            shadowMode:
+                              description: |-
+                                ShadowMode indicates whether this rate-limit rule runs in shadow mode.
+                                When enabled, all rate-limiting operations are performed (cache lookups,
+                                counter updates, telemetry generation), but the outcome is never enforced.
+                                The request always succeeds, even if the configured limit is exceeded.
+
+                                Only supported for Global Rate Limits.
+                              type: boolean
                             shared:
                               description: |-
                                 Shared determines whether this rate limit rule applies across all the policy targets.
@@ -22844,6 +22853,15 @@ spec:
                               - requests
                               - unit
                               type: object
+                            shadowMode:
+                              description: |-
+                                ShadowMode indicates whether this rate-limit rule runs in shadow mode.
+                                When enabled, all rate-limiting operations are performed (cache lookups,
+                                counter updates, telemetry generation), but the outcome is never enforced.
+                                The request always succeeds, even if the configured limit is exceeded.
+
+                                Only supported for Global Rate Limits.
+                              type: boolean
                             shared:
                               description: |-
                                 Shared determines whether this rate limit rule applies across all the policy targets.
@@ -22858,6 +22876,8 @@ spec:
                         x-kubernetes-validations:
                         - message: response cost is not supported for Local Rate Limits
                           rule: self.all(foo, !has(foo.cost) || !has(foo.cost.response))
+                        - message: shadow mode is not supported for Local Rate Limits
+                          rule: self.all(foo, !has(foo.shadowMode))
                     type: object
                   type:
                     description: |-
@@ -28081,8 +28101,11 @@ spec:
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
-    - jsonPath: .status.conditions[?(@.type=="Programmed")].reason
-      name: Status
+    - jsonPath: .status.ancestors[0].conditions[?(@.type=="Accepted")].status
+      name: Accepted
+      type: string
+    - jsonPath: .status.ancestors[0].conditions[?(@.type=="Programmed")].status
+      name: Programmed
       type: string
     - jsonPath: .metadata.creationTimestamp
       name: Age
@@ -39596,8 +39619,9 @@ spec:
                                     The [format string documentation](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#config-access-log-format-strings) provides more information.
                                   type: string
                                 type:
-                                  description: Type defines the type of accesslog
-                                    format.
+                                  description: |-
+                                    Type defines the type of accesslog format.
+                                    When unset, both text and json can be specified.
                                   enum:
                                   - Text
                                   - JSON
@@ -39606,10 +39630,24 @@ spec:
                               x-kubernetes-validations:
                               - message: If AccessLogFormat type is Text, text field
                                   needs to be set.
-                                rule: 'self.type == ''Text'' ? has(self.text) : !has(self.text)'
+                                rule: 'has(self.type) && self.type == ''Text'' ? has(self.text)
+                                  : true'
+                              - message: If AccessLogFormat type is Text, json field
+                                  must not be set.
+                                rule: 'has(self.type) && self.type == ''Text'' ? !has(self.json)
+                                  : true'
                               - message: If AccessLogFormat type is JSON, json field
                                   needs to be set.
-                                rule: 'self.type == ''JSON'' ? has(self.json) : !has(self.json)'
+                                rule: 'has(self.type) && self.type == ''JSON'' ? has(self.json)
+                                  : true'
+                              - message: If AccessLogFormat type is JSON, text field
+                                  must not be set.
+                                rule: 'has(self.type) && self.type == ''JSON'' ? !has(self.text)
+                                  : true'
+                              - message: If AccessLogFormat type is unset, at least
+                                  one of text or json must be set.
+                                rule: '!has(self.type) ? (has(self.text) || has(self.json))
+                                  : true'
                             matches:
                               description: |-
                                 Matches defines the match conditions for accesslog in CEL expression.
@@ -44740,6 +44778,17 @@ spec:
                         maximum: 100
                         minimum: 0
                         type: integer
+                      tags:
+                        additionalProperties:
+                          type: string
+                        description: |-
+                          Tags defines the custom tags to add to each span.
+                          Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators) may be used in the value.
+                          The [format string documentation](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#config-access-log-format-strings) provides more information.
+                          If provider is kubernetes, pod name and namespace are added by default.
+
+                          Same keys take precedence over CustomTags.
+                        type: object
                     required:
                     - provider
                     type: object
@@ -45949,6 +45998,85 @@ spec:
                     required:
                     - maxRequestBytes
                     type: object
+                  contextExtensions:
+                    description: |-
+                      ContextExtensions are analogous to http_request.headers, however these
+                      contents will not be sent to the upstream server. This provides an
+                      extension mechanism for sending additional information to the auth server
+                      without modifying the proto definition. It maps to the internal opaque
+                      context in the filter chain.
+                    items:
+                      description: |-
+                        ContextExtension is analogous to http_request.headers, however these
+                        contents will not be sent to the upstream server. This provides an
+                        extension mechanism for sending additional information to the auth server
+                        without modifying the proto definition. It maps to the internal opaque
+                        context in the filter chain.
+                      properties:
+                        name:
+                          description: Name of the context extension.
+                          type: string
+                        type:
+                          default: Value
+                          description: |-
+                            Type is the type of method to use to read the ContextExtension value.
+                            Valid values are Value and ValueRef, default is Value.
+                          enum:
+                          - Value
+                          - ValueRef
+                          type: string
+                        value:
+                          description: Value of the context extension.
+                          type: string
+                        valueRef:
+                          description: ValueRef for the context extension's value.
+                          properties:
+                            group:
+                              description: |-
+                                Group is the group of the referent. For example, "gateway.networking.k8s.io".
+                                When unspecified or empty string, core API group is inferred.
+                              maxLength: 253
+                              pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                              type: string
+                            key:
+                              description: The key to select.
+                              type: string
+                            kind:
+                              description: Kind is kind of the referent. For example
+                                "HTTPRoute" or "Service".
+                              maxLength: 63
+                              minLength: 1
+                              pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
+                              type: string
+                            name:
+                              description: Name is the name of the referent.
+                              maxLength: 253
+                              minLength: 1
+                              type: string
+                          required:
+                          - group
+                          - key
+                          - kind
+                          - name
+                          type: object
+                          x-kubernetes-validations:
+                          - message: Only a reference to an object of kind ConfigMap
+                              or Secret belonging to default v1 API group is supported.
+                            rule: self.kind in ['ConfigMap', 'Secret'] && self.group
+                              in ['', 'v1']
+                      required:
+                      - name
+                      - type
+                      type: object
+                      x-kubernetes-validations:
+                      - message: Exactly one of value or valueRef must be set with
+                          correct type.
+                        rule: (self.type == 'Value' && has(self.value) && !has(self.valueRef))
+                          || (self.type == 'ValueRef' && !has(self.value) && has(self.valueRef))
+                    type: array
+                    x-kubernetes-list-map-keys:
+                    - name
+                    x-kubernetes-list-type: map
                   failOpen:
                     default: false
                     description: |-

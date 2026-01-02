@@ -1,0 +1,24 @@
+- clusterName: url-rewrite-route-dest/backend/0
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 1.1.1.1
+            portValue: 8080
+      loadBalancingWeight: 1
+    loadBalancingWeight: 50
+    locality:
+      region: url-rewrite-route-dest/backend/0
+- clusterName: url-rewrite-route-dest/backend/1
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 2.2.2.2
+            portValue: 8080
+      loadBalancingWeight: 1
+    loadBalancingWeight: 50
+    locality:
+      region: url-rewrite-route-dest/backend/1

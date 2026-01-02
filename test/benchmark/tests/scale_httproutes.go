@@ -11,6 +11,7 @@ import (
 	"context"
 	"fmt"
 	"sort"
+	"strconv"
 	"testing"
 	"time"
 
@@ -50,6 +51,7 @@ var ScaleHTTPRoutes = suite.BenchmarkTest{
 		routeNameFormat := "benchmark-route-%d"
 		routeHostnameFormat := "www.benchmark-%d.com"
 		routeScales := []uint16{10, 50, 100, 300, 500, 1000}
+		rpsScales := []uint16{1, 3, 5, 8, 10, 20}
 		routeScalesN := len(routeScales)
 		routeNNs := make([]types.NamespacedName, 0, routeScales[routeScalesN-1])
 
@@ -57,9 +59,10 @@ var ScaleHTTPRoutes = suite.BenchmarkTest{
 
 		t.Run("scaling up httproutes", func(t *testing.T) {
 			var start, batch uint16 = 0, 0
-			for _, scale := range routeScales {
+			for i, scale := range routeScales {
 				routePerHost := scale / totalHosts
-				testName := fmt.Sprintf("scaling up httproutes to %d with %d routes per hostname", scale, routePerHost)
+				rps := scaledRPS(bSuite.Options.BaselineRPS, rpsScales[i])
+				testName := fmt.Sprintf("scaling up httproutes to %d with %d routes per hostname at %s rps", scale, routePerHost, rps)
 
 				r := roundtripper.DefaultRoundTripper{
 					Debug:         true,
@@ -111,7 +114,7 @@ var ScaleHTTPRoutes = suite.BenchmarkTest{
 
 					// Run benchmark test at different scale.
 					jobName := fmt.Sprintf("scale-up-httproutes-%d", scale)
-					report, err := bSuite.Benchmark(t, ctx, jobName, testName, gatewayAddr, routeHostnameFormat, int(totalHosts), startTime)
+					report, err := bSuite.Benchmark(t, ctx, jobName, testName, gatewayAddr, routeHostnameFormat, int(totalHosts), rps, startTime)
 					require.NoError(t, err)
 					report.RouteConvergence = getRouteConvergenceDuration(convergenceTimeByHost)
 					report.RoutesPerHost = int(routePerHost)
@@ -128,7 +131,8 @@ var ScaleHTTPRoutes = suite.BenchmarkTest{
 			for i := routeScalesN - 2; i >= 0; i-- {
 				scale := routeScales[i]
 				routePerHost := scale / totalHosts
-				testName := fmt.Sprintf("scaling down httproutes to %d with %d routes per hostname", scale, routePerHost)
+				rps := scaledRPS(bSuite.Options.BaselineRPS, rpsScales[i])
+				testName := fmt.Sprintf("scaling down httproutes to %d with %d routes per hostname at %s rps", scale, routePerHost, rps)
 
 				t.Run(testName, func(t *testing.T) {
 					startTime := time.Now()
@@ -149,7 +153,7 @@ var ScaleHTTPRoutes = suite.BenchmarkTest{
 
 					// Run benchmark test at different scale.
 					jobName := fmt.Sprintf("scale-down-httproutes-%d", scale)
-					report, err := bSuite.Benchmark(t, ctx, jobName, testName, gatewayAddr, routeHostnameFormat, int(totalHosts), startTime)
+					report, err := bSuite.Benchmark(t, ctx, jobName, testName, gatewayAddr, routeHostnameFormat, int(totalHosts), rps, startTime)
 					require.NoError(t, err)
 					report.RoutesPerHost = int(routePerHost)
 					report.Routes = int(scale)
@@ -180,4 +184,12 @@ func getRouteConvergenceDuration(durations map[string]time.Duration) *suite.Perf
 
 func convertFloat64ToDuration(f float64) time.Duration {
 	return time.Duration(f) * time.Microsecond
+}
+
+func scaledRPS(baseline string, scale uint16) string {
+	base, err := strconv.Atoi(baseline)
+	if err != nil || scale <= 0 {
+		return baseline
+	}
+	return strconv.Itoa(base * int(scale))
 }
