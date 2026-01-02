@@ -36,6 +36,8 @@ data:
         default: info
     provider:
       kubernetes:
+        proxyTopologyInjector:
+          disabled: true
         rateLimitDeployment:
           container:
             image: docker.io/envoyproxy/ratelimit:master
@@ -51,8 +53,6 @@ data:
         shutdownManager:
           image: docker.io/envoyproxy/gateway-dev:latest
       type: Kubernetes
-    proxyTopologyInjector:
-      disabled: true
 ---
 # Source: gateway-helm/templates/envoy-gateway-rbac.yaml
 apiVersion: rbac.authorization.k8s.io/v1

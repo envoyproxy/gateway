@@ -1,4 +1,4 @@
-{{- if .Values.topologyInjector.enabled }}
+{{- if and .Values.topologyInjector.enabled (not (eq (include "eg.isKube135OrHigher" .) "true")) }}
 
 {{ $watchedNamespaces := list }}
 {{ $gatewayNamespaceMode := false}}

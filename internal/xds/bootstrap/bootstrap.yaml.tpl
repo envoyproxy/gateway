@@ -14,7 +14,11 @@ cluster_manager:
 {{- end }}
 node:
   locality:
+{{- if .TopologyInjectorDisabled }}
+    zone: "$(ENVOY_SERVICE_ZONE)"
+{{- else }}
     zone: $(ENVOY_SERVICE_ZONE)
+{{- end }}
 stats_config:
   use_all_default_tags: true
   stats_tags:

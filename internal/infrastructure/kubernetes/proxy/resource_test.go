@@ -183,3 +183,29 @@ func TestGetImageTag(t *testing.T) {
 		})
 	}
 }
+
+func TestExpectedZoneFieldPath(t *testing.T) {
+	tests := []struct {
+		name                     string
+		topologyInjectorDisabled bool
+		expectedPath             string
+	}{
+		{
+			name:                     "topology injector enabled - use annotations",
+			topologyInjectorDisabled: false,
+			expectedPath:             "metadata.annotations['topology.kubernetes.io/zone']",
+		},
+		{
+			name:                     "topology injector disabled - use labels",
+			topologyInjectorDisabled: true,
+			expectedPath:             "metadata.labels['topology.kubernetes.io/zone']",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			path := expectedZoneFieldPath(tt.topologyInjectorDisabled)
+			require.Equal(t, tt.expectedPath, path)
+		})
+	}
+}
