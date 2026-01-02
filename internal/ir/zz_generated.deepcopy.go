@@ -1216,9 +1216,13 @@ func (in *ExtAuth) DeepCopyInto(out *ExtAuth) {
 	}
 	if in.HeadersToExtAuthOnMatch != nil {
 		in, out := &in.HeadersToExtAuthOnMatch, &out.HeadersToExtAuthOnMatch
-		*out = make([]v1alpha1.StringMatch, len(*in))
+		*out = make([]*StringMatch, len(*in))
 		for i := range *in {
-			(*in)[i].DeepCopyInto(&(*out)[i])
+			if (*in)[i] != nil {
+				in, out := &(*in)[i], &(*out)[i]
+				*out = new(StringMatch)
+				(*in).DeepCopyInto(*out)
+			}
 		}
 	}
 	if in.BodyToExtAuth != nil {

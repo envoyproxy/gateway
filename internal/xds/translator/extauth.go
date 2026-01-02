@@ -119,41 +119,40 @@ func extAuthConfig(extAuth *ir.ExtAuth) (*extauthv3.ExtAuthz, error) {
 
 	for _, header := range extAuth.HeadersToExtAuthOnMatch {
 		var mp *matcherv3.StringMatcher
-		switch *header.Type {
-		case egv1a1.StringMatchExact:
+		if header.Exact != nil {
 			mp = &matcherv3.StringMatcher{
 				MatchPattern: &matcherv3.StringMatcher_Exact{
-					Exact: header.Value,
+					Exact: *header.Exact,
 				},
 				IgnoreCase: true,
 			}
-		case egv1a1.StringMatchPrefix:
+		} else if header.Prefix != nil {
 			mp = &matcherv3.StringMatcher{
 				MatchPattern: &matcherv3.StringMatcher_Prefix{
-					Prefix: header.Value,
+					Prefix: *header.Prefix,
 				},
 				IgnoreCase: true,
 			}
-		case egv1a1.StringMatchSuffix:
+		} else if header.Suffix != nil {
 			mp = &matcherv3.StringMatcher{
 				MatchPattern: &matcherv3.StringMatcher_Suffix{
-					Suffix: header.Value,
+					Suffix: *header.Suffix,
 				},
 				IgnoreCase: true,
 			}
-		case egv1a1.StringMatchRegularExpression:
+		} else if header.SafeRegex != nil {
 			mp = &matcherv3.StringMatcher{
 				MatchPattern: &matcherv3.StringMatcher_SafeRegex{
 					SafeRegex: &matcherv3.RegexMatcher{
 						EngineType: &matcherv3.RegexMatcher_GoogleRe2{
 							GoogleRe2: &matcherv3.RegexMatcher_GoogleRE2{},
 						},
-						Regex: header.Value,
+						Regex: *header.SafeRegex,
 					},
 				},
 			}
-		default:
-			return nil, fmt.Errorf("unknown string match type: %s", *header.Type)
+		} else {
+			continue // Skip invalid matches
 		}
 		headersToExtAuth = append(headersToExtAuth, mp)
 	}

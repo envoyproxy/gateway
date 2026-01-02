@@ -134,5 +134,5 @@ http:
                 - header2
               path: /auth
             headersToExtAuthOnMatch:
-              - type: Exact
-                value: "x-test-foo"
+              - name: ""
+                exact: "x-test-foo"
