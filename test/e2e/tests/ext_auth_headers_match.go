@@ -37,7 +37,7 @@ func init() {
 var HTTPExtAuthTestExact = suite.ConformanceTest{
 	ShortName:   "HTTPExtAuthExact",
 	Description: "Test HTTP ExtAuth authentication",
-	Manifests:   []string{"testdata/ext-auth-http-headers-exact.yaml", "testdata/ext-auth-http-securitypolicy.yaml"},
+	Manifests:   []string{"testdata/ext-auth-service.yaml", "testdata/ext-auth-http-headers-exact.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		ns := "gateway-conformance-infra"
 		routeNN := types.NamespacedName{Name: "http-with-ext-auth", Namespace: ns}
