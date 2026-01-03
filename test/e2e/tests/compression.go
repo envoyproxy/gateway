@@ -118,12 +118,12 @@ var CompressionTest = suite.ConformanceTest{
 						"accept-encoding": "br",
 					},
 				},
-			ExpectedRequest: &http.ExpectedRequest{
-				Request: http.Request{
-					Path: "/compression-min-content-length",
+				ExpectedRequest: &http.ExpectedRequest{
+					Request: http.Request{
+						Path: "/compression-min-content-length",
+					},
+					AbsentHeaders: []string{"accept-encoding"},
 				},
-				AbsentHeaders: []string{"accept-encoding"},
-			},
 				Response: http.Response{
 					StatusCodes: []int{200},
 					Headers: map[string]string{
