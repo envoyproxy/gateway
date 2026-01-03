@@ -2,7 +2,7 @@
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
-  name: compression
+  name: compression-all
   namespace: gateway-conformance-infra
 spec:
   parentRefs:
@@ -12,6 +12,13 @@ spec:
         - path:
             type: PathPrefix
             value: /compression
+      backendRefs:
+        - name: infra-backend-v1
+          port: 8080
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /compression-min-content-length
       backendRefs:
         - name: infra-backend-v1
           port: 8080
@@ -36,49 +43,20 @@ spec:
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: BackendTrafficPolicy
 metadata:
-  name: compression
+  name: compression-all
   namespace: gateway-conformance-infra
 spec:
   targetRef:
     group: gateway.networking.k8s.io
     kind: HTTPRoute
-    name: compression
+    name: compression-all
   compressor:
     - type: Brotli
       brotli: {}
+      minContentLength: 50
     - type: Gzip
       gzip: {}
+      minContentLength: 50
     - type: Zstd
       zstd: {}
----
-apiVersion: gateway.networking.k8s.io/v1
-kind: HTTPRoute
-metadata:
-  name: compression-min-content-length
-  namespace: gateway-conformance-infra
-spec:
-  parentRefs:
-    - name: same-namespace
-  rules:
-    - matches:
-        - path:
-            type: PathPrefix
-            value: /compression-min-content-length
-      backendRefs:
-        - name: infra-backend-v1
-          port: 8080
----
-apiVersion: gateway.envoyproxy.io/v1alpha1
-kind: BackendTrafficPolicy
-metadata:
-  name: compression-min-content-length
-  namespace: gateway-conformance-infra
-spec:
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: HTTPRoute
-    name: compression-min-content-length
-  compressor:
-    - type: Gzip
-      gzip: {}
-      minContentLength: 5000
+      minContentLength: 50
