@@ -21,6 +21,7 @@ new features: |
   Added support for specifying both text (body) and attributes in access log format by making the type field optional.
   Set warning status condition for deprecated fields in xPolicy CRDs.
   Added support for URLRewrite filter on individual backendRefs.
+  Added support for custom headers on OTLP exports (metrics, tracing, access logs).
   Added support for configuring minimum response size for compression via minContentLength field in BackendTrafficPolicy.
 
 bug fixes: |
