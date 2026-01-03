@@ -409,5 +409,3 @@ kubectl delete httproute/test-opa securitypolicy/opa-jwt-authz backend/opa-unix-
 kubectl delete envoyproxy/eg configmap/opa-policy -n envoy-gateway-system
 kubectl delete deploy/$(kubectl get deploy -n envoy-gateway-system --selector=gateway.envoyproxy.io/owning-gateway-namespace=default,gateway.envoyproxy.io/owning-gateway-name=eg -o jsonpath='{.items[0].metadata.name}') -n envoy-gateway-system
 ```
-
-[Quickstart]: ../quickstart
