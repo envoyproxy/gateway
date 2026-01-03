@@ -364,6 +364,7 @@ Expected result: HTTP 401 Unauthorized
 
 ### Test with a valid JWT that has the wrong ISS claim
 
+<!-- markdown-link-check-disable-line -->
 Earlier, we configured the "ALLOWED_ISS" env var on the proxy pods to be "https://example.com", but the JWT in the "VALID_TOKEN" env var has an ISS claim of "https://foo.bar.com".
 
 Requests with an incorrect ISS are denied:
@@ -376,6 +377,7 @@ Expected result: HTTP 403 Forbidden
 
 ### Test with a valid JWT and ISS claim
 
+<!-- markdown-link-check-disable-line -->
 We must update the `EnvoyProxy` spec to use "https://foo.bar.com" for the "ALLOWED_ISS" so that it matches the ISS in "$VALID_TOKEN".
 
 ```yaml
