@@ -10,6 +10,7 @@ LINKINATOR_IGNORE := "opentelemetry.io \
 	jwt.io \
 	githubusercontent.com \
 	example.com \
+	foo.bar.com \
 	github.io \
 	gnu.org \
 	_print \
