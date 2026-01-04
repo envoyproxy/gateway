@@ -73,6 +73,7 @@ httpRoutes:
     - matches:
       - path:
           value: "/"
+        method: GET
       backendRefs:
       - name: service-1
         port: 8080
