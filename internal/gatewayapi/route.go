@@ -1324,15 +1324,33 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 			hasHostnameIntersection = true
 
 			irKey := t.getIRKey(listener.gateway.Gateway)
-
 			gwXdsIR := xdsIR[irKey]
 			irListener := gwXdsIR.GetTCPListener(irListenerName(listener))
 			if irListener != nil {
+				var tlsConfig *ir.TLS
+				if irListener.TLS != nil {
+					// Listener is in terminate mode.
+					tlsConfig = &ir.TLS{
+						Terminate: irListener.TLS,
+					}
+					// If hostnames specified, add SNI config for routing
+					if len(hosts) > 0 {
+						tlsConfig.TLSInspectorConfig = &ir.TLSInspectorConfig{
+							SNIs: hosts,
+						}
+					}
+				} else {
+					// Passthrough mode - only SNI inspection
+					tlsConfig = &ir.TLS{
+						TLSInspectorConfig: &ir.TLSInspectorConfig{
+							SNIs: hosts,
+						},
+					}
+				}
+
 				irRoute := &ir.TCPRoute{
 					Name: irTCPRouteName(tlsRoute),
-					TLS: &ir.TLS{TLSInspectorConfig: &ir.TLSInspectorConfig{
-						SNIs: hosts,
-					}},
+					TLS:  tlsConfig,
 					Destination: &ir.RouteDestination{
 						Name:     destName,
 						Settings: destSettings,
@@ -1353,7 +1371,7 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 				gwapiv1.RouteConditionAccepted,
 				metav1.ConditionFalse,
 				gwapiv1.RouteReasonNoMatchingListenerHostname,
-				"There were no hostname intersections between the HTTPRoute and this parent ref's Listener(s).",
+				"There were no hostname intersections between the TLSRoute and this parent ref's Listener(s).",
 			)
 		}
 
@@ -2038,6 +2056,9 @@ func applyHTTPFiltersContextToDestinationFilters(httpFiltersContext *HTTPFilters
 	}
 	if httpFiltersContext.CredentialInjection != nil {
 		destFilters.CredentialInjection = httpFiltersContext.CredentialInjection
+	}
+	if httpFiltersContext.URLRewrite != nil {
+		destFilters.URLRewrite = httpFiltersContext.URLRewrite
 	}
 }
 

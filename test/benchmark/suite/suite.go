@@ -181,7 +181,7 @@ func (b *BenchmarkTestSuite) Run(t *testing.T, tests []BenchmarkTest) {
 	suiteReport := &BenchmarkSuiteReport{
 		Title: "Benchmark Report",
 		Settings: map[string]string{
-			"rps":         os.Getenv("BENCHMARK_RPS"),
+			"rps":         os.Getenv("BENCHMARK_BASELINE_RPS"),
 			"connections": os.Getenv("BENCHMARK_CONNECTIONS"),
 			"duration":    os.Getenv("BENCHMARK_DURATION"),
 			"cpu":         os.Getenv("BENCHMARK_CPU_LIMITS"),
@@ -314,7 +314,7 @@ func trimNighthawkResult(result []byte) []byte {
 // consider switching to gRPC nighthawk-service for benchmark test.
 // ref: https://github.com/envoyproxy/nighthawk/blob/main/api/client/service.proto
 func (b *BenchmarkTestSuite) Benchmark(t *testing.T, ctx context.Context,
-	jobName, resultTitle, gatewayHostPort, hostnamePattern string, host int,
+	jobName, resultTitle, gatewayHostPort, hostnamePattern string, host int, rps string,
 	startAt time.Time,
 ) (*BenchmarkReport, error) {
 	tlog.Logf(t, "Running benchmark test: %s, start at %s", resultTitle, startAt)
@@ -323,7 +323,7 @@ func (b *BenchmarkTestSuite) Benchmark(t *testing.T, ctx context.Context,
 	for i := 1; i <= host; i++ {
 		requestHeaders = append(requestHeaders, "Host: "+fmt.Sprintf(hostnamePattern, i))
 	}
-	jobNN, err := b.createBenchmarkClientJob(t, jobName, gatewayHostPort, requestHeaders)
+	jobNN, err := b.createBenchmarkClientJob(t, jobName, gatewayHostPort, requestHeaders, rps)
 	if err != nil {
 		return nil, err
 	}
@@ -339,6 +339,8 @@ func (b *BenchmarkTestSuite) Benchmark(t *testing.T, ctx context.Context,
 	}
 
 	// Wait from benchmark test job to complete.
+	trafficStartAt := time.Now()
+	trafficEndTime := trafficStartAt.Add(time.Duration(duration) * time.Second)
 	report := NewBenchmarkReport(resultTitle, profilesOutputDir, b.kubeClient, b.promClient)
 	if err = wait.PollUntilContextTimeout(ctx, BenchmarkMetricsSampleTick, time.Duration(duration*10)*time.Second, true, func(ctx context.Context) (bool, error) {
 		job := new(batchv1.Job)
@@ -361,9 +363,14 @@ func (b *BenchmarkTestSuite) Benchmark(t *testing.T, ctx context.Context,
 		tlog.Logf(t, "Job %s still not complete", jobName)
 
 		// Sample the metrics and profiles at runtime.
-		// Do not consider it as an error, fail sampling should not affect test running.
-		if err := report.Sample(ctx, startAt); err != nil {
-			tlog.Logf(t, "Error occurs while sampling metrics or profiles: %v", err)
+		if time.Now().Before(trafficEndTime) {
+			if err := report.Sample(t, ctx, startAt, trafficStartAt); err != nil {
+				tlog.Logf(t, "Error occurs while sampling metrics or profiles, the sampling will be skipped: %v", err)
+			}
+		} else {
+			// Skip sampling after benchmark duration, otherwise we may get sampling data that is out of benchmark traffic window.
+			// These sampling data will lower the min/avg values of the benchmark result.
+			tlog.Logf(t, "Skipping sampling; benchmark traffic window (%ds) has ended", duration)
 		}
 
 		return false, nil
@@ -383,14 +390,14 @@ func (b *BenchmarkTestSuite) Benchmark(t *testing.T, ctx context.Context,
 	return report, nil
 }
 
-func (b *BenchmarkTestSuite) createBenchmarkClientJob(t *testing.T, name, gatewayHostPort string, requestHeaders []string) (*types.NamespacedName, error) {
+func (b *BenchmarkTestSuite) createBenchmarkClientJob(t *testing.T, name, gatewayHostPort string, requestHeaders []string, rps string) (*types.NamespacedName, error) {
 	job := b.BenchmarkClientJob.DeepCopy()
 	job.SetName(name)
 	job.SetLabels(map[string]string{
 		BenchmarkTestClientKey: "true",
 	})
 
-	runtimeArgs := prepareBenchmarkClientRuntimeArgs(gatewayHostPort, requestHeaders)
+	runtimeArgs := prepareBenchmarkClientRuntimeArgs(gatewayHostPort, requestHeaders, rps)
 	container := &job.Spec.Template.Spec.Containers[0]
 	container.Args = append(container.Args, runtimeArgs...)
 
@@ -404,7 +411,6 @@ func (b *BenchmarkTestSuite) createBenchmarkClientJob(t *testing.T, name, gatewa
 
 func prepareBenchmarkClientStaticArgs(options BenchmarkOptions) []string {
 	staticArgs := []string{
-		"--rps", options.RPS,
 		"--connections", options.Connections,
 		"--duration", options.Duration,
 		"--concurrency", options.Concurrency,
@@ -413,13 +419,13 @@ func prepareBenchmarkClientStaticArgs(options BenchmarkOptions) []string {
 	return staticArgs
 }
 
-func prepareBenchmarkClientRuntimeArgs(gatewayHostPort string, requestHeaders []string) []string {
-	args := make([]string, 0, len(requestHeaders)*2+1)
+func prepareBenchmarkClientRuntimeArgs(gatewayHostPort string, requestHeaders []string, rps string) []string {
+	args := make([]string, 0, len(requestHeaders)*2+3)
 
 	for _, reqHeader := range requestHeaders {
 		args = append(args, "--request-header", reqHeader)
 	}
-	args = append(args, "http://"+gatewayHostPort)
+	args = append(args, "--rps", rps, "http://"+gatewayHostPort)
 
 	return args
 }

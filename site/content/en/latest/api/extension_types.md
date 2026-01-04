@@ -475,7 +475,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `caCertificateRefs` | _LocalObjectReference array_ |  false  |  | CACertificateRefs contains one or more references to Kubernetes objects that<br />contain TLS certificates of the Certificate Authorities that can be used<br />as a trust anchor to validate the certificates presented by the backend.<br />A single reference to a Kubernetes ConfigMap or a Kubernetes Secret,<br />with the CA certificate in a key named `ca.crt` is currently supported.<br />If CACertificateRefs is empty or unspecified, then WellKnownCACertificates must be<br />specified. Only one of CACertificateRefs or WellKnownCACertificates may be specified,<br />not both. |
+| `caCertificateRefs` | _[LocalObjectReference](#localobjectreference) array_ |  false  |  | CACertificateRefs contains one or more references to Kubernetes objects that<br />contain TLS certificates of the Certificate Authorities that can be used<br />as a trust anchor to validate the certificates presented by the backend.<br />A single reference to a Kubernetes ConfigMap or a Kubernetes Secret,<br />with the CA certificate in a key named `ca.crt` is currently supported.<br />If CACertificateRefs is empty or unspecified, then WellKnownCACertificates must be<br />specified. Only one of CACertificateRefs or WellKnownCACertificates may be specified,<br />not both. |
 | `wellKnownCACertificates` | _[WellKnownCACertificatesType](#wellknowncacertificatestype)_ |  false  |  | WellKnownCACertificates specifies whether system CA certificates may be used in<br />the TLS handshake between the gateway and backend pod.<br />If WellKnownCACertificates is unspecified or empty (""), then CACertificateRefs<br />must be specified with at least one entry for a valid configuration. Only one of<br />CACertificateRefs or WellKnownCACertificates may be specified, not both. |
 | `insecureSkipVerify` | _boolean_ |  false  | false | InsecureSkipVerify indicates whether the upstream's certificate verification<br />should be skipped. Defaults to "false". |
 | `sni` | _[PreciseHostname](#precisehostname)_ |  false  |  | SNI is specifies the SNI value used when establishing an upstream TLS connection to the backend.<br />Envoy Gateway will use the HTTP host header value for SNI, when all resources referenced in BackendRefs are:<br />1. Backend resources that do not set SNI, or<br />2. Service/ServiceImport resources that do not have a BackendTLSPolicy attached to them<br />When a BackendTLSPolicy attaches to a Backend resource, the BackendTLSPolicy's Hostname value takes precedence<br />over this value. |
@@ -976,6 +976,42 @@ _Appears in:_
 | `Headers` | HeadersConsistentHashType hashes based on multiple request headers.<br /> | 
 | `Cookie` | CookieConsistentHashType hashes based on a cookie.<br /> | 
 | `QueryParams` | QueryParamsConsistentHashType hashes based on a multiple query parameter.<br /> | 
+
+
+#### ContextExtension
+
+
+
+ContextExtension is analogous to http_request.headers, however these
+contents will not be sent to the upstream server. This provides an
+extension mechanism for sending additional information to the auth server
+without modifying the proto definition. It maps to the internal opaque
+context in the filter chain.
+
+_Appears in:_
+- [ExtAuth](#extauth)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `name` | _string_ |  true  |  | Name of the context extension. |
+| `type` | _[ContextExtensionValueType](#contextextensionvaluetype)_ |  true  | Value | Type is the type of method to use to read the ContextExtension value.<br />Valid values are Value and ValueRef, default is Value. |
+| `value` | _string_ |  false  |  | Value of the context extension. |
+| `valueRef` | _[LocalObjectKeyReference](#localobjectkeyreference)_ |  false  |  | ValueRef for the context extension's value. |
+
+
+#### ContextExtensionValueType
+
+_Underlying type:_ _string_
+
+ContextExtensionValueType defines the types of values for ContextExtension supported by Envoy Gateway.
+
+_Appears in:_
+- [ContextExtension](#contextextension)
+
+| Value | Description |
+| ----- | ----------- |
+| `Value` | ContextExtensionValueTypeValue defines the "Value" ContextExtension type.<br /> | 
+| `ValueRef` | ContextExtensionValueTypeValueRef defines the "ValueRef" ContextExtension type.<br /> | 
 
 
 #### Cookie
@@ -1866,6 +1902,7 @@ _Appears in:_
 | `timeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#duration)_ |  false  |  | Timeout defines the timeout for requests to the external authorization service.<br />If not specified, defaults to 10 seconds. |
 | `failOpen` | _boolean_ |  false  | false | FailOpen is a switch used to control the behavior when a response from the External Authorization service cannot be obtained.<br />If FailOpen is set to true, the system allows the traffic to pass through.<br />Otherwise, if it is set to false or not set (defaulting to false),<br />the system blocks the traffic and returns a HTTP 5xx error, reflecting a fail-closed approach.<br />This setting determines whether to prioritize accessibility over strict security in case of authorization service failure.<br />If set to true, the External Authorization will also be bypassed if its configuration is invalid. |
 | `recomputeRoute` | _boolean_ |  false  |  | RecomputeRoute clears the route cache and recalculates the routing decision.<br />This field must be enabled if the headers added or modified by the ExtAuth are used for<br />route matching decisions. If the recomputation selects a new route, features targeting<br />the new matched route will be applied. |
+| `contextExtensions` | _[ContextExtension](#contextextension) array_ |  false  |  | ContextExtensions are analogous to http_request.headers, however these<br />contents will not be sent to the upstream server. This provides an<br />extension mechanism for sending additional information to the auth server<br />without modifying the proto definition. It maps to the internal opaque<br />context in the filter chain. |
 
 
 #### ExtProc
@@ -3331,6 +3368,23 @@ _Appears in:_
 | `ValueRef` | LocalJWKSTypeValueRef defines the "ValueRef" LocalJWKS type.<br /> | 
 
 
+#### LocalObjectKeyReference
+
+
+
+LocalObjectKeyReference selects a key from a local object.
+
+_Appears in:_
+- [ContextExtension](#contextextension)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `group` | _[Group](#group)_ |  true  |  | Group is the group of the referent. For example, "gateway.networking.k8s.io".<br />When unspecified or empty string, core API group is inferred. |
+| `kind` | _[Kind](#kind)_ |  true  |  | Kind is kind of the referent. For example "HTTPRoute" or "Service". |
+| `name` | _[ObjectName](#objectname)_ |  true  |  | Name is the name of the referent. |
+| `key` | _string_ |  true  |  | The key to select. |
+
+
 #### LocalRateLimit
 
 
@@ -3594,6 +3648,21 @@ _Appears in:_
 | `host` | _string_ |  false  |  | Host define the extension service hostname.<br />Deprecated: Use BackendRefs instead. |
 | `port` | _integer_ |  false  | 4317 | Port defines the port the extension service is exposed on.<br />Deprecated: Use BackendRefs instead. |
 | `resources` | _object (keys:string, values:string)_ |  false  |  | Resources is a set of labels that describe the source of a log entry, including envoy node info.<br />It's recommended to follow [semantic conventions](https://opentelemetry.io/docs/reference/specification/resource/semantic_conventions/). |
+| `headers` | _[HTTPHeader](#httpheader) array_ |  false  |  | Headers is a list of additional headers to send with OTLP export requests.<br />These headers are added as gRPC initial metadata for the OTLP gRPC service. |
+
+
+#### OpenTelemetryTracingProvider
+
+
+
+OpenTelemetryTracingProvider defines the OpenTelemetry tracing provider configuration.
+
+_Appears in:_
+- [TracingProvider](#tracingprovider)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `headers` | _[HTTPHeader](#httpheader) array_ |  false  |  | Headers is a list of additional headers to send with OTLP export requests.<br />These headers are added as gRPC initial metadata for the OTLP gRPC service. |
 
 
 #### Operation
@@ -3892,7 +3961,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `type` | _[ProxyAccessLogFormatType](#proxyaccesslogformattype)_ |  true  |  | Type defines the type of accesslog format. |
+| `type` | _[ProxyAccessLogFormatType](#proxyaccesslogformattype)_ |  false  |  | Type defines the type of accesslog format.<br />When unset, both text and json can be specified. |
 | `text` | _string_ |  false  |  | Text defines the text accesslog format, following Envoy accesslog formatting,<br />It's required when the format type is "Text".<br />Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators) may be used in the format.<br />The [format string documentation](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#config-access-log-format-strings) provides more information. |
 | `json` | _object (keys:string, values:string)_ |  false  |  | JSON is additional attributes that describe the specific event occurrence.<br />Structured format for the envoy access logs. Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators)<br />can be used as values for fields within the Struct.<br />It's required when the format type is "JSON". |
 
@@ -4084,6 +4153,7 @@ _Appears in:_
 | `port` | _integer_ |  false  | 4317 | Port defines the port the service is exposed on.<br />Deprecated: Use BackendRefs instead. |
 | `reportCountersAsDeltas` | _boolean_ |  false  |  | ReportCountersAsDeltas configures the OpenTelemetry sink to report<br />counters as delta temporality instead of cumulative. |
 | `reportHistogramsAsDeltas` | _boolean_ |  false  |  | ReportHistogramsAsDeltas configures the OpenTelemetry sink to report<br />histograms as delta temporality instead of cumulative.<br />Required for backends like Elastic that drop cumulative histograms. |
+| `headers` | _[HTTPHeader](#httpheader) array_ |  false  |  | Headers is a list of additional headers to send with OTLP export requests.<br />These headers are added as gRPC initial metadata for the OTLP gRPC service. |
 
 
 #### ProxyPrometheusProvider
@@ -4179,6 +4249,7 @@ _Appears in:_
 | `samplingRate` | _integer_ |  false  |  | SamplingRate controls the rate at which traffic will be<br />selected for tracing if no prior sampling decision has been made.<br />Defaults to 100, valid values [0-100]. 100 indicates 100% sampling.<br />Only one of SamplingRate or SamplingFraction may be specified.<br />If neither field is specified, all requests will be sampled. |
 | `samplingFraction` | _[Fraction](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#fraction)_ |  false  |  | SamplingFraction represents the fraction of requests that should be<br />selected for tracing if no prior sampling decision has been made.<br />Only one of SamplingRate or SamplingFraction may be specified.<br />If neither field is specified, all requests will be sampled. |
 | `customTags` | _object (keys:string, values:[CustomTag](#customtag))_ |  false  |  | CustomTags defines the custom tags to add to each span.<br />If provider is kubernetes, pod name and namespace are added by default. |
+| `tags` | _object (keys:string, values:string)_ |  false  |  | Tags defines the custom tags to add to each span.<br />Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators) may be used in the value.<br />The [format string documentation](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#config-access-log-format-strings) provides more information.<br />If provider is kubernetes, pod name and namespace are added by default.<br />Same keys take precedence over CustomTags. |
 | `provider` | _[TracingProvider](#tracingprovider)_ |  true  |  | Provider defines the tracing provider. |
 
 
@@ -4369,6 +4440,7 @@ _Appears in:_
 | `limit` | _[RateLimitValue](#ratelimitvalue)_ |  true  |  | Limit holds the rate limit values.<br />This limit is applied for traffic flows when the selectors<br />compute to True, causing the request to be counted towards the limit.<br />The limit is enforced and the request is ratelimited, i.e. a response with<br />429 HTTP status code is sent back to the client when<br />the selected requests have reached the limit. |
 | `cost` | _[RateLimitCost](#ratelimitcost)_ |  false  |  | Cost specifies the cost of requests and responses for the rule.<br />This is optional and if not specified, the default behavior is to reduce the rate limit counters by 1 on<br />the request path and do not reduce the rate limit counters on the response path. |
 | `shared` | _boolean_ |  false  |  | Shared determines whether this rate limit rule applies across all the policy targets.<br />If set to true, the rule is treated as a common bucket and is shared across all policy targets (xRoutes).<br />Default: false. |
+| `shadowMode` | _boolean_ |  false  |  | ShadowMode indicates whether this rate-limit rule runs in shadow mode.<br />When enabled, all rate-limiting operations are performed (cache lookups,<br />counter updates, telemetry generation), but the outcome is never enforced.<br />The request always succeeds, even if the configured limit is exceeded.<br />Only supported for Global Rate Limits. |
 
 
 #### RateLimitSelectCondition
@@ -4532,6 +4604,13 @@ _Appears in:_
 
 
 RemoteJWKS defines how to fetch and cache JSON Web Key Sets (JWKS) from a remote HTTP/HTTPS endpoint.
+
+BackendRefs is used to specify the address of the Remote JWKS.
+If the BackendRefs is not specified, the URI field is used to determine the address of the Remote JWKS.
+
+TLS configuration can be specified in a BackendTLSConfig resource and target the BackendRefs.
+
+Other settings for the connection to the remote JWKS can be specified in the BackendSettings resource.
 
 _Appears in:_
 - [JWTProvider](#jwtprovider)
@@ -5265,6 +5344,7 @@ _Appears in:_
 | `port` | _integer_ |  false  | 4317 | Port defines the port the provider service is exposed on.<br />Deprecated: Use BackendRefs instead. |
 | `serviceName` | _string_ |  false  |  | ServiceName defines the service name to use in tracing configuration.<br />If not set, Envoy Gateway will use a default service name set as<br />"name.namespace" (e.g., "my-gateway.default").<br />Note: This field is only supported for OpenTelemetry and Datadog tracing providers.<br />For Zipkin, the service name in traces is always derived from the Envoy --service-cluster flag<br />(typically "namespace/name" format). Setting this field has no effect for Zipkin. |
 | `zipkin` | _[ZipkinTracingProvider](#zipkintracingprovider)_ |  false  |  | Zipkin defines the Zipkin tracing provider configuration |
+| `openTelemetry` | _[OpenTelemetryTracingProvider](#opentelemetrytracingprovider)_ |  false  |  | OpenTelemetry defines the OpenTelemetry tracing provider configuration |
 
 
 #### TracingProviderType
