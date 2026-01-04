@@ -18,7 +18,9 @@ func TestTracesRunner_New(t *testing.T) {
 	cfg := &config.Server{
 		EnvoyGateway: &egv1a1.EnvoyGateway{
 			EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-				Telemetry: &egv1a1.EnvoyGatewayTelemetry{},
+				Telemetry: &egv1a1.EnvoyGatewayTelemetry{
+					Traces: &egv1a1.EnvoyGatewayTraces{},
+				},
 			},
 		},
 	}

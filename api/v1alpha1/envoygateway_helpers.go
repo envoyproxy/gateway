@@ -211,10 +211,23 @@ func (e *EnvoyGateway) DisablePrometheus() bool {
 	return e.GetEnvoyGatewayTelemetry().Metrics.Prometheus.Disable
 }
 
+// DisableTraces returns true if tracing is disabled.
+func (e *EnvoyGateway) DisableTraces() bool {
+	return e.GetEnvoyGatewayTelemetry().Traces.Disable
+}
+
 // DefaultEnvoyGatewayTelemetry returns a new EnvoyGatewayTelemetry with default configuration parameters.
 func DefaultEnvoyGatewayTelemetry() *EnvoyGatewayTelemetry {
 	return &EnvoyGatewayTelemetry{
 		Metrics: DefaultEnvoyGatewayMetrics(),
+		Traces:  DefaultEnvoyGatewayTraces(),
+	}
+}
+
+// DefaultEnvoyGatewayTraces returns a new EnvoyGatewayTraces with default configuration parameters.
+func DefaultEnvoyGatewayTraces() *EnvoyGatewayTraces {
+	return &EnvoyGatewayTraces{
+		Disable: true,
 	}
 }
 
