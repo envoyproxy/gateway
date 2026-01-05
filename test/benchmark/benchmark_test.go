@@ -22,7 +22,7 @@ func TestBenchmark(t *testing.T) {
 	// Parse benchmark options.
 	flag.Parse()
 	options := suite.NewBenchmarkOptions(
-		*suite.RPS,
+		*suite.BaselineRPS,
 		*suite.Connections,
 		*suite.Duration,
 		*suite.Concurrency,
