@@ -678,6 +678,7 @@ loki:
   deploymentMode: SingleBinary
   fullnameOverride: loki
   loki:
+    useTestSchema: true
     auth_enabled: false
     compactorAddress: "loki"
     memberlist: "loki-memberlist"
@@ -688,6 +689,13 @@ loki:
     rulerConfig:
       storage:
         type: "local"
+    limits_config:
+      otlp_config:
+        resource_attributes:
+          attributes_config:
+            - action: index_label
+              attributes:
+                - exporter
   test:
     enabled: false
   singleBinary:
@@ -847,8 +855,8 @@ opentelemetry-collector:
         endpoint: ":19001"
       debug:
         verbosity: detailed
-      loki:
-        endpoint: "http://loki.monitoring.svc:3100/loki/api/v1/push"
+      otlphttp/loki:
+        endpoint: "http://loki.monitoring.svc:3100/otlp"
       otlp:
         endpoint: tempo.monitoring.svc:4317
         tls:
@@ -857,13 +865,16 @@ opentelemetry-collector:
       health_check:
         endpoint: "[${env:MY_POD_IP}]:13133"
     processors:
-      attributes:
-        actions:
-          - action: insert
-            key: loki.attribute.labels
-            # k8s.pod.name is OpenTelemetry format for Kubernetes Pod name,
-            # Loki will convert this to k8s_pod_name label.
-            value: k8s.pod.name, k8s.namespace.name
+      # loki create index for resource attributes, so need to move k8s attributes from log to resource
+      transform/loki:
+        log_statements:   
+          - context: log
+            statements:
+              - set(resource.attributes["exporter"], "OTLP")
+              - set(resource.attributes["k8s.pod.name"], log.attributes["k8s.pod.name"])
+              - delete_key(log.attributes, "k8s.pod.name")
+              - set(resource.attributes["k8s.namespace.name"], log.attributes["k8s.namespace.name"])
+              - delete_key(log.attributes, "k8s.namespace.name")
     receivers:
       envoyals:
         endpoint: "[${env:MY_POD_IP}]:9000"
@@ -897,7 +908,6 @@ opentelemetry-collector:
       telemetry:
         metrics:
           level: none
-          address: null # Disable the deprecated setting
           readers:
             - pull:
                 exporter:
@@ -915,9 +925,9 @@ opentelemetry-collector:
             - otlp
         logs:
           exporters:
-            - loki
+            - otlphttp/loki
           processors:
-            - attributes
+            - transform/loki
           receivers:
             - otlp
             - envoyals
