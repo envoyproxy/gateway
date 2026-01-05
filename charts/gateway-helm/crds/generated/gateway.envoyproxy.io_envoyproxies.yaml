@@ -13512,6 +13512,42 @@ spec:
                                             && !(has(self.loadBalancer) && has(self.loadBalancer.type)
                                             && self.loadBalancer.type in [''Random'',
                                             ''RoundRobin'']))'
+                                      headers:
+                                        description: |-
+                                          Headers is a list of additional headers to send with OTLP export requests.
+                                          These headers are added as gRPC initial metadata for the OTLP gRPC service.
+                                        items:
+                                          description: HTTPHeader represents an HTTP
+                                            Header name and value as defined by RFC
+                                            7230.
+                                          properties:
+                                            name:
+                                              description: |-
+                                                Name is the name of the HTTP Header to be matched. Name matching MUST be
+                                                case-insensitive. (See https://tools.ietf.org/html/rfc7230#section-3.2).
+
+                                                If multiple entries specify equivalent header names, the first entry with
+                                                an equivalent name MUST be considered for a match. Subsequent entries
+                                                with an equivalent header name MUST be ignored. Due to the
+                                                case-insensitivity of header names, "foo" and "Foo" are considered
+                                                equivalent.
+                                              maxLength: 256
+                                              minLength: 1
+                                              pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
+                                              type: string
+                                            value:
+                                              description: Value is the value of HTTP
+                                                Header to be matched.
+                                              maxLength: 4096
+                                              minLength: 1
+                                              type: string
+                                          required:
+                                          - name
+                                          - value
+                                          type: object
+                                        maxItems: 32
+                                        minItems: 1
+                                        type: array
                                       host:
                                         description: |-
                                           Host define the extension service hostname.
@@ -14840,6 +14876,41 @@ spec:
                                       && has(self.connection.preconnect.predictivePercent))
                                       && !(has(self.loadBalancer) && has(self.loadBalancer.type)
                                       && self.loadBalancer.type in [''Random'', ''RoundRobin'']))'
+                                headers:
+                                  description: |-
+                                    Headers is a list of additional headers to send with OTLP export requests.
+                                    These headers are added as gRPC initial metadata for the OTLP gRPC service.
+                                  items:
+                                    description: HTTPHeader represents an HTTP Header
+                                      name and value as defined by RFC 7230.
+                                    properties:
+                                      name:
+                                        description: |-
+                                          Name is the name of the HTTP Header to be matched. Name matching MUST be
+                                          case-insensitive. (See https://tools.ietf.org/html/rfc7230#section-3.2).
+
+                                          If multiple entries specify equivalent header names, the first entry with
+                                          an equivalent name MUST be considered for a match. Subsequent entries
+                                          with an equivalent header name MUST be ignored. Due to the
+                                          case-insensitivity of header names, "foo" and "Foo" are considered
+                                          equivalent.
+                                        maxLength: 256
+                                        minLength: 1
+                                        pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
+                                        type: string
+                                      value:
+                                        description: Value is the value of HTTP Header
+                                          to be matched.
+                                        maxLength: 4096
+                                        minLength: 1
+                                        type: string
+                                    required:
+                                    - name
+                                    - value
+                                    type: object
+                                  maxItems: 32
+                                  minItems: 1
+                                  type: array
                                 host:
                                   description: |-
                                     Host define the service hostname.
@@ -16100,6 +16171,46 @@ spec:
                               Host define the provider service hostname.
                               Deprecated: Use BackendRefs instead.
                             type: string
+                          openTelemetry:
+                            description: OpenTelemetry defines the OpenTelemetry tracing
+                              provider configuration
+                            properties:
+                              headers:
+                                description: |-
+                                  Headers is a list of additional headers to send with OTLP export requests.
+                                  These headers are added as gRPC initial metadata for the OTLP gRPC service.
+                                items:
+                                  description: HTTPHeader represents an HTTP Header
+                                    name and value as defined by RFC 7230.
+                                  properties:
+                                    name:
+                                      description: |-
+                                        Name is the name of the HTTP Header to be matched. Name matching MUST be
+                                        case-insensitive. (See https://tools.ietf.org/html/rfc7230#section-3.2).
+
+                                        If multiple entries specify equivalent header names, the first entry with
+                                        an equivalent name MUST be considered for a match. Subsequent entries
+                                        with an equivalent header name MUST be ignored. Due to the
+                                        case-insensitivity of header names, "foo" and "Foo" are considered
+                                        equivalent.
+                                      maxLength: 256
+                                      minLength: 1
+                                      pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
+                                      type: string
+                                    value:
+                                      description: Value is the value of HTTP Header
+                                        to be matched.
+                                      maxLength: 4096
+                                      minLength: 1
+                                      type: string
+                                  required:
+                                  - name
+                                  - value
+                                  type: object
+                                maxItems: 32
+                                minItems: 1
+                                type: array
+                            type: object
                           port:
                             default: 4317
                             description: |-
@@ -16159,6 +16270,9 @@ spec:
                             group.
                           rule: 'has(self.backendRefs) ? (self.backendRefs.all(f,
                             f.group == "" || f.group == ''gateway.envoyproxy.io''))
+                            : true'
+                        - message: openTelemetry can only be used with type OpenTelemetry
+                          rule: 'has(self.openTelemetry) ? self.type == ''OpenTelemetry''
                             : true'
                       samplingFraction:
                         description: |-
