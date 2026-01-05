@@ -245,7 +245,7 @@ func (c *localFileCache) getOrFetch(key *cacheKey, opts *GetOptions) (*cacheEntr
 	switch u.Scheme {
 	case "http", "https":
 		// Download the Wasm module with http fetcher.
-		b, err = c.httpFetcher.Fetch(ctx, key.downloadURL, insecure)
+		b, err = c.httpFetcher.Fetch(ctx, key.downloadURL, insecure, opts.CACert)
 		if err != nil {
 			wasmRemoteFetchTotal.WithFailure(reasonDownloadError).Increment()
 			return nil, err
@@ -259,7 +259,7 @@ func (c *localFileCache) getOrFetch(key *cacheKey, opts *GetOptions) (*cacheEntr
 			isPrivate = true
 		}
 
-		imageBinaryFetcher, dChecksum, err = c.prepareFetch(ctx, u, insecure, opts.PullSecret)
+		imageBinaryFetcher, dChecksum, err = c.prepareFetch(ctx, u, insecure, opts.PullSecret, opts.CACert)
 
 		if isPrivate {
 			e := &permissionCacheEntry{
@@ -267,6 +267,7 @@ func (c *localFileCache) getOrFetch(key *cacheKey, opts *GetOptions) (*cacheEntr
 				fetcherOption: &ImageFetcherOption{
 					Insecure:   insecure,
 					PullSecret: opts.PullSecret,
+					CACert:     opts.CACert,
 				},
 				lastCheck:  time.Now(),
 				lastAccess: time.Now(),
@@ -314,11 +315,15 @@ func (c *localFileCache) getOrFetch(key *cacheKey, opts *GetOptions) (*cacheEntr
 
 // prepareFetch won't fetch the binary, but it will prepare the binaryFetcher and actualDigest.
 func (c *localFileCache) prepareFetch(
-	ctx context.Context, url *url.URL, insecure bool, pullSecret []byte) (
-	binaryFetcher func() ([]byte, error), actualDigest string, err error,
-) {
+	ctx context.Context,
+	url *url.URL,
+	insecure bool,
+	pullSecret []byte,
+	caCert []byte,
+) (binaryFetcher func() ([]byte, error), actualDigest string, err error) {
 	imgFetcherOps := ImageFetcherOption{
 		Insecure: insecure,
+		CACert:   caCert,
 	}
 	if len(pullSecret) > 0 {
 		imgFetcherOps.PullSecret = pullSecret

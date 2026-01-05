@@ -23,6 +23,7 @@ import (
 	"archive/tar"
 	"bytes"
 	"compress/gzip"
+	"context"
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
@@ -30,6 +31,7 @@ import (
 	"io"
 	"net/http/httptest"
 	"net/url"
+	"os"
 	"reflect"
 	"strings"
 	"testing"
@@ -45,6 +47,10 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/random"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/types"
+	"github.com/stretchr/testify/require"
+
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/logging"
 )
 
 func TestImageFetcherOption_useAnonymous(t *testing.T) {
@@ -268,6 +274,25 @@ func TestImageFetcher_Fetch(t *testing.T) {
 			t.Errorf("ImageFetcher.binaryFetcher get unexpected error '%v', but want '%v'", actual, expErr)
 		}
 	})
+}
+
+func TestImageFetcher_FetchWithCACert(t *testing.T) {
+	ctx := context.Background()
+	logger := logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo)
+
+	opt := ImageFetcherOption{
+		CACert: []byte("fake-ca"),
+	}
+	fetcher := NewImageFetcher(ctx, opt, logger)
+	require.NotNil(t, fetcher)
+
+	// Given the constraints, we at least verify the code path in NewImageFetcher for CACert.
+	opt2 := ImageFetcherOption{
+		Insecure: true,
+		CACert:   []byte("fake-ca"),
+	}
+	fetcher2 := NewImageFetcher(ctx, opt2, logger)
+	require.NotNil(t, fetcher2)
 }
 
 func TestExtractDockerImage(t *testing.T) {

@@ -935,6 +935,7 @@ func (t *Translator) buildWasm(
 		// downloaded from the original HTTP server or the OCI registry
 		originalChecksum string
 		servingURL       string // the wasm module download URL from the EG HTTP server
+		caCert           []byte
 		err              error
 	)
 
@@ -968,11 +969,18 @@ func (t *Translator) buildWasm(
 
 		http := config.Code.HTTP
 
+		if http.TLS != nil {
+			if caCert, err = t.resolveCACertRef(policy.Namespace, http.TLS.CACertificateRef, resources); err != nil {
+				return nil, err
+			}
+		}
+
 		if servingURL, checksum, err = t.WasmCache.Get(http.URL, &wasm.GetOptions{
 			Checksum:        originalChecksum,
 			PullPolicy:      pullPolicy,
 			ResourceName:    irConfigNameForWasm(policy, idx),
 			ResourceVersion: policy.ResourceVersion,
+			CACert:          caCert,
 		}); err != nil {
 			return nil, err
 		}
@@ -996,6 +1004,12 @@ func (t *Translator) buildWasm(
 		// This is a sanity check, the validation should have caught this
 		if image == nil {
 			return nil, fmt.Errorf("missing Image field in Wasm code source")
+		}
+
+		if image.TLS != nil {
+			if caCert, err = t.resolveCACertRef(policy.Namespace, image.TLS.CACertificateRef, resources); err != nil {
+				return nil, err
+			}
 		}
 
 		if image.PullSecretRef != nil {
@@ -1042,6 +1056,7 @@ func (t *Translator) buildWasm(
 			PullPolicy:      pullPolicy,
 			ResourceName:    irConfigNameForWasm(policy, idx),
 			ResourceVersion: policy.ResourceVersion,
+			CACert:          caCert,
 		}); err != nil {
 			return nil, err
 		}
@@ -1084,6 +1099,42 @@ func hasTag(imageURL string) bool {
 	parts := strings.Split(imageURL[len(ociURLPrefix):], ":")
 	// Verify that we aren't confusing a tag for a hostname with port.
 	return len(parts) > 1 && !strings.Contains(parts[len(parts)-1], "/")
+}
+
+func (t *Translator) resolveCACertRef(namespace string, caCertRef gwapiv1.SecretObjectReference, resources *resource.Resources) ([]byte, error) {
+	from := crossNamespaceFrom{
+		group:     egv1a1.GroupName,
+		kind:      resource.KindEnvoyExtensionPolicy,
+		namespace: namespace,
+	}
+
+	if caCertRef.Kind != nil && string(*caCertRef.Kind) == resource.KindConfigMap {
+		cm, err := t.validateConfigMapRef(false, from, caCertRef, resources)
+		if err != nil {
+			return nil, err
+		}
+		if data, ok := cm.Data["ca.crt"]; ok {
+			return []byte(data), nil
+		}
+		return nil, fmt.Errorf("missing ca.crt key in configmap %s/%s", cm.Namespace, cm.Name)
+	}
+
+	if caCertRef.Kind != nil && string(*caCertRef.Kind) == resource.KindClusterTrustBundle {
+		ctb := t.GetClusterTrustBundle(string(caCertRef.Name))
+		if ctb != nil {
+			return []byte(ctb.Spec.TrustBundle), nil
+		}
+		return nil, fmt.Errorf("cluster trust bundle %s not found", caCertRef.Name)
+	}
+
+	secret, err := t.validateSecretRef(false, from, caCertRef, resources)
+	if err != nil {
+		return nil, err
+	}
+	if data, ok := secret.Data["ca.crt"]; ok {
+		return data, nil
+	}
+	return nil, fmt.Errorf("missing ca.crt key in secret %s/%s", secret.Namespace, secret.Name)
 }
 
 func irConfigNameForWasm(policy client.Object, index int) string {
