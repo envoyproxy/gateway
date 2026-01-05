@@ -47,9 +47,9 @@ func TestAddServerNamesMatch(t *testing.T) {
 				},
 			},
 			hostnames:          []string{"example.com"},
-			expectFilterChain:  false,
+			expectFilterChain:  true,
 			expectTLSInspector: false,
-			expectServerNames:  nil,
+			expectServerNames:  []string{"example.com"},
 		},
 		{
 			name: "TCP listener with non-wildcard hostnames",
