@@ -738,6 +738,11 @@ func (in *BackendTrafficPolicySpec) DeepCopyInto(out *BackendTrafficPolicySpec) 
 		*out = new(bool)
 		**out = **in
 	}
+	if in.UpstreamScheme != nil {
+		in, out := &in.UpstreamScheme, &out.UpstreamScheme
+		*out = new(UpstreamScheme)
+		**out = **in
+	}
 	if in.Compression != nil {
 		in, out := &in.Compression, &out.Compression
 		*out = make([]*Compression, len(*in))

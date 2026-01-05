@@ -26,8 +26,6 @@
             ads: {}
             resourceApiVersion: V3
           routeConfigName: policyextension-listener
-        schemeHeaderTransformation:
-          matchUpstream: true
         serverHeaderTransformation: PASS_THROUGH
         statPrefix: http-10081
         useRemoteAddress: true

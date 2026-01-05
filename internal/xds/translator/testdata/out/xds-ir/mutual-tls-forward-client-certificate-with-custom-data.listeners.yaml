@@ -26,8 +26,6 @@
             ads: {}
             resourceApiVersion: V3
           routeConfigName: first-listener
-        schemeHeaderTransformation:
-          matchUpstream: true
         serverHeaderTransformation: PASS_THROUGH
         statPrefix: https-10001
         useRemoteAddress: true
@@ -89,8 +87,6 @@
             ads: {}
             resourceApiVersion: V3
           routeConfigName: second-listener
-        schemeHeaderTransformation:
-          matchUpstream: true
         serverHeaderTransformation: PASS_THROUGH
         statPrefix: https-10002
         useRemoteAddress: true
@@ -152,8 +148,6 @@
             ads: {}
             resourceApiVersion: V3
           routeConfigName: third-listener
-        schemeHeaderTransformation:
-          matchUpstream: true
         serverHeaderTransformation: PASS_THROUGH
         setCurrentClientCertDetails:
           subject: true
@@ -217,8 +211,6 @@
             ads: {}
             resourceApiVersion: V3
           routeConfigName: fourth-listener
-        schemeHeaderTransformation:
-          matchUpstream: true
         serverHeaderTransformation: PASS_THROUGH
         setCurrentClientCertDetails:
           dns: true
@@ -284,8 +276,6 @@
             ads: {}
             resourceApiVersion: V3
           routeConfigName: fifth-listener
-        schemeHeaderTransformation:
-          matchUpstream: true
         serverHeaderTransformation: PASS_THROUGH
         setCurrentClientCertDetails:
           cert: true

@@ -26,8 +26,6 @@
             ads: {}
             resourceApiVersion: V3
           routeConfigName: listener-enable-req-resp-sizes-stats
-        schemeHeaderTransformation:
-          matchUpstream: true
         serverHeaderTransformation: PASS_THROUGH
         statPrefix: http-10080
         useRemoteAddress: true

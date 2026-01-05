@@ -355,11 +355,6 @@ func (t *Translator) addHCMToXDSListener(
 		HttpProtocolOptions: http1ProtocolOptions(irListener.HTTP1),
 		// Hide the Envoy proxy in the Server header by default
 		ServerHeaderTransformation: hcmv3.HttpConnectionManager_PASS_THROUGH,
-		// Set the :scheme header to match the upstream transport protocol (http/https)
-		// This ensures correct scheme is sent to backends using TLS
-		SchemeHeaderTransformation: &corev3.SchemeHeaderTransformation{
-			MatchUpstream: true,
-		},
 		// Add HTTP2 protocol options
 		// Set it by default to also support HTTP1.1 to HTTP2 Upgrades
 		Http2ProtocolOptions: http2ProtocolOptions(irListener.HTTP2),
@@ -376,6 +371,14 @@ func (t *Translator) addHCMToXDSListener(
 		Tracing:                       hcmTracing,
 		ForwardClientCertDetails:      buildForwardClientCertDetailsAction(irListener.Headers),
 		EarlyHeaderMutationExtensions: buildEarlyHeaderMutation(irListener.Headers),
+	}
+
+	// Set the :scheme header to match the upstream transport protocol (http/https) if configured.
+	// This ensures the correct scheme is sent to backends using TLS when enabled.
+	if irListener.MatchUpstreamScheme {
+		mgr.SchemeHeaderTransformation = &corev3.SchemeHeaderTransformation{
+			MatchUpstream: true,
+		}
 	}
 
 	if requestID := ptr.Deref(irListener.Headers, ir.HeaderSettings{}).RequestID; requestID != nil {

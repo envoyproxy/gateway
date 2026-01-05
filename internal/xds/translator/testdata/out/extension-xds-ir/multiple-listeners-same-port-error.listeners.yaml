@@ -29,8 +29,6 @@
             ads: {}
             resourceApiVersion: V3
           routeConfigName: first-listener-error
-        schemeHeaderTransformation:
-          matchUpstream: true
         serverHeaderTransformation: PASS_THROUGH
         statPrefix: https-10080
         useRemoteAddress: true
@@ -76,8 +74,6 @@
             ads: {}
             resourceApiVersion: V3
           routeConfigName: second-listener
-        schemeHeaderTransformation:
-          matchUpstream: true
         serverHeaderTransformation: PASS_THROUGH
         statPrefix: https-10080
         useRemoteAddress: true

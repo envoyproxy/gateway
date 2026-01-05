@@ -122,8 +122,6 @@
             ads: {}
             resourceApiVersion: V3
           routeConfigName: first-listener
-        schemeHeaderTransformation:
-          matchUpstream: true
         serverHeaderTransformation: PASS_THROUGH
         statPrefix: http-10080
         useRemoteAddress: true

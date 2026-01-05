@@ -990,9 +990,6 @@
                             },
                             "routeConfigName": "default/eg/http"
                           },
-                          "schemeHeaderTransformation": {
-                            "matchUpstream": true
-                          },
                           "serverHeaderTransformation": "PASS_THROUGH",
                           "statPrefix": "http-10080",
                           "useRemoteAddress": true
@@ -1144,9 +1141,6 @@
                               "resourceApiVersion": "V3"
                             },
                             "routeConfigName": "default/eg/grpc"
-                          },
-                          "schemeHeaderTransformation": {
-                            "matchUpstream": true
                           },
                           "serverHeaderTransformation": "PASS_THROUGH",
                           "statPrefix": "http-8080",

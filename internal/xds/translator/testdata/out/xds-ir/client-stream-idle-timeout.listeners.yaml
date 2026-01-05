@@ -28,8 +28,6 @@
             resourceApiVersion: V3
           routeConfigName: first-listener
         requestTimeout: 5s
-        schemeHeaderTransformation:
-          matchUpstream: true
         serverHeaderTransformation: PASS_THROUGH
         statPrefix: http-10080
         streamIdleTimeout: 3600s
