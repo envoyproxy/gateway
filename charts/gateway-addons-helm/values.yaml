@@ -684,6 +684,10 @@ loki:
     memberlist: "loki-memberlist"
     commonConfig:
       replication_factor: 1
+      instance_addr: "${INSTANCE_ADDR}"
+      ring:
+        kvstore:
+          store: "memberlist"
     storage:
       type: "filesystem"
     rulerConfig:
@@ -696,19 +700,30 @@ loki:
             - action: index_label
               attributes:
                 - exporter
+  chunksCache:              
+    enabled: false
+  resultsCache:
+    enabled: false
   test:
     enabled: false
   singleBinary:
     replicas: 1
+    extraArgs:
+      - "-config.expand-env=true"
+    extraEnv:
+      - name: "INSTANCE_ADDR"
+        valueFrom:
+          fieldRef:
+            fieldPath: "status.podIP"
   read:
     replicas: 0
+  lokiCanary:
+    enabled: false
   backend:
     replicas: 0
   write:
     replicas: 0
   monitoring:
-    lokiCanary:
-      enabled: false
     selfMonitoring:
       enabled: false
       grafanaAgent:
