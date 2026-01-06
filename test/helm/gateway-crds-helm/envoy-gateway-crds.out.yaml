@@ -527,6 +527,100 @@ spec:
           spec:
             description: spec defines the desired state of BackendTrafficPolicy.
             properties:
+              admissionControl:
+                description: |-
+                  AdmissionControl defines the admission control policy to be applied. This configuration
+                  probabilistically rejects requests based on the success rate of previous requests in a
+                  configurable sliding time window.
+                properties:
+                  aggression:
+                    description: |-
+                      Aggression controls the rejection probability curve. A value of 1.0 means a linear
+                      increase in rejection probability as the success rate decreases. Higher values
+                      result in more aggressive rejection at higher success rates.
+                      Defaults to 1.0 if not specified.
+                    minimum: 0
+                    type: number
+                  enabled:
+                    description: |-
+                      Enabled enables or disables the admission control filter.
+                      Defaults to true if not specified.
+                    type: boolean
+                  maxRejectionProbability:
+                    description: |-
+                      MaxRejectionProbability represents the upper limit of the rejection probability.
+                      The value should be in the range [0.0, 1.0]. Defaults to 0.95 (95%) if not specified.
+                    maximum: 1
+                    minimum: 0
+                    type: number
+                  rpsThreshold:
+                    description: |-
+                      RPSThreshold defines the minimum requests per second below which requests will
+                      pass through the filter without rejection. Defaults to 1 if not specified.
+                    format: int32
+                    minimum: 0
+                    type: integer
+                  samplingWindow:
+                    description: |-
+                      SamplingWindow defines the time window over which request success rates are calculated.
+                      Defaults to 60s if not specified.
+                    type: string
+                  successCriteria:
+                    description: SuccessCriteria defines what constitutes a successful
+                      request for both HTTP and gRPC.
+                    properties:
+                      grpc:
+                        description: GRPC defines success criteria for gRPC requests.
+                        properties:
+                          grpcSuccessStatus:
+                            description: GRPCSuccessStatus defines gRPC status codes
+                              that are considered successful.
+                            items:
+                              format: int32
+                              type: integer
+                            type: array
+                        type: object
+                      http:
+                        description: HTTP defines success criteria for HTTP requests.
+                        properties:
+                          httpSuccessStatus:
+                            description: |-
+                              HTTPSuccessStatus defines ranges of HTTP status codes that are considered successful.
+                              Each range is inclusive on both ends.
+                            items:
+                              description: HTTPStatusRange defines a range of HTTP
+                                status codes.
+                              properties:
+                                end:
+                                  description: End is the inclusive end of the status
+                                    code range (100-600).
+                                  format: int32
+                                  maximum: 600
+                                  minimum: 100
+                                  type: integer
+                                start:
+                                  description: Start is the inclusive start of the
+                                    status code range (100-600).
+                                  format: int32
+                                  maximum: 600
+                                  minimum: 100
+                                  type: integer
+                              required:
+                              - end
+                              - start
+                              type: object
+                            type: array
+                        type: object
+                    type: object
+                  successRateThreshold:
+                    description: |-
+                      SuccessRateThreshold defines the lowest request success rate at which the filter
+                      will not reject requests. The value should be in the range [0.0, 1.0].
+                      Defaults to 0.95 (95%) if not specified.
+                    maximum: 1
+                    minimum: 0
+                    type: number
+                type: object
               circuitBreaker:
                 description: |-
                   Circuit Breaker settings for the upstream connections and requests.
