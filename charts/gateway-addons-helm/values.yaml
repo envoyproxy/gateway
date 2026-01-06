@@ -886,8 +886,6 @@ opentelemetry-collector:
           - context: log
             statements:
               - set(resource.attributes["exporter"], "OTLP")
-              - set(resource.attributes["k8s.pod.name"], log.attributes["k8s.pod.name"])
-              - delete_key(log.attributes, "k8s.pod.name")
               - set(resource.attributes["k8s.namespace.name"], log.attributes["k8s.namespace.name"])
               - delete_key(log.attributes, "k8s.namespace.name")
     receivers:

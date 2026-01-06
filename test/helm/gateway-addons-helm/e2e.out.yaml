@@ -341,8 +341,6 @@ data:
         - context: log
           statements:
           - set(resource.attributes["exporter"], "OTLP")
-          - set(resource.attributes["k8s.pod.name"], log.attributes["k8s.pod.name"])
-          - delete_key(log.attributes, "k8s.pod.name")
           - set(resource.attributes["k8s.namespace.name"], log.attributes["k8s.namespace.name"])
           - delete_key(log.attributes, "k8s.namespace.name")
     receivers:
@@ -10655,7 +10653,7 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/config: 333cb71e8f053f17303106c2ebd499519f5b689583136e960b274b2b9b80b2a4
+        checksum/config: 716747672f86c5cca87c85db09a8b79ce39cf2bcb0120e6534cdc870dcdf5831
         
       labels:
         app.kubernetes.io/name: opentelemetry-collector

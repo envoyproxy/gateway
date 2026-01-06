@@ -141,10 +141,8 @@ helm uninstall eg-addons -n monitoring
 | opentelemetry-collector.config.extensions.health_check.endpoint | string | `"[${env:MY_POD_IP}]:13133"` |  |
 | opentelemetry-collector.config.processors.transform/loki.log_statements[0].context | string | `"log"` |  |
 | opentelemetry-collector.config.processors.transform/loki.log_statements[0].statements[0] | string | `"set(resource.attributes[\"exporter\"], \"OTLP\")"` |  |
-| opentelemetry-collector.config.processors.transform/loki.log_statements[0].statements[1] | string | `"set(resource.attributes[\"k8s.pod.name\"], log.attributes[\"k8s.pod.name\"])"` |  |
-| opentelemetry-collector.config.processors.transform/loki.log_statements[0].statements[2] | string | `"delete_key(log.attributes, \"k8s.pod.name\")"` |  |
-| opentelemetry-collector.config.processors.transform/loki.log_statements[0].statements[3] | string | `"set(resource.attributes[\"k8s.namespace.name\"], log.attributes[\"k8s.namespace.name\"])"` |  |
-| opentelemetry-collector.config.processors.transform/loki.log_statements[0].statements[4] | string | `"delete_key(log.attributes, \"k8s.namespace.name\")"` |  |
+| opentelemetry-collector.config.processors.transform/loki.log_statements[0].statements[1] | string | `"set(resource.attributes[\"k8s.namespace.name\"], log.attributes[\"k8s.namespace.name\"])"` |  |
+| opentelemetry-collector.config.processors.transform/loki.log_statements[0].statements[2] | string | `"delete_key(log.attributes, \"k8s.namespace.name\")"` |  |
 | opentelemetry-collector.config.receivers.datadog.endpoint | string | `"[${env:MY_POD_IP}]:8126"` |  |
 | opentelemetry-collector.config.receivers.envoyals.endpoint | string | `"[${env:MY_POD_IP}]:9000"` |  |
 | opentelemetry-collector.config.receivers.jaeger.protocols.grpc.endpoint | string | `"[${env:MY_POD_IP}]:14250"` |  |
