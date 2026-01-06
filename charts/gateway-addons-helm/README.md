@@ -127,7 +127,7 @@ helm uninstall eg-addons -n monitoring
 | opentelemetry-collector.config.exporters.loki.endpoint | string | `"http://loki.monitoring.svc:3100/loki/api/v1/push"` |  |
 | opentelemetry-collector.config.exporters.otlp.endpoint | string | `"tempo.monitoring.svc:4317"` |  |
 | opentelemetry-collector.config.exporters.otlp.tls.insecure | bool | `true` |  |
-| opentelemetry-collector.config.exporters.prometheus.endpoint | string | `"[${env:MY_POD_IP}]:19001"` |  |
+| opentelemetry-collector.config.exporters.prometheus.endpoint | string | `":19001"` |  |
 | opentelemetry-collector.config.extensions.health_check.endpoint | string | `"[${env:MY_POD_IP}]:13133"` |  |
 | opentelemetry-collector.config.processors.attributes.actions[0].action | string | `"insert"` |  |
 | opentelemetry-collector.config.processors.attributes.actions[0].key | string | `"loki.attribute.labels"` |  |

@@ -844,7 +844,7 @@ opentelemetry-collector:
   config:
     exporters:
       prometheus:
-        endpoint: "[${env:MY_POD_IP}]:19001"
+        endpoint: ":19001"
       debug:
         verbosity: detailed
       loki:
