@@ -10,3 +10,11 @@
     loadBalancingWeight: 1
     locality:
       region: httproute/default/httproute-1/rule/0/backend/0
+    metadata:
+      filterMetadata:
+        envoy-gateway:
+          resources:
+          - kind: Service
+            name: service-1
+            namespace: default
+            sectionName: "8080"
