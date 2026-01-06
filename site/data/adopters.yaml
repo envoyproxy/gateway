@@ -114,4 +114,7 @@ adopters:
     logo: "/logos/tasrie-it-services.png"
     url: "https://tasrieit.com"
     description: "Tasrie IT Services leverages Envoy Gateway for standardized ingress management and traffic policy enforcement in cloud-native Kubernetes environments."
-
+  - name: "Procore"
+    logo: "/logos/procore.svg"
+    url: "https://www.procore.com/"
+    description: "Procore uses Envoy Gateway to manage ingress traffic for its primary and largest application."
