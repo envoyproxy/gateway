@@ -2768,45 +2768,60 @@ func (r *gatewayAPIReconciler) crdExists(ctx context.Context, mgr manager.Manage
 		Duration: time.Second,
 		Factor:   1.5,
 		Jitter:   0.1,
-		Steps:    4,
+		Steps:    10,
 	})
 }
 
 func (r *gatewayAPIReconciler) crdExistsWithClient(ctx context.Context, discoveryClient discovery.DiscoveryInterface, kind, groupVersion string, backoff wait.Backoff) (bool, error) {
-	var apiResourceList *metav1.APIResourceList
-	var lastErr error
-	notFound := false
+	var lastTransientErr error
 
-	err := wait.ExponentialBackoffWithContext(ctx, backoff, func(ctx context.Context) (bool, error) {
-		apiResourceList, lastErr = discoveryClient.ServerResourcesForGroupVersion(groupVersion)
-		if lastErr == nil {
-			return true, nil
+	for {
+		apiResourceList, err := discoveryClient.ServerResourcesForGroupVersion(groupVersion)
+		switch {
+		// check if the CRD exists
+		case err == nil:
+			for i := range apiResourceList.APIResources {
+				res := apiResourceList.APIResources[i]
+				if res.Kind == kind {
+					return true, nil
+				}
+			}
+			return false, nil
+		// the CRD doesn't exist when the GroupVersion doesn't exist
+		case kerrors.IsNotFound(err) || apimeta.IsNoMatchError(err):
+			return false, nil
+		// return immediately if the context is done
+		case errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded):
+			return false, fmt.Errorf("discover resources for %s: %w", groupVersion, err)
+		// return immediately if it's a non-recoverable error
+		case !isTransientError(err):
+			return false, fmt.Errorf("discover resources for %s: %w", groupVersion, err)
 		}
-		if kerrors.IsNotFound(lastErr) || apimeta.IsNoMatchError(lastErr) {
-			notFound = true
-			return true, nil
+
+		// retry transient errors with backoff
+		lastTransientErr = err
+
+		d := backoff.Duration
+		if backoff.Jitter > 0 {
+			d = wait.Jitter(d, backoff.Jitter)
 		}
-		return false, nil
-	})
-	if err != nil {
-		if wait.Interrupted(err) && lastErr != nil {
-			return false, fmt.Errorf("discover resources for %s: %w", groupVersion, lastErr)
+		switch {
+		case backoff.Steps > 1:
+			backoff.Steps--
+			backoff.Duration = time.Duration(float64(backoff.Duration) * backoff.Factor)
+		case backoff.Steps == 1:
+			backoff.Steps--
+		default:
+			// return the last transient error after retries
+			return false, fmt.Errorf("discover resources for %s: %w", groupVersion, lastTransientErr)
 		}
-		return false, fmt.Errorf("discover resources for %s: %w", groupVersion, err)
+
+		select {
+		case <-ctx.Done():
+			return false, fmt.Errorf("discover resources for %s: %w", groupVersion, ctx.Err())
+		case <-time.After(d): // wait for the next retry
+		}
 	}
-
-	if notFound || apiResourceList == nil {
-		return false, nil
-	}
-
-	for i := range apiResourceList.APIResources {
-		res := apiResourceList.APIResources[i]
-		if res.Kind == kind {
-			return true, nil
-		}
-	}
-
-	return false, nil
 }
 
 // isCustomBackendResource checks if the given group and kind match any of the configured custom backend resources

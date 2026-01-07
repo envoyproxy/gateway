@@ -2399,4 +2399,27 @@ func TestCRDExistsWithClient(t *testing.T) {
 		require.ErrorIs(t, err, expectedErr)
 		require.False(t, exists)
 	})
+
+	t.Run("retry transient errors until success", func(t *testing.T) {
+		disco := &discoveryfake.FakeDiscovery{Fake: &clientgotesting.Fake{}}
+		disco.Resources = []*metav1.APIResourceList{
+			{
+				GroupVersion: egv1a1.GroupVersion.String(),
+				APIResources: []metav1.APIResource{{Kind: resource.KindSecurityPolicy}},
+			},
+		}
+
+		attempts := 0
+		disco.PrependReactor("get", "resource", func(action clientgotesting.Action) (bool, runtime.Object, error) {
+			attempts++
+			if attempts == 1 {
+				return true, nil, kerrors.NewTooManyRequests("retry", 0)
+			}
+			return false, nil, nil
+		})
+
+		exists, err := r.crdExistsWithClient(ctx, disco, resource.KindSecurityPolicy, egv1a1.GroupVersion.String(), backoff)
+		require.NoError(t, err)
+		require.True(t, exists)
+	})
 }
