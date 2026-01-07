@@ -32,6 +32,33 @@ Envoy Gateway is built using a [make][]-based build system. Our CI is based on [
   it with a stub and require you to install a `python3-venv` package
   separately.
 
+### pre-commit (Optional)
+
+* [pre-commit][] can be used to run validations locally before committing changes.
+* Installation Guide: https://pre-commit.com/#install
+
+To set up the pre-commit hooks, run the following command from the repository root:
+
+```shell
+pre-commit install
+```
+
+This will configure Git to run the following checks before each commit:
+
+* `make lint`
+* `make test`
+* `make generate`
+* `make manifests`
+* `make gen-check`
+
+To run all pre-commit hooks manually without committing:
+
+```shell
+pre-commit run --all-files
+```
+
+[pre-commit]: https://pre-commit.com/
+
 ## Quickstart
 
 Run `make help` to see all the available targets to build, test and run Envoy Gateway. Below are the other make directives
