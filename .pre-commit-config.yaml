@@ -1,0 +1,39 @@
+# See https://pre-commit.com for more information
+# See https://pre-commit.com/hooks.html for more hooks
+repos:
+  - repo: local
+    hooks:
+      - id: make-lint
+        name: make lint
+        entry: make lint
+        language: system
+        pass_filenames: false
+        stages: [pre-commit]
+
+      - id: make-test
+        name: make test
+        entry: make test
+        language: system
+        pass_filenames: false
+        stages: [pre-commit]
+
+      - id: make-generate
+        name: make generate
+        entry: make generate
+        language: system
+        pass_filenames: false
+        stages: [pre-commit]
+
+      - id: make-manifests
+        name: make manifests
+        entry: make manifests
+        language: system
+        pass_filenames: false
+        stages: [pre-commit]
+
+      - id: make-gen-check
+        name: make gen-check
+        entry: make gen-check
+        language: system
+        pass_filenames: false
+        stages: [pre-commit]
