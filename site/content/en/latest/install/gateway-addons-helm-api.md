@@ -23,13 +23,13 @@ An Add-ons Helm chart for Envoy Gateway
 
 | Repository | Name | Version |
 |------------|------|---------|
-| https://fluent.github.io/helm-charts | fluent-bit | 0.30.4 |
-| https://grafana.github.io/helm-charts | alloy | 0.9.2 |
-| https://grafana.github.io/helm-charts | grafana | 10.3.1 |
-| https://grafana.github.io/helm-charts | loki | 4.8.0 |
+| https://fluent.github.io/helm-charts | fluent-bit | 0.54.0 |
+| https://grafana.github.io/helm-charts | alloy | 1.5.1 |
+| https://grafana.github.io/helm-charts | grafana | 10.3.2 |
+| https://grafana.github.io/helm-charts | loki | 6.49.0 |
 | https://grafana.github.io/helm-charts | tempo | 1.3.1 |
-| https://open-telemetry.github.io/opentelemetry-helm-charts | opentelemetry-collector | 0.117.3 |
-| https://prometheus-community.github.io/helm-charts | prometheus | 25.21.0 |
+| https://open-telemetry.github.io/opentelemetry-helm-charts | opentelemetry-collector | 0.141.1 |
+| https://prometheus-community.github.io/helm-charts | prometheus | 27.52.0 |
 
 ## Values
 
@@ -85,32 +85,43 @@ An Add-ons Helm chart for Envoy Gateway
 | grafana.service.type | string | `"LoadBalancer"` |  |
 | grafana.testFramework.enabled | bool | `false` |  |
 | loki.backend.replicas | int | `0` |  |
+| loki.chunksCache.enabled | bool | `false` |  |
 | loki.deploymentMode | string | `"SingleBinary"` |  |
 | loki.enabled | bool | `true` |  |
 | loki.fullnameOverride | string | `"loki"` |  |
 | loki.gateway.enabled | bool | `false` |  |
 | loki.loki.auth_enabled | bool | `false` |  |
+| loki.loki.commonConfig.instance_addr | string | `"${INSTANCE_ADDR}"` |  |
 | loki.loki.commonConfig.replication_factor | int | `1` |  |
+| loki.loki.commonConfig.ring.kvstore.store | string | `"memberlist"` |  |
 | loki.loki.compactorAddress | string | `"loki"` |  |
+| loki.loki.limits_config.otlp_config.resource_attributes.attributes_config[0].action | string | `"index_label"` |  |
+| loki.loki.limits_config.otlp_config.resource_attributes.attributes_config[0].attributes[0] | string | `"exporter"` |  |
 | loki.loki.memberlist | string | `"loki-memberlist"` |  |
 | loki.loki.rulerConfig.storage.type | string | `"local"` |  |
 | loki.loki.storage.type | string | `"filesystem"` |  |
-| loki.monitoring.lokiCanary.enabled | bool | `false` |  |
+| loki.loki.useTestSchema | bool | `true` |  |
+| loki.lokiCanary.enabled | bool | `false` |  |
 | loki.monitoring.selfMonitoring.enabled | bool | `false` |  |
 | loki.monitoring.selfMonitoring.grafanaAgent.installOperator | bool | `false` |  |
 | loki.read.replicas | int | `0` |  |
+| loki.resultsCache.enabled | bool | `false` |  |
+| loki.singleBinary.extraArgs[0] | string | `"-config.expand-env=true"` |  |
+| loki.singleBinary.extraEnv[0].name | string | `"INSTANCE_ADDR"` |  |
+| loki.singleBinary.extraEnv[0].valueFrom.fieldRef.fieldPath | string | `"status.podIP"` |  |
 | loki.singleBinary.replicas | int | `1` |  |
 | loki.test.enabled | bool | `false` |  |
 | loki.write.replicas | int | `0` |  |
 | opentelemetry-collector.config.exporters.debug.verbosity | string | `"detailed"` |  |
-| opentelemetry-collector.config.exporters.loki.endpoint | string | `"http://loki.monitoring.svc:3100/loki/api/v1/push"` |  |
 | opentelemetry-collector.config.exporters.otlp.endpoint | string | `"tempo.monitoring.svc:4317"` |  |
 | opentelemetry-collector.config.exporters.otlp.tls.insecure | bool | `true` |  |
+| opentelemetry-collector.config.exporters.otlphttp/loki.endpoint | string | `"http://loki.monitoring.svc:3100/otlp"` |  |
 | opentelemetry-collector.config.exporters.prometheus.endpoint | string | `":19001"` |  |
 | opentelemetry-collector.config.extensions.health_check.endpoint | string | `"[${env:MY_POD_IP}]:13133"` |  |
-| opentelemetry-collector.config.processors.attributes.actions[0].action | string | `"insert"` |  |
-| opentelemetry-collector.config.processors.attributes.actions[0].key | string | `"loki.attribute.labels"` |  |
-| opentelemetry-collector.config.processors.attributes.actions[0].value | string | `"k8s.pod.name, k8s.namespace.name"` |  |
+| opentelemetry-collector.config.processors.transform/loki.log_statements[0].context | string | `"log"` |  |
+| opentelemetry-collector.config.processors.transform/loki.log_statements[0].statements[0] | string | `"set(resource.attributes[\"exporter\"], \"OTLP\")"` |  |
+| opentelemetry-collector.config.processors.transform/loki.log_statements[0].statements[1] | string | `"set(resource.attributes[\"k8s.namespace.name\"], log.attributes[\"k8s.namespace.name\"])"` |  |
+| opentelemetry-collector.config.processors.transform/loki.log_statements[0].statements[2] | string | `"delete_key(log.attributes, \"k8s.namespace.name\")"` |  |
 | opentelemetry-collector.config.receivers.datadog.endpoint | string | `"[${env:MY_POD_IP}]:8126"` |  |
 | opentelemetry-collector.config.receivers.envoyals.endpoint | string | `"[${env:MY_POD_IP}]:9000"` |  |
 | opentelemetry-collector.config.receivers.jaeger.protocols.grpc.endpoint | string | `"[${env:MY_POD_IP}]:14250"` |  |
@@ -123,8 +134,8 @@ An Add-ons Helm chart for Envoy Gateway
 | opentelemetry-collector.config.receivers.prometheus.config.scrape_configs[0].static_configs[0].targets[0] | string | `"[${env:MY_POD_IP}]:8888"` |  |
 | opentelemetry-collector.config.receivers.zipkin.endpoint | string | `"[${env:MY_POD_IP}]:9411"` |  |
 | opentelemetry-collector.config.service.extensions[0] | string | `"health_check"` |  |
-| opentelemetry-collector.config.service.pipelines.logs.exporters[0] | string | `"loki"` |  |
-| opentelemetry-collector.config.service.pipelines.logs.processors[0] | string | `"attributes"` |  |
+| opentelemetry-collector.config.service.pipelines.logs.exporters[0] | string | `"otlphttp/loki"` |  |
+| opentelemetry-collector.config.service.pipelines.logs.processors[0] | string | `"transform/loki"` |  |
 | opentelemetry-collector.config.service.pipelines.logs.receivers[0] | string | `"otlp"` |  |
 | opentelemetry-collector.config.service.pipelines.logs.receivers[1] | string | `"envoyals"` |  |
 | opentelemetry-collector.config.service.pipelines.metrics.exporters[0] | string | `"prometheus"` |  |
@@ -134,14 +145,13 @@ An Add-ons Helm chart for Envoy Gateway
 | opentelemetry-collector.config.service.pipelines.traces.receivers[0] | string | `"datadog"` |  |
 | opentelemetry-collector.config.service.pipelines.traces.receivers[1] | string | `"otlp"` |  |
 | opentelemetry-collector.config.service.pipelines.traces.receivers[2] | string | `"zipkin"` |  |
-| opentelemetry-collector.config.service.telemetry.metrics.address | string | `nil` |  |
 | opentelemetry-collector.config.service.telemetry.metrics.level | string | `"none"` |  |
 | opentelemetry-collector.config.service.telemetry.metrics.readers[0].pull.exporter.prometheus.host | string | `"localhost"` |  |
 | opentelemetry-collector.config.service.telemetry.metrics.readers[0].pull.exporter.prometheus.port | int | `8888` |  |
 | opentelemetry-collector.enabled | bool | `false` |  |
 | opentelemetry-collector.fullnameOverride | string | `"otel-collector"` |  |
 | opentelemetry-collector.image.repository | string | `"otel/opentelemetry-collector-contrib"` |  |
-| opentelemetry-collector.image.tag | string | `"0.121.0"` |  |
+| opentelemetry-collector.image.tag | string | `"0.142.0"` |  |
 | opentelemetry-collector.mode | string | `"deployment"` |  |
 | opentelemetry-collector.ports.datadog.containerPort | int | `8126` |  |
 | opentelemetry-collector.ports.datadog.enabled | bool | `true` |  |
