@@ -92,15 +92,18 @@ func server(ctx context.Context, stdout, stderr io.Writer, asyncErrorNotifier *m
 		return err
 	}
 
-	// Wait for the context to be done, which usually happens the process receives a SIGTERM or SIGINT.
-	<-ctx.Done()
-
-	cfg.Logger.Info("shutting down")
-
-	// Wait for runners to finish.
-	<-runnersDone
-
-	return nil
+	for {
+		select {
+		case err := <-l.Errors():
+			if err != nil {
+				return err
+			}
+		case <-ctx.Done():
+			cfg.Logger.Info("shutting down")
+			<-runnersDone
+			return nil
+		}
+	}
 }
 
 // getConfig gets the Server configuration

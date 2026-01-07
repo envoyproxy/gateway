@@ -26,6 +26,7 @@ type Loader struct {
 	cancel  context.CancelFunc
 	hook    HookFunc
 	mu      sync.RWMutex
+	hookErr chan error
 
 	w filewatcher.FileWatcher
 }
@@ -36,12 +37,18 @@ func New(cfgPath string, cfg *config.Server, f HookFunc) *Loader {
 		cfg:     cfg,
 		logger:  cfg.Logger.WithName("config-loader"),
 		hook:    f,
+		hookErr: make(chan error, 1),
 		w:       filewatcher.NewWatcher(),
 	}
 }
 
 func (r *Loader) Start(ctx context.Context, logOut io.Writer) error {
 	r.runHook(ctx)
+	select {
+	case err := <-r.hookErr:
+		return err
+	default:
+	}
 
 	if r.cfgPath == "" {
 		r.logger.Info("no config file provided, skipping config watcher")
@@ -120,10 +127,26 @@ func (r *Loader) runHook(ctx context.Context) {
 	c, cancel := context.WithCancel(ctx)
 	r.cancel = cancel
 	go func(ctx context.Context) {
+		defer cancel()
 		if err := r.hook(ctx, cfgCopy); err != nil {
 			r.logger.Error(err, "hook error")
+			// There is nothing we can do here, throw the error to the main process to exit
+			// The EnvoyGateway pod will restart and hopefully any transient errors will be resolved
+			r.sendHookError(err)
 		}
 	}(c)
+}
+
+// Errors returns a channel where hook errors are reported.
+func (r *Loader) Errors() <-chan error {
+	return r.hookErr
+}
+
+func (r *Loader) sendHookError(err error) {
+	select {
+	case r.hookErr <- err: // avoid blocking the sender
+	default:
+	}
 }
 
 func (r *Loader) snapshotConfig() *config.Server {

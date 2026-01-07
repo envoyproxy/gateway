@@ -20,12 +20,14 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
+	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/utils/ptr"
@@ -1945,7 +1947,20 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		return fmt.Errorf("failed to watch GatewayClass: %w", err)
 	}
 
-	r.epCRDExists = r.crdExists(mgr, resource.KindEnvoyProxy, egv1a1.GroupVersion.String())
+	checkCRD := func(kind, groupVersion string) (bool, error) {
+		exists, err := r.crdExists(ctx, mgr, kind, groupVersion)
+		if err != nil {
+			return false, fmt.Errorf("failed to discover %s CRD: %w", kind, err)
+		}
+		return exists, nil
+	}
+
+	var err error
+
+	r.epCRDExists, err = checkCRD(resource.KindEnvoyProxy, egv1a1.GroupVersion.String())
+	if err != nil {
+		return err
+	}
 	if !r.epCRDExists {
 		r.log.Info("EnvoyProxy CRD not found, skipping EnvoyProxy watch")
 	} else {
@@ -2015,7 +2030,10 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 	}
 
 	// TODO: Remove this optional check once most cloud providers and service meshes support GRPCRoute v1
-	r.grpcRouteCRDExists = r.crdExists(mgr, resource.KindGRPCRoute, gwapiv1.GroupVersion.String())
+	r.grpcRouteCRDExists, err = checkCRD(resource.KindGRPCRoute, gwapiv1.GroupVersion.String())
+	if err != nil {
+		return err
+	}
 	if !r.grpcRouteCRDExists {
 		r.log.Info("GRPCRoute CRD not found, skipping GRPCRoute watch")
 	} else {
@@ -2039,7 +2057,10 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		}
 	}
 
-	r.tlsRouteCRDExists = r.crdExists(mgr, resource.KindTLSRoute, gwapiv1a3.GroupVersion.String())
+	r.tlsRouteCRDExists, err = checkCRD(resource.KindTLSRoute, gwapiv1a3.GroupVersion.String())
+	if err != nil {
+		return err
+	}
 	if !r.tlsRouteCRDExists {
 		r.log.Info("TLSRoute CRD not found, skipping TLSRoute watch")
 	} else {
@@ -2063,7 +2084,10 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		}
 	}
 
-	r.udpRouteCRDExists = r.crdExists(mgr, resource.KindUDPRoute, gwapiv1a2.GroupVersion.String())
+	r.udpRouteCRDExists, err = checkCRD(resource.KindUDPRoute, gwapiv1a2.GroupVersion.String())
+	if err != nil {
+		return err
+	}
 	if !r.udpRouteCRDExists {
 		r.log.Info("UDPRoute CRD not found, skipping UDPRoute watch")
 	} else {
@@ -2087,7 +2111,10 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		}
 	}
 
-	r.tcpRouteCRDExists = r.crdExists(mgr, resource.KindTCPRoute, gwapiv1a2.GroupVersion.String())
+	r.tcpRouteCRDExists, err = checkCRD(resource.KindTCPRoute, gwapiv1a2.GroupVersion.String())
+	if err != nil {
+		return err
+	}
 	if !r.tcpRouteCRDExists {
 		r.log.Info("TCPRoute CRD not found, skipping TCPRoute watch")
 	} else {
@@ -2132,7 +2159,10 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 	}
 
 	// Watch ServiceImport CRUDs and process affected *Route objects.
-	r.serviceImportCRDExists = r.crdExists(mgr, resource.KindServiceImport, mcsapiv1a1.GroupVersion.String())
+	r.serviceImportCRDExists, err = checkCRD(resource.KindServiceImport, mcsapiv1a1.GroupVersion.String())
+	if err != nil {
+		return err
+	}
 	if !r.serviceImportCRDExists {
 		r.log.Info("ServiceImport CRD not found, skipping ServiceImport watch")
 	} else {
@@ -2173,7 +2203,10 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 
 	// we didn't check if the backend CRD exists every time for performance,
 	// please make sure r.backendCRDExists is setting correctly before calling this
-	r.backendCRDExists = r.crdExists(mgr, resource.KindBackend, egv1a1.GroupVersion.String())
+	r.backendCRDExists, err = checkCRD(resource.KindBackend, egv1a1.GroupVersion.String())
+	if err != nil {
+		return err
+	}
 	if r.backendAPIDisabled() {
 		if !r.backendCRDExists {
 			r.log.Info("Backend CRD not found, skipping Backend watch")
@@ -2326,7 +2359,10 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		return err
 	}
 
-	r.eppCRDExists = r.crdExists(mgr, resource.KindEnvoyPatchPolicy, egv1a1.GroupVersion.String())
+	r.eppCRDExists, err = checkCRD(resource.KindEnvoyPatchPolicy, egv1a1.GroupVersion.String())
+	if err != nil {
+		return err
+	}
 	if !r.eppCRDExists {
 		r.log.Info("EnvoyPatchPolicy CRD not found, skipping EnvoyPatchPolicy watch")
 	} else if r.envoyGateway.ExtensionAPIs != nil && r.envoyGateway.ExtensionAPIs.EnableEnvoyPatchPolicy {
@@ -2350,7 +2386,10 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		}
 	}
 
-	r.ctpCRDExists = r.crdExists(mgr, resource.KindClientTrafficPolicy, egv1a1.GroupVersion.String())
+	r.ctpCRDExists, err = checkCRD(resource.KindClientTrafficPolicy, egv1a1.GroupVersion.String())
+	if err != nil {
+		return err
+	}
 	if !r.ctpCRDExists {
 		r.log.Info("ClientTrafficPolicy CRD not found, skipping ClientTrafficPolicy watch")
 	} else {
@@ -2378,7 +2417,10 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		}
 	}
 
-	r.btpCRDExists = r.crdExists(mgr, resource.KindBackendTrafficPolicy, egv1a1.GroupVersion.String())
+	r.btpCRDExists, err = checkCRD(resource.KindBackendTrafficPolicy, egv1a1.GroupVersion.String())
+	if err != nil {
+		return err
+	}
 	if !r.btpCRDExists {
 		r.log.Info("BackendTrafficPolicy CRD not found, skipping BackendTrafficPolicy watch")
 	} else {
@@ -2406,7 +2448,10 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		}
 	}
 
-	r.spCRDExists = r.crdExists(mgr, resource.KindSecurityPolicy, egv1a1.GroupVersion.String())
+	r.spCRDExists, err = checkCRD(resource.KindSecurityPolicy, egv1a1.GroupVersion.String())
+	if err != nil {
+		return err
+	}
 	if !r.spCRDExists {
 		r.log.Info("SecurityPolicy CRD not found, skipping SecurityPolicy watch")
 	} else {
@@ -2433,7 +2478,10 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		}
 	}
 
-	r.bTLSPolicyCRDExists = r.crdExists(mgr, resource.KindBackendTLSPolicy, gwapiv1.GroupVersion.String())
+	r.bTLSPolicyCRDExists, err = checkCRD(resource.KindBackendTLSPolicy, gwapiv1.GroupVersion.String())
+	if err != nil {
+		return err
+	}
 	if !r.bTLSPolicyCRDExists {
 		r.log.Info("BackendTLSPolicy CRD not found, skipping BackendTLSPolicy watch")
 	} else {
@@ -2461,7 +2509,10 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		}
 	}
 
-	r.eepCRDExists = r.crdExists(mgr, resource.KindEnvoyExtensionPolicy, egv1a1.GroupVersion.String())
+	r.eepCRDExists, err = checkCRD(resource.KindEnvoyExtensionPolicy, egv1a1.GroupVersion.String())
+	if err != nil {
+		return err
+	}
 	if !r.eepCRDExists {
 		r.log.Info("EnvoyExtensionPolicy CRD not found, skipping EnvoyExtensionPolicy watch")
 	} else {
@@ -2537,7 +2588,10 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		r.log.Info("Watching additional backend resource", "resource", gvk.String())
 	}
 
-	r.hrfCRDExists = r.crdExists(mgr, resource.KindHTTPRouteFilter, egv1a1.GroupVersion.String())
+	r.hrfCRDExists, err = checkCRD(resource.KindHTTPRouteFilter, egv1a1.GroupVersion.String())
+	if err != nil {
+		return err
+	}
 	if !r.hrfCRDExists {
 		r.log.Info("HTTPRouteFilter CRD not found, skipping HTTPRouteFilter watch")
 	} else {
@@ -2567,7 +2621,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		}
 	}
 
-	if err := r.watchClusterTrustBundle(c, mgr); err != nil {
+	if err := r.watchClusterTrustBundle(ctx, c, mgr); err != nil {
 		return err
 	}
 
@@ -2703,28 +2757,56 @@ func (r *gatewayAPIReconciler) processEnvoyProxy(ep *egv1a1.EnvoyProxy, resource
 	return nil
 }
 
-// crdExists checks for the existence of the CRD in k8s APIServer before watching it
-func (r *gatewayAPIReconciler) crdExists(mgr manager.Manager, kind, groupVersion string) bool {
+// crdExists checks for the existence of the CRD in k8s APIServer before watching it.
+func (r *gatewayAPIReconciler) crdExists(ctx context.Context, mgr manager.Manager, kind, groupVersion string) (bool, error) {
 	discoveryClient, err := discovery.NewDiscoveryClientForConfig(mgr.GetConfig())
 	if err != nil {
-		r.log.Error(err, "failed to create discovery client")
+		return false, fmt.Errorf("failed to create discovery client: %w", err)
 	}
-	apiResourceList, err := discoveryClient.ServerPreferredResources()
+
+	return r.crdExistsWithClient(ctx, discoveryClient, kind, groupVersion, wait.Backoff{
+		Duration: time.Second,
+		Factor:   1.5,
+		Jitter:   0.1,
+		Steps:    4,
+	})
+}
+
+func (r *gatewayAPIReconciler) crdExistsWithClient(ctx context.Context, discoveryClient discovery.DiscoveryInterface, kind, groupVersion string, backoff wait.Backoff) (bool, error) {
+	var apiResourceList *metav1.APIResourceList
+	var lastErr error
+	notFound := false
+
+	err := wait.ExponentialBackoffWithContext(ctx, backoff, func(ctx context.Context) (bool, error) {
+		apiResourceList, lastErr = discoveryClient.ServerResourcesForGroupVersion(groupVersion)
+		if lastErr == nil {
+			return true, nil
+		}
+		if kerrors.IsNotFound(lastErr) || apimeta.IsNoMatchError(lastErr) {
+			notFound = true
+			return true, nil
+		}
+		return false, nil
+	})
 	if err != nil {
-		r.log.Error(err, "failed to get API resource list")
+		if wait.Interrupted(err) && lastErr != nil {
+			return false, fmt.Errorf("discover resources for %s: %w", groupVersion, lastErr)
+		}
+		return false, fmt.Errorf("discover resources for %s: %w", groupVersion, err)
 	}
-	found := false
-	for _, list := range apiResourceList {
-		for i := range list.APIResources {
-			res := &list.APIResources[i]
-			if list.GroupVersion == groupVersion && res.Kind == kind {
-				found = true
-				break
-			}
+
+	if notFound || apiResourceList == nil {
+		return false, nil
+	}
+
+	for i := range apiResourceList.APIResources {
+		res := apiResourceList.APIResources[i]
+		if res.Kind == kind {
+			return true, nil
 		}
 	}
 
-	return found
+	return false, nil
 }
 
 // isCustomBackendResource checks if the given group and kind match any of the configured custom backend resources

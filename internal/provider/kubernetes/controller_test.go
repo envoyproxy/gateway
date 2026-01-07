@@ -10,15 +10,20 @@ import (
 	"fmt"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/apimachinery/pkg/util/wait"
+	discoveryfake "k8s.io/client-go/discovery/fake"
+	clientgotesting "k8s.io/client-go/testing"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -2333,4 +2338,65 @@ func TestProcessClientTrafficPolicies(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestCRDExistsWithClient(t *testing.T) {
+	ctx := context.Background()
+	r := &gatewayAPIReconciler{}
+
+	backoff := wait.Backoff{Duration: 5 * time.Millisecond, Factor: 1.0, Steps: 2}
+
+	t.Run("present kind", func(t *testing.T) {
+		disco := &discoveryfake.FakeDiscovery{Fake: &clientgotesting.Fake{}}
+		disco.Resources = []*metav1.APIResourceList{
+			{
+				GroupVersion: egv1a1.GroupVersion.String(),
+				APIResources: []metav1.APIResource{{Kind: resource.KindSecurityPolicy}},
+			},
+		}
+
+		exists, err := r.crdExistsWithClient(ctx, disco, resource.KindSecurityPolicy, egv1a1.GroupVersion.String(), backoff)
+		require.NoError(t, err)
+		require.True(t, exists)
+	})
+
+	t.Run("group missing treated as absent", func(t *testing.T) {
+		disco := &discoveryfake.FakeDiscovery{Fake: &clientgotesting.Fake{}}
+
+		exists, err := r.crdExistsWithClient(ctx, disco, resource.KindSecurityPolicy, "missing.io/v1", backoff)
+		require.NoError(t, err)
+		require.False(t, exists)
+	})
+
+	t.Run("kind missing in group", func(t *testing.T) {
+		disco := &discoveryfake.FakeDiscovery{Fake: &clientgotesting.Fake{}}
+		disco.Resources = []*metav1.APIResourceList{
+			{
+				GroupVersion: egv1a1.GroupVersion.String(),
+				APIResources: []metav1.APIResource{{Kind: "Other"}},
+			},
+		}
+
+		exists, err := r.crdExistsWithClient(ctx, disco, resource.KindSecurityPolicy, egv1a1.GroupVersion.String(), backoff)
+		require.NoError(t, err)
+		require.False(t, exists)
+	})
+
+	t.Run("fatal discovery error fails fast", func(t *testing.T) {
+		expectedErr := context.DeadlineExceeded
+		disco := &discoveryfake.FakeDiscovery{Fake: &clientgotesting.Fake{}}
+		disco.Resources = []*metav1.APIResourceList{
+			{
+				GroupVersion: egv1a1.GroupVersion.String(),
+				APIResources: []metav1.APIResource{{Kind: resource.KindSecurityPolicy}},
+			},
+		}
+		disco.PrependReactor("get", "resource", func(action clientgotesting.Action) (bool, runtime.Object, error) {
+			return true, nil, expectedErr
+		})
+
+		exists, err := r.crdExistsWithClient(ctx, disco, resource.KindSecurityPolicy, egv1a1.GroupVersion.String(), backoff)
+		require.ErrorIs(t, err, expectedErr)
+		require.False(t, exists)
+	})
 }
