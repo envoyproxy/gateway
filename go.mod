@@ -42,7 +42,7 @@ require (
 	github.com/prometheus/client_model v0.6.2
 	github.com/prometheus/common v0.67.5
 	github.com/quic-go/quic-go v0.58.0
-	github.com/replicatedhq/troubleshoot v0.123.16
+	github.com/replicatedhq/troubleshoot v0.123.13
 	github.com/shopspring/decimal v1.4.0
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.10
