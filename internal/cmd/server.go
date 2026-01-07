@@ -8,6 +8,7 @@ package cmd
 import (
 	"context"
 	"io"
+	"time"
 
 	"github.com/spf13/cobra"
 
@@ -77,14 +78,16 @@ func server(ctx context.Context, stdout, stderr io.Writer, asyncErrorNotifier *m
 		return err
 	}
 
-	runnersDone := make(chan struct{})
+	runnersDone := make(chan int64)
 	hook := func(c context.Context, cfg *config.Server) error {
-		cfg.Logger.Info("Start runners")
-		if err := startRunners(c, cfg, asyncErrorNotifier); err != nil {
+		id := time.Now().Unix()
+		logger := cfg.Logger.WithValues("id", id)
+		logger.Info("start runners")
+		if err := startRunners(c, logger, cfg, asyncErrorNotifier); err != nil {
 			cfg.Logger.Error(err, "failed to start runners")
 			return err
 		}
-		runnersDone <- struct{}{}
+		runnersDone <- id
 		return nil
 	}
 	l := loader.New(cfgPath, cfg, hook)
@@ -93,14 +96,15 @@ func server(ctx context.Context, stdout, stderr io.Writer, asyncErrorNotifier *m
 	}
 
 	// Wait for the context to be done, which usually happens the process receives a SIGTERM or SIGINT.
-	<-ctx.Done()
-
-	cfg.Logger.Info("shutting down")
-
-	// Wait for runners to finish.
-	<-runnersDone
-
-	return nil
+	for {
+		select {
+		case <-ctx.Done():
+			cfg.Logger.Info("shutting down")
+			return nil
+		case id := <-runnersDone:
+			cfg.Logger.Info("stop runners", "id", id)
+		}
+	}
 }
 
 // getConfig gets the Server configuration
@@ -148,7 +152,7 @@ func getConfigByPath(stdout, stderr io.Writer, cfgPath string) (*config.Server, 
 //
 // This will block until the context is done, and returns after synchronously
 // closing all the runners.
-func startRunners(ctx context.Context, cfg *config.Server, runnerErrors *message.RunnerErrors) (err error) {
+func startRunners(ctx context.Context, logger logging.Logger, cfg *config.Server, runnerErrors *message.RunnerErrors) (err error) {
 	channels := struct {
 		pResources *message.ProviderResources
 		xdsIR      *message.XdsIR
@@ -242,7 +246,7 @@ func startRunners(ctx context.Context, cfg *config.Server, runnerErrors *message
 
 	// Start all runners
 	for _, r := range runners {
-		if err = startRunner(ctx, cfg, r.runner); err != nil {
+		if err = startRunner(ctx, logger, cfg, r.runner); err != nil {
 			return err
 		}
 	}
@@ -255,7 +259,7 @@ func startRunners(ctx context.Context, cfg *config.Server, runnerErrors *message
 			XdsIR:        channels.xdsIR,
 			RunnerErrors: runnerErrors,
 		})
-		if err = startRunner(ctx, cfg, rateLimitRunner); err != nil {
+		if err = startRunner(ctx, logger, cfg, rateLimitRunner); err != nil {
 			return err
 		}
 	}
@@ -267,10 +271,10 @@ func startRunners(ctx context.Context, cfg *config.Server, runnerErrors *message
 	// No need to close infraIR and pResources channels since they are already closed
 	channels.xdsIR.Close()
 
-	cfg.Logger.Info("runners are shutting down")
+	logger.Info("runners are shutting down")
 	for _, r := range runners {
 		if err := r.runner.Close(); err != nil {
-			cfg.Logger.Error(err, "failed to close runner", "name", r.runner.Name())
+			logger.Error(err, "failed to close runner", "name", r.runner.Name())
 		}
 	}
 
@@ -284,10 +288,10 @@ func startRunners(ctx context.Context, cfg *config.Server, runnerErrors *message
 	return nil
 }
 
-func startRunner(ctx context.Context, cfg *config.Server, runner Runner) error {
-	cfg.Logger.Info("Starting runner", "name", runner.Name())
+func startRunner(ctx context.Context, logger logging.Logger, cfg *config.Server, runner Runner) error {
+	logger.Info("Starting runner", "name", runner.Name())
 	if err := runner.Start(ctx); err != nil {
-		cfg.Logger.Error(err, "Failed to start runner", "name", runner.Name())
+		logger.Error(err, "Failed to start runner", "name", runner.Name())
 		return err
 	}
 	return nil
