@@ -1,10 +1,10 @@
 dependencies:
 - name: prometheus
   repository: https://prometheus-community.github.io/helm-charts
-  version: 28.2.0
+  version: 28.2.1
 - name: grafana
   repository: https://grafana.github.io/helm-charts
-  version: 10.5.3
+  version: 10.5.4
 - name: fluent-bit
   repository: https://fluent.github.io/helm-charts
   version: 0.54.1
@@ -20,5 +20,5 @@ dependencies:
 - name: opentelemetry-collector
   repository: https://open-telemetry.github.io/opentelemetry-helm-charts
   version: 0.142.2
-digest: sha256:06c696c717e344a15a529f5041007868d888596a4fa3312d36247f9c7be7c08c
-generated: "2026-01-07T04:07:33.963441313Z"
+digest: sha256:a51f9834ec8a589da42aa32a63fa21a9f9272ebb42749e912e9a43b7215071ff
+generated: "2026-01-07T20:22:39.8124514Z"
