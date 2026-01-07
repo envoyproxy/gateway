@@ -2790,9 +2790,6 @@ func (r *gatewayAPIReconciler) crdExistsWithClient(ctx context.Context, discover
 		// the CRD doesn't exist when the GroupVersion doesn't exist
 		case kerrors.IsNotFound(err) || apimeta.IsNoMatchError(err):
 			return false, nil
-		// return immediately if the context is done
-		case errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded):
-			return false, fmt.Errorf("discover resources for %s: %w", groupVersion, err)
 		// return immediately if it's a non-recoverable error
 		case !isTransientError(err):
 			return false, fmt.Errorf("discover resources for %s: %w", groupVersion, err)
