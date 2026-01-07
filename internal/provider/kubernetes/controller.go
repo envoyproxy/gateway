@@ -2889,14 +2889,14 @@ func (r *gatewayAPIReconciler) processEnvoyExtensionPolicyObjectRefs(
 			}
 		}
 
-		// Add the referenced SecretRefs in EnvoyExtensionPolicies to the resourceTree
+		// Add the referenced SecretRefs, ConfigMapRefs, and ClusterTrustBundleRefs in EnvoyExtensionPolicies to the resourceTree
 		for _, wasm := range policy.Spec.Wasm {
 			if wasm.Code.Image != nil && wasm.Code.Image.PullSecretRef != nil {
 				if err := r.processSecretRef(
 					ctx,
 					resourceMap,
 					resourceTree,
-					resource.KindSecurityPolicy,
+					resource.KindEnvoyExtensionPolicy,
 					policy.Namespace,
 					policy.Name,
 					*wasm.Code.Image.PullSecretRef); err != nil {
@@ -2907,6 +2907,71 @@ func (r *gatewayAPIReconciler) processEnvoyExtensionPolicyObjectRefs(
 					r.log.Error(err,
 						"failed to process Wasm Image PullSecretRef for EnvoyExtensionPolicy",
 						"policy", policy, "secretRef", wasm.Code.Image.PullSecretRef)
+				}
+			}
+
+			var caCertRef *gwapiv1.SecretObjectReference
+			if wasm.Code.HTTP != nil && wasm.Code.HTTP.TLS != nil {
+				caCertRef = &wasm.Code.HTTP.TLS.CACertificateRef
+			} else if wasm.Code.Image != nil && wasm.Code.Image.TLS != nil {
+				caCertRef = &wasm.Code.Image.TLS.CACertificateRef
+			}
+
+			if caCertRef != nil {
+				kind := resource.KindSecret
+				if caCertRef.Kind != nil {
+					kind = string(*caCertRef.Kind)
+				}
+
+				switch kind {
+				case resource.KindSecret:
+					if err := r.processSecretRef(
+						ctx,
+						resourceMap,
+						resourceTree,
+						resource.KindEnvoyExtensionPolicy,
+						policy.Namespace,
+						policy.Name,
+						*caCertRef); err != nil {
+						// If the error is transient, we return it to retry later
+						if isTransientError(err) {
+							return err
+						}
+						r.log.Error(err,
+							"failed to process Wasm TLS Secret CA Cert Ref for EnvoyExtensionPolicy",
+							"policy", policy, "secretRef", caCertRef)
+					}
+				case resource.KindConfigMap:
+					if err := r.processConfigMapRef(
+						ctx,
+						resourceMap,
+						resourceTree,
+						resource.KindEnvoyExtensionPolicy,
+						policy.Namespace,
+						policy.Name,
+						*caCertRef); err != nil {
+						// If the error is transient, we return it to retry later
+						if isTransientError(err) {
+							return err
+						}
+						r.log.Error(err,
+							"failed to process Wasm TLS ConfigMap CA Cert Ref for EnvoyExtensionPolicy",
+							"policy", policy, "configMapRef", caCertRef)
+					}
+				case resource.KindClusterTrustBundle:
+					if err := r.processClusterTrustBundleRef(
+						ctx,
+						resourceMap,
+						resourceTree,
+						*caCertRef); err != nil {
+						// If the error is transient, we return it to retry later
+						if isTransientError(err) {
+							return err
+						}
+						r.log.Error(err,
+							"failed to process Wasm TLS ClusterTrustBundle CA Cert Ref for EnvoyExtensionPolicy",
+							"policy", policy, "ctbRef", caCertRef)
+					}
 				}
 			}
 		}
