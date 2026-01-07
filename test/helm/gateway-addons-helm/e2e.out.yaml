@@ -35,10 +35,10 @@ metadata:
   name: otel-collector
   namespace: monitoring
   labels:
-    helm.sh/chart: opentelemetry-collector-0.141.1
+    helm.sh/chart: opentelemetry-collector-0.142.2
     app.kubernetes.io/name: opentelemetry-collector
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "0.141.0"
+    app.kubernetes.io/version: "0.142.0"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: opentelemetry-collector
     app.kubernetes.io/component: standalone-collector
@@ -51,8 +51,8 @@ metadata:
     app.kubernetes.io/component: server
     app.kubernetes.io/name: prometheus
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: v3.8.1
-    helm.sh/chart: prometheus-27.52.0
+    app.kubernetes.io/version: v3.9.0
+    helm.sh/chart: prometheus-28.2.0
     app.kubernetes.io/part-of: prometheus
   name: prometheus
   namespace: monitoring
@@ -307,10 +307,10 @@ metadata:
   name: otel-collector
   namespace: monitoring
   labels:
-    helm.sh/chart: opentelemetry-collector-0.141.1
+    helm.sh/chart: opentelemetry-collector-0.142.2
     app.kubernetes.io/name: opentelemetry-collector
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "0.141.0"
+    app.kubernetes.io/version: "0.142.0"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: opentelemetry-collector
     app.kubernetes.io/component: standalone-collector
@@ -421,8 +421,8 @@ metadata:
     app.kubernetes.io/component: server
     app.kubernetes.io/name: prometheus
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: v3.8.1
-    helm.sh/chart: prometheus-27.52.0
+    app.kubernetes.io/version: v3.9.0
+    helm.sh/chart: prometheus-28.2.0
     app.kubernetes.io/part-of: prometheus
   name: prometheus
   namespace: monitoring
@@ -437,18 +437,9 @@ data:
       evaluation_interval: 1m
       scrape_interval: 10s
       scrape_timeout: 10s
-    rule_files:
-    - /etc/config/recording_rules.yml
-    - /etc/config/alerting_rules.yml
-    - /etc/config/rules
-    - /etc/config/alerts
     scrape_configs:
-    - job_name: prometheus
-      static_configs:
-      - targets:
-        - localhost:9090
-    - bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
-      job_name: kubernetes-apiservers
+    - job_name: kubernetes-api-servers
+      bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
       kubernetes_sd_configs:
       - role: endpoints
       relabel_configs:
@@ -461,8 +452,8 @@ data:
       scheme: https
       tls_config:
         ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
-    - bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
-      job_name: kubernetes-nodes
+    - job_name: kubernetes-nodes
+      bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
       kubernetes_sd_configs:
       - role: node
       relabel_configs:
@@ -478,8 +469,8 @@ data:
       scheme: https
       tls_config:
         ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
-    - bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
-      job_name: kubernetes-nodes-cadvisor
+    - job_name: kubernetes-nodes-cadvisor
+      bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
       kubernetes_sd_configs:
       - role: node
       relabel_configs:
@@ -495,138 +486,8 @@ data:
       scheme: https
       tls_config:
         ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
-    - honor_labels: true
-      job_name: kubernetes-service-endpoints
-      kubernetes_sd_configs:
-      - role: endpoints
-      relabel_configs:
-      - action: keep
-        regex: true
-        source_labels:
-        - __meta_kubernetes_service_annotation_prometheus_io_scrape
-      - action: drop
-        regex: true
-        source_labels:
-        - __meta_kubernetes_service_annotation_prometheus_io_scrape_slow
-      - action: replace
-        regex: (https?)
-        source_labels:
-        - __meta_kubernetes_service_annotation_prometheus_io_scheme
-        target_label: __scheme__
-      - action: replace
-        regex: (.+)
-        source_labels:
-        - __meta_kubernetes_service_annotation_prometheus_io_path
-        target_label: __metrics_path__
-      - action: replace
-        regex: (.+?)(?::\d+)?;(\d+)
-        replacement: $1:$2
-        source_labels:
-        - __address__
-        - __meta_kubernetes_service_annotation_prometheus_io_port
-        target_label: __address__
-      - action: labelmap
-        regex: __meta_kubernetes_service_annotation_prometheus_io_param_(.+)
-        replacement: __param_$1
-      - action: labelmap
-        regex: __meta_kubernetes_service_label_(.+)
-      - action: replace
-        source_labels:
-        - __meta_kubernetes_namespace
-        target_label: namespace
-      - action: replace
-        source_labels:
-        - __meta_kubernetes_service_name
-        target_label: service
-      - action: replace
-        source_labels:
-        - __meta_kubernetes_pod_node_name
-        target_label: node
-    - honor_labels: true
-      job_name: kubernetes-service-endpoints-slow
-      kubernetes_sd_configs:
-      - role: endpoints
-      relabel_configs:
-      - action: keep
-        regex: true
-        source_labels:
-        - __meta_kubernetes_service_annotation_prometheus_io_scrape_slow
-      - action: replace
-        regex: (https?)
-        source_labels:
-        - __meta_kubernetes_service_annotation_prometheus_io_scheme
-        target_label: __scheme__
-      - action: replace
-        regex: (.+)
-        source_labels:
-        - __meta_kubernetes_service_annotation_prometheus_io_path
-        target_label: __metrics_path__
-      - action: replace
-        regex: (.+?)(?::\d+)?;(\d+)
-        replacement: $1:$2
-        source_labels:
-        - __address__
-        - __meta_kubernetes_service_annotation_prometheus_io_port
-        target_label: __address__
-      - action: labelmap
-        regex: __meta_kubernetes_service_annotation_prometheus_io_param_(.+)
-        replacement: __param_$1
-      - action: labelmap
-        regex: __meta_kubernetes_service_label_(.+)
-      - action: replace
-        source_labels:
-        - __meta_kubernetes_namespace
-        target_label: namespace
-      - action: replace
-        source_labels:
-        - __meta_kubernetes_service_name
-        target_label: service
-      - action: replace
-        source_labels:
-        - __meta_kubernetes_pod_node_name
-        target_label: node
-      scrape_interval: 5m
-      scrape_timeout: 30s
-    - honor_labels: true
-      job_name: prometheus-pushgateway
-      kubernetes_sd_configs:
-      - role: service
-      relabel_configs:
-      - action: keep
-        regex: pushgateway
-        source_labels:
-        - __meta_kubernetes_service_annotation_prometheus_io_probe
-    - honor_labels: true
-      job_name: kubernetes-services
-      kubernetes_sd_configs:
-      - role: service
-      metrics_path: /probe
-      params:
-        module:
-        - http_2xx
-      relabel_configs:
-      - action: keep
-        regex: true
-        source_labels:
-        - __meta_kubernetes_service_annotation_prometheus_io_probe
-      - source_labels:
-        - __address__
-        target_label: __param_target
-      - replacement: blackbox
-        target_label: __address__
-      - source_labels:
-        - __param_target
-        target_label: instance
-      - action: labelmap
-        regex: __meta_kubernetes_service_label_(.+)
-      - source_labels:
-        - __meta_kubernetes_namespace
-        target_label: namespace
-      - source_labels:
-        - __meta_kubernetes_service_name
-        target_label: service
-    - honor_labels: true
-      job_name: kubernetes-pods
+    - job_name: kubernetes-pods
+      honor_labels: true
       kubernetes_sd_configs:
       - role: pod
       relabel_configs:
@@ -683,8 +544,8 @@ data:
         source_labels:
         - __meta_kubernetes_pod_node_name
         target_label: node
-    - honor_labels: true
-      job_name: kubernetes-pods-slow
+    - job_name: kubernetes-pods-slow
+      honor_labels: true
       kubernetes_sd_configs:
       - role: pod
       relabel_configs:
@@ -739,6 +600,145 @@ data:
         target_label: node
       scrape_interval: 5m
       scrape_timeout: 30s
+    - job_name: kubernetes-service-endpoints
+      honor_labels: true
+      kubernetes_sd_configs:
+      - role: endpoints
+      relabel_configs:
+      - action: keep
+        regex: true
+        source_labels:
+        - __meta_kubernetes_service_annotation_prometheus_io_scrape
+      - action: drop
+        regex: true
+        source_labels:
+        - __meta_kubernetes_service_annotation_prometheus_io_scrape_slow
+      - action: replace
+        regex: (https?)
+        source_labels:
+        - __meta_kubernetes_service_annotation_prometheus_io_scheme
+        target_label: __scheme__
+      - action: replace
+        regex: (.+)
+        source_labels:
+        - __meta_kubernetes_service_annotation_prometheus_io_path
+        target_label: __metrics_path__
+      - action: replace
+        regex: (.+?)(?::\d+)?;(\d+)
+        replacement: $1:$2
+        source_labels:
+        - __address__
+        - __meta_kubernetes_service_annotation_prometheus_io_port
+        target_label: __address__
+      - action: labelmap
+        regex: __meta_kubernetes_service_annotation_prometheus_io_param_(.+)
+        replacement: __param_$1
+      - action: labelmap
+        regex: __meta_kubernetes_service_label_(.+)
+      - action: replace
+        source_labels:
+        - __meta_kubernetes_namespace
+        target_label: namespace
+      - action: replace
+        source_labels:
+        - __meta_kubernetes_service_name
+        target_label: service
+      - action: replace
+        source_labels:
+        - __meta_kubernetes_pod_node_name
+        target_label: node
+    - job_name: kubernetes-service-endpoints-slow
+      honor_labels: true
+      kubernetes_sd_configs:
+      - role: endpoints
+      relabel_configs:
+      - action: keep
+        regex: true
+        source_labels:
+        - __meta_kubernetes_service_annotation_prometheus_io_scrape_slow
+      - action: replace
+        regex: (https?)
+        source_labels:
+        - __meta_kubernetes_service_annotation_prometheus_io_scheme
+        target_label: __scheme__
+      - action: replace
+        regex: (.+)
+        source_labels:
+        - __meta_kubernetes_service_annotation_prometheus_io_path
+        target_label: __metrics_path__
+      - action: replace
+        regex: (.+?)(?::\d+)?;(\d+)
+        replacement: $1:$2
+        source_labels:
+        - __address__
+        - __meta_kubernetes_service_annotation_prometheus_io_port
+        target_label: __address__
+      - action: labelmap
+        regex: __meta_kubernetes_service_annotation_prometheus_io_param_(.+)
+        replacement: __param_$1
+      - action: labelmap
+        regex: __meta_kubernetes_service_label_(.+)
+      - action: replace
+        source_labels:
+        - __meta_kubernetes_namespace
+        target_label: namespace
+      - action: replace
+        source_labels:
+        - __meta_kubernetes_service_name
+        target_label: service
+      - action: replace
+        source_labels:
+        - __meta_kubernetes_pod_node_name
+        target_label: node
+      scrape_interval: 5m
+      scrape_timeout: 30s
+    - job_name: kubernetes-services
+      honor_labels: true
+      kubernetes_sd_configs:
+      - role: service
+      metrics_path: /probe
+      params:
+        module:
+        - http_2xx
+      relabel_configs:
+      - action: keep
+        regex: true
+        source_labels:
+        - __meta_kubernetes_service_annotation_prometheus_io_probe
+      - source_labels:
+        - __address__
+        target_label: __param_target
+      - replacement: blackbox
+        target_label: __address__
+      - source_labels:
+        - __param_target
+        target_label: instance
+      - action: labelmap
+        regex: __meta_kubernetes_service_label_(.+)
+      - source_labels:
+        - __meta_kubernetes_namespace
+        target_label: namespace
+      - source_labels:
+        - __meta_kubernetes_service_name
+        target_label: service
+    - job_name: prometheus
+      static_configs:
+      - targets:
+        - localhost:9090
+    - job_name: prometheus-pushgateway
+      honor_labels: true
+      kubernetes_sd_configs:
+      - role: service
+      relabel_configs:
+      - action: keep
+        regex: pushgateway
+        source_labels:
+        - __meta_kubernetes_service_annotation_prometheus_io_probe
+    rule_files:
+    - /etc/config/recording_rules.yml
+    - /etc/config/alerting_rules.yml
+    - /etc/config/rules
+    - /etc/config/alerts
   recording_rules.yml: |
     {}
   rules: |
@@ -10196,8 +10196,8 @@ metadata:
     app.kubernetes.io/component: server
     app.kubernetes.io/name: prometheus
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: v3.8.1
-    helm.sh/chart: prometheus-27.52.0
+    app.kubernetes.io/version: v3.9.0
+    helm.sh/chart: prometheus-28.2.0
     app.kubernetes.io/part-of: prometheus
   name: prometheus
 rules:
@@ -10287,8 +10287,8 @@ metadata:
     app.kubernetes.io/component: server
     app.kubernetes.io/name: prometheus
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: v3.8.1
-    helm.sh/chart: prometheus-27.52.0
+    app.kubernetes.io/version: v3.9.0
+    helm.sh/chart: prometheus-28.2.0
     app.kubernetes.io/part-of: prometheus
   name: prometheus
 subjects:
@@ -10410,10 +10410,10 @@ metadata:
   name: otel-collector
   namespace: monitoring
   labels:
-    helm.sh/chart: opentelemetry-collector-0.141.1
+    helm.sh/chart: opentelemetry-collector-0.142.2
     app.kubernetes.io/name: opentelemetry-collector
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "0.141.0"
+    app.kubernetes.io/version: "0.142.0"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: opentelemetry-collector
     app.kubernetes.io/component: standalone-collector
@@ -10470,8 +10470,8 @@ metadata:
     app.kubernetes.io/component: server
     app.kubernetes.io/name: prometheus
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: v3.8.1
-    helm.sh/chart: prometheus-27.52.0
+    app.kubernetes.io/version: v3.9.0
+    helm.sh/chart: prometheus-28.2.0
     app.kubernetes.io/part-of: prometheus
   name: prometheus
   namespace: monitoring
@@ -10633,10 +10633,10 @@ metadata:
   name: otel-collector
   namespace: monitoring
   labels:
-    helm.sh/chart: opentelemetry-collector-0.141.1
+    helm.sh/chart: opentelemetry-collector-0.142.2
     app.kubernetes.io/name: opentelemetry-collector
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "0.141.0"
+    app.kubernetes.io/version: "0.142.0"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: opentelemetry-collector
     app.kubernetes.io/component: standalone-collector
@@ -10653,7 +10653,7 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/config: 716747672f86c5cca87c85db09a8b79ce39cf2bcb0120e6534cdc870dcdf5831
+        checksum/config: c1e28c33bb38e36c7a1c59d812ecb5423b9cc1aa1bcb86c3b255d4fe89828388
         
       labels:
         app.kubernetes.io/name: opentelemetry-collector
@@ -10672,7 +10672,7 @@ spec:
             - --config=/conf/relay.yaml
           securityContext:
             {}
-          image: "otel/opentelemetry-collector-contrib:0.142.0"
+          image: "otel/opentelemetry-collector-contrib:0.143.1"
           imagePullPolicy: IfNotPresent
           ports:
             
@@ -10734,8 +10734,8 @@ metadata:
     app.kubernetes.io/component: server
     app.kubernetes.io/name: prometheus
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: v3.8.1
-    helm.sh/chart: prometheus-27.52.0
+    app.kubernetes.io/version: v3.9.0
+    helm.sh/chart: prometheus-28.2.0
     app.kubernetes.io/part-of: prometheus
   name: prometheus
   namespace: monitoring
@@ -10756,8 +10756,8 @@ spec:
         app.kubernetes.io/component: server
         app.kubernetes.io/name: prometheus
         app.kubernetes.io/instance: gateway-addons-helm
-        app.kubernetes.io/version: v3.8.1
-        helm.sh/chart: prometheus-27.52.0
+        app.kubernetes.io/version: v3.9.0
+        helm.sh/chart: prometheus-28.2.0
         app.kubernetes.io/part-of: prometheus
     spec:
       enableServiceLinks: true
@@ -10792,7 +10792,7 @@ spec:
               readOnly: true
 
         - name: prometheus-server
-          image: "prom/prometheus:v3.8.1"
+          image: "prom/prometheus:v3.9.0"
           imagePullPolicy: "IfNotPresent"
           args:
             - --storage.tsdb.retention.time=15d
