@@ -118,3 +118,7 @@ adopters:
     logo: "/logos/procore.svg"
     url: "https://www.procore.com/"
     description: "Procore uses Envoy Gateway to manage ingress traffic for its primary and largest application."
+  - name: "LY Corporation"
+    logo: "/logos/ly-corporation.png"
+    url: "https://www.lycorp.co.jp/en/"
+    description: "LY Corporation uses Envoy Gateway to manage ingress traffic for their internal AI inference traffic with Envoy AI Gateway."
