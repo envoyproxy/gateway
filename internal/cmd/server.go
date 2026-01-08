@@ -8,6 +8,7 @@ package cmd
 import (
 	"context"
 	"io"
+	"sync"
 
 	"github.com/spf13/cobra"
 
@@ -77,10 +78,12 @@ func server(ctx context.Context, stdout, stderr io.Writer, asyncErrorNotifier *m
 		return err
 	}
 
-	runnersDone := make(chan struct{})
+	var hookWG sync.WaitGroup
 	hook := func(c context.Context, cfg *config.Server) error {
+		hookWG.Add(1)
+		defer hookWG.Done()
+
 		cfg.Logger.Info("Start runners")
-		defer func() { runnersDone <- struct{}{} }()
 		if err := startRunners(c, cfg, asyncErrorNotifier); err != nil {
 			cfg.Logger.Error(err, "failed to start runners")
 			return err
@@ -95,14 +98,17 @@ func server(ctx context.Context, stdout, stderr io.Writer, asyncErrorNotifier *m
 	for {
 		select {
 		case err := <-l.Errors():
-			if err != nil {
-				return err
-			}
+			cfg.Logger.Error(err, "failed to start runners")
+			// Wait for runners to finish before shutting down.
+			// This is to make sure no orphaned runner process is left running in standalone mode.
+			hookWG.Wait()
+			return err
 		// Wait for the context to be done, which usually happens the process receives a SIGTERM or SIGINT.
 		case <-ctx.Done():
 			cfg.Logger.Info("shutting down")
 			// Wait for runners to finish before shutting down.
-			<-runnersDone
+			// This is to make sure no orphaned runner process is left running in standalone mode.
+			hookWG.Wait()
 			return nil
 		}
 	}
