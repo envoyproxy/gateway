@@ -22,6 +22,7 @@ new features: |
   Set warning status condition for deprecated fields in xPolicy CRDs.
   Added support for URLRewrite filter on individual backendRefs.
   Added support for custom headers on OTLP exports (metrics, tracing, access logs).
+  Added support for allowing OPTIONS method implicitly when CORS security policy is used in HTTPRoutes.
 
 bug fixes: |
   Fixed configured OIDC authorization endpoint being overridden by discovered endpoints from issuer's well-known URL.

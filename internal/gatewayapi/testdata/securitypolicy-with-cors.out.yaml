@@ -167,7 +167,8 @@ httpRoutes:
       - name: service-1
         port: 8080
       matches:
-      - path:
+      - method: GET
+        path:
           value: /
   status:
     parents:
@@ -566,6 +567,69 @@ xdsIR:
             name: httproute/default/httproute-1/rule/0/backend/0
             protocol: HTTP
             weight: 1
+        headerMatches:
+        - distinct: false
+          exact: OPTIONS
+          name: :method
+        - distinct: false
+          name: origin
+          safeRegex: .*
+        - distinct: false
+          name: access-control-request-method
+          safeRegex: .*
+        hostname: gateway.envoyproxy.io
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-1
+          namespace: default
+        name: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io-cors-preflight
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /
+        security:
+          cors:
+            allowHeaders:
+            - x-header-5
+            - x-header-6
+            allowMethods:
+            - GET
+            - POST
+            allowOrigins:
+            - distinct: false
+              name: ""
+              safeRegex: https://.*\.test\.com:8080
+            - distinct: false
+              exact: https://www.test.org:8080
+              name: ""
+            exposeHeaders:
+            - x-header-7
+            - x-header-8
+            maxAge: 33m20s
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-1
+            namespace: default
+          name: httproute/default/httproute-1/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            metadata:
+              kind: Service
+              name: service-1
+              namespace: default
+              sectionName: "8080"
+            name: httproute/default/httproute-1/rule/0/backend/0
+            protocol: HTTP
+            weight: 1
+        headerMatches:
+        - distinct: false
+          exact: GET
+          name: :method
         hostname: gateway.envoyproxy.io
         isHTTP2: false
         metadata:

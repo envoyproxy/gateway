@@ -391,6 +391,20 @@ func (t *Translator) processSecurityPolicyForGateway(
 			policy.Generation,
 		)
 	}
+
+	// append the preflight routes to the listener
+	for _, listener := range targetedGateway.listeners {
+		// If the target is a gateway and the section name is defined, then the policy should only apply to the listener
+		if currTarget.SectionName != nil && string(*currTarget.SectionName) != string(listener.Name) {
+			continue
+		}
+
+		irListener := xdsIR[t.getIRKey(targetedGateway.Gateway)].GetHTTPListener(irListenerName(listener))
+		if irListener != nil && irListener.Routes != nil {
+			// Prefix is empty because invalid prefix means apply to all routes
+			t.processCORSPreflight(irListener, "", policy.Spec.CORS)
+		}
+	}
 }
 
 // validateSecurityPolicy validates the SecurityPolicy.
@@ -787,6 +801,7 @@ func (t *Translator) translateSecurityPolicyForRoute(
 							}
 						}
 					}
+					t.processCORSPreflight(irListener, prefix, policy.Spec.CORS)
 				}
 			}
 		}
@@ -798,6 +813,7 @@ func (t *Translator) translateSecurityPolicyForRoute(
 			"error", errs,
 		)
 	}
+
 	return errs
 }
 
@@ -2114,4 +2130,61 @@ func defaultAuthorizationRuleName(policy *egv1a1.SecurityPolicy, index int) stri
 		"%s/authorization/rule/%s",
 		irConfigName(policy),
 		strconv.Itoa(index))
+}
+
+func (t *Translator) processCORSPreflight(irListener *ir.HTTPListener, prefix string, cors *egv1a1.CORS) {
+	if cors == nil {
+		return
+	}
+
+	var preflightRoutes []*ir.HTTPRoute
+	for _, r := range irListener.Routes {
+		// If the prefix is empty, it means the policy applies to all routes (Gateway target)
+		// If the prefix is not empty, it means the policy applies to a specific route (Route target)
+		if prefix != "" && !strings.HasPrefix(r.Name, prefix) {
+			continue
+		}
+
+		// Check if the route needs preflight
+		needsPreflight := false
+		for _, m := range r.HeaderMatches {
+			if m.Name == ":method" && m.Exact != nil && *m.Exact != "OPTIONS" {
+				needsPreflight = true
+				break
+			}
+		}
+
+		if needsPreflight {
+			// Check if a preflight route already exists for this route
+			preflightName := r.Name + "-cors-preflight"
+			exists := false
+			for _, existing := range irListener.Routes {
+				if existing.Name == preflightName {
+					exists = true
+					break
+				}
+			}
+			if exists {
+				continue
+			}
+
+			preRoute := &ir.HTTPRoute{
+				Security: &ir.SecurityFeatures{
+					CORS: t.buildCORS(cors),
+				},
+				Name:              preflightName,
+				Metadata:          r.Metadata,
+				PathMatch:         r.PathMatch,
+				QueryParamMatches: r.QueryParamMatches,
+				CORS:              r.CORS,
+				Hostname:          r.Hostname,
+				Destination:       r.Destination,
+			}
+
+			preRoute.HeaderMatches = buildHeaderMatches(r)
+			preflightRoutes = append(preflightRoutes, preRoute)
+		}
+	}
+
+	irListener.Routes = append(irListener.Routes, preflightRoutes...)
 }
