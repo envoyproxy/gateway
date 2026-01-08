@@ -89,16 +89,16 @@ metadata:
   namespace: gateway-conformance-infra
 spec:
   parentRefs:
-  - name: same-namespace
-  hostnames: ["www.example.com"]
+    - name: same-namespace
+  hostnames: [ "www.example.com" ]
   rules:
-  - matches:
-    - path:
-        type: PathPrefix
-        value: /wasm-http-tls
-    backendRefs:
-    - name: infra-backend-v1
-      port: 8080
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /wasm-http-tls
+      backendRefs:
+        - name: infra-backend-v1
+          port: 8080
 ---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyExtensionPolicy
@@ -107,19 +107,19 @@ metadata:
   namespace: gateway-conformance-infra
 spec:
   targetRefs:
-  - group: gateway.networking.k8s.io
-    kind: HTTPRoute
-    name: http-with-wasm-http-tls
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: http-with-wasm-http-tls
   wasm:
-  - name: wasm-filter
-    rootID: my_root_id
-    code:
-      type: HTTP
-      http:
-        url: https://remote-jwks-server.gateway-conformance-infra/wasm/envoy_filter_http_wasm_example.wasm
-        sha256: 79c9f85128bb0177b6511afa85d587224efded376ac0ef76df56595f1e6315c0
-        tls:
-          caCertificateRef:
-            name: wasm-http-tls-server-ca
-            group: ''
-            kind: ConfigMap
+    - name: wasm-filter
+      rootID: my_root_id
+      code:
+        type: HTTP
+        http:
+          url: https://remote-jwks-server.gateway-conformance-infra/wasm/envoy_filter_http_wasm_example.wasm
+          sha256: 79c9f85128bb0177b6511afa85d587224efded376ac0ef76df56595f1e6315c0
+          tls:
+            caCertificateRef:
+              name: wasm-http-tls-server-ca
+              group: ''
+              kind: ConfigMap
