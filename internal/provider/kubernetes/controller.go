@@ -29,6 +29,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/discovery"
+	"k8s.io/client-go/util/retry"
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -2773,9 +2774,14 @@ func (r *gatewayAPIReconciler) crdExists(ctx context.Context, mgr manager.Manage
 }
 
 func (r *gatewayAPIReconciler) crdExistsWithClient(ctx context.Context, discoveryClient discovery.DiscoveryInterface, kind, groupVersion string, backoff wait.Backoff) (bool, error) {
-	var lastTransientErr error
+	var exists bool
 
-	for {
+	err := retry.OnError(backoff, isTransientError, func() error {
+		if err := ctx.Err(); err != nil {
+			// Wrap the error to make it non-retryable if the outer context is done.
+			return fmt.Errorf("context done: %v", err)
+		}
+
 		apiResourceList, err := discoveryClient.ServerResourcesForGroupVersion(groupVersion)
 		switch {
 		// check if the CRD exists
@@ -2783,42 +2789,26 @@ func (r *gatewayAPIReconciler) crdExistsWithClient(ctx context.Context, discover
 			for i := range apiResourceList.APIResources {
 				res := apiResourceList.APIResources[i]
 				if res.Kind == kind {
-					return true, nil
+					exists = true
+					return nil
 				}
 			}
-			return false, nil
+			exists = false
+			return nil
 		// the CRD doesn't exist when the GroupVersion doesn't exist
 		case kerrors.IsNotFound(err) || apimeta.IsNoMatchError(err):
-			return false, nil
-		// return immediately if it's a non-recoverable error
-		case !isTransientError(err):
-			return false, fmt.Errorf("discover resources for %s: %w", groupVersion, err)
-		}
-
-		// retry transient errors with backoff
-		lastTransientErr = err
-
-		d := backoff.Duration
-		if backoff.Jitter > 0 {
-			d = wait.Jitter(d, backoff.Jitter)
-		}
-		switch {
-		case backoff.Steps > 1:
-			backoff.Steps--
-			backoff.Duration = time.Duration(float64(backoff.Duration) * backoff.Factor)
-		case backoff.Steps == 1:
-			backoff.Steps--
+			exists = false
+			return nil
 		default:
-			// return the last transient error after retries
-			return false, fmt.Errorf("discover resources for %s: %w", groupVersion, lastTransientErr)
+			return err
 		}
-
-		select {
-		case <-ctx.Done():
-			return false, fmt.Errorf("discover resources for %s: %w", groupVersion, ctx.Err())
-		case <-time.After(d): // wait for the next retry
-		}
+	})
+	// Throw the error out to restart the EG pod.
+	if err != nil {
+		return false, fmt.Errorf("discover resources for %s: %w", groupVersion, err)
 	}
+
+	return exists, nil
 }
 
 // isCustomBackendResource checks if the given group and kind match any of the configured custom backend resources
