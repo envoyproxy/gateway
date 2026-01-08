@@ -88,6 +88,7 @@ func server(ctx context.Context, stdout, stderr io.Writer, asyncErrorNotifier *m
 			cfg.Logger.Error(err, "failed to start runners")
 			return err
 		}
+
 		return nil
 	}
 	l := loader.New(cfgPath, cfg, hook)
@@ -97,6 +98,8 @@ func server(ctx context.Context, stdout, stderr io.Writer, asyncErrorNotifier *m
 
 	for {
 		select {
+		// Exit if the config loader fails to start the runners.
+		// Continuing with failed runners would cause EG to function incorrectly.
 		case err := <-l.Errors():
 			cfg.Logger.Error(err, "failed to start runners")
 			// Wait for runners to finish before shutting down.

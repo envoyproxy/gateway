@@ -2779,7 +2779,7 @@ func (r *gatewayAPIReconciler) crdExistsWithClient(ctx context.Context, discover
 	err := retry.OnError(backoff, isTransientError, func() error {
 		if err := ctx.Err(); err != nil {
 			// Wrap the error to make it non-retryable if the outer context is done.
-			return fmt.Errorf("context done: %v", err)
+			return fmt.Errorf("context done: %w", err)
 		}
 
 		apiResourceList, err := discoveryClient.ServerResourcesForGroupVersion(groupVersion)
@@ -2803,7 +2803,8 @@ func (r *gatewayAPIReconciler) crdExistsWithClient(ctx context.Context, discover
 			return err
 		}
 	})
-	// Throw the error out to restart the EG pod.
+	// Propagate the error to trigger an EG pod restart.
+	// Continuing after this error may cause EG to reconcile incomplete resources.
 	if err != nil {
 		return false, fmt.Errorf("discover resources for %s: %w", groupVersion, err)
 	}
