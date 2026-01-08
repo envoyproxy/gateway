@@ -377,8 +377,7 @@ The HTTPRoute status should indicate that it has been accepted and is bound to t
 kubectl get httproute/http-filter-url-regex-rewrite -o yaml
 ```
 
-Querying `http://${GATEWAY_HOST}/service/foo/v1/api` should rewrite the request to
-`http://${GATEWAY_HOST}/service/foo/v1/api`.
+Querying `http://${GATEWAY_HOST}/service/foo/v1/api` should rewrite the request to `http://${GATEWAY_HOST}/v1/api/instance/foo`.
 
 ```console
 $ curl -L -vvv --header "Host: path.regex.rewrite.example" "http://${GATEWAY_HOST}/service/foo/v1/api"
