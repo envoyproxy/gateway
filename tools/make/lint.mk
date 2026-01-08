@@ -8,7 +8,7 @@ GITHUB_ACTION ?=
 LINT_BUILD_TAGS ?= e2e,celvalidation,conformance,experimental,benchmark,resilience,integration
 
 .PHONY: lint
-lint: ## Run all linter of code sources, including golint, yamllint, whitenoise lint and codespell.
+lint: ## Run all linter of code sources, including golint, yamllint, lint and codespell.
 
 # lint-deps is run separately in CI to separate the tooling install logs from the actual output logs generated
 # by the lint tooling.
@@ -59,13 +59,6 @@ lint.codespell: $(tools/codespell)
 	  fi; \
 	  (set -x; $(tools/codespell) $(CODESPELL_FLAGS) --skip $(CODESPELL_SKIP) --ignore-words tools/linter/codespell/.codespell.ignorewords --check-filenames --check-hidden -q2); \
 	}
-
-.PHONY: lint.whitenoise
-lint: lint.whitenoise
-lint-deps: $(tools/whitenoise)
-lint.whitenoise: $(tools/whitenoise)
-	@$(LOG_TARGET)
-	$(tools/whitenoise)
 
 
 .PHONY: lint.shellcheck
