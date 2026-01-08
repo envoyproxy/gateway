@@ -9,6 +9,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"sync"
 	"time"
 
@@ -51,7 +52,6 @@ import (
 	"github.com/envoyproxy/gateway/internal/message"
 	workqueuemetrics "github.com/envoyproxy/gateway/internal/metrics/workqueue"
 	"github.com/envoyproxy/gateway/internal/utils"
-	"github.com/envoyproxy/gateway/internal/utils/slice"
 )
 
 var skipNameValidation = func() *bool {
@@ -638,7 +638,7 @@ func (r *gatewayAPIReconciler) managedGatewayClasses(ctx context.Context) ([]*gw
 			// The gatewayclass was marked for deletion and the finalizer removed,
 			// so clean-up dependents.
 			if !gwClass.DeletionTimestamp.IsZero() &&
-				!slice.ContainsString(gwClass.Finalizers, gatewayClassFinalizer) {
+				!slices.Contains(gwClass.Finalizers, gatewayClassFinalizer) {
 				r.log.Info("gatewayclass marked for deletion", "name", gwClass.Name)
 				cc.removeMatch(gwClass)
 				continue
@@ -1902,9 +1902,11 @@ func (r *gatewayAPIReconciler) processBackendTLSPolicies(
 
 // removeFinalizer removes the GatewayClass finalizer from the provided gc, if it exists.
 func (r *gatewayAPIReconciler) removeFinalizer(ctx context.Context, gc *gwapiv1.GatewayClass) error {
-	if slice.ContainsString(gc.Finalizers, gatewayClassFinalizer) {
+	if slices.Contains(gc.Finalizers, gatewayClassFinalizer) {
 		base := client.MergeFrom(gc.DeepCopy())
-		gc.Finalizers = slice.RemoveString(gc.Finalizers, gatewayClassFinalizer)
+		gc.Finalizers = slices.DeleteFunc(gc.Finalizers, func(s string) bool {
+			return s == gatewayClassFinalizer
+		})
 		if err := r.client.Patch(ctx, gc, base); err != nil {
 			return fmt.Errorf("failed to remove finalizer from gatewayclass %s: %w", gc.Name, err)
 		}
@@ -1914,7 +1916,7 @@ func (r *gatewayAPIReconciler) removeFinalizer(ctx context.Context, gc *gwapiv1.
 
 // addFinalizer adds the gatewayclass finalizer to the provided gc, if it doesn't exist.
 func (r *gatewayAPIReconciler) addFinalizer(ctx context.Context, gc *gwapiv1.GatewayClass) error {
-	if !slice.ContainsString(gc.Finalizers, gatewayClassFinalizer) {
+	if !slices.Contains(gc.Finalizers, gatewayClassFinalizer) {
 		base := client.MergeFrom(gc.DeepCopy())
 		gc.Finalizers = append(gc.Finalizers, gatewayClassFinalizer)
 		if err := r.client.Patch(ctx, gc, base); err != nil {

@@ -63,6 +63,7 @@ func buildHCMTracing(tracing *ir.Tracing) (*hcm.HttpConnectionManager_Tracing, e
 							Authority:   tracing.Authority,
 						},
 					},
+					InitialMetadata: buildGrpcInitialMetadata(tracing.Headers),
 				},
 				ServiceName: tracing.ServiceName,
 			}

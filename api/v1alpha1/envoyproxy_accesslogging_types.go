@@ -5,6 +5,8 @@
 
 package v1alpha1
 
+import gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+
 type ProxyAccessLog struct {
 	// Disable disables access logging for managed proxies if set to true.
 	//
@@ -208,6 +210,12 @@ type OpenTelemetryEnvoyProxyAccessLog struct {
 	// It's recommended to follow [semantic conventions](https://opentelemetry.io/docs/reference/specification/resource/semantic_conventions/).
 	// +optional
 	Resources map[string]string `json:"resources,omitempty"`
+	// Headers is a list of additional headers to send with OTLP export requests.
+	// These headers are added as gRPC initial metadata for the OTLP gRPC service.
+	// +optional
+	// +kubebuilder:validation:MinItems=1
+	// +kubebuilder:validation:MaxItems=32
+	Headers []gwapiv1.HTTPHeader `json:"headers,omitempty"`
 
 	// TODO: support more OpenTelemetry accesslog options(e.g. TLS, auth etc.) in the future.
 }

@@ -30,12 +30,12 @@ Expand to see the full results.
 
 ### Metrics
 
-The CPU usage statistics of both control-plane and data-plane are the CPU usage per second over the past 30 seconds.
+The CPU usage statistics of both control-plane and data-plane are the CPU usage per second over the past 90 seconds.
 
 | Test Name | Envoy Gateway Container Memory (MiB) <br> min/max/means | Envoy Gateway Process Memory (MiB) <br> min/max/means | Envoy Gateway CPU (%) <br> min/max/means | Averaged Envoy Proxy Memory (MiB) <br> min/max/means | Averaged Envoy Proxy CPU (%) <br> min/max/means |
 |-----------|---------------------------------------------------------|---------------------------------------------------------|------------------------------------------|------------------------------------------------------|-------------------------------------------------|
 {{- range .Metrics }}
-| {{.Name}} | {{.ControlPlaneContainerMemory}} | {{.ControlPlaneProcessMemory}} | {{.ControlPlaneCPU}} | {{.DataPlaneMemory}} | {{.DataPlaneCPU}} |  
+| {{.Name}} | {{.ControlPlaneContainerMemory}} | {{.ControlPlaneProcessMemory}} | {{.ControlPlaneCPU}} | {{.DataPlaneMemory}} | {{.DataPlaneCPU}} |
 {{- end }}
 
 ### Profiles

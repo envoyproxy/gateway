@@ -125,7 +125,10 @@ func TestBackend(t *testing.T) {
 					Endpoints:    []egv1a1.BackendEndpoint{{}},
 				}
 			},
-			wantErrors: []string{"spec.endpoints[0]: Invalid value: \"object\": one of fqdn, ip or unix must be specified"},
+			wantErrors: []string{
+				"spec.endpoints[0]: Invalid value:",
+				"one of fqdn, ip or unix must be specified",
+			},
 		},
 		{
 			desc: "Multiple addresses",
@@ -145,7 +148,10 @@ func TestBackend(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{"spec.endpoints[0]: Invalid value: \"object\": only one of fqdn, ip or unix can be specified"},
+			wantErrors: []string{
+				"spec.endpoints[0]: Invalid value:",
+				"only one of fqdn, ip or unix can be specified",
+			},
 		},
 		{
 			desc: "Mixed types",
@@ -168,7 +174,10 @@ func TestBackend(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{"spec.endpoints: Invalid value: \"array\": FQDN addresses cannot be mixed with other address types"},
+			wantErrors: []string{
+				"spec.endpoints: Invalid value:",
+				"FQDN addresses cannot be mixed with other address types",
+			},
 		},
 		{
 			desc: "Invalid hostname",
@@ -299,7 +308,10 @@ func TestBackend(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{`spec.endpoints[0].unix.path: Invalid value: "string": unix domain socket path must not exceed 108 characters`},
+			wantErrors: []string{
+				"spec.endpoints[0].unix.path: Invalid value:",
+				"unix domain socket path must not exceed 108 characters",
+			},
 		},
 		{
 			desc: "dynamic resolver invalid WellKnownCACertificates and InsecureSkipVerify specified",

@@ -1,0 +1,11 @@
+# Hugo build configuration for Netlify
+# (https://gohugo.io/hosting-and-deployment/hosting-on-netlify/#configure-hugo-version-in-netlify)
+[build.environment]
+DART_SASS_VERSION = "1.97.1"
+GO_VERSION = "1.25.5"
+HUGO_VERSION = "0.151.2"
+NODE_VERSION = "24.12.0"
+
+[build]
+command = "make docs"
+publish = "site/public"

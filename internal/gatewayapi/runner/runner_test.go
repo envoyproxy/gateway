@@ -8,9 +8,9 @@ package runner
 import (
 	"context"
 	"crypto/tls"
+	"maps"
 	"os"
 	"path/filepath"
-	"reflect"
 	"testing"
 	"time"
 
@@ -65,7 +65,7 @@ func TestRunner(t *testing.T) {
 			return false
 		}
 		// Ensure ir is empty
-		return (reflect.DeepEqual(xdsIR.LoadAll(), map[string]*message.XdsIRWithContext{})) && (reflect.DeepEqual(infraIR.LoadAll(), map[string]*ir.Infra{}))
+		return maps.Equal(xdsIR.LoadAll(), map[string]*message.XdsIRWithContext{}) && maps.Equal(infraIR.LoadAll(), map[string]*ir.Infra{})
 	}, time.Second*1, time.Millisecond*20)
 }
 

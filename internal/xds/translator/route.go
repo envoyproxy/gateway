@@ -348,6 +348,14 @@ func buildXdsWeightedRouteAction(backendWeights *ir.BackendWeights, settings []*
 				if len(destinationSetting.Filters.RemoveResponseHeaders) > 0 {
 					validCluster.ResponseHeadersToRemove = append(validCluster.ResponseHeadersToRemove, destinationSetting.Filters.RemoveResponseHeaders...)
 				}
+
+				if destinationSetting.Filters.URLRewrite != nil &&
+					destinationSetting.Filters.URLRewrite.Host != nil &&
+					destinationSetting.Filters.URLRewrite.Host.Name != nil {
+					validCluster.HostRewriteSpecifier = &routev3.WeightedCluster_ClusterWeight_HostRewriteLiteral{
+						HostRewriteLiteral: *destinationSetting.Filters.URLRewrite.Host.Name,
+					}
+				}
 			}
 
 			weightedClusters = append(weightedClusters, validCluster)

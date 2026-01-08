@@ -1,10 +1,10 @@
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
 # To know the available versions check:
 # - https://github.com/kubernetes-sigs/controller-tools/blob/main/envtest-releases.yaml
-ENVTEST_K8S_VERSION ?= 1.34.1
+ENVTEST_K8S_VERSION ?= 1.35.0
 # Need run cel validation across multiple versions of k8s
 # TODO: update kubebuilder assets to 1.35.0 when available
-ENVTEST_K8S_VERSIONS ?= 1.31.0 1.32.0 1.33.0 1.34.1
+ENVTEST_K8S_VERSIONS ?= 1.32.0 1.33.0 1.34.1 1.35.0
 
 # GATEWAY_API_VERSION refers to the version of Gateway API CRDs.
 # For more details, see https://gateway-api.sigs.k8s.io/guides/getting-started/#installing-gateway-api
@@ -21,7 +21,7 @@ IP_FAMILY ?= ipv4
 BENCHMARK_TIMEOUT ?= 60m
 BENCHMARK_CPU_LIMITS ?= 1000m
 BENCHMARK_MEMORY_LIMITS ?= 1024Mi
-BENCHMARK_RPS ?= 10000
+BENCHMARK_BASELINE_RPS ?= 100
 BENCHMARK_CONNECTIONS ?= 100
 BENCHMARK_DURATION ?= 60
 BENCHMARK_REPORT_DIR ?= benchmark_report
@@ -298,7 +298,7 @@ run-benchmark: install-benchmark-server prepare-ip-family ## Run benchmark tests
 	kubectl wait --timeout=$(WAIT_TIMEOUT) -n benchmark-test deployment/nighthawk-test-server --for=condition=Available
 	kubectl wait --timeout=$(WAIT_TIMEOUT) -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
 	kubectl apply -f test/benchmark/config/gatewayclass.yaml
-	go test -v -tags benchmark -timeout $(BENCHMARK_TIMEOUT) ./test/benchmark --rps=$(BENCHMARK_RPS) --connections=$(BENCHMARK_CONNECTIONS) --duration=$(BENCHMARK_DURATION) --report-save-dir=$(BENCHMARK_REPORT_DIR)
+	go test -v -tags benchmark -timeout $(BENCHMARK_TIMEOUT) ./test/benchmark --baseline-rps=$(BENCHMARK_BASELINE_RPS) --connections=$(BENCHMARK_CONNECTIONS) --duration=$(BENCHMARK_DURATION) --report-save-dir=$(BENCHMARK_REPORT_DIR)
 	# render benchmark profiles into image
 	@if [ "$(BENCHMARK_RENDER_PNG)" != "false" ]; then dot -V; fi
 	@if [ "$(BENCHMARK_RENDER_PNG)" != "false" ]; then find test/benchmark/$(BENCHMARK_REPORT_DIR)/profiles -name "*.pprof" -type f -exec sh -c 'go tool pprof -png "$$1" > "$$${1%.pprof}.png"' _ {} \; ; fi

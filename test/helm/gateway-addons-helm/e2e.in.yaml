@@ -4,5 +4,9 @@ grafana:
   enabled: false
 opentelemetry-collector:
   enabled: true
+prometheus:
+  server:
+    global:
+      scrape_interval: 10s
 fluent-bit:
   enabled: false
