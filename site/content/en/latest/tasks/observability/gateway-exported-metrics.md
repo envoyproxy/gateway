@@ -2,7 +2,7 @@
 title: "Gateway Exported Metrics"
 ---
 
-The Envoy Gateway provides a collection of self-monitoring metrics in [Prometheus format][prom-format]. 
+The Envoy Gateway provides a collection of self-monitoring metrics in [Prometheus format][prom-format].
 
 These metrics allow monitoring of the behavior of Envoy Gateway itself (as distinct from that of the EnvoyProxy it managed).
 
@@ -89,7 +89,7 @@ Envoy Gateway monitors the status of Wasm remote fetch cache.
 
 | Name                      | Description                                      |
 |---------------------------|--------------------------------------------------|
-| `wasm_cache_entries`      | Number of Wasm remote fetch cache entries.       | 
+| `wasm_cache_entries`      | Number of Wasm remote fetch cache entries.       |
 | `wasm_cache_lookup_total` | Total number of Wasm remote fetch cache lookups. |
 | `wasm_remote_fetch_total` | Total number of Wasm remote fetches and results. |
 
