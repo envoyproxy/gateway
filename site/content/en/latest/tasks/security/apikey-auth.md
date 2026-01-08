@@ -2,12 +2,12 @@
 title: "API Key Authentication"
 ---
 
-This task provides instructions for configuring API Key Authentication. 
-API Key Authentication verifies whether an incoming request includes a valid API key in the header, parameter, or cookie before routing the request to 
+This task provides instructions for configuring API Key Authentication.
+API Key Authentication verifies whether an incoming request includes a valid API key in the header, parameter, or cookie before routing the request to
 a backend service.
 
-Envoy Gateway introduces a new CRD called [SecurityPolicy][] that allows the user to configure Api Key 
-authentication. 
+Envoy Gateway introduces a new CRD called [SecurityPolicy][] that allows the user to configure Api Key
+authentication.
 This instantiated resource can be linked to a [Gateway][], [HTTPRoute][] or [GRPCRoute][] resource.
 
 ## Prerequisites

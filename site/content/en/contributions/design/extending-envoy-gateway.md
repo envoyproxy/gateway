@@ -92,7 +92,7 @@ If the extension wants Envoy Gateway to watch for policy resources then it must 
 - `version`: the API version of the resource
 - `kind`: the Kind of resource
 
-Policy resources, like all Gateway-API policies, must contain `targetRef` or `targetRefs` fields in the spec which allow Envoy Gateway to identify which resources are targeted by the policy. 
+Policy resources, like all Gateway-API policies, must contain `targetRef` or `targetRefs` fields in the spec which allow Envoy Gateway to identify which resources are targeted by the policy.
 Policies can currently only target `Gateway` resources, and are provided as context to calls to the `HTTPListener` hook.
 
 The extension can configure the `extensionManager.hooks` field to specify which hook points it would like to support. If a given hook is not listed here then it will not be executed even
@@ -162,7 +162,7 @@ Similarly, any registered policy resource that targets an `HTTPListener` will be
 
 ## Watching New Resources
 
-Envoy Gateway will dynamically create new watches on resources introduced by the registered Extension. It does so by using the [controller-runtime][] to create new watches on [Unstructured][] resources that match the `version`s, `group`s, and `kind`s that the registered extension configured. When communicating with an extension, Envoy Gateway sends these Unstructured resources over to the extension. This eliminates the need for the extension to create its own watches which would have a strong chance of creating race conditions and reconciliation loops when resources change. When an extension receives the Unstructured resources from Envoy Gateway it can perform its own type validation on them. Currently we make the simplifying assumption that the registered extension's `Kinds` are filters referenced by `extensionRef` in `HTTPRouteFilter`s . Policy attachments which target `Gateway` resources work in the same way. 
+Envoy Gateway will dynamically create new watches on resources introduced by the registered Extension. It does so by using the [controller-runtime][] to create new watches on [Unstructured][] resources that match the `version`s, `group`s, and `kind`s that the registered extension configured. When communicating with an extension, Envoy Gateway sends these Unstructured resources over to the extension. This eliminates the need for the extension to create its own watches which would have a strong chance of creating race conditions and reconciliation loops when resources change. When an extension receives the Unstructured resources from Envoy Gateway it can perform its own type validation on them. Currently we make the simplifying assumption that the registered extension's `Kinds` are filters referenced by `extensionRef` in `HTTPRouteFilter`s . Policy attachments which target `Gateway` resources work in the same way.
 
 ## xDS Hooks API
 

@@ -105,14 +105,17 @@ latest-release-check: ## Check if latest release and tag are created properly.
 lint.markdown:
 	markdownlint -c .github/markdown_lint_config.json site/content/* \
 		--ignore site/content/en/*/api \
-		--ignore site/content/en/*/api/gateway_api \
+		--ignore site/content/en/v0.3/ \
 		--ignore site/content/en/v0.4/ \
 		--ignore site/content/en/v0.5/ \
 		--ignore site/content/en/v0.6/ \
 		--ignore site/content/en/v1.0/ \
+		--ignore site/content/en/v1.1/ \
 		--ignore site/content/en/v1.2/ \
 		--ignore site/content/en/v1.3/ \
-		--ignore site/content/en/v1.4/
+		--ignore site/content/en/v1.4/ \
+		--ignore site/content/en/v1.5/ \
+		--ignore site/content/en/v1.6/
 		
 		
 

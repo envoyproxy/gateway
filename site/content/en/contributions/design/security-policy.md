@@ -98,7 +98,7 @@ Here is a list of features that can be included in this API
 in the Policy Status field using the `Conflicted=True` condition.
 * If multiple polices target the same resource, the oldest resource (based on creation timestamp) will
 attach to the Gateway Listeners, the others will not.
-* If Policy A has a `targetRef` that includes a `sectionName` i.e. 
+* If Policy A has a `targetRef` that includes a `sectionName` i.e.
 it targets a specific Listener within a `Gateway` and Policy B has a `targetRef` that targets the same
 entire Gateway then
   * Policy A will be applied/attached to the specific Listener defined in the `targetRef.SectionName`
@@ -106,10 +106,10 @@ entire Gateway then
   status condition `Overridden=True`.
 * A Policy targeting the most specific scope wins over a policy targeting a lesser specific scope.
   i.e. A Policy targeting a xRoute (`HTTPRoute` or `GRPCRoute`) overrides a Policy targeting a Listener that is
-this route's parentRef which in turn overrides a Policy targeting the Gateway the listener/section is a part of. 
+this route's parentRef which in turn overrides a Policy targeting the Gateway the listener/section is a part of.
 
 ## Alternatives
 * The project can indefinitely wait for these configuration parameters to be part of the [Gateway API][].
 
-[Policy Attachment]: https://gateway-api.sigs.k8s.io/references/policy-attachment 
+[Policy Attachment]: https://gateway-api.sigs.k8s.io/references/policy-attachment
 [Gateway API]: https://gateway-api.sigs.k8s.io/
