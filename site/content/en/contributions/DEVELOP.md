@@ -45,7 +45,8 @@ pre-commit install
 
 This will configure Git to run the following checks before each commit:
 
-* `make lint`
+* `make lint.fix-golint` - automatically fixes Go lint issues
+* `make lint` - verifies no lint issues remain
 * `make test`
 * `make generate`
 * `make manifests`

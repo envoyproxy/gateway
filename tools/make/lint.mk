@@ -118,3 +118,7 @@ lint: lint.dependabot
 lint.dependabot: ## Check if dependabot configuration is valid
 	@$(LOG_TARGET)
 	@npx @bugron/validate-dependabot-yaml .github/dependabot.yml
+
+.PHONY: precommit
+precommit: ## Run all necessary steps to prepare for a commit.
+precommit: lint.fix-golint lint test generate manifests gen-check
