@@ -859,10 +859,8 @@ func TestProcessEnvoyExtensionPolicyObjectRefs(t *testing.T) {
 				if tc.secret != nil {
 					require.Contains(t, resourceTree.Secrets, tc.secret)
 				}
-			} else {
-				if tc.referenceGrant != nil {
-					require.NotContains(t, resourceTree.ReferenceGrants, tc.referenceGrant)
-				}
+			} else if tc.referenceGrant != nil {
+				require.NotContains(t, resourceTree.ReferenceGrants, tc.referenceGrant)
 			}
 		})
 	}
