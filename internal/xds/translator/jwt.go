@@ -22,12 +22,9 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/utils/cert"
 	"github.com/envoyproxy/gateway/internal/utils/proto"
 	"github.com/envoyproxy/gateway/internal/xds/types"
-)
-
-const (
-	envoyTrustBundle = "/etc/ssl/certs/ca-certificates.crt"
 )
 
 func init() {
@@ -239,7 +236,7 @@ func buildJWTAuthn(irListener *ir.HTTPListener, jwtAuthn *jwtauthnv3.JwtAuthenti
 	return nil
 }
 
-// buildXdsUpstreamTLSSocket returns an xDS TransportSocket that uses envoyTrustBundle
+// buildXdsUpstreamTLSSocket returns an xDS TransportSocket that uses the system trust store
 // as the CA to authenticate server certificates.
 // TODO huabing: add support for custom CA and client certificate.
 func buildXdsUpstreamTLSSocket(sni string) (*corev3.TransportSocket, error) {
@@ -250,7 +247,7 @@ func buildXdsUpstreamTLSSocket(sni string) (*corev3.TransportSocket, error) {
 				ValidationContext: &tlsv3.CertificateValidationContext{
 					TrustedCa: &corev3.DataSource{
 						Specifier: &corev3.DataSource_Filename{
-							Filename: envoyTrustBundle,
+							Filename: cert.SystemCertPath,
 						},
 					},
 				},

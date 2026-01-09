@@ -1,4 +1,21 @@
 apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: Backend
+metadata:
+  name: otel-collector
+spec:
+  endpoints:
+    - fqdn:
+        hostname: localhost
+        port: 4317
+# Use below for cloud OTLP endpoints
+#   endpoints:
+#     - fqdn:
+#         hostname: otel.example.com
+#         port: 443
+#   tls:
+#     wellKnownCACertificates: System
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
   name: otel-example
@@ -10,8 +27,10 @@ spec:
       sinks:
         - type: OpenTelemetry
           openTelemetry:
-            host: localhost
-            port: 4317
+            backendRefs:
+              - group: gateway.envoyproxy.io
+                kind: Backend
+                name: otel-collector
             # Delta temporality required for backends like otel-tui and Elastic
             reportCountersAsDeltas: true
             reportHistogramsAsDeltas: true
@@ -23,8 +42,10 @@ spec:
       samplingRate: 100
       provider:
         type: OpenTelemetry
-        host: localhost
-        port: 4317
+        backendRefs:
+          - group: gateway.envoyproxy.io
+            kind: Backend
+            name: otel-collector
         # Authorization header sent as gRPC initial metadata
         openTelemetry:
           headers:
@@ -46,8 +67,10 @@ spec:
           sinks:
             - type: OpenTelemetry
               openTelemetry:
-                host: localhost
-                port: 4317
+                backendRefs:
+                  - group: gateway.envoyproxy.io
+                    kind: Backend
+                    name: otel-collector
                 resources:
                   service.name: envoy-gateway-example
                 # Authorization header sent as gRPC initial metadata
@@ -105,5 +128,4 @@ spec:
         hostname: httpbingo.org
         port: 443
   tls:
-    sni: httpbingo.org
     wellKnownCACertificates: System
