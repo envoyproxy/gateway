@@ -362,7 +362,7 @@ func TestTranslate(t *testing.T) {
 				require.NoError(t, err)
 			}
 			if test.OverrideTestData() {
-				require.NoError(t, file.Write(string(out), filepath.Join("testdata", "translate", "out", fn)))
+				require.NoError(t, file.Write(test.NormalizeCertPath(string(out)), filepath.Join("testdata", "translate", "out", fn)))
 			}
 			want := &TranslationResult{}
 			mustUnmarshal(t, requireTestDataOutFile(t, fn), want)
@@ -388,7 +388,7 @@ func requireTestDataOutFile(t *testing.T, name ...string) []byte {
 	elems := append([]string{"testdata", "translate", "out"}, name...)
 	content, err := os.ReadFile(filepath.Join(elems...))
 	require.NoError(t, err)
-	return content
+	return []byte(test.DenormalizeCertPath(string(content)))
 }
 
 func mustUnmarshal(t *testing.T, val []byte, out interface{}) {
