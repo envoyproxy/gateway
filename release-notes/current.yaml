@@ -24,6 +24,7 @@ new features: |
   Added support for URLRewrite filter on individual backendRefs.
   Added support for custom headers on OTLP exports (metrics, tracing, access logs).
   Added support for configuring minimum response size for compression via minContentLength field in BackendTrafficPolicy.
+  Added support for custom span name.
 
 bug fixes: |
   Fixed configured OIDC authorization endpoint being overridden by discovered endpoints from issuer's well-known URL.
