@@ -963,6 +963,10 @@ func (t *Translator) processBackendRefs(name string, backendCluster egv1a1.Backe
 					return nil, nil, err
 				}
 				ds.TLS = tlsConfig
+				// Infer SNI from FQDN for telemetry backends (no Host header available)
+				if ds.TLS.SNI == nil && len(backend.Spec.Endpoints) == 1 && backend.Spec.Endpoints[0].FQDN != nil {
+					ds.TLS.SNI = &backend.Spec.Endpoints[0].FQDN.Hostname
+				}
 			}
 			result = append(result, ds)
 		default:

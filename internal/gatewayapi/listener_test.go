@@ -14,6 +14,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -1151,18 +1152,6 @@ func TestProcessServerValidationTLSSettings(t *testing.T) {
 			expected: &ir.TLSUpstreamConfig{SNI: ptr.To("explicit.example.com")},
 		},
 		{
-			name: "single FQDN endpoint infers SNI",
-			input: &egv1a1.Backend{
-				Spec: egv1a1.BackendSpec{
-					Endpoints: []egv1a1.BackendEndpoint{
-						{FQDN: &egv1a1.FQDNEndpoint{Hostname: "single.example.com", Port: 443}},
-					},
-					TLS: &egv1a1.BackendTLSSettings{},
-				},
-			},
-			expected: &ir.TLSUpstreamConfig{SNI: ptr.To("single.example.com")},
-		},
-		{
 			name: "multiple FQDN endpoints does not infer SNI",
 			input: &egv1a1.Backend{
 				Spec: egv1a1.BackendSpec{
@@ -1205,6 +1194,112 @@ func TestProcessServerValidationTLSSettings(t *testing.T) {
 			actual, err := translator.processServerValidationTLSSettings(tc.input)
 			require.NoError(t, err)
 			require.Equal(t, tc.expected, actual)
+		})
+	}
+}
+
+func TestProcessBackendRefsSNIInference(t *testing.T) {
+	ns := "test-ns"
+	tests := []struct {
+		name        string
+		backend     *egv1a1.Backend
+		expectedSNI *string
+	}{
+		{
+			name: "single FQDN endpoint infers SNI for telemetry",
+			backend: &egv1a1.Backend{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: ns,
+					Name:      "otel-collector",
+				},
+				Spec: egv1a1.BackendSpec{
+					Endpoints: []egv1a1.BackendEndpoint{
+						{FQDN: &egv1a1.FQDNEndpoint{Hostname: "otel.example.com", Port: 4317}},
+					},
+					TLS: &egv1a1.BackendTLSSettings{
+						WellKnownCACertificates: ptr.To(gwapiv1.WellKnownCACertificatesSystem),
+					},
+				},
+			},
+			expectedSNI: ptr.To("otel.example.com"),
+		},
+		{
+			name: "multiple FQDN endpoints does not infer SNI",
+			backend: &egv1a1.Backend{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: ns,
+					Name:      "otel-collector",
+				},
+				Spec: egv1a1.BackendSpec{
+					Endpoints: []egv1a1.BackendEndpoint{
+						{FQDN: &egv1a1.FQDNEndpoint{Hostname: "otel-1.example.com", Port: 4317}},
+						{FQDN: &egv1a1.FQDNEndpoint{Hostname: "otel-2.example.com", Port: 4317}},
+					},
+					TLS: &egv1a1.BackendTLSSettings{
+						WellKnownCACertificates: ptr.To(gwapiv1.WellKnownCACertificatesSystem),
+					},
+				},
+			},
+			expectedSNI: nil,
+		},
+		{
+			name: "explicit SNI takes precedence",
+			backend: &egv1a1.Backend{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: ns,
+					Name:      "otel-collector",
+				},
+				Spec: egv1a1.BackendSpec{
+					Endpoints: []egv1a1.BackendEndpoint{
+						{FQDN: &egv1a1.FQDNEndpoint{Hostname: "otel.example.com", Port: 4317}},
+					},
+					TLS: &egv1a1.BackendTLSSettings{
+						WellKnownCACertificates: ptr.To(gwapiv1.WellKnownCACertificatesSystem),
+						SNI:                     ptr.To(gwapiv1.PreciseHostname("explicit.example.com")),
+					},
+				},
+			},
+			expectedSNI: ptr.To("explicit.example.com"),
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			resources := resource.NewResources()
+			resources.Backends = append(resources.Backends, tc.backend)
+
+			ctx := &TranslatorContext{
+				BackendMap: map[types.NamespacedName]*egv1a1.Backend{
+					{Namespace: tc.backend.Namespace, Name: tc.backend.Name}: tc.backend,
+				},
+			}
+			translator := &Translator{
+				TranslatorContext: ctx,
+				BackendEnabled:    true,
+			}
+			backendCluster := egv1a1.BackendCluster{
+				BackendRefs: []egv1a1.BackendRef{{
+					BackendObjectReference: gwapiv1.BackendObjectReference{
+						Group:     ptr.To(gwapiv1.Group("gateway.envoyproxy.io")),
+						Kind:      ptr.To(gwapiv1.Kind("Backend")),
+						Name:      gwapiv1.ObjectName(tc.backend.Name),
+						Namespace: ptr.To(gwapiv1.Namespace(tc.backend.Namespace)),
+					},
+				}},
+			}
+
+			ds, _, err := translator.processBackendRefs("test", backendCluster, ns, resources, nil)
+			require.NoError(t, err)
+			require.Len(t, ds, 1)
+
+			if tc.expectedSNI == nil {
+				if ds[0].TLS != nil {
+					require.Nil(t, ds[0].TLS.SNI)
+				}
+			} else {
+				require.NotNil(t, ds[0].TLS)
+				require.Equal(t, tc.expectedSNI, ds[0].TLS.SNI)
+			}
 		})
 	}
 }
