@@ -159,3 +159,9 @@ curl --verbose --header "Host: www.example.com" http://$GATEWAY_HOST/status/500
 * Connection #0 to host 172.18.0.200 left intact
 {"error": "Internal Server Error"}
 ```
+
+## Next steps
+
+- See the full list of supported configuration fields in the
+  [BackendTrafficPolicy API reference](/docs/api/extension_types/#backendtrafficpolicy)
+
