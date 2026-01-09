@@ -1,0 +1,130 @@
+gatewayClass:
+  apiVersion: gateway.networking.k8s.io/v1
+  kind: GatewayClass
+  metadata:
+    name: envoy-gateway-class
+  spec:
+    controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    parametersRef:
+      group: gateway.envoyproxy.io
+      kind: EnvoyProxy
+      name: invalid
+      namespace: envoy-gateway-system
+  status:
+    conditions:
+    - lastTransitionTime: null
+      message: 'Invalid parametersRef: [unable to configure access log when using
+        File sink type but "file" field being empty, unable to configure access log
+        when using OpenTelemetry sink type but "openTelemetry" field being empty]'
+      reason: InvalidParameters
+      status: "False"
+      type: Accepted
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    name: ep-from-gtw
+    namespace: envoy-gateway
+  spec:
+    gatewayClassName: envoy-gateway-class
+    infrastructure:
+      parametersRef:
+        group: gateway.envoyproxy.io
+        kind: EnvoyProxy
+        name: valid
+    listeners:
+    - allowedRoutes:
+        namespaces:
+          from: Same
+      name: http
+      port: 80
+      protocol: HTTP
+  status: {}
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    name: ep-from-gc
+    namespace: envoy-gateway
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - allowedRoutes:
+        namespaces:
+          from: Same
+      name: http
+      port: 80
+      protocol: HTTP
+  status:
+    conditions:
+    - lastTransitionTime: null
+      message: 'Invalid parametersRef:: [unable to configure access log when using
+        File sink type but "file" field being empty, unable to configure access log
+        when using OpenTelemetry sink type but "openTelemetry" field being empty]'
+      reason: InvalidParameters
+      status: "False"
+      type: Accepted
+infraIR:
+  envoy-gateway/ep-from-gtw:
+    proxy:
+      config:
+        apiVersion: gateway.envoyproxy.io/v1alpha1
+        kind: EnvoyProxy
+        metadata:
+          name: valid
+          namespace: envoy-gateway
+        spec:
+          logging: {}
+          telemetry:
+            accessLog:
+              settings:
+              - format:
+                  text: |
+                    [%START_TIME%] "%REQ(:METHOD)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%"\n
+                  type: Text
+                sinks:
+                - file:
+                    path: /dev/stdout
+                  type: File
+        status: {}
+      metadata:
+        labels:
+          gateway.envoyproxy.io/owning-gateway-name: ep-from-gtw
+          gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+        ownerReference:
+          kind: GatewayClass
+          name: envoy-gateway-class
+      name: envoy-gateway/ep-from-gtw
+      namespace: envoy-gateway-system
+xdsIR:
+  envoy-gateway/ep-from-gtw:
+    accessLog:
+      text:
+      - format: |
+          [%START_TIME%] "%REQ(:METHOD)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%"\n
+        path: /dev/stdout
+    globalResources:
+      proxyServiceCluster:
+        metadata:
+          kind: Service
+          name: envoy-envoy-gateway-ep-from-gtw-90cb3c57
+          namespace: envoy-gateway-system
+          sectionName: "8080"
+        name: envoy-gateway/ep-from-gtw
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            kind: Service
+            name: envoy-envoy-gateway-ep-from-gtw-90cb3c57
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/ep-from-gtw
+          protocol: TCP
+    readyListener:
+      address: 0.0.0.0
+      ipFamily: IPv4
+      path: /ready
+      port: 19003
