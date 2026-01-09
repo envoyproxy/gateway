@@ -20,12 +20,12 @@ import (
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	pb "github.com/envoyproxy/gateway/envoygateway/extension/v1"
 	"github.com/envoyproxy/gateway/internal/crypto"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/extension/registry"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/message"
-	pb "github.com/envoyproxy/gateway/proto/extension"
 )
 
 func TestRunner(t *testing.T) {
@@ -35,7 +35,7 @@ func TestRunner(t *testing.T) {
 	infraIR := new(message.InfraIR)
 	cfg, err := config.New(os.Stdout, os.Stderr)
 	require.NoError(t, err)
-	extMgr, closeFunc, err := registry.NewInMemoryManager(&egv1a1.ExtensionManager{}, &pb.UnimplementedEnvoyGatewayExtensionServer{})
+	extMgr, closeFunc, err := registry.NewInMemoryManager(&egv1a1.ExtensionManager{}, &pb.UnimplementedEnvoyGatewayExtensionServiceServer{})
 	require.NoError(t, err)
 	defer closeFunc()
 	r := New(&Config{
@@ -76,7 +76,7 @@ func setupTestRunner(t *testing.T) (*Runner, []types.NamespacedName) {
 	infraIR := new(message.InfraIR)
 	cfg, err := config.New(os.Stdout, os.Stderr)
 	require.NoError(t, err)
-	extMgr, closeFunc, err := registry.NewInMemoryManager(&egv1a1.ExtensionManager{}, &pb.UnimplementedEnvoyGatewayExtensionServer{})
+	extMgr, closeFunc, err := registry.NewInMemoryManager(&egv1a1.ExtensionManager{}, &pb.UnimplementedEnvoyGatewayExtensionServiceServer{})
 	require.NoError(t, err)
 	t.Cleanup(closeFunc)
 

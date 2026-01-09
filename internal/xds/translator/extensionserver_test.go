@@ -23,11 +23,11 @@ import (
 	"google.golang.org/protobuf/types/known/durationpb"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
-	pb "github.com/envoyproxy/gateway/proto/extension"
+	pb "github.com/envoyproxy/gateway/envoygateway/extension/v1"
 )
 
 type testingExtensionServer struct {
-	pb.UnimplementedEnvoyGatewayExtensionServer
+	pb.UnimplementedEnvoyGatewayExtensionServiceServer
 }
 
 // PostRouteModifyHook returns a modified version of the route using context info and the passed in extensionResources

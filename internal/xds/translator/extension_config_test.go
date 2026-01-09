@@ -19,26 +19,26 @@ import (
 	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	v1 "github.com/envoyproxy/gateway/envoygateway/extension/v1"
 	"github.com/envoyproxy/gateway/internal/extension/registry"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/xds/types"
-	"github.com/envoyproxy/gateway/proto/extension"
 )
 
 // mockExtensionServer implements the extension server interface for testing
 type mockExtensionServer struct {
-	extension.UnimplementedEnvoyGatewayExtensionServer
+	v1.UnimplementedEnvoyGatewayExtensionServiceServer
 	receivedListeners []*listenerv3.Listener
 	receivedRoutes    []*routev3.RouteConfiguration
 }
 
-func (m *mockExtensionServer) PostTranslateModify(ctx context.Context, req *extension.PostTranslateModifyRequest) (*extension.PostTranslateModifyResponse, error) {
+func (m *mockExtensionServer) PostTranslateModify(ctx context.Context, req *v1.PostTranslateModifyRequest) (*v1.PostTranslateModifyResponse, error) {
 	// Store what we received for verification
 	m.receivedListeners = req.Listeners
 	m.receivedRoutes = req.Routes
 
 	// Return the same resources
-	return &extension.PostTranslateModifyResponse{
+	return &v1.PostTranslateModifyResponse{
 		Clusters:  req.Clusters,
 		Secrets:   req.Secrets,
 		Listeners: req.Listeners,

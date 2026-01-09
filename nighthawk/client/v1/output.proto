@@ -5,13 +5,13 @@
 
 syntax = "proto3";
 
-package nighthawk.client;
+package nighthawk.client.v1;
 
 import "google/protobuf/any.proto";
 import "google/protobuf/duration.proto";
 import "google/protobuf/timestamp.proto";
 
-option go_package = "test/benchmark/proto";
+option go_package = "github.com/envoyproxy/gateway/nighthawk/client/v1";
 
 message Counter {
   string name = 1;

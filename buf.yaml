@@ -5,12 +5,6 @@ deps:
 lint:
   use:
     - STANDARD
-  except:
-    - FIELD_NOT_REQUIRED
-    - PACKAGE_NO_IMPORT_CYCLE
-    - PACKAGE_DIRECTORY_MATCH
-    - PACKAGE_VERSION_SUFFIX
-    - SERVICE_SUFFIX
   disallow_comment_ignores: true
 breaking:
   use:

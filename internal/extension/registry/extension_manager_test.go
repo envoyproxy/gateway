@@ -36,10 +36,10 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	v1 "github.com/envoyproxy/gateway/envoygateway/extension/v1"
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 	extTypes "github.com/envoyproxy/gateway/internal/extension/types"
 	"github.com/envoyproxy/gateway/internal/ir"
-	"github.com/envoyproxy/gateway/proto/extension"
 )
 
 func TestGetExtensionServerAddress(t *testing.T) {
@@ -199,17 +199,17 @@ func Test_setupGRPCOpts(t *testing.T) {
 }
 
 type testServer struct {
-	extension.UnimplementedEnvoyGatewayExtensionServer
+	v1.UnimplementedEnvoyGatewayExtensionServiceServer
 }
 
-func (s *testServer) PostRouteModify(ctx context.Context, req *extension.PostRouteModifyRequest) (*extension.PostRouteModifyResponse, error) {
-	return &extension.PostRouteModifyResponse{
+func (s *testServer) PostRouteModify(ctx context.Context, req *v1.PostRouteModifyRequest) (*v1.PostRouteModifyResponse, error) {
+	return &v1.PostRouteModifyResponse{
 		Route: req.Route,
 	}, nil
 }
 
-func (s *testServer) PostTranslateModify(ctx context.Context, req *extension.PostTranslateModifyRequest) (*extension.PostTranslateModifyResponse, error) {
-	return &extension.PostTranslateModifyResponse{
+func (s *testServer) PostTranslateModify(ctx context.Context, req *v1.PostTranslateModifyRequest) (*v1.PostTranslateModifyResponse, error) {
+	return &v1.PostTranslateModifyResponse{
 		Clusters:  req.Clusters,
 		Secrets:   req.Secrets,
 		Listeners: req.Listeners,
@@ -242,7 +242,7 @@ func Test_TLS(t *testing.T) {
 		ClientAuth:   tls.NoClientCert,
 		MinVersion:   tls.VersionTLS12,
 	})))
-	extension.RegisterEnvoyGatewayExtensionServer(server, &testServer{})
+	v1.RegisterEnvoyGatewayExtensionServiceServer(server, &testServer{})
 	go func() {
 		_ = server.Serve(lis)
 		defer server.GracefulStop()
@@ -288,10 +288,10 @@ func Test_TLS(t *testing.T) {
 	require.NoError(t, err)
 	defer conn.Close()
 
-	client := extension.NewEnvoyGatewayExtensionClient(conn)
+	client := v1.NewEnvoyGatewayExtensionServiceClient(conn)
 	require.NotNil(t, client)
 
-	response, err := client.PostRouteModify(context.Background(), &extension.PostRouteModifyRequest{
+	response, err := client.PostRouteModify(context.Background(), &v1.PostRouteModifyRequest{
 		Route: &routev3.Route{
 			Name: "test-route",
 		},
@@ -336,7 +336,7 @@ func Test_mTLS(t *testing.T) {
 		ClientCAs:    caPool,
 		MinVersion:   tls.VersionTLS12,
 	})))
-	extension.RegisterEnvoyGatewayExtensionServer(server, &testServer{})
+	v1.RegisterEnvoyGatewayExtensionServiceServer(server, &testServer{})
 	go func() {
 		_ = server.Serve(lis)
 		defer server.GracefulStop()
@@ -400,11 +400,11 @@ func Test_mTLS(t *testing.T) {
 	require.NoError(t, err)
 	defer conn.Close()
 
-	client := extension.NewEnvoyGatewayExtensionClient(conn)
+	client := v1.NewEnvoyGatewayExtensionServiceClient(conn)
 	require.NotNil(t, client)
 
 	// Test that the mTLS connection works end-to-end
-	response, err := client.PostRouteModify(context.Background(), &extension.PostRouteModifyRequest{
+	response, err := client.PostRouteModify(context.Background(), &v1.PostRouteModifyRequest{
 		Route: &routev3.Route{
 			Name: "test-mtls-route",
 		},
@@ -440,7 +440,7 @@ func Test_buildServiceConfig(t *testing.T) {
 			},
 			want: `{
 "methodConfig": [{
-	"name": [{"service": "envoygateway.extension.EnvoyGatewayExtension"}],
+	"name": [{"service": "envoygateway.extension.v1.EnvoyGatewayExtensionService"}],
 	"waitForReady": true,
 	"retryPolicy": {
 		"MaxAttempts": 4,
@@ -493,7 +493,7 @@ func Test_buildServiceConfig(t *testing.T) {
 			},
 			want: `{
 "methodConfig": [{
-	"name": [{"service": "envoygateway.extension.EnvoyGatewayExtension"}],
+	"name": [{"service": "envoygateway.extension.v1.EnvoyGatewayExtensionService"}],
 	"waitForReady": true,
 	"retryPolicy": {
 		"MaxAttempts": 20,
@@ -520,7 +520,7 @@ func Test_buildServiceConfig(t *testing.T) {
 			},
 			want: `{
 "methodConfig": [{
-	"name": [{"service": "envoygateway.extension.EnvoyGatewayExtension"}],
+	"name": [{"service": "envoygateway.extension.v1.EnvoyGatewayExtensionService"}],
 	"waitForReady": true,
 	"retryPolicy": {
 		"MaxAttempts": 4,
@@ -570,17 +570,17 @@ func Test_buildServiceConfig(t *testing.T) {
 }
 
 type retryTestServer struct {
-	extension.UnimplementedEnvoyGatewayExtensionServer
+	v1.UnimplementedEnvoyGatewayExtensionServiceServer
 	attempts int
 	mu       sync.Mutex
 }
 
-func (s *retryTestServer) PostRouteModify(ctx context.Context, req *extension.PostRouteModifyRequest) (*extension.PostRouteModifyResponse, error) {
+func (s *retryTestServer) PostRouteModify(ctx context.Context, req *v1.PostRouteModifyRequest) (*v1.PostRouteModifyResponse, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.attempts++
 	if s.attempts == 10 {
-		return &extension.PostRouteModifyResponse{
+		return &v1.PostRouteModifyResponse{
 			Route: req.Route,
 		}, nil
 	} else {
@@ -677,7 +677,7 @@ func Test_Integration_RetryPolicy_MaxAttempts(t *testing.T) {
 }
 
 type clusterUpdateTestServer struct {
-	extension.UnimplementedEnvoyGatewayExtensionServer
+	v1.UnimplementedEnvoyGatewayExtensionServiceServer
 }
 
 func getTargetRefKind(obj *unstructured.Unstructured) (string, error) {
@@ -694,10 +694,10 @@ func getTargetRefKind(obj *unstructured.Unstructured) (string, error) {
 	return kind, nil
 }
 
-func (s *clusterUpdateTestServer) PostTranslateModify(ctx context.Context, req *extension.PostTranslateModifyRequest) (*extension.PostTranslateModifyResponse, error) {
+func (s *clusterUpdateTestServer) PostTranslateModify(ctx context.Context, req *v1.PostTranslateModifyRequest) (*v1.PostTranslateModifyResponse, error) {
 	clusters := req.GetClusters()
 	if clusters == nil {
-		return &extension.PostTranslateModifyResponse{
+		return &v1.PostTranslateModifyResponse{
 			Clusters:  clusters,
 			Secrets:   req.GetSecrets(),
 			Listeners: req.GetListeners(),
@@ -706,7 +706,7 @@ func (s *clusterUpdateTestServer) PostTranslateModify(ctx context.Context, req *
 	}
 
 	if len(req.PostTranslateContext.ExtensionResources) == 0 {
-		return &extension.PostTranslateModifyResponse{
+		return &v1.PostTranslateModifyResponse{
 			Clusters:  clusters,
 			Secrets:   req.GetSecrets(),
 			Listeners: req.GetListeners(),
@@ -717,7 +717,7 @@ func (s *clusterUpdateTestServer) PostTranslateModify(ctx context.Context, req *
 	for _, extensionResourceBytes := range req.PostTranslateContext.ExtensionResources {
 		extensionResource := unstructured.Unstructured{}
 		if err := extensionResource.UnmarshalJSON(extensionResourceBytes.UnstructuredBytes); err != nil {
-			return &extension.PostTranslateModifyResponse{
+			return &v1.PostTranslateModifyResponse{
 				Clusters:  clusters,
 				Secrets:   req.GetSecrets(),
 				Listeners: req.GetListeners(),
@@ -727,7 +727,7 @@ func (s *clusterUpdateTestServer) PostTranslateModify(ctx context.Context, req *
 
 		targetKind, err := getTargetRefKind(&extensionResource)
 		if err != nil || extensionResource.GetObjectKind().GroupVersionKind().Kind != "ExampleExtPolicy" || targetKind != "Gateway" {
-			return &extension.PostTranslateModifyResponse{
+			return &v1.PostTranslateModifyResponse{
 				Clusters:  clusters,
 				Secrets:   req.GetSecrets(),
 				Listeners: req.GetListeners(),
@@ -736,7 +736,7 @@ func (s *clusterUpdateTestServer) PostTranslateModify(ctx context.Context, req *
 		}
 	}
 
-	ret := &extension.PostTranslateModifyResponse{
+	ret := &v1.PostTranslateModifyResponse{
 		Clusters:  clusters,
 		Secrets:   req.GetSecrets(),
 		Listeners: req.GetListeners(),

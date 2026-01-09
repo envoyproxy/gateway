@@ -16,7 +16,7 @@ import (
 	"github.com/urfave/cli/v2"
 	"google.golang.org/grpc"
 
-	pb "github.com/envoyproxy/gateway/proto/extension"
+	pb "github.com/envoyproxy/gateway/envoygateway/extension/v1"
 )
 
 func main() {
@@ -89,6 +89,6 @@ func startExtensionServer(cCtx *cli.Context) error {
 	}
 	var opts []grpc.ServerOption
 	grpcServer = grpc.NewServer(opts...)
-	pb.RegisterEnvoyGatewayExtensionServer(grpcServer, extensionserver.New(logger))
+	pb.RegisterEnvoyGatewayExtensionServiceServer(grpcServer, extensionserver.New(logger))
 	return grpcServer.Serve(lis)
 }

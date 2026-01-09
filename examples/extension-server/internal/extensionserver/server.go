@@ -8,11 +8,11 @@ package extensionserver
 import (
 	"log/slog"
 
-	pb "github.com/envoyproxy/gateway/proto/extension"
+	pb "github.com/envoyproxy/gateway/envoygateway/extension/v1"
 )
 
 type Server struct {
-	pb.UnimplementedEnvoyGatewayExtensionServer
+	pb.UnimplementedEnvoyGatewayExtensionServiceServer
 
 	log *slog.Logger
 }

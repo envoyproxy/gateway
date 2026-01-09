@@ -15,7 +15,7 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/envoyproxy/gateway/test/benchmark/proto"
+	v1 "github.com/envoyproxy/gateway/nighthawk/client/v1"
 )
 
 //go:embed benchmark_report.tpl.md
@@ -78,7 +78,7 @@ func convertToMarkdownResult(r *BenchmarkCaseReport) (MarkdownResult, MarkdownMe
 	return md, mm
 }
 
-func renderProtoResult(r *proto.Result) string {
+func renderProtoResult(r *v1.Result) string {
 	// https://github.com/envoyproxy/nighthawk/blob/main/source/client/output_formatter_impl.cc#L160-L161
 	var sb strings.Builder
 	for _, stat := range r.Statistics {

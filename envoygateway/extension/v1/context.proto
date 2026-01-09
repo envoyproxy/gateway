@@ -5,9 +5,9 @@
 
 syntax = "proto3";
 
-package envoygateway.extension;
+package envoygateway.extension.v1;
 
-option go_package = "proto/extension";
+option go_package = "github.com/envoyproxy/gateway/envoygateway/extension/v1";
 
 
 // RouteExtensionContext provides resources introduced by an extension and watched by Envoy Gateway
