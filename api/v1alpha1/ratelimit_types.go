@@ -200,7 +200,7 @@ type RateLimitCostMetadata struct {
 // All the individual conditions must hold True for the overall condition to hold True.
 // And, at least one of headers or methods or path or sourceCIDR condition must be specified.
 //
-// +kubebuilder:validation:XValidation:rule="has(self.headers) || has(self.methods) || has(self.path) || has(self.sourceCIDR)",message="at least one of headers, methods, path or sourceCIDR must be specified"
+// +kubebuilder:validation:XValidation:rule="has(self.headers) || has(self.methods) || has(self.path) || has(self.sourceCIDR) || has(self.queryParams)",message="at least one of headers, methods, path, sourceCIDR or queryParams must be specified"
 type RateLimitSelectCondition struct {
 	// Headers is a list of request headers to match. Multiple header values are ANDed together,
 	// meaning, a request MUST match all the specified headers.
@@ -225,7 +225,68 @@ type RateLimitSelectCondition struct {
 	//
 	// +optional
 	SourceCIDR *SourceMatch `json:"sourceCIDR,omitempty"`
+
+	// QueryParams is a list of query parameters to match. Multiple query parameter values are ANDed together,
+	// meaning, a request MUST match all the specified query parameters.
+	// At least one of headers, sourceCIDR, or queryParams condition must be specified.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxItems=16
+	QueryParams []QueryParamMatch `json:"queryParams,omitempty"`
 }
+
+// QueryParamMatch defines the match attributes within the query parameters of the request.
+// Note: For Distinct match type, use the MatchType field (not StringMatch.Type) and leave StringMatch.Value empty.
+type QueryParamMatch struct {
+	// Name of the query parameter.
+	//
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	Name string `json:"name"`
+
+	// StringMatch defines how to match against the value of the query parameter.
+	// Use this for Exact and RegularExpression match types.
+	// For Distinct match type, leave this empty and use the MatchType field instead.
+	//
+	// +optional
+	StringMatch `json:",inline"`
+
+	// Invert specifies whether the value match result will be inverted.
+	// Do not set this field when MatchType="Distinct", implying matching on any/all unique
+	// values within the query parameter.
+	//
+	// +optional
+	// +kubebuilder:default=false
+	Invert *bool `json:"invert,omitempty"`
+
+	// MatchType specifies how to match against the value of the query parameter.
+	// Use this field only when MatchType="Distinct" (which is not part of StringMatchType).
+	// For Exact and RegularExpression, use StringMatch.Type instead.
+	//
+	// +optional
+	MatchType *QueryParamMatchType `json:"matchType,omitempty"`
+}
+
+// QueryParamMatchType specifies the semantics of how query parameter values should be compared.
+// Valid QueryParamMatchType values are "Exact", "RegularExpression", and "Distinct".
+//
+// +kubebuilder:validation:Enum=Exact;RegularExpression;Distinct
+type QueryParamMatchType string
+
+// QueryParamMatchType constants.
+const (
+	// QueryParamMatchExact matches the exact value of the Value field against the value of
+	// the specified query parameter.
+	QueryParamMatchExact QueryParamMatchType = "Exact"
+	// QueryParamMatchRegularExpression matches a regular expression against the value of the
+	// specified query parameter. The regex string must adhere to the syntax documented in
+	// https://github.com/google/re2/wiki/Syntax.
+	QueryParamMatchRegularExpression QueryParamMatchType = "RegularExpression"
+	// QueryParamMatchDistinct matches any and all possible unique values encountered in the
+	// specified query parameter. Note that each unique value will receive its own rate limit
+	// bucket.
+	QueryParamMatchDistinct QueryParamMatchType = "Distinct"
+)
 
 // +kubebuilder:validation:Enum=Exact;Distinct
 type SourceMatchType string

@@ -1238,10 +1238,10 @@ func buildRateLimitRule(rule egv1a1.RateLimitRule) (*ir.RateLimitRule, error) {
 
 	for _, match := range rule.ClientSelectors {
 		if len(match.Headers) == 0 && len(match.Methods) == 0 &&
-			match.Path == nil && match.SourceCIDR == nil {
+			match.Path == nil && match.SourceCIDR == nil && len(match.QueryParams) == 0 {
 			return nil, fmt.Errorf(
 				"unable to translate rateLimit. At least one of the" +
-					" header or method or path or sourceCIDR must be specified")
+					" header or method or path or sourceCIDR or queryParameters must be specified")
 		}
 		for _, header := range match.Headers {
 			switch {
@@ -1337,6 +1337,68 @@ func buildRateLimitRule(rule egv1a1.RateLimitRule) (*ir.RateLimitRule, error) {
 			}
 			cidrMatch.Distinct = distinct
 			irRule.CIDRMatch = cidrMatch
+		}
+
+		for _, queryParam := range match.QueryParams {
+			// Validate QueryParamMatch
+			if queryParam.Name == "" {
+				return nil, fmt.Errorf("name is required when QueryParamMatch is specified")
+			}
+
+			var stringMatch ir.StringMatch
+
+			// Check if MatchType is Distinct (handled separately from StringMatch)
+			if queryParam.MatchType != nil && *queryParam.MatchType == egv1a1.QueryParamMatchDistinct {
+				if queryParam.Invert != nil && *queryParam.Invert {
+					return nil, fmt.Errorf("unable to translate rateLimit." +
+						"Invert is not applicable for distinct query parameter match type")
+				}
+				stringMatch = ir.StringMatch{
+					Name:     queryParam.Name,
+					Distinct: true,
+				}
+			} else {
+				// Use StringMatch for Exact and RegularExpression
+				// StringMatch.Type can be nil (defaults to Exact) or RegularExpression
+				// Since StringMatch is embedded, we can access Type and Value directly
+				stringMatchType := egv1a1.StringMatchExact
+				if queryParam.Type != nil {
+					stringMatchType = *queryParam.Type
+				}
+
+				// Handle different match types using switch statement
+				switch stringMatchType {
+				case egv1a1.StringMatchExact:
+					if queryParam.Value == "" {
+						return nil, fmt.Errorf("value is required for Exact query parameter match")
+					}
+					stringMatch = ir.StringMatch{
+						Name:   queryParam.Name,
+						Exact:  &queryParam.Value,
+						Invert: queryParam.Invert,
+					}
+				case egv1a1.StringMatchRegularExpression:
+					if queryParam.Value == "" {
+						return nil, fmt.Errorf("value is required for RegularExpression query parameter match")
+					}
+					if err := regex.Validate(queryParam.Value); err != nil {
+						return nil, err
+					}
+					stringMatch = ir.StringMatch{
+						Name:      queryParam.Name,
+						SafeRegex: &queryParam.Value,
+						Invert:    queryParam.Invert,
+					}
+				default:
+					return nil, fmt.Errorf(
+						"unable to translate rateLimit. QueryParamMatch only supports Exact and RegularExpression via StringMatch, or Distinct via MatchType field")
+				}
+			}
+
+			m := &ir.QueryParamMatch{
+				StringMatch: stringMatch,
+			}
+			irRule.QueryParamMatches = append(irRule.QueryParamMatches, m)
 		}
 	}
 
