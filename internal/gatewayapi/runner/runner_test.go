@@ -8,9 +8,9 @@ package runner
 import (
 	"context"
 	"crypto/tls"
+	"maps"
 	"os"
 	"path/filepath"
-	"reflect"
 	"testing"
 	"time"
 

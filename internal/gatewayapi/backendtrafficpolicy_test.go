@@ -7,7 +7,7 @@ package gatewayapi
 
 import (
 	"math"
-	"reflect"
+	"slices"
 	"testing"
 	"time"
 
@@ -78,7 +78,7 @@ func TestMakeIrStatusSet(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := makeIrStatusSet(tt.in); !reflect.DeepEqual(got, tt.want) {
+			if got := makeIrStatusSet(tt.in); !slices.Equal(got, tt.want) {
 				t.Errorf("makeIrStatusSet() = %v, want %v", got, tt.want)
 			}
 		})
@@ -105,7 +105,7 @@ func TestMakeIrTriggerSet(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := makeIrTriggerSet(tt.in); !reflect.DeepEqual(got, tt.want) {
+			if got := makeIrTriggerSet(tt.in); !slices.Equal(got, tt.want) {
 				t.Errorf("makeIrTriggerSet() = %v, want %v", got, tt.want)
 			}
 		})

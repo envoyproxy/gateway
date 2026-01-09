@@ -1,0 +1,29 @@
+date: January 8, 2026
+
+# Changes that are expected to cause an incompatibility with previous versions, such as deletions or modifications to existing APIs.
+breaking changes: |
+
+# Updates addressing vulnerabilities, security flaws, or compliance requirements.
+security updates: |
+  Bump envoy to `v1.35.8`.
+
+
+# New features or capabilities added in this release.
+new features: |
+
+bug fixes: |
+  Fixed an issue where observedGeneration is missing from the EnvoyPatchPolicy status.
+  Fixed ExternalTrafficPolicy not being applied to Envoy Service when ServiceType is NodePort.
+  Fixed an issue where BackendTrafficPolicy does not validate maximum value of requestBuffer limit.
+  Fixed an issue where port forward not working on OpenTelemetry collector pods.
+  Fixed a potential goroutine leak when config reloads.
+
+
+# Enhancements that improve performance.
+performance improvements: |
+
+# Deprecated features or APIs.
+deprecations: |
+
+# Other notable changes not covered by the above sections.
+Other changes: |
