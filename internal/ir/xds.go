@@ -2356,8 +2356,9 @@ type EnvoyPatchPolicy struct {
 // EnvoyPatchPolicyStatus defines the status reference for the EnvoyPatchPolicy resource
 // +k8s:deepcopy-gen=true
 type EnvoyPatchPolicyStatus struct {
-	Name      string `json:"name,omitempty" yaml:"name"`
-	Namespace string `json:"namespace,omitempty" yaml:"namespace"`
+	Name       string `json:"name,omitempty" yaml:"name"`
+	Namespace  string `json:"namespace,omitempty" yaml:"namespace"`
+	Generation int64  `json:"generation,omitempty" yaml:"generation"`
 	// Status of the EnvoyPatchPolicy
 	Status *gwapiv1a2.PolicyStatus `json:"status,omitempty" yaml:"status,omitempty"`
 }

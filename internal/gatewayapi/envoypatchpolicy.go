@@ -60,6 +60,7 @@ func (t *Translator) ProcessEnvoyPatchPolicies(envoyPatchPolicies []*egv1a1.Envo
 		policyIR := ir.EnvoyPatchPolicy{}
 		policyIR.Name = policy.Name
 		policyIR.Namespace = policy.Namespace
+		policyIR.Generation = policy.Generation
 		policyIR.Status = &policy.Status
 
 		// Append the IR

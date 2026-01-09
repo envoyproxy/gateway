@@ -16,7 +16,7 @@ import (
 )
 
 // SetProgrammedForEnvoyPatchPolicy sets programmed conditions for each ancestor reference in policy status if it is unset.
-func SetProgrammedForEnvoyPatchPolicy(s *gwapiv1a2.PolicyStatus) {
+func SetProgrammedForEnvoyPatchPolicy(s *gwapiv1a2.PolicyStatus, generation int64) {
 	// Return early if Programmed condition is already set
 	for _, ancestor := range s.Ancestors {
 		for _, c := range ancestor.Conditions {
@@ -30,22 +30,22 @@ func SetProgrammedForEnvoyPatchPolicy(s *gwapiv1a2.PolicyStatus) {
 	}
 
 	message := "Patches have been successfully applied."
-	cond := newCondition(string(egv1a1.PolicyConditionProgrammed), metav1.ConditionTrue, string(egv1a1.PolicyReasonProgrammed), message, time.Now(), 0)
+	cond := newCondition(string(egv1a1.PolicyConditionProgrammed), metav1.ConditionTrue, string(egv1a1.PolicyReasonProgrammed), message, time.Now(), generation)
 	for i := range s.Ancestors {
 		s.Ancestors[i].Conditions = MergeConditions(s.Ancestors[i].Conditions, cond)
 	}
 }
 
-func SetTranslationErrorForEnvoyPatchPolicy(s *gwapiv1a2.PolicyStatus, errMsg string) {
-	cond := newCondition(string(egv1a1.PolicyConditionProgrammed), metav1.ConditionFalse, string(egv1a1.PolicyReasonInvalid), errMsg, time.Now(), 0)
+func SetTranslationErrorForEnvoyPatchPolicy(s *gwapiv1a2.PolicyStatus, errMsg string, generation int64) {
+	cond := newCondition(string(egv1a1.PolicyConditionProgrammed), metav1.ConditionFalse, string(egv1a1.PolicyReasonInvalid), errMsg, time.Now(), generation)
 	for i := range s.Ancestors {
 		s.Ancestors[i].Conditions = MergeConditions(s.Ancestors[i].Conditions, cond)
 	}
 }
 
-func SetResourceNotFoundErrorForEnvoyPatchPolicy(s *gwapiv1a2.PolicyStatus, notFoundResources []string) {
+func SetResourceNotFoundErrorForEnvoyPatchPolicy(s *gwapiv1a2.PolicyStatus, notFoundResources []string, generation int64) {
 	message := "Unable to find xds resources: " + strings.Join(notFoundResources, ",")
-	cond := newCondition(string(egv1a1.PolicyConditionProgrammed), metav1.ConditionFalse, string(egv1a1.PolicyReasonResourceNotFound), message, time.Now(), 0)
+	cond := newCondition(string(egv1a1.PolicyConditionProgrammed), metav1.ConditionFalse, string(egv1a1.PolicyReasonResourceNotFound), message, time.Now(), generation)
 	for i := range s.Ancestors {
 		s.Ancestors[i].Conditions = MergeConditions(s.Ancestors[i].Conditions, cond)
 	}
