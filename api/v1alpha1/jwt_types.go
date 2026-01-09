@@ -89,18 +89,18 @@ type JWTProvider struct {
 }
 
 // RemoteJWKS defines how to fetch and cache JSON Web Key Sets (JWKS) from a remote HTTP/HTTPS endpoint.
+//
+// BackendRefs is used to specify the address of the Remote JWKS.
+// If the BackendRefs is not specified, the URI field is used to determine the address of the Remote JWKS.
+//
+// TLS configuration can be specified in a BackendTLSConfig resource and target the BackendRefs.
+//
+// Other settings for the connection to the remote JWKS can be specified in the BackendSettings resource.
+//
 // +kubebuilder:validation:XValidation:rule="!has(self.backendRef)",message="BackendRefs must be used, backendRef is not supported."
 // +kubebuilder:validation:XValidation:rule="has(self.backendSettings)? (has(self.backendSettings.retry)?(has(self.backendSettings.retry.perRetry)? !has(self.backendSettings.retry.perRetry.timeout):true):true):true",message="Retry timeout is not supported."
 // +kubebuilder:validation:XValidation:rule="has(self.backendSettings)? (has(self.backendSettings.retry)?(has(self.backendSettings.retry.retryOn)? !has(self.backendSettings.retry.retryOn.httpStatusCodes):true):true):true",message="HTTPStatusCodes is not supported."
 type RemoteJWKS struct {
-	// BackendRefs is used to specify the address of the Remote JWKS. The BackendRefs are optional, if not specified,
-	// the backend service is extracted from the host and port of the URI field.
-	//
-	// TLS configuration can be specified in a BackendTLSConfig resource and target the BackendRefs.
-	//
-	// Other settings for the connection to remote JWKS can be specified in the BackendSettings resource.
-	// Currently, only the retry policy is supported.
-	//
 	// +optional
 	BackendCluster `json:",inline"`
 

@@ -55,9 +55,18 @@ const (
 	// PolicyConditionMerged indicates whether the policy has
 	// been merged with another policy targeting the parent(e.g. Gateway).
 	PolicyConditionMerged gwapiv1.PolicyConditionType = "Merged"
+
 	// PolicyReasonMerged is used with the "Merged" condition when the policy
 	// has been merged with another policy targeting the parent(e.g. Gateway).
 	PolicyReasonMerged gwapiv1.PolicyConditionReason = "Merged"
+
+	// PolicyConditionWarning indicates that the policy configuration contains
+	// non-critical issues that are accepted but requires attention.
+	PolicyConditionWarning gwapiv1.PolicyConditionType = "Warning"
+
+	// PolicyReasonDeprecatedField is used with the "Warning" condition when the policy
+	// uses deprecated fields that should be migrated to newer alternatives.
+	PolicyReasonDeprecatedField gwapiv1.PolicyConditionReason = "DeprecatedField"
 )
 
 // GroupVersionKind unambiguously identifies a Kind.
@@ -997,4 +1006,12 @@ type HTTPHeaderFilter struct {
 	// +kubebuilder:validation:MinItems=1
 	// +kubebuilder:validation:MaxItems=64
 	RemoveOnMatch []StringMatch `json:"removeOnMatch,omitempty"`
+}
+
+// LocalObjectKeyReference selects a key from a local object.
+type LocalObjectKeyReference struct {
+	// The local object to select from.
+	gwapiv1.LocalObjectReference `json:",inline"`
+	// The key to select.
+	Key string `json:"key"`
 }

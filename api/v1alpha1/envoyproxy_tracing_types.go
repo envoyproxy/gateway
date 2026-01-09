@@ -34,6 +34,15 @@ type ProxyTracing struct {
 	//
 	// +optional
 	CustomTags map[string]CustomTag `json:"customTags,omitempty"`
+	// Tags defines the custom tags to add to each span.
+	// Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators) may be used in the value.
+	// The [format string documentation](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#config-access-log-format-strings) provides more information.
+	// If provider is kubernetes, pod name and namespace are added by default.
+	//
+	// Same keys take precedence over CustomTags.
+	//
+	// +optional
+	Tags map[string]string `json:"tags,omitempty"`
 	// Provider defines the tracing provider.
 	Provider TracingProvider `json:"provider"`
 }
@@ -52,6 +61,7 @@ const (
 // +kubebuilder:validation:XValidation:message="BackendRefs must be used, backendRef is not supported.",rule="!has(self.backendRef)"
 // +kubebuilder:validation:XValidation:message="BackendRefs only support Service and Backend kind.",rule="has(self.backendRefs) ? self.backendRefs.all(f, f.kind == 'Service' || f.kind == 'Backend') : true"
 // +kubebuilder:validation:XValidation:message="BackendRefs only support Core and gateway.envoyproxy.io group.",rule="has(self.backendRefs) ? (self.backendRefs.all(f, f.group == \"\" || f.group == 'gateway.envoyproxy.io')) : true"
+// +kubebuilder:validation:XValidation:message="openTelemetry can only be used with type OpenTelemetry",rule="has(self.openTelemetry) ? self.type == 'OpenTelemetry' : true"
 type TracingProvider struct {
 	BackendCluster `json:",inline"`
 	// Type defines the tracing provider type.
@@ -83,6 +93,9 @@ type TracingProvider struct {
 	// Zipkin defines the Zipkin tracing provider configuration
 	// +optional
 	Zipkin *ZipkinTracingProvider `json:"zipkin,omitempty"`
+	// OpenTelemetry defines the OpenTelemetry tracing provider configuration
+	// +optional
+	OpenTelemetry *OpenTelemetryTracingProvider `json:"openTelemetry,omitempty"`
 }
 
 type CustomTagType string
@@ -111,9 +124,6 @@ type CustomTag struct {
 	// RequestHeader adds value from request header to each span.
 	// It's required when the type is "RequestHeader".
 	RequestHeader *RequestHeaderCustomTag `json:"requestHeader,omitempty"`
-
-	// TODO: add support for Metadata tags in the future.
-	// EG currently doesn't support metadata for route or cluster.
 }
 
 // LiteralCustomTag adds hard-coded value to each span.
@@ -151,4 +161,14 @@ type ZipkinTracingProvider struct {
 	// client and server spans sharing the same span context should be disabled.
 	// +optional
 	DisableSharedSpanContext *bool `json:"disableSharedSpanContext,omitempty"`
+}
+
+// OpenTelemetryTracingProvider defines the OpenTelemetry tracing provider configuration.
+type OpenTelemetryTracingProvider struct {
+	// Headers is a list of additional headers to send with OTLP export requests.
+	// These headers are added as gRPC initial metadata for the OTLP gRPC service.
+	// +optional
+	// +kubebuilder:validation:MinItems=1
+	// +kubebuilder:validation:MaxItems=32
+	Headers []gwapiv1.HTTPHeader `json:"headers,omitempty"`
 }

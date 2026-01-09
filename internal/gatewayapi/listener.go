@@ -558,8 +558,9 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 		if accessLog.Format != nil {
 			format = *accessLog.Format
 		} else {
+			defaultType := egv1a1.ProxyAccessLogFormatTypeJSON
 			format = egv1a1.ProxyAccessLogFormat{
-				Type: egv1a1.ProxyAccessLogFormatTypeJSON,
+				Type: &defaultType,
 				// Empty means default format
 			}
 		}
@@ -596,8 +597,7 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 					continue
 				}
 
-				switch format.Type {
-				case egv1a1.ProxyAccessLogFormatTypeText:
+				if format.Type != nil && *format.Type == egv1a1.ProxyAccessLogFormatTypeText {
 					al := &ir.TextAccessLog{
 						Format:     format.Text,
 						Path:       sink.File.Path,
@@ -605,7 +605,8 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 						LogType:    accessLogType,
 					}
 					irAccessLog.Text = append(irAccessLog.Text, al)
-				case egv1a1.ProxyAccessLogFormatTypeJSON:
+				} else {
+					// Default to JSON format if type is nil or JSON
 					al := &ir.JSONAccessLog{
 						JSON:       format.JSON,
 						Path:       sink.File.Path,
@@ -660,11 +661,11 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 					}
 					al.HTTP = http
 				}
-				switch format.Type {
-				case egv1a1.ProxyAccessLogFormatTypeJSON:
-					al.Attributes = format.JSON
-				case egv1a1.ProxyAccessLogFormatTypeText:
+				if format.Type != nil && *format.Type == egv1a1.ProxyAccessLogFormatTypeText {
 					al.Text = format.Text
+				} else {
+					// Default to JSON format if type is nil or JSON
+					al.Attributes = format.JSON
 				}
 
 				irAccessLog.ALS = append(irAccessLog.ALS, al)
@@ -690,6 +691,7 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 				al := &ir.OpenTelemetryAccessLog{
 					CELMatches: validExprs,
 					Resources:  sink.OpenTelemetry.Resources,
+					Headers:    sink.OpenTelemetry.Headers,
 					Destination: ir.RouteDestination{
 						Name:     destName,
 						Settings: ds,
@@ -710,11 +712,13 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 					al.Authority = host
 				}
 
-				switch format.Type {
-				case egv1a1.ProxyAccessLogFormatTypeJSON:
-					al.Attributes = format.JSON
-				case egv1a1.ProxyAccessLogFormatTypeText:
+				// For OpenTelemetry, text (body) and attributes can be used together.
+				// When format.Type is nil, both text and json from format can be used.
+				if format.Type == nil || *format.Type == egv1a1.ProxyAccessLogFormatTypeText {
 					al.Text = format.Text
+				}
+				if format.Type == nil || *format.Type == egv1a1.ProxyAccessLogFormatTypeJSON {
+					al.Attributes = format.JSON
 				}
 
 				irAccessLog.OpenTelemetry = append(irAccessLog.OpenTelemetry, al)
@@ -786,6 +790,7 @@ func (t *Translator) processTracing(gw *gwapiv1.Gateway, envoyproxy *egv1a1.Envo
 		},
 		Provider: tracing.Provider,
 		Traffic:  traffic,
+		Headers:  getOpenTelemetryTracingHeaders(&tracing.Provider),
 	}, nil
 }
 
@@ -806,6 +811,13 @@ func proxySamplingRate(tracing *egv1a1.ProxyTracing) float64 {
 		rate = math.Min(100, rate)
 	}
 	return rate
+}
+
+func getOpenTelemetryTracingHeaders(provider *egv1a1.TracingProvider) []gwapiv1.HTTPHeader {
+	if provider != nil && provider.OpenTelemetry != nil {
+		return provider.OpenTelemetry.Headers
+	}
+	return nil
 }
 
 func (t *Translator) processMetrics(envoyproxy *egv1a1.EnvoyProxy, resources *resource.Resources) (*ir.Metrics, error) {

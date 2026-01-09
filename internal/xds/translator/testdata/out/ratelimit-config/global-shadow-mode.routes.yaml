@@ -1,0 +1,47 @@
+costSpecified: false
+rateLimits:
+- actions:
+  - ActionSpecifier:
+      GenericKey:
+        descriptor_key: first-route
+        descriptor_value: first-route
+  - ActionSpecifier:
+      HeaderValueMatch:
+        descriptor_key: rule-0-match-0
+        descriptor_value: rule-0-match-0
+        expect_match:
+          value: true
+        headers:
+        - HeaderMatchSpecifier:
+            StringMatch:
+              MatchPattern:
+                Exact: one
+          name: x-user-id
+  - ActionSpecifier:
+      HeaderValueMatch:
+        descriptor_key: rule-0-match-1
+        descriptor_value: rule-0-match-1
+        expect_match:
+          value: true
+        headers:
+        - HeaderMatchSpecifier:
+            StringMatch:
+              MatchPattern:
+                Exact: two
+          name: x-user-id
+  - ActionSpecifier:
+      HeaderValueMatch:
+        descriptor_key: rule-0-match-2
+        descriptor_value: rule-0-match-2
+        expect_match:
+          value: true
+        headers:
+        - HeaderMatchSpecifier:
+            StringMatch:
+              MatchPattern:
+                Exact: three
+          name: x-org-id
+  - ActionSpecifier:
+      MaskedRemoteAddress:
+        v4_prefix_mask_len: {}
+routeName: first-route
