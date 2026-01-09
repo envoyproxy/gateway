@@ -283,7 +283,8 @@ func TestImageFetcher_FetchWithCACert(t *testing.T) {
 	opt := ImageFetcherOption{
 		CACert: []byte("fake-ca"),
 	}
-	fetcher := NewImageFetcher(ctx, opt, logger)
+	fetcher, err := NewImageFetcher(ctx, opt, logger)
+	require.NoError(t, err)
 	require.NotNil(t, fetcher)
 
 	// Given the constraints, we at least verify the code path in NewImageFetcher for CACert.
@@ -291,7 +292,8 @@ func TestImageFetcher_FetchWithCACert(t *testing.T) {
 		Insecure: true,
 		CACert:   []byte("fake-ca"),
 	}
-	fetcher2 := NewImageFetcher(ctx, opt2, logger)
+	fetcher2, err := NewImageFetcher(ctx, opt2, logger)
+	require.NoError(t, err)
 	require.NotNil(t, fetcher2)
 }
 

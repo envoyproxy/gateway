@@ -328,7 +328,10 @@ func (c *localFileCache) prepareFetch(
 	if len(pullSecret) > 0 {
 		imgFetcherOps.PullSecret = pullSecret
 	}
-	fetcher := NewImageFetcher(ctx, imgFetcherOps, c.logger)
+	fetcher, err := NewImageFetcher(ctx, imgFetcherOps, c.logger)
+	if err != nil {
+		return nil, "", err
+	}
 	if binaryFetcher, actualDigest, err = fetcher.PrepareFetch(url.Host + url.Path); err != nil {
 		return nil, "", err
 	}
