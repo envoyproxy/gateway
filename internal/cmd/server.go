@@ -85,7 +85,6 @@ func server(ctx context.Context, stdout, stderr io.Writer, asyncErrorNotifier *m
 
 		cfg.Logger.Info("Start runners")
 		if err := startRunners(c, cfg, asyncErrorNotifier); err != nil {
-			cfg.Logger.Error(err, "failed to start runners")
 			return err
 		}
 
@@ -301,7 +300,6 @@ func startRunners(ctx context.Context, cfg *config.Server, runnerErrors *message
 func startRunner(ctx context.Context, cfg *config.Server, runner Runner) error {
 	cfg.Logger.Info("Starting runner", "name", runner.Name())
 	if err := runner.Start(ctx); err != nil {
-		cfg.Logger.Error(err, "Failed to start runner", "name", runner.Name())
 		return err
 	}
 	return nil
