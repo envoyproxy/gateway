@@ -248,6 +248,8 @@ func (t *Translator) processServerValidationTLSSettings(
 
 	if backend.Spec.TLS.SNI != nil {
 		tlsConfig.SNI = ptr.To(string(*backend.Spec.TLS.SNI))
+	} else if len(backend.Spec.Endpoints) > 0 && backend.Spec.Endpoints[0].FQDN != nil {
+		tlsConfig.SNI = &backend.Spec.Endpoints[0].FQDN.Hostname
 	}
 
 	if !tlsConfig.InsecureSkipVerify {

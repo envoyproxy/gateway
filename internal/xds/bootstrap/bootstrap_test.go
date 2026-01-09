@@ -193,6 +193,31 @@ func TestGetRenderedBootstrapConfig(t *testing.T) {
 			},
 		},
 		{
+			name: "otel-metrics-tls",
+			opts: &RenderBootstrapConfigOptions{
+				ProxyMetrics: &egv1a1.ProxyMetrics{
+					Prometheus: &egv1a1.ProxyPrometheusProvider{
+						Disable: true,
+					},
+				},
+				ResolvedMetricSinks: []MetricSink{
+					{
+						Address:   "otel-collector.example.com",
+						Port:      443,
+						Authority: "otel-collector.example.com",
+						Headers: []gwapiv1.HTTPHeader{
+							{Name: "Authorization", Value: "Bearer fake"},
+						},
+						TLS: &MetricSinkTLS{
+							SNI:                 "otel-collector.example.com",
+							UseSystemTrustStore: true,
+						},
+					},
+				},
+				SdsConfig: sds,
+			},
+		},
+		{
 			name: "custom-stats-matcher",
 			opts: &RenderBootstrapConfigOptions{
 				ProxyMetrics: &egv1a1.ProxyMetrics{
@@ -278,7 +303,7 @@ func TestGetRenderedBootstrapConfig(t *testing.T) {
 
 			if test.OverrideTestData() {
 				// nolint:gosec
-				err = os.WriteFile(path.Join("testdata", "render", fmt.Sprintf("%s.yaml", tc.name)), []byte(got), 0o644)
+				err = os.WriteFile(path.Join("testdata", "render", fmt.Sprintf("%s.yaml", tc.name)), []byte(test.NormalizeCertPath(got)), 0o644)
 				require.NoError(t, err)
 				return
 			}
@@ -297,5 +322,5 @@ func readTestData(caseName string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return string(b), nil
+	return test.DenormalizeCertPath(string(b)), nil
 }

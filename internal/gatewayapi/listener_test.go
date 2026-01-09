@@ -1043,3 +1043,81 @@ func TestProcessAccessLog(t *testing.T) {
 		})
 	}
 }
+
+func TestGetAuthorityFromDestination(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    []*ir.DestinationSetting
+		expected string
+	}{
+		{
+			name:     "nil settings",
+			input:    nil,
+			expected: "",
+		},
+		{
+			name:     "empty settings",
+			input:    []*ir.DestinationSetting{},
+			expected: "",
+		},
+		{
+			name: "TLS with SNI",
+			input: []*ir.DestinationSetting{{
+				TLS: &ir.TLSUpstreamConfig{SNI: ptr.To("example.com")},
+			}},
+			expected: "example.com",
+		},
+		{
+			name: "hostname endpoint uses host",
+			input: []*ir.DestinationSetting{{
+				Endpoints: []*ir.DestinationEndpoint{{Host: "backend.local"}},
+			}},
+			expected: "backend.local",
+		},
+		{
+			name: "TLS without SNI uses hostname endpoint",
+			input: []*ir.DestinationSetting{{
+				TLS:       &ir.TLSUpstreamConfig{},
+				Endpoints: []*ir.DestinationEndpoint{{Host: "backend.local"}},
+			}},
+			expected: "backend.local",
+		},
+		{
+			name: "IP endpoint with Service metadata derives authority",
+			input: []*ir.DestinationSetting{{
+				Endpoints: []*ir.DestinationEndpoint{{Host: "10.0.0.1"}},
+				Metadata:  &ir.ResourceMetadata{Kind: resource.KindService, Name: "otel-collector", Namespace: "monitoring"},
+			}},
+			expected: "otel-collector.monitoring.svc",
+		},
+		{
+			name: "IP endpoint with Backend metadata derives authority",
+			input: []*ir.DestinationSetting{{
+				Endpoints: []*ir.DestinationEndpoint{{Host: "10.0.0.1"}},
+				Metadata:  &ir.ResourceMetadata{Kind: resource.KindBackend, Name: "my-backend", Namespace: "default"},
+			}},
+			expected: "my-backend.default",
+		},
+		{
+			name: "IP endpoint without metadata returns empty",
+			input: []*ir.DestinationSetting{{
+				Endpoints: []*ir.DestinationEndpoint{{Host: "10.0.0.1"}},
+			}},
+			expected: "",
+		},
+		{
+			name: "no endpoints returns empty",
+			input: []*ir.DestinationSetting{{
+				TLS: &ir.TLSUpstreamConfig{},
+			}},
+			expected: "",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			actual := getAuthorityFromDestination(tc.input)
+			require.Equal(t, tc.expected, actual)
+		})
+	}
+}
