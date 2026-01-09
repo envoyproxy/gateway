@@ -315,6 +315,48 @@ func TestGetRenderedBootstrapConfig(t *testing.T) {
 	}
 }
 
+func TestGetRenderedBootstrapConfigErrors(t *testing.T) {
+	cases := []struct {
+		name          string
+		opts          *RenderBootstrapConfigOptions
+		expectedError string
+	}{
+		{
+			name: "backendRef without port",
+			opts: &RenderBootstrapConfigOptions{
+				ProxyMetrics: &egv1a1.ProxyMetrics{
+					Sinks: []egv1a1.ProxyMetricSink{
+						{
+							Type: egv1a1.MetricSinkTypeOpenTelemetry,
+							OpenTelemetry: &egv1a1.ProxyOpenTelemetrySink{
+								BackendCluster: egv1a1.BackendCluster{
+									BackendRefs: []egv1a1.BackendRef{
+										{
+											BackendObjectReference: gwapiv1.BackendObjectReference{
+												Name:      "otel-collector",
+												Namespace: ptr.To(gwapiv1.Namespace("monitoring")),
+												// Port is nil
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedError: "metrics sink backendRef otel-collector has no port",
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := GetRenderedBootstrapConfig(tc.opts)
+			require.EqualError(t, err, tc.expectedError)
+		})
+	}
+}
+
 func readTestData(caseName string) (string, error) {
 	filename := path.Join("testdata", "render", fmt.Sprintf("%s.yaml", caseName))
 

@@ -1106,6 +1106,14 @@ func TestGetAuthorityFromDestination(t *testing.T) {
 			expected: "",
 		},
 		{
+			name: "IP endpoint with metadata name only returns name",
+			input: []*ir.DestinationSetting{{
+				Endpoints: []*ir.DestinationEndpoint{{Host: "10.0.0.1"}},
+				Metadata:  &ir.ResourceMetadata{Kind: resource.KindService, Name: "otel-collector"},
+			}},
+			expected: "otel-collector",
+		},
+		{
 			name: "no endpoints returns empty",
 			input: []*ir.DestinationSetting{{
 				TLS: &ir.TLSUpstreamConfig{},
@@ -1117,6 +1125,85 @@ func TestGetAuthorityFromDestination(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			actual := getAuthorityFromDestination(tc.input)
+			require.Equal(t, tc.expected, actual)
+		})
+	}
+}
+
+func TestProcessServerValidationTLSSettings(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    *egv1a1.Backend
+		expected *ir.TLSUpstreamConfig
+	}{
+		{
+			name: "explicit SNI",
+			input: &egv1a1.Backend{
+				Spec: egv1a1.BackendSpec{
+					Endpoints: []egv1a1.BackendEndpoint{
+						{FQDN: &egv1a1.FQDNEndpoint{Hostname: "endpoint.example.com", Port: 443}},
+					},
+					TLS: &egv1a1.BackendTLSSettings{
+						SNI: ptr.To(gwapiv1.PreciseHostname("explicit.example.com")),
+					},
+				},
+			},
+			expected: &ir.TLSUpstreamConfig{SNI: ptr.To("explicit.example.com")},
+		},
+		{
+			name: "single FQDN endpoint infers SNI",
+			input: &egv1a1.Backend{
+				Spec: egv1a1.BackendSpec{
+					Endpoints: []egv1a1.BackendEndpoint{
+						{FQDN: &egv1a1.FQDNEndpoint{Hostname: "single.example.com", Port: 443}},
+					},
+					TLS: &egv1a1.BackendTLSSettings{},
+				},
+			},
+			expected: &ir.TLSUpstreamConfig{SNI: ptr.To("single.example.com")},
+		},
+		{
+			name: "multiple FQDN endpoints does not infer SNI",
+			input: &egv1a1.Backend{
+				Spec: egv1a1.BackendSpec{
+					Endpoints: []egv1a1.BackendEndpoint{
+						{FQDN: &egv1a1.FQDNEndpoint{Hostname: "a.example.com", Port: 443}},
+						{FQDN: &egv1a1.FQDNEndpoint{Hostname: "b.example.com", Port: 443}},
+					},
+					TLS: &egv1a1.BackendTLSSettings{},
+				},
+			},
+			expected: &ir.TLSUpstreamConfig{},
+		},
+		{
+			name: "no endpoints does not infer SNI",
+			input: &egv1a1.Backend{
+				Spec: egv1a1.BackendSpec{
+					Endpoints: []egv1a1.BackendEndpoint{},
+					TLS:       &egv1a1.BackendTLSSettings{},
+				},
+			},
+			expected: &ir.TLSUpstreamConfig{},
+		},
+		{
+			name: "single IP endpoint does not infer SNI",
+			input: &egv1a1.Backend{
+				Spec: egv1a1.BackendSpec{
+					Endpoints: []egv1a1.BackendEndpoint{
+						{IP: &egv1a1.IPEndpoint{Address: "10.0.0.1", Port: 443}},
+					},
+					TLS: &egv1a1.BackendTLSSettings{},
+				},
+			},
+			expected: &ir.TLSUpstreamConfig{},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			translator := &Translator{}
+			actual, err := translator.processServerValidationTLSSettings(tc.input)
+			require.NoError(t, err)
 			require.Equal(t, tc.expected, actual)
 		})
 	}
