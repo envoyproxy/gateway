@@ -21,7 +21,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 )
 
-func (r *gatewayAPIReconciler) watchClusterTrustBundle(ctx context.Context, c controller.Controller, mgr manager.Manager,discoveryClient discovery.DiscoveryInterface) error {
+func (r *gatewayAPIReconciler) watchClusterTrustBundle(ctx context.Context, c controller.Controller, mgr manager.Manager, discoveryClient discovery.DiscoveryInterface) error {
 	groupVersion := certificatesv1b1.SchemeGroupVersion.String()
 	exists, err := r.crdExists(ctx, discoveryClient, resource.KindClusterTrustBundle, groupVersion)
 	if err != nil {
