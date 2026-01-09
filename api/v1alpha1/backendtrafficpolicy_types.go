@@ -127,6 +127,8 @@ type BackendTrafficPolicySpec struct {
 type BackendTelemetry struct {
 	// Tracing configures the tracing settings for the backend or HTTPRoute.
 	//
+	// This takes precedence over EnvoyProxy tracing when set.
+	//
 	// +optional
 	Tracing *Tracing `json:"tracing,omitempty"`
 	// Metrics defines metrics configuration for the backend or Route.

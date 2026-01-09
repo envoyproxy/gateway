@@ -16268,9 +16268,6 @@ spec:
                         description: |-
                           SamplingFraction represents the fraction of requests that should be
                           selected for tracing if no prior sampling decision has been made.
-
-                          Only one of SamplingRate or SamplingFraction may be specified.
-                          If neither field is specified, all requests will be sampled.
                         properties:
                           denominator:
                             default: 100
@@ -16299,6 +16296,22 @@ spec:
                         maximum: 100
                         minimum: 0
                         type: integer
+                      spanName:
+                        description: SpanName defines the name of the span which will
+                          be used for tracing.
+                        properties:
+                          client:
+                            description: Client defines operation name of the span
+                              which will be used for tracing.
+                            type: string
+                          server:
+                            description: Server defines the operation name of the
+                              upstream span which will be used for tracing.
+                            type: string
+                        required:
+                        - client
+                        - server
+                        type: object
                       tags:
                         additionalProperties:
                           type: string
