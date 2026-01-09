@@ -185,6 +185,7 @@ helm uninstall eg-addons -n monitoring
 | opentelemetry-collector.ports.envoy-als.hostPort | int | `9000` |  |
 | opentelemetry-collector.ports.envoy-als.protocol | string | `"TCP"` |  |
 | opentelemetry-collector.ports.envoy-als.servicePort | int | `9000` |  |
+| opentelemetry-collector.presets.kubernetesAttributes.enabled | bool | `true` |  |
 | prometheus.alertmanager.enabled | bool | `false` |  |
 | prometheus.enabled | bool | `true` |  |
 | prometheus.kube-state-metrics.customResourceState.config.kind | string | `"CustomResourceStateMetrics"` |  |
