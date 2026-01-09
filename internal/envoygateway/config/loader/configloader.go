@@ -44,11 +44,6 @@ func New(cfgPath string, cfg *config.Server, f HookFunc) *Loader {
 
 func (r *Loader) Start(ctx context.Context, logOut io.Writer) error {
 	r.runHook(ctx)
-	select {
-	case err := <-r.hookErr:
-		return err
-	default:
-	}
 
 	if r.cfgPath == "" {
 		r.logger.Info("no config file provided, skipping config watcher")
