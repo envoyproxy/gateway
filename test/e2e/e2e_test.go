@@ -72,6 +72,15 @@ func TestE2E(t *testing.T) {
 		)
 	}
 
+	// Skip these BTLSPolicy tests since their manifests are written in v1.
+	// V1alpha3 are covered in the BackendTLSTest test.
+	if tests.IsBTLSPolicyV1alpha3() {
+		skipTests = append(skipTests,
+			tests.BackendTLSSettingsTest.ShortName,
+			tests.BackendClusterTrustBundleTest.ShortName,
+		)
+	}
+
 	enabledFeatures := sets.New(features.SupportGateway)
 	if tests.EnabledClusterTrustBundle() {
 		tlog.Logf(t, "ClusterTrustBundle feature is enabled")
