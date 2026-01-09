@@ -65,7 +65,13 @@ func TestRunner(t *testing.T) {
 			return false
 		}
 		// Ensure ir is empty
-		return maps.Equal(xdsIR.LoadAll(), map[string]*message.XdsIRWithContext{}) && maps.Equal(infraIR.LoadAll(), map[string]*ir.Infra{})
+		return reflect.DeepEqual(
+			message.SortedXdsIRMap(xdsIR.LoadAll()),
+			message.SortedXdsIRMap(xdsIR.LoadAll()),
+		) && reflect.DeepEqual(
+			message.SortedInfraIRMap(infraIR.LoadAll()),
+			message.SortedInfraIRMap(map[string]*ir.Infra{}),
+		)
 	}, time.Second*1, time.Millisecond*20)
 }
 
