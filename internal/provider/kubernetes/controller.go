@@ -1948,15 +1948,17 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		return fmt.Errorf("failed to watch GatewayClass: %w", err)
 	}
 
+	discoveryClient, err := discovery.NewDiscoveryClientForConfig(mgr.GetConfig())
+	if err != nil {
+		return fmt.Errorf("failed to create discovery client: %w", err)
+	}
 	checkCRD := func(kind, groupVersion string) (bool, error) {
-		exists, err := r.crdExists(ctx, mgr, kind, groupVersion)
+		exists, err := r.crdExists(ctx, discoveryClient, kind, groupVersion)
 		if err != nil {
 			return false, fmt.Errorf("failed to discover %s CRD: %w", kind, err)
 		}
 		return exists, nil
 	}
-
-	var err error
 
 	r.epCRDExists, err = checkCRD(resource.KindEnvoyProxy, egv1a1.GroupVersion.String())
 	if err != nil {
@@ -2622,7 +2624,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		}
 	}
 
-	if err := r.watchClusterTrustBundle(ctx, c, mgr); err != nil {
+	if err := r.watchClusterTrustBundle(ctx, c, mgr, discoveryClient); err != nil {
 		return err
 	}
 
@@ -2759,12 +2761,7 @@ func (r *gatewayAPIReconciler) processEnvoyProxy(ep *egv1a1.EnvoyProxy, resource
 }
 
 // crdExists checks for the existence of the CRD in k8s APIServer before watching it.
-func (r *gatewayAPIReconciler) crdExists(ctx context.Context, mgr manager.Manager, kind, groupVersion string) (bool, error) {
-	discoveryClient, err := discovery.NewDiscoveryClientForConfig(mgr.GetConfig())
-	if err != nil {
-		return false, fmt.Errorf("failed to create discovery client: %w", err)
-	}
-
+func (r *gatewayAPIReconciler) crdExists(ctx context.Context, discoveryClient discovery.DiscoveryInterface, kind, groupVersion string) (bool, error) {
 	return r.crdExistsWithClient(ctx, discoveryClient, kind, groupVersion, wait.Backoff{
 		Duration: time.Second,
 		Factor:   1.5,
