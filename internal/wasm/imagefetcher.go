@@ -70,7 +70,7 @@ type ImageFetcher struct {
 	logger    logging.Logger
 }
 
-func NewImageFetcher(ctx context.Context, opt ImageFetcherOption, logger logging.Logger) *ImageFetcher {
+func NewImageFetcher(ctx context.Context, opt ImageFetcherOption, logger logging.Logger) (*ImageFetcher, error) {
 	fetchOpts := make([]remote.Option, 0, 2)
 	if opt.useAnonymous() {
 		// Use anonymous auth if no pull secret is provided.
@@ -94,7 +94,7 @@ func NewImageFetcher(ctx context.Context, opt ImageFetcherOption, logger logging
 			caCertPool = x509.NewCertPool()
 		}
 		if !caCertPool.AppendCertsFromPEM(opt.CACert) {
-			logger.Error(errors.New("failed to append CA certificate to pool"), "Wasm image fetcher")
+			return nil, fmt.Errorf("failed to append CA certificate to pool")
 		}
 		t.TLSClientConfig.RootCAs = caCertPool
 		fetchOpts = append(fetchOpts, remote.WithTransport(t))
@@ -103,7 +103,7 @@ func NewImageFetcher(ctx context.Context, opt ImageFetcherOption, logger logging
 	return &ImageFetcher{
 		fetchOpts: append(fetchOpts, remote.WithContext(ctx)),
 		logger:    logger,
-	}
+	}, nil
 }
 
 // PrepareFetch is the entrypoint for fetching Wasm binary from Wasm Image Specification compatible images.
