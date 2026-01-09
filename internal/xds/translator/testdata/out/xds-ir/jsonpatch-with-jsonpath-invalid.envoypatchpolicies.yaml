@@ -10,9 +10,12 @@
         namespace: default
       conditions:
       - lastTransitionTime: null
-        message: 'Unable to find xds resources: type.googleapis.com/envoy.config.listener.v3.Listener/non-existing-listener'
+        message: 'No jsonPointers were found while evaluating the jsonPath: ''..doesNotExists''.
+          Ensure the elements you are trying to select with the jsonPath exist in
+          the document. If you need to add a non-existing property, use the ''path''
+          attribute.'
         observedGeneration: 1
-        reason: ResourceNotFound
+        reason: Invalid
         status: "False"
         type: Programmed
       controllerName: ""

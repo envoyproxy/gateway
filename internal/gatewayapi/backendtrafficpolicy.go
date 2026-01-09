@@ -766,7 +766,7 @@ func (t *Translator) applyTrafficFeatureToRoute(route RouteContext,
 		}
 		for _, r := range http.Routes {
 			// If specified the sectionName in policy target, must match route rule from ir route metadata.
-			if target.SectionName != nil && string(*target.SectionName) != r.Destination.Metadata.SectionName {
+			if target.SectionName != nil && string(*target.SectionName) != r.Metadata.SectionName {
 				continue
 			}
 			// Apply if there is a match
@@ -1397,8 +1397,14 @@ func buildRequestBuffer(spec *egv1a1.RequestBuffer) (*ir.RequestBuffer, error) {
 		return nil, nil
 	}
 
-	if _, ok := spec.Limit.AsInt64(); !ok {
+	maxBytes, ok := spec.Limit.AsInt64()
+	if !ok {
 		return nil, fmt.Errorf("limit must be convertible to an int64")
+	}
+
+	if maxBytes < 0 || maxBytes > math.MaxUint32 {
+		return nil, fmt.Errorf("limit value %s is out of range, must be between 0 and %d",
+			spec.Limit.String(), math.MaxUint32)
 	}
 
 	return &ir.RequestBuffer{

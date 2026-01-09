@@ -21,7 +21,7 @@ IP_FAMILY ?= ipv4
 BENCHMARK_TIMEOUT ?= 60m
 BENCHMARK_CPU_LIMITS ?= 1000m
 BENCHMARK_MEMORY_LIMITS ?= 1024Mi
-BENCHMARK_RPS ?= 10000
+BENCHMARK_BASELINE_RPS ?= 100
 BENCHMARK_CONNECTIONS ?= 100
 BENCHMARK_DURATION ?= 60
 BENCHMARK_REPORT_DIR ?= benchmark_report
@@ -264,7 +264,7 @@ run-benchmark: install-benchmark-server prepare-ip-family ## Run benchmark tests
 	kubectl wait --timeout=$(WAIT_TIMEOUT) -n benchmark-test deployment/nighthawk-test-server --for=condition=Available
 	kubectl wait --timeout=$(WAIT_TIMEOUT) -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
 	kubectl apply -f test/benchmark/config/gatewayclass.yaml
-	go test -v -tags benchmark -timeout $(BENCHMARK_TIMEOUT) ./test/benchmark --rps=$(BENCHMARK_RPS) --connections=$(BENCHMARK_CONNECTIONS) --duration=$(BENCHMARK_DURATION) --report-save-dir=$(BENCHMARK_REPORT_DIR)
+	go test -v -tags benchmark -timeout $(BENCHMARK_TIMEOUT) ./test/benchmark --baseline-rps=$(BENCHMARK_BASELINE_RPS) --connections=$(BENCHMARK_CONNECTIONS) --duration=$(BENCHMARK_DURATION) --report-save-dir=$(BENCHMARK_REPORT_DIR)
 	# render benchmark profiles into image
 	@if [ "$(BENCHMARK_RENDER_PNG)" != "false" ]; then dot -V; fi
 	@if [ "$(BENCHMARK_RENDER_PNG)" != "false" ]; then find test/benchmark/$(BENCHMARK_REPORT_DIR)/profiles -name "*.pprof" -type f -exec sh -c 'go tool pprof -png "$$1" > "$$${1%.pprof}.png"' _ {} \; ; fi
@@ -272,8 +272,8 @@ run-benchmark: install-benchmark-server prepare-ip-family ## Run benchmark tests
 .PHONY: install-benchmark-server
 install-benchmark-server: ## Install nighthawk server for benchmark test
 	@$(LOG_TARGET)
-	kubectl create namespace benchmark-test
-	kubectl -n benchmark-test create configmap test-server-config --from-file=test/benchmark/config/nighthawk-test-server-config.yaml -o yaml
+	kubectl create namespace benchmark-test --dry-run=client -o yaml | kubectl apply -f -
+	kubectl -n benchmark-test create configmap test-server-config --from-file=test/benchmark/config/nighthawk-test-server-config.yaml --dry-run=client -o yaml | kubectl apply -f -
 	kubectl apply -f test/benchmark/config/nighthawk-test-server.yaml
 
 .PHONY: uninstall-benchmark-server

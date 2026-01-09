@@ -16,6 +16,11 @@ bug fixes: |
   Avoid creating skeleton RouteParent status entries for parentRefs belonging to unmanaged GatewayClasses.
   Fixed configured OIDC authorization endpoint being overridden by discovered endpoints from issuer's well-known URL.
   Fix 500 errors caused by partially invalid BackendRefs; traffic is now correctly routed between valid backends and 500 responses according to their configured weights.
+  Fixed an issue where BackendTrafficPolicy does not validate maximum value of requestBuffer limit.
+  Fixed an issue where observedGeneration is missing from the EnvoyPatchPolicy status.
+  Fixed a nil pointer error when applying BackendTrafficPolicy to HTTPRoutes with no backendRefs.
+  Fixed ExternalTrafficPolicy not being applied to Envoy Service when ServiceType is NodePort.
+  Fixed CRL ref not processed by gateway controller.
 
 # Enhancements that improve performance.
 performance improvements: |

@@ -47,3 +47,4 @@ charts/gateway-addons-helm/dashboards/vendor/
 
 *.out
 .hugo_build.lock
+test/benchmark/benchmark_report/*
