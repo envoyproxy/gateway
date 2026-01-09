@@ -17,6 +17,8 @@ The `ingress2eg` tool is an **unofficial proof-of-concept** forked from ingress2
 - **NGINX Annotation Support**: Converts NGINX-specific annotations (16+ feature categories including session affinity, authentication, rate limiting, CORS, canary deployments, etc.)
 - **Envoy Gateway CRD Output**: Generates not only Gateway API resources (Gateway, HTTPRoute) but also Envoy Gateway specific CRDs (BackendTrafficPolicy, SecurityPolicy, etc.)
 
+We aim to get this feature merged upstream in `ingress2gateway` as well.
+
 This guide will walk you through the prerequisites, installation of both tools, and provide example migration processes.
 
 ## Prerequisites
