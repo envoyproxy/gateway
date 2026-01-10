@@ -1,0 +1,7 @@
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyGateway
+metadata:
+  name: default
+spec:
+  provider:
+    type: Kubernetes
