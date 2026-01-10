@@ -309,6 +309,13 @@ type EnvoyGatewayKubernetesProvider struct {
 	// +optional
 	RateLimitPDB *KubernetesPodDisruptionBudgetSpec `json:"rateLimitPDB,omitempty"`
 
+	// EnvoyProxyTemplate defines default settings applied to all Envoy Proxy resources.
+	// Settings from EnvoyProxy resources referenced by GatewayClass or Gateway may be merged
+	// with or replace template definitions based on the mergeType.
+	//
+	// +optional
+	EnvoyProxyTemplate *EnvoyProxyTemplateSpec `json:"envoyProxyTemplate,omitempty"`
+
 	// Watch holds configuration of which input resources should be watched and reconciled.
 	// +optional
 	Watch *KubernetesWatchMode `json:"watch,omitempty"`
@@ -863,6 +870,47 @@ type ShutdownManager struct {
 type EnvoyGatewayTopologyInjector struct {
 	// +optional
 	Disable *bool `json:"disabled,omitempty"`
+}
+
+// EnvoyProxyTemplateMergeType defines the types of merge strategies supported for EnvoyProxy template merging.
+// +kubebuilder:validation:Enum=Replace;StrategicMerge;JSONMerge
+type EnvoyProxyTemplateMergeType string
+
+const (
+	// EnvoyProxyTemplateMergeTypeReplace means more specific configurations completely replace less specific ones.
+	// In this mode, if a Gateway has an EnvoyProxy parametersRef, it completely replaces any GatewayClass and
+	// template configurations.  Otherwise, if a GatewayClass has an EnvoyProxy parametersRef, it completely replaces
+	// the template configuration.
+	//
+	// This is the default behavior for backwards compatibility.
+	EnvoyProxyTemplateMergeTypeReplace EnvoyProxyTemplateMergeType = "Replace"
+
+	// EnvoyProxyTemplateMergeTypeStrategicMerge merges EnvoyProxy configurations using Kubernetes strategic merge patch semantics.
+	// The merge happens in order: template -> GatewayClass EnvoyProxy -> Gateway EnvoyProxy
+	// where later configurations override or extend earlier ones based on strategic merge rules.
+	EnvoyProxyTemplateMergeTypeStrategicMerge EnvoyProxyTemplateMergeType = "StrategicMerge"
+
+	// EnvoyProxyTemplateMergeTypeJSONMerge merges configurations using JSON merge patch (RFC 7386) semantics.
+	// The merge happens in order: template -> GatewayClass EnvoyProxy -> Gateway EnvoyProxy
+	// where later configurations override earlier ones.
+	EnvoyProxyTemplateMergeTypeJSONMerge EnvoyProxyTemplateMergeType = "JSONMerge"
+)
+
+// EnvoyProxyTemplateSpec defines the EnvoyProxy template configuration and its merge strategy.
+type EnvoyProxyTemplateSpec struct {
+	// MergeType defines how the template should be merged with EnvoyProxy configurations from
+	// GatewayClass or Gateway resources. If unspecified, defaults to Replace for backwards compatibility.
+	//
+	// +optional
+	// +kubebuilder:default=Replace
+	MergeType *EnvoyProxyTemplateMergeType `json:"mergeType,omitempty"`
+
+	// Spec defines the EnvoyProxy template specification.
+	// When MergeType is Replace, this is used only if no GatewayClass or Gateway EnvoyProxy is specified.
+	// When MergeType is StrategicMerge or JSONMerge, this serves as the base configuration.
+	//
+	// +optional
+	Spec *EnvoyProxySpec `json:"spec,omitempty"`
 }
 
 func init() {

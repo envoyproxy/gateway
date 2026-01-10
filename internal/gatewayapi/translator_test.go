@@ -118,7 +118,7 @@ func TestTranslate(t *testing.T) {
 				EnvoyPatchPolicyEnabled: envoyPatchPolicyEnabled,
 				BackendEnabled:          backendEnabled,
 				ControllerNamespace:     "envoy-gateway-system",
-				MergeGateways:           IsMergeGatewaysEnabled(resources),
+				MergeGateways:           IsMergeGatewaysEnabled(resources, nil),
 				GatewayNamespaceMode:    gatewayNamespaceMode,
 				WasmCache:               &mockWasmCache{},
 				RunningOnHost:           runningOnHost,
@@ -511,7 +511,7 @@ func TestTranslateWithExtensionKinds(t *testing.T) {
 					{Group: "storage.example.io", Kind: "S3Backend"},
 					{Group: "compute.example.io", Kind: "LambdaBackend"},
 				},
-				MergeGateways: IsMergeGatewaysEnabled(resources),
+				MergeGateways: IsMergeGatewaysEnabled(resources, nil),
 				Logger:        logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo),
 			}
 

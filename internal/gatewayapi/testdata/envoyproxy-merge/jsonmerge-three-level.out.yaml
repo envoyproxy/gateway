@@ -1,0 +1,20 @@
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: gateway-proxy
+  namespace: default
+spec:
+  logging:
+    level:
+      default: debug
+  provider:
+    type: Kubernetes
+    kubernetes:
+      envoyDeployment:
+        replicas: 5
+        container:
+          env:
+            - name: GATEWAYCLASS_ENV
+              value: gatewayclass_value
+      envoyService:
+        type: ClusterIP

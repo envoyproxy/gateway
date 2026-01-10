@@ -1,0 +1,26 @@
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: gateway-proxy
+  namespace: default
+spec:
+  logging:
+    level:
+      default: debug
+  provider:
+    type: Kubernetes
+    kubernetes:
+      envoyDeployment:
+        replicas: 3
+        container:
+          env:
+            - name: GATEWAY_ENV
+              value: gateway_value
+            - name: TEMPLATE_ENV
+              value: template_value
+          resources:
+            requests:
+              cpu: 200m
+              memory: 1Gi
+      envoyService:
+        type: LoadBalancer

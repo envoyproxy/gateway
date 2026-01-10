@@ -1,0 +1,58 @@
+envoyGateway:
+  apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyGateway
+  gateway:
+    controllerName: gateway.envoyproxy.io/gatewayclass-controller
+  provider:
+    type: Kubernetes
+    kubernetes:
+      envoyProxyTemplate:
+        mergeType: JSONMerge
+        spec:
+          logging:
+            level:
+              default: warn
+          provider:
+            type: Kubernetes
+            kubernetes:
+              envoyDeployment:
+                replicas: 1
+                container:
+                  env:
+                    - name: TEMPLATE_ENV
+                      value: template_value
+              envoyService:
+                type: ClusterIP
+
+envoyProxyForGatewayClass:
+  apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyProxy
+  metadata:
+    name: gatewayclass-proxy
+    namespace: envoy-gateway-system
+  spec:
+    provider:
+      type: Kubernetes
+      kubernetes:
+        envoyDeployment:
+          replicas: 3
+          container:
+            env:
+              - name: GATEWAYCLASS_ENV
+                value: gatewayclass_value
+
+envoyProxiesForGateways:
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: EnvoyProxy
+    metadata:
+      name: gateway-proxy
+      namespace: default
+    spec:
+      logging:
+        level:
+          default: debug
+      provider:
+        type: Kubernetes
+        kubernetes:
+          envoyDeployment:
+            replicas: 5
