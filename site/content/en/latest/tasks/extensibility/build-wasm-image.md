@@ -2,16 +2,16 @@
 title: "Build a Wasm image"
 ---
 
-Envoy Gateway supports two types of Wasm extensions within the [EnvoyExtensionPolicy][] API: HTTP Wasm Extensions and Image Wasm Extensions. 
-Packaging a Wasm extension as an OCI image is beneficial because it simplifies versioning and distribution for users. 
+Envoy Gateway supports two types of Wasm extensions within the [EnvoyExtensionPolicy][] API: HTTP Wasm Extensions and Image Wasm Extensions.
+Packaging a Wasm extension as an OCI image is beneficial because it simplifies versioning and distribution for users.
 Additionally, users can leverage existing image toolchain to build and manage Wasm images.
 
-This document describes how to build OCI images which are consumable by Envoy Gateway.  
+This document describes how to build OCI images which are consumable by Envoy Gateway.
 
 ## Wasm Image Formats
 
-There are two types of images that are supported by Envoy Gateway. One is in the Docker format, and another is the standard 
-OCI specification compliant format. Please note that both of them are supported by any OCI registries. You can choose 
+There are two types of images that are supported by Envoy Gateway. One is in the Docker format, and another is the standard
+OCI specification compliant format. Please note that both of them are supported by any OCI registries. You can choose
 either format depending on your preference, and both types of images are consumable by Envoy Gateway [EnvoyExtensionPolicy][] API.
 
 ## Build Wasm Docker image
@@ -43,7 +43,7 @@ $ docker push my-registry/mywasm:0.1.0
 
 ## Build Wasm OCI image
 
-We assume that you have a valid Wasm binary named `plugin.wasm`, and you have [buildah](https://buildah.io/) installed on your machine. 
+We assume that you have a valid Wasm binary named `plugin.wasm`, and you have [buildah](https://buildah.io/) installed on your machine.
 Then you can build a Wasm OCI image with the `buildah` CLI.
 
 1. First, we create a working container from `scratch` base image with `buildah from` command.

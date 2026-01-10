@@ -2,12 +2,12 @@
 title: "Circuit Breakers"
 ---
 
-[Envoy Circuit Breakers][] can be used to fail quickly and apply back-pressure in response to upstream service degradation. 
+[Envoy Circuit Breakers][] can be used to fail quickly and apply back-pressure in response to upstream service degradation.
 
 Envoy Gateway supports the following circuit breaker thresholds:
-- **Concurrent Connections**: limit the connections that Envoy can establish to the upstream service. When this threshold is met, new connections will not be established, and some requests will be queued until an existing connection becomes available. 
+- **Concurrent Connections**: limit the connections that Envoy can establish to the upstream service. When this threshold is met, new connections will not be established, and some requests will be queued until an existing connection becomes available.
 - **Concurrent Requests**: limit on concurrent requests in-flight from Envoy to the upstream service. When this threshold is met, requests will be queued.
-- **Pending Requests**: limit the pending request queue size. When this threshold is met, overflowing requests will be terminated with a `503` status code. 
+- **Pending Requests**: limit the pending request queue size. When this threshold is met, overflowing requests will be terminated with a `503` status code.
 
 Envoy's circuit breakers are distributed: counters are not synchronized across different Envoy processes. The default Envoy and Envoy Gateway circuit breaker threshold values (1024) may be too strict for high-throughput systems.
 
@@ -24,11 +24,11 @@ This instantiated resource can be linked to a [Gateway][], [HTTPRoute][] or [GRP
 
 ### Install the hey load testing tool
 
-* The `hey` CLI will be used to generate load and measure response times. Follow the installation instruction from the [Hey project] docs.   
+* The `hey` CLI will be used to generate load and measure response times. Follow the installation instruction from the [Hey project] docs.
 
 ## Test and customize circuit breaker settings
 
-This example will simulate a degraded backend that responds within 10 seconds by adding the `?delay=10s` query parameter to API calls. The hey tool will be used to generate 100 concurrent requests. 
+This example will simulate a degraded backend that responds within 10 seconds by adding the `?delay=10s` query parameter to API calls. The hey tool will be used to generate 100 concurrent requests.
 
 ```shell
 hey -n 100 -c 100 -host "www.example.com"  http://${GATEWAY_HOST}/?delay=10s
@@ -137,9 +137,9 @@ Response time histogram:
   10.122 [10]	|■■■■
 ```
 
-With the new circuit breaker settings, and due to the slowness of the backend, only the first 10 concurrent requests were proxied, while the other 90 overflowed.   
-* Overflowing Requests failed fast, reducing proxy resource consumption. 
-* Upstream traffic was limited, alleviating the pressure on the degraded service. 
+With the new circuit breaker settings, and due to the slowness of the backend, only the first 10 concurrent requests were proxied, while the other 90 overflowed.
+* Overflowing Requests failed fast, reducing proxy resource consumption.
+* Upstream traffic was limited, alleviating the pressure on the degraded service.
 
 [Envoy Circuit Breakers]: https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/upstream/circuit_breaking
 [BackendTrafficPolicy]: ../../../api/extension_types#backendtrafficpolicy

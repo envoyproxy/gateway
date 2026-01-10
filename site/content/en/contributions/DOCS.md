@@ -45,7 +45,7 @@ To create a new conceptual document, use the following command:
 hugo new --kind concept content/en/latest/concepts/your-new-concept.md
 ```
 
-Replace `your-new-concept` with the appropriate name for your documentation. 
+Replace `your-new-concept` with the appropriate name for your documentation.
 
 {{% alert title="Note" color="primary" %}}
 When adding new documentation, please make sure it is included in both the `site/content/en/latest` directory and the `site/content/en/v#.#` directory (where v#.# is the highest version number) to ensure consistency across current and versioned docs.

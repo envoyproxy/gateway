@@ -10,7 +10,7 @@ Follow the instructions [here](./../../install/install-egctl.md) to install `egc
 
 The `egctl config` subcommand provides tools for viewing and validating the Envoy Proxy and Envoy RateLimit configuration configured in Envoy Proxy.
 
-Here's an example of retrieving the [xDS Route Configuration](https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route.proto#envoy-v3-api-msg-config-route-v3-routeconfiguration) from all the proxies. 
+Here's an example of retrieving the [xDS Route Configuration](https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route.proto#envoy-v3-api-msg-config-route-v3-routeconfiguration) from all the proxies.
 
 ```console
 ~ egctl config envoy-proxy route
@@ -298,7 +298,7 @@ This subcommand allows users to translate from an input configuration type to an
 
 The `translate` subcommand can translate Kubernetes resources to:
 * Gateway API resources
-  This is useful in order to see how validation would occur if these resources were applied to Kubernetes. 
+  This is useful in order to see how validation would occur if these resources were applied to Kubernetes.
   
   Use the `--to gateway-api` parameter to translate to Gateway API resources.
   

@@ -6,7 +6,7 @@ This task provides instructions for configuring external authentication.
 
 External authorization calls an external HTTP or gRPC service to check whether an incoming HTTP request is authorized
 or not. If the request is deemed unauthorized, then the request will be denied with a 403 (Forbidden) response. If the
-request is authorized, then the request will be allowed to proceed to the backend service. 
+request is authorized, then the request will be allowed to proceed to the backend service.
 
 Envoy Gateway introduces a new CRD called [SecurityPolicy][] that allows the user to configure external authorization.
 This instantiated resource can be linked to a [Gateway][] and [HTTPRoute][] resource.
@@ -186,8 +186,8 @@ Send a request to the backend service with `Authentication` header:
 curl -v -H "Host: www.example.com" -H "Authorization: Bearer token1" "http://${GATEWAY_HOST}/myapp"
 ```
 
-The request should be allowed and you should see the response from the backend service. 
-Because the `x-current-user` header from the auth response has been sent to the backend service, 
+The request should be allowed and you should see the response from the backend service.
+Because the `x-current-user` header from the auth response has been sent to the backend service,
 you should see the `x-current-user` header in the response.
 
 ```
@@ -200,7 +200,7 @@ you should see the `x-current-user` header in the response.
 
 ### Installation
 
-Install a demo gRPC service that will be used as the external authorization service. The demo gRPC service is enabled 
+Install a demo gRPC service that will be used as the external authorization service. The demo gRPC service is enabled
 with TLS and a BackendTLSConfig is created to configure the communication between the Envoy proxy and the gRPC service.
 
 Note: TLS is optional for HTTP or gRPC external authorization services. However, enabling TLS is recommended for enhanced
@@ -277,7 +277,7 @@ kubectl get httproute/myapp -o yaml
 ### Configuration
 
 Update the SecurityPolicy that was created in the previous section to use the gRPC external authorization service.
-It calls the gRPC external authorization service "grpc-ext-auth" on port 9002 for authorization. 
+It calls the gRPC external authorization service "grpc-ext-auth" on port 9002 for authorization.
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
