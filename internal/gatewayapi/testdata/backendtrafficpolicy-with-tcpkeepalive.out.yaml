@@ -323,6 +323,9 @@ xdsIR:
           kind: GRPCRoute
           name: grpcroute-1
           namespace: default
+          trafficPolicy:
+            Name: policy-for-gateway
+            Namespace: envoy-gateway
         name: grpcroute/default/grpcroute-1/rule/0/match/-1/*
         traffic:
           tcpKeepalive:
@@ -401,6 +404,9 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-1
           namespace: default
+          trafficPolicy:
+            Name: policy-for-route
+            Namespace: default
         name: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
         pathMatch:
           distinct: false
