@@ -20,6 +20,7 @@ import (
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	protobuf "google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -107,6 +108,14 @@ func buildCompressorFilter(compression *ir.Compression) (*hcmv3.HttpFilter, erro
 
 	if compression.ChooseFirst {
 		compressorProto.ChooseFirst = true
+	}
+
+	if compression.MinContentLength != nil {
+		compressorProto.ResponseDirectionConfig = &compressorv3.Compressor_ResponseDirectionConfig{
+			CommonConfig: &compressorv3.Compressor_CommonDirectionConfig{
+				MinContentLength: wrapperspb.UInt32(*compression.MinContentLength),
+			},
+		}
 	}
 
 	if compressorAny, err = proto.ToAnyWithValidation(compressorProto); err != nil {

@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -277,6 +278,130 @@ func TestBuildPassiveHealthCheck(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			got := buildPassiveHealthCheck(tc.policy)
+			require.Equal(t, tc.expected, got)
+		})
+	}
+}
+
+func TestBuildCompression(t *testing.T) {
+	cases := []struct {
+		name        string
+		compression []*egv1a1.Compression
+		compressor  []*egv1a1.Compression
+		expected    []*ir.Compression
+	}{
+		{
+			name:        "nil compression",
+			compression: nil,
+			compressor:  nil,
+			expected:    nil,
+		},
+		{
+			name: "compression without minContentLength",
+			compression: []*egv1a1.Compression{
+				{
+					Type: egv1a1.GzipCompressorType,
+					Gzip: &egv1a1.GzipCompressor{},
+				},
+			},
+			expected: []*ir.Compression{
+				{
+					Type:             egv1a1.GzipCompressorType,
+					ChooseFirst:      true,
+					MinContentLength: nil,
+				},
+			},
+		},
+		{
+			name: "compression with minContentLength",
+			compression: []*egv1a1.Compression{
+				{
+					Type:             egv1a1.GzipCompressorType,
+					Gzip:             &egv1a1.GzipCompressor{},
+					MinContentLength: ptr.To(resource.MustParse("100")),
+				},
+			},
+			expected: []*ir.Compression{
+				{
+					Type:             egv1a1.GzipCompressorType,
+					ChooseFirst:      true,
+					MinContentLength: ptr.To[uint32](100),
+				},
+			},
+		},
+		{
+			name: "compressor with minContentLength",
+			compressor: []*egv1a1.Compression{
+				{
+					Type:             egv1a1.BrotliCompressorType,
+					Brotli:           &egv1a1.BrotliCompressor{},
+					MinContentLength: ptr.To(resource.MustParse("200")),
+				},
+			},
+			expected: []*ir.Compression{
+				{
+					Type:             egv1a1.BrotliCompressorType,
+					ChooseFirst:      true,
+					MinContentLength: ptr.To[uint32](200),
+				},
+			},
+		},
+		{
+			name: "multiple compressors with different minContentLength",
+			compressor: []*egv1a1.Compression{
+				{
+					Type:             egv1a1.BrotliCompressorType,
+					Brotli:           &egv1a1.BrotliCompressor{},
+					MinContentLength: ptr.To(resource.MustParse("50")),
+				},
+				{
+					Type:             egv1a1.GzipCompressorType,
+					Gzip:             &egv1a1.GzipCompressor{},
+					MinContentLength: ptr.To(resource.MustParse("100")),
+				},
+			},
+			expected: []*ir.Compression{
+				{
+					Type:             egv1a1.BrotliCompressorType,
+					ChooseFirst:      true,
+					MinContentLength: ptr.To[uint32](50),
+				},
+				{
+					Type:             egv1a1.GzipCompressorType,
+					ChooseFirst:      false,
+					MinContentLength: ptr.To[uint32](100),
+				},
+			},
+		},
+		{
+			name: "compressor takes priority over compression",
+			compression: []*egv1a1.Compression{
+				{
+					Type:             egv1a1.GzipCompressorType,
+					Gzip:             &egv1a1.GzipCompressor{},
+					MinContentLength: ptr.To(resource.MustParse("100")),
+				},
+			},
+			compressor: []*egv1a1.Compression{
+				{
+					Type:             egv1a1.BrotliCompressorType,
+					Brotli:           &egv1a1.BrotliCompressor{},
+					MinContentLength: ptr.To(resource.MustParse("200")),
+				},
+			},
+			expected: []*ir.Compression{
+				{
+					Type:             egv1a1.BrotliCompressorType,
+					ChooseFirst:      true,
+					MinContentLength: ptr.To[uint32](200),
+				},
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := buildCompression(tc.compression, tc.compressor)
 			require.Equal(t, tc.expected, got)
 		})
 	}
