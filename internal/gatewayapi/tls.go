@@ -12,9 +12,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	corev1 "k8s.io/api/core/v1"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+
+	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 )
 
 // parseCertsFromTLSSecretsData parses the cert and key provided in a secret
