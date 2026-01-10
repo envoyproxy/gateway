@@ -9,3 +9,5 @@ NODE_VERSION = "24.12.0"
 [build]
 command = "make docs"
 publish = "site/public"
+# https://docs.netlify.com/build/configure-builds/ignore-builds/
+ignore = "git diff --quiet $CACHED_COMMIT_REF $COMMIT_REF site/ tools/make/docs.mk netlify.toml"
