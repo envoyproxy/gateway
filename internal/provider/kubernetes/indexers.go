@@ -56,6 +56,7 @@ const (
 	configMapHTTPRouteFilterIndex    = "configMapHTTPRouteFilterIndex"
 	secretHTTPRouteFilterIndex       = "secretHTTPRouteFilterIndex"
 	// ClusterTrustBundle related indexers
+	clusterTrustBundleEepIndex     = "clusterTrustBundleEepIndex"
 	clusterTrustBundleBackendIndex = "clusterTrustBundleBackendIndex"
 	clusterTrustBundleBtlsIndex    = "clusterTrustBundleBtlsIndex"
 	clusterTrustBundleCtpIndex     = "clusterTrustBundleCtpIndex"
@@ -936,9 +937,6 @@ func configMapBtpIndexFunc(rawObj client.Object) []string {
 func configMapEepIndexFunc(rawObj client.Object) []string {
 	eep := rawObj.(*egv1a1.EnvoyExtensionPolicy)
 	var configMapReferences []string
-	if eep.Spec.Lua == nil {
-		return configMapReferences
-	}
 
 	for _, p := range eep.Spec.Lua {
 		if p.ValueRef != nil {
@@ -952,6 +950,25 @@ func configMapEepIndexFunc(rawObj client.Object) []string {
 			}
 		}
 	}
+
+	for _, wasm := range eep.Spec.Wasm {
+		var caCertRef *gwapiv1.SecretObjectReference
+		if wasm.Code.HTTP != nil && wasm.Code.HTTP.TLS != nil {
+			caCertRef = &wasm.Code.HTTP.TLS.CACertificateRef
+		} else if wasm.Code.Image != nil && wasm.Code.Image.TLS != nil {
+			caCertRef = &wasm.Code.Image.TLS.CACertificateRef
+		}
+
+		if caCertRef != nil && caCertRef.Kind != nil && string(*caCertRef.Kind) == resource.KindConfigMap {
+			configMapReferences = append(configMapReferences,
+				types.NamespacedName{
+					Namespace: gatewayapi.NamespaceDerefOr(caCertRef.Namespace, eep.Namespace),
+					Name:      string(caCertRef.Name),
+				}.String(),
+			)
+		}
+	}
+
 	return configMapReferences
 }
 
@@ -1096,6 +1113,12 @@ func addEnvoyExtensionPolicyIndexers(ctx context.Context, mgr manager.Manager) e
 		return err
 	}
 
+	if err = mgr.GetFieldIndexer().IndexField(
+		ctx, &egv1a1.EnvoyExtensionPolicy{}, clusterTrustBundleEepIndex,
+		clusterTrustBundleEepIndexFunc); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -1132,7 +1155,40 @@ func secretEnvoyExtensionPolicyIndexFunc(rawObj client.Object) []string {
 					Name:      string(secretRef.Name),
 				}.String())
 		}
+
+		var caCertRef *gwapiv1.SecretObjectReference
+		if wasm.Code.HTTP != nil && wasm.Code.HTTP.TLS != nil {
+			caCertRef = &wasm.Code.HTTP.TLS.CACertificateRef
+		} else if wasm.Code.Image != nil && wasm.Code.Image.TLS != nil {
+			caCertRef = &wasm.Code.Image.TLS.CACertificateRef
+		}
+
+		if caCertRef != nil && (caCertRef.Kind == nil || string(*caCertRef.Kind) == resource.KindSecret) {
+			ret = append(ret,
+				types.NamespacedName{
+					Namespace: gatewayapi.NamespaceDerefOr(caCertRef.Namespace, envoyExtensionPolicy.Namespace),
+					Name:      string(caCertRef.Name),
+				}.String())
+		}
 	}
 
 	return ret
+}
+
+func clusterTrustBundleEepIndexFunc(rawObj client.Object) []string {
+	eep := rawObj.(*egv1a1.EnvoyExtensionPolicy)
+	var refs []string
+	for _, wasm := range eep.Spec.Wasm {
+		var caCertRef *gwapiv1.SecretObjectReference
+		if wasm.Code.HTTP != nil && wasm.Code.HTTP.TLS != nil {
+			caCertRef = &wasm.Code.HTTP.TLS.CACertificateRef
+		} else if wasm.Code.Image != nil && wasm.Code.Image.TLS != nil {
+			caCertRef = &wasm.Code.Image.TLS.CACertificateRef
+		}
+
+		if caCertRef != nil && caCertRef.Kind != nil && string(*caCertRef.Kind) == resource.KindClusterTrustBundle {
+			refs = append(refs, string(caCertRef.Name))
+		}
+	}
+	return refs
 }

@@ -225,7 +225,25 @@ func (r *gatewayAPIReconciler) validateClusterTrustBundleForReconcile(ctb *certi
 		}
 	}
 
+	if r.eepCRDExists {
+		if r.isEnvoyExtensionPolicyReferencingClusterTrustBundle(ctb) {
+			return true
+		}
+	}
+
 	return false
+}
+
+func (r *gatewayAPIReconciler) isEnvoyExtensionPolicyReferencingClusterTrustBundle(ctb *certificatesv1b1.ClusterTrustBundle) bool {
+	eepList := &egv1a1.EnvoyExtensionPolicyList{}
+	if err := r.client.List(context.Background(), eepList, &client.ListOptions{
+		FieldSelector: fields.OneTermEqualSelector(clusterTrustBundleEepIndex, ctb.Name),
+	}); err != nil {
+		r.log.Error(err, "unable to find associated EnvoyExtensionPolicy")
+		return false
+	}
+
+	return len(eepList.Items) > 0
 }
 
 func (r *gatewayAPIReconciler) isCtpReferencingClusterTrustBundle(ctb *certificatesv1b1.ClusterTrustBundle) bool {
