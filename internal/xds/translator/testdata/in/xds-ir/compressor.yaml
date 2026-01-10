@@ -36,7 +36,7 @@ http:
       name: ""
       prefix: /
     traffic:
-      compressor:
+      compression:
       - type: Brotli
         minContentLength: 100
       - type: Gzip

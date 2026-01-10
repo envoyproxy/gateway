@@ -14,6 +14,39 @@
           initialStreamWindowSize: 65536
           maxConcurrentStreams: 100
         httpFilters:
+        - disabled: true
+          name: envoy.filters.http.compressor.brotli
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.compressor.v3.Compressor
+            compressorLibrary:
+              name: envoy.compression.brotli.compressor
+              typedConfig:
+                '@type': type.googleapis.com/envoy.extensions.compression.brotli.compressor.v3.Brotli
+            responseDirectionConfig:
+              commonConfig:
+                minContentLength: 100
+        - disabled: true
+          name: envoy.filters.http.compressor.gzip
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.compressor.v3.Compressor
+            compressorLibrary:
+              name: envoy.compression.gzip.compressor
+              typedConfig:
+                '@type': type.googleapis.com/envoy.extensions.compression.gzip.compressor.v3.Gzip
+            responseDirectionConfig:
+              commonConfig:
+                minContentLength: 200
+        - disabled: true
+          name: envoy.filters.http.compressor.zstd
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.compressor.v3.Compressor
+            compressorLibrary:
+              name: envoy.compression.zstd.compressor
+              typedConfig:
+                '@type': type.googleapis.com/envoy.extensions.compression.zstd.compressor.v3.Zstd
+            responseDirectionConfig:
+              commonConfig:
+                minContentLength: 300
         - name: envoy.filters.http.router
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
