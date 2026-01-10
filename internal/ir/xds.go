@@ -307,6 +307,9 @@ type HTTPListener struct {
 	Connection *ClientConnection `json:"connection,omitempty" yaml:"connection,omitempty"`
 	// PreserveRouteOrder determines if routes should be sorted according to GW-API specs
 	PreserveRouteOrder bool `json:"preserveRouteOrder,omitempty" yaml:"preserveRouteOrder,omitempty"`
+	// MatchUpstreamScheme configures Envoy to set the :scheme pseudo-header to match
+	// the upstream transport protocol (http/https) instead of preserving the downstream scheme.
+	MatchUpstreamScheme bool `json:"matchUpstreamScheme,omitempty" yaml:"matchUpstreamScheme,omitempty"`
 }
 
 // Validate the fields within the HTTPListener structure

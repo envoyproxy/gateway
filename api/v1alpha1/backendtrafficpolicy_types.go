@@ -73,6 +73,21 @@ type BackendTrafficPolicySpec struct {
 	// +optional
 	UseClientProtocol *bool `json:"useClientProtocol,omitempty"`
 
+	// UpstreamScheme configures how the :scheme pseudo-header is set for requests forwarded to backends.
+	//
+	// - PreserveDownstream (default): Preserves the :scheme from the original client request.
+	//   Use this when backends need to know the original client scheme for URL generation or redirects.
+	//
+	// - MatchUpstream: Sets the :scheme to match the upstream transport protocol.
+	//   If the backend uses TLS, the scheme is "https", otherwise "http".
+	//   Use this when backends require the scheme to match the actual transport protocol,
+	//   such as strictly HTTPS services that validate the :scheme header.
+	//
+	// This setting only takes effect when BackendTrafficPolicy targets a Gateway.
+	//
+	// +optional
+	UpstreamScheme *UpstreamScheme `json:"upstreamScheme,omitempty"`
+
 	// The compression config for the http streams.
 	// Deprecated: Use Compressor instead.
 	//
@@ -192,6 +207,21 @@ type BackendTrafficPolicyList struct {
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []BackendTrafficPolicy `json:"items"`
 }
+
+// UpstreamScheme defines how the :scheme pseudo-header is set for requests forwarded to backends.
+//
+// +kubebuilder:validation:Enum=PreserveDownstream;MatchUpstream
+type UpstreamScheme string
+
+const (
+	// UpstreamSchemePreserveDownstream preserves the :scheme from the original client request.
+	// This is the default behavior.
+	UpstreamSchemePreserveDownstream UpstreamScheme = "PreserveDownstream"
+
+	// UpstreamSchemeMatchUpstream sets the :scheme to match the upstream transport protocol.
+	// If the backend uses TLS, the scheme is "https", otherwise "http".
+	UpstreamSchemeMatchUpstream UpstreamScheme = "MatchUpstream"
+)
 
 func init() {
 	localSchemeBuilder.Register(&BackendTrafficPolicy{}, &BackendTrafficPolicyList{})
