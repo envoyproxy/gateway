@@ -80,12 +80,9 @@ var DynamicResolverBackendTest = suite.ConformanceTest{
 				},
 			})
 
-			// test with nghttp2.org, it support http2.0
-			// https://github.com/postmanlabs/httpbin/issues/373#issuecomment-354534597
 			req := http.MakeRequest(t, &http.ExpectedResponse{
 				Request: http.Request{
-					Host: "nghttp2.org",
-					Path: "httpbin/status/200",
+					Host: "gateway.envoyproxy.io", // gateway website supports http2.0
 				},
 				Response: http.Response{
 					StatusCodes: []int{200},
