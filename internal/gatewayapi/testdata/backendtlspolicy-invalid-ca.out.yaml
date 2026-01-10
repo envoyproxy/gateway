@@ -60,7 +60,7 @@ backendTLSPolicies:
       conditions:
       - lastTransitionTime: null
         message: No CA bundle found in referenced ConfigMap, Secret, or ClusterTrustBundle.
-        reason: NoValidCACertificate
+        reason: InvalidKind
         status: "False"
         type: Accepted
       - lastTransitionTime: null
