@@ -17,6 +17,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"syscall"
 	"testing"
 	"time"
 
@@ -31,6 +32,12 @@ var otelGRPCHeadersEnvoyGateway string
 
 //go:embed testdata/otel-grpc-headers/resources/gateway.yaml
 var otelGRPCHeadersGateway string
+
+//go:embed testdata/tcp-emptycluster/envoy-gateway.yaml
+var tcpEmptyClusterEnvoyGateway string
+
+//go:embed testdata/tcp-emptycluster/resources/gateway.yaml
+var tcpEmptyClusterGateway string
 
 // gatewayBin is the path to the compiled envoy-gateway binary.
 var gatewayBin string
@@ -132,4 +139,40 @@ func replaceTokens(content string, replacements map[string]string) string {
 		result = strings.ReplaceAll(result, token, value)
 	}
 	return result
+}
+
+func TestTCPListenersWithoutRoutesStartSuccessfully(t *testing.T) {
+	ports := testutils.RequireRandomPorts(t, 2)
+	listenerPort := ports[0]
+	adminPort := ports[1]
+
+	testDir := t.TempDir()
+	resourcesDir := filepath.Join(testDir, "resources")
+	require.NoError(t, os.Mkdir(resourcesDir, 0o755))
+
+	replacements := map[string]string{
+		"port: 443":   "port: " + strconv.Itoa(listenerPort),
+		"port: 8443":  "port: " + strconv.Itoa(listenerPort+1),
+		"port: 19000": "port: " + strconv.Itoa(adminPort),
+	}
+
+	envoyGatewayYAML := replaceTokens(tcpEmptyClusterEnvoyGateway, replacements)
+	gatewayYAML := replaceTokens(tcpEmptyClusterGateway, replacements)
+
+	require.NoError(t, os.WriteFile(filepath.Join(testDir, "envoy-gateway.yaml"), []byte(envoyGatewayYAML), 0o600))
+	require.NoError(t, os.WriteFile(filepath.Join(resourcesDir, "gateway.yaml"), []byte(gatewayYAML), 0o600))
+
+	cmd := exec.Command(gatewayBin, "server", "--config-path", filepath.Join(testDir, "envoy-gateway.yaml"))
+	cmd.Dir = testDir
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	require.NoError(t, cmd.Start())
+	defer func() {
+		_ = cmd.Process.Kill()
+		_ = cmd.Wait()
+	}()
+
+	// Assert: Envoy Gateway starts and stays up (regression check)
+	time.Sleep(3 * time.Second)
+	require.NoError(t, cmd.Process.Signal(os.Signal(syscall.Signal(0))))
 }
