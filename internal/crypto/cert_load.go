@@ -35,9 +35,10 @@ func LoadTLSConfig(tlsCrt, tlsKey, caCrt string) (*tls.Config, error) {
 		return &tls.Config{
 			Certificates: []tls.Certificate{cert},
 			NextProtos:   []string{"h2"},
-			ClientAuth:   tls.RequireAndVerifyClientCert,
-			ClientCAs:    certPool,
-			MinVersion:   tls.VersionTLS13,
+
+			ClientAuth: tls.RequireAndVerifyClientCert,
+			ClientCAs:  certPool,
+			MinVersion: tls.VersionTLS13,
 		}, nil
 	}
 
