@@ -294,11 +294,11 @@ func (t *Translator) validateListenerConditions(listener *ListenerContext) (isRe
 	if len(lConditions) == 1 && lConditions[0].Type == string(gwapiv1.ListenerConditionResolvedRefs) &&
 		lConditions[0].Reason == string(status.ListenerReasonPartiallyInvalidCertificateRef) {
 		status.SetGatewayListenerStatusCondition(listener.gateway.Gateway, listener.listenerStatusIdx,
-			gwapiv1.ListenerConditionProgrammed, metav1.ConditionTrue, gwapiv1.ListenerReasonProgrammed,
-			"Sending translated listener configuration to the data plane")
-		status.SetGatewayListenerStatusCondition(listener.gateway.Gateway, listener.listenerStatusIdx,
 			gwapiv1.ListenerConditionAccepted, metav1.ConditionTrue, gwapiv1.ListenerReasonAccepted,
 			"Listener has been successfully translated")
+		status.SetGatewayListenerStatusCondition(listener.gateway.Gateway, listener.listenerStatusIdx,
+			gwapiv1.ListenerConditionProgrammed, metav1.ConditionTrue, gwapiv1.ListenerReasonProgrammed,
+			"Sending translated listener configuration to the data plane")
 		return true
 	}
 
