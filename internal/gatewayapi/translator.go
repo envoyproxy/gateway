@@ -88,6 +88,10 @@ type Translator struct {
 	// should be merged under the parent GatewayClass.
 	MergeGateways bool
 
+	// MergeBackends is true when Backend resources with same identity
+	// should be merged under the Gateway.
+	MergeBackends bool
+
 	// GatewayNamespaceMode is true if controller uses gateway namespace mode for infra deployments.
 	GatewayNamespaceMode bool
 
