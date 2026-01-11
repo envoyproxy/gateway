@@ -60,15 +60,15 @@ gateways:
         status: "False"
         type: ResolvedRefs
       - lastTransitionTime: null
-        message: Sending translated listener configuration to the data plane
-        reason: Programmed
-        status: "True"
-        type: Programmed
-      - lastTransitionTime: null
         message: Listener has been successfully translated
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
       name: tls-contains-not-exist-ref
       supportedKinds:
       - group: gateway.networking.k8s.io
@@ -84,15 +84,15 @@ gateways:
         status: "False"
         type: ResolvedRefs
       - lastTransitionTime: null
-        message: Sending translated listener configuration to the data plane
-        reason: Programmed
-        status: "True"
-        type: Programmed
-      - lastTransitionTime: null
         message: Listener has been successfully translated
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
       name: tls-contains-not-exist-key-cert
       supportedKinds:
       - group: gateway.networking.k8s.io
