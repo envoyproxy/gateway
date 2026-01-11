@@ -875,6 +875,9 @@ type Tracing struct {
 	// +optional
 	Tags map[string]string `json:"tags,omitempty"`
 	// SpanName defines the name of the span which will be used for tracing.
+	// If not set, the span name is provider specific.
+	//
+	// +optional
 	SpanName *TracingSpanName `json:"spanName,omitempty"`
 }
 

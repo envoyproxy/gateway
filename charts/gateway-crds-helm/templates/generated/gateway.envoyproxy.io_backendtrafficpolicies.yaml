@@ -2440,8 +2440,9 @@ spec:
                         - message: numerator must be less than or equal to denominator
                           rule: self.numerator <= self.denominator
                       spanName:
-                        description: SpanName defines the name of the span which will
-                          be used for tracing.
+                        description: |-
+                          SpanName defines the name of the span which will be used for tracing.
+                          If not set, the span name is provider specific.
                         properties:
                           client:
                             description: Client defines operation name of the span

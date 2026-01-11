@@ -16313,8 +16313,9 @@ spec:
                         minimum: 0
                         type: integer
                       spanName:
-                        description: SpanName defines the name of the span which will
-                          be used for tracing.
+                        description: |-
+                          SpanName defines the name of the span which will be used for tracing.
+                          If not set, the span name is provider specific.
                         properties:
                           client:
                             description: Client defines operation name of the span
