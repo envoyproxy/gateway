@@ -1450,6 +1450,7 @@ _Appears in:_
 | `rateLimitDeployment` | _[KubernetesDeploymentSpec](#kubernetesdeploymentspec)_ |  false  |  | RateLimitDeployment defines the desired state of the Envoy ratelimit deployment resource.<br />If unspecified, default settings for the managed Envoy ratelimit deployment resource<br />are applied. |
 | `rateLimitHpa` | _[KubernetesHorizontalPodAutoscalerSpec](#kuberneteshorizontalpodautoscalerspec)_ |  false  |  | RateLimitHpa defines the Horizontal Pod Autoscaler settings for Envoy ratelimit Deployment.<br />If the HPA is set, Replicas field from RateLimitDeployment will be ignored. |
 | `rateLimitPDB` | _[KubernetesPodDisruptionBudgetSpec](#kubernetespoddisruptionbudgetspec)_ |  false  |  | RateLimitPDB allows to control the pod disruption budget of rate limit service. |
+| `envoyProxyTemplate` | _[EnvoyProxyTemplateSpec](#envoyproxytemplatespec)_ |  false  |  | EnvoyProxyTemplate defines default settings applied to all Envoy Proxy resources.<br />Settings from EnvoyProxy resources referenced by GatewayClass or Gateway may be merged<br />with or replace template definitions based on the mergeType. |
 | `watch` | _[KubernetesWatchMode](#kuberneteswatchmode)_ |  false  |  | Watch holds configuration of which input resources should be watched and reconciled. |
 | `leaderElection` | _[LeaderElection](#leaderelection)_ |  false  |  | LeaderElection specifies the configuration for leader election.<br />If it's not set up, leader election will be active by default, using Kubernetes' standard settings. |
 | `shutdownManager` | _[ShutdownManager](#shutdownmanager)_ |  false  |  | ShutdownManager defines the configuration for the shutdown manager. |
@@ -1834,6 +1835,7 @@ EnvoyProxySpec defines the desired state of EnvoyProxy.
 
 _Appears in:_
 - [EnvoyProxy](#envoyproxy)
+- [EnvoyProxyTemplateSpec](#envoyproxytemplatespec)
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
@@ -1865,6 +1867,37 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `ancestors` | _[EnvoyProxyAncestorStatus](#envoyproxyancestorstatus) array_ |  false  |  | Ancestors represent the status information for all the GatewayClass or Gateway<br />reference this EnvoyProxy with ParametersReference. |
+
+
+#### EnvoyProxyTemplateMergeType
+
+_Underlying type:_ _string_
+
+EnvoyProxyTemplateMergeType defines the types of merge strategies supported for EnvoyProxy template merging.
+
+_Appears in:_
+- [EnvoyProxyTemplateSpec](#envoyproxytemplatespec)
+
+| Value | Description |
+| ----- | ----------- |
+| `Replace` | EnvoyProxyTemplateMergeTypeReplace means more specific configurations completely replace less specific ones.<br />In this mode, if a Gateway has an EnvoyProxy parametersRef, it completely replaces any GatewayClass and<br />template configurations.  Otherwise, if a GatewayClass has an EnvoyProxy parametersRef, it completely replaces<br />the template configuration.<br />This is the default behavior for backwards compatibility.<br /> | 
+| `StrategicMerge` | EnvoyProxyTemplateMergeTypeStrategicMerge merges EnvoyProxy configurations using Kubernetes strategic merge patch semantics.<br />The merge happens in order: template -> GatewayClass EnvoyProxy -> Gateway EnvoyProxy<br />where later configurations override or extend earlier ones based on strategic merge rules.<br /> | 
+| `JSONMerge` | EnvoyProxyTemplateMergeTypeJSONMerge merges configurations using JSON merge patch (RFC 7386) semantics.<br />The merge happens in order: template -> GatewayClass EnvoyProxy -> Gateway EnvoyProxy<br />where later configurations override earlier ones.<br /> | 
+
+
+#### EnvoyProxyTemplateSpec
+
+
+
+EnvoyProxyTemplateSpec defines the EnvoyProxy template configuration and its merge strategy.
+
+_Appears in:_
+- [EnvoyGatewayKubernetesProvider](#envoygatewaykubernetesprovider)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `mergeType` | _[EnvoyProxyTemplateMergeType](#envoyproxytemplatemergetype)_ |  false  | Replace | MergeType defines how the template should be merged with EnvoyProxy configurations from<br />GatewayClass or Gateway resources. If unspecified, defaults to Replace for backwards compatibility. |
+| `spec` | _[EnvoyProxySpec](#envoyproxyspec)_ |  false  |  | Spec defines the EnvoyProxy template specification.<br />When MergeType is Replace, this is used only if no GatewayClass or Gateway EnvoyProxy is specified.<br />When MergeType is StrategicMerge or JSONMerge, this serves as the base configuration. |
 
 
 #### EnvoyResourceType

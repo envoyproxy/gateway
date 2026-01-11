@@ -50,20 +50,36 @@ func (g *GatewayContext) ResetListeners(resources *resource.Resources, epMap map
 	}
 }
 
-func (g *GatewayContext) attachEnvoyProxy(resources *resource.Resources, epMap map[types.NamespacedName]*egv1a1.EnvoyProxy) {
-	if g.Spec.Infrastructure != nil && g.Spec.Infrastructure.ParametersRef != nil && !IsMergeGatewaysEnabled(resources) {
+func (g *GatewayContext) attachEnvoyProxy(resources *resource.Resources, epMap map[types.NamespacedName]*egv1a1.EnvoyProxy, template *egv1a1.EnvoyProxyTemplateSpec) {
+	// Get the Gateway-level EnvoyProxy if parametersRef is set
+	var gatewayProxy *egv1a1.EnvoyProxy
+	if g.Spec.Infrastructure != nil && g.Spec.Infrastructure.ParametersRef != nil && !IsMergeGatewaysEnabled(resources, template) {
 		ref := g.Spec.Infrastructure.ParametersRef
 		if string(ref.Group) == egv1a1.GroupVersion.Group && ref.Kind == egv1a1.KindEnvoyProxy {
 			ep, exists := epMap[types.NamespacedName{Namespace: g.Namespace, Name: ref.Name}]
 			if exists {
-				g.envoyProxy = ep
-				return
+				gatewayProxy = ep
 			}
 		}
-		// not found, fallthrough to use envoyProxy attached to gatewayclass
 	}
 
-	g.envoyProxy = resources.EnvoyProxyForGatewayClass
+	// Get the GatewayClass-level EnvoyProxy
+	gatewayClassProxy := resources.EnvoyProxyForGatewayClass
+
+	// Merge template, GatewayClass and Gateway EnvoyProxy
+	// Defaults are applied later at infrastructure creation time
+	merged, err := MergeEnvoyProxyConfigs(template, gatewayClassProxy, gatewayProxy)
+	if err != nil {
+		// On merge error, fallback to Gateway or GatewayClass proxy
+		if gatewayProxy != nil {
+			g.envoyProxy = gatewayProxy
+		} else {
+			g.envoyProxy = gatewayClassProxy
+		}
+		return
+	}
+
+	g.envoyProxy = merged
 }
 
 // ListenerContext wraps a Listener and provides helper methods for

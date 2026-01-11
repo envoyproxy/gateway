@@ -1,0 +1,34 @@
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: gateway-proxy
+  namespace: default
+spec:
+  provider:
+    type: Kubernetes
+    kubernetes:
+      envoyDeployment:
+        replicas: 2
+        container:
+          env:
+            - name: GATEWAY_ENV
+              value: gateway_value
+            - name: GATEWAYCLASS_ENV
+              value: gatewayclass_value
+            - name: TEMPLATE_ENV
+              value: template_value
+            - name: SHARED_ENV
+              value: from_gateway
+          image: "envoyproxy/envoy:v1.28.0"
+          resources:
+            requests:
+              cpu: 200m
+              memory: 1Gi
+        pod:
+          annotations:
+            template-annotation: template-value
+            shared-annotation: from-gateway
+            gatewayclass-annotation: gatewayclass-value
+            gateway-annotation: gateway-value
+      envoyService:
+        type: NodePort

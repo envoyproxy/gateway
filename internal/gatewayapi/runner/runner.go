@@ -180,9 +180,10 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 					BackendEnabled:          r.EnvoyGateway.ExtensionAPIs != nil && r.EnvoyGateway.ExtensionAPIs.EnableBackend,
 					ControllerNamespace:     r.ControllerNamespace,
 					GatewayNamespaceMode:    r.EnvoyGateway.GatewayNamespaceMode(),
-					MergeGateways:           gatewayapi.IsMergeGatewaysEnabled(resources),
+					MergeGateways:           gatewayapi.IsMergeGatewaysEnabled(resources, r.EnvoyGateway.GetEnvoyProxyTemplate()),
 					WasmCache:               r.wasmCache,
 					RunningOnHost:           r.EnvoyGateway.Provider != nil && r.EnvoyGateway.Provider.IsRunningOnHost(),
+					EnvoyProxyTemplate:      r.EnvoyGateway.GetEnvoyProxyTemplate(),
 					Logger:                  traceLogger,
 				}
 
