@@ -53,7 +53,7 @@ lint.codespell: $(tools/codespell)
 # one shell, this is because we want the ::remove-matcher lines to get
 # printed whether or not it finds complaints.
 	@PS4=; set -e; { \
-	  if test -n "$$GITHUB_ACTION"; then \
+	  if test -n "$${GITHUB_ACTION:-}"; then \
 	    printf '::add-matcher::$(CURDIR)/tools/linter/codespell/matcher.json\n'; \
 	    trap "printf '::remove-matcher owner=codespell-matcher-default::\n::remove-matcher owner=codespell-matcher-specified::\n'" EXIT; \
 	  fi; \
@@ -121,4 +121,4 @@ lint.dependabot: ## Check if dependabot configuration is valid
 
 .PHONY: precommit
 precommit: ## Run all necessary steps to prepare for a commit.
-precommit: lint.fix-golint lint test generate manifests gen-check
+precommit: lint test generate manifests gen-check

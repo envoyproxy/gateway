@@ -5,7 +5,7 @@ repos:
     hooks:
       - id: make-precommit
         name: make precommit
-        entry: bash -c 'GITHUB_ACTION= make precommit'
+        entry: make precommit
         language: system
         pass_filenames: false
         stages: [pre-commit]
