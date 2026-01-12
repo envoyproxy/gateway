@@ -6,6 +6,7 @@ breaking changes: |
 # Updates addressing vulnerabilities, security flaws, or compliance requirements.
 security updates: |
   Bump envoy to `v1.35.8`.
+  Fixed CVE-2026-22771: arbitrary code execution through EnvoyExtensionPolicy Lua scripts.
 
 
 # New features or capabilities added in this release.
