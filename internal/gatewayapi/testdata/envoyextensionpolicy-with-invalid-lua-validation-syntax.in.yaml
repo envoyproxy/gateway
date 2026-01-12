@@ -5,7 +5,7 @@ envoyProxyForGatewayClass:
     namespace: envoy-gateway-system
     name: test
   spec:
-    luaValidation: Syntax
+    luaValidation: InsecureSyntax
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway

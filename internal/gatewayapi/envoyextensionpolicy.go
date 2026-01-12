@@ -668,6 +668,11 @@ func (t *Translator) buildLuas(
 		return nil, nil
 	}
 
+	// If Lua EnvoyExtensionPolicies are disabled, skip building Lua filters.
+	if len(policy.Spec.Lua) > 0 && t.LuaEnvoyExtensionPolicyDisabled {
+		return nil, fmt.Errorf("Skipping Lua EnvoyExtensionPolicy as feature is disabled in the Gateway")
+	}
+
 	luaIRList := make([]ir.Lua, 0, len(policy.Spec.Lua))
 
 	for idx, ep := range policy.Spec.Lua {
