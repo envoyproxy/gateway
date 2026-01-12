@@ -875,7 +875,10 @@ type Tracing struct {
 	// +optional
 	Tags map[string]string `json:"tags,omitempty"`
 	// SpanName defines the name of the span which will be used for tracing.
+	//
 	// If not set, the span name is provider specific.
+	// e.g. Datadog use `ingress` as the default ingress span name,
+	// and `router <UPSTREAM_CLUSTER> egress` as the egress span name.
 	//
 	// +optional
 	SpanName *TracingSpanName `json:"spanName,omitempty"`
