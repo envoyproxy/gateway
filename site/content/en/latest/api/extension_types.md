@@ -890,6 +890,7 @@ _Appears in:_
 | `brotli` | _[BrotliCompressor](#brotlicompressor)_ |  false  |  | The configuration for Brotli compressor. |
 | `gzip` | _[GzipCompressor](#gzipcompressor)_ |  false  |  | The configuration for GZIP compressor. |
 | `zstd` | _[ZstdCompressor](#zstdcompressor)_ |  false  |  | The configuration for Zstd compressor. |
+| `minContentLength` | _[Quantity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#quantity-resource-api)_ |  false  |  | MinContentLength defines the minimum response size in bytes to apply compression.<br />Responses smaller than this threshold will not be compressed.<br />Must be at least 30 bytes as enforced by Envoy Proxy.<br />Note that when the suffix is not provided, the value is interpreted as bytes.<br />Default: 30 bytes |
 
 
 #### CompressorType
