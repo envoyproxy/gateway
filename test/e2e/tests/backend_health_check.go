@@ -27,7 +27,10 @@ import (
 )
 
 func init() {
-	ConformanceTests = append(ConformanceTests, BackendHealthCheckActiveHTTPTest)
+	ConformanceTests = append(ConformanceTests,
+		BackendHealthCheckActiveHTTPTest,
+		BackendHealthCheckWithOverrideTest,
+	)
 }
 
 var BackendHealthCheckActiveHTTPTest = suite.ConformanceTest{
@@ -133,6 +136,117 @@ var BackendHealthCheckActiveHTTPTest = suite.ConformanceTest{
 					},
 					Response: http.Response{
 						StatusCodes: []int{503},
+					},
+					Namespace: ns,
+				}
+
+				http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
+			})
+		})
+	},
+}
+
+var BackendHealthCheckWithOverrideTest = suite.ConformanceTest{
+	ShortName:   "BackendHealthCheckWithOverride",
+	Description: "Test backend health check with override configuration",
+	Manifests:   []string{"testdata/backend-health-check-with-override.yaml"},
+	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
+		t.Run("health check with override", func(t *testing.T) {
+			ctx := context.Background()
+			ns := "gateway-conformance-infra"
+			withOverrideRouteNN := types.NamespacedName{Name: "httproute-with-health-check-override", Namespace: ns}
+			withoutOverrideRouteNN := types.NamespacedName{Name: "httproute-without-health-check-override", Namespace: ns}
+			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
+			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName,
+				kubernetes.NewGatewayRef(gwNN), withOverrideRouteNN, withoutOverrideRouteNN)
+
+			ancestorRef := gwapiv1.ParentReference{
+				Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
+				Kind:      gatewayapi.KindPtr(resource.KindGateway),
+				Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
+				Name:      gwapiv1.ObjectName(gwNN.Name),
+			}
+			BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "btp-with-health-check-override", Namespace: ns}, suite.ControllerName, ancestorRef)
+			BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "btp-without-health-check-override", Namespace: ns}, suite.ControllerName, ancestorRef)
+
+			promClient, err := prometheus.NewClient(suite.Client,
+				types.NamespacedName{Name: "prometheus", Namespace: "monitoring"},
+			)
+			require.NoError(t, err)
+
+			withOverrideClusterName := fmt.Sprintf("httproute/%s/%s/rule/0", ns, withOverrideRouteNN.Name)
+			withoutOverrideClusterName := fmt.Sprintf("httproute/%s/%s/rule/0", ns, withoutOverrideRouteNN.Name)
+			gtwName := "same-namespace"
+
+			// both routes should have successful health checks
+			withOverridePromQL := fmt.Sprintf(`envoy_cluster_health_check_success{envoy_cluster_name="%s",gateway_envoyproxy_io_owning_gateway_name="%s"}`, withOverrideClusterName, gtwName)
+			withoutOverridePromQL := fmt.Sprintf(`envoy_cluster_health_check_success{envoy_cluster_name="%s",gateway_envoyproxy_io_owning_gateway_name="%s"}`, withoutOverrideClusterName, gtwName)
+
+			// verify health check with override
+			http.AwaitConvergence(
+				t,
+				suite.TimeoutConfig.RequiredConsecutiveSuccesses,
+				suite.TimeoutConfig.MaxTimeToConsistency,
+				func(_ time.Duration) bool {
+					v, err := promClient.QuerySum(ctx, withOverridePromQL)
+					if err != nil {
+						return false
+					}
+					tlog.Logf(t, "cluster with health check override: success stats query count: %v", v)
+
+					if v == 0 {
+						t.Error("health check with override success count is not the same as expected")
+					} else {
+						t.Log("health check with override success count is the same as expected")
+					}
+
+					return true
+				},
+			)
+
+			// verify health check without override
+			http.AwaitConvergence(
+				t,
+				suite.TimeoutConfig.RequiredConsecutiveSuccesses,
+				suite.TimeoutConfig.MaxTimeToConsistency,
+				func(_ time.Duration) bool {
+					v, err := promClient.QuerySum(ctx, withoutOverridePromQL)
+					if err != nil {
+						return false
+					}
+					tlog.Logf(t, "cluster without health check override: success stats query count: %v", v)
+
+					if v == 0 {
+						t.Error("health check without override success count is not the same as expected")
+					} else {
+						t.Log("health check without override success count is the same as expected")
+					}
+
+					return true
+				},
+			)
+
+			t.Run("traffic routing works with health check override", func(t *testing.T) {
+				expectedResponse := http.ExpectedResponse{
+					Request: http.Request{
+						Path: "/health-check-with-override",
+					},
+					Response: http.Response{
+						StatusCodes: []int{200},
+					},
+					Namespace: ns,
+				}
+
+				http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
+			})
+
+			t.Run("traffic routing works without health check override", func(t *testing.T) {
+				expectedResponse := http.ExpectedResponse{
+					Request: http.Request{
+						Path: "/health-check-without-override",
+					},
+					Response: http.Response{
+						StatusCodes: []int{200},
 					},
 					Namespace: ns,
 				}
