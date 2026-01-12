@@ -509,8 +509,8 @@ function Headers:getHttp1ReasonPhrase()
   return "reason"
 end
 
--- StreamHandle Object
-local StreamHandle = {
+-- StreamHandle Object (must be global for user code to access)
+StreamHandle = {
 data = {Buffer}
 }
 
