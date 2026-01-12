@@ -251,6 +251,9 @@ type ExtensionAPISettings struct {
 	// EnableBackend enables Envoy Gateway to
 	// reconcile and implement the Backend resources.
 	EnableBackend bool `json:"enableBackend"`
+	// DisableLua determines if Lua EnvoyExtensionPolicies should be disabled.
+	// If set to true, the Lua EnvoyExtensionPolicy feature will be disabled.
+	DisableLua bool `json:"disableLua"`
 }
 
 // EnvoyGatewayProvider defines the desired configuration of a provider.

@@ -176,23 +176,29 @@ type EnvoyProxySpec struct {
 	LuaValidation *LuaValidation `json:"luaValidation,omitempty"`
 }
 
-// +kubebuilder:validation:Enum=Strict;Disabled
+// +kubebuilder:validation:Enum=Strict;InsecureSyntax;Disabled
 type LuaValidation string
 
 const (
 	// LuaValidationStrict is the default level and checks for issues during script execution.
-	// Recommended if your scripts only use the standard Envoy Lua stream handle API.
+	// Recommended if your scripts only use the standard Envoy Lua stream handle API and no external libraries.
 	// For supported APIs, see: https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/lua_filter#stream-handle-api
+	// INFO: This validation mode executes Lua scripts from EnvoyExtensionPolicy (EEP) resources in the gateway controller.
+	// Since the Gateway controller watches EEPs across all namespaces (or namespaces matching the configured selector),
+	// unprivileged users can create EEPs in their namespaces and cause arbitrary Lua code to execute in the Gateway controller process.
+	// Security measures are in place to prevent unsafe Lua code from accessing critical system resources on the controller
+	// and fail validation, preventing the unsafe code from flowing to the data plane proxy.
 	LuaValidationStrict LuaValidation = "Strict"
 
-	// LuaValidationSyntax checks for syntax errors in the Lua script.
-	// Note that this is not a full runtime validation and does not check for issues during script execution.
-	// This is recommended if your scripts use external libraries that are not supported by Lua runtime validation.
-	LuaValidationSyntax LuaValidation = "Syntax"
+	// LuaValidationInsecureSyntax checks for Lua syntax errors only.
+	// Useful if your scripts use external libraries other than the standard Envoy Lua stream handle API.
+	// WARNING: This mode does NOT offer any runtime validations, so no security measures are applied to validate Lua code safety.
+	// Not recommended unless you completely trust all EnvoyExtensionPolicy resources.
+	LuaValidationInsecureSyntax LuaValidation = "InsecureSyntax"
 
-	// LuaValidationDisabled disables all validations of Lua scripts.
-	// Scripts will be accepted and executed without any validation checks.
-	// This is not recommended unless both runtime and syntax validations are failing unexpectedly.
+	// LuaValidationDisabled disables all Lua script validations.
+	// WARNING: This mode does NOT offer any runtime or syntax validations, so no security measures are applied to validate Lua code safety.
+	// Not recommended unless you completely trust all EnvoyExtensionPolicy resources.
 	LuaValidationDisabled LuaValidation = "Disabled"
 )
 
