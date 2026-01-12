@@ -458,6 +458,23 @@ spec:
                           checks.
                         pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                         type: string
+                      overrides:
+                        description: |-
+                          Overrides defines the configuration of the overriding health check settings for all endpoints
+                          in the backend cluster. This allows customization of port and other settings that may differ
+                          from the main service configuration.
+                        properties:
+                          port:
+                            description: |-
+                              Port overrides the health check port.
+                              If not set, the endpoint's serving port is used for health checks.
+                              This is useful when health checks are served on a different port than
+                              the main service port (e.g., port 443 for service, port 9090 for health checks).
+                            format: int32
+                            maximum: 65535
+                            minimum: 0
+                            type: integer
+                        type: object
                       tcp:
                         description: |-
                           TCP defines the configuration of tcp health checker.

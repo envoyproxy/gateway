@@ -1,0 +1,70 @@
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_PREFERRED
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
+    serviceName: overrides-first-route-dest
+  healthChecks:
+  - healthyThreshold: 1
+    httpHealthCheck:
+      expectedStatuses:
+      - end: "201"
+        start: "200"
+      host: '*'
+      path: /healthz
+    interval: 3s
+    timeout: 1s
+    unhealthyThreshold: 3
+  ignoreHealthOnHostRemoval: true
+  lbPolicy: LEAST_REQUEST
+  loadBalancingPolicy:
+    policies:
+    - typedExtensionConfig:
+        name: envoy.load_balancing_policies.least_request
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
+          localityLbConfig:
+            localityWeightedLbConfig: {}
+  name: overrides-first-route-dest
+  perConnectionBufferLimitBytes: 32768
+  type: EDS
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_PREFERRED
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
+    serviceName: no-overrides-first-route-dest
+  healthChecks:
+  - healthyThreshold: 1
+    httpHealthCheck:
+      expectedStatuses:
+      - end: "201"
+        start: "200"
+      host: '*'
+      path: /healthz
+    interval: 3s
+    timeout: 1s
+    unhealthyThreshold: 3
+  ignoreHealthOnHostRemoval: true
+  lbPolicy: LEAST_REQUEST
+  loadBalancingPolicy:
+    policies:
+    - typedExtensionConfig:
+        name: envoy.load_balancing_policies.least_request
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
+          localityLbConfig:
+            localityWeightedLbConfig: {}
+  name: no-overrides-first-route-dest
+  perConnectionBufferLimitBytes: 32768
+  type: EDS
