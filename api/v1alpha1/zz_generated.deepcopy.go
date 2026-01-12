@@ -738,9 +738,9 @@ func (in *BackendTrafficPolicySpec) DeepCopyInto(out *BackendTrafficPolicySpec) 
 		*out = new(bool)
 		**out = **in
 	}
-	if in.UpstreamScheme != nil {
-		in, out := &in.UpstreamScheme, &out.UpstreamScheme
-		*out = new(UpstreamScheme)
+	if in.ClientScheme != nil {
+		in, out := &in.ClientScheme, &out.ClientScheme
+		*out = new(ClientScheme)
 		**out = **in
 	}
 	if in.Compression != nil {

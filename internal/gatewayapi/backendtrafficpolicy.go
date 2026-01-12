@@ -1014,9 +1014,9 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 			continue
 		}
 
-		// Set listener-level MatchUpstreamScheme if UpstreamScheme is set to MatchUpstream.
+		// Set listener-level MatchUpstreamScheme if ClientScheme is set to MatchUpstream.
 		// This only takes effect when BTP targets a Gateway.
-		if policy.Spec.UpstreamScheme != nil && *policy.Spec.UpstreamScheme == egv1a1.UpstreamSchemeMatchUpstream {
+		if policy.Spec.ClientScheme != nil && *policy.Spec.ClientScheme == egv1a1.ClientSchemeMatchUpstream {
 			http.MatchUpstreamScheme = true
 		}
 

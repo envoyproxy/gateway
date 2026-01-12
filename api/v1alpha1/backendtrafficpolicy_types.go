@@ -73,7 +73,7 @@ type BackendTrafficPolicySpec struct {
 	// +optional
 	UseClientProtocol *bool `json:"useClientProtocol,omitempty"`
 
-	// UpstreamScheme configures how the :scheme pseudo-header is set for requests forwarded to backends.
+	// ClientScheme configures how the :scheme pseudo-header is set for requests forwarded to backends.
 	//
 	// - PreserveDownstream (default): Preserves the :scheme from the original client request.
 	//   Use this when backends need to know the original client scheme for URL generation or redirects.
@@ -86,7 +86,7 @@ type BackendTrafficPolicySpec struct {
 	// This setting only takes effect when BackendTrafficPolicy targets a Gateway.
 	//
 	// +optional
-	UpstreamScheme *UpstreamScheme `json:"upstreamScheme,omitempty"`
+	ClientScheme *ClientScheme `json:"clientScheme,omitempty"`
 
 	// The compression config for the http streams.
 	// Deprecated: Use Compressor instead.
@@ -208,19 +208,19 @@ type BackendTrafficPolicyList struct {
 	Items           []BackendTrafficPolicy `json:"items"`
 }
 
-// UpstreamScheme defines how the :scheme pseudo-header is set for requests forwarded to backends.
+// ClientScheme defines how the :scheme pseudo-header is set for requests forwarded to backends.
 //
 // +kubebuilder:validation:Enum=PreserveDownstream;MatchUpstream
-type UpstreamScheme string
+type ClientScheme string
 
 const (
-	// UpstreamSchemePreserveDownstream preserves the :scheme from the original client request.
+	// ClientSchemePreserveDownstream preserves the :scheme from the original client request.
 	// This is the default behavior.
-	UpstreamSchemePreserveDownstream UpstreamScheme = "PreserveDownstream"
+	ClientSchemePreserveDownstream ClientScheme = "PreserveDownstream"
 
-	// UpstreamSchemeMatchUpstream sets the :scheme to match the upstream transport protocol.
+	// ClientSchemeMatchUpstream sets the :scheme to match the upstream transport protocol.
 	// If the backend uses TLS, the scheme is "https", otherwise "http".
-	UpstreamSchemeMatchUpstream UpstreamScheme = "MatchUpstream"
+	ClientSchemeMatchUpstream ClientScheme = "MatchUpstream"
 )
 
 func init() {
