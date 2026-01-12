@@ -105,10 +105,32 @@ func (ka *KubeActions) ManageEgress(ctx context.Context, ip, namespace, policyNa
 }
 
 func (ka *KubeActions) ScaleDeploymentAndWait(ctx context.Context, deploymentName, namespace string, replicas int32, timeout time.Duration, prefix bool) error {
-	if err := ka.ScaleDeployment(ctx, deploymentName, namespace, replicas, prefix); err != nil {
+	// Get the current deployment
+	deployment := &appsv1.Deployment{}
+	if prefix {
+		var err error
+		deployment, err = ka.getDepByPrefix(ctx, deploymentName, namespace)
+		if err != nil {
+			return err
+		}
+	} else {
+		err := ka.Get(ctx, client.ObjectKey{Name: deploymentName, Namespace: namespace}, deployment)
+		if err != nil {
+			return err
+		}
+	}
+
+	// Update the replicas count
+	deployment.Spec.Replicas = &replicas
+
+	// Apply the update
+	err := ka.Update(ctx, deployment)
+	if err != nil {
 		return err
 	}
-	return ka.WaitForDeploymentReplicaCount(ctx, deploymentName, namespace, replicas, timeout, false)
+
+	fmt.Printf("Deployment %s scaled to %d replicas\n", deployment.Name, replicas)
+	return ka.WaitForDeploymentReplicaCount(ctx, deployment.Name, namespace, replicas, timeout, false)
 }
 
 func (ka *KubeActions) ScaleDeployment(ctx context.Context, deploymentName, namespace string, replicas int32, prefix bool) error {
