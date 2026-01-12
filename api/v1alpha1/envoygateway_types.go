@@ -315,7 +315,6 @@ type EnvoyGatewayKubernetesProvider struct {
 	// Deploy holds configuration of how output managed resources such as the Envoy Proxy data plane
 	// should be deployed
 	// +optional
-	// +notImplementedHide
 	Deploy *KubernetesDeployMode `json:"deploy,omitempty"`
 	// LeaderElection specifies the configuration for leader election.
 	// If it's not set up, leader election will be active by default, using Kubernetes' standard settings.
@@ -781,7 +780,6 @@ type ExtensionTLS struct {
 	// for mTLS authentication. If not specified, only server certificate validation is performed.
 	//
 	// +optional
-	// +notImplementedHide
 	ClientCertificateRef *gwapiv1.SecretObjectReference `json:"clientCertificateRef,omitempty"`
 }
 

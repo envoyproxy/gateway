@@ -554,6 +554,7 @@ type EnvoyProxyStatus struct {
 	// reference this EnvoyProxy with ParametersReference.
 	//
 	// +optional
+	// +notImplementedHide
 	Ancestors []EnvoyProxyAncestorStatus `json:"ancestors,omitempty"`
 }
 
