@@ -21,7 +21,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/utils"
 )
 
-var ErrBackendTLSPolicyInvalidKind = fmt.Errorf("no CA bundle found in referenced ConfigMap, Secret, or ClusterTrustBundle")
+var ErrBackendTLSPolicyInvalidKind = fmt.Errorf("unsupported reference kind, supported kinds are ConfigMap, Secret, and ClusterTrustBundle")
 var ErrBackendTLSPolicyNoValidCACertificate = fmt.Errorf(
 	"no valid CA certificate found in referenced resources",
 )
