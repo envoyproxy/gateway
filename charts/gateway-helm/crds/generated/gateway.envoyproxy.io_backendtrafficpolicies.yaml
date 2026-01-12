@@ -2136,6 +2136,13 @@ spec:
                         type: array
                     type: object
                 type: object
+              routingType:
+                description: |-
+                  RoutingType can be set to "Service" to use the Service Cluster IP for routing to the backend,
+                  or it can be set to "Endpoint" to use Endpoint routing.
+                  When specified, this overrides the EnvoyProxy-level setting for the targeted routes.
+                  If not specified, the EnvoyProxy-level setting is used.
+                type: string
               targetRef:
                 description: |-
                   TargetRef is the name of the resource this policy is being attached to.
