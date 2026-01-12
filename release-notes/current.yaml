@@ -6,6 +6,7 @@ breaking changes: |
 # Updates addressing vulnerabilities, security flaws, or compliance requirements.
 security updates: |
   Bumped golang.org/x/crypto to the latest patched release to address upstream security fixes.
+  Restrict access to critical system resources via Lua EnvoyExtensionPolicies in the gateway controller. Set safe defaults and resource limits for the Lua runtime. Also support disabling Lua feature in extension policies.
 
 # New features or capabilities added in this release.
 new features: |

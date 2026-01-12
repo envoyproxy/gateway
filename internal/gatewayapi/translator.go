@@ -91,6 +91,9 @@ type Translator struct {
 	// feature is enabled.
 	EnvoyPatchPolicyEnabled bool
 
+	// LuaEnvoyExtensionPolicyDisabled when the Lua EnvoyExtensionPolicy feature is disabled.
+	LuaEnvoyExtensionPolicyDisabled bool
+
 	// BackendEnabled when the Backend feature is enabled.
 	BackendEnabled bool
 
