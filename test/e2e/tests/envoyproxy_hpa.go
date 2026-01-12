@@ -8,10 +8,10 @@
 package tests
 
 import (
-	"context"
 	"testing"
 
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
@@ -53,12 +53,12 @@ var EnvoyProxyHPATest = suite.ConformanceTest{
 
 			// Update the Gateway to without HPA
 			gw := &gwapiv1.Gateway{}
-			err := suite.Client.Get(context.Background(), gwNN, gw)
+			err := suite.Client.Get(t.Context(), gwNN, gw)
 			if err != nil {
 				t.Fatalf("Failed to get Gateway: %v", err)
 			}
 			gw.Spec.Infrastructure = nil
-			err = suite.Client.Update(context.Background(), gw)
+			err = suite.Client.Patch(t.Context(), gw, client.Merge)
 			if err != nil {
 				t.Fatalf("Failed to update Gateway: %v", err)
 			}

@@ -906,6 +906,8 @@ type Compression struct {
 	Type egv1a1.CompressorType `json:"type" yaml:"type"`
 	// ChooseFirst indicates this compressor is preferred when q-values in Accept-Encoding are equal.
 	ChooseFirst bool `json:"chooseFirst,omitempty" yaml:"chooseFirst,omitempty"`
+	// MinContentLength defines the minimum response size in bytes to apply compression.
+	MinContentLength *uint32 `json:"minContentLength,omitempty" yaml:"minContentLength,omitempty"`
 }
 
 // TrafficFeatures holds the information associated with the Backend Traffic Policy.
