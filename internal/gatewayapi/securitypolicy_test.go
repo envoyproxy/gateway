@@ -937,14 +937,22 @@ func Test_SecurityPolicy_TCP_Invalid_setsStatus_and_returns(t *testing.T) {
 	}
 	routeMap[key] = &policyRouteTargetContext{RouteContext: tcpRoute}
 
-	gatewayRouteMap := make(map[string]map[string]sets.Set[string])
+	gatewayRouteMap := &GatewayPolicyRouteMap{
+		Routes:       make(map[NamespacedNameWithSection]sets.Set[string]),
+		SectionIndex: make(map[types.NamespacedName]sets.Set[string]),
+	}
 	resources := resource.NewResources()
 	xdsIR := make(resource.XdsIRMap)
 	trContext.SetServices(resources.Services)
 	tr.TranslatorContext = trContext
 
 	// Process the policy - this should set error status
-	tr.processSecurityPolicyForRoute(resources, xdsIR, routeMap, gatewayRouteMap, policy, target)
+	gatewayPolicyMap := make(map[NamespacedNameWithSection]*egv1a1.SecurityPolicy)
+	gatewayPolicyMerged := &GatewayPolicyRouteMap{
+		Routes:       make(map[NamespacedNameWithSection]sets.Set[string]),
+		SectionIndex: make(map[types.NamespacedName]sets.Set[string]),
+	}
+	tr.processSecurityPolicyForRoute(resources, xdsIR, routeMap, gatewayRouteMap, gatewayPolicyMerged, gatewayPolicyMap, policy, target)
 
 	// Assert that the policy has a False condition (error was set)
 	require.True(t, hasParentFalseCondition(policy))
@@ -1014,14 +1022,22 @@ func Test_SecurityPolicy_HTTP_Invalid_setsStatus_and_returns(t *testing.T) {
 	}
 	routeMap[key] = &policyRouteTargetContext{RouteContext: httpRoute}
 
-	gatewayRouteMap := make(map[string]map[string]sets.Set[string])
+	gatewayRouteMap := &GatewayPolicyRouteMap{
+		Routes:       make(map[NamespacedNameWithSection]sets.Set[string]),
+		SectionIndex: make(map[types.NamespacedName]sets.Set[string]),
+	}
 	resources := resource.NewResources()
 	xdsIR := make(resource.XdsIRMap)
 	trContext.SetServices(resources.Services)
 	tr.TranslatorContext = trContext
 
 	// Process the policy - this should set error status
-	tr.processSecurityPolicyForRoute(resources, xdsIR, routeMap, gatewayRouteMap, policy, target)
+	gatewayPolicyMap := make(map[NamespacedNameWithSection]*egv1a1.SecurityPolicy)
+	gatewayPolicyMerged := &GatewayPolicyRouteMap{
+		Routes:       make(map[NamespacedNameWithSection]sets.Set[string]),
+		SectionIndex: make(map[types.NamespacedName]sets.Set[string]),
+	}
+	tr.processSecurityPolicyForRoute(resources, xdsIR, routeMap, gatewayRouteMap, gatewayPolicyMerged, gatewayPolicyMap, policy, target)
 
 	// Assert that the policy has a False condition (error was set)
 	require.True(t, hasParentFalseCondition(policy))
@@ -1368,6 +1384,105 @@ func Test_buildContextExtensions(t *testing.T) {
 
 			require.NoError(t, err)
 			require.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestMergeSecurityPolicy(t *testing.T) {
+	tests := []struct {
+		name         string
+		routePolicy  *egv1a1.SecurityPolicy
+		parentPolicy *egv1a1.SecurityPolicy
+		wantSpec     egv1a1.SecurityPolicySpec
+		wantErr      bool
+	}{
+		{
+			name: "merge with StrategicMerge - different fields",
+			routePolicy: &egv1a1.SecurityPolicy{
+				ObjectMeta: metav1.ObjectMeta{Name: "route-policy", Namespace: "default"},
+				Spec: egv1a1.SecurityPolicySpec{
+					MergeType: ptr.To(egv1a1.StrategicMerge),
+					JWT: &egv1a1.JWT{
+						Providers: []egv1a1.JWTProvider{{Name: "route-jwt"}},
+					},
+				},
+			},
+			parentPolicy: &egv1a1.SecurityPolicy{
+				ObjectMeta: metav1.ObjectMeta{Name: "gateway-policy", Namespace: "default"},
+				Spec: egv1a1.SecurityPolicySpec{
+					BasicAuth: &egv1a1.BasicAuth{
+						Users: gwapiv1.SecretObjectReference{Name: "gateway-users"},
+					},
+				},
+			},
+			wantSpec: egv1a1.SecurityPolicySpec{
+				MergeType: ptr.To(egv1a1.StrategicMerge),
+				JWT: &egv1a1.JWT{
+					Providers: []egv1a1.JWTProvider{{Name: "route-jwt"}},
+				},
+				BasicAuth: &egv1a1.BasicAuth{
+					Users: gwapiv1.SecretObjectReference{Name: "gateway-users"},
+				},
+			},
+		},
+		{
+			name: "no merge when MergeType is nil",
+			routePolicy: &egv1a1.SecurityPolicy{
+				ObjectMeta: metav1.ObjectMeta{Name: "route-policy", Namespace: "default"},
+				Spec: egv1a1.SecurityPolicySpec{
+					JWT: &egv1a1.JWT{
+						Providers: []egv1a1.JWTProvider{{Name: "route-jwt"}},
+					},
+				},
+			},
+			parentPolicy: &egv1a1.SecurityPolicy{
+				ObjectMeta: metav1.ObjectMeta{Name: "gateway-policy", Namespace: "default"},
+				Spec: egv1a1.SecurityPolicySpec{
+					BasicAuth: &egv1a1.BasicAuth{
+						Users: gwapiv1.SecretObjectReference{Name: "gateway-users"},
+					},
+				},
+			},
+			wantSpec: egv1a1.SecurityPolicySpec{
+				JWT: &egv1a1.JWT{
+					Providers: []egv1a1.JWTProvider{{Name: "route-jwt"}},
+				},
+			},
+		},
+		{
+			name: "no merge when parentPolicy is nil",
+			routePolicy: &egv1a1.SecurityPolicy{
+				ObjectMeta: metav1.ObjectMeta{Name: "route-policy", Namespace: "default"},
+				Spec: egv1a1.SecurityPolicySpec{
+					MergeType: ptr.To(egv1a1.StrategicMerge),
+					JWT: &egv1a1.JWT{
+						Providers: []egv1a1.JWTProvider{{Name: "route-jwt"}},
+					},
+				},
+			},
+			parentPolicy: nil,
+			wantSpec: egv1a1.SecurityPolicySpec{
+				MergeType: ptr.To(egv1a1.StrategicMerge),
+				JWT: &egv1a1.JWT{
+					Providers: []egv1a1.JWTProvider{{Name: "route-jwt"}},
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := mergeSecurityPolicy(tt.routePolicy, tt.parentPolicy)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("mergeSecurityPolicy() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if err == nil {
+				// Compare individual fields
+				require.Equal(t, tt.wantSpec.MergeType, got.Spec.MergeType, "MergeType should match")
+				require.Equal(t, tt.wantSpec.JWT, got.Spec.JWT, "JWT should match")
+				require.Equal(t, tt.wantSpec.BasicAuth, got.Spec.BasicAuth, "BasicAuth should match")
+			}
 		})
 	}
 }

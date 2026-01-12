@@ -6748,6 +6748,11 @@ func (in *SecurityPolicyList) DeepCopyObject() runtime.Object {
 func (in *SecurityPolicySpec) DeepCopyInto(out *SecurityPolicySpec) {
 	*out = *in
 	in.PolicyTargetReferences.DeepCopyInto(&out.PolicyTargetReferences)
+	if in.MergeType != nil {
+		in, out := &in.MergeType, &out.MergeType
+		*out = new(MergeType)
+		**out = **in
+	}
 	if in.APIKeyAuth != nil {
 		in, out := &in.APIKeyAuth, &out.APIKeyAuth
 		*out = new(APIKeyAuth)
