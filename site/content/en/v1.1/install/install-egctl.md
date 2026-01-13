@@ -12,7 +12,7 @@ weight: -80
 
 This task shows how to install the egctl CLI. egctl can be installed either from source, or from pre-built binary releases.
 
-### From The Envoy Gateway Project
+## From The Envoy Gateway Project
 
 The Envoy Gateway project provides two ways to fetch and install egctl. These are the official methods to get egctl releases. Installation through those methods can be found below the official methods.
 
