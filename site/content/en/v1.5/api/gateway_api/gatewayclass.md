@@ -45,7 +45,7 @@ The user of the classes will not need to know *how* `internet` and `private` are
 implemented. Instead, the user will only need to understand the resulting
 properties of the class that the `Gateway` was created with.
 
-### GatewayClass parameters
+## GatewayClass parameters
 
 Providers of the `Gateway` API may need to pass parameters to their controller
 as part of the class definition. This is done using the
@@ -75,7 +75,7 @@ spec:
 Using a Custom Resource for `GatewayClass.spec.parametersRef` is encouraged
 but implementations may resort to using a ConfigMap if needed.
 
-### GatewayClass status
+## GatewayClass status
 
 `GatewayClasses` MUST be validated by the provider to ensure that the configured
 parameters are valid. The validity of the class will be signaled to the user via

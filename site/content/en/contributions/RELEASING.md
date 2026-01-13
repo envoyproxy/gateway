@@ -40,10 +40,10 @@ export GITHUB_REMOTE=origin
 
    __Note:__ The release candidate version should be in the format `${MAJOR_VERSION}.${MINOR_VERSION}.0-rc.${RELEASE_CANDIDATE_NUMBER}`.
 3. Sign, commit, and push your changes to your fork.
-4. Submit a [Pull Request][] to merge the changes into the `main` branch. 
+4. Submit a [Pull Request][] to merge the changes into the `main` branch.
 5. Do not proceed until your PR has merged and the [Build and Test][] has successfully completed.
-6. **Create a new marker tag on `main` for the next minor version.**  
-   This tag serves as a **non-release marker** to indicate the start of the next development cycle.  
+6. **Create a new marker tag on `main` for the next minor version.**
+   This tag serves as a **non-release marker** to indicate the start of the next development cycle.
    It is **not a real release candidate** (see [#7248](https://github.com/envoyproxy/gateway/issues/7248) for details).
    ```shell
    git tag "v${MAJOR_VERSION}.$((MINOR_VERSION + 1)).0-rc.0"
@@ -66,7 +66,7 @@ export GITHUB_REMOTE=origin
  Please note that the tags should be updated in both the source code and the Helm chart. Reference [PR #5872][]
    for additional details on updating the image tag.
 10. Sign, commit, and push your changes to your fork.
-11. Submit a [Pull Request][] to merge the changes into the `release/v${MAJOR_VERSION}.${MINOR_VERSION}` branch. 
+11. Submit a [Pull Request][] to merge the changes into the `release/v${MAJOR_VERSION}.${MINOR_VERSION}` branch.
 12. Do not proceed until your PR has merged into the release branch and the [Build and Test][] has completed for your PR.
 13. Ensure your release branch is up-to-date and tag the head of your release branch with the release candidate number.
 
