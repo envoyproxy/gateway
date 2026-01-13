@@ -58,7 +58,6 @@ type SecurityPolicySpec struct {
 	// This field cannot be set when targeting a parent resource (Gateway).
 	// If unset, no merging occurs, and only the most specific configuration takes effect.
 	//
-	// +kubebuilder:validation:XValidation:rule="!has(self.mergeType) || (has(self.targetRef) && self.targetRef.kind != 'Gateway') || (has(self.targetRefs) && self.targetRefs.all(ref, ref.kind != 'Gateway'))", message="mergeType cannot be set when targeting a Gateway"
 	// +optional
 	MergeType *MergeType `json:"mergeType,omitempty"`
 
