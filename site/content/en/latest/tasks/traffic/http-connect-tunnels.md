@@ -2,8 +2,8 @@
 title: "HTTP CONNECT Tunnels"
 ---
 
-HTTP CONNECT tunnels are a mechanism that allows a client to establish a tunnel through an HTTP proxy server 
-to communicate directly with a destination server. This is commonly used for HTTPS traffic through proxies, 
+HTTP CONNECT tunnels are a mechanism that allows a client to establish a tunnel through an HTTP proxy server
+to communicate directly with a destination server. This is commonly used for HTTPS traffic through proxies,
 but can also be used for other protocols.
 
 This task will help you get started using HTTP Connect based tunnels using Envoy Gateway.

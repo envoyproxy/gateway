@@ -1451,6 +1451,7 @@ _Appears in:_
 | `rateLimitHpa` | _[KubernetesHorizontalPodAutoscalerSpec](#kuberneteshorizontalpodautoscalerspec)_ |  false  |  | RateLimitHpa defines the Horizontal Pod Autoscaler settings for Envoy ratelimit Deployment.<br />If the HPA is set, Replicas field from RateLimitDeployment will be ignored. |
 | `rateLimitPDB` | _[KubernetesPodDisruptionBudgetSpec](#kubernetespoddisruptionbudgetspec)_ |  false  |  | RateLimitPDB allows to control the pod disruption budget of rate limit service. |
 | `watch` | _[KubernetesWatchMode](#kuberneteswatchmode)_ |  false  |  | Watch holds configuration of which input resources should be watched and reconciled. |
+| `deploy` | _[KubernetesDeployMode](#kubernetesdeploymode)_ |  false  |  | Deploy holds configuration of how output managed resources such as the Envoy Proxy data plane<br />should be deployed |
 | `leaderElection` | _[LeaderElection](#leaderelection)_ |  false  |  | LeaderElection specifies the configuration for leader election.<br />If it's not set up, leader election will be active by default, using Kubernetes' standard settings. |
 | `shutdownManager` | _[ShutdownManager](#shutdownmanager)_ |  false  |  | ShutdownManager defines the configuration for the shutdown manager. |
 | `client` | _[KubernetesClient](#kubernetesclient)_ |  true  |  | Client holds the configuration for the Kubernetes client. |
@@ -1864,7 +1865,6 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `ancestors` | _[EnvoyProxyAncestorStatus](#envoyproxyancestorstatus) array_ |  false  |  | Ancestors represent the status information for all the GatewayClass or Gateway<br />reference this EnvoyProxy with ParametersReference. |
 
 
 #### EnvoyResourceType
@@ -2081,6 +2081,7 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `certificateRef` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#secretobjectreference)_ |  true  |  | CertificateRef is a reference to a Kubernetes Secret with a CA certificate in a key named "tls.crt".<br />The CA certificate is used by Envoy Gateway to verify the server certificate presented by the extension server. |
+| `clientCertificateRef` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#secretobjectreference)_ |  false  |  | ClientCertificateRef is a reference to a Kubernetes Secret with a client certificate and key<br />for client certificate authentication (mTLS). The secret must contain both "tls.crt" and "tls.key" keys.<br />When specified, Envoy Gateway will present this client certificate to the extension server<br />for mTLS authentication. If not specified, only server certificate validation is performed. |
 
 
 #### ExtractFrom
@@ -2206,6 +2207,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
+| `minEndpointsInZoneThreshold` | _integer_ |  false  |  | MinEndpointsInZoneThreshold is the minimum number of upstream endpoints in the local zone required to honor the forceLocalZone<br />override. This is useful for protecting zones with fewer endpoints. |
 
 
 #### GRPCActiveHealthChecker

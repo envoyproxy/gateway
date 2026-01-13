@@ -11,7 +11,7 @@ This task shows you how to configure them.
 Follow the steps from the [Quickstart](../../quickstart) to install Envoy Gateway and the example manifest.
 Before proceeding, you should be able to query the example backend using HTTP.
 
-## Testing Direct Response 
+## Testing Direct Response
 
 Note: the size of the response body (whether provided in-line or via a reference) cannot exceed 4096 bytes.
 

@@ -4,8 +4,8 @@ linkTitle: "Extension Server"
 ---
 
 This task explains how to extend Envoy Gateway using an Extension Server. Envoy Gateway
-can be configured to call an external server over gRPC with the xDS configuration _before_ 
-it is sent to Envoy Proxy. The external server can modify the provided configuration 
+can be configured to call an external server over gRPC with the xDS configuration _before_
+it is sent to Envoy Proxy. The external server can modify the provided configuration
 programmatically using any semantics supported by the [xDS][] API.
 
 Using an extension server allows vendors to add xDS configuration that Envoy Gateway itself
@@ -122,7 +122,7 @@ includes its own CRD which allows defining username/password pairs that will be 
 the Envoy Proxy.
 
 **Note:** Envoy Gateway supports adding Basic Authentication to routes using a [SecurityPolicy][].
-See [this task](../security/basic-auth) for the preferred way to configure Basic 
+See [this task](../security/basic-auth) for the preferred way to configure Basic
 Authentication.
 
 ## Quickstart
@@ -133,7 +133,7 @@ Authentication.
 
 ### Build and run the example Extension Server
 
-Build and deploy the example extension server in the `examples/extension-server` folder into the cluster 
+Build and deploy the example extension server in the `examples/extension-server` folder into the cluster
 running Envoy Gateway.
 
 * Build the extension server image
@@ -245,7 +245,7 @@ Get the Gateway's address:
 export GATEWAY_HOST=$(kubectl get gateway/eg -o jsonpath='{.status.addresses[0].value}')
 ```
 
-The extension server adds the Basic Authentication HTTP filter to all listeners configured by 
+The extension server adds the Basic Authentication HTTP filter to all listeners configured by
 Envoy Gateway. Initially there are no valid user/password combinations available. Accessing the
 example backend should fail with a 401 status:
 
