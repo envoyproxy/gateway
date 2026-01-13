@@ -18,4 +18,4 @@ assignees: ''
 - [ ] verify quickstart
 - [ ] update doc
 - [ ] update release [announcement](https://github.com/envoyproxy/gateway/releases/tag/v1.x.x) 
-- [ ] GH Release, Slack announcment, [google group](https://groups.google.com/g/envoy-gateway-announce) announcement
+- [ ] GH Release, Slack announcement, [google group](https://groups.google.com/g/envoy-gateway-announce) announcement
