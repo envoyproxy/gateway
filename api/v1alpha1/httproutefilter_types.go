@@ -44,6 +44,10 @@ type HTTPRouteFilterSpec struct {
 	DirectResponse *HTTPDirectResponseFilter `json:"directResponse,omitempty"`
 	// +optional
 	CredentialInjection *HTTPCredentialInjectionFilter `json:"credentialInjection,omitempty"`
+	// CookieMatch defines cookie-based request matching that must be satisfied for the
+	// parent HTTPRoute rule to be selected.
+	// +optional
+	CookieMatch *HTTPCookieMatchFilter `json:"cookieMatch,omitempty"`
 }
 
 // HTTPURLRewriteFilter define rewrites of HTTP URL components such as path and host
@@ -184,6 +188,33 @@ type InjectedCredential struct {
 	ValueRef gwapiv1.SecretObjectReference `json:"valueRef"`
 
 	// EG may support more credential types in the future, for example, OAuth2 access token retrieved by Client Credentials Grant flow.
+}
+
+// HTTPCookieMatchFilter defines cookie-based request matching that is applied to the
+// HTTPRoute rule.
+type HTTPCookieMatchFilter struct {
+	// Cookies is a list of cookie matchers evaluated against the HTTP request.
+	// All specified matchers must match.
+	//
+	// +kubebuilder:validation:MinItems=1
+	Cookies []HTTPCookieMatch `json:"cookies"`
+}
+
+// HTTPCookieMatch defines how to match a single cookie.
+type HTTPCookieMatch struct {
+	// Name is the cookie name to evaluate.
+	//
+	// +kubebuilder:validation:MinLength=1
+	Name string `json:"name"`
+
+	// Match defines how to evaluate the cookie value.
+	Match StringMatch `json:"match"`
+
+	// InvertMatch inverts the match result. If the cookie is absent, the match
+	// result is false unless InvertMatch is set.
+	//
+	// +optional
+	InvertMatch *bool `json:"invertMatch,omitempty"`
 }
 
 //+kubebuilder:object:root=true
