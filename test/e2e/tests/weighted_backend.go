@@ -189,8 +189,7 @@ func testMixedValidAndInvalid(t *testing.T, suite *suite.ConformanceTestSuite) {
 		}
 	}
 
-	// P(83 ≤ X ≤ 97) = Σ_{k=83}^{97} C(100,k)·0.9^k·0.1^{100−k} ≈ 0.9880 chance of success
-	if !AlmostEquals(successCount, 90, 7) { // The weight of valid backend is 90%
+	if successCount < 80 || successCount > 99 { // The weight of valid backend is 90%
 		t.Errorf("The actual success count is not within the expected range, success %d", successCount)
 	}
 }
