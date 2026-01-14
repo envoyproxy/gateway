@@ -76,7 +76,7 @@ helm-template: ## Render helm chart templates with test values.
   		$(MAKE) $(addprefix helm-generate., $$(basename $${chart})); \
   	done
 
-.PHONY: helm-generate.%
+.PHONY: helm-template.%
 helm-template.%: ## Render helm chart templates with test values.
 	$(eval CHART_NAME := $(COMMAND))
 	$(call log, "Run helm template for chart: ${CHART_NAME}!");
