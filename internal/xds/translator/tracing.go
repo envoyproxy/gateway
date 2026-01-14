@@ -93,7 +93,7 @@ func buildHCMTracing(tracing *ir.Tracing) (*hcm.HttpConnectionManager_Tracing, e
 		return nil, fmt.Errorf("failed to marshal tracing configuration: %w", err)
 	}
 
-	tags, err := buildTracingTags(tracing.CustomTags)
+	tags, err := buildTracingTags(tracing.CustomTags, tracing.Tags)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build tracing tags: %w", err)
 	}
@@ -161,13 +161,14 @@ func processClusterForTracing(tCtx *types.ResourceVersionTable, tracing *ir.Trac
 	})
 }
 
-func buildTracingTags(tracingTags map[string]egv1a1.CustomTag) ([]*tracingtype.CustomTag, error) {
-	tags := make([]*tracingtype.CustomTag, 0, len(tracingTags))
+func buildTracingTags(tracingTags map[string]egv1a1.CustomTag, tags map[string]string) ([]*tracingtype.CustomTag, error) {
+	out := make([]*tracingtype.CustomTag, 0, len(tracingTags)+len(tags))
+
 	// TODO: consider add some default tags for better UX
 	for k, v := range tracingTags {
 		switch v.Type {
 		case egv1a1.CustomTagTypeLiteral:
-			tags = append(tags, &tracingtype.CustomTag{
+			out = append(out, &tracingtype.CustomTag{
 				Tag: k,
 				Type: &tracingtype.CustomTag_Literal_{
 					Literal: &tracingtype.CustomTag_Literal{
@@ -181,7 +182,7 @@ func buildTracingTags(tracingTags map[string]egv1a1.CustomTag) ([]*tracingtype.C
 				defaultVal = *v.Environment.DefaultValue
 			}
 
-			tags = append(tags, &tracingtype.CustomTag{
+			out = append(out, &tracingtype.CustomTag{
 				Tag: k,
 				Type: &tracingtype.CustomTag_Environment_{
 					Environment: &tracingtype.CustomTag_Environment{
@@ -196,7 +197,7 @@ func buildTracingTags(tracingTags map[string]egv1a1.CustomTag) ([]*tracingtype.C
 				defaultVal = *v.RequestHeader.DefaultValue
 			}
 
-			tags = append(tags, &tracingtype.CustomTag{
+			out = append(out, &tracingtype.CustomTag{
 				Tag: k,
 				Type: &tracingtype.CustomTag_RequestHeader{
 					RequestHeader: &tracingtype.CustomTag_Header{
@@ -209,10 +210,20 @@ func buildTracingTags(tracingTags map[string]egv1a1.CustomTag) ([]*tracingtype.C
 			return nil, fmt.Errorf("unknown custom tag type: %s", v.Type)
 		}
 	}
+
+	for k, v := range tags {
+		out = append(out, &tracingtype.CustomTag{
+			Tag: k,
+			Type: &tracingtype.CustomTag_Value{
+				Value: v,
+			},
+		})
+	}
+
 	// sort tags by tag name, make result consistent
-	sort.Slice(tags, func(i, j int) bool {
-		return tags[i].Tag < tags[j].Tag
+	sort.Slice(out, func(i, j int) bool {
+		return out[i].Tag < out[j].Tag
 	})
 
-	return tags, nil
+	return out, nil
 }
