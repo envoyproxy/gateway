@@ -534,26 +534,30 @@ func (t *Translator) translateEnvoyExtensionPolicyForRoute(
 						if r.EnvoyExtensions != nil {
 							continue
 						}
+						r.EnvoyExtensions = &ir.EnvoyExtensionFeatures{
+							ExtProcs: extProcs,
+							Wasms:    wasms,
+							Luas:     luas,
+						}
 						if wasmError != nil || luaError != nil || extProcError != nil {
 							switch {
 							case (extProcError != nil && extProcFailOpen) && (luaError == nil && wasmError == nil):
 								// skip the extProc application where the extProc is failing open and no other errors
+								r.EnvoyExtensions.ExtProcs = nil
 							case (wasmError != nil && wasmFailOpen) && (luaError == nil && extProcError == nil):
 								// skip the wasm application where the wasm is failing open and no other errors
+								r.EnvoyExtensions.Wasms = nil
 							case (extProcError != nil && extProcFailOpen) && (wasmError != nil && wasmFailOpen) && luaError == nil:
 								// skip the wasm and extProc application where both are failing open and no lua errors
+								r.EnvoyExtensions.ExtProcs = nil
+								r.EnvoyExtensions.Wasms = nil
 							default:
+								r.EnvoyExtensions = nil
 								r.DirectResponse = &ir.CustomResponse{
 									StatusCode: ptr.To(uint32(500)),
 								}
 								routesWithDirectResponse.Insert(r.Name)
 							}
-							continue
-						}
-						r.EnvoyExtensions = &ir.EnvoyExtensionFeatures{
-							ExtProcs: extProcs,
-							Wasms:    wasms,
-							Luas:     luas,
 						}
 					}
 				}
@@ -624,28 +628,30 @@ func (t *Translator) translateEnvoyExtensionPolicyForGateway(
 			if r.EnvoyExtensions != nil {
 				continue
 			}
-
+			r.EnvoyExtensions = &ir.EnvoyExtensionFeatures{
+				ExtProcs: extProcs,
+				Wasms:    wasms,
+				Luas:     luas,
+			}
 			if errs != nil {
 				switch {
 				case (extProcError != nil && extProcFailOpen) && (luaError == nil && wasmError == nil):
 					// skip the extProc application where the extProc is failing open and no other errors
+					r.EnvoyExtensions.ExtProcs = nil
 				case (wasmError != nil && wasmFailOpen) && (luaError == nil && extProcError == nil):
 					// skip the wasm application where the wasm is failing open and no other errors
+					r.EnvoyExtensions.Wasms = nil
 				case (extProcError != nil && extProcFailOpen) && (wasmError != nil && wasmFailOpen) && luaError == nil:
 					// skip the wasm and extProc application where both are failing open and no lua errors
+					r.EnvoyExtensions.ExtProcs = nil
+					r.EnvoyExtensions.Wasms = nil
 				default:
+					r.EnvoyExtensions = nil
 					r.DirectResponse = &ir.CustomResponse{
 						StatusCode: ptr.To(uint32(500)),
 					}
 					routesWithDirectResponse.Insert(r.Name)
 				}
-				continue
-			}
-
-			r.EnvoyExtensions = &ir.EnvoyExtensionFeatures{
-				ExtProcs: extProcs,
-				Wasms:    wasms,
-				Luas:     luas,
 			}
 		}
 	}
