@@ -222,6 +222,9 @@ func convertResolvedMetricSinks(irSinks []ir.ResolvedMetricSink) []bootstrap.Met
 			if tls.SNI != nil {
 				ms.TLS.SNI = *tls.SNI
 			}
+			if tls.CACertificate != nil {
+				ms.TLS.CACertificate = tls.CACertificate.Certificate
+			}
 		}
 		result = append(result, ms)
 	}

@@ -29,6 +29,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/message"
 	"github.com/envoyproxy/gateway/internal/utils"
 	"github.com/envoyproxy/gateway/internal/utils/file"
+	"github.com/envoyproxy/gateway/internal/utils/test"
 	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
 	testutils "github.com/envoyproxy/gateway/test/utils"
 )
@@ -670,6 +671,42 @@ func TestResolvedMetricSinksConversion(t *testing.T) {
 					Authority: "otel-collector.example.com",
 					TLS: &bootstrap.MetricSinkTLS{
 						SNI: sni,
+					},
+				},
+			},
+		},
+		{
+			name: "sink with TLS and custom CA",
+			irSinks: []ir.ResolvedMetricSink{
+				{
+					Destination: ir.RouteDestination{
+						Name: "metrics_otel_0",
+						Settings: []*ir.DestinationSetting{
+							{
+								Endpoints: []*ir.DestinationEndpoint{
+									{Host: "otel-collector.example.com", Port: 443},
+								},
+								TLS: &ir.TLSUpstreamConfig{
+									SNI: &sni,
+									CACertificate: &ir.TLSCACertificate{
+										Name:        "custom-ca",
+										Certificate: test.TestCACertificate,
+									},
+								},
+							},
+						},
+					},
+					Authority: "otel-collector.example.com",
+				},
+			},
+			expected: []bootstrap.MetricSink{
+				{
+					Address:   "otel-collector.example.com",
+					Port:      443,
+					Authority: "otel-collector.example.com",
+					TLS: &bootstrap.MetricSinkTLS{
+						SNI:           sni,
+						CACertificate: test.TestCACertificate,
 					},
 				},
 			},

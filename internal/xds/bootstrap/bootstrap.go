@@ -8,6 +8,7 @@ package bootstrap
 import (
 	// Register embed
 	_ "embed"
+	"encoding/base64"
 	"fmt"
 	"net"
 	"strconv"
@@ -57,7 +58,11 @@ const (
 //go:embed bootstrap.yaml.tpl
 var bootstrapTmplStr string
 
-var bootstrapTmpl = template.Must(template.New(envoyCfgFileName).Parse(bootstrapTmplStr))
+var bootstrapTmpl = template.Must(template.New(envoyCfgFileName).Funcs(template.FuncMap{
+	"base64": func(data []byte) string {
+		return base64.StdEncoding.EncodeToString(data)
+	},
+}).Parse(bootstrapTmplStr))
 
 // bootstrapConfig defines the envoy Bootstrap configuration.
 type bootstrapConfig struct {
@@ -144,6 +149,9 @@ type MetricSinkTLS struct {
 	SNI string
 	// UseSystemTrustStore indicates whether to use the system CA trust store.
 	UseSystemTrustStore bool
+	// CACertificate is the CA certificate for validating the upstream TLS certificate.
+	// When set, this takes precedence over UseSystemTrustStore.
+	CACertificate []byte
 }
 
 type adminServerParameters struct {

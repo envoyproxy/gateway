@@ -6,10 +6,17 @@
 package test
 
 import (
+	_ "embed"
 	"strings"
 
 	"github.com/envoyproxy/gateway/internal/utils/cert"
 )
+
+// TestCACertificate is a test CA certificate for unit tests.
+// This is the same certificate used in backendtlspolicy-ca-only.in.yaml.
+//
+//go:embed testdata/ca.crt
+var TestCACertificate []byte
 
 // NormalizeCertPath replaces platform-specific cert path with canonical path for consistent golden files.
 func NormalizeCertPath(content string) string {

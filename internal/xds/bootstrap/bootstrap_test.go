@@ -218,6 +218,28 @@ func TestGetRenderedBootstrapConfig(t *testing.T) {
 			},
 		},
 		{
+			name: "otel-metrics-custom-ca",
+			opts: &RenderBootstrapConfigOptions{
+				ProxyMetrics: &egv1a1.ProxyMetrics{
+					Prometheus: &egv1a1.ProxyPrometheusProvider{
+						Disable: true,
+					},
+				},
+				ResolvedMetricSinks: []MetricSink{
+					{
+						Address:   "otel-collector.example.com",
+						Port:      443,
+						Authority: "otel-collector.example.com",
+						TLS: &MetricSinkTLS{
+							SNI:           "otel-collector.example.com",
+							CACertificate: test.TestCACertificate,
+						},
+					},
+				},
+				SdsConfig: sds,
+			},
+		},
+		{
 			name: "custom-stats-matcher",
 			opts: &RenderBootstrapConfigOptions{
 				ProxyMetrics: &egv1a1.ProxyMetrics{

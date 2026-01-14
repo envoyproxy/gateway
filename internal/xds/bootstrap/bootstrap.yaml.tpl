@@ -212,7 +212,12 @@ static_resources:
         {{- if $sink.TLS.SNI }}
         sni: {{ $sink.TLS.SNI }}
         {{- end }}
-        {{- if $sink.TLS.UseSystemTrustStore }}
+        {{- if $sink.TLS.CACertificate }}
+        common_tls_context:
+          validation_context:
+            trusted_ca:
+              inline_bytes: {{ $sink.TLS.CACertificate | base64 }}
+        {{- else if $sink.TLS.UseSystemTrustStore }}
         common_tls_context:
           validation_context:
             trusted_ca:
