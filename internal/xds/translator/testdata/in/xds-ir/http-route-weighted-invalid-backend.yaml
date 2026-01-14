@@ -19,7 +19,7 @@ http:
         weight: 1
         name: "first-route-dest/backend/0"
       - weight: 1
-        name: "first-route-dest/backend/1"  #  clusterNotFoundResponseCode should be default to 503 for cluster without endpoints
+        name: "first-route-dest/backend/1"         #  clusterNotFoundResponseCode should be default to 503 for cluster without endpoints
   - name: "second-route"
     hostname: "*"
     destination:
@@ -32,7 +32,7 @@ http:
         name: "second-route-dest/backend/0"
       - weight: 1
         name: "second-route-dest/backend/1"
-        invalid: true     #  clusterNotFoundResponseCode should be 500 for invalid cluster
+        invalid: true                              #  clusterNotFoundResponseCode should be 500 for invalid cluster
   - name: "third-route"
     hostname: "*"
     destination:
@@ -47,4 +47,4 @@ http:
         name: "third-route-dest/backend/1"
         invalid: true
       - weight: 1
-        name: "third-route-dest/backend/2" #  clusterNotFoundResponseCode should be 503 for mixed empty and invalid cluster
+        name: "third-route-dest/backend/2"        #  clusterNotFoundResponseCode should be 503 for mixed empty and invalid cluster

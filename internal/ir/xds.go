@@ -547,14 +547,14 @@ type ClientIPDetectionSettings egv1a1.ClientIPDetectionSettings
 
 // BackendWeights stores the weights of valid and invalid backends for the route so that 500 error responses can be returned in the same proportions
 type BackendWeights struct {
-	Name    string `json:"name" yaml:"name"`
-	Valid   uint32 `json:"valid" yaml:"valid"`
-	Invalid uint32 `json:"invalid" yaml:"invalid"`
-	Empty   uint32 `json:"empty" yaml:"empty"`
+	Name        string `json:"name" yaml:"name"`
+	Valid       uint32 `json:"valid" yaml:"valid"`
+	Invalid     uint32 `json:"invalid" yaml:"invalid"`
+	NoEndpoints uint32 `json:"noEndpoints" yaml:"noEndpoints"`
 }
 
-func (b *BackendWeights) NonValidWeight() uint32 {
-	return b.Invalid + b.Empty
+func (b *BackendWeights) UnavailableWeight() uint32 {
+	return b.Invalid + b.NoEndpoints
 }
 
 // HTTP1Settings provides HTTP/1 configuration on the listener.
@@ -852,8 +852,8 @@ func (h *HTTPRoute) NeedsClusterPerSetting() bool {
 		return true
 	}
 	// When the destination has both valid and invalid backend weights, we use weighted clusters to distribute between
-	// valid backends and the `invalid-backend-cluster` for 500 responses according to their configured weights.
-	if h.Destination.ToBackendWeights().Invalid > 0 || h.Destination.ToBackendWeights().Empty > 0 {
+	// valid backends and the `invalid-backend-cluster` for 500/503 responses according to their configured weights.
+	if h.Destination.ToBackendWeights().Invalid > 0 || h.Destination.ToBackendWeights().NoEndpoints > 0 {
 		return true
 	}
 	return h.Destination.NeedsClusterPerSetting()
@@ -1722,7 +1722,7 @@ func (r *RouteDestination) ToBackendWeights() *BackendWeights {
 		case len(s.Endpoints) > 0: // All other cases should have endpoints
 			w.Valid += *s.Weight
 		default: // DestinationSetting with no endpoints
-			w.Empty += *s.Weight
+			w.NoEndpoints += *s.Weight
 		}
 	}
 
@@ -1769,7 +1769,7 @@ type DestinationSetting struct {
 	// Invalid is true if the destination setting is invalid (e.g. reference to non-existent backend, invalid TLS config, etc.)
 	// DS without endpoints is considered valid.
 	// This is required because Gateway API spec requires different status code for invalid backend and backend without endpoints.
-	// * invalid 600
+	// * invalid 500
 	// * without endpoints 503
 	Invalid bool `json:"invalid,omitempty" yaml:"invalid,omitempty"`
 }

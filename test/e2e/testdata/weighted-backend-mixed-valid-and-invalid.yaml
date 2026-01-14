@@ -10,7 +10,7 @@ spec:
     - matches:
         - path:
             type: PathPrefix
-            value: /mixed-valid-and-invalid.  # should return 500 for invalid cluster
+            value: /mixed-valid-and-invalid.       # should return 500 for invalid cluster
       backendRefs:
         - name: infra-backend-v1
           port: 8080
@@ -26,7 +26,7 @@ spec:
         - name: infra-backend-v1
           port: 8080
           weight: 9
-        - name: infra-backend-without-endpoints # should return 503 for empty cluster
+        - name: infra-backend-without-endpoints    # should return 503 for empty cluster
           port: 8080
           weight: 1
 ---

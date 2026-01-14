@@ -316,10 +316,10 @@ func buildXdsRouteAction(route *ir.HTTPRoute) *routev3.RouteAction {
 
 func buildXdsWeightedRouteAction(backendWeights *ir.BackendWeights, settings []*ir.DestinationSetting) *routev3.RouteAction {
 	weightedClusters := make([]*routev3.WeightedCluster_ClusterWeight, 0, len(settings))
-	if backendWeights.NonValidWeight() > 0 {
+	if backendWeights.UnavailableWeight() > 0 {
 		invalidCluster := &routev3.WeightedCluster_ClusterWeight{
 			Name:   "invalid-backend-cluster",
-			Weight: &wrapperspb.UInt32Value{Value: backendWeights.NonValidWeight()},
+			Weight: &wrapperspb.UInt32Value{Value: backendWeights.UnavailableWeight()},
 		}
 		weightedClusters = append(weightedClusters, invalidCluster)
 	}
@@ -367,7 +367,7 @@ func buildXdsWeightedRouteAction(backendWeights *ir.BackendWeights, settings []*
 	// Reference: https://gateway-api.sigs.k8s.io/reference/spec/#httprouterule
 	clusterNotFoundResponseCode := routev3.RouteAction_INTERNAL_SERVER_ERROR
 	// Envoy can't handle mixed 500 and 503 responses, so we use 503 when both invalid and empty
-	if backendWeights.Empty > 0 {
+	if backendWeights.NoEndpoints > 0 {
 		clusterNotFoundResponseCode = routev3.RouteAction_SERVICE_UNAVAILABLE
 	}
 	return &routev3.RouteAction{
