@@ -21769,7 +21769,7 @@ spec:
                               the main service port (e.g., port 443 for service, port 9090 for health checks).
                             format: int32
                             maximum: 65535
-                            minimum: 0
+                            minimum: 1
                             type: integer
                         type: object
                       tcp:
@@ -26643,7 +26643,7 @@ spec:
                                         the main service port (e.g., port 443 for service, port 9090 for health checks).
                                       format: int32
                                       maximum: 65535
-                                      minimum: 0
+                                      minimum: 1
                                       type: integer
                                   type: object
                                 tcp:
@@ -40385,7 +40385,7 @@ spec:
                                                           the main service port (e.g., port 443 for service, port 9090 for health checks).
                                                         format: int32
                                                         maximum: 65535
-                                                        minimum: 0
+                                                        minimum: 1
                                                         type: integer
                                                     type: object
                                                   tcp:
@@ -41654,7 +41654,7 @@ spec:
                                                           the main service port (e.g., port 443 for service, port 9090 for health checks).
                                                         format: int32
                                                         maximum: 65535
-                                                        minimum: 0
+                                                        minimum: 1
                                                         type: integer
                                                     type: object
                                                   tcp:
@@ -43079,7 +43079,7 @@ spec:
                                                     the main service port (e.g., port 443 for service, port 9090 for health checks).
                                                   format: int32
                                                   maximum: 65535
-                                                  minimum: 0
+                                                  minimum: 1
                                                   type: integer
                                               type: object
                                             tcp:
@@ -44416,7 +44416,7 @@ spec:
                                               the main service port (e.g., port 443 for service, port 9090 for health checks).
                                             format: int32
                                             maximum: 65535
-                                            minimum: 0
+                                            minimum: 1
                                             type: integer
                                         type: object
                                       tcp:
@@ -47099,7 +47099,7 @@ spec:
                                           the main service port (e.g., port 443 for service, port 9090 for health checks).
                                         format: int32
                                         maximum: 65535
-                                        minimum: 0
+                                        minimum: 1
                                         type: integer
                                     type: object
                                   tcp:
@@ -48256,7 +48256,7 @@ spec:
                                           the main service port (e.g., port 443 for service, port 9090 for health checks).
                                         format: int32
                                         maximum: 65535
-                                        minimum: 0
+                                        minimum: 1
                                         type: integer
                                     type: object
                                   tcp:
@@ -49615,7 +49615,7 @@ spec:
                                                 the main service port (e.g., port 443 for service, port 9090 for health checks).
                                               format: int32
                                               maximum: 65535
-                                              minimum: 0
+                                              minimum: 1
                                               type: integer
                                           type: object
                                         tcp:
@@ -51050,7 +51050,7 @@ spec:
                                           the main service port (e.g., port 443 for service, port 9090 for health checks).
                                         format: int32
                                         maximum: 65535
-                                        minimum: 0
+                                        minimum: 1
                                         type: integer
                                     type: object
                                   tcp:

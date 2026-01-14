@@ -217,7 +217,7 @@ type HealthCheckOverrides struct {
 	// the main service port (e.g., port 443 for service, port 9090 for health checks).
 	//
 	// +optional
-	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Minimum=1
 	// +kubebuilder:validation:Maximum=65535
 	Port int32 `json:"port,omitempty"`
 }
