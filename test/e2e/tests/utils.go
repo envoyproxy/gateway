@@ -166,6 +166,29 @@ func SecurityPolicyMustFail(
 	require.NoErrorf(t, waitErr, "error waiting for SecurityPolicy to fail with message: %s policy %v", message, policy)
 }
 
+// SecurityPolicyMustBeMerged waits for the specified SecurityPolicy to have Merged condition.
+func SecurityPolicyMustBeMerged(t *testing.T, client client.Client, policyName types.NamespacedName, controllerName string, ancestorRef gwapiv1.ParentReference) {
+	t.Helper()
+
+	waitErr := wait.PollUntilContextTimeout(context.Background(), 1*time.Second, 60*time.Second, true, func(ctx context.Context) (bool, error) {
+		policy := &egv1a1.SecurityPolicy{}
+		err := client.Get(ctx, policyName, policy)
+		if err != nil {
+			return false, fmt.Errorf("error fetching SecurityPolicy: %w", err)
+		}
+
+		if policyMergedByAncestor(policy.Status.Ancestors, controllerName, ancestorRef) {
+			tlog.Logf(t, "SecurityPolicy has Merged condition: %v", policy)
+			return true, nil
+		}
+
+		tlog.Logf(t, "SecurityPolicy does not have Merged condition yet: %v", policy)
+		return false, nil
+	})
+
+	require.NoErrorf(t, waitErr, "error waiting for SecurityPolicy to have Merged condition")
+}
+
 // BackendTrafficPolicyMustBeAccepted waits for the specified BackendTrafficPolicy to be accepted.
 func BackendTrafficPolicyMustBeAccepted(t *testing.T, client client.Client, policyName types.NamespacedName, controllerName string, ancestorRef gwapiv1.ParentReference) {
 	t.Helper()
@@ -306,6 +329,19 @@ func policyAcceptedByAncestor(ancestors []gwapiv1.PolicyAncestorStatus, controll
 		if string(ancestor.ControllerName) == controllerName && cmp.Equal(ancestor.AncestorRef, ancestorRef) {
 			for _, condition := range ancestor.Conditions {
 				if condition.Type == string(gwapiv1.PolicyConditionAccepted) && condition.Status == metav1.ConditionTrue {
+					return true
+				}
+			}
+		}
+	}
+	return false
+}
+
+func policyMergedByAncestor(ancestors []gwapiv1.PolicyAncestorStatus, controllerName string, ancestorRef gwapiv1.ParentReference) bool {
+	for _, ancestor := range ancestors {
+		if string(ancestor.ControllerName) == controllerName && cmp.Equal(ancestor.AncestorRef, ancestorRef) {
+			for _, condition := range ancestor.Conditions {
+				if condition.Type == string(egv1a1.PolicyConditionMerged) && condition.Status == metav1.ConditionTrue {
 					return true
 				}
 			}
