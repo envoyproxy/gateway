@@ -55,9 +55,18 @@ const (
 	// PolicyConditionMerged indicates whether the policy has
 	// been merged with another policy targeting the parent(e.g. Gateway).
 	PolicyConditionMerged gwapiv1.PolicyConditionType = "Merged"
+
 	// PolicyReasonMerged is used with the "Merged" condition when the policy
 	// has been merged with another policy targeting the parent(e.g. Gateway).
 	PolicyReasonMerged gwapiv1.PolicyConditionReason = "Merged"
+
+	// PolicyConditionWarning indicates that the policy configuration contains
+	// non-critical issues that are accepted but requires attention.
+	PolicyConditionWarning gwapiv1.PolicyConditionType = "Warning"
+
+	// PolicyReasonDeprecatedField is used with the "Warning" condition when the policy
+	// uses deprecated fields that should be migrated to newer alternatives.
+	PolicyReasonDeprecatedField gwapiv1.PolicyConditionReason = "DeprecatedField"
 )
 
 // GroupVersionKind unambiguously identifies a Kind.
@@ -204,6 +213,13 @@ type KubernetesPodSpec struct {
 	//
 	// +optional
 	TopologySpreadConstraints []corev1.TopologySpreadConstraint `json:"topologySpreadConstraints,omitempty"`
+
+	// PriorityClassName indicates the importance of a Pod relative to other Pods.
+	// If a PriorityClassName is not specified, the pod priority will be default or zero if there is no default.
+	// More info: https://kubernetes.io/docs/concepts/scheduling-eviction/pod-priority-preemption/
+	//
+	// +optional
+	PriorityClassName *string `json:"priorityClassName,omitempty"`
 }
 
 // KubernetesContainerSpec defines the desired state of the Kubernetes container resource.
@@ -838,12 +854,9 @@ type CustomResponseBody struct {
 }
 
 // Tracing defines the configuration for tracing.
-// TODO: we'd better deprecate SamplingRate in the EnvoyProxy spec, so that we can reuse the struct.
 type Tracing struct {
 	// SamplingFraction represents the fraction of requests that should be
 	// selected for tracing if no prior sampling decision has been made.
-	//
-	// This will take precedence over sampling fraction on EnvoyProxy if set.
 	//
 	// +optional
 	SamplingFraction *gwapiv1.Fraction `json:"samplingFraction,omitempty"`
@@ -852,6 +865,32 @@ type Tracing struct {
 	//
 	// +optional
 	CustomTags map[string]CustomTag `json:"customTags,omitempty"`
+	// Tags defines the custom tags to add to each span.
+	// Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators) may be used in the value.
+	// The [format string documentation](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#config-access-log-format-strings) provides more information.
+	// If provider is kubernetes, pod name and namespace are added by default.
+	//
+	// Same keys take precedence over CustomTags.
+	//
+	// +optional
+	Tags map[string]string `json:"tags,omitempty"`
+	// SpanName defines the name of the span which will be used for tracing.
+	// Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators) may be used in the value.
+	// The [format string documentation](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#config-access-log-format-strings) provides more information.
+	//
+	// If not set, the span name is provider specific.
+	// e.g. Datadog use `ingress` as the default client span name,
+	// and `router <UPSTREAM_CLUSTER> egress` as the server span name.
+	//
+	// +optional
+	SpanName *TracingSpanName `json:"spanName,omitempty"`
+}
+
+type TracingSpanName struct {
+	// Client defines operation name of the span which will be used for tracing.
+	Client string `json:"client"`
+	// Server defines the operation name of the upstream span which will be used for tracing.
+	Server string `json:"server"`
 }
 
 // CustomRedirect contains configuration for returning a custom redirect.
@@ -990,4 +1029,12 @@ type HTTPHeaderFilter struct {
 	// +kubebuilder:validation:MinItems=1
 	// +kubebuilder:validation:MaxItems=64
 	RemoveOnMatch []StringMatch `json:"removeOnMatch,omitempty"`
+}
+
+// LocalObjectKeyReference selects a key from a local object.
+type LocalObjectKeyReference struct {
+	// The local object to select from.
+	gwapiv1.LocalObjectReference `json:",inline"`
+	// The key to select.
+	Key string `json:"key"`
 }

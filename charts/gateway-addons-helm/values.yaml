@@ -6,6 +6,12 @@ dashboard:
 grafana:
   enabled: true
   fullnameOverride: grafana
+  env:
+    GF_SECURITY_ADMIN_USER: "admin"
+    GF_SECURITY_ADMIN_PASSWORD: "admin"
+    GF_AUTH_BASIC_ENABLED: "false"
+    GF_AUTH_ANONYMOUS_ENABLED: "true"
+    GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
   datasources:
     datasources.yaml:
       apiVersion: 1
@@ -13,6 +19,15 @@ grafana:
         - name: Prometheus
           type: prometheus
           url: http://prometheus
+          editable: true
+        - name: Tempo
+          type: tempo
+          url: http://tempo:3100
+          editable: true
+        - name: Loki
+          type: loki
+          url: http://loki:3100
+          editable: true
   adminPassword: admin
   testFramework:
     enabled: false
@@ -663,29 +678,52 @@ loki:
   deploymentMode: SingleBinary
   fullnameOverride: loki
   loki:
+    useTestSchema: true
     auth_enabled: false
     compactorAddress: "loki"
     memberlist: "loki-memberlist"
     commonConfig:
       replication_factor: 1
+      instance_addr: "${INSTANCE_ADDR}"
+      ring:
+        kvstore:
+          store: "memberlist"
     storage:
       type: "filesystem"
     rulerConfig:
       storage:
         type: "local"
+    limits_config:
+      otlp_config:
+        resource_attributes:
+          attributes_config:
+            - action: index_label
+              attributes:
+                - exporter
+  chunksCache:              
+    enabled: false
+  resultsCache:
+    enabled: false
   test:
     enabled: false
   singleBinary:
     replicas: 1
+    extraArgs:
+      - "-config.expand-env=true"
+    extraEnv:
+      - name: "INSTANCE_ADDR"
+        valueFrom:
+          fieldRef:
+            fieldPath: "status.podIP"
   read:
     replicas: 0
+  lokiCanary:
+    enabled: false
   backend:
     replicas: 0
   write:
     replicas: 0
   monitoring:
-    lokiCanary:
-      enabled: false
     selfMonitoring:
       enabled: false
       grafanaAgent:
@@ -825,15 +863,15 @@ opentelemetry-collector:
   mode: deployment
   image:
     repository: "otel/opentelemetry-collector-contrib"
-    tag: "0.121.0"
+    tag: "0.143.1"
   config:
     exporters:
       prometheus:
-        endpoint: "[${env:MY_POD_IP}]:19001"
+        endpoint: ":19001"
       debug:
         verbosity: detailed
-      loki:
-        endpoint: "http://loki.monitoring.svc:3100/loki/api/v1/push"
+      otlphttp/loki:
+        endpoint: "http://loki.monitoring.svc:3100/otlp"
       otlp:
         endpoint: tempo.monitoring.svc:4317
         tls:
@@ -842,13 +880,14 @@ opentelemetry-collector:
       health_check:
         endpoint: "[${env:MY_POD_IP}]:13133"
     processors:
-      attributes:
-        actions:
-          - action: insert
-            key: loki.attribute.labels
-            # k8s.pod.name is OpenTelemetry format for Kubernetes Pod name,
-            # Loki will convert this to k8s_pod_name label.
-            value: k8s.pod.name, k8s.namespace.name
+      # loki create index for resource attributes, so need to move k8s attributes from log to resource
+      transform/loki:
+        log_statements:   
+          - context: log
+            statements:
+              - set(resource.attributes["exporter"], "OTLP")
+              - set(resource.attributes["k8s.namespace.name"], log.attributes["k8s.namespace.name"])
+              - delete_key(log.attributes, "k8s.namespace.name")
     receivers:
       envoyals:
         endpoint: "[${env:MY_POD_IP}]:9000"
@@ -882,7 +921,6 @@ opentelemetry-collector:
       telemetry:
         metrics:
           level: none
-          address: null # Disable the deprecated setting
           readers:
             - pull:
                 exporter:
@@ -900,9 +938,9 @@ opentelemetry-collector:
             - otlp
         logs:
           exporters:
-            - loki
+            - otlphttp/loki
           processors:
-            - attributes
+            - transform/loki
           receivers:
             - otlp
             - envoyals

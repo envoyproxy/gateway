@@ -30,6 +30,11 @@ backendTrafficPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
@@ -204,7 +209,8 @@ xdsIR:
           prefix: /
         traffic:
           compression:
-          - type: Brotli
+          - chooseFirst: true
+            type: Brotli
           - type: Gzip
           - type: Zstd
     readyListener:

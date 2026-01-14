@@ -17,6 +17,7 @@ import (
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
 	"k8s.io/utils/ptr"
 
@@ -92,7 +93,7 @@ func destinationSettingName(destName string) string {
 }
 
 // enableFilterOnRoute enables a filterType on the provided route.
-func enableFilterOnRoute(route *routev3.Route, filterName string) error {
+func enableFilterOnRoute(route *routev3.Route, filterName string, routeCfg proto.Message) error {
 	if route == nil {
 		return errors.New("xds route is nil")
 	}
@@ -106,9 +107,7 @@ func enableFilterOnRoute(route *routev3.Route, filterName string) error {
 	}
 
 	// Enable the corresponding filter for this route.
-	routeCfgAny, err := anypb.New(&routev3.FilterConfig{
-		Config: &anypb.Any{},
-	})
+	routeCfgAny, err := anypb.New(routeCfg)
 	if err != nil {
 		return err
 	}
@@ -173,7 +172,7 @@ func createExtServiceXDSCluster(rd *ir.RouteDestination, traffic *ir.TrafficFeat
 }
 
 // addClusterFromURL adds a cluster to the resource version table from the provided URL.
-func addClusterFromURL(url string, tCtx *types.ResourceVersionTable) error {
+func addClusterFromURL(url string, traffic *ir.TrafficFeatures, tCtx *types.ResourceVersionTable) error {
 	var (
 		uc      *urlCluster
 		ds      *ir.DestinationSetting
@@ -199,11 +198,24 @@ func addClusterFromURL(url string, tCtx *types.ResourceVersionTable) error {
 		endpointType: uc.endpointType,
 		metadata:     ds.Metadata,
 	}
+
 	if uc.tls {
 		if tSocket, err = buildXdsUpstreamTLSSocket(uc.hostname); err != nil {
 			return err
 		}
 		clusterArgs.tSocket = tSocket
+	}
+
+	if traffic != nil {
+		clusterArgs.loadBalancer = traffic.LoadBalancer
+		clusterArgs.proxyProtocol = traffic.ProxyProtocol
+		clusterArgs.circuitBreaker = traffic.CircuitBreaker
+		clusterArgs.healthCheck = traffic.HealthCheck
+		clusterArgs.timeout = traffic.Timeout
+		clusterArgs.tcpkeepalive = traffic.TCPKeepalive
+		clusterArgs.backendConnection = traffic.BackendConnection
+		clusterArgs.dns = traffic.DNS
+		clusterArgs.http2Settings = traffic.HTTP2
 	}
 
 	return addXdsCluster(tCtx, clusterArgs)

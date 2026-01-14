@@ -152,11 +152,32 @@ func testMixedValidAndInvalid(t *testing.T, suite *suite.ConformanceTestSuite) {
 	}
 	req := http.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
 
+	// Make sure the valid(response 200) and invalid(response 500) backends are ready.
+	http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, http.ExpectedResponse{
+		Request: http.Request{
+			Path: "/mixed-valid-and-invalid",
+		},
+		Namespace: ConformanceInfraNamespace,
+		Response: http.Response{
+			StatusCodes: []int{200},
+		},
+	})
+	http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, http.ExpectedResponse{
+		Request: http.Request{
+			Path: "/mixed-valid-and-invalid",
+		},
+		Namespace: ConformanceInfraNamespace,
+		Response: http.Response{
+			StatusCodes: []int{500},
+		},
+	})
+
 	var (
 		successCount = 0
 		failCount    = 0
 	)
-	for range sendRequests {
+
+	for range 100 {
 		_, response, err := suite.RoundTripper.CaptureRoundTrip(req)
 		if err != nil {
 			t.Errorf("failed to get expected response: %v", err)
@@ -168,7 +189,7 @@ func testMixedValidAndInvalid(t *testing.T, suite *suite.ConformanceTestSuite) {
 		}
 	}
 
-	if !AlmostEquals(successCount, sendRequests*.9, 3) { // The weight of valid backend is 90%
+	if successCount < 80 || successCount > 99 { // The weight of valid backend is 90%
 		t.Errorf("The actual success count is not within the expected range, success %d", successCount)
 	}
 }

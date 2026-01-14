@@ -33,6 +33,15 @@ import (
 // oci URL prefix
 const ociURLPrefix = "oci://"
 
+// deprecatedFieldsUsedInEnvoyExtensionPolicy returns a map of deprecated field paths to their alternatives.
+func deprecatedFieldsUsedInEnvoyExtensionPolicy(policy *egv1a1.EnvoyExtensionPolicy) map[string]string {
+	deprecatedFields := make(map[string]string)
+	if policy.Spec.TargetRef != nil {
+		deprecatedFields["spec.targetRef"] = "spec.targetRefs"
+	}
+	return deprecatedFields
+}
+
 func (t *Translator) ProcessEnvoyExtensionPolicies(
 	envoyExtensionPolicies []*egv1a1.EnvoyExtensionPolicy,
 	gateways []*GatewayContext,
@@ -243,6 +252,11 @@ func (t *Translator) processEnvoyExtensionPolicyForRoute(
 	// Set Accepted condition if it is unset
 	status.SetAcceptedForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName, policy.Generation)
 
+	// Check for deprecated fields and set warning if any are found
+	if deprecatedFields := deprecatedFieldsUsedInEnvoyExtensionPolicy(policy); len(deprecatedFields) > 0 {
+		status.SetDeprecatedFieldsWarningForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName, policy.Generation, deprecatedFields)
+	}
+
 	// Check if this policy is overridden by other policies targeting at route rule levels
 	key := policyTargetRouteKey{
 		Kind:      string(currTarget.Kind),
@@ -313,6 +327,11 @@ func (t *Translator) processEnvoyExtensionPolicyForGateway(
 
 	// Set Accepted condition if it is unset
 	status.SetAcceptedForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName, policy.Generation)
+
+	// Check for deprecated fields and set warning if any are found
+	if deprecatedFields := deprecatedFieldsUsedInEnvoyExtensionPolicy(policy); len(deprecatedFields) > 0 {
+		status.SetDeprecatedFieldsWarningForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName, policy.Generation, deprecatedFields)
+	}
 
 	// Check if this policy is overridden by other policies targeting at route rule, route and listener levels
 	overriddenTargetsMessage := getOverriddenTargetsMessageForGateway(
@@ -647,6 +666,11 @@ func (t *Translator) buildLuas(
 ) ([]ir.Lua, error) {
 	if policy == nil {
 		return nil, nil
+	}
+
+	// If Lua EnvoyExtensionPolicies are disabled, skip building Lua filters.
+	if len(policy.Spec.Lua) > 0 && t.LuaEnvoyExtensionPolicyDisabled {
+		return nil, fmt.Errorf("Skipping Lua EnvoyExtensionPolicy as feature is disabled in the Gateway")
 	}
 
 	luaIRList := make([]ir.Lua, 0, len(policy.Spec.Lua))

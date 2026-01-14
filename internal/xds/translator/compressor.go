@@ -8,6 +8,7 @@ package translator
 import (
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
@@ -19,6 +20,7 @@ import (
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	protobuf "google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -51,11 +53,10 @@ func (*compressor) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTT
 
 	for _, route := range irListener.Routes {
 		if route.Traffic != nil && route.Traffic.Compression != nil {
-			for i, irComp := range route.Traffic.Compression {
+			for _, irComp := range route.Traffic.Compression {
 				filterName := compressorFilterName(irComp.Type)
 				if !hcmContainsFilter(mgr, filterName) {
-					chooseFirst := i == 0
-					if filter, err = buildCompressorFilter(irComp, chooseFirst); err != nil {
+					if filter, err = buildCompressorFilter(irComp); err != nil {
 						return err
 					}
 					mgr.HttpFilters = append(mgr.HttpFilters, filter)
@@ -72,7 +73,7 @@ func compressorFilterName(compressorType egv1a1.CompressorType) string {
 }
 
 // buildCompressorFilter builds a compressor filter with the provided compressionType.
-func buildCompressorFilter(compression *ir.Compression, chooseFirst bool) (*hcmv3.HttpFilter, error) {
+func buildCompressorFilter(compression *ir.Compression) (*hcmv3.HttpFilter, error) {
 	var (
 		compressorProto *compressorv3.Compressor
 		extensionName   string
@@ -105,8 +106,16 @@ func buildCompressorFilter(compression *ir.Compression, chooseFirst bool) (*hcmv
 		},
 	}
 
-	if chooseFirst {
+	if compression.ChooseFirst {
 		compressorProto.ChooseFirst = true
+	}
+
+	if compression.MinContentLength != nil {
+		compressorProto.ResponseDirectionConfig = &compressorv3.Compressor_ResponseDirectionConfig{
+			CommonConfig: &compressorv3.Compressor_CommonDirectionConfig{
+				MinContentLength: wrapperspb.UInt32(*compression.MinContentLength),
+			},
+		}
 	}
 
 	if compressorAny, err = proto.ToAnyWithValidation(compressorProto); err != nil {
@@ -151,6 +160,7 @@ func (*compressor) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir
 		route.TypedPerFilterConfig = make(map[string]*anypb.Any)
 	}
 
+	compressorProto := compressorPerRouteConfig()
 	for _, irComp := range irRoute.Traffic.Compression {
 		filterName := compressorFilterName(irComp.Type)
 		if _, ok := perFilterCfg[filterName]; ok {
@@ -160,12 +170,16 @@ func (*compressor) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir
 				filterName, route)
 		}
 
-		compressorProto := compressorPerRouteConfig()
 		if compressorAny, err = proto.ToAnyWithValidation(compressorProto); err != nil {
 			return err
 		}
 
 		route.TypedPerFilterConfig[filterName] = compressorAny
+	}
+
+	// Ensure accept-encoding from the request to prevent double compression.
+	if !slices.Contains(route.RequestHeadersToRemove, "accept-encoding") {
+		route.RequestHeadersToRemove = append(route.RequestHeadersToRemove, "accept-encoding")
 	}
 
 	return nil

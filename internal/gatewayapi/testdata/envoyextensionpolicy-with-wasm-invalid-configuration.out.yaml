@@ -35,6 +35,11 @@ envoyExtensionPolicies:
         reason: Invalid
         status: "False"
         type: Accepted
+      - lastTransitionTime: null
+        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: EnvoyExtensionPolicy
@@ -73,6 +78,11 @@ envoyExtensionPolicies:
         reason: Invalid
         status: "False"
         type: Accepted
+      - lastTransitionTime: null
+        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: EnvoyExtensionPolicy
@@ -125,6 +135,11 @@ envoyExtensionPolicies:
         reason: Invalid
         status: "False"
         type: Accepted
+      - lastTransitionTime: null
+        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: EnvoyExtensionPolicy
@@ -165,12 +180,17 @@ envoyExtensionPolicies:
       - lastTransitionTime: null
         message: "Wasm: secret default/my-pull-secret-1 does not exist\nLua: validation
           failed for lua body in policy with name envoyextensionpolicy/default/policy-for-httproute-4/lua/0:
-          failed to validate with envoy_on_response: <string>:612: attempt to call
-          a non-function object\nstack traceback:\n\t<string>:612: in function 'envoy_on_response'\n\t<string>:613:
+          failed to validate with envoy_on_response: <string>:1: attempt to call a
+          non-function object\nstack traceback:\n\t<string>:1: in function 'envoy_on_response'\n\t<string>:2:
           in main chunk\n\t[G]: ?."
         reason: Invalid
         status: "False"
         type: Accepted
+      - lastTransitionTime: null
+        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: EnvoyExtensionPolicy
@@ -208,6 +228,11 @@ envoyExtensionPolicies:
         reason: Invalid
         status: "False"
         type: Accepted
+      - lastTransitionTime: null
+        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: EnvoyExtensionPolicy
@@ -244,6 +269,11 @@ envoyExtensionPolicies:
         reason: Invalid
         status: "False"
         type: Accepted
+      - lastTransitionTime: null
+        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1

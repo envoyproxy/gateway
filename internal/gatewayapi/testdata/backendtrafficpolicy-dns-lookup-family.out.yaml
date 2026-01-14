@@ -27,6 +27,11 @@ backendTrafficPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 backends:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -114,6 +119,11 @@ envoyExtensionPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
@@ -482,6 +492,7 @@ xdsIR:
           dns:
             dnsRefreshRate: 5s
             lookupFamily: IPv6
+            name: default/backend-traffic-policy
             respectDnsTtl: false
       - destination:
           metadata:
@@ -543,6 +554,7 @@ xdsIR:
           dns:
             dnsRefreshRate: 5s
             lookupFamily: IPv6
+            name: default/backend-traffic-policy
             respectDnsTtl: false
     readyListener:
       address: 0.0.0.0

@@ -21,6 +21,7 @@ import (
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
+	"github.com/envoyproxy/gateway/internal/ir"
 )
 
 // expectedListenerStatus defines the expected status for a listener in the test
@@ -53,8 +54,10 @@ func TestProxySamplingRate(t *testing.T) {
 		{
 			name: "fraction numerator only",
 			tracing: &egv1a1.ProxyTracing{
-				SamplingFraction: &gwapiv1.Fraction{
-					Numerator: 100,
+				Tracing: egv1a1.Tracing{
+					SamplingFraction: &gwapiv1.Fraction{
+						Numerator: 100,
+					},
 				},
 			},
 			expected: 1.0,
@@ -62,9 +65,11 @@ func TestProxySamplingRate(t *testing.T) {
 		{
 			name: "fraction",
 			tracing: &egv1a1.ProxyTracing{
-				SamplingFraction: &gwapiv1.Fraction{
-					Numerator:   1,
-					Denominator: ptr.To[int32](10),
+				Tracing: egv1a1.Tracing{
+					SamplingFraction: &gwapiv1.Fraction{
+						Numerator:   1,
+						Denominator: ptr.To[int32](10),
+					},
 				},
 			},
 			expected: 0.1,
@@ -72,9 +77,11 @@ func TestProxySamplingRate(t *testing.T) {
 		{
 			name: "less than zero",
 			tracing: &egv1a1.ProxyTracing{
-				SamplingFraction: &gwapiv1.Fraction{
-					Numerator:   1,
-					Denominator: ptr.To[int32](-1),
+				Tracing: egv1a1.Tracing{
+					SamplingFraction: &gwapiv1.Fraction{
+						Numerator:   1,
+						Denominator: ptr.To[int32](-1),
+					},
 				},
 			},
 			expected: 0,
@@ -82,9 +89,11 @@ func TestProxySamplingRate(t *testing.T) {
 		{
 			name: "greater than 100",
 			tracing: &egv1a1.ProxyTracing{
-				SamplingFraction: &gwapiv1.Fraction{
-					Numerator:   101,
-					Denominator: ptr.To[int32](1),
+				Tracing: egv1a1.Tracing{
+					SamplingFraction: &gwapiv1.Fraction{
+						Numerator:   101,
+						Denominator: ptr.To[int32](1),
+					},
 				},
 			},
 			expected: 100,
@@ -916,6 +925,121 @@ func TestProcessTracingServiceName(t *testing.T) {
 
 			assert.NotNil(t, result)
 			assert.Equal(t, tc.expectedServiceName, result.ServiceName)
+		})
+	}
+}
+
+func TestProcessAccessLog(t *testing.T) {
+	tests := []struct {
+		name       string
+		envoyProxy *egv1a1.EnvoyProxy
+		expected   *ir.AccessLog
+	}{
+		{
+			name: "nil format type with text only uses text for file sink",
+			envoyProxy: &egv1a1.EnvoyProxy{
+				Spec: egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						AccessLog: &egv1a1.ProxyAccessLog{
+							Settings: []egv1a1.ProxyAccessLogSetting{
+								{
+									Format: &egv1a1.ProxyAccessLogFormat{
+										Text: ptr.To("[%START_TIME%]"),
+									},
+									Sinks: []egv1a1.ProxyAccessLogSink{
+										{
+											Type: egv1a1.ProxyAccessLogSinkTypeFile,
+											File: &egv1a1.FileEnvoyProxyAccessLog{Path: "/dev/stdout"},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: &ir.AccessLog{
+				JSON: []*ir.JSONAccessLog{
+					{
+						Path: "/dev/stdout",
+					},
+				},
+			},
+		},
+		{
+			name: "nil format type with json only uses json for file sink",
+			envoyProxy: &egv1a1.EnvoyProxy{
+				Spec: egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						AccessLog: &egv1a1.ProxyAccessLog{
+							Settings: []egv1a1.ProxyAccessLogSetting{
+								{
+									Format: &egv1a1.ProxyAccessLogFormat{
+										JSON: map[string]string{"start_time": "%START_TIME%"},
+									},
+									Sinks: []egv1a1.ProxyAccessLogSink{
+										{
+											Type: egv1a1.ProxyAccessLogSinkTypeFile,
+											File: &egv1a1.FileEnvoyProxyAccessLog{Path: "/dev/stdout"},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: &ir.AccessLog{
+				JSON: []*ir.JSONAccessLog{
+					{
+						JSON: map[string]string{"start_time": "%START_TIME%"},
+						Path: "/dev/stdout",
+					},
+				},
+			},
+		},
+		{
+			name: "explicit Text type uses text for file sink",
+			envoyProxy: &egv1a1.EnvoyProxy{
+				Spec: egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						AccessLog: &egv1a1.ProxyAccessLog{
+							Settings: []egv1a1.ProxyAccessLogSetting{
+								{
+									Format: &egv1a1.ProxyAccessLogFormat{
+										Type: ptr.To(egv1a1.ProxyAccessLogFormatTypeText),
+										Text: ptr.To("[%START_TIME%]"),
+									},
+									Sinks: []egv1a1.ProxyAccessLogSink{
+										{
+											Type: egv1a1.ProxyAccessLogSinkTypeFile,
+											File: &egv1a1.FileEnvoyProxyAccessLog{Path: "/dev/stdout"},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: &ir.AccessLog{
+				Text: []*ir.TextAccessLog{
+					{
+						Format: ptr.To("[%START_TIME%]"),
+						Path:   "/dev/stdout",
+					},
+				},
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			translator := &Translator{}
+			resources := &resource.Resources{}
+			actual, err := translator.processAccessLog(tc.envoyProxy, resources)
+			require.NoError(t, err)
+			require.Equal(t, tc.expected, actual)
 		})
 	}
 }

@@ -5,6 +5,8 @@
 
 package v1alpha1
 
+import gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+
 type ProxyAccessLog struct {
 	// Disable disables access logging for managed proxies if set to true.
 	//
@@ -62,20 +64,22 @@ const (
 	ProxyAccessLogFormatTypeText ProxyAccessLogFormatType = "Text"
 	// ProxyAccessLogFormatTypeJSON defines the JSON accesslog format.
 	ProxyAccessLogFormatTypeJSON ProxyAccessLogFormatType = "JSON"
-	// TODO: support format type "mix" in the future.
 )
 
 // ProxyAccessLogFormat defines the format of accesslog.
 // By default accesslogs are written to standard output.
-// +union
 //
-// +kubebuilder:validation:XValidation:rule="self.type == 'Text' ? has(self.text) : !has(self.text)",message="If AccessLogFormat type is Text, text field needs to be set."
-// +kubebuilder:validation:XValidation:rule="self.type == 'JSON' ? has(self.json) : !has(self.json)",message="If AccessLogFormat type is JSON, json field needs to be set."
+// +kubebuilder:validation:XValidation:rule="has(self.type) && self.type == 'Text' ? has(self.text) : true",message="If AccessLogFormat type is Text, text field needs to be set."
+// +kubebuilder:validation:XValidation:rule="has(self.type) && self.type == 'Text' ? !has(self.json) : true",message="If AccessLogFormat type is Text, json field must not be set."
+// +kubebuilder:validation:XValidation:rule="has(self.type) && self.type == 'JSON' ? has(self.json) : true",message="If AccessLogFormat type is JSON, json field needs to be set."
+// +kubebuilder:validation:XValidation:rule="has(self.type) && self.type == 'JSON' ? !has(self.text) : true",message="If AccessLogFormat type is JSON, text field must not be set."
+// +kubebuilder:validation:XValidation:rule="!has(self.type) ? (has(self.text) || has(self.json)) : true",message="If AccessLogFormat type is unset, at least one of text or json must be set."
 type ProxyAccessLogFormat struct {
 	// Type defines the type of accesslog format.
+	// When unset, both text and json can be specified.
 	// +kubebuilder:validation:Enum=Text;JSON
-	// +unionDiscriminator
-	Type ProxyAccessLogFormatType `json:"type,omitempty"`
+	// +optional
+	Type *ProxyAccessLogFormatType `json:"type,omitempty"`
 	// Text defines the text accesslog format, following Envoy accesslog formatting,
 	// It's required when the format type is "Text".
 	// Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators) may be used in the format.
@@ -206,6 +210,12 @@ type OpenTelemetryEnvoyProxyAccessLog struct {
 	// It's recommended to follow [semantic conventions](https://opentelemetry.io/docs/reference/specification/resource/semantic_conventions/).
 	// +optional
 	Resources map[string]string `json:"resources,omitempty"`
+	// Headers is a list of additional headers to send with OTLP export requests.
+	// These headers are added as gRPC initial metadata for the OTLP gRPC service.
+	// +optional
+	// +kubebuilder:validation:MinItems=1
+	// +kubebuilder:validation:MaxItems=32
+	Headers []gwapiv1.HTTPHeader `json:"headers,omitempty"`
 
 	// TODO: support more OpenTelemetry accesslog options(e.g. TLS, auth etc.) in the future.
 }
