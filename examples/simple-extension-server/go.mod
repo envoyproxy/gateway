@@ -3,7 +3,7 @@ module github.com/envoyproxy/gateway-simple-extension-server
 go 1.25.5
 
 require (
-	github.com/envoyproxy/gateway v1.6.1
+	github.com/envoyproxy/gateway v1.6.2
 	github.com/urfave/cli/v2 v2.27.7
 	google.golang.org/grpc v1.78.0
 )

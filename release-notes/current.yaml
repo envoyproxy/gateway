@@ -24,6 +24,7 @@ new features: |
   Added support for URLRewrite filter on individual backendRefs.
   Added support for custom headers on OTLP exports (metrics, tracing, access logs).
   Added support for configuring minimum response size for compression via minContentLength field in BackendTrafficPolicy.
+  Added support for custom span name.
 
 bug fixes: |
   Fixed configured OIDC authorization endpoint being overridden by discovered endpoints from issuer's well-known URL.
@@ -34,6 +35,7 @@ bug fixes: |
   Fixed ExternalTrafficPolicy not being applied to Envoy Service when ServiceType is NodePort.
   Fixed CRL ref not processed by gateway controller.
   Fixed an issue where HTTP/3 listeners could not handle multiple hostnames.
+  Fixed an issue where listener translation fails when contains invalid certificate in multiple TLS certificateRefs.
 
 # Enhancements that improve performance.
 performance improvements: |
