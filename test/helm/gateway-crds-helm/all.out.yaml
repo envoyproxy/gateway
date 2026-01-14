@@ -23739,10 +23739,12 @@ spec:
                       spanName:
                         description: |-
                           SpanName defines the name of the span which will be used for tracing.
+                          Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators) may be used in the value.
+                          The [format string documentation](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#config-access-log-format-strings) provides more information.
 
                           If not set, the span name is provider specific.
-                          e.g. Datadog use `ingress` as the default ingress span name,
-                          and `router <UPSTREAM_CLUSTER> egress` as the egress span name.
+                          e.g. Datadog use `ingress` as the default client span name,
+                          and `router <UPSTREAM_CLUSTER> egress` as the server span name.
                         properties:
                           client:
                             description: Client defines operation name of the span
@@ -44966,10 +44968,12 @@ spec:
                       spanName:
                         description: |-
                           SpanName defines the name of the span which will be used for tracing.
+                          Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators) may be used in the value.
+                          The [format string documentation](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#config-access-log-format-strings) provides more information.
 
                           If not set, the span name is provider specific.
-                          e.g. Datadog use `ingress` as the default ingress span name,
-                          and `router <UPSTREAM_CLUSTER> egress` as the egress span name.
+                          e.g. Datadog use `ingress` as the default client span name,
+                          and `router <UPSTREAM_CLUSTER> egress` as the server span name.
                         properties:
                           client:
                             description: Client defines operation name of the span
