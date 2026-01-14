@@ -29,7 +29,6 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gwapiv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
@@ -976,16 +975,16 @@ func testTLSRoute(ctx context.Context, t *testing.T, provider *Provider, resourc
 
 	testCases := []struct {
 		name  string
-		route gwapiv1a3.TLSRoute
+		route gwapiv1a2.TLSRoute
 	}{
 		{
 			name: "tlsroute",
-			route: gwapiv1a3.TLSRoute{
+			route: gwapiv1a2.TLSRoute{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "tlsroute-test",
 					Namespace: ns.Name,
 				},
-				Spec: gwapiv1a3.TLSRouteSpec{
+				Spec: gwapiv1a2.TLSRouteSpec{
 					CommonRouteSpec: gwapiv1.CommonRouteSpec{
 						ParentRefs: []gwapiv1.ParentReference{
 							{
@@ -1035,7 +1034,7 @@ func testTLSRoute(ctx context.Context, t *testing.T, provider *Provider, resourc
 					return false
 				}
 
-				routes := make([]string, 0, len(res.HTTPRoutes))
+				routes := make([]string, 0, len(res.TLSRoutes))
 				for _, r := range res.TLSRoutes {
 					routes = append(routes, utils.NamespacedName(r).String())
 				}
@@ -1128,12 +1127,12 @@ func testServiceCleanupForMultipleRoutes(ctx context.Context, t *testing.T, prov
 		require.NoError(t, cli.Delete(ctx, svc))
 	}()
 
-	tlsRoute := gwapiv1a3.TLSRoute{
+	tlsRoute := gwapiv1a2.TLSRoute{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "tlsroute-test",
 			Namespace: ns.Name,
 		},
-		Spec: gwapiv1a3.TLSRouteSpec{
+		Spec: gwapiv1a2.TLSRouteSpec{
 			CommonRouteSpec: gwapiv1.CommonRouteSpec{
 				ParentRefs: []gwapiv1.ParentReference{{
 					Name: gwapiv1.ObjectName(gw.Name),
