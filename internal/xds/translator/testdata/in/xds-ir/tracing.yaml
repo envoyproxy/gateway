@@ -3,20 +3,23 @@ tracing:
   serviceName: "fake-name.fake-ns"
   samplingRate: 90
   customTags:
-    "literal1":
-      type: Literal
-      literal:
-        value: "value1"
-    "env1":
-      type: Environment
-      environment:
-        name: "env1"
-        defaultValue: "-"
-    "req1":
-      type: RequestHeader
-      requestHeader:
-        name: "X-Request-Id"
-        defaultValue: "-"
+    - key: "env1"
+      value:
+        type: Environment
+        environment:
+          name: "env1"
+          defaultValue: "-"
+    - key: "literal1"
+      value:
+        type: Literal
+        literal:
+          value: "value1"
+    - key: "req1"
+      value:
+        type: RequestHeader
+        requestHeader:
+          name: "X-Request-Id"
+          defaultValue: "-"
   authority: "otel-collector.default.svc.cluster.local"
   destination:
     name: "tracing-0"

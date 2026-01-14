@@ -952,8 +952,38 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy) (
 		RequestBuffer:     rb,
 		Compression:       cp,
 		HTTPUpgrade:       httpUpgrade,
-		Telemetry:         policy.Spec.Telemetry,
+		Telemetry:         buildBackendTelemetry(policy.Spec.Telemetry),
 	}, errs
+}
+func buildBackendTelemetry(telemetry *egv1a1.BackendTelemetry) *ir.BackendTelemetry {
+	if telemetry == nil {
+		return nil
+	}
+	return &ir.BackendTelemetry{
+		Tracing: buildBackendTracing(telemetry.Tracing),
+		Metrics: buildBackendMetrics(telemetry.Metrics),
+	}
+}
+
+func buildBackendTracing(tracing *egv1a1.Tracing) *ir.BackendTracing {
+	if tracing == nil {
+		return nil
+	}
+	return &ir.BackendTracing{
+		SamplingFraction: tracing.SamplingFraction,
+		CustomTags:       ir.CustomTagMapToSlice(tracing.CustomTags),
+		Tags:             ir.MapToSlice(tracing.Tags),
+		SpanName:         tracing.SpanName,
+	}
+}
+
+func buildBackendMetrics(metrics *egv1a1.BackendMetrics) *ir.BackendMetrics {
+	if metrics == nil {
+		return nil
+	}
+	return &ir.BackendMetrics{
+		RouteStatName: metrics.RouteStatName,
+	}
 }
 
 func (t *Translator) translateBackendTrafficPolicyForGateway(
