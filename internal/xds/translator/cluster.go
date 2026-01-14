@@ -253,9 +253,8 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 			requiresHTTP2Options = true
 		}
 
+		requiresAutoHTTPConfig = ds.TLS != nil
 		if ds.TLS != nil {
-			requiresAutoHTTPConfig = true
-
 			// it's safe to set autoSNI on cluster level only if all endpoints do not set literal SNIs.
 			// Otherwise, autoSNI will override transport-socket level SNI.
 			// See here: https://www.envoyproxy.io/docs/envoy/latest/start/quick-start/securing#connect-to-an-endpoint-with-sni
