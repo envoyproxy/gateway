@@ -51,8 +51,8 @@ metadata:
     app.kubernetes.io/component: server
     app.kubernetes.io/name: prometheus
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: v3.9.0
-    helm.sh/chart: prometheus-28.2.0
+    app.kubernetes.io/version: v3.9.1
+    helm.sh/chart: prometheus-28.2.1
     app.kubernetes.io/part-of: prometheus
   name: prometheus
   namespace: monitoring
@@ -421,8 +421,8 @@ metadata:
     app.kubernetes.io/component: server
     app.kubernetes.io/name: prometheus
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: v3.9.0
-    helm.sh/chart: prometheus-28.2.0
+    app.kubernetes.io/version: v3.9.1
+    helm.sh/chart: prometheus-28.2.1
     app.kubernetes.io/part-of: prometheus
   name: prometheus
   namespace: monitoring
@@ -10196,8 +10196,8 @@ metadata:
     app.kubernetes.io/component: server
     app.kubernetes.io/name: prometheus
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: v3.9.0
-    helm.sh/chart: prometheus-28.2.0
+    app.kubernetes.io/version: v3.9.1
+    helm.sh/chart: prometheus-28.2.1
     app.kubernetes.io/part-of: prometheus
   name: prometheus
 rules:
@@ -10287,8 +10287,8 @@ metadata:
     app.kubernetes.io/component: server
     app.kubernetes.io/name: prometheus
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: v3.9.0
-    helm.sh/chart: prometheus-28.2.0
+    app.kubernetes.io/version: v3.9.1
+    helm.sh/chart: prometheus-28.2.1
     app.kubernetes.io/part-of: prometheus
   name: prometheus
 subjects:
@@ -10470,8 +10470,8 @@ metadata:
     app.kubernetes.io/component: server
     app.kubernetes.io/name: prometheus
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: v3.9.0
-    helm.sh/chart: prometheus-28.2.0
+    app.kubernetes.io/version: v3.9.1
+    helm.sh/chart: prometheus-28.2.1
     app.kubernetes.io/part-of: prometheus
   name: prometheus
   namespace: monitoring
@@ -10734,8 +10734,8 @@ metadata:
     app.kubernetes.io/component: server
     app.kubernetes.io/name: prometheus
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: v3.9.0
-    helm.sh/chart: prometheus-28.2.0
+    app.kubernetes.io/version: v3.9.1
+    helm.sh/chart: prometheus-28.2.1
     app.kubernetes.io/part-of: prometheus
   name: prometheus
   namespace: monitoring
@@ -10756,8 +10756,8 @@ spec:
         app.kubernetes.io/component: server
         app.kubernetes.io/name: prometheus
         app.kubernetes.io/instance: gateway-addons-helm
-        app.kubernetes.io/version: v3.9.0
-        helm.sh/chart: prometheus-28.2.0
+        app.kubernetes.io/version: v3.9.1
+        helm.sh/chart: prometheus-28.2.1
         app.kubernetes.io/part-of: prometheus
     spec:
       enableServiceLinks: true
@@ -10792,7 +10792,7 @@ spec:
               readOnly: true
 
         - name: prometheus-server
-          image: "prom/prometheus:v3.9.0"
+          image: "prom/prometheus:v3.9.1"
           imagePullPolicy: "IfNotPresent"
           args:
             - --storage.tsdb.retention.time=15d
