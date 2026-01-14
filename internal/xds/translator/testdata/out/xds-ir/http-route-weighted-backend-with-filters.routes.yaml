@@ -9,7 +9,6 @@
         pathSeparatedPrefix: /foo
       name: first-route
       route:
-        clusterNotFoundResponseCode: INTERNAL_SERVER_ERROR
         upgradeConfigs:
         - upgradeType: websocket
         weightedClusters:
@@ -25,7 +24,6 @@
         prefix: /
       name: second-route
       route:
-        clusterNotFoundResponseCode: INTERNAL_SERVER_ERROR
         upgradeConfigs:
         - upgradeType: websocket
         weightedClusters:

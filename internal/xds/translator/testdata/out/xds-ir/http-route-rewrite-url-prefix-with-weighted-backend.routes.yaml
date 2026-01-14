@@ -9,7 +9,6 @@
         pathSeparatedPrefix: /foo
       name: first-route
       route:
-        clusterNotFoundResponseCode: INTERNAL_SERVER_ERROR
         regexRewrite:
           pattern:
             regex: ^/foo\/*
@@ -29,7 +28,6 @@
         pathSeparatedPrefix: /bar
       name: second-route
       route:
-        clusterNotFoundResponseCode: INTERNAL_SERVER_ERROR
         regexRewrite:
           pattern:
             regex: ^/bar\/*

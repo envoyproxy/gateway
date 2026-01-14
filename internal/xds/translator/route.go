@@ -363,8 +363,8 @@ func buildXdsWeightedRouteAction(backendWeights *ir.BackendWeights, settings []*
 	}
 
 	return &routev3.RouteAction{
-		// Intentionally route to a non-existent cluster and return a 500 error when it is not found
-		ClusterNotFoundResponseCode: routev3.RouteAction_INTERNAL_SERVER_ERROR,
+		// Intentionally route to a non-existent cluster and return a 503 error when it is not found
+		ClusterNotFoundResponseCode: routev3.RouteAction_SERVICE_UNAVAILABLE,
 		ClusterSpecifier: &routev3.RouteAction_WeightedClusters{
 			WeightedClusters: &routev3.WeightedCluster{
 				Clusters: weightedClusters,

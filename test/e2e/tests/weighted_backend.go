@@ -152,7 +152,7 @@ func testMixedValidAndInvalid(t *testing.T, suite *suite.ConformanceTestSuite) {
 	}
 	req := http.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
 
-	// Make sure the valid(response 200) and invalid(response 500) backends are ready.
+	// Make sure the valid(response 200) and invalid(response 503) backends are ready.
 	http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, http.ExpectedResponse{
 		Request: http.Request{
 			Path: "/mixed-valid-and-invalid",
@@ -168,7 +168,7 @@ func testMixedValidAndInvalid(t *testing.T, suite *suite.ConformanceTestSuite) {
 		},
 		Namespace: ConformanceInfraNamespace,
 		Response: http.Response{
-			StatusCodes: []int{500},
+			StatusCodes: []int{503},
 		},
 	})
 
