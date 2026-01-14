@@ -244,7 +244,7 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 
 	// scan through settings to determine cluster-level configuration options, as some of them
 	// influence transport socket specific settings
-	requiresAutoHTTPConfig := false
+	requiresAutoHTTPConfig := len(args.settings) > 0
 	requiresHTTP2Options := false
 	hasLiteralSNI := false
 	for _, ds := range args.settings {
@@ -253,7 +253,8 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 			requiresHTTP2Options = true
 		}
 
-		requiresAutoHTTPConfig = ds.TLS != nil
+		// auto HTTP config is required if all the destinations use HTTPS-based protocol
+		requiresAutoHTTPConfig = requiresAutoHTTPConfig && (ds.TLS != nil)
 		if ds.TLS != nil {
 			// it's safe to set autoSNI on cluster level only if all endpoints do not set literal SNIs.
 			// Otherwise, autoSNI will override transport-socket level SNI.

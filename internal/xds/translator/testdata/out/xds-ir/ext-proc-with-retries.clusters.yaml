@@ -79,11 +79,6 @@
     interval: 5s
     maxEjectionPercent: 10
   perConnectionBufferLimitBytes: 20971520
-  transportSocket:
-    name: dummy.transport_socket
-    typedConfig:
-      '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
-      commonTlsContext: {}
   transportSocketMatches:
   - match:
       name: envoyextensionpolicy/default/policy-for-http-route/0/tls/0
