@@ -687,7 +687,7 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 				if err != nil {
 					return nil, err
 				}
-				// EG currently support GRPC OTel only, change protocol to GRPC.
+				// TODO: update when OTLP/HTTP is completely supported (logs, traces, metrics)
 				for _, d := range ds {
 					d.Protocol = ir.GRPC
 				}
@@ -750,8 +750,8 @@ func (t *Translator) processTracing(gw *gwapiv1.Gateway, envoyproxy *egv1a1.Envo
 	if err != nil {
 		return nil, err
 	}
-	// EG currently support OTel tracing only, change protocol to GRPC.
 	if tracing.Provider.Type == egv1a1.TracingProviderTypeOpenTelemetry {
+		// TODO: update when OTLP/HTTP is completely supported (logs, traces, metrics)
 		for _, d := range ds {
 			d.Protocol = ir.GRPC
 		}
@@ -881,7 +881,7 @@ func (t *Translator) processMetrics(envoyproxy *egv1a1.EnvoyProxy, resources *re
 		if err != nil {
 			return nil, nil, err
 		}
-		// Set GRPC protocol for OTLP
+		// TODO: update when OTLP/HTTP is completely supported (logs, traces, metrics)
 		for _, d := range ds {
 			d.Protocol = ir.GRPC
 		}
