@@ -155,8 +155,8 @@ func testMixedValidAndInvalid(t *testing.T, suite *suite.ConformanceTestSuite) {
 			failureCode: 500,
 		},
 		{
-			name:        "MixedValidAndEmpty",
-			path:        "/mixed-valid-and-empty",
+			name:        "MixedValidAndNoEndpoints",
+			path:        "/mixed-valid-and-no-endpoints",
 			failureCode: 503,
 		},
 	}
@@ -188,6 +188,7 @@ func runMixedValidAndInvalidScenario(t *testing.T, suite *suite.ConformanceTestS
 		},
 	})
 
+	// Test if the requests are distributed to valid and invalid backends according to their weights
 	expected := http.ExpectedResponse{
 		Request: http.Request{
 			Path: path,

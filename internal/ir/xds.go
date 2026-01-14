@@ -545,7 +545,7 @@ type XForwardedClientCert struct {
 // +k8s:deepcopy-gen=true
 type ClientIPDetectionSettings egv1a1.ClientIPDetectionSettings
 
-// BackendWeights stores the weights of valid and invalid backends for the route so that 500 error responses can be returned in the same proportions
+// BackendWeights stores the weights of valid, invalid and no endpoints backends for the route so that 500/503 error responses can be returned in the same proportions
 type BackendWeights struct {
 	Name        string `json:"name" yaml:"name"`
 	Valid       uint32 `json:"valid" yaml:"valid"`
@@ -1766,7 +1766,7 @@ type DestinationSetting struct {
 	// Metadata is used to enrich envoy route metadata with user and provider-specific information
 	// The primary metadata for DestinationSettings comes from the Backend resource reference in BackendRef
 	Metadata *ResourceMetadata `json:"metadata,omitempty" yaml:"metadata,omitempty"`
-	// Invalid is true if the destination setting is invalid (e.g. reference to non-existent backend, invalid TLS config, etc.)
+	// Invalid is true if the destination setting is invalid (e.g. reference to non-existent backend, invalid TLS config, no matching port, etc.)
 	// DS without endpoints is considered valid.
 	// This is required because Gateway API spec requires different status code for invalid backend and backend without endpoints.
 	// * invalid 500

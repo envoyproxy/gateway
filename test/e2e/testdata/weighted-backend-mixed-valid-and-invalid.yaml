@@ -21,7 +21,7 @@ spec:
     - matches:
         - path:
             type: PathPrefix
-            value: /mixed-valid-and-empty
+            value: /mixed-valid-and-no-endpoints
       backendRefs:
         - name: infra-backend-v1
           port: 8080
