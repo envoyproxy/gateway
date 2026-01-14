@@ -550,6 +550,11 @@ type BackendWeights struct {
 	Name    string `json:"name" yaml:"name"`
 	Valid   uint32 `json:"valid" yaml:"valid"`
 	Invalid uint32 `json:"invalid" yaml:"invalid"`
+	Empty   uint32 `json:"empty" yaml:"empty"`
+}
+
+func (b *BackendWeights) NonValidWeight() uint32 {
+	return b.Invalid + b.Empty
 }
 
 // HTTP1Settings provides HTTP/1 configuration on the listener.
@@ -848,7 +853,7 @@ func (h *HTTPRoute) NeedsClusterPerSetting() bool {
 	}
 	// When the destination has both valid and invalid backend weights, we use weighted clusters to distribute between
 	// valid backends and the `invalid-backend-cluster` for 500 responses according to their configured weights.
-	if h.Destination.ToBackendWeights().Invalid > 0 {
+	if h.Destination.ToBackendWeights().Invalid > 0 || h.Destination.ToBackendWeights().Empty > 0 {
 		return true
 	}
 	return h.Destination.NeedsClusterPerSetting()
@@ -1708,14 +1713,16 @@ func (r *RouteDestination) ToBackendWeights() *BackendWeights {
 		}
 
 		switch {
+		case s.Invalid: // If invalid, add to invalid weight
+			w.Invalid += *s.Weight
 		case s.IsDynamicResolver: // Dynamic resolver has no endpoints
 			w.Valid += *s.Weight
 		case s.IsCustomBackend: // Custom backends has no endpoints
 			w.Valid += *s.Weight
 		case len(s.Endpoints) > 0: // All other cases should have endpoints
 			w.Valid += *s.Weight
-		default: // DestinationSetting with no endpoints is considered invalid
-			w.Invalid += *s.Weight
+		default: // DestinationSetting with no endpoints
+			w.Empty += *s.Weight
 		}
 	}
 
@@ -1759,6 +1766,12 @@ type DestinationSetting struct {
 	// Metadata is used to enrich envoy route metadata with user and provider-specific information
 	// The primary metadata for DestinationSettings comes from the Backend resource reference in BackendRef
 	Metadata *ResourceMetadata `json:"metadata,omitempty" yaml:"metadata,omitempty"`
+	// Invalid is true if the destination setting is invalid (e.g. reference to non-existent backend, invalid TLS config, etc.)
+	// DS without endpoints is considered valid.
+	// This is required because Gateway API spec requires different status code for invalid backend and backend without endpoints.
+	// * invalid 600
+	// * without endpoints 503
+	Invalid bool `json:"invalid,omitempty" yaml:"invalid,omitempty"`
 }
 
 // Validate the fields within the DestinationSetting structure

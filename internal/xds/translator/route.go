@@ -303,8 +303,7 @@ func buildXdsStringMatcher(irMatch *ir.StringMatch) *matcherv3.StringMatcher {
 
 func buildXdsRouteAction(route *ir.HTTPRoute) *routev3.RouteAction {
 	backendWeights := route.Destination.ToBackendWeights()
-	// only use weighted cluster when there are invalid weights
-	if route.NeedsClusterPerSetting() || backendWeights.Invalid != 0 {
+	if route.NeedsClusterPerSetting() {
 		return buildXdsWeightedRouteAction(backendWeights, route.Destination.Settings)
 	}
 
@@ -317,10 +316,10 @@ func buildXdsRouteAction(route *ir.HTTPRoute) *routev3.RouteAction {
 
 func buildXdsWeightedRouteAction(backendWeights *ir.BackendWeights, settings []*ir.DestinationSetting) *routev3.RouteAction {
 	weightedClusters := make([]*routev3.WeightedCluster_ClusterWeight, 0, len(settings))
-	if backendWeights.Invalid > 0 {
+	if backendWeights.NonValidWeight() > 0 {
 		invalidCluster := &routev3.WeightedCluster_ClusterWeight{
 			Name:   "invalid-backend-cluster",
-			Weight: &wrapperspb.UInt32Value{Value: backendWeights.Invalid},
+			Weight: &wrapperspb.UInt32Value{Value: backendWeights.NonValidWeight()},
 		}
 		weightedClusters = append(weightedClusters, invalidCluster)
 	}
@@ -362,9 +361,18 @@ func buildXdsWeightedRouteAction(backendWeights *ir.BackendWeights, settings []*
 		}
 	}
 
+	// According to the Gateway API:
+	// 500 status code should be returned for invalid HTTPBackendRef
+	// 503 status code should be returned for Services without ready endpoints
+	// Reference: https://gateway-api.sigs.k8s.io/reference/spec/#httprouterule
+	clusterNotFoundResponseCode := routev3.RouteAction_INTERNAL_SERVER_ERROR
+	// Envoy can't handle mixed 500 and 503 responses, so we use 503 when both invalid and empty
+	if backendWeights.Empty > 0 {
+		clusterNotFoundResponseCode = routev3.RouteAction_SERVICE_UNAVAILABLE
+	}
 	return &routev3.RouteAction{
 		// Intentionally route to a non-existent cluster and return a 503 error when it is not found
-		ClusterNotFoundResponseCode: routev3.RouteAction_SERVICE_UNAVAILABLE,
+		ClusterNotFoundResponseCode: clusterNotFoundResponseCode,
 		ClusterSpecifier: &routev3.RouteAction_WeightedClusters{
 			WeightedClusters: &routev3.WeightedCluster{
 				Clusters: weightedClusters,
@@ -477,7 +485,7 @@ func buildXdsURLRewriteAction(route *ir.HTTPRoute, urlRewrite *ir.URLRewrite, pa
 	backendWeights := route.Destination.ToBackendWeights()
 	// only use weighted cluster when there are invalid weights
 	var routeAction *routev3.RouteAction
-	if route.NeedsClusterPerSetting() || backendWeights.Invalid != 0 {
+	if route.NeedsClusterPerSetting() {
 		routeAction = buildXdsWeightedRouteAction(backendWeights, route.Destination.Settings)
 	} else {
 		routeAction = &routev3.RouteAction{

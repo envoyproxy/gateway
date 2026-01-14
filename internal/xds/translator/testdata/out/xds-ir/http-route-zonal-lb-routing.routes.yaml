@@ -16,6 +16,7 @@
         prefix: /
       name: route-with-lb-preferlocal
       route:
+        clusterNotFoundResponseCode: INTERNAL_SERVER_ERROR
         upgradeConfigs:
         - upgradeType: websocket
         weightedClusters:
@@ -26,6 +27,7 @@
         prefix: /
       name: route-with-lb-and-settings-preferlocal
       route:
+        clusterNotFoundResponseCode: INTERNAL_SERVER_ERROR
         upgradeConfigs:
         - upgradeType: websocket
         weightedClusters:

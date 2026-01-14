@@ -144,52 +144,74 @@ func testMixedValidAndInvalid(t *testing.T, suite *suite.ConformanceTestSuite) {
 	// Make sure all test resources are ready
 	kubernetes.NamespacesMustBeReady(t, suite.Client, suite.TimeoutConfig, []string{ConformanceInfraNamespace})
 
-	expectedResponse := http.ExpectedResponse{
-		Request: http.Request{
-			Path: "/mixed-valid-and-invalid",
+	scenarios := []struct {
+		name        string
+		path        string
+		failureCode int
+	}{
+		{
+			name:        "MixedValidAndInvalid",
+			path:        "/mixed-valid-and-invalid",
+			failureCode: 500,
 		},
-		Namespace: ConformanceInfraNamespace,
+		{
+			name:        "MixedValidAndEmpty",
+			path:        "/mixed-valid-and-empty",
+			failureCode: 503,
+		},
 	}
-	req := http.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
 
-	// Make sure the valid(response 200) and invalid(response 503) backends are ready.
+	for _, scenario := range scenarios {
+		t.Run(scenario.name, func(t *testing.T) {
+			runMixedValidAndInvalidScenario(t, suite, gwAddr, scenario.path, scenario.failureCode)
+		})
+	}
+}
+
+const (
+	mixedValidAndInvalidRequests    = 100
+	mixedValidAndInvalidSuccessLow  = 89
+	mixedValidAndInvalidSuccessHigh = 99
+)
+
+func runMixedValidAndInvalidScenario(t *testing.T, suite *suite.ConformanceTestSuite, gwAddr, path string, failureCode int) {
+	t.Helper()
+
+	// Make sure the valid(response 200) backend are ready.
 	http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, http.ExpectedResponse{
 		Request: http.Request{
-			Path: "/mixed-valid-and-invalid",
+			Path: path,
 		},
 		Namespace: ConformanceInfraNamespace,
 		Response: http.Response{
 			StatusCodes: []int{200},
 		},
 	})
-	http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, http.ExpectedResponse{
+
+	expected := http.ExpectedResponse{
 		Request: http.Request{
-			Path: "/mixed-valid-and-invalid",
+			Path: path,
+		},
+		Response: http.Response{
+			StatusCodes: []int{200, failureCode},
 		},
 		Namespace: ConformanceInfraNamespace,
-		Response: http.Response{
-			StatusCodes: []int{503},
-		},
-	})
+	}
+	req := http.MakeRequest(t, &expected, gwAddr, "HTTP", "http")
 
-	var (
-		successCount = 0
-		failCount    = 0
-	)
-
-	for range 100 {
+	successCount := 0
+	for i := 0; i < mixedValidAndInvalidRequests; i++ {
 		_, response, err := suite.RoundTripper.CaptureRoundTrip(req)
 		if err != nil {
 			t.Errorf("failed to get expected response: %v", err)
+			continue
 		}
 		if response.StatusCode == 200 {
 			successCount++
-		} else {
-			failCount++
 		}
 	}
 
-	if successCount < 80 || successCount > 99 { // The weight of valid backend is 90%
-		t.Errorf("The actual success count is not within the expected range, success %d", successCount)
+	if successCount < mixedValidAndInvalidSuccessLow || successCount > mixedValidAndInvalidSuccessHigh {
+		t.Errorf("actual success count for %s is not within the expected range, success %d", path, successCount)
 	}
 }
