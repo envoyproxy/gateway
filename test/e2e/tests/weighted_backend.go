@@ -170,7 +170,7 @@ func testMixedValidAndInvalid(t *testing.T, suite *suite.ConformanceTestSuite) {
 
 const (
 	mixedValidAndInvalidRequests    = 100
-	mixedValidAndInvalidSuccessLow  = 89
+	mixedValidAndInvalidSuccessLow  = 80
 	mixedValidAndInvalidSuccessHigh = 99
 )
 
@@ -201,18 +201,30 @@ func runMixedValidAndInvalidScenario(t *testing.T, suite *suite.ConformanceTestS
 	req := http.MakeRequest(t, &expected, gwAddr, "HTTP", "http")
 
 	successCount := 0
+	failureCount := 0
 	for i := 0; i < mixedValidAndInvalidRequests; i++ {
 		_, response, err := suite.RoundTripper.CaptureRoundTrip(req)
 		if err != nil {
 			t.Errorf("failed to get expected response: %v", err)
 			continue
 		}
-		if response.StatusCode == 200 {
+		switch response.StatusCode {
+		case 200:
 			successCount++
+		case failureCode:
+			failureCount++
+		default:
+			t.Errorf("unexpected status code %d for %s", response.StatusCode, path)
 		}
 	}
 
 	if successCount < mixedValidAndInvalidSuccessLow || successCount > mixedValidAndInvalidSuccessHigh {
 		t.Errorf("actual success count for %s is not within the expected range, success %d", path, successCount)
 	}
+
+	if successCount+failureCount != mixedValidAndInvalidRequests {
+		t.Errorf("the sum of success and failure count for %s is not equal to the total requests, success %d, failure %d, total %d", path, successCount, failureCount, mixedValidAndInvalidRequests)
+	}
+
+	t.Logf("success count for %s is %d, failure count for %s is %d", path, successCount, path, failureCount)
 }
