@@ -7,7 +7,6 @@ package translator
 
 import (
 	"fmt"
-	"sort"
 
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	tracecfg "github.com/envoyproxy/go-control-plane/envoy/config/trace/v3"
@@ -161,10 +160,11 @@ func processClusterForTracing(tCtx *types.ResourceVersionTable, tracing *ir.Trac
 	})
 }
 
-func buildTracingTags(tracingTags map[string]egv1a1.CustomTag) ([]*tracingtype.CustomTag, error) {
+func buildTracingTags(tracingTags []ir.CustomTagMapEntry) ([]*tracingtype.CustomTag, error) {
 	tags := make([]*tracingtype.CustomTag, 0, len(tracingTags))
 	// TODO: consider add some default tags for better UX
-	for k, v := range tracingTags {
+	for _, entry := range tracingTags {
+		k, v := entry.Key, entry.Value
 		switch v.Type {
 		case egv1a1.CustomTagTypeLiteral:
 			tags = append(tags, &tracingtype.CustomTag{
@@ -209,10 +209,7 @@ func buildTracingTags(tracingTags map[string]egv1a1.CustomTag) ([]*tracingtype.C
 			return nil, fmt.Errorf("unknown custom tag type: %s", v.Type)
 		}
 	}
-	// sort tags by tag name, make result consistent
-	sort.Slice(tags, func(i, j int) bool {
-		return tags[i].Tag < tags[j].Tag
-	})
+	// tags are already sorted in the IR
 
 	return tags, nil
 }

@@ -1229,7 +1229,7 @@ func buildResourceMetadata(resource client.Object, sectionName *gwapiv1.SectionN
 		Kind:        resource.GetObjectKind().GroupVersionKind().Kind,
 		Name:        resource.GetName(),
 		Namespace:   resource.GetNamespace(),
-		Annotations: filterEGPrefix(resource.GetAnnotations()),
+		Annotations: ir.MapToSlice(filterEGPrefix(resource.GetAnnotations())),
 	}
 	if sectionName != nil {
 		metadata.SectionName = string(*sectionName)
