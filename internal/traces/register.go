@@ -7,13 +7,17 @@ package traces
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
 	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 )
 
@@ -29,6 +33,16 @@ func New(cfg *config.Server) *Runner {
 }
 
 func (r *Runner) Start(ctx context.Context) error {
+	if r.cfg.EnvoyGateway.DisableTraces() {
+		return nil
+	}
+
+	tracesConfig := r.cfg.EnvoyGateway.GetEnvoyGatewayTelemetry().Traces
+	sinkConfig := tracesConfig.Sink
+	configObj := sinkConfig.OpenTelemetry
+
+	endpoint := fmt.Sprintf("%s:%d", sinkConfig.OpenTelemetry.Host, sinkConfig.OpenTelemetry.Port)
+
 	// Create resource
 	res, err := resource.New(ctx,
 		resource.WithAttributes(
@@ -39,14 +53,97 @@ func (r *Runner) Start(ctx context.Context) error {
 		return err
 	}
 
-	tp := trace.NewTracerProvider(
-		trace.WithResource(res),
-	)
+	// Get sampler configuration
+	sampler := r.getSampler(tracesConfig)
 
-	otel.SetTracerProvider(tp)
-	r.tp = tp
+	// Get batch span processor options
+	batchOptions := r.getBatchSpanProcessorOptions(tracesConfig)
+
+	if configObj.Protocol == egv1a1.GRPCProtocol {
+		exporter, err := otlptracegrpc.New(ctx,
+			otlptracegrpc.WithEndpoint(endpoint),
+			otlptracegrpc.WithInsecure(),
+		)
+		if err != nil {
+			return err
+		}
+
+		bsp := trace.NewBatchSpanProcessor(exporter, batchOptions...)
+		tp := trace.NewTracerProvider(
+			trace.WithSpanProcessor(bsp),
+			trace.WithResource(res),
+			trace.WithSampler(sampler),
+		)
+
+		otel.SetTracerProvider(tp)
+		r.tp = tp
+
+		return nil
+	}
+
+	if configObj.Protocol == egv1a1.HTTPProtocol {
+		// Create OTLP HTTP exporter
+		exporter, err := otlptracehttp.New(ctx,
+			otlptracehttp.WithEndpoint(endpoint),
+			otlptracehttp.WithInsecure(),
+		)
+		if err != nil {
+			return err
+		}
+
+		bsp := trace.NewBatchSpanProcessor(exporter, batchOptions...)
+		tp := trace.NewTracerProvider(
+			trace.WithSpanProcessor(bsp),
+			trace.WithResource(res),
+			trace.WithSampler(sampler),
+		)
+
+		otel.SetTracerProvider(tp)
+		r.tp = tp
+
+		return nil
+	}
 
 	return nil
+}
+
+// getSampler returns the configured sampler or a default sampler
+func (r *Runner) getSampler(tracesConfig *egv1a1.EnvoyGatewayTraces) trace.Sampler {
+	if tracesConfig.SamplingRate != nil {
+		return trace.TraceIDRatioBased(*tracesConfig.SamplingRate)
+	}
+	// Default to always sample (100%)
+	return trace.AlwaysSample()
+}
+
+// getBatchSpanProcessorOptions returns the configured batch span processor options
+func (r *Runner) getBatchSpanProcessorOptions(tracesConfig *egv1a1.EnvoyGatewayTraces) []trace.BatchSpanProcessorOption {
+	var options []trace.BatchSpanProcessorOption
+
+	if tracesConfig.BatchSpanProcessorConfig != nil {
+		cfg := tracesConfig.BatchSpanProcessorConfig
+
+		if cfg.BatchTimeout != nil {
+			timeout, err := time.ParseDuration(string(*cfg.BatchTimeout))
+			if err == nil && timeout > 0 {
+				options = append(options, trace.WithBatchTimeout(timeout))
+			}
+		}
+
+		if cfg.MaxExportBatchSize != nil && *cfg.MaxExportBatchSize > 0 {
+			options = append(options, trace.WithMaxExportBatchSize(*cfg.MaxExportBatchSize))
+		}
+
+		if cfg.MaxQueueSize != nil && *cfg.MaxQueueSize > 0 {
+			options = append(options, trace.WithMaxQueueSize(*cfg.MaxQueueSize))
+		}
+	}
+
+	// If no options were configured, use defaults
+	// Default BatchTimeout is 5s, MaxExportBatchSize is 512, MaxQueueSize is 2048
+	// These are the OpenTelemetry SDK defaults
+
+	return options
 }
 
 func (r *Runner) Name() string {

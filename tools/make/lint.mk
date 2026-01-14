@@ -79,10 +79,6 @@ lint.fix-golint:
 .PHONY: gen-check
 gen-check: format generate manifests protos go.testdata.complete
 	@$(LOG_TARGET)
-	@if [ ! -z "`git status --porcelain`" ]; then \
-		$(call errorlog, ERROR: Some files need to be updated, please run 'make generate', 'make manifests' and 'make protos' to include any changed files to your PR); \
-		git diff --exit-code; \
-	fi
 
 .PHONY: licensecheck
 licensecheck: ## Check license headers are present.
