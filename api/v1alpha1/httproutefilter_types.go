@@ -44,10 +44,13 @@ type HTTPRouteFilterSpec struct {
 	DirectResponse *HTTPDirectResponseFilter `json:"directResponse,omitempty"`
 	// +optional
 	CredentialInjection *HTTPCredentialInjectionFilter `json:"credentialInjection,omitempty"`
-	// CookieMatch defines cookie-based request matching that must be satisfied for the
-	// parent HTTPRoute rule to be selected.
+	// Matches defines additional matching criteria for the HTTPRoute rule.
+	// As with HTTPRouteRule.Matches, the rule is matched if any one match applies.
+	// When both HTTPRouteRule.Matches and HTTPRouteFilter.Matches are set, the
+	// effective matching is the logical AND of the two sets.
+	//
 	// +optional
-	CookieMatch *HTTPCookieMatchFilter `json:"cookieMatch,omitempty"`
+	Matches []HTTPRouteMatchFilter `json:"matches,omitempty"`
 }
 
 // HTTPURLRewriteFilter define rewrites of HTTP URL components such as path and host
@@ -190,31 +193,49 @@ type InjectedCredential struct {
 	// EG may support more credential types in the future, for example, OAuth2 access token retrieved by Client Credentials Grant flow.
 }
 
-// HTTPCookieMatchFilter defines cookie-based request matching that is applied to the
-// HTTPRoute rule.
-type HTTPCookieMatchFilter struct {
+// HTTPRouteMatchFilter defines additional matching criteria for the HTTPRoute rule.
+type HTTPRouteMatchFilter struct {
 	// Cookies is a list of cookie matchers evaluated against the HTTP request.
 	// All specified matchers must match.
 	//
 	// +kubebuilder:validation:MinItems=1
-	Cookies []HTTPCookieMatch `json:"cookies"`
+	Cookies []HTTPCookieMatch `json:"cookies,omitempty"`
 }
+
+// CookieMatchType specifies the semantics of how cookie values should be compared.
+// Valid CookieMatchType values are "Exact" and "RegularExpression".
+//
+// +kubebuilder:validation:Enum=Exact;RegularExpression
+type CookieMatchType string
+
+// CookieMatchType constants.
+const (
+	// CookieMatchExact matches the exact value of the cookie.
+	CookieMatchExact CookieMatchType = "Exact"
+	// CookieMatchRegularExpression matches a regular expression against the value of the cookie.
+	// The regex string must adhere to the syntax documented in https://github.com/google/re2/wiki/Syntax.
+	CookieMatchRegularExpression CookieMatchType = "RegularExpression"
+)
 
 // HTTPCookieMatch defines how to match a single cookie.
 type HTTPCookieMatch struct {
+	// Type specifies how to match against the value of the cookie.
+	//
+	// +optional
+	// +kubebuilder:default=Exact
+	Type *CookieMatchType `json:"type,omitempty"`
+
 	// Name is the cookie name to evaluate.
 	//
 	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
 	Name string `json:"name"`
 
-	// Match defines how to evaluate the cookie value.
-	Match StringMatch `json:"match"`
-
-	// InvertMatch inverts the match result. If the cookie is absent, the match
-	// result is false unless InvertMatch is set.
+	// Value is the cookie value to be matched.
 	//
-	// +optional
-	InvertMatch *bool `json:"invertMatch,omitempty"`
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=4096
+	Value string `json:"value"`
 }
 
 //+kubebuilder:object:root=true
