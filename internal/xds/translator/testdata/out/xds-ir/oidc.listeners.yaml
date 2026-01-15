@@ -74,6 +74,21 @@
               - profile
               authType: BASIC_AUTH
               authorizationEndpoint: https://oauth.bar.com/oauth2/v2/auth
+              cookieConfigs:
+                bearerTokenCookieConfig:
+                  partitioned: true
+                codeVerifierCookieConfig:
+                  partitioned: true
+                idTokenCookieConfig:
+                  partitioned: true
+                oauthExpiresCookieConfig:
+                  partitioned: true
+                oauthHmacCookieConfig:
+                  partitioned: true
+                oauthNonceCookieConfig:
+                  partitioned: true
+                refreshTokenCookieConfig:
+                  partitioned: true
               credentials:
                 clientId: client.oauth.bar.com
                 cookieDomain: example.com

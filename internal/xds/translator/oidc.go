@@ -267,22 +267,43 @@ func buildSameSite(config *egv1a1.OIDCCookieConfig) oauth2v3.CookieConfig_SameSi
 
 // buildCookieConfigs translates the OIDC configuration from the US
 func buildCookieConfigs(oidc *ir.OIDC) *oauth2v3.CookieConfigs {
-	// If the user did not specify any custom cookie configurations at all, return the defaults.
-	if oidc.CookieConfig == nil || oidc.CookieConfig.SameSite == nil {
+	requireCookieConfig := (oidc.CookieConfig != nil && oidc.CookieConfig.SameSite != nil) || oidc.CookieDomain != nil
+	if !requireCookieConfig {
 		return nil
 	}
 
-	// Apply the user-defined SameSite policy for each cookie if it has been configured.
-	sameSite := buildSameSite(oidc.CookieConfig)
-	return &oauth2v3.CookieConfigs{
-		BearerTokenCookieConfig:  &oauth2v3.CookieConfig{SameSite: sameSite},
-		OauthHmacCookieConfig:    &oauth2v3.CookieConfig{SameSite: sameSite},
-		OauthExpiresCookieConfig: &oauth2v3.CookieConfig{SameSite: sameSite},
-		IdTokenCookieConfig:      &oauth2v3.CookieConfig{SameSite: sameSite},
-		RefreshTokenCookieConfig: &oauth2v3.CookieConfig{SameSite: sameSite},
-		OauthNonceCookieConfig:   &oauth2v3.CookieConfig{SameSite: sameSite},
-		CodeVerifierCookieConfig: &oauth2v3.CookieConfig{SameSite: sameSite},
+	config := &oauth2v3.CookieConfigs{
+		BearerTokenCookieConfig:  &oauth2v3.CookieConfig{},
+		OauthHmacCookieConfig:    &oauth2v3.CookieConfig{},
+		OauthExpiresCookieConfig: &oauth2v3.CookieConfig{},
+		IdTokenCookieConfig:      &oauth2v3.CookieConfig{},
+		RefreshTokenCookieConfig: &oauth2v3.CookieConfig{},
+		OauthNonceCookieConfig:   &oauth2v3.CookieConfig{},
+		CodeVerifierCookieConfig: &oauth2v3.CookieConfig{},
 	}
+
+	if oidc.CookieDomain != nil {
+		config.BearerTokenCookieConfig.Partitioned = true
+		config.OauthHmacCookieConfig.Partitioned = true
+		config.OauthExpiresCookieConfig.Partitioned = true
+		config.IdTokenCookieConfig.Partitioned = true
+		config.RefreshTokenCookieConfig.Partitioned = true
+		config.OauthNonceCookieConfig.Partitioned = true
+		config.CodeVerifierCookieConfig.Partitioned = true
+	}
+
+	if oidc.CookieConfig != nil && oidc.CookieConfig.SameSite != nil {
+		// Apply the user-defined SameSite policy for each cookie if it has been configured.
+		sameSite := buildSameSite(oidc.CookieConfig)
+		config.BearerTokenCookieConfig.SameSite = sameSite
+		config.OauthHmacCookieConfig.SameSite = sameSite
+		config.OauthExpiresCookieConfig.SameSite = sameSite
+		config.IdTokenCookieConfig.SameSite = sameSite
+		config.RefreshTokenCookieConfig.SameSite = sameSite
+		config.OauthNonceCookieConfig.SameSite = sameSite
+		config.CodeVerifierCookieConfig.SameSite = sameSite
+	}
+	return config
 }
 
 func buildDenyRedirectMatcher(oidc *ir.OIDC) []*routev3.HeaderMatcher {
