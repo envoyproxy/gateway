@@ -17,7 +17,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/logging"
 )
 
-type HookFunc func(c context.Context, cfg *config.Server, wg *sync.WaitGroup) error
+type HookFunc func(c context.Context, cfg *config.Server) error
 
 type Loader struct {
 	cfgPath string
@@ -120,9 +120,14 @@ func (r *Loader) runHook(ctx context.Context, wg *sync.WaitGroup) {
 	cfgCopy := r.snapshotConfig()
 	c, cancel := context.WithCancel(ctx)
 	r.cancel = cancel
+	wg.Add(1)
 	go func(ctx context.Context) {
-		defer cancel()
-		if err := r.hook(ctx, cfgCopy, wg); err != nil {
+		defer func() {
+			wg.Done()
+			cancel()
+		}()
+
+		if err := r.hook(ctx, cfgCopy); err != nil {
 			r.logger.Error(err, "hook error")
 			// There is nothing we can do here, throw the error to the main process to exit
 			// The EnvoyGateway pod will restart and hopefully any transient errors will be resolved

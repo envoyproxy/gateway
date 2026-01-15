@@ -78,9 +78,7 @@ func server(ctx context.Context, stdout, stderr io.Writer, asyncErrorNotifier *m
 		return err
 	}
 
-	hook := func(c context.Context, cfg *config.Server, wg *sync.WaitGroup) error {
-		wg.Add(1)
-		defer wg.Done()
+	hook := func(c context.Context, cfg *config.Server) error {
 		cfg.Logger.Info("Start runners")
 		if err := startRunners(c, cfg, asyncErrorNotifier); err != nil {
 			return err
