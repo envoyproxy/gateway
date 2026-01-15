@@ -57,7 +57,7 @@ func TestGetServerCommand(t *testing.T) {
 func TestCustomProviderRun(t *testing.T) {
 	// Use Custom provider to avoid take too much to discovery CRDs
 	configPath := path.Join(t.TempDir(), "envoy-gateway.yaml")
-	require.NoError(t, os.WriteFile(configPath, []byte(fileProviderGatewayConfig), 0600))
+	require.NoError(t, os.WriteFile(configPath, []byte(fileProviderGatewayConfig), 0o600))
 
 	errCh := make(chan error)
 	ctx, cancel := context.WithCancel(t.Context())
