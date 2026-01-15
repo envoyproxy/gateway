@@ -4,7 +4,7 @@ title: "Request Buffering"
 
 The [Envoy buffer filter] is used to stop filter iteration and wait for a fully buffered complete request. This is useful in different situations including protecting some applications from having to deal with partial requests and high network latency.
 
-Enabling request buffering requires specifying a size limit for the buffer. Any requests that are larger than the limit will stop the buffering and return a HTTP 413 Content Too Large response. 
+Enabling request buffering requires specifying a size limit for the buffer. Any requests that are larger than the limit will stop the buffering and return a HTTP 413 Content Too Large response.
 
 Envoy Gateway introduces a new CRD called [BackendTrafficPolicy][] that allows the user to enable request buffering.
 This instantiated resource can be linked to a [Gateway][], or [HTTPRoute][].
@@ -182,7 +182,7 @@ Next we will try sending a json object that is larger than 4 bytes. We will also
 curl -H "Host: www.example.com" "http://${GATEWAY_HOST}/foo" -XPOST -d '{"key": "value"}' -w "\nStatus Code: %{http_code}"
 ```
 
-We will now see that sending a payload of `{"key": "value"}` which is larger than the request buffer limit of 4 bytes returns a 
+We will now see that sending a payload of `{"key": "value"}` which is larger than the request buffer limit of 4 bytes returns a
 HTTP 413 Payload Too Large response
 
 ```

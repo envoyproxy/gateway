@@ -5,16 +5,16 @@ title: "Fuzzing "
 ## Overview
 
 This design document introduces **Fuzz Testing** in Envoy Gateway.
-Its goal is to detect unexpected crashes, memory leaks, and undefined behaviors in the translation of Gateway 
-API resources and configuration parsing, areas that may not be fully covered by unit tests. 
+Its goal is to detect unexpected crashes, memory leaks, and undefined behaviors in the translation of Gateway
+API resources and configuration parsing, areas that may not be fully covered by unit tests.
 
-Additionally, [OSS-Fuzz](https://github.com/google/oss-fuzz) 
-provides a continuous fuzzing infrastructure for popular open-source projects. By writing fuzz tests, 
-we can leverage OSS-Fuzz to continuously fuzz Envoy Gateway against a wide range of inputs, 
+Additionally, [OSS-Fuzz](https://github.com/google/oss-fuzz)
+provides a continuous fuzzing infrastructure for popular open-source projects. By writing fuzz tests,
+we can leverage OSS-Fuzz to continuously fuzz Envoy Gateway against a wide range of inputs,
 improving its resilience and reliability.
 
-**Note:** This work is sponsored by the 
-[Linux Foundation Mentorship](https://mentorship.lfx.linuxfoundation.org/project/44020e81-1218-49aa-95e0-ee3e03998eb3) 
+**Note:** This work is sponsored by the
+[Linux Foundation Mentorship](https://mentorship.lfx.linuxfoundation.org/project/44020e81-1218-49aa-95e0-ee3e03998eb3)
 program.
 
 ## Goals
@@ -32,12 +32,12 @@ program.
 
 ## Implementation
 
-As the fuzzers will be integrated with OSS-Fuzz, the implementation will follow best practices 
+As the fuzzers will be integrated with OSS-Fuzz, the implementation will follow best practices
 outlined in [OSS-Fuzz Ideal Integration](https://google.github.io/oss-fuzz/advanced-topics/ideal-integration/) page.
 Fuzzers will be developed native Go fuzzing library [go-fuzz](https://go.dev/blog/fuzz-beta).
 
 ### Example
-Here is an example of a simple fuzzer that tests the translation of Gateway API resource to Intermediate 
+Here is an example of a simple fuzzer that tests the translation of Gateway API resource to Intermediate
 representation (IR).
 
 ```go
@@ -72,6 +72,6 @@ func FuzzGatewayAPIToIRWithGatewayClass(f *testing.F) {
 
 ## Conclusion
 
-Fuzz testing is an ongoing process. Once the initial fuzzers are developed, 
+Fuzz testing is an ongoing process. Once the initial fuzzers are developed,
 crashes reported by OSS-Fuzz will be continuously monitored, and the fuzzers will be iteratively refined.
 Additionally, future efforts will be directed toward exploring the integration of fuzz testing into the CI pipeline using GitHub Actions.

@@ -3,7 +3,7 @@ title: Retry
 ---
 
 {{% alert color="warning" %}}
-Starting from `v1.3`, Envoy Gateway supports [HTTPRoute Retries(GEP-1731)][], 
+Starting from `v1.3`, Envoy Gateway supports [HTTPRoute Retries(GEP-1731)][],
 this setting in the core Gateway API takes precedence over the BackendTrafficPolicy configuration.
 {{% /alert %}}
 

@@ -332,6 +332,43 @@ data:
         endpoint: '[${env:MY_POD_IP}]:13133'
     processors:
       batch: {}
+      k8sattributes:
+        extract:
+          metadata:
+          - k8s.namespace.name
+          - k8s.pod.name
+          - k8s.pod.uid
+          - k8s.node.name
+          - k8s.pod.start_time
+          - k8s.deployment.name
+          - k8s.replicaset.name
+          - k8s.replicaset.uid
+          - k8s.daemonset.name
+          - k8s.daemonset.uid
+          - k8s.job.name
+          - k8s.job.uid
+          - k8s.container.name
+          - k8s.cronjob.name
+          - k8s.statefulset.name
+          - k8s.statefulset.uid
+          - container.image.tag
+          - container.image.name
+          - k8s.cluster.uid
+          - service.namespace
+          - service.name
+          - service.version
+          - service.instance.id
+          otel_annotations: true
+        passthrough: false
+        pod_association:
+        - sources:
+          - from: resource_attribute
+            name: k8s.pod.ip
+        - sources:
+          - from: resource_attribute
+            name: k8s.pod.uid
+        - sources:
+          - from: connection
       memory_limiter:
         check_interval: 5s
         limit_percentage: 80
@@ -380,6 +417,7 @@ data:
           exporters:
           - otlphttp/loki
           processors:
+          - k8sattributes
           - transform/loki
           receivers:
           - otlp
@@ -388,6 +426,7 @@ data:
           exporters:
           - prometheus
           processors:
+          - k8sattributes
           - memory_limiter
           - batch
           receivers:
@@ -397,6 +436,7 @@ data:
           exporters:
           - otlp
           processors:
+          - k8sattributes
           - memory_limiter
           - batch
           receivers:
@@ -10188,6 +10228,30 @@ rules:
   resources: ["configmaps", "secrets"]
   verbs: ["get", "watch", "list"]
 ---
+# Source: gateway-addons-helm/charts/opentelemetry-collector/templates/clusterrole.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: otel-collector
+  labels:
+    helm.sh/chart: opentelemetry-collector-0.142.2
+    app.kubernetes.io/name: opentelemetry-collector
+    app.kubernetes.io/instance: gateway-addons-helm
+    app.kubernetes.io/version: "0.142.0"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: opentelemetry-collector
+    app.kubernetes.io/component: standalone-collector
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "namespaces"]
+    verbs: ["get", "watch", "list"]
+  - apiGroups: ["apps"]
+    resources: ["replicasets"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["extensions"]
+    resources: ["replicasets"]
+    verbs: ["get", "list", "watch"]
+---
 # Source: gateway-addons-helm/charts/prometheus/templates/clusterrole.yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -10278,6 +10342,28 @@ roleRef:
   kind: ClusterRole
   name: loki-clusterrole
   apiGroup: rbac.authorization.k8s.io
+---
+# Source: gateway-addons-helm/charts/opentelemetry-collector/templates/clusterrolebinding.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: otel-collector
+  labels:
+    helm.sh/chart: opentelemetry-collector-0.142.2
+    app.kubernetes.io/name: opentelemetry-collector
+    app.kubernetes.io/instance: gateway-addons-helm
+    app.kubernetes.io/version: "0.142.0"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: opentelemetry-collector
+    app.kubernetes.io/component: standalone-collector
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: otel-collector
+subjects:
+- kind: ServiceAccount
+  name: otel-collector
+  namespace: monitoring
 ---
 # Source: gateway-addons-helm/charts/prometheus/templates/clusterrolebinding.yaml
 apiVersion: rbac.authorization.k8s.io/v1
@@ -10653,7 +10739,7 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/config: c1e28c33bb38e36c7a1c59d812ecb5423b9cc1aa1bcb86c3b255d4fe89828388
+        checksum/config: 6d4a1dbfa1a9a8ec0cba4ee15200ffa34ae09d513e11b3ca0018de9c654c9ebc
         
       labels:
         app.kubernetes.io/name: opentelemetry-collector

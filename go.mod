@@ -9,15 +9,15 @@ require (
 	github.com/andybalholm/brotli v1.2.0
 	github.com/avast/retry-go/v5 v5.0.0
 	github.com/cenkalti/backoff/v4 v4.3.0
-	github.com/cncf/xds/go v0.0.0-20251022180443-0feb69152e9f
+	github.com/cncf/xds/go v0.0.0-20251110193048-8bfbf64dc13e
 	github.com/containers/image/v5 v5.36.2
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 	github.com/docker/cli v29.1.3+incompatible
 	github.com/docker/docker v28.5.1+incompatible
 	github.com/dominikbraun/graph v0.23.0
-	github.com/envoyproxy/go-control-plane v0.13.5-0.20251029084203-42a4a9261f66
+	github.com/envoyproxy/go-control-plane v0.14.0
 	github.com/envoyproxy/go-control-plane/contrib v1.32.5-0.20251029084203-42a4a9261f66
-	github.com/envoyproxy/go-control-plane/envoy v1.35.1-0.20251029084203-42a4a9261f66
+	github.com/envoyproxy/go-control-plane/envoy v1.36.1-0.20251212210832-8201564db014
 	github.com/envoyproxy/go-control-plane/ratelimit v0.1.1-0.20251029084203-42a4a9261f66
 	github.com/envoyproxy/ratelimit v1.4.1-0.20230427142404-e2a87f41d3a7
 	github.com/evanphx/json-patch v5.9.11+incompatible
@@ -65,7 +65,7 @@ require (
 	golang.org/x/exp v0.0.0-20250718183923-645b1fa84792
 	golang.org/x/net v0.48.0
 	gomodules.xyz/jsonpatch/v2 v2.5.0
-	gonum.org/v1/gonum v0.16.0
+	gonum.org/v1/gonum v0.17.0
 	google.golang.org/genproto/googleapis/api v0.0.0-20251202230838-ff82c1b0f217
 	google.golang.org/grpc v1.78.0
 	google.golang.org/grpc/security/advancedtls v1.0.0
@@ -142,7 +142,7 @@ require (
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/ebitengine/purego v0.9.0 // indirect
 	github.com/emicklei/go-restful/v3 v3.13.0 // indirect
-	github.com/envoyproxy/protoc-gen-validate v1.2.1 // indirect
+	github.com/envoyproxy/protoc-gen-validate v1.3.0 // indirect
 	github.com/exponent-io/jsonpath v0.0.0-20210407135951-1de76d718b3f // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/fxamacker/cbor/v2 v2.9.0 // indirect

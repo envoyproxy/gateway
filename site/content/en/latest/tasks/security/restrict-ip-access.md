@@ -16,10 +16,10 @@ This instantiated resource can be linked to a [Gateway][Gateway], [HTTPRoute][HT
 
 ### Create a SecurityPolicy
 
-The below SecurityPolicy restricts access to the backend service by allowing requests only from the IP addresses `10.0.1.0/24`. 
+The below SecurityPolicy restricts access to the backend service by allowing requests only from the IP addresses `10.0.1.0/24`.
 
 In this example, the default action is set to `Deny`, which means that only requests from the specified IP addresses with `Allow`
-action are allowed, and all other requests are denied. You can also change the default action to `Allow` to allow all requests 
+action are allowed, and all other requests are denied. You can also change the default action to `Allow` to allow all requests
 except those from the specified IP addresses with `Deny` action.
 
 {{< tabpane text=true >}}

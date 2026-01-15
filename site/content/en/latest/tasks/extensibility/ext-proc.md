@@ -4,8 +4,8 @@ title: "External Processing"
 
 This task provides instructions for configuring external processing.
 
-External processing calls an external gRPC service to process HTTP requests and responses. 
-The external processing service can inspect and mutate requests and responses.  
+External processing calls an external gRPC service to process HTTP requests and responses.
+The external processing service can inspect and mutate requests and responses.
 
 Envoy Gateway introduces a new CRD called [EnvoyExtensionPolicy][] that allows the user to configure external processing.
 This instantiated resource can be linked to a [Gateway][Gateway] and [HTTPRoute][HTTPRoute] resource.
@@ -89,7 +89,7 @@ kubectl get httproute/myapp -o yaml
 
 Create a new EnvoyExtensionPolicy resource to configure the external processing service. This EnvoyExtensionPolicy targets the HTTPRoute
 "myApp" created in the previous step. It calls the GRPC external processing service "grpc-ext-proc" on port 9002 for
-processing. 
+processing.
 
 By default, requests and responses are not sent to the external processor. The `processingMode` struct is used to define what should be sent to the external processor.
 In this example, we configure the following processing modes:
