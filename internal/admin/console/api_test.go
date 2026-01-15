@@ -420,8 +420,8 @@ func TestHandleAPIConfigDumpWithResourceAllRedactsSecrets(t *testing.T) {
 	masked := result.Resources[0].Secrets[0]
 	// Ensure the masked secret is redacted
 	assert.Contains(t, masked.Data, "token")
-	assert.Equal(t, []byte{}, masked.Data["token"])
-	assert.Empty(t, masked.StringData["token"])
+	assert.Equal(t, redactedSecretValueBytes, masked.Data["token"])
+	assert.Equal(t, redactedSecretValue, masked.StringData["token"])
 	assert.Equal(t, "test-secret", masked.Name)
 	assert.Empty(t, masked.Annotations)
 	assert.Empty(t, masked.ManagedFields)

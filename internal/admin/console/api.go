@@ -90,6 +90,10 @@ type ResourceSummary struct {
 
 var startTime = time.Now()
 
+const redactedSecretValue = "[redacted]"
+
+var redactedSecretValueBytes = []byte(redactedSecretValue)
+
 // handleAPIInfo returns basic system information
 func (h *Handler) handleAPIInfo(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
@@ -254,13 +258,13 @@ func redactSecrets(secrets []*corev1.Secret) []*corev1.Secret {
 		if len(secret.Data) > 0 {
 			redacted[i].Data = make(map[string][]byte, len(secret.Data))
 			for key := range secret.Data {
-				redacted[i].Data[key] = []byte("")
+				redacted[i].Data[key] = redactedSecretValueBytes
 			}
 		}
 		if len(secret.StringData) > 0 {
 			redacted[i].StringData = make(map[string]string, len(secret.StringData))
 			for key := range secret.StringData {
-				redacted[i].StringData[key] = ""
+				redacted[i].StringData[key] = redactedSecretValue
 			}
 		}
 	}
