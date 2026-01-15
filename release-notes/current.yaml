@@ -36,6 +36,7 @@ bug fixes: |
   Fixed ExternalTrafficPolicy not being applied to Envoy Service when ServiceType is NodePort.
   Fixed CRL ref not processed by gateway controller.
   Fixed an issue where HTTP/3 listeners could not handle multiple hostnames.
+  Fix gateway continuing with incomplete resources after unrecoverable Kubernetes discovery errors when checking optional CRDs by failing fast and propagating errors so pods restart instead of skipping optional CRDs.
   Fixed an issue where listener translation fails when contains invalid certificate in multiple TLS certificateRefs.
 
 # Enhancements that improve performance.
