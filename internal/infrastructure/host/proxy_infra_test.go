@@ -18,6 +18,7 @@ import (
 	"github.com/stretchr/testify/require"
 	func_e_api "github.com/tetratelabs/func-e/api"
 	"k8s.io/utils/ptr"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/crypto"
@@ -28,6 +29,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/message"
 	"github.com/envoyproxy/gateway/internal/utils"
 	"github.com/envoyproxy/gateway/internal/utils/file"
+	"github.com/envoyproxy/gateway/internal/utils/test"
 	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
 	testutils "github.com/envoyproxy/gateway/test/utils"
 )
@@ -588,6 +590,166 @@ func TestTopologyInjectorDisabledInHostMode(t *testing.T) {
 			} else {
 				require.NotContains(t, bootstrapYAML, "local_cluster_name:")
 			}
+		})
+	}
+}
+
+// TestResolvedMetricSinksConversion verifies that resolved metric sinks from IR
+// are correctly converted to bootstrap format, including TLS configuration.
+func TestResolvedMetricSinksConversion(t *testing.T) {
+	sni := "otel-collector.example.com"
+
+	testCases := []struct {
+		name     string
+		irSinks  []ir.ResolvedMetricSink
+		expected []bootstrap.MetricSink
+	}{
+		{
+			name:     "no sinks",
+			irSinks:  nil,
+			expected: []bootstrap.MetricSink{},
+		},
+		{
+			name: "skip sink with no endpoints",
+			irSinks: []ir.ResolvedMetricSink{
+				{
+					Destination: ir.RouteDestination{
+						Name:     "metrics_otel_0",
+						Settings: []*ir.DestinationSetting{{}},
+					},
+				},
+			},
+			expected: []bootstrap.MetricSink{},
+		},
+		{
+			name: "sink without TLS",
+			irSinks: []ir.ResolvedMetricSink{
+				{
+					Destination: ir.RouteDestination{
+						Name: "metrics_otel_0",
+						Settings: []*ir.DestinationSetting{
+							{
+								Endpoints: []*ir.DestinationEndpoint{
+									{Host: "otel-collector.example.com", Port: 4317},
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: []bootstrap.MetricSink{
+				{
+					Address: "otel-collector.example.com",
+					Port:    4317,
+				},
+			},
+		},
+		{
+			name: "sink with TLS and SNI",
+			irSinks: []ir.ResolvedMetricSink{
+				{
+					Destination: ir.RouteDestination{
+						Name: "metrics_otel_0",
+						Settings: []*ir.DestinationSetting{
+							{
+								Endpoints: []*ir.DestinationEndpoint{
+									{Host: "otel-collector.example.com", Port: 443},
+								},
+								TLS: &ir.TLSUpstreamConfig{
+									SNI: &sni,
+								},
+							},
+						},
+					},
+					Authority: "otel-collector.example.com",
+				},
+			},
+			expected: []bootstrap.MetricSink{
+				{
+					Address:   "otel-collector.example.com",
+					Port:      443,
+					Authority: "otel-collector.example.com",
+					TLS: &bootstrap.MetricSinkTLS{
+						SNI: sni,
+					},
+				},
+			},
+		},
+		{
+			name: "sink with TLS and custom CA",
+			irSinks: []ir.ResolvedMetricSink{
+				{
+					Destination: ir.RouteDestination{
+						Name: "metrics_otel_0",
+						Settings: []*ir.DestinationSetting{
+							{
+								Endpoints: []*ir.DestinationEndpoint{
+									{Host: "otel-collector.example.com", Port: 443},
+								},
+								TLS: &ir.TLSUpstreamConfig{
+									SNI: &sni,
+									CACertificate: &ir.TLSCACertificate{
+										Name:        "custom-ca",
+										Certificate: test.TestCACertificate,
+									},
+								},
+							},
+						},
+					},
+					Authority: "otel-collector.example.com",
+				},
+			},
+			expected: []bootstrap.MetricSink{
+				{
+					Address:   "otel-collector.example.com",
+					Port:      443,
+					Authority: "otel-collector.example.com",
+					TLS: &bootstrap.MetricSinkTLS{
+						SNI:           sni,
+						CACertificate: test.TestCACertificate,
+					},
+				},
+			},
+		},
+		{
+			name: "sink with headers and deltas",
+			irSinks: []ir.ResolvedMetricSink{
+				{
+					Destination: ir.RouteDestination{
+						Name: "metrics_otel_0",
+						Settings: []*ir.DestinationSetting{
+							{
+								Endpoints: []*ir.DestinationEndpoint{
+									{Host: "otel-collector.example.com", Port: 4317},
+								},
+							},
+						},
+					},
+					Headers: []gwapiv1.HTTPHeader{
+						{Name: "Authorization", Value: "Bearer token"},
+					},
+					ReportCountersAsDeltas:   true,
+					ReportHistogramsAsDeltas: true,
+				},
+			},
+			expected: []bootstrap.MetricSink{
+				{
+					Address:                  "otel-collector.example.com",
+					Port:                     4317,
+					ReportCountersAsDeltas:   true,
+					ReportHistogramsAsDeltas: true,
+					Headers: []gwapiv1.HTTPHeader{
+						{Name: "Authorization", Value: "Bearer token"},
+					},
+				},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			actual := convertResolvedMetricSinks(tc.irSinks)
+			require.Equal(t, tc.expected, actual)
 		})
 	}
 }
