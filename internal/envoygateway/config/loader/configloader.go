@@ -17,7 +17,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/logging"
 )
 
-type HookFunc func(c context.Context, cfg *config.Server) error
+type HookFunc func(c context.Context, cfg *config.Server, wg *sync.WaitGroup) error
 
 type Loader struct {
 	cfgPath string
@@ -42,9 +42,8 @@ func New(cfgPath string, cfg *config.Server, f HookFunc) *Loader {
 	}
 }
 
-func (r *Loader) Start(ctx context.Context, logOut io.Writer) error {
-	r.runHook(ctx)
-
+func (r *Loader) Start(ctx context.Context, logOut io.Writer, wg *sync.WaitGroup) error {
+	r.runHook(ctx, wg)
 	if r.cfgPath == "" {
 		r.logger.Info("no config file provided, skipping config watcher")
 		return nil
@@ -97,7 +96,7 @@ func (r *Loader) Start(ctx context.Context, logOut io.Writer) error {
 				// Otherwise we might end up with error listening on:8081
 				time.Sleep(3 * time.Second)
 
-				r.runHook(ctx)
+				r.runHook(ctx, wg)
 			case err := <-r.w.Errors(r.cfgPath):
 				r.logger.Error(err, "watcher error")
 			case <-ctx.Done():
@@ -112,7 +111,7 @@ func (r *Loader) Start(ctx context.Context, logOut io.Writer) error {
 	return nil
 }
 
-func (r *Loader) runHook(ctx context.Context) {
+func (r *Loader) runHook(ctx context.Context, wg *sync.WaitGroup) {
 	if r.hook == nil {
 		return
 	}
@@ -123,7 +122,7 @@ func (r *Loader) runHook(ctx context.Context) {
 	r.cancel = cancel
 	go func(ctx context.Context) {
 		defer cancel()
-		if err := r.hook(ctx, cfgCopy); err != nil {
+		if err := r.hook(ctx, cfgCopy, wg); err != nil {
 			r.logger.Error(err, "hook error")
 			// There is nothing we can do here, throw the error to the main process to exit
 			// The EnvoyGateway pod will restart and hopefully any transient errors will be resolved
