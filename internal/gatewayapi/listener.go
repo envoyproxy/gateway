@@ -10,12 +10,15 @@ import (
 	"fmt"
 	"math"
 	"net"
+	"net/netip"
+	"strconv"
 	"strings"
 
 	"github.com/google/cel-go/cel"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
@@ -55,7 +58,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 			infraIR[irKey].Proxy.Config = gateway.envoyProxy
 		}
 		t.processProxyReadyListener(xdsIR[irKey], gateway.envoyProxy)
-		t.processProxyObservability(gateway, xdsIR[irKey], infraIR[irKey].Proxy.Config, resources)
+		t.processProxyObservability(gateway, xdsIR[irKey], infraIR[irKey].Proxy, resources)
 
 		for _, listener := range gateway.listeners {
 			// Process protocol & supported kinds
@@ -468,8 +471,9 @@ func (t *Translator) processProxyReadyListener(xdsIR *ir.Xds, envoyProxy *egv1a1
 	}
 }
 
-func (t *Translator) processProxyObservability(gwCtx *GatewayContext, xdsIR *ir.Xds, envoyProxy *egv1a1.EnvoyProxy, resources *resource.Resources) {
+func (t *Translator) processProxyObservability(gwCtx *GatewayContext, xdsIR *ir.Xds, proxyInfra *ir.ProxyInfra, resources *resource.Resources) {
 	var err error
+	envoyProxy := proxyInfra.Config
 
 	xdsIR.AccessLog, err = t.processAccessLog(envoyProxy, resources)
 	if err != nil {
@@ -485,12 +489,14 @@ func (t *Translator) processProxyObservability(gwCtx *GatewayContext, xdsIR *ir.
 		return
 	}
 
-	xdsIR.Metrics, err = t.processMetrics(envoyProxy, resources)
+	var resolvedSinks []ir.ResolvedMetricSink
+	xdsIR.Metrics, resolvedSinks, err = t.processMetrics(envoyProxy, resources)
 	if err != nil {
 		status.UpdateGatewayStatusNotAccepted(gwCtx.Gateway, gwapiv1.GatewayReasonInvalidParameters,
 			fmt.Sprintf("Invalid metrics backendRefs in the referenced EnvoyProxy: %v", err))
 		return
 	}
+	proxyInfra.ResolvedMetricSinks = resolvedSinks
 }
 
 func (t *Translator) processInfraIRListener(listener *ListenerContext, infraIR resource.InfraIRMap, irKey string, servicePort *protocolPort, containerPort int32) {
@@ -677,13 +683,11 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 				// TODO: rename this, so that we can share backend with tracing?
 				destName := fmt.Sprintf("accesslog_otel_%d_%d", i, j)
 				settingName := irDestinationSettingName(destName, -1)
-				// TODO: how to get authority from the backendRefs?
 				ds, traffic, err := t.processBackendRefs(settingName, sink.OpenTelemetry.BackendCluster, envoyproxy.Namespace, resources, envoyproxy)
 				if err != nil {
 					return nil, err
 				}
-
-				// EG currently support GRPC OTel only, change protocol to GRPC.
+				// TODO: update when OTLP/HTTP is completely supported (logs, traces, metrics)
 				for _, d := range ds {
 					d.Protocol = ir.GRPC
 				}
@@ -692,6 +696,7 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 					CELMatches: validExprs,
 					Resources:  sink.OpenTelemetry.Resources,
 					Headers:    sink.OpenTelemetry.Headers,
+					Authority:  getAuthorityFromDestination(ds),
 					Destination: ir.RouteDestination{
 						Name:     destName,
 						Settings: ds,
@@ -741,20 +746,18 @@ func (t *Translator) processTracing(gw *gwapiv1.Gateway, envoyproxy *egv1a1.Envo
 	// TODO: rename this, so that we can share backend with accesslog?
 	destName := "tracing"
 	settingName := irDestinationSettingName(destName, -1)
-	// TODO: how to get authority from the backendRefs?
 	ds, traffic, err := t.processBackendRefs(settingName, tracing.Provider.BackendCluster, envoyproxy.Namespace, resources, envoyproxy)
 	if err != nil {
 		return nil, err
 	}
-
-	// EG currently support OTel tracing only, change protocol to GRPC.
 	if tracing.Provider.Type == egv1a1.TracingProviderTypeOpenTelemetry {
+		// TODO: update when OTLP/HTTP is completely supported (logs, traces, metrics)
 		for _, d := range ds {
 			d.Protocol = ir.GRPC
 		}
 	}
 
-	var authority string
+	authority := getAuthorityFromDestination(ds)
 
 	// fallback to host and port
 	// TODO: remove support for Host/Port in v1.2
@@ -814,6 +817,42 @@ func proxySamplingRate(tracing *egv1a1.ProxyTracing) float64 {
 	return rate
 }
 
+// getAuthorityFromDestination extracts the gRPC authority from a destination setting.
+// Priority: SNI > hostname > Service/Backend metadata.
+func getAuthorityFromDestination(ds []*ir.DestinationSetting) string {
+	if len(ds) == 0 {
+		return ""
+	}
+	dest := ds[0]
+
+	// Priority 1: SNI from TLS config
+	if dest.TLS != nil && dest.TLS.SNI != nil {
+		return *dest.TLS.SNI
+	}
+
+	// Priority 2: Endpoint host if it's a hostname (not IP)
+	if len(dest.Endpoints) > 0 {
+		host := dest.Endpoints[0].Host
+		if _, err := netip.ParseAddr(host); err != nil {
+			// Not an IP - use as authority
+			return host
+		}
+
+		// Priority 3: Derive from metadata when endpoint is an IP
+		if dest.Metadata != nil && dest.Metadata.Name != "" {
+			if dest.Metadata.Namespace != "" {
+				if dest.Metadata.Kind == resource.KindService {
+					return fmt.Sprintf("%s.%s.svc", dest.Metadata.Name, dest.Metadata.Namespace)
+				}
+				return fmt.Sprintf("%s.%s", dest.Metadata.Name, dest.Metadata.Namespace)
+			}
+			return dest.Metadata.Name
+		}
+	}
+	// Don't set authority to an IP - let Envoy use defaults
+	return ""
+}
+
 func getOpenTelemetryTracingHeaders(provider *egv1a1.TracingProvider) []gwapiv1.HTTPHeader {
 	if provider != nil && provider.OpenTelemetry != nil {
 		return provider.OpenTelemetry.Headers
@@ -821,21 +860,60 @@ func getOpenTelemetryTracingHeaders(provider *egv1a1.TracingProvider) []gwapiv1.
 	return nil
 }
 
-func (t *Translator) processMetrics(envoyproxy *egv1a1.EnvoyProxy, resources *resource.Resources) (*ir.Metrics, error) {
+func (t *Translator) processMetrics(envoyproxy *egv1a1.EnvoyProxy, resources *resource.Resources) (*ir.Metrics, []ir.ResolvedMetricSink, error) {
 	if envoyproxy == nil ||
 		envoyproxy.Spec.Telemetry == nil ||
 		envoyproxy.Spec.Telemetry.Metrics == nil {
-		return nil, nil
+		return nil, nil, nil
 	}
 
-	for _, sink := range envoyproxy.Spec.Telemetry.Metrics.Sinks {
+	var resolvedSinks []ir.ResolvedMetricSink
+	seen := sets.NewString()
+
+	for i, sink := range envoyproxy.Spec.Telemetry.Metrics.Sinks {
 		if sink.OpenTelemetry == nil {
 			continue
 		}
 
-		_, _, err := t.processBackendRefs("", sink.OpenTelemetry.BackendCluster, envoyproxy.Namespace, resources, envoyproxy)
+		destName := fmt.Sprintf("metrics_otel_%d", i)
+		settingName := irDestinationSettingName(destName, -1)
+		ds, _, err := t.processBackendRefs(settingName, sink.OpenTelemetry.BackendCluster, envoyproxy.Namespace, resources, envoyproxy)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
+		}
+		// TODO: update when OTLP/HTTP is completely supported (logs, traces, metrics)
+		for _, d := range ds {
+			d.Protocol = ir.GRPC
+		}
+
+		authority := getAuthorityFromDestination(ds)
+
+		// Fallback to deprecated host/port
+		if len(ds) == 0 && sink.OpenTelemetry.Host != nil {
+			ds = destinationSettingFromHostAndPort(settingName, *sink.OpenTelemetry.Host, uint32(sink.OpenTelemetry.Port))
+			authority = *sink.OpenTelemetry.Host
+		}
+
+		if len(ds) > 0 && len(ds[0].Endpoints) > 0 {
+			// Skip duplicate sinks (same address:port)
+			ep := ds[0].Endpoints[0]
+			addr := net.JoinHostPort(ep.Host, strconv.Itoa(int(ep.Port)))
+			if seen.Has(addr) {
+				continue
+			}
+			seen.Insert(addr)
+
+			resolvedSinks = append(resolvedSinks, ir.ResolvedMetricSink{
+				Destination: ir.RouteDestination{
+					Name:     destName,
+					Settings: ds,
+					Metadata: buildResourceMetadata(envoyproxy, nil),
+				},
+				Authority:                authority,
+				Headers:                  sink.OpenTelemetry.Headers,
+				ReportCountersAsDeltas:   ptr.Deref(sink.OpenTelemetry.ReportCountersAsDeltas, false),
+				ReportHistogramsAsDeltas: ptr.Deref(sink.OpenTelemetry.ReportHistogramsAsDeltas, false),
+			})
 		}
 	}
 
@@ -843,7 +921,7 @@ func (t *Translator) processMetrics(envoyproxy *egv1a1.EnvoyProxy, resources *re
 		EnableVirtualHostStats:          ptr.Deref(envoyproxy.Spec.Telemetry.Metrics.EnableVirtualHostStats, false),
 		EnablePerEndpointStats:          ptr.Deref(envoyproxy.Spec.Telemetry.Metrics.EnablePerEndpointStats, false),
 		EnableRequestResponseSizesStats: ptr.Deref(envoyproxy.Spec.Telemetry.Metrics.EnableRequestResponseSizesStats, false),
-	}, nil
+	}, resolvedSinks, nil
 }
 
 func (t *Translator) processBackendRefs(name string, backendCluster egv1a1.BackendCluster, namespace string,
@@ -876,6 +954,19 @@ func (t *Translator) processBackendRefs(name string, backendCluster egv1a1.Backe
 			// Dynamic resolver destinations are not supported for none-route destinations
 			if ds.IsDynamicResolver {
 				return nil, nil, errors.New("dynamic resolver destinations are not supported")
+			}
+			// Apply TLS config for backend (telemetry) clusters
+			backend := t.GetBackend(ns, string(ref.Name))
+			if backend.Spec.TLS != nil {
+				tlsConfig, err := t.processServerValidationTLSSettings(backend)
+				if err != nil {
+					return nil, nil, err
+				}
+				ds.TLS = tlsConfig
+				// Infer SNI from FQDN for telemetry backends (no Host header available)
+				if ds.TLS.SNI == nil && len(backend.Spec.Endpoints) == 1 && backend.Spec.Endpoints[0].FQDN != nil {
+					ds.TLS.SNI = &backend.Spec.Endpoints[0].FQDN.Hostname
+				}
 			}
 			result = append(result, ds)
 		default:
