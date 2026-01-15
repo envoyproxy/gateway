@@ -63,7 +63,7 @@ func GetServerCommand(asyncErrHandler func(string, error)) *cobra.Command {
 					}
 				},
 			)
-			return server(cmd.Context(), cmd.OutOrStdout(), cmd.ErrOrStderr(), runnerErrors)
+			return server(cmd.Context(), cmd.OutOrStdout(), cmd.ErrOrStderr(), cfgPath, runnerErrors)
 		},
 	}
 	cmd.PersistentFlags().StringVarP(&cfgPath, "config-path", "c", "",
@@ -72,8 +72,8 @@ func GetServerCommand(asyncErrHandler func(string, error)) *cobra.Command {
 }
 
 // server serves Envoy Gateway.
-func server(ctx context.Context, stdout, stderr io.Writer, asyncErrorNotifier *message.RunnerErrors) error {
-	cfg, err := getConfig(stdout, stderr)
+func server(ctx context.Context, stdout, stderr io.Writer, cfgPath string, asyncErrorNotifier *message.RunnerErrors) error {
+	cfg, err := getConfig(stdout, stderr, cfgPath)
 	if err != nil {
 		return err
 	}
@@ -114,8 +114,8 @@ func server(ctx context.Context, stdout, stderr io.Writer, asyncErrorNotifier *m
 }
 
 // getConfig gets the Server configuration
-func getConfig(stdout, stderr io.Writer) (*config.Server, error) {
-	return getConfigByPath(stdout, stderr, cfgPath)
+func getConfig(stdout, stderr io.Writer, cfg string) (*config.Server, error) {
+	return getConfigByPath(stdout, stderr, cfg)
 }
 
 // make `cfgPath` an argument to test it without polluting the global var

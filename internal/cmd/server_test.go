@@ -10,6 +10,7 @@ import (
 	"context"
 	"io"
 	"os"
+	"path"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -29,6 +30,23 @@ kind: EnvoyGateway
 apiVersion: gateway.envoyproxy.io/v1alpha1
 gateway: {}
 `
+
+	fileProviderGatewayConfig = `
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyGateway
+gateway:
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller
+provider:
+  type: Custom
+  custom:
+    resource:
+      type: File
+      file:
+        paths: ["/tmp/envoy-gateway-test"]
+    infrastructure:
+      type: Host
+      host: {}
+`
 )
 
 func TestGetServerCommand(t *testing.T) {
@@ -36,11 +54,15 @@ func TestGetServerCommand(t *testing.T) {
 	require.Equal(t, "server", got.Use)
 }
 
-func TestServerRun(t *testing.T) {
+func TestCustomProviderRun(t *testing.T) {
+	// Use Custom provider to avoid take too much to discovery CRDs
+	configPath := path.Join(t.TempDir(), "envoy-gateway.yaml")
+	require.NoError(t, os.WriteFile(configPath, []byte(fileProviderGatewayConfig), 0600))
+
 	errCh := make(chan error)
 	ctx, cancel := context.WithCancel(t.Context())
 	go func() {
-		errCh <- server(ctx, io.Discard, io.Discard, nil)
+		errCh <- server(ctx, t.Output(), t.Output(), configPath, nil)
 	}()
 	go func() {
 		cancel()
