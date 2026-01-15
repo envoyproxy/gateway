@@ -7,11 +7,11 @@ package cmd
 
 import (
 	"bytes"
+	"context"
 	"io"
 	"os"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -33,7 +33,21 @@ gateway: {}
 
 func TestGetServerCommand(t *testing.T) {
 	got := GetServerCommand(nil)
-	assert.Equal(t, "server", got.Use)
+	require.Equal(t, "server", got.Use)
+}
+
+func TestServerRun(t *testing.T) {
+	errCh := make(chan error)
+	ctx, cancel := context.WithCancel(t.Context())
+	go func() {
+		errCh <- server(ctx, io.Discard, io.Discard, nil)
+	}()
+	go func() {
+		cancel()
+	}()
+
+	err := <-errCh
+	require.NoError(t, err)
 }
 
 func TestGetConfigValidate(t *testing.T) {
