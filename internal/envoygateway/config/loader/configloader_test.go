@@ -9,6 +9,7 @@ import (
 	"context"
 	_ "embed"
 	"os"
+	"sync"
 	"sync/atomic"
 	"testing"
 
@@ -47,7 +48,7 @@ func TestConfigLoader(t *testing.T) {
 	}()
 
 	changed := 0
-	loader := New(cfgPath, s, func(_ context.Context, _ *config.Server) error {
+	loader := New(cfgPath, s, func(_ context.Context, _ *config.Server, _ *sync.WaitGroup) error {
 		changed++
 		t.Logf("config changed %d times", changed)
 		if changed > 1 {
@@ -56,7 +57,7 @@ func TestConfigLoader(t *testing.T) {
 		return nil
 	})
 
-	require.NoError(t, loader.Start(ctx, os.Stdout))
+	require.NoError(t, loader.Start(ctx, os.Stdout, nil))
 	go func() {
 		_ = os.WriteFile(cfgPath, []byte(redisConfig), 0o600)
 	}()
@@ -88,7 +89,7 @@ func TestConfigLoaderStandaloneExtensionServerAndCustomResource(t *testing.T) {
 	resultChannel := make(chan testResult, 1)
 
 	var changed int32
-	loader := New(cfgPath, s, func(_ context.Context, cfg *config.Server) error {
+	loader := New(cfgPath, s, func(_ context.Context, cfg *config.Server, _ *sync.WaitGroup) error {
 		c := atomic.AddInt32(&changed, 1)
 		t.Logf("config changed %d times", c)
 		if c > 1 {
@@ -98,7 +99,7 @@ func TestConfigLoaderStandaloneExtensionServerAndCustomResource(t *testing.T) {
 		return nil
 	})
 
-	require.NoError(t, loader.Start(ctx, os.Stdout))
+	require.NoError(t, loader.Start(ctx, os.Stdout, nil))
 	require.NotNil(t, loader.cfg.EnvoyGateway)
 	require.Nil(t, loader.cfg.EnvoyGateway.ExtensionManager)
 
