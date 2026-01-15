@@ -75,3 +75,7 @@ updates:
       - "/charts/gateway-addons-helm"
     schedule:
       interval: "weekly"
+    groups:
+      helm:
+        patterns:
+          - "*"
