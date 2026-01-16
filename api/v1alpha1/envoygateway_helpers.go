@@ -128,6 +128,33 @@ var defaultRuntimeFlags = map[RuntimeFlag]bool{
 	XDSNameSchemeV2: false,
 }
 
+// defaultExperimentalGatewayAPIs are the default experimental Gateway API flags.
+var defaultExperimentalGatewayAPIs = map[ExperimentalGatewayAPI]bool{
+	XListenerSet:          false,
+	XBackendTrafficPolicy: false,
+}
+
+// IsEnabled checks if an experimental Gateway API is enabled in the EnvoyGateway configuration.
+func (f *ExperimentalGatewayAPIs) IsEnabled(api ExperimentalGatewayAPI) bool {
+	if f != nil {
+		for _, disable := range f.Disabled {
+			if disable == api {
+				return false
+			}
+		}
+		for _, enable := range f.Enabled {
+			if enable == api {
+				return true
+			}
+		}
+	}
+
+	if defaultValue, found := defaultExperimentalGatewayAPIs[api]; found {
+		return defaultValue
+	}
+	return false
+}
+
 // IsEnabled checks if a runtime flag is enabled in the EnvoyGateway configuration.
 func (f *RuntimeFlags) IsEnabled(flag RuntimeFlag) bool {
 	if f != nil {
