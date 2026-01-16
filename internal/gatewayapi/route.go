@@ -755,6 +755,7 @@ func (t *Translator) processHTTPRouteRule(
 				Metadata:          routeRuleMetadata,
 				PathMatch:         irRoute.PathMatch,
 				QueryParamMatches: irRoute.QueryParamMatches,
+				CookieMatches:     irRoute.CookieMatches,
 				CORS:              httpFiltersContext.CORS,
 			}
 

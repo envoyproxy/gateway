@@ -194,6 +194,9 @@ type InjectedCredential struct {
 }
 
 // HTTPRouteMatchFilter defines additional matching criteria for the HTTPRoute rule.
+// At least one matcher must be specified.
+//
+// +kubebuilder:validation:MinProperties=1
 type HTTPRouteMatchFilter struct {
 	// Cookies is a list of cookie matchers evaluated against the HTTP request.
 	// All specified matchers must match.

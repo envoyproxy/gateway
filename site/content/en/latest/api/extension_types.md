@@ -2602,6 +2602,7 @@ _Appears in:_
 
 
 HTTPRouteMatchFilter defines additional matching criteria for the HTTPRoute rule.
+At least one matcher must be specified.
 
 _Appears in:_
 - [HTTPRouteFilterSpec](#httproutefilterspec)

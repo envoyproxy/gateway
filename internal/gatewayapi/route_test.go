@@ -243,7 +243,7 @@ func TestBuildRouteMatchCombinations(t *testing.T) {
 		expected      []routeMatchCombination
 	}{
 		{
-			name: "no rule or filter matches",
+			name:     "no rule or filter matches",
 			expected: nil,
 		},
 		{
@@ -254,10 +254,10 @@ func TestBuildRouteMatchCombinations(t *testing.T) {
 			},
 			expected: []routeMatchCombination{
 				{
-					cookies:        []egv1a1.HTTPCookieMatch{{Name: "a", Value: "1"}},
+					cookies: []egv1a1.HTTPCookieMatch{{Name: "a", Value: "1"}},
 				},
 				{
-					cookies:        []egv1a1.HTTPCookieMatch{{Name: "b", Value: "2"}},
+					cookies: []egv1a1.HTTPCookieMatch{{Name: "b", Value: "2"}},
 				},
 			},
 		},
