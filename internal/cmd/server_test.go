@@ -17,8 +17,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/stretchr/testify/require"
+
+	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 )
 
 var (
@@ -103,7 +104,7 @@ func TestCustomProviderCancelWhenStarting(t *testing.T) {
 	}()
 
 	err := <-errCh
-	require.NoError(t, err)
+	require.ErrorContains(t, err, "context canceled")
 }
 
 func TestCustomProviderFailedToStart(t *testing.T) {

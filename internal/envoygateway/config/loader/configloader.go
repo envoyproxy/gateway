@@ -9,13 +9,13 @@ import (
 	"context"
 	"io"
 	"sync"
-	"sync/atomic"
+
+	"golang.org/x/sync/semaphore"
 
 	"github.com/envoyproxy/gateway/api/v1alpha1/validation"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/filewatcher"
 	"github.com/envoyproxy/gateway/internal/logging"
-	"golang.org/x/sync/semaphore"
 )
 
 type HookFunc func(c context.Context, cfg *config.Server) error
@@ -31,8 +31,7 @@ type Loader struct {
 
 	mu      sync.RWMutex
 	hookErr chan error
-	started atomic.Bool
-
+	
 	w filewatcher.FileWatcher
 }
 
@@ -51,10 +50,6 @@ func New(cfgPath string, cfg *config.Server, f HookFunc) *Loader {
 		w:       filewatcher.NewWatcher(),
 		hookSem: semaphore.NewWeighted(maxConcurrentHooks),
 	}
-}
-
-func (r *Loader) Started() bool {
-	return r.started.Load()
 }
 
 func (r *Loader) Start(ctx context.Context, logOut io.Writer) error {
