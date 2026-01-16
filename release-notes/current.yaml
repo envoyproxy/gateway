@@ -33,6 +33,7 @@ new features: |
   Added support for addIfAbsent header action in ClientTrafficPolicy EarlyRequestHeaders and LateResponseHeaders to add headers only when they don't already exist.
   Added support for tracing tag, which allows to use Envoy string command operators such as `%ENVIRONMENT(...)%`.
   Added support for the experimental XListenerSet API, allowing listeners to be defined in a separate resource and attached to a Gateway. This feature is disabled by default and can be enabled by setting the 'XListenerSet' flag in the EnvoyGateway configuration. Supported route types: HTTPRoute (HTTP/HTTPS), GRPCRoute, TLSRoute, TCPRoute, and UDPRoute. Note: XListenerSet as a TargetRef for xPolicies is not yet supported.
+  Added support for resource attributes on OTLP metrics and tracing sinks via the resources field.
 
 bug fixes: |
   Fixed configured OIDC authorization endpoint being overridden by discovered endpoints from issuer's well-known URL.

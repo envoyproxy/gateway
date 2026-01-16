@@ -744,6 +744,37 @@ func TestResolvedMetricSinksConversion(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "sink with resources",
+			irSinks: []ir.ResolvedMetricSink{
+				{
+					Destination: ir.RouteDestination{
+						Name: "metrics_otel_0",
+						Settings: []*ir.DestinationSetting{
+							{
+								Endpoints: []*ir.DestinationEndpoint{
+									{Host: "otel-collector.example.com", Port: 4317},
+								},
+							},
+						},
+					},
+					Resources: map[string]string{
+						"service.name":           "test-service",
+						"deployment.environment": "test",
+					},
+				},
+			},
+			expected: []bootstrap.MetricSink{
+				{
+					Address: "otel-collector.example.com",
+					Port:    4317,
+					Resources: map[string]string{
+						"service.name":           "test-service",
+						"deployment.environment": "test",
+					},
+				},
+			},
+		},
 	}
 
 	for _, tc := range testCases {

@@ -13,6 +13,10 @@ spec:
             headers:
               - name: Authorization
                 value: Bearer test-api-key
+            resources:
+              service.name: envoy-gateway-test
+              service.version: v1.0.0
+              deployment.environment: test
     tracing:
       samplingRate: 100
       provider:
@@ -23,6 +27,10 @@ spec:
           headers:
             - name: Authorization
               value: Bearer test-api-key
+          resources:
+            service.name: envoy-gateway-test
+            service.version: v1.0.0
+            deployment.environment: test
     accessLog:
       settings:
         - format:
@@ -37,6 +45,10 @@ spec:
                 headers:
                   - name: Authorization
                     value: Bearer test-api-key
+                resources:
+                  service.name: envoy-gateway-test
+                  service.version: v1.0.0
+                  deployment.environment: test
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: GatewayClass

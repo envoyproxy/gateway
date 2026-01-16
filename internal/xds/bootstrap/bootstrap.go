@@ -138,6 +138,8 @@ type MetricSink struct {
 	ReportHistogramsAsDeltas bool
 	// Headers is a list of headers to send with OTLP export requests.
 	Headers []gwapiv1.HTTPHeader
+	// Resources is a map of resource attributes for the metrics sink.
+	Resources map[string]string
 	// TLS contains upstream TLS configuration for the metrics sink.
 	// Nil means no TLS.
 	TLS *MetricSinkTLS

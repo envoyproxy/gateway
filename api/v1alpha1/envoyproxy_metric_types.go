@@ -117,6 +117,10 @@ type ProxyOpenTelemetrySink struct {
 	// +kubebuilder:validation:MinItems=1
 	// +kubebuilder:validation:MaxItems=32
 	Headers []gwapiv1.HTTPHeader `json:"headers,omitempty"`
+	// Resources is a set of labels that describe the source of metrics.
+	// It's recommended to follow semantic conventions: https://opentelemetry.io/docs/reference/specification/resource/semantic_conventions/
+	// +optional
+	Resources map[string]string `json:"resources,omitempty"`
 }
 
 type ProxyPrometheusProvider struct {
