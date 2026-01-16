@@ -392,9 +392,10 @@ xdsIR:
           kind: GRPCRoute
           name: grpcroute-1
           namespace: default
-          trafficPolicy:
-            Name: policy-for-gateway
-            Namespace: envoy-gateway
+          policies:
+          - kind: BackendTrafficPolicy
+            name: policy-for-gateway
+            namespace: envoy-gateway
         name: grpcroute/default/grpcroute-1/rule/0/match/-1/*
         statName: GRPCRoute/default/grpcroute-1/grpcroute-1
         traffic:
@@ -426,9 +427,10 @@ xdsIR:
           kind: GRPCRoute
           name: grpcroute-2
           namespace: default
-          trafficPolicy:
-            Name: policy-for-route-rewrite
-            Namespace: default
+          policies:
+          - kind: BackendTrafficPolicy
+            name: policy-for-route-rewrite
+            namespace: default
         name: grpcroute/default/grpcroute-2/rule/0/match/-1/*
         statName: route=rewrite
         traffic:
@@ -507,9 +509,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-1
           namespace: default
-          trafficPolicy:
-            Name: policy-for-route
-            Namespace: default
+          policies:
+          - kind: BackendTrafficPolicy
+            name: policy-for-route
+            namespace: default
         name: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
         pathMatch:
           distinct: false

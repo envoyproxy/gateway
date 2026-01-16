@@ -8,7 +8,6 @@ package translator
 import (
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	"google.golang.org/protobuf/types/known/structpb"
-	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/envoyproxy/gateway/internal/ir"
 )
@@ -47,8 +46,9 @@ func buildXdsMetadata(metadata *ir.ResourceMetadata) *corev3.Metadata {
 	}
 
 	policyList := &structpb.ListValue{}
-	if metadata.TrafficPolicy != nil {
-		policyList.Values = append(policyList.Values, buildTrafficPolicyMetadata(metadata.TrafficPolicy))
+
+	for _, policy := range metadata.Policies {
+		policyList.Values = append(policyList.Values, buildTrafficPolicyMetadata(policy))
 	}
 
 	if len(policyList.Values) > 0 {
@@ -62,21 +62,21 @@ func buildXdsMetadata(metadata *ir.ResourceMetadata) *corev3.Metadata {
 	return md
 }
 
-func buildTrafficPolicyMetadata(nn *types.NamespacedName) *structpb.Value {
+func buildTrafficPolicyMetadata(md *ir.PolicyMetadata) *structpb.Value {
 	routeResourceFields := map[string]*structpb.Value{
 		envoyGatewayXdsMetadataKeyKind: {
 			Kind: &structpb.Value_StringValue{
-				StringValue: "BackendTrafficPolicy",
+				StringValue: md.Kind,
 			},
 		},
 		envoyGatewayXdsMetadataKeyName: {
 			Kind: &structpb.Value_StringValue{
-				StringValue: nn.Name,
+				StringValue: md.Name,
 			},
 		},
 		envoyGatewayXdsMetadataKeyNamespace: {
 			Kind: &structpb.Value_StringValue{
-				StringValue: nn.Namespace,
+				StringValue: md.Namespace,
 			},
 		},
 	}

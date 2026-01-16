@@ -542,10 +542,11 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-1
           namespace: default
+          policies:
+          - kind: BackendTrafficPolicy
+            name: merged-policy-for-httproute-1
+            namespace: default
           sectionName: rule-1
-          trafficPolicy:
-            Name: merged-policy-for-httproute-1
-            Namespace: default
         name: httproute/default/httproute-1/rule/0/match/0/*
         pathMatch:
           distinct: false
@@ -588,10 +589,11 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-1
           namespace: default
+          policies:
+          - kind: BackendTrafficPolicy
+            name: policy-for-httproute-1-rule-2
+            namespace: default
           sectionName: rule-2
-          trafficPolicy:
-            Name: policy-for-httproute-1-rule-2
-            Namespace: default
         name: httproute/default/httproute-1/rule/1/match/0/*
         pathMatch:
           distinct: false
@@ -625,9 +627,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-2
           namespace: default
-          trafficPolicy:
-            Name: merged-policy-for-httproute-2
-            Namespace: default
+          policies:
+          - kind: BackendTrafficPolicy
+            name: merged-policy-for-httproute-2
+            namespace: default
         name: httproute/default/httproute-2/rule/0/match/0/*
         pathMatch:
           distinct: false
@@ -683,9 +686,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-2
           namespace: default
-          trafficPolicy:
-            Name: merged-policy-for-httproute-2
-            Namespace: default
+          policies:
+          - kind: BackendTrafficPolicy
+            name: merged-policy-for-httproute-2
+            namespace: default
         name: httproute/default/httproute-2/rule/0/match/0/*
         pathMatch:
           distinct: false
@@ -725,9 +729,10 @@ xdsIR:
           kind: GRPCRoute
           name: grpcroute-1
           namespace: default
-          trafficPolicy:
-            Name: merged-policy-for-grpcroute-1
-            Namespace: default
+          policies:
+          - kind: BackendTrafficPolicy
+            name: merged-policy-for-grpcroute-1
+            namespace: default
         name: grpcroute/default/grpcroute-1/rule/0/match/-1/*
         traffic:
           backendConnection:

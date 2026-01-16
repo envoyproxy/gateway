@@ -387,9 +387,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-2
           namespace: default
-          trafficPolicy:
-            Name: dns-policy-for-httproute-2
-            Namespace: default
+          policies:
+          - kind: BackendTrafficPolicy
+            name: dns-policy-for-httproute-2
+            namespace: default
         name: httproute/default/httproute-2/rule/0/match/0/gateway_envoyproxy_io
         pathMatch:
           distinct: false
@@ -431,9 +432,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-2
           namespace: default
-          trafficPolicy:
-            Name: dns-policy-for-httproute-2
-            Namespace: default
+          policies:
+          - kind: BackendTrafficPolicy
+            name: dns-policy-for-httproute-2
+            namespace: default
         name: httproute/default/httproute-2/rule/1/match/0/gateway_envoyproxy_io
         pathMatch:
           distinct: false

@@ -1089,10 +1089,11 @@ func appendTrafficPolicyMetadata(md *ir.ResourceMetadata, policy *egv1a1.Backend
 		return
 	}
 
-	md.TrafficPolicy = &types.NamespacedName{
+	md.Policies = append(md.Policies, &ir.PolicyMetadata{
+		Kind:      egv1a1.KindBackendTrafficPolicy,
 		Name:      policy.Name,
 		Namespace: policy.Namespace,
-	}
+	})
 }
 
 func (t *Translator) buildRateLimit(policy *egv1a1.BackendTrafficPolicy) (*ir.RateLimit, error) {

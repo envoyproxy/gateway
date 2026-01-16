@@ -18,10 +18,6 @@
       metadata:
         filterMetadata:
           envoy-gateway:
-            policies:
-            - kind: BackendTrafficPolicy
-              name: policy-for-gateway
-              namespace: envoy-gateway
             resources:
             - kind: GRPCRoute
               name: grpcroute-1

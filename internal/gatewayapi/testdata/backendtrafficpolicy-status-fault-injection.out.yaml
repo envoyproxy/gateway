@@ -406,9 +406,10 @@ xdsIR:
           kind: GRPCRoute
           name: grpcroute-1
           namespace: default
-          trafficPolicy:
-            Name: policy-for-grpcroute
-            Namespace: default
+          policies:
+          - kind: BackendTrafficPolicy
+            name: policy-for-grpcroute
+            namespace: default
         name: grpcroute/default/grpcroute-1/rule/0/match/-1/*
         traffic:
           faultInjection:
@@ -490,9 +491,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-2
           namespace: default
-          trafficPolicy:
-            Name: policy-for-gateway
-            Namespace: envoy-gateway
+          policies:
+          - kind: BackendTrafficPolicy
+            name: policy-for-gateway
+            namespace: envoy-gateway
         name: httproute/default/httproute-2/rule/0/match/0/gateway_envoyproxy_io
         pathMatch:
           distinct: false
@@ -528,9 +530,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-1
           namespace: default
-          trafficPolicy:
-            Name: policy-for-route
-            Namespace: default
+          policies:
+          - kind: BackendTrafficPolicy
+            name: policy-for-route
+            namespace: default
         name: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
         pathMatch:
           distinct: false
