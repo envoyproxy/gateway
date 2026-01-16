@@ -1896,10 +1896,6 @@ ExperimentalGatewayAPI defines an experimental Gateway API resource that can be 
 _Appears in:_
 - [ExperimentalGatewayAPIs](#experimentalgatewayapis)
 
-| Value | Description |
-| ----- | ----------- |
-| `XListenerSet` | XListenerSet enables the Gateway API XListenerSet resource.<br /> | 
-| `XBackendTrafficPolicy` | XBackendTrafficPolicy enables the Gateway API XBackendTrafficPolicy resource.<br /> | 
 
 
 #### ExperimentalGatewayAPIs

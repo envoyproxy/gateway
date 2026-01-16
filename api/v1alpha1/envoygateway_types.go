@@ -118,9 +118,9 @@ type ExperimentalGatewayAPI string
 
 const (
 	// XListenerSet enables the Gateway API XListenerSet resource.
-	XListenerSet ExperimentalGatewayAPI = "XListenerSet"
+	// XListenerSet ExperimentalGatewayAPI = "XListenerSet"
 	// XBackendTrafficPolicy enables the Gateway API XBackendTrafficPolicy resource.
-	XBackendTrafficPolicy ExperimentalGatewayAPI = "XBackendTrafficPolicy"
+	// XBackendTrafficPolicy ExperimentalGatewayAPI = "XBackendTrafficPolicy"
 )
 
 // ExperimentalGatewayAPIs provides a mechanism to opt into experimental Gateway API resources.
