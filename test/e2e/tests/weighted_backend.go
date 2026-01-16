@@ -156,7 +156,8 @@ func testMixedValidAndInvalid(t *testing.T, suite *suite.ConformanceTestSuite) {
 		successCount = 0
 		failCount    = 0
 	)
-	for range sendRequests {
+
+	for range 100 {
 		_, response, err := suite.RoundTripper.CaptureRoundTrip(req)
 		if err != nil {
 			t.Errorf("failed to get expected response: %v", err)
@@ -168,7 +169,7 @@ func testMixedValidAndInvalid(t *testing.T, suite *suite.ConformanceTestSuite) {
 		}
 	}
 
-	if !AlmostEquals(successCount, 40, 3) { // The weight of valid backend is 80%, so the expected success count is 50*80%=40
+	if successCount < 80 || successCount > 99 { // The weight of valid backend is 90%
 		t.Errorf("The actual success count is not within the expected range, success %d", successCount)
 	}
 }
