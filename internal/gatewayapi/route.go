@@ -749,13 +749,15 @@ func (t *Translator) processHTTPRouteRule(
 		//
 		// Envoy Gateway improves user experience by implicitly creating the envoy route for CORS preflight.
 		if (httpFiltersContext != nil && httpFiltersContext.CORS != nil) &&
-			(match.Method != nil && string(*match.Method) != "OPTIONS") {
+			(match.Method != nil && string(*match.Method) != "OPTIONS") &&
+			// Browsers will not send cookies for CORS preflight requests, so there's no need to create a CORS preflight
+			// route if there are no cookie matches.
+			len(irRoute.CookieMatches) == 0 {
 			corsRoute := &ir.HTTPRoute{
 				Name:              irRouteName(httpRoute, ruleIdx, matchIdx) + "/cors-preflight",
 				Metadata:          routeRuleMetadata,
 				PathMatch:         irRoute.PathMatch,
 				QueryParamMatches: irRoute.QueryParamMatches,
-				CookieMatches:     irRoute.CookieMatches,
 				CORS:              httpFiltersContext.CORS,
 			}
 
