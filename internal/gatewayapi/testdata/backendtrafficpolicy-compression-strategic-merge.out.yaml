@@ -393,9 +393,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-3
           namespace: default
-          trafficPolicy:
-            Name: route-compression-policy-inherit
-            Namespace: default
+          policies:
+          - kind: BackendTrafficPolicy
+            name: route-compression-policy-inherit
+            namespace: default
         name: httproute/default/httproute-3/rule/0/match/0/gateway_envoyproxy_io
         pathMatch:
           distinct: false
@@ -430,9 +431,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-2
           namespace: default
-          trafficPolicy:
-            Name: route-compression-policy-no-merge
-            Namespace: default
+          policies:
+          - kind: BackendTrafficPolicy
+            name: route-compression-policy-no-merge
+            namespace: default
         name: httproute/default/httproute-2/rule/0/match/0/gateway_envoyproxy_io
         pathMatch:
           distinct: false
@@ -468,9 +470,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-1
           namespace: default
-          trafficPolicy:
-            Name: route-compression-policy
-            Namespace: default
+          policies:
+          - kind: BackendTrafficPolicy
+            name: route-compression-policy
+            namespace: default
         name: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
         pathMatch:
           distinct: false

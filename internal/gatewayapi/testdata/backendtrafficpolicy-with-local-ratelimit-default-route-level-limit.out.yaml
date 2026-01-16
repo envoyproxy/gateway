@@ -218,9 +218,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-1
           namespace: default
-          trafficPolicy:
-            Name: policy-for-gateway
-            Namespace: envoy-gateway
+          policies:
+          - kind: BackendTrafficPolicy
+            name: policy-for-gateway
+            namespace: envoy-gateway
         name: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
         pathMatch:
           distinct: false

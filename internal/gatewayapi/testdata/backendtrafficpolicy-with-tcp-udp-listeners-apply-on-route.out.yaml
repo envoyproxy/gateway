@@ -406,9 +406,10 @@ xdsIR:
           kind: TCPRoute
           name: tcp-app-1
           namespace: default
-          trafficPolicy:
-            Name: policy-for-gateway-2
-            Namespace: default
+          policies:
+          - kind: BackendTrafficPolicy
+            name: policy-for-gateway-2
+            namespace: default
         name: tcproute/default/tcp-app-1
         proxyProtocol:
           version: V2

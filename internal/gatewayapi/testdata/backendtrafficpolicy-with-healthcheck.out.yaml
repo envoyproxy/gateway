@@ -844,9 +844,10 @@ xdsIR:
           kind: GRPCRoute
           name: grpcroute-1
           namespace: default
-          trafficPolicy:
-            Name: policy-for-gateway
-            Namespace: envoy-gateway
+          policies:
+          - kind: BackendTrafficPolicy
+            name: policy-for-gateway
+            namespace: envoy-gateway
         name: grpcroute/default/grpcroute-1/rule/0/match/-1/*
         traffic:
           healthCheck:
@@ -897,9 +898,10 @@ xdsIR:
           kind: GRPCRoute
           name: grpcroute-3
           namespace: default
-          trafficPolicy:
-            Name: policy-for-grpc-route-3
-            Namespace: default
+          policies:
+          - kind: BackendTrafficPolicy
+            name: policy-for-grpc-route-3
+            namespace: default
         name: grpcroute/default/grpcroute-3/rule/0/match/-1/*
         traffic:
           healthCheck:
@@ -935,9 +937,10 @@ xdsIR:
           kind: GRPCRoute
           name: grpcroute-2
           namespace: default
-          trafficPolicy:
-            Name: policy-for-grpc-route
-            Namespace: default
+          policies:
+          - kind: BackendTrafficPolicy
+            name: policy-for-grpc-route
+            namespace: default
         name: grpcroute/default/grpcroute-2/rule/0/match/-1/*
         traffic:
           healthCheck:
@@ -1019,9 +1022,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-2
           namespace: default
-          trafficPolicy:
-            Name: policy-for-route-2
-            Namespace: default
+          policies:
+          - kind: BackendTrafficPolicy
+            name: policy-for-route-2
+            namespace: default
         name: httproute/default/httproute-2/rule/0/match/0/gateway_envoyproxy_io
         pathMatch:
           distinct: false
@@ -1072,9 +1076,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-3
           namespace: default
-          trafficPolicy:
-            Name: policy-for-route-3
-            Namespace: default
+          policies:
+          - kind: BackendTrafficPolicy
+            name: policy-for-route-3
+            namespace: default
         name: httproute/default/httproute-3/rule/0/match/0/gateway_envoyproxy_io
         pathMatch:
           distinct: false
@@ -1125,9 +1130,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-4
           namespace: default
-          trafficPolicy:
-            Name: policy-for-route-4
-            Namespace: default
+          policies:
+          - kind: BackendTrafficPolicy
+            name: policy-for-route-4
+            namespace: default
         name: httproute/default/httproute-4/rule/0/match/0/gateway_envoyproxy_io
         pathMatch:
           distinct: false
@@ -1173,9 +1179,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-5
           namespace: default
-          trafficPolicy:
-            Name: policy-for-route-5
-            Namespace: default
+          policies:
+          - kind: BackendTrafficPolicy
+            name: policy-for-route-5
+            namespace: default
         name: httproute/default/httproute-5/rule/0/match/0/gateway_envoyproxy_io
         pathMatch:
           distinct: false
@@ -1215,9 +1222,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-1
           namespace: default
-          trafficPolicy:
-            Name: policy-for-route-1
-            Namespace: default
+          policies:
+          - kind: BackendTrafficPolicy
+            name: policy-for-route-1
+            namespace: default
         name: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
         pathMatch:
           distinct: false

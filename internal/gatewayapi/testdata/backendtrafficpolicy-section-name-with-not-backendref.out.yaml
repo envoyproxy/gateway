@@ -171,10 +171,11 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-1
           namespace: default
+          policies:
+          - kind: BackendTrafficPolicy
+            name: btp-1
+            namespace: default
           sectionName: not-backend-ref
-          trafficPolicy:
-            Name: btp-1
-            Namespace: default
         name: httproute/default/httproute-1/rule/0/match/0/*
         pathMatch:
           distinct: false
