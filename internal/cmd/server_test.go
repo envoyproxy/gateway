@@ -86,13 +86,22 @@ func testHook(c context.Context, cfg *config.Server) error {
 	return nil
 }
 
-func TestCustomProviderCancelWhenStarting(t *testing.T) {
+func testCustomProvider(t *testing.T, genCert bool) (string, string) {
 	// Use Custom provider to avoid take too much to discovery CRDs
 	configHome := t.TempDir()
 	cfgFileContent := strings.ReplaceAll(fileProviderGatewayConfig, "[CONFIG_HOME_PLACE_HODLER]", configHome)
 	configPath := path.Join(t.TempDir(), "envoy-gateway.yaml")
 	require.NoError(t, os.WriteFile(configPath, []byte(cfgFileContent), 0o600))
 
+	if genCert {
+		require.NoError(t, certGen(t.Context(), t.Output(), true, configHome))
+	}
+
+	return configHome, configPath
+}
+
+func TestCustomProviderCancelWhenStarting(t *testing.T) {
+	_, configPath := testCustomProvider(t, false)
 	started := &atomic.Bool{}
 	errCh := make(chan error)
 	ctx, cancel := context.WithCancel(t.Context())
@@ -108,11 +117,7 @@ func TestCustomProviderCancelWhenStarting(t *testing.T) {
 }
 
 func TestCustomProviderFailedToStart(t *testing.T) {
-	// Use Custom provider to avoid take too much to discovery CRDs
-	configHome := t.TempDir()
-	cfgFileContent := strings.ReplaceAll(fileProviderGatewayConfig, "[CONFIG_HOME_PLACE_HODLER]", configHome)
-	configPath := path.Join(t.TempDir(), "envoy-gateway.yaml")
-	require.NoError(t, os.WriteFile(configPath, []byte(cfgFileContent), 0o600))
+	_, configPath := testCustomProvider(t, false)
 
 	started := &atomic.Bool{}
 	errCh := make(chan error)
@@ -127,13 +132,7 @@ func TestCustomProviderFailedToStart(t *testing.T) {
 }
 
 func TestCustomProviderCancelWhenConfigReload(t *testing.T) {
-	// Use Custom provider to avoid take too much to discovery CRDs
-	configHome := t.TempDir()
-	cfgFileContent := strings.ReplaceAll(fileProviderGatewayConfig, "[CONFIG_HOME_PLACE_HODLER]", configHome)
-	configPath := path.Join(t.TempDir(), "envoy-gateway.yaml")
-	require.NoError(t, os.WriteFile(configPath, []byte(cfgFileContent), 0o600))
-
-	require.NoError(t, certGen(t.Context(), t.Output(), true, configHome))
+	configHome, configPath := testCustomProvider(t, true)
 
 	started := &atomic.Bool{}
 	errCh := make(chan error)
