@@ -130,8 +130,8 @@ var defaultRuntimeFlags = map[RuntimeFlag]bool{
 
 // defaultExperimentalGatewayAPIs are the default experimental Gateway API flags.
 var defaultExperimentalGatewayAPIs = map[ExperimentalGatewayAPI]bool{
-	//XListenerSet:          false,
-	//XBackendTrafficPolicy: false,
+	// XListenerSet:          false,
+	// XBackendTrafficPolicy: false,
 }
 
 // IsEnabled checks if an experimental Gateway API is enabled in the EnvoyGateway configuration.
