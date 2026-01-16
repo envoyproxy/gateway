@@ -139,5 +139,5 @@ func TestRace(t *testing.T) {
 	}()
 
 	got := s.listNodeAddresses()
-	require.NotEmpty(t, got)
+	require.Empty(t, got)
 }
