@@ -16,6 +16,7 @@ import (
 	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -228,6 +229,105 @@ func TestGetIREndpointsFromEndpointSlices(t *testing.T) {
 			fmt.Println()
 			require.Equal(t, tt.expectedEndpoints, endpoints)
 			require.Equal(t, tt.expectedAddrType, *addrType)
+		})
+	}
+}
+
+func TestBuildRouteMatchCombinations(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name          string
+		ruleMatches   []gwapiv1.HTTPRouteMatch
+		filterMatches []egv1a1.HTTPRouteMatchFilter
+		expected      []routeMatchCombination
+	}{
+		{
+			name: "no rule or filter matches",
+			expected: nil,
+		},
+		{
+			name: "filter matches only",
+			filterMatches: []egv1a1.HTTPRouteMatchFilter{
+				{Cookies: []egv1a1.HTTPCookieMatch{{Name: "a", Value: "1"}}},
+				{Cookies: []egv1a1.HTTPCookieMatch{{Name: "b", Value: "2"}}},
+			},
+			expected: []routeMatchCombination{
+				{
+					cookies:        []egv1a1.HTTPCookieMatch{{Name: "a", Value: "1"}},
+				},
+				{
+					cookies:        []egv1a1.HTTPCookieMatch{{Name: "b", Value: "2"}},
+				},
+			},
+		},
+		{
+			name: "rule matches only",
+			ruleMatches: []gwapiv1.HTTPRouteMatch{
+				{Path: &gwapiv1.HTTPPathMatch{Value: ptr.To("/foo")}},
+				{Path: &gwapiv1.HTTPPathMatch{Value: ptr.To("/bar")}},
+			},
+			expected: []routeMatchCombination{
+				{HTTPRouteMatch: gwapiv1.HTTPRouteMatch{Path: &gwapiv1.HTTPPathMatch{Value: ptr.To("/foo")}}},
+				{HTTPRouteMatch: gwapiv1.HTTPRouteMatch{Path: &gwapiv1.HTTPPathMatch{Value: ptr.To("/bar")}}},
+			},
+		},
+		{
+			name: "rule and filter matches",
+			ruleMatches: []gwapiv1.HTTPRouteMatch{
+				{Path: &gwapiv1.HTTPPathMatch{Value: ptr.To("/foo")}},
+				{
+					Path: &gwapiv1.HTTPPathMatch{Value: ptr.To("/bar")},
+					Headers: []gwapiv1.HTTPHeaderMatch{
+						{Name: "a", Value: "1"},
+						{Name: "b", Value: "2"},
+						{Name: "c", Value: "3"},
+					},
+				},
+			},
+			filterMatches: []egv1a1.HTTPRouteMatchFilter{
+				{Cookies: []egv1a1.HTTPCookieMatch{{Name: "a", Value: "1"}}},
+				{Cookies: []egv1a1.HTTPCookieMatch{{Name: "b", Value: "2"}, {Name: "c", Value: "3"}}},
+			},
+			expected: []routeMatchCombination{
+				{
+					HTTPRouteMatch: gwapiv1.HTTPRouteMatch{Path: &gwapiv1.HTTPPathMatch{Value: ptr.To("/foo")}},
+					cookies:        []egv1a1.HTTPCookieMatch{{Name: "a", Value: "1"}},
+				},
+				{
+					HTTPRouteMatch: gwapiv1.HTTPRouteMatch{Path: &gwapiv1.HTTPPathMatch{Value: ptr.To("/foo")}},
+					cookies:        []egv1a1.HTTPCookieMatch{{Name: "b", Value: "2"}, {Name: "c", Value: "3"}},
+				},
+				{
+					HTTPRouteMatch: gwapiv1.HTTPRouteMatch{
+						Path: &gwapiv1.HTTPPathMatch{Value: ptr.To("/bar")},
+						Headers: []gwapiv1.HTTPHeaderMatch{
+							{Name: "a", Value: "1"},
+							{Name: "b", Value: "2"},
+							{Name: "c", Value: "3"},
+						},
+					},
+					cookies: []egv1a1.HTTPCookieMatch{{Name: "a", Value: "1"}},
+				},
+				{
+					HTTPRouteMatch: gwapiv1.HTTPRouteMatch{
+						Path: &gwapiv1.HTTPPathMatch{Value: ptr.To("/bar")},
+						Headers: []gwapiv1.HTTPHeaderMatch{
+							{Name: "a", Value: "1"},
+							{Name: "b", Value: "2"},
+							{Name: "c", Value: "3"},
+						},
+					},
+					cookies: []egv1a1.HTTPCookieMatch{{Name: "b", Value: "2"}, {Name: "c", Value: "3"}},
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			combos := buildRouteMatchCombinations(tt.ruleMatches, tt.filterMatches)
+			require.Equal(t, tt.expected, combos)
 		})
 	}
 }
