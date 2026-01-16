@@ -46,6 +46,14 @@
                   value: Bearer my-api-key
                 - key: X-Tenant-ID
                   value: tenant-123
+              resourceDetectors:
+              - name: envoy.tracers.opentelemetry.resource_detectors.static_config
+                typedConfig:
+                  '@type': type.googleapis.com/envoy.extensions.tracers.opentelemetry.resource_detectors.v3.StaticConfigResourceDetectorConfig
+                  attributes:
+                    deployment.environment: test
+                    service.name: test-service
+                    service.version: v1.0.0
               serviceName: fake-name.fake-ns
           randomSampling:
             value: 90

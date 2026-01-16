@@ -2598,6 +2598,7 @@ type Tracing struct {
 	Authority    string                      `json:"authority,omitempty"`
 	SamplingRate float64                     `json:"samplingRate,omitempty"`
 	CustomTags   map[string]egv1a1.CustomTag `json:"customTags,omitempty"`
+	Resources    map[string]string           `json:"resources,omitempty" yaml:"resources,omitempty"`
 	Destination  RouteDestination            `json:"destination,omitempty"`
 	Traffic      *TrafficFeatures            `json:"traffic,omitempty"`
 	Provider     egv1a1.TracingProvider      `json:"provider"`

@@ -70,6 +70,8 @@ type ResolvedMetricSink struct {
 	Authority string `json:"authority,omitempty" yaml:"authority,omitempty"`
 	// Headers to send with OTLP export requests.
 	Headers []gwapiv1.HTTPHeader `json:"headers,omitempty" yaml:"headers,omitempty"`
+	// Resources is a map of resource attributes for the metrics sink.
+	Resources map[string]string `json:"resources,omitempty" yaml:"resources,omitempty"`
 	// ReportCountersAsDeltas configures counters to use delta temporality.
 	ReportCountersAsDeltas bool `json:"reportCountersAsDeltas,omitempty" yaml:"reportCountersAsDeltas,omitempty"`
 	// ReportHistogramsAsDeltas configures histograms to use delta temporality.

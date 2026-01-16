@@ -187,6 +187,34 @@ func (c *GRPCCollector) TakeLog() *logsv1.LogRecord {
 	}
 }
 
+// TakeResourceLogs returns resource logs or nil if none were recorded within the timeout.
+func (c *GRPCCollector) TakeResourceLogs() *logsv1.ResourceLogs {
+	select {
+	case resourceLogs := <-c.logCh:
+		return resourceLogs
+	case <-time.After(otlpTimeout):
+		return nil
+	}
+}
+
+// TakeResourceSpans returns resource spans or nil if none were recorded within the timeout.
+func (c *GRPCCollector) TakeResourceSpans() *tracev1.ResourceSpans {
+	select {
+	case resourceSpans := <-c.traceCh:
+		return resourceSpans
+	case <-time.After(otlpTimeout):
+		return nil
+	}
+}
+
+// GetResourceAttribute returns the string value for the given key from resource attributes.
+func GetResourceAttribute(r *resourcev1.Resource, key string) string {
+	if r == nil {
+		return ""
+	}
+	return GetAttributeString(r.Attributes, key)
+}
+
 // TakeSpan returns a single span or nil if none were recorded within the timeout.
 func (c *GRPCCollector) TakeSpan() *tracev1.Span {
 	select {
