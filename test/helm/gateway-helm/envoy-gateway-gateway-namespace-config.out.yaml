@@ -40,7 +40,7 @@ data:
           type: GatewayNamespace
         rateLimitDeployment:
           container:
-            image: docker.io/envoyproxy/ratelimit:99d85510
+            image: docker.io/envoyproxy/ratelimit:a28b84d0
           patch:
             type: StrategicMerge
             value:
