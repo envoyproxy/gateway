@@ -9,12 +9,13 @@ import (
 	"context"
 	"io"
 	"sync"
-	"time"
+	"sync/atomic"
 
 	"github.com/envoyproxy/gateway/api/v1alpha1/validation"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/filewatcher"
 	"github.com/envoyproxy/gateway/internal/logging"
+	"golang.org/x/sync/semaphore"
 )
 
 type HookFunc func(c context.Context, cfg *config.Server) error
@@ -24,9 +25,13 @@ type Loader struct {
 	cfg     *config.Server
 	logger  logging.Logger
 	cancel  context.CancelFunc
+
+	hookSem *semaphore.Weighted
 	hook    HookFunc
+
 	mu      sync.RWMutex
 	hookErr chan error
+	started atomic.Bool
 
 	w filewatcher.FileWatcher
 }
@@ -39,11 +44,18 @@ func New(cfgPath string, cfg *config.Server, f HookFunc) *Loader {
 		hook:    f,
 		hookErr: make(chan error, 1),
 		w:       filewatcher.NewWatcher(),
+		hookSem: semaphore.NewWeighted(1),
 	}
 }
 
-func (r *Loader) Start(ctx context.Context, logOut io.Writer, wg *sync.WaitGroup) error {
-	r.runHook(ctx, wg)
+func (r *Loader) Started() bool {
+	return r.started.Load()
+}
+
+func (r *Loader) Start(ctx context.Context, logOut io.Writer) error {
+	if err := r.runHook(ctx); err != nil {
+		return err
+	}
 	if r.cfgPath == "" {
 		r.logger.Info("no config file provided, skipping config watcher")
 		return nil
@@ -92,11 +104,9 @@ func (r *Loader) Start(ctx context.Context, logOut io.Writer, wg *sync.WaitGroup
 					r.cancel()
 				}
 
-				// TODO: we need to make sure that all runners are stopped, before we start the new ones
-				// Otherwise we might end up with error listening on:8081
-				time.Sleep(3 * time.Second)
-
-				r.runHook(ctx, wg)
+				if err := r.runHook(ctx); err != nil {
+					r.logger.Error(err, "failed to run hook after config change")
+				}
 			case err := <-r.w.Errors(r.cfgPath):
 				r.logger.Error(err, "watcher error")
 			case <-ctx.Done():
@@ -111,22 +121,22 @@ func (r *Loader) Start(ctx context.Context, logOut io.Writer, wg *sync.WaitGroup
 	return nil
 }
 
-func (r *Loader) runHook(ctx context.Context, wg *sync.WaitGroup) {
+func (r *Loader) runHook(ctx context.Context) error {
 	if r.hook == nil {
-		return
+		return nil
 	}
-
 	r.logger.Info("running hook")
 	cfgCopy := r.snapshotConfig()
 	c, cancel := context.WithCancel(ctx)
 	r.cancel = cancel
-	wg.Add(1)
+	if err := r.hookSem.Acquire(ctx, 1); err != nil {
+		return err
+	}
 	go func(ctx context.Context) {
 		defer func() {
-			wg.Done()
+			r.hookSem.Release(1)
 			cancel()
 		}()
-
 		if err := r.hook(ctx, cfgCopy); err != nil {
 			r.logger.Error(err, "hook error")
 			// There is nothing we can do here, throw the error to the main process to exit
@@ -134,11 +144,22 @@ func (r *Loader) runHook(ctx context.Context, wg *sync.WaitGroup) {
 			r.sendHookError(err)
 		}
 	}(c)
+	return nil
 }
 
 // Errors returns a channel where hook errors are reported.
 func (r *Loader) Errors() <-chan error {
 	return r.hookErr
+}
+
+// Wait returns when success to acquire hookSem, which means no hook is running.
+func (r *Loader) Wait() error {
+	if err := r.hookSem.Acquire(context.TODO(), 1); err != nil {
+		return err
+	}
+
+	r.hookSem.Release(1)
+	return nil
 }
 
 func (r *Loader) sendHookError(err error) {

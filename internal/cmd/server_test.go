@@ -8,11 +8,16 @@ package cmd
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"io"
 	"os"
 	"path"
+	"strings"
+	"sync/atomic"
 	"testing"
+	"time"
 
+	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/stretchr/testify/require"
 )
 
@@ -45,7 +50,26 @@ provider:
         paths: ["/tmp/envoy-gateway-test"]
     infrastructure:
       type: Host
-      host: {}
+      host:
+        configHome: [CONFIG_HOME_PLACE_HODLER]
+`
+
+	fileProviderGatewayConfigChanged = `
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyGateway
+gateway:
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller
+provider:
+  type: Custom
+  custom:
+    resource:
+      type: File
+      file:
+        paths: ["/tmp/envoy-gateway-test2"]
+    infrastructure:
+      type: Host
+      host:
+        configHome: [CONFIG_HOME_PLACE_HODLER]
 `
 )
 
@@ -54,21 +78,103 @@ func TestGetServerCommand(t *testing.T) {
 	require.Equal(t, "server", got.Use)
 }
 
-func TestCustomProviderRun(t *testing.T) {
-	// Use Custom provider to avoid take too much to discovery CRDs
-	configPath := path.Join(t.TempDir(), "envoy-gateway.yaml")
-	require.NoError(t, os.WriteFile(configPath, []byte(fileProviderGatewayConfig), 0o600))
+func testHook(c context.Context, cfg *config.Server) error {
+	if err := startRunners(c, cfg, nil); err != nil {
+		return err
+	}
+	return nil
+}
 
+func TestCustomProviderCancelWhenStarting(t *testing.T) {
+	// Use Custom provider to avoid take too much to discovery CRDs
+	configHome := t.TempDir()
+	cfgFileContent := strings.ReplaceAll(fileProviderGatewayConfig, "[CONFIG_HOME_PLACE_HODLER]", configHome)
+	configPath := path.Join(t.TempDir(), "envoy-gateway.yaml")
+	require.NoError(t, os.WriteFile(configPath, []byte(cfgFileContent), 0o600))
+
+	started := &atomic.Bool{}
 	errCh := make(chan error)
 	ctx, cancel := context.WithCancel(t.Context())
 	go func() {
-		errCh <- server(ctx, t.Output(), t.Output(), configPath, nil)
+		errCh <- server(ctx, t.Output(), t.Output(), configPath, started, testHook)
 	}()
 	go func() {
 		cancel()
 	}()
 
 	err := <-errCh
+	require.NoError(t, err)
+}
+
+func TestCustomProviderFailedToStart(t *testing.T) {
+	// Use Custom provider to avoid take too much to discovery CRDs
+	configHome := t.TempDir()
+	cfgFileContent := strings.ReplaceAll(fileProviderGatewayConfig, "[CONFIG_HOME_PLACE_HODLER]", configHome)
+	configPath := path.Join(t.TempDir(), "envoy-gateway.yaml")
+	require.NoError(t, os.WriteFile(configPath, []byte(cfgFileContent), 0o600))
+
+	started := &atomic.Bool{}
+	errCh := make(chan error)
+	ctx, cancel := context.WithCancel(t.Context())
+	go func() {
+		errCh <- server(ctx, t.Output(), t.Output(), configPath, started, testHook)
+	}()
+
+	err := <-errCh
+	cancel()
+	require.Error(t, err, "failed to load TLS config")
+}
+
+func TestCustomProviderCancelWhenConfigReload(t *testing.T) {
+	// Use Custom provider to avoid take too much to discovery CRDs
+	configHome := t.TempDir()
+	cfgFileContent := strings.ReplaceAll(fileProviderGatewayConfig, "[CONFIG_HOME_PLACE_HODLER]", configHome)
+	configPath := path.Join(t.TempDir(), "envoy-gateway.yaml")
+	require.NoError(t, os.WriteFile(configPath, []byte(cfgFileContent), 0o600))
+
+	require.NoError(t, certGen(t.Context(), t.Output(), true, configHome))
+
+	started := &atomic.Bool{}
+	errCh := make(chan error)
+	ctx, cancel := context.WithCancel(t.Context())
+	count := atomic.Int32{}
+	hook := func(c context.Context, cfg *config.Server) error {
+		if count.Add(1) >= 2 {
+			t.Logf("Config reload triggered, cancelling context")
+			go cancel()
+		}
+		if err := startRunners(c, cfg, nil); err != nil {
+			return err
+		}
+		return nil
+	}
+	go func() {
+		errCh <- server(ctx, t.Output(), t.Output(), configPath, started, hook)
+	}()
+
+	go func() {
+		for {
+			select {
+			case <-time.After(time.Second * 10):
+				cancel()
+				errCh <- fmt.Errorf("wait for server started timeout")
+			case <-time.Tick(time.Millisecond):
+				if started.Load() {
+					t.Logf("Trigger config reload")
+					go func() {
+						cfgFileContentChanged := strings.ReplaceAll(fileProviderGatewayConfigChanged, "[CONFIG_HOME_PLACE_HODLER]", configHome)
+						require.NoError(t, os.WriteFile(configPath, []byte(cfgFileContentChanged), 0o600))
+					}()
+					return
+				}
+
+				t.Logf("waiting for server to start")
+			}
+		}
+	}()
+
+	err := <-errCh
+	cancel()
 	require.NoError(t, err)
 }
 

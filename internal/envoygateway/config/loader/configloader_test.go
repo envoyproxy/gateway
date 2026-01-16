@@ -9,7 +9,6 @@ import (
 	"context"
 	_ "embed"
 	"os"
-	"sync"
 	"sync/atomic"
 	"testing"
 
@@ -61,7 +60,7 @@ func TestConfigLoader(t *testing.T) {
 		return nil
 	})
 
-	require.NoError(t, loader.Start(ctx, os.Stdout, &sync.WaitGroup{}))
+	require.NoError(t, loader.Start(ctx, os.Stdout))
 	go func() {
 		_ = os.WriteFile(cfgPath, []byte(redisConfig), 0o600)
 	}()
@@ -103,7 +102,7 @@ func TestConfigLoaderStandaloneExtensionServerAndCustomResource(t *testing.T) {
 		return nil
 	})
 
-	require.NoError(t, loader.Start(ctx, os.Stdout, &sync.WaitGroup{}))
+	require.NoError(t, loader.Start(ctx, os.Stdout))
 	require.NotNil(t, loader.cfg.EnvoyGateway)
 	require.Nil(t, loader.cfg.EnvoyGateway.ExtensionManager)
 
