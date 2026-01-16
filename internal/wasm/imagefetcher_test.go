@@ -280,21 +280,58 @@ func TestImageFetcher_FetchWithCACert(t *testing.T) {
 	ctx := context.Background()
 	logger := logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo)
 
-	opt := ImageFetcherOption{
-		CACert: []byte("fake-ca"),
-	}
-	fetcher, err := NewImageFetcher(ctx, opt, logger)
-	require.NoError(t, err)
-	require.NotNil(t, fetcher)
+	t.Run("invalid CA certificate returns error", func(t *testing.T) {
+		opt := ImageFetcherOption{
+			CACert: []byte("fake-ca"),
+		}
+		fetcher, err := NewImageFetcher(ctx, opt, logger)
+		require.Error(t, err)
+		require.Nil(t, fetcher)
+		require.Contains(t, err.Error(), "failed to append CA certificate to pool")
+	})
 
-	// Given the constraints, we at least verify the code path in NewImageFetcher for CACert.
-	opt2 := ImageFetcherOption{
-		Insecure: true,
-		CACert:   []byte("fake-ca"),
-	}
-	fetcher2, err := NewImageFetcher(ctx, opt2, logger)
-	require.NoError(t, err)
-	require.NotNil(t, fetcher2)
+	t.Run("insecure mode ignores CA cert", func(t *testing.T) {
+		// When Insecure is true, the CA cert path is not considered,
+		// so NewImageFetcher should succeed even with a fake CA cert.
+		opt := ImageFetcherOption{
+			Insecure: true,
+			CACert:   []byte("fake-ca"),
+		}
+		fetcher, err := NewImageFetcher(ctx, opt, logger)
+		require.NoError(t, err)
+		require.NotNil(t, fetcher)
+	})
+
+	t.Run("valid PEM CA certificate succeeds", func(t *testing.T) {
+		// Using the certificate in test/e2e/testdata/jwt-local-jwks-inline.yaml.
+		validCACert := []byte(`-----BEGIN CERTIFICATE-----
+MIIDOzCCAiOgAwIBAgIUYozfdHNlpdxcE7TCuF+wDOrxi9kwDQYJKoZIhvcNAQEL
+BQAwLTEVMBMGA1UECgwMZXhhbXBsZSBJbmMuMRQwEgYDVQQDDAtleGFtcGxlLmNv
+bTAeFw0yNTAxMDcxMzEwMjJaFw0zNTAxMDUxMzEwMjJaMC0xFTATBgNVBAoMDGV4
+YW1wbGUgSW5jLjEUMBIGA1UEAwwLZXhhbXBsZS5jb20wggEiMA0GCSqGSIb3DQEB
+AQUAA4IBDwAwggEKAoIBAQDm+2qqe20PGAVzGU4cuOp5K74tdtRiEVj8Jps9tVZx
+I9UIYbVHvJgDnX2yNyHgPs8s0hQ2q8Q2HAbqeUCRhmcuWhHkag+3rpKWjdGZWLHy
+9lAYv2RSybeTwQAGVDwSz8SrKog6aE6XvvJvUEpfStsJep2blACX2MOpERXiHs6w
+avIu1FTF6a31GyICqNYG07o533X5gfJDRYV3N6ari08Nd+iAaP8HVepc8wziBgFj
+3pdvCvkB1FPHKIbClQdIFgViDwLQYiagaR7esFYcPg6gdwvDJOoAh3GV66HNo7ev
+slY6KHQlRdlorjwxPt5dkGrkN7hiXRbItKqhQCy5GlmLAgMBAAGjUzBRMB0GA1Ud
+DgQWBBQz18iiu8P3gYwOwsuRG4YyDVQuxzAfBgNVHSMEGDAWgBQz18iiu8P3gYwO
+wsuRG4YyDVQuxzAPBgNVHRMBAf8EBTADAQH/MA0GCSqGSIb3DQEBCwUAA4IBAQAg
+C4yDPACAHUjE09m3jmuJUtSSEr+FdXRZ9fkpTezYed6ebefz+4qbTb8HohsEC0K8
+52hg81Knh6n26FN/5S73/6k4LGcX4sN3WslKnRGdVuoXR3o1UGB4Rb0wtdNwOjZF
+5eI7Yxfg8nbsNS+6L+t/xgUj09wR34+fdv43XxxNjFPkWIagOItfG4jyyy+2ap/j
+kyzLypQx9SXeh6ELL4+I5AbNYwaLdoXUyPJHZfyqAABOZ+PVTUabBPiEJsCNmcbo
+toXi8O3UIo+oldyE771XJCGwMLLq75SJ79UZgy0yj3AGLVpirpgqEJT3Nd3VSWGF
+vjYDV/+uv3wEkMby25WT
+-----END CERTIFICATE-----`)
+
+		opt := ImageFetcherOption{
+			CACert: validCACert,
+		}
+		fetcher, err := NewImageFetcher(ctx, opt, logger)
+		require.NoError(t, err)
+		require.NotNil(t, fetcher)
+	})
 }
 
 func TestExtractDockerImage(t *testing.T) {
