@@ -1,11 +1,11 @@
 module github.com/exampleorg/envoygateway-extension
 
-go 1.25.5
+go 1.25.6
 
 require (
 	github.com/envoyproxy/gateway v1.3.1
-	github.com/envoyproxy/go-control-plane v0.13.5-0.20251029084203-42a4a9261f66
-	github.com/envoyproxy/go-control-plane/envoy v1.36.0
+	github.com/envoyproxy/go-control-plane v0.14.0
+	github.com/envoyproxy/go-control-plane/envoy v1.36.1-0.20251212210832-8201564db014
 	github.com/urfave/cli/v2 v2.27.7
 	google.golang.org/grpc v1.78.0
 	google.golang.org/protobuf v1.36.11
@@ -17,9 +17,9 @@ require (
 
 require (
 	cel.dev/expr v0.24.0 // indirect
-	github.com/cncf/xds/go v0.0.0-20251022180443-0feb69152e9f // indirect
+	github.com/cncf/xds/go v0.0.0-20251110193048-8bfbf64dc13e // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.7 // indirect
-	github.com/envoyproxy/protoc-gen-validate v1.2.1 // indirect
+	github.com/envoyproxy/protoc-gen-validate v1.3.0 // indirect
 	github.com/fatih/color v1.18.0 // indirect
 	github.com/fxamacker/cbor/v2 v2.9.0 // indirect
 	github.com/go-logr/logr v1.4.3 // indirect
