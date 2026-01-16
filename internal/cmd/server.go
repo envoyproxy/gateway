@@ -8,7 +8,7 @@ package cmd
 import (
 	"context"
 	"io"
-	"sync"
+	"sync/atomic"
 
 	"github.com/spf13/cobra"
 
@@ -63,7 +63,16 @@ func GetServerCommand(asyncErrHandler func(string, error)) *cobra.Command {
 					}
 				},
 			)
-			return server(cmd.Context(), cmd.OutOrStdout(), cmd.ErrOrStderr(), cfgPath, runnerErrors)
+			started := &atomic.Bool{}
+			hook := func(c context.Context, cfg *config.Server) error {
+				cfg.Logger.Info("Start runners")
+				if err := startRunners(c, cfg, runnerErrors); err != nil {
+					return err
+				}
+				return nil
+			}
+
+			return server(cmd.Context(), cmd.OutOrStdout(), cmd.ErrOrStderr(), cfgPath, started, hook)
 		},
 	}
 	cmd.PersistentFlags().StringVarP(&cfgPath, "config-path", "c", "",
@@ -72,26 +81,20 @@ func GetServerCommand(asyncErrHandler func(string, error)) *cobra.Command {
 }
 
 // server serves Envoy Gateway.
-func server(ctx context.Context, stdout, stderr io.Writer, cfgPath string, asyncErrorNotifier *message.RunnerErrors) error {
+func server(ctx context.Context, stdout, stderr io.Writer, cfgPath string, started *atomic.Bool, hook loader.HookFunc) error {
 	cfg, err := getConfig(stdout, stderr, cfgPath)
 	if err != nil {
 		return err
 	}
 
-	hook := func(c context.Context, cfg *config.Server) error {
-		cfg.Logger.Info("Start runners")
-		if err := startRunners(c, cfg, asyncErrorNotifier); err != nil {
-			return err
-		}
-
-		return nil
-	}
 	l := loader.New(cfgPath, cfg, hook)
-	var hookWG sync.WaitGroup
-	if err := l.Start(ctx, stdout, &hookWG); err != nil {
+	if err := l.Start(ctx, stdout); err != nil {
 		return err
 	}
 
+	if started != nil {
+		started.Store(true)
+	}
 	for {
 		select {
 		// Exit if the config loader fails to start the runners.
@@ -100,15 +103,16 @@ func server(ctx context.Context, stdout, stderr io.Writer, cfgPath string, async
 			cfg.Logger.Error(err, "failed to start runners")
 			// Wait for runners to finish before shutting down.
 			// This is to make sure no orphaned runner process is left running in standalone mode.
-			hookWG.Wait()
+			if err := l.Wait(); err != nil {
+				cfg.Logger.Error(err, "failed to wait")
+			}
 			return err
 		// Wait for the context to be done, which usually happens the process receives a SIGTERM or SIGINT.
 		case <-ctx.Done():
 			cfg.Logger.Info("shutting down")
 			// Wait for runners to finish before shutting down.
 			// This is to make sure no orphaned runner process is left running in standalone mode.
-			hookWG.Wait()
-			return nil
+			return l.Wait()
 		}
 	}
 }
