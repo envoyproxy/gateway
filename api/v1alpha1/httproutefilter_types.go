@@ -50,6 +50,7 @@ type HTTPRouteFilterSpec struct {
 	// effective matching is the logical AND of the two sets.
 	//
 	// +optional
+	// +kubebuilder:validation:MaxItems=8
 	Matches []HTTPRouteMatchFilter `json:"matches,omitempty"`
 }
 
@@ -202,6 +203,7 @@ type HTTPRouteMatchFilter struct {
 	// All specified matchers must match.
 	//
 	// +kubebuilder:validation:MinItems=1
+	// +kubebuilder:validation:MaxItems=16
 	Cookies []HTTPCookieMatch `json:"cookies,omitempty"`
 }
 
