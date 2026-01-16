@@ -788,6 +788,7 @@ func (t *Translator) processTracing(gw *gwapiv1.Gateway, envoyproxy *egv1a1.Envo
 		SamplingRate: proxySamplingRate(tracing),
 		CustomTags:   tracing.CustomTags,
 		Tags:         tracing.Tags,
+		Resources:    getOpenTelemetryTracingResources(&tracing.Provider),
 		Destination: ir.RouteDestination{
 			Name:     destName,
 			Settings: ds,
@@ -862,6 +863,13 @@ func getOpenTelemetryTracingHeaders(provider *egv1a1.TracingProvider) []gwapiv1.
 	return nil
 }
 
+func getOpenTelemetryTracingResources(provider *egv1a1.TracingProvider) map[string]string {
+	if provider != nil && provider.OpenTelemetry != nil {
+		return provider.OpenTelemetry.Resources
+	}
+	return nil
+}
+
 func (t *Translator) processMetrics(envoyproxy *egv1a1.EnvoyProxy, resources *resource.Resources) (*ir.Metrics, []ir.ResolvedMetricSink, error) {
 	if envoyproxy == nil ||
 		envoyproxy.Spec.Telemetry == nil ||
@@ -913,6 +921,7 @@ func (t *Translator) processMetrics(envoyproxy *egv1a1.EnvoyProxy, resources *re
 				},
 				Authority:                authority,
 				Headers:                  sink.OpenTelemetry.Headers,
+				Resources:                sink.OpenTelemetry.Resources,
 				ReportCountersAsDeltas:   ptr.Deref(sink.OpenTelemetry.ReportCountersAsDeltas, false),
 				ReportHistogramsAsDeltas: ptr.Deref(sink.OpenTelemetry.ReportHistogramsAsDeltas, false),
 			})

@@ -109,21 +109,36 @@ func TestOTELGRPCHeaders(t *testing.T) {
 	require.NoError(t, err)
 	resp.Body.Close()
 
-	// Verify collector received an access log with the expected format and Authorization header
-	log := collector.TakeLog()
-	require.NotNil(t, log)
+	// Verify collector received an access log with the expected format, Authorization header, and resource attributes
+	resourceLogs := collector.TakeResourceLogs()
+	require.NotNil(t, resourceLogs)
+	require.NotEmpty(t, resourceLogs.ScopeLogs)
+	require.NotEmpty(t, resourceLogs.ScopeLogs[0].LogRecords)
+	log := resourceLogs.ScopeLogs[0].LogRecords[0]
 	require.Contains(t, log.Body.GetStringValue(), `HTTP/1.1" 200`)
 	require.Equal(t, "Bearer test-api-key", testotel.GetAttributeString(log.Attributes, "grpc.metadata.authorization"))
+	require.Equal(t, "envoy-gateway-test", testotel.GetResourceAttribute(resourceLogs.Resource, "service.name"))
+	require.Equal(t, "v1.0.0", testotel.GetResourceAttribute(resourceLogs.Resource, "service.version"))
+	require.Equal(t, "test", testotel.GetResourceAttribute(resourceLogs.Resource, "deployment.environment"))
 
-	// Verify collector received a trace span with Authorization header
-	span := collector.TakeSpan()
-	require.NotNil(t, span)
+	// Verify collector received a trace span with Authorization header and resource attributes
+	resourceSpans := collector.TakeResourceSpans()
+	require.NotNil(t, resourceSpans)
+	require.NotEmpty(t, resourceSpans.ScopeSpans)
+	require.NotEmpty(t, resourceSpans.ScopeSpans[0].Spans)
+	span := resourceSpans.ScopeSpans[0].Spans[0]
 	require.Equal(t, "Bearer test-api-key", testotel.GetAttributeString(span.Attributes, "grpc.metadata.authorization"))
+	require.Equal(t, "envoy-gateway-test", testotel.GetResourceAttribute(resourceSpans.Resource, "service.name"))
+	require.Equal(t, "v1.0.0", testotel.GetResourceAttribute(resourceSpans.Resource, "service.version"))
+	require.Equal(t, "test", testotel.GetResourceAttribute(resourceSpans.Resource, "deployment.environment"))
 
-	// Verify collector received a metric with Authorization header
+	// Verify collector received a metric with Authorization header and resource attributes
 	resourceMetrics := collector.TakeMetric()
 	require.NotNil(t, resourceMetrics)
 	require.Equal(t, "Bearer test-api-key", testotel.GetAttributeString(resourceMetrics.Resource.Attributes, "grpc.metadata.authorization"))
+	require.Equal(t, "envoy-gateway-test", testotel.GetResourceAttribute(resourceMetrics.Resource, "service.name"))
+	require.Equal(t, "v1.0.0", testotel.GetResourceAttribute(resourceMetrics.Resource, "service.version"))
+	require.Equal(t, "test", testotel.GetResourceAttribute(resourceMetrics.Resource, "deployment.environment"))
 }
 
 func replaceTokens(content string, replacements map[string]string) string {

@@ -22,8 +22,6 @@ metadata:
 spec:
   telemetry:
     metrics:
-      # TODO: Metrics will have the wrong service name until EG exposes
-      # resource_detectors present in Envoy.
       sinks:
         - type: OpenTelemetry
           openTelemetry:
@@ -38,6 +36,10 @@ spec:
             headers:
               - name: Authorization
                 value: Bearer fake
+            resources:
+              service.name: envoy-gateway-example
+              service.version: v1.0.0
+              deployment.environment: production
     tracing:
       samplingRate: 100
       provider:
@@ -51,6 +53,10 @@ spec:
           headers:
             - name: Authorization
               value: Bearer fake
+          resources:
+            service.name: envoy-gateway-example
+            service.version: v1.0.0
+            deployment.environment: production
     accessLog:
       settings:
         - format:
@@ -73,6 +79,8 @@ spec:
                     name: otel-collector
                 resources:
                   service.name: envoy-gateway-example
+                  service.version: v1.0.0
+                  deployment.environment: production
                 # Authorization header sent as gRPC initial metadata
                 headers:
                   - name: Authorization
@@ -129,3 +137,5 @@ spec:
         port: 443
   tls:
     wellKnownCACertificates: System
+    # TODO: raise a PR to auto-infer SNI from the FQDN when not explicitly set
+    sni: httpbingo.org
