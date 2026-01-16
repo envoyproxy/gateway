@@ -432,7 +432,7 @@ func (t *Translator) GetRelevantGateways(resources *resource.Resources) (
 		}
 
 		// we cannot do this early, otherwise there's an error when updating status.
-		gCtx.ResetListeners(resources, envoyproxyMap)
+		gCtx.ResetListeners()
 		acceptedGateways = append(acceptedGateways, gCtx)
 	}
 	return acceptedGateways, failedGateways

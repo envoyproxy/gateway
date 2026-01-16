@@ -174,5 +174,5 @@ func verifyCert(certPEM []byte, roots *x509.CertPool, dnsname string, currentTim
 func TestGenerateHMACSecret(t *testing.T) {
 	bytes, _ := generateHMACSecret()
 	encodedSecret := base64.StdEncoding.EncodeToString(bytes)
-	fmt.Println("Base64 encoded secret:", encodedSecret)
+	require.NotEmpty(t, encodedSecret)
 }
