@@ -36,6 +36,11 @@ type Loader struct {
 	w filewatcher.FileWatcher
 }
 
+const (
+	maxConcurrentHooks = 2 // allow 2 concurrent hooks, e.g. one is terminating, one is starting
+	perHookWeight      = 1
+)
+
 func New(cfgPath string, cfg *config.Server, f HookFunc) *Loader {
 	return &Loader{
 		cfgPath: cfgPath,
@@ -44,7 +49,7 @@ func New(cfgPath string, cfg *config.Server, f HookFunc) *Loader {
 		hook:    f,
 		hookErr: make(chan error, 1),
 		w:       filewatcher.NewWatcher(),
-		hookSem: semaphore.NewWeighted(1),
+		hookSem: semaphore.NewWeighted(maxConcurrentHooks),
 	}
 }
 
@@ -129,12 +134,12 @@ func (r *Loader) runHook(ctx context.Context) error {
 	cfgCopy := r.snapshotConfig()
 	c, cancel := context.WithCancel(ctx)
 	r.cancel = cancel
-	if err := r.hookSem.Acquire(ctx, 1); err != nil {
+	if err := r.hookSem.Acquire(ctx, perHookWeight); err != nil {
 		return err
 	}
 	go func(ctx context.Context) {
 		defer func() {
-			r.hookSem.Release(1)
+			r.hookSem.Release(perHookWeight)
 			cancel()
 		}()
 		if err := r.hook(ctx, cfgCopy); err != nil {
@@ -154,11 +159,11 @@ func (r *Loader) Errors() <-chan error {
 
 // Wait returns when success to acquire hookSem, which means no hook is running.
 func (r *Loader) Wait() error {
-	if err := r.hookSem.Acquire(context.TODO(), 1); err != nil {
+	if err := r.hookSem.Acquire(context.TODO(), maxConcurrentHooks); err != nil {
 		return err
 	}
 
-	r.hookSem.Release(1)
+	r.hookSem.Release(maxConcurrentHooks)
 	return nil
 }
 
