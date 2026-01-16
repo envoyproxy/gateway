@@ -31,7 +31,7 @@ type Loader struct {
 
 	mu      sync.RWMutex
 	hookErr chan error
-	
+
 	w filewatcher.FileWatcher
 }
 
