@@ -2,16 +2,16 @@ name: "accesslog"
 accesslog:
   json:
   - json:
-      - key: method
-        value: "%REQ(:METHOD)%"
-      - key: path
-        value: "%REQ(X-ENVOY-ORIGINAL-PATH?:PATH)%"
-      - key: protocol
-        value: "%PROTOCOL%"
-      - key: response_code
-        value: "%RESPONSE_CODE%"
-      - key: start_time
-        value: "%START_TIME%"
+    - key: method
+      value: "%REQ(:METHOD)%"
+    - key: path
+      value: "%REQ(X-ENVOY-ORIGINAL-PATH?:PATH)%"
+    - key: protocol
+      value: "%PROTOCOL%"
+    - key: response_code
+      value: "%RESPONSE_CODE%"
+    - key: start_time
+      value: "%START_TIME%"
   als:
   - destination:
       name: accesslog/monitoring/envoy-als/port/9000
@@ -43,8 +43,8 @@ accesslog:
         tcp:
           connectTimeout: 15s
     attributes:
-      - key: attr1
-        value: value1
-      - key: attr2
-        value: value2
+    - key: attr1
+      value: value1
+    - key: attr2
+      value: value2
     type: TCP
