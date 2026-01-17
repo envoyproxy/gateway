@@ -4801,6 +4801,7 @@ _Underlying type:_ _string_
 RoutingType defines the type of routing of this Envoy proxy.
 
 _Appears in:_
+- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
 - [EnvoyProxySpec](#envoyproxyspec)
 
 | Value | Description |
