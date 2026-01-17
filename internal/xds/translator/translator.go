@@ -759,6 +759,8 @@ func (t *Translator) processTCPListenerXdsTranslation(
 	// errors and return them at the end.
 	var errs, err error
 
+	var sharedEmptyTCPRoute *ir.TCPRoute
+
 	for _, tcpListener := range tcpListeners {
 		// Search for an existing listener, if it does not exist, create one.
 		xdsListener := findXdsListenerByHostPort(tCtx, tcpListener.Address, tcpListener.Port, corev3.SocketAddress_TCP)
@@ -840,15 +842,17 @@ func (t *Translator) processTCPListenerXdsTranslation(
 				}
 			}
 
-			emptyRoute := &ir.TCPRoute{
-				Name: emptyClusterName,
-				Destination: &ir.RouteDestination{
+			if sharedEmptyTCPRoute == nil {
+				sharedEmptyTCPRoute = &ir.TCPRoute{
 					Name: emptyClusterName,
-				},
+					Destination: &ir.RouteDestination{
+						Name: emptyClusterName,
+					},
+				}
 			}
 			if err := t.addXdsTCPFilterChain(
 				xdsListener,
-				emptyRoute,
+				sharedEmptyTCPRoute,
 				emptyClusterName,
 				accesslog,
 				tcpListener.Timeout,
