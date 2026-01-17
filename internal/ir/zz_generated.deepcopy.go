@@ -441,7 +441,7 @@ func (in *BackendTracing) DeepCopyInto(out *BackendTracing) {
 	*out = *in
 	if in.SamplingFraction != nil {
 		in, out := &in.SamplingFraction, &out.SamplingFraction
-		*out = new(apisv1.Fraction)
+		*out = new(v1.Fraction)
 		(*in).DeepCopyInto(*out)
 	}
 	if in.CustomTags != nil {
