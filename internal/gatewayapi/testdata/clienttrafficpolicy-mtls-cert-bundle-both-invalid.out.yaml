@@ -10,8 +10,8 @@ clientTrafficPolicies:
         certDetailsToAdd:
         - Cert
         mode: Sanitize
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
     tls:
@@ -31,7 +31,7 @@ clientTrafficPolicies:
       conditions:
       - lastTransitionTime: null
         message: |-
-          TLS: invalid certificate in tls-bundle-secret: certificate mtls.example.com has expired since 2020-01-01 15:00:01 +0000 UTC
+          TLS: no valid certificates exist in tls-bundle-secret: certificate mtls.example.com has expired since 2020-01-01 15:00:01 +0000 UTC
           certificate mtls.example.com has expired since 2020-01-01 15:00:01 +0000 UTC.
         reason: Invalid
         status: "False"
