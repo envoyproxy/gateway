@@ -47,11 +47,7 @@ func TestConfigLoader(t *testing.T) {
 	}()
 
 	changed := 0
-<<<<<<< HEAD
-	loader := New(cfgPath, s, func(_ context.Context, _ *config.Server, _ *sync.WaitGroup) error {
-=======
-	loader := New(cfgPath, s, func(_ context.Context, cfg *config.Server) error {
->>>>>>> 1ddf736a8 (fix)
+	loader := New(cfgPath, s, func(_ context.Context, _ *config.Server) error {
 		changed++
 		t.Logf("config changed %d times", changed)
 		if changed > 1 {

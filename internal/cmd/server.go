@@ -8,7 +8,6 @@ package cmd
 import (
 	"context"
 	"io"
-	"sync/atomic"
 
 	"github.com/spf13/cobra"
 
@@ -63,7 +62,7 @@ func GetServerCommand(asyncErrHandler func(string, error)) *cobra.Command {
 					}
 				},
 			)
-			started := &atomic.Bool{}
+
 			hook := func(c context.Context, cfg *config.Server) error {
 				cfg.Logger.Info("Start runners")
 				if err := startRunners(c, cfg, runnerErrors); err != nil {
@@ -72,7 +71,7 @@ func GetServerCommand(asyncErrHandler func(string, error)) *cobra.Command {
 				return nil
 			}
 
-			return server(cmd.Context(), cmd.OutOrStdout(), cmd.ErrOrStderr(), cfgPath, started, hook)
+			return server(cmd.Context(), cmd.OutOrStdout(), cmd.ErrOrStderr(), cfgPath, hook, nil)
 		},
 	}
 	cmd.PersistentFlags().StringVarP(&cfgPath, "config-path", "c", "",
@@ -81,7 +80,7 @@ func GetServerCommand(asyncErrHandler func(string, error)) *cobra.Command {
 }
 
 // server serves Envoy Gateway.
-func server(ctx context.Context, stdout, stderr io.Writer, cfgPath string, started *atomic.Bool, hook loader.HookFunc) error {
+func server(ctx context.Context, stdout, stderr io.Writer, cfgPath string, hook loader.HookFunc, startedCallback func()) error {
 	cfg, err := getConfig(stdout, stderr, cfgPath)
 	if err != nil {
 		return err
@@ -92,9 +91,10 @@ func server(ctx context.Context, stdout, stderr io.Writer, cfgPath string, start
 		return err
 	}
 
-	if started != nil {
-		started.Store(true)
+	if startedCallback != nil {
+		startedCallback()
 	}
+
 	for {
 		select {
 		// Exit if the config loader fails to start the runners.
