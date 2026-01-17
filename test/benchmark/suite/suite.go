@@ -33,7 +33,7 @@ import (
 
 	opt "github.com/envoyproxy/gateway/internal/cmd/options"
 	kube "github.com/envoyproxy/gateway/internal/kubernetes"
-	"github.com/envoyproxy/gateway/test/benchmark/proto"
+	v1 "github.com/envoyproxy/gateway/nighthawk/client/v1"
 	prom "github.com/envoyproxy/gateway/test/utils/prometheus"
 )
 
@@ -67,7 +67,7 @@ type BenchmarkCaseReport struct {
 	Routes            int           `json:"routes"`
 	RoutesPerHostname int           `json:"routesPerHostname"`
 	Phase             string        `json:"phase"`
-	Result            *proto.Result `json:"result,omitempty"`
+	Result            *v1.Result    `json:"result,omitempty"`
 	RouteConvergence  *PerfDuration `json:"routeConvergence,omitempty"`
 	// Prometheus metrics and pprof profiles sampled data
 	Samples          []BenchmarkMetricSample `json:"samples,omitempty"`
@@ -199,7 +199,7 @@ func (b *BenchmarkTestSuite) Run(t *testing.T, tests []BenchmarkTest) {
 
 		tCaseReports := make([]*BenchmarkCaseReport, 0, len(reports))
 		for _, r := range reports {
-			output := &proto.Output{}
+			output := &v1.Output{}
 			data := trimNighthawkResult(r.Result)
 			if err := nighthawkProtoUnmarshalOptions.Unmarshal(data, output); err != nil {
 				tlog.Errorf(t, "Error unmarshalling nighthawk result for test %s: %v", test.ShortName, err)
@@ -281,7 +281,7 @@ func (b *BenchmarkTestSuite) Run(t *testing.T, tests []BenchmarkTest) {
 }
 
 // getGlobalResult extracts the global result from nighthawk output.
-func getGlobalResult(output *proto.Output) *proto.Result {
+func getGlobalResult(output *v1.Output) *v1.Result {
 	if output == nil || output.Results == nil {
 		return nil
 	}

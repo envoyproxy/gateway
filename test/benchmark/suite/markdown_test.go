@@ -15,10 +15,10 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 
 	"github.com/envoyproxy/gateway/internal/utils/test"
-	"github.com/envoyproxy/gateway/test/benchmark/proto"
+	v1 "github.com/envoyproxy/gateway/nighthawk/client/v1"
 )
 
-func fakeCaseResult() *proto.Result {
+func fakeCaseResult() *v1.Result {
 	data := []byte(`{
    "name": "global",
    "statistics": [
@@ -2669,9 +2669,9 @@ func fakeCaseResult() *proto.Result {
    "user_defined_outputs": []
   }`)
 
-	var r proto.Result
+	var r v1.Result
 	if err := protojson.Unmarshal(data, &r); err != nil {
-		return &proto.Result{}
+		return &v1.Result{}
 	}
 
 	return &r

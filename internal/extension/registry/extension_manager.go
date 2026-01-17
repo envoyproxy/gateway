@@ -30,16 +30,16 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	v1 "github.com/envoyproxy/gateway/envoygateway/extension/v1"
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	extTypes "github.com/envoyproxy/gateway/internal/extension/types"
 	"github.com/envoyproxy/gateway/internal/kubernetes"
-	"github.com/envoyproxy/gateway/proto/extension"
 )
 
 const grpcServiceConfigTemplate = `{
 "methodConfig": [{
-	"name": [{"service": "envoygateway.extension.EnvoyGatewayExtension"}],
+	"name": [{"service": "envoygateway.extension.v1.EnvoyGatewayExtensionService"}],
 	"waitForReady": true,
 	"retryPolicy": {
 		"MaxAttempts": %d,
@@ -87,7 +87,7 @@ func NewManager(cfg *config.Server, inK8s bool) (extTypes.Manager, error) {
 	}, nil
 }
 
-func NewInMemoryManager(cfg *egv1a1.ExtensionManager, server extension.EnvoyGatewayExtensionServer) (extTypes.Manager, func(), error) {
+func NewInMemoryManager(cfg *egv1a1.ExtensionManager, server v1.EnvoyGatewayExtensionServiceServer) (extTypes.Manager, func(), error) {
 	if server == nil {
 		return nil, nil, fmt.Errorf("in-memory manager must be passed a server")
 	}
@@ -96,7 +96,7 @@ func NewInMemoryManager(cfg *egv1a1.ExtensionManager, server extension.EnvoyGate
 	lis := bufconn.Listen(buffer)
 
 	baseServer := grpc.NewServer()
-	extension.RegisterEnvoyGatewayExtensionServer(baseServer, server)
+	v1.RegisterEnvoyGatewayExtensionServiceServer(baseServer, server)
 	go func() {
 		_ = baseServer.Serve(lis)
 	}()
@@ -222,7 +222,7 @@ func (m *Manager) GetPreXDSHookClient(xdsHookType egv1a1.XDSTranslatorHook) (ext
 		m.extensionConnCache = conn
 	}
 
-	client := extension.NewEnvoyGatewayExtensionClient(m.extensionConnCache)
+	client := v1.NewEnvoyGatewayExtensionServiceClient(m.extensionConnCache)
 	xdsHookClient := &XDSHook{
 		grpcClient: client,
 	}
@@ -271,7 +271,7 @@ func (m *Manager) GetPostXDSHookClient(xdsHookType egv1a1.XDSTranslatorHook) (ex
 		m.extensionConnCache = conn
 	}
 
-	client := extension.NewEnvoyGatewayExtensionClient(m.extensionConnCache)
+	client := v1.NewEnvoyGatewayExtensionServiceClient(m.extensionConnCache)
 	xdsHookClient := &XDSHook{
 		grpcClient: client,
 	}
