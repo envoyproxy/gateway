@@ -92,16 +92,19 @@ var HeaderSettingsTest = suite.ConformanceTest{
 					Path: "/late-header",
 				},
 				BackendSetResponseHeaders: map[string]string{
-					"late-added-header":         "backend",
-					"late-set-header":           "backend",
-					"late-removed-header":       "backend",
-					"late-removed-regex-header": "backend",
+					"late-added-header":           "backend",
+					"late-set-header":             "backend",
+					"late-removed-header":         "backend",
+					"late-removed-regex-header":   "backend",
+					"late-add-if-absent-existing": "backend",
 				},
 				Response: http.Response{
 					StatusCodes: []int{200},
 					Headers: map[string]string{
-						"late-added-header": "backend,filter,late",
-						"late-set-header":   "late",
+						"late-added-header":           "backend,filter,late",
+						"late-set-header":             "late",
+						"late-add-if-absent-header":   "late-default",   // added because header was absent
+						"late-add-if-absent-existing": "backend,filter", // NOT overwritten because header already existed
 					},
 					AbsentHeaders: []string{
 						"late-removed-header",
