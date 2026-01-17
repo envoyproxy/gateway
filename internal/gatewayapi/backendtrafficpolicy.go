@@ -951,34 +951,6 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy) (
 		Telemetry:         buildBackendTelemetry(policy.Spec.Telemetry),
 	}, errs
 }
-func buildBackendTelemetry(telemetry *egv1a1.BackendTelemetry) *ir.BackendTelemetry {
-	if telemetry == nil {
-		return nil
-	}
-	return &ir.BackendTelemetry{
-		Tracing: buildBackendTracing(telemetry.Tracing),
-		Metrics: buildBackendMetrics(telemetry.Metrics),
-	}
-}
-
-func buildBackendTracing(tracing *egv1a1.Tracing) *ir.BackendTracing {
-	if tracing == nil {
-		return nil
-	}
-	return &ir.BackendTracing{
-		SamplingFraction: tracing.SamplingFraction,
-		CustomTags:       ir.CustomTagMapToSlice(tracing.CustomTags),
-	}
-}
-
-func buildBackendMetrics(metrics *egv1a1.BackendMetrics) *ir.BackendMetrics {
-	if metrics == nil {
-		return nil
-	}
-	return &ir.BackendMetrics{
-		RouteStatName: metrics.RouteStatName,
-	}
-}
 
 func (t *Translator) translateBackendTrafficPolicyForGateway(
 	policy *egv1a1.BackendTrafficPolicy, target gwapiv1.LocalPolicyTargetReferenceWithSectionName,
@@ -1690,6 +1662,26 @@ func buildHTTPProtocolUpgradeConfig(cfgs []*egv1a1.ProtocolUpgradeConfig) []ir.H
 	}
 
 	return result
+}
+
+func buildBackendTelemetry(telemetry *egv1a1.BackendTelemetry) *ir.BackendTelemetry {
+	if telemetry == nil {
+		return nil
+	}
+	res := &ir.BackendTelemetry{}
+	if telemetry.Metrics != nil {
+		res.Metrics = &ir.BackendMetrics{
+			RouteStatName: telemetry.Metrics.RouteStatName,
+		}
+	}
+	if telemetry.Tracing != nil {
+		res.Tracing = &ir.BackendTracing{
+			SamplingFraction: telemetry.Tracing.SamplingFraction,
+			CustomTags:       ir.CustomTagMapToSlice(telemetry.Tracing.CustomTags),
+			SpanName:         telemetry.Tracing.SpanName,
+		}
+	}
+	return res
 }
 
 func validateTelemetry(telemetry *egv1a1.BackendTelemetry) error {

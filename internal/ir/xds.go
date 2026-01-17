@@ -975,8 +975,9 @@ type BackendTelemetry struct {
 // BackendTracing defines the tracing configuration for the backend.
 // +k8s:deepcopy-gen=true
 type BackendTracing struct {
-	SamplingFraction *gwapiv1.Fraction   `json:"samplingFraction,omitempty" yaml:"samplingFraction,omitempty"`
-	CustomTags       []CustomTagMapEntry `json:"customTags,omitempty" yaml:"customTags,omitempty"`
+	SamplingFraction *gwapiv1.Fraction       `json:"samplingFraction,omitempty" yaml:"samplingFraction,omitempty"`
+	CustomTags       []CustomTagMapEntry     `json:"customTags,omitempty" yaml:"customTags,omitempty"`
+	SpanName         *egv1a1.TracingSpanName `json:"spanName,omitempty" yaml:"spanName,omitempty"`
 }
 
 // BackendMetrics defines the metrics configuration for the backend.
