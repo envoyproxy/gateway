@@ -1,0 +1,36 @@
+- clusterName: match-upstream-dest
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 1.1.1.1
+            portValue: 8081
+      loadBalancingWeight: 1
+    loadBalancingWeight: 1
+    locality:
+      region: match-upstream-dest/backend/0
+- clusterName: set-dest
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 2.2.2.2
+            portValue: 8082
+      loadBalancingWeight: 1
+    loadBalancingWeight: 1
+    locality:
+      region: set-dest/backend/0
+- clusterName: preserve-dest
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 3.3.3.3
+            portValue: 8083
+      loadBalancingWeight: 1
+    loadBalancingWeight: 1
+    locality:
+      region: preserve-dest/backend/0

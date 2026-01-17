@@ -166,6 +166,13 @@ type HeaderSettings struct {
 	//
 	// +optional
 	LateResponseHeaders *HTTPHeaderFilter `json:"lateResponseHeaders,omitempty"`
+
+	// SchemeHeaderTransformation configures how the :scheme pseudo-header is handled.
+	// This is useful when Envoy terminates TLS and forwards requests as plaintext
+	// to backends that detect the scheme/transport mismatch (e.g., .NET gRPC services).
+	//
+	// +optional
+	SchemeHeaderTransformation *SchemeHeaderTransformation `json:"schemeHeaderTransformation,omitempty"`
 }
 
 // WithUnderscoresAction configures the action to take when an HTTP header with underscores

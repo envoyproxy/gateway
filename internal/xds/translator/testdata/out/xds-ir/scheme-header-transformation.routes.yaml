@@ -1,0 +1,42 @@
+- ignorePortInHostMatching: true
+  name: match-upstream-listener
+  virtualHosts:
+  - domains:
+    - '*'
+    name: match-upstream-listener/*
+    routes:
+    - match:
+        prefix: /
+      name: match-upstream-route
+      route:
+        cluster: match-upstream-dest
+        upgradeConfigs:
+        - upgradeType: websocket
+- ignorePortInHostMatching: true
+  name: set-listener
+  virtualHosts:
+  - domains:
+    - '*'
+    name: set-listener/*
+    routes:
+    - match:
+        prefix: /
+      name: set-route
+      route:
+        cluster: set-dest
+        upgradeConfigs:
+        - upgradeType: websocket
+- ignorePortInHostMatching: true
+  name: preserve-listener
+  virtualHosts:
+  - domains:
+    - '*'
+    name: preserve-listener/*
+    routes:
+    - match:
+        prefix: /
+      name: preserve-route
+      route:
+        cluster: preserve-dest
+        upgradeConfigs:
+        - upgradeType: websocket

@@ -394,6 +394,8 @@ func (t *Translator) addHCMToXDSListener(
 		mgr.SetCurrentClientCertDetails = buildSetCurrentClientCertDetails(irListener.Headers)
 	}
 
+	mgr.SchemeHeaderTransformation = buildSchemeHeaderTransformation(irListener.Headers)
+
 	if irListener.Timeout != nil && irListener.Timeout.HTTP != nil {
 		if irListener.Timeout.HTTP.RequestReceivedTimeout != nil {
 			mgr.RequestTimeout = durationpb.New(irListener.Timeout.HTTP.RequestReceivedTimeout.Duration)
@@ -1200,4 +1202,28 @@ func buildSetCurrentClientCertDetails(in *ir.HeaderSettings) *hcmv3.HttpConnecti
 	}
 
 	return clientCertDetails
+}
+
+func buildSchemeHeaderTransformation(in *ir.HeaderSettings) *corev3.SchemeHeaderTransformation {
+	if in == nil || in.SchemeHeaderTransformation == nil {
+		return nil
+	}
+
+	switch in.SchemeHeaderTransformation.Mode {
+	case ir.SchemeHeaderTransformationModeMatchUpstream:
+		return &corev3.SchemeHeaderTransformation{
+			MatchUpstream: true,
+		}
+	case ir.SchemeHeaderTransformationModeSet:
+		return &corev3.SchemeHeaderTransformation{
+			Transformation: &corev3.SchemeHeaderTransformation_SchemeToOverwrite{
+				SchemeToOverwrite: in.SchemeHeaderTransformation.Scheme,
+			},
+		}
+	case ir.SchemeHeaderTransformationModePreserve:
+		// Preserve is the default behavior - no transformation needed
+		return nil
+	}
+
+	return nil
 }

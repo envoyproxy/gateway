@@ -532,6 +532,23 @@ const (
 	RequestIDActionDisable            = RequestIDAction(egv1a1.RequestIDActionDisable)
 )
 
+type SchemeHeaderTransformationMode egv1a1.SchemeHeaderTransformationMode
+
+const (
+	SchemeHeaderTransformationModePreserve      = SchemeHeaderTransformationMode(egv1a1.SchemeHeaderTransformationModePreserve)
+	SchemeHeaderTransformationModeMatchUpstream = SchemeHeaderTransformationMode(egv1a1.SchemeHeaderTransformationModeMatchUpstream)
+	SchemeHeaderTransformationModeSet           = SchemeHeaderTransformationMode(egv1a1.SchemeHeaderTransformationModeSet)
+)
+
+// SchemeHeaderTransformation provides configuration for :scheme header handling.
+// +k8s:deepcopy-gen=true
+type SchemeHeaderTransformation struct {
+	// Mode of transformation to apply.
+	Mode SchemeHeaderTransformationMode `json:"mode" yaml:"mode"`
+	// Scheme is the explicit scheme value when Mode is Set.
+	Scheme string `json:"scheme,omitempty" yaml:"scheme,omitempty"`
+}
+
 // Configure Envoy proxy how to handle the x-forwarded-client-cert (XFCC) HTTP header.
 // +k8s:deepcopy-gen=true
 type XForwardedClientCert struct {
@@ -736,6 +753,9 @@ type HeaderSettings struct {
 
 	// LateRemoveResponseHeadersOnMatch defines header name matchers that would remove headers after envoy response processing.
 	LateRemoveResponseHeadersOnMatch []*StringMatch `json:"lateRemoveResponseHeadersOnMatch,omitempty" yaml:"lateRemoveResponseHeadersOnMatch,omitempty"`
+
+	// SchemeHeaderTransformation configures how the :scheme header is handled.
+	SchemeHeaderTransformation *SchemeHeaderTransformation `json:"schemeHeaderTransformation,omitempty" yaml:"schemeHeaderTransformation,omitempty"`
 }
 
 // ClientTimeout sets the timeout configuration for downstream connections

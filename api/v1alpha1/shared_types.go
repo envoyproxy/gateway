@@ -939,6 +939,48 @@ type CustomRedirect struct {
 	StatusCode *int `json:"statusCode,omitempty"`
 }
 
+// SchemeHeaderTransformationMode defines the mode of scheme header transformation.
+// +kubebuilder:validation:Enum=Preserve;MatchUpstream;Set
+type SchemeHeaderTransformationMode string
+
+const (
+	// SchemeHeaderTransformationModePreserve preserves the original scheme header value.
+	// This is the default behavior.
+	SchemeHeaderTransformationModePreserve SchemeHeaderTransformationMode = "Preserve"
+
+	// SchemeHeaderTransformationModeMatchUpstream sets the :scheme header to match the upstream
+	// transport protocol. This sets :scheme to "http" when the upstream connection is plaintext
+	// and "https" when TLS.
+	SchemeHeaderTransformationModeMatchUpstream SchemeHeaderTransformationMode = "MatchUpstream"
+
+	// SchemeHeaderTransformationModeSet explicitly sets the :scheme header to a specified value.
+	SchemeHeaderTransformationModeSet SchemeHeaderTransformationMode = "Set"
+)
+
+// SchemeHeaderTransformation configures how Envoy handles the :scheme pseudo-header.
+// This is useful when Envoy terminates TLS and forwards requests as plaintext to backends
+// that may detect the scheme/transport mismatch (e.g., .NET gRPC services).
+//
+// +kubebuilder:validation:XValidation:rule="!has(self.mode) || self.mode != 'Set' || has(self.scheme)",message="scheme must be set when mode is Set"
+// +kubebuilder:validation:XValidation:rule="!has(self.scheme) || (has(self.mode) && self.mode == 'Set')",message="scheme can only be set when mode is Set"
+type SchemeHeaderTransformation struct {
+	// Mode specifies how the :scheme header should be transformed.
+	// - Preserve: Preserve the original scheme (default)
+	// - MatchUpstream: Set scheme based on upstream connection (http/https)
+	// - Set: Explicitly set scheme to the value specified in the scheme field
+	//
+	// +kubebuilder:default=Preserve
+	// +optional
+	Mode *SchemeHeaderTransformationMode `json:"mode,omitempty"`
+
+	// Scheme specifies the explicit scheme value to use when mode is Set.
+	// Must be either "http" or "https".
+	//
+	// +kubebuilder:validation:Enum=http;https
+	// +optional
+	Scheme *string `json:"scheme,omitempty"`
+}
+
 // HTTPHeaderFilter has been copied from the upstream Gateway API project
 // https://github.com/kubernetes-sigs/gateway-api/blob/main/apis/v1/httproute_types.go
 // and edited to increase the maxItems from 16 to 64

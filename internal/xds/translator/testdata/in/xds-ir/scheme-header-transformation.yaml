@@ -1,0 +1,56 @@
+http:
+- name: "match-upstream-listener"
+  address: "::"
+  port: 8081
+  hostnames:
+  - "*"
+  routes:
+  - name: "match-upstream-route"
+    hostname: "*"
+    destination:
+      name: "match-upstream-dest"
+      settings:
+      - endpoints:
+        - host: "1.1.1.1"
+          port: 8081
+        name: "match-upstream-dest/backend/0"
+  headers:
+    schemeHeaderTransformation:
+      mode: MatchUpstream
+- name: "set-listener"
+  address: "::"
+  port: 8082
+  hostnames:
+  - "*"
+  routes:
+  - name: "set-route"
+    hostname: "*"
+    destination:
+      name: "set-dest"
+      settings:
+      - endpoints:
+        - host: "2.2.2.2"
+          port: 8082
+        name: "set-dest/backend/0"
+  headers:
+    schemeHeaderTransformation:
+      mode: Set
+      scheme: http
+- name: "preserve-listener"
+  address: "::"
+  port: 8083
+  hostnames:
+  - "*"
+  routes:
+  - name: "preserve-route"
+    hostname: "*"
+    destination:
+      name: "preserve-dest"
+      settings:
+      - endpoints:
+        - host: "3.3.3.3"
+          port: 8083
+        name: "preserve-dest/backend/0"
+  headers:
+    schemeHeaderTransformation:
+      mode: Preserve

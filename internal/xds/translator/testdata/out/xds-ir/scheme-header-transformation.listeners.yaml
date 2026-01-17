@@ -1,0 +1,103 @@
+- address:
+    socketAddress:
+      address: '::'
+      portValue: 8081
+  defaultFilterChain:
+    filters:
+    - name: envoy.filters.network.http_connection_manager
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+        commonHttpProtocolOptions:
+          headersWithUnderscoresAction: REJECT_REQUEST
+        http2ProtocolOptions:
+          initialConnectionWindowSize: 1048576
+          initialStreamWindowSize: 65536
+          maxConcurrentStreams: 100
+        httpFilters:
+        - name: envoy.filters.http.router
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+            suppressEnvoyHeaders: true
+        normalizePath: true
+        rds:
+          configSource:
+            ads: {}
+            resourceApiVersion: V3
+          routeConfigName: match-upstream-listener
+        schemeHeaderTransformation:
+          matchUpstream: true
+        serverHeaderTransformation: PASS_THROUGH
+        statPrefix: http-8081
+        useRemoteAddress: true
+    name: match-upstream-listener
+  maxConnectionsToAcceptPerSocketEvent: 1
+  name: match-upstream-listener
+  perConnectionBufferLimitBytes: 32768
+- address:
+    socketAddress:
+      address: '::'
+      portValue: 8082
+  defaultFilterChain:
+    filters:
+    - name: envoy.filters.network.http_connection_manager
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+        commonHttpProtocolOptions:
+          headersWithUnderscoresAction: REJECT_REQUEST
+        http2ProtocolOptions:
+          initialConnectionWindowSize: 1048576
+          initialStreamWindowSize: 65536
+          maxConcurrentStreams: 100
+        httpFilters:
+        - name: envoy.filters.http.router
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+            suppressEnvoyHeaders: true
+        normalizePath: true
+        rds:
+          configSource:
+            ads: {}
+            resourceApiVersion: V3
+          routeConfigName: set-listener
+        schemeHeaderTransformation:
+          schemeToOverwrite: http
+        serverHeaderTransformation: PASS_THROUGH
+        statPrefix: http-8082
+        useRemoteAddress: true
+    name: set-listener
+  maxConnectionsToAcceptPerSocketEvent: 1
+  name: set-listener
+  perConnectionBufferLimitBytes: 32768
+- address:
+    socketAddress:
+      address: '::'
+      portValue: 8083
+  defaultFilterChain:
+    filters:
+    - name: envoy.filters.network.http_connection_manager
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+        commonHttpProtocolOptions:
+          headersWithUnderscoresAction: REJECT_REQUEST
+        http2ProtocolOptions:
+          initialConnectionWindowSize: 1048576
+          initialStreamWindowSize: 65536
+          maxConcurrentStreams: 100
+        httpFilters:
+        - name: envoy.filters.http.router
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+            suppressEnvoyHeaders: true
+        normalizePath: true
+        rds:
+          configSource:
+            ads: {}
+            resourceApiVersion: V3
+          routeConfigName: preserve-listener
+        serverHeaderTransformation: PASS_THROUGH
+        statPrefix: http-8083
+        useRemoteAddress: true
+    name: preserve-listener
+  maxConnectionsToAcceptPerSocketEvent: 1
+  name: preserve-listener
+  perConnectionBufferLimitBytes: 32768
