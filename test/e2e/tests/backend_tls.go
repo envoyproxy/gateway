@@ -25,8 +25,13 @@ func init() {
 var BackendTLSTest = suite.ConformanceTest{
 	ShortName:   "BackendTLS",
 	Description: "Connect to backend with TLS",
-	Manifests:   []string{"testdata/backend-tls.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
+		if IsBTLSPolicyV1alpha3() {
+			suite.Applier.MustApplyWithCleanup(t, suite.Client, suite.TimeoutConfig, "testdata/backend-tls-v1alpha3.yaml", true)
+		} else {
+			suite.Applier.MustApplyWithCleanup(t, suite.Client, suite.TimeoutConfig, "testdata/backend-tls.yaml", true)
+		}
+
 		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ConformanceInfraNamespace}
 		t.Run("with a backend TLS Policy", func(t *testing.T) {
 			routeNN := types.NamespacedName{Name: "http-with-backend-tls", Namespace: ConformanceInfraNamespace}
