@@ -657,5 +657,110 @@ spec:
 {{% /tab %}}
 {{< /tabpane >}}
 
+### Configure Scheme Header Transformation
+
+When Envoy terminates TLS and forwards requests as plaintext HTTP to backends, it preserves the original `:scheme`
+pseudo-header value (`https`) from the client request. Some backends (notably .NET gRPC services) detect this
+scheme/transport mismatch and reject requests.
+
+The `schemeHeaderTransformation` setting allows you to configure how Envoy handles the `:scheme` header:
+
+- **MatchUpstream**: Sets `:scheme` to match the upstream connection protocol (`http` for plaintext, `https` for TLS)
+- **Set**: Explicitly sets `:scheme` to a specified value (`http` or `https`)
+
+If not configured, Envoy preserves the original `:scheme` header from the client request.
+
+This example configures Envoy to set the `:scheme` header to match the upstream connection:
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: ClientTrafficPolicy
+metadata:
+  name: scheme-header-match-upstream
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: eg
+  headers:
+    schemeHeaderTransformation:
+      mode: MatchUpstream
+EOF
+```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: ClientTrafficPolicy
+metadata:
+  name: scheme-header-match-upstream
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: eg
+  headers:
+    schemeHeaderTransformation:
+      mode: MatchUpstream
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
+
+Alternatively, you can explicitly set the scheme to a specific value:
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: ClientTrafficPolicy
+metadata:
+  name: scheme-header-set-http
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: eg
+  headers:
+    schemeHeaderTransformation:
+      mode: Set
+      scheme: http
+EOF
+```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: ClientTrafficPolicy
+metadata:
+  name: scheme-header-set-http
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: eg
+  headers:
+    schemeHeaderTransformation:
+      mode: Set
+      scheme: http
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
+
 [ClientTrafficPolicy]: ../../../api/extension_types#clienttrafficpolicy
 [BackendTrafficPolicy]: ../../../api/extension_types#backendtrafficpolicy

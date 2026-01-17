@@ -939,6 +939,44 @@ type CustomRedirect struct {
 	StatusCode *int `json:"statusCode,omitempty"`
 }
 
+// SchemeHeaderTransformationMode defines the mode of scheme header transformation.
+// +kubebuilder:validation:Enum=MatchUpstream;Set
+type SchemeHeaderTransformationMode string
+
+const (
+	// SchemeHeaderTransformationModeMatchUpstream sets the :scheme header to match the upstream
+	// transport protocol. This sets :scheme to "http" when the upstream connection is plaintext
+	// and "https" when TLS.
+	SchemeHeaderTransformationModeMatchUpstream SchemeHeaderTransformationMode = "MatchUpstream"
+
+	// SchemeHeaderTransformationModeSet explicitly sets the :scheme header to a specified value.
+	SchemeHeaderTransformationModeSet SchemeHeaderTransformationMode = "Set"
+)
+
+// SchemeHeaderTransformation configures how Envoy handles the :scheme pseudo-header.
+// This is useful when Envoy terminates TLS and forwards requests as plaintext to backends
+// that may detect the scheme/transport mismatch (e.g., .NET gRPC services).
+//
+// By default (when this field is not configured), Envoy preserves the original :scheme
+// header from the client request.
+//
+// +kubebuilder:validation:XValidation:rule="self.mode != 'Set' || has(self.scheme)",message="scheme must be set when mode is Set"
+// +kubebuilder:validation:XValidation:rule="!has(self.scheme) || self.mode == 'Set'",message="scheme can only be set when mode is Set"
+type SchemeHeaderTransformation struct {
+	// Mode specifies how the :scheme header should be transformed.
+	// - MatchUpstream: Set scheme based on upstream connection (http/https)
+	// - Set: Explicitly set scheme to the value specified in the scheme field
+	//
+	Mode SchemeHeaderTransformationMode `json:"mode"`
+
+	// Scheme specifies the explicit scheme value to use when mode is Set.
+	// Must be either "http" or "https".
+	//
+	// +kubebuilder:validation:Enum=http;https
+	// +optional
+	Scheme *string `json:"scheme,omitempty"`
+}
+
 // HTTPHeaderFilter has been copied from the upstream Gateway API project
 // https://github.com/kubernetes-sigs/gateway-api/blob/main/apis/v1/httproute_types.go
 // and edited to increase the maxItems from 16 to 64

@@ -707,6 +707,15 @@ func translateListenerHeaderSettings(headerSettings *egv1a1.HeaderSettings, http
 		httpIR.Headers.LateRemoveResponseHeadersOnMatch = removeOnMatch
 	}
 
+	if headerSettings.SchemeHeaderTransformation != nil {
+		httpIR.Headers.SchemeHeaderTransformation = &ir.SchemeHeaderTransformation{
+			Mode: ir.SchemeHeaderTransformationMode(headerSettings.SchemeHeaderTransformation.Mode),
+		}
+		if headerSettings.SchemeHeaderTransformation.Scheme != nil {
+			httpIR.Headers.SchemeHeaderTransformation.Scheme = *headerSettings.SchemeHeaderTransformation.Scheme
+		}
+	}
+
 	return errs
 }
 
