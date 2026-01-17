@@ -733,11 +733,6 @@ func (in *BackendTrafficPolicySpec) DeepCopyInto(out *BackendTrafficPolicySpec) 
 		*out = new(FaultInjection)
 		(*in).DeepCopyInto(*out)
 	}
-	if in.UseClientProtocol != nil {
-		in, out := &in.UseClientProtocol, &out.UseClientProtocol
-		*out = new(bool)
-		**out = **in
-	}
 	if in.Compression != nil {
 		in, out := &in.Compression, &out.Compression
 		*out = make([]*Compression, len(*in))
@@ -1305,6 +1300,11 @@ func (in *ClusterSettings) DeepCopyInto(out *ClusterSettings) {
 		in, out := &in.HTTP2, &out.HTTP2
 		*out = new(HTTP2Settings)
 		(*in).DeepCopyInto(*out)
+	}
+	if in.UseClientProtocol != nil {
+		in, out := &in.UseClientProtocol, &out.UseClientProtocol
+		*out = new(bool)
+		**out = **in
 	}
 }
 
