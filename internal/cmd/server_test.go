@@ -8,14 +8,12 @@ package cmd
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"io"
 	"os"
 	"path"
 	"strings"
 	"sync/atomic"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/require"
 
@@ -102,11 +100,10 @@ func testCustomProvider(t *testing.T, genCert bool) (string, string) {
 
 func TestCustomProviderCancelWhenStarting(t *testing.T) {
 	_, configPath := testCustomProvider(t, false)
-	started := &atomic.Bool{}
 	errCh := make(chan error)
 	ctx, cancel := context.WithCancel(t.Context())
 	go func() {
-		errCh <- server(ctx, t.Output(), t.Output(), configPath, started, testHook)
+		errCh <- server(ctx, t.Output(), t.Output(), configPath, testHook, nil)
 	}()
 	go func() {
 		cancel()
@@ -119,11 +116,10 @@ func TestCustomProviderCancelWhenStarting(t *testing.T) {
 func TestCustomProviderFailedToStart(t *testing.T) {
 	_, configPath := testCustomProvider(t, false)
 
-	started := &atomic.Bool{}
 	errCh := make(chan error)
 	ctx, cancel := context.WithCancel(t.Context())
 	go func() {
-		errCh <- server(ctx, t.Output(), t.Output(), configPath, started, testHook)
+		errCh <- server(ctx, t.Output(), t.Output(), configPath, testHook, nil)
 	}()
 
 	err := <-errCh
@@ -134,7 +130,6 @@ func TestCustomProviderFailedToStart(t *testing.T) {
 func TestCustomProviderCancelWhenConfigReload(t *testing.T) {
 	configHome, configPath := testCustomProvider(t, true)
 
-	started := &atomic.Bool{}
 	errCh := make(chan error)
 	ctx, cancel := context.WithCancel(t.Context())
 	count := atomic.Int32{}
@@ -148,29 +143,18 @@ func TestCustomProviderCancelWhenConfigReload(t *testing.T) {
 		}
 		return nil
 	}
-	go func() {
-		errCh <- server(ctx, t.Output(), t.Output(), configPath, started, hook)
-	}()
+
+	startedCallback := func() {
+		t.Logf("Trigger config reload")
+		go func() {
+			cfgFileContentChanged := strings.ReplaceAll(fileProviderGatewayConfigChanged, "[CONFIG_HOME_PLACE_HODLER]", configHome)
+			require.NoError(t, os.WriteFile(configPath, []byte(cfgFileContentChanged), 0o600))
+		}()
+		return
+	}
 
 	go func() {
-		for {
-			select {
-			case <-time.After(time.Second * 10):
-				cancel()
-				errCh <- fmt.Errorf("wait for server started timeout")
-			case <-time.Tick(time.Millisecond):
-				if started.Load() {
-					t.Logf("Trigger config reload")
-					go func() {
-						cfgFileContentChanged := strings.ReplaceAll(fileProviderGatewayConfigChanged, "[CONFIG_HOME_PLACE_HODLER]", configHome)
-						require.NoError(t, os.WriteFile(configPath, []byte(cfgFileContentChanged), 0o600))
-					}()
-					return
-				}
-
-				t.Logf("waiting for server to start")
-			}
-		}
+		errCh <- server(ctx, t.Output(), t.Output(), configPath, hook, startedCallback)
 	}()
 
 	err := <-errCh
