@@ -12,15 +12,15 @@ Here are some reasons why you may want to implement Rate limits
 
 Envoy Gateway supports two types of rate limiting: [Global rate limiting][] and [Local rate limiting][].
 
-[Local rate limiting][] applies rate limits to the traffic flowing through a single instance of Envoy proxy. This means 
+[Local rate limiting][] applies rate limits to the traffic flowing through a single instance of Envoy proxy. This means
 that if the data plane has 2 replicas of Envoy running, and the rate limit is 10 requests/second, each replica will allow
 10 requests/second. This is in contrast to [Global Rate Limiting][] which applies rate limits to the traffic flowing through
 all instances of Envoy proxy.
 
-Envoy Gateway introduces a new CRD called [BackendTrafficPolicy][] that allows the user to describe their rate limit intent. 
+Envoy Gateway introduces a new CRD called [BackendTrafficPolicy][] that allows the user to describe their rate limit intent.
 This instantiated resource can be linked to a [Gateway][], [HTTPRoute][] or [GRPCRoute][] resource.
 
-**Note:** Limit is applied per route. Even if a [BackendTrafficPolicy][] targets a gateway, each route in that gateway 
+**Note:** Limit is applied per route. Even if a [BackendTrafficPolicy][] targets a gateway, each route in that gateway
 still has a separate rate limit bucket. For example, if a gateway has 2 routes, and the limit is 100r/s, then each route
 has its own 100r/s rate limit bucket.
 
@@ -28,7 +28,7 @@ has its own 100r/s rate limit bucket.
 
 {{< boilerplate prerequisites >}}
 
-## Rate Limit Specific User 
+## Rate Limit Specific User
 
 Here is an example of a rate limit implemented by the application developer to limit a specific user by matching on a custom `x-user-id` header
 with a value set to `one`.
@@ -48,7 +48,6 @@ spec:
     kind: HTTPRoute
     name: http-ratelimit
   rateLimit:
-    type: Local
     local:
       rules:
       - clientSelectors:
@@ -77,7 +76,6 @@ spec:
     kind: HTTPRoute
     name: http-ratelimit
   rateLimit:
-    type: Local
     local:
       rules:
       - clientSelectors:
@@ -163,7 +161,7 @@ Get the Gateway's address:
 export GATEWAY_HOST=$(kubectl get gateway/eg -o jsonpath='{.status.addresses[0].value}')
 ```
 
-Let's query `ratelimit.example/get` 4 times. We should receive a `200` response from the example Gateway for the first 3 requests 
+Let's query `ratelimit.example/get` 4 times. We should receive a `200` response from the example Gateway for the first 3 requests
 and then receive a `429` status code for the 4th request since the limit is set at 3 requests/Hour for the request which contains the header `x-user-id`
 and value `one`.
 
@@ -265,7 +263,6 @@ spec:
     kind: HTTPRoute
     name: http-ratelimit
   rateLimit:
-    type: Local
     local:
       rules:
       - clientSelectors:
@@ -297,7 +294,6 @@ spec:
     kind: HTTPRoute
     name: http-ratelimit
   rateLimit:
-    type: Local
     local:
       rules:
       - clientSelectors:
@@ -466,7 +462,7 @@ server: envoy
 
 ```
 
-## Rate Limit All Requests 
+## Rate Limit All Requests
 
 This example shows you how to rate limit all requests matching the HTTPRoute rule at 3 requests/Hour by leaving the `clientSelectors` field unset.
 
@@ -485,7 +481,6 @@ spec:
     kind: HTTPRoute
     name: http-ratelimit
   rateLimit:
-    type: Local
     local:
       rules:
       - limit:
@@ -510,7 +505,6 @@ spec:
     kind: HTTPRoute
     name: http-ratelimit
   rateLimit:
-    type: Local
     local:
       rules:
       - limit:
@@ -617,8 +611,8 @@ transfer-encoding: chunked
 
 ```
 
-**Note:** Local rate limiting does not support `distinct` matching. If you want to rate limit based on distinct values, 
-you should use [Global Rate Limiting][]. 
+**Note:** Local rate limiting does not support `distinct` matching. If you want to rate limit based on distinct values,
+you should use [Global Rate Limiting][].
 
 ## Rate Limit Based on Path
 
@@ -639,7 +633,6 @@ spec:
     kind: HTTPRoute
     name: http-ratelimit
   rateLimit:
-    type: Local
     local:
       rules:
       - clientSelectors:
@@ -668,7 +661,6 @@ spec:
     kind: HTTPRoute
     name: http-ratelimit
   rateLimit:
-    type: Local
     local:
       rules:
       - clientSelectors:
@@ -844,7 +836,6 @@ spec:
     kind: HTTPRoute
     name: http-ratelimit
   rateLimit:
-    type: Local
     local:
       rules:
       - clientSelectors:
@@ -872,7 +863,6 @@ spec:
     kind: HTTPRoute
     name: http-ratelimit
   rateLimit:
-    type: Local
     local:
       rules:
       - clientSelectors:

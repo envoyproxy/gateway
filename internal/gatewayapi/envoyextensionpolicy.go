@@ -33,7 +33,17 @@ import (
 // oci URL prefix
 const ociURLPrefix = "oci://"
 
-func (t *Translator) ProcessEnvoyExtensionPolicies(envoyExtensionPolicies []*egv1a1.EnvoyExtensionPolicy,
+// deprecatedFieldsUsedInEnvoyExtensionPolicy returns a map of deprecated field paths to their alternatives.
+func deprecatedFieldsUsedInEnvoyExtensionPolicy(policy *egv1a1.EnvoyExtensionPolicy) map[string]string {
+	deprecatedFields := make(map[string]string)
+	if policy.Spec.TargetRef != nil {
+		deprecatedFields["spec.targetRef"] = "spec.targetRefs"
+	}
+	return deprecatedFields
+}
+
+func (t *Translator) ProcessEnvoyExtensionPolicies(
+	envoyExtensionPolicies []*egv1a1.EnvoyExtensionPolicy,
 	gateways []*GatewayContext,
 	routes []RouteContext,
 	resources *resource.Resources,
@@ -242,6 +252,11 @@ func (t *Translator) processEnvoyExtensionPolicyForRoute(
 	// Set Accepted condition if it is unset
 	status.SetAcceptedForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName, policy.Generation)
 
+	// Check for deprecated fields and set warning if any are found
+	if deprecatedFields := deprecatedFieldsUsedInEnvoyExtensionPolicy(policy); len(deprecatedFields) > 0 {
+		status.SetDeprecatedFieldsWarningForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName, policy.Generation, deprecatedFields)
+	}
+
 	// Check if this policy is overridden by other policies targeting at route rule levels
 	key := policyTargetRouteKey{
 		Kind:      string(currTarget.Kind),
@@ -312,6 +327,11 @@ func (t *Translator) processEnvoyExtensionPolicyForGateway(
 
 	// Set Accepted condition if it is unset
 	status.SetAcceptedForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName, policy.Generation)
+
+	// Check for deprecated fields and set warning if any are found
+	if deprecatedFields := deprecatedFieldsUsedInEnvoyExtensionPolicy(policy); len(deprecatedFields) > 0 {
+		status.SetDeprecatedFieldsWarningForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName, policy.Generation, deprecatedFields)
+	}
 
 	// Check if this policy is overridden by other policies targeting at route rule, route and listener levels
 	overriddenTargetsMessage := getOverriddenTargetsMessageForGateway(
@@ -475,13 +495,18 @@ func (t *Translator) translateEnvoyExtensionPolicyForRoute(
 	parentRefs := GetParentReferences(route)
 	routesWithDirectResponse := sets.New[string]()
 	for _, p := range parentRefs {
-		parentRefCtx := GetRouteParentContext(route, p, t.GatewayControllerName)
+		// Skip if this parentRef was not processed by this translator
+		// (e.g., references a Gateway with a different GatewayClass)
+		parentRefCtx := route.GetRouteParentContext(p)
+		if parentRefCtx == nil {
+			continue
+		}
 		gtwCtx := parentRefCtx.GetGateway()
 		if gtwCtx == nil {
 			continue
 		}
 
-		if luas, luaError = t.buildLuas(policy, resources, gtwCtx.envoyProxy); luaError != nil {
+		if luas, luaError = t.buildLuas(policy, gtwCtx.envoyProxy); luaError != nil {
 			luaError = perr.WithMessage(luaError, "Lua")
 			errs = errors.Join(errs, luaError)
 		}
@@ -570,7 +595,7 @@ func (t *Translator) translateEnvoyExtensionPolicyForGateway(
 		wasmError = perr.WithMessage(wasmError, "Wasm")
 		errs = errors.Join(errs, wasmError)
 	}
-	if luas, luaError = t.buildLuas(policy, resources, gateway.envoyProxy); luaError != nil {
+	if luas, luaError = t.buildLuas(policy, gateway.envoyProxy); luaError != nil {
 		luaError = perr.WithMessage(luaError, "Lua")
 		errs = errors.Join(errs, luaError)
 	}
@@ -635,16 +660,24 @@ func (t *Translator) translateEnvoyExtensionPolicyForGateway(
 	return errs
 }
 
-func (t *Translator) buildLuas(policy *egv1a1.EnvoyExtensionPolicy, resources *resource.Resources, envoyProxy *egv1a1.EnvoyProxy) ([]ir.Lua, error) {
+func (t *Translator) buildLuas(
+	policy *egv1a1.EnvoyExtensionPolicy,
+	envoyProxy *egv1a1.EnvoyProxy,
+) ([]ir.Lua, error) {
 	if policy == nil {
 		return nil, nil
+	}
+
+	// If Lua EnvoyExtensionPolicies are disabled, skip building Lua filters.
+	if len(policy.Spec.Lua) > 0 && t.LuaEnvoyExtensionPolicyDisabled {
+		return nil, fmt.Errorf("Skipping Lua EnvoyExtensionPolicy as feature is disabled in the Gateway")
 	}
 
 	luaIRList := make([]ir.Lua, 0, len(policy.Spec.Lua))
 
 	for idx, ep := range policy.Spec.Lua {
 		name := irConfigNameForLua(policy, idx)
-		luaIR, err := t.buildLua(name, policy, ep, resources, envoyProxy)
+		luaIR, err := t.buildLua(name, policy, ep, envoyProxy)
 		if err != nil {
 			return nil, err
 		}
@@ -657,13 +690,12 @@ func (t *Translator) buildLua(
 	name string,
 	policy *egv1a1.EnvoyExtensionPolicy,
 	lua egv1a1.Lua,
-	resources *resource.Resources,
 	envoyProxy *egv1a1.EnvoyProxy,
 ) (*ir.Lua, error) {
 	var luaCode *string
 	var err error
 	if lua.Type == egv1a1.LuaValueTypeValueRef {
-		luaCode, err = getLuaBodyFromLocalObjectReference(lua.ValueRef, resources, policy.Namespace)
+		luaCode, err = t.getLuaBodyFromLocalObjectReference(lua.ValueRef, policy.Namespace)
 	} else {
 		luaCode = lua.Inline
 	}
@@ -681,8 +713,11 @@ func (t *Translator) buildLua(
 }
 
 // getLuaBodyFromLocalObjectReference assumes the local object reference points to a Kubernetes ConfigMap
-func getLuaBodyFromLocalObjectReference(valueRef *gwapiv1.LocalObjectReference, resources *resource.Resources, policyNs string) (*string, error) {
-	cm := resources.GetConfigMap(policyNs, string(valueRef.Name))
+func (t *Translator) getLuaBodyFromLocalObjectReference(
+	valueRef *gwapiv1.LocalObjectReference,
+	policyNs string,
+) (*string, error) {
+	cm := t.GetConfigMap(policyNs, string(valueRef.Name))
 	if cm != nil {
 		b, dataOk := cm.Data["lua"]
 		switch {

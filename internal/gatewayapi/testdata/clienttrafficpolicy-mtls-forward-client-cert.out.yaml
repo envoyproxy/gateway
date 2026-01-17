@@ -32,6 +32,11 @@ clientTrafficPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: ClientTrafficPolicy
@@ -69,6 +74,11 @@ clientTrafficPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: ClientTrafficPolicy
@@ -103,6 +113,11 @@ clientTrafficPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: ClientTrafficPolicy
@@ -137,6 +152,11 @@ clientTrafficPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: ClientTrafficPolicy
@@ -171,6 +191,11 @@ clientTrafficPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
@@ -543,6 +568,7 @@ xdsIR:
     globalResources:
       proxyServiceCluster:
         metadata:
+          kind: Service
           name: envoy-envoy-gateway-gateway-1-196ae069
           namespace: envoy-gateway-system
           sectionName: "8080"
@@ -554,6 +580,7 @@ xdsIR:
             port: 8080
             zone: zone1
           metadata:
+            kind: Service
             name: envoy-envoy-gateway-gateway-1-196ae069
             namespace: envoy-gateway-system
             sectionName: "8080"
@@ -622,6 +649,7 @@ xdsIR:
     globalResources:
       proxyServiceCluster:
         metadata:
+          kind: Service
           name: envoy-envoy-gateway-gateway-2-4a0e4eb9
           namespace: envoy-gateway-system
           sectionName: "8080"
@@ -633,6 +661,7 @@ xdsIR:
             port: 8080
             zone: zone1
           metadata:
+            kind: Service
             name: envoy-envoy-gateway-gateway-2-4a0e4eb9
             namespace: envoy-gateway-system
             sectionName: "8080"
@@ -682,6 +711,7 @@ xdsIR:
     globalResources:
       proxyServiceCluster:
         metadata:
+          kind: Service
           name: envoy-envoy-gateway-gateway-3-32e857a6
           namespace: envoy-gateway-system
           sectionName: "8080"
@@ -693,6 +723,7 @@ xdsIR:
             port: 8080
             zone: zone1
           metadata:
+            kind: Service
             name: envoy-envoy-gateway-gateway-3-32e857a6
             namespace: envoy-gateway-system
             sectionName: "8080"
@@ -742,6 +773,7 @@ xdsIR:
     globalResources:
       proxyServiceCluster:
         metadata:
+          kind: Service
           name: envoy-envoy-gateway-gateway-4-a293650b
           namespace: envoy-gateway-system
           sectionName: "8080"
@@ -753,6 +785,7 @@ xdsIR:
             port: 8080
             zone: zone1
           metadata:
+            kind: Service
             name: envoy-envoy-gateway-gateway-4-a293650b
             namespace: envoy-gateway-system
             sectionName: "8080"
@@ -802,6 +835,7 @@ xdsIR:
     globalResources:
       proxyServiceCluster:
         metadata:
+          kind: Service
           name: envoy-envoy-gateway-gateway-5-e35ee57f
           namespace: envoy-gateway-system
           sectionName: "8080"
@@ -813,6 +847,7 @@ xdsIR:
             port: 8080
             zone: zone1
           metadata:
+            kind: Service
             name: envoy-envoy-gateway-gateway-5-e35ee57f
             namespace: envoy-gateway-system
             sectionName: "8080"

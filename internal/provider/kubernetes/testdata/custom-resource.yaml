@@ -1,0 +1,55 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: eg
+spec:
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: eg
+spec:
+  gatewayClassName: gw
+  listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+---
+apiVersion: extensions.example.io/v1alpha1
+kind: CustomExtensionServerPolicy
+metadata:
+  name: exampleUser
+spec:
+  targetRefs:
+    - kind: Gateway
+      name: gw
+      group: gateway.networking.k8s.io
+  username: user
+  password: p@ssw0rd
+---
+apiVersion: gateway.example.io/v1alpha1
+kind: CustomRouteFilterResource
+metadata:
+  name: example-filter
+spec:
+  type: HeaderModifier
+  headerModifier:
+    add:
+      - name: x-custom
+        value: added-by-filter
+    remove: ["x-deprecated"]
+---
+apiVersion: backend.example.io/v1alpha1
+kind: CustomBackendResource
+metadata:
+  name: example-backend
+spec:
+  endpoints:
+    - address: 10.0.0.1
+      port: 8080
+    - address: 10.0.0.2
+      port: 8080
+  healthCheck:
+    path: /healthz
+    intervalSeconds: 10

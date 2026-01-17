@@ -16,6 +16,7 @@ import (
 	tlsv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 	matcherv3 "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
 	"github.com/golang/protobuf/ptypes/wrappers"
+	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"k8s.io/utils/ptr"
 
@@ -120,6 +121,15 @@ func oauth2Config(securityFeatures *ir.SecurityFeatures) (*oauth2v3.OAuth2, erro
 		tokenEndpointCluster = cluster.name
 	}
 
+	tokenEndpointTimeout := durationpb.New(defaultExtServiceRequestTimeout)
+	requestTimeoutConfigured := oidc.Provider.Traffic != nil &&
+		oidc.Provider.Traffic.Timeout != nil &&
+		oidc.Provider.Traffic.Timeout.HTTP != nil &&
+		oidc.Provider.Traffic.Timeout.HTTP.RequestTimeout != nil
+	if requestTimeoutConfigured {
+		tokenEndpointTimeout = durationpb.New(oidc.Provider.Traffic.Timeout.HTTP.RequestTimeout.Duration)
+	}
+
 	// Envoy OAuth2 filter deletes the HTTP authorization header by default, which surprises users.
 
 	// If the user wants to forward the oauth2 access token to the upstream service,
@@ -127,12 +137,13 @@ func oauth2Config(securityFeatures *ir.SecurityFeatures) (*oauth2v3.OAuth2, erro
 	preserveAuthorizationHeader := !oidc.ForwardAccessToken
 	oauth2 := &oauth2v3.OAuth2{
 		Config: &oauth2v3.OAuth2Config{
+			StatPrefix: oidc.Name,
 			TokenEndpoint: &corev3.HttpUri{
 				Uri: oidc.Provider.TokenEndpoint,
 				HttpUpstreamType: &corev3.HttpUri_Cluster{
 					Cluster: tokenEndpointCluster,
 				},
-				Timeout: durationpb.New(defaultExtServiceRequestTimeout),
+				Timeout: tokenEndpointTimeout,
 			},
 			AuthorizationEndpoint: oidc.Provider.AuthorizationEndpoint,
 			RedirectUri:           oidc.RedirectURL,
@@ -432,7 +443,7 @@ func createOAuthServerClusters(tCtx *types.ResourceVersionTable,
 			}
 		} else {
 			// Create a cluster with the token endpoint url.
-			if err := createOAuth2TokenEndpointCluster(tCtx, oidc.Provider.TokenEndpoint); err != nil {
+			if err := createOAuth2TokenEndpointCluster(tCtx, oidc); err != nil {
 				errs = errors.Join(errs, err)
 			}
 		}
@@ -444,7 +455,7 @@ func createOAuthServerClusters(tCtx *types.ResourceVersionTable,
 // createOAuth2TokenEndpointClusters creates token endpoint clusters from the
 // provided routes, if needed.
 func createOAuth2TokenEndpointCluster(tCtx *types.ResourceVersionTable,
-	tokenEndpoint string,
+	oidc *ir.OIDC,
 ) error {
 	var (
 		cluster *urlCluster
@@ -453,7 +464,7 @@ func createOAuth2TokenEndpointCluster(tCtx *types.ResourceVersionTable,
 		err     error
 	)
 
-	if cluster, err = url2Cluster(tokenEndpoint); err != nil {
+	if cluster, err = url2Cluster(oidc.Provider.TokenEndpoint); err != nil {
 		return err
 	}
 
@@ -463,7 +474,7 @@ func createOAuth2TokenEndpointCluster(tCtx *types.ResourceVersionTable,
 	if cluster.endpointType == EndpointTypeStatic {
 		return fmt.Errorf(
 			"static IP cluster is not allowed: %s",
-			tokenEndpoint)
+			oidc.Provider.TokenEndpoint)
 	}
 
 	ds = &ir.DestinationSetting{
@@ -488,6 +499,19 @@ func createOAuth2TokenEndpointCluster(tCtx *types.ResourceVersionTable,
 			return err
 		}
 		clusterArgs.tSocket = tSocket
+	}
+
+	// Apply traffic features if they exist.
+	if oidc.Provider.Traffic != nil {
+		clusterArgs.loadBalancer = oidc.Provider.Traffic.LoadBalancer
+		clusterArgs.proxyProtocol = oidc.Provider.Traffic.ProxyProtocol
+		clusterArgs.circuitBreaker = oidc.Provider.Traffic.CircuitBreaker
+		clusterArgs.healthCheck = oidc.Provider.Traffic.HealthCheck
+		clusterArgs.timeout = oidc.Provider.Traffic.Timeout
+		clusterArgs.tcpkeepalive = oidc.Provider.Traffic.TCPKeepalive
+		clusterArgs.backendConnection = oidc.Provider.Traffic.BackendConnection
+		clusterArgs.dns = oidc.Provider.Traffic.DNS
+		clusterArgs.http2Settings = oidc.Provider.Traffic.HTTP2
 	}
 
 	return addXdsCluster(tCtx, clusterArgs)
@@ -573,7 +597,9 @@ func (*oidc) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir.HTTPL
 		return nil
 	}
 	filterName := oauth2FilterName(irRoute.Security.OIDC)
-	if err := enableFilterOnRoute(route, filterName); err != nil {
+	if err := enableFilterOnRoute(route, filterName, &routev3.FilterConfig{
+		Config: &anypb.Any{},
+	}); err != nil {
 		return err
 	}
 	return nil

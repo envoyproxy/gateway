@@ -111,6 +111,29 @@ func TestExpectedServiceSpec(t *testing.T) {
 				SessionAffinity: corev1.ServiceAffinityNone,
 			},
 		},
+		{
+			name: "NodePort",
+			args: args{service: &egv1a1.KubernetesServiceSpec{
+				Type: egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeNodePort),
+			}},
+			want: corev1.ServiceSpec{
+				Type:                  corev1.ServiceTypeNodePort,
+				SessionAffinity:       corev1.ServiceAffinityNone,
+				ExternalTrafficPolicy: corev1.ServiceExternalTrafficPolicyTypeLocal,
+			},
+		},
+		{
+			name: "NodePortWithExternalTrafficPolicyCluster",
+			args: args{service: &egv1a1.KubernetesServiceSpec{
+				Type:                  egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeNodePort),
+				ExternalTrafficPolicy: egv1a1.GetKubernetesServiceExternalTrafficPolicy(egv1a1.ServiceExternalTrafficPolicyCluster),
+			}},
+			want: corev1.ServiceSpec{
+				Type:                  corev1.ServiceTypeNodePort,
+				SessionAffinity:       corev1.ServiceAffinityNone,
+				ExternalTrafficPolicy: corev1.ServiceExternalTrafficPolicyTypeCluster,
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

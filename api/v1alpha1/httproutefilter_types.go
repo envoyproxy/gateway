@@ -24,6 +24,9 @@ const (
 
 // HTTPRouteFilter is a custom Envoy Gateway HTTPRouteFilter which provides extended
 // traffic processing options such as path regex rewrite, direct response and more.
+// +genclient
+// +genclient:noStatus
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 type HTTPRouteFilter struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -155,7 +158,6 @@ type HTTPHostnameModifier struct {
 // This is useful when the backend service requires credentials in the request, and the original
 // request does not contain them. The filter can inject credentials into the request before forwarding
 // it to the backend service.
-// +notImplementedHide
 type HTTPCredentialInjectionFilter struct {
 	// Header is the name of the header where the credentials are injected.
 	// If not specified, the credentials are injected into the Authorization header.
@@ -172,7 +174,6 @@ type HTTPCredentialInjectionFilter struct {
 }
 
 // InjectedCredential defines the credential to be injected.
-// +notImplementedHide
 type InjectedCredential struct {
 	// ValueRef is a reference to the secret containing the credentials to be injected.
 	// This is an Opaque secret. The credential should be stored in the key
@@ -188,6 +189,7 @@ type InjectedCredential struct {
 //+kubebuilder:object:root=true
 
 // HTTPRouteFilterList contains a list of HTTPRouteFilter resources.
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 type HTTPRouteFilterList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
@@ -195,5 +197,5 @@ type HTTPRouteFilterList struct {
 }
 
 func init() {
-	SchemeBuilder.Register(&HTTPRouteFilter{}, &HTTPRouteFilterList{})
+	localSchemeBuilder.Register(&HTTPRouteFilter{}, &HTTPRouteFilterList{})
 }

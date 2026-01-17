@@ -14,11 +14,13 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"testing"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/gateway-api/conformance/utils/tlog"
 
 	kube "github.com/envoyproxy/gateway/internal/kubernetes"
 	"github.com/envoyproxy/gateway/internal/troubleshoot/collect"
@@ -32,6 +34,8 @@ const (
 	dataPlaneMemQL             = `container_memory_working_set_bytes{namespace="envoy-gateway-system", container="envoy"}/1024/1024`
 	dataPlaneCPUQLFormat       = `rate(container_cpu_usage_seconds_total{namespace="envoy-gateway-system", container="envoy"}[%DURATIONs])*100`
 	DurationFormatter          = "%DURATION"
+
+	benchmarkCPURateWindow = 30 * time.Second
 )
 
 // BenchmarkMetricSample contains sampled metrics and profiles data.
@@ -45,8 +49,20 @@ type BenchmarkMetricSample struct {
 	HeapProfile []byte
 }
 
+func (s *BenchmarkMetricSample) String() string {
+	return fmt.Sprintf("ControlPlaneContainerMem: %.2f MiB, ControlPlaneProcessMem: %.2f MiB, ControlPlaneCPU: %.2f%%, DataPlaneMem: %.2f MiB, DataPlaneCPU: %.2f%%",
+		s.ControlPlaneContainerMem,
+		s.ControlPlaneProcessMem,
+		s.ControlPlaneCPU,
+		s.DataPlaneMem,
+		s.DataPlaneCPU)
+}
+
 type BenchmarkReport struct {
 	Name              string
+	Routes            int
+	RoutesPerHost     int
+	Phase             string
 	ProfilesOutputDir string
 	RouteConvergence  *PerfDuration
 	// Nighthawk benchmark result
@@ -73,10 +89,10 @@ func NewBenchmarkReport(name, profilesOutputDir string, kubeClient kube.CLIClien
 	}
 }
 
-func (r *BenchmarkReport) Sample(ctx context.Context, startTime time.Time) (err error) {
+func (r *BenchmarkReport) Sample(t *testing.T, ctx context.Context, testStartTime, trafficStartTime time.Time) (err error) {
 	sample := BenchmarkMetricSample{}
 
-	if mErr := r.sampleMetrics(ctx, &sample, startTime); mErr != nil {
+	if mErr := r.sampleMetrics(ctx, &sample, testStartTime, trafficStartTime); mErr != nil {
 		err = errors.Join(mErr)
 	}
 
@@ -84,6 +100,13 @@ func (r *BenchmarkReport) Sample(ctx context.Context, startTime time.Time) (err 
 		err = errors.Join(err, pErr)
 	}
 
+	tlog.Logf(t, "Sampled metrics: %s", sample.String())
+	// We still append the sample even if there is error during sampling, because some of the metrics
+	// could be collected successfully.
+	// The observed errors is the data plane cpu query failure due to no data plane traffic during sampling, but
+	// control plane metrics are collected successfully. We want to keep the collected metrics for control plane
+	// because control plane cpu metrics changes during routes scaling, before traffic is sent to data plane.
+	// Those data plane cpu samples with error will be ignored during report generation.
 	r.Samples = append(r.Samples, sample)
 	return err
 }
@@ -118,43 +141,74 @@ func (r *BenchmarkReport) GetResult(ctx context.Context, job *types.NamespacedNa
 	return nil
 }
 
-func (r *BenchmarkReport) sampleMetrics(ctx context.Context, sample *BenchmarkMetricSample, startTime time.Time) (err error) {
-	// Sample memory
-	cpcMem, qErr := r.promClient.QuerySum(ctx, controlPlaneContainerMemQL)
-	if qErr != nil {
-		err = errors.Join(fmt.Errorf("failed to query control plane container memory: %w", qErr))
-	}
-	cppMem, qErr := r.promClient.QuerySum(ctx, controlPlaneProcessMemQL)
-	if qErr != nil {
-		err = errors.Join(fmt.Errorf("failed to query control plane process memory: %w", qErr))
-	}
-	dpMem, qErr := r.promClient.QueryAvg(ctx, dataPlaneMemQL)
-	if qErr != nil {
-		err = errors.Join(err, fmt.Errorf("failed to query data plane memory: %w", qErr))
-	}
-	// Sample cpu
+func (r *BenchmarkReport) sampleMetrics(ctx context.Context, sample *BenchmarkMetricSample, testStartTime, trafficStartTime time.Time) (err error) {
+	var (
+		cpcMem     = -1.0
+		cppMem     = -1.0
+		dpMem      = -1.0
+		dpCPUValue = -1.0
+		cpCPUValue = -1.0
+	)
 
-	// Get duration
-	durationSeconds := int(time.Since(startTime).Seconds())
+	if v, qErr := r.promClient.QuerySum(ctx, controlPlaneContainerMemQL); qErr != nil {
+		err = errors.Join(fmt.Errorf("failed to query control plane container memory: %w", qErr))
+	} else {
+		cpcMem = v
+	}
+	if v, qErr := r.promClient.QuerySum(ctx, controlPlaneProcessMemQL); qErr != nil {
+		err = errors.Join(fmt.Errorf("failed to query control plane process memory: %w", qErr))
+	} else {
+		cppMem = v
+	}
+	if v, qErr := r.promClient.QueryAvg(ctx, dataPlaneMemQL); qErr != nil {
+		err = errors.Join(err, fmt.Errorf("failed to query data plane memory: %w", qErr))
+	} else {
+		dpMem = v
+	}
+
+	// CPU usages is calculated based on the Kubernetes container_cpu_usage_seconds_total counter metric.
+	// We use a fixed window size of 30s for rate calculation. However, to ensure that we only capture
+	// metrics during the benchmark run period (and not before), if the benchmark run duration is
+	// less than the fixed window size,
+	durationSeconds := int(benchmarkCPURateWindow.Seconds())
+	elapsed := time.Since(testStartTime)
+	if elapsed < benchmarkCPURateWindow {
+		durationSeconds = int(elapsed.Seconds())
+		if durationSeconds < 1 {
+			durationSeconds = 1
+		}
+	}
 	durationStr := fmt.Sprintf("%d", durationSeconds)
 	cpCPUQL := strings.ReplaceAll(controlPlaneCPUQL, DurationFormatter, durationStr)
 
-	cpCPU, qErr := r.promClient.QuerySum(ctx, cpCPUQL)
-	if qErr != nil {
+	if v, qErr := r.promClient.QuerySum(ctx, cpCPUQL); qErr != nil {
 		err = errors.Join(err, fmt.Errorf("failed to query control plane cpu: %w", qErr))
+	} else {
+		cpCPUValue = v
 	}
 
+	// We should only capture data plane cpu metrics during the benchmark traffic sending period.
+	elapsed = time.Since(trafficStartTime)
+	if elapsed < benchmarkCPURateWindow {
+		durationSeconds = int(elapsed.Seconds())
+		if durationSeconds < 1 {
+			durationSeconds = 1
+		}
+	}
+	durationStr = fmt.Sprintf("%d", durationSeconds)
 	dpCPUQL := strings.ReplaceAll(dataPlaneCPUQLFormat, DurationFormatter, durationStr)
 	dpCPU, qErr := r.promClient.QueryAvg(ctx, dpCPUQL)
 	if qErr != nil {
 		err = errors.Join(err, fmt.Errorf("failed to query data plane cpu: %w", qErr))
+	} else {
+		dpCPUValue = dpCPU
 	}
 
 	sample.ControlPlaneContainerMem = cpcMem
 	sample.ControlPlaneProcessMem = cppMem
-	sample.ControlPlaneCPU = cpCPU
+	sample.ControlPlaneCPU = cpCPUValue
 	sample.DataPlaneMem = dpMem
-	sample.DataPlaneCPU = dpCPU
+	sample.DataPlaneCPU = dpCPUValue
 	return err
 }
 

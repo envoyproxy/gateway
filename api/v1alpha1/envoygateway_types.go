@@ -199,7 +199,21 @@ type EnvoyGatewayLogging struct {
 	//
 	// +kubebuilder:default={default: info}
 	Level map[EnvoyGatewayLogComponent]LogLevel `json:"level,omitempty"`
+	// Encoder defines the log encoder format.
+	// If unspecified, defaults to "Text".
+	//
+	// +optional
+	Encoder *EnvoyGatewayLogEncoder `json:"encoder,omitempty"`
 }
+
+type EnvoyGatewayLogEncoder string
+
+const (
+	// EnvoyGatewayLogEncoderText defines the "Text" log encoder.
+	EnvoyGatewayLogEncoderText EnvoyGatewayLogEncoder = "Text"
+	// EnvoyGatewayLogEncoderJSON defines the "JSON" log encoder.
+	EnvoyGatewayLogEncoderJSON EnvoyGatewayLogEncoder = "JSON"
+)
 
 // EnvoyGatewayLogComponent defines a component that supports a configured logging level.
 // +kubebuilder:validation:Enum=default;provider;gateway-api;xds-translator;xds-server;xds;infrastructure;global-ratelimit
@@ -251,6 +265,9 @@ type ExtensionAPISettings struct {
 	// EnableBackend enables Envoy Gateway to
 	// reconcile and implement the Backend resources.
 	EnableBackend bool `json:"enableBackend"`
+	// DisableLua determines if Lua EnvoyExtensionPolicies should be disabled.
+	// If set to true, the Lua EnvoyExtensionPolicy feature will be disabled.
+	DisableLua bool `json:"disableLua"`
 }
 
 // EnvoyGatewayProvider defines the desired configuration of a provider.
@@ -301,7 +318,6 @@ type EnvoyGatewayKubernetesProvider struct {
 	// Deploy holds configuration of how output managed resources such as the Envoy Proxy data plane
 	// should be deployed
 	// +optional
-	// +notImplementedHide
 	Deploy *KubernetesDeployMode `json:"deploy,omitempty"`
 	// LeaderElection specifies the configuration for leader election.
 	// If it's not set up, leader election will be active by default, using Kubernetes' standard settings.
@@ -767,7 +783,6 @@ type ExtensionTLS struct {
 	// for mTLS authentication. If not specified, only server certificate validation is performed.
 	//
 	// +optional
-	// +notImplementedHide
 	ClientCertificateRef *gwapiv1.SecretObjectReference `json:"clientCertificateRef,omitempty"`
 }
 
@@ -852,5 +867,5 @@ type EnvoyGatewayTopologyInjector struct {
 }
 
 func init() {
-	SchemeBuilder.Register(&EnvoyGateway{})
+	localSchemeBuilder.Register(&EnvoyGateway{})
 }

@@ -10,7 +10,6 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
-	"runtime"
 	"sort"
 	"strings"
 	"testing"
@@ -59,28 +58,6 @@ type rateLimitOutput struct {
 }
 
 func TestTranslateXds(t *testing.T) {
-	// this is a hack to make sure EG render same output on macos and linux
-	defaultCertificateName = "/etc/ssl/certs/ca-certificates.crt"
-	defer func() {
-		defaultCertificateName = func() string {
-			switch runtime.GOOS {
-			case "darwin":
-				// TODO: maybe automatically get the keychain cert? That might be macOS version dependent.
-				// For now, we'll just use the root cert installed by Homebrew: brew install ca-certificates.
-				//
-				// See:
-				// * https://apple.stackexchange.com/questions/226375/where-are-the-root-cas-stored-on-os-x
-				// * https://superuser.com/questions/992167/where-are-digital-certificates-physically-stored-on-a-mac-os-x-machine
-				return "/opt/homebrew/etc/ca-certificates/cert.pem"
-			default:
-				// This is the default location for the system trust store
-				// on Debian derivatives like the envoy-proxy image being used by the infrastructure
-				// controller.
-				// See https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/security/ssl
-				return "/etc/ssl/certs/ca-certificates.crt"
-			}
-		}()
-	}()
 	testConfigs := map[string]testFileConfig{
 		"ratelimit-custom-domain": {
 			dnsDomain: "example-cluster.local",
@@ -181,6 +158,27 @@ func TestTranslateXds(t *testing.T) {
 				RuntimeFlags: cfg.runtimeFlags,
 			}
 			tCtx, err := tr.Translate(x)
+
+			// Handle EnvoyPatchPolicy statuses first, even if there are errors
+			// because errors are captured in the policy status conditions
+			if cfg.requireEnvoyPatchPolicies {
+				got := tCtx.EnvoyPatchPolicyStatuses
+				for _, e := range got {
+					require.NoError(t, field.SetValue(e, "LastTransitionTime", metav1.NewTime(time.Time{})))
+				}
+				if test.OverrideTestData() {
+					out, err := yaml.Marshal(got)
+					require.NoError(t, err)
+					require.NoError(t, file.Write(string(out), filepath.Join("testdata", "out", "xds-ir", inputFileName+".envoypatchpolicies.yaml")))
+				}
+
+				in := requireTestDataOutFile(t, "xds-ir", inputFileName+".envoypatchpolicies.yaml")
+				want := xtypes.EnvoyPatchPolicyStatuses{}
+				require.NoError(t, yaml.Unmarshal([]byte(in), &want))
+				opts := cmpopts.IgnoreFields(metav1.Condition{}, "LastTransitionTime")
+				require.Empty(t, cmp.Diff(want, got, opts))
+			}
+
 			if !strings.HasSuffix(inputFileName, "partial-invalid") && len(cfg.errMsg) == 0 {
 				t.Log(inputFileName)
 				require.NoError(t, err)
@@ -211,24 +209,6 @@ func TestTranslateXds(t *testing.T) {
 					require.NoError(t, file.Write(requireResourcesToYAMLString(t, secrets), filepath.Join("testdata", "out", "xds-ir", inputFileName+".secrets.yaml")))
 				}
 				require.Equal(t, requireTestDataOutFile(t, "xds-ir", inputFileName+".secrets.yaml"), requireResourcesToYAMLString(t, secrets))
-			}
-
-			if cfg.requireEnvoyPatchPolicies {
-				got := tCtx.EnvoyPatchPolicyStatuses
-				for _, e := range got {
-					require.NoError(t, field.SetValue(e, "LastTransitionTime", metav1.NewTime(time.Time{})))
-				}
-				if test.OverrideTestData() {
-					out, err := yaml.Marshal(got)
-					require.NoError(t, err)
-					require.NoError(t, file.Write(string(out), filepath.Join("testdata", "out", "xds-ir", inputFileName+".envoypatchpolicies.yaml")))
-				}
-
-				in := requireTestDataOutFile(t, "xds-ir", inputFileName+".envoypatchpolicies.yaml")
-				want := xtypes.EnvoyPatchPolicyStatuses{}
-				require.NoError(t, yaml.Unmarshal([]byte(in), &want))
-				opts := cmpopts.IgnoreFields(metav1.Condition{}, "LastTransitionTime")
-				require.Empty(t, cmp.Diff(want, got, opts))
 			}
 		})
 	}
@@ -631,5 +611,5 @@ func requireResourcesToYAMLString(t *testing.T, resources []types.Resource) stri
 	require.NoError(t, err)
 	data, err := yaml.JSONToYAML(jsonBytes)
 	require.NoError(t, err)
-	return string(data)
+	return test.NormalizeCertPath(string(data))
 }

@@ -20,6 +20,7 @@ import (
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils/proto"
@@ -139,6 +140,9 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute, httpListener *ir.HTTPListener) (*rou
 			return nil, err
 		}
 	}
+
+	// Metrics
+	router.StatPrefix = ptr.Deref(httpRoute.StatName, "")
 
 	// Add per route filter configs to the route, if needed.
 	if err := patchRouteWithPerRouteConfig(router, httpRoute, httpListener); err != nil {
@@ -299,8 +303,7 @@ func buildXdsStringMatcher(irMatch *ir.StringMatch) *matcherv3.StringMatcher {
 
 func buildXdsRouteAction(route *ir.HTTPRoute) *routev3.RouteAction {
 	backendWeights := route.Destination.ToBackendWeights()
-	// only use weighted cluster when there are invalid weights
-	if route.NeedsClusterPerSetting() || backendWeights.Invalid != 0 {
+	if route.NeedsClusterPerSetting() {
 		return buildXdsWeightedRouteAction(backendWeights, route.Destination.Settings)
 	}
 
@@ -313,10 +316,10 @@ func buildXdsRouteAction(route *ir.HTTPRoute) *routev3.RouteAction {
 
 func buildXdsWeightedRouteAction(backendWeights *ir.BackendWeights, settings []*ir.DestinationSetting) *routev3.RouteAction {
 	weightedClusters := make([]*routev3.WeightedCluster_ClusterWeight, 0, len(settings))
-	if backendWeights.Invalid > 0 {
+	if backendWeights.UnavailableWeight() > 0 {
 		invalidCluster := &routev3.WeightedCluster_ClusterWeight{
 			Name:   "invalid-backend-cluster",
-			Weight: &wrapperspb.UInt32Value{Value: backendWeights.Invalid},
+			Weight: &wrapperspb.UInt32Value{Value: backendWeights.UnavailableWeight()},
 		}
 		weightedClusters = append(weightedClusters, invalidCluster)
 	}
@@ -344,15 +347,32 @@ func buildXdsWeightedRouteAction(backendWeights *ir.BackendWeights, settings []*
 				if len(destinationSetting.Filters.RemoveResponseHeaders) > 0 {
 					validCluster.ResponseHeadersToRemove = append(validCluster.ResponseHeadersToRemove, destinationSetting.Filters.RemoveResponseHeaders...)
 				}
+
+				if destinationSetting.Filters.URLRewrite != nil &&
+					destinationSetting.Filters.URLRewrite.Host != nil &&
+					destinationSetting.Filters.URLRewrite.Host.Name != nil {
+					validCluster.HostRewriteSpecifier = &routev3.WeightedCluster_ClusterWeight_HostRewriteLiteral{
+						HostRewriteLiteral: *destinationSetting.Filters.URLRewrite.Host.Name,
+					}
+				}
 			}
 
 			weightedClusters = append(weightedClusters, validCluster)
 		}
 	}
 
+	// According to the Gateway API:
+	// 500 status code should be returned for invalid HTTPBackendRef
+	// 503 status code should be returned for Services without ready endpoints
+	// Reference: https://gateway-api.sigs.k8s.io/reference/spec/#httprouterule
+	clusterNotFoundResponseCode := routev3.RouteAction_INTERNAL_SERVER_ERROR
+	// Envoy can't handle mixed 500 and 503 responses, so we use 503 when both invalid and empty
+	if backendWeights.NoEndpoints > 0 {
+		clusterNotFoundResponseCode = routev3.RouteAction_SERVICE_UNAVAILABLE
+	}
 	return &routev3.RouteAction{
-		// Intentionally route to a non-existent cluster and return a 500 error when it is not found
-		ClusterNotFoundResponseCode: routev3.RouteAction_INTERNAL_SERVER_ERROR,
+		// Intentionally route to a non-existent cluster and return a 503 error when it is not found
+		ClusterNotFoundResponseCode: clusterNotFoundResponseCode,
 		ClusterSpecifier: &routev3.RouteAction_WeightedClusters{
 			WeightedClusters: &routev3.WeightedCluster{
 				Clusters: weightedClusters,
@@ -465,7 +485,7 @@ func buildXdsURLRewriteAction(route *ir.HTTPRoute, urlRewrite *ir.URLRewrite, pa
 	backendWeights := route.Destination.ToBackendWeights()
 	// only use weighted cluster when there are invalid weights
 	var routeAction *routev3.RouteAction
-	if route.NeedsClusterPerSetting() || backendWeights.Invalid != 0 {
+	if route.NeedsClusterPerSetting() {
 		routeAction = buildXdsWeightedRouteAction(backendWeights, route.Destination.Settings)
 	} else {
 		routeAction = &routev3.RouteAction{
@@ -508,19 +528,24 @@ func buildXdsURLRewriteAction(route *ir.HTTPRoute, urlRewrite *ir.URLRewrite, pa
 	}
 
 	if urlRewrite.Host != nil {
-
-		switch {
-		case urlRewrite.Host.Name != nil:
-			routeAction.HostRewriteSpecifier = &routev3.RouteAction_HostRewriteLiteral{
-				HostRewriteLiteral: *urlRewrite.Host.Name,
-			}
-		case urlRewrite.Host.Header != nil:
-			routeAction.HostRewriteSpecifier = &routev3.RouteAction_HostRewriteHeader{
-				HostRewriteHeader: *urlRewrite.Host.Header,
-			}
-		case urlRewrite.Host.Backend != nil:
-			routeAction.HostRewriteSpecifier = &routev3.RouteAction_AutoHostRewrite{
-				AutoHostRewrite: wrapperspb.Bool(true),
+		// For DFP use cases, route-level host literal/header rewrites are not used, and instead DFP per-filter config is used, see here:
+		// https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/dynamic_forward_proxy/v3/dynamic_forward_proxy.proto#envoy-v3-api-msg-extensions-filters-http-dynamic-forward-proxy-v3-perrouteconfig
+		// Auto Host rewrites are only supported for strict/logical DNS clusters, so not relevant for DFP, see here:
+		// https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto#envoy-v3-api-field-config-route-v3-routeaction-auto-host-rewrite
+		if !route.IsDynamicResolverRoute() {
+			switch {
+			case urlRewrite.Host.Name != nil:
+				routeAction.HostRewriteSpecifier = &routev3.RouteAction_HostRewriteLiteral{
+					HostRewriteLiteral: *urlRewrite.Host.Name,
+				}
+			case urlRewrite.Host.Header != nil:
+				routeAction.HostRewriteSpecifier = &routev3.RouteAction_HostRewriteHeader{
+					HostRewriteHeader: *urlRewrite.Host.Header,
+				}
+			case urlRewrite.Host.Backend != nil:
+				routeAction.HostRewriteSpecifier = &routev3.RouteAction_AutoHostRewrite{
+					AutoHostRewrite: wrapperspb.Bool(true),
+				}
 			}
 		}
 
@@ -683,6 +708,22 @@ func buildHashPolicy(httpRoute *ir.HTTPRoute) []*routev3.RouteAction_HashPolicy 
 			},
 		}
 		return []*routev3.RouteAction_HashPolicy{hashPolicy}
+	case ch.QueryParams != nil:
+		hps := make([]*routev3.RouteAction_HashPolicy, 0, len(ch.QueryParams))
+		for _, q := range ch.QueryParams {
+			if q == nil {
+				continue
+			}
+			hp := &routev3.RouteAction_HashPolicy{
+				PolicySpecifier: &routev3.RouteAction_HashPolicy_QueryParameter_{
+					QueryParameter: &routev3.RouteAction_HashPolicy_QueryParameter{
+						Name: q.Name,
+					},
+				},
+			}
+			hps = append(hps, hp)
+		}
+		return hps
 	default:
 		return nil
 	}
@@ -779,9 +820,13 @@ func buildRouteTracing(httpRoute *ir.HTTPRoute) (*routev3.Tracing, error) {
 		return nil, fmt.Errorf("failed to build route tracing tags:%w", err)
 	}
 
+	op, upstreamOp := buildTracingOperation(tracing.SpanName)
+
 	return &routev3.Tracing{
-		RandomSampling: fractionalpercent.FromFraction(tracing.SamplingFraction),
-		CustomTags:     tags,
+		RandomSampling:    fractionalpercent.FromFraction(tracing.SamplingFraction),
+		CustomTags:        tags,
+		Operation:         op,
+		UpstreamOperation: upstreamOp,
 	}, nil
 }
 

@@ -1028,7 +1028,7 @@ By default, Envoy Gateway applies the following filters in the order shown:
 * envoy.filters.http.fault
 * envoy.filters.http.cors
 * envoy.filters.http.ext_authz
-* envoy.filters.http.basic_authn
+* envoy.filters.http.basic_auth
 * envoy.filters.http.oauth2
 * envoy.filters.http.jwt_authn
 * envoy.filters.http.ext_proc
@@ -1047,7 +1047,7 @@ If a filter occurs in multiple configurations, the final order is the result of 
 To avoid conflicts, it is recommended to only specify one configuration per filter.
 
 For example, the following configuration moves the `envoy.filters.http.wasm` filter before the `envoy.filters.http.jwt_authn`
-filter and the `envoy.filters.http.cors` filter after the `envoy.filters.http.basic_authn` filter:
+filter and the `envoy.filters.http.cors` filter after the `envoy.filters.http.basic_auth` filter:
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
@@ -1064,7 +1064,7 @@ spec:
     - name: envoy.filters.http.wasm
       before: envoy.filters.http.jwt_authn
     - name: envoy.filters.http.cors
-      after: envoy.filters.http.basic_authn
+      after: envoy.filters.http.basic_auth
 EOF
 ```
 
@@ -1084,7 +1084,7 @@ spec:
     - name: envoy.filters.http.wasm
       before: envoy.filters.http.jwt_authn
     - name: envoy.filters.http.cors
-      after: envoy.filters.http.basic_authn
+      after: envoy.filters.http.basic_auth
 ```
 
 {{% /tab %}}

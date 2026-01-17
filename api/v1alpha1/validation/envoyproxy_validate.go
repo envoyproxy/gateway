@@ -11,6 +11,7 @@ import (
 	"net"
 	"net/netip"
 	"regexp"
+	"strings"
 
 	"github.com/dominikbraun/graph"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
@@ -18,6 +19,8 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
+
+var statNameRegex = regexp.MustCompile("%[^%]*%")
 
 // ValidateEnvoyProxy validates the provided EnvoyProxy.
 func ValidateEnvoyProxy(proxy *egv1a1.EnvoyProxy) error {
@@ -213,8 +216,8 @@ func validateProxyTelemetry(spec *egv1a1.EnvoyProxySpec) []error {
 		}
 
 		if spec.Telemetry.Metrics.ClusterStatName != nil {
-			if clusterStatErrs := validateClusterStatName(*spec.Telemetry.Metrics.ClusterStatName); clusterStatErrs != nil {
-				errs = append(errs, clusterStatErrs...)
+			if clusterStatErr := ValidateClusterStatName(*spec.Telemetry.Metrics.ClusterStatName); clusterStatErr != nil {
+				errs = append(errs, clusterStatErr)
 			}
 		}
 	}
@@ -230,8 +233,8 @@ func validateProxyAccessLog(accessLog *egv1a1.ProxyAccessLog) []error {
 	var errs []error
 
 	for _, setting := range accessLog.Settings {
-		if setting.Format != nil {
-			switch setting.Format.Type {
+		if setting.Format != nil && setting.Format.Type != nil {
+			switch *setting.Format.Type {
 			case egv1a1.ProxyAccessLogFormatTypeText:
 				if setting.Format.Text == nil {
 					err := fmt.Errorf("unable to configure access log when using Text format but \"text\" field being empty")
@@ -294,8 +297,15 @@ func validateFilterOrder(filterOrder []egv1a1.FilterPosition) error {
 	return nil
 }
 
-func validateClusterStatName(clusterStatName string) []error {
-	supportedOperators := map[string]bool{
+var (
+	routeStatSupportedOperators = map[string]bool{
+		egv1a1.StatFormatterRouteName:      true,
+		egv1a1.StatFormatterRouteNamespace: true,
+		egv1a1.StatFormatterRouteKind:      true,
+		egv1a1.StatFormatterRouteRuleName:  true,
+	}
+
+	clusterStatSupportedOperators = map[string]bool{
 		egv1a1.StatFormatterRouteName:       true,
 		egv1a1.StatFormatterRouteNamespace:  true,
 		egv1a1.StatFormatterRouteKind:       true,
@@ -303,16 +313,39 @@ func validateClusterStatName(clusterStatName string) []error {
 		egv1a1.StatFormatterRouteRuleNumber: true,
 		egv1a1.StatFormatterBackendRefs:     true,
 	}
+)
 
-	var errs []error
-	re := regexp.MustCompile("%[^%]*%")
-	matches := re.FindAllString(clusterStatName, -1)
+func ValidateRouteStatName(routeStatName string) error {
+	if err := validateStatName(routeStatName, routeStatSupportedOperators); err != nil {
+		return fmt.Errorf("unable to configure Route Stat Name: %w", err)
+	}
+
+	return nil
+}
+
+func ValidateClusterStatName(clusterStatName string) error {
+	if err := validateStatName(clusterStatName, clusterStatSupportedOperators); err != nil {
+		return fmt.Errorf("unable to configure Cluster Stat Name: %w", err)
+	}
+
+	return nil
+}
+
+func validateStatName(statName string, supportedOperators map[string]bool) error {
+	var unsupportedOperators []string
+	matches := statNameRegex.FindAllString(statName, -1)
+	if len(matches) == 0 && strings.Contains(statName, "%") {
+		return fmt.Errorf("unable to configure stat name with invalid operator")
+	}
 	for _, operator := range matches {
 		if _, ok := supportedOperators[operator]; !ok {
-			err := fmt.Errorf("unable to configure Cluster Stat Name with unsupported operator: %s", operator)
-			errs = append(errs, err)
+			unsupportedOperators = append(unsupportedOperators, operator)
 		}
 	}
 
-	return errs
+	if len(unsupportedOperators) > 0 {
+		return fmt.Errorf("unsupported operators: %v", unsupportedOperators)
+	}
+
+	return nil
 }

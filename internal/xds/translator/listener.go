@@ -455,16 +455,15 @@ func (t *Translator) addHCMToXDSListener(
 	}
 
 	filterChain := &listenerv3.FilterChain{
+		Name:    httpsListenerFilterChainName(irListener),
 		Filters: filters,
 	}
 
 	if irListener.TLS != nil {
 		var tSocket *corev3.TransportSocket
+
 		if http3Listener {
 			tSocket, err = buildDownstreamQUICTransportSocket(irListener.TLS)
-			if err != nil {
-				return err
-			}
 		} else {
 			config := irListener.TLS.DeepCopy()
 			// If the listener has overlapping TLS config with other listeners, we need to disable HTTP/2
@@ -474,17 +473,15 @@ func (t *Translator) addHCMToXDSListener(
 				config.ALPNProtocols = []string{"http/1.1"}
 			}
 			tSocket, err = buildXdsDownstreamTLSSocket(config)
-			if err != nil {
-				return err
-			}
+		}
+		if err != nil {
+			return err
 		}
 		filterChain.TransportSocket = tSocket
-		filterChain.Name = httpsListenerFilterChainName(irListener)
 
 		if err := addServerNamesMatch(xdsListener, filterChain, irListener.Hostnames); err != nil {
 			return err
 		}
-
 		xdsListener.FilterChains = append(xdsListener.FilterChains, filterChain)
 	} else {
 		// Add the HTTP filter chain as the default filter chain
@@ -541,12 +538,12 @@ func tlsListenerFilterChainName(irRoute *ir.TCPRoute) string {
 }
 
 func buildEarlyHeaderMutation(headers *ir.HeaderSettings) []*corev3.TypedExtensionConfig {
-	if headers == nil || (len(headers.EarlyAddRequestHeaders) == 0 && len(headers.EarlyRemoveRequestHeaders) == 0) {
+	if headers == nil || (len(headers.EarlyAddRequestHeaders) == 0 && len(headers.EarlyRemoveRequestHeaders) == 0 && len(headers.EarlyRemoveRequestHeadersOnMatch) == 0) {
 		return nil
 	}
 
 	earlyHeaderMutationAny, _ := proto.ToAnyWithValidation(&early_header_mutationv3.HeaderMutation{
-		Mutations: buildHeaderMutationRules(headers.EarlyAddRequestHeaders, headers.EarlyRemoveRequestHeaders),
+		Mutations: buildHeaderMutationRules(headers.EarlyAddRequestHeaders, headers.EarlyRemoveRequestHeaders, headers.EarlyRemoveRequestHeadersOnMatch),
 	})
 
 	return []*corev3.TypedExtensionConfig{
@@ -558,14 +555,7 @@ func buildEarlyHeaderMutation(headers *ir.HeaderSettings) []*corev3.TypedExtensi
 }
 
 func addServerNamesMatch(xdsListener *listenerv3.Listener, filterChain *listenerv3.FilterChain, hostnames []string) error {
-	// Skip adding ServerNames match for:
-	// 1. nil listeners
-	// 2. UDP (QUIC) listeners used for HTTP3
-	// 3. wildcard hostnames
-	// TODO(zhaohuabing): https://github.com/envoyproxy/gateway/issues/5660#issuecomment-3130314740
-	if xdsListener == nil || (xdsListener.GetAddress() != nil &&
-		xdsListener.GetAddress().GetSocketAddress() != nil &&
-		xdsListener.GetAddress().GetSocketAddress().GetProtocol() == corev3.SocketAddress_UDP) {
+	if xdsListener == nil {
 		return nil
 	}
 
@@ -575,8 +565,16 @@ func addServerNamesMatch(xdsListener *listenerv3.Listener, filterChain *listener
 			ServerNames: hostnames,
 		}
 
-		if err := addXdsTLSInspectorFilter(xdsListener); err != nil {
-			return err
+		isQUICListener := xdsListener.GetAddress() != nil &&
+			xdsListener.GetAddress().GetSocketAddress() != nil &&
+			xdsListener.GetAddress().GetSocketAddress().GetProtocol() == corev3.SocketAddress_UDP
+
+		// Envoy’s QUIC stack parses SNI itself, so filter_chain_match.server_names works without TLS Inspector.
+		// TLS Inspector is only needed for TCP/TLS listeners.
+		if !isQUICListener {
+			if err := addXdsTLSInspectorFilter(xdsListener); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -629,17 +627,20 @@ func (t *Translator) addXdsTCPFilterChain(
 
 	isTLSPassthrough := irRoute.TLS != nil && irRoute.TLS.TLSInspectorConfig != nil
 	isTLSTerminate := irRoute.TLS != nil && irRoute.TLS.Terminate != nil
-	statPrefix := "tcp"
-	if isTLSPassthrough {
-		statPrefix = "tls-passthrough"
-	}
+	statPrefix := ptr.Deref(irRoute.StatName, "")
+	if statPrefix == "" {
+		statPrefix = "tcp"
+		if isTLSPassthrough {
+			statPrefix = "tls-passthrough"
+		}
 
-	if isTLSTerminate {
-		statPrefix = "tls-terminate"
-	}
+		if isTLSTerminate {
+			statPrefix = "tls-terminate"
+		}
 
-	// Append port to the statPrefix.
-	statPrefix = strings.Join([]string{statPrefix, strconv.Itoa(int(xdsListener.Address.GetSocketAddress().GetPortValue()))}, "-")
+		// Append port to the statPrefix.
+		statPrefix = strings.Join([]string{statPrefix, strconv.Itoa(int(xdsListener.Address.GetSocketAddress().GetPortValue()))}, "-")
+	}
 
 	filterChain, err := buildTCPFilterChain(
 		irRoute,

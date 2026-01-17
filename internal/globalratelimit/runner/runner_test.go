@@ -217,9 +217,10 @@ func Test_subscribeAndTranslate(t *testing.T) {
 			require.NoError(t, err)
 
 			r := New(&Config{
-				Server: *cfg,
-				XdsIR:  xdsIR,
-				cache:  cachev3.NewSnapshotCache(false, cachev3.IDHash{}, nil),
+				Server:       *cfg,
+				XdsIR:        xdsIR,
+				RunnerErrors: new(message.RunnerErrors),
+				cache:        cachev3.NewSnapshotCache(false, cachev3.IDHash{}, nil),
 			})
 
 			c := xdsIR.Subscribe(ctx)
@@ -230,7 +231,11 @@ func Test_subscribeAndTranslate(t *testing.T) {
 					xdsIR.Delete(xds.Key)
 					continue
 				}
-				xdsIR.Store(xds.Key, xds.Value)
+				m := message.XdsIRWithContext{
+					XdsIR:   xds.Value,
+					Context: context.Background(),
+				}
+				xdsIR.Store(xds.Key, &m)
 			}
 
 			diff := ""

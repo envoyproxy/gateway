@@ -81,6 +81,8 @@ gateways:
       supportedKinds:
       - group: gateway.networking.k8s.io
         kind: TCPRoute
+      - group: gateway.networking.k8s.io
+        kind: TLSRoute
     - attachedRoutes: 1
       conditions:
       - lastTransitionTime: null
@@ -232,6 +234,7 @@ xdsIR:
     globalResources:
       proxyServiceCluster:
         metadata:
+          kind: Service
           name: envoy-envoy-gateway-gateway-tls-e5408cf3
           namespace: envoy-gateway-system
           sectionName: "8080"
@@ -243,6 +246,7 @@ xdsIR:
             port: 8080
             zone: zone1
           metadata:
+            kind: Service
             name: envoy-envoy-gateway-gateway-tls-e5408cf3
             namespace: envoy-gateway-system
             sectionName: "8080"
@@ -376,6 +380,10 @@ xdsIR:
               sni: example.com
               useSystemTrustStore: true
             weight: 1
+        metadata:
+          kind: TCPRoute
+          name: envoy-gateway
+          namespace: envoy-gateway
         name: tcproute/envoy-gateway/envoy-gateway
         tls:
           terminate:

@@ -96,11 +96,11 @@ func NewImageFetcher(ctx context.Context, opt ImageFetcherOption, logger logging
 // PrepareFetch is the entrypoint for fetching Wasm binary from Wasm Image Specification compatible images.
 // Wasm binary is not fetched immediately, but returned by `binaryFetcher` function, which is returned by PrepareFetch.
 // By this way, we can have another chance to check cache with `actualDigest` without downloading the OCI image.
-func (o *ImageFetcher) PrepareFetch(url string) (binaryFetcher func() ([]byte, error), actualDigest string, err error) {
+func (o *ImageFetcher) PrepareFetch(url string) (func() ([]byte, error), string, error) {
 	ref, err := name.ParseReference(url)
 	if err != nil {
 		err = fmt.Errorf("could not parse url in image reference: %w", err)
-		return
+		return nil, "", err
 	}
 	o.logger.Info("fetching image", "image", ref.Context().RepositoryStr(),
 		"registry", ref.Context().RegistryStr(), "tag", ref.Identifier())
@@ -118,20 +118,20 @@ func (o *ImageFetcher) PrepareFetch(url string) (binaryFetcher func() ([]byte, e
 
 	if err != nil {
 		err = fmt.Errorf("could not fetch manifest: %w", err)
-		return
+		return nil, "", err
 	}
 
 	// Fetch image.
 	img, err := desc.Image()
 	if err != nil {
 		err = fmt.Errorf("could not fetch image: %w", err)
-		return
+		return nil, "", err
 	}
 
 	// Check Manifest's digest if expManifestDigest is not empty.
 	d, _ := img.Digest()
-	actualDigest = d.Hex
-	binaryFetcher = func() ([]byte, error) {
+	actualDigest := d.Hex
+	binaryFetcher := func() ([]byte, error) {
 		manifest, err := img.Manifest()
 		if err != nil {
 			return nil, fmt.Errorf("could not retrieve manifest: %w", err)
@@ -168,7 +168,7 @@ func (o *ImageFetcher) PrepareFetch(url string) (binaryFetcher func() ([]byte, e
 			),
 		)
 	}
-	return
+	return binaryFetcher, actualDigest, err
 }
 
 // extractDockerImage extracts the Wasm binary from the

@@ -23,6 +23,8 @@ const (
 // +kubebuilder:resource:categories=envoy-gateway,shortName=btp
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
+// +genclient
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 type BackendTrafficPolicy struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -75,6 +77,7 @@ type BackendTrafficPolicySpec struct {
 
 	// The compressor config for the http streams.
 	// This provides more granular control over compression configuration.
+	// Order matters: The first compressor in the list is preferred when q-values in Accept-Encoding are equal.
 	//
 	// +patchMergeKey=type
 	// +patchStrategy=merge
@@ -117,8 +120,28 @@ type BackendTrafficPolicySpec struct {
 type BackendTelemetry struct {
 	// Tracing configures the tracing settings for the backend or HTTPRoute.
 	//
+	// This takes precedence over EnvoyProxy tracing when set.
+	//
 	// +optional
 	Tracing *Tracing `json:"tracing,omitempty"`
+	// Metrics defines metrics configuration for the backend or Route.
+	//
+	// +optional
+	Metrics *BackendMetrics `json:"metrics,omitempty"`
+}
+
+type BackendMetrics struct {
+	// RouteStatName defines the value of the Route stat_prefix, determining how the route stats are named.
+	// For more details, see envoy docs: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto#config-route-v3-route
+	// The supported operators for this pattern are:
+	// %ROUTE_NAME%: name of Gateway API xRoute resource
+	// %ROUTE_NAMESPACE%: namespace of Gateway API xRoute resource
+	// %ROUTE_KIND%: kind of Gateway API xRoute resource
+	// Example: %ROUTE_KIND%/%ROUTE_NAMESPACE%/%ROUTE_NAME% => httproute/my-ns/my-route
+	// Disabled by default.
+	//
+	// +optional
+	RouteStatName *string `json:"routeStatName,omitempty"`
 }
 
 // ProtocolUpgradeConfig specifies the configuration for protocol upgrades.
@@ -158,6 +181,7 @@ type RequestBuffer struct {
 // BackendTrafficPolicyList contains a list of BackendTrafficPolicy resources.
 //
 // +kubebuilder:object:root=true
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 type BackendTrafficPolicyList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
@@ -165,5 +189,5 @@ type BackendTrafficPolicyList struct {
 }
 
 func init() {
-	SchemeBuilder.Register(&BackendTrafficPolicy{}, &BackendTrafficPolicyList{})
+	localSchemeBuilder.Register(&BackendTrafficPolicy{}, &BackendTrafficPolicyList{})
 }

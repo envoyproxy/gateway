@@ -6,12 +6,18 @@
 package gatewayapi
 
 import (
+	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"regexp"
+	"sync/atomic"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -19,6 +25,7 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
+	"github.com/envoyproxy/gateway/internal/ir"
 )
 
 func Test_wildcard2regex(t *testing.T) {
@@ -780,6 +787,79 @@ func TestValidateCIDRs_ErrorOnBadCIDR(t *testing.T) {
 	}
 }
 
+func TestTranslatorFetchEndpointsFromIssuerCache(t *testing.T) {
+	var (
+		callCount atomic.Int32
+		server    *httptest.Server
+	)
+
+	server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/.well-known/openid-configuration" {
+			http.NotFound(w, r)
+			return
+		}
+
+		callCount.Add(1)
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = fmt.Fprintf(w, `{"token_endpoint":%q,"authorization_endpoint":%q}`, server.URL+"/token", server.URL+"/authorize")
+	}))
+	defer server.Close()
+
+	tr := &Translator{GatewayControllerName: "gateway.envoyproxy.io/gatewayclass-controller"}
+	tr.oidcDiscoveryCache = newOIDCDiscoveryCache()
+
+	cfg, err := tr.fetchEndpointsFromIssuer(server.URL, nil)
+	require.NoError(t, err)
+	require.NotNil(t, cfg)
+	require.Equal(t, int32(1), callCount.Load())
+
+	cfgCached, err := tr.fetchEndpointsFromIssuer(server.URL, nil)
+	require.NoError(t, err)
+	require.NotNil(t, cfgCached)
+	require.Equal(t, int32(1), callCount.Load(), "second fetch should use cache")
+
+	cfgAgain, err := tr.fetchEndpointsFromIssuer(server.URL, nil)
+	require.NoError(t, err)
+	require.NotNil(t, cfgAgain)
+	require.Equal(t, int32(1), callCount.Load(), "subsequent fetch should continue using cache")
+}
+
+func TestTranslatorFetchEndpointsFromIssuerCacheError(t *testing.T) {
+	var (
+		callCount atomic.Int32
+		server    *httptest.Server
+	)
+
+	server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/.well-known/openid-configuration" {
+			http.NotFound(w, r)
+			return
+		}
+
+		callCount.Add(1)
+		http.NotFound(w, r)
+	}))
+	defer server.Close()
+
+	tr := &Translator{GatewayControllerName: "gateway.envoyproxy.io/gatewayclass-controller"}
+	tr.oidcDiscoveryCache = newOIDCDiscoveryCache()
+
+	cfg, err := tr.fetchEndpointsFromIssuer(server.URL, nil)
+	require.Error(t, err)
+	require.Nil(t, cfg)
+	require.Equal(t, int32(1), callCount.Load())
+
+	cfgCached, err := tr.fetchEndpointsFromIssuer(server.URL, nil)
+	require.Error(t, err)
+	require.Nil(t, cfgCached)
+	require.Equal(t, int32(1), callCount.Load(), "second fetch should use cached error")
+
+	cfgAfter, err := tr.fetchEndpointsFromIssuer(server.URL, nil)
+	require.Error(t, err)
+	require.Nil(t, cfgAfter)
+	require.Equal(t, int32(1), callCount.Load(), "subsequent fetch should continue using cached error")
+}
+
 // / tiny helper to build a minimal SecurityPolicy
 func sp(ns, name string) *egv1a1.SecurityPolicy {
 	return &egv1a1.SecurityPolicy{
@@ -802,6 +882,7 @@ func hasParentFalseCondition(p *egv1a1.SecurityPolicy) bool {
 // --- TCP branch: validateSecurityPolicyForTCP(...) returns err -> SetTranslationErrorForPolicyAncestors(...) + return
 func Test_SecurityPolicy_TCP_Invalid_setsStatus_and_returns(t *testing.T) {
 	tr := &Translator{GatewayControllerName: "gateway.envoyproxy.io/gatewayclass-controller"}
+	trContext := &TranslatorContext{}
 
 	// Create an invalid TCP policy (has CORS which is not allowed for TCP)
 	policy := sp("default", "bad-tcp")
@@ -859,6 +940,8 @@ func Test_SecurityPolicy_TCP_Invalid_setsStatus_and_returns(t *testing.T) {
 	gatewayRouteMap := make(map[string]map[string]sets.Set[string])
 	resources := resource.NewResources()
 	xdsIR := make(resource.XdsIRMap)
+	trContext.SetServices(resources.Services)
+	tr.TranslatorContext = trContext
 
 	// Process the policy - this should set error status
 	tr.processSecurityPolicyForRoute(resources, xdsIR, routeMap, gatewayRouteMap, policy, target)
@@ -870,6 +953,7 @@ func Test_SecurityPolicy_TCP_Invalid_setsStatus_and_returns(t *testing.T) {
 // --- non-TCP branch: malformed CIDR should return err -> SetTranslationErrorForPolicyAncestors(...) + return
 func Test_SecurityPolicy_HTTP_Invalid_setsStatus_and_returns(t *testing.T) {
 	tr := &Translator{GatewayControllerName: "gateway.envoyproxy.io/gatewayclass-controller"}
+	trContext := &TranslatorContext{}
 
 	// Create an invalid HTTP policy (malformed CIDR)
 	policy := sp("default", "bad-http")
@@ -933,6 +1017,8 @@ func Test_SecurityPolicy_HTTP_Invalid_setsStatus_and_returns(t *testing.T) {
 	gatewayRouteMap := make(map[string]map[string]sets.Set[string])
 	resources := resource.NewResources()
 	xdsIR := make(resource.XdsIRMap)
+	trContext.SetServices(resources.Services)
+	tr.TranslatorContext = trContext
 
 	// Process the policy - this should set error status
 	tr.processSecurityPolicyForRoute(resources, xdsIR, routeMap, gatewayRouteMap, policy, target)
@@ -1085,6 +1171,203 @@ func Test_validateSecurityPolicyForTCP_Table(t *testing.T) {
 			} else {
 				require.NoError(t, err)
 			}
+		})
+	}
+}
+
+func Test_buildContextExtensions(t *testing.T) {
+	policyNs := "default"
+	tests := []struct {
+		name              string
+		contextExtensions []*egv1a1.ContextExtension
+		translatorContext *TranslatorContext
+		want              []*ir.ContextExtention
+		wantErr           bool
+	}{
+		{
+			name:              "Nil",
+			contextExtensions: nil,
+			want:              nil,
+		},
+		{
+			name:              "Empty",
+			contextExtensions: []*egv1a1.ContextExtension{},
+			want:              nil,
+		},
+		{
+			name: "TypeValue",
+			contextExtensions: []*egv1a1.ContextExtension{
+				{Name: "foo", Value: ptr.To("bar")},
+			},
+			want: []*ir.ContextExtention{{Name: "foo", Value: ir.PrivateBytes("bar")}},
+		},
+		{
+			name:              "TypeValueEmpty",
+			contextExtensions: []*egv1a1.ContextExtension{{Name: "foo"}},
+			want:              []*ir.ContextExtention{{Name: "foo", Value: nil}},
+		},
+		{
+			name: "TypeValueExplicit",
+			contextExtensions: []*egv1a1.ContextExtension{
+				{
+					Name:  "foo",
+					Type:  egv1a1.ContextExtensionValueTypeValue,
+					Value: ptr.To("bar"),
+				},
+			},
+			want: []*ir.ContextExtention{{Name: "foo", Value: ir.PrivateBytes("bar")}},
+		},
+		{
+			name: "TypeValueRefNil",
+			contextExtensions: []*egv1a1.ContextExtension{
+				{Name: "foo", Type: egv1a1.ContextExtensionValueTypeValueRef},
+			},
+			wantErr: true,
+		},
+		{
+			name: "TypeValueRefConfigMapNotFound",
+			contextExtensions: []*egv1a1.ContextExtension{{
+				Name: "foo",
+				Type: egv1a1.ContextExtensionValueTypeValueRef,
+				ValueRef: &egv1a1.LocalObjectKeyReference{
+					LocalObjectReference: gwapiv1.LocalObjectReference{
+						Kind: resource.KindConfigMap,
+						Name: "test-cm",
+					},
+					Key: "test-key",
+				},
+			}},
+			translatorContext: &TranslatorContext{},
+			wantErr:           true,
+		},
+		{
+			name: "TypeValueRefConfigMapKeyNotFound",
+			contextExtensions: []*egv1a1.ContextExtension{{
+				Name: "foo",
+				Type: egv1a1.ContextExtensionValueTypeValueRef,
+				ValueRef: &egv1a1.LocalObjectKeyReference{
+					LocalObjectReference: gwapiv1.LocalObjectReference{
+						Kind: resource.KindConfigMap,
+						Name: "test-cm",
+					},
+					Key: "test-key",
+				},
+			}},
+			translatorContext: &TranslatorContext{
+				ConfigMapMap: map[types.NamespacedName]*corev1.ConfigMap{
+					{Namespace: policyNs, Name: "test-cm"}: {},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "TypeValueRefConfigMap",
+			contextExtensions: []*egv1a1.ContextExtension{{
+				Name: "foo",
+				Type: egv1a1.ContextExtensionValueTypeValueRef,
+				ValueRef: &egv1a1.LocalObjectKeyReference{
+					LocalObjectReference: gwapiv1.LocalObjectReference{
+						Kind: resource.KindConfigMap,
+						Name: "test-cm",
+					},
+					Key: "test-key",
+				},
+			}},
+			translatorContext: &TranslatorContext{
+				ConfigMapMap: map[types.NamespacedName]*corev1.ConfigMap{
+					{Namespace: policyNs, Name: "test-cm"}: {
+						Data: map[string]string{"test-key": "bar"},
+					},
+				},
+			},
+			want: []*ir.ContextExtention{{Name: "foo", Value: ir.PrivateBytes("bar")}},
+		},
+		{
+			name: "TypeValueRefSecretNotFound",
+			contextExtensions: []*egv1a1.ContextExtension{{
+				Name: "foo",
+				Type: egv1a1.ContextExtensionValueTypeValueRef,
+				ValueRef: &egv1a1.LocalObjectKeyReference{
+					LocalObjectReference: gwapiv1.LocalObjectReference{
+						Kind: resource.KindSecret,
+						Name: "test-secret",
+					},
+					Key: "test-key",
+				},
+			}},
+			translatorContext: &TranslatorContext{},
+			wantErr:           true,
+		},
+		{
+			name: "TypeValueRefSecretKeyNotFound",
+			contextExtensions: []*egv1a1.ContextExtension{{
+				Name: "foo",
+				Type: egv1a1.ContextExtensionValueTypeValueRef,
+				ValueRef: &egv1a1.LocalObjectKeyReference{
+					LocalObjectReference: gwapiv1.LocalObjectReference{
+						Kind: resource.KindSecret,
+						Name: "test-secret",
+					},
+					Key: "test-key",
+				},
+			}},
+			translatorContext: &TranslatorContext{
+				SecretMap: map[types.NamespacedName]*corev1.Secret{
+					{Namespace: policyNs, Name: "test-secret"}: {},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "TypeValueRefSecret",
+			contextExtensions: []*egv1a1.ContextExtension{{
+				Name: "foo",
+				Type: egv1a1.ContextExtensionValueTypeValueRef,
+				ValueRef: &egv1a1.LocalObjectKeyReference{
+					LocalObjectReference: gwapiv1.LocalObjectReference{
+						Kind: resource.KindSecret,
+						Name: "test-secret",
+					},
+					Key: "test-key",
+				},
+			}},
+			translatorContext: &TranslatorContext{
+				SecretMap: map[types.NamespacedName]*corev1.Secret{
+					{Namespace: policyNs, Name: "test-secret"}: {
+						Data: map[string][]byte{"test-key": []byte("YmFy")},
+					},
+				},
+			},
+			want: []*ir.ContextExtention{{Name: "foo", Value: ir.PrivateBytes("bar")}},
+		},
+		{
+			name: "TypeValueRefUnexpectedKind",
+			contextExtensions: []*egv1a1.ContextExtension{{
+				Name: "foo",
+				Type: egv1a1.ContextExtensionValueTypeValueRef,
+				ValueRef: &egv1a1.LocalObjectKeyReference{
+					LocalObjectReference: gwapiv1.LocalObjectReference{
+						Kind: resource.KindService,
+						Name: "test-secret",
+					},
+					Key: "test-key",
+				},
+			}},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			translator := &Translator{TranslatorContext: tt.translatorContext}
+			got, err := translator.buildContextExtensions(tt.contextExtensions, policyNs)
+			if tt.wantErr {
+				require.Error(t, err)
+				require.Nil(t, got)
+				return
+			}
+
+			require.NoError(t, err)
+			require.Equal(t, tt.want, got)
 		})
 	}
 }

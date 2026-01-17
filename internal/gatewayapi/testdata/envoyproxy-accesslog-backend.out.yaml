@@ -138,7 +138,8 @@ xdsIR:
   envoy-gateway/gateway-1:
     accessLog:
       openTelemetry:
-      - destination:
+      - authority: otel-collector.monitoring.svc
+        destination:
           metadata:
             kind: EnvoyProxy
             name: test
@@ -150,6 +151,7 @@ xdsIR:
             - host: 8.7.6.5
               port: 4317
             metadata:
+              kind: Service
               name: otel-collector
               namespace: monitoring
               sectionName: "4317"
@@ -166,6 +168,7 @@ xdsIR:
     globalResources:
       proxyServiceCluster:
         metadata:
+          kind: Service
           name: envoy-envoy-gateway-gateway-1-196ae069
           namespace: envoy-gateway-system
           sectionName: "8080"
@@ -177,6 +180,7 @@ xdsIR:
             port: 8080
             zone: zone1
           metadata:
+            kind: Service
             name: envoy-envoy-gateway-gateway-1-196ae069
             namespace: envoy-gateway-system
             sectionName: "8080"

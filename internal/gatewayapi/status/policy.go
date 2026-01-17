@@ -7,7 +7,7 @@ package status
 
 import (
 	"sort"
-	"time"
+	"strings"
 
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -72,6 +72,19 @@ func SetAcceptedForPolicyAncestor(policyStatus *gwapiv1.PolicyStatus, ancestorRe
 		gwapiv1.PolicyConditionAccepted, metav1.ConditionTrue, gwapiv1.PolicyReasonAccepted, message, generation)
 }
 
+// SetDeprecatedFieldsWarningForPolicyAncestors sets deprecated fields warning conditions for each ancestor reference.
+func SetDeprecatedFieldsWarningForPolicyAncestors(policyStatus *gwapiv1.PolicyStatus, ancestorRefs []*gwapiv1.ParentReference, controllerName string, generation int64, deprecatedFields map[string]string) {
+	for _, ancestorRef := range ancestorRefs {
+		SetDeprecatedFieldsWarningForPolicyAncestor(policyStatus, ancestorRef, controllerName, generation, deprecatedFields)
+	}
+}
+
+// SetDeprecatedFieldsWarningForPolicyAncestor sets a deprecated fields warning condition for a specific ancestor reference.
+func SetDeprecatedFieldsWarningForPolicyAncestor(policyStatus *gwapiv1.PolicyStatus, ancestorRef *gwapiv1.ParentReference, controllerName string, generation int64, deprecatedFields map[string]string) {
+	SetConditionForPolicyAncestor(policyStatus, ancestorRef, controllerName,
+		egv1a1.PolicyConditionWarning, metav1.ConditionTrue, egv1a1.PolicyReasonDeprecatedField, buildDeprecationWarningMessage(deprecatedFields), generation)
+}
+
 func SetConditionForPolicyAncestors(policyStatus *gwapiv1.PolicyStatus, ancestorRefs []*gwapiv1.ParentReference, controllerName string,
 	conditionType gwapiv1.PolicyConditionType, status metav1.ConditionStatus, reason gwapiv1.PolicyConditionReason, message string, generation int64,
 ) {
@@ -104,19 +117,45 @@ func SetConditionForPolicyAncestor(policyStatus *gwapiv1.PolicyStatus, ancestorR
 			}
 
 			// Only create condition and merge if needed
-			cond := newCondition(string(conditionType), status, string(reason), sanitizedMessage, time.Now(), generation)
+			cond := newCondition(string(conditionType), status, string(reason), sanitizedMessage, generation)
 			policyStatus.Ancestors[i].Conditions = MergeConditions(policyStatus.Ancestors[i].Conditions, cond)
 			return
 		}
 	}
 
 	// Add condition for new PolicyAncestorStatus
-	cond := newCondition(string(conditionType), status, string(reason), sanitizedMessage, time.Now(), generation)
+	cond := newCondition(string(conditionType), status, string(reason), sanitizedMessage, generation)
 	policyStatus.Ancestors = append(policyStatus.Ancestors, gwapiv1.PolicyAncestorStatus{
 		AncestorRef:    *ancestorRef,
 		ControllerName: gwapiv1a2.GatewayController(controllerName),
 		Conditions:     []metav1.Condition{cond},
 	})
+}
+
+// buildDeprecationWarningMessage builds a warning message from a map of deprecated fields to their alternatives.
+func buildDeprecationWarningMessage(deprecatedFields map[string]string) string {
+	if len(deprecatedFields) == 0 {
+		return ""
+	}
+
+	// Sort the keys to ensure deterministic message ordering
+	keys := make([]string, 0, len(deprecatedFields))
+	for k := range deprecatedFields {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	var builder strings.Builder
+	for i, deprecated := range keys {
+		if i > 0 {
+			builder.WriteString("; ")
+		}
+		builder.WriteString(deprecated)
+		builder.WriteString(" is deprecated, use ")
+		builder.WriteString(deprecatedFields[deprecated])
+		builder.WriteString(" instead")
+	}
+	return builder.String()
 }
 
 func ancestorRefsEqual(a, b *gwapiv1.ParentReference) bool {

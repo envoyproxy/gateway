@@ -1,0 +1,80 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: weight-mixed-valid-and-invalid-http-route
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: same-namespace
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /mixed-valid-and-invalid        # should return 500 for invalid cluster
+      backendRefs:
+        - name: infra-backend-v1
+          port: 8080
+          weight: 9
+        - name: non-existent-backend
+          port: 8080
+          weight: 1
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /mixed-valid-and-no-endpoints
+      backendRefs:
+        - name: infra-backend-v1
+          port: 8080
+          weight: 9
+        - name: infra-backend-without-endpoints    # should return 503 for empty cluster
+          port: 8080
+          weight: 1
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: infra-backend-without-endpoints
+  namespace: gateway-conformance-infra
+spec:
+  selector:
+    app: infra-backend-without-endpoints
+  ports:
+    - protocol: TCP
+      port: 8080
+      name: http1
+      targetPort: 3000
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: infra-backend-without-endpoints
+  namespace: gateway-conformance-infra
+  labels:
+    app: infra-backend-without-endpoints
+spec:
+  replicas: 0
+  selector:
+    matchLabels:
+      app: infra-backend-without-endpoints
+  template:
+    metadata:
+      labels:
+        app: infra-backend-without-endpoints
+    spec:
+      containers:
+        - name: infra-backend-without-endpoints
+          image: gcr.io/k8s-staging-gateway-api/echo-basic:v20231214-v1.0.0-140-gf544a46e
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: SERVICE_NAME
+              value: infra-backend-without-endpoints
+          resources:
+            requests:
+              cpu: 10m

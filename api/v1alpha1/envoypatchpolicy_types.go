@@ -19,11 +19,14 @@ const (
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:categories=envoy-gateway,shortName=epp
 // +kubebuilder:subresource:status
-// +kubebuilder:printcolumn:name="Status",type=string,JSONPath=`.status.conditions[?(@.type=="Programmed")].reason`
+// +kubebuilder:printcolumn:name="Accepted",type=string,JSONPath=`.status.ancestors[0].conditions[?(@.type=="Accepted")].status`
+// +kubebuilder:printcolumn:name="Programmed",type=string,JSONPath=`.status.ancestors[0].conditions[?(@.type=="Programmed")].status`
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
 
 // EnvoyPatchPolicy allows the user to modify the generated Envoy xDS
 // resources by Envoy Gateway using this patch API
+// +genclient
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 type EnvoyPatchPolicy struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -169,6 +172,7 @@ const (
 //+kubebuilder:object:root=true
 
 // EnvoyPatchPolicyList contains a list of EnvoyPatchPolicy resources.
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 type EnvoyPatchPolicyList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
@@ -176,5 +180,5 @@ type EnvoyPatchPolicyList struct {
 }
 
 func init() {
-	SchemeBuilder.Register(&EnvoyPatchPolicy{}, &EnvoyPatchPolicyList{})
+	localSchemeBuilder.Register(&EnvoyPatchPolicy{}, &EnvoyPatchPolicyList{})
 }

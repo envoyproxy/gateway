@@ -63,7 +63,7 @@ backends:
     conditions:
     - lastTransitionTime: null
       message: 'The Backend was not accepted: IP address 127.0.0.1 in the loopback
-        range is not supported'
+        range is only supported when using the Host infrastructure'
       reason: Accepted
       status: "False"
       type: Invalid
@@ -263,7 +263,7 @@ httpRoutes:
         type: Accepted
       - lastTransitionTime: null
         message: 'Failed to process route rule 0 backendRef 0: IP address 127.0.0.1
-          in the loopback range is not supported.'
+          in the loopback range is only supported when using the Host infrastructure.'
         reason: InvalidAddress
         status: "False"
         type: ResolvedRefs
@@ -337,6 +337,7 @@ xdsIR:
     globalResources:
       proxyServiceCluster:
         metadata:
+          kind: Service
           name: envoy-envoy-gateway-gateway-1-196ae069
           namespace: envoy-gateway-system
           sectionName: "8080"
@@ -348,6 +349,7 @@ xdsIR:
             port: 8080
             zone: zone1
           metadata:
+            kind: Service
             name: envoy-envoy-gateway-gateway-1-196ae069
             namespace: envoy-gateway-system
             sectionName: "8080"

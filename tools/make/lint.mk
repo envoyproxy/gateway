@@ -8,7 +8,7 @@ GITHUB_ACTION ?=
 LINT_BUILD_TAGS ?= e2e,celvalidation,conformance,experimental,benchmark,resilience,integration
 
 .PHONY: lint
-lint: ## Run all linter of code sources, including golint, yamllint, whitenoise lint and codespell.
+lint: ## Run all linter of code sources, including golint, yamllint, lint and codespell.
 
 # lint-deps is run separately in CI to separate the tooling install logs from the actual output logs generated
 # by the lint tooling.
@@ -21,6 +21,13 @@ lint: lint.golint
 lint.golint:
 	@$(LOG_TARGET)
 	$(GO_TOOL) golangci-lint run $(GOLANGCI_LINT_FLAGS) --build-tags=$(LINT_BUILD_TAGS) --config=tools/linter/golangci-lint/.golangci.yml
+
+.PHONY: lint.kube-api-linter
+lint: lint.kube-api-linter
+lint-deps: $(tools/kube-api-linter)
+lint.kube-api-linter: $(tools/kube-api-linter)
+	@$(LOG_TARGET)
+	$(GO_TOOL) golangci-lint run $(GOLANGCI_LINT_FLAGS) --build-tags=$(LINT_BUILD_TAGS) --config=tools/linter/golangci-lint/.golangci-kal.yml ./api/... --verbose
 
 .PHONY: lint.yamllint
 lint: lint.yamllint
@@ -52,13 +59,6 @@ lint.codespell: $(tools/codespell)
 	  fi; \
 	  (set -x; $(tools/codespell) $(CODESPELL_FLAGS) --skip $(CODESPELL_SKIP) --ignore-words tools/linter/codespell/.codespell.ignorewords --check-filenames --check-hidden -q2); \
 	}
-
-.PHONY: lint.whitenoise
-lint: lint.whitenoise
-lint-deps: $(tools/whitenoise)
-lint.whitenoise: $(tools/whitenoise)
-	@$(LOG_TARGET)
-	$(tools/whitenoise)
 
 
 .PHONY: lint.shellcheck
@@ -96,9 +96,25 @@ latest-release-check: ## Check if latest release and tag are created properly.
 
 .PHONY: lint.markdown
 lint.markdown:
-	markdownlint -c .github/markdown_lint_config.json site/content/*
+	markdownlint -c .github/markdown_lint_config.json site/content/* \
+	    --ignore site/content/en/news/releases/notes/ \
+		--ignore site/content/en/*/api \
+		--ignore site/content/en/v0.3/ \
+		--ignore site/content/en/v0.4/ \
+		--ignore site/content/en/v0.5/ \
+		--ignore site/content/en/v0.6/ \
+		--ignore site/content/en/v1.0/ \
+		--ignore site/content/en/v1.1/ \
+		--ignore site/content/en/v1.2/ \
+		--ignore site/content/en/v1.3/ \
+		--ignore site/content/en/v1.4/ \
+		--ignore site/content/en/v1.5/ \
+		--ignore site/content/en/v1.6/
+		
+		
 
 .PHONY: lint.dependabot
 lint: lint.dependabot
 lint.dependabot: ## Check if dependabot configuration is valid
+	@$(LOG_TARGET)
 	@npx @bugron/validate-dependabot-yaml .github/dependabot.yml

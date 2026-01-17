@@ -64,6 +64,10 @@ type TranslatorManager interface {
 // Translator translates Gateway API resources to IRs and computes status
 // for Gateway API resources.
 type Translator struct {
+	// TranslatorContext holds pre-indexed resource maps for efficient lookup resources
+	// during translation operations.
+	*TranslatorContext
+
 	// GatewayControllerName is the name of the Gateway API controller
 	GatewayControllerName string
 
@@ -91,6 +95,9 @@ type Translator struct {
 	// feature is enabled.
 	EnvoyPatchPolicyEnabled bool
 
+	// LuaEnvoyExtensionPolicyDisabled when the Lua EnvoyExtensionPolicy feature is disabled.
+	LuaEnvoyExtensionPolicyDisabled bool
+
 	// BackendEnabled when the Backend feature is enabled.
 	BackendEnabled bool
 
@@ -105,10 +112,16 @@ type Translator struct {
 	// WasmCache is the cache for Wasm modules.
 	WasmCache wasm.Cache
 
-	// ListenerPortShiftDisabled disables translating the
-	// gateway listener port into a non privileged port
-	// and reuses the specified value.
-	ListenerPortShiftDisabled bool
+	// RunningOnHost indicates whether Envoy Gateway is running locally on the host machine.
+	//
+	// When running on the local host using the Host infrastructure provider, disable translating the
+	// gateway listener port into a non-privileged port and reuse the specified value.
+	// Also, allow loopback IP addresses in Backend endpoints, as the threat model is different from
+	// the cluster environment and the related security risk is not applicable.
+	RunningOnHost bool
+
+	// oidcDiscoveryCache is the cache for OIDC configurations discovered from issuer's well-known URL.
+	oidcDiscoveryCache *oidcDiscoveryCache
 
 	// Logger is the logger used by the translator.
 	Logger logging.Logger
@@ -214,6 +227,19 @@ func newTranslateResult(
 func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult, error) {
 	var errs error
 
+	// Preprocessing to improve get resources operations performance.
+	translatorContext := &TranslatorContext{}
+	translatorContext.SetNamespaces(resources.Namespaces)
+	translatorContext.SetServices(resources.Services)
+	translatorContext.SetServiceImports(resources.ServiceImports)
+	translatorContext.SetBackends(resources.Backends)
+	translatorContext.SetSecrets(resources.Secrets)
+	translatorContext.SetConfigMaps(resources.ConfigMaps)
+	translatorContext.SetClusterTrustBundles(resources.ClusterTrustBundles)
+	translatorContext.SetEndpointSlicesForBackend(resources.EndpointSlices)
+
+	t.TranslatorContext = translatorContext
+
 	// Get Gateways belonging to our GatewayClass.
 	acceptedGateways, failedGateways := t.GetRelevantGateways(resources)
 
@@ -275,8 +301,7 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 	}
 
 	// Process BackendTrafficPolicies
-	backendTrafficPolicies := t.ProcessBackendTrafficPolicies(
-		resources, acceptedGateways, routes, xdsIR)
+	backendTrafficPolicies := t.ProcessBackendTrafficPolicies(resources, acceptedGateways, routes, xdsIR)
 
 	// Process SecurityPolicies
 	securityPolicies := t.ProcessSecurityPolicies(
@@ -344,7 +369,7 @@ func (t *Translator) GetRelevantGateways(resources *resource.Resources) (
 			status.SetGatewayClassAccepted(resources.GatewayClass,
 				false, string(gwapiv1.GatewayClassReasonInvalidParameters),
 				fmt.Sprintf("%s: %v", status.MsgGatewayClassInvalidParams, err))
-			return
+			return acceptedGateways, failedGateways
 		}
 
 		// TODO: remove this nil check after we update all the testdata.
@@ -386,6 +411,7 @@ func (t *Translator) GetRelevantGateways(resources *resource.Resources) (
 		gCtx := &GatewayContext{
 			Gateway: gateway,
 		}
+		gCtx.attachEnvoyProxy(resources, envoyproxyMap)
 
 		// Gateways that are not accepted by the controller because they reference an invalid EnvoyProxy.
 		if status.GatewayNotAccepted(gCtx.Gateway) {
@@ -394,7 +420,6 @@ func (t *Translator) GetRelevantGateways(resources *resource.Resources) (
 			continue
 		}
 
-		gCtx.ResetListeners(resources, envoyproxyMap)
 		if ep := gCtx.envoyProxy; ep != nil {
 			key := utils.NamespacedName(ep)
 			if err, exits := envoyproxyValidationErrorMap[key]; exits {
@@ -406,9 +431,11 @@ func (t *Translator) GetRelevantGateways(resources *resource.Resources) (
 			}
 		}
 
+		// we cannot do this early, otherwise there's an error when updating status.
+		gCtx.ResetListeners(resources, envoyproxyMap)
 		acceptedGateways = append(acceptedGateways, gCtx)
 	}
-	return
+	return acceptedGateways, failedGateways
 }
 
 func validateEnvoyProxy(ep *egv1a1.EnvoyProxy) error {

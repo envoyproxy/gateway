@@ -446,6 +446,57 @@ spec:
 
 After applying the config, you can get the envoyproxy deployment, and see resources has been changed.
 
+## Customize EnvoyProxy Priority Class
+
+You can configure the [PriorityClassName](https://kubernetes.io/docs/concepts/scheduling-eviction/pod-priority-preemption/) for the Envoy Proxy pods via EnvoyProxy Config.
+
+**Note:** The PriorityClass must exist in your cluster before creating the EnvoyProxy resource.
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: custom-proxy-config
+  namespace: default
+spec:
+  provider:
+    type: Kubernetes
+    kubernetes:
+      envoyDeployment:
+        pod:
+          priorityClassName: high-priority
+EOF
+```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: custom-proxy-config
+  namespace: default
+spec:
+  provider:
+    type: Kubernetes
+    kubernetes:
+      envoyDeployment:
+        pod:
+          priorityClassName: high-priority
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
+
+After applying the config, you can get the envoyproxy deployment and see the priorityClassName has been set.
+
 ## Customize EnvoyProxy Service Annotations
 
 You can customize the EnvoyProxy Service Annotations via EnvoyProxy Config like:
@@ -1025,17 +1076,27 @@ Under the hood, Envoy Gateway uses a series of [Envoy HTTP filters](https://www.
 to process HTTP requests and responses, and to apply various policies.
 
 By default, Envoy Gateway applies the following filters in the order shown:
+* envoy.filters.http.health_check
 * envoy.filters.http.fault
 * envoy.filters.http.cors
 * envoy.filters.http.ext_authz
-* envoy.filters.http.basic_authn
+* envoy.filters.http.api_key_auth
+* envoy.filters.http.basic_auth
 * envoy.filters.http.oauth2
 * envoy.filters.http.jwt_authn
+* envoy.filters.http.stateful_session
+* envoy.filters.http.buffer
+* envoy.filters.http.lua
 * envoy.filters.http.ext_proc
 * envoy.filters.http.wasm
 * envoy.filters.http.rbac
 * envoy.filters.http.local_ratelimit
 * envoy.filters.http.ratelimit
+* envoy.filters.http.grpc_web
+* envoy.filters.http.grpc_stats
+* envoy.filters.http.custom_response
+* envoy.filters.http.credential_injector
+* envoy.filters.http.compressor
 * envoy.filters.http.router
 
 The default order in which these filters are applied is opinionated and may not suit all use cases.
@@ -1047,7 +1108,7 @@ If a filter occurs in multiple configurations, the final order is the result of 
 To avoid conflicts, it is recommended to only specify one configuration per filter.
 
 For example, the following configuration moves the `envoy.filters.http.wasm` filter before the `envoy.filters.http.jwt_authn`
-filter and the `envoy.filters.http.cors` filter after the `envoy.filters.http.basic_authn` filter:
+filter and the `envoy.filters.http.cors` filter after the `envoy.filters.http.basic_auth` filter:
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
@@ -1064,7 +1125,7 @@ spec:
     - name: envoy.filters.http.wasm
       before: envoy.filters.http.jwt_authn
     - name: envoy.filters.http.cors
-      after: envoy.filters.http.basic_authn
+      after: envoy.filters.http.basic_auth
 EOF
 ```
 
@@ -1084,7 +1145,7 @@ spec:
     - name: envoy.filters.http.wasm
       before: envoy.filters.http.jwt_authn
     - name: envoy.filters.http.cors
-      after: envoy.filters.http.basic_authn
+      after: envoy.filters.http.basic_auth
 ```
 
 {{% /tab %}}

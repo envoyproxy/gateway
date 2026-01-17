@@ -36,6 +36,11 @@ clientTrafficPolicies:
         reason: Invalid
         status: "False"
         type: Accepted
+      - lastTransitionTime: null
+        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: ClientTrafficPolicy
@@ -74,6 +79,11 @@ clientTrafficPolicies:
         reason: Invalid
         status: "False"
         type: Accepted
+      - lastTransitionTime: null
+        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: ClientTrafficPolicy
@@ -112,6 +122,11 @@ clientTrafficPolicies:
         reason: Invalid
         status: "False"
         type: Accepted
+      - lastTransitionTime: null
+        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
@@ -229,6 +244,8 @@ gateways:
       supportedKinds:
       - group: gateway.networking.k8s.io
         kind: TCPRoute
+      - group: gateway.networking.k8s.io
+        kind: TLSRoute
     - attachedRoutes: 1
       conditions:
       - lastTransitionTime: null
@@ -365,6 +382,8 @@ gateways:
       supportedKinds:
       - group: gateway.networking.k8s.io
         kind: TCPRoute
+      - group: gateway.networking.k8s.io
+        kind: TLSRoute
     - attachedRoutes: 0
       conditions:
       - lastTransitionTime: null
@@ -501,6 +520,8 @@ gateways:
       supportedKinds:
       - group: gateway.networking.k8s.io
         kind: TCPRoute
+      - group: gateway.networking.k8s.io
+        kind: TLSRoute
     - attachedRoutes: 0
       conditions:
       - lastTransitionTime: null
@@ -813,6 +834,7 @@ xdsIR:
     globalResources:
       proxyServiceCluster:
         metadata:
+          kind: Service
           name: envoy-default-gateway-1-bfd08ef4
           namespace: envoy-gateway-system
           sectionName: "8080"
@@ -824,6 +846,7 @@ xdsIR:
             port: 8080
             zone: zone1
           metadata:
+            kind: Service
             name: envoy-default-gateway-1-bfd08ef4
             namespace: envoy-gateway-system
             sectionName: "8080"
@@ -862,6 +885,7 @@ xdsIR:
             - host: 7.7.7.7
               port: 8080
             metadata:
+              kind: Service
               name: service-1
               namespace: default
               sectionName: "8080"
@@ -889,6 +913,7 @@ xdsIR:
             - host: 7.7.7.7
               port: 8080
             metadata:
+              kind: Service
               name: service-1
               namespace: default
               sectionName: "8080"
@@ -944,6 +969,7 @@ xdsIR:
             - host: 7.7.7.7
               port: 8080
             metadata:
+              kind: Service
               name: service-1
               namespace: default
               sectionName: "8080"
@@ -1002,12 +1028,17 @@ xdsIR:
             - host: 7.7.7.7
               port: 8080
             metadata:
+              kind: Service
               name: service-1
               namespace: default
               sectionName: "8080"
             name: tcproute/default/tcp-route-1/rule/-1/backend/0
             protocol: TCP
             weight: 1
+        metadata:
+          kind: TCPRoute
+          name: tcp-route-1
+          namespace: default
         name: tcproute/default/tcp-route-1
   default/gateway-2:
     accessLog:
@@ -1016,6 +1047,7 @@ xdsIR:
     globalResources:
       proxyServiceCluster:
         metadata:
+          kind: Service
           name: envoy-default-gateway-2-5e70ed84
           namespace: envoy-gateway-system
           sectionName: "8080"
@@ -1027,6 +1059,7 @@ xdsIR:
             port: 8080
             zone: zone1
           metadata:
+            kind: Service
             name: envoy-default-gateway-2-5e70ed84
             namespace: envoy-gateway-system
             sectionName: "8080"
@@ -1118,6 +1151,7 @@ xdsIR:
     globalResources:
       proxyServiceCluster:
         metadata:
+          kind: Service
           name: envoy-default-gateway-3-206418d2
           namespace: envoy-gateway-system
           sectionName: "8080"
@@ -1129,6 +1163,7 @@ xdsIR:
             port: 8080
             zone: zone1
           metadata:
+            kind: Service
             name: envoy-default-gateway-3-206418d2
             namespace: envoy-gateway-system
             sectionName: "8080"

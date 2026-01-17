@@ -9,6 +9,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"sort"
+	"strings"
 	"time"
 
 	clusterv3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
@@ -53,6 +54,8 @@ const (
 	// https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto#envoy-v3-api-field-config-cluster-v3-cluster-per-connection-buffer-limit-bytes
 	tcpClusterPerConnectionBufferLimitBytes = 32768
 	tcpClusterPerConnectTimeout             = 10 * time.Second
+	dfpClusterTypeName                      = "envoy.clusters.dynamic_forward_proxy"
+	dfpDNSCacheName                         = "envoy-gateway-dfp-cache"
 )
 
 type xdsClusterArgs struct {
@@ -126,17 +129,12 @@ func buildEndpointType(settings []*ir.DestinationSetting) EndpointType {
 	return EndpointTypeStatic
 }
 
-type buildClusterResult struct {
-	cluster *clusterv3.Cluster
-	secrets []*tlsv3.Secret // Secrets used in the cluster filters, we may need to add other types of resources in the future.
-}
-
-func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
+func computeDNSLookupFamily(ipFamily *egv1a1.IPFamily, dns *ir.DNS) clusterv3.Cluster_DnsLookupFamily {
 	dnsLookupFamily := clusterv3.Cluster_V4_PREFERRED
-	customDNSPolicy := args.dns != nil && args.dns.LookupFamily != nil
+	customDNSPolicy := dns != nil && dns.LookupFamily != nil
 	// apply DNS lookup family if custom DNS traffic policy is set
 	if customDNSPolicy {
-		switch *args.dns.LookupFamily {
+		switch *dns.LookupFamily {
 		case egv1a1.IPv4DNSLookupFamily:
 			dnsLookupFamily = clusterv3.Cluster_V4_ONLY
 		case egv1a1.IPv6DNSLookupFamily:
@@ -149,8 +147,8 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 	}
 
 	// Ensure to override if a specific IP family is set.
-	if args.ipFamily != nil {
-		switch *args.ipFamily {
+	if ipFamily != nil {
+		switch *ipFamily {
 		case egv1a1.IPv4:
 			dnsLookupFamily = clusterv3.Cluster_V4_ONLY
 		case egv1a1.IPv6:
@@ -162,6 +160,47 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 			}
 		}
 	}
+
+	return dnsLookupFamily
+}
+
+func dfpCacheName(ipFamily *egv1a1.IPFamily, dns *ir.DNS) string {
+	refresh := 30 * time.Second
+	if dns != nil && dns.DNSRefreshRate != nil && dns.DNSRefreshRate.Duration > 0 {
+		refresh = dns.DNSRefreshRate.Duration
+	}
+
+	dnsLookupFamily := computeDNSLookupFamily(ipFamily, dns)
+	base := fmt.Sprintf("%s-%s-%dms", dfpDNSCacheName, strings.ToLower(dnsLookupFamily.String()), refresh/time.Millisecond)
+	suffix := "default"
+	if dns != nil && dns.Name != "" {
+		suffix = dns.Name
+	}
+	// Hash to keep names short and avoid collisions when new DNS settings are added.
+	return fmt.Sprintf("%s-%s", base, suffix)
+}
+
+func buildDFPDNSCacheConfig(name string, dns *ir.DNS, dnsLookupFamily clusterv3.Cluster_DnsLookupFamily) *commondfpv3.DnsCacheConfig {
+	dnsCacheConfig := &commondfpv3.DnsCacheConfig{
+		Name:            name,
+		DnsLookupFamily: dnsLookupFamily,
+		DnsRefreshRate:  durationpb.New(30 * time.Second),
+	}
+
+	if dns != nil && dns.DNSRefreshRate != nil && dns.DNSRefreshRate.Duration > 0 {
+		dnsCacheConfig.DnsRefreshRate = durationpb.New(dns.DNSRefreshRate.Duration)
+	}
+
+	return dnsCacheConfig
+}
+
+type buildClusterResult struct {
+	cluster *clusterv3.Cluster
+	secrets []*tlsv3.Secret // Secrets used in the cluster filters, we may need to add other types of resources in the future.
+}
+
+func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
+	dnsLookupFamily := computeDNSLookupFamily(args.ipFamily, args.dns)
 
 	cluster := &clusterv3.Cluster{
 		Name:                          args.name,
@@ -203,13 +242,6 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 		}
 	}
 
-	// Set Proxy Protocol
-	if args.proxyProtocol != nil {
-		cluster.TransportSocket = buildProxyProtocolSocket(args.proxyProtocol, args.tSocket)
-	} else if args.tSocket != nil {
-		cluster.TransportSocket = args.tSocket
-	}
-
 	// scan through settings to determine cluster-level configuration options, as some of them
 	// influence transport socket specific settings
 	requiresAutoHTTPConfig := false
@@ -235,6 +267,14 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 	// only enable auto sni if TLS is configured
 	requiresAutoSNI := !hasLiteralSNI && requiresAutoHTTPConfig
 
+	// Set Proxy Protocol
+	proxyProtocolEnabled := args.proxyProtocol != nil
+	if proxyProtocolEnabled {
+		cluster.TransportSocket = buildProxyProtocolSocket(args.proxyProtocol, args.tSocket, requiresAutoHTTPConfig)
+	} else if args.tSocket != nil {
+		cluster.TransportSocket = args.tSocket
+	}
+
 	for i, ds := range args.settings {
 		if ds.TLS != nil {
 			socket, err := buildXdsUpstreamTLSSocketWthCert(ds.TLS, requiresAutoSNI, args.endpointType)
@@ -242,8 +282,8 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 				// TODO: Log something here
 				return nil, err
 			}
-			if args.proxyProtocol != nil {
-				socket = buildProxyProtocolSocket(args.proxyProtocol, socket)
+			if proxyProtocolEnabled {
+				socket = buildProxyProtocolSocket(args.proxyProtocol, socket, requiresAutoHTTPConfig)
 			}
 			matchName := fmt.Sprintf("%s/tls/%d", args.name, i)
 
@@ -265,7 +305,7 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 	}
 
 	// TransportSocket is required for auto HTTP config
-	if requiresAutoHTTPConfig && cluster.TransportSocket == nil {
+	if requiresAutoHTTPConfig && cluster.TransportSocket == nil && !proxyProtocolEnabled {
 		// we need a dummy transport socket to pass the validation
 		cluster.TransportSocket = dummyTransportSocket
 	}
@@ -275,7 +315,8 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 	if err != nil {
 		return nil, err
 	}
-	if epo != nil {
+	// Set TypedExtensionProtocolOptions if not using Proxy Protocol
+	if !proxyProtocolEnabled && epo != nil {
 		cluster.TypedExtensionProtocolOptions = epo
 	}
 
@@ -415,18 +456,8 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 
 	switch args.endpointType {
 	case EndpointTypeDynamicResolver:
-		dnsCacheConfig := &commondfpv3.DnsCacheConfig{
-			Name:            args.name,
-			DnsLookupFamily: dnsLookupFamily,
-		}
-		dnsCacheConfig.DnsRefreshRate = durationpb.New(30 * time.Second)
-		if args.dns != nil {
-			if args.dns.DNSRefreshRate != nil {
-				if args.dns.DNSRefreshRate.Duration > 0 {
-					dnsCacheConfig.DnsRefreshRate = durationpb.New(args.dns.DNSRefreshRate.Duration)
-				}
-			}
-		}
+		cacheName := dfpCacheName(args.ipFamily, args.dns)
+		dnsCacheConfig := buildDFPDNSCacheConfig(cacheName, args.dns, dnsLookupFamily)
 
 		dfp := &dfpv3.ClusterConfig{
 			ClusterImplementationSpecifier: &dfpv3.ClusterConfig_DnsCacheConfig{
@@ -438,7 +469,7 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 			return nil, err
 		}
 		cluster.ClusterDiscoveryType = &clusterv3.Cluster_ClusterType{ClusterType: &clusterv3.Cluster_CustomClusterType{
-			Name:        args.name,
+			Name:        dfpClusterTypeName,
 			TypedConfig: dfpAny,
 		}}
 		cluster.LbPolicy = clusterv3.Cluster_CLUSTER_PROVIDED
@@ -1006,7 +1037,7 @@ func buildUpstreamCodecFilter() (*hcmv3.HttpFilter, error) {
 }
 
 // buildProxyProtocolSocket builds the ProxyProtocol transport socket.
-func buildProxyProtocolSocket(proxyProtocol *ir.ProxyProtocol, tSocket *corev3.TransportSocket) *corev3.TransportSocket {
+func buildProxyProtocolSocket(proxyProtocol *ir.ProxyProtocol, tSocket *corev3.TransportSocket, requiresAutoHTTPConfig bool) *corev3.TransportSocket {
 	if proxyProtocol == nil {
 		return nil
 	}
@@ -1026,18 +1057,22 @@ func buildProxyProtocolSocket(proxyProtocol *ir.ProxyProtocol, tSocket *corev3.T
 
 	// If existing transport socket does not exist wrap around raw buffer
 	if tSocket == nil {
-		rawCtx := &rawbufferv3.RawBuffer{}
-		rawCtxAny, err := proto.ToAnyWithValidation(rawCtx)
-		if err != nil {
-			return nil
+		if requiresAutoHTTPConfig {
+			ppCtx.TransportSocket = dummyTransportSocket
+		} else {
+			rawCtx := &rawbufferv3.RawBuffer{}
+			rawCtxAny, err := proto.ToAnyWithValidation(rawCtx)
+			if err != nil {
+				return nil
+			}
+			rawSocket := &corev3.TransportSocket{
+				Name: wellknown.TransportSocketRawBuffer,
+				ConfigType: &corev3.TransportSocket_TypedConfig{
+					TypedConfig: rawCtxAny,
+				},
+			}
+			ppCtx.TransportSocket = rawSocket
 		}
-		rawSocket := &corev3.TransportSocket{
-			Name: wellknown.TransportSocketRawBuffer,
-			ConfigType: &corev3.TransportSocket_TypedConfig{
-				TypedConfig: rawCtxAny,
-			},
-		}
-		ppCtx.TransportSocket = rawSocket
 	} else {
 		ppCtx.TransportSocket = tSocket
 	}

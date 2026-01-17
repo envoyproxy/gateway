@@ -2,8 +2,8 @@
 title: "HTTP CONNECT Tunnels"
 ---
 
-HTTP CONNECT tunnels are a mechanism that allows a client to establish a tunnel through an HTTP proxy server 
-to communicate directly with a destination server. This is commonly used for HTTPS traffic through proxies, 
+HTTP CONNECT tunnels are a mechanism that allows a client to establish a tunnel through an HTTP proxy server
+to communicate directly with a destination server. This is commonly used for HTTPS traffic through proxies,
 but can also be used for other protocols.
 
 This task will help you get started using HTTP Connect based tunnels using Envoy Gateway.
@@ -26,7 +26,6 @@ Create a Gateway and HTTPRoute to route proxy CONNECT requests to a Backend serv
 
 ```shell
 cat <<EOF | kubectl apply -f -
-# curl -ik -v -x 172.18.0.201:80 https://www.httpbin.org | grep -o "<title>.*</title>"
 apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:

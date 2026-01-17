@@ -8,7 +8,6 @@ package translator
 import (
 	"errors"
 	"fmt"
-	"runtime"
 	"strings"
 	"time"
 
@@ -34,6 +33,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/logging"
 	"github.com/envoyproxy/gateway/internal/utils"
+	"github.com/envoyproxy/gateway/internal/utils/cert"
 	"github.com/envoyproxy/gateway/internal/utils/proto"
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
@@ -478,6 +478,14 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 	return errs
 }
 
+const (
+	// DefaultMaxDirectResponseBodySize is 4KB
+	// https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route.proto.html#max_direct_response_body_size_bytes
+	DefaultMaxDirectResponseBodySize = 4 * 1024
+
+	DefaultCRDMaxSize = 1024 * 1024 // 1MB
+)
+
 // addRouteToRouteConfig generates xDS virtual hosts and routes for the given HTTPListener,
 // and adds them to the provided xDS route config.
 func (t *Translator) addRouteToRouteConfig(
@@ -492,6 +500,8 @@ func (t *Translator) addRouteToRouteConfig(
 		vHostList []*routev3.VirtualHost              // keep track of order by using a list as well as the map
 		errs      error                               // the accumulated errors
 		err       error
+
+		maxDirectResponseBodySize uint32 = DefaultMaxDirectResponseBodySize
 	)
 
 	// Check if an extension is loaded that wants to modify xDS Routes after they have been generated
@@ -529,6 +539,11 @@ func (t *Translator) addRouteToRouteConfig(
 			}
 			vHosts[httpRoute.Hostname] = vHost
 			vHostList = append(vHostList, vHost)
+		}
+
+		if dr := httpRoute.DirectResponse; dr != nil {
+			target := uint32(len(dr.Body))
+			maxDirectResponseBodySize = max(target, maxDirectResponseBodySize)
 		}
 
 		var xdsRoute *routev3.Route
@@ -653,6 +668,17 @@ func (t *Translator) addRouteToRouteConfig(
 		}
 	}
 	xdsRouteCfg.VirtualHosts = append(xdsRouteCfg.VirtualHosts, vHostList...)
+	if maxDirectResponseBodySize > DefaultMaxDirectResponseBodySize {
+		// this's fine for most of the case, because EG read the body from ConfigMap/Secret,
+		// which usually has a size limit less than 1MB.
+
+		if maxDirectResponseBodySize > DefaultCRDMaxSize {
+			xdsRouteCfg.MaxDirectResponseBodySizeBytes = wrapperspb.UInt32(maxDirectResponseBodySize)
+		} else {
+			xdsRouteCfg.MaxDirectResponseBodySizeBytes = wrapperspb.UInt32(DefaultCRDMaxSize)
+		}
+	}
+
 	return errs
 }
 
@@ -1116,40 +1142,14 @@ const (
 	EDS
 )
 
-// defaultCertificateName is the default location of the system trust store, initialized at runtime once.
-//
-// This assumes the Envoy running in a very specific environment. For example, the default location of the system
-// trust store on Debian derivatives like the envoy-proxy image being used by the infrastructure controller.
-//
-// TODO: this might be configurable by an env var or EnvoyGateway configuration.
-var defaultCertificateName = func() string {
-	switch runtime.GOOS {
-	case "darwin":
-		// TODO: maybe automatically get the keychain cert? That might be macOS version dependent.
-		// For now, we'll just use the root cert installed by Homebrew: brew install ca-certificates.
-		//
-		// See:
-		// * https://apple.stackexchange.com/questions/226375/where-are-the-root-cas-stored-on-os-x
-		// * https://superuser.com/questions/992167/where-are-digital-certificates-physically-stored-on-a-mac-os-x-machine
-		return "/opt/homebrew/etc/ca-certificates/cert.pem"
-	default:
-		// This is the default location for the system trust store
-		// on Debian derivatives like the envoy-proxy image being used by the infrastructure
-		// controller.
-		// See https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/security/ssl
-		return "/etc/ssl/certs/ca-certificates.crt"
-	}
-}()
-
 func buildXdsUpstreamTLSCASecret(tlsConfig *ir.TLSUpstreamConfig) *tlsv3.Secret {
-	// Build the tls secret
 	if tlsConfig.UseSystemTrustStore {
 		return &tlsv3.Secret{
 			Name: tlsConfig.CACertificate.Name,
 			Type: &tlsv3.Secret_ValidationContext{
 				ValidationContext: &tlsv3.CertificateValidationContext{
 					TrustedCa: &corev3.DataSource{
-						Specifier: &corev3.DataSource_Filename{Filename: defaultCertificateName},
+						Specifier: &corev3.DataSource_Filename{Filename: cert.SystemCertPath},
 					},
 				},
 			},

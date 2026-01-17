@@ -49,6 +49,11 @@ clientTrafficPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
@@ -101,6 +106,8 @@ gateways:
       supportedKinds:
       - group: gateway.networking.k8s.io
         kind: TCPRoute
+      - group: gateway.networking.k8s.io
+        kind: TLSRoute
     - attachedRoutes: 1
       conditions:
       - lastTransitionTime: null
@@ -188,6 +195,7 @@ xdsIR:
     globalResources:
       proxyServiceCluster:
         metadata:
+          kind: Service
           name: envoy-envoy-gateway-gateway-1-196ae069
           namespace: envoy-gateway-system
           sectionName: "8080"
@@ -199,6 +207,7 @@ xdsIR:
             port: 8080
             zone: zone1
           metadata:
+            kind: Service
             name: envoy-envoy-gateway-gateway-1-196ae069
             namespace: envoy-gateway-system
             sectionName: "8080"
@@ -238,12 +247,17 @@ xdsIR:
             - host: 7.7.7.7
               port: 8080
             metadata:
+              kind: Service
               name: service-1
               namespace: default
               sectionName: "8080"
             name: tcproute/default/tcproute-1/rule/-1/backend/0
             protocol: TCP
             weight: 1
+        metadata:
+          kind: TCPRoute
+          name: tcproute-1
+          namespace: default
         name: tcproute/default/tcproute-1
         tls:
           terminate:
@@ -315,12 +329,17 @@ xdsIR:
             - host: 7.7.7.7
               port: 8080
             metadata:
+              kind: Service
               name: service-1
               namespace: default
               sectionName: "8080"
             name: tcproute/default/tcproute-1/rule/-1/backend/0
             protocol: TCP
             weight: 1
+        metadata:
+          kind: TCPRoute
+          name: tcproute-1
+          namespace: default
         name: tcproute/default/tcproute-1
       tcpKeepalive:
         idleTime: 1200

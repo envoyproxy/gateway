@@ -6,22 +6,22 @@ weight: 2
 - [The Gateway API](https://gateway-api.sigs.k8s.io/)
 
 ## Overview
-Gateway API Extensions let you configure extra features that aren’t part of the standard Kubernetes Gateway API. These extensions are built by the teams that create and maintain Gateway API implementations.
-The Gateway API was designed to be extensible safe, and reliable. In the old Ingress API, people had to use custom annotations to add new features, but those weren’t type-safe, making it hard to check if their configuration was correct.
+Gateway API Extensions let you configure extra features that aren't part of the standard Kubernetes Gateway API. These extensions are built by the teams that create and maintain Gateway API implementations.
+The Gateway API was designed to be extensible, safe, and reliable. In the old Ingress API, people had to use custom annotations to add new features, but those weren't type-safe, making it hard to check if their configuration was correct.
 With Gateway API Extensions, implementers provide type-safe Custom Resource Definitions (CRDs). This means every configuration you write has a clear structure and strict rules, making it easier to catch mistakes early and be confident your setup is valid.
 ## Use Cases
 
 Here are some examples of what kind of features extensions include:
 
-1. **Advanced Traffic Management:** 
+1. **Advanced Traffic Management:**
     Implementing sophisticated load balancing algorithms, circuit breaking, or retries not defined in the core API
-2. **Enhanced Security Controls:** 
+2. **Enhanced Security Controls:**
     Adding implementation-specific TLS configurations, authentication mechanisms, or access control rules
-3. **Observability Integration:** 
+3. **Observability Integration:**
     Connecting Gateway resources to monitoring systems, logging pipelines, or tracing frameworks
-4. **Custom Protocol Support:** 
+4. **Custom Protocol Support:**
     Extending beyond HTTP/TCP/UDP with specialized protocol handling
-5. **Rate Limiting and Compression:** 
+5. **Rate Limiting and Compression:**
     Implementing traffic policing specific to the implementation's capabilities
 
 ## Gateway API Extensions in Envoy Gateway

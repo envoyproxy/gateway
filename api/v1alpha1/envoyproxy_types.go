@@ -20,13 +20,17 @@ const (
 // +kubebuilder:subresource:status
 
 // EnvoyProxy is the schema for the envoyproxies API.
+// +genclient
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 type EnvoyProxy struct {
-	metav1.TypeMeta   `json:",inline"`
+	metav1.TypeMeta `json:",inline"`
+	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
 	// EnvoyProxySpec defines the desired state of EnvoyProxy.
-	Spec EnvoyProxySpec `json:"spec,omitempty"`
+	Spec EnvoyProxySpec `json:"spec"`
 	// EnvoyProxyStatus defines the actual state of EnvoyProxy.
+	// +optional
 	Status EnvoyProxyStatus `json:"status,omitempty"`
 }
 
@@ -106,6 +110,8 @@ type EnvoyProxySpec struct {
 	//
 	// - envoy.filters.http.ext_authz
 	//
+	// - envoy.filters.http.api_key_auth
+	//
 	// - envoy.filters.http.basic_auth
 	//
 	// - envoy.filters.http.oauth2
@@ -113,6 +119,8 @@ type EnvoyProxySpec struct {
 	// - envoy.filters.http.jwt_authn
 	//
 	// - envoy.filters.http.stateful_session
+	//
+	// - envoy.filters.http.buffer
 	//
 	// - envoy.filters.http.lua
 	//
@@ -126,7 +134,17 @@ type EnvoyProxySpec struct {
 	//
 	// - envoy.filters.http.ratelimit
 	//
+	// - envoy.filters.http.grpc_web
+	//
+	// - envoy.filters.http.grpc_stats
+	//
 	// - envoy.filters.http.custom_response
+	//
+	// - envoy.filters.http.credential_injector
+	//
+	// - envoy.filters.http.compressor
+	//
+	// - envoy.filters.http.dynamic_forward_proxy
 	//
 	// - envoy.filters.http.router
 	//
@@ -164,23 +182,29 @@ type EnvoyProxySpec struct {
 	LuaValidation *LuaValidation `json:"luaValidation,omitempty"`
 }
 
-// +kubebuilder:validation:Enum=Strict;Disabled
+// +kubebuilder:validation:Enum=Strict;InsecureSyntax;Disabled
 type LuaValidation string
 
 const (
 	// LuaValidationStrict is the default level and checks for issues during script execution.
-	// Recommended if your scripts only use the standard Envoy Lua stream handle API.
+	// Recommended if your scripts only use the standard Envoy Lua stream handle API and no external libraries.
 	// For supported APIs, see: https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/lua_filter#stream-handle-api
+	// INFO: This validation mode executes Lua scripts from EnvoyExtensionPolicy (EEP) resources in the gateway controller.
+	// Since the Gateway controller watches EEPs across all namespaces (or namespaces matching the configured selector),
+	// unprivileged users can create EEPs in their namespaces and cause arbitrary Lua code to execute in the Gateway controller process.
+	// Security measures are in place to prevent unsafe Lua code from accessing critical system resources on the controller
+	// and fail validation, preventing the unsafe code from flowing to the data plane proxy.
 	LuaValidationStrict LuaValidation = "Strict"
 
-	// LuaValidationSyntax checks for syntax errors in the Lua script.
-	// Note that this is not a full runtime validation and does not check for issues during script execution.
-	// This is recommended if your scripts use external libraries that are not supported by Lua runtime validation.
-	LuaValidationSyntax LuaValidation = "Syntax"
+	// LuaValidationInsecureSyntax checks for Lua syntax errors only.
+	// Useful if your scripts use external libraries other than the standard Envoy Lua stream handle API.
+	// WARNING: This mode does NOT offer any runtime validations, so no security measures are applied to validate Lua code safety.
+	// Not recommended unless you completely trust all EnvoyExtensionPolicy resources.
+	LuaValidationInsecureSyntax LuaValidation = "InsecureSyntax"
 
-	// LuaValidationDisabled disables all validations of Lua scripts.
-	// Scripts will be accepted and executed without any validation checks.
-	// This is not recommended unless both runtime and syntax validations are failing unexpectedly.
+	// LuaValidationDisabled disables all Lua script validations.
+	// WARNING: This mode does NOT offer any runtime or syntax validations, so no security measures are applied to validate Lua code safety.
+	// Not recommended unless you completely trust all EnvoyExtensionPolicy resources.
 	LuaValidationDisabled LuaValidation = "Disabled"
 )
 
@@ -222,7 +246,7 @@ type FilterPosition struct {
 }
 
 // EnvoyFilter defines the type of Envoy HTTP filter.
-// +kubebuilder:validation:Enum=envoy.filters.http.health_check;envoy.filters.http.fault;envoy.filters.http.cors;envoy.filters.http.ext_authz;envoy.filters.http.api_key_auth;envoy.filters.http.basic_auth;envoy.filters.http.oauth2;envoy.filters.http.jwt_authn;envoy.filters.http.stateful_session;envoy.filters.http.lua;envoy.filters.http.ext_proc;envoy.filters.http.wasm;envoy.filters.http.rbac;envoy.filters.http.local_ratelimit;envoy.filters.http.ratelimit;envoy.filters.http.custom_response;envoy.filters.http.compressor
+// +kubebuilder:validation:Enum=envoy.filters.http.health_check;envoy.filters.http.fault;envoy.filters.http.cors;envoy.filters.http.ext_authz;envoy.filters.http.api_key_auth;envoy.filters.http.basic_auth;envoy.filters.http.oauth2;envoy.filters.http.jwt_authn;envoy.filters.http.stateful_session;envoy.filters.http.buffer;envoy.filters.http.lua;envoy.filters.http.ext_proc;envoy.filters.http.wasm;envoy.filters.http.rbac;envoy.filters.http.local_ratelimit;envoy.filters.http.ratelimit;envoy.filters.http.grpc_web;envoy.filters.http.grpc_stats;envoy.filters.http.custom_response;envoy.filters.http.credential_injector;envoy.filters.http.compressor;envoy.filters.http.dynamic_forward_proxy
 type EnvoyFilter string
 
 const (
@@ -286,6 +310,9 @@ const (
 
 	// EnvoyFilterCompressor defines the Envoy HTTP compressor filter.
 	EnvoyFilterCompressor EnvoyFilter = "envoy.filters.http.compressor"
+
+	// EnvoyFilterDynamicForwardProxy defines the Envoy HTTP dynamic forward proxy filter.
+	EnvoyFilterDynamicForwardProxy EnvoyFilter = "envoy.filters.http.dynamic_forward_proxy"
 
 	// EnvoyFilterRouter defines the Envoy HTTP router filter.
 	EnvoyFilterRouter EnvoyFilter = "envoy.filters.http.router"
@@ -527,16 +554,48 @@ const (
 	BootstrapTypeJSONPatch BootstrapType = "JSONPatch"
 )
 
-// EnvoyProxyStatus defines the observed state of EnvoyProxy. This type is not implemented
-// until https://github.com/envoyproxy/gateway/issues/1007 is fixed.
+// EnvoyProxyStatus defines the observed state of EnvoyProxy.
 type EnvoyProxyStatus struct {
-	// INSERT ADDITIONAL STATUS FIELDS - define observed state of cluster.
-	// Important: Run "make" to regenerate code after modifying this file.
+	// Ancestors represent the status information for all the GatewayClass or Gateway
+	// reference this EnvoyProxy with ParametersReference.
+	//
+	// +optional
+	// +notImplementedHide
+	Ancestors []EnvoyProxyAncestorStatus `json:"ancestors,omitempty"`
 }
+
+type EnvoyProxyAncestorStatus struct {
+	// Conditions describes the status of the Policy with respect to the given Ancestor.
+	//
+	// +required
+	// +listType=map
+	// +listMapKey=type
+	// +optional
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
+
+	// AncestorRef corresponds a GatewayClass or Gateway use this EnvoyProxy with ParametersReference.
+	// +required
+	AncestorRef gwapiv1.ParentReference `json:"ancestorRef"`
+}
+
+type EnvoyProxyConditionType string
+
+const (
+	EnvoyProxyConditionAccepted EnvoyProxyConditionType = "Accepted"
+)
+
+type EnvoyProxyConditionReason string
+
+const (
+	EnvoyProxyReasonAccepted EnvoyProxyConditionReason = "Accepted"
+
+	EnvoyProxyReasonInvalidParameters EnvoyProxyConditionReason = "InvalidParameters"
+)
 
 // +kubebuilder:object:root=true
 
 // EnvoyProxyList contains a list of EnvoyProxy
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 type EnvoyProxyList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
@@ -558,5 +617,5 @@ const (
 )
 
 func init() {
-	SchemeBuilder.Register(&EnvoyProxy{}, &EnvoyProxyList{})
+	localSchemeBuilder.Register(&EnvoyProxy{}, &EnvoyProxyList{})
 }

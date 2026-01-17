@@ -68,14 +68,23 @@ func (i *Infra) CreateOrUpdateProxyInfra(ctx context.Context, infra *ir.Infra) e
 	}
 
 	proxyConfig := proxyInfra.GetProxyConfig()
-	// Disable Prometheus to make envoy running as a host process successfully.
-	// TODO: Add Prometheus support to host infra.
-	bootstrapConfigOptions := &bootstrap.RenderBootstrapConfigOptions{
-		ProxyMetrics: &egv1a1.ProxyMetrics{
-			Prometheus: &egv1a1.ProxyPrometheusProvider{
-				Disable: true,
-			},
+	// Build proxy metrics with Prometheus disabled for host mode,
+	// but preserve any user-configured sinks (e.g., OpenTelemetry).
+	proxyMetrics := &egv1a1.ProxyMetrics{
+		Prometheus: &egv1a1.ProxyPrometheusProvider{
+			Disable: true,
 		},
+	}
+	if proxyConfig.Spec.Telemetry != nil && proxyConfig.Spec.Telemetry.Metrics != nil {
+		proxyMetrics.Sinks = proxyConfig.Spec.Telemetry.Metrics.Sinks
+		proxyMetrics.Matches = proxyConfig.Spec.Telemetry.Metrics.Matches
+	}
+
+	resolvedMetricSinks := convertResolvedMetricSinks(proxyInfra.ResolvedMetricSinks)
+
+	bootstrapConfigOptions := &bootstrap.RenderBootstrapConfigOptions{
+		ProxyMetrics:        proxyMetrics,
+		ResolvedMetricSinks: resolvedMetricSinks,
 		SdsConfig: bootstrap.SdsConfigPath{
 			Certificate: filepath.Join(i.sdsConfigPath, common.SdsCertFilename),
 			TrustedCA:   filepath.Join(i.sdsConfigPath, common.SdsCAFilename),
@@ -119,6 +128,9 @@ func (i *Infra) runEnvoy(ctx context.Context, envoyVersion, name string, args []
 			func_e_api.EnvoyVersion(envoyVersion))
 		if err != nil {
 			i.Logger.Error(err, "failed to run envoy")
+			// If the Envoy process fails to start, notify an unrecoverable error so that the main control
+			// loop can properly handle it.
+			i.errors.Store(err)
 		}
 	}()
 }
@@ -184,4 +196,37 @@ func extractSemver(image string) (string, error) {
 		return "", fmt.Errorf("no semver found in tag: %s", tag)
 	}
 	return semver, nil
+}
+
+// convertResolvedMetricSinks converts IR metric sinks to bootstrap format.
+func convertResolvedMetricSinks(irSinks []ir.ResolvedMetricSink) []bootstrap.MetricSink {
+	result := make([]bootstrap.MetricSink, 0, len(irSinks))
+	for _, sink := range irSinks {
+		if len(sink.Destination.Settings) == 0 || len(sink.Destination.Settings[0].Endpoints) == 0 {
+			continue
+		}
+		// Metrics are aggregated locally in Envoy and exported to one collector.
+		ep := sink.Destination.Settings[0].Endpoints[0]
+		ms := bootstrap.MetricSink{
+			Address:                  ep.Host,
+			Port:                     ep.Port,
+			Authority:                sink.Authority,
+			ReportCountersAsDeltas:   sink.ReportCountersAsDeltas,
+			ReportHistogramsAsDeltas: sink.ReportHistogramsAsDeltas,
+			Headers:                  sink.Headers,
+		}
+		if tls := sink.Destination.Settings[0].TLS; tls != nil {
+			ms.TLS = &bootstrap.MetricSinkTLS{
+				UseSystemTrustStore: tls.UseSystemTrustStore,
+			}
+			if tls.SNI != nil {
+				ms.TLS.SNI = *tls.SNI
+			}
+			if tls.CACertificate != nil {
+				ms.TLS.CACertificate = tls.CACertificate.Certificate
+			}
+		}
+		result = append(result, ms)
+	}
+	return result
 }

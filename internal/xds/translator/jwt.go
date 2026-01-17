@@ -22,12 +22,9 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/utils/cert"
 	"github.com/envoyproxy/gateway/internal/utils/proto"
 	"github.com/envoyproxy/gateway/internal/xds/types"
-)
-
-const (
-	envoyTrustBundle = "/etc/ssl/certs/ca-certificates.crt"
 )
 
 func init() {
@@ -53,31 +50,39 @@ func (*jwt) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPListen
 		return nil
 	}
 
-	// Return early if filter already exists.
-	for _, httpFilter := range mgr.HttpFilters {
+	var jwtAuthn jwtauthnv3.JwtAuthentication
+	jwtAuthnFilterIndex := -1
+	// Add providers to existing JwtAuthentication if present.
+	for index, httpFilter := range mgr.HttpFilters {
 		if httpFilter.Name == egv1a1.EnvoyFilterJWTAuthn.String() {
-			return nil
+			jwtAuthnFilterIndex = index
+			if err := httpFilter.GetTypedConfig().UnmarshalTo(&jwtAuthn); err != nil {
+				return err
+			}
 		}
 	}
 
-	jwtFilter, err := buildHCMJWTFilter(irListener)
+	if err := buildJWTAuthn(irListener, &jwtAuthn); err != nil {
+		return err
+	}
+
+	jwtFilter, err := buildHCMJWTFilter(&jwtAuthn)
 	if err != nil {
 		return err
 	}
 
-	mgr.HttpFilters = append([]*hcmv3.HttpFilter{jwtFilter}, mgr.HttpFilters...)
+	if exist := jwtAuthnFilterIndex != -1; exist {
+		mgr.HttpFilters[jwtAuthnFilterIndex] = jwtFilter
+	} else {
+		mgr.HttpFilters = append([]*hcmv3.HttpFilter{jwtFilter}, mgr.HttpFilters...)
+	}
 
 	return nil
 }
 
 // buildHCMJWTFilter returns a JWT authn HTTP filter from the provided IR listener.
-func buildHCMJWTFilter(irListener *ir.HTTPListener) (*hcmv3.HttpFilter, error) {
-	jwtAuthnProto, err := buildJWTAuthn(irListener)
-	if err != nil {
-		return nil, err
-	}
-
-	jwtAuthnAny, err := proto.ToAnyWithValidation(jwtAuthnProto)
+func buildHCMJWTFilter(jwtAuthn *jwtauthnv3.JwtAuthentication) (*hcmv3.HttpFilter, error) {
+	jwtAuthnAny, err := proto.ToAnyWithValidation(jwtAuthn)
 	if err != nil {
 		return nil, err
 	}
@@ -91,13 +96,17 @@ func buildHCMJWTFilter(irListener *ir.HTTPListener) (*hcmv3.HttpFilter, error) {
 }
 
 // buildJWTAuthn returns a JwtAuthentication based on the provided IR HTTPListener.
-func buildJWTAuthn(irListener *ir.HTTPListener) (*jwtauthnv3.JwtAuthentication, error) {
-	jwtProviders := make(map[string]*jwtauthnv3.JwtProvider)
-	reqMap := make(map[string]*jwtauthnv3.JwtRequirement)
-
+func buildJWTAuthn(irListener *ir.HTTPListener, jwtAuthn *jwtauthnv3.JwtAuthentication) error {
 	for _, route := range irListener.Routes {
 		if route == nil || !routeContainsJWTAuthn(route) {
 			continue
+		}
+
+		if jwtAuthn.Providers == nil {
+			jwtAuthn.Providers = make(map[string]*jwtauthnv3.JwtProvider, len(route.Security.JWT.Providers))
+		}
+		if jwtAuthn.RequirementMap == nil {
+			jwtAuthn.RequirementMap = make(map[string]*jwtauthnv3.JwtRequirement, len(route.Security.JWT.Providers))
 		}
 
 		var reqs []*jwtauthnv3.JwtRequirement
@@ -144,9 +153,17 @@ func buildJWTAuthn(irListener *ir.HTTPListener) (*jwtauthnv3.JwtAuthentication, 
 				} else {
 					var cluster *urlCluster
 					if cluster, err = url2Cluster(jwks.URI); err != nil {
-						return nil, err
+						return err
 					}
 					jwksCluster = cluster.name
+				}
+
+				jwksTimeout := durationpb.New(defaultExtServiceRequestTimeout)
+				if jwks.Traffic != nil &&
+					jwks.Traffic.Timeout != nil &&
+					jwks.Traffic.Timeout.HTTP != nil &&
+					jwks.Traffic.Timeout.HTTP.RequestTimeout != nil {
+					jwksTimeout = durationpb.New(jwks.Traffic.Timeout.HTTP.RequestTimeout.Duration)
 				}
 
 				remote := &jwtauthnv3.JwtProvider_RemoteJwks{
@@ -156,7 +173,7 @@ func buildJWTAuthn(irListener *ir.HTTPListener) (*jwtauthnv3.JwtAuthentication, 
 							HttpUpstreamType: &corev3.HttpUri_Cluster{
 								Cluster: jwksCluster,
 							},
-							Timeout: durationpb.New(defaultExtServiceRequestTimeout),
+							Timeout: jwksTimeout,
 						},
 
 						AsyncFetch: &jwtauthnv3.JwksAsyncFetch{},
@@ -169,7 +186,7 @@ func buildJWTAuthn(irListener *ir.HTTPListener) (*jwtauthnv3.JwtAuthentication, 
 				if jwks.Traffic != nil && jwks.Traffic.Retry != nil {
 					var rp *corev3.RetryPolicy
 					if rp, err = buildNonRouteRetryPolicy(jwks.Traffic.Retry); err != nil {
-						return nil, err
+						return err
 					}
 					remote.RemoteJwks.RetryPolicy = rp
 				}
@@ -187,7 +204,7 @@ func buildJWTAuthn(irListener *ir.HTTPListener) (*jwtauthnv3.JwtAuthentication, 
 			}
 
 			providerKey := fmt.Sprintf("%s/%s", route.Name, irProvider.Name)
-			jwtProviders[providerKey] = jwtProvider
+			jwtAuthn.Providers[providerKey] = jwtProvider
 			reqs = append(reqs, &jwtauthnv3.JwtRequirement{
 				RequiresType: &jwtauthnv3.JwtRequirement_ProviderName{
 					ProviderName: providerKey,
@@ -204,7 +221,7 @@ func buildJWTAuthn(irListener *ir.HTTPListener) (*jwtauthnv3.JwtAuthentication, 
 		}
 
 		if len(reqs) == 1 {
-			reqMap[route.Name] = reqs[0]
+			jwtAuthn.RequirementMap[route.Name] = reqs[0]
 		} else {
 			orListReqs := &jwtauthnv3.JwtRequirement{
 				RequiresType: &jwtauthnv3.JwtRequirement_RequiresAny{
@@ -213,17 +230,13 @@ func buildJWTAuthn(irListener *ir.HTTPListener) (*jwtauthnv3.JwtAuthentication, 
 					},
 				},
 			}
-			reqMap[route.Name] = orListReqs
+			jwtAuthn.RequirementMap[route.Name] = orListReqs
 		}
 	}
-
-	return &jwtauthnv3.JwtAuthentication{
-		RequirementMap: reqMap,
-		Providers:      jwtProviders,
-	}, nil
+	return nil
 }
 
-// buildXdsUpstreamTLSSocket returns an xDS TransportSocket that uses envoyTrustBundle
+// buildXdsUpstreamTLSSocket returns an xDS TransportSocket that uses the system trust store
 // as the CA to authenticate server certificates.
 // TODO huabing: add support for custom CA and client certificate.
 func buildXdsUpstreamTLSSocket(sni string) (*corev3.TransportSocket, error) {
@@ -234,7 +247,7 @@ func buildXdsUpstreamTLSSocket(sni string) (*corev3.TransportSocket, error) {
 				ValidationContext: &tlsv3.CertificateValidationContext{
 					TrustedCa: &corev3.DataSource{
 						Specifier: &corev3.DataSource_Filename{
-							Filename: envoyTrustBundle,
+							Filename: cert.SystemCertPath,
 						},
 					},
 				},
@@ -316,7 +329,7 @@ func (*jwt) patchResources(tCtx *types.ResourceVersionTable, routes []*ir.HTTPRo
 				}
 			} else {
 				// Create a cluster with the token endpoint url.
-				if err := addClusterFromURL(jwks.URI, tCtx); err != nil {
+				if err := addClusterFromURL(jwks.URI, jwks.Traffic, tCtx); err != nil {
 					errs = errors.Join(errs, err)
 				}
 			}

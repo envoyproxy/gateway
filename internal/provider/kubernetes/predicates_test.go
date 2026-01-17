@@ -6,6 +6,7 @@
 package kubernetes
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"testing"
@@ -177,6 +178,90 @@ func TestValidateGatewayForReconcile(t *testing.T) {
 	}
 }
 
+func TestFindOwningGateway(t *testing.T) {
+	controllerName := gwapiv1.GatewayController("example.com/foo")
+	otherControllerName := gwapiv1.GatewayController("example.com/bar")
+
+	testCases := []struct {
+		name    string
+		configs []client.Object
+		labels  map[string]string
+		expect  *gwapiv1.Gateway
+	}{
+		{
+			name: "returns Gateway when it belongs to this controller",
+			configs: []client.Object{
+				test.GetGatewayClass("test-gc", controllerName, nil),
+				test.GetGateway(types.NamespacedName{Namespace: "default", Name: "test-gw"}, "test-gc", 8080),
+			},
+			labels: map[string]string{
+				gatewayapi.OwningGatewayNameLabel:      "test-gw",
+				gatewayapi.OwningGatewayNamespaceLabel: "default",
+			},
+			expect: test.GetGateway(types.NamespacedName{Namespace: "default", Name: "test-gw"}, "test-gc", 8080),
+		},
+		{
+			name: "returns nil when Gateway belongs to different controller",
+			configs: []client.Object{
+				test.GetGatewayClass("test-gc", otherControllerName, nil),
+				test.GetGateway(types.NamespacedName{Namespace: "default", Name: "test-gw"}, "test-gc", 8080),
+			},
+			labels: map[string]string{
+				gatewayapi.OwningGatewayNameLabel:      "test-gw",
+				gatewayapi.OwningGatewayNamespaceLabel: "default",
+			},
+			expect: nil,
+		},
+		{
+			name:    "returns nil when Gateway name label is missing",
+			configs: []client.Object{},
+			labels: map[string]string{
+				gatewayapi.OwningGatewayNamespaceLabel: "default",
+			},
+			expect: nil,
+		},
+		{
+			name:    "returns nil when Gateway namespace label is missing",
+			configs: []client.Object{},
+			labels: map[string]string{
+				gatewayapi.OwningGatewayNameLabel: "test-gw",
+			},
+			expect: nil,
+		},
+		{
+			name:    "returns nil when Gateway does not exist",
+			configs: []client.Object{},
+			labels: map[string]string{
+				gatewayapi.OwningGatewayNameLabel:      "non-existent",
+				gatewayapi.OwningGatewayNamespaceLabel: "default",
+			},
+			expect: nil,
+		},
+	}
+
+	logger := logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo)
+
+	r := gatewayAPIReconciler{
+		classController: controllerName,
+		log:             logger,
+	}
+
+	for _, tc := range testCases {
+		r.client = fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects(tc.configs...).Build()
+		t.Run(tc.name, func(t *testing.T) {
+			ctx := context.Background()
+			res := r.findOwningGateway(ctx, tc.labels)
+			if tc.expect == nil {
+				require.Nil(t, res)
+			} else {
+				require.NotNil(t, res)
+				require.Equal(t, tc.expect.Name, res.Name)
+				require.Equal(t, tc.expect.Namespace, res.Namespace)
+			}
+		})
+	}
+}
+
 // TestValidateConfigMapForReconcile tests the validateConfigMapForReconcile
 // predicate function.
 func TestValidateConfigMapForReconcile(t *testing.T) {
@@ -283,6 +368,36 @@ func TestValidateConfigMapForReconcile(t *testing.T) {
 			configMap: test.GetConfigMap(types.NamespacedName{Name: "not-lua", Namespace: "test"}, make(map[string]string), make(map[string]string)),
 			expect:    false,
 		},
+		{
+			name: "references SecurityPolicy Ext Auth context extensions config map",
+			configs: []client.Object{
+				&egv1a1.SecurityPolicy{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "ext-auth",
+						Namespace: "test",
+					},
+					Spec: egv1a1.SecurityPolicySpec{
+						ExtAuth: &egv1a1.ExtAuth{
+							ContextExtensions: []*egv1a1.ContextExtension{
+								{
+									Name: "foo",
+									Type: egv1a1.ContextExtensionValueTypeValueRef,
+									ValueRef: &egv1a1.LocalObjectKeyReference{
+										LocalObjectReference: gwapiv1.LocalObjectReference{
+											Kind: resource.KindConfigMap,
+											Name: "context-extensions-cm",
+										},
+										Key: "foo",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			configMap: test.GetConfigMap(types.NamespacedName{Name: "context-extensions-cm", Namespace: "test"}, nil, nil),
+			expect:    true,
+		},
 	}
 
 	// Create the reconciler.
@@ -292,6 +407,7 @@ func TestValidateConfigMapForReconcile(t *testing.T) {
 		classController:  egv1a1.GatewayControllerName,
 		log:              logger,
 		backendCRDExists: true,
+		spCRDExists:      true,
 		eepCRDExists:     true,
 		envoyGateway: &egv1a1.EnvoyGateway{
 			EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
@@ -308,6 +424,7 @@ func TestValidateConfigMapForReconcile(t *testing.T) {
 			WithObjects(tc.configs...).
 			WithIndex(&egv1a1.Backend{}, configMapBackendIndex, configMapBackendIndexFunc).
 			WithIndex(&egv1a1.EnvoyExtensionPolicy{}, configMapEepIndex, configMapEepIndexFunc).
+			WithIndex(&egv1a1.SecurityPolicy{}, configMapSecurityPolicyIndex, configMapSecurityPolicyIndexFunc).
 			Build()
 		t.Run(tc.name, func(t *testing.T) {
 			res := r.validateConfigMapForReconcile(tc.configMap)
@@ -525,6 +642,35 @@ func TestValidateSecretForReconcile(t *testing.T) {
 						BasicAuth: &egv1a1.BasicAuth{
 							Users: gwapiv1.SecretObjectReference{
 								Name: "secret",
+							},
+						},
+					},
+				},
+			},
+			secret: test.GetSecret(types.NamespacedName{Name: "secret"}),
+			expect: true,
+		},
+		{
+			name: "references SecurityPolicy Ext Auth context extensions",
+			configs: []client.Object{
+				&egv1a1.SecurityPolicy{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "ext-auth",
+					},
+					Spec: egv1a1.SecurityPolicySpec{
+						ExtAuth: &egv1a1.ExtAuth{
+							ContextExtensions: []*egv1a1.ContextExtension{
+								{
+									Name: "foo",
+									Type: egv1a1.ContextExtensionValueTypeValueRef,
+									ValueRef: &egv1a1.LocalObjectKeyReference{
+										LocalObjectReference: gwapiv1.LocalObjectReference{
+											Kind: resource.KindSecret,
+											Name: "secret",
+										},
+										Key: "foo",
+									},
+								},
 							},
 						},
 					},

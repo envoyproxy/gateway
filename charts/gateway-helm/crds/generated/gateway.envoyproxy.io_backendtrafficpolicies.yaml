@@ -128,6 +128,20 @@ spec:
                     gzip:
                       description: The configuration for GZIP compressor.
                       type: object
+                    minContentLength:
+                      allOf:
+                      - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                      - pattern: ^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$
+                      anyOf:
+                      - type: integer
+                      - type: string
+                      description: |-
+                        MinContentLength defines the minimum response size in bytes to apply compression.
+                        Responses smaller than this threshold will not be compressed.
+                        Must be at least 30 bytes as enforced by Envoy Proxy.
+                        Note that when the suffix is not provided, the value is interpreted as bytes.
+                        Default: 30 bytes
+                      x-kubernetes-int-or-string: true
                     type:
                       description: CompressorType defines the compressor type to use
                         for compression.
@@ -147,6 +161,7 @@ spec:
                 description: |-
                   The compressor config for the http streams.
                   This provides more granular control over compression configuration.
+                  Order matters: The first compressor in the list is preferred when q-values in Accept-Encoding are equal.
                 items:
                   description: |-
                     Compression defines the config of enabling compression.
@@ -158,6 +173,20 @@ spec:
                     gzip:
                       description: The configuration for GZIP compressor.
                       type: object
+                    minContentLength:
+                      allOf:
+                      - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                      - pattern: ^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$
+                      anyOf:
+                      - type: integer
+                      - type: string
+                      description: |-
+                        MinContentLength defines the minimum response size in bytes to apply compression.
+                        Responses smaller than this threshold will not be compressed.
+                        Must be at least 30 bytes as enforced by Envoy Proxy.
+                        Note that when the suffix is not provided, the value is interpreted as bytes.
+                        Default: 30 bytes
+                      x-kubernetes-int-or-string: true
                     type:
                       description: CompressorType defines the compressor type to use
                         for compression.
@@ -735,6 +764,21 @@ spec:
                           - name
                           type: object
                         type: array
+                      queryParams:
+                        description: QueryParams configures the query parameter hash
+                          policy when the consistent hash type is set to QueryParams.
+                        items:
+                          description: |-
+                            QueryParam defines the query parameter name hashing configuration for consistent hash based
+                            load balancing.
+                          properties:
+                            name:
+                              description: Name of the query param to hash.
+                              type: string
+                          required:
+                          - name
+                          type: object
+                        type: array
                       tableSize:
                         default: 65537
                         description: The table size for consistent hashing, must be
@@ -750,11 +794,13 @@ spec:
                           "Header",
                           "Headers",
                           "Cookie".
+                          "QueryParams".
                         enum:
                         - SourceIP
                         - Header
                         - Headers
                         - Cookie
+                        - QueryParams
                         type: string
                     required:
                     - type
@@ -769,6 +815,10 @@ spec:
                     - message: If consistent hash type is cookie, the cookie field
                         must be set.
                       rule: 'self.type == ''Cookie'' ? has(self.cookie) : !has(self.cookie)'
+                    - message: If consistent hash type is queryParams, the queryParams
+                        field must be set.
+                      rule: 'self.type == ''QueryParams'' ? has(self.queryParams)
+                        : !has(self.queryParams)'
                   endpointOverride:
                     description: |-
                       EndpointOverride defines the configuration for endpoint override.
@@ -1212,6 +1262,15 @@ spec:
                               - requests
                               - unit
                               type: object
+                            shadowMode:
+                              description: |-
+                                ShadowMode indicates whether this rate-limit rule runs in shadow mode.
+                                When enabled, all rate-limiting operations are performed (cache lookups,
+                                counter updates, telemetry generation), but the outcome is never enforced.
+                                The request always succeeds, even if the configured limit is exceeded.
+
+                                Only supported for Global Rate Limits.
+                              type: boolean
                             shared:
                               description: |-
                                 Shared determines whether this rate limit rule applies across all the policy targets.
@@ -1524,6 +1583,15 @@ spec:
                               - requests
                               - unit
                               type: object
+                            shadowMode:
+                              description: |-
+                                ShadowMode indicates whether this rate-limit rule runs in shadow mode.
+                                When enabled, all rate-limiting operations are performed (cache lookups,
+                                counter updates, telemetry generation), but the outcome is never enforced.
+                                The request always succeeds, even if the configured limit is exceeded.
+
+                                Only supported for Global Rate Limits.
+                              type: boolean
                             shared:
                               description: |-
                                 Shared determines whether this rate limit rule applies across all the policy targets.
@@ -1538,17 +1606,19 @@ spec:
                         x-kubernetes-validations:
                         - message: response cost is not supported for Local Rate Limits
                           rule: self.all(foo, !has(foo.cost) || !has(foo.cost.response))
+                        - message: shadow mode is not supported for Local Rate Limits
+                          rule: self.all(foo, !has(foo.shadowMode))
                     type: object
                   type:
                     description: |-
                       Type decides the scope for the RateLimits.
                       Valid RateLimitType values are "Global" or "Local".
+
+                      Deprecated: Use Global and/or Local fields directly instead. Both can be specified simultaneously for combined rate limiting.
                     enum:
                     - Global
                     - Local
                     type: string
-                required:
-                - type
                 type: object
               requestBuffer:
                 description: |-
@@ -2264,9 +2334,27 @@ spec:
                   Telemetry configures the telemetry settings for the policy target (Gateway or xRoute).
                   This will override the telemetry settings in the EnvoyProxy resource.
                 properties:
+                  metrics:
+                    description: Metrics defines metrics configuration for the backend
+                      or Route.
+                    properties:
+                      routeStatName:
+                        description: |-
+                          RouteStatName defines the value of the Route stat_prefix, determining how the route stats are named.
+                          For more details, see envoy docs: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto#config-route-v3-route
+                          The supported operators for this pattern are:
+                          %ROUTE_NAME%: name of Gateway API xRoute resource
+                          %ROUTE_NAMESPACE%: namespace of Gateway API xRoute resource
+                          %ROUTE_KIND%: kind of Gateway API xRoute resource
+                          Example: %ROUTE_KIND%/%ROUTE_NAMESPACE%/%ROUTE_NAME% => httproute/my-ns/my-route
+                          Disabled by default.
+                        type: string
+                    type: object
                   tracing:
-                    description: Tracing configures the tracing settings for the backend
-                      or HTTPRoute.
+                    description: |-
+                      Tracing configures the tracing settings for the backend or HTTPRoute.
+
+                      This takes precedence over EnvoyProxy tracing when set.
                     properties:
                       customTags:
                         additionalProperties:
@@ -2334,8 +2422,6 @@ spec:
                         description: |-
                           SamplingFraction represents the fraction of requests that should be
                           selected for tracing if no prior sampling decision has been made.
-
-                          This will take precedence over sampling fraction on EnvoyProxy if set.
                         properties:
                           denominator:
                             default: 100
@@ -2352,6 +2438,39 @@ spec:
                         x-kubernetes-validations:
                         - message: numerator must be less than or equal to denominator
                           rule: self.numerator <= self.denominator
+                      spanName:
+                        description: |-
+                          SpanName defines the name of the span which will be used for tracing.
+                          Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators) may be used in the value.
+                          The [format string documentation](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#config-access-log-format-strings) provides more information.
+
+                          If not set, the span name is provider specific.
+                          e.g. Datadog use `ingress` as the default client span name,
+                          and `router <UPSTREAM_CLUSTER> egress` as the server span name.
+                        properties:
+                          client:
+                            description: Client defines operation name of the span
+                              which will be used for tracing.
+                            type: string
+                          server:
+                            description: Server defines the operation name of the
+                              upstream span which will be used for tracing.
+                            type: string
+                        required:
+                        - client
+                        - server
+                        type: object
+                      tags:
+                        additionalProperties:
+                          type: string
+                        description: |-
+                          Tags defines the custom tags to add to each span.
+                          Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators) may be used in the value.
+                          The [format string documentation](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#config-access-log-format-strings) provides more information.
+                          If provider is kubernetes, pod name and namespace are added by default.
+
+                          Same keys take precedence over CustomTags.
+                        type: object
                     type: object
                 type: object
               timeout:

@@ -70,6 +70,28 @@ spec:
 {{% /tab %}}
 {{< /tabpane >}}
 
+### Configuring Minimum Content Length
+
+You can configure the minimum response size for compression using the `minContentLength` field. Responses smaller than this threshold will not be compressed. This can reduce CPU overhead for small responses.
+
+The minimum allowed value is 30 bytes (enforced by Envoy Proxy). If not specified, Envoy's default of 30 bytes is used.
+
+```yaml
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: response-compression
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: backend
+  compressor:
+    - type: Gzip
+      gzip: {}
+      minContentLength: 1024
+```
+
 ### Deprecated Configuration
 
 The following configuration uses the deprecated `compression` field. While still supported, it's recommended to migrate to the `compressor` field:

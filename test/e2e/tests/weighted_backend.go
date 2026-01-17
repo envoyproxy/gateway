@@ -31,6 +31,7 @@ var WeightedBackendTest = suite.ConformanceTest{
 		"testdata/weighted-backend-all-equal.yaml",
 		"testdata/weighted-backend-bluegreen.yaml",
 		"testdata/weighted-backend-completing-rollout.yaml",
+		"testdata/weighted-backend-mixed-valid-and-invalid.yaml",
 	},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		t.Run("SameWeight", func(t *testing.T) {
@@ -56,6 +57,11 @@ var WeightedBackendTest = suite.ConformanceTest{
 				"infra-backend-v2": sendRequests * 0,
 			}
 			runWeightedBackendTest(t, suite, nil, "weight-complete-rollout-http-route", "/complete-rollout", "infra-backend", expected)
+		})
+
+		t.Run("MixedValidAndInvalid", func(t *testing.T) {
+			// Requests should be distributed to valid and invalid backends according to their weights
+			testMixedValidAndInvalid(t, suite)
 		})
 	},
 }
@@ -128,4 +134,97 @@ func extractPodNamePrefix(podName, prefix string) string {
 	}
 
 	return podName
+}
+
+func testMixedValidAndInvalid(t *testing.T, suite *suite.ConformanceTestSuite) {
+	weightEqualRoute := types.NamespacedName{Name: "weight-mixed-valid-and-invalid-http-route", Namespace: ConformanceInfraNamespace}
+	gatewayRef := kubernetes.NewGatewayRef(SameNamespaceGateway)
+	gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, gatewayRef, weightEqualRoute)
+
+	// Make sure all test resources are ready
+	kubernetes.NamespacesMustBeReady(t, suite.Client, suite.TimeoutConfig, []string{ConformanceInfraNamespace})
+
+	scenarios := []struct {
+		name        string
+		path        string
+		failureCode int
+	}{
+		{
+			name:        "MixedValidAndInvalid",
+			path:        "/mixed-valid-and-invalid",
+			failureCode: 500,
+		},
+		{
+			name:        "MixedValidAndNoEndpoints",
+			path:        "/mixed-valid-and-no-endpoints",
+			failureCode: 503,
+		},
+	}
+
+	for _, scenario := range scenarios {
+		t.Run(scenario.name, func(t *testing.T) {
+			runMixedValidAndInvalidScenario(t, suite, gwAddr, scenario.path, scenario.failureCode)
+		})
+	}
+}
+
+const (
+	mixedValidAndInvalidRequests    = 100
+	mixedValidAndInvalidSuccessLow  = 80
+	mixedValidAndInvalidSuccessHigh = 99
+)
+
+func runMixedValidAndInvalidScenario(t *testing.T, suite *suite.ConformanceTestSuite, gwAddr, path string, failureCode int) {
+	t.Helper()
+
+	// Make sure the valid(response 200) backend are ready.
+	http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, http.ExpectedResponse{
+		Request: http.Request{
+			Path: path,
+		},
+		Namespace: ConformanceInfraNamespace,
+		Response: http.Response{
+			StatusCodes: []int{200},
+		},
+	})
+
+	// Test if the requests are distributed to valid and invalid backends according to their weights
+	expected := http.ExpectedResponse{
+		Request: http.Request{
+			Path: path,
+		},
+		Response: http.Response{
+			StatusCodes: []int{200, failureCode},
+		},
+		Namespace: ConformanceInfraNamespace,
+	}
+	req := http.MakeRequest(t, &expected, gwAddr, "HTTP", "http")
+
+	successCount := 0
+	failureCount := 0
+	for i := 0; i < mixedValidAndInvalidRequests; i++ {
+		_, response, err := suite.RoundTripper.CaptureRoundTrip(req)
+		if err != nil {
+			t.Errorf("failed to get expected response: %v", err)
+			continue
+		}
+		switch response.StatusCode {
+		case 200:
+			successCount++
+		case failureCode:
+			failureCount++
+		default:
+			t.Errorf("unexpected status code %d for %s", response.StatusCode, path)
+		}
+	}
+
+	if successCount < mixedValidAndInvalidSuccessLow || successCount > mixedValidAndInvalidSuccessHigh {
+		t.Errorf("actual success count for %s is not within the expected range, success %d", path, successCount)
+	}
+
+	if successCount+failureCount != mixedValidAndInvalidRequests {
+		t.Errorf("the sum of success and failure count for %s is not equal to the total requests, success %d, failure %d, total %d", path, successCount, failureCount, mixedValidAndInvalidRequests)
+	}
+
+	t.Logf("success count for %s is %d, failure count for %s is %d", path, successCount, path, failureCount)
 }

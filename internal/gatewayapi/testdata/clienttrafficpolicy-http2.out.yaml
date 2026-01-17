@@ -9,6 +9,7 @@ clientTrafficPolicies:
       initialConnectionWindowSize: 32Mi
       initialStreamWindowSize: 64Ki
       maxConcurrentStreams: 200
+      onInvalidMessage: TerminateConnection
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway
@@ -166,6 +167,7 @@ xdsIR:
     globalResources:
       proxyServiceCluster:
         metadata:
+          kind: Service
           name: envoy-envoy-gateway-gateway-1-196ae069
           namespace: envoy-gateway-system
           sectionName: "8080"
@@ -177,6 +179,7 @@ xdsIR:
             port: 8080
             zone: zone1
           metadata:
+            kind: Service
             name: envoy-envoy-gateway-gateway-1-196ae069
             namespace: envoy-gateway-system
             sectionName: "8080"
@@ -191,6 +194,7 @@ xdsIR:
         initialConnectionWindowSize: 65536
         initialStreamWindowSize: 33554432
         maxConcurrentStreams: 200
+        resetStreamOnError: false
       isHTTP2: false
       metadata:
         kind: Gateway
@@ -206,8 +210,6 @@ xdsIR:
       externalPort: 8080
       hostnames:
       - www.example.com
-      http2:
-        maxConcurrentStreams: 200
       isHTTP2: false
       metadata:
         kind: Gateway
