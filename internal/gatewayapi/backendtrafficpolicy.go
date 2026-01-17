@@ -955,6 +955,7 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy) (
 		Telemetry:         buildBackendTelemetry(policy.Spec.Telemetry),
 	}, errs
 }
+
 func buildBackendTelemetry(telemetry *egv1a1.BackendTelemetry) *ir.BackendTelemetry {
 	if telemetry == nil {
 		return nil
