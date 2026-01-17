@@ -96,7 +96,7 @@ var RateLimitCIDRMatchTest = suite.ConformanceTest{
 				t.Errorf("failed to get expected response for the last (fourth) request: %v", err)
 			}
 			// make sure that metric worked as expected.
-			if err := wait.PollUntilContextTimeout(context.TODO(), 3*time.Second, time.Minute, true, func(ctx context.Context) (done bool, err error) {
+			if err := wait.PollUntilContextTimeout(context.TODO(), 3*time.Second, time.Minute, true, func(_ context.Context) (done bool, err error) {
 				v, err := prometheus.QueryPrometheus(suite.Client, `ratelimit_service_rate_limit_over_limit{key2="masked_remote_address_0_0_0_0/0"}`)
 				if err != nil {
 					tlog.Logf(t, "failed to query prometheus: %v", err)
@@ -1027,7 +1027,7 @@ var RateLimitGlobalSharedCidrMatchTest = suite.ConformanceTest{
 			}
 
 			// Make sure that metric worked as expected.
-			if err := wait.PollUntilContextTimeout(context.TODO(), 3*time.Second, time.Minute, true, func(ctx context.Context) (done bool, err error) {
+			if err := wait.PollUntilContextTimeout(context.TODO(), 3*time.Second, time.Minute, true, func(_ context.Context) (done bool, err error) {
 				v, err := prometheus.QueryPrometheus(suite.Client, `ratelimit_service_rate_limit_over_limit{key2="masked_remote_address_0_0_0_0/0"}`)
 				if err != nil {
 					tlog.Logf(t, "failed to query prometheus: %v", err)
@@ -1133,7 +1133,7 @@ var RateLimitGlobalSharedGatewayHeaderMatchTest = suite.ConformanceTest{
 			}
 
 			// Make sure that metric worked as expected.
-			if err := wait.PollUntilContextTimeout(context.TODO(), 3*time.Second, time.Minute, true, func(ctx context.Context) (done bool, err error) {
+			if err := wait.PollUntilContextTimeout(context.TODO(), 3*time.Second, time.Minute, true, func(_ context.Context) (done bool, err error) {
 				v, err := prometheus.QueryPrometheus(suite.Client, `ratelimit_service_rate_limit_over_limit{key2="header_x-user-id_one"}`)
 				if err != nil {
 					tlog.Logf(t, "failed to query prometheus: %v", err)

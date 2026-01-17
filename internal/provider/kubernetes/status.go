@@ -31,7 +31,7 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 		message.HandleSubscription(
 			message.Metadata{Runner: string(egv1a1.LogComponentProviderRunner), Message: message.GatewayClassStatusMessageName},
 			r.subscriptions.gatewayClassStatuses,
-			func(update message.Update[types.NamespacedName, *gwapiv1.GatewayClassStatus], errChan chan error) {
+			func(update message.Update[types.NamespacedName, *gwapiv1.GatewayClassStatus], _ chan error) {
 				// skip delete updates.
 				if update.Delete {
 					return

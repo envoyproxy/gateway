@@ -57,7 +57,7 @@ func newFakePortForwarder(b []byte) (kube.PortForwarder, error) {
 		localPort:    p,
 		mux:          http.NewServeMux(),
 	}
-	fw.mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+	fw.mux.HandleFunc("/", func(w http.ResponseWriter, _ *http.Request) {
 		_, _ = w.Write(fw.responseBody)
 	})
 

@@ -42,7 +42,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 	}{
 		{
 			desc:       "nil provider",
-			mutate:     func(envoy *egv1a1.EnvoyProxy) {},
+			mutate:     func(_ *egv1a1.EnvoyProxy) {},
 			wantErrors: []string{},
 		},
 		{

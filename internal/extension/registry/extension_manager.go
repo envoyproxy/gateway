@@ -366,7 +366,7 @@ func getGRPCCredentials(client k8scli.Client, ext *egv1a1.ExtensionManager, name
 }
 
 func createGetRootCertificatesHandler(client k8scli.Client, ext *egv1a1.ExtensionManager, namespace string) func(*advancedtls.ConnectionInfo) (*advancedtls.RootCertificates, error) {
-	return func(params *advancedtls.ConnectionInfo) (*advancedtls.RootCertificates, error) {
+	return func(_ *advancedtls.ConnectionInfo) (*advancedtls.RootCertificates, error) {
 		ctx := context.Background()
 		cp, err := getCertPoolFromSecret(ctx, client, ext, namespace)
 		if err != nil {
@@ -396,7 +396,7 @@ func getCertPoolFromSecret(ctx context.Context, client k8scli.Client, ext *egv1a
 }
 
 func createGetClientCertificatesHandler(client k8scli.Client, ext *egv1a1.ExtensionManager, namespace string) func(*tls.CertificateRequestInfo) (*tls.Certificate, error) {
-	return func(certReqInfo *tls.CertificateRequestInfo) (*tls.Certificate, error) {
+	return func(_ *tls.CertificateRequestInfo) (*tls.Certificate, error) {
 		ctx := context.Background()
 		cert, err := getClientCertificateFromSecret(ctx, client, ext, namespace)
 		if err != nil {

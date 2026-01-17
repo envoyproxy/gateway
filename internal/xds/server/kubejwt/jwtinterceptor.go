@@ -85,7 +85,7 @@ func newWrappedStream(s grpc.ServerStream, ctx context.Context, interceptor *JWT
 
 // Stream intercepts streaming gRPC calls for authorization.
 func (i *JWTAuthInterceptor) Stream() grpc.StreamServerInterceptor {
-	return func(srv any, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
+	return func(srv any, ss grpc.ServerStream, _ *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
 		wrapped := newWrappedStream(ss, ss.Context(), i)
 		return handler(srv, wrapped)
 	}

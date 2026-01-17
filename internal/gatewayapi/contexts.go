@@ -35,7 +35,7 @@ type GatewayContext struct {
 
 // ResetListeners resets the listener statuses and re-generates the GatewayContext
 // ListenerContexts from the Gateway spec.
-func (g *GatewayContext) ResetListeners(resources *resource.Resources, epMap map[types.NamespacedName]*egv1a1.EnvoyProxy) {
+func (g *GatewayContext) ResetListeners() {
 	numListeners := len(g.Spec.Listeners)
 	g.Status.Listeners = make([]gwapiv1.ListenerStatus, numListeners)
 	g.listeners = make([]*ListenerContext, numListeners)

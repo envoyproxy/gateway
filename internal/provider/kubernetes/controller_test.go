@@ -2391,7 +2391,7 @@ func TestCRDExistsWithClient(t *testing.T) {
 				APIResources: []metav1.APIResource{{Kind: resource.KindSecurityPolicy}},
 			},
 		}
-		disco.PrependReactor("get", "resource", func(action clientgotesting.Action) (bool, runtime.Object, error) {
+		disco.PrependReactor("get", "resource", func(_ clientgotesting.Action) (bool, runtime.Object, error) {
 			return true, nil, expectedErr
 		})
 
@@ -2410,7 +2410,7 @@ func TestCRDExistsWithClient(t *testing.T) {
 		}
 
 		attempts := 0
-		disco.PrependReactor("get", "resource", func(action clientgotesting.Action) (bool, runtime.Object, error) {
+		disco.PrependReactor("get", "resource", func(_ clientgotesting.Action) (bool, runtime.Object, error) {
 			attempts++
 			if attempts == 1 {
 				return true, nil, kerrors.NewTooManyRequests("retry", 0)

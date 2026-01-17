@@ -101,7 +101,7 @@ func newTranslateCommand() *cobra.Command {
   # Translate Gateway API Resources into IR in YAML output,
   egctl experimental translate --from gateway-api --to ir --output yaml --file <input file>
 	`,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			return translate(cmd.OutOrStdout(), inFile, inType, outTypes, output, resourceType, addMissingResources, namespace, dnsDomain)
 		},
 	}

@@ -202,13 +202,13 @@ type testServer struct {
 	extension.UnimplementedEnvoyGatewayExtensionServer
 }
 
-func (s *testServer) PostRouteModify(ctx context.Context, req *extension.PostRouteModifyRequest) (*extension.PostRouteModifyResponse, error) {
+func (s *testServer) PostRouteModify(_ context.Context, req *extension.PostRouteModifyRequest) (*extension.PostRouteModifyResponse, error) {
 	return &extension.PostRouteModifyResponse{
 		Route: req.Route,
 	}, nil
 }
 
-func (s *testServer) PostTranslateModify(ctx context.Context, req *extension.PostTranslateModifyRequest) (*extension.PostTranslateModifyResponse, error) {
+func (s *testServer) PostTranslateModify(_ context.Context, req *extension.PostTranslateModifyRequest) (*extension.PostTranslateModifyResponse, error) {
 	return &extension.PostTranslateModifyResponse{
 		Clusters:  req.Clusters,
 		Secrets:   req.Secrets,
@@ -575,7 +575,7 @@ type retryTestServer struct {
 	mu       sync.Mutex
 }
 
-func (s *retryTestServer) PostRouteModify(ctx context.Context, req *extension.PostRouteModifyRequest) (*extension.PostRouteModifyResponse, error) {
+func (s *retryTestServer) PostRouteModify(_ context.Context, req *extension.PostRouteModifyRequest) (*extension.PostRouteModifyResponse, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.attempts++
@@ -694,7 +694,7 @@ func getTargetRefKind(obj *unstructured.Unstructured) (string, error) {
 	return kind, nil
 }
 
-func (s *clusterUpdateTestServer) PostTranslateModify(ctx context.Context, req *extension.PostTranslateModifyRequest) (*extension.PostTranslateModifyResponse, error) {
+func (s *clusterUpdateTestServer) PostTranslateModify(_ context.Context, req *extension.PostTranslateModifyRequest) (*extension.PostTranslateModifyResponse, error) {
 	clusters := req.GetClusters()
 	if clusters == nil {
 		return &extension.PostTranslateModifyResponse{

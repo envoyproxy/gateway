@@ -37,7 +37,7 @@ func (i *Infra) Close() error {
 	var wg sync.WaitGroup
 
 	// Stop any Envoy subprocesses in parallel
-	i.proxyContextMap.Range(func(key, value any) bool {
+	i.proxyContextMap.Range(func(key, _ any) bool {
 		wg.Add(1)
 		go func(name string) {
 			defer wg.Done()
