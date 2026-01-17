@@ -6,7 +6,6 @@
 package gatewayapi
 
 import (
-	"errors"
 	"os"
 	"path/filepath"
 	"testing"
@@ -234,33 +233,69 @@ func TestValidateTLSSecretsData(t *testing.T) {
 	}
 }
 
-func TestValidateCertificate(t *testing.T) {
+func TestFilterValidCertificates(t *testing.T) {
 	type testCase struct {
-		Name        string
-		CertFile    string
-		ExpectedErr error
+		Name              string
+		CertFile          string
+		ExpectedErrMsg    string
+		ExpectedErrReason gwapiv1.ListenerConditionReason
+		ExpectedDataFile  string // File containing expected filtered certificate data
 	}
 
 	testCases := []testCase{
 		{
-			Name:        "valid-rsa-cert",
-			CertFile:    "rsa-cert.pem",
-			ExpectedErr: nil,
+			Name:              "valid-rsa-cert",
+			CertFile:          "rsa-cert.pem",
+			ExpectedErrMsg:    "",
+			ExpectedErrReason: "",
+			ExpectedDataFile:  "rsa-cert.pem", // Same as input for valid cert
 		},
 		{
-			Name:        "valid-ecdsa-p256-cert",
-			CertFile:    "ecdsa-p256-cert.pem",
-			ExpectedErr: nil,
+			Name:              "valid-ecdsa-p256-cert",
+			CertFile:          "ecdsa-p256-cert.pem",
+			ExpectedErrMsg:    "",
+			ExpectedErrReason: "",
+			ExpectedDataFile:  "ecdsa-p256-cert.pem", // Same as input
 		},
 		{
-			Name:        "valid-ecdsa-p384-cert",
-			CertFile:    "ecdsa-p384-cert.pem",
-			ExpectedErr: nil,
+			Name:              "valid-ecdsa-p384-cert",
+			CertFile:          "ecdsa-p384-cert.pem",
+			ExpectedErrMsg:    "",
+			ExpectedErrReason: "",
+			ExpectedDataFile:  "ecdsa-p384-cert.pem", // Same as input
 		},
 		{
-			Name:        "malformed-cert",
-			CertFile:    "malformed-cert.pem",
-			ExpectedErr: errors.New("x509: malformed certificate"),
+			Name:              "malformed-cert",
+			CertFile:          "malformed-cert.pem",
+			ExpectedErrMsg:    "x509: malformed certificate",
+			ExpectedErrReason: gwapiv1.ListenerReasonInvalidCertificateRef,
+		},
+		{
+			Name:              "bundle-both-valid",
+			CertFile:          "bundle-both-valid.pem",
+			ExpectedErrMsg:    "",
+			ExpectedErrReason: "",
+			ExpectedDataFile:  "bundle-both-valid.pem", // All certs are valid
+		},
+		{
+			Name:              "bundle-first-valid",
+			CertFile:          "bundle-first-valid.pem", // rsa-cert.pem + malformed-cert.pem
+			ExpectedErrMsg:    "x509: malformed certificate",
+			ExpectedErrReason: status.ListenerReasonPartiallyInvalidCertificateRef,
+			ExpectedDataFile:  "rsa-cert.pem", // Only first cert
+		},
+		{
+			Name:              "bundle-first-invalid",
+			CertFile:          "bundle-first-invalid.pem", // malformed-cert.pem + rsa-cert.pem
+			ExpectedErrMsg:    "x509: malformed certificate",
+			ExpectedErrReason: status.ListenerReasonPartiallyInvalidCertificateRef,
+			ExpectedDataFile:  "rsa-cert.pem", // Only second cert
+		},
+		{
+			Name:              "bundle-both-invalid",
+			CertFile:          "bundle-both-invalid.pem",
+			ExpectedErrMsg:    "x509: malformed certificate\nx509: malformed certificate",
+			ExpectedErrReason: gwapiv1.ListenerReasonInvalidCertificateRef,
 		},
 	}
 
@@ -268,11 +303,35 @@ func TestValidateCertificate(t *testing.T) {
 		t.Run(tc.Name, func(t *testing.T) {
 			certData, err := os.ReadFile(filepath.Join("testdata", "tls", tc.CertFile))
 			require.NoError(t, err)
-			err = validateCertificates(certData)
-			if tc.ExpectedErr == nil {
-				require.NoError(t, err)
+
+			result, listenerErr := filterValidCertificates(certData)
+
+			if tc.ExpectedErrMsg == "" {
+				require.NoError(t, listenerErr)
+				require.NotNil(t, result)
+
+				// If ExpectedDataFile is provided, compare with expected data
+				if tc.ExpectedDataFile != "" {
+					expectedData, err := os.ReadFile(filepath.Join("testdata", "tls", tc.ExpectedDataFile))
+					require.NoError(t, err)
+					require.Equal(t, expectedData, result, "filtered certificate data should match expected value")
+				}
 			} else {
-				require.EqualError(t, err, tc.ExpectedErr.Error())
+				require.Error(t, listenerErr)
+				require.Equal(t, tc.ExpectedErrMsg, listenerErr.Error())
+				require.Equal(t, tc.ExpectedErrReason, listenerErr.Reason())
+
+				// For PartiallyInvalidCertificateRef, we should still have valid data
+				if tc.ExpectedErrReason == status.ListenerReasonPartiallyInvalidCertificateRef {
+					require.NotNil(t, result, "result should not be nil for partially invalid certificates")
+					if tc.ExpectedDataFile != "" {
+						expectedData, err := os.ReadFile(filepath.Join("testdata", "tls", tc.ExpectedDataFile))
+						require.NoError(t, err)
+						require.Equal(t, expectedData, result, "filtered certificate data should match expected value")
+					}
+				} else {
+					require.Nil(t, result, "result should be nil for completely invalid certificates")
+				}
 			}
 		})
 	}

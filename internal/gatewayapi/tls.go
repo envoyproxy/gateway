@@ -34,13 +34,19 @@ func parseCertsFromTLSSecretsData(secrets []*corev1.Secret) ([]*corev1.Secret, [
 	for _, secret := range secrets {
 		certData := secret.Data[corev1.TLSCertKey]
 
-		if err := validateCertificates(certData); err != nil {
-			errs = append(errs, fmt.Errorf("%s/%s must contain valid %s and %s, unable to validate certificate in %s: %w",
-				secret.Namespace, secret.Name, corev1.TLSCertKey, corev1.TLSPrivateKeyKey, corev1.TLSCertKey, err))
-			continue
+		validData, listenerErr := filterValidCertificates(certData)
+		if listenerErr != nil {
+			if listenerErr.Reason() == gwapiv1.ListenerReasonInvalidCertificateRef {
+				errs = append(errs, fmt.Errorf("%s/%s must contain valid tls.crt and tls.key, unable to validate certificate in tls.crt: %s",
+					secret.Namespace, secret.Name, listenerErr.Error()))
+				continue
+			} else if listenerErr.Reason() == status.ListenerReasonPartiallyInvalidCertificateRef {
+				errs = append(errs, fmt.Errorf("%s/%s has some invalid certificates: %s",
+					secret.Namespace, secret.Name, listenerErr.Error()))
+			}
 		}
 
-		certBlock, _ := pem.Decode(certData)
+		certBlock, _ := pem.Decode(validData)
 		if certBlock == nil {
 			errs = append(errs, fmt.Errorf("%s/%s must contain valid %s and %s, unable to decode pem data in %s",
 				secret.Namespace, secret.Name, corev1.TLSCertKey, corev1.TLSPrivateKeyKey, corev1.TLSCertKey))
@@ -145,26 +151,80 @@ func parseCertsFromTLSSecretsData(secrets []*corev1.Secret) ([]*corev1.Secret, [
 	return validSecrets, certs, nil
 }
 
-// validateCertificate validates all certificates in PEM encoded data.
-func validateCertificates(data []byte) error {
-	block, _ := pem.Decode(data)
-	if block == nil {
-		return fmt.Errorf("unable to decode pem data for certificate")
+// filterValidCertificates filters out expired or not-yet-valid certificates from PEM encoded data.
+// It accepts certificate bundles (multiple PEM blocks) and returns only the valid certificates.
+// A certificate is considered valid if the current time is within its NotBefore and NotAfter period.
+//
+// Return a status.ListenerError with InvalidCertificateRef Condition if no valid certificates are found in the provided data,
+// Return a status.ListenerError with PartiallyInvalidCertificateRef Condition if some certificates are invalid but also valid certificates exist.
+func filterValidCertificates(data []byte) ([]byte, status.ListenerError) {
+	if len(data) == 0 {
+		return nil, status.NewListenerStatusError(
+			fmt.Errorf("no certificate data provided"),
+			gwapiv1.ListenerReasonInvalidCertificateRef,
+		)
 	}
-	certs, err := x509.ParseCertificates(block.Bytes)
-	if err != nil {
-		return err
-	}
+
 	now := time.Now()
-	for _, cert := range certs {
-		if now.After(cert.NotAfter) {
-			return fmt.Errorf("certificate %s has expired since %v", cert.Subject.CommonName, cert.NotAfter)
+	var errs []error
+	validData := make([]byte, 0, len(data))
+
+	// Process each PEM block in the data
+	rest := data
+	for len(rest) > 0 {
+		block, remaining := pem.Decode(rest)
+		if block == nil {
+			break
 		}
-		if now.Before(cert.NotBefore) {
-			return fmt.Errorf("certificate %s will be valid after %v", cert.Subject.CommonName, cert.NotBefore)
+		rest = remaining
+
+		// Parse all certificates in this PEM block
+		certs, err := x509.ParseCertificates(block.Bytes)
+		if err != nil {
+			errs = append(errs, err)
+			continue
+		}
+
+		// Validate all certificates in this PEM block
+		blockValid := true
+		for _, cert := range certs {
+			if now.After(cert.NotAfter) {
+				errs = append(errs, fmt.Errorf("certificate %s has expired since %v", cert.Subject.CommonName, cert.NotAfter))
+				blockValid = false
+				break
+			}
+			if now.Before(cert.NotBefore) {
+				errs = append(errs, fmt.Errorf("certificate %s will be valid after %v", cert.Subject.CommonName, cert.NotBefore))
+				blockValid = false
+				break
+			}
+		}
+		// Only include this PEM block if all certificates in it are valid
+		if blockValid {
+			validData = append(validData, pem.EncodeToMemory(block)...)
 		}
 	}
-	return nil
+
+	if len(validData) == 0 {
+		if len(errs) > 0 {
+			return nil, status.NewListenerStatusError(
+				errors.Join(errs...),
+				gwapiv1.ListenerReasonInvalidCertificateRef,
+			)
+		}
+		// No errors but no valid PEM blocks found - PEM decoding failed
+		return nil, status.NewListenerStatusError(
+			fmt.Errorf("unable to decode pem data for certificate"),
+			gwapiv1.ListenerReasonInvalidCertificateRef,
+		)
+	}
+	if len(errs) > 0 {
+		return validData, status.NewListenerStatusError(
+			errors.Join(errs...),
+			status.ListenerReasonPartiallyInvalidCertificateRef,
+		)
+	}
+	return validData, nil
 }
 
 // validateCrl validates a CRL in PEM encoded data.
