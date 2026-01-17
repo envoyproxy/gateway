@@ -83,6 +83,27 @@ func (x XdsIRRoutes) Less(i, j int) bool {
 	}
 	// Equal case
 
+	// 4. Sort based on the number of Cookie matches.
+	// When the number is same, sort based on number of Exact Cookie matches.
+	cCountI := len(x[i].CookieMatches)
+	cCountJ := len(x[j].CookieMatches)
+	if cCountI < cCountJ {
+		return true
+	}
+	if cCountI > cCountJ {
+		return false
+	}
+
+	cExtNumberI := numberOfExactMatches(x[i].CookieMatches)
+	cExtNumberJ := numberOfExactMatches(x[j].CookieMatches)
+	if cExtNumberI < cExtNumberJ {
+		return true
+	}
+	if cExtNumberI > cExtNumberJ {
+		return false
+	}
+	// Equal case
+
 	// 4. Sort based on the number of Query param matches.
 	// When the number is same, sort based on number of Exact Query param matches.
 	qCountI := len(x[i].QueryParamMatches)
