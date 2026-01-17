@@ -6,8 +6,7 @@
 package ir
 
 import (
-	"cmp"
-	"slices"
+	"sort"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
@@ -21,8 +20,8 @@ func MapToSlice(m map[string]string) []MapEntry {
 	for k, v := range m {
 		res = append(res, MapEntry{Key: k, Value: v})
 	}
-	slices.SortFunc(res, func(a, b MapEntry) int {
-		return cmp.Compare(a.Key, b.Key)
+	sort.Slice(res, func(i, j int) bool {
+		return res[i].Key < res[j].Key
 	})
 	return res
 }
@@ -36,8 +35,8 @@ func CustomTagMapToSlice(m map[string]egv1a1.CustomTag) []CustomTagMapEntry {
 	for k, v := range m {
 		res = append(res, CustomTagMapEntry{Key: k, Value: v})
 	}
-	slices.SortFunc(res, func(a, b CustomTagMapEntry) int {
-		return cmp.Compare(a.Key, b.Key)
+	sort.Slice(res, func(i, j int) bool {
+		return res[i].Key < res[j].Key
 	})
 	return res
 }
