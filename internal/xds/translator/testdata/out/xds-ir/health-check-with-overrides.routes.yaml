@@ -1,0 +1,28 @@
+- ignorePortInHostMatching: true
+  name: health-check-with-overrides-listener
+  virtualHosts:
+  - domains:
+    - '*'
+    name: health-check-with-overrides-listener/*
+    routes:
+    - match:
+        prefix: /
+      name: overrides-first-route
+      route:
+        cluster: overrides-first-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket
+- ignorePortInHostMatching: true
+  name: health-check-with-no-overrides-listener
+  virtualHosts:
+  - domains:
+    - '*'
+    name: health-check-with-no-overrides-listener/*
+    routes:
+    - match:
+        prefix: /
+      name: no-overrides-first-route
+      route:
+        cluster: no-overrides-first-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket

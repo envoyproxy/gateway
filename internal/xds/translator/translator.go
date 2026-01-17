@@ -1088,7 +1088,7 @@ func addXdsCluster(tCtx *types.ResourceVersionTable, args *xdsClusterArgs) error
 	}
 	xdsCluster := result.cluster
 	preferLocal := ptr.Deref(args.loadBalancer, ir.LoadBalancer{}).PreferLocal
-	xdsEndpoints := buildXdsClusterLoadAssignment(args.name, args.settings, preferLocal)
+	xdsEndpoints := buildXdsClusterLoadAssignment(args.name, args.settings, args.healthCheck, preferLocal)
 	for _, ds := range args.settings {
 		shouldValidateTLS := ds.TLS != nil && !ds.TLS.InsecureSkipVerify
 		if shouldValidateTLS {
