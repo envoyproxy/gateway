@@ -26,6 +26,7 @@ new features: |
   Added support for configuring minimum response size for compression via minContentLength field in BackendTrafficPolicy.
   Added support for custom span name.
   Added support for TLS telemetry gRPC backends.
+  Added support for tracing tag, which allows to use Envoy string command operators such as `%ENVIRONMENT(...)%`.
 
 bug fixes: |
   Fixed configured OIDC authorization endpoint being overridden by discovered endpoints from issuer's well-known URL.
