@@ -2,7 +2,7 @@
 title: "Load Balancing"
 ---
 
-[Envoy load balancing][] is a way of distributing traffic between multiple hosts within a single upstream cluster 
+[Envoy load balancing][] is a way of distributing traffic between multiple hosts within a single upstream cluster
 in order to effectively make use of available resources.
 
 Envoy Gateway supports the following load balancing policies:
@@ -31,7 +31,7 @@ kubectl patch deployment backend -n default -p '{"spec": {"replicas": 4}}'
 
 ### Install the hey load testing tool
 
-Install the `Hey` CLI tool, this tool will be used to generate load and measure response times. 
+Install the `Hey` CLI tool, this tool will be used to generate load and measure response times.
 
 Follow the installation instruction from the [Hey project] docs.
 
@@ -413,7 +413,7 @@ Response time histogram:
   0.048 [4] 	|■■■■■■■
 ```
 
-As a result, you can see all available upstream hosts receive traffics randomly, 
+As a result, you can see all available upstream hosts receive traffics randomly,
 and host `backend-69fcff487f-6l2pw` receives fewer requests than others.
 
 ```shell
@@ -833,7 +833,7 @@ spec:
 {{% /tab %}}
 {{< /tabpane >}}
 
-By sending 10 request with `curl` to the `${GATEWAY_HOST}/cookie`, you can see that all requests got routed to only 
+By sending 10 request with `curl` to the `${GATEWAY_HOST}/cookie`, you can see that all requests got routed to only
 one upstream host, since they have same cookie setting.
 
 ```shell
@@ -861,7 +861,7 @@ backend-69fcff487f-gnpm4: received 10 requests
 backend-69fcff487f-t2pgm: received 10 requests
 ```
 
-If the cookie has not been set in one request, Envoy Gateway will auto-generate a cookie for this request 
+If the cookie has not been set in one request, Envoy Gateway will auto-generate a cookie for this request
 according to the `ttl` and `attributes` field.
 
 In this example, the following cookie will be generated (see `set-cookie` header in response) if sending a request without cookie:
