@@ -37,7 +37,8 @@ func parseCertsFromTLSSecretsData(secrets []*corev1.Secret) ([]*corev1.Secret, [
 		validData, listenerErr := filterValidCertificates(certData)
 		if listenerErr != nil {
 			if listenerErr.Reason() == gwapiv1.ListenerReasonInvalidCertificateRef {
-				errs = append(errs, listenerErr)
+				errs = append(errs, fmt.Errorf("%s/%s must contain valid tls.crt and tls.key, unable to validate certificate in tls.crt: %s",
+					secret.Namespace, secret.Name, listenerErr.Error()))
 				continue
 			} else if listenerErr.Reason() == status.ListenerReasonPartiallyInvalidCertificateRef {
 				errs = append(errs, fmt.Errorf("%s/%s has some invalid certificates: %s",
