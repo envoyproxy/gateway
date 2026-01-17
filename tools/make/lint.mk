@@ -77,7 +77,7 @@ lint.fix-golint:
 	$(MAKE) lint.golint GOLANGCI_LINT_FLAGS="--fix"
 
 .PHONY: gen-check
-gen-check: format generate manifests protos go.testdata.complete
+gen-check: format generate manifests helm-template protos go.testdata.complete
 	@$(LOG_TARGET)
 	@if [ ! -z "`git status --porcelain`" ]; then \
 		$(call errorlog, ERROR: Some files need to be updated, please run 'make generate', 'make manifests' and 'make protos' to include any changed files to your PR); \
