@@ -48,6 +48,7 @@ linters:
     - testifylint
     - unconvert
     - unparam
+    - unused
   exclusions:
     generated: lax
     presets:
@@ -135,6 +136,7 @@ linters:
     revive:
       # TODO: enable if-return check
       rules:
+        - name: unused-parameter
         - name: if-return
           disabled: true
     staticcheck:
