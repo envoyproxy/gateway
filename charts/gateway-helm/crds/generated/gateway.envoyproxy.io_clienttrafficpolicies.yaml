@@ -578,16 +578,14 @@ spec:
                       SchemeHeaderTransformation configures how the :scheme pseudo-header is handled.
                       This is useful when Envoy terminates TLS and forwards requests as plaintext
                       to backends that detect the scheme/transport mismatch (e.g., .NET gRPC services).
+                      If not configured, Envoy preserves the original :scheme header from the client request.
                     properties:
                       mode:
-                        default: Preserve
                         description: |-
                           Mode specifies how the :scheme header should be transformed.
-                          - Preserve: Preserve the original scheme (default)
                           - MatchUpstream: Set scheme based on upstream connection (http/https)
                           - Set: Explicitly set scheme to the value specified in the scheme field
                         enum:
-                        - Preserve
                         - MatchUpstream
                         - Set
                         type: string
@@ -599,13 +597,14 @@ spec:
                         - http
                         - https
                         type: string
+                    required:
+                    - mode
                     type: object
                     x-kubernetes-validations:
                     - message: scheme must be set when mode is Set
-                      rule: '!has(self.mode) || self.mode != ''Set'' || has(self.scheme)'
+                      rule: self.mode != 'Set' || has(self.scheme)
                     - message: scheme can only be set when mode is Set
-                      rule: '!has(self.scheme) || (has(self.mode) && self.mode ==
-                        ''Set'')'
+                      rule: '!has(self.scheme) || self.mode == ''Set'''
                   withUnderscoresAction:
                     description: |-
                       WithUnderscoresAction configures the action to take when an HTTP header with underscores

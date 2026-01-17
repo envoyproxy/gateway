@@ -36,21 +36,3 @@ http:
     schemeHeaderTransformation:
       mode: Set
       scheme: http
-- name: "preserve-listener"
-  address: "::"
-  port: 8083
-  hostnames:
-  - "*"
-  routes:
-  - name: "preserve-route"
-    hostname: "*"
-    destination:
-      name: "preserve-dest"
-      settings:
-      - endpoints:
-        - host: "3.3.3.3"
-          port: 8083
-        name: "preserve-dest/backend/0"
-  headers:
-    schemeHeaderTransformation:
-      mode: Preserve

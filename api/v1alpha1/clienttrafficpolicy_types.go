@@ -170,6 +170,7 @@ type HeaderSettings struct {
 	// SchemeHeaderTransformation configures how the :scheme pseudo-header is handled.
 	// This is useful when Envoy terminates TLS and forwards requests as plaintext
 	// to backends that detect the scheme/transport mismatch (e.g., .NET gRPC services).
+	// If not configured, Envoy preserves the original :scheme header from the client request.
 	//
 	// +optional
 	SchemeHeaderTransformation *SchemeHeaderTransformation `json:"schemeHeaderTransformation,omitempty"`

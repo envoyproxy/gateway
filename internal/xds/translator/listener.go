@@ -1220,10 +1220,7 @@ func buildSchemeHeaderTransformation(in *ir.HeaderSettings) *corev3.SchemeHeader
 				SchemeToOverwrite: in.SchemeHeaderTransformation.Scheme,
 			},
 		}
-	case ir.SchemeHeaderTransformationModePreserve:
-		// Preserve is the default behavior - no transformation needed
+	default:
 		return nil
 	}
-
-	return nil
 }

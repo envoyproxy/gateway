@@ -22,15 +22,3 @@
     loadBalancingWeight: 1
     locality:
       region: set-dest/backend/0
-- clusterName: preserve-dest
-  endpoints:
-  - lbEndpoints:
-    - endpoint:
-        address:
-          socketAddress:
-            address: 3.3.3.3
-            portValue: 8083
-      loadBalancingWeight: 1
-    loadBalancingWeight: 1
-    locality:
-      region: preserve-dest/backend/0

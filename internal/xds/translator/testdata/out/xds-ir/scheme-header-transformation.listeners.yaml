@@ -68,36 +68,3 @@
   maxConnectionsToAcceptPerSocketEvent: 1
   name: set-listener
   perConnectionBufferLimitBytes: 32768
-- address:
-    socketAddress:
-      address: '::'
-      portValue: 8083
-  defaultFilterChain:
-    filters:
-    - name: envoy.filters.network.http_connection_manager
-      typedConfig:
-        '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
-        commonHttpProtocolOptions:
-          headersWithUnderscoresAction: REJECT_REQUEST
-        http2ProtocolOptions:
-          initialConnectionWindowSize: 1048576
-          initialStreamWindowSize: 65536
-          maxConcurrentStreams: 100
-        httpFilters:
-        - name: envoy.filters.http.router
-          typedConfig:
-            '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
-            suppressEnvoyHeaders: true
-        normalizePath: true
-        rds:
-          configSource:
-            ads: {}
-            resourceApiVersion: V3
-          routeConfigName: preserve-listener
-        serverHeaderTransformation: PASS_THROUGH
-        statPrefix: http-8083
-        useRemoteAddress: true
-    name: preserve-listener
-  maxConnectionsToAcceptPerSocketEvent: 1
-  name: preserve-listener
-  perConnectionBufferLimitBytes: 32768

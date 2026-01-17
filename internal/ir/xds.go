@@ -535,7 +535,6 @@ const (
 type SchemeHeaderTransformationMode egv1a1.SchemeHeaderTransformationMode
 
 const (
-	SchemeHeaderTransformationModePreserve      = SchemeHeaderTransformationMode(egv1a1.SchemeHeaderTransformationModePreserve)
 	SchemeHeaderTransformationModeMatchUpstream = SchemeHeaderTransformationMode(egv1a1.SchemeHeaderTransformationModeMatchUpstream)
 	SchemeHeaderTransformationModeSet           = SchemeHeaderTransformationMode(egv1a1.SchemeHeaderTransformationModeSet)
 )

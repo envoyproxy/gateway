@@ -26,17 +26,3 @@
         cluster: set-dest
         upgradeConfigs:
         - upgradeType: websocket
-- ignorePortInHostMatching: true
-  name: preserve-listener
-  virtualHosts:
-  - domains:
-    - '*'
-    name: preserve-listener/*
-    routes:
-    - match:
-        prefix: /
-      name: preserve-route
-      route:
-        cluster: preserve-dest
-        upgradeConfigs:
-        - upgradeType: websocket

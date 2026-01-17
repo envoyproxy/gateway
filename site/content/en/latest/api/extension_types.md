@@ -2691,7 +2691,7 @@ _Appears in:_
 | `requestID` | _[RequestIDAction](#requestidaction)_ |  false  |  | RequestID configures Envoy's behavior for handling the `X-Request-ID` header.<br />When omitted default behavior is `Generate` which builds the `X-Request-ID` for every request<br /> and ignores pre-existing values from the edge.<br />(An "edge request" refers to a request from an external client to the Envoy entrypoint.) |
 | `earlyRequestHeaders` | _[HTTPHeaderFilter](#httpheaderfilter)_ |  false  |  | EarlyRequestHeaders defines settings for early request header modification, before envoy performs<br />routing, tracing and built-in header manipulation. |
 | `lateResponseHeaders` | _[HTTPHeaderFilter](#httpheaderfilter)_ |  false  |  | LateResponseHeaders defines settings for global response header modification. |
-| `schemeHeaderTransformation` | _[SchemeHeaderTransformation](#schemeheadertransformation)_ |  false  |  | SchemeHeaderTransformation configures how the :scheme pseudo-header is handled.<br />This is useful when Envoy terminates TLS and forwards requests as plaintext<br />to backends that detect the scheme/transport mismatch (e.g., .NET gRPC services). |
+| `schemeHeaderTransformation` | _[SchemeHeaderTransformation](#schemeheadertransformation)_ |  false  |  | SchemeHeaderTransformation configures how the :scheme pseudo-header is handled.<br />This is useful when Envoy terminates TLS and forwards requests as plaintext<br />to backends that detect the scheme/transport mismatch (e.g., .NET gRPC services).<br />If not configured, Envoy preserves the original :scheme header from the client request. |
 
 
 #### HealthCheck
@@ -4854,12 +4854,15 @@ SchemeHeaderTransformation configures how Envoy handles the :scheme pseudo-heade
 This is useful when Envoy terminates TLS and forwards requests as plaintext to backends
 that may detect the scheme/transport mismatch (e.g., .NET gRPC services).
 
+By default (when this field is not configured), Envoy preserves the original :scheme
+header from the client request.
+
 _Appears in:_
 - [HeaderSettings](#headersettings)
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `mode` | _[SchemeHeaderTransformationMode](#schemeheadertransformationmode)_ |  false  | Preserve | Mode specifies how the :scheme header should be transformed.<br />- Preserve: Preserve the original scheme (default)<br />- MatchUpstream: Set scheme based on upstream connection (http/https)<br />- Set: Explicitly set scheme to the value specified in the scheme field |
+| `mode` | _[SchemeHeaderTransformationMode](#schemeheadertransformationmode)_ |  true  |  | Mode specifies how the :scheme header should be transformed.<br />- MatchUpstream: Set scheme based on upstream connection (http/https)<br />- Set: Explicitly set scheme to the value specified in the scheme field |
 | `scheme` | _string_ |  false  |  | Scheme specifies the explicit scheme value to use when mode is Set.<br />Must be either "http" or "https". |
 
 
@@ -4874,7 +4877,6 @@ _Appears in:_
 
 | Value | Description |
 | ----- | ----------- |
-| `Preserve` | SchemeHeaderTransformationModePreserve preserves the original scheme header value.<br />This is the default behavior.<br /> | 
 | `MatchUpstream` | SchemeHeaderTransformationModeMatchUpstream sets the :scheme header to match the upstream<br />transport protocol. This sets :scheme to "http" when the upstream connection is plaintext<br />and "https" when TLS.<br /> | 
 | `Set` | SchemeHeaderTransformationModeSet explicitly sets the :scheme header to a specified value.<br /> | 
 

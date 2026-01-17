@@ -709,9 +709,7 @@ func translateListenerHeaderSettings(headerSettings *egv1a1.HeaderSettings, http
 
 	if headerSettings.SchemeHeaderTransformation != nil {
 		httpIR.Headers.SchemeHeaderTransformation = &ir.SchemeHeaderTransformation{
-			Mode: ir.SchemeHeaderTransformationMode(
-				ptr.Deref(headerSettings.SchemeHeaderTransformation.Mode, egv1a1.SchemeHeaderTransformationModePreserve),
-			),
+			Mode: ir.SchemeHeaderTransformationMode(headerSettings.SchemeHeaderTransformation.Mode),
 		}
 		if headerSettings.SchemeHeaderTransformation.Scheme != nil {
 			httpIR.Headers.SchemeHeaderTransformation.Scheme = *headerSettings.SchemeHeaderTransformation.Scheme
