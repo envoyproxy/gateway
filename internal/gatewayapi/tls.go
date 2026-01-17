@@ -34,11 +34,15 @@ func parseCertsFromTLSSecretsData(secrets []*corev1.Secret) ([]*corev1.Secret, [
 	for _, secret := range secrets {
 		certData := secret.Data[corev1.TLSCertKey]
 
-		validData, err := filterValidCertificates(certData)
-		if err != nil {
-			errs = append(errs, fmt.Errorf("%s/%s must contain valid %s and %s, unable to validate certificate in %s: %w",
-				secret.Namespace, secret.Name, corev1.TLSCertKey, corev1.TLSPrivateKeyKey, corev1.TLSCertKey, err))
-			continue
+		validData, listenerErr := filterValidCertificates(certData)
+		if listenerErr != nil {
+			if listenerErr.Reason() == gwapiv1.ListenerReasonInvalidCertificateRef {
+				errs = append(errs, listenerErr)
+				continue
+			} else if listenerErr.Reason() == status.ListenerReasonPartiallyInvalidCertificateRef {
+				errs = append(errs, fmt.Errorf("%s/%s has some invalid certificates: %s",
+					secret.Namespace, secret.Name, listenerErr.Error()))
+			}
 		}
 
 		certBlock, _ := pem.Decode(validData)
@@ -149,14 +153,18 @@ func parseCertsFromTLSSecretsData(secrets []*corev1.Secret) ([]*corev1.Secret, [
 // filterValidCertificates filters out expired or not-yet-valid certificates from PEM encoded data.
 // It accepts certificate bundles (multiple PEM blocks) and returns only the valid certificates.
 // A certificate is considered valid if the current time is within its NotBefore and NotAfter period.
-// Returns an error if no valid certificates are found in the provided data.
-func filterValidCertificates(data []byte) ([]byte, error) {
+//
+// Return a status.ListenerError with InvalidCertificateRef Condition if no valid certificates are found in the provided data,
+// Return a status.ListenerError with PartiallyInvalidCertificateRef Condition if some certificates are invalid but also valid certificates exist.
+func filterValidCertificates(data []byte) ([]byte, status.ListenerError) {
 	if len(data) == 0 {
-		return nil, fmt.Errorf("no certificate data provided")
+		return nil, status.NewListenerStatusError(
+			fmt.Errorf("no certificate data provided"),
+			gwapiv1.ListenerReasonInvalidCertificateRef,
+		)
 	}
 
 	now := time.Now()
-	var validPemCount int
 	var errs []error
 	validData := make([]byte, 0, len(data))
 
@@ -193,17 +201,27 @@ func filterValidCertificates(data []byte) ([]byte, error) {
 		// Only include this PEM block if all certificates in it are valid
 		if blockValid {
 			validData = append(validData, pem.EncodeToMemory(block)...)
-			validPemCount++
 		}
 	}
 
-	// Return error if no valid certificates were found
-	if validPemCount == 0 {
+	if len(validData) == 0 {
 		if len(errs) > 0 {
-			return nil, errors.Join(errs...)
+			return nil, status.NewListenerStatusError(
+				errors.Join(errs...),
+				gwapiv1.ListenerReasonInvalidCertificateRef,
+			)
 		}
 		// No errors but no valid PEM blocks found - PEM decoding failed
-		return nil, fmt.Errorf("unable to decode pem data for certificate")
+		return nil, status.NewListenerStatusError(
+			fmt.Errorf("unable to decode pem data for certificate"),
+			gwapiv1.ListenerReasonInvalidCertificateRef,
+		)
+	}
+	if len(errs) > 0 {
+		return validData, status.NewListenerStatusError(
+			errors.Join(errs...),
+			status.ListenerReasonPartiallyInvalidCertificateRef,
+		)
 	}
 	return validData, nil
 }
