@@ -445,7 +445,7 @@ func buildListenerMetadata(listener *ListenerContext, gateway *GatewayContext) *
 		Kind:        gateway.GetObjectKind().GroupVersionKind().Kind,
 		Name:        gateway.GetName(),
 		Namespace:   gateway.GetNamespace(),
-		Annotations: filterEGPrefix(gateway.GetAnnotations()),
+		Annotations: ir.MapToSlice(filterEGPrefix(gateway.GetAnnotations())),
 		SectionName: string(listener.Name),
 	}
 }
@@ -588,7 +588,7 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 
 		if len(accessLog.Sinks) == 0 {
 			al := &ir.JSONAccessLog{
-				JSON:       format.JSON,
+				JSON:       ir.MapToSlice(format.JSON),
 				CELMatches: validExprs,
 				LogType:    accessLogType,
 				Path:       "/dev/stdout",
@@ -614,7 +614,7 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 				} else {
 					// Default to JSON format if type is nil or JSON
 					al := &ir.JSONAccessLog{
-						JSON:       format.JSON,
+						JSON:       ir.MapToSlice(format.JSON),
 						Path:       sink.File.Path,
 						CELMatches: validExprs,
 						LogType:    accessLogType,
@@ -671,7 +671,7 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 					al.Text = format.Text
 				} else {
 					// Default to JSON format if type is nil or JSON
-					al.Attributes = format.JSON
+					al.Attributes = ir.MapToSlice(format.JSON)
 				}
 
 				irAccessLog.ALS = append(irAccessLog.ALS, al)
@@ -694,7 +694,7 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 
 				al := &ir.OpenTelemetryAccessLog{
 					CELMatches: validExprs,
-					Resources:  sink.OpenTelemetry.Resources,
+					Resources:  ir.MapToSlice(sink.OpenTelemetry.Resources),
 					Headers:    sink.OpenTelemetry.Headers,
 					Authority:  getAuthorityFromDestination(ds),
 					Destination: ir.RouteDestination{
@@ -723,7 +723,7 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 					al.Text = format.Text
 				}
 				if format.Type == nil || *format.Type == egv1a1.ProxyAccessLogFormatTypeJSON {
-					al.Attributes = format.JSON
+					al.Attributes = ir.MapToSlice(format.JSON)
 				}
 
 				irAccessLog.OpenTelemetry = append(irAccessLog.OpenTelemetry, al)
@@ -785,7 +785,7 @@ func (t *Translator) processTracing(gw *gwapiv1.Gateway, envoyproxy *egv1a1.Envo
 		Authority:    authority,
 		ServiceName:  serviceName,
 		SamplingRate: proxySamplingRate(tracing),
-		CustomTags:   tracing.CustomTags,
+		CustomTags:   ir.CustomTagMapToSlice(tracing.CustomTags),
 		Destination: ir.RouteDestination{
 			Name:     destName,
 			Settings: ds,

@@ -151,8 +151,10 @@ xdsIR:
     accessLog:
       als:
       - attributes:
-          attr1: val1
-          attr2: val2
+        - key: attr1
+          value: val1
+        - key: attr2
+          value: val2
         destination:
           metadata:
             kind: EnvoyProxy
@@ -181,8 +183,10 @@ xdsIR:
         name: accesslog
         type: HTTP
       - attributes:
-          attr1: val1
-          attr2: val2
+        - key: attr1
+          value: val1
+        - key: attr2
+          value: val2
         destination:
           metadata:
             kind: EnvoyProxy

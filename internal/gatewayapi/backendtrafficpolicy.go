@@ -948,7 +948,7 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy) (
 		RequestBuffer:     rb,
 		Compression:       cp,
 		HTTPUpgrade:       httpUpgrade,
-		Telemetry:         policy.Spec.Telemetry,
+		Telemetry:         buildBackendTelemetry(policy.Spec.Telemetry),
 	}, errs
 }
 
@@ -1662,6 +1662,26 @@ func buildHTTPProtocolUpgradeConfig(cfgs []*egv1a1.ProtocolUpgradeConfig) []ir.H
 	}
 
 	return result
+}
+
+func buildBackendTelemetry(telemetry *egv1a1.BackendTelemetry) *ir.BackendTelemetry {
+	if telemetry == nil {
+		return nil
+	}
+	res := &ir.BackendTelemetry{}
+	if telemetry.Metrics != nil {
+		res.Metrics = &ir.BackendMetrics{
+			RouteStatName: telemetry.Metrics.RouteStatName,
+		}
+	}
+	if telemetry.Tracing != nil {
+		res.Tracing = &ir.BackendTracing{
+			SamplingFraction: telemetry.Tracing.SamplingFraction,
+			CustomTags:       ir.CustomTagMapToSlice(telemetry.Tracing.CustomTags),
+			SpanName:         telemetry.Tracing.SpanName,
+		}
+	}
+	return res
 }
 
 func validateTelemetry(telemetry *egv1a1.BackendTelemetry) error {
