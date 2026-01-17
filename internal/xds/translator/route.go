@@ -614,9 +614,12 @@ func buildXdsAddedHeaders(headersToAdd []ir.AddHeader) []*corev3.HeaderValueOpti
 	for _, header := range headersToAdd {
 		var appendAction corev3.HeaderValueOption_HeaderAppendAction
 
-		if header.Append {
+		switch {
+		case header.AddIfAbsent:
+			appendAction = corev3.HeaderValueOption_ADD_IF_ABSENT
+		case header.Append:
 			appendAction = corev3.HeaderValueOption_APPEND_IF_EXISTS_OR_ADD
-		} else {
+		default:
 			appendAction = corev3.HeaderValueOption_OVERWRITE_IF_EXISTS_OR_ADD
 		}
 		// Allow empty headers to be set, but don't add the config to do so unless necessary
