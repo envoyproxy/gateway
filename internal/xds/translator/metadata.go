@@ -48,7 +48,7 @@ func buildXdsMetadata(metadata *ir.ResourceMetadata) *corev3.Metadata {
 	policyList := &structpb.ListValue{}
 
 	for _, policy := range metadata.Policies {
-		policyList.Values = append(policyList.Values, buildTrafficPolicyMetadata(policy))
+		policyList.Values = append(policyList.Values, buildpolicyMetadata(policy))
 	}
 
 	if len(policyList.Values) > 0 {
@@ -62,7 +62,7 @@ func buildXdsMetadata(metadata *ir.ResourceMetadata) *corev3.Metadata {
 	return md
 }
 
-func buildTrafficPolicyMetadata(md *ir.PolicyMetadata) *structpb.Value {
+func buildpolicyMetadata(md *ir.PolicyMetadata) *structpb.Value {
 	routeResourceFields := map[string]*structpb.Value{
 		envoyGatewayXdsMetadataKeyKind: {
 			Kind: &structpb.Value_StringValue{
