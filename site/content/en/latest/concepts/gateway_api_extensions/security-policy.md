@@ -203,6 +203,72 @@ spec:
 
 In the example, policy A affects only the HTTPS listener, while policy B applies to the rest of the listeners in the gateway. Since Policy A is more specific, the system will show Overridden=True for Policy B on the https listener.
 
+When the `mergeType` field is unset, no merging occurs and only the most specific configuration takes effect. However, policies can be configured to merge with parent policies using the `mergeType` field (see [Policy Merging](#policy-merging) section below).
+
+## Policy Merging
+
+SecurityPolicy supports merging configurations using the `mergeType` field, which allows route-level or route rule-level policies to combine with gateway-level or listener-level policies rather than completely overriding them. This enables layered security strategies where platform teams can set baseline security configurations at the Gateway level, while application teams can add specific security policies for their routes.
+
+When merging occurs, route-level policies will merge with either a gateway-level or listener-level policy, but not both. If both gateway and listener policies exist, the listener-level policy takes precedence.
+
+### Merge Types
+
+- **StrategicMerge**: Uses Kubernetes strategic merge patch semantics, providing intelligent merging for complex data structures including arrays
+- **JSONMerge**: Uses RFC 7396 JSON Merge Patch semantics, with simple replacement strategy where arrays are completely replaced
+
+### Example Usage
+
+Here's an example demonstrating policy merging for combining authentication and CORS policies:
+
+```yaml
+# Platform team: Gateway-level policy with baseline authentication
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: gateway-security
+  namespace: default
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: Gateway
+    name: my-gateway
+    sectionName: https-listener
+  basicAuth:
+    users:
+      name: basic-auth-secret
+
+---
+# Application team: Route-level policy with CORS configuration
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: route-security
+  namespace: default
+spec:
+  mergeType: StrategicMerge  # Enables merging with gateway policy
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: my-route
+  cors:
+    allowOrigins:
+    - exact: https://example.com
+    allowMethods:
+    - GET
+    - POST
+    allowHeaders:
+    - x-header-1
+```
+
+In this example, the route-level policy merges with the gateway-level policy, resulting in both security controls being enforced: the baseline BasicAuth (from Gateway) and the route-specific CORS policy (from Route). This allows platform teams to enforce organization-wide authentication requirements while enabling application teams to configure route-specific cross-origin policies.
+
+### Key Constraints
+
+- The `mergeType` field can only be set on policies targeting child resources (like HTTPRoute), not parent resources (like Gateway)
+- When `mergeType` is unset, no merging occurs - only the most specific policy takes effect
+- The merged configuration combines both policies, enabling layered security strategies
+- When the same security feature is configured in both parent and child policies (e.g., both define CORS), the child policy's configuration takes precedence for that specific feature
+
 ## Related Resources
 - [API Key Authentication](../../tasks/security/apikey-auth.md)
 - [Basic Authentication](../../tasks/security/basic-auth.md)
