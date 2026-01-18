@@ -150,7 +150,6 @@ func TestCustomProviderCancelWhenConfigReload(t *testing.T) {
 			cfgFileContentChanged := strings.ReplaceAll(fileProviderGatewayConfigChanged, "[CONFIG_HOME_PLACE_HODLER]", configHome)
 			require.NoError(t, os.WriteFile(configPath, []byte(cfgFileContentChanged), 0o600))
 		}()
-		return
 	}
 
 	go func() {
