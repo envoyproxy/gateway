@@ -13,7 +13,7 @@ assignees: ''
 - [ ] update VERSION in release branch
 - [ ] wait for CI
 - [ ] push tag
-    - [ ] Pusth tag https://github.com/envoyproxy/gateway/releases/tag/v1.x.x
+    - [ ] Push tag https://github.com/envoyproxy/gateway/releases/tag/v1.x.x
     - [ ] wait for release CI
 - [ ] verify quickstart
 - [ ] update doc
