@@ -1,3 +1,50 @@
+clientTrafficPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: ClientTrafficPolicy
+  metadata:
+    name: target-gateway-1
+    namespace: envoy-gateway
+  spec:
+    headers:
+      earlyRequestHeaders:
+        addIfAbsent:
+        - name: my-early-default-header
+          value: my-early-default-value
+        - name: my-early-default-header
+          value: duplicate-should-be-ignored
+        - name: another-early-default-header
+          value: another-early-value
+      lateResponseHeaders:
+        addIfAbsent:
+        - name: my-default-header
+          value: my-default-value
+        - name: my-default-header
+          value: duplicate-should-be-ignored
+        - name: another-default-header
+          value: another-value
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-1
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
@@ -9,13 +56,13 @@ gateways:
     listeners:
     - allowedRoutes:
         namespaces:
-          from: All
-      name: http
+          from: Same
+      name: http-1
       port: 80
       protocol: HTTP
   status:
     listeners:
-    - attachedRoutes: 1
+    - attachedRoutes: 0
       conditions:
       - lastTransitionTime: null
         message: Sending translated listener configuration to the data plane
@@ -32,62 +79,18 @@ gateways:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
-      name: http
+      name: http-1
       supportedKinds:
       - group: gateway.networking.k8s.io
         kind: HTTPRoute
       - group: gateway.networking.k8s.io
         kind: GRPCRoute
-grpcRoutes:
-- apiVersion: gateway.networking.k8s.io/v1alpha2
-  kind: GRPCRoute
-  metadata:
-    name: grpcroute-1
-    namespace: default
-  spec:
-    parentRefs:
-    - name: gateway-1
-      namespace: envoy-gateway
-      sectionName: http
-    rules:
-    - backendRefs:
-      - name: service-1
-        port: 8080
-      filters:
-      - requestHeaderModifier:
-          add:
-          - name: my-header-multi-value
-            value: foo,bar
-        type: RequestHeaderModifier
-      - requestHeaderModifier:
-          add:
-          - name: my-header
-            value: foo
-        type: RequestHeaderModifier
-  status:
-    parents:
-    - conditions:
-      - lastTransitionTime: null
-        message: Route is accepted
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      - lastTransitionTime: null
-        message: Resolved all the Object references for the Route
-        reason: ResolvedRefs
-        status: "True"
-        type: ResolvedRefs
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
-      parentRef:
-        name: gateway-1
-        namespace: envoy-gateway
-        sectionName: http
 infraIR:
   envoy-gateway/gateway-1:
     proxy:
       listeners:
       - address: null
-        name: envoy-gateway/gateway-1/http
+        name: envoy-gateway/gateway-1/http-1
         ports:
         - containerPort: 10080
           name: http-80
@@ -131,57 +134,43 @@ xdsIR:
     http:
     - address: 0.0.0.0
       externalPort: 80
+      headers:
+        earlyAddRequestHeaders:
+        - addIfAbsent: true
+          append: false
+          name: my-early-default-header
+          value:
+          - my-early-default-value
+        - addIfAbsent: true
+          append: false
+          name: another-early-default-header
+          value:
+          - another-early-value
+        lateAddResponseHeaders:
+        - addIfAbsent: true
+          append: false
+          name: my-default-header
+          value:
+          - my-default-value
+        - addIfAbsent: true
+          append: false
+          name: another-default-header
+          value:
+          - another-value
+        withUnderscoresAction: RejectRequest
       hostnames:
       - '*'
-      isHTTP2: true
+      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-1
         namespace: envoy-gateway
-        sectionName: http
-      name: envoy-gateway/gateway-1/http
+        sectionName: http-1
+      name: envoy-gateway/gateway-1/http-1
       path:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
       port: 10080
-      routes:
-      - addRequestHeaders:
-        - addIfAbsent: false
-          append: true
-          name: my-header-multi-value
-          value:
-          - foo,bar
-        - addIfAbsent: false
-          append: true
-          name: my-header
-          value:
-          - foo
-        destination:
-          metadata:
-            kind: GRPCRoute
-            name: grpcroute-1
-            namespace: default
-          name: grpcroute/default/grpcroute-1/rule/0
-          settings:
-          - addressType: IP
-            endpoints:
-            - host: 7.7.7.7
-              port: 8080
-            metadata:
-              kind: Service
-              name: service-1
-              namespace: default
-              sectionName: "8080"
-            name: grpcroute/default/grpcroute-1/rule/0/backend/0
-            protocol: GRPC
-            weight: 1
-        hostname: '*'
-        isHTTP2: true
-        metadata:
-          kind: GRPCRoute
-          name: grpcroute-1
-          namespace: default
-        name: grpcroute/default/grpcroute-1/rule/0/match/-1/*
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
