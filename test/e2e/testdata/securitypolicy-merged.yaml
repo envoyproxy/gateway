@@ -38,10 +38,8 @@ kind: Secret
 metadata:
   name: basic-auth-merged-secret
   namespace: gateway-conformance-infra
-type: kubernetes.io/basic-auth
-stringData:
-  .htpasswd: |
-    user1:$apr1$F3qTlsKs$AHIXMpXPDKVJw/AXaXAKQ/
+data:
+  .htpasswd: "dXNlcjE6e1NIQX15LzJzWUFqNXlyUUlONFRMMFlkUGRtR05LcGM9"
 ---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: SecurityPolicy
