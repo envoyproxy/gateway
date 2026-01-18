@@ -9,6 +9,16 @@
         '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
         commonHttpProtocolOptions:
           headersWithUnderscoresAction: REJECT_REQUEST
+        earlyHeaderMutationExtensions:
+        - name: envoy.http.early_header_mutation.header_mutation
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.http.early_header_mutation.header_mutation.v3.HeaderMutation
+            mutations:
+            - append:
+                appendAction: ADD_IF_ABSENT
+                header:
+                  key: early-add-if-absent-header
+                  value: early-default-value
         http2ProtocolOptions:
           initialConnectionWindowSize: 1048576
           initialStreamWindowSize: 65536

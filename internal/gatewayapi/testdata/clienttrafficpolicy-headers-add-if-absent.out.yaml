@@ -6,6 +6,14 @@ clientTrafficPolicies:
     namespace: envoy-gateway
   spec:
     headers:
+      earlyRequestHeaders:
+        addIfAbsent:
+        - name: my-early-default-header
+          value: my-early-default-value
+        - name: my-early-default-header
+          value: duplicate-should-be-ignored
+        - name: another-early-default-header
+          value: another-early-value
       lateResponseHeaders:
         addIfAbsent:
         - name: my-default-header
@@ -127,6 +135,17 @@ xdsIR:
     - address: 0.0.0.0
       externalPort: 80
       headers:
+        earlyAddRequestHeaders:
+        - addIfAbsent: true
+          append: false
+          name: my-early-default-header
+          value:
+          - my-early-default-value
+        - addIfAbsent: true
+          append: false
+          name: another-early-default-header
+          value:
+          - another-early-value
         lateAddResponseHeaders:
         - addIfAbsent: true
           append: false

@@ -5,6 +5,11 @@ http:
   hostnames:
   - "*"
   headers:
+    earlyAddRequestHeaders:
+    - name: "early-add-if-absent-header"
+      value:
+      - "early-default-value"
+      addIfAbsent: true
     lateAddResponseHeaders:
     - name: "add-if-absent-header"
       value:

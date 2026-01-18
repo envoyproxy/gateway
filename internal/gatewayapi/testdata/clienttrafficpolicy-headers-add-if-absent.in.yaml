@@ -6,6 +6,14 @@ clientTrafficPolicies:
     name: target-gateway-1
   spec:
     headers:
+      earlyRequestHeaders:
+        addIfAbsent:
+        - name: "my-early-default-header"
+          value: "my-early-default-value"
+        - name: "my-early-default-header"
+          value: "duplicate-should-be-ignored"
+        - name: "another-early-default-header"
+          value: "another-early-value"
       lateResponseHeaders:
         addIfAbsent:
         - name: "my-default-header"
