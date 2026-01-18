@@ -489,7 +489,7 @@ func (t *Translator) addHCMToXDSListener(
 		}
 		filterChain.TransportSocket = tSocket
 
-		if err := addServerNamesMatch(xdsListener, filterChain, irListener.Hostnames); err != nil {
+		if err := addServerNamesMatch(xdsListener, filterChain, irListener.Hostnames, irListener.TLS.Fingerprints); err != nil {
 			return err
 		}
 		xdsListener.FilterChains = append(xdsListener.FilterChains, filterChain)
@@ -564,27 +564,28 @@ func buildEarlyHeaderMutation(headers *ir.HeaderSettings) []*corev3.TypedExtensi
 	}
 }
 
-func addServerNamesMatch(xdsListener *listenerv3.Listener, filterChain *listenerv3.FilterChain, hostnames []string) error {
+func addServerNamesMatch(xdsListener *listenerv3.Listener, filterChain *listenerv3.FilterChain, hostnames []string, fingerprints []ir.TLSFingerprintType) error {
 	if xdsListener == nil {
 		return nil
 	}
 
-	// Dont add a filter chain match if the hostname is a wildcard character.
-	if len(hostnames) > 0 && hostnames[0] != "*" {
+	// Add filter chain match only if SNI is not a pure wildcard
+	hasSNIs := len(hostnames) > 0 && hostnames[0] != "*"
+	if hasSNIs {
 		filterChain.FilterChainMatch = &listenerv3.FilterChainMatch{
 			ServerNames: hostnames,
 		}
+	}
 
-		isQUICListener := xdsListener.GetAddress() != nil &&
-			xdsListener.GetAddress().GetSocketAddress() != nil &&
-			xdsListener.GetAddress().GetSocketAddress().GetProtocol() == corev3.SocketAddress_UDP
+	isQUICListener := xdsListener.GetAddress() != nil &&
+		xdsListener.GetAddress().GetSocketAddress() != nil &&
+		xdsListener.GetAddress().GetSocketAddress().GetProtocol() == corev3.SocketAddress_UDP
 
-		// Envoy’s QUIC stack parses SNI itself, so filter_chain_match.server_names works without TLS Inspector.
-		// TLS Inspector is only needed for TCP/TLS listeners.
-		if !isQUICListener {
-			if err := addXdsTLSInspectorFilter(xdsListener); err != nil {
-				return err
-			}
+	// Envoy’s QUIC stack parses SNI itself, so filter_chain_match.server_names works without TLS Inspector.
+	// TLS Inspector is only needed for TCP/TLS listeners.
+	if len(fingerprints) > 0 || (hasSNIs && !isQUICListener) {
+		if err := addXdsTLSInspectorFilter(xdsListener, fingerprints); err != nil {
+			return err
 		}
 	}
 
@@ -630,6 +631,7 @@ func hasHCMInDefaultFilterChain(xdsListener *listenerv3.Listener) bool {
 func (t *Translator) addXdsTCPFilterChain(
 	xdsListener *listenerv3.Listener, irRoute *ir.TCPRoute, clusterName string,
 	accesslog *ir.AccessLog, timeout *ir.ClientTimeout, connection *ir.ClientConnection,
+	tlsConfig *ir.TLSConfig,
 ) error {
 	if irRoute == nil {
 		return errors.New("tcp listener is nil")
@@ -664,20 +666,21 @@ func (t *Translator) addXdsTCPFilterChain(
 		return err
 	}
 
-	if isTLSPassthrough {
-		if err := addServerNamesMatch(xdsListener, filterChain, irRoute.TLS.TLSInspectorConfig.SNIs); err != nil {
-			return err
-		}
+	var snis []string
+	if irRoute.TLS != nil && irRoute.TLS.TLSInspectorConfig != nil {
+		snis = irRoute.TLS.TLSInspectorConfig.SNIs
+	}
+
+	var fingerprints []ir.TLSFingerprintType
+	if tlsConfig != nil {
+		fingerprints = tlsConfig.Fingerprints
+	}
+
+	if err := addServerNamesMatch(xdsListener, filterChain, snis, fingerprints); err != nil {
+		return err
 	}
 
 	if isTLSTerminate {
-		var snis []string
-		if cfg := irRoute.TLS.TLSInspectorConfig; cfg != nil {
-			snis = cfg.SNIs
-		}
-		if err := addServerNamesMatch(xdsListener, filterChain, snis); err != nil {
-			return err
-		}
 		tSocket, err := buildXdsDownstreamTLSSocket(irRoute.TLS.Terminate)
 		if err != nil {
 			return err
@@ -758,7 +761,7 @@ func buildConnectionLimitFilter(statPrefix string, connection *ir.ClientConnecti
 }
 
 // addXdsTLSInspectorFilter adds a Tls Inspector filter if it does not yet exist.
-func addXdsTLSInspectorFilter(xdsListener *listenerv3.Listener) error {
+func addXdsTLSInspectorFilter(xdsListener *listenerv3.Listener, fingerprints []ir.TLSFingerprintType) error {
 	// Return early if it exists
 	for _, filter := range xdsListener.ListenerFilters {
 		if filter.Name == wellknown.TlsInspector {
@@ -766,7 +769,22 @@ func addXdsTLSInspectorFilter(xdsListener *listenerv3.Listener) error {
 		}
 	}
 
-	tlsInspector := &tls_inspectorv3.TlsInspector{}
+	enableJA3 := false
+	enableJA4 := false
+	for _, fingerprint := range fingerprints {
+		switch fingerprint {
+		case ir.TLSFingerprintTypeJA3:
+			enableJA3 = true
+		case ir.TLSFingerprintTypeJA4:
+			enableJA4 = true
+		}
+	}
+
+	tlsInspector := &tls_inspectorv3.TlsInspector{
+		EnableJa3Fingerprinting: &wrapperspb.BoolValue{Value: enableJA3},
+		EnableJa4Fingerprinting: &wrapperspb.BoolValue{Value: enableJA4},
+	}
+
 	tlsInspectorAny, err := proto.ToAnyWithValidation(tlsInspector)
 	if err != nil {
 		return err

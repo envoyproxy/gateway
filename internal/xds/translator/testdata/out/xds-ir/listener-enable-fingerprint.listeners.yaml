@@ -39,43 +39,20 @@
         '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.DownstreamTlsContext
         commonTlsContext:
           alpnProtocols:
-          - some-other-protocol
+          - h2
+          - http/1.1
           tlsCertificateSdsSecretConfigs:
-          - name: secret-1
+          - name: first-listener
             sdsConfig:
               ads: {}
               resourceApiVersion: V3
-          - name: secret-2
-            sdsConfig:
-              ads: {}
-              resourceApiVersion: V3
-          tlsParams:
-            cipherSuites:
-            - ECDHE-ECDSA-AES128-GCM-SHA256
-            - ECDHE-RSA-AES128-GCM-SHA256
-            - ECDHE-ECDSA-AES256-GCM-SHA384
-            - ECDHE-RSA-AES256-GCM-SHA384
-            ecdhCurves:
-            - X25519
-            - P-256
-            signatureAlgorithms:
-            - ecdsa_secp256r1_sha256
-            - rsa_pss_rsae_sha256
-            - rsa_pkcs1_sha256
-            - ecdsa_secp384r1_sha384
-            - rsa_pss_rsae_sha384
-            - rsa_pkcs1_sha384
-            - rsa_pss_rsae_sha512
-            - rsa_pkcs1_sha512
-            - rsa_pkcs1_sha1
-            tlsMaximumProtocolVersion: TLSv1_2
-            tlsMinimumProtocolVersion: TLSv1_0
+        disableStatefulSessionResumption: true
         disableStatelessSessionResumption: true
   listenerFilters:
   - name: envoy.filters.listener.tls_inspector
     typedConfig:
       '@type': type.googleapis.com/envoy.extensions.filters.listener.tls_inspector.v3.TlsInspector
-      enableJa3Fingerprinting: false
+      enableJa3Fingerprinting: true
       enableJa4Fingerprinting: false
   maxConnectionsToAcceptPerSocketEvent: 1
   name: first-listener
@@ -85,47 +62,22 @@
       address: '::'
       portValue: 10081
   filterChains:
-  - filters:
+  - filterChainMatch:
+      serverNames:
+      - bar.com
+    filters:
     - name: envoy.filters.network.tcp_proxy
       typedConfig:
         '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
-        cluster: tls-terminate-dest
-        statPrefix: tls-terminate-10081
-    name: tls-route-terminate
-    transportSocket:
-      name: envoy.transport_sockets.tls
-      typedConfig:
-        '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.DownstreamTlsContext
-        commonTlsContext:
-          alpnProtocols:
-          - some-other-protocol
-          tlsCertificateSdsSecretConfigs:
-          - name: secret-3
-            sdsConfig:
-              ads: {}
-              resourceApiVersion: V3
-          tlsParams:
-            cipherSuites:
-            - ECDHE-ECDSA-AES128-GCM-SHA256
-            - ECDHE-RSA-AES128-GCM-SHA256
-            - ECDHE-ECDSA-AES256-GCM-SHA384
-            - ECDHE-RSA-AES256-GCM-SHA384
-            ecdhCurves:
-            - X25519
-            - P-256
-            signatureAlgorithms:
-            - ecdsa_secp256r1_sha256
-            - rsa_pss_rsae_sha256
-            - rsa_pkcs1_sha256
-            - ecdsa_secp384r1_sha384
-            - rsa_pss_rsae_sha384
-            - rsa_pkcs1_sha384
-            - rsa_pss_rsae_sha512
-            - rsa_pkcs1_sha512
-            - rsa_pkcs1_sha1
-            tlsMaximumProtocolVersion: TLSv1_2
-            tlsMinimumProtocolVersion: TLSv1_0
-        disableStatefulSessionResumption: true
+        cluster: tcp-route-dest
+        statPrefix: tls-passthrough-10081
+    name: second-route
+  listenerFilters:
+  - name: envoy.filters.listener.tls_inspector
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.filters.listener.tls_inspector.v3.TlsInspector
+      enableJa3Fingerprinting: true
+      enableJa4Fingerprinting: true
   maxConnectionsToAcceptPerSocketEvent: 1
   name: second-listener
   perConnectionBufferLimitBytes: 32768
