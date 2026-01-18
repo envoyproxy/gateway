@@ -42,7 +42,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 	}{
 		{
 			desc:       "nil provider",
-			mutate:     func(envoy *egv1a1.EnvoyProxy) {},
+			mutate:     func(_ *egv1a1.EnvoyProxy) {},
 			wantErrors: []string{},
 		},
 		{
@@ -1525,8 +1525,10 @@ func TestEnvoyProxyProvider(t *testing.T) {
 				envoy.Spec = egv1a1.EnvoyProxySpec{
 					Telemetry: &egv1a1.ProxyTelemetry{
 						Tracing: &egv1a1.ProxyTracing{
-							SamplingRate:     ptr.To[uint32](1),
-							SamplingFraction: &gwapiv1.Fraction{Numerator: 1, Denominator: ptr.To[int32](1000)},
+							SamplingRate: ptr.To[uint32](1),
+							Tracing: egv1a1.Tracing{
+								SamplingFraction: &gwapiv1.Fraction{Numerator: 1, Denominator: ptr.To[int32](1000)},
+							},
 							Provider: egv1a1.TracingProvider{
 								BackendCluster: egv1a1.BackendCluster{
 									BackendRefs: []egv1a1.BackendRef{

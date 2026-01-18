@@ -24,6 +24,9 @@ new features: |
   Added support for URLRewrite filter on individual backendRefs.
   Added support for custom headers on OTLP exports (metrics, tracing, access logs).
   Added support for configuring minimum response size for compression via minContentLength field in BackendTrafficPolicy.
+  Added support for custom span name.
+  Added support for TLS telemetry gRPC backends.
+  Added support for addIfAbsent header action in ClientTrafficPolicy EarlyRequestHeaders and LateResponseHeaders to add headers only when they don't already exist.
   Added support for MergeType in SecurityPolicy to enable route-level policies to merge with parent Gateway/Listener policies, similar to BackendTrafficPolicy.
 
 bug fixes: |
@@ -35,6 +38,8 @@ bug fixes: |
   Fixed ExternalTrafficPolicy not being applied to Envoy Service when ServiceType is NodePort.
   Fixed CRL ref not processed by gateway controller.
   Fixed an issue where HTTP/3 listeners could not handle multiple hostnames.
+  Fix gateway continuing with incomplete resources after unrecoverable Kubernetes discovery errors when checking optional CRDs by failing fast and propagating errors so pods restart instead of skipping optional CRDs.
+  Fixed an issue where listener translation fails when contains invalid certificate in multiple TLS certificateRefs.
 
 # Enhancements that improve performance.
 performance improvements: |

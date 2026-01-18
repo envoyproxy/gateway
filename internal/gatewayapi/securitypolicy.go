@@ -660,7 +660,7 @@ func validateAPIKeyAuth(apiKeyAuth *egv1a1.APIKeyAuth) error {
 // Currently, we only validate that the secret exists, but we don't validate
 // the content of the secret. This function will be called when the security policy
 // is being processed, but before the secret is actually read.
-func validateBasicAuth(basicAuth *egv1a1.BasicAuth) error {
+func validateBasicAuth(_ *egv1a1.BasicAuth) error {
 	// The actual validation of the htpasswd format will happen when the secret is read
 	// in the buildBasicAuth function.
 	return nil

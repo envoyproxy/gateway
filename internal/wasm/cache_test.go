@@ -740,7 +740,7 @@ func TestWasmCache(t *testing.T) {
 				for start := time.Now(); time.Since(start) < c.checkPurgeTimeout; {
 					fileCount := 0
 					err = filepath.Walk(tmpDir,
-						func(path string, info os.FileInfo, err error) error {
+						func(_ string, info os.FileInfo, err error) error {
 							if err != nil {
 								return err
 							}
@@ -888,7 +888,7 @@ func TestWasmCachePolicyChangesUsingHTTP(t *testing.T) {
 	binary2 = append(binary2, 2)
 
 	// Create a test server which returns 0 for the first two calls, and returns 1 for the following calls.
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		if gotNumRequest <= 1 {
 			_, _ = w.Write(binary1)
 		} else {

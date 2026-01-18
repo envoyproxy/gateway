@@ -108,7 +108,7 @@ func (l *LuaValidator) newLuaState() (*lua.LState, context.CancelFunc) {
 	L.SetContext(ctx)
 
 	// Suppress all print statements
-	L.SetGlobal("print", L.NewFunction(func(L *lua.LState) int {
+	L.SetGlobal("print", L.NewFunction(func(_ *lua.LState) int {
 		return 0
 	}))
 	return L, cancel

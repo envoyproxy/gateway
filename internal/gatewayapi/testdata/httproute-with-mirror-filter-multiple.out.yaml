@@ -166,15 +166,18 @@ xdsIR:
       port: 10080
       routes:
       - addRequestHeaders:
-        - append: true
+        - addIfAbsent: false
+          append: true
           name: X-Header-Add
           value:
           - header-val-1
-        - append: true
+        - addIfAbsent: false
+          append: true
           name: X-Header-Add-Append
           value:
           - header-val-2
-        - append: false
+        - addIfAbsent: false
+          append: false
           name: X-Header-Set
           value:
           - set-overwrites-values

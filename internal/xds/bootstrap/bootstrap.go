@@ -8,6 +8,7 @@ package bootstrap
 import (
 	// Register embed
 	_ "embed"
+	"encoding/base64"
 	"fmt"
 	"net"
 	"strconv"
@@ -19,6 +20,7 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/utils/cert"
 	netutils "github.com/envoyproxy/gateway/internal/utils/net"
 	"github.com/envoyproxy/gateway/internal/utils/regex"
 )
@@ -56,7 +58,11 @@ const (
 //go:embed bootstrap.yaml.tpl
 var bootstrapTmplStr string
 
-var bootstrapTmpl = template.Must(template.New(envoyCfgFileName).Parse(bootstrapTmplStr))
+var bootstrapTmpl = template.Must(template.New(envoyCfgFileName).Funcs(template.FuncMap{
+	"base64": func(data []byte) string {
+		return base64.StdEncoding.EncodeToString(data)
+	},
+}).Parse(bootstrapTmplStr))
 
 // bootstrapConfig defines the envoy Bootstrap configuration.
 type bootstrapConfig struct {
@@ -78,6 +84,8 @@ type bootstrapParameters struct {
 	SdsCertificatePath string
 	// SdsTrustedCAPath defines the path to SDS trusted CA config.
 	SdsTrustedCAPath string
+	// SystemCACertPath is the path to the system CA certificate bundle.
+	SystemCACertPath string
 
 	// EnablePrometheus defines whether to enable metrics endpoint for prometheus.
 	EnablePrometheus bool
@@ -88,7 +96,7 @@ type bootstrapParameters struct {
 	PrometheusCompressionLibrary string
 
 	// OtelMetricSinks defines the configuration of the OpenTelemetry sinks.
-	OtelMetricSinks []metricSink
+	OtelMetricSinks []MetricSink
 	// EnableStatConfig defines whether to customize the Envoy proxy stats.
 	EnableStatConfig bool
 	// StatsMatcher is to control creation of custom Envoy stats with prefix,
@@ -116,22 +124,34 @@ type serverParameters struct {
 	Port int32
 }
 
-type metricSink struct {
-	// Address is the address of the XDS Server that Envoy is managed by.
+// MetricSink defines an OpenTelemetry metrics sink destination for template rendering.
+type MetricSink struct {
+	// Address is the address of the metrics sink.
 	Address string
-	// Port is the port of the XDS Server that Envoy is managed by.
+	// Port is the port of the metrics sink.
 	Port uint32
+	// Authority is the gRPC authority header value (typically SNI or hostname).
+	Authority string
 	// ReportCountersAsDeltas configures counters to use delta temporality.
 	ReportCountersAsDeltas bool
 	// ReportHistogramsAsDeltas configures histograms to use delta temporality.
 	ReportHistogramsAsDeltas bool
 	// Headers is a list of headers to send with OTLP export requests.
-	Headers []header
+	Headers []gwapiv1.HTTPHeader
+	// TLS contains upstream TLS configuration for the metrics sink.
+	// Nil means no TLS.
+	TLS *MetricSinkTLS
 }
 
-type header struct {
-	Key   string
-	Value string
+// MetricSinkTLS defines TLS settings for a metrics sink.
+type MetricSinkTLS struct {
+	// SNI is the Server Name Indication for TLS.
+	SNI string
+	// UseSystemTrustStore indicates whether to use the system CA trust store.
+	UseSystemTrustStore bool
+	// CACertificate is the CA certificate for validating the upstream TLS certificate.
+	// When set, this takes precedence over UseSystemTrustStore.
+	CACertificate []byte
 }
 
 type adminServerParameters struct {
@@ -155,8 +175,10 @@ type overloadManagerParameters struct {
 }
 
 type RenderBootstrapConfigOptions struct {
-	IPFamily                 *egv1a1.IPFamily
-	ProxyMetrics             *egv1a1.ProxyMetrics
+	IPFamily     *egv1a1.IPFamily
+	ProxyMetrics *egv1a1.ProxyMetrics
+	// TODO: remove after deprecating host/port in favor of backendRefs.
+	ResolvedMetricSinks      []MetricSink
 	SdsConfig                SdsConfigPath
 	ServiceClusterName       *string
 	XdsServerHost            *string
@@ -193,7 +215,7 @@ func GetRenderedBootstrapConfig(opts *RenderBootstrapConfigOptions) (string, err
 		enablePrometheus             = true
 		enablePrometheusCompression  = false
 		prometheusCompressionLibrary = "Gzip"
-		metricSinks                  []metricSink
+		metricSinks                  []MetricSink
 		StatsMatcher                 StatsMatcherParameters
 	)
 
@@ -209,34 +231,45 @@ func GetRenderedBootstrapConfig(opts *RenderBootstrapConfigOptions) (string, err
 			}
 		}
 
-		addresses := sets.NewString()
-		for _, sink := range proxyMetrics.Sinks {
-			if sink.OpenTelemetry == nil {
-				continue
-			}
+		// Use pre-resolved metric sinks if provided
+		if len(opts.ResolvedMetricSinks) > 0 {
+			metricSinks = opts.ResolvedMetricSinks
+		} else {
+			// Fall back to resolving from ProxyMetrics (legacy path for Service-type backends)
+			addresses := sets.NewString()
+			for _, sink := range proxyMetrics.Sinks {
+				if sink.OpenTelemetry == nil {
+					continue
+				}
 
-			// skip duplicate sinks
-			var host string
-			var port uint32
-			if sink.OpenTelemetry.Host != nil {
-				host, port = *sink.OpenTelemetry.Host, uint32(sink.OpenTelemetry.Port)
-			}
-			if len(sink.OpenTelemetry.BackendRefs) > 0 {
-				host, port = netutils.BackendHostAndPort(sink.OpenTelemetry.BackendRefs[0].BackendObjectReference, "")
-			}
-			addr := net.JoinHostPort(host, strconv.Itoa(int(port)))
-			if addresses.Has(addr) {
-				continue
-			}
-			addresses.Insert(addr)
+				var host string
+				var port uint32
+				if sink.OpenTelemetry.Host != nil {
+					host, port = *sink.OpenTelemetry.Host, uint32(sink.OpenTelemetry.Port)
+				}
+				if len(sink.OpenTelemetry.BackendRefs) > 0 {
+					ref := sink.OpenTelemetry.BackendRefs[0].BackendObjectReference
+					if ref.Port == nil {
+						return "", fmt.Errorf("metrics sink backendRef %s has no port", ref.Name)
+					}
+					host, port = netutils.BackendHostAndPort(ref, "")
+				}
 
-			metricSinks = append(metricSinks, metricSink{
-				Address:                  host,
-				Port:                     port,
-				ReportCountersAsDeltas:   ptr.Deref(sink.OpenTelemetry.ReportCountersAsDeltas, false),
-				ReportHistogramsAsDeltas: ptr.Deref(sink.OpenTelemetry.ReportHistogramsAsDeltas, false),
-				Headers:                  convertHeaders(sink.OpenTelemetry.Headers),
-			})
+				// skip duplicate sinks
+				addr := net.JoinHostPort(host, strconv.Itoa(int(port)))
+				if addresses.Has(addr) {
+					continue
+				}
+				addresses.Insert(addr)
+
+				metricSinks = append(metricSinks, MetricSink{
+					Address:                  host,
+					Port:                     port,
+					ReportCountersAsDeltas:   ptr.Deref(sink.OpenTelemetry.ReportCountersAsDeltas, false),
+					ReportHistogramsAsDeltas: ptr.Deref(sink.OpenTelemetry.ReportHistogramsAsDeltas, false),
+					Headers:                  sink.OpenTelemetry.Headers,
+				})
+			}
 		}
 
 		if proxyMetrics.Matches != nil {
@@ -281,6 +314,7 @@ func GetRenderedBootstrapConfig(opts *RenderBootstrapConfigOptions) (string, err
 			},
 			SdsCertificatePath:           defaultSdsCertificatePath,
 			SdsTrustedCAPath:             defaultSdsTrustedCAPath,
+			SystemCACertPath:             cert.SystemCertPath,
 			EnablePrometheus:             enablePrometheus,
 			EnablePrometheusCompression:  enablePrometheusCompression,
 			PrometheusCompressionLibrary: prometheusCompressionLibrary,
@@ -346,16 +380,4 @@ func GetRenderedBootstrapConfig(opts *RenderBootstrapConfigOptions) (string, err
 	}
 
 	return cfg.rendered, nil
-}
-
-// convertHeaders converts gateway-api HTTPHeaders to bootstrap header format.
-func convertHeaders(headers []gwapiv1.HTTPHeader) []header {
-	if len(headers) == 0 {
-		return nil
-	}
-	result := make([]header, len(headers))
-	for i, h := range headers {
-		result[i] = header{Key: string(h.Name), Value: h.Value}
-	}
-	return result
 }
