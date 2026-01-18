@@ -1,0 +1,76 @@
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-1
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: All
+httpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-1
+  spec:
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: "/foo"
+      backendRefs:
+      - name: service-1
+        port: 8080
+securityPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: policy-for-gateway
+  spec:
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-1
+      sectionName: http
+    basicAuth:
+      users:
+        name: users-secret
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    namespace: default
+    name: policy-for-route
+  spec:
+    mergeType: StrategicMerge
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-1
+    cors:
+      allowOrigins:
+      - "https://www.example.com"
+      allowMethods:
+      - GET
+      - POST
+      allowHeaders:
+      - "x-header-1"
+secrets:
+- apiVersion: v1
+  kind: Secret
+  metadata:
+    namespace: envoy-gateway
+    name: users-secret
+  type: Opaque
+  data:
+    .htpasswd: dXNlcjE6e1NIQX15LzJzWUFqNXlyUUlONFRMMFlkUGRtR05LcGM9
