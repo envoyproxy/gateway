@@ -1,27 +1,46 @@
+backends:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: Backend
+  metadata:
+    creationTimestamp: null
+    name: backend-ip
+    namespace: default
+  spec:
+    endpoints:
+    - ip:
+        address: 1.1.1.1
+        port: 3001
+  status:
+    conditions:
+    - lastTransitionTime: null
+      message: The Backend was accepted
+      reason: Accepted
+      status: "True"
+      type: Accepted
 envoyExtensionPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: EnvoyExtensionPolicy
   metadata:
     creationTimestamp: null
-    name: policy-for-httproute-1
+    name: policy-for-httproute-with-valid-and-invalid-extension-failclose
     namespace: default
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    extProc:
+    - backendRefs:
+      - group: gateway.envoyproxy.io
+        kind: Backend
+        name: backend-ip
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: HTTPRoute
-      name: httproute-1
+      name: httproute-with-valid-and-invalid-extension-failclose
     wasm:
     - code:
-        image:
-          pullSecretRef:
-            group: null
-            kind: null
-            name: my-pull-secret-1
-          sha256: 314100af781b98a8ca175d5bf90a8bf76576e20a2f397a88223404edc6ebfd46
-          url: oci://www.example.com/wasm-filter-1:v1.0.0
-        type: Image
+        http:
+          sha256: 2d89c4c6ab2a1c615c7696ed37ade9e50654ac70384b5d45100eb08e62130ff4
+          url: https://www.example.com/non-existent.wasm
+        type: HTTP
       name: wasm-filter-1
-      rootID: my-root-id
   status:
     ancestors:
     - ancestorRef:
@@ -32,7 +51,9 @@ envoyExtensionPolicies:
         sectionName: http
       conditions:
       - lastTransitionTime: null
-        message: 'Wasm: secret default/my-pull-secret-1 does not exist.'
+        message: 'Wasm: module downloaded from https://www.example.com/non-existent.wasm
+          has checksum 36ed359d2ddef6346c48c9c63ab424db2df51bb19d532e8744bfbbbd6ef0f45a,
+          which does not match: 2d89c4c6ab2a1c615c7696ed37ade9e50654ac70384b5d45100eb08e62130ff4.'
         reason: Invalid
         status: "False"
         type: Accepted
@@ -41,77 +62,26 @@ envoyExtensionPolicies:
   kind: EnvoyExtensionPolicy
   metadata:
     creationTimestamp: null
-    name: policy-for-httproute-2
+    name: policy-for-httproute-with-invalid-extensions-mixed-failclose-failopen
     namespace: default
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    extProc:
+    - backendRefs:
+      - group: gateway.envoyproxy.io
+        kind: Backend
+        name: backend-not-exist
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: HTTPRoute
-      name: httproute-2
+      name: httproute-with-invalid-extensions-mixed-failclose-failopen
     wasm:
     - code:
-        image:
-          pullSecretRef:
-            group: null
-            kind: null
-            name: my-pull-secret-1
-          sha256: 314100af781b98a8ca175d5bf90a8bf76576e20a2f397a88223404edc6ebfd46
-          url: oci://www.example.com/wasm-filter-1:v1.0.0
-        type: Image
+        http:
+          sha256: 2d89c4c6ab2a1c615c7696ed37ade9e50654ac70384b5d45100eb08e62130ff4
+          url: https://www.example.com/non-existent.wasm
+        type: HTTP
       failOpen: true
       name: wasm-filter-1
-      rootID: my-root-id
-  status:
-    ancestors:
-    - ancestorRef:
-        group: gateway.networking.k8s.io
-        kind: Gateway
-        name: gateway-1
-        namespace: default
-        sectionName: http
-      conditions:
-      - lastTransitionTime: null
-        message: 'Wasm: secret default/my-pull-secret-1 does not exist.'
-        reason: Invalid
-        status: "False"
-        type: Accepted
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
-- apiVersion: gateway.envoyproxy.io/v1alpha1
-  kind: EnvoyExtensionPolicy
-  metadata:
-    creationTimestamp: null
-    name: policy-for-httproute-3
-    namespace: default
-  spec:
-    targetRef:
-      group: gateway.networking.k8s.io
-      kind: HTTPRoute
-      name: httproute-3
-    wasm:
-    - code:
-        image:
-          pullSecretRef:
-            group: null
-            kind: null
-            name: my-pull-secret-1
-          sha256: 314100af781b98a8ca175d5bf90a8bf76576e20a2f397a88223404edc6ebfd46
-          url: oci://www.example.com/wasm-filter-1:v1.0.0
-        type: Image
-      failOpen: true
-      name: wasm-filter-1
-      rootID: my-root-id
-    - code:
-        image:
-          pullSecretRef:
-            group: null
-            kind: null
-            name: my-pull-secret-2
-          sha256: 314100af781b98a8ca175d5bf90a8bf76576e20a2f397a88223404edc6ebfd46
-          url: oci://www.example.com/wasm-filter-2:v1.0.0
-        type: Image
-      failOpen: false
-      name: wasm-filter-1
-      rootID: my-root-id
   status:
     ancestors:
     - ancestorRef:
@@ -123,8 +93,8 @@ envoyExtensionPolicies:
       conditions:
       - lastTransitionTime: null
         message: |-
-          Wasm: secret default/my-pull-secret-1 does not exist
-          secret default/my-pull-secret-2 does not exist.
+          Wasm: module downloaded from https://www.example.com/non-existent.wasm has checksum 36ed359d2ddef6346c48c9c63ab424db2df51bb19d532e8744bfbbbd6ef0f45a, which does not match: 2d89c4c6ab2a1c615c7696ed37ade9e50654ac70384b5d45100eb08e62130ff4
+          ExtProc: backend default/backend-not-exist not found.
         reason: Invalid
         status: "False"
         type: Accepted
@@ -133,30 +103,31 @@ envoyExtensionPolicies:
   kind: EnvoyExtensionPolicy
   metadata:
     creationTimestamp: null
-    name: policy-for-httproute-4
+    name: policy-for-httproute-with-invalid-lua-invald-wasm-failopen
     namespace: default
   spec:
+    extProc:
+    - backendRefs:
+      - group: gateway.envoyproxy.io
+        kind: Backend
+        name: backend-not-exist
+      failOpen: true
     lua:
-    - inline: function envoy_on_response(response_handle) response_handle:UnknownApi()
+    - inline: function non_existing_function(request_handle) request_handle:logInfo('Goodbye.')
         end
       type: Inline
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: HTTPRoute
-      name: httproute-4
+      name: httproute-with-invalid-lua-invald-wasm-failopen
     wasm:
     - code:
-        image:
-          pullSecretRef:
-            group: null
-            kind: null
-            name: my-pull-secret-1
-          sha256: 314100af781b98a8ca175d5bf90a8bf76576e20a2f397a88223404edc6ebfd46
-          url: oci://www.example.com/wasm-filter-1:v1.0.0
-        type: Image
+        http:
+          sha256: 2d89c4c6ab2a1c615c7696ed37ade9e50654ac70384b5d45100eb08e62130ff4
+          url: https://www.example.com/non-existent.wasm
+        type: HTTP
       failOpen: true
       name: wasm-filter-1
-      rootID: my-root-id
   status:
     ancestors:
     - ancestorRef:
@@ -167,11 +138,10 @@ envoyExtensionPolicies:
         sectionName: http
       conditions:
       - lastTransitionTime: null
-        message: "Wasm: secret default/my-pull-secret-1 does not exist\nLua: validation
-          failed for lua body in policy with name envoyextensionpolicy/default/policy-for-httproute-4/lua/0:
-          failed to validate with envoy_on_response: <string>:1: attempt to call a
-          non-function object\nstack traceback:\n\t<string>:1: in function 'envoy_on_response'\n\t<string>:2:
-          in main chunk\n\t[G]: ?."
+        message: |-
+          Wasm: module downloaded from https://www.example.com/non-existent.wasm has checksum 36ed359d2ddef6346c48c9c63ab424db2df51bb19d532e8744bfbbbd6ef0f45a, which does not match: 2d89c4c6ab2a1c615c7696ed37ade9e50654ac70384b5d45100eb08e62130ff4
+          Lua: validation failed for lua body in policy with name envoyextensionpolicy/default/policy-for-httproute-with-invalid-lua-invald-wasm-failopen/lua/0: expected one of envoy_on_request() or envoy_on_response() to be defined
+          ExtProc: backend default/backend-not-exist not found.
         reason: Invalid
         status: "False"
         type: Accepted
@@ -180,36 +150,79 @@ envoyExtensionPolicies:
   kind: EnvoyExtensionPolicy
   metadata:
     creationTimestamp: null
-    name: policy-for-gateway-2
+    name: policy-for-httproute-with-all-invalid-extensions-failclose
     namespace: default
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
-      kind: Gateway
-      name: gateway-2
+    extProc:
+    - backendRefs:
+      - group: gateway.envoyproxy.io
+        kind: Backend
+        name: backend-not-exist
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-with-all-invalid-extensions-failclose
     wasm:
     - code:
-        image:
-          pullSecretRef:
-            group: null
-            kind: null
-            name: my-pull-secret-1
-          sha256: 314100af781b98a8ca175d5bf90a8bf76576e20a2f397a88223404edc6ebfd46
-          url: oci://www.example.com/wasm-filter-1:v1.0.0
-        type: Image
+        http:
+          sha256: 2d89c4c6ab2a1c615c7696ed37ade9e50654ac70384b5d45100eb08e62130ff4
+          url: https://www.example.com/non-existent.wasm
+        type: HTTP
+      name: wasm-filter-1
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: default
+        sectionName: http
+      conditions:
+      - lastTransitionTime: null
+        message: |-
+          Wasm: module downloaded from https://www.example.com/non-existent.wasm has checksum 36ed359d2ddef6346c48c9c63ab424db2df51bb19d532e8744bfbbbd6ef0f45a, which does not match: 2d89c4c6ab2a1c615c7696ed37ade9e50654ac70384b5d45100eb08e62130ff4
+          ExtProc: backend default/backend-not-exist not found.
+        reason: Invalid
+        status: "False"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyExtensionPolicy
+  metadata:
+    creationTimestamp: null
+    name: policy-for-httproute-with-valid-and-invalid-extension-failopen
+    namespace: default
+  spec:
+    extProc:
+    - backendRefs:
+      - group: gateway.envoyproxy.io
+        kind: Backend
+        name: backend-ip
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-with-valid-and-invalid-extension-failopen
+    wasm:
+    - code:
+        http:
+          sha256: 2d89c4c6ab2a1c615c7696ed37ade9e50654ac70384b5d45100eb08e62130ff4
+          url: https://www.example.com/non-existent.wasm
+        type: HTTP
       failOpen: true
       name: wasm-filter-1
-      rootID: my-root-id
   status:
     ancestors:
     - ancestorRef:
         group: gateway.networking.k8s.io
         kind: Gateway
-        name: gateway-2
+        name: gateway-1
         namespace: default
+        sectionName: http
       conditions:
       - lastTransitionTime: null
-        message: 'Wasm: secret default/my-pull-secret-1 does not exist.'
+        message: 'Wasm: module downloaded from https://www.example.com/non-existent.wasm
+          has checksum 36ed359d2ddef6346c48c9c63ab424db2df51bb19d532e8744bfbbbd6ef0f45a,
+          which does not match: 2d89c4c6ab2a1c615c7696ed37ade9e50654ac70384b5d45100eb08e62130ff4.'
         reason: Invalid
         status: "False"
         type: Accepted
@@ -218,35 +231,40 @@ envoyExtensionPolicies:
   kind: EnvoyExtensionPolicy
   metadata:
     creationTimestamp: null
-    name: policy-for-gateway-3
+    name: policy-for-httproute-with-all-invalid-extensions-failopen
     namespace: default
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
-      kind: Gateway
-      name: gateway-3
+    extProc:
+    - backendRefs:
+      - group: gateway.envoyproxy.io
+        kind: Backend
+        name: backend-ip
+      failOpen: true
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-with-all-invalid-extensions-failopen
     wasm:
     - code:
-        image:
-          pullSecretRef:
-            group: null
-            kind: null
-            name: my-pull-secret-1
-          sha256: 314100af781b98a8ca175d5bf90a8bf76576e20a2f397a88223404edc6ebfd46
-          url: oci://www.example.com/wasm-filter-1:v1.0.0
-        type: Image
+        http:
+          sha256: 2d89c4c6ab2a1c615c7696ed37ade9e50654ac70384b5d45100eb08e62130ff4
+          url: https://www.example.com/non-existent.wasm
+        type: HTTP
+      failOpen: true
       name: wasm-filter-1
-      rootID: my-root-id
   status:
     ancestors:
     - ancestorRef:
         group: gateway.networking.k8s.io
         kind: Gateway
-        name: gateway-3
+        name: gateway-1
         namespace: default
+        sectionName: http
       conditions:
       - lastTransitionTime: null
-        message: 'Wasm: secret default/my-pull-secret-1 does not exist.'
+        message: 'Wasm: module downloaded from https://www.example.com/non-existent.wasm
+          has checksum 36ed359d2ddef6346c48c9c63ab424db2df51bb19d532e8744bfbbbd6ef0f45a,
+          which does not match: 2d89c4c6ab2a1c615c7696ed37ade9e50654ac70384b5d45100eb08e62130ff4.'
         reason: Invalid
         status: "False"
         type: Accepted
@@ -269,87 +287,7 @@ gateways:
       protocol: HTTP
   status:
     listeners:
-    - attachedRoutes: 4
-      conditions:
-      - lastTransitionTime: null
-        message: Sending translated listener configuration to the data plane
-        reason: Programmed
-        status: "True"
-        type: Programmed
-      - lastTransitionTime: null
-        message: Listener has been successfully translated
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      - lastTransitionTime: null
-        message: Listener references have been resolved
-        reason: ResolvedRefs
-        status: "True"
-        type: ResolvedRefs
-      name: http
-      supportedKinds:
-      - group: gateway.networking.k8s.io
-        kind: HTTPRoute
-      - group: gateway.networking.k8s.io
-        kind: GRPCRoute
-- apiVersion: gateway.networking.k8s.io/v1
-  kind: Gateway
-  metadata:
-    creationTimestamp: null
-    name: gateway-2
-    namespace: default
-  spec:
-    gatewayClassName: envoy-gateway-class
-    listeners:
-    - allowedRoutes:
-        namespaces:
-          from: All
-      name: http
-      port: 80
-      protocol: HTTP
-  status:
-    listeners:
-    - attachedRoutes: 2
-      conditions:
-      - lastTransitionTime: null
-        message: Sending translated listener configuration to the data plane
-        reason: Programmed
-        status: "True"
-        type: Programmed
-      - lastTransitionTime: null
-        message: Listener has been successfully translated
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      - lastTransitionTime: null
-        message: Listener references have been resolved
-        reason: ResolvedRefs
-        status: "True"
-        type: ResolvedRefs
-      name: http
-      supportedKinds:
-      - group: gateway.networking.k8s.io
-        kind: HTTPRoute
-      - group: gateway.networking.k8s.io
-        kind: GRPCRoute
-- apiVersion: gateway.networking.k8s.io/v1
-  kind: Gateway
-  metadata:
-    creationTimestamp: null
-    name: gateway-3
-    namespace: default
-  spec:
-    gatewayClassName: envoy-gateway-class
-    listeners:
-    - allowedRoutes:
-        namespaces:
-          from: All
-      name: http
-      port: 80
-      protocol: HTTP
-  status:
-    listeners:
-    - attachedRoutes: 1
+    - attachedRoutes: 6
       conditions:
       - lastTransitionTime: null
         message: Sending translated listener configuration to the data plane
@@ -377,7 +315,7 @@ httpRoutes:
   kind: HTTPRoute
   metadata:
     creationTimestamp: null
-    name: httproute-1
+    name: httproute-with-valid-and-invalid-extension-failclose
     namespace: default
   spec:
     hostnames:
@@ -415,11 +353,11 @@ httpRoutes:
   kind: HTTPRoute
   metadata:
     creationTimestamp: null
-    name: httproute-2
+    name: httproute-with-all-invalid-extensions-failclose
     namespace: default
   spec:
     hostnames:
-    - www.bar.com
+    - www.foo.com
     parentRefs:
     - name: gateway-1
       namespace: default
@@ -453,11 +391,11 @@ httpRoutes:
   kind: HTTPRoute
   metadata:
     creationTimestamp: null
-    name: httproute-3
+    name: httproute-with-invalid-extensions-mixed-failclose-failopen
     namespace: default
   spec:
     hostnames:
-    - www.baz.com
+    - www.foo.com
     parentRefs:
     - name: gateway-1
       namespace: default
@@ -491,11 +429,11 @@ httpRoutes:
   kind: HTTPRoute
   metadata:
     creationTimestamp: null
-    name: httproute-4
+    name: httproute-with-invalid-lua-invald-wasm-failopen
     namespace: default
   spec:
     hostnames:
-    - www.qux.com
+    - www.foo.com
     parentRefs:
     - name: gateway-1
       namespace: default
@@ -529,13 +467,13 @@ httpRoutes:
   kind: HTTPRoute
   metadata:
     creationTimestamp: null
-    name: httproute-5
+    name: httproute-with-valid-and-invalid-extension-failopen
     namespace: default
   spec:
     hostnames:
     - www.foo.com
     parentRefs:
-    - name: gateway-2
+    - name: gateway-1
       namespace: default
       sectionName: http
     rules:
@@ -544,7 +482,7 @@ httpRoutes:
         port: 8080
       matches:
       - path:
-          value: /foo
+          value: /quit
   status:
     parents:
     - conditions:
@@ -560,20 +498,20 @@ httpRoutes:
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
-        name: gateway-2
+        name: gateway-1
         namespace: default
         sectionName: http
 - apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
   metadata:
     creationTimestamp: null
-    name: httproute-6
+    name: httproute-with-all-invalid-extensions-failopen
     namespace: default
   spec:
     hostnames:
-    - www.bar.com
+    - www.foo.com
     parentRefs:
-    - name: gateway-2
+    - name: gateway-1
       namespace: default
       sectionName: http
     rules:
@@ -582,7 +520,7 @@ httpRoutes:
         port: 8080
       matches:
       - path:
-          value: /bar
+          value: /corge
   status:
     parents:
     - conditions:
@@ -598,45 +536,7 @@ httpRoutes:
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
-        name: gateway-2
-        namespace: default
-        sectionName: http
-- apiVersion: gateway.networking.k8s.io/v1
-  kind: HTTPRoute
-  metadata:
-    creationTimestamp: null
-    name: httproute-6
-    namespace: default
-  spec:
-    hostnames:
-    - www.bar.com
-    parentRefs:
-    - name: gateway-3
-      namespace: default
-      sectionName: http
-    rules:
-    - backendRefs:
-      - name: service-1
-        port: 8080
-      matches:
-      - path:
-          value: /bar
-  status:
-    parents:
-    - conditions:
-      - lastTransitionTime: null
-        message: Route is accepted
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      - lastTransitionTime: null
-        message: Resolved all the Object references for the Route
-        reason: ResolvedRefs
-        status: "True"
-        type: ResolvedRefs
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
-      parentRef:
-        name: gateway-3
+        name: gateway-1
         namespace: default
         sectionName: http
 infraIR:
@@ -659,49 +559,26 @@ infraIR:
           name: envoy-gateway-class
       name: default/gateway-1
       namespace: envoy-gateway-system
-  default/gateway-2:
-    proxy:
-      listeners:
-      - address: null
-        name: default/gateway-2/http
-        ports:
-        - containerPort: 10080
-          name: http-80
-          protocol: HTTP
-          servicePort: 80
-      metadata:
-        labels:
-          gateway.envoyproxy.io/owning-gateway-name: gateway-2
-          gateway.envoyproxy.io/owning-gateway-namespace: default
-        ownerReference:
-          kind: GatewayClass
-          name: envoy-gateway-class
-      name: default/gateway-2
-      namespace: envoy-gateway-system
-  default/gateway-3:
-    proxy:
-      listeners:
-      - address: null
-        name: default/gateway-3/http
-        ports:
-        - containerPort: 10080
-          name: http-80
-          protocol: HTTP
-          servicePort: 80
-      metadata:
-        labels:
-          gateway.envoyproxy.io/owning-gateway-name: gateway-3
-          gateway.envoyproxy.io/owning-gateway-namespace: default
-        ownerReference:
-          kind: GatewayClass
-          name: envoy-gateway-class
-      name: default/gateway-3
-      namespace: envoy-gateway-system
 xdsIR:
   default/gateway-1:
     accessLog:
       json:
       - path: /dev/stdout
+    globalResources:
+      proxyServiceCluster:
+        name: default/gateway-1
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            name: envoy-default-gateway-1-bfd08ef4
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: default/gateway-1
+          protocol: TCP
     http:
     - address: 0.0.0.0
       externalPort: 80
@@ -722,9 +599,9 @@ xdsIR:
       - destination:
           metadata:
             kind: HTTPRoute
-            name: httproute-1
+            name: httproute-with-all-invalid-extensions-failopen
             namespace: default
-          name: httproute/default/httproute-1/rule/0
+          name: httproute/default/httproute-with-all-invalid-extensions-failopen/rule/0
           settings:
           - addressType: IP
             endpoints:
@@ -734,7 +611,110 @@ xdsIR:
               name: service-1
               namespace: default
               sectionName: "8080"
-            name: httproute/default/httproute-1/rule/0/backend/0
+            name: httproute/default/httproute-with-all-invalid-extensions-failopen/rule/0/backend/0
+            protocol: HTTP
+            weight: 1
+        envoyExtensions:
+          extProcs:
+          - authority: backend-ip.default
+            destination:
+              metadata:
+                kind: EnvoyExtensionPolicy
+                name: policy-for-httproute-with-all-invalid-extensions-failopen
+                namespace: default
+              name: envoyextensionpolicy/default/policy-for-httproute-with-all-invalid-extensions-failopen/extproc/0
+              settings:
+              - addressType: IP
+                endpoints:
+                - host: 1.1.1.1
+                  port: 3001
+                metadata:
+                  kind: Backend
+                  name: backend-ip
+                  namespace: default
+                name: envoyextensionpolicy/default/policy-for-httproute-with-all-invalid-extensions-failopen/extproc/0/backend/0
+                protocol: GRPC
+                weight: 1
+            failOpen: true
+            name: envoyextensionpolicy/default/policy-for-httproute-with-all-invalid-extensions-failopen/extproc/0
+        hostname: www.foo.com
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-with-all-invalid-extensions-failopen
+          namespace: default
+        name: httproute/default/httproute-with-all-invalid-extensions-failopen/rule/0/match/0/www_foo_com
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /corge
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-with-valid-and-invalid-extension-failopen
+            namespace: default
+          name: httproute/default/httproute-with-valid-and-invalid-extension-failopen/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            metadata:
+              name: service-1
+              namespace: default
+              sectionName: "8080"
+            name: httproute/default/httproute-with-valid-and-invalid-extension-failopen/rule/0/backend/0
+            protocol: HTTP
+            weight: 1
+        envoyExtensions:
+          extProcs:
+          - authority: backend-ip.default
+            destination:
+              metadata:
+                kind: EnvoyExtensionPolicy
+                name: policy-for-httproute-with-valid-and-invalid-extension-failopen
+                namespace: default
+              name: envoyextensionpolicy/default/policy-for-httproute-with-valid-and-invalid-extension-failopen/extproc/0
+              settings:
+              - addressType: IP
+                endpoints:
+                - host: 1.1.1.1
+                  port: 3001
+                metadata:
+                  kind: Backend
+                  name: backend-ip
+                  namespace: default
+                name: envoyextensionpolicy/default/policy-for-httproute-with-valid-and-invalid-extension-failopen/extproc/0/backend/0
+                protocol: GRPC
+                weight: 1
+            name: envoyextensionpolicy/default/policy-for-httproute-with-valid-and-invalid-extension-failopen/extproc/0
+        hostname: www.foo.com
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-with-valid-and-invalid-extension-failopen
+          namespace: default
+        name: httproute/default/httproute-with-valid-and-invalid-extension-failopen/rule/0/match/0/www_foo_com
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /quit
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-with-valid-and-invalid-extension-failclose
+            namespace: default
+          name: httproute/default/httproute-with-valid-and-invalid-extension-failclose/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            metadata:
+              name: service-1
+              namespace: default
+              sectionName: "8080"
+            name: httproute/default/httproute-with-valid-and-invalid-extension-failclose/rule/0/backend/0
             protocol: HTTP
             weight: 1
         directResponse:
@@ -743,9 +723,9 @@ xdsIR:
         isHTTP2: false
         metadata:
           kind: HTTPRoute
-          name: httproute-1
+          name: httproute-with-valid-and-invalid-extension-failclose
           namespace: default
-        name: httproute/default/httproute-1/rule/0/match/0/www_foo_com
+        name: httproute/default/httproute-with-valid-and-invalid-extension-failclose/rule/0/match/0/www_foo_com
         pathMatch:
           distinct: false
           name: ""
@@ -753,9 +733,9 @@ xdsIR:
       - destination:
           metadata:
             kind: HTTPRoute
-            name: httproute-2
+            name: httproute-with-all-invalid-extensions-failclose
             namespace: default
-          name: httproute/default/httproute-2/rule/0
+          name: httproute/default/httproute-with-all-invalid-extensions-failclose/rule/0
           settings:
           - addressType: IP
             endpoints:
@@ -765,17 +745,18 @@ xdsIR:
               name: service-1
               namespace: default
               sectionName: "8080"
-            name: httproute/default/httproute-2/rule/0/backend/0
+            name: httproute/default/httproute-with-all-invalid-extensions-failclose/rule/0/backend/0
             protocol: HTTP
             weight: 1
-        envoyExtensions: {}
-        hostname: www.bar.com
+        directResponse:
+          statusCode: 500
+        hostname: www.foo.com
         isHTTP2: false
         metadata:
           kind: HTTPRoute
-          name: httproute-2
+          name: httproute-with-all-invalid-extensions-failclose
           namespace: default
-        name: httproute/default/httproute-2/rule/0/match/0/www_bar_com
+        name: httproute/default/httproute-with-all-invalid-extensions-failclose/rule/0/match/0/www_foo_com
         pathMatch:
           distinct: false
           name: ""
@@ -783,9 +764,9 @@ xdsIR:
       - destination:
           metadata:
             kind: HTTPRoute
-            name: httproute-3
+            name: httproute-with-invalid-extensions-mixed-failclose-failopen
             namespace: default
-          name: httproute/default/httproute-3/rule/0
+          name: httproute/default/httproute-with-invalid-extensions-mixed-failclose-failopen/rule/0
           settings:
           - addressType: IP
             endpoints:
@@ -795,18 +776,18 @@ xdsIR:
               name: service-1
               namespace: default
               sectionName: "8080"
-            name: httproute/default/httproute-3/rule/0/backend/0
+            name: httproute/default/httproute-with-invalid-extensions-mixed-failclose-failopen/rule/0/backend/0
             protocol: HTTP
             weight: 1
         directResponse:
           statusCode: 500
-        hostname: www.baz.com
+        hostname: www.foo.com
         isHTTP2: false
         metadata:
           kind: HTTPRoute
-          name: httproute-3
+          name: httproute-with-invalid-extensions-mixed-failclose-failopen
           namespace: default
-        name: httproute/default/httproute-3/rule/0/match/0/www_baz_com
+        name: httproute/default/httproute-with-invalid-extensions-mixed-failclose-failopen/rule/0/match/0/www_foo_com
         pathMatch:
           distinct: false
           name: ""
@@ -814,9 +795,9 @@ xdsIR:
       - destination:
           metadata:
             kind: HTTPRoute
-            name: httproute-4
+            name: httproute-with-invalid-lua-invald-wasm-failopen
             namespace: default
-          name: httproute/default/httproute-4/rule/0
+          name: httproute/default/httproute-with-invalid-lua-invald-wasm-failopen/rule/0
           settings:
           - addressType: IP
             endpoints:
@@ -826,175 +807,22 @@ xdsIR:
               name: service-1
               namespace: default
               sectionName: "8080"
-            name: httproute/default/httproute-4/rule/0/backend/0
+            name: httproute/default/httproute-with-invalid-lua-invald-wasm-failopen/rule/0/backend/0
             protocol: HTTP
             weight: 1
         directResponse:
           statusCode: 500
-        hostname: www.qux.com
-        isHTTP2: false
-        metadata:
-          kind: HTTPRoute
-          name: httproute-4
-          namespace: default
-        name: httproute/default/httproute-4/rule/0/match/0/www_qux_com
-        pathMatch:
-          distinct: false
-          name: ""
-          prefix: /qux
-    readyListener:
-      address: 0.0.0.0
-      ipFamily: IPv4
-      path: /ready
-      port: 19003
-  default/gateway-2:
-    accessLog:
-      json:
-      - path: /dev/stdout
-    http:
-    - address: 0.0.0.0
-      externalPort: 80
-      hostnames:
-      - '*'
-      isHTTP2: false
-      metadata:
-        kind: Gateway
-        name: gateway-2
-        namespace: default
-        sectionName: http
-      name: default/gateway-2/http
-      path:
-        escapedSlashesAction: UnescapeAndRedirect
-        mergeSlashes: true
-      port: 10080
-      routes:
-      - destination:
-          metadata:
-            kind: HTTPRoute
-            name: httproute-5
-            namespace: default
-          name: httproute/default/httproute-5/rule/0
-          settings:
-          - addressType: IP
-            endpoints:
-            - host: 7.7.7.7
-              port: 8080
-            metadata:
-              name: service-1
-              namespace: default
-              sectionName: "8080"
-            name: httproute/default/httproute-5/rule/0/backend/0
-            protocol: HTTP
-            weight: 1
-        envoyExtensions: {}
         hostname: www.foo.com
         isHTTP2: false
         metadata:
           kind: HTTPRoute
-          name: httproute-5
+          name: httproute-with-invalid-lua-invald-wasm-failopen
           namespace: default
-        name: httproute/default/httproute-5/rule/0/match/0/www_foo_com
+        name: httproute/default/httproute-with-invalid-lua-invald-wasm-failopen/rule/0/match/0/www_foo_com
         pathMatch:
           distinct: false
           name: ""
-          prefix: /foo
-      - destination:
-          metadata:
-            kind: HTTPRoute
-            name: httproute-6
-            namespace: default
-          name: httproute/default/httproute-6/rule/0
-          settings:
-          - addressType: IP
-            endpoints:
-            - host: 7.7.7.7
-              port: 8080
-            metadata:
-              name: service-1
-              namespace: default
-              sectionName: "8080"
-            name: httproute/default/httproute-6/rule/0/backend/0
-            protocol: HTTP
-            weight: 1
-        envoyExtensions: {}
-        hostname: www.bar.com
-        isHTTP2: false
-        metadata:
-          kind: HTTPRoute
-          name: httproute-6
-          namespace: default
-        name: httproute/default/httproute-6/rule/0/match/0/www_bar_com
-        pathMatch:
-          distinct: false
-          name: ""
-          prefix: /bar
-    readyListener:
-      address: 0.0.0.0
-      ipFamily: IPv4
-      path: /ready
-      port: 19003
-  default/gateway-3:
-    accessLog:
-      json:
-      - path: /dev/stdout
-    globalResources:
-      proxyServiceCluster:
-        name: default/gateway-3
-        settings:
-        - metadata:
-            name: envoy-default-gateway-1-bfd08ef4
-            namespace: envoy-gateway-system
-            sectionName: "8080"
-          name: default/gateway-3
-          protocol: TCP
-    http:
-    - address: 0.0.0.0
-      externalPort: 80
-      hostnames:
-      - '*'
-      isHTTP2: false
-      metadata:
-        kind: Gateway
-        name: gateway-3
-        namespace: default
-        sectionName: http
-      name: default/gateway-3/http
-      path:
-        escapedSlashesAction: UnescapeAndRedirect
-        mergeSlashes: true
-      port: 10080
-      routes:
-      - destination:
-          metadata:
-            kind: HTTPRoute
-            name: httproute-6
-            namespace: default
-          name: httproute/default/httproute-6/rule/0
-          settings:
-          - addressType: IP
-            endpoints:
-            - host: 7.7.7.7
-              port: 8080
-            metadata:
-              name: service-1
-              namespace: default
-              sectionName: "8080"
-            name: httproute/default/httproute-6/rule/0/backend/0
-            protocol: HTTP
-            weight: 1
-        directResponse:
-          statusCode: 500
-        hostname: www.bar.com
-        isHTTP2: false
-        metadata:
-          kind: HTTPRoute
-          name: httproute-6
-          namespace: default
-        name: httproute/default/httproute-6/rule/0/match/0/www_bar_com
-        pathMatch:
-          distinct: false
-          name: ""
-          prefix: /bar
+          prefix: /qux
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
