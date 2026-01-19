@@ -291,7 +291,7 @@ end
 				luaConfig := &luafilterv3.Lua{}
 				err := filter.GetTypedConfig().UnmarshalTo(luaConfig)
 				require.NoError(t, err)
-				assert.Equal(t, "", luaConfig.DefaultSourceCode.GetInlineString())
+				assert.Empty(t, luaConfig.DefaultSourceCode.GetInlineString())
 			},
 		},
 	}
@@ -668,7 +668,7 @@ func TestLuaFilterValidation(t *testing.T) {
 
 	// Verify the Lua configuration is valid according to Envoy's validation
 	err = luaConfig.ValidateAll()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// Verify the source code is set correctly
 	require.NotNil(t, luaConfig.DefaultSourceCode)
