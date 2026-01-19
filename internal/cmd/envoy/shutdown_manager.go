@@ -10,9 +10,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"os/signal"
+	"regexp"
 	"syscall"
 	"time"
 
@@ -132,12 +134,14 @@ func Shutdown(drainTimeout, minDrainDuration time.Duration, exitAtConnections in
 		logger.Error(err, "error failing active health checks")
 	}
 
+	useServerConnections := os.Getenv("USE_SERVER_CONNECTIONS") == "true"
+
 	// Poll total connections from Envoy admin API until minimum drain period has
 	// been reached and total connections reaches threshold or timeout is exceeded
 	for {
 		elapsedTime := time.Since(startTime)
 
-		conn, err := getTotalConnections()
+		conn, err := getTotalConnections(useServerConnections)
 		if err != nil {
 			logger.Error(err, "error getting total connections")
 		}
@@ -169,21 +173,30 @@ func Shutdown(drainTimeout, minDrainDuration time.Duration, exitAtConnections in
 
 // postEnvoyAdminAPI sends a POST request to the Envoy admin API
 func postEnvoyAdminAPI(path string) error {
-	if resp, err := http.Post(fmt.Sprintf("http://%s:%d/%s",
-		"localhost", bootstrap.EnvoyAdminPort, path), "application/json", nil); err != nil {
+	resp, err := http.Post(fmt.Sprintf("http://%s:%d/%s",
+		"localhost", bootstrap.EnvoyAdminPort, path), "application/json", nil)
+	if err != nil {
 		return err
-	} else {
-		defer resp.Body.Close()
-
-		if resp.StatusCode != http.StatusOK {
-			return fmt.Errorf("unexpected response status: %s", resp.Status)
-		}
-		return nil
 	}
+	defer func() {
+		_ = resp.Body.Close()
+	}()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("unexpected response status: %s", resp.Status)
+	}
+	return nil
 }
 
-// getTotalConnections retrieves the total number of open connections from Envoy's server.total_connections stat
-func getTotalConnections() (*int, error) {
+func getTotalConnections(useServerTotalConnections bool) (*int, error) {
+	if useServerTotalConnections {
+		return getServerConnections()
+	}
+	return getDownstreamCXActive()
+}
+
+// getServerConnections retrieves the total number of open connections from Envoy's server.total_connections stat
+func getServerConnections() (*int, error) {
 	// Send request to Envoy admin API to retrieve server.total_connections stat
 	if resp, err := http.Get(fmt.Sprintf("http://%s:%d//stats?filter=^server\\.total_connections$&format=json",
 		"localhost", bootstrap.EnvoyAdminPort)); err != nil {
@@ -215,8 +228,69 @@ func getTotalConnections() (*int, error) {
 
 			// Log and return total connections
 			c := r.Stats[0].Value
-			logger.Info(fmt.Sprintf("total connections: %d", c))
+			logger.Info(fmt.Sprintf("total server connections: %d", c))
 			return &c, nil
 		}
 	}
+}
+
+// Define struct to decode JSON response into; expecting a single stat in the response in the format:
+// {"stats":[{"name":"server.total_connections","value":123}]}
+type envoyStatsResponse struct {
+	Stats []struct {
+		Name  string
+		Value int
+	}
+}
+
+// skipConnectionRE is a regex to match connection stats to be excluded from total connections count
+// e.g. admin, ready and stat listener
+var skipConnectionRE = regexp.MustCompile(`admin|19001|19003|worker`)
+
+// getDownstreamCXActive retrieves the total number of open connections from Envoy's listener downstream_cx_active stat
+func getDownstreamCXActive() (*int, error) {
+	// Send request to Envoy admin API to retrieve listener.\.$.downstream_cx_active stat
+	statFilter := "^listener\\..*\\.downstream_cx_active$"
+	resp, err := http.Get(fmt.Sprintf("http://%s:%d//stats?filter=%s&format=json",
+		"localhost", bootstrap.EnvoyAdminPort, statFilter))
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		_ = resp.Body.Close()
+	}()
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("unexpected response status: %s", resp.Status)
+	}
+
+	totalConnection, err := parseTotalConnection(resp.Body)
+	if err != nil {
+		logger.Error(err, "error parsing total connections from response")
+		return nil, err
+	}
+
+	logger.Info(fmt.Sprintf("total downstream connections: %d", totalConnection))
+	return totalConnection, nil
+}
+
+func parseTotalConnection(statResponse io.ReadCloser) (*int, error) {
+	r := &envoyStatsResponse{}
+	// Decode JSON response into struct
+	if err := json.NewDecoder(statResponse).Decode(&r); err != nil {
+		return nil, err
+	}
+
+	// Defensive check for empty stats
+	if len(r.Stats) == 0 {
+		return nil, fmt.Errorf("no stats found")
+	}
+
+	totalConnection := 0
+	for _, stat := range r.Stats {
+		if excluded := skipConnectionRE.MatchString(stat.Name); !excluded {
+			totalConnection += stat.Value
+		}
+	}
+
+	return &totalConnection, nil
 }
