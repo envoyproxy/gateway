@@ -182,5 +182,4 @@ func TestGetTotalConnection(t *testing.T) {
 			require.Equal(t, tc.expectedCount, gotCount)
 		})
 	}
-
 }

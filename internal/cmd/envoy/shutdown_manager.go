@@ -195,6 +195,15 @@ func getTotalConnections(useServerTotalConnections bool) (*int, error) {
 	return getDownstreamCXActive()
 }
 
+// Define struct to decode JSON response into; expecting a single stat in the response in the format:
+// {"stats":[{"name":"server.total_connections","value":123}]}
+type envoyStatsResponse struct {
+	Stats []struct {
+		Name  string
+		Value int
+	}
+}
+
 // getServerConnections retrieves the total number of open connections from Envoy's server.total_connections stat
 func getServerConnections() (*int, error) {
 	// Send request to Envoy admin API to retrieve server.total_connections stat
@@ -209,12 +218,7 @@ func getServerConnections() (*int, error) {
 		} else {
 			// Define struct to decode JSON response into; expecting a single stat in the response in the format:
 			// {"stats":[{"name":"server.total_connections","value":123}]}
-			var r *struct {
-				Stats []struct {
-					Name  string
-					Value int
-				}
-			}
+			r := &envoyStatsResponse{}
 
 			// Decode JSON response into struct
 			if err := json.NewDecoder(resp.Body).Decode(&r); err != nil {
@@ -231,15 +235,6 @@ func getServerConnections() (*int, error) {
 			logger.Info(fmt.Sprintf("total server connections: %d", c))
 			return &c, nil
 		}
-	}
-}
-
-// Define struct to decode JSON response into; expecting a single stat in the response in the format:
-// {"stats":[{"name":"server.total_connections","value":123}]}
-type envoyStatsResponse struct {
-	Stats []struct {
-		Name  string
-		Value int
 	}
 }
 
