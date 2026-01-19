@@ -6,6 +6,7 @@
 package console
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -15,6 +16,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/telepresenceio/watchable"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
@@ -358,6 +360,84 @@ func TestHandleAPIConfigDumpWithResourceAll(t *testing.T) {
 	totalCount, ok := result["totalCount"].(float64)
 	assert.True(t, ok)
 	assert.Equal(t, float64(0), totalCount)
+}
+
+func TestHandleAPIConfigDumpWithResourceAllRedactsSecrets(t *testing.T) {
+	cfg := &config.Server{
+		Logger: logging.NewLogger(os.Stdout, egv1a1.DefaultEnvoyGatewayLogging()),
+	}
+
+	providerRes := &message.ProviderResources{}
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-secret",
+			Namespace: "default",
+			Annotations: map[string]string{
+				corev1.LastAppliedConfigAnnotation: "{\"data\":{\"token\":\"c3VwZXJzZWNyZXQ=\"}}",
+				"example.com/foo":                  "value",
+			},
+			ManagedFields: []metav1.ManagedFieldsEntry{
+				{
+					Manager:   "kubectl",
+					Operation: metav1.ManagedFieldsOperationApply,
+				},
+			},
+		},
+		Data: map[string][]byte{
+			"token": []byte("supersecret"),
+		},
+		StringData: map[string]string{
+			"token": "supersecret",
+		},
+	}
+	controllerResources := resource.ControllerResources{
+		&resource.Resources{
+			Secrets: []*corev1.Secret{secret},
+		},
+	}
+	providerRes.GatewayAPIResources.Store("test", &resource.ControllerResourcesContext{
+		Resources: &controllerResources,
+		Context:   context.Background(),
+	})
+
+	handler := NewHandler(cfg, providerRes)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/config_dump?resource=all", nil)
+	resp := httptest.NewRecorder()
+
+	handler.handleAPIConfigDump(resp, req)
+
+	assert.Equal(t, http.StatusOK, resp.Code)
+
+	var result struct {
+		Resources []*resource.Resources `json:"resources"`
+	}
+	resultErr := json.Unmarshal(resp.Body.Bytes(), &result)
+	require.NoError(t, resultErr)
+
+	require.Len(t, result.Resources, 1)
+	require.Len(t, result.Resources[0].Secrets, 1)
+	masked := result.Resources[0].Secrets[0]
+	// Ensure the masked secret is redacted
+	assert.Contains(t, masked.Data, "token")
+	assert.Equal(t, redactedSecretValueBytes, masked.Data["token"])
+	assert.Equal(t, redactedSecretValue, masked.StringData["token"])
+	assert.Equal(t, "test-secret", masked.Name)
+	assert.Empty(t, masked.Annotations)
+	assert.Empty(t, masked.ManagedFields)
+	// Ensure the original secret is not modified
+	assert.Equal(t, []byte("supersecret"), secret.Data["token"])
+	assert.Equal(t, "supersecret", secret.StringData["token"])
+	assert.Equal(t, map[string]string{
+		corev1.LastAppliedConfigAnnotation: "{\"data\":{\"token\":\"c3VwZXJzZWNyZXQ=\"}}",
+		"example.com/foo":                  "value",
+	}, secret.Annotations)
+	assert.Equal(t, []metav1.ManagedFieldsEntry{
+		{
+			Manager:   "kubectl",
+			Operation: metav1.ManagedFieldsOperationApply,
+		},
+	}, secret.ManagedFields)
 }
 
 func TestHandleAPIConfigDumpWithResourceAllMethodNotAllowed(t *testing.T) {
