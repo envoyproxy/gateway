@@ -100,7 +100,7 @@ type EnvoyGatewaySpec struct {
 	// +optional
 	ExtensionAPIs *ExtensionAPISettings `json:"extensionApis,omitempty"`
 
-	// ExperimentalGatewayAPIs defines feature flags for experimental Gateway API resources.
+	// GatewayAPIs defines feature flags for experimental Gateway API resources.
 	// These APIs live under the gateway.networking.x-k8s.io group and are opt-in.
 	//
 	// +optional
