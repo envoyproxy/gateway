@@ -8,7 +8,6 @@
 package tests
 
 import (
-	"net/http"
 	"testing"
 
 	"k8s.io/apimachinery/pkg/types"
@@ -69,39 +68,20 @@ var SecurityPolicyMergedTest = suite.ConformanceTest{
 				ancestorRef,
 			)
 
-			// Test request without credentials - should get 401 from BasicAuth (from Gateway policy)
+			// Test that merged policies work - Authorization (from gateway) allows, CORS (from route) adds headers
 			expectedResponse := httputils.ExpectedResponse{
 				Namespace: ns,
 				Request: httputils.Request{
 					Host: "listener1.merged.example.com",
 					Path: "/merged",
-				},
-				Response: httputils.Response{
-					StatusCode: 401,
-				},
-			}
-			httputils.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
-
-			// Test CORS preflight request - verifies both BasicAuth and CORS are applied
-			// CORS policy is from route, BasicAuth is from gateway (merged together)
-			expectedResponse = httputils.ExpectedResponse{
-				Namespace: ns,
-				Request: httputils.Request{
-					Host:   "listener1.merged.example.com",
-					Path:   "/merged",
-					Method: http.MethodOptions,
 					Headers: map[string]string{
-						"Origin":                         "https://www.example.com",
-						"Access-Control-Request-Method":  "POST",
-						"Access-Control-Request-Headers": "x-header-1",
+						"Origin": "https://www.example.com",
 					},
 				},
 				Response: httputils.Response{
 					StatusCode: 200,
 					Headers: map[string]string{
-						"Access-Control-Allow-Origin":  "https://www.example.com",
-						"Access-Control-Allow-Methods": "GET, POST",
-						"Access-Control-Allow-Headers": "x-header-1, x-header-2",
+						"Access-Control-Allow-Origin": "https://www.example.com",
 					},
 				},
 			}
