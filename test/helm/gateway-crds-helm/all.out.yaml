@@ -45709,9 +45709,11 @@ spec:
                         - name
                         - value
                         type: object
+                      maxItems: 16
                       minItems: 1
                       type: array
                   type: object
+                maxItems: 8
                 type: array
               urlRewrite:
                 description: HTTPURLRewriteFilter define rewrites of HTTP URL components
