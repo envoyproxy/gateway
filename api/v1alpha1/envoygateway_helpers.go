@@ -128,7 +128,6 @@ var defaultRuntimeFlags = map[RuntimeFlag]bool{
 	XDSNameSchemeV2: false,
 }
 
-
 // IsEnabled checks if an experimental Gateway API is enabled in the EnvoyGateway configuration.
 func (f *GatewayAPIs) IsEnabled(api GatewayAPI) bool {
 	if f != nil {
