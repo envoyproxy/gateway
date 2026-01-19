@@ -1,3 +1,4 @@
+---
 date: Pending
 # Changes that are expected to cause an incompatibility with previous versions, such as deletions or modifications to existing APIs.
 breaking changes: |
@@ -31,4 +32,4 @@ performance improvements: ""
 deprecations: ""
 # Other notable changes not covered by the above sections.
 Other changes: |
-  Added clientScheme field to BackendTrafficPolicy enabling scheme header transformation to match upstream transport protocol, allowing gateways with HTTP listeners to proxy to HTTPS services without protocol errors
+  Added scheme field to ClientTrafficPolicy enabling scheme header transformation to match backend transport protocol, allowing gateways with HTTP listeners to proxy to HTTPS services without protocol errors

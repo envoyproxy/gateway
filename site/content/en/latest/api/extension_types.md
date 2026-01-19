@@ -542,7 +542,6 @@ _Appears in:_
 | `rateLimit` | _[RateLimitSpec](#ratelimitspec)_ |  false  |  | RateLimit allows the user to limit the number of incoming requests<br />to a predefined value based on attributes within the traffic flow. |
 | `faultInjection` | _[FaultInjection](#faultinjection)_ |  false  |  | FaultInjection defines the fault injection policy to be applied. This configuration can be used to<br />inject delays and abort requests to mimic failure scenarios such as service failures and overloads |
 | `useClientProtocol` | _boolean_ |  false  |  | UseClientProtocol configures Envoy to prefer sending requests to backends using<br />the same HTTP protocol that the incoming request used. Defaults to false, which means<br />that Envoy will use the protocol indicated by the attached BackendRef. |
-| `clientScheme` | _[ClientScheme](#clientscheme)_ |  false  |  | ClientScheme configures how the :scheme pseudo-header is set for requests forwarded to backends.<br />- PreserveDownstream (default): Preserves the :scheme from the original client request.<br />  Use this when backends need to know the original client scheme for URL generation or redirects.<br />- MatchUpstream: Sets the :scheme to match the upstream transport protocol.<br />  If the backend uses TLS, the scheme is "https", otherwise "http".<br />  Use this when backends require the scheme to match the actual transport protocol,<br />  such as strictly HTTPS services that validate the :scheme header.<br />This setting only takes effect when BackendTrafficPolicy targets a Gateway. |
 | `compression` | _[Compression](#compression) array_ |  false  |  | The compression config for the http streams.<br />Deprecated: Use Compressor instead. |
 | `compressor` | _[Compression](#compression) array_ |  false  |  | The compressor config for the http streams.<br />This provides more granular control over compression configuration.<br />Order matters: The first compressor in the list is preferred when q-values in Accept-Encoding are equal. |
 | `responseOverride` | _[ResponseOverride](#responseoverride) array_ |  false  |  | ResponseOverride defines the configuration to override specific responses with a custom one.<br />If multiple configurations are specified, the first one to match wins. |
@@ -722,21 +721,6 @@ _Appears in:_
 | `customHeader` | _[CustomHeaderExtensionSettings](#customheaderextensionsettings)_ |  false  |  | CustomHeader provides configuration for determining the client IP address for a request based on<br />a trusted custom HTTP header. This uses the custom_header original IP detection extension.<br />Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/http/original_ip_detection/custom_header/v3/custom_header.proto<br />for more details. |
 
 
-#### ClientScheme
-
-_Underlying type:_ _string_
-
-ClientScheme defines how the :scheme pseudo-header is set for requests forwarded to backends.
-
-_Appears in:_
-- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
-
-| Value | Description |
-| ----- | ----------- |
-| `PreserveDownstream` | ClientSchemePreserveDownstream preserves the :scheme from the original client request.<br />This is the default behavior.<br /> | 
-| `MatchUpstream` | ClientSchemeMatchUpstream sets the :scheme to match the upstream transport protocol.<br />If the backend uses TLS, the scheme is "https", otherwise "http".<br /> | 
-
-
 #### ClientTLSSettings
 
 
@@ -818,6 +802,7 @@ _Appears in:_
 | `http2` | _[HTTP2Settings](#http2settings)_ |  false  |  | HTTP2 provides HTTP/2 configuration on the listener. |
 | `http3` | _[HTTP3Settings](#http3settings)_ |  false  |  | HTTP3 provides HTTP/3 configuration on the listener. |
 | `healthCheck` | _[HealthCheckSettings](#healthchecksettings)_ |  false  |  | HealthCheck provides configuration for determining whether the HTTP/HTTPS listener is healthy. |
+| `scheme` | _[SchemeHeaderTransform](#schemeheadertransform)_ |  false  |  | Scheme configures how the :scheme pseudo-header is set for requests forwarded to backends.<br />- Preserve (default): Preserves the :scheme from the original client request.<br />  Use this when backends need to know the original client scheme for URL generation or redirects.<br />- MatchBackend: Sets the :scheme to match the backend transport protocol.<br />  If the backend uses TLS, the scheme is "https", otherwise "http".<br />  Use this when backends require the scheme to match the actual transport protocol,<br />  such as strictly HTTPS services that validate the :scheme header. |
 
 
 #### ClientValidationContext
@@ -4838,6 +4823,21 @@ _Appears in:_
 | `disabled` | _[RuntimeFlag](#runtimeflag) array_ |  true  |  |  |
 
 
+
+
+#### SchemeHeaderTransform
+
+_Underlying type:_ _string_
+
+SchemeHeaderTransform defines how the :scheme pseudo-header is set for requests forwarded to backends.
+
+_Appears in:_
+- [ClientTrafficPolicySpec](#clienttrafficpolicyspec)
+
+| Value | Description |
+| ----- | ----------- |
+| `Preserve` | SchemeHeaderTransformPreserve preserves the :scheme from the original client request.<br />This is the default behavior.<br /> | 
+| `MatchBackend` | SchemeHeaderTransformMatchBackend sets the :scheme to match the backend transport protocol.<br />If the backend uses TLS, the scheme is "https", otherwise "http".<br /> | 
 
 
 #### SecretTranslationConfig

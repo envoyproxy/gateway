@@ -375,7 +375,7 @@ func (t *Translator) addHCMToXDSListener(
 
 	// Set the :scheme header to match the upstream transport protocol (http/https) if configured.
 	// This ensures the correct scheme is sent to backends using TLS when enabled.
-	if irListener.MatchUpstreamScheme {
+	if irListener.MatchBackendScheme {
 		mgr.SchemeHeaderTransformation = &corev3.SchemeHeaderTransformation{
 			MatchUpstream: true,
 		}

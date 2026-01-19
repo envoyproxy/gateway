@@ -738,11 +738,6 @@ func (in *BackendTrafficPolicySpec) DeepCopyInto(out *BackendTrafficPolicySpec) 
 		*out = new(bool)
 		**out = **in
 	}
-	if in.ClientScheme != nil {
-		in, out := &in.ClientScheme, &out.ClientScheme
-		*out = new(ClientScheme)
-		**out = **in
-	}
 	if in.Compression != nil {
 		in, out := &in.Compression, &out.Compression
 		*out = make([]*Compression, len(*in))
@@ -1202,6 +1197,11 @@ func (in *ClientTrafficPolicySpec) DeepCopyInto(out *ClientTrafficPolicySpec) {
 	if in.HealthCheck != nil {
 		in, out := &in.HealthCheck, &out.HealthCheck
 		*out = new(HealthCheckSettings)
+		**out = **in
+	}
+	if in.Scheme != nil {
+		in, out := &in.Scheme, &out.Scheme
+		*out = new(SchemeHeaderTransform)
 		**out = **in
 	}
 }

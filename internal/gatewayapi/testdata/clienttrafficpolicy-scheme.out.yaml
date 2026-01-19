@@ -1,6 +1,7 @@
-backendTrafficPolicies:
+---
+clientTrafficPolicies:
   - apiVersion: gateway.envoyproxy.io/v1alpha1
-    kind: BackendTrafficPolicy
+    kind: ClientTrafficPolicy
     metadata:
       name: policy-for-gateway
       namespace: envoy-gateway
@@ -9,7 +10,7 @@ backendTrafficPolicies:
         group: gateway.networking.k8s.io
         kind: Gateway
         name: gateway-1
-      clientScheme: MatchUpstream
+      scheme: MatchBackend
     status:
       ancestors:
         - ancestorRef:
@@ -154,7 +155,7 @@ xdsIR:
         hostnames:
           - '*'
         isHTTP2: false
-        matchUpstreamScheme: true
+        matchBackendScheme: true
         metadata:
           kind: Gateway
           name: gateway-1
@@ -196,7 +197,6 @@ xdsIR:
               distinct: false
               name: ""
               prefix: /
-            traffic: {}
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

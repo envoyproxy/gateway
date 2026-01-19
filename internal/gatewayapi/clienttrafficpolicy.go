@@ -476,6 +476,9 @@ func (t *Translator) translateClientTrafficPolicyForListener(
 		// Translate Health Check Settings
 		translateHealthCheckSettings(policy.Spec.HealthCheck, httpIR)
 
+		// Translate Scheme Header Transformation
+		translateSchemeHeaderTransform(policy.Spec.Scheme, httpIR)
+
 		// Translate TLS parameters
 		tlsConfig, err = t.buildListenerTLSParameters(policy, httpIR.TLS, resources)
 		if err != nil {
@@ -757,6 +760,18 @@ func translateHealthCheckSettings(healthCheckSettings *egv1a1.HealthCheckSetting
 	}
 
 	httpIR.HealthCheck = (*ir.HealthCheckSettings)(healthCheckSettings)
+}
+
+func translateSchemeHeaderTransform(scheme *egv1a1.SchemeHeaderTransform, httpIR *ir.HTTPListener) {
+	// Return early if not set or if set to Preserve (default behavior)
+	if scheme == nil || *scheme == egv1a1.SchemeHeaderTransformPreserve {
+		return
+	}
+
+	// Set MatchBackendScheme to true when scheme is set to MatchBackend
+	if *scheme == egv1a1.SchemeHeaderTransformMatchBackend {
+		httpIR.MatchBackendScheme = true
+	}
 }
 
 func (t *Translator) buildListenerTLSParameters(
