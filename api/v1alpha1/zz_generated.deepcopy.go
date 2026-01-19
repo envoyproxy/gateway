@@ -3681,6 +3681,11 @@ func (in *HTTPHeaderFilter) DeepCopyInto(out *HTTPHeaderFilter) {
 		*out = make([]v1.HTTPHeader, len(*in))
 		copy(*out, *in)
 	}
+	if in.AddIfAbsent != nil {
+		in, out := &in.AddIfAbsent, &out.AddIfAbsent
+		*out = make([]v1.HTTPHeader, len(*in))
+		copy(*out, *in)
+	}
 	if in.Remove != nil {
 		in, out := &in.Remove, &out.Remove
 		*out = make([]string, len(*in))

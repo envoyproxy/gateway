@@ -52,7 +52,7 @@ func GetServerCommand(asyncErrHandler func(string, error)) *cobra.Command {
 		Use:     "server",
 		Aliases: []string{"serve"},
 		Short:   "Serve Envoy Gateway",
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			runnerErrors := &message.RunnerErrors{}
 			defer runnerErrors.Close()
 			go message.HandleSubscription(message.Metadata{Runner: "runner-errors", Message: message.RunnerErrorsMessageName},

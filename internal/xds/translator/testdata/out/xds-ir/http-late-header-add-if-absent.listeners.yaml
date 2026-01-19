@@ -1,0 +1,67 @@
+- address:
+    socketAddress:
+      address: '::'
+      portValue: 10080
+  defaultFilterChain:
+    filters:
+    - name: envoy.filters.network.http_connection_manager
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+        commonHttpProtocolOptions:
+          headersWithUnderscoresAction: REJECT_REQUEST
+        earlyHeaderMutationExtensions:
+        - name: envoy.http.early_header_mutation.header_mutation
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.http.early_header_mutation.header_mutation.v3.HeaderMutation
+            mutations:
+            - append:
+                appendAction: ADD_IF_ABSENT
+                header:
+                  key: early-add-if-absent-header
+                  value: early-default-value
+        http2ProtocolOptions:
+          initialConnectionWindowSize: 1048576
+          initialStreamWindowSize: 65536
+          maxConcurrentStreams: 100
+        httpFilters:
+        - name: envoy.filters.http.header_mutation
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.header_mutation.v3.HeaderMutation
+            mutations:
+              responseMutations:
+              - append:
+                  appendAction: ADD_IF_ABSENT
+                  header:
+                    key: add-if-absent-header
+                    value: default-value
+              - append:
+                  appendAction: ADD_IF_ABSENT
+                  header:
+                    key: another-add-if-absent
+                    value: another-default
+              - append:
+                  header:
+                    key: regular-append-header
+                    value: regular-value
+              - append:
+                  appendAction: OVERWRITE_IF_EXISTS_OR_ADD
+                  header:
+                    key: regular-set-header
+                    value: set-value
+        - name: envoy.filters.http.router
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+            suppressEnvoyHeaders: true
+        normalizePath: true
+        rds:
+          configSource:
+            ads: {}
+            resourceApiVersion: V3
+          routeConfigName: first-listener
+        serverHeaderTransformation: PASS_THROUGH
+        statPrefix: http-10080
+        useRemoteAddress: true
+    name: first-listener
+  maxConnectionsToAcceptPerSocketEvent: 1
+  name: first-listener
+  perConnectionBufferLimitBytes: 32768

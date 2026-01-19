@@ -42,7 +42,7 @@ func New(cfg *config.Server) *Runner {
 	}
 }
 
-func (r *Runner) Start(ctx context.Context) error {
+func (r *Runner) Start(_ context.Context) error {
 	metricsLogger := r.cfg.Logger.WithName("metrics")
 	otel.SetLogger(metricsLogger.Logger)
 
