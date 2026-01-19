@@ -377,7 +377,7 @@ spec:
         "k8s.namespace.name": "%ENVIRONMENT(ENVOY_POD_NAMESPACE)%"
         # This is an example of using a header value as a tag value
         "header1": "%REQUEST_HEADER(X-Header-1)%"
-        "requestedServerName": "%REQUESTED_SERVER_NAME%
+        "requestedServerName": "%REQUESTED_SERVER_NAME%"
 ```
 
 [envoy-proxy-crd]: ../../api/extension_types#envoyproxy
