@@ -258,9 +258,9 @@ func getDownstreamCXActive() (*int, error) {
 		return nil, fmt.Errorf("unexpected response status: %s", resp.Status)
 	}
 
-	totalConnection, err := parseTotalConnection(resp.Body)
+	totalConnection, err := parseDownstreamCXActive(resp.Body)
 	if err != nil {
-		logger.Error(err, "error parsing total connections from response")
+		logger.Error(err, "error parsing downstream connections from response")
 		return nil, err
 	}
 
@@ -268,7 +268,7 @@ func getDownstreamCXActive() (*int, error) {
 	return totalConnection, nil
 }
 
-func parseTotalConnection(statResponse io.ReadCloser) (*int, error) {
+func parseDownstreamCXActive(statResponse io.ReadCloser) (*int, error) {
 	r := &envoyStatsResponse{}
 	// Decode JSON response into struct
 	if err := json.NewDecoder(statResponse).Decode(&r); err != nil {

@@ -14,7 +14,7 @@ import (
 	"k8s.io/utils/ptr"
 )
 
-func TestGetTotalConnection(t *testing.T) {
+func TestGetDownstreamCXActive(t *testing.T) {
 	cases := []struct {
 		input string
 
@@ -177,7 +177,7 @@ func TestGetTotalConnection(t *testing.T) {
 			defer func() {
 				_ = rc.Close()
 			}()
-			gotCount, gotError := parseTotalConnection(rc)
+			gotCount, gotError := parseDownstreamCXActive(rc)
 			require.Equal(t, tc.expectedError, gotError)
 			require.Equal(t, tc.expectedCount, gotCount)
 		})
