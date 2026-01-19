@@ -751,7 +751,7 @@ func (t *Translator) processHTTPRouteRule(
 		if (httpFiltersContext != nil && httpFiltersContext.CORS != nil) &&
 			(match.Method != nil && string(*match.Method) != "OPTIONS") &&
 			// Browsers will not send cookies for CORS preflight requests, so there's no need to create a CORS preflight
-			// route if there are no cookie matches.
+			// route if there are cookie matches.
 			len(irRoute.CookieMatches) == 0 {
 			corsRoute := &ir.HTTPRoute{
 				Name:              irRouteName(httpRoute, ruleIdx, matchIdx) + "/cors-preflight",
