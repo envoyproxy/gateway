@@ -585,10 +585,10 @@ spec:
           jwt:
             provider: entra
             claims:
-            - name: roles
-              valueType: "StringArray"
-              values:
-              - "administrators"
+              - name: roles
+                valueType: "StringArray"
+                values:
+                  - "administrators"
   jwt:
     providers:
       - name: entra
