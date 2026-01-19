@@ -10,11 +10,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
 	"regexp"
+	"strconv"
 	"syscall"
 	"time"
 
@@ -141,7 +142,7 @@ func Shutdown(drainTimeout, minDrainDuration time.Duration, exitAtConnections in
 	for {
 		elapsedTime := time.Since(startTime)
 
-		conn, err := getTotalConnections(useServerConnections)
+		conn, err := getTotalConnections(useServerConnections, bootstrap.EnvoyAdminPort)
 		if err != nil {
 			logger.Error(err, "error getting total connections")
 		}
@@ -188,11 +189,11 @@ func postEnvoyAdminAPI(path string) error {
 	return nil
 }
 
-func getTotalConnections(useServerTotalConnections bool) (*int, error) {
+func getTotalConnections(useServerTotalConnections bool, port int) (*int, error) {
 	if useServerTotalConnections {
-		return getServerConnections()
+		return getServerConnections(port)
 	}
-	return getDownstreamCXActive()
+	return getDownstreamCXActive(port)
 }
 
 // Define struct to decode JSON response into; expecting a single stat in the response in the format:
@@ -205,52 +206,27 @@ type envoyStatsResponse struct {
 }
 
 // getServerConnections retrieves the total number of open connections from Envoy's server.total_connections stat
-func getServerConnections() (*int, error) {
+func getServerConnections(port int) (*int, error) {
 	// Send request to Envoy admin API to retrieve server.total_connections stat
-	if resp, err := http.Get(fmt.Sprintf("http://%s:%d//stats?filter=^server\\.total_connections$&format=json",
-		"localhost", bootstrap.EnvoyAdminPort)); err != nil {
-		return nil, err
-	} else {
-		defer resp.Body.Close()
-
-		if resp.StatusCode != http.StatusOK {
-			return nil, fmt.Errorf("unexpected response status: %s", resp.Status)
-		} else {
-			// Define struct to decode JSON response into; expecting a single stat in the response in the format:
-			// {"stats":[{"name":"server.total_connections","value":123}]}
-			r := &envoyStatsResponse{}
-
-			// Decode JSON response into struct
-			if err := json.NewDecoder(resp.Body).Decode(&r); err != nil {
-				return nil, err
-			}
-
-			// Defensive check for empty stats
-			if len(r.Stats) == 0 {
-				return nil, fmt.Errorf("no stats found")
-			}
-
-			// Log and return total connections
-			c := r.Stats[0].Value
-			logger.Info(fmt.Sprintf("total server connections: %d", c))
-			return &c, nil
-		}
+	statFilter := "^server\\.total_connections$"
+	r, err := getStatsFromEnvoyStatsEndpoint(port, statFilter)
+	if err != nil {
+		return nil, fmt.Errorf("error getting server total_connections stat: %w", err)
 	}
+
+	// Log and return total connections
+	c := r.Stats[0].Value
+	logger.Info(fmt.Sprintf("total server connections: %d", c))
+	return &c, nil
 }
 
-// skipConnectionRE is a regex to match connection stats to be excluded from total connections count
-// e.g. admin, ready and stat listener
-var skipConnectionRE = regexp.MustCompile(`admin|19001|19003|worker`)
-
-// getDownstreamCXActive retrieves the total number of open connections from Envoy's listener downstream_cx_active stat
-func getDownstreamCXActive() (*int, error) {
-	// Send request to Envoy admin API to retrieve listener.\.$.downstream_cx_active stat
-	statFilter := "^listener\\..*\\.downstream_cx_active$"
-	resp, err := http.Get(fmt.Sprintf("http://%s:%d//stats?filter=%s&format=json",
-		"localhost", bootstrap.EnvoyAdminPort, statFilter))
+func getStatsFromEnvoyStatsEndpoint(port int, statFilter string) (*envoyStatsResponse, error) {
+	resp, err := http.Get(fmt.Sprintf("http://%s//stats?filter=%s&format=json",
+		net.JoinHostPort("localhost", strconv.Itoa(port)), statFilter))
 	if err != nil {
 		return nil, err
 	}
+
 	defer func() {
 		_ = resp.Body.Close()
 	}()
@@ -258,20 +234,9 @@ func getDownstreamCXActive() (*int, error) {
 		return nil, fmt.Errorf("unexpected response status: %s", resp.Status)
 	}
 
-	totalConnection, err := parseDownstreamCXActive(resp.Body)
-	if err != nil {
-		logger.Error(err, "error parsing downstream connections from response")
-		return nil, err
-	}
-
-	logger.Info(fmt.Sprintf("total downstream connections: %d", totalConnection))
-	return totalConnection, nil
-}
-
-func parseDownstreamCXActive(statResponse io.ReadCloser) (*int, error) {
 	r := &envoyStatsResponse{}
 	// Decode JSON response into struct
-	if err := json.NewDecoder(statResponse).Decode(&r); err != nil {
+	if err := json.NewDecoder(resp.Body).Decode(&r); err != nil {
 		return nil, err
 	}
 
@@ -280,6 +245,28 @@ func parseDownstreamCXActive(statResponse io.ReadCloser) (*int, error) {
 		return nil, fmt.Errorf("no stats found")
 	}
 
+	return r, nil
+}
+
+// getDownstreamCXActive retrieves the total number of open connections from Envoy's listener downstream_cx_active stat
+func getDownstreamCXActive(port int) (*int, error) {
+	// Send request to Envoy admin API to retrieve listener.\.$.downstream_cx_active stat
+	statFilter := "^listener\\..*\\.downstream_cx_active$"
+	r, err := getStatsFromEnvoyStatsEndpoint(port, statFilter)
+	if err != nil {
+		return nil, fmt.Errorf("error getting listener downstream_cx_active stat: %w", err)
+	}
+
+	totalConnection := filterDownstreamCXActive(r)
+	logger.Info(fmt.Sprintf("total downstream connections: %d", totalConnection))
+	return totalConnection, nil
+}
+
+// skipConnectionRE is a regex to match connection stats to be excluded from total connections count
+// e.g. admin, ready and stat listener
+var skipConnectionRE = regexp.MustCompile(`admin|19001|19003|worker`)
+
+func filterDownstreamCXActive(r *envoyStatsResponse) *int {
 	totalConnection := 0
 	for _, stat := range r.Stats {
 		if excluded := skipConnectionRE.MatchString(stat.Name); !excluded {
@@ -287,5 +274,5 @@ func parseDownstreamCXActive(statResponse io.ReadCloser) (*int, error) {
 		}
 	}
 
-	return &totalConnection, nil
+	return &totalConnection
 }

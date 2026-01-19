@@ -6,31 +6,68 @@
 package envoy
 
 import (
+	"errors"
+	"fmt"
 	"io"
+	"net"
+	"net/http"
+	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	"k8s.io/utils/ptr"
 )
 
-func TestGetDownstreamCXActive(t *testing.T) {
+// setupFakeEnvoyStats set up an HTTP server return content
+func setupFakeEnvoyStats(t *testing.T, content string) *http.Server {
+	l, err := net.Listen("tcp", ":0") //nolint: gosec
+	require.NoError(t, err)
+	require.NoError(t, l.Close())
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", func(writer http.ResponseWriter, _ *http.Request) {
+		writer.Header().Set("Content-Type", "application/json")
+		writer.WriteHeader(http.StatusOK)
+		_, _ = writer.Write([]byte(content))
+	})
+
+	addr := l.Addr().String()
+	s := &http.Server{
+		Addr:              addr,
+		Handler:           mux,
+		ReadHeaderTimeout: time.Second,
+	}
+	t.Logf("start to listen at %s ", addr)
+	go func() {
+		if err := s.ListenAndServe(); err != nil {
+			fmt.Println("fail to listen: ", err)
+		}
+	}()
+
+	return s
+}
+
+func TestGetTotalConnections(t *testing.T) {
 	cases := []struct {
-		input string
+		name                      string
+		input                     string
+		useServerTotalConnections bool
 
 		expectedError error
 		expectedCount *int
 	}{
 		{
+			name: "downstream_cx_active",
 			input: `{
     "stats": [
         {
             "name": "listener.0.0.0.0_8000.downstream_cx_active",
-            "value": 0
+            "value": 1
         },
         {
             "name": "listener.0.0.0.0_8000.worker_0.downstream_cx_active",
-            "value": 0
+            "value": 1
         },
         {
             "name": "listener.0.0.0.0_8000.worker_1.downstream_cx_active",
@@ -166,19 +203,50 @@ func TestGetDownstreamCXActive(t *testing.T) {
         }
     ]
 }`,
-			expectedCount: ptr.To(0),
+			expectedCount: ptr.To(1),
+		},
+		{
+			name:                      "total_connections",
+			input:                     `{"stats":[{"name":"server.total_connections","value":1}]}`,
+			useServerTotalConnections: true,
+			expectedCount:             ptr.To(1),
+		},
+		{
+			name:                      "invalid-with-server.total_connections",
+			input:                     `{"stats":[{"name":"server.total_connections","value":1]}`,
+			useServerTotalConnections: true,
+			expectedError:             errors.New("error getting server total_connections stat"),
+		},
+		{
+			name:          "invalid",
+			input:         `{"stats":[{"name":"listener.0.0.0.0_8000.downstream_cx_active","value":1]}`,
+			expectedError: errors.New("error getting listener downstream_cx_active stat"),
 		},
 	}
 
 	for _, tc := range cases {
-		t.Run("", func(t *testing.T) {
+		t.Run(tc.name, func(t *testing.T) {
+			s := setupFakeEnvoyStats(t, tc.input)
+			_, port, err := net.SplitHostPort(s.Addr)
+			require.NoError(t, err)
+
+			p, err := strconv.Atoi(port)
+			require.NoError(t, err)
+			defer func() {
+				_ = s.Close()
+			}()
 			reader := strings.NewReader(tc.input)
 			rc := io.NopCloser(reader)
 			defer func() {
 				_ = rc.Close()
 			}()
-			gotCount, gotError := parseDownstreamCXActive(rc)
-			require.Equal(t, tc.expectedError, gotError)
+
+			gotCount, gotError := getTotalConnections(tc.useServerTotalConnections, p)
+			if tc.expectedError != nil {
+				require.ErrorContains(t, gotError, tc.expectedError.Error())
+				return
+			}
+			require.NoError(t, gotError)
 			require.Equal(t, tc.expectedCount, gotCount)
 		})
 	}
