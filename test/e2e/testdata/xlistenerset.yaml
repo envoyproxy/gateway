@@ -1,0 +1,54 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: xlistener-gateway
+  namespace: gateway-conformance-infra
+spec:
+  gatewayClassName: envoy-gateway-class
+  allowedListeners:
+    namespaces:
+      from: Same
+  listeners:
+  - name: core
+    port: 18080
+    protocol: HTTP
+    allowedRoutes:
+      namespaces:
+        from: Same
+---
+apiVersion: gateway.networking.x-k8s.io/v1alpha1
+kind: XListenerSet
+metadata:
+  name: xlistener-set
+  namespace: gateway-conformance-infra
+spec:
+  parentRef:
+    name: xlistener-gateway
+  listeners:
+  - name: extra-http
+    port: 18081
+    protocol: HTTP
+    allowedRoutes:
+      namespaces:
+        from: Same
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: xlistener-httproute
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+  - group: gateway.networking.k8s.io
+    kind: XListenerSet
+    namespace: gateway-conformance-infra
+    name: xlistener-set
+    sectionName: extra-http
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /xlistener
+    backendRefs:
+    - name: infra-backend-v1
+      port: 8080
