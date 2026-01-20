@@ -33,6 +33,15 @@ import (
 // oci URL prefix
 const ociURLPrefix = "oci://"
 
+// deprecatedFieldsUsedInEnvoyExtensionPolicy returns a map of deprecated field paths to their alternatives.
+func deprecatedFieldsUsedInEnvoyExtensionPolicy(policy *egv1a1.EnvoyExtensionPolicy) map[string]string {
+	deprecatedFields := make(map[string]string)
+	if policy.Spec.TargetRef != nil {
+		deprecatedFields["spec.targetRef"] = "spec.targetRefs"
+	}
+	return deprecatedFields
+}
+
 func (t *Translator) ProcessEnvoyExtensionPolicies(
 	envoyExtensionPolicies []*egv1a1.EnvoyExtensionPolicy,
 	gateways []*GatewayContext,
@@ -243,6 +252,11 @@ func (t *Translator) processEnvoyExtensionPolicyForRoute(
 	// Set Accepted condition if it is unset
 	status.SetAcceptedForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName, policy.Generation)
 
+	// Check for deprecated fields and set warning if any are found
+	if deprecatedFields := deprecatedFieldsUsedInEnvoyExtensionPolicy(policy); len(deprecatedFields) > 0 {
+		status.SetDeprecatedFieldsWarningForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName, policy.Generation, deprecatedFields)
+	}
+
 	// Check if this policy is overridden by other policies targeting at route rule levels
 	key := policyTargetRouteKey{
 		Kind:      string(currTarget.Kind),
@@ -313,6 +327,11 @@ func (t *Translator) processEnvoyExtensionPolicyForGateway(
 
 	// Set Accepted condition if it is unset
 	status.SetAcceptedForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName, policy.Generation)
+
+	// Check for deprecated fields and set warning if any are found
+	if deprecatedFields := deprecatedFieldsUsedInEnvoyExtensionPolicy(policy); len(deprecatedFields) > 0 {
+		status.SetDeprecatedFieldsWarningForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName, policy.Generation, deprecatedFields)
+	}
 
 	// Check if this policy is overridden by other policies targeting at route rule, route and listener levels
 	overriddenTargetsMessage := getOverriddenTargetsMessageForGateway(
@@ -515,26 +534,30 @@ func (t *Translator) translateEnvoyExtensionPolicyForRoute(
 						if r.EnvoyExtensions != nil {
 							continue
 						}
-						if wasmError != nil || luaError != nil || extProcError != nil {
-							switch {
-							case (extProcError != nil && extProcFailOpen) && (luaError == nil && wasmError == nil):
-								// skip the extProc application where the extProc is failing open and no other errors
-							case (wasmError != nil && wasmFailOpen) && (luaError == nil && extProcError == nil):
-								// skip the wasm application where the wasm is failing open and no other errors
-							case (extProcError != nil && extProcFailOpen) && (wasmError != nil && wasmFailOpen) && luaError == nil:
-								// skip the wasm and extProc application where both are failing open and no lua errors
-							default:
-								r.DirectResponse = &ir.CustomResponse{
-									StatusCode: ptr.To(uint32(500)),
-								}
-								routesWithDirectResponse.Insert(r.Name)
-							}
-							continue
+
+						failRoute := false
+						// Lua extension doesn't have a fail open option, so fail the route if there is a lua error
+						// TODO: we may also add fail open option for Lua extension to align with other extensions
+						if luaError != nil {
+							failRoute = true
 						}
-						r.EnvoyExtensions = &ir.EnvoyExtensionFeatures{
-							ExtProcs: extProcs,
-							Wasms:    wasms,
-							Luas:     luas,
+						if wasmError != nil {
+							failRoute = failRoute || !wasmFailOpen
+						}
+						if extProcError != nil {
+							failRoute = failRoute || !extProcFailOpen
+						}
+						if failRoute {
+							r.DirectResponse = &ir.CustomResponse{
+								StatusCode: ptr.To(uint32(500)),
+							}
+							routesWithDirectResponse.Insert(r.Name)
+						} else {
+							r.EnvoyExtensions = &ir.EnvoyExtensionFeatures{
+								ExtProcs: extProcs,
+								Wasms:    wasms,
+								Luas:     luas,
+							}
 						}
 					}
 				}
@@ -606,27 +629,29 @@ func (t *Translator) translateEnvoyExtensionPolicyForGateway(
 				continue
 			}
 
-			if errs != nil {
-				switch {
-				case (extProcError != nil && extProcFailOpen) && (luaError == nil && wasmError == nil):
-					// skip the extProc application where the extProc is failing open and no other errors
-				case (wasmError != nil && wasmFailOpen) && (luaError == nil && extProcError == nil):
-					// skip the wasm application where the wasm is failing open and no other errors
-				case (extProcError != nil && extProcFailOpen) && (wasmError != nil && wasmFailOpen) && luaError == nil:
-					// skip the wasm and extProc application where both are failing open and no lua errors
-				default:
-					r.DirectResponse = &ir.CustomResponse{
-						StatusCode: ptr.To(uint32(500)),
-					}
-					routesWithDirectResponse.Insert(r.Name)
-				}
-				continue
+			failRoute := false
+			// Lua extension doesn't have a fail open option, so fail the route if there is a lua error
+			// TODO: we may also add fail open option for Lua extension to align with other extensions
+			if luaError != nil {
+				failRoute = true
 			}
-
-			r.EnvoyExtensions = &ir.EnvoyExtensionFeatures{
-				ExtProcs: extProcs,
-				Wasms:    wasms,
-				Luas:     luas,
+			if wasmError != nil {
+				failRoute = failRoute || !wasmFailOpen
+			}
+			if extProcError != nil {
+				failRoute = failRoute || !extProcFailOpen
+			}
+			if failRoute {
+				r.DirectResponse = &ir.CustomResponse{
+					StatusCode: ptr.To(uint32(500)),
+				}
+				routesWithDirectResponse.Insert(r.Name)
+			} else {
+				r.EnvoyExtensions = &ir.EnvoyExtensionFeatures{
+					ExtProcs: extProcs,
+					Wasms:    wasms,
+					Luas:     luas,
+				}
 			}
 		}
 	}
@@ -647,6 +672,11 @@ func (t *Translator) buildLuas(
 ) ([]ir.Lua, error) {
 	if policy == nil {
 		return nil, nil
+	}
+
+	// If Lua EnvoyExtensionPolicies are disabled, skip building Lua filters.
+	if len(policy.Spec.Lua) > 0 && t.LuaEnvoyExtensionPolicyDisabled {
+		return nil, fmt.Errorf("Skipping Lua EnvoyExtensionPolicy as feature is disabled in the Gateway")
 	}
 
 	luaIRList := make([]ir.Lua, 0, len(policy.Spec.Lua))

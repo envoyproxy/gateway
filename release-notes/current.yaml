@@ -9,7 +9,10 @@ breaking changes: |
   Removed Accept-Encoding header from requests to backends when compression is enabled to avoid double compression issues.
   The default value `stats_tags` has been changed to improve the prometheus metrics output. Following metrics are affected: `envoy_cluster_*_rq_time_count`, `envoy_cluster_*_total_match_count`, `envoy_cluster_circuit_breakers_*_cx_open`.
 # Updates addressing vulnerabilities, security flaws, or compliance requirements.
-security updates: ""
+
+security updates: |
+  Restrict access to critical system resources via Lua EnvoyExtensionPolicies in the gateway controller. Set safe defaults and resource limits for the Lua runtime. Also support disabling Lua feature in extension policies.
+
 # New features or capabilities added in this release.
 new features: |
   Added support for weight in BackendRef API to enable traffic splitting for non-x-route resources.
@@ -17,7 +20,15 @@ new features: |
   Added support for priorityClassName in KubernetesPodSpec for Envoy Proxy pods.
   Added support for Global rate limit shadow mode.
   Added support for specifying both text (body) and attributes in access log format by making the type field optional.
+  Set warning status condition for deprecated fields in xPolicy CRDs.
   Added support for URLRewrite filter on individual backendRefs.
+  Added support for custom headers on OTLP exports (metrics, tracing, access logs).
+  Added support for configuring minimum response size for compression via minContentLength field in BackendTrafficPolicy.
+  Added support for custom span name.
+  Added support for TLS telemetry gRPC backends.
+  Added cookie matching support to HTTPRouteFilter matches, combined with HTTPRoute rule matches.
+  Added support for addIfAbsent header action in ClientTrafficPolicy EarlyRequestHeaders and LateResponseHeaders to add headers only when they don't already exist.
+
 bug fixes: |
   Fixed configured OIDC authorization endpoint being overridden by discovered endpoints from issuer's well-known URL.
   Fix 500 errors caused by partially invalid BackendRefs; traffic is now correctly routed between valid backends and 500 responses according to their configured weights.
@@ -26,10 +37,17 @@ bug fixes: |
   Fixed a nil pointer error when applying BackendTrafficPolicy to HTTPRoutes with no backendRefs.
   Fixed ExternalTrafficPolicy not being applied to Envoy Service when ServiceType is NodePort.
   Fixed CRL ref not processed by gateway controller.
+  Fixed an issue where HTTP/3 listeners could not handle multiple hostnames.
+  Fix gateway continuing with incomplete resources after unrecoverable Kubernetes discovery errors when checking optional CRDs by failing fast and propagating errors so pods restart instead of skipping optional CRDs.
+  Fixed an issue where listener translation fails when contains invalid certificate in multiple TLS certificateRefs.
+  Fixed an issue where auto-detect upstream protocol breaks with multiple backends(HTTP + HTTPS).
+
 # Enhancements that improve performance.
-performance improvements: ""
+performance improvements: |
+
 # Deprecated features or APIs.
-deprecations: ""
+deprecations: |
+
 # Other notable changes not covered by the above sections.
 Other changes: |
   Added scheme field to ClientTrafficPolicy enabling scheme header transformation to match backend transport protocol, allowing gateways with HTTP listeners to proxy to HTTPS services without protocol errors

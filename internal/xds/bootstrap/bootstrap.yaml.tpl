@@ -75,6 +75,16 @@ stats_sinks:
     grpc_service:
       envoy_grpc:
         cluster_name: otel_metric_sink_{{ $idx }}
+        {{- if $sink.Authority }}
+        authority: {{ $sink.Authority }}
+        {{- end }}
+      {{- if $sink.Headers }}
+      initial_metadata:
+      {{- range $sink.Headers }}
+      - key: "{{ .Name }}"
+        value: "{{ .Value }}"
+      {{- end }}
+      {{- end }}
     {{- if $sink.ReportCountersAsDeltas }}
     report_counters_as_deltas: true
     {{- end }}
@@ -194,6 +204,26 @@ static_resources:
               socket_address:
                 address: {{ $sink.Address }}
                 port_value: {{ $sink.Port }}
+    {{- if $sink.TLS }}
+    transport_socket:
+      name: envoy.transport_sockets.tls
+      typed_config:
+        "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+        {{- if $sink.TLS.SNI }}
+        sni: {{ $sink.TLS.SNI }}
+        {{- end }}
+        {{- if $sink.TLS.CACertificate }}
+        common_tls_context:
+          validation_context:
+            trusted_ca:
+              inline_bytes: {{ $sink.TLS.CACertificate | base64 }}
+        {{- else if $sink.TLS.UseSystemTrustStore }}
+        common_tls_context:
+          validation_context:
+            trusted_ca:
+              filename: {{ $.SystemCACertPath }}
+        {{- end }}
+    {{- end }}
   {{- end }}
   {{- if not .TopologyInjectorDisabled }}
   - connect_timeout: 10s

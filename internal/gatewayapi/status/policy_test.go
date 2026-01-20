@@ -34,3 +34,32 @@ func TestSetConditionForPolicyAncestorsTruncatesMessages(t *testing.T) {
 		}
 	}
 }
+
+func TestBuildDeprecationWarningMessage(t *testing.T) {
+	tests := []struct {
+		name             string
+		deprecatedFields map[string]string
+		expected         string
+	}{
+		{
+			name:             "empty map",
+			deprecatedFields: map[string]string{},
+			expected:         "",
+		},
+		{
+			name: "two entries with deterministic ordering",
+			deprecatedFields: map[string]string{
+				"spec.targetRef":   "spec.targetRefs",
+				"spec.compression": "spec.compressor",
+			},
+			expected: "spec.compression is deprecated, use spec.compressor instead; spec.targetRef is deprecated, use spec.targetRefs instead",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := buildDeprecationWarningMessage(tt.deprecatedFields)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}

@@ -121,7 +121,7 @@ var PreserveCaseTest = suite.ConformanceTest{
 
 			WaitForPods(t, suite.Client, "gateway-preserve-case-backend", map[string]string{"app": "preserve-case"}, corev1.PodRunning, &PodReady)
 
-			err := wait.PollUntilContextTimeout(context.TODO(), time.Second, suite.TimeoutConfig.DeleteTimeout, true, func(ctx context.Context) (bool, error) {
+			err := wait.PollUntilContextTimeout(context.TODO(), time.Second, suite.TimeoutConfig.DeleteTimeout, true, func(_ context.Context) (bool, error) {
 				// Can't use the standard method for checking the response, since the remote side isn't the
 				// conformance echo server and it returns a differently formatted response.
 				expectedResponse := http.ExpectedResponse{

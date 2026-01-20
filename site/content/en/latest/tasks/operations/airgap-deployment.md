@@ -92,8 +92,8 @@ For comprehensive EnvoyProxy configuration options including deployment settings
 
 ## Default LoadBalancer Service Type
 
-By default, Envoy uses a Service of type `LoadBalancer`. In air-gapped environments, 
-you may need to configure service annotations or change the service type depending 
+By default, Envoy uses a Service of type `LoadBalancer`. In air-gapped environments,
+you may need to configure service annotations or change the service type depending
 on your Kubernetes environment and network restrictions.
 
 For detailed service configuration options including annotations, service types, and other networking customizations, see [Customize EnvoyProxy](customize-envoyproxy).

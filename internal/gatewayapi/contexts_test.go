@@ -10,22 +10,12 @@ import (
 
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
-	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 )
 
 func TestContexts(t *testing.T) {
-	r := &resource.Resources{
-		GatewayClass: &gwapiv1.GatewayClass{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "foo",
-			},
-		},
-	}
 	gateway := &gwapiv1.Gateway{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: "envoy-gateway",
@@ -39,11 +29,10 @@ func TestContexts(t *testing.T) {
 			},
 		},
 	}
-	envoyproxyMap := map[types.NamespacedName]*egv1a1.EnvoyProxy{}
 	gctx := &GatewayContext{
 		Gateway: gateway,
 	}
-	gctx.ResetListeners(r, envoyproxyMap)
+	gctx.ResetListeners()
 	require.Len(t, gctx.listeners, 1)
 
 	lctx := gctx.listeners[0]
@@ -66,18 +55,11 @@ func TestContexts(t *testing.T) {
 	require.Len(t, gateway.Status.Listeners[0].SupportedKinds, 1)
 	require.EqualValues(t, "HTTPRoute", gateway.Status.Listeners[0].SupportedKinds[0].Kind)
 
-	gctx.ResetListeners(r, envoyproxyMap)
+	gctx.ResetListeners()
 	require.Empty(t, gateway.Status.Listeners[0].Conditions)
 }
 
 func TestContextsStaleListener(t *testing.T) {
-	r := &resource.Resources{
-		GatewayClass: &gwapiv1.GatewayClass{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "foo",
-			},
-		},
-	}
 	gateway := &gwapiv1.Gateway{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: "envoy-gateway",
@@ -114,7 +96,6 @@ func TestContextsStaleListener(t *testing.T) {
 			},
 		},
 	}
-	envoyproxyMap := map[types.NamespacedName]*egv1a1.EnvoyProxy{}
 	gCtx := &GatewayContext{Gateway: gateway}
 
 	httpsListenerCtx := &ListenerContext{
@@ -133,7 +114,7 @@ func TestContextsStaleListener(t *testing.T) {
 		listenerStatusIdx: 1,
 	}
 
-	gCtx.ResetListeners(r, envoyproxyMap)
+	gCtx.ResetListeners()
 
 	require.Len(t, gCtx.listeners, 2)
 
@@ -158,7 +139,7 @@ func TestContextsStaleListener(t *testing.T) {
 	// Remove one of the listeners
 	gateway.Spec.Listeners = gateway.Spec.Listeners[:1]
 
-	gCtx.ResetListeners(r, envoyproxyMap)
+	gCtx.ResetListeners()
 
 	// Ensure the listener status has been updated and the stale listener has been
 	// removed.

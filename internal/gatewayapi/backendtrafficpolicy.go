@@ -34,6 +34,18 @@ const (
 	MaxConsistentHashTableSize = 5000011 // https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto#config-cluster-v3-cluster-maglevlbconfig
 )
 
+// deprecatedFieldsUsedInBackendTrafficPolicy returns a map of deprecated field paths to their alternatives.
+func deprecatedFieldsUsedInBackendTrafficPolicy(policy *egv1a1.BackendTrafficPolicy) map[string]string {
+	deprecatedFields := make(map[string]string)
+	if policy.Spec.TargetRef != nil {
+		deprecatedFields["spec.targetRef"] = "spec.targetRefs"
+	}
+	if len(policy.Spec.Compression) > 0 {
+		deprecatedFields["spec.compression"] = "spec.compressor"
+	}
+	return deprecatedFields
+}
+
 func (t *Translator) ProcessBackendTrafficPolicies(
 	resources *resource.Resources,
 	gateways []*GatewayContext,
@@ -392,6 +404,11 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 	// Set Accepted condition if it is unset
 	status.SetAcceptedForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName, policy.Generation)
 
+	// Check for deprecated fields and set warning if any are found
+	if deprecatedFields := deprecatedFieldsUsedInBackendTrafficPolicy(policy); len(deprecatedFields) > 0 {
+		status.SetDeprecatedFieldsWarningForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName, policy.Generation, deprecatedFields)
+	}
+
 	// Check if this policy is overridden by other policies targeting at route rule levels
 	// If policy target is route rule, we can skip the check
 	if currTarget.SectionName != nil {
@@ -463,6 +480,11 @@ func (t *Translator) processBackendTrafficPolicyForGateway(
 
 	// Set Accepted condition if it is unset
 	status.SetAcceptedForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName, policy.Generation)
+
+	// Check for deprecated fields and set warning if any are found
+	if deprecatedFields := deprecatedFieldsUsedInBackendTrafficPolicy(policy); len(deprecatedFields) > 0 {
+		status.SetDeprecatedFieldsWarningForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName, policy.Generation, deprecatedFields)
+	}
 
 	overriddenMessage, mergedMessage := getOverriddenAndMergedTargetsMessageForGateway(
 		gatewayMap[gatewayNN], gatewayRouteMap, gatewayPolicyMergedMap, currTarget.SectionName)
@@ -1577,34 +1599,48 @@ func defaultResponseOverrideRuleName(policy *egv1a1.BackendTrafficPolicy, index 
 func buildCompression(compression, compressor []*egv1a1.Compression) []*ir.Compression {
 	// Handle the Compressor field first (higher priority)
 	if len(compressor) > 0 {
-		irCompression := make([]*ir.Compression, 0, len(compressor))
+		result := make([]*ir.Compression, 0, len(compressor))
 		for i, c := range compressor {
 			// Only add compression if the corresponding compressor not null
 			if (c.Type == egv1a1.GzipCompressorType && c.Gzip != nil) ||
 				(c.Type == egv1a1.BrotliCompressorType && c.Brotli != nil) ||
 				(c.Type == egv1a1.ZstdCompressorType && c.Zstd != nil) {
-				irCompression = append(irCompression, &ir.Compression{
+				irCompression := ir.Compression{
 					Type:        c.Type,
 					ChooseFirst: i == 0, // only the first compressor is marked as ChooseFirst
-				})
+				}
+				if c.MinContentLength != nil {
+					minContentLength, ok := c.MinContentLength.AsInt64()
+					if ok {
+						irCompression.MinContentLength = ptr.To(uint32(minContentLength))
+					}
+				}
+				result = append(result, &irCompression)
 			}
 		}
-		return irCompression
+		return result
 	}
 
 	// Fallback to the deprecated Compression field
 	if compression == nil {
 		return nil
 	}
-	irCompression := make([]*ir.Compression, 0, len(compression))
+	result := make([]*ir.Compression, 0, len(compression))
 	for i, c := range compression {
-		irCompression = append(irCompression, &ir.Compression{
+		irCompression := ir.Compression{
 			Type:        c.Type,
 			ChooseFirst: i == 0, // only the first compressor is marked as ChooseFirst
-		})
+		}
+		if c.MinContentLength != nil {
+			minContentLength, ok := c.MinContentLength.AsInt64()
+			if ok {
+				irCompression.MinContentLength = ptr.To(uint32(minContentLength))
+			}
+		}
+		result = append(result, &irCompression)
 	}
 
-	return irCompression
+	return result
 }
 
 func buildHTTPProtocolUpgradeConfig(cfgs []*egv1a1.ProtocolUpgradeConfig) []ir.HTTPUpgradeConfig {
