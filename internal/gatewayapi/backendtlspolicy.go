@@ -360,7 +360,7 @@ func (t *Translator) processClientTLSSettings(resources *resource.Resources, cli
 			ownerResource = "Backend"
 		}
 
-		ns := string(ptr.Deref(clientTLS.ClientCertificateRef.Namespace, "default"))
+		ns := NamespaceDerefOr(clientTLS.ClientCertificateRef.Namespace, ownerNs)
 		if ns != ownerNs {
 			err = fmt.Errorf("ClientCertificateRef Secret is not located in the same namespace as %s. Secret namespace: %s does not match %s namespace: %s", ownerResource, ns, ownerResource, ownerNs)
 			return tlsConfig, err
