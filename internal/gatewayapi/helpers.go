@@ -23,6 +23,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapixv1a1 "sigs.k8s.io/gateway-api/apisx/v1alpha1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
@@ -191,8 +192,13 @@ func isRefToXListenerSet(parentRef gwapiv1.ParentReference) bool {
 	if parentRef.Kind == nil || string(*parentRef.Kind) != resource.KindXListenerSet {
 		return false
 	}
-	if parentRef.Group != nil && string(*parentRef.Group) != gwapiv1.GroupName {
-		return false
+	if parentRef.Group != nil {
+		switch string(*parentRef.Group) {
+		case gwapiv1.GroupName, gwapixv1a1.GroupVersion.Group:
+			// allowed group values for core Gateway API and experimental XListenerSet API
+		default:
+			return false
+		}
 	}
 	return true
 }

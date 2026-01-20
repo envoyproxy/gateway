@@ -129,6 +129,7 @@ type subscriptions struct {
 	tlsRouteStatuses             <-chan watchable.Snapshot[types.NamespacedName, *gwapiv1a2.TLSRouteStatus]
 	tcpRouteStatuses             <-chan watchable.Snapshot[types.NamespacedName, *gwapiv1a2.TCPRouteStatus]
 	udpRouteStatuses             <-chan watchable.Snapshot[types.NamespacedName, *gwapiv1a2.UDPRouteStatus]
+	xListenerSetStatuses         <-chan watchable.Snapshot[types.NamespacedName, *gwapixv1a1.ListenerSetStatus]
 	backendTLSPolicyStatuses     <-chan watchable.Snapshot[types.NamespacedName, *gwapiv1.PolicyStatus]
 	backendTrafficPolicyStatuses <-chan watchable.Snapshot[types.NamespacedName, *gwapiv1.PolicyStatus]
 	envoyExtensionPolicyStatuses <-chan watchable.Snapshot[types.NamespacedName, *gwapiv1.PolicyStatus]
@@ -249,6 +250,7 @@ func (r *gatewayAPIReconciler) subscribeToResources(ctx context.Context) {
 	r.subscriptions.tlsRouteStatuses = r.resources.TLSRouteStatuses.Subscribe(ctx)
 	r.subscriptions.tcpRouteStatuses = r.resources.TCPRouteStatuses.Subscribe(ctx)
 	r.subscriptions.udpRouteStatuses = r.resources.UDPRouteStatuses.Subscribe(ctx)
+	r.subscriptions.xListenerSetStatuses = r.resources.XListenerSetStatuses.Subscribe(ctx)
 	r.subscriptions.backendTLSPolicyStatuses = r.resources.BackendTLSPolicyStatuses.Subscribe(ctx)
 	r.subscriptions.backendTrafficPolicyStatuses = r.resources.BackendTrafficPolicyStatuses.Subscribe(ctx)
 	r.subscriptions.envoyExtensionPolicyStatuses = r.resources.EnvoyExtensionPolicyStatuses.Subscribe(ctx)
@@ -1855,6 +1857,8 @@ func (r *gatewayAPIReconciler) processClientTrafficPolicies(
 func (r *gatewayAPIReconciler) processXListenerSets(ctx context.Context, gatewayNamespaceName string,
 	resourceMap *resourceMappings, resourceTree *resource.Resources,
 ) error {
+	resourceMap.gatewayToXListenerSets[gatewayNamespaceName] = nil
+
 	xListenerSetList := &gwapixv1a1.XListenerSetList{}
 	if err := r.client.List(ctx, xListenerSetList, &client.ListOptions{
 		FieldSelector: fields.OneTermEqualSelector(gatewayXListenerSetIndex, gatewayNamespaceName),
@@ -1908,6 +1912,10 @@ func (r *gatewayAPIReconciler) processXListenerSets(ctx context.Context, gateway
 		xls.Status = gwapixv1a1.ListenerSetStatus{}
 		resourceMap.allAssociatedNamespaces.Insert(xls.Namespace)
 		resourceMap.allAssociatedXListenerSets.Insert(key)
+		resourceMap.gatewayToXListenerSets[gatewayNamespaceName] = append(
+			resourceMap.gatewayToXListenerSets[gatewayNamespaceName],
+			utils.NamespacedName(xls),
+		)
 		resourceTree.XListenerSets = append(resourceTree.XListenerSets, xls)
 	}
 

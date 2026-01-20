@@ -202,6 +202,18 @@ func (r *gatewayAPIReconciler) processHTTPRoutes(ctx context.Context, gatewayNam
 	resourceMap *resourceMappings, resourceTree *resource.Resources,
 ) error {
 	httpRouteList := &gwapiv1.HTTPRouteList{}
+	processedKeys := make(map[string]struct{})
+	processList := func(list *gwapiv1.HTTPRouteList) {
+		for i := range list.Items {
+			httpRoute := &list.Items[i]
+			key := utils.NamespacedName(httpRoute).String()
+			if _, seen := processedKeys[key]; seen {
+				continue
+			}
+			processedKeys[key] = struct{}{}
+			r.processHTTPRoute(ctx, httpRoute, resourceMap, resourceTree)
+		}
+	}
 
 	extensionRefFilters, err := r.getExtensionRefFilters(ctx)
 	if err != nil {
@@ -228,76 +240,89 @@ func (r *gatewayAPIReconciler) processHTTPRoutes(ctx context.Context, gatewayNam
 		r.log.Error(err, "failed to list HTTPRoutes")
 		return err
 	}
+	processList(httpRouteList)
 
-	for i := range httpRouteList.Items {
-		httpRoute := &httpRouteList.Items[i]
-		if r.namespaceLabel != nil {
-			if ok, err := r.checkObjectNamespaceLabels(httpRoute); err != nil {
-				r.log.Error(err, "failed to check namespace labels for HTTPRoute %s in namespace %s: %w", httpRoute.GetName(), httpRoute.GetNamespace())
-				continue
-			} else if !ok {
-				continue
-			}
+	for _, xlsNN := range resourceMap.gatewayToXListenerSets[gatewayNamespaceName] {
+		httpRouteList = &gwapiv1.HTTPRouteList{}
+		if err := r.client.List(ctx, httpRouteList, &client.ListOptions{
+			FieldSelector: fields.OneTermEqualSelector(xListenerHTTPRouteIndex, xlsNN.String()),
+		}); err != nil {
+			r.log.Error(err, "failed to list HTTPRoutes by XListenerSet", "xListenerSet", xlsNN.String())
+			return err
 		}
+		processList(httpRouteList)
+	}
 
-		key := utils.NamespacedName(httpRoute).String()
-		if resourceMap.allAssociatedHTTPRoutes.Has(key) {
-			r.log.Info("current HTTPRoute has been processed already", "namespace", httpRoute.Namespace, "name", httpRoute.Name)
-			continue
+	return nil
+}
+
+func (r *gatewayAPIReconciler) processHTTPRoute(ctx context.Context, httpRoute *gwapiv1.HTTPRoute,
+	resourceMap *resourceMappings, resourceTree *resource.Resources,
+) {
+	if r.namespaceLabel != nil {
+		if ok, err := r.checkObjectNamespaceLabels(httpRoute); err != nil {
+			r.log.Error(err, "failed to check namespace labels for HTTPRoute %s in namespace %s: %w", httpRoute.GetName(), httpRoute.GetNamespace())
+			return
+		} else if !ok {
+			return
 		}
+	}
 
-		r.log.Info("processing HTTPRoute", "namespace", httpRoute.Namespace, "name", httpRoute.Name)
+	key := utils.NamespacedName(httpRoute).String()
+	if resourceMap.allAssociatedHTTPRoutes.Has(key) {
+		r.log.Info("current HTTPRoute has been processed already", "namespace", httpRoute.Namespace, "name", httpRoute.Name)
+		return
+	}
 
-		for _, rule := range httpRoute.Spec.Rules {
-			for _, backendRef := range rule.BackendRefs {
-				// Skip validation for custom backend resources managed by extensions
-				backendRefKind := gatewayapi.KindDerefOr(backendRef.Kind, resource.KindService)
-				if !r.isCustomBackendResource(backendRef.Group, backendRefKind) {
-					if err := validateBackendRef(&backendRef.BackendRef); err != nil {
-						r.log.Error(err, "invalid backendRef")
-						continue
-					}
-				}
-				if err := r.processBackendRef(
-					ctx,
-					resourceMap,
-					resourceTree,
-					resource.KindHTTPRoute,
-					httpRoute.Namespace,
-					httpRoute.Name,
-					backendRef.BackendObjectReference); err != nil {
-					r.log.Error(err,
-						"failed to process BackendRef for HTTPRoute",
-						"httpRoute", httpRoute, "backendRef", backendRef.BackendObjectReference)
-				}
+	r.log.Info("processing HTTPRoute", "namespace", httpRoute.Namespace, "name", httpRoute.Name)
 
-				for j := range backendRef.Filters {
-					// Some of the validation logic in processHTTPRouteFilter is not needed for backendRef filters.
-					// However, we reuse the same function to avoid code duplication.
-					if err := r.processHTTPRouteFilter(ctx, &backendRef.Filters[j], httpRoute, resourceMap, resourceTree); err != nil {
-						r.log.Error(err, "bypassing backendRef filter", "index", j)
-						continue
-					}
+	for _, rule := range httpRoute.Spec.Rules {
+		for _, backendRef := range rule.BackendRefs {
+			// Skip validation for custom backend resources managed by extensions
+			backendRefKind := gatewayapi.KindDerefOr(backendRef.Kind, resource.KindService)
+			if !r.isCustomBackendResource(backendRef.Group, backendRefKind) {
+				if err := validateBackendRef(&backendRef.BackendRef); err != nil {
+					r.log.Error(err, "invalid backendRef")
+					continue
 				}
 			}
+			if err := r.processBackendRef(
+				ctx,
+				resourceMap,
+				resourceTree,
+				resource.KindHTTPRoute,
+				httpRoute.Namespace,
+				httpRoute.Name,
+				backendRef.BackendObjectReference); err != nil {
+				r.log.Error(err,
+					"failed to process BackendRef for HTTPRoute",
+					"httpRoute", httpRoute, "backendRef", backendRef.BackendObjectReference)
+			}
 
-			for j := range rule.Filters {
-				if err := r.processHTTPRouteFilter(ctx, &rule.Filters[j], httpRoute, resourceMap, resourceTree); err != nil {
-					r.log.Error(err, "bypassing filter rule", "index", j)
+			for j := range backendRef.Filters {
+				// Some of the validation logic in processHTTPRouteFilter is not needed for backendRef filters.
+				// However, we reuse the same function to avoid code duplication.
+				if err := r.processHTTPRouteFilter(ctx, &backendRef.Filters[j], httpRoute, resourceMap, resourceTree); err != nil {
+					r.log.Error(err, "bypassing backendRef filter", "index", j)
 					continue
 				}
 			}
 		}
 
-		resourceMap.allAssociatedNamespaces.Insert(httpRoute.Namespace)
-		resourceMap.allAssociatedHTTPRoutes.Insert(key)
-		// Discard Status to reduce memory consumption in watchable
-		// It will be recomputed by the gateway-api layer
-		httpRoute.Status = gwapiv1.HTTPRouteStatus{}
-		resourceTree.HTTPRoutes = append(resourceTree.HTTPRoutes, httpRoute)
+		for j := range rule.Filters {
+			if err := r.processHTTPRouteFilter(ctx, &rule.Filters[j], httpRoute, resourceMap, resourceTree); err != nil {
+				r.log.Error(err, "bypassing filter rule", "index", j)
+				continue
+			}
+		}
 	}
 
-	return nil
+	resourceMap.allAssociatedNamespaces.Insert(httpRoute.Namespace)
+	resourceMap.allAssociatedHTTPRoutes.Insert(key)
+	// Discard Status to reduce memory consumption in watchable
+	// It will be recomputed by the gateway-api layer
+	httpRoute.Status = gwapiv1.HTTPRouteStatus{}
+	resourceTree.HTTPRoutes = append(resourceTree.HTTPRoutes, httpRoute)
 }
 
 func (r *gatewayAPIReconciler) processHTTPRouteFilter(

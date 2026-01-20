@@ -274,7 +274,8 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 				}
 				for _, xListenerSet := range result.XListenerSets {
 					key := utils.NamespacedName(xListenerSet)
-					r.ProviderResources.XListenerSetStatuses.Store(key, &xListenerSet.Status)
+					statusCopy := xListenerSet.Status.DeepCopy()
+					r.ProviderResources.XListenerSetStatuses.Store(key, statusCopy)
 					xListenerSetStatusCount++
 					delete(keysToDelete.XListenerSetStatus, key)
 					r.keyCache.XListenerSetStatus[key] = true

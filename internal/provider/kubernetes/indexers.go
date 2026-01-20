@@ -28,6 +28,7 @@ const (
 	classGatewayIndex                = "classGatewayIndex"
 	gatewayTLSRouteIndex             = "gatewayTLSRouteIndex"
 	gatewayHTTPRouteIndex            = "gatewayHTTPRouteIndex"
+	xListenerHTTPRouteIndex          = "xlistenerHTTPRouteIndex"
 	gatewayXListenerSetIndex         = "gatewayXListenerSetIndex"
 	gatewayGRPCRouteIndex            = "gatewayGRPCRouteIndex"
 	gatewayTCPRouteIndex             = "gatewayTCPRouteIndex"
@@ -86,6 +87,9 @@ func addHTTPRouteIndexers(ctx context.Context, mgr manager.Manager) error {
 	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1.HTTPRoute{}, gatewayHTTPRouteIndex, gatewayHTTPRouteIndexFunc); err != nil {
 		return err
 	}
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1.HTTPRoute{}, xListenerHTTPRouteIndex, xListenerHTTPRouteIndexFunc); err != nil {
+		return err
+	}
 
 	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1.HTTPRoute{}, backendHTTPRouteIndex, backendHTTPRouteIndexFunc); err != nil {
 		return err
@@ -137,6 +141,29 @@ func gatewayHTTPRouteIndexFunc(rawObj client.Object) []string {
 		}
 	}
 	return gateways
+}
+
+func xListenerHTTPRouteIndexFunc(rawObj client.Object) []string {
+	httproute := rawObj.(*gwapiv1.HTTPRoute)
+	var xlisteners []string
+	for _, parent := range httproute.Spec.ParentRefs {
+		if parent.Kind == nil || string(*parent.Kind) != resource.KindXListenerSet {
+			continue
+		}
+		if parent.Group != nil {
+			group := string(*parent.Group)
+			if group != gwapiv1.GroupName && group != gwapixv1a1.GroupVersion.Group {
+				continue
+			}
+		}
+		xlisteners = append(xlisteners,
+			types.NamespacedName{
+				Namespace: gatewayapi.NamespaceDerefOr(parent.Namespace, httproute.Namespace),
+				Name:      string(parent.Name),
+			}.String(),
+		)
+	}
+	return xlisteners
 }
 
 func backendHTTPRouteIndexFunc(rawObj client.Object) []string {
