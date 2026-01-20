@@ -135,14 +135,12 @@ func Shutdown(drainTimeout, minDrainDuration time.Duration, exitAtConnections in
 		logger.Error(err, "error failing active health checks")
 	}
 
-	useServerConnections := os.Getenv("USE_SERVER_CONNECTIONS") == "true"
-
 	// Poll total connections from Envoy admin API until minimum drain period has
 	// been reached and total connections reaches threshold or timeout is exceeded
 	for {
 		elapsedTime := time.Since(startTime)
 
-		conn, err := getTotalConnections(useServerConnections, bootstrap.EnvoyAdminPort)
+		conn, err := getTotalConnections(bootstrap.EnvoyAdminPort)
 		if err != nil {
 			logger.Error(err, "error getting total connections")
 		}
@@ -189,10 +187,7 @@ func postEnvoyAdminAPI(path string) error {
 	return nil
 }
 
-func getTotalConnections(useServerTotalConnections bool, port int) (*int, error) {
-	if useServerTotalConnections {
-		return getServerConnections(port)
-	}
+func getTotalConnections(port int) (*int, error) {
 	return getDownstreamCXActive(port)
 }
 
@@ -203,21 +198,6 @@ type envoyStatsResponse struct {
 		Name  string
 		Value int
 	}
-}
-
-// getServerConnections retrieves the total number of open connections from Envoy's server.total_connections stat
-func getServerConnections(port int) (*int, error) {
-	// Send request to Envoy admin API to retrieve server.total_connections stat
-	statFilter := "^server\\.total_connections$"
-	r, err := getStatsFromEnvoyStatsEndpoint(port, statFilter)
-	if err != nil {
-		return nil, fmt.Errorf("error getting server total_connections stat: %w", err)
-	}
-
-	// Log and return total connections
-	c := r.Stats[0].Value
-	logger.Info(fmt.Sprintf("total server connections: %d", c))
-	return &c, nil
 }
 
 func getStatsFromEnvoyStatsEndpoint(port int, statFilter string) (*envoyStatsResponse, error) {

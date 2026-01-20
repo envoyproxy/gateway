@@ -50,9 +50,8 @@ func setupFakeEnvoyStats(t *testing.T, content string) *http.Server {
 
 func TestGetTotalConnections(t *testing.T) {
 	cases := []struct {
-		name                      string
-		input                     string
-		useServerTotalConnections bool
+		name  string
+		input string
 
 		expectedError error
 		expectedCount *int
@@ -206,18 +205,6 @@ func TestGetTotalConnections(t *testing.T) {
 			expectedCount: ptr.To(1),
 		},
 		{
-			name:                      "total_connections",
-			input:                     `{"stats":[{"name":"server.total_connections","value":1}]}`,
-			useServerTotalConnections: true,
-			expectedCount:             ptr.To(1),
-		},
-		{
-			name:                      "invalid-with-server.total_connections",
-			input:                     `{"stats":[{"name":"server.total_connections","value":1]}`,
-			useServerTotalConnections: true,
-			expectedError:             errors.New("error getting server total_connections stat"),
-		},
-		{
 			name:          "invalid",
 			input:         `{"stats":[{"name":"listener.0.0.0.0_8000.downstream_cx_active","value":1]}`,
 			expectedError: errors.New("error getting listener downstream_cx_active stat"),
@@ -241,7 +228,7 @@ func TestGetTotalConnections(t *testing.T) {
 				_ = rc.Close()
 			}()
 
-			gotCount, gotError := getTotalConnections(tc.useServerTotalConnections, p)
+			gotCount, gotError := getTotalConnections(p)
 			if tc.expectedError != nil {
 				require.ErrorContains(t, gotError, tc.expectedError.Error())
 				return
