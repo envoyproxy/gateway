@@ -4578,7 +4578,7 @@ _Appears in:_
 RateLimitSelectCondition specifies the attributes within the traffic flow that can
 be used to select a subset of clients to be ratelimited.
 All the individual conditions must hold True for the overall condition to hold True.
-And, at least one of headers or methods or path or sourceCIDR condition must be specified.
+And, at least one of headers or methods or path or sourceCIDR or queryParams condition must be specified.
 
 _Appears in:_
 - [RateLimitRule](#ratelimitrule)
@@ -4589,7 +4589,7 @@ _Appears in:_
 | `methods` | _[MethodMatch](#methodmatch) array_ |  false  |  | Methods is a list of request methods to match. Multiple method values are ORed together,<br />meaning, a request can match any one of the specified methods. If not specified, it matches all methods. |
 | `path` | _[PathMatch](#pathmatch)_ |  false  |  | Path is the request path to match.<br />Support Exact, PathPrefix and RegularExpression match types. |
 | `sourceCIDR` | _[SourceMatch](#sourcematch)_ |  false  |  | SourceCIDR is the client IP Address range to match on. |
-| `queryParams` | _[QueryParamMatch](#queryparammatch) array_ |  false  |  | QueryParams is a list of query parameters to match. Multiple query parameter values are ANDed together,<br />meaning, a request MUST match all the specified query parameters.<br />At least one of headers, sourceCIDR, or queryParams condition must be specified. |
+| `queryParams` | _[QueryParamMatch](#queryparammatch) array_ |  false  |  | QueryParams is a list of query parameters to match. Multiple query parameter values are ANDed together,<br />meaning, a request MUST match all the specified query parameters. |
 
 
 #### RateLimitSpec
