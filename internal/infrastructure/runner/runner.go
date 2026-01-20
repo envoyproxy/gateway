@@ -124,6 +124,12 @@ func (r *Runner) updateProxyInfraFromSubscription(ctx context.Context, sub <-cha
 					return
 				}
 
+				// Skip creating or updating infra if the Infra IR is invalid.
+				if ptr.Deref(val.Invalid, false) {
+					r.Logger.Info("Infra IR was update, but it is invalid. Skipping infra provision.")
+					return
+				}
+
 				if err := r.mgr.CreateOrUpdateProxyInfra(ctx, val); err != nil {
 					r.Logger.Error(err, "failed to create new infra")
 					errChan <- err

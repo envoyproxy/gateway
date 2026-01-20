@@ -64,6 +64,18 @@ gateways:
       status: "False"
       type: Accepted
 infraIR:
+  envoy-gateway/ep-from-gc:
+    invalid: true
+    proxy:
+      metadata:
+        labels:
+          gateway.envoyproxy.io/owning-gateway-name: ep-from-gc
+          gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+        ownerReference:
+          kind: GatewayClass
+          name: envoy-gateway-class
+      name: envoy-gateway/ep-from-gc
+      namespace: envoy-gateway-system
   envoy-gateway/ep-from-gtw:
     proxy:
       config:
@@ -96,6 +108,7 @@ infraIR:
       name: envoy-gateway/ep-from-gtw
       namespace: envoy-gateway-system
 xdsIR:
+  envoy-gateway/ep-from-gc: {}
   envoy-gateway/ep-from-gtw:
     accessLog:
       text:
