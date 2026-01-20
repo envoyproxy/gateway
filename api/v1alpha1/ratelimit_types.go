@@ -198,7 +198,7 @@ type RateLimitCostMetadata struct {
 // RateLimitSelectCondition specifies the attributes within the traffic flow that can
 // be used to select a subset of clients to be ratelimited.
 // All the individual conditions must hold True for the overall condition to hold True.
-// And, at least one of headers or methods or path or sourceCIDR condition must be specified.
+// And, at least one of headers or methods or path or sourceCIDR or queryParams condition must be specified.
 //
 // +kubebuilder:validation:XValidation:rule="has(self.headers) || has(self.methods) || has(self.path) || has(self.sourceCIDR) || has(self.queryParams)",message="at least one of headers, methods, path, sourceCIDR or queryParams must be specified"
 type RateLimitSelectCondition struct {
@@ -228,7 +228,6 @@ type RateLimitSelectCondition struct {
 
 	// QueryParams is a list of query parameters to match. Multiple query parameter values are ANDed together,
 	// meaning, a request MUST match all the specified query parameters.
-	// At least one of headers, sourceCIDR, or queryParams condition must be specified.
 	//
 	// +optional
 	// +kubebuilder:validation:MaxItems=16
