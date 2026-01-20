@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
@@ -151,24 +152,29 @@ var BackendHealthCheckWithOverrideTest = suite.ConformanceTest{
 	Description: "Test backend health check with override configuration",
 	Manifests:   []string{"testdata/backend-health-check-with-override.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
-		t.Run("health check with override", func(t *testing.T) {
+		ns := "gateway-conformance-infra"
+		withOverrideRouteNN := types.NamespacedName{Name: "httproute-with-health-check-override", Namespace: ns}
+		withoutOverrideRouteNN := types.NamespacedName{Name: "httproute-without-health-check-override", Namespace: ns}
+		gtwName := "same-namespace"
+		gwNN := types.NamespacedName{Name: gtwName, Namespace: ns}
+		gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName,
+			kubernetes.NewGatewayRef(gwNN), withOverrideRouteNN, withoutOverrideRouteNN)
+
+		ancestorRef := gwapiv1.ParentReference{
+			Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
+			Kind:      gatewayapi.KindPtr(resource.KindGateway),
+			Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
+			Name:      gwapiv1.ObjectName(gwNN.Name),
+		}
+		BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "btp-with-health-check-override", Namespace: ns}, suite.ControllerName, ancestorRef)
+		BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "btp-without-health-check-override", Namespace: ns}, suite.ControllerName, ancestorRef)
+
+		// Wait for the service pods to be ready
+		WaitForPods(t, suite.Client, ns, map[string]string{"app": "multi-ports-backend"}, corev1.PodRunning, &PodReady)
+		WaitForPods(t, suite.Client, ns, map[string]string{"app": "single-port-backend"}, corev1.PodRunning, &PodReady)
+
+		t.Run("health checks work with and without health check overrides", func(t *testing.T) {
 			ctx := context.Background()
-			ns := "gateway-conformance-infra"
-			withOverrideRouteNN := types.NamespacedName{Name: "httproute-with-health-check-override", Namespace: ns}
-			withoutOverrideRouteNN := types.NamespacedName{Name: "httproute-without-health-check-override", Namespace: ns}
-			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
-			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName,
-				kubernetes.NewGatewayRef(gwNN), withOverrideRouteNN, withoutOverrideRouteNN)
-
-			ancestorRef := gwapiv1.ParentReference{
-				Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
-				Kind:      gatewayapi.KindPtr(resource.KindGateway),
-				Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
-				Name:      gwapiv1.ObjectName(gwNN.Name),
-			}
-			BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "btp-with-health-check-override", Namespace: ns}, suite.ControllerName, ancestorRef)
-			BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "btp-without-health-check-override", Namespace: ns}, suite.ControllerName, ancestorRef)
-
 			promClient, err := prometheus.NewClient(suite.Client,
 				types.NamespacedName{Name: "prometheus", Namespace: "monitoring"},
 			)
@@ -176,7 +182,6 @@ var BackendHealthCheckWithOverrideTest = suite.ConformanceTest{
 
 			withOverrideClusterName := fmt.Sprintf("httproute/%s/%s/rule/0", ns, withOverrideRouteNN.Name)
 			withoutOverrideClusterName := fmt.Sprintf("httproute/%s/%s/rule/0", ns, withoutOverrideRouteNN.Name)
-			gtwName := "same-namespace"
 
 			// both routes should have successful health checks
 			withOverridePromQL := fmt.Sprintf(`envoy_cluster_health_check_success{envoy_cluster_name="%s",gateway_envoyproxy_io_owning_gateway_name="%s"}`, withOverrideClusterName, gtwName)
