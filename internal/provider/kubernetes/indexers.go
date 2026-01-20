@@ -145,7 +145,7 @@ func gatewayHTTPRouteIndexFunc(rawObj client.Object) []string {
 
 func xListenerHTTPRouteIndexFunc(rawObj client.Object) []string {
 	httproute := rawObj.(*gwapiv1.HTTPRoute)
-	var xlisteners []string
+	xlisteners := make([]string, 0, len(httproute.Spec.ParentRefs))
 	for _, parent := range httproute.Spec.ParentRefs {
 		if parent.Kind == nil || string(*parent.Kind) != resource.KindXListenerSet {
 			continue

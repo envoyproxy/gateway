@@ -16,6 +16,7 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwapiv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
+	gwapixv1a1 "sigs.k8s.io/gateway-api/apisx/v1alpha1"
 	mcsapiv1a1 "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -23,7 +24,6 @@ import (
 	statuspkg "github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils"
-	gwapixv1a1 "sigs.k8s.io/gateway-api/apisx/v1alpha1"
 )
 
 // GatewayContext wraps a Gateway and provides helper methods for
@@ -101,7 +101,6 @@ func (l *ListenerContext) SetSupportedKinds(kinds ...gwapiv1.RouteGroupKind) {
 		} else {
 			l.xListenerSet.Status.Listeners[l.xListenerSetStatusIdx].SupportedKinds = []gwapixv1a1.RouteGroupKind{}
 		}
-
 	} else {
 		if len(kinds) > 0 {
 			l.gateway.Status.Listeners[l.listenerStatusIdx].SupportedKinds = make([]gwapiv1.RouteGroupKind, len(kinds))
@@ -132,9 +131,7 @@ func (l *ListenerContext) AllowsKind(kind gwapiv1.RouteGroupKind) bool {
 	if l.xListenerSet != nil {
 		// Convert XListenerSet supported kinds to Gateway API kinds
 		// Since they are alias types, we can cast them
-		for _, k := range l.xListenerSet.Status.Listeners[l.xListenerSetStatusIdx].SupportedKinds {
-			supportedKinds = append(supportedKinds, gwapiv1.RouteGroupKind(k))
-		}
+		supportedKinds = append(supportedKinds, l.xListenerSet.Status.Listeners[l.xListenerSetStatusIdx].SupportedKinds...)
 	} else {
 		supportedKinds = l.gateway.Status.Listeners[l.listenerStatusIdx].SupportedKinds
 	}

@@ -588,10 +588,10 @@ func (t *Translator) validateTerminateModeAndGetTLSSecrets(
 					listener.listenerStatusIdx,
 					gwapiv1.ListenerConditionResolvedRefs,
 					metav1.ConditionFalse,
-				err.Reason(),
-				fmt.Sprintf("No valid secrets exist: %v.", err.Error()),
-			)
-		}
+					err.Reason(),
+					fmt.Sprintf("No valid secrets exist: %v.", err.Error()),
+				)
+			}
 			return nil, nil
 		} else {
 			errs = append(errs, err)

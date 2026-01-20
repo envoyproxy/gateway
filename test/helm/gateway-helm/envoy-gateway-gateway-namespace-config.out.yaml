@@ -175,6 +175,20 @@ rules:
   verbs:
   - update
 - apiGroups:
+  - gateway.networking.x-k8s.io
+  resources:
+  - xlistenersets
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - gateway.networking.x-k8s.io
+  resources:
+  - xlistenersets/status
+  verbs:
+  - update
+- apiGroups:
   - ""
   resources:
   - pods

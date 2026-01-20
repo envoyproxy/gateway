@@ -199,7 +199,7 @@ func (t *Translator) isXListenerSetAllowed(gateway *gwapiv1.Gateway, xls *gwapix
 		}
 		// We need to look up the namespace of the XListenerSet to check labels
 		// translatorContext has NamespaceMap
-		ns := t.TranslatorContext.GetNamespace(xls.Namespace)
+		ns := t.GetNamespace(xls.Namespace)
 		if ns != nil {
 			return selector.Matches(labels.Set(ns.Labels))
 		}
