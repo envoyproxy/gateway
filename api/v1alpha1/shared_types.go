@@ -863,6 +863,8 @@ type Tracing struct {
 	// CustomTags defines the custom tags to add to each span.
 	// If provider is kubernetes, pod name and namespace are added by default.
 	//
+	// Deprecated: Use Tags instead.
+	//
 	// +optional
 	CustomTags map[string]CustomTag `json:"customTags,omitempty"`
 	// Tags defines the custom tags to add to each span.

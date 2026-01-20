@@ -786,6 +786,7 @@ func (t *Translator) processTracing(gw *gwapiv1.Gateway, envoyproxy *egv1a1.Envo
 		ServiceName:  serviceName,
 		SamplingRate: proxySamplingRate(tracing),
 		CustomTags:   tracing.CustomTags,
+		Tags:         tracing.Tags,
 		Destination: ir.RouteDestination{
 			Name:     destName,
 			Settings: ds,
