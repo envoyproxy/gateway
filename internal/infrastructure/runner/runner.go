@@ -119,14 +119,14 @@ func (r *Runner) updateProxyInfraFromSubscription(ctx context.Context, sub <-cha
 				}
 			} else {
 				// Manage the proxy infra.
-				if len(val.Proxy.Listeners) == 0 {
-					r.Logger.Info("Infra IR was updated, but no listeners were found. Skipping infra creation.")
-					return
-				}
-
 				// Skip creating or updating infra if the Infra IR is invalid.
 				if ptr.Deref(val.Invalid, false) {
 					r.Logger.Info("Infra IR was update, but it is invalid. Skipping infra provision.")
+					return
+				}
+
+				if len(val.Proxy.Listeners) == 0 {
+					r.Logger.Info("Infra IR was updated, but no listeners were found. Skipping infra creation.")
 					return
 				}
 
