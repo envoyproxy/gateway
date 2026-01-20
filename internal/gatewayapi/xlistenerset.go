@@ -41,6 +41,8 @@ func (t *Translator) processXListenerSet(xls *gwapixv1a1.XListenerSet, gatewayMa
 		return
 	}
 
+	t.Logger.Info("Processing XListenerSet 1", "namespace", xls.Namespace, "name", xls.Name)
+
 	var (
 		xlsReason gwapixv1a1.ListenerSetConditionReason
 		xlsMsg    string
@@ -55,6 +57,8 @@ func (t *Translator) processXListenerSet(xls *gwapixv1a1.XListenerSet, gatewayMa
 		return
 	}
 
+	t.Logger.Info("Processing XListenerSet 2", "namespace", xls.Namespace, "name", xls.Name)
+
 	// Check if the namespace is allowed
 	if !t.isXListenerSetAllowed(gatewayCtx.Gateway, xls) {
 		xlsReason = gwapixv1a1.ListenerSetReasonNotAllowed
@@ -63,6 +67,8 @@ func (t *Translator) processXListenerSet(xls *gwapixv1a1.XListenerSet, gatewayMa
 		status.UpdateXListenerSetStatusProgrammed(xls, false, gwapixv1a1.ListenerSetReasonProgrammed, "Not Programmed")
 		return
 	}
+
+	t.Logger.Info("Processing XListenerSet 3", "namespace", xls.Namespace, "name", xls.Name)
 
 	// Attach listeners to the GatewayContext
 	// We do NOT update status here. It will be updated in ProcessXListenerSetStatus after listeners are processed.
@@ -94,7 +100,10 @@ func (t *Translator) processXListenerSet(xls *gwapixv1a1.XListenerSet, gatewayMa
 			xListenerSetStatusIdx: i,
 		}
 		gatewayCtx.listeners = append(gatewayCtx.listeners, listenerCtx)
+		t.Logger.Info("Processing XListenerSet 3.1", "namespace", xls.Namespace, "name", xls.Name)
 	}
+
+	t.Logger.Info("Processing XListenerSet 4", "namespace", xls.Namespace, "name", xls.Name)
 }
 
 // ProcessXListenerSetStatus computes the status of XListenerSets after their listeners have been processed.

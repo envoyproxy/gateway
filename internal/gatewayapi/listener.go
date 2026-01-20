@@ -61,6 +61,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 		t.processProxyObservability(gateway, xdsIR[irKey], infraIR[irKey].Proxy, resources)
 
 		for _, listener := range gateway.listeners {
+			t.Logger.Info("Processing listener 1", "name", listener.Name)
 			// Process protocol & supported kinds
 			switch listener.Protocol {
 			case gwapiv1.TLSProtocolType:
