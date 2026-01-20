@@ -643,7 +643,7 @@ func (t *Translator) addRouteToRouteConfig(
 						name:         mrr.Destination.Name,
 						settings:     mrr.Destination.Settings,
 						tSocket:      nil,
-						endpointType: EndpointTypeStatic,
+						endpointType: buildEndpointType(mrr.Destination.Settings),
 						metrics:      metrics,
 						metadata:     mrr.Destination.Metadata,
 					}); err != nil {
