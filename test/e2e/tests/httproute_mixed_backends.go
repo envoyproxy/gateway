@@ -8,7 +8,6 @@
 package tests
 
 import (
-	"strings"
 	"testing"
 
 	"k8s.io/apimachinery/pkg/types"
@@ -37,70 +36,34 @@ var HTTPRouteMixedBackendsTest = suite.ConformanceTest{
 
 		kubernetes.NamespacesMustBeReady(t, suite.Client, suite.TimeoutConfig, []string{ns})
 
-		expectedResponse := http.ExpectedResponse{
-			Request: http.Request{
-				Host: "mixed.example.com",
-				Path: "/mixed",
+		// Make requests to both backends to verify traffic is routed correctly.
+		responses := []http.ExpectedResponse{
+			{
+				Request: http.Request{
+					Host: "mixed.example.com",
+					Path: "/mixed",
+				},
+				Response: http.Response{
+					StatusCodes: []int{200},
+				},
+				Namespace: ns,
+				Backend:   "infra-backend-v1",
 			},
-			Response: http.Response{
-				StatusCodes: []int{200},
+			{
+				Request: http.Request{
+					Host: "mixed.example.com",
+					Path: "/mixed",
+				},
+				Response: http.Response{
+					StatusCodes: []int{200},
+				},
+				Namespace: ns,
+				Backend:   "infra-backend-v2",
 			},
-			Namespace: ns,
 		}
 
-		http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
-
-		req := http.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
-
-		expectedBackends := map[string]struct{}{
-			"infra-backend-v1": {},
-			"infra-backend-v2": {},
-		}
-		seen := make(map[string]struct{})
-
-		const maxRequests = 40
-		for i := 0; i < maxRequests; i++ {
-			cReq, cResp, err := suite.RoundTripper.CaptureRoundTrip(req)
-			if err != nil {
-				t.Fatalf("failed to capture round trip: %v", err)
-			}
-
-			if err := http.CompareRoundTrip(t, &req, cReq, cResp, expectedResponse); err != nil {
-				t.Fatalf("failed to compare request and response: %v", err)
-			}
-
-			podName := cReq.Pod
-			if podName == "" {
-				t.Fatalf("missing pod information in captured request")
-			}
-
-			backend := backendFromPodName(podName)
-			if backend == "" {
-				t.Fatalf("unexpected pod name %q", podName)
-			}
-
-			if _, ok := expectedBackends[backend]; ok {
-				seen[backend] = struct{}{}
-			}
-
-			if len(seen) == len(expectedBackends) {
-				break
-			}
-		}
-
-		if len(seen) != len(expectedBackends) {
-			t.Fatalf("expected to see traffic routed to both infra-backend-v1 and infra-backend-v2, got %v", seen)
+		for _, res := range responses {
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, res)
 		}
 	},
-}
-
-func backendFromPodName(podName string) string {
-	switch {
-	case strings.HasPrefix(podName, "infra-backend-v1"):
-		return "infra-backend-v1"
-	case strings.HasPrefix(podName, "infra-backend-v2"):
-		return "infra-backend-v2"
-	default:
-		return ""
-	}
 }
