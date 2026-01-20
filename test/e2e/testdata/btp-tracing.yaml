@@ -32,6 +32,12 @@ spec:
           - name: otel-collector
             namespace: monitoring
             port: 4317
+      # will be overridden by tags
+      customTags:
+        "provider":
+          type: Literal
+          literal:
+            value: "value-will-be-overrite"
       tags:
         "provider": "otel"
         "k8s.cluster.name": "envoy-gateway"
