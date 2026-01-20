@@ -2282,6 +2282,9 @@ GatewayAPI defines an experimental Gateway API resource that can be enabled.
 _Appears in:_
 - [GatewayAPIs](#gatewayapis)
 
+| Value | Description |
+| ----- | ----------- |
+| `XListenerSet` | XListenerSet enables the Gateway API XListenerSet resource.<br /> | 
 
 
 #### GatewayAPIs

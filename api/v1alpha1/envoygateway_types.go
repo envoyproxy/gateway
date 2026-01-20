@@ -118,10 +118,8 @@ type EnvoyGatewaySpec struct {
 type GatewayAPI string
 
 const (
-// XListenerSet enables the Gateway API XListenerSet resource.
-// XListenerSet GatewayAPI = "XListenerSet"
-// XBackendTrafficPolicy enables the Gateway API XBackendTrafficPolicy resource.
-// XBackendTrafficPolicy GatewayAPI = "XBackendTrafficPolicy"
+	// XListenerSet enables the Gateway API XListenerSet resource.
+	XListenerSet GatewayAPI = "XListenerSet"
 )
 
 // GatewayAPIs provides a mechanism to opt into experimental Gateway API resources.

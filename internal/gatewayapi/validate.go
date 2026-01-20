@@ -20,6 +20,7 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+	gwapixv1a1 "sigs.k8s.io/gateway-api/apisx/v1alpha1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
@@ -274,18 +275,31 @@ func (t *Translator) validateBackendRefBackend(
 	return nil
 }
 
+// TODO simplify the status update logic for listeners
 func (t *Translator) validateListenerConditions(listener *ListenerContext) (isReady bool) {
 	lConditions := listener.GetConditions()
 	if len(lConditions) == 0 {
-		status.SetGatewayListenerStatusCondition(listener.gateway.Gateway, listener.listenerStatusIdx,
-			gwapiv1.ListenerConditionProgrammed, metav1.ConditionTrue, gwapiv1.ListenerReasonProgrammed,
-			"Sending translated listener configuration to the data plane")
-		status.SetGatewayListenerStatusCondition(listener.gateway.Gateway, listener.listenerStatusIdx,
-			gwapiv1.ListenerConditionAccepted, metav1.ConditionTrue, gwapiv1.ListenerReasonAccepted,
-			"Listener has been successfully translated")
-		status.SetGatewayListenerStatusCondition(listener.gateway.Gateway, listener.listenerStatusIdx,
-			gwapiv1.ListenerConditionResolvedRefs, metav1.ConditionTrue, gwapiv1.ListenerReasonResolvedRefs,
-			"Listener references have been resolved")
+		if listener.isFromXListenerSet() {
+			status.SetXListenerSetListenerStatusCondition(listener.xListenerSet, listener.xListenerSetStatusIdx,
+				gwapixv1a1.ListenerEntryConditionProgrammed, metav1.ConditionTrue, gwapixv1a1.ListenerEntryReasonProgrammed,
+				"Sending translated listener configuration to the data plane")
+			status.SetXListenerSetListenerStatusCondition(listener.xListenerSet, listener.xListenerSetStatusIdx,
+				gwapixv1a1.ListenerEntryConditionAccepted, metav1.ConditionTrue, gwapixv1a1.ListenerEntryReasonAccepted,
+				"Listener has been successfully translated")
+			status.SetXListenerSetListenerStatusCondition(listener.xListenerSet, listener.xListenerSetStatusIdx,
+				gwapixv1a1.ListenerEntryConditionResolvedRefs, metav1.ConditionTrue, gwapixv1a1.ListenerEntryReasonResolvedRefs,
+				"Listener references have been resolved")
+		} else {
+			status.SetGatewayListenerStatusCondition(listener.gateway.Gateway, listener.listenerStatusIdx,
+				gwapiv1.ListenerConditionProgrammed, metav1.ConditionTrue, gwapiv1.ListenerReasonProgrammed,
+				"Sending translated listener configuration to the data plane")
+			status.SetGatewayListenerStatusCondition(listener.gateway.Gateway, listener.listenerStatusIdx,
+				gwapiv1.ListenerConditionAccepted, metav1.ConditionTrue, gwapiv1.ListenerReasonAccepted,
+				"Listener has been successfully translated")
+			status.SetGatewayListenerStatusCondition(listener.gateway.Gateway, listener.listenerStatusIdx,
+				gwapiv1.ListenerConditionResolvedRefs, metav1.ConditionTrue, gwapiv1.ListenerReasonResolvedRefs,
+				"Listener references have been resolved")
+		}
 		return true
 	}
 
@@ -293,12 +307,21 @@ func (t *Translator) validateListenerConditions(listener *ListenerContext) (isRe
 	// In this case, we can still consider the listener as ready because we only program the listener using only the valid certificates.
 	if len(lConditions) == 1 && lConditions[0].Type == string(gwapiv1.ListenerConditionResolvedRefs) &&
 		lConditions[0].Reason == string(status.ListenerReasonPartiallyInvalidCertificateRef) {
-		status.SetGatewayListenerStatusCondition(listener.gateway.Gateway, listener.listenerStatusIdx,
-			gwapiv1.ListenerConditionAccepted, metav1.ConditionTrue, gwapiv1.ListenerReasonAccepted,
-			"Listener has been successfully translated")
-		status.SetGatewayListenerStatusCondition(listener.gateway.Gateway, listener.listenerStatusIdx,
-			gwapiv1.ListenerConditionProgrammed, metav1.ConditionTrue, gwapiv1.ListenerReasonProgrammed,
-			"Sending translated listener configuration to the data plane")
+		if listener.isFromXListenerSet() {
+			status.SetXListenerSetListenerStatusCondition(listener.xListenerSet, listener.xListenerSetStatusIdx,
+				gwapixv1a1.ListenerEntryConditionAccepted, metav1.ConditionTrue, gwapixv1a1.ListenerEntryReasonAccepted,
+				"Listener has been successfully translated")
+			status.SetXListenerSetListenerStatusCondition(listener.xListenerSet, listener.xListenerSetStatusIdx,
+				gwapixv1a1.ListenerEntryConditionProgrammed, metav1.ConditionTrue, gwapixv1a1.ListenerEntryReasonProgrammed,
+				"Sending translated listener configuration to the data plane")
+		} else {
+			status.SetGatewayListenerStatusCondition(listener.gateway.Gateway, listener.listenerStatusIdx,
+				gwapiv1.ListenerConditionAccepted, metav1.ConditionTrue, gwapiv1.ListenerReasonAccepted,
+				"Listener has been successfully translated")
+			status.SetGatewayListenerStatusCondition(listener.gateway.Gateway, listener.listenerStatusIdx,
+				gwapiv1.ListenerConditionProgrammed, metav1.ConditionTrue, gwapiv1.ListenerReasonProgrammed,
+				"Sending translated listener configuration to the data plane")
+		}
 		return true
 	}
 
@@ -316,23 +339,44 @@ func (t *Translator) validateListenerConditions(listener *ListenerContext) (isRe
 		}
 		// set "Programmed: false" if it's not set already.
 		if !hasProgrammedCond {
-			status.SetGatewayListenerStatusCondition(listener.gateway.Gateway,
-				listener.listenerStatusIdx,
-				gwapiv1.ListenerConditionProgrammed,
-				metav1.ConditionFalse,
-				gwapiv1.ListenerReasonInvalid,
-				"Listener is invalid, see other Conditions for details.",
-			)
+			if listener.isFromXListenerSet() {
+				status.SetXListenerSetListenerStatusCondition(
+					listener.xListenerSet,
+					listener.xListenerSetStatusIdx,
+					gwapixv1a1.ListenerEntryConditionProgrammed,
+					metav1.ConditionFalse,
+					gwapixv1a1.ListenerEntryReasonInvalid,
+					"Listener is invalid, see other Conditions for details.")
+			} else {
+				status.SetGatewayListenerStatusCondition(listener.gateway.Gateway,
+					listener.listenerStatusIdx,
+					gwapiv1.ListenerConditionProgrammed,
+					metav1.ConditionFalse,
+					gwapiv1.ListenerReasonInvalid,
+					"Listener is invalid, see other Conditions for details.",
+				)
+			}
 		}
 		// set "ResolvedRefs: true" if it's not set already.
 		if !hasRefsCond {
-			status.SetGatewayListenerStatusCondition(listener.gateway.Gateway,
-				listener.listenerStatusIdx,
-				gwapiv1.ListenerConditionResolvedRefs,
-				metav1.ConditionTrue,
-				gwapiv1.ListenerReasonResolvedRefs,
-				"Listener references have been resolved",
-			)
+			if listener.isFromXListenerSet() {
+				status.SetXListenerSetListenerStatusCondition(
+					listener.xListenerSet,
+					listener.xListenerSetStatusIdx,
+					gwapixv1a1.ListenerEntryConditionResolvedRefs,
+					metav1.ConditionTrue,
+					gwapixv1a1.ListenerEntryReasonResolvedRefs,
+					"Listener references have been resolved",
+				)
+			} else {
+				status.SetGatewayListenerStatusCondition(listener.gateway.Gateway,
+					listener.listenerStatusIdx,
+					gwapiv1.ListenerConditionResolvedRefs,
+					metav1.ConditionTrue,
+					gwapiv1.ListenerReasonResolvedRefs,
+					"Listener references have been resolved",
+				)
+			}
 		}
 		// skip computing IR
 		return false
@@ -346,23 +390,45 @@ func (t *Translator) validateAllowedNamespaces(listener *ListenerContext) {
 		listener.AllowedRoutes.Namespaces.From != nil &&
 		*listener.AllowedRoutes.Namespaces.From == gwapiv1.NamespacesFromSelector {
 		if listener.AllowedRoutes.Namespaces.Selector == nil {
-			status.SetGatewayListenerStatusCondition(listener.gateway.Gateway,
-				listener.listenerStatusIdx,
-				gwapiv1.ListenerConditionProgrammed,
-				metav1.ConditionFalse,
-				gwapiv1.ListenerReasonInvalid,
-				"The allowedRoutes.namespaces.selector field must be specified when allowedRoutes.namespaces.from is set to \"Selector\".",
-			)
-		} else {
-			selector, err := metav1.LabelSelectorAsSelector(listener.AllowedRoutes.Namespaces.Selector)
-			if err != nil {
+			if listener.isFromXListenerSet() {
+				status.SetXListenerSetListenerStatusCondition(
+					listener.xListenerSet,
+					listener.xListenerSetStatusIdx,
+					gwapixv1a1.ListenerEntryConditionProgrammed,
+					metav1.ConditionFalse,
+					gwapixv1a1.ListenerEntryReasonInvalid,
+					"The allowedRoutes.namespaces.selector field must be specified when allowedRoutes.namespaces.from is set to \"Selector\".",
+				)
+			} else {
 				status.SetGatewayListenerStatusCondition(listener.gateway.Gateway,
 					listener.listenerStatusIdx,
 					gwapiv1.ListenerConditionProgrammed,
 					metav1.ConditionFalse,
 					gwapiv1.ListenerReasonInvalid,
-					fmt.Sprintf("The allowedRoutes.namespaces.selector could not be parsed: %v.", err),
+					"The allowedRoutes.namespaces.selector field must be specified when allowedRoutes.namespaces.from is set to \"Selector\".",
 				)
+			}
+		} else {
+			selector, err := metav1.LabelSelectorAsSelector(listener.AllowedRoutes.Namespaces.Selector)
+			if err != nil {
+				if listener.isFromXListenerSet() {
+					status.SetXListenerSetListenerStatusCondition(
+						listener.xListenerSet,
+						listener.xListenerSetStatusIdx,
+						gwapixv1a1.ListenerEntryConditionProgrammed,
+						metav1.ConditionFalse,
+						gwapixv1a1.ListenerEntryReasonInvalid,
+						fmt.Sprintf("The allowedRoutes.namespaces.selector could not be parsed: %v.", err),
+					)
+				} else {
+					status.SetGatewayListenerStatusCondition(listener.gateway.Gateway,
+						listener.listenerStatusIdx,
+						gwapiv1.ListenerConditionProgrammed,
+						metav1.ConditionFalse,
+						gwapiv1.ListenerReasonInvalid,
+						fmt.Sprintf("The allowedRoutes.namespaces.selector could not be parsed: %v.", err),
+					)
+				}
 			}
 
 			listener.namespaceSelector = selector
@@ -375,13 +441,24 @@ func (t *Translator) validateTerminateModeAndGetTLSSecrets(
 	resources *resource.Resources,
 ) ([]*corev1.Secret, []*x509.Certificate) {
 	if len(listener.TLS.CertificateRefs) == 0 {
-		status.SetGatewayListenerStatusCondition(listener.gateway.Gateway,
-			listener.listenerStatusIdx,
-			gwapiv1.ListenerConditionProgrammed,
-			metav1.ConditionFalse,
-			gwapiv1.ListenerReasonInvalid,
-			"Listener must have at least 1 TLS certificate ref",
-		)
+		if listener.isFromXListenerSet() {
+			status.SetXListenerSetListenerStatusCondition(
+				listener.xListenerSet,
+				listener.xListenerSetStatusIdx,
+				gwapixv1a1.ListenerEntryConditionProgrammed,
+				metav1.ConditionFalse,
+				gwapixv1a1.ListenerEntryReasonInvalid,
+				"Listener must have at least 1 TLS certificate ref",
+			)
+		} else {
+			status.SetGatewayListenerStatusCondition(listener.gateway.Gateway,
+				listener.listenerStatusIdx,
+				gwapiv1.ListenerConditionProgrammed,
+				metav1.ConditionFalse,
+				gwapiv1.ListenerReasonInvalid,
+				"Listener must have at least 1 TLS certificate ref",
+			)
+		}
 		return nil, nil
 	}
 
@@ -475,27 +552,46 @@ func (t *Translator) validateTerminateModeAndGetTLSSecrets(
 		for i, e := range errs {
 			errList[i] = e
 		}
-
-		status.SetGatewayListenerStatusCondition(listener.gateway.Gateway,
-			listener.listenerStatusIdx,
-			gwapiv1.ListenerConditionResolvedRefs,
-			metav1.ConditionFalse,
-			reason,
-			fmt.Sprintf("No valid secrets exist: %v", errors.Join(errList...)),
-		)
+		if listener.isFromXListenerSet() {
+			status.SetXListenerSetListenerStatusCondition(listener.xListenerSet,
+				listener.xListenerSetStatusIdx,
+				gwapixv1a1.ListenerEntryConditionResolvedRefs,
+				metav1.ConditionFalse,
+				gwapixv1a1.ListenerEntryConditionReason(reason),
+				fmt.Sprintf("No valid secrets exist: %v", errors.Join(errList...)),
+			)
+		} else {
+			status.SetGatewayListenerStatusCondition(listener.gateway.Gateway,
+				listener.listenerStatusIdx,
+				gwapiv1.ListenerConditionResolvedRefs,
+				metav1.ConditionFalse,
+				reason,
+				fmt.Sprintf("No valid secrets exist: %v", errors.Join(errList...)),
+			)
+		}
 		return nil, nil
 	}
 
 	validSecrets, certs, err := parseCertsFromTLSSecretsData(secrets)
 	if err != nil {
 		if err.Reason() != status.ListenerReasonPartiallyInvalidCertificateRef {
-			status.SetGatewayListenerStatusCondition(listener.gateway.Gateway,
-				listener.listenerStatusIdx,
-				gwapiv1.ListenerConditionResolvedRefs,
-				metav1.ConditionFalse,
+			if listener.isFromXListenerSet() {
+				status.SetXListenerSetListenerStatusCondition(listener.xListenerSet,
+					listener.xListenerSetStatusIdx,
+					gwapixv1a1.ListenerEntryConditionResolvedRefs,
+					metav1.ConditionFalse,
+					gwapixv1a1.ListenerEntryConditionReason(err.Reason()),
+					fmt.Sprintf("No valid secrets exist: %v.", err.Error()),
+				)
+			} else {
+				status.SetGatewayListenerStatusCondition(listener.gateway.Gateway,
+					listener.listenerStatusIdx,
+					gwapiv1.ListenerConditionResolvedRefs,
+					metav1.ConditionFalse,
 				err.Reason(),
 				fmt.Sprintf("No valid secrets exist: %v.", err.Error()),
 			)
+		}
 			return nil, nil
 		} else {
 			errs = append(errs, err)

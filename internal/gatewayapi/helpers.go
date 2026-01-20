@@ -140,12 +140,37 @@ func IsRefToGateway(routeNamespace gwapiv1.Namespace, parentRef gwapiv1.ParentRe
 	return string(parentRef.Name) == gateway.Name
 }
 
-// GetReferencedListeners returns whether a given parent ref references a Gateway
-// in the given list, and if so, a list of the Listeners within that Gateway that
+// GetReferencedListeners returns whether a given parent ref references a Gateway or XListenerSet
+// in the given list, and if so, a list of the Listeners within that Gateway or XListenerSet that
 // are included by the parent ref (either one specific Listener, or all Listeners
-// in the Gateway, depending on whether section name is specified or not).
+// in the Gateway or XListenerSet, depending on whether section name is specified or not).
 func GetReferencedListeners(routeNamespace gwapiv1.Namespace, parentRef gwapiv1.ParentReference, gateways []*GatewayContext) (bool, []*ListenerContext) {
 	var referencedListeners []*ListenerContext
+
+	if isRefToXListenerSet(parentRef) {
+		ns := routeNamespace
+		if parentRef.Namespace != nil {
+			ns = *parentRef.Namespace
+		}
+		var matchedListenerSet bool
+		for _, gateway := range gateways {
+			for _, listener := range gateway.listeners {
+				if !listener.isFromXListenerSet() || listener.xListenerSet == nil {
+					continue
+				}
+				if listener.xListenerSet.Namespace != string(ns) ||
+					listener.xListenerSet.Name != string(parentRef.Name) {
+					continue
+				}
+				matchedListenerSet = true
+				if (parentRef.SectionName == nil || *parentRef.SectionName == listener.Name) &&
+					(parentRef.Port == nil || *parentRef.Port == listener.Port) {
+					referencedListeners = append(referencedListeners, listener)
+				}
+			}
+		}
+		return matchedListenerSet, referencedListeners
+	}
 
 	for _, gateway := range gateways {
 		if IsRefToGateway(routeNamespace, parentRef, utils.NamespacedName(gateway)) {
@@ -160,6 +185,16 @@ func GetReferencedListeners(routeNamespace gwapiv1.Namespace, parentRef gwapiv1.
 	}
 
 	return false, referencedListeners
+}
+
+func isRefToXListenerSet(parentRef gwapiv1.ParentReference) bool {
+	if parentRef.Kind == nil || string(*parentRef.Kind) != resource.KindXListenerSet {
+		return false
+	}
+	if parentRef.Group != nil && string(*parentRef.Group) != gwapiv1.GroupName {
+		return false
+	}
+	return true
 }
 
 // HasReadyListener returns true if at least one Listener in the

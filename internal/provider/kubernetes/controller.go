@@ -43,6 +43,7 @@ import (
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwapiv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+	gwapixv1a1 "sigs.k8s.io/gateway-api/apisx/v1alpha1"
 	mcsapiv1a1 "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -95,6 +96,9 @@ type gatewayAPIReconciler struct {
 	tcpRouteCRDExists      bool
 	tlsRouteCRDExists      bool
 	udpRouteCRDExists      bool
+
+	// Experimental Gateway API features
+	xListenerSetEnabled bool
 
 	clusterTrustBundleExits bool
 }
@@ -267,6 +271,11 @@ func (r *gatewayAPIReconciler) backendAPIDisabled() bool {
 	}
 
 	return !r.envoyGateway.ExtensionAPIs.EnableBackend
+}
+
+func (r *gatewayAPIReconciler) xListenerSetDisabled() bool {
+	return r.envoyGateway == nil || r.envoyGateway.GatewayAPIs == nil ||
+		!r.envoyGateway.GatewayAPIs.IsEnabled(egv1a1.XListenerSet)
 }
 
 func byNamespaceSelectorEnabled(eg *egv1a1.EnvoyGateway) bool {
@@ -1659,6 +1668,15 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, managedGC *g
 			}
 		}
 
+		if r.xListenerSetEnabled {
+			if err := r.processXListenerSets(ctx, gtwNamespacedName, resourceMap, resourceTree); err != nil {
+				if isTransientError(err) {
+					return err
+				}
+				r.log.Error(err, "failed to process XListenerSets for gateway", "namespace", gtw.Namespace, "name", gtw.Name)
+			}
+		}
+
 		// Get HTTPRoute objects and check if it exists.
 		if err := r.processHTTPRoutes(ctx, gtwNamespacedName, resourceMap, resourceTree); err != nil {
 			return err
@@ -1832,6 +1850,68 @@ func (r *gatewayAPIReconciler) processClientTrafficPolicies(
 		return err
 	}
 	return r.processCTPCrlRefs(ctx, resourceTree, resourceMap)
+}
+
+func (r *gatewayAPIReconciler) processXListenerSets(ctx context.Context, gatewayNamespaceName string,
+	resourceMap *resourceMappings, resourceTree *resource.Resources,
+) error {
+	xListenerSetList := &gwapixv1a1.XListenerSetList{}
+	if err := r.client.List(ctx, xListenerSetList, &client.ListOptions{
+		FieldSelector: fields.OneTermEqualSelector(gatewayXListenerSetIndex, gatewayNamespaceName),
+	}); err != nil {
+		r.log.Error(err, "failed to list XListenerSets", "gateway", gatewayNamespaceName)
+		return err
+	}
+
+	for i := range xListenerSetList.Items {
+		xls := &xListenerSetList.Items[i]
+		if r.namespaceLabel != nil {
+			if ok, err := r.checkObjectNamespaceLabels(xls); err != nil {
+				r.log.Error(err, "failed to check namespace labels for XListenerSet",
+					"name", xls.GetName(), "namespace", xls.GetNamespace())
+				continue
+			} else if !ok {
+				continue
+			}
+		}
+
+		key := utils.NamespacedName(xls).String()
+		if resourceMap.allAssociatedXListenerSets.Has(key) {
+			continue
+		}
+
+		r.log.Info("processing XListenerSet", "namespace", xls.Namespace, "name", xls.Name)
+
+		for _, listener := range xls.Spec.Listeners {
+			// Listener TLS is optional; only process when TLS termination occurs.
+			if !islistenerEntryTerminatesTLS(&listener) {
+				continue
+			}
+
+			for _, certRef := range listener.TLS.CertificateRefs {
+				if refsSecret(&certRef) {
+					if err := r.processSecretRef(ctx,
+						resourceMap, resourceTree,
+						resource.KindXListenerSet, xls.Namespace, xls.Name,
+						certRef); err != nil {
+						if isTransientError(err) {
+							return err
+						}
+						r.log.Error(err, "failed to process TLS SecretRef for XListenerSet",
+							"xListenerSet", xls, "secretRef", certRef)
+					}
+				}
+			}
+		}
+
+		// Drop Status to reduce memory
+		xls.Status = gwapixv1a1.ListenerSetStatus{}
+		resourceMap.allAssociatedNamespaces.Insert(xls.Namespace)
+		resourceMap.allAssociatedXListenerSets.Insert(key)
+		resourceTree.XListenerSets = append(resourceTree.XListenerSets, xls)
+	}
+
+	return nil
 }
 
 // processBackendTrafficPolicies adds BackendTrafficPolicies to the resourceTree
@@ -2011,6 +2091,42 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 	}
 	if err := addGatewayIndexers(ctx, mgr); err != nil {
 		return err
+	}
+
+	// Watch XListenerSet CRUDs when the experimental API is enabled and the CRD exists.
+	r.xListenerSetEnabled = false
+	exists, err := checkCRD(resource.KindXListenerSet, gwapixv1a1.GroupVersion.String())
+	if err != nil {
+		return err
+	}
+	switch {
+	case !exists:
+		r.log.Info("XListenerSet CRD not found, skipping XListenerSet watch")
+	case r.xListenerSetDisabled():
+		r.log.Info("XListenerSet API disabled, skipping XListenerSet watch")
+	default:
+		r.log.Info("XListenerSet API enabled, watching XListenerSets")
+		xlsPredicates := []predicate.TypedPredicate[*gwapixv1a1.XListenerSet]{
+			predicate.TypedGenerationChangedPredicate[*gwapixv1a1.XListenerSet]{},
+		}
+		if r.namespaceLabel != nil {
+			xlsPredicates = append(xlsPredicates, predicate.NewTypedPredicateFuncs(func(obj *gwapixv1a1.XListenerSet) bool {
+				return r.hasMatchingNamespaceLabels(obj)
+			}))
+		}
+
+		if err := c.Watch(
+			source.Kind(mgr.GetCache(), &gwapixv1a1.XListenerSet{},
+				handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, obj *gwapixv1a1.XListenerSet) []reconcile.Request {
+					return r.enqueueClass(ctx, obj)
+				}),
+				xlsPredicates...)); err != nil {
+			return err
+		}
+		if err := addXListenerSetIndexers(ctx, mgr); err != nil {
+			return err
+		}
+		r.xListenerSetEnabled = true
 	}
 
 	// Watch HTTPRoute CRUDs and process affected Gateways.

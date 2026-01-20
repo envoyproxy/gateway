@@ -11,6 +11,7 @@ const (
 	KindBackendTrafficPolicy = "BackendTrafficPolicy"
 	KindBackendTLSPolicy     = "BackendTLSPolicy"
 	KindBackend              = "Backend"
+	KindXListenerSet         = "XListenerSet"
 	KindEnvoyPatchPolicy     = "EnvoyPatchPolicy"
 	KindEnvoyExtensionPolicy = "EnvoyExtensionPolicy"
 	KindSecurityPolicy       = "SecurityPolicy"

@@ -70,6 +70,8 @@ type resourceMappings struct {
 	// allAssociatedClusterTrustBundles is a set of all ClusterTrustBundles' name
 	// key is the name of ClusterTrustBundle, because ClusterTrustBundle is cluster-scoped resource
 	allAssociatedClusterTrustBundles sets.Set[string]
+	// Set for storing XListenerSets' NamespacedNames attaching to Gateways.
+	allAssociatedXListenerSets sets.Set[string]
 }
 
 func newResourceMapping() *resourceMappings {
@@ -100,5 +102,6 @@ func newResourceMapping() *resourceMappings {
 		allAssociatedHTTPRouteExtensionFilters:  sets.New[utils.NamespacedNameWithGroupKind](),
 		allAssociatedBackendRefExtensionFilters: sets.New[utils.NamespacedNameWithGroupKind](),
 		allAssociatedClusterTrustBundles:        sets.New[string](),
+		allAssociatedXListenerSets:              sets.New[string](),
 	}
 }
