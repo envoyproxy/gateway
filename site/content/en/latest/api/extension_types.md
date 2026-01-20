@@ -2273,6 +2273,33 @@ _Appears in:_
 | `controllerName` | _string_ |  false  |  | ControllerName defines the name of the Gateway API controller. If unspecified,<br />defaults to "gateway.envoyproxy.io/gatewayclass-controller". See the following<br />for additional details:<br />  https://gateway-api.sigs.k8s.io/reference/1.4/spec/#gatewayclass |
 
 
+#### GatewayAPI
+
+_Underlying type:_ _string_
+
+GatewayAPI defines an experimental Gateway API resource that can be enabled.
+
+_Appears in:_
+- [GatewayAPIs](#gatewayapis)
+
+
+
+#### GatewayAPIs
+
+
+
+GatewayAPIs provides a mechanism to opt into experimental Gateway API resources.
+These APIs are experimental today and are subject to change or removal as they mature.
+
+_Appears in:_
+- [EnvoyGateway](#envoygateway)
+- [EnvoyGatewaySpec](#envoygatewayspec)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `enabled` | _[GatewayAPI](#gatewayapi) array_ |  true  |  |  |
+
+
 #### GlobalRateLimit
 
 
