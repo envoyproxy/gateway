@@ -251,7 +251,7 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 	// Gateways are already sorted by the provider layer
 
 	// Build IR maps.
-	xdsIR, infraIR := t.InitIRs(acceptedGateways)
+	xdsIR, infraIR := t.InitIRs(acceptedGateways, failedGateways)
 
 	// Process XListenerSets and attach them to the relevant Gateways
 	t.ProcessXListenerSets(resources.XListenerSets, acceptedGateways)
@@ -493,46 +493,61 @@ func validateEnvoyProxy(ep *egv1a1.EnvoyProxy) error {
 }
 
 // InitIRs checks if mergeGateways is enabled in EnvoyProxy config and initializes XdsIR and InfraIR maps with adequate keys.
-func (t *Translator) InitIRs(gateways []*GatewayContext) (map[string]*ir.Xds, map[string]*ir.Infra) {
+func (t *Translator) InitIRs(acceptedGateways, failedGateways []*GatewayContext) (map[string]*ir.Xds, map[string]*ir.Infra) {
 	xdsIR := make(resource.XdsIRMap)
 	infraIR := make(resource.InfraIRMap)
 
-	for _, gateway := range gateways {
-		gwXdsIR := &ir.Xds{}
-		gwInfraIR := ir.NewInfra()
-		labels := infrastructureLabels(gateway.Gateway)
-		annotations := infrastructureAnnotations(gateway.Gateway)
-		gwInfraIR.Proxy.GetProxyMetadata().Annotations = annotations
+	for _, gateway := range acceptedGateways {
+		irKey, gwXdsIR, gwInfraIR := t.buildIR(gateway)
+		// save the IR references in the map before the translation starts
+		xdsIR[irKey] = gwXdsIR
+		infraIR[irKey] = gwInfraIR
+	}
 
-		irKey := t.IRKey(types.NamespacedName{Namespace: gateway.Namespace, Name: gateway.Name})
-		if t.MergeGateways {
-			maps.Copy(labels, GatewayClassOwnerLabel(string(t.GatewayClassName)))
-			gwInfraIR.Proxy.GetProxyMetadata().Labels = labels
-		} else {
-			maps.Copy(labels, GatewayOwnerLabels(gateway.Namespace, gateway.Name))
-			gwInfraIR.Proxy.GetProxyMetadata().Labels = labels
-		}
-
-		gwInfraIR.Proxy.Name = irKey
-		gwInfraIR.Proxy.Namespace = t.ControllerNamespace
-		gwInfraIR.Proxy.GetProxyMetadata().OwnerReference = &ir.ResourceMetadata{
-			Kind: resource.KindGatewayClass,
-			Name: string(t.GatewayClassName),
-		}
-		if t.GatewayNamespaceMode {
-			gwInfraIR.Proxy.Name = gateway.Name
-			gwInfraIR.Proxy.Namespace = gateway.Namespace
-			gwInfraIR.Proxy.GetProxyMetadata().OwnerReference = &ir.ResourceMetadata{
-				Kind: resource.KindGateway,
-				Name: gateway.Name,
-			}
-		}
+	for _, gtw := range failedGateways {
+		irKey, gwXdsIR, gwInfraIR := t.buildIR(gtw)
+		// marked as invalid
+		gwInfraIR.Invalid = ptr.To(true)
 		// save the IR references in the map before the translation starts
 		xdsIR[irKey] = gwXdsIR
 		infraIR[irKey] = gwInfraIR
 	}
 
 	return xdsIR, infraIR
+}
+
+func (t *Translator) buildIR(gateway *GatewayContext) (string, *ir.Xds, *ir.Infra) {
+	gwXdsIR := &ir.Xds{}
+	gwInfraIR := ir.NewInfra()
+	labels := infrastructureLabels(gateway.Gateway)
+	annotations := infrastructureAnnotations(gateway.Gateway)
+	gwInfraIR.Proxy.GetProxyMetadata().Annotations = annotations
+
+	irKey := t.IRKey(types.NamespacedName{Namespace: gateway.Namespace, Name: gateway.Name})
+	if t.MergeGateways {
+		maps.Copy(labels, GatewayClassOwnerLabel(string(t.GatewayClassName)))
+		gwInfraIR.Proxy.GetProxyMetadata().Labels = labels
+	} else {
+		maps.Copy(labels, GatewayOwnerLabels(gateway.Namespace, gateway.Name))
+		gwInfraIR.Proxy.GetProxyMetadata().Labels = labels
+	}
+
+	gwInfraIR.Proxy.Name = irKey
+	gwInfraIR.Proxy.Namespace = t.ControllerNamespace
+	gwInfraIR.Proxy.GetProxyMetadata().OwnerReference = &ir.ResourceMetadata{
+		Kind: resource.KindGatewayClass,
+		Name: string(t.GatewayClassName),
+	}
+	if t.GatewayNamespaceMode {
+		gwInfraIR.Proxy.Name = gateway.Name
+		gwInfraIR.Proxy.Namespace = gateway.Namespace
+		gwInfraIR.Proxy.GetProxyMetadata().OwnerReference = &ir.ResourceMetadata{
+			Kind: resource.KindGateway,
+			Name: gateway.Name,
+		}
+	}
+
+	return irKey, gwXdsIR, gwInfraIR
 }
 
 // IsEnvoyServiceRouting returns true if EnvoyProxy.Spec.RoutingType == ServiceRoutingType
