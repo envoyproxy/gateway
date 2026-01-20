@@ -8,6 +8,7 @@ package loader
 import (
 	"context"
 	"io"
+	"sync"
 	"time"
 
 	"github.com/envoyproxy/gateway/api/v1alpha1/validation"
@@ -24,6 +25,8 @@ type Loader struct {
 	logger  logging.Logger
 	cancel  context.CancelFunc
 	hook    HookFunc
+	mu      sync.RWMutex
+	hookErr chan error
 
 	w filewatcher.FileWatcher
 }
@@ -34,6 +37,7 @@ func New(cfgPath string, cfg *config.Server, f HookFunc) *Loader {
 		cfg:     cfg,
 		logger:  cfg.Logger.WithName("config-loader"),
 		hook:    f,
+		hookErr: make(chan error, 1),
 		w:       filewatcher.NewWatcher(),
 	}
 }
@@ -76,10 +80,13 @@ func (r *Loader) Start(ctx context.Context, logOut io.Writer) error {
 
 				// Set defaults for unset fields
 				eg.SetEnvoyGatewayDefaults()
+				eg.Logging.SetEnvoyGatewayLoggingDefaults()
+
+				r.mu.Lock()
 				r.cfg.EnvoyGateway = eg
 				// update cfg logger
-				eg.Logging.SetEnvoyGatewayLoggingDefaults()
 				r.cfg.Logger = logging.NewLogger(logOut, eg.Logging)
+				r.mu.Unlock()
 
 				// cancel last
 				if r.cancel != nil {
@@ -111,11 +118,44 @@ func (r *Loader) runHook(ctx context.Context) {
 	}
 
 	r.logger.Info("running hook")
+	cfgCopy := r.snapshotConfig()
 	c, cancel := context.WithCancel(ctx)
 	r.cancel = cancel
 	go func(ctx context.Context) {
-		if err := r.hook(ctx, r.cfg); err != nil {
+		defer cancel()
+		if err := r.hook(ctx, cfgCopy); err != nil {
 			r.logger.Error(err, "hook error")
+			// There is nothing we can do here, throw the error to the main process to exit
+			// The EnvoyGateway pod will restart and hopefully any transient errors will be resolved
+			r.sendHookError(err)
 		}
 	}(c)
+}
+
+// Errors returns a channel where hook errors are reported.
+func (r *Loader) Errors() <-chan error {
+	return r.hookErr
+}
+
+func (r *Loader) sendHookError(err error) {
+	select {
+	case r.hookErr <- err: // avoid blocking the sender
+	default:
+	}
+}
+
+func (r *Loader) snapshotConfig() *config.Server {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	if r.cfg == nil {
+		return nil
+	}
+
+	cp := *r.cfg
+	if r.cfg.EnvoyGateway != nil {
+		cp.EnvoyGateway = r.cfg.EnvoyGateway.DeepCopy()
+	}
+
+	return &cp
 }

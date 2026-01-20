@@ -11,10 +11,12 @@ import (
 	"runtime"
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/envoyproxy/gateway/internal/cmd/version"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 )
 
 // SystemInfo represents basic system information
@@ -87,6 +89,10 @@ type ResourceSummary struct {
 }
 
 var startTime = time.Now()
+
+const redactedSecretValue = "[redacted]"
+
+var redactedSecretValueBytes = []byte(redactedSecretValue)
 
 // handleAPIInfo returns basic system information
 func (h *Handler) handleAPIInfo(w http.ResponseWriter, r *http.Request) {
@@ -206,7 +212,7 @@ func (h *Handler) handleCompleteConfigDump(w http.ResponseWriter, _ *http.Reques
 	}
 
 	// Get the actual resources using GetResources() method
-	resources := h.providerResources.GetResources()
+	resources := redactSecretData(h.providerResources.GetResources())
 
 	// Create a structured response with the actual resource data
 	response := map[string]interface{}{
@@ -219,6 +225,51 @@ func (h *Handler) handleCompleteConfigDump(w http.ResponseWriter, _ *http.Reques
 		http.Error(w, "Failed to encode provider resources", http.StatusInternalServerError)
 		return
 	}
+}
+
+func redactSecretData(resources []*resource.Resources) []*resource.Resources {
+	redactedResources := make([]*resource.Resources, len(resources))
+	for i, res := range resources {
+		// Copy the resource to avoid modifying the original.
+		// A shallow copy is sufficient here since we only modify the secrets array
+		// and want to avoid unnecessary memory allocations.
+		copyRes := *res
+		copyRes.Secrets = redactSecrets(res.Secrets)
+		redactedResources[i] = &copyRes
+	}
+
+	return redactedResources
+}
+
+func redactSecrets(secrets []*corev1.Secret) []*corev1.Secret {
+	redacted := make([]*corev1.Secret, len(secrets))
+	for i, secret := range secrets {
+		objectMeta := secret.ObjectMeta
+		// ManagedFields and Annotations can also have sensitive information, so remove them.
+		objectMeta.ManagedFields = nil
+		objectMeta.Annotations = nil
+
+		redacted[i] = &corev1.Secret{
+			TypeMeta:   secret.TypeMeta,
+			ObjectMeta: objectMeta,
+			Type:       secret.Type,
+			Immutable:  secret.Immutable,
+		}
+		if len(secret.Data) > 0 {
+			redacted[i].Data = make(map[string][]byte, len(secret.Data))
+			for key := range secret.Data {
+				redacted[i].Data[key] = redactedSecretValueBytes
+			}
+		}
+		if len(secret.StringData) > 0 {
+			redacted[i].StringData = make(map[string]string, len(secret.StringData))
+			for key := range secret.StringData {
+				redacted[i].StringData[key] = redactedSecretValue
+			}
+		}
+	}
+
+	return redacted
 }
 
 // loadConfigDump loads configuration data from provider resources
@@ -260,14 +311,14 @@ func (h *Handler) loadConfigDump() ConfigDumpInfo {
 
 	if h.providerResources != nil {
 		// Load controller resources directly from the provider resources
-		controllerResources := h.providerResources.GatewayAPIResources.LoadAll()
+		controllerResourcesContext := h.providerResources.GatewayAPIResources.LoadAll()
 
-		for _, resources := range controllerResources {
-			if resources == nil {
+		for _, resourcesContext := range controllerResourcesContext {
+			if resourcesContext == nil {
 				continue
 			}
 
-			for _, res := range *resources {
+			for _, res := range *resourcesContext.Resources {
 				if res == nil {
 					continue
 				}

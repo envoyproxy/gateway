@@ -36,6 +36,21 @@ func hasSectionName(target *gwapiv1.LocalPolicyTargetReferenceWithSectionName) b
 	return target.SectionName != nil
 }
 
+// deprecatedFieldsUsedInClientTrafficPolicy returns a map of deprecated field paths to their alternatives.
+func deprecatedFieldsUsedInClientTrafficPolicy(policy *egv1a1.ClientTrafficPolicy) map[string]string {
+	deprecatedFields := make(map[string]string)
+	if policy.Spec.EnableProxyProtocol != nil {
+		deprecatedFields["spec.enableProxyProtocol"] = "spec.proxyProtocol"
+	}
+	if policy.Spec.Headers != nil && policy.Spec.Headers.PreserveXRequestID != nil {
+		deprecatedFields["spec.headers.preserveXRequestID"] = "spec.headers.requestID"
+	}
+	if policy.Spec.TargetRef != nil {
+		deprecatedFields["spec.targetRef"] = "spec.targetRefs"
+	}
+	return deprecatedFields
+}
+
 func (t *Translator) ProcessClientTrafficPolicies(
 	resources *resource.Resources,
 	gateways []*GatewayContext,
@@ -270,6 +285,11 @@ func (t *Translator) ProcessClientTrafficPolicies(
 
 				// Set Accepted condition if it is unset
 				status.SetAcceptedForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName, policy.Generation)
+
+				// Check for deprecated fields and set warning if any are found
+				if deprecatedFields := deprecatedFieldsUsedInClientTrafficPolicy(policy); len(deprecatedFields) > 0 {
+					status.SetDeprecatedFieldsWarningForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName, policy.Generation, deprecatedFields)
+				}
 			}
 		}
 	}
@@ -1086,6 +1106,47 @@ func translateHeaderModifier(headerModifier *egv1a1.HTTPHeaderFilter, modType st
 				Name:   string(setHeader.Name),
 				Append: false,
 				Value:  []string{setHeader.Value},
+			}
+
+			addRequestHeaders = append(addRequestHeaders, newHeader)
+		}
+	}
+
+	// AddIfAbsent headers
+	if headersToAddIfAbsent := headerModifier.AddIfAbsent; headersToAddIfAbsent != nil {
+		for _, addHeader := range headersToAddIfAbsent {
+			if addHeader.Name == "" {
+				errs = errors.Join(errs, fmt.Errorf("%s cannot addIfAbsent a header with an empty name", modType))
+				continue
+			}
+			// Per Gateway API specification on HTTPHeaderName, : and / are invalid characters in header names
+			if strings.ContainsAny(string(addHeader.Name), "/:") {
+				errs = errors.Join(errs, fmt.Errorf("%s cannot addIfAbsent a header with a '/' or ':' character in them. Header: '%q'", modType, string(addHeader.Name)))
+				continue
+			}
+			// Gateway API specification allows only valid value as defined by RFC 7230
+			if !HeaderValueRegexp.MatchString(addHeader.Value) {
+				errs = errors.Join(errs, fmt.Errorf("%s cannot addIfAbsent a header with an invalid value. Header: '%q'", modType, string(addHeader.Name)))
+				continue
+			}
+			// Check if the header is a duplicate
+			headerKey := string(addHeader.Name)
+			canAddHeader := true
+			for _, h := range addRequestHeaders {
+				if strings.EqualFold(h.Name, headerKey) {
+					canAddHeader = false
+					break
+				}
+			}
+
+			if !canAddHeader {
+				continue
+			}
+
+			newHeader := ir.AddHeader{
+				Name:        headerKey,
+				AddIfAbsent: true,
+				Value:       []string{addHeader.Value},
 			}
 
 			addRequestHeaders = append(addRequestHeaders, newHeader)

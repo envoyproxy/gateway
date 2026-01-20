@@ -64,7 +64,8 @@ func translateTrafficFeatures(policy *egv1a1.ClusterSettings) (*ir.TrafficFeatur
 
 	ret.HealthCheck = buildHealthCheck(policy)
 
-	ret.DNS = translateDNS(policy)
+	// The name for non-policy DNS settings is not used in xDS generation for now, so leave it empty.
+	ret.DNS = translateDNS(policy, "")
 
 	if h2, err := buildIRHTTP2Settings(policy.HTTP2); err != nil {
 		return nil, err
@@ -629,13 +630,14 @@ func translateActiveHealthCheckPayload(p *egv1a1.ActiveHealthCheckPayload) *ir.H
 	return irPayload
 }
 
-func translateDNS(policy *egv1a1.ClusterSettings) *ir.DNS {
+func translateDNS(policy *egv1a1.ClusterSettings, policyName string) *ir.DNS {
 	if policy.DNS == nil {
 		return nil
 	}
 	irDNS := &ir.DNS{
 		LookupFamily:  policy.DNS.LookupFamily,
 		RespectDNSTTL: policy.DNS.RespectDNSTTL,
+		Name:          policyName,
 	}
 
 	if policy.DNS.DNSRefreshRate != nil {

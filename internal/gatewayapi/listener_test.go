@@ -14,6 +14,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -21,6 +22,7 @@ import (
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
+	"github.com/envoyproxy/gateway/internal/ir"
 )
 
 // expectedListenerStatus defines the expected status for a listener in the test
@@ -53,8 +55,10 @@ func TestProxySamplingRate(t *testing.T) {
 		{
 			name: "fraction numerator only",
 			tracing: &egv1a1.ProxyTracing{
-				SamplingFraction: &gwapiv1.Fraction{
-					Numerator: 100,
+				Tracing: egv1a1.Tracing{
+					SamplingFraction: &gwapiv1.Fraction{
+						Numerator: 100,
+					},
 				},
 			},
 			expected: 1.0,
@@ -62,9 +66,11 @@ func TestProxySamplingRate(t *testing.T) {
 		{
 			name: "fraction",
 			tracing: &egv1a1.ProxyTracing{
-				SamplingFraction: &gwapiv1.Fraction{
-					Numerator:   1,
-					Denominator: ptr.To[int32](10),
+				Tracing: egv1a1.Tracing{
+					SamplingFraction: &gwapiv1.Fraction{
+						Numerator:   1,
+						Denominator: ptr.To[int32](10),
+					},
 				},
 			},
 			expected: 0.1,
@@ -72,9 +78,11 @@ func TestProxySamplingRate(t *testing.T) {
 		{
 			name: "less than zero",
 			tracing: &egv1a1.ProxyTracing{
-				SamplingFraction: &gwapiv1.Fraction{
-					Numerator:   1,
-					Denominator: ptr.To[int32](-1),
+				Tracing: egv1a1.Tracing{
+					SamplingFraction: &gwapiv1.Fraction{
+						Numerator:   1,
+						Denominator: ptr.To[int32](-1),
+					},
 				},
 			},
 			expected: 0,
@@ -82,9 +90,11 @@ func TestProxySamplingRate(t *testing.T) {
 		{
 			name: "greater than 100",
 			tracing: &egv1a1.ProxyTracing{
-				SamplingFraction: &gwapiv1.Fraction{
-					Numerator:   101,
-					Denominator: ptr.To[int32](1),
+				Tracing: egv1a1.Tracing{
+					SamplingFraction: &gwapiv1.Fraction{
+						Numerator:   101,
+						Denominator: ptr.To[int32](1),
+					},
 				},
 			},
 			expected: 100,
@@ -916,6 +926,380 @@ func TestProcessTracingServiceName(t *testing.T) {
 
 			assert.NotNil(t, result)
 			assert.Equal(t, tc.expectedServiceName, result.ServiceName)
+		})
+	}
+}
+
+func TestProcessAccessLog(t *testing.T) {
+	tests := []struct {
+		name       string
+		envoyProxy *egv1a1.EnvoyProxy
+		expected   *ir.AccessLog
+	}{
+		{
+			name: "nil format type with text only uses text for file sink",
+			envoyProxy: &egv1a1.EnvoyProxy{
+				Spec: egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						AccessLog: &egv1a1.ProxyAccessLog{
+							Settings: []egv1a1.ProxyAccessLogSetting{
+								{
+									Format: &egv1a1.ProxyAccessLogFormat{
+										Text: ptr.To("[%START_TIME%]"),
+									},
+									Sinks: []egv1a1.ProxyAccessLogSink{
+										{
+											Type: egv1a1.ProxyAccessLogSinkTypeFile,
+											File: &egv1a1.FileEnvoyProxyAccessLog{Path: "/dev/stdout"},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: &ir.AccessLog{
+				JSON: []*ir.JSONAccessLog{
+					{
+						Path: "/dev/stdout",
+					},
+				},
+			},
+		},
+		{
+			name: "nil format type with json only uses json for file sink",
+			envoyProxy: &egv1a1.EnvoyProxy{
+				Spec: egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						AccessLog: &egv1a1.ProxyAccessLog{
+							Settings: []egv1a1.ProxyAccessLogSetting{
+								{
+									Format: &egv1a1.ProxyAccessLogFormat{
+										JSON: map[string]string{"start_time": "%START_TIME%"},
+									},
+									Sinks: []egv1a1.ProxyAccessLogSink{
+										{
+											Type: egv1a1.ProxyAccessLogSinkTypeFile,
+											File: &egv1a1.FileEnvoyProxyAccessLog{Path: "/dev/stdout"},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: &ir.AccessLog{
+				JSON: []*ir.JSONAccessLog{
+					{
+						JSON: map[string]string{"start_time": "%START_TIME%"},
+						Path: "/dev/stdout",
+					},
+				},
+			},
+		},
+		{
+			name: "explicit Text type uses text for file sink",
+			envoyProxy: &egv1a1.EnvoyProxy{
+				Spec: egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						AccessLog: &egv1a1.ProxyAccessLog{
+							Settings: []egv1a1.ProxyAccessLogSetting{
+								{
+									Format: &egv1a1.ProxyAccessLogFormat{
+										Type: ptr.To(egv1a1.ProxyAccessLogFormatTypeText),
+										Text: ptr.To("[%START_TIME%]"),
+									},
+									Sinks: []egv1a1.ProxyAccessLogSink{
+										{
+											Type: egv1a1.ProxyAccessLogSinkTypeFile,
+											File: &egv1a1.FileEnvoyProxyAccessLog{Path: "/dev/stdout"},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: &ir.AccessLog{
+				Text: []*ir.TextAccessLog{
+					{
+						Format: ptr.To("[%START_TIME%]"),
+						Path:   "/dev/stdout",
+					},
+				},
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			translator := &Translator{}
+			resources := &resource.Resources{}
+			actual, err := translator.processAccessLog(tc.envoyProxy, resources)
+			require.NoError(t, err)
+			require.Equal(t, tc.expected, actual)
+		})
+	}
+}
+
+func TestGetAuthorityFromDestination(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    []*ir.DestinationSetting
+		expected string
+	}{
+		{
+			name:     "nil settings",
+			input:    nil,
+			expected: "",
+		},
+		{
+			name:     "empty settings",
+			input:    []*ir.DestinationSetting{},
+			expected: "",
+		},
+		{
+			name: "TLS with SNI",
+			input: []*ir.DestinationSetting{{
+				TLS: &ir.TLSUpstreamConfig{SNI: ptr.To("example.com")},
+			}},
+			expected: "example.com",
+		},
+		{
+			name: "hostname endpoint uses host",
+			input: []*ir.DestinationSetting{{
+				Endpoints: []*ir.DestinationEndpoint{{Host: "backend.local"}},
+			}},
+			expected: "backend.local",
+		},
+		{
+			name: "TLS without SNI uses hostname endpoint",
+			input: []*ir.DestinationSetting{{
+				TLS:       &ir.TLSUpstreamConfig{},
+				Endpoints: []*ir.DestinationEndpoint{{Host: "backend.local"}},
+			}},
+			expected: "backend.local",
+		},
+		{
+			name: "IP endpoint with Service metadata derives authority",
+			input: []*ir.DestinationSetting{{
+				Endpoints: []*ir.DestinationEndpoint{{Host: "10.0.0.1"}},
+				Metadata:  &ir.ResourceMetadata{Kind: resource.KindService, Name: "otel-collector", Namespace: "monitoring"},
+			}},
+			expected: "otel-collector.monitoring.svc",
+		},
+		{
+			name: "IP endpoint with Backend metadata derives authority",
+			input: []*ir.DestinationSetting{{
+				Endpoints: []*ir.DestinationEndpoint{{Host: "10.0.0.1"}},
+				Metadata:  &ir.ResourceMetadata{Kind: resource.KindBackend, Name: "my-backend", Namespace: "default"},
+			}},
+			expected: "my-backend.default",
+		},
+		{
+			name: "IP endpoint without metadata returns empty",
+			input: []*ir.DestinationSetting{{
+				Endpoints: []*ir.DestinationEndpoint{{Host: "10.0.0.1"}},
+			}},
+			expected: "",
+		},
+		{
+			name: "IP endpoint with metadata name only returns name",
+			input: []*ir.DestinationSetting{{
+				Endpoints: []*ir.DestinationEndpoint{{Host: "10.0.0.1"}},
+				Metadata:  &ir.ResourceMetadata{Kind: resource.KindService, Name: "otel-collector"},
+			}},
+			expected: "otel-collector",
+		},
+		{
+			name: "no endpoints returns empty",
+			input: []*ir.DestinationSetting{{
+				TLS: &ir.TLSUpstreamConfig{},
+			}},
+			expected: "",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			actual := getAuthorityFromDestination(tc.input)
+			require.Equal(t, tc.expected, actual)
+		})
+	}
+}
+
+func TestProcessServerValidationTLSSettings(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    *egv1a1.Backend
+		expected *ir.TLSUpstreamConfig
+	}{
+		{
+			name: "explicit SNI",
+			input: &egv1a1.Backend{
+				Spec: egv1a1.BackendSpec{
+					Endpoints: []egv1a1.BackendEndpoint{
+						{FQDN: &egv1a1.FQDNEndpoint{Hostname: "endpoint.example.com", Port: 443}},
+					},
+					TLS: &egv1a1.BackendTLSSettings{
+						SNI: ptr.To(gwapiv1.PreciseHostname("explicit.example.com")),
+					},
+				},
+			},
+			expected: &ir.TLSUpstreamConfig{SNI: ptr.To("explicit.example.com")},
+		},
+		{
+			name: "multiple FQDN endpoints does not infer SNI",
+			input: &egv1a1.Backend{
+				Spec: egv1a1.BackendSpec{
+					Endpoints: []egv1a1.BackendEndpoint{
+						{FQDN: &egv1a1.FQDNEndpoint{Hostname: "a.example.com", Port: 443}},
+						{FQDN: &egv1a1.FQDNEndpoint{Hostname: "b.example.com", Port: 443}},
+					},
+					TLS: &egv1a1.BackendTLSSettings{},
+				},
+			},
+			expected: &ir.TLSUpstreamConfig{},
+		},
+		{
+			name: "no endpoints does not infer SNI",
+			input: &egv1a1.Backend{
+				Spec: egv1a1.BackendSpec{
+					Endpoints: []egv1a1.BackendEndpoint{},
+					TLS:       &egv1a1.BackendTLSSettings{},
+				},
+			},
+			expected: &ir.TLSUpstreamConfig{},
+		},
+		{
+			name: "single IP endpoint does not infer SNI",
+			input: &egv1a1.Backend{
+				Spec: egv1a1.BackendSpec{
+					Endpoints: []egv1a1.BackendEndpoint{
+						{IP: &egv1a1.IPEndpoint{Address: "10.0.0.1", Port: 443}},
+					},
+					TLS: &egv1a1.BackendTLSSettings{},
+				},
+			},
+			expected: &ir.TLSUpstreamConfig{},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			translator := &Translator{}
+			actual, err := translator.processServerValidationTLSSettings(tc.input)
+			require.NoError(t, err)
+			require.Equal(t, tc.expected, actual)
+		})
+	}
+}
+
+func TestProcessBackendRefsSNIInference(t *testing.T) {
+	ns := "test-ns"
+	tests := []struct {
+		name        string
+		backend     *egv1a1.Backend
+		expectedSNI *string
+	}{
+		{
+			name: "single FQDN endpoint infers SNI for telemetry",
+			backend: &egv1a1.Backend{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: ns,
+					Name:      "otel-collector",
+				},
+				Spec: egv1a1.BackendSpec{
+					Endpoints: []egv1a1.BackendEndpoint{
+						{FQDN: &egv1a1.FQDNEndpoint{Hostname: "otel.example.com", Port: 4317}},
+					},
+					TLS: &egv1a1.BackendTLSSettings{
+						WellKnownCACertificates: ptr.To(gwapiv1.WellKnownCACertificatesSystem),
+					},
+				},
+			},
+			expectedSNI: ptr.To("otel.example.com"),
+		},
+		{
+			name: "multiple FQDN endpoints does not infer SNI",
+			backend: &egv1a1.Backend{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: ns,
+					Name:      "otel-collector",
+				},
+				Spec: egv1a1.BackendSpec{
+					Endpoints: []egv1a1.BackendEndpoint{
+						{FQDN: &egv1a1.FQDNEndpoint{Hostname: "otel-1.example.com", Port: 4317}},
+						{FQDN: &egv1a1.FQDNEndpoint{Hostname: "otel-2.example.com", Port: 4317}},
+					},
+					TLS: &egv1a1.BackendTLSSettings{
+						WellKnownCACertificates: ptr.To(gwapiv1.WellKnownCACertificatesSystem),
+					},
+				},
+			},
+			expectedSNI: nil,
+		},
+		{
+			name: "explicit SNI takes precedence",
+			backend: &egv1a1.Backend{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: ns,
+					Name:      "otel-collector",
+				},
+				Spec: egv1a1.BackendSpec{
+					Endpoints: []egv1a1.BackendEndpoint{
+						{FQDN: &egv1a1.FQDNEndpoint{Hostname: "otel.example.com", Port: 4317}},
+					},
+					TLS: &egv1a1.BackendTLSSettings{
+						WellKnownCACertificates: ptr.To(gwapiv1.WellKnownCACertificatesSystem),
+						SNI:                     ptr.To(gwapiv1.PreciseHostname("explicit.example.com")),
+					},
+				},
+			},
+			expectedSNI: ptr.To("explicit.example.com"),
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			resources := resource.NewResources()
+			resources.Backends = append(resources.Backends, tc.backend)
+
+			ctx := &TranslatorContext{
+				BackendMap: map[types.NamespacedName]*egv1a1.Backend{
+					{Namespace: tc.backend.Namespace, Name: tc.backend.Name}: tc.backend,
+				},
+			}
+			translator := &Translator{
+				TranslatorContext: ctx,
+				BackendEnabled:    true,
+			}
+			backendCluster := egv1a1.BackendCluster{
+				BackendRefs: []egv1a1.BackendRef{{
+					BackendObjectReference: gwapiv1.BackendObjectReference{
+						Group:     ptr.To(gwapiv1.Group("gateway.envoyproxy.io")),
+						Kind:      ptr.To(gwapiv1.Kind("Backend")),
+						Name:      gwapiv1.ObjectName(tc.backend.Name),
+						Namespace: ptr.To(gwapiv1.Namespace(tc.backend.Namespace)),
+					},
+				}},
+			}
+
+			ds, _, err := translator.processBackendRefs("test", backendCluster, ns, resources, nil)
+			require.NoError(t, err)
+			require.Len(t, ds, 1)
+
+			if tc.expectedSNI == nil {
+				if ds[0].TLS != nil {
+					require.Nil(t, ds[0].TLS.SNI)
+				}
+			} else {
+				require.NotNil(t, ds[0].TLS)
+				require.Equal(t, tc.expectedSNI, ds[0].TLS.SNI)
+			}
 		})
 	}
 }

@@ -11,15 +11,16 @@ import (
 	"path/filepath"
 	"strings"
 
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 )
 
 // loadFromFilesAndDirs loads resources from specific files and directories.
-func loadFromFilesAndDirs(files, dirs []string) ([]*resource.Resources, error) {
+func loadFromFilesAndDirs(files, dirs []string, envoyGateway *egv1a1.EnvoyGateway) ([]*resource.Resources, error) {
 	rs := make([]*resource.Resources, 0, len(files)+len(dirs))
 
 	for _, file := range files {
-		r, err := loadFromFile(file)
+		r, err := loadFromFile(file, envoyGateway)
 		if err != nil {
 			return nil, fmt.Errorf("failed to load resources from file %s: %w", file, err)
 		}
@@ -27,7 +28,7 @@ func loadFromFilesAndDirs(files, dirs []string) ([]*resource.Resources, error) {
 	}
 
 	for _, dir := range dirs {
-		r, err := loadFromDir(dir)
+		r, err := loadFromDir(dir, envoyGateway)
 		if err != nil {
 			return nil, err
 		}
@@ -38,24 +39,23 @@ func loadFromFilesAndDirs(files, dirs []string) ([]*resource.Resources, error) {
 }
 
 // loadFromFile loads resources from a specific file.
-func loadFromFile(path string) (*resource.Resources, error) {
+func loadFromFile(path string, envoyGateway *egv1a1.EnvoyGateway) (*resource.Resources, error) {
 	if _, err := os.Stat(path); err != nil {
 		if os.IsNotExist(err) {
 			return nil, fmt.Errorf("file %s is not exist", path)
 		}
 		return nil, err
 	}
-
 	bytes, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
 
-	return resource.LoadResourcesFromYAMLBytes(bytes, false)
+	return resource.LoadResourcesFromYAMLBytes(bytes, false, envoyGateway)
 }
 
 // loadFromDir loads resources from all the files under a specific directory excluding subdirectories.
-func loadFromDir(path string) ([]*resource.Resources, error) {
+func loadFromDir(path string, envoyGateway *egv1a1.EnvoyGateway) ([]*resource.Resources, error) {
 	entries, err := os.ReadDir(path)
 	if err != nil {
 		return nil, err
@@ -68,7 +68,7 @@ func loadFromDir(path string) ([]*resource.Resources, error) {
 			continue
 		}
 		full := filepath.Join(path, entry.Name())
-		r, err := loadFromFile(full)
+		r, err := loadFromFile(full, envoyGateway)
 		if err != nil {
 			return nil, fmt.Errorf("failed to load resources from file %s: %w", full, err)
 		}

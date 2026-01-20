@@ -32,6 +32,12 @@ backendTrafficPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: spec.compression is deprecated, use spec.compressor instead; spec.targetRef
+          is deprecated, use spec.targetRefs instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
@@ -60,6 +66,12 @@ backendTrafficPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: spec.compression is deprecated, use spec.compressor instead; spec.targetRef
+          is deprecated, use spec.targetRefs instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
@@ -91,6 +103,11 @@ backendTrafficPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
@@ -117,6 +134,12 @@ backendTrafficPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: spec.compression is deprecated, use spec.compressor instead; spec.targetRef
+          is deprecated, use spec.targetRefs instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
       - lastTransitionTime: null
         message: 'This policy is being merged by other backendTrafficPolicies for
           these routes: [default/httproute-1 default/httproute-3]'
@@ -377,7 +400,8 @@ xdsIR:
           prefix: /admin
         traffic:
           compression:
-          - type: Gzip
+          - chooseFirst: true
+            type: Gzip
       - destination:
           metadata:
             kind: HTTPRoute
@@ -410,7 +434,8 @@ xdsIR:
           prefix: /api
         traffic:
           compression:
-          - type: Brotli
+          - chooseFirst: true
+            type: Brotli
           - type: Zstd
       - destination:
           metadata:
@@ -444,7 +469,8 @@ xdsIR:
           prefix: /
         traffic:
           compression:
-          - type: Brotli
+          - chooseFirst: true
+            type: Brotli
           - type: Zstd
           - type: Gzip
     readyListener:

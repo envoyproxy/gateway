@@ -16,6 +16,9 @@ import (
 
 	"github.com/docker/docker/pkg/fileutils"
 	"github.com/telepresenceio/watchable"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -45,6 +48,8 @@ const (
 	hmacSecretName = "envoy-oidc-hmac" // nolint: gosec
 	hmacSecretKey  = "hmac-secret"
 )
+
+var tracer = otel.Tracer("envoy-gateway/gateway-api")
 
 type Config struct {
 	config.Server
@@ -123,16 +128,36 @@ func (r *Runner) startWasmCache(ctx context.Context) {
 	r.wasmCache.Start(ctx)
 }
 
-func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *resource.ControllerResources]) {
+func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *resource.ControllerResourcesContext]) {
 	message.HandleSubscription(message.Metadata{Runner: r.Name(), Message: message.ProviderResourcesMessageName}, sub,
-		func(update message.Update[string, *resource.ControllerResources], errChan chan error) {
-			r.Logger.Info("received an update", "key", update.Key)
-			val := update.Value
+		func(update message.Update[string, *resource.ControllerResourcesContext], errChan chan error) {
+			parentCtx := context.Background()
+			if update.Value != nil && update.Value.Context != nil {
+				parentCtx = update.Value.Context
+			}
+
+			traceCtx, span := tracer.Start(parentCtx, "GatewayApiRunner.subscribeAndTranslate")
+			defer span.End()
+			traceLogger := r.Logger.WithTrace(traceCtx)
+			traceLogger.Info("received an update", "key", update.Key)
+
+			valWrapper := update.Value
 			// There is only 1 key which is the controller name
 			// so when a delete is triggered, delete all keys
-			if update.Delete || val == nil {
+			if update.Delete || valWrapper == nil || valWrapper.Resources == nil {
 				r.deleteAllKeys()
 				return
+			}
+
+			val := valWrapper.Resources
+
+			// Add span attributes for observability
+			span.SetAttributes(
+				attribute.String("controller.key", update.Key),
+				attribute.Bool("update.delete", update.Delete),
+			)
+			if val != nil {
+				span.SetAttributes(attribute.Int("resources.count", len(*val)))
 			}
 
 			// Initialize keysToDelete with tracked keys (mark and sweep approach)
@@ -144,20 +169,22 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 			var backendTLSPolicyStatusCount, clientTrafficPolicyStatusCount, backendTrafficPolicyStatusCount int
 			var securityPolicyStatusCount, envoyExtensionPolicyStatusCount, backendStatusCount, extensionServerPolicyStatusCount int
 
+			span.AddEvent("translate", trace.WithAttributes(attribute.Int("resources.count", len(*val))))
 			for _, resources := range *val {
 				// Translate and publish IRs.
 				t := &gatewayapi.Translator{
-					GatewayControllerName:   r.EnvoyGateway.Gateway.ControllerName,
-					GatewayClassName:        gwapiv1.ObjectName(resources.GatewayClass.Name),
-					GlobalRateLimitEnabled:  r.EnvoyGateway.RateLimit != nil,
-					EnvoyPatchPolicyEnabled: r.EnvoyGateway.ExtensionAPIs != nil && r.EnvoyGateway.ExtensionAPIs.EnableEnvoyPatchPolicy,
-					BackendEnabled:          r.EnvoyGateway.ExtensionAPIs != nil && r.EnvoyGateway.ExtensionAPIs.EnableBackend,
-					ControllerNamespace:     r.ControllerNamespace,
-					GatewayNamespaceMode:    r.EnvoyGateway.GatewayNamespaceMode(),
-					MergeGateways:           gatewayapi.IsMergeGatewaysEnabled(resources),
-					WasmCache:               r.wasmCache,
-					RunningOnHost:           r.EnvoyGateway.Provider != nil && r.EnvoyGateway.Provider.IsRunningOnHost(),
-					Logger:                  r.Logger,
+					GatewayControllerName:           r.EnvoyGateway.Gateway.ControllerName,
+					GatewayClassName:                gwapiv1.ObjectName(resources.GatewayClass.Name),
+					GlobalRateLimitEnabled:          r.EnvoyGateway.RateLimit != nil,
+					EnvoyPatchPolicyEnabled:         r.EnvoyGateway.ExtensionAPIs != nil && r.EnvoyGateway.ExtensionAPIs.EnableEnvoyPatchPolicy,
+					BackendEnabled:                  r.EnvoyGateway.ExtensionAPIs != nil && r.EnvoyGateway.ExtensionAPIs.EnableBackend,
+					ControllerNamespace:             r.ControllerNamespace,
+					GatewayNamespaceMode:            r.EnvoyGateway.GatewayNamespaceMode(),
+					MergeGateways:                   gatewayapi.IsMergeGatewaysEnabled(resources),
+					WasmCache:                       r.wasmCache,
+					RunningOnHost:                   r.EnvoyGateway.Provider != nil && r.EnvoyGateway.Provider.IsRunningOnHost(),
+					Logger:                          traceLogger,
+					LuaEnvoyExtensionPolicyDisabled: r.EnvoyGateway.ExtensionAPIs != nil && r.EnvoyGateway.ExtensionAPIs.DisableLua,
 				}
 
 				// If an extension is loaded, pass its supported groups/kinds to the translator
@@ -171,13 +198,15 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 						extGKs = append(extGKs, schema.GroupKind{Group: gvk.Group, Kind: gvk.Kind})
 					}
 					t.ExtensionGroupKinds = extGKs
-					r.Logger.Info("extension resources", "GVKs count", len(extGKs))
+					traceLogger.Info("extension resources", "GVKs count", len(extGKs))
 				}
 				// Translate to IR
+				_, translateToIRSpan := tracer.Start(traceCtx, "GatewayApiRunner.ResoureTranslationCycle.TranslateToIR")
 				result, err := t.Translate(resources)
+				translateToIRSpan.End()
 				if err != nil {
 					// Currently all errors that Translate returns should just be logged
-					r.Logger.Error(err, "errors detected during translation", "gateway-class", resources.GatewayClass.Name)
+					traceLogger.Error(err, "errors detected during translation", "gateway-class", resources.GatewayClass.Name)
 					// Notify the main control loop about translation errors. This may be a critical error in standalone mode, so
 					// notify the control loop in case this needs to be handled.
 					r.RunnerErrors.Store(r.Name(), message.NewWatchableError(err))
@@ -186,12 +215,12 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 				// Publish the IRs.
 				// Also validate the ir before sending it.
 				for key, val := range result.InfraIR {
-					logger := r.Logger.V(1).WithValues(string(message.InfraIRMessageName), key)
-					if logger.Enabled() {
-						logger.Info(val.JSONString())
+					logV := traceLogger.V(1).WithValues(string(message.InfraIRMessageName), key)
+					if logV.Enabled() {
+						logV.Info(val.JSONString())
 					}
 					if err := val.Validate(); err != nil {
-						r.Logger.Error(err, "unable to validate infra ir, skipped sending it")
+						traceLogger.Error(err, "unable to validate infra ir, skipped sending it")
 						errChan <- err
 					} else {
 						r.InfraIR.Store(key, val)
@@ -203,20 +232,25 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 				}
 
 				for key, val := range result.XdsIR {
-					logger := r.Logger.V(1).WithValues(string(message.XDSIRMessageName), key)
-					if logger.Enabled() {
-						logger.Info(val.JSONString())
+					logV := traceLogger.V(1).WithValues(string(message.XDSIRMessageName), key)
+					if logV.Enabled() {
+						logV.Info(val.JSONString())
 					}
 					if err := val.Validate(); err != nil {
-						r.Logger.Error(err, "unable to validate xds ir, skipped sending it")
+						traceLogger.Error(err, "unable to validate xds ir, skipped sending it")
 						errChan <- err
 					} else {
-						r.XdsIR.Store(key, val)
+						m := message.XdsIRWithContext{
+							XdsIR:   val,
+							Context: traceCtx,
+						}
+						r.XdsIR.Store(key, &m)
 						xdsIRCount++
 					}
 				}
 
 				// Update Status
+				_, statusUpdateSpan := tracer.Start(traceCtx, "GatewayApiRunner.ResoureTranslationCycle.UpdateStatus")
 				if result.GatewayClass != nil {
 					key := utils.NamespacedName(result.GatewayClass)
 					r.ProviderResources.GatewayClassStatuses.Store(key, &result.GatewayClass.Status)
@@ -339,6 +373,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 					delete(keysToDelete.ExtensionServerPolicyStatus, key)
 					r.keyCache.ExtensionServerPolicyStatus[key] = true
 				}
+				statusUpdateSpan.End()
 			}
 
 			// Publish aggregated metrics

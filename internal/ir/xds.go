@@ -545,11 +545,16 @@ type XForwardedClientCert struct {
 // +k8s:deepcopy-gen=true
 type ClientIPDetectionSettings egv1a1.ClientIPDetectionSettings
 
-// BackendWeights stores the weights of valid and invalid backends for the route so that 500 error responses can be returned in the same proportions
+// BackendWeights stores the weights of valid, invalid and no endpoints backends for the route so that 500/503 error responses can be returned in the same proportions
 type BackendWeights struct {
-	Name    string `json:"name" yaml:"name"`
-	Valid   uint32 `json:"valid" yaml:"valid"`
-	Invalid uint32 `json:"invalid" yaml:"invalid"`
+	Name        string `json:"name" yaml:"name"`
+	Valid       uint32 `json:"valid" yaml:"valid"`
+	Invalid     uint32 `json:"invalid" yaml:"invalid"`
+	NoEndpoints uint32 `json:"noEndpoints" yaml:"noEndpoints"`
+}
+
+func (b *BackendWeights) UnavailableWeight() uint32 {
+	return b.Invalid + b.NoEndpoints
 }
 
 // HTTP1Settings provides HTTP/1 configuration on the listener.
@@ -847,11 +852,16 @@ func (h *HTTPRoute) NeedsClusterPerSetting() bool {
 		return true
 	}
 	// When the destination has both valid and invalid backend weights, we use weighted clusters to distribute between
-	// valid backends and the `invalid-backend-cluster` for 500 responses according to their configured weights.
-	if h.Destination.ToBackendWeights().Invalid > 0 {
+	// valid backends and the `invalid-backend-cluster` for 500/503 responses according to their configured weights.
+	if h.Destination.ToBackendWeights().Invalid > 0 || h.Destination.ToBackendWeights().NoEndpoints > 0 {
 		return true
 	}
 	return h.Destination.NeedsClusterPerSetting()
+}
+
+func (h *HTTPRoute) IsDynamicResolverRoute() bool {
+	// If using a dynamic resolver, only a single destination setting is expected and enforced during IR translation
+	return h.Destination != nil && len(h.Destination.Settings) == 1 && h.Destination.Settings[0].IsDynamicResolver
 }
 
 // DNS contains configuration options for DNS resolution.
@@ -863,6 +873,8 @@ type DNS struct {
 	RespectDNSTTL *bool `json:"respectDnsTtl,omitempty"`
 	// LookupFamily allows to configure the dns lookup policy
 	LookupFamily *egv1a1.DNSLookupFamily `json:"lookupFamily,omitempty"`
+	// Name is a unique name for a DNS configuration.
+	Name string `json:"name,omitempty" yaml:"name,omitempty"`
 }
 
 // SessionPersistence defines the desired state of SessionPersistence.
@@ -897,6 +909,10 @@ type HeaderBasedSessionPersistence struct {
 type Compression struct {
 	// Type of compression to be used.
 	Type egv1a1.CompressorType `json:"type" yaml:"type"`
+	// ChooseFirst indicates this compressor is preferred when q-values in Accept-Encoding are equal.
+	ChooseFirst bool `json:"chooseFirst,omitempty" yaml:"chooseFirst,omitempty"`
+	// MinContentLength defines the minimum response size in bytes to apply compression.
+	MinContentLength *uint32 `json:"minContentLength,omitempty" yaml:"minContentLength,omitempty"`
 }
 
 // TrafficFeatures holds the information associated with the Backend Traffic Policy.
@@ -1351,6 +1367,14 @@ type ExtAuth struct {
 	// the new matched route will be applied.
 	// +optional
 	RecomputeRoute *bool `json:"recomputeRoute,omitempty"`
+
+	// ContextExtensions are analogous to http_request.headers, however these
+	// contents will not be sent to the upstream server. This provides an
+	// extension mechanism for sending additional information to the auth server
+	// without modifying the proto definition. It maps to the internal opaque
+	// context in the filter chain.
+	// +optional
+	ContextExtensions []*ContextExtention `json:"contextExtensions,omitempty"`
 }
 
 // BodyToExtAuth defines the Body to Ext Auth configuration
@@ -1361,6 +1385,21 @@ type BodyToExtAuth struct {
 	// reaches the number set in this field.
 	// Note that this setting will have precedence over failOpen mode.
 	MaxRequestBytes uint32 `json:"maxRequestBytes"`
+}
+
+// ContextExtension is analogous to http_request.headers, however these
+// contents will not be sent to the upstream server. This provides an
+// extension mechanism for sending additional information to the auth server
+// without modifying the proto definition. It maps to the internal opaque
+// context in the filter chain.
+//
+// +k8s:deepcopy-gen=true
+type ContextExtention struct {
+	// Name of the context extension.
+	Name string `json:"name"`
+
+	// Value of the context extension.
+	Value PrivateBytes `json:"value"`
 }
 
 // HTTPExtAuthService defines the HTTP External Authorization service
@@ -1674,14 +1713,16 @@ func (r *RouteDestination) ToBackendWeights() *BackendWeights {
 		}
 
 		switch {
+		case s.Invalid: // If invalid, add to invalid weight
+			w.Invalid += *s.Weight
 		case s.IsDynamicResolver: // Dynamic resolver has no endpoints
 			w.Valid += *s.Weight
 		case s.IsCustomBackend: // Custom backends has no endpoints
 			w.Valid += *s.Weight
 		case len(s.Endpoints) > 0: // All other cases should have endpoints
 			w.Valid += *s.Weight
-		default: // DestinationSetting with no endpoints is considered invalid
-			w.Invalid += *s.Weight
+		default: // DestinationSetting with no endpoints
+			w.NoEndpoints += *s.Weight
 		}
 	}
 
@@ -1725,6 +1766,12 @@ type DestinationSetting struct {
 	// Metadata is used to enrich envoy route metadata with user and provider-specific information
 	// The primary metadata for DestinationSettings comes from the Backend resource reference in BackendRef
 	Metadata *ResourceMetadata `json:"metadata,omitempty" yaml:"metadata,omitempty"`
+	// Invalid is true if the destination setting is invalid (e.g. reference to non-existent backend, invalid TLS config, no matching port, etc.)
+	// DS without endpoints is considered valid.
+	// This is required because Gateway API spec requires different status code for invalid backend and backend without endpoints.
+	// * invalid 500
+	// * without endpoints 503
+	Invalid bool `json:"invalid,omitempty" yaml:"invalid,omitempty"`
 }
 
 // Validate the fields within the DestinationSetting structure
@@ -1808,9 +1855,10 @@ func NewDestEndpoint(hostname *string, host string, port uint32, draining bool, 
 // AddHeader configures a header to be added to a request or response.
 // +k8s:deepcopy-gen=true
 type AddHeader struct {
-	Name   string   `json:"name" yaml:"name"`
-	Value  []string `json:"value" yaml:"value"`
-	Append bool     `json:"append" yaml:"append"`
+	Name        string   `json:"name" yaml:"name"`
+	Value       []string `json:"value" yaml:"value"`
+	Append      bool     `json:"append" yaml:"append"`
+	AddIfAbsent bool     `json:"addIfAbsent" yaml:"addIfAbsent"`
 }
 
 // Validate the fields within the AddHeader structure
@@ -1955,6 +2003,7 @@ func (r ExtendedHTTPPathModifier) Validate() error {
 // with both core gateway-api and extended envoy gateway capabilities
 // +k8s:deepcopy-gen=true
 type HTTPHostModifier struct {
+	// Name provides a string to replace the host of the request.
 	Name    *string `json:"name,omitempty" yaml:"name,omitempty"`
 	Header  *string `json:"header,omitempty" yaml:"header,omitempty"`
 	Backend *bool   `json:"backend,omitempty" yaml:"backend,omitempty"`
@@ -2299,6 +2348,11 @@ type RateLimitRule struct {
 	//
 	// +optional
 	Shared *bool `json:"shared,omitempty" yaml:"shared,omitempty"`
+	// ShadowMode determines whether this rate limit rule enables shadow mode.
+	// When enabled, rate limiting functions execute as normal (cache lookup, statistics),
+	// but the result is always success regardless of whether the limit was exceeded.
+	// +optional
+	ShadowMode *bool `json:"shadowMode,omitempty" yaml:"shadowMode,omitempty"`
 	// Name is a unique identifier for this rule, set as <policy-ns>/<policy-name>/rule/<rule-index>.
 	Name string `json:"name,omitempty" yaml:"name,omitempty"`
 }
@@ -2404,14 +2458,15 @@ type ALSAccessLogHTTP struct {
 // OpenTelemetryAccessLog holds the configuration for OpenTelemetry access logging.
 // +k8s:deepcopy-gen=true
 type OpenTelemetryAccessLog struct {
-	CELMatches  []string            `json:"celMatches,omitempty" yaml:"celMatches,omitempty"`
-	Authority   string              `json:"authority,omitempty" yaml:"authority,omitempty"`
-	Text        *string             `json:"text,omitempty" yaml:"text,omitempty"`
-	Attributes  map[string]string   `json:"attributes,omitempty" yaml:"attributes,omitempty"`
-	Resources   map[string]string   `json:"resources,omitempty" yaml:"resources,omitempty"`
-	Destination RouteDestination    `json:"destination,omitempty" yaml:"destination,omitempty"`
-	Traffic     *TrafficFeatures    `json:"traffic,omitempty" yaml:"traffic,omitempty"`
-	LogType     *ProxyAccessLogType `json:"logType,omitempty" yaml:"logType,omitempty"`
+	CELMatches  []string             `json:"celMatches,omitempty" yaml:"celMatches,omitempty"`
+	Authority   string               `json:"authority,omitempty" yaml:"authority,omitempty"`
+	Text        *string              `json:"text,omitempty" yaml:"text,omitempty"`
+	Attributes  map[string]string    `json:"attributes,omitempty" yaml:"attributes,omitempty"`
+	Resources   map[string]string    `json:"resources,omitempty" yaml:"resources,omitempty"`
+	Headers     []gwapiv1.HTTPHeader `json:"headers,omitempty" yaml:"headers,omitempty"`
+	Destination RouteDestination     `json:"destination,omitempty" yaml:"destination,omitempty"`
+	Traffic     *TrafficFeatures     `json:"traffic,omitempty" yaml:"traffic,omitempty"`
+	LogType     *ProxyAccessLogType  `json:"logType,omitempty" yaml:"logType,omitempty"`
 }
 
 // EnvoyPatchPolicy defines the intermediate representation of the EnvoyPatchPolicy resource.
@@ -2426,8 +2481,9 @@ type EnvoyPatchPolicy struct {
 // EnvoyPatchPolicyStatus defines the status reference for the EnvoyPatchPolicy resource
 // +k8s:deepcopy-gen=true
 type EnvoyPatchPolicyStatus struct {
-	Name      string `json:"name,omitempty" yaml:"name"`
-	Namespace string `json:"namespace,omitempty" yaml:"namespace"`
+	Name       string `json:"name,omitempty" yaml:"name"`
+	Namespace  string `json:"namespace,omitempty" yaml:"namespace"`
+	Generation int64  `json:"generation,omitempty" yaml:"generation"`
 	// Status of the EnvoyPatchPolicy
 	Status *gwapiv1.PolicyStatus `json:"status,omitempty" yaml:"status,omitempty"`
 }
@@ -2546,6 +2602,8 @@ type Tracing struct {
 	Destination  RouteDestination            `json:"destination,omitempty"`
 	Traffic      *TrafficFeatures            `json:"traffic,omitempty"`
 	Provider     egv1a1.TracingProvider      `json:"provider"`
+	Headers      []gwapiv1.HTTPHeader        `json:"headers,omitempty" yaml:"headers,omitempty"`
+	SpanName     *egv1a1.TracingSpanName     `json:"spanName,omitempty"`
 }
 
 // Metrics defines the configuration for metrics generated by Envoy
@@ -3283,6 +3341,8 @@ type DestinationFilters struct {
 	RemoveResponseHeaders []string `json:"removeResponseHeaders,omitempty" yaml:"removeResponseHeaders,omitempty"`
 	// CredentialInjection defines the credential injection configuration.
 	CredentialInjection *CredentialInjection `json:"credentialInjection,omitempty" yaml:"credentialInjection,omitempty"`
+	// URLRewrite defines the URL rewrite configuration for the backend.
+	URLRewrite *URLRewrite `json:"urlRewrite,omitempty" yaml:"urlRewrite,omitempty"`
 }
 
 // ResourceMetadata is metadata from the provider resource that is translated to an envoy resource

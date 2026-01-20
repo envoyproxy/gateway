@@ -24,7 +24,7 @@ Changing to the Let's Encrypt production environment is straight-forward after t
 
 *This is a summary of [cert-manager Installation with Helm](https://cert-manager.io/docs/installation/helm/).*
 
-Installing cert-manager is straight-forward and you can follow the below approach to install cert-manager in your cluster. Gateway API CRDs should either be installed before cert-manager starts or the cert-manager Deployment should be restarted after installing the Gateway API CRDs. Remember to enable the Gateway API support. You can refer this [page](https://cert-manager.io/docs/usage/gateway/) for more details. 
+Installing cert-manager is straight-forward and you can follow the below approach to install cert-manager in your cluster. Gateway API CRDs should either be installed before cert-manager starts or the cert-manager Deployment should be restarted after installing the Gateway API CRDs. Remember to enable the Gateway API support. You can refer this [page](https://cert-manager.io/docs/usage/gateway/) for more details.
 
 ```console
 $ helm repo add jetstack https://charts.jetstack.io

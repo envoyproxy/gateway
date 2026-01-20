@@ -262,7 +262,6 @@ type ForceLocalZone struct {
 	// override. This is useful for protecting zones with fewer endpoints.
 	//
 	// +optional
-	// +notImplementedHide
 	MinEndpointsInZoneThreshold *uint32 `json:"minEndpointsInZoneThreshold,omitempty"`
 }
 

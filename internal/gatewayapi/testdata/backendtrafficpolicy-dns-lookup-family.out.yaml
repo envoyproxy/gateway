@@ -27,6 +27,11 @@ backendTrafficPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 backends:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -114,6 +119,11 @@ envoyExtensionPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
@@ -324,7 +334,8 @@ xdsIR:
   envoy-gateway/gateway-1:
     accessLog:
       openTelemetry:
-      - destination:
+      - authority: logs.default.svc
+        destination:
           metadata:
             kind: EnvoyProxy
             name: config-for-gateway-class
@@ -341,7 +352,7 @@ xdsIR:
               namespace: default
               sectionName: "8080"
             name: accesslog_otel_0_1/backend/-1
-            protocol: TCP
+            protocol: GRPC
         resources:
           k8s.cluster.name: cluster-1
         text: |
@@ -482,6 +493,7 @@ xdsIR:
           dns:
             dnsRefreshRate: 5s
             lookupFamily: IPv6
+            name: default/backend-traffic-policy
             respectDnsTtl: false
       - destination:
           metadata:
@@ -543,6 +555,7 @@ xdsIR:
           dns:
             dnsRefreshRate: 5s
             lookupFamily: IPv6
+            name: default/backend-traffic-policy
             respectDnsTtl: false
     readyListener:
       address: 0.0.0.0

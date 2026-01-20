@@ -112,7 +112,7 @@ This section outlines the foundational premises that shape our analysis and reco
 
 - A dedicated cluster operation (ops) team responsible for maintaining the core cluster infrastructure.
 
-- Multiple application teams who wish to define their own Gateway resources, which will route traffic to their respective applications. 
+- Multiple application teams who wish to define their own Gateway resources, which will route traffic to their respective applications.
 
 **3. Soft multi-tenancy model**: It is assumed that co-tenants will have some level of trust between themselves, and will not act in an overtly hostile manner to each other.
 
@@ -620,9 +620,9 @@ Set runAsUser and runAsGroup security context options to specific UIDs (e.g., ru
 
 ## Attack Trees
 
-Attack trees offer a methodical way of describing the security of systems, based on varying attack patterns. It's important to approach the review of attack trees from a top-down perspective. The top node, also known as the root node, symbolises the attacker's primary objective. This goal is then broken down into subsidiary aims, each reflecting a different strategy to attain the root objective. This deconstruction persists until reaching the lowest level objectives or 'leaf nodes', which depict attacks that can be directly launched. 
+Attack trees offer a methodical way of describing the security of systems, based on varying attack patterns. It's important to approach the review of attack trees from a top-down perspective. The top node, also known as the root node, symbolises the attacker's primary objective. This goal is then broken down into subsidiary aims, each reflecting a different strategy to attain the root objective. This deconstruction persists until reaching the lowest level objectives or 'leaf nodes', which depict attacks that can be directly launched.
 
-It is essential to note that attack trees presented here are speculative paths for potential exploitation. The Envoy Gateway project is in a continuous development cycle, and as the project evolves, new vulnerabilities may be exposed, or additional controls could be introduced. Therefore, the threats illustrated in the attack trees should be perceived as point-in-time reflections of the project’s current state at the time of writing this threat model. 
+It is essential to note that attack trees presented here are speculative paths for potential exploitation. The Envoy Gateway project is in a continuous development cycle, and as the project evolves, new vulnerabilities may be exposed, or additional controls could be introduced. Therefore, the threats illustrated in the attack trees should be perceived as point-in-time reflections of the project’s current state at the time of writing this threat model.
 
 ### Node ID Schema
 

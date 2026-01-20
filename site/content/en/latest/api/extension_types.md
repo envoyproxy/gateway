@@ -475,7 +475,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `caCertificateRefs` | _LocalObjectReference array_ |  false  |  | CACertificateRefs contains one or more references to Kubernetes objects that<br />contain TLS certificates of the Certificate Authorities that can be used<br />as a trust anchor to validate the certificates presented by the backend.<br />A single reference to a Kubernetes ConfigMap or a Kubernetes Secret,<br />with the CA certificate in a key named `ca.crt` is currently supported.<br />If CACertificateRefs is empty or unspecified, then WellKnownCACertificates must be<br />specified. Only one of CACertificateRefs or WellKnownCACertificates may be specified,<br />not both. |
+| `caCertificateRefs` | _[LocalObjectReference](#localobjectreference) array_ |  false  |  | CACertificateRefs contains one or more references to Kubernetes objects that<br />contain TLS certificates of the Certificate Authorities that can be used<br />as a trust anchor to validate the certificates presented by the backend.<br />A single reference to a Kubernetes ConfigMap or a Kubernetes Secret,<br />with the CA certificate in a key named `ca.crt` is currently supported.<br />If CACertificateRefs is empty or unspecified, then WellKnownCACertificates must be<br />specified. Only one of CACertificateRefs or WellKnownCACertificates may be specified,<br />not both. |
 | `wellKnownCACertificates` | _[WellKnownCACertificatesType](#wellknowncacertificatestype)_ |  false  |  | WellKnownCACertificates specifies whether system CA certificates may be used in<br />the TLS handshake between the gateway and backend pod.<br />If WellKnownCACertificates is unspecified or empty (""), then CACertificateRefs<br />must be specified with at least one entry for a valid configuration. Only one of<br />CACertificateRefs or WellKnownCACertificates may be specified, not both. |
 | `insecureSkipVerify` | _boolean_ |  false  | false | InsecureSkipVerify indicates whether the upstream's certificate verification<br />should be skipped. Defaults to "false". |
 | `sni` | _[PreciseHostname](#precisehostname)_ |  false  |  | SNI is specifies the SNI value used when establishing an upstream TLS connection to the backend.<br />Envoy Gateway will use the HTTP host header value for SNI, when all resources referenced in BackendRefs are:<br />1. Backend resources that do not set SNI, or<br />2. Service/ServiceImport resources that do not have a BackendTLSPolicy attached to them<br />When a BackendTLSPolicy attaches to a Backend resource, the BackendTLSPolicy's Hostname value takes precedence<br />over this value. |
@@ -492,7 +492,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `tracing` | _[Tracing](#tracing)_ |  false  |  | Tracing configures the tracing settings for the backend or HTTPRoute. |
+| `tracing` | _[Tracing](#tracing)_ |  false  |  | Tracing configures the tracing settings for the backend or HTTPRoute.<br />This takes precedence over EnvoyProxy tracing when set. |
 | `metrics` | _[BackendMetrics](#backendmetrics)_ |  false  |  | Metrics defines metrics configuration for the backend or Route. |
 
 
@@ -909,6 +909,7 @@ _Appears in:_
 | `brotli` | _[BrotliCompressor](#brotlicompressor)_ |  false  |  | The configuration for Brotli compressor. |
 | `gzip` | _[GzipCompressor](#gzipcompressor)_ |  false  |  | The configuration for GZIP compressor. |
 | `zstd` | _[ZstdCompressor](#zstdcompressor)_ |  false  |  | The configuration for Zstd compressor. |
+| `minContentLength` | _[Quantity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#quantity-resource-api)_ |  false  |  | MinContentLength defines the minimum response size in bytes to apply compression.<br />Responses smaller than this threshold will not be compressed.<br />Must be at least 30 bytes as enforced by Envoy Proxy.<br />Note that when the suffix is not provided, the value is interpreted as bytes.<br />Default: 30 bytes |
 
 
 #### CompressorType
@@ -995,6 +996,42 @@ _Appears in:_
 | `Headers` | HeadersConsistentHashType hashes based on multiple request headers.<br /> | 
 | `Cookie` | CookieConsistentHashType hashes based on a cookie.<br /> | 
 | `QueryParams` | QueryParamsConsistentHashType hashes based on a multiple query parameter.<br /> | 
+
+
+#### ContextExtension
+
+
+
+ContextExtension is analogous to http_request.headers, however these
+contents will not be sent to the upstream server. This provides an
+extension mechanism for sending additional information to the auth server
+without modifying the proto definition. It maps to the internal opaque
+context in the filter chain.
+
+_Appears in:_
+- [ExtAuth](#extauth)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `name` | _string_ |  true  |  | Name of the context extension. |
+| `type` | _[ContextExtensionValueType](#contextextensionvaluetype)_ |  true  | Value | Type is the type of method to use to read the ContextExtension value.<br />Valid values are Value and ValueRef, default is Value. |
+| `value` | _string_ |  false  |  | Value of the context extension. |
+| `valueRef` | _[LocalObjectKeyReference](#localobjectkeyreference)_ |  false  |  | ValueRef for the context extension's value. |
+
+
+#### ContextExtensionValueType
+
+_Underlying type:_ _string_
+
+ContextExtensionValueType defines the types of values for ContextExtension supported by Envoy Gateway.
+
+_Appears in:_
+- [ContextExtension](#contextextension)
+
+| Value | Description |
+| ----- | ----------- |
+| `Value` | ContextExtensionValueTypeValue defines the "Value" ContextExtension type.<br /> | 
+| `ValueRef` | ContextExtensionValueTypeValueRef defines the "ValueRef" ContextExtension type.<br /> | 
 
 
 #### Cookie
@@ -1295,6 +1332,7 @@ _Appears in:_
 | `envoy.filters.http.custom_response` | EnvoyFilterCustomResponse defines the Envoy HTTP custom response filter.<br /> | 
 | `envoy.filters.http.credential_injector` | EnvoyFilterCredentialInjector defines the Envoy HTTP credential injector filter.<br /> | 
 | `envoy.filters.http.compressor` | EnvoyFilterCompressor defines the Envoy HTTP compressor filter.<br /> | 
+| `envoy.filters.http.dynamic_forward_proxy` | EnvoyFilterDynamicForwardProxy defines the Envoy HTTP dynamic forward proxy filter.<br /> | 
 | `envoy.filters.http.router` | EnvoyFilterRouter defines the Envoy HTTP router filter.<br /> | 
 | `envoy.filters.http.buffer` | EnvoyFilterBuffer defines the Envoy HTTP buffer filter<br /> | 
 | `envoy.filters.http.header_mutation` | EnvoyFilterHeaderMutation defines the Envoy HTTP header mutation filter<br /> | 
@@ -1432,6 +1470,7 @@ _Appears in:_
 | `rateLimitHpa` | _[KubernetesHorizontalPodAutoscalerSpec](#kuberneteshorizontalpodautoscalerspec)_ |  false  |  | RateLimitHpa defines the Horizontal Pod Autoscaler settings for Envoy ratelimit Deployment.<br />If the HPA is set, Replicas field from RateLimitDeployment will be ignored. |
 | `rateLimitPDB` | _[KubernetesPodDisruptionBudgetSpec](#kubernetespoddisruptionbudgetspec)_ |  false  |  | RateLimitPDB allows to control the pod disruption budget of rate limit service. |
 | `watch` | _[KubernetesWatchMode](#kuberneteswatchmode)_ |  false  |  | Watch holds configuration of which input resources should be watched and reconciled. |
+| `deploy` | _[KubernetesDeployMode](#kubernetesdeploymode)_ |  false  |  | Deploy holds configuration of how output managed resources such as the Envoy Proxy data plane<br />should be deployed |
 | `leaderElection` | _[LeaderElection](#leaderelection)_ |  false  |  | LeaderElection specifies the configuration for leader election.<br />If it's not set up, leader election will be active by default, using Kubernetes' standard settings. |
 | `shutdownManager` | _[ShutdownManager](#shutdownmanager)_ |  false  |  | ShutdownManager defines the configuration for the shutdown manager. |
 | `client` | _[KubernetesClient](#kubernetesclient)_ |  true  |  | Client holds the configuration for the Kubernetes client. |
@@ -1717,9 +1756,28 @@ EnvoyProxy is the schema for the envoyproxies API.
 | ---   | ---  | ---      | ---     | ---         |
 | `apiVersion` | _string_ | |`gateway.envoyproxy.io/v1alpha1`
 | `kind` | _string_ | |`EnvoyProxy`
-| `metadata` | _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#objectmeta-v1-meta)_ |  true  |  | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `metadata` | _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#objectmeta-v1-meta)_ |  false  |  | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` | _[EnvoyProxySpec](#envoyproxyspec)_ |  true  |  | EnvoyProxySpec defines the desired state of EnvoyProxy. |
-| `status` | _[EnvoyProxyStatus](#envoyproxystatus)_ |  true  |  | EnvoyProxyStatus defines the actual state of EnvoyProxy. |
+| `status` | _[EnvoyProxyStatus](#envoyproxystatus)_ |  false  |  | EnvoyProxyStatus defines the actual state of EnvoyProxy. |
+
+
+#### EnvoyProxyAncestorStatus
+
+
+
+
+
+_Appears in:_
+- [EnvoyProxyStatus](#envoyproxystatus)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `conditions` | _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#condition-v1-meta) array_ |  false  |  | Conditions describes the status of the Policy with respect to the given Ancestor. |
+| `ancestorRef` | _[ParentReference](#parentreference)_ |  true  |  | AncestorRef corresponds a GatewayClass or Gateway use this EnvoyProxy with ParametersReference. |
+
+
+
+
 
 
 #### EnvoyProxyHostProvider
@@ -1808,7 +1866,7 @@ _Appears in:_
 | `extraArgs` | _string array_ |  false  |  | ExtraArgs defines additional command line options that are provided to Envoy.<br />More info: https://www.envoyproxy.io/docs/envoy/latest/operations/cli#command-line-options<br />Note: some command line options are used internally(e.g. --log-level) so they cannot be provided here. |
 | `mergeGateways` | _boolean_ |  false  |  | MergeGateways defines if Gateway resources should be merged onto the same Envoy Proxy Infrastructure.<br />Setting this field to true would merge all Gateway Listeners under the parent Gateway Class.<br />This means that the port, protocol and hostname tuple must be unique for every listener.<br />If a duplicate listener is detected, the newer listener (based on timestamp) will be rejected and its status will be updated with a "Accepted=False" condition. |
 | `shutdown` | _[ShutdownConfig](#shutdownconfig)_ |  false  |  | Shutdown defines configuration for graceful envoy shutdown process. |
-| `filterOrder` | _[FilterPosition](#filterposition) array_ |  false  |  | FilterOrder defines the order of filters in the Envoy proxy's HTTP filter chain.<br />The FilterPosition in the list will be applied in the order they are defined.<br />If unspecified, the default filter order is applied.<br />Default filter order is:<br />- envoy.filters.http.health_check<br />- envoy.filters.http.fault<br />- envoy.filters.http.cors<br />- envoy.filters.http.ext_authz<br />- envoy.filters.http.api_key_auth<br />- envoy.filters.http.basic_auth<br />- envoy.filters.http.oauth2<br />- envoy.filters.http.jwt_authn<br />- envoy.filters.http.stateful_session<br />- envoy.filters.http.buffer<br />- envoy.filters.http.lua<br />- envoy.filters.http.ext_proc<br />- envoy.filters.http.wasm<br />- envoy.filters.http.rbac<br />- envoy.filters.http.local_ratelimit<br />- envoy.filters.http.ratelimit<br />- envoy.filters.http.grpc_web<br />- envoy.filters.http.grpc_stats<br />- envoy.filters.http.custom_response<br />- envoy.filters.http.credential_injector<br />- envoy.filters.http.compressor<br />- envoy.filters.http.router<br />Note: "envoy.filters.http.router" cannot be reordered, it's always the last filter in the chain. |
+| `filterOrder` | _[FilterPosition](#filterposition) array_ |  false  |  | FilterOrder defines the order of filters in the Envoy proxy's HTTP filter chain.<br />The FilterPosition in the list will be applied in the order they are defined.<br />If unspecified, the default filter order is applied.<br />Default filter order is:<br />- envoy.filters.http.health_check<br />- envoy.filters.http.fault<br />- envoy.filters.http.cors<br />- envoy.filters.http.ext_authz<br />- envoy.filters.http.api_key_auth<br />- envoy.filters.http.basic_auth<br />- envoy.filters.http.oauth2<br />- envoy.filters.http.jwt_authn<br />- envoy.filters.http.stateful_session<br />- envoy.filters.http.buffer<br />- envoy.filters.http.lua<br />- envoy.filters.http.ext_proc<br />- envoy.filters.http.wasm<br />- envoy.filters.http.rbac<br />- envoy.filters.http.local_ratelimit<br />- envoy.filters.http.ratelimit<br />- envoy.filters.http.grpc_web<br />- envoy.filters.http.grpc_stats<br />- envoy.filters.http.custom_response<br />- envoy.filters.http.credential_injector<br />- envoy.filters.http.compressor<br />- envoy.filters.http.dynamic_forward_proxy<br />- envoy.filters.http.router<br />Note: "envoy.filters.http.router" cannot be reordered, it's always the last filter in the chain. |
 | `backendTLS` | _[BackendTLSConfig](#backendtlsconfig)_ |  false  |  | BackendTLS is the TLS configuration for the Envoy proxy to use when connecting to backends.<br />These settings are applied on backends for which TLS policies are specified. |
 | `ipFamily` | _[IPFamily](#ipfamily)_ |  false  |  | IPFamily specifies the IP family for the EnvoyProxy fleet.<br />This setting only affects the Gateway listener port and does not impact<br />other aspects of the Envoy proxy configuration.<br />If not specified, the system will operate as follows:<br />- It defaults to IPv4 only.<br />- IPv6 and dual-stack environments are not supported in this default configuration.<br />Note: To enable IPv6 or dual-stack functionality, explicit configuration is required. |
 | `preserveRouteOrder` | _boolean_ |  false  |  | PreserveRouteOrder determines if the order of matching for HTTPRoutes is determined by Gateway-API<br />specification (https://gateway-api.sigs.k8s.io/reference/1.4/spec/#httprouterule)<br />or preserves the order defined by users in the HTTPRoute's HTTPRouteRule list.<br />Default: False |
@@ -1819,12 +1877,13 @@ _Appears in:_
 
 
 
-EnvoyProxyStatus defines the observed state of EnvoyProxy. This type is not implemented
-until https://github.com/envoyproxy/gateway/issues/1007 is fixed.
+EnvoyProxyStatus defines the observed state of EnvoyProxy.
 
 _Appears in:_
 - [EnvoyProxy](#envoyproxy)
 
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
 
 
 #### EnvoyResourceType
@@ -1863,6 +1922,7 @@ _Appears in:_
 | `timeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#duration)_ |  false  |  | Timeout defines the timeout for requests to the external authorization service.<br />If not specified, defaults to 10 seconds. |
 | `failOpen` | _boolean_ |  false  | false | FailOpen is a switch used to control the behavior when a response from the External Authorization service cannot be obtained.<br />If FailOpen is set to true, the system allows the traffic to pass through.<br />Otherwise, if it is set to false or not set (defaulting to false),<br />the system blocks the traffic and returns a HTTP 5xx error, reflecting a fail-closed approach.<br />This setting determines whether to prioritize accessibility over strict security in case of authorization service failure.<br />If set to true, the External Authorization will also be bypassed if its configuration is invalid. |
 | `recomputeRoute` | _boolean_ |  false  |  | RecomputeRoute clears the route cache and recalculates the routing decision.<br />This field must be enabled if the headers added or modified by the ExtAuth are used for<br />route matching decisions. If the recomputation selects a new route, features targeting<br />the new matched route will be applied. |
+| `contextExtensions` | _[ContextExtension](#contextextension) array_ |  false  |  | ContextExtensions are analogous to http_request.headers, however these<br />contents will not be sent to the upstream server. This provides an<br />extension mechanism for sending additional information to the auth server<br />without modifying the proto definition. It maps to the internal opaque<br />context in the filter chain. |
 
 
 #### ExtProc
@@ -1949,6 +2009,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `enableEnvoyPatchPolicy` | _boolean_ |  true  |  | EnableEnvoyPatchPolicy enables Envoy Gateway to<br />reconcile and implement the EnvoyPatchPolicy resources. |
 | `enableBackend` | _boolean_ |  true  |  | EnableBackend enables Envoy Gateway to<br />reconcile and implement the Backend resources. |
+| `disableLua` | _boolean_ |  true  |  | DisableLua determines if Lua EnvoyExtensionPolicies should be disabled.<br />If set to true, the Lua EnvoyExtensionPolicy feature will be disabled. |
 
 
 #### ExtensionHooks
@@ -2039,6 +2100,7 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `certificateRef` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#secretobjectreference)_ |  true  |  | CertificateRef is a reference to a Kubernetes Secret with a CA certificate in a key named "tls.crt".<br />The CA certificate is used by Envoy Gateway to verify the server certificate presented by the extension server. |
+| `clientCertificateRef` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#secretobjectreference)_ |  false  |  | ClientCertificateRef is a reference to a Kubernetes Secret with a client certificate and key<br />for client certificate authentication (mTLS). The secret must contain both "tls.crt" and "tls.key" keys.<br />When specified, Envoy Gateway will present this client certificate to the extension server<br />for mTLS authentication. If not specified, only server certificate validation is performed. |
 
 
 #### ExtractFrom
@@ -2164,6 +2226,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
+| `minEndpointsInZoneThreshold` | _integer_ |  false  |  | MinEndpointsInZoneThreshold is the minimum number of upstream endpoints in the local zone required to honor the forceLocalZone<br />override. This is useful for protecting zones with fewer endpoints. |
 
 
 #### GRPCActiveHealthChecker
@@ -2424,6 +2487,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `set` | _[HTTPHeader](#httpheader) array_ |  false  |  | Set overwrites the request with the given header (name, value)<br />before the action.<br />Input:<br />  GET /foo HTTP/1.1<br />  my-header: foo<br />Config:<br />  set:<br />  - name: "my-header"<br />    value: "bar"<br />Output:<br />  GET /foo HTTP/1.1<br />  my-header: bar |
 | `add` | _[HTTPHeader](#httpheader) array_ |  false  |  | Add adds the given header(s) (name, value) to the request<br />before the action. It appends to any existing values associated<br />with the header name.<br />Input:<br />  GET /foo HTTP/1.1<br />  my-header: foo<br />Config:<br />  add:<br />  - name: "my-header"<br />    value: "bar,baz"<br />Output:<br />  GET /foo HTTP/1.1<br />  my-header: foo,bar,baz |
+| `addIfAbsent` | _[HTTPHeader](#httpheader) array_ |  false  |  | AddIfAbsent adds the given header(s) (name, value) to the request/response<br />only if the header does not already exist. Unlike Add which appends to<br />existing values, this is a no-op if the header is already present.<br />Input:<br />  GET /foo HTTP/1.1<br />  my-header: foo<br />Config:<br />  addIfAbsent:<br />  - name: "my-header"<br />    value: "bar"<br />Output:<br />  GET /foo HTTP/1.1<br />  my-header: foo |
 | `remove` | _string array_ |  false  |  | Remove the given header(s) from the HTTP request before the action. The<br />value of Remove is a list of HTTP header names. Note that the header<br />names are case-insensitive (see<br />https://datatracker.ietf.org/doc/html/rfc2616#section-4.2).<br />Input:<br />  GET /foo HTTP/1.1<br />  my-header1: foo<br />  my-header2: bar<br />  my-header3: baz<br />Config:<br />  remove: ["my-header1", "my-header3"]<br />Output:<br />  GET /foo HTTP/1.1<br />  my-header2: bar |
 | `removeOnMatch` | _[StringMatch](#stringmatch) array_ |  false  |  | RemoveOnMatch removes headers whose names match the specified string matchers.<br />Matching is performed on the header name (case-insensitive). |
 
@@ -3149,6 +3213,7 @@ _Appears in:_
 | `imagePullSecrets` | _[LocalObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#localobjectreference-v1-core) array_ |  false  |  | ImagePullSecrets is an optional list of references to secrets<br />in the same namespace to use for pulling any of the images used by this PodSpec.<br />If specified, these secrets will be passed to individual puller implementations for them to use.<br />More info: https://kubernetes.io/docs/concepts/containers/images#specifying-imagepullsecrets-on-a-pod |
 | `nodeSelector` | _object (keys:string, values:string)_ |  false  |  | NodeSelector is a selector which must be true for the pod to fit on a node.<br />Selector which must match a node's labels for the pod to be scheduled on that node.<br />More info: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/ |
 | `topologySpreadConstraints` | _[TopologySpreadConstraint](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#topologyspreadconstraint-v1-core) array_ |  false  |  | TopologySpreadConstraints describes how a group of pods ought to spread across topology<br />domains. Scheduler will schedule pods in a way which abides by the constraints.<br />All topologySpreadConstraints are ANDed. |
+| `priorityClassName` | _string_ |  false  |  | PriorityClassName indicates the importance of a Pod relative to other Pods.<br />If a PriorityClassName is not specified, the pod priority will be default or zero if there is no default.<br />More info: https://kubernetes.io/docs/concepts/scheduling-eviction/pod-priority-preemption/ |
 
 
 #### KubernetesServiceAccountSpec
@@ -3329,6 +3394,23 @@ _Appears in:_
 | `ValueRef` | LocalJWKSTypeValueRef defines the "ValueRef" LocalJWKS type.<br /> | 
 
 
+#### LocalObjectKeyReference
+
+
+
+LocalObjectKeyReference selects a key from a local object.
+
+_Appears in:_
+- [ContextExtension](#contextextension)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `group` | _[Group](#group)_ |  true  |  | Group is the group of the referent. For example, "gateway.networking.k8s.io".<br />When unspecified or empty string, core API group is inferred. |
+| `kind` | _[Kind](#kind)_ |  true  |  | Kind is kind of the referent. For example "HTTPRoute" or "Service". |
+| `name` | _[ObjectName](#objectname)_ |  true  |  | Name is the name of the referent. |
+| `key` | _string_ |  true  |  | The key to select. |
+
+
 #### LocalRateLimit
 
 
@@ -3390,9 +3472,9 @@ _Appears in:_
 
 | Value | Description |
 | ----- | ----------- |
-| `Strict` | LuaValidationStrict is the default level and checks for issues during script execution.<br />Recommended if your scripts only use the standard Envoy Lua stream handle API.<br />For supported APIs, see: https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/lua_filter#stream-handle-api<br /> | 
-| `Syntax` | LuaValidationSyntax checks for syntax errors in the Lua script.<br />Note that this is not a full runtime validation and does not check for issues during script execution.<br />This is recommended if your scripts use external libraries that are not supported by Lua runtime validation.<br /> | 
-| `Disabled` | LuaValidationDisabled disables all validations of Lua scripts.<br />Scripts will be accepted and executed without any validation checks.<br />This is not recommended unless both runtime and syntax validations are failing unexpectedly.<br /> | 
+| `Strict` | LuaValidationStrict is the default level and checks for issues during script execution.<br />Recommended if your scripts only use the standard Envoy Lua stream handle API and no external libraries.<br />For supported APIs, see: https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/lua_filter#stream-handle-api<br />INFO: This validation mode executes Lua scripts from EnvoyExtensionPolicy (EEP) resources in the gateway controller.<br />Since the Gateway controller watches EEPs across all namespaces (or namespaces matching the configured selector),<br />unprivileged users can create EEPs in their namespaces and cause arbitrary Lua code to execute in the Gateway controller process.<br />Security measures are in place to prevent unsafe Lua code from accessing critical system resources on the controller<br />and fail validation, preventing the unsafe code from flowing to the data plane proxy.<br /> | 
+| `InsecureSyntax` | LuaValidationInsecureSyntax checks for Lua syntax errors only.<br />Useful if your scripts use external libraries other than the standard Envoy Lua stream handle API.<br />WARNING: This mode does NOT offer any runtime validations, so no security measures are applied to validate Lua code safety.<br />Not recommended unless you completely trust all EnvoyExtensionPolicy resources.<br /> | 
+| `Disabled` | LuaValidationDisabled disables all Lua script validations.<br />WARNING: This mode does NOT offer any runtime or syntax validations, so no security measures are applied to validate Lua code safety.<br />Not recommended unless you completely trust all EnvoyExtensionPolicy resources.<br /> | 
 
 
 #### LuaValueType
@@ -3553,6 +3635,14 @@ _Appears in:_
 
 OIDCProvider defines the OIDC Provider configuration.
 
+BackendRefs is used to specify the address of the OIDC Provider.
+If the BackendRefs is not specified, The host and port of the OIDC Provider's token endpoint
+will be used as the address of the OIDC Provider.
+
+TLS configuration can be specified in a BackendTLSConfig resource and target the BackendRefs.
+
+Other settings for the connection to the OIDC Provider can be specified in the BackendSettings resource.
+
 _Appears in:_
 - [OIDC](#oidc)
 
@@ -3584,6 +3674,21 @@ _Appears in:_
 | `host` | _string_ |  false  |  | Host define the extension service hostname.<br />Deprecated: Use BackendRefs instead. |
 | `port` | _integer_ |  false  | 4317 | Port defines the port the extension service is exposed on.<br />Deprecated: Use BackendRefs instead. |
 | `resources` | _object (keys:string, values:string)_ |  false  |  | Resources is a set of labels that describe the source of a log entry, including envoy node info.<br />It's recommended to follow [semantic conventions](https://opentelemetry.io/docs/reference/specification/resource/semantic_conventions/). |
+| `headers` | _[HTTPHeader](#httpheader) array_ |  false  |  | Headers is a list of additional headers to send with OTLP export requests.<br />These headers are added as gRPC initial metadata for the OTLP gRPC service. |
+
+
+#### OpenTelemetryTracingProvider
+
+
+
+OpenTelemetryTracingProvider defines the OpenTelemetry tracing provider configuration.
+
+_Appears in:_
+- [TracingProvider](#tracingprovider)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `headers` | _[HTTPHeader](#httpheader) array_ |  false  |  | Headers is a list of additional headers to send with OTLP export requests.<br />These headers are added as gRPC initial metadata for the OTLP gRPC service. |
 
 
 #### Operation
@@ -3882,7 +3987,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `type` | _[ProxyAccessLogFormatType](#proxyaccesslogformattype)_ |  true  |  | Type defines the type of accesslog format. |
+| `type` | _[ProxyAccessLogFormatType](#proxyaccesslogformattype)_ |  false  |  | Type defines the type of accesslog format.<br />When unset, both text and json can be specified. |
 | `text` | _string_ |  false  |  | Text defines the text accesslog format, following Envoy accesslog formatting,<br />It's required when the format type is "Text".<br />Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators) may be used in the format.<br />The [format string documentation](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#config-access-log-format-strings) provides more information. |
 | `json` | _object (keys:string, values:string)_ |  false  |  | JSON is additional attributes that describe the specific event occurrence.<br />Structured format for the envoy access logs. Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators)<br />can be used as values for fields within the Struct.<br />It's required when the format type is "JSON". |
 
@@ -4072,6 +4177,9 @@ _Appears in:_
 | `backendSettings` | _[ClusterSettings](#clustersettings)_ |  false  |  | BackendSettings holds configuration for managing the connection<br />to the backend. |
 | `host` | _string_ |  false  |  | Host define the service hostname.<br />Deprecated: Use BackendRefs instead. |
 | `port` | _integer_ |  false  | 4317 | Port defines the port the service is exposed on.<br />Deprecated: Use BackendRefs instead. |
+| `reportCountersAsDeltas` | _boolean_ |  false  |  | ReportCountersAsDeltas configures the OpenTelemetry sink to report<br />counters as delta temporality instead of cumulative. |
+| `reportHistogramsAsDeltas` | _boolean_ |  false  |  | ReportHistogramsAsDeltas configures the OpenTelemetry sink to report<br />histograms as delta temporality instead of cumulative.<br />Required for backends like Elastic that drop cumulative histograms. |
+| `headers` | _[HTTPHeader](#httpheader) array_ |  false  |  | Headers is a list of additional headers to send with OTLP export requests.<br />These headers are added as gRPC initial metadata for the OTLP gRPC service. |
 
 
 #### ProxyPrometheusProvider
@@ -4164,9 +4272,11 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `samplingRate` | _integer_ |  false  |  | SamplingRate controls the rate at which traffic will be<br />selected for tracing if no prior sampling decision has been made.<br />Defaults to 100, valid values [0-100]. 100 indicates 100% sampling.<br />Only one of SamplingRate or SamplingFraction may be specified.<br />If neither field is specified, all requests will be sampled. |
-| `samplingFraction` | _[Fraction](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#fraction)_ |  false  |  | SamplingFraction represents the fraction of requests that should be<br />selected for tracing if no prior sampling decision has been made.<br />Only one of SamplingRate or SamplingFraction may be specified.<br />If neither field is specified, all requests will be sampled. |
+| `samplingFraction` | _[Fraction](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#fraction)_ |  false  |  | SamplingFraction represents the fraction of requests that should be<br />selected for tracing if no prior sampling decision has been made. |
 | `customTags` | _object (keys:string, values:[CustomTag](#customtag))_ |  false  |  | CustomTags defines the custom tags to add to each span.<br />If provider is kubernetes, pod name and namespace are added by default. |
+| `tags` | _object (keys:string, values:string)_ |  false  |  | Tags defines the custom tags to add to each span.<br />Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators) may be used in the value.<br />The [format string documentation](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#config-access-log-format-strings) provides more information.<br />If provider is kubernetes, pod name and namespace are added by default.<br />Same keys take precedence over CustomTags. |
+| `spanName` | _[TracingSpanName](#tracingspanname)_ |  false  |  | SpanName defines the name of the span which will be used for tracing.<br />Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators) may be used in the value.<br />The [format string documentation](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#config-access-log-format-strings) provides more information.<br />If not set, the span name is provider specific.<br />e.g. Datadog use `ingress` as the default client span name,<br />and `router <UPSTREAM_CLUSTER> egress` as the server span name. |
+| `samplingRate` | _integer_ |  false  |  | SamplingRate controls the rate at which traffic will be<br />selected for tracing if no prior sampling decision has been made.<br />Defaults to 100, valid values [0-100]. 100 indicates 100% sampling.<br />Only one of SamplingRate or SamplingFraction may be specified.<br />If neither field is specified, all requests will be sampled. |
 | `provider` | _[TracingProvider](#tracingprovider)_ |  true  |  | Provider defines the tracing provider. |
 
 
@@ -4357,6 +4467,7 @@ _Appears in:_
 | `limit` | _[RateLimitValue](#ratelimitvalue)_ |  true  |  | Limit holds the rate limit values.<br />This limit is applied for traffic flows when the selectors<br />compute to True, causing the request to be counted towards the limit.<br />The limit is enforced and the request is ratelimited, i.e. a response with<br />429 HTTP status code is sent back to the client when<br />the selected requests have reached the limit. |
 | `cost` | _[RateLimitCost](#ratelimitcost)_ |  false  |  | Cost specifies the cost of requests and responses for the rule.<br />This is optional and if not specified, the default behavior is to reduce the rate limit counters by 1 on<br />the request path and do not reduce the rate limit counters on the response path. |
 | `shared` | _boolean_ |  false  |  | Shared determines whether this rate limit rule applies across all the policy targets.<br />If set to true, the rule is treated as a common bucket and is shared across all policy targets (xRoutes).<br />Default: false. |
+| `shadowMode` | _boolean_ |  false  |  | ShadowMode indicates whether this rate-limit rule runs in shadow mode.<br />When enabled, all rate-limiting operations are performed (cache lookups,<br />counter updates, telemetry generation), but the outcome is never enforced.<br />The request always succeeds, even if the configured limit is exceeded.<br />Only supported for Global Rate Limits. |
 
 
 #### RateLimitSelectCondition
@@ -4520,6 +4631,13 @@ _Appears in:_
 
 
 RemoteJWKS defines how to fetch and cache JSON Web Key Sets (JWKS) from a remote HTTP/HTTPS endpoint.
+
+BackendRefs is used to specify the address of the Remote JWKS.
+If the BackendRefs is not specified, the URI field is used to determine the address of the Remote JWKS.
+
+TLS configuration can be specified in a BackendTLSConfig resource and target the BackendRefs.
+
+Other settings for the connection to the remote JWKS can be specified in the BackendSettings resource.
 
 _Appears in:_
 - [JWTProvider](#jwtprovider)
@@ -5227,11 +5345,14 @@ Tracing defines the configuration for tracing.
 
 _Appears in:_
 - [BackendTelemetry](#backendtelemetry)
+- [ProxyTracing](#proxytracing)
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `samplingFraction` | _[Fraction](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#fraction)_ |  false  |  | SamplingFraction represents the fraction of requests that should be<br />selected for tracing if no prior sampling decision has been made.<br />This will take precedence over sampling fraction on EnvoyProxy if set. |
+| `samplingFraction` | _[Fraction](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#fraction)_ |  false  |  | SamplingFraction represents the fraction of requests that should be<br />selected for tracing if no prior sampling decision has been made. |
 | `customTags` | _object (keys:string, values:[CustomTag](#customtag))_ |  false  |  | CustomTags defines the custom tags to add to each span.<br />If provider is kubernetes, pod name and namespace are added by default. |
+| `tags` | _object (keys:string, values:string)_ |  false  |  | Tags defines the custom tags to add to each span.<br />Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators) may be used in the value.<br />The [format string documentation](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#config-access-log-format-strings) provides more information.<br />If provider is kubernetes, pod name and namespace are added by default.<br />Same keys take precedence over CustomTags. |
+| `spanName` | _[TracingSpanName](#tracingspanname)_ |  false  |  | SpanName defines the name of the span which will be used for tracing.<br />Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators) may be used in the value.<br />The [format string documentation](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#config-access-log-format-strings) provides more information.<br />If not set, the span name is provider specific.<br />e.g. Datadog use `ingress` as the default client span name,<br />and `router <UPSTREAM_CLUSTER> egress` as the server span name. |
 
 
 #### TracingProvider
@@ -5253,6 +5374,7 @@ _Appears in:_
 | `port` | _integer_ |  false  | 4317 | Port defines the port the provider service is exposed on.<br />Deprecated: Use BackendRefs instead. |
 | `serviceName` | _string_ |  false  |  | ServiceName defines the service name to use in tracing configuration.<br />If not set, Envoy Gateway will use a default service name set as<br />"name.namespace" (e.g., "my-gateway.default").<br />Note: This field is only supported for OpenTelemetry and Datadog tracing providers.<br />For Zipkin, the service name in traces is always derived from the Envoy --service-cluster flag<br />(typically "namespace/name" format). Setting this field has no effect for Zipkin. |
 | `zipkin` | _[ZipkinTracingProvider](#zipkintracingprovider)_ |  false  |  | Zipkin defines the Zipkin tracing provider configuration |
+| `openTelemetry` | _[OpenTelemetryTracingProvider](#opentelemetrytracingprovider)_ |  false  |  | OpenTelemetry defines the OpenTelemetry tracing provider configuration |
 
 
 #### TracingProviderType
@@ -5270,6 +5392,22 @@ _Appears in:_
 | `OpenTelemetry` |  | 
 | `Zipkin` |  | 
 | `Datadog` |  | 
+
+
+#### TracingSpanName
+
+
+
+
+
+_Appears in:_
+- [ProxyTracing](#proxytracing)
+- [Tracing](#tracing)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `client` | _string_ |  true  |  | Client defines operation name of the span which will be used for tracing. |
+| `server` | _string_ |  true  |  | Server defines the operation name of the upstream span which will be used for tracing. |
 
 
 #### TranslationConfig

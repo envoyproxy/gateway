@@ -31,7 +31,7 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 		message.HandleSubscription(
 			message.Metadata{Runner: string(egv1a1.LogComponentProviderRunner), Message: message.GatewayClassStatusMessageName},
 			r.subscriptions.gatewayClassStatuses,
-			func(update message.Update[types.NamespacedName, *gwapiv1.GatewayClassStatus], errChan chan error) {
+			func(update message.Update[types.NamespacedName, *gwapiv1.GatewayClassStatus], _ chan error) {
 				// skip delete updates.
 				if update.Delete {
 					return
@@ -45,9 +45,14 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 						if !ok {
 							panic(fmt.Sprintf("unsupported object type %T", obj))
 						}
-						gcCopy := gc.DeepCopy()
-						gcCopy.Status = *update.Value.DeepCopy()
-						setLastTransitionTimeInConditions(gcCopy.Status.Conditions, metav1.Now())
+						valCopy := update.Value.DeepCopy()
+						setLastTransitionTimeInConditions(valCopy.Conditions, metav1.Now())
+						gcCopy := &gwapiv1.GatewayClass{
+							TypeMeta:   gc.TypeMeta,
+							ObjectMeta: gc.ObjectMeta,
+							Spec:       gc.Spec,
+							Status:     *valCopy,
+						}
 						return gcCopy
 					}),
 				})
@@ -579,10 +584,16 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 								errChan <- err
 								panic(err)
 							}
-							tCopy := t.DeepCopy()
 							valCopy := val.DeepCopy()
 							setLastTransitionTimeInConditionsForPolicyStatus(valCopy, metav1.Now())
-							tCopy.Object["status"] = *valCopy
+							objMap := make(map[string]interface{}, len(t.Object))
+							for k, v := range t.Object {
+								if k != "status" {
+									objMap[k] = v
+								}
+							}
+							objMap["status"] = *valCopy
+							tCopy := &unstructured.Unstructured{Object: objMap}
 							return tCopy
 						}),
 					})
@@ -680,11 +691,16 @@ func (r *gatewayAPIReconciler) updateStatusForGateway(ctx context.Context, gtw *
 			if !ok {
 				panic(fmt.Sprintf("unsupported object type %T", obj))
 			}
-			gCopy := g.DeepCopy()
-			gCopy.Status = *gtw.Status.DeepCopy()
-			setLastTransitionTimeInConditions(gCopy.Status.Conditions, metav1.Now())
-			for i := range gCopy.Status.Listeners {
-				setLastTransitionTimeInConditions(gCopy.Status.Listeners[i].Conditions, metav1.Now())
+			statusCopy := gtw.Status.DeepCopy()
+			setLastTransitionTimeInConditions(statusCopy.Conditions, metav1.Now())
+			for i := range statusCopy.Listeners {
+				setLastTransitionTimeInConditions(statusCopy.Listeners[i].Conditions, metav1.Now())
+			}
+			gCopy := &gwapiv1.Gateway{
+				TypeMeta:   g.TypeMeta,
+				ObjectMeta: g.ObjectMeta,
+				Spec:       g.Spec,
+				Status:     *statusCopy,
 			}
 			return gCopy
 		}),

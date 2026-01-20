@@ -32,7 +32,7 @@ type mockExtensionServer struct {
 	receivedRoutes    []*routev3.RouteConfiguration
 }
 
-func (m *mockExtensionServer) PostTranslateModify(ctx context.Context, req *extension.PostTranslateModifyRequest) (*extension.PostTranslateModifyResponse, error) {
+func (m *mockExtensionServer) PostTranslateModify(_ context.Context, req *extension.PostTranslateModifyRequest) (*extension.PostTranslateModifyResponse, error) {
 	// Store what we received for verification
 	m.receivedListeners = req.Listeners
 	m.receivedRoutes = req.Routes

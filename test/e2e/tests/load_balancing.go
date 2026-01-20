@@ -468,7 +468,7 @@ var ConsistentHashCookieLoadBalancingTest = suite.ConformanceTest{
 				},
 			})
 
-			waitErr := wait.PollUntilContextTimeout(context.Background(), 1*time.Second, 60*time.Second, true, func(ctx context.Context) (bool, error) {
+			waitErr := wait.PollUntilContextTimeout(context.Background(), 1*time.Second, 60*time.Second, true, func(_ context.Context) (bool, error) {
 				resp, err := client.Do(req)
 				if err != nil {
 					t.Errorf("failed to get response: %v", err)

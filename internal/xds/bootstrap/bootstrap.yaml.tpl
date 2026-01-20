@@ -15,8 +15,18 @@ cluster_manager:
 node:
   locality:
     zone: $(ENVOY_SERVICE_ZONE)
-{{- if .StatsMatcher  }}
 stats_config:
+  use_all_default_tags: true
+  stats_tags:
+  - regex: \.zone(\.(([^\.]+)\.))
+    tag_name: from_zone
+  - regex: \.zone\.[^\.]+\.(([^\.]+)\.)
+    tag_name: to_zone
+  - regex: "^cluster(\\..+\\.(.+))\\.total_match_count$"
+    tag_name: socket_match_name
+  - regex: "circuit_breakers\\.((.+?)\\.).+"
+    tag_name: priority
+{{- if .StatsMatcher  }}
   stats_matcher:
     inclusion_list:
       patterns:
@@ -65,6 +75,22 @@ stats_sinks:
     grpc_service:
       envoy_grpc:
         cluster_name: otel_metric_sink_{{ $idx }}
+        {{- if $sink.Authority }}
+        authority: {{ $sink.Authority }}
+        {{- end }}
+      {{- if $sink.Headers }}
+      initial_metadata:
+      {{- range $sink.Headers }}
+      - key: "{{ .Name }}"
+        value: "{{ .Value }}"
+      {{- end }}
+      {{- end }}
+    {{- if $sink.ReportCountersAsDeltas }}
+    report_counters_as_deltas: true
+    {{- end }}
+    {{- if $sink.ReportHistogramsAsDeltas }}
+    report_histograms_as_deltas: true
+    {{- end }}
 {{- end }}
 {{- end }}
 static_resources:
@@ -178,6 +204,26 @@ static_resources:
               socket_address:
                 address: {{ $sink.Address }}
                 port_value: {{ $sink.Port }}
+    {{- if $sink.TLS }}
+    transport_socket:
+      name: envoy.transport_sockets.tls
+      typed_config:
+        "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+        {{- if $sink.TLS.SNI }}
+        sni: {{ $sink.TLS.SNI }}
+        {{- end }}
+        {{- if $sink.TLS.CACertificate }}
+        common_tls_context:
+          validation_context:
+            trusted_ca:
+              inline_bytes: {{ $sink.TLS.CACertificate | base64 }}
+        {{- else if $sink.TLS.UseSystemTrustStore }}
+        common_tls_context:
+          validation_context:
+            trusted_ca:
+              filename: {{ $.SystemCACertPath }}
+        {{- end }}
+    {{- end }}
   {{- end }}
   {{- if not .TopologyInjectorDisabled }}
   - connect_timeout: 10s

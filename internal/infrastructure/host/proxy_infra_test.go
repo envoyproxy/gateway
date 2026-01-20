@@ -18,6 +18,7 @@ import (
 	"github.com/stretchr/testify/require"
 	func_e_api "github.com/tetratelabs/func-e/api"
 	"k8s.io/utils/ptr"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/crypto"
@@ -28,6 +29,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/message"
 	"github.com/envoyproxy/gateway/internal/utils"
 	"github.com/envoyproxy/gateway/internal/utils/file"
+	"github.com/envoyproxy/gateway/internal/utils/test"
 	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
 	testutils "github.com/envoyproxy/gateway/test/utils"
 )
@@ -64,7 +66,7 @@ func newMockInfra(t *testing.T, cfg *config.Server) *Infra {
 		sdsConfigPath: proxyDir,
 		Stdout:        io.Discard,
 		Stderr:        io.Discard,
-		envoyRunner: func(ctx context.Context, args []string, options ...func_e_api.RunOption) error {
+		envoyRunner: func(ctx context.Context, _ []string, _ ...func_e_api.RunOption) error {
 			// Block until context is cancelled (mimics real Envoy blocking)
 			<-ctx.Done()
 			return ctx.Err()
@@ -402,7 +404,7 @@ func TestInfra_Close(t *testing.T) {
 
 		// Verify all proxies are running
 		count := 0
-		infra.proxyContextMap.Range(func(key, value any) bool {
+		infra.proxyContextMap.Range(func(_, _ any) bool {
 			count++
 			return true
 		})
@@ -414,7 +416,7 @@ func TestInfra_Close(t *testing.T) {
 
 		// Verify all proxies were stopped
 		count = 0
-		infra.proxyContextMap.Range(func(key, value any) bool {
+		infra.proxyContextMap.Range(func(_, _ any) bool {
 			count++
 			return true
 		})
@@ -587,6 +589,240 @@ func TestTopologyInjectorDisabledInHostMode(t *testing.T) {
 				require.Contains(t, bootstrapYAML, "local_cluster_name:")
 			} else {
 				require.NotContains(t, bootstrapYAML, "local_cluster_name:")
+			}
+		})
+	}
+}
+
+// TestResolvedMetricSinksConversion verifies that resolved metric sinks from IR
+// are correctly converted to bootstrap format, including TLS configuration.
+func TestResolvedMetricSinksConversion(t *testing.T) {
+	sni := "otel-collector.example.com"
+
+	testCases := []struct {
+		name     string
+		irSinks  []ir.ResolvedMetricSink
+		expected []bootstrap.MetricSink
+	}{
+		{
+			name:     "no sinks",
+			irSinks:  nil,
+			expected: []bootstrap.MetricSink{},
+		},
+		{
+			name: "skip sink with no endpoints",
+			irSinks: []ir.ResolvedMetricSink{
+				{
+					Destination: ir.RouteDestination{
+						Name:     "metrics_otel_0",
+						Settings: []*ir.DestinationSetting{{}},
+					},
+				},
+			},
+			expected: []bootstrap.MetricSink{},
+		},
+		{
+			name: "sink without TLS",
+			irSinks: []ir.ResolvedMetricSink{
+				{
+					Destination: ir.RouteDestination{
+						Name: "metrics_otel_0",
+						Settings: []*ir.DestinationSetting{
+							{
+								Endpoints: []*ir.DestinationEndpoint{
+									{Host: "otel-collector.example.com", Port: 4317},
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: []bootstrap.MetricSink{
+				{
+					Address: "otel-collector.example.com",
+					Port:    4317,
+				},
+			},
+		},
+		{
+			name: "sink with TLS and SNI",
+			irSinks: []ir.ResolvedMetricSink{
+				{
+					Destination: ir.RouteDestination{
+						Name: "metrics_otel_0",
+						Settings: []*ir.DestinationSetting{
+							{
+								Endpoints: []*ir.DestinationEndpoint{
+									{Host: "otel-collector.example.com", Port: 443},
+								},
+								TLS: &ir.TLSUpstreamConfig{
+									SNI: &sni,
+								},
+							},
+						},
+					},
+					Authority: "otel-collector.example.com",
+				},
+			},
+			expected: []bootstrap.MetricSink{
+				{
+					Address:   "otel-collector.example.com",
+					Port:      443,
+					Authority: "otel-collector.example.com",
+					TLS: &bootstrap.MetricSinkTLS{
+						SNI: sni,
+					},
+				},
+			},
+		},
+		{
+			name: "sink with TLS and custom CA",
+			irSinks: []ir.ResolvedMetricSink{
+				{
+					Destination: ir.RouteDestination{
+						Name: "metrics_otel_0",
+						Settings: []*ir.DestinationSetting{
+							{
+								Endpoints: []*ir.DestinationEndpoint{
+									{Host: "otel-collector.example.com", Port: 443},
+								},
+								TLS: &ir.TLSUpstreamConfig{
+									SNI: &sni,
+									CACertificate: &ir.TLSCACertificate{
+										Name:        "custom-ca",
+										Certificate: test.TestCACertificate,
+									},
+								},
+							},
+						},
+					},
+					Authority: "otel-collector.example.com",
+				},
+			},
+			expected: []bootstrap.MetricSink{
+				{
+					Address:   "otel-collector.example.com",
+					Port:      443,
+					Authority: "otel-collector.example.com",
+					TLS: &bootstrap.MetricSinkTLS{
+						SNI:           sni,
+						CACertificate: test.TestCACertificate,
+					},
+				},
+			},
+		},
+		{
+			name: "sink with headers and deltas",
+			irSinks: []ir.ResolvedMetricSink{
+				{
+					Destination: ir.RouteDestination{
+						Name: "metrics_otel_0",
+						Settings: []*ir.DestinationSetting{
+							{
+								Endpoints: []*ir.DestinationEndpoint{
+									{Host: "otel-collector.example.com", Port: 4317},
+								},
+							},
+						},
+					},
+					Headers: []gwapiv1.HTTPHeader{
+						{Name: "Authorization", Value: "Bearer token"},
+					},
+					ReportCountersAsDeltas:   true,
+					ReportHistogramsAsDeltas: true,
+				},
+			},
+			expected: []bootstrap.MetricSink{
+				{
+					Address:                  "otel-collector.example.com",
+					Port:                     4317,
+					ReportCountersAsDeltas:   true,
+					ReportHistogramsAsDeltas: true,
+					Headers: []gwapiv1.HTTPHeader{
+						{Name: "Authorization", Value: "Bearer token"},
+					},
+				},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			actual := convertResolvedMetricSinks(tc.irSinks)
+			require.Equal(t, tc.expected, actual)
+		})
+	}
+}
+
+// TestUserConfiguredMetricSinksPreserved verifies that user-configured metric
+// sinks (e.g., OpenTelemetry) are preserved in the bootstrap config for host mode.
+func TestUserConfiguredMetricSinksPreserved(t *testing.T) {
+	testCases := []struct {
+		name        string
+		telemetry   *egv1a1.ProxyTelemetry
+		expectSinks bool
+	}{
+		{
+			name:        "no telemetry config",
+			telemetry:   nil,
+			expectSinks: false,
+		},
+		{
+			name: "telemetry with nil metrics",
+			telemetry: &egv1a1.ProxyTelemetry{
+				Metrics: nil,
+			},
+			expectSinks: false,
+		},
+		{
+			name: "telemetry with otel sink",
+			telemetry: &egv1a1.ProxyTelemetry{
+				Metrics: &egv1a1.ProxyMetrics{
+					Sinks: []egv1a1.ProxyMetricSink{
+						{
+							Type: egv1a1.MetricSinkTypeOpenTelemetry,
+							OpenTelemetry: &egv1a1.ProxyOpenTelemetrySink{
+								Host: ptr.To("otel-collector.example.com"),
+								Port: 4317,
+							},
+						},
+					},
+				},
+			},
+			expectSinks: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			proxyConfig := &egv1a1.EnvoyProxy{
+				Spec: egv1a1.EnvoyProxySpec{
+					Telemetry: tc.telemetry,
+				},
+			}
+
+			// Build proxy metrics the same way CreateOrUpdateProxyInfra does
+			proxyMetrics := &egv1a1.ProxyMetrics{
+				Prometheus: &egv1a1.ProxyPrometheusProvider{
+					Disable: true,
+				},
+			}
+			if proxyConfig.Spec.Telemetry != nil && proxyConfig.Spec.Telemetry.Metrics != nil {
+				proxyMetrics.Sinks = proxyConfig.Spec.Telemetry.Metrics.Sinks
+				proxyMetrics.Matches = proxyConfig.Spec.Telemetry.Metrics.Matches
+			}
+
+			// Verify Prometheus is always disabled
+			require.True(t, proxyMetrics.Prometheus.Disable)
+
+			// Verify sinks and matches are preserved when configured
+			if tc.expectSinks {
+				require.NotEmpty(t, proxyMetrics.Sinks, "user-configured sinks should be preserved")
+				require.Equal(t, tc.telemetry.Metrics.Sinks, proxyMetrics.Sinks)
+				require.Equal(t, tc.telemetry.Metrics.Matches, proxyMetrics.Matches)
+			} else {
+				require.Empty(t, proxyMetrics.Sinks, "no sinks expected when not configured")
+				require.Empty(t, proxyMetrics.Matches, "no matches expected when not configured")
 			}
 		})
 	}

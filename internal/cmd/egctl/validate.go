@@ -24,7 +24,7 @@ func newValidateCommand() *cobra.Command {
 		Example: `  # Validate Gateway API Resources
   egctl x validate -f <input file>
 `,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			if len(inFile) == 0 {
 				return fmt.Errorf("-f/--file must be specified")
 			}
@@ -50,7 +50,7 @@ func runValidate(w io.Writer, inFile string) error {
 	noErr := true
 	_ = resource.IterYAMLBytes(inBytes, func(yamlByte []byte) error {
 		// Passing each resource as YAML string and get all their errors from local validator.
-		_, err = resource.LoadResourcesFromYAMLBytes(yamlByte, false)
+		_, err = resource.LoadResourcesFromYAMLBytes(yamlByte, false, nil)
 		if err != nil {
 			noErr = false
 			yamlRows := bytes.Split(yamlByte, []byte("\n"))
