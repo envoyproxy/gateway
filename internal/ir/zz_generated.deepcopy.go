@@ -1895,6 +1895,17 @@ func (in *HTTPRoute) DeepCopyInto(out *HTTPRoute) {
 			}
 		}
 	}
+	if in.CookieMatches != nil {
+		in, out := &in.CookieMatches, &out.CookieMatches
+		*out = make([]*StringMatch, len(*in))
+		for i := range *in {
+			if (*in)[i] != nil {
+				in, out := &(*in)[i], &(*out)[i]
+				*out = new(StringMatch)
+				(*in).DeepCopyInto(*out)
+			}
+		}
+	}
 	if in.AddRequestHeaders != nil {
 		in, out := &in.AddRequestHeaders, &out.AddRequestHeaders
 		*out = make([]AddHeader, len(*in))
