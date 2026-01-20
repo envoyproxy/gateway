@@ -1,0 +1,11 @@
+# See https://pre-commit.com for more information
+# See https://pre-commit.com/hooks.html for more hooks
+repos:
+  - repo: local
+    hooks:
+      - id: make-precommit
+        name: make precommit
+        entry: make precommit
+        language: system
+        pass_filenames: false
+        stages: [pre-commit]
