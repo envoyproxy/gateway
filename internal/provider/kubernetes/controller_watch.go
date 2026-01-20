@@ -7,8 +7,10 @@ package kubernetes
 
 import (
 	"context"
+	"fmt"
 
 	certificatesv1b1 "k8s.io/api/certificates/v1beta1"
+	"k8s.io/client-go/discovery"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -19,9 +21,13 @@ import (
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 )
 
-func (r *gatewayAPIReconciler) watchClusterTrustBundle(c controller.Controller, mgr manager.Manager) error {
+func (r *gatewayAPIReconciler) watchClusterTrustBundle(ctx context.Context, c controller.Controller, mgr manager.Manager, discoveryClient discovery.DiscoveryInterface) error {
 	groupVersion := certificatesv1b1.SchemeGroupVersion.String()
-	r.clusterTrustBundleExits = r.crdExists(mgr, resource.KindClusterTrustBundle, groupVersion)
+	exists, err := r.crdExists(ctx, discoveryClient, resource.KindClusterTrustBundle, groupVersion)
+	if err != nil {
+		return fmt.Errorf("failed to discover %s CRD: %w", resource.KindClusterTrustBundle, err)
+	}
+	r.clusterTrustBundleExits = exists
 	if !r.clusterTrustBundleExits {
 		r.log.Info("Skipping watch", "kind", resource.KindClusterTrustBundle, "groupVersion", groupVersion)
 	} else {

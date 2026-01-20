@@ -125,8 +125,8 @@ docker run --net=host --rm ghcr.io/macbre/curl-http3 curl -kv --http3 -HHost:www
 {{% /tab %}}
 {{% tab header="Without LoadBalancer Support" %}}
 
-It is not possible at the moment to port-forward UDP protocol in kubernetes service 
-check out https://github.com/kubernetes/kubernetes/issues/47862. 
+It is not possible at the moment to port-forward UDP protocol in kubernetes service
+check out https://github.com/kubernetes/kubernetes/issues/47862.
 Hence we need external loadbalancer to test this feature out.
 
 {{% /tab %}}

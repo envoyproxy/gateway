@@ -189,11 +189,11 @@ curl -s "http://$LOKI_IP:3100/loki/api/v1/query_range" --data-urlencode "query={
 
 ## CEL Expressions
 
-Envoy Gateway provides [CEL expressions](https://www.envoyproxy.io/docs/envoy/latest/xds/type/v3/cel.proto.html#common-expression-language-cel-proto) to filter access log . 
+Envoy Gateway provides [CEL expressions](https://www.envoyproxy.io/docs/envoy/latest/xds/type/v3/cel.proto.html#common-expression-language-cel-proto) to filter access log .
 
 For example, you can use the expression `'x-envoy-logged' in request.headers` to filter logs that contain the `x-envoy-logged` header.
 
-```shell 
+```shell
 kubectl apply -f - <<EOF
 apiVersion: gateway.networking.k8s.io/v1
 kind: GatewayClass
@@ -242,34 +242,34 @@ curl -s "http://$LOKI_IP:3100/loki/api/v1/query_range" --data-urlencode "query={
 ## Gateway API Metadata
 
 Envoy Gateway provides additional metadata about the K8s resources that were translated to  certain envoy resources.
-For example, details about the `HTTPRoute` and `GRPCRoute` (kind, group, name, namespace and annotations) are available 
-for access log formatter using the `METADATA` operator. 
+For example, details about the `HTTPRoute` and `GRPCRoute` (kind, group, name, namespace and annotations) are available
+for access log formatter using the `METADATA` operator.
 
 To enrich logs, users can add log operator that refer to XDS metadata, such as:
-- `%METADATA(ROUTE:envoy-gateway:resources)%` 
-- `%CEL(xds.route_metadata.filter_metadata['envoy-gateway']['resources'][0]['name'])%` 
+- `%METADATA(ROUTE:envoy-gateway:resources)%`
+- `%CEL(xds.route_metadata.filter_metadata['envoy-gateway']['resources'][0]['name'])%`
 
 ## Access Log Types
 
 By default, Access Log settings would apply to:
 - All Routes
-- If traffic is not matched by any Route known to Envoy, the Listener would emit the access log instead 
+- If traffic is not matched by any Route known to Envoy, the Listener would emit the access log instead
 
 Users may wish to customize this behavior:
 - Emit Access Logs by all Listeners for all traffic with specific settings
 - Do not emit Route-oriented access logs when a route is not matched.
 
-To achieve this, users can select if Access Log settings follow the default behavior or apply specifically to 
-Routes or Listeners by specifying the setting's type. 
+To achieve this, users can select if Access Log settings follow the default behavior or apply specifically to
+Routes or Listeners by specifying the setting's type.
 
-**Note**: When users define their own Access Log settings (with or without a type), the default Envoy Gateway 
-file access log is no longer configured. It can be re-enabled explicitly by adding empty settings for the desired components. 
+**Note**: When users define their own Access Log settings (with or without a type), the default Envoy Gateway
+file access log is no longer configured. It can be re-enabled explicitly by adding empty settings for the desired components.
 
 In the following example:
-- Route Access logs would use the default Envoy Gateway format and sink 
+- Route Access logs would use the default Envoy Gateway format and sink
 - Listener Access logs are customized to report transport-level failures and connection attributes
 
-```shell 
+```shell
 kubectl apply -f - <<EOF
 apiVersion: gateway.networking.k8s.io/v1
 kind: GatewayClass

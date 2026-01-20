@@ -167,7 +167,7 @@ var ESResilience = suite.ResilienceTest{
 
 func waitForMetricValueVerification(t *testing.T, suite *suite.ResilienceTestSuite, query string, verifier func(actual float64) bool) (float64, error) {
 	var actual float64
-	if err := wait.PollUntilContextTimeout(context.TODO(), 3*time.Second, time.Minute, true, func(ctx context.Context) (done bool, err error) {
+	if err := wait.PollUntilContextTimeout(context.TODO(), 3*time.Second, time.Minute, true, func(_ context.Context) (done bool, err error) {
 		v, err := prometheus.QueryPrometheus(suite.Client, query)
 		if err != nil {
 			tlog.Logf(t, "failed to query prometheus: %v", err)

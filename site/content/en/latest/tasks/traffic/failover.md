@@ -9,10 +9,10 @@ running smoothly if something goes wrong. Here’s why it’s valuable:
 the fallback (or "passive") backend is ready to step in instantly.
 This helps keep your API accessible and your services running, so users don’t even notice any interruptions.
 
-* Automatic Switch Over: If a problem occurs, the system can automatically switch traffic over to the fallback backend. 
+* Automatic Switch Over: If a problem occurs, the system can automatically switch traffic over to the fallback backend.
 This avoids needing someone to jump in and fix things manually, which could take time and might even lead to mistakes.
 
-* Lower Costs: In an active-passive setup, the fallback backend doesn’t need to work all the time—it’s just on standby. 
+* Lower Costs: In an active-passive setup, the fallback backend doesn’t need to work all the time—it’s just on standby.
 This can save on costs (like cloud egress costs) compared to setups where both backend are running at full capacity.
 
 * Peace of Mind with Redundancy: Although the fallback backend isn’t handling traffic daily, it's there as a safety net.

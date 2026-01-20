@@ -23,11 +23,11 @@ where its applied i.e. if the data plane has 2 replicas of Envoy running, and th
 and 5 requests pass through the second replica within the same second.
 
 * Local - In this case, the rate limits are specific to each instance/replica of Envoy running.
-Note - This is not part of the initial design and will be added as a future enhancement. 
+Note - This is not part of the initial design and will be added as a future enhancement.
 
-## Match Types 
+## Match Types
 
-### Rate limit a specific traffic flow 
+### Rate limit a specific traffic flow
 
 * Here is an example of a ratelimit implemented by the application developer to limit a specific user
 by matching on a custom `x-user-id` header with a value set to `one`
@@ -132,7 +132,7 @@ spec:
 
 * Here is an example of a rate limit implemented by the application developer to limit any unique user
 by matching on a custom `x-user-id` header. Here, user A (recognised from the traffic flow using the header
-`x-user-id` and value `a`) will be rate limited at 10 requests/hour and so will user B 
+`x-user-id` and value `a`) will be rate limited at 10 requests/hour and so will user B
 (recognised from the traffic flow using the header `x-user-id` and value `b`).
 
 ```yaml
@@ -389,7 +389,7 @@ is reset and again evaluated.
 * If user `bar` also ends up sending 90 more requests within the hour, summing up `bar`'s total request count to 101, the rate limit rule
 defined within `ratelimit-per-user` will get activated, and `bar`'s requests will be rate limited again until the hour interval ends.
 * Within the same above hour, if `baz` sends 991 more requests, summing up `baz`'s total request count to 1001, the rate limit rule defined
-within `ratelimit-per-user` will get activated for `baz`, and `baz`'s requests will also be rate limited until the hour interval ends. 
+within `ratelimit-per-user` will get activated for `baz`, and `baz`'s requests will also be rate limited until the hour interval ends.
 
 ## Design Decisions
 
@@ -412,7 +412,7 @@ attribute such as [IP subnet][] in the future that are not relevant in the [HTTP
 * [Global rate limiting][] in Envoy Proxy can be achieved using the following -
   * [Actions][] can be configured per [xDS Route][].
   * If the match criteria defined within these actions is met for a specific HTTP Request, a set of key value pairs called [descriptors][]
-  defined within the above actions is sent to a remote [rate limit service][], whose configuration (such as the URL for the rate limit service) is defined 
+  defined within the above actions is sent to a remote [rate limit service][], whose configuration (such as the URL for the rate limit service) is defined
   using a [rate limit filter][].
   * Based on information received by the rate limit service and its programmed configuration, a decision is computed, whether to rate limit
   the HTTP Request or not, and is sent back to Envoy, which enforces this decision on the data plane.
@@ -440,7 +440,7 @@ attribute such as [IP subnet][] in the future that are not relevant in the [HTTP
 [descriptors]: https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/rate_limit_filter.html?highlight=descriptor#example-1
 [Global rate limiting]: https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/other_features/global_rate_limiting
 [xDS Route]: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto#envoy-v3-api-msg-config-route-v3-routeaction
-[rate limit filter]: https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/ratelimit/v3/rate_limit.proto#envoy-v3-api-msg-extensions-filters-http-ratelimit-v3-ratelimit 
+[rate limit filter]: https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/ratelimit/v3/rate_limit.proto#envoy-v3-api-msg-extensions-filters-http-ratelimit-v3-ratelimit
 [rate limit service]: https://www.envoyproxy.io/docs/envoy/latest/configuration/other_features/rate_limit#config-rate-limit-service
 [reference implementation]: https://github.com/envoyproxy/ratelimit
 [EnvoyGateway]: https://github.com/envoyproxy/gateway/blob/main/api/v1alpha1/envoygateway_types.go

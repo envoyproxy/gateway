@@ -226,7 +226,8 @@ xdsIR:
       port: 10080
       routes:
       - addResponseHeaders:
-        - append: false
+        - addIfAbsent: false
+          append: false
           name: Content-Type
           value:
           - text/plain

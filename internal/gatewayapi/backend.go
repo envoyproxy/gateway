@@ -159,7 +159,7 @@ func validateBackendTLSSettings(backend *egv1a1.Backend, backendTLSPolicies []*g
 	}
 
 	if backend.Spec.TLS.BackendTLSConfig != nil && backend.Spec.TLS.ClientCertificateRef != nil {
-		ns := string(ptr.Deref(backend.Spec.TLS.ClientCertificateRef.Namespace, "default"))
+		ns := NamespaceDerefOr(backend.Spec.TLS.ClientCertificateRef.Namespace, backend.Namespace)
 		if ns != backend.Namespace {
 			return status.NewRouteStatusError(
 				fmt.Errorf("clientCertificateRef Secret is not located in the same namespace as Backend. Secret namespace: %s does not match Backend namespace: %s", ns, backend.Namespace),

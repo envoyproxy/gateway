@@ -289,6 +289,19 @@ func (t *Translator) validateListenerConditions(listener *ListenerContext) (isRe
 		return true
 	}
 
+	// Edge case: only one condition which is ResolvedRefs=False, Reason=PartiallyInvalidCertificateRef
+	// In this case, we can still consider the listener as ready because we only program the listener using only the valid certificates.
+	if len(lConditions) == 1 && lConditions[0].Type == string(gwapiv1.ListenerConditionResolvedRefs) &&
+		lConditions[0].Reason == string(status.ListenerReasonPartiallyInvalidCertificateRef) {
+		status.SetGatewayListenerStatusCondition(listener.gateway.Gateway, listener.listenerStatusIdx,
+			gwapiv1.ListenerConditionAccepted, metav1.ConditionTrue, gwapiv1.ListenerReasonAccepted,
+			"Listener has been successfully translated")
+		status.SetGatewayListenerStatusCondition(listener.gateway.Gateway, listener.listenerStatusIdx,
+			gwapiv1.ListenerConditionProgrammed, metav1.ConditionTrue, gwapiv1.ListenerReasonProgrammed,
+			"Sending translated listener configuration to the data plane")
+		return true
+	}
+
 	// Any condition on the listener apart from Programmed=true indicates an error.
 	if lConditions[0].Type != string(gwapiv1.ListenerConditionProgrammed) || lConditions[0].Status != metav1.ConditionTrue {
 		hasProgrammedCond := false
@@ -372,29 +385,23 @@ func (t *Translator) validateTerminateModeAndGetTLSSecrets(
 		return nil, nil
 	}
 
-	secrets := make([]*corev1.Secret, 0)
-	for _, certificateRef := range listener.TLS.CertificateRefs {
-		// TODO zhaohuabing: reuse validateSecretRef
+	var errs []status.ListenerError
+	secrets := make([]*corev1.Secret, 0, len(listener.TLS.CertificateRefs))
+	for idx, certificateRef := range listener.TLS.CertificateRefs {
 		if certificateRef.Group != nil && string(*certificateRef.Group) != "" {
-			status.SetGatewayListenerStatusCondition(listener.gateway.Gateway,
-				listener.listenerStatusIdx,
-				gwapiv1.ListenerConditionResolvedRefs,
-				metav1.ConditionFalse,
+			errs = append(errs, status.NewListenerStatusError(
+				fmt.Errorf("certificate refs %d: Listener's TLS certificate ref group must be unspecified/empty.", idx),
 				gwapiv1.ListenerReasonInvalidCertificateRef,
-				"Listener's TLS certificate ref group must be unspecified/empty.",
-			)
-			break
+			))
+			continue
 		}
 
 		if certificateRef.Kind != nil && string(*certificateRef.Kind) != resource.KindSecret {
-			status.SetGatewayListenerStatusCondition(listener.gateway.Gateway,
-				listener.listenerStatusIdx,
-				gwapiv1.ListenerConditionResolvedRefs,
-				metav1.ConditionFalse,
+			errs = append(errs, status.NewListenerStatusError(
+				fmt.Errorf("certificate refs %d: Listener's TLS certificate ref kind must be %s.", idx, resource.KindSecret),
 				gwapiv1.ListenerReasonInvalidCertificateRef,
-				fmt.Sprintf("Listener's TLS certificate ref kind must be %s.", resource.KindSecret),
-			)
-			break
+			))
+			continue
 		}
 
 		secretNamespace := listener.gateway.Namespace
@@ -414,14 +421,11 @@ func (t *Translator) validateTerminateModeAndGetTLSSecrets(
 				},
 				resources.ReferenceGrants,
 			) {
-				status.SetGatewayListenerStatusCondition(listener.gateway.Gateway,
-					listener.listenerStatusIdx,
-					gwapiv1.ListenerConditionResolvedRefs,
-					metav1.ConditionFalse,
+				errs = append(errs, status.NewListenerStatusError(
+					fmt.Errorf("certificate refs %d: Certificate ref to secret %s/%s not permitted by any ReferenceGrant.", idx, *certificateRef.Namespace, certificateRef.Name),
 					gwapiv1.ListenerReasonRefNotPermitted,
-					fmt.Sprintf("Certificate ref to secret %s/%s not permitted by any ReferenceGrant.", *certificateRef.Namespace, certificateRef.Name),
-				)
-				break
+				))
+				continue
 			}
 
 			secretNamespace = string(*certificateRef.Namespace)
@@ -430,53 +434,89 @@ func (t *Translator) validateTerminateModeAndGetTLSSecrets(
 		secret := t.GetSecret(secretNamespace, string(certificateRef.Name))
 
 		if secret == nil {
-			status.SetGatewayListenerStatusCondition(listener.gateway.Gateway,
-				listener.listenerStatusIdx,
-				gwapiv1.ListenerConditionResolvedRefs,
-				metav1.ConditionFalse,
+			errs = append(errs, status.NewListenerStatusError(
+				fmt.Errorf("certificate refs %d: Secret %s/%s does not exist.", idx, listener.gateway.Namespace, certificateRef.Name),
 				gwapiv1.ListenerReasonInvalidCertificateRef,
-				fmt.Sprintf("Secret %s/%s does not exist.", listener.gateway.Namespace, certificateRef.Name),
-			)
-			break
+			))
+			continue
 		}
 
 		if secret.Type != corev1.SecretTypeTLS {
-			status.SetGatewayListenerStatusCondition(listener.gateway.Gateway,
-				listener.listenerStatusIdx,
-				gwapiv1.ListenerConditionResolvedRefs,
-				metav1.ConditionFalse,
+			errs = append(errs, status.NewListenerStatusError(
+				fmt.Errorf("certificate refs %d: Secret %s/%s must be of type %s.", idx, listener.gateway.Namespace, certificateRef.Name, corev1.SecretTypeTLS),
 				gwapiv1.ListenerReasonInvalidCertificateRef,
-				fmt.Sprintf("Secret %s/%s must be of type %s.", listener.gateway.Namespace, certificateRef.Name, corev1.SecretTypeTLS),
-			)
-			break
+			))
+			continue
 		}
 
 		if len(secret.Data[corev1.TLSCertKey]) == 0 || len(secret.Data[corev1.TLSPrivateKeyKey]) == 0 {
-			status.SetGatewayListenerStatusCondition(listener.gateway.Gateway,
-				listener.listenerStatusIdx,
-				gwapiv1.ListenerConditionResolvedRefs,
-				metav1.ConditionFalse,
+			errs = append(errs, status.NewListenerStatusError(
+				fmt.Errorf("certificate refs %d: Secret %s/%s must contain %s and %s.", idx, listener.gateway.Namespace, certificateRef.Name, corev1.TLSCertKey, corev1.TLSPrivateKeyKey),
 				gwapiv1.ListenerReasonInvalidCertificateRef,
-				fmt.Sprintf("Secret %s/%s must contain %s and %s.", listener.gateway.Namespace, certificateRef.Name, corev1.TLSCertKey, corev1.TLSPrivateKeyKey),
-			)
-			break
+			))
+			continue
 		}
 
 		secrets = append(secrets, secret)
 	}
 
-	certs, err := parseCertsFromTLSSecretsData(secrets)
-	if err != nil {
+	if len(secrets) == 0 {
+		// Use RefNotPermitted only if ALL errors are RefNotPermitted
+		// Otherwise use InvalidCertificateRef as the general catch-all
+		reason := gwapiv1.ListenerReasonRefNotPermitted
+		for _, err := range errs {
+			if err.Reason() != gwapiv1.ListenerReasonRefNotPermitted {
+				reason = gwapiv1.ListenerReasonInvalidCertificateRef
+				break
+			}
+		}
+
+		errList := make([]error, len(errs))
+		for i, e := range errs {
+			errList[i] = e
+		}
+
 		status.SetGatewayListenerStatusCondition(listener.gateway.Gateway,
 			listener.listenerStatusIdx,
 			gwapiv1.ListenerConditionResolvedRefs,
 			metav1.ConditionFalse,
-			gwapiv1.ListenerReasonInvalidCertificateRef,
-			fmt.Sprintf("Secret %s.", err.Error()),
+			reason,
+			fmt.Sprintf("No valid secrets exist: %v", errors.Join(errList...)),
 		)
+		return nil, nil
 	}
 
-	return secrets, certs
+	validSecrets, certs, err := parseCertsFromTLSSecretsData(secrets)
+	if err != nil {
+		if err.Reason() != status.ListenerReasonPartiallyInvalidCertificateRef {
+			status.SetGatewayListenerStatusCondition(listener.gateway.Gateway,
+				listener.listenerStatusIdx,
+				gwapiv1.ListenerConditionResolvedRefs,
+				metav1.ConditionFalse,
+				err.Reason(),
+				fmt.Sprintf("No valid secrets exist: %v.", err.Error()),
+			)
+			return nil, nil
+		} else {
+			errs = append(errs, err)
+		}
+	}
+
+	if len(errs) > 0 {
+		errList := make([]error, len(errs))
+		for i, e := range errs {
+			errList[i] = e
+		}
+
+		status.SetGatewayListenerStatusCondition(listener.gateway.Gateway,
+			listener.listenerStatusIdx,
+			gwapiv1.ListenerConditionResolvedRefs,
+			metav1.ConditionFalse,
+			status.ListenerReasonPartiallyInvalidCertificateRef,
+			fmt.Sprintf("Some secrets are invalid: %v", errors.Join(errList...)),
+		)
+	}
+	return validSecrets, certs
 }
 
 func (t *Translator) validateTLSConfiguration(

@@ -98,6 +98,8 @@ func buildHCMTracing(tracing *ir.Tracing) (*hcm.HttpConnectionManager_Tracing, e
 		return nil, fmt.Errorf("failed to build tracing tags: %w", err)
 	}
 
+	op, upstreamOp := buildTracingOperation(tracing.SpanName)
+
 	return &hcm.HttpConnectionManager_Tracing{
 		ClientSampling: &xdstype.Percent{
 			Value: 100.0,
@@ -116,7 +118,17 @@ func buildHCMTracing(tracing *ir.Tracing) (*hcm.HttpConnectionManager_Tracing, e
 		},
 		CustomTags:        tags,
 		SpawnUpstreamSpan: wrapperspb.Bool(true),
+		Operation:         op,
+		UpstreamOperation: upstreamOp,
 	}, nil
+}
+
+func buildTracingOperation(span *egv1a1.TracingSpanName) (string, string) {
+	if span == nil {
+		return "", ""
+	}
+
+	return span.Client, span.Server
 }
 
 func processClusterForTracing(tCtx *types.ResourceVersionTable, tracing *ir.Tracing, metrics *ir.Metrics) error {

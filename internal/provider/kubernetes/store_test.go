@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -125,12 +126,18 @@ func TestRace(t *testing.T) {
 
 	go func() {
 		for {
-			s.addNode(&corev1.Node{
-				ObjectMeta: metav1.ObjectMeta{Name: "node1"},
-				Status:     corev1.NodeStatus{Addresses: []corev1.NodeAddress{{}}},
-			})
+			select {
+			case <-t.Context().Done():
+				return
+			default:
+				s.addNode(&corev1.Node{
+					ObjectMeta: metav1.ObjectMeta{Name: "node1"},
+					Status:     corev1.NodeStatus{Addresses: []corev1.NodeAddress{{}}},
+				})
+			}
 		}
 	}()
 
-	_ = s.listNodeAddresses()
+	got := s.listNodeAddresses()
+	require.Empty(t, got)
 }

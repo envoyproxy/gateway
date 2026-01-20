@@ -82,7 +82,7 @@ spec:
 The `status` field in your resource definitions is your primary troubleshooting tool. It provides insights into whether a resource has been **Accepted** or not, along with the reason for rejection.
 
 #### Using kubectl
-This example below shows why an HTTPRoute has been **Accepted** but the **ResolvedRefs** condition is `false` because the backend does not exist. 
+This example below shows why an HTTPRoute has been **Accepted** but the **ResolvedRefs** condition is `false` because the backend does not exist.
 **Note**: Almost all resources have a `status` field, so be sure to check them all.
 
 ```shell

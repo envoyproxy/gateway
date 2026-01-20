@@ -32,7 +32,7 @@ func ExpectedTraceCount(t *testing.T, suite *suite.ConformanceTestSuite, gwAddr 
 		t.Fatalf("expected response cannot be nil")
 	}
 	if err := wait.PollUntilContextTimeout(context.TODO(), time.Second, time.Minute, true,
-		func(ctx context.Context) (bool, error) {
+		func(_ context.Context) (bool, error) {
 			preCount, err := queryTraceFromTempo(t, suite.Client, tags)
 			if err != nil {
 				tlog.Logf(t, "failed to get trace count from tempo: %v", err)
@@ -42,7 +42,7 @@ func ExpectedTraceCount(t *testing.T, suite *suite.ConformanceTestSuite, gwAddr 
 			httputils.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, *expectedResponse)
 
 			// looks like we need almost 15 seconds to get the trace from Tempo?
-			err = wait.PollUntilContextTimeout(context.TODO(), time.Second, 15*time.Second, true, func(ctx context.Context) (done bool, err error) {
+			err = wait.PollUntilContextTimeout(context.TODO(), time.Second, 15*time.Second, true, func(_ context.Context) (done bool, err error) {
 				curCount, err := queryTraceFromTempo(t, suite.Client, tags)
 				if err != nil {
 					tlog.Logf(t, "failed to get curCount count from tempo: %v", err)

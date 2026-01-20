@@ -41,7 +41,7 @@ func ratelimitConfigCommand() *cobra.Command {
   # Retrieve rate limit configuration with short syntax
   egctl c rl
 `,
-		Run: func(c *cobra.Command, args []string) {
+		Run: func(c *cobra.Command, _ []string) {
 			cmdutil.CheckErr(runRateLimitConfig(c, namespace))
 		},
 	}

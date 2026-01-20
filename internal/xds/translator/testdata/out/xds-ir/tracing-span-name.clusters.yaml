@@ -1,0 +1,110 @@
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_PREFERRED
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
+    serviceName: httproute/default/httproute-1/rule/0
+  ignoreHealthOnHostRemoval: true
+  lbPolicy: LEAST_REQUEST
+  loadBalancingPolicy:
+    policies:
+    - typedExtensionConfig:
+        name: envoy.load_balancing_policies.least_request
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
+          localityLbConfig:
+            localityWeightedLbConfig: {}
+  metadata:
+    filterMetadata:
+      envoy-gateway:
+        resources:
+        - kind: HTTPRoute
+          name: httproute-1
+          namespace: default
+  name: httproute/default/httproute-1/rule/0
+  perConnectionBufferLimitBytes: 32768
+  type: EDS
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_PREFERRED
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
+    serviceName: httproute/default/httproute-2/rule/0
+  ignoreHealthOnHostRemoval: true
+  lbPolicy: LEAST_REQUEST
+  loadBalancingPolicy:
+    policies:
+    - typedExtensionConfig:
+        name: envoy.load_balancing_policies.least_request
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
+          localityLbConfig:
+            localityWeightedLbConfig: {}
+  metadata:
+    filterMetadata:
+      envoy-gateway:
+        resources:
+        - kind: HTTPRoute
+          name: httproute-2
+          namespace: default
+  name: httproute/default/httproute-2/rule/0
+  perConnectionBufferLimitBytes: 32768
+  type: EDS
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_PREFERRED
+  dnsRefreshRate: 30s
+  ignoreHealthOnHostRemoval: true
+  lbPolicy: LEAST_REQUEST
+  loadAssignment:
+    clusterName: tracing
+    endpoints:
+    - lbEndpoints:
+      - endpoint:
+          address:
+            socketAddress:
+              address: otel-collector.monitoring.svc.cluster.local
+              portValue: 4317
+        loadBalancingWeight: 1
+      loadBalancingWeight: 1
+      locality:
+        region: tracing/backend/-1
+  loadBalancingPolicy:
+    policies:
+    - typedExtensionConfig:
+        name: envoy.load_balancing_policies.least_request
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
+          localityLbConfig:
+            localityWeightedLbConfig: {}
+  metadata:
+    filterMetadata:
+      envoy-gateway:
+        resources:
+        - kind: EnvoyProxy
+          name: test
+          namespace: envoy-gateway
+  name: tracing
+  perConnectionBufferLimitBytes: 32768
+  respectDnsTtl: true
+  type: STRICT_DNS
+  typedExtensionProtocolOptions:
+    envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
+      '@type': type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
+      explicitHttpConfig:
+        http2ProtocolOptions:
+          initialConnectionWindowSize: 1048576
+          initialStreamWindowSize: 65536

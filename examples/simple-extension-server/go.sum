@@ -4,8 +4,8 @@ github.com/cncf/xds/go v0.0.0-20251022180443-0feb69152e9f h1:Y8xYupdHxryycyPlc9Y
 github.com/cncf/xds/go v0.0.0-20251022180443-0feb69152e9f/go.mod h1:HlzOvOjVBOfTGSRXRyY0OiCS/3J1akRGQQpRO/7zyF4=
 github.com/cpuguy83/go-md2man/v2 v2.0.7 h1:zbFlGlXEAKlwXpmvle3d8Oe3YnkKIK4xSRTd3sHPnBo=
 github.com/cpuguy83/go-md2man/v2 v2.0.7/go.mod h1:oOW0eioCTA6cOiMLiUPZOpcVxMig6NIQQ7OS05n1F4g=
-github.com/envoyproxy/gateway v1.6.1 h1:Etp7MR3Nix72EM8bmHWxCW3329oFRTlyvFiDQGXDvdw=
-github.com/envoyproxy/gateway v1.6.1/go.mod h1:F3Spa//JPyvpg8XXa5ZAvbrG8KdjObBpPYWVVHT9Hv8=
+github.com/envoyproxy/gateway v1.6.2 h1:GAoqPWMNl3ZWrjfvJ6wQ3mzuc/xPN+Vgjuf4l/0jDd8=
+github.com/envoyproxy/gateway v1.6.2/go.mod h1:cLMfSmbyvOafa/ASP137PnYO069koBGY1SjNPLtjIio=
 github.com/envoyproxy/go-control-plane/envoy v1.35.1-0.20251029084203-42a4a9261f66 h1:OmImC5gJvyHY9sGri9tcupvaFDesFVZpKLp7No3utdg=
 github.com/envoyproxy/go-control-plane/envoy v1.35.1-0.20251029084203-42a4a9261f66/go.mod h1:ty89S1YCCVruQAm9OtKeEkQLTb+Lkz0k8v9W0Oxsv98=
 github.com/envoyproxy/protoc-gen-validate v1.2.1 h1:DEo3O99U8j4hBFwbJfrz9VtgcDfUKS7KJ7spH3d86P8=

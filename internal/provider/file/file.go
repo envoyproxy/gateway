@@ -84,7 +84,7 @@ func (p *Provider) Start(ctx context.Context) error {
 	}()
 
 	// Start runnable servers.
-	var readyzChecker healthz.Checker = func(req *http.Request) error {
+	var readyzChecker healthz.Checker = func(_ *http.Request) error {
 		if !p.ready.Load() {
 			return fmt.Errorf("file provider not ready yet")
 		}

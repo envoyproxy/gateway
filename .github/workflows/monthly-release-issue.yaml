@@ -1,0 +1,109 @@
+name: Create Monthly Release Issue
+
+on:
+  schedule:
+    # Run on the 1st of every month at 9:00 AM UTC
+    - cron: '0 9 1 * *'
+  workflow_dispatch:  # Allow manual triggering for testing
+
+permissions:
+  issues: write
+
+jobs:
+  create-release-issue:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Calculate current release month and versions
+        id: release_info
+        run: |
+          # Get current date
+          CURRENT_MONTH=$(date +%m)
+          CURRENT_YEAR=$(date +%Y)
+
+          # Get current month name
+          MONTH_NAME=$(date +%B)
+
+          # Read current version from VERSION file
+          CURRENT_VERSION=$(cat VERSION | tr -d 'v' | tr -d '\n')
+
+          # Parse version (assuming format X.Y.Z)
+          MAJOR=$(echo $CURRENT_VERSION | cut -d. -f1)
+          MINOR=$(echo $CURRENT_VERSION | cut -d. -f2)
+          PATCH=$(echo $CURRENT_VERSION | cut -d. -f3)
+
+          # Calculate N version (current minor version)
+          N_VERSION="v${MAJOR}.${MINOR}"
+
+          # Calculate N-1 version (previous minor version)
+          if [ $MINOR -gt 0 ]; then
+            N_MINUS_1_MINOR=$((MINOR - 1))
+            N_MINUS_1_VERSION="v${MAJOR}.${N_MINUS_1_MINOR}"
+          else
+            # If minor is 0, go to previous major version
+            if [ $MAJOR -gt 0 ]; then
+              N_MINUS_1_MAJOR=$((MAJOR - 1))
+              N_MINUS_1_VERSION="v${N_MINUS_1_MAJOR}.0"
+            else
+              N_MINUS_1_VERSION="v0.0"
+            fi
+          fi
+
+          echo "month=${CURRENT_MONTH}" >> $GITHUB_OUTPUT
+          echo "year=${CURRENT_YEAR}" >> $GITHUB_OUTPUT
+          echo "month_name=${MONTH_NAME}" >> $GITHUB_OUTPUT
+          echo "n_version=${N_VERSION}" >> $GITHUB_OUTPUT
+          echo "n_minus_1_version=${N_MINUS_1_VERSION}" >> $GITHUB_OUTPUT
+
+      - name: Read issue template
+        id: template
+        run: |
+          # Read the template file and skip the YAML front matter
+          TEMPLATE_CONTENT=$(awk '/^---$/,/^---$/{if (!/^---$/) next} /^---$/{p++; next} p==2' .github/ISSUE_TEMPLATE/release.md)
+
+          # Save to output using multiline format
+          {
+            echo 'content<<EOF'
+            echo "$TEMPLATE_CONTENT"
+            echo 'EOF'
+          } >> $GITHUB_OUTPUT
+
+      - name: Create release issue for N version
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          MONTH_NAME="${{ steps.release_info.outputs.month_name }}"
+          YEAR="${{ steps.release_info.outputs.year }}"
+          N_VERSION="${{ steps.release_info.outputs.n_version }}"
+          TEMPLATE_CONTENT="${{ steps.template.outputs.content }}"
+
+          gh issue create \
+            --title "Patch Release ${N_VERSION}.x for ${MONTH_NAME} ${YEAR}" \
+            --label "release-process" \
+            --body "## Patch Release Checklist for ${N_VERSION}.x (${MONTH_NAME} ${YEAR})
+
+          ${TEMPLATE_CONTENT}
+
+          ---
+          *This issue was automatically created by the monthly release workflow.*"
+
+      - name: Create release issue for N-1 version
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          MONTH_NAME="${{ steps.release_info.outputs.month_name }}"
+          YEAR="${{ steps.release_info.outputs.year }}"
+          N_MINUS_1_VERSION="${{ steps.release_info.outputs.n_minus_1_version }}"
+          TEMPLATE_CONTENT="${{ steps.template.outputs.content }}"
+
+          gh issue create \
+            --title "Patch Release ${N_MINUS_1_VERSION}.x for ${MONTH_NAME} ${YEAR}" \
+            --label "release-process" \
+            --body "## Patch Release Checklist for ${N_MINUS_1_VERSION}.x (${MONTH_NAME} ${YEAR})
+
+          ${TEMPLATE_CONTENT}
+
+          ---
+          *This issue was automatically created by the monthly release workflow.*"

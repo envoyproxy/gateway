@@ -158,7 +158,6 @@ type HTTPHostnameModifier struct {
 // This is useful when the backend service requires credentials in the request, and the original
 // request does not contain them. The filter can inject credentials into the request before forwarding
 // it to the backend service.
-// +notImplementedHide
 type HTTPCredentialInjectionFilter struct {
 	// Header is the name of the header where the credentials are injected.
 	// If not specified, the credentials are injected into the Authorization header.
@@ -175,7 +174,6 @@ type HTTPCredentialInjectionFilter struct {
 }
 
 // InjectedCredential defines the credential to be injected.
-// +notImplementedHide
 type InjectedCredential struct {
 	// ValueRef is a reference to the secret containing the credentials to be injected.
 	// This is an Opaque secret. The credential should be stored in the key

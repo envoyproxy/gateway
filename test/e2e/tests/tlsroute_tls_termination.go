@@ -145,7 +145,7 @@ var TLSRouteTLSTerminationTest = suite.ConformanceTest{
 }
 
 // WaitForConsistentResponseWithCA makes requests with TLS using a CA certificate to verify the server
-func WaitForConsistentResponseWithCA(t *testing.T, r roundtripper.RoundTripper, req *roundtripper.Request, expected *http.ExpectedResponse, threshold int, maxTimeToConsistency time.Duration, certPem, keyPem, caCertPem []byte, serverName string) {
+func WaitForConsistentResponseWithCA(t *testing.T, r roundtripper.RoundTripper, req *roundtripper.Request, expected *http.ExpectedResponse, threshold int, maxTimeToConsistency time.Duration, _, keyPem, caCertPem []byte, serverName string) {
 	if req == nil {
 		t.Fatalf("request cannot be nil")
 	}

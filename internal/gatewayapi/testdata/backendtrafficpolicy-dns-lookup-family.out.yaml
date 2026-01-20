@@ -334,7 +334,8 @@ xdsIR:
   envoy-gateway/gateway-1:
     accessLog:
       openTelemetry:
-      - destination:
+      - authority: logs.default.svc
+        destination:
           metadata:
             kind: EnvoyProxy
             name: config-for-gateway-class

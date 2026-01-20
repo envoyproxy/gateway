@@ -47,7 +47,7 @@ func TestConfigLoader(t *testing.T) {
 	}()
 
 	changed := 0
-	loader := New(cfgPath, s, func(_ context.Context, cfg *config.Server) error {
+	loader := New(cfgPath, s, func(_ context.Context, _ *config.Server) error {
 		changed++
 		t.Logf("config changed %d times", changed)
 		if changed > 1 {
