@@ -214,6 +214,8 @@ type LeaderElection struct {
 type EnvoyGatewayTelemetry struct {
 	// Metrics defines metrics configuration for envoy gateway.
 	Metrics *EnvoyGatewayMetrics `json:"metrics,omitempty"`
+	// Traces defines traces configuration for envoy gateway.
+	Traces *EnvoyGatewayTraces `json:"traces,omitempty"`
 }
 
 // EnvoyGatewayLogging defines logging for Envoy Gateway.
