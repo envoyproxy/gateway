@@ -10,8 +10,6 @@ import (
 	"io"
 	"sync"
 
-	"golang.org/x/sync/semaphore"
-
 	"github.com/envoyproxy/gateway/api/v1alpha1/validation"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/filewatcher"
@@ -26,19 +24,14 @@ type Loader struct {
 	logger  logging.Logger
 	cancel  context.CancelFunc
 
-	hookSem *semaphore.Weighted
-	hook    HookFunc
+	hookMutex sync.Mutex
+	hook      HookFunc
 
 	mu      sync.RWMutex
 	hookErr chan error
 
 	w filewatcher.FileWatcher
 }
-
-const (
-	maxConcurrentHooks = 2 // allow 2 concurrent hooks, e.g. one is terminating, one is starting
-	perHookWeight      = 1
-)
 
 func New(cfgPath string, cfg *config.Server, f HookFunc) *Loader {
 	return &Loader{
@@ -48,7 +41,6 @@ func New(cfgPath string, cfg *config.Server, f HookFunc) *Loader {
 		hook:    f,
 		hookErr: make(chan error, 1),
 		w:       filewatcher.NewWatcher(),
-		hookSem: semaphore.NewWeighted(maxConcurrentHooks),
 	}
 }
 
@@ -129,12 +121,10 @@ func (r *Loader) runHook(ctx context.Context) error {
 	cfgCopy := r.snapshotConfig()
 	c, cancel := context.WithCancel(ctx)
 	r.cancel = cancel
-	if err := r.hookSem.Acquire(ctx, perHookWeight); err != nil {
-		return err
-	}
+	r.hookMutex.Lock()
 	go func(ctx context.Context) {
 		defer func() {
-			r.hookSem.Release(perHookWeight)
+			r.hookMutex.Unlock()
 			cancel()
 		}()
 		if err := r.hook(ctx, cfgCopy); err != nil {
@@ -152,14 +142,10 @@ func (r *Loader) Errors() <-chan error {
 	return r.hookErr
 }
 
-// Wait returns when success to acquire hookSem, which means no hook is running.
-func (r *Loader) Wait() error {
-	if err := r.hookSem.Acquire(context.TODO(), maxConcurrentHooks); err != nil {
-		return err
-	}
-
-	r.hookSem.Release(maxConcurrentHooks)
-	return nil
+// Wait returns when success to acquire mutex, which means no hook is running.
+func (r *Loader) Wait() {
+	r.hookMutex.Lock()
+	defer r.hookMutex.Unlock()
 }
 
 func (r *Loader) sendHookError(err error) {

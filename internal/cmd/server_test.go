@@ -110,7 +110,7 @@ func TestCustomProviderCancelWhenStarting(t *testing.T) {
 	}()
 
 	err := <-errCh
-	require.ErrorContains(t, err, "context canceled")
+	require.NoError(t, err)
 }
 
 func TestCustomProviderFailedToStart(t *testing.T) {

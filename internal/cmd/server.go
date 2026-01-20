@@ -103,16 +103,15 @@ func server(ctx context.Context, stdout, stderr io.Writer, cfgPath string, hook 
 			cfg.Logger.Error(err, "failed to start runners")
 			// Wait for runners to finish before shutting down.
 			// This is to make sure no orphaned runner process is left running in standalone mode.
-			if err := l.Wait(); err != nil {
-				cfg.Logger.Error(err, "failed to wait")
-			}
+			l.Wait()
 			return err
 		// Wait for the context to be done, which usually happens the process receives a SIGTERM or SIGINT.
 		case <-ctx.Done():
 			cfg.Logger.Info("shutting down")
 			// Wait for runners to finish before shutting down.
 			// This is to make sure no orphaned runner process is left running in standalone mode.
-			return l.Wait()
+			l.Wait()
+			return nil
 		}
 	}
 }
