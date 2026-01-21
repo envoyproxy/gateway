@@ -148,6 +148,7 @@ func IsRefToGateway(routeNamespace gwapiv1.Namespace, parentRef gwapiv1.ParentRe
 func GetReferencedListeners(routeNamespace gwapiv1.Namespace, parentRef gwapiv1.ParentReference, gateways []*GatewayContext) (bool, []*ListenerContext) {
 	var referencedListeners []*ListenerContext
 
+	// The parentRef is an XListenerSet
 	if isRefToXListenerSet(parentRef) {
 		ns := routeNamespace
 		if parentRef.Namespace != nil {
@@ -156,7 +157,7 @@ func GetReferencedListeners(routeNamespace gwapiv1.Namespace, parentRef gwapiv1.
 		var matchedListenerSet bool
 		for _, gateway := range gateways {
 			for _, listener := range gateway.listeners {
-				if !listener.isFromXListenerSet() || listener.xListenerSet == nil {
+				if !listener.isFromXListenerSet() {
 					continue
 				}
 				if listener.xListenerSet.Namespace != string(ns) ||
@@ -173,10 +174,14 @@ func GetReferencedListeners(routeNamespace gwapiv1.Namespace, parentRef gwapiv1.
 		return matchedListenerSet, referencedListeners
 	}
 
+	// The parentRef is a Gateway
 	for _, gateway := range gateways {
 		if IsRefToGateway(routeNamespace, parentRef, utils.NamespacedName(gateway)) {
-			// The parentRef may be to the entire Gateway, or to a specific listener.
 			for _, listener := range gateway.listeners {
+				if listener.isFromXListenerSet() {
+					continue
+				}
+				// The parentRef may be to the entire Gateway, or to a specific listener.
 				if (parentRef.SectionName == nil || *parentRef.SectionName == listener.Name) && (parentRef.Port == nil || *parentRef.Port == listener.Port) {
 					referencedListeners = append(referencedListeners, listener)
 				}
@@ -189,18 +194,11 @@ func GetReferencedListeners(routeNamespace gwapiv1.Namespace, parentRef gwapiv1.
 }
 
 func isRefToXListenerSet(parentRef gwapiv1.ParentReference) bool {
-	if parentRef.Kind == nil || string(*parentRef.Kind) != resource.KindXListenerSet {
-		return false
+	if parentRef.Kind != nil && string(*parentRef.Kind) == resource.KindXListenerSet &&
+		parentRef.Group != nil && string(*parentRef.Group) == gwapixv1a1.GroupVersion.Group {
+		return true
 	}
-	if parentRef.Group != nil {
-		switch string(*parentRef.Group) {
-		case gwapiv1.GroupName, gwapixv1a1.GroupVersion.Group:
-			// allowed group values for core Gateway API and experimental XListenerSet API
-		default:
-			return false
-		}
-	}
-	return true
+	return false
 }
 
 // HasReadyListener returns true if at least one Listener in the

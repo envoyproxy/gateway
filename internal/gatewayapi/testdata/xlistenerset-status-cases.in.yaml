@@ -39,7 +39,7 @@ gateways:
           from: All
 
 xListenerSets:
-- apiVersion: gateway.networking.k8s.io/v1alpha1
+- apiVersion: gateway.networking.x-k8s.io/v1alpha1
   kind: XListenerSet
   metadata:
     namespace: gateway-xls
@@ -60,7 +60,7 @@ xListenerSets:
       allowedRoutes:
         namespaces:
           from: All
-- apiVersion: gateway.networking.k8s.io/v1alpha1
+- apiVersion: gateway.networking.x-k8s.io/v1alpha1
   kind: XListenerSet
   metadata:
     namespace: cross-allowed
@@ -76,7 +76,7 @@ xListenerSets:
       allowedRoutes:
         namespaces:
           from: All
-- apiVersion: gateway.networking.k8s.io/v1alpha1
+- apiVersion: gateway.networking.x-k8s.io/v1alpha1
   kind: XListenerSet
   metadata:
     namespace: cross-denied
@@ -92,7 +92,7 @@ xListenerSets:
       allowedRoutes:
         namespaces:
           from: All
-- apiVersion: gateway.networking.k8s.io/v1alpha1
+- apiVersion: gateway.networking.x-k8s.io/v1alpha1
   kind: XListenerSet
   metadata:
     namespace: gateway-xls
@@ -113,7 +113,7 @@ xListenerSets:
       allowedRoutes:
         namespaces:
           from: All
-- apiVersion: gateway.networking.k8s.io/v1alpha1
+- apiVersion: gateway.networking.x-k8s.io/v1alpha1
   kind: XListenerSet
   metadata:
     namespace: gateway-xls
@@ -157,7 +157,7 @@ httpRoutes:
     name: route-extra-http-one
   spec:
     parentRefs:
-    - group: gateway.networking.k8s.io
+    - group: gateway.networking.x-k8s.io
       kind: XListenerSet
       namespace: gateway-xls
       name: same-namespace-valid
@@ -173,7 +173,7 @@ httpRoutes:
     name: route-extra-http-two
   spec:
     parentRefs:
-    - group: gateway.networking.k8s.io
+    - group: gateway.networking.x-k8s.io
       kind: XListenerSet
       namespace: gateway-xls
       name: same-namespace-valid
@@ -189,7 +189,7 @@ httpRoutes:
     name: route-cross-http-allowed
   spec:
     parentRefs:
-    - group: gateway.networking.k8s.io
+    - group: gateway.networking.x-k8s.io
       kind: XListenerSet
       namespace: cross-allowed
       name: cross-namespace-allowed
@@ -205,7 +205,7 @@ httpRoutes:
     name: route-cross-http-denied
   spec:
     parentRefs:
-    - group: gateway.networking.k8s.io
+    - group: gateway.networking.x-k8s.io
       kind: XListenerSet
       namespace: cross-denied
       name: cross-namespace-denied
@@ -221,7 +221,7 @@ httpRoutes:
     name: route-invalid-one
   spec:
     parentRefs:
-    - group: gateway.networking.k8s.io
+    - group: gateway.networking.x-k8s.io
       kind: XListenerSet
       namespace: gateway-xls
       name: same-namespace-invalid
@@ -237,7 +237,7 @@ httpRoutes:
     name: route-invalid-two
   spec:
     parentRefs:
-    - group: gateway.networking.k8s.io
+    - group: gateway.networking.x-k8s.io
       kind: XListenerSet
       namespace: gateway-xls
       name: same-namespace-invalid
@@ -253,7 +253,7 @@ httpRoutes:
     name: route-mixed-valid
   spec:
     parentRefs:
-    - group: gateway.networking.k8s.io
+    - group: gateway.networking.x-k8s.io
       kind: XListenerSet
       namespace: gateway-xls
       name: same-namespace-mixed
@@ -269,7 +269,7 @@ httpRoutes:
     name: route-mixed-invalid
   spec:
     parentRefs:
-    - group: gateway.networking.k8s.io
+    - group: gateway.networking.x-k8s.io
       kind: XListenerSet
       namespace: gateway-xls
       name: same-namespace-mixed

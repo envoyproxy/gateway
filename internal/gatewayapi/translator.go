@@ -260,6 +260,7 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 	t.ProcessListeners(acceptedGateways, xdsIR, infraIR, resources)
 
 	// Compute XListenerSet status based on listener processing results
+	// This should be done after ProcessListeners because XListenerSet status depends on listener processing results
 	t.ProcessXListenerSetStatus(resources.XListenerSets)
 
 	// Process EnvoyPatchPolicies

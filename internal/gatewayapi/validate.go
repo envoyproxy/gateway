@@ -604,13 +604,23 @@ func (t *Translator) validateTerminateModeAndGetTLSSecrets(
 			errList[i] = e
 		}
 
-		status.SetGatewayListenerStatusCondition(listener.gateway.Gateway,
-			listener.listenerStatusIdx,
-			gwapiv1.ListenerConditionResolvedRefs,
-			metav1.ConditionFalse,
-			status.ListenerReasonPartiallyInvalidCertificateRef,
-			fmt.Sprintf("Some secrets are invalid: %v", errors.Join(errList...)),
-		)
+		if listener.isFromXListenerSet() {
+			status.SetXListenerSetListenerStatusCondition(listener.xListenerSet,
+				listener.xListenerSetStatusIdx,
+				gwapixv1a1.ListenerEntryConditionResolvedRefs,
+				metav1.ConditionFalse,
+				gwapixv1a1.ListenerEntryConditionReason(status.ListenerReasonPartiallyInvalidCertificateRef),
+				fmt.Sprintf("Some secrets are invalid: %v", errors.Join(errList...)),
+			)
+		} else {
+			status.SetGatewayListenerStatusCondition(listener.gateway.Gateway,
+				listener.listenerStatusIdx,
+				gwapiv1.ListenerConditionResolvedRefs,
+				metav1.ConditionFalse,
+				status.ListenerReasonPartiallyInvalidCertificateRef,
+				fmt.Sprintf("Some secrets are invalid: %v", errors.Join(errList...)),
+			)
+		}
 	}
 	return validSecrets, certs
 }

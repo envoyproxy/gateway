@@ -41,8 +41,6 @@ func (t *Translator) processXListenerSet(xls *gwapixv1a1.XListenerSet, gatewayMa
 		return
 	}
 
-	t.Logger.Info("Processing XListenerSet 1", "namespace", xls.Namespace, "name", xls.Name)
-
 	var (
 		xlsReason gwapixv1a1.ListenerSetConditionReason
 		xlsMsg    string
@@ -57,8 +55,6 @@ func (t *Translator) processXListenerSet(xls *gwapixv1a1.XListenerSet, gatewayMa
 		return
 	}
 
-	t.Logger.Info("Processing XListenerSet 2", "namespace", xls.Namespace, "name", xls.Name)
-
 	// Check if the namespace is allowed
 	if !t.isXListenerSetAllowed(gatewayCtx.Gateway, xls) {
 		xlsReason = gwapixv1a1.ListenerSetReasonNotAllowed
@@ -67,8 +63,6 @@ func (t *Translator) processXListenerSet(xls *gwapixv1a1.XListenerSet, gatewayMa
 		status.UpdateXListenerSetStatusProgrammed(xls, false, gwapixv1a1.ListenerSetReasonProgrammed, "Not Programmed")
 		return
 	}
-
-	t.Logger.Info("Processing XListenerSet 3", "namespace", xls.Namespace, "name", xls.Name)
 
 	// Attach listeners to the GatewayContext
 	// We do NOT update status here. It will be updated in ProcessXListenerSetStatus after listeners are processed.
@@ -111,11 +105,6 @@ func (t *Translator) ProcessXListenerSetStatus(xListenerSets []*gwapixv1a1.XList
 	for _, xls := range xListenerSets {
 		// If Accepted condition is already set to False, it means it failed during attachment (parent not found/accepted or not allowed).
 		// We skip re-processing.
-		// If Accepted is not set (or True from previous reconciliation?), we assume it was attached and we need to validate listeners.
-		// Note: Since we re-process resources from scratch, Status.Conditions should be from the fresh object or we need to check if we just updated it.
-		// My implementation of processXListenerSet only updates status on failure.
-		// So if we don't find a False Accepted condition, we proceed.
-
 		alreadyRejected := false
 		for _, cond := range xls.Status.Conditions {
 			if cond.Type == string(gwapixv1a1.ListenerSetConditionAccepted) && cond.Status == metav1.ConditionFalse {
@@ -128,6 +117,7 @@ func (t *Translator) ProcessXListenerSetStatus(xListenerSets []*gwapixv1a1.XList
 		}
 
 		// Calculate status based on listeners
+		// TODO: implement PartiallyInvalid conditions when Gateway API supports it
 		allListenersValid := true
 		anyListenerValid := false
 
@@ -135,6 +125,7 @@ func (t *Translator) ProcessXListenerSetStatus(xListenerSets []*gwapixv1a1.XList
 			// Check if listener is accepted and not conflicted
 			accepted := false
 			conflicted := false
+			// TODO: check other conditions
 			for _, cond := range lStatus.Conditions {
 				if cond.Type == string(gwapixv1a1.ListenerEntryConditionAccepted) && cond.Status == metav1.ConditionTrue {
 					accepted = true

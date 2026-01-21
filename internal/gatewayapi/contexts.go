@@ -21,7 +21,6 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
-	statuspkg "github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils"
 )
@@ -74,8 +73,6 @@ func (g *GatewayContext) attachEnvoyProxy(resources *resource.Resources, epMap m
 type ListenerContext struct {
 	*gwapiv1.Listener
 
-	// gateway is the Gateway that this listener belongs to.
-	// If nil, this listener belongs to an XListenerSet.
 	gateway           *GatewayContext
 	listenerStatusIdx int
 
@@ -194,24 +191,6 @@ func (l *ListenerContext) GetConditions() []metav1.Condition {
 		return l.xListenerSet.Status.Listeners[l.xListenerSetStatusIdx].Conditions
 	}
 	return l.gateway.Status.Listeners[l.listenerStatusIdx].Conditions
-}
-
-func (l *ListenerContext) SetCondition(conditionType gwapiv1.ListenerConditionType, status metav1.ConditionStatus, reason gwapiv1.ListenerConditionReason, message string) {
-	if l.isFromXListenerSet() {
-		// Convert Gateway API types to XListenerSet types
-		// Note: The string values are expected to match between the APIs
-		statuspkg.SetXListenerSetListenerStatusCondition(l.xListenerSet, l.xListenerSetStatusIdx,
-			gwapixv1a1.ListenerEntryConditionType(conditionType),
-			status,
-			gwapixv1a1.ListenerEntryConditionReason(reason),
-			message)
-	} else {
-		statuspkg.SetGatewayListenerStatusCondition(l.gateway.Gateway, l.listenerStatusIdx,
-			conditionType,
-			status,
-			reason,
-			message)
-	}
 }
 
 func (l *ListenerContext) SetTLSSecrets(tlsSecrets []*corev1.Secret) {

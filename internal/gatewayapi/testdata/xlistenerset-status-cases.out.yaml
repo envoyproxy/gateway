@@ -84,7 +84,7 @@ httpRoutes:
     namespace: default
   spec:
     parentRefs:
-    - group: gateway.networking.k8s.io
+    - group: gateway.networking.x-k8s.io
       kind: XListenerSet
       name: same-namespace-valid
       namespace: gateway-xls
@@ -108,7 +108,7 @@ httpRoutes:
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
-        group: gateway.networking.k8s.io
+        group: gateway.networking.x-k8s.io
         kind: XListenerSet
         name: same-namespace-valid
         namespace: gateway-xls
@@ -120,7 +120,7 @@ httpRoutes:
     namespace: default
   spec:
     parentRefs:
-    - group: gateway.networking.k8s.io
+    - group: gateway.networking.x-k8s.io
       kind: XListenerSet
       name: same-namespace-valid
       namespace: gateway-xls
@@ -144,7 +144,7 @@ httpRoutes:
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
-        group: gateway.networking.k8s.io
+        group: gateway.networking.x-k8s.io
         kind: XListenerSet
         name: same-namespace-valid
         namespace: gateway-xls
@@ -156,7 +156,7 @@ httpRoutes:
     namespace: default
   spec:
     parentRefs:
-    - group: gateway.networking.k8s.io
+    - group: gateway.networking.x-k8s.io
       kind: XListenerSet
       name: cross-namespace-allowed
       namespace: cross-allowed
@@ -180,7 +180,7 @@ httpRoutes:
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
-        group: gateway.networking.k8s.io
+        group: gateway.networking.x-k8s.io
         kind: XListenerSet
         name: cross-namespace-allowed
         namespace: cross-allowed
@@ -192,7 +192,7 @@ httpRoutes:
     namespace: default
   spec:
     parentRefs:
-    - group: gateway.networking.k8s.io
+    - group: gateway.networking.x-k8s.io
       kind: XListenerSet
       name: same-namespace-invalid
       namespace: gateway-xls
@@ -216,7 +216,7 @@ httpRoutes:
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
-        group: gateway.networking.k8s.io
+        group: gateway.networking.x-k8s.io
         kind: XListenerSet
         name: same-namespace-invalid
         namespace: gateway-xls
@@ -228,7 +228,7 @@ httpRoutes:
     namespace: default
   spec:
     parentRefs:
-    - group: gateway.networking.k8s.io
+    - group: gateway.networking.x-k8s.io
       kind: XListenerSet
       name: same-namespace-invalid
       namespace: gateway-xls
@@ -252,7 +252,7 @@ httpRoutes:
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
-        group: gateway.networking.k8s.io
+        group: gateway.networking.x-k8s.io
         kind: XListenerSet
         name: same-namespace-invalid
         namespace: gateway-xls
@@ -264,7 +264,7 @@ httpRoutes:
     namespace: default
   spec:
     parentRefs:
-    - group: gateway.networking.k8s.io
+    - group: gateway.networking.x-k8s.io
       kind: XListenerSet
       name: same-namespace-mixed
       namespace: gateway-xls
@@ -288,7 +288,7 @@ httpRoutes:
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
-        group: gateway.networking.k8s.io
+        group: gateway.networking.x-k8s.io
         kind: XListenerSet
         name: same-namespace-mixed
         namespace: gateway-xls
@@ -300,7 +300,7 @@ httpRoutes:
     namespace: default
   spec:
     parentRefs:
-    - group: gateway.networking.k8s.io
+    - group: gateway.networking.x-k8s.io
       kind: XListenerSet
       name: same-namespace-mixed
       namespace: gateway-xls
@@ -324,7 +324,7 @@ httpRoutes:
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
-        group: gateway.networking.k8s.io
+        group: gateway.networking.x-k8s.io
         kind: XListenerSet
         name: same-namespace-mixed
         namespace: gateway-xls
@@ -378,7 +378,7 @@ infraIR:
       name: gateway-xls/composite-gateway
       namespace: envoy-gateway-system
 xListenerSets:
-- apiVersion: gateway.networking.k8s.io/v1alpha1
+- apiVersion: gateway.networking.x-k8s.io/v1alpha1
   kind: XListenerSet
   metadata:
     name: same-namespace-valid
@@ -462,7 +462,7 @@ xListenerSets:
         kind: HTTPRoute
       - group: gateway.networking.k8s.io
         kind: GRPCRoute
-- apiVersion: gateway.networking.k8s.io/v1alpha1
+- apiVersion: gateway.networking.x-k8s.io/v1alpha1
   kind: XListenerSet
   metadata:
     name: cross-namespace-allowed
@@ -517,7 +517,7 @@ xListenerSets:
         kind: HTTPRoute
       - group: gateway.networking.k8s.io
         kind: GRPCRoute
-- apiVersion: gateway.networking.k8s.io/v1alpha1
+- apiVersion: gateway.networking.x-k8s.io/v1alpha1
   kind: XListenerSet
   metadata:
     name: cross-namespace-denied
@@ -548,7 +548,7 @@ xListenerSets:
       reason: Programmed
       status: "False"
       type: Programmed
-- apiVersion: gateway.networking.k8s.io/v1alpha1
+- apiVersion: gateway.networking.x-k8s.io/v1alpha1
   kind: XListenerSet
   metadata:
     name: same-namespace-invalid
@@ -624,7 +624,7 @@ xListenerSets:
       name: invalid-two
       port: 8086
       supportedKinds: []
-- apiVersion: gateway.networking.k8s.io/v1alpha1
+- apiVersion: gateway.networking.x-k8s.io/v1alpha1
   kind: XListenerSet
   metadata:
     name: same-namespace-mixed
