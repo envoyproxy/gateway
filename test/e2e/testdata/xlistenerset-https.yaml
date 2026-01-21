@@ -7,7 +7,7 @@ spec:
   hostnames:
   - www.example.com
   parentRefs:
-  - group: gateway.networking.k8s.io
+  - group: gateway.networking.x-k8s.io
     kind: XListenerSet
     namespace: gateway-conformance-infra
     name: xlistener-set-http

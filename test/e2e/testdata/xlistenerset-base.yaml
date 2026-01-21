@@ -16,6 +16,9 @@ spec:
       namespaces:
         from: Same
 ---
+# ./certs/client-mtls-trustbundle.sh
+#
+# kubectl create secret generic example-com-tls -n gateway-conformance-infra --from-file=ca.crt=example.com.crt --from-file=tls.crt=www.example.com.crt --from-file=tls.key=www.example.com.key --dry-run=client -o yaml > example-com-tls.yaml
 apiVersion: v1
 kind: Secret
 metadata:

@@ -15,6 +15,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+	gwapixv1a1 "sigs.k8s.io/gateway-api/apisx/v1alpha1"
 	"sigs.k8s.io/gateway-api/conformance/echo-basic/grpcechoserver"
 	"sigs.k8s.io/gateway-api/conformance/utils/grpc"
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
@@ -52,7 +53,7 @@ var XListenerSetHTTPTest = suite.ConformanceTest{
 
 		parents := []gwapiv1.RouteParentStatus{{
 			ParentRef: gwapiv1.ParentReference{
-				Group:       gatewayapi.GroupPtr(gwapiv1.GroupName),
+				Group:       gatewayapi.GroupPtr(gwapixv1a1.GroupVersion.Group),
 				Kind:        gatewayapi.KindPtr(resource.KindXListenerSet),
 				Name:        gwapiv1.ObjectName("xlistener-set-http"),
 				Namespace:   gatewayapi.NamespacePtr(ns),
@@ -112,7 +113,7 @@ var XListenerSetHTTPSTest = suite.ConformanceTest{
 
 		parents := []gwapiv1.RouteParentStatus{{
 			ParentRef: gwapiv1.ParentReference{
-				Group:       gatewayapi.GroupPtr(gwapiv1.GroupName),
+				Group:       gatewayapi.GroupPtr(gwapixv1a1.GroupVersion.Group),
 				Kind:        gatewayapi.KindPtr(resource.KindXListenerSet),
 				Name:        gwapiv1.ObjectName("xlistener-set-http"),
 				Namespace:   gatewayapi.NamespacePtr(ns),
@@ -185,7 +186,7 @@ var XListenerSetGRPCTest = suite.ConformanceTest{
 
 		parents := []gwapiv1.RouteParentStatus{{
 			ParentRef: gwapiv1.ParentReference{
-				Group:       gatewayapi.GroupPtr(gwapiv1.GroupName),
+				Group:       gatewayapi.GroupPtr(gwapixv1a1.GroupVersion.Group),
 				Kind:        gatewayapi.KindPtr(resource.KindXListenerSet),
 				Name:        gwapiv1.ObjectName("xlistener-set-grpc"),
 				Namespace:   gatewayapi.NamespacePtr(ns),
