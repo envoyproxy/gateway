@@ -43,6 +43,7 @@ bug fixes: |
   Fix gateway continuing with incomplete resources after unrecoverable Kubernetes discovery errors when checking optional CRDs by failing fast and propagating errors so pods restart instead of skipping optional CRDs.
   Fixed an issue where listener translation fails when contains invalid certificate in multiple TLS certificateRefs.
   Fixed an issue where auto-detect upstream protocol breaks with multiple backends(HTTP + HTTPS).
+  Fixed an issue where route match rule order is wrong when merging with empty path match.
 
 # Enhancements that improve performance.
 performance improvements: |
