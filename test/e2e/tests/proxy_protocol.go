@@ -13,6 +13,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	httputils "sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
@@ -49,7 +50,7 @@ var ProxyProtocolTest = suite.ConformanceTest{
 				}
 			}
 
-			err = suite.Client.Update(t.Context(), backend)
+			err = suite.Client.Patch(t.Context(), backend, client.MergeFrom(backend))
 			require.NoError(t, err)
 		}
 
