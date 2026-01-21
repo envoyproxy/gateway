@@ -17,8 +17,8 @@ import (
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
-func TestBuildLoadBalancer_ClientSideWeightedRoundRobin(t *testing.T) {
-	cswrr := &egv1a1.ClientSideWeightedRoundRobin{
+func TestBuildLoadBalancer_BackendUtilization(t *testing.T) {
+	backendUtilization := &egv1a1.BackendUtilization{
 		BlackoutPeriod:                     ptr.To(gwapiv1.Duration("10s")),
 		WeightExpirationPeriod:             ptr.To(gwapiv1.Duration("3m")),
 		WeightUpdatePeriod:                 ptr.To(gwapiv1.Duration("1s")),
@@ -28,17 +28,17 @@ func TestBuildLoadBalancer_ClientSideWeightedRoundRobin(t *testing.T) {
 
 	policy := &egv1a1.ClusterSettings{
 		LoadBalancer: &egv1a1.LoadBalancer{
-			Type:                         egv1a1.ClientSideWeightedRoundRobinLoadBalancerType,
-			ClientSideWeightedRoundRobin: cswrr,
+			Type:               egv1a1.BackendUtilizationLoadBalancerType,
+			BackendUtilization: backendUtilization,
 		},
 	}
 
 	lb, err := buildLoadBalancer(policy)
 	require.NoError(t, err)
 	require.NotNil(t, lb)
-	require.NotNil(t, lb.ClientSideWeightedRoundRobin)
+	require.NotNil(t, lb.BackendUtilization)
 
-	got := lb.ClientSideWeightedRoundRobin
+	got := lb.BackendUtilization
 	require.Equal(t, ir.MetaV1DurationPtr(10*time.Second), got.BlackoutPeriod)
 	require.Equal(t, ir.MetaV1DurationPtr(3*time.Minute), got.WeightExpirationPeriod)
 	require.Equal(t, ir.MetaV1DurationPtr(1*time.Second), got.WeightUpdatePeriod)

@@ -147,7 +147,7 @@ backendTrafficPolicies:
     namespace: default
   spec:
     loadBalancer:
-      clientSideWeightedRoundRobin:
+      backendUtilization:
         blackoutPeriod: 10s
         errorUtilizationPenalty: 100
         metricNamesForComputingUtilization:
@@ -156,7 +156,7 @@ backendTrafficPolicies:
         weightUpdatePeriod: 10s
       slowStart:
         window: 300s
-      type: ClientSideWeightedRoundRobin
+      type: BackendUtilization
     targetRef:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
@@ -851,7 +851,7 @@ xdsIR:
           prefix: /test5
         traffic:
           loadBalancer:
-            clientSideWeightedRoundRobin:
+            backendUtilization:
               blackoutPeriod: 10s
               errorUtilizationPenalty: 100
               metricNamesForComputingUtilization:

@@ -341,32 +341,32 @@ func buildLoadBalancer(policy *egv1a1.ClusterSettings) (*ir.LoadBalancer, error)
 				Window: ir.MetaV1DurationPtr(d),
 			}
 		}
-	case egv1a1.ClientSideWeightedRoundRobinLoadBalancerType:
+	case egv1a1.BackendUtilizationLoadBalancerType:
 		lb = &ir.LoadBalancer{
-			ClientSideWeightedRoundRobin: &ir.ClientSideWeightedRoundRobin{},
+			BackendUtilization: &ir.BackendUtilization{},
 		}
-		cswrr := policy.LoadBalancer.ClientSideWeightedRoundRobin
-		if cswrr != nil {
-			if cswrr.BlackoutPeriod != nil {
-				if d, err := time.ParseDuration(string(*cswrr.BlackoutPeriod)); err == nil {
-					lb.ClientSideWeightedRoundRobin.BlackoutPeriod = ir.MetaV1DurationPtr(d)
+		bu := policy.LoadBalancer.BackendUtilization
+		if bu != nil {
+			if bu.BlackoutPeriod != nil {
+				if d, err := time.ParseDuration(string(*bu.BlackoutPeriod)); err == nil {
+					lb.BackendUtilization.BlackoutPeriod = ir.MetaV1DurationPtr(d)
 				}
 			}
-			if cswrr.WeightExpirationPeriod != nil {
-				if d, err := time.ParseDuration(string(*cswrr.WeightExpirationPeriod)); err == nil {
-					lb.ClientSideWeightedRoundRobin.WeightExpirationPeriod = ir.MetaV1DurationPtr(d)
+			if bu.WeightExpirationPeriod != nil {
+				if d, err := time.ParseDuration(string(*bu.WeightExpirationPeriod)); err == nil {
+					lb.BackendUtilization.WeightExpirationPeriod = ir.MetaV1DurationPtr(d)
 				}
 			}
-			if cswrr.WeightUpdatePeriod != nil {
-				if d, err := time.ParseDuration(string(*cswrr.WeightUpdatePeriod)); err == nil {
-					lb.ClientSideWeightedRoundRobin.WeightUpdatePeriod = ir.MetaV1DurationPtr(d)
+			if bu.WeightUpdatePeriod != nil {
+				if d, err := time.ParseDuration(string(*bu.WeightUpdatePeriod)); err == nil {
+					lb.BackendUtilization.WeightUpdatePeriod = ir.MetaV1DurationPtr(d)
 				}
 			}
-			if cswrr.ErrorUtilizationPenalty != nil {
-				lb.ClientSideWeightedRoundRobin.ErrorUtilizationPenalty = ptr.To(*cswrr.ErrorUtilizationPenalty)
+			if bu.ErrorUtilizationPenalty != nil {
+				lb.BackendUtilization.ErrorUtilizationPenalty = ptr.To(*bu.ErrorUtilizationPenalty)
 			}
-			if len(cswrr.MetricNamesForComputingUtilization) > 0 {
-				lb.ClientSideWeightedRoundRobin.MetricNamesForComputingUtilization = append([]string(nil), cswrr.MetricNamesForComputingUtilization...)
+			if len(bu.MetricNamesForComputingUtilization) > 0 {
+				lb.BackendUtilization.MetricNamesForComputingUtilization = append([]string(nil), bu.MetricNamesForComputingUtilization...)
 			}
 		}
 		if policy.LoadBalancer.SlowStart != nil && policy.LoadBalancer.SlowStart.Window != nil {
@@ -374,7 +374,7 @@ func buildLoadBalancer(policy *egv1a1.ClusterSettings) (*ir.LoadBalancer, error)
 			if err != nil {
 				return nil, err
 			}
-			lb.ClientSideWeightedRoundRobin.SlowStart = &ir.SlowStart{
+			lb.BackendUtilization.SlowStart = &ir.SlowStart{
 				Window: ir.MetaV1DurationPtr(d),
 			}
 		}

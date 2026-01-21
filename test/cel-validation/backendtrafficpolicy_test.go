@@ -497,7 +497,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			},
 			wantErrors: []string{
 				"spec.loadBalancer: Invalid value:",
-				": Currently SlowStart is only supported for RoundRobin, LeastRequest, and ClientSideWeightedRoundRobin load balancers.",
+				": Currently SlowStart is only supported for RoundRobin, LeastRequest, and BackendUtilization load balancers.",
 			},
 		},
 		{
@@ -525,11 +525,11 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			},
 			wantErrors: []string{
 				"spec.loadBalancer: Invalid value:",
-				": Currently SlowStart is only supported for RoundRobin, LeastRequest, and ClientSideWeightedRoundRobin load balancers.",
+				": Currently SlowStart is only supported for RoundRobin, LeastRequest, and BackendUtilization load balancers.",
 			},
 		},
 		{
-			desc: "cswrr all fields set",
+			desc: "backendUtilization all fields set",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
@@ -543,8 +543,8 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 					},
 					ClusterSettings: egv1a1.ClusterSettings{
 						LoadBalancer: &egv1a1.LoadBalancer{
-							Type: egv1a1.ClientSideWeightedRoundRobinLoadBalancerType,
-							ClientSideWeightedRoundRobin: &egv1a1.ClientSideWeightedRoundRobin{
+							Type: egv1a1.BackendUtilizationLoadBalancerType,
+							BackendUtilization: &egv1a1.BackendUtilization{
 								BlackoutPeriod:                     ptr.To(gwapiv1.Duration("10s")),
 								WeightUpdatePeriod:                 ptr.To(gwapiv1.Duration("10s")),
 								WeightExpirationPeriod:             ptr.To(gwapiv1.Duration("10s")),
@@ -558,7 +558,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			wantErrors: []string{},
 		},
 		{
-			desc: "cswrr field nil when type is ClientSideWeightedRoundRobin",
+			desc: "backendUtilization field nil when type is BackendUtilization",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
@@ -572,17 +572,18 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 					},
 					ClusterSettings: egv1a1.ClusterSettings{
 						LoadBalancer: &egv1a1.LoadBalancer{
-							Type: egv1a1.ClientSideWeightedRoundRobinLoadBalancerType,
+							Type: egv1a1.BackendUtilizationLoadBalancerType,
 						},
 					},
 				}
 			},
 			wantErrors: []string{
-				"spec.loadBalancer: Invalid value: \"object\": If LoadBalancer type is ClientSideWeightedRoundRobin, clientSideWeightedRoundRobin field needs to be set.",
+				"spec.loadBalancer: Invalid value:",
+				": If LoadBalancer type is BackendUtilization, backendUtilization field needs to be set.",
 			},
 		},
 		{
-			desc: "cswrr with SlowStart is set",
+			desc: "backendUtilization with SlowStart is set",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
@@ -596,9 +597,9 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 					},
 					ClusterSettings: egv1a1.ClusterSettings{
 						LoadBalancer: &egv1a1.LoadBalancer{
-							Type:                         egv1a1.ClientSideWeightedRoundRobinLoadBalancerType,
-							ClientSideWeightedRoundRobin: &egv1a1.ClientSideWeightedRoundRobin{},
-							SlowStart:                    &egv1a1.SlowStart{Window: ptr.To(gwapiv1.Duration("10ms"))},
+							Type:               egv1a1.BackendUtilizationLoadBalancerType,
+							BackendUtilization: &egv1a1.BackendUtilization{},
+							SlowStart:          &egv1a1.SlowStart{Window: ptr.To(gwapiv1.Duration("10ms"))},
 						},
 					},
 				}
@@ -606,7 +607,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			wantErrors: []string{},
 		},
 		{
-			desc: "cswrr with ZoneAware is set",
+			desc: "backendUtilization with ZoneAware is set",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
@@ -620,19 +621,20 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 					},
 					ClusterSettings: egv1a1.ClusterSettings{
 						LoadBalancer: &egv1a1.LoadBalancer{
-							Type:                         egv1a1.ClientSideWeightedRoundRobinLoadBalancerType,
-							ClientSideWeightedRoundRobin: &egv1a1.ClientSideWeightedRoundRobin{},
-							ZoneAware:                    &egv1a1.ZoneAware{PreferLocal: &egv1a1.PreferLocalZone{}},
+							Type:               egv1a1.BackendUtilizationLoadBalancerType,
+							BackendUtilization: &egv1a1.BackendUtilization{},
+							ZoneAware:          &egv1a1.ZoneAware{PreferLocal: &egv1a1.PreferLocalZone{}},
 						},
 					},
 				}
 			},
 			wantErrors: []string{
-				"spec.loadBalancer: Invalid value: \"object\": Currently ZoneAware is only supported for LeastRequest, Random, and RoundRobin load balancers.",
+				"spec.loadBalancer: Invalid value:",
+				": Currently ZoneAware is only supported for LeastRequest, Random, and RoundRobin load balancers.",
 			},
 		},
 		{
-			desc: "cswrr with zero penalty is valid",
+			desc: "backendUtilization with zero penalty is valid",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
@@ -646,8 +648,8 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 					},
 					ClusterSettings: egv1a1.ClusterSettings{
 						LoadBalancer: &egv1a1.LoadBalancer{
-							Type:                         egv1a1.ClientSideWeightedRoundRobinLoadBalancerType,
-							ClientSideWeightedRoundRobin: &egv1a1.ClientSideWeightedRoundRobin{ErrorUtilizationPenalty: ptr.To[uint32](0)},
+							Type:               egv1a1.BackendUtilizationLoadBalancerType,
+							BackendUtilization: &egv1a1.BackendUtilization{ErrorUtilizationPenalty: ptr.To[uint32](0)},
 						},
 					},
 				}

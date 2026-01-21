@@ -439,9 +439,9 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 				},
 			}},
 		}
-	case args.loadBalancer.ClientSideWeightedRoundRobin != nil:
+	case args.loadBalancer.BackendUtilization != nil:
 		cswrr := &cswrrv3.ClientSideWeightedRoundRobin{}
-		if v := args.loadBalancer.ClientSideWeightedRoundRobin; v != nil {
+		if v := args.loadBalancer.BackendUtilization; v != nil {
 			if v.BlackoutPeriod != nil && v.BlackoutPeriod.Duration > 0 {
 				cswrr.BlackoutPeriod = durationpb.New(v.BlackoutPeriod.Duration)
 			}
@@ -451,7 +451,6 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 			if v.WeightUpdatePeriod != nil && v.WeightUpdatePeriod.Duration > 0 {
 				cswrr.WeightUpdatePeriod = durationpb.New(v.WeightUpdatePeriod.Duration)
 			}
-			// Map SlowStart for CSWRR if configured in IR
 			if v.SlowStart != nil && v.SlowStart.Window != nil && v.SlowStart.Window.Duration > 0 {
 				cswrr.SlowStartConfig = &commonv3.SlowStartConfig{
 					SlowStartWindow: durationpb.New(v.SlowStart.Window.Duration),
@@ -1402,8 +1401,8 @@ func buildEndpointOverrideLoadBalancingPolicy(loadBalancer *ir.LoadBalancer) (*c
 		fallbackType = ir.RandomLoadBalancer
 	case loadBalancer.ConsistentHash != nil:
 		fallbackType = ir.ConsistentHashLoadBalancer
-	case loadBalancer.ClientSideWeightedRoundRobin != nil:
-		fallbackType = ir.ClientSideWeightedRoundRobinLoadBalancer
+	case loadBalancer.BackendUtilization != nil:
+		fallbackType = ir.BackendUtilizationLoadBalancer
 	default:
 		// Default to LeastRequest if no specific type is set
 		fallbackType = ir.LeastRequestLoadBalancer
@@ -1499,10 +1498,10 @@ func buildFallbackLoadBalancingPolicy(fallbackType ir.LoadBalancerType) (*cluste
 				},
 			},
 		}, nil
-	case ir.ClientSideWeightedRoundRobinLoadBalancer:
+	case ir.BackendUtilizationLoadBalancer:
 		fallbackPolicyAny, err := anypb.New(&cswrrv3.ClientSideWeightedRoundRobin{})
 		if err != nil {
-			return nil, fmt.Errorf("failed to marshal ClientSideWeightedRoundRobin policy: %w", err)
+			return nil, fmt.Errorf("failed to marshal BackendUtilization policy: %w", err)
 		}
 		return &clusterv3.LoadBalancingPolicy{
 			Policies: []*clusterv3.LoadBalancingPolicy_Policy{

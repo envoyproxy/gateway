@@ -11,9 +11,9 @@ import gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 // +union
 //
 // +kubebuilder:validation:XValidation:rule="self.type == 'ConsistentHash' ? has(self.consistentHash) : !has(self.consistentHash)",message="If LoadBalancer type is consistentHash, consistentHash field needs to be set."
-// +kubebuilder:validation:XValidation:rule="self.type == 'ClientSideWeightedRoundRobin' ? has(self.clientSideWeightedRoundRobin) : !has(self.clientSideWeightedRoundRobin)",message="If LoadBalancer type is ClientSideWeightedRoundRobin, clientSideWeightedRoundRobin field needs to be set."
-// +kubebuilder:validation:XValidation:rule="self.type in ['Random', 'ConsistentHash'] ? !has(self.slowStart) : true ",message="Currently SlowStart is only supported for RoundRobin, LeastRequest, and ClientSideWeightedRoundRobin load balancers."
-// +kubebuilder:validation:XValidation:rule="self.type in ['ConsistentHash', 'ClientSideWeightedRoundRobin'] ? !has(self.zoneAware) : true ",message="Currently ZoneAware is only supported for LeastRequest, Random, and RoundRobin load balancers."
+// +kubebuilder:validation:XValidation:rule="self.type == 'BackendUtilization' ? has(self.backendUtilization) : !has(self.backendUtilization)",message="If LoadBalancer type is BackendUtilization, backendUtilization field needs to be set."
+// +kubebuilder:validation:XValidation:rule="self.type in ['Random', 'ConsistentHash'] ? !has(self.slowStart) : true ",message="Currently SlowStart is only supported for RoundRobin, LeastRequest, and BackendUtilization load balancers."
+// +kubebuilder:validation:XValidation:rule="self.type in ['ConsistentHash', 'BackendUtilization'] ? !has(self.zoneAware) : true ",message="Currently ZoneAware is only supported for LeastRequest, Random, and RoundRobin load balancers."
 type LoadBalancer struct {
 	// Type decides the type of Load Balancer policy.
 	// Valid LoadBalancerType values are
@@ -21,7 +21,7 @@ type LoadBalancer struct {
 	// "LeastRequest",
 	// "Random",
 	// "RoundRobin",
-	// "ClientSideWeightedRoundRobin".
+	// "BackendUtilization".
 	//
 	// +unionDiscriminator
 	Type LoadBalancerType `json:"type"`
@@ -31,11 +31,11 @@ type LoadBalancer struct {
 	// +optional
 	ConsistentHash *ConsistentHash `json:"consistentHash,omitempty"`
 
-	// ClientSideWeightedRoundRobin defines the configuration when the load balancer type is
-	// set to ClientSideWeightedRoundRobin.
+	// BackendUtilization defines the configuration when the load balancer type is
+	// set to BackendUtilization.
 	//
 	// +optional
-	ClientSideWeightedRoundRobin *ClientSideWeightedRoundRobin `json:"clientSideWeightedRoundRobin,omitempty"`
+	BackendUtilization *BackendUtilization `json:"backendUtilization,omitempty"`
 
 	// EndpointOverride defines the configuration for endpoint override.
 	// When specified, the load balancer will attempt to route requests to endpoints
@@ -47,7 +47,7 @@ type LoadBalancer struct {
 
 	// SlowStart defines the configuration related to the slow start load balancer policy.
 	// If set, during slow start window, traffic sent to the newly added hosts will gradually increase.
-	// Supported for RoundRobin, LeastRequest, and ClientSideWeightedRoundRobin load balancers.
+	// Supported for RoundRobin, LeastRequest, and BackendUtilization load balancers.
 	//
 	// +optional
 	SlowStart *SlowStart `json:"slowStart,omitempty"`
@@ -59,7 +59,7 @@ type LoadBalancer struct {
 }
 
 // LoadBalancerType specifies the types of LoadBalancer.
-// +kubebuilder:validation:Enum=ConsistentHash;LeastRequest;Random;RoundRobin;ClientSideWeightedRoundRobin
+// +kubebuilder:validation:Enum=ConsistentHash;LeastRequest;Random;RoundRobin;BackendUtilization
 type LoadBalancerType string
 
 const (
@@ -71,8 +71,8 @@ const (
 	RandomLoadBalancerType LoadBalancerType = "Random"
 	// RoundRobinLoadBalancerType load balancer policy.
 	RoundRobinLoadBalancerType LoadBalancerType = "RoundRobin"
-	// ClientSideWeightedRoundRobinLoadBalancerType load balancer policy.
-	ClientSideWeightedRoundRobinLoadBalancerType LoadBalancerType = "ClientSideWeightedRoundRobin"
+	// BackendUtilizationLoadBalancerType load balancer policy.
+	BackendUtilizationLoadBalancerType LoadBalancerType = "BackendUtilization"
 )
 
 // ConsistentHash defines the configuration related to the consistent hash
@@ -158,9 +158,9 @@ type Cookie struct {
 	Attributes map[string]string `json:"attributes,omitempty"`
 }
 
-// ClientSideWeightedRoundRobin defines configuration for Envoy's Client-Side Weighted Round Robin policy.
+// BackendUtilization defines configuration for Envoy's Backend Utilization policy.
 // See Envoy proto: envoy.extensions.load_balancing_policies.client_side_weighted_round_robin.v3.ClientSideWeightedRoundRobin
-type ClientSideWeightedRoundRobin struct {
+type BackendUtilization struct {
 	// A given endpoint must report load metrics continuously for at least this long before the endpoint weight will be used.
 	// Default is 10s.
 	// +optional

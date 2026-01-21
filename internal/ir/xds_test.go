@@ -1338,9 +1338,9 @@ func TestValidateLoadBalancer(t *testing.T) {
 			want: ErrLoadBalancerInvalid,
 		},
 		{
-			name: "client side wrr set",
+			name: "backend utilization set",
 			input: LoadBalancer{
-				ClientSideWeightedRoundRobin: &ClientSideWeightedRoundRobin{
+				BackendUtilization: &BackendUtilization{
 					BlackoutPeriod:                     MetaV1DurationPtr(30 * time.Second),
 					WeightExpirationPeriod:             MetaV1DurationPtr(10 * time.Second),
 					WeightUpdatePeriod:                 MetaV1DurationPtr(1 * time.Second),

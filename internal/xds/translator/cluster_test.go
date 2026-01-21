@@ -160,14 +160,14 @@ func requireCmpNoDiff(t *testing.T, expected, actual interface{}) {
 	require.Empty(t, cmp.Diff(expected, actual, protocmp.Transform()))
 }
 
-func TestBuildCluster_WithClientSideWeightedRoundRobin(t *testing.T) {
+func TestBuildClusterWithBackendUtilization(t *testing.T) {
 	args := &xdsClusterArgs{
-		name:         "test-cluster-cswrr",
+		name:         "test-cluster-bu",
 		endpointType: EndpointTypeStatic,
 		settings: []*ir.DestinationSetting{{
 			Endpoints: []*ir.DestinationEndpoint{{Host: "127.0.0.1", Port: 8080}},
 		}},
-		loadBalancer: &ir.LoadBalancer{ClientSideWeightedRoundRobin: &ir.ClientSideWeightedRoundRobin{}},
+		loadBalancer: &ir.LoadBalancer{BackendUtilization: &ir.BackendUtilization{}},
 	}
 
 	result, err := buildXdsCluster(args)
@@ -187,15 +187,15 @@ func TestBuildCluster_WithClientSideWeightedRoundRobin(t *testing.T) {
 	require.Equal(t, "type.googleapis.com/envoy.extensions.load_balancing_policies.client_side_weighted_round_robin.v3.ClientSideWeightedRoundRobin", policy.TypedExtensionConfig.TypedConfig.TypeUrl)
 }
 
-func TestBuildCluster_WithClientSideWeightedRoundRobin_SlowStart(t *testing.T) {
+func TestBuildClusterWithBackendUtilizationSlowStart(t *testing.T) {
 	window := 5 * time.Second
 	args := &xdsClusterArgs{
-		name:         "test-cluster-cswrr-ss",
+		name:         "test-cluster-bu-ss",
 		endpointType: EndpointTypeStatic,
 		settings: []*ir.DestinationSetting{{
 			Endpoints: []*ir.DestinationEndpoint{{Host: "127.0.0.1", Port: 8080}},
 		}},
-		loadBalancer: &ir.LoadBalancer{ClientSideWeightedRoundRobin: &ir.ClientSideWeightedRoundRobin{
+		loadBalancer: &ir.LoadBalancer{BackendUtilization: &ir.BackendUtilization{
 			SlowStart: &ir.SlowStart{Window: ir.MetaV1DurationPtr(window)},
 		}},
 	}

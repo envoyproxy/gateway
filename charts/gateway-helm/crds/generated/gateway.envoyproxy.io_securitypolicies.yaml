@@ -1332,10 +1332,10 @@ spec:
                               LoadBalancer policy to apply when routing traffic from the gateway to
                               the backend endpoints. Defaults to `LeastRequest`.
                             properties:
-                              clientSideWeightedRoundRobin:
+                              backendUtilization:
                                 description: |-
-                                  ClientSideWeightedRoundRobin defines the configuration when the load balancer type is
-                                  set to ClientSideWeightedRoundRobin.
+                                  BackendUtilization defines the configuration when the load balancer type is
+                                  set to BackendUtilization.
                                 properties:
                                   blackoutPeriod:
                                     description: |-
@@ -1534,7 +1534,7 @@ spec:
                                 description: |-
                                   SlowStart defines the configuration related to the slow start load balancer policy.
                                   If set, during slow start window, traffic sent to the newly added hosts will gradually increase.
-                                  Supported for RoundRobin, LeastRequest, and ClientSideWeightedRoundRobin load balancers.
+                                  Supported for RoundRobin, LeastRequest, and BackendUtilization load balancers.
                                 properties:
                                   window:
                                     description: |-
@@ -1555,13 +1555,13 @@ spec:
                                   "LeastRequest",
                                   "Random",
                                   "RoundRobin",
-                                  "ClientSideWeightedRoundRobin".
+                                  "BackendUtilization".
                                 enum:
                                 - ConsistentHash
                                 - LeastRequest
                                 - Random
                                 - RoundRobin
-                                - ClientSideWeightedRoundRobin
+                                - BackendUtilization
                                 type: string
                               zoneAware:
                                 description: ZoneAware defines the configuration related
@@ -1611,18 +1611,17 @@ spec:
                                 field needs to be set.
                               rule: 'self.type == ''ConsistentHash'' ? has(self.consistentHash)
                                 : !has(self.consistentHash)'
-                            - message: If LoadBalancer type is ClientSideWeightedRoundRobin,
-                                clientSideWeightedRoundRobin field needs to be set.
-                              rule: 'self.type == ''ClientSideWeightedRoundRobin''
-                                ? has(self.clientSideWeightedRoundRobin) : !has(self.clientSideWeightedRoundRobin)'
+                            - message: If LoadBalancer type is BackendUtilization,
+                                backendUtilization field needs to be set.
+                              rule: 'self.type == ''BackendUtilization'' ? has(self.backendUtilization)
+                                : !has(self.backendUtilization)'
                             - message: Currently SlowStart is only supported for RoundRobin,
-                                LeastRequest, and ClientSideWeightedRoundRobin load
-                                balancers.
+                                LeastRequest, and BackendUtilization load balancers.
                               rule: 'self.type in [''Random'', ''ConsistentHash'']
                                 ? !has(self.slowStart) : true '
                             - message: Currently ZoneAware is only supported for LeastRequest,
                                 Random, and RoundRobin load balancers.
-                              rule: 'self.type in [''ConsistentHash'', ''ClientSideWeightedRoundRobin'']
+                              rule: 'self.type in [''ConsistentHash'', ''BackendUtilization'']
                                 ? !has(self.zoneAware) : true '
                           proxyProtocol:
                             description: ProxyProtocol enables the Proxy Protocol
@@ -2527,10 +2526,10 @@ spec:
                               LoadBalancer policy to apply when routing traffic from the gateway to
                               the backend endpoints. Defaults to `LeastRequest`.
                             properties:
-                              clientSideWeightedRoundRobin:
+                              backendUtilization:
                                 description: |-
-                                  ClientSideWeightedRoundRobin defines the configuration when the load balancer type is
-                                  set to ClientSideWeightedRoundRobin.
+                                  BackendUtilization defines the configuration when the load balancer type is
+                                  set to BackendUtilization.
                                 properties:
                                   blackoutPeriod:
                                     description: |-
@@ -2729,7 +2728,7 @@ spec:
                                 description: |-
                                   SlowStart defines the configuration related to the slow start load balancer policy.
                                   If set, during slow start window, traffic sent to the newly added hosts will gradually increase.
-                                  Supported for RoundRobin, LeastRequest, and ClientSideWeightedRoundRobin load balancers.
+                                  Supported for RoundRobin, LeastRequest, and BackendUtilization load balancers.
                                 properties:
                                   window:
                                     description: |-
@@ -2750,13 +2749,13 @@ spec:
                                   "LeastRequest",
                                   "Random",
                                   "RoundRobin",
-                                  "ClientSideWeightedRoundRobin".
+                                  "BackendUtilization".
                                 enum:
                                 - ConsistentHash
                                 - LeastRequest
                                 - Random
                                 - RoundRobin
-                                - ClientSideWeightedRoundRobin
+                                - BackendUtilization
                                 type: string
                               zoneAware:
                                 description: ZoneAware defines the configuration related
@@ -2806,18 +2805,17 @@ spec:
                                 field needs to be set.
                               rule: 'self.type == ''ConsistentHash'' ? has(self.consistentHash)
                                 : !has(self.consistentHash)'
-                            - message: If LoadBalancer type is ClientSideWeightedRoundRobin,
-                                clientSideWeightedRoundRobin field needs to be set.
-                              rule: 'self.type == ''ClientSideWeightedRoundRobin''
-                                ? has(self.clientSideWeightedRoundRobin) : !has(self.clientSideWeightedRoundRobin)'
+                            - message: If LoadBalancer type is BackendUtilization,
+                                backendUtilization field needs to be set.
+                              rule: 'self.type == ''BackendUtilization'' ? has(self.backendUtilization)
+                                : !has(self.backendUtilization)'
                             - message: Currently SlowStart is only supported for RoundRobin,
-                                LeastRequest, and ClientSideWeightedRoundRobin load
-                                balancers.
+                                LeastRequest, and BackendUtilization load balancers.
                               rule: 'self.type in [''Random'', ''ConsistentHash'']
                                 ? !has(self.slowStart) : true '
                             - message: Currently ZoneAware is only supported for LeastRequest,
                                 Random, and RoundRobin load balancers.
-                              rule: 'self.type in [''ConsistentHash'', ''ClientSideWeightedRoundRobin'']
+                              rule: 'self.type in [''ConsistentHash'', ''BackendUtilization'']
                                 ? !has(self.zoneAware) : true '
                           proxyProtocol:
                             description: ProxyProtocol enables the Proxy Protocol
@@ -3933,10 +3931,10 @@ spec:
                                     LoadBalancer policy to apply when routing traffic from the gateway to
                                     the backend endpoints. Defaults to `LeastRequest`.
                                   properties:
-                                    clientSideWeightedRoundRobin:
+                                    backendUtilization:
                                       description: |-
-                                        ClientSideWeightedRoundRobin defines the configuration when the load balancer type is
-                                        set to ClientSideWeightedRoundRobin.
+                                        BackendUtilization defines the configuration when the load balancer type is
+                                        set to BackendUtilization.
                                       properties:
                                         blackoutPeriod:
                                           description: |-
@@ -4139,7 +4137,7 @@ spec:
                                       description: |-
                                         SlowStart defines the configuration related to the slow start load balancer policy.
                                         If set, during slow start window, traffic sent to the newly added hosts will gradually increase.
-                                        Supported for RoundRobin, LeastRequest, and ClientSideWeightedRoundRobin load balancers.
+                                        Supported for RoundRobin, LeastRequest, and BackendUtilization load balancers.
                                       properties:
                                         window:
                                           description: |-
@@ -4160,13 +4158,13 @@ spec:
                                         "LeastRequest",
                                         "Random",
                                         "RoundRobin",
-                                        "ClientSideWeightedRoundRobin".
+                                        "BackendUtilization".
                                       enum:
                                       - ConsistentHash
                                       - LeastRequest
                                       - Random
                                       - RoundRobin
-                                      - ClientSideWeightedRoundRobin
+                                      - BackendUtilization
                                       type: string
                                     zoneAware:
                                       description: ZoneAware defines the configuration
@@ -4217,20 +4215,19 @@ spec:
                                       consistentHash field needs to be set.
                                     rule: 'self.type == ''ConsistentHash'' ? has(self.consistentHash)
                                       : !has(self.consistentHash)'
-                                  - message: If LoadBalancer type is ClientSideWeightedRoundRobin,
-                                      clientSideWeightedRoundRobin field needs to
-                                      be set.
-                                    rule: 'self.type == ''ClientSideWeightedRoundRobin''
-                                      ? has(self.clientSideWeightedRoundRobin) : !has(self.clientSideWeightedRoundRobin)'
+                                  - message: If LoadBalancer type is BackendUtilization,
+                                      backendUtilization field needs to be set.
+                                    rule: 'self.type == ''BackendUtilization'' ? has(self.backendUtilization)
+                                      : !has(self.backendUtilization)'
                                   - message: Currently SlowStart is only supported
-                                      for RoundRobin, LeastRequest, and ClientSideWeightedRoundRobin
+                                      for RoundRobin, LeastRequest, and BackendUtilization
                                       load balancers.
                                     rule: 'self.type in [''Random'', ''ConsistentHash'']
                                       ? !has(self.slowStart) : true '
                                   - message: Currently ZoneAware is only supported
                                       for LeastRequest, Random, and RoundRobin load
                                       balancers.
-                                    rule: 'self.type in [''ConsistentHash'', ''ClientSideWeightedRoundRobin'']
+                                    rule: 'self.type in [''ConsistentHash'', ''BackendUtilization'']
                                       ? !has(self.zoneAware) : true '
                                 proxyProtocol:
                                   description: ProxyProtocol enables the Proxy Protocol
@@ -5399,10 +5396,10 @@ spec:
                               LoadBalancer policy to apply when routing traffic from the gateway to
                               the backend endpoints. Defaults to `LeastRequest`.
                             properties:
-                              clientSideWeightedRoundRobin:
+                              backendUtilization:
                                 description: |-
-                                  ClientSideWeightedRoundRobin defines the configuration when the load balancer type is
-                                  set to ClientSideWeightedRoundRobin.
+                                  BackendUtilization defines the configuration when the load balancer type is
+                                  set to BackendUtilization.
                                 properties:
                                   blackoutPeriod:
                                     description: |-
@@ -5601,7 +5598,7 @@ spec:
                                 description: |-
                                   SlowStart defines the configuration related to the slow start load balancer policy.
                                   If set, during slow start window, traffic sent to the newly added hosts will gradually increase.
-                                  Supported for RoundRobin, LeastRequest, and ClientSideWeightedRoundRobin load balancers.
+                                  Supported for RoundRobin, LeastRequest, and BackendUtilization load balancers.
                                 properties:
                                   window:
                                     description: |-
@@ -5622,13 +5619,13 @@ spec:
                                   "LeastRequest",
                                   "Random",
                                   "RoundRobin",
-                                  "ClientSideWeightedRoundRobin".
+                                  "BackendUtilization".
                                 enum:
                                 - ConsistentHash
                                 - LeastRequest
                                 - Random
                                 - RoundRobin
-                                - ClientSideWeightedRoundRobin
+                                - BackendUtilization
                                 type: string
                               zoneAware:
                                 description: ZoneAware defines the configuration related
@@ -5678,18 +5675,17 @@ spec:
                                 field needs to be set.
                               rule: 'self.type == ''ConsistentHash'' ? has(self.consistentHash)
                                 : !has(self.consistentHash)'
-                            - message: If LoadBalancer type is ClientSideWeightedRoundRobin,
-                                clientSideWeightedRoundRobin field needs to be set.
-                              rule: 'self.type == ''ClientSideWeightedRoundRobin''
-                                ? has(self.clientSideWeightedRoundRobin) : !has(self.clientSideWeightedRoundRobin)'
+                            - message: If LoadBalancer type is BackendUtilization,
+                                backendUtilization field needs to be set.
+                              rule: 'self.type == ''BackendUtilization'' ? has(self.backendUtilization)
+                                : !has(self.backendUtilization)'
                             - message: Currently SlowStart is only supported for RoundRobin,
-                                LeastRequest, and ClientSideWeightedRoundRobin load
-                                balancers.
+                                LeastRequest, and BackendUtilization load balancers.
                               rule: 'self.type in [''Random'', ''ConsistentHash'']
                                 ? !has(self.slowStart) : true '
                             - message: Currently ZoneAware is only supported for LeastRequest,
                                 Random, and RoundRobin load balancers.
-                              rule: 'self.type in [''ConsistentHash'', ''ClientSideWeightedRoundRobin'']
+                              rule: 'self.type in [''ConsistentHash'', ''BackendUtilization'']
                                 ? !has(self.zoneAware) : true '
                           proxyProtocol:
                             description: ProxyProtocol enables the Proxy Protocol

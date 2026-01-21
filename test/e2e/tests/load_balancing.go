@@ -45,14 +45,14 @@ func init() {
 		EndpointOverrideLoadBalancingTest,
 		MultiHeaderConsistentHashHeaderLoadBalancingTest,
 		ConsistentHashQueryParamsLoadBalancingTest,
-		ClientSideWeightedRoundRobinLoadBalancingTest,
+		BackendUtilizationLoadBalancingTest,
 	)
 }
 
-var ClientSideWeightedRoundRobinLoadBalancingTest = suite.ConformanceTest{
-	ShortName:   "ClientSideWeightedRoundRobinLoadBalancing",
-	Description: "Test for client-side weighted round robin load balancing type",
-	Manifests:   []string{"testdata/load_balancing_client_side_weighted_round_robin.yaml"},
+var BackendUtilizationLoadBalancingTest = suite.ConformanceTest{
+	ShortName:   "BackendUtilizationLoadBalancing",
+	Description: "Test for backend utilization load balancing type",
+	Manifests:   []string{"testdata/load_balancing_backend_utilization.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		const (
 			sendRequests = 90
@@ -71,14 +71,14 @@ var ClientSideWeightedRoundRobinLoadBalancingTest = suite.ConformanceTest{
 			Name:      gwapiv1.ObjectName(gwNN.Name),
 		}
 		BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "client-side-wrr-lb-policy", Namespace: ns}, suite.ControllerName, ancestorRef)
-		WaitForPods(t, suite.Client, ns, map[string]string{"app": "lb-backend-cswrr"}, corev1.PodRunning, &PodReady)
+		WaitForPods(t, suite.Client, ns, map[string]string{"app": "lb-backend-bu"}, corev1.PodRunning, &PodReady)
 
 		gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
 
 		t.Run("traffic should be split roughly evenly (defaults to equal weights without ORCA)", func(t *testing.T) {
 			expectedResponse := http.ExpectedResponse{
 				Request: http.Request{
-					Path: "/cswrr",
+					Path: "/bu",
 				},
 				Response: http.Response{
 					StatusCodes: []int{200},
@@ -711,10 +711,10 @@ var EndpointOverrideLoadBalancingTest = suite.ConformanceTest{
 	},
 }
 
-var ClientSideWeightedRoundRobinOOBLoadBalancingTest = suite.ConformanceTest{
-	ShortName:   "ClientSideWeightedRoundRobinOOBLoadBalancing",
-	Description: "Test for client-side weighted round robin with OOB enabled",
-	Manifests:   []string{"testdata/load_balancing_client_side_weighted_round_robin_oob.yaml"},
+var BackendUtilizationOOBLoadBalancingTest = suite.ConformanceTest{
+	ShortName:   "BackendUtilizationOOBLoadBalancing",
+	Description: "Test for backend utilization with OOB enabled",
+	Manifests:   []string{"testdata/load_balancing_backend_utilization.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		const (
 			sendRequests = 90
@@ -733,14 +733,14 @@ var ClientSideWeightedRoundRobinOOBLoadBalancingTest = suite.ConformanceTest{
 			Name:      gwapiv1.ObjectName(gwNN.Name),
 		}
 		BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "client-side-wrr-lb-policy-oob", Namespace: ns}, suite.ControllerName, ancestorRef)
-		WaitForPods(t, suite.Client, ns, map[string]string{"app": "lb-backend-cswrr-oob"}, corev1.PodRunning, &PodReady)
+		WaitForPods(t, suite.Client, ns, map[string]string{"app": "lb-backend-bu-oob"}, corev1.PodRunning, &PodReady)
 
 		gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
 
 		t.Run("traffic should be roughly even with OOB enabled (no ORCA signals)", func(t *testing.T) {
 			expectedResponse := http.ExpectedResponse{
 				Request: http.Request{
-					Path: "/cswrroob",
+					Path: "/buoob",
 				},
 				Response: http.Response{
 					StatusCodes: []int{200},
@@ -768,10 +768,10 @@ var ClientSideWeightedRoundRobinOOBLoadBalancingTest = suite.ConformanceTest{
 	},
 }
 
-var ClientSideWeightedRoundRobinPenaltyLoadBalancingTest = suite.ConformanceTest{
-	ShortName:   "ClientSideWeightedRoundRobinPenaltyLoadBalancing",
-	Description: "Test for client-side weighted round robin with penalty and metrics",
-	Manifests:   []string{"testdata/load_balancing_client_side_weighted_round_robin_penalty.yaml"},
+var BackendUtilizationPenaltyLoadBalancingTest = suite.ConformanceTest{
+	ShortName:   "BackendUtilizationPenaltyLoadBalancing",
+	Description: "Test for backend utilization with error penalty",
+	Manifests:   []string{"testdata/load_balancing_backend_utilization.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		const (
 			sendRequests = 90
@@ -790,14 +790,14 @@ var ClientSideWeightedRoundRobinPenaltyLoadBalancingTest = suite.ConformanceTest
 			Name:      gwapiv1.ObjectName(gwNN.Name),
 		}
 		BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "client-side-wrr-lb-policy-penalty", Namespace: ns}, suite.ControllerName, ancestorRef)
-		WaitForPods(t, suite.Client, ns, map[string]string{"app": "lb-backend-cswrr-penalty"}, corev1.PodRunning, &PodReady)
+		WaitForPods(t, suite.Client, ns, map[string]string{"app": "lb-backend-bu-penalty"}, corev1.PodRunning, &PodReady)
 
 		gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
 
 		t.Run("traffic should be roughly even without ORCA, even with penalty configured", func(t *testing.T) {
 			expectedResponse := http.ExpectedResponse{
 				Request: http.Request{
-					Path: "/cswrrpenalty",
+					Path: "/bupenalty",
 				},
 				Response: http.Response{
 					StatusCodes: []int{200},

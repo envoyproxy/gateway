@@ -49,14 +49,14 @@ spec:
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: BackendTrafficPolicy
 metadata:
-  name: cswrr-lb-policy
+  name: bu-lb-policy
   namespace: gateway-conformance-infra
 spec:
   targetRefs:
     - group: gateway.networking.k8s.io
       kind: HTTPRoute
-      name: cswrr-lb-route
+      name: bu-lb-route
   loadBalancer:
-    type: ClientSideWeightedRoundRobin
-    clientSideWeightedRoundRobin:
+    type: BackendUtilization
+    backendUtilization:
       errorUtilizationPenalty: 120

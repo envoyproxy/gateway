@@ -221,7 +221,7 @@ http:
     hostname: "*"
     traffic:
       loadBalancer:
-        clientSideWeightedRoundRobin:
+        backendUtilization:
           blackoutPeriod: 30s
           weightExpirationPeriod: 60s
           weightUpdatePeriod: 10s
@@ -241,7 +241,7 @@ http:
     hostname: "*"
     traffic:
       loadBalancer:
-        clientSideWeightedRoundRobin:
+        backendUtilization:
           blackoutPeriod: 30s
           weightExpirationPeriod: 60s
           weightUpdatePeriod: 10s
