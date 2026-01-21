@@ -720,10 +720,11 @@ func TestProcessGRPCRoutes(t *testing.T) {
 	gwNsName := utils.NamespacedName(gw).String()
 
 	testCases := []struct {
-		name               string
-		routes             []*gwapiv1.GRPCRoute
-		extensionAPIGroups []schema.GroupVersionKind
-		expected           bool
+		name                   string
+		routes                 []*gwapiv1.GRPCRoute
+		extensionAPIGroups     []schema.GroupVersionKind
+		gatewayToXListenerSets []types.NamespacedName
+		expected               bool
 	}{
 		{
 			name: "valid grpcroute",
@@ -768,6 +769,87 @@ func TestProcessGRPCRoutes(t *testing.T) {
 			},
 			expected: true,
 		},
+		{
+			name: "grpcroute referencing xlistenerset",
+			routes: []*gwapiv1.GRPCRoute{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "test",
+						Name:      "xlistener-only",
+					},
+					Spec: gwapiv1.GRPCRouteSpec{
+						CommonRouteSpec: gwapiv1.CommonRouteSpec{
+							ParentRefs: []gwapiv1.ParentReference{
+								{
+									Group:       gatewayapi.GroupPtr(gwapiv1.GroupName),
+									Kind:        gatewayapi.KindPtr(resource.KindXListenerSet),
+									Name:        "xlistener-set",
+									Namespace:   gatewayapi.NamespacePtr("test"),
+									SectionName: gatewayapi.SectionNamePtr("extra-grpc"),
+								},
+							},
+						},
+						Rules: []gwapiv1.GRPCRouteRule{
+							{
+								BackendRefs: []gwapiv1.GRPCBackendRef{
+									{
+										BackendRef: gwapiv1.BackendRef{
+											BackendObjectReference: gwapiv1.BackendObjectReference{
+												Name: gwapiv1.ObjectName("test"),
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			gatewayToXListenerSets: []types.NamespacedName{{Namespace: "test", Name: "xlistener-set"}},
+			expected:               true,
+		},
+		{
+			name: "grpcroute referencing gateway and xlistenerset",
+			routes: []*gwapiv1.GRPCRoute{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "test",
+						Name:      "multiple-parents",
+					},
+					Spec: gwapiv1.GRPCRouteSpec{
+						CommonRouteSpec: gwapiv1.CommonRouteSpec{
+							ParentRefs: []gwapiv1.ParentReference{
+								{
+									Name: "test",
+								},
+								{
+									Group:       gatewayapi.GroupPtr(gwapiv1.GroupName),
+									Kind:        gatewayapi.KindPtr(resource.KindXListenerSet),
+									Name:        "xlistener-set",
+									Namespace:   gatewayapi.NamespacePtr("test"),
+									SectionName: gatewayapi.SectionNamePtr("extra-grpc"),
+								},
+							},
+						},
+						Rules: []gwapiv1.GRPCRouteRule{
+							{
+								BackendRefs: []gwapiv1.GRPCBackendRef{
+									{
+										BackendRef: gwapiv1.BackendRef{
+											BackendObjectReference: gwapiv1.BackendObjectReference{
+												Name: gwapiv1.ObjectName("test"),
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			gatewayToXListenerSets: []types.NamespacedName{{Namespace: "test", Name: "xlistener-set"}},
+			expected:               true,
+		},
 	}
 
 	for i := range testCases {
@@ -798,11 +880,15 @@ func TestProcessGRPCRoutes(t *testing.T) {
 				WithScheme(envoygateway.GetScheme()).
 				WithObjects(objs...).
 				WithIndex(&gwapiv1.GRPCRoute{}, gatewayGRPCRouteIndex, gatewayGRPCRouteIndexFunc).
+				WithIndex(&gwapiv1.GRPCRoute{}, xListenerGRPCRouteIndex, xListenerGRPCRouteIndexFunc).
 				Build()
 
 			// Process the test case httproutes.
 			resourceTree := resource.NewResources()
 			resourceMap := newResourceMapping()
+			if len(tc.gatewayToXListenerSets) > 0 {
+				resourceMap.gatewayToXListenerSets[gwNsName] = append(resourceMap.gatewayToXListenerSets[gwNsName], tc.gatewayToXListenerSets...)
+			}
 			err := r.processGRPCRoutes(ctx, gwNsName, resourceMap, resourceTree)
 			if tc.expected {
 				require.NoError(t, err)

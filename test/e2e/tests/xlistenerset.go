@@ -15,6 +15,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+	"sigs.k8s.io/gateway-api/conformance/echo-basic/grpcechoserver"
+	"sigs.k8s.io/gateway-api/conformance/utils/grpc"
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
@@ -24,7 +26,7 @@ import (
 )
 
 func init() {
-	ConformanceTests = append(ConformanceTests, XListenerSetTest)
+	ConformanceTests = append(ConformanceTests, XListenerSetTest, XListenerSetGRPCTest)
 }
 
 var XListenerSetTest = suite.ConformanceTest{
@@ -83,5 +85,61 @@ var XListenerSetTest = suite.ConformanceTest{
 		}
 
 		http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, listenerAddr, expected)
+	},
+}
+
+var XListenerSetGRPCTest = suite.ConformanceTest{
+	ShortName:   "XListenerSetGRPC",
+	Description: "GRPCRoute should attach to an XListenerSet listener and serve traffic",
+	Manifests: []string{
+		"testdata/xlistenerset.yaml",
+		"testdata/xlistenerset-grpc.yaml",
+	},
+	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
+		ns := "gateway-conformance-infra"
+		gwNN := types.NamespacedName{Name: "xlistener-gateway", Namespace: ns}
+		routeNN := types.NamespacedName{Name: "xlistener-grpcroute", Namespace: ns}
+
+		gwAddrWithPort, err := kubernetes.WaitForGatewayAddress(t, suite.Client, suite.TimeoutConfig, kubernetes.NewGatewayRef(gwNN, "core"))
+		require.NoError(t, err)
+
+		hostOnly := gwAddrWithPort
+		if host, _, splitErr := net.SplitHostPort(gwAddrWithPort); splitErr == nil {
+			hostOnly = host
+		}
+		listenerAddr := net.JoinHostPort(hostOnly, "18082")
+
+		parents := []gwapiv1.RouteParentStatus{{
+			ParentRef: gwapiv1.ParentReference{
+				Group:       gatewayapi.GroupPtr(gwapiv1.GroupName),
+				Kind:        gatewayapi.KindPtr(resource.KindXListenerSet),
+				Name:        gwapiv1.ObjectName("xlistener-set"),
+				Namespace:   gatewayapi.NamespacePtr(ns),
+				SectionName: gatewayapi.SectionNamePtr("extra-grpc"),
+			},
+			ControllerName: gwapiv1.GatewayController(suite.ControllerName),
+			Conditions: []metav1.Condition{
+				{
+					Type:   string(gwapiv1.RouteConditionAccepted),
+					Status: metav1.ConditionTrue,
+					Reason: string(gwapiv1.RouteReasonAccepted),
+				},
+				{
+					Type:   string(gwapiv1.RouteConditionResolvedRefs),
+					Status: metav1.ConditionTrue,
+					Reason: string(gwapiv1.RouteReasonResolvedRefs),
+				},
+			},
+		}}
+
+		kubernetes.RouteMustHaveParents(t, suite.Client, suite.TimeoutConfig, routeNN, parents, false, &gwapiv1.GRPCRoute{})
+
+		expected := grpc.ExpectedResponse{
+			EchoRequest: &grpcechoserver.EchoRequest{},
+			Backend:     "grpc-xlistener-backend",
+			Namespace:   ns,
+		}
+
+		grpc.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.GRPCClient, suite.TimeoutConfig, listenerAddr, expected)
 	},
 }

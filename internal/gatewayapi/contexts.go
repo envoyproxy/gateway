@@ -74,6 +74,8 @@ func (g *GatewayContext) attachEnvoyProxy(resources *resource.Resources, epMap m
 type ListenerContext struct {
 	*gwapiv1.Listener
 
+	// gateway is the Gateway that this listener belongs to.
+	// If nil, this listener belongs to an XListenerSet.
 	gateway           *GatewayContext
 	listenerStatusIdx int
 
@@ -89,6 +91,7 @@ type ListenerContext struct {
 	httpIR *ir.HTTPListener
 }
 
+// isFromXListenerSet returns true if the listener belongs to an XListenerSet instead of a Gateway.
 func (l *ListenerContext) isFromXListenerSet() bool {
 	return l.xListenerSet != nil
 }

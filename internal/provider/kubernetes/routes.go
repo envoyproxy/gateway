@@ -94,6 +94,36 @@ func (r *gatewayAPIReconciler) processGRPCRoutes(ctx context.Context, gatewayNam
 	resourceMap *resourceMappings, resourceTree *resource.Resources,
 ) error {
 	grpcRouteList := &gwapiv1.GRPCRouteList{}
+	processedKeys := make(map[string]struct{})
+	processList := func(list *gwapiv1.GRPCRouteList) {
+		for i := range list.Items {
+			grpcRoute := &list.Items[i]
+			key := utils.NamespacedName(grpcRoute).String()
+			if _, seen := processedKeys[key]; seen {
+				continue
+			}
+			processedKeys[key] = struct{}{}
+			r.processGRPCRoute(ctx, grpcRoute, resourceMap, resourceTree)
+		}
+	}
+
+	extensionRefFilters, err := r.getExtensionRefFilters(ctx)
+	if err != nil {
+		return err
+	}
+	for i := range extensionRefFilters {
+		filter := extensionRefFilters[i]
+		resourceMap.extensionRefFilters[utils.GetNamespacedNameWithGroupKind(&filter)] = filter
+	}
+
+	extensionBackendResources, err := r.getExtensionBackendResources(ctx)
+	if err != nil {
+		return err
+	}
+	for i := range extensionBackendResources {
+		backend := extensionBackendResources[i]
+		resourceMap.extensionRefFilters[utils.GetNamespacedNameWithGroupKind(&backend)] = backend
+	}
 
 	if err := r.client.List(ctx, grpcRouteList, &client.ListOptions{
 		FieldSelector: fields.OneTermEqualSelector(gatewayGRPCRouteIndex, gatewayNamespaceName),
@@ -101,99 +131,107 @@ func (r *gatewayAPIReconciler) processGRPCRoutes(ctx context.Context, gatewayNam
 		r.log.Error(err, "failed to list GRPCRoutes")
 		return err
 	}
+	processList(grpcRouteList)
 
-	for i := range grpcRouteList.Items {
-		grpcRoute := &grpcRouteList.Items[i]
-		if r.namespaceLabel != nil {
-			if ok, err := r.checkObjectNamespaceLabels(grpcRoute); err != nil {
-				r.log.Error(err, "failed to check namespace labels for GRPCRoute %s in namespace %s: %w", grpcRoute.GetName(), grpcRoute.GetNamespace())
-				continue
-			} else if !ok {
-				continue
-			}
+	for _, xlsNN := range resourceMap.gatewayToXListenerSets[gatewayNamespaceName] {
+		grpcRouteList = &gwapiv1.GRPCRouteList{}
+		if err := r.client.List(ctx, grpcRouteList, &client.ListOptions{
+			FieldSelector: fields.OneTermEqualSelector(xListenerGRPCRouteIndex, xlsNN.String()),
+		}); err != nil {
+			r.log.Error(err, "failed to list GRPCRoutes by XListenerSet", "xListenerSet", xlsNN.String())
+			return err
 		}
-
-		key := utils.NamespacedName(grpcRoute).String()
-		if resourceMap.allAssociatedGRPCRoutes.Has(key) {
-			r.log.Info("current GRPCRoute has been processed already", "namespace", grpcRoute.Namespace, "name", grpcRoute.Name)
-			continue
-		}
-
-		r.log.Info("processing GRPCRoute", "namespace", grpcRoute.Namespace, "name", grpcRoute.Name)
-
-		for _, rule := range grpcRoute.Spec.Rules {
-			for _, backendRef := range rule.BackendRefs {
-				// Skip validation for custom backend resources managed by extensions
-				backendRefKind := gatewayapi.KindDerefOr(backendRef.Kind, resource.KindService)
-				if !r.isCustomBackendResource(backendRef.Group, backendRefKind) {
-					if err := validateBackendRef(&backendRef.BackendRef); err != nil {
-						r.log.Error(err, "invalid backendRef")
-						continue
-					}
-				}
-				if err := r.processBackendRef(
-					ctx,
-					resourceMap,
-					resourceTree,
-					resource.KindGRPCRoute,
-					grpcRoute.Namespace,
-					grpcRoute.Name,
-					backendRef.BackendObjectReference); err != nil {
-					r.log.Error(err,
-						"failed to process BackendRef for GRPCRoute",
-						"grpcRoute", grpcRoute, "backendRef", backendRef.BackendObjectReference)
-				}
-			}
-
-			for i := range rule.Filters {
-				filter := rule.Filters[i]
-				var extGKs []schema.GroupKind
-				for _, gvk := range r.extGVKs {
-					extGKs = append(extGKs, gvk.GroupKind())
-				}
-				if err := gatewayapi.ValidateGRPCRouteFilter(&filter, extGKs...); err != nil {
-					r.log.Error(err, "bypassing filter rule", "index", i)
-					continue
-				}
-				if filter.Type == gwapiv1.GRPCRouteFilterExtensionRef {
-					// NOTE: filters must be in the same namespace as the GRPCRoute
-					// Check if it's a Kind managed by an extension and add to resourceTree
-					key := utils.NamespacedNameWithGroupKind{
-						NamespacedName: types.NamespacedName{
-							Namespace: grpcRoute.Namespace,
-							Name:      string(filter.ExtensionRef.Name),
-						},
-						GroupKind: schema.GroupKind{
-							Group: string(filter.ExtensionRef.Group),
-							Kind:  string(filter.ExtensionRef.Kind),
-						},
-					}
-
-					extRefFilter, ok := resourceMap.extensionRefFilters[key]
-					if !ok {
-						r.log.Error(
-							errors.New("filter not found; bypassing rule"),
-							"Filter not found; bypassing rule",
-							"name",
-							filter.ExtensionRef.Name, "index", i)
-						continue
-					}
-
-					resourceTree.ExtensionRefFilters = append(resourceTree.ExtensionRefFilters, extRefFilter)
-
-				}
-			}
-		}
-
-		resourceMap.allAssociatedNamespaces.Insert(grpcRoute.Namespace)
-		resourceMap.allAssociatedGRPCRoutes.Insert(key)
-		// Discard Status to reduce memory consumption in watchable
-		// It will be recomputed by the gateway-api layer
-		grpcRoute.Status = gwapiv1.GRPCRouteStatus{}
-		resourceTree.GRPCRoutes = append(resourceTree.GRPCRoutes, grpcRoute)
+		processList(grpcRouteList)
 	}
 
 	return nil
+}
+
+func (r *gatewayAPIReconciler) processGRPCRoute(ctx context.Context, grpcRoute *gwapiv1.GRPCRoute,
+	resourceMap *resourceMappings, resourceTree *resource.Resources,
+) {
+	if r.namespaceLabel != nil {
+		if ok, err := r.checkObjectNamespaceLabels(grpcRoute); err != nil {
+			r.log.Error(err, "failed to check namespace labels for GRPCRoute %s in namespace %s: %w", grpcRoute.GetName(), grpcRoute.GetNamespace())
+			return
+		} else if !ok {
+			return
+		}
+	}
+
+	key := utils.NamespacedName(grpcRoute).String()
+	if resourceMap.allAssociatedGRPCRoutes.Has(key) {
+		r.log.Info("current GRPCRoute has been processed already", "namespace", grpcRoute.Namespace, "name", grpcRoute.Name)
+		return
+	}
+
+	r.log.Info("processing GRPCRoute", "namespace", grpcRoute.Namespace, "name", grpcRoute.Name)
+
+	for _, rule := range grpcRoute.Spec.Rules {
+		for _, backendRef := range rule.BackendRefs {
+			backendRefKind := gatewayapi.KindDerefOr(backendRef.Kind, resource.KindService)
+			if !r.isCustomBackendResource(backendRef.Group, backendRefKind) {
+				if err := validateBackendRef(&backendRef.BackendRef); err != nil {
+					r.log.Error(err, "invalid backendRef")
+					continue
+				}
+			}
+			if err := r.processBackendRef(
+				ctx,
+				resourceMap,
+				resourceTree,
+				resource.KindGRPCRoute,
+				grpcRoute.Namespace,
+				grpcRoute.Name,
+				backendRef.BackendObjectReference); err != nil {
+				r.log.Error(err,
+					"failed to process BackendRef for GRPCRoute",
+					"grpcRoute", grpcRoute, "backendRef", backendRef.BackendObjectReference)
+			}
+		}
+
+		for i := range rule.Filters {
+			filter := rule.Filters[i]
+			var extGKs []schema.GroupKind
+			for _, gvk := range r.extGVKs {
+				extGKs = append(extGKs, gvk.GroupKind())
+			}
+			if err := gatewayapi.ValidateGRPCRouteFilter(&filter, extGKs...); err != nil {
+				r.log.Error(err, "bypassing filter rule", "index", i)
+				continue
+			}
+			if filter.Type == gwapiv1.GRPCRouteFilterExtensionRef {
+				key := utils.NamespacedNameWithGroupKind{
+					NamespacedName: types.NamespacedName{
+						Namespace: grpcRoute.Namespace,
+						Name:      string(filter.ExtensionRef.Name),
+					},
+					GroupKind: schema.GroupKind{
+						Group: string(filter.ExtensionRef.Group),
+						Kind:  string(filter.ExtensionRef.Kind),
+					},
+				}
+
+				extRefFilter, ok := resourceMap.extensionRefFilters[key]
+				if !ok {
+					r.log.Error(
+						errors.New("filter not found; bypassing rule"),
+						"Filter not found; bypassing rule",
+						"name",
+						filter.ExtensionRef.Name, "index", i)
+					continue
+				}
+
+				resourceTree.ExtensionRefFilters = append(resourceTree.ExtensionRefFilters, extRefFilter)
+
+			}
+		}
+	}
+
+	resourceMap.allAssociatedNamespaces.Insert(grpcRoute.Namespace)
+	resourceMap.allAssociatedGRPCRoutes.Insert(key)
+	grpcRoute.Status = gwapiv1.GRPCRouteStatus{}
+	resourceTree.GRPCRoutes = append(resourceTree.GRPCRoutes, grpcRoute)
 }
 
 // processHTTPRoutes finds HTTPRoutes corresponding to a gatewayNamespaceName, further checks for

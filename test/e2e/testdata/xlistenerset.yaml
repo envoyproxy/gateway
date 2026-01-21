@@ -31,6 +31,12 @@ spec:
     allowedRoutes:
       namespaces:
         from: Same
+  - name: extra-grpc
+    port: 18082
+    protocol: HTTP
+    allowedRoutes:
+      namespaces:
+        from: Same
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
