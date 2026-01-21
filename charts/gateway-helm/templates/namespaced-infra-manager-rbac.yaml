@@ -1,3 +1,12 @@
+{{/*
+This template creates namespace-scoped infrastructure management roles when:
+- GatewayNamespace deployment mode is enabled
+- An explicit list of namespaces is provided via watch.namespaces
+
+Note: When using watch.namespaceSelector, infrastructure management permissions
+are provided via ClusterRole (see infra-manager-rbac.yaml) since the namespaces
+cannot be determined at Helm install time.
+*/}}
 {{ $watchedNamespaces := list }}
 {{ if .Values.config.envoyGateway.provider.kubernetes }}
 {{ $kube := .Values.config.envoyGateway.provider.kubernetes }}

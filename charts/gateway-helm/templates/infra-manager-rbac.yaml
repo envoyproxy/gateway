@@ -1,6 +1,11 @@
 {{ if .Values.config.envoyGateway.provider.kubernetes }}
 {{ $kube := .Values.config.envoyGateway.provider.kubernetes }}
-{{ if and (not $kube.watch) ($kube.deploy) (eq $kube.deploy.type "GatewayNamespace") }}
+{{/* Create ClusterRole for GatewayNamespace mode when:
+     1. No watch config is set, OR
+     2. Watch is configured but without explicit namespace list (e.g., using NamespaceSelector)
+*/}}
+{{ $shouldCreateClusterRole := and ($kube.deploy) (eq $kube.deploy.type "GatewayNamespace") (or (not $kube.watch) (not $kube.watch.namespaces) (eq (len $kube.watch.namespaces) 0)) }}
+{{ if $shouldCreateClusterRole }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
