@@ -7,7 +7,6 @@ package kubernetes
 
 import (
 	"context"
-	"fmt"
 
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -219,7 +218,6 @@ func httpRouteFilterHTTPRouteIndexFunc(rawObj client.Object) []string {
 							Namespace: httproute.Namespace,
 							Name:      string(filter.ExtensionRef.Name),
 						}.String()] = struct{}{}
-						fmt.Println("xxxxxbackendRef: ", backendRef.Name, "filter: ", filter.ExtensionRef.Name)
 					}
 				}
 			}

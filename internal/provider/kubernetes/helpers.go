@@ -111,7 +111,7 @@ func terminatesTLS(listener *gwapiv1.Listener) bool {
 	return false
 }
 
-func islistenerEntryTerminatesTLS(listenerEntry *gwapixv1a1.ListenerEntry) bool {
+func isListenerEntryTerminatesTLS(listenerEntry *gwapixv1a1.ListenerEntry) bool {
 	if listenerEntry.TLS != nil &&
 		(listenerEntry.Protocol == gwapiv1.HTTPSProtocolType ||
 			listenerEntry.Protocol == gwapiv1.TLSProtocolType) &&

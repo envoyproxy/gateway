@@ -97,10 +97,10 @@ type gatewayAPIReconciler struct {
 	tlsRouteCRDExists      bool
 	udpRouteCRDExists      bool
 
+	clusterTrustBundleExits bool
+
 	// Experimental Gateway API features
 	xListenerSetEnabled bool
-
-	clusterTrustBundleExits bool
 }
 
 // isGatewayClassMerged reports whether the supplied GatewayClass has mergeGateways enabled.
@@ -275,11 +275,6 @@ func (r *gatewayAPIReconciler) backendAPIDisabled() bool {
 	return !r.envoyGateway.ExtensionAPIs.EnableBackend
 }
 
-func (r *gatewayAPIReconciler) xListenerSetDisabled() bool {
-	return r.envoyGateway == nil || r.envoyGateway.GatewayAPIs == nil ||
-		!r.envoyGateway.GatewayAPIs.IsEnabled(egv1a1.XListenerSet)
-}
-
 func byNamespaceSelectorEnabled(eg *egv1a1.EnvoyGateway) bool {
 	if eg.Provider == nil ||
 		eg.Provider.Kubernetes == nil ||
@@ -442,7 +437,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 			gcLogger.Error(err, "failed to process EnvoyTLSSecret")
 		}
 
-		// Add all Gateways, their associated Routes, and referenced resources to the resourceTree
+		// Add all Gateways, their associated XListenerSets, Routes, and referenced resources to the resourceTree
 		if err = r.processGateways(ctx, managedGC, gwcResourceMapping, gwcResource); err != nil {
 			if isTransientError(err) {
 				gcLogger.Error(err, "transient error processing gateways")
@@ -1888,7 +1883,7 @@ func (r *gatewayAPIReconciler) processXListenerSets(ctx context.Context, gateway
 
 		for _, listener := range xls.Spec.Listeners {
 			// Listener TLS is optional; only process when TLS termination occurs.
-			if !islistenerEntryTerminatesTLS(&listener) {
+			if !isListenerEntryTerminatesTLS(&listener) {
 				continue
 			}
 
@@ -2107,10 +2102,14 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 	if err != nil {
 		return err
 	}
+
+	disabled := r.envoyGateway == nil || r.envoyGateway.GatewayAPIs == nil ||
+		!r.envoyGateway.GatewayAPIs.IsEnabled(egv1a1.XListenerSet)
+
 	switch {
 	case !exists:
 		r.log.Info("XListenerSet CRD not found, skipping XListenerSet watch")
-	case r.xListenerSetDisabled():
+	case disabled:
 		r.log.Info("XListenerSet API disabled, skipping XListenerSet watch")
 	default:
 		r.log.Info("XListenerSet API enabled, watching XListenerSets")

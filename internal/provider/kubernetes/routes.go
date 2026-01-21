@@ -94,45 +94,20 @@ func (r *gatewayAPIReconciler) processGRPCRoutes(ctx context.Context, gatewayNam
 	resourceMap *resourceMappings, resourceTree *resource.Resources,
 ) error {
 	grpcRouteList := &gwapiv1.GRPCRouteList{}
-	processedKeys := make(map[string]struct{})
-	processList := func(list *gwapiv1.GRPCRouteList) {
-		for i := range list.Items {
-			grpcRoute := &list.Items[i]
-			key := utils.NamespacedName(grpcRoute).String()
-			if _, seen := processedKeys[key]; seen {
-				continue
-			}
-			processedKeys[key] = struct{}{}
-			r.processGRPCRoute(ctx, grpcRoute, resourceMap, resourceTree)
-		}
-	}
 
-	extensionRefFilters, err := r.getExtensionRefFilters(ctx)
-	if err != nil {
-		return err
-	}
-	for i := range extensionRefFilters {
-		filter := extensionRefFilters[i]
-		resourceMap.extensionRefFilters[utils.GetNamespacedNameWithGroupKind(&filter)] = filter
-	}
-
-	extensionBackendResources, err := r.getExtensionBackendResources(ctx)
-	if err != nil {
-		return err
-	}
-	for i := range extensionBackendResources {
-		backend := extensionBackendResources[i]
-		resourceMap.extensionRefFilters[utils.GetNamespacedNameWithGroupKind(&backend)] = backend
-	}
-
+	// Process GRPCRoutes attached to the gateway
 	if err := r.client.List(ctx, grpcRouteList, &client.ListOptions{
 		FieldSelector: fields.OneTermEqualSelector(gatewayGRPCRouteIndex, gatewayNamespaceName),
 	}); err != nil {
 		r.log.Error(err, "failed to list GRPCRoutes")
 		return err
 	}
-	processList(grpcRouteList)
+	for i := range grpcRouteList.Items {
+		grpcRoute := &grpcRouteList.Items[i]
+		r.processGRPCRoute(ctx, grpcRoute, resourceMap, resourceTree)
+	}
 
+	// Process GRPCRoutes attached to the xListenerSet
 	for _, xlsNN := range resourceMap.gatewayToXListenerSets[gatewayNamespaceName] {
 		grpcRouteList = &gwapiv1.GRPCRouteList{}
 		if err := r.client.List(ctx, grpcRouteList, &client.ListOptions{
@@ -141,7 +116,10 @@ func (r *gatewayAPIReconciler) processGRPCRoutes(ctx context.Context, gatewayNam
 			r.log.Error(err, "failed to list GRPCRoutes by XListenerSet", "xListenerSet", xlsNN.String())
 			return err
 		}
-		processList(grpcRouteList)
+		for i := range grpcRouteList.Items {
+			grpcRoute := &grpcRouteList.Items[i]
+			r.processGRPCRoute(ctx, grpcRoute, resourceMap, resourceTree)
+		}
 	}
 
 	return nil
@@ -240,18 +218,6 @@ func (r *gatewayAPIReconciler) processHTTPRoutes(ctx context.Context, gatewayNam
 	resourceMap *resourceMappings, resourceTree *resource.Resources,
 ) error {
 	httpRouteList := &gwapiv1.HTTPRouteList{}
-	processedKeys := make(map[string]struct{})
-	processList := func(list *gwapiv1.HTTPRouteList) {
-		for i := range list.Items {
-			httpRoute := &list.Items[i]
-			key := utils.NamespacedName(httpRoute).String()
-			if _, seen := processedKeys[key]; seen {
-				continue
-			}
-			processedKeys[key] = struct{}{}
-			r.processHTTPRoute(ctx, httpRoute, resourceMap, resourceTree)
-		}
-	}
 
 	extensionRefFilters, err := r.getExtensionRefFilters(ctx)
 	if err != nil {
@@ -272,14 +238,19 @@ func (r *gatewayAPIReconciler) processHTTPRoutes(ctx context.Context, gatewayNam
 		resourceMap.extensionRefFilters[utils.GetNamespacedNameWithGroupKind(&backend)] = backend
 	}
 
+	// Process HTTPRoutes attached to the gateway
 	if err := r.client.List(ctx, httpRouteList, &client.ListOptions{
 		FieldSelector: fields.OneTermEqualSelector(gatewayHTTPRouteIndex, gatewayNamespaceName),
 	}); err != nil {
-		r.log.Error(err, "failed to list HTTPRoutes")
+		r.log.Error(err, "failed to list HTTPRoutes by Gateway", "gateway", gatewayNamespaceName)
 		return err
 	}
-	processList(httpRouteList)
+	for i := range httpRouteList.Items {
+		httpRoute := &httpRouteList.Items[i]
+		r.processHTTPRoute(ctx, httpRoute, resourceMap, resourceTree)
+	}
 
+	// Process HTTPRoutes attached to the xListenerSet
 	for _, xlsNN := range resourceMap.gatewayToXListenerSets[gatewayNamespaceName] {
 		httpRouteList = &gwapiv1.HTTPRouteList{}
 		if err := r.client.List(ctx, httpRouteList, &client.ListOptions{
@@ -288,7 +259,10 @@ func (r *gatewayAPIReconciler) processHTTPRoutes(ctx context.Context, gatewayNam
 			r.log.Error(err, "failed to list HTTPRoutes by XListenerSet", "xListenerSet", xlsNN.String())
 			return err
 		}
-		processList(httpRouteList)
+		for i := range httpRouteList.Items {
+			httpRoute := &httpRouteList.Items[i]
+			r.processHTTPRoute(ctx, httpRoute, resourceMap, resourceTree)
+		}
 	}
 
 	return nil
