@@ -61,7 +61,7 @@ var BackendUtilizationLoadBalancingTest = suite.ConformanceTest{
 		)
 
 		ns := "gateway-conformance-infra"
-		routeNN := types.NamespacedName{Name: "client-side-wrr-lb-route", Namespace: ns}
+		routeNN := types.NamespacedName{Name: "backend-utilization-lb-route", Namespace: ns}
 		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 
 		ancestorRef := gwapiv1.ParentReference{
@@ -70,7 +70,7 @@ var BackendUtilizationLoadBalancingTest = suite.ConformanceTest{
 			Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
 			Name:      gwapiv1.ObjectName(gwNN.Name),
 		}
-		BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "client-side-wrr-lb-policy", Namespace: ns}, suite.ControllerName, ancestorRef)
+		BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "backend-utilization-lb-policy", Namespace: ns}, suite.ControllerName, ancestorRef)
 		WaitForPods(t, suite.Client, ns, map[string]string{"app": "lb-backend-bu"}, corev1.PodRunning, &PodReady)
 
 		gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
@@ -100,7 +100,7 @@ var BackendUtilizationLoadBalancingTest = suite.ConformanceTest{
 			if err := wait.PollUntilContextTimeout(context.TODO(), time.Second, 30*time.Second, true, func(_ context.Context) (bool, error) {
 				return runTrafficTest(t, suite, &req, &expectedResponse, sendRequests, compareFunc), nil
 			}); err != nil {
-				tlog.Errorf(t, "failed to run client-side weighted round robin load balancing test: %v", err)
+				tlog.Errorf(t, "failed to run backend utilization load balancing test: %v", err)
 			}
 		})
 	},
@@ -723,7 +723,7 @@ var BackendUtilizationOOBLoadBalancingTest = suite.ConformanceTest{
 		)
 
 		ns := "gateway-conformance-infra"
-		routeNN := types.NamespacedName{Name: "client-side-wrr-lb-route-oob", Namespace: ns}
+		routeNN := types.NamespacedName{Name: "backend-utilization-lb-route-oob", Namespace: ns}
 		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 
 		ancestorRef := gwapiv1.ParentReference{
@@ -732,7 +732,7 @@ var BackendUtilizationOOBLoadBalancingTest = suite.ConformanceTest{
 			Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
 			Name:      gwapiv1.ObjectName(gwNN.Name),
 		}
-		BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "client-side-wrr-lb-policy-oob", Namespace: ns}, suite.ControllerName, ancestorRef)
+		BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "backend-utilization-lb-policy-oob", Namespace: ns}, suite.ControllerName, ancestorRef)
 		WaitForPods(t, suite.Client, ns, map[string]string{"app": "lb-backend-bu-oob"}, corev1.PodRunning, &PodReady)
 
 		gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
@@ -762,7 +762,7 @@ var BackendUtilizationOOBLoadBalancingTest = suite.ConformanceTest{
 			if err := wait.PollUntilContextTimeout(context.TODO(), time.Second, 30*time.Second, true, func(_ context.Context) (bool, error) {
 				return runTrafficTest(t, suite, &req, &expectedResponse, sendRequests, compareFunc), nil
 			}); err != nil {
-				tlog.Errorf(t, "failed to run client-side WRR OOB test: %v", err)
+				tlog.Errorf(t, "failed to run backend utilization OOB test: %v", err)
 			}
 		})
 	},
@@ -780,7 +780,7 @@ var BackendUtilizationPenaltyLoadBalancingTest = suite.ConformanceTest{
 		)
 
 		ns := "gateway-conformance-infra"
-		routeNN := types.NamespacedName{Name: "client-side-wrr-lb-route-penalty", Namespace: ns}
+		routeNN := types.NamespacedName{Name: "backend-utilization-lb-route-penalty", Namespace: ns}
 		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 
 		ancestorRef := gwapiv1.ParentReference{
@@ -789,7 +789,7 @@ var BackendUtilizationPenaltyLoadBalancingTest = suite.ConformanceTest{
 			Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
 			Name:      gwapiv1.ObjectName(gwNN.Name),
 		}
-		BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "client-side-wrr-lb-policy-penalty", Namespace: ns}, suite.ControllerName, ancestorRef)
+		BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "backend-utilization-lb-policy-penalty", Namespace: ns}, suite.ControllerName, ancestorRef)
 		WaitForPods(t, suite.Client, ns, map[string]string{"app": "lb-backend-bu-penalty"}, corev1.PodRunning, &PodReady)
 
 		gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
@@ -819,7 +819,7 @@ var BackendUtilizationPenaltyLoadBalancingTest = suite.ConformanceTest{
 			if err := wait.PollUntilContextTimeout(context.TODO(), time.Second, 30*time.Second, true, func(_ context.Context) (bool, error) {
 				return runTrafficTest(t, suite, &req, &expectedResponse, sendRequests, compareFunc), nil
 			}); err != nil {
-				tlog.Errorf(t, "failed to run client-side WRR penalty test: %v", err)
+				tlog.Errorf(t, "failed to run backend utilization penalty test: %v", err)
 			}
 		})
 	},
