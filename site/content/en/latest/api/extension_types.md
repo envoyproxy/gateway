@@ -231,6 +231,8 @@ AuthorizationAction defines the action to be taken if a rule matches.
 _Appears in:_
 - [Authorization](#authorization)
 - [AuthorizationRule](#authorizationrule)
+- [GeoIPAccessControl](#geoipaccesscontrol)
+- [GeoIPRule](#geoiprule)
 
 | Value | Description |
 | ----- | ----------- |
@@ -2349,6 +2351,192 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `enabled` | _[GatewayAPI](#gatewayapi) array_ |  true  |  |  |
+
+
+#### GeoIP
+
+
+
+GeoIP defines GeoIP enrichment and access control configuration.
+
+_Appears in:_
+- [SecurityPolicySpec](#securitypolicyspec)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `source` | _[GeoIPSource](#geoipsource)_ |  false  |  | Source configures how the client IP is extracted before being passed to the provider.<br />If unset, Envoy falls back to using the immediate downstream connection address. |
+| `provider` | _[GeoIPProvider](#geoipprovider)_ |  true  |  | Provider defines the GeoIP provider configuration. |
+| `access` | _[GeoIPAccessControl](#geoipaccesscontrol)_ |  false  |  | Access defines the GeoIP based access control configuration. |
+
+
+#### GeoIPAccessControl
+
+
+
+GeoIPAccessControl defines GeoIP-based allow/deny lists.
+
+_Appears in:_
+- [GeoIP](#geoip)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `defaultAction` | _[AuthorizationAction](#authorizationaction)_ |  false  |  | DefaultAction defines how to handle requests that do not match any rule or lack GeoIP data.<br />Defaults to Allow when unset. |
+| `rules` | _[GeoIPRule](#geoiprule) array_ |  false  |  | Rules evaluated in order. The first matching rule's action applies. |
+
+
+#### GeoIPCity
+
+
+
+GeoIPCity selects a city, optionally scoped to a region.
+
+_Appears in:_
+- [GeoIPRule](#geoiprule)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `countryCode` | _string_ |  true  |  | CountryCode is the ISO 3166-1 alpha-2 country code. |
+| `regionCode` | _string_ |  false  |  | RegionCode optionally scopes the city to a subdivision (ISO 3166-2 without country prefix). |
+| `cityName` | _string_ |  true  |  | CityName is the city name. |
+
+
+#### GeoIPHeaderSource
+
+
+
+GeoIPHeaderSource configures extraction from a custom header.
+
+_Appears in:_
+- [GeoIPSource](#geoipsource)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `headerName` | _string_ |  true  |  | HeaderName is the HTTP header that carries the client IP. |
+
+
+#### GeoIPMaxMind
+
+
+
+GeoIPMaxMind configures the MaxMind provider.
+These database files are expected to be mounted into the Envoy container, and a sidecar container can be used to update the database files.
+
+_Appears in:_
+- [GeoIPProvider](#geoipprovider)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `cityDbPath` | _string_ |  false  |  | CityDBPath is the path to the City database (.mmdb). |
+| `countryDbPath` | _string_ |  false  |  | CountryDBPath is the path to the Country database (.mmdb). |
+| `asnDbPath` | _string_ |  false  |  | ASNDBPath is the path to the ASN database (.mmdb). |
+| `ispDbPath` | _string_ |  false  |  | ISPDBPath is the path to the ISP database (.mmdb). |
+| `anonymousIpDbPath` | _string_ |  false  |  | AnonymousIPDBPath is the path to the Anonymous IP database (.mmdb). |
+
+
+#### GeoIPProvider
+
+
+
+GeoIPProvider defines provider-specific settings.
+
+_Appears in:_
+- [GeoIP](#geoip)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `type` | _[GeoIPProviderType](#geoipprovidertype)_ |  true  |  |  |
+| `MaxMind` | _[GeoIPMaxMind](#geoipmaxmind)_ |  false  |  | MaxMind configures the MaxMind provider. |
+
+
+#### GeoIPProviderType
+
+_Underlying type:_ _string_
+
+GeoIPProviderType enumerates GeoIP providers supported by Envoy Gateway.
+
+_Appears in:_
+- [GeoIPProvider](#geoipprovider)
+
+| Value | Description |
+| ----- | ----------- |
+| `MaxMind` | GeoIPProviderTypeMaxMind configures Envoy with the MaxMind provider pointing to local files.<br /> | 
+
+
+#### GeoIPRegion
+
+
+
+GeoIPRegion selects a region within a country.
+
+_Appears in:_
+- [GeoIPRule](#geoiprule)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `countryCode` | _string_ |  true  |  | CountryCode is the ISO 3166-1 alpha-2 country code. |
+| `regionCode` | _string_ |  true  |  | RegionCode is the ISO 3166-2 subdivision code (without country prefix). |
+
+
+#### GeoIPRule
+
+
+
+GeoIPRule defines a single GeoIP allow/deny rule.
+
+_Appears in:_
+- [GeoIPAccessControl](#geoipaccesscontrol)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `action` | _[AuthorizationAction](#authorizationaction)_ |  true  |  | Action is reused from Authorization rules (Allow or Deny). |
+| `countries` | _string array_ |  false  |  | Countries is a list of ISO 3166-1 alpha-2 country codes. |
+| `regions` | _[GeoIPRegion](#geoipregion) array_ |  false  |  | Regions refines matching to ISO 3166-2 subdivisions. |
+| `cities` | _[GeoIPCity](#geoipcity) array_ |  false  |  | Cities refines matching to specific city names. |
+
+
+#### GeoIPSource
+
+
+
+GeoIPSource configures how Envoy determines the client IP address that is passed to the provider.
+
+_Appears in:_
+- [GeoIP](#geoip)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `type` | _[GeoIPSourceType](#geoipsourcetype)_ |  true  |  |  |
+| `xff` | _[GeoIPXFFSource](#geoipxffsource)_ |  false  |  | XFF configures extraction based on the X-Forwarded-For header chain. |
+| `header` | _[GeoIPHeaderSource](#geoipheadersource)_ |  false  |  | Header configures extraction from a custom header. |
+
+
+#### GeoIPSourceType
+
+_Underlying type:_ _string_
+
+GeoIPSourceType enumerates supported client IP sources.
+
+_Appears in:_
+- [GeoIPSource](#geoipsource)
+
+| Value | Description |
+| ----- | ----------- |
+| `XFF` | GeoIPSourceTypeXFF instructs Envoy to honor the X-Forwarded-For header count.<br /> | 
+| `Header` | GeoIPSourceTypeHeader instructs Envoy to read a custom request header.<br /> | 
+
+
+#### GeoIPXFFSource
+
+
+
+GeoIPXFFSource configures trusted hop count for XFF parsing.
+
+_Appears in:_
+- [GeoIPSource](#geoipsource)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `trustedHops` | _integer_ |  false  |  | TrustedHops defines the number of trusted hops from the right side of XFF.<br />Defaults to 0 when unset. |
 
 
 #### GlobalRateLimit
