@@ -1940,6 +1940,17 @@ func (in *HTTPRoute) DeepCopyInto(out *HTTPRoute) {
 			}
 		}
 	}
+	if in.CookieMatches != nil {
+		in, out := &in.CookieMatches, &out.CookieMatches
+		*out = make([]*StringMatch, len(*in))
+		for i := range *in {
+			if (*in)[i] != nil {
+				in, out := &(*in)[i], &(*out)[i]
+				*out = new(StringMatch)
+				(*in).DeepCopyInto(*out)
+			}
+		}
+	}
 	if in.AddRequestHeaders != nil {
 		in, out := &in.AddRequestHeaders, &out.AddRequestHeaders
 		*out = make([]AddHeader, len(*in))
@@ -4331,6 +4342,13 @@ func (in *Tracing) DeepCopyInto(out *Tracing) {
 		*out = make(map[string]v1alpha1.CustomTag, len(*in))
 		for key, val := range *in {
 			(*out)[key] = *val.DeepCopy()
+		}
+	}
+	if in.Tags != nil {
+		in, out := &in.Tags, &out.Tags
+		*out = make(map[string]string, len(*in))
+		for key, val := range *in {
+			(*out)[key] = val
 		}
 	}
 	in.Destination.DeepCopyInto(&out.Destination)
