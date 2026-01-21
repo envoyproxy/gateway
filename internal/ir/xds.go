@@ -789,6 +789,8 @@ type HTTPRoute struct {
 	HeaderMatches []*StringMatch `json:"headerMatches,omitempty" yaml:"headerMatches,omitempty"`
 	// QueryParamMatches define the match conditions on the query parameters.
 	QueryParamMatches []*StringMatch `json:"queryParamMatches,omitempty" yaml:"queryParamMatches,omitempty"`
+	// CookieMatches define the match conditions on the request cookies for this route.
+	CookieMatches []*StringMatch `json:"cookieMatches,omitempty" yaml:"cookieMatches,omitempty"`
 	// AddRequestHeaders defines header/value sets to be added to the headers of requests.
 	AddRequestHeaders []AddHeader `json:"addRequestHeaders,omitempty" yaml:"addRequestHeaders,omitempty"`
 	// RemoveRequestHeaders defines a list of headers to be removed from requests.
@@ -1547,6 +1549,11 @@ func (h *HTTPRoute) Validate() error {
 			errs = errors.Join(errs, err)
 		}
 	}
+	for _, cMatch := range h.CookieMatches {
+		if err := cMatch.Validate(); err != nil {
+			errs = errors.Join(errs, err)
+		}
+	}
 	if h.Destination != nil {
 		if err := h.Destination.Validate(); err != nil {
 			errs = errors.Join(errs, err)
@@ -1855,9 +1862,10 @@ func NewDestEndpoint(hostname *string, host string, port uint32, draining bool, 
 // AddHeader configures a header to be added to a request or response.
 // +k8s:deepcopy-gen=true
 type AddHeader struct {
-	Name   string   `json:"name" yaml:"name"`
-	Value  []string `json:"value" yaml:"value"`
-	Append bool     `json:"append" yaml:"append"`
+	Name        string   `json:"name" yaml:"name"`
+	Value       []string `json:"value" yaml:"value"`
+	Append      bool     `json:"append" yaml:"append"`
+	AddIfAbsent bool     `json:"addIfAbsent" yaml:"addIfAbsent"`
 }
 
 // Validate the fields within the AddHeader structure
@@ -2598,6 +2606,7 @@ type Tracing struct {
 	Authority    string                      `json:"authority,omitempty"`
 	SamplingRate float64                     `json:"samplingRate,omitempty"`
 	CustomTags   map[string]egv1a1.CustomTag `json:"customTags,omitempty"`
+	Tags         map[string]string           `json:"tags,omitempty"`
 	Destination  RouteDestination            `json:"destination,omitempty"`
 	Traffic      *TrafficFeatures            `json:"traffic,omitempty"`
 	Provider     egv1a1.TracingProvider      `json:"provider"`

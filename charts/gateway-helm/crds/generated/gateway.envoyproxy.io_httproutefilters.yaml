@@ -334,6 +334,54 @@ spec:
                       If unset, defaults to 200.
                     type: integer
                 type: object
+              matches:
+                description: |-
+                  Matches defines additional matching criteria for the HTTPRoute rule.
+                  As with HTTPRouteRule.Matches, the rule is matched if any one match applies.
+                  When both HTTPRouteRule.Matches and HTTPRouteFilter.Matches are set, the
+                  effective matching is the logical AND of the two sets.
+                items:
+                  description: |-
+                    HTTPRouteMatchFilter defines additional matching criteria for the HTTPRoute rule.
+                    At least one matcher must be specified.
+                  minProperties: 1
+                  properties:
+                    cookies:
+                      description: |-
+                        Cookies is a list of cookie matchers evaluated against the HTTP request.
+                        All specified matchers must match.
+                      items:
+                        description: HTTPCookieMatch defines how to match a single
+                          cookie.
+                        properties:
+                          name:
+                            description: Name is the cookie name to evaluate.
+                            maxLength: 256
+                            minLength: 1
+                            type: string
+                          type:
+                            default: Exact
+                            description: Type specifies how to match against the value
+                              of the cookie.
+                            enum:
+                            - Exact
+                            - RegularExpression
+                            type: string
+                          value:
+                            description: Value is the cookie value to be matched.
+                            maxLength: 4096
+                            minLength: 1
+                            type: string
+                        required:
+                        - name
+                        - value
+                        type: object
+                      maxItems: 16
+                      minItems: 1
+                      type: array
+                  type: object
+                maxItems: 8
+                type: array
               urlRewrite:
                 description: HTTPURLRewriteFilter define rewrites of HTTP URL components
                   such as path and host

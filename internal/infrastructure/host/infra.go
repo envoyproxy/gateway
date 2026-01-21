@@ -68,7 +68,7 @@ type Infra struct {
 	errors message.RunnerErrorNotifier
 }
 
-func NewInfra(runnerCtx context.Context, cfg *config.Server, logger logging.Logger, errors message.RunnerErrorNotifier) (*Infra, error) {
+func NewInfra(_ context.Context, cfg *config.Server, logger logging.Logger, errors message.RunnerErrorNotifier) (*Infra, error) {
 	// Get configuration from provider
 	var hostCfg *egv1a1.EnvoyGatewayHostInfrastructureProvider
 	if p := cfg.EnvoyGateway.Provider; p != nil && p.Custom != nil &&
