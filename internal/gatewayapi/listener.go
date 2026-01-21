@@ -21,7 +21,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwapixv1a1 "sigs.k8s.io/gateway-api/apisx/v1alpha1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
@@ -87,25 +86,12 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 				listener.SetSupportedKinds()
 				message := fmt.Sprintf("Protocol %s is unsupported, must be %s, %s, %s or %s.", listener.Protocol,
 					gwapiv1.HTTPProtocolType, gwapiv1.HTTPSProtocolType, gwapiv1.TCPProtocolType, gwapiv1.UDPProtocolType)
-				if listener.isFromXListenerSet() {
-					status.SetXListenerSetListenerStatusCondition(
-						listener.xListenerSet,
-						listener.xListenerSetStatusIdx,
-						gwapixv1a1.ListenerEntryConditionType(gwapiv1.ListenerConditionAccepted),
-						metav1.ConditionFalse,
-						gwapixv1a1.ListenerEntryConditionReason(gwapiv1.ListenerReasonUnsupportedProtocol),
-						message,
-					)
-				} else {
-					status.SetGatewayListenerStatusCondition(
-						listener.gateway.Gateway,
-						listener.listenerStatusIdx,
-						gwapiv1.ListenerConditionAccepted,
-						metav1.ConditionFalse,
-						gwapiv1.ListenerReasonUnsupportedProtocol,
-						message,
-					)
-				}
+				listener.SetCondition(
+					gwapiv1.ListenerConditionAccepted,
+					metav1.ConditionFalse,
+					gwapiv1.ListenerReasonUnsupportedProtocol,
+					message,
+				)
 			}
 
 			// Validate allowed namespaces
@@ -310,25 +296,12 @@ func checkOverlappingHostnames(httpsListeners []*ListenerContext) {
 				)
 			}
 
-			if listener.isFromXListenerSet() {
-				status.SetXListenerSetListenerStatusCondition(
-					listener.xListenerSet,
-					listener.xListenerSetStatusIdx,
-					gwapixv1a1.ListenerEntryConditionType(gwapiv1.ListenerConditionOverlappingTLSConfig),
-					metav1.ConditionTrue,
-					gwapixv1a1.ListenerEntryConditionReason(gwapiv1.ListenerReasonOverlappingHostnames),
-					message,
-				)
-			} else {
-				status.SetGatewayListenerStatusCondition(
-					listener.gateway.Gateway,
-					listener.listenerStatusIdx,
-					gwapiv1.ListenerConditionOverlappingTLSConfig,
-					metav1.ConditionTrue,
-					gwapiv1.ListenerReasonOverlappingHostnames,
-					message,
-				)
-			}
+			listener.SetCondition(
+				gwapiv1.ListenerConditionOverlappingTLSConfig,
+				metav1.ConditionTrue,
+				gwapiv1.ListenerReasonOverlappingHostnames,
+				message,
+			)
 			if listener.httpIR != nil {
 				listener.httpIR.TLSOverlaps = true
 			}
@@ -407,23 +380,11 @@ func checkOverlappingCertificates(httpsListeners []*ListenerContext) {
 				)
 			}
 
-			if listener.isFromXListenerSet() {
-				status.SetXListenerSetListenerStatusCondition(
-					listener.xListenerSet,
-					listener.xListenerSetStatusIdx,
-					gwapixv1a1.ListenerEntryConditionType(gwapiv1.ListenerConditionOverlappingTLSConfig),
-					metav1.ConditionTrue,
-					gwapixv1a1.ListenerEntryConditionReason(gwapiv1.ListenerReasonOverlappingCertificates),
-					message)
-			} else {
-				status.SetGatewayListenerStatusCondition(
-					listener.gateway.Gateway,
-					listener.listenerStatusIdx,
-					gwapiv1.ListenerConditionOverlappingTLSConfig,
-					metav1.ConditionTrue,
-					gwapiv1.ListenerReasonOverlappingCertificates,
-					message)
-			}
+			listener.SetCondition(
+				gwapiv1.ListenerConditionOverlappingTLSConfig,
+				metav1.ConditionTrue,
+				gwapiv1.ListenerReasonOverlappingCertificates,
+				message)
 			if listener.httpIR != nil {
 				listener.httpIR.TLSOverlaps = true
 			}

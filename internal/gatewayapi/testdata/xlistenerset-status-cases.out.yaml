@@ -19,6 +19,12 @@ gateways:
       name: core-http
       port: 80
       protocol: HTTP
+    - allowedRoutes:
+        namespaces:
+          from: All
+      name: conflict-listener
+      port: 8888
+      protocol: HTTP
   status:
     listeners:
     - attachedRoutes: 1
@@ -39,6 +45,29 @@ gateways:
         status: "True"
         type: ResolvedRefs
       name: core-http
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
+    - attachedRoutes: 0
+      conditions:
+      - lastTransitionTime: null
+        message: All listeners for a given port must use a unique hostname
+        reason: HostnameConflict
+        status: "True"
+        type: Conflicted
+      - lastTransitionTime: null
+        message: Listener is invalid, see other Conditions for details.
+        reason: Invalid
+        status: "False"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: conflict-listener
       supportedKinds:
       - group: gateway.networking.k8s.io
         kind: HTTPRoute
@@ -368,6 +397,20 @@ infraIR:
           name: http-8087
           protocol: HTTP
           servicePort: 8087
+      - address: null
+        name: gateway-xls/composite-gateway/good-listener
+        ports:
+        - containerPort: 8090
+          name: http-8090
+          protocol: HTTP
+          servicePort: 8090
+      - address: null
+        name: gateway-xls/composite-gateway/good-listener
+        ports:
+        - containerPort: 8091
+          name: http-8091
+          protocol: HTTP
+          servicePort: 8091
       metadata:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: composite-gateway
@@ -704,6 +747,255 @@ xListenerSets:
       name: mixed-invalid
       port: 8088
       supportedKinds: []
+- apiVersion: gateway.networking.x-k8s.io/v1alpha1
+  kind: XListenerSet
+  metadata:
+    name: conflict-listener-from-same-xls
+    namespace: gateway-xls
+  spec:
+    listeners:
+    - allowedRoutes:
+        namespaces:
+          from: All
+      name: conflict-listener-1
+      port: 8089
+      protocol: HTTP
+    - allowedRoutes:
+        namespaces:
+          from: All
+      name: conflict-listener-2
+      port: 8089
+      protocol: HTTP
+    parentRef:
+      group: null
+      kind: null
+      name: composite-gateway
+  status:
+    conditions:
+    - lastTransitionTime: null
+      message: All listeners are invalid or conflicted
+      reason: ListenersNotValid
+      status: "True"
+      type: Accepted
+    - lastTransitionTime: null
+      message: Programmed
+      reason: Programmed
+      status: "True"
+      type: Programmed
+    listeners:
+    - attachedRoutes: 0
+      conditions:
+      - lastTransitionTime: null
+        message: All listeners for a given port must use a unique hostname
+        reason: HostnameConflict
+        status: "True"
+        type: Conflicted
+      - lastTransitionTime: null
+        message: Listener is invalid, see other Conditions for details.
+        reason: Invalid
+        status: "False"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: conflict-listener-1
+      port: 8089
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
+    - attachedRoutes: 0
+      conditions:
+      - lastTransitionTime: null
+        message: All listeners for a given port must use a unique hostname
+        reason: HostnameConflict
+        status: "True"
+        type: Conflicted
+      - lastTransitionTime: null
+        message: Listener is invalid, see other Conditions for details.
+        reason: Invalid
+        status: "False"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: conflict-listener-2
+      port: 8089
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
+- apiVersion: gateway.networking.x-k8s.io/v1alpha1
+  kind: XListenerSet
+  metadata:
+    name: conflict-listener-from-two-xlss
+    namespace: gateway-xls
+  spec:
+    listeners:
+    - allowedRoutes:
+        namespaces:
+          from: All
+      name: conflict-listener
+      port: 8089
+      protocol: HTTP
+    - allowedRoutes:
+        namespaces:
+          from: All
+      name: good-listener
+      port: 8090
+      protocol: HTTP
+    parentRef:
+      group: null
+      kind: null
+      name: composite-gateway
+  status:
+    conditions:
+    - lastTransitionTime: null
+      message: Some listeners are invalid or conflicted
+      reason: ListenersNotValid
+      status: "True"
+      type: Accepted
+    - lastTransitionTime: null
+      message: Programmed
+      reason: Programmed
+      status: "True"
+      type: Programmed
+    listeners:
+    - attachedRoutes: 0
+      conditions:
+      - lastTransitionTime: null
+        message: All listeners for a given port must use a unique hostname
+        reason: HostnameConflict
+        status: "True"
+        type: Conflicted
+      - lastTransitionTime: null
+        message: Listener is invalid, see other Conditions for details.
+        reason: Invalid
+        status: "False"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: conflict-listener
+      port: 8089
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
+    - attachedRoutes: 0
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: good-listener
+      port: 8090
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
+- apiVersion: gateway.networking.x-k8s.io/v1alpha1
+  kind: XListenerSet
+  metadata:
+    name: listener-conflict-with-gateway
+    namespace: gateway-xls
+  spec:
+    listeners:
+    - allowedRoutes:
+        namespaces:
+          from: All
+      name: conflict-listener
+      port: 8888
+      protocol: HTTP
+    - name: good-listener
+      port: 8091
+      protocol: HTTP
+    parentRef:
+      group: null
+      kind: null
+      name: composite-gateway
+  status:
+    conditions:
+    - lastTransitionTime: null
+      message: Some listeners are invalid or conflicted
+      reason: ListenersNotValid
+      status: "True"
+      type: Accepted
+    - lastTransitionTime: null
+      message: Programmed
+      reason: Programmed
+      status: "True"
+      type: Programmed
+    listeners:
+    - attachedRoutes: 0
+      conditions:
+      - lastTransitionTime: null
+        message: All listeners for a given port must use a unique hostname
+        reason: HostnameConflict
+        status: "True"
+        type: Conflicted
+      - lastTransitionTime: null
+        message: Listener is invalid, see other Conditions for details.
+        reason: Invalid
+        status: "False"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: conflict-listener
+      port: 8888
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
+    - attachedRoutes: 0
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: good-listener
+      port: 8091
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
 xdsIR:
   gateway-xls/composite-gateway:
     accessLog:
@@ -941,6 +1233,36 @@ xdsIR:
           name: route-mixed-valid
           namespace: default
         name: httproute/default/route-mixed-valid/rule/0/match/-1/*
+    - address: 0.0.0.0
+      externalPort: 8090
+      hostnames:
+      - '*'
+      isHTTP2: false
+      metadata:
+        kind: Gateway
+        name: composite-gateway
+        namespace: gateway-xls
+        sectionName: good-listener
+      name: gateway-xls/composite-gateway/good-listener
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
+      port: 8090
+    - address: 0.0.0.0
+      externalPort: 8091
+      hostnames:
+      - '*'
+      isHTTP2: false
+      metadata:
+        kind: Gateway
+        name: composite-gateway
+        namespace: gateway-xls
+        sectionName: good-listener
+      name: gateway-xls/composite-gateway/good-listener
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
+      port: 8091
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

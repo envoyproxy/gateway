@@ -37,6 +37,12 @@ gateways:
       allowedRoutes:
         namespaces:
           from: All
+    - allowedRoutes:
+        namespaces:
+          from: All
+      name: conflict-listener
+      port: 8888
+      protocol: HTTP
 
 xListenerSets:
 - apiVersion: gateway.networking.x-k8s.io/v1alpha1
@@ -134,7 +140,66 @@ xListenerSets:
       allowedRoutes:
         namespaces:
           from: All
-
+- apiVersion: gateway.networking.x-k8s.io/v1alpha1
+  kind: XListenerSet
+  metadata:
+    namespace: gateway-xls
+    name: conflict-listener-from-same-xls
+  spec:
+    parentRef:
+      name: composite-gateway
+    listeners:
+    - name: conflict-listener-1
+      protocol: HTTP
+      port: 8089
+      allowedRoutes:
+        namespaces:
+          from: All
+    - name: conflict-listener-2
+      protocol: HTTP
+      port: 8089
+      allowedRoutes:
+        namespaces:
+          from: All
+- apiVersion: gateway.networking.x-k8s.io/v1alpha1
+  kind: XListenerSet
+  metadata:
+    namespace: gateway-xls
+    name: conflict-listener-from-two-xlss
+  spec:
+    parentRef:
+      name: composite-gateway
+    listeners:
+    - name: conflict-listener
+      protocol: HTTP
+      port: 8089
+      allowedRoutes:
+        namespaces:
+          from: All
+    - name: good-listener
+      protocol: HTTP
+      port: 8090
+      allowedRoutes:
+        namespaces:
+          from: All
+- apiVersion: gateway.networking.x-k8s.io/v1alpha1
+  kind: XListenerSet
+  metadata:
+    namespace: gateway-xls
+    name: listener-conflict-with-gateway
+  spec:
+    parentRef:
+      name: composite-gateway
+    listeners:
+    - name: conflict-listener
+      protocol: HTTP
+      port: 8888
+      allowedRoutes:
+        namespaces:
+          from: All
+    - name: good-listener
+      protocol: HTTP
+      port: 8091
 httpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute

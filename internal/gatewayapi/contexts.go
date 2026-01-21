@@ -21,6 +21,7 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils"
 )
@@ -191,6 +192,24 @@ func (l *ListenerContext) GetConditions() []metav1.Condition {
 		return l.xListenerSet.Status.Listeners[l.xListenerSetStatusIdx].Conditions
 	}
 	return l.gateway.Status.Listeners[l.listenerStatusIdx].Conditions
+}
+
+func (l *ListenerContext) SetCondition(conditionType gwapiv1.ListenerConditionType, conditionStatus metav1.ConditionStatus, reason gwapiv1.ListenerConditionReason, message string) {
+	if l.isFromXListenerSet() {
+		// Convert Gateway API types to XListenerSet types
+		// Note: The string values are expected to match between the APIs
+		status.SetXListenerSetListenerStatusCondition(l.xListenerSet, l.xListenerSetStatusIdx,
+			gwapixv1a1.ListenerEntryConditionType(conditionType),
+			conditionStatus,
+			gwapixv1a1.ListenerEntryConditionReason(reason),
+			message)
+	} else {
+		status.SetGatewayListenerStatusCondition(l.gateway.Gateway, l.listenerStatusIdx,
+			conditionType,
+			conditionStatus,
+			reason,
+			message)
+	}
 }
 
 func (l *ListenerContext) SetTLSSecrets(tlsSecrets []*corev1.Secret) {
