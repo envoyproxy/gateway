@@ -49,13 +49,13 @@ spec:
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: BackendTrafficPolicy
 metadata:
-  name: bu-lb-policy
+  name: backend-utilization-lb-policy
   namespace: gateway-conformance-infra
 spec:
   targetRefs:
     - group: gateway.networking.k8s.io
       kind: HTTPRoute
-      name: bu-lb-route
+      name: backend-utilization-lb-route
   loadBalancer:
     type: BackendUtilization
     backendUtilization:

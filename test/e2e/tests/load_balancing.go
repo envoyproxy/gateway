@@ -71,14 +71,14 @@ var BackendUtilizationLoadBalancingTest = suite.ConformanceTest{
 			Name:      gwapiv1.ObjectName(gwNN.Name),
 		}
 		BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "backend-utilization-lb-policy", Namespace: ns}, suite.ControllerName, ancestorRef)
-		WaitForPods(t, suite.Client, ns, map[string]string{"app": "lb-backend-bu"}, corev1.PodRunning, &PodReady)
+		WaitForPods(t, suite.Client, ns, map[string]string{"app": "lb-backend-utilization"}, corev1.PodRunning, &PodReady)
 
 		gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
 
 		t.Run("traffic should be split roughly evenly (defaults to equal weights without ORCA)", func(t *testing.T) {
 			expectedResponse := http.ExpectedResponse{
 				Request: http.Request{
-					Path: "/bu",
+					Path: "/backend-utilization",
 				},
 				Response: http.Response{
 					StatusCodes: []int{200},

@@ -1,11 +1,11 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: lb-backend-bu
+  name: lb-backend-utilization
   namespace: gateway-conformance-infra
 spec:
   selector:
-    app: lb-backend-bu
+    app: lb-backend-utilization
   ports:
   - protocol: TCP
     port: 8080
@@ -14,19 +14,19 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: lb-backend-bu
+  name: lb-backend-utilization
   namespace: gateway-conformance-infra
   labels:
-    app: lb-backend-bu
+    app: lb-backend-utilization
 spec:
   replicas: 3
   selector:
     matchLabels:
-      app: lb-backend-bu
+      app: lb-backend-utilization
   template:
     metadata:
       labels:
-        app: lb-backend-bu
+        app: lb-backend-utilization
     spec:
       containers:
       - name: backend
@@ -42,7 +42,7 @@ spec:
             fieldRef:
               fieldPath: metadata.namespace
         - name: SERVICE_NAME
-          value: lb-backend-bu
+          value: lb-backend-utilization
         resources:
           requests:
             cpu: 10m
@@ -50,13 +50,13 @@ spec:
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: BackendTrafficPolicy
 metadata:
-  name: client-side-wrr-lb-policy
+  name: backend-utilization-lb-policy
   namespace: gateway-conformance-infra
 spec:
   targetRefs:
   - group: gateway.networking.k8s.io
     kind: HTTPRoute
-    name: client-side-wrr-lb-route
+    name: backend-utilization-lb-route
   loadBalancer:
     type: BackendUtilization
     backendUtilization:
@@ -69,7 +69,7 @@ spec:
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
-  name: client-side-wrr-lb-route
+  name: backend-utilization-lb-route
   namespace: gateway-conformance-infra
 spec:
   parentRefs:
@@ -78,7 +78,7 @@ spec:
   - matches:
     - path:
         type: PathPrefix
-        value: /bu
+        value: /backend-utilization
     backendRefs:
-    - name: lb-backend-bu
+    - name: lb-backend-utilization
       port: 8080

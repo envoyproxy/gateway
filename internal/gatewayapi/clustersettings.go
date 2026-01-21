@@ -345,28 +345,28 @@ func buildLoadBalancer(policy *egv1a1.ClusterSettings) (*ir.LoadBalancer, error)
 		lb = &ir.LoadBalancer{
 			BackendUtilization: &ir.BackendUtilization{},
 		}
-		bu := policy.LoadBalancer.BackendUtilization
-		if bu != nil {
-			if bu.BlackoutPeriod != nil {
-				if d, err := time.ParseDuration(string(*bu.BlackoutPeriod)); err == nil {
+		backendUtilization := policy.LoadBalancer.BackendUtilization
+		if backendUtilization != nil {
+			if backendUtilization.BlackoutPeriod != nil {
+				if d, err := time.ParseDuration(string(*backendUtilization.BlackoutPeriod)); err == nil {
 					lb.BackendUtilization.BlackoutPeriod = ir.MetaV1DurationPtr(d)
 				}
 			}
-			if bu.WeightExpirationPeriod != nil {
-				if d, err := time.ParseDuration(string(*bu.WeightExpirationPeriod)); err == nil {
+			if backendUtilization.WeightExpirationPeriod != nil {
+				if d, err := time.ParseDuration(string(*backendUtilization.WeightExpirationPeriod)); err == nil {
 					lb.BackendUtilization.WeightExpirationPeriod = ir.MetaV1DurationPtr(d)
 				}
 			}
-			if bu.WeightUpdatePeriod != nil {
-				if d, err := time.ParseDuration(string(*bu.WeightUpdatePeriod)); err == nil {
+			if backendUtilization.WeightUpdatePeriod != nil {
+				if d, err := time.ParseDuration(string(*backendUtilization.WeightUpdatePeriod)); err == nil {
 					lb.BackendUtilization.WeightUpdatePeriod = ir.MetaV1DurationPtr(d)
 				}
 			}
-			if bu.ErrorUtilizationPenalty != nil {
-				lb.BackendUtilization.ErrorUtilizationPenalty = ptr.To(*bu.ErrorUtilizationPenalty)
+			if backendUtilization.ErrorUtilizationPenalty != nil {
+				lb.BackendUtilization.ErrorUtilizationPenalty = ptr.To(*backendUtilization.ErrorUtilizationPenalty)
 			}
-			if len(bu.MetricNamesForComputingUtilization) > 0 {
-				lb.BackendUtilization.MetricNamesForComputingUtilization = append([]string(nil), bu.MetricNamesForComputingUtilization...)
+			if len(backendUtilization.MetricNamesForComputingUtilization) > 0 {
+				lb.BackendUtilization.MetricNamesForComputingUtilization = append([]string(nil), backendUtilization.MetricNamesForComputingUtilization...)
 			}
 		}
 		if policy.LoadBalancer.SlowStart != nil && policy.LoadBalancer.SlowStart.Window != nil {
