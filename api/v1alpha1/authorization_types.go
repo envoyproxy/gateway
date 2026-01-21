@@ -72,7 +72,7 @@ type Operation struct {
 // or any other identity that can be extracted from a custom header.
 // If there are multiple principal types, all principals must match for the rule to match.
 //
-// +kubebuilder:validation:XValidation:rule="(has(self.clientCIDRs) || has(self.jwt) || has(self.headers))",message="at least one of clientCIDRs, jwt, or headers must be specified"
+// +kubebuilder:validation:XValidation:rule="(has(self.clientCIDRs) || has(self.sourceCIDRs) || has(self.jwt) || has(self.headers))",message="at least one of clientCIDRs, sourceCIDRs, jwt, or headers must be specified"
 type Principal struct {
 	// ClientCIDRs are the IP CIDR ranges of the client.
 	// Valid examples are "192.168.1.0/24" or "2001:db8::/64"
@@ -110,6 +110,24 @@ type Principal struct {
 	// +kubebuilder:validation:MinItems=1
 	// +kubebuilder:validation:MaxItems=256
 	Headers []AuthorizationHeaderMatch `json:"headers,omitempty"`
+
+	// SourceCIDRs are the IP CIDR ranges of the source (L4 peer IP).
+	// Valid examples are "192.168.1.0/24" or "2001:db8::/64"
+	//
+	// If multiple CIDR ranges are specified, one of the CIDR ranges must match
+	// the source IP for the rule to match.
+	//
+	// The source IP is the IP address of the peer that connected to Envoy.
+	// This IP is obtained from the TCP connection's peer address and is not
+	// affected by X-Forwarded-For or other IP detection headers.
+	// If intermediaries (load balancers, NAT) terminate or proxy TCP,
+	// the original client IP will only be available if the intermediary
+	// preserves the source address (for example by enabling the PROXY protocol
+	// or avoiding SNAT).
+	// +optional
+	// +kubebuilder:validation:MinItems=1
+	// +notImplementedHide
+	SourceCIDRs []CIDR `json:"sourceCIDRs,omitempty"`
 }
 
 // AuthorizationHeaderMatch specifies how to match against the value of an HTTP header within a authorization rule.
