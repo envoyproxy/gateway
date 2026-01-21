@@ -28916,6 +28916,201 @@ spec:
                 - message: only one of grpc or http can be specified
                   rule: (has(self.grpc) && !has(self.http)) || (!has(self.grpc) &&
                     has(self.http))
+              geoip:
+                description: GeoIP defines the configuration for GeoIP based request
+                  enrichment and access control.
+                properties:
+                  access:
+                    description: Access defines the GeoIP based access control configuration.
+                    properties:
+                      defaultAction:
+                        description: |-
+                          DefaultAction defines how to handle requests that do not match any rule or lack GeoIP data.
+                          Defaults to Allow when unset.
+                        enum:
+                        - Allow
+                        - Deny
+                        type: string
+                      rules:
+                        description: Rules evaluated in order. The first matching
+                          rule's action applies.
+                        items:
+                          description: GeoIPRule defines a single GeoIP allow/deny
+                            rule.
+                          properties:
+                            action:
+                              description: Action is reused from Authorization rules
+                                (Allow or Deny).
+                              enum:
+                              - Allow
+                              - Deny
+                              type: string
+                            cities:
+                              description: Cities refines matching to specific city
+                                names.
+                              items:
+                                description: GeoIPCity selects a city, optionally
+                                  scoped to a region.
+                                properties:
+                                  cityName:
+                                    description: CityName is the city name.
+                                    minLength: 1
+                                    type: string
+                                  countryCode:
+                                    description: CountryCode is the ISO 3166-1 alpha-2
+                                      country code.
+                                    pattern: ^[A-Z]{2}$
+                                    type: string
+                                  regionCode:
+                                    description: RegionCode optionally scopes the
+                                      city to a subdivision (ISO 3166-2 without country
+                                      prefix).
+                                    maxLength: 32
+                                    type: string
+                                required:
+                                - cityName
+                                - countryCode
+                                type: object
+                                x-kubernetes-validations:
+                                - message: countryCode and cityName must be set
+                                  rule: has(self.countryCode) && has(self.cityName)
+                              type: array
+                            countries:
+                              description: Countries is a list of ISO 3166-1 alpha-2
+                                country codes.
+                              items:
+                                type: string
+                              type: array
+                            regions:
+                              description: Regions refines matching to ISO 3166-2
+                                subdivisions.
+                              items:
+                                description: GeoIPRegion selects a region within a
+                                  country.
+                                properties:
+                                  countryCode:
+                                    description: CountryCode is the ISO 3166-1 alpha-2
+                                      country code.
+                                    pattern: ^[A-Z]{2}$
+                                    type: string
+                                  regionCode:
+                                    description: RegionCode is the ISO 3166-2 subdivision
+                                      code (without country prefix).
+                                    maxLength: 32
+                                    minLength: 1
+                                    type: string
+                                required:
+                                - countryCode
+                                - regionCode
+                                type: object
+                                x-kubernetes-validations:
+                                - message: countryCode and regionCode must both be
+                                    set
+                                  rule: has(self.countryCode) && has(self.regionCode)
+                              type: array
+                          required:
+                          - action
+                          type: object
+                          x-kubernetes-validations:
+                          - message: At least one of countries, regions, or cities
+                              must be specified
+                            rule: has(self.countries) || has(self.regions) || has(self.cities)
+                        type: array
+                    type: object
+                  provider:
+                    description: Provider defines the GeoIP provider configuration.
+                    properties:
+                      MaxMind:
+                        description: MaxMind configures the MaxMind provider.
+                        properties:
+                          anonymousIpDbPath:
+                            description: AnonymousIPDBPath is the path to the Anonymous
+                              IP database (.mmdb).
+                            pattern: ^.*\\.mmdb$
+                            type: string
+                          asnDbPath:
+                            description: ASNDBPath is the path to the ASN database
+                              (.mmdb).
+                            pattern: ^.*\\.mmdb$
+                            type: string
+                          cityDbPath:
+                            description: CityDBPath is the path to the City database
+                              (.mmdb).
+                            pattern: ^.*\\.mmdb$
+                            type: string
+                          countryDbPath:
+                            description: CountryDBPath is the path to the Country
+                              database (.mmdb).
+                            pattern: ^.*\\.mmdb$
+                            type: string
+                          ispDbPath:
+                            description: ISPDBPath is the path to the ISP database
+                              (.mmdb).
+                            pattern: ^.*\\.mmdb$
+                            type: string
+                        type: object
+                        x-kubernetes-validations:
+                        - message: At least one MaxMind database path must be specified
+                          rule: has(self.cityDbPath) || has(self.countryDbPath) ||
+                            has(self.asnDbPath) || has(self.ispDbPath) || has(self.anonymousIpDbPath)
+                      type:
+                        description: GeoIPProviderType enumerates GeoIP providers
+                          supported by Envoy Gateway.
+                        enum:
+                        - MaxMind
+                        type: string
+                    required:
+                    - type
+                    type: object
+                    x-kubernetes-validations:
+                    - message: MaxMind must be set when type is MaxMind
+                      rule: 'self.type == ''MaxMind'' ? has(self.MaxMind) : true'
+                  source:
+                    description: |-
+                      Source configures how the client IP is extracted before being passed to the provider.
+                      If unset, Envoy falls back to using the immediate downstream connection address.
+                    properties:
+                      header:
+                        description: Header configures extraction from a custom header.
+                        properties:
+                          headerName:
+                            description: HeaderName is the HTTP header that carries
+                              the client IP.
+                            minLength: 1
+                            type: string
+                        required:
+                        - headerName
+                        type: object
+                      type:
+                        description: GeoIPSourceType enumerates supported client IP
+                          sources.
+                        enum:
+                        - XFF
+                        - Header
+                        type: string
+                      xff:
+                        description: XFF configures extraction based on the X-Forwarded-For
+                          header chain.
+                        properties:
+                          trustedHops:
+                            description: |-
+                              TrustedHops defines the number of trusted hops from the right side of XFF.
+                              Defaults to 0 when unset.
+                            format: int32
+                            type: integer
+                        type: object
+                    required:
+                    - type
+                    type: object
+                    x-kubernetes-validations:
+                    - message: When type is XFF, xff must be set (and header unset).
+                        When type is Header, header must be set (and xff unset).
+                      rule: 'self.type == ''XFF'' ? has(self.xff) && !has(self.header)
+                        : self.type == ''Header'' ? has(self.header) && !has(self.xff)
+                        : true'
+                required:
+                - provider
+                type: object
               jwt:
                 description: JWT defines the configuration for JSON Web Token (JWT)
                   authentication.
