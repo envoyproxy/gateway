@@ -59,7 +59,7 @@ spec:
   - group: gateway.networking.k8s.io
     kind: XListenerSet
     namespace: gateway-conformance-infra
-    name: xlistener-set
+    name: xlistener-set-grpc
     sectionName: extra-grpc
   rules:
   - matches:
