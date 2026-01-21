@@ -2273,6 +2273,33 @@ _Appears in:_
 | `controllerName` | _string_ |  false  |  | ControllerName defines the name of the Gateway API controller. If unspecified,<br />defaults to "gateway.envoyproxy.io/gatewayclass-controller". See the following<br />for additional details:<br />  https://gateway-api.sigs.k8s.io/reference/1.4/spec/#gatewayclass |
 
 
+#### GatewayAPI
+
+_Underlying type:_ _string_
+
+GatewayAPI defines an experimental Gateway API resource that can be enabled.
+
+_Appears in:_
+- [GatewayAPIs](#gatewayapis)
+
+
+
+#### GatewayAPIs
+
+
+
+GatewayAPIs provides a mechanism to opt into experimental Gateway API resources.
+These APIs are experimental today and are subject to change or removal as they mature.
+
+_Appears in:_
+- [EnvoyGateway](#envoygateway)
+- [EnvoyGatewaySpec](#envoygatewayspec)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `enabled` | _[GatewayAPI](#gatewayapi) array_ |  true  |  |  |
+
+
 #### GlobalRateLimit
 
 
@@ -4300,7 +4327,7 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `samplingFraction` | _[Fraction](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#fraction)_ |  false  |  | SamplingFraction represents the fraction of requests that should be<br />selected for tracing if no prior sampling decision has been made. |
-| `customTags` | _object (keys:string, values:[CustomTag](#customtag))_ |  false  |  | CustomTags defines the custom tags to add to each span.<br />If provider is kubernetes, pod name and namespace are added by default. |
+| `customTags` | _object (keys:string, values:[CustomTag](#customtag))_ |  false  |  | CustomTags defines the custom tags to add to each span.<br />If provider is kubernetes, pod name and namespace are added by default.<br />Deprecated: Use Tags instead. |
 | `tags` | _object (keys:string, values:string)_ |  false  |  | Tags defines the custom tags to add to each span.<br />Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators) may be used in the value.<br />The [format string documentation](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#config-access-log-format-strings) provides more information.<br />If provider is kubernetes, pod name and namespace are added by default.<br />Same keys take precedence over CustomTags. |
 | `spanName` | _[TracingSpanName](#tracingspanname)_ |  false  |  | SpanName defines the name of the span which will be used for tracing.<br />Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators) may be used in the value.<br />The [format string documentation](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#config-access-log-format-strings) provides more information.<br />If not set, the span name is provider specific.<br />e.g. Datadog use `ingress` as the default client span name,<br />and `router <UPSTREAM_CLUSTER> egress` as the server span name. |
 | `samplingRate` | _integer_ |  false  |  | SamplingRate controls the rate at which traffic will be<br />selected for tracing if no prior sampling decision has been made.<br />Defaults to 100, valid values [0-100]. 100 indicates 100% sampling.<br />Only one of SamplingRate or SamplingFraction may be specified.<br />If neither field is specified, all requests will be sampled. |
@@ -5377,7 +5404,7 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `samplingFraction` | _[Fraction](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#fraction)_ |  false  |  | SamplingFraction represents the fraction of requests that should be<br />selected for tracing if no prior sampling decision has been made. |
-| `customTags` | _object (keys:string, values:[CustomTag](#customtag))_ |  false  |  | CustomTags defines the custom tags to add to each span.<br />If provider is kubernetes, pod name and namespace are added by default. |
+| `customTags` | _object (keys:string, values:[CustomTag](#customtag))_ |  false  |  | CustomTags defines the custom tags to add to each span.<br />If provider is kubernetes, pod name and namespace are added by default.<br />Deprecated: Use Tags instead. |
 | `tags` | _object (keys:string, values:string)_ |  false  |  | Tags defines the custom tags to add to each span.<br />Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators) may be used in the value.<br />The [format string documentation](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#config-access-log-format-strings) provides more information.<br />If provider is kubernetes, pod name and namespace are added by default.<br />Same keys take precedence over CustomTags. |
 | `spanName` | _[TracingSpanName](#tracingspanname)_ |  false  |  | SpanName defines the name of the span which will be used for tracing.<br />Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators) may be used in the value.<br />The [format string documentation](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#config-access-log-format-strings) provides more information.<br />If not set, the span name is provider specific.<br />e.g. Datadog use `ingress` as the default client span name,<br />and `router <UPSTREAM_CLUSTER> egress` as the server span name. |
 
