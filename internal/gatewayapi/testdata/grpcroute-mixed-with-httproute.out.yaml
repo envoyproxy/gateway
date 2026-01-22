@@ -80,7 +80,7 @@ httpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
   metadata:
-    name: httproute-1
+    name: match-all
     namespace: default
   spec:
     parentRefs:
@@ -91,9 +91,6 @@ httpRoutes:
     - backendRefs:
       - name: service-1
         port: 8080
-      matches:
-      - path:
-          value: /
   status:
     parents:
     - conditions:
@@ -208,9 +205,9 @@ xdsIR:
       - destination:
           metadata:
             kind: HTTPRoute
-            name: httproute-1
+            name: match-all
             namespace: default
-          name: httproute/default/httproute-1/rule/0
+          name: httproute/default/match-all/rule/0
           settings:
           - addressType: IP
             endpoints:
@@ -221,20 +218,16 @@ xdsIR:
               name: service-1
               namespace: default
               sectionName: "8080"
-            name: httproute/default/httproute-1/rule/0/backend/0
+            name: httproute/default/match-all/rule/0/backend/0
             protocol: HTTP
             weight: 1
         hostname: '*'
         isHTTP2: false
         metadata:
           kind: HTTPRoute
-          name: httproute-1
+          name: match-all
           namespace: default
-        name: httproute/default/httproute-1/rule/0/match/0/*
-        pathMatch:
-          distinct: false
-          name: ""
-          prefix: /
+        name: httproute/default/match-all/rule/0/match/-1/*
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

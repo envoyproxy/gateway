@@ -1,3 +1,6 @@
+# this file contains test to ensure that
+# GRPCRoute merged with HTTPRoute properly
+# The match-all HTTPRoute should be the lower priority.
 gateways:
   - apiVersion: gateway.networking.k8s.io/v1
     kind: Gateway
@@ -18,17 +21,14 @@ httpRoutes:
     kind: HTTPRoute
     metadata:
       namespace: default
-      name: httproute-1
+      name: match-all
     spec:
       parentRefs:
         - namespace: envoy-gateway
           name: gateway-1
           sectionName: http
       rules:
-        - matches:
-            - path:
-                value: "/"
-          backendRefs:
+        - backendRefs:
             - name: service-1
               port: 8080
 grpcRoutes:
