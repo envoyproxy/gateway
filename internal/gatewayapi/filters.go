@@ -64,6 +64,9 @@ type HTTPFilterIR struct {
 	CORS *ir.CORS
 
 	ExtensionRefs []*ir.UnstructuredRef
+
+	// Matches holds matchers defined on HTTPRouteFilters that must be ANDed with HTTPRouteRule.Matches.
+	Matches []egv1a1.HTTPRouteMatchFilter
 }
 
 // Header value pattern according to RFC 7230
@@ -796,6 +799,15 @@ func (t *Translator) processExtensionRefHTTPFilter(extFilter *gwapiv1.LocalObjec
 		for _, hrf := range resources.HTTPRouteFilters {
 			if hrf.Namespace == filterNs && hrf.Name == string(extFilter.Name) {
 				found = true
+				if len(hrf.Spec.Matches) > 0 && len(filterContext.Matches) > 0 {
+					return status.NewRouteStatusError(
+						errors.New("only one HTTPRouteFilter with matches is supported per HTTPRouteRule"),
+						gwapiv1.RouteReasonUnsupportedValue,
+					).WithType(gwapiv1.RouteConditionAccepted)
+				}
+				if len(hrf.Spec.Matches) > 0 {
+					filterContext.Matches = hrf.Spec.Matches
+				}
 				if hrf.Spec.URLRewrite != nil {
 
 					if filterContext.URLRewrite != nil {
