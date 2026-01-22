@@ -1268,13 +1268,49 @@ var RateLimitGlobalMergeTest = suite.ConformanceTest{
 		})
 
 		t.Run("shared_no_client_selectors", func(t *testing.T) {
-			ok1 := http.ExpectedResponse{Request: http.Request{Path: "/bar"}, Response: http.Response{StatusCodes: []int{200}}, Namespace: ns}
-			limit := http.ExpectedResponse{Request: http.Request{Path: "/bar"}, Response: http.Response{StatusCodes: []int{429}}, Namespace: ns}
+			// This test verifies that the gateway-level rate limit rule without clientSelectors
+			// applies to all requests that don't match more specific rules.
+			// The limit is set to 100 requests per hour (shared across all routes).
+			// We verify that requests without any headers are subject to this limit.
 
-			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr1, ok1)
+			ratelimitHeader := make(map[string]string)
+			expectOkResp := http.ExpectedResponse{
+				Request: http.Request{
+					Path: "/bar",
+				},
+				Response: http.Response{
+					StatusCodes: []int{200},
+					Headers:     ratelimitHeader,
+				},
+				Namespace: ns,
+			}
+			expectOkResp.Response.Headers["X-Ratelimit-Limit"] = "100, 100;w=3600"
+			expectOkReq := http.MakeRequest(t, &expectOkResp, gwAddr1, "HTTP", "http")
 
-			if err := GotExactExpectedResponse(t, 1, suite.RoundTripper, http.MakeRequest(t, &limit, gwAddr1, "HTTP", "http"), limit); err != nil {
-				t.Errorf("expected 429 for third request: %v", err)
+			expectLimitResp := http.ExpectedResponse{
+				Request: http.Request{
+					Path: "/bar",
+				},
+				Response: http.Response{
+					StatusCodes: []int{429},
+				},
+				Namespace: ns,
+			}
+			expectLimitReq := http.MakeRequest(t, &expectLimitResp, gwAddr1, "HTTP", "http")
+
+			// Wait for the rate limit configuration to be ready
+			// This ensures the gateway is properly configured before we start counting requests
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr1, expectOkResp)
+
+			// Now send exactly 99 more requests (total: 100 requests including the one above)
+			// All should succeed since the limit is 100
+			if err := GotExactExpectedResponse(t, 99, suite.RoundTripper, expectOkReq, expectOkResp); err != nil {
+				t.Errorf("failed to get expected response for the first 100 requests: %v", err)
+			}
+
+			// The 101st request should be rate limited
+			if err := GotExactExpectedResponse(t, 1, suite.RoundTripper, expectLimitReq, expectLimitResp); err != nil {
+				t.Errorf("expected 429 for the 101st request: %v", err)
 			}
 		})
 	},
