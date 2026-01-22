@@ -114,23 +114,6 @@ spec:
                         type: integer
                     type: object
                 type: object
-              clientScheme:
-                description: |-
-                  ClientScheme configures how the :scheme pseudo-header is set for requests forwarded to backends.
-
-                  - PreserveDownstream (default): Preserves the :scheme from the original client request.
-                    Use this when backends need to know the original client scheme for URL generation or redirects.
-
-                  - MatchUpstream: Sets the :scheme to match the upstream transport protocol.
-                    If the backend uses TLS, the scheme is "https", otherwise "http".
-                    Use this when backends require the scheme to match the actual transport protocol,
-                    such as strictly HTTPS services that validate the :scheme header.
-
-                  This setting only takes effect when BackendTrafficPolicy targets a Gateway.
-                enum:
-                - PreserveDownstream
-                - MatchUpstream
-                type: string
               compression:
                 description: |-
                   The compression config for the http streams.
