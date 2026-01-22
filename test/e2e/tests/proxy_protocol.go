@@ -67,12 +67,12 @@ var ProxyProtocolTest = suite.ConformanceTest{
 			Namespace: ns,
 		})
 
-		gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client,
+		_ = kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client,
 			suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, types.NamespacedName{
 				Name: "proxy-protocol", Namespace: ns,
 			})
 
-		gwAddr = kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client,
+		gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client,
 			suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
 
 		expectedResponse := httputils.ExpectedResponse{
