@@ -421,6 +421,9 @@ func irStringKey(gatewayNs, gatewayName string) string {
 }
 
 func irListenerName(listener *ListenerContext) string {
+	if listener.isFromXListenerSet() {
+		return fmt.Sprintf("%s/%s/%s/%s/%s", listener.gateway.Namespace, listener.gateway.Name, listener.xListenerSet.Namespace, listener.xListenerSet.Name, listener.Name)
+	}
 	return fmt.Sprintf("%s/%s/%s", listener.gateway.Namespace, listener.gateway.Name, listener.Name)
 }
 

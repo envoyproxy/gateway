@@ -274,7 +274,6 @@ func (t *Translator) validateBackendRefBackend(
 	return nil
 }
 
-// TODO simplify the status update logic for listeners
 func (t *Translator) validateListenerConditions(listener *ListenerContext) (isReady bool) {
 	lConditions := listener.GetConditions()
 	if len(lConditions) == 0 {

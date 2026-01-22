@@ -117,51 +117,48 @@ func (t *Translator) ProcessXListenerSetStatus(xListenerSets []*gwapixv1a1.XList
 		}
 
 		// Calculate status based on listeners
-		// TODO: implement PartiallyInvalid conditions when Gateway API supports it
 		allListenersValid := true
 		anyListenerValid := false
 
 		for _, lStatus := range xls.Status.Listeners {
-			// Check if listener is accepted and not conflicted
 			accepted := false
-			conflicted := false
-			// TODO: check other conditions
 			for _, cond := range lStatus.Conditions {
 				if cond.Type == string(gwapixv1a1.ListenerEntryConditionAccepted) && cond.Status == metav1.ConditionTrue {
 					accepted = true
-				}
-				if cond.Type == string(gwapixv1a1.ListenerEntryConditionConflicted) && cond.Status == metav1.ConditionTrue {
-					conflicted = true
+					break
 				}
 			}
-
-			if accepted && !conflicted {
-				anyListenerValid = true
-			} else {
-				allListenersValid = false
-			}
+			anyListenerValid = anyListenerValid || accepted
+			allListenersValid = allListenersValid && accepted
 		}
 
-		xlsAccepted := true
-		xlsReason := gwapixv1a1.ListenerSetReasonAccepted
-		xlsMsg := "Attached to Gateway"
+		var (
+			xlsAccepted         bool
+			xlsReason           gwapixv1a1.ListenerSetConditionReason
+			xlsProgrammedReason gwapixv1a1.ListenerSetConditionReason
+			xlsMsg              string
+		)
 
-		if !allListenersValid {
-			// If not all listeners are valid, we still Accept the ListenerSet (partial success), but warn.
-			// If NONE are valid, we also Accept but with invalid listeners reason?
-			// The spec says: "This can be the reason when 'Accepted' is 'True' or 'False'..."
-			// We choose True to allow partial success updates if supported, or at least indicate the Set itself is valid.
+		switch {
+		case allListenersValid:
+			xlsAccepted = true
+			xlsReason = gwapixv1a1.ListenerSetReasonAccepted
+			xlsProgrammedReason = gwapixv1a1.ListenerSetReasonProgrammed
+			xlsMsg = "All listeners are valid"
+		case anyListenerValid: // TODO: implement PartiallyInvalid conditions when Gateway API supports it
+			xlsAccepted = true
 			xlsReason = gwapixv1a1.ListenerSetReasonListenersNotValid
-			xlsMsg = "Some listeners are invalid or conflicted"
-			if !anyListenerValid {
-				// If no listeners are valid, should we set Accepted=False?
-				// Gateway API usually prefers Accepted=True if the resource structure is valid.
-				xlsMsg = "All listeners are invalid or conflicted"
-			}
+			xlsProgrammedReason = gwapixv1a1.ListenerSetReasonProgrammed
+			xlsMsg = "Some listeners are invalid"
+		default:
+			xlsAccepted = false
+			xlsReason = gwapixv1a1.ListenerSetReasonListenersNotValid
+			xlsProgrammedReason = gwapixv1a1.ListenerSetReasonInvalid
+			xlsMsg = "All listeners are invalid"
 		}
 
 		status.UpdateXListenerSetStatusAccepted(xls, xlsAccepted, xlsReason, xlsMsg)
-		status.UpdateXListenerSetStatusProgrammed(xls, xlsAccepted, gwapixv1a1.ListenerSetReasonProgrammed, "Programmed")
+		status.UpdateXListenerSetStatusProgrammed(xls, xlsAccepted, xlsProgrammedReason, xlsMsg)
 	}
 }
 
