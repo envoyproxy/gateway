@@ -18,6 +18,7 @@ RUN --mount=type=cache,target=/root/.cache/go-build --mount=type=cache,target=/g
 FROM gcr.io/distroless/static-debian11
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=builder /bin/static-file-server /
-COPY files/ files/
+# Copy files directory, ensuring binary files are preserved
+COPY --chown=0:0 files/ files/
 
 ENTRYPOINT ["/static-file-server"]
