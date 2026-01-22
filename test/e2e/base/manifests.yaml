@@ -580,12 +580,3 @@ spec:
         - name: static-file-server
           image: envoyproxy/gateway-static-file-server
           imagePullPolicy: IfNotPresent
-          readinessProbe:
-            httpGet:
-              path: /wasm/envoy_filter_http_wasm_example.wasm
-              port: 8080
-            initialDelaySeconds: 5
-            periodSeconds: 2
-            timeoutSeconds: 1
-            successThreshold: 1
-            failureThreshold: 3

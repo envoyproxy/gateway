@@ -5,6 +5,3 @@
 
 # Collapse generated code in code reviews.
 **/zz_generated.*.go linguist-generated=true
-
-# Treat WASM files as binary to prevent any modifications
-*.wasm binary
