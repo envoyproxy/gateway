@@ -187,12 +187,6 @@ func newProvider(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server,
 		})
 	}
 
-	// Enable cache-backed reads for unstructured extension resources (default is live list).
-	if mgrOpts.Client.Cache == nil {
-		mgrOpts.Client.Cache = &client.CacheOptions{}
-	}
-	mgrOpts.Client.Cache.Unstructured = true
-
 	mgr, err := ctrl.NewManager(restCfg, mgrOpts)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create manager: %w", err)
