@@ -1357,6 +1357,7 @@ EnvoyGateway is the schema for the envoygateways API.
 | `extensionManager` | _[ExtensionManager](#extensionmanager)_ |  false  |  | ExtensionManager defines an extension manager to register for the Envoy Gateway Control Plane. |
 | `extensionApis` | _[ExtensionAPISettings](#extensionapisettings)_ |  false  |  | ExtensionAPIs defines the settings related to specific Gateway API Extensions<br />implemented by Envoy Gateway |
 | `runtimeFlags` | _[RuntimeFlags](#runtimeflags)_ |  true  |  | RuntimeFlags defines the runtime flags for Envoy Gateway.<br />Unlike ExtensionAPIs, these flags are temporary and will be removed in future releases once the related features are stable. |
+| `envoyProxy` | _[EnvoyProxySpec](#envoyproxyspec)_ |  false  |  | EnvoyProxy defines the default EnvoyProxy configuration that applies<br />to all managed Envoy Proxy fleet. This is an optional field and when<br />provided, the settings from this EnvoyProxySpec serve as the base<br />defaults for all Envoy Proxy instances.<br />The hierarchy for EnvoyProxy configuration is (highest to lowest priority):<br />1. Gateway-level EnvoyProxy (referenced via Gateway.spec.infrastructure.parametersRef)<br />2. GatewayClass-level EnvoyProxy (referenced via GatewayClass.spec.parametersRef)<br />3. This EnvoyProxy default spec<br />Currently, the most specific EnvoyProxy configuration wins completely (replace semantics).<br />A future release will introduce merge semantics to allow combining configurations<br />across multiple levels. |
 
 
 #### EnvoyGatewayAdmin
@@ -1643,6 +1644,7 @@ _Appears in:_
 | `extensionManager` | _[ExtensionManager](#extensionmanager)_ |  false  |  | ExtensionManager defines an extension manager to register for the Envoy Gateway Control Plane. |
 | `extensionApis` | _[ExtensionAPISettings](#extensionapisettings)_ |  false  |  | ExtensionAPIs defines the settings related to specific Gateway API Extensions<br />implemented by Envoy Gateway |
 | `runtimeFlags` | _[RuntimeFlags](#runtimeflags)_ |  true  |  | RuntimeFlags defines the runtime flags for Envoy Gateway.<br />Unlike ExtensionAPIs, these flags are temporary and will be removed in future releases once the related features are stable. |
+| `envoyProxy` | _[EnvoyProxySpec](#envoyproxyspec)_ |  false  |  | EnvoyProxy defines the default EnvoyProxy configuration that applies<br />to all managed Envoy Proxy fleet. This is an optional field and when<br />provided, the settings from this EnvoyProxySpec serve as the base<br />defaults for all Envoy Proxy instances.<br />The hierarchy for EnvoyProxy configuration is (highest to lowest priority):<br />1. Gateway-level EnvoyProxy (referenced via Gateway.spec.infrastructure.parametersRef)<br />2. GatewayClass-level EnvoyProxy (referenced via GatewayClass.spec.parametersRef)<br />3. This EnvoyProxy default spec<br />Currently, the most specific EnvoyProxy configuration wins completely (replace semantics).<br />A future release will introduce merge semantics to allow combining configurations<br />across multiple levels. |
 
 
 #### EnvoyGatewayTelemetry
@@ -1850,6 +1852,8 @@ _Appears in:_
 EnvoyProxySpec defines the desired state of EnvoyProxy.
 
 _Appears in:_
+- [EnvoyGateway](#envoygateway)
+- [EnvoyGatewaySpec](#envoygatewayspec)
 - [EnvoyProxy](#envoyproxy)
 
 | Field | Type | Required | Default | Description |
