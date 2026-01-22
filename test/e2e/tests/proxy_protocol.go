@@ -52,6 +52,7 @@ var ProxyProtocolTest = suite.ConformanceTest{
 						{
 							FQDN: &egv1a1.FQDNEndpoint{
 								Hostname: fmt.Sprintf("%s.%s.svc", gwNN.Name, gwNN.Namespace),
+								Port:     443,
 							},
 						},
 					},
@@ -61,8 +62,19 @@ var ProxyProtocolTest = suite.ConformanceTest{
 			require.NoError(t, suite.Client.Patch(t.Context(), backend, client.Apply, patchOpts...))
 		}
 
+		BackendMustBeAccepted(t, suite.Client, types.NamespacedName{
+			Name:      "proxy-protocol-backend",
+			Namespace: ns,
+		})
+
 		gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client,
+			suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, types.NamespacedName{
+				Name: "proxy-protocol", Namespace: ns,
+			})
+
+		gwAddr = kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client,
 			suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
+
 		expectedResponse := httputils.ExpectedResponse{
 			Request: httputils.Request{
 				Path: "/",
