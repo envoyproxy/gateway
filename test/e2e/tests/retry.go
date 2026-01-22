@@ -85,9 +85,9 @@ var RetryTest = suite.ConformanceTest{
 					}
 					delta := int64(v - before)
 					// numRetries is 5, so delta mod 5 equals 0
-					resutl := delta > 0 && delta%5 == 0
-					tlog.Logf(t, "query PromQL %s after: %v, result: %v", promQL, v, resutl)
-					return resutl
+					result := delta > 0 && delta%5 == 0
+					tlog.Logf(t, "query PromQL %s after: %v, result: %v", promQL, v, result)
+					return result
 				})
 		})
 	},
