@@ -8,7 +8,6 @@ package cmd
 import (
 	"context"
 	"io"
-	"sync"
 
 	"github.com/spf13/cobra"
 
@@ -63,7 +62,16 @@ func GetServerCommand(asyncErrHandler func(string, error)) *cobra.Command {
 					}
 				},
 			)
-			return server(cmd.Context(), cmd.OutOrStdout(), cmd.ErrOrStderr(), runnerErrors)
+
+			hook := func(c context.Context, cfg *config.Server) error {
+				cfg.Logger.Info("Start runners")
+				if err := startRunners(c, cfg, runnerErrors); err != nil {
+					return err
+				}
+				return nil
+			}
+
+			return server(cmd.Context(), cmd.OutOrStdout(), cmd.ErrOrStderr(), cfgPath, hook, nil)
 		},
 	}
 	cmd.PersistentFlags().StringVarP(&cfgPath, "config-path", "c", "",
@@ -72,27 +80,19 @@ func GetServerCommand(asyncErrHandler func(string, error)) *cobra.Command {
 }
 
 // server serves Envoy Gateway.
-func server(ctx context.Context, stdout, stderr io.Writer, asyncErrorNotifier *message.RunnerErrors) error {
-	cfg, err := getConfig(stdout, stderr)
+func server(ctx context.Context, stdout, stderr io.Writer, cfgPath string, hook loader.HookFunc, startedCallback func()) error {
+	cfg, err := getConfig(stdout, stderr, cfgPath)
 	if err != nil {
 		return err
 	}
 
-	var hookWG sync.WaitGroup
-	hook := func(c context.Context, cfg *config.Server) error {
-		hookWG.Add(1)
-		defer hookWG.Done()
-
-		cfg.Logger.Info("Start runners")
-		if err := startRunners(c, cfg, asyncErrorNotifier); err != nil {
-			return err
-		}
-
-		return nil
-	}
 	l := loader.New(cfgPath, cfg, hook)
 	if err := l.Start(ctx, stdout); err != nil {
 		return err
+	}
+
+	if startedCallback != nil {
+		startedCallback()
 	}
 
 	for {
@@ -103,22 +103,22 @@ func server(ctx context.Context, stdout, stderr io.Writer, asyncErrorNotifier *m
 			cfg.Logger.Error(err, "failed to start runners")
 			// Wait for runners to finish before shutting down.
 			// This is to make sure no orphaned runner process is left running in standalone mode.
-			hookWG.Wait()
+			l.Wait()
 			return err
 		// Wait for the context to be done, which usually happens the process receives a SIGTERM or SIGINT.
 		case <-ctx.Done():
 			cfg.Logger.Info("shutting down")
 			// Wait for runners to finish before shutting down.
 			// This is to make sure no orphaned runner process is left running in standalone mode.
-			hookWG.Wait()
+			l.Wait()
 			return nil
 		}
 	}
 }
 
 // getConfig gets the Server configuration
-func getConfig(stdout, stderr io.Writer) (*config.Server, error) {
-	return getConfigByPath(stdout, stderr, cfgPath)
+func getConfig(stdout, stderr io.Writer, cfg string) (*config.Server, error) {
+	return getConfigByPath(stdout, stderr, cfg)
 }
 
 // make `cfgPath` an argument to test it without polluting the global var
