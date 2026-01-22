@@ -717,6 +717,14 @@ func getPreserveRouteOrder(envoyProxy *egv1a1.EnvoyProxy) bool {
 	return false
 }
 
+// getRequestIDExtensionAction returns the RequestIDExtensionAction configuration from EnvoyProxy
+func getRequestIDExtensionAction(envoyProxy *egv1a1.EnvoyProxy) *ir.RequestIDExtensionAction {
+	if envoyProxy == nil || envoyProxy.Spec.Telemetry == nil || envoyProxy.Spec.Telemetry.RequestID == nil {
+		return nil
+	}
+	return (*ir.RequestIDExtensionAction)(envoyProxy.Spec.Telemetry.RequestID.Tracing)
+}
+
 // getOrFirstFromData returns the value of the key in the data map
 // or the first value if the key is not found only if data map has exactly one entry
 func getOrFirstFromData[T any](data map[string]T, key string) (T, bool) {
