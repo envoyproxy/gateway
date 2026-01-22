@@ -58,6 +58,10 @@ updates:
       k8s.io:
         patterns:
           - "k8s.io/*"
+      envoyproxy.io:
+        patterns:
+          # This won't pass CI, but give us a reminder.
+          - "github.com/envoyproxy/*"
   - package-ecosystem: npm
     directories:
       - /site
