@@ -50,7 +50,7 @@ var ProxyProtocolTest = suite.ConformanceTest{
 				}
 			}
 
-			err = suite.Client.Patch(t.Context(), backend, client.MergeFrom(backend))
+			err = suite.Client.Patch(t.Context(), backend, client.Apply)
 			require.NoError(t, err)
 		}
 
