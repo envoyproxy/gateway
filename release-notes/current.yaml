@@ -32,6 +32,7 @@ new features: |
   Added cookie matching support to HTTPRouteFilter matches, combined with HTTPRoute rule matches.
   Added support for addIfAbsent header action in ClientTrafficPolicy EarlyRequestHeaders and LateResponseHeaders to add headers only when they don't already exist.
   Added support for tracing tag, which allows to use Envoy string command operators such as `%ENVIRONMENT(...)%`.
+  Implement the experimental XListenerSet API, allowing listeners to be defined in a separate resource and attached to a Gateway. This feature is disabled by default and can be enabled by setting the 'XListenerSet' flag in the EnvoyGateway configuration.
 
 
 bug fixes: |
