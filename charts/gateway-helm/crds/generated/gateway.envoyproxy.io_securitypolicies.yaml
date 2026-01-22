@@ -413,10 +413,9 @@ spec:
                               type: array
                           type: object
                           x-kubernetes-validations:
-                          - message: at least one of clientCIDRs, sourceCIDRs, jwt,
-                              or headers must be specified
-                            rule: (has(self.clientCIDRs) || has(self.sourceCIDRs)
-                              || has(self.jwt) || has(self.headers))
+                          - message: at least one of clientCIDRs, jwt, or headers
+                              must be specified
+                            rule: (has(self.clientCIDRs) || has(self.jwt) || has(self.headers))
                       required:
                       - action
                       - principal
