@@ -820,7 +820,17 @@ func TestValidateSecretForReconcile(t *testing.T) {
 // TestValidateEndpointSliceForReconcile tests the validateEndpointSliceForReconcile
 // predicate function.
 func TestValidateEndpointSliceForReconcile(t *testing.T) {
-	sampleGatewayClass := test.GetGatewayClass("test-gc", egv1a1.GatewayControllerName, nil)
+	sampleEP := test.GetEnvoyProxy(types.NamespacedName{Name: "test-ep"}, false)
+	sampleEPRef := &test.GroupKindNamespacedName{
+		Group:     gwapiv1.Group(sampleEP.GroupVersionKind().Group),
+		Kind:      gwapiv1.Kind(sampleEP.GroupVersionKind().Kind),
+		Namespace: gwapiv1.Namespace(sampleEP.Namespace),
+		Name:      gwapiv1.ObjectName(sampleEP.Name),
+	}
+	sampleEPWithServiceRouting := sampleEP.DeepCopy()
+	sampleEPWithServiceRouting.Spec.RoutingType = ptr.To(egv1a1.ServiceRoutingType)
+
+	sampleGatewayClass := test.GetGatewayClass("test-gc", egv1a1.GatewayControllerName, sampleEPRef)
 	sampleGateway := test.GetGateway(types.NamespacedName{Namespace: "default", Name: "scheduled-status-test"}, "test-gc", 8080)
 	sampleServiceBackendRef := test.GetServiceBackendRef(types.NamespacedName{Name: "service"}, 80)
 	sampleServiceImportBackendRef := test.GetServiceImportBackendRef(types.NamespacedName{Name: "imported-service"}, 80)
@@ -836,6 +846,7 @@ func TestValidateEndpointSliceForReconcile(t *testing.T) {
 			configs: []client.Object{
 				sampleGatewayClass,
 				sampleGateway,
+				sampleEP,
 			},
 			endpointSlice: test.GetEndpointSlice(types.NamespacedName{Name: "endpointslice"}, "service", false),
 			expect:        false,
@@ -845,16 +856,18 @@ func TestValidateEndpointSliceForReconcile(t *testing.T) {
 			configs: []client.Object{
 				sampleGatewayClass,
 				sampleGateway,
+				sampleEP,
 				test.GetHTTPRoute(types.NamespacedName{Name: "httproute-test"}, "scheduled-status-test", sampleServiceBackendRef, ""),
 			},
 			endpointSlice: test.GetEndpointSlice(types.NamespacedName{Name: "endpointslice"}, "other-service", false),
 			expect:        false,
 		},
 		{
-			name: "http route service routes exist",
+			name: "http route service routes exist with endpoint routing",
 			configs: []client.Object{
 				sampleGatewayClass,
 				sampleGateway,
+				sampleEP,
 				test.GetHTTPRoute(types.NamespacedName{Name: "httproute-test"}, "scheduled-status-test", sampleServiceBackendRef, ""),
 			},
 			endpointSlice: test.GetEndpointSlice(types.NamespacedName{Name: "endpointslice"}, "service", false),
@@ -865,6 +878,7 @@ func TestValidateEndpointSliceForReconcile(t *testing.T) {
 			configs: []client.Object{
 				sampleGatewayClass,
 				sampleGateway,
+				sampleEP,
 				test.GetHTTPRoute(types.NamespacedName{Name: "httproute-test"}, "scheduled-status-test", sampleServiceImportBackendRef, ""),
 			},
 			endpointSlice: test.GetEndpointSlice(types.NamespacedName{Name: "endpointslice"}, "imported-service", true),
@@ -873,8 +887,9 @@ func TestValidateEndpointSliceForReconcile(t *testing.T) {
 		{
 			name: "mirrored backend route exists",
 			configs: []client.Object{
-				test.GetGatewayClass("test-gc", egv1a1.GatewayControllerName, nil),
+				sampleGatewayClass,
 				sampleGateway,
+				sampleEP,
 				&gwapiv1.HTTPRoute{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "httproute-test",
@@ -915,6 +930,52 @@ func TestValidateEndpointSliceForReconcile(t *testing.T) {
 			},
 			endpointSlice: test.GetEndpointSlice(types.NamespacedName{Name: "endpointslice"}, "mirror-service", false),
 			expect:        true,
+		},
+		{
+			name: "http route service routes exist with service routing",
+			configs: []client.Object{
+				sampleGatewayClass,
+				sampleGateway,
+				sampleEPWithServiceRouting,
+				test.GetHTTPRoute(types.NamespacedName{Name: "httproute-test"}, "scheduled-status-test", sampleServiceBackendRef, ""),
+			},
+			endpointSlice: test.GetEndpointSlice(types.NamespacedName{Name: "endpointslice"}, "service", false),
+			expect:        false,
+		},
+		{
+			name: "http route service routes exist without endpoints when parent ref is unknown",
+			configs: []client.Object{
+				sampleGatewayClass,
+				sampleGateway,
+				sampleEP,
+				func() client.Object {
+					route := test.GetHTTPRoute(types.NamespacedName{Name: "httproute-test"}, "scheduled-status-test", sampleServiceBackendRef, "")
+					route.Spec.ParentRefs[0].Kind = gatewayapi.KindPtr("unknown")
+					return route
+				}(),
+			},
+			endpointSlice: test.GetEndpointSlice(types.NamespacedName{Name: "endpointslice"}, "service", false),
+			expect:        false,
+		},
+		{
+			name: "http route service routes exist without endpoints when gatewayclass is not found",
+			configs: []client.Object{
+				sampleGateway,
+				sampleEP,
+				test.GetHTTPRoute(types.NamespacedName{Name: "httproute-test"}, "scheduled-status-test", sampleServiceBackendRef, ""),
+			},
+			endpointSlice: test.GetEndpointSlice(types.NamespacedName{Name: "endpointslice"}, "service", false),
+			expect:        false,
+		},
+		{
+			name: "http route service routes exist without endpoints when gateway is not found",
+			configs: []client.Object{
+				sampleGatewayClass,
+				sampleEP,
+				test.GetHTTPRoute(types.NamespacedName{Name: "httproute-test"}, "scheduled-status-test", sampleServiceBackendRef, ""),
+			},
+			endpointSlice: test.GetEndpointSlice(types.NamespacedName{Name: "endpointslice"}, "service", false),
+			expect:        false,
 		},
 	}
 
