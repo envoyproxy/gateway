@@ -21,14 +21,13 @@ type HookFunc func(c context.Context, cfg *config.Server) error
 type Loader struct {
 	cfgPath string
 	cfg     *config.Server
+	cfgMu   sync.RWMutex
 	logger  logging.Logger
 	cancel  context.CancelFunc
 
 	hookMutex sync.Mutex
 	hook      HookFunc
-
-	mu      sync.RWMutex
-	hookErr chan error
+	hookErr   chan error
 
 	w filewatcher.FileWatcher
 }
@@ -85,11 +84,11 @@ func (r *Loader) Start(ctx context.Context, logOut io.Writer) error {
 				eg.SetEnvoyGatewayDefaults()
 				eg.Logging.SetEnvoyGatewayLoggingDefaults()
 
-				r.mu.Lock()
+				r.cfgMu.Lock()
 				r.cfg.EnvoyGateway = eg
 				// update cfg logger
 				r.cfg.Logger = logging.NewLogger(logOut, eg.Logging)
-				r.mu.Unlock()
+				r.cfgMu.Unlock()
 
 				// cancel last
 				if r.cancel != nil {
@@ -156,8 +155,8 @@ func (r *Loader) sendHookError(err error) {
 }
 
 func (r *Loader) snapshotConfig() *config.Server {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
+	r.cfgMu.RLock()
+	defer r.cfgMu.RUnlock()
 
 	if r.cfg == nil {
 		return nil
