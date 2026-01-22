@@ -28,6 +28,11 @@ spec:
       set:
         - name: "late-set-header"
           value: "late"
+      addIfAbsent:
+        - name: "late-add-if-absent-header"
+          value: "late-default"
+        - name: "late-add-if-absent-existing"
+          value: "late-default"
       remove:
         - "late-removed-header"
       removeOnMatch:
@@ -87,6 +92,8 @@ spec:
               - name: late-removed-header
                 value: filter
               - name: late-removed-regex-header
+                value: filter
+              - name: late-add-if-absent-existing
                 value: filter
       backendRefs:
         - name: infra-backend-v1

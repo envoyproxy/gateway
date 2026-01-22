@@ -100,9 +100,34 @@ type EnvoyGatewaySpec struct {
 	// +optional
 	ExtensionAPIs *ExtensionAPISettings `json:"extensionApis,omitempty"`
 
+	// GatewayAPIs defines feature flags for experimental Gateway API resources.
+	// These APIs live under the gateway.networking.x-k8s.io group and are opt-in.
+	//
+	// +optional
+	// +notImplementedHide
+	GatewayAPIs *GatewayAPIs `json:"gatewayAPIs,omitempty"`
+
 	// RuntimeFlags defines the runtime flags for Envoy Gateway.
 	// Unlike ExtensionAPIs, these flags are temporary and will be removed in future releases once the related features are stable.
 	RuntimeFlags *RuntimeFlags `json:"runtimeFlags,omitempty"`
+}
+
+// GatewayAPI defines an experimental Gateway API resource that can be enabled.
+// +enum
+// +kubebuilder:validation:Enum=XListenerSet;XBackendTrafficPolicy
+type GatewayAPI string
+
+const (
+// XListenerSet enables the Gateway API XListenerSet resource.
+// XListenerSet GatewayAPI = "XListenerSet"
+// XBackendTrafficPolicy enables the Gateway API XBackendTrafficPolicy resource.
+// XBackendTrafficPolicy GatewayAPI = "XBackendTrafficPolicy"
+)
+
+// GatewayAPIs provides a mechanism to opt into experimental Gateway API resources.
+// These APIs are experimental today and are subject to change or removal as they mature.
+type GatewayAPIs struct {
+	Enabled []GatewayAPI `json:"enabled,omitempty"`
 }
 
 // RuntimeFlag defines a runtime flag used to guard breaking changes or risky experimental features in new Envoy Gateway releases.

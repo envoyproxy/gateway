@@ -43,6 +43,14 @@ clientTrafficPolicies:
           value: ":/"
         - name: "example-header-4"
           value: "  invalid"
+        addIfAbsent:
+        - name: ""
+          value: "empty"
+        - name: "Example/Header/5"
+          value: ":/"
+        - name: "example-header-6"
+          value: |
+            multi-line-header-value
         remove:
         - ""
     targetRef:

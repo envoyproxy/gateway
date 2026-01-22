@@ -34,6 +34,14 @@ clientTrafficPolicies:
         - name: example-header-2
           value: |
             multi-line-header-value
+        addIfAbsent:
+        - name: ""
+          value: empty
+        - name: Example/Header/5
+          value: :/
+        - name: example-header-6
+          value: |
+            multi-line-header-value
         remove:
         - ""
         set:
@@ -73,6 +81,9 @@ clientTrafficPolicies:
           LateResponseHeaders cannot set a header with an empty name
           LateResponseHeaders cannot set a header with a '/' or ':' character in them. Header: '"Example:Header:3"'
           LateResponseHeaders cannot set a header with an invalid value. Header: '"example-header-4"'
+          LateResponseHeaders cannot addIfAbsent a header with an empty name
+          LateResponseHeaders cannot addIfAbsent a header with a '/' or ':' character in them. Header: '"Example/Header/5"'
+          LateResponseHeaders cannot addIfAbsent a header with an invalid value. Header: '"example-header-6"'
           LateResponseHeaders cannot remove a header with an empty name
           LateResponseHeaders did not provide valid configuration to add/set/remove any headers.
         reason: Invalid

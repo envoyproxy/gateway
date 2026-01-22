@@ -863,6 +863,8 @@ type Tracing struct {
 	// CustomTags defines the custom tags to add to each span.
 	// If provider is kubernetes, pod name and namespace are added by default.
 	//
+	// Deprecated: Use Tags instead.
+	//
 	// +optional
 	CustomTags map[string]CustomTag `json:"customTags,omitempty"`
 	// Tags defines the custom tags to add to each span.
@@ -997,6 +999,30 @@ type HTTPHeaderFilter struct {
 	// +kubebuilder:validation:MinItems=1
 	// +kubebuilder:validation:MaxItems=64
 	Add []gwapiv1.HTTPHeader `json:"add,omitempty"`
+
+	// AddIfAbsent adds the given header(s) (name, value) to the request/response
+	// only if the header does not already exist. Unlike Add which appends to
+	// existing values, this is a no-op if the header is already present.
+	//
+	// Input:
+	//   GET /foo HTTP/1.1
+	//   my-header: foo
+	//
+	// Config:
+	//   addIfAbsent:
+	//   - name: "my-header"
+	//     value: "bar"
+	//
+	// Output:
+	//   GET /foo HTTP/1.1
+	//   my-header: foo
+	//
+	// +optional
+	// +listType=map
+	// +listMapKey=name
+	// +kubebuilder:validation:MinItems=1
+	// +kubebuilder:validation:MaxItems=64
+	AddIfAbsent []gwapiv1.HTTPHeader `json:"addIfAbsent,omitempty"`
 
 	// Remove the given header(s) from the HTTP request before the action. The
 	// value of Remove is a list of HTTP header names. Note that the header
