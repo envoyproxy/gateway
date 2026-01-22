@@ -586,9 +586,12 @@ func (t *Translator) addRouteToRouteConfig(
 			}
 
 			var err error
-			// If there are no filters in the destination
-			// settings and ZoneAware routing isn't
-			// enabled we create a regular xds Cluster
+			// In these cases we create a cluster per setting
+			//
+			// * ZoneAware routing is enabled
+			// * There are filters in the destination settings
+			// * There are multiple Address	Type of destination settings(IP, FQDN, UDC, etc.)
+			// * There are invalid/empty settings in the destination settings
 			if !httpRoute.NeedsClusterPerSetting() {
 				err = processXdsCluster(
 					tCtx,
@@ -602,8 +605,6 @@ func (t *Translator) addRouteToRouteConfig(
 					errs = errors.Join(errs, err)
 				}
 			} else {
-				// If a filter does exist, we create a weighted cluster that's
-				// attached to the route, and create a xds Cluster per setting
 				for _, setting := range httpRoute.Destination.Settings {
 					tSettings := []*ir.DestinationSetting{setting}
 					err = processXdsCluster(
@@ -628,7 +629,7 @@ func (t *Translator) addRouteToRouteConfig(
 						name:         mrr.Destination.Name,
 						settings:     mrr.Destination.Settings,
 						tSocket:      nil,
-						endpointType: EndpointTypeStatic,
+						endpointType: buildEndpointType(mrr.Destination.Settings),
 						metrics:      metrics,
 						metadata:     mrr.Destination.Metadata,
 					}); err != nil {
