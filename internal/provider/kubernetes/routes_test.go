@@ -26,6 +26,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+	gwapixv1a1 "sigs.k8s.io/gateway-api/apisx/v1alpha1"
 	gwapischeme "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned/scheme"
 	mcsapiv1a1 "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
@@ -781,7 +782,7 @@ func TestProcessGRPCRoutes(t *testing.T) {
 						CommonRouteSpec: gwapiv1.CommonRouteSpec{
 							ParentRefs: []gwapiv1.ParentReference{
 								{
-									Group:       gatewayapi.GroupPtr(gwapiv1.GroupName),
+									Group:       gatewayapi.GroupPtr(gwapixv1a1.GroupVersion.Group),
 									Kind:        gatewayapi.KindPtr(resource.KindXListenerSet),
 									Name:        "xlistener-set",
 									Namespace:   gatewayapi.NamespacePtr("test"),
