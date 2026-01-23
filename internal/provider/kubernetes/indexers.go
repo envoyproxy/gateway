@@ -7,7 +7,6 @@ package kubernetes
 
 import (
 	"context"
-	"fmt"
 
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -385,8 +384,6 @@ func xListenerGRPCRouteIndexFunc(rawObj client.Object) []string {
 
 func xListenerTLSRouteIndexFunc(rawObj client.Object) []string {
 	tlsRoute := rawObj.(*gwapiv1a3.TLSRoute)
-	// Debug logging to track indexer calls
-	fmt.Printf("TLSRoute indexer called for %s/%s\n", tlsRoute.Namespace, tlsRoute.Name)
 	xlisteners := make([]string, 0, len(tlsRoute.Spec.ParentRefs))
 	for _, parent := range tlsRoute.Spec.ParentRefs {
 		if parent.Group != nil && string(*parent.Group) == gwapixv1a1.GroupVersion.Group &&

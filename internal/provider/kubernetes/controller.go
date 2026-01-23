@@ -1656,21 +1656,22 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, managedGC *g
 
 		gtwNamespacedName := utils.NamespacedName(gtw).String()
 
-		// Route Processing
-
-		if r.tlsRouteCRDExists {
-			// Get TLSRoute objects and check if it exists.
-			if err := r.processTLSRoutes(ctx, gtwNamespacedName, resourceMap, resourceTree); err != nil {
-				return err
-			}
-		}
-
+		// XListenerSet Processing (must be done before route processing)
 		if r.xListenerSetEnabled {
 			if err := r.processXListenerSets(ctx, gtwNamespacedName, resourceMap, resourceTree); err != nil {
 				if isTransientError(err) {
 					return err
 				}
 				r.log.Error(err, "failed to process XListenerSets for gateway", "namespace", gtw.Namespace, "name", gtw.Name)
+			}
+		}
+
+		// Route Processing
+
+		if r.tlsRouteCRDExists {
+			// Get TLSRoute objects and check if it exists.
+			if err := r.processTLSRoutes(ctx, gtwNamespacedName, resourceMap, resourceTree); err != nil {
+				return err
 			}
 		}
 

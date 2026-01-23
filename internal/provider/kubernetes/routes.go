@@ -105,7 +105,6 @@ func (r *gatewayAPIReconciler) processTLSRoutes(ctx context.Context, gatewayName
 			r.log.Error(err, "failed to list TLSRoutes by XListenerSet", "xListenerSet", xlsNN.String())
 			return err
 		}
-		r.log.Info("processed TLSRoutes for XListenerSet", "xListenerSet", xlsNN.String(), "count", len(tlsRouteList.Items))
 		for i := range tlsRouteList.Items {
 			tlsRoute := &tlsRouteList.Items[i]
 			r.processTLSRoute(ctx, tlsRoute, resourceMap, resourceTree)
