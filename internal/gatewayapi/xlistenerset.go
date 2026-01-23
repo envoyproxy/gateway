@@ -94,10 +94,7 @@ func (t *Translator) processXListenerSet(xls *gwapixv1a1.XListenerSet, gatewayMa
 			xListenerSetStatusIdx: i,
 		}
 		gatewayCtx.listeners = append(gatewayCtx.listeners, listenerCtx)
-		t.Logger.Info("Processing XListenerSet 3.1", "namespace", xls.Namespace, "name", xls.Name)
 	}
-
-	t.Logger.Info("Processing XListenerSet 4", "namespace", xls.Namespace, "name", xls.Name)
 }
 
 // ProcessXListenerSetStatus computes the status of XListenerSets after their listeners have been processed.
