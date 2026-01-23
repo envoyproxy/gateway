@@ -157,14 +157,14 @@ func TestContextsStaleListener(t *testing.T) {
 
 func TestAttachEnvoyProxy(t *testing.T) {
 	testCases := []struct {
-		name                    string
-		gatewayParametersRef    *gwapiv1.LocalParametersReference
-		envoyProxyForGateway    *egv1a1.EnvoyProxy
-		envoyProxyForGWClass    *egv1a1.EnvoyProxy
-		envoyProxyDefaultSpec   *egv1a1.EnvoyProxySpec
-		expectedMergeGateways   *bool
-		expectedConcurrency     *int32
-		expectEnvoyProxyNil     bool
+		name                  string
+		gatewayParametersRef  *gwapiv1.LocalParametersReference
+		envoyProxyForGateway  *egv1a1.EnvoyProxy
+		envoyProxyForGWClass  *egv1a1.EnvoyProxy
+		envoyProxyDefaultSpec *egv1a1.EnvoyProxySpec
+		expectedMergeGateways *bool
+		expectedConcurrency   *int32
+		expectEnvoyProxyNil   bool
 	}{
 		{
 			name:                "no envoy proxy at any level",
