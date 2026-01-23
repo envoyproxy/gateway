@@ -268,6 +268,9 @@ func buildPathMatch(pathMatch *ir.StringMatch) *routev3.RouteMatch {
 		} else if pathMatch.SafeRegex != nil {
 			outMatch.PathSpecifier = &routev3.RouteMatch_SafeRegex{
 				SafeRegex: &matcherv3.RegexMatcher{
+					EngineType: &matcherv3.RegexMatcher_GoogleRe2{
+						GoogleRe2: &matcherv3.RegexMatcher_GoogleRE2{},
+					},
 					Regex: *pathMatch.SafeRegex,
 				},
 			}
@@ -303,6 +306,9 @@ func buildXdsStringMatcher(irMatch *ir.StringMatch) *matcherv3.StringMatcher {
 		stringMatcher = &matcherv3.StringMatcher{
 			MatchPattern: &matcherv3.StringMatcher_SafeRegex{
 				SafeRegex: &matcherv3.RegexMatcher{
+					EngineType: &matcherv3.RegexMatcher_GoogleRe2{
+						GoogleRe2: &matcherv3.RegexMatcher_GoogleRE2{},
+					},
 					Regex: *irMatch.SafeRegex,
 				},
 			},
@@ -484,6 +490,9 @@ func useRegexRewriteForPrefixMatchReplace(pathMatch *ir.StringMatch, prefixMatch
 func prefix2RegexRewrite(prefix string) *matcherv3.RegexMatchAndSubstitute {
 	return &matcherv3.RegexMatchAndSubstitute{
 		Pattern: &matcherv3.RegexMatcher{
+			EngineType: &matcherv3.RegexMatcher_GoogleRe2{
+				GoogleRe2: &matcherv3.RegexMatcher_GoogleRE2{},
+			},
 			// Escape prefix for regex metacharacters
 			// https://github.com/envoyproxy/gateway/issues/6857
 			Regex: "^" + regexp.QuoteMeta(prefix) + `\/*`,
@@ -511,6 +520,9 @@ func buildXdsURLRewriteAction(route *ir.HTTPRoute, urlRewrite *ir.URLRewrite, pa
 		case urlRewrite.Path.FullReplace != nil:
 			routeAction.RegexRewrite = &matcherv3.RegexMatchAndSubstitute{
 				Pattern: &matcherv3.RegexMatcher{
+					EngineType: &matcherv3.RegexMatcher_GoogleRe2{
+						GoogleRe2: &matcherv3.RegexMatcher_GoogleRE2{},
+					},
 					Regex: "^/.*$",
 				},
 				Substitution: *urlRewrite.Path.FullReplace,
@@ -531,6 +543,9 @@ func buildXdsURLRewriteAction(route *ir.HTTPRoute, urlRewrite *ir.URLRewrite, pa
 		case urlRewrite.Path.RegexMatchReplace != nil:
 			routeAction.RegexRewrite = &matcherv3.RegexMatchAndSubstitute{
 				Pattern: &matcherv3.RegexMatcher{
+					EngineType: &matcherv3.RegexMatcher_GoogleRe2{
+						GoogleRe2: &matcherv3.RegexMatcher_GoogleRE2{},
+					},
 					Regex: urlRewrite.Path.RegexMatchReplace.Pattern,
 				},
 				Substitution: urlRewrite.Path.RegexMatchReplace.Substitution,
