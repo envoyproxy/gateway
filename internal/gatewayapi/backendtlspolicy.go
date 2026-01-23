@@ -23,7 +23,7 @@ import (
 )
 
 var (
-	ErrBackendTLSPolicyInvalidKind          = fmt.Errorf("unsupported reference kind, supported kinds are ConfigMap, Secret, and ClusterTrustBundle")
+	ErrBackendTLSPolicyInvalidKind          = fmt.Errorf("Unsupported reference kind, supported kinds are ConfigMap, Secret, and ClusterTrustBundle")
 	ErrBackendTLSPolicyNoValidCACertificate = fmt.Errorf(
 		"no valid CA certificate found in referenced resources",
 	)
