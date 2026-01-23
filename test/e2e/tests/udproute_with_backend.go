@@ -83,8 +83,7 @@ func testUDPRouteWithBackend(t *testing.T, suite *suite.ConformanceTestSuite, ba
 
 	// Wait for CoreDNS pod to be ready before sending DNS queries.
 	// This ensures the backend service is fully operational.
-	podReady := corev1.PodCondition{Type: corev1.PodReady, Status: corev1.ConditionTrue}
-	WaitForPods(t, suite.Client, namespace, map[string]string{"app": "udp"}, corev1.PodRunning, &podReady)
+	WaitForPods(t, suite.Client, namespace, map[string]string{"app": "udp"}, corev1.PodRunning, &PodReady)
 
 	msg := new(dns.Msg)
 	msg.SetQuestion(domain, dns.TypeA)
