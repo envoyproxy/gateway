@@ -9,6 +9,7 @@ package tests
 
 import (
 	"context"
+	"fmt"
 	"net"
 	"testing"
 	"time"
@@ -18,9 +19,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwapixv1a1 "sigs.k8s.io/gateway-api/apisx/v1alpha1"
 	"sigs.k8s.io/gateway-api/conformance/echo-basic/grpcechoserver"
+	"sigs.k8s.io/gateway-api/conformance/utils/config"
 	"sigs.k8s.io/gateway-api/conformance/utils/grpc"
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
@@ -32,7 +36,8 @@ import (
 )
 
 func init() {
-	ConformanceTests = append(ConformanceTests, XListenerSetHTTPTest, XListenerSetHTTPSTest, XListenerSetGRPCTest, XListenerSetTCPTest, XListenerSetUDPTest)
+	ConformanceTests = append(ConformanceTests, XListenerSetHTTPTest, XListenerSetHTTPSTest,
+		XListenerSetGRPCTest, XListenerSetTCPTest, XListenerSetUDPTest, XListenerSetTLSTest)
 }
 
 // getListenerAddr extracts the host from a gateway address and joins it with a port
@@ -263,4 +268,73 @@ var XListenerSetUDPTest = suite.ConformanceTest{
 			t.Errorf("failed to perform DNS query: %v", err)
 		}
 	},
+}
+
+var XListenerSetTLSTest = suite.ConformanceTest{
+	ShortName:   "XListenerSetTLS",
+	Description: "TLSRoute should attach to an XListenerSet TLS listener and serve traffic",
+	Manifests: []string{
+		"testdata/xlistenerset-base.yaml",
+		"testdata/xlistenerset-tls.yaml",
+	},
+	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
+		ns := "gateway-conformance-infra"
+		gwNN := types.NamespacedName{Name: "xlistener-gateway", Namespace: ns}
+		routeNN := types.NamespacedName{Name: "xlistener-tlsroute", Namespace: ns}
+
+		gwAddrWithPort, err := kubernetes.WaitForGatewayAddress(t, suite.Client, suite.TimeoutConfig, kubernetes.NewGatewayRef(gwNN, "core"))
+		require.NoError(t, err)
+
+		listenerAddr := getListenerAddr(gwAddrWithPort, "18444")
+		parents := []gwapiv1.RouteParentStatus{
+			createXListenerSetParent(suite.ControllerName, "xlistener-set-tls", "extra-tls"),
+		}
+
+		TLSRouteMustHaveParents(t, suite.Client, &suite.TimeoutConfig, routeNN, parents)
+
+		expected := http.ExpectedResponse{
+			Request: http.Request{
+				Host: "tls.example.com",
+				Path: "/",
+			},
+			Response: http.Response{
+				StatusCodes: []int{200},
+			},
+			Namespace: ns,
+		}
+
+		req := http.MakeRequest(t, &expected, listenerAddr, "HTTPS", "https")
+
+		certNN := types.NamespacedName{Name: "backend-tls-certificate", Namespace: ns}
+		cPem, keyPem, _, err := GetTLSSecret(suite.Client, certNN)
+		require.NoError(t, err)
+
+		WaitForConsistentMTLSResponse(
+			t,
+			suite.RoundTripper,
+			&req,
+			&expected,
+			suite.TimeoutConfig.RequiredConsecutiveSuccesses,
+			suite.TimeoutConfig.MaxTimeToConsistency,
+			cPem,
+			keyPem,
+			"tls.example.com")
+	},
+}
+
+// TLSRouteMustHaveParents waits for the TLSRoute to have parents matching the expected parents
+func TLSRouteMustHaveParents(t *testing.T, client client.Client, timeoutConfig *config.TimeoutConfig, routeName types.NamespacedName, parents []gwapiv1.RouteParentStatus) {
+	t.Helper()
+	var actual []gwapiv1.RouteParentStatus
+	waitErr := wait.PollUntilContextTimeout(context.Background(), 1*time.Second, timeoutConfig.RouteMustHaveParents, true, func(ctx context.Context) (bool, error) {
+		route := &gwapiv1a2.TLSRoute{}
+		err := client.Get(ctx, routeName, route)
+		if err != nil {
+			return false, fmt.Errorf("error fetching TLSRoute: %w", err)
+		}
+
+		actual = route.Status.Parents
+		return parentsForRouteMatch(t, routeName, parents, actual, false), nil
+	})
+	require.NoErrorf(t, waitErr, "error waiting for TLSRoute to have parents matching expectations")
 }

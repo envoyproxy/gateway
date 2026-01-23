@@ -1,0 +1,41 @@
+apiVersion: gateway.networking.x-k8s.io/v1alpha1
+kind: XListenerSet
+metadata:
+  name: xlistener-set-tls
+  namespace: gateway-conformance-infra
+spec:
+  parentRef:
+    name: xlistener-gateway
+    namespace: gateway-conformance-infra
+  listeners:
+    - name: extra-tls
+      port: 18444
+      protocol: TLS
+      hostname: "*.example.com"
+      tls:
+        mode: Passthrough
+      allowedRoutes:
+        namespaces:
+          from: Same
+        kinds:
+          - kind: TLSRoute
+            group: gateway.networking.k8s.io
+---
+apiVersion: gateway.networking.k8s.io/v1alpha2
+kind: TLSRoute
+metadata:
+  name: xlistener-tlsroute
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - group: gateway.networking.x-k8s.io
+      kind: XListenerSet
+      namespace: gateway-conformance-infra
+      name: xlistener-set-tls
+      sectionName: extra-tls
+  hostnames:
+    - "tls.example.com"
+  rules:
+    - backendRefs:
+        - name: tls-backend
+          port: 10443
