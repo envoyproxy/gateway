@@ -77,9 +77,14 @@ The Helm chart for Envoy Gateway
 | hpa.minReplicas | int | `1` |  |
 | kubernetesClusterDomain | string | `"cluster.local"` |  |
 | podDisruptionBudget.minAvailable | int | `0` |  |
+| rbac | object | `{"create":true}` | RBAC configuration |
+| rbac.create | bool | `true` | Specifies whether RBAC resources should be created |
 | service.annotations | object | `{}` |  |
 | service.trafficDistribution | string | `""` |  |
 | service.type | string | `"ClusterIP"` | Service type. Can be set to LoadBalancer with specific IP, e.g.: type: LoadBalancer loadBalancerIP: 10.236.90.20 |
+| serviceAccount | object | `{"create":true,"name":"envoy-gateway"}` | ServiceAccount configuration |
+| serviceAccount.create | bool | `true` | Specifies whether a ServiceAccount should be created |
+| serviceAccount.name | string | `"envoy-gateway"` | The name of the ServiceAccount to use |
 | topologyInjector.annotations | object | `{}` |  |
 | topologyInjector.enabled | bool | `true` |  |
 

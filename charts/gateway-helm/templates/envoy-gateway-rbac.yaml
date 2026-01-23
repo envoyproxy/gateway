@@ -1,3 +1,6 @@
+{{- $rbac := .Values.rbac | default dict }}
+{{- $rbacCreate := ternary $rbac.create true (hasKey $rbac "create") }}
+{{- if $rbacCreate }}
 {{ $watchedNamespaces := list }}
 {{ if .Values.config.envoyGateway.provider.kubernetes }}
 {{ $kube := .Values.config.envoyGateway.provider.kubernetes }}
@@ -32,7 +35,7 @@ roleRef:
   name: {{ include "eg.fullname" $ }}-envoy-gateway-role
 subjects:
 - kind: ServiceAccount
-  name: 'envoy-gateway'
+  name: '{{ include "eg.serviceAccountName" $ }}'
   namespace: '{{ $.Release.Namespace }}'
 {{ end }}
 ---
@@ -54,7 +57,7 @@ roleRef:
   name: {{ include "eg.fullname" . }}-envoy-gateway-role
 subjects:
 - kind: ServiceAccount
-  name: 'envoy-gateway'
+  name: '{{ include "eg.serviceAccountName" . }}'
   namespace: '{{ .Release.Namespace }}'
 {{ else }}
 ---
@@ -77,6 +80,7 @@ roleRef:
   name: {{ include "eg.fullname" . }}-envoy-gateway-role
 subjects:
 - kind: ServiceAccount
-  name: 'envoy-gateway'
+  name: '{{ include "eg.serviceAccountName" . }}'
   namespace: '{{ .Release.Namespace }}'
 {{ end }}
+{{- end }}
