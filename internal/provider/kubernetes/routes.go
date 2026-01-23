@@ -29,11 +29,13 @@ import (
 func (r *gatewayAPIReconciler) processTLSRoute(ctx context.Context, tlsRoute *gwapiv1a3.TLSRoute,
 	resourceMap *resourceMappings, resourceTree *resource.Resources,
 ) {
+	r.log.Info("processing TLSRoute", "namespace", tlsRoute.Namespace, "name", tlsRoute.Name)
 	if r.namespaceLabel != nil {
 		if ok, err := r.checkObjectNamespaceLabels(tlsRoute); err != nil {
 			r.log.Error(err, "failed to check namespace labels for TLSRoute %s in namespace %s: %w", tlsRoute.GetName(), tlsRoute.GetNamespace())
 			return
 		} else if !ok {
+			r.log.Info("TLSRoute namespace labels don't match", "namespace", tlsRoute.Namespace, "name", tlsRoute.Name)
 			return
 		}
 	}
@@ -43,8 +45,7 @@ func (r *gatewayAPIReconciler) processTLSRoute(ctx context.Context, tlsRoute *gw
 		r.log.Info("current TLSRoute has been processed already", "namespace", tlsRoute.Namespace, "name", tlsRoute.Name)
 		return
 	}
-
-	r.log.Info("processing TLSRoute", "namespace", tlsRoute.Namespace, "name", tlsRoute.Name)
+	r.log.Info("adding TLSRoute to resource tree", "namespace", tlsRoute.Namespace, "name", tlsRoute.Name)
 
 	for _, rule := range tlsRoute.Spec.Rules {
 		for _, backendRef := range rule.BackendRefs {
@@ -104,6 +105,7 @@ func (r *gatewayAPIReconciler) processTLSRoutes(ctx context.Context, gatewayName
 			r.log.Error(err, "failed to list TLSRoutes by XListenerSet", "xListenerSet", xlsNN.String())
 			return err
 		}
+		r.log.Info("processed TLSRoutes for XListenerSet", "xListenerSet", xlsNN.String(), "count", len(tlsRouteList.Items))
 		for i := range tlsRouteList.Items {
 			tlsRoute := &tlsRouteList.Items[i]
 			r.processTLSRoute(ctx, tlsRoute, resourceMap, resourceTree)

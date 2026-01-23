@@ -150,21 +150,14 @@ func xListenerHTTPRouteIndexFunc(rawObj client.Object) []string {
 	httproute := rawObj.(*gwapiv1.HTTPRoute)
 	xlisteners := make([]string, 0, len(httproute.Spec.ParentRefs))
 	for _, parent := range httproute.Spec.ParentRefs {
-		if parent.Kind == nil || string(*parent.Kind) != resource.KindXListenerSet {
-			continue
+		if parent.Kind == nil || string(*parent.Kind) == resource.KindXListenerSet {
+			xlisteners = append(xlisteners,
+				types.NamespacedName{
+					Namespace: gatewayapi.NamespaceDerefOr(parent.Namespace, httproute.Namespace),
+					Name:      string(parent.Name),
+				}.String(),
+			)
 		}
-		if parent.Group != nil {
-			group := string(*parent.Group)
-			if group != gwapiv1.GroupName && group != gwapixv1a1.GroupVersion.Group {
-				continue
-			}
-		}
-		xlisteners = append(xlisteners,
-			types.NamespacedName{
-				Namespace: gatewayapi.NamespaceDerefOr(parent.Namespace, httproute.Namespace),
-				Name:      string(parent.Name),
-			}.String(),
-		)
 	}
 	return xlisteners
 }
@@ -375,44 +368,31 @@ func xListenerGRPCRouteIndexFunc(rawObj client.Object) []string {
 	grpcRoute := rawObj.(*gwapiv1.GRPCRoute)
 	xlisteners := make([]string, 0, len(grpcRoute.Spec.ParentRefs))
 	for _, parent := range grpcRoute.Spec.ParentRefs {
-		if parent.Kind == nil || string(*parent.Kind) != resource.KindXListenerSet {
-			continue
+		if parent.Kind == nil || string(*parent.Kind) == resource.KindXListenerSet {
+			xlisteners = append(xlisteners,
+				types.NamespacedName{
+					Namespace: gatewayapi.NamespaceDerefOr(parent.Namespace, grpcRoute.Namespace),
+					Name:      string(parent.Name),
+				}.String(),
+			)
 		}
-		if parent.Group != nil {
-			group := string(*parent.Group)
-			if group != gwapiv1.GroupName && group != gwapixv1a1.GroupVersion.Group {
-				continue
-			}
-		}
-		xlisteners = append(xlisteners,
-			types.NamespacedName{
-				Namespace: gatewayapi.NamespaceDerefOr(parent.Namespace, grpcRoute.Namespace),
-				Name:      string(parent.Name),
-			}.String(),
-		)
 	}
 	return xlisteners
 }
+
 
 func xListenerTLSRouteIndexFunc(rawObj client.Object) []string {
 	tlsRoute := rawObj.(*gwapiv1a3.TLSRoute)
 	xlisteners := make([]string, 0, len(tlsRoute.Spec.ParentRefs))
 	for _, parent := range tlsRoute.Spec.ParentRefs {
-		if parent.Kind == nil || string(*parent.Kind) != resource.KindXListenerSet {
-			continue
+		if parent.Kind == nil || string(*parent.Kind) == resource.KindXListenerSet {
+			xlisteners = append(xlisteners,
+				types.NamespacedName{
+					Namespace: gatewayapi.NamespaceDerefOr(parent.Namespace, tlsRoute.Namespace),
+					Name:      string(parent.Name),
+				}.String(),
+			)
 		}
-		if parent.Group != nil {
-			group := string(*parent.Group)
-			if group != gwapiv1.GroupName && group != gwapixv1a1.GroupVersion.Group {
-				continue
-			}
-		}
-		xlisteners = append(xlisteners,
-			types.NamespacedName{
-				Namespace: gatewayapi.NamespaceDerefOr(parent.Namespace, tlsRoute.Namespace),
-				Name:      string(parent.Name),
-			}.String(),
-		)
 	}
 	return xlisteners
 }
@@ -421,21 +401,14 @@ func xListenerTCPRouteIndexFunc(rawObj client.Object) []string {
 	tcpRoute := rawObj.(*gwapiv1a2.TCPRoute)
 	xlisteners := make([]string, 0, len(tcpRoute.Spec.ParentRefs))
 	for _, parent := range tcpRoute.Spec.ParentRefs {
-		if parent.Kind == nil || string(*parent.Kind) != resource.KindXListenerSet {
-			continue
+		if parent.Kind == nil || string(*parent.Kind) == resource.KindXListenerSet {
+			xlisteners = append(xlisteners,
+				types.NamespacedName{
+					Namespace: gatewayapi.NamespaceDerefOr(parent.Namespace, tcpRoute.Namespace),
+					Name:      string(parent.Name),
+				}.String(),
+			)
 		}
-		if parent.Group != nil {
-			group := string(*parent.Group)
-			if group != gwapiv1.GroupName && group != gwapixv1a1.GroupVersion.Group {
-				continue
-			}
-		}
-		xlisteners = append(xlisteners,
-			types.NamespacedName{
-				Namespace: gatewayapi.NamespaceDerefOr(parent.Namespace, tcpRoute.Namespace),
-				Name:      string(parent.Name),
-			}.String(),
-		)
 	}
 	return xlisteners
 }
@@ -444,21 +417,14 @@ func xListenerUDPRouteIndexFunc(rawObj client.Object) []string {
 	udpRoute := rawObj.(*gwapiv1a2.UDPRoute)
 	xlisteners := make([]string, 0, len(udpRoute.Spec.ParentRefs))
 	for _, parent := range udpRoute.Spec.ParentRefs {
-		if parent.Kind == nil || string(*parent.Kind) != resource.KindXListenerSet {
-			continue
+		if parent.Kind == nil || string(*parent.Kind) == resource.KindXListenerSet {
+			xlisteners = append(xlisteners,
+				types.NamespacedName{
+					Namespace: gatewayapi.NamespaceDerefOr(parent.Namespace, udpRoute.Namespace),
+					Name:      string(parent.Name),
+				}.String(),
+			)
 		}
-		if parent.Group != nil {
-			group := string(*parent.Group)
-			if group != gwapiv1.GroupName && group != gwapixv1a1.GroupVersion.Group {
-				continue
-			}
-		}
-		xlisteners = append(xlisteners,
-			types.NamespacedName{
-				Namespace: gatewayapi.NamespaceDerefOr(parent.Namespace, udpRoute.Namespace),
-				Name:      string(parent.Name),
-			}.String(),
-		)
 	}
 	return xlisteners
 }
