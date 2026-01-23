@@ -156,7 +156,7 @@ func TestWasmHTTPFetch(t *testing.T) {
 	}{
 		{
 			name: "download ok",
-			handler: func(w http.ResponseWriter, r *http.Request, num int) {
+			handler: func(w http.ResponseWriter, _ *http.Request, _ int) {
 				fmt.Fprintln(w, "wasm")
 			},
 			timeout:        10 * time.Second,
@@ -164,7 +164,7 @@ func TestWasmHTTPFetch(t *testing.T) {
 		},
 		{
 			name: "download retry",
-			handler: func(w http.ResponseWriter, r *http.Request, num int) {
+			handler: func(w http.ResponseWriter, _ *http.Request, num int) {
 				if num <= 2 {
 					w.WriteHeader(http.StatusInternalServerError)
 				} else {
@@ -176,7 +176,7 @@ func TestWasmHTTPFetch(t *testing.T) {
 		},
 		{
 			name: "download max retry",
-			handler: func(w http.ResponseWriter, r *http.Request, num int) {
+			handler: func(w http.ResponseWriter, _ *http.Request, _ int) {
 				w.WriteHeader(http.StatusInternalServerError)
 			},
 			timeout:        10 * time.Second,
@@ -185,7 +185,7 @@ func TestWasmHTTPFetch(t *testing.T) {
 		},
 		{
 			name: "download is never tried by immediate context timeout",
-			handler: func(w http.ResponseWriter, r *http.Request, num int) {
+			handler: func(w http.ResponseWriter, _ *http.Request, _ int) {
 				w.WriteHeader(http.StatusInternalServerError)
 			},
 			timeout:        0, // Immediately timeout in the context level.
@@ -236,7 +236,7 @@ func TestWasmHTTPInsecureServer(t *testing.T) {
 	}{
 		{
 			name: "download fail",
-			handler: func(w http.ResponseWriter, r *http.Request, num int) {
+			handler: func(w http.ResponseWriter, _ *http.Request, _ int) {
 				fmt.Fprintln(w, "wasm")
 			},
 			insecure:        false,
@@ -245,7 +245,7 @@ func TestWasmHTTPInsecureServer(t *testing.T) {
 		},
 		{
 			name: "download ok",
-			handler: func(w http.ResponseWriter, r *http.Request, num int) {
+			handler: func(w http.ResponseWriter, _ *http.Request, _ int) {
 				fmt.Fprintln(w, "wasm")
 			},
 			insecure:       true,
@@ -331,25 +331,25 @@ func TestWasmHTTPFetchCompressedOrTarFile(t *testing.T) {
 	}{
 		{
 			name: "plain wasm binary",
-			handler: func(w http.ResponseWriter, r *http.Request, num int) {
+			handler: func(w http.ResponseWriter, _ *http.Request, _ int) {
 				_, _ = w.Write(wasmBinary)
 			},
 		},
 		{
 			name: "tarball of wasm binary",
-			handler: func(w http.ResponseWriter, r *http.Request, num int) {
+			handler: func(w http.ResponseWriter, _ *http.Request, _ int) {
 				_, _ = w.Write(tarball)
 			},
 		},
 		{
 			name: "gzipped wasm binary",
-			handler: func(w http.ResponseWriter, r *http.Request, num int) {
+			handler: func(w http.ResponseWriter, _ *http.Request, _ int) {
 				_, _ = w.Write(gz)
 			},
 		},
 		{
 			name: "gzipped tarball of wasm binary",
-			handler: func(w http.ResponseWriter, r *http.Request, num int) {
+			handler: func(w http.ResponseWriter, _ *http.Request, _ int) {
 				_, _ = w.Write(gzTarball)
 			},
 		},

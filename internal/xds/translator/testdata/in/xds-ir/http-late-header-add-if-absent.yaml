@@ -1,0 +1,39 @@
+http:
+- name: "first-listener"
+  address: "::"
+  port: 10080
+  hostnames:
+  - "*"
+  headers:
+    earlyAddRequestHeaders:
+    - name: "early-add-if-absent-header"
+      value:
+      - "early-default-value"
+      addIfAbsent: true
+    lateAddResponseHeaders:
+    - name: "add-if-absent-header"
+      value:
+      - "default-value"
+      addIfAbsent: true
+    - name: "another-add-if-absent"
+      value:
+      - "another-default"
+      addIfAbsent: true
+    - name: "regular-append-header"
+      value:
+      - "regular-value"
+      append: true
+    - name: "regular-set-header"
+      value:
+      - "set-value"
+      append: false
+  routes:
+  - name: "first-route"
+    hostname: "*"
+    destination:
+      name: "first-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "first-route-dest/backend/0"

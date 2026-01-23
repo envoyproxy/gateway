@@ -48,7 +48,7 @@ func newVersionCommand() *cobra.Command {
   # Show version of client without server.
   egctl version --remote=false
 	  `,
-		Run: func(cmd *cobra.Command, args []string) {
+		Run: func(cmd *cobra.Command, _ []string) {
 			cmdutil.CheckErr(versions(cmd.OutOrStdout(), egContainerName, output, remote))
 		},
 	}

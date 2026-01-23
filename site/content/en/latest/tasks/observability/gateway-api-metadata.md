@@ -2,24 +2,24 @@
 title: "Gateway API Metadata"
 ---
 
-## Background 
-Envoy Gateway translates Gateway API resources to Envoy XDS resources. In this translation process, Envoy Gateway annotates XDS resources with additional metadata from their origin Gateway API resources. 
+## Background
+Envoy Gateway translates Gateway API resources to Envoy XDS resources. In this translation process, Envoy Gateway annotates XDS resources with additional metadata from their origin Gateway API resources.
 
 Gateway API Metadata includes:
 - K8s Resource Kinds, Names and Namespaces.
 - K8s Resource Annotations with the `gateway.envoyproxy.io/` prefix.
 - K8s Resource SectionNames (when applicable, e.g. for Route rules and Listeners).
 
-Gateway API Metadata is added to XDS resources using envoy's [Static Metadata][] under `metadata.filter_metadata.envoy-gateway.resources`. Currently, `resources` only contains the primary origin resource. 
-However, in the future, additional relevant resources (e.g. policies, filters attached to the primary origin resources) may be added. 
+Gateway API Metadata is added to XDS resources using envoy's [Static Metadata][] under `metadata.filter_metadata.envoy-gateway.resources`. Currently, `resources` only contains the primary origin resource.
+However, in the future, additional relevant resources (e.g. policies, filters attached to the primary origin resources) may be added.
 
-## Supported Resources 
+## Supported Resources
 Currently, the following mapping of Gateway API metadata to XDS metadata are supported:
 
 | XDS Resource     | Primary Gateway API Resource                           | XDS Metadata                                                                        | Comments
 |------------------|--------------------------------------------------------|-------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------|
 | [Virtual Host][] | `Gateway`                                              | Kind, Namespace, Name, Annotations, SectionName (`spec.listeners.<listener>.name`)  |                                                                                   |
-| [Route][]        | `HTTPRoute`, `GRPCRoute`                               | Kind, Namespace, Name, Annotations, SectionName (`spec.listener.rules.<rule>.name`) |                                                                                   | 
+| [Route][]        | `HTTPRoute`, `GRPCRoute`                               | Kind, Namespace, Name, Annotations, SectionName (`spec.listener.rules.<rule>.name`) |                                                                                   |
 | [Cluster][]      | `xRoute`                                               | Kind, Namespace, Name, Annotations, SectionName (`spec.listener.rules.<rule>.name`) |                                                                                   |
 | [Cluster][]      | `EnvoyProxy`, `EnvoyExtensionPolicy`, `SecurityPolicy` | Kind, Namespace, Name, Annotations, SectionName (`spec.listener.rules.<rule>.name`) |  When a non-xRoute BackendRef is used (e.g. ext_auth, observabiltiy sink, ... )   |
 | [LBEndpoints][]  | `Service`, `ServiceImport`, `Backend`                  | Kind, Namespace, Name, Annotations, SectionName (`backendRef.port`)                 |                                                                                   |
@@ -67,11 +67,11 @@ metadata:
 XDS Metadata serves multiple purposes:
 - Observability: Envoy proxy access logs can be [enriched with Gateway-API resource](./proxy-accesslog.md) context and custom annotations, creating an association with relevant Application Developers personas.
 - Troubleshooting: users and tools that analyze the envoy proxy XDS config can identify the Gateway API resources that lead to the XDS configuration's creation.
-- Extensibility: 
-  - Envoy Gateway [Extension Servers][] can leverage Gateway API metadata as additional context annotating XDS resources sent for mutation.  
+- Extensibility:
+  - Envoy Gateway [Extension Servers][] can leverage Gateway API metadata as additional context annotating XDS resources sent for mutation.
   - Envoy Proxy extensions can leverage XDS metadata as additional context when processing traffic:
     - [lua][] extensions can access metadata using the [Metadata Stream handle API][] .
-    - [ext_proc][] extensions can access metadata using the `xds.*_metadata` [ext_proc attribute][]. 
+    - [ext_proc][] extensions can access metadata using the `xds.*_metadata` [ext_proc attribute][].
   
 
 [Static Metadata]: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/base.proto#envoy-v3-api-msg-config-core-v3-metadata

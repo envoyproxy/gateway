@@ -11,6 +11,7 @@ breaking changes: |
 
 # Updates addressing vulnerabilities, security flaws, or compliance requirements.
 security updates: |
+  Restrict access to critical system resources via Lua EnvoyExtensionPolicies in the gateway controller. Set safe defaults and resource limits for the Lua runtime. Also support disabling Lua feature in extension policies.
 
 # New features or capabilities added in this release.
 new features: |
@@ -23,6 +24,13 @@ new features: |
   Added support for URLRewrite filter on individual backendRefs.
   Added support for custom headers on OTLP exports (metrics, tracing, access logs).
   Added support for custom TLS configuration when pulling WASM code via HTTP or OCI in EnvoyExtensionPolicy.
+  Added support for configuring minimum response size for compression via minContentLength field in BackendTrafficPolicy.
+  Added support for custom span name.
+  Added support for TLS telemetry gRPC backends.
+  Added cookie matching support to HTTPRouteFilter matches, combined with HTTPRoute rule matches.
+  Added support for addIfAbsent header action in ClientTrafficPolicy EarlyRequestHeaders and LateResponseHeaders to add headers only when they don't already exist.
+  Added support for tracing tag, which allows to use Envoy string command operators such as `%ENVIRONMENT(...)%`.
+
 
 bug fixes: |
   Fixed configured OIDC authorization endpoint being overridden by discovered endpoints from issuer's well-known URL.
@@ -33,6 +41,10 @@ bug fixes: |
   Fixed ExternalTrafficPolicy not being applied to Envoy Service when ServiceType is NodePort.
   Fixed CRL ref not processed by gateway controller.
   Fixed an issue where HTTP/3 listeners could not handle multiple hostnames.
+  Fix gateway continuing with incomplete resources after unrecoverable Kubernetes discovery errors when checking optional CRDs by failing fast and propagating errors so pods restart instead of skipping optional CRDs.
+  Fixed an issue where listener translation fails when contains invalid certificate in multiple TLS certificateRefs.
+  Fixed an issue where auto-detect upstream protocol breaks with multiple backends(HTTP + HTTPS).
+  Fixed wrong cluster type selection when an HTTPRoute mixes Service backends with Backend (FQDN) references, ensuring STRICT_DNS clusters are generated for the FQDN targets.
 
 # Enhancements that improve performance.
 performance improvements: |
