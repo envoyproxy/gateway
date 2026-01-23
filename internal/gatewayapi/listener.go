@@ -84,13 +84,12 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 				t.validateAllowedRoutes(listener, resource.KindUDPRoute)
 			default:
 				listener.SetSupportedKinds()
-				message := fmt.Sprintf("Protocol %s is unsupported, must be %s, %s, %s or %s.", listener.Protocol,
-					gwapiv1.HTTPProtocolType, gwapiv1.HTTPSProtocolType, gwapiv1.TCPProtocolType, gwapiv1.UDPProtocolType)
 				listener.SetCondition(
 					gwapiv1.ListenerConditionAccepted,
 					metav1.ConditionFalse,
 					gwapiv1.ListenerReasonUnsupportedProtocol,
-					message,
+					fmt.Sprintf("Protocol %s is unsupported, must be %s, %s, %s or %s.", listener.Protocol,
+						gwapiv1.HTTPProtocolType, gwapiv1.HTTPSProtocolType, gwapiv1.TCPProtocolType, gwapiv1.UDPProtocolType),
 				)
 			}
 
