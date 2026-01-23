@@ -144,6 +144,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 					irListener.Hostnames = append(irListener.Hostnames, "*")
 				}
 				irListener.PreserveRouteOrder = getPreserveRouteOrder(gateway.envoyProxy)
+				irListener.RequestID = getRequestIDExtensionAction(gateway.envoyProxy)
 				xdsIR[irKey].HTTP = append(xdsIR[irKey].HTTP, irListener)
 				// Store the HTTPListener IR in the listener context for use in the overlapping TLS config check.
 				listener.httpIR = irListener
