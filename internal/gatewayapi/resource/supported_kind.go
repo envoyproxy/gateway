@@ -11,7 +11,6 @@ const (
 	KindBackendTrafficPolicy = "BackendTrafficPolicy"
 	KindBackendTLSPolicy     = "BackendTLSPolicy"
 	KindBackend              = "Backend"
-	KindXListenerSet         = "XListenerSet"
 	KindEnvoyPatchPolicy     = "EnvoyPatchPolicy"
 	KindEnvoyExtensionPolicy = "EnvoyExtensionPolicy"
 	KindSecurityPolicy       = "SecurityPolicy"
@@ -30,4 +29,5 @@ const (
 	KindHTTPRouteFilter      = "HTTPRouteFilter"
 	KindReferenceGrant       = "ReferenceGrant"
 	KindClusterTrustBundle   = "ClusterTrustBundle"
+	KindXListenerSet         = "XListenerSet"
 )

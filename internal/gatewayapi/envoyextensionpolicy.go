@@ -612,7 +612,7 @@ func (t *Translator) translateEnvoyExtensionPolicyForGateway(
 
 	routesWithDirectResponse := sets.New[string]()
 	for _, http := range x.HTTP {
-		gatewayName := http.Name[0:strings.LastIndex(http.Name, "/")]
+		gatewayName := extractGatewayNameFromListener(http.Name)
 		if t.MergeGateways && gatewayName != policyTarget {
 			continue
 		}

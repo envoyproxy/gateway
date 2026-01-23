@@ -355,7 +355,7 @@ func validatePortOverlapForClientTrafficPolicy(l *ListenerContext, xds *ir.Xds, 
 				// is turned on, validate that all the listeners affected by this policy originated
 				// from the same Gateway resource. The name of the Gateway from which this listener
 				// originated is part of the listener's name by construction.
-				gatewayName := fmt.Sprintf("%s/%s", l.gateway.Namespace, l.gateway.Name)
+				gatewayName := extractGatewayNameFromListener(irListenerName)
 				conflictingListeners := []string{}
 				for _, currName := range sameListeners {
 					if strings.Index(currName, gatewayName) != 0 {
