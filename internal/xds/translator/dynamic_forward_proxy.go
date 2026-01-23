@@ -193,6 +193,10 @@ func listenerHasDynamicResolverRoute(listener *ir.HTTPListener) bool {
 // A dynamic forward proxy is required when:
 // * The route has a dynamic resolver backend.
 // * The route needs DFP to rewrite the host header based on a header or literal name.
+//
+// Note: Dynamic resolver routes always require the DFP filter to handle DNS resolution,
+// regardless of whether host rewriting is configured. If host rewriting is not configured,
+// DFP will use the original :authority header for resolution.
 func routeRequireDFP(route *ir.HTTPRoute) bool {
 	if route == nil || route.Destination == nil {
 		return false
