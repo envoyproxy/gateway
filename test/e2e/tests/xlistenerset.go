@@ -35,6 +35,41 @@ func init() {
 	ConformanceTests = append(ConformanceTests, XListenerSetHTTPTest, XListenerSetHTTPSTest, XListenerSetGRPCTest, XListenerSetTCPTest, XListenerSetUDPTest)
 }
 
+// getListenerAddr extracts the host from a gateway address and joins it with a port
+func getListenerAddr(gwAddrWithPort string, port string) string {
+	hostOnly := gwAddrWithPort
+	if host, _, splitErr := net.SplitHostPort(gwAddrWithPort); splitErr == nil {
+		hostOnly = host
+	}
+	return net.JoinHostPort(hostOnly, port)
+}
+
+// createXListenerSetParent creates a RouteParentStatus for an XListenerSet
+func createXListenerSetParent(ns string, controllerName string, xlistenerSetName string, sectionName string) gwapiv1.RouteParentStatus {
+	return gwapiv1.RouteParentStatus{
+		ParentRef: gwapiv1.ParentReference{
+			Group:       gatewayapi.GroupPtr(gwapixv1a1.GroupVersion.Group),
+			Kind:        gatewayapi.KindPtr(resource.KindXListenerSet),
+			Name:        gwapiv1.ObjectName(xlistenerSetName),
+			Namespace:   gatewayapi.NamespacePtr(ns),
+			SectionName: gatewayapi.SectionNamePtr(sectionName),
+		},
+		ControllerName: gwapiv1.GatewayController(controllerName),
+		Conditions: []metav1.Condition{
+			{
+				Type:   string(gwapiv1.RouteConditionAccepted),
+				Status: metav1.ConditionTrue,
+				Reason: string(gwapiv1.RouteReasonAccepted),
+			},
+			{
+				Type:   string(gwapiv1.RouteConditionResolvedRefs),
+				Status: metav1.ConditionTrue,
+				Reason: string(gwapiv1.RouteReasonResolvedRefs),
+			},
+		},
+	}
+}
+
 var XListenerSetHTTPTest = suite.ConformanceTest{
 	ShortName:   "XListenerSetHTTP",
 	Description: "HTTPRoute should attach to an XListenerSet listener and serve traffic",
@@ -50,37 +85,13 @@ var XListenerSetHTTPTest = suite.ConformanceTest{
 		gwAddrWithPort, err := kubernetes.WaitForGatewayAddress(t, suite.Client, suite.TimeoutConfig, kubernetes.NewGatewayRef(gwNN, "core"))
 		require.NoError(t, err)
 
-		hostOnly := gwAddrWithPort
-		if host, _, splitErr := net.SplitHostPort(gwAddrWithPort); splitErr == nil {
-			hostOnly = host
+		parents := []gwapiv1.RouteParentStatus{
+			createXListenerSetParent(ns, suite.ControllerName, "xlistener-set-http", "extra-http"),
 		}
-		listenerAddr := net.JoinHostPort(hostOnly, "18081")
-
-		parents := []gwapiv1.RouteParentStatus{{
-			ParentRef: gwapiv1.ParentReference{
-				Group:       gatewayapi.GroupPtr(gwapixv1a1.GroupVersion.Group),
-				Kind:        gatewayapi.KindPtr(resource.KindXListenerSet),
-				Name:        gwapiv1.ObjectName("xlistener-set-http"),
-				Namespace:   gatewayapi.NamespacePtr(ns),
-				SectionName: gatewayapi.SectionNamePtr("extra-http"),
-			},
-			ControllerName: gwapiv1.GatewayController(suite.ControllerName),
-			Conditions: []metav1.Condition{
-				{
-					Type:   string(gwapiv1.RouteConditionAccepted),
-					Status: metav1.ConditionTrue,
-					Reason: string(gwapiv1.RouteReasonAccepted),
-				},
-				{
-					Type:   string(gwapiv1.RouteConditionResolvedRefs),
-					Status: metav1.ConditionTrue,
-					Reason: string(gwapiv1.RouteReasonResolvedRefs),
-				},
-			},
-		}}
 
 		kubernetes.RouteMustHaveParents(t, suite.Client, suite.TimeoutConfig, routeNN, parents, false, &gwapiv1.HTTPRoute{})
 
+		listenerAddr := getListenerAddr(gwAddrWithPort, "18081")
 		expected := http.ExpectedResponse{
 			Request: http.Request{
 				Path: "/xlistener",
@@ -110,34 +121,10 @@ var XListenerSetHTTPSTest = suite.ConformanceTest{
 		gwAddrWithPort, err := kubernetes.WaitForGatewayAddress(t, suite.Client, suite.TimeoutConfig, kubernetes.NewGatewayRef(gwNN, "core"))
 		require.NoError(t, err)
 
-		hostOnly := gwAddrWithPort
-		if host, _, splitErr := net.SplitHostPort(gwAddrWithPort); splitErr == nil {
-			hostOnly = host
+		listenerAddr := getListenerAddr(gwAddrWithPort, "18443")
+		parents := []gwapiv1.RouteParentStatus{
+			createXListenerSetParent(ns, suite.ControllerName, "xlistener-set-http", "extra-https"),
 		}
-		listenerAddr := net.JoinHostPort(hostOnly, "18443")
-
-		parents := []gwapiv1.RouteParentStatus{{
-			ParentRef: gwapiv1.ParentReference{
-				Group:       gatewayapi.GroupPtr(gwapixv1a1.GroupVersion.Group),
-				Kind:        gatewayapi.KindPtr(resource.KindXListenerSet),
-				Name:        gwapiv1.ObjectName("xlistener-set-http"),
-				Namespace:   gatewayapi.NamespacePtr(ns),
-				SectionName: gatewayapi.SectionNamePtr("extra-https"),
-			},
-			ControllerName: gwapiv1.GatewayController(suite.ControllerName),
-			Conditions: []metav1.Condition{
-				{
-					Type:   string(gwapiv1.RouteConditionAccepted),
-					Status: metav1.ConditionTrue,
-					Reason: string(gwapiv1.RouteReasonAccepted),
-				},
-				{
-					Type:   string(gwapiv1.RouteConditionResolvedRefs),
-					Status: metav1.ConditionTrue,
-					Reason: string(gwapiv1.RouteReasonResolvedRefs),
-				},
-			},
-		}}
 
 		kubernetes.RouteMustHaveParents(t, suite.Client, suite.TimeoutConfig, routeNN, parents, false, &gwapiv1.HTTPRoute{})
 
@@ -183,34 +170,10 @@ var XListenerSetGRPCTest = suite.ConformanceTest{
 		gwAddrWithPort, err := kubernetes.WaitForGatewayAddress(t, suite.Client, suite.TimeoutConfig, kubernetes.NewGatewayRef(gwNN, "core"))
 		require.NoError(t, err)
 
-		hostOnly := gwAddrWithPort
-		if host, _, splitErr := net.SplitHostPort(gwAddrWithPort); splitErr == nil {
-			hostOnly = host
+		listenerAddr := getListenerAddr(gwAddrWithPort, "18082")
+		parents := []gwapiv1.RouteParentStatus{
+			createXListenerSetParent(ns, suite.ControllerName, "xlistener-set-grpc", "extra-grpc"),
 		}
-		listenerAddr := net.JoinHostPort(hostOnly, "18082")
-
-		parents := []gwapiv1.RouteParentStatus{{
-			ParentRef: gwapiv1.ParentReference{
-				Group:       gatewayapi.GroupPtr(gwapixv1a1.GroupVersion.Group),
-				Kind:        gatewayapi.KindPtr(resource.KindXListenerSet),
-				Name:        gwapiv1.ObjectName("xlistener-set-grpc"),
-				Namespace:   gatewayapi.NamespacePtr(ns),
-				SectionName: gatewayapi.SectionNamePtr("extra-grpc"),
-			},
-			ControllerName: gwapiv1.GatewayController(suite.ControllerName),
-			Conditions: []metav1.Condition{
-				{
-					Type:   string(gwapiv1.RouteConditionAccepted),
-					Status: metav1.ConditionTrue,
-					Reason: string(gwapiv1.RouteReasonAccepted),
-				},
-				{
-					Type:   string(gwapiv1.RouteConditionResolvedRefs),
-					Status: metav1.ConditionTrue,
-					Reason: string(gwapiv1.RouteReasonResolvedRefs),
-				},
-			},
-		}}
 
 		kubernetes.RouteMustHaveParents(t, suite.Client, suite.TimeoutConfig, routeNN, parents, false, &gwapiv1.GRPCRoute{})
 
@@ -239,34 +202,10 @@ var XListenerSetTCPTest = suite.ConformanceTest{
 		gwAddrWithPort, err := kubernetes.WaitForGatewayAddress(t, suite.Client, suite.TimeoutConfig, kubernetes.NewGatewayRef(gwNN, "core"))
 		require.NoError(t, err)
 
-		hostOnly := gwAddrWithPort
-		if host, _, splitErr := net.SplitHostPort(gwAddrWithPort); splitErr == nil {
-			hostOnly = host
+		listenerAddr := getListenerAddr(gwAddrWithPort, "18083")
+		parents := []gwapiv1.RouteParentStatus{
+			createXListenerSetParent(ns, suite.ControllerName, "xlistener-set-tcp", "extra-tcp"),
 		}
-		listenerAddr := net.JoinHostPort(hostOnly, "18083")
-
-		parents := []gwapiv1.RouteParentStatus{{
-			ParentRef: gwapiv1.ParentReference{
-				Group:       gatewayapi.GroupPtr(gwapixv1a1.GroupVersion.Group),
-				Kind:        gatewayapi.KindPtr(resource.KindXListenerSet),
-				Name:        gwapiv1.ObjectName("xlistener-set-tcp"),
-				Namespace:   gatewayapi.NamespacePtr(ns),
-				SectionName: gatewayapi.SectionNamePtr("extra-tcp"),
-			},
-			ControllerName: gwapiv1.GatewayController(suite.ControllerName),
-			Conditions: []metav1.Condition{
-				{
-					Type:   string(gwapiv1.RouteConditionAccepted),
-					Status: metav1.ConditionTrue,
-					Reason: string(gwapiv1.RouteReasonAccepted),
-				},
-				{
-					Type:   string(gwapiv1.RouteConditionResolvedRefs),
-					Status: metav1.ConditionTrue,
-					Reason: string(gwapiv1.RouteReasonResolvedRefs),
-				},
-			},
-		}}
 
 		TCPRouteMustHaveParents(t, suite.Client, &suite.TimeoutConfig, routeNN, parents, false)
 
@@ -299,34 +238,10 @@ var XListenerSetUDPTest = suite.ConformanceTest{
 		gwAddrWithPort, err := kubernetes.WaitForGatewayAddress(t, suite.Client, suite.TimeoutConfig, kubernetes.NewGatewayRef(gwNN, "core"))
 		require.NoError(t, err)
 
-		hostOnly := gwAddrWithPort
-		if host, _, splitErr := net.SplitHostPort(gwAddrWithPort); splitErr == nil {
-			hostOnly = host
+		listenerAddr := getListenerAddr(gwAddrWithPort, "5300")
+		parents := []gwapiv1.RouteParentStatus{
+			createXListenerSetParent(ns, suite.ControllerName, "xlistener-set-udp", "extra-udp"),
 		}
-		listenerAddr := net.JoinHostPort(hostOnly, "5300")
-
-		parents := []gwapiv1.RouteParentStatus{{
-			ParentRef: gwapiv1.ParentReference{
-				Group:       gatewayapi.GroupPtr(gwapixv1a1.GroupVersion.Group),
-				Kind:        gatewayapi.KindPtr(resource.KindXListenerSet),
-				Name:        gwapiv1.ObjectName("xlistener-set-udp"),
-				Namespace:   gatewayapi.NamespacePtr(ns),
-				SectionName: gatewayapi.SectionNamePtr("extra-udp"),
-			},
-			ControllerName: gwapiv1.GatewayController(suite.ControllerName),
-			Conditions: []metav1.Condition{
-				{
-					Type:   string(gwapiv1.RouteConditionAccepted),
-					Status: metav1.ConditionTrue,
-					Reason: string(gwapiv1.RouteReasonAccepted),
-				},
-				{
-					Type:   string(gwapiv1.RouteConditionResolvedRefs),
-					Status: metav1.ConditionTrue,
-					Reason: string(gwapiv1.RouteReasonResolvedRefs),
-				},
-			},
-		}}
 
 		UDPRouteMustHaveParents(t, suite.Client, &suite.TimeoutConfig, routeNN, parents, false)
 
