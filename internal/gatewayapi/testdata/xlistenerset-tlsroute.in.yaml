@@ -1,67 +1,67 @@
 namespaces:
-- apiVersion: v1
-  kind: Namespace
-  metadata:
-    name: gateway-xls
-    labels:
-      allow-xls: "true"
+  - apiVersion: v1
+    kind: Namespace
+    metadata:
+      name: gateway-xls
+      labels:
+        allow-xls: "true"
 gateways:
-- apiVersion: gateway.networking.k8s.io/v1
-  kind: Gateway
-  metadata:
-    namespace: gateway-xls
-    name: composite-gateway
-  spec:
-    gatewayClassName: envoy-gateway-class
-    allowedListeners:
-      namespaces:
-        from: Selector
-        selector:
-          matchLabels:
-            allow-xls: "true"
-    listeners:
-    - name: core-http
-      protocol: HTTP
-      port: 80
-      allowedRoutes:
-        namespaces:
-          from: All
-xListenerSets:
-- apiVersion: gateway.networking.x-k8s.io/v1alpha1
-  kind: XListenerSet
-  metadata:
-    namespace: gateway-xls
-    name: tls-xls
-  spec:
-    parentRef:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: Gateway
+    metadata:
+      namespace: gateway-xls
       name: composite-gateway
-    listeners:
-    - name: extra-tls-passthrough
-      protocol: TLS
-      port: 8443
-      tls:
-        mode: Passthrough
-      allowedRoutes:
-        kinds:
-          - kind: TLSRoute
-            group: gateway.networking.k8s.io
+    spec:
+      gatewayClassName: envoy-gateway-class
+      allowedListeners:
         namespaces:
-          from: All
-    - name: extra-tls-terminate
-      protocol: TLS
-      port: 9443
-      tls:
-        mode: Terminate
-        certificateRefs:
-          - group: ""
-            kind: Secret
-            name: tls-secret-1
-      allowedRoutes:
-        kinds:
-          - kind: TLSRoute
-            group: gateway.networking.k8s.io
-        namespaces:
-          from: All
+          from: Selector
+          selector:
+            matchLabels:
+              allow-xls: "true"
+      listeners:
+        - name: core-http
+          protocol: HTTP
+          port: 80
+          allowedRoutes:
+            namespaces:
+              from: All
+xListenerSets:
+  - apiVersion: gateway.networking.x-k8s.io/v1alpha1
+    kind: XListenerSet
+    metadata:
+      namespace: gateway-xls
+      name: tls-xls
+    spec:
+      parentRef:
+        name: composite-gateway
+      listeners:
+        - name: extra-tls-passthrough
+          protocol: TLS
+          port: 8443
+          tls:
+            mode: Passthrough
+          allowedRoutes:
+            kinds:
+              - kind: TLSRoute
+                group: gateway.networking.k8s.io
+            namespaces:
+              from: All
+        - name: extra-tls-terminate
+          protocol: TLS
+          port: 9443
+          tls:
+            mode: Terminate
+            certificateRefs:
+              - group: ""
+                kind: Secret
+                name: tls-secret-1
+          allowedRoutes:
+            kinds:
+              - kind: TLSRoute
+                group: gateway.networking.k8s.io
+            namespaces:
+              from: All
 tlsRoutes:
   - apiVersion: gateway.networking.k8s.io/v1alpha2
     kind: TLSRoute

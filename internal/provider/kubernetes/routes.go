@@ -24,12 +24,65 @@ import (
 	"github.com/envoyproxy/gateway/internal/utils"
 )
 
+// processTLSRoute processes a single TLSRoute, performing namespace label checks,
+// backend reference validation, and updating the resource map and tree.
+func (r *gatewayAPIReconciler) processTLSRoute(ctx context.Context, tlsRoute *gwapiv1a3.TLSRoute,
+	resourceMap *resourceMappings, resourceTree *resource.Resources,
+) {
+	if r.namespaceLabel != nil {
+		if ok, err := r.checkObjectNamespaceLabels(tlsRoute); err != nil {
+			r.log.Error(err, "failed to check namespace labels for TLSRoute %s in namespace %s: %w", tlsRoute.GetName(), tlsRoute.GetNamespace())
+			return
+		} else if !ok {
+			return
+		}
+	}
+
+	key := utils.NamespacedName(tlsRoute).String()
+	if resourceMap.allAssociatedTLSRoutes.Has(key) {
+		r.log.Info("current TLSRoute has been processed already", "namespace", tlsRoute.Namespace, "name", tlsRoute.Name)
+		return
+	}
+
+	r.log.Info("processing TLSRoute", "namespace", tlsRoute.Namespace, "name", tlsRoute.Name)
+
+	for _, rule := range tlsRoute.Spec.Rules {
+		for _, backendRef := range rule.BackendRefs {
+			if err := validateBackendRef(&backendRef); err != nil {
+				r.log.Error(err, "invalid backendRef")
+				continue
+			}
+			if err := r.processBackendRef(
+				ctx,
+				resourceMap,
+				resourceTree,
+				resource.KindTLSRoute,
+				tlsRoute.Namespace,
+				tlsRoute.Name,
+				backendRef.BackendObjectReference); err != nil {
+				r.log.Error(err,
+					"failed to process BackendRef for TLSRoute",
+					"tlsRoute", tlsRoute, "backendRef", backendRef.BackendObjectReference)
+			}
+		}
+	}
+
+	resourceMap.allAssociatedNamespaces.Insert(tlsRoute.Namespace)
+	resourceMap.allAssociatedTLSRoutes.Insert(key)
+	// Discard Status to reduce memory consumption in watchable
+	// It will be recomputed by the gateway-api layer
+	tlsRoute.Status = gwapiv1a2.TLSRouteStatus{}
+	resourceTree.TLSRoutes = append(resourceTree.TLSRoutes, tlsRoute)
+}
+
 // processTLSRoutes finds TLSRoutes corresponding to a gatewayNamespaceName, further checks for
 // the backend references and pushes the TLSRoutes to the resourceTree.
 func (r *gatewayAPIReconciler) processTLSRoutes(ctx context.Context, gatewayNamespaceName string,
 	resourceMap *resourceMappings, resourceTree *resource.Resources,
 ) error {
 	tlsRouteList := &gwapiv1a3.TLSRouteList{}
+
+	// Process TLSRoutes attached to the gateway
 	if err := r.client.List(ctx, tlsRouteList, &client.ListOptions{
 		FieldSelector: fields.OneTermEqualSelector(gatewayTLSRouteIndex, gatewayNamespaceName),
 	}); err != nil {
@@ -39,50 +92,22 @@ func (r *gatewayAPIReconciler) processTLSRoutes(ctx context.Context, gatewayName
 
 	for i := range tlsRouteList.Items {
 		tlsRoute := &tlsRouteList.Items[i]
-		if r.namespaceLabel != nil {
-			if ok, err := r.checkObjectNamespaceLabels(tlsRoute); err != nil {
-				r.log.Error(err, "failed to check namespace labels for TLSRoute %s in namespace %s: %w", tlsRoute.GetName(), tlsRoute.GetNamespace())
-				continue
-			} else if !ok {
-				continue
-			}
+		r.processTLSRoute(ctx, tlsRoute, resourceMap, resourceTree)
+	}
+
+	// Process TLSRoutes attached to the xListenerSet
+	for _, xlsNN := range resourceMap.gatewayToXListenerSets[gatewayNamespaceName] {
+		tlsRouteList = &gwapiv1a3.TLSRouteList{}
+		if err := r.client.List(ctx, tlsRouteList, &client.ListOptions{
+			FieldSelector: fields.OneTermEqualSelector(xListenerTLSRouteIndex, xlsNN.String()),
+		}); err != nil {
+			r.log.Error(err, "failed to list TLSRoutes by XListenerSet", "xListenerSet", xlsNN.String())
+			return err
 		}
-
-		key := utils.NamespacedName(tlsRoute).String()
-		if resourceMap.allAssociatedTLSRoutes.Has(key) {
-			r.log.Info("current TLSRoute has been processed already", "namespace", tlsRoute.Namespace, "name", tlsRoute.Name)
-			continue
+		for i := range tlsRouteList.Items {
+			tlsRoute := &tlsRouteList.Items[i]
+			r.processTLSRoute(ctx, tlsRoute, resourceMap, resourceTree)
 		}
-
-		r.log.Info("processing TLSRoute", "namespace", tlsRoute.Namespace, "name", tlsRoute.Name)
-
-		for _, rule := range tlsRoute.Spec.Rules {
-			for _, backendRef := range rule.BackendRefs {
-				if err := validateBackendRef(&backendRef); err != nil {
-					r.log.Error(err, "invalid backendRef")
-					continue
-				}
-				if err := r.processBackendRef(
-					ctx,
-					resourceMap,
-					resourceTree,
-					resource.KindTLSRoute,
-					tlsRoute.Namespace,
-					tlsRoute.Name,
-					backendRef.BackendObjectReference); err != nil {
-					r.log.Error(err,
-						"failed to process BackendRef for TLSRoute",
-						"tlsRoute", tlsRoute, "backendRef", backendRef.BackendObjectReference)
-				}
-			}
-		}
-
-		resourceMap.allAssociatedNamespaces.Insert(tlsRoute.Namespace)
-		resourceMap.allAssociatedTLSRoutes.Insert(key)
-		// Discard Status to reduce memory consumption in watchable
-		// It will be recomputed by the gateway-api layer
-		tlsRoute.Status = gwapiv1a2.TLSRouteStatus{}
-		resourceTree.TLSRoutes = append(resourceTree.TLSRoutes, tlsRoute)
 	}
 
 	return nil
@@ -431,68 +456,144 @@ func (r *gatewayAPIReconciler) processHTTPRouteFilter(
 	return nil
 }
 
+// processTCPRoute processes a single TCPRoute, performing namespace label checks,
+// backend reference validation, and updating the resource map and tree.
+func (r *gatewayAPIReconciler) processTCPRoute(ctx context.Context, tcpRoute *gwapiv1a2.TCPRoute,
+	resourceMap *resourceMappings, resourceTree *resource.Resources,
+) {
+	if r.namespaceLabel != nil {
+		if ok, err := r.checkObjectNamespaceLabels(tcpRoute); err != nil {
+			r.log.Error(err, "failed to check namespace labels for TCPRoute %s in namespace %s: %w", tcpRoute.GetName(), tcpRoute.GetNamespace())
+			return
+		} else if !ok {
+			return
+		}
+	}
+
+	key := utils.NamespacedName(tcpRoute).String()
+	if resourceMap.allAssociatedTCPRoutes.Has(key) {
+		r.log.Info("current TCPRoute has been processed already", "namespace", tcpRoute.Namespace, "name", tcpRoute.Name)
+		return
+	}
+
+	r.log.Info("processing TCPRoute", "namespace", tcpRoute.Namespace, "name", tcpRoute.Name)
+
+	for _, rule := range tcpRoute.Spec.Rules {
+		for _, backendRef := range rule.BackendRefs {
+			if err := validateBackendRef(&backendRef); err != nil {
+				r.log.Error(err, "invalid backendRef")
+				continue
+			}
+			if err := r.processBackendRef(
+				ctx,
+				resourceMap,
+				resourceTree,
+				resource.KindTCPRoute,
+				tcpRoute.Namespace,
+				tcpRoute.Name,
+				backendRef.BackendObjectReference); err != nil {
+				r.log.Error(err,
+					"failed to process BackendRef for TCPRoute",
+					"tcpRoute", tcpRoute, "backendRef", backendRef.BackendObjectReference)
+			}
+		}
+	}
+
+	resourceMap.allAssociatedNamespaces.Insert(tcpRoute.Namespace)
+	resourceMap.allAssociatedTCPRoutes.Insert(key)
+	// Discard Status to reduce memory consumption in watchable
+	// It will be recomputed by the gateway-api layer
+	tcpRoute.Status = gwapiv1a2.TCPRouteStatus{}
+	resourceTree.TCPRoutes = append(resourceTree.TCPRoutes, tcpRoute)
+}
+
 // processTCPRoutes finds TCPRoutes corresponding to a gatewayNamespaceName, further checks for
 // the backend references and pushes the TCPRoutes to the resourceTree.
 func (r *gatewayAPIReconciler) processTCPRoutes(ctx context.Context, gatewayNamespaceName string,
 	resourceMap *resourceMappings, resourceTree *resource.Resources,
 ) error {
 	tcpRouteList := &gwapiv1a2.TCPRouteList{}
+
+	// Process TCPRoutes attached to the gateway
 	if err := r.client.List(ctx, tcpRouteList, &client.ListOptions{
 		FieldSelector: fields.OneTermEqualSelector(gatewayTCPRouteIndex, gatewayNamespaceName),
 	}); err != nil {
-		r.log.Error(err, "unable to find associated UDPRoutes")
+		r.log.Error(err, "unable to find associated TCPRoutes")
 		return err
 	}
 
 	for i := range tcpRouteList.Items {
 		tcpRoute := &tcpRouteList.Items[i]
-		if r.namespaceLabel != nil {
-			if ok, err := r.checkObjectNamespaceLabels(tcpRoute); err != nil {
-				r.log.Error(err, "failed to check namespace labels for TCPRoute %s in namespace %s: %w", tcpRoute.GetName(), tcpRoute.GetNamespace())
-				continue
-			} else if !ok {
-				continue
-			}
+		r.processTCPRoute(ctx, tcpRoute, resourceMap, resourceTree)
+	}
+
+	// Process TCPRoutes attached to the xListenerSet
+	for _, xlsNN := range resourceMap.gatewayToXListenerSets[gatewayNamespaceName] {
+		tcpRouteList = &gwapiv1a2.TCPRouteList{}
+		if err := r.client.List(ctx, tcpRouteList, &client.ListOptions{
+			FieldSelector: fields.OneTermEqualSelector(xListenerTCPRouteIndex, xlsNN.String()),
+		}); err != nil {
+			r.log.Error(err, "failed to list TCPRoutes by XListenerSet", "xListenerSet", xlsNN.String())
+			return err
 		}
-
-		key := utils.NamespacedName(tcpRoute).String()
-		if resourceMap.allAssociatedTCPRoutes.Has(key) {
-			r.log.Info("current TCPRoute has been processed already", "namespace", tcpRoute.Namespace, "name", tcpRoute.Name)
-			continue
+		for i := range tcpRouteList.Items {
+			tcpRoute := &tcpRouteList.Items[i]
+			r.processTCPRoute(ctx, tcpRoute, resourceMap, resourceTree)
 		}
-
-		r.log.Info("processing TCPRoute", "namespace", tcpRoute.Namespace, "name", tcpRoute.Name)
-
-		for _, rule := range tcpRoute.Spec.Rules {
-			for _, backendRef := range rule.BackendRefs {
-				if err := validateBackendRef(&backendRef); err != nil {
-					r.log.Error(err, "invalid backendRef")
-					continue
-				}
-				if err := r.processBackendRef(
-					ctx,
-					resourceMap,
-					resourceTree,
-					resource.KindTCPRoute,
-					tcpRoute.Namespace,
-					tcpRoute.Name,
-					backendRef.BackendObjectReference); err != nil {
-					r.log.Error(err,
-						"failed to process BackendRef for TCPRoute",
-						"tcpRoute", tcpRoute, "backendRef", backendRef.BackendObjectReference)
-				}
-			}
-		}
-
-		resourceMap.allAssociatedNamespaces.Insert(tcpRoute.Namespace)
-		resourceMap.allAssociatedTCPRoutes.Insert(key)
-		// Discard Status to reduce memory consumption in watchable
-		// It will be recomputed by the gateway-api layer
-		tcpRoute.Status = gwapiv1a2.TCPRouteStatus{}
-		resourceTree.TCPRoutes = append(resourceTree.TCPRoutes, tcpRoute)
 	}
 
 	return nil
+}
+
+// processUDPRoute processes a single UDPRoute, performing namespace label checks,
+// backend reference validation, and updating the resource map and tree.
+func (r *gatewayAPIReconciler) processUDPRoute(ctx context.Context, udpRoute *gwapiv1a2.UDPRoute,
+	resourceMap *resourceMappings, resourceTree *resource.Resources,
+) {
+	if r.namespaceLabel != nil {
+		if ok, err := r.checkObjectNamespaceLabels(udpRoute); err != nil {
+			r.log.Error(err, "failed to check namespace labels for UDPRoute %s in namespace %s: %w", udpRoute.GetName(), udpRoute.GetNamespace())
+			return
+		} else if !ok {
+			return
+		}
+	}
+
+	key := utils.NamespacedName(udpRoute).String()
+	if resourceMap.allAssociatedUDPRoutes.Has(key) {
+		r.log.Info("current UDPRoute has been processed already", "namespace", udpRoute.Namespace, "name", udpRoute.Name)
+		return
+	}
+
+	r.log.Info("processing UDPRoute", "namespace", udpRoute.Namespace, "name", udpRoute.Name)
+
+	for _, rule := range udpRoute.Spec.Rules {
+		for _, backendRef := range rule.BackendRefs {
+			if err := validateBackendRef(&backendRef); err != nil {
+				r.log.Error(err, "invalid backendRef")
+				continue
+			}
+			if err := r.processBackendRef(
+				ctx,
+				resourceMap,
+				resourceTree,
+				resource.KindUDPRoute,
+				udpRoute.Namespace,
+				udpRoute.Name,
+				backendRef.BackendObjectReference); err != nil {
+				r.log.Error(err,
+					"failed to process BackendRef for UDPRoute",
+					"udpRoute", udpRoute, "backendRef", backendRef.BackendObjectReference)
+			}
+		}
+	}
+
+	resourceMap.allAssociatedNamespaces.Insert(udpRoute.Namespace)
+	resourceMap.allAssociatedUDPRoutes.Insert(key)
+	// Discard Status to reduce memory consumption in watchable
+	// It will be recomputed by the gateway-api layer
+	udpRoute.Status = gwapiv1a2.UDPRouteStatus{}
+	resourceTree.UDPRoutes = append(resourceTree.UDPRoutes, udpRoute)
 }
 
 // processUDPRoutes finds UDPRoutes corresponding to a gatewayNamespaceName, further checks for
@@ -501,6 +602,8 @@ func (r *gatewayAPIReconciler) processUDPRoutes(ctx context.Context, gatewayName
 	resourceMap *resourceMappings, resourceTree *resource.Resources,
 ) error {
 	udpRouteList := &gwapiv1a2.UDPRouteList{}
+
+	// Process UDPRoutes attached to the gateway
 	if err := r.client.List(ctx, udpRouteList, &client.ListOptions{
 		FieldSelector: fields.OneTermEqualSelector(gatewayUDPRouteIndex, gatewayNamespaceName),
 	}); err != nil {
@@ -510,50 +613,22 @@ func (r *gatewayAPIReconciler) processUDPRoutes(ctx context.Context, gatewayName
 
 	for i := range udpRouteList.Items {
 		udpRoute := &udpRouteList.Items[i]
-		if r.namespaceLabel != nil {
-			if ok, err := r.checkObjectNamespaceLabels(udpRoute); err != nil {
-				r.log.Error(err, "failed to check namespace labels for UDPRoute %s in namespace %s: %w", udpRoute.GetName(), udpRoute.GetNamespace())
-				continue
-			} else if !ok {
-				continue
-			}
+		r.processUDPRoute(ctx, udpRoute, resourceMap, resourceTree)
+	}
+
+	// Process UDPRoutes attached to the xListenerSet
+	for _, xlsNN := range resourceMap.gatewayToXListenerSets[gatewayNamespaceName] {
+		udpRouteList = &gwapiv1a2.UDPRouteList{}
+		if err := r.client.List(ctx, udpRouteList, &client.ListOptions{
+			FieldSelector: fields.OneTermEqualSelector(xListenerUDPRouteIndex, xlsNN.String()),
+		}); err != nil {
+			r.log.Error(err, "failed to list UDPRoutes by XListenerSet", "xListenerSet", xlsNN.String())
+			return err
 		}
-
-		key := utils.NamespacedName(udpRoute).String()
-		if resourceMap.allAssociatedUDPRoutes.Has(key) {
-			r.log.Info("current UDPRoute has been processed already", "namespace", udpRoute.Namespace, "name", udpRoute.Name)
-			continue
+		for i := range udpRouteList.Items {
+			udpRoute := &udpRouteList.Items[i]
+			r.processUDPRoute(ctx, udpRoute, resourceMap, resourceTree)
 		}
-
-		r.log.Info("processing UDPRoute", "namespace", udpRoute.Namespace, "name", udpRoute.Name)
-
-		for _, rule := range udpRoute.Spec.Rules {
-			for _, backendRef := range rule.BackendRefs {
-				if err := validateBackendRef(&backendRef); err != nil {
-					r.log.Error(err, "invalid backendRef")
-					continue
-				}
-				if err := r.processBackendRef(
-					ctx,
-					resourceMap,
-					resourceTree,
-					resource.KindUDPRoute,
-					udpRoute.Namespace,
-					udpRoute.Name,
-					backendRef.BackendObjectReference); err != nil {
-					r.log.Error(err,
-						"failed to process BackendRef for UDPRoute",
-						"udpRoute", udpRoute, "backendRef", backendRef.BackendObjectReference)
-				}
-			}
-		}
-
-		resourceMap.allAssociatedNamespaces.Insert(udpRoute.Namespace)
-		resourceMap.allAssociatedUDPRoutes.Insert(key)
-		// Discard Status to reduce memory consumption in watchable
-		// It will be recomputed by the gateway-api layer
-		udpRoute.Status = gwapiv1a2.UDPRouteStatus{}
-		resourceTree.UDPRoutes = append(resourceTree.UDPRoutes, udpRoute)
 	}
 
 	return nil

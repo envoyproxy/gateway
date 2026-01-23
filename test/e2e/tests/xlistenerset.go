@@ -27,7 +27,7 @@ import (
 )
 
 func init() {
-	ConformanceTests = append(ConformanceTests, XListenerSetHTTPTest, XListenerSetHTTPSTest, XListenerSetGRPCTest)
+	ConformanceTests = append(ConformanceTests, XListenerSetHTTPTest, XListenerSetHTTPSTest, XListenerSetGRPCTest, XListenerSetTCPTest)
 }
 
 var XListenerSetHTTPTest = suite.ConformanceTest{
@@ -216,5 +216,65 @@ var XListenerSetGRPCTest = suite.ConformanceTest{
 		}
 
 		grpc.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.GRPCClient, suite.TimeoutConfig, listenerAddr, expected)
+	},
+}
+
+var XListenerSetTCPTest = suite.ConformanceTest{
+	ShortName:   "XListenerSetTCP",
+	Description: "TCPRoute should attach to an XListenerSet listener and serve traffic",
+	Manifests: []string{
+		"testdata/xlistenerset-base.yaml",
+		"testdata/xlistenerset-tcproute.yaml",
+	},
+	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
+		ns := "gateway-conformance-infra"
+		gwNN := types.NamespacedName{Name: "xlistener-gateway", Namespace: ns}
+		routeNN := types.NamespacedName{Name: "xlistener-tcproute", Namespace: ns}
+
+		gwAddrWithPort, err := kubernetes.WaitForGatewayAddress(t, suite.Client, suite.TimeoutConfig, kubernetes.NewGatewayRef(gwNN, "core"))
+		require.NoError(t, err)
+
+		hostOnly := gwAddrWithPort
+		if host, _, splitErr := net.SplitHostPort(gwAddrWithPort); splitErr == nil {
+			hostOnly = host
+		}
+		listenerAddr := net.JoinHostPort(hostOnly, "18083")
+
+		parents := []gwapiv1.RouteParentStatus{{
+			ParentRef: gwapiv1.ParentReference{
+				Group:       gatewayapi.GroupPtr(gwapixv1a1.GroupVersion.Group),
+				Kind:        gatewayapi.KindPtr(resource.KindXListenerSet),
+				Name:        gwapiv1.ObjectName("xlistener-set-tcp"),
+				Namespace:   gatewayapi.NamespacePtr(ns),
+				SectionName: gatewayapi.SectionNamePtr("extra-tcp"),
+			},
+			ControllerName: gwapiv1.GatewayController(suite.ControllerName),
+			Conditions: []metav1.Condition{
+				{
+					Type:   string(gwapiv1.RouteConditionAccepted),
+					Status: metav1.ConditionTrue,
+					Reason: string(gwapiv1.RouteReasonAccepted),
+				},
+				{
+					Type:   string(gwapiv1.RouteConditionResolvedRefs),
+					Status: metav1.ConditionTrue,
+					Reason: string(gwapiv1.RouteReasonResolvedRefs),
+				},
+			},
+		}}
+
+		TCPRouteMustHaveParents(t, suite.Client, &suite.TimeoutConfig, routeNN, parents, false)
+
+		expected := http.ExpectedResponse{
+			Request: http.Request{
+				Path: "/xlistener",
+			},
+			Response: http.Response{
+				StatusCodes: []int{200},
+			},
+			Namespace: ns,
+		}
+
+		http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, listenerAddr, expected)
 	},
 }

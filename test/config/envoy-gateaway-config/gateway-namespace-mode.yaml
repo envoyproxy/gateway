@@ -17,7 +17,7 @@ data:
     extensionApis:
       enableEnvoyPatchPolicy: true
       enableBackend: true
-    gatewayAPIs:
+    gatewayAPI:
       enabled: [XListenerSet]
     rateLimit:
       backend:
