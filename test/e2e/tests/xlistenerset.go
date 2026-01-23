@@ -197,7 +197,7 @@ var XListenerSetTCPTest = suite.ConformanceTest{
 	Description: "TCPRoute should attach to an XListenerSet listener and serve traffic",
 	Manifests: []string{
 		"testdata/xlistenerset-base.yaml",
-		"testdata/xlistenerset-tcproute.yaml",
+		"testdata/xlistenerset-tcp.yaml",
 	},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		ns := "gateway-conformance-infra"
