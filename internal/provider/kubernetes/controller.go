@@ -2103,8 +2103,8 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		return err
 	}
 
-	disabled := r.envoyGateway == nil || r.envoyGateway.GatewayAPIs == nil ||
-		!r.envoyGateway.GatewayAPIs.IsEnabled(egv1a1.XListenerSet)
+	disabled := r.envoyGateway == nil || r.envoyGateway.GatewayAPI == nil ||
+		!r.envoyGateway.GatewayAPI.IsEnabled(egv1a1.XListenerSet)
 
 	switch {
 	case !exists:
