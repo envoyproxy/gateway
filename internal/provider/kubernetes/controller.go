@@ -1863,8 +1863,6 @@ func (r *gatewayAPIReconciler) processXListenerSets(ctx context.Context, gateway
 		return err
 	}
 
-	r.log.Info("found XListenerSets for gateway", "gateway", gatewayNamespaceName, "count", len(xListenerSetList.Items))
-
 	for i := range xListenerSetList.Items {
 		xls := &xListenerSetList.Items[i]
 		if r.namespaceLabel != nil {
@@ -1881,8 +1879,6 @@ func (r *gatewayAPIReconciler) processXListenerSets(ctx context.Context, gateway
 		if resourceMap.allAssociatedXListenerSets.Has(key) {
 			continue
 		}
-
-		r.log.Info("processing XListenerSet", "namespace", xls.Namespace, "name", xls.Name)
 
 		for _, listener := range xls.Spec.Listeners {
 			// Listener TLS is optional; only process when TLS termination occurs.
@@ -1914,7 +1910,6 @@ func (r *gatewayAPIReconciler) processXListenerSets(ctx context.Context, gateway
 			resourceMap.gatewayToXListenerSets[gatewayNamespaceName],
 			utils.NamespacedName(xls),
 		)
-		r.log.Info("added XListenerSet to gatewayToXListenerSets map", "gateway", gatewayNamespaceName, "xListenerSet", xls.Name, "total", len(resourceMap.gatewayToXListenerSets[gatewayNamespaceName]))
 		resourceTree.XListenerSets = append(resourceTree.XListenerSets, xls)
 	}
 
