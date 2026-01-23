@@ -36,7 +36,7 @@ func init() {
 }
 
 // getListenerAddr extracts the host from a gateway address and joins it with a port
-func getListenerAddr(gwAddrWithPort string, port string) string {
+func getListenerAddr(gwAddrWithPort, port string) string {
 	hostOnly := gwAddrWithPort
 	if host, _, splitErr := net.SplitHostPort(gwAddrWithPort); splitErr == nil {
 		hostOnly = host
@@ -45,13 +45,13 @@ func getListenerAddr(gwAddrWithPort string, port string) string {
 }
 
 // createXListenerSetParent creates a RouteParentStatus for an XListenerSet
-func createXListenerSetParent(ns string, controllerName string, xlistenerSetName string, sectionName string) gwapiv1.RouteParentStatus {
+func createXListenerSetParent(controllerName, xlistenerSetName, sectionName string) gwapiv1.RouteParentStatus {
 	return gwapiv1.RouteParentStatus{
 		ParentRef: gwapiv1.ParentReference{
 			Group:       gatewayapi.GroupPtr(gwapixv1a1.GroupVersion.Group),
 			Kind:        gatewayapi.KindPtr(resource.KindXListenerSet),
 			Name:        gwapiv1.ObjectName(xlistenerSetName),
-			Namespace:   gatewayapi.NamespacePtr(ns),
+			Namespace:   gatewayapi.NamespacePtr("gateway-conformance-infra"),
 			SectionName: gatewayapi.SectionNamePtr(sectionName),
 		},
 		ControllerName: gwapiv1.GatewayController(controllerName),
@@ -86,7 +86,7 @@ var XListenerSetHTTPTest = suite.ConformanceTest{
 		require.NoError(t, err)
 
 		parents := []gwapiv1.RouteParentStatus{
-			createXListenerSetParent(ns, suite.ControllerName, "xlistener-set-http", "extra-http"),
+			createXListenerSetParent(suite.ControllerName, "xlistener-set-http", "extra-http"),
 		}
 
 		kubernetes.RouteMustHaveParents(t, suite.Client, suite.TimeoutConfig, routeNN, parents, false, &gwapiv1.HTTPRoute{})
@@ -123,7 +123,7 @@ var XListenerSetHTTPSTest = suite.ConformanceTest{
 
 		listenerAddr := getListenerAddr(gwAddrWithPort, "18443")
 		parents := []gwapiv1.RouteParentStatus{
-			createXListenerSetParent(ns, suite.ControllerName, "xlistener-set-http", "extra-https"),
+			createXListenerSetParent(suite.ControllerName, "xlistener-set-http", "extra-https"),
 		}
 
 		kubernetes.RouteMustHaveParents(t, suite.Client, suite.TimeoutConfig, routeNN, parents, false, &gwapiv1.HTTPRoute{})
@@ -172,7 +172,7 @@ var XListenerSetGRPCTest = suite.ConformanceTest{
 
 		listenerAddr := getListenerAddr(gwAddrWithPort, "18082")
 		parents := []gwapiv1.RouteParentStatus{
-			createXListenerSetParent(ns, suite.ControllerName, "xlistener-set-grpc", "extra-grpc"),
+			createXListenerSetParent(suite.ControllerName, "xlistener-set-grpc", "extra-grpc"),
 		}
 
 		kubernetes.RouteMustHaveParents(t, suite.Client, suite.TimeoutConfig, routeNN, parents, false, &gwapiv1.GRPCRoute{})
@@ -204,7 +204,7 @@ var XListenerSetTCPTest = suite.ConformanceTest{
 
 		listenerAddr := getListenerAddr(gwAddrWithPort, "18083")
 		parents := []gwapiv1.RouteParentStatus{
-			createXListenerSetParent(ns, suite.ControllerName, "xlistener-set-tcp", "extra-tcp"),
+			createXListenerSetParent(suite.ControllerName, "xlistener-set-tcp", "extra-tcp"),
 		}
 
 		TCPRouteMustHaveParents(t, suite.Client, &suite.TimeoutConfig, routeNN, parents, false)
@@ -240,7 +240,7 @@ var XListenerSetUDPTest = suite.ConformanceTest{
 
 		listenerAddr := getListenerAddr(gwAddrWithPort, "5300")
 		parents := []gwapiv1.RouteParentStatus{
-			createXListenerSetParent(ns, suite.ControllerName, "xlistener-set-udp", "extra-udp"),
+			createXListenerSetParent(suite.ControllerName, "xlistener-set-udp", "extra-udp"),
 		}
 
 		UDPRouteMustHaveParents(t, suite.Client, &suite.TimeoutConfig, routeNN, parents, false)
