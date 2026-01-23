@@ -32,10 +32,10 @@ spec:
   authentication:
     rules:
       - headers:
-          x-api-key: my-api-key
+          x-user: example-user
 ```
 
-In this example, requests are allowed only if the `x-api-key` header is present and matches the configured value.
+In this example, requests are allowed only if the `x-user` header is present and matches the configured value.
 
 ---
 
@@ -83,12 +83,12 @@ spec:
   authentication:
     rules:
       - headers:
-          x-api-key: my-api-key
+          x-user: example-user
         methods:
           - GET
 ```
 
-In this scenario, a request is only authorized if it uses the `GET` method AND contains the correct `x-api-key` header.
+In this scenario, a request is only authorized if it uses the `GET` method and contains the expected user identity in the request headers.
 
 ---
 
