@@ -193,7 +193,8 @@ xdsIR:
               port: 8080
             filters:
               addRequestHeaders:
-              - append: false
+              - addIfAbsent: false
+                append: false
                 name: add-header-3
                 value:
                 - some-value
@@ -232,11 +233,13 @@ xdsIR:
               port: 8080
             filters:
               addRequestHeaders:
-              - append: true
+              - addIfAbsent: false
+                append: true
                 name: add-header-1
                 value:
                 - some-value
-              - append: true
+              - addIfAbsent: false
+                append: true
                 name: add-header-2
                 value:
                 - some-value

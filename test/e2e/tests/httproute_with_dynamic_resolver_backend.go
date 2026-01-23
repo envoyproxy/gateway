@@ -66,7 +66,6 @@ var DynamicResolverBackendTest = suite.ConformanceTest{
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 		})
 		t.Run("route to external service with app protocol", func(t *testing.T) {
-			t.Skip("https://github.com/envoyproxy/gateway/issues/7058")
 			routeNN := types.NamespacedName{Name: "httproute-with-dynamic-resolver-backend-with-app-protocol", Namespace: ConformanceInfraNamespace}
 			gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
 			BackendMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "backend-dynamic-resolver-with-app-protocol", Namespace: ConformanceInfraNamespace})
@@ -81,12 +80,9 @@ var DynamicResolverBackendTest = suite.ConformanceTest{
 				},
 			})
 
-			// test with nghttp2.org, it support http2.0
-			// https://github.com/postmanlabs/httpbin/issues/373#issuecomment-354534597
 			req := http.MakeRequest(t, &http.ExpectedResponse{
 				Request: http.Request{
-					Host: "nghttp2.org",
-					Path: "httpbin/status/200",
+					Host: "gateway.envoyproxy.io", // gateway website supports http2.0
 				},
 				Response: http.Response{
 					StatusCodes: []int{200},

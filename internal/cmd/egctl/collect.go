@@ -40,7 +40,7 @@ func newCollectCommand() *cobra.Command {
 		Example: `  # Collect configurations from current context.
   egctl experimental collect
 	`,
-		Run: func(c *cobra.Command, args []string) {
+		Run: func(c *cobra.Command, _ []string) {
 			cmdutil.CheckErr(runCollect(c.OutOrStderr(), *collectOpts))
 		},
 	}

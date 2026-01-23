@@ -16,7 +16,7 @@ Curl the example app through Envoy proxy:
 curl --verbose --header "Host: www.example.com" http://$GATEWAY_HOST/get
 ```
 
-The above command should succeed with status code 200. 
+The above command should succeed with status code 200.
 
 
 {{% /tab %}}
@@ -46,7 +46,7 @@ Curl the example app through Envoy proxy:
 curl --verbose --header "Host: www.example.com" http://localhost:8888/get
 ```
 
-The above command should succeed with status code 200. 
+The above command should succeed with status code 200.
 
 {{% /tab %}}
 {{< /tabpane >}}

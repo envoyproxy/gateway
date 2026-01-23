@@ -199,6 +199,7 @@ xdsIR:
       path: /ready
       port: 19003
     tracing:
+      authority: otel-collector.monitoring.svc
       destination:
         metadata:
           kind: EnvoyProxy

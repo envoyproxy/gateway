@@ -38,7 +38,7 @@ func newEnvoyGatewayDashboardCmd() *cobra.Command {
   egctl x dashboard envoy-gateway --port 8080
 `,
 		Aliases: []string{"eg"},
-		RunE: func(c *cobra.Command, args []string) error {
+		RunE: func(c *cobra.Command, _ []string) error {
 			if listenPort > 65535 || listenPort < 0 {
 				return fmt.Errorf("invalid port number range")
 			}

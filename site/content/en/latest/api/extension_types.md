@@ -492,7 +492,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `tracing` | _[Tracing](#tracing)_ |  false  |  | Tracing configures the tracing settings for the backend or HTTPRoute. |
+| `tracing` | _[Tracing](#tracing)_ |  false  |  | Tracing configures the tracing settings for the backend or HTTPRoute.<br />This takes precedence over EnvoyProxy tracing when set. |
 | `metrics` | _[BackendMetrics](#backendmetrics)_ |  false  |  | Metrics defines metrics configuration for the backend or Route. |
 
 
@@ -890,6 +890,7 @@ _Appears in:_
 | `brotli` | _[BrotliCompressor](#brotlicompressor)_ |  false  |  | The configuration for Brotli compressor. |
 | `gzip` | _[GzipCompressor](#gzipcompressor)_ |  false  |  | The configuration for GZIP compressor. |
 | `zstd` | _[ZstdCompressor](#zstdcompressor)_ |  false  |  | The configuration for Zstd compressor. |
+| `minContentLength` | _[Quantity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#quantity-resource-api)_ |  false  |  | MinContentLength defines the minimum response size in bytes to apply compression.<br />Responses smaller than this threshold will not be compressed.<br />Must be at least 30 bytes as enforced by Envoy Proxy.<br />Note that when the suffix is not provided, the value is interpreted as bytes.<br />Default: 30 bytes |
 
 
 #### CompressorType
@@ -1029,6 +1030,22 @@ _Appears in:_
 | `name` | _string_ |  true  |  | Name of the cookie to hash.<br />If this cookie does not exist in the request, Envoy will generate a cookie and set<br />the TTL on the response back to the client based on Layer 4<br />attributes of the backend endpoint, to ensure that these future requests<br />go to the same backend endpoint. Make sure to set the TTL field for this case. |
 | `ttl` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#duration)_ |  false  |  | TTL of the generated cookie if the cookie is not present. This value sets the<br />Max-Age attribute value. |
 | `attributes` | _object (keys:string, values:string)_ |  false  |  | Additional Attributes to set for the generated cookie. |
+
+
+#### CookieMatchType
+
+_Underlying type:_ _string_
+
+CookieMatchType specifies the semantics of how cookie values should be compared.
+Valid CookieMatchType values are "Exact" and "RegularExpression".
+
+_Appears in:_
+- [HTTPCookieMatch](#httpcookiematch)
+
+| Value | Description |
+| ----- | ----------- |
+| `Exact` | CookieMatchExact matches the exact value of the cookie.<br /> | 
+| `RegularExpression` | CookieMatchRegularExpression matches a regular expression against the value of the cookie.<br />The regex string must adhere to the syntax documented in https://github.com/google/re2/wiki/Syntax.<br /> | 
 
 
 #### CrlContext
@@ -1450,6 +1467,7 @@ _Appears in:_
 | `rateLimitHpa` | _[KubernetesHorizontalPodAutoscalerSpec](#kuberneteshorizontalpodautoscalerspec)_ |  false  |  | RateLimitHpa defines the Horizontal Pod Autoscaler settings for Envoy ratelimit Deployment.<br />If the HPA is set, Replicas field from RateLimitDeployment will be ignored. |
 | `rateLimitPDB` | _[KubernetesPodDisruptionBudgetSpec](#kubernetespoddisruptionbudgetspec)_ |  false  |  | RateLimitPDB allows to control the pod disruption budget of rate limit service. |
 | `watch` | _[KubernetesWatchMode](#kuberneteswatchmode)_ |  false  |  | Watch holds configuration of which input resources should be watched and reconciled. |
+| `deploy` | _[KubernetesDeployMode](#kubernetesdeploymode)_ |  false  |  | Deploy holds configuration of how output managed resources such as the Envoy Proxy data plane<br />should be deployed |
 | `leaderElection` | _[LeaderElection](#leaderelection)_ |  false  |  | LeaderElection specifies the configuration for leader election.<br />If it's not set up, leader election will be active by default, using Kubernetes' standard settings. |
 | `shutdownManager` | _[ShutdownManager](#shutdownmanager)_ |  false  |  | ShutdownManager defines the configuration for the shutdown manager. |
 | `client` | _[KubernetesClient](#kubernetesclient)_ |  true  |  | Client holds the configuration for the Kubernetes client. |
@@ -1863,7 +1881,6 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `ancestors` | _[EnvoyProxyAncestorStatus](#envoyproxyancestorstatus) array_ |  false  |  | Ancestors represent the status information for all the GatewayClass or Gateway<br />reference this EnvoyProxy with ParametersReference. |
 
 
 #### EnvoyResourceType
@@ -1989,6 +2006,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `enableEnvoyPatchPolicy` | _boolean_ |  true  |  | EnableEnvoyPatchPolicy enables Envoy Gateway to<br />reconcile and implement the EnvoyPatchPolicy resources. |
 | `enableBackend` | _boolean_ |  true  |  | EnableBackend enables Envoy Gateway to<br />reconcile and implement the Backend resources. |
+| `disableLua` | _boolean_ |  true  |  | DisableLua determines if Lua EnvoyExtensionPolicies should be disabled.<br />If set to true, the Lua EnvoyExtensionPolicy feature will be disabled. |
 
 
 #### ExtensionHooks
@@ -2079,6 +2097,7 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `certificateRef` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#secretobjectreference)_ |  true  |  | CertificateRef is a reference to a Kubernetes Secret with a CA certificate in a key named "tls.crt".<br />The CA certificate is used by Envoy Gateway to verify the server certificate presented by the extension server. |
+| `clientCertificateRef` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#secretobjectreference)_ |  false  |  | ClientCertificateRef is a reference to a Kubernetes Secret with a client certificate and key<br />for client certificate authentication (mTLS). The secret must contain both "tls.crt" and "tls.key" keys.<br />When specified, Envoy Gateway will present this client certificate to the extension server<br />for mTLS authentication. If not specified, only server certificate validation is performed. |
 
 
 #### ExtractFrom
@@ -2204,6 +2223,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
+| `minEndpointsInZoneThreshold` | _integer_ |  false  |  | MinEndpointsInZoneThreshold is the minimum number of upstream endpoints in the local zone required to honor the forceLocalZone<br />override. This is useful for protecting zones with fewer endpoints. |
 
 
 #### GRPCActiveHealthChecker
@@ -2251,6 +2271,33 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `controllerName` | _string_ |  false  |  | ControllerName defines the name of the Gateway API controller. If unspecified,<br />defaults to "gateway.envoyproxy.io/gatewayclass-controller". See the following<br />for additional details:<br />  https://gateway-api.sigs.k8s.io/reference/1.4/spec/#gatewayclass |
+
+
+#### GatewayAPI
+
+_Underlying type:_ _string_
+
+GatewayAPI defines an experimental Gateway API resource that can be enabled.
+
+_Appears in:_
+- [GatewayAPIs](#gatewayapis)
+
+
+
+#### GatewayAPIs
+
+
+
+GatewayAPIs provides a mechanism to opt into experimental Gateway API resources.
+These APIs are experimental today and are subject to change or removal as they mature.
+
+_Appears in:_
+- [EnvoyGateway](#envoygateway)
+- [EnvoyGatewaySpec](#envoygatewayspec)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `enabled` | _[GatewayAPI](#gatewayapi) array_ |  true  |  |  |
 
 
 #### GlobalRateLimit
@@ -2392,6 +2439,22 @@ _Appears in:_
 | `streamIdleTimeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#duration)_ |  false  |  |  The stream idle timeout defines the amount of time a stream can exist without any upstream or downstream activity.<br /> Default: 5 minutes. |
 
 
+#### HTTPCookieMatch
+
+
+
+HTTPCookieMatch defines how to match a single cookie.
+
+_Appears in:_
+- [HTTPRouteMatchFilter](#httproutematchfilter)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `type` | _[CookieMatchType](#cookiematchtype)_ |  false  | Exact | Type specifies how to match against the value of the cookie. |
+| `name` | _string_ |  true  |  | Name is the cookie name to evaluate. |
+| `value` | _string_ |  true  |  | Value is the cookie value to be matched. |
+
+
 #### HTTPCredentialInjectionFilter
 
 
@@ -2464,6 +2527,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `set` | _[HTTPHeader](#httpheader) array_ |  false  |  | Set overwrites the request with the given header (name, value)<br />before the action.<br />Input:<br />  GET /foo HTTP/1.1<br />  my-header: foo<br />Config:<br />  set:<br />  - name: "my-header"<br />    value: "bar"<br />Output:<br />  GET /foo HTTP/1.1<br />  my-header: bar |
 | `add` | _[HTTPHeader](#httpheader) array_ |  false  |  | Add adds the given header(s) (name, value) to the request<br />before the action. It appends to any existing values associated<br />with the header name.<br />Input:<br />  GET /foo HTTP/1.1<br />  my-header: foo<br />Config:<br />  add:<br />  - name: "my-header"<br />    value: "bar,baz"<br />Output:<br />  GET /foo HTTP/1.1<br />  my-header: foo,bar,baz |
+| `addIfAbsent` | _[HTTPHeader](#httpheader) array_ |  false  |  | AddIfAbsent adds the given header(s) (name, value) to the request/response<br />only if the header does not already exist. Unlike Add which appends to<br />existing values, this is a no-op if the header is already present.<br />Input:<br />  GET /foo HTTP/1.1<br />  my-header: foo<br />Config:<br />  addIfAbsent:<br />  - name: "my-header"<br />    value: "bar"<br />Output:<br />  GET /foo HTTP/1.1<br />  my-header: foo |
 | `remove` | _string array_ |  false  |  | Remove the given header(s) from the HTTP request before the action. The<br />value of Remove is a list of HTTP header names. Note that the header<br />names are case-insensitive (see<br />https://datatracker.ietf.org/doc/html/rfc2616#section-4.2).<br />Input:<br />  GET /foo HTTP/1.1<br />  my-header1: foo<br />  my-header2: bar<br />  my-header3: baz<br />Config:<br />  remove: ["my-header1", "my-header3"]<br />Output:<br />  GET /foo HTTP/1.1<br />  my-header2: bar |
 | `removeOnMatch` | _[StringMatch](#stringmatch) array_ |  false  |  | RemoveOnMatch removes headers whose names match the specified string matchers.<br />Matching is performed on the header name (case-insensitive). |
 
@@ -2558,6 +2622,22 @@ _Appears in:_
 | `urlRewrite` | _[HTTPURLRewriteFilter](#httpurlrewritefilter)_ |  false  |  |  |
 | `directResponse` | _[HTTPDirectResponseFilter](#httpdirectresponsefilter)_ |  false  |  |  |
 | `credentialInjection` | _[HTTPCredentialInjectionFilter](#httpcredentialinjectionfilter)_ |  false  |  |  |
+| `matches` | _[HTTPRouteMatchFilter](#httproutematchfilter) array_ |  false  |  | Matches defines additional matching criteria for the HTTPRoute rule.<br />As with HTTPRouteRule.Matches, the rule is matched if any one match applies.<br />When both HTTPRouteRule.Matches and HTTPRouteFilter.Matches are set, the<br />effective matching is the logical AND of the two sets. |
+
+
+#### HTTPRouteMatchFilter
+
+
+
+HTTPRouteMatchFilter defines additional matching criteria for the HTTPRoute rule.
+At least one matcher must be specified.
+
+_Appears in:_
+- [HTTPRouteFilterSpec](#httproutefilterspec)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `cookies` | _[HTTPCookieMatch](#httpcookiematch) array_ |  true  |  | Cookies is a list of cookie matchers evaluated against the HTTP request.<br />All specified matchers must match. |
 
 
 #### HTTPStatus
@@ -3446,9 +3526,9 @@ _Appears in:_
 
 | Value | Description |
 | ----- | ----------- |
-| `Strict` | LuaValidationStrict is the default level and checks for issues during script execution.<br />Recommended if your scripts only use the standard Envoy Lua stream handle API.<br />For supported APIs, see: https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/lua_filter#stream-handle-api<br /> | 
-| `Syntax` | LuaValidationSyntax checks for syntax errors in the Lua script.<br />Note that this is not a full runtime validation and does not check for issues during script execution.<br />This is recommended if your scripts use external libraries that are not supported by Lua runtime validation.<br /> | 
-| `Disabled` | LuaValidationDisabled disables all validations of Lua scripts.<br />Scripts will be accepted and executed without any validation checks.<br />This is not recommended unless both runtime and syntax validations are failing unexpectedly.<br /> | 
+| `Strict` | LuaValidationStrict is the default level and checks for issues during script execution.<br />Recommended if your scripts only use the standard Envoy Lua stream handle API and no external libraries.<br />For supported APIs, see: https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/lua_filter#stream-handle-api<br />INFO: This validation mode executes Lua scripts from EnvoyExtensionPolicy (EEP) resources in the gateway controller.<br />Since the Gateway controller watches EEPs across all namespaces (or namespaces matching the configured selector),<br />unprivileged users can create EEPs in their namespaces and cause arbitrary Lua code to execute in the Gateway controller process.<br />Security measures are in place to prevent unsafe Lua code from accessing critical system resources on the controller<br />and fail validation, preventing the unsafe code from flowing to the data plane proxy.<br /> | 
+| `InsecureSyntax` | LuaValidationInsecureSyntax checks for Lua syntax errors only.<br />Useful if your scripts use external libraries other than the standard Envoy Lua stream handle API.<br />WARNING: This mode does NOT offer any runtime validations, so no security measures are applied to validate Lua code safety.<br />Not recommended unless you completely trust all EnvoyExtensionPolicy resources.<br /> | 
+| `Disabled` | LuaValidationDisabled disables all Lua script validations.<br />WARNING: This mode does NOT offer any runtime or syntax validations, so no security measures are applied to validate Lua code safety.<br />Not recommended unless you completely trust all EnvoyExtensionPolicy resources.<br /> | 
 
 
 #### LuaValueType
@@ -4233,6 +4313,7 @@ _Appears in:_
 | `accessLog` | _[ProxyAccessLog](#proxyaccesslog)_ |  false  |  | AccessLogs defines accesslog parameters for managed proxies.<br />If unspecified, will send default format to stdout. |
 | `tracing` | _[ProxyTracing](#proxytracing)_ |  false  |  | Tracing defines tracing configuration for managed proxies.<br />If unspecified, will not send tracing data. |
 | `metrics` | _[ProxyMetrics](#proxymetrics)_ |  true  |  | Metrics defines metrics configuration for managed proxies. |
+| `requestID` | _[RequestIDSettings](#requestidsettings)_ |  false  |  | RequestID configures Envoy request ID behavior. |
 
 
 #### ProxyTracing
@@ -4246,10 +4327,11 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `samplingRate` | _integer_ |  false  |  | SamplingRate controls the rate at which traffic will be<br />selected for tracing if no prior sampling decision has been made.<br />Defaults to 100, valid values [0-100]. 100 indicates 100% sampling.<br />Only one of SamplingRate or SamplingFraction may be specified.<br />If neither field is specified, all requests will be sampled. |
-| `samplingFraction` | _[Fraction](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#fraction)_ |  false  |  | SamplingFraction represents the fraction of requests that should be<br />selected for tracing if no prior sampling decision has been made.<br />Only one of SamplingRate or SamplingFraction may be specified.<br />If neither field is specified, all requests will be sampled. |
-| `customTags` | _object (keys:string, values:[CustomTag](#customtag))_ |  false  |  | CustomTags defines the custom tags to add to each span.<br />If provider is kubernetes, pod name and namespace are added by default. |
+| `samplingFraction` | _[Fraction](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#fraction)_ |  false  |  | SamplingFraction represents the fraction of requests that should be<br />selected for tracing if no prior sampling decision has been made. |
+| `customTags` | _object (keys:string, values:[CustomTag](#customtag))_ |  false  |  | CustomTags defines the custom tags to add to each span.<br />If provider is kubernetes, pod name and namespace are added by default.<br />Deprecated: Use Tags instead. |
 | `tags` | _object (keys:string, values:string)_ |  false  |  | Tags defines the custom tags to add to each span.<br />Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators) may be used in the value.<br />The [format string documentation](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#config-access-log-format-strings) provides more information.<br />If provider is kubernetes, pod name and namespace are added by default.<br />Same keys take precedence over CustomTags. |
+| `spanName` | _[TracingSpanName](#tracingspanname)_ |  false  |  | SpanName defines the name of the span which will be used for tracing.<br />Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators) may be used in the value.<br />The [format string documentation](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#config-access-log-format-strings) provides more information.<br />If not set, the span name is provider specific.<br />e.g. Datadog use `ingress` as the default client span name,<br />and `router <UPSTREAM_CLUSTER> egress` as the server span name. |
+| `samplingRate` | _integer_ |  false  |  | SamplingRate controls the rate at which traffic will be<br />selected for tracing if no prior sampling decision has been made.<br />Defaults to 100, valid values [0-100]. 100 indicates 100% sampling.<br />Only one of SamplingRate or SamplingFraction may be specified.<br />If neither field is specified, all requests will be sampled. |
 | `provider` | _[TracingProvider](#tracingprovider)_ |  true  |  | Provider defines the tracing provider. |
 
 
@@ -4684,6 +4766,39 @@ _Appears in:_
 | `Preserve` | Preserve `X-Request-ID` if already present, do not generate when empty<br /> | 
 | `Generate` | Always generate `X-Request-ID` header, do not preserve `X-Request-ID`<br />header if it exists. This is the default behavior.<br /> | 
 | `Disable` | Do not preserve or generate `X-Request-ID` header<br /> | 
+
+
+#### RequestIDExtensionAction
+
+_Underlying type:_ _string_
+
+RequestIDExtensionAction defines how the UUID request ID extension behaves
+with respect to packing the trace reason into the UUID and using the
+request ID for trace sampling decisions.
+
+_Appears in:_
+- [RequestIDSettings](#requestidsettings)
+
+| Value | Description |
+| ----- | ----------- |
+| `PackAndSample` | PackAndSample enables both behaviors:<br />- Alters the UUID to contain the trace sampling decision<br />- Uses `X-Request-ID` for trace sampling<br /> | 
+| `Sample` | Sample uses `X-Request-ID` for trace sampling decisions, but does NOT alter<br />the UUID to pack the trace sampling decision.<br /> | 
+| `Pack` | Pack alters the UUID to contain the trace sampling decision, but does NOT<br />use `X-Request-ID` for trace sampling decisions.<br /> | 
+| `Disable` | Disable disables both behaviors:<br />- Does not alter the UUID<br />- Does not use `X-Request-ID` for trace sampling<br /> | 
+
+
+#### RequestIDSettings
+
+
+
+RequestIDSettings defines configuration for Envoy's UUID request ID extension.
+
+_Appears in:_
+- [ProxyTelemetry](#proxytelemetry)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `tracing` | _[RequestIDExtensionAction](#requestidextensionaction)_ |  false  |  | Tracing configures Envoy's behavior for the UUID request ID extension,<br />including whether the trace sampling decision is packed into the UUID and<br />whether `X-Request-ID` is used for trace sampling decisions.<br />When omitted, the default behavior is `PackAndSample`, which alters the UUID<br />to contain the trace sampling decision and uses `X-Request-ID` for stable<br />trace sampling. |
 
 
 #### ResourceProviderType
@@ -5318,11 +5433,14 @@ Tracing defines the configuration for tracing.
 
 _Appears in:_
 - [BackendTelemetry](#backendtelemetry)
+- [ProxyTracing](#proxytracing)
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `samplingFraction` | _[Fraction](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#fraction)_ |  false  |  | SamplingFraction represents the fraction of requests that should be<br />selected for tracing if no prior sampling decision has been made.<br />This will take precedence over sampling fraction on EnvoyProxy if set. |
-| `customTags` | _object (keys:string, values:[CustomTag](#customtag))_ |  false  |  | CustomTags defines the custom tags to add to each span.<br />If provider is kubernetes, pod name and namespace are added by default. |
+| `samplingFraction` | _[Fraction](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#fraction)_ |  false  |  | SamplingFraction represents the fraction of requests that should be<br />selected for tracing if no prior sampling decision has been made. |
+| `customTags` | _object (keys:string, values:[CustomTag](#customtag))_ |  false  |  | CustomTags defines the custom tags to add to each span.<br />If provider is kubernetes, pod name and namespace are added by default.<br />Deprecated: Use Tags instead. |
+| `tags` | _object (keys:string, values:string)_ |  false  |  | Tags defines the custom tags to add to each span.<br />Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators) may be used in the value.<br />The [format string documentation](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#config-access-log-format-strings) provides more information.<br />If provider is kubernetes, pod name and namespace are added by default.<br />Same keys take precedence over CustomTags. |
+| `spanName` | _[TracingSpanName](#tracingspanname)_ |  false  |  | SpanName defines the name of the span which will be used for tracing.<br />Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators) may be used in the value.<br />The [format string documentation](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#config-access-log-format-strings) provides more information.<br />If not set, the span name is provider specific.<br />e.g. Datadog use `ingress` as the default client span name,<br />and `router <UPSTREAM_CLUSTER> egress` as the server span name. |
 
 
 #### TracingProvider
@@ -5362,6 +5480,22 @@ _Appears in:_
 | `OpenTelemetry` |  | 
 | `Zipkin` |  | 
 | `Datadog` |  | 
+
+
+#### TracingSpanName
+
+
+
+
+
+_Appears in:_
+- [ProxyTracing](#proxytracing)
+- [Tracing](#tracing)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `client` | _string_ |  true  |  | Client defines operation name of the span which will be used for tracing. |
+| `server` | _string_ |  true  |  | Server defines the operation name of the upstream span which will be used for tracing. |
 
 
 #### TranslationConfig

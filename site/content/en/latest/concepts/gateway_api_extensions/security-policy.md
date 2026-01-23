@@ -27,7 +27,7 @@ title: "SecurityPolicy"
 
 ## SecurityPolicy in Envoy Gateway
 
-`SecurityPolicy` is implemented as a Kubernetes Custom Resource Definition (CRD) and follows the policy attachment model. 
+`SecurityPolicy` is implemented as a Kubernetes Custom Resource Definition (CRD) and follows the policy attachment model.
 
 ### Targets
 
