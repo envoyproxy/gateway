@@ -11,7 +11,7 @@ spec:
     - name: extra-tls
       port: 18444
       protocol: TLS
-      hostname: "*.example.com"
+      hostname: "example.com"
       tls:
         mode: Passthrough
       allowedRoutes:
@@ -34,8 +34,8 @@ spec:
       name: xlistener-set-tls
       sectionName: extra-tls
   hostnames:
-    - "tls.example.com"
+    - "example.com"
   rules:
     - backendRefs:
-        - name: tls-backend
-          port: 10443
+        - name: tls-backend-2
+          port: 443

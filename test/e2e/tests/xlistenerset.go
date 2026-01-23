@@ -294,7 +294,7 @@ var XListenerSetTLSTest = suite.ConformanceTest{
 
 		expected := http.ExpectedResponse{
 			Request: http.Request{
-				Host: "tls.example.com",
+				Host: "example.com",
 				Path: "/",
 			},
 			Response: http.Response{
@@ -318,7 +318,7 @@ var XListenerSetTLSTest = suite.ConformanceTest{
 			suite.TimeoutConfig.MaxTimeToConsistency,
 			cPem,
 			keyPem,
-			"tls.example.com")
+			"example.com")
 	},
 }
 
