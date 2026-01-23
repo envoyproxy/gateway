@@ -135,9 +135,17 @@ func (*dynamicForwardProxy) patchRoute(route *routev3.Route, irRoute *ir.HTTPRou
 		return nil
 	}
 
+	if route.TypedPerFilterConfig == nil {
+		route.TypedPerFilterConfig = make(map[string]*anypb.Any)
+	}
+
+	filterName := dfpFilterName(dfpCacheName(determineIPFamily(irRoute.Destination.Settings), routeDNS(irRoute)))
+
 	perRouteCfg := buildDFPPerRouteConfig(irRoute)
 	if perRouteCfg == nil {
-		return nil
+		// Even without host rewrite, we need to enable the DFP filter for DNS resolution.
+		// DFP will use the :authority header for DNS lookup.
+		perRouteCfg = &dfpv3.PerRouteConfig{}
 	}
 
 	perRouteAny, err := anypb.New(perRouteCfg)
@@ -145,10 +153,6 @@ func (*dynamicForwardProxy) patchRoute(route *routev3.Route, irRoute *ir.HTTPRou
 		return err
 	}
 
-	if route.TypedPerFilterConfig == nil {
-		route.TypedPerFilterConfig = make(map[string]*anypb.Any)
-	}
-	filterName := dfpFilterName(dfpCacheName(determineIPFamily(irRoute.Destination.Settings), routeDNS(irRoute)))
 	route.TypedPerFilterConfig[filterName] = perRouteAny
 
 	// Clear out any existing host rewrite specifier to avoid conflicts.
@@ -198,12 +202,10 @@ func routeRequireDFP(route *ir.HTTPRoute) bool {
 		return false
 	}
 
-	if route.URLRewrite != nil && route.URLRewrite.Host != nil &&
-		(route.URLRewrite.Host.Header != nil || route.URLRewrite.Host.Name != nil) {
-		return true
-	}
-
-	return false
+	// DynamicResolver routes always require DFP filter to resolve DNS for the host header.
+	// If URLRewrite.Host is configured, DFP will use the rewritten hostname for DNS resolution.
+	// Otherwise, DFP will use the original :authority header.
+	return true
 }
 
 // dfpCacheConfigs builds a sorted list of unique DFP DNS cache configs needed by the given routes.
