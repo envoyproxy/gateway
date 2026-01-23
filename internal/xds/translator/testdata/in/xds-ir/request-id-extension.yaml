@@ -1,0 +1,70 @@
+http:
+- name: "disable-request-id-extension-listener"
+  address: "::"
+  port: 10080
+  requestID: Disable
+  hostnames:
+  - "*"
+  http1:
+    preserveHeaderCase: true
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  routes:
+  - name: "first-route"
+    hostname: "*"
+    destination:
+      name: "first-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "first-route-dest/backend/0"
+- name: "sample-request-id-extension-listener"
+  address: "::"
+  port: 10081
+  requestID: Sample
+  hostnames:
+  - "*"
+  routes:
+  - name: "second-route"
+    hostname: "*"
+    destination:
+      name: "second-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.5"
+          port: 50000
+        name: "second-route-dest/backend/0"
+- name: "pack-request-id-extension-listener"
+  address: "::"
+  port: 10082
+  requestID: Pack
+  hostnames:
+  - "*"
+  routes:
+  - name: "third-route"
+    hostname: "*"
+    destination:
+      name: "third-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.5"
+          port: 50000
+        name: "third-route-dest/backend/0"
+- name: "pack-and-sample-request-id-extension-listener"
+  address: "::"
+  port: 10083
+  requestID: PackAndSample
+  hostnames:
+  - "*"
+  routes:
+  - name: "fourth-route"
+    hostname: "*"
+    destination:
+      name: "fourth-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.5"
+          port: 50000
+        name: "fourth-route-dest/backend/0"
