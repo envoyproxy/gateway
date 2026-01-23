@@ -20,6 +20,7 @@
       redirect:
         regexRewrite:
           pattern:
+            googleRe2: {}
             regex: ^/redirect\/*
           substitution: /
     - match:
@@ -28,6 +29,7 @@
       redirect:
         regexRewrite:
           pattern:
+            googleRe2: {}
             regex: ^/redirect/\/*
           substitution: /
     - match:

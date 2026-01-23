@@ -21,6 +21,7 @@
           allowMethods: GET, POST
           allowOriginStringMatch:
           - safeRegex:
+              googleRe2: {}
               regex: https://.*\.test\.com:8080
           - exact: https://www.test.org:8080
           forwardNotMatchingPreflights: false

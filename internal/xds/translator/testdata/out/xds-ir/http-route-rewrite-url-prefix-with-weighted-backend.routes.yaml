@@ -12,6 +12,7 @@
         clusterNotFoundResponseCode: INTERNAL_SERVER_ERROR
         regexRewrite:
           pattern:
+            googleRe2: {}
             regex: ^/foo\/*
           substitution: /
         upgradeConfigs:
@@ -32,6 +33,7 @@
         clusterNotFoundResponseCode: INTERNAL_SERVER_ERROR
         regexRewrite:
           pattern:
+            googleRe2: {}
             regex: ^/bar\/*
           substitution: /
         upgradeConfigs:

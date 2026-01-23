@@ -10,13 +10,16 @@
         - name: re_header
           stringMatch:
             safeRegex:
+              googleRe2: {}
               regex: .*
         queryParameters:
         - name: re_query
           stringMatch:
             safeRegex:
+              googleRe2: {}
               regex: .*
         safeRegex:
+          googleRe2: {}
           regex: /v1/.*
       name: regex-route
       route:

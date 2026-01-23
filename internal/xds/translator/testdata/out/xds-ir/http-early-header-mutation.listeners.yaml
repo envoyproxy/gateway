@@ -92,6 +92,7 @@
             - removeOnMatch:
                 keyMatcher:
                   safeRegex:
+                    googleRe2: {}
                     regex: removed-regex-.*
         http2ProtocolOptions:
           initialConnectionWindowSize: 1048576

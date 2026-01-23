@@ -101,6 +101,7 @@
               - name: test-regex
                 stringMatch:
                   safeRegex:
+                    googleRe2: {}
                     regex: .*
               - name: test-suffix
                 stringMatch:

@@ -13,6 +13,7 @@
         - name: cookie-2
           stringMatch:
             safeRegex:
+              googleRe2: {}
               regex: foo.*
         headers:
         - name: user

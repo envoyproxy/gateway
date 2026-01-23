@@ -20,6 +20,7 @@
           allowMethods: '*'
           allowOriginStringMatch:
           - safeRegex:
+              googleRe2: {}
               regex: '*.example.com'
           - exact: foo.bar.com
           exposeHeaders: x-header-3, x-header-4

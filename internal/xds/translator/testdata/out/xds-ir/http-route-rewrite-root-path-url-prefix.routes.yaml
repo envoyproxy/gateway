@@ -16,6 +16,7 @@
         cluster: rewrite-route-dest
         regexRewrite:
           pattern:
+            googleRe2: {}
             regex: ^/origin/\/*
           substitution: /
         upgradeConfigs:

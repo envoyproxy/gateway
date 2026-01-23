@@ -33,7 +33,8 @@ rateLimits:
             StringMatch:
               MatchPattern:
                 SafeRegex:
-                  EngineType: null
+                  EngineType:
+                    GoogleRe2: {}
                   regex: foo/bar
           name: :path
 routeName: first-route

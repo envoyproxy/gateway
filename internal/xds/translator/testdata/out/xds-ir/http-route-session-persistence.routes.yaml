@@ -7,6 +7,7 @@
     routes:
     - match:
         safeRegex:
+          googleRe2: {}
           regex: /v1/.*
       name: header-based-session-persistence-route
       route:
@@ -24,6 +25,7 @@
                 name: session-header
     - match:
         safeRegex:
+          googleRe2: {}
           regex: /v1/.*/hoge
       name: cookie-based-session-persistence-route-regex
       route:

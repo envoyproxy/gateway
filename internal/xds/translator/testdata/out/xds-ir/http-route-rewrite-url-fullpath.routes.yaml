@@ -12,6 +12,7 @@
         cluster: rewrite-route
         regexRewrite:
           pattern:
+            googleRe2: {}
             regex: ^/.*$
           substitution: /rewrite
         upgradeConfigs:
@@ -24,6 +25,7 @@
         idleTimeout: 3600s
         regexRewrite:
           pattern:
+            googleRe2: {}
             regex: ^/.*$
           substitution: /rewrite
         timeout: 5s

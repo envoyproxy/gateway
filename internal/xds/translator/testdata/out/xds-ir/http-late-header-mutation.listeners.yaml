@@ -97,6 +97,7 @@
               - removeOnMatch:
                   keyMatcher:
                     safeRegex:
+                      googleRe2: {}
                       regex: removed-response-regex-.*
         - name: envoy.filters.http.router
           typedConfig:

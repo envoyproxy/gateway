@@ -12,6 +12,7 @@
         cluster: rewrite-route
         regexRewrite:
           pattern:
+            googleRe2: {}
             regex: ^/service/([^/]+)(/.*)$
           substitution: \2/instance/\1
         upgradeConfigs:
@@ -23,6 +24,7 @@
         cluster: rewrite-route
         regexRewrite:
           pattern:
+            googleRe2: {}
             regex: ^/\$env\/*
           substitution: /
         upgradeConfigs:
@@ -35,6 +37,7 @@
         idleTimeout: 3600s
         regexRewrite:
           pattern:
+            googleRe2: {}
             regex: ^/service/([^/]+)(/.*)$
           substitution: \2/instance/\1
         timeout: 5s
