@@ -8,10 +8,11 @@ package gatewayapi
 import (
 	"errors"
 	"fmt"
+	"reflect"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
-	"reflect"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -21,9 +22,11 @@ import (
 	"github.com/envoyproxy/gateway/internal/utils"
 )
 
-var ErrBackendTLSPolicyInvalidKind = fmt.Errorf("unsupported reference kind, supported kinds are ConfigMap, Secret, and ClusterTrustBundle")
-var ErrBackendTLSPolicyNoValidCACertificate = fmt.Errorf(
-	"no valid CA certificate found in referenced resources",
+var (
+	ErrBackendTLSPolicyInvalidKind          = fmt.Errorf("unsupported reference kind, supported kinds are ConfigMap, Secret, and ClusterTrustBundle")
+	ErrBackendTLSPolicyNoValidCACertificate = fmt.Errorf(
+		"no valid CA certificate found in referenced resources",
+	)
 )
 
 // ProcessBackendTLSPolicyStatus is called to post-process Backend TLS Policy status
