@@ -145,7 +145,7 @@ func TestBuildWasmWithTLS(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			var capturedCA []byte
 			mockCache := &caCapturingMockWasmCache{
-				GetFunc: func(downloadURL string, opts *wasm.GetOptions) (string, string, error) {
+				GetFunc: func(_ string, opts *wasm.GetOptions) (string, string, error) {
 					capturedCA = opts.CACert
 					return "http://eg.default/wasm", "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef", nil
 				},

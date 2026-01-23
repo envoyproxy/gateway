@@ -351,8 +351,7 @@ func TestWasmTLSIndexers(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			objs := []client.Object{gc, gtw}
 			for _, eep := range tc.configs {
-				eepCopy := eep
-				objs = append(objs, &eepCopy)
+				objs = append(objs, &eep)
 			}
 
 			clientBuilder := fakeclient.NewClientBuilder().
