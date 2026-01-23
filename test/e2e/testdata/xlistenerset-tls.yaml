@@ -21,7 +21,7 @@ spec:
           - kind: TLSRoute
             group: gateway.networking.k8s.io
 ---
-apiVersion: gateway.networking.k8s.io/v1alpha2
+apiVersion: gateway.networking.k8s.io/v1alpha3
 kind: TLSRoute
 metadata:
   name: xlistener-tlsroute

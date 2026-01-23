@@ -7,6 +7,7 @@ package kubernetes
 
 import (
 	"context"
+	"fmt"
 
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -150,7 +151,8 @@ func xListenerHTTPRouteIndexFunc(rawObj client.Object) []string {
 	httproute := rawObj.(*gwapiv1.HTTPRoute)
 	xlisteners := make([]string, 0, len(httproute.Spec.ParentRefs))
 	for _, parent := range httproute.Spec.ParentRefs {
-		if parent.Kind == nil || string(*parent.Kind) == resource.KindXListenerSet {
+		if parent.Group != nil && string(*parent.Group) == gwapixv1a1.GroupVersion.Group &&
+			parent.Kind != nil && string(*parent.Kind) == resource.KindXListenerSet {
 			xlisteners = append(xlisteners,
 				types.NamespacedName{
 					Namespace: gatewayapi.NamespaceDerefOr(parent.Namespace, httproute.Namespace),
@@ -368,7 +370,8 @@ func xListenerGRPCRouteIndexFunc(rawObj client.Object) []string {
 	grpcRoute := rawObj.(*gwapiv1.GRPCRoute)
 	xlisteners := make([]string, 0, len(grpcRoute.Spec.ParentRefs))
 	for _, parent := range grpcRoute.Spec.ParentRefs {
-		if parent.Kind == nil || string(*parent.Kind) == resource.KindXListenerSet {
+		if parent.Group != nil && string(*parent.Group) == gwapixv1a1.GroupVersion.Group &&
+			parent.Kind != nil && string(*parent.Kind) == resource.KindXListenerSet {
 			xlisteners = append(xlisteners,
 				types.NamespacedName{
 					Namespace: gatewayapi.NamespaceDerefOr(parent.Namespace, grpcRoute.Namespace),
@@ -380,12 +383,14 @@ func xListenerGRPCRouteIndexFunc(rawObj client.Object) []string {
 	return xlisteners
 }
 
-
 func xListenerTLSRouteIndexFunc(rawObj client.Object) []string {
 	tlsRoute := rawObj.(*gwapiv1a3.TLSRoute)
+	// Debug logging to track indexer calls
+	fmt.Printf("TLSRoute indexer called for %s/%s\n", tlsRoute.Namespace, tlsRoute.Name)
 	xlisteners := make([]string, 0, len(tlsRoute.Spec.ParentRefs))
 	for _, parent := range tlsRoute.Spec.ParentRefs {
-		if parent.Kind == nil || string(*parent.Kind) == resource.KindXListenerSet {
+		if parent.Group != nil && string(*parent.Group) == gwapixv1a1.GroupVersion.Group &&
+			parent.Kind != nil && string(*parent.Kind) == resource.KindXListenerSet {
 			xlisteners = append(xlisteners,
 				types.NamespacedName{
 					Namespace: gatewayapi.NamespaceDerefOr(parent.Namespace, tlsRoute.Namespace),
@@ -401,7 +406,8 @@ func xListenerTCPRouteIndexFunc(rawObj client.Object) []string {
 	tcpRoute := rawObj.(*gwapiv1a2.TCPRoute)
 	xlisteners := make([]string, 0, len(tcpRoute.Spec.ParentRefs))
 	for _, parent := range tcpRoute.Spec.ParentRefs {
-		if parent.Kind == nil || string(*parent.Kind) == resource.KindXListenerSet {
+		if parent.Group != nil && string(*parent.Group) == gwapixv1a1.GroupVersion.Group &&
+			parent.Kind != nil && string(*parent.Kind) == resource.KindXListenerSet {
 			xlisteners = append(xlisteners,
 				types.NamespacedName{
 					Namespace: gatewayapi.NamespaceDerefOr(parent.Namespace, tcpRoute.Namespace),
@@ -417,7 +423,8 @@ func xListenerUDPRouteIndexFunc(rawObj client.Object) []string {
 	udpRoute := rawObj.(*gwapiv1a2.UDPRoute)
 	xlisteners := make([]string, 0, len(udpRoute.Spec.ParentRefs))
 	for _, parent := range udpRoute.Spec.ParentRefs {
-		if parent.Kind == nil || string(*parent.Kind) == resource.KindXListenerSet {
+		if parent.Group != nil && string(*parent.Group) == gwapixv1a1.GroupVersion.Group &&
+			parent.Kind != nil && string(*parent.Kind) == resource.KindXListenerSet {
 			xlisteners = append(xlisteners,
 				types.NamespacedName{
 					Namespace: gatewayapi.NamespaceDerefOr(parent.Namespace, udpRoute.Namespace),
