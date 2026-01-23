@@ -8,12 +8,16 @@
 package tests
 
 import (
+	"context"
 	"net"
 	"testing"
+	"time"
 
+	"github.com/miekg/dns"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/wait"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapixv1a1 "sigs.k8s.io/gateway-api/apisx/v1alpha1"
 	"sigs.k8s.io/gateway-api/conformance/echo-basic/grpcechoserver"
@@ -21,13 +25,14 @@ import (
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
+	"sigs.k8s.io/gateway-api/conformance/utils/tlog"
 
 	gatewayapi "github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 )
 
 func init() {
-	ConformanceTests = append(ConformanceTests, XListenerSetHTTPTest, XListenerSetHTTPSTest, XListenerSetGRPCTest, XListenerSetTCPTest)
+	ConformanceTests = append(ConformanceTests, XListenerSetHTTPTest, XListenerSetHTTPSTest, XListenerSetGRPCTest, XListenerSetTCPTest, XListenerSetUDPTest)
 }
 
 var XListenerSetHTTPTest = suite.ConformanceTest{
@@ -276,5 +281,71 @@ var XListenerSetTCPTest = suite.ConformanceTest{
 		}
 
 		http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, listenerAddr, expected)
+	},
+}
+
+var XListenerSetUDPTest = suite.ConformanceTest{
+	ShortName:   "XListenerSetUDP",
+	Description: "UDPRoute should attach to an XListenerSet listener and serve traffic",
+	Manifests: []string{
+		"testdata/xlistenerset-base.yaml",
+		"testdata/xlistenerset-udp.yaml",
+	},
+	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
+		ns := "gateway-conformance-infra"
+		gwNN := types.NamespacedName{Name: "xlistener-gateway", Namespace: ns}
+		routeNN := types.NamespacedName{Name: "xlistener-udproute", Namespace: ns}
+
+		gwAddrWithPort, err := kubernetes.WaitForGatewayAddress(t, suite.Client, suite.TimeoutConfig, kubernetes.NewGatewayRef(gwNN, "core"))
+		require.NoError(t, err)
+
+		hostOnly := gwAddrWithPort
+		if host, _, splitErr := net.SplitHostPort(gwAddrWithPort); splitErr == nil {
+			hostOnly = host
+		}
+		listenerAddr := net.JoinHostPort(hostOnly, "5300")
+
+		parents := []gwapiv1.RouteParentStatus{{
+			ParentRef: gwapiv1.ParentReference{
+				Group:       gatewayapi.GroupPtr(gwapixv1a1.GroupVersion.Group),
+				Kind:        gatewayapi.KindPtr(resource.KindXListenerSet),
+				Name:        gwapiv1.ObjectName("xlistener-set-udp"),
+				Namespace:   gatewayapi.NamespacePtr(ns),
+				SectionName: gatewayapi.SectionNamePtr("extra-udp"),
+			},
+			ControllerName: gwapiv1.GatewayController(suite.ControllerName),
+			Conditions: []metav1.Condition{
+				{
+					Type:   string(gwapiv1.RouteConditionAccepted),
+					Status: metav1.ConditionTrue,
+					Reason: string(gwapiv1.RouteReasonAccepted),
+				},
+				{
+					Type:   string(gwapiv1.RouteConditionResolvedRefs),
+					Status: metav1.ConditionTrue,
+					Reason: string(gwapiv1.RouteReasonResolvedRefs),
+				},
+			},
+		}}
+
+		UDPRouteMustHaveParents(t, suite.Client, &suite.TimeoutConfig, routeNN, parents, false)
+
+		domain := "foo.bar.com."
+		msg := new(dns.Msg)
+		msg.SetQuestion(domain, dns.TypeA)
+
+		if err := wait.PollUntilContextTimeout(context.TODO(), time.Second, time.Minute, true,
+			func(_ context.Context) (done bool, err error) {
+				tlog.Logf(t, "performing DNS query %s on %s", domain, listenerAddr)
+				r, err := dns.Exchange(msg, listenerAddr)
+				if err != nil {
+					tlog.Logf(t, "failed to perform a UDP query: %v", err)
+					return false, nil
+				}
+				tlog.Logf(t, "got DNS response: %s", r.String())
+				return true, nil
+			}); err != nil {
+			t.Errorf("failed to perform DNS query: %v", err)
+		}
 	},
 }
