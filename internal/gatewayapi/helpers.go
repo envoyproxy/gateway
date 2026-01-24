@@ -537,9 +537,9 @@ func IsMergeGatewaysEnabled(resources *resource.Resources) bool {
 	}
 
 	// Fall back to default EnvoyProxySpec from EnvoyGateway configuration
-	if resources.EnvoyProxyDefaultSpec != nil &&
-		resources.EnvoyProxyDefaultSpec.MergeGateways != nil {
-		return *resources.EnvoyProxyDefaultSpec.MergeGateways
+	if resources.EnvoyProxyDefault != nil &&
+		resources.EnvoyProxyDefault.MergeGateways != nil {
+		return *resources.EnvoyProxyDefault.MergeGateways
 	}
 
 	return false

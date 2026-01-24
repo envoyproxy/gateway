@@ -161,7 +161,7 @@ func TestAttachEnvoyProxy(t *testing.T) {
 		gatewayParametersRef  *gwapiv1.LocalParametersReference
 		envoyProxyForGateway  *egv1a1.EnvoyProxy
 		envoyProxyForGWClass  *egv1a1.EnvoyProxy
-		envoyProxyDefaultSpec *egv1a1.EnvoyProxySpec
+		envoyProxyDefault *egv1a1.EnvoyProxySpec
 		expectedMergeGateways *bool
 		expectedConcurrency   *int32
 		expectEnvoyProxyNil   bool
@@ -172,7 +172,7 @@ func TestAttachEnvoyProxy(t *testing.T) {
 		},
 		{
 			name: "only default spec - should use default",
-			envoyProxyDefaultSpec: &egv1a1.EnvoyProxySpec{
+			envoyProxyDefault: &egv1a1.EnvoyProxySpec{
 				Concurrency: ptr.To[int32](4),
 			},
 			expectedConcurrency: ptr.To[int32](4),
@@ -188,7 +188,7 @@ func TestAttachEnvoyProxy(t *testing.T) {
 					Concurrency: ptr.To[int32](8),
 				},
 			},
-			envoyProxyDefaultSpec: &egv1a1.EnvoyProxySpec{
+			envoyProxyDefault: &egv1a1.EnvoyProxySpec{
 				Concurrency: ptr.To[int32](4),
 			},
 			expectedConcurrency: ptr.To[int32](8),
@@ -218,14 +218,14 @@ func TestAttachEnvoyProxy(t *testing.T) {
 					Concurrency: ptr.To[int32](8),
 				},
 			},
-			envoyProxyDefaultSpec: &egv1a1.EnvoyProxySpec{
+			envoyProxyDefault: &egv1a1.EnvoyProxySpec{
 				Concurrency: ptr.To[int32](4),
 			},
 			expectedConcurrency: ptr.To[int32](16),
 		},
 		{
 			name: "default spec with merge gateways enabled",
-			envoyProxyDefaultSpec: &egv1a1.EnvoyProxySpec{
+			envoyProxyDefault: &egv1a1.EnvoyProxySpec{
 				MergeGateways: ptr.To(true),
 				Concurrency:   ptr.To[int32](4),
 			},
@@ -243,7 +243,7 @@ func TestAttachEnvoyProxy(t *testing.T) {
 					MergeGateways: ptr.To(false),
 				},
 			},
-			envoyProxyDefaultSpec: &egv1a1.EnvoyProxySpec{
+			envoyProxyDefault: &egv1a1.EnvoyProxySpec{
 				MergeGateways: ptr.To(true),
 			},
 			expectedMergeGateways: ptr.To(false),
@@ -273,7 +273,7 @@ func TestAttachEnvoyProxy(t *testing.T) {
 			// Build resources
 			resources := &resource.Resources{
 				EnvoyProxyForGatewayClass: tc.envoyProxyForGWClass,
-				EnvoyProxyDefaultSpec:     tc.envoyProxyDefaultSpec,
+				EnvoyProxyDefault:     tc.envoyProxyDefault,
 			}
 
 			// Build envoy proxy map for gateway-level proxies
@@ -315,7 +315,7 @@ func TestIsMergeGatewaysEnabled(t *testing.T) {
 	testCases := []struct {
 		name                  string
 		envoyProxyForGWClass  *egv1a1.EnvoyProxy
-		envoyProxyDefaultSpec *egv1a1.EnvoyProxySpec
+		envoyProxyDefault *egv1a1.EnvoyProxySpec
 		expected              bool
 	}{
 		{
@@ -324,14 +324,14 @@ func TestIsMergeGatewaysEnabled(t *testing.T) {
 		},
 		{
 			name: "default spec with merge gateways true",
-			envoyProxyDefaultSpec: &egv1a1.EnvoyProxySpec{
+			envoyProxyDefault: &egv1a1.EnvoyProxySpec{
 				MergeGateways: ptr.To(true),
 			},
 			expected: true,
 		},
 		{
 			name: "default spec with merge gateways false",
-			envoyProxyDefaultSpec: &egv1a1.EnvoyProxySpec{
+			envoyProxyDefault: &egv1a1.EnvoyProxySpec{
 				MergeGateways: ptr.To(false),
 			},
 			expected: false,
@@ -352,7 +352,7 @@ func TestIsMergeGatewaysEnabled(t *testing.T) {
 					MergeGateways: ptr.To(true),
 				},
 			},
-			envoyProxyDefaultSpec: &egv1a1.EnvoyProxySpec{
+			envoyProxyDefault: &egv1a1.EnvoyProxySpec{
 				MergeGateways: ptr.To(false),
 			},
 			expected: true,
@@ -364,7 +364,7 @@ func TestIsMergeGatewaysEnabled(t *testing.T) {
 					MergeGateways: ptr.To(false),
 				},
 			},
-			envoyProxyDefaultSpec: &egv1a1.EnvoyProxySpec{
+			envoyProxyDefault: &egv1a1.EnvoyProxySpec{
 				MergeGateways: ptr.To(true),
 			},
 			expected: false,
@@ -376,7 +376,7 @@ func TestIsMergeGatewaysEnabled(t *testing.T) {
 					Concurrency: ptr.To[int32](4), // some other setting
 				},
 			},
-			envoyProxyDefaultSpec: &egv1a1.EnvoyProxySpec{
+			envoyProxyDefault: &egv1a1.EnvoyProxySpec{
 				MergeGateways: ptr.To(true),
 			},
 			expected: true,
@@ -387,7 +387,7 @@ func TestIsMergeGatewaysEnabled(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			resources := &resource.Resources{
 				EnvoyProxyForGatewayClass: tc.envoyProxyForGWClass,
-				EnvoyProxyDefaultSpec:     tc.envoyProxyDefaultSpec,
+				EnvoyProxyDefault:     tc.envoyProxyDefault,
 			}
 
 			result := IsMergeGatewaysEnabled(resources)

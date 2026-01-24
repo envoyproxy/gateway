@@ -13,7 +13,7 @@ import (
 )
 
 // MergeEnvoyProxyConfigs merges EnvoyProxy configurations using a 3-level hierarchy:
-// 1. defaultSpec - EnvoyProxySpec from EnvoyGateway.Provider.Kubernetes.EnvoyProxyDefaultSpec (base defaults)
+// 1. defaultSpec - EnvoyProxySpec from EnvoyGateway.Provider.Kubernetes.EnvoyProxyDefault (base defaults)
 // 2. gatewayClassProxy - EnvoyProxy from GatewayClass parametersRef (overrides defaults)
 // 3. gatewayProxy - EnvoyProxy from Gateway parametersRef (highest priority). Note that this is only present if the MergeGateways option is false.
 //
