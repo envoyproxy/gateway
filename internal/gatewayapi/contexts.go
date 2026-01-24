@@ -52,7 +52,11 @@ func (g *GatewayContext) ResetListeners() {
 	}
 }
 
-func (g *GatewayContext) attachEnvoyProxy(resources *resource.Resources, epMap map[types.NamespacedName]*egv1a1.EnvoyProxy) {
+// attachEnvoyProxy merges EnvoyProxy configurations from multiple levels and attaches the result.
+// Returns an error if the merge fails, which should be logged by the caller.
+// On error, the function still sets envoyProxy using fallback priority-based selection
+// so the gateway can continue to function, but administrators should investigate the merge failure.
+func (g *GatewayContext) attachEnvoyProxy(resources *resource.Resources, epMap map[types.NamespacedName]*egv1a1.EnvoyProxy) error {
 	// Merge EnvoyProxy configurations from 3 levels (in priority order, highest to lowest):
 	// 1. Gateway-level EnvoyProxy (via parametersRef) - only when MergeGateways is disabled
 	// 2. GatewayClass-level EnvoyProxy
@@ -78,7 +82,8 @@ func (g *GatewayContext) attachEnvoyProxy(resources *resource.Resources, epMap m
 		gatewayProxy,
 	)
 	if err != nil {
-		// If merge fails, fall back to simple priority-based selection
+		// If merge fails, fall back to simple priority-based selection so the gateway can still function.
+		// The caller should log this error to alert administrators.
 		if gatewayProxy != nil {
 			g.envoyProxy = gatewayProxy
 		} else if resources.EnvoyProxyForGatewayClass != nil {
@@ -88,10 +93,11 @@ func (g *GatewayContext) attachEnvoyProxy(resources *resource.Resources, epMap m
 				Spec: *resources.EnvoyProxyDefaultSpec,
 			}
 		}
-		return
+		return err
 	}
 
 	g.envoyProxy = merged
+	return nil
 }
 
 // ListenerContext wraps a Listener and provides helper methods for
