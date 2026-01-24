@@ -27,7 +27,11 @@ import (
 // Note: If there are settings which are not supplied by the merged EnvoyProxy, those are applied later
 // at infrastructure creation time via GetEnvoyProxyKubeProvider() which calls the existing default functions.
 //
-// Returns a merged EnvoyProxy with settings from all levels, or the highest priority config if only one exists.
+// Returns:
+// - merged: The merged EnvoyProxy configuration. On error, this contains the fallback configuration
+//   using priority-based selection so the gateway can continue to function.
+// - err: Any error that occurred during merging. Even when err is non-nil, merged will contain
+//   a valid fallback configuration. The caller should log this error to alert administrators.
 func MergeEnvoyProxyConfigs(
 	defaultSpec *egv1a1.EnvoyProxySpec,
 	gatewayClassProxy *egv1a1.EnvoyProxy,
@@ -42,7 +46,15 @@ func MergeEnvoyProxyConfigs(
 	}
 
 	// Handle merge strategies (StrategicMerge or JSONMerge)
-	return mergeEnvoyProxy(defaultSpec, gatewayClassProxy, gatewayProxy, *mergeType)
+	merged, err := mergeEnvoyProxy(defaultSpec, gatewayClassProxy, gatewayProxy, *mergeType)
+	if err != nil {
+		// Return the fallback configuration along with the error.
+		// This allows the gateway to continue functioning while alerting administrators.
+		fallback := replaceEnvoyProxy(defaultSpec, gatewayClassProxy, gatewayProxy)
+		return fallback, err
+	}
+
+	return merged, nil
 }
 
 // determineMergeType finds the MergeType to use by checking configs in priority order.

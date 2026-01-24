@@ -424,7 +424,7 @@ func (t *Translator) GetRelevantGateways(resources *resource.Resources) (
 			Gateway: gateway,
 		}
 		if err := gCtx.attachEnvoyProxy(resources, envoyproxyMap); err != nil {
-			t.Logger.Error(err, "EnvoyProxy merge failed, using fallback configuration", logKeysAndValues...)
+			t.Logger.Error(err, "Error attaching EnvoyProxy", logKeysAndValues...)
 		}
 
 		// Gateways that are not accepted by the controller because they reference an invalid EnvoyProxy.
