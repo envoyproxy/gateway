@@ -827,6 +827,58 @@ func TestValidateEnvoyProxy(t *testing.T) {
 			},
 			expected: false,
 		},
+		{
+			name: "valid MergeType StrategicMerge",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					MergeType: ptr.To(egv1a1.StrategicMerge),
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "valid MergeType JSONMerge",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					MergeType: ptr.To(egv1a1.JSONMerge),
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "valid MergeType Replace",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					MergeType: ptr.To(egv1a1.Replace),
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "invalid MergeType",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					MergeType: ptr.To(egv1a1.MergeType("InvalidType")),
+				},
+			},
+			expected: false,
+		},
 	}
 
 	for i := range testCases {

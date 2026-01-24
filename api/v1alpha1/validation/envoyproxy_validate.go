@@ -56,6 +56,13 @@ func validateEnvoyProxySpec(spec *egv1a1.EnvoyProxySpec) error {
 		errs = append(errs, validateProxyTelemetryErrs...)
 	}
 
+	// validate MergeType
+	if spec != nil {
+		if err := validateMergeType(spec.MergeType); err != nil {
+			errs = append(errs, err)
+		}
+	}
+
 	// validate filter order
 	if spec != nil && spec.FilterOrder != nil {
 		if err := validateFilterOrder(spec.FilterOrder); err != nil {
@@ -329,6 +336,19 @@ func ValidateClusterStatName(clusterStatName string) error {
 	}
 
 	return nil
+}
+
+func validateMergeType(mergeType *egv1a1.MergeType) error {
+	if mergeType == nil {
+		return nil
+	}
+	switch *mergeType {
+	case egv1a1.StrategicMerge, egv1a1.JSONMerge, egv1a1.Replace:
+		return nil
+	default:
+		return fmt.Errorf("unsupported merge type %q, must be one of: %s, %s, %s",
+			*mergeType, egv1a1.StrategicMerge, egv1a1.JSONMerge, egv1a1.Replace)
+	}
 }
 
 func validateStatName(statName string, supportedOperators map[string]bool) error {
