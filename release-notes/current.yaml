@@ -9,6 +9,7 @@ security updates: |
 # New features or capabilities added in this release.
 new features: |
   Added support for configuring optional health check configuration.
+  Added support for default EnvoyProxy settings on EnvoyGatewaySpec that can be overridden by GatewayClass or Gateway-level EnvoyProxy configurations. A new MergeType field allows choosing between Replace (default), StrategicMerge, or JSONMerge strategies for combining configurations.
 
 bug fixes: |
   Rejected ClientTrafficPolicy if invalid TLS cipher suites are configured.

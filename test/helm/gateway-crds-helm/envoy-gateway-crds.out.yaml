@@ -8571,6 +8571,10 @@ spec:
                   This means that the port, protocol and hostname tuple must be unique for every listener.
                   If a duplicate listener is detected, the newer listener (based on timestamp) will be rejected and its status will be updated with a "Accepted=False" condition.
                 type: boolean
+              mergeType:
+                description: If unset, no merging occurs, and only the most specific
+                  configuration takes effect.
+                type: string
               preserveRouteOrder:
                 description: |-
                   PreserveRouteOrder determines if the order of matching for HTTPRoutes is determined by Gateway-API
@@ -8785,6 +8789,15 @@ spec:
                                 - message: Image must include a tag and allowed characters
                                     only (e.g., 'repo:tag').
                                   rule: self.matches('^[a-zA-Z0-9._-]+(:[0-9]+)?(/[a-zA-Z0-9._/-]+)?(:[a-zA-Z0-9._-]+)?(@sha256:[a-z0-9]+)?$')
+                              imagePullPolicy:
+                                description: |-
+                                  ImagePullPolicy specifies the pull policy for the container image.
+                                  If not specified, defaults to IfNotPresent.
+                                enum:
+                                - Always
+                                - Never
+                                - IfNotPresent
+                                type: string
                               imageRepository:
                                 description: |-
                                   ImageRepository specifies the container image repository to be used without specifying a tag.
@@ -12794,6 +12807,15 @@ spec:
                                 - message: Image must include a tag and allowed characters
                                     only (e.g., 'repo:tag').
                                   rule: self.matches('^[a-zA-Z0-9._-]+(:[0-9]+)?(/[a-zA-Z0-9._/-]+)?(:[a-zA-Z0-9._-]+)?(@sha256:[a-z0-9]+)?$')
+                              imagePullPolicy:
+                                description: |-
+                                  ImagePullPolicy specifies the pull policy for the container image.
+                                  If not specified, defaults to IfNotPresent.
+                                enum:
+                                - Always
+                                - Never
+                                - IfNotPresent
+                                type: string
                               imageRepository:
                                 description: |-
                                   ImageRepository specifies the container image repository to be used without specifying a tag.

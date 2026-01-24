@@ -6,6 +6,7 @@
 package gatewayapi
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -423,7 +424,15 @@ func (t *Translator) GetRelevantGateways(resources *resource.Resources) (
 		gCtx := &GatewayContext{
 			Gateway: gateway,
 		}
-		gCtx.attachEnvoyProxy(resources, envoyproxyMap)
+		if err := gCtx.attachEnvoyProxy(resources, envoyproxyMap); err != nil {
+			t.Logger.Error(err, "Error attaching EnvoyProxy", logKeysAndValues...)
+		} else if gCtx.envoyProxy != nil {
+			// Debug logging to inspect the final merged EnvoyProxy configuration
+			if configJSON, jsonErr := json.Marshal(gCtx.envoyProxy.Spec); jsonErr == nil {
+				t.Logger.V(1).Info("Merged EnvoyProxy configuration",
+					append(logKeysAndValues, "merged_config", string(configJSON))...)
+			}
+		}
 
 		// Gateways that are not accepted by the controller because they reference an invalid EnvoyProxy.
 		if status.GatewayNotAccepted(gCtx.Gateway) {
