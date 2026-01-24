@@ -260,6 +260,17 @@ func (l *CoreListenerDetails) GetExtensionRefs() []*UnstructuredRef {
 	return l.ExtensionRefs
 }
 
+// RequestIDExtension defines configuration for the UUID request ID extension.
+// +k8s:deepcopy-gen=true
+type RequestIDExtensionAction egv1a1.RequestIDExtensionAction
+
+const (
+	RequestIDExtensionActionPackAndSample = RequestIDExtensionAction(egv1a1.RequestIDExtensionActionPackAndSample)
+	RequestIDExtensionActionSample        = RequestIDExtensionAction(egv1a1.RequestIDExtensionActionSample)
+	RequestIDExtensionActionPack          = RequestIDExtensionAction(egv1a1.RequestIDExtensionActionPack)
+	RequestIDExtensionActionDisable       = RequestIDExtensionAction(egv1a1.RequestIDExtensionActionDisable)
+)
+
 // HTTPListener holds the listener configuration.
 // +k8s:deepcopy-gen=true
 type HTTPListener struct {
@@ -307,6 +318,8 @@ type HTTPListener struct {
 	Connection *ClientConnection `json:"connection,omitempty" yaml:"connection,omitempty"`
 	// PreserveRouteOrder determines if routes should be sorted according to GW-API specs
 	PreserveRouteOrder bool `json:"preserveRouteOrder,omitempty" yaml:"preserveRouteOrder,omitempty"`
+	// RequestID defines configuration for the UUID request ID extension.
+	RequestID *RequestIDExtensionAction `json:"requestID,omitempty" yaml:"requestID,omitempty"`
 }
 
 // Validate the fields within the HTTPListener structure
@@ -789,6 +802,8 @@ type HTTPRoute struct {
 	HeaderMatches []*StringMatch `json:"headerMatches,omitempty" yaml:"headerMatches,omitempty"`
 	// QueryParamMatches define the match conditions on the query parameters.
 	QueryParamMatches []*StringMatch `json:"queryParamMatches,omitempty" yaml:"queryParamMatches,omitempty"`
+	// CookieMatches define the match conditions on the request cookies for this route.
+	CookieMatches []*StringMatch `json:"cookieMatches,omitempty" yaml:"cookieMatches,omitempty"`
 	// AddRequestHeaders defines header/value sets to be added to the headers of requests.
 	AddRequestHeaders []AddHeader `json:"addRequestHeaders,omitempty" yaml:"addRequestHeaders,omitempty"`
 	// RemoveRequestHeaders defines a list of headers to be removed from requests.
@@ -1544,6 +1559,11 @@ func (h *HTTPRoute) Validate() error {
 	}
 	for _, qMatch := range h.QueryParamMatches {
 		if err := qMatch.Validate(); err != nil {
+			errs = errors.Join(errs, err)
+		}
+	}
+	for _, cMatch := range h.CookieMatches {
+		if err := cMatch.Validate(); err != nil {
 			errs = errors.Join(errs, err)
 		}
 	}
@@ -2599,6 +2619,7 @@ type Tracing struct {
 	Authority    string                      `json:"authority,omitempty"`
 	SamplingRate float64                     `json:"samplingRate,omitempty"`
 	CustomTags   map[string]egv1a1.CustomTag `json:"customTags,omitempty"`
+	Tags         map[string]string           `json:"tags,omitempty"`
 	Destination  RouteDestination            `json:"destination,omitempty"`
 	Traffic      *TrafficFeatures            `json:"traffic,omitempty"`
 	Provider     egv1a1.TracingProvider      `json:"provider"`
