@@ -439,6 +439,8 @@ type TLSCertificate struct {
 	PrivateKey PrivateBytes `json:"privateKey,omitempty" yaml:"privateKey,omitempty"`
 	// OCSPStaple contains the stapled OCSP response associated with the certificate, if provided.
 	OCSPStaple []byte `json:"ocspStaple,omitempty" yaml:"ocspStaple,omitempty"`
+	// Optional CA certs to be appended to the served certificate chain
+	CACertificate []byte `json:"caCertificate,omitempty" yaml:"caCertificate,omitempty"`
 }
 
 // TLSCrl holds a single CRL's details

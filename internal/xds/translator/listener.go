@@ -961,18 +961,33 @@ func buildALPNProtocols(alpn []string) []string {
 }
 
 func buildXdsTLSCertSecret(tlsConfig *ir.TLSCertificate) *tlsv3.Secret {
+	// Start with the leaf certificate (tls.crt)
+	chain := tlsConfig.Certificate
+
+	// If a CA certificate is present, append it to the served cert chain
+	// Order matters: leaf -> intermediates -> root
+	if len(tlsConfig.CACertificate) > 0 {
+		chain = append(chain, tlsConfig.CACertificate...)
+	}
+
 	tlsCertificate := &tlsv3.TlsCertificate{
 		CertificateChain: &corev3.DataSource{
-			Specifier: &corev3.DataSource_InlineBytes{InlineBytes: tlsConfig.Certificate},
+			Specifier: &corev3.DataSource_InlineBytes{
+				InlineBytes: chain,
+			},
 		},
 		PrivateKey: &corev3.DataSource{
-			Specifier: &corev3.DataSource_InlineBytes{InlineBytes: tlsConfig.PrivateKey},
+			Specifier: &corev3.DataSource_InlineBytes{
+				InlineBytes: tlsConfig.PrivateKey,
+			},
 		},
 	}
 
 	if len(tlsConfig.OCSPStaple) > 0 {
 		tlsCertificate.OcspStaple = &corev3.DataSource{
-			Specifier: &corev3.DataSource_InlineBytes{InlineBytes: tlsConfig.OCSPStaple},
+			Specifier: &corev3.DataSource_InlineBytes{
+				InlineBytes: tlsConfig.OCSPStaple,
+			},
 		}
 	}
 
