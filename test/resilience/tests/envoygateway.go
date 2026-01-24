@@ -218,37 +218,28 @@ var EGResilience = suite.ResilienceTest{
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, localTimeout, gwAddr, expectedResponse)
 		})
 
-		t.Run("EnvoyGateway recovers after failing to start runners", func(t *testing.T) {
+		t.Run("EnvoyGateway restart after CRD discovery failure", func(t *testing.T) {
 			ctx := context.Background()
 
 			t.Log("Scaling down the deployment to 0 replicas")
 			err := suite.Kube().ScaleDeploymentAndWait(ctx, envoygateway, namespace, 0, timeout, false)
 			require.NoError(t, err, "Failed to scale deployment replicas")
 
-			scope := map[string]string{"app.kubernetes.io/name": "gateway-helm"}
-			policyRemoved := false
-			t.Cleanup(func() {
-				if !policyRemoved {
-					_, _ = suite.Kube().ManageEgress(context.Background(), apiServerIP, namespace, policyName, false, scope)
-				}
-			})
+			t.Log("Enabling CRD discovery failure via environment variable")
+			err = suite.Kube().UpdateDeploymentEnvVar(ctx, envoygateway, namespace, "EG_TEST_FAIL_CRD_DISCOVERY", "true", false)
+			require.NoError(t, err, "Failed to update deployment environment variable")
 
-			t.Log("Blocking API server network access for EnvoyGateway pods")
-			_, err = suite.Kube().ManageEgress(ctx, apiServerIP, namespace, policyName, true, scope)
-			require.NoError(t, err, "Failed to block API server connectivity")
-
-			t.Log("Scaling up the deployment while API server access is blocked")
+			t.Log("Scaling up the deployment while CRD discovery is failing")
 			err = suite.Kube().ScaleDeployment(ctx, envoygateway, namespace, 1, false)
 			require.NoError(t, err, "Failed to scale deployment replicas")
 
-			t.Log("Deployment should not reach the ready replica count with API server access blocked")
-			err = suite.Kube().CheckDeploymentReplicas(ctx, envoygateway, namespace, 1, 30*time.Second)
-			require.Error(t, err, "Deployment became ready despite API server connectivity being blocked")
+			t.Log("Deployment should not reach the ready replica count with CRD discovery failing")
+			err = suite.Kube().CheckDeploymentReplicas(ctx, envoygateway, namespace, 1, 5*time.Minute)
+			require.Error(t, err, "Deployment became ready despite CRD discovery failing")
 
-			t.Log("Restoring API server network access for EnvoyGateway pods")
-			_, err = suite.Kube().ManageEgress(ctx, apiServerIP, namespace, policyName, false, scope)
-			require.NoError(t, err, "Failed to unblock API server connectivity")
-			policyRemoved = true
+			t.Log("Disabling CRD discovery failure via environment variable")
+			err = suite.Kube().UpdateDeploymentEnvVar(ctx, envoygateway, namespace, "EG_TEST_FAIL_CRD_DISCOVERY", "false", false)
+			require.NoError(t, err, "Failed to update deployment environment variable")
 
 			t.Log("Waiting for EnvoyGateway to recover")
 			err = suite.Kube().WaitForDeploymentReplicaCount(ctx, envoygateway, namespace, 1, timeout, false)

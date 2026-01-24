@@ -14,6 +14,7 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	coordinationv1 "k8s.io/api/coordination/v1"
+	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -327,4 +328,49 @@ func (ka *KubeActions) getLease(ctx context.Context, namespace, leaseName string
 	}
 
 	return lease, nil
+}
+
+func (ka *KubeActions) UpdateDeploymentEnvVar(ctx context.Context, deploymentName, namespace, key, value string, prefix bool) error {
+	// Get the current deployment
+	deployment := &appsv1.Deployment{}
+	if prefix {
+		var err error
+		deployment, err = ka.getDepByPrefix(ctx, deploymentName, namespace)
+		if err != nil {
+			return err
+		}
+	} else {
+		err := ka.Get(ctx, client.ObjectKey{Name: deploymentName, Namespace: namespace}, deployment)
+		if err != nil {
+			return err
+		}
+	}
+
+	// Update the environment variables in all containers
+	for i := range deployment.Spec.Template.Spec.Containers {
+		container := &deployment.Spec.Template.Spec.Containers[i]
+		found := false
+		for j := range container.Env {
+			if container.Env[j].Name == key {
+				container.Env[j].Value = value
+				found = true
+				break
+			}
+		}
+		if !found {
+			container.Env = append(container.Env, corev1.EnvVar{
+				Name:  key,
+				Value: value,
+			})
+		}
+	}
+
+	// Apply the update
+	err := ka.Update(ctx, deployment)
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("Deployment %s updated with env var %s=%s\n", deployment.Name, key, value)
+	return nil
 }

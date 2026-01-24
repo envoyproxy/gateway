@@ -9,6 +9,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"sync"
 	"time"
 
@@ -1877,11 +1878,18 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		return fmt.Errorf("failed to watch GatewayClass: %w", err)
 	}
 
-	discoveryClient, err := discovery.NewDiscoveryClientForConfig(mgr.GetConfig())
+	var (
+		discoveryClient discovery.DiscoveryInterface
+		err             error
+	)
+	discoveryClient, err = discovery.NewDiscoveryClientForConfig(mgr.GetConfig())
 	if err != nil {
 		return fmt.Errorf("failed to create discovery client: %w", err)
 	}
 	checkCRD := func(kind, groupVersion string) (bool, error) {
+		if os.Getenv("EG_TEST_FAIL_CRD_DISCOVERY") == "true" {
+			discoveryClient = &failingDiscoveryClient{}
+		}
 		exists, err := r.crdExists(ctx, discoveryClient, kind, groupVersion)
 		if err != nil {
 			return false, fmt.Errorf("failed to discover %s CRD: %w", kind, err)
@@ -2952,4 +2960,12 @@ func (r *gatewayAPIReconciler) processEnvoyExtensionPolicyObjectRefs(
 		}
 	}
 	return nil
+}
+
+type failingDiscoveryClient struct {
+	discovery.DiscoveryInterface
+}
+
+func (f *failingDiscoveryClient) ServerResourcesForGroupVersion(_ string) (*metav1.APIResourceList, error) {
+	return nil, fmt.Errorf("fake discovery error")
 }
