@@ -43738,6 +43738,25 @@ spec:
                         maxItems: 16
                         type: array
                     type: object
+                  requestID:
+                    description: RequestID configures Envoy request ID behavior.
+                    properties:
+                      tracing:
+                        description: |-
+                          Tracing configures Envoy's behavior for the UUID request ID extension,
+                          including whether the trace sampling decision is packed into the UUID and
+                          whether `X-Request-ID` is used for trace sampling decisions.
+
+                          When omitted, the default behavior is `PackAndSample`, which alters the UUID
+                          to contain the trace sampling decision and uses `X-Request-ID` for stable
+                          trace sampling.
+                        enum:
+                        - PackAndSample
+                        - Sample
+                        - Pack
+                        - Disable
+                        type: string
+                    type: object
                   tracing:
                     description: |-
                       Tracing defines tracing configuration for managed proxies.

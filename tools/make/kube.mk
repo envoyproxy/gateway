@@ -36,8 +36,10 @@ E2E_TIMEOUT ?= 20m
 # E2E_REDIRECT allow you specified a redirect when run e2e test locally, e.g. `>> test_output.out 2>&1`
 E2E_REDIRECT ?=
 E2E_TEST_ARGS ?= -v -tags e2e -timeout $(E2E_TIMEOUT)
+# If E2E_DEBUG is not explicitly defined, set it based on the ACTIONS_STEP_DEBUG environment variable.
+E2E_DEBUG ?= $(if $(filter true yes 1,$(ACTIONS_STEP_DEBUG)),true,false)
 # If you want to skip crds version check, add `--allow-crds-mismatch` to E2E_TEST_SUITE_ARGS
-E2E_TEST_SUITE_ARGS ?= --debug=true
+E2E_TEST_SUITE_ARGS ?= --debug=$(E2E_DEBUG)
 
 CONFORMANCE_RUN_TEST ?=
 CONFORMANCE_TEST_ARGS ?= -v -tags conformance -timeout $(E2E_TIMEOUT)

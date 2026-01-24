@@ -40,7 +40,10 @@ communications with the Envoy Gateway community, and the mechanics of the releas
 | 2025 Q1 |         Guy Daich ([guydc](https://github.com/guydc))         |
 | 2025 Q2 |      Xiaohan Hu ([shawnh2](https://github.com/shawnh2))       |
 | 2025 Q3 |       Jianpeng He ([zirain](https://github.com/zirain))       |
-| 2025 Q4 |       Rudrakh Panigrahi ([rudrakhp](https://github.com/rudrakhp))       |
+| 2025 Q4 | Rudrakh Panigrahi ([rudrakhp](https://github.com/rudrakhp))   |
+| 2026 Q1 |   Karol Szwaj ([cnvergence](https://github.com/cnvergence))   |
+| 2026 Q2 |        Isaac Wilson ([jukie](https://github.com/jukie))       |
+| 2026 Q3 |   Kota Kimura ([kkk777-7](https://github.com/kkk777-7))       |
 
 ## Release Schedule
 
