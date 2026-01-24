@@ -53,36 +53,45 @@ func (g *GatewayContext) ResetListeners() {
 }
 
 func (g *GatewayContext) attachEnvoyProxy(resources *resource.Resources, epMap map[types.NamespacedName]*egv1a1.EnvoyProxy) {
-	// Priority order (highest to lowest):
-	// 1. Gateway-level EnvoyProxy (via parametersRef)
+	// Merge EnvoyProxy configurations from 3 levels (in priority order, highest to lowest):
+	// 1. Gateway-level EnvoyProxy (via parametersRef) - only when MergeGateways is disabled
 	// 2. GatewayClass-level EnvoyProxy
 	// 3. Default EnvoyProxySpec from EnvoyGateway configuration
 
+	var gatewayProxy *egv1a1.EnvoyProxy
+
+	// Get Gateway-level EnvoyProxy if available (only when MergeGateways is disabled)
 	if g.Spec.Infrastructure != nil && g.Spec.Infrastructure.ParametersRef != nil && !IsMergeGatewaysEnabled(resources) {
 		ref := g.Spec.Infrastructure.ParametersRef
 		if string(ref.Group) == egv1a1.GroupVersion.Group && ref.Kind == egv1a1.KindEnvoyProxy {
 			ep, exists := epMap[types.NamespacedName{Namespace: g.Namespace, Name: ref.Name}]
 			if exists {
-				g.envoyProxy = ep
-				return
+				gatewayProxy = ep
 			}
 		}
-		// not found, fallthrough to use envoyProxy attached to gatewayclass
 	}
 
-	// Use GatewayClass-level EnvoyProxy if available
-	if resources.EnvoyProxyForGatewayClass != nil {
-		g.envoyProxy = resources.EnvoyProxyForGatewayClass
+	// Merge all EnvoyProxy configs
+	merged, err := MergeEnvoyProxyConfigs(
+		resources.EnvoyProxyDefaultSpec,
+		resources.EnvoyProxyForGatewayClass,
+		gatewayProxy,
+	)
+	if err != nil {
+		// If merge fails, fall back to simple priority-based selection
+		if gatewayProxy != nil {
+			g.envoyProxy = gatewayProxy
+		} else if resources.EnvoyProxyForGatewayClass != nil {
+			g.envoyProxy = resources.EnvoyProxyForGatewayClass
+		} else if resources.EnvoyProxyDefaultSpec != nil {
+			g.envoyProxy = &egv1a1.EnvoyProxy{
+				Spec: *resources.EnvoyProxyDefaultSpec,
+			}
+		}
 		return
 	}
 
-	// Fall back to default EnvoyProxySpec from EnvoyGateway configuration
-	if resources.EnvoyProxyDefaultSpec != nil {
-		// Create a synthetic EnvoyProxy object from the default spec
-		g.envoyProxy = &egv1a1.EnvoyProxy{
-			Spec: *resources.EnvoyProxyDefaultSpec,
-		}
-	}
+	g.envoyProxy = merged
 }
 
 // ListenerContext wraps a Listener and provides helper methods for
