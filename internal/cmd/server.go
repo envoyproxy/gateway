@@ -88,6 +88,7 @@ func server(ctx context.Context, stdout, stderr io.Writer, cfgPath string, hook 
 
 	l := loader.New(cfgPath, cfg, hook)
 	if err := l.Start(ctx, stdout); err != nil {
+		cfg.Logger.Error(err, "failed to start config loader")
 		return err
 	}
 
