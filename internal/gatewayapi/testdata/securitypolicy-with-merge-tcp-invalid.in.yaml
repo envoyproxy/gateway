@@ -7,30 +7,56 @@ gateways:
   spec:
     gatewayClassName: envoy-gateway-class
     listeners:
-    - name: http
-      protocol: HTTP
-      port: 80
+    - name: tcp
+      protocol: TCP
+      port: 9000
       allowedRoutes:
         namespaces:
           from: All
-httpRoutes:
-- apiVersion: gateway.networking.k8s.io/v1
-  kind: HTTPRoute
+tcpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1alpha2
+  kind: TCPRoute
   metadata:
     namespace: default
-    name: httproute-1
+    name: tcproute-1
   spec:
     parentRefs:
     - namespace: envoy-gateway
       name: gateway-1
-      sectionName: http
+      sectionName: tcp
     rules:
-    - matches:
-      - path:
-          value: "/foo"
-      backendRefs:
-      - name: service-1
+    - backendRefs:
+      - name: tcp-service-1
         port: 8080
+services:
+- apiVersion: v1
+  kind: Service
+  metadata:
+    namespace: default
+    name: tcp-service-1
+  spec:
+    ports:
+    - port: 8080
+      name: tcp
+      protocol: TCP
+endpointSlices:
+- apiVersion: discovery.k8s.io/v1
+  kind: EndpointSlice
+  metadata:
+    name: endpointslice-tcp-service-1
+    namespace: default
+    labels:
+      kubernetes.io/service-name: tcp-service-1
+  addressType: IPv4
+  ports:
+  - name: tcp
+    protocol: TCP
+    port: 8080
+  endpoints:
+  - addresses:
+    - "10.244.0.5"
+    conditions:
+      ready: true
 securityPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: SecurityPolicy
@@ -42,7 +68,7 @@ securityPolicies:
     - group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
-      sectionName: http
+      sectionName: tcp
     basicAuth:
       users:
         name: users-secret
@@ -55,16 +81,16 @@ securityPolicies:
     mergeType: StrategicMerge
     targetRefs:
     - group: gateway.networking.k8s.io
-      kind: HTTPRoute
-      name: httproute-1
-    cors:
-      allowOrigins:
-      - "https://www.example.com"
-      allowMethods:
-      - GET
-      - POST
-      allowHeaders:
-      - "x-header-1"
+      kind: TCPRoute
+      name: tcproute-1
+    authorization:
+      defaultAction: Deny
+      rules:
+      - action: Allow
+        name: "allow-from-internal"
+        principal:
+          clientCIDRs:
+          - 10.0.0.0/8
 secrets:
 - apiVersion: v1
   kind: Secret

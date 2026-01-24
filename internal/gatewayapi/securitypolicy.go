@@ -423,6 +423,18 @@ func (t *Translator) processSecurityPolicyForRoute(
 					continue
 				}
 
+				if err := validator(mergedPolicy); err != nil {
+					status.SetConditionForPolicyAncestor(&policy.Status,
+						&ancestorRef,
+						t.GatewayControllerName,
+						gwapiv1.PolicyConditionAccepted, metav1.ConditionFalse,
+						egv1a1.PolicyReasonInvalid,
+						status.Error2ConditionMsg(err),
+						policy.Generation,
+					)
+					continue
+				}
+
 				// Apply merged policy
 				if err := t.translateSecurityPolicyForRoute(mergedPolicy, targetedRoute, currTarget, resources, xdsIR); err != nil {
 					status.SetConditionForPolicyAncestor(&policy.Status,
@@ -467,6 +479,12 @@ func (t *Translator) processSecurityPolicyForRoute(
 	// Check for deprecated fields and set warning if any are found
 	if deprecatedFields := deprecatedFieldsUsedInSecurityPolicy(policy); len(deprecatedFields) > 0 {
 		status.SetDeprecatedFieldsWarningForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName, policy.Generation, deprecatedFields)
+	}
+
+	// Check if this policy is overridden by other policies targeting at route rule levels
+	// If policy target is route rule, we can skip the check
+	if currTarget.SectionName != nil {
+		return
 	}
 
 	// Check if this policy is overridden by other policies targeting at route rule levels

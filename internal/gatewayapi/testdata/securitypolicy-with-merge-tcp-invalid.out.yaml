@@ -10,9 +10,9 @@ gateways:
     - allowedRoutes:
         namespaces:
           from: All
-      name: http
-      port: 80
-      protocol: HTTP
+      name: tcp
+      port: 9000
+      protocol: TCP
   status:
     listeners:
     - attachedRoutes: 1
@@ -32,59 +32,21 @@ gateways:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
-      name: http
+      name: tcp
       supportedKinds:
       - group: gateway.networking.k8s.io
-        kind: HTTPRoute
-      - group: gateway.networking.k8s.io
-        kind: GRPCRoute
-httpRoutes:
-- apiVersion: gateway.networking.k8s.io/v1
-  kind: HTTPRoute
-  metadata:
-    name: httproute-1
-    namespace: default
-  spec:
-    parentRefs:
-    - name: gateway-1
-      namespace: envoy-gateway
-      sectionName: http
-    rules:
-    - backendRefs:
-      - name: service-1
-        port: 8080
-      matches:
-      - path:
-          value: /foo
-  status:
-    parents:
-    - conditions:
-      - lastTransitionTime: null
-        message: Route is accepted
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      - lastTransitionTime: null
-        message: Resolved all the Object references for the Route
-        reason: ResolvedRefs
-        status: "True"
-        type: ResolvedRefs
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
-      parentRef:
-        name: gateway-1
-        namespace: envoy-gateway
-        sectionName: http
+        kind: TCPRoute
 infraIR:
   envoy-gateway/gateway-1:
     proxy:
       listeners:
       - address: null
-        name: envoy-gateway/gateway-1/http
+        name: envoy-gateway/gateway-1/tcp
         ports:
-        - containerPort: 10080
-          name: http-80
-          protocol: HTTP
-          servicePort: 80
+        - containerPort: 9000
+          name: tcp-9000
+          protocol: TCP
+          servicePort: 9000
       metadata:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
@@ -101,19 +63,19 @@ securityPolicies:
     name: policy-for-route
     namespace: default
   spec:
-    cors:
-      allowHeaders:
-      - x-header-1
-      allowMethods:
-      - GET
-      - POST
-      allowOrigins:
-      - https://www.example.com
+    authorization:
+      defaultAction: Deny
+      rules:
+      - action: Allow
+        name: allow-from-internal
+        principal:
+          clientCIDRs:
+          - 10.0.0.0/8
     mergeType: StrategicMerge
     targetRefs:
     - group: gateway.networking.k8s.io
-      kind: HTTPRoute
-      name: httproute-1
+      kind: TCPRoute
+      name: tcproute-1
   status:
     ancestors:
     - ancestorRef:
@@ -121,17 +83,12 @@ securityPolicies:
         kind: Gateway
         name: gateway-1
         namespace: envoy-gateway
-        sectionName: http
+        sectionName: tcp
       conditions:
       - lastTransitionTime: null
-        message: Merged with policy envoy-gateway/policy-for-gateway
-        reason: Merged
-        status: "True"
-        type: Merged
-      - lastTransitionTime: null
-        message: Policy has been accepted.
-        reason: Accepted
-        status: "True"
+        message: Only authorization is supported for TCP (routes/listeners).
+        reason: Invalid
+        status: "False"
         type: Accepted
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -149,7 +106,7 @@ securityPolicies:
     - group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
-      sectionName: http
+      sectionName: tcp
   status:
     ancestors:
     - ancestorRef:
@@ -157,7 +114,7 @@ securityPolicies:
         kind: Gateway
         name: gateway-1
         namespace: envoy-gateway
-        sectionName: http
+        sectionName: tcp
       conditions:
       - lastTransitionTime: null
         message: Policy has been accepted.
@@ -165,12 +122,45 @@ securityPolicies:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: 'This policy is being merged by other securityPolicies for these
-          routes: [default/httproute-1]'
-        reason: Merged
+        message: 'This policy is being overridden by other securityPolicies for these
+          routes: [default/tcproute-1]'
+        reason: Overridden
         status: "True"
-        type: Merged
+        type: Overridden
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
+tcpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1alpha2
+  kind: TCPRoute
+  metadata:
+    name: tcproute-1
+    namespace: default
+  spec:
+    parentRefs:
+    - name: gateway-1
+      namespace: envoy-gateway
+      sectionName: tcp
+    rules:
+    - backendRefs:
+      - name: tcp-service-1
+        port: 8080
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: tcp
 xdsIR:
   envoy-gateway/gateway-1:
     accessLog:
@@ -197,69 +187,43 @@ xdsIR:
             sectionName: "8080"
           name: envoy-gateway/gateway-1
           protocol: TCP
-    http:
-    - address: 0.0.0.0
-      externalPort: 80
-      hostnames:
-      - '*'
-      isHTTP2: false
-      metadata:
-        kind: Gateway
-        name: gateway-1
-        namespace: envoy-gateway
-        sectionName: http
-      name: envoy-gateway/gateway-1/http
-      path:
-        escapedSlashesAction: UnescapeAndRedirect
-        mergeSlashes: true
-      port: 10080
-      routes:
-      - destination:
-          metadata:
-            kind: HTTPRoute
-            name: httproute-1
-            namespace: default
-          name: httproute/default/httproute-1/rule/0
-          settings:
-          - addressType: IP
-            endpoints:
-            - host: 7.7.7.7
-              port: 8080
-            metadata:
-              kind: Service
-              name: service-1
-              namespace: default
-              sectionName: "8080"
-            name: httproute/default/httproute-1/rule/0/backend/0
-            protocol: HTTP
-            weight: 1
-        hostname: '*'
-        isHTTP2: false
-        metadata:
-          kind: HTTPRoute
-          name: httproute-1
-          namespace: default
-        name: httproute/default/httproute-1/rule/0/match/0/*
-        pathMatch:
-          distinct: false
-          name: ""
-          prefix: /foo
-        security:
-          basicAuth:
-            name: securitypolicy/default/policy-for-route
-            users: dXNlcjE6e1NIQX15LzJzWUFqNXlyUUlONFRMMFlkUGRtR05LcGM9
-          cors:
-            allowHeaders:
-            - x-header-1
-            allowMethods:
-            - GET
-            - POST
-            allowOrigins:
-            - distinct: false
-              exact: https://www.example.com
-              name: ""
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
       path: /ready
       port: 19003
+    tcp:
+    - address: 0.0.0.0
+      externalPort: 9000
+      metadata:
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: tcp
+      name: envoy-gateway/gateway-1/tcp
+      port: 9000
+      routes:
+      - destination:
+          metadata:
+            kind: TCPRoute
+            name: tcproute-1
+            namespace: default
+          name: tcproute/default/tcproute-1/rule/-1
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 10.244.0.5
+              port: 8080
+            metadata:
+              kind: Service
+              name: tcp-service-1
+              namespace: default
+              sectionName: "8080"
+            name: tcproute/default/tcproute-1/rule/-1/backend/0
+            protocol: TCP
+            weight: 1
+        metadata:
+          kind: TCPRoute
+          name: tcproute-1
+          namespace: default
+        name: tcproute/default/tcproute-1

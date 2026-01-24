@@ -27,7 +27,7 @@ httpRoutes:
     rules:
     - matches:
       - path:
-          value: "/foo"
+          value: "/api"
       backendRefs:
       - name: service-1
         port: 8080
@@ -43,9 +43,14 @@ securityPolicies:
       kind: Gateway
       name: gateway-1
       sectionName: http
-    basicAuth:
-      users:
-        name: users-secret
+    jwt:
+      providers:
+      - name: example
+        issuer: https://www.example.com
+        audiences:
+        - example.com
+        remoteJWKS:
+          uri: https://www.example.com/.well-known/jwks.json
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: SecurityPolicy
   metadata:
@@ -59,26 +64,11 @@ securityPolicies:
       name: httproute-1
     cors:
       allowOrigins:
-      - "https://www.example.com"
+      - "https://api.example.com"
       allowMethods:
       - GET
       - POST
+      - PUT
       allowHeaders:
-      - "x-header-1"
-secrets:
-- apiVersion: v1
-  kind: Secret
-  metadata:
-    namespace: envoy-gateway
-    name: users-secret
-  type: Opaque
-  data:
-    .htpasswd: dXNlcjE6e1NIQX15LzJzWUFqNXlyUUlONFRMMFlkUGRtR05LcGM9
-- apiVersion: v1
-  kind: Secret
-  metadata:
-    namespace: default
-    name: users-secret
-  type: Opaque
-  data:
-    .htpasswd: dXNlcjE6e1NIQX15LzJzWUFqNXlyUUlONFRMMFlkUGRtR05LcGM9
+      - "authorization"
+      - "content-type"

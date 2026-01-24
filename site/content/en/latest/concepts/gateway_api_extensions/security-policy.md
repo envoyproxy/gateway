@@ -269,6 +269,17 @@ In this example, the route-level policy merges with the gateway-level policy, re
 - The merged configuration combines both policies, enabling layered security strategies
 - When the same security feature is configured in both parent and child policies (e.g., both define CORS), the child policy's configuration takes precedence for that specific feature
 
+### Important: Namespace Behavior with Secret References
+
+When policies are merged, secret references inherited from parent policies must be resolvable from the **route policy's namespace**. This is because the merged policy retains the identity (including namespace) of the route-level policy.
+
+**Example scenario:**
+- Gateway policy in namespace `envoy-gateway` references `basic-auth-secret`
+- Route policy in namespace `default` merges with the gateway policy
+- The secret `basic-auth-secret` must exist in the `default` namespace for the merged policy to work
+
+**Best Practice:** When using policy merging with secret-based authentication (BasicAuth, OIDC, JWT, APIKeyAuth), ensure that required secrets are available in each route's namespace, or design your namespace strategy accordingly.
+
 ## Related Resources
 - [API Key Authentication](../../tasks/security/apikey-auth.md)
 - [Basic Authentication](../../tasks/security/basic-auth.md)

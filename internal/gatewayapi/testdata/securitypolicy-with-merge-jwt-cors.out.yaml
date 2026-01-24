@@ -55,7 +55,7 @@ httpRoutes:
         port: 8080
       matches:
       - path:
-          value: /foo
+          value: /api
   status:
     parents:
     - conditions:
@@ -103,12 +103,14 @@ securityPolicies:
   spec:
     cors:
       allowHeaders:
-      - x-header-1
+      - authorization
+      - content-type
       allowMethods:
       - GET
       - POST
+      - PUT
       allowOrigins:
-      - https://www.example.com
+      - https://api.example.com
     mergeType: StrategicMerge
     targetRefs:
     - group: gateway.networking.k8s.io
@@ -140,11 +142,14 @@ securityPolicies:
     name: policy-for-gateway
     namespace: envoy-gateway
   spec:
-    basicAuth:
-      users:
-        group: null
-        kind: null
-        name: users-secret
+    jwt:
+      providers:
+      - audiences:
+        - example.com
+        issuer: https://www.example.com
+        name: example
+        remoteJWKS:
+          uri: https://www.example.com/.well-known/jwks.json
     targetRefs:
     - group: gateway.networking.k8s.io
       kind: Gateway
@@ -243,21 +248,28 @@ xdsIR:
         pathMatch:
           distinct: false
           name: ""
-          prefix: /foo
+          prefix: /api
         security:
-          basicAuth:
-            name: securitypolicy/default/policy-for-route
-            users: dXNlcjE6e1NIQX15LzJzWUFqNXlyUUlONFRMMFlkUGRtR05LcGM9
           cors:
             allowHeaders:
-            - x-header-1
+            - authorization
+            - content-type
             allowMethods:
             - GET
             - POST
+            - PUT
             allowOrigins:
             - distinct: false
-              exact: https://www.example.com
+              exact: https://api.example.com
               name: ""
+          jwt:
+            providers:
+            - audiences:
+              - example.com
+              issuer: https://www.example.com
+              name: example
+              remoteJWKS:
+                uri: https://www.example.com/.well-known/jwks.json
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
