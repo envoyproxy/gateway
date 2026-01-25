@@ -398,6 +398,44 @@ func TestValidateConfigMapForReconcile(t *testing.T) {
 			configMap: test.GetConfigMap(types.NamespacedName{Name: "context-extensions-cm", Namespace: "test"}, nil, nil),
 			expect:    true,
 		},
+		{
+			name: "references SecurityPolicy OIDC Provider issuer config map",
+			configs: []client.Object{
+				&egv1a1.SecurityPolicy{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "oidc-cm",
+						Namespace: "test",
+					},
+					Spec: egv1a1.SecurityPolicySpec{
+						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+									Kind: "Gateway",
+									Name: "scheduled-status-test",
+								},
+							},
+						},
+						OIDC: &egv1a1.OIDC{
+							Provider: egv1a1.OIDCProvider{
+								IssuerRef: &egv1a1.LocalObjectKeyReference{
+									LocalObjectReference: gwapiv1.LocalObjectReference{
+										Kind: resource.KindConfigMap,
+										Name: "oidc-config",
+									},
+									Key: "issuer",
+								},
+							},
+							ClientID: ptr.To("client-id"),
+							ClientSecret: gwapiv1.SecretObjectReference{
+								Name: "secret",
+							},
+						},
+					},
+				},
+			},
+			configMap: test.GetConfigMap(types.NamespacedName{Name: "oidc-config", Namespace: "test"}, nil, nil),
+			expect:    true,
+		},
 	}
 
 	// Create the reconciler.
@@ -575,7 +613,7 @@ func TestValidateSecretForReconcile(t *testing.T) {
 						},
 						OIDC: &egv1a1.OIDC{
 							Provider: egv1a1.OIDCProvider{
-								Issuer:                "https://accounts.google.com",
+								Issuer:                ptr.To("https://accounts.google.com"),
 								AuthorizationEndpoint: ptr.To("https://accounts.google.com/o/oauth2/v2/auth"),
 								TokenEndpoint:         ptr.To("https://oauth2.googleapis.com/token"),
 							},
@@ -777,6 +815,46 @@ func TestValidateSecretForReconcile(t *testing.T) {
 				},
 			},
 			secret: test.GetSecret(types.NamespacedName{Namespace: "default", Name: "secret"}),
+			expect: true,
+		},
+		{
+			name: "references SecurityPolicy OIDC Provider token secret",
+			configs: []client.Object{
+				test.GetGatewayClass("test-gc", egv1a1.GatewayControllerName, nil),
+				test.GetGateway(types.NamespacedName{Name: "scheduled-status-test", Namespace: "default"}, "test-gc", 8080),
+				&egv1a1.SecurityPolicy{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "oidc-policy",
+						Namespace: "default",
+					},
+					Spec: egv1a1.SecurityPolicySpec{
+						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+									Kind: "Gateway",
+									Name: "scheduled-status-test",
+								},
+							},
+						},
+						OIDC: &egv1a1.OIDC{
+							Provider: egv1a1.OIDCProvider{
+								TokenEndpointRef: &egv1a1.LocalObjectKeyReference{
+									LocalObjectReference: gwapiv1.LocalObjectReference{
+										Kind: resource.KindSecret,
+										Name: "oidc-token-secret",
+									},
+									Key: "token",
+								},
+							},
+							ClientID: ptr.To("client-id"),
+							ClientSecret: gwapiv1.SecretObjectReference{
+								Name: "secret",
+							},
+						},
+					},
+				},
+			},
+			secret: test.GetSecret(types.NamespacedName{Name: "oidc-token-secret", Namespace: "default"}),
 			expect: true,
 		},
 	}
