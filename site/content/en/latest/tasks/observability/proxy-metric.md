@@ -23,10 +23,10 @@ kubectl port-forward service/prometheus -n monitoring 19001:$PROMETHEUS_PORT
 Query metrics using Prometheus API:
 
 ```shell
-curl -s 'http://localhost:19001/api/v1/query?query=topk(1,envoy_cluster_upstream_cx_connect_ms_sum)' | jq . 
+curl -s 'http://localhost:19001/api/v1/query?query=topk(1,envoy_cluster_upstream_cx_connect_ms_sum)' | jq .
 ```
 
-To directly view the metrics in Prometheus format from the Envoy's `/stats/prometheus` 
+To directly view the metrics in Prometheus format from the Envoy's `/stats/prometheus`
 [admin endpoint](https://www.envoyproxy.io/docs/envoy/latest/operations/admin), follow the steps below.
 
 ```shell
@@ -119,8 +119,8 @@ helm upgrade eg-addons oci://docker.io/envoyproxy/gateway-addons-helm --version 
 
 ### OpenTelemetry Metrics
 
-Envoy Gateway can export metrics to an OpenTelemetry sink. Use the following command to send metrics to the 
-OpenTelemetry Collector. Ensure that the OpenTelemetry components are enabled, 
+Envoy Gateway can export metrics to an OpenTelemetry sink. Use the following command to send metrics to the
+OpenTelemetry Collector. Ensure that the OpenTelemetry components are enabled,
 as mentioned in the [Prerequisites](#prerequisites).
 
 {{< tabpane text=true >}}
@@ -197,7 +197,7 @@ spec:
 {{< /tabpane >}}
 
 
-Temporarily enable the `debug` exporter in the OpenTelemetry Collector 
+Temporarily enable the `debug` exporter in the OpenTelemetry Collector
 to view metrics in the pod logs using the following command. Debug exporter is enabled for demonstration purposes and
 should not be used in production.
 

@@ -596,6 +596,151 @@ $ curl -vvv "http://${GATEWAY_HOST}/get" \
 ...
 ```
 
+## Adding Headers If Absent
+
+In some cases you may want to set default headers at the gateway level that can be overridden by backend responses. For example, you may want to add a default `Content-Security-Policy` header to all responses, but allow specific backends to provide their own policy. The `addIfAbsent` action adds headers only when they don't already exist in the response.
+
+Unlike `add` which appends to existing headers, or `set` which overwrites them, `addIfAbsent` is a no-op if the header is already present.
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-headers
+spec:
+  parentRefs:
+    - name: eg
+  hostnames:
+    - headers.example
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - group: ""
+          kind: Service
+          name: backend
+          port: 3000
+          weight: 1
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: ClientTrafficPolicy
+metadata:
+  name: default-headers
+  namespace: default
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: Gateway
+    name: eg
+  headers:
+    lateResponseHeaders:
+      addIfAbsent:
+        - name: "content-security-policy"
+          value: "default-src 'self'"
+        - name: "x-frame-options"
+          value: "DENY"
+EOF
+```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-headers
+spec:
+  parentRefs:
+    - name: eg
+  hostnames:
+    - headers.example
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - group: ""
+          kind: Service
+          name: backend
+          port: 3000
+          weight: 1
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: ClientTrafficPolicy
+metadata:
+  name: default-headers
+  namespace: default
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: Gateway
+    name: eg
+  headers:
+    lateResponseHeaders:
+      addIfAbsent:
+        - name: "content-security-policy"
+          value: "default-src 'self'"
+        - name: "x-frame-options"
+          value: "DENY"
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
+
+Querying `headers.example/get` should result in a `200` response from the example `Gateway`. When the backend does not set these headers, the default values from the `ClientTrafficPolicy` are used:
+
+```console
+$ curl -vvv "http://${GATEWAY_HOST}/get" \
+  --header "Host: headers.example"
+
+...
+> GET /get HTTP/1.1
+> Host: headers.example
+> User-Agent: curl/7.81.0
+> Accept: */*
+>
+
+< HTTP/1.1 200 OK
+< content-type: application/json
+< content-security-policy: default-src 'self'
+< x-frame-options: DENY
+<
+...
+```
+
+However, when the backend sets these headers, the backend values are preserved and the gateway defaults are not applied:
+
+```console
+$ curl -vvv "http://${GATEWAY_HOST}/get" \
+  --header "Host: headers.example" \
+  --header "X-Echo-Set-Header: content-security-policy:default-src 'self' https://trusted.example.com"
+
+...
+> GET /get HTTP/1.1
+> Host: headers.example
+> User-Agent: curl/7.81.0
+> Accept: */*
+> X-Echo-Set-Header: content-security-policy:default-src 'self' https://trusted.example.com
+>
+
+< HTTP/1.1 200 OK
+< content-type: application/json
+< content-security-policy: default-src 'self' https://trusted.example.com
+< x-frame-options: DENY
+<
+...
+```
+
 [HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute/
 [Gateway API documentation]: https://gateway-api.sigs.k8s.io/
 [req_filter]: https://gateway-api.sigs.k8s.io/reference/1.4/spec#httpheaderfilter

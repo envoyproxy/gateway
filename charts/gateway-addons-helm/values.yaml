@@ -860,10 +860,15 @@ opentelemetry-collector:
       hostPort: 8126
       protocol: TCP
   fullnameOverride: otel-collector
+  # Enable kubernetesAttributes preset to ensure RBAC is created
+  # when the collector is enabled (required for k8s discovery)
+  presets:
+    kubernetesAttributes:
+      enabled: true
   mode: deployment
   image:
     repository: "otel/opentelemetry-collector-contrib"
-    tag: "0.143.1"
+    tag: "0.144.0"
   config:
     exporters:
       prometheus:
@@ -951,3 +956,4 @@ opentelemetry-collector:
             - datadog
             - otlp
             - zipkin
+            

@@ -45,7 +45,7 @@ The user of the classes will not need to know *how* `internet` and `private` are
 implemented. Instead, the user will only need to understand the resulting
 properties of the class that the `Gateway` was created with.
 
-### GatewayClass parameters
+## GatewayClass parameters
 
 Providers of the `Gateway` API may need to pass parameters to their controller
 as part of the class definition. This is done using the

@@ -8,7 +8,6 @@ package translator
 import (
 	"errors"
 	"fmt"
-	"runtime"
 	"strings"
 	"time"
 
@@ -34,6 +33,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/logging"
 	"github.com/envoyproxy/gateway/internal/utils"
+	"github.com/envoyproxy/gateway/internal/utils/cert"
 	"github.com/envoyproxy/gateway/internal/utils/proto"
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
@@ -601,9 +601,12 @@ func (t *Translator) addRouteToRouteConfig(
 			}
 
 			var err error
-			// If there are no filters in the destination
-			// settings and ZoneAware routing isn't
-			// enabled we create a regular xds Cluster
+			// In these cases we create a cluster per setting
+			//
+			// * ZoneAware routing is enabled
+			// * There are filters in the destination settings
+			// * There are multiple Address	Type of destination settings(IP, FQDN, UDC, etc.)
+			// * There are invalid/empty settings in the destination settings
 			if !httpRoute.NeedsClusterPerSetting() {
 				err = processXdsCluster(
 					tCtx,
@@ -617,8 +620,6 @@ func (t *Translator) addRouteToRouteConfig(
 					errs = errors.Join(errs, err)
 				}
 			} else {
-				// If a filter does exist, we create a weighted cluster that's
-				// attached to the route, and create a xds Cluster per setting
 				for _, setting := range httpRoute.Destination.Settings {
 					tSettings := []*ir.DestinationSetting{setting}
 					err = processXdsCluster(
@@ -643,7 +644,7 @@ func (t *Translator) addRouteToRouteConfig(
 						name:         mrr.Destination.Name,
 						settings:     mrr.Destination.Settings,
 						tSocket:      nil,
-						endpointType: EndpointTypeStatic,
+						endpointType: buildEndpointType(mrr.Destination.Settings),
 						metrics:      metrics,
 						metadata:     mrr.Destination.Metadata,
 					}); err != nil {
@@ -1142,40 +1143,14 @@ const (
 	EDS
 )
 
-// defaultCertificateName is the default location of the system trust store, initialized at runtime once.
-//
-// This assumes the Envoy running in a very specific environment. For example, the default location of the system
-// trust store on Debian derivatives like the envoy-proxy image being used by the infrastructure controller.
-//
-// TODO: this might be configurable by an env var or EnvoyGateway configuration.
-var defaultCertificateName = func() string {
-	switch runtime.GOOS {
-	case "darwin":
-		// TODO: maybe automatically get the keychain cert? That might be macOS version dependent.
-		// For now, we'll just use the root cert installed by Homebrew: brew install ca-certificates.
-		//
-		// See:
-		// * https://apple.stackexchange.com/questions/226375/where-are-the-root-cas-stored-on-os-x
-		// * https://superuser.com/questions/992167/where-are-digital-certificates-physically-stored-on-a-mac-os-x-machine
-		return "/opt/homebrew/etc/ca-certificates/cert.pem"
-	default:
-		// This is the default location for the system trust store
-		// on Debian derivatives like the envoy-proxy image being used by the infrastructure
-		// controller.
-		// See https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/security/ssl
-		return "/etc/ssl/certs/ca-certificates.crt"
-	}
-}()
-
 func buildXdsUpstreamTLSCASecret(tlsConfig *ir.TLSUpstreamConfig) *tlsv3.Secret {
-	// Build the tls secret
 	if tlsConfig.UseSystemTrustStore {
 		return &tlsv3.Secret{
 			Name: tlsConfig.CACertificate.Name,
 			Type: &tlsv3.Secret_ValidationContext{
 				ValidationContext: &tlsv3.CertificateValidationContext{
 					TrustedCa: &corev3.DataSource{
-						Specifier: &corev3.DataSource_Filename{Filename: defaultCertificateName},
+						Specifier: &corev3.DataSource_Filename{Filename: cert.SystemCertPath},
 					},
 				},
 			},

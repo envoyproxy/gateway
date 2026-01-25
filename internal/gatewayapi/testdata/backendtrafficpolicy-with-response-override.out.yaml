@@ -539,11 +539,13 @@ xdsIR:
               name: backendtrafficpolicy/default/policy-for-gateway/responseoverride/rule/0
               response:
                 addResponseHeaders:
-                - append: true
+                - addIfAbsent: false
+                  append: true
                   name: X-Add-Header
                   value:
                   - added-404
-                - append: false
+                - addIfAbsent: false
+                  append: false
                   name: X-Set-Header
                   value:
                   - set-404

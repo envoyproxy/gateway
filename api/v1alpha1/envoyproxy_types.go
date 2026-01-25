@@ -182,23 +182,29 @@ type EnvoyProxySpec struct {
 	LuaValidation *LuaValidation `json:"luaValidation,omitempty"`
 }
 
-// +kubebuilder:validation:Enum=Strict;Disabled
+// +kubebuilder:validation:Enum=Strict;InsecureSyntax;Disabled
 type LuaValidation string
 
 const (
 	// LuaValidationStrict is the default level and checks for issues during script execution.
-	// Recommended if your scripts only use the standard Envoy Lua stream handle API.
+	// Recommended if your scripts only use the standard Envoy Lua stream handle API and no external libraries.
 	// For supported APIs, see: https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/lua_filter#stream-handle-api
+	// INFO: This validation mode executes Lua scripts from EnvoyExtensionPolicy (EEP) resources in the gateway controller.
+	// Since the Gateway controller watches EEPs across all namespaces (or namespaces matching the configured selector),
+	// unprivileged users can create EEPs in their namespaces and cause arbitrary Lua code to execute in the Gateway controller process.
+	// Security measures are in place to prevent unsafe Lua code from accessing critical system resources on the controller
+	// and fail validation, preventing the unsafe code from flowing to the data plane proxy.
 	LuaValidationStrict LuaValidation = "Strict"
 
-	// LuaValidationSyntax checks for syntax errors in the Lua script.
-	// Note that this is not a full runtime validation and does not check for issues during script execution.
-	// This is recommended if your scripts use external libraries that are not supported by Lua runtime validation.
-	LuaValidationSyntax LuaValidation = "Syntax"
+	// LuaValidationInsecureSyntax checks for Lua syntax errors only.
+	// Useful if your scripts use external libraries other than the standard Envoy Lua stream handle API.
+	// WARNING: This mode does NOT offer any runtime validations, so no security measures are applied to validate Lua code safety.
+	// Not recommended unless you completely trust all EnvoyExtensionPolicy resources.
+	LuaValidationInsecureSyntax LuaValidation = "InsecureSyntax"
 
-	// LuaValidationDisabled disables all validations of Lua scripts.
-	// Scripts will be accepted and executed without any validation checks.
-	// This is not recommended unless both runtime and syntax validations are failing unexpectedly.
+	// LuaValidationDisabled disables all Lua script validations.
+	// WARNING: This mode does NOT offer any runtime or syntax validations, so no security measures are applied to validate Lua code safety.
+	// Not recommended unless you completely trust all EnvoyExtensionPolicy resources.
 	LuaValidationDisabled LuaValidation = "Disabled"
 )
 
@@ -348,6 +354,10 @@ type ProxyTelemetry struct {
 
 	// Metrics defines metrics configuration for managed proxies.
 	Metrics *ProxyMetrics `json:"metrics,omitempty"`
+
+	// RequestID configures Envoy request ID behavior.
+	// +optional
+	RequestID *RequestIDSettings `json:"requestID,omitempty"`
 }
 
 // EnvoyProxyProviderType defines the types of providers supported by Envoy Proxy.
@@ -361,6 +371,44 @@ const (
 
 	// EnvoyProxyProviderTypeHost defines the "Host" provider.
 	EnvoyProxyProviderTypeHost EnvoyProxyProviderType = "Host"
+)
+
+// RequestIDSettings defines configuration for Envoy's UUID request ID extension.
+type RequestIDSettings struct {
+	// Tracing configures Envoy's behavior for the UUID request ID extension,
+	// including whether the trace sampling decision is packed into the UUID and
+	// whether `X-Request-ID` is used for trace sampling decisions.
+	//
+	// When omitted, the default behavior is `PackAndSample`, which alters the UUID
+	// to contain the trace sampling decision and uses `X-Request-ID` for stable
+	// trace sampling.
+	//
+	// +optional
+	Tracing *RequestIDExtensionAction `json:"tracing,omitempty"`
+}
+
+// RequestIDExtensionAction defines how the UUID request ID extension behaves
+// with respect to packing the trace reason into the UUID and using the
+// request ID for trace sampling decisions.
+//
+// +kubebuilder:validation:Enum=PackAndSample;Sample;Pack;Disable
+type RequestIDExtensionAction string
+
+const (
+	// PackAndSample enables both behaviors:
+	// - Alters the UUID to contain the trace sampling decision
+	// - Uses `X-Request-ID` for trace sampling
+	RequestIDExtensionActionPackAndSample RequestIDExtensionAction = "PackAndSample"
+	// Sample uses `X-Request-ID` for trace sampling decisions, but does NOT alter
+	// the UUID to pack the trace sampling decision.
+	RequestIDExtensionActionSample RequestIDExtensionAction = "Sample"
+	// Pack alters the UUID to contain the trace sampling decision, but does NOT
+	// use `X-Request-ID` for trace sampling decisions.
+	RequestIDExtensionActionPack RequestIDExtensionAction = "Pack"
+	// Disable disables both behaviors:
+	// - Does not alter the UUID
+	// - Does not use `X-Request-ID` for trace sampling
+	RequestIDExtensionActionDisable RequestIDExtensionAction = "Disable"
 )
 
 // EnvoyProxyProvider defines the desired state of a resource provider.
@@ -554,6 +602,7 @@ type EnvoyProxyStatus struct {
 	// reference this EnvoyProxy with ParametersReference.
 	//
 	// +optional
+	// +notImplementedHide
 	Ancestors []EnvoyProxyAncestorStatus `json:"ancestors,omitempty"`
 }
 

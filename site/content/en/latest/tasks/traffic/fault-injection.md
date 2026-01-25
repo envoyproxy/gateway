@@ -183,7 +183,7 @@ spec:
 {{< /tabpane >}}
 
 
-Two HTTPRoute resources were created, one for `/foo` and another for `/bar`.  `fault-injection-abort` BackendTrafficPolicy has been created and targeted HTTPRoute foo to abort requests for `/foo`. `fault-injection-delay` BackendTrafficPolicy has been created and targeted HTTPRoute foo to delay `2s` requests for `/bar`. 
+Two HTTPRoute resources were created, one for `/foo` and another for `/bar`.  `fault-injection-abort` BackendTrafficPolicy has been created and targeted HTTPRoute foo to abort requests for `/foo`. `fault-injection-delay` BackendTrafficPolicy has been created and targeted HTTPRoute foo to delay `2s` requests for `/bar`.
 
 Verify the HTTPRoute configuration and status:
 

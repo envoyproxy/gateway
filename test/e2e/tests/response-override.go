@@ -86,7 +86,7 @@ func verifyCustomResponse(t *testing.T, timeoutConfig *config.TimeoutConfig, gwA
 		Path:   path,
 	}
 
-	httputils.AwaitConvergence(t, timeoutConfig.RequiredConsecutiveSuccesses, timeoutConfig.MaxTimeToConsistency, func(elapsed time.Duration) bool {
+	httputils.AwaitConvergence(t, timeoutConfig.RequiredConsecutiveSuccesses, timeoutConfig.MaxTimeToConsistency, func(_ time.Duration) bool {
 		rsp, err := http.Get(reqURL.String())
 		if err != nil {
 			tlog.Logf(t, "failed to get response: %v", err)

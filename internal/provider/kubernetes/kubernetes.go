@@ -84,6 +84,11 @@ func newProvider(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server,
 		HealthProbeBindAddress:  healthProbeBindAddress,
 		LeaderElectionID:        "5b9825d2.gateway.envoyproxy.io",
 		LeaderElectionNamespace: svrCfg.ControllerNamespace,
+		Client: client.Options{
+			Cache: &client.CacheOptions{
+				Unstructured: true,
+			},
+		},
 	}
 
 	if metricsOpts != nil {
@@ -181,6 +186,7 @@ func newProvider(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server,
 			Port:     webhookTLSPort,
 		})
 	}
+
 	mgr, err := ctrl.NewManager(restCfg, mgrOpts)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create manager: %w", err)
