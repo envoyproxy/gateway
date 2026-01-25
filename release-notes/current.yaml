@@ -52,6 +52,7 @@ bug fixes: |
 
 # Enhancements that improve performance.
 performance improvements: |
+  Including only needed keys in Secret and ConfigMap data to reduce memory usage.
 
 # Deprecated features or APIs.
 deprecations: |

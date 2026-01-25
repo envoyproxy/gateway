@@ -37,8 +37,10 @@ const (
 	L4Protocol = "L4"
 	L7Protocol = "L7"
 
-	caCertKey = "ca.crt"
-	crlKey    = "ca.crl"
+	// CACertKey is the key used in ConfigMaps and Secrets to store CA certificate data
+	CACertKey = "ca.crt"
+	// CRLKey is the key used in ConfigMaps and Secrets to store certificate revocation list data
+	CRLKey = "ca.crl"
 )
 
 type NamespacedNameWithSection struct {
@@ -464,11 +466,11 @@ func irTLSListenerConfigName(secret *corev1.Secret) string {
 }
 
 func irTLSCACertName(namespace, name string) string {
-	return fmt.Sprintf("%s/%s/%s", namespace, name, caCertKey)
+	return fmt.Sprintf("%s/%s/%s", namespace, name, CACertKey)
 }
 
 func irTLSCrlName(namespace, name string) string {
-	return fmt.Sprintf("%s/%s/%s", namespace, name, crlKey)
+	return fmt.Sprintf("%s/%s/%s", namespace, name, CRLKey)
 }
 
 func IsMergeGatewaysEnabled(resources *resource.Resources) bool {
