@@ -19,6 +19,9 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 )
 
+// validCipherSuites contains the list of supported TLS cipher suites.
+// The source of truth for these ciphers is the Envoy documentation:
+// https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/transport_sockets/tls/v3/common.proto#extensions-transport-sockets-tls-v3-tlsparameters
 var validCipherSuites = sets.New(
 	"ECDHE-ECDSA-AES128-GCM-SHA256",
 	"ECDHE-RSA-AES128-GCM-SHA256",
