@@ -367,6 +367,20 @@ type EnvoyGatewayKubernetesProvider struct {
 	// Default: 10 hours
 	// +optional
 	CacheSyncPeriod *gwapiv1.Duration `json:"cacheSyncPeriod,omitempty"`
+
+	// EnvoyDeployment defines the global default state of the managed Envoy deployment resource.
+	// If unspecified, default settings for the managed Envoy deployment resource
+	// are applied.
+	//
+	// +optional
+	EnvoyDeployment *KubernetesDeploymentSpec `json:"envoyDeployment,omitempty"`
+
+	// EnvoyService defines the global default state of the managed Envoy service resource.
+	// If unspecified, default settings for the managed Envoy service resource
+	// are applied.
+	//
+	// +optional
+	EnvoyService *KubernetesServiceSpec `json:"envoyService,omitempty"`
 }
 
 const (

@@ -29,6 +29,7 @@ new features: |
   Added cookie matching support to HTTPRouteFilter matches, combined with HTTPRoute rule matches.
   Added support for addIfAbsent header action in ClientTrafficPolicy EarlyRequestHeaders and LateResponseHeaders to add headers only when they don't already exist.
   Added support for tracing tag, which allows to use Envoy string command operators such as `%ENVIRONMENT(...)%`.
+  Added support for configuring global EnvoyProxy infrastructure attributes (Deployment and Service) via the Helm chart.
 
 
 bug fixes: |
@@ -44,7 +45,6 @@ bug fixes: |
   Fixed an issue where listener translation fails when contains invalid certificate in multiple TLS certificateRefs.
   Fixed an issue where auto-detect upstream protocol breaks with multiple backends(HTTP + HTTPS).
   Fixed wrong cluster type selection when an HTTPRoute mixes Service backends with Backend (FQDN) references, ensuring STRICT_DNS clusters are generated for the FQDN targets.
-  Rejected ClientTrafficPolicy if invalid TLS cipher suites are configured.
 
 # Enhancements that improve performance.
 performance improvements: |

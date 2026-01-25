@@ -1473,6 +1473,8 @@ _Appears in:_
 | `client` | _[KubernetesClient](#kubernetesclient)_ |  true  |  | Client holds the configuration for the Kubernetes client. |
 | `proxyTopologyInjector` | _[EnvoyGatewayTopologyInjector](#envoygatewaytopologyinjector)_ |  false  |  | TopologyInjector defines the configuration for topology injector MutatatingWebhookConfiguration |
 | `cacheSyncPeriod` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#duration)_ |  false  |  | CacheSyncPeriod determines the minimum frequency at which watched resources are synced.<br />Note that a sync in the provider layer will not lead to a full reconciliation (including translation),<br />unless there are actual changes in the provider resources.<br />This option can be used to protect against missed events or issues in Envoy Gateway where resources<br />are not requeued when they should be, at the cost of increased resource consumption.<br />Learn more about the implications of this option: https://pkg.go.dev/sigs.k8s.io/controller-runtime/pkg/cache#Options<br />Default: 10 hours |
+| `envoyDeployment` | _[KubernetesDeploymentSpec](#kubernetesdeploymentspec)_ |  false  |  | EnvoyDeployment defines the global default state of the managed Envoy deployment resource.<br />If unspecified, default settings for the managed Envoy deployment resource<br />are applied. |
+| `envoyService` | _[KubernetesServiceSpec](#kubernetesservicespec)_ |  false  |  | EnvoyService defines the global default state of the managed Envoy service resource.<br />If unspecified, default settings for the managed Envoy service resource<br />are applied. |
 
 
 #### EnvoyGatewayLogComponent
@@ -3293,6 +3295,7 @@ _Appears in:_
 KubernetesServiceSpec defines the desired state of the Kubernetes service resource.
 
 _Appears in:_
+- [EnvoyGatewayKubernetesProvider](#envoygatewaykubernetesprovider)
 - [EnvoyProxyKubernetesProvider](#envoyproxykubernetesprovider)
 
 | Field | Type | Required | Default | Description |

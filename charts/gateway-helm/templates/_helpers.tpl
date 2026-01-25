@@ -176,6 +176,22 @@ provider:
       {{- end }}
     shutdownManager:
       image: {{ include "eg.image" . }}
+    {{- with .Values.config.envoyGateway.provider.kubernetes.envoyDeployment }}
+    envoyDeployment:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+    {{- with .Values.config.envoyGateway.provider.kubernetes.envoyService }}
+    envoyService:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+    {{- with .Values.config.envoyGateway.provider.kubernetes.envoyDeployment }}
+    envoyDeployment:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+    {{- with .Values.config.envoyGateway.provider.kubernetes.envoyService }}
+    envoyService:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
 {{- with .Values.config.envoyGateway.extensionApis }}
 extensionApis:
   {{- toYaml . | nindent 2 }}
