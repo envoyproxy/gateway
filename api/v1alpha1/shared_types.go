@@ -26,8 +26,12 @@ const (
 	DefaultEnvoyProxyImage = "docker.io/envoyproxy/envoy:distroless-dev"
 	// DefaultShutdownManagerCPUResourceRequests for shutdown manager cpu resource
 	DefaultShutdownManagerCPUResourceRequests = "10m"
+	// DefaultShutdownManagerCPUResourceLimits for shutdown manager cpu resource limit
+	DefaultShutdownManagerCPUResourceLimits = "100m"
 	// DefaultShutdownManagerMemoryResourceRequests for shutdown manager memory resource
 	DefaultShutdownManagerMemoryResourceRequests = "32Mi"
+	// DefaultShutdownManagerMemoryResourceLimits for shutdown manager memory resource limit
+	DefaultShutdownManagerMemoryResourceLimits = "1Gi"
 	// DefaultShutdownManagerImage is the default image used for the shutdown manager.
 	DefaultShutdownManagerImage = "docker.io/envoyproxy/gateway-dev:latest"
 	// DefaultRateLimitImage is the default image used by ratelimit.

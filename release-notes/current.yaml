@@ -29,6 +29,7 @@ new features: |
   Added cookie matching support to HTTPRouteFilter matches, combined with HTTPRoute rule matches.
   Added support for addIfAbsent header action in ClientTrafficPolicy EarlyRequestHeaders and LateResponseHeaders to add headers only when they don't already exist.
   Added support for tracing tag, which allows to use Envoy string command operators such as `%ENVIRONMENT(...)%`.
+  Added default resource CPU and memory limits for the shutdown-manager container.
 
 
 bug fixes: |

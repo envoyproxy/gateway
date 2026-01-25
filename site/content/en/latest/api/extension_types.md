@@ -5105,6 +5105,7 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `image` | _string_ |  true  |  | Image specifies the ShutdownManager container image to be used, instead of the default image. |
+| `resources` | _[ResourceRequirements](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#resourcerequirements-v1-core)_ |  false  |  | Resources defined the resource requirements for the ShutdownManager container. |
 
 
 #### SlowStart
