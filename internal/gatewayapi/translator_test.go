@@ -50,11 +50,12 @@ func mustUnmarshal(t *testing.T, val []byte, out any) {
 
 func TestTranslate(t *testing.T) {
 	testCasesConfig := []struct {
-		name                    string
-		EnvoyPatchPolicyEnabled bool
-		BackendEnabled          bool
-		GatewayNamespaceMode    bool
-		RunningOnHost           bool
+		name                            string
+		EnvoyPatchPolicyEnabled         bool
+		BackendEnabled                  bool
+		GatewayNamespaceMode            bool
+		RunningOnHost                   bool
+		LuaEnvoyExtensionPolicyDisabled bool
 	}{
 		{
 			name:                    "envoypatchpolicy-invalid-feature-disabled",
@@ -77,6 +78,10 @@ func TestTranslate(t *testing.T) {
 			name:           "httproute-attaching-to-listener-with-backend-backendref-host-infra",
 			BackendEnabled: true,
 			RunningOnHost:  true,
+		},
+		{
+			name:                            "envoyextensionpolicy-lua-feature-disabled",
+			LuaEnvoyExtensionPolicyDisabled: true,
 		},
 	}
 
@@ -101,6 +106,7 @@ func TestTranslate(t *testing.T) {
 			backendEnabled := true
 			gatewayNamespaceMode := false
 			runningOnHost := false
+			luaEnvoyExtensionPolicyDisabled := false
 
 			for _, config := range testCasesConfig {
 				if config.name == strings.Split(filepath.Base(inputFile), ".")[0] {
@@ -108,21 +114,23 @@ func TestTranslate(t *testing.T) {
 					backendEnabled = config.BackendEnabled
 					gatewayNamespaceMode = config.GatewayNamespaceMode
 					runningOnHost = config.RunningOnHost
+					luaEnvoyExtensionPolicyDisabled = config.LuaEnvoyExtensionPolicyDisabled
 				}
 			}
 
 			translator := &Translator{
-				GatewayControllerName:   egv1a1.GatewayControllerName,
-				GatewayClassName:        "envoy-gateway-class",
-				GlobalRateLimitEnabled:  true,
-				EnvoyPatchPolicyEnabled: envoyPatchPolicyEnabled,
-				BackendEnabled:          backendEnabled,
-				ControllerNamespace:     "envoy-gateway-system",
-				MergeGateways:           IsMergeGatewaysEnabled(resources),
-				GatewayNamespaceMode:    gatewayNamespaceMode,
-				WasmCache:               &mockWasmCache{},
-				RunningOnHost:           runningOnHost,
-				Logger:                  logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo),
+				GatewayControllerName:           egv1a1.GatewayControllerName,
+				GatewayClassName:                "envoy-gateway-class",
+				GlobalRateLimitEnabled:          true,
+				EnvoyPatchPolicyEnabled:         envoyPatchPolicyEnabled,
+				BackendEnabled:                  backendEnabled,
+				ControllerNamespace:             "envoy-gateway-system",
+				MergeGateways:                   IsMergeGatewaysEnabled(resources),
+				GatewayNamespaceMode:            gatewayNamespaceMode,
+				WasmCache:                       &mockWasmCache{},
+				RunningOnHost:                   runningOnHost,
+				LuaEnvoyExtensionPolicyDisabled: luaEnvoyExtensionPolicyDisabled,
+				Logger:                          logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo),
 			}
 
 			// Add common test fixtures
