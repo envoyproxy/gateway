@@ -5301,9 +5301,24 @@ func (in *OIDCDenyRedirectHeader) DeepCopy() *OIDCDenyRedirectHeader {
 func (in *OIDCProvider) DeepCopyInto(out *OIDCProvider) {
 	*out = *in
 	in.BackendCluster.DeepCopyInto(&out.BackendCluster)
+	if in.Issuer != nil {
+		in, out := &in.Issuer, &out.Issuer
+		*out = new(string)
+		**out = **in
+	}
+	if in.IssuerRef != nil {
+		in, out := &in.IssuerRef, &out.IssuerRef
+		*out = new(LocalObjectKeyReference)
+		**out = **in
+	}
 	if in.AuthorizationEndpoint != nil {
 		in, out := &in.AuthorizationEndpoint, &out.AuthorizationEndpoint
 		*out = new(string)
+		**out = **in
+	}
+	if in.AuthorizationEndpointRef != nil {
+		in, out := &in.AuthorizationEndpointRef, &out.AuthorizationEndpointRef
+		*out = new(LocalObjectKeyReference)
 		**out = **in
 	}
 	if in.TokenEndpoint != nil {
@@ -5311,9 +5326,19 @@ func (in *OIDCProvider) DeepCopyInto(out *OIDCProvider) {
 		*out = new(string)
 		**out = **in
 	}
+	if in.TokenEndpointRef != nil {
+		in, out := &in.TokenEndpointRef, &out.TokenEndpointRef
+		*out = new(LocalObjectKeyReference)
+		**out = **in
+	}
 	if in.EndSessionEndpoint != nil {
 		in, out := &in.EndSessionEndpoint, &out.EndSessionEndpoint
 		*out = new(string)
+		**out = **in
+	}
+	if in.EndSessionEndpointRef != nil {
+		in, out := &in.EndSessionEndpointRef, &out.EndSessionEndpointRef
+		*out = new(LocalObjectKeyReference)
 		**out = **in
 	}
 }

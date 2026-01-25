@@ -1412,6 +1412,7 @@ func (t *Translator) buildOIDCProvider(
 		tokenEndpoint         string
 		authorizationEndpoint string
 		endSessionEndpoint    *string
+		issuer                string
 		protocol              ir.AppProtocol
 		rd                    *ir.RouteDestination
 		traffic               *ir.TrafficFeatures
@@ -1419,11 +1420,31 @@ func (t *Translator) buildOIDCProvider(
 		err                   error
 	)
 
+	// Resolve issuer
+	switch {
+	case provider.Issuer != nil:
+		issuer = *provider.Issuer
+	case provider.IssuerRef != nil:
+		if issuer, err = t.getObjectValueFromRef(provider.IssuerRef, policy.Namespace); err != nil {
+			return nil, perr.WithMessage(err, "issuerRef")
+		}
+	}
+
 	var u *url.URL
-	if provider.TokenEndpoint != nil {
-		u, err = url.Parse(*provider.TokenEndpoint)
+	// Use resolved issuer if token endpoint is not provided
+	if provider.TokenEndpoint != nil || provider.TokenEndpointRef != nil {
+		var tokenEndpointStr string
+		switch {
+		case provider.TokenEndpoint != nil:
+			tokenEndpointStr = *provider.TokenEndpoint
+		case provider.TokenEndpointRef != nil:
+			if tokenEndpointStr, err = t.getObjectValueFromRef(provider.TokenEndpointRef, policy.Namespace); err != nil {
+				return nil, perr.WithMessage(err, "tokenEndpointRef")
+			}
+		}
+		u, err = url.Parse(tokenEndpointStr)
 	} else {
-		u, err = url.Parse(provider.Issuer)
+		u, err = url.Parse(issuer)
 	}
 
 	if err != nil {
@@ -1456,16 +1477,43 @@ func (t *Translator) buildOIDCProvider(
 	// EG assumes that the issuer url uses the same protocol and CA as the token endpoint.
 	// If we need to support different protocols or CAs, we need to add more fields to the OIDCProvider CRD.
 	var (
-		userProvidedAuthorizationEndpoint = ptr.Deref(provider.AuthorizationEndpoint, "")
-		userProvidedTokenEndpoint         = ptr.Deref(provider.TokenEndpoint, "")
-		userProvidedEndSessionEndpoint    = ptr.Deref(provider.EndSessionEndpoint, "")
+		userProvidedAuthorizationEndpoint string
+		userProvidedTokenEndpoint         string
+		userProvidedEndSessionEndpoint    string
 	)
+
+	switch {
+	case provider.AuthorizationEndpoint != nil:
+		userProvidedAuthorizationEndpoint = *provider.AuthorizationEndpoint
+	case provider.AuthorizationEndpointRef != nil:
+		if userProvidedAuthorizationEndpoint, err = t.getObjectValueFromRef(provider.AuthorizationEndpointRef, policy.Namespace); err != nil {
+			return nil, perr.WithMessage(err, "authorizationEndpointRef")
+		}
+	}
+
+	switch {
+	case provider.TokenEndpoint != nil:
+		userProvidedTokenEndpoint = *provider.TokenEndpoint
+	case provider.TokenEndpointRef != nil:
+		if userProvidedTokenEndpoint, err = t.getObjectValueFromRef(provider.TokenEndpointRef, policy.Namespace); err != nil {
+			return nil, perr.WithMessage(err, "tokenEndpointRef")
+		}
+	}
+
+	switch {
+	case provider.EndSessionEndpoint != nil:
+		userProvidedEndSessionEndpoint = *provider.EndSessionEndpoint
+	case provider.EndSessionEndpointRef != nil:
+		if userProvidedEndSessionEndpoint, err = t.getObjectValueFromRef(provider.EndSessionEndpointRef, policy.Namespace); err != nil {
+			return nil, perr.WithMessage(err, "endSessionEndpointRef")
+		}
+	}
 
 	// Authorization endpoint and token endpoint are required fields.
 	// If either of them is not provided, we need to fetch them from the issuer's well-known url.
 	if userProvidedAuthorizationEndpoint == "" || userProvidedTokenEndpoint == "" {
 		// Fetch the endpoints from the issuer's well-known url.
-		discoveredConfig, err := t.fetchEndpointsFromIssuer(provider.Issuer, providerTLS)
+		discoveredConfig, err := t.fetchEndpointsFromIssuer(issuer, providerTLS)
 		if err != nil {
 			return nil, err
 		}
@@ -1494,9 +1542,11 @@ func (t *Translator) buildOIDCProvider(
 			endSessionEndpoint = discoveredConfig.EndSessionEndpoint
 		}
 	} else {
-		tokenEndpoint = *provider.TokenEndpoint
-		authorizationEndpoint = *provider.AuthorizationEndpoint
-		endSessionEndpoint = provider.EndSessionEndpoint
+		tokenEndpoint = userProvidedTokenEndpoint
+		authorizationEndpoint = userProvidedAuthorizationEndpoint
+		if userProvidedEndSessionEndpoint != "" {
+			endSessionEndpoint = &userProvidedEndSessionEndpoint
+		}
 	}
 
 	if err = validateTokenEndpoint(tokenEndpoint); err != nil {
@@ -1514,6 +1564,41 @@ func (t *Translator) buildOIDCProvider(
 		TokenEndpoint:         tokenEndpoint,
 		EndSessionEndpoint:    endSessionEndpoint,
 	}, nil
+}
+
+// getObjectValueFromRef assumes the local object reference points to
+// a Kubernetes ConfigMap or Secret.
+func (t *Translator) getObjectValueFromRef(
+	valueRef *egv1a1.LocalObjectKeyReference,
+	policyNs string,
+) (string, error) {
+	if valueRef == nil {
+		return "", errors.New("unexpected nil reference")
+	}
+
+	switch valueRef.Kind {
+	case resource.KindConfigMap:
+		cm := t.GetConfigMap(policyNs, string(valueRef.Name))
+		if cm != nil {
+			s, dataOk := cm.Data[valueRef.Key]
+			if !dataOk {
+				return "", fmt.Errorf("can't find the key %q in the referenced configmap %q", valueRef.Key, valueRef.Name)
+			}
+			return s, nil
+		}
+		return "", fmt.Errorf("can't find the referenced configmap %q in namespace %q", valueRef.Name, policyNs)
+	case resource.KindSecret:
+		sec := t.GetSecret(policyNs, string(valueRef.Name))
+		if sec != nil {
+			b, dataOk := sec.Data[valueRef.Key]
+			if !dataOk {
+				return "", fmt.Errorf("can't find the key %q in the referenced secret %q", valueRef.Key, valueRef.Name)
+			}
+			return string(b), nil
+		}
+		return "", fmt.Errorf("can't find the referenced secret %q in namespace %q", valueRef.Name, policyNs)
+	}
+	return "", fmt.Errorf("unexpected reference to kind %q", valueRef.Kind)
 }
 
 func extractRedirectPath(redirectURL string) (string, error) {
