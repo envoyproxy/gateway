@@ -2895,6 +2895,8 @@ spec:
                         description: |-
                           CustomTags defines the custom tags to add to each span.
                           If provider is kubernetes, pod name and namespace are added by default.
+
+                          Deprecated: Use Tags instead.
                         type: object
                       samplingFraction:
                         description: |-
@@ -3642,6 +3644,58 @@ spec:
                         x-kubernetes-list-map-keys:
                         - name
                         x-kubernetes-list-type: map
+                      addIfAbsent:
+                        description: |-
+                          AddIfAbsent adds the given header(s) (name, value) to the request/response
+                          only if the header does not already exist. Unlike Add which appends to
+                          existing values, this is a no-op if the header is already present.
+
+                          Input:
+                            GET /foo HTTP/1.1
+                            my-header: foo
+
+                          Config:
+                            addIfAbsent:
+                            - name: "my-header"
+                              value: "bar"
+
+                          Output:
+                            GET /foo HTTP/1.1
+                            my-header: foo
+                        items:
+                          description: HTTPHeader represents an HTTP Header name and
+                            value as defined by RFC 7230.
+                          properties:
+                            name:
+                              description: |-
+                                Name is the name of the HTTP Header to be matched. Name matching MUST be
+                                case-insensitive. (See https://tools.ietf.org/html/rfc7230#section-3.2).
+
+                                If multiple entries specify equivalent header names, the first entry with
+                                an equivalent name MUST be considered for a match. Subsequent entries
+                                with an equivalent header name MUST be ignored. Due to the
+                                case-insensitivity of header names, "foo" and "Foo" are considered
+                                equivalent.
+                              maxLength: 256
+                              minLength: 1
+                              pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
+                              type: string
+                            value:
+                              description: Value is the value of HTTP Header to be
+                                matched.
+                              maxLength: 4096
+                              minLength: 1
+                              type: string
+                          required:
+                          - name
+                          - value
+                          type: object
+                        maxItems: 64
+                        minItems: 1
+                        type: array
+                        x-kubernetes-list-map-keys:
+                        - name
+                        x-kubernetes-list-type: map
                       remove:
                         description: |-
                           Remove the given header(s) from the HTTP request before the action. The
@@ -3777,6 +3831,58 @@ spec:
                           Output:
                             GET /foo HTTP/1.1
                             my-header: foo,bar,baz
+                        items:
+                          description: HTTPHeader represents an HTTP Header name and
+                            value as defined by RFC 7230.
+                          properties:
+                            name:
+                              description: |-
+                                Name is the name of the HTTP Header to be matched. Name matching MUST be
+                                case-insensitive. (See https://tools.ietf.org/html/rfc7230#section-3.2).
+
+                                If multiple entries specify equivalent header names, the first entry with
+                                an equivalent name MUST be considered for a match. Subsequent entries
+                                with an equivalent header name MUST be ignored. Due to the
+                                case-insensitivity of header names, "foo" and "Foo" are considered
+                                equivalent.
+                              maxLength: 256
+                              minLength: 1
+                              pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
+                              type: string
+                            value:
+                              description: Value is the value of HTTP Header to be
+                                matched.
+                              maxLength: 4096
+                              minLength: 1
+                              type: string
+                          required:
+                          - name
+                          - value
+                          type: object
+                        maxItems: 64
+                        minItems: 1
+                        type: array
+                        x-kubernetes-list-map-keys:
+                        - name
+                        x-kubernetes-list-type: map
+                      addIfAbsent:
+                        description: |-
+                          AddIfAbsent adds the given header(s) (name, value) to the request/response
+                          only if the header does not already exist. Unlike Add which appends to
+                          existing values, this is a no-op if the header is already present.
+
+                          Input:
+                            GET /foo HTTP/1.1
+                            my-header: foo
+
+                          Config:
+                            addIfAbsent:
+                            - name: "my-header"
+                              value: "bar"
+
+                          Output:
+                            GET /foo HTTP/1.1
+                            my-header: foo
                         items:
                           description: HTTPHeader represents an HTTP Header name and
                             value as defined by RFC 7230.
@@ -22812,6 +22918,25 @@ spec:
                         maxItems: 16
                         type: array
                     type: object
+                  requestID:
+                    description: RequestID configures Envoy request ID behavior.
+                    properties:
+                      tracing:
+                        description: |-
+                          Tracing configures Envoy's behavior for the UUID request ID extension,
+                          including whether the trace sampling decision is packed into the UUID and
+                          whether `X-Request-ID` is used for trace sampling decisions.
+
+                          When omitted, the default behavior is `PackAndSample`, which alters the UUID
+                          to contain the trace sampling decision and uses `X-Request-ID` for stable
+                          trace sampling.
+                        enum:
+                        - PackAndSample
+                        - Sample
+                        - Pack
+                        - Disable
+                        type: string
+                    type: object
                   tracing:
                     description: |-
                       Tracing defines tracing configuration for managed proxies.
@@ -22878,6 +23003,8 @@ spec:
                         description: |-
                           CustomTags defines the custom tags to add to each span.
                           If provider is kubernetes, pod name and namespace are added by default.
+
+                          Deprecated: Use Tags instead.
                         type: object
                       provider:
                         description: Provider defines the tracing provider.
@@ -24743,6 +24870,54 @@ spec:
                       If unset, defaults to 200.
                     type: integer
                 type: object
+              matches:
+                description: |-
+                  Matches defines additional matching criteria for the HTTPRoute rule.
+                  As with HTTPRouteRule.Matches, the rule is matched if any one match applies.
+                  When both HTTPRouteRule.Matches and HTTPRouteFilter.Matches are set, the
+                  effective matching is the logical AND of the two sets.
+                items:
+                  description: |-
+                    HTTPRouteMatchFilter defines additional matching criteria for the HTTPRoute rule.
+                    At least one matcher must be specified.
+                  minProperties: 1
+                  properties:
+                    cookies:
+                      description: |-
+                        Cookies is a list of cookie matchers evaluated against the HTTP request.
+                        All specified matchers must match.
+                      items:
+                        description: HTTPCookieMatch defines how to match a single
+                          cookie.
+                        properties:
+                          name:
+                            description: Name is the cookie name to evaluate.
+                            maxLength: 256
+                            minLength: 1
+                            type: string
+                          type:
+                            default: Exact
+                            description: Type specifies how to match against the value
+                              of the cookie.
+                            enum:
+                            - Exact
+                            - RegularExpression
+                            type: string
+                          value:
+                            description: Value is the cookie value to be matched.
+                            maxLength: 4096
+                            minLength: 1
+                            type: string
+                        required:
+                        - name
+                        - value
+                        type: object
+                      maxItems: 16
+                      minItems: 1
+                      type: array
+                  type: object
+                maxItems: 8
+                type: array
               urlRewrite:
                 description: HTTPURLRewriteFilter define rewrites of HTTP URL components
                   such as path and host

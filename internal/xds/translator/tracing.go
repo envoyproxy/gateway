@@ -93,7 +93,7 @@ func buildHCMTracing(tracing *ir.Tracing) (*hcm.HttpConnectionManager_Tracing, e
 		return nil, fmt.Errorf("failed to marshal tracing configuration: %w", err)
 	}
 
-	tags, err := buildTracingTags(tracing.CustomTags)
+	tags, err := buildTracingTags(tracing.CustomTags, tracing.Tags)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build tracing tags: %w", err)
 	}
@@ -161,27 +161,28 @@ func processClusterForTracing(tCtx *types.ResourceVersionTable, tracing *ir.Trac
 	})
 }
 
-func buildTracingTags(tracingTags map[string]egv1a1.CustomTag) ([]*tracingtype.CustomTag, error) {
-	tags := make([]*tracingtype.CustomTag, 0, len(tracingTags))
+func buildTracingTags(tracingTags map[string]egv1a1.CustomTag, tags map[string]string) ([]*tracingtype.CustomTag, error) {
+	out := make(map[string]*tracingtype.CustomTag)
+
 	// TODO: consider add some default tags for better UX
 	for k, v := range tracingTags {
 		switch v.Type {
 		case egv1a1.CustomTagTypeLiteral:
-			tags = append(tags, &tracingtype.CustomTag{
+			out[k] = &tracingtype.CustomTag{
 				Tag: k,
 				Type: &tracingtype.CustomTag_Literal_{
 					Literal: &tracingtype.CustomTag_Literal{
 						Value: v.Literal.Value,
 					},
 				},
-			})
+			}
 		case egv1a1.CustomTagTypeEnvironment:
 			defaultVal := ""
 			if v.Environment.DefaultValue != nil {
 				defaultVal = *v.Environment.DefaultValue
 			}
 
-			tags = append(tags, &tracingtype.CustomTag{
+			out[k] = &tracingtype.CustomTag{
 				Tag: k,
 				Type: &tracingtype.CustomTag_Environment_{
 					Environment: &tracingtype.CustomTag_Environment{
@@ -189,14 +190,14 @@ func buildTracingTags(tracingTags map[string]egv1a1.CustomTag) ([]*tracingtype.C
 						DefaultValue: defaultVal,
 					},
 				},
-			})
+			}
 		case egv1a1.CustomTagTypeRequestHeader:
 			defaultVal := ""
 			if v.RequestHeader.DefaultValue != nil {
 				defaultVal = *v.RequestHeader.DefaultValue
 			}
 
-			tags = append(tags, &tracingtype.CustomTag{
+			out[k] = &tracingtype.CustomTag{
 				Tag: k,
 				Type: &tracingtype.CustomTag_RequestHeader{
 					RequestHeader: &tracingtype.CustomTag_Header{
@@ -204,15 +205,31 @@ func buildTracingTags(tracingTags map[string]egv1a1.CustomTag) ([]*tracingtype.C
 						DefaultValue: defaultVal,
 					},
 				},
-			})
+			}
 		default:
 			return nil, fmt.Errorf("unknown custom tag type: %s", v.Type)
 		}
 	}
+
+	// same key in tags will override tracingTags
+	for k, v := range tags {
+		out[k] = &tracingtype.CustomTag{
+			Tag: k,
+			Type: &tracingtype.CustomTag_Value{
+				Value: v,
+			},
+		}
+	}
+
+	result := make([]*tracingtype.CustomTag, 0, len(out))
+	for _, v := range out {
+		result = append(result, v)
+	}
+
 	// sort tags by tag name, make result consistent
-	sort.Slice(tags, func(i, j int) bool {
-		return tags[i].Tag < tags[j].Tag
+	sort.Slice(result, func(i, j int) bool {
+		return result[i].Tag < result[j].Tag
 	})
 
-	return tags, nil
+	return result, nil
 }

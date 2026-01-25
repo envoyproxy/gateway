@@ -66,7 +66,7 @@ var GatewayInfraResourceTest = suite.ConformanceTest{
 				},
 			}
 
-			err := suite.Client.Patch(context.TODO(), newGatewayObj, client.Apply, client.ForceOwnership, client.FieldOwner("e2e-test"))
+			err := suite.Client.Patch(t.Context(), newGatewayObj, client.Apply, patchOpts...)
 			require.NoError(t, err)
 
 			<-time.After(time.Millisecond * 300)
@@ -110,12 +110,12 @@ var GatewayInfraResourceTest = suite.ConformanceTest{
 				},
 			}
 
-			err := suite.Client.Patch(context.TODO(), changedGatewayObj, client.Apply, client.ForceOwnership, client.FieldOwner("e2e-test"))
+			err := suite.Client.Patch(t.Context(), changedGatewayObj, client.Apply, patchOpts...)
 			require.NoError(t, err)
 
 			<-time.After(time.Millisecond * 300)
 			var gatewayDeploymentList appsv1.DeploymentList
-			err = suite.Client.List(context.TODO(), &gatewayDeploymentList, &client.ListOptions{
+			err = suite.Client.List(t.Context(), &gatewayDeploymentList, &client.ListOptions{
 				LabelSelector: labelSelector,
 				Namespace:     gatewayObjMeta.Namespace,
 			})

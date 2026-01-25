@@ -49,7 +49,7 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute, httpListener *ir.HTTPListener) (*rou
 	connectMatch := trafficUpgradeConnect(httpRoute.Traffic)
 	router := &routev3.Route{
 		Name:     httpRoute.Name,
-		Match:    buildXdsRouteMatch(connectMatch, httpRoute.PathMatch, httpRoute.HeaderMatches, httpRoute.QueryParamMatches),
+		Match:    buildXdsRouteMatch(connectMatch, httpRoute.PathMatch, httpRoute.HeaderMatches, httpRoute.QueryParamMatches, httpRoute.CookieMatches),
 		Metadata: buildXdsMetadata(httpRoute.Metadata),
 	}
 
@@ -185,7 +185,7 @@ func buildUpgradeConfig(trafficFeatures *ir.TrafficFeatures) []*routev3.RouteAct
 	return upgradeConfigs
 }
 
-func buildXdsRouteMatch(connectMatch bool, pathMatch *ir.StringMatch, headerMatches, queryParamMatches []*ir.StringMatch) *routev3.RouteMatch {
+func buildXdsRouteMatch(connectMatch bool, pathMatch *ir.StringMatch, headerMatches, queryParamMatches, cookieMatches []*ir.StringMatch) *routev3.RouteMatch {
 	var outMatch *routev3.RouteMatch
 	if connectMatch {
 		outMatch = &routev3.RouteMatch{
@@ -221,6 +221,17 @@ func buildXdsRouteMatch(connectMatch bool, pathMatch *ir.StringMatch, headerMatc
 			},
 		}
 		outMatch.QueryParameters = append(outMatch.QueryParameters, queryParamMatcher)
+	}
+
+	for _, cookieMatch := range cookieMatches {
+		stringMatcher := buildXdsStringMatcher(cookieMatch)
+
+		cookieMatcher := &routev3.CookieMatcher{
+			Name:        cookieMatch.Name,
+			StringMatch: stringMatcher,
+			InvertMatch: ptr.Deref(cookieMatch.Invert, false),
+		}
+		outMatch.Cookies = append(outMatch.Cookies, cookieMatcher)
 	}
 
 	return outMatch
@@ -614,9 +625,12 @@ func buildXdsAddedHeaders(headersToAdd []ir.AddHeader) []*corev3.HeaderValueOpti
 	for _, header := range headersToAdd {
 		var appendAction corev3.HeaderValueOption_HeaderAppendAction
 
-		if header.Append {
+		switch {
+		case header.AddIfAbsent:
+			appendAction = corev3.HeaderValueOption_ADD_IF_ABSENT
+		case header.Append:
 			appendAction = corev3.HeaderValueOption_APPEND_IF_EXISTS_OR_ADD
-		} else {
+		default:
 			appendAction = corev3.HeaderValueOption_OVERWRITE_IF_EXISTS_OR_ADD
 		}
 		// Allow empty headers to be set, but don't add the config to do so unless necessary
@@ -815,7 +829,7 @@ func buildRouteTracing(httpRoute *ir.HTTPRoute) (*routev3.Tracing, error) {
 	}
 
 	tracing := httpRoute.Traffic.Telemetry.Tracing
-	tags, err := buildTracingTags(tracing.CustomTags)
+	tags, err := buildTracingTags(tracing.CustomTags, tracing.Tags)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build route tracing tags:%w", err)
 	}

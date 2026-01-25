@@ -64,3 +64,8 @@ backendTrafficPolicies:
               requestHeader:
                 name: "X-Request-Id"
                 defaultValue: "-"
+          # tags will override customTags
+          tags:
+            env1: "%ENVIRONMENT(ENVOY_POD_NAME)%"
+            literal1: "literal_value_1"
+            req1: "%REQUEST_HEADER(X-Request-Id)%"

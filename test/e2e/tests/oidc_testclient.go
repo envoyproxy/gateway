@@ -168,7 +168,7 @@ func (o *OIDCTestClient) Get(url string, followDirection bool) (*http.Response, 
 
 // Send sends the specified request.
 func (o *OIDCTestClient) Send(req *http.Request, followRedirect bool) (*http.Response, error) {
-	o.http.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+	o.http.CheckRedirect = func(_ *http.Request, _ []*http.Request) error {
 		if followRedirect {
 			return nil
 		}

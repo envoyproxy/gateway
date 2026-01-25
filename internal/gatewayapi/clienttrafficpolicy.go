@@ -1112,6 +1112,47 @@ func translateHeaderModifier(headerModifier *egv1a1.HTTPHeaderFilter, modType st
 		}
 	}
 
+	// AddIfAbsent headers
+	if headersToAddIfAbsent := headerModifier.AddIfAbsent; headersToAddIfAbsent != nil {
+		for _, addHeader := range headersToAddIfAbsent {
+			if addHeader.Name == "" {
+				errs = errors.Join(errs, fmt.Errorf("%s cannot addIfAbsent a header with an empty name", modType))
+				continue
+			}
+			// Per Gateway API specification on HTTPHeaderName, : and / are invalid characters in header names
+			if strings.ContainsAny(string(addHeader.Name), "/:") {
+				errs = errors.Join(errs, fmt.Errorf("%s cannot addIfAbsent a header with a '/' or ':' character in them. Header: '%q'", modType, string(addHeader.Name)))
+				continue
+			}
+			// Gateway API specification allows only valid value as defined by RFC 7230
+			if !HeaderValueRegexp.MatchString(addHeader.Value) {
+				errs = errors.Join(errs, fmt.Errorf("%s cannot addIfAbsent a header with an invalid value. Header: '%q'", modType, string(addHeader.Name)))
+				continue
+			}
+			// Check if the header is a duplicate
+			headerKey := string(addHeader.Name)
+			canAddHeader := true
+			for _, h := range addRequestHeaders {
+				if strings.EqualFold(h.Name, headerKey) {
+					canAddHeader = false
+					break
+				}
+			}
+
+			if !canAddHeader {
+				continue
+			}
+
+			newHeader := ir.AddHeader{
+				Name:        headerKey,
+				AddIfAbsent: true,
+				Value:       []string{addHeader.Value},
+			}
+
+			addRequestHeaders = append(addRequestHeaders, newHeader)
+		}
+	}
+
 	// Remove request headers
 	// As far as Envoy is concerned, it is ok to configure a header to be added/set and also in the list of
 	// headers to remove. It will remove the original header if present and then add/set the header after.

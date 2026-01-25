@@ -3,7 +3,7 @@ title: "HTTP Routing"
 ---
 
 The [HTTPRoute][] resource allows users to configure HTTP routing by matching HTTP traffic and forwarding it to
-Kubernetes backends. Currently, the only supported backend supported by Envoy Gateway is a [Service](https://kubernetes.io/docs/concepts/services-networking/service/) resource. This task
+Kubernetes backends. Currently, the only backend supported by Envoy Gateway is a [Service](https://kubernetes.io/docs/concepts/services-networking/service/) resource. This task
 shows how to route traffic based on host, header, and path fields and forward the traffic to different Kubernetes
 [Services](https://kubernetes.io/docs/concepts/services-networking/service/). To learn more about HTTP routing, refer to the [Gateway API documentation][].
 
