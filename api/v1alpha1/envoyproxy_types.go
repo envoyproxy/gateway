@@ -354,6 +354,10 @@ type ProxyTelemetry struct {
 
 	// Metrics defines metrics configuration for managed proxies.
 	Metrics *ProxyMetrics `json:"metrics,omitempty"`
+
+	// RequestID configures Envoy request ID behavior.
+	// +optional
+	RequestID *RequestIDSettings `json:"requestID,omitempty"`
 }
 
 // EnvoyProxyProviderType defines the types of providers supported by Envoy Proxy.
@@ -367,6 +371,44 @@ const (
 
 	// EnvoyProxyProviderTypeHost defines the "Host" provider.
 	EnvoyProxyProviderTypeHost EnvoyProxyProviderType = "Host"
+)
+
+// RequestIDSettings defines configuration for Envoy's UUID request ID extension.
+type RequestIDSettings struct {
+	// Tracing configures Envoy's behavior for the UUID request ID extension,
+	// including whether the trace sampling decision is packed into the UUID and
+	// whether `X-Request-ID` is used for trace sampling decisions.
+	//
+	// When omitted, the default behavior is `PackAndSample`, which alters the UUID
+	// to contain the trace sampling decision and uses `X-Request-ID` for stable
+	// trace sampling.
+	//
+	// +optional
+	Tracing *RequestIDExtensionAction `json:"tracing,omitempty"`
+}
+
+// RequestIDExtensionAction defines how the UUID request ID extension behaves
+// with respect to packing the trace reason into the UUID and using the
+// request ID for trace sampling decisions.
+//
+// +kubebuilder:validation:Enum=PackAndSample;Sample;Pack;Disable
+type RequestIDExtensionAction string
+
+const (
+	// PackAndSample enables both behaviors:
+	// - Alters the UUID to contain the trace sampling decision
+	// - Uses `X-Request-ID` for trace sampling
+	RequestIDExtensionActionPackAndSample RequestIDExtensionAction = "PackAndSample"
+	// Sample uses `X-Request-ID` for trace sampling decisions, but does NOT alter
+	// the UUID to pack the trace sampling decision.
+	RequestIDExtensionActionSample RequestIDExtensionAction = "Sample"
+	// Pack alters the UUID to contain the trace sampling decision, but does NOT
+	// use `X-Request-ID` for trace sampling decisions.
+	RequestIDExtensionActionPack RequestIDExtensionAction = "Pack"
+	// Disable disables both behaviors:
+	// - Does not alter the UUID
+	// - Does not use `X-Request-ID` for trace sampling
+	RequestIDExtensionActionDisable RequestIDExtensionAction = "Disable"
 )
 
 // EnvoyProxyProvider defines the desired state of a resource provider.

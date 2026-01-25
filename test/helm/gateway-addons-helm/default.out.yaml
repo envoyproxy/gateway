@@ -18,7 +18,7 @@ kind: ServiceAccount
 automountServiceAccountToken: false
 metadata:
   labels:
-    helm.sh/chart: grafana-10.5.6
+    helm.sh/chart: grafana-10.5.8
     app.kubernetes.io/name: grafana
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: "12.3.1"
@@ -47,7 +47,7 @@ metadata:
     app.kubernetes.io/name: prometheus
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: v3.9.1
-    helm.sh/chart: prometheus-28.3.0
+    helm.sh/chart: prometheus-28.6.0
     app.kubernetes.io/part-of: prometheus
   name: prometheus
   namespace: monitoring
@@ -143,7 +143,7 @@ metadata:
   name: grafana
   namespace: monitoring
   labels:
-    helm.sh/chart: grafana-10.5.6
+    helm.sh/chart: grafana-10.5.8
     app.kubernetes.io/name: grafana
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: "12.3.1"
@@ -316,7 +316,7 @@ metadata:
     app.kubernetes.io/name: prometheus
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: v3.9.1
-    helm.sh/chart: prometheus-28.3.0
+    helm.sh/chart: prometheus-28.6.0
     app.kubernetes.io/part-of: prometheus
   name: prometheus
   namespace: monitoring
@@ -9980,7 +9980,7 @@ kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   labels:
-    helm.sh/chart: grafana-10.5.6
+    helm.sh/chart: grafana-10.5.8
     app.kubernetes.io/name: grafana
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: "12.3.1"
@@ -10011,7 +10011,7 @@ metadata:
     app.kubernetes.io/name: prometheus
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: v3.9.1
-    helm.sh/chart: prometheus-28.3.0
+    helm.sh/chart: prometheus-28.6.0
     app.kubernetes.io/part-of: prometheus
   name: prometheus
 rules:
@@ -10078,7 +10078,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: grafana-clusterrolebinding
   labels:
-    helm.sh/chart: grafana-10.5.6
+    helm.sh/chart: grafana-10.5.8
     app.kubernetes.io/name: grafana
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: "12.3.1"
@@ -10119,7 +10119,7 @@ metadata:
     app.kubernetes.io/name: prometheus
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: v3.9.1
-    helm.sh/chart: prometheus-28.3.0
+    helm.sh/chart: prometheus-28.6.0
     app.kubernetes.io/part-of: prometheus
   name: prometheus
 subjects:
@@ -10138,7 +10138,7 @@ metadata:
   name: grafana
   namespace: monitoring
   labels:
-    helm.sh/chart: grafana-10.5.6
+    helm.sh/chart: grafana-10.5.8
     app.kubernetes.io/name: grafana
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: "12.3.1"
@@ -10151,7 +10151,7 @@ metadata:
   name: grafana
   namespace: monitoring
   labels:
-    helm.sh/chart: grafana-10.5.6
+    helm.sh/chart: grafana-10.5.8
     app.kubernetes.io/name: grafana
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: "12.3.1"
@@ -10194,7 +10194,7 @@ metadata:
   name: grafana
   namespace: monitoring
   labels:
-    helm.sh/chart: grafana-10.5.6
+    helm.sh/chart: grafana-10.5.8
     app.kubernetes.io/name: grafana
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: "12.3.1"
@@ -10296,7 +10296,7 @@ metadata:
     app.kubernetes.io/name: prometheus
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: v3.9.1
-    helm.sh/chart: prometheus-28.3.0
+    helm.sh/chart: prometheus-28.6.0
     app.kubernetes.io/part-of: prometheus
   name: prometheus
   namespace: monitoring
@@ -10462,7 +10462,7 @@ metadata:
   name: grafana
   namespace: monitoring
   labels:
-    helm.sh/chart: grafana-10.5.6
+    helm.sh/chart: grafana-10.5.8
     app.kubernetes.io/name: grafana
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: "12.3.1"
@@ -10478,7 +10478,7 @@ spec:
   template:
     metadata:
       labels:
-        helm.sh/chart: grafana-10.5.6
+        helm.sh/chart: grafana-10.5.8
         app.kubernetes.io/name: grafana
         app.kubernetes.io/instance: gateway-addons-helm
         app.kubernetes.io/version: "12.3.1"
@@ -10594,7 +10594,7 @@ metadata:
     app.kubernetes.io/name: prometheus
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: v3.9.1
-    helm.sh/chart: prometheus-28.3.0
+    helm.sh/chart: prometheus-28.6.0
     app.kubernetes.io/part-of: prometheus
   name: prometheus
   namespace: monitoring
@@ -10616,7 +10616,7 @@ spec:
         app.kubernetes.io/name: prometheus
         app.kubernetes.io/instance: gateway-addons-helm
         app.kubernetes.io/version: v3.9.1
-        helm.sh/chart: prometheus-28.3.0
+        helm.sh/chart: prometheus-28.6.0
         app.kubernetes.io/part-of: prometheus
     spec:
       enableServiceLinks: true
