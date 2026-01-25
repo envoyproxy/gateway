@@ -59,12 +59,14 @@ backendTLSPolicies:
         sectionName: http
       conditions:
       - lastTransitionTime: null
-        message: Unsupported reference kind, supported kinds are ConfigMap, Secret, and ClusterTrustBundle.
+        message: Unsupported reference kind, supported kinds are ConfigMap, Secret,
+          and ClusterTrustBundle.
         reason: InvalidKind
         status: "False"
         type: Accepted
       - lastTransitionTime: null
-        message: Unsupported reference kind, supported kinds are ConfigMap, Secret, and ClusterTrustBundle.
+        message: Unsupported reference kind, supported kinds are ConfigMap, Secret,
+          and ClusterTrustBundle.
         reason: InvalidKind
         status: "False"
         type: ResolvedRefs
