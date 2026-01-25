@@ -247,7 +247,7 @@ xdsIR:
         security:
           basicAuth:
             name: securitypolicy/default/policy-for-route
-            users: dXNlcjE6e1NIQX15LzJzWUFqNXlyUUlONFRMMFlkUGRtR05LcGM9
+            users: '[redacted]'
           cors:
             allowHeaders:
             - x-header-1
