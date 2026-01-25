@@ -1,0 +1,119 @@
+http:
+- name: "path-match-listener"
+  address: "::"
+  port: 10080
+  hostnames:
+  - "*"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  routes:
+  # Test 1: Path prefix match
+  - name: "route-path-prefix-api"
+    hostname: "*"
+    traffic:
+      rateLimit:
+        local:
+          default:
+            requests: 100
+            unit: Second
+          rules:
+          - pathMatch:
+              prefix: /api/
+            limit:
+              requests: 50
+              unit: Second
+    pathMatch:
+      prefix: /api/
+    destination:
+      name: "api-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 8080
+        name: "api-dest/backend/0"
+  # Test 2: Path exact match
+  - name: "route-path-exact-admin"
+    hostname: "*"
+    traffic:
+      rateLimit:
+        local:
+          default:
+            requests: 100
+            unit: Second
+          rules:
+          - pathMatch:
+              exact: /admin
+            limit:
+              requests: 10
+              unit: Minute
+    pathMatch:
+      exact: /admin
+    destination:
+      name: "admin-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 8080
+        name: "admin-dest/backend/0"
+  # Test 3: Multiple path rules
+  - name: "route-multiple-path-rules"
+    hostname: "*"
+    traffic:
+      rateLimit:
+        local:
+          default:
+            requests: 100
+            unit: Second
+          rules:
+          - pathMatch:
+              prefix: /v1/
+            limit:
+              requests: 200
+              unit: Second
+          - pathMatch:
+              prefix: /v2/
+            limit:
+              requests: 150
+              unit: Second
+          - pathMatch:
+              exact: /health
+            limit:
+              requests: 1000
+              unit: Second
+    pathMatch:
+      prefix: /
+    destination:
+      name: "versioned-api-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 8080
+        name: "versioned-api-dest/backend/0"
+  # Test 4: Path match with header match combination
+  - name: "route-path-and-header"
+    hostname: "*"
+    traffic:
+      rateLimit:
+        local:
+          default:
+            requests: 100
+            unit: Second
+          rules:
+          - headerMatches:
+            - name: x-api-key
+              exact: premium
+            pathMatch:
+              prefix: /premium/
+            limit:
+              requests: 500
+              unit: Minute
+    pathMatch:
+      prefix: /premium/
+    destination:
+      name: "premium-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 8080
+        name: "premium-dest/backend/0"
