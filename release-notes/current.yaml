@@ -25,6 +25,8 @@ new features: |
   Added support for custom headers on OTLP exports (metrics, tracing, access logs).
   Added support for configuring minimum response size for compression via minContentLength field in BackendTrafficPolicy.
   Added support for custom span name.
+  Added support for updating initial_fetch_timeout in the bootstrap configuration.
+  Set default initial_fetch_timeout to 0s.
   Added support for TLS telemetry gRPC backends.
   Added cookie matching support to HTTPRouteFilter matches, combined with HTTPRoute rule matches.
   Added support for addIfAbsent header action in ClientTrafficPolicy EarlyRequestHeaders and LateResponseHeaders to add headers only when they don't already exist.
