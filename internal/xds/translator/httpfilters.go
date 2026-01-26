@@ -77,14 +77,14 @@ type OrderedHTTPFilters []*OrderedHTTPFilter
 // newOrderedHTTPFilter gives each HTTP filter a rational order.
 // This is needed because the order of the filters is important.
 // For example:
-//  - the custom_response filter should be placed first to ensure it sees local replies.
-//  - the health_check filter should be placed next because external load balancer determines whether envoy should
-//    receive traffic based on the health check result which only depending on the current draining state of the envoy,
-//    result should not be affected by other filters, or else user traffic disruption may happen.
-//  - the fault filter should be placed after it because it doesn't rely on the functionality of other filters,
-//    and rejecting early can save computation costs for the remaining filters.
-//  - the cors filter should be put after that to avoid unnecessary processing of other filters for unauthorized cross-region access.
-//  - the router filter must be the last one since it's a terminal filter.
+//   - the custom_response filter should be placed first to ensure it sees local replies.
+//   - the health_check filter should be placed next because external load balancer determines whether envoy should
+//     receive traffic based on the health check result which only depending on the current draining state of the envoy,
+//     result should not be affected by other filters, or else user traffic disruption may happen.
+//   - the fault filter should be placed after it because it doesn't rely on the functionality of other filters,
+//     and rejecting early can save computation costs for the remaining filters.
+//   - the cors filter should be put after that to avoid unnecessary processing of other filters for unauthorized cross-region access.
+//   - the router filter must be the last one since it's a terminal filter.
 //
 // Important: please modify this method and set the order for the new filter
 // when adding a new filter in the HCM filter chain.
