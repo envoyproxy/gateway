@@ -31,11 +31,12 @@ spec:
       name: example-route
   authentication:
     rules:
-      - headers:
-          x-user: example-user
+      - headerMatches:
+        - name: x-user
+          exact: example-user
 ```
 
-In this example, requests are allowed only if the `x-user` header is present and matches the configured value.
+In this example, requests are allowed only if the request headers match the configured header match conditions.
 
 ---
 
@@ -80,15 +81,16 @@ spec:
   targetRefs:
     - kind: HTTPRoute
       name: example-route
-  authentication:
-    rules:
-      - headers:
-          x-user: example-user
-        methods:
-          - GET
+authentication:
+  rules:
+    - headerMatches:
+        - name: x-user
+          exact: example-user
+      methods:
+        - GET
 ```
 
-In this scenario, a request is only authorized if it uses the `GET` method and contains the expected user identity in the request headers.
+In this scenario, a request is only authorized if it matches the configured header conditions and uses the allowed HTTP method.
 
 ---
 
