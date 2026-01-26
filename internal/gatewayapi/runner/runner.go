@@ -13,6 +13,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"sync"
 
 	"github.com/docker/docker/pkg/fileutils"
 	"github.com/telepresenceio/watchable"
@@ -60,6 +61,9 @@ type Runner struct {
 
 	// Key tracking for mark and sweep - avoids expensive LoadAll operations
 	keyCache *KeyCache
+
+	// Goroutine synchronization
+	done sync.WaitGroup
 }
 
 func New(cfg *Config) *Runner {
@@ -70,7 +74,10 @@ func New(cfg *Config) *Runner {
 }
 
 // Close implements Runner interface.
-func (r *Runner) Close() error { return nil }
+func (r *Runner) Close() error {
+	r.done.Wait()
+	return nil
+}
 
 // Name implements Runner interface.
 func (r *Runner) Name() string {
@@ -80,13 +87,15 @@ func (r *Runner) Name() string {
 // Start starts the gateway-api translator runner
 func (r *Runner) Start(ctx context.Context) error {
 	r.Logger = r.Logger.WithName(r.Name()).WithValues("runner", r.Name())
-
-	go r.startWasmCache(ctx)
+	r.done.Go(func() {
+		r.startWasmCache(ctx)
+	})
 	// Do not call .Subscribe() inside Goroutine since it is supposed to be called from the same
 	// Goroutine where Close() is called.
 	c := r.ProviderResources.GatewayAPIResources.Subscribe(ctx)
-
-	go r.subscribeAndTranslate(c)
+	r.done.Go(func() {
+		r.subscribeAndTranslate(c)
+	})
 	r.Logger.Info("started")
 	return nil
 }

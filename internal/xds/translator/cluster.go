@@ -205,7 +205,7 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 
 	// scan through settings to determine cluster-level configuration options, as some of them
 	// influence transport socket specific settings
-	requiresAutoHTTPConfig := false
+	requiresAutoHTTPConfig := len(args.settings) > 0
 	requiresHTTP2Options := false
 	hasLiteralSNI := false
 	for _, ds := range args.settings {
@@ -214,9 +214,9 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 			requiresHTTP2Options = true
 		}
 
+		// auto HTTP config is required if all the destinations use HTTPS-based protocol
+		requiresAutoHTTPConfig = requiresAutoHTTPConfig && (ds.TLS != nil)
 		if ds.TLS != nil {
-			requiresAutoHTTPConfig = true
-
 			// it's safe to set autoSNI on cluster level only if all endpoints do not set literal SNIs.
 			// Otherwise, autoSNI will override transport-socket level SNI.
 			// See here: https://www.envoyproxy.io/docs/envoy/latest/start/quick-start/securing#connect-to-an-endpoint-with-sni
@@ -1178,7 +1178,7 @@ func (route *UDPRouteTranslator) asClusterArgs(name string,
 		name:         name,
 		settings:     settings,
 		loadBalancer: route.LoadBalancer,
-		endpointType: buildEndpointType(route.Destination.Settings),
+		endpointType: buildEndpointType(settings),
 		metrics:      extra.metrics,
 		dns:          route.DNS,
 		ipFamily:     extra.ipFamily,
@@ -1204,7 +1204,7 @@ func (route *TCPRouteTranslator) asClusterArgs(name string,
 		tcpkeepalive:      route.TCPKeepalive,
 		healthCheck:       route.HealthCheck,
 		timeout:           route.Timeout,
-		endpointType:      buildEndpointType(route.Destination.Settings),
+		endpointType:      buildEndpointType(settings),
 		metrics:           extra.metrics,
 		backendConnection: route.BackendConnection,
 		dns:               route.DNS,
@@ -1226,7 +1226,7 @@ func (httpRoute *HTTPRouteTranslator) asClusterArgs(name string,
 		name:              name,
 		settings:          settings,
 		tSocket:           nil,
-		endpointType:      buildEndpointType(httpRoute.Destination.Settings),
+		endpointType:      buildEndpointType(settings),
 		metrics:           extra.metrics,
 		http1Settings:     extra.http1Settings,
 		http2Settings:     extra.http2Settings,
