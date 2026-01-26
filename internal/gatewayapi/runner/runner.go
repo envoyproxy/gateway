@@ -93,21 +93,15 @@ func (r *Runner) Name() string {
 // Start starts the gateway-api translator runner
 func (r *Runner) Start(ctx context.Context) error {
 	r.Logger = r.Logger.WithName(r.Name()).WithValues("runner", r.Name())
-	// Add 2 to the WaitGroup: one for the WASM cache server goroutine and one for the
-	// subscribeAndTranslate goroutine that handles resource translation
-	r.done.Add(2)
-	go func() {
-		defer r.done.Done()
+	r.done.Go(func() {
 		r.startWasmCache(ctx)
-	}()
+	})
 	// Do not call .Subscribe() inside Goroutine since it is supposed to be called from the same
 	// Goroutine where Close() is called.
 	c := r.ProviderResources.GatewayAPIResources.Subscribe(ctx)
-
-	go func() {
-		defer r.done.Done()
+	r.done.Go(func() {
 		r.subscribeAndTranslate(c)
-	}()
+	})
 	r.Logger.Info("started")
 	return nil
 }
