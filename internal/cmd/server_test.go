@@ -7,6 +7,7 @@ package cmd
 
 import (
 	"context"
+	"io"
 	"os"
 	"path"
 	"strings"
@@ -90,7 +91,7 @@ func testCustomProvider(t *testing.T, genCert bool) (string, string) {
 	require.NoError(t, os.WriteFile(configPath, []byte(cfgFileContent), 0o600))
 
 	if genCert {
-		require.NoError(t, certGen(t.Context(), os.Stdout, true))
+		require.NoError(t, certGen(t.Context(), os.Stdout, true, configHome))
 	}
 
 	return configHome, configPath
@@ -185,7 +186,7 @@ func TestGetConfigValidate(t *testing.T) {
 			_, err = file.WriteString(test.input)
 			require.NoError(t, err)
 
-			_, err = getConfigByPath(os.Stderr, file.Name())
+			_, err = getConfigByPath(io.Discard, io.Discard, file.Name())
 			if test.errors == nil {
 				require.NoError(t, err)
 			} else {

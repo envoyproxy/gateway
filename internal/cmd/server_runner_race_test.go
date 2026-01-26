@@ -47,7 +47,7 @@ func TestRunnerGoroutineRace(t *testing.T) {
 
 	hook := func(c context.Context, cfg *config.Server) error {
 		cfg.Logger = logging.DefaultLogger(t.Output(), egv1a1.LogLevelInfo)
-		return startRunners(c, cfg, nil)
+		return startRunners(c, cfg)
 	}
 
 	errCh := make(chan error, 1)
@@ -94,7 +94,7 @@ func TestRunnerGoroutineRaceStress(t *testing.T) {
 
 			hook := func(c context.Context, cfg *config.Server) error {
 				cfg.Logger = logging.DefaultLogger(t.Output(), egv1a1.LogLevelInfo)
-				return startRunners(c, cfg, nil)
+				return startRunners(c, cfg)
 			}
 
 			errCh := make(chan error, 1)

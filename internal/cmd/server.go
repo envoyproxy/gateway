@@ -100,14 +100,14 @@ func server(ctx context.Context, stdout, stderr io.Writer, cfgPath string, hook 
 }
 
 // getConfig gets the Server configuration
-func getConfig(stdout, _ io.Writer, cfg string) (*config.Server, error) {
-	return getConfigByPath(stdout, cfg)
+func getConfig(stdout, stderr io.Writer, cfg string) (*config.Server, error) {
+	return getConfigByPath(stdout, stderr, cfg)
 }
 
 // make `cfgPath` an argument to test it without polluting the global var
-func getConfigByPath(logOut io.Writer, cfgPath string) (*config.Server, error) {
+func getConfigByPath(logOut, stderr io.Writer, cfgPath string) (*config.Server, error) {
 	// Initialize with default config parameters.
-	cfg, err := config.New(logOut)
+	cfg, err := config.New(logOut, stderr)
 	if err != nil {
 		return nil, err
 	}
