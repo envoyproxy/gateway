@@ -42,8 +42,9 @@ type Resources struct {
 	EnvoyProxyForGatewayClass *egv1a1.EnvoyProxy `json:"envoyProxyForGatewayClass,omitempty" yaml:"envoyProxyForGatewayClass,omitempty"`
 	// EnvoyProxiesForGateways holds EnvoyProxiesForGateways attached to Gateways
 	EnvoyProxiesForGateways []*egv1a1.EnvoyProxy `json:"envoyProxiesForGateways,omitempty" yaml:"envoyProxiesForGateways,omitempty"`
-	// EnvoyProxyDefault holds the default EnvoyProxySpec from EnvoyGateway configuration.
+	// EnvoyProxyDefaultSpec holds the default EnvoyProxySpec from EnvoyGateway configuration.
 	// This serves as the lowest priority fallback when no GatewayClass or Gateway level EnvoyProxy is specified.
+	// Current behaviour will be to use repl
 	EnvoyProxyDefault *egv1a1.EnvoyProxySpec `json:"envoyProxyDefault,omitempty" yaml:"envoyProxyDefault,omitempty"`
 
 	GatewayClass            *gwapiv1.GatewayClass          `json:"gatewayClass,omitempty" yaml:"gatewayClass,omitempty"`

@@ -161,7 +161,7 @@ func TestAttachEnvoyProxy(t *testing.T) {
 		gatewayParametersRef  *gwapiv1.LocalParametersReference
 		envoyProxyForGateway  *egv1a1.EnvoyProxy
 		envoyProxyForGWClass  *egv1a1.EnvoyProxy
-		envoyProxyDefault *egv1a1.EnvoyProxySpec
+		envoyProxyDefault     *egv1a1.EnvoyProxySpec
 		expectedMergeGateways *bool
 		expectedConcurrency   *int32
 		expectEnvoyProxyNil   bool
