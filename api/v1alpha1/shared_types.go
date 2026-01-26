@@ -720,6 +720,16 @@ type HTTP2Settings struct {
 	OnInvalidMessage *InvalidMessageAction `json:"onInvalidMessage,omitempty"`
 }
 
+// GRPCSettings provides gRPC configuration for listeners.
+type GRPCSettings struct {
+	// EnableWeb configures the gRPC-web filter on the listener.
+	// The gRPC-web filter allows clients (typically browsers) to make gRPC calls
+	// using HTTP/1.1 or HTTP/2.
+	//
+	// +optional
+	EnableWeb *bool `json:"enableWeb,omitempty"`
+}
+
 // ResponseOverride defines the configuration to override specific responses with a custom one.
 // +kubebuilder:validation:XValidation:rule="(has(self.response) && !has(self.redirect)) || (!has(self.response) && has(self.redirect))",message="exactly one of response or redirect must be specified"
 type ResponseOverride struct {

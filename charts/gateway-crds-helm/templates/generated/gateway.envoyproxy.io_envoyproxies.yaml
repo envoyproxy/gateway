@@ -13639,6 +13639,10 @@ spec:
                           Default: `%ROUTE_KIND%/%ROUTE_NAMESPACE%/%ROUTE_NAME%/rule/%ROUTE_RULE_NUMBER%`
                           Example: `httproute/my-ns/my-route/rule/0`
                         type: string
+                      enableGRPCStats:
+                        description: EnableGRPCStats enables the gRPC stats filter
+                          on listeners.
+                        type: boolean
                       enablePerEndpointStats:
                         description: |-
                           EnablePerEndpointStats enables per endpoint envoy stats metrics.

@@ -4,7 +4,9 @@ http:
   port: 10080
   hostnames:
   - "*"
-  isHTTP2: true
+  grpc:
+    enableGRPCStats: true
+    enableGRPCWeb: true
   path:
     mergeSlashes: true
     escapedSlashesAction: UnescapeAndRedirect

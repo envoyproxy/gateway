@@ -195,7 +195,6 @@ xdsIR:
         initialStreamWindowSize: 33554432
         maxConcurrentStreams: 200
         resetStreamOnError: false
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-1
@@ -210,7 +209,6 @@ xdsIR:
       externalPort: 8080
       hostnames:
       - www.example.com
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-1

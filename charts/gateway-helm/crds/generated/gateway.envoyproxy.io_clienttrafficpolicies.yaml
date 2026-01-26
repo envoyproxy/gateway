@@ -212,6 +212,16 @@ spec:
 
                   Deprecated: Use ProxyProtocol instead.
                 type: boolean
+              grpc:
+                description: GRPC provides gRPC configuration on the listener.
+                properties:
+                  enableWeb:
+                    description: |-
+                      EnableWeb configures the gRPC-web filter on the listener.
+                      The gRPC-web filter allows clients (typically browsers) to make gRPC calls
+                      using HTTP/1.1 or HTTP/2.
+                    type: boolean
+                type: object
               headers:
                 description: HeaderSettings provides configuration for header management.
                 properties:
