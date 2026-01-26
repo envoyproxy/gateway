@@ -12,6 +12,10 @@ import (
 const (
 	OIDCClientSecretKey = "client-secret"
 	OIDCClientIDKey     = "client-id"
+	OIDCIssuerKey                 = "issuer"
+	OIDCAuthorizationEndpointKey  = "authorization-endpoint"
+	OIDCTokenEndpointKey          = "token-endpoint"
+	OIDCEndSessionEndpointKey     = "end-session-endpoint"
 )
 
 // OIDC defines the configuration for the OpenID Connect (OIDC) authentication.
@@ -172,9 +176,6 @@ type OIDC struct {
 // +kubebuilder:validation:XValidation:rule="has(self.backendSettings)? (has(self.backendSettings.retry)?(has(self.backendSettings.retry.perRetry)? !has(self.backendSettings.retry.perRetry.timeout):true):true):true",message="Retry timeout is not supported."
 // +kubebuilder:validation:XValidation:rule="has(self.backendSettings)? (has(self.backendSettings.retry)?(has(self.backendSettings.retry.retryOn)? !has(self.backendSettings.retry.retryOn.httpStatusCodes):true):true):true",message="HTTPStatusCodes is not supported."
 // +kubebuilder:validation:XValidation:rule="(has(self.issuer) && !has(self.issuerRef)) || (!has(self.issuer) && has(self.issuerRef))", message="only one of issuer or issuerRef must be set"
-// +kubebuilder:validation:XValidation:rule="!has(self.authorizationEndpoint) || !has(self.authorizationEndpointRef)", message="only one of authorizationEndpoint or authorizationEndpointRef must be set"
-// +kubebuilder:validation:XValidation:rule="!has(self.tokenEndpoint) || !has(self.tokenEndpointRef)", message="only one of tokenEndpoint or tokenEndpointRef must be set"
-// +kubebuilder:validation:XValidation:rule="!has(self.endSessionEndpoint) || !has(self.endSessionEndpointRef)", message="only one of endSessionEndpoint or endSessionEndpointRef must be set"
 type OIDCProvider struct {
 	// +optional
 	BackendCluster `json:",inline"`
@@ -188,57 +189,38 @@ type OIDCProvider struct {
 	// +optional
 	// +kubebuilder:validation:MinLength=1
 	Issuer *string `json:"issuer,omitempty"`
-
-	// IssuerRef defines the OIDC Provider's issuer identifier as a reference to a secret or configmap.
+	
+	// IssuerRef defines the OIDC Provider's configuration as a reference to a secret or configmap.
+	// The referenced resource should contain the following keys:
+	// - issuer
+	// - authorization-endpoint
+	// - token-endpoint
+	// - end-session-endpoint
 	//
 	// Only one of issuer or issuerRef must be set.
 	// +kubebuilder:validation:XValidation:rule="self.kind in ['ConfigMap', 'Secret'] && self.group in ['', 'v1']",message="Only a reference to an object of kind ConfigMap or Secret belonging to default v1 API group is supported."
 	// +optional
-	IssuerRef *LocalObjectKeyReference `json:"issuerRef,omitempty"`
+	IssuerRef *gwapiv1.SecretObjectReference `json:"issuerRef,omitempty"`
 
 	// The OIDC Provider's [authorization endpoint](https://openid.net/specs/openid-connect-core-1_0.html#AuthorizationEndpoint).
 	// If not provided, EG will try to discover it from the provider's [Well-Known Configuration Endpoint](https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfigurationResponse).
 	//
-	// Only one of authorizationEndpoint or authorizationEndpointRef must be set.
 	// +optional
 	AuthorizationEndpoint *string `json:"authorizationEndpoint,omitempty"`
-
-	// AuthorizationEndpointRef defines the OIDC Provider's authorization endpoint as a reference to a secret or configmap.
-	//
-	// Only one of authorizationEndpoint or authorizationEndpointRef must be set.
-	// +kubebuilder:validation:XValidation:rule="self.kind in ['ConfigMap', 'Secret'] && self.group in ['', 'v1']",message="Only a reference to an object of kind ConfigMap or Secret belonging to default v1 API group is supported."
-	// +optional
-	AuthorizationEndpointRef *LocalObjectKeyReference `json:"authorizationEndpointRef,omitempty"`
 
 	// The OIDC Provider's [token endpoint](https://openid.net/specs/openid-connect-core-1_0.html#TokenEndpoint).
 	// If not provided, EG will try to discover it from the provider's [Well-Known Configuration Endpoint](https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfigurationResponse).
 	//
-	// Only one of tokenEndpoint or tokenEndpointRef must be set.
 	// +optional
 	TokenEndpoint *string `json:"tokenEndpoint,omitempty"`
-
-	// TokenEndpointRef defines the OIDC Provider's token endpoint as a reference to a secret or configmap.
-	//
-	// Only one of tokenEndpoint or tokenEndpointRef must be set.
-	// +kubebuilder:validation:XValidation:rule="self.kind in ['ConfigMap', 'Secret'] && self.group in ['', 'v1']",message="Only a reference to an object of kind ConfigMap or Secret belonging to default v1 API group is supported."
-	// +optional
-	TokenEndpointRef *LocalObjectKeyReference `json:"tokenEndpointRef,omitempty"`
 
 	// The OIDC Provider's [end session endpoint](https://openid.net/specs/openid-connect-core-1_0.html#RPLogout).
 	//
 	// If the end session endpoint is provided, EG will use it to log out the user from the OIDC Provider when the user accesses the logout path.
 	// EG will also try to discover the end session endpoint from the provider's [Well-Known Configuration Endpoint](https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfigurationResponse) when authorizationEndpoint or tokenEndpoint is not provided.
 	//
-	// Only one of endSessionEndpoint or endSessionEndpointRef must be set.
 	// +optional
 	EndSessionEndpoint *string `json:"endSessionEndpoint,omitempty"`
-
-	// EndSessionEndpointRef defines the OIDC Provider's end session endpoint as a reference to a secret or configmap.
-	//
-	// Only one of endSessionEndpoint or endSessionEndpointRef must be set.
-	// +kubebuilder:validation:XValidation:rule="self.kind in ['ConfigMap', 'Secret'] && self.group in ['', 'v1']",message="Only a reference to an object of kind ConfigMap or Secret belonging to default v1 API group is supported."
-	// +optional
-	EndSessionEndpointRef *LocalObjectKeyReference `json:"endSessionEndpointRef,omitempty"`
 }
 
 // OIDCDenyRedirect defines headers to match against the request to deny redirect to the OIDC Provider.
