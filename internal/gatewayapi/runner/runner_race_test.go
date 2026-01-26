@@ -57,14 +57,13 @@ func TestRunnerDataRace(t *testing.T) {
 
 	// Create provider resources with watchable store
 	providerResources := new(message.ProviderResources)
-	providerResources.GatewayAPIResources = watchable.Map[string, *resource.ControllerResourcesContext]{}
+	providerResources.GatewayAPIResources = watchable.Map[string, *resource.ControllerResources]{}
 
 	cfg := &Config{
 		Server:            *serverCfg,
 		ProviderResources: providerResources,
 		XdsIR:             new(message.XdsIR),
 		InfraIR:           new(message.InfraIR),
-		RunnerErrors:      new(message.RunnerErrors),
 	}
 
 	runner := New(cfg)
@@ -82,9 +81,7 @@ func TestRunnerDataRace(t *testing.T) {
 
 	// Trigger an update to cause logging in subscribeAndTranslate
 	// This will cause the goroutine to call r.Logger.Info("received an update", ...)
-	providerResources.GatewayAPIResources.Store("test-controller", &resource.ControllerResourcesContext{
-		Context: ctx,
-	})
+	providerResources.GatewayAPIResources.Store("test-controller", &resource.ControllerResources{})
 
 	// Small delay to let the goroutine start processing the update
 	time.Sleep(30 * time.Millisecond)
@@ -131,13 +128,12 @@ func TestRunnerDataRaceAggressive(t *testing.T) {
 			}
 
 			providerResources := new(message.ProviderResources)
-			providerResources.GatewayAPIResources = watchable.Map[string, *resource.ControllerResourcesContext]{}
+			providerResources.GatewayAPIResources = watchable.Map[string, *resource.ControllerResources]{}
 			cfg := &Config{
 				Server:            *serverCfg,
 				ProviderResources: providerResources,
 				XdsIR:             new(message.XdsIR),
 				InfraIR:           new(message.InfraIR),
-				RunnerErrors:      new(message.RunnerErrors),
 			}
 
 			runner := New(cfg)
@@ -157,9 +153,7 @@ func TestRunnerDataRaceAggressive(t *testing.T) {
 					case <-ctx.Done():
 						return
 					default:
-						providerResources.GatewayAPIResources.Store("test-controller", &resource.ControllerResourcesContext{
-							Context: ctx,
-						})
+						providerResources.GatewayAPIResources.Store("test-controller", &resource.ControllerResources{})
 						time.Sleep(10 * time.Millisecond)
 					}
 				}
@@ -204,14 +198,13 @@ func TestRunnerDataRaceImmediate(t *testing.T) {
 	}
 
 	providerResources := new(message.ProviderResources)
-	providerResources.GatewayAPIResources = watchable.Map[string, *resource.ControllerResourcesContext]{}
+	providerResources.GatewayAPIResources = watchable.Map[string, *resource.ControllerResources]{}
 
 	cfg := &Config{
 		Server:            *serverCfg,
 		ProviderResources: providerResources,
 		XdsIR:             new(message.XdsIR),
 		InfraIR:           new(message.InfraIR),
-		RunnerErrors:      new(message.RunnerErrors),
 	}
 
 	runner := New(cfg)
@@ -220,9 +213,7 @@ func TestRunnerDataRaceImmediate(t *testing.T) {
 	_ = runner.Start(ctx)
 
 	// Trigger update immediately
-	providerResources.GatewayAPIResources.Store("test-controller", &resource.ControllerResourcesContext{
-		Context: ctx,
-	})
+	providerResources.GatewayAPIResources.Store("test-controller", &resource.ControllerResources{})
 
 	// Cancel and close almost immediately
 	time.Sleep(5 * time.Millisecond)

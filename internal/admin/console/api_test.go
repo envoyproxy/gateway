@@ -6,7 +6,6 @@
 package console
 
 import (
-	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -395,10 +394,7 @@ func TestHandleAPIConfigDumpWithResourceAllRedactsSecrets(t *testing.T) {
 			Secrets: []*corev1.Secret{secret},
 		},
 	}
-	providerRes.GatewayAPIResources.Store("test", &resource.ControllerResourcesContext{
-		Resources: &controllerResources,
-		Context:   context.Background(),
-	})
+	providerRes.GatewayAPIResources.Store("test", &controllerResources)
 
 	handler := NewHandler(cfg, providerRes)
 
