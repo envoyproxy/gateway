@@ -101,11 +101,14 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 		proxyMetrics = infra.Config.Spec.Telemetry.Metrics
 	}
 
+	resolvedMetricSinks := common.ConvertResolvedMetricSinks(infra.ResolvedMetricSinks)
+
 	maxHeapSizeBytes := calculateMaxHeapSizeBytes(containerSpec.Resources)
 
 	// Get the default Bootstrap
 	bootstrapConfigOptions := &bootstrap.RenderBootstrapConfigOptions{
-		ProxyMetrics: proxyMetrics,
+		ProxyMetrics:        proxyMetrics,
+		ResolvedMetricSinks: resolvedMetricSinks,
 		SdsConfig: bootstrap.SdsConfigPath{
 			Certificate: filepath.Join("/sds", common.SdsCertFilename),
 			TrustedCA:   filepath.Join("/sds", common.SdsCAFilename),
