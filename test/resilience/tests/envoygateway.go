@@ -16,6 +16,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/tlog"
@@ -49,6 +50,11 @@ var EGResilience = suite.ResilienceTest{
 			ControllerName: "gateway.envoyproxy.io/gatewayclass-controller",
 		}
 		ap.MustApplyWithCleanup(t, suite.Client, suite.TimeoutConfig, "testdata/base.yaml", true)
+
+		// Preserve original convergence semantics for resilience tests
+		localTimeout := suite.TimeoutConfig
+		localTimeout.RequiredConsecutiveSuccesses = threshold
+		localTimeout.MaxTimeToConsistency = timeout
 
 		// this test will fail until https://github.com/envoyproxy/gateway/pull/4767/files is merged
 		t.Run("Secondary EnvoyGateway instances can serve an up to date xDS", func(t *testing.T) {
@@ -251,6 +257,64 @@ var EGResilience = suite.ResilienceTest{
 				}
 				return true
 			})
+		})
+
+		t.Run("EnvoyGateway recovers after failing to start runners", func(t *testing.T) {
+			ctx := context.Background()
+
+			t.Log("Scaling down the deployment to 0 replicas")
+			err := suite.Kube().ScaleDeploymentAndWait(ctx, envoygateway, namespace, 0, timeout, false)
+			require.NoError(t, err, "Failed to scale deployment replicas")
+
+			scope := map[string]string{"app.kubernetes.io/name": "gateway-helm"}
+			policyRemoved := false
+			t.Cleanup(func() {
+				if !policyRemoved {
+					_, _ = suite.Kube().ManageEgress(context.Background(), apiServerIP, namespace, policyName, false, scope)
+				}
+			})
+
+			t.Log("Blocking API server network access for EnvoyGateway pods")
+			_, err = suite.Kube().ManageEgress(ctx, apiServerIP, namespace, policyName, true, scope)
+			require.NoError(t, err, "Failed to block API server connectivity")
+
+			t.Log("Scaling up the deployment while API server access is blocked")
+			err = suite.Kube().ScaleDeployment(ctx, envoygateway, namespace, 1, false)
+			require.NoError(t, err, "Failed to scale deployment replicas")
+
+			t.Log("Deployment should not reach the ready replica count with API server access blocked")
+			err = suite.Kube().CheckDeploymentReplicas(ctx, envoygateway, namespace, 1, 30*time.Second)
+			require.Error(t, err, "Deployment became ready despite API server connectivity being blocked")
+
+			t.Log("Restoring API server network access for EnvoyGateway pods")
+			_, err = suite.Kube().ManageEgress(ctx, apiServerIP, namespace, policyName, false, scope)
+			require.NoError(t, err, "Failed to unblock API server connectivity")
+			policyRemoved = true
+
+			t.Log("Waiting for EnvoyGateway to recover")
+			err = suite.Kube().WaitForDeploymentReplicaCount(ctx, envoygateway, namespace, 1, timeout, false)
+			require.NoError(t, err, "Failed to ensure EnvoyGateway pod came online")
+
+			t.Log("EnvoyGateway is online again")
+
+			ap.MustApplyWithCleanup(t, suite.Client, suite.TimeoutConfig, "testdata/route_changes.yaml", true)
+
+			ns := "gateway-resilience"
+			routeNN := types.NamespacedName{Name: "backend", Namespace: ns}
+			gwNN := types.NamespacedName{Name: "all-namespaces", Namespace: ns}
+			gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, localTimeout, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, routeNN)
+
+			expectedResponse := http.ExpectedResponse{
+				Request: http.Request{
+					Path: "/route-change",
+				},
+				Response: http.Response{
+					StatusCode: 200,
+				},
+				Namespace: ns,
+			}
+
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, localTimeout, gwAddr, expectedResponse)
 		})
 	},
 }

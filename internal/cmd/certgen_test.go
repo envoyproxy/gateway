@@ -29,7 +29,8 @@ func TestGetCertgenCommand(t *testing.T) {
 }
 
 func TestOutputCertsForLocal(t *testing.T) {
-	cfg, err := getConfig(os.Stdout)
+	o := os.Stdout
+	cfg, err := getConfig(o, o, "")
 	require.NoError(t, err)
 
 	certs, err := crypto.GenerateCerts(cfg)
@@ -52,7 +53,8 @@ func TestOutputCertsForLocal(t *testing.T) {
 }
 
 func TestPatchTopologyWebhook(t *testing.T) {
-	cfg, err := getConfig(os.Stdout)
+	o := os.Stdout
+	cfg, err := getConfig(o, o, "")
 	require.NoError(t, err)
 
 	cases := []struct {

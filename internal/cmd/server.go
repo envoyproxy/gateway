@@ -8,7 +8,6 @@ package cmd
 import (
 	"context"
 	"io"
-	"sync"
 
 	"github.com/spf13/cobra"
 
@@ -45,8 +44,16 @@ func GetServerCommand() *cobra.Command {
 		Use:     "server",
 		Aliases: []string{"serve"},
 		Short:   "Serve Envoy Gateway",
-		RunE: func(cmd *cobra.Command, args []string) error {
-			return server(cmd.Context(), cmd.OutOrStdout())
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			hook := func(c context.Context, cfg *config.Server) error {
+				cfg.Logger.Info("Start runners")
+				if err := startRunners(c, cfg); err != nil {
+					return err
+				}
+				return nil
+			}
+
+			return server(cmd.Context(), cmd.OutOrStdout(), cmd.ErrOrStderr(), cfgPath, hook, nil)
 		},
 	}
 	cmd.PersistentFlags().StringVarP(&cfgPath, "config-path", "c", "",
@@ -56,45 +63,45 @@ func GetServerCommand() *cobra.Command {
 }
 
 // server serves Envoy Gateway.
-func server(ctx context.Context, logOut io.Writer) error {
-	cfg, err := getConfig(logOut)
+func server(ctx context.Context, stdout, stderr io.Writer, cfgPath string, hook loader.HookFunc, startedCallback func()) error {
+	cfg, err := getConfig(stdout, stderr, cfgPath)
 	if err != nil {
 		return err
 	}
 
-	var hookWG sync.WaitGroup
-	hook := func(c context.Context, cfg *config.Server) error {
-		hookWG.Add(1)
-		defer hookWG.Done()
-
-		cfg.Logger.Info("Start runners")
-		if err := startRunners(c, cfg); err != nil {
-			cfg.Logger.Error(err, "failed to start runners")
-			return err
-		}
-
-		return nil
-	}
 	l := loader.New(cfgPath, cfg, hook)
-	if err := l.Start(ctx, logOut); err != nil {
+	if err := l.Start(ctx, stdout); err != nil {
 		return err
 	}
 
-	// Wait for the context to be done, which usually happens the process receives a SIGTERM or SIGINT.
-	<-ctx.Done()
+	if startedCallback != nil {
+		startedCallback()
+	}
 
-	cfg.Logger.Info("shutting down")
-
-	// Wait for runners to finish before shutting down.
-	// This is to make sure no orphaned runner process is left running in standalone mode.
-	hookWG.Wait()
-
-	return nil
+	for {
+		select {
+		// Exit if the config loader fails to start the runners.
+		// Continuing with failed runners would cause EG to function incorrectly.
+		case err := <-l.Errors():
+			cfg.Logger.Error(err, "failed to start runners")
+			// Wait for runners to finish before shutting down.
+			// This is to make sure no orphaned runner process is left running in standalone mode.
+			l.Wait()
+			return err
+		// Wait for the context to be done, which usually happens the process receives a SIGTERM or SIGINT.
+		case <-ctx.Done():
+			cfg.Logger.Info("shutting down")
+			// Wait for runners to finish before shutting down.
+			// This is to make sure no orphaned runner process is left running in standalone mode.
+			l.Wait()
+			return nil
+		}
+	}
 }
 
 // getConfig gets the Server configuration
-func getConfig(logOut io.Writer) (*config.Server, error) {
-	return getConfigByPath(logOut, cfgPath)
+func getConfig(stdout, _ io.Writer, cfg string) (*config.Server, error) {
+	return getConfigByPath(stdout, cfg)
 }
 
 // make `cfgPath` an argument to test it without polluting the global var
@@ -266,7 +273,6 @@ func startRunners(ctx context.Context, cfg *config.Server) (err error) {
 func startRunner(ctx context.Context, cfg *config.Server, runner Runner) error {
 	cfg.Logger.Info("Starting runner", "name", runner.Name())
 	if err := runner.Start(ctx); err != nil {
-		cfg.Logger.Error(err, "Failed to start runner", "name", runner.Name())
 		return err
 	}
 	return nil
