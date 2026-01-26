@@ -227,8 +227,10 @@ docs-check: ## Verify no doc changes are needed
 		git diff --exit-code; \
 	fi
 
-release-notes-docs: $(tools/release-notes-docs)
+release-notes-docs: $(tools/release-notes-docs) # Read version from Environment variable, if not set, read from VERSION file
 	@$(LOG_TARGET)
-	@for file in $(wildcard release-notes/$(shell cat VERSION).yaml); do \
+	$(eval RELEASE_NOTE_VERSION := $(if $(RELEASE_NOTE_VERSION),$(RELEASE_NOTE_VERSION),$(shell cat VERSION)))
+	@echo "Generating release notes for version $(RELEASE_NOTE_VERSION)"
+	@for file in $(wildcard release-notes/$(RELEASE_NOTE_VERSION).yaml); do \
 		$(tools/release-notes-docs) $$file site/content/en/news/releases/notes; \
 	done
