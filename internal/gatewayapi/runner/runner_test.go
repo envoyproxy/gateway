@@ -46,9 +46,8 @@ func TestRunner(t *testing.T) {
 		InfraIR:           infraIR,
 		ExtensionManager:  extMgr,
 	})
-	ctx := context.Background()
 	// Start
-	err = r.Start(ctx)
+	err = r.Start(t.Context())
 	require.NoError(t, err)
 
 	// IR is nil at start
