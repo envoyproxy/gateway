@@ -407,15 +407,6 @@ func TestIsServiceHeadless(t *testing.T) {
 			want: true,
 		},
 		{
-			name: "headless service with empty ClusterIP",
-			service: &corev1.Service{
-				Spec: corev1.ServiceSpec{
-					ClusterIP: "",
-				},
-			},
-			want: true,
-		},
-		{
 			name: "normal service with ClusterIP",
 			service: &corev1.Service{
 				Spec: corev1.ServiceSpec{
@@ -428,18 +419,8 @@ func TestIsServiceHeadless(t *testing.T) {
 			name: "dual-stack headless service",
 			service: &corev1.Service{
 				Spec: corev1.ServiceSpec{
-					ClusterIP:  "10.0.0.1",
+					ClusterIP:  "None",
 					ClusterIPs: []string{"None", "None"},
-				},
-			},
-			want: true,
-		},
-		{
-			name: "dual-stack headless service (all ClusterIPs are empty)",
-			service: &corev1.Service{
-				Spec: corev1.ServiceSpec{
-					ClusterIP:  "10.0.0.1",
-					ClusterIPs: []string{"", ""},
 				},
 			},
 			want: true,

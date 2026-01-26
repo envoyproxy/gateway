@@ -1951,15 +1951,7 @@ func isServiceHeadless(service *corev1.Service) bool {
 	if service == nil {
 		return false
 	}
-	if service.Spec.ClusterIP == "None" || service.Spec.ClusterIP == "" {
-		return true
-	}
-	if len(service.Spec.ClusterIPs) > 0 {
-		for _, ip := range service.Spec.ClusterIPs {
-			if ip != "None" && ip != "" {
-				return false
-			}
-		}
+	if service.Spec.ClusterIP == corev1.ClusterIPNone {
 		return true
 	}
 	return false
