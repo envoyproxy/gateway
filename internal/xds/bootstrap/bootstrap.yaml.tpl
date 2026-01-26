@@ -62,9 +62,11 @@ dynamic_resources:
     set_node_on_first_message_only: true
   lds_config:
     ads: {}
+    initial_fetch_timeout: 0s
     resource_api_version: V3
   cds_config:
     ads: {}
+    initial_fetch_timeout: 0s
     resource_api_version: V3
 {{- if .OtelMetricSinks }}
 stats_sinks:
