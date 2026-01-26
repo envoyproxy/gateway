@@ -36,7 +36,7 @@
       name: third-route
       route:
         cluster: third-route-dest
-        idleTimeout: 0s
+        idleTimeout: 3600s
         timeout: 0s
         upgradeConfigs:
         - upgradeType: websocket
@@ -63,7 +63,7 @@
       name: sixth-route
       route:
         cluster: sixth-route-dest
-        idleTimeout: 0s
+        idleTimeout: 3600s
         timeout: 0s
         upgradeConfigs:
         - upgradeType: websocket
@@ -72,7 +72,7 @@
       name: seventh-route
       route:
         cluster: seventh-route-dest
-        idleTimeout: 0s
+        idleTimeout: 3600s
         timeout: 0s
         upgradeConfigs:
         - upgradeType: websocket
