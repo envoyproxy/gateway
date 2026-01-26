@@ -30,7 +30,7 @@ func TestGetCertgenCommand(t *testing.T) {
 
 func TestOutputCertsForLocal(t *testing.T) {
 	o := os.Stdout
-	cfg, err := getConfig(o, t.Output(), "")
+	cfg, err := getConfig(o, o, "")
 	require.NoError(t, err)
 
 	certs, err := crypto.GenerateCerts(cfg)
