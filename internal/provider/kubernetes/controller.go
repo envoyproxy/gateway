@@ -1875,7 +1875,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		}
 	}
 
-	r.tlsRouteCRDExists, err = checkCRD(resource.KindTLSRoute, gwapiv1a3.GroupVersion.String())
+	r.tlsRouteCRDExists, err = checkCRD(resource.KindTLSRoute, gwapiv1a2.GroupVersion.String())
 	if err != nil {
 		return err
 	}
@@ -2296,7 +2296,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		}
 	}
 
-	r.bTLSPolicyCRDExists, err = checkCRD(resource.KindBackendTLSPolicy, gwapiv1.GroupVersion.String())
+	r.bTLSPolicyCRDExists, err = checkCRD(resource.KindBackendTLSPolicy, gwapiv1a3.GroupVersion.String())
 	if err != nil {
 		return err
 	}
