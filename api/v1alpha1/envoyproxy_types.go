@@ -108,6 +108,10 @@ type EnvoyProxySpec struct {
 	//
 	// - envoy.filters.http.cors
 	//
+	// - envoy.filters.http.header_mutation
+	//
+	// - envoy.filters.http.custom_response
+	//
 	// - envoy.filters.http.ext_authz
 	//
 	// - envoy.filters.http.api_key_auth
@@ -137,8 +141,6 @@ type EnvoyProxySpec struct {
 	// - envoy.filters.http.grpc_web
 	//
 	// - envoy.filters.http.grpc_stats
-	//
-	// - envoy.filters.http.custom_response
 	//
 	// - envoy.filters.http.credential_injector
 	//

@@ -107,6 +107,8 @@ func newOrderedHTTPFilter(filter *hcmv3.HttpFilter) *OrderedHTTPFilter {
 	case isFilterType(filter, egv1a1.EnvoyFilterHeaderMutation):
 		// Ensure header mutation run before ext auth which might consume the header.
 		order = 3
+	case isFilterType(filter, egv1a1.EnvoyFilterCustomResponse):
+		order = 3
 	case isFilterType(filter, egv1a1.EnvoyFilterExtAuthz):
 		order = 4
 	case isFilterType(filter, egv1a1.EnvoyFilterAPIKeyAuth):
@@ -137,8 +139,6 @@ func newOrderedHTTPFilter(filter *hcmv3.HttpFilter) *OrderedHTTPFilter {
 		order = 304
 	case isFilterType(filter, egv1a1.EnvoyFilterGRPCStats):
 		order = 305
-	case isFilterType(filter, egv1a1.EnvoyFilterCustomResponse):
-		order = 306
 	case isFilterType(filter, egv1a1.EnvoyFilterCredentialInjector):
 		order = 307
 	case isFilterType(filter, egv1a1.EnvoyFilterCompressor):

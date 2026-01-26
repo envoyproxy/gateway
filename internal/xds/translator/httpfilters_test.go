@@ -32,6 +32,7 @@ func Test_sortHTTPFilters(t *testing.T) {
 				httpFilterForTest(egv1a1.EnvoyFilterJWTAuthn),
 				httpFilterForTest(egv1a1.EnvoyFilterOAuth2 + "/securitypolicy/default/policy-for-http-route-1"),
 				httpFilterForTest(egv1a1.EnvoyFilterBasicAuth),
+				httpFilterForTest(egv1a1.EnvoyFilterCustomResponse),
 				httpFilterForTest(egv1a1.EnvoyFilterWasm + "/envoyextensionpolicy/default/policy-for-http-route-1/2"),
 				httpFilterForTest(egv1a1.EnvoyFilterRateLimit),
 				httpFilterForTest(egv1a1.EnvoyFilterExtProc + "/envoyextensionpolicy/default/policy-for-http-route-1/1"),
@@ -49,6 +50,7 @@ func Test_sortHTTPFilters(t *testing.T) {
 				httpFilterForTest(wellknown.HealthCheck),
 				httpFilterForTest(egv1a1.EnvoyFilterFault),
 				httpFilterForTest(egv1a1.EnvoyFilterCORS),
+				httpFilterForTest(egv1a1.EnvoyFilterCustomResponse),
 				httpFilterForTest(egv1a1.EnvoyFilterHeaderMutation),
 				httpFilterForTest(egv1a1.EnvoyFilterExtAuthz + "/securitypolicy/default/policy-for-http-route-1"),
 				httpFilterForTest(egv1a1.EnvoyFilterBasicAuth),
@@ -73,6 +75,7 @@ func Test_sortHTTPFilters(t *testing.T) {
 				httpFilterForTest(egv1a1.EnvoyFilterCORS),
 				httpFilterForTest(egv1a1.EnvoyFilterJWTAuthn),
 				httpFilterForTest(egv1a1.EnvoyFilterOAuth2 + "/securitypolicy/default/policy-for-http-route-1"),
+				httpFilterForTest(egv1a1.EnvoyFilterCustomResponse),
 				httpFilterForTest(egv1a1.EnvoyFilterBasicAuth),
 				httpFilterForTest(egv1a1.EnvoyFilterWasm + "/envoyextensionpolicy/default/policy-for-http-route-1/2"),
 				httpFilterForTest(egv1a1.EnvoyFilterRateLimit),
@@ -98,6 +101,7 @@ func Test_sortHTTPFilters(t *testing.T) {
 			want: []*hcmv3.HttpFilter{
 				httpFilterForTest(egv1a1.EnvoyFilterCORS),
 				httpFilterForTest(egv1a1.EnvoyFilterFault),
+				httpFilterForTest(egv1a1.EnvoyFilterCustomResponse),
 				httpFilterForTest(egv1a1.EnvoyFilterExtAuthz + "/securitypolicy/default/policy-for-http-route-1"),
 				httpFilterForTest(egv1a1.EnvoyFilterBasicAuth),
 				httpFilterForTest(egv1a1.EnvoyFilterOAuth2 + "/securitypolicy/default/policy-for-http-route-1"),
@@ -118,6 +122,7 @@ func Test_sortHTTPFilters(t *testing.T) {
 			filters: []*hcmv3.HttpFilter{
 				httpFilterForTest(egv1a1.EnvoyFilterRouter),
 				httpFilterForTest(egv1a1.EnvoyFilterCORS),
+				httpFilterForTest(egv1a1.EnvoyFilterCustomResponse),
 				httpFilterForTest(egv1a1.EnvoyFilterJWTAuthn),
 				httpFilterForTest(egv1a1.EnvoyFilterOAuth2 + "/securitypolicy/default/policy-for-http-route-1"),
 				httpFilterForTest(egv1a1.EnvoyFilterBasicAuth),
@@ -141,6 +146,7 @@ func Test_sortHTTPFilters(t *testing.T) {
 			want: []*hcmv3.HttpFilter{
 				httpFilterForTest(egv1a1.EnvoyFilterFault),
 				httpFilterForTest(egv1a1.EnvoyFilterCORS),
+				httpFilterForTest(egv1a1.EnvoyFilterCustomResponse),
 				httpFilterForTest(egv1a1.EnvoyFilterExtAuthz + "/securitypolicy/default/policy-for-http-route-1"),
 				httpFilterForTest(egv1a1.EnvoyFilterBasicAuth),
 				httpFilterForTest(egv1a1.EnvoyFilterOAuth2 + "/securitypolicy/default/policy-for-http-route-1"),
@@ -161,6 +167,7 @@ func Test_sortHTTPFilters(t *testing.T) {
 			filters: []*hcmv3.HttpFilter{
 				httpFilterForTest(egv1a1.EnvoyFilterRouter),
 				httpFilterForTest(egv1a1.EnvoyFilterCORS),
+				httpFilterForTest(egv1a1.EnvoyFilterCustomResponse),
 				httpFilterForTest(egv1a1.EnvoyFilterJWTAuthn),
 				httpFilterForTest(egv1a1.EnvoyFilterOAuth2 + "/securitypolicy/default/policy-for-http-route-1"),
 				httpFilterForTest(egv1a1.EnvoyFilterBasicAuth),
@@ -184,6 +191,7 @@ func Test_sortHTTPFilters(t *testing.T) {
 			want: []*hcmv3.HttpFilter{
 				httpFilterForTest(egv1a1.EnvoyFilterFault),
 				httpFilterForTest(egv1a1.EnvoyFilterCORS),
+				httpFilterForTest(egv1a1.EnvoyFilterCustomResponse),
 				httpFilterForTest(egv1a1.EnvoyFilterExtAuthz + "/securitypolicy/default/policy-for-http-route-1"),
 				httpFilterForTest(egv1a1.EnvoyFilterBasicAuth),
 				httpFilterForTest(egv1a1.EnvoyFilterOAuth2 + "/securitypolicy/default/policy-for-http-route-1"),
@@ -204,6 +212,7 @@ func Test_sortHTTPFilters(t *testing.T) {
 			filters: []*hcmv3.HttpFilter{
 				httpFilterForTest(egv1a1.EnvoyFilterRouter),
 				httpFilterForTest(egv1a1.EnvoyFilterCORS),
+				httpFilterForTest(egv1a1.EnvoyFilterCustomResponse),
 				httpFilterForTest(egv1a1.EnvoyFilterJWTAuthn),
 				httpFilterForTest(egv1a1.EnvoyFilterOAuth2 + "/securitypolicy/default/policy-for-http-route-1"),
 				httpFilterForTest(egv1a1.EnvoyFilterBasicAuth),
@@ -227,6 +236,7 @@ func Test_sortHTTPFilters(t *testing.T) {
 			want: []*hcmv3.HttpFilter{
 				httpFilterForTest(egv1a1.EnvoyFilterFault),
 				httpFilterForTest(egv1a1.EnvoyFilterCORS),
+				httpFilterForTest(egv1a1.EnvoyFilterCustomResponse),
 				httpFilterForTest(egv1a1.EnvoyFilterExtAuthz + "/securitypolicy/default/policy-for-http-route-1"),
 				httpFilterForTest(egv1a1.EnvoyFilterBasicAuth),
 				httpFilterForTest(egv1a1.EnvoyFilterOAuth2 + "/securitypolicy/default/policy-for-http-route-1"),
@@ -247,6 +257,7 @@ func Test_sortHTTPFilters(t *testing.T) {
 			filters: []*hcmv3.HttpFilter{
 				httpFilterForTest(egv1a1.EnvoyFilterRouter),
 				httpFilterForTest(egv1a1.EnvoyFilterCORS),
+				httpFilterForTest(egv1a1.EnvoyFilterCustomResponse),
 				httpFilterForTest(egv1a1.EnvoyFilterJWTAuthn),
 				httpFilterForTest(egv1a1.EnvoyFilterOAuth2 + "/securitypolicy/default/policy-for-http-route-1"),
 				httpFilterForTest(egv1a1.EnvoyFilterBasicAuth),
@@ -270,6 +281,7 @@ func Test_sortHTTPFilters(t *testing.T) {
 			want: []*hcmv3.HttpFilter{
 				httpFilterForTest(egv1a1.EnvoyFilterFault),
 				httpFilterForTest(egv1a1.EnvoyFilterCORS),
+				httpFilterForTest(egv1a1.EnvoyFilterCustomResponse),
 				httpFilterForTest(egv1a1.EnvoyFilterExtAuthz + "/securitypolicy/default/policy-for-http-route-1"),
 				httpFilterForTest(egv1a1.EnvoyFilterBasicAuth),
 				httpFilterForTest(egv1a1.EnvoyFilterOAuth2 + "/securitypolicy/default/policy-for-http-route-1"),
@@ -290,6 +302,7 @@ func Test_sortHTTPFilters(t *testing.T) {
 			filters: []*hcmv3.HttpFilter{
 				httpFilterForTest(egv1a1.EnvoyFilterRouter),
 				httpFilterForTest(egv1a1.EnvoyFilterCORS),
+				httpFilterForTest(egv1a1.EnvoyFilterCustomResponse),
 				httpFilterForTest(egv1a1.EnvoyFilterJWTAuthn),
 				httpFilterForTest(egv1a1.EnvoyFilterOAuth2 + "/securitypolicy/default/policy-for-http-route-1"),
 				httpFilterForTest(egv1a1.EnvoyFilterBasicAuth),
@@ -313,6 +326,7 @@ func Test_sortHTTPFilters(t *testing.T) {
 			want: []*hcmv3.HttpFilter{
 				httpFilterForTest(egv1a1.EnvoyFilterFault),
 				httpFilterForTest(egv1a1.EnvoyFilterCORS),
+				httpFilterForTest(egv1a1.EnvoyFilterCustomResponse),
 				httpFilterForTest(egv1a1.EnvoyFilterExtAuthz + "/securitypolicy/default/policy-for-http-route-1"),
 				httpFilterForTest(egv1a1.EnvoyFilterBasicAuth),
 				httpFilterForTest(egv1a1.EnvoyFilterOAuth2 + "/securitypolicy/default/policy-for-http-route-1"),
@@ -333,6 +347,7 @@ func Test_sortHTTPFilters(t *testing.T) {
 			filters: []*hcmv3.HttpFilter{
 				httpFilterForTest(egv1a1.EnvoyFilterRouter),
 				httpFilterForTest(egv1a1.EnvoyFilterCORS),
+				httpFilterForTest(egv1a1.EnvoyFilterCustomResponse),
 				httpFilterForTest(egv1a1.EnvoyFilterJWTAuthn),
 				httpFilterForTest(egv1a1.EnvoyFilterOAuth2 + "/securitypolicy/default/policy-for-http-route-1"),
 				httpFilterForTest(egv1a1.EnvoyFilterBasicAuth),
@@ -356,6 +371,7 @@ func Test_sortHTTPFilters(t *testing.T) {
 			want: []*hcmv3.HttpFilter{
 				httpFilterForTest(egv1a1.EnvoyFilterFault),
 				httpFilterForTest(egv1a1.EnvoyFilterCORS),
+				httpFilterForTest(egv1a1.EnvoyFilterCustomResponse),
 				httpFilterForTest(egv1a1.EnvoyFilterExtAuthz + "/securitypolicy/default/policy-for-http-route-1"),
 				httpFilterForTest(egv1a1.EnvoyFilterBasicAuth),
 				httpFilterForTest(egv1a1.EnvoyFilterOAuth2 + "/securitypolicy/default/policy-for-http-route-1"),
@@ -376,6 +392,7 @@ func Test_sortHTTPFilters(t *testing.T) {
 			filters: []*hcmv3.HttpFilter{
 				httpFilterForTest(egv1a1.EnvoyFilterRouter),
 				httpFilterForTest(egv1a1.EnvoyFilterCORS),
+				httpFilterForTest(egv1a1.EnvoyFilterCustomResponse),
 				httpFilterForTest(egv1a1.EnvoyFilterJWTAuthn),
 				httpFilterForTest(egv1a1.EnvoyFilterOAuth2 + "/securitypolicy/default/policy-for-http-route-1"),
 				httpFilterForTest(egv1a1.EnvoyFilterBasicAuth),
@@ -412,6 +429,7 @@ func Test_sortHTTPFilters(t *testing.T) {
 				httpFilterForTest(egv1a1.EnvoyFilterFault),
 				httpFilterForTest(egv1a1.EnvoyFilterCORS),
 				httpFilterForTest(egv1a1.EnvoyFilterLocalRateLimit),
+				httpFilterForTest(egv1a1.EnvoyFilterCustomResponse),
 				httpFilterForTest(egv1a1.EnvoyFilterExtAuthz + "/securitypolicy/default/policy-for-http-route-1"),
 				httpFilterForTest(egv1a1.EnvoyFilterBasicAuth),
 				httpFilterForTest(egv1a1.EnvoyFilterExtProc + "/envoyextensionpolicy/default/policy-for-http-route-1/0"),
