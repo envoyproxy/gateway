@@ -90,7 +90,7 @@ func testCustomProvider(t *testing.T, genCert bool) (string, string) {
 	require.NoError(t, os.WriteFile(configPath, []byte(cfgFileContent), 0o600))
 
 	if genCert {
-		require.NoError(t, certGen(t.Context(), t.Output(), true))
+		require.NoError(t, certGen(t.Context(), os.Stdout, true))
 	}
 
 	return configHome, configPath
@@ -101,7 +101,7 @@ func TestCustomProviderCancelWhenStarting(t *testing.T) {
 	errCh := make(chan error)
 	ctx, cancel := context.WithCancel(t.Context())
 	go func() {
-		errCh <- server(ctx, t.Output(), t.Output(), configPath, testHook, nil)
+		errCh <- server(ctx, os.Stdout, os.Stdout, configPath, testHook, nil)
 	}()
 	go func() {
 		cancel()
@@ -117,7 +117,7 @@ func TestCustomProviderFailedToStart(t *testing.T) {
 	errCh := make(chan error)
 	ctx, cancel := context.WithCancel(t.Context())
 	go func() {
-		errCh <- server(ctx, t.Output(), t.Output(), configPath, testHook, nil)
+		errCh <- server(ctx, os.Stdout, os.Stdout, configPath, testHook, nil)
 	}()
 
 	err := <-errCh
@@ -151,7 +151,7 @@ func TestCustomProviderCancelWhenConfigReload(t *testing.T) {
 	}
 
 	go func() {
-		errCh <- server(ctx, t.Output(), t.Output(), configPath, hook, startedCallback)
+		errCh <- server(ctx, os.Stdout, os.Stdout, configPath, hook, startedCallback)
 	}()
 
 	err := <-errCh
