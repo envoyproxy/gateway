@@ -3366,6 +3366,19 @@ type ResourceMetadata struct {
 	Annotations map[string]string `json:"annotations,omitempty" yaml:"annotations,omitempty"`
 	// SectionName is the name of a section of a resource
 	SectionName string `json:"sectionName,omitempty" yaml:"sectionName,omitempty"`
+
+	// Policies is the information of the xPolicy resource associated with this resource
+	// If merged with parent policy, users need to check the status to find more details.
+	Policies []*PolicyMetadata `json:"policies,omitempty" yaml:"policies,omitempty"`
+}
+
+type PolicyMetadata struct {
+	// Kind is the kind of the policy
+	Kind string `json:"kind,omitempty" yaml:"kind,omitempty"`
+	// Name is the name of the policy
+	Name string `json:"name,omitempty" yaml:"name,omitempty"`
+	// Namespace is the namespace of the policy
+	Namespace string `json:"namespace,omitempty" yaml:"namespace,omitempty"`
 }
 
 // RequestBuffer holds the information for the Buffer filter
