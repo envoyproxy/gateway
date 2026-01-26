@@ -2,6 +2,7 @@ gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
   metadata:
+    creationTimestamp: null
     name: gateway-1
     namespace: envoy-gateway
   spec:
@@ -43,6 +44,7 @@ httpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
   metadata:
+    creationTimestamp: null
     name: httproute-1
     namespace: default
   spec:
@@ -82,6 +84,7 @@ httpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
   metadata:
+    creationTimestamp: null
     name: httproute-2
     namespace: default
   spec:
@@ -155,11 +158,6 @@ xdsIR:
       - path: /dev/stdout
     globalResources:
       proxyServiceCluster:
-        metadata:
-          kind: Service
-          name: envoy-envoy-gateway-gateway-1-196ae069
-          namespace: envoy-gateway-system
-          sectionName: "8080"
         name: envoy-gateway/gateway-1
         settings:
         - addressType: IP
@@ -168,7 +166,6 @@ xdsIR:
             port: 8080
             zone: zone1
           metadata:
-            kind: Service
             name: envoy-envoy-gateway-gateway-1-196ae069
             namespace: envoy-gateway-system
             sectionName: "8080"
@@ -203,7 +200,6 @@ xdsIR:
             - host: 7.7.7.7
               port: 8080
             metadata:
-              kind: Service
               name: service-1
               namespace: default
               sectionName: "8080"
@@ -233,7 +229,6 @@ xdsIR:
             - host: 7.7.7.7
               port: 8080
             metadata:
-              kind: Service
               name: service-1
               namespace: default
               sectionName: "8080"
@@ -267,7 +262,6 @@ xdsIR:
             - host: 7.7.7.7
               port: 8080
             metadata:
-              kind: Service
               name: service-1
               namespace: default
               sectionName: "8080"
