@@ -31,7 +31,7 @@ var HTTPRouteMixedBackendsTest = suite.ConformanceTest{
 		ns := ConformanceInfraNamespace
 		routeNN := types.NamespacedName{Name: "httproute-mixed-backends", Namespace: ns}
 		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
-		gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
+		gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, routeNN)
 		BackendMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "backend-mixed-fqdn", Namespace: ns})
 
 		kubernetes.NamespacesMustBeReady(t, suite.Client, suite.TimeoutConfig, []string{ns})
@@ -44,7 +44,7 @@ var HTTPRouteMixedBackendsTest = suite.ConformanceTest{
 					Path: "/mixed",
 				},
 				Response: http.Response{
-					StatusCodes: []int{200},
+					StatusCode: 200,
 				},
 				Namespace: ns,
 				Backend:   "infra-backend-v1",
@@ -55,7 +55,7 @@ var HTTPRouteMixedBackendsTest = suite.ConformanceTest{
 					Path: "/mixed",
 				},
 				Response: http.Response{
-					StatusCodes: []int{200},
+					StatusCode: 200,
 				},
 				Namespace: ns,
 				Backend:   "infra-backend-v2",

@@ -16,6 +16,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/tlog"
@@ -49,6 +50,11 @@ var EGResilience = suite.ResilienceTest{
 			ControllerName: "gateway.envoyproxy.io/gatewayclass-controller",
 		}
 		ap.MustApplyWithCleanup(t, suite.Client, suite.TimeoutConfig, "testdata/base.yaml", true)
+
+		// Preserve original convergence semantics for resilience tests
+		localTimeout := suite.TimeoutConfig
+		localTimeout.RequiredConsecutiveSuccesses = threshold
+		localTimeout.MaxTimeToConsistency = timeout
 
 		// this test will fail until https://github.com/envoyproxy/gateway/pull/4767/files is merged
 		t.Run("Secondary EnvoyGateway instances can serve an up to date xDS", func(t *testing.T) {
@@ -296,14 +302,14 @@ var EGResilience = suite.ResilienceTest{
 			ns := "gateway-resilience"
 			routeNN := types.NamespacedName{Name: "backend", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "all-namespaces", Namespace: ns}
-			gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
+			gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, localTimeout, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, routeNN)
 
 			expectedResponse := http.ExpectedResponse{
 				Request: http.Request{
 					Path: "/route-change",
 				},
 				Response: http.Response{
-					StatusCodes: []int{200},
+					StatusCode: 200,
 				},
 				Namespace: ns,
 			}

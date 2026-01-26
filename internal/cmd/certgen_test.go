@@ -8,7 +8,6 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"os"
 	"path/filepath"
 	"testing"
 
@@ -29,7 +28,7 @@ func TestGetCertgenCommand(t *testing.T) {
 }
 
 func TestOutputCertsForLocal(t *testing.T) {
-	cfg, err := getConfig(os.Stdout)
+	cfg, err := getConfig(t.Output(), t.Output(), "")
 	require.NoError(t, err)
 
 	certs, err := crypto.GenerateCerts(cfg)
@@ -52,7 +51,7 @@ func TestOutputCertsForLocal(t *testing.T) {
 }
 
 func TestPatchTopologyWebhook(t *testing.T) {
-	cfg, err := getConfig(os.Stdout)
+	cfg, err := getConfig(t.Output(), t.Output(), "")
 	require.NoError(t, err)
 
 	cases := []struct {
