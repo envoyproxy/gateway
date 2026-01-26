@@ -3,7 +3,7 @@ title: "HTTP Routing"
 ---
 
 The [HTTPRoute][] resource allows users to configure HTTP routing by matching HTTP traffic and forwarding it to
-Kubernetes backends. Currently, the only supported backend supported by Envoy Gateway is a [Service](https://kubernetes.io/docs/concepts/services-networking/service/) resource. This task
+Kubernetes backends. Currently, the only backend supported by Envoy Gateway is a [Service](https://kubernetes.io/docs/concepts/services-networking/service/) resource. This task
 shows how to route traffic based on host, header, and path fields and forward the traffic to different Kubernetes
 [Services](https://kubernetes.io/docs/concepts/services-networking/service/). To learn more about HTTP routing, refer to the [Gateway API documentation][].
 
@@ -119,7 +119,7 @@ curl -vvv --header "Host: bar.example.com" --header "env: canary" "http://${GATE
 A `200` status code should be returned and the body should include `"pod": "bar-canary-backend-*"` indicating the
 traffic was routed to the foo backend service.
 
-### JWT Claims Based Routing
+## JWT Claims Based Routing
 
 Users can route to a specific backend by matching on JWT claims.
 This can be achieved, by defining a [SecurityPolicy](../../../api/extension_types#securitypolicy) with a jwt configuration that does the following
@@ -294,6 +294,102 @@ curl -sS -H "Host: bar.example.com" -H "Authorization: Bearer $TOKEN" "http://${
 ```
 The request should return the pod name, for example `bar-backend-6688b8944c-s8htr`
 
+## Cookie Based Routing
+
+Users can route to a specific backend by matching on HTTP cookies. This is
+achieved by defining an
+[HTTPRouteFilter](../../../api/extension_types#httproutefilter) that specifies
+the cookie matching criteria and referencing it in an [HTTPRoute][] rule.
+
+{{< tabpane text=true >}} {{% tab header="Apply from stdin" %}}
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: HTTPRouteFilter
+metadata:
+  name: cookie-match
+spec:
+  matches:
+    - cookies:
+        - name: choco
+          value: chip
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: httproute-cookie-match
+spec:
+  parentRefs:
+    - name: eg
+  rules:
+    - filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: gateway.envoyproxy.io
+            kind: HTTPRouteFilter
+            name: cookie-match
+      backendRefs:
+        - name: foo-svc
+          port: 8080
+EOF
+```
+
+{{% /tab %}} {{% tab header="Apply from file" %}} Save and apply the following
+resources to your cluster:
+
+```yaml
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: HTTPRouteFilter
+metadata:
+  name: cookie-match
+spec:
+  matches:
+    - cookies:
+        - name: choco
+          value: chip
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: httproute-cookie-match
+spec:
+  parentRefs:
+    - name: eg
+  rules:
+    - filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: gateway.envoyproxy.io
+            kind: HTTPRouteFilter
+            name: cookie-match
+      backendRefs:
+        - name: foo-svc
+          port: 8080
+```
+
+{{% /tab %}} {{< /tabpane >}}
+
+Test HTTP routing to the `foo-svc` backend by specifying the cookie
+`choco=chip`.
+
+```shell
+curl -vvv --header "Host: foo.example.com" --cookie "choco=chip" "http://${GATEWAY_HOST}/"
+```
+
+A `200` status code should be returned and the body should include
+`"pod": "foo-backend-*"` indicating the traffic was routed to the foo backend
+service.
+
+If the cookie is missing or has a different value, the request will not match
+and a `404` should be returned.
+
+```shell
+curl -vvv --header "Host: foo.example.com" "http://${GATEWAY_HOST}/"
+```
+
+The HTTP traffic will not be routed and a `404` should be returned.
 
 [HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute/
 [Gateway API documentation]: https://gateway-api.sigs.k8s.io/

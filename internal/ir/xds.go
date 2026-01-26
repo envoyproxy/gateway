@@ -260,6 +260,17 @@ func (l *CoreListenerDetails) GetExtensionRefs() []*UnstructuredRef {
 	return l.ExtensionRefs
 }
 
+// RequestIDExtension defines configuration for the UUID request ID extension.
+// +k8s:deepcopy-gen=true
+type RequestIDExtensionAction egv1a1.RequestIDExtensionAction
+
+const (
+	RequestIDExtensionActionPackAndSample = RequestIDExtensionAction(egv1a1.RequestIDExtensionActionPackAndSample)
+	RequestIDExtensionActionSample        = RequestIDExtensionAction(egv1a1.RequestIDExtensionActionSample)
+	RequestIDExtensionActionPack          = RequestIDExtensionAction(egv1a1.RequestIDExtensionActionPack)
+	RequestIDExtensionActionDisable       = RequestIDExtensionAction(egv1a1.RequestIDExtensionActionDisable)
+)
+
 // HTTPListener holds the listener configuration.
 // +k8s:deepcopy-gen=true
 type HTTPListener struct {
@@ -310,6 +321,8 @@ type HTTPListener struct {
 	// MatchBackendScheme configures Envoy to set the :scheme pseudo-header to match
 	// the upstream transport protocol (http/https) instead of preserving the downstream scheme.
 	MatchBackendScheme bool `json:"matchBackendScheme,omitempty" yaml:"matchBackendScheme,omitempty"`
+	// RequestID defines configuration for the UUID request ID extension.
+	RequestID *RequestIDExtensionAction `json:"requestID,omitempty" yaml:"requestID,omitempty"`
 }
 
 // Validate the fields within the HTTPListener structure
@@ -2609,6 +2622,7 @@ type Tracing struct {
 	Authority    string                      `json:"authority,omitempty"`
 	SamplingRate float64                     `json:"samplingRate,omitempty"`
 	CustomTags   map[string]egv1a1.CustomTag `json:"customTags,omitempty"`
+	Tags         map[string]string           `json:"tags,omitempty"`
 	Destination  RouteDestination            `json:"destination,omitempty"`
 	Traffic      *TrafficFeatures            `json:"traffic,omitempty"`
 	Provider     egv1a1.TracingProvider      `json:"provider"`
