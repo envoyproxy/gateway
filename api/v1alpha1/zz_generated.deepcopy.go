@@ -5308,17 +5308,12 @@ func (in *OIDCProvider) DeepCopyInto(out *OIDCProvider) {
 	}
 	if in.IssuerRef != nil {
 		in, out := &in.IssuerRef, &out.IssuerRef
-		*out = new(LocalObjectKeyReference)
-		**out = **in
+		*out = new(v1.SecretObjectReference)
+		(*in).DeepCopyInto(*out)
 	}
 	if in.AuthorizationEndpoint != nil {
 		in, out := &in.AuthorizationEndpoint, &out.AuthorizationEndpoint
 		*out = new(string)
-		**out = **in
-	}
-	if in.AuthorizationEndpointRef != nil {
-		in, out := &in.AuthorizationEndpointRef, &out.AuthorizationEndpointRef
-		*out = new(LocalObjectKeyReference)
 		**out = **in
 	}
 	if in.TokenEndpoint != nil {
@@ -5326,19 +5321,9 @@ func (in *OIDCProvider) DeepCopyInto(out *OIDCProvider) {
 		*out = new(string)
 		**out = **in
 	}
-	if in.TokenEndpointRef != nil {
-		in, out := &in.TokenEndpointRef, &out.TokenEndpointRef
-		*out = new(LocalObjectKeyReference)
-		**out = **in
-	}
 	if in.EndSessionEndpoint != nil {
 		in, out := &in.EndSessionEndpoint, &out.EndSessionEndpoint
 		*out = new(string)
-		**out = **in
-	}
-	if in.EndSessionEndpointRef != nil {
-		in, out := &in.EndSessionEndpointRef, &out.EndSessionEndpointRef
-		*out = new(LocalObjectKeyReference)
 		**out = **in
 	}
 }
