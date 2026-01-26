@@ -2362,11 +2362,6 @@ func (in *EnvoyGatewaySpec) DeepCopyInto(out *EnvoyGatewaySpec) {
 		*out = new(ExtensionAPISettings)
 		**out = **in
 	}
-	if in.GatewayAPIs != nil {
-		in, out := &in.GatewayAPIs, &out.GatewayAPIs
-		*out = new(GatewayAPIs)
-		(*in).DeepCopyInto(*out)
-	}
 	if in.RuntimeFlags != nil {
 		in, out := &in.RuntimeFlags, &out.RuntimeFlags
 		*out = new(RuntimeFlags)
