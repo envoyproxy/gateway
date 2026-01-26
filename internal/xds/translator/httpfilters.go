@@ -76,15 +76,15 @@ type OrderedHTTPFilters []*OrderedHTTPFilter
 
 // newOrderedHTTPFilter gives each HTTP filter a rational order.
 // This is needed because the order of the filters is important.
-// For example, the health_check filter should be placed in the first position because external load
-// balancer determines whether envoy should receive traffic based on the health check result which
-// only depending on the current draining state of the envoy, result should not be affected by other
-// filters, or else user traffic disruption may happen.
-// the fault filter should be placed in the second position because
-// it doesn't rely on the functionality of other filters, and rejecting early can save computation costs
-// for the remaining filters, the cors filter should be put at the third to avoid unnecessary
-// processing of other filters for unauthorized cross-region access.
-// The router filter must be the last one since it's a terminal filter.
+// For example:
+//  - the custom_response filter should be placed first to ensure it sees local replies.
+//  - the health_check filter should be placed next because external load balancer determines whether envoy should
+//    receive traffic based on the health check result which only depending on the current draining state of the envoy,
+//    result should not be affected by other filters, or else user traffic disruption may happen.
+//  - the fault filter should be placed after it because it doesn't rely on the functionality of other filters,
+//    and rejecting early can save computation costs for the remaining filters.
+//  - the cors filter should be put after that to avoid unnecessary processing of other filters for unauthorized cross-region access.
+//  - the router filter must be the last one since it's a terminal filter.
 //
 // Important: please modify this method and set the order for the new filter
 // when adding a new filter in the HCM filter chain.
@@ -98,33 +98,33 @@ func newOrderedHTTPFilter(filter *hcmv3.HttpFilter) *OrderedHTTPFilter {
 	// the remaining filters is skipped when rejected early
 	// Important: After adding new filter types, don't forget to modify the validation rule of the EnvoyFilter type in the API
 	switch {
-	case isFilterType(filter, egv1a1.EnvoyFilterHealthCheck):
+	case isFilterType(filter, egv1a1.EnvoyFilterCustomResponse):
 		order = 0
-	case isFilterType(filter, egv1a1.EnvoyFilterFault):
+	case isFilterType(filter, egv1a1.EnvoyFilterHealthCheck):
 		order = 1
-	case isFilterType(filter, egv1a1.EnvoyFilterCORS):
+	case isFilterType(filter, egv1a1.EnvoyFilterFault):
 		order = 2
+	case isFilterType(filter, egv1a1.EnvoyFilterCORS):
+		order = 3
 	case isFilterType(filter, egv1a1.EnvoyFilterHeaderMutation):
 		// Ensure header mutation run before ext auth which might consume the header.
-		order = 3
-	case isFilterType(filter, egv1a1.EnvoyFilterCustomResponse):
-		order = 3
-	case isFilterType(filter, egv1a1.EnvoyFilterExtAuthz):
 		order = 4
-	case isFilterType(filter, egv1a1.EnvoyFilterAPIKeyAuth):
+	case isFilterType(filter, egv1a1.EnvoyFilterExtAuthz):
 		order = 5
-	case isFilterType(filter, egv1a1.EnvoyFilterBasicAuth):
+	case isFilterType(filter, egv1a1.EnvoyFilterAPIKeyAuth):
 		order = 6
-	case isFilterType(filter, egv1a1.EnvoyFilterOAuth2):
+	case isFilterType(filter, egv1a1.EnvoyFilterBasicAuth):
 		order = 7
-	case isFilterType(filter, egv1a1.EnvoyFilterJWTAuthn):
+	case isFilterType(filter, egv1a1.EnvoyFilterOAuth2):
 		order = 8
-	case isFilterType(filter, egv1a1.EnvoyFilterSessionPersistence):
+	case isFilterType(filter, egv1a1.EnvoyFilterJWTAuthn):
 		order = 9
-	case isFilterType(filter, egv1a1.EnvoyFilterBuffer):
+	case isFilterType(filter, egv1a1.EnvoyFilterSessionPersistence):
 		order = 10
+	case isFilterType(filter, egv1a1.EnvoyFilterBuffer):
+		order = 11
 	case isFilterType(filter, egv1a1.EnvoyFilterLua):
-		order = 11 + mustGetFilterIndex(filter.Name)
+		order = 12 + mustGetFilterIndex(filter.Name)
 	case isFilterType(filter, egv1a1.EnvoyFilterExtProc):
 		order = 100 + mustGetFilterIndex(filter.Name)
 	case isFilterType(filter, egv1a1.EnvoyFilterWasm):
