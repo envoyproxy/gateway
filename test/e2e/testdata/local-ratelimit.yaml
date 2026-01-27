@@ -9,7 +9,8 @@ spec:
   targetRefs:
     - group: gateway.networking.k8s.io
       kind: Gateway
-      name: all-namespaces # use different gatway
+      # use different gatway
+      name: all-namespaces
 ---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: BackendTrafficPolicy
