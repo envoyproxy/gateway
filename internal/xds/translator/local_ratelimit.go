@@ -17,6 +17,7 @@ import (
 	typev3 "github.com/envoyproxy/go-control-plane/envoy/type/v3"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
+	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -239,6 +240,7 @@ func buildRouteLocalRateLimits(local *ir.LocalRateLimit) (
 					},
 					FillInterval: ratelimit.UnitToDuration(rule.Limit.Unit),
 				},
+				ShadowMode: ptr.Deref(rule.ShadowMode, false),
 			})
 		}
 	}
