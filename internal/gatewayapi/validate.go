@@ -964,7 +964,8 @@ func (t *Translator) validateSecretObjectRef(
 			resources.ReferenceGrants,
 		) {
 			return fmt.Errorf(
-				"certificate ref to secret %s/%s not permitted by any ReferenceGrant",
+				"ref to %s %s/%s not permitted by any ReferenceGrant",
+				kind,
 				*secretRef.Namespace, secretRef.Name)
 		}
 
