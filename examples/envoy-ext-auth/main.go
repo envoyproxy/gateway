@@ -16,6 +16,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	envoy_api_v3_core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	envoy_service_auth_v3 "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
@@ -92,6 +93,8 @@ func (s *authServer) Check(
 	_ context.Context,
 	req *envoy_service_auth_v3.CheckRequest,
 ) (*envoy_service_auth_v3.CheckResponse, error) {
+	delayIfNeed()
+
 	authorization := req.Attributes.Request.Http.Headers["authorization"]
 	log.Println("GRPC check auth: ", authorization)
 
@@ -141,7 +144,30 @@ func (u Users) Check(key string) (bool, string) {
 	return ok, value
 }
 
+func getDelayDuration() *time.Duration {
+	delayDuration := os.Getenv("DELAY_DURATION")
+	if delayDuration == "" {
+		return nil
+	}
+
+	d, err := time.ParseDuration(delayDuration)
+	if err != nil {
+		// fallback to default value which means 10s
+		d = time.Second * 10
+	}
+
+	return &d
+}
+
+func delayIfNeed() {
+	d := getDelayDuration()
+	if d != nil {
+		time.Sleep(*d)
+	}
+}
+
 func authCheckerHandler(w http.ResponseWriter, req *http.Request) {
+	delayIfNeed()
 	authorization := req.Header.Get("authorization")
 	log.Println("HTTP check auth")
 	if len(authorization) == 0 {
