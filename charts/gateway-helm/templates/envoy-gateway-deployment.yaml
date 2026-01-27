@@ -98,7 +98,7 @@ spec:
       {{- with .Values.deployment.priorityClassName }}
       priorityClassName: {{ . | quote }}
       {{- end }}
-      serviceAccountName: envoy-gateway
+      serviceAccountName: {{ include "eg.serviceAccountName" . }}
       terminationGracePeriodSeconds: 10
       volumes:
       - configMap:

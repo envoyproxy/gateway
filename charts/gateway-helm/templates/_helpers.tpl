@@ -54,10 +54,12 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 Create the name of the service account to use
 */}}
 {{- define "eg.serviceAccountName" -}}
-{{- if .Values.serviceAccount.create }}
-{{- default (include "eg.fullname" .) .Values.serviceAccount.name }}
+{{- $sa := .Values.serviceAccount | default dict }}
+{{- $saCreate := ternary $sa.create true (hasKey $sa "create") }}
+{{- if $saCreate }}
+{{- default "envoy-gateway" $sa.name }}
 {{- else }}
-{{- default "default" .Values.serviceAccount.name }}
+{{- default "default" $sa.name }}
 {{- end }}
 {{- end }}
 

@@ -113,6 +113,18 @@ createNamespace: false
 
 kubernetesClusterDomain: cluster.local
 
+# -- ServiceAccount configuration
+serviceAccount:
+  # -- Specifies whether a ServiceAccount should be created
+  create: true
+  # -- The name of the ServiceAccount to use
+  name: envoy-gateway
+
+# -- RBAC configuration
+rbac:
+  # -- Specifies whether RBAC resources should be created
+  create: true
+
 # -- Certgen is used to generate the certificates required by EnvoyGateway. If you want to construct a custom certificate, you can generate a custom certificate through Cert-Manager before installing EnvoyGateway. Certgen will not overwrite the custom certificate. Please do not manually modify `values.yaml` to disable certgen, it may cause EnvoyGateway OIDC,OAuth2,etc. to not work as expected.
 certgen:
   job:
