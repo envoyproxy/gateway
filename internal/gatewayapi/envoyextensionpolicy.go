@@ -1021,7 +1021,7 @@ func (t *Translator) buildWasm(
 			}
 
 			if secret, err = t.validateSecretRef(
-				false, from, *image.PullSecretRef, resources); err != nil {
+				true, from, *image.PullSecretRef, resources); err != nil {
 				return nil, err
 			}
 
