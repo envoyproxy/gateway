@@ -726,6 +726,11 @@ type GRPCSettings struct {
 	// The gRPC-web filter allows clients (typically browsers) to make gRPC calls
 	// using HTTP/1.1 or HTTP/2.
 	//
+	// This is enabled by default for GRPCRoute and opt-in for HTTPRoute.
+	// In general, gRPC traffic should be handled via GRPCRoute, but there are cases where
+	// users want to route gRPC using HTTPRoute for its richer matching capabilities.
+	// Therefore, we enable this behavior only when it is explicitly opted in.
+	//
 	// +optional
 	EnableWeb *bool `json:"enableWeb,omitempty"`
 }
