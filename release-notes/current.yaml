@@ -48,7 +48,7 @@ bug fixes: |
   Fixed validation of certificates in a CA bundle when some certificates are invalid.
   Fixed an issue where route match rule order is wrong when merging with empty path match.
   Fixed wrong cluster type selection when an HTTPRoute mixes Service backends with Backend (FQDN) references, ensuring STRICT_DNS clusters are generated for the FQDN targets.
-
+  Fixed JWT scope authorization to accept the `scp` claim in addition to `scope`.
 
 # Enhancements that improve performance.
 performance improvements: |

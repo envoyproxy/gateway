@@ -47,42 +47,82 @@
                   predicate:
                     andMatcher:
                       predicate:
-                      - singlePredicate:
-                          customMatch:
-                            name: scope_matcher
-                            typedConfig:
-                              '@type': type.googleapis.com/envoy.extensions.matching.input_matchers.metadata.v3.Metadata
-                              value:
-                                listMatch:
-                                  oneOf:
-                                    stringMatch:
-                                      exact: foo
-                          input:
-                            name: scope
-                            typedConfig:
-                              '@type': type.googleapis.com/envoy.extensions.matching.common_inputs.network.v3.DynamicMetadataInput
-                              filter: envoy.filters.http.jwt_authn
-                              path:
-                              - key: example1
-                              - key: scope
-                      - singlePredicate:
-                          customMatch:
-                            name: scope_matcher
-                            typedConfig:
-                              '@type': type.googleapis.com/envoy.extensions.matching.input_matchers.metadata.v3.Metadata
-                              value:
-                                listMatch:
-                                  oneOf:
-                                    stringMatch:
-                                      exact: bar
-                          input:
-                            name: scope
-                            typedConfig:
-                              '@type': type.googleapis.com/envoy.extensions.matching.common_inputs.network.v3.DynamicMetadataInput
-                              filter: envoy.filters.http.jwt_authn
-                              path:
-                              - key: example1
-                              - key: scope
+                      - orMatcher:
+                          predicate:
+                          - singlePredicate:
+                              customMatch:
+                                name: scope_matcher
+                                typedConfig:
+                                  '@type': type.googleapis.com/envoy.extensions.matching.input_matchers.metadata.v3.Metadata
+                                  value:
+                                    listMatch:
+                                      oneOf:
+                                        stringMatch:
+                                          exact: foo
+                              input:
+                                name: scope
+                                typedConfig:
+                                  '@type': type.googleapis.com/envoy.extensions.matching.common_inputs.network.v3.DynamicMetadataInput
+                                  filter: envoy.filters.http.jwt_authn
+                                  path:
+                                  - key: example1
+                                  - key: scope
+                          - singlePredicate:
+                              customMatch:
+                                name: scope_matcher
+                                typedConfig:
+                                  '@type': type.googleapis.com/envoy.extensions.matching.input_matchers.metadata.v3.Metadata
+                                  value:
+                                    listMatch:
+                                      oneOf:
+                                        stringMatch:
+                                          exact: foo
+                              input:
+                                name: scope
+                                typedConfig:
+                                  '@type': type.googleapis.com/envoy.extensions.matching.common_inputs.network.v3.DynamicMetadataInput
+                                  filter: envoy.filters.http.jwt_authn
+                                  path:
+                                  - key: example1
+                                  - key: scp
+                      - orMatcher:
+                          predicate:
+                          - singlePredicate:
+                              customMatch:
+                                name: scope_matcher
+                                typedConfig:
+                                  '@type': type.googleapis.com/envoy.extensions.matching.input_matchers.metadata.v3.Metadata
+                                  value:
+                                    listMatch:
+                                      oneOf:
+                                        stringMatch:
+                                          exact: bar
+                              input:
+                                name: scope
+                                typedConfig:
+                                  '@type': type.googleapis.com/envoy.extensions.matching.common_inputs.network.v3.DynamicMetadataInput
+                                  filter: envoy.filters.http.jwt_authn
+                                  path:
+                                  - key: example1
+                                  - key: scope
+                          - singlePredicate:
+                              customMatch:
+                                name: scope_matcher
+                                typedConfig:
+                                  '@type': type.googleapis.com/envoy.extensions.matching.input_matchers.metadata.v3.Metadata
+                                  value:
+                                    listMatch:
+                                      oneOf:
+                                        stringMatch:
+                                          exact: bar
+                              input:
+                                name: scope
+                                typedConfig:
+                                  '@type': type.googleapis.com/envoy.extensions.matching.common_inputs.network.v3.DynamicMetadataInput
+                                  filter: envoy.filters.http.jwt_authn
+                                  path:
+                                  - key: example1
+                                  - key: scp
               onNoMatch:
                 action:
                   name: default
@@ -122,24 +162,44 @@
                         action: DENY
                         name: DENY
                   predicate:
-                    singlePredicate:
-                      customMatch:
-                        name: scope_matcher
-                        typedConfig:
-                          '@type': type.googleapis.com/envoy.extensions.matching.input_matchers.metadata.v3.Metadata
-                          value:
-                            listMatch:
-                              oneOf:
-                                stringMatch:
-                                  exact: foo
-                      input:
-                        name: scope
-                        typedConfig:
-                          '@type': type.googleapis.com/envoy.extensions.matching.common_inputs.network.v3.DynamicMetadataInput
-                          filter: envoy.filters.http.jwt_authn
-                          path:
-                          - key: example1
-                          - key: scope
+                    orMatcher:
+                      predicate:
+                      - singlePredicate:
+                          customMatch:
+                            name: scope_matcher
+                            typedConfig:
+                              '@type': type.googleapis.com/envoy.extensions.matching.input_matchers.metadata.v3.Metadata
+                              value:
+                                listMatch:
+                                  oneOf:
+                                    stringMatch:
+                                      exact: foo
+                          input:
+                            name: scope
+                            typedConfig:
+                              '@type': type.googleapis.com/envoy.extensions.matching.common_inputs.network.v3.DynamicMetadataInput
+                              filter: envoy.filters.http.jwt_authn
+                              path:
+                              - key: example1
+                              - key: scope
+                      - singlePredicate:
+                          customMatch:
+                            name: scope_matcher
+                            typedConfig:
+                              '@type': type.googleapis.com/envoy.extensions.matching.input_matchers.metadata.v3.Metadata
+                              value:
+                                listMatch:
+                                  oneOf:
+                                    stringMatch:
+                                      exact: foo
+                          input:
+                            name: scope
+                            typedConfig:
+                              '@type': type.googleapis.com/envoy.extensions.matching.common_inputs.network.v3.DynamicMetadataInput
+                              filter: envoy.filters.http.jwt_authn
+                              path:
+                              - key: example1
+                              - key: scp
               onNoMatch:
                 action:
                   name: default
