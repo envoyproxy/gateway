@@ -2,6 +2,18 @@ tcp:
 - name: "tls-listener-terminate"
   address: "::"
   port: 10080
+  metadata:
+    groupVersion: "gateway.networking.k8s.io/v1"
+    kind: "Gateway"
+    name: "gateway-tls-terminate"
+    namespace: "tls-listener-terminate"
+    sectionName: "terminate"
+    annotations:
+    - key: foo
+      value: bar
+    ingressAnnotation:
+    - key: foobar
+      value: barfoo
   routes:
   - name: "tls-route-terminate"
     tls:
@@ -24,6 +36,18 @@ tcp:
   - name: "tls-terminate-hostname"
     address: "::"
     port: 10080
+    metadata:
+      groupVersion: "gateway.networking.k8s.io/v1"
+      kind: "Gateway"
+      name: "gateway-tls-terminate-hostname"
+      namespace: "tls-listener-terminate-hostname"
+      sectionName: "terminate-hostname"
+      annotations:
+      - key: foo
+        value: bar
+      ingressAnnotation:
+      - key: foobar
+        value: barfoo
     tls:
       inspector:
         snis:

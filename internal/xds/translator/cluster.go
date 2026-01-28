@@ -208,7 +208,7 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 		CommonLbConfig:                &clusterv3.Cluster_CommonLbConfig{},
 		PerConnectionBufferLimitBytes: buildBackandConnectionBufferLimitBytes(args.backendConnection),
 		PreconnectPolicy:              buildBackendConnectionPreconnectPolicy(args.backendConnection),
-		Metadata:                      buildXdsMetadata(args.metadata),
+		Metadata:                      buildXdsMetadata(args.metadata, false),
 		// Dont wait for a health check to determine health and remove these endpoints
 		// if the endpoint has been removed via EDS by the control plane or removed from DNS query results
 		IgnoreHealthOnHostRemoval: true,
@@ -823,7 +823,7 @@ func buildZonalLocalities(metadata *corev3.Metadata, ds *ir.DestinationSetting) 
 			},
 			LbEndpoints: endPts,
 			Priority:    ptr.Deref(ds.Priority, 0),
-			Metadata:    buildXdsMetadata(ds.Metadata),
+			Metadata:    buildXdsMetadata(ds.Metadata, false),
 		}
 		localities = append(localities, locality)
 	}
@@ -863,7 +863,7 @@ func buildWeightedLocalities(metadata *corev3.Metadata, ds *ir.DestinationSettin
 		},
 		LbEndpoints: endpoints,
 		Priority:    0,
-		Metadata:    buildXdsMetadata(ds.Metadata),
+		Metadata:    buildXdsMetadata(ds.Metadata, false),
 	}
 
 	// Set locality weight

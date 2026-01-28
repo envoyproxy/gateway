@@ -18,6 +18,7 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	httputils "sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
+	"sigs.k8s.io/gateway-api/conformance/utils/roundtripper"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
 	"sigs.k8s.io/gateway-api/conformance/utils/tlog"
 )
@@ -60,7 +61,7 @@ var FileAccessLogTest = suite.ConformanceTest{
 			// make sure listener is ready
 			httputils.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 
-			runLogTest(t, suite, gwAddr, &expectedResponse, labels, match, 1)
+			runLogTest(t, suite, gwAddr, &expectedResponse, labels, match, 1, nil)
 		})
 
 		t.Run("Negative", func(t *testing.T) {
@@ -82,13 +83,59 @@ var FileAccessLogTest = suite.ConformanceTest{
 			// make sure listener is ready
 			httputils.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 
-			runLogTest(t, suite, gwAddr, &expectedResponse, labels, match, 0)
+			runLogTest(t, suite, gwAddr, &expectedResponse, labels, match, 0, nil)
 		})
 
-		t.Run("Listener Logs", func(t *testing.T) {
+		t.Run("TLSRoute Listener Logs", func(t *testing.T) {
+			// access log format: LISTENER ACCESS LOG %UPSTREAM_PROTOCOL% %RESPONSE_CODE% %METADATA(LISTENER_FILTER_CHAIN:envoy-gateway:resources)%
 			// Ensure that Listener is emitting the log: protocol and response code should be
 			// empty in listener logs as they are upstream L7 attributes
-			expectedMatch := "LISTENER ACCESS LOG - 0"
+			// filter chain metadata is added to TLSRoute filter chain
+			expectedMatch := "LISTENER ACCESS LOG - 0.*same-namespace.*"
+
+			ns := "gateway-conformance-infra"
+			certNN := types.NamespacedName{Name: "backend-tls-certificate", Namespace: ns}
+			routeNN := types.NamespacedName{Name: "tlsroute-acccesslog", Namespace: ns}
+			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
+			gwAddr, _ := kubernetes.GatewayAndTLSRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN, "tls"), routeNN)
+
+			// make sure listener is ready
+			expectedResponse := httputils.ExpectedResponse{
+				Request: httputils.Request{
+					Host: "example.com",
+					Path: "/",
+				},
+				Response: httputils.Response{
+					StatusCodes: []int{200},
+				},
+				Namespace: ns,
+			}
+
+			req := httputils.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "https")
+
+			// This test uses the same key/cert pair as both a client cert and server cert
+			// Both backend and client treat the self-signed cert as a trusted CA
+			cPem, keyPem, _, err := GetTLSSecret(suite.Client, certNN)
+			if err != nil {
+				t.Fatalf("unexpected error finding TLS secret: %v", err)
+			}
+
+			req.KeyPem = keyPem
+			req.CertPem = cPem
+			req.Server = "example.com"
+
+			// make sure listener is ready
+			httputils.WaitForConsistentResponse(t, suite.RoundTripper, req, expectedResponse, suite.TimeoutConfig.RequiredConsecutiveSuccesses, suite.TimeoutConfig.MaxTimeToConsistency)
+
+			runLogTest(t, suite, gwAddr, &expectedResponse, labels, expectedMatch, 0, &req)
+		})
+
+		t.Run("HTTPRoute Listener Logs", func(t *testing.T) {
+			// access log format: LISTENER ACCESS LOG %UPSTREAM_PROTOCOL% %RESPONSE_CODE% %METADATA(LISTENER_FILTER_CHAIN:envoy-gateway:resources)%
+			// Ensure that Listener is emitting the log: protocol and response code should be
+			// empty in listener logs as they are upstream L7 attributes
+			// filter chain metadata is not added to the default filter chain
+			expectedMatch := "LISTENER ACCESS LOG - 0 -"
 			ns := "gateway-conformance-infra"
 			routeNN := types.NamespacedName{Name: "accesslog-file", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
@@ -114,7 +161,7 @@ var FileAccessLogTest = suite.ConformanceTest{
 			// make sure listener is ready
 			httputils.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 
-			runLogTest(t, suite, gwAddr, &expectedResponse, labels, expectedMatch, 0)
+			runLogTest(t, suite, gwAddr, &expectedResponse, labels, expectedMatch, 0, nil)
 		})
 	},
 }
@@ -146,7 +193,7 @@ var OpenTelemetryTestText = suite.ConformanceTest{
 			// make sure listener is ready
 			httputils.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 
-			runLogTest(t, suite, gwAddr, &expectedResponse, labels, "", 1)
+			runLogTest(t, suite, gwAddr, &expectedResponse, labels, "", 1, nil)
 		})
 
 		t.Run("Negative", func(t *testing.T) {
@@ -163,7 +210,7 @@ var OpenTelemetryTestText = suite.ConformanceTest{
 			// make sure listener is ready
 			httputils.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 
-			runLogTest(t, suite, gwAddr, &expectedResponse, labels, "", 0)
+			runLogTest(t, suite, gwAddr, &expectedResponse, labels, "", 0, nil)
 		})
 	},
 }
@@ -195,7 +242,7 @@ var OpenTelemetryTestJSONAsDefault = suite.ConformanceTest{
 			// make sure listener is ready
 			httputils.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 
-			runLogTest(t, suite, gwAddr, &expectedResponse, labels, "", 1)
+			runLogTest(t, suite, gwAddr, &expectedResponse, labels, "", 1, nil)
 		})
 
 		t.Run("Negative", func(t *testing.T) {
@@ -212,7 +259,7 @@ var OpenTelemetryTestJSONAsDefault = suite.ConformanceTest{
 			// make sure listener is ready
 			httputils.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 
-			runLogTest(t, suite, gwAddr, &expectedResponse, labels, "", 0)
+			runLogTest(t, suite, gwAddr, &expectedResponse, labels, "", 0, nil)
 		})
 	},
 }
@@ -244,7 +291,7 @@ var OpenTelemetryTestJSON = suite.ConformanceTest{
 			// make sure listener is ready
 			httputils.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 
-			runLogTest(t, suite, gwAddr, &expectedResponse, labels, "", 1)
+			runLogTest(t, suite, gwAddr, &expectedResponse, labels, "", 1, nil)
 		})
 
 		t.Run("Negative", func(t *testing.T) {
@@ -261,7 +308,7 @@ var OpenTelemetryTestJSON = suite.ConformanceTest{
 			// make sure listener is ready
 			httputils.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 
-			runLogTest(t, suite, gwAddr, &expectedResponse, labels, "", 0)
+			runLogTest(t, suite, gwAddr, &expectedResponse, labels, "", 0, nil)
 		})
 	},
 }
@@ -297,7 +344,7 @@ var ALSTest = suite.ConformanceTest{
 			// make sure listener is ready
 			httputils.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 
-			runLogTest(t, suite, gwAddr, &expectedResponse, labels, match, 0)
+			runLogTest(t, suite, gwAddr, &expectedResponse, labels, match, 0, nil)
 		})
 	},
 }
@@ -317,9 +364,7 @@ func getOTELLabels(testNamespace string) map[string]string {
 	}
 }
 
-func runLogTest(t *testing.T, suite *suite.ConformanceTestSuite, gwAddr string,
-	expectedResponse *httputils.ExpectedResponse, expectedLabels map[string]string, expectedMatch string, expectedDelta int,
-) {
+func runLogTest(t *testing.T, suite *suite.ConformanceTestSuite, gwAddr string, expectedResponse *httputils.ExpectedResponse, expectedLabels map[string]string, expectedMatch string, expectedDelta int, customRequest *roundtripper.Request) {
 	if err := wait.PollUntilContextTimeout(context.TODO(), time.Second, 3*time.Minute, true,
 		func(ctx context.Context) (bool, error) {
 			// query log count from loki
@@ -329,7 +374,11 @@ func runLogTest(t *testing.T, suite *suite.ConformanceTestSuite, gwAddr string,
 				return false, nil
 			}
 
-			httputils.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, *expectedResponse)
+			if customRequest != nil {
+				httputils.WaitForConsistentResponse(t, suite.RoundTripper, *customRequest, *expectedResponse, suite.TimeoutConfig.RequiredConsecutiveSuccesses, suite.TimeoutConfig.MaxTimeToConsistency)
+			} else {
+				httputils.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, *expectedResponse)
+			}
 
 			// it will take some time for fluent-bit to collect the log and send to loki
 			// let's wait for a while

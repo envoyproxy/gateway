@@ -442,7 +442,7 @@ func buildListenerMetadata(listener *ListenerContext, gateway *GatewayContext) *
 		Kind:        gateway.GetObjectKind().GroupVersionKind().Kind,
 		Name:        gateway.GetName(),
 		Namespace:   gateway.GetNamespace(),
-		Annotations: ir.MapToSlice(filterEGPrefix(gateway.GetAnnotations())),
+		Annotations: ir.MapToSlice(filterAnnotations(gateway.GetAnnotations(), egv1a1.EnvoyGatewayAnnotationPrefix)),
 		SectionName: string(listener.Name),
 	}
 }

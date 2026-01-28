@@ -43,3 +43,27 @@
         cluster: second-route-dest
         upgradeConfigs:
         - upgradeType: websocket
+- ignorePortInHostMatching: true
+  name: second-listener
+  virtualHosts:
+  - domains:
+    - '*'
+    metadata:
+      filterMetadata:
+        envoy-gateway:
+          resources:
+          - annotations:
+              foo: bar
+            kind: Gateway
+            name: second-gateway
+            namespace: second-gateway
+            sectionName: second-listener
+    name: second-listener/*
+    routes:
+    - match:
+        prefix: /
+      name: first-route
+      route:
+        cluster: first-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket

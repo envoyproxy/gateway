@@ -3411,6 +3411,8 @@ type ResourceMetadata struct {
 	Namespace string `json:"namespace,omitempty" yaml:"namespace,omitempty"`
 	// Annotations are the annotations of the resource
 	Annotations []MapEntry `json:"annotations,omitempty" yaml:"annotations,omitempty"`
+	// IngressAnnotations are additional annotations used only for xds ingress resources like listener and filter chain
+	IngressAnnotations []MapEntry `json:"ingressAnnotations,omitempty" yaml:"ingressAnnotations,omitempty"`
 	// SectionName is the name of a section of a resource
 	SectionName string `json:"sectionName,omitempty" yaml:"sectionName,omitempty"`
 

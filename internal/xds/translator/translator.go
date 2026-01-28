@@ -518,7 +518,7 @@ func (t *Translator) addRouteToRouteConfig(
 			vHost = &routev3.VirtualHost{
 				Name:     virtualHostName(httpListener, underscoredHostname, t.xdsNameSchemeV2()),
 				Domains:  []string{httpRoute.Hostname},
-				Metadata: buildXdsMetadata(httpListener.Metadata),
+				Metadata: buildXdsMetadata(httpListener.Metadata, false),
 			}
 			if metrics != nil && metrics.EnableVirtualHostStats {
 				vHost.VirtualClusters = []*routev3.VirtualCluster{
@@ -842,6 +842,7 @@ func (t *Translator) processTCPListenerXdsTranslation(
 				accesslog,
 				tcpListener.Timeout,
 				tcpListener.Connection,
+				tcpListener.Metadata,
 			); err != nil {
 				errs = errors.Join(errs, err)
 			}
@@ -862,14 +863,7 @@ func (t *Translator) processTCPListenerXdsTranslation(
 					Name: emptyClusterName,
 				},
 			}
-			if err := t.addXdsTCPFilterChain(
-				xdsListener,
-				emptyRoute,
-				emptyClusterName,
-				accesslog,
-				tcpListener.Timeout,
-				tcpListener.Connection,
-			); err != nil {
+			if err := t.addXdsTCPFilterChain(xdsListener, emptyRoute, emptyClusterName, accesslog, tcpListener.Timeout, tcpListener.Connection, tcpListener.Metadata); err != nil {
 				errs = errors.Join(errs, err)
 			}
 		}

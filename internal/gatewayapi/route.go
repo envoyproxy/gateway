@@ -36,8 +36,6 @@ const (
 	// Request timeout, which is defined as Duration, specifies the upstream timeout for the route
 	// If not specified, the default is 15s
 	HTTPRequestTimeout = "15s"
-	// egPrefix is a prefix of annotation keys that are processed by Envoy Gateway
-	egPrefix = "gateway.envoyproxy.io/"
 )
 
 var (
@@ -1302,10 +1300,11 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 
 func buildResourceMetadata(resource client.Object, sectionName *gwapiv1.SectionName) *ir.ResourceMetadata {
 	metadata := &ir.ResourceMetadata{
-		Kind:        resource.GetObjectKind().GroupVersionKind().Kind,
-		Name:        resource.GetName(),
-		Namespace:   resource.GetNamespace(),
-		Annotations: ir.MapToSlice(filterEGPrefix(resource.GetAnnotations())),
+		Kind:               resource.GetObjectKind().GroupVersionKind().Kind,
+		Name:               resource.GetName(),
+		Namespace:          resource.GetNamespace(),
+		Annotations:        ir.MapToSlice(filterAnnotations(resource.GetAnnotations(), egv1a1.EnvoyGatewayAnnotationPrefix)),
+		IngressAnnotations: ir.MapToSlice(filterAnnotations(resource.GetAnnotations(), egv1a1.EnvoyGatewayIngressAnnotationPrefix)),
 	}
 	if sectionName != nil {
 		metadata.SectionName = string(*sectionName)
@@ -1313,18 +1312,18 @@ func buildResourceMetadata(resource client.Object, sectionName *gwapiv1.SectionN
 	return metadata
 }
 
-func filterEGPrefix(in map[string]string) map[string]string {
+func filterAnnotations(in map[string]string, prefix string) map[string]string {
 	if len(in) == 0 {
 		return nil
 	}
 
 	var out map[string]string
 	for k, v := range in {
-		if strings.HasPrefix(k, egPrefix) {
+		if strings.HasPrefix(k, prefix) {
 			if out == nil {
 				out = make(map[string]string, len(in))
 			}
-			out[strings.TrimPrefix(k, egPrefix)] = v
+			out[strings.TrimPrefix(k, prefix)] = v
 		}
 	}
 	return out

@@ -1261,6 +1261,19 @@
                           }
                         }
                       ],
+                      "metadata": {
+                        "filterMetadata": {
+                          "envoy-gateway": {
+                            "resources": [
+                              {
+                                "kind": "Gateway",
+                                "name": "eg",
+                                "namespace": "default"
+                              }
+                            ]
+                          }
+                        }
+                      },
                       "name": "tcproute/default/backend"
                     }
                   ],
@@ -1378,6 +1391,19 @@
                           }
                         }
                       ],
+                      "metadata": {
+                        "filterMetadata": {
+                          "envoy-gateway": {
+                            "resources": [
+                              {
+                                "kind": "Gateway",
+                                "name": "eg",
+                                "namespace": "default"
+                              }
+                            ]
+                          }
+                        }
+                      },
                       "name": "tlsroute/default/backend"
                     }
                   ],

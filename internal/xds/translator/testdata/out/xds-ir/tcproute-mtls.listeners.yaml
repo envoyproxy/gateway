@@ -9,6 +9,13 @@
         '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
         cluster: tcproute/default/tcproute-1/rule/-1
         statPrefix: tcp-10090
+    metadata:
+      filterMetadata:
+        envoy-gateway:
+          resources:
+          - kind: Gateway
+            name: gateway-1
+            namespace: envoy-gateway
     name: tcproute/default/tcproute-1
   maxConnectionsToAcceptPerSocketEvent: 1
   name: envoy-gateway/gateway-1/tcp

@@ -3,6 +3,16 @@
 # and the filters should be merged into the DefaultFilterChain of the HTTP connection manager.
 http:
   - name: default/gateway-1/http
+    metadata:
+      name: gateway-1
+      namespace: default
+      sectionName: http
+      annotations:
+        - key: foo
+          value: bar
+      ingressAnnotation:
+        - key: foobar
+          value: barfoo
     address: 0.0.0.0
     hostnames:
       - 'www.foo.com'
@@ -77,6 +87,13 @@ http:
                 - header2
               path: /auth
   - name: default/gateway-2/http
+    metadata:
+      name: gateway-2
+      namespace: default
+      sectionName: http
+      annotations:
+        - key: bar
+          value: foo
     address: 0.0.0.0
     hostnames:
       - 'www.bar.com'

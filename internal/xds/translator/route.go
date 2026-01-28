@@ -50,7 +50,7 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute, httpListener *ir.HTTPListener) (*rou
 	router := &routev3.Route{
 		Name:     httpRoute.Name,
 		Match:    buildXdsRouteMatch(connectMatch, httpRoute.PathMatch, httpRoute.HeaderMatches, httpRoute.QueryParamMatches, httpRoute.CookieMatches),
-		Metadata: buildXdsMetadata(httpRoute.Metadata),
+		Metadata: buildXdsMetadata(httpRoute.Metadata, false),
 	}
 
 	if len(httpRoute.AddRequestHeaders) > 0 {

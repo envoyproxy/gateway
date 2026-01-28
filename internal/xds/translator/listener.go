@@ -470,6 +470,11 @@ func (t *Translator) addHCMToXDSListener(
 	}
 
 	if irListener.TLS != nil {
+		// When the default filter chain is updated, the entire listener is drained: https://github.com/envoyproxy/envoy/issues/43165.
+		// If solved, ds metadata can be added to default filter chain, when HTTP listeners are not merged.
+		// Currently, we only supports metadata for filter chains in filter_chains is updated.
+		filterChain.Metadata = buildXdsMetadata(irListener.Metadata, true)
+
 		var tSocket *corev3.TransportSocket
 
 		if http3Listener {
@@ -627,10 +632,7 @@ func hasHCMInDefaultFilterChain(xdsListener *listenerv3.Listener) bool {
 	return false
 }
 
-func (t *Translator) addXdsTCPFilterChain(
-	xdsListener *listenerv3.Listener, irRoute *ir.TCPRoute, clusterName string,
-	accesslog *ir.AccessLog, timeout *ir.ClientTimeout, connection *ir.ClientConnection,
-) error {
+func (t *Translator) addXdsTCPFilterChain(xdsListener *listenerv3.Listener, irRoute *ir.TCPRoute, clusterName string, accesslog *ir.AccessLog, timeout *ir.ClientTimeout, connection *ir.ClientConnection, metadata *ir.ResourceMetadata) error {
 	if irRoute == nil {
 		return errors.New("tcp listener is nil")
 	}
@@ -685,6 +687,7 @@ func (t *Translator) addXdsTCPFilterChain(
 		filterChain.TransportSocket = tSocket
 	}
 
+	filterChain.Metadata = buildXdsMetadata(metadata, true)
 	xdsListener.FilterChains = append(xdsListener.FilterChains, filterChain)
 
 	return nil

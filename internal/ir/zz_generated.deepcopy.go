@@ -3540,6 +3540,11 @@ func (in *ResourceMetadata) DeepCopyInto(out *ResourceMetadata) {
 		*out = make([]MapEntry, len(*in))
 		copy(*out, *in)
 	}
+	if in.IngressAnnotations != nil {
+		in, out := &in.IngressAnnotations, &out.IngressAnnotations
+		*out = make([]MapEntry, len(*in))
+		copy(*out, *in)
+	}
 	if in.Policies != nil {
 		in, out := &in.Policies, &out.Policies
 		*out = make([]*PolicyMetadata, len(*in))
