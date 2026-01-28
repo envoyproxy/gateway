@@ -690,10 +690,10 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 				}
 
 				al := &ir.OpenTelemetryAccessLog{
-					CELMatches: validExprs,
-					Resources:  sink.OpenTelemetry.Resources,
-					Headers:    sink.OpenTelemetry.Headers,
-					Authority:  getAuthorityFromDestination(ds),
+					CELMatches:         validExprs,
+					ResourceAttributes: sink.OpenTelemetry.GetResourceAttributes(),
+					Headers:            sink.OpenTelemetry.Headers,
+					Authority:          getAuthorityFromDestination(ds),
 					Destination: ir.RouteDestination{
 						Name:     destName,
 						Settings: ds,
@@ -779,12 +779,12 @@ func (t *Translator) processTracing(gw *gwapiv1.Gateway, envoyproxy *egv1a1.Envo
 	}
 
 	return &ir.Tracing{
-		Authority:    authority,
-		ServiceName:  serviceName,
-		SamplingRate: proxySamplingRate(tracing),
-		CustomTags:   tracing.CustomTags,
-		Tags:         tracing.Tags,
-		Resources:    getOpenTelemetryTracingResources(&tracing.Provider),
+		Authority:          authority,
+		ServiceName:        serviceName,
+		SamplingRate:       proxySamplingRate(tracing),
+		CustomTags:         tracing.CustomTags,
+		Tags:               tracing.Tags,
+		ResourceAttributes: getOpenTelemetryTracingResourceAttributes(&tracing.Provider),
 		Destination: ir.RouteDestination{
 			Name:     destName,
 			Settings: ds,
@@ -859,9 +859,9 @@ func getOpenTelemetryTracingHeaders(provider *egv1a1.TracingProvider) []gwapiv1.
 	return nil
 }
 
-func getOpenTelemetryTracingResources(provider *egv1a1.TracingProvider) map[string]string {
+func getOpenTelemetryTracingResourceAttributes(provider *egv1a1.TracingProvider) map[string]string {
 	if provider != nil && provider.OpenTelemetry != nil {
-		return provider.OpenTelemetry.Resources
+		return provider.OpenTelemetry.ResourceAttributes
 	}
 	return nil
 }
@@ -917,7 +917,7 @@ func (t *Translator) processMetrics(envoyproxy *egv1a1.EnvoyProxy, resources *re
 				},
 				Authority:                authority,
 				Headers:                  sink.OpenTelemetry.Headers,
-				Resources:                sink.OpenTelemetry.Resources,
+				ResourceAttributes:       sink.OpenTelemetry.ResourceAttributes,
 				ReportCountersAsDeltas:   ptr.Deref(sink.OpenTelemetry.ReportCountersAsDeltas, false),
 				ReportHistogramsAsDeltas: ptr.Deref(sink.OpenTelemetry.ReportHistogramsAsDeltas, false),
 			})

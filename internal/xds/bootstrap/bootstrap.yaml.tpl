@@ -93,13 +93,13 @@ stats_sinks:
     {{- if $sink.ReportHistogramsAsDeltas }}
     report_histograms_as_deltas: true
     {{- end }}
-    {{- if $sink.Resources }}
+    {{- if $sink.ResourceAttributes }}
     resource_detectors:
     - name: envoy.tracers.opentelemetry.resource_detectors.static_config
       typed_config:
         "@type": type.googleapis.com/envoy.extensions.tracers.opentelemetry.resource_detectors.v3.StaticConfigResourceDetectorConfig
         attributes:
-        {{- range $key, $value := $sink.Resources }}
+        {{- range $key, $value := $sink.ResourceAttributes }}
           {{ $key }}: "{{ $value }}"
         {{- end }}
     {{- end }}

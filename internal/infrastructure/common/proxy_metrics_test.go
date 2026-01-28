@@ -180,7 +180,7 @@ func TestResolvedMetricSinksConversion(t *testing.T) {
 							},
 						},
 					},
-					Resources: map[string]string{
+					ResourceAttributes: map[string]string{
 						"service.name":           "test-service",
 						"deployment.environment": "test",
 					},
@@ -190,7 +190,7 @@ func TestResolvedMetricSinksConversion(t *testing.T) {
 				{
 					Address: "otel-collector.example.com",
 					Port:    4317,
-					Resources: map[string]string{
+					ResourceAttributes: map[string]string{
 						"service.name":           "test-service",
 						"deployment.environment": "test",
 					},

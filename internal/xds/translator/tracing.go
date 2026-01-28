@@ -67,7 +67,7 @@ func buildHCMTracing(tracing *ir.Tracing) (*hcm.HttpConnectionManager_Tracing, e
 					InitialMetadata: buildGrpcInitialMetadata(tracing.Headers),
 				},
 				ServiceName:       tracing.ServiceName,
-				ResourceDetectors: buildResourceDetectors(tracing.Resources),
+				ResourceDetectors: buildResourceDetectors(tracing.ResourceAttributes),
 			}
 
 			return proto.ToAnyWithValidation(config)

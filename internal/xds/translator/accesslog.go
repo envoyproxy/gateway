@@ -302,7 +302,7 @@ func buildXdsAccessLog(al *ir.AccessLog, accessLogType ir.ProxyAccessLogType) ([
 				},
 				TransportApiVersion: cfgcore.ApiVersion_V3,
 			},
-			ResourceAttributes: convertToKeyValueList(otel.Resources, false),
+			ResourceAttributes: convertToKeyValueList(otel.ResourceAttributes, false),
 		}
 
 		var format string

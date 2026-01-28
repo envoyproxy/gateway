@@ -58,6 +58,7 @@ performance improvements: |
 
 # Deprecated features or APIs.
 deprecations: |
+  OpenTelemetry access log `resources` field is deprecated, use `resourceAttributes` instead.
 
 # Other notable changes not covered by the above sections.
 Other changes: |
