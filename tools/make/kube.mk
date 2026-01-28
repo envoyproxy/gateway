@@ -264,6 +264,11 @@ e2e-upgrade: create-cluster kube-install-image kube-deploy \
 	install-ratelimit install-eg-addons kube-install-examples-image \
 	e2e-prepare setup-mac-net-connect run-e2e-upgrade delete-cluster
 
+.PHONY: e2e-other
+e2e-other: create-cluster kube-install-image kube-deploy \
+	install-ratelimit install-eg-addons kube-install-examples-image \
+	e2e-prepare setup-mac-net-connect run-e2e-other delete-cluster
+
 .PHONY: e2e-core
 e2e-core: create-cluster kube-install-image kube-deploy \
 	install-ratelimit install-eg-addons kube-install-examples-image \
@@ -317,9 +322,7 @@ run-e2e: ## Run e2e tests
 	@$(LOG_TARGET)
 ifeq ($(E2E_RUN_TEST),)
 	$(MAKE) run-e2e-core
-	$(MAKE) run-e2e-merge-gateways
-	$(MAKE) run-e2e-multiple-gc
-	$(MAKE) run-e2e-upgrade
+	$(MAKE) run-e2e-other
 else
 	$(MAKE) run-e2e-core E2E_RUN_TEST=$(E2E_RUN_TEST)
 endif
@@ -333,6 +336,13 @@ else
 	go test $(E2E_TEST_ARGS) ./test/e2e $(E2E_TEST_SUITE_ARGS) --gateway-class=envoy-gateway --cleanup-base-resources=$(E2E_CLEANUP) \
 		--run-test $(E2E_RUN_TEST) $(E2E_REDIRECT)
 endif
+
+.PHONY: run-e2e-other
+run-e2e-other: ## Run non-core e2e tests
+	@$(LOG_TARGET)
+	$(MAKE) run-e2e-merge-gateways
+	$(MAKE) run-e2e-multiple-gc
+	$(MAKE) run-e2e-upgrade
 
 .PHONY: run-e2e-merge-gateways
 run-e2e-merge-gateways: ## Run merge gateways e2e tests

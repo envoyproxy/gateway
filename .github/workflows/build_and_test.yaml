@@ -209,12 +209,8 @@ jobs:
         suite:
         - name: core
           make_target: e2e-core
-        - name: merge-gateways
-          make_target: e2e-merge-gateways
-        - name: multiple-gc
-          make_target: e2e-multiple-gc
-        - name: upgrade
-          make_target: e2e-upgrade
+        - name: other
+          make_target: e2e-other
 
     steps:
     - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
