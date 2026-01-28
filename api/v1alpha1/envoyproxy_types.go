@@ -98,11 +98,15 @@ type EnvoyProxySpec struct {
 	// If unspecified, the default filter order is applied.
 	// Default filter order is:
 	//
+	// - envoy.filters.http.custom_response
+	//
 	// - envoy.filters.http.health_check
 	//
 	// - envoy.filters.http.fault
 	//
 	// - envoy.filters.http.cors
+	//
+	// - envoy.filters.http.header_mutation
 	//
 	// - envoy.filters.http.ext_authz
 	//
@@ -133,8 +137,6 @@ type EnvoyProxySpec struct {
 	// - envoy.filters.http.grpc_web
 	//
 	// - envoy.filters.http.grpc_stats
-	//
-	// - envoy.filters.http.custom_response
 	//
 	// - envoy.filters.http.credential_injector
 	//
@@ -240,10 +242,13 @@ type FilterPosition struct {
 }
 
 // EnvoyFilter defines the type of Envoy HTTP filter.
-// +kubebuilder:validation:Enum=envoy.filters.http.health_check;envoy.filters.http.fault;envoy.filters.http.cors;envoy.filters.http.ext_authz;envoy.filters.http.api_key_auth;envoy.filters.http.basic_auth;envoy.filters.http.oauth2;envoy.filters.http.jwt_authn;envoy.filters.http.stateful_session;envoy.filters.http.buffer;envoy.filters.http.lua;envoy.filters.http.ext_proc;envoy.filters.http.wasm;envoy.filters.http.rbac;envoy.filters.http.local_ratelimit;envoy.filters.http.ratelimit;envoy.filters.http.grpc_web;envoy.filters.http.grpc_stats;envoy.filters.http.custom_response;envoy.filters.http.credential_injector;envoy.filters.http.compressor
+// +kubebuilder:validation:Enum=envoy.filters.http.custom_response;envoy.filters.http.health_check;envoy.filters.http.fault;envoy.filters.http.cors;envoy.filters.http.header_mutation;envoy.filters.http.ext_authz;envoy.filters.http.api_key_auth;envoy.filters.http.basic_auth;envoy.filters.http.oauth2;envoy.filters.http.jwt_authn;envoy.filters.http.stateful_session;envoy.filters.http.buffer;envoy.filters.http.lua;envoy.filters.http.ext_proc;envoy.filters.http.wasm;envoy.filters.http.rbac;envoy.filters.http.local_ratelimit;envoy.filters.http.ratelimit;envoy.filters.http.grpc_web;envoy.filters.http.grpc_stats;envoy.filters.http.credential_injector;envoy.filters.http.compressor;envoy.filters.http.dynamic_forward_proxy
 type EnvoyFilter string
 
 const (
+	// EnvoyFilterCustomResponse defines the Envoy HTTP custom response filter.
+	EnvoyFilterCustomResponse EnvoyFilter = "envoy.filters.http.custom_response"
+
 	// EnvoyFilterHealthCheck defines the Envoy HTTP health check filter.
 	EnvoyFilterHealthCheck EnvoyFilter = "envoy.filters.http.health_check"
 
@@ -252,6 +257,9 @@ const (
 
 	// EnvoyFilterCORS defines the Envoy HTTP CORS filter.
 	EnvoyFilterCORS EnvoyFilter = "envoy.filters.http.cors"
+
+	// EnvoyFilterHeaderMutation defines the Envoy HTTP header mutation filter
+	EnvoyFilterHeaderMutation EnvoyFilter = "envoy.filters.http.header_mutation"
 
 	// EnvoyFilterExtAuthz defines the Envoy HTTP external authorization filter.
 	EnvoyFilterExtAuthz EnvoyFilter = "envoy.filters.http.ext_authz"
@@ -272,14 +280,17 @@ const (
 	// EnvoyFilterSessionPersistence defines the Envoy HTTP session persistence filter.
 	EnvoyFilterSessionPersistence EnvoyFilter = "envoy.filters.http.stateful_session"
 
+	// EnvoyFilterBuffer defines the Envoy HTTP buffer filter
+	EnvoyFilterBuffer EnvoyFilter = "envoy.filters.http.buffer"
+
+	// EnvoyFilterLua defines the Envoy HTTP Lua filter.
+	EnvoyFilterLua EnvoyFilter = "envoy.filters.http.lua"
+
 	// EnvoyFilterExtProc defines the Envoy HTTP external process filter.
 	EnvoyFilterExtProc EnvoyFilter = "envoy.filters.http.ext_proc"
 
 	// EnvoyFilterWasm defines the Envoy HTTP WebAssembly filter.
 	EnvoyFilterWasm EnvoyFilter = "envoy.filters.http.wasm"
-
-	// EnvoyFilterLua defines the Envoy HTTP Lua filter.
-	EnvoyFilterLua EnvoyFilter = "envoy.filters.http.lua"
 
 	// EnvoyFilterRBAC defines the Envoy RBAC filter.
 	EnvoyFilterRBAC EnvoyFilter = "envoy.filters.http.rbac"
@@ -296,9 +307,6 @@ const (
 	// EnvoyFilterGRPCStats defines the Envoy HTTP gRPC stats filter.
 	EnvoyFilterGRPCStats EnvoyFilter = "envoy.filters.http.grpc_stats"
 
-	// EnvoyFilterCustomResponse defines the Envoy HTTP custom response filter.
-	EnvoyFilterCustomResponse EnvoyFilter = "envoy.filters.http.custom_response"
-
 	// EnvoyFilterCredentialInjector defines the Envoy HTTP credential injector filter.
 	EnvoyFilterCredentialInjector EnvoyFilter = "envoy.filters.http.credential_injector"
 
@@ -307,12 +315,6 @@ const (
 
 	// EnvoyFilterRouter defines the Envoy HTTP router filter.
 	EnvoyFilterRouter EnvoyFilter = "envoy.filters.http.router"
-
-	// EnvoyFilterBuffer defines the Envoy HTTP buffer filter
-	EnvoyFilterBuffer EnvoyFilter = "envoy.filters.http.buffer"
-
-	// EnvoyFilterHeaderMutation defines the Envoy HTTP header mutation filter
-	EnvoyFilterHeaderMutation EnvoyFilter = "envoy.filters.http.header_mutation"
 
 	// StatFormatterRouteName defines the Route Name formatter for stats
 	StatFormatterRouteName string = "%ROUTE_NAME%"
