@@ -4365,18 +4365,16 @@ _Appears in:_
 
 
 QueryParamMatch defines the match attributes within the query parameters of the request.
-Note: For Distinct match type, use the MatchType field (not StringMatch.Type) and leave StringMatch.Value empty.
 
 _Appears in:_
 - [RateLimitSelectCondition](#ratelimitselectcondition)
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
+| `type` | _[QueryParamMatchType](#queryparammatchtype)_ |  false  | Exact | Type specifies how to match against the value of the query parameter. |
 | `name` | _string_ |  true  |  | Name of the query parameter. |
-| `type` | _[StringMatchType](#stringmatchtype)_ |  false  | Exact | Type specifies how to match against a string. |
-| `value` | _string_ |  true  |  | Value specifies the string value that the match must have. |
-| `invert` | _boolean_ |  false  | false | Invert specifies whether the value match result will be inverted.<br />Do not set this field when MatchType="Distinct", implying matching on any/all unique<br />values within the query parameter. |
-| `matchType` | _[QueryParamMatchType](#queryparammatchtype)_ |  false  |  | MatchType specifies how to match against the value of the query parameter.<br />Use this field only when MatchType="Distinct" (which is not part of StringMatchType).<br />For Exact and RegularExpression, use StringMatch.Type instead. |
+| `value` | _string_ |  false  |  | Value of the query parameter.<br />Do not set this field when Type="Distinct", implying matching on any/all unique<br />values within the query parameter. |
+| `invert` | _boolean_ |  false  | false | Invert specifies whether the value match result will be inverted.<br />Do not set this field when Type="Distinct", implying matching on any/all unique<br />values within the query parameter. |
 
 
 #### QueryParamMatchType
@@ -5304,7 +5302,6 @@ _Appears in:_
 - [OIDCDenyRedirectHeader](#oidcdenyredirectheader)
 - [OtherSANMatch](#othersanmatch)
 - [ProxyMetrics](#proxymetrics)
-- [QueryParamMatch](#queryparammatch)
 - [SubjectAltNames](#subjectaltnames)
 
 | Field | Type | Required | Default | Description |
@@ -5323,7 +5320,6 @@ Valid MatchType values are "Exact", "Prefix", "Suffix", "RegularExpression".
 _Appears in:_
 - [OIDCDenyRedirectHeader](#oidcdenyredirectheader)
 - [OtherSANMatch](#othersanmatch)
-- [QueryParamMatch](#queryparammatch)
 - [StringMatch](#stringmatch)
 
 | Value | Description |

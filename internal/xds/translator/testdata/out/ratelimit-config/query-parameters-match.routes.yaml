@@ -19,8 +19,8 @@ rateLimits:
           name: x-user-id
   - ActionSpecifier:
       QueryParameterValueMatch:
-        descriptor_key: user
-        descriptor_value: user
+        descriptor_key: rule-0-match-1
+        descriptor_value: rule-0-match-1
         expect_match:
           value: true
         query_parameters:

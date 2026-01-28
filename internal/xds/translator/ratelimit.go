@@ -263,7 +263,8 @@ func buildRouteRateLimits(route *ir.HTTPRoute) (rateLimits []*routev3.RateLimit,
 			// Process each CIDR match in the rule.
 			buildCIDRMatchRateLimitActions(&rlActions, rule.CIDRMatch)
 			// Process each query parameter match in the rule.
-			buildQueryParamMatchRateLimitActions(&rlActions, rule.QueryParamMatches)
+			// Pass header match count as offset to continue match index sequence
+			buildQueryParamMatchRateLimitActions(&rlActions, domainRuleIdx, len(rule.HeaderMatches), rule.QueryParamMatches)
 
 			// Case when both header/method/path and cidr match are not set and the ratelimit
 			// will be applied to all traffic.
@@ -476,15 +477,17 @@ func buildCIDRMatchRateLimitActions(
 
 func buildQueryParamMatchRateLimitActions(
 	rlActions *[]*routev3.RateLimit_Action,
+	ruleIdx int,
+	matchIdxOffset int,
 	queryParamMatches []*ir.QueryParamMatch,
 ) {
-	for _, queryParam := range queryParamMatches {
+	for mIdx, queryParam := range queryParamMatches {
 		var action *routev3.RateLimit_Action
 
 		if queryParam.Distinct {
 			// For distinct matches, use QueryParameters action to match any value.
 			// Each unique value will get its own rate limit bucket.
-			descriptorKey := queryParam.Name
+			descriptorKey := getRouteRuleDescriptor(ruleIdx, matchIdxOffset+mIdx)
 			queryParamAction := &routev3.RateLimit_Action_QueryParameters{}
 			queryParamAction.DescriptorKey = descriptorKey
 			queryParamAction.QueryParameterName = queryParam.Name
@@ -496,8 +499,8 @@ func buildQueryParamMatchRateLimitActions(
 		} else {
 			// For non-distinct matches (exact, regex, invert), use QueryParameterValueMatch
 			// action to support advanced matching features like regex and invert.
-			descriptorKey := queryParam.Name
-			descriptorVal := queryParam.Name
+			descriptorKey := getRouteRuleDescriptor(ruleIdx, matchIdxOffset+mIdx)
+			descriptorVal := getRouteRuleDescriptor(ruleIdx, matchIdxOffset+mIdx)
 			queryParamMatcher := &routev3.QueryParameterMatcher{
 				Name: queryParam.Name,
 				QueryParameterMatchSpecifier: &routev3.QueryParameterMatcher_StringMatch{
@@ -884,13 +887,19 @@ func buildRateLimitServiceDescriptors(route *ir.HTTPRoute) []*rlsconfv3.RateLimi
 		}
 
 		// 5) Query Parameters
-		for _, queryParam := range rule.QueryParamMatches {
+		// Use header match count as offset to continue match index sequence
+		queryParamOffset := len(rule.HeaderMatches)
+		for mIdx, queryParam := range rule.QueryParamMatches {
 			pbDesc := new(rlsconfv3.RateLimitDescriptor)
 			pbDesc.ShadowMode = isRuleShadowMode(rule)
-			// For query parameters, always set only the key (no value).
-			// The actual value matching is handled by Envoy's QueryParameterValueMatch action,
-			// and the rate limit service only needs the key to identify the descriptor.
-			pbDesc.Key = queryParam.Name
+			// Use the same descriptor key pattern as header matches for consistency.
+			// For distinct matches, only set the key; for non-distinct, set both key and value.
+			if queryParam.Distinct {
+				pbDesc.Key = getRouteRuleDescriptor(domainRuleIdx, queryParamOffset+mIdx)
+			} else {
+				pbDesc.Key = getRouteRuleDescriptor(domainRuleIdx, queryParamOffset+mIdx)
+				pbDesc.Value = getRouteRuleDescriptor(domainRuleIdx, queryParamOffset+mIdx)
+			}
 
 			if cur != nil {
 				// The header/method/path or cidr match descriptor chain exists, add current

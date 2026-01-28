@@ -225,7 +225,8 @@ func buildRouteLocalRateLimits(local *ir.LocalRateLimit) (
 			buildMethodMatchLocalRateLimitAction(&rlActions, &descriptorEntries, rIdx, methodMatch)
 			buildPathMatchLocalRateLimitAction(&rlActions, &descriptorEntries, rIdx, rule.PathMatch)
 			buildCIDRMatchLocalRateLimitActions(&rlActions, &descriptorEntries, rule.CIDRMatch)
-			buildQueryParamMatchLocalRateLimitActions(&rlActions, &descriptorEntries, rule.QueryParamMatches)
+			// Pass header match count as offset to continue match index sequence
+			buildQueryParamMatchLocalRateLimitActions(&rlActions, &descriptorEntries, rIdx, len(rule.HeaderMatches), rule.QueryParamMatches)
 
 			// Create rate limit and descriptor
 			rateLimits = append(rateLimits, &routev3.RateLimit{Actions: rlActions})
@@ -437,16 +438,18 @@ func buildMethodMatchLocalRateLimitAction(
 func buildQueryParamMatchLocalRateLimitActions(
 	rlActions *[]*routev3.RateLimit_Action,
 	descriptorEntries *[]*rlv3.RateLimitDescriptor_Entry,
+	ruleIdx int,
+	matchIdxOffset int,
 	queryParamMatches []*ir.QueryParamMatch,
 ) {
-	for _, queryParam := range queryParamMatches {
+	for mIdx, queryParam := range queryParamMatches {
 		var action *routev3.RateLimit_Action
 		var entry *rlv3.RateLimitDescriptor_Entry
 
 		if queryParam.Distinct {
 			// For distinct matches, use QueryParameters action to match any value.
 			// Each unique value will get its own rate limit bucket.
-			descriptorKey := queryParam.Name
+			descriptorKey := getRouteRuleDescriptor(ruleIdx, matchIdxOffset+mIdx)
 			queryParamAction := &routev3.RateLimit_Action_QueryParameters{}
 			queryParamAction.DescriptorKey = descriptorKey
 			queryParamAction.QueryParameterName = queryParam.Name
@@ -463,8 +466,8 @@ func buildQueryParamMatchLocalRateLimitActions(
 		} else {
 			// For non-distinct matches (exact, regex, invert), use QueryParameterValueMatch
 			// action to support advanced matching features like regex and invert.
-			descriptorKey := queryParam.Name
-			descriptorVal := queryParam.Name
+			descriptorKey := getRouteRuleDescriptor(ruleIdx, matchIdxOffset+mIdx)
+			descriptorVal := getRouteRuleDescriptor(ruleIdx, matchIdxOffset+mIdx)
 			queryParamMatcher := &routev3.QueryParameterMatcher{
 				Name: queryParam.Name,
 				QueryParameterMatchSpecifier: &routev3.QueryParameterMatcher_StringMatch{

@@ -1583,27 +1583,17 @@ spec:
                                       QueryParams is a list of query parameters to match. Multiple query parameter values are ANDed together,
                                       meaning, a request MUST match all the specified query parameters.
                                     items:
-                                      description: |-
-                                        QueryParamMatch defines the match attributes within the query parameters of the request.
-                                        Note: For Distinct match type, use the MatchType field (not StringMatch.Type) and leave StringMatch.Value empty.
+                                      description: QueryParamMatch defines the match
+                                        attributes within the query parameters of
+                                        the request.
                                       properties:
                                         invert:
                                           default: false
                                           description: |-
                                             Invert specifies whether the value match result will be inverted.
-                                            Do not set this field when MatchType="Distinct", implying matching on any/all unique
+                                            Do not set this field when Type="Distinct", implying matching on any/all unique
                                             values within the query parameter.
                                           type: boolean
-                                        matchType:
-                                          description: |-
-                                            MatchType specifies how to match against the value of the query parameter.
-                                            Use this field only when MatchType="Distinct" (which is not part of StringMatchType).
-                                            For Exact and RegularExpression, use StringMatch.Type instead.
-                                          enum:
-                                          - Exact
-                                          - RegularExpression
-                                          - Distinct
-                                          type: string
                                         name:
                                           description: Name of the query parameter.
                                           maxLength: 256
@@ -1612,22 +1602,21 @@ spec:
                                         type:
                                           default: Exact
                                           description: Type specifies how to match
-                                            against a string.
+                                            against the value of the query parameter.
                                           enum:
                                           - Exact
-                                          - Prefix
-                                          - Suffix
                                           - RegularExpression
+                                          - Distinct
                                           type: string
                                         value:
-                                          description: Value specifies the string
-                                            value that the match must have.
+                                          description: |-
+                                            Value of the query parameter.
+                                            Do not set this field when Type="Distinct", implying matching on any/all unique
+                                            values within the query parameter.
                                           maxLength: 1024
-                                          minLength: 1
                                           type: string
                                       required:
                                       - name
-                                      - value
                                       type: object
                                     maxItems: 16
                                     type: array
@@ -1957,27 +1946,17 @@ spec:
                                       QueryParams is a list of query parameters to match. Multiple query parameter values are ANDed together,
                                       meaning, a request MUST match all the specified query parameters.
                                     items:
-                                      description: |-
-                                        QueryParamMatch defines the match attributes within the query parameters of the request.
-                                        Note: For Distinct match type, use the MatchType field (not StringMatch.Type) and leave StringMatch.Value empty.
+                                      description: QueryParamMatch defines the match
+                                        attributes within the query parameters of
+                                        the request.
                                       properties:
                                         invert:
                                           default: false
                                           description: |-
                                             Invert specifies whether the value match result will be inverted.
-                                            Do not set this field when MatchType="Distinct", implying matching on any/all unique
+                                            Do not set this field when Type="Distinct", implying matching on any/all unique
                                             values within the query parameter.
                                           type: boolean
-                                        matchType:
-                                          description: |-
-                                            MatchType specifies how to match against the value of the query parameter.
-                                            Use this field only when MatchType="Distinct" (which is not part of StringMatchType).
-                                            For Exact and RegularExpression, use StringMatch.Type instead.
-                                          enum:
-                                          - Exact
-                                          - RegularExpression
-                                          - Distinct
-                                          type: string
                                         name:
                                           description: Name of the query parameter.
                                           maxLength: 256
@@ -1986,22 +1965,21 @@ spec:
                                         type:
                                           default: Exact
                                           description: Type specifies how to match
-                                            against a string.
+                                            against the value of the query parameter.
                                           enum:
                                           - Exact
-                                          - Prefix
-                                          - Suffix
                                           - RegularExpression
+                                          - Distinct
                                           type: string
                                         value:
-                                          description: Value specifies the string
-                                            value that the match must have.
+                                          description: |-
+                                            Value of the query parameter.
+                                            Do not set this field when Type="Distinct", implying matching on any/all unique
+                                            values within the query parameter.
                                           maxLength: 1024
-                                          minLength: 1
                                           type: string
                                       required:
                                       - name
-                                      - value
                                       type: object
                                     maxItems: 16
                                     type: array
@@ -8391,8 +8369,6 @@ spec:
 
                   - envoy.filters.http.grpc_stats
 
-                  - envoy.filters.http.custom_response
-
                   - envoy.filters.http.credential_injector
 
                   - envoy.filters.http.compressor
@@ -8431,7 +8407,6 @@ spec:
                       - envoy.filters.http.ratelimit
                       - envoy.filters.http.grpc_web
                       - envoy.filters.http.grpc_stats
-                      - envoy.filters.http.custom_response
                       - envoy.filters.http.credential_injector
                       - envoy.filters.http.compressor
                       - envoy.filters.http.dynamic_forward_proxy
@@ -8461,7 +8436,6 @@ spec:
                       - envoy.filters.http.ratelimit
                       - envoy.filters.http.grpc_web
                       - envoy.filters.http.grpc_stats
-                      - envoy.filters.http.custom_response
                       - envoy.filters.http.credential_injector
                       - envoy.filters.http.compressor
                       - envoy.filters.http.dynamic_forward_proxy
@@ -8489,7 +8463,6 @@ spec:
                       - envoy.filters.http.ratelimit
                       - envoy.filters.http.grpc_web
                       - envoy.filters.http.grpc_stats
-                      - envoy.filters.http.custom_response
                       - envoy.filters.http.credential_injector
                       - envoy.filters.http.compressor
                       - envoy.filters.http.dynamic_forward_proxy

@@ -422,11 +422,9 @@ func TestBuildRateLimitRuleQueryParams(t *testing.T) {
 					{
 						QueryParams: []egv1a1.QueryParamMatch{
 							{
-								Name: "user",
-								StringMatch: egv1a1.StringMatch{
-									Type:  ptr.To(egv1a1.StringMatchExact),
-									Value: "alice",
-								},
+								Type:  ptr.To(egv1a1.QueryParamMatchExact),
+								Name:  "user",
+								Value: ptr.To("alice"),
 							},
 						},
 					},
@@ -491,11 +489,9 @@ func TestBuildRateLimitRuleQueryParams(t *testing.T) {
 						},
 						QueryParams: []egv1a1.QueryParamMatch{
 							{
-								Name: "user",
-								StringMatch: egv1a1.StringMatch{
-									Type:  ptr.To(egv1a1.StringMatchExact),
-									Value: "alice",
-								},
+								Type:  ptr.To(egv1a1.QueryParamMatchExact),
+								Name:  "user",
+								Value: ptr.To("alice"),
 							},
 						},
 					},
@@ -542,11 +538,9 @@ func TestBuildRateLimitRuleQueryParams(t *testing.T) {
 						},
 						QueryParams: []egv1a1.QueryParamMatch{
 							{
-								Name: "user",
-								StringMatch: egv1a1.StringMatch{
-									Type:  ptr.To(egv1a1.StringMatchExact),
-									Value: "alice",
-								},
+								Type:  ptr.To(egv1a1.QueryParamMatchExact),
+								Name:  "user",
+								Value: ptr.To("alice"),
 							},
 						},
 					},
@@ -589,11 +583,9 @@ func TestBuildRateLimitRuleQueryParams(t *testing.T) {
 					{
 						QueryParams: []egv1a1.QueryParamMatch{
 							{
-								Name: "user",
-								StringMatch: egv1a1.StringMatch{
-									Type:  ptr.To(egv1a1.StringMatchRegularExpression),
-									Value: "alice.*",
-								},
+								Type:  ptr.To(egv1a1.QueryParamMatchRegularExpression),
+								Name:  "user",
+								Value: ptr.To("alice.*"),
 							},
 						},
 					},
@@ -630,8 +622,8 @@ func TestBuildRateLimitRuleQueryParams(t *testing.T) {
 					{
 						QueryParams: []egv1a1.QueryParamMatch{
 							{
-								Name:      "user",
-								MatchType: ptr.To(egv1a1.QueryParamMatchDistinct),
+								Type: ptr.To(egv1a1.QueryParamMatchDistinct),
+								Name: "user",
 							},
 						},
 					},
@@ -667,11 +659,9 @@ func TestBuildRateLimitRuleQueryParams(t *testing.T) {
 					{
 						QueryParams: []egv1a1.QueryParamMatch{
 							{
-								Name: "user",
-								StringMatch: egv1a1.StringMatch{
-									Type:  ptr.To(egv1a1.StringMatchExact),
-									Value: "alice",
-								},
+								Type:   ptr.To(egv1a1.QueryParamMatchExact),
+								Name:   "user",
+								Value:  ptr.To("alice"),
 								Invert: ptr.To(true),
 							},
 						},
@@ -709,11 +699,9 @@ func TestBuildRateLimitRuleQueryParams(t *testing.T) {
 					{
 						QueryParams: []egv1a1.QueryParamMatch{
 							{
-								Name: "user",
-								StringMatch: egv1a1.StringMatch{
-									Type:  ptr.To(egv1a1.StringMatchRegularExpression),
-									Value: "[invalid",
-								},
+								Type:  ptr.To(egv1a1.QueryParamMatchRegularExpression),
+								Name:  "user",
+								Value: ptr.To("[invalid"),
 							},
 						},
 					},
@@ -734,9 +722,9 @@ func TestBuildRateLimitRuleQueryParams(t *testing.T) {
 					{
 						QueryParams: []egv1a1.QueryParamMatch{
 							{
-								Name:      "user",
-								MatchType: ptr.To(egv1a1.QueryParamMatchDistinct),
-								Invert:    ptr.To(true),
+								Type:   ptr.To(egv1a1.QueryParamMatchDistinct),
+								Name:   "user",
+								Invert: ptr.To(true),
 							},
 						},
 					},
@@ -757,11 +745,9 @@ func TestBuildRateLimitRuleQueryParams(t *testing.T) {
 					{
 						QueryParams: []egv1a1.QueryParamMatch{
 							{
-								Name: "user",
-								StringMatch: egv1a1.StringMatch{
-									Type:  ptr.To(egv1a1.StringMatchExact),
-									Value: "",
-								},
+								Type:  ptr.To(egv1a1.QueryParamMatchExact),
+								Name:  "user",
+								Value: ptr.To(""),
 							},
 						},
 					},
@@ -782,11 +768,9 @@ func TestBuildRateLimitRuleQueryParams(t *testing.T) {
 					{
 						QueryParams: []egv1a1.QueryParamMatch{
 							{
-								Name: "user",
-								StringMatch: egv1a1.StringMatch{
-									Type:  ptr.To(egv1a1.StringMatchRegularExpression),
-									Value: "",
-								},
+								Type:  ptr.To(egv1a1.QueryParamMatchRegularExpression),
+								Name:  "user",
+								Value: ptr.To(""),
 							},
 						},
 					},
@@ -807,18 +791,14 @@ func TestBuildRateLimitRuleQueryParams(t *testing.T) {
 					{
 						QueryParams: []egv1a1.QueryParamMatch{
 							{
-								Name: "user",
-								StringMatch: egv1a1.StringMatch{
-									Type:  ptr.To(egv1a1.StringMatchExact),
-									Value: "alice",
-								},
+								Type:  ptr.To(egv1a1.QueryParamMatchExact),
+								Name:  "user",
+								Value: ptr.To("alice"),
 							},
 							{
-								Name: "role",
-								StringMatch: egv1a1.StringMatch{
-									Type:  ptr.To(egv1a1.StringMatchExact),
-									Value: "admin",
-								},
+								Type:  ptr.To(egv1a1.QueryParamMatchExact),
+								Name:  "role",
+								Value: ptr.To("admin"),
 							},
 						},
 					},
