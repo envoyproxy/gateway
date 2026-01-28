@@ -31,7 +31,11 @@ import (
 )
 
 // oci URL prefix
-const ociURLPrefix = "oci://"
+const (
+	ociURLPrefix = "oci://"
+	// LuaConfigMapKey is the key used in ConfigMaps to store Lua scripts
+	LuaConfigMapKey = "lua"
+)
 
 // deprecatedFieldsUsedInEnvoyExtensionPolicy returns a map of deprecated field paths to their alternatives.
 func deprecatedFieldsUsedInEnvoyExtensionPolicy(policy *egv1a1.EnvoyExtensionPolicy) map[string]string {
@@ -725,7 +729,7 @@ func (t *Translator) getLuaBodyFromLocalObjectReference(
 ) (*string, error) {
 	cm := t.GetConfigMap(policyNs, string(valueRef.Name))
 	if cm != nil {
-		b, dataOk := cm.Data["lua"]
+		b, dataOk := cm.Data[LuaConfigMapKey]
 		switch {
 		case dataOk:
 			return &b, nil
@@ -736,7 +740,7 @@ func (t *Translator) getLuaBodyFromLocalObjectReference(
 			}
 			return &b, nil
 		default:
-			return nil, fmt.Errorf("can't find the key lua in the referenced configmap %s", valueRef.Name)
+			return nil, fmt.Errorf("can't find the key %s in the referenced configmap %s", LuaConfigMapKey, valueRef.Name)
 		}
 
 	} else {

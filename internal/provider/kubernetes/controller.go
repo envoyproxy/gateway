@@ -355,6 +355,12 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 		gwcResource := resource.NewResources()
 		gwcResource.GatewayClass = managedGC
 
+		// Set default EnvoyProxySpec from EnvoyGateway configuration if available.
+		// This serves as the lowest priority fallback when no GatewayClass or Gateway level EnvoyProxy is specified.
+		if r.envoyGateway != nil {
+			gwcResource.EnvoyProxyDefaultSpec = r.envoyGateway.GetEnvoyProxyDefaultSpec()
+		}
+
 		gwcResourceMapping := newResourceMapping()
 		gcLogger := logger.WithValues("GatewayClass", managedGC.Name)
 		// Process the parametersRef of the accepted GatewayClass.
@@ -551,9 +557,8 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 			gwcResource.Namespaces = append(gwcResource.Namespaces, namespace)
 		}
 
-		if gwcResource.EnvoyProxyForGatewayClass != nil && gwcResource.EnvoyProxyForGatewayClass.Spec.MergeGateways != nil {
-			r.setGatewayClassMerge(managedGC.Name, *gwcResource.EnvoyProxyForGatewayClass.Spec.MergeGateways)
-		}
+		// Update merge gateways tracking based on EnvoyProxy configuration
+		r.setGatewayClassMerge(managedGC.Name, gatewayapi.IsMergeGatewaysEnabled(gwcResource))
 
 		if len(gwcResource.Gateways) == 0 {
 			gcLogger.Info("No gateways found for accepted GatewayClass")

@@ -109,6 +109,23 @@ type EnvoyGatewaySpec struct {
 	// RuntimeFlags defines the runtime flags for Envoy Gateway.
 	// Unlike ExtensionAPIs, these flags are temporary and will be removed in future releases once the related features are stable.
 	RuntimeFlags *RuntimeFlags `json:"runtimeFlags,omitempty"`
+
+	// EnvoyProxy defines the default EnvoyProxy configuration that applies
+	// to all managed Envoy Proxy fleet. This is an optional field and when
+	// provided, the settings from this EnvoyProxySpec serve as the base
+	// defaults for all Envoy Proxy instances.
+	//
+	// The hierarchy for EnvoyProxy configuration is (highest to lowest priority):
+	// 1. Gateway-level EnvoyProxy (referenced via Gateway.spec.infrastructure.parametersRef)
+	// 2. GatewayClass-level EnvoyProxy (referenced via GatewayClass.spec.parametersRef)
+	// 3. This EnvoyProxy default spec
+	//
+	// Currently, the most specific EnvoyProxy configuration wins completely (replace semantics).
+	// A future release will introduce merge semantics to allow combining configurations
+	// across multiple levels.
+	//
+	// +optional
+	EnvoyProxy *EnvoyProxySpec `json:"envoyProxy,omitempty"`
 }
 
 // GatewayAPI defines an experimental Gateway API resource that can be enabled.

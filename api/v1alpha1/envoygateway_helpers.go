@@ -123,6 +123,12 @@ func (e *EnvoyGateway) TopologyInjectorDisabled() bool {
 	return false
 }
 
+// GetEnvoyProxyDefaultSpec returns the default EnvoyProxySpec if specified,
+// otherwise returns nil.
+func (e *EnvoyGateway) GetEnvoyProxyDefaultSpec() *EnvoyProxySpec {
+	return e.EnvoyProxy
+}
+
 // defaultRuntimeFlags are the default runtime flags for Envoy Gateway.
 var defaultRuntimeFlags = map[RuntimeFlag]bool{
 	XDSNameSchemeV2: false,
