@@ -12,6 +12,10 @@ import (
 const (
 	OIDCClientSecretKey = "client-secret"
 	OIDCClientIDKey     = "client-id"
+	OIDCIssuerKey                 = "issuer"
+	OIDCAuthorizationEndpointKey  = "authorization-endpoint"
+	OIDCTokenEndpointKey          = "token-endpoint"
+	OIDCEndSessionEndpointKey     = "end-session-endpoint"
 )
 
 // OIDC defines the configuration for the OpenID Connect (OIDC) authentication.
@@ -171,6 +175,7 @@ type OIDC struct {
 // +kubebuilder:validation:XValidation:rule="!has(self.backendRef)",message="BackendRefs must be used, backendRef is not supported."
 // +kubebuilder:validation:XValidation:rule="has(self.backendSettings)? (has(self.backendSettings.retry)?(has(self.backendSettings.retry.perRetry)? !has(self.backendSettings.retry.perRetry.timeout):true):true):true",message="Retry timeout is not supported."
 // +kubebuilder:validation:XValidation:rule="has(self.backendSettings)? (has(self.backendSettings.retry)?(has(self.backendSettings.retry.retryOn)? !has(self.backendSettings.retry.retryOn.httpStatusCodes):true):true):true",message="HTTPStatusCodes is not supported."
+// +kubebuilder:validation:XValidation:rule="(has(self.issuer) && !has(self.issuerRef)) || (!has(self.issuer) && has(self.issuerRef))", message="only one of issuer or issuerRef must be set"
 type OIDCProvider struct {
 	// +optional
 	BackendCluster `json:",inline"`
@@ -179,10 +184,23 @@ type OIDCProvider struct {
 	// Issuer MUST be a URI RFC 3986 [RFC3986] with a scheme component that MUST
 	// be https, a host component, and optionally, port and path components and
 	// no query or fragment components.
+	//
+	// Only one of issuer or issuerRef must be set.
+	// +optional
 	// +kubebuilder:validation:MinLength=1
-	Issuer string `json:"issuer"`
-
-	// TODO zhaohuabing validate the issuer
+	Issuer *string `json:"issuer,omitempty"`
+	
+	// IssuerRef defines the OIDC Provider's configuration as a reference to a secret or configmap.
+	// The referenced resource should contain the following keys:
+	// - issuer
+	// - authorization-endpoint
+	// - token-endpoint
+	// - end-session-endpoint
+	//
+	// Only one of issuer or issuerRef must be set.
+	// +kubebuilder:validation:XValidation:rule="self.kind in ['ConfigMap', 'Secret'] && self.group in ['', 'v1']",message="Only a reference to an object of kind ConfigMap or Secret belonging to default v1 API group is supported."
+	// +optional
+	IssuerRef *gwapiv1.SecretObjectReference `json:"issuerRef,omitempty"`
 
 	// The OIDC Provider's [authorization endpoint](https://openid.net/specs/openid-connect-core-1_0.html#AuthorizationEndpoint).
 	// If not provided, EG will try to discover it from the provider's [Well-Known Configuration Endpoint](https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfigurationResponse).
@@ -200,6 +218,7 @@ type OIDCProvider struct {
 	//
 	// If the end session endpoint is provided, EG will use it to log out the user from the OIDC Provider when the user accesses the logout path.
 	// EG will also try to discover the end session endpoint from the provider's [Well-Known Configuration Endpoint](https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfigurationResponse) when authorizationEndpoint or tokenEndpoint is not provided.
+	//
 	// +optional
 	EndSessionEndpoint *string `json:"endSessionEndpoint,omitempty"`
 }

@@ -596,6 +596,24 @@ func secretSecurityPolicyIndexFunc(rawObj client.Object) []string {
 		if securityPolicy.Spec.OIDC.ClientIDRef != nil {
 			secretReferences = append(secretReferences, *securityPolicy.Spec.OIDC.ClientIDRef)
 		}
+
+		// Add OIDC provider references
+		provider := securityPolicy.Spec.OIDC.Provider
+		for _, ref := range []*egv1a1.LocalObjectKeyReference{
+			provider.IssuerRef,
+			provider.AuthorizationEndpointRef,
+			provider.TokenEndpointRef,
+			provider.EndSessionEndpointRef,
+		} {
+			if ref != nil && ref.Kind == resource.KindSecret {
+				values = append(values,
+					types.NamespacedName{
+						Namespace: securityPolicy.Namespace,
+						Name:      string(ref.Name),
+					}.String(),
+				)
+			}
+		}
 	}
 	if securityPolicy.Spec.APIKeyAuth != nil {
 		secretReferences = append(secretReferences, securityPolicy.Spec.APIKeyAuth.CredentialRefs...)
@@ -692,6 +710,26 @@ func configMapSecurityPolicyIndexFunc(rawObj client.Object) []string {
 					types.NamespacedName{
 						Namespace: securityPolicy.Namespace,
 						Name:      string(provider.LocalJWKS.ValueRef.Name),
+					}.String(),
+				)
+			}
+		}
+	}
+
+	if securityPolicy.Spec.OIDC != nil {
+		// Add OIDC provider references
+		provider := securityPolicy.Spec.OIDC.Provider
+		for _, ref := range []*egv1a1.LocalObjectKeyReference{
+			provider.IssuerRef,
+			provider.AuthorizationEndpointRef,
+			provider.TokenEndpointRef,
+			provider.EndSessionEndpointRef,
+		} {
+			if ref != nil && ref.Kind == resource.KindConfigMap {
+				values = append(values,
+					types.NamespacedName{
+						Namespace: securityPolicy.Namespace,
+						Name:      string(ref.Name),
 					}.String(),
 				)
 			}
