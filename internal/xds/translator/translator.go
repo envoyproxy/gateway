@@ -375,12 +375,12 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 		}
 
 		if addHCM {
-			if err = t.addHCMToXDSListener(tcpXDSListener, httpListener, accessLog, tracing, false, httpListener.Connection); err != nil {
+			if err = t.addHCMToXDSListener(tcpXDSListener, httpListener, accessLog, tracing, metrics, false, httpListener.Connection); err != nil {
 				errs = errors.Join(errs, err)
 				continue
 			}
 			if http3Enabled {
-				if err = t.addHCMToXDSListener(quicXDSListener, httpListener, accessLog, tracing, true, httpListener.Connection); err != nil {
+				if err = t.addHCMToXDSListener(quicXDSListener, httpListener, accessLog, tracing, metrics, true, httpListener.Connection); err != nil {
 					errs = errors.Join(errs, err)
 					continue
 				}

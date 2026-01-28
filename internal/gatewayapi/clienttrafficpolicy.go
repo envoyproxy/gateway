@@ -493,6 +493,9 @@ func (t *Translator) translateClientTrafficPolicyForListener(
 			}
 		}
 
+		// Translate GRPC Settings
+		translateGRPCSettings(policy.Spec.GRPC, httpIR)
+
 		// Translate Health Check Settings
 		translateHealthCheckSettings(policy.Spec.HealthCheck, httpIR)
 
@@ -768,6 +771,17 @@ func translateHTTP1Settings(http1Settings *egv1a1.HTTP1Settings, connection *ir.
 		}
 	}
 	return nil
+}
+
+func translateGRPCSettings(grpcSettings *egv1a1.GRPCSettings, httpIR *ir.HTTPListener) {
+	// Return early if not set
+	if grpcSettings == nil {
+		return
+	}
+	if httpIR.GRPC == nil {
+		httpIR.GRPC = &ir.GRPCSettings{}
+	}
+	httpIR.GRPC.EnableGRPCWeb = grpcSettings.EnableWeb
 }
 
 func translateHealthCheckSettings(healthCheckSettings *egv1a1.HealthCheckSettings, httpIR *ir.HTTPListener) {

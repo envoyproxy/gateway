@@ -3,7 +3,9 @@ http:
   externalPort: 80
   hostnames:
   - '*'
-  isHTTP2: true
+  grpc:
+    enableGRPCStats: true
+    enableGRPCWeb: true
   metadata:
     kind: Gateway
     name: gateway-1
