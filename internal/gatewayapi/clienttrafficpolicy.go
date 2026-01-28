@@ -852,7 +852,7 @@ func (t *Translator) buildListenerTLSParameters(
 		}
 
 		for _, caCertRef := range tlsParams.ClientValidation.CACertificateRefs {
-			caCertBytes, err := t.validateAndGetDataAtKeyInRef(caCertRef, caCertKey, resources, from)
+			caCertBytes, err := t.validateAndGetDataAtKeyInRef(caCertRef, CACertKey, resources, from)
 			if err != nil {
 				return irTLSConfig, fmt.Errorf("failed to get certificate from ref: %w", err)
 			}
@@ -882,7 +882,7 @@ func (t *Translator) buildListenerTLSParameters(
 
 		if tlsParams.ClientValidation.Crl != nil {
 			for _, crlRef := range tlsParams.ClientValidation.Crl.Refs {
-				crlBytes, err := t.validateAndGetDataAtKeyInRef(crlRef, crlKey, resources, from)
+				crlBytes, err := t.validateAndGetDataAtKeyInRef(crlRef, CRLKey, resources, from)
 				if err != nil {
 					return irTLSConfig, fmt.Errorf("failed to get crl from ref: %w", err)
 				}

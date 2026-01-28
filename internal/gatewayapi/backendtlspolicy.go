@@ -476,7 +476,7 @@ func (t *Translator) getCaCertsFromCARefs(
 		case resource.KindConfigMap:
 			cm := t.GetConfigMap(namespace, string(caRef.Name))
 			if cm != nil {
-				if crt, dataOk := getOrFirstFromData(cm.Data, caCertKey); dataOk {
+				if crt, dataOk := getOrFirstFromData(cm.Data, CACertKey); dataOk {
 					if ca != "" {
 						ca += "\n"
 					}
@@ -490,7 +490,7 @@ func (t *Translator) getCaCertsFromCARefs(
 		case resource.KindSecret:
 			secret := t.GetSecret(namespace, string(caRef.Name))
 			if secret != nil {
-				if crt, dataOk := getOrFirstFromData(secret.Data, caCertKey); dataOk {
+				if crt, dataOk := getOrFirstFromData(secret.Data, CACertKey); dataOk {
 					if ca != "" {
 						ca += "\n"
 					}
