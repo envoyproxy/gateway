@@ -23487,6 +23487,13 @@ spec:
                         type: array
                     type: object
                 type: object
+              routingType:
+                description: |-
+                  RoutingType can be set to "Service" to use the Service Cluster IP for routing to the backend,
+                  or it can be set to "Endpoint" to use Endpoint routing.
+                  When specified, this overrides the EnvoyProxy-level setting for the relevant targeRefs.
+                  If not specified, the EnvoyProxy-level setting is used.
+                type: string
               targetRef:
                 description: |-
                   TargetRef is the name of the resource this policy is being attached to.
@@ -25119,6 +25126,21 @@ spec:
                       For more information on security implications, see haproxy.org/download/2.1/doc/proxy-protocol.txt
                     type: boolean
                 type: object
+              scheme:
+                description: |-
+                  Scheme configures how the :scheme pseudo-header is set for requests forwarded to backends.
+
+                  - Preserve (default): Preserves the :scheme from the original client request.
+                    Use this when backends need to know the original client scheme for URL generation or redirects.
+
+                  - MatchBackend: Sets the :scheme to match the backend transport protocol.
+                    If the backend uses TLS, the scheme is "https", otherwise "http".
+                    Use this when backends require the scheme to match the actual transport protocol,
+                    such as strictly HTTPS services that validate the :scheme header.
+                enum:
+                - Preserve
+                - MatchBackend
+                type: string
               targetRef:
                 description: |-
                   TargetRef is the name of the resource this policy is being attached to.
@@ -29150,11 +29172,15 @@ spec:
                   If unspecified, the default filter order is applied.
                   Default filter order is:
 
+                  - envoy.filters.http.custom_response
+
                   - envoy.filters.http.health_check
 
                   - envoy.filters.http.fault
 
                   - envoy.filters.http.cors
+
+                  - envoy.filters.http.header_mutation
 
                   - envoy.filters.http.ext_authz
 
@@ -29186,8 +29212,6 @@ spec:
 
                   - envoy.filters.http.grpc_stats
 
-                  - envoy.filters.http.custom_response
-
                   - envoy.filters.http.credential_injector
 
                   - envoy.filters.http.compressor
@@ -29206,9 +29230,11 @@ spec:
                         After defines the filter that should come after the filter.
                         Only one of Before or After must be set.
                       enum:
+                      - envoy.filters.http.custom_response
                       - envoy.filters.http.health_check
                       - envoy.filters.http.fault
                       - envoy.filters.http.cors
+                      - envoy.filters.http.header_mutation
                       - envoy.filters.http.ext_authz
                       - envoy.filters.http.api_key_auth
                       - envoy.filters.http.basic_auth
@@ -29224,7 +29250,6 @@ spec:
                       - envoy.filters.http.ratelimit
                       - envoy.filters.http.grpc_web
                       - envoy.filters.http.grpc_stats
-                      - envoy.filters.http.custom_response
                       - envoy.filters.http.credential_injector
                       - envoy.filters.http.compressor
                       - envoy.filters.http.dynamic_forward_proxy
@@ -29234,9 +29259,11 @@ spec:
                         Before defines the filter that should come before the filter.
                         Only one of Before or After must be set.
                       enum:
+                      - envoy.filters.http.custom_response
                       - envoy.filters.http.health_check
                       - envoy.filters.http.fault
                       - envoy.filters.http.cors
+                      - envoy.filters.http.header_mutation
                       - envoy.filters.http.ext_authz
                       - envoy.filters.http.api_key_auth
                       - envoy.filters.http.basic_auth
@@ -29252,7 +29279,6 @@ spec:
                       - envoy.filters.http.ratelimit
                       - envoy.filters.http.grpc_web
                       - envoy.filters.http.grpc_stats
-                      - envoy.filters.http.custom_response
                       - envoy.filters.http.credential_injector
                       - envoy.filters.http.compressor
                       - envoy.filters.http.dynamic_forward_proxy
@@ -29260,9 +29286,11 @@ spec:
                     name:
                       description: Name of the filter.
                       enum:
+                      - envoy.filters.http.custom_response
                       - envoy.filters.http.health_check
                       - envoy.filters.http.fault
                       - envoy.filters.http.cors
+                      - envoy.filters.http.header_mutation
                       - envoy.filters.http.ext_authz
                       - envoy.filters.http.api_key_auth
                       - envoy.filters.http.basic_auth
@@ -29278,7 +29306,6 @@ spec:
                       - envoy.filters.http.ratelimit
                       - envoy.filters.http.grpc_web
                       - envoy.filters.http.grpc_stats
-                      - envoy.filters.http.custom_response
                       - envoy.filters.http.credential_injector
                       - envoy.filters.http.compressor
                       - envoy.filters.http.dynamic_forward_proxy
@@ -44020,6 +44047,25 @@ spec:
                         maxItems: 16
                         type: array
                     type: object
+                  requestID:
+                    description: RequestID configures Envoy request ID behavior.
+                    properties:
+                      tracing:
+                        description: |-
+                          Tracing configures Envoy's behavior for the UUID request ID extension,
+                          including whether the trace sampling decision is packed into the UUID and
+                          whether `X-Request-ID` is used for trace sampling decisions.
+
+                          When omitted, the default behavior is `PackAndSample`, which alters the UUID
+                          to contain the trace sampling decision and uses `X-Request-ID` for stable
+                          trace sampling.
+                        enum:
+                        - PackAndSample
+                        - Sample
+                        - Pack
+                        - Disable
+                        type: string
+                    type: object
                   tracing:
                     description: |-
                       Tracing defines tracing configuration for managed proxies.
@@ -46519,8 +46565,8 @@ spec:
                                   description: |-
                                     Scopes are a special type of claim in a JWT token that represents the permissions of the client.
 
-                                    The value of the scopes field should be a space delimited string that is expected in the scope parameter,
-                                    as defined in RFC 6749: https://datatracker.ietf.org/doc/html/rfc6749#page-23.
+                                    The value of the scopes field should be a space delimited string that is expected in the
+                                    scope (or scp) claim, as defined in RFC 6749: https://datatracker.ietf.org/doc/html/rfc6749#page-23.
 
                                     If multiple scopes are specified, all scopes must match for the rule to match.
                                   items:
@@ -46537,6 +46583,29 @@ spec:
                               - message: at least one of claims or scopes must be
                                   specified
                                 rule: (has(self.claims) || has(self.scopes))
+                            sourceCIDRs:
+                              description: |-
+                                SourceCIDRs are the IP CIDR ranges of the source (L4 peer IP).
+                                Valid examples are "192.168.1.0/24" or "2001:db8::/64"
+
+                                If multiple CIDR ranges are specified, one of the CIDR ranges must match
+                                the source IP for the rule to match.
+
+                                The source IP is the IP address of the peer that connected to Envoy.
+                                This IP is obtained from the TCP connection's peer address and is not
+                                affected by X-Forwarded-For or other IP detection headers.
+                                If intermediaries (load balancers, NAT) terminate or proxy TCP,
+                                the original client IP will only be available if the intermediary
+                                preserves the source address (for example by enabling the PROXY protocol
+                                or avoiding SNAT).
+                              items:
+                                description: |-
+                                  CIDR defines a CIDR Address range.
+                                  A CIDR can be an IPv4 address range such as "192.168.1.0/24" or an IPv6 address range such as "2001:0db8:11a3:09d7::/64".
+                                pattern: ((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\/([0-9]+))|((([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))\/([0-9]+))
+                                type: string
+                              minItems: 1
+                              type: array
                           type: object
                           x-kubernetes-validations:
                           - message: at least one of clientCIDRs, jwt, or headers

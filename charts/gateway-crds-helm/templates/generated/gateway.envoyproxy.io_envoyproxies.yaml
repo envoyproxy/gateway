@@ -284,11 +284,15 @@ spec:
                   If unspecified, the default filter order is applied.
                   Default filter order is:
 
+                  - envoy.filters.http.custom_response
+
                   - envoy.filters.http.health_check
 
                   - envoy.filters.http.fault
 
                   - envoy.filters.http.cors
+
+                  - envoy.filters.http.header_mutation
 
                   - envoy.filters.http.ext_authz
 
@@ -320,8 +324,6 @@ spec:
 
                   - envoy.filters.http.grpc_stats
 
-                  - envoy.filters.http.custom_response
-
                   - envoy.filters.http.credential_injector
 
                   - envoy.filters.http.compressor
@@ -340,9 +342,11 @@ spec:
                         After defines the filter that should come after the filter.
                         Only one of Before or After must be set.
                       enum:
+                      - envoy.filters.http.custom_response
                       - envoy.filters.http.health_check
                       - envoy.filters.http.fault
                       - envoy.filters.http.cors
+                      - envoy.filters.http.header_mutation
                       - envoy.filters.http.ext_authz
                       - envoy.filters.http.api_key_auth
                       - envoy.filters.http.basic_auth
@@ -358,7 +362,6 @@ spec:
                       - envoy.filters.http.ratelimit
                       - envoy.filters.http.grpc_web
                       - envoy.filters.http.grpc_stats
-                      - envoy.filters.http.custom_response
                       - envoy.filters.http.credential_injector
                       - envoy.filters.http.compressor
                       - envoy.filters.http.dynamic_forward_proxy
@@ -368,9 +371,11 @@ spec:
                         Before defines the filter that should come before the filter.
                         Only one of Before or After must be set.
                       enum:
+                      - envoy.filters.http.custom_response
                       - envoy.filters.http.health_check
                       - envoy.filters.http.fault
                       - envoy.filters.http.cors
+                      - envoy.filters.http.header_mutation
                       - envoy.filters.http.ext_authz
                       - envoy.filters.http.api_key_auth
                       - envoy.filters.http.basic_auth
@@ -386,7 +391,6 @@ spec:
                       - envoy.filters.http.ratelimit
                       - envoy.filters.http.grpc_web
                       - envoy.filters.http.grpc_stats
-                      - envoy.filters.http.custom_response
                       - envoy.filters.http.credential_injector
                       - envoy.filters.http.compressor
                       - envoy.filters.http.dynamic_forward_proxy
@@ -394,9 +398,11 @@ spec:
                     name:
                       description: Name of the filter.
                       enum:
+                      - envoy.filters.http.custom_response
                       - envoy.filters.http.health_check
                       - envoy.filters.http.fault
                       - envoy.filters.http.cors
+                      - envoy.filters.http.header_mutation
                       - envoy.filters.http.ext_authz
                       - envoy.filters.http.api_key_auth
                       - envoy.filters.http.basic_auth
@@ -412,7 +418,6 @@ spec:
                       - envoy.filters.http.ratelimit
                       - envoy.filters.http.grpc_web
                       - envoy.filters.http.grpc_stats
-                      - envoy.filters.http.custom_response
                       - envoy.filters.http.credential_injector
                       - envoy.filters.http.compressor
                       - envoy.filters.http.dynamic_forward_proxy
@@ -15153,6 +15158,25 @@ spec:
                               : !has(self.openTelemetry)'
                         maxItems: 16
                         type: array
+                    type: object
+                  requestID:
+                    description: RequestID configures Envoy request ID behavior.
+                    properties:
+                      tracing:
+                        description: |-
+                          Tracing configures Envoy's behavior for the UUID request ID extension,
+                          including whether the trace sampling decision is packed into the UUID and
+                          whether `X-Request-ID` is used for trace sampling decisions.
+
+                          When omitted, the default behavior is `PackAndSample`, which alters the UUID
+                          to contain the trace sampling decision and uses `X-Request-ID` for stable
+                          trace sampling.
+                        enum:
+                        - PackAndSample
+                        - Sample
+                        - Pack
+                        - Disable
+                        type: string
                     type: object
                   tracing:
                     description: |-

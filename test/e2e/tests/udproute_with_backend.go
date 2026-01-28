@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/miekg/dns"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
@@ -79,6 +80,10 @@ func testUDPRouteWithBackend(t *testing.T, suite *suite.ConformanceTestSuite, ba
 	gwAddr := GatewayAndUDPRoutesMustBeAccepted(t, suite.Client, &suite.TimeoutConfig, suite.ControllerName, NewGatewayRef(gwNN), routeNN)
 
 	BackendMustBeAccepted(t, suite.Client, types.NamespacedName{Name: backend, Namespace: namespace})
+
+	// Wait for CoreDNS pod to be ready before sending DNS queries.
+	// This ensures the backend service is fully operational.
+	WaitForPods(t, suite.Client, namespace, map[string]string{"app": "udp"}, corev1.PodRunning, &PodReady)
 
 	msg := new(dns.Msg)
 	msg.SetQuestion(domain, dns.TypeA)

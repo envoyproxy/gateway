@@ -370,8 +370,8 @@ spec:
                                   description: |-
                                     Scopes are a special type of claim in a JWT token that represents the permissions of the client.
 
-                                    The value of the scopes field should be a space delimited string that is expected in the scope parameter,
-                                    as defined in RFC 6749: https://datatracker.ietf.org/doc/html/rfc6749#page-23.
+                                    The value of the scopes field should be a space delimited string that is expected in the
+                                    scope (or scp) claim, as defined in RFC 6749: https://datatracker.ietf.org/doc/html/rfc6749#page-23.
 
                                     If multiple scopes are specified, all scopes must match for the rule to match.
                                   items:
@@ -388,6 +388,29 @@ spec:
                               - message: at least one of claims or scopes must be
                                   specified
                                 rule: (has(self.claims) || has(self.scopes))
+                            sourceCIDRs:
+                              description: |-
+                                SourceCIDRs are the IP CIDR ranges of the source (L4 peer IP).
+                                Valid examples are "192.168.1.0/24" or "2001:db8::/64"
+
+                                If multiple CIDR ranges are specified, one of the CIDR ranges must match
+                                the source IP for the rule to match.
+
+                                The source IP is the IP address of the peer that connected to Envoy.
+                                This IP is obtained from the TCP connection's peer address and is not
+                                affected by X-Forwarded-For or other IP detection headers.
+                                If intermediaries (load balancers, NAT) terminate or proxy TCP,
+                                the original client IP will only be available if the intermediary
+                                preserves the source address (for example by enabling the PROXY protocol
+                                or avoiding SNAT).
+                              items:
+                                description: |-
+                                  CIDR defines a CIDR Address range.
+                                  A CIDR can be an IPv4 address range such as "192.168.1.0/24" or an IPv6 address range such as "2001:0db8:11a3:09d7::/64".
+                                pattern: ((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\/([0-9]+))|((([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))\/([0-9]+))
+                                type: string
+                              minItems: 1
+                              type: array
                           type: object
                           x-kubernetes-validations:
                           - message: at least one of clientCIDRs, jwt, or headers

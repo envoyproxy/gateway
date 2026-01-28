@@ -821,6 +821,7 @@ _Appears in:_
 | `http2` | _[HTTP2Settings](#http2settings)_ |  false  |  | HTTP2 provides HTTP/2 configuration on the listener. |
 | `http3` | _[HTTP3Settings](#http3settings)_ |  false  |  | HTTP3 provides HTTP/3 configuration on the listener. |
 | `healthCheck` | _[HealthCheckSettings](#healthchecksettings)_ |  false  |  | HealthCheck provides configuration for determining whether the HTTP/HTTPS listener is healthy. |
+| `scheme` | _[SchemeHeaderTransform](#schemeheadertransform)_ |  false  |  | Scheme configures how the :scheme pseudo-header is set for requests forwarded to backends.<br />- Preserve (default): Preserves the :scheme from the original client request.<br />  Use this when backends need to know the original client scheme for URL generation or redirects.<br />- MatchBackend: Sets the :scheme to match the backend transport protocol.<br />  If the backend uses TLS, the scheme is "https", otherwise "http".<br />  Use this when backends require the scheme to match the actual transport protocol,<br />  such as strictly HTTPS services that validate the :scheme header. |
 
 
 #### ClientValidationContext
@@ -1328,30 +1329,30 @@ _Appears in:_
 
 | Value | Description |
 | ----- | ----------- |
+| `envoy.filters.http.custom_response` | EnvoyFilterCustomResponse defines the Envoy HTTP custom response filter.<br /> | 
 | `envoy.filters.http.health_check` | EnvoyFilterHealthCheck defines the Envoy HTTP health check filter.<br /> | 
 | `envoy.filters.http.fault` | EnvoyFilterFault defines the Envoy HTTP fault filter.<br /> | 
 | `envoy.filters.http.cors` | EnvoyFilterCORS defines the Envoy HTTP CORS filter.<br /> | 
+| `envoy.filters.http.header_mutation` | EnvoyFilterHeaderMutation defines the Envoy HTTP header mutation filter<br /> | 
 | `envoy.filters.http.ext_authz` | EnvoyFilterExtAuthz defines the Envoy HTTP external authorization filter.<br /> | 
 | `envoy.filters.http.api_key_auth` | EnvoyFilterAPIKeyAuth defines the Envoy HTTP api key authentication filter.<br /> | 
 | `envoy.filters.http.basic_auth` | EnvoyFilterBasicAuth defines the Envoy HTTP basic authentication filter.<br /> | 
 | `envoy.filters.http.oauth2` | EnvoyFilterOAuth2 defines the Envoy HTTP OAuth2 filter.<br /> | 
 | `envoy.filters.http.jwt_authn` | EnvoyFilterJWTAuthn defines the Envoy HTTP JWT authentication filter.<br /> | 
 | `envoy.filters.http.stateful_session` | EnvoyFilterSessionPersistence defines the Envoy HTTP session persistence filter.<br /> | 
+| `envoy.filters.http.buffer` | EnvoyFilterBuffer defines the Envoy HTTP buffer filter<br /> | 
+| `envoy.filters.http.lua` | EnvoyFilterLua defines the Envoy HTTP Lua filter.<br /> | 
 | `envoy.filters.http.ext_proc` | EnvoyFilterExtProc defines the Envoy HTTP external process filter.<br /> | 
 | `envoy.filters.http.wasm` | EnvoyFilterWasm defines the Envoy HTTP WebAssembly filter.<br /> | 
-| `envoy.filters.http.lua` | EnvoyFilterLua defines the Envoy HTTP Lua filter.<br /> | 
 | `envoy.filters.http.rbac` | EnvoyFilterRBAC defines the Envoy RBAC filter.<br /> | 
 | `envoy.filters.http.local_ratelimit` | EnvoyFilterLocalRateLimit defines the Envoy HTTP local rate limit filter.<br /> | 
 | `envoy.filters.http.ratelimit` | EnvoyFilterRateLimit defines the Envoy HTTP rate limit filter.<br /> | 
 | `envoy.filters.http.grpc_web` | EnvoyFilterGRPCWeb defines the Envoy HTTP gRPC-web filter.<br /> | 
 | `envoy.filters.http.grpc_stats` | EnvoyFilterGRPCStats defines the Envoy HTTP gRPC stats filter.<br /> | 
-| `envoy.filters.http.custom_response` | EnvoyFilterCustomResponse defines the Envoy HTTP custom response filter.<br /> | 
 | `envoy.filters.http.credential_injector` | EnvoyFilterCredentialInjector defines the Envoy HTTP credential injector filter.<br /> | 
 | `envoy.filters.http.compressor` | EnvoyFilterCompressor defines the Envoy HTTP compressor filter.<br /> | 
 | `envoy.filters.http.dynamic_forward_proxy` | EnvoyFilterDynamicForwardProxy defines the Envoy HTTP dynamic forward proxy filter.<br /> | 
 | `envoy.filters.http.router` | EnvoyFilterRouter defines the Envoy HTTP router filter.<br /> | 
-| `envoy.filters.http.buffer` | EnvoyFilterBuffer defines the Envoy HTTP buffer filter<br /> | 
-| `envoy.filters.http.header_mutation` | EnvoyFilterHeaderMutation defines the Envoy HTTP header mutation filter<br /> | 
 
 
 #### EnvoyGateway
@@ -1376,6 +1377,7 @@ EnvoyGateway is the schema for the envoygateways API.
 | `extensionManager` | _[ExtensionManager](#extensionmanager)_ |  false  |  | ExtensionManager defines an extension manager to register for the Envoy Gateway Control Plane. |
 | `extensionApis` | _[ExtensionAPISettings](#extensionapisettings)_ |  false  |  | ExtensionAPIs defines the settings related to specific Gateway API Extensions<br />implemented by Envoy Gateway |
 | `runtimeFlags` | _[RuntimeFlags](#runtimeflags)_ |  true  |  | RuntimeFlags defines the runtime flags for Envoy Gateway.<br />Unlike ExtensionAPIs, these flags are temporary and will be removed in future releases once the related features are stable. |
+| `envoyProxy` | _[EnvoyProxySpec](#envoyproxyspec)_ |  false  |  | EnvoyProxy defines the default EnvoyProxy configuration that applies<br />to all managed Envoy Proxy fleet. This is an optional field and when<br />provided, the settings from this EnvoyProxySpec serve as the base<br />defaults for all Envoy Proxy instances.<br />The hierarchy for EnvoyProxy configuration is (highest to lowest priority):<br />1. Gateway-level EnvoyProxy (referenced via Gateway.spec.infrastructure.parametersRef)<br />2. GatewayClass-level EnvoyProxy (referenced via GatewayClass.spec.parametersRef)<br />3. This EnvoyProxy default spec<br />Currently, the most specific EnvoyProxy configuration wins completely (replace semantics).<br />A future release will introduce merge semantics to allow combining configurations<br />across multiple levels. |
 
 
 #### EnvoyGatewayAdmin
@@ -1662,6 +1664,7 @@ _Appears in:_
 | `extensionManager` | _[ExtensionManager](#extensionmanager)_ |  false  |  | ExtensionManager defines an extension manager to register for the Envoy Gateway Control Plane. |
 | `extensionApis` | _[ExtensionAPISettings](#extensionapisettings)_ |  false  |  | ExtensionAPIs defines the settings related to specific Gateway API Extensions<br />implemented by Envoy Gateway |
 | `runtimeFlags` | _[RuntimeFlags](#runtimeflags)_ |  true  |  | RuntimeFlags defines the runtime flags for Envoy Gateway.<br />Unlike ExtensionAPIs, these flags are temporary and will be removed in future releases once the related features are stable. |
+| `envoyProxy` | _[EnvoyProxySpec](#envoyproxyspec)_ |  false  |  | EnvoyProxy defines the default EnvoyProxy configuration that applies<br />to all managed Envoy Proxy fleet. This is an optional field and when<br />provided, the settings from this EnvoyProxySpec serve as the base<br />defaults for all Envoy Proxy instances.<br />The hierarchy for EnvoyProxy configuration is (highest to lowest priority):<br />1. Gateway-level EnvoyProxy (referenced via Gateway.spec.infrastructure.parametersRef)<br />2. GatewayClass-level EnvoyProxy (referenced via GatewayClass.spec.parametersRef)<br />3. This EnvoyProxy default spec<br />Currently, the most specific EnvoyProxy configuration wins completely (replace semantics).<br />A future release will introduce merge semantics to allow combining configurations<br />across multiple levels. |
 
 
 #### EnvoyGatewayTelemetry
@@ -1869,6 +1872,8 @@ _Appears in:_
 EnvoyProxySpec defines the desired state of EnvoyProxy.
 
 _Appears in:_
+- [EnvoyGateway](#envoygateway)
+- [EnvoyGatewaySpec](#envoygatewayspec)
 - [EnvoyProxy](#envoyproxy)
 
 | Field | Type | Required | Default | Description |
@@ -1882,7 +1887,7 @@ _Appears in:_
 | `extraArgs` | _string array_ |  false  |  | ExtraArgs defines additional command line options that are provided to Envoy.<br />More info: https://www.envoyproxy.io/docs/envoy/latest/operations/cli#command-line-options<br />Note: some command line options are used internally(e.g. --log-level) so they cannot be provided here. |
 | `mergeGateways` | _boolean_ |  false  |  | MergeGateways defines if Gateway resources should be merged onto the same Envoy Proxy Infrastructure.<br />Setting this field to true would merge all Gateway Listeners under the parent Gateway Class.<br />This means that the port, protocol and hostname tuple must be unique for every listener.<br />If a duplicate listener is detected, the newer listener (based on timestamp) will be rejected and its status will be updated with a "Accepted=False" condition. |
 | `shutdown` | _[ShutdownConfig](#shutdownconfig)_ |  false  |  | Shutdown defines configuration for graceful envoy shutdown process. |
-| `filterOrder` | _[FilterPosition](#filterposition) array_ |  false  |  | FilterOrder defines the order of filters in the Envoy proxy's HTTP filter chain.<br />The FilterPosition in the list will be applied in the order they are defined.<br />If unspecified, the default filter order is applied.<br />Default filter order is:<br />- envoy.filters.http.health_check<br />- envoy.filters.http.fault<br />- envoy.filters.http.cors<br />- envoy.filters.http.ext_authz<br />- envoy.filters.http.api_key_auth<br />- envoy.filters.http.basic_auth<br />- envoy.filters.http.oauth2<br />- envoy.filters.http.jwt_authn<br />- envoy.filters.http.stateful_session<br />- envoy.filters.http.buffer<br />- envoy.filters.http.lua<br />- envoy.filters.http.ext_proc<br />- envoy.filters.http.wasm<br />- envoy.filters.http.rbac<br />- envoy.filters.http.local_ratelimit<br />- envoy.filters.http.ratelimit<br />- envoy.filters.http.grpc_web<br />- envoy.filters.http.grpc_stats<br />- envoy.filters.http.custom_response<br />- envoy.filters.http.credential_injector<br />- envoy.filters.http.compressor<br />- envoy.filters.http.dynamic_forward_proxy<br />- envoy.filters.http.router<br />Note: "envoy.filters.http.router" cannot be reordered, it's always the last filter in the chain. |
+| `filterOrder` | _[FilterPosition](#filterposition) array_ |  false  |  | FilterOrder defines the order of filters in the Envoy proxy's HTTP filter chain.<br />The FilterPosition in the list will be applied in the order they are defined.<br />If unspecified, the default filter order is applied.<br />Default filter order is:<br />- envoy.filters.http.custom_response<br />- envoy.filters.http.health_check<br />- envoy.filters.http.fault<br />- envoy.filters.http.cors<br />- envoy.filters.http.header_mutation<br />- envoy.filters.http.ext_authz<br />- envoy.filters.http.api_key_auth<br />- envoy.filters.http.basic_auth<br />- envoy.filters.http.oauth2<br />- envoy.filters.http.jwt_authn<br />- envoy.filters.http.stateful_session<br />- envoy.filters.http.buffer<br />- envoy.filters.http.lua<br />- envoy.filters.http.ext_proc<br />- envoy.filters.http.wasm<br />- envoy.filters.http.rbac<br />- envoy.filters.http.local_ratelimit<br />- envoy.filters.http.ratelimit<br />- envoy.filters.http.grpc_web<br />- envoy.filters.http.grpc_stats<br />- envoy.filters.http.credential_injector<br />- envoy.filters.http.compressor<br />- envoy.filters.http.dynamic_forward_proxy<br />- envoy.filters.http.router<br />Note: "envoy.filters.http.router" cannot be reordered, it's always the last filter in the chain. |
 | `backendTLS` | _[BackendTLSConfig](#backendtlsconfig)_ |  false  |  | BackendTLS is the TLS configuration for the Envoy proxy to use when connecting to backends.<br />These settings are applied on backends for which TLS policies are specified. |
 | `ipFamily` | _[IPFamily](#ipfamily)_ |  false  |  | IPFamily specifies the IP family for the EnvoyProxy fleet.<br />This setting only affects the Gateway listener port and does not impact<br />other aspects of the Envoy proxy configuration.<br />If not specified, the system will operate as follows:<br />- It defaults to IPv4 only.<br />- IPv6 and dual-stack environments are not supported in this default configuration.<br />Note: To enable IPv6 or dual-stack functionality, explicit configuration is required. |
 | `preserveRouteOrder` | _boolean_ |  false  |  | PreserveRouteOrder determines if the order of matching for HTTPRoutes is determined by Gateway-API<br />specification (https://gateway-api.sigs.k8s.io/reference/1.4/spec/#httprouterule)<br />or preserves the order defined by users in the HTTPRoute's HTTPRouteRule list.<br />Default: False |
@@ -3052,7 +3057,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `provider` | _string_ |  true  |  | Provider is the name of the JWT provider that used to verify the JWT token.<br />In order to use JWT claims for authorization, you must configure the JWT<br />authentication with the same provider in the same `SecurityPolicy`. |
 | `claims` | _[JWTClaim](#jwtclaim) array_ |  false  |  | Claims are the claims in a JWT token.<br />If multiple claims are specified, all claims must match for the rule to match.<br />For example, if there are two claims: one for the audience and one for the issuer,<br />the rule will match only if both the audience and the issuer match. |
-| `scopes` | _[JWTScope](#jwtscope) array_ |  false  |  | Scopes are a special type of claim in a JWT token that represents the permissions of the client.<br />The value of the scopes field should be a space delimited string that is expected in the scope parameter,<br />as defined in RFC 6749: https://datatracker.ietf.org/doc/html/rfc6749#page-23.<br />If multiple scopes are specified, all scopes must match for the rule to match. |
+| `scopes` | _[JWTScope](#jwtscope) array_ |  false  |  | Scopes are a special type of claim in a JWT token that represents the permissions of the client.<br />The value of the scopes field should be a space delimited string that is expected in the<br />scope (or scp) claim, as defined in RFC 6749: https://datatracker.ietf.org/doc/html/rfc6749#page-23.<br />If multiple scopes are specified, all scopes must match for the rule to match. |
 
 
 #### JWTProvider
@@ -4334,6 +4339,7 @@ _Appears in:_
 | `accessLog` | _[ProxyAccessLog](#proxyaccesslog)_ |  false  |  | AccessLogs defines accesslog parameters for managed proxies.<br />If unspecified, will send default format to stdout. |
 | `tracing` | _[ProxyTracing](#proxytracing)_ |  false  |  | Tracing defines tracing configuration for managed proxies.<br />If unspecified, will not send tracing data. |
 | `metrics` | _[ProxyMetrics](#proxymetrics)_ |  true  |  | Metrics defines metrics configuration for managed proxies. |
+| `requestID` | _[RequestIDSettings](#requestidsettings)_ |  false  |  | RequestID configures Envoy request ID behavior. |
 
 
 #### ProxyTracing
@@ -4788,6 +4794,39 @@ _Appears in:_
 | `Disable` | Do not preserve or generate `X-Request-ID` header<br /> | 
 
 
+#### RequestIDExtensionAction
+
+_Underlying type:_ _string_
+
+RequestIDExtensionAction defines how the UUID request ID extension behaves
+with respect to packing the trace reason into the UUID and using the
+request ID for trace sampling decisions.
+
+_Appears in:_
+- [RequestIDSettings](#requestidsettings)
+
+| Value | Description |
+| ----- | ----------- |
+| `PackAndSample` | PackAndSample enables both behaviors:<br />- Alters the UUID to contain the trace sampling decision<br />- Uses `X-Request-ID` for trace sampling<br /> | 
+| `Sample` | Sample uses `X-Request-ID` for trace sampling decisions, but does NOT alter<br />the UUID to pack the trace sampling decision.<br /> | 
+| `Pack` | Pack alters the UUID to contain the trace sampling decision, but does NOT<br />use `X-Request-ID` for trace sampling decisions.<br /> | 
+| `Disable` | Disable disables both behaviors:<br />- Does not alter the UUID<br />- Does not use `X-Request-ID` for trace sampling<br /> | 
+
+
+#### RequestIDSettings
+
+
+
+RequestIDSettings defines configuration for Envoy's UUID request ID extension.
+
+_Appears in:_
+- [ProxyTelemetry](#proxytelemetry)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `tracing` | _[RequestIDExtensionAction](#requestidextensionaction)_ |  false  |  | Tracing configures Envoy's behavior for the UUID request ID extension,<br />including whether the trace sampling decision is packed into the UUID and<br />whether `X-Request-ID` is used for trace sampling decisions.<br />When omitted, the default behavior is `PackAndSample`, which alters the UUID<br />to contain the trace sampling decision and uses `X-Request-ID` for stable<br />trace sampling. |
+
+
 #### ResourceProviderType
 
 _Underlying type:_ _string_
@@ -4898,6 +4937,7 @@ _Underlying type:_ _string_
 RoutingType defines the type of routing of this Envoy proxy.
 
 _Appears in:_
+- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
 - [EnvoyProxySpec](#envoyproxyspec)
 
 | Value | Description |
@@ -4940,6 +4980,21 @@ _Appears in:_
 | `disabled` | _[RuntimeFlag](#runtimeflag) array_ |  true  |  |  |
 
 
+
+
+#### SchemeHeaderTransform
+
+_Underlying type:_ _string_
+
+SchemeHeaderTransform defines how the :scheme pseudo-header is set for requests forwarded to backends.
+
+_Appears in:_
+- [ClientTrafficPolicySpec](#clienttrafficpolicyspec)
+
+| Value | Description |
+| ----- | ----------- |
+| `Preserve` | SchemeHeaderTransformPreserve preserves the :scheme from the original client request.<br />This is the default behavior.<br /> | 
+| `MatchBackend` | SchemeHeaderTransformMatchBackend sets the :scheme to match the backend transport protocol.<br />If the backend uses TLS, the scheme is "https", otherwise "http".<br /> | 
 
 
 #### SecretTranslationConfig

@@ -496,6 +496,9 @@ func (t *Translator) translateClientTrafficPolicyForListener(
 		// Translate Health Check Settings
 		translateHealthCheckSettings(policy.Spec.HealthCheck, httpIR)
 
+		// Translate Scheme Header Transformation
+		translateSchemeHeaderTransform(policy.Spec.Scheme, httpIR)
+
 		// Translate TLS parameters
 		tlsConfig, err = t.buildListenerTLSParameters(policy, httpIR.TLS, resources)
 		if err != nil {
@@ -779,6 +782,18 @@ func translateHealthCheckSettings(healthCheckSettings *egv1a1.HealthCheckSetting
 	httpIR.HealthCheck = (*ir.HealthCheckSettings)(healthCheckSettings)
 }
 
+func translateSchemeHeaderTransform(scheme *egv1a1.SchemeHeaderTransform, httpIR *ir.HTTPListener) {
+	// Return early if not set or if set to Preserve (default behavior)
+	if scheme == nil || *scheme == egv1a1.SchemeHeaderTransformPreserve {
+		return
+	}
+
+	// Set MatchBackendScheme to true when scheme is set to MatchBackend
+	if *scheme == egv1a1.SchemeHeaderTransformMatchBackend {
+		httpIR.MatchBackendScheme = true
+	}
+}
+
 func (t *Translator) buildListenerTLSParameters(
 	policy *egv1a1.ClientTrafficPolicy,
 	irTLSConfig *ir.TLSConfig, resources *resource.Resources,
@@ -837,14 +852,23 @@ func (t *Translator) buildListenerTLSParameters(
 		}
 
 		for _, caCertRef := range tlsParams.ClientValidation.CACertificateRefs {
-			caCertBytes, err := t.validateAndGetDataAtKeyInRef(caCertRef, caCertKey, resources, from)
+			caCertBytes, err := t.validateAndGetDataAtKeyInRef(caCertRef, CACertKey, resources, from)
 			if err != nil {
 				return irTLSConfig, fmt.Errorf("failed to get certificate from ref: %w", err)
 			}
-			if err := validateCertificates(caCertBytes); err != nil {
-				return irTLSConfig, fmt.Errorf("invalid certificate in %s: %w", caCertRef.Name, err)
+			validCaCertBytes, listenerErr := filterValidCertificates(caCertBytes)
+			if listenerErr != nil {
+				if listenerErr.Reason() == gwapiv1.ListenerReasonInvalidCertificateRef {
+					return irTLSConfig, fmt.Errorf("no valid certificates exist in %s: %w", caCertRef.Name, listenerErr)
+				} else if listenerErr.Reason() == status.ListenerReasonPartiallyInvalidCertificateRef {
+					t.Logger.Sugar().Warn("some certificates are invalid but proceeding with valid ones",
+						"policy", utils.NamespacedName(policy),
+						"certificate", caCertRef.Name,
+						"error", listenerErr.Error(),
+					)
+				}
 			}
-			irCACert.Certificate = append(irCACert.Certificate, caCertBytes...)
+			irCACert.Certificate = append(irCACert.Certificate, validCaCertBytes...)
 		}
 		if len(irCACert.Certificate) > 0 {
 			irTLSConfig.CACertificate = irCACert
@@ -858,7 +882,7 @@ func (t *Translator) buildListenerTLSParameters(
 
 		if tlsParams.ClientValidation.Crl != nil {
 			for _, crlRef := range tlsParams.ClientValidation.Crl.Refs {
-				crlBytes, err := t.validateAndGetDataAtKeyInRef(crlRef, crlKey, resources, from)
+				crlBytes, err := t.validateAndGetDataAtKeyInRef(crlRef, CRLKey, resources, from)
 				if err != nil {
 					return irTLSConfig, fmt.Errorf("failed to get crl from ref: %w", err)
 				}

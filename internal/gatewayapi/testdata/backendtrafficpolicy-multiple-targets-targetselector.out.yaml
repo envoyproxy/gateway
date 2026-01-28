@@ -264,6 +264,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute
           namespace: envoy-gateway
+          policies:
+          - kind: BackendTrafficPolicy
+            name: policy-for-route-in-envoy-gateway-ns
+            namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute/rule/0/match/0/gateway_envoyproxy_io
         pathMatch:
           distinct: false

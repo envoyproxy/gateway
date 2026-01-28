@@ -570,6 +570,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-1
           namespace: default
+          policies:
+          - kind: BackendTrafficPolicy
+            name: policy-for-gateway
+            namespace: default
         name: httproute/default/httproute-1/rule/0/match/0/bar_example_com
         pathMatch:
           distinct: false
@@ -640,6 +644,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-2
           namespace: default
+          policies:
+          - kind: BackendTrafficPolicy
+            name: policy-for-gateway
+            namespace: default
         name: httproute/default/httproute-2/rule/0/match/0/foo_example_com
         pathMatch:
           distinct: false

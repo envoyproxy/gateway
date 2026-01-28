@@ -25,6 +25,7 @@ import (
 	preservecasev3 "github.com/envoyproxy/go-control-plane/envoy/extensions/http/header_formatters/preserve_case/v3"
 	customheaderv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/http/original_ip_detection/custom_header/v3"
 	xffv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/http/original_ip_detection/xff/v3"
+	uuidv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/request_id/uuid/v3"
 	quicv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/quic/v3"
 	tlsv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 	typev3 "github.com/envoyproxy/go-control-plane/envoy/type/v3"
@@ -371,6 +372,15 @@ func (t *Translator) addHCMToXDSListener(
 		Tracing:                       hcmTracing,
 		ForwardClientCertDetails:      buildForwardClientCertDetailsAction(irListener.Headers),
 		EarlyHeaderMutationExtensions: buildEarlyHeaderMutation(irListener.Headers),
+		RequestIdExtension:            buildRequestIDExtension(irListener.RequestID),
+	}
+
+	// Set the :scheme header to match the upstream transport protocol (http/https) if configured.
+	// This ensures the correct scheme is sent to backends using TLS when enabled.
+	if irListener.MatchBackendScheme {
+		mgr.SchemeHeaderTransformation = &corev3.SchemeHeaderTransformation{
+			MatchUpstream: true,
+		}
 	}
 
 	if requestID := ptr.Deref(irListener.Headers, ir.HeaderSettings{}).RequestID; requestID != nil {
@@ -1200,4 +1210,30 @@ func buildSetCurrentClientCertDetails(in *ir.HeaderSettings) *hcmv3.HttpConnecti
 	}
 
 	return clientCertDetails
+}
+
+func buildRequestIDExtension(requestID *ir.RequestIDExtensionAction) *hcmv3.RequestIDExtension {
+	if requestID == nil || *requestID == ir.RequestIDExtensionActionPackAndSample {
+		return nil
+	}
+
+	packTraceReason := false
+	useRequestIDForSampling := false
+
+	switch *requestID {
+	case ir.RequestIDExtensionActionPack:
+		packTraceReason = true
+	case ir.RequestIDExtensionActionSample:
+		useRequestIDForSampling = true
+	}
+
+	cfg := &uuidv3.UuidRequestIdConfig{
+		PackTraceReason:              wrapperspb.Bool(packTraceReason),
+		UseRequestIdForTraceSampling: wrapperspb.Bool(useRequestIDForSampling),
+	}
+
+	requestIDConfig, _ := proto.ToAnyWithValidation(cfg)
+	return &hcmv3.RequestIDExtension{
+		TypedConfig: requestIDConfig,
+	}
 }
