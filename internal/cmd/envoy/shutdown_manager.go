@@ -241,7 +241,7 @@ func getDownstreamCXActive(port int) (*int, error) {
 	}
 
 	totalConnection := filterDownstreamCXActive(r)
-	logger.Info(fmt.Sprintf("total downstream connections: %d", totalConnection))
+	logger.Info(fmt.Sprintf("total downstream connections: %d", *totalConnection))
 	return totalConnection, nil
 }
 
