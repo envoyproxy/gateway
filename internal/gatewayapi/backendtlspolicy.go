@@ -22,7 +22,12 @@ import (
 	"github.com/envoyproxy/gateway/internal/utils"
 )
 
-var ErrBackendTLSPolicyInvalidKind = fmt.Errorf("no CA bundle found in referenced ConfigMap, Secret, or ClusterTrustBundle")
+var (
+	ErrBackendTLSPolicyInvalidKind          = fmt.Errorf("Unsupported reference kind, supported kinds are ConfigMap, Secret, and ClusterTrustBundle")
+	ErrBackendTLSPolicyNoValidCACertificate = fmt.Errorf(
+		"no valid CA certificate found in referenced resources",
+	)
+)
 
 // ProcessBackendTLSPolicyStatus is called to post-process Backend TLS Policy status
 // after they were applied in all relevant translations.
@@ -287,33 +292,39 @@ func (t *Translator) processBackendTLSPolicy(
 	ancestorRefs = append(ancestorRefs, &parent)
 
 	if err != nil {
-		status.SetConditionForPolicyAncestors(&policy.Status,
+		acceptedReason := gwapiv1.BackendTLSPolicyReasonNoValidCACertificate
+		resolvedReason := gwapiv1.BackendTLSPolicyReasonInvalidCACertificateRef
+
+		if errors.Is(err, ErrBackendTLSPolicyInvalidKind) {
+			// Accepted MUST remain NoValidCACertificate (per Gateway API conformance)
+			resolvedReason = gwapiv1.BackendTLSPolicyReasonInvalidKind
+		}
+
+		status.SetConditionForPolicyAncestors(
+			&policy.Status,
 			ancestorRefs,
 			t.GatewayControllerName,
 			gwapiv1.PolicyConditionAccepted,
 			metav1.ConditionFalse,
-			gwapiv1.BackendTLSPolicyReasonNoValidCACertificate,
+			acceptedReason,
 			status.Error2ConditionMsg(err),
 			policy.Generation,
 		)
 
-		reason := gwapiv1.BackendTLSPolicyReasonInvalidCACertificateRef
-		if errors.Is(err, ErrBackendTLSPolicyInvalidKind) {
-			reason = gwapiv1.BackendTLSPolicyReasonInvalidKind
-		}
-
-		status.SetConditionForPolicyAncestors(&policy.Status,
+		status.SetConditionForPolicyAncestors(
+			&policy.Status,
 			ancestorRefs,
 			t.GatewayControllerName,
 			gwapiv1.BackendTLSPolicyConditionResolvedRefs,
 			metav1.ConditionFalse,
-			reason,
+			resolvedReason,
 			status.Error2ConditionMsg(err),
 			policy.Generation,
 		)
 
 		return nil, err
 	}
+
 	status.SetConditionForPolicyAncestors(&policy.Status,
 		ancestorRefs,
 		t.GatewayControllerName,
@@ -469,11 +480,13 @@ func (t *Translator) getCaCertsFromCARefs(
 	caCertificates []gwapiv1.LocalObjectReference,
 ) ([]byte, error) {
 	ca := ""
+	foundSupportedRef := false
 	for _, caRef := range caCertificates {
 		kind := string(caRef.Kind)
 
 		switch kind {
 		case resource.KindConfigMap:
+			foundSupportedRef = true
 			cm := t.GetConfigMap(namespace, string(caRef.Name))
 			if cm != nil {
 				if crt, dataOk := getOrFirstFromData(cm.Data, CACertKey); dataOk {
@@ -488,6 +501,7 @@ func (t *Translator) getCaCertsFromCARefs(
 				return nil, fmt.Errorf("configmap %s not found in namespace %s", caRef.Name, namespace)
 			}
 		case resource.KindSecret:
+			foundSupportedRef = true
 			secret := t.GetSecret(namespace, string(caRef.Name))
 			if secret != nil {
 				if crt, dataOk := getOrFirstFromData(secret.Data, CACertKey); dataOk {
@@ -502,6 +516,7 @@ func (t *Translator) getCaCertsFromCARefs(
 				return nil, fmt.Errorf("secret %s not found in namespace %s", caRef.Name, namespace)
 			}
 		case resource.KindClusterTrustBundle:
+			foundSupportedRef = true
 			ctb := t.GetClusterTrustBundle(string(caRef.Name))
 			if ctb != nil {
 				if ca != "" {
@@ -515,7 +530,10 @@ func (t *Translator) getCaCertsFromCARefs(
 	}
 
 	if ca == "" {
-		return nil, ErrBackendTLSPolicyInvalidKind
+		if !foundSupportedRef {
+			return nil, ErrBackendTLSPolicyInvalidKind
+		}
+		return nil, ErrBackendTLSPolicyNoValidCACertificate
 	}
 	return []byte(ca), nil
 }
