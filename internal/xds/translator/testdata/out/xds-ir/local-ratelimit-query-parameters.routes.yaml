@@ -20,8 +20,8 @@
           - entries:
             - key: rule-0-match-0
               value: rule-0-match-0
-            - key: user
-              value: user
+            - key: rule-0-match-1
+              value: rule-0-match-1
             tokenBucket:
               fillInterval: 3600s
               maxTokens: 10
@@ -44,8 +44,8 @@
                   stringMatch:
                     exact: one
             - queryParameterValueMatch:
-                descriptorKey: user
-                descriptorValue: user
+                descriptorKey: rule-0-match-1
+                descriptorValue: rule-0-match-1
                 expectMatch: true
                 queryParameters:
                 - name: user

@@ -9,8 +9,8 @@ descriptors:
         value: rule-0-match-0
         rate_limit: null
         descriptors:
-          - key: user
-            value: ""
+          - key: rule-0-match-1
+            value: rule-0-match-1
             rate_limit:
               requests_per_unit: 5
               unit: SECOND
