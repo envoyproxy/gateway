@@ -89,9 +89,55 @@ subjects:
   namespace: 'envoy-gateway-system'
 ```
 
-Envoy Gateway also supports configuration to you only watch resources in the specific namespaces by assigning
-`EnvoyGateway.provider.kubernetes.watch.namespaces` or `EnvoyGateway.provider.kubernetes.watch.namespaceSelector`.
-In this case, when you specify this configuration with Gateway Namespace Mode,Envoy Gateway will only watch for Gateway API resources in the specified namespaces and create needed Roles for infrastructure management in the specified namespaces.
+### Watch Mode Configuration
+
+Envoy Gateway also supports configuration to watch resources only in specific namespaces by using:
+- `EnvoyGateway.provider.kubernetes.watch.namespaces` - An explicit list of namespace names
+- `EnvoyGateway.provider.kubernetes.watch.namespaceSelector` - A label selector for dynamic namespace selection
+
+#### Using Explicit Namespace List
+
+When you specify an explicit namespace list with Gateway Namespace Mode, Envoy Gateway will:
+- Only watch for Gateway API resources in the specified namespaces
+- Create namespace-scoped Roles for infrastructure management in each specified namespace
+
+Example configuration:
+```yaml
+envoyGateway:
+  provider:
+    type: Kubernetes
+    kubernetes:
+      deploy:
+        type: GatewayNamespace
+      watch:
+        type: Namespaces
+        namespaces:
+          - team-a
+          - team-b
+```
+
+#### Using Namespace Selector
+
+When you use a namespace selector with Gateway Namespace Mode, Envoy Gateway will:
+- Watch for Gateway API resources in all namespaces matching the label selector
+- Use a ClusterRole for infrastructure management (since target namespaces are determined dynamically at runtime)
+
+Example configuration:
+```yaml
+envoyGateway:
+  provider:
+    type: Kubernetes
+    kubernetes:
+      deploy:
+        type: GatewayNamespace
+      watch:
+        type: NamespaceSelector
+        namespaceSelector:
+          matchLabels:
+            gateway: enabled
+```
+
+**Note:** When using `NamespaceSelector`, the ClusterRole for infrastructure management is automatically created by the Helm chart, providing permissions across all namespaces that match the selector.
 
 ## Testing
 

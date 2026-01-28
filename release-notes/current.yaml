@@ -8,6 +8,7 @@ breaking changes: |
   Set HTTPRoute Accepted status to False when RequestMirror filter is used together with DirectResponse or RequestRedirect filters.
   Removed Accept-Encoding header from requests to backends when compression is enabled to avoid double compression issues.
   The default value `stats_tags` has been changed to improve the prometheus metrics output. Following metrics are affected: `envoy_cluster_*_rq_time_count`, `envoy_cluster_*_total_match_count`, `envoy_cluster_circuit_breakers_*_cx_open`.
+  Default HTTP filter ordering now places envoy.filters.http.custom_response at the first, which can change the behavior of local replies and header processing.
 
 # Updates addressing vulnerabilities, security flaws, or compliance requirements.
 security updates: |
