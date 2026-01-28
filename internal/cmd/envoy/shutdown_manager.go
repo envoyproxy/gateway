@@ -246,7 +246,7 @@ func getDownstreamCXActive(port int) (*int, error) {
 }
 
 // skipConnectionRE is a regex to match connection stats to be excluded from total connections count
-// e.g. admin, ready and stat listener
+// e.g. admin, ready and stat listener and stats from worker thread
 var skipConnectionRE = regexp.MustCompile(`admin|19001|19003|worker`)
 
 func filterDownstreamCXActive(r *envoyStatsResponse) *int {
