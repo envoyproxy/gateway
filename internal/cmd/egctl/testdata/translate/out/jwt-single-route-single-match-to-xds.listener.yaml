@@ -135,6 +135,7 @@ xds:
                         normalizePayloadInMetadata:
                           spaceDelimitedClaims:
                           - scope
+                          - scp
                         payloadInMetadata: example
                         remoteJwks:
                           asyncFetch: {}

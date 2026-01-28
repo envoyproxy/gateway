@@ -62,6 +62,7 @@
                 normalizePayloadInMetadata:
                   spaceDelimitedClaims:
                   - scope
+                  - scp
                 payloadInMetadata: jwt1
                 remoteJwks:
                   asyncFetch: {}
@@ -77,6 +78,7 @@
                 normalizePayloadInMetadata:
                   spaceDelimitedClaims:
                   - scope
+                  - scp
                 payloadInMetadata: jwt2
                 remoteJwks:
                   asyncFetch: {}

@@ -9,7 +9,9 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -431,6 +433,373 @@ func TestClassAccepted(t *testing.T) {
 			// Process the test case objects.
 			res := classAccepted(tc.gc)
 			require.Equal(t, tc.expected, res)
+		})
+	}
+}
+
+func TestTransformConfigMapData(t *testing.T) {
+	testCases := []struct {
+		name     string
+		input    interface{}
+		expected map[string]string
+	}{
+		{
+			name:     "nil configmap",
+			input:    nil,
+			expected: nil,
+		},
+		{
+			name: "non-configmap object",
+			input: &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test",
+					Namespace: "default",
+				},
+			},
+			expected: nil,
+		},
+		{
+			name: "configmap with single key - no filtering",
+			input: &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test",
+					Namespace: "default",
+				},
+				Data: map[string]string{
+					"key1": "value1",
+				},
+			},
+			expected: map[string]string{
+				"key1": "value1",
+			},
+		},
+		{
+			name: "configmap with cached keys only",
+			input: &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test",
+					Namespace: "default",
+				},
+				Data: map[string]string{
+					gatewayapi.JWKSConfigMapKey:         "jwks-data",
+					gatewayapi.LuaConfigMapKey:          "lua-data",
+					gatewayapi.ResponseBodyConfigMapKey: "response-body-data",
+				},
+			},
+			expected: map[string]string{
+				gatewayapi.JWKSConfigMapKey:         "jwks-data",
+				gatewayapi.LuaConfigMapKey:          "lua-data",
+				gatewayapi.ResponseBodyConfigMapKey: "response-body-data",
+			},
+		},
+		{
+			name: "configmap with cached and non-cached keys",
+			input: &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test",
+					Namespace: "default",
+				},
+				Data: map[string]string{
+					gatewayapi.JWKSConfigMapKey:         "jwks-data",
+					gatewayapi.LuaConfigMapKey:          "lua-data",
+					"unwanted-key-1":                    "unwanted-value-1",
+					"unwanted-key-2":                    "unwanted-value-2",
+					gatewayapi.ResponseBodyConfigMapKey: "response-body-data",
+				},
+			},
+			expected: map[string]string{
+				gatewayapi.JWKSConfigMapKey:         "jwks-data",
+				gatewayapi.LuaConfigMapKey:          "lua-data",
+				gatewayapi.ResponseBodyConfigMapKey: "response-body-data",
+				// Note: First key "jwks" is expected, so no fallback key is added
+			},
+		},
+		{
+			name: "configmap with only non-cached keys",
+			input: &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test",
+					Namespace: "default",
+				},
+				Data: map[string]string{
+					"unwanted-key-1": "unwanted-value-1",
+					"unwanted-key-2": "unwanted-value-2",
+					"unwanted-key-3": "unwanted-value-3",
+				},
+			},
+			expected: map[string]string{
+				"unwanted-key-1": "unwanted-value-1", // first fallback key
+			},
+		},
+		{
+			name: "configmap with CACertKey and CRLKey",
+			input: &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test",
+					Namespace: "default",
+				},
+				Data: map[string]string{
+					gatewayapi.CACertKey: "ca-cert-data",
+					gatewayapi.CRLKey:    "crl-data",
+					"other-key":          "other-value",
+				},
+			},
+			expected: map[string]string{
+				gatewayapi.CACertKey: "ca-cert-data",
+				gatewayapi.CRLKey:    "crl-data",
+				// Note: First key "ca.crl" is expected, so no fallback key is added
+			},
+		},
+		{
+			name: "configmap with non-expected key first",
+			input: &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test",
+					Namespace: "default",
+				},
+				Data: map[string]string{
+					"unwanted-key":              "unwanted-value",
+					gatewayapi.JWKSConfigMapKey: "jwks-data",
+					gatewayapi.LuaConfigMapKey:  "lua-data",
+					"another-unwanted-key":      "another-value",
+				},
+			},
+			expected: map[string]string{
+				"another-unwanted-key":      "another-value", // first key in sorted order, added as fallback
+				gatewayapi.JWKSConfigMapKey: "jwks-data",
+				gatewayapi.LuaConfigMapKey:  "lua-data",
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			transform := composeTransforms(cache.TransformStripManagedFields(), transformConfigMapData)
+
+			result, err := transform(tc.input)
+			require.NoError(t, err)
+
+			if tc.expected == nil {
+				require.Equal(t, tc.input, result)
+				return
+			}
+
+			cm, ok := result.(*corev1.ConfigMap)
+			require.True(t, ok, "result should be a ConfigMap")
+			if tc.expected != nil {
+				require.Equal(t, tc.expected, cm.Data)
+			}
+		})
+	}
+}
+
+func TestTransformSecretData(t *testing.T) {
+	testCases := []struct {
+		name     string
+		input    interface{}
+		expected map[string][]byte
+	}{
+		{
+			name:     "nil secret",
+			input:    nil,
+			expected: nil,
+		},
+		{
+			name: "non-secret object",
+			input: &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test",
+					Namespace: "default",
+				},
+			},
+			expected: nil,
+		},
+		{
+			name: "secret with single key - no filtering",
+			input: &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test",
+					Namespace: "default",
+				},
+				Data: map[string][]byte{
+					"key1": []byte("value1"),
+				},
+			},
+			expected: map[string][]byte{
+				"key1": []byte("value1"),
+			},
+		},
+		{
+			name: "secret with cached keys only",
+			input: &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test",
+					Namespace: "default",
+				},
+				Data: map[string][]byte{
+					corev1.TLSCertKey:       []byte("cert-data"),
+					corev1.TLSPrivateKeyKey: []byte("key-data"),
+					egv1a1.TLSOCSPKey:       []byte("ocsp-data"),
+				},
+			},
+			expected: map[string][]byte{
+				corev1.TLSCertKey:       []byte("cert-data"),
+				corev1.TLSPrivateKeyKey: []byte("key-data"),
+				egv1a1.TLSOCSPKey:       []byte("ocsp-data"),
+			},
+		},
+		{
+			name: "secret with cached and non-cached keys",
+			input: &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test",
+					Namespace: "default",
+				},
+				Data: map[string][]byte{
+					corev1.TLSCertKey:       []byte("cert-data"),
+					corev1.TLSPrivateKeyKey: []byte("key-data"),
+					"unwanted-key-1":        []byte("unwanted-value-1"),
+					"unwanted-key-2":        []byte("unwanted-value-2"),
+					egv1a1.TLSOCSPKey:       []byte("ocsp-data"),
+				},
+			},
+			expected: map[string][]byte{
+				corev1.TLSCertKey:       []byte("cert-data"),
+				corev1.TLSPrivateKeyKey: []byte("key-data"),
+				egv1a1.TLSOCSPKey:       []byte("ocsp-data"),
+				// Note: First key "tls.crt" is expected, so no fallback key is added
+			},
+		},
+		{
+			name: "secret with only non-cached keys",
+			input: &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test",
+					Namespace: "default",
+				},
+				Data: map[string][]byte{
+					"unwanted-key-1": []byte("unwanted-value-1"),
+					"unwanted-key-2": []byte("unwanted-value-2"),
+					"unwanted-key-3": []byte("unwanted-value-3"),
+				},
+			},
+			expected: map[string][]byte{
+				"unwanted-key-1": []byte("unwanted-value-1"), // first key in sorted order
+			},
+		},
+		{
+			name: "secret with OIDC keys",
+			input: &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test",
+					Namespace: "default",
+				},
+				Data: map[string][]byte{
+					egv1a1.OIDCClientIDKey:     []byte("client-id"),
+					egv1a1.OIDCClientSecretKey: []byte("client-secret"),
+					"other-key":                []byte("other-value"),
+				},
+			},
+			expected: map[string][]byte{
+				egv1a1.OIDCClientIDKey:     []byte("client-id"),
+				egv1a1.OIDCClientSecretKey: []byte("client-secret"),
+				// Note: First key "client-id" is expected, so no fallback key is added
+			},
+		},
+		{
+			name: "secret with BasicAuth and APIKeys keys",
+			input: &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test",
+					Namespace: "default",
+				},
+				Data: map[string][]byte{
+					egv1a1.BasicAuthUsersSecretKey: []byte("basic-auth-data"),
+					egv1a1.APIKeysSecretKey:        []byte("api-keys-data"),
+					"unwanted-key":                 []byte("unwanted-value"),
+				},
+			},
+			expected: map[string][]byte{
+				egv1a1.BasicAuthUsersSecretKey: []byte("basic-auth-data"),
+				egv1a1.APIKeysSecretKey:        []byte("api-keys-data"),
+				// Note: First key ".htpasswd" is expected, so no fallback key is added
+			},
+		},
+		{
+			name: "secret with DockerConfigJsonKey",
+			input: &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test",
+					Namespace: "default",
+				},
+				Data: map[string][]byte{
+					corev1.DockerConfigJsonKey: []byte("docker-config"),
+					"other-key":                []byte("other-value"),
+				},
+			},
+			expected: map[string][]byte{
+				corev1.DockerConfigJsonKey: []byte("docker-config"),
+				// Note: First key ".dockerconfigjson" is expected, so no fallback key is added
+			},
+		},
+		{
+			name: "secret with CACertKey and CRLKey",
+			input: &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test",
+					Namespace: "default",
+				},
+				Data: map[string][]byte{
+					gatewayapi.CACertKey: []byte("ca-cert-data"),
+					gatewayapi.CRLKey:    []byte("crl-data"),
+					"other-key":          []byte("other-value"),
+				},
+			},
+			expected: map[string][]byte{
+				gatewayapi.CACertKey: []byte("ca-cert-data"),
+				gatewayapi.CRLKey:    []byte("crl-data"),
+				// Note: First key "ca.crl" is expected, so no fallback key is added
+			},
+		},
+		{
+			name: "secret with non-expected key first",
+			input: &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test",
+					Namespace: "default",
+				},
+				Data: map[string][]byte{
+					"unwanted-key":          []byte("unwanted-value"),
+					corev1.TLSCertKey:       []byte("cert-data"),
+					corev1.TLSPrivateKeyKey: []byte("key-data"),
+					"another-unwanted-key":  []byte("another-value"),
+				},
+			},
+			expected: map[string][]byte{
+				"another-unwanted-key":  []byte("another-value"), // first key in sorted order, added as fallback
+				corev1.TLSCertKey:       []byte("cert-data"),
+				corev1.TLSPrivateKeyKey: []byte("key-data"),
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			transform := composeTransforms(cache.TransformStripManagedFields(), transformSecretData)
+
+			result, err := transform(tc.input)
+			require.NoError(t, err)
+
+			if tc.expected == nil {
+				require.Equal(t, tc.input, result)
+				return
+			}
+
+			secret, ok := result.(*corev1.Secret)
+			require.True(t, ok, "result should be a Secret")
+			if tc.expected != nil {
+				require.Equal(t, tc.expected, secret.Data)
+			}
 		})
 	}
 }
