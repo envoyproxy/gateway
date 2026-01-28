@@ -208,7 +208,7 @@ func TestGetRenderedBootstrapConfig(t *testing.T) {
 						Headers: []gwapiv1.HTTPHeader{
 							{Name: "Authorization", Value: "Bearer fake"},
 						},
-						Resources: map[string]string{
+						ResourceAttributes: map[string]string{
 							"service.name":           "test-service",
 							"service.version":        "v1.0.0",
 							"deployment.environment": "test",

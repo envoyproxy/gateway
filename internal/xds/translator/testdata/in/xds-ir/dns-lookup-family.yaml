@@ -9,7 +9,7 @@ accessLog:
             protocol: "GRPC"
             addressType: FQDN
             name: "accesslog-0/backend/0"
-      resources:
+      resourceAttributes:
         k8s.cluster.name: cluster-1
       text: |
         [%START_TIME%] "%REQ(:METHOD)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%"\n

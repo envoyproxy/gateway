@@ -13,7 +13,7 @@ spec:
             headers:
               - name: Authorization
                 value: Bearer test-api-key
-            resources:
+            resourceAttributes:
               service.name: envoy-gateway-test
               service.version: v1.0.0
               deployment.environment: test
@@ -27,7 +27,7 @@ spec:
           headers:
             - name: Authorization
               value: Bearer test-api-key
-          resources:
+          resourceAttributes:
             service.name: envoy-gateway-test
             service.version: v1.0.0
             deployment.environment: test
@@ -45,7 +45,7 @@ spec:
                 headers:
                   - name: Authorization
                     value: Bearer test-api-key
-                resources:
+                resourceAttributes:
                   service.name: envoy-gateway-test
                   service.version: v1.0.0
                   deployment.environment: test

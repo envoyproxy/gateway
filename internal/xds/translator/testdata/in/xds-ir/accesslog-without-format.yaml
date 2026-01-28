@@ -33,7 +33,7 @@ accesslog:
   openTelemetry:
   - attributes:
       "response_code": "%RESPONSE_CODE%"
-    resources:
+    resourceAttributes:
       "cluster_name": "cluster1"
     authority: "otel-collector.default.svc.cluster.local"
     destination:

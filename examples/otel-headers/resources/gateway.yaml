@@ -36,7 +36,7 @@ spec:
             headers:
               - name: Authorization
                 value: Bearer fake
-            resources:
+            resourceAttributes:
               service.name: envoy-gateway-example
               service.version: v1.0.0
               deployment.environment: production
@@ -53,7 +53,7 @@ spec:
           headers:
             - name: Authorization
               value: Bearer fake
-          resources:
+          resourceAttributes:
             service.name: envoy-gateway-example
             service.version: v1.0.0
             deployment.environment: production
@@ -77,7 +77,7 @@ spec:
                   - group: gateway.envoyproxy.io
                     kind: Backend
                     name: otel-collector
-                resources:
+                resourceAttributes:
                   service.name: envoy-gateway-example
                   service.version: v1.0.0
                   deployment.environment: production

@@ -150,8 +150,8 @@ type OpenTelemetryTracingProvider struct {
 	// +kubebuilder:validation:MinItems=1
 	// +kubebuilder:validation:MaxItems=32
 	Headers []gwapiv1.HTTPHeader `json:"headers,omitempty"`
-	// Resources is a set of labels that describe the source of traces.
+	// ResourceAttributes is a set of labels that describe the source of traces.
 	// It's recommended to follow semantic conventions: https://opentelemetry.io/docs/reference/specification/resource/semantic_conventions/
 	// +optional
-	Resources map[string]string `json:"resources,omitempty"`
+	ResourceAttributes map[string]string `json:"resourceAttributes,omitempty"`
 }

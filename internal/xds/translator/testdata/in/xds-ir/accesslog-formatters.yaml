@@ -27,7 +27,7 @@ accesslog:
       "request_method": "%CEL(request.method)%"
       "response_code": "%RESPONSE_CODE%"
       "test_key": "%METADATA(DYNAMIC:com.test.my_filter:test_key)%"
-    resources:
+    resourceAttributes:
       "cluster_name": "cluster1"
     authority: "otel-collector.default.svc.cluster.local"
     destination:

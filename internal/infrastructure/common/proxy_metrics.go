@@ -26,7 +26,7 @@ func ConvertResolvedMetricSinks(irSinks []ir.ResolvedMetricSink) []bootstrap.Met
 			ReportCountersAsDeltas:   sink.ReportCountersAsDeltas,
 			ReportHistogramsAsDeltas: sink.ReportHistogramsAsDeltas,
 			Headers:                  sink.Headers,
-			Resources:                sink.Resources,
+			ResourceAttributes:       sink.ResourceAttributes,
 		}
 		if tls := sink.Destination.Settings[0].TLS; tls != nil {
 			ms.TLS = &bootstrap.MetricSinkTLS{
