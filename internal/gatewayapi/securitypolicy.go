@@ -1286,7 +1286,7 @@ func (t *Translator) buildOIDC(
 		clientID = *oidc.ClientID
 	case oidc.ClientIDRef != nil:
 		var clientIDSecret *corev1.Secret
-		if clientIDSecret, err = t.validateSecretRef(false, from, *oidc.ClientIDRef, resources); err != nil {
+		if clientIDSecret, err = t.validateSecretRef(true, from, *oidc.ClientIDRef, resources); err != nil {
 			return nil, err
 		}
 		clientIDBytes, ok := clientIDSecret.Data[egv1a1.OIDCClientIDKey]
@@ -1299,7 +1299,7 @@ func (t *Translator) buildOIDC(
 		return nil, fmt.Errorf("client ID must be specified in OIDC policy %s/%s", policy.Namespace, policy.Name)
 	}
 
-	if clientSecret, err = t.validateSecretRef(false, from, oidc.ClientSecret, resources); err != nil {
+	if clientSecret, err = t.validateSecretRef(true, from, oidc.ClientSecret, resources); err != nil {
 		return nil, err
 	}
 
@@ -1735,7 +1735,7 @@ func (t *Translator) buildAPIKeyAuth(
 	seenClients := make(sets.Set[string])
 
 	for _, ref := range policy.Spec.APIKeyAuth.CredentialRefs {
-		credentialsSecret, err := t.validateSecretRef(false, from, ref, resources)
+		credentialsSecret, err := t.validateSecretRef(true, from, ref, resources)
 		if err != nil {
 			return nil, err
 		}
@@ -1790,7 +1790,7 @@ func (t *Translator) buildBasicAuth(
 		kind:      resource.KindSecurityPolicy,
 		namespace: policy.Namespace,
 	}
-	if usersSecret, err = t.validateSecretRef(false, from, basicAuth.Users, resources); err != nil {
+	if usersSecret, err = t.validateSecretRef(true, from, basicAuth.Users, resources); err != nil {
 		return nil, err
 	}
 
