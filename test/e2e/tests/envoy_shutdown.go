@@ -22,12 +22,14 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/conformance/utils/config"
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
+	"sigs.k8s.io/gateway-api/conformance/utils/tlog"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
@@ -79,20 +81,23 @@ var EnvoyShutdownTest = suite.ConformanceTest{
 				return u.String()
 			}()
 
-			t.Logf("Starting regular load to %s", regURL)
+			tlog.Logf(t, "Starting regular load to %s", regURL)
 			go runLoadAndWait(t, &suite.TimeoutConfig, regDone, aborter, regURL, 0)
 
-			t.Logf("Starting delayed load to %s", delayedURL)
+			tlog.Logf(t, "Starting delayed load to %s", delayedURL)
 			go runLoadAndWait(t, &suite.TimeoutConfig, delayedDone, aborter, delayedURL, 10*time.Second)
 
 			t.Log("Rolling out proxy deployment")
-			err = restartProxyAndWaitForRollout(t, &suite.TimeoutConfig, suite.Client, epNN, dp)
+			d, err := restartProxyAndWaitForRollout(t, &suite.TimeoutConfig, suite.Client, epNN, dp)
 
-			t.Log("Stopping load generation and collecting results")
+			tlog.Logf(t, "Stopping load generation and collecting results")
 			aborter.Abort(false)
 
 			if err != nil {
 				t.Errorf("Failed to rollout proxy deployment: %v", err)
+			}
+			if *d > time.Minute {
+				t.Errorf("Rollout took too long: %v", *d)
 			}
 			if ok := <-regDone; !ok {
 				t.Errorf("Regular load failed during rollout")
@@ -137,7 +142,9 @@ func getDeploymentForGateway(namespace, name string, c client.Client) (*appsv1.D
 
 // sets the "gateway.envoyproxy.io/restartedAt" annotation in the EnvoyProxy resource's deployment patch spec
 // leading to EG triggering a rollout restart of the deployment
-func restartProxyAndWaitForRollout(t *testing.T, timeoutConfig *config.TimeoutConfig, c client.Client, epNN types.NamespacedName, dp *appsv1.Deployment) error {
+func restartProxyAndWaitForRollout(t *testing.T, timeoutConfig *config.TimeoutConfig, c client.Client,
+	epNN types.NamespacedName, dp *appsv1.Deployment,
+) (*time.Duration, error) {
 	t.Helper()
 	const egRestartAnnotation = "gateway.envoyproxy.io/restartedAt"
 	restartTime := time.Now().Format(time.RFC3339)
@@ -148,7 +155,7 @@ func restartProxyAndWaitForRollout(t *testing.T, timeoutConfig *config.TimeoutCo
 	}
 	ep := egv1a1.EnvoyProxy{}
 	if err := c.Get(context.Background(), epNN, &ep); err != nil {
-		return err
+		return nil, err
 	}
 
 	jsonData := fmt.Sprintf("{\"metadata\": {\"annotations\": {\"gateway.envoyproxy.io/restartedAt\": \"%s\"}}, \"spec\": {\"template\": {\"metadata\": {\"annotations\": {\"gateway.envoyproxy.io/restartedAt\": \"%s\"}}}}}", restartTime, restartTime)
@@ -160,12 +167,12 @@ func restartProxyAndWaitForRollout(t *testing.T, timeoutConfig *config.TimeoutCo
 	}
 
 	if err := c.Update(ctx, &ep); err != nil {
-		return err
+		return nil, err
 	}
-
+	startAt := time.Now()
 	// increase timeout for IPv6 first cluster
-	return wait.PollUntilContextTimeout(ctx, 2*time.Second, 2*timeoutConfig.CreateTimeout, true, func(ctx context.Context) (bool, error) {
-		// wait for replicaset with the same annotation to reach ready status
+	err := wait.PollUntilContextTimeout(ctx, 2*time.Second, 2*timeoutConfig.CreateTimeout, true, func(ctx context.Context) (bool, error) {
+		// wait for ReplicaSet with the same annotation to reach ready status
 		podList := &corev1.PodList{}
 		listOpts := []client.ListOption{
 			client.InNamespace(dp.Namespace),
@@ -192,4 +199,6 @@ func restartProxyAndWaitForRollout(t *testing.T, timeoutConfig *config.TimeoutCo
 
 		return false, nil
 	})
+
+	return ptr.To(time.Since(startAt)), err
 }
