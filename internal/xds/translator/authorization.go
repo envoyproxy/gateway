@@ -373,39 +373,42 @@ func buildJWTPredicate(jwt egv1a1.JWTPrincipal) ([]*matcherv3.Matcher_MatcherLis
 	// Build the scope matchers.
 	// Multiple scopes are ANDed together.
 	for _, scope := range jwt.Scopes {
-		var (
-			inputPb   *anypb.Any
-			matcherPb *anypb.Any
-			err       error
-		)
+		scopePredicates := make([]*matcherv3.Matcher_MatcherList_Predicate, 0, 2)
+		for _, scopeKey := range []string{"scope", "scp"} {
+			var (
+				inputPb   *anypb.Any
+				matcherPb *anypb.Any
+				err       error
+			)
 
-		input := &networkinput.DynamicMetadataInput{
-			Filter: "envoy.filters.http.jwt_authn",
-			Path: []*networkinput.DynamicMetadataInput_PathSegment{
-				{
-					Segment: &networkinput.DynamicMetadataInput_PathSegment_Key{
-						Key: jwt.Provider, // The name of the jwt provider is used as the `payload_in_metadata` in the JWT Authn filter.
+			input := &networkinput.DynamicMetadataInput{
+				Filter: "envoy.filters.http.jwt_authn",
+				Path: []*networkinput.DynamicMetadataInput_PathSegment{
+					{
+						Segment: &networkinput.DynamicMetadataInput_PathSegment_Key{
+							Key: jwt.Provider, // The name of the jwt provider is used as the `payload_in_metadata` in the JWT Authn filter.
+						},
+					},
+					{
+						Segment: &networkinput.DynamicMetadataInput_PathSegment_Key{
+							Key: scopeKey,
+						},
 					},
 				},
-				{
-					Segment: &networkinput.DynamicMetadataInput_PathSegment_Key{
-						Key: "scope",
-					},
-				},
-			},
-		}
+			}
 
-		// The scope has already been normalized to a string array in the JWT Authn filter.
-		scopeMatcher := &metadatav3.Metadata{
-			Value: &envoymatcherv3.ValueMatcher{
-				MatchPattern: &envoymatcherv3.ValueMatcher_ListMatch{
-					ListMatch: &envoymatcherv3.ListMatcher{
-						MatchPattern: &envoymatcherv3.ListMatcher_OneOf{
-							OneOf: &envoymatcherv3.ValueMatcher{
-								MatchPattern: &envoymatcherv3.ValueMatcher_StringMatch{
-									StringMatch: &envoymatcherv3.StringMatcher{
-										MatchPattern: &envoymatcherv3.StringMatcher_Exact{
-											Exact: string(scope),
+			// The scope has already been normalized to a string array in the JWT Authn filter.
+			scopeMatcher := &metadatav3.Metadata{
+				Value: &envoymatcherv3.ValueMatcher{
+					MatchPattern: &envoymatcherv3.ValueMatcher_ListMatch{
+						ListMatch: &envoymatcherv3.ListMatcher{
+							MatchPattern: &envoymatcherv3.ListMatcher_OneOf{
+								OneOf: &envoymatcherv3.ValueMatcher{
+									MatchPattern: &envoymatcherv3.ValueMatcher_StringMatch{
+										StringMatch: &envoymatcherv3.StringMatcher{
+											MatchPattern: &envoymatcherv3.StringMatcher_Exact{
+												Exact: string(scope),
+											},
 										},
 									},
 								},
@@ -413,37 +416,48 @@ func buildJWTPredicate(jwt egv1a1.JWTPrincipal) ([]*matcherv3.Matcher_MatcherLis
 						},
 					},
 				},
-			},
-		}
+			}
 
-		if inputPb, err = proto.ToAnyWithValidation(input); err != nil {
-			return nil, err
-		}
+			if inputPb, err = proto.ToAnyWithValidation(input); err != nil {
+				return nil, err
+			}
 
-		if matcherPb, err = proto.ToAnyWithValidation(scopeMatcher); err != nil {
-			return nil, err
-		}
+			if matcherPb, err = proto.ToAnyWithValidation(scopeMatcher); err != nil {
+				return nil, err
+			}
 
-		scopePredicate := matcherv3.Matcher_MatcherList_Predicate_SinglePredicate{
-			Input: &cncfv3.TypedExtensionConfig{
-				Name:        "scope",
-				TypedConfig: inputPb,
-			},
-			Matcher: &matcherv3.Matcher_MatcherList_Predicate_SinglePredicate_CustomMatch{
-				CustomMatch: &cncfv3.TypedExtensionConfig{
-					Name:        "scope_matcher",
-					TypedConfig: matcherPb,
+			scopePredicate := matcherv3.Matcher_MatcherList_Predicate_SinglePredicate{
+				Input: &cncfv3.TypedExtensionConfig{
+					Name:        "scope",
+					TypedConfig: inputPb,
 				},
-			},
-		}
+				Matcher: &matcherv3.Matcher_MatcherList_Predicate_SinglePredicate_CustomMatch{
+					CustomMatch: &cncfv3.TypedExtensionConfig{
+						Name:        "scope_matcher",
+						TypedConfig: matcherPb,
+					},
+				},
+			}
 
-		jwtPredicate = append(jwtPredicate,
-			&matcherv3.Matcher_MatcherList_Predicate{
+			scopePredicates = append(scopePredicates, &matcherv3.Matcher_MatcherList_Predicate{
 				MatchType: &matcherv3.Matcher_MatcherList_Predicate_SinglePredicate_{
 					SinglePredicate: &scopePredicate,
 				},
+			})
+		}
+
+		if len(scopePredicates) == 1 {
+			jwtPredicate = append(jwtPredicate, scopePredicates[0])
+			continue
+		}
+
+		jwtPredicate = append(jwtPredicate, &matcherv3.Matcher_MatcherList_Predicate{
+			MatchType: &matcherv3.Matcher_MatcherList_Predicate_OrMatcher{
+				OrMatcher: &matcherv3.Matcher_MatcherList_Predicate_PredicateList{
+					Predicate: scopePredicates,
+				},
 			},
-		)
+		})
 	}
 
 	// Build the claim matchers.

@@ -29,6 +29,7 @@
                 normalizePayloadInMetadata:
                   spaceDelimitedClaims:
                   - scope
+                  - scp
                 payloadInMetadata: foobar
                 remoteJwks:
                   asyncFetch: {}

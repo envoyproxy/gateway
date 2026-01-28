@@ -802,6 +802,7 @@ _Appears in:_
 | `http2` | _[HTTP2Settings](#http2settings)_ |  false  |  | HTTP2 provides HTTP/2 configuration on the listener. |
 | `http3` | _[HTTP3Settings](#http3settings)_ |  false  |  | HTTP3 provides HTTP/3 configuration on the listener. |
 | `healthCheck` | _[HealthCheckSettings](#healthchecksettings)_ |  false  |  | HealthCheck provides configuration for determining whether the HTTP/HTTPS listener is healthy. |
+| `scheme` | _[SchemeHeaderTransform](#schemeheadertransform)_ |  false  |  | Scheme configures how the :scheme pseudo-header is set for requests forwarded to backends.<br />- Preserve (default): Preserves the :scheme from the original client request.<br />  Use this when backends need to know the original client scheme for URL generation or redirects.<br />- MatchBackend: Sets the :scheme to match the backend transport protocol.<br />  If the backend uses TLS, the scheme is "https", otherwise "http".<br />  Use this when backends require the scheme to match the actual transport protocol,<br />  such as strictly HTTPS services that validate the :scheme header. |
 
 
 #### ClientValidationContext
@@ -3037,7 +3038,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `provider` | _string_ |  true  |  | Provider is the name of the JWT provider that used to verify the JWT token.<br />In order to use JWT claims for authorization, you must configure the JWT<br />authentication with the same provider in the same `SecurityPolicy`. |
 | `claims` | _[JWTClaim](#jwtclaim) array_ |  false  |  | Claims are the claims in a JWT token.<br />If multiple claims are specified, all claims must match for the rule to match.<br />For example, if there are two claims: one for the audience and one for the issuer,<br />the rule will match only if both the audience and the issuer match. |
-| `scopes` | _[JWTScope](#jwtscope) array_ |  false  |  | Scopes are a special type of claim in a JWT token that represents the permissions of the client.<br />The value of the scopes field should be a space delimited string that is expected in the scope parameter,<br />as defined in RFC 6749: https://datatracker.ietf.org/doc/html/rfc6749#page-23.<br />If multiple scopes are specified, all scopes must match for the rule to match. |
+| `scopes` | _[JWTScope](#jwtscope) array_ |  false  |  | Scopes are a special type of claim in a JWT token that represents the permissions of the client.<br />The value of the scopes field should be a space delimited string that is expected in the<br />scope (or scp) claim, as defined in RFC 6749: https://datatracker.ietf.org/doc/html/rfc6749#page-23.<br />If multiple scopes are specified, all scopes must match for the rule to match. |
 
 
 #### JWTProvider
@@ -4915,6 +4916,7 @@ _Underlying type:_ _string_
 RoutingType defines the type of routing of this Envoy proxy.
 
 _Appears in:_
+- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
 - [EnvoyProxySpec](#envoyproxyspec)
 
 | Value | Description |
@@ -4957,6 +4959,21 @@ _Appears in:_
 | `disabled` | _[RuntimeFlag](#runtimeflag) array_ |  true  |  |  |
 
 
+
+
+#### SchemeHeaderTransform
+
+_Underlying type:_ _string_
+
+SchemeHeaderTransform defines how the :scheme pseudo-header is set for requests forwarded to backends.
+
+_Appears in:_
+- [ClientTrafficPolicySpec](#clienttrafficpolicyspec)
+
+| Value | Description |
+| ----- | ----------- |
+| `Preserve` | SchemeHeaderTransformPreserve preserves the :scheme from the original client request.<br />This is the default behavior.<br /> | 
+| `MatchBackend` | SchemeHeaderTransformMatchBackend sets the :scheme to match the backend transport protocol.<br />If the backend uses TLS, the scheme is "https", otherwise "http".<br /> | 
 
 
 #### SecretTranslationConfig
