@@ -19,9 +19,11 @@ dynamicResources:
   ldsConfig:
     ads: {}
     resourceApiVersion: V3
+    initial_fetch_timeout: 0s
   cdsConfig:
     ads: {}
     resourceApiVersion: V3
+    initial_fetch_timeout: 0s
 staticResources:
   clusters:
   - connectTimeout: 10s
