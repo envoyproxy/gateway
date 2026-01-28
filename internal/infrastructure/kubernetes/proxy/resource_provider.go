@@ -69,7 +69,14 @@ type ResourceRender struct {
 
 	TopologyInjectorDisabled bool
 
+	// GatewayNamespaceMode is true if controller uses gateway namespace mode for infra deployments.
 	GatewayNamespaceMode bool
+
+	// GlobalEnvoyDeployment defines the global default state of the managed Envoy deployment resource.
+	GlobalEnvoyDeployment *egv1a1.KubernetesDeploymentSpec
+
+	// GlobalEnvoyService defines the global default state of the managed Envoy service resource.
+	GlobalEnvoyService *egv1a1.KubernetesServiceSpec
 
 	// ownerReferenceUID store the uid of its owner reference. Key is the kind of owner resource.
 	// - GatewayClass when enabled ControllerNamespaceMode, merged Gateway...
@@ -100,16 +107,20 @@ func NewResourceRender(ctx context.Context, kubeInfra KubernetesInfraProvider, i
 		ShutdownManager:          kubeInfra.GetEnvoyGateway().GetEnvoyGatewayProvider().GetEnvoyGatewayKubeProvider().ShutdownManager,
 		TopologyInjectorDisabled: kubeInfra.GetEnvoyGateway().TopologyInjectorDisabled(),
 		GatewayNamespaceMode:     kubeInfra.GetEnvoyGateway().GatewayNamespaceMode(),
+		GlobalEnvoyDeployment:    kubeInfra.GetEnvoyGateway().GetEnvoyGatewayProvider().GetEnvoyGatewayKubeProvider().EnvoyDeployment,
+		GlobalEnvoyService:       kubeInfra.GetEnvoyGateway().GetEnvoyGatewayProvider().GetEnvoyGatewayKubeProvider().EnvoyService,
 		ownerReferenceUID:        ownerReference,
 	}, nil
 }
 
 func (r *ResourceRender) serviceAccountName() string {
-	prov := r.infra.GetProxyConfig().GetEnvoyProxyProvider().GetEnvoyProxyKubeProvider()
-	if prov != nil &&
-		prov.EnvoyServiceAccount != nil &&
-		prov.EnvoyServiceAccount.Name != nil {
-		return *prov.EnvoyServiceAccount.Name
+	proxyConfig := r.infra.GetProxyConfig()
+	if proxyConfig.Spec.Provider != nil &&
+		proxyConfig.Spec.Provider.Type == egv1a1.EnvoyProxyProviderTypeKubernetes &&
+		proxyConfig.Spec.Provider.Kubernetes != nil &&
+		proxyConfig.Spec.Provider.Kubernetes.EnvoyServiceAccount != nil &&
+		proxyConfig.Spec.Provider.Kubernetes.EnvoyServiceAccount.Name != nil {
+		return *proxyConfig.Spec.Provider.Kubernetes.EnvoyServiceAccount.Name
 	}
 
 	return r.Name()
@@ -222,18 +233,37 @@ func (r *ResourceRender) Service() (*corev1.Service, error) {
 		}
 	}
 
-	// Set the infraLabels based on the owning gatewayclass name.
+	// svcLabels based on the owning gatewayclass name.
 	infraLabels := r.envoyLabels(r.infra.GetProxyMetadata().Labels)
 	if OwningGatewayLabelsAbsent(infraLabels) {
 		return nil, fmt.Errorf("missing owning gateway infraLabels")
+	}
+
+	// Calculate EnvoyService Config: Hardcoded < Global < Specific
+	envoyServiceConfig := egv1a1.DefaultKubernetesService()
+	if envoyServiceConfig.Type == nil {
+		t := egv1a1.ServiceTypeLoadBalancer
+		envoyServiceConfig.Type = &t
+	}
+	// Calculate EnvoyService Config: Hardcoded < Global < Specific
+	if r.GlobalEnvoyService != nil {
+		envoyServiceConfig = mergeKubernetesServiceSpec(envoyServiceConfig, r.GlobalEnvoyService)
+	}
+
+	proxyConfig := r.infra.GetProxyConfig()
+	var specificKube *egv1a1.EnvoyProxyKubernetesProvider
+	if proxyConfig.Spec.Provider != nil && proxyConfig.Spec.Provider.Type == egv1a1.EnvoyProxyProviderTypeKubernetes {
+		specificKube = proxyConfig.Spec.Provider.Kubernetes
+	}
+
+	if specificKube != nil && specificKube.EnvoyService != nil {
+		envoyServiceConfig = mergeKubernetesServiceSpec(envoyServiceConfig, specificKube.EnvoyService)
 	}
 
 	// Get annotations
 	annotations := map[string]string{}
 	maps.Copy(annotations, r.infra.GetProxyMetadata().Annotations)
 
-	provider := r.infra.GetProxyConfig().GetEnvoyProxyProvider()
-	envoyServiceConfig := provider.GetEnvoyProxyKubeProvider().EnvoyService
 	if envoyServiceConfig.Annotations != nil {
 		maps.Copy(annotations, envoyServiceConfig.Annotations)
 	}
@@ -366,16 +396,35 @@ func (r *ResourceRender) stableSelector() *metav1.LabelSelector {
 func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 	proxyConfig := r.infra.GetProxyConfig()
 
-	// Get the EnvoyProxy config to configure the deployment.
-	provider := proxyConfig.GetEnvoyProxyProvider()
-	if provider.Type != egv1a1.EnvoyProxyProviderTypeKubernetes {
-		return nil, fmt.Errorf("invalid provider type %v for Kubernetes infra manager", provider.Type)
+	// Calculate EnvoyDeployment Config: Hardcoded < Global < Specific
+	var specificKube *egv1a1.EnvoyProxyKubernetesProvider
+	if proxyConfig.Spec.Provider != nil && proxyConfig.Spec.Provider.Type == egv1a1.EnvoyProxyProviderTypeKubernetes {
+		specificKube = proxyConfig.Spec.Provider.Kubernetes
+	} else if proxyConfig.Spec.Provider != nil && proxyConfig.Spec.Provider.Type != egv1a1.EnvoyProxyProviderTypeKubernetes {
+		// Invalid provider type for Kubernetes infra manager
+		return nil, fmt.Errorf("invalid provider type %v for Kubernetes infra manager", proxyConfig.Spec.Provider.Type)
 	}
-	deploymentConfig := provider.GetEnvoyProxyKubeProvider().EnvoyDeployment
 
-	// If deployment config is nil, it's not Deployment installation.
-	if deploymentConfig == nil {
+	var specificDeployment *egv1a1.KubernetesDeploymentSpec
+	var specificDaemonSet *egv1a1.KubernetesDaemonSetSpec
+	if specificKube != nil {
+		specificDeployment = specificKube.EnvoyDeployment
+		specificDaemonSet = specificKube.EnvoyDaemonSet
+	}
+
+	if specificDeployment == nil && specificDaemonSet != nil {
+		// User explicitly asked for DaemonSet and not Deployment.
 		return nil, nil
+	}
+
+	deploymentConfig := egv1a1.DefaultKubernetesDeployment(egv1a1.DefaultEnvoyProxyImage)
+
+	if r.GlobalEnvoyDeployment != nil {
+		deploymentConfig = mergeKubernetesDeploymentSpec(deploymentConfig, r.GlobalEnvoyDeployment)
+	}
+
+	if specificDeployment != nil {
+		deploymentConfig = mergeKubernetesDeploymentSpec(deploymentConfig, specificDeployment)
 	}
 
 	// Get expected bootstrap configurations rendered ProxyContainers
@@ -454,7 +503,7 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 }
 
 func (r *ResourceRender) DaemonSet() (*appsv1.DaemonSet, error) {
-	proxyConfig := r.infra.GetProxyConfig()
+	proxyConfig := r.infra.GetProxyConfig().DeepCopy()
 
 	// Get the EnvoyProxy config to configure the daemonset.
 	provider := proxyConfig.GetEnvoyProxyProvider()
@@ -687,4 +736,182 @@ func OwningGatewayLabelsAbsent(labels map[string]string) bool {
 	return (len(labels[gatewayapi.OwningGatewayNameLabel]) == 0 ||
 		len(labels[gatewayapi.OwningGatewayNamespaceLabel]) == 0) &&
 		len(labels[gatewayapi.OwningGatewayClassLabel]) == 0
+}
+
+func mergeKubernetesServiceSpec(base, override *egv1a1.KubernetesServiceSpec) *egv1a1.KubernetesServiceSpec {
+	if base == nil {
+		return override
+	}
+	if override == nil {
+		return base
+	}
+	out := base.DeepCopy()
+
+	if override.Annotations != nil {
+		if out.Annotations == nil {
+			out.Annotations = make(map[string]string)
+		}
+		maps.Copy(out.Annotations, override.Annotations)
+	}
+	if override.Labels != nil {
+		if out.Labels == nil {
+			out.Labels = make(map[string]string)
+		}
+		maps.Copy(out.Labels, override.Labels)
+	}
+	if override.Type != nil {
+		out.Type = override.Type
+	}
+	if override.LoadBalancerClass != nil {
+		out.LoadBalancerClass = override.LoadBalancerClass
+	}
+	if override.AllocateLoadBalancerNodePorts != nil {
+		out.AllocateLoadBalancerNodePorts = override.AllocateLoadBalancerNodePorts
+	}
+	if override.LoadBalancerSourceRanges != nil {
+		out.LoadBalancerSourceRanges = override.LoadBalancerSourceRanges
+	}
+	if override.LoadBalancerIP != nil {
+		out.LoadBalancerIP = override.LoadBalancerIP
+	}
+	if override.ExternalTrafficPolicy != nil {
+		out.ExternalTrafficPolicy = override.ExternalTrafficPolicy
+	}
+	if override.Name != nil {
+		out.Name = override.Name
+	}
+	if override.Patch != nil {
+		out.Patch = override.Patch
+	}
+
+	return out
+}
+
+func mergeKubernetesDeploymentSpec(base, override *egv1a1.KubernetesDeploymentSpec) *egv1a1.KubernetesDeploymentSpec {
+	if base == nil {
+		return override
+	}
+	if override == nil {
+		return base
+	}
+	out := base.DeepCopy()
+
+	if override.Replicas != nil {
+		out.Replicas = override.Replicas
+	}
+	if override.Strategy != nil {
+		out.Strategy = override.Strategy
+	}
+	if override.Name != nil {
+		out.Name = override.Name
+	}
+	if override.Patch != nil {
+		out.Patch = override.Patch
+	}
+	if override.InitContainers != nil {
+		out.InitContainers = override.InitContainers
+	}
+
+	// Merge Container
+	if override.Container != nil {
+		if out.Container == nil {
+			out.Container = override.Container
+		} else {
+			out.Container = mergeKubernetesContainerSpec(out.Container, override.Container)
+		}
+	}
+
+	// Merge Pod
+	if override.Pod != nil {
+		if out.Pod == nil {
+			out.Pod = override.Pod
+		} else {
+			out.Pod = mergeKubernetesPodSpec(out.Pod, override.Pod)
+		}
+	}
+
+	return out
+}
+
+func mergeKubernetesContainerSpec(base, override *egv1a1.KubernetesContainerSpec) *egv1a1.KubernetesContainerSpec {
+	if base == nil {
+		return override
+	}
+	if override == nil {
+		return base
+	}
+	out := base.DeepCopy()
+
+	if override.Env != nil {
+		out.Env = override.Env
+	}
+	if override.Resources != nil {
+		out.Resources = override.Resources
+	}
+	if override.SecurityContext != nil {
+		out.SecurityContext = override.SecurityContext
+	}
+	if override.Image != nil {
+		out.Image = override.Image
+	}
+	if override.ImageRepository != nil {
+		out.ImageRepository = override.ImageRepository
+	}
+	if override.VolumeMounts != nil {
+		out.VolumeMounts = override.VolumeMounts
+	}
+
+	return out
+}
+
+func mergeKubernetesPodSpec(base, override *egv1a1.KubernetesPodSpec) *egv1a1.KubernetesPodSpec {
+	if base == nil {
+		return override
+	}
+	if override == nil {
+		return base
+	}
+	out := base.DeepCopy()
+
+	if override.Annotations != nil {
+		if out.Annotations == nil {
+			out.Annotations = make(map[string]string)
+		}
+		maps.Copy(out.Annotations, override.Annotations)
+	}
+	if override.Labels != nil {
+		if out.Labels == nil {
+			out.Labels = make(map[string]string)
+		}
+		maps.Copy(out.Labels, override.Labels)
+	}
+	if override.SecurityContext != nil {
+		out.SecurityContext = override.SecurityContext
+	}
+	if override.Affinity != nil {
+		out.Affinity = override.Affinity
+	}
+	if override.Tolerations != nil {
+		out.Tolerations = override.Tolerations
+	}
+	if override.Volumes != nil {
+		out.Volumes = override.Volumes
+	}
+	if override.ImagePullSecrets != nil {
+		out.ImagePullSecrets = override.ImagePullSecrets
+	}
+	if override.NodeSelector != nil {
+		if out.NodeSelector == nil {
+			out.NodeSelector = make(map[string]string)
+		}
+		maps.Copy(out.NodeSelector, override.NodeSelector)
+	}
+	if override.TopologySpreadConstraints != nil {
+		out.TopologySpreadConstraints = override.TopologySpreadConstraints
+	}
+	if override.PriorityClassName != nil {
+		out.PriorityClassName = override.PriorityClassName
+	}
+
+	return out
 }
