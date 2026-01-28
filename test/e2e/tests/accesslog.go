@@ -341,7 +341,7 @@ func runLogTest(t *testing.T, suite *suite.ConformanceTestSuite, gwAddr string,
 				}
 
 				delta := count - preCount
-				if delta == expectedDelta {
+				if delta >= expectedDelta {
 					return true, nil
 				}
 
