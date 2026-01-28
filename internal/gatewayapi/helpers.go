@@ -472,7 +472,19 @@ func irTLSCrlName(namespace, name string) string {
 }
 
 func IsMergeGatewaysEnabled(resources *resource.Resources) bool {
-	return resources.EnvoyProxyForGatewayClass != nil && resources.EnvoyProxyForGatewayClass.Spec.MergeGateways != nil && *resources.EnvoyProxyForGatewayClass.Spec.MergeGateways
+	// Check GatewayClass-level EnvoyProxy first (higher priority)
+	if resources.EnvoyProxyForGatewayClass != nil &&
+		resources.EnvoyProxyForGatewayClass.Spec.MergeGateways != nil {
+		return *resources.EnvoyProxyForGatewayClass.Spec.MergeGateways
+	}
+
+	// Fall back to default EnvoyProxySpec from EnvoyGateway configuration
+	if resources.EnvoyProxyDefaultSpec != nil &&
+		resources.EnvoyProxyDefaultSpec.MergeGateways != nil {
+		return *resources.EnvoyProxyDefaultSpec.MergeGateways
+	}
+
+	return false
 }
 
 func protocolSliceToStringSlice(protocols []gwapiv1.ProtocolType) []string {

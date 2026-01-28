@@ -41,6 +41,11 @@ func (in *Resources) DeepCopyInto(out *Resources) {
 			}
 		}
 	}
+	if in.EnvoyProxyDefaultSpec != nil {
+		in, out := &in.EnvoyProxyDefaultSpec, &out.EnvoyProxyDefaultSpec
+		*out = new(v1alpha1.EnvoyProxySpec)
+		(*in).DeepCopyInto(*out)
+	}
 	if in.GatewayClass != nil {
 		in, out := &in.GatewayClass, &out.GatewayClass
 		*out = new(v1.GatewayClass)
