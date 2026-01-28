@@ -177,6 +177,9 @@ func postEnvoyAdminAPI(path string) error {
 	if err != nil {
 		return err
 	}
+	if resp == nil {
+		return errors.New("unexcepted nil response from Envoy admin API")
+	}
 	defer func() {
 		_ = resp.Body.Close()
 	}()
