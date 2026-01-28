@@ -199,7 +199,7 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 			Command:                  []string{"envoy-gateway"},
 			Args:                     expectedShutdownManagerArgs(shutdownConfig),
 			Env:                      expectedContainerEnv(nil),
-			Resources:                *egv1a1.DefaultShutdownManagerContainerResourceRequirements(),
+			Resources:                expectedShutdownManagerResources(shutdownManager),
 			TerminationMessagePolicy: corev1.TerminationMessageReadFile,
 			TerminationMessagePath:   "/dev/termination-log",
 			StartupProbe: &corev1.Probe{
@@ -260,6 +260,13 @@ func expectedShutdownManagerImage(shutdownManager *egv1a1.ShutdownManager) strin
 		return *shutdownManager.Image
 	}
 	return egv1a1.DefaultShutdownManagerImage
+}
+
+func expectedShutdownManagerResources(shutdownManager *egv1a1.ShutdownManager) corev1.ResourceRequirements {
+	if shutdownManager != nil && shutdownManager.Resources != nil {
+		return *shutdownManager.Resources
+	}
+	return *egv1a1.DefaultShutdownManagerContainerResourceRequirements()
 }
 
 func expectedShutdownManagerArgs(cfg *egv1a1.ShutdownConfig) []string {
