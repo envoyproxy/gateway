@@ -29043,11 +29043,15 @@ spec:
                   If unspecified, the default filter order is applied.
                   Default filter order is:
 
+                  - envoy.filters.http.custom_response
+
                   - envoy.filters.http.health_check
 
                   - envoy.filters.http.fault
 
                   - envoy.filters.http.cors
+
+                  - envoy.filters.http.header_mutation
 
                   - envoy.filters.http.ext_authz
 
@@ -29079,8 +29083,6 @@ spec:
 
                   - envoy.filters.http.grpc_stats
 
-                  - envoy.filters.http.custom_response
-
                   - envoy.filters.http.credential_injector
 
                   - envoy.filters.http.compressor
@@ -29099,9 +29101,11 @@ spec:
                         After defines the filter that should come after the filter.
                         Only one of Before or After must be set.
                       enum:
+                      - envoy.filters.http.custom_response
                       - envoy.filters.http.health_check
                       - envoy.filters.http.fault
                       - envoy.filters.http.cors
+                      - envoy.filters.http.header_mutation
                       - envoy.filters.http.ext_authz
                       - envoy.filters.http.api_key_auth
                       - envoy.filters.http.basic_auth
@@ -29117,7 +29121,6 @@ spec:
                       - envoy.filters.http.ratelimit
                       - envoy.filters.http.grpc_web
                       - envoy.filters.http.grpc_stats
-                      - envoy.filters.http.custom_response
                       - envoy.filters.http.credential_injector
                       - envoy.filters.http.compressor
                       - envoy.filters.http.dynamic_forward_proxy
@@ -29127,9 +29130,11 @@ spec:
                         Before defines the filter that should come before the filter.
                         Only one of Before or After must be set.
                       enum:
+                      - envoy.filters.http.custom_response
                       - envoy.filters.http.health_check
                       - envoy.filters.http.fault
                       - envoy.filters.http.cors
+                      - envoy.filters.http.header_mutation
                       - envoy.filters.http.ext_authz
                       - envoy.filters.http.api_key_auth
                       - envoy.filters.http.basic_auth
@@ -29145,7 +29150,6 @@ spec:
                       - envoy.filters.http.ratelimit
                       - envoy.filters.http.grpc_web
                       - envoy.filters.http.grpc_stats
-                      - envoy.filters.http.custom_response
                       - envoy.filters.http.credential_injector
                       - envoy.filters.http.compressor
                       - envoy.filters.http.dynamic_forward_proxy
@@ -29153,9 +29157,11 @@ spec:
                     name:
                       description: Name of the filter.
                       enum:
+                      - envoy.filters.http.custom_response
                       - envoy.filters.http.health_check
                       - envoy.filters.http.fault
                       - envoy.filters.http.cors
+                      - envoy.filters.http.header_mutation
                       - envoy.filters.http.ext_authz
                       - envoy.filters.http.api_key_auth
                       - envoy.filters.http.basic_auth
@@ -29171,7 +29177,6 @@ spec:
                       - envoy.filters.http.ratelimit
                       - envoy.filters.http.grpc_web
                       - envoy.filters.http.grpc_stats
-                      - envoy.filters.http.custom_response
                       - envoy.filters.http.credential_injector
                       - envoy.filters.http.compressor
                       - envoy.filters.http.dynamic_forward_proxy
