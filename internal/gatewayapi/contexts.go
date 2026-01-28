@@ -54,7 +54,6 @@ func (g *GatewayContext) attachEnvoyProxy(resources *resource.Resources, epMap m
 	// Priority order (highest to lowest):
 	// 1. Gateway-level EnvoyProxy (via parametersRef)
 	// 2. GatewayClass-level EnvoyProxy
-	// 3. Default EnvoyProxySpec from EnvoyGateway configuration
 
 	if g.Spec.Infrastructure != nil && g.Spec.Infrastructure.ParametersRef != nil && !IsMergeGatewaysEnabled(resources) {
 		ref := g.Spec.Infrastructure.ParametersRef
@@ -69,18 +68,7 @@ func (g *GatewayContext) attachEnvoyProxy(resources *resource.Resources, epMap m
 	}
 
 	// Use GatewayClass-level EnvoyProxy if available
-	if resources.EnvoyProxyForGatewayClass != nil {
-		g.envoyProxy = resources.EnvoyProxyForGatewayClass
-		return
-	}
-
-	// Fall back to default EnvoyProxySpec from EnvoyGateway configuration
-	if resources.EnvoyProxyDefaultSpec != nil {
-		// Create a synthetic EnvoyProxy object from the default spec
-		g.envoyProxy = &egv1a1.EnvoyProxy{
-			Spec: *resources.EnvoyProxyDefaultSpec,
-		}
-	}
+	g.envoyProxy = resources.EnvoyProxyForGatewayClass
 }
 
 // ListenerContext wraps a Listener and provides helper methods for
