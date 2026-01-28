@@ -12,11 +12,11 @@ spec:
   - protocol: TCP
     port: 8080
     name: http
-    targetPort: 3000
+    targetPort: 8080
   - protocol: TCP
     port: 9090
     name: health
-    targetPort: 3000
+    targetPort: 9090
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -39,7 +39,39 @@ spec:
       - name: multi-ports-backend
         # From https://github.com/kubernetes-sigs/gateway-api/blob/main/conformance/echo-basic/echo-basic.go
         image: gcr.io/k8s-staging-gateway-api/echo-basic:v20231214-v1.0.0-140-gf544a46e
+        ports:
+        - containerPort: 8080
+          name: http
         env:
+        - name: HTTP_PORT
+          value: "8080"
+        - name: H2C_PORT
+          value: "3001"        
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: SERVICE_NAME
+          value: multi-ports-backend
+        resources:
+          requests:
+            cpu: 10m
+      # Sidecar for health check on port 9090
+      - name: multi-ports-backend-health
+        # From https://github.com/kubernetes-sigs/gateway-api/blob/main/conformance/echo-basic/echo-basic.go
+        image: gcr.io/k8s-staging-gateway-api/echo-basic:v20231214-v1.0.0-140-gf544a46e
+        ports:
+        - containerPort: 9090
+          name: health
+        env:
+        - name: HTTP_PORT
+          value: "9090"
+        - name: H2C_PORT
+          value: "3002"
         - name: POD_NAME
           valueFrom:
             fieldRef:
@@ -66,8 +98,8 @@ spec:
   ports:
   - protocol: TCP
     port: 8080
-    name: http
-    targetPort: 3000
+    name: http-and-health
+    targetPort: 8080
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -90,7 +122,12 @@ spec:
       - name: single-port-backend
         # From https://github.com/kubernetes-sigs/gateway-api/blob/main/conformance/echo-basic/echo-basic.go
         image: gcr.io/k8s-staging-gateway-api/echo-basic:v20231214-v1.0.0-140-gf544a46e
+        ports:
+        - containerPort: 8080
+          name: http-and-health
         env:
+        - name: HTTP_PORT
+          value: "8080"
         - name: POD_NAME
           valueFrom:
             fieldRef:
