@@ -33,6 +33,8 @@ When enabling `EnvoyPatchPolicy`, additional security measures should be taken b
 * Using K8s [RBAC][] to restrict access to `EnvoyPatchPolicy`.
 * Disabling envoy extensions which are not needed with envoy [command line options][].
 * Implementing Kubernetes [network policies][] that restrict traffic from the proxy pod only to relevant targets.
+* Use [admission control][] tools to validate `EnvoyPatchPolicy` resources, ensuring that only approved patches admitted.
+* Audit `EnvoyPatchPolciy` resources periodically, and [audit log][] `EnvoyPatchPolicy` API server operations.
 {{% /alert %}}
 
 ## Quickstart
@@ -525,6 +527,8 @@ such as changing the `name` field of resources.
 [RBAC]: https://kubernetes.io/docs/reference/access-authn-authz/rbac/
 [command line options]: ../operations/customize-envoyproxy/#customize-envoyproxy-command-line-options
 [network policies]: https://kubernetes.io/docs/concepts/services-networking/network-policies/
+[admission control]: https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/
+[audit log]: https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/
 [EnvoyGateway]: ../../../api/extension_types#envoygateway
 [JSON Patch]: https://datatracker.ietf.org/doc/html/rfc6902
 [xDS]: https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/operations/dynamic_configuration
