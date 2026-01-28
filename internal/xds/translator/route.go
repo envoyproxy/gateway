@@ -428,7 +428,10 @@ func idleTimeout(httpRoute *ir.HTTPRoute, httpListener *ir.HTTPListener) *durati
 		if idleTimeout < requestTimeout.Duration {
 			idleTimeout = requestTimeout.Duration
 		}
-
+		// Disable idle timeout when request timeout is disabled
+		if requestTimeout.Duration == 0 {
+			idleTimeout = 0
+		}
 		return durationpb.New(idleTimeout)
 	}
 	return nil
