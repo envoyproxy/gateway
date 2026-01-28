@@ -101,3 +101,32 @@ http:
         - host: "1.2.3.4"
           port: 50002
         name: "seventh-route-dest/backend/0"
+- name: "second-listener"
+  address: "::"
+  port: 10081
+  hostnames:
+  - "*"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  timeout:
+    http:
+      streamIdleTimeout: 10s
+  routes:
+  - name: "first-route"
+    hostname: "*"
+    traffic:
+      timeout:
+        http:
+          requestTimeout: 5s          # should not set route-level idle timeout because listener has it
+    headerMatches:
+    - name: user
+      stringMatch:
+      exact: "jason"
+    destination:
+      name: "first-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "first-route-dest/backend/0"
