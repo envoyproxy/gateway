@@ -49,6 +49,8 @@ const (
 	// nolint: gosec
 	oidcHMACSecretName = "envoy-oidc-hmac"
 	oidcHMACSecretKey  = "hmac-secret"
+	// JWKSConfigMapKey is the key used in ConfigMaps to store JWKS data
+	JWKSConfigMapKey = "jwks"
 )
 
 // deprecatedFieldsUsedInSecurityPolicy returns a map of deprecated field paths to their alternatives.
@@ -1420,7 +1422,7 @@ func (t *Translator) buildLocalJWKS(
 			return "", fmt.Errorf("local JWKS ConfigMap %s/%s not found", policy.Namespace, localJWKS.ValueRef.Name)
 		}
 
-		jwksBytes, ok := cm.Data["jwks"]
+		jwksBytes, ok := cm.Data[JWKSConfigMapKey]
 		if ok {
 			return jwksBytes, nil
 		}
@@ -1432,7 +1434,8 @@ func (t *Translator) buildLocalJWKS(
 		}
 
 		return "", fmt.Errorf(
-			"JWKS data not found in ConfigMap %s/%s, no 'jwks' key and no other data found",
+			"JWKS data not found in ConfigMap %s/%s, no %q key and no other data found",
+			JWKSConfigMapKey,
 			cm.Namespace, cm.Name)
 	}
 

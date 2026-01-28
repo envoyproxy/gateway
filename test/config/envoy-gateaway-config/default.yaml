@@ -19,3 +19,11 @@ data:
         type: Redis
         redis:
           url: redis.redis-system.svc.cluster.local:6379
+    envoyProxy:
+      logging:
+        level: debug
+      provider:
+        kubernetes:
+          envoyDeployment:
+            container:
+              image: envoyproxy/envoy:distroless-dev-debug

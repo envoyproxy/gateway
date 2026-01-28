@@ -34,6 +34,7 @@ new features: |
   Added support for tracing tag, which allows to use Envoy string command operators such as `%ENVIRONMENT(...)%`.
   Added support for MergeType in SecurityPolicy to enable route-level policies to merge with parent Gateway/Listener policies, similar to BackendTrafficPolicy.
 
+
 bug fixes: |
   Fixed configured OIDC authorization endpoint being overridden by discovered endpoints from issuer's well-known URL.
   Fix 500 errors caused by partially invalid BackendRefs; traffic is now correctly routed between valid backends and 500 responses according to their configured weights.
@@ -53,9 +54,11 @@ bug fixes: |
 
 # Enhancements that improve performance.
 performance improvements: |
+  Including only needed keys in Secret and ConfigMap data to reduce memory usage.
 
 # Deprecated features or APIs.
 deprecations: |
 
 # Other notable changes not covered by the above sections.
 Other changes: |
+  Added scheme field to ClientTrafficPolicy enabling scheme header transformation to match backend transport protocol, allowing gateways with HTTP listeners to proxy to HTTPS services without protocol errors

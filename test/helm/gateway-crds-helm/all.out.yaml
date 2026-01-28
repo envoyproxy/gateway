@@ -23434,6 +23434,13 @@ spec:
                         type: array
                     type: object
                 type: object
+              routingType:
+                description: |-
+                  RoutingType can be set to "Service" to use the Service Cluster IP for routing to the backend,
+                  or it can be set to "Endpoint" to use Endpoint routing.
+                  When specified, this overrides the EnvoyProxy-level setting for the relevant targeRefs.
+                  If not specified, the EnvoyProxy-level setting is used.
+                type: string
               targetRef:
                 description: |-
                   TargetRef is the name of the resource this policy is being attached to.
@@ -25066,6 +25073,21 @@ spec:
                       For more information on security implications, see haproxy.org/download/2.1/doc/proxy-protocol.txt
                     type: boolean
                 type: object
+              scheme:
+                description: |-
+                  Scheme configures how the :scheme pseudo-header is set for requests forwarded to backends.
+
+                  - Preserve (default): Preserves the :scheme from the original client request.
+                    Use this when backends need to know the original client scheme for URL generation or redirects.
+
+                  - MatchBackend: Sets the :scheme to match the backend transport protocol.
+                    If the backend uses TLS, the scheme is "https", otherwise "http".
+                    Use this when backends require the scheme to match the actual transport protocol,
+                    such as strictly HTTPS services that validate the :scheme header.
+                enum:
+                - Preserve
+                - MatchBackend
+                type: string
               targetRef:
                 description: |-
                   TargetRef is the name of the resource this policy is being attached to.
