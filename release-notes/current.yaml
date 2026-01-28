@@ -33,7 +33,6 @@ new features: |
   Added support for addIfAbsent header action in ClientTrafficPolicy EarlyRequestHeaders and LateResponseHeaders to add headers only when they don't already exist.
   Added support for tracing tag, which allows to use Envoy string command operators such as `%ENVIRONMENT(...)%`.
 
-
 bug fixes: |
   Fixed configured OIDC authorization endpoint being overridden by discovered endpoints from issuer's well-known URL.
   Fix 500 errors caused by partially invalid BackendRefs; traffic is now correctly routed between valid backends and 500 responses according to their configured weights.
@@ -59,3 +58,4 @@ deprecations: |
 
 # Other notable changes not covered by the above sections.
 Other changes: |
+  Added scheme field to ClientTrafficPolicy enabling scheme header transformation to match backend transport protocol, allowing gateways with HTTP listeners to proxy to HTTPS services without protocol errors

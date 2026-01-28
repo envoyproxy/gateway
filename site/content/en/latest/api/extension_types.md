@@ -802,6 +802,7 @@ _Appears in:_
 | `http2` | _[HTTP2Settings](#http2settings)_ |  false  |  | HTTP2 provides HTTP/2 configuration on the listener. |
 | `http3` | _[HTTP3Settings](#http3settings)_ |  false  |  | HTTP3 provides HTTP/3 configuration on the listener. |
 | `healthCheck` | _[HealthCheckSettings](#healthchecksettings)_ |  false  |  | HealthCheck provides configuration for determining whether the HTTP/HTTPS listener is healthy. |
+| `scheme` | _[SchemeHeaderTransform](#schemeheadertransform)_ |  false  |  | Scheme configures how the :scheme pseudo-header is set for requests forwarded to backends.<br />- Preserve (default): Preserves the :scheme from the original client request.<br />  Use this when backends need to know the original client scheme for URL generation or redirects.<br />- MatchBackend: Sets the :scheme to match the backend transport protocol.<br />  If the backend uses TLS, the scheme is "https", otherwise "http".<br />  Use this when backends require the scheme to match the actual transport protocol,<br />  such as strictly HTTPS services that validate the :scheme header. |
 
 
 #### ClientValidationContext
@@ -4958,6 +4959,21 @@ _Appears in:_
 | `disabled` | _[RuntimeFlag](#runtimeflag) array_ |  true  |  |  |
 
 
+
+
+#### SchemeHeaderTransform
+
+_Underlying type:_ _string_
+
+SchemeHeaderTransform defines how the :scheme pseudo-header is set for requests forwarded to backends.
+
+_Appears in:_
+- [ClientTrafficPolicySpec](#clienttrafficpolicyspec)
+
+| Value | Description |
+| ----- | ----------- |
+| `Preserve` | SchemeHeaderTransformPreserve preserves the :scheme from the original client request.<br />This is the default behavior.<br /> | 
+| `MatchBackend` | SchemeHeaderTransformMatchBackend sets the :scheme to match the backend transport protocol.<br />If the backend uses TLS, the scheme is "https", otherwise "http".<br /> | 
 
 
 #### SecretTranslationConfig
