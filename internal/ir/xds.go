@@ -318,6 +318,9 @@ type HTTPListener struct {
 	Connection *ClientConnection `json:"connection,omitempty" yaml:"connection,omitempty"`
 	// PreserveRouteOrder determines if routes should be sorted according to GW-API specs
 	PreserveRouteOrder bool `json:"preserveRouteOrder,omitempty" yaml:"preserveRouteOrder,omitempty"`
+	// MatchBackendScheme configures Envoy to set the :scheme pseudo-header to match
+	// the upstream transport protocol (http/https) instead of preserving the downstream scheme.
+	MatchBackendScheme bool `json:"matchBackendScheme,omitempty" yaml:"matchBackendScheme,omitempty"`
 	// RequestID defines configuration for the UUID request ID extension.
 	RequestID *RequestIDExtensionAction `json:"requestID,omitempty" yaml:"requestID,omitempty"`
 }

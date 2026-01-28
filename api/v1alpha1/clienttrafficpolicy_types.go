@@ -107,6 +107,18 @@ type ClientTrafficPolicySpec struct {
 	//
 	// +optional
 	HealthCheck *HealthCheckSettings `json:"healthCheck,omitempty"`
+	// Scheme configures how the :scheme pseudo-header is set for requests forwarded to backends.
+	//
+	// - Preserve (default): Preserves the :scheme from the original client request.
+	//   Use this when backends need to know the original client scheme for URL generation or redirects.
+	//
+	// - MatchBackend: Sets the :scheme to match the backend transport protocol.
+	//   If the backend uses TLS, the scheme is "https", otherwise "http".
+	//   Use this when backends require the scheme to match the actual transport protocol,
+	//   such as strictly HTTPS services that validate the :scheme header.
+	//
+	// +optional
+	Scheme *SchemeHeaderTransform `json:"scheme,omitempty"`
 }
 
 // HeaderSettings provides configuration options for headers on the listener.
@@ -412,6 +424,21 @@ type ClientTrafficPolicyList struct {
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []ClientTrafficPolicy `json:"items"`
 }
+
+// SchemeHeaderTransform defines how the :scheme pseudo-header is set for requests forwarded to backends.
+//
+// +kubebuilder:validation:Enum=Preserve;MatchBackend
+type SchemeHeaderTransform string
+
+const (
+	// SchemeHeaderTransformPreserve preserves the :scheme from the original client request.
+	// This is the default behavior.
+	SchemeHeaderTransformPreserve SchemeHeaderTransform = "Preserve"
+
+	// SchemeHeaderTransformMatchBackend sets the :scheme to match the backend transport protocol.
+	// If the backend uses TLS, the scheme is "https", otherwise "http".
+	SchemeHeaderTransformMatchBackend SchemeHeaderTransform = "MatchBackend"
+)
 
 func init() {
 	localSchemeBuilder.Register(&ClientTrafficPolicy{}, &ClientTrafficPolicyList{})
