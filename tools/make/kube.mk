@@ -244,6 +244,46 @@ e2e: create-cluster kube-install-image kube-deploy \
 	install-ratelimit install-eg-addons kube-install-examples-image \
 	e2e-prepare setup-mac-net-connect run-e2e delete-cluster
 
+.PHONY: e2e-core
+e2e-core: create-cluster kube-install-image kube-deploy \
+	install-ratelimit install-eg-addons kube-install-examples-image \
+	e2e-prepare setup-mac-net-connect run-e2e-core delete-cluster
+
+.PHONY: e2e-merge-gateways
+e2e-merge-gateways: create-cluster kube-install-image kube-deploy \
+	install-ratelimit install-eg-addons kube-install-examples-image \
+	e2e-prepare setup-mac-net-connect run-e2e-merge-gateways delete-cluster
+
+.PHONY: e2e-multiple-gc
+e2e-multiple-gc: create-cluster kube-install-image kube-deploy \
+	install-ratelimit install-eg-addons kube-install-examples-image \
+	e2e-prepare setup-mac-net-connect run-e2e-multiple-gc delete-cluster
+
+.PHONY: e2e-upgrade
+e2e-upgrade: create-cluster kube-install-image kube-deploy \
+	install-ratelimit install-eg-addons kube-install-examples-image \
+	e2e-prepare setup-mac-net-connect run-e2e-upgrade delete-cluster
+
+.PHONY: e2e-core
+e2e-core: create-cluster kube-install-image kube-deploy \
+	install-ratelimit install-eg-addons kube-install-examples-image \
+	e2e-prepare setup-mac-net-connect run-e2e-core delete-cluster
+
+.PHONY: e2e-merge-gateways
+e2e-merge-gateways: create-cluster kube-install-image kube-deploy \
+	install-ratelimit install-eg-addons kube-install-examples-image \
+	e2e-prepare setup-mac-net-connect run-e2e-merge-gateways delete-cluster
+
+.PHONY: e2e-multiple-gc
+e2e-multiple-gc: create-cluster kube-install-image kube-deploy \
+	install-ratelimit install-eg-addons kube-install-examples-image \
+	e2e-prepare setup-mac-net-connect run-e2e-multiple-gc delete-cluster
+
+.PHONY: e2e-upgrade
+e2e-upgrade: create-cluster kube-install-image kube-deploy \
+	install-ratelimit install-eg-addons kube-install-examples-image \
+	e2e-prepare setup-mac-net-connect run-e2e-upgrade delete-cluster
+
 .PHONY: install-ratelimit
 install-ratelimit:
 	@$(LOG_TARGET)
@@ -276,17 +316,38 @@ setup-mac-net-connect:
 run-e2e: ## Run e2e tests
 	@$(LOG_TARGET)
 ifeq ($(E2E_RUN_TEST),)
-	go test $(E2E_TEST_ARGS) ./test/e2e $(E2E_TEST_SUITE_ARGS) --gateway-class=envoy-gateway  --cleanup-base-resources=false $(E2E_REDIRECT)
-	go test $(E2E_TEST_ARGS) ./test/e2e/merge_gateways $(E2E_TEST_SUITE_ARGS)  --gateway-class=merge-gateways --cleanup-base-resources=false
-	go test $(E2E_TEST_ARGS) ./test/e2e/multiple_gc $(E2E_TEST_SUITE_ARGS)  --cleanup-base-resources=true
-	LAST_VERSION_TAG=$(shell cat VERSION) go test $(E2E_TEST_ARGS) ./test/e2e/upgrade $(E2E_TEST_SUITE_ARGS) --gateway-class=upgrade --cleanup-base-resources=$(E2E_CLEANUP)
+	$(MAKE) run-e2e-core
+	$(MAKE) run-e2e-merge-gateways
+	$(MAKE) run-e2e-multiple-gc
+	$(MAKE) run-e2e-upgrade
+else
+	$(MAKE) run-e2e-core E2E_RUN_TEST=$(E2E_RUN_TEST)
+endif
+
+.PHONY: run-e2e-core
+run-e2e-core: ## Run core e2e tests
+	@$(LOG_TARGET)
+ifeq ($(E2E_RUN_TEST),)
+	go test $(E2E_TEST_ARGS) ./test/e2e $(E2E_TEST_SUITE_ARGS) --gateway-class=envoy-gateway --cleanup-base-resources=false $(E2E_REDIRECT)
 else
 	go test $(E2E_TEST_ARGS) ./test/e2e $(E2E_TEST_SUITE_ARGS) --gateway-class=envoy-gateway --cleanup-base-resources=$(E2E_CLEANUP) \
 		--run-test $(E2E_RUN_TEST) $(E2E_REDIRECT)
 endif
 
-run-e2e-upgrade:
-	go test $(E2E_TEST_ARGS) ./test/e2e/upgrade $(E2E_TEST_SUITE_ARGS) --gateway-class=upgrade --cleanup-base-resources=$(E2E_CLEANUP)
+.PHONY: run-e2e-merge-gateways
+run-e2e-merge-gateways: ## Run merge gateways e2e tests
+	@$(LOG_TARGET)
+	go test $(E2E_TEST_ARGS) ./test/e2e/merge_gateways $(E2E_TEST_SUITE_ARGS) --gateway-class=merge-gateways --cleanup-base-resources=false
+
+.PHONY: run-e2e-multiple-gc
+run-e2e-multiple-gc: ## Run multiple gatewayclass e2e tests
+	@$(LOG_TARGET)
+	go test $(E2E_TEST_ARGS) ./test/e2e/multiple_gc $(E2E_TEST_SUITE_ARGS) --cleanup-base-resources=true
+
+.PHONY: run-e2e-upgrade
+run-e2e-upgrade: ## Run upgrade e2e tests
+	@$(LOG_TARGET)
+	LAST_VERSION_TAG=$(shell cat VERSION) go test $(E2E_TEST_ARGS) ./test/e2e/upgrade $(E2E_TEST_SUITE_ARGS) --gateway-class=upgrade --cleanup-base-resources=$(E2E_CLEANUP)
 
 .PHONY: run-resilience
 run-resilience: ## Run resilience tests
