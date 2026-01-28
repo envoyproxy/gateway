@@ -23434,6 +23434,13 @@ spec:
                         type: array
                     type: object
                 type: object
+              routingType:
+                description: |-
+                  RoutingType can be set to "Service" to use the Service Cluster IP for routing to the backend,
+                  or it can be set to "Endpoint" to use Endpoint routing.
+                  When specified, this overrides the EnvoyProxy-level setting for the relevant targeRefs.
+                  If not specified, the EnvoyProxy-level setting is used.
+                type: string
               targetRef:
                 description: |-
                   TargetRef is the name of the resource this policy is being attached to.
@@ -25066,6 +25073,21 @@ spec:
                       For more information on security implications, see haproxy.org/download/2.1/doc/proxy-protocol.txt
                     type: boolean
                 type: object
+              scheme:
+                description: |-
+                  Scheme configures how the :scheme pseudo-header is set for requests forwarded to backends.
+
+                  - Preserve (default): Preserves the :scheme from the original client request.
+                    Use this when backends need to know the original client scheme for URL generation or redirects.
+
+                  - MatchBackend: Sets the :scheme to match the backend transport protocol.
+                    If the backend uses TLS, the scheme is "https", otherwise "http".
+                    Use this when backends require the scheme to match the actual transport protocol,
+                    such as strictly HTTPS services that validate the :scheme header.
+                enum:
+                - Preserve
+                - MatchBackend
+                type: string
               targetRef:
                 description: |-
                   TargetRef is the name of the resource this policy is being attached to.
@@ -29043,11 +29065,15 @@ spec:
                   If unspecified, the default filter order is applied.
                   Default filter order is:
 
+                  - envoy.filters.http.custom_response
+
                   - envoy.filters.http.health_check
 
                   - envoy.filters.http.fault
 
                   - envoy.filters.http.cors
+
+                  - envoy.filters.http.header_mutation
 
                   - envoy.filters.http.ext_authz
 
@@ -29079,8 +29105,6 @@ spec:
 
                   - envoy.filters.http.grpc_stats
 
-                  - envoy.filters.http.custom_response
-
                   - envoy.filters.http.credential_injector
 
                   - envoy.filters.http.compressor
@@ -29099,9 +29123,11 @@ spec:
                         After defines the filter that should come after the filter.
                         Only one of Before or After must be set.
                       enum:
+                      - envoy.filters.http.custom_response
                       - envoy.filters.http.health_check
                       - envoy.filters.http.fault
                       - envoy.filters.http.cors
+                      - envoy.filters.http.header_mutation
                       - envoy.filters.http.ext_authz
                       - envoy.filters.http.api_key_auth
                       - envoy.filters.http.basic_auth
@@ -29117,7 +29143,6 @@ spec:
                       - envoy.filters.http.ratelimit
                       - envoy.filters.http.grpc_web
                       - envoy.filters.http.grpc_stats
-                      - envoy.filters.http.custom_response
                       - envoy.filters.http.credential_injector
                       - envoy.filters.http.compressor
                       - envoy.filters.http.dynamic_forward_proxy
@@ -29127,9 +29152,11 @@ spec:
                         Before defines the filter that should come before the filter.
                         Only one of Before or After must be set.
                       enum:
+                      - envoy.filters.http.custom_response
                       - envoy.filters.http.health_check
                       - envoy.filters.http.fault
                       - envoy.filters.http.cors
+                      - envoy.filters.http.header_mutation
                       - envoy.filters.http.ext_authz
                       - envoy.filters.http.api_key_auth
                       - envoy.filters.http.basic_auth
@@ -29145,7 +29172,6 @@ spec:
                       - envoy.filters.http.ratelimit
                       - envoy.filters.http.grpc_web
                       - envoy.filters.http.grpc_stats
-                      - envoy.filters.http.custom_response
                       - envoy.filters.http.credential_injector
                       - envoy.filters.http.compressor
                       - envoy.filters.http.dynamic_forward_proxy
@@ -29153,9 +29179,11 @@ spec:
                     name:
                       description: Name of the filter.
                       enum:
+                      - envoy.filters.http.custom_response
                       - envoy.filters.http.health_check
                       - envoy.filters.http.fault
                       - envoy.filters.http.cors
+                      - envoy.filters.http.header_mutation
                       - envoy.filters.http.ext_authz
                       - envoy.filters.http.api_key_auth
                       - envoy.filters.http.basic_auth
@@ -29171,7 +29199,6 @@ spec:
                       - envoy.filters.http.ratelimit
                       - envoy.filters.http.grpc_web
                       - envoy.filters.http.grpc_stats
-                      - envoy.filters.http.custom_response
                       - envoy.filters.http.credential_injector
                       - envoy.filters.http.compressor
                       - envoy.filters.http.dynamic_forward_proxy
@@ -46201,8 +46228,8 @@ spec:
                                   description: |-
                                     Scopes are a special type of claim in a JWT token that represents the permissions of the client.
 
-                                    The value of the scopes field should be a space delimited string that is expected in the scope parameter,
-                                    as defined in RFC 6749: https://datatracker.ietf.org/doc/html/rfc6749#page-23.
+                                    The value of the scopes field should be a space delimited string that is expected in the
+                                    scope (or scp) claim, as defined in RFC 6749: https://datatracker.ietf.org/doc/html/rfc6749#page-23.
 
                                     If multiple scopes are specified, all scopes must match for the rule to match.
                                   items:

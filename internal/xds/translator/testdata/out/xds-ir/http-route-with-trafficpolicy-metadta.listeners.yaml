@@ -1,0 +1,54 @@
+- address:
+    socketAddress:
+      address: 0.0.0.0
+      portValue: 10080
+  defaultFilterChain:
+    filters:
+    - name: envoy.filters.network.http_connection_manager
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+        commonHttpProtocolOptions:
+          headersWithUnderscoresAction: REJECT_REQUEST
+        http2ProtocolOptions:
+          initialConnectionWindowSize: 1048576
+          initialStreamWindowSize: 65536
+          maxConcurrentStreams: 100
+        httpFilters:
+        - name: envoy.filters.http.ratelimit
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.ratelimit.v3.RateLimit
+            disableXEnvoyRatelimitedHeader: true
+            domain: envoy-gateway/gateway-1/http
+            enableXRatelimitHeaders: DRAFT_VERSION_03
+            rateLimitService:
+              grpcService:
+                envoyGrpc:
+                  clusterName: ratelimit_cluster
+              transportApiVersion: V3
+        - name: envoy.filters.http.grpc_web
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.grpc_web.v3.GrpcWeb
+        - name: envoy.filters.http.grpc_stats
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.grpc_stats.v3.FilterConfig
+            emitFilterState: true
+            statsForAllMethods: true
+        - name: envoy.filters.http.router
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+            suppressEnvoyHeaders: true
+        mergeSlashes: true
+        normalizePath: true
+        pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
+        rds:
+          configSource:
+            ads: {}
+            resourceApiVersion: V3
+          routeConfigName: envoy-gateway/gateway-1/http
+        serverHeaderTransformation: PASS_THROUGH
+        statPrefix: http-10080
+        useRemoteAddress: true
+    name: envoy-gateway/gateway-1/http
+  maxConnectionsToAcceptPerSocketEvent: 1
+  name: envoy-gateway/gateway-1/http
+  perConnectionBufferLimitBytes: 32768

@@ -1936,11 +1936,6 @@ func validateDestinationSettings(destinationSettings *ir.DestinationSetting, end
 				status.RouteReasonUnsupportedAddressType)
 		}
 	case resource.KindService, resource.KindServiceImport:
-		if endpointRoutingDisabled && isHeadlessService(destinationSettings) {
-			return status.NewRouteStatusError(
-				fmt.Errorf("service %s is a headless Service, please set routingType=Endpoint", destinationSettings.Name),
-				status.RouteReasonUnsupportedSetting)
-		}
 		if !endpointRoutingDisabled && destinationSettings.AddressType != nil && *destinationSettings.AddressType == ir.MIXED {
 			return status.NewRouteStatusError(
 				fmt.Errorf("mixed endpointslice address type for the same backendRef is not supported"),
@@ -1951,13 +1946,13 @@ func validateDestinationSettings(destinationSettings *ir.DestinationSetting, end
 	return nil
 }
 
-// isHeadlessService reports true when any DestinationEndpoint corresponds to
-// a headless Kubernetes Service (ClusterIP="None").
-func isHeadlessService(ds *ir.DestinationSetting) bool {
-	for _, ep := range ds.Endpoints {
-		if ep.Host == "None" {
-			return true
-		}
+// isServiceHeadless reports true when a Kubernetes Service is headless.
+func isServiceHeadless(service *corev1.Service) bool {
+	if service == nil {
+		return false
+	}
+	if service.Spec.ClusterIP == corev1.ClusterIPNone {
+		return true
 	}
 	return false
 }
@@ -1987,8 +1982,12 @@ func (t *Translator) processServiceImportDestinationSetting(
 		protocol = serviceAppProtocolToIRAppProtocol(*servicePort.AppProtocol, protocol, false)
 	}
 
-	// Route to endpoints by default
-	if !t.IsEnvoyServiceRouting(envoyProxy) {
+	backendIps := serviceImport.Spec.IPs
+	isHeadless := len(backendIps) == 0
+
+	// Route to endpoints by default, or if service routing is enabled but ServiceImport is headless
+	useEndpointRouting := !t.IsEnvoyServiceRouting(envoyProxy) || isHeadless
+	if useEndpointRouting {
 		endpointSlices := t.GetEndpointSlicesForBackend(backendNamespace, string(backendRef.Name), resource.KindServiceImport)
 		endpoints, addrType = getIREndpointsFromEndpointSlices(endpointSlices, servicePort.Name, getServicePortProtocol(servicePort.Protocol))
 		if len(endpoints) == 0 {
@@ -1998,8 +1997,7 @@ func (t *Translator) processServiceImportDestinationSetting(
 			)
 		}
 	} else {
-		// Fall back to Service ClusterIP routing
-		backendIps := t.GetServiceImport(backendNamespace, string(backendRef.Name)).Spec.IPs
+		// Use ServiceImport IPs for routing
 		for _, ip := range backendIps {
 			ep := ir.NewDestEndpoint(nil, ip, uint32(*backendRef.Port), false, nil)
 			endpoints = append(endpoints, ep)
@@ -2041,8 +2039,11 @@ func (t *Translator) processServiceDestinationSetting(
 		protocol = serviceAppProtocolToIRAppProtocol(*servicePort.AppProtocol, protocol, true)
 	}
 
-	// Route to endpoints by default
-	if !t.IsEnvoyServiceRouting(envoyProxy) {
+	isHeadless := isServiceHeadless(service)
+
+	// Route to endpoints by default, or if service routing is enabled but service is headless
+	useEndpointRouting := !t.IsEnvoyServiceRouting(envoyProxy) || isHeadless
+	if useEndpointRouting {
 		endpointSlices := t.GetEndpointSlicesForBackend(backendNamespace, string(backendRef.Name), KindDerefOr(backendRef.Kind, resource.KindService))
 		endpoints, addrType = getIREndpointsFromEndpointSlices(endpointSlices, servicePort.Name, getServicePortProtocol(servicePort.Protocol))
 		if len(endpoints) == 0 {
@@ -2052,7 +2053,7 @@ func (t *Translator) processServiceDestinationSetting(
 			)
 		}
 	} else {
-		// Fall back to Service ClusterIP routing
+		// Use Service ClusterIP routing
 		ep := ir.NewDestEndpoint(nil, service.Spec.ClusterIP, uint32(*backendRef.Port), false, nil)
 		endpoints = append(endpoints, ep)
 	}

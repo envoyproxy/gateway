@@ -32,6 +32,8 @@ import (
 
 const (
 	MaxConsistentHashTableSize = 5000011 // https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto#config-cluster-v3-cluster-maglevlbconfig
+	// ResponseBodyConfigMapKey is the key used in ConfigMaps to store custom response body data
+	ResponseBodyConfigMapKey = "response.body"
 )
 
 // deprecatedFieldsUsedInBackendTrafficPolicy returns a map of deprecated field paths to their alternatives.
@@ -759,6 +761,7 @@ func (t *Translator) applyTrafficFeatureToRoute(route RouteContext,
 				setIfNil(&r.BackendConnection, tf.BackendConnection)
 				setIfNil(&r.DNS, tf.DNS)
 				setIfNil(&r.StatName, buildRouteStatName(routeStatName, r.Metadata))
+				appendTrafficPolicyMetadata(r.Metadata, policy)
 			}
 		}
 	}
@@ -826,6 +829,7 @@ func (t *Translator) applyTrafficFeatureToRoute(route RouteContext,
 				if policy.Spec.UseClientProtocol != nil {
 					r.UseClientProtocol = policy.Spec.UseClientProtocol
 				}
+				appendTrafficPolicyMetadata(r.Metadata, policy)
 			}
 		}
 	}
@@ -998,6 +1002,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 			setIfNil(&r.Timeout, tf.Timeout)
 			setIfNil(&r.DNS, tf.DNS)
 			setIfNil(&r.StatName, buildRouteStatName(routeStatName, r.Metadata))
+			appendTrafficPolicyMetadata(r.Metadata, policy)
 		}
 	}
 
@@ -1056,7 +1061,6 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 			}
 
 			r.Traffic = tf.DeepCopy()
-
 			if localTo, err := buildClusterSettingsTimeout(&policy.Spec.ClusterSettings); err == nil {
 				r.Traffic.Timeout = localTo
 			}
@@ -1067,6 +1071,8 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 			if policy.Spec.UseClientProtocol != nil {
 				r.UseClientProtocol = policy.Spec.UseClientProtocol
 			}
+
+			appendTrafficPolicyMetadata(r.Metadata, policy)
 		}
 	}
 	if len(routesWithDirectResponse) > 0 {
@@ -1078,6 +1084,18 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 	}
 
 	return errs
+}
+
+func appendTrafficPolicyMetadata(md *ir.ResourceMetadata, policy *egv1a1.BackendTrafficPolicy) {
+	if md == nil || policy == nil {
+		return
+	}
+
+	md.Policies = append(md.Policies, &ir.PolicyMetadata{
+		Kind:      egv1a1.KindBackendTrafficPolicy,
+		Name:      policy.Name,
+		Namespace: policy.Namespace,
+	})
 }
 
 func (t *Translator) buildRateLimit(policy *egv1a1.BackendTrafficPolicy) (*ir.RateLimit, error) {
@@ -1561,7 +1579,7 @@ func (t *Translator) getCustomResponseBody(
 	if body.Type != nil && *body.Type == egv1a1.ResponseValueTypeValueRef {
 		cm := t.GetConfigMap(policyNs, string(body.ValueRef.Name))
 		if cm != nil {
-			b, dataOk := cm.Data["response.body"]
+			b, dataOk := cm.Data[ResponseBodyConfigMapKey]
 			switch {
 			case dataOk:
 				data := []byte(b)
@@ -1576,7 +1594,7 @@ func (t *Translator) getCustomResponseBody(
 					return binData, nil
 				}
 			default:
-				return nil, fmt.Errorf("can't find the key response.body in the referenced configmap %s", body.ValueRef.Name)
+				return nil, fmt.Errorf("can't find the key %s in the referenced configmap %s", ResponseBodyConfigMapKey, body.ValueRef.Name)
 			}
 		} else {
 			return nil, fmt.Errorf("can't find the referenced configmap %s", body.ValueRef.Name)

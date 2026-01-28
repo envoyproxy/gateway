@@ -345,17 +345,6 @@ func TestValidateDestinationSettings(t *testing.T) {
 		wantReason              gwapiv1.RouteConditionReason
 	}{
 		{
-			name: "headless service rejected when endpointRoutingDisabled=true",
-			ds: &ir.DestinationSetting{
-				Name:      "headless",
-				Endpoints: []*ir.DestinationEndpoint{{Host: "None"}},
-			},
-			endpointRoutingDisabled: true,
-			kind:                    &svcKind,
-			wantErr:                 true,
-			wantReason:              status.RouteReasonUnsupportedSetting,
-		},
-		{
 			name: "normal service allowed with ClusterIP routing",
 			ds: &ir.DestinationSetting{
 				Name:      "normal",
@@ -402,37 +391,60 @@ func TestValidateDestinationSettings(t *testing.T) {
 	}
 }
 
-func TestIsHeadlessService(t *testing.T) {
+func TestIsServiceHeadless(t *testing.T) {
 	tests := []struct {
-		name      string
-		endpoints []*ir.DestinationEndpoint
-		want      bool
+		name    string
+		service *corev1.Service
+		want    bool
 	}{
 		{
-			name: "headless Service",
-			endpoints: []*ir.DestinationEndpoint{
-				{Host: "None"},
+			name: "headless service with ClusterIP None",
+			service: &corev1.Service{
+				Spec: corev1.ServiceSpec{
+					ClusterIP: "None",
+				},
 			},
 			want: true,
 		},
 		{
-			name: "non headless Service with valid ClusterIP",
-			endpoints: []*ir.DestinationEndpoint{
-				{Host: "10.0.0.1"},
+			name: "normal service with ClusterIP",
+			service: &corev1.Service{
+				Spec: corev1.ServiceSpec{
+					ClusterIP: "10.0.0.1",
+				},
 			},
 			want: false,
 		},
 		{
-			name:      "empty slice",
-			endpoints: nil,
-			want:      false,
+			name: "dual-stack headless service",
+			service: &corev1.Service{
+				Spec: corev1.ServiceSpec{
+					ClusterIP:  "None",
+					ClusterIPs: []string{"None", "None"},
+				},
+			},
+			want: true,
+		},
+		{
+			name: "dual-stack service with valid IPs",
+			service: &corev1.Service{
+				Spec: corev1.ServiceSpec{
+					ClusterIP:  "10.0.0.1",
+					ClusterIPs: []string{"10.0.0.1", "2001:db8::1"},
+				},
+			},
+			want: false,
+		},
+		{
+			name:    "nil service",
+			service: nil,
+			want:    false,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ds := &ir.DestinationSetting{Endpoints: tt.endpoints}
-			got := isHeadlessService(ds)
+			got := isServiceHeadless(tt.service)
 			require.Equal(t, tt.want, got)
 		})
 	}

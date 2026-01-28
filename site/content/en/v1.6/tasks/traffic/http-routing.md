@@ -51,7 +51,7 @@ The three HTTPRoute resources create routing rules on the Gateway. In order to r
 an HTTPRoute must be configured with `parentRefs` which reference the parent Gateway(s) that it should be attached to.
 An HTTPRoute can match against a [single set of hostnames][spec]. These hostnames are matched before any other matching
 within the HTTPRoute takes place. Since `example.com`, `foo.example.com`, and `bar.example.com` are separate hosts with
-different routing requirements, each is deployed as its own HTTPRoute - `example-route, ``foo-route`, and `bar-route`.
+different routing requirements, each is deployed as its own HTTPRoute - `example-route`, `foo-route`, and `bar-route`.
 
 Check the status of the HTTPRoutes:
 

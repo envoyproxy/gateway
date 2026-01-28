@@ -8,6 +8,7 @@ breaking changes: |
   Set HTTPRoute Accepted status to False when RequestMirror filter is used together with DirectResponse or RequestRedirect filters.
   Removed Accept-Encoding header from requests to backends when compression is enabled to avoid double compression issues.
   The default value `stats_tags` has been changed to improve the prometheus metrics output. Following metrics are affected: `envoy_cluster_*_rq_time_count`, `envoy_cluster_*_total_match_count`, `envoy_cluster_circuit_breakers_*_cx_open`.
+  Default HTTP filter ordering now places envoy.filters.http.custom_response at the first, which can change the behavior of local replies and header processing.
 
 # Updates addressing vulnerabilities, security flaws, or compliance requirements.
 security updates: |
@@ -32,7 +33,6 @@ new features: |
   Added support for addIfAbsent header action in ClientTrafficPolicy EarlyRequestHeaders and LateResponseHeaders to add headers only when they don't already exist.
   Added support for tracing tag, which allows to use Envoy string command operators such as `%ENVIRONMENT(...)%`.
 
-
 bug fixes: |
   Fixed configured OIDC authorization endpoint being overridden by discovered endpoints from issuer's well-known URL.
   Fix 500 errors caused by partially invalid BackendRefs; traffic is now correctly routed between valid backends and 500 responses according to their configured weights.
@@ -49,12 +49,15 @@ bug fixes: |
   Fixed an issue where route match rule order is wrong when merging with empty path match.
   Fixed wrong cluster type selection when an HTTPRoute mixes Service backends with Backend (FQDN) references, ensuring STRICT_DNS clusters are generated for the FQDN targets.
   Fixed SecurityPolicy BasicAuth validation to reject invalid {SHA} htpasswd entries.
+  Fixed JWT scope authorization to accept the `scp` claim in addition to `scope`.
 
 # Enhancements that improve performance.
 performance improvements: |
+  Including only needed keys in Secret and ConfigMap data to reduce memory usage.
 
 # Deprecated features or APIs.
 deprecations: |
 
 # Other notable changes not covered by the above sections.
 Other changes: |
+  Added scheme field to ClientTrafficPolicy enabling scheme header transformation to match backend transport protocol, allowing gateways with HTTP listeners to proxy to HTTPS services without protocol errors
