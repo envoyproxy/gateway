@@ -76,3 +76,22 @@
         timeout: 0s
         upgradeConfigs:
         - upgradeType: websocket
+- ignorePortInHostMatching: true
+  name: second-listener
+  virtualHosts:
+  - domains:
+    - '*'
+    name: second-listener/*
+    routes:
+    - match:
+        headers:
+        - name: user
+          stringMatch:
+            exact: jason
+        prefix: /
+      name: first-route
+      route:
+        cluster: first-route-dest
+        timeout: 5s
+        upgradeConfigs:
+        - upgradeType: websocket
