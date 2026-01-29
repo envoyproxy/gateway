@@ -2358,6 +2358,8 @@ type RateLimitRule struct {
 	MethodMatches []*StringMatch `json:"methodMatches,omitempty" yaml:"methodMatches,omitempty"`
 	// CIDRMatch define the match conditions on the source IP's CIDR for this route.
 	CIDRMatch *CIDRMatch `json:"cidrMatch,omitempty" yaml:"cidrMatch,omitempty"`
+	// QueryParamMatches define the match conditions on the request query parameters for this route.
+	QueryParamMatches []*QueryParamMatch `json:"queryParamMatches,omitempty" yaml:"queryParamMatches,omitempty"`
 	// Limit holds the rate limit values.
 	Limit RateLimitValue `json:"limit,omitempty" yaml:"limit,omitempty"`
 	// RequestCost specifies the cost of the request.
@@ -2397,9 +2399,17 @@ type CIDRMatch struct {
 	Distinct bool `json:"distinct" yaml:"distinct"`
 }
 
+// QueryParamMatch defines the match attributes within the query parameters of the request.
+// +k8s:deepcopy-gen=true
+type QueryParamMatch struct {
+	// StringMatch defines how to match against the value of the query parameter.
+	// The Name field within StringMatch is used for the query parameter name.
+	StringMatch `json:",inline" yaml:",inline"`
+}
+
 // TODO zhaohuabing: remove this function
 func (r *RateLimitRule) IsMatchSet() bool {
-	return len(r.HeaderMatches) != 0 || r.PathMatch != nil || len(r.MethodMatches) != 0 || r.CIDRMatch != nil
+	return len(r.HeaderMatches) != 0 || r.PathMatch != nil || len(r.MethodMatches) != 0 || r.CIDRMatch != nil || len(r.QueryParamMatches) != 0
 }
 
 type RateLimitUnit egv1a1.RateLimitUnit
