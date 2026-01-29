@@ -5359,6 +5359,13 @@ func (in *OpenTelemetryEnvoyProxyAccessLog) DeepCopyInto(out *OpenTelemetryEnvoy
 			(*out)[key] = val
 		}
 	}
+	if in.ResourceAttributes != nil {
+		in, out := &in.ResourceAttributes, &out.ResourceAttributes
+		*out = make(map[string]string, len(*in))
+		for key, val := range *in {
+			(*out)[key] = val
+		}
+	}
 	if in.Headers != nil {
 		in, out := &in.Headers, &out.Headers
 		*out = make([]v1.HTTPHeader, len(*in))
@@ -5383,6 +5390,13 @@ func (in *OpenTelemetryTracingProvider) DeepCopyInto(out *OpenTelemetryTracingPr
 		in, out := &in.Headers, &out.Headers
 		*out = make([]v1.HTTPHeader, len(*in))
 		copy(*out, *in)
+	}
+	if in.ResourceAttributes != nil {
+		in, out := &in.ResourceAttributes, &out.ResourceAttributes
+		*out = make(map[string]string, len(*in))
+		for key, val := range *in {
+			(*out)[key] = val
+		}
 	}
 }
 
@@ -6030,6 +6044,13 @@ func (in *ProxyOpenTelemetrySink) DeepCopyInto(out *ProxyOpenTelemetrySink) {
 		in, out := &in.Headers, &out.Headers
 		*out = make([]v1.HTTPHeader, len(*in))
 		copy(*out, *in)
+	}
+	if in.ResourceAttributes != nil {
+		in, out := &in.ResourceAttributes, &out.ResourceAttributes
+		*out = make(map[string]string, len(*in))
+		for key, val := range *in {
+			(*out)[key] = val
+		}
 	}
 }
 

@@ -58,6 +58,14 @@ stats_sinks:
       initial_metadata:
       - key: "Authorization"
         value: "Bearer fake"
+    resource_detectors:
+    - name: envoy.tracers.opentelemetry.resource_detectors.static_config
+      typed_config:
+        "@type": type.googleapis.com/envoy.extensions.tracers.opentelemetry.resource_detectors.v3.StaticConfigResourceDetectorConfig
+        attributes:
+          deployment.environment: "test"
+          service.name: "test-service"
+          service.version: "v1.0.0"
 static_resources:
   clusters:
   - name: otel_metric_sink_0

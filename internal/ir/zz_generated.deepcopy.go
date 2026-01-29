@@ -2757,8 +2757,8 @@ func (in *OpenTelemetryAccessLog) DeepCopyInto(out *OpenTelemetryAccessLog) {
 			(*out)[key] = val
 		}
 	}
-	if in.Resources != nil {
-		in, out := &in.Resources, &out.Resources
+	if in.ResourceAttributes != nil {
+		in, out := &in.ResourceAttributes, &out.ResourceAttributes
 		*out = make(map[string]string, len(*in))
 		for key, val := range *in {
 			(*out)[key] = val
@@ -3407,6 +3407,13 @@ func (in *ResolvedMetricSink) DeepCopyInto(out *ResolvedMetricSink) {
 		in, out := &in.Headers, &out.Headers
 		*out = make([]v1.HTTPHeader, len(*in))
 		copy(*out, *in)
+	}
+	if in.ResourceAttributes != nil {
+		in, out := &in.ResourceAttributes, &out.ResourceAttributes
+		*out = make(map[string]string, len(*in))
+		for key, val := range *in {
+			(*out)[key] = val
+		}
 	}
 }
 
@@ -4339,6 +4346,13 @@ func (in *Tracing) DeepCopyInto(out *Tracing) {
 	}
 	if in.Tags != nil {
 		in, out := &in.Tags, &out.Tags
+		*out = make(map[string]string, len(*in))
+		for key, val := range *in {
+			(*out)[key] = val
+		}
+	}
+	if in.ResourceAttributes != nil {
+		in, out := &in.ResourceAttributes, &out.ResourceAttributes
 		*out = make(map[string]string, len(*in))
 		for key, val := range *in {
 			(*out)[key] = val

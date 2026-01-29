@@ -116,7 +116,7 @@ accessLog:
             weight: 1
             name: accesslog_otel_0_3/backend/0
       logType: Route
-      resources:
+      resourceAttributes:
         k8s.cluster.name: cluster-1
       text: |
         this is a route log
@@ -132,7 +132,7 @@ accessLog:
             weight: 1
             name: accesslog_otel_1_3/backend/0
       logType: Listener
-      resources:
+      resourceAttributes:
         k8s.cluster.name: cluster-1
       text: |
         this is a listener log
@@ -147,7 +147,7 @@ accessLog:
             addressType: FQDN
             weight: 1
             name: accesslog_otel_2_3/backend/0
-      resources:
+      resourceAttributes:
         k8s.cluster.name: cluster-1
       text: |
         this is a Global log

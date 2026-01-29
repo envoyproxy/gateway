@@ -30,7 +30,7 @@ envoyProxyForGatewayClass:
                       Kind: Backend
                       Group: gateway.envoyproxy.io
                       port: 3001
-                  resources:
+                  resourceAttributes:
                     k8s.cluster.name: "cluster-1"
 gateways:
   - apiVersion: gateway.networking.k8s.io/v1
