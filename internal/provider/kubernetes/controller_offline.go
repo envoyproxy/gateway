@@ -115,6 +115,12 @@ func NewOfflineGatewayAPIController(
 		r.updateStatusFromSubscriptions(ctx, cfg.EnvoyGateway.ExtensionManager != nil)
 	}
 
+	go func() {
+		<-ctx.Done()
+		r.resources.Close()
+		r.log.Info("shutting down")
+	}()
+
 	return &OfflineGatewayAPIReconciler{
 		gatewayAPIReconciler: r,
 		Client:               cli,

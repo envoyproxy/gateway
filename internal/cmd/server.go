@@ -277,7 +277,6 @@ func startRunners(ctx context.Context, cfg *config.Server, runnerErrors *message
 	<-ctx.Done()
 
 	// Close xdsIR channel
-	// No need to close infraIR and pResources channels since they are already closed
 	channels.xdsIR.Close()
 
 	cfg.Logger.Info("runners are shutting down")
@@ -286,6 +285,10 @@ func startRunners(ctx context.Context, cfg *config.Server, runnerErrors *message
 			cfg.Logger.Error(err, "failed to close runner", "name", r.runner.Name())
 		}
 	}
+
+	// Close shared resources after all runners have exited to avoid racing Subscribe/Close.
+	channels.pResources.Close()
+	channels.infraIR.Close()
 
 	if extMgr != nil {
 		// Close connections to extension services

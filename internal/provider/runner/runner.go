@@ -27,6 +27,7 @@ type Config struct {
 
 type Runner struct {
 	Config
+	providerDone chan struct{}
 }
 
 func New(cfg *Config) *Runner {
@@ -34,7 +35,13 @@ func New(cfg *Config) *Runner {
 }
 
 // Close implements Runner interface.
-func (r *Runner) Close() error { return nil }
+func (r *Runner) Close() error {
+	if r.providerDone == nil {
+		return nil
+	}
+	<-r.providerDone
+	return nil
+}
 
 // Name implements Runner interface.
 func (r *Runner) Name() string {
@@ -66,7 +73,9 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 	}
 
 	r.Logger.Info("Running provider", "type", p.Type())
+	r.providerDone = make(chan struct{})
 	go func() {
+		defer close(r.providerDone)
 		if err := p.Start(ctx); err != nil {
 			r.Logger.Error(err, "unable to start provider")
 		}
