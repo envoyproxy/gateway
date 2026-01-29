@@ -192,6 +192,7 @@ type FileEnvoyProxyAccessLog struct {
 // +kubebuilder:validation:XValidation:message="BackendRefs must be used, backendRef is not supported.",rule="!has(self.backendRef)"
 // +kubebuilder:validation:XValidation:message="BackendRefs only support Service and Backend kind.",rule="has(self.backendRefs) ? self.backendRefs.all(f, f.kind == 'Service' || f.kind == 'Backend') : true"
 // +kubebuilder:validation:XValidation:message="BackendRefs only support Core and gateway.envoyproxy.io group.",rule="has(self.backendRefs) ? (self.backendRefs.all(f, f.group == \"\" || f.group == 'gateway.envoyproxy.io')) : true"
+// +kubebuilder:validation:XValidation:rule="!has(self.resources) || !has(self.resourceAttributes)",message="either resources or resourceAttributes can be set, not both"
 type OpenTelemetryEnvoyProxyAccessLog struct {
 	BackendCluster `json:",inline"`
 	// Host define the extension service hostname.
@@ -208,8 +209,14 @@ type OpenTelemetryEnvoyProxyAccessLog struct {
 	Port int32 `json:"port,omitempty"`
 	// Resources is a set of labels that describe the source of a log entry, including envoy node info.
 	// It's recommended to follow [semantic conventions](https://opentelemetry.io/docs/reference/specification/resource/semantic_conventions/).
+	//
+	// Deprecated: Use ResourceAttributes instead.
 	// +optional
 	Resources map[string]string `json:"resources,omitempty"`
+	// ResourceAttributes is a set of labels that describe the source of a log entry, including envoy node info.
+	// It's recommended to follow [semantic conventions](https://opentelemetry.io/docs/reference/specification/resource/semantic_conventions/).
+	// +optional
+	ResourceAttributes map[string]string `json:"resourceAttributes,omitempty"`
 	// Headers is a list of additional headers to send with OTLP export requests.
 	// These headers are added as gRPC initial metadata for the OTLP gRPC service.
 	// +optional
@@ -218,4 +225,15 @@ type OpenTelemetryEnvoyProxyAccessLog struct {
 	Headers []gwapiv1.HTTPHeader `json:"headers,omitempty"`
 
 	// TODO: support more OpenTelemetry accesslog options(e.g. TLS, auth etc.) in the future.
+}
+
+// GetResourceAttributes returns the preferred resource attributes for OpenTelemetry access logs.
+func (o *OpenTelemetryEnvoyProxyAccessLog) GetResourceAttributes() map[string]string {
+	if o == nil {
+		return nil
+	}
+	if o.ResourceAttributes != nil {
+		return o.ResourceAttributes
+	}
+	return o.Resources
 }

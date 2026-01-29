@@ -8,6 +8,10 @@ tracing:
     value: Bearer my-api-key
   - name: X-Tenant-ID
     value: tenant-123
+  resourceAttributes:
+    service.name: test-service
+    service.version: v1.0.0
+    deployment.environment: test
   destination:
     name: "tracing-0"
     settings:

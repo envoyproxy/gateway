@@ -208,6 +208,11 @@ func TestGetRenderedBootstrapConfig(t *testing.T) {
 						Headers: []gwapiv1.HTTPHeader{
 							{Name: "Authorization", Value: "Bearer fake"},
 						},
+						ResourceAttributes: map[string]string{
+							"service.name":           "test-service",
+							"service.version":        "v1.0.0",
+							"deployment.environment": "test",
+						},
 						TLS: &MetricSinkTLS{
 							SNI:                 "otel-collector.example.com",
 							UseSystemTrustStore: true,
