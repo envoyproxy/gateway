@@ -5,7 +5,7 @@ global:
       image: "docker.io/envoyproxy/gateway-dev:latest"
       pullPolicy: Always
     ratelimit:
-      image: "docker.io/envoyproxy/ratelimit:master"
+      image: "docker.io/envoyproxy/ratelimit:3fb70258"
 
 deployment:
   envoyGateway:
