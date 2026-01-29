@@ -429,6 +429,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-with-no-overrides
           namespace: default
+          policies:
+          - kind: BackendTrafficPolicy
+            name: policy-for-httproute-with-no-overrides
+            namespace: default
         name: httproute/default/httproute-with-no-overrides/rule/0/match/0/gateway_envoyproxy_io
         pathMatch:
           distinct: false
@@ -472,6 +476,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-with-overrides
           namespace: default
+          policies:
+          - kind: BackendTrafficPolicy
+            name: policy-for-httproute-with-overrides
+            namespace: default
         name: httproute/default/httproute-with-overrides/rule/0/match/0/gateway_envoyproxy_io
         pathMatch:
           distinct: false
@@ -517,6 +525,10 @@ xdsIR:
           kind: GRPCRoute
           name: grpcroute-with-overrides
           namespace: default
+          policies:
+          - kind: BackendTrafficPolicy
+            name: policy-for-grpcroute-with-overrides
+            namespace: default
         name: grpcroute/default/grpcroute-with-overrides/rule/0/match/-1/*
         traffic:
           healthCheck:
@@ -554,6 +566,10 @@ xdsIR:
           kind: GRPCRoute
           name: grpcroute-with-no-overrides
           namespace: default
+          policies:
+          - kind: BackendTrafficPolicy
+            name: policy-for-grpcroute-with-no-overrides
+            namespace: default
         name: grpcroute/default/grpcroute-with-no-overrides/rule/0/match/-1/*
         traffic:
           healthCheck:

@@ -46,7 +46,7 @@ spec:
         - name: HTTP_PORT
           value: "8080"
         - name: H2C_PORT
-          value: "3001"        
+          value: "3001"
         - name: POD_NAME
           valueFrom:
             fieldRef:
