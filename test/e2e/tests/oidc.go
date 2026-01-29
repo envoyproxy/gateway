@@ -53,7 +53,8 @@ var OIDCTest = suite.ConformanceTest{
 		podInitialized := corev1.PodCondition{Type: corev1.PodInitialized, Status: corev1.ConditionTrue}
 		// Wait for the keycloak pod to be configured with the test user and client
 		WaitForPods(t, suite.Client, ns, map[string]string{"job-name": "setup-keycloak"}, corev1.PodSucceeded, &podInitialized)
-		// Apply the security policy that configures OIDC authentication
+		// Apply the security policy after the keycloak pod is ready, this is because EG will try to fetch the
+		// OIDC configuration from the keycloak's well-known endpoint
 		suite.Applier.MustApplyWithCleanup(t, suite.Client, suite.TimeoutConfig, "testdata/oidc-securitypolicy.yaml", true)
 
 		t.Run("oidc provider represented by a URL", func(t *testing.T) {
