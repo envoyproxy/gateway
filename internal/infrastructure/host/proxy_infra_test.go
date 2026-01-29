@@ -437,7 +437,7 @@ func TestGetEnvoyVersion(t *testing.T) {
 		},
 		{
 			name:         "k8s provider dev version",
-			defaultImage: "docker.io/envoyproxy/envoy:distroless-v1.37.0",
+			defaultImage: "docker.io/envoyproxy/envoy:distroless-dev",
 			provider:     egv1a1.DefaultEnvoyProxyProvider(),
 			want:         "",
 		},
@@ -461,7 +461,7 @@ func TestGetEnvoyVersion(t *testing.T) {
 		},
 		{
 			name:         "host provider envoy version unset dev version",
-			defaultImage: "docker.io/envoyproxy/envoy:distroless-v1.37.0",
+			defaultImage: "docker.io/envoyproxy/envoy:distroless-dev",
 			provider: &egv1a1.EnvoyProxyProvider{
 				Type: egv1a1.EnvoyProxyProviderTypeHost,
 				Host: &egv1a1.EnvoyProxyHostProvider{},
@@ -470,7 +470,7 @@ func TestGetEnvoyVersion(t *testing.T) {
 		},
 		{
 			name:         "host provider envoy version empty dev version",
-			defaultImage: "docker.io/envoyproxy/envoy:distroless-v1.37.0",
+			defaultImage: "docker.io/envoyproxy/envoy:distroless-dev",
 			provider: &egv1a1.EnvoyProxyProvider{
 				Type: egv1a1.EnvoyProxyProviderTypeHost,
 				Host: &egv1a1.EnvoyProxyHostProvider{EnvoyVersion: ptr.To("")},
