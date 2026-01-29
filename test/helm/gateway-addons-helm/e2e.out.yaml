@@ -836,10 +836,9 @@ data:
             local:
               path: /var/tempo/traces
             wal:
-              flush_age_threshold: 5s
               path: /var/tempo/wal
     querier:
-          search_ingesters_until: 1s
+          {}
     query_frontend:
           {}
     overrides:
@@ -11119,7 +11118,7 @@ spec:
         app.kubernetes.io/name: tempo
         app.kubernetes.io/instance: gateway-addons-helm
       annotations:
-        checksum/config: 225cbc15bdb5741708e85e96fd9d74d2dd273190b51217624e56ff925b59a13b
+        checksum/config: 658cd054eaa8051815e2801a76bff8e63e030ca415e6220fdec9c6373a970ebc
     spec:
       serviceAccountName: tempo
       automountServiceAccountToken: true

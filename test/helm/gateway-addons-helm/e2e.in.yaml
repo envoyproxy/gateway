@@ -15,11 +15,3 @@ tempo:
     ingester:
       flush_check_period: 1s
       max_block_duration: 15s
-    querier:
-      # Look at very recent data sitting in ingester memory
-      search_ingesters_until: 1s
-    storage:
-      trace:
-        wal:
-          # Force Write-Ahead Log to flush sooner
-          flush_age_threshold: 5s
