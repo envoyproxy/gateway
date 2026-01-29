@@ -2,7 +2,7 @@
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
-  name: http-with-ext-auth
+  name: http-with-http-ext-auth
   namespace: gateway-conformance-infra
 spec:
   parentRefs:
@@ -12,25 +12,7 @@ spec:
     - matches:
         - path:
             type: PathPrefix
-            value: /myapp              # This is the path that will be protected by ext auth
-      backendRefs:
-        - name: infra-backend-v1
-          port: 8080
----
-apiVersion: gateway.networking.k8s.io/v1
-kind: HTTPRoute
-metadata:
-  name: http-without-ext-auth
-  namespace: gateway-conformance-infra
-spec:
-  parentRefs:
-    - name: same-namespace
-  hostnames: ["www.example.com"]
-  rules:
-    - matches:
-        - path:
-            type: PathPrefix
-            value: /public            # This is the path that will be public
+            value: /http
       backendRefs:
         - name: infra-backend-v1
           port: 8080
@@ -38,15 +20,15 @@ spec:
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: SecurityPolicy
 metadata:
-  name: ext-auth-test
+  name: http-ext-auth
   namespace: gateway-conformance-infra
 spec:
   targetRefs:
     - group: gateway.networking.k8s.io
       kind: HTTPRoute
-      name: http-with-ext-auth
+      name: http-with-http-ext-auth
   extAuth:
-    timeout: 0ms  # 0 millisecond - should cause timeout
+    timeout: 10ms
     http:
       path: /auth
       backendRef:
@@ -62,13 +44,13 @@ metadata:
   namespace: gateway-conformance-infra
 spec:
   targetRefs:
-    - group: ''
+    - group: ""
       kind: Service
       name: envoy-ext-auth
       sectionName: http
   validation:
     caCertificateRefs:
       - name: envoy-ext-auth-ca
-        group: ''
+        group: ""
         kind: ConfigMap
     hostname: envoy-ext-auth
