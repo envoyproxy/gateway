@@ -92,6 +92,7 @@ jobs:
     if: ${{ always() && needs.verify-build-and-test.result == 'success' && (needs.benchmark-test.result == 'success' || needs.benchmark-test.result == 'skipped') }}
     permissions:
       contents: write
+      packages: write
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
       - uses: ./tools/github-actions/reclaim-storage
@@ -111,11 +112,19 @@ jobs:
         with:
           username: ${{ vars.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_PASSWORD }}
+
+      - name: Login to GHCR
+        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121  # v4.1.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
       - name: Build multiarch binaries
         run: make build-multiarch
 
       - name: Build and push multiarch image
-        run: make image.multiarch.setup image.push.multiarch TAG=${{ env.release_tag }} IMAGE=docker.io/envoyproxy/gateway
+        run: make image.multiarch.setup image.push.multiarch TAG=${{ env.release_tag }} IMAGE=docker.io/envoyproxy/gateway EXTRA_TAGS="-t ghcr.io/${{ github.repository }}:${{ env.release_tag }}"
 
       - name: Generate Release Artifacts
         # rc.0 tags ship no release notes, so generate-artifacts would fail on the missing file.
