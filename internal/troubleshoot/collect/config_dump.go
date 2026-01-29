@@ -27,6 +27,8 @@ import (
 
 const (
 	SecretsConfigDumpTypeURL = "type.googleapis.com/envoy.admin.v3.SecretsConfigDump"
+	// DefaultConfigDumpTimeout is the default timeout for config dump collection
+	DefaultConfigDumpTimeout = 30 * time.Second
 )
 
 var _ tbcollect.Collector = &ConfigDump{}
@@ -38,6 +40,8 @@ type ConfigDump struct {
 	ClientConfig *rest.Config
 
 	EnableSDS bool
+	// Timeout is the timeout for collecting config dumps. If not set, defaults to DefaultConfigDumpTimeout.
+	Timeout time.Duration
 }
 
 func (cd ConfigDump) Title() string {
@@ -60,8 +64,16 @@ func (cd ConfigDump) CheckRBAC(_ context.Context, _ tbcollect.Collector, _ *trou
 	return nil
 }
 
+// getTimeout returns the configured timeout, or the default if not set
+func (cd ConfigDump) getTimeout() time.Duration {
+	if cd.Timeout > 0 {
+		return cd.Timeout
+	}
+	return DefaultConfigDumpTimeout
+}
+
 func (cd ConfigDump) Collect(_ chan<- interface{}) (tbcollect.CollectorResult, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), cd.getTimeout())
 	defer cancel()
 
 	client, err := kubernetes.NewForConfig(cd.ClientConfig)
