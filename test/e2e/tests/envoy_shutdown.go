@@ -55,7 +55,7 @@ var EnvoyShutdownTest = suite.ConformanceTest{
 			)
 
 			err = wait.PollUntilContextTimeout(t.Context(), 2*time.Second, suite.TimeoutConfig.CreateTimeout, true, func(ctx context.Context) (bool, error) {
-				dp, err = getDeploymentForGateway(ns, name, suite.Client)
+				dp, err = getDeploymentForGateway(ctx, ns, name, suite.Client)
 				if err != nil {
 					tlog.Logf(t, "Waiting for proxy deployment to be created: %v", err)
 					return false, nil
@@ -127,13 +127,12 @@ var EnvoyShutdownTest = suite.ConformanceTest{
 }
 
 // gets the proxy deployment created for a gateway, assuming merge-gateways is not used
-func getDeploymentForGateway(namespace, name string, c client.Client) (*appsv1.Deployment, error) {
+func getDeploymentForGateway(ctx context.Context, namespace, name string, c client.Client) (*appsv1.Deployment, error) {
 	dpLabels := proxy.EnvoyAppLabel()
 	owningLabels := gatewayapi.GatewayOwnerLabels(namespace, name)
 	for k, v := range owningLabels {
 		dpLabels[k] = v
 	}
-	ctx := context.Background()
 
 	gwNs := "envoy-gateway-system"
 	if IsGatewayNamespaceMode() {
