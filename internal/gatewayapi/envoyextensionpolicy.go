@@ -950,6 +950,7 @@ func (t *Translator) buildWasm(
 		// downloaded from the original HTTP server or the OCI registry
 		originalChecksum string
 		servingURL       string // the wasm module download URL from the EG HTTP server
+		caCert           []byte
 		err              error
 	)
 
@@ -983,11 +984,23 @@ func (t *Translator) buildWasm(
 
 		http := config.Code.HTTP
 
+		if http.TLS != nil {
+			from := crossNamespaceFrom{
+				group:     egv1a1.GroupName,
+				kind:      resource.KindEnvoyExtensionPolicy,
+				namespace: policy.Namespace,
+			}
+			if caCert, err = t.validateAndGetDataAtKeyInRef(http.TLS.CACertificateRef, "ca.crt", resources, from); err != nil {
+				return nil, err
+			}
+		}
+
 		if servingURL, checksum, err = t.WasmCache.Get(http.URL, &wasm.GetOptions{
 			Checksum:        originalChecksum,
 			PullPolicy:      pullPolicy,
 			ResourceName:    irConfigNameForWasm(policy, idx),
 			ResourceVersion: policy.ResourceVersion,
+			CACert:          caCert,
 		}); err != nil {
 			return nil, err
 		}
@@ -1011,6 +1024,17 @@ func (t *Translator) buildWasm(
 		// This is a sanity check, the validation should have caught this
 		if image == nil {
 			return nil, fmt.Errorf("missing Image field in Wasm code source")
+		}
+
+		if image.TLS != nil {
+			from := crossNamespaceFrom{
+				group:     egv1a1.GroupName,
+				kind:      resource.KindEnvoyExtensionPolicy,
+				namespace: policy.Namespace,
+			}
+			if caCert, err = t.validateAndGetDataAtKeyInRef(image.TLS.CACertificateRef, "ca.crt", resources, from); err != nil {
+				return nil, err
+			}
 		}
 
 		if image.PullSecretRef != nil {
@@ -1057,6 +1081,7 @@ func (t *Translator) buildWasm(
 			PullPolicy:      pullPolicy,
 			ResourceName:    irConfigNameForWasm(policy, idx),
 			ResourceVersion: policy.ResourceVersion,
+			CACert:          caCert,
 		}); err != nil {
 			return nil, err
 		}

@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+	certificatesv1b1 "k8s.io/api/certificates/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -633,9 +634,80 @@ func TestProcessEnvoyExtensionPolicyObjectRefs(t *testing.T) {
 		name                 string
 		envoyExtensionPolicy *egv1a1.EnvoyExtensionPolicy
 		backend              *egv1a1.Backend
+		configMap            *corev1.ConfigMap
+		secret               *corev1.Secret
+		clusterTrustBundle   *certificatesv1b1.ClusterTrustBundle
 		referenceGrant       *gwapiv1b1.ReferenceGrant
 		shouldBeAdded        bool
 	}{
+		{
+			name: "valid wasm configmap ca cert ref",
+			envoyExtensionPolicy: &egv1a1.EnvoyExtensionPolicy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "ns-1",
+					Name:      "test-policy",
+				},
+				Spec: egv1a1.EnvoyExtensionPolicySpec{
+					Wasm: []egv1a1.Wasm{
+						{
+							Code: egv1a1.WasmCodeSource{
+								Type: egv1a1.HTTPWasmCodeSourceType,
+								HTTP: &egv1a1.HTTPWasmCodeSource{
+									URL: "https://example.com/test.wasm",
+									TLS: &egv1a1.WasmCodeSourceTLSConfig{
+										CACertificateRef: gwapiv1.SecretObjectReference{
+											Kind: ptr.To(gwapiv1.Kind(resource.KindConfigMap)),
+											Name: "ca-cert",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			configMap: &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "ns-1",
+					Name:      "ca-cert",
+				},
+			},
+			shouldBeAdded: true,
+		},
+		{
+			name: "valid wasm secret ca cert ref",
+			envoyExtensionPolicy: &egv1a1.EnvoyExtensionPolicy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "ns-1",
+					Name:      "test-policy",
+				},
+				Spec: egv1a1.EnvoyExtensionPolicySpec{
+					Wasm: []egv1a1.Wasm{
+						{
+							Code: egv1a1.WasmCodeSource{
+								Type: egv1a1.HTTPWasmCodeSourceType,
+								HTTP: &egv1a1.HTTPWasmCodeSource{
+									URL: "https://example.com/test.wasm",
+									TLS: &egv1a1.WasmCodeSourceTLSConfig{
+										CACertificateRef: gwapiv1.SecretObjectReference{
+											Kind: ptr.To(gwapiv1.Kind(resource.KindSecret)),
+											Name: "ca-cert",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			secret: &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "ns-1",
+					Name:      "ca-cert",
+				},
+			},
+			shouldBeAdded: true,
+		},
 		{
 			name: "valid envoy extension policy with proper ref grant to backend",
 			envoyExtensionPolicy: &egv1a1.EnvoyExtensionPolicy{
@@ -748,6 +820,159 @@ func TestProcessEnvoyExtensionPolicyObjectRefs(t *testing.T) {
 			},
 			shouldBeAdded: false,
 		},
+		{
+			name: "valid wasm http with ClusterTrustBundle ca cert ref",
+			envoyExtensionPolicy: &egv1a1.EnvoyExtensionPolicy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "ns-1",
+					Name:      "test-policy",
+				},
+				Spec: egv1a1.EnvoyExtensionPolicySpec{
+					Wasm: []egv1a1.Wasm{
+						{
+							Code: egv1a1.WasmCodeSource{
+								Type: egv1a1.HTTPWasmCodeSourceType,
+								HTTP: &egv1a1.HTTPWasmCodeSource{
+									URL: "https://example.com/test.wasm",
+									TLS: &egv1a1.WasmCodeSourceTLSConfig{
+										CACertificateRef: gwapiv1.SecretObjectReference{
+											Kind: ptr.To(gwapiv1.Kind(resource.KindClusterTrustBundle)),
+											Name: "ca-ctb",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			clusterTrustBundle: &certificatesv1b1.ClusterTrustBundle{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "ca-ctb",
+				},
+			},
+			shouldBeAdded: true,
+		},
+		{
+			name: "valid wasm image with ClusterTrustBundle ca cert ref",
+			envoyExtensionPolicy: &egv1a1.EnvoyExtensionPolicy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "ns-1",
+					Name:      "test-policy",
+				},
+				Spec: egv1a1.EnvoyExtensionPolicySpec{
+					Wasm: []egv1a1.Wasm{
+						{
+							Code: egv1a1.WasmCodeSource{
+								Type: egv1a1.ImageWasmCodeSourceType,
+								Image: &egv1a1.ImageWasmCodeSource{
+									URL: "oci://example.com/test.wasm:v1.0.0",
+									TLS: &egv1a1.WasmCodeSourceTLSConfig{
+										CACertificateRef: gwapiv1.SecretObjectReference{
+											Kind: ptr.To(gwapiv1.Kind(resource.KindClusterTrustBundle)),
+											Name: "ca-ctb-image",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			clusterTrustBundle: &certificatesv1b1.ClusterTrustBundle{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "ca-ctb-image",
+				},
+			},
+			shouldBeAdded: true,
+		},
+		{
+			name: "valid wasm image with Secret ca cert ref (default kind)",
+			envoyExtensionPolicy: &egv1a1.EnvoyExtensionPolicy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "ns-1",
+					Name:      "test-policy",
+				},
+				Spec: egv1a1.EnvoyExtensionPolicySpec{
+					Wasm: []egv1a1.Wasm{
+						{
+							Code: egv1a1.WasmCodeSource{
+								Type: egv1a1.ImageWasmCodeSourceType,
+								Image: &egv1a1.ImageWasmCodeSource{
+									URL: "oci://example.com/test.wasm:v1.0.0",
+									TLS: &egv1a1.WasmCodeSourceTLSConfig{
+										CACertificateRef: gwapiv1.SecretObjectReference{
+											// Kind is nil, should default to Secret
+											Name: "ca-secret-default",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			secret: &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "ns-1",
+					Name:      "ca-secret-default",
+				},
+			},
+			shouldBeAdded: true,
+		},
+		{
+			name: "wasm with multiple sources (HTTP with ConfigMap, Image with ClusterTrustBundle)",
+			envoyExtensionPolicy: &egv1a1.EnvoyExtensionPolicy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "ns-1",
+					Name:      "test-policy",
+				},
+				Spec: egv1a1.EnvoyExtensionPolicySpec{
+					Wasm: []egv1a1.Wasm{
+						{
+							Code: egv1a1.WasmCodeSource{
+								Type: egv1a1.HTTPWasmCodeSourceType,
+								HTTP: &egv1a1.HTTPWasmCodeSource{
+									URL: "https://example.com/test1.wasm",
+									TLS: &egv1a1.WasmCodeSourceTLSConfig{
+										CACertificateRef: gwapiv1.SecretObjectReference{
+											Kind: ptr.To(gwapiv1.Kind(resource.KindConfigMap)),
+											Name: "ca-cm-multi",
+										},
+									},
+								},
+							},
+						},
+						{
+							Code: egv1a1.WasmCodeSource{
+								Type: egv1a1.ImageWasmCodeSourceType,
+								Image: &egv1a1.ImageWasmCodeSource{
+									URL: "oci://example.com/test2.wasm:v1.0.0",
+									TLS: &egv1a1.WasmCodeSourceTLSConfig{
+										CACertificateRef: gwapiv1.SecretObjectReference{
+											Kind: ptr.To(gwapiv1.Kind(resource.KindClusterTrustBundle)),
+											Name: "ca-ctb-multi",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			configMap: &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "ns-1",
+					Name:      "ca-cm-multi",
+				},
+			},
+			clusterTrustBundle: &certificatesv1b1.ClusterTrustBundle{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "ca-ctb-multi",
+				},
+			},
+			shouldBeAdded: true,
+		},
 	}
 
 	for i := range testCases {
@@ -755,18 +980,53 @@ func TestProcessEnvoyExtensionPolicyObjectRefs(t *testing.T) {
 		// Run the test cases.
 		t.Run(tc.name, func(t *testing.T) {
 			// Add objects referenced by test cases.
-			objs := []client.Object{tc.envoyExtensionPolicy, tc.backend, tc.referenceGrant}
+			var objs []client.Object
+			if tc.envoyExtensionPolicy != nil {
+				objs = append(objs, tc.envoyExtensionPolicy)
+			}
+			if tc.backend != nil {
+				objs = append(objs, tc.backend)
+			}
+			if tc.configMap != nil {
+				objs = append(objs, tc.configMap)
+			}
+			if tc.secret != nil {
+				objs = append(objs, tc.secret)
+			}
+			if tc.referenceGrant != nil {
+				objs = append(objs, tc.referenceGrant)
+			}
+			if tc.clusterTrustBundle != nil {
+				objs = append(objs, tc.clusterTrustBundle)
+			}
 			r := setupReferenceGrantReconciler(objs)
 
 			ctx := context.Background()
 			resourceTree := resource.NewResources()
 			resourceMap := newResourceMapping()
 
-			err := r.processEnvoyExtensionPolicies(ctx, resourceTree, resourceMap)
+			// need to add the policy to resourceTree for processEnvoyExtensionPolicyObjectRefs to find it
+			if tc.envoyExtensionPolicy != nil {
+				resourceTree.EnvoyExtensionPolicies = append(resourceTree.EnvoyExtensionPolicies, tc.envoyExtensionPolicy)
+			}
+
+			err := r.processEnvoyExtensionPolicyObjectRefs(ctx, resourceTree, resourceMap)
 			require.NoError(t, err)
+
 			if tc.shouldBeAdded {
-				require.Contains(t, resourceTree.ReferenceGrants, tc.referenceGrant)
-			} else {
+				if tc.referenceGrant != nil {
+					require.Contains(t, resourceTree.ReferenceGrants, tc.referenceGrant)
+				}
+				if tc.configMap != nil {
+					require.Contains(t, resourceTree.ConfigMaps, tc.configMap)
+				}
+				if tc.secret != nil {
+					require.Contains(t, resourceTree.Secrets, tc.secret)
+				}
+				if tc.clusterTrustBundle != nil {
+					require.Contains(t, resourceTree.ClusterTrustBundles, tc.clusterTrustBundle)
+				}
+			} else if tc.referenceGrant != nil {
 				require.NotContains(t, resourceTree.ReferenceGrants, tc.referenceGrant)
 			}
 		})
