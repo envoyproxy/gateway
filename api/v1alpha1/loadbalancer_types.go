@@ -159,7 +159,20 @@ type Cookie struct {
 }
 
 // BackendUtilization defines configuration for Envoy's Backend Utilization policy.
+// It uses Open Resource Cost Application (ORCA) load metrics reported by endpoints to make load balancing decisions.
+// These metrics are typically sent by the backend service in response headers or trailers.
+//
+// The backend should report these metrics in header/trailer as one of the following formats:
+// - Binary: `endpoint-load-metrics-bin` with base64-encoded serialized `OrcaLoadReport` proto.
+// - JSON: `endpoint-load-metrics` with JSON-encoded `OrcaLoadReport` proto, e.g., `JSON {"cpu_utilization": 0.3}`.
+// - TEXT: `endpoint-load-metrics` with comma-separated key-value pairs, e.g., `TEXT cpu=0.3,mem=0.8`.
+//
+// By default, Envoy will forward these ORCA response headers/trailers from the upstream service to the downstream client.
+// If the downstream client also uses this information for load balancing, it might lead to unexpected behavior.
+// To avoid this, you can use the `HTTPRoute` or `BackendTrafficPolicy` to remove the load report headers before sending the response to the client.
+//
 // See Envoy proto: envoy.extensions.load_balancing_policies.client_side_weighted_round_robin.v3.ClientSideWeightedRoundRobin
+// See ORCA Load Report proto: xds.data.orca.v3.orca_load_report.proto
 type BackendUtilization struct {
 	// A given endpoint must report load metrics continuously for at least this long before the endpoint weight will be used.
 	// Default is 10s.

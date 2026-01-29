@@ -23,7 +23,7 @@ Envoy Gateway supports several load balancing strategies that determine how traf
 - **Random** – Chooses a backend at random to balance load
 - **Least Request** – Sends the request to the backend with the fewest active requests (this is the default)
 - **Consistent Hash** – Routes requests based on a hash (e.g., client IP or header), which helps keep repeat requests going to the same backend (useful for session affinity)
-- **Backend Utilization** – Uses client-observed load reports (e.g., ORCA metrics) to dynamically weight endpoints; if no metrics are available, it behaves similar to even-weight round robin
+- **Backend Utilization** – Uses client-observed load reports (e.g., Open Resource Cost Aggregation (ORCA) metrics) to dynamically weight endpoints; if no metrics are available, it behaves similar to even-weight round-robin.
 
 If no load balancing strategy is specified, Envoy Gateway uses **Least Request** by default.
 
@@ -65,6 +65,55 @@ spec:
       port: 3000
 ```
 In this setup, traffic matching /round is distributed evenly across all available backend service instances. For example, if there are four replicas of the backend service, each one should receive roughly 25% of the requests.
+
+## Backend Utilization (ORCA)
+
+Backend Utilization load balancing uses Open Resource Cost Application (ORCA) metrics to make load balancing decisions. These metrics are reported by the backend service in response headers or trailers.
+
+### ORCA Load Metrics
+
+The backend service (or its sidecar) reports load metrics in response headers or trailers (for streaming requests). ORCA supports multiple formats for these metrics:
+
+- **JSON**: Use the `endpoint-load-metrics` header with a JSON object.
+  ```http
+  endpoint-load-metrics: JSON {"cpu_utilization": 0.3, "mem_utilization": 0.8}
+  ```
+- **TEXT**: Use the `endpoint-load-metrics` header with comma-separated key-value pairs.
+  ```http
+  endpoint-load-metrics: TEXT cpu=0.3,mem=0.8,foo_bytes=123
+  ```
+- **Binary Proto**: Use the `endpoint-load-metrics-bin` header with a base64-encoded serialized `OrcaLoadReport` proto.
+  ```http
+  endpoint-load-metrics-bin: Cg4KCHNvbWUta2V5Eg0AAAAAAADwPw==
+  ```
+
+For more details, see:
+- [ORCA Load Report Proto](https://www.envoyproxy.io/docs/envoy/latest/xds/data/orca/v3/orca_load_report.proto)
+- [ORCA Design Document](https://docs.google.com/document/d/1NSnK3346BkBo1JUU3I9I5NYYnaJZQPt8_Z_XCBCI3uA)
+
+### Automatic Header Forwarding
+
+By default, Envoy forwards the ORCA response headers/trailers from the upstream cluster to the downstream client. This means that if the downstream client is also configured to use client-side weighted round-robin, it will load balance against Envoy based on upstream weights.
+
+To avoid this, you can configure an `HTTPRoute` or `BackendTrafficPolicy` to remove the ORCA headers before they reach the client.
+
+Example of removing the ORCA headers using `HTTPRoute`:
+
+```yaml
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: backend-utilization-route
+spec:
+  rules:
+  - filters:
+    - type: ResponseHeaderModifier
+      responseHeaderModifier:
+        remove: ["endpoint-load-metrics", "endpoint-load-metrics-bin"]
+    backendRefs:
+    - name: backend
+      port: 3000
+```
 
 ## Related Resources
 - [BackendTrafficPolicy](gateway_api_extensions/backend-traffic-policy.md)
