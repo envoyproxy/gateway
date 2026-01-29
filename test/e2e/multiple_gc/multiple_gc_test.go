@@ -27,6 +27,10 @@ import (
 func TestMultipleGC(t *testing.T) {
 	flag.Parse()
 	c, cfg := kubetest.NewClient(t)
+	recorder := e2e.NewTimingRecorder()
+	t.Cleanup(func() {
+		recorder.Report(t)
+	})
 
 	if flags.RunTest != nil && *flags.RunTest != "" {
 		tlog.Logf(t, "Running E2E test %s with %s GatewayClass\n cleanup: %t\n debug: %t",
@@ -62,9 +66,10 @@ func TestMultipleGC(t *testing.T) {
 		internetGatewaySuite.Applier.GatewayClass = internetGatewaySuiteGatewayClassName
 		internetGatewaySuite.ControllerName = kubernetes.GWCMustHaveAcceptedConditionTrue(t, internetGatewaySuite.Client, internetGatewaySuite.TimeoutConfig, internetGatewaySuite.GatewayClassName)
 
+		timedTests := e2e.WrapConformanceTestsWithTiming(tests.MultipleGCTests[internetGatewaySuiteGatewayClassName], recorder)
 		tlog.Logf(t, "Running %d MultipleGC tests", len(tests.MultipleGCTests[internetGatewaySuiteGatewayClassName]))
 
-		err = internetGatewaySuite.Run(t, tests.MultipleGCTests[internetGatewaySuiteGatewayClassName])
+		err = internetGatewaySuite.Run(t, timedTests)
 		if err != nil {
 			t.Fatalf("Failed to run InternetGC tests: %v", err)
 		}
@@ -96,8 +101,9 @@ func TestMultipleGC(t *testing.T) {
 		privateGatewaySuite.Applier.GatewayClass = privateGatewaySuiteGatewayClassName
 		privateGatewaySuite.ControllerName = kubernetes.GWCMustHaveAcceptedConditionTrue(t, privateGatewaySuite.Client, privateGatewaySuite.TimeoutConfig, privateGatewaySuite.GatewayClassName)
 
+		timedTests := e2e.WrapConformanceTestsWithTiming(tests.MultipleGCTests[privateGatewaySuiteGatewayClassName], recorder)
 		tlog.Logf(t, "Running %d MultipleGC tests", len(tests.MultipleGCTests[privateGatewaySuiteGatewayClassName]))
-		err = privateGatewaySuite.Run(t, tests.MultipleGCTests[privateGatewaySuiteGatewayClassName])
+		err = privateGatewaySuite.Run(t, timedTests)
 		if err != nil {
 			t.Fatalf("Failed to run PrivateGC tests: %v", err)
 		}
