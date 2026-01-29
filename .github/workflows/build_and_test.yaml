@@ -345,6 +345,8 @@ jobs:
     runs-on: ubuntu-latest
     needs: [conformance-test, e2e-test]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      packages: write
     steps:
     - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
     - uses: ./tools/github-actions/setup-deps
@@ -365,16 +367,24 @@ jobs:
         username: ${{ vars.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_PASSWORD }}
 
+    - name: Login to GHCR
+      if: github.event_name == 'push'
+      uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121  # v4.1.0
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ github.token }}
+
     - name: Setup Multiarch Environment
       run: make image.multiarch.setup
 
     - name: Build and Push EG Commit Image
       # tag is set to the short SHA of the commit
-      run: make image.push.multiarch PLATFORMS="linux_amd64 linux_arm64" IMAGE=envoyproxy/gateway-dev
+      run: make image.push.multiarch PLATFORMS="linux_amd64 linux_arm64" EXTRA_TAGS="-t ghcr.io/${{ github.repository }}:$(git rev-parse --short HEAD)" IMAGE=envoyproxy/gateway-dev
 
     - name: Build and Push EG Latest Image
       # tag is set to `latest` when pushing to main branch
-      run: make image.push.multiarch TAG=latest PLATFORMS="linux_amd64 linux_arm64" IMAGE=envoyproxy/gateway-dev
+      run: make image.push.multiarch TAG=latest PLATFORMS="linux_amd64 linux_arm64" EXTRA_TAGS="-t ghcr.io/${{ github.repository }}:latest" IMAGE=envoyproxy/gateway-dev
 
     - name: Build and Push EG Latest Helm Chart
       # use `0.0.0` as the default latest version.
