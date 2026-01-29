@@ -10,6 +10,7 @@ package tests
 import (
 	"testing"
 
+	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
 )
 
@@ -24,6 +25,13 @@ var OIDCBackendClusterTest = suite.ConformanceTest{
 	Description: "Test OIDC authentication",
 	Manifests:   []string{"testdata/oidc-keycloak.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
+		ns := "gateway-conformance-infra"
+		podInitialized := corev1.PodCondition{Type: corev1.PodInitialized, Status: corev1.ConditionTrue}
+		// Wait for the keycloak pod to be configured with the test user and client
+		WaitForPods(t, suite.Client, ns, map[string]string{"job-name": "setup-keycloak"}, corev1.PodSucceeded, &podInitialized)
+		// Apply the security policy that configures OIDC authentication
+		suite.Applier.MustApplyWithCleanup(t, suite.Client, suite.TimeoutConfig, "testdata/oidc-securitypolicy-backendcluster.yaml", true)
+
 		t.Run("oidc provider represented by a BackendCluster", func(t *testing.T) {
 			testOIDC(t, suite, "testdata/oidc-securitypolicy-backendcluster.yaml")
 		})

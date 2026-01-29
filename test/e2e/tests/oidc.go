@@ -49,20 +49,18 @@ var OIDCTest = suite.ConformanceTest{
 	Description: "Test OIDC authentication",
 	Manifests:   []string{"testdata/oidc-keycloak.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
+		ns := "gateway-conformance-infra"
+		podInitialized := corev1.PodCondition{Type: corev1.PodInitialized, Status: corev1.ConditionTrue}
+		// Wait for the keycloak pod to be configured with the test user and client
+		WaitForPods(t, suite.Client, ns, map[string]string{"job-name": "setup-keycloak"}, corev1.PodSucceeded, &podInitialized)
+		// Apply the security policy that configures OIDC authentication
+		suite.Applier.MustApplyWithCleanup(t, suite.Client, suite.TimeoutConfig, "testdata/oidc-securitypolicy.yaml", true)
+
 		t.Run("oidc provider represented by a URL", func(t *testing.T) {
 			testOIDC(t, suite, "testdata/oidc-securitypolicy.yaml")
 		})
 
 		t.Run("oidc bypass", func(t *testing.T) {
-			ns := "gateway-conformance-infra"
-
-			podInitialized := corev1.PodCondition{Type: corev1.PodInitialized, Status: corev1.ConditionTrue}
-			// Wait for the keycloak pod to be configured with the test user and client
-			WaitForPods(t, suite.Client, ns, map[string]string{"job-name": "setup-keycloak"}, corev1.PodSucceeded, &podInitialized)
-
-			// Apply the security policy that configures OIDC authentication
-			suite.Applier.MustApplyWithCleanup(t, suite.Client, suite.TimeoutConfig, "testdata/oidc-securitypolicy.yaml", true)
-
 			routeWithOIDCNN := types.NamespacedName{Name: "http-with-oidc", Namespace: ns}
 			routeWithoutOIDCNN := types.NamespacedName{Name: "http-without-oidc", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
@@ -125,14 +123,6 @@ func testOIDC(t *testing.T, suite *suite.ConformanceTestSuite, securityPolicyMan
 		sp        = "oidc-test"
 		ns        = "gateway-conformance-infra"
 	)
-
-	podInitialized := corev1.PodCondition{Type: corev1.PodInitialized, Status: corev1.ConditionTrue}
-	// Wait for the keycloak pod to be configured with the test user and client
-	WaitForPods(t, suite.Client, ns, map[string]string{"job-name": "setup-keycloak"}, corev1.PodSucceeded, &podInitialized)
-
-	// Apply the security policy that configures OIDC authentication
-	suite.Applier.MustApplyWithCleanup(t, suite.Client, suite.TimeoutConfig, securityPolicyManifest, true)
-
 	routeNN := types.NamespacedName{Name: route, Namespace: ns}
 	gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 	httpGWAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN, "http"), routeNN)
