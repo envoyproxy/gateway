@@ -9,7 +9,6 @@ package tests
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/url"
 	"testing"
@@ -49,9 +48,25 @@ var EnvoyShutdownTest = suite.ConformanceTest{
 			gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
 			baseURL := url.URL{Scheme: "http", Host: http.CalculateHost(t, gwAddr, "http"), Path: "/envoy-shutdown"}
 			epNN := types.NamespacedName{Name: "upgrade-config", Namespace: "envoy-gateway-system"}
-			dp, err := getDeploymentForGateway(ns, name, suite.Client)
+
+			var (
+				dp  *appsv1.Deployment
+				err error
+			)
+
+			err = wait.PollUntilContextTimeout(t.Context(), 2*time.Second, suite.TimeoutConfig.CreateTimeout, true, func(ctx context.Context) (bool, error) {
+				dp, err = getDeploymentForGateway(ns, name, suite.Client)
+				if err != nil {
+					tlog.Logf(t, "Waiting for proxy deployment to be created: %v", err)
+					return false, nil
+				}
+				if dp != nil {
+					return true, nil
+				}
+				return false, nil
+			})
 			if err != nil {
-				t.Errorf("Failed to get proxy deployment")
+				t.Fatalf("Failed to get proxy deployment")
 			}
 
 			WaitForPods(t, suite.Client, dp.Namespace, map[string]string{"gateway.envoyproxy.io/owning-gateway-name": name}, corev1.PodRunning, &PodReady)
@@ -94,16 +109,18 @@ var EnvoyShutdownTest = suite.ConformanceTest{
 			aborter.Abort(false)
 
 			if err != nil {
-				t.Errorf("Failed to rollout proxy deployment: %v", err)
+				t.Fatalf("Failed to rollout proxy deployment: %v", err)
 			}
-			if *d > time.Minute {
-				t.Errorf("Rollout took too long: %v", *d)
+
+			maxDuration := 2 * time.Minute // should be same as the value in shutdown.drainTimeout in the manifest
+			if *d > maxDuration {
+				t.Fatalf("Rollout took too long: %v", *d)
 			}
 			if ok := <-regDone; !ok {
-				t.Errorf("Regular load failed during rollout")
+				t.Fatalf("Regular load failed during rollout")
 			}
 			if ok := <-delayedDone; !ok {
-				t.Errorf("Delayed load failed during rollout")
+				t.Fatalf("Delayed load failed during rollout")
 			}
 		})
 	},
@@ -134,7 +151,7 @@ func getDeploymentForGateway(namespace, name string, c client.Client) (*appsv1.D
 		return nil, err
 	}
 	if len(depList.Items) != 1 {
-		return nil, errors.New("unexpected number of matching deployments found")
+		return nil, fmt.Errorf("unexpected number of matching deployments found in namespace %s, %v", gwNs, len(depList.Items))
 	}
 	ret := depList.Items[0]
 	return &ret, nil
