@@ -2665,6 +2665,8 @@ type LoadBalancer struct {
 	Random *Random `json:"random,omitempty" yaml:"random,omitempty"`
 	// ConsistentHash load balancer policy
 	ConsistentHash *ConsistentHash `json:"consistentHash,omitempty" yaml:"consistentHash,omitempty"`
+	// BackendUtilization load balancer policy
+	BackendUtilization *BackendUtilization `json:"backendUtilization,omitempty" yaml:"backendUtilization,omitempty"`
 	// PreferLocal defines the configuration related to the distribution of requests between locality zones.
 	PreferLocal *PreferLocalZone `json:"preferLocal,omitempty" yaml:"preferLocal,omitempty"`
 	// EndpointOverride defines the configuration for endpoint override.
@@ -2688,6 +2690,9 @@ func (l *LoadBalancer) Validate() error {
 		matchCount++
 	}
 	if l.ConsistentHash != nil {
+		matchCount++
+	}
+	if l.BackendUtilization != nil {
 		matchCount++
 	}
 	if matchCount != 1 {
@@ -2716,6 +2721,17 @@ type LeastRequest struct {
 // Random load balancer settings
 // +k8s:deepcopy-gen=true
 type Random struct{}
+
+// BackendUtilization load balancer settings
+// +k8s:deepcopy-gen=true
+type BackendUtilization struct {
+	BlackoutPeriod                     *metav1.Duration `json:"blackoutPeriod,omitempty" yaml:"blackoutPeriod,omitempty"`
+	WeightExpirationPeriod             *metav1.Duration `json:"weightExpirationPeriod,omitempty" yaml:"weightExpirationPeriod,omitempty"`
+	WeightUpdatePeriod                 *metav1.Duration `json:"weightUpdatePeriod,omitempty" yaml:"weightUpdatePeriod,omitempty"`
+	ErrorUtilizationPenalty            *uint32          `json:"errorUtilizationPenalty,omitempty" yaml:"errorUtilizationPenalty,omitempty"`
+	MetricNamesForComputingUtilization []string         `json:"metricNamesForComputingUtilization,omitempty" yaml:"metricNamesForComputingUtilization,omitempty"`
+	SlowStart                          *SlowStart       `json:"slowStart,omitempty" yaml:"slowStart,omitempty"`
+}
 
 // ConsistentHash load balancer settings
 // +k8s:deepcopy-gen=true
@@ -3435,4 +3451,6 @@ const (
 	RandomLoadBalancer LoadBalancerType = "Random"
 	// ConsistentHashLoadBalancer is the consistent hash load balancer type.
 	ConsistentHashLoadBalancer LoadBalancerType = "ConsistentHash"
+	// BackendUtilizationLoadBalancer is the backend utilization load balancer type.
+	BackendUtilizationLoadBalancer LoadBalancerType = "BackendUtilization"
 )

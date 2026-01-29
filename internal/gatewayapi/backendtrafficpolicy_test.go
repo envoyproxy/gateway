@@ -13,7 +13,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/api/resource"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
@@ -223,8 +222,8 @@ func TestBuildPassiveHealthCheck(t *testing.T) {
 				},
 			},
 			expected: &ir.OutlierDetection{
-				Interval:             ptr.To(metav1.Duration{Duration: 10 * time.Second}),
-				BaseEjectionTime:     ptr.To(metav1.Duration{Duration: 30 * time.Second}),
+				Interval:             ir.MetaV1DurationPtr(10 * time.Second),
+				BaseEjectionTime:     ir.MetaV1DurationPtr(30 * time.Second),
 				MaxEjectionPercent:   ptr.To[int32](10),
 				Consecutive5xxErrors: ptr.To[uint32](5),
 			},
@@ -241,8 +240,8 @@ func TestBuildPassiveHealthCheck(t *testing.T) {
 				},
 			},
 			expected: &ir.OutlierDetection{
-				Interval:                   ptr.To(metav1.Duration{Duration: 10 * time.Second}),
-				BaseEjectionTime:           ptr.To(metav1.Duration{Duration: 30 * time.Second}),
+				Interval:                   ir.MetaV1DurationPtr(10 * time.Second),
+				BaseEjectionTime:           ir.MetaV1DurationPtr(30 * time.Second),
 				MaxEjectionPercent:         ptr.To[int32](10),
 				Consecutive5xxErrors:       ptr.To[uint32](5),
 				FailurePercentageThreshold: ptr.To[uint32](90),
@@ -264,11 +263,11 @@ func TestBuildPassiveHealthCheck(t *testing.T) {
 			},
 			expected: &ir.OutlierDetection{
 				SplitExternalLocalOriginErrors: ptr.To(true),
-				Interval:                       ptr.To(metav1.Duration{Duration: 10 * time.Second}),
+				Interval:                       ir.MetaV1DurationPtr(10 * time.Second),
 				ConsecutiveLocalOriginFailures: ptr.To[uint32](3),
 				ConsecutiveGatewayErrors:       ptr.To[uint32](2),
 				Consecutive5xxErrors:           ptr.To[uint32](5),
-				BaseEjectionTime:               ptr.To(metav1.Duration{Duration: 30 * time.Second}),
+				BaseEjectionTime:               ir.MetaV1DurationPtr(30 * time.Second),
 				MaxEjectionPercent:             ptr.To[int32](10),
 				FailurePercentageThreshold:     ptr.To[uint32](85),
 			},
