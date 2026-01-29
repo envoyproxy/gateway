@@ -84,8 +84,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 				t.validateAllowedRoutes(listener, resource.KindUDPRoute)
 			default:
 				listener.SetSupportedKinds()
-				status.SetGatewayListenerStatusCondition(listener.gateway.Gateway,
-					listener.listenerStatusIdx,
+				listener.SetCondition(
 					gwapiv1.ListenerConditionAccepted,
 					metav1.ConditionFalse,
 					gwapiv1.ListenerReasonUnsupportedProtocol,
@@ -296,8 +295,7 @@ func checkOverlappingHostnames(httpsListeners []*ListenerContext) {
 				)
 			}
 
-			status.SetGatewayListenerStatusCondition(listener.gateway.Gateway,
-				listener.listenerStatusIdx,
+			listener.SetCondition(
 				gwapiv1.ListenerConditionOverlappingTLSConfig,
 				metav1.ConditionTrue,
 				gwapiv1.ListenerReasonOverlappingHostnames,
@@ -381,13 +379,11 @@ func checkOverlappingCertificates(httpsListeners []*ListenerContext) {
 				)
 			}
 
-			status.SetGatewayListenerStatusCondition(listener.gateway.Gateway,
-				listener.listenerStatusIdx,
+			listener.SetCondition(
 				gwapiv1.ListenerConditionOverlappingTLSConfig,
 				metav1.ConditionTrue,
 				gwapiv1.ListenerReasonOverlappingCertificates,
-				message,
-			)
+				message)
 			if listener.httpIR != nil {
 				listener.httpIR.TLSOverlaps = true
 			}

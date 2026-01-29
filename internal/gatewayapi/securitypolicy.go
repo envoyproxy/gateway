@@ -921,9 +921,7 @@ func (t *Translator) translateSecurityPolicyForGateway(
 	policyTarget := irStringKey(policy.Namespace, string(target.Name))
 	routesWithDirectResponse := sets.New[string]()
 	for _, h := range x.HTTP {
-		// A HTTPListener name has the format namespace/gatewayName/listenerName
-		gatewayNameEnd := strings.LastIndex(h.Name, "/")
-		gatewayName := h.Name[0:gatewayNameEnd]
+		gatewayName := extractGatewayNameFromListener(h.Name)
 		if t.MergeGateways && gatewayName != policyTarget {
 			continue
 		}
@@ -967,9 +965,7 @@ func (t *Translator) translateSecurityPolicyForGateway(
 			if tl == nil || len(tl.Routes) == 0 {
 				continue
 			}
-			// TCPListener name has same format namespace/gatewayName/listenerName
-			gatewayNameEnd := strings.LastIndex(tl.Name, "/")
-			gatewayName := tl.Name[0:gatewayNameEnd]
+			gatewayName := extractGatewayNameFromListener(tl.Name)
 			if t.MergeGateways && gatewayName != policyTarget {
 				continue
 			}
