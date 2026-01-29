@@ -112,6 +112,12 @@ var OIDCTest = suite.ConformanceTest{
 				})
 			}
 		})
+
+		// Apply the security policy that configures OIDC authentication with BackendCluster
+		suite.Applier.MustApplyWithCleanup(t, suite.Client, suite.TimeoutConfig, "testdata/oidc-securitypolicy-backendcluster.yaml", true)
+		t.Run("oidc provider represented by a BackendCluster", func(t *testing.T) {
+			testOIDC(t, suite, "testdata/oidc-securitypolicy-backendcluster.yaml")
+		})
 	},
 }
 
