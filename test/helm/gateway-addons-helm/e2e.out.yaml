@@ -826,7 +826,8 @@ data:
                 http:
                   endpoint: 0.0.0.0:4318
     ingester:
-          {}
+          flush_check_period: 1s
+          max_block_duration: 15s
     server:
           http_listen_port: 3100
     storage:
@@ -835,9 +836,10 @@ data:
             local:
               path: /var/tempo/traces
             wal:
+              flush_age_threshold: 5s
               path: /var/tempo/wal
     querier:
-          {}
+          search_ingesters_until: 1s
     query_frontend:
           {}
     overrides:
@@ -11117,7 +11119,7 @@ spec:
         app.kubernetes.io/name: tempo
         app.kubernetes.io/instance: gateway-addons-helm
       annotations:
-        checksum/config: 0898f7ca87563d700c35d7ea1824cd042cf93fb2f05e254d12a854aa97a5c5e5
+        checksum/config: 225cbc15bdb5741708e85e96fd9d74d2dd273190b51217624e56ff925b59a13b
     spec:
       serviceAccountName: tempo
       automountServiceAccountToken: true
