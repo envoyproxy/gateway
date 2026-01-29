@@ -19,6 +19,9 @@ metadata:
   namespace: envoy-gateway-system
 spec:
   ipFamily: IPv4
+  shutdown:
+    drainTimeout: 2m
+    minDrainDuration: 1s
   provider:
     type: Kubernetes
     kubernetes:
