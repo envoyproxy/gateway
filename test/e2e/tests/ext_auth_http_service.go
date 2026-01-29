@@ -100,7 +100,7 @@ var HTTPExtAuthTest = suite.ConformanceTest{
 			req := http.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
 			cReq, cResp, err := suite.RoundTripper.CaptureRoundTrip(req)
 			if err != nil {
-				t.Errorf("failed to get expected response: %v", err)
+				t.Fatalf("failed to get expected response: %v", err)
 			}
 			if err := http.CompareRoundTrip(t, &req, cReq, cResp, expectedResponse); err != nil {
 				t.Errorf("failed to compare request and response: %v", err)
@@ -133,7 +133,7 @@ var HTTPExtAuthTest = suite.ConformanceTest{
 			req := http.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
 			cReq, cResp, err := suite.RoundTripper.CaptureRoundTrip(req)
 			if err != nil {
-				t.Errorf("failed to get expected response: %v", err)
+				t.Fatalf("failed to get expected response: %v", err)
 			}
 			if err := http.CompareRoundTrip(t, &req, cReq, cResp, expectedResponse); err != nil {
 				t.Errorf("failed to compare request and response: %v", err)
@@ -163,7 +163,7 @@ var HTTPExtAuthTest = suite.ConformanceTest{
 			req := http.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
 			cReq, cResp, err := suite.RoundTripper.CaptureRoundTrip(req)
 			if err != nil {
-				t.Errorf("failed to get expected response: %v", err)
+				t.Fatalf("failed to get expected response: %v", err)
 			}
 			if err := http.CompareRoundTrip(t, &req, cReq, cResp, expectedResponse); err != nil {
 				t.Errorf("failed to compare request and response: %v", err)
