@@ -10,6 +10,7 @@ import (
 	"context"
 	"fmt"
 	"path"
+	"time"
 
 	adminv3 "github.com/envoyproxy/go-control-plane/envoy/admin/v3"
 	troubleshootv1b2 "github.com/replicatedhq/troubleshoot/pkg/apis/troubleshoot/v1beta2"
@@ -60,12 +61,15 @@ func (cd ConfigDump) CheckRBAC(_ context.Context, _ tbcollect.Collector, _ *trou
 }
 
 func (cd ConfigDump) Collect(_ chan<- interface{}) (tbcollect.CollectorResult, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
 	client, err := kubernetes.NewForConfig(cd.ClientConfig)
 	if err != nil {
 		return nil, err
 	}
 
-	pods, err := listPods(context.TODO(), client, cd.Namespace, labels.SelectorFromSet(map[string]string{
+	pods, err := listPods(ctx, client, cd.Namespace, labels.SelectorFromSet(map[string]string{
 		"app.kubernetes.io/component":  "proxy",
 		"app.kubernetes.io/managed-by": "envoy-gateway",
 		"app.kubernetes.io/name":       "envoy",
