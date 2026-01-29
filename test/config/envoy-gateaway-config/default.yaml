@@ -14,10 +14,14 @@ data:
     extensionApis:
       enableEnvoyPatchPolicy: true
       enableBackend: true
-    gatewayAPI:
-      enabled: [XListenerSet]
     rateLimit:
       backend:
         type: Redis
         redis:
           url: redis.redis-system.svc.cluster.local:6379
+    envoyProxy:
+      provider:
+        kubernetes:
+          envoyDeployment:
+            container:
+              image: envoyproxy/envoy:invalid-tag
