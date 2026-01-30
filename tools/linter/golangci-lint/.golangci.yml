@@ -59,13 +59,14 @@ linters:
     rules:
       - linters:
           - staticcheck
-        text: 'SA1019:'
+        text: "SA1019:"
       - linters:
           - bodyclose
         path: test/e2e
       - linters:
           - gosec
-        path: api/v1alpha1/envoyproxy_types.go  # EnvoyFilterCredentialInjector EnvoyFilter = "envoy.filters.http.credential_injector"
+        # EnvoyFilterCredentialInjector EnvoyFilter = "envoy.filters.http.credential_injector"
+        path: api/v1alpha1/envoyproxy_types.go
   settings:
     copyloopvar:
       check-alias: true
@@ -86,8 +87,12 @@ linters:
             - pkg: github.com/hashicorp/go-multierror
               desc: "use errors instead"
     gocritic:
-      enabled-tags:
-        - performance
+      enabled-checks:
+        - ruleguard
+      settings:
+        ruleguard:
+          rules: "rules/rules-*.go"
+          failOn: dsl,import
     goheader:
       # Note that because the format is different (this needs no comment markers),
       # updating this text means also updating /tools/boilerplate.txt so that
