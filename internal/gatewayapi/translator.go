@@ -506,8 +506,6 @@ func (t *Translator) InitIRs(acceptedGateways, failedGateways []*GatewayContext)
 
 	for _, gtw := range failedGateways {
 		irKey, gwXdsIR, gwInfraIR := t.buildIR(gtw)
-		// marked as invalid
-		gwInfraIR.Invalid = ptr.To(true)
 		// save the IR references in the map before the translation starts
 		xdsIR[irKey] = gwXdsIR
 		infraIR[irKey] = gwInfraIR
