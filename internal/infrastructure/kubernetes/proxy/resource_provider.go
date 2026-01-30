@@ -312,6 +312,17 @@ func (r *ResourceRender) Service() (*corev1.Service, error) {
 	return svc, nil
 }
 
+func (r *ResourceRender) configMapName() string {
+	prov := r.infra.GetProxyConfig().GetEnvoyProxyProvider().GetEnvoyProxyKubeProvider()
+	if prov != nil &&
+		prov.EnvoyConfigMap != nil &&
+		prov.EnvoyConfigMap.Name != nil {
+		return *prov.EnvoyConfigMap.Name
+	}
+
+	return r.Name()
+}
+
 // ConfigMap returns the expected ConfigMap based on the provided infra.
 func (r *ResourceRender) ConfigMap(cert string) (*corev1.ConfigMap, error) {
 	// Set the labels based on the owning gateway name.
@@ -340,7 +351,7 @@ func (r *ResourceRender) ConfigMap(cert string) (*corev1.ConfigMap, error) {
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:       r.Namespace(),
-			Name:            r.Name(),
+			Name:            r.configMapName(),
 			Labels:          cmLabels,
 			Annotations:     r.infra.GetProxyMetadata().Annotations,
 			OwnerReferences: r.ownerReferences(),
