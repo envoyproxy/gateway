@@ -118,3 +118,9 @@ lint: lint.dependabot
 lint.dependabot: ## Check if dependabot configuration is valid
 	@$(LOG_TARGET)
 	@npx @bugron/validate-dependabot-yaml .github/dependabot.yml
+
+.PHONY: lint.release-notes
+lint: lint.release-notes
+lint.release-notes: ## Check if release note filenames follow SemVer
+	@$(LOG_TARGET)
+	@bash tools/hack/verify-release-notes.sh
