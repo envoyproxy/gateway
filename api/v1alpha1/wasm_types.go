@@ -153,7 +153,6 @@ type ImageWasmCodeSource struct {
 	SHA256 *string `json:"sha256"`
 
 	// PullSecretRef is a reference to the secret containing the credentials to pull the image.
-	// Only support Kubernetes Secret resource from the same namespace.
 	// +kubebuilder:validation:XValidation:message="only support Secret kind.",rule="self.kind == 'Secret'"
 	// +optional
 	PullSecretRef *gwapiv1.SecretObjectReference `json:"pullSecretRef,omitempty"`
@@ -185,6 +184,5 @@ type WasmCodeSourceTLSConfig struct {
 	// as a trust anchor to validate the certificates presented by the Wasm code source.
 	//
 	// Kubernetes ConfigMap and Kubernetes Secret are supported.
-	// Note: The ConfigMap or Secret must be in the same namespace as the EnvoyExtensionPolicy.
 	CACertificateRef gwapiv1.SecretObjectReference `json:"caCertificateRef"`
 }
