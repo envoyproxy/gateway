@@ -1583,14 +1583,6 @@ func firstNonEmpty(ss ...string) string {
 	return ""
 }
 
-func extractGatewayNameFromListener(listenerName string) string {
-	parts := strings.Split(listenerName, "/")
-	if len(parts) >= 2 {
-		return fmt.Sprintf("%s/%s", parts[0], parts[1])
-	}
-	return listenerName
-}
-
 // appendOpenidScopeIfNotExist appends the openid scope to the provided scopes
 // if it is not already present.
 // `openid` is a required scope for OIDC.
