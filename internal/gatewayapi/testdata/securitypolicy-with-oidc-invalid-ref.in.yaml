@@ -40,7 +40,6 @@ securityPolicies:
         issuerRef:
           kind: ConfigMap
           name: missing-config
-          key: issuer
       clientID: "client1"
       clientSecret:
         name: "client1-secret"

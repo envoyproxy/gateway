@@ -6,7 +6,8 @@ configMaps:
     name: oidc-config
   data:
     issuer: "https://oauth.foo.com"
-    auth: "https://oauth.foo.com/oauth2/v2/auth"
+    authorization-endpoint: "https://oauth.foo.com/oauth2/v2/auth"
+    token-endpoint: "https://oauth.foo.com/token"
 secrets:
 - apiVersion: v1
   kind: Secret
@@ -82,15 +83,6 @@ securityPolicies:
         issuerRef:
           kind: ConfigMap
           name: oidc-config
-          key: issuer
-        authorizationEndpointRef:
-          kind: ConfigMap
-          name: oidc-config
-          key: auth
-        tokenEndpointRef:
-          kind: Secret
-          name: oidc-secret
-          key: token
       clientID: "client1.apps.googleusercontent.com"
       clientSecret:
         name: "client1-secret"

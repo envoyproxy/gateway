@@ -1419,33 +1419,62 @@ func (t *Translator) buildOIDCProvider(
 		err                   error
 	)
 
-	// Resolve issuer
-	switch {
-	case provider.Issuer != nil:
-		issuer = *provider.Issuer
-	case provider.IssuerRef != nil:
-		if issuer, err = t.getObjectValueFromRef(provider.IssuerRef, policy.Namespace); err != nil {
-			return nil, perr.WithMessage(err, "issuerRef")
+	// Resolve Issuer and endpoints from IssuerRef if present
+	if provider.IssuerRef != nil {
+		from := crossNamespaceFrom{
+			group:     egv1a1.GroupName,
+			kind:      egv1a1.KindSecurityPolicy,
+			namespace: policy.Namespace,
 		}
+		switch string(ptr.Deref(provider.IssuerRef.Kind, "Secret")) {
+		case "Secret":
+			secret, err := t.validateSecretRef(false, from, *provider.IssuerRef, resources)
+			if err != nil {
+				return nil, err
+			}
+			if v, ok := secret.Data[egv1a1.OIDCIssuerKey]; ok {
+				issuer = string(v)
+			}
+			if v, ok := secret.Data[egv1a1.OIDCAuthorizationEndpointKey]; ok {
+				authorizationEndpoint = string(v)
+			}
+			if v, ok := secret.Data[egv1a1.OIDCTokenEndpointKey]; ok {
+				tokenEndpoint = string(v)
+			}
+			if v, ok := secret.Data[egv1a1.OIDCEndSessionEndpointKey]; ok {
+				val := string(v)
+				endSessionEndpoint = &val
+			}
+		case "ConfigMap":
+			cm, err := t.validateConfigMapRef(false, from, *provider.IssuerRef, resources)
+			if err != nil {
+				return nil, err
+			}
+			if v, ok := cm.Data[egv1a1.OIDCIssuerKey]; ok {
+				issuer = v
+			}
+			if v, ok := cm.Data[egv1a1.OIDCAuthorizationEndpointKey]; ok {
+				authorizationEndpoint = v
+			}
+			if v, ok := cm.Data[egv1a1.OIDCTokenEndpointKey]; ok {
+				tokenEndpoint = v
+			}
+			if v, ok := cm.Data[egv1a1.OIDCEndSessionEndpointKey]; ok {
+				val := v
+				endSessionEndpoint = &val
+			}
+		}
+	}
+
+	// Override with explicit values if set
+	if provider.Issuer != nil {
+		issuer = *provider.Issuer
 	}
 
 	var u *url.URL
 	// Use resolved issuer if token endpoint is not provided
-	if provider.TokenEndpoint != nil || provider.TokenEndpointRef != nil {
-		var tokenEndpointStr string
-		switch {
-		case provider.TokenEndpoint != nil:
-			tokenEndpointStr = *provider.TokenEndpoint
-		case provider.TokenEndpointRef != nil:
-			if tokenEndpointStr, err = t.getObjectValueFromRef(provider.TokenEndpointRef, policy.Namespace); err != nil {
-				return nil, perr.WithMessage(err, "tokenEndpointRef")
-			}
-		}
-		u, err = url.Parse(tokenEndpointStr)
-	} else {
-		u, err = url.Parse(issuer)
-	}
-
+	tokenEndpointToParse := firstNonEmpty(ptr.Deref(provider.TokenEndpoint, ""), tokenEndpoint, issuer)
+	u, err = url.Parse(tokenEndpointToParse)
 	if err != nil {
 		return nil, err
 	}
@@ -1476,75 +1505,35 @@ func (t *Translator) buildOIDCProvider(
 	// EG assumes that the issuer url uses the same protocol and CA as the token endpoint.
 	// If we need to support different protocols or CAs, we need to add more fields to the OIDCProvider CRD.
 	var (
-		userProvidedAuthorizationEndpoint string
-		userProvidedTokenEndpoint         string
-		userProvidedEndSessionEndpoint    string
+		userProvidedAuthorizationEndpoint = ptr.Deref(provider.AuthorizationEndpoint, "")
+		userProvidedTokenEndpoint         = ptr.Deref(provider.TokenEndpoint, "")
+		userProvidedEndSessionEndpoint    = ptr.Deref(provider.EndSessionEndpoint, "")
 	)
 
-	switch {
-	case provider.AuthorizationEndpoint != nil:
-		userProvidedAuthorizationEndpoint = *provider.AuthorizationEndpoint
-	case provider.AuthorizationEndpointRef != nil:
-		if userProvidedAuthorizationEndpoint, err = t.getObjectValueFromRef(provider.AuthorizationEndpointRef, policy.Namespace); err != nil {
-			return nil, perr.WithMessage(err, "authorizationEndpointRef")
-		}
-	}
-
-	switch {
-	case provider.TokenEndpoint != nil:
-		userProvidedTokenEndpoint = *provider.TokenEndpoint
-	case provider.TokenEndpointRef != nil:
-		if userProvidedTokenEndpoint, err = t.getObjectValueFromRef(provider.TokenEndpointRef, policy.Namespace); err != nil {
-			return nil, perr.WithMessage(err, "tokenEndpointRef")
-		}
-	}
-
-	switch {
-	case provider.EndSessionEndpoint != nil:
-		userProvidedEndSessionEndpoint = *provider.EndSessionEndpoint
-	case provider.EndSessionEndpointRef != nil:
-		if userProvidedEndSessionEndpoint, err = t.getObjectValueFromRef(provider.EndSessionEndpointRef, policy.Namespace); err != nil {
-			return nil, perr.WithMessage(err, "endSessionEndpointRef")
-		}
-	}
-
 	// Authorization endpoint and token endpoint are required fields.
-	// If either of them is not provided, we need to fetch them from the issuer's well-known url.
-	if userProvidedAuthorizationEndpoint == "" || userProvidedTokenEndpoint == "" {
+	// We check if we have them from either explicit fields or the Ref.
+	// If still missing, we discover them.
+	authorizationEndpoint = firstNonEmpty(userProvidedAuthorizationEndpoint, authorizationEndpoint)
+	tokenEndpoint = firstNonEmpty(userProvidedTokenEndpoint, tokenEndpoint)
+	if userProvidedEndSessionEndpoint != "" {
+		endSessionEndpoint = &userProvidedEndSessionEndpoint
+	}
+
+	if authorizationEndpoint == "" || tokenEndpoint == "" {
 		// Fetch the endpoints from the issuer's well-known url.
 		discoveredConfig, err := t.fetchEndpointsFromIssuer(issuer, providerTLS)
 		if err != nil {
 			return nil, err
 		}
 
-		// Prioritize using the explicitly provided authorization endpoints if available.
-		// This allows users to add extra parameters to the authorization endpoint if needed.
-		if userProvidedAuthorizationEndpoint != "" {
-			authorizationEndpoint = userProvidedAuthorizationEndpoint
-		} else {
+		if authorizationEndpoint == "" {
 			authorizationEndpoint = discoveredConfig.AuthorizationEndpoint
 		}
-
-		// Prioritize using the explicitly provided token endpoints if available.
-		// This may not be necessary, but we do it for consistency with authorization endpoint.
-		if userProvidedTokenEndpoint != "" {
-			tokenEndpoint = userProvidedTokenEndpoint
-		} else {
+		if tokenEndpoint == "" {
 			tokenEndpoint = discoveredConfig.TokenEndpoint
 		}
-
-		// Prioritize using the explicitly provided end session endpoints if available.
-		// This may not be necessary, but we do it for consistency with other endpoints.
-		if userProvidedEndSessionEndpoint != "" {
-			endSessionEndpoint = &userProvidedEndSessionEndpoint
-		} else {
+		if endSessionEndpoint == nil && discoveredConfig.EndSessionEndpoint != nil {
 			endSessionEndpoint = discoveredConfig.EndSessionEndpoint
-		}
-	} else {
-		tokenEndpoint = userProvidedTokenEndpoint
-		authorizationEndpoint = userProvidedAuthorizationEndpoint
-		if userProvidedEndSessionEndpoint != "" {
-			endSessionEndpoint = &userProvidedEndSessionEndpoint
 		}
 	}
 
@@ -1565,41 +1554,6 @@ func (t *Translator) buildOIDCProvider(
 	}, nil
 }
 
-// getObjectValueFromRef assumes the local object reference points to
-// a Kubernetes ConfigMap or Secret.
-func (t *Translator) getObjectValueFromRef(
-	valueRef *egv1a1.LocalObjectKeyReference,
-	policyNs string,
-) (string, error) {
-	if valueRef == nil {
-		return "", errors.New("unexpected nil reference")
-	}
-
-	switch valueRef.Kind {
-	case resource.KindConfigMap:
-		cm := t.GetConfigMap(policyNs, string(valueRef.Name))
-		if cm != nil {
-			s, dataOk := cm.Data[valueRef.Key]
-			if !dataOk {
-				return "", fmt.Errorf("can't find the key %q in the referenced configmap %q", valueRef.Key, valueRef.Name)
-			}
-			return s, nil
-		}
-		return "", fmt.Errorf("can't find the referenced configmap %q in namespace %q", valueRef.Name, policyNs)
-	case resource.KindSecret:
-		sec := t.GetSecret(policyNs, string(valueRef.Name))
-		if sec != nil {
-			b, dataOk := sec.Data[valueRef.Key]
-			if !dataOk {
-				return "", fmt.Errorf("can't find the key %q in the referenced secret %q", valueRef.Key, valueRef.Name)
-			}
-			return string(b), nil
-		}
-		return "", fmt.Errorf("can't find the referenced secret %q in namespace %q", valueRef.Name, policyNs)
-	}
-	return "", fmt.Errorf("unexpected reference to kind %q", valueRef.Kind)
-}
-
 func extractRedirectPath(redirectURL string) (string, error) {
 	schemeDelimiter := strings.Index(redirectURL, "://")
 	if schemeDelimiter <= 0 {
@@ -1618,6 +1572,23 @@ func extractRedirectPath(redirectURL string) (string, error) {
 		return "", fmt.Errorf("invalid redirect URL %s", redirectURL)
 	}
 	return path, nil
+}
+
+func firstNonEmpty(ss ...string) string {
+	for _, s := range ss {
+		if s != "" {
+			return s
+		}
+	}
+	return ""
+}
+
+func extractGatewayNameFromListener(listenerName string) string {
+	parts := strings.Split(listenerName, "/")
+	if len(parts) >= 2 {
+		return fmt.Sprintf("%s/%s", parts[0], parts[1])
+	}
+	return listenerName
 }
 
 // appendOpenidScopeIfNotExist appends the openid scope to the provided scopes

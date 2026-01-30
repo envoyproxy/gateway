@@ -101,8 +101,7 @@ securityPolicies:
         name: client1-secret
       provider:
         issuerRef:
-          group: ""
-          key: issuer
+          group: null
           kind: ConfigMap
           name: missing-config
     targetRef:
@@ -118,8 +117,7 @@ securityPolicies:
         namespace: envoy-gateway
       conditions:
       - lastTransitionTime: null
-        message: 'OIDC: issuerRef: can''t find the referenced configmap "missing-config"
-          in namespace "envoy-gateway".'
+        message: 'OIDC: configmap envoy-gateway/missing-config does not exist.'
         reason: Invalid
         status: "False"
         type: Accepted

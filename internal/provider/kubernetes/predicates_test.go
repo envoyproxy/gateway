@@ -417,12 +417,9 @@ func TestValidateConfigMapForReconcile(t *testing.T) {
 						},
 						OIDC: &egv1a1.OIDC{
 							Provider: egv1a1.OIDCProvider{
-								IssuerRef: &egv1a1.LocalObjectKeyReference{
-									LocalObjectReference: gwapiv1.LocalObjectReference{
-										Kind: resource.KindConfigMap,
-										Name: "oidc-config",
-									},
-									Key: "issuer",
+								IssuerRef: &gwapiv1.SecretObjectReference{
+									Kind: gatewayapi.KindPtr(resource.KindConfigMap),
+									Name: "oidc-config",
 								},
 							},
 							ClientID: ptr.To("client-id"),
@@ -838,12 +835,9 @@ func TestValidateSecretForReconcile(t *testing.T) {
 						},
 						OIDC: &egv1a1.OIDC{
 							Provider: egv1a1.OIDCProvider{
-								TokenEndpointRef: &egv1a1.LocalObjectKeyReference{
-									LocalObjectReference: gwapiv1.LocalObjectReference{
-										Kind: resource.KindSecret,
-										Name: "oidc-token-secret",
-									},
-									Key: "token",
+								IssuerRef: &gwapiv1.SecretObjectReference{
+									Kind: gatewayapi.KindPtr(resource.KindSecret),
+									Name: "oidc-token-secret",
 								},
 							},
 							ClientID: ptr.To("client-id"),

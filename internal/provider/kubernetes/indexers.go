@@ -727,20 +727,13 @@ func secretSecurityPolicyIndexFunc(rawObj client.Object) []string {
 
 		// Add OIDC provider references
 		provider := securityPolicy.Spec.OIDC.Provider
-		for _, ref := range []*egv1a1.LocalObjectKeyReference{
-			provider.IssuerRef,
-			provider.AuthorizationEndpointRef,
-			provider.TokenEndpointRef,
-			provider.EndSessionEndpointRef,
-		} {
-			if ref != nil && ref.Kind == resource.KindSecret {
-				values = append(values,
-					types.NamespacedName{
-						Namespace: securityPolicy.Namespace,
-						Name:      string(ref.Name),
-					}.String(),
-				)
-			}
+		if provider.IssuerRef != nil && (provider.IssuerRef.Kind == nil || string(*provider.IssuerRef.Kind) == resource.KindSecret) {
+			values = append(values,
+				types.NamespacedName{
+					Namespace: gatewayapi.NamespaceDerefOr(provider.IssuerRef.Namespace, securityPolicy.Namespace),
+					Name:      string(provider.IssuerRef.Name),
+				}.String(),
+			)
 		}
 	}
 	if securityPolicy.Spec.APIKeyAuth != nil {
@@ -847,20 +840,13 @@ func configMapSecurityPolicyIndexFunc(rawObj client.Object) []string {
 	if securityPolicy.Spec.OIDC != nil {
 		// Add OIDC provider references
 		provider := securityPolicy.Spec.OIDC.Provider
-		for _, ref := range []*egv1a1.LocalObjectKeyReference{
-			provider.IssuerRef,
-			provider.AuthorizationEndpointRef,
-			provider.TokenEndpointRef,
-			provider.EndSessionEndpointRef,
-		} {
-			if ref != nil && ref.Kind == resource.KindConfigMap {
-				values = append(values,
-					types.NamespacedName{
-						Namespace: securityPolicy.Namespace,
-						Name:      string(ref.Name),
-					}.String(),
-				)
-			}
+		if provider.IssuerRef != nil && provider.IssuerRef.Kind != nil && string(*provider.IssuerRef.Kind) == resource.KindConfigMap {
+			values = append(values,
+				types.NamespacedName{
+					Namespace: gatewayapi.NamespaceDerefOr(provider.IssuerRef.Namespace, securityPolicy.Namespace),
+					Name:      string(provider.IssuerRef.Name),
+				}.String(),
+			)
 		}
 	}
 

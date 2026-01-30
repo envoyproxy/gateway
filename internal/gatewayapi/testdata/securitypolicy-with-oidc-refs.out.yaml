@@ -111,21 +111,10 @@ securityPolicies:
         kind: null
         name: client1-secret
       provider:
-        authorizationEndpointRef:
-          group: ""
-          key: auth
-          kind: ConfigMap
-          name: oidc-config
         issuerRef:
-          group: ""
-          key: issuer
+          group: null
           kind: ConfigMap
           name: oidc-config
-        tokenEndpointRef:
-          group: ""
-          key: token
-          kind: Secret
-          name: oidc-secret
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway
