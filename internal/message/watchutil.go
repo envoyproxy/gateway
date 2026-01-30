@@ -76,7 +76,6 @@ func HandleSubscription[K comparable, V any](l logging.Logger,
 	subscription <-chan watchable.Snapshot[K, V],
 	handle func(updateFunc Update[K, V], errChans chan error),
 ) {
-
 	// TODO: find a suitable value
 	errChans := make(chan error, 10)
 	go func() {
