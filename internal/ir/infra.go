@@ -25,9 +25,6 @@ const (
 // Infra defines managed infrastructure.
 // +k8s:deepcopy-gen=true
 type Infra struct {
-	// Invalid indicates whether the IR is invalid.
-	// This is an optional bool so that we won't update all existing files.
-	Invalid *bool `json:"invalid,omitempty" yaml:"invalid,omitempty"`
 	// Proxy defines managed proxy infrastructure.
 	Proxy *ProxyInfra `json:"proxy" yaml:"proxy"`
 }

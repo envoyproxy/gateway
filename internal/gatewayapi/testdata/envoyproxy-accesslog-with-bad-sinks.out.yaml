@@ -45,7 +45,6 @@ gateways:
       type: Accepted
 infraIR:
   envoy-gateway/gateway-1:
-    invalid: true
     proxy:
       metadata:
         labels:

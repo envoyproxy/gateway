@@ -65,7 +65,6 @@ gateways:
       type: Accepted
 infraIR:
   envoy-gateway/ep-from-gc:
-    invalid: true
     proxy:
       metadata:
         labels:
