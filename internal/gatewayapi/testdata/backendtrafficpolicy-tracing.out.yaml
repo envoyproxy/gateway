@@ -253,9 +253,12 @@ xdsIR:
                 denominator: 100
                 numerator: 1
               tags:
-                env1: '%ENVIRONMENT(ENVOY_POD_NAME)%'
-                literal1: literal_value_1
-                req1: '%REQUEST_HEADER(X-Request-Id)%'
+              - key: env1
+                value: '%ENVIRONMENT(ENVOY_POD_NAME)%'
+              - key: literal1
+                value: literal_value_1
+              - key: req1
+                value: '%REQUEST_HEADER(X-Request-Id)%'
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
