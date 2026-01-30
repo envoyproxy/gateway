@@ -17,6 +17,8 @@
   - name: envoy.filters.listener.tls_inspector
     typedConfig:
       '@type': type.googleapis.com/envoy.extensions.filters.listener.tls_inspector.v3.TlsInspector
+      enableJa3Fingerprinting: false
+      enableJa4Fingerprinting: false
   maxConnectionsToAcceptPerSocketEvent: 1
   name: tls-passthrough-foo
   perConnectionBufferLimitBytes: 32768
@@ -39,6 +41,8 @@
   - name: envoy.filters.listener.tls_inspector
     typedConfig:
       '@type': type.googleapis.com/envoy.extensions.filters.listener.tls_inspector.v3.TlsInspector
+      enableJa3Fingerprinting: false
+      enableJa4Fingerprinting: false
   maxConnectionsToAcceptPerSocketEvent: 1
   name: tls-passthrough-bar
   perConnectionBufferLimitBytes: 32768
