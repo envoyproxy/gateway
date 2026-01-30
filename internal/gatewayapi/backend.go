@@ -17,7 +17,6 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
-	"github.com/envoyproxy/gateway/internal/utils/net"
 )
 
 func (t *Translator) ProcessBackends(backends []*egv1a1.Backend, backendTLSPolicies []*gwapiv1.BackendTLSPolicy) []*egv1a1.Backend {
@@ -69,17 +68,9 @@ func validateBackend(backend *egv1a1.Backend, backendTLSPolicies []*gwapiv1.Back
 				return routeErr
 			}
 		} else if ep.IP != nil {
-			ip, err := netip.ParseAddr(ep.IP.Address)
-			if err != nil {
-				return status.NewRouteStatusError(
-					fmt.Errorf("IP address %s is invalid", ep.IP.Address),
-					status.RouteReasonInvalidAddress,
-				)
-			} else if ip.IsLoopback() && !runningOnHost {
-				return status.NewRouteStatusError(
-					fmt.Errorf("IP address %s in the loopback range is only supported when using the Host infrastructure", ep.IP.Address),
-					status.RouteReasonInvalidAddress,
-				)
+			routeErr := validateIP(ep.IP, runningOnHost)
+			if routeErr != nil {
+				return routeErr
 			}
 		}
 	}
@@ -170,7 +161,7 @@ func validateBackendTLSSettings(backend *egv1a1.Backend, backendTLSPolicies []*g
 	return nil
 }
 
-func validateHostname(hostname, typeName string, allowLocalhost bool) *status.RouteStatusError {
+func validateHostname(hostname, typeName string, runningOnHost bool) *status.RouteStatusError {
 	// must be a valid hostname
 	if errs := validation.IsDNS1123Subdomain(hostname); errs != nil {
 		return status.NewRouteStatusError(
@@ -178,8 +169,9 @@ func validateHostname(hostname, typeName string, allowLocalhost bool) *status.Ro
 			status.RouteReasonInvalidAddress,
 		)
 	}
-	isLocalHostname := allowLocalhost && hostname == net.DefaultLocalAddress
-	if !isLocalHostname && len(strings.Split(hostname, ".")) < 2 {
+	// Host mode is a dev configuration, so we do not enforce domain rules.
+	// Doing so would interfere with docker hostnames (e.g. "jaeger") or literal IPs.
+	if !runningOnHost && len(strings.Split(hostname, ".")) < 2 {
 		return status.NewRouteStatusError(
 			fmt.Errorf("hostname %s should be a domain with at least two segments separated by dots", hostname),
 			status.RouteReasonInvalidAddress,
@@ -193,5 +185,21 @@ func validateHostname(hostname, typeName string, allowLocalhost bool) *status.Ro
 		)
 	}
 
+	return nil
+}
+
+func validateIP(epIP *egv1a1.IPEndpoint, runningOnHost bool) status.Error {
+	ip, err := netip.ParseAddr(epIP.Address)
+	if err != nil {
+		return status.NewRouteStatusError(
+			fmt.Errorf("IP address %s is invalid", epIP.Address),
+			status.RouteReasonInvalidAddress,
+		)
+	} else if ip.IsLoopback() && !runningOnHost {
+		return status.NewRouteStatusError(
+			fmt.Errorf("IP address %s in the loopback range is only supported when using the Host infrastructure", epIP.Address),
+			status.RouteReasonInvalidAddress,
+		)
+	}
 	return nil
 }
