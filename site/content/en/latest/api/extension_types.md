@@ -4570,6 +4570,7 @@ _Appears in:_
 | `cost` | _[RateLimitCost](#ratelimitcost)_ |  false  |  | Cost specifies the cost of requests and responses for the rule.<br />This is optional and if not specified, the default behavior is to reduce the rate limit counters by 1 on<br />the request path and do not reduce the rate limit counters on the response path. |
 | `shared` | _boolean_ |  false  |  | Shared determines whether this rate limit rule applies across all the policy targets.<br />If set to true, the rule is treated as a common bucket and is shared across all policy targets (xRoutes).<br />Default: false. |
 | `shadowMode` | _boolean_ |  false  |  | ShadowMode indicates whether this rate-limit rule runs in shadow mode.<br />When enabled, all rate-limiting operations are performed (cache lookups,<br />counter updates, telemetry generation), but the outcome is never enforced.<br />The request always succeeds, even if the configured limit is exceeded.<br />Only supported for Global Rate Limits. |
+| `quotaMode` | _boolean_ |  false  |  | QuotaMode indicates whether this rate-limit rule runs in quota mode.<br />When enabled, rate-limiting operations are performed and violations are<br />tracked in dynamic metadata, but the request is not blocked (returns OK instead of OVER_LIMIT).<br />This allows for "soft" rate limiting where requests pass through but violations<br />are logged for observability and alerting purposes.<br />Only supported for Global Rate Limits. |
 
 
 #### RateLimitSelectCondition
