@@ -40,3 +40,15 @@ func CustomTagMapToSlice(m map[string]egv1a1.CustomTag) []CustomTagMapEntry {
 	})
 	return res
 }
+
+// SliceToMap converts a slice of MapEntry to a map[string]string.
+func SliceToMap(s []MapEntry) map[string]string {
+	if len(s) == 0 {
+		return nil
+	}
+	res := make(map[string]string, len(s))
+	for _, entry := range s {
+		res[entry.Key] = entry.Value
+	}
+	return res
+}

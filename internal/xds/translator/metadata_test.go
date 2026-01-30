@@ -18,7 +18,7 @@ func TestBuildXdsMetadata(t *testing.T) {
 		Kind:        "HTTPRoute",
 		Name:        "my-route",
 		Namespace:   "default",
-		Annotations: map[string]string{"foo": "bar"},
+		Annotations: ir.MapToSlice(map[string]string{"foo": "bar"}),
 		SectionName: "section-1",
 		Policies: []*ir.PolicyMetadata{
 			{

@@ -9,9 +9,12 @@ tracing:
   - name: X-Tenant-ID
     value: tenant-123
   resourceAttributes:
-    service.name: test-service
-    service.version: v1.0.0
-    deployment.environment: test
+  - key: service.name
+    value: test-service
+  - key: service.version
+    value: v1.0.0
+  - key: deployment.environment
+    value: test
   destination:
     name: "tracing-0"
     settings:

@@ -238,12 +238,12 @@ func buildTracingTags(customTags []ir.CustomTagMapEntry, tags []ir.MapEntry) ([]
 
 // buildResourceDetectors creates resource detectors for OpenTelemetry tracing
 // using the StaticConfigResourceDetector extension with the given attributes.
-func buildResourceDetectors(resources map[string]string) []*corev3.TypedExtensionConfig {
+func buildResourceDetectors(resources []ir.MapEntry) []*corev3.TypedExtensionConfig {
 	if len(resources) == 0 {
 		return nil
 	}
 	staticConfig := &resourcedetectorsv3.StaticConfigResourceDetectorConfig{
-		Attributes: resources,
+		Attributes: ir.SliceToMap(resources),
 	}
 	any, err := proto.ToAnyWithValidation(staticConfig)
 	if err != nil {
