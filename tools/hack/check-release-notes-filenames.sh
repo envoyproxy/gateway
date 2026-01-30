@@ -28,7 +28,6 @@ VALID_PATTERN='^(current|v[0-9]+\.[0-9]+\.[0-9]+(-rc\.[0-9]+)?)\.yaml$'
 LEGACY_FILES=(
     "v0.2.0-rc1.yaml"
     "v0.2.0-rc2.yaml"
-    "v1.7.0-rc1.yaml"
 )
 
 INVALID_FILES=()
