@@ -27737,7 +27737,6 @@ spec:
                                     as a trust anchor to validate the certificates presented by the Wasm code source.
 
                                     Kubernetes ConfigMap and Kubernetes Secret are supported.
-                                    Note: The ConfigMap or Secret must be in the same namespace as the EnvoyExtensionPolicy.
                                   properties:
                                     group:
                                       default: ""
@@ -27795,9 +27794,8 @@ spec:
                             Note that the image must be accessible from the Envoy Gateway.
                           properties:
                             pullSecretRef:
-                              description: |-
-                                PullSecretRef is a reference to the secret containing the credentials to pull the image.
-                                Only support Kubernetes Secret resource from the same namespace.
+                              description: PullSecretRef is a reference to the secret
+                                containing the credentials to pull the image.
                               properties:
                                 group:
                                   default: ""
@@ -27862,7 +27860,6 @@ spec:
                                     as a trust anchor to validate the certificates presented by the Wasm code source.
 
                                     Kubernetes ConfigMap and Kubernetes Secret are supported.
-                                    Note: The ConfigMap or Secret must be in the same namespace as the EnvoyExtensionPolicy.
                                   properties:
                                     group:
                                       default: ""
@@ -46413,8 +46410,6 @@ spec:
                       Right now, only SHA hash algorithm is supported.
                       Reference to https://httpd.apache.org/docs/2.4/programs/htpasswd.html
                       for more details.
-
-                      Note: The secret must be in the same namespace as the SecurityPolicy.
                     properties:
                       group:
                         default: ""
