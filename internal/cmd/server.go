@@ -54,7 +54,9 @@ func GetServerCommand(asyncErrHandler func(string, error)) *cobra.Command {
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			runnerErrors := &message.RunnerErrors{}
 			defer runnerErrors.Close()
-			go message.HandleSubscription(message.Metadata{Runner: "runner-errors", Message: message.RunnerErrorsMessageName},
+			go message.HandleSubscription(
+				logging.NewLogger(cmd.OutOrStdout(), egv1a1.DefaultEnvoyGatewayLogging()),
+				message.Metadata{Runner: "runner-errors", Message: message.RunnerErrorsMessageName},
 				runnerErrors.Subscribe(cmd.Context()),
 				func(update message.Update[string, message.WatchableError], _ chan error) {
 					if asyncErrHandler != nil {
