@@ -118,3 +118,7 @@ adopters:
     logo: "/logos/ly-corporation.png"
     url: "https://www.lycorp.co.jp/en/"
     description: "LY Corporation uses Envoy Gateway to manage ingress traffic for their internal AI inference traffic with Envoy AI Gateway."
+  - name: "Mirakl"
+    logo: "/logos/mirakl.png"
+    url: "https://www.mirakl.com/"
+    description: "Mirakl uses Envoy Gateway to manage and centralize ingress traffic to both self-hosted (kserve) and public (openAI, HF, etc...) models."
