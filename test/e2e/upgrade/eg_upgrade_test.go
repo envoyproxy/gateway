@@ -71,10 +71,15 @@ func TestEGUpgrade(t *testing.T) {
 		tests.EGUpgradeTest,
 	}
 
+	recorder := e2e.NewTimingRecorder()
+	t.Cleanup(func() {
+		recorder.Report(t)
+	})
+	timedTests := e2e.WrapConformanceTestsWithTiming(tests.UpgradeTests, recorder)
 	tlog.Logf(t, "Running %d Upgrade tests", len(tests.UpgradeTests))
-	cSuite.Setup(t, tests.UpgradeTests)
+	cSuite.Setup(t, timedTests)
 
-	err = cSuite.Run(t, tests.UpgradeTests)
+	err = cSuite.Run(t, timedTests)
 	if err != nil {
 		t.Fatalf("Failed to run tests: %v", err)
 	}

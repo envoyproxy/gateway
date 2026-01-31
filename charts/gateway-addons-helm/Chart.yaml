@@ -31,18 +31,18 @@ dependencies:
     condition: prometheus.enabled
   - name: grafana
     repository: https://grafana.github.io/helm-charts
-    version: 10.5.8
+    version: 10.5.13
     condition: grafana.enabled
   - name: fluent-bit
     repository: https://fluent.github.io/helm-charts
-    version: 0.54.1
+    version: 0.55.0
     condition: fluent-bit.enabled
   - name: alloy
     repository: https://grafana.github.io/helm-charts
     version: 1.5.2
     condition: alloy.enabled
   - name: loki
-    version: 6.49.0
+    version: 6.51.0
     repository: https://grafana.github.io/helm-charts
     condition: loki.enabled
   - name: tempo
@@ -51,5 +51,5 @@ dependencies:
     condition: tempo.enabled
   - name: opentelemetry-collector
     repository: https://open-telemetry.github.io/opentelemetry-helm-charts
-    version: 0.143.1
+    version: 0.144.0
     condition: opentelemetry-collector.enabled

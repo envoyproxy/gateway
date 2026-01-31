@@ -24,6 +24,23 @@ Envoy Gateway Extension Server provides a mechanism where Envoy Gateway tracks a
 resources and then calls a set of hooks that allow the generated xDS configuration to be
 modified before it is sent to Envoy Proxy. See the [design documentation][] for full details.
 
+## Security Warning
+
+{{% alert title="Security Warning" color="warning" %}}
+Enabling an Extension Server may lead to complete security compromise of your system.
+Users that control the Extension Server can inject arbitrary configuration to proxies,
+leading to high Confidentiality, Integrity and Availability risks.
+
+Injected configuration may include arbitrary code executed by the proxy without any isolation. Such code may be used
+to launch SSRF attacks, as well as allow users to gain access to proxy credentials as described in [CVE-2026-22771][].
+With such access, users can fetch the complete proxy configuration, including secrets and cluster network topology.
+
+When enabling Extension Server, additional security measures should be taken by admins to reduce security risks, including:
+* Using K8s [RBAC][] to restrict access to the Envoy Gateway Configuration as well as the Extension Server deployment.
+* Disabling envoy extensions which are not needed with envoy [command line options][].
+* Implementing Kubernetes [network policies][] that restrict traffic from the proxy pod only to relevant targets.
+  {{% /alert %}}
+
 ## Extension Hooks Overview
 
 Envoy Gateway provides several extension hooks that are called at different stages of the xDS translation process. These hooks allow extensions to modify various aspects of the generated xDS configuration:
@@ -319,4 +336,8 @@ $ curl -v http://${GATEWAY_HOST}/example  -H "Host: www.example.com"   --user 'u
 
 [xDS]: https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/operations/dynamic_configuration
 [design documentation]: /contributions/design/extending-envoy-gateway
+[CVE-2026-22771]: https://github.com/envoyproxy/gateway/security/advisories/GHSA-xrwg-mqj6-6m22
+[RBAC]: https://kubernetes.io/docs/reference/access-authn-authz/rbac/
+[command line options]: ../operations/customize-envoyproxy/#customize-envoyproxy-command-line-options
+[network policies]: https://kubernetes.io/docs/concepts/services-networking/network-policies/
 [SecurityPolicy]: /latest/api/extension_types/#securitypolicy

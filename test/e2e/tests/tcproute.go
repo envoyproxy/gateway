@@ -186,7 +186,7 @@ func TCPRouteMustHaveParents(t *testing.T, client client.Client, timeoutConfig *
 		route := &gwapiv1a2.TCPRoute{}
 		err := client.Get(ctx, routeName, route)
 		if err != nil {
-			return false, fmt.Errorf("error fetching HTTPRoute: %w", err)
+			return false, fmt.Errorf("error fetching TCPRoute: %w", err)
 		}
 
 		actual = route.Status.Parents

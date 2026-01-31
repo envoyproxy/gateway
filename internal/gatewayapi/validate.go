@@ -277,14 +277,11 @@ func (t *Translator) validateBackendRefBackend(
 func (t *Translator) validateListenerConditions(listener *ListenerContext) (isReady bool) {
 	lConditions := listener.GetConditions()
 	if len(lConditions) == 0 {
-		status.SetGatewayListenerStatusCondition(listener.gateway.Gateway, listener.listenerStatusIdx,
-			gwapiv1.ListenerConditionProgrammed, metav1.ConditionTrue, gwapiv1.ListenerReasonProgrammed,
+		listener.SetCondition(gwapiv1.ListenerConditionProgrammed, metav1.ConditionTrue, gwapiv1.ListenerReasonProgrammed,
 			"Sending translated listener configuration to the data plane")
-		status.SetGatewayListenerStatusCondition(listener.gateway.Gateway, listener.listenerStatusIdx,
-			gwapiv1.ListenerConditionAccepted, metav1.ConditionTrue, gwapiv1.ListenerReasonAccepted,
+		listener.SetCondition(gwapiv1.ListenerConditionAccepted, metav1.ConditionTrue, gwapiv1.ListenerReasonAccepted,
 			"Listener has been successfully translated")
-		status.SetGatewayListenerStatusCondition(listener.gateway.Gateway, listener.listenerStatusIdx,
-			gwapiv1.ListenerConditionResolvedRefs, metav1.ConditionTrue, gwapiv1.ListenerReasonResolvedRefs,
+		listener.SetCondition(gwapiv1.ListenerConditionResolvedRefs, metav1.ConditionTrue, gwapiv1.ListenerReasonResolvedRefs,
 			"Listener references have been resolved")
 		return true
 	}
@@ -293,11 +290,9 @@ func (t *Translator) validateListenerConditions(listener *ListenerContext) (isRe
 	// In this case, we can still consider the listener as ready because we only program the listener using only the valid certificates.
 	if len(lConditions) == 1 && lConditions[0].Type == string(gwapiv1.ListenerConditionResolvedRefs) &&
 		lConditions[0].Reason == string(status.ListenerReasonPartiallyInvalidCertificateRef) {
-		status.SetGatewayListenerStatusCondition(listener.gateway.Gateway, listener.listenerStatusIdx,
-			gwapiv1.ListenerConditionAccepted, metav1.ConditionTrue, gwapiv1.ListenerReasonAccepted,
+		listener.SetCondition(gwapiv1.ListenerConditionAccepted, metav1.ConditionTrue, gwapiv1.ListenerReasonAccepted,
 			"Listener has been successfully translated")
-		status.SetGatewayListenerStatusCondition(listener.gateway.Gateway, listener.listenerStatusIdx,
-			gwapiv1.ListenerConditionProgrammed, metav1.ConditionTrue, gwapiv1.ListenerReasonProgrammed,
+		listener.SetCondition(gwapiv1.ListenerConditionProgrammed, metav1.ConditionTrue, gwapiv1.ListenerReasonProgrammed,
 			"Sending translated listener configuration to the data plane")
 		return true
 	}
@@ -316,8 +311,7 @@ func (t *Translator) validateListenerConditions(listener *ListenerContext) (isRe
 		}
 		// set "Programmed: false" if it's not set already.
 		if !hasProgrammedCond {
-			status.SetGatewayListenerStatusCondition(listener.gateway.Gateway,
-				listener.listenerStatusIdx,
+			listener.SetCondition(
 				gwapiv1.ListenerConditionProgrammed,
 				metav1.ConditionFalse,
 				gwapiv1.ListenerReasonInvalid,
@@ -326,8 +320,7 @@ func (t *Translator) validateListenerConditions(listener *ListenerContext) (isRe
 		}
 		// set "ResolvedRefs: true" if it's not set already.
 		if !hasRefsCond {
-			status.SetGatewayListenerStatusCondition(listener.gateway.Gateway,
-				listener.listenerStatusIdx,
+			listener.SetCondition(
 				gwapiv1.ListenerConditionResolvedRefs,
 				metav1.ConditionTrue,
 				gwapiv1.ListenerReasonResolvedRefs,
@@ -346,8 +339,7 @@ func (t *Translator) validateAllowedNamespaces(listener *ListenerContext) {
 		listener.AllowedRoutes.Namespaces.From != nil &&
 		*listener.AllowedRoutes.Namespaces.From == gwapiv1.NamespacesFromSelector {
 		if listener.AllowedRoutes.Namespaces.Selector == nil {
-			status.SetGatewayListenerStatusCondition(listener.gateway.Gateway,
-				listener.listenerStatusIdx,
+			listener.SetCondition(
 				gwapiv1.ListenerConditionProgrammed,
 				metav1.ConditionFalse,
 				gwapiv1.ListenerReasonInvalid,
@@ -356,8 +348,7 @@ func (t *Translator) validateAllowedNamespaces(listener *ListenerContext) {
 		} else {
 			selector, err := metav1.LabelSelectorAsSelector(listener.AllowedRoutes.Namespaces.Selector)
 			if err != nil {
-				status.SetGatewayListenerStatusCondition(listener.gateway.Gateway,
-					listener.listenerStatusIdx,
+				listener.SetCondition(
 					gwapiv1.ListenerConditionProgrammed,
 					metav1.ConditionFalse,
 					gwapiv1.ListenerReasonInvalid,
@@ -375,8 +366,7 @@ func (t *Translator) validateTerminateModeAndGetTLSSecrets(
 	resources *resource.Resources,
 ) ([]*corev1.Secret, []*x509.Certificate) {
 	if len(listener.TLS.CertificateRefs) == 0 {
-		status.SetGatewayListenerStatusCondition(listener.gateway.Gateway,
-			listener.listenerStatusIdx,
+		listener.SetCondition(
 			gwapiv1.ListenerConditionProgrammed,
 			metav1.ConditionFalse,
 			gwapiv1.ListenerReasonInvalid,
@@ -476,21 +466,20 @@ func (t *Translator) validateTerminateModeAndGetTLSSecrets(
 			errList[i] = e
 		}
 
-		status.SetGatewayListenerStatusCondition(listener.gateway.Gateway,
-			listener.listenerStatusIdx,
+		listener.SetCondition(
 			gwapiv1.ListenerConditionResolvedRefs,
 			metav1.ConditionFalse,
 			reason,
 			fmt.Sprintf("No valid secrets exist: %v", errors.Join(errList...)),
 		)
+
 		return nil, nil
 	}
 
 	validSecrets, certs, err := parseCertsFromTLSSecretsData(secrets)
 	if err != nil {
 		if err.Reason() != status.ListenerReasonPartiallyInvalidCertificateRef {
-			status.SetGatewayListenerStatusCondition(listener.gateway.Gateway,
-				listener.listenerStatusIdx,
+			listener.SetCondition(
 				gwapiv1.ListenerConditionResolvedRefs,
 				metav1.ConditionFalse,
 				err.Reason(),
@@ -508,8 +497,7 @@ func (t *Translator) validateTerminateModeAndGetTLSSecrets(
 			errList[i] = e
 		}
 
-		status.SetGatewayListenerStatusCondition(listener.gateway.Gateway,
-			listener.listenerStatusIdx,
+		listener.SetCondition(
 			gwapiv1.ListenerConditionResolvedRefs,
 			metav1.ConditionFalse,
 			status.ListenerReasonPartiallyInvalidCertificateRef,
@@ -526,8 +514,7 @@ func (t *Translator) validateTLSConfiguration(
 	switch listener.Protocol {
 	case gwapiv1.HTTPProtocolType, gwapiv1.UDPProtocolType, gwapiv1.TCPProtocolType:
 		if listener.TLS != nil {
-			status.SetGatewayListenerStatusCondition(listener.gateway.Gateway,
-				listener.listenerStatusIdx,
+			listener.SetCondition(
 				gwapiv1.ListenerConditionProgrammed,
 				metav1.ConditionFalse,
 				gwapiv1.ListenerReasonInvalid,
@@ -536,8 +523,7 @@ func (t *Translator) validateTLSConfiguration(
 		}
 	case gwapiv1.HTTPSProtocolType:
 		if listener.TLS == nil {
-			status.SetGatewayListenerStatusCondition(listener.gateway.Gateway,
-				listener.listenerStatusIdx,
+			listener.SetCondition(
 				gwapiv1.ListenerConditionProgrammed,
 				metav1.ConditionFalse,
 				gwapiv1.ListenerReasonInvalid,
@@ -547,8 +533,7 @@ func (t *Translator) validateTLSConfiguration(
 		}
 
 		if listener.TLS.Mode != nil && *listener.TLS.Mode != gwapiv1.TLSModeTerminate {
-			status.SetGatewayListenerStatusCondition(listener.gateway.Gateway,
-				listener.listenerStatusIdx,
+			listener.SetCondition(
 				gwapiv1.ListenerConditionProgrammed,
 				metav1.ConditionFalse,
 				"UnsupportedTLSMode",
@@ -567,8 +552,7 @@ func (t *Translator) validateTLSConfiguration(
 
 	case gwapiv1.TLSProtocolType:
 		if listener.TLS == nil {
-			status.SetGatewayListenerStatusCondition(listener.gateway.Gateway,
-				listener.listenerStatusIdx,
+			listener.SetCondition(
 				gwapiv1.ListenerConditionProgrammed,
 				metav1.ConditionFalse,
 				gwapiv1.ListenerReasonInvalid,
@@ -579,8 +563,7 @@ func (t *Translator) validateTLSConfiguration(
 
 		if listener.TLS.Mode != nil && *listener.TLS.Mode == gwapiv1.TLSModePassthrough {
 			if len(listener.TLS.CertificateRefs) > 0 {
-				status.SetGatewayListenerStatusCondition(listener.gateway.Gateway,
-					listener.listenerStatusIdx,
+				listener.SetCondition(
 					gwapiv1.ListenerConditionProgrammed,
 					metav1.ConditionFalse,
 					gwapiv1.ListenerReasonInvalid,
@@ -592,8 +575,7 @@ func (t *Translator) validateTLSConfiguration(
 
 		if listener.TLS.Mode != nil && *listener.TLS.Mode == gwapiv1.TLSModeTerminate {
 			if len(listener.TLS.CertificateRefs) == 0 {
-				status.SetGatewayListenerStatusCondition(listener.gateway.Gateway,
-					listener.listenerStatusIdx,
+				listener.SetCondition(
 					gwapiv1.ListenerConditionProgrammed,
 					metav1.ConditionFalse,
 					gwapiv1.ListenerReasonInvalid,
@@ -610,8 +592,7 @@ func (t *Translator) validateTLSConfiguration(
 func (t *Translator) validateHostName(listener *ListenerContext) {
 	if listener.Protocol == gwapiv1.UDPProtocolType || listener.Protocol == gwapiv1.TCPProtocolType {
 		if listener.Hostname != nil {
-			status.SetGatewayListenerStatusCondition(listener.gateway.Gateway,
-				listener.listenerStatusIdx,
+			listener.SetCondition(
 				gwapiv1.ListenerConditionProgrammed,
 				metav1.ConditionFalse,
 				gwapiv1.ListenerReasonInvalid,
@@ -639,8 +620,7 @@ func (t *Translator) validateAllowedRoutes(listener *ListenerContext, routeKinds
 
 		// if there is a group it must match `gateway.networking.k8s.io`
 		if kind.Group != nil && string(*kind.Group) != gwapiv1.GroupName {
-			status.SetGatewayListenerStatusCondition(listener.gateway.Gateway,
-				listener.listenerStatusIdx,
+			listener.SetCondition(
 				gwapiv1.ListenerConditionResolvedRefs,
 				metav1.ConditionFalse,
 				gwapiv1.ListenerReasonInvalidRouteKinds,
@@ -671,8 +651,7 @@ func (t *Translator) validateAllowedRoutes(listener *ListenerContext, routeKinds
 		} else {
 			printRouteKinds = supportedRouteKinds
 		}
-		status.SetGatewayListenerStatusCondition(listener.gateway.Gateway,
-			listener.listenerStatusIdx,
+		listener.SetCondition(
 			gwapiv1.ListenerConditionResolvedRefs,
 			metav1.ConditionFalse,
 			gwapiv1.ListenerReasonInvalidRouteKinds,
@@ -700,8 +679,7 @@ func (t *Translator) validateConflictedMergedListeners(gateways []*GatewayContex
 			}
 			portProtocolHostname := fmt.Sprintf("%s:%s:%d", listener.Protocol, *hostname, listener.Port)
 			if listenerSets.Has(portProtocolHostname) {
-				status.SetGatewayListenerStatusCondition(listener.gateway.Gateway,
-					listener.listenerStatusIdx,
+				listener.SetCondition(
 					gwapiv1.ListenerConditionConflicted,
 					metav1.ConditionTrue,
 					gwapiv1.ListenerReasonHostnameConflict,
@@ -753,8 +731,7 @@ func (t *Translator) validateConflictedLayer7Listeners(gateways []*GatewayContex
 		for _, info := range portListenerInfo {
 			for _, listener := range info.listeners {
 				if len(info.protocols) > 1 {
-					status.SetGatewayListenerStatusCondition(listener.gateway.Gateway,
-						listener.listenerStatusIdx,
+					listener.SetCondition(
 						gwapiv1.ListenerConditionConflicted,
 						metav1.ConditionTrue,
 						gwapiv1.ListenerReasonProtocolConflict,
@@ -768,8 +745,7 @@ func (t *Translator) validateConflictedLayer7Listeners(gateways []*GatewayContex
 				}
 
 				if info.hostnames[hostname] > 1 {
-					status.SetGatewayListenerStatusCondition(listener.gateway.Gateway,
-						listener.listenerStatusIdx,
+					listener.SetCondition(
 						gwapiv1.ListenerConditionConflicted,
 						metav1.ConditionTrue,
 						gwapiv1.ListenerReasonHostnameConflict,
@@ -800,8 +776,7 @@ func (t *Translator) validateConflictedLayer4Listeners(gateways []*GatewayContex
 		for _, info := range portListenerInfo {
 			if len(info.listeners) > 1 {
 				for i := 1; i < len(info.listeners); i++ {
-					status.SetGatewayListenerStatusCondition(info.listeners[i].gateway.Gateway,
-						info.listeners[i].listenerStatusIdx,
+					info.listeners[i].SetCondition(
 						gwapiv1.ListenerConditionConflicted,
 						metav1.ConditionTrue,
 						gwapiv1.ListenerReasonProtocolConflict,

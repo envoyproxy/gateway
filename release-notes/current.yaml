@@ -2,63 +2,22 @@ date: Pending
 
 # Changes that are expected to cause an incompatibility with previous versions, such as deletions or modifications to existing APIs.
 breaking changes: |
-  The SecurityPolicy name has been added to the stat prefix for aouth2 filter metrics to provide better granularity. Example: http.https-10443.securitypolicy/default/oidc-example.oauth_success: 0.
-  Returning 500 direct responses for HTTPRoute and GRPCRoute with invalid filters.
-  When an HTTPRoute rule is configured with host-rewrite filters and routes to a Dynamic Resolver backend, the rewritten Host header is used for both DNS resolution and as the Host header in upstream requests.
-  Set HTTPRoute Accepted status to False when RequestMirror filter is used together with DirectResponse or RequestRedirect filters.
-  Removed Accept-Encoding header from requests to backends when compression is enabled to avoid double compression issues.
-  The default value `stats_tags` has been changed to improve the prometheus metrics output. Following metrics are affected: `envoy_cluster_*_rq_time_count`, `envoy_cluster_*_total_match_count`, `envoy_cluster_circuit_breakers_*_cx_open`.
-  Default HTTP filter ordering now places envoy.filters.http.custom_response at the first, which can change the behavior of local replies and header processing.
 
 # Updates addressing vulnerabilities, security flaws, or compliance requirements.
 security updates: |
-  Restrict access to critical system resources via Lua EnvoyExtensionPolicies in the gateway controller. Set safe defaults and resource limits for the Lua runtime. Also support disabling Lua feature in extension policies.
 
 # New features or capabilities added in this release.
 new features: |
-  Added support for weight in BackendRef API to enable traffic splitting for non-x-route resources.
-  Added support for removing headers based on matching criteria (Exact, Prefix, Suffix, RegularExpression) in ClientTrafficPolicy EarlyRequestHeaders and LateResponseHeaders.
-  Added support for priorityClassName in KubernetesPodSpec for Envoy Proxy pods.
-  Added support for Global rate limit shadow mode.
-  Added support for specifying both text (body) and attributes in access log format by making the type field optional.
-  Set warning status condition for deprecated fields in xPolicy CRDs.
-  Added support for URLRewrite filter on individual backendRefs.
-  Added support for custom headers on OTLP exports (metrics, tracing, access logs).
-  Added support for configuring minimum response size for compression via minContentLength field in BackendTrafficPolicy.
-  Added support for custom span name.
-  Added support for updating initial_fetch_timeout in the bootstrap configuration.
-  Set default initial_fetch_timeout to 0s.
-  Added support for TLS telemetry gRPC backends.
-  Added cookie matching support to HTTPRouteFilter matches, combined with HTTPRoute rule matches.
-  Added support for addIfAbsent header action in ClientTrafficPolicy EarlyRequestHeaders and LateResponseHeaders to add headers only when they don't already exist.
-  Added support for tracing tag, which allows to use Envoy string command operators such as `%ENVIRONMENT(...)%`.
   Added support for MergeType in SecurityPolicy to enable route-level policies to merge with parent Gateway/Listener policies, similar to BackendTrafficPolicy.
 
-
 bug fixes: |
-  Fixed configured OIDC authorization endpoint being overridden by discovered endpoints from issuer's well-known URL.
-  Fix 500 errors caused by partially invalid BackendRefs; traffic is now correctly routed between valid backends and 500 responses according to their configured weights.
-  Fixed an issue where BackendTrafficPolicy does not validate maximum value of requestBuffer limit.
-  Fixed an issue where observedGeneration is missing from the EnvoyPatchPolicy status.
-  Fixed a nil pointer error when applying BackendTrafficPolicy to HTTPRoutes with no backendRefs.
-  Fixed ExternalTrafficPolicy not being applied to Envoy Service when ServiceType is NodePort.
-  Fixed CRL ref not processed by gateway controller.
-  Fixed an issue where HTTP/3 listeners could not handle multiple hostnames.
-  Fix gateway continuing with incomplete resources after unrecoverable Kubernetes discovery errors when checking optional CRDs by failing fast and propagating errors so pods restart instead of skipping optional CRDs.
-  Fixed an issue where listener translation fails when contains invalid certificate in multiple TLS certificateRefs.
-  Fixed an issue where auto-detect upstream protocol breaks with multiple backends(HTTP + HTTPS).
-  Fixed validation of certificates in a CA bundle when some certificates are invalid.
-  Fixed an issue where route match rule order is wrong when merging with empty path match.
-  Fixed wrong cluster type selection when an HTTPRoute mixes Service backends with Backend (FQDN) references, ensuring STRICT_DNS clusters are generated for the FQDN targets.
-
+  Allowed single-label backend hostnames when running with the Host infrastructure, enabling Docker Compose service names for telemetry backends.
 
 # Enhancements that improve performance.
 performance improvements: |
-  Including only needed keys in Secret and ConfigMap data to reduce memory usage.
 
 # Deprecated features or APIs.
 deprecations: |
 
 # Other notable changes not covered by the above sections.
 Other changes: |
-  Added scheme field to ClientTrafficPolicy enabling scheme header transformation to match backend transport protocol, allowing gateways with HTTP listeners to proxy to HTTPS services without protocol errors
