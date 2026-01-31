@@ -49,6 +49,7 @@ bug fixes: |
   Fixed an issue where route match rule order is wrong when merging with empty path match.
   Fixed wrong cluster type selection when an HTTPRoute mixes Service backends with Backend (FQDN) references, ensuring STRICT_DNS clusters are generated for the FQDN targets.
   Fixed JWT scope authorization to accept the `scp` claim in addition to `scope`.
+  Fixed issue with controller pods reporting as ready before successful cache sync.
 
 # Enhancements that improve performance.
 performance improvements: |
