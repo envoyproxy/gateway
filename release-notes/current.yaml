@@ -11,7 +11,8 @@ new features: |
 
 bug fixes: |
   Fixed SecurityPolicy BasicAuth validation to reject invalid {SHA} htpasswd entries.
-  
+  Allowed single-label backend hostnames when running with the Host infrastructure, enabling Docker Compose service names for telemetry backends.
+
 # Enhancements that improve performance.
 performance improvements: |
 
