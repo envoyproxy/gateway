@@ -57,8 +57,13 @@ func (g *GatewayContext) ResetListeners() {
 // On error, the envoyProxy is still set using fallback priority-based selection
 // so the gateway can continue to function, but administrators should investigate the merge failure.
 func (g *GatewayContext) attachEnvoyProxy(resources *resource.Resources, epMap map[types.NamespacedName]*egv1a1.EnvoyProxy) error {
-	// Get Gateway-level EnvoyProxy if available (only when MergeGateways is disabled)
+	// Priority order (highest to lowest):
+	// 1. Gateway-level EnvoyProxy (via parametersRef)
+	// 2. GatewayClass-level EnvoyProxy
+	// 3. Default EnvoyProxySpec from EnvoyGateway configuration
+
 	var gatewayProxy *egv1a1.EnvoyProxy
+
 	if g.Spec.Infrastructure != nil && g.Spec.Infrastructure.ParametersRef != nil && !IsMergeGatewaysEnabled(resources) {
 		ref := g.Spec.Infrastructure.ParametersRef
 		if string(ref.Group) == egv1a1.GroupVersion.Group && ref.Kind == egv1a1.KindEnvoyProxy {
@@ -72,7 +77,7 @@ func (g *GatewayContext) attachEnvoyProxy(resources *resource.Resources, epMap m
 	// Merge all EnvoyProxy configs. On error, MergeEnvoyProxyConfigs returns a fallback
 	// configuration so the gateway can continue to function.
 	merged, err := MergeEnvoyProxyConfigs(
-		resources.EnvoyProxyDefault,
+		resources.EnvoyProxyDefaultSpec,
 		resources.EnvoyProxyForGatewayClass,
 		gatewayProxy,
 	)

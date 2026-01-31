@@ -358,7 +358,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 		// Set default EnvoyProxySpec from EnvoyGateway configuration if available.
 		// This serves as the lowest priority fallback when no GatewayClass or Gateway level EnvoyProxy is specified.
 		if r.envoyGateway != nil {
-			gwcResource.EnvoyProxyDefault = r.envoyGateway.GetEnvoyProxyDefault()
+			gwcResource.EnvoyProxyDefaultSpec = r.envoyGateway.GetEnvoyProxyDefaultSpec()
 		}
 
 		gwcResourceMapping := newResourceMapping()
