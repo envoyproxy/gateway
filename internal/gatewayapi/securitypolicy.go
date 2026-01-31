@@ -363,7 +363,7 @@ func (t *Translator) processSecurityPolicyForRoute(
 	// Check if merging is enabled
 	if policy.Spec.MergeType == nil {
 		// No merging - use existing translation logic
-		if err := t.translateSecurityPolicyForRoute(policy, targetedRoute, currTarget, resources, xdsIR); err != nil {
+		if err := t.translateSecurityPolicyForRoute(policy, targetedRoute, currTarget, resources, xdsIR, nil); err != nil {
 			status.SetTranslationErrorForPolicyAncestors(&policy.Status,
 				ancestorRefs,
 				t.GatewayControllerName,
@@ -393,7 +393,7 @@ func (t *Translator) processSecurityPolicyForRoute(
 
 				if gwPolicy == nil && listenerPolicy == nil {
 					// No parent policy found, fall back to current policy
-					if err := t.translateSecurityPolicyForRoute(policy, targetedRoute, currTarget, resources, xdsIR); err != nil {
+					if err := t.translateSecurityPolicyForRoute(policy, targetedRoute, currTarget, resources, xdsIR, &listener.Name); err != nil {
 						status.SetConditionForPolicyAncestor(&policy.Status,
 							&ancestorRef,
 							t.GatewayControllerName,
@@ -438,7 +438,7 @@ func (t *Translator) processSecurityPolicyForRoute(
 				}
 
 				// Apply merged policy
-				if err := t.translateSecurityPolicyForRoute(mergedPolicy, targetedRoute, currTarget, resources, xdsIR); err != nil {
+				if err := t.translateSecurityPolicyForRoute(mergedPolicy, targetedRoute, currTarget, resources, xdsIR, &listener.Name); err != nil {
 					status.SetConditionForPolicyAncestor(&policy.Status,
 						&ancestorRef,
 						t.GatewayControllerName,
@@ -818,6 +818,7 @@ func (t *Translator) translateSecurityPolicyForRoute(
 	target gwapiv1.LocalPolicyTargetReferenceWithSectionName,
 	resources *resource.Resources,
 	xdsIR resource.XdsIRMap,
+	policyTargetListener *gwapiv1.SectionName,
 ) error {
 	// Build IR
 	var (
@@ -938,6 +939,10 @@ func (t *Translator) translateSecurityPolicyForRoute(
 		switch route.GetRouteType() {
 		case resource.KindTCPRoute:
 			for _, listener := range parentRefCtx.listeners {
+				// If policyTargetListener is set, only apply to the specific listener
+				if policyTargetListener != nil && *policyTargetListener != listener.Name {
+					continue
+				}
 				tl := xdsIR[irKey].GetTCPListener(irListenerName(listener))
 				for _, r := range tl.Routes {
 					// If target.SectionName is specified it must match the route-rule section name
@@ -957,6 +962,10 @@ func (t *Translator) translateSecurityPolicyForRoute(
 			}
 		case resource.KindHTTPRoute, resource.KindGRPCRoute:
 			for _, listener := range parentRefCtx.listeners {
+				// If policyTargetListener is set, only apply to the specific listener
+				if policyTargetListener != nil && *policyTargetListener != listener.Name {
+					continue
+				}
 				irListener := xdsIR[irKey].GetHTTPListener(irListenerName(listener))
 				if irListener != nil {
 					for _, r := range irListener.Routes {
