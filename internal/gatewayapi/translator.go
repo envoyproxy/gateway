@@ -17,6 +17,7 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwapiv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
+	gwapixv1a1 "sigs.k8s.io/gateway-api/apisx/v1alpha1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/api/v1alpha1/validation"
@@ -148,6 +149,7 @@ func newTranslateResult(
 	envoyExtensionPolicies []*egv1a1.EnvoyExtensionPolicy,
 	extPolicies []unstructured.Unstructured,
 	backends []*egv1a1.Backend,
+	xListenerSets []*gwapixv1a1.XListenerSet,
 	xdsIR resource.XdsIRMap, infraIR resource.InfraIRMap,
 ) *TranslateResult {
 	translateResult := &TranslateResult{
@@ -220,6 +222,9 @@ func newTranslateResult(
 	if len(backends) > 0 {
 		translateResult.Backends = backends
 	}
+	if len(xListenerSets) > 0 {
+		translateResult.XListenerSets = xListenerSets
+	}
 
 	return translateResult
 }
@@ -248,8 +253,15 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 	// Build IR maps.
 	xdsIR, infraIR := t.InitIRs(acceptedGateways)
 
+	// Process XListenerSets and attach them to the relevant Gateways
+	t.ProcessXListenerSets(resources.XListenerSets, acceptedGateways)
+
 	// Process all Listeners for all relevant Gateways.
 	t.ProcessListeners(acceptedGateways, xdsIR, infraIR, resources)
+
+	// Compute XListenerSet status based on listener processing results
+	// This should be done after ProcessListeners because XListenerSet status depends on listener processing results
+	t.ProcessXListenerSetStatus(resources.XListenerSets)
 
 	// Process EnvoyPatchPolicies
 	t.ProcessEnvoyPatchPolicies(resources.EnvoyPatchPolicies, xdsIR)
@@ -346,7 +358,7 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 		allGateways, httpRoutes, grpcRoutes, tlsRoutes,
 		tcpRoutes, udpRoutes, clientTrafficPolicies, backendTrafficPolicies,
 		securityPolicies, resources.BackendTLSPolicies, envoyExtensionPolicies,
-		extServerPolicies, backends, xdsIR, infraIR), errs
+		extServerPolicies, backends, resources.XListenerSets, xdsIR, infraIR), errs
 }
 
 // GetRelevantGateways returns GatewayContexts, containing a copy of the original

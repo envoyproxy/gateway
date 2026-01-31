@@ -23,6 +23,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapixv1a1 "sigs.k8s.io/gateway-api/apisx/v1alpha1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
@@ -142,17 +143,47 @@ func IsRefToGateway(routeNamespace gwapiv1.Namespace, parentRef gwapiv1.ParentRe
 	return string(parentRef.Name) == gateway.Name
 }
 
-// GetReferencedListeners returns whether a given parent ref references a Gateway
-// in the given list, and if so, a list of the Listeners within that Gateway that
+// GetReferencedListeners returns whether a given parent ref references a Gateway or XListenerSet
+// in the given list, and if so, a list of the Listeners within that Gateway or XListenerSet that
 // are included by the parent ref (either one specific Listener, or all Listeners
-// in the Gateway, depending on whether section name is specified or not).
+// in the Gateway or XListenerSet, depending on whether section name is specified or not).
 func GetReferencedListeners(routeNamespace gwapiv1.Namespace, parentRef gwapiv1.ParentReference, gateways []*GatewayContext) (bool, []*ListenerContext) {
 	var referencedListeners []*ListenerContext
 
+	// The parentRef is an XListenerSet
+	if isRefToXListenerSet(parentRef) {
+		ns := routeNamespace
+		if parentRef.Namespace != nil {
+			ns = *parentRef.Namespace
+		}
+		var matchedListenerSet bool
+		for _, gateway := range gateways {
+			for _, listener := range gateway.listeners {
+				if !listener.isFromXListenerSet() {
+					continue
+				}
+				if listener.xListenerSet.Namespace != string(ns) ||
+					listener.xListenerSet.Name != string(parentRef.Name) {
+					continue
+				}
+				matchedListenerSet = true
+				if (parentRef.SectionName == nil || *parentRef.SectionName == listener.Name) &&
+					(parentRef.Port == nil || *parentRef.Port == listener.Port) {
+					referencedListeners = append(referencedListeners, listener)
+				}
+			}
+		}
+		return matchedListenerSet, referencedListeners
+	}
+
+	// The parentRef is a Gateway
 	for _, gateway := range gateways {
 		if IsRefToGateway(routeNamespace, parentRef, utils.NamespacedName(gateway)) {
-			// The parentRef may be to the entire Gateway, or to a specific listener.
 			for _, listener := range gateway.listeners {
+				if listener.isFromXListenerSet() {
+					continue
+				}
+				// The parentRef may be to the entire Gateway, or to a specific listener.
 				if (parentRef.SectionName == nil || *parentRef.SectionName == listener.Name) && (parentRef.Port == nil || *parentRef.Port == listener.Port) {
 					referencedListeners = append(referencedListeners, listener)
 				}
@@ -162,6 +193,14 @@ func GetReferencedListeners(routeNamespace gwapiv1.Namespace, parentRef gwapiv1.
 	}
 
 	return false, referencedListeners
+}
+
+func isRefToXListenerSet(parentRef gwapiv1.ParentReference) bool {
+	if parentRef.Kind != nil && string(*parentRef.Kind) == resource.KindXListenerSet &&
+		parentRef.Group != nil && string(*parentRef.Group) == gwapixv1a1.GroupVersion.Group {
+		return true
+	}
+	return false
 }
 
 // HasReadyListener returns true if at least one Listener in the
@@ -383,7 +422,24 @@ func irStringKey(gatewayNs, gatewayName string) string {
 	return fmt.Sprintf("%s/%s", gatewayNs, gatewayName)
 }
 
+// extractGatewayNameFromListener extracts the gateway name from an IR listener name.
+// The listener name format can be:
+// - Gateway: "namespace/gateway/listener"
+// - XListenerSet: "namespace/gateway/xls-ns/xls-name/listener"
+// Returns "namespace/gateway" in both cases.
+func extractGatewayNameFromListener(listenerName string) string {
+	parts := strings.Split(listenerName, "/")
+	if len(parts) >= 2 {
+		return fmt.Sprintf("%s/%s", parts[0], parts[1])
+	}
+	// should never happen
+	return listenerName
+}
+
 func irListenerName(listener *ListenerContext) string {
+	if listener.isFromXListenerSet() {
+		return fmt.Sprintf("%s/%s/%s/%s/%s", listener.gateway.Namespace, listener.gateway.Name, listener.xListenerSet.Namespace, listener.xListenerSet.Name, listener.Name)
+	}
 	return fmt.Sprintf("%s/%s/%s", listener.gateway.Namespace, listener.gateway.Name, listener.Name)
 }
 

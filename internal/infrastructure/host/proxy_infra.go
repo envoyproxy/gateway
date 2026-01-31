@@ -80,7 +80,7 @@ func (i *Infra) CreateOrUpdateProxyInfra(ctx context.Context, infra *ir.Infra) e
 		proxyMetrics.Matches = proxyConfig.Spec.Telemetry.Metrics.Matches
 	}
 
-	resolvedMetricSinks := convertResolvedMetricSinks(proxyInfra.ResolvedMetricSinks)
+	resolvedMetricSinks := common.ConvertResolvedMetricSinks(proxyInfra.ResolvedMetricSinks)
 
 	bootstrapConfigOptions := &bootstrap.RenderBootstrapConfigOptions{
 		ProxyMetrics:        proxyMetrics,
@@ -196,37 +196,4 @@ func extractSemver(image string) (string, error) {
 		return "", fmt.Errorf("no semver found in tag: %s", tag)
 	}
 	return semver, nil
-}
-
-// convertResolvedMetricSinks converts IR metric sinks to bootstrap format.
-func convertResolvedMetricSinks(irSinks []ir.ResolvedMetricSink) []bootstrap.MetricSink {
-	result := make([]bootstrap.MetricSink, 0, len(irSinks))
-	for _, sink := range irSinks {
-		if len(sink.Destination.Settings) == 0 || len(sink.Destination.Settings[0].Endpoints) == 0 {
-			continue
-		}
-		// Metrics are aggregated locally in Envoy and exported to one collector.
-		ep := sink.Destination.Settings[0].Endpoints[0]
-		ms := bootstrap.MetricSink{
-			Address:                  ep.Host,
-			Port:                     ep.Port,
-			Authority:                sink.Authority,
-			ReportCountersAsDeltas:   sink.ReportCountersAsDeltas,
-			ReportHistogramsAsDeltas: sink.ReportHistogramsAsDeltas,
-			Headers:                  sink.Headers,
-		}
-		if tls := sink.Destination.Settings[0].TLS; tls != nil {
-			ms.TLS = &bootstrap.MetricSinkTLS{
-				UseSystemTrustStore: tls.UseSystemTrustStore,
-			}
-			if tls.SNI != nil {
-				ms.TLS.SNI = *tls.SNI
-			}
-			if tls.CACertificate != nil {
-				ms.TLS.CACertificate = tls.CACertificate.Certificate
-			}
-		}
-		result = append(result, ms)
-	}
-	return result
 }

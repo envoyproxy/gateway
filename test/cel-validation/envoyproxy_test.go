@@ -742,6 +742,127 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			},
 		},
 		{
+			desc: "accesslog-OpenTelemetry-resources",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						AccessLog: &egv1a1.ProxyAccessLog{
+							Settings: []egv1a1.ProxyAccessLogSetting{
+								{
+									Format: &egv1a1.ProxyAccessLogFormat{
+										Type: ptr.To(egv1a1.ProxyAccessLogFormatTypeText),
+										Text: ptr.To("[%START_TIME%]"),
+									},
+									Sinks: []egv1a1.ProxyAccessLogSink{
+										{
+											Type: egv1a1.ProxyAccessLogSinkTypeOpenTelemetry,
+											OpenTelemetry: &egv1a1.OpenTelemetryEnvoyProxyAccessLog{
+												BackendCluster: egv1a1.BackendCluster{
+													BackendRefs: []egv1a1.BackendRef{
+														{
+															BackendObjectReference: gwapiv1.BackendObjectReference{
+																Name: "otel-collector",
+																Port: ptr.To(gwapiv1.PortNumber(4317)),
+															},
+														},
+													},
+												},
+												Resources: map[string]string{
+													"service.name": "eg",
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+		},
+		{
+			desc: "accesslog-OpenTelemetry-resourceAttributes",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						AccessLog: &egv1a1.ProxyAccessLog{
+							Settings: []egv1a1.ProxyAccessLogSetting{
+								{
+									Format: &egv1a1.ProxyAccessLogFormat{
+										Type: ptr.To(egv1a1.ProxyAccessLogFormatTypeText),
+										Text: ptr.To("[%START_TIME%]"),
+									},
+									Sinks: []egv1a1.ProxyAccessLogSink{
+										{
+											Type: egv1a1.ProxyAccessLogSinkTypeOpenTelemetry,
+											OpenTelemetry: &egv1a1.OpenTelemetryEnvoyProxyAccessLog{
+												BackendCluster: egv1a1.BackendCluster{
+													BackendRefs: []egv1a1.BackendRef{
+														{
+															BackendObjectReference: gwapiv1.BackendObjectReference{
+																Name: "otel-collector",
+																Port: ptr.To(gwapiv1.PortNumber(4317)),
+															},
+														},
+													},
+												},
+												ResourceAttributes: map[string]string{
+													"service.name": "eg",
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+		},
+		{
+			desc: "accesslog-OpenTelemetry-resources-and-resourceAttributes",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						AccessLog: &egv1a1.ProxyAccessLog{
+							Settings: []egv1a1.ProxyAccessLogSetting{
+								{
+									Format: &egv1a1.ProxyAccessLogFormat{
+										Type: ptr.To(egv1a1.ProxyAccessLogFormatTypeText),
+										Text: ptr.To("[%START_TIME%]"),
+									},
+									Sinks: []egv1a1.ProxyAccessLogSink{
+										{
+											Type: egv1a1.ProxyAccessLogSinkTypeOpenTelemetry,
+											OpenTelemetry: &egv1a1.OpenTelemetryEnvoyProxyAccessLog{
+												BackendCluster: egv1a1.BackendCluster{
+													BackendRefs: []egv1a1.BackendRef{
+														{
+															BackendObjectReference: gwapiv1.BackendObjectReference{
+																Name: "otel-collector",
+																Port: ptr.To(gwapiv1.PortNumber(4317)),
+															},
+														},
+													},
+												},
+												Resources: map[string]string{
+													"service.name": "eg",
+												},
+												ResourceAttributes: map[string]string{
+													"service.version": "1.0",
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"either resources or resourceAttributes can be set, not both"},
+		},
+		{
 			desc: "invalid-accesslog-backendref",
 			mutate: func(envoy *egv1a1.EnvoyProxy) {
 				envoy.Spec = egv1a1.EnvoyProxySpec{
