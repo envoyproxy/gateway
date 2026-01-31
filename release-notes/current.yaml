@@ -39,6 +39,9 @@ bug fixes: |
   Fixed client certificate secret never delivered when it is exclusively referenced by a SecurityPolicy `extAuth`/`jwt`/`oidc` Backend
   Fixed xRoute status condition when route has mirror filter and the mirror backend has no endpoints.
   Fixed gateway-helm RBAC in GatewayNamespace mode with explicit `watch.namespaces` list by adding controller-namespace secret read permissions to infra-manager.
+  Fixed SecurityPolicy BasicAuth validation to reject invalid {SHA} htpasswd entries.
+  Allowed single-label backend hostnames when running with the Host infrastructure, enabling Docker Compose service names for telemetry backends.
+  Fixed an issue that message package didn't adopt logging level.
 
 # Enhancements that improve performance.
 performance improvements: |
