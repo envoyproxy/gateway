@@ -18,6 +18,25 @@ using [JSON Patch][] semantics.
 This API was introduced to allow advanced users to be able to leverage Envoy Proxy functionality
 not exposed by Envoy Gateway APIs today.
 
+## Security Warning
+
+{{% alert title="Security Warning" color="warning" %}}
+Enabling `EnvoyPatchPolicy` may lead to complete security compromise of your system.
+Users with `EnvoyPatchPolicy` permissions can inject arbitrary configuration to proxies,
+leading to high Confidentiality, Integrity and Availability risks.  
+
+Injected configuration may include arbitrary code executed by the proxy without any isolation. Such code may be used
+to launch SSRF attacks, as well as allow users to gain access to proxy credentials as described in [CVE-2026-22771][].
+With such access, users can fetch the complete proxy configuration, including secrets and cluster network topology.
+
+When enabling `EnvoyPatchPolicy`, additional security measures should be taken by admins to reduce security risks, including:  
+* Using K8s [RBAC][] to restrict access to `EnvoyPatchPolicy`.
+* Disabling envoy extensions which are not needed with envoy [command line options][].
+* Implementing Kubernetes [network policies][] that restrict traffic from the proxy pod only to relevant targets.
+* Use [admission control][] tools to validate `EnvoyPatchPolicy` resources, ensuring that only approved patches admitted.
+* Audit `EnvoyPatchPolciy` resources periodically, and [audit log][] `EnvoyPatchPolicy` API server operations.
+{{% /alert %}}
+
 ## Quickstart
 
 ### Prerequisites
@@ -504,6 +523,12 @@ across versions for these reasons
 such as changing the `name` field of resources.
 
 [EnvoyPatchPolicy]: ../../../api/extension_types#envoypatchpolicy
+[CVE-2026-22771]: https://github.com/envoyproxy/gateway/security/advisories/GHSA-xrwg-mqj6-6m22
+[RBAC]: https://kubernetes.io/docs/reference/access-authn-authz/rbac/
+[command line options]: ../operations/customize-envoyproxy/#customize-envoyproxy-command-line-options
+[network policies]: https://kubernetes.io/docs/concepts/services-networking/network-policies/
+[admission control]: https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/
+[audit log]: https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/
 [EnvoyGateway]: ../../../api/extension_types#envoygateway
 [JSON Patch]: https://datatracker.ietf.org/doc/html/rfc6902
 [xDS]: https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/operations/dynamic_configuration
