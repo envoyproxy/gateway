@@ -42,12 +42,11 @@ httpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
   metadata:
-    annotations:
-      gateway.envoyproxy.io/foo: bar
-      k8s.io/bar: foo
     name: httproute-1
     namespace: default
   spec:
+    hostnames:
+    - www.example.com
     parentRefs:
     - name: gateway-1
       namespace: envoy-gateway
@@ -56,16 +55,9 @@ httpRoutes:
     - backendRefs:
       - name: service-1
         port: 8080
-      name: rule-1
-    - backendRefs:
-      - name: service-1
-        port: 8080
       matches:
-      - headers:
-        - name: foo
-          type: Exact
-          value: bar
-      name: rule-2
+      - path:
+          value: /foo
   status:
     parents:
     - conditions:
@@ -87,15 +79,6 @@ httpRoutes:
 infraIR:
   envoy-gateway/gateway-1:
     proxy:
-      config:
-        apiVersion: gateway.envoyproxy.io/v1alpha1
-        kind: EnvoyProxy
-        metadata:
-          name: test
-          namespace: envoy-gateway-system
-        spec:
-          logging: {}
-        status: {}
       listeners:
       - address: null
         name: envoy-gateway/gateway-1/http
@@ -113,6 +96,43 @@ infraIR:
           name: envoy-gateway-class
       name: envoy-gateway/gateway-1
       namespace: envoy-gateway-system
+securityPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    name: policy-for-gateway
+    namespace: envoy-gateway
+    uid: b8284d0f-de82-4c65-b204-96a0d3f258a1
+  spec:
+    oidc:
+      clientID: client1.apps.googleusercontent.com
+      clientSecret:
+        group: null
+        kind: null
+        name: client1-secret
+      provider:
+        issuerRef:
+          group: null
+          kind: ConfigMap
+          name: oidc-config
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-1
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
 xdsIR:
   envoy-gateway/gateway-1:
     accessLog:
@@ -158,86 +178,50 @@ xdsIR:
       routes:
       - destination:
           metadata:
-            annotations:
-            - key: foo
-              value: bar
             kind: HTTPRoute
             name: httproute-1
             namespace: default
-            sectionName: rule-2
-          name: httproute/default/httproute-1/rule/1
-          settings:
-          - addressType: IP
-            endpoints:
-            - host: 7.7.7.7
-              port: 8080
-              zone: antarctica-east1b
-            metadata:
-              kind: Service
-              name: service-1
-              namespace: default
-              sectionName: "8080"
-            name: httproute/default/httproute-1/rule/1/backend/0
-            preferLocal:
-              force:
-                minEndpointsInZoneThreshold: 1
-              minEndpointsThreshold: 1
-            protocol: HTTP
-            weight: 1
-        headerMatches:
-        - distinct: false
-          exact: bar
-          name: foo
-        hostname: '*'
-        isHTTP2: false
-        metadata:
-          annotations:
-          - key: foo
-            value: bar
-          kind: HTTPRoute
-          name: httproute-1
-          namespace: default
-          sectionName: rule-2
-        name: httproute/default/httproute-1/rule/1/match/0/*
-      - destination:
-          metadata:
-            annotations:
-            - key: foo
-              value: bar
-            kind: HTTPRoute
-            name: httproute-1
-            namespace: default
-            sectionName: rule-1
           name: httproute/default/httproute-1/rule/0
           settings:
           - addressType: IP
             endpoints:
             - host: 7.7.7.7
               port: 8080
-              zone: antarctica-east1b
             metadata:
               kind: Service
               name: service-1
               namespace: default
               sectionName: "8080"
             name: httproute/default/httproute-1/rule/0/backend/0
-            preferLocal:
-              force:
-                minEndpointsInZoneThreshold: 1
-              minEndpointsThreshold: 1
             protocol: HTTP
             weight: 1
-        hostname: '*'
+        hostname: www.example.com
         isHTTP2: false
         metadata:
-          annotations:
-          - key: foo
-            value: bar
           kind: HTTPRoute
           name: httproute-1
           namespace: default
-          sectionName: rule-1
-        name: httproute/default/httproute-1/rule/0/match/-1/*
+        name: httproute/default/httproute-1/rule/0/match/0/www_example_com
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /foo
+        security:
+          oidc:
+            clientID: client1.apps.googleusercontent.com
+            clientSecret: '[redacted]'
+            cookieSuffix: b0a1b740
+            hmacSecret: '[redacted]'
+            logoutPath: /logout
+            name: securitypolicy/envoy-gateway/policy-for-gateway
+            provider:
+              authorizationEndpoint: https://oauth.foo.com/oauth2/v2/auth
+              tokenEndpoint: https://oauth.foo.com/token
+            redirectPath: /oauth2/callback
+            redirectURL: '%REQ(x-forwarded-proto)%://%REQ(:authority)%/oauth2/callback'
+            refreshToken: true
+            scopes:
+            - openid
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

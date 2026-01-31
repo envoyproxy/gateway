@@ -305,7 +305,8 @@ xdsIR:
             protocol: GRPC
             weight: 1
         resourceAttributes:
-          k8s.cluster.name: cluster-1
+        - key: k8s.cluster.name
+          value: cluster-1
         text: |
           [%START_TIME%] "%REQ(:METHOD)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%"\n
         traffic:

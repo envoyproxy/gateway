@@ -163,11 +163,11 @@ func processClusterForTracing(tCtx *types.ResourceVersionTable, tracing *ir.Trac
 	})
 }
 
-func buildTracingTags(tracingTags map[string]egv1a1.CustomTag, tags map[string]string) ([]*tracingtype.CustomTag, error) {
+func buildTracingTags(customTags []ir.CustomTagMapEntry, tags []ir.MapEntry) ([]*tracingtype.CustomTag, error) {
 	out := make(map[string]*tracingtype.CustomTag)
 
-	// TODO: consider add some default tags for better UX
-	for k, v := range tracingTags {
+	for _, entry := range customTags {
+		k, v := entry.Key, entry.Value
 		switch v.Type {
 		case egv1a1.CustomTagTypeLiteral:
 			out[k] = &tracingtype.CustomTag{
@@ -214,11 +214,11 @@ func buildTracingTags(tracingTags map[string]egv1a1.CustomTag, tags map[string]s
 	}
 
 	// same key in tags will override tracingTags
-	for k, v := range tags {
-		out[k] = &tracingtype.CustomTag{
-			Tag: k,
+	for _, entry := range tags {
+		out[entry.Key] = &tracingtype.CustomTag{
+			Tag: entry.Key,
 			Type: &tracingtype.CustomTag_Value{
-				Value: v,
+				Value: entry.Value,
 			},
 		}
 	}
@@ -238,12 +238,12 @@ func buildTracingTags(tracingTags map[string]egv1a1.CustomTag, tags map[string]s
 
 // buildResourceDetectors creates resource detectors for OpenTelemetry tracing
 // using the StaticConfigResourceDetector extension with the given attributes.
-func buildResourceDetectors(resources map[string]string) []*corev3.TypedExtensionConfig {
+func buildResourceDetectors(resources []ir.MapEntry) []*corev3.TypedExtensionConfig {
 	if len(resources) == 0 {
 		return nil
 	}
 	staticConfig := &resourcedetectorsv3.StaticConfigResourceDetectorConfig{
-		Attributes: resources,
+		Attributes: ir.SliceToMap(resources),
 	}
 	any, err := proto.ToAnyWithValidation(staticConfig)
 	if err != nil {

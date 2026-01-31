@@ -7,10 +7,7 @@ gateways:
   spec:
     gatewayClassName: envoy-gateway-class
     listeners:
-    - allowedRoutes:
-        namespaces:
-          from: Same
-      name: http
+    - name: http
       port: 80
       protocol: HTTP
   status:
@@ -38,36 +35,40 @@ gateways:
         kind: HTTPRoute
       - group: gateway.networking.k8s.io
         kind: GRPCRoute
+httpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    name: httproute-1
+    namespace: default
+  spec:
+    parentRefs:
+    - name: gateway-1
+      namespace: envoy-gateway
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8080
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: No listeners included by this parent ref allowed this attachment.
+        reason: NotAllowedByListeners
+        status: "False"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        namespace: envoy-gateway
 infraIR:
   envoy-gateway/gateway-1:
     proxy:
-      config:
-        apiVersion: gateway.envoyproxy.io/v1alpha1
-        kind: EnvoyProxy
-        metadata:
-          name: test
-          namespace: envoy-gateway-system
-        spec:
-          logging: {}
-          provider:
-            type: Kubernetes
-          telemetry:
-            accessLog:
-              settings:
-              - format:
-                  json:
-                    response_code_details: '%RESPONSE_CODE_DETAILS%'
-                    upstream_cluster: '%UPSTREAM_CLUSTER%'
-                    upstream_host: '%UPSTREAM_HOST%'
-                  text: '%REQ(:METHOD)% %REQ(:PATH)% %PROTOCOL% %RESPONSE_CODE%'
-                sinks:
-                - openTelemetry:
-                    host: otel-collector.monitoring.svc.cluster.local
-                    port: 4317
-                    resourceAttributes:
-                      k8s.cluster.name: cluster-1
-                  type: OpenTelemetry
-        status: {}
       listeners:
       - address: null
         name: envoy-gateway/gateway-1/http
@@ -85,36 +86,47 @@ infraIR:
           name: envoy-gateway-class
       name: envoy-gateway/gateway-1
       namespace: envoy-gateway-system
+securityPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    name: policy-invalid-ref
+    namespace: envoy-gateway
+  spec:
+    oidc:
+      clientID: client1
+      clientSecret:
+        group: null
+        kind: null
+        name: client1-secret
+      provider:
+        issuerRef:
+          group: null
+          kind: ConfigMap
+          name: missing-config
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-1
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: 'OIDC: configmap envoy-gateway/missing-config does not exist.'
+        reason: Invalid
+        status: "False"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
 xdsIR:
   envoy-gateway/gateway-1:
     accessLog:
-      openTelemetry:
-      - attributes:
-        - key: response_code_details
-          value: '%RESPONSE_CODE_DETAILS%'
-        - key: upstream_cluster
-          value: '%UPSTREAM_CLUSTER%'
-        - key: upstream_host
-          value: '%UPSTREAM_HOST%'
-        authority: otel-collector.monitoring.svc.cluster.local
-        destination:
-          metadata:
-            kind: EnvoyProxy
-            name: test
-            namespace: envoy-gateway-system
-          name: accesslog_otel_0_0
-          settings:
-          - addressType: FQDN
-            endpoints:
-            - host: otel-collector.monitoring.svc.cluster.local
-              port: 4317
-            name: accesslog_otel_0_0/backend/-1
-            protocol: GRPC
-            weight: 1
-        resourceAttributes:
-        - key: k8s.cluster.name
-          value: cluster-1
-        text: '%REQ(:METHOD)% %REQ(:PATH)% %PROTOCOL% %RESPONSE_CODE%'
+      json:
+      - path: /dev/stdout
     globalResources:
       proxyServiceCluster:
         metadata:

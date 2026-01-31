@@ -724,6 +724,17 @@ func secretSecurityPolicyIndexFunc(rawObj client.Object) []string {
 		if securityPolicy.Spec.OIDC.ClientIDRef != nil {
 			secretReferences = append(secretReferences, *securityPolicy.Spec.OIDC.ClientIDRef)
 		}
+
+		// Add OIDC provider references
+		provider := securityPolicy.Spec.OIDC.Provider
+		if provider.IssuerRef != nil && (provider.IssuerRef.Kind == nil || string(*provider.IssuerRef.Kind) == resource.KindSecret) {
+			values = append(values,
+				types.NamespacedName{
+					Namespace: gatewayapi.NamespaceDerefOr(provider.IssuerRef.Namespace, securityPolicy.Namespace),
+					Name:      string(provider.IssuerRef.Name),
+				}.String(),
+			)
+		}
 	}
 	if securityPolicy.Spec.APIKeyAuth != nil {
 		secretReferences = append(secretReferences, securityPolicy.Spec.APIKeyAuth.CredentialRefs...)
@@ -823,6 +834,19 @@ func configMapSecurityPolicyIndexFunc(rawObj client.Object) []string {
 					}.String(),
 				)
 			}
+		}
+	}
+
+	if securityPolicy.Spec.OIDC != nil {
+		// Add OIDC provider references
+		provider := securityPolicy.Spec.OIDC.Provider
+		if provider.IssuerRef != nil && provider.IssuerRef.Kind != nil && string(*provider.IssuerRef.Kind) == resource.KindConfigMap {
+			values = append(values,
+				types.NamespacedName{
+					Namespace: gatewayapi.NamespaceDerefOr(provider.IssuerRef.Namespace, securityPolicy.Namespace),
+					Name:      string(provider.IssuerRef.Name),
+				}.String(),
+			)
 		}
 	}
 

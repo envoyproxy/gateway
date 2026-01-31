@@ -5316,6 +5316,16 @@ func (in *OIDCDenyRedirectHeader) DeepCopy() *OIDCDenyRedirectHeader {
 func (in *OIDCProvider) DeepCopyInto(out *OIDCProvider) {
 	*out = *in
 	in.BackendCluster.DeepCopyInto(&out.BackendCluster)
+	if in.Issuer != nil {
+		in, out := &in.Issuer, &out.Issuer
+		*out = new(string)
+		**out = **in
+	}
+	if in.IssuerRef != nil {
+		in, out := &in.IssuerRef, &out.IssuerRef
+		*out = new(v1.SecretObjectReference)
+		(*in).DeepCopyInto(*out)
+	}
 	if in.AuthorizationEndpoint != nil {
 		in, out := &in.AuthorizationEndpoint, &out.AuthorizationEndpoint
 		*out = new(string)
@@ -7036,6 +7046,11 @@ func (in *ShutdownManager) DeepCopyInto(out *ShutdownManager) {
 		in, out := &in.Image, &out.Image
 		*out = new(string)
 		**out = **in
+	}
+	if in.Resources != nil {
+		in, out := &in.Resources, &out.Resources
+		*out = new(corev1.ResourceRequirements)
+		(*in).DeepCopyInto(*out)
 	}
 }
 
