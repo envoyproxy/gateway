@@ -429,7 +429,7 @@ func (t *Translator) GetRelevantGateways(resources *resource.Resources) (
 		} else if gCtx.envoyProxy != nil {
 			// Debug logging to inspect the final merged EnvoyProxy configuration
 			if configJSON, jsonErr := json.Marshal(gCtx.envoyProxy.Spec); jsonErr == nil {
-				t.Logger.V(1).Info("Merged EnvoyProxy configuration",
+				t.Logger.Info("Merged EnvoyProxy configuration",
 					append(logKeysAndValues, "merged_config", string(configJSON))...)
 			}
 		}

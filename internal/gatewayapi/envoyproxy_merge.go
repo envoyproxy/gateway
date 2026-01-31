@@ -18,7 +18,7 @@ import (
 // 3. gatewayProxy - EnvoyProxy from Gateway parametersRef (highest priority). Note that this is only present if the MergeGateways option is false.
 //
 // The merge behavior depends on the MergeType field:
-// - nil/unset: More specific configs completely replace less specific ones (no merging)
+// - nil or Replace: More specific configs completely replace less specific ones (no merging)
 // - StrategicMerge: Configs are merged using Kubernetes strategic merge patch
 // - JSONMerge: Configs are merged using JSON merge patch
 //
@@ -31,7 +31,7 @@ import (
 // - merged: The merged EnvoyProxy configuration. On error, this contains the fallback configuration
 //   using priority-based selection so the gateway can continue to function.
 // - err: Any error that occurred during merging. Even when err is non-nil, merged will contain
-//   a valid fallback configuration. The caller should log this error to alert administrators.
+//   a valid fallback configuration.
 func MergeEnvoyProxyConfigs(
 	defaultSpec *egv1a1.EnvoyProxySpec,
 	gatewayClassProxy *egv1a1.EnvoyProxy,
