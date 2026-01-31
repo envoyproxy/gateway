@@ -135,7 +135,7 @@ var defaultRuntimeFlags = map[RuntimeFlag]bool{
 }
 
 // IsEnabled checks if an experimental Gateway API is enabled in the EnvoyGateway configuration.
-func (f *GatewayAPIs) IsEnabled(api GatewayAPI) bool {
+func (f *GatewayAPISettings) IsEnabled(api GatewayAPI) bool {
 	if f != nil {
 		for _, enable := range f.Enabled {
 			if enable == api {

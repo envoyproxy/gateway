@@ -1,0 +1,136 @@
+namespaces:
+- apiVersion: v1
+  kind: Namespace
+  metadata:
+    name: gateway-xls
+    labels:
+      allow-xls: "true"
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: gateway-xls
+    name: composite-gateway
+  spec:
+    gatewayClassName: envoy-gateway-class
+    allowedListeners:
+      namespaces:
+        from: Selector
+        selector:
+          matchLabels:
+            allow-xls: "true"
+    listeners:
+    - name: core-http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: All
+xListenerSets:
+- apiVersion: gateway.networking.x-k8s.io/v1alpha1
+  kind: XListenerSet
+  metadata:
+    namespace: gateway-xls
+    name: same-namespace-invalid
+  spec:
+    parentRef:
+      name: composite-gateway
+    listeners:
+    - name: invalid-one
+      protocol: INVALID
+      port: 8085
+      allowedRoutes:
+        namespaces:
+          from: All
+    - name: invalid-two
+      protocol: INVALID
+      port: 8086
+      allowedRoutes:
+        namespaces:
+          from: All
+- apiVersion: gateway.networking.x-k8s.io/v1alpha1
+  kind: XListenerSet
+  metadata:
+    namespace: gateway-xls
+    name: same-namespace-mixed
+  spec:
+    parentRef:
+      name: composite-gateway
+    listeners:
+    - name: mixed-valid
+      protocol: HTTP
+      port: 8087
+      allowedRoutes:
+        namespaces:
+          from: All
+    - name: mixed-invalid
+      protocol: INVALID
+      port: 8088
+      allowedRoutes:
+        namespaces:
+          from: All
+httpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: route-invalid-one
+  spec:
+    parentRefs:
+    - group: gateway.networking.x-k8s.io
+      kind: XListenerSet
+      namespace: gateway-xls
+      name: same-namespace-invalid
+      sectionName: invalid-one
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8080
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: route-invalid-two
+  spec:
+    parentRefs:
+    - group: gateway.networking.x-k8s.io
+      kind: XListenerSet
+      namespace: gateway-xls
+      name: same-namespace-invalid
+      sectionName: invalid-two
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8080
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: route-mixed-valid
+  spec:
+    parentRefs:
+    - group: gateway.networking.x-k8s.io
+      kind: XListenerSet
+      namespace: gateway-xls
+      name: same-namespace-mixed
+      sectionName: mixed-valid
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8080
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: route-mixed-invalid
+  spec:
+    parentRefs:
+    - group: gateway.networking.x-k8s.io
+      kind: XListenerSet
+      namespace: gateway-xls
+      name: same-namespace-mixed
+      sectionName: mixed-invalid
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8080

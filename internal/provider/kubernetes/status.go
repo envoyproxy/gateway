@@ -16,6 +16,7 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwapiv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
+	gwapixv1a1 "sigs.k8s.io/gateway-api/apisx/v1alpha1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
@@ -292,6 +293,43 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 			},
 		)
 		r.log.Info("udpRoute status subscriber shutting down")
+	}()
+
+	// XListenerSet object status updater
+	go func() {
+		message.HandleSubscription(
+			message.Metadata{Runner: string(egv1a1.LogComponentProviderRunner), Message: message.XListenerSetStatusMessageName},
+			r.subscriptions.xListenerSetStatuses,
+			func(update message.Update[types.NamespacedName, *gwapixv1a1.ListenerSetStatus], errChan chan error) {
+				if update.Delete {
+					return
+				}
+				r.statusUpdater.Send(Update{
+					NamespacedName: update.Key,
+					Resource:       new(gwapixv1a1.XListenerSet),
+					Mutator: MutatorFunc(func(obj client.Object) client.Object {
+						xls, ok := obj.(*gwapixv1a1.XListenerSet)
+						if !ok {
+							err := fmt.Errorf("unsupported object type %T", obj)
+							errChan <- err
+							panic(err)
+						}
+						statusCopy := update.Value.DeepCopy()
+						setLastTransitionTimeInConditions(statusCopy.Conditions, metav1.Now())
+						for i := range statusCopy.Listeners {
+							setLastTransitionTimeInConditions(statusCopy.Listeners[i].Conditions, metav1.Now())
+						}
+						return &gwapixv1a1.XListenerSet{
+							TypeMeta:   xls.TypeMeta,
+							ObjectMeta: xls.ObjectMeta,
+							Spec:       xls.Spec,
+							Status:     *statusCopy,
+						}
+					}),
+				})
+			},
+		)
+		r.log.Info("xListenerSet status subscriber shutting down")
 	}()
 
 	// EnvoyPatchPolicy object status updater
