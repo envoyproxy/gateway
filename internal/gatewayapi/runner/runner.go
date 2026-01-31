@@ -138,7 +138,9 @@ func (r *Runner) startWasmCache(ctx context.Context) {
 }
 
 func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *resource.ControllerResourcesContext]) {
-	message.HandleSubscription(message.Metadata{Runner: r.Name(), Message: message.ProviderResourcesMessageName}, sub,
+	message.HandleSubscription(
+		r.Logger,
+		message.Metadata{Runner: r.Name(), Message: message.ProviderResourcesMessageName}, sub,
 		func(update message.Update[string, *resource.ControllerResourcesContext], errChan chan error) {
 			parentCtx := context.Background()
 			if update.Value != nil && update.Value.Context != nil {

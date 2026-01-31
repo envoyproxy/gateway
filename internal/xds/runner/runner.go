@@ -259,7 +259,9 @@ func registerServer(srv serverv3.Server, g *grpc.Server) {
 
 func (r *Runner) translateFromSubscription(sub <-chan watchable.Snapshot[string, *message.XdsIRWithContext]) {
 	// Subscribe to resources
-	message.HandleSubscription(message.Metadata{Runner: r.Name(), Message: message.XDSIRMessageName}, sub,
+	message.HandleSubscription(
+		r.Logger,
+		message.Metadata{Runner: r.Name(), Message: message.XDSIRMessageName}, sub,
 		func(update message.Update[string, *message.XdsIRWithContext], errChan chan error) {
 			parentCtx := context.Background()
 			if update.Value != nil && update.Value.Context != nil {
