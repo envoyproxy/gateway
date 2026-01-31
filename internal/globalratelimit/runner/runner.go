@@ -136,7 +136,8 @@ func (r *Runner) translateFromSubscription(ctx context.Context, c <-chan watchab
 	// rateLimitConfigsCache is a cache of the rate limit config, which is keyed by the xdsIR key.
 	rateLimitConfigsCache := map[string][]cachetype.Resource{}
 
-	message.HandleSubscription(message.Metadata{Runner: r.Name(), Message: message.XDSIRMessageName}, c,
+	message.HandleSubscription(r.Logger,
+		message.Metadata{Runner: r.Name(), Message: message.XDSIRMessageName}, c,
 		func(update message.Update[string, *ir.Xds], errChan chan error) {
 			r.Logger.Info("received a notification")
 

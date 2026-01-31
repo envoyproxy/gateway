@@ -255,7 +255,8 @@ func registerServer(srv serverv3.Server, g *grpc.Server) {
 
 func (r *Runner) translateFromSubscription(sub <-chan watchable.Snapshot[string, *ir.Xds]) {
 	// Subscribe to resources
-	message.HandleSubscription(message.Metadata{Runner: r.Name(), Message: message.XDSIRMessageName}, sub,
+	message.HandleSubscription(r.Logger,
+		message.Metadata{Runner: r.Name(), Message: message.XDSIRMessageName}, sub,
 		func(update message.Update[string, *ir.Xds], errChan chan error) {
 			r.Logger.Info("received an update")
 			key := update.Key
