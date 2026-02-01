@@ -321,6 +321,7 @@ func (t *Translator) addHCMToXDSListener(
 	irListener *ir.HTTPListener,
 	accesslog *ir.AccessLog,
 	tracing *ir.Tracing,
+	metrics *ir.Metrics,
 	http3Listener bool,
 	connection *ir.ClientConnection,
 ) error {
@@ -426,7 +427,7 @@ func (t *Translator) addHCMToXDSListener(
 		if ptr.Deref(irListener.GRPC.EnableGRPCWeb, false) {
 			mgr.HttpFilters = append(mgr.HttpFilters, xdsfilters.GRPCWeb)
 		}
-		if ptr.Deref(irListener.GRPC.EnableGRPCStats, false) {
+		if ptr.Deref(irListener.GRPC.EnableGRPCStats, false) || (metrics != nil && metrics.EnableGRPCStats) {
 			mgr.HttpFilters = append(mgr.HttpFilters, xdsfilters.GRPCStats)
 		}
 	}

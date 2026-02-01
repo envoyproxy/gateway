@@ -2654,6 +2654,7 @@ type Metrics struct {
 	EnableVirtualHostStats          bool `json:"enableVirtualHostStats" yaml:"enableVirtualHostStats"`
 	EnablePerEndpointStats          bool `json:"enablePerEndpointStats" yaml:"enablePerEndpointStats"`
 	EnableRequestResponseSizesStats bool `json:"enableRequestResponseSizesStats" yaml:"enableRequestResponseSizesStats"`
+	EnableGRPCStats                 bool `json:"enableGRPCStats,omitempty" yaml:"enableGRPCStats,omitempty"`
 }
 
 // TCPKeepalive define the TCP Keepalive configuration.
