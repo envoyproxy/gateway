@@ -72,7 +72,6 @@ var (
 // before reporting ready. This prevents serving inconsistent xDS configuration to Envoy proxies
 // when running multiple control plane replicas during periods of resource churn.
 func cacheReadyCheck(mgr manager.Manager) healthz.Checker {
-
 	return func(req *http.Request) error {
 		// Use a short timeout to avoid blocking the health check indefinitely.
 		// The readiness probe will retry periodically until the cache syncs.
