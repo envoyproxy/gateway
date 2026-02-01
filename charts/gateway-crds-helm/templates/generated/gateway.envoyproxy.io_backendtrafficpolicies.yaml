@@ -1051,7 +1051,7 @@ spec:
                                   RateLimitSelectCondition specifies the attributes within the traffic flow that can
                                   be used to select a subset of clients to be ratelimited.
                                   All the individual conditions must hold True for the overall condition to hold True.
-                                  And, at least one of headers or methods or path or sourceCIDR condition must be specified.
+                                  And, at least one of headers or methods or path or sourceCIDR or queryParams condition must be specified.
                                 properties:
                                   headers:
                                     description: |-
@@ -1154,6 +1154,48 @@ spec:
                                     required:
                                     - value
                                     type: object
+                                  queryParams:
+                                    description: |-
+                                      QueryParams is a list of query parameters to match. Multiple query parameter values are ANDed together,
+                                      meaning, a request MUST match all the specified query parameters.
+                                    items:
+                                      description: QueryParamMatch defines the match
+                                        attributes within the query parameters of
+                                        the request.
+                                      properties:
+                                        invert:
+                                          default: false
+                                          description: |-
+                                            Invert specifies whether the value match result will be inverted.
+                                            Do not set this field when Type="Distinct", implying matching on any/all unique
+                                            values within the query parameter.
+                                          type: boolean
+                                        name:
+                                          description: Name of the query parameter.
+                                          maxLength: 256
+                                          minLength: 1
+                                          type: string
+                                        type:
+                                          default: Exact
+                                          description: Type specifies how to match
+                                            against the value of the query parameter.
+                                          enum:
+                                          - Exact
+                                          - RegularExpression
+                                          - Distinct
+                                          type: string
+                                        value:
+                                          description: |-
+                                            Value of the query parameter.
+                                            Do not set this field when Type="Distinct", implying matching on any/all unique
+                                            values within the query parameter.
+                                          maxLength: 1024
+                                          type: string
+                                      required:
+                                      - name
+                                      type: object
+                                    maxItems: 16
+                                    type: array
                                   sourceCIDR:
                                     description: SourceCIDR is the client IP Address
                                       range to match on.
@@ -1177,10 +1219,10 @@ spec:
                                     type: object
                                 type: object
                                 x-kubernetes-validations:
-                                - message: at least one of headers, methods, path
-                                    or sourceCIDR must be specified
+                                - message: at least one of headers, methods, path,
+                                    sourceCIDR or queryParams must be specified
                                   rule: has(self.headers) || has(self.methods) ||
-                                    has(self.path) || has(self.sourceCIDR)
+                                    has(self.path) || has(self.sourceCIDR) || has(self.queryParams)
                               maxItems: 8
                               type: array
                             cost:
@@ -1372,7 +1414,7 @@ spec:
                                   RateLimitSelectCondition specifies the attributes within the traffic flow that can
                                   be used to select a subset of clients to be ratelimited.
                                   All the individual conditions must hold True for the overall condition to hold True.
-                                  And, at least one of headers or methods or path or sourceCIDR condition must be specified.
+                                  And, at least one of headers or methods or path or sourceCIDR or queryParams condition must be specified.
                                 properties:
                                   headers:
                                     description: |-
@@ -1475,6 +1517,48 @@ spec:
                                     required:
                                     - value
                                     type: object
+                                  queryParams:
+                                    description: |-
+                                      QueryParams is a list of query parameters to match. Multiple query parameter values are ANDed together,
+                                      meaning, a request MUST match all the specified query parameters.
+                                    items:
+                                      description: QueryParamMatch defines the match
+                                        attributes within the query parameters of
+                                        the request.
+                                      properties:
+                                        invert:
+                                          default: false
+                                          description: |-
+                                            Invert specifies whether the value match result will be inverted.
+                                            Do not set this field when Type="Distinct", implying matching on any/all unique
+                                            values within the query parameter.
+                                          type: boolean
+                                        name:
+                                          description: Name of the query parameter.
+                                          maxLength: 256
+                                          minLength: 1
+                                          type: string
+                                        type:
+                                          default: Exact
+                                          description: Type specifies how to match
+                                            against the value of the query parameter.
+                                          enum:
+                                          - Exact
+                                          - RegularExpression
+                                          - Distinct
+                                          type: string
+                                        value:
+                                          description: |-
+                                            Value of the query parameter.
+                                            Do not set this field when Type="Distinct", implying matching on any/all unique
+                                            values within the query parameter.
+                                          maxLength: 1024
+                                          type: string
+                                      required:
+                                      - name
+                                      type: object
+                                    maxItems: 16
+                                    type: array
                                   sourceCIDR:
                                     description: SourceCIDR is the client IP Address
                                       range to match on.
@@ -1498,10 +1582,10 @@ spec:
                                     type: object
                                 type: object
                                 x-kubernetes-validations:
-                                - message: at least one of headers, methods, path
-                                    or sourceCIDR must be specified
+                                - message: at least one of headers, methods, path,
+                                    sourceCIDR or queryParams must be specified
                                   rule: has(self.headers) || has(self.methods) ||
-                                    has(self.path) || has(self.sourceCIDR)
+                                    has(self.path) || has(self.sourceCIDR) || has(self.queryParams)
                               maxItems: 8
                               type: array
                             cost:

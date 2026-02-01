@@ -952,8 +952,39 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy) (
 		RequestBuffer:     rb,
 		Compression:       cp,
 		HTTPUpgrade:       httpUpgrade,
-		Telemetry:         policy.Spec.Telemetry,
+		Telemetry:         buildBackendTelemetry(policy.Spec.Telemetry),
 	}, errs
+}
+
+func buildBackendTelemetry(telemetry *egv1a1.BackendTelemetry) *ir.BackendTelemetry {
+	if telemetry == nil {
+		return nil
+	}
+	return &ir.BackendTelemetry{
+		Tracing: buildBackendTracing(telemetry.Tracing),
+		Metrics: buildBackendMetrics(telemetry.Metrics),
+	}
+}
+
+func buildBackendTracing(tracing *egv1a1.Tracing) *ir.BackendTracing {
+	if tracing == nil {
+		return nil
+	}
+	return &ir.BackendTracing{
+		SamplingFraction: tracing.SamplingFraction,
+		CustomTags:       ir.CustomTagMapToSlice(tracing.CustomTags),
+		Tags:             ir.MapToSlice(tracing.Tags),
+		SpanName:         tracing.SpanName,
+	}
+}
+
+func buildBackendMetrics(metrics *egv1a1.BackendMetrics) *ir.BackendMetrics {
+	if metrics == nil {
+		return nil
+	}
+	return &ir.BackendMetrics{
+		RouteStatName: metrics.RouteStatName,
+	}
 }
 
 func (t *Translator) translateBackendTrafficPolicyForGateway(
@@ -981,7 +1012,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 	policyTarget := irStringKey(policy.Namespace, string(target.Name))
 
 	for _, tcp := range x.TCP {
-		gatewayName := tcp.Name[0:strings.LastIndex(tcp.Name, "/")]
+		gatewayName := extractGatewayNameFromListener(tcp.Name)
 		if t.MergeGateways && gatewayName != policyTarget {
 			continue
 		}
@@ -1007,7 +1038,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 	}
 
 	for _, udp := range x.UDP {
-		gatewayName := udp.Name[0:strings.LastIndex(udp.Name, "/")]
+		gatewayName := extractGatewayNameFromListener(udp.Name)
 		if t.MergeGateways && gatewayName != policyTarget {
 			continue
 		}
@@ -1031,7 +1062,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 
 	routesWithDirectResponse := sets.New[string]()
 	for _, http := range x.HTTP {
-		gatewayName := http.Name[0:strings.LastIndex(http.Name, "/")]
+		gatewayName := extractGatewayNameFromListener(http.Name)
 		if t.MergeGateways && gatewayName != policyTarget {
 			continue
 		}
@@ -1256,10 +1287,10 @@ func buildRateLimitRule(rule egv1a1.RateLimitRule) (*ir.RateLimitRule, error) {
 
 	for _, match := range rule.ClientSelectors {
 		if len(match.Headers) == 0 && len(match.Methods) == 0 &&
-			match.Path == nil && match.SourceCIDR == nil {
+			match.Path == nil && match.SourceCIDR == nil && len(match.QueryParams) == 0 {
 			return nil, fmt.Errorf(
 				"unable to translate rateLimit. At least one of the" +
-					" header or method or path or sourceCIDR must be specified")
+					" header or method or path or sourceCIDR or queryParameters must be specified")
 		}
 		for _, header := range match.Headers {
 			switch {
@@ -1355,6 +1386,65 @@ func buildRateLimitRule(rule egv1a1.RateLimitRule) (*ir.RateLimitRule, error) {
 			}
 			cidrMatch.Distinct = distinct
 			irRule.CIDRMatch = cidrMatch
+		}
+
+		for _, queryParam := range match.QueryParams {
+			// Validate QueryParamMatch
+			if queryParam.Name == "" {
+				return nil, fmt.Errorf("name is required when QueryParamMatch is specified")
+			}
+
+			var stringMatch ir.StringMatch
+
+			// Default to Exact match if Type is not specified
+			matchType := egv1a1.QueryParamMatchExact
+			if queryParam.Type != nil {
+				matchType = *queryParam.Type
+			}
+
+			switch matchType {
+			case egv1a1.QueryParamMatchExact:
+				if queryParam.Value == nil || *queryParam.Value == "" {
+					return nil, fmt.Errorf("value is required for Exact query parameter match")
+				}
+				stringMatch = ir.StringMatch{
+					Name:   queryParam.Name,
+					Exact:  queryParam.Value,
+					Invert: queryParam.Invert,
+				}
+			case egv1a1.QueryParamMatchRegularExpression:
+				if queryParam.Value == nil || *queryParam.Value == "" {
+					return nil, fmt.Errorf("value is required for RegularExpression query parameter match")
+				}
+				if err := regex.Validate(*queryParam.Value); err != nil {
+					return nil, err
+				}
+				stringMatch = ir.StringMatch{
+					Name:      queryParam.Name,
+					SafeRegex: queryParam.Value,
+					Invert:    queryParam.Invert,
+				}
+			case egv1a1.QueryParamMatchDistinct:
+				if queryParam.Invert != nil && *queryParam.Invert {
+					return nil, fmt.Errorf("unable to translate rateLimit." +
+						"Invert is not applicable for distinct query parameter match type")
+				}
+				if queryParam.Value != nil {
+					return nil, fmt.Errorf("unable to translate rateLimit." +
+						"Value is not applicable for distinct query parameter match type")
+				}
+				stringMatch = ir.StringMatch{
+					Name:     queryParam.Name,
+					Distinct: true,
+				}
+			default:
+				return nil, fmt.Errorf("invalid query parameter match type: %s", matchType)
+			}
+
+			m := &ir.QueryParamMatch{
+				StringMatch: stringMatch,
+			}
+			irRule.QueryParamMatches = append(irRule.QueryParamMatches, m)
 		}
 	}
 

@@ -1387,8 +1387,9 @@ EnvoyGateway is the schema for the envoygateways API.
 | `telemetry` | _[EnvoyGatewayTelemetry](#envoygatewaytelemetry)_ |  false  |  | Telemetry defines the desired control plane telemetry related abilities.<br />If unspecified, the telemetry is used with default configuration. |
 | `xdsServer` | _[XDSServer](#xdsserver)_ |  false  |  | XDSServer defines the configuration for the Envoy Gateway xDS gRPC server.<br />If unspecified, default connection keepalive settings will be used. |
 | `rateLimit` | _[RateLimit](#ratelimit)_ |  false  |  | RateLimit defines the configuration associated with the Rate Limit service<br />deployed by Envoy Gateway required to implement the Global Rate limiting<br />functionality. The specific rate limit service used here is the reference<br />implementation in Envoy. For more details visit https://github.com/envoyproxy/ratelimit.<br />This configuration is unneeded for "Local" rate limiting. |
-| `extensionManager` | _[ExtensionManager](#extensionmanager)_ |  false  |  | ExtensionManager defines an extension manager to register for the Envoy Gateway Control Plane. |
+| `extensionManager` | _[ExtensionManager](#extensionmanager)_ |  false  |  | ExtensionManager defines an extension manager to register for the Envoy Gateway Control Plane.<br />Warning: Enabling an Extension Server may lead to complete security compromise of your system.<br />Users that control the Extension Server can inject arbitrary configuration to proxies,<br />leading to high Confidentiality, Integrity and Availability risks. |
 | `extensionApis` | _[ExtensionAPISettings](#extensionapisettings)_ |  false  |  | ExtensionAPIs defines the settings related to specific Gateway API Extensions<br />implemented by Envoy Gateway |
+| `gatewayAPI` | _[GatewayAPISettings](#gatewayapisettings)_ |  false  |  | GatewayAPI defines feature flags for experimental Gateway API resources.<br />These APIs live under the gateway.networking.x-k8s.io group and are opt-in. |
 | `runtimeFlags` | _[RuntimeFlags](#runtimeflags)_ |  true  |  | RuntimeFlags defines the runtime flags for Envoy Gateway.<br />Unlike ExtensionAPIs, these flags are temporary and will be removed in future releases once the related features are stable. |
 | `envoyProxy` | _[EnvoyProxySpec](#envoyproxyspec)_ |  false  |  | EnvoyProxy defines the default EnvoyProxy configuration that applies<br />to all managed Envoy Proxy fleet. This is an optional field and when<br />provided, the settings from this EnvoyProxySpec serve as the base<br />defaults for all Envoy Proxy instances.<br />The hierarchy for EnvoyProxy configuration is (highest to lowest priority):<br />1. Gateway-level EnvoyProxy (referenced via Gateway.spec.infrastructure.parametersRef)<br />2. GatewayClass-level EnvoyProxy (referenced via GatewayClass.spec.parametersRef)<br />3. This EnvoyProxy default spec<br />Currently, the most specific EnvoyProxy configuration wins completely (replace semantics).<br />A future release will introduce merge semantics to allow combining configurations<br />across multiple levels. |
 
@@ -1674,8 +1675,9 @@ _Appears in:_
 | `telemetry` | _[EnvoyGatewayTelemetry](#envoygatewaytelemetry)_ |  false  |  | Telemetry defines the desired control plane telemetry related abilities.<br />If unspecified, the telemetry is used with default configuration. |
 | `xdsServer` | _[XDSServer](#xdsserver)_ |  false  |  | XDSServer defines the configuration for the Envoy Gateway xDS gRPC server.<br />If unspecified, default connection keepalive settings will be used. |
 | `rateLimit` | _[RateLimit](#ratelimit)_ |  false  |  | RateLimit defines the configuration associated with the Rate Limit service<br />deployed by Envoy Gateway required to implement the Global Rate limiting<br />functionality. The specific rate limit service used here is the reference<br />implementation in Envoy. For more details visit https://github.com/envoyproxy/ratelimit.<br />This configuration is unneeded for "Local" rate limiting. |
-| `extensionManager` | _[ExtensionManager](#extensionmanager)_ |  false  |  | ExtensionManager defines an extension manager to register for the Envoy Gateway Control Plane. |
+| `extensionManager` | _[ExtensionManager](#extensionmanager)_ |  false  |  | ExtensionManager defines an extension manager to register for the Envoy Gateway Control Plane.<br />Warning: Enabling an Extension Server may lead to complete security compromise of your system.<br />Users that control the Extension Server can inject arbitrary configuration to proxies,<br />leading to high Confidentiality, Integrity and Availability risks. |
 | `extensionApis` | _[ExtensionAPISettings](#extensionapisettings)_ |  false  |  | ExtensionAPIs defines the settings related to specific Gateway API Extensions<br />implemented by Envoy Gateway |
+| `gatewayAPI` | _[GatewayAPISettings](#gatewayapisettings)_ |  false  |  | GatewayAPI defines feature flags for experimental Gateway API resources.<br />These APIs live under the gateway.networking.x-k8s.io group and are opt-in. |
 | `runtimeFlags` | _[RuntimeFlags](#runtimeflags)_ |  true  |  | RuntimeFlags defines the runtime flags for Envoy Gateway.<br />Unlike ExtensionAPIs, these flags are temporary and will be removed in future releases once the related features are stable. |
 | `envoyProxy` | _[EnvoyProxySpec](#envoyproxyspec)_ |  false  |  | EnvoyProxy defines the default EnvoyProxy configuration that applies<br />to all managed Envoy Proxy fleet. This is an optional field and when<br />provided, the settings from this EnvoyProxySpec serve as the base<br />defaults for all Envoy Proxy instances.<br />The hierarchy for EnvoyProxy configuration is (highest to lowest priority):<br />1. Gateway-level EnvoyProxy (referenced via Gateway.spec.infrastructure.parametersRef)<br />2. GatewayClass-level EnvoyProxy (referenced via GatewayClass.spec.parametersRef)<br />3. This EnvoyProxy default spec<br />Currently, the most specific EnvoyProxy configuration wins completely (replace semantics).<br />A future release will introduce merge semantics to allow combining configurations<br />across multiple levels. |
 
@@ -2041,7 +2043,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `enableEnvoyPatchPolicy` | _boolean_ |  true  |  | EnableEnvoyPatchPolicy enables Envoy Gateway to<br />reconcile and implement the EnvoyPatchPolicy resources. |
+| `enableEnvoyPatchPolicy` | _boolean_ |  true  |  | EnableEnvoyPatchPolicy enables Envoy Gateway to<br />reconcile and implement the EnvoyPatchPolicy resources.<br />Warning: Enabling `EnvoyPatchPolicy` may lead to complete security compromise of your system.<br />Users with `EnvoyPatchPolicy` permissions can inject arbitrary configuration to proxies,<br />leading to high Confidentiality, Integrity and Availability risks. |
 | `enableBackend` | _boolean_ |  true  |  | EnableBackend enables Envoy Gateway to<br />reconcile and implement the Backend resources. |
 | `disableLua` | _boolean_ |  true  |  | DisableLua determines if Lua EnvoyExtensionPolicies should be disabled.<br />If set to true, the Lua EnvoyExtensionPolicy feature will be disabled. |
 
@@ -2317,15 +2319,18 @@ _Underlying type:_ _string_
 GatewayAPI defines an experimental Gateway API resource that can be enabled.
 
 _Appears in:_
-- [GatewayAPIs](#gatewayapis)
+- [GatewayAPISettings](#gatewayapisettings)
+
+| Value | Description |
+| ----- | ----------- |
+| `XListenerSet` | XListenerSet enables the Gateway API XListenerSet resource.<br /> | 
+
+
+#### GatewayAPISettings
 
 
 
-#### GatewayAPIs
-
-
-
-GatewayAPIs provides a mechanism to opt into experimental Gateway API resources.
+GatewayAPISettings provides a mechanism to opt into experimental Gateway API resources.
 These APIs are experimental today and are subject to change or removal as they mature.
 
 _Appears in:_
@@ -3766,7 +3771,8 @@ _Appears in:_
 | `backendSettings` | _[ClusterSettings](#clustersettings)_ |  false  |  | BackendSettings holds configuration for managing the connection<br />to the backend. |
 | `host` | _string_ |  false  |  | Host define the extension service hostname.<br />Deprecated: Use BackendRefs instead. |
 | `port` | _integer_ |  false  | 4317 | Port defines the port the extension service is exposed on.<br />Deprecated: Use BackendRefs instead. |
-| `resources` | _object (keys:string, values:string)_ |  false  |  | Resources is a set of labels that describe the source of a log entry, including envoy node info.<br />It's recommended to follow [semantic conventions](https://opentelemetry.io/docs/reference/specification/resource/semantic_conventions/). |
+| `resources` | _object (keys:string, values:string)_ |  false  |  | Resources is a set of labels that describe the source of a log entry, including envoy node info.<br />It's recommended to follow [semantic conventions](https://opentelemetry.io/docs/reference/specification/resource/semantic_conventions/).<br />Deprecated: Use ResourceAttributes instead. |
+| `resourceAttributes` | _object (keys:string, values:string)_ |  false  |  | ResourceAttributes is a set of labels that describe the source of a log entry, including envoy node info.<br />It's recommended to follow [semantic conventions](https://opentelemetry.io/docs/reference/specification/resource/semantic_conventions/). |
 | `headers` | _[HTTPHeader](#httpheader) array_ |  false  |  | Headers is a list of additional headers to send with OTLP export requests.<br />These headers are added as gRPC initial metadata for the OTLP gRPC service. |
 
 
@@ -3782,6 +3788,7 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `headers` | _[HTTPHeader](#httpheader) array_ |  false  |  | Headers is a list of additional headers to send with OTLP export requests.<br />These headers are added as gRPC initial metadata for the OTLP gRPC service. |
+| `resourceAttributes` | _object (keys:string, values:string)_ |  false  |  | ResourceAttributes is a set of labels that describe the source of traces.<br />It's recommended to follow semantic conventions: https://opentelemetry.io/docs/reference/specification/resource/semantic_conventions/ |
 
 
 #### Operation
@@ -4273,6 +4280,7 @@ _Appears in:_
 | `reportCountersAsDeltas` | _boolean_ |  false  |  | ReportCountersAsDeltas configures the OpenTelemetry sink to report<br />counters as delta temporality instead of cumulative. |
 | `reportHistogramsAsDeltas` | _boolean_ |  false  |  | ReportHistogramsAsDeltas configures the OpenTelemetry sink to report<br />histograms as delta temporality instead of cumulative.<br />Required for backends like Elastic that drop cumulative histograms. |
 | `headers` | _[HTTPHeader](#httpheader) array_ |  false  |  | Headers is a list of additional headers to send with OTLP export requests.<br />These headers are added as gRPC initial metadata for the OTLP gRPC service. |
+| `resourceAttributes` | _object (keys:string, values:string)_ |  false  |  | ResourceAttributes is a set of labels that describe the source of metrics.<br />It's recommended to follow semantic conventions: https://opentelemetry.io/docs/reference/specification/resource/semantic_conventions/ |
 
 
 #### ProxyPrometheusProvider
@@ -4387,6 +4395,40 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `name` | _string_ |  true  |  | Name of the query param to hash. |
+
+
+#### QueryParamMatch
+
+
+
+QueryParamMatch defines the match attributes within the query parameters of the request.
+
+_Appears in:_
+- [RateLimitSelectCondition](#ratelimitselectcondition)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `type` | _[QueryParamMatchType](#queryparammatchtype)_ |  false  | Exact | Type specifies how to match against the value of the query parameter. |
+| `name` | _string_ |  true  |  | Name of the query parameter. |
+| `value` | _string_ |  false  |  | Value of the query parameter.<br />Do not set this field when Type="Distinct", implying matching on any/all unique<br />values within the query parameter. |
+| `invert` | _boolean_ |  false  | false | Invert specifies whether the value match result will be inverted.<br />Do not set this field when Type="Distinct", implying matching on any/all unique<br />values within the query parameter. |
+
+
+#### QueryParamMatchType
+
+_Underlying type:_ _string_
+
+QueryParamMatchType specifies the semantics of how query parameter values should be compared.
+Valid QueryParamMatchType values are "Exact", "RegularExpression", and "Distinct".
+
+_Appears in:_
+- [QueryParamMatch](#queryparammatch)
+
+| Value | Description |
+| ----- | ----------- |
+| `Exact` | QueryParamMatchExact matches the exact value of the Value field against the value of<br />the specified query parameter.<br /> | 
+| `RegularExpression` | QueryParamMatchRegularExpression matches a regular expression against the value of the<br />specified query parameter. The regex string must adhere to the syntax documented in<br />https://github.com/google/re2/wiki/Syntax.<br /> | 
+| `Distinct` | QueryParamMatchDistinct matches any and all possible unique values encountered in the<br />specified query parameter. Note that each unique value will receive its own rate limit<br />bucket.<br /> | 
 
 
 #### RateLimit
@@ -4571,7 +4613,7 @@ _Appears in:_
 RateLimitSelectCondition specifies the attributes within the traffic flow that can
 be used to select a subset of clients to be ratelimited.
 All the individual conditions must hold True for the overall condition to hold True.
-And, at least one of headers or methods or path or sourceCIDR condition must be specified.
+And, at least one of headers or methods or path or sourceCIDR or queryParams condition must be specified.
 
 _Appears in:_
 - [RateLimitRule](#ratelimitrule)
@@ -4582,6 +4624,7 @@ _Appears in:_
 | `methods` | _[MethodMatch](#methodmatch) array_ |  false  |  | Methods is a list of request methods to match. Multiple method values are ORed together,<br />meaning, a request can match any one of the specified methods. If not specified, it matches all methods. |
 | `path` | _[PathMatch](#pathmatch)_ |  false  |  | Path is the request path to match.<br />Support Exact, PathPrefix and RegularExpression match types. |
 | `sourceCIDR` | _[SourceMatch](#sourcematch)_ |  false  |  | SourceCIDR is the client IP Address range to match on. |
+| `queryParams` | _[QueryParamMatch](#queryparammatch) array_ |  false  |  | QueryParams is a list of query parameters to match. Multiple query parameter values are ANDed together,<br />meaning, a request MUST match all the specified query parameters. |
 
 
 #### RateLimitSpec

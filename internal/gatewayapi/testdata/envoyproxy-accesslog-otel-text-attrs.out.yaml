@@ -64,7 +64,7 @@ infraIR:
                 - openTelemetry:
                     host: otel-collector.monitoring.svc.cluster.local
                     port: 4317
-                    resources:
+                    resourceAttributes:
                       k8s.cluster.name: cluster-1
                   type: OpenTelemetry
         status: {}
@@ -90,9 +90,12 @@ xdsIR:
     accessLog:
       openTelemetry:
       - attributes:
-          response_code_details: '%RESPONSE_CODE_DETAILS%'
-          upstream_cluster: '%UPSTREAM_CLUSTER%'
-          upstream_host: '%UPSTREAM_HOST%'
+        - key: response_code_details
+          value: '%RESPONSE_CODE_DETAILS%'
+        - key: upstream_cluster
+          value: '%UPSTREAM_CLUSTER%'
+        - key: upstream_host
+          value: '%UPSTREAM_HOST%'
         authority: otel-collector.monitoring.svc.cluster.local
         destination:
           metadata:
@@ -108,8 +111,9 @@ xdsIR:
             name: accesslog_otel_0_0/backend/-1
             protocol: GRPC
             weight: 1
-        resources:
-          k8s.cluster.name: cluster-1
+        resourceAttributes:
+        - key: k8s.cluster.name
+          value: cluster-1
         text: '%REQ(:METHOD)% %REQ(:PATH)% %PROTOCOL% %RESPONSE_CODE%'
     globalResources:
       proxyServiceCluster:

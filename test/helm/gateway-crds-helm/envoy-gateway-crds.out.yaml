@@ -1528,7 +1528,7 @@ spec:
                                   RateLimitSelectCondition specifies the attributes within the traffic flow that can
                                   be used to select a subset of clients to be ratelimited.
                                   All the individual conditions must hold True for the overall condition to hold True.
-                                  And, at least one of headers or methods or path or sourceCIDR condition must be specified.
+                                  And, at least one of headers or methods or path or sourceCIDR or queryParams condition must be specified.
                                 properties:
                                   headers:
                                     description: |-
@@ -1631,6 +1631,48 @@ spec:
                                     required:
                                     - value
                                     type: object
+                                  queryParams:
+                                    description: |-
+                                      QueryParams is a list of query parameters to match. Multiple query parameter values are ANDed together,
+                                      meaning, a request MUST match all the specified query parameters.
+                                    items:
+                                      description: QueryParamMatch defines the match
+                                        attributes within the query parameters of
+                                        the request.
+                                      properties:
+                                        invert:
+                                          default: false
+                                          description: |-
+                                            Invert specifies whether the value match result will be inverted.
+                                            Do not set this field when Type="Distinct", implying matching on any/all unique
+                                            values within the query parameter.
+                                          type: boolean
+                                        name:
+                                          description: Name of the query parameter.
+                                          maxLength: 256
+                                          minLength: 1
+                                          type: string
+                                        type:
+                                          default: Exact
+                                          description: Type specifies how to match
+                                            against the value of the query parameter.
+                                          enum:
+                                          - Exact
+                                          - RegularExpression
+                                          - Distinct
+                                          type: string
+                                        value:
+                                          description: |-
+                                            Value of the query parameter.
+                                            Do not set this field when Type="Distinct", implying matching on any/all unique
+                                            values within the query parameter.
+                                          maxLength: 1024
+                                          type: string
+                                      required:
+                                      - name
+                                      type: object
+                                    maxItems: 16
+                                    type: array
                                   sourceCIDR:
                                     description: SourceCIDR is the client IP Address
                                       range to match on.
@@ -1654,10 +1696,10 @@ spec:
                                     type: object
                                 type: object
                                 x-kubernetes-validations:
-                                - message: at least one of headers, methods, path
-                                    or sourceCIDR must be specified
+                                - message: at least one of headers, methods, path,
+                                    sourceCIDR or queryParams must be specified
                                   rule: has(self.headers) || has(self.methods) ||
-                                    has(self.path) || has(self.sourceCIDR)
+                                    has(self.path) || has(self.sourceCIDR) || has(self.queryParams)
                               maxItems: 8
                               type: array
                             cost:
@@ -1849,7 +1891,7 @@ spec:
                                   RateLimitSelectCondition specifies the attributes within the traffic flow that can
                                   be used to select a subset of clients to be ratelimited.
                                   All the individual conditions must hold True for the overall condition to hold True.
-                                  And, at least one of headers or methods or path or sourceCIDR condition must be specified.
+                                  And, at least one of headers or methods or path or sourceCIDR or queryParams condition must be specified.
                                 properties:
                                   headers:
                                     description: |-
@@ -1952,6 +1994,48 @@ spec:
                                     required:
                                     - value
                                     type: object
+                                  queryParams:
+                                    description: |-
+                                      QueryParams is a list of query parameters to match. Multiple query parameter values are ANDed together,
+                                      meaning, a request MUST match all the specified query parameters.
+                                    items:
+                                      description: QueryParamMatch defines the match
+                                        attributes within the query parameters of
+                                        the request.
+                                      properties:
+                                        invert:
+                                          default: false
+                                          description: |-
+                                            Invert specifies whether the value match result will be inverted.
+                                            Do not set this field when Type="Distinct", implying matching on any/all unique
+                                            values within the query parameter.
+                                          type: boolean
+                                        name:
+                                          description: Name of the query parameter.
+                                          maxLength: 256
+                                          minLength: 1
+                                          type: string
+                                        type:
+                                          default: Exact
+                                          description: Type specifies how to match
+                                            against the value of the query parameter.
+                                          enum:
+                                          - Exact
+                                          - RegularExpression
+                                          - Distinct
+                                          type: string
+                                        value:
+                                          description: |-
+                                            Value of the query parameter.
+                                            Do not set this field when Type="Distinct", implying matching on any/all unique
+                                            values within the query parameter.
+                                          maxLength: 1024
+                                          type: string
+                                      required:
+                                      - name
+                                      type: object
+                                    maxItems: 16
+                                    type: array
                                   sourceCIDR:
                                     description: SourceCIDR is the client IP Address
                                       range to match on.
@@ -1975,10 +2059,10 @@ spec:
                                     type: object
                                 type: object
                                 x-kubernetes-validations:
-                                - message: at least one of headers, methods, path
-                                    or sourceCIDR must be specified
+                                - message: at least one of headers, methods, path,
+                                    sourceCIDR or queryParams must be specified
                                   rule: has(self.headers) || has(self.methods) ||
-                                    has(self.path) || has(self.sourceCIDR)
+                                    has(self.path) || has(self.sourceCIDR) || has(self.queryParams)
                               maxItems: 8
                               type: array
                             cost:
@@ -21744,12 +21828,21 @@ spec:
                                         format: int32
                                         minimum: 0
                                         type: integer
+                                      resourceAttributes:
+                                        additionalProperties:
+                                          type: string
+                                        description: |-
+                                          ResourceAttributes is a set of labels that describe the source of a log entry, including envoy node info.
+                                          It's recommended to follow [semantic conventions](https://opentelemetry.io/docs/reference/specification/resource/semantic_conventions/).
+                                        type: object
                                       resources:
                                         additionalProperties:
                                           type: string
                                         description: |-
                                           Resources is a set of labels that describe the source of a log entry, including envoy node info.
                                           It's recommended to follow [semantic conventions](https://opentelemetry.io/docs/reference/specification/resource/semantic_conventions/).
+
+                                          Deprecated: Use ResourceAttributes instead.
                                         type: object
                                     type: object
                                     x-kubernetes-validations:
@@ -21769,6 +21862,9 @@ spec:
                                       rule: 'has(self.backendRefs) ? (self.backendRefs.all(f,
                                         f.group == "" || f.group == ''gateway.envoyproxy.io''))
                                         : true'
+                                    - message: either resources or resourceAttributes
+                                        can be set, not both
+                                      rule: '!has(self.resources) || !has(self.resourceAttributes)'
                                   type:
                                     description: Type defines the type of accesslog
                                       sink.
@@ -23190,6 +23286,13 @@ spec:
                                     histograms as delta temporality instead of cumulative.
                                     Required for backends like Elastic that drop cumulative histograms.
                                   type: boolean
+                                resourceAttributes:
+                                  additionalProperties:
+                                    type: string
+                                  description: |-
+                                    ResourceAttributes is a set of labels that describe the source of metrics.
+                                    It's recommended to follow semantic conventions: https://opentelemetry.io/docs/reference/specification/resource/semantic_conventions/
+                                  type: object
                               type: object
                               x-kubernetes-validations:
                               - message: host or backendRefs needs to be set
@@ -24540,6 +24643,13 @@ spec:
                                 maxItems: 32
                                 minItems: 1
                                 type: array
+                              resourceAttributes:
+                                additionalProperties:
+                                  type: string
+                                description: |-
+                                  ResourceAttributes is a set of labels that describe the source of traces.
+                                  It's recommended to follow semantic conventions: https://opentelemetry.io/docs/reference/specification/resource/semantic_conventions/
+                                type: object
                             type: object
                           port:
                             default: 4317

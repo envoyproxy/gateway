@@ -1305,7 +1305,7 @@ func buildResourceMetadata(resource client.Object, sectionName *gwapiv1.SectionN
 		Kind:        resource.GetObjectKind().GroupVersionKind().Kind,
 		Name:        resource.GetName(),
 		Namespace:   resource.GetNamespace(),
-		Annotations: filterEGPrefix(resource.GetAnnotations()),
+		Annotations: ir.MapToSlice(filterEGPrefix(resource.GetAnnotations())),
 	}
 	if sectionName != nil {
 		metadata.SectionName = string(*sectionName)
@@ -2182,9 +2182,8 @@ func inspectAppProtocolByRouteKind(kind gwapiv1.Kind) ir.AppProtocol {
 	return ir.TCP
 }
 
-// processAllowedListenersForParentRefs finds out if the route attaches to one of our
-// Gateways' listeners, and if so, gets the list of listeners that allow it to
-// attach for each parentRef.
+// processAllowedListenersForParentRefs finds out if the route attaches to one of our Gateways' listeners or the attached
+// XListenerSet's listeners, and if so, gets the list of listeners that allow it to attach for each parentRef.
 func (t *Translator) processAllowedListenersForParentRefs(
 	routeContext RouteContext,
 	gateways []*GatewayContext,

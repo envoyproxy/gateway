@@ -83,7 +83,7 @@ infraIR:
                       kind: Backend
                       name: otel-collector
                       namespace: envoy-gateway
-                    resources:
+                    resourceAttributes:
                       k8s.cluster.name: cluster-1
                   type: OpenTelemetry
             metrics:
@@ -175,8 +175,9 @@ xdsIR:
                 name: otel-collector/envoy-gateway-ca
               sni: otel-collector.example.com
               useSystemTrustStore: true
-        resources:
-          k8s.cluster.name: cluster-1
+        resourceAttributes:
+        - key: k8s.cluster.name
+          value: cluster-1
         text: |
           [%START_TIME%] "%REQ(:METHOD)% %PROTOCOL%" %RESPONSE_CODE%
     globalResources:

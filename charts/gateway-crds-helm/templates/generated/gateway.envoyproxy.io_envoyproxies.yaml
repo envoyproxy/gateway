@@ -13676,12 +13676,21 @@ spec:
                                         format: int32
                                         minimum: 0
                                         type: integer
+                                      resourceAttributes:
+                                        additionalProperties:
+                                          type: string
+                                        description: |-
+                                          ResourceAttributes is a set of labels that describe the source of a log entry, including envoy node info.
+                                          It's recommended to follow [semantic conventions](https://opentelemetry.io/docs/reference/specification/resource/semantic_conventions/).
+                                        type: object
                                       resources:
                                         additionalProperties:
                                           type: string
                                         description: |-
                                           Resources is a set of labels that describe the source of a log entry, including envoy node info.
                                           It's recommended to follow [semantic conventions](https://opentelemetry.io/docs/reference/specification/resource/semantic_conventions/).
+
+                                          Deprecated: Use ResourceAttributes instead.
                                         type: object
                                     type: object
                                     x-kubernetes-validations:
@@ -13701,6 +13710,9 @@ spec:
                                       rule: 'has(self.backendRefs) ? (self.backendRefs.all(f,
                                         f.group == "" || f.group == ''gateway.envoyproxy.io''))
                                         : true'
+                                    - message: either resources or resourceAttributes
+                                        can be set, not both
+                                      rule: '!has(self.resources) || !has(self.resourceAttributes)'
                                   type:
                                     description: Type defines the type of accesslog
                                       sink.
@@ -15122,6 +15134,13 @@ spec:
                                     histograms as delta temporality instead of cumulative.
                                     Required for backends like Elastic that drop cumulative histograms.
                                   type: boolean
+                                resourceAttributes:
+                                  additionalProperties:
+                                    type: string
+                                  description: |-
+                                    ResourceAttributes is a set of labels that describe the source of metrics.
+                                    It's recommended to follow semantic conventions: https://opentelemetry.io/docs/reference/specification/resource/semantic_conventions/
+                                  type: object
                               type: object
                               x-kubernetes-validations:
                               - message: host or backendRefs needs to be set
@@ -16472,6 +16491,13 @@ spec:
                                 maxItems: 32
                                 minItems: 1
                                 type: array
+                              resourceAttributes:
+                                additionalProperties:
+                                  type: string
+                                description: |-
+                                  ResourceAttributes is a set of labels that describe the source of traces.
+                                  It's recommended to follow semantic conventions: https://opentelemetry.io/docs/reference/specification/resource/semantic_conventions/
+                                type: object
                             type: object
                           port:
                             default: 4317
