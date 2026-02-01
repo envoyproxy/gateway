@@ -28,22 +28,13 @@
   commonLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_PREFERRED
-  dnsRefreshRate: 30s
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
+    serviceName: tracing-0
   ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
-  loadAssignment:
-    clusterName: tracing-0
-    endpoints:
-    - lbEndpoints:
-      - endpoint:
-          address:
-            socketAddress:
-              address: zipkin.default.svc.cluster.local
-              portValue: 9411
-        loadBalancingWeight: 1
-      loadBalancingWeight: 1
-      locality:
-        region: tracing-0/backend/0
   loadBalancingPolicy:
     policies:
     - typedExtensionConfig:
@@ -54,5 +45,4 @@
             localityWeightedLbConfig: {}
   name: tracing-0
   perConnectionBufferLimitBytes: 32768
-  respectDnsTtl: true
-  type: STRICT_DNS
+  type: EDS
