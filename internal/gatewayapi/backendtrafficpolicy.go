@@ -1165,7 +1165,7 @@ func (t *Translator) buildLocalRateLimit(policy *egv1a1.BackendTrafficPolicy) (*
 			continue
 		}
 
-		irRule, err = buildRateLimitRule(rule)
+		irRule, err = buildRateLimitRule(&rule)
 		if err != nil {
 			return nil, err
 		}
@@ -1202,7 +1202,7 @@ func (t *Translator) buildGlobalRateLimit(policy *egv1a1.BackendTrafficPolicy) (
 	irRules := rateLimit.Global.Rules
 	var err error
 	for i, rule := range global.Rules {
-		irRules[i], err = buildRateLimitRule(rule)
+		irRules[i], err = buildRateLimitRule(&rule)
 		if err != nil {
 			return nil, err
 		}
@@ -1242,7 +1242,7 @@ func (t *Translator) buildBothRateLimit(policy *egv1a1.BackendTrafficPolicy) (*i
 	return rl, nil
 }
 
-func buildRateLimitRule(rule egv1a1.RateLimitRule) (*ir.RateLimitRule, error) {
+func buildRateLimitRule(rule *egv1a1.RateLimitRule) (*ir.RateLimitRule, error) {
 	irRule := &ir.RateLimitRule{
 		Limit: ir.RateLimitValue{
 			Requests: rule.Limit.Requests,

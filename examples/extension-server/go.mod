@@ -4,8 +4,8 @@ go 1.25.6
 
 require (
 	github.com/envoyproxy/gateway v1.3.1
-	github.com/envoyproxy/go-control-plane v0.14.0
-	github.com/envoyproxy/go-control-plane/envoy v1.36.1-0.20260115164926-066cbd5b3989
+	github.com/envoyproxy/go-control-plane v0.14.1-0.20260131204543-4ca8b9cded3e
+	github.com/envoyproxy/go-control-plane/envoy v1.36.1-0.20260131204543-4ca8b9cded3e
 	github.com/urfave/cli/v2 v2.27.7
 	google.golang.org/grpc v1.78.0
 	google.golang.org/protobuf v1.36.11
@@ -16,8 +16,8 @@ require (
 )
 
 require (
-	cel.dev/expr v0.24.0 // indirect
-	github.com/cncf/xds/go v0.0.0-20251110193048-8bfbf64dc13e // indirect
+	cel.dev/expr v0.25.1 // indirect
+	github.com/cncf/xds/go v0.0.0-20260121142036-a486691bba94 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.7 // indirect
 	github.com/envoyproxy/protoc-gen-validate v1.3.0 // indirect
 	github.com/fatih/color v1.18.0 // indirect
@@ -51,8 +51,8 @@ require (
 	golang.org/x/sys v0.40.0 // indirect
 	golang.org/x/text v0.33.0 // indirect
 	golang.org/x/tools v0.40.0 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20251202230838-ff82c1b0f217 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20251202230838-ff82c1b0f217 // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20260128011058-8636f8732409 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20260128011058-8636f8732409 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
