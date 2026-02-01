@@ -423,6 +423,13 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 	case args.loadBalancer.ConsistentHash != nil:
 		cluster.LbPolicy = clusterv3.Cluster_MAGLEV
 		consistentHash := &maglevv3.Maglev{}
+		// Maglev only supports LocalityWeightedLbConfig, not the full LocalityLbConfig
+		// Extract it if the config is using weighted locality (which is the default)
+		if localityLbConfig != nil {
+			if weightedConfig, ok := localityLbConfig.LocalityConfigSpecifier.(*commonv3.LocalityLbConfig_LocalityWeightedLbConfig_); ok {
+				consistentHash.LocalityWeightedLbConfig = weightedConfig.LocalityWeightedLbConfig
+			}
+		}
 		if args.loadBalancer.ConsistentHash.TableSize != nil {
 			consistentHash.TableSize = wrapperspb.UInt64(*args.loadBalancer.ConsistentHash.TableSize)
 		}
