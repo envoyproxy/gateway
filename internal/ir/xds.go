@@ -2358,6 +2358,8 @@ type RateLimitRule struct {
 	MethodMatches []*StringMatch `json:"methodMatches,omitempty" yaml:"methodMatches,omitempty"`
 	// CIDRMatch define the match conditions on the source IP's CIDR for this route.
 	CIDRMatch *CIDRMatch `json:"cidrMatch,omitempty" yaml:"cidrMatch,omitempty"`
+	// QueryParamMatches define the match conditions on the request query parameters for this route.
+	QueryParamMatches []*QueryParamMatch `json:"queryParamMatches,omitempty" yaml:"queryParamMatches,omitempty"`
 	// Limit holds the rate limit values.
 	Limit RateLimitValue `json:"limit,omitempty" yaml:"limit,omitempty"`
 	// RequestCost specifies the cost of the request.
@@ -2397,9 +2399,17 @@ type CIDRMatch struct {
 	Distinct bool `json:"distinct" yaml:"distinct"`
 }
 
+// QueryParamMatch defines the match attributes within the query parameters of the request.
+// +k8s:deepcopy-gen=true
+type QueryParamMatch struct {
+	// StringMatch defines how to match against the value of the query parameter.
+	// The Name field within StringMatch is used for the query parameter name.
+	StringMatch `json:",inline" yaml:",inline"`
+}
+
 // TODO zhaohuabing: remove this function
 func (r *RateLimitRule) IsMatchSet() bool {
-	return len(r.HeaderMatches) != 0 || r.PathMatch != nil || len(r.MethodMatches) != 0 || r.CIDRMatch != nil
+	return len(r.HeaderMatches) != 0 || r.PathMatch != nil || len(r.MethodMatches) != 0 || r.CIDRMatch != nil || len(r.QueryParamMatches) != 0
 }
 
 type RateLimitUnit egv1a1.RateLimitUnit
@@ -2481,15 +2491,15 @@ type ALSAccessLogHTTP struct {
 // OpenTelemetryAccessLog holds the configuration for OpenTelemetry access logging.
 // +k8s:deepcopy-gen=true
 type OpenTelemetryAccessLog struct {
-	CELMatches  []string             `json:"celMatches,omitempty" yaml:"celMatches,omitempty"`
-	Authority   string               `json:"authority,omitempty" yaml:"authority,omitempty"`
-	Text        *string              `json:"text,omitempty" yaml:"text,omitempty"`
-	Attributes  map[string]string    `json:"attributes,omitempty" yaml:"attributes,omitempty"`
-	Resources   map[string]string    `json:"resources,omitempty" yaml:"resources,omitempty"`
-	Headers     []gwapiv1.HTTPHeader `json:"headers,omitempty" yaml:"headers,omitempty"`
-	Destination RouteDestination     `json:"destination,omitempty" yaml:"destination,omitempty"`
-	Traffic     *TrafficFeatures     `json:"traffic,omitempty" yaml:"traffic,omitempty"`
-	LogType     *ProxyAccessLogType  `json:"logType,omitempty" yaml:"logType,omitempty"`
+	CELMatches         []string             `json:"celMatches,omitempty" yaml:"celMatches,omitempty"`
+	Authority          string               `json:"authority,omitempty" yaml:"authority,omitempty"`
+	Text               *string              `json:"text,omitempty" yaml:"text,omitempty"`
+	Attributes         map[string]string    `json:"attributes,omitempty" yaml:"attributes,omitempty"`
+	ResourceAttributes map[string]string    `json:"resourceAttributes,omitempty" yaml:"resourceAttributes,omitempty"`
+	Headers            []gwapiv1.HTTPHeader `json:"headers,omitempty" yaml:"headers,omitempty"`
+	Destination        RouteDestination     `json:"destination,omitempty" yaml:"destination,omitempty"`
+	Traffic            *TrafficFeatures     `json:"traffic,omitempty" yaml:"traffic,omitempty"`
+	LogType            *ProxyAccessLogType  `json:"logType,omitempty" yaml:"logType,omitempty"`
 }
 
 // EnvoyPatchPolicy defines the intermediate representation of the EnvoyPatchPolicy resource.
@@ -2618,16 +2628,17 @@ func (o *JSONPatchOperation) Validate() error {
 // Tracing defines the configuration for tracing a Envoy xDS Resource
 // +k8s:deepcopy-gen=true
 type Tracing struct {
-	ServiceName  string                      `json:"serviceName"`
-	Authority    string                      `json:"authority,omitempty"`
-	SamplingRate float64                     `json:"samplingRate,omitempty"`
-	CustomTags   map[string]egv1a1.CustomTag `json:"customTags,omitempty"`
-	Tags         map[string]string           `json:"tags,omitempty"`
-	Destination  RouteDestination            `json:"destination,omitempty"`
-	Traffic      *TrafficFeatures            `json:"traffic,omitempty"`
-	Provider     egv1a1.TracingProvider      `json:"provider"`
-	Headers      []gwapiv1.HTTPHeader        `json:"headers,omitempty" yaml:"headers,omitempty"`
-	SpanName     *egv1a1.TracingSpanName     `json:"spanName,omitempty"`
+	ServiceName        string                      `json:"serviceName"`
+	Authority          string                      `json:"authority,omitempty"`
+	SamplingRate       float64                     `json:"samplingRate,omitempty"`
+	CustomTags         map[string]egv1a1.CustomTag `json:"customTags,omitempty"`
+	Tags               map[string]string           `json:"tags,omitempty"`
+	ResourceAttributes map[string]string           `json:"resourceAttributes,omitempty" yaml:"resourceAttributes,omitempty"`
+	Destination        RouteDestination            `json:"destination,omitempty"`
+	Traffic            *TrafficFeatures            `json:"traffic,omitempty"`
+	Provider           egv1a1.TracingProvider      `json:"provider"`
+	Headers            []gwapiv1.HTTPHeader        `json:"headers,omitempty" yaml:"headers,omitempty"`
+	SpanName           *egv1a1.TracingSpanName     `json:"spanName,omitempty"`
 }
 
 // Metrics defines the configuration for metrics generated by Envoy

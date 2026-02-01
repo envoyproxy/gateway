@@ -17,6 +17,8 @@ data:
     extensionApis:
       enableEnvoyPatchPolicy: true
       enableBackend: true
+    gatewayAPI:
+      enabled: [XListenerSet]
     rateLimit:
       backend:
         type: Redis

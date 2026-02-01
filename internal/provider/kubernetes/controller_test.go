@@ -29,6 +29,7 @@ import (
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+	gwapixv1a1 "sigs.k8s.io/gateway-api/apisx/v1alpha1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway"
@@ -1800,6 +1801,120 @@ func TestProcessBackendRefs(t *testing.T) {
 				require.Contains(t, resourceTree.ConfigMaps, cm)
 			} else {
 				require.NotContains(t, resourceTree.ConfigMaps, cm)
+			}
+		})
+	}
+}
+
+func TestProcessXListenerSets(t *testing.T) {
+	logger := logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo)
+	scheme := envoygateway.GetScheme()
+
+	testCases := []struct {
+		name            string
+		xls             *gwapixv1a1.XListenerSet
+		secret          *corev1.Secret
+		expectXLSCount  int
+		expectSecretRef bool
+	}{
+		{
+			name: "matching gateway with TLS secret",
+			xls: &gwapixv1a1.XListenerSet{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-xls",
+					Namespace: "default",
+				},
+				Spec: gwapixv1a1.ListenerSetSpec{
+					ParentRef: gwapixv1a1.ParentGatewayReference{
+						Name:      gwapixv1a1.ObjectName("test-gateway"),
+						Namespace: ptr.To(gwapiv1.Namespace("default")),
+					},
+					Listeners: []gwapixv1a1.ListenerEntry{
+						{
+							Name:     gwapixv1a1.SectionName("http"),
+							Protocol: gwapixv1a1.ProtocolType("HTTPS"),
+							Port:     gwapixv1a1.PortNumber(8080),
+							TLS: &gwapixv1a1.ListenerTLSConfig{
+								Mode: ptr.To(gwapiv1.TLSModeTerminate),
+								CertificateRefs: []gwapiv1.SecretObjectReference{{
+									Name: gwapiv1.ObjectName("listener-cert"),
+								}},
+							},
+						},
+					},
+				},
+			},
+			secret: &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "listener-cert",
+					Namespace: "default",
+				},
+			},
+			expectXLSCount:  1,
+			expectSecretRef: true,
+		},
+
+		{
+			name: "non-matching gateway",
+			xls: &gwapixv1a1.XListenerSet{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-xls",
+					Namespace: "default",
+				},
+				Spec: gwapixv1a1.ListenerSetSpec{
+					ParentRef: gwapixv1a1.ParentGatewayReference{
+						Name:      gwapixv1a1.ObjectName("other-gateway"),
+						Namespace: ptr.To(gwapiv1.Namespace("default")),
+					},
+					Listeners: []gwapixv1a1.ListenerEntry{
+						{
+							Name:     gwapixv1a1.SectionName("http"),
+							Protocol: gwapixv1a1.ProtocolType("HTTPS"),
+							Port:     gwapixv1a1.PortNumber(8080),
+							TLS: &gwapixv1a1.ListenerTLSConfig{
+								Mode: ptr.To(gwapiv1.TLSModeTerminate),
+								CertificateRefs: []gwapiv1.SecretObjectReference{{
+									Name: gwapiv1.ObjectName("listener-cert"),
+								}},
+							},
+						},
+					},
+				},
+			},
+			expectXLSCount:  0,
+			expectSecretRef: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			var objs []client.Object
+			objs = append(objs, tc.xls)
+			if tc.secret != nil {
+				objs = append(objs, tc.secret)
+			}
+			fakeClient := fakeclient.NewClientBuilder().
+				WithScheme(scheme).
+				WithObjects(objs...).
+				WithIndex(&gwapixv1a1.XListenerSet{}, gatewayXListenerSetIndex, gatewayXListenerSetIndexFunc).
+				Build()
+
+			r := &gatewayAPIReconciler{
+				client: fakeClient,
+				log:    logger,
+			}
+
+			resourceTree := resource.NewResources()
+			resourceMap := newResourceMapping()
+			err := r.processXListenerSets(
+				context.Background(),
+				"default/test-gateway",
+				resourceMap,
+				resourceTree)
+			require.NoError(t, err)
+			require.Len(t, resourceTree.XListenerSets, tc.expectXLSCount)
+			if tc.expectSecretRef {
+				require.Contains(t, resourceTree.Secrets, tc.secret)
 			}
 		})
 	}

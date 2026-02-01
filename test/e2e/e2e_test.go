@@ -97,13 +97,18 @@ func TestE2E(t *testing.T) {
 		t.Fatalf("Failed to create ConformanceTestSuite: %v", err)
 	}
 
-	cSuite.Setup(t, tests.ConformanceTests)
+	recorder := NewTimingRecorder()
+	t.Cleanup(func() {
+		recorder.Report(t)
+	})
+	timedTests := WrapConformanceTestsWithTiming(tests.ConformanceTests, recorder)
+	cSuite.Setup(t, timedTests)
 	if cSuite.RunTest != "" {
 		tlog.Logf(t, "Running E2E test %s", cSuite.RunTest)
 	} else {
 		tlog.Logf(t, "Running %d E2E tests", len(tests.ConformanceTests))
 	}
-	err = cSuite.Run(t, tests.ConformanceTests)
+	err = cSuite.Run(t, timedTests)
 	if err != nil {
 		tlog.Fatalf(t, "Failed to run E2E tests: %v", err)
 	}

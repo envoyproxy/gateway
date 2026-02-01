@@ -1,0 +1,105 @@
+namespaces:
+- apiVersion: v1
+  kind: Namespace
+  metadata:
+    name: gateway-xls
+    labels:
+      allow-xls: "true"
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: gateway-xls
+    name: composite-gateway
+  spec:
+    gatewayClassName: envoy-gateway-class
+    allowedListeners:
+      namespaces:
+        from: Selector
+        selector:
+          matchLabels:
+            allow-xls: "true"
+    listeners:
+    - name: core-grpc
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: All
+xListenerSets:
+- apiVersion: gateway.networking.x-k8s.io/v1alpha1
+  kind: XListenerSet
+  metadata:
+    namespace: gateway-xls
+    name: xlistenerset-grpc-one
+  spec:
+    parentRef:
+      name: composite-gateway
+    listeners:
+    - name: grpc-listener
+      protocol: HTTP
+      port: 8081
+      allowedRoutes:
+        namespaces:
+          from: All
+- apiVersion: gateway.networking.x-k8s.io/v1alpha1
+  kind: XListenerSet
+  metadata:
+    namespace: gateway-xls
+    name: xlistenerset-grpc-two
+  spec:
+    parentRef:
+      name: composite-gateway
+    listeners:
+    - name: grpc-listener
+      protocol: HTTP
+      port: 8082
+      allowedRoutes:
+        namespaces:
+          from: All
+grpcRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: GRPCRoute
+  metadata:
+    namespace: default
+    name: route-core-grpc
+  spec:
+    parentRefs:
+    - namespace: gateway-xls
+      name: composite-gateway
+      sectionName: core-grpc
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8080
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: GRPCRoute
+  metadata:
+    namespace: default
+    name: route-grpc-one
+  spec:
+    parentRefs:
+    - group: gateway.networking.x-k8s.io
+      kind: XListenerSet
+      namespace: gateway-xls
+      name: xlistenerset-grpc-one
+      sectionName: grpc-listener
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8080
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: GRPCRoute
+  metadata:
+    namespace: default
+    name: route-grpc-two
+  spec:
+    parentRefs:
+    - group: gateway.networking.x-k8s.io
+      kind: XListenerSet
+      namespace: gateway-xls
+      name: xlistenerset-grpc-two
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8080

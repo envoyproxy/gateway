@@ -12,6 +12,7 @@ import (
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	tracecfg "github.com/envoyproxy/go-control-plane/envoy/config/trace/v3"
 	hcm "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
+	resourcedetectorsv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/tracers/opentelemetry/resource_detectors/v3"
 	tracingtype "github.com/envoyproxy/go-control-plane/envoy/type/tracing/v3"
 	xdstype "github.com/envoyproxy/go-control-plane/envoy/type/v3"
 	"google.golang.org/protobuf/types/known/anypb"
@@ -65,7 +66,8 @@ func buildHCMTracing(tracing *ir.Tracing) (*hcm.HttpConnectionManager_Tracing, e
 					},
 					InitialMetadata: buildGrpcInitialMetadata(tracing.Headers),
 				},
-				ServiceName: tracing.ServiceName,
+				ServiceName:       tracing.ServiceName,
+				ResourceDetectors: buildResourceDetectors(tracing.ResourceAttributes),
 			}
 
 			return proto.ToAnyWithValidation(config)
@@ -232,4 +234,25 @@ func buildTracingTags(tracingTags map[string]egv1a1.CustomTag, tags map[string]s
 	})
 
 	return result, nil
+}
+
+// buildResourceDetectors creates resource detectors for OpenTelemetry tracing
+// using the StaticConfigResourceDetector extension with the given attributes.
+func buildResourceDetectors(resources map[string]string) []*corev3.TypedExtensionConfig {
+	if len(resources) == 0 {
+		return nil
+	}
+	staticConfig := &resourcedetectorsv3.StaticConfigResourceDetectorConfig{
+		Attributes: resources,
+	}
+	any, err := proto.ToAnyWithValidation(staticConfig)
+	if err != nil {
+		return nil
+	}
+	return []*corev3.TypedExtensionConfig{
+		{
+			Name:        "envoy.tracers.opentelemetry.resource_detectors.static_config",
+			TypedConfig: any,
+		},
+	}
 }

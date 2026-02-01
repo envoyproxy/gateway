@@ -91,6 +91,10 @@ type EnvoyGatewaySpec struct {
 
 	// ExtensionManager defines an extension manager to register for the Envoy Gateway Control Plane.
 	//
+	// Warning: Enabling an Extension Server may lead to complete security compromise of your system.
+	// Users that control the Extension Server can inject arbitrary configuration to proxies,
+	// leading to high Confidentiality, Integrity and Availability risks.
+	//
 	// +optional
 	ExtensionManager *ExtensionManager `json:"extensionManager,omitempty"`
 
@@ -100,12 +104,11 @@ type EnvoyGatewaySpec struct {
 	// +optional
 	ExtensionAPIs *ExtensionAPISettings `json:"extensionApis,omitempty"`
 
-	// GatewayAPIs defines feature flags for experimental Gateway API resources.
+	// GatewayAPI defines feature flags for experimental Gateway API resources.
 	// These APIs live under the gateway.networking.x-k8s.io group and are opt-in.
 	//
 	// +optional
-	// +notImplementedHide
-	GatewayAPIs *GatewayAPIs `json:"gatewayAPIs,omitempty"`
+	GatewayAPI *GatewayAPISettings `json:"gatewayAPI,omitempty"`
 
 	// RuntimeFlags defines the runtime flags for Envoy Gateway.
 	// Unlike ExtensionAPIs, these flags are temporary and will be removed in future releases once the related features are stable.
@@ -135,15 +138,13 @@ type EnvoyGatewaySpec struct {
 type GatewayAPI string
 
 const (
-// XListenerSet enables the Gateway API XListenerSet resource.
-// XListenerSet GatewayAPI = "XListenerSet"
-// XBackendTrafficPolicy enables the Gateway API XBackendTrafficPolicy resource.
-// XBackendTrafficPolicy GatewayAPI = "XBackendTrafficPolicy"
+	// XListenerSet enables the Gateway API XListenerSet resource.
+	XListenerSet GatewayAPI = "XListenerSet"
 )
 
-// GatewayAPIs provides a mechanism to opt into experimental Gateway API resources.
+// GatewayAPISettings provides a mechanism to opt into experimental Gateway API resources.
 // These APIs are experimental today and are subject to change or removal as they mature.
-type GatewayAPIs struct {
+type GatewayAPISettings struct {
 	Enabled []GatewayAPI `json:"enabled,omitempty"`
 }
 
@@ -303,6 +304,10 @@ type Gateway struct {
 type ExtensionAPISettings struct {
 	// EnableEnvoyPatchPolicy enables Envoy Gateway to
 	// reconcile and implement the EnvoyPatchPolicy resources.
+	//
+	// Warning: Enabling `EnvoyPatchPolicy` may lead to complete security compromise of your system.
+	// Users with `EnvoyPatchPolicy` permissions can inject arbitrary configuration to proxies,
+	// leading to high Confidentiality, Integrity and Availability risks.
 	EnableEnvoyPatchPolicy bool `json:"enableEnvoyPatchPolicy"`
 	// EnableBackend enables Envoy Gateway to
 	// reconcile and implement the Backend resources.

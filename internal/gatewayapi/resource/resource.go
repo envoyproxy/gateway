@@ -18,6 +18,7 @@ import (
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwapiv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+	gwapixv1a1 "sigs.k8s.io/gateway-api/apisx/v1alpha1"
 	mcsapiv1a1 "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -47,6 +48,7 @@ type Resources struct {
 
 	GatewayClass            *gwapiv1.GatewayClass          `json:"gatewayClass,omitempty" yaml:"gatewayClass,omitempty"`
 	Gateways                []*gwapiv1.Gateway             `json:"gateways,omitempty" yaml:"gateways,omitempty"`
+	XListenerSets           []*gwapixv1a1.XListenerSet     `json:"xListenerSets,omitempty" yaml:"xListenerSets,omitempty"`
 	HTTPRoutes              []*gwapiv1.HTTPRoute           `json:"httpRoutes,omitempty" yaml:"httpRoutes,omitempty"`
 	GRPCRoutes              []*gwapiv1.GRPCRoute           `json:"grpcRoutes,omitempty" yaml:"grpcRoutes,omitempty"`
 	TLSRoutes               []*gwapiv1a3.TLSRoute          `json:"tlsRoutes,omitempty" yaml:"tlsRoutes,omitempty"`
@@ -76,6 +78,7 @@ type Resources struct {
 func NewResources() *Resources {
 	return &Resources{
 		Gateways:                []*gwapiv1.Gateway{},
+		XListenerSets:           []*gwapixv1a1.XListenerSet{},
 		HTTPRoutes:              []*gwapiv1.HTTPRoute{},
 		GRPCRoutes:              []*gwapiv1.GRPCRoute{},
 		TLSRoutes:               []*gwapiv1a3.TLSRoute{},
@@ -235,6 +238,17 @@ func (r *Resources) Sort() {
 		// Not identical CreationTimestamps
 
 		return r.Gateways[i].CreationTimestamp.Before(&(r.Gateways[j].CreationTimestamp))
+	})
+
+	// Sort XListenerSets by creation timestamp, then namespace/name
+	sort.Slice(r.XListenerSets, func(i, j int) bool {
+		if r.XListenerSets[i].CreationTimestamp.Equal(&(r.XListenerSets[j].CreationTimestamp)) {
+			if r.XListenerSets[i].Namespace != r.XListenerSets[j].Namespace {
+				return r.XListenerSets[i].Namespace < r.XListenerSets[j].Namespace
+			}
+			return r.XListenerSets[i].Name < r.XListenerSets[j].Name
+		}
+		return r.XListenerSets[i].CreationTimestamp.Before(&(r.XListenerSets[j].CreationTimestamp))
 	})
 
 	// Sort HTTPRoutes by creation timestamp, then namespace/name

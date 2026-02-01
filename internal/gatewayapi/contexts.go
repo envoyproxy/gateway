@@ -16,10 +16,12 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwapiv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
+	gwapixv1a1 "sigs.k8s.io/gateway-api/apisx/v1alpha1"
 	mcsapiv1a1 "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils"
 )
@@ -91,6 +93,12 @@ type ListenerContext struct {
 
 	gateway           *GatewayContext
 	listenerStatusIdx int
+
+	// xListenerSet is the XListenerSet that this listener belongs to.
+	// If nil, this listener belongs to the Gateway.
+	xListenerSet          *gwapixv1a1.XListenerSet
+	xListenerSetStatusIdx int
+
 	namespaceSelector labels.Selector
 	tlsSecrets        []*corev1.Secret
 	certDNSNames      []string
@@ -98,25 +106,55 @@ type ListenerContext struct {
 	httpIR *ir.HTTPListener
 }
 
+// isFromXListenerSet returns true if the listener belongs to an XListenerSet instead of a Gateway.
+func (l *ListenerContext) isFromXListenerSet() bool {
+	return l.xListenerSet != nil
+}
+
 func (l *ListenerContext) SetSupportedKinds(kinds ...gwapiv1.RouteGroupKind) {
-	if len(kinds) > 0 {
-		l.gateway.Status.Listeners[l.listenerStatusIdx].SupportedKinds = make([]gwapiv1.RouteGroupKind, len(kinds))
-		copy(l.gateway.Status.Listeners[l.listenerStatusIdx].SupportedKinds, kinds)
+	if l.isFromXListenerSet() {
+		if len(kinds) > 0 {
+			l.xListenerSet.Status.Listeners[l.xListenerSetStatusIdx].SupportedKinds = make([]gwapixv1a1.RouteGroupKind, len(kinds))
+			copy(l.xListenerSet.Status.Listeners[l.xListenerSetStatusIdx].SupportedKinds, kinds)
+		} else {
+			l.xListenerSet.Status.Listeners[l.xListenerSetStatusIdx].SupportedKinds = []gwapixv1a1.RouteGroupKind{}
+		}
 	} else {
-		l.gateway.Status.Listeners[l.listenerStatusIdx].SupportedKinds = []gwapiv1.RouteGroupKind{}
+		if len(kinds) > 0 {
+			l.gateway.Status.Listeners[l.listenerStatusIdx].SupportedKinds = make([]gwapiv1.RouteGroupKind, len(kinds))
+			copy(l.gateway.Status.Listeners[l.listenerStatusIdx].SupportedKinds, kinds)
+		} else {
+			l.gateway.Status.Listeners[l.listenerStatusIdx].SupportedKinds = []gwapiv1.RouteGroupKind{}
+		}
 	}
 }
 
 func (l *ListenerContext) IncrementAttachedRoutes() {
-	l.gateway.Status.Listeners[l.listenerStatusIdx].AttachedRoutes++
+	if l.isFromXListenerSet() {
+		l.xListenerSet.Status.Listeners[l.xListenerSetStatusIdx].AttachedRoutes++
+	} else {
+		l.gateway.Status.Listeners[l.listenerStatusIdx].AttachedRoutes++
+	}
 }
 
 func (l *ListenerContext) AttachedRoutes() int32 {
+	if l.isFromXListenerSet() {
+		return l.xListenerSet.Status.Listeners[l.xListenerSetStatusIdx].AttachedRoutes
+	}
 	return l.gateway.Status.Listeners[l.listenerStatusIdx].AttachedRoutes
 }
 
 func (l *ListenerContext) AllowsKind(kind gwapiv1.RouteGroupKind) bool {
-	for _, allowed := range l.gateway.Status.Listeners[l.listenerStatusIdx].SupportedKinds {
+	var supportedKinds []gwapiv1.RouteGroupKind
+	if l.xListenerSet != nil {
+		// Convert XListenerSet supported kinds to Gateway API kinds
+		// Since they are alias types, we can cast them
+		supportedKinds = append(supportedKinds, l.xListenerSet.Status.Listeners[l.xListenerSetStatusIdx].SupportedKinds...)
+	} else {
+		supportedKinds = l.gateway.Status.Listeners[l.listenerStatusIdx].SupportedKinds
+	}
+
+	for _, allowed := range supportedKinds {
 		if GroupDerefOr(allowed.Group, "") == GroupDerefOr(kind.Group, "") &&
 			allowed.Kind == kind.Kind {
 			return true
@@ -150,7 +188,14 @@ func (l *ListenerContext) AllowsNamespace(namespace *corev1.Namespace) bool {
 }
 
 func (l *ListenerContext) IsReady() bool {
-	for _, cond := range l.gateway.Status.Listeners[l.listenerStatusIdx].Conditions {
+	var conditions []metav1.Condition
+	if l.isFromXListenerSet() {
+		conditions = l.xListenerSet.Status.Listeners[l.xListenerSetStatusIdx].Conditions
+	} else {
+		conditions = l.gateway.Status.Listeners[l.listenerStatusIdx].Conditions
+	}
+
+	for _, cond := range conditions {
 		if cond.Type == string(gwapiv1.ListenerConditionProgrammed) && cond.Status == metav1.ConditionTrue {
 			return true
 		}
@@ -160,7 +205,28 @@ func (l *ListenerContext) IsReady() bool {
 }
 
 func (l *ListenerContext) GetConditions() []metav1.Condition {
+	if l.isFromXListenerSet() {
+		return l.xListenerSet.Status.Listeners[l.xListenerSetStatusIdx].Conditions
+	}
 	return l.gateway.Status.Listeners[l.listenerStatusIdx].Conditions
+}
+
+func (l *ListenerContext) SetCondition(conditionType gwapiv1.ListenerConditionType, conditionStatus metav1.ConditionStatus, reason gwapiv1.ListenerConditionReason, message string) {
+	if l.isFromXListenerSet() {
+		// Convert Gateway API types to XListenerSet types
+		// Note: The string values are expected to match between the APIs
+		status.SetXListenerSetListenerStatusCondition(l.xListenerSet, l.xListenerSetStatusIdx,
+			gwapixv1a1.ListenerEntryConditionType(conditionType),
+			conditionStatus,
+			gwapixv1a1.ListenerEntryConditionReason(reason),
+			message)
+	} else {
+		status.SetGatewayListenerStatusCondition(l.gateway.Gateway, l.listenerStatusIdx,
+			conditionType,
+			conditionStatus,
+			reason,
+			message)
+	}
 }
 
 func (l *ListenerContext) SetTLSSecrets(tlsSecrets []*corev1.Secret) {

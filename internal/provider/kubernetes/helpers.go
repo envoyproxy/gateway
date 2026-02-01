@@ -15,6 +15,7 @@ import (
 	toolscache "k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+	gwapixv1a1 "sigs.k8s.io/gateway-api/apisx/v1alpha1"
 	mcsapiv1a1 "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -133,6 +134,17 @@ func terminatesTLS(listener *gwapiv1.Listener) bool {
 			listener.Protocol == gwapiv1.TLSProtocolType) &&
 		listener.TLS.Mode != nil &&
 		*listener.TLS.Mode == gwapiv1.TLSModeTerminate {
+		return true
+	}
+	return false
+}
+
+func isListenerEntryTerminatesTLS(listenerEntry *gwapixv1a1.ListenerEntry) bool {
+	if listenerEntry.TLS != nil &&
+		(listenerEntry.Protocol == gwapiv1.HTTPSProtocolType ||
+			listenerEntry.Protocol == gwapiv1.TLSProtocolType) &&
+		listenerEntry.TLS.Mode != nil &&
+		*listenerEntry.TLS.Mode == gwapiv1.TLSModeTerminate {
 		return true
 	}
 	return false

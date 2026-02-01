@@ -5,7 +5,7 @@ accesslog:
       [%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE%
     attributes:
       "response_code": "%RESPONSE_CODE%"
-    resources:
+    resourceAttributes:
       "cluster_name": "cluster1"
     authority: "otel-collector.default.svc.cluster.local"
     headers:
