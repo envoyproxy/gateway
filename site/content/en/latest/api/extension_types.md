@@ -801,6 +801,7 @@ _Appears in:_
 | `http1` | _[HTTP1Settings](#http1settings)_ |  false  |  | HTTP1 provides HTTP/1 configuration on the listener. |
 | `http2` | _[HTTP2Settings](#http2settings)_ |  false  |  | HTTP2 provides HTTP/2 configuration on the listener. |
 | `http3` | _[HTTP3Settings](#http3settings)_ |  false  |  | HTTP3 provides HTTP/3 configuration on the listener. |
+| `grpc` | _[GRPCSettings](#grpcsettings)_ |  false  |  | GRPC provides gRPC configuration on the listener. |
 | `healthCheck` | _[HealthCheckSettings](#healthchecksettings)_ |  false  |  | HealthCheck provides configuration for determining whether the HTTP/HTTPS listener is healthy. |
 | `scheme` | _[SchemeHeaderTransform](#schemeheadertransform)_ |  false  |  | Scheme configures how the :scheme pseudo-header is set for requests forwarded to backends.<br />- Preserve (default): Preserves the :scheme from the original client request.<br />  Use this when backends need to know the original client scheme for URL generation or redirects.<br />- MatchBackend: Sets the :scheme to match the backend transport protocol.<br />  If the backend uses TLS, the scheme is "https", otherwise "http".<br />  Use this when backends require the scheme to match the actual transport protocol,<br />  such as strictly HTTPS services that validate the :scheme header. |
 
@@ -2263,6 +2264,20 @@ _Appears in:_
 | `backendRef` | _[BackendObjectReference](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#backendobjectreference)_ |  false  |  | BackendRef references a Kubernetes object that represents the<br />backend server to which the authorization request will be sent.<br />Deprecated: Use BackendRefs instead. |
 | `backendRefs` | _[BackendRef](#backendref) array_ |  false  |  | BackendRefs references a Kubernetes object that represents the<br />backend server to which the authorization request will be sent. |
 | `backendSettings` | _[ClusterSettings](#clustersettings)_ |  false  |  | BackendSettings holds configuration for managing the connection<br />to the backend. |
+
+
+#### GRPCSettings
+
+
+
+GRPCSettings provides gRPC configuration for listeners.
+
+_Appears in:_
+- [ClientTrafficPolicySpec](#clienttrafficpolicyspec)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `enableWeb` | _boolean_ |  false  |  | EnableWeb configures the gRPC-web filter on the listener.<br />The gRPC-web filter allows clients (typically browsers) to make gRPC calls<br />using HTTP/1.1 or HTTP/2.<br />This is enabled by default for GRPCRoute and opt-in for HTTPRoute.<br />In general, gRPC traffic should be handled via GRPCRoute, but there are cases where<br />users want to route gRPC using HTTPRoute for its richer matching capabilities.<br />Therefore, we enable this behavior only when it is explicitly opted in. |
 
 
 #### Gateway

@@ -103,6 +103,10 @@ type ClientTrafficPolicySpec struct {
 	//
 	// +optional
 	HTTP3 *HTTP3Settings `json:"http3,omitempty"`
+	// GRPC provides gRPC configuration on the listener.
+	//
+	// +optional
+	GRPC *GRPCSettings `json:"grpc,omitempty"`
 	// HealthCheck provides configuration for determining whether the HTTP/HTTPS listener is healthy.
 	//
 	// +optional

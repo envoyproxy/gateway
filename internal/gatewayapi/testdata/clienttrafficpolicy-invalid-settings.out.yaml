@@ -861,7 +861,6 @@ xdsIR:
           mode: Sanitize
       hostnames:
       - '*'
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-1
@@ -945,7 +944,6 @@ xdsIR:
           mode: Sanitize
       hostnames:
       - '*'
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-1
@@ -1074,7 +1072,6 @@ xdsIR:
           mode: Sanitize
       hostnames:
       - '*'
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-2
@@ -1101,7 +1098,6 @@ xdsIR:
           mode: Sanitize
       hostnames:
       - '*'
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-2
@@ -1178,7 +1174,6 @@ xdsIR:
           mode: Sanitize
       hostnames:
       - '*'
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-3
@@ -1205,7 +1200,6 @@ xdsIR:
           mode: Sanitize
       hostnames:
       - '*'
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-3

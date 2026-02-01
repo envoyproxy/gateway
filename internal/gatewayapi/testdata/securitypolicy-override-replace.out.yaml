@@ -591,7 +591,6 @@ xdsIR:
       externalPort: 80
       hostnames:
       - listener-1.gateway-1.envoyproxy.io
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-1
@@ -854,7 +853,6 @@ xdsIR:
       externalPort: 80
       hostnames:
       - listener-2.gateway-1.envoyproxy.io
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-1
