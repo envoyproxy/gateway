@@ -4,11 +4,11 @@ accesslog:
   - text: |
       [%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE%
     attributes:
-      - key: "response_code"
-        value: "%RESPONSE_CODE%"
+    - key: "response_code"
+      value: "%RESPONSE_CODE%"
     resourceAttributes:
-      - key: "cluster_name"
-        value: "cluster1"
+    - key: "cluster_name"
+      value: "cluster1"
     authority: "otel-collector.default.svc.cluster.local"
     headers:
     - name: Authorization

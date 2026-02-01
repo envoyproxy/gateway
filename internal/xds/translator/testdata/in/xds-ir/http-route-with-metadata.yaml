@@ -9,8 +9,8 @@ http:
     namespace: "first-gateway"
     sectionName: "first-listener"
     annotations:
-      - key: foo
-        value: bar
+    - key: foo
+      value: bar
   hostnames:
   - "*"
   path:
@@ -25,8 +25,8 @@ http:
         namespace: "first-route-ns"
         sectionName: "first-route-rule"
         annotations:
-          - key: foo
-            value: bar
+        - key: foo
+          value: bar
       name: "first-route-dest"
       settings:
       - endpoints:
@@ -46,8 +46,8 @@ http:
       namespace: "first-route-ns"
       sectionName: "first-route-rule"
       annotations:
-        - key: foo
-          value: bar
+      - key: foo
+        value: bar
     name: envoy-gateway/httproute-2/rule/0/match/0/example.com
     pathMatch:
       prefix: /v1/example
@@ -62,8 +62,8 @@ http:
         namespace: "second-route-ns"
         sectionName: "second-route-rule"
         annotations:
-          - key: foo
-            value: bar
+        - key: foo
+          value: bar
       name: "second-route-dest"
       settings:
       - endpoints:

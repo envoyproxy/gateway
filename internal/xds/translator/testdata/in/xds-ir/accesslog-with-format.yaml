@@ -7,16 +7,16 @@ accesslog:
   json:
   - path: "/dev/stdout"
     json:
-      - key: method
-        value: "%REQ(:METHOD)%"
-      - key: path
-        value: "%REQ(X-ENVOY-ORIGINAL-PATH?:PATH)%"
-      - key: protocol
-        value: "%PROTOCOL%"
-      - key: response_code
-        value: "%RESPONSE_CODE%"
-      - key: start_time
-        value: "%START_TIME%"
+    - key: method
+      value: "%REQ(:METHOD)%"
+    - key: path
+      value: "%REQ(X-ENVOY-ORIGINAL-PATH?:PATH)%"
+    - key: protocol
+      value: "%PROTOCOL%"
+    - key: response_code
+      value: "%RESPONSE_CODE%"
+    - key: start_time
+      value: "%START_TIME%"
   als:
   - name: als
     destination:
@@ -40,11 +40,11 @@ accesslog:
   - text: |
       this is a brand new log
     attributes:
-      - key: "response_code"
-        value: "%RESPONSE_CODE%"
+    - key: "response_code"
+      value: "%RESPONSE_CODE%"
     resourceAttributes:
-      - key: "cluster_name"
-        value: "cluster1"
+    - key: "cluster_name"
+      value: "cluster1"
     authority: "otel-collector.default.svc.cluster.local"
     destination:
       name: "accesslog-0"

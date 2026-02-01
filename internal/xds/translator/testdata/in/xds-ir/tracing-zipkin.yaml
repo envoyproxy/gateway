@@ -24,12 +24,12 @@ tracing:
   destination:
     name: "tracing-0"
     settings:
-    - endpoints:
-      - host: "zipkin.default.svc.cluster.local"
-        port: 9411
-      protocol: "TCP"
-      addressType: FQDN
-      name: "tracing-0/backend/0"
+      - endpoints:
+          - host: "zipkin.default.svc.cluster.local"
+            port: 9411
+            protocol: "TCP"
+            addressType: FQDN
+            name: "tracing-0/backend/0"
   provider:
     host: zipkin.default.svc.cluster.local
     port: 9411
@@ -38,21 +38,21 @@ tracing:
       enable128BitTraceId: true
       disableSharedSpanContext: true
 http:
-- name: "first-listener"
-  address: "::"
-  port: 10080
-  hostnames:
-  - "*"
-  path:
-    mergeSlashes: true
-    escapedSlashesAction: UnescapeAndRedirect
-  routes:
-  - name: "direct-route"
-    hostname: "*"
-    destination:
-      name: "direct-route-dest"
-      settings:
-      - endpoints:
-        - host: "1.2.3.4"
-          port: 50000
-        name: "direct-route-dest/backend/0"
+  - name: "first-listener"
+    address: "::"
+    port: 10080
+    hostnames:
+      - "*"
+    path:
+      mergeSlashes: true
+      escapedSlashesAction: UnescapeAndRedirect
+    routes:
+      - name: "direct-route"
+        hostname: "*"
+        destination:
+          name: "direct-route-dest"
+          settings:
+            - endpoints:
+                - host: "1.2.3.4"
+                  port: 50000
+                  name: "direct-route-dest/backend/0"
