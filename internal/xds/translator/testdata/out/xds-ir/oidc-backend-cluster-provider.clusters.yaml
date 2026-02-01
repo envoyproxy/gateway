@@ -72,6 +72,7 @@
         name: envoy.load_balancing_policies.maglev
         typedConfig:
           '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.maglev.v3.Maglev
+          localityWeightedLbConfig: {}
   name: securitypolicy/envoy-gateway/policy-for-gateway/0
   outlierDetection:
     baseEjectionTime: 160s
