@@ -117,7 +117,8 @@ accessLog:
             name: accesslog_otel_0_3/backend/0
       logType: Route
       resourceAttributes:
-        k8s.cluster.name: cluster-1
+        - key: k8s.cluster.name
+          value: cluster-1
       text: |
         this is a route log
     - authority: otel-collector.monitoring.svc.cluster.local
@@ -133,7 +134,8 @@ accessLog:
             name: accesslog_otel_1_3/backend/0
       logType: Listener
       resourceAttributes:
-        k8s.cluster.name: cluster-1
+        - key: k8s.cluster.name
+          value: cluster-1
       text: |
         this is a listener log
     - authority: otel-collector.monitoring.svc.cluster.local
@@ -148,7 +150,8 @@ accessLog:
             weight: 1
             name: accesslog_otel_2_3/backend/0
       resourceAttributes:
-        k8s.cluster.name: cluster-1
+        - key: k8s.cluster.name
+          value: cluster-1
       text: |
         this is a Global log
   text:

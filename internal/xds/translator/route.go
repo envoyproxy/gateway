@@ -74,7 +74,7 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute, httpListener *ir.HTTPListener) (*rou
 		router.Action = &routev3.Route_Redirect{Redirect: buildXdsRedirectAction(httpRoute)}
 	case httpRoute.URLRewrite != nil:
 		routeAction := buildXdsURLRewriteAction(httpRoute, httpRoute.URLRewrite, httpRoute.PathMatch)
-		routeAction.IdleTimeout = idleTimeout(httpRoute)
+		routeAction.IdleTimeout = idleTimeout(httpRoute, httpListener)
 		if httpRoute.Mirrors != nil {
 			routeAction.RequestMirrorPolicies = buildXdsRequestMirrorPolicies(httpRoute.Mirrors)
 		}
@@ -86,7 +86,7 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute, httpListener *ir.HTTPListener) (*rou
 		router.Action = &routev3.Route_Route{Route: routeAction}
 	default:
 		routeAction := buildXdsRouteAction(httpRoute)
-		routeAction.IdleTimeout = idleTimeout(httpRoute)
+		routeAction.IdleTimeout = idleTimeout(httpRoute, httpListener)
 
 		if httpRoute.Mirrors != nil {
 			routeAction.RequestMirrorPolicies = buildXdsRequestMirrorPolicies(httpRoute.Mirrors)
@@ -408,21 +408,31 @@ func getEffectiveRequestTimeout(httpRoute *ir.HTTPRoute) *metav1.Duration {
 	return nil
 }
 
-func idleTimeout(httpRoute *ir.HTTPRoute) *durationpb.Duration {
-	rt := getEffectiveRequestTimeout(httpRoute)
-	timeout := time.Hour // Default to 1 hour
-	if rt != nil {
-		// Ensure is not less than the request timeout
-		if timeout < rt.Duration {
-			timeout = rt.Duration
-		}
+func idleTimeout(httpRoute *ir.HTTPRoute, httpListener *ir.HTTPListener) *durationpb.Duration {
+	// When a user-configured stream idle timeout exists at the listener level, avoid overriding it at the route level
+	// and allow the user-configured listener-level timeout to take effect.
+	// TODO: we may need to support route-level idle timeout in the BackendTrafficPolicy
+	if httpListener != nil &&
+		httpListener.Timeout != nil &&
+		httpListener.Timeout.HTTP != nil &&
+		httpListener.Timeout.HTTP.StreamIdleTimeout != nil {
+		return nil
+	}
 
+	// When a user-configured request timeout exists at the route level, and no user-configured stream idle timeout exists
+	// at the listener level, set a route-level idle timeout to avoid stream timeout before request timeout.
+	requestTimeout := getEffectiveRequestTimeout(httpRoute)
+	idleTimeout := time.Hour // Default to 1 hour
+	if requestTimeout != nil {
+		// Ensure the idle timeout is not less than the request timeout
+		if idleTimeout < requestTimeout.Duration {
+			idleTimeout = requestTimeout.Duration
+		}
 		// Disable idle timeout when request timeout is disabled
-		if rt.Duration == 0 {
-			timeout = 0
+		if requestTimeout.Duration == 0 {
+			idleTimeout = 0
 		}
-
-		return durationpb.New(timeout)
+		return durationpb.New(idleTimeout)
 	}
 	return nil
 }

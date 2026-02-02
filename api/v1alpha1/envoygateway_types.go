@@ -91,6 +91,10 @@ type EnvoyGatewaySpec struct {
 
 	// ExtensionManager defines an extension manager to register for the Envoy Gateway Control Plane.
 	//
+	// Warning: Enabling an Extension Server may lead to complete security compromise of your system.
+	// Users that control the Extension Server can inject arbitrary configuration to proxies,
+	// leading to high Confidentiality, Integrity and Availability risks.
+	//
 	// +optional
 	ExtensionManager *ExtensionManager `json:"extensionManager,omitempty"`
 
@@ -300,6 +304,10 @@ type Gateway struct {
 type ExtensionAPISettings struct {
 	// EnableEnvoyPatchPolicy enables Envoy Gateway to
 	// reconcile and implement the EnvoyPatchPolicy resources.
+	//
+	// Warning: Enabling `EnvoyPatchPolicy` may lead to complete security compromise of your system.
+	// Users with `EnvoyPatchPolicy` permissions can inject arbitrary configuration to proxies,
+	// leading to high Confidentiality, Integrity and Availability risks.
 	EnableEnvoyPatchPolicy bool `json:"enableEnvoyPatchPolicy"`
 	// EnableBackend enables Envoy Gateway to
 	// reconcile and implement the Backend resources.

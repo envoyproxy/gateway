@@ -15,7 +15,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
+	"github.com/envoyproxy/gateway/internal/logging"
 	"github.com/envoyproxy/gateway/internal/message"
 )
 
@@ -25,6 +27,7 @@ func TestHandleSubscriptionAlreadyClosed(t *testing.T) {
 
 	var calls int
 	message.HandleSubscription(
+		logging.NewLogger(t.Output(), egv1a1.DefaultEnvoyGatewayLogging()),
 		message.Metadata{Runner: "demo", Message: "demo"},
 		ch,
 		func(_ message.Update[string, any], _ chan error) { calls++ },
@@ -50,6 +53,7 @@ func TestPanicInSubscriptionHandler(t *testing.T) {
 
 	numCalls := 0
 	message.HandleSubscription(
+		logging.NewLogger(t.Output(), egv1a1.DefaultEnvoyGatewayLogging()),
 		message.Metadata{Runner: "demo", Message: "demo"},
 		m.Subscribe(context.Background()),
 		func(update message.Update[string, any], _ chan error) {
@@ -78,6 +82,7 @@ func TestHandleSubscriptionAlreadyInitialized(t *testing.T) {
 	var storeCalls int
 	var deleteCalls int
 	message.HandleSubscription(
+		logging.NewLogger(t.Output(), egv1a1.DefaultEnvoyGatewayLogging()),
 		message.Metadata{Runner: "demo", Message: "demo"},
 		m.Subscribe(context.Background()),
 		func(update message.Update[string, any], _ chan error) {
@@ -246,7 +251,7 @@ func TestControllerResourceUpdate(t *testing.T) {
 			m := &message.ProviderResources{}
 
 			snapshotC := m.GatewayAPIResources.Subscribe(ctx)
-			endCtx, end := context.WithCancel(ctx)
+			endCtx, cancel := context.WithCancel(ctx)
 			m.GatewayAPIResources.Store("start", &resource.ControllerResourcesContext{
 				Resources: &resource.ControllerResources{},
 				Context:   ctx,
@@ -268,15 +273,17 @@ func TestControllerResourceUpdate(t *testing.T) {
 			}()
 
 			updates := 0
-			message.HandleSubscription(message.Metadata{Runner: "demo", Message: "demo"}, snapshotC, func(u message.Update[string, *resource.ControllerResourcesContext], _ chan error) {
-				end()
-				if u.Key == "test" {
-					updates += 1
-				}
-				if u.Key == "end" {
-					m.GatewayAPIResources.Close()
-				}
-			})
+			message.HandleSubscription(
+				logging.NewLogger(t.Output(), egv1a1.DefaultEnvoyGatewayLogging()),
+				message.Metadata{Runner: "demo", Message: "demo"}, snapshotC, func(u message.Update[string, *resource.ControllerResourcesContext], _ chan error) {
+					cancel()
+					if u.Key == "test" {
+						updates += 1
+					}
+					if u.Key == "end" {
+						m.GatewayAPIResources.Close()
+					}
+				})
 			if tc.updates > 1 {
 				require.LessOrEqual(t, updates, tc.updates) // Updates can be coalesced
 			} else {

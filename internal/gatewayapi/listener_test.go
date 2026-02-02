@@ -993,7 +993,7 @@ func TestProcessAccessLog(t *testing.T) {
 			expected: &ir.AccessLog{
 				JSON: []*ir.JSONAccessLog{
 					{
-						JSON: map[string]string{"start_time": "%START_TIME%"},
+						JSON: []ir.MapEntry{{Key: "start_time", Value: "%START_TIME%"}},
 						Path: "/dev/stdout",
 					},
 				},
