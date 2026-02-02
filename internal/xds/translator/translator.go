@@ -832,6 +832,22 @@ func (t *Translator) processTCPListenerXdsTranslation(
 			}
 		}
 
+		// add http route client certs
+		for _, route := range tcpListener.Routes {
+			if route.Destination != nil {
+				for _, st := range route.Destination.Settings {
+					if st.TLS != nil {
+						for _, clientCert := range st.TLS.ClientCertificates {
+							secret := buildXdsTLSCertSecret(&clientCert)
+							if err := tCtx.AddXdsResource(resourcev3.SecretType, secret); err != nil {
+								errs = errors.Join(errs, err)
+							}
+						}
+					}
+				}
+			}
+		}
+
 		// If there are no routes, add a route without a destination to the listener to create a filter chain
 		// This is needed because Envoy requires a filter chain to be present in the listener, otherwise it will reject the listener and report a warning
 		if len(tcpListener.Routes) == 0 {

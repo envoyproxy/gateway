@@ -85,10 +85,25 @@ var TCPMTLSRouteTest = suite.ConformanceTest{
 	Manifests:   []string{"testdata/tcproute-mtls.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		ns := "gateway-conformance-infra"
+		acceptedCond := metav1.Condition{
+			Type:   string(gwapiv1.PolicyConditionAccepted),
+			Status: metav1.ConditionTrue,
+			Reason: string(gwapiv1.PolicyReasonAccepted),
+		}
+		resolvedRefsCond := metav1.Condition{
+			Type:   string(gwapiv1.BackendTLSPolicyConditionResolvedRefs),
+			Status: metav1.ConditionTrue,
+			Reason: string(gwapiv1.BackendTLSPolicyReasonResolvedRefs),
+		}
+
 		routeNN := types.NamespacedName{Name: "tcp-route", Namespace: ns}
 		gwNN := types.NamespacedName{Name: "tcp-gateway", Namespace: ns}
+		validPolicyNN := types.NamespacedName{Name: "tls-backend-policy", Namespace: ns}
+		kubernetes.BackendTLSPolicyMustHaveCondition(t, suite.Client, suite.TimeoutConfig, validPolicyNN, gwNN, acceptedCond)
+		kubernetes.BackendTLSPolicyMustHaveCondition(t, suite.Client, suite.TimeoutConfig, validPolicyNN, gwNN, resolvedRefsCond)
 		gwAddr := GatewayAndTCPRoutesMustBeAccepted(t, suite.Client, &suite.TimeoutConfig, suite.ControllerName, NewGatewayRef(gwNN), routeNN)
-		OkResp := http.ExpectedResponse{
+
+		http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, http.ExpectedResponse{
 			Request: http.Request{
 				Path: "/",
 			},
@@ -96,9 +111,7 @@ var TCPMTLSRouteTest = suite.ConformanceTest{
 				StatusCodes: []int{200},
 			},
 			Namespace: ns,
-		}
-
-		http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, OkResp)
+		})
 	},
 }
 

@@ -28,7 +28,20 @@ spec:
   backendTLS:
     clientCertificateRef:
       kind: Secret
-      name: "backend-tls-certificate"
+      name: "client-tls-certificate"
+---
+# This is used as the client certificate for the envoy to connect to the backend service
+# openssl req -out envoy.csr -newkey rsa:2048 -nodes -keyout envoy.key -subj "/CN=envoy/O=example organization"
+# openssl x509 -req -days 36500 -CA ca.crt -CAkey ca.key -set_serial 0 -in envoy.csr -out envoy.crt
+apiVersion: v1
+kind: Secret
+metadata:
+  name: client-tls-certificate
+  namespace: gateway-conformance-infra
+type: kubernetes.io/tls
+data:
+  tls.crt: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURHekNDQWdPZ0F3SUJBZ0lCQURBTkJna3Foa2lHOXcwQkFRc0ZBREF0TVJVd0V3WURWUVFLREF4bGVHRnQKY0d4bElFbHVZeTR4RkRBU0JnTlZCQU1NQzJWNFlXMXdiR1V1WTI5dE1DQVhEVEkxTVRBeE16QTJNekV4T0ZvWQpEekl4TWpVd09URTVNRFl6TVRFNFdqQXZNUTR3REFZRFZRUUREQVZsYm5admVURWRNQnNHQTFVRUNnd1VaWGhoCmJYQnNaU0J2Y21kaGJtbDZZWFJwYjI0d2dnRWlNQTBHQ1NxR1NJYjNEUUVCQVFVQUE0SUJEd0F3Z2dFS0FvSUIKQVFDd0ViQ3FYb1BtT0NBYTRVYmxrcE80eHRFMDUwSXM3ZHgvbDlrY3lpRDA5SmU0L0t0L0RPdENjeTYybXVTUAp6N2ZtR3EwTktOdGU3aWhQTGY1YlUzQlRVVGR0WU5lNXBadVNMQm9CQ1VUZWEzNkdzVHdXeTdBbVgxUVI2YXJMCkdEWVBzL3k1MWU3WE9hT3ZQTmx2M0VxTURzaUoyU0NtSmkyV1NBZXBtdStMQytHenBKRFZ4Z3gwYXV0djVIeWwKVXJKb3JKOFpxd0NPS29SdGNkQmpSMXpzTjdJZzJVWFpuMGltUzU2bENtQUg5YVRpbUZFbko5S3ZEd3JURGNXTQpGTXA5QW5iMlBLbkJmMWZZMU51VTV6cHpPaGhkN1B1RDNiMnZQUjlPdW5vMFBEU1hNYWVFdnNBbnlnUG10aDExClhxMHRxc1d5RVU4Q3gvcjNuNm9xZ3phckFnTUJBQUdqUWpCQU1CMEdBMVVkRGdRV0JCUUkzVlMyRDR3b3ZDRisKRUpDYmt0dW93Y2tvckRBZkJnTlZIU01FR0RBV2dCUVdVcUs0c0FRRnl6RE82MjFHaEhQMU44a2d0ekFOQmdrcQpoa2lHOXcwQkFRc0ZBQU9DQVFFQUszUHducGVVLzB1c1I5SnF4MFAyMzZQaGdvYW5IZXJlWlB4eDRMcFFqNHdJCnhEclE3RUwyOVBZMmRrcW0yWmI2cTJiUnVnSmNFMGdFQnNoN3ZtejBYNTQxQUYrOWIrbmdlOVhUZjBYdmZoM20KSGV5Q0d2MTJtSERSNDBHTE9PRzhpYmRZcVFDcGJxenYyRFRFbmNtNjNETEsvUVcrdjFSMEIrU3FLdnVldkxxVQpxT1RBS0JwTVdhZUh4cHB5RHlMblhyN3RxbE9GMGFUY1M0dlpjOUdWcitvOEdiY0diTHBSYVVTMHBPN2VtL3o3Cml1MFlMa1lkOGpnd0RTcDZBRFlhUjk3WEFlTStYS2djb3d6cFRWK0NYbUpaZTJtRzZIc3JIU0pIVUxaZHUwcDcKUUNQdDFEbnJmS2Z5L0Zmd29VQmZKa1pNbVo1dTVMSElabEZJR0tWSndnPT0KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
+  tls.key: LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tCk1JSUV2UUlCQURBTkJna3Foa2lHOXcwQkFRRUZBQVNDQktjd2dnU2pBZ0VBQW9JQkFRQ3dFYkNxWG9QbU9DQWEKNFVibGtwTzR4dEUwNTBJczdkeC9sOWtjeWlEMDlKZTQvS3QvRE90Q2N5NjJtdVNQejdmbUdxME5LTnRlN2loUApMZjViVTNCVFVUZHRZTmU1cFp1U0xCb0JDVVRlYTM2R3NUd1d5N0FtWDFRUjZhckxHRFlQcy95NTFlN1hPYU92ClBObHYzRXFNRHNpSjJTQ21KaTJXU0FlcG11K0xDK0d6cEpEVnhneDBhdXR2NUh5bFVySm9ySjhacXdDT0tvUnQKY2RCalIxenNON0lnMlVYWm4waW1TNTZsQ21BSDlhVGltRkVuSjlLdkR3clREY1dNRk1wOUFuYjJQS25CZjFmWQoxTnVVNXpwek9oaGQ3UHVEM2IydlBSOU91bm8wUERTWE1hZUV2c0FueWdQbXRoMTFYcTB0cXNXeUVVOEN4L3IzCm42b3FnemFyQWdNQkFBRUNnZ0VBQVcvemlFQ0RSU0xhS0Q0RWpTVTRMWDc2QUR1UEQ3elZXdmxMWFcvTSt4THcKRmlPQjV1U2RHd3JEcTl2eDE3YXpZcDUvSVNkZk94UW9vaFRYQ2JuUnBleDR6bHpIQmczekNpdHYvdWdyZHNGYgo1QStZVlB0T3NkRi9aeklJSWVaTnNxMGVlQW5tREQyOU4xWUExR2Z3OTltN0MxMEpaakhUbDNGNUZvcGNRRDlTCkhXVGNKeVEwRVkzaGlrZEYrT1JZVUJPcjlXbmQ0d25xRGN2cURoYi8zaGxJaGsyNk5zOWdPbFRvS3hZNmFKWjIKbWdXUFg1SnZoKzFRRkFBKzdKVnROUW9EeUE3cThuUHZETTgwMW1VaWppOEdhdkkxVElJTFliTDJVUEljRXlJaQpxQVZYQTQ1bkFDaWhYd3kxdk8xK3NsTUwvUEJOdzRpVk8ybnNJQi9SS1FLQmdRRGNPZVpDK3dWSlp1aWpOd1UvCkpmV1oyQU5rZ3dxWHdsNEVMUGRHOThDbnN1Zk5sei9qTnpaVTZmcHlzYitYOE1kUGdRRUhCNkVjMTlFUDh4TkMKeWtDWlltNTNXT2s2ei9vTnVvbDl2MzhlVUpwSGtjemFYTDRyRmZYUVZhZXVJRkdnbE11cWtBYUg3bGhNdE4rRgpuanIxTDJid3UyNW9XTXQrZ21zdGNGc2dYd0tCZ1FETXE0VVpzbU5hWUZCNDlBNStCRHgxcS9GM1VWTzBjZTlqCk01TUM5VTg0eEFHWklhU2ZKYmRvb1hUUi9wWWw5eTY0clppSk9QcDFqREVPMG16b3dwNDRpWHdvdXlNYUVoMngKSHFaempwbmw2V2VLOHhBNHZFQ2tiUmR6WWlRRGQ5TEE2ZjhYelVoMktWb0Q2SmFUT282YTVCSHErMGdncEJRTAppRVYwa2YxZE5RS0JnUUNDVkoycDdDYXZ6d0JFZjI1U2RlT0luV2M4bDdTd0pXNUFhR0FiRnNwa05LT3NieU4zCkU1akszZ0hDMk9DN1NkcWFlWTBqSE9mRFN4SEZyNlFwZGNxUE84cUdSUThhS0RVaTVNOHpwUjNVMGZ6TCtFUlUKd21nazFZVTVPMGZWNi9pQzRTdzdENnRkekxkakJmUDJmck1Eb1g3NVh1TXpTOEY2YURLSG5LUEJYd0tCZ0hSYgoweWovMVNKTmZaSzJWZ0xvejZLcXBYWUxZNFpEL0RBdTR4YWNkblMwWXFBM2swcnplMmxkMlhlRndNRkczV1liCk00eFlPM1JXeHBGQnFxOU43ZndBbGZqbUk1ZXYwdmVla0UxRU5sU1N0TTQzVC9LaGZESyszc1UzZDNnTlNHRnEKNXg4V0Uyc3lLVDN0bnFXSGRnbXpQa2lVb2JZRThteDRCZHkzSHc4OUFvR0FlTTR0czVQMlpSOWExenBSeG9NTApDbVY5ZjliVCt6MVh1L1FlYjM1aWpheTZTMHdaNkhDTjBYcTk2U1llWkxaWW14WkpyQXZ2WGdCb1phT2VSVnlxClFGRUdYN2l2L2JvOUZkOXFkdGVmOGJHWTllOFU0RkJiYllYNFdQaHU3RVVFNFlZckRSMHV6VnArRXJleDlyS0gKUFpIeFFmbUhlMXN2RHRiU2xabXppdWs9Ci0tLS0tRU5EIFBSSVZBVEUgS0VZLS0tLS0K
 ---
 apiVersion: gateway.networking.k8s.io/v1alpha2
 kind: TCPRoute
@@ -40,25 +53,51 @@ spec:
     - name: tcp-gateway
   rules:
     - backendRefs:
-        - name: tls-backend
+        - name: tls-backend-2
           port: 443
+---
+apiVersion: v1
+data:
+  ca.crt: |
+    -----BEGIN CERTIFICATE-----
+    MIIDQzCCAiugAwIBAgIBATANBgkqhkiG9w0BAQsFADBCMRMwEQYDVQQKEwpFbnZv
+    eVByb3h5MRAwDgYDVQQLEwdHYXRld2F5MRkwFwYDVQQDExBFbnZveSBHYXRld2F5
+    IENBMCAXDTI0MDMxMDE1MzIxN1oYDzIxMjQwMzEwMTYzMjE3WjBCMRMwEQYDVQQK
+    EwpFbnZveVByb3h5MRAwDgYDVQQLEwdHYXRld2F5MRkwFwYDVQQDExBFbnZveSBH
+    YXRld2F5IENBMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA7ZFmGB4e
+    m1KdGEohAZBfqydAEGLDHJ1YyfHWdd+vBAevdW64bZx3pggJOtgCnePuFd02rDQS
+    dlsJlX/6mFtoQilo6wvxDSJRfaTDbtfTjw+7k8yfd/Jsmh0RWG+UeyI7Na9sXAz7
+    b57mpxsCoNowzeK5ETiOGGNWPcjENJkSnBarz5muN00xIZWBU+yN5PLJNxZvxpZJ
+    Ol/SSI8sno0e0PxAmp3fe7QaXiZj/TAGJPGuTJkUxrHqyZGJtYUxsS8A0dT1zBjj
+    izA5Dp+b5yzYo23Hh7BgpbZ7X4gsDThFuwCD6fHyepuv2zHPqvSsdqg2hAhDp91R
+    zrn7a9GxG2VSIwIDAQABo0IwQDAOBgNVHQ8BAf8EBAMCAQYwDwYDVR0TAQH/BAUw
+    AwEB/zAdBgNVHQ4EFgQUUpP1aZ1M2KIuPPWrNPDV2c5CngowDQYJKoZIhvcNAQEL
+    BQADggEBAGSEkAVz+Z0qS4FmA0q4SCpIIq64bsdEjiUzev7pK1LEK0/Y28QBPixV
+    cUXfax18VPR9pls1JgXto9qY+C0hnRZic6611QTJlWK1p6dinQ/eDdYCBC+nv5xx
+    ssASwmplIxMvj3S1qF6dr7sMI2ZVD5HElTWdO19UBLyhiKKZW2KxDsYj+5NRwGFe
+    G+JuDgq7njUM8mdyYk0NehefdBUEUUCQtnwUtW95/429XwqQROuRDteGT9kjD+Y5
+    ea5mW4mfqLeuGJXZs9bdWjKKdLQPrn9IshPysWqz2Hz8dQ1f7N9/g8UWVSjd4cyx
+    S5EAolzVv0yB7wHCWCgfG/ckdOTUNnE=
+    -----END CERTIFICATE-----
+kind: ConfigMap
+metadata:
+  name: backend-tls-ca
+  namespace: gateway-conformance-infra
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: BackendTLSPolicy
 metadata:
-  name: tls-backend-policy
+  name: policy-btls
   namespace: gateway-conformance-infra
 spec:
   targetRefs:
     - group: ""
       kind: Service
-      name: "tls-backend"
-      sectionName: "btls"
+      name: tls-backend-2
+      sectionName: https
   validation:
     caCertificateRefs:
-      - group: ""
+      - name: backend-tls-ca
+        group: ""
         kind: ConfigMap
-        # This ConfigMap is generated dynamically by the test suite.
-        # It contains the CA certificate used to sign the tls-backend serving certificate.
-        name: "tls-checks-ca-certificate"
-    hostname: "abc.example.com"
+    hostname: example.com
