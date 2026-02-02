@@ -135,12 +135,12 @@ func buildResourceMetadata(metadata *ir.ResourceMetadata) *structpb.Value {
 	return routeResourceValue
 }
 
-func mapToStruct(data map[string]string) *structpb.Struct {
+func mapToStruct(data []ir.MapEntry) *structpb.Struct {
 	fields := make(map[string]*structpb.Value)
-	for key, value := range data {
-		fields[key] = &structpb.Value{
+	for _, entry := range data {
+		fields[entry.Key] = &structpb.Value{
 			Kind: &structpb.Value_StringValue{
-				StringValue: value,
+				StringValue: entry.Value,
 			},
 		}
 	}

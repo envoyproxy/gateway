@@ -11,18 +11,25 @@ accesslog:
     celMatches:
     - response.code >= 400
     json:
-      start_time: "%START_TIME%"
-      method: "%REQ(:METHOD)%"
-      path: "%REQ(X-ENVOY-ORIGINAL-PATH?:PATH)%"
-      protocol: "%PROTOCOL%"
-      response_code: "%RESPONSE_CODE%"
+    - key: method
+      value: "%REQ(:METHOD)%"
+    - key: path
+      value: "%REQ(X-ENVOY-ORIGINAL-PATH?:PATH)%"
+    - key: protocol
+      value: "%PROTOCOL%"
+    - key: response_code
+      value: "%RESPONSE_CODE%"
+    - key: start_time
+      value: "%START_TIME%"
   openTelemetry:
   - text: |
       [%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%"
     attributes:
-      "response_code": "%RESPONSE_CODE%"
+    - key: "response_code"
+      value: "%RESPONSE_CODE%"
     resourceAttributes:
-      "cluster_name": "cluster1"
+    - key: "cluster_name"
+      value: "cluster1"
     authority: "otel-collector.default.svc.cluster.local"
     celMatches:
     - response.code >= 400
