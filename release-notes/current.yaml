@@ -14,6 +14,7 @@ bug fixes: |
   Allowed single-label backend hostnames when running with the Host infrastructure, enabling Docker Compose service names for telemetry backends.
   Fixed an issue that message package didn't adopt logging level.
   Fixed issue with controller pods reporting as ready before successful cache sync.
+  Fixed issue that auto HTTP config was incorrectly being applied to TCP clusters.
 
 # Enhancements that improve performance.
 performance improvements: |
