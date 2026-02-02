@@ -832,7 +832,7 @@ func (t *Translator) processTCPListenerXdsTranslation(
 			}
 		}
 
-		// add http route client certs
+		// add TCPRoute client certs
 		for _, route := range tcpListener.Routes {
 			if route.Destination != nil {
 				for _, st := range route.Destination.Settings {
