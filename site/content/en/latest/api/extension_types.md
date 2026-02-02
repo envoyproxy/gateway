@@ -595,6 +595,7 @@ _Appears in:_
 | `weightUpdatePeriod` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#duration)_ |  false  |  | How often endpoint weights are recalculated. Values less than 100ms are capped at 100ms. Default 1s. |
 | `errorUtilizationPenaltyPercent` | _integer_ |  false  |  | ErrorUtilizationPenaltyPercent adjusts endpoint weights based on the error rate (eps/qps).<br />This is expressed as a percentage-based integer where 100 represents 1.0, 150 represents 1.5, etc.<br />For example:<br />- 100 => 1.0x<br />- 120 => 1.2x<br />- 200 => 2.0x<br />Note: In the internal IR/XDS configuration this value is converted back to a<br />floating point multiplier (value / 100.0).<br />Must be non-negative. |
 | `metricNamesForComputingUtilization` | _string array_ |  false  |  | Metric names used to compute utilization if application_utilization is not set.<br />For map fields in ORCA proto, use the form "<map_field>.<key>", e.g., "named_metrics.foo". |
+| `removeResponseHeaders` | _boolean_ |  false  | true | RemoveResponseHeaders removes the ORCA load report headers/trailers before sending the response to the client.<br />Defaults to true. |
 
 
 #### BasicAuth

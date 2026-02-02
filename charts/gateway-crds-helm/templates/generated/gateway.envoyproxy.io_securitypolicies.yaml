@@ -1391,6 +1391,12 @@ spec:
                                     items:
                                       type: string
                                     type: array
+                                  removeResponseHeaders:
+                                    default: true
+                                    description: |-
+                                      RemoveResponseHeaders removes the ORCA load report headers/trailers before sending the response to the client.
+                                      Defaults to true.
+                                    type: boolean
                                   weightExpirationPeriod:
                                     description: If a given endpoint has not reported
                                       load metrics in this long, stop using the reported
@@ -2585,6 +2591,12 @@ spec:
                                     items:
                                       type: string
                                     type: array
+                                  removeResponseHeaders:
+                                    default: true
+                                    description: |-
+                                      RemoveResponseHeaders removes the ORCA load report headers/trailers before sending the response to the client.
+                                      Defaults to true.
+                                    type: boolean
                                   weightExpirationPeriod:
                                     description: If a given endpoint has not reported
                                       load metrics in this long, stop using the reported
@@ -3990,6 +4002,12 @@ spec:
                                           items:
                                             type: string
                                           type: array
+                                        removeResponseHeaders:
+                                          default: true
+                                          description: |-
+                                            RemoveResponseHeaders removes the ORCA load report headers/trailers before sending the response to the client.
+                                            Defaults to true.
+                                          type: boolean
                                         weightExpirationPeriod:
                                           description: If a given endpoint has not
                                             reported load metrics in this long, stop
@@ -5455,6 +5473,12 @@ spec:
                                     items:
                                       type: string
                                     type: array
+                                  removeResponseHeaders:
+                                    default: true
+                                    description: |-
+                                      RemoveResponseHeaders removes the ORCA load report headers/trailers before sending the response to the client.
+                                      Defaults to true.
+                                    type: boolean
                                   weightExpirationPeriod:
                                     description: If a given endpoint has not reported
                                       load metrics in this long, stop using the reported

@@ -2778,6 +2778,7 @@ type BackendUtilization struct {
 	ErrorUtilizationPenaltyPercent     *uint32          `json:"errorUtilizationPenaltyPercent,omitempty" yaml:"errorUtilizationPenaltyPercent,omitempty"`
 	MetricNamesForComputingUtilization []string         `json:"metricNamesForComputingUtilization,omitempty" yaml:"metricNamesForComputingUtilization,omitempty"`
 	SlowStart                          *SlowStart       `json:"slowStart,omitempty" yaml:"slowStart,omitempty"`
+	RemoveResponseHeaders              *bool            `json:"removeResponseHeaders,omitempty" yaml:"removeResponseHeaders,omitempty"`
 }
 
 // ConsistentHash load balancer settings

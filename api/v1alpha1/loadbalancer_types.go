@@ -207,6 +207,12 @@ type BackendUtilization struct {
 	// For map fields in ORCA proto, use the form "<map_field>.<key>", e.g., "named_metrics.foo".
 	// +optional
 	MetricNamesForComputingUtilization []string `json:"metricNamesForComputingUtilization,omitempty"`
+
+	// RemoveResponseHeaders removes the ORCA load report headers/trailers before sending the response to the client.
+	// Defaults to true.
+	// +optional
+	// +kubebuilder:default=true
+	RemoveResponseHeaders *bool `json:"removeResponseHeaders,omitempty"`
 }
 
 // ConsistentHashType defines the type of input to hash on.
