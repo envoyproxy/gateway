@@ -548,7 +548,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 								BlackoutPeriod:                     ptr.To(gwapiv1.Duration("10s")),
 								WeightUpdatePeriod:                 ptr.To(gwapiv1.Duration("10s")),
 								WeightExpirationPeriod:             ptr.To(gwapiv1.Duration("10s")),
-								ErrorUtilizationPenalty:            ptr.To[uint32](50),
+								ErrorUtilizationPenaltyPercent:     ptr.To[uint32](50),
 								MetricNamesForComputingUtilization: []string{"metric1", "metric2"},
 							},
 						},
@@ -649,7 +649,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 					ClusterSettings: egv1a1.ClusterSettings{
 						LoadBalancer: &egv1a1.LoadBalancer{
 							Type:               egv1a1.BackendUtilizationLoadBalancerType,
-							BackendUtilization: &egv1a1.BackendUtilization{ErrorUtilizationPenalty: ptr.To[uint32](0)},
+							BackendUtilization: &egv1a1.BackendUtilization{ErrorUtilizationPenaltyPercent: ptr.To[uint32](0)},
 						},
 					},
 				}

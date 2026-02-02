@@ -22,7 +22,7 @@ func TestBuildLoadBalancer_BackendUtilization(t *testing.T) {
 		BlackoutPeriod:                     ptr.To(gwapiv1.Duration("10s")),
 		WeightExpirationPeriod:             ptr.To(gwapiv1.Duration("3m")),
 		WeightUpdatePeriod:                 ptr.To(gwapiv1.Duration("1s")),
-		ErrorUtilizationPenalty:            ptr.To[uint32](150),
+		ErrorUtilizationPenaltyPercent:     ptr.To[uint32](150),
 		MetricNamesForComputingUtilization: []string{"named_metrics.foo", "cpu_utilization"},
 	}
 
@@ -42,7 +42,7 @@ func TestBuildLoadBalancer_BackendUtilization(t *testing.T) {
 	require.Equal(t, ir.MetaV1DurationPtr(10*time.Second), got.BlackoutPeriod)
 	require.Equal(t, ir.MetaV1DurationPtr(3*time.Minute), got.WeightExpirationPeriod)
 	require.Equal(t, ir.MetaV1DurationPtr(1*time.Second), got.WeightUpdatePeriod)
-	require.NotNil(t, got.ErrorUtilizationPenalty)
-	require.EqualValues(t, 150, *got.ErrorUtilizationPenalty)
+	require.NotNil(t, got.ErrorUtilizationPenaltyPercent)
+	require.EqualValues(t, 150, *got.ErrorUtilizationPenaltyPercent)
 	require.Equal(t, []string{"named_metrics.foo", "cpu_utilization"}, got.MetricNamesForComputingUtilization)
 }

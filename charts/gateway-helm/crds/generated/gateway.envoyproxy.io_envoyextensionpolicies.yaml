@@ -746,9 +746,9 @@ spec:
                                     Default is 10s.
                                   pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                   type: string
-                                errorUtilizationPenalty:
+                                errorUtilizationPenaltyPercent:
                                   description: |-
-                                    ErrorUtilizationPenalty adjusts endpoint weights based on the error rate (eps/qps).
+                                    ErrorUtilizationPenaltyPercent adjusts endpoint weights based on the error rate (eps/qps).
                                     This is expressed as a percentage-based integer where 100 represents 1.0, 150 represents 1.5, etc.
 
                                     For example:

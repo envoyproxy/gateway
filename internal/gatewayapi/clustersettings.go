@@ -362,12 +362,13 @@ func buildLoadBalancer(policy *egv1a1.ClusterSettings) (*ir.LoadBalancer, error)
 					lb.BackendUtilization.WeightUpdatePeriod = ir.MetaV1DurationPtr(d)
 				}
 			}
-			if backendUtilization.ErrorUtilizationPenalty != nil {
-				lb.BackendUtilization.ErrorUtilizationPenalty = ptr.To(*backendUtilization.ErrorUtilizationPenalty)
+			if backendUtilization.ErrorUtilizationPenaltyPercent != nil {
+				lb.BackendUtilization.ErrorUtilizationPenaltyPercent = ptr.To(*backendUtilization.ErrorUtilizationPenaltyPercent)
 			}
 			if len(backendUtilization.MetricNamesForComputingUtilization) > 0 {
 				lb.BackendUtilization.MetricNamesForComputingUtilization = append([]string(nil), backendUtilization.MetricNamesForComputingUtilization...)
 			}
+			lb.BackendUtilization.RemoveResponseHeaders = ptr.To(ptr.Deref(backendUtilization.RemoveResponseHeaders, true))
 		}
 		if policy.LoadBalancer.SlowStart != nil && policy.LoadBalancer.SlowStart.Window != nil {
 			d, err := time.ParseDuration(string(*policy.LoadBalancer.SlowStart.Window))

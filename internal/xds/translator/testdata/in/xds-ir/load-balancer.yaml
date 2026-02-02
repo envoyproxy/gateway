@@ -227,7 +227,7 @@ http:
           weightUpdatePeriod: 10s
           slowStart:
             window: 45s
-          errorUtilizationPenalty: 100
+          errorUtilizationPenaltyPercent: 100
           metricNamesForComputingUtilization:
           - "cpu_utilization"
     destination:

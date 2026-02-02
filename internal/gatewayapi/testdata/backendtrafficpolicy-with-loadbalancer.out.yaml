@@ -149,7 +149,7 @@ backendTrafficPolicies:
     loadBalancer:
       backendUtilization:
         blackoutPeriod: 10s
-        errorUtilizationPenalty: 100
+        errorUtilizationPenaltyPercent: 100
         metricNamesForComputingUtilization:
         - cpu_utilization
         weightExpirationPeriod: 60s
@@ -869,13 +869,17 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /test5
+        removeResponseHeaders:
+        - endpoint-load-metrics
+        - endpoint-load-metrics-bin
         traffic:
           loadBalancer:
             backendUtilization:
               blackoutPeriod: 10s
-              errorUtilizationPenalty: 100
+              errorUtilizationPenaltyPercent: 100
               metricNamesForComputingUtilization:
               - cpu_utilization
+              removeResponseHeaders: true
               slowStart:
                 window: 5m0s
               weightExpirationPeriod: 1m0s

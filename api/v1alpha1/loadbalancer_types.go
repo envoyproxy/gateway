@@ -187,7 +187,7 @@ type BackendUtilization struct {
 	// +optional
 	WeightUpdatePeriod *gwapiv1.Duration `json:"weightUpdatePeriod,omitempty"`
 
-	// ErrorUtilizationPenalty adjusts endpoint weights based on the error rate (eps/qps).
+	// ErrorUtilizationPenaltyPercent adjusts endpoint weights based on the error rate (eps/qps).
 	// This is expressed as a percentage-based integer where 100 represents 1.0, 150 represents 1.5, etc.
 	//
 	// For example:
@@ -201,7 +201,7 @@ type BackendUtilization struct {
 	// Must be non-negative.
 	// +kubebuilder:validation:Minimum=0
 	// +optional
-	ErrorUtilizationPenalty *uint32 `json:"errorUtilizationPenalty,omitempty"`
+	ErrorUtilizationPenaltyPercent *uint32 `json:"errorUtilizationPenaltyPercent,omitempty"`
 
 	// Metric names used to compute utilization if application_utilization is not set.
 	// For map fields in ORCA proto, use the form "<map_field>.<key>", e.g., "named_metrics.foo".

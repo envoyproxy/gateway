@@ -456,8 +456,8 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 					SlowStartWindow: durationpb.New(v.SlowStart.Window.Duration),
 				}
 			}
-			if v.ErrorUtilizationPenalty != nil {
-				cswrr.ErrorUtilizationPenalty = wrapperspb.Float(float32(*v.ErrorUtilizationPenalty) / 100.0)
+			if v.ErrorUtilizationPenaltyPercent != nil {
+				cswrr.ErrorUtilizationPenalty = wrapperspb.Float(float32(*v.ErrorUtilizationPenaltyPercent) / 100.0)
 			}
 			if len(v.MetricNamesForComputingUtilization) > 0 {
 				cswrr.MetricNamesForComputingUtilization = append([]string(nil), v.MetricNamesForComputingUtilization...)

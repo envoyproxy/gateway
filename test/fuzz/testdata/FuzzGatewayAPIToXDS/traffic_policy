@@ -59,4 +59,4 @@ spec:
   loadBalancer:
     type: BackendUtilization
     backendUtilization:
-      errorUtilizationPenalty: 120
+      errorUtilizationPenaltyPercent: 120

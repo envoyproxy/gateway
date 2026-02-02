@@ -491,8 +491,8 @@ func (in *BackendUtilization) DeepCopyInto(out *BackendUtilization) {
 		*out = new(metav1.Duration)
 		**out = **in
 	}
-	if in.ErrorUtilizationPenalty != nil {
-		in, out := &in.ErrorUtilizationPenalty, &out.ErrorUtilizationPenalty
+	if in.ErrorUtilizationPenaltyPercent != nil {
+		in, out := &in.ErrorUtilizationPenaltyPercent, &out.ErrorUtilizationPenaltyPercent
 		*out = new(uint32)
 		**out = **in
 	}
