@@ -32,7 +32,7 @@ import (
 )
 
 func init() {
-	ConformanceTests = append(ConformanceTests, TCPRouteTest)
+	ConformanceTests = append(ConformanceTests, TCPRouteTest, TCPMTLSRouteTest)
 }
 
 var TCPRouteTest = suite.ConformanceTest{
@@ -73,9 +73,32 @@ var TCPRouteTest = suite.ConformanceTest{
 				Namespace: ns,
 			}
 
-			// Send a request to an valid path and expect a successful response
+			// Send a request to a valid path and expect a successful response
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, OkResp)
 		})
+	},
+}
+
+var TCPMTLSRouteTest = suite.ConformanceTest{
+	ShortName:   "TCPRouteMtls",
+	Description: "Testing TCP MTLS Route",
+	Manifests:   []string{"testdata/tcproute-mtls.yaml"},
+	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
+		ns := "gateway-conformance-infra"
+		routeNN := types.NamespacedName{Name: "tcp-route", Namespace: ns}
+		gwNN := types.NamespacedName{Name: "tcp-gateway", Namespace: ns}
+		gwAddr := GatewayAndTCPRoutesMustBeAccepted(t, suite.Client, &suite.TimeoutConfig, suite.ControllerName, NewGatewayRef(gwNN), routeNN)
+		OkResp := http.ExpectedResponse{
+			Request: http.Request{
+				Path: "/",
+			},
+			Response: http.Response{
+				StatusCodes: []int{200},
+			},
+			Namespace: ns,
+		}
+
+		http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, OkResp)
 	},
 }
 
@@ -91,8 +114,11 @@ func GatewayAndTCPRoutesMustBeAccepted(t *testing.T, c client.Client, timeoutCon
 	if err != nil {
 		tlog.Logf(t, "error fetching TCPRoute: %v", err)
 	}
-
-	gwAddr, err := WaitForGatewayAddress(t, c, timeoutConfig, gw.NamespacedName, string(*tcpRoute.Spec.ParentRefs[0].SectionName))
+	sectionName := ""
+	if tcpRoute.Spec.ParentRefs[0].SectionName != nil {
+		sectionName = string(*tcpRoute.Spec.ParentRefs[0].SectionName)
+	}
+	gwAddr, err := WaitForGatewayAddress(t, c, timeoutConfig, gw.NamespacedName, sectionName)
 	require.NoErrorf(t, err, "timed out waiting for Gateway address to be assigned")
 
 	ns := gwapiv1.Namespace(gw.Namespace)
