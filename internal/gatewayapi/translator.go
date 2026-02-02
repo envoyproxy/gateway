@@ -504,6 +504,8 @@ func (t *Translator) InitIRs(acceptedGateways, failedGateways []*GatewayContext)
 		infraIR[irKey] = gwInfraIR
 	}
 
+	// we need to build IRs for failed gateways to avoid delete event to Infra IR,
+	// which will cause the deletion of infra resources managed by the failed gateways.
 	for _, gtw := range failedGateways {
 		irKey, gwXdsIR, gwInfraIR := t.buildIR(gtw)
 		// save the IR references in the map before the translation starts
