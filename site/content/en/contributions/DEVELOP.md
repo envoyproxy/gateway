@@ -199,7 +199,7 @@ Here are some brief benchmark reports about Envoy Gateway:
 - It will take up nearly 550MiB memory and 11s total CPU time for (1 GatewayClass + 1 Gateway + 500 HTTRoutes) settings
 
 
-[Quickstart]: https://github.com/envoyproxy/gateway/blob/main/docs/latest/user/quickstart.md
+[Quickstart]: https://gateway.envoyproxy.io/docs/tasks/quickstart/
 [make]: https://www.gnu.org/software/make/
 [Github Actions]: https://docs.github.com/en/actions
 [workflows]: https://github.com/envoyproxy/gateway/tree/main/.github/workflows
