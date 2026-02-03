@@ -88,11 +88,25 @@ If not empty, renders as a multi-line YAML list.
 */}}
 {{- define "eg.imagePullSecrets" -}}
 {{- $pullSecrets := .Values.deployment.envoyGateway.image.pullSecrets | default .Values.global.image.pullSecrets -}}
-{{- if $pullSecrets }}
+{{- if $pullSecrets -}}
 imagePullSecrets:
   {{- toYaml $pullSecrets | nindent 2 }}
-{{- else }}
+{{- else -}}
 imagePullSecrets: []
+{{- end -}}
+{{- end -}}
+
+{{/*
+Render imagePullPolicy conditionally.
+If empty, renders as a single-line empty list.
+If not empty, renders as a multi-line YAML list.
+*/}}
+{{- define "eg.imagePullPolicy" -}}
+{{- $pullPolicy := .Values.deployment.envoyGateway.image.pullPolicy | default .Values.global.image.pullPolicy -}}
+{{- if $pullPolicy -}}
+imagePullPolicy: {{ $pullPolicy }}
+{{- else -}}
+imagePullPolicy: ""
 {{- end -}}
 {{- end -}}
 

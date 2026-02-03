@@ -50,8 +50,8 @@ spec:
               fieldPath: metadata.namespace
         - name: KUBERNETES_CLUSTER_DOMAIN
           value: {{ .Values.kubernetesClusterDomain }}
-        image: {{ include "eg.image" . }}
-        imagePullPolicy: {{ .Values.deployment.envoyGateway.image.pullPolicy | default .Values.global.image.pullPolicy | quote }}
+        image: {{ include "eg.image" . -}}
+        {{- include "eg.imagePullPolicy" . | nindent 8 }}
         name: envoy-gateway-certgen
         {{- with .Values.certgen.job.resources }}
         resources:
