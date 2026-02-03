@@ -71,6 +71,8 @@ var (
 	ErrHCHTTPPathInvalid                        = errors.New("field HTTPHealthChecker.Path should be specified")
 	ErrHCHTTPMethodInvalid                      = errors.New("only one of the GET, HEAD, POST, DELETE, OPTIONS, TRACE, PATCH of HTTPHealthChecker.Method could be set")
 	ErrHCHTTPExpectedStatusesInvalid            = errors.New("field HTTPHealthChecker.ExpectedStatuses should be specified")
+	ErrHCHTTPRetriableStatusesInvalid           = errors.New("field HTTPHealthChecker.RetriableStatuses is invalid")
+	ErrHTTPStatusRangeInvalid                   = errors.New("HTTPStatusRange should be within [100,600) and end must be greater than start")
 	ErrHealthCheckPayloadInvalid                = errors.New("one of Text, Binary fields must be set in payload")
 	ErrHTTPStatusInvalid                        = errors.New("HTTPStatus should be in [200,600)")
 	ErrOutlierDetectionBaseEjectionTimeInvalid  = errors.New("field OutlierDetection.BaseEjectionTime must be specified")
@@ -2963,6 +2965,9 @@ type HTTPHealthChecker struct {
 	Method *string `json:"method,omitempty" yaml:"method,omitempty"`
 	// ExpectedStatuses defines a list of HTTP response statuses considered healthy.
 	ExpectedStatuses []HTTPStatus `json:"expectedStatuses,omitempty" yaml:"expectedStatuses,omitempty"`
+	// RetriableStatuses defines a list of HTTP response status ranges considered retriable.
+	// Ranges follow half-open semantics [start, end) and must be within [100, 600).
+	RetriableStatuses []HTTPStatusRange `json:"retriableStatuses,omitempty" yaml:"retriableStatuses,omitempty"`
 	// ExpectedResponse defines a list of HTTP expected responses to match.
 	ExpectedResponse *HealthCheckPayload `json:"expectedResponse,omitempty" yaml:"expectedResponses,omitempty"`
 }
@@ -2999,6 +3004,11 @@ func (c *HTTPHealthChecker) Validate() error {
 			errs = errors.Join(errs, err)
 		}
 	}
+	for _, rr := range c.RetriableStatuses {
+		if err := rr.Validate(); err != nil {
+			errs = errors.Join(errs, ErrHCHTTPRetriableStatusesInvalid, err)
+		}
+	}
 	if c.ExpectedResponse != nil {
 		if err := c.ExpectedResponse.Validate(); err != nil {
 			errs = errors.Join(errs, err)
@@ -3013,6 +3023,27 @@ type HTTPStatus int
 func (h HTTPStatus) Validate() error {
 	if h < 100 || h >= 600 {
 		return ErrHTTPStatusInvalid
+	}
+	return nil
+}
+
+// HTTPStatusRange defines a range of HTTP status codes.
+// The range uses half-open semantics [Start, End).
+// +k8s:deepcopy-gen=true
+type HTTPStatusRange struct {
+	Start int `json:"start" yaml:"start"`
+	End   int `json:"end" yaml:"end"`
+}
+
+func (r HTTPStatusRange) Validate() error {
+	if r.Start < 100 || r.Start >= 600 {
+		return ErrHTTPStatusRangeInvalid
+	}
+	if r.End < 100 || r.End > 600 {
+		return ErrHTTPStatusRangeInvalid
+	}
+	if r.End <= r.Start {
+		return ErrHTTPStatusRangeInvalid
 	}
 	return nil
 }
