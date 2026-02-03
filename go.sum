@@ -302,7 +302,6 @@ github.com/google/gnostic-models v0.7.0/go.mod h1:whL5G0m6dmc5cPxKc5bdKdEN3UjI7O
 github.com/google/go-cmp v0.3.0/go.mod h1:8QqcDgzrUqlUb/G2PQTWiueGozuR1884gddMywk6iLU=
 github.com/google/go-cmp v0.3.1/go.mod h1:8QqcDgzrUqlUb/G2PQTWiueGozuR1884gddMywk6iLU=
 github.com/google/go-cmp v0.4.0/go.mod h1:v8dTdLbMG2kIc/vJvl+f65V22dbkXbowE6jgT/gNBxE=
-github.com/google/go-cmp v0.5.9/go.mod h1:17dUlkBOakJ0+DkrSSNjCkIjxS6bF9zb3elmeNGIjoY=
 github.com/google/go-cmp v0.7.0 h1:wk8382ETsv4JYUZwIsn6YpYiWiBsYLSJiTsyBybVuN8=
 github.com/google/go-cmp v0.7.0/go.mod h1:pXiqmnSA92OHEEa9HXL2W4E7lf9JzCmGVUdgjX3N/iU=
 github.com/google/go-containerregistry v0.20.6 h1:cvWX87UxxLgaH76b4hIvya6Dzz9qHB31qAwjAohdSTU=
@@ -403,8 +402,8 @@ github.com/liggitt/tabwriter v0.0.0-20181228230101-89fcab3d43de/go.mod h1:zAbeS9
 github.com/longhorn/go-iscsi-helper v0.0.0-20210330030558-49a327fb024e h1:hz4quJkaJWDo+xW+G6wTF6d6/95QvJ+o2D0+bB/tJ1U=
 github.com/longhorn/go-iscsi-helper v0.0.0-20210330030558-49a327fb024e/go.mod h1:9z/y9glKmWEdV50tjlUPxFwi1goQfIrrsoZbnMyIZbY=
 github.com/longhorn/nsfilelock v0.0.0-20200723175406-fa7c83ad0003/go.mod h1:0CLeXlf59Lg6C0kjLSDf47ft73Dh37CwymYRKWwAn04=
-github.com/lufia/plan9stats v0.0.0-20220913051719-115f729f3c8c h1:VtwQ41oftZwlMnOEbMWQtSEUgU64U4s+GHk7hZK+jtY=
-github.com/lufia/plan9stats v0.0.0-20220913051719-115f729f3c8c/go.mod h1:JKx41uQRwqlTZabZc+kILPrO/3jlKnQ2Z8b7YiVw5cE=
+github.com/lufia/plan9stats v0.0.0-20251013123823-9fd1530e3ec3 h1:PwQumkgq4/acIiZhtifTV5OUqqiP82UAl0h87xj/l9k=
+github.com/lufia/plan9stats v0.0.0-20251013123823-9fd1530e3ec3/go.mod h1:autxFIvghDt3jPTLoqZ9OZ7s9qTGNAWmYCjVFWPX/zg=
 github.com/lyft/gostats v0.4.1 h1:oR6p4HRCGxt0nUntmZIWmYMgyothBi3eZH2A71vRjsc=
 github.com/lyft/gostats v0.4.1/go.mod h1:Tpx2xRzz4t+T2Tx0xdVgIoBdR2UMVz+dKnE3X01XSd8=
 github.com/mailru/easyjson v0.9.0 h1:PrnmzHw7262yW8sTBwxi1PdJA3Iw/EKBa8psRf7d9a4=
@@ -614,8 +613,8 @@ github.com/telepresenceio/telepresence/rpc/v2 v2.6.8 h1:q5V85LBT9bA/c4YPa/kMvJGy
 github.com/telepresenceio/telepresence/rpc/v2 v2.6.8/go.mod h1:VlgfRoXaW6Tl8IZbHmMWhITne8HY09/wOFtABHGj3ic=
 github.com/telepresenceio/watchable v0.0.0-20220726211108-9bb86f92afa7 h1:GMw3nEaOVyi+tNiGko5kAeRtoiEIpXNHmISyZ7fpw14=
 github.com/telepresenceio/watchable v0.0.0-20220726211108-9bb86f92afa7/go.mod h1:ihJ97e2gsd8GuzFF/I3B1qcik3XZLpXjumQifXi8Slg=
-github.com/tetratelabs/func-e v1.3.0 h1:u6FS+ec2hs9vn+vX5X2GEB9JeqCajz/A4rvlsdktnQ4=
-github.com/tetratelabs/func-e v1.3.0/go.mod h1:zq1g5hXTBV3rNOXruLeMquQvZse0kscUSQg9NvkUz6U=
+github.com/tetratelabs/func-e v1.4.0 h1:eBu8RoGQIogjCNuX1lmbO8crRopvfcu7tQO82NVL+gA=
+github.com/tetratelabs/func-e v1.4.0/go.mod h1:q8/N//P0lY3hTuMKwWrfq4IXIUN5pCc2J+AsE74odxo=
 github.com/tklauser/go-sysconf v0.3.16 h1:frioLaCQSsF5Cy1jgRBrzr6t502KIIwQ0MArYICU0nA=
 github.com/tklauser/go-sysconf v0.3.16/go.mod h1:/qNL9xxDhc7tx3HSRsLWNnuzbVfh3e7gh/BmM179nYI=
 github.com/tklauser/numcpus v0.11.0 h1:nSTwhKH5e1dMNsCdVBukSZrURJRoHbSEQjdEbY+9RXw=

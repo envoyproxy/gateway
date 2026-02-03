@@ -274,7 +274,7 @@ jobs:
 
   resilience-test:
     runs-on: ubuntu-latest
-    if: ${{ ! (startsWith(github.event_name, 'push') && needs.changes.outputs.skip_test_workflow != 'true') }}
+    if: ${{ github.event_name != 'pull_request' || needs.changes.outputs.run_test_workflow == 'true' }}
     needs:
     - build
     - changes

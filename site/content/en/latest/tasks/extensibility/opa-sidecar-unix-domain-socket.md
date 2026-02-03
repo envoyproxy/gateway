@@ -48,8 +48,10 @@ Note that the OPA sidecar with Unix Domain Sockets pattern does _not_ require th
 
 1. Enable the `Backend` extension API so Envoy can reference a Unix Domain Socket.
 2. Create an OPA policy in a `ConfigMap` and mount it into an OPA sidecar in the Envoy pods.
-3. Configure a `SecurityPolicy` that delegates authorization to OPA via the Unix Domain Socket `Backend`. For demonstration purposes we'll also configure JWT authentication.
-4. Create an HTTPRoute that requires protection and verify traffic flow.
+3. Configure the Envoy Proxy pods to have an OPA sidecar
+4. Configure a `SecurityPolicy` that delegates authorization to OPA via the Unix Domain Socket `Backend`. For demonstration purposes we'll also configure JWT authentication.
+5. Create an HTTPRoute that requires protection
+6. Test the configuration
 
 ## Step 1: Enable the Backend extension API
 
@@ -114,7 +116,7 @@ On MacOS you can apply that by copying it and running `pbpaste | kubectl apply -
 
 In this policy we extract a `x-jwt-iss` header from the request. That header is not automatically available on `ext_authz` filter requests. We will configure Envoy to add that header from the decoded JWT. That configuration happens in the SecurityPolicy in step 4.
 
-## Step 3: Configure the Envoy Proxy pods with an OPA sidecar
+## Step 3: Configure the Envoy Proxy pods to have an OPA sidecar
 
 Create an `EnvoyProxy` resource that mounts the OPA policy `ConfigMap`, shares a Unix Domain Socket between Envoy and OPA, and configures the "ext_authz" filter order so OPA receives JWT headers from the JWT authentication filter.
 
@@ -151,7 +153,7 @@ spec:
                       configMap:
                         name: opa-policy
                   containers:
-                    # Add the Unox domain socket volume to the existing envoy
+                    # Add the Unix Domain Socket volume to the existing envoy
                     # proxy container named "envoy".
                     - name: envoy
                       volumeMounts:
@@ -336,7 +338,7 @@ spec:
       port: 3000
 ```
 
-## Step 5: Test the configuration
+## Step 6: Test the configuration
 
 Prepare some env vars:
 
