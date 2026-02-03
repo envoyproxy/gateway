@@ -51,7 +51,7 @@ spec:
         - name: KUBERNETES_CLUSTER_DOMAIN
           value: {{ .Values.kubernetesClusterDomain }}
         image: {{ include "eg.image" . }}
-        imagePullPolicy: {{ include "eg.image.pullPolicy" . }}
+        imagePullPolicy: {{ .Values.deployment.envoyGateway.image.pullPolicy | default .Values.global.image.pullPolicy | quote }}
         name: envoy-gateway-certgen
         {{- with .Values.certgen.job.resources }}
         resources:
@@ -59,7 +59,7 @@ spec:
         {{- end }}
         securityContext:
           {{- toYaml .Values.certgen.job.securityContext | nindent 10 }}
-      {{- include "eg.image.pullSecrets" . | nindent 6 }}
+      {{- include "eg.imagePullSecrets" . | nindent 6 }}
       {{- with .Values.certgen.job.affinity }}
       affinity:
         {{- toYaml . | nindent 8 }}

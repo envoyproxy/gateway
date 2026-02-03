@@ -51,10 +51,6 @@ helm-generate:
 helm-generate.%:
 	$(eval COMMAND := $(word 1,$(subst ., ,$*)))
 	$(eval CHART_NAME := $(COMMAND))
-	@if test -f "charts/${CHART_NAME}/values.tmpl.yaml"; then \
-  		GatewayImage=${IMAGE}:${TAG} GatewayImagePullPolicy=${IMAGE_PULL_POLICY} \
-  		envsubst < charts/${CHART_NAME}/values.tmpl.yaml > ./charts/${CHART_NAME}/values.yaml; \
-  	fi
 	$(GO_TOOL) helm dependency update charts/${CHART_NAME}
 	$(GO_TOOL) helm lint charts/${CHART_NAME} || exit 1
 
