@@ -793,6 +793,19 @@ func (t *Translator) processTCPListenerXdsTranslation(
 						errs = errors.Join(errs, err)
 					}
 				}
+			} else if route.Destination != nil {
+				// TCPRoute with BackendTLSPolicy
+				// add tcp route client certs
+				for _, st := range route.Destination.Settings {
+					if st.TLS != nil {
+						for _, clientCert := range st.TLS.ClientCertificates {
+							secret := buildXdsTLSCertSecret(&clientCert)
+							if err := tCtx.AddXdsResource(resourcev3.SecretType, secret); err != nil {
+								errs = errors.Join(errs, err)
+							}
+						}
+					}
+				}
 			}
 			if err := t.addXdsTCPFilterChain(
 				xdsListener,

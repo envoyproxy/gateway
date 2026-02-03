@@ -1,0 +1,15 @@
+- address:
+    socketAddress:
+      address: 0.0.0.0
+      portValue: 10090
+  filterChains:
+  - filters:
+    - name: envoy.filters.network.tcp_proxy
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
+        cluster: tcproute/default/tcproute-1/rule/-1
+        statPrefix: tcp-10090
+    name: tcproute/default/tcproute-1
+  maxConnectionsToAcceptPerSocketEvent: 1
+  name: envoy-gateway/gateway-1/tcp
+  perConnectionBufferLimitBytes: 32768
