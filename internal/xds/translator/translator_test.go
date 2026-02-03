@@ -23,6 +23,7 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/yaml"
 
@@ -130,6 +131,7 @@ func TestTranslateXds(t *testing.T) {
 
 	inputFiles, err := filepath.Glob(filepath.Join("testdata", "in", "xds-ir", "*.yaml"))
 	require.NoError(t, err)
+	keep := make(sets.Set[string])
 
 	for _, inputFile := range inputFiles {
 		inputFileName := testName(inputFile)
@@ -167,6 +169,7 @@ func TestTranslateXds(t *testing.T) {
 					require.NoError(t, field.SetValue(e, "LastTransitionTime", metav1.NewTime(time.Time{})))
 				}
 				if test.OverrideTestData() {
+					keep.Insert(inputFileName + ".envoypatchpolicies.yaml")
 					out, err := yaml.Marshal(got)
 					require.NoError(t, err)
 					require.NoError(t, file.Write(string(out), filepath.Join("testdata", "out", "xds-ir", inputFileName+".envoypatchpolicies.yaml")))
@@ -193,6 +196,10 @@ func TestTranslateXds(t *testing.T) {
 			clusters := tCtx.XdsResources[resourcev3.ClusterType]
 			endpoints := tCtx.XdsResources[resourcev3.EndpointType]
 			if test.OverrideTestData() {
+				keep.Insert(inputFileName + ".listeners.yaml")
+				keep.Insert(inputFileName + ".routes.yaml")
+				keep.Insert(inputFileName + ".clusters.yaml")
+				keep.Insert(inputFileName + ".endpoints.yaml")
 				require.NoError(t, file.Write(requireResourcesToYAMLString(t, listeners), filepath.Join("testdata", "out", "xds-ir", inputFileName+".listeners.yaml")))
 				require.NoError(t, file.Write(requireResourcesToYAMLString(t, routes), filepath.Join("testdata", "out", "xds-ir", inputFileName+".routes.yaml")))
 				require.NoError(t, file.Write(requireResourcesToYAMLString(t, clusters), filepath.Join("testdata", "out", "xds-ir", inputFileName+".clusters.yaml")))
@@ -206,11 +213,35 @@ func TestTranslateXds(t *testing.T) {
 			secrets, ok := tCtx.XdsResources[resourcev3.SecretType]
 			if ok && len(secrets) > 0 {
 				if test.OverrideTestData() {
+					keep.Insert(inputFileName + ".secrets.yaml")
 					require.NoError(t, file.Write(requireResourcesToYAMLString(t, secrets), filepath.Join("testdata", "out", "xds-ir", inputFileName+".secrets.yaml")))
 				}
 				require.Equal(t, requireTestDataOutFile(t, "xds-ir", inputFileName+".secrets.yaml"), requireResourcesToYAMLString(t, secrets))
 			}
 		})
+	}
+
+	if test.OverrideTestData() {
+		cleanupOutdatedTestData(t, filepath.Join("testdata", "out", "xds-ir"), keep)
+	}
+}
+
+func cleanupOutdatedTestData(t *testing.T, dir string, keep sets.Set[string]) {
+	t.Helper()
+	entries, err := os.ReadDir(dir)
+	require.NoError(t, err)
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+		name := entry.Name()
+		if filepath.Ext(name) != ".yaml" {
+			continue
+		}
+		if _, ok := keep[name]; ok {
+			continue
+		}
+		require.NoError(t, os.Remove(filepath.Join(dir, name)))
 	}
 }
 
