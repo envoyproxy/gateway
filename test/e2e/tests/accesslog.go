@@ -39,6 +39,8 @@ var FileAccessLogTest = suite.ConformanceTest{
 		}
 		match := "test-annotation-value"
 
+		// t.Fatalf("test fail fast")
+
 		t.Run("Positive", func(t *testing.T) {
 			ns := "gateway-conformance-infra"
 			routeNN := types.NamespacedName{Name: "accesslog-file", Namespace: ns}

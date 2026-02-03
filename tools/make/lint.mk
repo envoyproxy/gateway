@@ -20,7 +20,8 @@ GOLANGCI_LINT_FLAGS ?=
 lint: lint.golint
 lint.golint:
 	@$(LOG_TARGET)
-	$(GO_TOOL) golangci-lint run $(GOLANGCI_LINT_FLAGS) --build-tags=$(LINT_BUILD_TAGS) --config=tools/linter/golangci-lint/.golangci.yml
+	$(GO_TOOL) golangci-lint run $(GOLANGCI_LINT_FLAGS) --build-tags=$(LINT_BUILD_TAGS) --config=$(ROOT_DIR)/tools/linter/golangci-lint/.golangci.yml
+	cd test && $(GO_TOOL) golangci-lint run $(GOLANGCI_LINT_FLAGS) --build-tags=$(LINT_BUILD_TAGS) --config=$(ROOT_DIR)/tools/linter/golangci-lint/.golangci.yml
 
 .PHONY: lint.kube-api-linter
 lint: lint.kube-api-linter
