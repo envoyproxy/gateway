@@ -819,22 +819,9 @@ func (t *Translator) processTCPListenerXdsTranslation(
 						errs = errors.Join(errs, err)
 					}
 				}
-			}
-			if err := t.addXdsTCPFilterChain(
-				xdsListener,
-				route,
-				route.Destination.Name,
-				accesslog,
-				tcpListener.Timeout,
-				tcpListener.Connection,
-			); err != nil {
-				errs = errors.Join(errs, err)
-			}
-		}
-
-		// add TCPRoute client certs
-		for _, route := range tcpListener.Routes {
-			if route.Destination != nil {
+			} else if route.Destination != nil {
+				// TCPRoute with BackendTLSPolicy
+				// add tcp route client certs
 				for _, st := range route.Destination.Settings {
 					if st.TLS != nil {
 						for _, clientCert := range st.TLS.ClientCertificates {
@@ -845,6 +832,16 @@ func (t *Translator) processTCPListenerXdsTranslation(
 						}
 					}
 				}
+			}
+			if err := t.addXdsTCPFilterChain(
+				xdsListener,
+				route,
+				route.Destination.Name,
+				accesslog,
+				tcpListener.Timeout,
+				tcpListener.Connection,
+			); err != nil {
+				errs = errors.Join(errs, err)
 			}
 		}
 
