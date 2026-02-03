@@ -607,7 +607,6 @@ spec:
         - mountPath: /certs
           name: certs
           readOnly: true
-      
       imagePullSecrets: []
       serviceAccountName: envoy-gateway
       terminationGracePeriodSeconds: 10
@@ -791,7 +790,6 @@ spec:
           runAsUser: 65532
           seccompProfile:
             type: RuntimeDefault
-      
       imagePullSecrets: []
       restartPolicy: Never
       serviceAccountName: gateway-helm-certgen
