@@ -390,50 +390,20 @@ func (t *Translator) GetRelevantGateways(resources *resource.Resources) (
 			status.SetGatewayClassAccepted(resources.GatewayClass,
 				false, string(gwapiv1.GatewayClassReasonInvalidParameters),
 				fmt.Sprintf("%s: %v", status.MsgGatewayClassInvalidParams, err))
-
-			for _, gateway := range resources.Gateways {
-				if gateway == nil {
-					// Should not happen
-					panic("received nil gateway")
-				}
-
-				logKeysAndValues := []any{
-					"namespace", gateway.Namespace, "name", gateway.Name,
-				}
-
-				gtwCtx := &GatewayContext{
-					Gateway: gateway,
-				}
-				gtwCtx.attachEnvoyProxy(resources, envoyproxyMap)
-				gwEnvoyProxy := gtwCtx.envoyProxy
-				key := utils.NamespacedName(gwEnvoyProxy)
-				if err, exits := envoyproxyValidationErrorMap[key]; exits {
-					failedGateways = append(failedGateways, gtwCtx)
-					t.Logger.Info("Invalid parametersRef", logKeysAndValues...)
-					status.UpdateGatewayStatusNotAccepted(gtwCtx.Gateway, gwapiv1.GatewayReasonInvalidParameters,
-						fmt.Sprintf("%s: %v", "Invalid parametersRef:", err.Error()))
-					continue
-				}
-
-				// Gateway use a valid EnvoyProxy from spec.infrastructure.parametersRef
-				acceptedGateways = append(acceptedGateways, gtwCtx)
+		} else {
+			// TODO: remove this nil check after we update all the testdata.
+			if resources.GatewayClass != nil {
+				status.SetGatewayClassAccepted(
+					resources.GatewayClass,
+					true,
+					string(gwapiv1.GatewayClassReasonAccepted),
+					status.MsgValidGatewayClass)
 			}
 
-			return acceptedGateways, failedGateways
+			key := utils.NamespacedName(ep)
+			envoyproxyMap[key] = ep
+			// we didn't append to envoyproxyValidatioErrorMap because it's valid.
 		}
-
-		// TODO: remove this nil check after we update all the testdata.
-		if resources.GatewayClass != nil {
-			status.SetGatewayClassAccepted(
-				resources.GatewayClass,
-				true,
-				string(gwapiv1.GatewayClassReasonAccepted),
-				status.MsgValidGatewayClass)
-		}
-
-		key := utils.NamespacedName(ep)
-		envoyproxyMap[key] = ep
-		// we didn't append to envoyproxyValidatioErrorMap because it's valid.
 	}
 
 	for _, gateway := range resources.Gateways {
@@ -445,15 +415,16 @@ func (t *Translator) GetRelevantGateways(resources *resource.Resources) (
 		logKeysAndValues := []any{
 			"namespace", gateway.Namespace, "name", gateway.Name,
 		}
-		if gateway.Spec.GatewayClassName != t.GatewayClassName {
-			t.Logger.Info("Skipping Gateway because GatewayClassName doesn't match", logKeysAndValues...)
-			continue
-		}
 
 		gCtx := &GatewayContext{
 			Gateway: gateway,
 		}
 		gCtx.attachEnvoyProxy(resources, envoyproxyMap)
+
+		if gateway.Spec.GatewayClassName != t.GatewayClassName {
+			t.Logger.Info("Skipping Gateway because GatewayClassName doesn't match", logKeysAndValues...)
+			continue
+		}
 
 		// Gateways that are not accepted by the controller because they reference an invalid EnvoyProxy.
 		if status.GatewayNotAccepted(gCtx.Gateway) {
