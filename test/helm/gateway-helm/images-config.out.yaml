@@ -38,9 +38,22 @@ data:
       kubernetes:
         rateLimitDeployment:
           container:
-            image: docker.io/envoyproxy/ratelimit:master
+            image: private-hub/envoyproxy/ratelimit:test
+          patch:
+            type: StrategicMerge
+            value:
+              spec:
+                template:
+                  spec:
+                    containers:
+                    - imagePullPolicy: Always
+                      name: envoy-ratelimit
+          pod:
+            imagePullSecrets:
+            - name: secret3
+            - name: secret4
         shutdownManager:
-          image: docker.io/envoyproxy/gateway:latest
+          image: private-hub/envoyproxy/gateway-dev:abcdef12
       type: Kubernetes
 ---
 # Source: gateway-helm/templates/envoy-gateway-rbac.yaml
@@ -427,8 +440,8 @@ spec:
               fieldPath: metadata.namespace
         - name: KUBERNETES_CLUSTER_DOMAIN
           value: cluster.local
-        image: docker.io/envoyproxy/gateway:latest
-        imagePullPolicy: ""
+        image: private-hub/envoyproxy/gateway-dev:abcdef12
+        imagePullPolicy: Always
         livenessProbe:
           httpGet:
             path: /healthz
@@ -477,8 +490,9 @@ spec:
         - mountPath: /certs
           name: certs
           readOnly: true
-      
-      imagePullSecrets: []
+      imagePullSecrets:
+        - name: secret1
+        - name: secret2
       serviceAccountName: envoy-gateway
       terminationGracePeriodSeconds: 10
       volumes:
@@ -646,8 +660,8 @@ spec:
               fieldPath: metadata.namespace
         - name: KUBERNETES_CLUSTER_DOMAIN
           value: cluster.local
-        image: docker.io/envoyproxy/gateway:latest
-        imagePullPolicy: ""
+        image: private-hub/envoyproxy/gateway-dev:abcdef12
+        imagePullPolicy: Always
         name: envoy-gateway-certgen
         securityContext:
           allowPrivilegeEscalation: false
@@ -661,8 +675,9 @@ spec:
           runAsUser: 65532
           seccompProfile:
             type: RuntimeDefault
-      
-      imagePullSecrets: []
+      imagePullSecrets:
+        - name: secret1
+        - name: secret2
       restartPolicy: Never
       serviceAccountName: gateway-helm-certgen
   ttlSecondsAfterFinished: 30
