@@ -4,9 +4,6 @@ go 1.25.6
 
 replace github.com/envoyproxy/gateway => ../
 
-// TODO: remove this when https://github.com/kubernetes-sigs/gateway-api/pull/4479 merged
-replace sigs.k8s.io/gateway-api/conformance => github.com/zirain-dev/gateway-api/conformance v0.0.0-20260203110540-f9f400104e9c
-
 // TODO: remove this when v1.5.0 is released
 replace sigs.k8s.io/gateway-api => sigs.k8s.io/gateway-api v1.3.1-0.20260203001228-5643ebfba378
 
