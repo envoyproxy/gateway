@@ -14,6 +14,7 @@ import (
 	"strings"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 
@@ -102,8 +103,11 @@ func TestCustomProviderCancelWhenStarting(t *testing.T) {
 	_, configPath := testCustomProvider(t, false)
 	errCh := make(chan error)
 	ctx, cancel := context.WithCancel(t.Context())
+
+	// Use a buffer to avoid data races with t.Output() after test completion
+	var logBuffer bytes.Buffer
 	go func() {
-		errCh <- server(ctx, t.Output(), t.Output(), configPath, testHook, nil)
+		errCh <- server(ctx, &logBuffer, &logBuffer, configPath, testHook, nil)
 	}()
 	go func() {
 		cancel()
@@ -111,6 +115,11 @@ func TestCustomProviderCancelWhenStarting(t *testing.T) {
 
 	err := <-errCh
 	require.NoError(t, err)
+
+	// Cleanup: allow goroutines to finish before test completes
+	t.Cleanup(func() {
+		time.Sleep(100 * time.Millisecond)
+	})
 }
 
 func TestCustomProviderFailedToStart(t *testing.T) {
@@ -118,13 +127,21 @@ func TestCustomProviderFailedToStart(t *testing.T) {
 
 	errCh := make(chan error)
 	ctx, cancel := context.WithCancel(t.Context())
+
+	// Use a buffer to avoid data races with t.Output() after test completion
+	var logBuffer bytes.Buffer
 	go func() {
-		errCh <- server(ctx, t.Output(), t.Output(), configPath, testHook, nil)
+		errCh <- server(ctx, &logBuffer, &logBuffer, configPath, testHook, nil)
 	}()
 
 	err := <-errCh
 	cancel()
 	require.Error(t, err, "failed to load TLS config")
+
+	// Cleanup: allow goroutines to finish before test completes
+	t.Cleanup(func() {
+		time.Sleep(100 * time.Millisecond)
+	})
 }
 
 func TestCustomProviderCancelWhenConfigReload(t *testing.T) {
@@ -152,13 +169,20 @@ func TestCustomProviderCancelWhenConfigReload(t *testing.T) {
 		}()
 	}
 
+	// Use a buffer to avoid data races with t.Output() after test completion
+	var logBuffer bytes.Buffer
 	go func() {
-		errCh <- server(ctx, t.Output(), t.Output(), configPath, hook, startedCallback)
+		errCh <- server(ctx, &logBuffer, &logBuffer, configPath, hook, startedCallback)
 	}()
 
 	err := <-errCh
 	cancel()
 	require.NoError(t, err)
+
+	// Cleanup: allow goroutines to finish before test completes
+	t.Cleanup(func() {
+		time.Sleep(100 * time.Millisecond)
+	})
 }
 
 func TestGetConfigValidate(t *testing.T) {
