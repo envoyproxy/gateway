@@ -230,7 +230,7 @@ xListenerSets:
         status: "True"
         type: ResolvedRefs
       name: grpc-listener
-      port: 8081
+      port: 0
       supportedKinds:
       - group: gateway.networking.k8s.io
         kind: HTTPRoute
@@ -284,7 +284,7 @@ xListenerSets:
         status: "True"
         type: ResolvedRefs
       name: grpc-listener
-      port: 8082
+      port: 0
       supportedKinds:
       - group: gateway.networking.k8s.io
         kind: HTTPRoute
