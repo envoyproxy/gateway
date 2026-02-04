@@ -415,16 +415,15 @@ func (t *Translator) GetRelevantGateways(resources *resource.Resources) (
 		logKeysAndValues := []any{
 			"namespace", gateway.Namespace, "name", gateway.Name,
 		}
+		if gateway.Spec.GatewayClassName != t.GatewayClassName {
+			t.Logger.Info("Skipping Gateway because GatewayClassName doesn't match", logKeysAndValues...)
+			continue
+		}
 
 		gCtx := &GatewayContext{
 			Gateway: gateway,
 		}
 		gCtx.attachEnvoyProxy(resources, envoyproxyMap)
-
-		if gateway.Spec.GatewayClassName != t.GatewayClassName {
-			t.Logger.Info("Skipping Gateway because GatewayClassName doesn't match", logKeysAndValues...)
-			continue
-		}
 
 		// Gateways that are not accepted by the controller because they reference an invalid EnvoyProxy.
 		if status.GatewayNotAccepted(gCtx.Gateway) {
