@@ -147,13 +147,8 @@ var XListenerSetHTTPSTest = suite.ConformanceTest{
 		}
 
 		certNN := types.NamespacedName{Name: "xlistener-https-certificate", Namespace: ns}
-		serverCertificate, _, caPem, err := GetTLSSecret(suite.Client, certNN)
+		serverCertificate, _, _, err := GetTLSSecret(suite.Client, certNN)
 		require.NoError(t, err)
-
-		combined := string(serverCertificate)
-		if len(caPem) > 0 {
-			combined += "\n" + string(caPem)
-		}
 
 		tlsutils.MakeTLSRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig,
 			listenerAddr, serverCertificate, nil, nil, "www.example.com", expected)
