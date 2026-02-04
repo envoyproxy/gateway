@@ -13,10 +13,10 @@ import (
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/util/sets"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
-	"k8s.io/apimachinery/pkg/util/sets"
 )
 
 // validCipherSuites contains the list of supported TLS cipher suites.
