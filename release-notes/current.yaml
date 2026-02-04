@@ -10,18 +10,6 @@ security updates: |
 new features: |
 
 bug fixes: |
-  Fixed configured OIDC authorization endpoint being overridden by discovered endpoints from issuer's well-known URL.
-  Fix 500 errors caused by partially invalid BackendRefs; traffic is now correctly routed between valid backends and 500 responses according to their configured weights.
-  Fixed an issue where BackendTrafficPolicy does not validate maximum value of requestBuffer limit.
-  Fixed an issue where observedGeneration is missing from the EnvoyPatchPolicy status.
-  Fixed a nil pointer error when applying BackendTrafficPolicy to HTTPRoutes with no backendRefs.
-  Fixed ExternalTrafficPolicy not being applied to Envoy Service when ServiceType is NodePort.
-  Fixed CRL ref not processed by gateway controller.
-  Fixed an issue where HTTP/3 listeners could not handle multiple hostnames.
-  Fix gateway continuing with incomplete resources after unrecoverable Kubernetes discovery errors when checking optional CRDs by failing fast and propagating errors so pods restart instead of skipping optional CRDs.
-  Fixed an issue where listener translation fails when contains invalid certificate in multiple TLS certificateRefs.
-  Fixed an issue where auto-detect upstream protocol breaks with multiple backends(HTTP + HTTPS).
-  Fixed wrong cluster type selection when an HTTPRoute mixes Service backends with Backend (FQDN) references, ensuring STRICT_DNS clusters are generated for the FQDN targets.
   Rejected ClientTrafficPolicy if invalid TLS cipher suites are configured.
 
 # Enhancements that improve performance.
