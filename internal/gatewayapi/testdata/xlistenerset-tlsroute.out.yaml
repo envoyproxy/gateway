@@ -220,7 +220,7 @@ xListenerSets:
         status: "True"
         type: ResolvedRefs
       name: extra-tls-passthrough
-      port: 8443
+      port: 0
       supportedKinds:
       - group: gateway.networking.k8s.io
         kind: TLSRoute
@@ -242,7 +242,7 @@ xListenerSets:
         status: "True"
         type: ResolvedRefs
       name: extra-tls-terminate
-      port: 9443
+      port: 0
       supportedKinds:
       - group: gateway.networking.k8s.io
         kind: TLSRoute

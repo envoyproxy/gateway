@@ -269,7 +269,7 @@ xListenerSets:
         status: "True"
         type: ResolvedRefs
       name: extra-http-one
-      port: 8081
+      port: 0
       supportedKinds:
       - group: gateway.networking.k8s.io
         kind: HTTPRoute
@@ -293,7 +293,7 @@ xListenerSets:
         status: "True"
         type: ResolvedRefs
       name: extra-http-two
-      port: 8082
+      port: 0
       supportedKinds:
       - group: gateway.networking.k8s.io
         kind: HTTPRoute

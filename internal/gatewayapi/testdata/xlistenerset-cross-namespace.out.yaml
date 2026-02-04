@@ -199,7 +199,7 @@ xListenerSets:
         status: "True"
         type: ResolvedRefs
       name: cross-http-allowed
-      port: 8083
+      port: 0
       supportedKinds:
       - group: gateway.networking.k8s.io
         kind: HTTPRoute

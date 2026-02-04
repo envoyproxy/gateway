@@ -222,7 +222,7 @@ xListenerSets:
         status: "True"
         type: ResolvedRefs
       name: listener-1
-      port: 8089
+      port: 0
       supportedKinds:
       - group: gateway.networking.k8s.io
         kind: HTTPRoute

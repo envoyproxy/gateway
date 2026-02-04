@@ -79,7 +79,7 @@ func (t *Translator) processXListenerSet(xls *gwapixv1a1.XListenerSet, gatewayMa
 		// Convert XListenerSet listener to Gateway listener for internal processing
 		gwListener := &gwapiv1.Listener{
 			Name:          listener.Name,
-			Port:          gwapiv1.PortNumber(listener.Port),
+			Port:          listener.Port,
 			Protocol:      listener.Protocol,
 			TLS:           listener.TLS,
 			AllowedRoutes: listener.AllowedRoutes,

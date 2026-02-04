@@ -269,7 +269,7 @@ xListenerSets:
         status: "True"
         type: ResolvedRefs
       name: invalid-one
-      port: 8085
+      port: 0
       supportedKinds: []
     - attachedRoutes: 0
       conditions:
@@ -289,7 +289,7 @@ xListenerSets:
         status: "True"
         type: ResolvedRefs
       name: invalid-two
-      port: 8086
+      port: 0
       supportedKinds: []
 - apiVersion: gateway.networking.x-k8s.io/v1alpha1
   kind: XListenerSet
@@ -345,7 +345,7 @@ xListenerSets:
         status: "True"
         type: ResolvedRefs
       name: mixed-valid
-      port: 8087
+      port: 0
       supportedKinds:
       - group: gateway.networking.k8s.io
         kind: HTTPRoute
@@ -369,7 +369,7 @@ xListenerSets:
         status: "True"
         type: ResolvedRefs
       name: mixed-invalid
-      port: 8088
+      port: 0
       supportedKinds: []
 xdsIR:
   gateway-xls/composite-gateway:
