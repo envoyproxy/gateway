@@ -548,7 +548,7 @@ Guides to integrate with specific OIDC providers.
 
 ### Azure Entra
 
-This guide demonstrates how to configure Envoy Gateway to use [Azure Entra](https://entra.microsoft.com/) as the OIDC provider with additional JWT authorization. To get OAuth 2.0 compatible tokens you must register a Scope for your application as described in the [Microsoft Documentation](https://learn.microsoft.com/en-us/azure/active-directory/develop/v2-permissions-and-consent). In this example the resulting scope is `api://custom/EnvoyGateway.OIDC`.
+This guide demonstrates how to configure Envoy Gateway to use [Azure Entra](https://learn.microsoft.com/en-us/entra) as the OIDC provider with additional JWT authorization. To get OAuth 2.0 compatible tokens you must register a Scope for your application as described in the [Microsoft Documentation](https://learn.microsoft.com/en-us/azure/active-directory/develop/v2-permissions-and-consent). In this example the resulting scope is `api://custom/EnvoyGateway.OIDC`.
 
 ```yaml
 ---
