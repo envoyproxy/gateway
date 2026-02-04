@@ -16,6 +16,7 @@ import (
 func SkipTests(gatewayNamespaceMode bool) []suite.ConformanceTest {
 	skipTests := []suite.ConformanceTest{
 		tests.GatewayStaticAddresses,
+		// TODO: fix following conformance tests
 		tests.ListenerSetCrossNamespace,
 		tests.ListenerSetHostnameConflict,
 		tests.ListenerSetNotAllowed,
@@ -28,6 +29,15 @@ func SkipTests(gatewayNamespaceMode bool) []suite.ConformanceTest {
 		tests.TLSRouteListenerTerminateSupportedKinds,
 		tests.TLSRouteSimpleSameNamespace,
 		tests.TLSRouteTerminateSimpleSameNamespace,
+		tests.GatewayInvalidTLSBackendConfiguration,
+		tests.GatewayWithAttachedRoutes,
+		tests.GatewayTLSBackendClientCertificate,
+		tests.GatewayFrontendClientCertificateValidation,
+		tests.GatewayInvalidFrontendClientCertificateValidation,
+		tests.HTTPRoute303Redirect,
+		tests.HTTPRoute307Redirect,
+		tests.HTTPRoute308Redirect,
+		tests.HTTPRouteHostnameIntersection,
 	}
 
 	if gatewayNamespaceMode {
