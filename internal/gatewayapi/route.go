@@ -16,6 +16,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -1848,6 +1849,26 @@ func (t *Translator) processDestination(name string, backendRefContext BackendRe
 		envoyProxy = gatewayCtx.envoyProxy
 	}
 
+	// Resolve BTP RoutingType for this route/gateway combination
+	var btpRoutingType *egv1a1.RoutingType
+	if gatewayCtx != nil {
+		routeNN := types.NamespacedName{
+			Namespace: route.GetNamespace(),
+			Name:      route.GetName(),
+		}
+		gatewayNN := types.NamespacedName{
+			Namespace: gatewayCtx.Namespace,
+			Name:      gatewayCtx.Name,
+		}
+		btpRoutingType = GetBTPRoutingTypeForRoute(
+			resources.BackendTrafficPolicies,
+			routeNN,
+			routeType,
+			gatewayNN,
+			parentRef.SectionName,
+		)
+	}
+
 	protocol := inspectAppProtocolByRouteKind(routeType)
 
 	// Process BackendTLSPolicy first to ensure status is set.
@@ -1871,12 +1892,12 @@ func (t *Translator) processDestination(name string, backendRefContext BackendRe
 
 	switch KindDerefOr(backendRef.Kind, resource.KindService) {
 	case resource.KindServiceImport:
-		ds, err = t.processServiceImportDestinationSetting(name, backendRef.BackendObjectReference, backendNamespace, protocol, envoyProxy)
+		ds, err = t.processServiceImportDestinationSetting(name, backendRef.BackendObjectReference, backendNamespace, protocol, envoyProxy, btpRoutingType)
 		if err != nil {
 			return emptyDS, nil, err
 		}
 	case resource.KindService:
-		ds, err = t.processServiceDestinationSetting(name, backendRef.BackendObjectReference, backendNamespace, protocol, envoyProxy)
+		ds, err = t.processServiceDestinationSetting(name, backendRef.BackendObjectReference, backendNamespace, protocol, envoyProxy, btpRoutingType)
 		if err != nil {
 			return emptyDS, nil, err
 		}
@@ -1918,7 +1939,7 @@ func (t *Translator) processDestination(name string, backendRefContext BackendRe
 		return emptyDS, nil, status.NewRouteStatusError(filtersErr, status.RouteReasonInvalidBackendFilters)
 	}
 
-	if err := validateDestinationSettings(ds, t.IsEnvoyServiceRouting(envoyProxy), backendRef.Kind); err != nil {
+	if err := validateDestinationSettings(ds, t.IsServiceRouting(envoyProxy, btpRoutingType), backendRef.Kind); err != nil {
 		return emptyDS, nil, err
 	}
 
@@ -1963,6 +1984,7 @@ func (t *Translator) processServiceImportDestinationSetting(
 	backendNamespace string,
 	protocol ir.AppProtocol,
 	envoyProxy *egv1a1.EnvoyProxy,
+	btpRoutingType *egv1a1.RoutingType,
 ) (*ir.DestinationSetting, status.Error) {
 	var (
 		endpoints []*ir.DestinationEndpoint
@@ -1986,7 +2008,7 @@ func (t *Translator) processServiceImportDestinationSetting(
 	isHeadless := len(backendIps) == 0
 
 	// Route to endpoints by default, or if service routing is enabled but ServiceImport is headless
-	useEndpointRouting := !t.IsEnvoyServiceRouting(envoyProxy) || isHeadless
+	useEndpointRouting := !t.IsServiceRouting(envoyProxy, btpRoutingType) || isHeadless
 	if useEndpointRouting {
 		endpointSlices := t.GetEndpointSlicesForBackend(backendNamespace, string(backendRef.Name), resource.KindServiceImport)
 		endpoints, addrType = getIREndpointsFromEndpointSlices(endpointSlices, servicePort.Name, getServicePortProtocol(servicePort.Protocol))
@@ -2019,6 +2041,7 @@ func (t *Translator) processServiceDestinationSetting(
 	backendNamespace string,
 	protocol ir.AppProtocol,
 	envoyProxy *egv1a1.EnvoyProxy,
+	btpRoutingType *egv1a1.RoutingType,
 ) (*ir.DestinationSetting, status.Error) {
 	var (
 		endpoints []*ir.DestinationEndpoint
@@ -2042,7 +2065,7 @@ func (t *Translator) processServiceDestinationSetting(
 	isHeadless := isServiceHeadless(service)
 
 	// Route to endpoints by default, or if service routing is enabled but service is headless
-	useEndpointRouting := !t.IsEnvoyServiceRouting(envoyProxy) || isHeadless
+	useEndpointRouting := !t.IsServiceRouting(envoyProxy, btpRoutingType) || isHeadless
 	if useEndpointRouting {
 		endpointSlices := t.GetEndpointSlicesForBackend(backendNamespace, string(backendRef.Name), KindDerefOr(backendRef.Kind, resource.KindService))
 		endpoints, addrType = getIREndpointsFromEndpointSlices(endpointSlices, servicePort.Name, getServicePortProtocol(servicePort.Protocol))
