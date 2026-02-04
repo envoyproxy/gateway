@@ -12,7 +12,7 @@ cluster_manager:
   local_cluster_name: local_cluster
 node:
   locality:
-    zone: $(ENVOY_SERVICE_ZONE)
+    zone: "$(ENVOY_SERVICE_ZONE)"
 stats_config:
   use_all_default_tags: true
   stats_tags:

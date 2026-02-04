@@ -65,7 +65,7 @@ spec:
             local_cluster_name: namespace-1/gateway-1
           node:
             locality:
-              zone: $(ENVOY_SERVICE_ZONE)
+              zone: "$(ENVOY_SERVICE_ZONE)"
           stats_config:
             use_all_default_tags: true
             stats_tags:
@@ -498,7 +498,7 @@ spec:
             local_cluster_name: namespace-2/gateway-2
           node:
             locality:
-              zone: $(ENVOY_SERVICE_ZONE)
+              zone: "$(ENVOY_SERVICE_ZONE)"
           stats_config:
             use_all_default_tags: true
             stats_tags:
