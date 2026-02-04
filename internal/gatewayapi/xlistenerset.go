@@ -71,7 +71,6 @@ func (t *Translator) processXListenerSet(xls *gwapixv1a1.XListenerSet, gatewayMa
 		// Initialize listener status conditions
 		xls.Status.Listeners = append(xls.Status.Listeners, gwapixv1a1.ListenerEntryStatus{
 			Name:           listener.Name,
-			Port:           listener.Port,
 			SupportedKinds: []gwapixv1a1.RouteGroupKind{},
 			AttachedRoutes: 0,
 			Conditions:     []metav1.Condition{},
@@ -80,7 +79,7 @@ func (t *Translator) processXListenerSet(xls *gwapixv1a1.XListenerSet, gatewayMa
 		// Convert XListenerSet listener to Gateway listener for internal processing
 		gwListener := &gwapiv1.Listener{
 			Name:          listener.Name,
-			Port:          listener.Port,
+			Port:          gwapiv1.PortNumber(listener.Port),
 			Protocol:      listener.Protocol,
 			TLS:           listener.TLS,
 			AllowedRoutes: listener.AllowedRoutes,

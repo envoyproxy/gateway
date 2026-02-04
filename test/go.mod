@@ -4,12 +4,18 @@ go 1.25.6
 
 replace github.com/envoyproxy/gateway => ../
 
+// TODO: remove this when https://github.com/kubernetes-sigs/gateway-api/pull/4479 merged
+replace sigs.k8s.io/gateway-api/conformance => github.com/zirain-dev/gateway-api/conformance v0.0.0-20260203110540-f9f400104e9c
+
+// TODO: remove this when v1.5.0 is released
+replace sigs.k8s.io/gateway-api => sigs.k8s.io/gateway-api v1.3.1-0.20260203001228-5643ebfba378
+
 require (
 	fortio.org/fortio v1.73.2
 	fortio.org/log v1.18.3
 	github.com/andybalholm/brotli v1.2.0
 	github.com/docker/docker v28.5.1+incompatible
-	github.com/envoyproxy/gateway v0.0.0-000000000000-000000000000
+	github.com/envoyproxy/gateway v0.0.0-00010101000000-000000000000
 	github.com/go-logfmt/logfmt v0.6.1
 	github.com/google/go-cmp v0.7.0
 	github.com/google/go-containerregistry v0.20.6
@@ -35,6 +41,7 @@ require (
 	k8s.io/utils v0.0.0-20251002143259-bc988d571ff4
 	sigs.k8s.io/controller-runtime v0.23.1
 	sigs.k8s.io/gateway-api v1.4.1
+	sigs.k8s.io/gateway-api/conformance v0.0.0-20260203001228-5643ebfba378
 	sigs.k8s.io/yaml v1.6.0
 )
 
@@ -97,6 +104,7 @@ require (
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/dominikbraun/graph v0.23.0 // indirect
 	github.com/ebitengine/purego v0.9.1 // indirect
+	github.com/eclipse/paho.mqtt.golang v1.5.1 // indirect
 	github.com/emicklei/go-restful/v3 v3.13.0 // indirect
 	github.com/envoyproxy/go-control-plane v0.14.0 // indirect
 	github.com/envoyproxy/go-control-plane/contrib v1.36.1-0.20260115164926-066cbd5b3989 // indirect

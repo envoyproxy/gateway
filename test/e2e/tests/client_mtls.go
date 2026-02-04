@@ -23,9 +23,8 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
-	"sigs.k8s.io/gateway-api/conformance/utils/roundtripper"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
-	"sigs.k8s.io/gateway-api/conformance/utils/tlog"
+	tlsutils "sigs.k8s.io/gateway-api/conformance/utils/tls"
 	"sigs.k8s.io/gateway-api/pkg/features"
 )
 
@@ -45,7 +44,6 @@ var ClientMTLSTest = suite.ConformanceTest{
 			gwNN := types.NamespacedName{Name: "client-mtls-gateway", Namespace: ns}
 			gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
 			kubernetes.NamespacesMustBeReady(t, suite.Client, suite.TimeoutConfig, []string{depNS})
-			certNN := types.NamespacedName{Name: "client-mtls-certificate", Namespace: ns}
 
 			expected := http.ExpectedResponse{
 				Request: http.Request{
@@ -67,16 +65,15 @@ var ClientMTLSTest = suite.ConformanceTest{
 				Namespace: ns,
 			}
 
-			req := http.MakeRequest(t, &expected, gwAddr, "HTTPS", "https")
-
 			// This test uses the same key/cert pair as both a client cert and server cert
 			// Both backend and client treat the self-signed cert as a trusted CA
-			cPem, keyPem, _, err := GetTLSSecret(suite.Client, certNN)
+			clientCertificate, clientCertificateKey, _, err := GetTLSSecret(suite.Client, types.NamespacedName{Name: "client-mtls-certificate", Namespace: ns})
 			if err != nil {
 				t.Fatalf("unexpected error finding TLS secret: %v", err)
 			}
 
-			WaitForConsistentMTLSResponse(t, suite.RoundTripper, &req, &expected, suite.TimeoutConfig.RequiredConsecutiveSuccesses, suite.TimeoutConfig.MaxTimeToConsistency, cPem, keyPem, "mtls.example.com")
+			tlsutils.MakeTLSRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig,
+				gwAddr, clientCertificate, clientCertificate, clientCertificateKey, "mtls.example.com", expected)
 		})
 
 		t.Run("Client TLS Settings Enforced", func(t *testing.T) {
@@ -109,18 +106,17 @@ var ClientMTLSTest = suite.ConformanceTest{
 				Namespace: ns,
 			}
 
-			req := http.MakeRequest(t, &expected, gwAddr, "HTTPS", "https")
-
 			// added but not used, as these are required by test utils when for SNI to be added
-			cPem, keyPem, _, err := GetTLSSecret(suite.Client, certNN)
+			clientCertificate, clientCertificateKey, _, err := GetTLSSecret(suite.Client, certNN)
 			if err != nil {
 				t.Fatalf("unexpected error finding TLS secret: %v", err)
 			}
 
-			WaitForConsistentMTLSResponse(t, suite.RoundTripper, &req, &expected, suite.TimeoutConfig.RequiredConsecutiveSuccesses, suite.TimeoutConfig.MaxTimeToConsistency, cPem, keyPem, serverName)
+			tlsutils.MakeTLSRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig,
+				gwAddr, clientCertificate, clientCertificate, clientCertificateKey, serverName, expected)
 
 			certPool := x509.NewCertPool()
-			if !certPool.AppendCertsFromPEM(cPem) {
+			if !certPool.AppendCertsFromPEM(clientCertificate) {
 				t.Errorf("Error setting Root CAs: %v", err)
 			}
 
@@ -167,7 +163,6 @@ var ClientMTLSClusterTrustBundleTest = suite.ConformanceTest{
 			routeNN := types.NamespacedName{Name: "client-mtls-clustertrustbundle", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "client-mtls-clustertrustbundle", Namespace: ns}
 			gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
-			certNN := types.NamespacedName{Name: "client-example-com", Namespace: ns}
 
 			expected := http.ExpectedResponse{
 				Request: http.Request{
@@ -189,51 +184,27 @@ var ClientMTLSClusterTrustBundleTest = suite.ConformanceTest{
 				Namespace: ns,
 			}
 
-			req := http.MakeRequest(t, &expected, gwAddr, "HTTPS", "https")
-
+			serverCertificate, _, _, err := GetTLSSecret(suite.Client, types.NamespacedName{
+				Name:      "example-com-tls",
+				Namespace: ns,
+			})
+			if err != nil {
+				t.Fatalf("unexpected error finding TLS secret: %v", err)
+			}
 			// This test uses the same key/cert pair as both a client cert and server cert
 			// Both backend and client treat the self-signed cert as a trusted CA
-			cPem, keyPem, caPem, err := GetTLSSecret(suite.Client, certNN)
+			clientCertificate, clientCertificateKey, _, err := GetTLSSecret(suite.Client, types.NamespacedName{
+				Name:      "client-example-com",
+				Namespace: ns,
+			})
 			if err != nil {
 				t.Fatalf("unexpected error finding TLS secret: %v", err)
 			}
 
-			combined := string(cPem) + "\n" + string(caPem)
-
-			WaitForConsistentMTLSResponse(t, suite.RoundTripper, &req, &expected, suite.TimeoutConfig.RequiredConsecutiveSuccesses, suite.TimeoutConfig.MaxTimeToConsistency,
-				[]byte(combined), keyPem, "www.example.com")
+			tlsutils.MakeTLSRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig,
+				gwAddr, serverCertificate, clientCertificate, clientCertificateKey, "www.example.com", expected)
 		})
 	},
-}
-
-func WaitForConsistentMTLSResponse(t *testing.T, r roundtripper.RoundTripper, req *roundtripper.Request, expected *http.ExpectedResponse, threshold int, maxTimeToConsistency time.Duration, cPem, keyPem []byte, server string) {
-	if req == nil {
-		t.Fatalf("request cannot be nil")
-	}
-	if expected == nil {
-		t.Fatalf("expected response cannot be nil")
-	}
-
-	http.AwaitConvergence(t, threshold, maxTimeToConsistency, func(elapsed time.Duration) bool {
-		updatedReq := *req
-		updatedReq.KeyPem = keyPem
-		updatedReq.CertPem = cPem
-		updatedReq.Server = server
-
-		cReq, cRes, err := r.CaptureRoundTrip(updatedReq)
-		if err != nil {
-			tlog.Logf(t, "Request failed, not ready yet: %v (after %v)", err.Error(), elapsed)
-			return false
-		}
-
-		if err := http.CompareRoundTrip(t, &updatedReq, cReq, cRes, *expected); err != nil {
-			tlog.Logf(t, "Response expectation failed for request: %+v  not ready yet: %v (after %v)", updatedReq, err, elapsed)
-			return false
-		}
-
-		return true
-	})
-	tlog.Logf(t, "Request passed")
 }
 
 // GetTLSSecret fetches the named Secret and converts both cert and key to []byte
