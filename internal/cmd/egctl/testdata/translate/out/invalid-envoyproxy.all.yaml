@@ -41,3 +41,58 @@ gatewayClass:
       reason: InvalidParameters
       status: "False"
       type: Accepted
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    name: eg
+    namespace: default
+  spec:
+    gatewayClassName: eg
+    listeners:
+    - allowedRoutes:
+        namespaces:
+          from: Same
+      name: tcp
+      port: 1234
+      protocol: TCP
+    - allowedRoutes:
+        namespaces:
+          from: Same
+      name: udp
+      port: 1234
+      protocol: UDP
+    - allowedRoutes:
+        namespaces:
+          from: Same
+      hostname: foo.com
+      name: tls-passthrough
+      port: 8443
+      protocol: TLS
+      tls:
+        mode: Passthrough
+    - allowedRoutes:
+        kinds:
+        - group: gateway.networking.k8s.io
+          kind: HTTPRoute
+        namespaces:
+          from: Same
+      name: http
+      port: 80
+      protocol: HTTP
+    - allowedRoutes:
+        kinds:
+        - group: gateway.networking.k8s.io
+          kind: GRPCRoute
+        namespaces:
+          from: Same
+      name: grpc
+      port: 8080
+      protocol: HTTP
+  status:
+    conditions:
+    - lastTransitionTime: null
+      message: 'Invalid parametersRef:: dynamic_resources cannot be modified'
+      reason: InvalidParameters
+      status: "False"
+      type: Accepted
