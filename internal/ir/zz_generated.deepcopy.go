@@ -506,8 +506,8 @@ func (in *BackendUtilization) DeepCopyInto(out *BackendUtilization) {
 		*out = new(SlowStart)
 		(*in).DeepCopyInto(*out)
 	}
-	if in.RemoveResponseHeaders != nil {
-		in, out := &in.RemoveResponseHeaders, &out.RemoveResponseHeaders
+	if in.KeepResponseHeaders != nil {
+		in, out := &in.KeepResponseHeaders, &out.KeepResponseHeaders
 		*out = new(bool)
 		**out = **in
 	}

@@ -208,11 +208,11 @@ type BackendUtilization struct {
 	// +optional
 	MetricNamesForComputingUtilization []string `json:"metricNamesForComputingUtilization,omitempty"`
 
-	// RemoveResponseHeaders removes the ORCA load report headers/trailers before sending the response to the client.
-	// Defaults to true.
+	// KeepResponseHeaders keeps the ORCA load report headers/trailers before sending the response to the client.
+	// Defaults to false.
 	// +optional
-	// +kubebuilder:default=true
-	RemoveResponseHeaders *bool `json:"removeResponseHeaders,omitempty"`
+	// +kubebuilder:default=false
+	KeepResponseHeaders *bool `json:"keepResponseHeaders,omitempty"`
 }
 
 // ConsistentHashType defines the type of input to hash on.

@@ -11835,6 +11835,12 @@ spec:
                                                     format: int32
                                                     minimum: 0
                                                     type: integer
+                                                  keepResponseHeaders:
+                                                    default: false
+                                                    description: |-
+                                                      KeepResponseHeaders keeps the ORCA load report headers/trailers before sending the response to the client.
+                                                      Defaults to false.
+                                                    type: boolean
                                                   metricNamesForComputingUtilization:
                                                     description: |-
                                                       Metric names used to compute utilization if application_utilization is not set.
@@ -11842,12 +11848,6 @@ spec:
                                                     items:
                                                       type: string
                                                     type: array
-                                                  removeResponseHeaders:
-                                                    default: true
-                                                    description: |-
-                                                      RemoveResponseHeaders removes the ORCA load report headers/trailers before sending the response to the client.
-                                                      Defaults to true.
-                                                    type: boolean
                                                   weightExpirationPeriod:
                                                     description: If a given endpoint
                                                       has not reported load metrics
@@ -13152,6 +13152,12 @@ spec:
                                                     format: int32
                                                     minimum: 0
                                                     type: integer
+                                                  keepResponseHeaders:
+                                                    default: false
+                                                    description: |-
+                                                      KeepResponseHeaders keeps the ORCA load report headers/trailers before sending the response to the client.
+                                                      Defaults to false.
+                                                    type: boolean
                                                   metricNamesForComputingUtilization:
                                                     description: |-
                                                       Metric names used to compute utilization if application_utilization is not set.
@@ -13159,12 +13165,6 @@ spec:
                                                     items:
                                                       type: string
                                                     type: array
-                                                  removeResponseHeaders:
-                                                    default: true
-                                                    description: |-
-                                                      RemoveResponseHeaders removes the ORCA load report headers/trailers before sending the response to the client.
-                                                      Defaults to true.
-                                                    type: boolean
                                                   weightExpirationPeriod:
                                                     description: If a given endpoint
                                                       has not reported load metrics
@@ -14625,6 +14625,12 @@ spec:
                                               format: int32
                                               minimum: 0
                                               type: integer
+                                            keepResponseHeaders:
+                                              default: false
+                                              description: |-
+                                                KeepResponseHeaders keeps the ORCA load report headers/trailers before sending the response to the client.
+                                                Defaults to false.
+                                              type: boolean
                                             metricNamesForComputingUtilization:
                                               description: |-
                                                 Metric names used to compute utilization if application_utilization is not set.
@@ -14632,12 +14638,6 @@ spec:
                                               items:
                                                 type: string
                                               type: array
-                                            removeResponseHeaders:
-                                              default: true
-                                              description: |-
-                                                RemoveResponseHeaders removes the ORCA load report headers/trailers before sending the response to the client.
-                                                Defaults to true.
-                                              type: boolean
                                             weightExpirationPeriod:
                                               description: If a given endpoint has
                                                 not reported load metrics in this
@@ -16014,6 +16014,12 @@ spec:
                                         format: int32
                                         minimum: 0
                                         type: integer
+                                      keepResponseHeaders:
+                                        default: false
+                                        description: |-
+                                          KeepResponseHeaders keeps the ORCA load report headers/trailers before sending the response to the client.
+                                          Defaults to false.
+                                        type: boolean
                                       metricNamesForComputingUtilization:
                                         description: |-
                                           Metric names used to compute utilization if application_utilization is not set.
@@ -16021,12 +16027,6 @@ spec:
                                         items:
                                           type: string
                                         type: array
-                                      removeResponseHeaders:
-                                        default: true
-                                        description: |-
-                                          RemoveResponseHeaders removes the ORCA load report headers/trailers before sending the response to the client.
-                                          Defaults to true.
-                                        type: boolean
                                       weightExpirationPeriod:
                                         description: If a given endpoint has not reported
                                           load metrics in this long, stop using the

@@ -47,4 +47,4 @@ backendTrafficPolicies:
       loadBalancer:
         type: BackendUtilization
         backendUtilization:
-          removeResponseHeaders: true
+          keepResponseHeaders: false

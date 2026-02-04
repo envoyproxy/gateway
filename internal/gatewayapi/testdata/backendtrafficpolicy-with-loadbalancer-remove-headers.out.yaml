@@ -7,7 +7,7 @@ backendTrafficPolicies:
   spec:
     loadBalancer:
       backendUtilization:
-        removeResponseHeaders: true
+        keepResponseHeaders: false
       type: BackendUtilization
     targetRefs:
     - group: gateway.networking.k8s.io
@@ -209,7 +209,7 @@ xdsIR:
         traffic:
           loadBalancer:
             backendUtilization:
-              removeResponseHeaders: true
+              keepResponseHeaders: false
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

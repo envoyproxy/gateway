@@ -368,7 +368,7 @@ func buildLoadBalancer(policy *egv1a1.ClusterSettings) (*ir.LoadBalancer, error)
 			if len(backendUtilization.MetricNamesForComputingUtilization) > 0 {
 				lb.BackendUtilization.MetricNamesForComputingUtilization = append([]string(nil), backendUtilization.MetricNamesForComputingUtilization...)
 			}
-			lb.BackendUtilization.RemoveResponseHeaders = ptr.To(ptr.Deref(backendUtilization.RemoveResponseHeaders, true))
+			lb.BackendUtilization.KeepResponseHeaders = ptr.To(ptr.Deref(backendUtilization.KeepResponseHeaders, false))
 		}
 		if policy.LoadBalancer.SlowStart != nil && policy.LoadBalancer.SlowStart.Window != nil {
 			d, err := time.ParseDuration(string(*policy.LoadBalancer.SlowStart.Window))

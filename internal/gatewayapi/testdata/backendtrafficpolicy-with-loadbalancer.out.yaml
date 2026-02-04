@@ -877,9 +877,9 @@ xdsIR:
             backendUtilization:
               blackoutPeriod: 10s
               errorUtilizationPenaltyPercent: 100
+              keepResponseHeaders: false
               metricNamesForComputingUtilization:
               - cpu_utilization
-              removeResponseHeaders: true
               slowStart:
                 window: 5m0s
               weightExpirationPeriod: 1m0s

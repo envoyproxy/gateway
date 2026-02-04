@@ -91,11 +91,11 @@ For more details, see:
 - [ORCA Load Report Proto](https://www.envoyproxy.io/docs/envoy/latest/xds/data/orca/v3/orca_load_report.proto)
 - [ORCA Design Document](https://docs.google.com/document/d/1NSnK3346BkBo1JUU3I9I5NYYnaJZQPt8_Z_XCBCI3uA)
 
-### Automatic Header Forwarding
+### Automatic Header Removal
 
 By default, Envoy forwards the ORCA response headers/trailers from the upstream cluster to the downstream client. This means that if the downstream client is also configured to use client-side weighted round-robin, it will load balance against Envoy based on upstream weights.
 
-To avoid this, you can configure the `BackendTrafficPolicy` to remove the ORCA headers before they reach the client using the `removeResponseHeaders` field in `backendUtilization`. This field defaults to `true` when `BackendUtilization` is enabled.
+To prevent this, Envoy Gateway automatically removes these headers by default when `BackendUtilization` is enabled. You can change this behavior using the `keepResponseHeaders` field in `backendUtilization`.
 
 ```yaml
 apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -110,25 +110,7 @@ spec:
   loadBalancer:
     type: BackendUtilization
     backendUtilization:
-      removeResponseHeaders: true # Default value
-```
-
-Alternatively, you can manually remove the ORCA headers using a `ResponseHeaderModifier` filter in the `HTTPRoute`:
-
-```yaml
-apiVersion: gateway.networking.k8s.io/v1
-kind: HTTPRoute
-metadata:
-  name: backend-utilization-route
-spec:
-  rules:
-  - filters:
-    - type: ResponseHeaderModifier
-      responseHeaderModifier:
-        remove: ["endpoint-load-metrics", "endpoint-load-metrics-bin"]
-    backendRefs:
-    - name: backend
-      port: 3000
+      keepResponseHeaders: true # Keep headers and forward them to the client
 ```
 
 ## Related Resources

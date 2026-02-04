@@ -821,7 +821,7 @@ func (t *Translator) applyTrafficFeatureToRoute(route RouteContext,
 
 				if r.Traffic != nil && r.Traffic.LoadBalancer != nil &&
 					r.Traffic.LoadBalancer.BackendUtilization != nil &&
-					ptr.Deref(r.Traffic.LoadBalancer.BackendUtilization.RemoveResponseHeaders, false) {
+					!ptr.Deref(r.Traffic.LoadBalancer.BackendUtilization.KeepResponseHeaders, false) {
 					headersToRemove := []string{"endpoint-load-metrics", "endpoint-load-metrics-bin"}
 					for _, h := range headersToRemove {
 						found := false
