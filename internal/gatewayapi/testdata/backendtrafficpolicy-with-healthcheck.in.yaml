@@ -230,6 +230,8 @@ backendTrafficPolicies:
             end: 600
           - start: 429
             end: 430
+          - start: 500
+            end: 503
           expectedResponse:
             type: Text
             text: pong

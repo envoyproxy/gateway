@@ -23,6 +23,8 @@ backendTrafficPolicies:
             start: 500
           - end: 430
             start: 429
+          - end: 503
+            start: 500
         interval: 5s
         timeout: 1s
         type: HTTP
@@ -1252,6 +1254,8 @@ xdsIR:
                 retriableStatuses:
                 - end: 430
                   start: 429
+                - end: 503
+                  start: 500
                 - end: 600
                   start: 500
               interval: 5s

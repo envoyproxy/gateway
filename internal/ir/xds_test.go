@@ -1813,6 +1813,29 @@ func TestValidateHealthCheck(t *testing.T) {
 			want: ErrHealthCheckPayloadInvalid,
 		},
 		{
+			name: "http-health-check: valid retriable-statuses",
+			input: HealthCheck{
+				&ActiveHealthCheck{
+					Timeout:            MetaV1DurationPtr(time.Second),
+					Interval:           MetaV1DurationPtr(time.Second),
+					UnhealthyThreshold: ptr.To(uint32(3)),
+					HealthyThreshold:   ptr.To(uint32(3)),
+					HTTP: &HTTPHealthChecker{
+						Host:             "*",
+						Path:             "/healthz",
+						Method:           ptr.To(http.MethodGet),
+						ExpectedStatuses: []HTTPStatus{200},
+						RetriableStatuses: []HTTPStatusRange{
+							{Start: 500, End: 600},
+						},
+					},
+				},
+				&OutlierDetection{},
+				ptr.To[uint32](10),
+			},
+			want: nil,
+		},
+		{
 			name: "http-health-check: invalid retriable-statuses",
 			input: HealthCheck{
 				&ActiveHealthCheck{
@@ -1827,6 +1850,52 @@ func TestValidateHealthCheck(t *testing.T) {
 						ExpectedStatuses: []HTTPStatus{200},
 						RetriableStatuses: []HTTPStatusRange{
 							{Start: 500, End: 500},
+						},
+					},
+				},
+				&OutlierDetection{},
+				ptr.To[uint32](10),
+			},
+			want: errors.Join(ErrHCHTTPRetriableStatusesInvalid, ErrHTTPStatusRangeInvalid),
+		},
+		{
+			name: "http-health-check: invalid retriable-statuses start out of range",
+			input: HealthCheck{
+				&ActiveHealthCheck{
+					Timeout:            MetaV1DurationPtr(time.Second),
+					Interval:           MetaV1DurationPtr(time.Second),
+					UnhealthyThreshold: ptr.To(uint32(3)),
+					HealthyThreshold:   ptr.To(uint32(3)),
+					HTTP: &HTTPHealthChecker{
+						Host:             "*",
+						Path:             "/healthz",
+						Method:           ptr.To(http.MethodGet),
+						ExpectedStatuses: []HTTPStatus{200},
+						RetriableStatuses: []HTTPStatusRange{
+							{Start: 600, End: 700},
+						},
+					},
+				},
+				&OutlierDetection{},
+				ptr.To[uint32](10),
+			},
+			want: errors.Join(ErrHCHTTPRetriableStatusesInvalid, ErrHTTPStatusRangeInvalid),
+		},
+		{
+			name: "http-health-check: invalid retriable-statuses end out of range",
+			input: HealthCheck{
+				&ActiveHealthCheck{
+					Timeout:            MetaV1DurationPtr(time.Second),
+					Interval:           MetaV1DurationPtr(time.Second),
+					UnhealthyThreshold: ptr.To(uint32(3)),
+					HealthyThreshold:   ptr.To(uint32(3)),
+					HTTP: &HTTPHealthChecker{
+						Host:             "*",
+						Path:             "/healthz",
+						Method:           ptr.To(http.MethodGet),
+						ExpectedStatuses: []HTTPStatus{200},
+						RetriableStatuses: []HTTPStatusRange{
+							{Start: 500, End: 700},
 						},
 					},
 				},
