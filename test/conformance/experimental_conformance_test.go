@@ -23,7 +23,6 @@ import (
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
 	"sigs.k8s.io/yaml"
 
-	internalconf "github.com/envoyproxy/gateway/internal/gatewayapi/conformance"
 	"github.com/envoyproxy/gateway/test/e2e"
 	ege2etest "github.com/envoyproxy/gateway/test/e2e/tests"
 )
@@ -32,7 +31,7 @@ func TestExperimentalConformance(t *testing.T) {
 	flag.Parse()
 	log.SetLogger(zap.New(zap.WriteTo(os.Stderr), zap.UseDevMode(true)))
 
-	internalSuite := internalconf.EnvoyGatewaySuite(ege2etest.IsGatewayNamespaceMode())
+	internalSuite := EnvoyGatewaySuite(ege2etest.IsGatewayNamespaceMode())
 
 	opts := conformance.DefaultOptions(t)
 	opts.SkipTests = internalSuite.SkipTests
