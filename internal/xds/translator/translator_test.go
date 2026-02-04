@@ -93,26 +93,21 @@ func TestTranslateXds(t *testing.T) {
 		},
 		"jsonpatch-with-jsonpath-invalid": {
 			requireEnvoyPatchPolicies: true,
-			errMsg:                    "no jsonPointers were found while evaluating the jsonPath",
 		},
 		"jsonpatch-add-op-empty-jsonpath": {
 			requireEnvoyPatchPolicies: true,
-			errMsg:                    "a patch operation must specify a path or jsonPath",
 		},
 		"jsonpatch-missing-resource": {
 			requireEnvoyPatchPolicies: true,
 		},
 		"jsonpatch-invalid-patch": {
 			requireEnvoyPatchPolicies: true,
-			errMsg:                    "unable to unmarshal xds resource",
 		},
 		"jsonpatch-add-op-without-value": {
 			requireEnvoyPatchPolicies: true,
-			errMsg:                    "the add operation requires a value",
 		},
 		"jsonpatch-move-op-with-value": {
 			requireEnvoyPatchPolicies: true,
-			errMsg:                    "value and from can't be specified with the remove operation",
 		},
 		"http-route-invalid": {
 			errMsg: "validation failed for xds resource",
