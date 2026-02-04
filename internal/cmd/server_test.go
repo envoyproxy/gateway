@@ -104,10 +104,9 @@ func TestCustomProviderCancelWhenStarting(t *testing.T) {
 	errCh := make(chan error)
 	ctx, cancel := context.WithCancel(t.Context())
 
-	// Use a buffer to avoid data races with t.Output() after test completion
-	var logBuffer bytes.Buffer
+	// Use io.Discard to avoid data races (it's thread-safe unlike bytes.Buffer)
 	go func() {
-		errCh <- server(ctx, &logBuffer, &logBuffer, configPath, testHook, nil)
+		errCh <- server(ctx, io.Discard, io.Discard, configPath, testHook, nil)
 	}()
 	go func() {
 		cancel()
@@ -128,10 +127,9 @@ func TestCustomProviderFailedToStart(t *testing.T) {
 	errCh := make(chan error)
 	ctx, cancel := context.WithCancel(t.Context())
 
-	// Use a buffer to avoid data races with t.Output() after test completion
-	var logBuffer bytes.Buffer
+	// Use io.Discard to avoid data races (it's thread-safe unlike bytes.Buffer)
 	go func() {
-		errCh <- server(ctx, &logBuffer, &logBuffer, configPath, testHook, nil)
+		errCh <- server(ctx, io.Discard, io.Discard, configPath, testHook, nil)
 	}()
 
 	err := <-errCh
@@ -169,10 +167,9 @@ func TestCustomProviderCancelWhenConfigReload(t *testing.T) {
 		}()
 	}
 
-	// Use a buffer to avoid data races with t.Output() after test completion
-	var logBuffer bytes.Buffer
+	// Use io.Discard to avoid data races (it's thread-safe unlike bytes.Buffer)
 	go func() {
-		errCh <- server(ctx, &logBuffer, &logBuffer, configPath, hook, startedCallback)
+		errCh <- server(ctx, io.Discard, io.Discard, configPath, hook, startedCallback)
 	}()
 
 	err := <-errCh
