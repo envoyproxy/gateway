@@ -30,6 +30,7 @@ import (
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
 	"sigs.k8s.io/gateway-api/conformance/utils/tlog"
+	tlsutils "sigs.k8s.io/gateway-api/conformance/utils/tls"
 
 	gatewayapi "github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
@@ -145,19 +146,17 @@ var XListenerSetHTTPSTest = suite.ConformanceTest{
 			Namespace: ns,
 		}
 
-		req := http.MakeRequest(t, &expected, listenerAddr, "HTTPS", "https")
-
 		certNN := types.NamespacedName{Name: "xlistener-https-certificate", Namespace: ns}
-		cPem, keyPem, caPem, err := GetTLSSecret(suite.Client, certNN)
+		serverCertificate, _, caPem, err := GetTLSSecret(suite.Client, certNN)
 		require.NoError(t, err)
 
-		combined := string(cPem)
+		combined := string(serverCertificate)
 		if len(caPem) > 0 {
 			combined += "\n" + string(caPem)
 		}
 
-		WaitForConsistentMTLSResponse(t, suite.RoundTripper, &req, &expected, suite.TimeoutConfig.RequiredConsecutiveSuccesses, suite.TimeoutConfig.MaxTimeToConsistency,
-			[]byte(combined), keyPem, "www.example.com")
+		tlsutils.MakeTLSRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig,
+			listenerAddr, serverCertificate, nil, nil, "www.example.com", expected)
 	},
 }
 
@@ -304,22 +303,12 @@ var XListenerSetTLSPassthroughTest = suite.ConformanceTest{
 			Namespace: ns,
 		}
 
-		req := http.MakeRequest(t, &expected, listenerAddr, "HTTPS", "https")
-
 		certNN := types.NamespacedName{Name: "backend-tls-certificate", Namespace: ns}
-		cPem, keyPem, _, err := GetTLSSecret(suite.Client, certNN)
+		serverCertificate, _, _, err := GetTLSSecret(suite.Client, certNN)
 		require.NoError(t, err)
 
-		WaitForConsistentMTLSResponse(
-			t,
-			suite.RoundTripper,
-			&req,
-			&expected,
-			suite.TimeoutConfig.RequiredConsecutiveSuccesses,
-			suite.TimeoutConfig.MaxTimeToConsistency,
-			cPem,
-			keyPem,
-			"example.com")
+		tlsutils.MakeTLSRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig,
+			listenerAddr, serverCertificate, nil, nil, "example.com", expected)
 	},
 }
 
