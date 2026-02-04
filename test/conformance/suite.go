@@ -16,6 +16,11 @@ import (
 func SkipTests(gatewayNamespaceMode bool) []suite.ConformanceTest {
 	skipTests := []suite.ConformanceTest{
 		tests.GatewayStaticAddresses,
+		tests.ListenerSetCrossNamespace,
+		tests.ListenerSetHostnameConflict,
+		tests.ListenerSetNotAllowed,
+		tests.ListenerSetProtocolConflict,
+		tests.ListenerSetSameNamespace,
 	}
 
 	if gatewayNamespaceMode {
