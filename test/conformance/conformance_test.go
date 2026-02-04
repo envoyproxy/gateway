@@ -56,6 +56,11 @@ func TestGatewayAPIConformance(t *testing.T) {
 		)
 	}
 
+	// If focusing on a single test, clear the skip list to ensure it runs.
+	if opts.RunTest != "" {
+		opts.SkipTests = nil
+	}
+
 	cSuite, err := suite.NewConformanceTestSuite(opts)
 	if err != nil {
 		t.Fatalf("Error creating conformance test suite: %v", err)

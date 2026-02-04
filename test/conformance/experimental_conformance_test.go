@@ -55,6 +55,11 @@ func TestExperimentalConformance(t *testing.T) {
 		)
 	}
 
+	// If focusing on a single test, clear the skip list to ensure it runs.
+	if opts.RunTest != "" {
+		opts.SkipTests = nil
+	}
+
 	t.Logf("Running experimental conformance tests with %s GatewayClass\n cleanup: %t\n debug: %t\n enable all features: %t \n conformance profiles: [%v]",
 		*flags.GatewayClassName, *flags.CleanupBaseResources, *flags.ShowDebug, *flags.EnableAllSupportedFeatures, opts.ConformanceProfiles)
 
