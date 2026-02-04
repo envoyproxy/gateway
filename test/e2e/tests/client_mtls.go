@@ -82,7 +82,6 @@ var ClientMTLSTest = suite.ConformanceTest{
 			routeNN := types.NamespacedName{Name: "http-client-tls-settings", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "client-mtls-gateway", Namespace: ns}
 			gwHost := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
-			certNN := types.NamespacedName{Name: "client-tls-settings-certificate", Namespace: ns}
 			kubernetes.NamespacesMustBeReady(t, suite.Client, suite.TimeoutConfig, []string{depNS})
 
 			gwAddr := net.JoinHostPort(gwHost, "443")
@@ -107,13 +106,13 @@ var ClientMTLSTest = suite.ConformanceTest{
 			}
 
 			// added but not used, as these are required by test utils when for SNI to be added
-			clientCertificate, clientCertificateKey, _, err := GetTLSSecret(suite.Client, certNN)
+			clientCertificate, _, _, err := GetTLSSecret(suite.Client, types.NamespacedName{Name: "client-tls-settings-certificate", Namespace: ns})
 			if err != nil {
 				t.Fatalf("unexpected error finding TLS secret: %v", err)
 			}
 
 			tlsutils.MakeTLSRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig,
-				gwAddr, clientCertificate, clientCertificate, clientCertificateKey, serverName, expected)
+				gwAddr, clientCertificate, nil, nil, serverName, expected)
 
 			certPool := x509.NewCertPool()
 			if !certPool.AppendCertsFromPEM(clientCertificate) {
