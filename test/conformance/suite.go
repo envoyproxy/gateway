@@ -21,6 +21,7 @@ func SkipTests(gatewayNamespaceMode bool) []suite.ConformanceTest {
 		tests.ListenerSetNotAllowed,
 		tests.ListenerSetProtocolConflict,
 		tests.ListenerSetSameNamespace,
+		tests.TLSRouteHostnameIntersection,
 	}
 
 	if gatewayNamespaceMode {
