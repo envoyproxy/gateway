@@ -8,6 +8,7 @@ security updates: |
 
 # New features or capabilities added in this release.
 new features: |
+  Implement RoutingType field for BackendTrafficPolicy
 
 bug fixes: |
 
