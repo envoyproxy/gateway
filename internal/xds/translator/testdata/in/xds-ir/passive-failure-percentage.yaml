@@ -30,3 +30,4 @@ http:
           consecutiveLocalOriginFailures: 5
           splitExternalLocalOriginErrors: false
           failurePercentageThreshold: 90
+          alwaysEjectOneHost: true
