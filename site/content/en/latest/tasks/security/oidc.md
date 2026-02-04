@@ -541,6 +541,65 @@ Additional connection settings for the OIDC provider can be configured in the [b
 
 For more information about [Backend] and [BackendTLSPolicy], refer to the [Backend Routing][backend-routing] and [Backend TLS: Gateway to Backend][backend-tls] tasks.
 
+
+## Providers
+
+Guides to integrate with specific OIDC providers.
+
+### Azure Entra
+
+This guide demonstrates how to configure Envoy Gateway to use [Azure Entra](https://learn.microsoft.com/en-us/entra) as the OIDC provider with additional JWT authorization. To get OAuth 2.0 compatible tokens you must register a Scope for your application as described in the [Microsoft Documentation](https://learn.microsoft.com/en-us/azure/active-directory/develop/v2-permissions-and-consent). In this example the resulting scope is `api://custom/EnvoyGateway.OIDC`.
+
+```yaml
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: entra-example
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: eg
+  oidc:
+    clientID: "${CLIENT_ID}"
+    clientSecret:
+      name: "my-app-client-secret"
+    redirectURL: "https://www.example.com:8443/myapp/oauth2/callback"
+    logoutPath: "/myapp/logout"
+    
+    cookieDomain: "example.com"
+    cookieNames:
+      accessToken: "azure-access-token"
+
+    provider:
+      issuer: "https://login.microsoftonline.com/<AZURE_TENANT_ID>/v2.0"
+    scopes:
+      - api://custom/EnvoyGateway.OIDC
+  authorization:
+    defaultAction: Deny
+    rules:
+      - name: "allow-jwt-claim"
+        action: Allow
+        principal:
+          jwt:
+            provider: entra
+            claims:
+              - name: roles
+                valueType: "StringArray"
+                values:
+                  - "administrators"
+  jwt:
+    providers:
+      - name: entra
+        issuer: "https://login.microsoftonline.com/<AZURE_TENANT_ID>/v2.0"
+        remoteJWKS:
+          uri: https://login.microsoftonline.com/<AZURE_TENANT_ID>/discovery/v2.0/keys
+        extractFrom:
+          cookies:
+            - "azure-access-token"
+```
+
 ## Clean-Up
 
 Follow the steps from the [Quickstart](../../quickstart) to uninstall Envoy Gateway and the example manifest.
