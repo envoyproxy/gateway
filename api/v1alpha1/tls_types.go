@@ -88,6 +88,20 @@ type TLSSettings struct {
 	//
 	// +optional
 	ALPNProtocols []ALPNProtocol `json:"alpnProtocols,omitempty"`
+
+	// Fingerprints specifies TLS client fingerprinting.
+	// When specified, a JAX fingerprint derived from the client’s TLS handshake
+	// is generated. The fingerprint can be logged in access logs or
+	// forwarded to upstream services using request headers.
+	//
+	// Fingerprinting is disabled if not specified.
+	//
+	// Supported values are:
+	// - JA3
+	// - JA4
+	//
+	// +optional
+	Fingerprints []TLSFingerprintType `json:"fingerprints,omitempty"`
 }
 
 // ALPNProtocol specifies the protocol to be negotiated using ALPN
@@ -120,6 +134,18 @@ const (
 	TLSv12 TLSVersion = "1.2"
 	// TLSv1.3 specifies TLS version 1.3
 	TLSv13 TLSVersion = "1.3"
+)
+
+// TLSFingerprintType specifies the TLS client fingerprinting mode.
+type TLSFingerprintType string
+
+const (
+	// Enable JA3 TLS fingerprinting only.
+	// The fingerprint will be available as %TLS_JA3_FINGERPRINT%.
+	TLSFingerprintTypeJA3 TLSFingerprintType = "JA3"
+	// Enable JA4 TLS fingerprinting only.
+	// The fingerprint will be available as %TLS_JA4_FINGERPRINT%.
+	TLSFingerprintTypeJA4 TLSFingerprintType = "JA4"
 )
 
 // ClientValidationContext holds configuration that can be used to validate the client initiating the TLS connection

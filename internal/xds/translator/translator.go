@@ -842,6 +842,7 @@ func (t *Translator) processTCPListenerXdsTranslation(
 				accesslog,
 				tcpListener.Timeout,
 				tcpListener.Connection,
+				tcpListener.TLS,
 			); err != nil {
 				errs = errors.Join(errs, err)
 			}
@@ -869,6 +870,7 @@ func (t *Translator) processTCPListenerXdsTranslation(
 				accesslog,
 				tcpListener.Timeout,
 				tcpListener.Connection,
+				tcpListener.TLS,
 			); err != nil {
 				errs = errors.Join(errs, err)
 			}
