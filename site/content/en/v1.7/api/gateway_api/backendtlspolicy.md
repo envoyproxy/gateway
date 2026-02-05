@@ -11,7 +11,7 @@ title = "BackendTLSPolicy"
 of the connection from the Gateway to a backend pod(s) via the Service API object.
 
 Implementations may also decide to support the usage of `BackendTLSPolicy` for specifying the TLS configuration
-of the connection from the Gateway to services not connected via HTTPRoute, and any 
+of the connection from the Gateway to services not connected via HTTPRoute, and any
 other kind of backend like [InferencePool](https://gateway-api-inference-extension.sigs.k8s.io/reference/spec/#inferencepool)
 
 ## Background
@@ -31,7 +31,7 @@ applied to a Service that accesses a backend, where the BackendTLSPolicy resides
 Service to which it is applied. The BackendTLSPolicy and the Service must reside in the same namespace in order
 to prevent the complications involved with sharing trust across namespace boundaries.
 
-Additionally, implementations may use BackendTLSPolicy for specifying the TLS configuration 
+Additionally, implementations may use BackendTLSPolicy for specifying the TLS configuration
 of the connection from the Gateway to services not connected via HTTPRoute, and any other
 kind of backend, but this behavior is optional and may not be available on all implementations.
 
@@ -45,13 +45,13 @@ The specification of a [BackendTLSPolicy][backendtlspolicy] consists of:
 - [Validation][validation] - Defines the configuration for TLS, including hostname, CACertificateRefs, and
 WellKnownCACertificates.
 - [Hostname][hostname] - Defines the Server Name Indication (SNI) that the Gateway uses to connect to the backend.
-- [SubjectAltNames][subjectAltNames] - Specifies one or more Subject Alternative Names that the backend certificate must match. When specified, the certificate must have at least one matching SAN. This field enables separation between SNI (hostname) and certificate identity validation.  A maximum of 5 SANs are allowed.  
+- [SubjectAltNames][subjectAltNames] - Specifies one or more Subject Alternative Names that the backend certificate must match. When specified, the certificate must have at least one matching SAN. This field enables separation between SNI (hostname) and certificate identity validation.  A maximum of 5 SANs are allowed.
 - [CACertificateRefs][caCertificateRefs] - Defines one or more references to objects that contain PEM-encoded TLS certificates,
 which are used to establish a TLS handshake between the Gateway and backend Pod.  Either CACertificateRefs or
 WellKnownCACertificates may be specified, but not both.
 - [WellKnownCACertificates][wellKnownCACertificates] - Specifies whether system CA certificates may be used in the TLS
 handshake between the Gateway and backend Pod.  Either CACertificateRefs or WellKnownCACertificates may be specified, but not both.
-- [Options][options] - A map of key/value pairs enabling extended TLS configuration for implementations that choose to provide support.  Check your implementation's documentation for details.  
+- [Options][options] - A map of key/value pairs enabling extended TLS configuration for implementations that choose to provide support.  Check your implementation's documentation for details.
 
 The following chart outlines the object definitions and relationship:
 ```mermaid
@@ -59,7 +59,7 @@ flowchart LR
     backendTLSPolicy[["<b>backendTLSPolicy</b> <hr><align=left>BackendTLSPolicySpec: spec<br>PolicyStatus: status</align>"]]
     spec[["<b>spec</b><hr>PolicyTargetReferenceWithSectionName: targetRefs <br> BackendTLSPolicyValidation: tls"]]
     status[["<b>status</b><hr>[ ]PolicyAncestorStatus: ancestors"]]
-    validation[["<b>tls</b><hr>LocalObjectReference: caCertificateRefs<br>wellKnownCACertificatesType: wellKnownCACertificates<br>PreciseHostname: hostname<br>[]SubjectAltName: subjectAltNames"]]  
+    validation[["<b>tls</b><hr>LocalObjectReference: caCertificateRefs<br>wellKnownCACertificatesType: wellKnownCACertificates<br>PreciseHostname: hostname<br>[]SubjectAltName: subjectAltNames"]]
     ancestorStatus[["<b>ancestors</b><hr>AncestorRef: parentReference<br>GatewayController: controllerName<br>[]Condition: conditions"]]
     targetRefs[[<b>targetRefs</b><hr>]]
     service["<b>service</>"]
@@ -119,11 +119,11 @@ Also note:
 
 
     This field was added to BackendTLSPolicy in `v1.2.0`
-The subjectAltNames field enables basic mutual TLS configuration between Gateways and backends, as well as the optional use of SPIFFE. When subjectAltNames is specified, the certificate served by the backend must have at least one Subject Alternative Name matching one of the specified values. This is particularly useful for SPIFFE implementations where URI-based SANs may not be valid SNIs.  
-Subject Alternative Names may contain one of either a Hostname or URI field, and must contain a Type specifying whether Hostname or URI is chosen.  
+The subjectAltNames field enables basic mutual TLS configuration between Gateways and backends, as well as the optional use of SPIFFE. When subjectAltNames is specified, the certificate served by the backend must have at least one Subject Alternative Name matching one of the specified values. This is particularly useful for SPIFFE implementations where URI-based SANs may not be valid SNIs.
+Subject Alternative Names may contain one of either a Hostname or URI field, and must contain a Type specifying whether Hostname or URI is chosen.
 
 
-    - IP addresses and wildcard hostnames are not allowed. (see the description for Hostname above for more details). 
+    - IP addresses and wildcard hostnames are not allowed. (see the description for Hostname above for more details).
     - Hostname: DNS name format
     - URI: URI format (e.g., SPIFFE ID)
 
@@ -131,13 +131,13 @@ Subject Alternative Names may contain one of either a Hostname or URI field, and
 
 
     This field was added to BackendTLSPolicy in `v1.2.0`
-The options field allows specification of implementation-specific TLS configurations. This can include:  
+The options field allows specification of implementation-specific TLS configurations. This can include:
 
-- Vendor-specific mutual TLS automation configuration  
+- Vendor-specific mutual TLS automation configuration
 - Minimum supported TLS version restrictions
 - Supported cipher suite configurations
 
-Check your implementation documentation for details.  
+Check your implementation documentation for details.
 
 ###
 #### Certificates

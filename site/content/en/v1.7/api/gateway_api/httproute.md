@@ -231,10 +231,10 @@ are specified that would result in a response being sent, a 404 error code
 is returned.
 
 The following example forwards HTTP requests for path prefix `/bar` to service
-"my-service1" on port `8080`, and HTTP requests fulfilling _all_ four of the 
+"my-service1" on port `8080`, and HTTP requests fulfilling _all_ four of the
 following criteria
 
-- header `magic: foo` 
+- header `magic: foo`
 - query param `great: example`
 - path prefix `/some/thing`
 - method `GET`
