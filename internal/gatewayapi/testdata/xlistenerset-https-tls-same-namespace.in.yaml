@@ -2,18 +2,18 @@ namespaces:
 - apiVersion: v1
   kind: Namespace
   metadata:
-    name: gateway-xls
-    labels:
-      allow-xls: "true"
+    name: gateway
 - apiVersion: v1
   kind: Namespace
   metadata:
-    name: secret
+    name: xls
+    labels:
+      allow-xls: "true"
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
   metadata:
-    namespace: gateway-xls
+    namespace: gateway
     name: composite-gateway
   spec:
     gatewayClassName: envoy-gateway-class
@@ -34,94 +34,48 @@ xListenerSets:
 - apiVersion: gateway.networking.x-k8s.io/v1alpha1
   kind: XListenerSet
   metadata:
-    namespace: gateway-xls
-    name: tls-xls
+    namespace: xls
+    name: https-xls
   spec:
     parentRef:
       name: composite-gateway
+      namespace: gateway
     listeners:
-    - name: extra-tls-passthrough
-      protocol: TLS
+    - name: extra-https-same-ns
+      protocol: HTTPS
       port: 8443
-      tls:
-        mode: Passthrough
-      allowedRoutes:
-        kinds:
-        - kind: TLSRoute
-          group: gateway.networking.k8s.io
-        namespaces:
-          from: All
-    - name: extra-tls-terminate
-      protocol: TLS
-      port: 9443
       tls:
         mode: Terminate
         certificateRefs:
         - group: ""
           kind: Secret
           name: tls-secret-1
-          namespace: secret
+          namespace: xls
       allowedRoutes:
-        kinds:
-        - kind: TLSRoute
-          group: gateway.networking.k8s.io
         namespaces:
           from: All
-tlsRoutes:
-- apiVersion: gateway.networking.k8s.io/v1alpha2
-  kind: TLSRoute
+httpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
   metadata:
     namespace: default
-    name: tls-app-passthrough
+    name: route-extra-https
   spec:
     parentRefs:
     - group: gateway.networking.x-k8s.io
       kind: XListenerSet
-      namespace: gateway-xls
-      name: tls-xls
-      sectionName: extra-tls-passthrough
+      namespace: xls
+      name: https-xls
+      sectionName: extra-https-same-ns
     rules:
     - backendRefs:
       - name: service-1
         port: 8080
-        namespace: default
-- apiVersion: gateway.networking.k8s.io/v1alpha2
-  kind: TLSRoute
-  metadata:
-    namespace: default
-    name: tls-app-terminate
-  spec:
-    parentRefs:
-    - group: gateway.networking.x-k8s.io
-      kind: XListenerSet
-      namespace: gateway-xls
-      name: tls-xls
-      sectionName: extra-tls-terminate
-    rules:
-    - backendRefs:
-      - name: service-1
-        port: 8080
-        namespace: default
-referenceGrants:
-- apiVersion: gateway.networking.k8s.io/v1beta1
-  kind: ReferenceGrant
-  metadata:
-    name: rg
-    namespace: secret
-  spec:
-    from:
-    - group: gateway.networking.x-k8s.io
-      kind: XListenerSet
-      namespace: gateway-xls
-    to:
-    - group: ""
-      kind: Secret
-      name: tls-secret-1
 secrets:
 - apiVersion: v1
   kind: Secret
   metadata:
-    namespace: secret
+    namespace: xls
     name: tls-secret-1
   type: kubernetes.io/tls
   data:
