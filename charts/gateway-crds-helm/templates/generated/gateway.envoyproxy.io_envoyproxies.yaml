@@ -74,6 +74,8 @@ spec:
                     description: |-
                       Ciphers specifies the set of cipher suites supported when
                       negotiating TLS 1.0 - 1.2. This setting has no effect for TLS 1.3.
+                      For the list of supported ciphers, please refer to the Envoy documentation:
+                      https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/transport_sockets/tls/v3/common.proto#extensions-transport-sockets-tls-v3-tlsparameters
                       In non-FIPS Envoy Proxy builds the default cipher list is:
                       - [ECDHE-ECDSA-AES128-GCM-SHA256|ECDHE-ECDSA-CHACHA20-POLY1305]
                       - [ECDHE-RSA-AES128-GCM-SHA256|ECDHE-RSA-CHACHA20-POLY1305]
