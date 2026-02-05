@@ -10,6 +10,7 @@ security updates: |
 new features: |
 
 bug fixes: |
+  Fixed validation of XListenerSet certificateRefs
 
 # Enhancements that improve performance.
 performance improvements: |
