@@ -29,7 +29,7 @@ ReferenceGrant, a cross namespace reference is invalid.
 It is recommended that `ReferenceGrants` are used with caution, and that validations
 and limits are applied by cluster admins to guarantee the proper usage of this resource.
 
-Please refer to [Security Considerations](https://gateway-api.sigs.k8s.io/concepts/security-considerations#limiting-cross-namespace-references)
+Please refer to [Security Considerations](https://gateway-api.sigs.k8s.io/concepts/security/#limiting-cross-namespace-references)
 for more details.
 
 ## Structure
