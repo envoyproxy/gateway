@@ -137,6 +137,14 @@ func (l *ListenerContext) IncrementAttachedRoutes() {
 	}
 }
 
+func (l *ListenerContext) DecrementAttachedRoutes() {
+	if l.isFromXListenerSet() {
+		l.xListenerSet.Status.Listeners[l.xListenerSetStatusIdx].AttachedRoutes--
+	} else {
+		l.gateway.Status.Listeners[l.listenerStatusIdx].AttachedRoutes--
+	}
+}
+
 func (l *ListenerContext) AttachedRoutes() int32 {
 	if l.isFromXListenerSet() {
 		return l.xListenerSet.Status.Listeners[l.xListenerSetStatusIdx].AttachedRoutes
@@ -155,7 +163,8 @@ func (l *ListenerContext) AllowsKind(kind gwapiv1.RouteGroupKind) bool {
 	}
 
 	for _, allowed := range supportedKinds {
-		if GroupDerefOr(allowed.Group, "") == GroupDerefOr(kind.Group, "") &&
+		// RouteGroupKind default Group is "gateway.networking.k8s.io"
+		if GroupDerefOr(allowed.Group, "gateway.networking.k8s.io") == GroupDerefOr(kind.Group, "") &&
 			allowed.Kind == kind.Kind {
 			return true
 		}
