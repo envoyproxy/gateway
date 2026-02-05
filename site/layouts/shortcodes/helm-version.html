@@ -23,3 +23,9 @@
 {{- with (strings.HasPrefix $pagePrefix "docs") -}}
 {{- "v1.6.3" -}}
 {{- end -}}
+{{- with (strings.HasPrefix $pagePrefix "v1.7") -}}
+{{- "v1.7.0" -}}
+{{- end -}}
+{{- with (strings.HasPrefix $pagePrefix "docs") -}}
+{{- "v1.7.0" -}}
+{{- end -}}
