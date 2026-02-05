@@ -41,9 +41,9 @@ _Appears in:_
 
 | Value | Description |
 | ----- | ----------- |
-| `http/1.0` | HTTPProtocolVersion1_0 specifies that HTTP/1.0 should be negotiable with ALPN<br /> |
-| `http/1.1` | HTTPProtocolVersion1_1 specifies that HTTP/1.1 should be negotiable with ALPN<br /> |
-| `h2` | HTTPProtocolVersion2 specifies that HTTP/2 should be negotiable with ALPN<br /> |
+| `http/1.0` | HTTPProtocolVersion1_0 specifies that HTTP/1.0 should be negotiable with ALPN<br /> | 
+| `http/1.1` | HTTPProtocolVersion1_1 specifies that HTTP/1.1 should be negotiable with ALPN<br /> | 
+| `h2` | HTTPProtocolVersion2 specifies that HTTP/2 should be negotiable with ALPN<br /> | 
 
 
 #### ALSEnvoyProxyAccessLog
@@ -80,8 +80,8 @@ _Appears in:_
 
 | Value | Description |
 | ----- | ----------- |
-| `HTTP` | ALSEnvoyProxyAccessLogTypeHTTP defines the HTTP access log type and will populate StreamAccessLogsMessage.http_logs.<br /> |
-| `TCP` | ALSEnvoyProxyAccessLogTypeTCP defines the TCP access log type and will populate StreamAccessLogsMessage.tcp_logs.<br /> |
+| `HTTP` | ALSEnvoyProxyAccessLogTypeHTTP defines the HTTP access log type and will populate StreamAccessLogsMessage.http_logs.<br /> | 
+| `TCP` | ALSEnvoyProxyAccessLogTypeTCP defines the TCP access log type and will populate StreamAccessLogsMessage.tcp_logs.<br /> | 
 
 
 #### ALSEnvoyProxyHTTPAccessLogConfig
@@ -168,8 +168,8 @@ _Appears in:_
 
 | Value | Description |
 | ----- | ----------- |
-| `Text` | ActiveHealthCheckPayloadTypeText defines the Text type payload.<br /> |
-| `Binary` | ActiveHealthCheckPayloadTypeBinary defines the Binary type payload.<br /> |
+| `Text` | ActiveHealthCheckPayloadTypeText defines the Text type payload.<br /> | 
+| `Binary` | ActiveHealthCheckPayloadTypeBinary defines the Binary type payload.<br /> | 
 
 
 #### ActiveHealthCheckerType
@@ -183,9 +183,9 @@ _Appears in:_
 
 | Value | Description |
 | ----- | ----------- |
-| `HTTP` | ActiveHealthCheckerTypeHTTP defines the HTTP type of health checking.<br /> |
-| `TCP` | ActiveHealthCheckerTypeTCP defines the TCP type of health checking.<br /> |
-| `GRPC` | ActiveHealthCheckerTypeGRPC defines the GRPC type of health checking.<br /> |
+| `HTTP` | ActiveHealthCheckerTypeHTTP defines the HTTP type of health checking.<br /> | 
+| `TCP` | ActiveHealthCheckerTypeTCP defines the TCP type of health checking.<br /> | 
+| `GRPC` | ActiveHealthCheckerTypeGRPC defines the GRPC type of health checking.<br /> | 
 
 
 #### AppProtocolType
@@ -199,9 +199,9 @@ _Appears in:_
 
 | Value | Description |
 | ----- | ----------- |
-| `gateway.envoyproxy.io/h2c` | AppProtocolTypeH2C defines the HTTP/2 application protocol.<br /> |
-| `gateway.envoyproxy.io/ws` | AppProtocolTypeWS defines the WebSocket over HTTP protocol.<br /> |
-| `gateway.envoyproxy.io/wss` | AppProtocolTypeWSS defines the WebSocket over HTTPS protocol.<br /> |
+| `gateway.envoyproxy.io/h2c` | AppProtocolTypeH2C defines the HTTP/2 application protocol.<br /> | 
+| `gateway.envoyproxy.io/ws` | AppProtocolTypeWS defines the WebSocket over HTTP protocol.<br /> | 
+| `gateway.envoyproxy.io/wss` | AppProtocolTypeWSS defines the WebSocket over HTTPS protocol.<br /> | 
 
 
 #### Authorization
@@ -233,8 +233,8 @@ _Appears in:_
 
 | Value | Description |
 | ----- | ----------- |
-| `Allow` | AuthorizationActionAllow is the action to allow the request.<br /> |
-| `Deny` | AuthorizationActionDeny is the action to deny the request.<br /> |
+| `Allow` | AuthorizationActionAllow is the action to allow the request.<br /> | 
+| `Deny` | AuthorizationActionDeny is the action to deny the request.<br /> | 
 
 
 #### AuthorizationHeaderMatch
@@ -561,8 +561,8 @@ _Appears in:_
 
 | Value | Description |
 | ----- | ----------- |
-| `Endpoints` | BackendTypeEndpoints defines the type of the backend as Endpoints.<br /> |
-| `DynamicResolver` | BackendTypeDynamicResolver defines the type of the backend as DynamicResolver.<br />When a backend is of type DynamicResolver, the Envoy will resolve the upstream<br />ip address and port from the host header of the incoming request. If the ip address<br />is directly set in the host header, the Envoy will use the ip address and port as the<br />upstream address. If the hostname is set in the host header, the Envoy will resolve the<br />ip address and port from the hostname using the DNS resolver.<br /> |
+| `Endpoints` | BackendTypeEndpoints defines the type of the backend as Endpoints.<br /> | 
+| `DynamicResolver` | BackendTypeDynamicResolver defines the type of the backend as DynamicResolver.<br />When a backend is of type DynamicResolver, the Envoy will resolve the upstream<br />ip address and port from the host header of the incoming request. If the ip address<br />is directly set in the host header, the Envoy will use the ip address and port as the<br />upstream address. If the hostname is set in the host header, the Envoy will resolve the<br />ip address and port from the hostname using the DNS resolver.<br /> | 
 
 
 #### BasicAuth
@@ -605,9 +605,9 @@ _Appears in:_
 
 | Value | Description |
 | ----- | ----------- |
-| `Merge` | Merge merges the provided bootstrap with the default one. The provided bootstrap can add or override a value<br />within a map, or add a new value to a list.<br />Please note that the provided bootstrap can't override a value within a list.<br /> |
-| `Replace` | Replace replaces the default bootstrap with the provided one.<br /> |
-| `JSONPatch` | JSONPatch applies the provided JSONPatches to the default bootstrap.<br /> |
+| `Merge` | Merge merges the provided bootstrap with the default one. The provided bootstrap can add or override a value<br />within a map, or add a new value to a list.<br />Please note that the provided bootstrap can't override a value within a list.<br /> | 
+| `Replace` | Replace replaces the default bootstrap with the provided one.<br /> | 
+| `JSONPatch` | JSONPatch applies the provided JSONPatches to the default bootstrap.<br /> | 
 
 
 #### BrotliCompressor
@@ -905,9 +905,9 @@ _Appears in:_
 
 | Value | Description |
 | ----- | ----------- |
-| `Gzip` |  |
-| `Brotli` |  |
-| `Zstd` |  |
+| `Gzip` |  | 
+| `Brotli` |  | 
+| `Zstd` |  | 
 
 
 #### ConnectConfig
@@ -973,11 +973,11 @@ _Appears in:_
 
 | Value | Description |
 | ----- | ----------- |
-| `SourceIP` | SourceIPConsistentHashType hashes based on the source IP address.<br /> |
-| `Header` | HeaderConsistentHashType hashes based on a request header.<br />Deprecated: use HeadersConsistentHashType instead<br /> |
-| `Headers` | HeadersConsistentHashType hashes based on multiple request headers.<br /> |
-| `Cookie` | CookieConsistentHashType hashes based on a cookie.<br /> |
-| `QueryParams` | QueryParamsConsistentHashType hashes based on a multiple query parameter.<br /> |
+| `SourceIP` | SourceIPConsistentHashType hashes based on the source IP address.<br /> | 
+| `Header` | HeaderConsistentHashType hashes based on a request header.<br />Deprecated: use HeadersConsistentHashType instead<br /> | 
+| `Headers` | HeadersConsistentHashType hashes based on multiple request headers.<br /> | 
+| `Cookie` | CookieConsistentHashType hashes based on a cookie.<br /> | 
+| `QueryParams` | QueryParamsConsistentHashType hashes based on a multiple query parameter.<br /> | 
 
 
 #### ContextExtension
@@ -1012,8 +1012,8 @@ _Appears in:_
 
 | Value | Description |
 | ----- | ----------- |
-| `Value` | ContextExtensionValueTypeValue defines the "Value" ContextExtension type.<br /> |
-| `ValueRef` | ContextExtensionValueTypeValueRef defines the "ValueRef" ContextExtension type.<br /> |
+| `Value` | ContextExtensionValueTypeValue defines the "Value" ContextExtension type.<br /> | 
+| `ValueRef` | ContextExtensionValueTypeValueRef defines the "ValueRef" ContextExtension type.<br /> | 
 
 
 #### Cookie
@@ -1045,8 +1045,8 @@ _Appears in:_
 
 | Value | Description |
 | ----- | ----------- |
-| `Exact` | CookieMatchExact matches the exact value of the cookie.<br /> |
-| `RegularExpression` | CookieMatchRegularExpression matches a regular expression against the value of the cookie.<br />The regex string must adhere to the syntax documented in https://github.com/google/re2/wiki/Syntax.<br /> |
+| `Exact` | CookieMatchExact matches the exact value of the cookie.<br /> | 
+| `RegularExpression` | CookieMatchRegularExpression matches a regular expression against the value of the cookie.<br />The regex string must adhere to the syntax documented in https://github.com/google/re2/wiki/Syntax.<br /> | 
 
 
 #### CrlContext
@@ -1177,9 +1177,9 @@ _Appears in:_
 
 | Value | Description |
 | ----- | ----------- |
-| `Literal` | CustomTagTypeLiteral adds hard-coded value to each span.<br /> |
-| `Environment` | CustomTagTypeEnvironment adds value from environment variable to each span.<br /> |
-| `RequestHeader` | CustomTagTypeRequestHeader adds value from request header to each span.<br /> |
+| `Literal` | CustomTagTypeLiteral adds hard-coded value to each span.<br /> | 
+| `Environment` | CustomTagTypeEnvironment adds value from environment variable to each span.<br /> | 
+| `RequestHeader` | CustomTagTypeRequestHeader adds value from request header to each span.<br /> | 
 
 
 #### DNS
@@ -1210,11 +1210,11 @@ _Appears in:_
 
 | Value | Description |
 | ----- | ----------- |
-| `IPv4` | IPv4DNSLookupFamily means the DNS resolver will first perform a lookup for addresses in the IPv4 family.<br /> |
-| `IPv6` | IPv6DNSLookupFamily means the DNS resolver will first perform a lookup for addresses in the IPv6 family.<br /> |
-| `IPv4Preferred` | IPv4PreferredDNSLookupFamily means the DNS resolver will first perform a lookup for addresses in the IPv4 family and fallback<br />to a lookup for addresses in the IPv6 family.<br /> |
-| `IPv6Preferred` | IPv6PreferredDNSLookupFamily means the DNS resolver will first perform a lookup for addresses in the IPv6 family and fallback<br />to a lookup for addresses in the IPv4 family.<br /> |
-| `IPv4AndIPv6` | IPv4AndIPv6DNSLookupFamily mean the DNS resolver will perform a lookup for both IPv4 and IPv6 families, and return all resolved<br />addresses. When this is used, Happy Eyeballs will be enabled for upstream connections.<br /> |
+| `IPv4` | IPv4DNSLookupFamily means the DNS resolver will first perform a lookup for addresses in the IPv4 family.<br /> | 
+| `IPv6` | IPv6DNSLookupFamily means the DNS resolver will first perform a lookup for addresses in the IPv6 family.<br /> | 
+| `IPv4Preferred` | IPv4PreferredDNSLookupFamily means the DNS resolver will first perform a lookup for addresses in the IPv4 family and fallback<br />to a lookup for addresses in the IPv6 family.<br /> | 
+| `IPv6Preferred` | IPv6PreferredDNSLookupFamily means the DNS resolver will first perform a lookup for addresses in the IPv6 family and fallback<br />to a lookup for addresses in the IPv4 family.<br /> | 
+| `IPv4AndIPv6` | IPv4AndIPv6DNSLookupFamily mean the DNS resolver will perform a lookup for both IPv4 and IPv6 families, and return all resolved<br />addresses. When this is used, Happy Eyeballs will be enabled for upstream connections.<br /> | 
 
 
 #### EndpointOverride
@@ -1310,30 +1310,30 @@ _Appears in:_
 
 | Value | Description |
 | ----- | ----------- |
-| `envoy.filters.http.custom_response` | EnvoyFilterCustomResponse defines the Envoy HTTP custom response filter.<br /> |
-| `envoy.filters.http.health_check` | EnvoyFilterHealthCheck defines the Envoy HTTP health check filter.<br /> |
-| `envoy.filters.http.fault` | EnvoyFilterFault defines the Envoy HTTP fault filter.<br /> |
-| `envoy.filters.http.cors` | EnvoyFilterCORS defines the Envoy HTTP CORS filter.<br /> |
-| `envoy.filters.http.header_mutation` | EnvoyFilterHeaderMutation defines the Envoy HTTP header mutation filter<br /> |
-| `envoy.filters.http.ext_authz` | EnvoyFilterExtAuthz defines the Envoy HTTP external authorization filter.<br /> |
-| `envoy.filters.http.api_key_auth` | EnvoyFilterAPIKeyAuth defines the Envoy HTTP api key authentication filter.<br /> |
-| `envoy.filters.http.basic_auth` | EnvoyFilterBasicAuth defines the Envoy HTTP basic authentication filter.<br /> |
-| `envoy.filters.http.oauth2` | EnvoyFilterOAuth2 defines the Envoy HTTP OAuth2 filter.<br /> |
-| `envoy.filters.http.jwt_authn` | EnvoyFilterJWTAuthn defines the Envoy HTTP JWT authentication filter.<br /> |
-| `envoy.filters.http.stateful_session` | EnvoyFilterSessionPersistence defines the Envoy HTTP session persistence filter.<br /> |
-| `envoy.filters.http.buffer` | EnvoyFilterBuffer defines the Envoy HTTP buffer filter<br /> |
-| `envoy.filters.http.lua` | EnvoyFilterLua defines the Envoy HTTP Lua filter.<br /> |
-| `envoy.filters.http.ext_proc` | EnvoyFilterExtProc defines the Envoy HTTP external process filter.<br /> |
-| `envoy.filters.http.wasm` | EnvoyFilterWasm defines the Envoy HTTP WebAssembly filter.<br /> |
-| `envoy.filters.http.rbac` | EnvoyFilterRBAC defines the Envoy RBAC filter.<br /> |
-| `envoy.filters.http.local_ratelimit` | EnvoyFilterLocalRateLimit defines the Envoy HTTP local rate limit filter.<br /> |
-| `envoy.filters.http.ratelimit` | EnvoyFilterRateLimit defines the Envoy HTTP rate limit filter.<br /> |
-| `envoy.filters.http.grpc_web` | EnvoyFilterGRPCWeb defines the Envoy HTTP gRPC-web filter.<br /> |
-| `envoy.filters.http.grpc_stats` | EnvoyFilterGRPCStats defines the Envoy HTTP gRPC stats filter.<br /> |
-| `envoy.filters.http.credential_injector` | EnvoyFilterCredentialInjector defines the Envoy HTTP credential injector filter.<br /> |
-| `envoy.filters.http.compressor` | EnvoyFilterCompressor defines the Envoy HTTP compressor filter.<br /> |
-| `envoy.filters.http.dynamic_forward_proxy` | EnvoyFilterDynamicForwardProxy defines the Envoy HTTP dynamic forward proxy filter.<br /> |
-| `envoy.filters.http.router` | EnvoyFilterRouter defines the Envoy HTTP router filter.<br /> |
+| `envoy.filters.http.custom_response` | EnvoyFilterCustomResponse defines the Envoy HTTP custom response filter.<br /> | 
+| `envoy.filters.http.health_check` | EnvoyFilterHealthCheck defines the Envoy HTTP health check filter.<br /> | 
+| `envoy.filters.http.fault` | EnvoyFilterFault defines the Envoy HTTP fault filter.<br /> | 
+| `envoy.filters.http.cors` | EnvoyFilterCORS defines the Envoy HTTP CORS filter.<br /> | 
+| `envoy.filters.http.header_mutation` | EnvoyFilterHeaderMutation defines the Envoy HTTP header mutation filter<br /> | 
+| `envoy.filters.http.ext_authz` | EnvoyFilterExtAuthz defines the Envoy HTTP external authorization filter.<br /> | 
+| `envoy.filters.http.api_key_auth` | EnvoyFilterAPIKeyAuth defines the Envoy HTTP api key authentication filter.<br /> | 
+| `envoy.filters.http.basic_auth` | EnvoyFilterBasicAuth defines the Envoy HTTP basic authentication filter.<br /> | 
+| `envoy.filters.http.oauth2` | EnvoyFilterOAuth2 defines the Envoy HTTP OAuth2 filter.<br /> | 
+| `envoy.filters.http.jwt_authn` | EnvoyFilterJWTAuthn defines the Envoy HTTP JWT authentication filter.<br /> | 
+| `envoy.filters.http.stateful_session` | EnvoyFilterSessionPersistence defines the Envoy HTTP session persistence filter.<br /> | 
+| `envoy.filters.http.buffer` | EnvoyFilterBuffer defines the Envoy HTTP buffer filter<br /> | 
+| `envoy.filters.http.lua` | EnvoyFilterLua defines the Envoy HTTP Lua filter.<br /> | 
+| `envoy.filters.http.ext_proc` | EnvoyFilterExtProc defines the Envoy HTTP external process filter.<br /> | 
+| `envoy.filters.http.wasm` | EnvoyFilterWasm defines the Envoy HTTP WebAssembly filter.<br /> | 
+| `envoy.filters.http.rbac` | EnvoyFilterRBAC defines the Envoy RBAC filter.<br /> | 
+| `envoy.filters.http.local_ratelimit` | EnvoyFilterLocalRateLimit defines the Envoy HTTP local rate limit filter.<br /> | 
+| `envoy.filters.http.ratelimit` | EnvoyFilterRateLimit defines the Envoy HTTP rate limit filter.<br /> | 
+| `envoy.filters.http.grpc_web` | EnvoyFilterGRPCWeb defines the Envoy HTTP gRPC-web filter.<br /> | 
+| `envoy.filters.http.grpc_stats` | EnvoyFilterGRPCStats defines the Envoy HTTP gRPC stats filter.<br /> | 
+| `envoy.filters.http.credential_injector` | EnvoyFilterCredentialInjector defines the Envoy HTTP credential injector filter.<br /> | 
+| `envoy.filters.http.compressor` | EnvoyFilterCompressor defines the Envoy HTTP compressor filter.<br /> | 
+| `envoy.filters.http.dynamic_forward_proxy` | EnvoyFilterDynamicForwardProxy defines the Envoy HTTP dynamic forward proxy filter.<br /> | 
+| `envoy.filters.http.router` | EnvoyFilterRouter defines the Envoy HTTP router filter.<br /> | 
 
 
 #### EnvoyGateway
@@ -1489,14 +1489,14 @@ _Appears in:_
 
 | Value | Description |
 | ----- | ----------- |
-| `default` | LogComponentGatewayDefault defines the "default"-wide logging component. When specified,<br />all other logging components are ignored.<br /> |
-| `provider` | LogComponentProviderRunner defines the "provider" runner component.<br /> |
-| `gateway-api` | LogComponentGatewayAPIRunner defines the "gateway-api" runner component.<br /> |
-| `xds-translator` | LogComponentXdsTranslatorRunner defines the "xds-translator" runner component.<br /> |
-| `xds-server` | LogComponentXdsServerRunner defines the "xds-server" runner component.<br /> |
-| `xds` | LogComponentXdsRunner defines the "xds" runner component.<br /> |
-| `infrastructure` | LogComponentInfrastructureRunner defines the "infrastructure" runner component.<br /> |
-| `global-ratelimit` | LogComponentGlobalRateLimitRunner defines the "global-ratelimit" runner component.<br /> |
+| `default` | LogComponentGatewayDefault defines the "default"-wide logging component. When specified,<br />all other logging components are ignored.<br /> | 
+| `provider` | LogComponentProviderRunner defines the "provider" runner component.<br /> | 
+| `gateway-api` | LogComponentGatewayAPIRunner defines the "gateway-api" runner component.<br /> | 
+| `xds-translator` | LogComponentXdsTranslatorRunner defines the "xds-translator" runner component.<br /> | 
+| `xds-server` | LogComponentXdsServerRunner defines the "xds-server" runner component.<br /> | 
+| `xds` | LogComponentXdsRunner defines the "xds" runner component.<br /> | 
+| `infrastructure` | LogComponentInfrastructureRunner defines the "infrastructure" runner component.<br /> | 
+| `global-ratelimit` | LogComponentGlobalRateLimitRunner defines the "global-ratelimit" runner component.<br /> | 
 
 
 #### EnvoyGatewayLogEncoder
@@ -1510,8 +1510,8 @@ _Appears in:_
 
 | Value | Description |
 | ----- | ----------- |
-| `Text` | EnvoyGatewayLogEncoderText defines the "Text" log encoder.<br /> |
-| `JSON` | EnvoyGatewayLogEncoderJSON defines the "JSON" log encoder.<br /> |
+| `Text` | EnvoyGatewayLogEncoderText defines the "Text" log encoder.<br /> | 
+| `JSON` | EnvoyGatewayLogEncoderJSON defines the "JSON" log encoder.<br /> | 
 
 
 #### EnvoyGatewayLogging
@@ -1743,7 +1743,7 @@ _Appears in:_
 
 | Value | Description |
 | ----- | ----------- |
-| `JSONPatch` | JSONPatchEnvoyPatchType allows the user to patch the generated xDS resources using JSONPatch semantics.<br />For more details on the semantics, please refer to https://datatracker.ietf.org/doc/html/rfc6902<br /> |
+| `JSONPatch` | JSONPatchEnvoyPatchType allows the user to patch the generated xDS resources using JSONPatch semantics.<br />For more details on the semantics, please refer to https://datatracker.ietf.org/doc/html/rfc6902<br /> | 
 
 
 #### EnvoyProxy
@@ -1844,8 +1844,8 @@ _Appears in:_
 
 | Value | Description |
 | ----- | ----------- |
-| `Kubernetes` | EnvoyProxyProviderTypeKubernetes defines the "Kubernetes" provider.<br /> |
-| `Host` | EnvoyProxyProviderTypeHost defines the "Host" provider.<br /> |
+| `Kubernetes` | EnvoyProxyProviderTypeKubernetes defines the "Kubernetes" provider.<br /> | 
+| `Host` | EnvoyProxyProviderTypeHost defines the "Host" provider.<br /> | 
 
 
 #### EnvoyProxySpec
@@ -1901,11 +1901,11 @@ _Appears in:_
 
 | Value | Description |
 | ----- | ----------- |
-| `type.googleapis.com/envoy.config.listener.v3.Listener` | ListenerEnvoyResourceType defines the Type URL of the Listener resource<br /> |
-| `type.googleapis.com/envoy.config.route.v3.RouteConfiguration` | RouteConfigurationEnvoyResourceType defines the Type URL of the RouteConfiguration resource<br /> |
-| `type.googleapis.com/envoy.config.cluster.v3.Cluster` | ClusterEnvoyResourceType defines the Type URL of the Cluster resource<br /> |
-| `type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment` | ClusterLoadAssignmentEnvoyResourceType defines the Type URL of the ClusterLoadAssignment resource<br /> |
-| `type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.Secret` | SecretEnvoyResourceType defines the Type URL of the Secret resource<br /> |
+| `type.googleapis.com/envoy.config.listener.v3.Listener` | ListenerEnvoyResourceType defines the Type URL of the Listener resource<br /> | 
+| `type.googleapis.com/envoy.config.route.v3.RouteConfiguration` | RouteConfigurationEnvoyResourceType defines the Type URL of the RouteConfiguration resource<br /> | 
+| `type.googleapis.com/envoy.config.cluster.v3.Cluster` | ClusterEnvoyResourceType defines the Type URL of the Cluster resource<br /> | 
+| `type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment` | ClusterLoadAssignmentEnvoyResourceType defines the Type URL of the ClusterLoadAssignment resource<br /> | 
+| `type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.Secret` | SecretEnvoyResourceType defines the Type URL of the Secret resource<br /> | 
 
 
 #### ExtAuth
@@ -1960,10 +1960,10 @@ _Appears in:_
 
 | Value | Description |
 | ----- | ----------- |
-| `Streamed` | StreamedExtProcBodyProcessingMode will stream the body to the server in pieces as they arrive at the proxy.<br /> |
-| `Buffered` | BufferedExtProcBodyProcessingMode will buffer the message body in memory and send the entire body at once. If the body exceeds the configured buffer limit, then the downstream system will receive an error.<br /> |
-| `FullDuplexStreamed` | FullDuplexStreamedExtBodyProcessingMode will send the body in pieces, to be read in a stream. When enabled, trailers are also sent, and failOpen must be false.<br />Full details here: https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/ext_proc/v3/processing_mode.proto.html#enum-extensions-filters-http-ext-proc-v3-processingmode-bodysendmode<br /> |
-| `BufferedPartial` | BufferedPartialExtBodyHeaderProcessingMode will buffer the message body in memory and send the entire body in one chunk. If the body exceeds the configured buffer limit, then the body contents up to the buffer limit will be sent.<br /> |
+| `Streamed` | StreamedExtProcBodyProcessingMode will stream the body to the server in pieces as they arrive at the proxy.<br /> | 
+| `Buffered` | BufferedExtProcBodyProcessingMode will buffer the message body in memory and send the entire body at once. If the body exceeds the configured buffer limit, then the downstream system will receive an error.<br /> | 
+| `FullDuplexStreamed` | FullDuplexStreamedExtBodyProcessingMode will send the body in pieces, to be read in a stream. When enabled, trailers are also sent, and failOpen must be false.<br />Full details here: https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/ext_proc/v3/processing_mode.proto.html#enum-extensions-filters-http-ext-proc-v3-processingmode-bodysendmode<br /> | 
+| `BufferedPartial` | BufferedPartialExtBodyHeaderProcessingMode will buffer the message body in memory and send the entire body in one chunk. If the body exceeds the configured buffer limit, then the body contents up to the buffer limit will be sent.<br /> | 
 
 
 #### ExtProcMetadata
@@ -2291,7 +2291,7 @@ _Appears in:_
 
 | Value | Description |
 | ----- | ----------- |
-| `XListenerSet` | XListenerSet enables the Gateway API XListenerSet resource.<br /> |
+| `XListenerSet` | XListenerSet enables the Gateway API XListenerSet resource.<br /> | 
 
 
 #### GatewayAPISettings
@@ -2568,8 +2568,8 @@ _Appears in:_
 
 | Value | Description |
 | ----- | ----------- |
-| `Header` | HeaderHTTPHostnameModifier indicates that the Host header value would be replaced with the value of the header specified in header.<br />https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto#envoy-v3-api-field-config-route-v3-routeaction-host-rewrite-header<br /> |
-| `Backend` | BackendHTTPHostnameModifier indicates that the Host header value would be replaced by the DNS name of the backend if it exists.<br />https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto#envoy-v3-api-field-config-route-v3-routeaction-auto-host-rewrite<br /> |
+| `Header` | HeaderHTTPHostnameModifier indicates that the Host header value would be replaced with the value of the header specified in header.<br />https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto#envoy-v3-api-field-config-route-v3-routeaction-host-rewrite-header<br /> | 
+| `Backend` | BackendHTTPHostnameModifier indicates that the Host header value would be replaced by the DNS name of the backend if it exists.<br />https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto#envoy-v3-api-field-config-route-v3-routeaction-auto-host-rewrite<br /> | 
 
 
 #### HTTPPathModifier
@@ -2598,7 +2598,7 @@ _Appears in:_
 
 | Value | Description |
 | ----- | ----------- |
-| `ReplaceRegexMatch` | RegexHTTPPathModifier This type of modifier indicates that the portions of the path that match the specified<br /> regex would be substituted with the specified substitution value<br />https://www.envoyproxy.io/docs/envoy/latest/api-v3/type/matcher/v3/regex.proto#type-matcher-v3-regexmatchandsubstitute<br /> |
+| `ReplaceRegexMatch` | RegexHTTPPathModifier This type of modifier indicates that the portions of the path that match the specified<br /> regex would be substituted with the specified substitution value<br />https://www.envoyproxy.io/docs/envoy/latest/api-v3/type/matcher/v3/regex.proto#type-matcher-v3-regexmatchandsubstitute<br /> | 
 
 
 #### HTTPRouteFilter
@@ -2753,9 +2753,9 @@ _Appears in:_
 
 | Value | Description |
 | ----- | ----------- |
-| `Exact` | HeaderMatchExact matches the exact value of the Value field against the value of<br />the specified HTTP Header.<br /> |
-| `RegularExpression` | HeaderMatchRegularExpression matches a regular expression against the value of the<br />specified HTTP Header. The regex string must adhere to the syntax documented in<br />https://github.com/google/re2/wiki/Syntax.<br /> |
-| `Distinct` | HeaderMatchDistinct matches any and all possible unique values encountered in the<br />specified HTTP Header. Note that each unique value will receive its own rate limit<br />bucket.<br /> |
+| `Exact` | HeaderMatchExact matches the exact value of the Value field against the value of<br />the specified HTTP Header.<br /> | 
+| `RegularExpression` | HeaderMatchRegularExpression matches a regular expression against the value of the<br />specified HTTP Header. The regex string must adhere to the syntax documented in<br />https://github.com/google/re2/wiki/Syntax.<br /> | 
+| `Distinct` | HeaderMatchDistinct matches any and all possible unique values encountered in the<br />specified HTTP Header. Note that each unique value will receive its own rate limit<br />bucket.<br /> | 
 
 
 #### HeaderSettings
@@ -2839,9 +2839,9 @@ _Appears in:_
 
 | Value | Description |
 | ----- | ----------- |
-| `IPv4` | IPv4 defines the IPv4 family.<br /> |
-| `IPv6` | IPv6 defines the IPv6 family.<br /> |
-| `DualStack` | DualStack defines the dual-stack family.<br />When set to DualStack, Envoy proxy will listen on both IPv4 and IPv6 addresses<br />for incoming client traffic, enabling support for both IP protocol versions.<br /> |
+| `IPv4` | IPv4 defines the IPv4 family.<br /> | 
+| `IPv6` | IPv6 defines the IPv6 family.<br /> | 
+| `DualStack` | DualStack defines the dual-stack family.<br />When set to DualStack, Envoy proxy will listen on both IPv4 and IPv6 addresses<br />for incoming client traffic, enabling support for both IP protocol versions.<br /> | 
 
 
 #### ImagePullPolicy
@@ -2855,8 +2855,8 @@ _Appears in:_
 
 | Value | Description |
 | ----- | ----------- |
-| `IfNotPresent` | ImagePullPolicyIfNotPresent will only pull the image if it does not already exist in the EG cache.<br /> |
-| `Always` | ImagePullPolicyAlways will pull the image when the EnvoyExtension resource version changes.<br />Note: EG does not update the Wasm module every time an Envoy proxy requests the Wasm module.<br /> |
+| `IfNotPresent` | ImagePullPolicyIfNotPresent will only pull the image if it does not already exist in the EG cache.<br /> | 
+| `Always` | ImagePullPolicyAlways will pull the image when the EnvoyExtension resource version changes.<br />Note: EG does not update the Wasm module every time an Envoy proxy requests the Wasm module.<br /> | 
 
 
 #### ImageWasmCodeSource
@@ -2886,7 +2886,7 @@ _Appears in:_
 
 | Value | Description |
 | ----- | ----------- |
-| `Host` | InfrastructureProviderTypeHost defines the "Host" provider.<br /> |
+| `Host` | InfrastructureProviderTypeHost defines the "Host" provider.<br /> | 
 
 
 #### InjectedCredential
@@ -2914,8 +2914,8 @@ _Appears in:_
 
 | Value | Description |
 | ----- | ----------- |
-| `TerminateConnection` |  |
-| `TerminateStream` |  |
+| `TerminateConnection` |  | 
+| `TerminateStream` |  | 
 
 
 #### JSONPatchOperation
@@ -2991,8 +2991,8 @@ _Appears in:_
 
 | Value | Description |
 | ----- | ----------- |
-| `String` |  |
-| `StringArray` |  |
+| `String` |  | 
+| `StringArray` |  | 
 
 
 #### JWTExtractor
@@ -3171,8 +3171,8 @@ _Appears in:_
 
 | Value | Description |
 | ----- | ----------- |
-| `ControllerNamespace` | KubernetesDeployModeTypeControllerNamespace indicates that the controller namespace is used for the infra proxy deployments.<br /> |
-| `GatewayNamespace` | KubernetesDeployModeTypeGatewayNamespace indicates that the gateway namespace is used for the infra proxy deployments.<br /> |
+| `ControllerNamespace` | KubernetesDeployModeTypeControllerNamespace indicates that the controller namespace is used for the infra proxy deployments.<br /> | 
+| `GatewayNamespace` | KubernetesDeployModeTypeGatewayNamespace indicates that the gateway namespace is used for the infra proxy deployments.<br /> | 
 
 
 #### KubernetesDeploymentSpec
@@ -3421,10 +3421,10 @@ _Appears in:_
 
 | Value | Description |
 | ----- | ----------- |
-| `ConsistentHash` | ConsistentHashLoadBalancerType load balancer policy.<br /> |
-| `LeastRequest` | LeastRequestLoadBalancerType load balancer policy.<br /> |
-| `Random` | RandomLoadBalancerType load balancer policy.<br /> |
-| `RoundRobin` | RoundRobinLoadBalancerType load balancer policy.<br /> |
+| `ConsistentHash` | ConsistentHashLoadBalancerType load balancer policy.<br /> | 
+| `LeastRequest` | LeastRequestLoadBalancerType load balancer policy.<br /> | 
+| `Random` | RandomLoadBalancerType load balancer policy.<br /> | 
+| `RoundRobin` | RoundRobinLoadBalancerType load balancer policy.<br /> | 
 
 
 #### LocalJWKS
@@ -3454,8 +3454,8 @@ _Appears in:_
 
 | Value | Description |
 | ----- | ----------- |
-| `Inline` | LocalJWKSTypeInline defines the "Inline" LocalJWKS type.<br /> |
-| `ValueRef` | LocalJWKSTypeValueRef defines the "ValueRef" LocalJWKS type.<br /> |
+| `Inline` | LocalJWKSTypeInline defines the "Inline" LocalJWKS type.<br /> | 
+| `ValueRef` | LocalJWKSTypeValueRef defines the "ValueRef" LocalJWKS type.<br /> | 
 
 
 #### LocalObjectKeyReference
@@ -3501,11 +3501,11 @@ _Appears in:_
 
 | Value | Description |
 | ----- | ----------- |
-| `trace` | LogLevelTrace defines the "Trace" logging level.<br /> |
-| `debug` | LogLevelDebug defines the "debug" logging level.<br /> |
-| `info` | LogLevelInfo defines the "Info" logging level.<br /> |
-| `warn` | LogLevelWarn defines the "Warn" logging level.<br /> |
-| `error` | LogLevelError defines the "Error" logging level.<br /> |
+| `trace` | LogLevelTrace defines the "Trace" logging level.<br /> | 
+| `debug` | LogLevelDebug defines the "debug" logging level.<br /> | 
+| `info` | LogLevelInfo defines the "Info" logging level.<br /> | 
+| `warn` | LogLevelWarn defines the "Warn" logging level.<br /> | 
+| `error` | LogLevelError defines the "Error" logging level.<br /> | 
 
 
 #### Lua
@@ -3536,9 +3536,9 @@ _Appears in:_
 
 | Value | Description |
 | ----- | ----------- |
-| `Strict` | LuaValidationStrict is the default level and checks for issues during script execution.<br />Recommended if your scripts only use the standard Envoy Lua stream handle API and no external libraries.<br />For supported APIs, see: https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/lua_filter#stream-handle-api<br />INFO: This validation mode executes Lua scripts from EnvoyExtensionPolicy (EEP) resources in the gateway controller.<br />Since the Gateway controller watches EEPs across all namespaces (or namespaces matching the configured selector),<br />unprivileged users can create EEPs in their namespaces and cause arbitrary Lua code to execute in the Gateway controller process.<br />Security measures are in place to prevent unsafe Lua code from accessing critical system resources on the controller<br />and fail validation, preventing the unsafe code from flowing to the data plane proxy.<br /> |
-| `InsecureSyntax` | LuaValidationInsecureSyntax checks for Lua syntax errors only.<br />Useful if your scripts use external libraries other than the standard Envoy Lua stream handle API.<br />WARNING: This mode does NOT offer any runtime validations, so no security measures are applied to validate Lua code safety.<br />Not recommended unless you completely trust all EnvoyExtensionPolicy resources.<br /> |
-| `Disabled` | LuaValidationDisabled disables all Lua script validations.<br />WARNING: This mode does NOT offer any runtime or syntax validations, so no security measures are applied to validate Lua code safety.<br />Not recommended unless you completely trust all EnvoyExtensionPolicy resources.<br /> |
+| `Strict` | LuaValidationStrict is the default level and checks for issues during script execution.<br />Recommended if your scripts only use the standard Envoy Lua stream handle API and no external libraries.<br />For supported APIs, see: https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/lua_filter#stream-handle-api<br />INFO: This validation mode executes Lua scripts from EnvoyExtensionPolicy (EEP) resources in the gateway controller.<br />Since the Gateway controller watches EEPs across all namespaces (or namespaces matching the configured selector),<br />unprivileged users can create EEPs in their namespaces and cause arbitrary Lua code to execute in the Gateway controller process.<br />Security measures are in place to prevent unsafe Lua code from accessing critical system resources on the controller<br />and fail validation, preventing the unsafe code from flowing to the data plane proxy.<br /> | 
+| `InsecureSyntax` | LuaValidationInsecureSyntax checks for Lua syntax errors only.<br />Useful if your scripts use external libraries other than the standard Envoy Lua stream handle API.<br />WARNING: This mode does NOT offer any runtime validations, so no security measures are applied to validate Lua code safety.<br />Not recommended unless you completely trust all EnvoyExtensionPolicy resources.<br /> | 
+| `Disabled` | LuaValidationDisabled disables all Lua script validations.<br />WARNING: This mode does NOT offer any runtime or syntax validations, so no security measures are applied to validate Lua code safety.<br />Not recommended unless you completely trust all EnvoyExtensionPolicy resources.<br /> | 
 
 
 #### LuaValueType
@@ -3552,8 +3552,8 @@ _Appears in:_
 
 | Value | Description |
 | ----- | ----------- |
-| `Inline` | LuaValueTypeInline defines the "Inline" Lua type.<br /> |
-| `ValueRef` | LuaValueTypeValueRef defines the "ValueRef" Lua type.<br /> |
+| `Inline` | LuaValueTypeInline defines the "Inline" Lua type.<br /> | 
+| `ValueRef` | LuaValueTypeValueRef defines the "ValueRef" Lua type.<br /> | 
 
 
 #### MergeType
@@ -3568,8 +3568,8 @@ _Appears in:_
 
 | Value | Description |
 | ----- | ----------- |
-| `StrategicMerge` | StrategicMerge indicates a strategic merge patch type<br /> |
-| `JSONMerge` | JSONMerge indicates a JSON merge patch type<br /> |
+| `StrategicMerge` | StrategicMerge indicates a strategic merge patch type<br /> | 
+| `JSONMerge` | JSONMerge indicates a JSON merge patch type<br /> | 
 
 
 #### MethodMatch
@@ -3599,7 +3599,7 @@ _Appears in:_
 
 | Value | Description |
 | ----- | ----------- |
-| `OpenTelemetry` |  |
+| `OpenTelemetry` |  | 
 
 
 #### OIDC
@@ -3844,10 +3844,10 @@ _Appears in:_
 
 | Value | Description |
 | ----- | ----------- |
-| `KeepUnchanged` | KeepUnchangedAction keeps escaped slashes as they arrive without changes<br /> |
-| `RejectRequest` | RejectRequestAction rejects client requests containing escaped slashes<br />with a 400 status. gRPC requests will be rejected with the INTERNAL (13)<br />error code.<br />The "httpN.downstream_rq_failed_path_normalization" counter is incremented<br />for each rejected request.<br /> |
-| `UnescapeAndRedirect` | UnescapeAndRedirect unescapes %2F and %5C sequences and redirects to the new path<br />if these sequences were present.<br />Redirect occurs after path normalization and merge slashes transformations if<br />they were configured. gRPC requests will be rejected with the INTERNAL (13)<br />error code.<br />This option minimizes possibility of path confusion exploits by forcing request<br />with unescaped slashes to traverse all parties: downstream client, intermediate<br />proxies, Envoy and upstream server.<br />The “httpN.downstream_rq_redirected_with_normalized_path” counter is incremented<br />for each redirected request.<br /> |
-| `UnescapeAndForward` | UnescapeAndForward unescapes %2F and %5C sequences and forwards the request.<br />Note: this option should not be enabled if intermediaries perform path based access<br />control as it may lead to path confusion vulnerabilities.<br /> |
+| `KeepUnchanged` | KeepUnchangedAction keeps escaped slashes as they arrive without changes<br /> | 
+| `RejectRequest` | RejectRequestAction rejects client requests containing escaped slashes<br />with a 400 status. gRPC requests will be rejected with the INTERNAL (13)<br />error code.<br />The "httpN.downstream_rq_failed_path_normalization" counter is incremented<br />for each rejected request.<br /> | 
+| `UnescapeAndRedirect` | UnescapeAndRedirect unescapes %2F and %5C sequences and redirects to the new path<br />if these sequences were present.<br />Redirect occurs after path normalization and merge slashes transformations if<br />they were configured. gRPC requests will be rejected with the INTERNAL (13)<br />error code.<br />This option minimizes possibility of path confusion exploits by forcing request<br />with unescaped slashes to traverse all parties: downstream client, intermediate<br />proxies, Envoy and upstream server.<br />The “httpN.downstream_rq_redirected_with_normalized_path” counter is incremented<br />for each redirected request.<br /> | 
+| `UnescapeAndForward` | UnescapeAndForward unescapes %2F and %5C sequences and forwards the request.<br />Note: this option should not be enabled if intermediaries perform path based access<br />control as it may lead to path confusion vulnerabilities.<br /> | 
 
 
 #### PathMatch
@@ -4022,8 +4022,8 @@ _Appears in:_
 
 | Value | Description |
 | ----- | ----------- |
-| `Kubernetes` | ProviderTypeKubernetes defines the "Kubernetes" provider.<br /> |
-| `Custom` | ProviderTypeCustom defines the "Custom" provider.<br /> |
+| `Kubernetes` | ProviderTypeKubernetes defines the "Kubernetes" provider.<br /> | 
+| `Custom` | ProviderTypeCustom defines the "Custom" provider.<br /> | 
 
 
 #### ProxyAccessLog
@@ -4069,8 +4069,8 @@ _Appears in:_
 
 | Value | Description |
 | ----- | ----------- |
-| `Text` | ProxyAccessLogFormatTypeText defines the text accesslog format.<br /> |
-| `JSON` | ProxyAccessLogFormatTypeJSON defines the JSON accesslog format.<br /> |
+| `Text` | ProxyAccessLogFormatTypeText defines the text accesslog format.<br /> | 
+| `JSON` | ProxyAccessLogFormatTypeJSON defines the JSON accesslog format.<br /> | 
 
 
 #### ProxyAccessLogSetting
@@ -4118,9 +4118,9 @@ _Appears in:_
 
 | Value | Description |
 | ----- | ----------- |
-| `ALS` | ProxyAccessLogSinkTypeALS defines the gRPC Access Log Service (ALS) sink.<br />The service must implement the Envoy gRPC Access Log Service streaming API:<br />https://www.envoyproxy.io/docs/envoy/latest/api-v3/service/accesslog/v3/als.proto<br /> |
-| `File` | ProxyAccessLogSinkTypeFile defines the file accesslog sink.<br /> |
-| `OpenTelemetry` | ProxyAccessLogSinkTypeOpenTelemetry defines the OpenTelemetry accesslog sink.<br />When the provider is Kubernetes, EnvoyGateway always sends `k8s.namespace.name`<br />and `k8s.pod.name` as additional attributes.<br /> |
+| `ALS` | ProxyAccessLogSinkTypeALS defines the gRPC Access Log Service (ALS) sink.<br />The service must implement the Envoy gRPC Access Log Service streaming API:<br />https://www.envoyproxy.io/docs/envoy/latest/api-v3/service/accesslog/v3/als.proto<br /> | 
+| `File` | ProxyAccessLogSinkTypeFile defines the file accesslog sink.<br /> | 
+| `OpenTelemetry` | ProxyAccessLogSinkTypeOpenTelemetry defines the OpenTelemetry accesslog sink.<br />When the provider is Kubernetes, EnvoyGateway always sends `k8s.namespace.name`<br />and `k8s.pod.name` as additional attributes.<br /> | 
 
 
 #### ProxyAccessLogType
@@ -4134,8 +4134,8 @@ _Appears in:_
 
 | Value | Description |
 | ----- | ----------- |
-| `Listener` | ProxyAccessLogTypeListener defines the accesslog for Listeners.<br />https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/listener/v3/listener.proto#envoy-v3-api-field-config-listener-v3-listener-access-log<br /> |
-| `Route` | ProxyAccessLogTypeRoute defines the accesslog for HTTP, GRPC, UDP and TCP Routes.<br />https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/udp/udp_proxy/v3/udp_proxy.proto#envoy-v3-api-field-extensions-filters-udp-udp-proxy-v3-udpproxyconfig-access-log<br />https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/network/tcp_proxy/v3/tcp_proxy.proto#envoy-v3-api-field-extensions-filters-network-tcp-proxy-v3-tcpproxy-access-log<br />https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/network/http_connection_manager/v3/http_connection_manager.proto#envoy-v3-api-field-extensions-filters-network-http-connection-manager-v3-httpconnectionmanager-access-log<br /> |
+| `Listener` | ProxyAccessLogTypeListener defines the accesslog for Listeners.<br />https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/listener/v3/listener.proto#envoy-v3-api-field-config-listener-v3-listener-access-log<br /> | 
+| `Route` | ProxyAccessLogTypeRoute defines the accesslog for HTTP, GRPC, UDP and TCP Routes.<br />https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/udp/udp_proxy/v3/udp_proxy.proto#envoy-v3-api-field-extensions-filters-udp-udp-proxy-v3-udpproxyconfig-access-log<br />https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/network/tcp_proxy/v3/tcp_proxy.proto#envoy-v3-api-field-extensions-filters-network-tcp-proxy-v3-tcpproxy-access-log<br />https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/network/http_connection_manager/v3/http_connection_manager.proto#envoy-v3-api-field-extensions-filters-network-http-connection-manager-v3-httpconnectionmanager-access-log<br /> | 
 
 
 #### ProxyBootstrap
@@ -4165,16 +4165,16 @@ _Appears in:_
 
 | Value | Description |
 | ----- | ----------- |
-| `default` | LogComponentDefault defines the default logging component.<br />See more details: https://www.envoyproxy.io/docs/envoy/latest/operations/cli#cmdoption-l<br /> |
-| `upstream` | LogComponentUpstream defines the "upstream" logging component.<br /> |
-| `http` | LogComponentHTTP defines the "http" logging component.<br /> |
-| `connection` | LogComponentConnection defines the "connection" logging component.<br /> |
-| `admin` | LogComponentAdmin defines the "admin" logging component.<br /> |
-| `client` | LogComponentClient defines the "client" logging component.<br /> |
-| `filter` | LogComponentFilter defines the "filter" logging component.<br /> |
-| `main` | LogComponentMain defines the "main" logging component.<br /> |
-| `router` | LogComponentRouter defines the "router" logging component.<br /> |
-| `runtime` | LogComponentRuntime defines the "runtime" logging component.<br /> |
+| `default` | LogComponentDefault defines the default logging component.<br />See more details: https://www.envoyproxy.io/docs/envoy/latest/operations/cli#cmdoption-l<br /> | 
+| `upstream` | LogComponentUpstream defines the "upstream" logging component.<br /> | 
+| `http` | LogComponentHTTP defines the "http" logging component.<br /> | 
+| `connection` | LogComponentConnection defines the "connection" logging component.<br /> | 
+| `admin` | LogComponentAdmin defines the "admin" logging component.<br /> | 
+| `client` | LogComponentClient defines the "client" logging component.<br /> | 
+| `filter` | LogComponentFilter defines the "filter" logging component.<br /> | 
+| `main` | LogComponentMain defines the "main" logging component.<br /> | 
+| `router` | LogComponentRouter defines the "router" logging component.<br /> | 
+| `runtime` | LogComponentRuntime defines the "runtime" logging component.<br /> | 
 
 
 #### ProxyLogging
@@ -4308,8 +4308,8 @@ _Appears in:_
 
 | Value | Description |
 | ----- | ----------- |
-| `V1` | ProxyProtocolVersionV1 is the PROXY protocol version 1 (human readable format).<br /> |
-| `V2` | ProxyProtocolVersionV2 is the PROXY protocol version 2 (binary format).<br /> |
+| `V1` | ProxyProtocolVersionV1 is the PROXY protocol version 1 (human readable format).<br /> | 
+| `V2` | ProxyProtocolVersionV2 is the PROXY protocol version 2 (binary format).<br /> | 
 
 
 #### ProxyTelemetry
@@ -4392,9 +4392,9 @@ _Appears in:_
 
 | Value | Description |
 | ----- | ----------- |
-| `Exact` | QueryParamMatchExact matches the exact value of the Value field against the value of<br />the specified query parameter.<br /> |
-| `RegularExpression` | QueryParamMatchRegularExpression matches a regular expression against the value of the<br />specified query parameter. The regex string must adhere to the syntax documented in<br />https://github.com/google/re2/wiki/Syntax.<br /> |
-| `Distinct` | QueryParamMatchDistinct matches any and all possible unique values encountered in the<br />specified query parameter. Note that each unique value will receive its own rate limit<br />bucket.<br /> |
+| `Exact` | QueryParamMatchExact matches the exact value of the Value field against the value of<br />the specified query parameter.<br /> | 
+| `RegularExpression` | QueryParamMatchRegularExpression matches a regular expression against the value of the<br />specified query parameter. The regex string must adhere to the syntax documented in<br />https://github.com/google/re2/wiki/Syntax.<br /> | 
+| `Distinct` | QueryParamMatchDistinct matches any and all possible unique values encountered in the<br />specified query parameter. Note that each unique value will receive its own rate limit<br />bucket.<br /> | 
 
 
 #### RateLimit
@@ -4443,8 +4443,8 @@ _Appears in:_
 
 | Value | Description |
 | ----- | ----------- |
-| `Number` | RateLimitCostFromNumber specifies the rate limit cost to be a fixed number.<br /> |
-| `Metadata` | RateLimitCostFromMetadata specifies the rate limit cost to be retrieved from the per-request dynamic metadata.<br /> |
+| `Number` | RateLimitCostFromNumber specifies the rate limit cost to be a fixed number.<br /> | 
+| `Metadata` | RateLimitCostFromMetadata specifies the rate limit cost to be retrieved from the per-request dynamic metadata.<br /> | 
 
 
 #### RateLimitCostMetadata
@@ -4506,7 +4506,7 @@ _Appears in:_
 
 | Value | Description |
 | ----- | ----------- |
-| `Redis` | RedisBackendType uses a redis database for the rate limit service.<br /> |
+| `Redis` | RedisBackendType uses a redis database for the rate limit service.<br /> | 
 
 
 #### RateLimitMetrics
@@ -4676,8 +4676,8 @@ _Appears in:_
 
 | Value | Description |
 | ----- | ----------- |
-| `Global` | GlobalRateLimitType allows the rate limits to be applied across all Envoy<br />proxy instances.<br /> |
-| `Local` | LocalRateLimitType allows the rate limits to be applied on a per Envoy<br />proxy instance basis.<br /> |
+| `Global` | GlobalRateLimitType allows the rate limits to be applied across all Envoy<br />proxy instances.<br /> | 
+| `Local` | LocalRateLimitType allows the rate limits to be applied on a per Envoy<br />proxy instance basis.<br /> | 
 
 
 #### RateLimitUnit
@@ -4692,12 +4692,12 @@ _Appears in:_
 
 | Value | Description |
 | ----- | ----------- |
-| `Second` | RateLimitUnitSecond specifies the rate limit interval to be 1 second.<br /> |
-| `Minute` | RateLimitUnitMinute specifies the rate limit interval to be 1 minute.<br /> |
-| `Hour` | RateLimitUnitHour specifies the rate limit interval to be 1 hour.<br /> |
-| `Day` | RateLimitUnitDay specifies the rate limit interval to be 1 day.<br /> |
-| `Month` | RateLimitUnitMonth specifies the rate limit interval to be 1 month.<br /> |
-| `Year` | RateLimitUnitYear specifies the rate limit interval to be 1 year.<br /> |
+| `Second` | RateLimitUnitSecond specifies the rate limit interval to be 1 second.<br /> | 
+| `Minute` | RateLimitUnitMinute specifies the rate limit interval to be 1 minute.<br /> | 
+| `Hour` | RateLimitUnitHour specifies the rate limit interval to be 1 hour.<br /> | 
+| `Day` | RateLimitUnitDay specifies the rate limit interval to be 1 day.<br /> | 
+| `Month` | RateLimitUnitMonth specifies the rate limit interval to be 1 month.<br /> | 
+| `Year` | RateLimitUnitYear specifies the rate limit interval to be 1 year.<br /> | 
 
 
 #### RateLimitValue
@@ -4810,10 +4810,10 @@ _Appears in:_
 
 | Value | Description |
 | ----- | ----------- |
-| `PreserveOrGenerate` | Preserve `X-Request-ID` if already present or generate if empty<br /> |
-| `Preserve` | Preserve `X-Request-ID` if already present, do not generate when empty<br /> |
-| `Generate` | Always generate `X-Request-ID` header, do not preserve `X-Request-ID`<br />header if it exists. This is the default behavior.<br /> |
-| `Disable` | Do not preserve or generate `X-Request-ID` header<br /> |
+| `PreserveOrGenerate` | Preserve `X-Request-ID` if already present or generate if empty<br /> | 
+| `Preserve` | Preserve `X-Request-ID` if already present, do not generate when empty<br /> | 
+| `Generate` | Always generate `X-Request-ID` header, do not preserve `X-Request-ID`<br />header if it exists. This is the default behavior.<br /> | 
+| `Disable` | Do not preserve or generate `X-Request-ID` header<br /> | 
 
 
 #### RequestIDExtensionAction
@@ -4829,10 +4829,10 @@ _Appears in:_
 
 | Value | Description |
 | ----- | ----------- |
-| `PackAndSample` | PackAndSample enables both behaviors:<br />- Alters the UUID to contain the trace sampling decision<br />- Uses `X-Request-ID` for trace sampling<br /> |
-| `Sample` | Sample uses `X-Request-ID` for trace sampling decisions, but does NOT alter<br />the UUID to pack the trace sampling decision.<br /> |
-| `Pack` | Pack alters the UUID to contain the trace sampling decision, but does NOT<br />use `X-Request-ID` for trace sampling decisions.<br /> |
-| `Disable` | Disable disables both behaviors:<br />- Does not alter the UUID<br />- Does not use `X-Request-ID` for trace sampling<br /> |
+| `PackAndSample` | PackAndSample enables both behaviors:<br />- Alters the UUID to contain the trace sampling decision<br />- Uses `X-Request-ID` for trace sampling<br /> | 
+| `Sample` | Sample uses `X-Request-ID` for trace sampling decisions, but does NOT alter<br />the UUID to pack the trace sampling decision.<br /> | 
+| `Pack` | Pack alters the UUID to contain the trace sampling decision, but does NOT<br />use `X-Request-ID` for trace sampling decisions.<br /> | 
+| `Disable` | Disable disables both behaviors:<br />- Does not alter the UUID<br />- Does not use `X-Request-ID` for trace sampling<br /> | 
 
 
 #### RequestIDSettings
@@ -4860,7 +4860,7 @@ _Appears in:_
 
 | Value | Description |
 | ----- | ----------- |
-| `File` | ResourceProviderTypeFile defines the "File" provider.<br /> |
+| `File` | ResourceProviderTypeFile defines the "File" provider.<br /> | 
 
 
 #### ResponseOverride
@@ -4890,8 +4890,8 @@ _Appears in:_
 
 | Value | Description |
 | ----- | ----------- |
-| `Inline` | ResponseValueTypeInline defines the "Inline" response body type.<br /> |
-| `ValueRef` | ResponseValueTypeValueRef defines the "ValueRef" response body type.<br /> |
+| `Inline` | ResponseValueTypeInline defines the "Inline" response body type.<br /> | 
+| `ValueRef` | ResponseValueTypeValueRef defines the "ValueRef" response body type.<br /> | 
 
 
 #### Retry
@@ -4964,8 +4964,8 @@ _Appears in:_
 
 | Value | Description |
 | ----- | ----------- |
-| `Service` | ServiceRoutingType is the RoutingType for Service Cluster IP routing.<br /> |
-| `Endpoint` | EndpointRoutingType is the RoutingType for Endpoint routing.<br /> |
+| `Service` | ServiceRoutingType is the RoutingType for Service Cluster IP routing.<br /> | 
+| `Endpoint` | EndpointRoutingType is the RoutingType for Endpoint routing.<br /> | 
 
 
 #### RuntimeFlag
@@ -4980,7 +4980,7 @@ _Appears in:_
 
 | Value | Description |
 | ----- | ----------- |
-| `XDSNameSchemeV2` | XDSNameSchemeV2 indicates that the xds name scheme v2 is used.<br />* The listener name will be generated using the protocol and port of the listener.<br /> |
+| `XDSNameSchemeV2` | XDSNameSchemeV2 indicates that the xds name scheme v2 is used.<br />* The listener name will be generated using the protocol and port of the listener.<br /> | 
 
 
 #### RuntimeFlags
@@ -5015,8 +5015,8 @@ _Appears in:_
 
 | Value | Description |
 | ----- | ----------- |
-| `Preserve` | SchemeHeaderTransformPreserve preserves the :scheme from the original client request.<br />This is the default behavior.<br /> |
-| `MatchBackend` | SchemeHeaderTransformMatchBackend sets the :scheme to match the backend transport protocol.<br />If the backend uses TLS, the scheme is "https", otherwise "http".<br /> |
+| `Preserve` | SchemeHeaderTransformPreserve preserves the :scheme from the original client request.<br />This is the default behavior.<br /> | 
+| `MatchBackend` | SchemeHeaderTransformMatchBackend sets the :scheme to match the backend transport protocol.<br />If the backend uses TLS, the scheme is "https", otherwise "http".<br /> | 
 
 
 #### SecretTranslationConfig
@@ -5093,8 +5093,8 @@ _Appears in:_
 
 | Value | Description |
 | ----- | ----------- |
-| `Cluster` | ServiceExternalTrafficPolicyCluster routes traffic to all endpoints.<br /> |
-| `Local` | ServiceExternalTrafficPolicyLocal preserves the source IP of the traffic by<br />routing only to endpoints on the same node as the traffic was received on<br />(dropping the traffic if there are no local endpoints).<br /> |
+| `Cluster` | ServiceExternalTrafficPolicyCluster routes traffic to all endpoints.<br /> | 
+| `Local` | ServiceExternalTrafficPolicyLocal preserves the source IP of the traffic by<br />routing only to endpoints on the same node as the traffic was received on<br />(dropping the traffic if there are no local endpoints).<br /> | 
 
 
 #### ServiceType
@@ -5108,9 +5108,9 @@ _Appears in:_
 
 | Value | Description |
 | ----- | ----------- |
-| `ClusterIP` | ServiceTypeClusterIP means a service will only be accessible inside the<br />cluster, via the cluster IP.<br /> |
-| `LoadBalancer` | ServiceTypeLoadBalancer means a service will be exposed via an<br />external load balancer (if the cloud provider supports it).<br /> |
-| `NodePort` | ServiceTypeNodePort means a service will be exposed on each Kubernetes Node<br />at a static Port, common across all Nodes.<br /> |
+| `ClusterIP` | ServiceTypeClusterIP means a service will only be accessible inside the<br />cluster, via the cluster IP.<br /> | 
+| `LoadBalancer` | ServiceTypeLoadBalancer means a service will be exposed via an<br />external load balancer (if the cloud provider supports it).<br /> | 
+| `NodePort` | ServiceTypeNodePort means a service will be exposed on each Kubernetes Node<br />at a static Port, common across all Nodes.<br /> | 
 
 
 #### Session
@@ -5211,8 +5211,8 @@ _Appears in:_
 
 | Value | Description |
 | ----- | ----------- |
-| `Exact` | SourceMatchExact All IP Addresses within the specified Source IP CIDR are treated as a single client selector<br />and share the same rate limit bucket.<br /> |
-| `Distinct` | SourceMatchDistinct Each IP Address within the specified Source IP CIDR is treated as a distinct client selector<br />and uses a separate rate limit bucket/counter.<br /> |
+| `Exact` | SourceMatchExact All IP Addresses within the specified Source IP CIDR are treated as a single client selector<br />and share the same rate limit bucket.<br /> | 
+| `Distinct` | SourceMatchDistinct Each IP Address within the specified Source IP CIDR is treated as a distinct client selector<br />and uses a separate rate limit bucket/counter.<br /> | 
 
 
 #### StatefulTLSSessionResumption
@@ -5288,8 +5288,8 @@ _Appears in:_
 
 | Value | Description |
 | ----- | ----------- |
-| `Value` | StatusCodeValueTypeValue defines the "Value" status code match type.<br /> |
-| `Range` | StatusCodeValueTypeRange defines the "Range" status code match type.<br /> |
+| `Value` | StatusCodeValueTypeValue defines the "Value" status code match type.<br /> | 
+| `Range` | StatusCodeValueTypeRange defines the "Range" status code match type.<br /> | 
 
 
 #### StringMatch
@@ -5327,10 +5327,10 @@ _Appears in:_
 
 | Value | Description |
 | ----- | ----------- |
-| `Exact` | StringMatchExact :the input string must match exactly the match value.<br /> |
-| `Prefix` | StringMatchPrefix :the input string must start with the match value.<br /> |
-| `Suffix` | StringMatchSuffix :the input string must end with the match value.<br /> |
-| `RegularExpression` | StringMatchRegularExpression :The input string must match the regular expression<br />specified in the match value.<br />The regex string must adhere to the syntax documented in<br />https://github.com/google/re2/wiki/Syntax.<br /> |
+| `Exact` | StringMatchExact :the input string must match exactly the match value.<br /> | 
+| `Prefix` | StringMatchPrefix :the input string must start with the match value.<br /> | 
+| `Suffix` | StringMatchSuffix :the input string must end with the match value.<br /> | 
+| `RegularExpression` | StringMatchRegularExpression :The input string must match the regular expression<br />specified in the match value.<br />The regex string must adhere to the syntax documented in<br />https://github.com/google/re2/wiki/Syntax.<br /> | 
 
 
 #### SubjectAltNames
@@ -5445,11 +5445,11 @@ _Appears in:_
 
 | Value | Description |
 | ----- | ----------- |
-| `Auto` | TLSAuto allows Envoy to choose the optimal TLS Version<br /> |
-| `1.0` | TLS1.0 specifies TLS version 1.0<br /> |
-| `1.1` | TLS1.1 specifies TLS version 1.1<br /> |
-| `1.2` | TLSv1.2 specifies TLS version 1.2<br /> |
-| `1.3` | TLSv1.3 specifies TLS version 1.3<br /> |
+| `Auto` | TLSAuto allows Envoy to choose the optimal TLS Version<br /> | 
+| `1.0` | TLS1.0 specifies TLS version 1.0<br /> | 
+| `1.1` | TLS1.1 specifies TLS version 1.1<br /> | 
+| `1.2` | TLSv1.2 specifies TLS version 1.2<br /> | 
+| `1.3` | TLSv1.3 specifies TLS version 1.3<br /> | 
 
 
 #### TargetSelector
@@ -5540,10 +5540,10 @@ _Appears in:_
 
 | Value | Description |
 | ----- | ----------- |
-| `OpenTelemetry` |  |
-| `OpenTelemetry` |  |
-| `Zipkin` |  |
-| `Datadog` |  |
+| `OpenTelemetry` |  | 
+| `OpenTelemetry` |  | 
+| `Zipkin` |  | 
+| `Datadog` |  | 
 
 
 #### TracingSpanName
@@ -5590,19 +5590,19 @@ _Appears in:_
 
 | Value | Description |
 | ----- | ----------- |
-| `5xx` | The upstream server responds with any 5xx response code, or does not respond at all (disconnect/reset/read timeout).<br />Includes connect-failure and refused-stream.<br /> |
-| `gateway-error` | The response is a gateway error (502,503 or 504).<br /> |
-| `reset` | The upstream server does not respond at all (disconnect/reset/read timeout.)<br /> |
-| `reset-before-request` | Like reset, but only retry if the request headers have not been sent to the upstream server.<br /> |
-| `connect-failure` | Connection failure to the upstream server (connect timeout, etc.). (Included in *5xx*)<br /> |
-| `retriable-4xx` | The upstream server responds with a retriable 4xx response code.<br />Currently, the only response code in this category is 409.<br /> |
-| `refused-stream` | The upstream server resets the stream with a REFUSED_STREAM error code.<br /> |
-| `retriable-status-codes` | The upstream server responds with any response code matching one defined in the RetriableStatusCodes.<br /> |
-| `cancelled` | The gRPC status code in the response headers is “cancelled”.<br /> |
-| `deadline-exceeded` | The gRPC status code in the response headers is “deadline-exceeded”.<br /> |
-| `internal` | The gRPC status code in the response headers is “internal”.<br /> |
-| `resource-exhausted` | The gRPC status code in the response headers is “resource-exhausted”.<br /> |
-| `unavailable` | The gRPC status code in the response headers is “unavailable”.<br /> |
+| `5xx` | The upstream server responds with any 5xx response code, or does not respond at all (disconnect/reset/read timeout).<br />Includes connect-failure and refused-stream.<br /> | 
+| `gateway-error` | The response is a gateway error (502,503 or 504).<br /> | 
+| `reset` | The upstream server does not respond at all (disconnect/reset/read timeout.)<br /> | 
+| `reset-before-request` | Like reset, but only retry if the request headers have not been sent to the upstream server.<br /> | 
+| `connect-failure` | Connection failure to the upstream server (connect timeout, etc.). (Included in *5xx*)<br /> | 
+| `retriable-4xx` | The upstream server responds with a retriable 4xx response code.<br />Currently, the only response code in this category is 409.<br /> | 
+| `refused-stream` | The upstream server resets the stream with a REFUSED_STREAM error code.<br /> | 
+| `retriable-status-codes` | The upstream server responds with any response code matching one defined in the RetriableStatusCodes.<br /> | 
+| `cancelled` | The gRPC status code in the response headers is “cancelled”.<br /> | 
+| `deadline-exceeded` | The gRPC status code in the response headers is “deadline-exceeded”.<br /> | 
+| `internal` | The gRPC status code in the response headers is “internal”.<br /> | 
+| `resource-exhausted` | The gRPC status code in the response headers is “resource-exhausted”.<br /> | 
+| `unavailable` | The gRPC status code in the response headers is “unavailable”.<br /> | 
 
 
 #### UnixSocket
@@ -5686,8 +5686,8 @@ _Appears in:_
 
 | Value | Description |
 | ----- | ----------- |
-| `HTTP` | HTTPWasmCodeSourceType allows the user to specify the Wasm code in an HTTP URL.<br /> |
-| `Image` | ImageWasmCodeSourceType allows the user to specify the Wasm code in an OCI image.<br /> |
+| `HTTP` | HTTPWasmCodeSourceType allows the user to specify the Wasm code in an HTTP URL.<br /> | 
+| `Image` | ImageWasmCodeSourceType allows the user to specify the Wasm code in an OCI image.<br /> | 
 
 
 #### WasmEnv
@@ -5716,9 +5716,9 @@ _Appears in:_
 
 | Value | Description |
 | ----- | ----------- |
-| `Allow` | WithUnderscoresActionAllow allows headers with underscores to be passed through.<br /> |
-| `RejectRequest` | WithUnderscoresActionRejectRequest rejects the client request. HTTP/1 requests are rejected with<br />the 400 status. HTTP/2 requests end with the stream reset.<br /> |
-| `DropHeader` | WithUnderscoresActionDropHeader drops the client header with name containing underscores. The header<br />is dropped before the filter chain is invoked and as such filters will not see<br />dropped headers.<br /> |
+| `Allow` | WithUnderscoresActionAllow allows headers with underscores to be passed through.<br /> | 
+| `RejectRequest` | WithUnderscoresActionRejectRequest rejects the client request. HTTP/1 requests are rejected with<br />the 400 status. HTTP/2 requests end with the stream reset.<br /> | 
+| `DropHeader` | WithUnderscoresActionDropHeader drops the client header with name containing underscores. The header<br />is dropped before the filter chain is invoked and as such filters will not see<br />dropped headers.<br /> | 
 
 
 #### XDSServer
@@ -5749,11 +5749,11 @@ _Appears in:_
 
 | Value | Description |
 | ----- | ----------- |
-| `VirtualHost` |  |
-| `Route` |  |
-| `HTTPListener` |  |
-| `Translation` |  |
-| `Cluster` |  |
+| `VirtualHost` |  | 
+| `Route` |  | 
+| `HTTPListener` |  | 
+| `Translation` |  | 
+| `Cluster` |  | 
 
 
 #### XDSTranslatorHooks
@@ -5783,11 +5783,11 @@ _Appears in:_
 
 | Value | Description |
 | ----- | ----------- |
-| `Subject` | XFCCCertDataSubject is the Subject field of the current client certificate.<br /> |
-| `Cert` | XFCCCertDataCert is the entire client certificate in URL encoded PEM format.<br /> |
-| `Chain` | XFCCCertDataChain is the entire client certificate chain (including the leaf certificate) in URL encoded PEM format.<br /> |
-| `DNS` | XFCCCertDataDNS is the DNS type Subject Alternative Name field of the current client certificate.<br /> |
-| `URI` | XFCCCertDataURI is the URI type Subject Alternative Name field of the current client certificate.<br /> |
+| `Subject` | XFCCCertDataSubject is the Subject field of the current client certificate.<br /> | 
+| `Cert` | XFCCCertDataCert is the entire client certificate in URL encoded PEM format.<br /> | 
+| `Chain` | XFCCCertDataChain is the entire client certificate chain (including the leaf certificate) in URL encoded PEM format.<br /> | 
+| `DNS` | XFCCCertDataDNS is the DNS type Subject Alternative Name field of the current client certificate.<br /> | 
+| `URI` | XFCCCertDataURI is the URI type Subject Alternative Name field of the current client certificate.<br /> | 
 
 
 #### XFCCForwardMode
@@ -5801,11 +5801,11 @@ _Appears in:_
 
 | Value | Description |
 | ----- | ----------- |
-| `Sanitize` | XFCCForwardModeSanitize removes the XFCC header from the request. This is the default mode.<br /> |
-| `ForwardOnly` | XFCCForwardModeForwardOnly forwards the XFCC header in the request if the client connection is mTLS.<br /> |
-| `AppendForward` | XFCCForwardModeAppendForward appends the client certificate information to the request’s XFCC header and forward it if the client connection is mTLS.<br /> |
-| `SanitizeSet` | XFCCForwardModeSanitizeSet resets the XFCC header with the client certificate information and forward it if the client connection is mTLS.<br />The existing certificate information in the XFCC header is removed.<br /> |
-| `AlwaysForwardOnly` | XFCCForwardModeAlwaysForwardOnly always forwards the XFCC header in the request, regardless of whether the client connection is mTLS.<br /> |
+| `Sanitize` | XFCCForwardModeSanitize removes the XFCC header from the request. This is the default mode.<br /> | 
+| `ForwardOnly` | XFCCForwardModeForwardOnly forwards the XFCC header in the request if the client connection is mTLS.<br /> | 
+| `AppendForward` | XFCCForwardModeAppendForward appends the client certificate information to the request’s XFCC header and forward it if the client connection is mTLS.<br /> | 
+| `SanitizeSet` | XFCCForwardModeSanitizeSet resets the XFCC header with the client certificate information and forward it if the client connection is mTLS.<br />The existing certificate information in the XFCC header is removed.<br /> | 
+| `AlwaysForwardOnly` | XFCCForwardModeAlwaysForwardOnly always forwards the XFCC header in the request, regardless of whether the client connection is mTLS.<br /> | 
 
 
 #### XForwardedClientCert
