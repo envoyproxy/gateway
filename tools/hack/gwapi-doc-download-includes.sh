@@ -48,7 +48,10 @@ for file in $SYNC_FILES; do
 
     # Remove lines start with `#$`
     # macOS sed requires an extension, so use empty string for in-place editing
-
-    $SED -i '/^#\$/d' "$dest"
+    if [[ "$(uname)" == "Darwin" ]] && [[ "$SED" != *"gsed"* ]]; then
+      $SED -i '' '/^#\$/d' "$dest"
+    else
+      $SED -i '/^#\$/d' "$dest"
+    fi
   done
 done
