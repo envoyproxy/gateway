@@ -36,6 +36,66 @@ const (
 	ResponseBodyConfigMapKey = "response.body"
 )
 
+// GetBTPRoutingTypeForRoute resolves the RoutingType from BackendTrafficPolicies
+// for a specific route and gateway/listener combination.
+// It checks BTPs in priority order:
+// 1. BTPs targeting the specific route (most specific)
+// 2. BTPs targeting the gateway listener
+// 3. BTPs targeting the gateway
+// Returns nil if no BTP with RoutingType targets the route/gateway.
+func GetBTPRoutingTypeForRoute(
+	btps []*egv1a1.BackendTrafficPolicy,
+	routeNN types.NamespacedName,
+	routeKind gwapiv1.Kind,
+	gatewayNN types.NamespacedName,
+	listenerName *gwapiv1.SectionName,
+) *egv1a1.RoutingType {
+	var gatewayBTPRoutingType *egv1a1.RoutingType
+	var listenerBTPRoutingType *egv1a1.RoutingType
+
+	for _, btp := range btps {
+		if btp.Spec.RoutingType == nil {
+			continue
+		}
+
+		targetRefs := btp.Spec.GetTargetRefs()
+		for _, ref := range targetRefs {
+			refNamespace := btp.Namespace
+			refName := string(ref.Name)
+			refKind := string(ref.Kind)
+
+			// Check if BTP targets the route
+			if refKind == string(routeKind) &&
+				refName == routeNN.Name &&
+				refNamespace == routeNN.Namespace {
+				// Route-level BTP has highest priority
+				return btp.Spec.RoutingType
+			}
+
+			// Check if BTP targets the gateway
+			if refKind == resource.KindGateway &&
+				refName == gatewayNN.Name &&
+				refNamespace == gatewayNN.Namespace {
+				if ref.SectionName != nil {
+					// Listener-level BTP
+					if listenerName != nil && string(*ref.SectionName) == string(*listenerName) {
+						listenerBTPRoutingType = btp.Spec.RoutingType
+					}
+				} else {
+					// Gateway-level BTP
+					gatewayBTPRoutingType = btp.Spec.RoutingType
+				}
+			}
+		}
+	}
+
+	// Return listener-level if found, otherwise gateway-level
+	if listenerBTPRoutingType != nil {
+		return listenerBTPRoutingType
+	}
+	return gatewayBTPRoutingType
+}
+
 // deprecatedFieldsUsedInBackendTrafficPolicy returns a map of deprecated field paths to their alternatives.
 func deprecatedFieldsUsedInBackendTrafficPolicy(policy *egv1a1.BackendTrafficPolicy) map[string]string {
 	deprecatedFields := make(map[string]string)
