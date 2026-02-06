@@ -35,7 +35,7 @@ layered_runtime:
       re2.max_program_size.warn_level: 1000
 node:
   locality:
-    zone: $(ENVOY_SERVICE_ZONE)
+    zone: "$(ENVOY_SERVICE_ZONE)"
 overload_manager:
   refresh_interval: 0.250s
   resource_monitors:
