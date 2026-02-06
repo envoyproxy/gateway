@@ -119,6 +119,9 @@ func (r *Runner) updateProxyInfraFromSubscription(ctx context.Context, sub <-cha
 				}
 			} else {
 				// Manage the proxy infra.
+				// Skip creating or updating infra if the Infra IR without any listener.
+				// e.g.https://github.com/envoyproxy/gateway/issues/3044 --- Invalid Listener
+				//     https://github.com/envoyproxy/gateway/issues/7735 --- Invalid EnvoyProxy
 				if len(val.Proxy.Listeners) == 0 {
 					r.Logger.Info("Infra IR was updated, but no listeners were found. Skipping infra creation.")
 					return

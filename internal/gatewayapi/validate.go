@@ -20,6 +20,7 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+	gwapixv1a1 "sigs.k8s.io/gateway-api/apisx/v1alpha1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
@@ -394,14 +395,23 @@ func (t *Translator) validateTerminateModeAndGetTLSSecrets(
 			continue
 		}
 
-		secretNamespace := listener.gateway.Namespace
+		listenerNamespace := listener.GetNamespace()
+		secretNamespace := listenerNamespace
 
-		if certificateRef.Namespace != nil && string(*certificateRef.Namespace) != "" && string(*certificateRef.Namespace) != listener.gateway.Namespace {
+		if certificateRef.Namespace != nil && string(*certificateRef.Namespace) != "" && string(*certificateRef.Namespace) != listenerNamespace {
+			fromGroup := gwapiv1.GroupName
+			fromKind := resource.KindGateway
+
+			if listener.isFromXListenerSet() {
+				fromGroup = gwapixv1a1.GroupName
+				fromKind = resource.KindXListenerSet
+			}
+
 			if !t.validateCrossNamespaceRef(
 				crossNamespaceFrom{
-					group:     gwapiv1.GroupName,
-					kind:      resource.KindGateway,
-					namespace: listener.gateway.Namespace,
+					group:     fromGroup,
+					kind:      fromKind,
+					namespace: listenerNamespace,
 				},
 				crossNamespaceTo{
 					group:     "",
@@ -425,7 +435,7 @@ func (t *Translator) validateTerminateModeAndGetTLSSecrets(
 
 		if secret == nil {
 			errs = append(errs, status.NewListenerStatusError(
-				fmt.Errorf("certificate refs %d: Secret %s/%s does not exist.", idx, listener.gateway.Namespace, certificateRef.Name),
+				fmt.Errorf("certificate refs %d: Secret %s/%s does not exist.", idx, secretNamespace, certificateRef.Name),
 				gwapiv1.ListenerReasonInvalidCertificateRef,
 			))
 			continue
@@ -433,7 +443,7 @@ func (t *Translator) validateTerminateModeAndGetTLSSecrets(
 
 		if secret.Type != corev1.SecretTypeTLS {
 			errs = append(errs, status.NewListenerStatusError(
-				fmt.Errorf("certificate refs %d: Secret %s/%s must be of type %s.", idx, listener.gateway.Namespace, certificateRef.Name, corev1.SecretTypeTLS),
+				fmt.Errorf("certificate refs %d: Secret %s/%s must be of type %s.", idx, secretNamespace, certificateRef.Name, corev1.SecretTypeTLS),
 				gwapiv1.ListenerReasonInvalidCertificateRef,
 			))
 			continue
@@ -441,7 +451,7 @@ func (t *Translator) validateTerminateModeAndGetTLSSecrets(
 
 		if len(secret.Data[corev1.TLSCertKey]) == 0 || len(secret.Data[corev1.TLSPrivateKeyKey]) == 0 {
 			errs = append(errs, status.NewListenerStatusError(
-				fmt.Errorf("certificate refs %d: Secret %s/%s must contain %s and %s.", idx, listener.gateway.Namespace, certificateRef.Name, corev1.TLSCertKey, corev1.TLSPrivateKeyKey),
+				fmt.Errorf("certificate refs %d: Secret %s/%s must contain %s and %s.", idx, secretNamespace, certificateRef.Name, corev1.TLSCertKey, corev1.TLSPrivateKeyKey),
 				gwapiv1.ListenerReasonInvalidCertificateRef,
 			))
 			continue
