@@ -71,6 +71,13 @@ httpRoutes:
 infraIR:
   envoy-gateway/gateway-1:
     proxy:
+      listeners:
+      - name: envoy-gateway/gateway-1/unsupported
+        ports:
+        - containerPort: 10080
+          name: "-80"
+          protocol: ""
+          servicePort: 80
       metadata:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1

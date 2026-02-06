@@ -228,6 +228,12 @@ infraIR:
           name: http-80
           protocol: HTTP
           servicePort: 80
+      - name: envoy-gateway/gateway-2/https
+        ports:
+        - containerPort: 10443
+          name: https-443
+          protocol: HTTPS
+          servicePort: 443
       - name: envoy-gateway/gateway-2/tcp
         ports:
         - containerPort: 10053
@@ -523,6 +529,42 @@ xdsIR:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
       port: 10080
+      routes:
+      - directResponse:
+          statusCode: 500
+        headerMatches:
+        - distinct: false
+          exact: foo
+          name: magic
+        hostname: '*'
+        isHTTP2: true
+        metadata:
+          kind: GRPCRoute
+          name: grpcroute-1
+          namespace: envoy-gateway
+        name: grpcroute/envoy-gateway/grpcroute-1/rule/0/match/0/*
+        security:
+          cors:
+            allowOrigins:
+            - distinct: false
+              name: ""
+              safeRegex: http://.*\.example\.com
+            maxAge: 16m40s
+    - address: 0.0.0.0
+      externalPort: 443
+      hostnames:
+      - '*'
+      isHTTP2: true
+      metadata:
+        kind: Gateway
+        name: gateway-2
+        namespace: envoy-gateway
+        sectionName: https
+      name: envoy-gateway/gateway-2/https
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
+      port: 10443
       routes:
       - directResponse:
           statusCode: 500
