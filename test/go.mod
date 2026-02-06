@@ -5,7 +5,7 @@ go 1.25.7
 replace github.com/envoyproxy/gateway => ../
 
 // TODO: remove this when v1.5.0 is released
-replace sigs.k8s.io/gateway-api => sigs.k8s.io/gateway-api v1.3.1-0.20260206000630-dbb66e4adbec
+replace sigs.k8s.io/gateway-api => sigs.k8s.io/gateway-api v1.3.1-0.20260205205831-a8c4b5edbcde
 
 require (
 	fortio.org/fortio v1.73.2
@@ -38,7 +38,7 @@ require (
 	k8s.io/utils v0.0.0-20260108192941-914a6e750570
 	sigs.k8s.io/controller-runtime v0.23.1
 	sigs.k8s.io/gateway-api v1.4.1
-	sigs.k8s.io/gateway-api/conformance v0.0.0-20260206000630-dbb66e4adbec
+	sigs.k8s.io/gateway-api/conformance v0.0.0-20260205205831-a8c4b5edbcde
 	sigs.k8s.io/yaml v1.6.0
 )
 

@@ -165,7 +165,7 @@ xListenerSets:
         status: "True"
         type: ResolvedRefs
       name: extra-https-same-ns
-      port: 8443
+      port: 0
       supportedKinds:
       - group: gateway.networking.k8s.io
         kind: HTTPRoute

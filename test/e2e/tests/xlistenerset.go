@@ -340,19 +340,12 @@ var XListenerSetTLSTerminationTest = suite.ConformanceTest{
 			Namespace: ns,
 		}
 
-		req := http.MakeRequest(t, &expected, listenerAddr, "HTTPS", "https")
-
 		certNN := types.NamespacedName{Name: "xlistener-https-certificate", Namespace: "xlistenerset-tls-termination-secret"}
-		cPem, keyPem, caPem, err := GetTLSSecret(suite.Client, certNN)
+		serverCertificate, _, _, err := GetTLSSecret(suite.Client, certNN)
 		require.NoError(t, err)
 
-		combined := string(cPem)
-		if len(caPem) > 0 {
-			combined += "\n" + string(caPem)
-		}
-
-		WaitForConsistentMTLSResponse(t, suite.RoundTripper, &req, &expected, suite.TimeoutConfig.RequiredConsecutiveSuccesses, suite.TimeoutConfig.MaxTimeToConsistency,
-			[]byte(combined), keyPem, "www.example.com")
+		tlsutils.MakeTLSRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig,
+			listenerAddr, serverCertificate, nil, nil, "www.example.com", expected)
 	},
 }
 
