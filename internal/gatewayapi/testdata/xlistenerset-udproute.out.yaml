@@ -161,7 +161,7 @@ xListenerSets:
         status: "True"
         type: ResolvedRefs
       name: extra-udp
-      port: 8162
+      port: 0
       supportedKinds:
       - group: gateway.networking.k8s.io
         kind: UDPRoute

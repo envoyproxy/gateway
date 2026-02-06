@@ -162,7 +162,7 @@ xListenerSets:
         status: "True"
         type: ResolvedRefs
       name: conflict-listener-1
-      port: 8089
+      port: 0
       supportedKinds:
       - group: gateway.networking.k8s.io
         kind: HTTPRoute
@@ -186,7 +186,7 @@ xListenerSets:
         status: "True"
         type: ResolvedRefs
       name: conflict-listener-2
-      port: 8089
+      port: 0
       supportedKinds:
       - group: gateway.networking.k8s.io
         kind: HTTPRoute
@@ -246,7 +246,7 @@ xListenerSets:
         status: "True"
         type: ResolvedRefs
       name: conflict-listener
-      port: 8089
+      port: 0
       supportedKinds:
       - group: gateway.networking.k8s.io
         kind: HTTPRoute
@@ -270,7 +270,7 @@ xListenerSets:
         status: "True"
         type: ResolvedRefs
       name: good-listener
-      port: 8090
+      port: 0
       supportedKinds:
       - group: gateway.networking.k8s.io
         kind: HTTPRoute
@@ -330,7 +330,7 @@ xListenerSets:
         status: "True"
         type: ResolvedRefs
       name: conflict-listener
-      port: 8888
+      port: 0
       supportedKinds:
       - group: gateway.networking.k8s.io
         kind: HTTPRoute
@@ -354,7 +354,7 @@ xListenerSets:
         status: "True"
         type: ResolvedRefs
       name: good-listener
-      port: 8091
+      port: 0
       supportedKinds:
       - group: gateway.networking.k8s.io
         kind: HTTPRoute

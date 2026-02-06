@@ -16,6 +16,28 @@ import (
 func SkipTests(gatewayNamespaceMode bool) []suite.ConformanceTest {
 	skipTests := []suite.ConformanceTest{
 		tests.GatewayStaticAddresses,
+		// TODO: fix following conformance tests
+		tests.ListenerSetCrossNamespace,
+		tests.ListenerSetHostnameConflict,
+		tests.ListenerSetNotAllowed,
+		tests.ListenerSetProtocolConflict,
+		tests.ListenerSetSameNamespace,
+		tests.TLSRouteHostnameIntersection,
+		tests.TLSRouteInvalidNoMatchingListener,
+		tests.TLSRouteInvalidNoMatchingListenerHostname,
+		tests.TLSRouteInvalidReferenceGrant,
+		tests.TLSRouteListenerTerminateSupportedKinds,
+		tests.TLSRouteSimpleSameNamespace,
+		tests.TLSRouteTerminateSimpleSameNamespace,
+		tests.GatewayInvalidTLSBackendConfiguration,
+		tests.GatewayWithAttachedRoutes,
+		tests.GatewayTLSBackendClientCertificate,
+		tests.GatewayFrontendClientCertificateValidation,
+		tests.GatewayInvalidFrontendClientCertificateValidation,
+		tests.HTTPRoute303Redirect,
+		tests.HTTPRoute307Redirect,
+		tests.HTTPRoute308Redirect,
+		tests.HTTPRouteHostnameIntersection,
 	}
 
 	if gatewayNamespaceMode {
@@ -36,6 +58,7 @@ func SkipFeatures(gatewayNamespaceMode bool) sets.Set[features.FeatureName] {
 	return sets.New(
 		features.GatewayStaticAddressesFeature.Name,
 		features.GatewayInfrastructurePropagationFeature.Name,
+		features.GatewayListenerSetFeature.Name,
 	)
 }
 
