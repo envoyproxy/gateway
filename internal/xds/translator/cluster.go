@@ -787,11 +787,12 @@ func buildXdsClusterLoadAssignment(clusterName string, destSettings []*ir.Destin
 		// if multiple backendRefs exist. This pushes part of the routing logic higher up the stack which can
 		// limit host selection controls during retries and session affinity.
 		// For more details see https://github.com/envoyproxy/gateway/issues/5307#issuecomment-2688767482
-		if ds.PreferLocal != nil || preferLocal != nil {
+		switch {
+		case ds.PreferLocal != nil || preferLocal != nil:
 			localities = append(localities, buildZonalLocalities(metadata, ds, hc)...)
-		} else if len(weightedZones) > 0 {
+		case len(weightedZones) > 0:
 			localities = append(localities, buildWeightedZonalLocalities(metadata, ds, hc, weightedZones)...)
-		} else {
+		default:
 			localities = append(localities, buildWeightedLocalities(metadata, ds, hc))
 		}
 	}
