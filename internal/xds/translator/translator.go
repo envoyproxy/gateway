@@ -824,31 +824,57 @@ func (t *Translator) processTCPListenerXdsTranslation(
 			}
 		}
 
-		// If there are no routes, add a route without a destination to the listener to create a filter chain
-		// This is needed because Envoy requires a filter chain to be present in the listener, otherwise it will reject the listener and report a warning
 		if len(tcpListener.Routes) == 0 {
-			// Ensure EmptyCluster exists (safe to do repeatedly)
-			if findXdsCluster(tCtx, emptyClusterName) == nil {
-				if err := tCtx.AddXdsResource(resourcev3.ClusterType, emptyRouteCluster); err != nil {
-					errs = errors.Join(errs, err)
-				}
-			}
+			isTLSPassthrough := tcpListener.TLS != nil
 
-			// Reuse the same route object
-			if sharedEmptyTCPRoute == nil {
-				sharedEmptyTCPRoute = &ir.TCPRoute{
-					Name: emptyClusterName,
+			clusterName := emptyClusterName
+			var route *ir.TCPRoute
+
+			if isTLSPassthrough {
+				// TLS passthrough listeners must not share EmptyCluster
+				clusterName = fmt.Sprintf("%s-%s", emptyClusterName, tcpListener.Name)
+
+				if findXdsCluster(tCtx, clusterName) == nil {
+					if err := tCtx.AddXdsResource(
+						resourcev3.ClusterType,
+						&clusterv3.Cluster{
+							Name:                 clusterName,
+							ClusterDiscoveryType: &clusterv3.Cluster_Type{Type: clusterv3.Cluster_STATIC},
+						},
+					); err != nil {
+						errs = errors.Join(errs, err)
+					}
+				}
+
+				route = &ir.TCPRoute{
+					Name: clusterName,
 					Destination: &ir.RouteDestination{
-						Name: emptyClusterName,
+						Name: clusterName,
 					},
 				}
+			} else {
+				// Non-TLS-passthrough: reuse shared EmptyCluster
+				if findXdsCluster(tCtx, emptyClusterName) == nil {
+					if err := tCtx.AddXdsResource(resourcev3.ClusterType, emptyRouteCluster); err != nil {
+						errs = errors.Join(errs, err)
+					}
+				}
+
+				if sharedEmptyTCPRoute == nil {
+					sharedEmptyTCPRoute = &ir.TCPRoute{
+						Name: emptyClusterName,
+						Destination: &ir.RouteDestination{
+							Name: emptyClusterName,
+						},
+					}
+				}
+				route = sharedEmptyTCPRoute
 			}
 
-			// IMPORTANT: always add a filter chain per listener
 			if err := t.addXdsTCPFilterChain(
 				xdsListener,
-				sharedEmptyTCPRoute,
-				emptyClusterName,
+				route,
+				clusterName,
 				accesslog,
 				tcpListener.Timeout,
 				tcpListener.Connection,
