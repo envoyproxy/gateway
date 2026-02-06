@@ -5,7 +5,7 @@ go 1.25.6
 replace github.com/envoyproxy/gateway => ../
 
 // TODO: remove this when v1.5.0 is released
-replace sigs.k8s.io/gateway-api => sigs.k8s.io/gateway-api v1.3.1-0.20260203001228-5643ebfba378
+replace sigs.k8s.io/gateway-api => sigs.k8s.io/gateway-api v1.3.1-0.20260206000630-dbb66e4adbec
 
 require (
 	fortio.org/fortio v1.73.2
@@ -35,10 +35,10 @@ require (
 	k8s.io/cli-runtime v0.35.0
 	k8s.io/client-go v0.35.0
 	k8s.io/kubectl v0.35.0
-	k8s.io/utils v0.0.0-20251002143259-bc988d571ff4
+	k8s.io/utils v0.0.0-20260108192941-914a6e750570
 	sigs.k8s.io/controller-runtime v0.23.1
 	sigs.k8s.io/gateway-api v1.4.1
-	sigs.k8s.io/gateway-api/conformance v0.0.0-20260203001228-5643ebfba378
+	sigs.k8s.io/gateway-api/conformance v0.0.0-20260206000630-dbb66e4adbec
 	sigs.k8s.io/yaml v1.6.0
 )
 
@@ -101,7 +101,6 @@ require (
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/dominikbraun/graph v0.23.0 // indirect
 	github.com/ebitengine/purego v0.9.1 // indirect
-	github.com/eclipse/paho.mqtt.golang v1.5.1 // indirect
 	github.com/emicklei/go-restful/v3 v3.13.0 // indirect
 	github.com/envoyproxy/go-control-plane v0.14.0 // indirect
 	github.com/envoyproxy/go-control-plane/contrib v1.36.1-0.20260115164926-066cbd5b3989 // indirect
@@ -183,7 +182,7 @@ require (
 	github.com/longhorn/go-iscsi-helper v0.0.0-20210330030558-49a327fb024e // indirect
 	github.com/lufia/plan9stats v0.0.0-20251013123823-9fd1530e3ec3 // indirect
 	github.com/lyft/gostats v0.4.1 // indirect
-	github.com/mailru/easyjson v0.9.0 // indirect
+	github.com/mailru/easyjson v0.9.1 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mattn/go-runewidth v0.0.16 // indirect
@@ -287,7 +286,7 @@ require (
 	golang.org/x/term v0.39.0 // indirect
 	golang.org/x/text v0.33.0 // indirect
 	golang.org/x/time v0.14.0 // indirect
-	golang.org/x/tools v0.40.0 // indirect
+	golang.org/x/tools v0.41.0 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.5.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20251202230838-ff82c1b0f217 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20251202230838-ff82c1b0f217 // indirect
