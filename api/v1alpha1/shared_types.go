@@ -36,6 +36,12 @@ const (
 	HTTPProtocol = "http"
 	// GRPCProtocol is the common-used grpc protocol.
 	GRPCProtocol = "grpc"
+	// EnvoyGatewayAnnotationPrefix is a prefix of annotation keys that are processed by Envoy Gateway
+	EnvoyGatewayAnnotationPrefix = "gateway.envoyproxy.io/"
+	// EnvoyGatewayIngressAnnotationPrefix is a prefix of annotation keys that are processed by Envoy Gateway
+	// used specifically for metadata injection to listeners and filter chains, where metadata changes may
+	// lead to drains and eventual connection disruption
+	EnvoyGatewayIngressAnnotationPrefix = "ingress.gateway.envoyproxy.io/"
 )
 
 const (

@@ -1341,6 +1341,13 @@ xds:
                       path: /dev/stdout
                   cluster: tcproute/default/backend/rule/-1
                   statPrefix: tcp-1234
+              metadata:
+                filterMetadata:
+                  envoy-gateway:
+                    resources:
+                    - kind: Gateway
+                      name: eg
+                      namespace: default
               name: tcproute/default/backend
             maxConnectionsToAcceptPerSocketEvent: 1
             name: default/eg/tcp
@@ -1428,6 +1435,13 @@ xds:
                       path: /dev/stdout
                   cluster: tlsroute/default/backend/rule/-1
                   statPrefix: tls-passthrough-8443
+              metadata:
+                filterMetadata:
+                  envoy-gateway:
+                    resources:
+                    - kind: Gateway
+                      name: eg
+                      namespace: default
               name: tlsroute/default/backend
             listenerFilters:
             - name: envoy.filters.listener.tls_inspector

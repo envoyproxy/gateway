@@ -79,3 +79,46 @@ http:
     name: envoy-gateway/httproute-3/rule/0/match/0/example.com
     pathMatch:
       prefix: /v1/example
+- name: "second-listener"
+  address: "::"
+  port: 10443
+  metadata:
+    groupVersion: "gateway.networking.k8s.io/v1"
+    kind: "Gateway"
+    name: "second-gateway"
+    namespace: "second-gateway"
+    sectionName: "second-listener"
+    annotations:
+    - key: foo
+      value: bar
+    ingressAnnotation:
+    - key: foobar
+      value: barfoo
+  hostnames:
+  - "*"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  tls:
+    alpnProtocols:
+    - h2
+    - http/1.1
+    certificates:
+    - name: secret-1
+      # byte slice representation of "key-data"
+      certificate: [99, 101, 114, 116, 45, 100, 97, 116, 97]
+      # byte slice representation of "key-data"
+      privateKey: [107, 101, 121, 45, 100, 97, 116, 97]
+    - name: secret-2
+      certificate: [99, 101, 114, 116, 45, 100, 97, 116, 97]
+      privateKey: [107, 101, 121, 45, 100, 97, 116, 97]
+  routes:
+  - name: "first-route"
+    hostname: "*"
+    destination:
+      name: "first-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "first-route-dest/backend/0"

@@ -16,3 +16,19 @@ spec:
       backendRefs:
         - name: infra-backend-v1
           port: 8080
+---
+apiVersion: gateway.networking.k8s.io/v1alpha2
+kind: TLSRoute
+metadata:
+  name: tlsroute-acccesslog
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: same-namespace
+      sectionName: tls
+  hostnames:
+    - "example.com"
+  rules:
+    - backendRefs:
+        - name: tls-backend-2
+          port: 443

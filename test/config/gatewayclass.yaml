@@ -48,7 +48,7 @@ spec:
           format:
             type: Text
             text: |
-              LISTENER ACCESS LOG %UPSTREAM_PROTOCOL% %RESPONSE_CODE%
+              LISTENER ACCESS LOG %UPSTREAM_PROTOCOL% %RESPONSE_CODE% %METADATA(LISTENER_FILTER_CHAIN:envoy-gateway:resources)%
           sinks:
             - type: File
               file:

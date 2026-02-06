@@ -8,6 +8,7 @@ security updates: |
 
 # New features or capabilities added in this release.
 new features: |
+  Added support for Filter Chain XDS metadata.
 
 bug fixes: |
 

@@ -18,10 +18,11 @@ Currently, the following mapping of Gateway API metadata to XDS metadata are sup
 
 | XDS Resource     | Primary Gateway API Resource                           | XDS Metadata                                                                        | Comments
 |------------------|--------------------------------------------------------|-------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------|
+| [Filter Chain][] | `Gateway`                                              | Kind, Namespace, Name, Annotations, SectionName (`spec.listeners.<listener>.name`)  |  Only for TCP, TLS and HTTPS Listeners                                            |
 | [Virtual Host][] | `Gateway`                                              | Kind, Namespace, Name, Annotations, SectionName (`spec.listeners.<listener>.name`)  |                                                                                   |
 | [Route][]        | `HTTPRoute`, `GRPCRoute`                               | Kind, Namespace, Name, Annotations, SectionName (`spec.listener.rules.<rule>.name`) |                                                                                   |
 | [Cluster][]      | `xRoute`                                               | Kind, Namespace, Name, Annotations, SectionName (`spec.listener.rules.<rule>.name`) |                                                                                   |
-| [Cluster][]      | `EnvoyProxy`, `EnvoyExtensionPolicy`, `SecurityPolicy` | Kind, Namespace, Name, Annotations, SectionName (`spec.listener.rules.<rule>.name`) |  When a non-xRoute BackendRef is used (e.g. ext_auth, observabiltiy sink, ... )   |
+| [Cluster][]      | `EnvoyProxy`, `EnvoyExtensionPolicy`, `SecurityPolicy` | Kind, Namespace, Name, Annotations, SectionName (`spec.listener.rules.<rule>.name`) |  When a non-xRoute BackendRef is used (e.g. ext_auth, observability sink, ... )   |
 | [LBEndpoints][]  | `Service`, `ServiceImport`, `Backend`                  | Kind, Namespace, Name, Annotations, SectionName (`backendRef.port`)                 |                                                                                   |
 
 For example, consider the following Gateway API HTTPRoute:
@@ -73,8 +74,26 @@ XDS Metadata serves multiple purposes:
     - [lua][] extensions can access metadata using the [Metadata Stream handle API][] .
     - [ext_proc][] extensions can access metadata using the `xds.*_metadata` [ext_proc attribute][].
   
+## Operational Considerations
+In some cases, changes in XDS metadata may lead to traffic disruption. For example, changing [Filter Chain][] and [Listener][] XDS metadata will lead to a [filter chain drain][] and [listener drain][] accordingly, which may disrupt long-lived connections.
+
+When generating metadata for Listeners and Filter Chains, Envoy Gateway considers the following:
+- Multiple Gateway-API `Gateway` resources can be merged into a single XDS Listener. In this case, there is no primary Gateway-API resource for the XDS listener.
+- Multiple Gateway-API `Gateway` HTTP listeners can be merged into a single Filter Chain, using distinct HTTP virtual hosts. In this case, there is no primary Gateway-API resource for the XDS Filter Chain.
+- A change in Gateway-API `Gateway` resource may lead to multiple filter chains XSD metadata being updated and causing drains:
+  - Annotation changes will lead to a drain across all filter chains derived from a gateway
+  - SectionName changes will lead to a localized drain in the specific filter chain
+
+As a result, Envoy Gateway currently only supports HTTPS Listener filter chain metadata at this time, with the following resrtictions:
+- To propagate K8s annotations from a `Gateway` resources to XDS Filter Chains, a distinct annotation namespace must be used: `ingress.gateway.envoyproxy.io`.
+ - A change in an annotation with this unique prefix will trigger a drain of all Filter Chains originating from the `Gateway` resource.
+ - Other annotations are ignored for Filter Chains.
+- SectionNames are not propagated to avoid unintended drains.
+
 
 [Static Metadata]: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/base.proto#envoy-v3-api-msg-config-core-v3-metadata
+[Filter Chain]: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/listener/v3/listener_components.proto#envoy-v3-api-msg-config-listener-v3-filterchain
+[Listener]: https://www.envoyproxy.io/docs/envoy/latest/configuration/listeners/listeners#config-listeners
 [Virtual Host]: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto#config-route-v3-virtualhost
 [Route]: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto#envoy-v3-api-msg-config-route-v3-route
 [Cluster]: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto.html
@@ -84,6 +103,6 @@ XDS Metadata serves multiple purposes:
 [ext_proc]: ../../api/extension_types#extproc
 [ext_proc attribute]: ../../api/extension_types#processingmodeoptions
 [Extension Servers]: ../extensibility/extension-server.md
-
-
+[filter chain drain]: https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/listeners/listener_filters.html#filter-chain-only-update
+[listener drain]: https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/operations/draining
 
