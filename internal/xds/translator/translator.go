@@ -155,7 +155,9 @@ func (t *Translator) Translate(xdsIR *ir.Xds) (*types.ResourceVersionTable, erro
 
 	// All XDS resources is ready, let's do the patch.
 	if err := processJSONPatches(tCtx, xdsIR.EnvoyPatchPolicies); err != nil {
-		errs = errors.Join(errs, err)
+		// Since JSONPatch error is user-triggered, we don't fail the entire xDS translation so that the remaining
+		// valid xDS resources can be sent to the proxy.
+		t.Logger.Error(err, "Failed to process JSON patches")
 	}
 
 	// Check if an extension want to inject any clusters/secrets
