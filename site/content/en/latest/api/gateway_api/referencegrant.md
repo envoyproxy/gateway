@@ -26,6 +26,12 @@ If an object is referred to from outside its namespace, the object's owner must
 create a ReferenceGrant resource to explicitly allow that reference. Without a
 ReferenceGrant, a cross namespace reference is invalid.
 
+It is recommended that `ReferenceGrants` are used with caution, and that validations
+and limits are applied by cluster admins to guarantee the proper usage of this resource.
+
+Please refer to [Security Considerations](https://gateway-api.sigs.k8s.io/concepts/security#limiting-cross-namespace-references)
+for more details.
+
 ## Structure
 Fundamentally a ReferenceGrant is made up of two lists, a list of resources
 references may come from, and a list of resources that may be referenced.
@@ -39,7 +45,7 @@ in the `to` list because a ReferenceGrant can only be used to allow references
 to resources in the same namespace as the ReferenceGrant.
 
 ## Example
-The following example shows how a HTTPRoute in namespace `foo` can reference a
+The following example shows how an HTTPRoute in namespace `foo` can reference a
 Service in namespace `bar`. In this example a ReferenceGrant in the `bar`
 namespace explicitly allows references to Services from HTTPRoutes in the `foo`
 namespace.
@@ -110,7 +116,7 @@ No hints should be provided about whether or not the referenced resource exists.
 Cross namespace Route -> Gateway binding follows a slightly different pattern
 where the handshake mechanism is built into the Gateway resource. For more
 information on that approach, refer to the relevant [Security Model
-documentation](https://gateway-api.sigs.k8s.io/concepts/security/). Although conceptually similar to
+documentation](https://gateway-api.sigs.k8s.io/concepts/security-model). Although conceptually similar to
 ReferenceGrant, this configuration is built directly into Gateway Listeners,
 and allows for fine-grained per Listener configuration that would not be
 possible with ReferenceGrant.
