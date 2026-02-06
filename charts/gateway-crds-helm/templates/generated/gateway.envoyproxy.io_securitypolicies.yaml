@@ -1613,10 +1613,11 @@ spec:
                                 and LeastRequest load balancers.
                               rule: 'self.type in [''Random'', ''ConsistentHash'']
                                 ? !has(self.slowStart) : true '
-                            - message: Currently ZoneAware is only supported for LeastRequest,
-                                Random, and RoundRobin load balancers.
-                              rule: 'self.type == ''ConsistentHash'' ? !has(self.zoneAware)
-                                : true '
+                            - message: PreferLocal zone-aware routing is not supported
+                                for ConsistentHash load balancers. Use weightedZones
+                                instead.
+                              rule: 'self.type == ''ConsistentHash'' && has(self.zoneAware)
+                                ? !has(self.zoneAware.preferLocal) : true'
                             - message: ZoneAware PreferLocal and WeightedZones cannot
                                 be specified together.
                               rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal)
@@ -2781,10 +2782,11 @@ spec:
                                 and LeastRequest load balancers.
                               rule: 'self.type in [''Random'', ''ConsistentHash'']
                                 ? !has(self.slowStart) : true '
-                            - message: Currently ZoneAware is only supported for LeastRequest,
-                                Random, and RoundRobin load balancers.
-                              rule: 'self.type == ''ConsistentHash'' ? !has(self.zoneAware)
-                                : true '
+                            - message: PreferLocal zone-aware routing is not supported
+                                for ConsistentHash load balancers. Use weightedZones
+                                instead.
+                              rule: 'self.type == ''ConsistentHash'' && has(self.zoneAware)
+                                ? !has(self.zoneAware.preferLocal) : true'
                             - message: ZoneAware PreferLocal and WeightedZones cannot
                                 be specified together.
                               rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal)
@@ -4164,11 +4166,11 @@ spec:
                                       for RoundRobin and LeastRequest load balancers.
                                     rule: 'self.type in [''Random'', ''ConsistentHash'']
                                       ? !has(self.slowStart) : true '
-                                  - message: Currently ZoneAware is only supported
-                                      for LeastRequest, Random, and RoundRobin load
-                                      balancers.
-                                    rule: 'self.type == ''ConsistentHash'' ? !has(self.zoneAware)
-                                      : true '
+                                  - message: PreferLocal zone-aware routing is not
+                                      supported for ConsistentHash load balancers.
+                                      Use weightedZones instead.
+                                    rule: 'self.type == ''ConsistentHash'' && has(self.zoneAware)
+                                      ? !has(self.zoneAware.preferLocal) : true'
                                   - message: ZoneAware PreferLocal and WeightedZones
                                       cannot be specified together.
                                     rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal)
@@ -5597,10 +5599,11 @@ spec:
                                 and LeastRequest load balancers.
                               rule: 'self.type in [''Random'', ''ConsistentHash'']
                                 ? !has(self.slowStart) : true '
-                            - message: Currently ZoneAware is only supported for LeastRequest,
-                                Random, and RoundRobin load balancers.
-                              rule: 'self.type == ''ConsistentHash'' ? !has(self.zoneAware)
-                                : true '
+                            - message: PreferLocal zone-aware routing is not supported
+                                for ConsistentHash load balancers. Use weightedZones
+                                instead.
+                              rule: 'self.type == ''ConsistentHash'' && has(self.zoneAware)
+                                ? !has(self.zoneAware.preferLocal) : true'
                             - message: ZoneAware PreferLocal and WeightedZones cannot
                                 be specified together.
                               rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal)
