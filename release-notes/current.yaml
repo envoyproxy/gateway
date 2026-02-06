@@ -11,7 +11,6 @@ new features: |
   Added support for configuring optional health check configuration.
 
 bug fixes: |
-  Allowed single-label backend hostnames when running with the Host infrastructure, enabling Docker Compose service names for telemetry backends.
 
 # Enhancements that improve performance.
 performance improvements: |

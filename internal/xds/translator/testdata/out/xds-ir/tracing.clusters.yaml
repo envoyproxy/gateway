@@ -29,22 +29,13 @@
   commonLbConfig: {}
   connectTimeout: 15s
   dnsLookupFamily: V4_PREFERRED
-  dnsRefreshRate: 30s
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
+    serviceName: tracing-0
   ignoreHealthOnHostRemoval: true
   lbPolicy: LEAST_REQUEST
-  loadAssignment:
-    clusterName: tracing-0
-    endpoints:
-    - lbEndpoints:
-      - endpoint:
-          address:
-            socketAddress:
-              address: otel-collector.default.svc.cluster.local
-              portValue: 4317
-        loadBalancingWeight: 1
-      loadBalancingWeight: 1
-      locality:
-        region: tracing-0/backend/0
   loadBalancingPolicy:
     policies:
     - typedExtensionConfig:
@@ -63,15 +54,7 @@
     interval: 5s
     maxEjectionPercent: 10
   perConnectionBufferLimitBytes: 20971520
-  respectDnsTtl: true
-  type: STRICT_DNS
-  typedExtensionProtocolOptions:
-    envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
-      '@type': type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
-      explicitHttpConfig:
-        http2ProtocolOptions:
-          initialConnectionWindowSize: 1048576
-          initialStreamWindowSize: 65536
+  type: EDS
   upstreamConnectionOptions:
     tcpKeepalive:
       keepaliveProbes: 7

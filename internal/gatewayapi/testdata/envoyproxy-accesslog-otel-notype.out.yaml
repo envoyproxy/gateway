@@ -90,9 +90,12 @@ xdsIR:
     accessLog:
       openTelemetry:
       - attributes:
-          method: '%REQ(:METHOD)%'
-          response_code: '%RESPONSE_CODE%'
-          start_time: '%START_TIME%'
+        - key: method
+          value: '%REQ(:METHOD)%'
+        - key: response_code
+          value: '%RESPONSE_CODE%'
+        - key: start_time
+          value: '%START_TIME%'
         authority: otel-collector.monitoring.svc.cluster.local
         destination:
           metadata:
@@ -109,7 +112,8 @@ xdsIR:
             protocol: GRPC
             weight: 1
         resourceAttributes:
-          k8s.cluster.name: cluster-1
+        - key: k8s.cluster.name
+          value: cluster-1
         text: '%REQ(:METHOD)% %REQ(:PATH)% %PROTOCOL% %RESPONSE_CODE%'
     globalResources:
       proxyServiceCluster:

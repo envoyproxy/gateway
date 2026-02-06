@@ -39,20 +39,23 @@ http:
           telemetry:
             tracing:
               customTags:
-                env1:
-                  environment:
-                    defaultValue: "-"
-                    name: env1
-                  type: Environment
-                literal1:
-                  literal:
-                    value: value1
-                  type: Literal
-                req1:
-                  requestHeader:
-                    defaultValue: "-"
-                    name: X-Request-Id
-                  type: RequestHeader
+                - key: env1
+                  value:
+                    environment:
+                      defaultValue: "-"
+                      name: env1
+                    type: Environment
+                - key: literal1
+                  value:
+                    literal:
+                      value: value1
+                    type: Literal
+                - key: req1
+                  value:
+                    requestHeader:
+                      defaultValue: "-"
+                      name: X-Request-Id
+                    type: RequestHeader
               samplingFraction:
                 denominator: 100
                 numerator: 1

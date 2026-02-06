@@ -253,6 +253,10 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 			requiresHTTP2Options = true
 		}
 
+		if ds.Protocol == ir.TCP {
+			requiresAutoHTTPConfig = false
+		}
+
 		// auto HTTP config is required if all the destinations use HTTPS-based protocol
 		requiresAutoHTTPConfig = requiresAutoHTTPConfig && (ds.TLS != nil)
 		if ds.TLS != nil {

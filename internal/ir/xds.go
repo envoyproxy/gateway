@@ -134,6 +134,20 @@ func MetaV1DurationPtr(d time.Duration) *metav1.Duration {
 	return &metav1.Duration{Duration: d}
 }
 
+// MapEntry holds a key-value pair for a map.
+// +k8s:deepcopy-gen=true
+type MapEntry struct {
+	Key   string `json:"key" yaml:"key"`
+	Value string `json:"value" yaml:"value"`
+}
+
+// CustomTagMapEntry holds a key-value pair for a CustomTag map.
+// +k8s:deepcopy-gen=true
+type CustomTagMapEntry struct {
+	Key   string           `json:"key" yaml:"key"`
+	Value egv1a1.CustomTag `json:"value" yaml:"value"`
+}
+
 // Xds holds the intermediate representation of a Gateway and is
 // used by the xDS Translator to convert it into xDS resources.
 // +k8s:deepcopy-gen=true
@@ -970,9 +984,31 @@ type TrafficFeatures struct {
 	// HTTPUpgrade defines the schema for upgrading the HTTP protocol.
 	HTTPUpgrade []HTTPUpgradeConfig `json:"httpUpgrade,omitempty" yaml:"httpUpgrade,omitempty"`
 	// Telemetry defines the schema for telemetry configuration.
-	Telemetry *egv1a1.BackendTelemetry `json:"telemetry,omitempty" yaml:"telemetry,omitempty"`
+	Telemetry *BackendTelemetry `json:"telemetry,omitempty" yaml:"telemetry,omitempty"`
 	// RequestBuffer defines the schema for enabling buffered requests
 	RequestBuffer *RequestBuffer `json:"requestBuffer,omitempty" yaml:"requestBuffer,omitempty"`
+}
+
+// BackendTelemetry defines the telemetry configuration for the backend.
+// +k8s:deepcopy-gen=true
+type BackendTelemetry struct {
+	Tracing *BackendTracing `json:"tracing,omitempty" yaml:"tracing,omitempty"`
+	Metrics *BackendMetrics `json:"metrics,omitempty" yaml:"metrics,omitempty"`
+}
+
+// BackendTracing defines the tracing configuration for the backend.
+// +k8s:deepcopy-gen=true
+type BackendTracing struct {
+	SamplingFraction *gwapiv1.Fraction       `json:"samplingFraction,omitempty" yaml:"samplingFraction,omitempty"`
+	CustomTags       []CustomTagMapEntry     `json:"customTags,omitempty" yaml:"customTags,omitempty"`
+	Tags             []MapEntry              `json:"tags,omitempty" yaml:"tags,omitempty"`
+	SpanName         *egv1a1.TracingSpanName `json:"spanName,omitempty" yaml:"spanName,omitempty"`
+}
+
+// BackendMetrics defines the metrics configuration for the backend.
+// +k8s:deepcopy-gen=true
+type BackendMetrics struct {
+	RouteStatName *string `json:"routeStatName,omitempty" yaml:"routeStatName,omitempty"`
 }
 
 // +k8s:deepcopy-gen=true
@@ -2462,7 +2498,7 @@ type TextAccessLog struct {
 // +k8s:deepcopy-gen=true
 type JSONAccessLog struct {
 	CELMatches []string            `json:"celMatches,omitempty" yaml:"celMatches,omitempty"`
-	JSON       map[string]string   `json:"json,omitempty" yaml:"json,omitempty"`
+	JSON       []MapEntry          `json:"json,omitempty" yaml:"json,omitempty"`
 	Path       string              `json:"path" yaml:"path"`
 	LogType    *ProxyAccessLogType `json:"logType,omitempty" yaml:"logType,omitempty"`
 }
@@ -2476,7 +2512,7 @@ type ALSAccessLog struct {
 	Traffic     *TrafficFeatures                  `json:"traffic,omitempty" yaml:"traffic,omitempty"`
 	Type        egv1a1.ALSEnvoyProxyAccessLogType `json:"type" yaml:"type"`
 	Text        *string                           `json:"text,omitempty" yaml:"text,omitempty"`
-	Attributes  map[string]string                 `json:"attributes,omitempty" yaml:"attributes,omitempty"`
+	Attributes  []MapEntry                        `json:"attributes,omitempty" yaml:"attributes,omitempty"`
 	HTTP        *ALSAccessLogHTTP                 `json:"http,omitempty" yaml:"http,omitempty"`
 	LogType     *ProxyAccessLogType               `json:"logType,omitempty" yaml:"logType,omitempty"`
 }
@@ -2495,8 +2531,8 @@ type OpenTelemetryAccessLog struct {
 	CELMatches         []string             `json:"celMatches,omitempty" yaml:"celMatches,omitempty"`
 	Authority          string               `json:"authority,omitempty" yaml:"authority,omitempty"`
 	Text               *string              `json:"text,omitempty" yaml:"text,omitempty"`
-	Attributes         map[string]string    `json:"attributes,omitempty" yaml:"attributes,omitempty"`
-	ResourceAttributes map[string]string    `json:"resourceAttributes,omitempty" yaml:"resourceAttributes,omitempty"`
+	Attributes         []MapEntry           `json:"attributes,omitempty" yaml:"attributes,omitempty"`
+	ResourceAttributes []MapEntry           `json:"resourceAttributes,omitempty" yaml:"resourceAttributes,omitempty"`
 	Headers            []gwapiv1.HTTPHeader `json:"headers,omitempty" yaml:"headers,omitempty"`
 	Destination        RouteDestination     `json:"destination,omitempty" yaml:"destination,omitempty"`
 	Traffic            *TrafficFeatures     `json:"traffic,omitempty" yaml:"traffic,omitempty"`
@@ -2629,17 +2665,17 @@ func (o *JSONPatchOperation) Validate() error {
 // Tracing defines the configuration for tracing a Envoy xDS Resource
 // +k8s:deepcopy-gen=true
 type Tracing struct {
-	ServiceName        string                      `json:"serviceName"`
-	Authority          string                      `json:"authority,omitempty"`
-	SamplingRate       float64                     `json:"samplingRate,omitempty"`
-	CustomTags         map[string]egv1a1.CustomTag `json:"customTags,omitempty"`
-	Tags               map[string]string           `json:"tags,omitempty"`
-	ResourceAttributes map[string]string           `json:"resourceAttributes,omitempty" yaml:"resourceAttributes,omitempty"`
-	Destination        RouteDestination            `json:"destination,omitempty"`
-	Traffic            *TrafficFeatures            `json:"traffic,omitempty"`
-	Provider           egv1a1.TracingProvider      `json:"provider"`
-	Headers            []gwapiv1.HTTPHeader        `json:"headers,omitempty" yaml:"headers,omitempty"`
-	SpanName           *egv1a1.TracingSpanName     `json:"spanName,omitempty"`
+	ServiceName        string                  `json:"serviceName"`
+	Authority          string                  `json:"authority,omitempty"`
+	SamplingRate       float64                 `json:"samplingRate,omitempty"`
+	CustomTags         []CustomTagMapEntry     `json:"customTags,omitempty"`
+	Tags               []MapEntry              `json:"tags,omitempty"`
+	ResourceAttributes []MapEntry              `json:"resourceAttributes,omitempty" yaml:"resourceAttributes,omitempty"`
+	Destination        RouteDestination        `json:"destination,omitempty"`
+	Traffic            *TrafficFeatures        `json:"traffic,omitempty"`
+	Provider           egv1a1.TracingProvider  `json:"provider"`
+	Headers            []gwapiv1.HTTPHeader    `json:"headers,omitempty" yaml:"headers,omitempty"`
+	SpanName           *egv1a1.TracingSpanName `json:"spanName,omitempty"`
 }
 
 // Metrics defines the configuration for metrics generated by Envoy
@@ -3397,7 +3433,7 @@ type ResourceMetadata struct {
 	// Namespace is the namespace of the resource
 	Namespace string `json:"namespace,omitempty" yaml:"namespace,omitempty"`
 	// Annotations are the annotations of the resource
-	Annotations map[string]string `json:"annotations,omitempty" yaml:"annotations,omitempty"`
+	Annotations []MapEntry `json:"annotations,omitempty" yaml:"annotations,omitempty"`
 	// SectionName is the name of a section of a resource
 	SectionName string `json:"sectionName,omitempty" yaml:"sectionName,omitempty"`
 
