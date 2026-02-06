@@ -5730,7 +5730,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `zone` | _string_ |  true  |  | Zone specifies the zone this weight applies to.<br />Empty string means apply to all zones within the region. |
+| `zone` | _string_ |  true  |  | Zone specifies the topology zone this weight applies to.<br />The value should match the topology.kubernetes.io/zone label<br />of the nodes where endpoints are running.<br />Zones not listed in the configuration receive a default weight of 1. |
 | `weight` | _integer_ |  true  |  | Weight defines the weight for this locality.<br />Higher values receive more traffic. The actual traffic distribution<br />is proportional to this value relative to other localities. |
 
 

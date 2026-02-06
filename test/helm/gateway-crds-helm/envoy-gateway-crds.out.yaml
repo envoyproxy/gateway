@@ -1427,8 +1427,10 @@ spec:
                               type: integer
                             zone:
                               description: |-
-                                Zone specifies the zone this weight applies to.
-                                Empty string means apply to all zones within the region.
+                                Zone specifies the topology zone this weight applies to.
+                                The value should match the topology.kubernetes.io/zone label
+                                of the nodes where endpoints are running.
+                                Zones not listed in the configuration receive a default weight of 1.
                               type: string
                           required:
                           - weight
@@ -6401,8 +6403,10 @@ spec:
                                         type: integer
                                       zone:
                                         description: |-
-                                          Zone specifies the zone this weight applies to.
-                                          Empty string means apply to all zones within the region.
+                                          Zone specifies the topology zone this weight applies to.
+                                          The value should match the topology.kubernetes.io/zone label
+                                          of the nodes where endpoints are running.
+                                          Zones not listed in the configuration receive a default weight of 1.
                                         type: string
                                     required:
                                     - weight
@@ -20221,8 +20225,10 @@ spec:
                                                           type: integer
                                                         zone:
                                                           description: |-
-                                                            Zone specifies the zone this weight applies to.
-                                                            Empty string means apply to all zones within the region.
+                                                            Zone specifies the topology zone this weight applies to.
+                                                            The value should match the topology.kubernetes.io/zone label
+                                                            of the nodes where endpoints are running.
+                                                            Zones not listed in the configuration receive a default weight of 1.
                                                           type: string
                                                       required:
                                                       - weight
@@ -21522,8 +21528,10 @@ spec:
                                                           type: integer
                                                         zone:
                                                           description: |-
-                                                            Zone specifies the zone this weight applies to.
-                                                            Empty string means apply to all zones within the region.
+                                                            Zone specifies the topology zone this weight applies to.
+                                                            The value should match the topology.kubernetes.io/zone label
+                                                            of the nodes where endpoints are running.
+                                                            Zones not listed in the configuration receive a default weight of 1.
                                                           type: string
                                                       required:
                                                       - weight
@@ -22971,8 +22979,10 @@ spec:
                                                     type: integer
                                                   zone:
                                                     description: |-
-                                                      Zone specifies the zone this weight applies to.
-                                                      Empty string means apply to all zones within the region.
+                                                      Zone specifies the topology zone this weight applies to.
+                                                      The value should match the topology.kubernetes.io/zone label
+                                                      of the nodes where endpoints are running.
+                                                      Zones not listed in the configuration receive a default weight of 1.
                                                     type: string
                                                 required:
                                                 - weight
@@ -24338,8 +24348,10 @@ spec:
                                               type: integer
                                             zone:
                                               description: |-
-                                                Zone specifies the zone this weight applies to.
-                                                Empty string means apply to all zones within the region.
+                                                Zone specifies the topology zone this weight applies to.
+                                                The value should match the topology.kubernetes.io/zone label
+                                                of the nodes where endpoints are running.
+                                                Zones not listed in the configuration receive a default weight of 1.
                                               type: string
                                           required:
                                           - weight
@@ -27046,8 +27058,10 @@ spec:
                                           type: integer
                                         zone:
                                           description: |-
-                                            Zone specifies the zone this weight applies to.
-                                            Empty string means apply to all zones within the region.
+                                            Zone specifies the topology zone this weight applies to.
+                                            The value should match the topology.kubernetes.io/zone label
+                                            of the nodes where endpoints are running.
+                                            Zones not listed in the configuration receive a default weight of 1.
                                           type: string
                                       required:
                                       - weight
@@ -28232,8 +28246,10 @@ spec:
                                           type: integer
                                         zone:
                                           description: |-
-                                            Zone specifies the zone this weight applies to.
-                                            Empty string means apply to all zones within the region.
+                                            Zone specifies the topology zone this weight applies to.
+                                            The value should match the topology.kubernetes.io/zone label
+                                            of the nodes where endpoints are running.
+                                            Zones not listed in the configuration receive a default weight of 1.
                                           type: string
                                       required:
                                       - weight
@@ -29633,8 +29649,10 @@ spec:
                                                 type: integer
                                               zone:
                                                 description: |-
-                                                  Zone specifies the zone this weight applies to.
-                                                  Empty string means apply to all zones within the region.
+                                                  Zone specifies the topology zone this weight applies to.
+                                                  The value should match the topology.kubernetes.io/zone label
+                                                  of the nodes where endpoints are running.
+                                                  Zones not listed in the configuration receive a default weight of 1.
                                                 type: string
                                             required:
                                             - weight
@@ -31083,8 +31101,10 @@ spec:
                                           type: integer
                                         zone:
                                           description: |-
-                                            Zone specifies the zone this weight applies to.
-                                            Empty string means apply to all zones within the region.
+                                            Zone specifies the topology zone this weight applies to.
+                                            The value should match the topology.kubernetes.io/zone label
+                                            of the nodes where endpoints are running.
+                                            Zones not listed in the configuration receive a default weight of 1.
                                           type: string
                                       required:
                                       - weight
