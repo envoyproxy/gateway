@@ -161,7 +161,6 @@ xdsIR:
       http1:
         enableTrailers: true
         preserveHeaderCase: true
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-1
@@ -179,7 +178,6 @@ xdsIR:
       http1:
         enableTrailers: true
         preserveHeaderCase: true
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-1

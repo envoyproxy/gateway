@@ -1434,7 +1434,7 @@ func TestRedaction(t *testing.T) {
 				`"basicAuth":{"name":"","users":"[redacted]"},` +
 				`"extAuth":{"name":"","contextExtensions":[{"name":"key","value":"[redacted]"}]}` +
 				`}}],` +
-				`"isHTTP2":false,"path":{"mergeSlashes":false,"escapedSlashesAction":""}}],` +
+				`"path":{"mergeSlashes":false,"escapedSlashesAction":""}}],` +
 				`"globalResources":{"envoyClientCertificate":{"name":"test","certificate":"Q2VydGlmaWNhdGU=","privateKey":"[redacted]"}}}`,
 		},
 	}

@@ -8,6 +8,8 @@ security updates: |
 
 # New features or capabilities added in this release.
 new features: |
+  Added support for settings of gRPC web in ClientTrafficPolicy.
+  Added support for settings of gRPC stats in EnvoyProxy.
 
 bug fixes: |
 
