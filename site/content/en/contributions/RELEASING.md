@@ -122,7 +122,7 @@ export GITHUB_REMOTE=origin
       make docs-release TAG=v${MAJOR_VERSION}.${MINOR_VERSION}.0
       ```
 
-   1. Update `site/layouts/shortcodes/helm-version.html`, add the latest version of the minor release, and update the short code for `{{- with (strings.HasPrefix $pagePrefix "doc") -}}` to the latest minor version.
+   1. Update `site/layouts/shortcodes/helm-version.html`, add the latest version of the minor release, and update the short code for `{{- with (strings.HasPrefix $pagePrefix "version") -}}` to the latest minor version.
 
       ```console
       {{- $pagePrefix := (index (split $.Page.File.Dir "/") 0) -}}
@@ -140,7 +140,7 @@ export GITHUB_REMOTE=origin
       {{- end -}}
       ```
 
-   1. Update `site/layouts/shortcodes/yaml-version.html`, add the latest version of the minor release, and update the short code for `{{- with (strings.HasPrefix $pagePrefix "doc") -}}` to the latest minor version.
+   1. Update `site/layouts/shortcodes/yaml-version.html`, add the latest version of the minor release, and update the short code for `{{- with (strings.HasPrefix $pagePrefix "version") -}}` to the latest minor version.
 
       ```console
       {{- $pagePrefix := (index (split $.Page.File.Dir "/") 0) -}}
