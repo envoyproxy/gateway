@@ -1,0 +1,28 @@
+date: January 12, 2026
+
+# Changes that are expected to cause an incompatibility with previous versions, such as deletions or modifications to existing APIs.
+breaking changes: |
+
+# Updates addressing vulnerabilities, security flaws, or compliance requirements.
+security updates: |
+  Fixed CVE-2026-22771: arbitrary code execution through EnvoyExtensionPolicy Lua scripts.
+
+# New features or capabilities added in this release.
+new features: |
+  Change benchmark report to JSON format.
+
+bug fixes: |
+  Fixed an issue where BackendTrafficPolicy does not validate maximum value of requestBuffer limit.
+  Fixed an issue where observedGeneration is missing from the EnvoyPatchPolicy status.
+  Fixed a nil pointer error when applying BackendTrafficPolicy to HTTPRoutes with no backendRefs.
+  Fixed ExternalTrafficPolicy not being applied to Envoy Service when ServiceType is NodePort.
+  Fixed CRL ref not processed by gateway controller.
+
+# Enhancements that improve performance.
+performance improvements: |
+
+# Deprecated features or APIs.
+deprecations: |
+
+# Other notable changes not covered by the above sections.
+Other changes: |

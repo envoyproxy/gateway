@@ -2,12 +2,12 @@
 title: "API Key Authentication"
 ---
 
-This task provides instructions for configuring API Key Authentication. 
-API Key Authentication verifies whether an incoming request includes a valid API key in the header, parameter, or cookie before routing the request to 
+This task provides instructions for configuring API Key Authentication.
+API Key Authentication verifies whether an incoming request includes a valid API key in the header, parameter, or cookie before routing the request to
 a backend service.
 
-Envoy Gateway introduces a new CRD called [SecurityPolicy][] that allows the user to configure Api Key 
-authentication. 
+Envoy Gateway introduces a new CRD called [SecurityPolicy][] that allows the user to configure Api Key
+authentication.
 This instantiated resource can be linked to a [Gateway][], [HTTPRoute][] or [GRPCRoute][] resource.
 
 ## Prerequisites
@@ -19,7 +19,36 @@ This instantiated resource can be linked to a [Gateway][], [HTTPRoute][] or [GRP
 API Key must be stored in a kubernetes secret and referenced in the [SecurityPolicy][] configuration.
 The secret is an Opaque secret, with each API key stored under a key corresponding to the client ID.
 
-### Create a API Key Secret
+> **Important**
+>
+> When API keys are extracted from the `Authorization` header, the value stored in the Kubernetes
+> Secret **must not include the `Bearer` prefix**.
+>
+> Envoy Gateway compares the extracted header value directly against the stored secret value.
+> Authentication scheme prefixes (such as `Bearer`) are not stripped automatically.
+>
+> For example:
+>
+> **Non-working configuration**
+> ```yaml
+> stringData:
+>   client1: "Bearer my-api-key"
+> ```
+>
+> **Working configuration**
+> ```yaml
+> stringData:
+>   client1: "my-api-key"
+> ```
+>
+> Clients may still send requests using:
+> ```http
+> Authorization: Bearer my-api-key
+> ```
+
+
+
+### Create an API Key Secret
 
 Create an Opaque Secret containing the client ID and its corresponding API key
 

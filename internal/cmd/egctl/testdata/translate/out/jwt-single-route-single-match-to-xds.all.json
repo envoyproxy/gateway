@@ -40,10 +40,12 @@
               },
               "cdsConfig": {
                 "ads": {},
+                "initialFetchTimeout": "0s",
                 "resourceApiVersion": "V3"
               },
               "ldsConfig": {
                 "ads": {},
+                "initialFetchTimeout": "0s",
                 "resourceApiVersion": "V3"
               }
             },
@@ -265,6 +267,27 @@
                   "name": "envoy-gateway-proxy-stats-0.0.0.0-19001"
                 }
               ]
+            },
+            "statsConfig": {
+              "statsTags": [
+                {
+                  "regex": "\\.zone(\\.(([^\\.]+)\\.))",
+                  "tagName": "from_zone"
+                },
+                {
+                  "regex": "\\.zone\\.[^\\.]+\\.(([^\\.]+)\\.)",
+                  "tagName": "to_zone"
+                },
+                {
+                  "regex": "^cluster(\\..+\\.(.+))\\.total_match_count$",
+                  "tagName": "socket_match_name"
+                },
+                {
+                  "regex": "circuit_breakers\\.((.+?)\\.).+",
+                  "tagName": "priority"
+                }
+              ],
+              "useAllDefaultTags": true
             }
           }
         },
@@ -640,7 +663,8 @@
                                     "forward": true,
                                     "normalizePayloadInMetadata": {
                                       "spaceDelimitedClaims": [
-                                        "scope"
+                                        "scope",
+                                        "scp"
                                       ]
                                     },
                                     "payloadInMetadata": "example",

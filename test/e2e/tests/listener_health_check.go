@@ -58,7 +58,7 @@ var ListenerHealthCheckTest = suite.ConformanceTest{
 			req := http.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
 
 			timeoutConfig := suite.TimeoutConfig
-			http.AwaitConvergence(t, timeoutConfig.RequiredConsecutiveSuccesses, timeoutConfig.MaxTimeToConsistency, func(elapsed time.Duration) bool {
+			http.AwaitConvergence(t, timeoutConfig.RequiredConsecutiveSuccesses, timeoutConfig.MaxTimeToConsistency, func(_ time.Duration) bool {
 				_, cResp, err := suite.RoundTripper.CaptureRoundTrip(req)
 				if err != nil {
 					t.Errorf("failed to get expected response: %v", err)

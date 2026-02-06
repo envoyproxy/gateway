@@ -32,7 +32,21 @@ import (
 
 const (
 	MaxConsistentHashTableSize = 5000011 // https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto#config-cluster-v3-cluster-maglevlbconfig
+	// ResponseBodyConfigMapKey is the key used in ConfigMaps to store custom response body data
+	ResponseBodyConfigMapKey = "response.body"
 )
+
+// deprecatedFieldsUsedInBackendTrafficPolicy returns a map of deprecated field paths to their alternatives.
+func deprecatedFieldsUsedInBackendTrafficPolicy(policy *egv1a1.BackendTrafficPolicy) map[string]string {
+	deprecatedFields := make(map[string]string)
+	if policy.Spec.TargetRef != nil {
+		deprecatedFields["spec.targetRef"] = "spec.targetRefs"
+	}
+	if len(policy.Spec.Compression) > 0 {
+		deprecatedFields["spec.compression"] = "spec.compressor"
+	}
+	return deprecatedFields
+}
 
 func (t *Translator) ProcessBackendTrafficPolicies(
 	resources *resource.Resources,
@@ -392,6 +406,11 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 	// Set Accepted condition if it is unset
 	status.SetAcceptedForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName, policy.Generation)
 
+	// Check for deprecated fields and set warning if any are found
+	if deprecatedFields := deprecatedFieldsUsedInBackendTrafficPolicy(policy); len(deprecatedFields) > 0 {
+		status.SetDeprecatedFieldsWarningForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName, policy.Generation, deprecatedFields)
+	}
+
 	// Check if this policy is overridden by other policies targeting at route rule levels
 	// If policy target is route rule, we can skip the check
 	if currTarget.SectionName != nil {
@@ -463,6 +482,11 @@ func (t *Translator) processBackendTrafficPolicyForGateway(
 
 	// Set Accepted condition if it is unset
 	status.SetAcceptedForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName, policy.Generation)
+
+	// Check for deprecated fields and set warning if any are found
+	if deprecatedFields := deprecatedFieldsUsedInBackendTrafficPolicy(policy); len(deprecatedFields) > 0 {
+		status.SetDeprecatedFieldsWarningForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName, policy.Generation, deprecatedFields)
+	}
 
 	overriddenMessage, mergedMessage := getOverriddenAndMergedTargetsMessageForGateway(
 		gatewayMap[gatewayNN], gatewayRouteMap, gatewayPolicyMergedMap, currTarget.SectionName)
@@ -737,6 +761,7 @@ func (t *Translator) applyTrafficFeatureToRoute(route RouteContext,
 				setIfNil(&r.BackendConnection, tf.BackendConnection)
 				setIfNil(&r.DNS, tf.DNS)
 				setIfNil(&r.StatName, buildRouteStatName(routeStatName, r.Metadata))
+				appendTrafficPolicyMetadata(r.Metadata, policy)
 			}
 		}
 	}
@@ -771,7 +796,7 @@ func (t *Translator) applyTrafficFeatureToRoute(route RouteContext,
 		}
 		for _, r := range http.Routes {
 			// If specified the sectionName in policy target, must match route rule from ir route metadata.
-			if target.SectionName != nil && string(*target.SectionName) != r.Destination.Metadata.SectionName {
+			if target.SectionName != nil && string(*target.SectionName) != r.Metadata.SectionName {
 				continue
 			}
 			// Apply if there is a match
@@ -804,6 +829,7 @@ func (t *Translator) applyTrafficFeatureToRoute(route RouteContext,
 				if policy.Spec.UseClientProtocol != nil {
 					r.UseClientProtocol = policy.Spec.UseClientProtocol
 				}
+				appendTrafficPolicyMetadata(r.Metadata, policy)
 			}
 		}
 	}
@@ -907,7 +933,7 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy) (
 	cp = buildCompression(policy.Spec.Compression, policy.Spec.Compressor)
 	httpUpgrade = buildHTTPProtocolUpgradeConfig(policy.Spec.HTTPUpgrade)
 
-	ds = translateDNS(&policy.Spec.ClusterSettings)
+	ds = translateDNS(&policy.Spec.ClusterSettings, utils.NamespacedName(policy).String())
 
 	return &ir.TrafficFeatures{
 		RateLimit:         rl,
@@ -926,8 +952,39 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy) (
 		RequestBuffer:     rb,
 		Compression:       cp,
 		HTTPUpgrade:       httpUpgrade,
-		Telemetry:         policy.Spec.Telemetry,
+		Telemetry:         buildBackendTelemetry(policy.Spec.Telemetry),
 	}, errs
+}
+
+func buildBackendTelemetry(telemetry *egv1a1.BackendTelemetry) *ir.BackendTelemetry {
+	if telemetry == nil {
+		return nil
+	}
+	return &ir.BackendTelemetry{
+		Tracing: buildBackendTracing(telemetry.Tracing),
+		Metrics: buildBackendMetrics(telemetry.Metrics),
+	}
+}
+
+func buildBackendTracing(tracing *egv1a1.Tracing) *ir.BackendTracing {
+	if tracing == nil {
+		return nil
+	}
+	return &ir.BackendTracing{
+		SamplingFraction: tracing.SamplingFraction,
+		CustomTags:       ir.CustomTagMapToSlice(tracing.CustomTags),
+		Tags:             ir.MapToSlice(tracing.Tags),
+		SpanName:         tracing.SpanName,
+	}
+}
+
+func buildBackendMetrics(metrics *egv1a1.BackendMetrics) *ir.BackendMetrics {
+	if metrics == nil {
+		return nil
+	}
+	return &ir.BackendMetrics{
+		RouteStatName: metrics.RouteStatName,
+	}
 }
 
 func (t *Translator) translateBackendTrafficPolicyForGateway(
@@ -955,7 +1012,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 	policyTarget := irStringKey(policy.Namespace, string(target.Name))
 
 	for _, tcp := range x.TCP {
-		gatewayName := tcp.Name[0:strings.LastIndex(tcp.Name, "/")]
+		gatewayName := extractGatewayNameFromListener(tcp.Name)
 		if t.MergeGateways && gatewayName != policyTarget {
 			continue
 		}
@@ -976,11 +1033,12 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 			setIfNil(&r.Timeout, tf.Timeout)
 			setIfNil(&r.DNS, tf.DNS)
 			setIfNil(&r.StatName, buildRouteStatName(routeStatName, r.Metadata))
+			appendTrafficPolicyMetadata(r.Metadata, policy)
 		}
 	}
 
 	for _, udp := range x.UDP {
-		gatewayName := udp.Name[0:strings.LastIndex(udp.Name, "/")]
+		gatewayName := extractGatewayNameFromListener(udp.Name)
 		if t.MergeGateways && gatewayName != policyTarget {
 			continue
 		}
@@ -1004,7 +1062,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 
 	routesWithDirectResponse := sets.New[string]()
 	for _, http := range x.HTTP {
-		gatewayName := http.Name[0:strings.LastIndex(http.Name, "/")]
+		gatewayName := extractGatewayNameFromListener(http.Name)
 		if t.MergeGateways && gatewayName != policyTarget {
 			continue
 		}
@@ -1034,7 +1092,6 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 			}
 
 			r.Traffic = tf.DeepCopy()
-
 			if localTo, err := buildClusterSettingsTimeout(&policy.Spec.ClusterSettings); err == nil {
 				r.Traffic.Timeout = localTo
 			}
@@ -1045,6 +1102,8 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 			if policy.Spec.UseClientProtocol != nil {
 				r.UseClientProtocol = policy.Spec.UseClientProtocol
 			}
+
+			appendTrafficPolicyMetadata(r.Metadata, policy)
 		}
 	}
 	if len(routesWithDirectResponse) > 0 {
@@ -1056,6 +1115,18 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 	}
 
 	return errs
+}
+
+func appendTrafficPolicyMetadata(md *ir.ResourceMetadata, policy *egv1a1.BackendTrafficPolicy) {
+	if md == nil || policy == nil {
+		return
+	}
+
+	md.Policies = append(md.Policies, &ir.PolicyMetadata{
+		Kind:      egv1a1.KindBackendTrafficPolicy,
+		Name:      policy.Name,
+		Namespace: policy.Namespace,
+	})
 }
 
 func (t *Translator) buildRateLimit(policy *egv1a1.BackendTrafficPolicy) (*ir.RateLimit, error) {
@@ -1211,14 +1282,15 @@ func buildRateLimitRule(rule egv1a1.RateLimitRule) (*ir.RateLimitRule, error) {
 		HeaderMatches: make([]*ir.StringMatch, 0),
 		MethodMatches: make([]*ir.StringMatch, 0),
 		Shared:        rule.Shared,
+		ShadowMode:    rule.ShadowMode,
 	}
 
 	for _, match := range rule.ClientSelectors {
 		if len(match.Headers) == 0 && len(match.Methods) == 0 &&
-			match.Path == nil && match.SourceCIDR == nil {
+			match.Path == nil && match.SourceCIDR == nil && len(match.QueryParams) == 0 {
 			return nil, fmt.Errorf(
 				"unable to translate rateLimit. At least one of the" +
-					" header or method or path or sourceCIDR must be specified")
+					" header or method or path or sourceCIDR or queryParameters must be specified")
 		}
 		for _, header := range match.Headers {
 			switch {
@@ -1314,6 +1386,65 @@ func buildRateLimitRule(rule egv1a1.RateLimitRule) (*ir.RateLimitRule, error) {
 			}
 			cidrMatch.Distinct = distinct
 			irRule.CIDRMatch = cidrMatch
+		}
+
+		for _, queryParam := range match.QueryParams {
+			// Validate QueryParamMatch
+			if queryParam.Name == "" {
+				return nil, fmt.Errorf("name is required when QueryParamMatch is specified")
+			}
+
+			var stringMatch ir.StringMatch
+
+			// Default to Exact match if Type is not specified
+			matchType := egv1a1.QueryParamMatchExact
+			if queryParam.Type != nil {
+				matchType = *queryParam.Type
+			}
+
+			switch matchType {
+			case egv1a1.QueryParamMatchExact:
+				if queryParam.Value == nil || *queryParam.Value == "" {
+					return nil, fmt.Errorf("value is required for Exact query parameter match")
+				}
+				stringMatch = ir.StringMatch{
+					Name:   queryParam.Name,
+					Exact:  queryParam.Value,
+					Invert: queryParam.Invert,
+				}
+			case egv1a1.QueryParamMatchRegularExpression:
+				if queryParam.Value == nil || *queryParam.Value == "" {
+					return nil, fmt.Errorf("value is required for RegularExpression query parameter match")
+				}
+				if err := regex.Validate(*queryParam.Value); err != nil {
+					return nil, err
+				}
+				stringMatch = ir.StringMatch{
+					Name:      queryParam.Name,
+					SafeRegex: queryParam.Value,
+					Invert:    queryParam.Invert,
+				}
+			case egv1a1.QueryParamMatchDistinct:
+				if queryParam.Invert != nil && *queryParam.Invert {
+					return nil, fmt.Errorf("unable to translate rateLimit." +
+						"Invert is not applicable for distinct query parameter match type")
+				}
+				if queryParam.Value != nil {
+					return nil, fmt.Errorf("unable to translate rateLimit." +
+						"Value is not applicable for distinct query parameter match type")
+				}
+				stringMatch = ir.StringMatch{
+					Name:     queryParam.Name,
+					Distinct: true,
+				}
+			default:
+				return nil, fmt.Errorf("invalid query parameter match type: %s", matchType)
+			}
+
+			m := &ir.QueryParamMatch{
+				StringMatch: stringMatch,
+			}
+			irRule.QueryParamMatches = append(irRule.QueryParamMatches, m)
 		}
 	}
 
@@ -1415,8 +1546,14 @@ func buildRequestBuffer(spec *egv1a1.RequestBuffer) (*ir.RequestBuffer, error) {
 		return nil, nil
 	}
 
-	if _, ok := spec.Limit.AsInt64(); !ok {
+	maxBytes, ok := spec.Limit.AsInt64()
+	if !ok {
 		return nil, fmt.Errorf("limit must be convertible to an int64")
+	}
+
+	if maxBytes < 0 || maxBytes > math.MaxUint32 {
+		return nil, fmt.Errorf("limit value %s is out of range, must be between 0 and %d",
+			spec.Limit.String(), math.MaxUint32)
 	}
 
 	return &ir.RequestBuffer{
@@ -1521,59 +1658,39 @@ func (t *Translator) buildResponseOverride(policy *egv1a1.BackendTrafficPolicy) 
 	}, nil
 }
 
-func checkResponseBodySize(b []byte) error {
-	// Make this configurable in the future
-	// https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route.proto.html#max_direct_response_body_size_bytes
-	maxDirectResponseSize := 4096
-	lenB := len(b)
-	if lenB > maxDirectResponseSize {
-		return fmt.Errorf("response.body size %d greater than the max size %d", lenB, maxDirectResponseSize)
-	}
-
-	return nil
-}
-
 func (t *Translator) getCustomResponseBody(
 	body *egv1a1.CustomResponseBody,
 	policyNs string,
 ) ([]byte, error) {
-	if body != nil && body.Type != nil && *body.Type == egv1a1.ResponseValueTypeValueRef {
+	if body == nil {
+		return nil, nil
+	}
+
+	if body.Type != nil && *body.Type == egv1a1.ResponseValueTypeValueRef {
 		cm := t.GetConfigMap(policyNs, string(body.ValueRef.Name))
 		if cm != nil {
-			b, dataOk := cm.Data["response.body"]
+			b, dataOk := cm.Data[ResponseBodyConfigMapKey]
 			switch {
 			case dataOk:
-				body := []byte(b)
-				if err := checkResponseBodySize(body); err != nil {
-					return nil, err
-				}
-				return body, nil
+				data := []byte(b)
+				return data, nil
 			case len(cm.Data) > 0: // Fallback to the first key if response.body is not found
 				for _, value := range cm.Data {
-					body := []byte(value)
-					if err := checkResponseBodySize(body); err != nil {
-						return nil, err
-					}
-					return body, nil
+					data := []byte(value)
+					return data, nil
 				}
 			case len(cm.BinaryData) > 0:
 				for _, binData := range cm.BinaryData {
-					if err := checkResponseBodySize(binData); err != nil {
-						return nil, err
-					}
 					return binData, nil
 				}
 			default:
-				return nil, fmt.Errorf("can't find the key response.body in the referenced configmap %s", body.ValueRef.Name)
+				return nil, fmt.Errorf("can't find the key %s in the referenced configmap %s", ResponseBodyConfigMapKey, body.ValueRef.Name)
 			}
 		} else {
 			return nil, fmt.Errorf("can't find the referenced configmap %s", body.ValueRef.Name)
 		}
-	} else if body != nil && body.Inline != nil {
+	} else if body.Inline != nil {
 		inlineValue := []byte(*body.Inline)
-		if err := checkResponseBodySize(inlineValue); err != nil {
-			return nil, err
-		}
 		return inlineValue, nil
 	}
 
@@ -1590,32 +1707,48 @@ func defaultResponseOverrideRuleName(policy *egv1a1.BackendTrafficPolicy, index 
 func buildCompression(compression, compressor []*egv1a1.Compression) []*ir.Compression {
 	// Handle the Compressor field first (higher priority)
 	if len(compressor) > 0 {
-		irCompression := make([]*ir.Compression, 0, len(compressor))
-		for _, c := range compressor {
+		result := make([]*ir.Compression, 0, len(compressor))
+		for i, c := range compressor {
 			// Only add compression if the corresponding compressor not null
 			if (c.Type == egv1a1.GzipCompressorType && c.Gzip != nil) ||
 				(c.Type == egv1a1.BrotliCompressorType && c.Brotli != nil) ||
 				(c.Type == egv1a1.ZstdCompressorType && c.Zstd != nil) {
-				irCompression = append(irCompression, &ir.Compression{
-					Type: c.Type,
-				})
+				irCompression := ir.Compression{
+					Type:        c.Type,
+					ChooseFirst: i == 0, // only the first compressor is marked as ChooseFirst
+				}
+				if c.MinContentLength != nil {
+					minContentLength, ok := c.MinContentLength.AsInt64()
+					if ok {
+						irCompression.MinContentLength = ptr.To(uint32(minContentLength))
+					}
+				}
+				result = append(result, &irCompression)
 			}
 		}
-		return irCompression
+		return result
 	}
 
 	// Fallback to the deprecated Compression field
 	if compression == nil {
 		return nil
 	}
-	irCompression := make([]*ir.Compression, 0, len(compression))
-	for _, c := range compression {
-		irCompression = append(irCompression, &ir.Compression{
-			Type: c.Type,
-		})
+	result := make([]*ir.Compression, 0, len(compression))
+	for i, c := range compression {
+		irCompression := ir.Compression{
+			Type:        c.Type,
+			ChooseFirst: i == 0, // only the first compressor is marked as ChooseFirst
+		}
+		if c.MinContentLength != nil {
+			minContentLength, ok := c.MinContentLength.AsInt64()
+			if ok {
+				irCompression.MinContentLength = ptr.To(uint32(minContentLength))
+			}
+		}
+		result = append(result, &irCompression)
 	}
 
-	return irCompression
+	return result
 }
 
 func buildHTTPProtocolUpgradeConfig(cfgs []*egv1a1.ProtocolUpgradeConfig) []ir.HTTPUpgradeConfig {

@@ -4,7 +4,22 @@ title: Migrating from Ingress Resources
 
 ## Introduction
 
-Migrating from Ingress to Envoy Gateway involves converting existing Ingress resources into resources compatible with Envoy Gateway. The `ingress2gateway` tool simplifies this migration by transforming Ingress resources into Gateway API resources that Envoy Gateway can use. This guide will walk you through the prerequisites, installation of the `ingress2gateway` tool, and provide an example migration process.
+Migrating from Ingress to Envoy Gateway involves converting existing Ingress resources into resources compatible with Envoy Gateway. Two tools are available to help with this migration:
+
+### ingress2gateway
+
+The official `ingress2gateway` tool (maintained by Kubernetes SIG-Network) transforms Ingress resources into Gateway API resources.
+
+### ingress2eg
+
+The `ingress2eg` tool is an **unofficial proof-of-concept** forked from ingress2gateway with additional capabilities:
+
+- **NGINX Annotation Support**: Converts NGINX-specific annotations (16+ feature categories including session affinity, authentication, rate limiting, CORS, canary deployments, etc.)
+- **Envoy Gateway CRD Output**: Generates not only Gateway API resources (Gateway, HTTPRoute) but also Envoy Gateway specific CRDs (BackendTrafficPolicy, SecurityPolicy, etc.)
+
+We aim to get this feature merged upstream in `ingress2gateway` as well.
+
+This guide will walk you through the prerequisites, installation of both tools, and provide example migration processes.
 
 ## Prerequisites
 
@@ -13,6 +28,7 @@ Before you start the migration, ensure you have the following:
 1. **Envoy Gateway Installed**: You need Envoy Gateway set up in your Kubernetes cluster. Follow the [Envoy Gateway installation guide](../install) for details.
 2. **Kubernetes Cluster Access**: Ensure you have access to your Kubernetes cluster and necessary permissions to manage resources.
 3. **Installation of `ingress2gateway` Tool**: You need to install the `ingress2gateway` tool in your Kubernetes cluster and configure it accordingly. Follow the [ingress2gateway tool installation guide](https://github.com/kubernetes-sigs/ingress2gateway/blob/main/README.md#installation) for details.
+4. **Installation of `ingress2eg` Tool**: You need to install the `ingress2eg` tool in your Kubernetes cluster and configure it accordingly. Follow the [ingress2eg tool installation guide](https://github.com/kkk777-7/ingress2eg?tab=readme-ov-file#installation) for details.
 
 ## Example Migration
 
@@ -138,6 +154,142 @@ kubectl get httproutes
 
 Monitor the Envoy Gateway logs and metrics to ensure everything is functioning correctly. Troubleshoot any issues by reviewing the Gateway and HTTPRoute statuses and Envoy Gateway controller logs.
 
+## Example Migration using ingress2eg
+
+The `ingress2eg` tool provides extended support for NGINX-specific annotations and generates Envoy Gateway CRD resources in addition to Gateway API resources. Follow steps 1-2 from the ingress2gateway example above for Envoy Gateway installation and GatewayClass creation.
+
+### 1. Install ingress2eg
+
+Ensure you have the ingress2eg tool installed. Follow the [installation guide](https://github.com/kkk777-7/ingress2eg?tab=readme-ov-file#installation) for details.
+
+### 2. Prepare Ingress with NGINX Annotations
+
+Here's an example Ingress resource using NGINX annotations for rate limiting and CORS:
+
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: example-ingress-nginx
+  namespace: default
+  annotations:
+    nginx.ingress.kubernetes.io/limit-rps: "10"
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+    nginx.ingress.kubernetes.io/cors-allow-methods: "GET, POST, OPTIONS"
+    nginx.ingress.kubernetes.io/cors-allow-origin: "https://example.com"
+spec:
+  rules:
+  - host: example.com
+    http:
+      paths:
+      - path: /api
+        pathType: Prefix
+        backend:
+          service:
+            name: api-service
+            port:
+              number: 80
+```
+
+### 3. Run ingress2eg
+
+Use ingress2eg to convert the Ingress resources. The tool supports various options:
+
+```sh
+# Convert from cluster resources in a specific namespace
+ingress2eg print --namespace default
+
+# Convert from a file
+ingress2eg print --input-file ingress.yaml
+```
+
+### 4. Review Generated Resources
+
+For the above Ingress example, ingress2eg generates the following resources:
+
+**Gateway API Resources:**
+- Gateway
+- HTTPRoute
+
+**Envoy Gateway CRD Resources:**
+- **BackendTrafficPolicy**: Generated from rate limiting annotation (`limit-rps`)
+- **SecurityPolicy**: Generated from CORS annotations (`enable-cors`, `cors-allow-methods`, `cors-allow-origin`)
+
+Generated BackendTrafficPolicy (from the `limit-rps` annotation):
+
+```yaml
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: rate-limit-policy
+  namespace: default
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: example-httproute
+  rateLimit:
+    type: Local
+    local:
+      rules:
+      - clientSelectors:
+        - sourceCIDR:
+            type: Distinct
+            value: 0.0.0.0/0
+        limit:
+          requests: 10
+          unit: Second
+```
+
+Generated SecurityPolicy (from the CORS annotations):
+
+```yaml
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: cors-policy
+  namespace: default
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: example-httproute
+  cors:
+    allowOrigins:
+    - "https://example.com"
+    allowMethods:
+    - GET
+    - POST
+    - OPTIONS
+```
+
+### 5. Apply the Generated Resources
+
+Save the output and apply all resources to your cluster:
+
+```sh
+ingress2eg print --namespace default > gateway-resources.yaml
+kubectl apply -f gateway-resources.yaml
+```
+
+### 6. Validate the Migration
+
+Verify that all resources are created correctly:
+
+```sh
+kubectl get gateways
+kubectl get httproutes
+kubectl get backendtrafficpolicies
+kubectl get securitypolicies
+```
+
+Check the status of the policies to ensure they are accepted:
+
+```sh
+kubectl describe backendtrafficpolicy rate-limit-policy
+kubectl describe securitypolicy cors-policy
+```
+
 ## Summary
 
-By following this guide, users can effectively migrate their existing Ingress resources to Envoy Gateway using the Ingress2gateway package. Creating a GatewayClass and linking it to the Envoy Gateway controller ensures that the translated resources are properly programmed in the data plane, providing a seamless transition to the Envoy Gateway environment.
+By following this guide, users can effectively migrate their existing Ingress resources to Envoy Gateway using the Ingress2gateway, Ingress2eg package. Creating a GatewayClass and linking it to the Envoy Gateway controller ensures that the translated resources are properly programmed in the data plane, providing a seamless transition to the Envoy Gateway environment.

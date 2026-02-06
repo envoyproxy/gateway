@@ -110,6 +110,24 @@ type Principal struct {
 	// +kubebuilder:validation:MinItems=1
 	// +kubebuilder:validation:MaxItems=256
 	Headers []AuthorizationHeaderMatch `json:"headers,omitempty"`
+
+	// SourceCIDRs are the IP CIDR ranges of the source (L4 peer IP).
+	// Valid examples are "192.168.1.0/24" or "2001:db8::/64"
+	//
+	// If multiple CIDR ranges are specified, one of the CIDR ranges must match
+	// the source IP for the rule to match.
+	//
+	// The source IP is the IP address of the peer that connected to Envoy.
+	// This IP is obtained from the TCP connection's peer address and is not
+	// affected by X-Forwarded-For or other IP detection headers.
+	// If intermediaries (load balancers, NAT) terminate or proxy TCP,
+	// the original client IP will only be available if the intermediary
+	// preserves the source address (for example by enabling the PROXY protocol
+	// or avoiding SNAT).
+	// +optional
+	// +kubebuilder:validation:MinItems=1
+	// +notImplementedHide
+	SourceCIDRs []CIDR `json:"sourceCIDRs,omitempty"`
 }
 
 // AuthorizationHeaderMatch specifies how to match against the value of an HTTP header within a authorization rule.
@@ -160,8 +178,8 @@ type JWTPrincipal struct {
 
 	// Scopes are a special type of claim in a JWT token that represents the permissions of the client.
 	//
-	// The value of the scopes field should be a space delimited string that is expected in the scope parameter,
-	// as defined in RFC 6749: https://datatracker.ietf.org/doc/html/rfc6749#page-23.
+	// The value of the scopes field should be a space delimited string that is expected in the
+	// scope (or scp) claim, as defined in RFC 6749: https://datatracker.ietf.org/doc/html/rfc6749#page-23.
 	//
 	// If multiple scopes are specified, all scopes must match for the rule to match.
 	//

@@ -15,6 +15,7 @@ import (
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	genericv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/http/injected_credentials/generic/v3"
 	tlsv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
+	"google.golang.org/protobuf/types/known/anypb"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -152,7 +153,9 @@ func (*credentialInjector) patchRoute(route *routev3.Route, irRoute *ir.HTTPRout
 		return nil
 	}
 	filterName := credentialInjectorFilterName(irRoute.CredentialInjection)
-	if err := enableFilterOnRoute(route, filterName); err != nil {
+	if err := enableFilterOnRoute(route, filterName, &routev3.FilterConfig{
+		Config: &anypb.Any{},
+	}); err != nil {
 		return err
 	}
 	return nil

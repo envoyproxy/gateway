@@ -446,6 +446,57 @@ spec:
 
 After applying the config, you can get the envoyproxy deployment, and see resources has been changed.
 
+## Customize EnvoyProxy Priority Class
+
+You can configure the [PriorityClassName](https://kubernetes.io/docs/concepts/scheduling-eviction/pod-priority-preemption/) for the Envoy Proxy pods via EnvoyProxy Config.
+
+**Note:** The PriorityClass must exist in your cluster before creating the EnvoyProxy resource.
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: custom-proxy-config
+  namespace: default
+spec:
+  provider:
+    type: Kubernetes
+    kubernetes:
+      envoyDeployment:
+        pod:
+          priorityClassName: high-priority
+EOF
+```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: custom-proxy-config
+  namespace: default
+spec:
+  provider:
+    type: Kubernetes
+    kubernetes:
+      envoyDeployment:
+        pod:
+          priorityClassName: high-priority
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
+
+After applying the config, you can get the envoyproxy deployment and see the priorityClassName has been set.
+
 ## Customize EnvoyProxy Service Annotations
 
 You can customize the EnvoyProxy Service Annotations via EnvoyProxy Config like:

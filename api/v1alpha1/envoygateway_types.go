@@ -91,6 +91,10 @@ type EnvoyGatewaySpec struct {
 
 	// ExtensionManager defines an extension manager to register for the Envoy Gateway Control Plane.
 	//
+	// Warning: Enabling an Extension Server may lead to complete security compromise of your system.
+	// Users that control the Extension Server can inject arbitrary configuration to proxies,
+	// leading to high Confidentiality, Integrity and Availability risks.
+	//
 	// +optional
 	ExtensionManager *ExtensionManager `json:"extensionManager,omitempty"`
 
@@ -100,9 +104,48 @@ type EnvoyGatewaySpec struct {
 	// +optional
 	ExtensionAPIs *ExtensionAPISettings `json:"extensionApis,omitempty"`
 
+	// GatewayAPI defines feature flags for experimental Gateway API resources.
+	// These APIs live under the gateway.networking.x-k8s.io group and are opt-in.
+	//
+	// +optional
+	GatewayAPI *GatewayAPISettings `json:"gatewayAPI,omitempty"`
+
 	// RuntimeFlags defines the runtime flags for Envoy Gateway.
 	// Unlike ExtensionAPIs, these flags are temporary and will be removed in future releases once the related features are stable.
 	RuntimeFlags *RuntimeFlags `json:"runtimeFlags,omitempty"`
+
+	// EnvoyProxy defines the default EnvoyProxy configuration that applies
+	// to all managed Envoy Proxy fleet. This is an optional field and when
+	// provided, the settings from this EnvoyProxySpec serve as the base
+	// defaults for all Envoy Proxy instances.
+	//
+	// The hierarchy for EnvoyProxy configuration is (highest to lowest priority):
+	// 1. Gateway-level EnvoyProxy (referenced via Gateway.spec.infrastructure.parametersRef)
+	// 2. GatewayClass-level EnvoyProxy (referenced via GatewayClass.spec.parametersRef)
+	// 3. This EnvoyProxy default spec
+	//
+	// Currently, the most specific EnvoyProxy configuration wins completely (replace semantics).
+	// A future release will introduce merge semantics to allow combining configurations
+	// across multiple levels.
+	//
+	// +optional
+	EnvoyProxy *EnvoyProxySpec `json:"envoyProxy,omitempty"`
+}
+
+// GatewayAPI defines an experimental Gateway API resource that can be enabled.
+// +enum
+// +kubebuilder:validation:Enum=XListenerSet;XBackendTrafficPolicy
+type GatewayAPI string
+
+const (
+	// XListenerSet enables the Gateway API XListenerSet resource.
+	XListenerSet GatewayAPI = "XListenerSet"
+)
+
+// GatewayAPISettings provides a mechanism to opt into experimental Gateway API resources.
+// These APIs are experimental today and are subject to change or removal as they mature.
+type GatewayAPISettings struct {
+	Enabled []GatewayAPI `json:"enabled,omitempty"`
 }
 
 // RuntimeFlag defines a runtime flag used to guard breaking changes or risky experimental features in new Envoy Gateway releases.
@@ -261,10 +304,17 @@ type Gateway struct {
 type ExtensionAPISettings struct {
 	// EnableEnvoyPatchPolicy enables Envoy Gateway to
 	// reconcile and implement the EnvoyPatchPolicy resources.
+	//
+	// Warning: Enabling `EnvoyPatchPolicy` may lead to complete security compromise of your system.
+	// Users with `EnvoyPatchPolicy` permissions can inject arbitrary configuration to proxies,
+	// leading to high Confidentiality, Integrity and Availability risks.
 	EnableEnvoyPatchPolicy bool `json:"enableEnvoyPatchPolicy"`
 	// EnableBackend enables Envoy Gateway to
 	// reconcile and implement the Backend resources.
 	EnableBackend bool `json:"enableBackend"`
+	// DisableLua determines if Lua EnvoyExtensionPolicies should be disabled.
+	// If set to true, the Lua EnvoyExtensionPolicy feature will be disabled.
+	DisableLua bool `json:"disableLua"`
 }
 
 // EnvoyGatewayProvider defines the desired configuration of a provider.
@@ -315,7 +365,6 @@ type EnvoyGatewayKubernetesProvider struct {
 	// Deploy holds configuration of how output managed resources such as the Envoy Proxy data plane
 	// should be deployed
 	// +optional
-	// +notImplementedHide
 	Deploy *KubernetesDeployMode `json:"deploy,omitempty"`
 	// LeaderElection specifies the configuration for leader election.
 	// If it's not set up, leader election will be active by default, using Kubernetes' standard settings.
@@ -781,7 +830,6 @@ type ExtensionTLS struct {
 	// for mTLS authentication. If not specified, only server certificate validation is performed.
 	//
 	// +optional
-	// +notImplementedHide
 	ClientCertificateRef *gwapiv1.SecretObjectReference `json:"clientCertificateRef,omitempty"`
 }
 

@@ -26,6 +26,11 @@ backendTrafficPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
@@ -64,6 +69,11 @@ backendTrafficPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
       - lastTransitionTime: null
         message: 'This policy is being overridden by other backendTrafficPolicy for
           these route rules: [rule-2]'
@@ -123,6 +133,11 @@ backendTrafficPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
@@ -156,6 +171,11 @@ backendTrafficPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
@@ -188,6 +208,11 @@ backendTrafficPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
       - lastTransitionTime: null
         message: 'This policy is being merged by other backendTrafficPolicies for
           these routes: [default/grpcroute-1 default/httproute-2]'
@@ -224,6 +249,11 @@ backendTrafficPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
       - lastTransitionTime: null
         message: 'This policy is being merged by other backendTrafficPolicies for
           these routes: [default/grpcroute-1 default/httproute-1 default/httproute-2]'
@@ -512,6 +542,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-1
           namespace: default
+          policies:
+          - kind: BackendTrafficPolicy
+            name: merged-policy-for-httproute-1
+            namespace: default
           sectionName: rule-1
         name: httproute/default/httproute-1/rule/0/match/0/*
         pathMatch:
@@ -555,6 +589,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-1
           namespace: default
+          policies:
+          - kind: BackendTrafficPolicy
+            name: policy-for-httproute-1-rule-2
+            namespace: default
           sectionName: rule-2
         name: httproute/default/httproute-1/rule/1/match/0/*
         pathMatch:
@@ -589,6 +627,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-2
           namespace: default
+          policies:
+          - kind: BackendTrafficPolicy
+            name: merged-policy-for-httproute-2
+            namespace: default
         name: httproute/default/httproute-2/rule/0/match/0/*
         pathMatch:
           distinct: false
@@ -644,6 +686,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-2
           namespace: default
+          policies:
+          - kind: BackendTrafficPolicy
+            name: merged-policy-for-httproute-2
+            namespace: default
         name: httproute/default/httproute-2/rule/0/match/0/*
         pathMatch:
           distinct: false
@@ -683,6 +729,10 @@ xdsIR:
           kind: GRPCRoute
           name: grpcroute-1
           namespace: default
+          policies:
+          - kind: BackendTrafficPolicy
+            name: merged-policy-for-grpcroute-1
+            namespace: default
         name: grpcroute/default/grpcroute-1/rule/0/match/-1/*
         traffic:
           backendConnection:

@@ -368,6 +368,36 @@ func TestValidateConfigMapForReconcile(t *testing.T) {
 			configMap: test.GetConfigMap(types.NamespacedName{Name: "not-lua", Namespace: "test"}, make(map[string]string), make(map[string]string)),
 			expect:    false,
 		},
+		{
+			name: "references SecurityPolicy Ext Auth context extensions config map",
+			configs: []client.Object{
+				&egv1a1.SecurityPolicy{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "ext-auth",
+						Namespace: "test",
+					},
+					Spec: egv1a1.SecurityPolicySpec{
+						ExtAuth: &egv1a1.ExtAuth{
+							ContextExtensions: []*egv1a1.ContextExtension{
+								{
+									Name: "foo",
+									Type: egv1a1.ContextExtensionValueTypeValueRef,
+									ValueRef: &egv1a1.LocalObjectKeyReference{
+										LocalObjectReference: gwapiv1.LocalObjectReference{
+											Kind: resource.KindConfigMap,
+											Name: "context-extensions-cm",
+										},
+										Key: "foo",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			configMap: test.GetConfigMap(types.NamespacedName{Name: "context-extensions-cm", Namespace: "test"}, nil, nil),
+			expect:    true,
+		},
 	}
 
 	// Create the reconciler.
@@ -377,6 +407,7 @@ func TestValidateConfigMapForReconcile(t *testing.T) {
 		classController:  egv1a1.GatewayControllerName,
 		log:              logger,
 		backendCRDExists: true,
+		spCRDExists:      true,
 		eepCRDExists:     true,
 		envoyGateway: &egv1a1.EnvoyGateway{
 			EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
@@ -393,6 +424,7 @@ func TestValidateConfigMapForReconcile(t *testing.T) {
 			WithObjects(tc.configs...).
 			WithIndex(&egv1a1.Backend{}, configMapBackendIndex, configMapBackendIndexFunc).
 			WithIndex(&egv1a1.EnvoyExtensionPolicy{}, configMapEepIndex, configMapEepIndexFunc).
+			WithIndex(&egv1a1.SecurityPolicy{}, configMapSecurityPolicyIndex, configMapSecurityPolicyIndexFunc).
 			Build()
 		t.Run(tc.name, func(t *testing.T) {
 			res := r.validateConfigMapForReconcile(tc.configMap)
@@ -610,6 +642,35 @@ func TestValidateSecretForReconcile(t *testing.T) {
 						BasicAuth: &egv1a1.BasicAuth{
 							Users: gwapiv1.SecretObjectReference{
 								Name: "secret",
+							},
+						},
+					},
+				},
+			},
+			secret: test.GetSecret(types.NamespacedName{Name: "secret"}),
+			expect: true,
+		},
+		{
+			name: "references SecurityPolicy Ext Auth context extensions",
+			configs: []client.Object{
+				&egv1a1.SecurityPolicy{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "ext-auth",
+					},
+					Spec: egv1a1.SecurityPolicySpec{
+						ExtAuth: &egv1a1.ExtAuth{
+							ContextExtensions: []*egv1a1.ContextExtension{
+								{
+									Name: "foo",
+									Type: egv1a1.ContextExtensionValueTypeValueRef,
+									ValueRef: &egv1a1.LocalObjectKeyReference{
+										LocalObjectReference: gwapiv1.LocalObjectReference{
+											Kind: resource.KindSecret,
+											Name: "secret",
+										},
+										Key: "foo",
+									},
+								},
 							},
 						},
 					},

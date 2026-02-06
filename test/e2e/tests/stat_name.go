@@ -65,7 +65,7 @@ var ClusterStatNameTest = suite.ConformanceTest{
 
 			// make sure that a metrics for alt_stat_name exists in test gateway and they collapse stats from multiple clusters
 			// expect to find 2 cluster members, since there are two routes with the same alt_stat_name and each cluster has a single member
-			if err := wait.PollUntilContextTimeout(context.TODO(), 3*time.Second, time.Minute, true, func(ctx context.Context) (done bool, err error) {
+			if err := wait.PollUntilContextTimeout(context.TODO(), 3*time.Second, time.Minute, true, func(_ context.Context) (done bool, err error) {
 				v, err := prometheus.QueryPrometheus(suite.Client, `envoy_cluster_membership_healthy{envoy_cluster_name="gateway-conformance-infra/stat-name-route/gateway-conformance-infra/infra-backend-v1"}`)
 				if err != nil {
 					tlog.Logf(t, "failed to query prometheus: %v", err)
@@ -142,7 +142,7 @@ var TCPRouteStatNameTest = suite.ConformanceTest{
 }
 
 func verifyMetrics(t *testing.T, suite *suite.ConformanceTestSuite, promQuery string) {
-	if err := wait.PollUntilContextTimeout(context.TODO(), 3*time.Second, time.Minute, true, func(ctx context.Context) (done bool, err error) {
+	if err := wait.PollUntilContextTimeout(context.TODO(), 3*time.Second, time.Minute, true, func(_ context.Context) (done bool, err error) {
 		v, err := prometheus.QueryPrometheus(suite.Client, promQuery)
 		if err != nil {
 			tlog.Logf(t, "failed to query prometheus: %v", err)

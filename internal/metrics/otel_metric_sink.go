@@ -73,7 +73,7 @@ func newGauge(o MetricOptions) *Gauge {
 	r := &Gauge{mutex: &sync.RWMutex{}, name: o.Name}
 	r.stores = map[attribute.Set]*GaugeValues{}
 	g, err := meter().Float64ObservableGauge(o.Name,
-		api.WithFloat64Callback(func(ctx context.Context, observer api.Float64Observer) error {
+		api.WithFloat64Callback(func(_ context.Context, observer api.Float64Observer) error {
 			r.mutex.Lock()
 			defer r.mutex.Unlock()
 			for _, gv := range r.stores {

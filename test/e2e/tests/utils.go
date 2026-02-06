@@ -59,6 +59,10 @@ var (
 	SameNamespaceGatewayRef = k8sutils.NewGatewayRef(SameNamespaceGateway)
 
 	PodReady = corev1.PodCondition{Type: corev1.PodReady, Status: corev1.ConditionTrue}
+
+	patchOpts = []client.PatchOption{
+		client.ForceOwnership, client.FieldOwner("e2e-test"),
+	}
 )
 
 const (

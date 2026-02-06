@@ -33,6 +33,8 @@ var HTTPExtAuthTimeoutTest = suite.ConformanceTest{
 	Description: "Test ExtAuth timeout behavior with HTTP auth service",
 	Manifests:   []string{"testdata/ext-auth-service.yaml", "testdata/ext-auth-http-timeout-securitypolicy.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
+		t.Skip("https://github.com/envoyproxy/gateway/issues/8046")
+
 		ns := "gateway-conformance-infra"
 		routeNN := types.NamespacedName{Name: "http-with-ext-auth", Namespace: ns}
 		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}

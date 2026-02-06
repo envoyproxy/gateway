@@ -319,17 +319,17 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, envoyPatchPolicies []*
 
 		// Set translation errors for every policy ancestor references
 		if tErrs != nil {
-			status.SetTranslationErrorForEnvoyPatchPolicy(e.Status, status.Error2ConditionMsg(tErrs))
+			status.SetTranslationErrorForEnvoyPatchPolicy(e.Status, status.Error2ConditionMsg(tErrs), e.Generation)
 			errs = errors.Join(errs, tErrs)
 		}
 
 		// Set resources not found errors for every policy ancestor references
 		if len(notFoundResources) > 0 {
-			status.SetResourceNotFoundErrorForEnvoyPatchPolicy(e.Status, notFoundResources)
+			status.SetResourceNotFoundErrorForEnvoyPatchPolicy(e.Status, notFoundResources, e.Generation)
 		}
 
 		// Set Programmed condition if not yet set
-		status.SetProgrammedForEnvoyPatchPolicy(e.Status)
+		status.SetProgrammedForEnvoyPatchPolicy(e.Status, e.Generation)
 
 		// Set output context
 		tCtx.EnvoyPatchPolicyStatuses = append(tCtx.EnvoyPatchPolicyStatuses, &e.EnvoyPatchPolicyStatus)

@@ -66,7 +66,6 @@ var DynamicResolverBackendTest = suite.ConformanceTest{
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 		})
 		t.Run("route to external service with app protocol", func(t *testing.T) {
-			t.Skip("https://github.com/envoyproxy/gateway/issues/7058")
 			routeNN := types.NamespacedName{Name: "httproute-with-dynamic-resolver-backend-with-app-protocol", Namespace: ConformanceInfraNamespace}
 			gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
 			BackendMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "backend-dynamic-resolver-with-app-protocol", Namespace: ConformanceInfraNamespace})
@@ -81,12 +80,9 @@ var DynamicResolverBackendTest = suite.ConformanceTest{
 				},
 			})
 
-			// test with nghttp2.org, it support http2.0
-			// https://github.com/postmanlabs/httpbin/issues/373#issuecomment-354534597
 			req := http.MakeRequest(t, &http.ExpectedResponse{
 				Request: http.Request{
-					Host: "nghttp2.org",
-					Path: "httpbin/status/200",
+					Host: "gateway.envoyproxy.io", // gateway website supports http2.0
 				},
 				Response: http.Response{
 					StatusCodes: []int{200},
@@ -97,6 +93,137 @@ var DynamicResolverBackendTest = suite.ConformanceTest{
 					StatusCodes: []int{200},
 				},
 			}, suite.TimeoutConfig.RequiredConsecutiveSuccesses, suite.TimeoutConfig.MaxTimeToConsistency)
+		})
+		t.Run("route to loopback address should be blocked", func(t *testing.T) {
+			expectedResponse := http.ExpectedResponse{
+				Request: http.Request{
+					Host: "127.0.0.1",
+					Path: "/",
+				},
+				Response: http.Response{
+					StatusCodes: []int{403},
+				},
+				Namespace: ConformanceInfraNamespace,
+			}
+
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
+		})
+		t.Run("host rewrite to header with default dns cache", func(t *testing.T) {
+			expectedResponse := http.ExpectedResponse{
+				Request: http.Request{
+					Host: "non-existent-host",
+					Path: "/host-rewrite-default-dns-cache",
+					Headers: map[string]string{
+						"x-dynamic-host-header-1": "test-service-foo.gateway-conformance-infra.svc.cluster.local",
+					},
+				},
+				ExpectedRequest: &http.ExpectedRequest{
+					Request: http.Request{
+						Host: "test-service-foo.gateway-conformance-infra.svc.cluster.local",
+						Path: "/host-rewrite-default-dns-cache",
+					},
+				},
+				Response: http.Response{
+					StatusCodes: []int{200},
+				},
+				Namespace: ConformanceInfraNamespace,
+			}
+
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
+		})
+		t.Run("host rewrite to header with custom dns cache", func(t *testing.T) {
+			expectedResponse := http.ExpectedResponse{
+				Request: http.Request{
+					Host: "non-existent-host",
+					Path: "/host-rewrite-custom-dns-cache",
+					Headers: map[string]string{
+						"x-dynamic-host-header-2": "test-service-bar.gateway-conformance-infra.svc.cluster.local",
+					},
+				},
+				ExpectedRequest: &http.ExpectedRequest{
+					Request: http.Request{
+						Host: "test-service-bar.gateway-conformance-infra.svc.cluster.local",
+						Path: "/host-rewrite-custom-dns-cache",
+					},
+				},
+				Response: http.Response{
+					StatusCodes: []int{200},
+				},
+				Namespace: ConformanceInfraNamespace,
+			}
+
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
+		})
+		t.Run("host rewrite to literal name", func(t *testing.T) {
+			expectedResponse := http.ExpectedResponse{
+				Request: http.Request{
+					Host: "non-existent-host",
+					Path: "/host-rewrite-literal-name",
+				},
+				ExpectedRequest: &http.ExpectedRequest{
+					Request: http.Request{
+						Host: "test-service-foo.gateway-conformance-infra.svc.cluster.local",
+						Path: "/host-rewrite-literal-name",
+					},
+				},
+				Response: http.Response{
+					StatusCodes: []int{200},
+				},
+				Namespace: ConformanceInfraNamespace,
+			}
+
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
+		})
+		t.Run("host rewrite to loopback address at a specific port should be blocked", func(t *testing.T) {
+			expectedResponse := http.ExpectedResponse{
+				Request: http.Request{
+					Host: "non-existent-host",
+					Path: "/host-rewrite-default-dns-cache",
+					Headers: map[string]string{
+						"x-dynamic-host-header-1": "127.0.0.1:19002",
+					},
+				},
+				Response: http.Response{
+					StatusCodes: []int{403},
+				},
+				Namespace: ConformanceInfraNamespace,
+			}
+
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
+		})
+		t.Run("host rewrite to loopback address at the default port should be blocked", func(t *testing.T) {
+			expectedResponse := http.ExpectedResponse{
+				Request: http.Request{
+					Host: "non-existent-host",
+					Path: "/host-rewrite-custom-dns-cache",
+					Headers: map[string]string{
+						"x-dynamic-host-header-2": "localhost",
+					},
+				},
+				Response: http.Response{
+					StatusCodes: []int{403},
+				},
+				Namespace: ConformanceInfraNamespace,
+			}
+
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
+		})
+		t.Run("host rewrite to forbidden hosts should be blocked", func(t *testing.T) {
+			expectedResponse := http.ExpectedResponse{
+				Request: http.Request{
+					Host: "non-existent-host",
+					Path: "/host-rewrite-custom-dns-cache",
+					Headers: map[string]string{
+						"x-dynamic-host-header-2": "forbidden.com",
+					},
+				},
+				Response: http.Response{
+					StatusCodes: []int{403},
+				},
+				Namespace: ConformanceInfraNamespace,
+			}
+
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 		})
 	},
 }

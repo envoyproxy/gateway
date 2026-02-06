@@ -23,6 +23,11 @@ clientTrafficPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
@@ -36,7 +41,34 @@ gateways:
     - allowedRoutes:
         namespaces:
           from: All
-      name: tls
+      hostname: '*.example.com'
+      name: https-wildcard
+      port: 443
+      protocol: HTTPS
+      tls:
+        certificateRefs:
+        - group: null
+          kind: null
+          name: tls-secret-1
+        mode: Terminate
+    - allowedRoutes:
+        namespaces:
+          from: All
+      hostname: foo.example.com
+      name: https-foo
+      port: 443
+      protocol: HTTPS
+      tls:
+        certificateRefs:
+        - group: null
+          kind: null
+          name: tls-secret-1
+        mode: Terminate
+    - allowedRoutes:
+        namespaces:
+          from: All
+      hostname: bar.example.com
+      name: https-bar
       port: 443
       protocol: HTTPS
       tls:
@@ -47,7 +79,7 @@ gateways:
         mode: Terminate
   status:
     listeners:
-    - attachedRoutes: 1
+    - attachedRoutes: 2
       conditions:
       - lastTransitionTime: null
         message: Sending translated listener configuration to the data plane
@@ -64,7 +96,74 @@ gateways:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
-      name: tls
+      - lastTransitionTime: null
+        message: The hostname *.example.com overlaps with the hostname bar.example.com
+          in listener https-bar. ALPN will default to HTTP/1.1 to prevent HTTP/2 connection
+          coalescing, unless explicitly configured via ClientTrafficPolicy
+        reason: OverlappingHostnames
+        status: "True"
+        type: OverlappingTLSConfig
+      name: https-wildcard
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
+    - attachedRoutes: 2
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      - lastTransitionTime: null
+        message: The hostname foo.example.com overlaps with the hostname *.example.com
+          in listener https-wildcard. ALPN will default to HTTP/1.1 to prevent HTTP/2
+          connection coalescing, unless explicitly configured via ClientTrafficPolicy
+        reason: OverlappingHostnames
+        status: "True"
+        type: OverlappingTLSConfig
+      name: https-foo
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
+    - attachedRoutes: 2
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      - lastTransitionTime: null
+        message: The hostname bar.example.com overlaps with the hostname *.example.com
+          in listener https-wildcard. ALPN will default to HTTP/1.1 to prevent HTTP/2
+          connection coalescing, unless explicitly configured via ClientTrafficPolicy
+        reason: OverlappingHostnames
+        status: "True"
+        type: OverlappingTLSConfig
+      name: https-bar
       supportedKinds:
       - group: gateway.networking.k8s.io
         kind: HTTPRoute
@@ -77,6 +176,8 @@ httpRoutes:
     name: httproute-1
     namespace: default
   spec:
+    hostnames:
+    - foo.example.com
     parentRefs:
     - name: gateway-1
       namespace: envoy-gateway
@@ -104,13 +205,48 @@ httpRoutes:
       parentRef:
         name: gateway-1
         namespace: envoy-gateway
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    name: httproute-1
+    namespace: default
+  spec:
+    hostnames:
+    - bar.example.com
+    parentRefs:
+    - name: gateway-1
+      namespace: envoy-gateway
+    rules:
+    - backendRefs:
+      - name: service-2
+        port: 8080
+      matches:
+      - path:
+          value: /
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        namespace: envoy-gateway
 infraIR:
   envoy-gateway/gateway-1:
     proxy:
       listeners:
       - address: null
         http3: {}
-        name: envoy-gateway/gateway-1/tls
+        name: envoy-gateway/gateway-1/https-wildcard
         ports:
         - containerPort: 10443
           name: https-443
@@ -155,15 +291,40 @@ xdsIR:
     - address: 0.0.0.0
       externalPort: 443
       hostnames:
-      - '*'
+      - '*.example.com'
       http3: {}
       isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-1
         namespace: envoy-gateway
-        sectionName: tls
-      name: envoy-gateway/gateway-1/tls
+        sectionName: https-wildcard
+      name: envoy-gateway/gateway-1/https-wildcard
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
+      port: 10443
+      tls:
+        alpnProtocols: null
+        certificates:
+        - certificate: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUREVENDQWZXZ0F3SUJBZ0lVRUZNaFA5ZUo5WEFCV3NRNVptNmJSazJjTE5Rd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0ZqRVVNQklHQTFVRUF3d0xabTl2TG1KaGNpNWpiMjB3SGhjTk1qUXdNakk1TURrek1ERXdXaGNOTXpRdwpNakkyTURrek1ERXdXakFXTVJRd0VnWURWUVFEREF0bWIyOHVZbUZ5TG1OdmJUQ0NBU0l3RFFZSktvWklodmNOCkFRRUJCUUFEZ2dFUEFEQ0NBUW9DZ2dFQkFKbEk2WXhFOVprQ1BzNnBDUXhickNtZWl4OVA1RGZ4OVJ1NUxENFQKSm1kVzdJS2R0UVYvd2ZMbXRzdTc2QithVGRDaldlMEJUZmVPT1JCYlIzY1BBRzZFbFFMaWNsUVVydW4zcStncwpKcEsrSTdjSStqNXc4STY4WEg1V1E3clZVdGJ3SHBxYncrY1ZuQnFJVU9MaUlhdGpJZjdLWDUxTTF1RjljZkVICkU0RG5jSDZyYnI1OS9SRlpCc2toeHM1T3p3Sklmb2hreXZGd2V1VHd4Sy9WcGpJKzdPYzQ4QUJDWHBOTzlEL3EKRWgrck9hdWpBTWNYZ0hRSVRrQ2lpVVRjVW82TFNIOXZMWlB0YXFmem9acTZuaE1xcFc2NUUxcEF3RjNqeVRUeAphNUk4SmNmU0Zqa2llWjIwTFVRTW43TThVNHhIamFvL2d2SDBDQWZkQjdSTFUyc0NBd0VBQWFOVE1GRXdIUVlEClZSME9CQllFRk9SQ0U4dS8xRERXN2loWnA3Y3g5dFNtUG02T01COEdBMVVkSXdRWU1CYUFGT1JDRTh1LzFERFcKN2loWnA3Y3g5dFNtUG02T01BOEdBMVVkRXdFQi93UUZNQU1CQWY4d0RRWUpLb1pJaHZjTkFRRUxCUUFEZ2dFQgpBRnQ1M3pqc3FUYUg1YThFMmNodm1XQWdDcnhSSzhiVkxNeGl3TkdqYm1FUFJ6K3c2TngrazBBOEtFY0lEc0tjClNYY2k1OHU0b1didFZKQmx6YS9adWpIUjZQMUJuT3BsK2FveTc4NGJiZDRQMzl3VExvWGZNZmJCQ20xdmV2aDkKQUpLbncyWnRxcjRta2JMY3hFcWxxM3NCTEZBUzlzUUxuS05DZTJjR0xkVHAyYm9HK3FjZ3lRZ0NJTTZmOEVNdgpXUGlmQ01NR3V6Sy9HUkY0YlBPL1lGNDhld0R1M1VlaWgwWFhkVUFPRTlDdFVhOE5JaGMxVVBhT3pQcnRZVnFyClpPR2t2L0t1K0I3OGg4U0VzTzlYclFjdXdiT25KeDZLdFIrYWV5a3ZBcFhDUTNmWkMvYllLQUFSK1A4QUpvUVoKYndJVW1YaTRnajVtK2JLUGhlK2lyK0U9Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0=
+          name: envoy-gateway/tls-secret-1
+          privateKey: '[redacted]'
+        maxVersion: "1.3"
+        minVersion: "1.2"
+      tlsOverlaps: true
+    - address: 0.0.0.0
+      externalPort: 443
+      hostnames:
+      - foo.example.com
+      http3: {}
+      isHTTP2: false
+      metadata:
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: https-foo
+      name: envoy-gateway/gateway-1/https-foo
       path:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
@@ -188,13 +349,13 @@ xdsIR:
             name: httproute/default/httproute-1/rule/0/backend/0
             protocol: HTTP
             weight: 1
-        hostname: '*'
+        hostname: foo.example.com
         isHTTP2: false
         metadata:
           kind: HTTPRoute
           name: httproute-1
           namespace: default
-        name: httproute/default/httproute-1/rule/0/match/0/*
+        name: httproute/default/httproute-1/rule/0/match/0/foo_example_com
         pathMatch:
           distinct: false
           name: ""
@@ -207,6 +368,63 @@ xdsIR:
           privateKey: '[redacted]'
         maxVersion: "1.3"
         minVersion: "1.2"
+      tlsOverlaps: true
+    - address: 0.0.0.0
+      externalPort: 443
+      hostnames:
+      - bar.example.com
+      http3: {}
+      isHTTP2: false
+      metadata:
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: https-bar
+      name: envoy-gateway/gateway-1/https-bar
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
+      port: 10443
+      routes:
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-1
+            namespace: default
+          name: httproute/default/httproute-1/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            metadata:
+              kind: Service
+              name: service-2
+              namespace: default
+              sectionName: "8080"
+            name: httproute/default/httproute-1/rule/0/backend/0
+            protocol: HTTP
+            weight: 1
+        hostname: bar.example.com
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-1
+          namespace: default
+        name: httproute/default/httproute-1/rule/0/match/0/bar_example_com
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /
+      tls:
+        alpnProtocols: null
+        certificates:
+        - certificate: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUREVENDQWZXZ0F3SUJBZ0lVRUZNaFA5ZUo5WEFCV3NRNVptNmJSazJjTE5Rd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0ZqRVVNQklHQTFVRUF3d0xabTl2TG1KaGNpNWpiMjB3SGhjTk1qUXdNakk1TURrek1ERXdXaGNOTXpRdwpNakkyTURrek1ERXdXakFXTVJRd0VnWURWUVFEREF0bWIyOHVZbUZ5TG1OdmJUQ0NBU0l3RFFZSktvWklodmNOCkFRRUJCUUFEZ2dFUEFEQ0NBUW9DZ2dFQkFKbEk2WXhFOVprQ1BzNnBDUXhickNtZWl4OVA1RGZ4OVJ1NUxENFQKSm1kVzdJS2R0UVYvd2ZMbXRzdTc2QithVGRDaldlMEJUZmVPT1JCYlIzY1BBRzZFbFFMaWNsUVVydW4zcStncwpKcEsrSTdjSStqNXc4STY4WEg1V1E3clZVdGJ3SHBxYncrY1ZuQnFJVU9MaUlhdGpJZjdLWDUxTTF1RjljZkVICkU0RG5jSDZyYnI1OS9SRlpCc2toeHM1T3p3Sklmb2hreXZGd2V1VHd4Sy9WcGpJKzdPYzQ4QUJDWHBOTzlEL3EKRWgrck9hdWpBTWNYZ0hRSVRrQ2lpVVRjVW82TFNIOXZMWlB0YXFmem9acTZuaE1xcFc2NUUxcEF3RjNqeVRUeAphNUk4SmNmU0Zqa2llWjIwTFVRTW43TThVNHhIamFvL2d2SDBDQWZkQjdSTFUyc0NBd0VBQWFOVE1GRXdIUVlEClZSME9CQllFRk9SQ0U4dS8xRERXN2loWnA3Y3g5dFNtUG02T01COEdBMVVkSXdRWU1CYUFGT1JDRTh1LzFERFcKN2loWnA3Y3g5dFNtUG02T01BOEdBMVVkRXdFQi93UUZNQU1CQWY4d0RRWUpLb1pJaHZjTkFRRUxCUUFEZ2dFQgpBRnQ1M3pqc3FUYUg1YThFMmNodm1XQWdDcnhSSzhiVkxNeGl3TkdqYm1FUFJ6K3c2TngrazBBOEtFY0lEc0tjClNYY2k1OHU0b1didFZKQmx6YS9adWpIUjZQMUJuT3BsK2FveTc4NGJiZDRQMzl3VExvWGZNZmJCQ20xdmV2aDkKQUpLbncyWnRxcjRta2JMY3hFcWxxM3NCTEZBUzlzUUxuS05DZTJjR0xkVHAyYm9HK3FjZ3lRZ0NJTTZmOEVNdgpXUGlmQ01NR3V6Sy9HUkY0YlBPL1lGNDhld0R1M1VlaWgwWFhkVUFPRTlDdFVhOE5JaGMxVVBhT3pQcnRZVnFyClpPR2t2L0t1K0I3OGg4U0VzTzlYclFjdXdiT25KeDZLdFIrYWV5a3ZBcFhDUTNmWkMvYllLQUFSK1A4QUpvUVoKYndJVW1YaTRnajVtK2JLUGhlK2lyK0U9Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0=
+          name: envoy-gateway/tls-secret-1
+          privateKey: '[redacted]'
+        maxVersion: "1.3"
+        minVersion: "1.2"
+      tlsOverlaps: true
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

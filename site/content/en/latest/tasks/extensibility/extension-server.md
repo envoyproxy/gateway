@@ -4,8 +4,8 @@ linkTitle: "Extension Server"
 ---
 
 This task explains how to extend Envoy Gateway using an Extension Server. Envoy Gateway
-can be configured to call an external server over gRPC with the xDS configuration _before_ 
-it is sent to Envoy Proxy. The external server can modify the provided configuration 
+can be configured to call an external server over gRPC with the xDS configuration _before_
+it is sent to Envoy Proxy. The external server can modify the provided configuration
 programmatically using any semantics supported by the [xDS][] API.
 
 Using an extension server allows vendors to add xDS configuration that Envoy Gateway itself
@@ -23,6 +23,23 @@ build value-added products without having to re-engineer fundamental interaction
 Envoy Gateway Extension Server provides a mechanism where Envoy Gateway tracks all provider
 resources and then calls a set of hooks that allow the generated xDS configuration to be
 modified before it is sent to Envoy Proxy. See the [design documentation][] for full details.
+
+## Security Warning
+
+{{% alert title="Security Warning" color="warning" %}}
+Enabling an Extension Server may lead to complete security compromise of your system.
+Users that control the Extension Server can inject arbitrary configuration to proxies,
+leading to high Confidentiality, Integrity and Availability risks.
+
+Injected configuration may include arbitrary code executed by the proxy without any isolation. Such code may be used
+to launch SSRF attacks, as well as allow users to gain access to proxy credentials as described in [CVE-2026-22771][].
+With such access, users can fetch the complete proxy configuration, including secrets and cluster network topology.
+
+When enabling Extension Server, additional security measures should be taken by admins to reduce security risks, including:
+* Using K8s [RBAC][] to restrict access to the Envoy Gateway Configuration as well as the Extension Server deployment.
+* Disabling envoy extensions which are not needed with envoy [command line options][].
+* Implementing Kubernetes [network policies][] that restrict traffic from the proxy pod only to relevant targets.
+  {{% /alert %}}
 
 ## Extension Hooks Overview
 
@@ -122,7 +139,7 @@ includes its own CRD which allows defining username/password pairs that will be 
 the Envoy Proxy.
 
 **Note:** Envoy Gateway supports adding Basic Authentication to routes using a [SecurityPolicy][].
-See [this task](../security/basic-auth) for the preferred way to configure Basic 
+See [this task](../security/basic-auth) for the preferred way to configure Basic
 Authentication.
 
 ## Quickstart
@@ -133,7 +150,7 @@ Authentication.
 
 ### Build and run the example Extension Server
 
-Build and deploy the example extension server in the `examples/extension-server` folder into the cluster 
+Build and deploy the example extension server in the `examples/extension-server` folder into the cluster
 running Envoy Gateway.
 
 * Build the extension server image
@@ -245,7 +262,7 @@ Get the Gateway's address:
 export GATEWAY_HOST=$(kubectl get gateway/eg -o jsonpath='{.status.addresses[0].value}')
 ```
 
-The extension server adds the Basic Authentication HTTP filter to all listeners configured by 
+The extension server adds the Basic Authentication HTTP filter to all listeners configured by
 Envoy Gateway. Initially there are no valid user/password combinations available. Accessing the
 example backend should fail with a 401 status:
 
@@ -319,4 +336,8 @@ $ curl -v http://${GATEWAY_HOST}/example  -H "Host: www.example.com"   --user 'u
 
 [xDS]: https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/operations/dynamic_configuration
 [design documentation]: /contributions/design/extending-envoy-gateway
+[CVE-2026-22771]: https://github.com/envoyproxy/gateway/security/advisories/GHSA-xrwg-mqj6-6m22
+[RBAC]: https://kubernetes.io/docs/reference/access-authn-authz/rbac/
+[command line options]: ../operations/customize-envoyproxy/#customize-envoyproxy-command-line-options
+[network policies]: https://kubernetes.io/docs/concepts/services-networking/network-policies/
 [SecurityPolicy]: /latest/api/extension_types/#securitypolicy

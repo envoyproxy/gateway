@@ -64,10 +64,18 @@ type HTTPFilterIR struct {
 	CORS *ir.CORS
 
 	ExtensionRefs []*ir.UnstructuredRef
+
+	// Matches holds matchers defined on HTTPRouteFilters that must be ANDed with HTTPRouteRule.Matches.
+	Matches []egv1a1.HTTPRouteMatchFilter
 }
 
 // Header value pattern according to RFC 7230
 var HeaderValueRegexp = regexp.MustCompile(`^[!-~]+([\t ]?[!-~]+)*$`)
+
+const (
+	requestMirrorDirectResponseConflictMsg = "RequestMirror filter cannot be used when the rule also configures a DirectResponse filter"
+	requestMirrorRedirectConflictMsg       = "RequestMirror filter cannot be used when the rule also configures a RequestRedirect filter"
+)
 
 // ProcessHTTPFilters translates gateway api http filters to IRs.
 func (t *Translator) ProcessHTTPFilters(
@@ -126,6 +134,28 @@ func (t *Translator) ProcessHTTPFilters(
 		default:
 			errs.Add(t.processUnsupportedHTTPFilter(string(filter.Type), httpFiltersContext))
 		}
+	}
+
+	// Check for conflicts between RequestMirror and DirectResponse or RequestRedirect filters
+	if httpFiltersContext.DirectResponse != nil && len(httpFiltersContext.Mirrors) > 0 {
+		// Clear the DirectResponse to prevent it from being configured in the IR
+		httpFiltersContext.DirectResponse = nil
+		httpFiltersContext.Mirrors = nil
+
+		errs.Add(status.NewRouteStatusError(
+			errors.New(requestMirrorDirectResponseConflictMsg),
+			gwapiv1.RouteReasonIncompatibleFilters,
+		).WithType(gwapiv1.RouteConditionAccepted))
+	}
+	if httpFiltersContext.RedirectResponse != nil && len(httpFiltersContext.Mirrors) > 0 {
+		// Clear the RedirectResponse to prevent it from being configured in the IR
+		httpFiltersContext.RedirectResponse = nil
+		httpFiltersContext.Mirrors = nil
+
+		errs.Add(status.NewRouteStatusError(
+			errors.New(requestMirrorRedirectConflictMsg),
+			gwapiv1.RouteReasonIncompatibleFilters,
+		).WithType(gwapiv1.RouteConditionAccepted))
 	}
 
 	return httpFiltersContext, errs.GetAllErrors()
@@ -769,6 +799,15 @@ func (t *Translator) processExtensionRefHTTPFilter(extFilter *gwapiv1.LocalObjec
 		for _, hrf := range resources.HTTPRouteFilters {
 			if hrf.Namespace == filterNs && hrf.Name == string(extFilter.Name) {
 				found = true
+				if len(hrf.Spec.Matches) > 0 && len(filterContext.Matches) > 0 {
+					return status.NewRouteStatusError(
+						errors.New("only one HTTPRouteFilter with matches is supported per HTTPRouteRule"),
+						gwapiv1.RouteReasonUnsupportedValue,
+					).WithType(gwapiv1.RouteConditionAccepted)
+				}
+				if len(hrf.Spec.Matches) > 0 {
+					filterContext.Matches = hrf.Spec.Matches
+				}
 				if hrf.Spec.URLRewrite != nil {
 
 					if filterContext.URLRewrite != nil {
@@ -854,8 +893,9 @@ func (t *Translator) processExtensionRefHTTPFilter(extFilter *gwapiv1.LocalObjec
 				if hrf.Spec.DirectResponse != nil {
 					dr := &ir.CustomResponse{}
 					if hrf.Spec.DirectResponse.Body != nil {
+						body := hrf.Spec.DirectResponse.Body
 						var err error
-						if dr.Body, err = t.getCustomResponseBody(hrf.Spec.DirectResponse.Body, filterNs); err != nil {
+						if dr.Body, err = t.getCustomResponseBody(body, filterNs); err != nil {
 							return t.processInvalidHTTPFilter(string(extFilter.Kind), filterContext, err)
 						}
 					}

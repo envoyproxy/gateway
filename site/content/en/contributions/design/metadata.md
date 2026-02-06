@@ -7,12 +7,12 @@ title: "Metadata in XDS resources"
 In Envoy, [static metadata][] can be configured on various resources: [listener][], [virtual host][], [route][] and [cluster][].
 
 Static metadata can be used for various purposes:
-- Observability: enrichment of access logs and traces with [metadata formatters][] and [custom tags][]. 
-- Processing: provide configuration context to filters in a certain scope (e.g. vhost, route, etc.).  
+- Observability: enrichment of access logs and traces with [metadata formatters][] and [custom tags][].
+- Processing: provide configuration context to filters in a certain scope (e.g. vhost, route, etc.).
 
 This document describes how Envoy Gateway manages [static metadata][] for various XDS resource such as listeners, virtual hosts, routes, clusters and endpoints.
 
-## Configuration 
+## Configuration
 
 Envoy Gateway propagates certain attributes of [Gateway-API][gw_api] resources to XDS resources. Attributes include:
 - Metadata: Kind, Group/Version, Name, Namespace and Annotations (belonging to the `gateway.envoyproxy.io` namespace)
@@ -23,7 +23,7 @@ Future enhancements may include:
 - Supporting section-specific metadata, e.g. HTTPRoute Metadata annotations that are propagated only to a specific route rule XDS metadata.
 - Supporting additional XDS resource, e.g. endpoints and filter chains.
 
-## Translation 
+## Translation
 
 Envoy Gateway uses the following namespace for envoy resource metadata: `gateway.envoyproxy.io/`. For example, an envoy [route][] resource may have the following metadata structure:
 
@@ -66,10 +66,10 @@ metadata:
 ```
 
 Envoy Gateway translates [Gateway-API][gw_api] in the following manner:
-- [Gateway][gw] metadata is propagated to envoy [listener][] metadata. If merge-gateways is enabled, [Gateway Class][gc] is used instead. 
+- [Gateway][gw] metadata is propagated to envoy [listener][] metadata. If merge-gateways is enabled, [Gateway Class][gc] is used instead.
 - [Gateway][gw] metadata and Listener Section name are propagated to envoy [virtual host][] metadata
 - [HTTPRoute][httpr] and [GRPCRoute][grpcr] metadata is propagated to envoy [route][] metadata. When Gateway-API adds support [named route rules][], the route rule name
-- [TCP/UDPRoute][tcpr] and [TLSRoute][tlsr] resource attributes are not propagated. These resources are translated to envoy filter chains, which do not currently support static metadata. 
+- [TCP/UDPRoute][tcpr] and [TLSRoute][tlsr] resource attributes are not propagated. These resources are translated to envoy filter chains, which do not currently support static metadata.
 - [Service][svc], [ServiceImport][svci] and [Backend][] metadata and port name are propagated to envoy [cluster] metadata.
 
 ## Usage

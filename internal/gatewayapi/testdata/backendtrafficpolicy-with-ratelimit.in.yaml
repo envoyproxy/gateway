@@ -177,3 +177,4 @@ backendTrafficPolicies:
           limit:
             requests: 30
             unit: Hour
+          shadowMode: true

@@ -17,7 +17,7 @@ type AddressesTranslator interface {
 	ProcessAddresses(gateways []*GatewayContext, xdsIR resource.XdsIRMap, infraIR resource.InfraIRMap)
 }
 
-func (t *Translator) ProcessAddresses(gateways []*GatewayContext, xdsIR resource.XdsIRMap, infraIR resource.InfraIRMap) {
+func (t *Translator) ProcessAddresses(gateways []*GatewayContext, _ resource.XdsIRMap, infraIR resource.InfraIRMap) {
 	for _, gateway := range gateways {
 		// Infra IR already exist
 		irKey := t.getIRKey(gateway.Gateway)

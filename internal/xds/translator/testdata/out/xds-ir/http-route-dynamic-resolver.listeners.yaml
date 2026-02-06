@@ -50,6 +50,9 @@
           initialStreamWindowSize: 65536
           maxConcurrentStreams: 100
         httpFilters:
+        - name: envoy.filters.http.rbac.dfp_loopback_deny
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.rbac.v3.RBAC
         - name: envoy.filters.http.router
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router

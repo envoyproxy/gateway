@@ -48,7 +48,7 @@ func GetCertGenCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "certgen",
 		Short: "Generate Control Plane Certificates",
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			return certGen(cmd.Context(), cmd.OutOrStdout(), local, configHome)
 		},
 	}

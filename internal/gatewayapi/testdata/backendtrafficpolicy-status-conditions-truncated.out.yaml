@@ -467,6 +467,11 @@ backendTrafficPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
     - ancestorRef:
         group: gateway.networking.k8s.io
@@ -479,6 +484,11 @@ backendTrafficPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
     - ancestorRef:
         group: gateway.networking.k8s.io
@@ -491,6 +501,11 @@ backendTrafficPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
     - ancestorRef:
         group: gateway.networking.k8s.io
@@ -503,6 +518,11 @@ backendTrafficPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
     - ancestorRef:
         group: gateway.networking.k8s.io
@@ -515,6 +535,11 @@ backendTrafficPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
     - ancestorRef:
         group: gateway.networking.k8s.io
@@ -527,6 +552,11 @@ backendTrafficPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
     - ancestorRef:
         group: gateway.networking.k8s.io
@@ -539,6 +569,11 @@ backendTrafficPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
     - ancestorRef:
         group: gateway.networking.k8s.io
@@ -551,6 +586,11 @@ backendTrafficPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
     - ancestorRef:
         group: gateway.networking.k8s.io
@@ -563,6 +603,11 @@ backendTrafficPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
     - ancestorRef:
         group: gateway.networking.k8s.io
@@ -575,6 +620,11 @@ backendTrafficPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
     - ancestorRef:
         group: gateway.networking.k8s.io
@@ -587,6 +637,11 @@ backendTrafficPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
     - ancestorRef:
         group: gateway.networking.k8s.io
@@ -599,6 +654,11 @@ backendTrafficPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
     - ancestorRef:
         group: gateway.networking.k8s.io
@@ -611,6 +671,11 @@ backendTrafficPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
     - ancestorRef:
         group: gateway.networking.k8s.io
@@ -623,6 +688,11 @@ backendTrafficPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
     - ancestorRef:
         group: gateway.networking.k8s.io
@@ -635,6 +705,11 @@ backendTrafficPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
     - ancestorRef:
         group: gateway.networking.k8s.io
@@ -647,6 +722,11 @@ backendTrafficPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
       - lastTransitionTime: null
         message: Ancestors have been truncated because the number of policy ancestors
           exceeds 16.
@@ -2432,6 +2512,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-2
           namespace: envoy-gateway
+          policies:
+          - kind: BackendTrafficPolicy
+            name: target-gateway-with-route-level-override-truncated-ancestors
+            namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-2/rule/0/match/0/*
         pathMatch:
           distinct: false
@@ -2446,6 +2530,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-1
           namespace: envoy-gateway
+          policies:
+          - kind: BackendTrafficPolicy
+            name: target-httproute-with-accepted-truncated-ancestors
+            namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-1/rule/0/match/0/*
         pathMatch:
           distinct: false
@@ -2507,6 +2595,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-2
           namespace: envoy-gateway
+          policies:
+          - kind: BackendTrafficPolicy
+            name: target-gateway-with-route-level-override-truncated-ancestors
+            namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-2/rule/0/match/0/*
         pathMatch:
           distinct: false
@@ -2521,6 +2613,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-1
           namespace: envoy-gateway
+          policies:
+          - kind: BackendTrafficPolicy
+            name: target-httproute-with-accepted-truncated-ancestors
+            namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-1/rule/0/match/0/*
         pathMatch:
           distinct: false
@@ -2582,6 +2678,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-2
           namespace: envoy-gateway
+          policies:
+          - kind: BackendTrafficPolicy
+            name: target-gateway-with-route-level-override-truncated-ancestors
+            namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-2/rule/0/match/0/*
         pathMatch:
           distinct: false
@@ -2596,6 +2696,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-1
           namespace: envoy-gateway
+          policies:
+          - kind: BackendTrafficPolicy
+            name: target-httproute-with-accepted-truncated-ancestors
+            namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-1/rule/0/match/0/*
         pathMatch:
           distinct: false
@@ -2657,6 +2761,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-2
           namespace: envoy-gateway
+          policies:
+          - kind: BackendTrafficPolicy
+            name: target-gateway-with-route-level-override-truncated-ancestors
+            namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-2/rule/0/match/0/*
         pathMatch:
           distinct: false
@@ -2671,6 +2779,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-1
           namespace: envoy-gateway
+          policies:
+          - kind: BackendTrafficPolicy
+            name: target-httproute-with-accepted-truncated-ancestors
+            namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-1/rule/0/match/0/*
         pathMatch:
           distinct: false
@@ -2732,6 +2844,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-2
           namespace: envoy-gateway
+          policies:
+          - kind: BackendTrafficPolicy
+            name: target-gateway-with-route-level-override-truncated-ancestors
+            namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-2/rule/0/match/0/*
         pathMatch:
           distinct: false
@@ -2746,6 +2862,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-1
           namespace: envoy-gateway
+          policies:
+          - kind: BackendTrafficPolicy
+            name: target-httproute-with-accepted-truncated-ancestors
+            namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-1/rule/0/match/0/*
         pathMatch:
           distinct: false
@@ -2807,6 +2927,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-2
           namespace: envoy-gateway
+          policies:
+          - kind: BackendTrafficPolicy
+            name: target-gateway-with-route-level-override-truncated-ancestors
+            namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-2/rule/0/match/0/*
         pathMatch:
           distinct: false
@@ -2821,6 +2945,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-1
           namespace: envoy-gateway
+          policies:
+          - kind: BackendTrafficPolicy
+            name: target-httproute-with-accepted-truncated-ancestors
+            namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-1/rule/0/match/0/*
         pathMatch:
           distinct: false
@@ -2882,6 +3010,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-2
           namespace: envoy-gateway
+          policies:
+          - kind: BackendTrafficPolicy
+            name: target-gateway-with-route-level-override-truncated-ancestors
+            namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-2/rule/0/match/0/*
         pathMatch:
           distinct: false
@@ -2896,6 +3028,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-1
           namespace: envoy-gateway
+          policies:
+          - kind: BackendTrafficPolicy
+            name: target-httproute-with-accepted-truncated-ancestors
+            namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-1/rule/0/match/0/*
         pathMatch:
           distinct: false
@@ -2957,6 +3093,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-2
           namespace: envoy-gateway
+          policies:
+          - kind: BackendTrafficPolicy
+            name: target-gateway-with-route-level-override-truncated-ancestors
+            namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-2/rule/0/match/0/*
         pathMatch:
           distinct: false
@@ -2971,6 +3111,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-1
           namespace: envoy-gateway
+          policies:
+          - kind: BackendTrafficPolicy
+            name: target-httproute-with-accepted-truncated-ancestors
+            namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-1/rule/0/match/0/*
         pathMatch:
           distinct: false
@@ -3032,6 +3176,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-2
           namespace: envoy-gateway
+          policies:
+          - kind: BackendTrafficPolicy
+            name: target-gateway-with-route-level-override-truncated-ancestors
+            namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-2/rule/0/match/0/*
         pathMatch:
           distinct: false
@@ -3046,6 +3194,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-1
           namespace: envoy-gateway
+          policies:
+          - kind: BackendTrafficPolicy
+            name: target-httproute-with-accepted-truncated-ancestors
+            namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-1/rule/0/match/0/*
         pathMatch:
           distinct: false
@@ -3107,6 +3259,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-2
           namespace: envoy-gateway
+          policies:
+          - kind: BackendTrafficPolicy
+            name: target-gateway-with-route-level-override-truncated-ancestors
+            namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-2/rule/0/match/0/*
         pathMatch:
           distinct: false
@@ -3121,6 +3277,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-1
           namespace: envoy-gateway
+          policies:
+          - kind: BackendTrafficPolicy
+            name: target-httproute-with-accepted-truncated-ancestors
+            namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-1/rule/0/match/0/*
         pathMatch:
           distinct: false
@@ -3182,6 +3342,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-2
           namespace: envoy-gateway
+          policies:
+          - kind: BackendTrafficPolicy
+            name: target-gateway-with-route-level-override-truncated-ancestors
+            namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-2/rule/0/match/0/*
         pathMatch:
           distinct: false
@@ -3196,6 +3360,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-1
           namespace: envoy-gateway
+          policies:
+          - kind: BackendTrafficPolicy
+            name: target-httproute-with-accepted-truncated-ancestors
+            namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-1/rule/0/match/0/*
         pathMatch:
           distinct: false
@@ -3257,6 +3425,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-2
           namespace: envoy-gateway
+          policies:
+          - kind: BackendTrafficPolicy
+            name: target-gateway-with-route-level-override-truncated-ancestors
+            namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-2/rule/0/match/0/*
         pathMatch:
           distinct: false
@@ -3271,6 +3443,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-1
           namespace: envoy-gateway
+          policies:
+          - kind: BackendTrafficPolicy
+            name: target-httproute-with-accepted-truncated-ancestors
+            namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-1/rule/0/match/0/*
         pathMatch:
           distinct: false
@@ -3332,6 +3508,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-2
           namespace: envoy-gateway
+          policies:
+          - kind: BackendTrafficPolicy
+            name: target-gateway-with-route-level-override-truncated-ancestors
+            namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-2/rule/0/match/0/*
         pathMatch:
           distinct: false
@@ -3346,6 +3526,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-1
           namespace: envoy-gateway
+          policies:
+          - kind: BackendTrafficPolicy
+            name: target-httproute-with-accepted-truncated-ancestors
+            namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-1/rule/0/match/0/*
         pathMatch:
           distinct: false
@@ -3407,6 +3591,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-2
           namespace: envoy-gateway
+          policies:
+          - kind: BackendTrafficPolicy
+            name: target-gateway-with-route-level-override-truncated-ancestors
+            namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-2/rule/0/match/0/*
         pathMatch:
           distinct: false
@@ -3421,6 +3609,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-1
           namespace: envoy-gateway
+          policies:
+          - kind: BackendTrafficPolicy
+            name: target-httproute-with-accepted-truncated-ancestors
+            namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-1/rule/0/match/0/*
         pathMatch:
           distinct: false
@@ -3482,6 +3674,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-2
           namespace: envoy-gateway
+          policies:
+          - kind: BackendTrafficPolicy
+            name: target-gateway-with-route-level-override-truncated-ancestors
+            namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-2/rule/0/match/0/*
         pathMatch:
           distinct: false
@@ -3496,6 +3692,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-1
           namespace: envoy-gateway
+          policies:
+          - kind: BackendTrafficPolicy
+            name: target-httproute-with-accepted-truncated-ancestors
+            namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-1/rule/0/match/0/*
         pathMatch:
           distinct: false
@@ -3557,6 +3757,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-2
           namespace: envoy-gateway
+          policies:
+          - kind: BackendTrafficPolicy
+            name: target-gateway-with-route-level-override-truncated-ancestors
+            namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-2/rule/0/match/0/*
         pathMatch:
           distinct: false
@@ -3571,6 +3775,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-1
           namespace: envoy-gateway
+          policies:
+          - kind: BackendTrafficPolicy
+            name: target-httproute-with-accepted-truncated-ancestors
+            namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-1/rule/0/match/0/*
         pathMatch:
           distinct: false
@@ -3632,6 +3840,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-2
           namespace: envoy-gateway
+          policies:
+          - kind: BackendTrafficPolicy
+            name: target-gateway-with-route-level-override-truncated-ancestors
+            namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-2/rule/0/match/0/*
         pathMatch:
           distinct: false
@@ -3646,6 +3858,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-1
           namespace: envoy-gateway
+          policies:
+          - kind: BackendTrafficPolicy
+            name: target-httproute-with-accepted-truncated-ancestors
+            namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-1/rule/0/match/0/*
         pathMatch:
           distinct: false
@@ -3707,6 +3923,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-2
           namespace: envoy-gateway
+          policies:
+          - kind: BackendTrafficPolicy
+            name: target-gateway-with-route-level-override-truncated-ancestors
+            namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-2/rule/0/match/0/*
         pathMatch:
           distinct: false
@@ -3721,6 +3941,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-1
           namespace: envoy-gateway
+          policies:
+          - kind: BackendTrafficPolicy
+            name: target-httproute-with-accepted-truncated-ancestors
+            namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-1/rule/0/match/0/*
         pathMatch:
           distinct: false

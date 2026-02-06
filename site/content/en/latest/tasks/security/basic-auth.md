@@ -2,12 +2,12 @@
 title: "Basic Authentication"
 ---
 
-This task provides instructions for configuring [HTTP Basic authentication][http Basic authentication]. 
-HTTP Basic authentication checks if an incoming request has a valid username and password before routing the request to 
+This task provides instructions for configuring [HTTP Basic authentication][http Basic authentication].
+HTTP Basic authentication checks if an incoming request has a valid username and password before routing the request to
 a backend service.
 
-Envoy Gateway introduces a new CRD called [SecurityPolicy][] that allows the user to configure HTTP Basic 
-authentication. 
+Envoy Gateway introduces a new CRD called [SecurityPolicy][] that allows the user to configure HTTP Basic
+authentication.
 This instantiated resource can be linked to a [Gateway][], [HTTPRoute][] or [GRPCRoute][] resource.
 
 ## Prerequisites
@@ -17,7 +17,7 @@ This instantiated resource can be linked to a [Gateway][], [HTTPRoute][] or [GRP
 ## Configuration
 
 Envoy Gateway uses [.htpasswd][.htpasswd] format to store the username-password pairs for authentication.
-The file must be stored in a kubernetes secret and referenced in the [SecurityPolicy][] configuration. 
+The file must be stored in a kubernetes secret and referenced in the [SecurityPolicy][] configuration.
 The secret is an Opaque secret, and the username-password pairs must be stored in the key ".htpasswd".
 
 ### Create a root certificate
@@ -37,7 +37,7 @@ openssl req -out www.example.com.csr -newkey rsa:2048 -nodes -keyout www.example
 openssl x509 -req -days 365 -CA example.com.crt -CAkey example.com.key -set_serial 0 -in www.example.com.csr -out www.example.com.crt
 ```
 
-### Create certificate 
+### Create certificate
 
 ```shell
 kubectl create secret tls example-cert --key=www.example.com.key --cert=www.example.com.crt
@@ -65,12 +65,12 @@ kubectl patch gateway eg --type=json --patch '
 ```
 
 ### Create a .htpasswd file
-First, create a [.htpasswd][] file with the username and password you want to use for authentication. 
+First, create a [.htpasswd][] file with the username and password you want to use for authentication.
 
 Note: Please always use HTTPS with Basic Authentication. This prevents credentials from being transmitted in plain text.
 
 The input password won't be saved, instead, a hash will be generated and saved in the output file. When a request
-tries to access protected resources, the password in the "Authorization" HTTP header will be hashed and compared with the 
+tries to access protected resources, the password in the "Authorization" HTTP header will be hashed and compared with the
 saved hash.
 
 Note: only SHA hash algorithm is supported for now.

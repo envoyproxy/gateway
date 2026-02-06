@@ -132,8 +132,10 @@ xdsIR:
     accessLog:
       json:
       - json:
-          duration: '%DURATION%'
-          protocol: '%PROTOCOL%'
+        - key: duration
+          value: '%DURATION%'
+        - key: protocol
+          value: '%PROTOCOL%'
         path: /dev/stdout
     globalResources:
       proxyServiceCluster:

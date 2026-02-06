@@ -151,6 +151,9 @@ spec:
                   maxInterval: 5s
               retryOn:
                 triggers: ["5xx", "gateway-error", "reset"]
+              timeout:
+                http:
+                  requestTimeout: 5s
           uri: https://remote-jwks-server.gateway-conformance-infra/jwt/jwks.json
           cacheDuration: 300s
 ---

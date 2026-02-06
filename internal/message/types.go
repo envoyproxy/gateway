@@ -6,11 +6,15 @@
 package message
 
 import (
+	"context"
+	"reflect"
+
 	"github.com/telepresenceio/watchable"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapixv1a1 "sigs.k8s.io/gateway-api/apisx/v1alpha1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
@@ -20,8 +24,8 @@ import (
 // ProviderResources message
 type ProviderResources struct {
 	// GatewayAPIResources is a map from a GatewayClass name to
-	// a group of gateway API and other related resources.
-	GatewayAPIResources watchable.Map[string, *resource.ControllerResources]
+	// a group of gateway API and other related resources with trace context.
+	GatewayAPIResources watchable.Map[string, *resource.ControllerResourcesContext]
 
 	// GatewayAPIStatuses is a group of gateway api
 	// resource statuses maps.
@@ -40,7 +44,9 @@ func (p *ProviderResources) GetResources() []*resource.Resources {
 	}
 
 	for _, v := range p.GatewayAPIResources.LoadAll() {
-		return *v
+		if v != nil && v.Resources != nil {
+			return *v.Resources
+		}
 	}
 
 	return nil
@@ -82,6 +88,7 @@ type GatewayAPIStatuses struct {
 	TLSRouteStatuses     watchable.Map[types.NamespacedName, *gwapiv1a2.TLSRouteStatus]
 	TCPRouteStatuses     watchable.Map[types.NamespacedName, *gwapiv1a2.TCPRouteStatus]
 	UDPRouteStatuses     watchable.Map[types.NamespacedName, *gwapiv1a2.UDPRouteStatus]
+	XListenerSetStatuses watchable.Map[types.NamespacedName, *gwapixv1a1.ListenerSetStatus]
 }
 
 func (s *GatewayAPIStatuses) Close() {
@@ -92,6 +99,7 @@ func (s *GatewayAPIStatuses) Close() {
 	s.TLSRouteStatuses.Close()
 	s.TCPRouteStatuses.Close()
 	s.UDPRouteStatuses.Close()
+	s.XListenerSetStatuses.Close()
 }
 
 type NamespacedNameAndGVK struct {
@@ -129,9 +137,47 @@ func (e *ExtensionStatuses) Close() {
 	e.BackendStatuses.Close()
 }
 
+type XdsIRWithContext struct {
+	XdsIR   *ir.Xds
+	Context context.Context
+}
+
+// DeepCopy creates a new ControllerResourcesContext.
+// The Context field is preserved (not deep copied) since contexts are meant to be passed around.
+func (x *XdsIRWithContext) DeepCopy() *XdsIRWithContext {
+	if x == nil {
+		return nil
+	}
+	var xdsIRCopy *ir.Xds
+	if x.XdsIR != nil {
+		xdsIRCopy = x.XdsIR.DeepCopy()
+	}
+	return &XdsIRWithContext{
+		XdsIR:   xdsIRCopy,
+		Context: x.Context,
+	}
+}
+
+func (x *XdsIRWithContext) Equal(other *XdsIRWithContext) bool {
+	if x == nil && other == nil {
+		return true
+	}
+	if x == nil || other == nil {
+		return false
+	}
+	if x.XdsIR == nil && other.XdsIR == nil {
+		return true
+	}
+	if x.XdsIR == nil || other.XdsIR == nil {
+		return false
+	}
+
+	return reflect.DeepEqual(x.XdsIR, other.XdsIR)
+}
+
 // XdsIR message
 type XdsIR struct {
-	watchable.Map[string, *ir.Xds]
+	watchable.Map[string, *XdsIRWithContext]
 }
 
 // InfraIR message
@@ -176,6 +222,8 @@ const (
 	HTTPRouteStatusMessageName MessageName = "httproute-status"
 	// GatewayStatusMessageName is a message containing updates to Gateway status
 	GatewayStatusMessageName MessageName = "gateway-status"
+	// XListenerSetStatusMessageName is a message containing updates to XListenerSet status
+	XListenerSetStatusMessageName MessageName = "xlistenerset-status"
 	// GatewayClassStatusMessageName is a message containing updates to GatewayClass status
 	GatewayClassStatusMessageName MessageName = "gatewayclass-status"
 )

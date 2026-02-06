@@ -69,6 +69,11 @@ backendTrafficPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
@@ -140,6 +145,11 @@ backendTrafficPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
@@ -396,6 +406,10 @@ xdsIR:
           kind: TCPRoute
           name: tcp-app-1
           namespace: default
+          policies:
+          - kind: BackendTrafficPolicy
+            name: policy-for-gateway-2
+            namespace: default
         name: tcproute/default/tcp-app-1
         proxyProtocol:
           version: V2

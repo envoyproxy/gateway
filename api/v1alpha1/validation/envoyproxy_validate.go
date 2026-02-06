@@ -233,8 +233,8 @@ func validateProxyAccessLog(accessLog *egv1a1.ProxyAccessLog) []error {
 	var errs []error
 
 	for _, setting := range accessLog.Settings {
-		if setting.Format != nil {
-			switch setting.Format.Type {
+		if setting.Format != nil && setting.Format.Type != nil {
+			switch *setting.Format.Type {
 			case egv1a1.ProxyAccessLogFormatTypeText:
 				if setting.Format.Text == nil {
 					err := fmt.Errorf("unable to configure access log when using Text format but \"text\" field being empty")

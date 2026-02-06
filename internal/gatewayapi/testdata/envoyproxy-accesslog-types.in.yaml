@@ -45,7 +45,7 @@ envoyProxyForGatewayClass:
             openTelemetry:
               host: otel-collector.monitoring.svc.cluster.local
               port: 4317
-              resources:
+              resourceAttributes:
                 k8s.cluster.name: "cluster-1"
         - type: Listener
           format:
@@ -82,7 +82,7 @@ envoyProxyForGatewayClass:
             openTelemetry:
               host: otel-collector.monitoring.svc.cluster.local
               port: 4317
-              resources:
+              resourceAttributes:
                 k8s.cluster.name: "cluster-1"
         - format:
             type: Text
@@ -118,7 +118,7 @@ envoyProxyForGatewayClass:
             openTelemetry:
               host: otel-collector.monitoring.svc.cluster.local
               port: 4317
-              resources:
+              resourceAttributes:
                 k8s.cluster.name: "cluster-1"
     provider:
       type: Kubernetes

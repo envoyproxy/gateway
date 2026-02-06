@@ -53,7 +53,7 @@ var EGUpgradeTest = suite.ConformanceTest{
 			chartPath := "../../../charts/gateway-helm"
 			relName := "eg"
 			depNS := "envoy-gateway-system"
-			lastVersionTag := "1.6.0" //  the latest prior release
+			lastVersionTag := "1.6.3" //  the latest prior release
 
 			t.Logf("Upgrading from version: %s", lastVersionTag)
 

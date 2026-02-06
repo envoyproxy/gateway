@@ -30,6 +30,11 @@ backendTrafficPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
@@ -62,6 +67,11 @@ backendTrafficPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
@@ -90,6 +100,11 @@ backendTrafficPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
       - lastTransitionTime: null
         message: 'This policy is being overridden by other backendTrafficPolicies
           for these routes: [default/httproute-1]'
@@ -391,6 +406,10 @@ xdsIR:
           kind: GRPCRoute
           name: grpcroute-1
           namespace: default
+          policies:
+          - kind: BackendTrafficPolicy
+            name: policy-for-grpcroute
+            namespace: default
         name: grpcroute/default/grpcroute-1/rule/0/match/-1/*
         traffic:
           faultInjection:
@@ -472,6 +491,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-2
           namespace: default
+          policies:
+          - kind: BackendTrafficPolicy
+            name: policy-for-gateway
+            namespace: envoy-gateway
         name: httproute/default/httproute-2/rule/0/match/0/gateway_envoyproxy_io
         pathMatch:
           distinct: false
@@ -507,6 +530,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-1
           namespace: default
+          policies:
+          - kind: BackendTrafficPolicy
+            name: policy-for-route
+            namespace: default
         name: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
         pathMatch:
           distinct: false

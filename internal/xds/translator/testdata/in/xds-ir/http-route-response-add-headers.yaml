@@ -43,3 +43,7 @@ http:
       value:
       - ""
       append: false
+    - name: "add-if-absent-header"
+      value:
+      - "default-value"
+      addIfAbsent: true

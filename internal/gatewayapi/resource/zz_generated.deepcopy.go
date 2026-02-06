@@ -19,6 +19,7 @@ import (
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/apis/v1alpha3"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
+	apisxv1alpha1 "sigs.k8s.io/gateway-api/apisx/v1alpha1"
 	apisv1alpha1 "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 )
 
@@ -41,6 +42,11 @@ func (in *Resources) DeepCopyInto(out *Resources) {
 			}
 		}
 	}
+	if in.EnvoyProxyDefaultSpec != nil {
+		in, out := &in.EnvoyProxyDefaultSpec, &out.EnvoyProxyDefaultSpec
+		*out = new(v1alpha1.EnvoyProxySpec)
+		(*in).DeepCopyInto(*out)
+	}
 	if in.GatewayClass != nil {
 		in, out := &in.GatewayClass, &out.GatewayClass
 		*out = new(v1.GatewayClass)
@@ -53,6 +59,17 @@ func (in *Resources) DeepCopyInto(out *Resources) {
 			if (*in)[i] != nil {
 				in, out := &(*in)[i], &(*out)[i]
 				*out = new(v1.Gateway)
+				(*in).DeepCopyInto(*out)
+			}
+		}
+	}
+	if in.XListenerSets != nil {
+		in, out := &in.XListenerSets, &out.XListenerSets
+		*out = make([]*apisxv1alpha1.XListenerSet, len(*in))
+		for i := range *in {
+			if (*in)[i] != nil {
+				in, out := &(*in)[i], &(*out)[i]
+				*out = new(apisxv1alpha1.XListenerSet)
 				(*in).DeepCopyInto(*out)
 			}
 		}

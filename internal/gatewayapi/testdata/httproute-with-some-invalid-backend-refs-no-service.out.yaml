@@ -149,9 +149,11 @@ xdsIR:
             namespace: default
           name: httproute/default/httproute-1/rule/0
           settings:
-          - name: httproute/default/httproute-1/rule/0/backend/0
+          - invalid: true
+            name: httproute/default/httproute-1/rule/0/backend/0
             weight: 1
-          - name: httproute/default/httproute-1/rule/0/backend/1
+          - invalid: true
+            name: httproute/default/httproute-1/rule/0/backend/1
             weight: 1
           - addressType: IP
             endpoints:

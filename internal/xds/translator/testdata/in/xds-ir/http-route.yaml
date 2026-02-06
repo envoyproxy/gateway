@@ -20,6 +20,13 @@ http:
     queryParamMatches:
     - name: "debug"
       exact: "yes"
+    cookieMatches:
+    - distinct: false
+      exact: xxx
+      name: cookie-1
+    - distinct: false
+      name: cookie-2
+      safeRegex: foo.*
     destination:
       name: "first-route-dest"
       settings:

@@ -9,7 +9,6 @@
         prefix: /
       name: first-route
       route:
-        clusterNotFoundResponseCode: INTERNAL_SERVER_ERROR
         upgradeConfigs:
         - upgradeType: websocket
         weightedClusters:
@@ -17,4 +16,29 @@
           - name: invalid-backend-cluster
             weight: 1
           - name: first-route-dest/backend/0
+            weight: 1
+    - match:
+        prefix: /
+      name: second-route
+      route:
+        clusterNotFoundResponseCode: INTERNAL_SERVER_ERROR
+        upgradeConfigs:
+        - upgradeType: websocket
+        weightedClusters:
+          clusters:
+          - name: invalid-backend-cluster
+            weight: 1
+          - name: second-route-dest/backend/0
+            weight: 1
+    - match:
+        prefix: /
+      name: third-route
+      route:
+        upgradeConfigs:
+        - upgradeType: websocket
+        weightedClusters:
+          clusters:
+          - name: invalid-backend-cluster
+            weight: 2
+          - name: third-route-dest/backend/0
             weight: 1

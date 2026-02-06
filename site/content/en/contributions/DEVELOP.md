@@ -188,18 +188,18 @@ The performance and scalability concerns come from several aspects for control-p
 - The consumption of memory and CPU.
 - The rate of configuration changes.
 
-The benchmark test is running on a [Kind][Kind] cluster, you can start a Kind cluster and 
+The benchmark test is running on a [Kind][Kind] cluster, you can start a Kind cluster and
 run benchmark test on it by executing `make benchmark`.
 
 The benchmark report will be included in the release artifacts, you can learn more by downloading
 the detailed benchmark report, namely `benchmark_report.zip`.
 
-Here are some brief benchmark reports about Envoy Gateway: 
+Here are some brief benchmark reports about Envoy Gateway:
 
 - It will take up nearly 550MiB memory and 11s total CPU time for (1 GatewayClass + 1 Gateway + 500 HTTRoutes) settings
 
 
-[Quickstart]: https://github.com/envoyproxy/gateway/blob/main/docs/latest/user/quickstart.md
+[Quickstart]: https://gateway.envoyproxy.io/docs/tasks/quickstart/
 [make]: https://www.gnu.org/software/make/
 [Github Actions]: https://docs.github.com/en/actions
 [workflows]: https://github.com/envoyproxy/gateway/tree/main/.github/workflows

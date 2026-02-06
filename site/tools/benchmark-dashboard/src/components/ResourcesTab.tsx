@@ -186,7 +186,7 @@ const ResourcesTab = ({ resourceTrends, benchmarkResults }: ResourcesTabProps) =
       return {
         gatewayMemoryRange: '0-0MB',
         proxyMemoryRange: '0-0MB',
-        peakCPU: 0,
+        peakProxyMeanCPU: 0,
         memoryPerRouteAtScale: 0
       };
     }
@@ -200,9 +200,9 @@ const ResourcesTab = ({ resourceTrends, benchmarkResults }: ResourcesTabProps) =
     const proxyMin = Math.min(...proxyMemories);
     const proxyMax = Math.max(...proxyMemories);
 
-    // Calculate peak CPU from all components
-    const allCPUMaxValues = cpuData.flatMap(d => [d.gatewayMax, d.proxyMax]);
-    const peakCPU = Math.max(...allCPUMaxValues);
+    // Calculate peak proxy mean CPU (highest average across all tests)
+    const proxyMeanCPUValues = cpuData.map(d => d.proxyMean);
+    const peakProxyMeanCPU = proxyMeanCPUValues.length > 0 ? Math.max(...proxyMeanCPUValues) : 0;
 
     // Get memory per route at highest scale (most efficient point)
     const highestScaleEfficiency = efficiencyData[efficiencyData.length - 1];
@@ -211,7 +211,7 @@ const ResourcesTab = ({ resourceTrends, benchmarkResults }: ResourcesTabProps) =
     return {
       gatewayMemoryRange: `${gatewayMin}-${gatewayMax}MB`,
       proxyMemoryRange: `${proxyMin}-${proxyMax}MB`,
-      peakCPU: Math.round(peakCPU),
+      peakProxyMeanCPU: Math.round(peakProxyMeanCPU),
       memoryPerRouteAtScale: memoryPerRouteAtScale
     };
   };
@@ -250,13 +250,13 @@ const ResourcesTab = ({ resourceTrends, benchmarkResults }: ResourcesTabProps) =
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Peak CPU</CardTitle>
+            <CardTitle className="text-sm font-medium">Peak Proxy Mean CPU</CardTitle>
             <Activity className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{resourceMetrics.peakCPU}%</div>
+            <div className="text-2xl font-bold">{resourceMetrics.peakProxyMeanCPU}%</div>
             <p className="text-xs text-muted-foreground">
-              Brief spikes, stable avg
+              Highest average CPU usage
             </p>
           </CardContent>
         </Card>
@@ -341,9 +341,9 @@ const ResourcesTab = ({ resourceTrends, benchmarkResults }: ResourcesTabProps) =
         {/* CPU Usage */}
         <Card>
           <CardHeader>
-            <CardTitle>CPU Usage Patterns</CardTitle>
+            <CardTitle>Gateway CPU Usage Patterns</CardTitle>
             <CardDescription>
-              Mean vs peak CPU usage showing burst characteristics.
+              Gateway mean vs peak CPU usage. Shows how Gateway CPU usage is affected by scaling up routes.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -383,28 +383,12 @@ const ResourcesTab = ({ resourceTrends, benchmarkResults }: ResourcesTabProps) =
                     strokeWidth={1}
                     strokeDasharray="2 2"
                   />
-                  <Area
-                    dataKey="proxyMax"
-                    type="monotone"
-                    fill="#818cf8"
-                    fillOpacity={0.1}
-                    stroke="#818cf8"
-                    strokeWidth={1}
-                    strokeDasharray="2 2"
-                  />
                   <Line
                     dataKey="gatewayMean"
                     type="monotone"
                     stroke="#8b5cf6"
                     strokeWidth={3}
                     dot={{ fill: "#8b5cf6", strokeWidth: 2, r: 4 }}
-                  />
-                  <Line
-                    dataKey="proxyMean"
-                    type="monotone"
-                    stroke="#6366f1"
-                    strokeWidth={3}
-                    dot={{ fill: "#6366f1", strokeWidth: 2, r: 4 }}
                   />
                 </ComposedChart>
               </ChartContainer>
@@ -414,6 +398,7 @@ const ResourcesTab = ({ resourceTrends, benchmarkResults }: ResourcesTabProps) =
             )}
           </CardContent>
         </Card>
+
       </div>
 
       {/* Secondary Analysis */}

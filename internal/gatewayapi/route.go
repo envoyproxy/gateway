@@ -288,6 +288,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 						fmt.Errorf("failed to process route rule %d backendRef %d: %w", ruleIdx, i, err),
 						err.Reason(),
 					))
+					ds.Invalid = true
 					processDestinationError = err
 				}
 			}
@@ -318,11 +319,6 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 		case processFilterError != nil:
 			routesWithDirectResponse := sets.New[string]()
 			for _, irRoute := range ruleRoutes {
-				// If the route already has a direct response or redirect configured, then it was from a filter so skip
-				// the direct response from errors.
-				if irRoute.DirectResponse != nil || irRoute.Redirect != nil {
-					continue
-				}
 				irRoute.DirectResponse = &ir.CustomResponse{
 					StatusCode: ptr.To(uint32(500)),
 				}
@@ -457,6 +453,49 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 	return irRoutes, errorCollector.GetAllErrors(), unacceptedRules.List()
 }
 
+type routeMatchCombination struct {
+	gwapiv1.HTTPRouteMatch
+	cookies []egv1a1.HTTPCookieMatch
+}
+
+// buildRouteMatchCombinations builds a list of route match combinations from the given rule matches and filter matches.
+// The rule matches are ANDed with the filter matches. The result is a list of X*Y combinations where X is the number of
+// rule matches and Y is the number of filter matches.
+func buildRouteMatchCombinations(ruleMatches []gwapiv1.HTTPRouteMatch, filterMatches []egv1a1.HTTPRouteMatchFilter) []routeMatchCombination {
+	if len(ruleMatches) == 0 && len(filterMatches) == 0 {
+		return nil
+	}
+
+	// If there are no filter matches, return the base matches directly.
+	if len(filterMatches) == 0 {
+		results := make([]routeMatchCombination, len(ruleMatches))
+		for i, match := range ruleMatches {
+			results[i] = routeMatchCombination{HTTPRouteMatch: match}
+		}
+		return results
+	}
+
+	// Cross product of base matches and filter matches.
+	baseMatches := ruleMatches
+	if len(baseMatches) == 0 {
+		baseMatches = []gwapiv1.HTTPRouteMatch{{}}
+	}
+	total := len(baseMatches) * len(filterMatches)
+	results := make([]routeMatchCombination, total)
+	idx := 0
+	for _, match := range baseMatches {
+		for _, filterMatch := range filterMatches {
+			results[idx] = routeMatchCombination{
+				HTTPRouteMatch: match,
+				cookies:        filterMatch.Cookies,
+			}
+			idx++
+		}
+	}
+
+	return results
+}
+
 func processRouteTrafficFeatures(irRoute *ir.HTTPRoute, rule *gwapiv1.HTTPRouteRule) {
 	processRouteTimeout(irRoute, rule)
 	processRouteRetry(irRoute, rule)
@@ -531,23 +570,6 @@ func (t *Translator) processHTTPRouteRule(
 	rule *gwapiv1.HTTPRouteRule,
 	routeRuleMetadata *ir.ResourceMetadata,
 ) ([]*ir.HTTPRoute, status.Error) {
-	capacity := len(rule.Matches)
-	if capacity == 0 {
-		capacity = 1
-	}
-	ruleRoutes := make([]*ir.HTTPRoute, 0, capacity)
-
-	// If no matches are specified, the implementation MUST match every HTTP request.
-	if len(rule.Matches) == 0 {
-		irRoute := &ir.HTTPRoute{
-			Name:     irRouteName(httpRoute, ruleIdx, -1),
-			Metadata: routeRuleMetadata,
-		}
-		processRouteTrafficFeatures(irRoute, rule)
-		applyHTTPFiltersContextToIRRoute(httpFiltersContext, irRoute)
-		ruleRoutes = append(ruleRoutes, irRoute)
-	}
-
 	var sessionPersistence *ir.SessionPersistence
 	if rule.SessionPersistence != nil {
 		if rule.SessionPersistence.IdleTimeout != nil {
@@ -601,10 +623,32 @@ func (t *Translator) processHTTPRouteRule(
 		}
 	}
 
+	filterMatches := []egv1a1.HTTPRouteMatchFilter(nil)
+	if httpFiltersContext != nil {
+		filterMatches = httpFiltersContext.Matches
+	}
+	matches := buildRouteMatchCombinations(rule.Matches, filterMatches)
+
+	capacity := len(matches)
+	if capacity == 0 {
+		capacity = 1
+	}
+	ruleRoutes := make([]*ir.HTTPRoute, 0, capacity)
+	// If no matches are specified, the implementation MUST match every HTTP request.
+	if len(matches) == 0 {
+		irRoute := &ir.HTTPRoute{
+			Name:     irRouteName(httpRoute, ruleIdx, -1),
+			Metadata: routeRuleMetadata,
+		}
+		processRouteTrafficFeatures(irRoute, rule)
+		applyHTTPFiltersContextToIRRoute(httpFiltersContext, irRoute)
+		ruleRoutes = append(ruleRoutes, irRoute)
+	}
+
 	// A rule is matched if any one of its matches
 	// is satisfied (i.e. a logical "OR"), so generate
 	// a unique Xds IR HTTPRoute per match.
-	for matchIdx, match := range rule.Matches {
+	for matchIdx, match := range matches {
 		irRoute := &ir.HTTPRoute{
 			Name:               irRouteName(httpRoute, ruleIdx, matchIdx),
 			SessionPersistence: sessionPersistence,
@@ -672,6 +716,30 @@ func (t *Translator) processHTTPRouteRule(
 				Exact: ptr.To(string(*match.Method)),
 			})
 		}
+		for _, cookieMatch := range match.cookies {
+			sm := &ir.StringMatch{
+				Name: cookieMatch.Name,
+			}
+			matchType := egv1a1.CookieMatchExact
+			if cookieMatch.Type != nil {
+				matchType = *cookieMatch.Type
+			}
+			switch matchType {
+			case egv1a1.CookieMatchExact:
+				sm.Exact = ptr.To(cookieMatch.Value)
+			case egv1a1.CookieMatchRegularExpression:
+				if err := regex.Validate(cookieMatch.Value); err != nil {
+					return nil, status.NewRouteStatusError(err, gwapiv1.RouteReasonUnsupportedValue)
+				}
+				sm.SafeRegex = ptr.To(cookieMatch.Value)
+			default:
+				return nil, status.NewRouteStatusError(
+					fmt.Errorf("unsupported cookie match type %q", matchType),
+					gwapiv1.RouteReasonUnsupportedValue,
+				)
+			}
+			irRoute.CookieMatches = append(irRoute.CookieMatches, sm)
+		}
 		applyHTTPFiltersContextToIRRoute(httpFiltersContext, irRoute)
 		ruleRoutes = append(ruleRoutes, irRoute)
 
@@ -681,7 +749,10 @@ func (t *Translator) processHTTPRouteRule(
 		//
 		// Envoy Gateway improves user experience by implicitly creating the envoy route for CORS preflight.
 		if (httpFiltersContext != nil && httpFiltersContext.CORS != nil) &&
-			(match.Method != nil && string(*match.Method) != "OPTIONS") {
+			(match.Method != nil && string(*match.Method) != "OPTIONS") &&
+			// Browsers will not send cookies for CORS preflight requests, so there's no need to create a CORS preflight
+			// route if there are cookie matches.
+			len(irRoute.CookieMatches) == 0 {
 			corsRoute := &ir.HTTPRoute{
 				Name:              irRouteName(httpRoute, ruleIdx, matchIdx) + "/cors-preflight",
 				Metadata:          routeRuleMetadata,
@@ -1234,7 +1305,7 @@ func buildResourceMetadata(resource client.Object, sectionName *gwapiv1.SectionN
 		Kind:        resource.GetObjectKind().GroupVersionKind().Kind,
 		Name:        resource.GetName(),
 		Namespace:   resource.GetNamespace(),
-		Annotations: filterEGPrefix(resource.GetAnnotations()),
+		Annotations: ir.MapToSlice(filterEGPrefix(resource.GetAnnotations())),
 	}
 	if sectionName != nil {
 		metadata.SectionName = string(*sectionName)
@@ -1356,15 +1427,33 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 			hasHostnameIntersection = true
 
 			irKey := t.getIRKey(listener.gateway.Gateway)
-
 			gwXdsIR := xdsIR[irKey]
 			irListener := gwXdsIR.GetTCPListener(irListenerName(listener))
 			if irListener != nil {
+				var tlsConfig *ir.TLS
+				if irListener.TLS != nil {
+					// Listener is in terminate mode.
+					tlsConfig = &ir.TLS{
+						Terminate: irListener.TLS,
+					}
+					// If hostnames specified, add SNI config for routing
+					if len(hosts) > 0 {
+						tlsConfig.TLSInspectorConfig = &ir.TLSInspectorConfig{
+							SNIs: hosts,
+						}
+					}
+				} else {
+					// Passthrough mode - only SNI inspection
+					tlsConfig = &ir.TLS{
+						TLSInspectorConfig: &ir.TLSInspectorConfig{
+							SNIs: hosts,
+						},
+					}
+				}
+
 				irRoute := &ir.TCPRoute{
 					Name: irTCPRouteName(tlsRoute),
-					TLS: &ir.TLS{TLSInspectorConfig: &ir.TLSInspectorConfig{
-						SNIs: hosts,
-					}},
+					TLS:  tlsConfig,
 					Destination: &ir.RouteDestination{
 						Name:     destName,
 						Settings: destSettings,
@@ -1385,7 +1474,7 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 				gwapiv1.RouteConditionAccepted,
 				metav1.ConditionFalse,
 				gwapiv1.RouteReasonNoMatchingListenerHostname,
-				"There were no hostname intersections between the HTTPRoute and this parent ref's Listener(s).",
+				"There were no hostname intersections between the TLSRoute and this parent ref's Listener(s).",
 			)
 		}
 
@@ -1847,11 +1936,6 @@ func validateDestinationSettings(destinationSettings *ir.DestinationSetting, end
 				status.RouteReasonUnsupportedAddressType)
 		}
 	case resource.KindService, resource.KindServiceImport:
-		if endpointRoutingDisabled && isHeadlessService(destinationSettings) {
-			return status.NewRouteStatusError(
-				fmt.Errorf("service %s is a headless Service, please set routingType=Endpoint", destinationSettings.Name),
-				status.RouteReasonUnsupportedSetting)
-		}
 		if !endpointRoutingDisabled && destinationSettings.AddressType != nil && *destinationSettings.AddressType == ir.MIXED {
 			return status.NewRouteStatusError(
 				fmt.Errorf("mixed endpointslice address type for the same backendRef is not supported"),
@@ -1862,13 +1946,13 @@ func validateDestinationSettings(destinationSettings *ir.DestinationSetting, end
 	return nil
 }
 
-// isHeadlessService reports true when any DestinationEndpoint corresponds to
-// a headless Kubernetes Service (ClusterIP="None").
-func isHeadlessService(ds *ir.DestinationSetting) bool {
-	for _, ep := range ds.Endpoints {
-		if ep.Host == "None" {
-			return true
-		}
+// isServiceHeadless reports true when a Kubernetes Service is headless.
+func isServiceHeadless(service *corev1.Service) bool {
+	if service == nil {
+		return false
+	}
+	if service.Spec.ClusterIP == corev1.ClusterIPNone {
+		return true
 	}
 	return false
 }
@@ -1898,8 +1982,12 @@ func (t *Translator) processServiceImportDestinationSetting(
 		protocol = serviceAppProtocolToIRAppProtocol(*servicePort.AppProtocol, protocol, false)
 	}
 
-	// Route to endpoints by default
-	if !t.IsEnvoyServiceRouting(envoyProxy) {
+	backendIps := serviceImport.Spec.IPs
+	isHeadless := len(backendIps) == 0
+
+	// Route to endpoints by default, or if service routing is enabled but ServiceImport is headless
+	useEndpointRouting := !t.IsEnvoyServiceRouting(envoyProxy) || isHeadless
+	if useEndpointRouting {
 		endpointSlices := t.GetEndpointSlicesForBackend(backendNamespace, string(backendRef.Name), resource.KindServiceImport)
 		endpoints, addrType = getIREndpointsFromEndpointSlices(endpointSlices, servicePort.Name, getServicePortProtocol(servicePort.Protocol))
 		if len(endpoints) == 0 {
@@ -1909,8 +1997,7 @@ func (t *Translator) processServiceImportDestinationSetting(
 			)
 		}
 	} else {
-		// Fall back to Service ClusterIP routing
-		backendIps := t.GetServiceImport(backendNamespace, string(backendRef.Name)).Spec.IPs
+		// Use ServiceImport IPs for routing
 		for _, ip := range backendIps {
 			ep := ir.NewDestEndpoint(nil, ip, uint32(*backendRef.Port), false, nil)
 			endpoints = append(endpoints, ep)
@@ -1952,8 +2039,11 @@ func (t *Translator) processServiceDestinationSetting(
 		protocol = serviceAppProtocolToIRAppProtocol(*servicePort.AppProtocol, protocol, true)
 	}
 
-	// Route to endpoints by default
-	if !t.IsEnvoyServiceRouting(envoyProxy) {
+	isHeadless := isServiceHeadless(service)
+
+	// Route to endpoints by default, or if service routing is enabled but service is headless
+	useEndpointRouting := !t.IsEnvoyServiceRouting(envoyProxy) || isHeadless
+	if useEndpointRouting {
 		endpointSlices := t.GetEndpointSlicesForBackend(backendNamespace, string(backendRef.Name), KindDerefOr(backendRef.Kind, resource.KindService))
 		endpoints, addrType = getIREndpointsFromEndpointSlices(endpointSlices, servicePort.Name, getServicePortProtocol(servicePort.Protocol))
 		if len(endpoints) == 0 {
@@ -1963,7 +2053,7 @@ func (t *Translator) processServiceDestinationSetting(
 			)
 		}
 	} else {
-		// Fall back to Service ClusterIP routing
+		// Use Service ClusterIP routing
 		ep := ir.NewDestEndpoint(nil, service.Spec.ClusterIP, uint32(*backendRef.Port), false, nil)
 		endpoints = append(endpoints, ep)
 	}
@@ -2071,6 +2161,9 @@ func applyHTTPFiltersContextToDestinationFilters(httpFiltersContext *HTTPFilters
 	if httpFiltersContext.CredentialInjection != nil {
 		destFilters.CredentialInjection = httpFiltersContext.CredentialInjection
 	}
+	if httpFiltersContext.URLRewrite != nil {
+		destFilters.URLRewrite = httpFiltersContext.URLRewrite
+	}
 }
 
 func inspectAppProtocolByRouteKind(kind gwapiv1.Kind) ir.AppProtocol {
@@ -2089,9 +2182,8 @@ func inspectAppProtocolByRouteKind(kind gwapiv1.Kind) ir.AppProtocol {
 	return ir.TCP
 }
 
-// processAllowedListenersForParentRefs finds out if the route attaches to one of our
-// Gateways' listeners, and if so, gets the list of listeners that allow it to
-// attach for each parentRef.
+// processAllowedListenersForParentRefs finds out if the route attaches to one of our Gateways' listeners or the attached
+// XListenerSet's listeners, and if so, gets the list of listeners that allow it to attach for each parentRef.
 func (t *Translator) processAllowedListenersForParentRefs(
 	routeContext RouteContext,
 	gateways []*GatewayContext,

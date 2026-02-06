@@ -98,6 +98,8 @@ helm install eg oci://docker.io/envoyproxy/gateway-helm \
 that live in the `/crds` folder in the Helm Chart. So you will manually need to update the CRDs.
 Follow the steps outlined in [this](./install-yaml/#upgrading-from-the-previous-version) section if you're upgrading from a previous version.
 
+Note: make sure to upgrade the CRDs first, then upgrade Envoy Gateway. Otherwise, Envoy Gateway may not find the new CRD versions and could fail to reconcile existing resources.
+
 ## Helm chart customizations
 
 Some of the quick ways of using the helm install command for envoy gateway installation are below.

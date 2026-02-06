@@ -22,6 +22,11 @@ backendTrafficPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
@@ -71,6 +76,11 @@ backendTrafficPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
@@ -119,6 +129,11 @@ backendTrafficPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
       - lastTransitionTime: null
         message: 'This policy is being overridden by other backendTrafficPolicies
           for these routes: [envoy-gateway/httproute-1]'
@@ -626,6 +641,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-1
           namespace: envoy-gateway
+          policies:
+          - kind: BackendTrafficPolicy
+            name: target-httproute-in-gateway-1
+            namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-1/rule/0/match/0/*
         pathMatch:
           distinct: false
@@ -708,6 +727,10 @@ xdsIR:
           kind: GRPCRoute
           name: grpcroute-1
           namespace: envoy-gateway
+          policies:
+          - kind: BackendTrafficPolicy
+            name: target-grpcroute-in-gateway-2
+            namespace: envoy-gateway
         name: grpcroute/envoy-gateway/grpcroute-1/rule/0/match/0/*
         traffic: {}
     readyListener:

@@ -26,6 +26,11 @@ backendTrafficPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
@@ -54,6 +59,11 @@ backendTrafficPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
@@ -81,6 +91,11 @@ backendTrafficPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
       - lastTransitionTime: null
         message: 'This policy is being overridden by other backendTrafficPolicies
           for these routes: [default/grpcroute-2]'
@@ -377,6 +392,10 @@ xdsIR:
           kind: GRPCRoute
           name: grpcroute-1
           namespace: default
+          policies:
+          - kind: BackendTrafficPolicy
+            name: policy-for-gateway
+            namespace: envoy-gateway
         name: grpcroute/default/grpcroute-1/rule/0/match/-1/*
         statName: GRPCRoute/default/grpcroute-1/grpcroute-1
         traffic:
@@ -408,6 +427,10 @@ xdsIR:
           kind: GRPCRoute
           name: grpcroute-2
           namespace: default
+          policies:
+          - kind: BackendTrafficPolicy
+            name: policy-for-route-rewrite
+            namespace: default
         name: grpcroute/default/grpcroute-2/rule/0/match/-1/*
         statName: route=rewrite
         traffic:
@@ -486,6 +509,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-1
           namespace: default
+          policies:
+          - kind: BackendTrafficPolicy
+            name: policy-for-route
+            namespace: default
         name: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
         pathMatch:
           distinct: false

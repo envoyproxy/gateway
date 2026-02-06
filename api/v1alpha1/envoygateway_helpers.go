@@ -123,9 +123,28 @@ func (e *EnvoyGateway) TopologyInjectorDisabled() bool {
 	return false
 }
 
+// GetEnvoyProxyDefaultSpec returns the default EnvoyProxySpec if specified,
+// otherwise returns nil.
+func (e *EnvoyGateway) GetEnvoyProxyDefaultSpec() *EnvoyProxySpec {
+	return e.EnvoyProxy
+}
+
 // defaultRuntimeFlags are the default runtime flags for Envoy Gateway.
 var defaultRuntimeFlags = map[RuntimeFlag]bool{
 	XDSNameSchemeV2: false,
+}
+
+// IsEnabled checks if an experimental Gateway API is enabled in the EnvoyGateway configuration.
+func (f *GatewayAPISettings) IsEnabled(api GatewayAPI) bool {
+	if f != nil {
+		for _, enable := range f.Enabled {
+			if enable == api {
+				return true
+			}
+		}
+	}
+
+	return false
 }
 
 // IsEnabled checks if a runtime flag is enabled in the EnvoyGateway configuration.

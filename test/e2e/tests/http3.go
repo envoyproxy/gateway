@@ -30,7 +30,7 @@ var HTTP3Test = suite.ConformanceTest{
 	Description: "HTTP3 tests ensure that Envoy Gateway supports HTTP/3 features.",
 	Manifests:   []string{"testdata/http3.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
-		routeNN := types.NamespacedName{Name: "http3-route", Namespace: ConformanceInfraNamespace}
+		routeNN := types.NamespacedName{Name: "http3-route-foo", Namespace: ConformanceInfraNamespace}
 		gwNN := types.NamespacedName{Name: "http3-gtw", Namespace: ConformanceInfraNamespace}
 		gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName,
 			kubernetes.NewGatewayRef(gwNN), routeNN)
@@ -44,31 +44,36 @@ var HTTP3Test = suite.ConformanceTest{
 		ClientTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "http3-ctp", Namespace: ConformanceInfraNamespace},
 			suite.ControllerName, ancestorRef)
 
-		quicRoundTripper := &utils.QuicRoundTripper{
-			Debug:         suite.Debug,
-			TimeoutConfig: suite.TimeoutConfig,
+		testHTTP3 := func(host, secretName string) {
+			quicRoundTripper := &utils.QuicRoundTripper{
+				Debug:         suite.Debug,
+				TimeoutConfig: suite.TimeoutConfig,
+			}
+
+			expected := http.ExpectedResponse{
+				Request: http.Request{
+					Host: host,
+					Path: "/",
+				},
+				Response: http.Response{
+					StatusCodes: []int{200},
+				},
+				Namespace: ConformanceInfraNamespace,
+			}
+
+			cPem, keyPem, _, err := GetTLSSecret(suite.Client, types.NamespacedName{Name: secretName, Namespace: ConformanceInfraNamespace})
+			if err != nil {
+				t.Fatalf("unexpected error finding TLS secret: %v", err)
+			}
+
+			req := http.MakeRequest(t, &expected, gwAddr, "HTTPS", "https")
+			WaitForConsistentMTLSResponse(t, quicRoundTripper, &req, &expected, suite.TimeoutConfig.RequiredConsecutiveSuccesses, suite.TimeoutConfig.MaxTimeToConsistency,
+				cPem, keyPem, host)
 		}
 
-		expected := http.ExpectedResponse{
-			Request: http.Request{
-				Host: "mtls.example.com",
-				Path: "/",
-			},
-			Response: http.Response{
-				StatusCodes: []int{200},
-			},
-			Namespace: ConformanceInfraNamespace,
-		}
-
-		// This test uses the same key/cert pair as both a client cert and server cert
-		// Both backend and client treat the self-signed cert as a trusted CA
-		cPem, keyPem, _, err := GetTLSSecret(suite.Client, types.NamespacedName{Name: "example-com-tls", Namespace: ConformanceInfraNamespace})
-		if err != nil {
-			t.Fatalf("unexpected error finding TLS secret: %v", err)
-		}
-
-		req := http.MakeRequest(t, &expected, gwAddr, "HTTPS", "https")
-		WaitForConsistentMTLSResponse(t, quicRoundTripper, &req, &expected, suite.TimeoutConfig.RequiredConsecutiveSuccesses, suite.TimeoutConfig.MaxTimeToConsistency,
-			cPem, keyPem, "www.example.com")
+		testHTTP3("foo.example.com", "foo-com-tls")
+		testHTTP3("bar.example.com", "bar-com-tls")
+		testHTTP3("www.awesome.org", "www-awesome-org-tls") // test with a domain overlapped with a wildcard domain
+		testHTTP3("api.awesome.org", "awesome-org-tls")     // test with a wildcard domain
 	},
 }

@@ -76,6 +76,11 @@ clientTrafficPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
@@ -204,15 +209,18 @@ xdsIR:
       externalPort: 80
       headers:
         earlyAddRequestHeaders:
-        - append: true
+        - addIfAbsent: false
+          append: true
           name: my-added-header
           value:
           - my-added-header-value
-        - append: true
+        - addIfAbsent: false
+          append: true
           name: my-multi-added-header
           value:
           - value1,value2
-        - append: false
+        - addIfAbsent: false
+          append: false
           name: my-set-header
           value:
           - my-set-header-value
@@ -233,15 +241,18 @@ xdsIR:
           safeRegex: removed-regex-.*
         enableEnvoyHeaders: true
         lateAddResponseHeaders:
-        - append: true
+        - addIfAbsent: false
+          append: true
           name: my-added-response-header
           value:
           - my-added-response-header-value
-        - append: false
+        - addIfAbsent: false
+          append: false
           name: my-set-response-header
           value:
           - my-set-response-header-value
-        - append: false
+        - addIfAbsent: false
+          append: false
           name: my-multi-set-response-header
           value:
           - value1,value2
@@ -279,15 +290,18 @@ xdsIR:
       externalPort: 8080
       headers:
         earlyAddRequestHeaders:
-        - append: true
+        - addIfAbsent: false
+          append: true
           name: my-added-header
           value:
           - my-added-header-value
-        - append: true
+        - addIfAbsent: false
+          append: true
           name: my-multi-added-header
           value:
           - value1,value2
-        - append: false
+        - addIfAbsent: false
+          append: false
           name: my-set-header
           value:
           - my-set-header-value
@@ -308,15 +322,18 @@ xdsIR:
           safeRegex: removed-regex-.*
         enableEnvoyHeaders: true
         lateAddResponseHeaders:
-        - append: true
+        - addIfAbsent: false
+          append: true
           name: my-added-response-header
           value:
           - my-added-response-header-value
-        - append: false
+        - addIfAbsent: false
+          append: false
           name: my-set-response-header
           value:
           - my-set-response-header-value
-        - append: false
+        - addIfAbsent: false
+          append: false
           name: my-multi-set-response-header
           value:
           - value1,value2

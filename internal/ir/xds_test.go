@@ -1415,6 +1415,9 @@ func TestRedaction(t *testing.T) {
 							BasicAuth: &BasicAuth{
 								Users: []byte("secret"),
 							},
+							ExtAuth: &ExtAuth{
+								ContextExtensions: []*ContextExtention{{Name: "key", Value: []byte("secret")}},
+							},
 						},
 					}},
 				}},
@@ -1428,7 +1431,8 @@ func TestRedaction(t *testing.T) {
 				`"name":"","hostname":"","isHTTP2":false,"security":{` +
 				`"oidc":{"name":"","provider":{"authorizationEndpoint":"","tokenEndpoint":""},"clientID":"","clientSecret":"[redacted]","hmacSecret":"[redacted]"},` +
 				`"apiKeyAuth":{"credentials":[{"client":"[redacted]","key":"[redacted]"}],"extractFrom":null},` +
-				`"basicAuth":{"name":"","users":"[redacted]"}` +
+				`"basicAuth":{"name":"","users":"[redacted]"},` +
+				`"extAuth":{"name":"","contextExtensions":[{"name":"key","value":"[redacted]"}]}` +
 				`}}],` +
 				`"isHTTP2":false,"path":{"mergeSlashes":false,"escapedSlashesAction":""}}],` +
 				`"globalResources":{"envoyClientCertificate":{"name":"test","certificate":"Q2VydGlmaWNhdGU=","privateKey":"[redacted]"}}}`,

@@ -70,3 +70,12 @@ updates:
       - /tools/src/yamllint
     schedule:
       interval: weekly
+  - package-ecosystem: "helm"
+    directories:
+      - "/charts/gateway-addons-helm"
+    schedule:
+      interval: "weekly"
+    groups:
+      helm:
+        patterns:
+          - "*"

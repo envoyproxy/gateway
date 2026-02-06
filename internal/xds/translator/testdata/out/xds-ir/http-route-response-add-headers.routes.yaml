@@ -31,6 +31,10 @@
         header:
           key: empty-header
         keepEmptyValue: true
+      - appendAction: ADD_IF_ABSENT
+        header:
+          key: add-if-absent-header
+          value: default-value
       route:
         cluster: response-header-route-dest
         upgradeConfigs:

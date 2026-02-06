@@ -9,6 +9,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"sort"
+	"strings"
 	"time"
 
 	clusterv3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
@@ -53,6 +54,8 @@ const (
 	// https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto#envoy-v3-api-field-config-cluster-v3-cluster-per-connection-buffer-limit-bytes
 	tcpClusterPerConnectionBufferLimitBytes = 32768
 	tcpClusterPerConnectTimeout             = 10 * time.Second
+	dfpClusterTypeName                      = "envoy.clusters.dynamic_forward_proxy"
+	dfpDNSCacheName                         = "envoy-gateway-dfp-cache"
 )
 
 type xdsClusterArgs struct {
@@ -126,17 +129,12 @@ func buildEndpointType(settings []*ir.DestinationSetting) EndpointType {
 	return EndpointTypeStatic
 }
 
-type buildClusterResult struct {
-	cluster *clusterv3.Cluster
-	secrets []*tlsv3.Secret // Secrets used in the cluster filters, we may need to add other types of resources in the future.
-}
-
-func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
+func computeDNSLookupFamily(ipFamily *egv1a1.IPFamily, dns *ir.DNS) clusterv3.Cluster_DnsLookupFamily {
 	dnsLookupFamily := clusterv3.Cluster_V4_PREFERRED
-	customDNSPolicy := args.dns != nil && args.dns.LookupFamily != nil
+	customDNSPolicy := dns != nil && dns.LookupFamily != nil
 	// apply DNS lookup family if custom DNS traffic policy is set
 	if customDNSPolicy {
-		switch *args.dns.LookupFamily {
+		switch *dns.LookupFamily {
 		case egv1a1.IPv4DNSLookupFamily:
 			dnsLookupFamily = clusterv3.Cluster_V4_ONLY
 		case egv1a1.IPv6DNSLookupFamily:
@@ -149,8 +147,8 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 	}
 
 	// Ensure to override if a specific IP family is set.
-	if args.ipFamily != nil {
-		switch *args.ipFamily {
+	if ipFamily != nil {
+		switch *ipFamily {
 		case egv1a1.IPv4:
 			dnsLookupFamily = clusterv3.Cluster_V4_ONLY
 		case egv1a1.IPv6:
@@ -162,6 +160,47 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 			}
 		}
 	}
+
+	return dnsLookupFamily
+}
+
+func dfpCacheName(ipFamily *egv1a1.IPFamily, dns *ir.DNS) string {
+	refresh := 30 * time.Second
+	if dns != nil && dns.DNSRefreshRate != nil && dns.DNSRefreshRate.Duration > 0 {
+		refresh = dns.DNSRefreshRate.Duration
+	}
+
+	dnsLookupFamily := computeDNSLookupFamily(ipFamily, dns)
+	base := fmt.Sprintf("%s-%s-%dms", dfpDNSCacheName, strings.ToLower(dnsLookupFamily.String()), refresh/time.Millisecond)
+	suffix := "default"
+	if dns != nil && dns.Name != "" {
+		suffix = dns.Name
+	}
+	// Hash to keep names short and avoid collisions when new DNS settings are added.
+	return fmt.Sprintf("%s-%s", base, suffix)
+}
+
+func buildDFPDNSCacheConfig(name string, dns *ir.DNS, dnsLookupFamily clusterv3.Cluster_DnsLookupFamily) *commondfpv3.DnsCacheConfig {
+	dnsCacheConfig := &commondfpv3.DnsCacheConfig{
+		Name:            name,
+		DnsLookupFamily: dnsLookupFamily,
+		DnsRefreshRate:  durationpb.New(30 * time.Second),
+	}
+
+	if dns != nil && dns.DNSRefreshRate != nil && dns.DNSRefreshRate.Duration > 0 {
+		dnsCacheConfig.DnsRefreshRate = durationpb.New(dns.DNSRefreshRate.Duration)
+	}
+
+	return dnsCacheConfig
+}
+
+type buildClusterResult struct {
+	cluster *clusterv3.Cluster
+	secrets []*tlsv3.Secret // Secrets used in the cluster filters, we may need to add other types of resources in the future.
+}
+
+func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
+	dnsLookupFamily := computeDNSLookupFamily(args.ipFamily, args.dns)
 
 	cluster := &clusterv3.Cluster{
 		Name:                          args.name,
@@ -205,7 +244,7 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 
 	// scan through settings to determine cluster-level configuration options, as some of them
 	// influence transport socket specific settings
-	requiresAutoHTTPConfig := false
+	requiresAutoHTTPConfig := len(args.settings) > 0
 	requiresHTTP2Options := false
 	hasLiteralSNI := false
 	for _, ds := range args.settings {
@@ -214,9 +253,13 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 			requiresHTTP2Options = true
 		}
 
-		if ds.TLS != nil {
-			requiresAutoHTTPConfig = true
+		if ds.Protocol == ir.TCP {
+			requiresAutoHTTPConfig = false
+		}
 
+		// auto HTTP config is required if all the destinations use HTTPS-based protocol
+		requiresAutoHTTPConfig = requiresAutoHTTPConfig && (ds.TLS != nil)
+		if ds.TLS != nil {
 			// it's safe to set autoSNI on cluster level only if all endpoints do not set literal SNIs.
 			// Otherwise, autoSNI will override transport-socket level SNI.
 			// See here: https://www.envoyproxy.io/docs/envoy/latest/start/quick-start/securing#connect-to-an-endpoint-with-sni
@@ -417,18 +460,8 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 
 	switch args.endpointType {
 	case EndpointTypeDynamicResolver:
-		dnsCacheConfig := &commondfpv3.DnsCacheConfig{
-			Name:            args.name,
-			DnsLookupFamily: dnsLookupFamily,
-		}
-		dnsCacheConfig.DnsRefreshRate = durationpb.New(30 * time.Second)
-		if args.dns != nil {
-			if args.dns.DNSRefreshRate != nil {
-				if args.dns.DNSRefreshRate.Duration > 0 {
-					dnsCacheConfig.DnsRefreshRate = durationpb.New(args.dns.DNSRefreshRate.Duration)
-				}
-			}
-		}
+		cacheName := dfpCacheName(args.ipFamily, args.dns)
+		dnsCacheConfig := buildDFPDNSCacheConfig(cacheName, args.dns, dnsLookupFamily)
 
 		dfp := &dfpv3.ClusterConfig{
 			ClusterImplementationSpecifier: &dfpv3.ClusterConfig_DnsCacheConfig{
@@ -440,7 +473,7 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 			return nil, err
 		}
 		cluster.ClusterDiscoveryType = &clusterv3.Cluster_ClusterType{ClusterType: &clusterv3.Cluster_CustomClusterType{
-			Name:        args.name,
+			Name:        dfpClusterTypeName,
 			TypedConfig: dfpAny,
 		}}
 		cluster.LbPolicy = clusterv3.Cluster_CLUSTER_PROVIDED
@@ -1178,7 +1211,7 @@ func (route *UDPRouteTranslator) asClusterArgs(name string,
 		name:         name,
 		settings:     settings,
 		loadBalancer: route.LoadBalancer,
-		endpointType: buildEndpointType(route.Destination.Settings),
+		endpointType: buildEndpointType(settings),
 		metrics:      extra.metrics,
 		dns:          route.DNS,
 		ipFamily:     extra.ipFamily,
@@ -1204,7 +1237,7 @@ func (route *TCPRouteTranslator) asClusterArgs(name string,
 		tcpkeepalive:      route.TCPKeepalive,
 		healthCheck:       route.HealthCheck,
 		timeout:           route.Timeout,
-		endpointType:      buildEndpointType(route.Destination.Settings),
+		endpointType:      buildEndpointType(settings),
 		metrics:           extra.metrics,
 		backendConnection: route.BackendConnection,
 		dns:               route.DNS,
@@ -1226,7 +1259,7 @@ func (httpRoute *HTTPRouteTranslator) asClusterArgs(name string,
 		name:              name,
 		settings:          settings,
 		tSocket:           nil,
-		endpointType:      buildEndpointType(httpRoute.Destination.Settings),
+		endpointType:      buildEndpointType(settings),
 		metrics:           extra.metrics,
 		http1Settings:     extra.http1Settings,
 		http2Settings:     extra.http2Settings,

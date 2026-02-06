@@ -13,6 +13,17 @@ cluster_manager:
 node:
   locality:
     zone: $(ENVOY_SERVICE_ZONE)
+stats_config:
+  use_all_default_tags: true
+  stats_tags:
+  - regex: \.zone(\.(([^\.]+)\.))
+    tag_name: from_zone
+  - regex: \.zone\.[^\.]+\.(([^\.]+)\.)
+    tag_name: to_zone
+  - regex: "^cluster(\\..+\\.(.+))\\.total_match_count$"
+    tag_name: socket_match_name
+  - regex: "circuit_breakers\\.((.+?)\\.).+"
+    tag_name: priority
 layered_runtime:
   layers:
   - name: global_config
@@ -30,9 +41,11 @@ dynamic_resources:
     set_node_on_first_message_only: true
   lds_config:
     ads: {}
+    initial_fetch_timeout: 0s
     resource_api_version: V3
   cds_config:
     ads: {}
+    initial_fetch_timeout: 0s
     resource_api_version: V3
 static_resources:
   listeners:

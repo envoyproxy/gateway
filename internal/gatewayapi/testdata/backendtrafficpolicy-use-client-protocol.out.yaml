@@ -23,6 +23,11 @@ backendTrafficPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
@@ -190,6 +195,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-1
           namespace: default
+          policies:
+          - kind: BackendTrafficPolicy
+            name: policy-for-gateway
+            namespace: envoy-gateway
         name: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
         pathMatch:
           distinct: false

@@ -430,6 +430,7 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 					ImagePullSecrets:              deploymentConfig.Pod.ImagePullSecrets,
 					NodeSelector:                  deploymentConfig.Pod.NodeSelector,
 					TopologySpreadConstraints:     deploymentConfig.Pod.TopologySpreadConstraints,
+					PriorityClassName:             ptr.Deref(deploymentConfig.Pod.PriorityClassName, ""),
 				},
 			},
 			RevisionHistoryLimit:    ptr.To[int32](10),
@@ -643,6 +644,7 @@ func (r *ResourceRender) getPodSpec(
 		ImagePullSecrets:              pod.ImagePullSecrets,
 		NodeSelector:                  pod.NodeSelector,
 		TopologySpreadConstraints:     pod.TopologySpreadConstraints,
+		PriorityClassName:             ptr.Deref(pod.PriorityClassName, ""),
 	}
 }
 

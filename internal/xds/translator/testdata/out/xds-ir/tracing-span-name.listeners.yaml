@@ -1,0 +1,108 @@
+- address:
+    socketAddress:
+      address: 0.0.0.0
+      portValue: 10080
+  defaultFilterChain:
+    filters:
+    - name: envoy.filters.network.http_connection_manager
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+        commonHttpProtocolOptions:
+          headersWithUnderscoresAction: REJECT_REQUEST
+        http2ProtocolOptions:
+          initialConnectionWindowSize: 1048576
+          initialStreamWindowSize: 65536
+          maxConcurrentStreams: 100
+        httpFilters:
+        - name: envoy.filters.http.router
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+            suppressEnvoyHeaders: true
+        mergeSlashes: true
+        normalizePath: true
+        pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
+        rds:
+          configSource:
+            ads: {}
+            resourceApiVersion: V3
+          routeConfigName: envoy-gateway/gateway-1/http
+        serverHeaderTransformation: PASS_THROUGH
+        statPrefix: http-10080
+        tracing:
+          clientSampling:
+            value: 100
+          operation: '%REQ(X-ENVOY-ORIGINAL-HOST)%%PATH(NQ:ORIG)%'
+          overallSampling:
+            value: 100
+          provider:
+            name: envoy.tracers.opentelemetry
+            typedConfig:
+              '@type': type.googleapis.com/envoy.config.trace.v3.OpenTelemetryConfig
+              grpcService:
+                envoyGrpc:
+                  authority: otel-collector.monitoring.svc.cluster.local
+                  clusterName: tracing
+              serviceName: envoy-gateway-class
+          randomSampling:
+            value: 100
+          spawnUpstreamSpan: true
+          upstreamOperation: '%UPSTREAM_HOST_NAME%%PATH(NQ:PATH)%'
+        useRemoteAddress: true
+    name: envoy-gateway/gateway-1/http
+  maxConnectionsToAcceptPerSocketEvent: 1
+  name: envoy-gateway/gateway-1/http
+  perConnectionBufferLimitBytes: 32768
+- address:
+    socketAddress:
+      address: 0.0.0.0
+      portValue: 8888
+  defaultFilterChain:
+    filters:
+    - name: envoy.filters.network.http_connection_manager
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+        commonHttpProtocolOptions:
+          headersWithUnderscoresAction: REJECT_REQUEST
+        http2ProtocolOptions:
+          initialConnectionWindowSize: 1048576
+          initialStreamWindowSize: 65536
+          maxConcurrentStreams: 100
+        httpFilters:
+        - name: envoy.filters.http.router
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+            suppressEnvoyHeaders: true
+        mergeSlashes: true
+        normalizePath: true
+        pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
+        rds:
+          configSource:
+            ads: {}
+            resourceApiVersion: V3
+          routeConfigName: envoy-gateway/gateway-2/http-2
+        serverHeaderTransformation: PASS_THROUGH
+        statPrefix: http-8888
+        tracing:
+          clientSampling:
+            value: 100
+          operation: '%REQ(X-ENVOY-ORIGINAL-HOST)%%PATH(NQ:ORIG)%'
+          overallSampling:
+            value: 100
+          provider:
+            name: envoy.tracers.opentelemetry
+            typedConfig:
+              '@type': type.googleapis.com/envoy.config.trace.v3.OpenTelemetryConfig
+              grpcService:
+                envoyGrpc:
+                  authority: otel-collector.monitoring.svc.cluster.local
+                  clusterName: tracing
+              serviceName: envoy-gateway-class
+          randomSampling:
+            value: 100
+          spawnUpstreamSpan: true
+          upstreamOperation: '%UPSTREAM_HOST_NAME%%PATH(NQ:PATH)%'
+        useRemoteAddress: true
+    name: envoy-gateway/gateway-2/http-2
+  maxConnectionsToAcceptPerSocketEvent: 1
+  name: envoy-gateway/gateway-2/http-2
+  perConnectionBufferLimitBytes: 32768

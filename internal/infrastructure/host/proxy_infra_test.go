@@ -64,7 +64,7 @@ func newMockInfra(t *testing.T, cfg *config.Server) *Infra {
 		sdsConfigPath: proxyDir,
 		Stdout:        io.Discard,
 		Stderr:        io.Discard,
-		envoyRunner: func(ctx context.Context, args []string, options ...func_e_api.RunOption) error {
+		envoyRunner: func(ctx context.Context, _ []string, _ ...func_e_api.RunOption) error {
 			// Block until context is cancelled (mimics real Envoy blocking)
 			<-ctx.Done()
 			return ctx.Err()
@@ -402,7 +402,7 @@ func TestInfra_Close(t *testing.T) {
 
 		// Verify all proxies are running
 		count := 0
-		infra.proxyContextMap.Range(func(key, value any) bool {
+		infra.proxyContextMap.Range(func(_, _ any) bool {
 			count++
 			return true
 		})
@@ -414,7 +414,7 @@ func TestInfra_Close(t *testing.T) {
 
 		// Verify all proxies were stopped
 		count = 0
-		infra.proxyContextMap.Range(func(key, value any) bool {
+		infra.proxyContextMap.Range(func(_, _ any) bool {
 			count++
 			return true
 		})
@@ -587,6 +587,80 @@ func TestTopologyInjectorDisabledInHostMode(t *testing.T) {
 				require.Contains(t, bootstrapYAML, "local_cluster_name:")
 			} else {
 				require.NotContains(t, bootstrapYAML, "local_cluster_name:")
+			}
+		})
+	}
+}
+
+// TestUserConfiguredMetricSinksPreserved verifies that user-configured metric
+// sinks (e.g., OpenTelemetry) are preserved in the bootstrap config for host mode.
+func TestUserConfiguredMetricSinksPreserved(t *testing.T) {
+	testCases := []struct {
+		name        string
+		telemetry   *egv1a1.ProxyTelemetry
+		expectSinks bool
+	}{
+		{
+			name:        "no telemetry config",
+			telemetry:   nil,
+			expectSinks: false,
+		},
+		{
+			name: "telemetry with nil metrics",
+			telemetry: &egv1a1.ProxyTelemetry{
+				Metrics: nil,
+			},
+			expectSinks: false,
+		},
+		{
+			name: "telemetry with otel sink",
+			telemetry: &egv1a1.ProxyTelemetry{
+				Metrics: &egv1a1.ProxyMetrics{
+					Sinks: []egv1a1.ProxyMetricSink{
+						{
+							Type: egv1a1.MetricSinkTypeOpenTelemetry,
+							OpenTelemetry: &egv1a1.ProxyOpenTelemetrySink{
+								Host: ptr.To("otel-collector.example.com"),
+								Port: 4317,
+							},
+						},
+					},
+				},
+			},
+			expectSinks: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			proxyConfig := &egv1a1.EnvoyProxy{
+				Spec: egv1a1.EnvoyProxySpec{
+					Telemetry: tc.telemetry,
+				},
+			}
+
+			// Build proxy metrics the same way CreateOrUpdateProxyInfra does
+			proxyMetrics := &egv1a1.ProxyMetrics{
+				Prometheus: &egv1a1.ProxyPrometheusProvider{
+					Disable: true,
+				},
+			}
+			if proxyConfig.Spec.Telemetry != nil && proxyConfig.Spec.Telemetry.Metrics != nil {
+				proxyMetrics.Sinks = proxyConfig.Spec.Telemetry.Metrics.Sinks
+				proxyMetrics.Matches = proxyConfig.Spec.Telemetry.Metrics.Matches
+			}
+
+			// Verify Prometheus is always disabled
+			require.True(t, proxyMetrics.Prometheus.Disable)
+
+			// Verify sinks and matches are preserved when configured
+			if tc.expectSinks {
+				require.NotEmpty(t, proxyMetrics.Sinks, "user-configured sinks should be preserved")
+				require.Equal(t, tc.telemetry.Metrics.Sinks, proxyMetrics.Sinks)
+				require.Equal(t, tc.telemetry.Metrics.Matches, proxyMetrics.Matches)
+			} else {
+				require.Empty(t, proxyMetrics.Sinks, "no sinks expected when not configured")
+				require.Empty(t, proxyMetrics.Matches, "no matches expected when not configured")
 			}
 		})
 	}

@@ -94,7 +94,7 @@ spec:
     global:
       rules:
         - limit:
-            requests: 21
+            requests: 100
             unit: Hour
           shared: true
         - clientSelectors:

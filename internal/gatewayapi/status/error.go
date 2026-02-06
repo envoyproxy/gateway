@@ -35,6 +35,72 @@ const (
 	RouteConditionBackendsAvailable gwapiv1.RouteConditionType = "BackendsAvailable"
 )
 
+// Listener condition reasons for various error scenarios
+const (
+	ListenerReasonPartiallyInvalidCertificateRef gwapiv1.ListenerConditionReason = "PartiallyInvalidCertificateRef"
+)
+
+// ListenerError is an error interface that represents errors that need to be reflected
+// in the status of a Kubernetes resource. It extends the standard error interface
+// with a Reason method that returns the specific condition reason.
+//
+// TODO kkk777-7: consider using generics to make Error interface resource-agnostic to support all resource types.
+type ListenerError interface {
+	error
+	Reason() gwapiv1.ListenerConditionReason
+	Type() gwapiv1.ListenerConditionType
+}
+
+// ListenerStatusError represents an error that needs to be reflected in the status of listener.
+// It wraps an underlying error and provides a specific listener condition reason.
+type ListenerStatusError struct {
+	Wrapped                 error
+	ListenerConditionReason gwapiv1.ListenerConditionReason
+	ListenerConditionType   gwapiv1.ListenerConditionType
+}
+
+// NewListenerStatusError creates a new ListenerStatusError with the given wrapped error and listener condition reason.
+func NewListenerStatusError(wrapped error, reason gwapiv1.ListenerConditionReason) *ListenerStatusError {
+	return &ListenerStatusError{
+		Wrapped:                 wrapped,
+		ListenerConditionReason: reason,
+	}
+}
+
+func (s *ListenerStatusError) WithType(t gwapiv1.ListenerConditionType) *ListenerStatusError {
+	s.ListenerConditionType = t
+	return s
+}
+
+// Error returns the string representation of the error.
+// If Wrapped is nil, it returns the string representation of the ListenerConditionReason.
+func (s *ListenerStatusError) Error() string {
+	if s == nil {
+		return ""
+	}
+	if s.Wrapped != nil {
+		return s.Wrapped.Error()
+	}
+	return string(s.ListenerConditionReason)
+}
+
+// Reason returns the listener condition reason associated with this error.
+func (s *ListenerStatusError) Reason() gwapiv1.ListenerConditionReason {
+	if s == nil {
+		return ""
+	}
+	return s.ListenerConditionReason
+}
+
+// Type returns the listener condition type associated with this error.
+func (s *ListenerStatusError) Type() gwapiv1.ListenerConditionType {
+	// Default to ResolvedRefs because it's the most common type.
+	if s == nil || s.ListenerConditionType == "" {
+		return gwapiv1.ListenerConditionResolvedRefs
+	}
+	return s.ListenerConditionType
+}
+
 // Error is an error interface that represents errors that need to be reflected
 // in the status of a Kubernetes resource. It extends the standard error interface
 // with a Reason method that returns the specific condition reason.

@@ -63,8 +63,13 @@ func TestMergeGateways(t *testing.T) {
 	cSuite.Applier.GatewayClass = *flags.GatewayClassName
 	cSuite.ControllerName = kubernetes.GWCMustHaveAcceptedConditionTrue(t, cSuite.Client, cSuite.TimeoutConfig, cSuite.GatewayClassName)
 
+	recorder := e2e.NewTimingRecorder()
+	t.Cleanup(func() {
+		recorder.Report(t)
+	})
+	timedTests := e2e.WrapConformanceTestsWithTiming(tests.MergeGatewaysTests, recorder)
 	tlog.Logf(t, "Running %d MergeGateways tests", len(tests.MergeGatewaysTests))
-	err = cSuite.Run(t, tests.MergeGatewaysTests)
+	err = cSuite.Run(t, timedTests)
 	if err != nil {
 		t.Fatalf("Failed to run MergeGateways tests: %v", err)
 	}
