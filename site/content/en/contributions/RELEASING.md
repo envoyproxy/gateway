@@ -157,6 +157,7 @@ export GITHUB_REMOTE=origin
       {{- "v1.2.0" -}}
       {{- end -}}
       ```
+      docs prefix should be updated after releasing and ensuring that everything is working as it should.
 
    1. Update `site/hugo.toml`, add the new version to the `params.versions` section.
 
