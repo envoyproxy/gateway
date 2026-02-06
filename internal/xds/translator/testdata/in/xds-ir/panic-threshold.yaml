@@ -62,10 +62,10 @@ http:
       healthCheck:
         panicThreshold: 80
     destination:
-      name: "fifth-route-dest"
-      protocol: GRPC
+      name: "fifth-route-dest" 
       settings:
       - endpoints:
         - host: "1.2.3.4"
           port: 50000
+        protocol: GRPC
         name: "fifth-route-dest/backend/0"

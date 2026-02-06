@@ -1,4 +1,3 @@
-name: "tracing-otel-headers"
 tracing:
   serviceName: "fake-name.fake-ns"
   samplingRate: 90

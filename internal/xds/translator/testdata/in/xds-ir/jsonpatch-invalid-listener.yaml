@@ -1,55 +1,66 @@
-jsonPatches:
-- type: "type.googleapis.com/envoy.config.listener.v3.Listener"
-  name: "first-listener"
-  operation:
-    op: "add"
-    path: "/default_filter_chain/filters/0/typed_config/http_filters/0"
-    value:
-      name: "envoy.filters.http.ratelimit"
-      typed_config:
-        "@type": "type.googleapis.com/envoy.extensions.filters.http.ratelimit.v3.RateLimit"
-        domain: "eg-ratelimit"
-        failure_mode_deny: true
-        timeout: 1s
-        rate_limit_service:
-          grpc_service:
-            envoy_grpc:
-              cluster_name: rate-limit-cluster
-          transport_api_version: V3
-- type: "type.googleapis.com/envoy.config.route.v3.RouteConfiguration"
-  name: "first-listener"
-  operation:
-    op: "add"
-    path: "/virtual_hosts/0/rate_limits"
-    value:
-    - actions:
-      - remote_address: {}
-- type: "type.googleapis.com/envoy.config.cluster.v3.Cluster"
-  name: rate-limit-cluster
-  operation:
-    op: add
-    path: ""
-    value:
-      name: rate-limit-cluster
-      type: STRICT_DNS
-      connect_timeout: 10s
-      lb_policy: ROUND_ROBIN
-      http2_protocol_options: {}
-      load_assignment:
-        cluster_name: rate-limit-cluster
-        endpoints:
-        - lb_endpoints:
-          - endpoint:
-              address:
-                socket_address:
-                  address: ratelimit.svc.cluster.local
-                  port_value: 8081
-- type: "type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment"
-  name: "first-route"
-  operation:
-    op: "replace"
-    path: "/endpoints/0/load_balancing_weight"
-    value: "50"
+envoyPatchPolicies:
+- status:
+    ancestors:
+    - ancestorRef:
+        group: "gateway.networking.k8s.io"
+        kind: "Gateway"
+        namespace: "default"
+        name: "foobar"
+  name: "first-policy"
+  namespace: "default"
+  generation: 1
+  jsonPatches:
+  - type: "type.googleapis.com/envoy.config.listener.v3.Listener"
+    name: "first-listener"
+    operation:
+      op: "add"
+      path: "/default_filter_chain/filters/0/typed_config/http_filters/0"
+      value:
+        name: "envoy.filters.http.ratelimit"
+        typed_config:
+          "@type": "type.googleapis.com/envoy.extensions.filters.http.ratelimit.v3.RateLimit"
+          domain: "eg-ratelimit"
+          failure_mode_deny: true
+          timeout: 1s
+          rate_limit_service:
+            grpc_service:
+              envoy_grpc:
+                cluster_name: rate-limit-cluster
+            transport_api_version: V3
+  - type: "type.googleapis.com/envoy.config.route.v3.RouteConfiguration"
+    name: "first-listener"
+    operation:
+      op: "add"
+      path: "/virtual_hosts/0/rate_limits"
+      value:
+      - actions:
+        - remote_address: {}
+  - type: "type.googleapis.com/envoy.config.cluster.v3.Cluster"
+    name: rate-limit-cluster
+    operation:
+      op: add
+      path: ""
+      value:
+        name: rate-limit-cluster
+        type: STRICT_DNS
+        connect_timeout: 10s
+        lb_policy: ROUND_ROBIN
+        http2_protocol_options: {}
+        load_assignment:
+          cluster_name: rate-limit-cluster
+          endpoints:
+          - lb_endpoints:
+            - endpoint:
+                address:
+                  socket_address:
+                    address: ratelimit.svc.cluster.local
+                    port_value: 8081
+  - type: "type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment"
+    name: "first-route"
+    operation:
+      op: "replace"
+      path: "/endpoints/0/load_balancing_weight"
+      value: "50"
 http:
 - name: "first-listener"
   address: ""
@@ -64,7 +75,6 @@ http:
     hostname: "*"
     headerMatches:
     - name: user
-      stringMatch:
       exact: "jason"
     destination:
       name: "first-route-dest"
