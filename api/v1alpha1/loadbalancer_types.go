@@ -226,8 +226,10 @@ type ForceLocalZone struct {
 
 // WeightedZoneConfig defines the weight for a specific locality zone.
 type WeightedZoneConfig struct {
-	// Zone specifies the zone this weight applies to.
-	// Empty string means apply to all zones within the region.
+	// Zone specifies the topology zone this weight applies to.
+	// The value should match the topology.kubernetes.io/zone label
+	// of the nodes where endpoints are running.
+	// Zones not listed in the configuration receive a default weight of 1.
 	Zone string `json:"zone,omitempty"`
 
 	// Weight defines the weight for this locality.

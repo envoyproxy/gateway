@@ -509,7 +509,8 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				"spec.loadBalancer: Invalid value: \"object\": ZoneAware PreferLocal and WeightedZones cannot be specified together",
+				"spec.loadBalancer: Invalid value:",
+				": ZoneAware PreferLocal and WeightedZones cannot be specified together",
 			},
 		},
 		{
