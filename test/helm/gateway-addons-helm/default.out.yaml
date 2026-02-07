@@ -18,7 +18,7 @@ kind: ServiceAccount
 automountServiceAccountToken: false
 metadata:
   labels:
-    helm.sh/chart: grafana-10.5.13
+    helm.sh/chart: grafana-10.5.15
     app.kubernetes.io/name: grafana
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: "12.3.1"
@@ -47,7 +47,7 @@ metadata:
     app.kubernetes.io/name: prometheus
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: v3.9.1
-    helm.sh/chart: prometheus-28.6.0
+    helm.sh/chart: prometheus-28.8.0
     app.kubernetes.io/part-of: prometheus
   name: prometheus
   namespace: monitoring
@@ -143,7 +143,7 @@ metadata:
   name: grafana
   namespace: monitoring
   labels:
-    helm.sh/chart: grafana-10.5.13
+    helm.sh/chart: grafana-10.5.15
     app.kubernetes.io/name: grafana
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: "12.3.1"
@@ -314,7 +314,7 @@ metadata:
     app.kubernetes.io/name: prometheus
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: v3.9.1
-    helm.sh/chart: prometheus-28.6.0
+    helm.sh/chart: prometheus-28.8.0
     app.kubernetes.io/part-of: prometheus
   name: prometheus
   namespace: monitoring
@@ -351,13 +351,6 @@ data:
       relabel_configs:
       - action: labelmap
         regex: __meta_kubernetes_node_label_(.+)
-      - replacement: kubernetes.default.svc:443
-        target_label: __address__
-      - regex: (.+)
-        replacement: /api/v1/nodes/$1/proxy/metrics
-        source_labels:
-        - __meta_kubernetes_node_name
-        target_label: __metrics_path__
       scheme: https
       tls_config:
         ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
@@ -365,16 +358,13 @@ data:
       bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
       kubernetes_sd_configs:
       - role: node
+      metrics_path: /metrics/cadvisor
       relabel_configs:
       - action: labelmap
         regex: __meta_kubernetes_node_label_(.+)
-      - replacement: kubernetes.default.svc:443
-        target_label: __address__
-      - regex: (.+)
-        replacement: /api/v1/nodes/$1/proxy/metrics/cadvisor
-        source_labels:
-        - __meta_kubernetes_node_name
-        target_label: __metrics_path__
+      - source_labels:
+        - __metrics_path__
+        target_label: metrics_path
       scheme: https
       tls_config:
         ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
@@ -9978,7 +9968,7 @@ kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   labels:
-    helm.sh/chart: grafana-10.5.13
+    helm.sh/chart: grafana-10.5.15
     app.kubernetes.io/name: grafana
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: "12.3.1"
@@ -10009,7 +9999,7 @@ metadata:
     app.kubernetes.io/name: prometheus
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: v3.9.1
-    helm.sh/chart: prometheus-28.6.0
+    helm.sh/chart: prometheus-28.8.0
     app.kubernetes.io/part-of: prometheus
   name: prometheus
 rules:
@@ -10017,7 +10007,6 @@ rules:
       - ""
     resources:
       - nodes
-      - nodes/proxy
       - nodes/metrics
       - services
       - endpoints
@@ -10076,7 +10065,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: grafana-clusterrolebinding
   labels:
-    helm.sh/chart: grafana-10.5.13
+    helm.sh/chart: grafana-10.5.15
     app.kubernetes.io/name: grafana
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: "12.3.1"
@@ -10117,7 +10106,7 @@ metadata:
     app.kubernetes.io/name: prometheus
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: v3.9.1
-    helm.sh/chart: prometheus-28.6.0
+    helm.sh/chart: prometheus-28.8.0
     app.kubernetes.io/part-of: prometheus
   name: prometheus
 subjects:
@@ -10136,7 +10125,7 @@ metadata:
   name: grafana
   namespace: monitoring
   labels:
-    helm.sh/chart: grafana-10.5.13
+    helm.sh/chart: grafana-10.5.15
     app.kubernetes.io/name: grafana
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: "12.3.1"
@@ -10149,7 +10138,7 @@ metadata:
   name: grafana
   namespace: monitoring
   labels:
-    helm.sh/chart: grafana-10.5.13
+    helm.sh/chart: grafana-10.5.15
     app.kubernetes.io/name: grafana
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: "12.3.1"
@@ -10192,7 +10181,7 @@ metadata:
   name: grafana
   namespace: monitoring
   labels:
-    helm.sh/chart: grafana-10.5.13
+    helm.sh/chart: grafana-10.5.15
     app.kubernetes.io/name: grafana
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: "12.3.1"
@@ -10294,7 +10283,7 @@ metadata:
     app.kubernetes.io/name: prometheus
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: v3.9.1
-    helm.sh/chart: prometheus-28.6.0
+    helm.sh/chart: prometheus-28.8.0
     app.kubernetes.io/part-of: prometheus
   name: prometheus
   namespace: monitoring
@@ -10460,7 +10449,7 @@ metadata:
   name: grafana
   namespace: monitoring
   labels:
-    helm.sh/chart: grafana-10.5.13
+    helm.sh/chart: grafana-10.5.15
     app.kubernetes.io/name: grafana
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: "12.3.1"
@@ -10476,7 +10465,7 @@ spec:
   template:
     metadata:
       labels:
-        helm.sh/chart: grafana-10.5.13
+        helm.sh/chart: grafana-10.5.15
         app.kubernetes.io/name: grafana
         app.kubernetes.io/instance: gateway-addons-helm
         app.kubernetes.io/version: "12.3.1"
@@ -10593,7 +10582,7 @@ metadata:
     app.kubernetes.io/name: prometheus
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: v3.9.1
-    helm.sh/chart: prometheus-28.6.0
+    helm.sh/chart: prometheus-28.8.0
     app.kubernetes.io/part-of: prometheus
   name: prometheus
   namespace: monitoring
@@ -10615,14 +10604,14 @@ spec:
         app.kubernetes.io/name: prometheus
         app.kubernetes.io/instance: gateway-addons-helm
         app.kubernetes.io/version: v3.9.1
-        helm.sh/chart: prometheus-28.6.0
+        helm.sh/chart: prometheus-28.8.0
         app.kubernetes.io/part-of: prometheus
     spec:
       enableServiceLinks: true
       serviceAccountName: prometheus
       containers:
         - name: prometheus-server-configmap-reload
-          image: "quay.io/prometheus-operator/prometheus-config-reloader:v0.88.0"
+          image: "quay.io/prometheus-operator/prometheus-config-reloader:v0.88.1"
           imagePullPolicy: "IfNotPresent"
           args:
             - --watched-dir=/etc/config
