@@ -10,6 +10,7 @@ security updates: |
 new features: |
 
 bug fixes: |
+  Added support for retriableStatuses in HTTP active health checks to treat configured status ranges as retriable before marking hosts unhealthy.
 
 # Enhancements that improve performance.
 performance improvements: |

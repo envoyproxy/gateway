@@ -179,9 +179,32 @@ type HTTPActiveHealthChecker struct {
 	// Defaults to 200 only
 	// +optional
 	ExpectedStatuses []HTTPStatus `json:"expectedStatuses,omitempty" yaml:"expectedStatuses,omitempty"`
+	// RetriableStatuses defines a list of HTTP response status ranges considered retriable.
+	//
+	// Responses within these ranges will count towards the configured unhealthyThreshold,
+	// but will not result in the host being considered immediately unhealthy.
+	// Ranges follow half-open semantics [start, end) and must be within [100, 600).
+	//
+	// +optional
+	RetriableStatuses []HTTPStatusRange `json:"retriableStatuses,omitempty" yaml:"retriableStatuses,omitempty"`
 	// ExpectedResponse defines a list of HTTP expected responses to match.
 	// +optional
 	ExpectedResponse *ActiveHealthCheckPayload `json:"expectedResponse,omitempty" yaml:"expectedResponse,omitempty"`
+}
+
+// HTTPStatusRange defines a range of HTTP status codes.
+//
+// The range uses half-open semantics [start, end).
+// +kubebuilder:validation:XValidation: message="end must be greater than start",rule="self.end > self.start"
+type HTTPStatusRange struct {
+	// Start of the range, including the start value.
+	// +kubebuilder:validation:Minimum=100
+	// +kubebuilder:validation:Maximum=599
+	Start int `json:"start" yaml:"start"`
+	// End of the range, excluding the end value.
+	// +kubebuilder:validation:Minimum=101
+	// +kubebuilder:validation:Maximum=600
+	End int `json:"end" yaml:"end"`
 }
 
 // TCPActiveHealthChecker defines the settings of tcp health check.

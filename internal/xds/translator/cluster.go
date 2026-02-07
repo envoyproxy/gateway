@@ -592,6 +592,7 @@ func buildXdsHealthCheck(healthcheck *ir.ActiveHealthCheck) []*corev3.HealthChec
 			httpChecker.Method = corev3.RequestMethod(corev3.RequestMethod_value[*healthcheck.HTTP.Method])
 		}
 		httpChecker.ExpectedStatuses = buildHTTPStatusRange(healthcheck.HTTP.ExpectedStatuses)
+		httpChecker.RetriableStatuses = buildRetriableHTTPStatusRange(healthcheck.HTTP.RetriableStatuses)
 		if receive := buildHealthCheckPayload(healthcheck.HTTP.ExpectedResponse); receive != nil {
 			httpChecker.Receive = append(httpChecker.Receive, receive)
 		}
@@ -677,6 +678,19 @@ func buildHTTPStatusRange(irStatuses []ir.HTTPStatus) []*xdstype.Int64Range {
 	}
 	if start != 0 {
 		ranges = append(ranges, &xdstype.Int64Range{Start: start, End: end})
+	}
+	return ranges
+}
+
+// buildRetriableHTTPStatusRange converts IR HTTPStatusRange to xDS Int64Range.
+// HTTPStatusRange uses half-open semantics [Start, End) which matches the Envoy xDS format.
+func buildRetriableHTTPStatusRange(irRanges []ir.HTTPStatusRange) []*xdstype.Int64Range {
+	if len(irRanges) == 0 {
+		return nil
+	}
+	ranges := make([]*xdstype.Int64Range, 0, len(irRanges))
+	for _, r := range irRanges {
+		ranges = append(ranges, &xdstype.Int64Range{Start: int64(r.Start), End: int64(r.End)})
 	}
 	return ranges
 }

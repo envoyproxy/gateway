@@ -920,6 +920,39 @@ spec:
                             maxLength: 1024
                             minLength: 1
                             type: string
+                          retriableStatuses:
+                            description: |-
+                              RetriableStatuses defines a list of HTTP response status ranges considered retriable.
+
+                              Responses within these ranges will count towards the configured unhealthyThreshold,
+                              but will not result in the host being considered immediately unhealthy.
+                              Ranges follow half-open semantics [start, end) and must be within [100, 600).
+                            items:
+                              description: |-
+                                HTTPStatusRange defines a range of HTTP status codes.
+
+                                The range uses half-open semantics [start, end).
+                              properties:
+                                end:
+                                  description: End of the range, excluding the end
+                                    value.
+                                  maximum: 600
+                                  minimum: 101
+                                  type: integer
+                                start:
+                                  description: Start of the range, including the start
+                                    value.
+                                  maximum: 599
+                                  minimum: 100
+                                  type: integer
+                              required:
+                              - end
+                              - start
+                              type: object
+                              x-kubernetes-validations:
+                              - message: end must be greater than start
+                                rule: self.end > self.start
+                            type: array
                         required:
                         - path
                         type: object
@@ -5861,6 +5894,39 @@ spec:
                                       maxLength: 1024
                                       minLength: 1
                                       type: string
+                                    retriableStatuses:
+                                      description: |-
+                                        RetriableStatuses defines a list of HTTP response status ranges considered retriable.
+
+                                        Responses within these ranges will count towards the configured unhealthyThreshold,
+                                        but will not result in the host being considered immediately unhealthy.
+                                        Ranges follow half-open semantics [start, end) and must be within [100, 600).
+                                      items:
+                                        description: |-
+                                          HTTPStatusRange defines a range of HTTP status codes.
+
+                                          The range uses half-open semantics [start, end).
+                                        properties:
+                                          end:
+                                            description: End of the range, excluding
+                                              the end value.
+                                            maximum: 600
+                                            minimum: 101
+                                            type: integer
+                                          start:
+                                            description: Start of the range, including
+                                              the start value.
+                                            maximum: 599
+                                            minimum: 100
+                                            type: integer
+                                        required:
+                                        - end
+                                        - start
+                                        type: object
+                                        x-kubernetes-validations:
+                                        - message: end must be greater than start
+                                          rule: self.end > self.start
+                                      type: array
                                   required:
                                   - path
                                   type: object
@@ -19585,6 +19651,42 @@ spec:
                                                         maxLength: 1024
                                                         minLength: 1
                                                         type: string
+                                                      retriableStatuses:
+                                                        description: |-
+                                                          RetriableStatuses defines a list of HTTP response status ranges considered retriable.
+
+                                                          Responses within these ranges will count towards the configured unhealthyThreshold,
+                                                          but will not result in the host being considered immediately unhealthy.
+                                                          Ranges follow half-open semantics [start, end) and must be within [100, 600).
+                                                        items:
+                                                          description: |-
+                                                            HTTPStatusRange defines a range of HTTP status codes.
+
+                                                            The range uses half-open semantics [start, end).
+                                                          properties:
+                                                            end:
+                                                              description: End of
+                                                                the range, excluding
+                                                                the end value.
+                                                              maximum: 600
+                                                              minimum: 101
+                                                              type: integer
+                                                            start:
+                                                              description: Start of
+                                                                the range, including
+                                                                the start value.
+                                                              maximum: 599
+                                                              minimum: 100
+                                                              type: integer
+                                                          required:
+                                                          - end
+                                                          - start
+                                                          type: object
+                                                          x-kubernetes-validations:
+                                                          - message: end must be greater
+                                                              than start
+                                                            rule: self.end > self.start
+                                                        type: array
                                                     required:
                                                     - path
                                                     type: object
@@ -20837,6 +20939,42 @@ spec:
                                                         maxLength: 1024
                                                         minLength: 1
                                                         type: string
+                                                      retriableStatuses:
+                                                        description: |-
+                                                          RetriableStatuses defines a list of HTTP response status ranges considered retriable.
+
+                                                          Responses within these ranges will count towards the configured unhealthyThreshold,
+                                                          but will not result in the host being considered immediately unhealthy.
+                                                          Ranges follow half-open semantics [start, end) and must be within [100, 600).
+                                                        items:
+                                                          description: |-
+                                                            HTTPStatusRange defines a range of HTTP status codes.
+
+                                                            The range uses half-open semantics [start, end).
+                                                          properties:
+                                                            end:
+                                                              description: End of
+                                                                the range, excluding
+                                                                the end value.
+                                                              maximum: 600
+                                                              minimum: 101
+                                                              type: integer
+                                                            start:
+                                                              description: Start of
+                                                                the range, including
+                                                                the start value.
+                                                              maximum: 599
+                                                              minimum: 100
+                                                              type: integer
+                                                          required:
+                                                          - end
+                                                          - start
+                                                          type: object
+                                                          x-kubernetes-validations:
+                                                          - message: end must be greater
+                                                              than start
+                                                            rule: self.end > self.start
+                                                        type: array
                                                     required:
                                                     - path
                                                     type: object
@@ -22258,6 +22396,41 @@ spec:
                                                   maxLength: 1024
                                                   minLength: 1
                                                   type: string
+                                                retriableStatuses:
+                                                  description: |-
+                                                    RetriableStatuses defines a list of HTTP response status ranges considered retriable.
+
+                                                    Responses within these ranges will count towards the configured unhealthyThreshold,
+                                                    but will not result in the host being considered immediately unhealthy.
+                                                    Ranges follow half-open semantics [start, end) and must be within [100, 600).
+                                                  items:
+                                                    description: |-
+                                                      HTTPStatusRange defines a range of HTTP status codes.
+
+                                                      The range uses half-open semantics [start, end).
+                                                    properties:
+                                                      end:
+                                                        description: End of the range,
+                                                          excluding the end value.
+                                                        maximum: 600
+                                                        minimum: 101
+                                                        type: integer
+                                                      start:
+                                                        description: Start of the
+                                                          range, including the start
+                                                          value.
+                                                        maximum: 599
+                                                        minimum: 100
+                                                        type: integer
+                                                    required:
+                                                    - end
+                                                    - start
+                                                    type: object
+                                                    x-kubernetes-validations:
+                                                    - message: end must be greater
+                                                        than start
+                                                      rule: self.end > self.start
+                                                  type: array
                                               required:
                                               - path
                                               type: object
@@ -23585,6 +23758,40 @@ spec:
                                             maxLength: 1024
                                             minLength: 1
                                             type: string
+                                          retriableStatuses:
+                                            description: |-
+                                              RetriableStatuses defines a list of HTTP response status ranges considered retriable.
+
+                                              Responses within these ranges will count towards the configured unhealthyThreshold,
+                                              but will not result in the host being considered immediately unhealthy.
+                                              Ranges follow half-open semantics [start, end) and must be within [100, 600).
+                                            items:
+                                              description: |-
+                                                HTTPStatusRange defines a range of HTTP status codes.
+
+                                                The range uses half-open semantics [start, end).
+                                              properties:
+                                                end:
+                                                  description: End of the range, excluding
+                                                    the end value.
+                                                  maximum: 600
+                                                  minimum: 101
+                                                  type: integer
+                                                start:
+                                                  description: Start of the range,
+                                                    including the start value.
+                                                  maximum: 599
+                                                  minimum: 100
+                                                  type: integer
+                                              required:
+                                              - end
+                                              - start
+                                              type: object
+                                              x-kubernetes-validations:
+                                              - message: end must be greater than
+                                                  start
+                                                rule: self.end > self.start
+                                            type: array
                                         required:
                                         - path
                                         type: object
@@ -26258,6 +26465,39 @@ spec:
                                         maxLength: 1024
                                         minLength: 1
                                         type: string
+                                      retriableStatuses:
+                                        description: |-
+                                          RetriableStatuses defines a list of HTTP response status ranges considered retriable.
+
+                                          Responses within these ranges will count towards the configured unhealthyThreshold,
+                                          but will not result in the host being considered immediately unhealthy.
+                                          Ranges follow half-open semantics [start, end) and must be within [100, 600).
+                                        items:
+                                          description: |-
+                                            HTTPStatusRange defines a range of HTTP status codes.
+
+                                            The range uses half-open semantics [start, end).
+                                          properties:
+                                            end:
+                                              description: End of the range, excluding
+                                                the end value.
+                                              maximum: 600
+                                              minimum: 101
+                                              type: integer
+                                            start:
+                                              description: Start of the range, including
+                                                the start value.
+                                              maximum: 599
+                                              minimum: 100
+                                              type: integer
+                                          required:
+                                          - end
+                                          - start
+                                          type: object
+                                          x-kubernetes-validations:
+                                          - message: end must be greater than start
+                                            rule: self.end > self.start
+                                        type: array
                                     required:
                                     - path
                                     type: object
@@ -27398,6 +27638,39 @@ spec:
                                         maxLength: 1024
                                         minLength: 1
                                         type: string
+                                      retriableStatuses:
+                                        description: |-
+                                          RetriableStatuses defines a list of HTTP response status ranges considered retriable.
+
+                                          Responses within these ranges will count towards the configured unhealthyThreshold,
+                                          but will not result in the host being considered immediately unhealthy.
+                                          Ranges follow half-open semantics [start, end) and must be within [100, 600).
+                                        items:
+                                          description: |-
+                                            HTTPStatusRange defines a range of HTTP status codes.
+
+                                            The range uses half-open semantics [start, end).
+                                          properties:
+                                            end:
+                                              description: End of the range, excluding
+                                                the end value.
+                                              maximum: 600
+                                              minimum: 101
+                                              type: integer
+                                            start:
+                                              description: Start of the range, including
+                                                the start value.
+                                              maximum: 599
+                                              minimum: 100
+                                              type: integer
+                                          required:
+                                          - end
+                                          - start
+                                          type: object
+                                          x-kubernetes-validations:
+                                          - message: end must be greater than start
+                                            rule: self.end > self.start
+                                        type: array
                                     required:
                                     - path
                                     type: object
@@ -28740,6 +29013,40 @@ spec:
                                               maxLength: 1024
                                               minLength: 1
                                               type: string
+                                            retriableStatuses:
+                                              description: |-
+                                                RetriableStatuses defines a list of HTTP response status ranges considered retriable.
+
+                                                Responses within these ranges will count towards the configured unhealthyThreshold,
+                                                but will not result in the host being considered immediately unhealthy.
+                                                Ranges follow half-open semantics [start, end) and must be within [100, 600).
+                                              items:
+                                                description: |-
+                                                  HTTPStatusRange defines a range of HTTP status codes.
+
+                                                  The range uses half-open semantics [start, end).
+                                                properties:
+                                                  end:
+                                                    description: End of the range,
+                                                      excluding the end value.
+                                                    maximum: 600
+                                                    minimum: 101
+                                                    type: integer
+                                                  start:
+                                                    description: Start of the range,
+                                                      including the start value.
+                                                    maximum: 599
+                                                    minimum: 100
+                                                    type: integer
+                                                required:
+                                                - end
+                                                - start
+                                                type: object
+                                                x-kubernetes-validations:
+                                                - message: end must be greater than
+                                                    start
+                                                  rule: self.end > self.start
+                                              type: array
                                           required:
                                           - path
                                           type: object
@@ -30158,6 +30465,39 @@ spec:
                                         maxLength: 1024
                                         minLength: 1
                                         type: string
+                                      retriableStatuses:
+                                        description: |-
+                                          RetriableStatuses defines a list of HTTP response status ranges considered retriable.
+
+                                          Responses within these ranges will count towards the configured unhealthyThreshold,
+                                          but will not result in the host being considered immediately unhealthy.
+                                          Ranges follow half-open semantics [start, end) and must be within [100, 600).
+                                        items:
+                                          description: |-
+                                            HTTPStatusRange defines a range of HTTP status codes.
+
+                                            The range uses half-open semantics [start, end).
+                                          properties:
+                                            end:
+                                              description: End of the range, excluding
+                                                the end value.
+                                              maximum: 600
+                                              minimum: 101
+                                              type: integer
+                                            start:
+                                              description: Start of the range, including
+                                                the start value.
+                                              maximum: 599
+                                              minimum: 100
+                                              type: integer
+                                          required:
+                                          - end
+                                          - start
+                                          type: object
+                                          x-kubernetes-validations:
+                                          - message: end must be greater than start
+                                            rule: self.end > self.start
+                                        type: array
                                     required:
                                     - path
                                     type: object

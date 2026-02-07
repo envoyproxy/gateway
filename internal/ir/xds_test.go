@@ -7,6 +7,7 @@ package ir
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"testing"
 	"time"
@@ -1460,6 +1461,72 @@ func TestValidateHealthCheck(t *testing.T) {
 		want  error
 	}{
 		{
+			name: "valid http health check",
+			input: HealthCheck{
+				&ActiveHealthCheck{
+					Timeout:            MetaV1DurationPtr(time.Second),
+					Interval:           MetaV1DurationPtr(time.Second),
+					UnhealthyThreshold: ptr.To[uint32](3),
+					HealthyThreshold:   ptr.To[uint32](3),
+					HTTP: &HTTPHealthChecker{
+						Host:             "*",
+						Path:             "/healthz",
+						Method:           ptr.To(http.MethodGet),
+						ExpectedStatuses: []HTTPStatus{200},
+					},
+				},
+				&OutlierDetection{},
+				ptr.To[uint32](10),
+			},
+			want: nil,
+		},
+		{
+			name: "valid http health check with retriable statuses",
+			input: HealthCheck{
+				&ActiveHealthCheck{
+					Timeout:            MetaV1DurationPtr(time.Second),
+					Interval:           MetaV1DurationPtr(time.Second),
+					UnhealthyThreshold: ptr.To[uint32](3),
+					HealthyThreshold:   ptr.To[uint32](3),
+					HTTP: &HTTPHealthChecker{
+						Host:             "*",
+						Path:             "/healthz",
+						Method:           ptr.To(http.MethodGet),
+						ExpectedStatuses: []HTTPStatus{200},
+						RetriableStatuses: []HTTPStatusRange{
+							{Start: 500, End: 600},
+							{Start: 429, End: 430},
+						},
+					},
+				},
+				&OutlierDetection{},
+				ptr.To[uint32](10),
+			},
+			want: nil,
+		},
+		{
+			name: "valid tcp health check",
+			input: HealthCheck{
+				&ActiveHealthCheck{
+					Timeout:            MetaV1DurationPtr(time.Second),
+					Interval:           MetaV1DurationPtr(time.Second),
+					UnhealthyThreshold: ptr.To[uint32](3),
+					HealthyThreshold:   ptr.To[uint32](3),
+					TCP: &TCPHealthChecker{
+						Send: &HealthCheckPayload{
+							Text: ptr.To("ping"),
+						},
+						Receive: &HealthCheckPayload{
+							Text: ptr.To("pong"),
+						},
+					},
+				},
+				&OutlierDetection{},
+				ptr.To[uint32](10),
+			},
+			want: nil,
+		},
+		{
 			name: "invalid timeout",
 			input: HealthCheck{
 				&ActiveHealthCheck{
@@ -1746,6 +1813,98 @@ func TestValidateHealthCheck(t *testing.T) {
 			want: ErrHealthCheckPayloadInvalid,
 		},
 		{
+			name: "http-health-check: valid retriable-statuses",
+			input: HealthCheck{
+				&ActiveHealthCheck{
+					Timeout:            MetaV1DurationPtr(time.Second),
+					Interval:           MetaV1DurationPtr(time.Second),
+					UnhealthyThreshold: ptr.To(uint32(3)),
+					HealthyThreshold:   ptr.To(uint32(3)),
+					HTTP: &HTTPHealthChecker{
+						Host:             "*",
+						Path:             "/healthz",
+						Method:           ptr.To(http.MethodGet),
+						ExpectedStatuses: []HTTPStatus{200},
+						RetriableStatuses: []HTTPStatusRange{
+							{Start: 500, End: 600},
+						},
+					},
+				},
+				&OutlierDetection{},
+				ptr.To[uint32](10),
+			},
+			want: nil,
+		},
+		{
+			name: "http-health-check: invalid retriable-statuses",
+			input: HealthCheck{
+				&ActiveHealthCheck{
+					Timeout:            MetaV1DurationPtr(time.Second),
+					Interval:           MetaV1DurationPtr(time.Second),
+					UnhealthyThreshold: ptr.To(uint32(3)),
+					HealthyThreshold:   ptr.To(uint32(3)),
+					HTTP: &HTTPHealthChecker{
+						Host:             "*",
+						Path:             "/healthz",
+						Method:           ptr.To(http.MethodGet),
+						ExpectedStatuses: []HTTPStatus{200},
+						RetriableStatuses: []HTTPStatusRange{
+							{Start: 500, End: 500},
+						},
+					},
+				},
+				&OutlierDetection{},
+				ptr.To[uint32](10),
+			},
+			want: errors.Join(ErrHCHTTPRetriableStatusesInvalid, ErrHTTPStatusRangeInvalid),
+		},
+		{
+			name: "http-health-check: invalid retriable-statuses start out of range",
+			input: HealthCheck{
+				&ActiveHealthCheck{
+					Timeout:            MetaV1DurationPtr(time.Second),
+					Interval:           MetaV1DurationPtr(time.Second),
+					UnhealthyThreshold: ptr.To(uint32(3)),
+					HealthyThreshold:   ptr.To(uint32(3)),
+					HTTP: &HTTPHealthChecker{
+						Host:             "*",
+						Path:             "/healthz",
+						Method:           ptr.To(http.MethodGet),
+						ExpectedStatuses: []HTTPStatus{200},
+						RetriableStatuses: []HTTPStatusRange{
+							{Start: 600, End: 700},
+						},
+					},
+				},
+				&OutlierDetection{},
+				ptr.To[uint32](10),
+			},
+			want: errors.Join(ErrHCHTTPRetriableStatusesInvalid, ErrHTTPStatusRangeInvalid),
+		},
+		{
+			name: "http-health-check: invalid retriable-statuses end out of range",
+			input: HealthCheck{
+				&ActiveHealthCheck{
+					Timeout:            MetaV1DurationPtr(time.Second),
+					Interval:           MetaV1DurationPtr(time.Second),
+					UnhealthyThreshold: ptr.To(uint32(3)),
+					HealthyThreshold:   ptr.To(uint32(3)),
+					HTTP: &HTTPHealthChecker{
+						Host:             "*",
+						Path:             "/healthz",
+						Method:           ptr.To(http.MethodGet),
+						ExpectedStatuses: []HTTPStatus{200},
+						RetriableStatuses: []HTTPStatusRange{
+							{Start: 500, End: 700},
+						},
+					},
+				},
+				&OutlierDetection{},
+				ptr.To[uint32](10),
+			},
+			want: errors.Join(ErrHCHTTPRetriableStatusesInvalid, ErrHTTPStatusRangeInvalid),
+		},
+		{
 			name: "OutlierDetection invalid interval",
 			input: HealthCheck{
 				&ActiveHealthCheck{},
@@ -1777,6 +1936,36 @@ func TestValidateHealthCheck(t *testing.T) {
 				require.NoError(t, (&test.input).Validate())
 			} else {
 				require.EqualError(t, test.input.Validate(), test.want.Error())
+			}
+		})
+	}
+}
+
+func TestValidateHTTPStatusRange(t *testing.T) {
+	tests := []struct {
+		name  string
+		input HTTPStatusRange
+		want  error
+	}{
+		{
+			name:  "valid range",
+			input: HTTPStatusRange{Start: 500, End: 600},
+			want:  nil,
+		},
+		{
+			name:  "invalid range",
+			input: HTTPStatusRange{Start: 500, End: 500},
+			want:  ErrHTTPStatusRangeInvalid,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			err := test.input.Validate()
+			if test.want == nil {
+				require.NoError(t, err)
+			} else {
+				require.EqualError(t, err, test.want.Error())
 			}
 		})
 	}

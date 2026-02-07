@@ -12,6 +12,7 @@ import (
 	"math/big"
 	"net/http"
 	"reflect"
+	"sort"
 	"strings"
 	"time"
 
@@ -559,6 +560,20 @@ func buildHTTPActiveHealthChecker(h *egv1a1.HTTPActiveHealthChecker) *ir.HTTPHea
 		irStatuses = append(irStatuses, ir.HTTPStatus(r))
 	}
 	irHTTP.ExpectedStatuses = irStatuses
+
+	// Preserve user-provided retriable status ranges (half-open [start, end)).
+	if len(h.RetriableStatuses) > 0 {
+		irHTTP.RetriableStatuses = make([]ir.HTTPStatusRange, 0, len(h.RetriableStatuses))
+		for _, r := range h.RetriableStatuses {
+			irHTTP.RetriableStatuses = append(irHTTP.RetriableStatuses, ir.HTTPStatusRange{Start: r.Start, End: r.End})
+		}
+		sort.Slice(irHTTP.RetriableStatuses, func(i, j int) bool {
+			if irHTTP.RetriableStatuses[i].Start == irHTTP.RetriableStatuses[j].Start {
+				return irHTTP.RetriableStatuses[i].End < irHTTP.RetriableStatuses[j].End
+			}
+			return irHTTP.RetriableStatuses[i].Start < irHTTP.RetriableStatuses[j].Start
+		})
+	}
 
 	irHTTP.ExpectedResponse = translateActiveHealthCheckPayload(h.ExpectedResponse)
 	return irHTTP
