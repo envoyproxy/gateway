@@ -8,6 +8,7 @@ security updates: |
 
 # New features or capabilities added in this release.
 new features: |
+  Support for configuring weights for locality zones
 
 bug fixes: |
 

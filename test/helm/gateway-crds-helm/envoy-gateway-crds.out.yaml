@@ -1391,6 +1391,32 @@ spec:
                             minimum: 0
                             type: integer
                         type: object
+                      weightedZones:
+                        description: |-
+                          WeightedZones configures weight-based traffic distribution across locality zones.
+                          Traffic is distributed proportionally based on the sum of all zone weights.
+                        items:
+                          description: WeightedZoneConfig defines the weight for a
+                            specific locality zone.
+                          properties:
+                            weight:
+                              description: |-
+                                Weight defines the weight for this locality.
+                                Higher values receive more traffic. The actual traffic distribution
+                                is proportional to this value relative to other localities.
+                              format: int32
+                              type: integer
+                            zone:
+                              description: |-
+                                Zone specifies the topology zone this weight applies to.
+                                The value should match the topology.kubernetes.io/zone label
+                                of the nodes where endpoints are running.
+                                Zones not listed in the configuration receive a default weight of 1.
+                              type: string
+                          required:
+                          - weight
+                          type: object
+                        type: array
                     type: object
                 required:
                 - type
@@ -1404,10 +1430,14 @@ spec:
                     LeastRequest load balancers.
                   rule: 'self.type in [''Random'', ''ConsistentHash''] ? !has(self.slowStart)
                     : true '
-                - message: Currently ZoneAware is only supported for LeastRequest,
-                    Random, and RoundRobin load balancers.
-                  rule: 'self.type == ''ConsistentHash'' ? !has(self.zoneAware) :
-                    true '
+                - message: PreferLocal zone-aware routing is not supported for ConsistentHash
+                    load balancers. Use weightedZones instead.
+                  rule: 'self.type == ''ConsistentHash'' && has(self.zoneAware) ?
+                    !has(self.zoneAware.preferLocal) : true'
+                - message: ZoneAware PreferLocal and WeightedZones cannot be specified
+                    together.
+                  rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal) &&
+                    has(self.zoneAware.weightedZones)) : true'
               mergeType:
                 description: |-
                   MergeType determines how this configuration is merged with existing BackendTrafficPolicy
@@ -6318,6 +6348,32 @@ spec:
                                       minimum: 0
                                       type: integer
                                   type: object
+                                weightedZones:
+                                  description: |-
+                                    WeightedZones configures weight-based traffic distribution across locality zones.
+                                    Traffic is distributed proportionally based on the sum of all zone weights.
+                                  items:
+                                    description: WeightedZoneConfig defines the weight
+                                      for a specific locality zone.
+                                    properties:
+                                      weight:
+                                        description: |-
+                                          Weight defines the weight for this locality.
+                                          Higher values receive more traffic. The actual traffic distribution
+                                          is proportional to this value relative to other localities.
+                                        format: int32
+                                        type: integer
+                                      zone:
+                                        description: |-
+                                          Zone specifies the topology zone this weight applies to.
+                                          The value should match the topology.kubernetes.io/zone label
+                                          of the nodes where endpoints are running.
+                                          Zones not listed in the configuration receive a default weight of 1.
+                                        type: string
+                                    required:
+                                    - weight
+                                    type: object
+                                  type: array
                               type: object
                           required:
                           - type
@@ -6331,10 +6387,15 @@ spec:
                               and LeastRequest load balancers.
                             rule: 'self.type in [''Random'', ''ConsistentHash''] ?
                               !has(self.slowStart) : true '
-                          - message: Currently ZoneAware is only supported for LeastRequest,
-                              Random, and RoundRobin load balancers.
-                            rule: 'self.type == ''ConsistentHash'' ? !has(self.zoneAware)
-                              : true '
+                          - message: PreferLocal zone-aware routing is not supported
+                              for ConsistentHash load balancers. Use weightedZones
+                              instead.
+                            rule: 'self.type == ''ConsistentHash'' && has(self.zoneAware)
+                              ? !has(self.zoneAware.preferLocal) : true'
+                          - message: ZoneAware PreferLocal and WeightedZones cannot
+                              be specified together.
+                            rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal)
+                              && has(self.zoneAware.weightedZones)) : true'
                         proxyProtocol:
                           description: ProxyProtocol enables the Proxy Protocol when
                             communicating with the backend.
@@ -20089,6 +20150,33 @@ spec:
                                                         minimum: 0
                                                         type: integer
                                                     type: object
+                                                  weightedZones:
+                                                    description: |-
+                                                      WeightedZones configures weight-based traffic distribution across locality zones.
+                                                      Traffic is distributed proportionally based on the sum of all zone weights.
+                                                    items:
+                                                      description: WeightedZoneConfig
+                                                        defines the weight for a specific
+                                                        locality zone.
+                                                      properties:
+                                                        weight:
+                                                          description: |-
+                                                            Weight defines the weight for this locality.
+                                                            Higher values receive more traffic. The actual traffic distribution
+                                                            is proportional to this value relative to other localities.
+                                                          format: int32
+                                                          type: integer
+                                                        zone:
+                                                          description: |-
+                                                            Zone specifies the topology zone this weight applies to.
+                                                            The value should match the topology.kubernetes.io/zone label
+                                                            of the nodes where endpoints are running.
+                                                            Zones not listed in the configuration receive a default weight of 1.
+                                                          type: string
+                                                      required:
+                                                      - weight
+                                                      type: object
+                                                    type: array
                                                 type: object
                                             required:
                                             - type
@@ -20103,11 +20191,18 @@ spec:
                                                 load balancers.
                                               rule: 'self.type in [''Random'', ''ConsistentHash'']
                                                 ? !has(self.slowStart) : true '
-                                            - message: Currently ZoneAware is only
-                                                supported for LeastRequest, Random,
-                                                and RoundRobin load balancers.
+                                            - message: PreferLocal zone-aware routing
+                                                is not supported for ConsistentHash
+                                                load balancers. Use weightedZones
+                                                instead.
                                               rule: 'self.type == ''ConsistentHash''
-                                                ? !has(self.zoneAware) : true '
+                                                && has(self.zoneAware) ? !has(self.zoneAware.preferLocal)
+                                                : true'
+                                            - message: ZoneAware PreferLocal and WeightedZones
+                                                cannot be specified together.
+                                              rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal)
+                                                && has(self.zoneAware.weightedZones))
+                                                : true'
                                           proxyProtocol:
                                             description: ProxyProtocol enables the
                                               Proxy Protocol when communicating with
@@ -21341,6 +21436,33 @@ spec:
                                                         minimum: 0
                                                         type: integer
                                                     type: object
+                                                  weightedZones:
+                                                    description: |-
+                                                      WeightedZones configures weight-based traffic distribution across locality zones.
+                                                      Traffic is distributed proportionally based on the sum of all zone weights.
+                                                    items:
+                                                      description: WeightedZoneConfig
+                                                        defines the weight for a specific
+                                                        locality zone.
+                                                      properties:
+                                                        weight:
+                                                          description: |-
+                                                            Weight defines the weight for this locality.
+                                                            Higher values receive more traffic. The actual traffic distribution
+                                                            is proportional to this value relative to other localities.
+                                                          format: int32
+                                                          type: integer
+                                                        zone:
+                                                          description: |-
+                                                            Zone specifies the topology zone this weight applies to.
+                                                            The value should match the topology.kubernetes.io/zone label
+                                                            of the nodes where endpoints are running.
+                                                            Zones not listed in the configuration receive a default weight of 1.
+                                                          type: string
+                                                      required:
+                                                      - weight
+                                                      type: object
+                                                    type: array
                                                 type: object
                                             required:
                                             - type
@@ -21355,11 +21477,18 @@ spec:
                                                 load balancers.
                                               rule: 'self.type in [''Random'', ''ConsistentHash'']
                                                 ? !has(self.slowStart) : true '
-                                            - message: Currently ZoneAware is only
-                                                supported for LeastRequest, Random,
-                                                and RoundRobin load balancers.
+                                            - message: PreferLocal zone-aware routing
+                                                is not supported for ConsistentHash
+                                                load balancers. Use weightedZones
+                                                instead.
                                               rule: 'self.type == ''ConsistentHash''
-                                                ? !has(self.zoneAware) : true '
+                                                && has(self.zoneAware) ? !has(self.zoneAware.preferLocal)
+                                                : true'
+                                            - message: ZoneAware PreferLocal and WeightedZones
+                                                cannot be specified together.
+                                              rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal)
+                                                && has(self.zoneAware.weightedZones))
+                                                : true'
                                           proxyProtocol:
                                             description: ProxyProtocol enables the
                                               Proxy Protocol when communicating with
@@ -22741,6 +22870,33 @@ spec:
                                                   minimum: 0
                                                   type: integer
                                               type: object
+                                            weightedZones:
+                                              description: |-
+                                                WeightedZones configures weight-based traffic distribution across locality zones.
+                                                Traffic is distributed proportionally based on the sum of all zone weights.
+                                              items:
+                                                description: WeightedZoneConfig defines
+                                                  the weight for a specific locality
+                                                  zone.
+                                                properties:
+                                                  weight:
+                                                    description: |-
+                                                      Weight defines the weight for this locality.
+                                                      Higher values receive more traffic. The actual traffic distribution
+                                                      is proportional to this value relative to other localities.
+                                                    format: int32
+                                                    type: integer
+                                                  zone:
+                                                    description: |-
+                                                      Zone specifies the topology zone this weight applies to.
+                                                      The value should match the topology.kubernetes.io/zone label
+                                                      of the nodes where endpoints are running.
+                                                      Zones not listed in the configuration receive a default weight of 1.
+                                                    type: string
+                                                required:
+                                                - weight
+                                                type: object
+                                              type: array
                                           type: object
                                       required:
                                       - type
@@ -22754,11 +22910,17 @@ spec:
                                           for RoundRobin and LeastRequest load balancers.
                                         rule: 'self.type in [''Random'', ''ConsistentHash'']
                                           ? !has(self.slowStart) : true '
-                                      - message: Currently ZoneAware is only supported
-                                          for LeastRequest, Random, and RoundRobin
-                                          load balancers.
-                                        rule: 'self.type == ''ConsistentHash'' ? !has(self.zoneAware)
-                                          : true '
+                                      - message: PreferLocal zone-aware routing is
+                                          not supported for ConsistentHash load balancers.
+                                          Use weightedZones instead.
+                                        rule: 'self.type == ''ConsistentHash'' &&
+                                          has(self.zoneAware) ? !has(self.zoneAware.preferLocal)
+                                          : true'
+                                      - message: ZoneAware PreferLocal and WeightedZones
+                                          cannot be specified together.
+                                        rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal)
+                                          && has(self.zoneAware.weightedZones)) :
+                                          true'
                                     proxyProtocol:
                                       description: ProxyProtocol enables the Proxy
                                         Protocol when communicating with the backend.
@@ -24061,6 +24223,32 @@ spec:
                                             minimum: 0
                                             type: integer
                                         type: object
+                                      weightedZones:
+                                        description: |-
+                                          WeightedZones configures weight-based traffic distribution across locality zones.
+                                          Traffic is distributed proportionally based on the sum of all zone weights.
+                                        items:
+                                          description: WeightedZoneConfig defines
+                                            the weight for a specific locality zone.
+                                          properties:
+                                            weight:
+                                              description: |-
+                                                Weight defines the weight for this locality.
+                                                Higher values receive more traffic. The actual traffic distribution
+                                                is proportional to this value relative to other localities.
+                                              format: int32
+                                              type: integer
+                                            zone:
+                                              description: |-
+                                                Zone specifies the topology zone this weight applies to.
+                                                The value should match the topology.kubernetes.io/zone label
+                                                of the nodes where endpoints are running.
+                                                Zones not listed in the configuration receive a default weight of 1.
+                                              type: string
+                                          required:
+                                          - weight
+                                          type: object
+                                        type: array
                                     type: object
                                 required:
                                 - type
@@ -24074,10 +24262,15 @@ spec:
                                     RoundRobin and LeastRequest load balancers.
                                   rule: 'self.type in [''Random'', ''ConsistentHash'']
                                     ? !has(self.slowStart) : true '
-                                - message: Currently ZoneAware is only supported for
-                                    LeastRequest, Random, and RoundRobin load balancers.
-                                  rule: 'self.type == ''ConsistentHash'' ? !has(self.zoneAware)
-                                    : true '
+                                - message: PreferLocal zone-aware routing is not supported
+                                    for ConsistentHash load balancers. Use weightedZones
+                                    instead.
+                                  rule: 'self.type == ''ConsistentHash'' && has(self.zoneAware)
+                                    ? !has(self.zoneAware.preferLocal) : true'
+                                - message: ZoneAware PreferLocal and WeightedZones
+                                    cannot be specified together.
+                                  rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal)
+                                    && has(self.zoneAware.weightedZones)) : true'
                               proxyProtocol:
                                 description: ProxyProtocol enables the Proxy Protocol
                                   when communicating with the backend.
@@ -26723,6 +26916,32 @@ spec:
                                         minimum: 0
                                         type: integer
                                     type: object
+                                  weightedZones:
+                                    description: |-
+                                      WeightedZones configures weight-based traffic distribution across locality zones.
+                                      Traffic is distributed proportionally based on the sum of all zone weights.
+                                    items:
+                                      description: WeightedZoneConfig defines the
+                                        weight for a specific locality zone.
+                                      properties:
+                                        weight:
+                                          description: |-
+                                            Weight defines the weight for this locality.
+                                            Higher values receive more traffic. The actual traffic distribution
+                                            is proportional to this value relative to other localities.
+                                          format: int32
+                                          type: integer
+                                        zone:
+                                          description: |-
+                                            Zone specifies the topology zone this weight applies to.
+                                            The value should match the topology.kubernetes.io/zone label
+                                            of the nodes where endpoints are running.
+                                            Zones not listed in the configuration receive a default weight of 1.
+                                          type: string
+                                      required:
+                                      - weight
+                                      type: object
+                                    type: array
                                 type: object
                             required:
                             - type
@@ -26736,10 +26955,15 @@ spec:
                                 and LeastRequest load balancers.
                               rule: 'self.type in [''Random'', ''ConsistentHash'']
                                 ? !has(self.slowStart) : true '
-                            - message: Currently ZoneAware is only supported for LeastRequest,
-                                Random, and RoundRobin load balancers.
-                              rule: 'self.type == ''ConsistentHash'' ? !has(self.zoneAware)
-                                : true '
+                            - message: PreferLocal zone-aware routing is not supported
+                                for ConsistentHash load balancers. Use weightedZones
+                                instead.
+                              rule: 'self.type == ''ConsistentHash'' && has(self.zoneAware)
+                                ? !has(self.zoneAware.preferLocal) : true'
+                            - message: ZoneAware PreferLocal and WeightedZones cannot
+                                be specified together.
+                              rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal)
+                                && has(self.zoneAware.weightedZones)) : true'
                           proxyProtocol:
                             description: ProxyProtocol enables the Proxy Protocol
                               when communicating with the backend.
@@ -27863,6 +28087,32 @@ spec:
                                         minimum: 0
                                         type: integer
                                     type: object
+                                  weightedZones:
+                                    description: |-
+                                      WeightedZones configures weight-based traffic distribution across locality zones.
+                                      Traffic is distributed proportionally based on the sum of all zone weights.
+                                    items:
+                                      description: WeightedZoneConfig defines the
+                                        weight for a specific locality zone.
+                                      properties:
+                                        weight:
+                                          description: |-
+                                            Weight defines the weight for this locality.
+                                            Higher values receive more traffic. The actual traffic distribution
+                                            is proportional to this value relative to other localities.
+                                          format: int32
+                                          type: integer
+                                        zone:
+                                          description: |-
+                                            Zone specifies the topology zone this weight applies to.
+                                            The value should match the topology.kubernetes.io/zone label
+                                            of the nodes where endpoints are running.
+                                            Zones not listed in the configuration receive a default weight of 1.
+                                          type: string
+                                      required:
+                                      - weight
+                                      type: object
+                                    type: array
                                 type: object
                             required:
                             - type
@@ -27876,10 +28126,15 @@ spec:
                                 and LeastRequest load balancers.
                               rule: 'self.type in [''Random'', ''ConsistentHash'']
                                 ? !has(self.slowStart) : true '
-                            - message: Currently ZoneAware is only supported for LeastRequest,
-                                Random, and RoundRobin load balancers.
-                              rule: 'self.type == ''ConsistentHash'' ? !has(self.zoneAware)
-                                : true '
+                            - message: PreferLocal zone-aware routing is not supported
+                                for ConsistentHash load balancers. Use weightedZones
+                                instead.
+                              rule: 'self.type == ''ConsistentHash'' && has(self.zoneAware)
+                                ? !has(self.zoneAware.preferLocal) : true'
+                            - message: ZoneAware PreferLocal and WeightedZones cannot
+                                be specified together.
+                              rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal)
+                                && has(self.zoneAware.weightedZones)) : true'
                           proxyProtocol:
                             description: ProxyProtocol enables the Proxy Protocol
                               when communicating with the backend.
@@ -29218,6 +29473,32 @@ spec:
                                               minimum: 0
                                               type: integer
                                           type: object
+                                        weightedZones:
+                                          description: |-
+                                            WeightedZones configures weight-based traffic distribution across locality zones.
+                                            Traffic is distributed proportionally based on the sum of all zone weights.
+                                          items:
+                                            description: WeightedZoneConfig defines
+                                              the weight for a specific locality zone.
+                                            properties:
+                                              weight:
+                                                description: |-
+                                                  Weight defines the weight for this locality.
+                                                  Higher values receive more traffic. The actual traffic distribution
+                                                  is proportional to this value relative to other localities.
+                                                format: int32
+                                                type: integer
+                                              zone:
+                                                description: |-
+                                                  Zone specifies the topology zone this weight applies to.
+                                                  The value should match the topology.kubernetes.io/zone label
+                                                  of the nodes where endpoints are running.
+                                                  Zones not listed in the configuration receive a default weight of 1.
+                                                type: string
+                                            required:
+                                            - weight
+                                            type: object
+                                          type: array
                                       type: object
                                   required:
                                   - type
@@ -29231,11 +29512,15 @@ spec:
                                       for RoundRobin and LeastRequest load balancers.
                                     rule: 'self.type in [''Random'', ''ConsistentHash'']
                                       ? !has(self.slowStart) : true '
-                                  - message: Currently ZoneAware is only supported
-                                      for LeastRequest, Random, and RoundRobin load
-                                      balancers.
-                                    rule: 'self.type == ''ConsistentHash'' ? !has(self.zoneAware)
-                                      : true '
+                                  - message: PreferLocal zone-aware routing is not
+                                      supported for ConsistentHash load balancers.
+                                      Use weightedZones instead.
+                                    rule: 'self.type == ''ConsistentHash'' && has(self.zoneAware)
+                                      ? !has(self.zoneAware.preferLocal) : true'
+                                  - message: ZoneAware PreferLocal and WeightedZones
+                                      cannot be specified together.
+                                    rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal)
+                                      && has(self.zoneAware.weightedZones)) : true'
                                 proxyProtocol:
                                   description: ProxyProtocol enables the Proxy Protocol
                                     when communicating with the backend.
@@ -30623,6 +30908,32 @@ spec:
                                         minimum: 0
                                         type: integer
                                     type: object
+                                  weightedZones:
+                                    description: |-
+                                      WeightedZones configures weight-based traffic distribution across locality zones.
+                                      Traffic is distributed proportionally based on the sum of all zone weights.
+                                    items:
+                                      description: WeightedZoneConfig defines the
+                                        weight for a specific locality zone.
+                                      properties:
+                                        weight:
+                                          description: |-
+                                            Weight defines the weight for this locality.
+                                            Higher values receive more traffic. The actual traffic distribution
+                                            is proportional to this value relative to other localities.
+                                          format: int32
+                                          type: integer
+                                        zone:
+                                          description: |-
+                                            Zone specifies the topology zone this weight applies to.
+                                            The value should match the topology.kubernetes.io/zone label
+                                            of the nodes where endpoints are running.
+                                            Zones not listed in the configuration receive a default weight of 1.
+                                          type: string
+                                      required:
+                                      - weight
+                                      type: object
+                                    type: array
                                 type: object
                             required:
                             - type
@@ -30636,10 +30947,15 @@ spec:
                                 and LeastRequest load balancers.
                               rule: 'self.type in [''Random'', ''ConsistentHash'']
                                 ? !has(self.slowStart) : true '
-                            - message: Currently ZoneAware is only supported for LeastRequest,
-                                Random, and RoundRobin load balancers.
-                              rule: 'self.type == ''ConsistentHash'' ? !has(self.zoneAware)
-                                : true '
+                            - message: PreferLocal zone-aware routing is not supported
+                                for ConsistentHash load balancers. Use weightedZones
+                                instead.
+                              rule: 'self.type == ''ConsistentHash'' && has(self.zoneAware)
+                                ? !has(self.zoneAware.preferLocal) : true'
+                            - message: ZoneAware PreferLocal and WeightedZones cannot
+                                be specified together.
+                              rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal)
+                                && has(self.zoneAware.weightedZones)) : true'
                           proxyProtocol:
                             description: ProxyProtocol enables the Proxy Protocol
                               when communicating with the backend.
