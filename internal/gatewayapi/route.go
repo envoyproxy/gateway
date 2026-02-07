@@ -1253,6 +1253,7 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 	for _, listener := range parentRef.listeners {
 		hosts := computeHosts(GetHostnames(route), listener)
 		if len(hosts) == 0 {
+			listener.DecrementAttachedRoutes()
 			continue
 		}
 		hasHostnameIntersection = true
@@ -1421,6 +1422,7 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 		for _, listener := range parentRef.listeners {
 			hosts := computeHosts(GetHostnames(tlsRoute), listener)
 			if len(hosts) == 0 {
+				listener.DecrementAttachedRoutes()
 				continue
 			}
 
@@ -1462,7 +1464,6 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 					Metadata: buildResourceMetadata(tlsRoute, nil),
 				}
 				irListener.Routes = append(irListener.Routes, irRoute)
-
 			}
 		}
 
@@ -1592,9 +1593,11 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 		for _, listener := range parentRef.listeners {
 			// only one route is allowed for a UDP listener
 			if listener.AttachedRoutes() > 1 {
+				listener.DecrementAttachedRoutes()
 				continue
 			}
 			if !listener.IsReady() {
+				listener.DecrementAttachedRoutes()
 				continue
 			}
 			accepted = true
@@ -1742,9 +1745,11 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 		for _, listener := range parentRef.listeners {
 			// only one route is allowed for a TCP listener
 			if listener.AttachedRoutes() > 1 {
+				listener.DecrementAttachedRoutes()
 				continue
 			}
 			if !listener.IsReady() {
+				listener.DecrementAttachedRoutes()
 				continue
 			}
 			accepted = true
@@ -1774,9 +1779,7 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 				}
 
 				irListener.Routes = append(irListener.Routes, irRoute)
-
 			}
-
 		}
 
 		// If no negative conditions have been set, the route is considered "Accepted=True".
