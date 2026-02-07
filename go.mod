@@ -9,16 +9,16 @@ require (
 	github.com/andybalholm/brotli v1.2.0
 	github.com/avast/retry-go/v5 v5.0.0
 	github.com/cenkalti/backoff/v4 v4.3.0
-	github.com/cncf/xds/go v0.0.0-20251110193048-8bfbf64dc13e
+	github.com/cncf/xds/go v0.0.0-20260121142036-a486691bba94
 	github.com/containers/image/v5 v5.36.2
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 	github.com/docker/cli v29.2.0+incompatible
 	github.com/docker/docker v28.5.1+incompatible
 	github.com/dominikbraun/graph v0.23.0
-	github.com/envoyproxy/go-control-plane v0.14.0
-	github.com/envoyproxy/go-control-plane/contrib v1.36.1-0.20260115164926-066cbd5b3989
-	github.com/envoyproxy/go-control-plane/envoy v1.36.1-0.20260113062649-004b9ec70a46
-	github.com/envoyproxy/go-control-plane/ratelimit v0.1.1-0.20260115164926-066cbd5b3989
+	github.com/envoyproxy/go-control-plane v0.14.1-0.20260131204543-4ca8b9cded3e
+	github.com/envoyproxy/go-control-plane/contrib v1.36.1-0.20260131204543-4ca8b9cded3e
+	github.com/envoyproxy/go-control-plane/envoy v1.36.1-0.20260131204543-4ca8b9cded3e
+	github.com/envoyproxy/go-control-plane/ratelimit v0.1.1-0.20260131204543-4ca8b9cded3e
 	github.com/envoyproxy/ratelimit v1.4.1-0.20230427142404-e2a87f41d3a7
 	github.com/evanphx/json-patch v5.9.11+incompatible
 	github.com/evanphx/json-patch/v5 v5.9.11
@@ -66,7 +66,7 @@ require (
 	golang.org/x/net v0.49.0
 	gomodules.xyz/jsonpatch/v2 v2.5.0
 	gonum.org/v1/gonum v0.17.0
-	google.golang.org/genproto/googleapis/api v0.0.0-20251202230838-ff82c1b0f217
+	google.golang.org/genproto/googleapis/api v0.0.0-20260128011058-8636f8732409
 	google.golang.org/grpc v1.78.0
 	google.golang.org/grpc/security/advancedtls v1.0.0
 	google.golang.org/protobuf v1.36.11
@@ -90,7 +90,7 @@ require (
 )
 
 require (
-	cel.dev/expr v0.24.0 // indirect
+	cel.dev/expr v0.25.1 // indirect
 	cyphar.com/go-pathrs v0.2.1 // indirect
 	dario.cat/mergo v1.0.2 // indirect
 	filippo.io/edwards25519 v1.1.0 // indirect
@@ -299,7 +299,7 @@ require (
 	golang.org/x/text v0.33.0 // indirect
 	golang.org/x/time v0.14.0 // indirect
 	golang.org/x/tools v0.40.0 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20251202230838-ff82c1b0f217 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20260128011058-8636f8732409 // indirect
 	gopkg.in/evanphx/json-patch.v4 v4.13.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect

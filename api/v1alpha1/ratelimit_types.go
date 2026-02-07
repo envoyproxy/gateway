@@ -69,6 +69,7 @@ type LocalRateLimit struct {
 	// +kubebuilder:validation:MaxItems=16
 	// +kubebuilder:validation:XValidation:rule="self.all(foo, !has(foo.cost) || !has(foo.cost.response))", message="response cost is not supported for Local Rate Limits"
 	// +kubebuilder:validation:XValidation:rule="self.all(foo, !has(foo.shadowMode))", message="shadow mode is not supported for Local Rate Limits"
+	// +kubebuilder:validation:XValidation:rule="self.all(foo, !has(foo.quotaMode))", message="quota mode is not supported for Local Rate Limits"
 	Rules []RateLimitRule `json:"rules"`
 }
 
@@ -120,6 +121,16 @@ type RateLimitRule struct {
 	//
 	// +optional
 	ShadowMode *bool `json:"shadowMode,omitempty"`
+	// QuotaMode indicates whether this rate-limit rule runs in quota mode.
+	// When enabled, rate-limiting operations are performed and violations are
+	// tracked in dynamic metadata, but the request is not blocked (returns OK instead of OVER_LIMIT).
+	// This allows for "soft" rate limiting where requests pass through but violations
+	// are logged for observability and alerting purposes.
+	//
+	// Only supported for Global Rate Limits.
+	//
+	// +optional
+	QuotaMode *bool `json:"quotaMode,omitempty"`
 }
 
 type RateLimitCost struct {
