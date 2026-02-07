@@ -11,15 +11,17 @@ import gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 // +union
 //
 // +kubebuilder:validation:XValidation:rule="self.type == 'ConsistentHash' ? has(self.consistentHash) : !has(self.consistentHash)",message="If LoadBalancer type is consistentHash, consistentHash field needs to be set."
-// +kubebuilder:validation:XValidation:rule="self.type in ['Random', 'ConsistentHash'] ? !has(self.slowStart) : true ",message="Currently SlowStart is only supported for RoundRobin and LeastRequest load balancers."
-// +kubebuilder:validation:XValidation:rule="self.type == 'ConsistentHash' ? !has(self.zoneAware) : true ",message="Currently ZoneAware is only supported for LeastRequest, Random, and RoundRobin load balancers."
+// +kubebuilder:validation:XValidation:rule="self.type == 'BackendUtilization' ? has(self.backendUtilization) : !has(self.backendUtilization)",message="If LoadBalancer type is BackendUtilization, backendUtilization field needs to be set."
+// +kubebuilder:validation:XValidation:rule="self.type in ['Random', 'ConsistentHash'] ? !has(self.slowStart) : true ",message="Currently SlowStart is only supported for RoundRobin, LeastRequest, and BackendUtilization load balancers."
+// +kubebuilder:validation:XValidation:rule="self.type in ['ConsistentHash', 'BackendUtilization'] ? !has(self.zoneAware) : true ",message="Currently ZoneAware is only supported for LeastRequest, Random, and RoundRobin load balancers."
 type LoadBalancer struct {
 	// Type decides the type of Load Balancer policy.
 	// Valid LoadBalancerType values are
 	// "ConsistentHash",
 	// "LeastRequest",
 	// "Random",
-	// "RoundRobin".
+	// "RoundRobin",
+	// "BackendUtilization".
 	//
 	// +unionDiscriminator
 	Type LoadBalancerType `json:"type"`
@@ -28,6 +30,12 @@ type LoadBalancer struct {
 	//
 	// +optional
 	ConsistentHash *ConsistentHash `json:"consistentHash,omitempty"`
+
+	// BackendUtilization defines the configuration when the load balancer type is
+	// set to BackendUtilization.
+	//
+	// +optional
+	BackendUtilization *BackendUtilization `json:"backendUtilization,omitempty"`
 
 	// EndpointOverride defines the configuration for endpoint override.
 	// When specified, the load balancer will attempt to route requests to endpoints
@@ -39,7 +47,7 @@ type LoadBalancer struct {
 
 	// SlowStart defines the configuration related to the slow start load balancer policy.
 	// If set, during slow start window, traffic sent to the newly added hosts will gradually increase.
-	// Currently this is only supported for RoundRobin and LeastRequest load balancers
+	// Supported for RoundRobin, LeastRequest, and BackendUtilization load balancers.
 	//
 	// +optional
 	SlowStart *SlowStart `json:"slowStart,omitempty"`
@@ -51,7 +59,7 @@ type LoadBalancer struct {
 }
 
 // LoadBalancerType specifies the types of LoadBalancer.
-// +kubebuilder:validation:Enum=ConsistentHash;LeastRequest;Random;RoundRobin
+// +kubebuilder:validation:Enum=ConsistentHash;LeastRequest;Random;RoundRobin;BackendUtilization
 type LoadBalancerType string
 
 const (
@@ -63,6 +71,8 @@ const (
 	RandomLoadBalancerType LoadBalancerType = "Random"
 	// RoundRobinLoadBalancerType load balancer policy.
 	RoundRobinLoadBalancerType LoadBalancerType = "RoundRobin"
+	// BackendUtilizationLoadBalancerType load balancer policy.
+	BackendUtilizationLoadBalancerType LoadBalancerType = "BackendUtilization"
 )
 
 // ConsistentHash defines the configuration related to the consistent hash
@@ -146,6 +156,63 @@ type Cookie struct {
 	//
 	// +optional
 	Attributes map[string]string `json:"attributes,omitempty"`
+}
+
+// BackendUtilization defines configuration for Envoy's Backend Utilization policy.
+// It uses Open Resource Cost Application (ORCA) load metrics reported by endpoints to make load balancing decisions.
+// These metrics are typically sent by the backend service in response headers or trailers.
+//
+// The backend should report these metrics in header/trailer as one of the following formats:
+// - Binary: `endpoint-load-metrics-bin` with base64-encoded serialized `OrcaLoadReport` proto.
+// - JSON: `endpoint-load-metrics` with JSON-encoded `OrcaLoadReport` proto, e.g., `JSON {"cpu_utilization": 0.3}`.
+// - TEXT: `endpoint-load-metrics` with comma-separated key-value pairs, e.g., `TEXT cpu=0.3,mem=0.8`.
+//
+// By default, Envoy will forward these ORCA response headers/trailers from the upstream service to the downstream client.
+// If the downstream client also uses this information for load balancing, it might lead to unexpected behavior.
+// To avoid this, you can use the `HTTPRoute` or `BackendTrafficPolicy` to remove the load report headers before sending the response to the client.
+//
+// See Envoy proto: envoy.extensions.load_balancing_policies.client_side_weighted_round_robin.v3.ClientSideWeightedRoundRobin
+// See ORCA Load Report proto: xds.data.orca.v3.orca_load_report.proto
+type BackendUtilization struct {
+	// A given endpoint must report load metrics continuously for at least this long before the endpoint weight will be used.
+	// Default is 10s.
+	// +optional
+	BlackoutPeriod *gwapiv1.Duration `json:"blackoutPeriod,omitempty"`
+
+	// If a given endpoint has not reported load metrics in this long, stop using the reported weight. Defaults to 3m.
+	// +optional
+	WeightExpirationPeriod *gwapiv1.Duration `json:"weightExpirationPeriod,omitempty"`
+
+	// How often endpoint weights are recalculated. Values less than 100ms are capped at 100ms. Default 1s.
+	// +optional
+	WeightUpdatePeriod *gwapiv1.Duration `json:"weightUpdatePeriod,omitempty"`
+
+	// ErrorUtilizationPenaltyPercent adjusts endpoint weights based on the error rate (eps/qps).
+	// This is expressed as a percentage-based integer where 100 represents 1.0, 150 represents 1.5, etc.
+	//
+	// For example:
+	// - 100 => 1.0x
+	// - 120 => 1.2x
+	// - 200 => 2.0x
+	//
+	// Note: In the internal IR/XDS configuration this value is converted back to a
+	// floating point multiplier (value / 100.0).
+	//
+	// Must be non-negative.
+	// +kubebuilder:validation:Minimum=0
+	// +optional
+	ErrorUtilizationPenaltyPercent *uint32 `json:"errorUtilizationPenaltyPercent,omitempty"`
+
+	// Metric names used to compute utilization if application_utilization is not set.
+	// For map fields in ORCA proto, use the form "<map_field>.<key>", e.g., "named_metrics.foo".
+	// +optional
+	MetricNamesForComputingUtilization []string `json:"metricNamesForComputingUtilization,omitempty"`
+
+	// KeepResponseHeaders keeps the ORCA load report headers/trailers before sending the response to the client.
+	// Defaults to false.
+	// +optional
+	// +kubebuilder:default=false
+	KeepResponseHeaders *bool `json:"keepResponseHeaders,omitempty"`
 }
 
 // ConsistentHashType defines the type of input to hash on.
