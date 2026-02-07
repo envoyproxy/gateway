@@ -14,7 +14,7 @@ cluster_manager:
 {{- end }}
 node:
   locality:
-    zone: $(ENVOY_SERVICE_ZONE)
+    zone: "$(ENVOY_SERVICE_ZONE)"
 stats_config:
   use_all_default_tags: true
   stats_tags:

@@ -10,6 +10,7 @@ security updates: |
 new features: |
 
 bug fixes: |
+  Revert double-quoting of zone names
 
 # Enhancements that improve performance.
 performance improvements: |

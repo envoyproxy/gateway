@@ -67,7 +67,7 @@ func TestProxyTopologyInjector_Handle(t *testing.T) {
 				Operation: "add",
 				Path:      "/metadata/annotations",
 				Value: map[string]interface{}{
-					"topology.kubernetes.io/zone": "\"0\"",
+					"topology.kubernetes.io/zone": "0",
 				},
 			}},
 		},

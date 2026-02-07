@@ -22,7 +22,7 @@ envoyProxyForGatewayClass:
           local_cluster_name: local_cluster
         node:
           locality:
-            zone: $(ENVOY_SERVICE_ZONE)
+            zone: "$(ENVOY_SERVICE_ZONE)"
         stats_config:
           use_all_default_tags: true
           stats_tags:
@@ -593,7 +593,7 @@ xds:
               re2.max_program_size.warn_level: 1000
         node:
           locality:
-            zone: $(ENVOY_SERVICE_ZONE)
+            zone: "$(ENVOY_SERVICE_ZONE)"
         overloadManager:
           refreshInterval: 0.250s
           resourceMonitors:

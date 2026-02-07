@@ -41,7 +41,7 @@ layered_runtime:
         resource_api_version: V3
 node:
   locality:
-    zone: $(ENVOY_SERVICE_ZONE)
+    zone: "$(ENVOY_SERVICE_ZONE)"
 overload_manager:
   refresh_interval: 0.250s
   resource_monitors:
