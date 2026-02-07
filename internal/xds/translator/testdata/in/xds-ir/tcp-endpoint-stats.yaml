@@ -1,4 +1,3 @@
-name: "metrics-endpoint-stats"
 metrics:
   enablePerEndpointStats: true
 tcp:

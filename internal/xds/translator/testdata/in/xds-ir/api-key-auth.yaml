@@ -16,9 +16,6 @@ http:
           distinct: false
           name: ""
           prefix: /foo1
-        backendWeights:
-          invalid: 0
-          valid: 0
         destination:
           name: httproute/default/httproute-1/rule/0
           settings:
@@ -31,7 +28,6 @@ http:
               name: httproute/default/httproute-1/rule/0/backend/0
         security:
           apiKeyAuth:
-            name: securitypolicy/default/policy-for-http-route-1
             credentials:
               - client: "Y2xpZW50LTE="
                 key: "a2V5MQ=="
@@ -40,15 +36,12 @@ http:
             forwardClientIDHeader: "X-API-KEY-CLIENT-ID"
             sanitize: true
       - name: httproute/default/httproute-1/rule/1/match/0/www_foo_com
-        backendWeights:
         hostname: www.foo.com
         isHTTP2: false
         pathMatch:
           distinct: false
           name: ""
           prefix: /foo2
-          invalid: 0
-          valid: 0
         destination:
           name: httproute/default/httproute-1/rule/1
           settings:
@@ -61,7 +54,6 @@ http:
               name: httproute/default/httproute-1/rule/1/backend/0
         security:
           apiKeyAuth:
-            name: securitypolicy/default/policy-for-http-route-1
             credentials:
               - client: "Y2xpZW50LTI="
                 key: "a2V5Mg=="
@@ -74,9 +66,6 @@ http:
           distinct: false
           name: ""
           prefix: /bar
-        backendWeights:
-          invalid: 0
-          valid: 0
         destination:
           name: httproute/default/httproute-2/rule/0
           settings:
@@ -89,7 +78,6 @@ http:
               name: httproute/default/httproute-2/rule/0/backend/0
         security:
           apiKeyAuth:
-            name: securitypolicy/default/policy-for-http-route-1
             credentials:
               - client: "Y2xpZW50LTM="
                 key: "a2V5Mw=="
@@ -102,9 +90,6 @@ http:
           distinct: false
           name: ""
           prefix: /bar2
-        backendWeights:
-          invalid: 0
-          valid: 0
         destination:
           name: httproute/default/httproute-2/rule/0
           settings:
@@ -117,7 +102,6 @@ http:
               name: httproute/default/httproute-2/rule/0/backend/0
         security:
           apiKeyAuth:
-            name: securitypolicy/default/policy-for-http-route-1
             credentials:
               - client: "Y2xpZW50LTM="
                 key: "a2V5Mw=="

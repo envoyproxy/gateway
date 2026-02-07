@@ -62,7 +62,6 @@ http:
     hostname: "*"
     headerMatches:
     - name: user
-      stringMatch:
       exact: "jason"
     destination:
       name: "first-route-dest"

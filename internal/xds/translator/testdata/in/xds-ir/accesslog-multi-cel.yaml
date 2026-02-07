@@ -1,6 +1,4 @@
-name: "accesslog"
 accesslog:
-
   text:
   - path: "/dev/stdout"
     celMatches:

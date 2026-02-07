@@ -16,9 +16,6 @@ http:
           distinct: false
           name: ""
           prefix: /foo
-        backendWeights:
-          invalid: 0
-          valid: 0
         destination:
           name: httproute/default/httproute-1/rule/0
           settings:
@@ -62,9 +59,6 @@ http:
           distinct: false
           name: ""
           prefix: /bar
-        backendWeights:
-          invalid: 0
-          valid: 0
         destination:
           name: httproute/default/httproute-2/rule/0
           settings:

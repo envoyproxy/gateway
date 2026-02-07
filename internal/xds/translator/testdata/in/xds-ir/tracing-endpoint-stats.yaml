@@ -1,4 +1,3 @@
-name: "tracing"
 metrics:
   enablePerEndpointStats: true
 tracing:
@@ -24,7 +23,6 @@ tracing:
           defaultValue: "-"
   destination:
     name: "tracing-0"
-    authority: "otel-collector.default.svc.cluster.local"
     settings:
       - endpoints:
           - host: "otel-collector.default.svc.cluster.local"

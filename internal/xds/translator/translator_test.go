@@ -547,7 +547,7 @@ func requireXdsIRFromInputTestData(t *testing.T, name string) *ir.Xds {
 	content, err := inFiles.ReadFile(name)
 	require.NoError(t, err)
 	x := &ir.Xds{}
-	err = yaml.Unmarshal(content, x)
+	err = yaml.Unmarshal(content, x, yaml.DisallowUnknownFields)
 	require.NoError(t, err)
 	return x
 }
