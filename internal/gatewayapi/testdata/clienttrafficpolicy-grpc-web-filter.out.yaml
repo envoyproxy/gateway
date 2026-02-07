@@ -1,3 +1,30 @@
+clientTrafficPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: ClientTrafficPolicy
+  metadata:
+    name: target-gateway-1-http-1
+    namespace: envoy-gateway
+  spec:
+    grpc:
+      enableWeb: true
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-1
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
@@ -9,14 +36,13 @@ gateways:
     listeners:
     - allowedRoutes:
         namespaces:
-          from: All
-      hostname: '*.envoyproxy.io'
-      name: http
-      port: 80
+          from: Same
+      name: http-1
+      port: 8081
       protocol: HTTP
   status:
     listeners:
-    - attachedRoutes: 1
+    - attachedRoutes: 0
       conditions:
       - lastTransitionTime: null
         message: Sending translated listener configuration to the data plane
@@ -33,71 +59,23 @@ gateways:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
-      name: http
+      name: http-1
       supportedKinds:
       - group: gateway.networking.k8s.io
         kind: HTTPRoute
       - group: gateway.networking.k8s.io
         kind: GRPCRoute
-httpRoutes:
-- apiVersion: gateway.networking.k8s.io/v1
-  kind: HTTPRoute
-  metadata:
-    name: httproute-1
-    namespace: default
-  spec:
-    hostnames:
-    - gateway.envoyproxy.io
-    parentRefs:
-    - name: gateway-1
-      namespace: envoy-gateway
-      sectionName: http
-    rules:
-    - backendRefs:
-      - name: service-1
-        port: 8080
-      filters:
-      - type: URLRewrite
-        urlRewrite:
-          hostname: -rewrite.com
-          path:
-            replacePrefixMatch: /rewrite
-            type: ReplacePrefixMatch
-      matches:
-      - path:
-          value: /
-  status:
-    parents:
-    - conditions:
-      - lastTransitionTime: null
-        message: 'Hostname "-rewrite.com" is invalid: [a lowercase RFC 1123 subdomain
-          must consist of lower case alphanumeric characters, ''-'' or ''.'', and
-          must start and end with an alphanumeric character (e.g. ''example.com'',
-          regex used for validation is ''[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*'')].'
-        reason: UnsupportedValue
-        status: "False"
-        type: Accepted
-      - lastTransitionTime: null
-        message: Resolved all the Object references for the Route
-        reason: ResolvedRefs
-        status: "True"
-        type: ResolvedRefs
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
-      parentRef:
-        name: gateway-1
-        namespace: envoy-gateway
-        sectionName: http
 infraIR:
   envoy-gateway/gateway-1:
     proxy:
       listeners:
       - address: null
-        name: envoy-gateway/gateway-1/http
+        name: envoy-gateway/gateway-1/http-1
         ports:
-        - containerPort: 10080
-          name: http-80
+        - containerPort: 8081
+          name: http-8081
           protocol: HTTP
-          servicePort: 80
+          servicePort: 8081
       metadata:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
@@ -135,19 +113,21 @@ xdsIR:
           protocol: TCP
     http:
     - address: 0.0.0.0
-      externalPort: 80
+      externalPort: 8081
+      grpc:
+        enableGRPCWeb: true
       hostnames:
-      - '*.envoyproxy.io'
+      - '*'
       metadata:
         kind: Gateway
         name: gateway-1
         namespace: envoy-gateway
-        sectionName: http
-      name: envoy-gateway/gateway-1/http
+        sectionName: http-1
+      name: envoy-gateway/gateway-1/http-1
       path:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
-      port: 10080
+      port: 8081
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

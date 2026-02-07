@@ -216,7 +216,6 @@ xdsIR:
       externalPort: 443
       hostnames:
       - foo.example.com
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-1
@@ -269,7 +268,6 @@ xdsIR:
       externalPort: 443
       hostnames:
       - bar.example.com
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-1
@@ -322,7 +320,6 @@ xdsIR:
       externalPort: 443
       hostnames:
       - foo.bar.com
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-1
