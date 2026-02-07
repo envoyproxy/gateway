@@ -146,7 +146,6 @@ http:
     hostname: "*"
     headerMatches:
     - name: user
-      stringMatch:
       exact: "jason"
     destination:
       name: "first-route-dest"
@@ -159,10 +158,8 @@ http:
     hostname: "*"
     headerMatches:
     - name: user
-      stringMatch:
       exact: "james"
     - name: country
-      stringMatch:
       exact: "US"
     destination:
       name: "second-route-dest"
