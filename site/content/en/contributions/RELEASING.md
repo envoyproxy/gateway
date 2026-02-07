@@ -71,7 +71,7 @@ export GITHUB_REMOTE=origin
 13. Ensure your release branch is up-to-date and tag the head of your release branch with the release candidate number.
 
     ```shell
-    git tag -a v${MAJOR_VERSION}.${MINOR_VERSION}.0-rc.${RELEASE_CANDIDATE_NUMBER} -m 'Envoy Gateway v${MAJOR_VERSION}.${MINOR_VERSION}.0-rc.${RELEASE_CANDIDATE_NUMBER} Release Candidate'
+    git tag -a v${MAJOR_VERSION}.${MINOR_VERSION}.0-rc.${RELEASE_CANDIDATE_NUMBER} -m "Envoy Gateway v${MAJOR_VERSION}.${MINOR_VERSION}.0-rc.${RELEASE_CANDIDATE_NUMBER} Release Candidate"
     ```
 
 14. Push the tag to the Envoy Gateway repository.
@@ -122,7 +122,7 @@ export GITHUB_REMOTE=origin
       make docs-release TAG=v${MAJOR_VERSION}.${MINOR_VERSION}.0
       ```
 
-   1. Update `site/layouts/shortcodes/helm-version.html`, add the latest version of the minor release, and update the short code for `{{- with (strings.HasPrefix $pagePrefix "doc") -}}` to the latest minor version.
+   1. Update `site/layouts/shortcodes/helm-version.html`, add the latest version of the minor release, and update the short code for `{{- with (strings.HasPrefix $pagePrefix "version") -}}` to the latest minor version.
 
       ```console
       {{- $pagePrefix := (index (split $.Page.File.Dir "/") 0) -}}
@@ -140,7 +140,7 @@ export GITHUB_REMOTE=origin
       {{- end -}}
       ```
 
-   1. Update `site/layouts/shortcodes/yaml-version.html`, add the latest version of the minor release, and update the short code for `{{- with (strings.HasPrefix $pagePrefix "doc") -}}` to the latest minor version.
+   1. Update `site/layouts/shortcodes/yaml-version.html`, add the latest version of the minor release, and update the short code for `{{- with (strings.HasPrefix $pagePrefix "version") -}}` to the latest minor version.
 
       ```console
       {{- $pagePrefix := (index (split $.Page.File.Dir "/") 0) -}}
@@ -157,6 +157,7 @@ export GITHUB_REMOTE=origin
       {{- "v1.2.0" -}}
       {{- end -}}
       ```
+      docs prefix should be updated after releasing and ensuring that everything is working as it should.
 
    1. Update `site/hugo.toml`, add the new version to the `params.versions` section.
 
@@ -214,7 +215,7 @@ export GITHUB_REMOTE=origin
 8. Tag the head of your release branch with the release tag. For example:
 
     ```shell
-    git tag -a v${MAJOR_VERSION}.${MINOR_VERSION}.0 -m 'Envoy Gateway v${MAJOR_VERSION}.${MINOR_VERSION}.0 Release'
+    git tag -a v${MAJOR_VERSION}.${MINOR_VERSION}.0 -m "Envoy Gateway v${MAJOR_VERSION}.${MINOR_VERSION}.0 Release"
     ```
 
     __Note:__ The tag version differs from the release branch by including the `.0` patch version.
@@ -363,7 +364,7 @@ export GITHUB_REMOTE=origin
 9. Tag the head of your release branch with the release tag. For example:
 
     ```shell
-    git tag -a v${MAJOR_VERSION}.${MINOR_VERSION}.${PATCH_VERSION} -m 'Envoy Gateway v${MAJOR_VERSION}.${MINOR_VERSION}.${PATCH_VERSION} Release'
+    git tag -a v${MAJOR_VERSION}.${MINOR_VERSION}.${PATCH_VERSION} -m "Envoy Gateway v${MAJOR_VERSION}.${MINOR_VERSION}.${PATCH_VERSION} Release"
     ```
 
 10. Push the tag to the Envoy Gateway repository.
@@ -412,7 +413,7 @@ It's important that the world knows about the release. Use the following steps t
 
 [release notes]: https://github.com/envoyproxy/gateway/tree/main/release-notes
 [Pull Request]: https://github.com/envoyproxy/gateway/pulls
-[Quickstart]: https://github.com/envoyproxy/gateway/blob/main/docs/user/quickstart.md
+[Quickstart]: https://gateway.envoyproxy.io/docs/tasks/quickstart/
 [Build and Test]: https://github.com/envoyproxy/gateway/blob/main/.github/workflows/build_and_test.yaml
 [release GitHub action]: https://github.com/envoyproxy/gateway/blob/main/.github/workflows/release.yaml
 [release workflow]: https://github.com/envoyproxy/gateway/actions/workflows/release.yaml
