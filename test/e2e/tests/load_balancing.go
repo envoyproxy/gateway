@@ -45,6 +45,7 @@ func init() {
 		EndpointOverrideLoadBalancingTest,
 		MultiHeaderConsistentHashHeaderLoadBalancingTest,
 		ConsistentHashQueryParamsLoadBalancingTest,
+		LocalityWeightedConsistentHashLoadBalancingTest,
 	)
 }
 
@@ -649,6 +650,114 @@ var EndpointOverrideLoadBalancingTest = suite.ConformanceTest{
 			}
 
 			t.Logf("All %d requests without override header got 200 response (fallback working)", sendRequests)
+		})
+	},
+}
+
+var LocalityWeightedConsistentHashLoadBalancingTest = suite.ConformanceTest{
+	ShortName:   "LocalityWeightedConsistentHashLoadBalancing",
+	Description: "Test for locality weighted consistent hash load balancing type",
+	Manifests:   []string{"testdata/load_balancing_locality_weighted_consistent_hash.yaml"},
+	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
+		const sendRequests = 10
+
+		ns := "gateway-conformance-infra"
+		routeNN := types.NamespacedName{Name: "locality-weighted-lb-route", Namespace: ns}
+		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
+
+		ancestorRef := gwapiv1.ParentReference{
+			Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
+			Kind:      gatewayapi.KindPtr(resource.KindGateway),
+			Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
+			Name:      gwapiv1.ObjectName(gwNN.Name),
+		}
+		BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "locality-weighted-lb-policy", Namespace: ns}, suite.ControllerName, ancestorRef)
+		WaitForPods(t, suite.Client, ns, map[string]string{"app": "lb-backend-locality-weighted"}, corev1.PodRunning, &PodReady)
+
+		gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
+
+		t.Run("same hash key routes to same pod consistently", func(t *testing.T) {
+			expectedResponse := http.ExpectedResponse{
+				Request: http.Request{
+					Path: "/locality-weighted",
+				},
+				Response: http.Response{
+					StatusCodes: []int{200},
+				},
+				Namespace: ns,
+			}
+
+			// Test multiple hash keys - each should stick to one pod
+			hashKeys := []string{"user-1", "user-2", "user-3", "user-4", "user-5"}
+
+			for _, hashKey := range hashKeys {
+				req := http.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
+				req.Headers["X-Hash-Key"] = []string{hashKey}
+
+				// All requests with the same hash key should go to the same pod
+				compareFunc := func(trafficMap map[string]int) bool {
+					return len(trafficMap) == 1
+				}
+
+				if err := wait.PollUntilContextTimeout(context.TODO(), time.Second, 30*time.Second, true, func(_ context.Context) (bool, error) {
+					return runTrafficTest(t, suite, &req, &expectedResponse, sendRequests, compareFunc), nil
+				}); err != nil {
+					tlog.Errorf(t, "failed: hash key %s did not consistently route to same pod: %v", hashKey, err)
+				}
+			}
+		})
+
+		t.Run("different hash keys can distribute to different pods", func(t *testing.T) {
+			expectedResponse := http.ExpectedResponse{
+				Request: http.Request{
+					Path: "/locality-weighted",
+				},
+				Response: http.Response{
+					StatusCodes: []int{200},
+				},
+				Namespace: ns,
+			}
+
+			// Map to track which pod each hash key routes to
+			hashKeyToPod := make(map[string]string)
+			hashKeys := []string{"key-1", "key-2", "key-3", "key-4", "key-5", "key-6", "key-7", "key-8", "key-9", "key-10"}
+
+			for _, hashKey := range hashKeys {
+				req := http.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
+				req.Headers["X-Hash-Key"] = []string{hashKey}
+
+				cReq, cResp, err := suite.RoundTripper.CaptureRoundTrip(req)
+				if err != nil {
+					t.Errorf("failed to get expected response: %v", err)
+					continue
+				}
+
+				if err := http.CompareRoundTrip(t, &req, cReq, cResp, expectedResponse); err != nil {
+					t.Errorf("failed to compare request and response: %v", err)
+					continue
+				}
+
+				podName := cReq.Pod
+				if len(podName) == 0 {
+					t.Errorf("failed to get pod header in response")
+				} else {
+					hashKeyToPod[hashKey] = podName
+				}
+			}
+
+			// Count unique pods that received traffic
+			uniquePods := make(map[string]bool)
+			for _, pod := range hashKeyToPod {
+				uniquePods[pod] = true
+			}
+
+			// Different hash keys should distribute across multiple pods (at least 2)
+			// This verifies both consistent hashing distribution and locality weighting
+			if len(uniquePods) < 2 {
+				t.Errorf("expected different hash keys to distribute across at least 2 pods, but got %d pods: %v", len(uniquePods), hashKeyToPod)
+			} else {
+				tlog.Logf(t, "different hash keys distributed across %d pods: %v", len(uniquePods), hashKeyToPod)
+			}
 		})
 	},
 }
