@@ -59,8 +59,8 @@ spec:
               fieldPath: metadata.namespace
         - name: KUBERNETES_CLUSTER_DOMAIN
           value: {{ .Values.kubernetesClusterDomain }}
-        image: {{ include "eg.image" . }}
-        imagePullPolicy: {{ include "eg.image.pullPolicy" . }}
+        image: {{ include "eg.image" . -}}
+        {{- include "eg.imagePullPolicy" . | nindent 8 }}
         livenessProbe:
           httpGet:
             path: /healthz
@@ -94,7 +94,7 @@ spec:
         - mountPath: /certs
           name: certs
           readOnly: true
-      {{- include "eg.image.pullSecrets" . | nindent 6 }}
+      {{- include "eg.imagePullSecrets" . | nindent 6 }}
       {{- with .Values.deployment.priorityClassName }}
       priorityClassName: {{ . | quote }}
       {{- end }}

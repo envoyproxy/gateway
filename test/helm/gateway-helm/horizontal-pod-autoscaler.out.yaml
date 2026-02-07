@@ -39,17 +39,8 @@ data:
         rateLimitDeployment:
           container:
             image: docker.io/envoyproxy/ratelimit:master
-          patch:
-            type: StrategicMerge
-            value:
-              spec:
-                template:
-                  spec:
-                    containers:
-                    - imagePullPolicy: IfNotPresent
-                      name: envoy-ratelimit
         shutdownManager:
-          image: docker.io/envoyproxy/gateway-dev:latest
+          image: docker.io/envoyproxy/gateway:latest
       type: Kubernetes
 ---
 # Source: gateway-helm/templates/envoy-gateway-rbac.yaml
@@ -435,8 +426,8 @@ spec:
               fieldPath: metadata.namespace
         - name: KUBERNETES_CLUSTER_DOMAIN
           value: cluster.local
-        image: docker.io/envoyproxy/gateway-dev:latest
-        imagePullPolicy: Always
+        image: docker.io/envoyproxy/gateway:latest
+        imagePullPolicy: ""
         livenessProbe:
           httpGet:
             path: /healthz
@@ -684,8 +675,8 @@ spec:
               fieldPath: metadata.namespace
         - name: KUBERNETES_CLUSTER_DOMAIN
           value: cluster.local
-        image: docker.io/envoyproxy/gateway-dev:latest
-        imagePullPolicy: Always
+        image: docker.io/envoyproxy/gateway:latest
+        imagePullPolicy: ""
         name: envoy-gateway-certgen
         securityContext:
           allowPrivilegeEscalation: false

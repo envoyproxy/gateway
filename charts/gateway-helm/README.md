@@ -63,10 +63,11 @@ helm uninstall eg -n envoy-gateway-system
 | config.envoyGateway | object | `{"extensionApis":{},"gateway":{"controllerName":"gateway.envoyproxy.io/gatewayclass-controller"},"logging":{"level":{"default":"info"}},"provider":{"type":"Kubernetes"}}` | EnvoyGateway configuration. Visit https://gateway.envoyproxy.io/docs/api/extension_types/#envoygateway to view all options. |
 | createNamespace | bool | `false` |  |
 | deployment.annotations | object | `{}` |  |
-| deployment.envoyGateway.image.repository | string | `""` |  |
+| deployment.envoyGateway.image.pullPolicy | string | `""` |  |
+| deployment.envoyGateway.image.pullSecrets | list | `[]` |  |
+| deployment.envoyGateway.image.registry | string | `""` |  |
+| deployment.envoyGateway.image.repository | string | `"envoyproxy/gateway"` |  |
 | deployment.envoyGateway.image.tag | string | `""` |  |
-| deployment.envoyGateway.imagePullPolicy | string | `""` |  |
-| deployment.envoyGateway.imagePullSecrets | list | `[]` |  |
 | deployment.envoyGateway.resources.limits.memory | string | `"1024Mi"` |  |
 | deployment.envoyGateway.resources.requests.cpu | string | `"100m"` |  |
 | deployment.envoyGateway.resources.requests.memory | string | `"256Mi"` |  |
@@ -98,14 +99,9 @@ helm uninstall eg -n envoy-gateway-system
 | deployment.ports[3].targetPort | int | `19001` |  |
 | deployment.priorityClassName | string | `nil` |  |
 | deployment.replicas | int | `1` |  |
-| global.imagePullSecrets | list | `[]` | Global override for image pull secrets |
-| global.imageRegistry | string | `""` | Global override for image registry |
-| global.images.envoyGateway.image | string | `nil` |  |
-| global.images.envoyGateway.pullPolicy | string | `nil` |  |
-| global.images.envoyGateway.pullSecrets | list | `[]` |  |
-| global.images.ratelimit.image | string | `"docker.io/envoyproxy/ratelimit:master"` |  |
-| global.images.ratelimit.pullPolicy | string | `"IfNotPresent"` |  |
-| global.images.ratelimit.pullSecrets | list | `[]` |  |
+| global.image.pullPolicy | string | `""` | Global image pull policy Specify image pull policy if default kubernetes behavior isn't desired. Default behavior: latest images will be Always else IfNotPresent. |
+| global.image.pullSecrets | list | `[]` | Global override for image pull secrets |
+| global.image.registry | string | `"docker.io"` | Global override for image registry (omit trailing slash) |
 | hpa.behavior | object | `{}` |  |
 | hpa.enabled | bool | `false` |  |
 | hpa.maxReplicas | int | `1` |  |
@@ -113,6 +109,11 @@ helm uninstall eg -n envoy-gateway-system
 | hpa.minReplicas | int | `1` |  |
 | kubernetesClusterDomain | string | `"cluster.local"` |  |
 | podDisruptionBudget.minAvailable | int | `0` |  |
+| ratelimit.image.pullPolicy | string | `""` |  |
+| ratelimit.image.pullSecrets | list | `[]` |  |
+| ratelimit.image.registry | string | `""` |  |
+| ratelimit.image.repository | string | `"envoyproxy/ratelimit"` |  |
+| ratelimit.image.tag | string | `"master"` |  |
 | service.annotations | object | `{}` |  |
 | service.trafficDistribution | string | `""` |  |
 | service.type | string | `"ClusterIP"` | Service type. Can be set to LoadBalancer with specific IP, e.g.: type: LoadBalancer loadBalancerIP: 10.236.90.20 |

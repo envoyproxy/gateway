@@ -65,88 +65,50 @@ Create the name of the service account to use
 The name of the Envoy Gateway image.
 */}}
 {{- define "eg.image" -}}
-{{/* if deployment-specific repository is defined, it takes precedence */}}
-{{- if .Values.deployment.envoyGateway.image.repository -}}
-{{/*  if global.imageRegistry is defined, it takes precedence always */}}
-{{-   if .Values.global.imageRegistry -}}
-{{-     $repositoryParts := splitn "/" 2 .Values.deployment.envoyGateway.image.repository -}}
-{{-     $registryName := .Values.global.imageRegistry -}}
-{{-     $repositoryName := $repositoryParts._1 -}}
-{{-     $imageTag := default .Chart.AppVersion .Values.deployment.envoyGateway.image.tag -}}
-{{-     printf "%s/%s:%s" $registryName $repositoryName $imageTag -}}
-{{/*  if global.imageRegistry is undefined, take repository as is */}}
-{{-   else -}}
-{{-     $imageTag := default .Chart.AppVersion .Values.deployment.envoyGateway.image.tag -}}
-{{-     printf "%s:%s" .Values.deployment.envoyGateway.image.repository $imageTag -}}
-{{-   end -}}
-{{/* else, global image is used if defined */}}
-{{- else if .Values.global.images.envoyGateway.image -}}
-{{-   $imageParts := splitn "/" 2 .Values.global.images.envoyGateway.image -}}
-{{/*    if global.imageRegistry is defined, it takes precedence always */}}
-{{-   $registryName := default $imageParts._0 .Values.global.imageRegistry -}}
-{{-   $repositoryTag := $imageParts._1 -}}
-{{-   $repositoryParts := splitn ":" 2 $repositoryTag -}}
-{{-   $repositoryName := $repositoryParts._0 -}}
-{{-   $imageTag := $repositoryParts._1 -}}
-{{-   printf "%s/%s:%s" $registryName $repositoryName $imageTag -}}
-{{- else -}}
-docker.io/envoyproxy/gateway:{{ .Chart.Version }}
+{{-   $registry := .Values.deployment.envoyGateway.image.registry | default .Values.global.image.registry -}}
+{{-   $repository := .Values.deployment.envoyGateway.image.repository -}}
+{{-   $tag := .Values.deployment.envoyGateway.image.tag | default .Chart.AppVersion -}}
+{{- printf "%s/%s:%s" $registry $repository $tag -}}
 {{- end -}}
-{{- end -}}
-
-{{/*
-Pull policy for the Envoy Gateway image.
-*/}}
-{{- define "eg.image.pullPolicy" -}}
-{{- default .Values.deployment.envoyGateway.imagePullPolicy .Values.global.images.envoyGateway.pullPolicy -}}
-{{- end }}
-
-{{/*
-Pull secrets for the Envoy Gateway image.
-*/}}
-{{- define "eg.image.pullSecrets" -}}
-{{- if .Values.global.imagePullSecrets -}}
-imagePullSecrets:
-{{ toYaml .Values.global.imagePullSecrets }}
-{{- else if .Values.deployment.envoyGateway.imagePullSecrets -}}
-imagePullSecrets:
-{{ toYaml .Values.deployment.envoyGateway.imagePullSecrets }}
-{{- else if .Values.global.images.envoyGateway.pullSecrets -}}
-imagePullSecrets:
-{{ toYaml .Values.global.images.envoyGateway.pullSecrets }}
-{{- else -}}
-imagePullSecrets: {{ toYaml list }}
-{{- end }}
-{{- end }}
 
 {{/*
 The name of the Envoy Ratelimit image.
 */}}
 {{- define "eg.ratelimit.image" -}}
-{{-   $imageParts := splitn "/" 2 .Values.global.images.ratelimit.image -}}
-{{/*    if global.imageRegistry is defined, it takes precedence always */}}
-{{-   $registryName := default $imageParts._0 .Values.global.imageRegistry -}}
-{{-   $repositoryTag := $imageParts._1 -}}
-{{-   $repositoryParts := splitn ":" 2 $repositoryTag -}}
-{{-   $repositoryName := $repositoryParts._0 -}}
-{{-   $imageTag := default "master" $repositoryParts._1 -}}
-{{-   printf "%s/%s:%s" $registryName $repositoryName $imageTag -}}
+{{-   $registry := .Values.ratelimit.image.registry | default .Values.global.image.registry -}}
+{{-   $repository := .Values.ratelimit.image.repository -}}
+{{-   $tag := .Values.ratelimit.image.tag -}}
+{{-   printf "%s/%s:%s" $registry $repository $tag -}}
 {{- end -}}
 
 {{/*
-Pull secrets for the Envoy Ratelimit image.
+Render imagePullSecrets conditionally.
+If empty, renders as a single-line empty list.
+If not empty, renders as a multi-line YAML list.
 */}}
-{{- define "eg.ratelimit.image.pullSecrets" -}}
-{{- if .Values.global.imagePullSecrets }}
+{{- define "eg.imagePullSecrets" -}}
+{{- $pullSecrets := .Values.deployment.envoyGateway.image.pullSecrets | default .Values.global.image.pullSecrets -}}
+{{- if $pullSecrets -}}
 imagePullSecrets:
-{{ toYaml .Values.global.imagePullSecrets }}
-{{- else if .Values.global.images.ratelimit.pullSecrets -}}
-imagePullSecrets:
-{{ toYaml .Values.global.images.ratelimit.pullSecrets }}
-{{- else }}
-imagePullSecrets: {{ toYaml list }}
-{{- end }}
-{{- end }}
+  {{- toYaml $pullSecrets | nindent 2 }}
+{{- else -}}
+imagePullSecrets: []
+{{- end -}}
+{{- end -}}
+
+{{/*
+Render imagePullPolicy conditionally.
+If empty, renders as a single-line empty list.
+If not empty, renders as a multi-line YAML list.
+*/}}
+{{- define "eg.imagePullPolicy" -}}
+{{- $pullPolicy := .Values.deployment.envoyGateway.image.pullPolicy | default .Values.global.image.pullPolicy -}}
+{{- if $pullPolicy -}}
+imagePullPolicy: {{ $pullPolicy }}
+{{- else -}}
+imagePullPolicy: ""
+{{- end -}}
+{{- end -}}
 
 
 {{/*
@@ -159,11 +121,11 @@ provider:
     rateLimitDeployment:
       container:
         image: {{ include "eg.ratelimit.image" . }}
-      {{- if (or .Values.global.imagePullSecrets .Values.global.images.ratelimit.pullSecrets) }}
+      {{- if (or .Values.global.image.pullSecrets .Values.ratelimit.image.pullSecrets) }}
       pod:
-        {{- include "eg.ratelimit.image.pullSecrets" . | nindent 8 }}
+        imagePullSecrets: {{ .Values.ratelimit.image.pullSecrets | default .Values.global.image.pullSecrets | toYaml | nindent 10 }}
       {{- end }}
-      {{- with .Values.global.images.ratelimit.pullPolicy }}
+      {{- if (or .Values.global.image.pullPolicy .Values.ratelimit.image.pullPolicy) }}
       patch:
         type: StrategicMerge
         value:
@@ -172,7 +134,7 @@ provider:
               spec:
                 containers:
                 - name: envoy-ratelimit
-                  imagePullPolicy: {{ . }}
+                  imagePullPolicy: {{ .Values.ratelimit.image.pullPolicy | default .Values.global.image.pullPolicy }}
       {{- end }}
     shutdownManager:
       image: {{ include "eg.image" . }}

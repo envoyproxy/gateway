@@ -39,15 +39,6 @@ data:
         rateLimitDeployment:
           container:
             image: docker.io/envoyproxy/ratelimit:master
-          patch:
-            type: StrategicMerge
-            value:
-              spec:
-                template:
-                  spec:
-                    containers:
-                    - imagePullPolicy: IfNotPresent
-                      name: envoy-ratelimit
         shutdownManager:
           image: private-hub/envoyproxy/gateway:abcdef12
       type: Kubernetes
@@ -487,8 +478,8 @@ spec:
           name: certs
           readOnly: true
       imagePullSecrets:
-      - name: secret1
-      - name: secret2
+        - name: secret1
+        - name: secret2
       serviceAccountName: envoy-gateway
       terminationGracePeriodSeconds: 10
       volumes:
@@ -672,8 +663,8 @@ spec:
           seccompProfile:
             type: RuntimeDefault
       imagePullSecrets:
-      - name: secret1
-      - name: secret2
+        - name: secret1
+        - name: secret2
       restartPolicy: Never
       serviceAccountName: gateway-helm-certgen
   ttlSecondsAfterFinished: 30

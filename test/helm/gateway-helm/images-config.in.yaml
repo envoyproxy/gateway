@@ -1,0 +1,19 @@
+deployment:
+  envoyGateway:
+    image:
+      registry: private-hub
+      repository: "envoyproxy/gateway-dev"
+      tag: "abcdef12"
+      pullPolicy: Always
+      pullSecrets:
+        - name: "secret1"
+        - name: "secret2"
+ratelimit:
+    image:
+      registry: private-hub
+      repository: "envoyproxy/ratelimit"
+      tag: "test"
+      pullPolicy: Always
+      pullSecrets:
+        - name: "secret3"
+        - name: "secret4"

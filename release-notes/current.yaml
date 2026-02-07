@@ -2,6 +2,7 @@ date: Pending
 
 # Changes that are expected to cause an incompatibility with previous versions, such as deletions or modifications to existing APIs.
 breaking changes: |
+  Redefined how images are set in Helm charts to improve flexibility.
 
 # Updates addressing vulnerabilities, security flaws, or compliance requirements.
 security updates: |

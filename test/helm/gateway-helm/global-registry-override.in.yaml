@@ -1,0 +1,13 @@
+global:
+  image:
+    registry: "private.registry"
+
+deployment:
+  envoyGateway:
+    image:
+      tag: "abcdef"
+
+ratelimit: 
+  image:
+    registry: "docker.io"
+    tag: "abcdef"
