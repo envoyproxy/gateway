@@ -51,11 +51,3 @@ extensionServerPolicies:
         group: gateway.networking.k8s.io
         kind: Gateway
         name: test-gateway
-extensionManagerConfig:
-  hooks:
-    xdsTranslator:
-      translation:
-        listener:
-          includeAll: true
-        route:
-          includeAll: true
