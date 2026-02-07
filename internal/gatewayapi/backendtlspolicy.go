@@ -190,7 +190,7 @@ func (t *Translator) processGatewayBackendTLS(gateway *gwapiv1.Gateway) (*ir.TLS
 	}, nil
 }
 
-// Merges TLS settings from Gateway API BackendTLSPolicy and Envoy Gateway Backend TL.
+// Merges TLS settings from Gateway API BackendTLSPolicy and Envoy Gateway Backend TLS.
 // BackendTLSPolicy takes precedence for identical attributes that are set in both.
 func mergeServerValidationTLSConfigs(
 	backendValidationTLSConfig *ir.TLSUpstreamConfig,
