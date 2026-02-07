@@ -148,7 +148,7 @@ func (t *Translator) applyBackendTLSSetting(
 
 	// Get the client certificate settings from Gateway resource.
 	if gateway != nil && gateway.Spec.TLS != nil && gateway.Spec.TLS.Backend != nil {
-		if gatewayClientTLSConfig, err = t.processGatewayBackendTLS(gateway); err != nil {
+		if gatewayClientTLSConfig, err = t.processGatewayBackendTLS(gateway, resources); err != nil {
 			return nil, err
 		}
 	}
@@ -163,25 +163,24 @@ func (t *Translator) applyBackendTLSSetting(
 	return mergedTLSConfig, nil
 }
 
-func (t *Translator) processGatewayBackendTLS(gateway *gwapiv1.Gateway) (*ir.TLSConfig, error) {
+func (t *Translator) processGatewayBackendTLS(gateway *gwapiv1.Gateway, resources *resource.Resources) (*ir.TLSConfig, error) {
 	ref := gateway.Spec.TLS.Backend.ClientCertificateRef
 	if ref == nil {
 		return nil, nil
 	}
 
-	ns := NamespaceDerefOr(ref.Namespace, gateway.Namespace)
-	if ns != gateway.Namespace {
-		return nil, fmt.Errorf(
-			"ClientCertificateRef Secret is not located in the same namespace as Gateway. Secret namespace: %s does not match Gateway namespace: %s",
-			ns, gateway.Namespace)
-	}
-
-	secret := t.GetSecret(ns, string(ref.Name))
-	if secret == nil {
-		return nil, fmt.Errorf(
-			"failed to locate TLS secret for client auth: %s specified in Gateway %s",
-			types.NamespacedName{Namespace: ns, Name: string(ref.Name)}.String(),
-			types.NamespacedName{Namespace: gateway.Namespace, Name: gateway.Name}.String())
+	secret, err := t.validateSecretRef(
+		true, // allowCrossNamespace – Gateway spec permits cross-ns refs via ReferenceGrant
+		crossNamespaceFrom{
+			group:     gwapiv1.GroupName,
+			kind:      resource.KindGateway,
+			namespace: gateway.Namespace,
+		},
+		*ref,
+		resources,
+	)
+	if err != nil {
+		return nil, err
 	}
 
 	tlsConf := irTLSConfigs(secret)
