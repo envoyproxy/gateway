@@ -64,6 +64,8 @@ In order to align with the Envoy Proxy [release schedule][], Envoy Gateway relea
 |  1.4.x  | 2025/05/12 | 2025/05/13 |   +1 day   | 2025/11/13  |
 |  1.5.x  | 2025/08/12 | 2025/08/08 |   -4 day   | 2026/02/13  |
 |  1.6.x  | 2025/11/11 | 2025/11/11 |            | 2026/05/13  |
+|  1.7.x  | 2026/02/04 | 2025/02/05 |  +1 day    | 2026/08/05  |
+
 
 [v2.0.0 spec]: https://semver.org/spec/v2.0.0.html
 [release guide]: ../../contributions/releasing
