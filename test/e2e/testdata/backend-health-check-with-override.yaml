@@ -1,0 +1,257 @@
+---
+# Service with two ports: 8080 for traffic, 9090 for health checks
+apiVersion: v1
+kind: Service
+metadata:
+  name: multi-ports-backend
+  namespace: gateway-conformance-infra
+spec:
+  selector:
+    app: multi-ports-backend
+  ports:
+  - protocol: TCP
+    port: 8080
+    name: http
+    targetPort: 8080
+  - protocol: TCP
+    port: 9090
+    name: health
+    targetPort: 9090
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: multi-ports-backend
+  namespace: gateway-conformance-infra
+  labels:
+    app: multi-ports-backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: multi-ports-backend
+  template:
+    metadata:
+      labels:
+        app: multi-ports-backend
+    spec:
+      containers:
+      - name: multi-ports-backend
+        # From https://github.com/kubernetes-sigs/gateway-api/blob/main/conformance/echo-basic/echo-basic.go
+        image: gcr.io/k8s-staging-gateway-api/echo-basic:v20231214-v1.0.0-140-gf544a46e
+        ports:
+        - containerPort: 8080
+          name: http
+        env:
+        - name: HTTP_PORT
+          value: "8080"
+        - name: H2C_PORT
+          value: "3001"
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: SERVICE_NAME
+          value: multi-ports-backend
+        resources:
+          requests:
+            cpu: 10m
+      # Sidecar for health check on port 9090
+      - name: multi-ports-backend-health
+        # From https://github.com/kubernetes-sigs/gateway-api/blob/main/conformance/echo-basic/echo-basic.go
+        image: gcr.io/k8s-staging-gateway-api/echo-basic:v20231214-v1.0.0-140-gf544a46e
+        ports:
+        - containerPort: 9090
+          name: health
+        env:
+        - name: HTTP_PORT
+          value: "9090"
+        - name: H2C_PORT
+          value: "3002"
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: SERVICE_NAME
+          value: multi-ports-backend
+        resources:
+          requests:
+            cpu: 10m
+---
+# Service with single port: 8080 for traffic and health checks
+apiVersion: v1
+kind: Service
+metadata:
+  name: single-port-backend
+  namespace: gateway-conformance-infra
+spec:
+  selector:
+    app: single-port-backend
+  ports:
+  - protocol: TCP
+    port: 8080
+    name: http-and-health
+    targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: single-port-backend
+  namespace: gateway-conformance-infra
+  labels:
+    app: single-port-backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: single-port-backend
+  template:
+    metadata:
+      labels:
+        app: single-port-backend
+    spec:
+      containers:
+      - name: single-port-backend
+        # From https://github.com/kubernetes-sigs/gateway-api/blob/main/conformance/echo-basic/echo-basic.go
+        image: gcr.io/k8s-staging-gateway-api/echo-basic:v20231214-v1.0.0-140-gf544a46e
+        ports:
+        - containerPort: 8080
+          name: http-and-health
+        env:
+        - name: HTTP_PORT
+          value: "8080"
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: SERVICE_NAME
+          value: single-port-backend
+        resources:
+          requests:
+            cpu: 10m
+---
+# HTTPRoute with health check override - traffic to 8080, health checks to 9090
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: httproute-with-health-check-override
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+  - name: same-namespace
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /health-check-with-override
+    backendRefs:
+    - name: multi-ports-backend
+      port: 8080
+---
+# BackendTrafficPolicy with health check override - traffic to 8080, health checks to 9090
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: btp-with-health-check-override
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: httproute-with-health-check-override
+  healthCheck:
+    active:
+      timeout: 3s
+      interval: 5s
+      unhealthyThreshold: 3
+      healthyThreshold: 1
+      type: HTTP
+      http:
+        path: "/status/200"
+        expectedStatuses:
+        - 200
+      overrides:
+        port: 9090
+---
+# HTTPRoute without health check override - both traffic and health checks to 8080
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: httproute-without-health-check-override
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+  - name: same-namespace
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /health-check-without-override
+    backendRefs:
+    - name: single-port-backend
+      port: 8080
+---
+# BackendTrafficPolicy without health check override - both traffic and health checks to 8080
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: btp-without-health-check-override
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: httproute-without-health-check-override
+  healthCheck:
+    active:
+      timeout: 3s
+      interval: 5s
+      unhealthyThreshold: 3
+      healthyThreshold: 1
+      type: HTTP
+      http:
+        path: "/status/200"
+        expectedStatuses:
+        - 200
+---
+# Disable cluster panic threshold for both routes to properly test health checks
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyPatchPolicy
+metadata:
+  name: disable-cluster-panic-patch-policy
+  namespace: gateway-conformance-infra
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: Gateway
+    name: same-namespace
+  type: JSONPatch
+  jsonPatches:
+  - type: "type.googleapis.com/envoy.config.cluster.v3.Cluster"
+    name: "httproute/gateway-conformance-infra/httproute-with-health-check-override/rule/0"
+    operation:
+      op: add
+      path: "/common_lb_config"
+      value:
+        healthy_panic_threshold:
+          value: 0.0
+  - type: "type.googleapis.com/envoy.config.cluster.v3.Cluster"
+    name: "httproute/gateway-conformance-infra/httproute-without-health-check-override/rule/0"
+    operation:
+      op: add
+      path: "/common_lb_config"
+      value:
+        healthy_panic_threshold:
+          value: 0.0

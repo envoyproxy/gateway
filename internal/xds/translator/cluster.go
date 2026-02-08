@@ -759,7 +759,7 @@ func buildXdsClusterCircuitBreaker(circuitBreaker *ir.CircuitBreaker) *clusterv3
 	return ecb
 }
 
-func buildXdsClusterLoadAssignment(clusterName string, destSettings []*ir.DestinationSetting, preferLocal *ir.PreferLocalZone) *endpointv3.ClusterLoadAssignment {
+func buildXdsClusterLoadAssignment(clusterName string, destSettings []*ir.DestinationSetting, hc *ir.HealthCheck, preferLocal *ir.PreferLocalZone) *endpointv3.ClusterLoadAssignment {
 	localities := make([]*endpointv3.LocalityLbEndpoints, 0, len(destSettings))
 	for i, ds := range destSettings {
 
@@ -784,15 +784,15 @@ func buildXdsClusterLoadAssignment(clusterName string, destSettings []*ir.Destin
 		// limit host selection controls during retries and session affinity.
 		// For more details see https://github.com/envoyproxy/gateway/issues/5307#issuecomment-2688767482
 		if ds.PreferLocal != nil || preferLocal != nil {
-			localities = append(localities, buildZonalLocalities(metadata, ds)...)
+			localities = append(localities, buildZonalLocalities(metadata, ds, hc)...)
 		} else {
-			localities = append(localities, buildWeightedLocalities(metadata, ds))
+			localities = append(localities, buildWeightedLocalities(metadata, ds, hc))
 		}
 	}
 	return &endpointv3.ClusterLoadAssignment{ClusterName: clusterName, Endpoints: localities}
 }
 
-func buildZonalLocalities(metadata *corev3.Metadata, ds *ir.DestinationSetting) []*endpointv3.LocalityLbEndpoints {
+func buildZonalLocalities(metadata *corev3.Metadata, ds *ir.DestinationSetting, hc *ir.HealthCheck) []*endpointv3.LocalityLbEndpoints {
 	zonalEndpoints := make(map[string][]*endpointv3.LbEndpoint)
 	for _, irEp := range ds.Endpoints {
 		healthStatus := corev3.HealthStatus_UNKNOWN
@@ -803,8 +803,9 @@ func buildZonalLocalities(metadata *corev3.Metadata, ds *ir.DestinationSetting) 
 			Metadata: metadata,
 			HostIdentifier: &endpointv3.LbEndpoint_Endpoint{
 				Endpoint: &endpointv3.Endpoint{
-					Hostname: ptr.Deref(irEp.Hostname, ""),
-					Address:  buildAddress(irEp),
+					Hostname:          ptr.Deref(irEp.Hostname, ""),
+					Address:           buildAddress(irEp),
+					HealthCheckConfig: buildHealthCheckConfig(hc),
 				},
 			},
 			LoadBalancingWeight: wrapperspb.UInt32(1),
@@ -835,7 +836,7 @@ func buildZonalLocalities(metadata *corev3.Metadata, ds *ir.DestinationSetting) 
 	return localities
 }
 
-func buildWeightedLocalities(metadata *corev3.Metadata, ds *ir.DestinationSetting) *endpointv3.LocalityLbEndpoints {
+func buildWeightedLocalities(metadata *corev3.Metadata, ds *ir.DestinationSetting, hc *ir.HealthCheck) *endpointv3.LocalityLbEndpoints {
 	endpoints := make([]*endpointv3.LbEndpoint, 0, len(ds.Endpoints))
 
 	for _, irEp := range ds.Endpoints {
@@ -847,8 +848,9 @@ func buildWeightedLocalities(metadata *corev3.Metadata, ds *ir.DestinationSettin
 			Metadata: metadata,
 			HostIdentifier: &endpointv3.LbEndpoint_Endpoint{
 				Endpoint: &endpointv3.Endpoint{
-					Hostname: ptr.Deref(irEp.Hostname, ""),
-					Address:  buildAddress(irEp),
+					Hostname:          ptr.Deref(irEp.Hostname, ""),
+					Address:           buildAddress(irEp),
+					HealthCheckConfig: buildHealthCheckConfig(hc),
 				},
 			},
 			HealthStatus: healthStatus,
@@ -876,6 +878,16 @@ func buildWeightedLocalities(metadata *corev3.Metadata, ds *ir.DestinationSettin
 	locality.LoadBalancingWeight = &wrapperspb.UInt32Value{Value: weight}
 	locality.Priority = ptr.Deref(ds.Priority, 0)
 	return locality
+}
+
+func buildHealthCheckConfig(hc *ir.HealthCheck) *endpointv3.Endpoint_HealthCheckConfig {
+	if hc == nil || hc.Active == nil || hc.Active.Overrides == nil {
+		return nil
+	}
+
+	return &endpointv3.Endpoint_HealthCheckConfig{
+		PortValue: hc.Active.Overrides.Port,
+	}
 }
 
 func buildTypedExtensionProtocolOptions(args *xdsClusterArgs, requiresAutoHTTPConfig, requiresHTTP2Options, requiresAutoSNI bool) (map[string]*anypb.Any, []*tlsv3.Secret, error) {

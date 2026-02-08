@@ -138,6 +138,7 @@ _Appears in:_
 | `http` | _[HTTPActiveHealthChecker](#httpactivehealthchecker)_ |  false  |  | HTTP defines the configuration of http health checker.<br />It's required while the health checker type is HTTP. |
 | `tcp` | _[TCPActiveHealthChecker](#tcpactivehealthchecker)_ |  false  |  | TCP defines the configuration of tcp health checker.<br />It's required while the health checker type is TCP. |
 | `grpc` | _[GRPCActiveHealthChecker](#grpcactivehealthchecker)_ |  false  |  | GRPC defines the configuration of the GRPC health checker.<br />It's optional, and can only be used if the specified type is GRPC. |
+| `overrides` | _[HealthCheckOverrides](#healthcheckoverrides)_ |  false  |  | Overrides defines the configuration of the overriding health check settings for all endpoints<br />in the backend cluster. This allows customization of port and other settings that may differ<br />from the main service configuration. |
 
 
 #### ActiveHealthCheckPayload
@@ -2795,6 +2796,20 @@ _Appears in:_
 | `active` | _[ActiveHealthCheck](#activehealthcheck)_ |  false  |  | Active health check configuration |
 | `passive` | _[PassiveHealthCheck](#passivehealthcheck)_ |  false  |  | Passive passive check configuration |
 | `panicThreshold` | _integer_ |  false  |  | When number of unhealthy endpoints for a backend reaches this threshold<br />Envoy will disregard health status and balance across all endpoints.<br />It's designed to prevent a situation in which host failures cascade throughout the cluster<br />as load increases. If not set, the default value is 50%. To disable panic mode, set value to `0`. |
+
+
+#### HealthCheckOverrides
+
+
+
+HealthCheckOverrides allows overriding default health check behavior for specific use cases.
+
+_Appears in:_
+- [ActiveHealthCheck](#activehealthcheck)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `port` | _integer_ |  false  |  | Port overrides the health check port.<br />If not set, the endpoint's serving port is used for health checks.<br />This is useful when health checks are served on a different port than<br />the main service port (e.g., port 443 for service, port 9090 for health checks). |
 
 
 #### HealthCheckSettings

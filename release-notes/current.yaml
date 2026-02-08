@@ -8,6 +8,7 @@ security updates: |
 
 # New features or capabilities added in this release.
 new features: |
+  Added support for configuring optional health check configuration.
 
 bug fixes: |
   Rejected ClientTrafficPolicy if invalid TLS cipher suites are configured.
