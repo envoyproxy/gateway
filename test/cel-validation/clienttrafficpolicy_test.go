@@ -466,7 +466,9 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 						},
 					},
 					HTTP2: &egv1a1.HTTP2ClientSettings{
-						InitialStreamWindowSize: ptr.To(resource.MustParse("15m")),
+						HTTP2Settings: egv1a1.HTTP2Settings{
+							InitialStreamWindowSize: ptr.To(resource.MustParse("15m")),
+						},
 					},
 				}
 			},
@@ -488,7 +490,9 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 						},
 					},
 					HTTP2: &egv1a1.HTTP2ClientSettings{
-						InitialConnectionWindowSize: ptr.To(resource.MustParse("15m")),
+						HTTP2Settings: egv1a1.HTTP2Settings{
+							InitialConnectionWindowSize: ptr.To(resource.MustParse("15m")),
+						},
 					},
 				}
 			},
