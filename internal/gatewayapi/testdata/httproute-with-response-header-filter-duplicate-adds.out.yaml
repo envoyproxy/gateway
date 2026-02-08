@@ -153,7 +153,6 @@ xdsIR:
       externalPort: 80
       hostnames:
       - '*.envoyproxy.io'
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-1
