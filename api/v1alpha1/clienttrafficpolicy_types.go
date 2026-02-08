@@ -6,7 +6,6 @@
 package v1alpha1
 
 import (
-	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
@@ -443,35 +442,8 @@ const (
 
 // HTTP2ClientSettings provides HTTP/2 configuration for client connections to the listener.
 type HTTP2ClientSettings struct {
-	// InitialStreamWindowSize sets the initial window size for HTTP/2 streams.
-	// If not set, the default value is 64 KiB(64*1024).
-	//
-	// +kubebuilder:validation:XIntOrString
-	// +kubebuilder:validation:Pattern="^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$"
-	// +optional
-	InitialStreamWindowSize *resource.Quantity `json:"initialStreamWindowSize,omitempty"`
-
-	// InitialConnectionWindowSize sets the initial window size for HTTP/2 connections.
-	// If not set, the default value is 1 MiB.
-	//
-	// +kubebuilder:validation:XIntOrString
-	// +kubebuilder:validation:Pattern="^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$"
-	// +optional
-	InitialConnectionWindowSize *resource.Quantity `json:"initialConnectionWindowSize,omitempty"`
-
-	// MaxConcurrentStreams sets the maximum number of concurrent streams allowed per connection.
-	// If not set, the default value is 100.
-	// +kubebuilder:validation:Minimum=1
-	// +kubebuilder:validation:Maximum=2147483647
-	// +optional
-	MaxConcurrentStreams *uint32 `json:"maxConcurrentStreams,omitempty"`
-
-	// OnInvalidMessage determines if Envoy will terminate the connection or just the offending stream in the event of HTTP messaging error
-	// It's recommended for L2 Envoy deployments to set this value to TerminateStream.
-	// https://www.envoyproxy.io/docs/envoy/latest/configuration/best_practices/level_two
-	// Default: TerminateConnection
-	// +optional
-	OnInvalidMessage *InvalidMessageAction `json:"onInvalidMessage,omitempty"`
+	// Embed shared HTTP/2 settings.
+	HTTP2Settings `json:",inline"`
 
 	// ConnectionKeepalive configures HTTP/2 connection keepalive using PING frames.
 	// +optional

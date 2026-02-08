@@ -2429,6 +2429,7 @@ HTTP2Settings provides HTTP/2 configuration for listeners and backends.
 _Appears in:_
 - [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
 - [ClusterSettings](#clustersettings)
+- [HTTP2ClientSettings](#http2clientsettings)
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
