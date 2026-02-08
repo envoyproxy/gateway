@@ -6,6 +6,7 @@
 package gatewayapi
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math"
@@ -646,7 +647,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(
 	policyTargetGatewayNN *types.NamespacedName,
 	policyTargetListener *gwapiv1.SectionName,
 ) error {
-	tf, errs := t.buildTrafficFeatures(policy)
+	tf, errs := t.buildTrafficFeatures(policy, nil)
 	if tf == nil {
 		// should not happen
 		return nil
@@ -676,8 +677,18 @@ func (t *Translator) translateBackendTrafficPolicyForRouteWithMerge(
 		return fmt.Errorf("error merging policies: %w", err)
 	}
 
-	// Build traffic features from the merged policy
-	tf, errs := t.buildTrafficFeatures(mergedPolicy)
+	// Build item→namespace map for ResponseOverride so we resolve ConfigMap refs in the correct namespace.
+	// Route overwrites parent when the same item appears in both.
+	responseOverrideRefToNs := BuildNamespaceMappingForMergedResources(
+		parentPolicy.Spec.ResponseOverride,
+		policy.Spec.ResponseOverride,
+		parentPolicy.Namespace,
+		policy.Namespace,
+		responseOverrideKey,
+	)
+
+	// Build traffic features from the merged policy.
+	tf, errs := t.buildTrafficFeatures(mergedPolicy, responseOverrideRefToNs)
 	if tf == nil {
 		// should not happen
 		return nil
@@ -692,8 +703,8 @@ func (t *Translator) translateBackendTrafficPolicyForRouteWithMerge(
 	// 2. Only gateway policy has rate limits - preserve gateway policy's rule names
 	// 3. Only route policy has rate limits - use route policy's rule names (default behavior)
 	if policy.Spec.RateLimit != nil && parentPolicy.Spec.RateLimit != nil {
-		tfGW, _ := t.buildTrafficFeatures(parentPolicy)
-		tfRoute, _ := t.buildTrafficFeatures(policy)
+		tfGW, _ := t.buildTrafficFeatures(parentPolicy, responseOverrideRefToNs)
+		tfRoute, _ := t.buildTrafficFeatures(policy, responseOverrideRefToNs)
 
 		if tfGW != nil && tfRoute != nil &&
 			tfGW.RateLimit != nil && tfRoute.RateLimit != nil {
@@ -707,7 +718,7 @@ func (t *Translator) translateBackendTrafficPolicyForRouteWithMerge(
 		}
 	} else if policy.Spec.RateLimit == nil && parentPolicy.Spec.RateLimit != nil {
 		// Case 2: Only gateway policy has rate limits - preserve gateway policy's rule names
-		tfGW, _ := t.buildTrafficFeatures(parentPolicy)
+		tfGW, _ := t.buildTrafficFeatures(parentPolicy, responseOverrideRefToNs)
 		if tfGW != nil && tfGW.RateLimit != nil {
 			// Use the gateway policy's rate limit with its original rule names
 			tf.RateLimit = tfGW.RateLimit
@@ -847,10 +858,24 @@ func mergeBackendTrafficPolicy(routePolicy, gwPolicy *egv1a1.BackendTrafficPolic
 		return routePolicy, nil
 	}
 
-	return utils.Merge[*egv1a1.BackendTrafficPolicy](gwPolicy, routePolicy, *routePolicy.Spec.MergeType)
+	return utils.Merge(gwPolicy, routePolicy, *routePolicy.Spec.MergeType)
 }
 
-func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy) (*ir.TrafficFeatures, error) {
+// responseOverrideKey returns a comparable key for ResponseOverride object.
+func responseOverrideKey(ro *egv1a1.ResponseOverride) string {
+	if ro == nil {
+		return ""
+	}
+	b, err := json.Marshal(ro)
+	if err != nil {
+		return ""
+	}
+	return string(b)
+}
+
+// buildTrafficFeatures builds IR traffic features from a BackendTrafficPolicy.
+// responseOverrideRefToNs is optionally provided for resolving LocalObjectReferences in ResponseOverride.
+func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy, responseOverrideRefToNs map[string]string) (*ir.TrafficFeatures, error) {
 	var (
 		rl          *ir.RateLimit
 		lb          *ir.LoadBalancer
@@ -915,7 +940,7 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy) (
 		errs = errors.Join(errs, err)
 	}
 
-	if ro, err = t.buildResponseOverride(policy); err != nil {
+	if ro, err = t.buildResponseOverride(policy, responseOverrideRefToNs); err != nil {
 		err = perr.WithMessage(err, "ResponseOverride")
 		errs = errors.Join(errs, err)
 	}
@@ -991,7 +1016,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 	policy *egv1a1.BackendTrafficPolicy, target gwapiv1.LocalPolicyTargetReferenceWithSectionName,
 	gateway *GatewayContext, xdsIR resource.XdsIRMap,
 ) error {
-	tf, errs := t.buildTrafficFeatures(policy)
+	tf, errs := t.buildTrafficFeatures(policy, nil)
 	if tf == nil {
 		// should not happen
 		return errs
@@ -1561,7 +1586,7 @@ func buildRequestBuffer(spec *egv1a1.RequestBuffer) (*ir.RequestBuffer, error) {
 	}, nil
 }
 
-func (t *Translator) buildResponseOverride(policy *egv1a1.BackendTrafficPolicy) (*ir.ResponseOverride, error) {
+func (t *Translator) buildResponseOverride(policy *egv1a1.BackendTrafficPolicy, responseOverrideRefToNs map[string]string) (*ir.ResponseOverride, error) {
 	if len(policy.Spec.ResponseOverride) == 0 {
 		return nil, nil
 	}
@@ -1622,7 +1647,14 @@ func (t *Translator) buildResponseOverride(policy *egv1a1.BackendTrafficPolicy) 
 			}
 
 			var err error
-			response.Body, err = t.getCustomResponseBody(ro.Response.Body, policy.Namespace)
+			// Use item→namespace map when present (merge path); key is entire ResponseOverride. Otherwise use policy namespace.
+			ns := policy.Namespace
+			if responseOverrideRefToNs != nil {
+				if resolved := responseOverrideRefToNs[responseOverrideKey(ro)]; resolved != "" {
+					ns = resolved
+				}
+			}
+			response.Body, err = t.getCustomResponseBody(ro.Response.Body, ns)
 			if err != nil {
 				return nil, err
 			}
@@ -1684,10 +1716,10 @@ func (t *Translator) getCustomResponseBody(
 					return binData, nil
 				}
 			default:
-				return nil, fmt.Errorf("can't find the key %s in the referenced configmap %s", ResponseBodyConfigMapKey, body.ValueRef.Name)
+				return nil, fmt.Errorf("can't find the key %s in the referenced configmap %s/%s", ResponseBodyConfigMapKey, policyNs, body.ValueRef.Name)
 			}
 		} else {
-			return nil, fmt.Errorf("can't find the referenced configmap %s", body.ValueRef.Name)
+			return nil, fmt.Errorf("can't find the referenced configmap %s/%s", policyNs, body.ValueRef.Name)
 		}
 	} else if body.Inline != nil {
 		inlineValue := []byte(*body.Inline)
