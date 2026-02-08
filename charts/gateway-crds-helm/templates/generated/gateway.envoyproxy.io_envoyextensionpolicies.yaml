@@ -996,11 +996,10 @@ spec:
                                     - zone
                                     type: object
                                   type: array
+                                  x-kubernetes-list-map-keys:
+                                  - zone
+                                  x-kubernetes-list-type: map
                               type: object
-                              x-kubernetes-validations:
-                              - message: Duplicate zone names are not allowed in weightedZones.
-                                rule: '!has(self.weightedZones) || self.weightedZones.all(z,
-                                  self.weightedZones.exists_one(z2, z2.zone == z.zone))'
                           required:
                           - type
                           type: object

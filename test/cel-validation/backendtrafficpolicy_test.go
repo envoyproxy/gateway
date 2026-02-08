@@ -540,8 +540,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				"spec.loadBalancer.zoneAware: Invalid value:",
-				": Duplicate zone names are not allowed in weightedZones.",
+				"spec.loadBalancer.zoneAware.weightedZones[1]: Duplicate value:",
 			},
 		},
 		{

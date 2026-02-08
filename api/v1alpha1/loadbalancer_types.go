@@ -180,8 +180,6 @@ type SlowStart struct {
 }
 
 // ZoneAware defines the configuration related to the distribution of requests between locality zones.
-//
-// +kubebuilder:validation:XValidation:rule="!has(self.weightedZones) || self.weightedZones.all(z, self.weightedZones.exists_one(z2, z2.zone == z.zone))",message="Duplicate zone names are not allowed in weightedZones."
 type ZoneAware struct {
 	// PreferLocalZone configures zone-aware routing to prefer sending traffic to the local locality zone.
 	//
@@ -192,6 +190,8 @@ type ZoneAware struct {
 	// Traffic is distributed proportionally based on the sum of all zone weights.
 	//
 	// +optional
+	// +listType=map
+	// +listMapKey=zone
 	WeightedZones []WeightedZoneConfig `json:"weightedZones,omitempty"`
 }
 
