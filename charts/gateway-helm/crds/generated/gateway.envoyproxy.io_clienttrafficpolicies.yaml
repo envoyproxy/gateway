@@ -798,6 +798,26 @@ spec:
               http2:
                 description: HTTP2 provides HTTP/2 configuration on the listener.
                 properties:
+                  connectionKeepalive:
+                    description: ConnectionKeepalive configures HTTP/2 connection
+                      keepalive using PING frames.
+                    properties:
+                      connectionIdleInterval:
+                        description: ConnectionIdleInterval specifies how long a connection
+                          must be idle before a PING is sent.
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                        type: string
+                      interval:
+                        description: Interval specifies how often to send HTTP/2 PING
+                          frames to keep the connection alive.
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                        type: string
+                      timeout:
+                        description: Timeout specifies how long to wait for a PING
+                          response before considering the connection dead.
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                        type: string
+                    type: object
                   initialConnectionWindowSize:
                     allOf:
                     - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$

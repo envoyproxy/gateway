@@ -9,6 +9,7 @@ security updates: |
 # New features or capabilities added in this release.
 new features: |
   Added support for configuring optional health check configuration.
+  Added HTTP/2 connection keepalive support to ClientTrafficPolicy and BackendTrafficPolicy.
 
 bug fixes: |
   Rejected ClientTrafficPolicy if invalid TLS cipher suites are configured.

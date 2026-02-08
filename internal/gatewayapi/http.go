@@ -8,6 +8,7 @@ package gatewayapi
 import (
 	"errors"
 	"fmt"
+	"time"
 
 	"k8s.io/utils/ptr"
 
@@ -70,6 +71,35 @@ func buildIRHTTP2Settings(http2Settings *egv1a1.HTTP2Settings) (*ir.HTTP2Setting
 		case egv1a1.InvalidMessageActionTerminateConnection:
 			http2.ResetStreamOnError = ptr.To(false)
 		}
+	}
+
+	if http2Settings.ConnectionKeepalive != nil {
+		keepalive := &ir.HTTP2ConnectionKeepalive{}
+		if http2Settings.ConnectionKeepalive.Interval != nil {
+			d, err := time.ParseDuration(string(*http2Settings.ConnectionKeepalive.Interval))
+			if err != nil {
+				errs = errors.Join(errs, fmt.Errorf("invalid ConnectionKeepalive.Interval: %w", err))
+			} else {
+				keepalive.Interval = ptr.To(uint32(d.Seconds()))
+			}
+		}
+		if http2Settings.ConnectionKeepalive.Timeout != nil {
+			d, err := time.ParseDuration(string(*http2Settings.ConnectionKeepalive.Timeout))
+			if err != nil {
+				errs = errors.Join(errs, fmt.Errorf("invalid ConnectionKeepalive.Timeout: %w", err))
+			} else {
+				keepalive.Timeout = ptr.To(uint32(d.Seconds()))
+			}
+		}
+		if http2Settings.ConnectionKeepalive.ConnectionIdleInterval != nil {
+			d, err := time.ParseDuration(string(*http2Settings.ConnectionKeepalive.ConnectionIdleInterval))
+			if err != nil {
+				errs = errors.Join(errs, fmt.Errorf("invalid ConnectionKeepalive.ConnectionIdleInterval: %w", err))
+			} else {
+				keepalive.ConnectionIdleInterval = ptr.To(uint32(d.Seconds()))
+			}
+		}
+		http2.ConnectionKeepalive = keepalive
 	}
 
 	return http2, errs
