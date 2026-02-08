@@ -615,6 +615,19 @@ type HTTP2Settings struct {
 	MaxConcurrentStreams *uint32 `json:"maxConcurrentStreams,omitempty" yaml:"maxConcurrentStreams,omitempty"`
 	// ResetStreamOnError determines if a stream or connection is reset on messaging error.
 	ResetStreamOnError *bool `json:"resetStreamOnError,omitempty" yaml:"resetStreamOnError,omitempty"`
+	// ConnectionKeepalive configures HTTP/2 PING-based keepalive settings.
+	ConnectionKeepalive *HTTP2ConnectionKeepalive `json:"connectionKeepalive,omitempty" yaml:"connectionKeepalive,omitempty"`
+}
+
+// HTTP2ConnectionKeepalive configures HTTP/2 PING-based keepalive settings.
+// +k8s:deepcopy-gen=true
+type HTTP2ConnectionKeepalive struct {
+	// Interval specifies how often to send HTTP/2 PING frames (in seconds).
+	Interval *uint32 `json:"interval,omitempty" yaml:"interval,omitempty"`
+	// Timeout specifies how long to wait for a PING response (in seconds).
+	Timeout *uint32 `json:"timeout,omitempty" yaml:"timeout,omitempty"`
+	// ConnectionIdleInterval specifies idle time before sending a PING (in seconds).
+	ConnectionIdleInterval *uint32 `json:"connectionIdleInterval,omitempty" yaml:"connectionIdleInterval,omitempty"`
 }
 
 // ResponseOverride defines the configuration to override specific responses with a custom one.

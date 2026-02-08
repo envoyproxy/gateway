@@ -718,6 +718,32 @@ type HTTP2Settings struct {
 	// Default: TerminateConnection
 	// +optional
 	OnInvalidMessage *InvalidMessageAction `json:"onInvalidMessage,omitempty"`
+
+	// ConnectionKeepalive configures HTTP/2 connection keepalive using PING frames.
+	// This allows detecting dead connections and keeping connections alive through
+	// intermediaries that may close idle connections.
+	// +optional
+	ConnectionKeepalive *HTTP2ConnectionKeepalive `json:"connectionKeepalive,omitempty"`
+}
+
+// HTTP2ConnectionKeepalive configures HTTP/2 PING-based keepalive settings.
+type HTTP2ConnectionKeepalive struct {
+	// Interval specifies how often to send HTTP/2 PING frames to keep the connection alive.
+	// If not set, PING frames will not be sent periodically.
+	// +optional
+	Interval *gwapiv1.Duration `json:"interval,omitempty"`
+
+	// Timeout specifies how long to wait for a PING response before considering the connection dead.
+	// If not set, a default timeout is used.
+	// +optional
+	Timeout *gwapiv1.Duration `json:"timeout,omitempty"`
+
+	// ConnectionIdleInterval specifies how long a connection must be idle before a PING is sent
+	// to check if the connection is still alive. This is useful for detecting dead connections
+	// before sending new streams.
+	// If not set, idle connection checks are not performed.
+	// +optional
+	ConnectionIdleInterval *gwapiv1.Duration `json:"connectionIdleInterval,omitempty"`
 }
 
 // ResponseOverride defines the configuration to override specific responses with a custom one.
