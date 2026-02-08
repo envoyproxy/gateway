@@ -11,6 +11,7 @@ import (
 
 	bootstrapv3 "github.com/envoyproxy/go-control-plane/envoy/config/bootstrap/v3"
 	clusterv3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
+	maglevv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/load_balancing_policies/maglev/v3"
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/encoding/protojson"
@@ -158,4 +159,88 @@ func TestBuildXdsOutlierDetection(t *testing.T) {
 
 func requireCmpNoDiff(t *testing.T, expected, actual interface{}) {
 	require.Empty(t, cmp.Diff(expected, actual, protocmp.Transform()))
+}
+
+func TestBuildXdsClusterWithConsistentHashAndLocalityWeighted(t *testing.T) {
+	tests := []struct {
+		name              string
+		loadBalancer      *ir.LoadBalancer
+		expectLocalityLb  bool
+		expectTableSize   bool
+		expectedTableSize uint64
+	}{
+		{
+			name: "consistent hash with locality weighted lb config",
+			loadBalancer: &ir.LoadBalancer{
+				ConsistentHash: &ir.ConsistentHash{},
+			},
+			expectLocalityLb: true,
+			expectTableSize:  false,
+		},
+		{
+			name: "consistent hash with table size and locality weighted lb config",
+			loadBalancer: &ir.LoadBalancer{
+				ConsistentHash: &ir.ConsistentHash{
+					TableSize: ptr.To(uint64(524287)),
+				},
+			},
+			expectLocalityLb:  true,
+			expectTableSize:   true,
+			expectedTableSize: 524287,
+		},
+		{
+			name: "consistent hash with preferLocal should not have locality weighted config",
+			loadBalancer: &ir.LoadBalancer{
+				ConsistentHash: &ir.ConsistentHash{},
+				PreferLocal: &ir.PreferLocalZone{
+					MinEndpointsThreshold: ptr.To(uint64(3)),
+				},
+			},
+			expectLocalityLb: false,
+			expectTableSize:  false,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			args := &xdsClusterArgs{
+				name:         "test-cluster",
+				endpointType: EndpointTypeStatic,
+				loadBalancer: tc.loadBalancer,
+			}
+
+			result, err := buildXdsCluster(args)
+			require.NoError(t, err)
+			require.NotNil(t, result)
+			require.NotNil(t, result.cluster)
+
+			cluster := result.cluster
+			require.Equal(t, clusterv3.Cluster_MAGLEV, cluster.LbPolicy)
+			require.NotNil(t, cluster.LoadBalancingPolicy)
+			require.Len(t, cluster.LoadBalancingPolicy.Policies, 1)
+
+			policy := cluster.LoadBalancingPolicy.Policies[0]
+			require.Equal(t, "envoy.load_balancing_policies.maglev", policy.TypedExtensionConfig.Name)
+
+			// Unmarshal the Maglev config
+			maglev := &maglevv3.Maglev{}
+			err = policy.TypedExtensionConfig.TypedConfig.UnmarshalTo(maglev)
+			require.NoError(t, err)
+
+			// Check locality weighted LB config
+			if tc.expectLocalityLb {
+				require.NotNil(t, maglev.LocalityWeightedLbConfig, "expected LocalityWeightedLbConfig to be set")
+			} else {
+				require.Nil(t, maglev.LocalityWeightedLbConfig, "expected LocalityWeightedLbConfig to be nil when preferLocal is set")
+			}
+
+			// Check table size
+			if tc.expectTableSize {
+				require.NotNil(t, maglev.TableSize)
+				require.Equal(t, tc.expectedTableSize, maglev.TableSize.Value)
+			} else {
+				require.Nil(t, maglev.TableSize)
+			}
+		})
+	}
 }
