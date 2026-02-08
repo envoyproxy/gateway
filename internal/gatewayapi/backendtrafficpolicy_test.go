@@ -14,7 +14,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
@@ -878,25 +877,39 @@ func TestGetBTPRoutingTypeForRoute(t *testing.T) {
 	serviceRouting := egv1a1.ServiceRoutingType
 	endpointRouting := egv1a1.EndpointRoutingType
 
+	defaultRoute := &HTTPRouteContext{
+		HTTPRoute: &gwapiv1.HTTPRoute{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: "default",
+				Name:      "route-1",
+			},
+		},
+	}
+	defaultGateway := &gwapiv1.Gateway{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "default",
+			Name:      "gateway-1",
+		},
+	}
+
 	tests := []struct {
-		name         string
-		btps         []*egv1a1.BackendTrafficPolicy
-		routeNN      types.NamespacedName
-		routeKind    gwapiv1.Kind
-		gatewayNN    types.NamespacedName
-		listenerName *gwapiv1.SectionName
-		expected     *egv1a1.RoutingType
+		name          string
+		btps          []*egv1a1.BackendTrafficPolicy
+		route         RouteContext
+		gateway       *gwapiv1.Gateway
+		listenerName  *gwapiv1.SectionName
+		routeRuleName *gwapiv1.SectionName
+		expected      *egv1a1.RoutingType
 	}{
 		{
-			name:      "no BTPs",
-			btps:      nil,
-			routeNN:   types.NamespacedName{Namespace: "default", Name: "route-1"},
-			routeKind: gwapiv1.Kind("HTTPRoute"),
-			gatewayNN: types.NamespacedName{Namespace: "default", Name: "gateway-1"},
-			expected:  nil,
+			name:     "no BTPs",
+			btps:     nil,
+			route:    defaultRoute,
+			gateway:  defaultGateway,
+			expected: nil,
 		},
 		{
-			name: "BTP targeting route has highest priority",
+			name: "BTP targeting route has priority over gateway",
 			btps: []*egv1a1.BackendTrafficPolicy{
 				{
 					ObjectMeta: metav1.ObjectMeta{
@@ -935,10 +948,9 @@ func TestGetBTPRoutingTypeForRoute(t *testing.T) {
 					},
 				},
 			},
-			routeNN:   types.NamespacedName{Namespace: "default", Name: "route-1"},
-			routeKind: gwapiv1.Kind("HTTPRoute"),
-			gatewayNN: types.NamespacedName{Namespace: "default", Name: "gateway-1"},
-			expected:  &serviceRouting,
+			route:    defaultRoute,
+			gateway:  defaultGateway,
+			expected: &serviceRouting,
 		},
 		{
 			name: "BTP targeting gateway",
@@ -962,10 +974,9 @@ func TestGetBTPRoutingTypeForRoute(t *testing.T) {
 					},
 				},
 			},
-			routeNN:   types.NamespacedName{Namespace: "default", Name: "route-1"},
-			routeKind: gwapiv1.Kind("HTTPRoute"),
-			gatewayNN: types.NamespacedName{Namespace: "default", Name: "gateway-1"},
-			expected:  &serviceRouting,
+			route:    defaultRoute,
+			gateway:  defaultGateway,
+			expected: &serviceRouting,
 		},
 		{
 			name: "BTP targeting listener (sectionName) has priority over gateway",
@@ -1008,9 +1019,8 @@ func TestGetBTPRoutingTypeForRoute(t *testing.T) {
 					},
 				},
 			},
-			routeNN:      types.NamespacedName{Namespace: "default", Name: "route-1"},
-			routeKind:    gwapiv1.Kind("HTTPRoute"),
-			gatewayNN:    types.NamespacedName{Namespace: "default", Name: "gateway-1"},
+			route:        defaultRoute,
+			gateway:      defaultGateway,
 			listenerName: ptr.To(gwapiv1.SectionName("http")),
 			expected:     &serviceRouting,
 		},
@@ -1055,9 +1065,8 @@ func TestGetBTPRoutingTypeForRoute(t *testing.T) {
 					},
 				},
 			},
-			routeNN:      types.NamespacedName{Namespace: "default", Name: "route-1"},
-			routeKind:    gwapiv1.Kind("HTTPRoute"),
-			gatewayNN:    types.NamespacedName{Namespace: "default", Name: "gateway-1"},
+			route:        defaultRoute,
+			gateway:      defaultGateway,
 			listenerName: ptr.To(gwapiv1.SectionName("http")),
 			expected:     &serviceRouting,
 		},
@@ -1101,10 +1110,9 @@ func TestGetBTPRoutingTypeForRoute(t *testing.T) {
 					},
 				},
 			},
-			routeNN:   types.NamespacedName{Namespace: "default", Name: "route-1"},
-			routeKind: gwapiv1.Kind("HTTPRoute"),
-			gatewayNN: types.NamespacedName{Namespace: "default", Name: "gateway-1"},
-			expected:  &serviceRouting,
+			route:    defaultRoute,
+			gateway:  defaultGateway,
+			expected: &serviceRouting,
 		},
 		{
 			name: "BTP in different namespace does not match",
@@ -1128,10 +1136,9 @@ func TestGetBTPRoutingTypeForRoute(t *testing.T) {
 					},
 				},
 			},
-			routeNN:   types.NamespacedName{Namespace: "default", Name: "route-1"},
-			routeKind: gwapiv1.Kind("HTTPRoute"),
-			gatewayNN: types.NamespacedName{Namespace: "default", Name: "gateway-1"},
-			expected:  nil,
+			route:    defaultRoute,
+			gateway:  defaultGateway,
+			expected: nil,
 		},
 		{
 			name: "BTP using targetRefs instead of targetRef",
@@ -1164,10 +1171,9 @@ func TestGetBTPRoutingTypeForRoute(t *testing.T) {
 					},
 				},
 			},
-			routeNN:   types.NamespacedName{Namespace: "default", Name: "route-1"},
-			routeKind: gwapiv1.Kind("HTTPRoute"),
-			gatewayNN: types.NamespacedName{Namespace: "default", Name: "gateway-1"},
-			expected:  &serviceRouting,
+			route:    defaultRoute,
+			gateway:  defaultGateway,
+			expected: &serviceRouting,
 		},
 		{
 			name: "full priority chain: route > listener > gateway",
@@ -1228,17 +1234,366 @@ func TestGetBTPRoutingTypeForRoute(t *testing.T) {
 					},
 				},
 			},
-			routeNN:      types.NamespacedName{Namespace: "default", Name: "route-1"},
-			routeKind:    gwapiv1.Kind("HTTPRoute"),
-			gatewayNN:    types.NamespacedName{Namespace: "default", Name: "gateway-1"},
+			route:        defaultRoute,
+			gateway:      defaultGateway,
 			listenerName: ptr.To(gwapiv1.SectionName("http")),
 			expected:     &serviceRouting,
+		},
+		{
+			name: "route-rule BTP has highest priority over route-level",
+			btps: []*egv1a1.BackendTrafficPolicy{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+						Name:      "btp-route",
+					},
+					Spec: egv1a1.BackendTrafficPolicySpec{
+						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+									Group: gwapiv1.Group("gateway.networking.k8s.io"),
+									Kind:  gwapiv1.Kind("HTTPRoute"),
+									Name:  gwapiv1.ObjectName("route-1"),
+								},
+							},
+						},
+						RoutingType: &endpointRouting,
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+						Name:      "btp-route-rule",
+					},
+					Spec: egv1a1.BackendTrafficPolicySpec{
+						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+									Group: gwapiv1.Group("gateway.networking.k8s.io"),
+									Kind:  gwapiv1.Kind("HTTPRoute"),
+									Name:  gwapiv1.ObjectName("route-1"),
+								},
+								SectionName: ptr.To(gwapiv1.SectionName("rule-0")),
+							},
+						},
+						RoutingType: &serviceRouting,
+					},
+				},
+			},
+			route:         defaultRoute,
+			gateway:       defaultGateway,
+			routeRuleName: ptr.To(gwapiv1.SectionName("rule-0")),
+			expected:      &serviceRouting,
+		},
+		{
+			name: "route-rule BTP with mismatched sectionName falls back to route",
+			btps: []*egv1a1.BackendTrafficPolicy{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+						Name:      "btp-route-rule",
+					},
+					Spec: egv1a1.BackendTrafficPolicySpec{
+						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+									Group: gwapiv1.Group("gateway.networking.k8s.io"),
+									Kind:  gwapiv1.Kind("HTTPRoute"),
+									Name:  gwapiv1.ObjectName("route-1"),
+								},
+								SectionName: ptr.To(gwapiv1.SectionName("rule-1")),
+							},
+						},
+						RoutingType: &endpointRouting,
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+						Name:      "btp-route",
+					},
+					Spec: egv1a1.BackendTrafficPolicySpec{
+						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+									Group: gwapiv1.Group("gateway.networking.k8s.io"),
+									Kind:  gwapiv1.Kind("HTTPRoute"),
+									Name:  gwapiv1.ObjectName("route-1"),
+								},
+							},
+						},
+						RoutingType: &serviceRouting,
+					},
+				},
+			},
+			route:         defaultRoute,
+			gateway:       defaultGateway,
+			routeRuleName: ptr.To(gwapiv1.SectionName("rule-0")),
+			expected:      &serviceRouting,
+		},
+		{
+			name: "route-rule BTP with nil routeRuleName does not match at rule level",
+			btps: []*egv1a1.BackendTrafficPolicy{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+						Name:      "btp-route-rule",
+					},
+					Spec: egv1a1.BackendTrafficPolicySpec{
+						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+									Group: gwapiv1.Group("gateway.networking.k8s.io"),
+									Kind:  gwapiv1.Kind("HTTPRoute"),
+									Name:  gwapiv1.ObjectName("route-1"),
+								},
+								SectionName: ptr.To(gwapiv1.SectionName("rule-0")),
+							},
+						},
+						RoutingType: &serviceRouting,
+					},
+				},
+			},
+			route:         defaultRoute,
+			gateway:       defaultGateway,
+			routeRuleName: nil,
+			expected:      nil,
+		},
+		{
+			name: "BTP with targetSelector matching route labels",
+			btps: []*egv1a1.BackendTrafficPolicy{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+						Name:      "btp-selector",
+					},
+					Spec: egv1a1.BackendTrafficPolicySpec{
+						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+							TargetSelectors: []egv1a1.TargetSelector{
+								{
+									Kind:        gwapiv1.Kind("HTTPRoute"),
+									MatchLabels: map[string]string{"app": "web"},
+								},
+							},
+						},
+						RoutingType: &serviceRouting,
+					},
+				},
+			},
+			route: &HTTPRouteContext{
+				HTTPRoute: &gwapiv1.HTTPRoute{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+						Name:      "route-1",
+						Labels:    map[string]string{"app": "web"},
+					},
+				},
+			},
+			gateway:  defaultGateway,
+			expected: &serviceRouting,
+		},
+		{
+			name: "BTP with targetSelector matching gateway labels",
+			btps: []*egv1a1.BackendTrafficPolicy{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+						Name:      "btp-selector",
+					},
+					Spec: egv1a1.BackendTrafficPolicySpec{
+						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+							TargetSelectors: []egv1a1.TargetSelector{
+								{
+									Kind:        gwapiv1.Kind("Gateway"),
+									MatchLabels: map[string]string{"env": "prod"},
+								},
+							},
+						},
+						RoutingType: &serviceRouting,
+					},
+				},
+			},
+			route: defaultRoute,
+			gateway: &gwapiv1.Gateway{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "gateway-1",
+					Labels:    map[string]string{"env": "prod"},
+				},
+			},
+			expected: &serviceRouting,
+		},
+		{
+			name: "BTP with targetSelector not matching labels returns nil",
+			btps: []*egv1a1.BackendTrafficPolicy{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+						Name:      "btp-selector",
+					},
+					Spec: egv1a1.BackendTrafficPolicySpec{
+						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+							TargetSelectors: []egv1a1.TargetSelector{
+								{
+									Kind:        gwapiv1.Kind("HTTPRoute"),
+									MatchLabels: map[string]string{"app": "web"},
+								},
+							},
+						},
+						RoutingType: &serviceRouting,
+					},
+				},
+			},
+			route: &HTTPRouteContext{
+				HTTPRoute: &gwapiv1.HTTPRoute{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+						Name:      "route-1",
+						Labels:    map[string]string{"app": "api"},
+					},
+				},
+			},
+			gateway:  defaultGateway,
+			expected: nil,
+		},
+		{
+			name: "explicit route targetRef takes priority over targetSelector gateway",
+			btps: []*egv1a1.BackendTrafficPolicy{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+						Name:      "btp-selector-gateway",
+					},
+					Spec: egv1a1.BackendTrafficPolicySpec{
+						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+							TargetSelectors: []egv1a1.TargetSelector{
+								{
+									Kind:        gwapiv1.Kind("Gateway"),
+									MatchLabels: map[string]string{"env": "prod"},
+								},
+							},
+						},
+						RoutingType: &endpointRouting,
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+						Name:      "btp-route",
+					},
+					Spec: egv1a1.BackendTrafficPolicySpec{
+						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+									Group: gwapiv1.Group("gateway.networking.k8s.io"),
+									Kind:  gwapiv1.Kind("HTTPRoute"),
+									Name:  gwapiv1.ObjectName("route-1"),
+								},
+							},
+						},
+						RoutingType: &serviceRouting,
+					},
+				},
+			},
+			route: defaultRoute,
+			gateway: &gwapiv1.Gateway{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "gateway-1",
+					Labels:    map[string]string{"env": "prod"},
+				},
+			},
+			expected: &serviceRouting,
+		},
+		{
+			name: "full priority chain: routeRule > route > listener > gateway",
+			btps: []*egv1a1.BackendTrafficPolicy{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+						Name:      "btp-gateway",
+					},
+					Spec: egv1a1.BackendTrafficPolicySpec{
+						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+									Group: gwapiv1.Group("gateway.networking.k8s.io"),
+									Kind:  gwapiv1.Kind("Gateway"),
+									Name:  gwapiv1.ObjectName("gateway-1"),
+								},
+							},
+						},
+						RoutingType: &endpointRouting,
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+						Name:      "btp-listener",
+					},
+					Spec: egv1a1.BackendTrafficPolicySpec{
+						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+									Group: gwapiv1.Group("gateway.networking.k8s.io"),
+									Kind:  gwapiv1.Kind("Gateway"),
+									Name:  gwapiv1.ObjectName("gateway-1"),
+								},
+								SectionName: ptr.To(gwapiv1.SectionName("http")),
+							},
+						},
+						RoutingType: &endpointRouting,
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+						Name:      "btp-route",
+					},
+					Spec: egv1a1.BackendTrafficPolicySpec{
+						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+									Group: gwapiv1.Group("gateway.networking.k8s.io"),
+									Kind:  gwapiv1.Kind("HTTPRoute"),
+									Name:  gwapiv1.ObjectName("route-1"),
+								},
+							},
+						},
+						RoutingType: &endpointRouting,
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+						Name:      "btp-route-rule",
+					},
+					Spec: egv1a1.BackendTrafficPolicySpec{
+						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+									Group: gwapiv1.Group("gateway.networking.k8s.io"),
+									Kind:  gwapiv1.Kind("HTTPRoute"),
+									Name:  gwapiv1.ObjectName("route-1"),
+								},
+								SectionName: ptr.To(gwapiv1.SectionName("rule-0")),
+							},
+						},
+						RoutingType: &serviceRouting,
+					},
+				},
+			},
+			route:         defaultRoute,
+			gateway:       defaultGateway,
+			listenerName:  ptr.To(gwapiv1.SectionName("http")),
+			routeRuleName: ptr.To(gwapiv1.SectionName("rule-0")),
+			expected:      &serviceRouting,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := GetBTPRoutingTypeForRoute(tt.btps, tt.routeNN, tt.routeKind, tt.gatewayNN, tt.listenerName)
+			got := GetBTPRoutingTypeForRoute(tt.btps, tt.route, tt.gateway, tt.listenerName, tt.routeRuleName)
 			require.Equal(t, tt.expected, got)
 		})
 	}
