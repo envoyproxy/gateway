@@ -514,6 +514,37 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			},
 		},
 		{
+			desc: "weightedZones with duplicate zone names",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					ClusterSettings: egv1a1.ClusterSettings{
+						LoadBalancer: &egv1a1.LoadBalancer{
+							Type: egv1a1.RoundRobinLoadBalancerType,
+							ZoneAware: &egv1a1.ZoneAware{
+								WeightedZones: []egv1a1.WeightedZoneConfig{
+									{Zone: "us-east-1a", Weight: 70},
+									{Zone: "us-east-1a", Weight: 30},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.loadBalancer.zoneAware: Invalid value:",
+				": Duplicate zone names are not allowed in weightedZones.",
+			},
+		},
+		{
 			desc: "leastRequest with SlowStar is set",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{

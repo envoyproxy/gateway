@@ -9,7 +9,7 @@ security updates: |
 # New features or capabilities added in this release.
 new features: |
   Added support for configuring optional health check configuration.
-  Support for configuring weights for locality zones
+  Support for configuring weights for locality zones.
 
 bug fixes: |
   Rejected ClientTrafficPolicy if invalid TLS cipher suites are configured.

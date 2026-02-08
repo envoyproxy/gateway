@@ -1617,9 +1617,15 @@ spec:
                                           type: string
                                       required:
                                       - weight
+                                      - zone
                                       type: object
                                     type: array
                                 type: object
+                                x-kubernetes-validations:
+                                - message: Duplicate zone names are not allowed in
+                                    weightedZones.
+                                  rule: '!has(self.weightedZones) || self.weightedZones.all(z,
+                                    self.weightedZones.exists_one(z2, z2.zone == z.zone))'
                             required:
                             - type
                             type: object
@@ -2805,9 +2811,15 @@ spec:
                                           type: string
                                       required:
                                       - weight
+                                      - zone
                                       type: object
                                     type: array
                                 type: object
+                                x-kubernetes-validations:
+                                - message: Duplicate zone names are not allowed in
+                                    weightedZones.
+                                  rule: '!has(self.weightedZones) || self.weightedZones.all(z,
+                                    self.weightedZones.exists_one(z2, z2.zone == z.zone))'
                             required:
                             - type
                             type: object
@@ -4208,9 +4220,16 @@ spec:
                                                 type: string
                                             required:
                                             - weight
+                                            - zone
                                             type: object
                                           type: array
                                       type: object
+                                      x-kubernetes-validations:
+                                      - message: Duplicate zone names are not allowed
+                                          in weightedZones.
+                                        rule: '!has(self.weightedZones) || self.weightedZones.all(z,
+                                          self.weightedZones.exists_one(z2, z2.zone
+                                          == z.zone))'
                                   required:
                                   - type
                                   type: object
@@ -5660,9 +5679,15 @@ spec:
                                           type: string
                                       required:
                                       - weight
+                                      - zone
                                       type: object
                                     type: array
                                 type: object
+                                x-kubernetes-validations:
+                                - message: Duplicate zone names are not allowed in
+                                    weightedZones.
+                                  rule: '!has(self.weightedZones) || self.weightedZones.all(z,
+                                    self.weightedZones.exists_one(z2, z2.zone == z.zone))'
                             required:
                             - type
                             type: object

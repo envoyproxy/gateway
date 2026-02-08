@@ -180,6 +180,8 @@ type SlowStart struct {
 }
 
 // ZoneAware defines the configuration related to the distribution of requests between locality zones.
+//
+// +kubebuilder:validation:XValidation:rule="!has(self.weightedZones) || self.weightedZones.all(z, self.weightedZones.exists_one(z2, z2.zone == z.zone))",message="Duplicate zone names are not allowed in weightedZones."
 type ZoneAware struct {
 	// PreferLocalZone configures zone-aware routing to prefer sending traffic to the local locality zone.
 	//
@@ -230,7 +232,7 @@ type WeightedZoneConfig struct {
 	// The value should match the topology.kubernetes.io/zone label
 	// of the nodes where endpoints are running.
 	// Zones not listed in the configuration receive a default weight of 1.
-	Zone string `json:"zone,omitempty"`
+	Zone string `json:"zone"`
 
 	// Weight defines the weight for this locality.
 	// Higher values receive more traffic. The actual traffic distribution
