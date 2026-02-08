@@ -10,6 +10,8 @@ security updates: |
 new features: |
 
 bug fixes: |
+  Rejected ClientTrafficPolicy if invalid TLS cipher suites are configured.
+  Fixed validation of XListenerSet certificateRefs
 
 # Enhancements that improve performance.
 performance improvements: |
