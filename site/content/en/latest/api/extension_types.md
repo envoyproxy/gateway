@@ -2430,6 +2430,7 @@ _Appears in:_
 | `path` | _string_ |  true  |  | Path defines the HTTP path that will be requested during health checking. |
 | `method` | _string_ |  false  |  | Method defines the HTTP method used for health checking.<br />Defaults to GET |
 | `expectedStatuses` | _[HTTPStatus](#httpstatus) array_ |  false  |  | ExpectedStatuses defines a list of HTTP response statuses considered healthy.<br />Defaults to 200 only |
+| `retriableStatuses` | _[HTTPStatusRange](#httpstatusrange) array_ |  false  |  | RetriableStatuses defines a list of HTTP response status ranges considered retriable.<br />Responses within these ranges will count towards the configured unhealthyThreshold,<br />but will not result in the host being considered immediately unhealthy.<br />Ranges follow half-open semantics [start, end) and must be within [100, 600). |
 | `expectedResponse` | _[ActiveHealthCheckPayload](#activehealthcheckpayload)_ |  false  |  | ExpectedResponse defines a list of HTTP expected responses to match. |
 
 
@@ -2660,6 +2661,23 @@ _Appears in:_
 - [HTTPActiveHealthChecker](#httpactivehealthchecker)
 - [RetryOn](#retryon)
 
+
+
+#### HTTPStatusRange
+
+
+
+HTTPStatusRange defines a range of HTTP status codes.
+
+The range uses half-open semantics [start, end).
+
+_Appears in:_
+- [HTTPActiveHealthChecker](#httpactivehealthchecker)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `start` | _integer_ |  true  |  | Start of the range, including the start value. |
+| `end` | _integer_ |  true  |  | End of the range, excluding the end value. |
 
 
 #### HTTPTimeout
