@@ -470,7 +470,7 @@ func (t *Translator) translateClientTrafficPolicyForListener(
 		}
 
 		// Translate HTTP2 Settings
-		if h2, err := buildIRHTTP2Settings(policy.Spec.HTTP2); err != nil {
+		if h2, err := buildIRHTTP2ClientSettings(policy.Spec.HTTP2); err != nil {
 			err = perr.WithMessage(err, "HTTP2")
 			errs = errors.Join(errs, err)
 		} else {

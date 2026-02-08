@@ -11,6 +11,7 @@ import (
 	"net"
 	"strconv"
 	"strings"
+	"time"
 
 	xdscore "github.com/cncf/xds/go/xds/core/v3"
 	matcher "github.com/cncf/xds/go/xds/type/matcher/v3"
@@ -108,6 +109,20 @@ func http2ProtocolOptions(opts *ir.HTTP2Settings) *corev3.Http2ProtocolOptions {
 		out.OverrideStreamErrorOnInvalidHttpMessage = &wrapperspb.BoolValue{
 			Value: *opts.ResetStreamOnError,
 		}
+	}
+
+	if opts.ConnectionKeepalive != nil {
+		keepalive := &corev3.KeepaliveSettings{}
+		if opts.ConnectionKeepalive.Interval != nil {
+			keepalive.Interval = durationpb.New(time.Duration(*opts.ConnectionKeepalive.Interval) * time.Second)
+		}
+		if opts.ConnectionKeepalive.Timeout != nil {
+			keepalive.Timeout = durationpb.New(time.Duration(*opts.ConnectionKeepalive.Timeout) * time.Second)
+		}
+		if opts.ConnectionKeepalive.ConnectionIdleInterval != nil {
+			keepalive.ConnectionIdleInterval = durationpb.New(time.Duration(*opts.ConnectionKeepalive.ConnectionIdleInterval) * time.Second)
+		}
+		out.ConnectionKeepalive = keepalive
 	}
 
 	return out

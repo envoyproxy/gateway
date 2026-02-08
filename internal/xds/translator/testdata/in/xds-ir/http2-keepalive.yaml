@@ -1,0 +1,27 @@
+http:
+- name: "first-listener"
+  address: "::"
+  port: 10080
+  hostnames:
+  - "foo.com"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  http2:
+    initialConnectionWindowSize: 65536
+    initialStreamWindowSize: 33554432
+    maxConcurrentStreams: 200
+    connectionKeepalive:
+      interval: 60
+      timeout: 10
+      connectionIdleInterval: 30
+  routes:
+  - name: "first-route"
+    hostname: "*"
+    destination:
+      name: "first-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "first-route-dest/backend/0"

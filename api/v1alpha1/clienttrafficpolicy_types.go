@@ -6,6 +6,7 @@
 package v1alpha1
 
 import (
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
@@ -98,7 +99,7 @@ type ClientTrafficPolicySpec struct {
 	// HTTP2 provides HTTP/2 configuration on the listener.
 	//
 	// +optional
-	HTTP2 *HTTP2Settings `json:"http2,omitempty"`
+	HTTP2 *HTTP2ClientSettings `json:"http2,omitempty"`
 	// HTTP3 provides HTTP/3 configuration on the listener.
 	//
 	// +optional
@@ -439,6 +440,62 @@ const (
 	// If the backend uses TLS, the scheme is "https", otherwise "http".
 	SchemeHeaderTransformMatchBackend SchemeHeaderTransform = "MatchBackend"
 )
+
+// HTTP2ClientSettings provides HTTP/2 configuration for client connections to the listener.
+type HTTP2ClientSettings struct {
+	// InitialStreamWindowSize sets the initial window size for HTTP/2 streams.
+	// If not set, the default value is 64 KiB(64*1024).
+	//
+	// +kubebuilder:validation:XIntOrString
+	// +kubebuilder:validation:Pattern="^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$"
+	// +optional
+	InitialStreamWindowSize *resource.Quantity `json:"initialStreamWindowSize,omitempty"`
+
+	// InitialConnectionWindowSize sets the initial window size for HTTP/2 connections.
+	// If not set, the default value is 1 MiB.
+	//
+	// +kubebuilder:validation:XIntOrString
+	// +kubebuilder:validation:Pattern="^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$"
+	// +optional
+	InitialConnectionWindowSize *resource.Quantity `json:"initialConnectionWindowSize,omitempty"`
+
+	// MaxConcurrentStreams sets the maximum number of concurrent streams allowed per connection.
+	// If not set, the default value is 100.
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=2147483647
+	// +optional
+	MaxConcurrentStreams *uint32 `json:"maxConcurrentStreams,omitempty"`
+
+	// OnInvalidMessage determines if Envoy will terminate the connection or just the offending stream in the event of HTTP messaging error
+	// It's recommended for L2 Envoy deployments to set this value to TerminateStream.
+	// https://www.envoyproxy.io/docs/envoy/latest/configuration/best_practices/level_two
+	// Default: TerminateConnection
+	// +optional
+	OnInvalidMessage *InvalidMessageAction `json:"onInvalidMessage,omitempty"`
+
+	// ConnectionKeepalive configures HTTP/2 connection keepalive using PING frames.
+	// +optional
+	ConnectionKeepalive *HTTP2ConnectionKeepalive `json:"connectionKeepalive,omitempty"`
+}
+
+// HTTP2ConnectionKeepalive configures HTTP/2 PING-based keepalive settings.
+type HTTP2ConnectionKeepalive struct {
+	// Interval specifies how often to send HTTP/2 PING frames to keep the connection alive.
+	// If not set, PING frames will not be sent periodically.
+	// +optional
+	Interval *gwapiv1.Duration `json:"interval,omitempty"`
+
+	// Timeout specifies how long to wait for a PING response before considering the connection dead.
+	// If not set, a default timeout is used.
+	// +optional
+	Timeout *gwapiv1.Duration `json:"timeout,omitempty"`
+
+	// ConnectionIdleInterval specifies how long a connection must be idle before a PING is sent
+	// to check if the connection is still alive.
+	// If not set, idle connection checks are not performed.
+	// +optional
+	ConnectionIdleInterval *gwapiv1.Duration `json:"connectionIdleInterval,omitempty"`
+}
 
 func init() {
 	localSchemeBuilder.Register(&ClientTrafficPolicy{}, &ClientTrafficPolicyList{})
