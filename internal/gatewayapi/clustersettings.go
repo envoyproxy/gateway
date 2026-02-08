@@ -563,6 +563,10 @@ func buildActiveHealthCheck(policy egv1a1.HealthCheck) *ir.ActiveHealthCheck {
 		}
 	}
 
+	if hc.Overrides != nil {
+		irHC.Overrides = buildHealthCheckOverrides(hc.Overrides)
+	}
+
 	return irHC
 }
 
@@ -612,6 +616,18 @@ func buildTCPActiveHealthChecker(h *egv1a1.TCPActiveHealthChecker) *ir.TCPHealth
 		Receive: translateActiveHealthCheckPayload(h.Receive),
 	}
 	return irTCP
+}
+
+func buildHealthCheckOverrides(overrides *egv1a1.HealthCheckOverrides) *ir.HealthCheckOverrides {
+	if overrides == nil {
+		return nil
+	}
+
+	irOverrides := &ir.HealthCheckOverrides{
+		Port: uint32(overrides.Port),
+	}
+
+	return irOverrides
 }
 
 func translateActiveHealthCheckPayload(p *egv1a1.ActiveHealthCheckPayload) *ir.HealthCheckPayload {

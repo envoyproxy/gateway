@@ -204,6 +204,13 @@ func (l *ListenerContext) IsReady() bool {
 	return false
 }
 
+func (l *ListenerContext) GetNamespace() string {
+	if l.isFromXListenerSet() {
+		return l.xListenerSet.Namespace
+	}
+	return l.gateway.Namespace
+}
+
 func (l *ListenerContext) GetConditions() []metav1.Condition {
 	if l.isFromXListenerSet() {
 		return l.xListenerSet.Status.Listeners[l.xListenerSetStatusIdx].Conditions

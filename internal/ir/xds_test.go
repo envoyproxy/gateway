@@ -1780,6 +1780,19 @@ func TestValidateHealthCheck(t *testing.T) {
 			},
 			want: ErrOutlierDetectionBaseEjectionTimeInvalid,
 		},
+		{
+			name: "HealthCheckOverrides invalid port",
+			input: HealthCheck{
+				&ActiveHealthCheck{
+					Overrides: &HealthCheckOverrides{
+						Port: uint32(65536),
+					},
+				},
+				&OutlierDetection{},
+				ptr.To[uint32](10),
+			},
+			want: ErrHealthCheckOverridesPortInvalid,
+		},
 	}
 	for i := range tests {
 		test := tests[i]

@@ -1,7 +1,7 @@
 apiVersion: gateway.networking.x-k8s.io/v1alpha1
 kind: XListenerSet
 metadata:
-  name: xlistener-set-tls
+  name: xlistener-set-tls-passthrough
   namespace: gateway-conformance-infra
 spec:
   parentRef:
@@ -24,14 +24,14 @@ spec:
 apiVersion: gateway.networking.k8s.io/v1alpha3
 kind: TLSRoute
 metadata:
-  name: xlistener-tlsroute
+  name: xlistener-tlsroute-passthrough
   namespace: gateway-conformance-infra
 spec:
   parentRefs:
     - group: gateway.networking.x-k8s.io
       kind: XListenerSet
       namespace: gateway-conformance-infra
-      name: xlistener-set-tls
+      name: xlistener-set-tls-passthrough
       sectionName: extra-tls
   hostnames:
     - "example.com"

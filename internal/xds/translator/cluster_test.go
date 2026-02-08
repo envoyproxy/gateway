@@ -12,6 +12,8 @@ import (
 	bootstrapv3 "github.com/envoyproxy/go-control-plane/envoy/config/bootstrap/v3"
 	clusterv3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
 	cswrrv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/load_balancing_policies/client_side_weighted_round_robin/v3"
+	endpointv3 "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
+
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/encoding/protojson"
@@ -59,9 +61,69 @@ func TestBuildXdsClusterLoadAssignment(t *testing.T) {
 		Endpoints: []*ir.DestinationEndpoint{{Host: envoyGatewayXdsServerHost, Port: bootstrap.DefaultXdsServerPort}},
 	}
 	settings := []*ir.DestinationSetting{ds}
-	dynamicXdsClusterLoadAssignment := buildXdsClusterLoadAssignment(bootstrapXdsCluster.Name, settings, nil)
+	dynamicXdsClusterLoadAssignment := buildXdsClusterLoadAssignment(bootstrapXdsCluster.Name, settings, nil, nil)
 
 	requireCmpNoDiff(t, bootstrapXdsCluster.LoadAssignment.Endpoints[0].LbEndpoints[0], dynamicXdsClusterLoadAssignment.Endpoints[0].LbEndpoints[0])
+}
+
+func TestBuildXdsClusterLoadAssignmentWithHealthCheckConfig(t *testing.T) {
+	tests := []struct {
+		name        string
+		healthCheck *ir.HealthCheck
+		expected    *endpointv3.Endpoint_HealthCheckConfig
+	}{
+		{
+			name:        "nil health check config",
+			healthCheck: nil,
+			expected:    nil,
+		},
+		{
+			name:        "nil active health check",
+			healthCheck: &ir.HealthCheck{},
+			expected:    nil,
+		},
+		{
+			name: "nil health check overrides",
+			healthCheck: &ir.HealthCheck{
+				Active: &ir.ActiveHealthCheck{
+					HealthyThreshold: ptr.To[uint32](3),
+				},
+			},
+			expected: nil,
+		},
+		{
+			name: "health check overrides with port override",
+			healthCheck: &ir.HealthCheck{
+				Active: &ir.ActiveHealthCheck{
+					HealthyThreshold: ptr.To[uint32](3),
+					Overrides: &ir.HealthCheckOverrides{
+						Port: 9090,
+					},
+				},
+			},
+			expected: &endpointv3.Endpoint_HealthCheckConfig{
+				PortValue: 9090,
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			settings := []*ir.DestinationSetting{{
+				Endpoints: []*ir.DestinationEndpoint{{Host: envoyGatewayXdsServerHost, Port: 8080}},
+			}}
+
+			clusterLoadAssignment := buildXdsClusterLoadAssignment("test-cluster", settings, tc.healthCheck, nil)
+
+			require.Len(t, clusterLoadAssignment.GetEndpoints(), 1)
+			require.Len(t, clusterLoadAssignment.GetEndpoints()[0].GetLbEndpoints(), 1)
+			endpoint := clusterLoadAssignment.GetEndpoints()[0].GetLbEndpoints()[0].GetEndpoint()
+			require.NotNil(t, endpoint)
+
+			require.Equal(t, uint32(8080), endpoint.GetAddress().GetSocketAddress().GetPortValue())
+			requireCmpNoDiff(t, tc.expected, endpoint.HealthCheckConfig)
+		})
+	}
 }
 
 func getXdsClusterObjFromBootstrap(t *testing.T) *clusterv3.Cluster {
