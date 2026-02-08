@@ -46,7 +46,7 @@ var SessionPersistenceTest = suite.ConformanceTest{
 					Path: "/no-session-persistence",
 				},
 				Response: http.Response{
-					AbsentHeaders: []string{"Session-A"},
+					AbsentHeaders: []string{"Session-A", "Set-Cookie"},
 					StatusCodes:   []int{stdhttp.StatusOK},
 				},
 				Namespace: ns,
@@ -171,9 +171,9 @@ var SessionPersistenceTest = suite.ConformanceTest{
 
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expected)
 
-			backend := runCookieBasedSessionPersistenceTest(t, suite, gwAddr, expected)
+			backend := runCookieBasedSessionPersistenceTest(t, suite, gwAddr, &expected)
 			err := wait.PollUntilContextTimeout(t.Context(), time.Second, time.Minute, true, func(_ context.Context) (done bool, err error) {
-				newBackend := runCookieBasedSessionPersistenceTest(t, suite, gwAddr, expected)
+				newBackend := runCookieBasedSessionPersistenceTest(t, suite, gwAddr, &expected)
 				if newBackend != backend {
 					t.Logf("backend changed from %s to %s, as expected", backend, newBackend)
 					return true, nil
@@ -188,8 +188,8 @@ var SessionPersistenceTest = suite.ConformanceTest{
 	},
 }
 
-func runCookieBasedSessionPersistenceTest(t *testing.T, suite *suite.ConformanceTestSuite, gwAddr string, expected http.ExpectedResponse) string {
-	req := http.MakeRequest(t, &expected, gwAddr, "HTTP", "http")
+func runCookieBasedSessionPersistenceTest(t *testing.T, suite *suite.ConformanceTestSuite, gwAddr string, expected *http.ExpectedResponse) string {
+	req := http.MakeRequest(t, expected, gwAddr, "HTTP", "http")
 	initialPod := ""
 	backend := ""
 	for i := range 10 {
@@ -197,7 +197,7 @@ func runCookieBasedSessionPersistenceTest(t *testing.T, suite *suite.Conformance
 		if err != nil {
 			t.Fatalf("request %d with cookie failed: %v", i+1, err)
 		}
-		if err := http.CompareRoundTrip(t, &req, cReq, cRes, expected); err != nil {
+		if err := http.CompareRoundTrip(t, &req, cReq, cRes, *expected); err != nil {
 			t.Fatalf("request %d with cookie failed expectations: %v", i+1, err)
 		}
 
