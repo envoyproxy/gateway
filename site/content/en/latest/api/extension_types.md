@@ -3140,7 +3140,6 @@ _Appears in:_
 | `securityContext` | _[SecurityContext](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#securitycontext-v1-core)_ |  false  |  | SecurityContext defines the security options the container should be run with.<br />If set, the fields of SecurityContext override the equivalent fields of PodSecurityContext.<br />More info: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/ |
 | `image` | _string_ |  false  |  | Image specifies the EnvoyProxy container image to be used including a tag, instead of the default image.<br />This field is mutually exclusive with ImageRepository. |
 | `imageRepository` | _string_ |  false  |  | ImageRepository specifies the container image repository to be used without specifying a tag.<br />The default tag will be used.<br />This field is mutually exclusive with Image. |
-| `imagePullPolicy` | _[PullPolicy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#pullpolicy-v1-core)_ |  false  |  | ImagePullPolicy specifies the pull policy for the container image.<br />If not specified, defaults to IfNotPresent. |
 | `volumeMounts` | _[VolumeMount](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#volumemount-v1-core) array_ |  false  |  | VolumeMounts are volumes to mount into the container's filesystem.<br />Cannot be updated. |
 
 

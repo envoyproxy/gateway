@@ -4509,11 +4509,6 @@ func (in *KubernetesContainerSpec) DeepCopyInto(out *KubernetesContainerSpec) {
 		*out = new(string)
 		**out = **in
 	}
-	if in.ImagePullPolicy != nil {
-		in, out := &in.ImagePullPolicy, &out.ImagePullPolicy
-		*out = new(corev1.PullPolicy)
-		**out = **in
-	}
 	if in.VolumeMounts != nil {
 		in, out := &in.VolumeMounts, &out.VolumeMounts
 		*out = make([]corev1.VolumeMount, len(*in))
