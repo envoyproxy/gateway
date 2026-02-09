@@ -2,7 +2,6 @@ name: Manual Cherry-Pick
 on:
   issue_comment:
     types: [created]
-
 jobs:
   cherry-pick:
     # Only trigger if the comment starts with /cherry-pick on a Pull Request
@@ -15,15 +14,34 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Check User Status
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ACTOR="${{ github.actor }}"
+
+          # Check if actor is listed anywhere in the OWNERS file
+          if ! grep -i "^- $ACTOR$" OWNERS > /dev/null; then
+            gh pr comment ${{ github.event.issue.number }} --body "❌ Only people listed in the OWNERS file can use the cherry-pick command."
+            exit 1
+          fi
+
       - name: Parse Branch and PR Data
         id: data
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          TARGET_BRANCH=$(echo "${{ github.event.comment.body }}" | sed -n 's|.*/cherry-pick ||p' | xargs)
+          # Extract only the first argument after /cherry-pick (ignore trailing text)
+          TARGET_BRANCH=$(echo "${{ github.event.comment.body }}" | awk '/\/cherry-pick/{print $2}')
+
+          if [ -z "$TARGET_BRANCH" ]; then
+            gh pr comment ${{ github.event.issue.number }} --body "⚠️ Usage: \`/cherry-pick <branch>\` (e.g. \`/cherry-pick release/v1.7\`)"
+            exit 1
+          fi
+
           echo "target_branch=$TARGET_BRANCH" >> $GITHUB_OUTPUT
 
-          # 2. Get original PR title and merge status
+          # Get original PR title and merge status
           PR_JSON=$(gh pr view ${{ github.event.issue.number }} --json title,merged,mergeCommit)
 
           IS_MERGED=$(echo "$PR_JSON" | jq -r '.merged')
