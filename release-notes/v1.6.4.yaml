@@ -1,0 +1,29 @@
+date: February 11, 2026
+
+# Changes that are expected to cause an incompatibility with previous versions, such as deletions or modifications to existing APIs.
+breaking changes: |
+
+# Updates addressing vulnerabilities, security flaws, or compliance requirements.
+security updates: |
+
+# New features or capabilities added in this release.
+new features: |
+
+bug fixes: |
+  Fixes an issue where shutdown manager didn't ignore ready and stats listener metrics in connection calculation.
+  Fixed an issue where BackendTLSPolicy ResolvedRefs status reason was not aligned with Gateway API specification.
+  Fixed an issue where shutdown manager incorrectly counted ready and stats listener connections, preventing timely shutdown.
+  Fixed an issue where custom response filters were not properly positioned in the filter chain, causing redirect functionality to fail in OAuth2 flows.
+  Fixed an issue where route-level idle timeout prevented users from configuring listener-level idle timeout.
+  Fixed an issue where the message package did not adopt the configured logging level.
+  Fixed an issue where TCPRoute with mTLS did not work due to incorrect auto HTTP protocol detection on TCP clusters.
+  Fixed an issue where invalid EnvoyPatchPolicy prevented processing of remaining xDS resources.
+
+# Enhancements that improve performance.
+performance improvements: |
+
+# Deprecated features or APIs.
+deprecations: |
+
+# Other notable changes not covered by the above sections.
+Other changes: |
