@@ -1,4 +1,3 @@
-name: "accesslog"
 accesslog:
   json:
   - json:
