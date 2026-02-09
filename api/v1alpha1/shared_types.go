@@ -268,13 +268,6 @@ type KubernetesContainerSpec struct {
 	// +optional
 	ImageRepository *string `json:"imageRepository,omitempty"`
 
-	// ImagePullPolicy specifies the pull policy for the container image.
-	// If not specified, defaults to IfNotPresent.
-	//
-	// +optional
-	// +kubebuilder:validation:Enum=Always;Never;IfNotPresent
-	ImagePullPolicy *corev1.PullPolicy `json:"imagePullPolicy,omitempty"`
-
 	// VolumeMounts are volumes to mount into the container's filesystem.
 	// Cannot be updated.
 	//
