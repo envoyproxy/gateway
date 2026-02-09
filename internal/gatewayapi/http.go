@@ -91,6 +91,9 @@ func buildIRHTTP2Settings(http2Settings *egv1a1.HTTP2Settings) (*ir.HTTP2Setting
 				keepalive.Timeout = ptr.To(uint32(d.Seconds()))
 			}
 		}
+		if keepalive.Interval != nil && keepalive.Timeout != nil && *keepalive.Timeout >= *keepalive.Interval {
+			errs = errors.Join(errs, fmt.Errorf("ConnectionKeepalive.Timeout must be less than Interval"))
+		}
 		if http2Settings.ConnectionKeepalive.IntervalJitter != nil {
 			keepalive.IntervalJitter = http2Settings.ConnectionKeepalive.IntervalJitter
 		}
