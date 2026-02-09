@@ -781,6 +781,26 @@ func TestTransformSecretData(t *testing.T) {
 				corev1.TLSPrivateKeyKey: []byte("key-data"),
 			},
 		},
+		{
+			name: "secret with API key client IDs (multiple clients)",
+			input: &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "api-key-secret",
+					Namespace: "default",
+				},
+				Data: map[string][]byte{
+					"client1": []byte("a2V5MQ=="),
+					"client2": []byte("a2V5Mg=="),
+					"client3": []byte("a2V5Mw=="),
+				},
+			},
+			expected: map[string][]byte{
+				"client1": []byte("a2V5MQ=="),
+				"client2": []byte("a2V5Mg=="),
+				"client3": []byte("a2V5Mw=="),
+				// All client IDs should be preserved for API key auth
+			},
+		},
 	}
 
 	for _, tc := range testCases {
