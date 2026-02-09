@@ -6967,6 +6967,7 @@ spec:
                       - envoy.filters.http.oauth2
                       - envoy.filters.http.jwt_authn
                       - envoy.filters.http.stateful_session
+                      - envoy.filters.http.buffer
                       - envoy.filters.http.lua
                       - envoy.filters.http.ext_proc
                       - envoy.filters.http.wasm
@@ -6977,6 +6978,7 @@ spec:
                       - envoy.filters.http.grpc_stats
                       - envoy.filters.http.credential_injector
                       - envoy.filters.http.compressor
+                      - envoy.filters.http.dynamic_forward_proxy
                       type: string
                     before:
                       description: |-
@@ -6994,6 +6996,7 @@ spec:
                       - envoy.filters.http.oauth2
                       - envoy.filters.http.jwt_authn
                       - envoy.filters.http.stateful_session
+                      - envoy.filters.http.buffer
                       - envoy.filters.http.lua
                       - envoy.filters.http.ext_proc
                       - envoy.filters.http.wasm
@@ -7004,6 +7007,7 @@ spec:
                       - envoy.filters.http.grpc_stats
                       - envoy.filters.http.credential_injector
                       - envoy.filters.http.compressor
+                      - envoy.filters.http.dynamic_forward_proxy
                       type: string
                     name:
                       description: Name of the filter.
@@ -7019,6 +7023,7 @@ spec:
                       - envoy.filters.http.oauth2
                       - envoy.filters.http.jwt_authn
                       - envoy.filters.http.stateful_session
+                      - envoy.filters.http.buffer
                       - envoy.filters.http.lua
                       - envoy.filters.http.ext_proc
                       - envoy.filters.http.wasm
@@ -7029,6 +7034,7 @@ spec:
                       - envoy.filters.http.grpc_stats
                       - envoy.filters.http.credential_injector
                       - envoy.filters.http.compressor
+                      - envoy.filters.http.dynamic_forward_proxy
                       type: string
                   required:
                   - name
