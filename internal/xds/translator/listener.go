@@ -119,6 +119,9 @@ func http2ProtocolOptions(opts *ir.HTTP2Settings) *corev3.Http2ProtocolOptions {
 		if opts.ConnectionKeepalive.Timeout != nil {
 			keepalive.Timeout = durationpb.New(time.Duration(*opts.ConnectionKeepalive.Timeout) * time.Second)
 		}
+		if opts.ConnectionKeepalive.IntervalJitter != nil {
+			keepalive.IntervalJitter = &typev3.Percent{Value: float64(*opts.ConnectionKeepalive.IntervalJitter)}
+		}
 		if opts.ConnectionKeepalive.ConnectionIdleInterval != nil {
 			keepalive.ConnectionIdleInterval = durationpb.New(time.Duration(*opts.ConnectionKeepalive.ConnectionIdleInterval) * time.Second)
 		}

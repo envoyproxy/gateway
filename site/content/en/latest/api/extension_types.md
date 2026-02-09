@@ -2399,6 +2399,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `interval` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#duration)_ |  false  |  | Interval specifies how often to send HTTP/2 PING frames to keep the connection alive. |
 | `timeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#duration)_ |  false  |  | Timeout specifies how long to wait for a PING response before considering the connection dead. |
+| `intervalJitter` | _integer_ |  false  |  | IntervalJitter specifies a random jitter percentage added to each interval.<br />Defaults to 15% if not specified. |
 | `connectionIdleInterval` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#duration)_ |  false  |  | ConnectionIdleInterval specifies how long a connection must be idle before a PING is sent. |
 
 

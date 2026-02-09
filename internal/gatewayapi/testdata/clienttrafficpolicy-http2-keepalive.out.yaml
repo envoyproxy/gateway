@@ -9,6 +9,7 @@ clientTrafficPolicies:
       connectionKeepalive:
         connectionIdleInterval: 30s
         interval: 60s
+        intervalJitter: 20
         timeout: 10s
     targetRef:
       group: gateway.networking.k8s.io
@@ -125,6 +126,7 @@ xdsIR:
         connectionKeepalive:
           connectionIdleInterval: 30
           interval: 60
+          intervalJitter: 20
           timeout: 10
       isHTTP2: false
       metadata:

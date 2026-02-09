@@ -1715,6 +1715,11 @@ func (in *HTTP2ConnectionKeepalive) DeepCopyInto(out *HTTP2ConnectionKeepalive) 
 		*out = new(uint32)
 		**out = **in
 	}
+	if in.IntervalJitter != nil {
+		in, out := &in.IntervalJitter, &out.IntervalJitter
+		*out = new(uint32)
+		**out = **in
+	}
 	if in.ConnectionIdleInterval != nil {
 		in, out := &in.ConnectionIdleInterval, &out.ConnectionIdleInterval
 		*out = new(uint32)

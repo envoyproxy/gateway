@@ -14,6 +14,7 @@ http:
     connectionKeepalive:
       interval: 60
       timeout: 10
+      intervalJitter: 20
       connectionIdleInterval: 30
   routes:
   - name: "first-route"
