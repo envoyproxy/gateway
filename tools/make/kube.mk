@@ -170,7 +170,7 @@ ifndef ignore-not-found
 endif
 
 .PHONY: kube-deploy
-kube-deploy: manifests helm-generate.gateway-helm helm-generate.gateway-crds-helm ## Install Envoy Gateway into the Kubernetes cluster specified in ~/.kube/config.
+kube-deploy: manifests helm-generate ## Install Envoy Gateway into the Kubernetes cluster specified in ~/.kube/config.
 	@$(LOG_TARGET)
 	# Install CRDs using helm template to avoid 1MB secret size limit
 	$(GO_TOOL) helm template eg-crds charts/gateway-crds-helm \
@@ -187,7 +187,7 @@ kube-deploy: manifests helm-generate.gateway-helm helm-generate.gateway-crds-hel
 		-f $(KUBE_DEPLOY_HELM_VALUES_FILE)
 
 .PHONY: kube-deploy-for-benchmark-test
-kube-deploy-for-benchmark-test: manifests helm-generate helm-generate.gateway-crds-helm ## Install Envoy Gateway and prometheus-server for benchmark test purpose only.
+kube-deploy-for-benchmark-test: manifests helm-generate ## Install Envoy Gateway and prometheus-server for benchmark test purpose only.
 	@$(LOG_TARGET)
 	# Install CRDs using helm template to avoid 1MB secret size limit
 	$(GO_TOOL) helm template eg-crds charts/gateway-crds-helm \
@@ -211,7 +211,7 @@ kube-deploy-for-benchmark-test: manifests helm-generate helm-generate.gateway-cr
  		-n monitoring --create-namespace --debug --timeout='$(WAIT_TIMEOUT)' --wait --wait-for-jobs
 
 .PHONY: kube-undeploy
-kube-undeploy: manifests helm-generate.gateway-crds-helm ## Uninstall the Envoy Gateway into the Kubernetes cluster specified in ~/.kube/config.
+kube-undeploy: manifests helm-generate ## Uninstall the Envoy Gateway into the Kubernetes cluster specified in ~/.kube/config.
 	@$(LOG_TARGET)
 	$(GO_TOOL) helm uninstall eg -n envoy-gateway-system
 	# Uninstall CRDs
