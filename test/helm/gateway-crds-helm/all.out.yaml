@@ -21962,6 +21962,14 @@ spec:
                           frames to keep the connection alive.
                         pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                         type: string
+                      intervalJitter:
+                        description: |-
+                          IntervalJitter specifies a random jitter percentage added to each interval.
+                          Defaults to 15% if not specified.
+                        format: int32
+                        maximum: 100
+                        minimum: 0
+                        type: integer
                       timeout:
                         description: Timeout specifies how long to wait for a PING
                           response before considering the connection dead.
@@ -25129,6 +25137,14 @@ spec:
                           frames to keep the connection alive.
                         pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                         type: string
+                      intervalJitter:
+                        description: |-
+                          IntervalJitter specifies a random jitter percentage added to each interval.
+                          Defaults to 15% if not specified.
+                        format: int32
+                        maximum: 100
+                        minimum: 0
+                        type: integer
                       timeout:
                         description: Timeout specifies how long to wait for a PING
                           response before considering the connection dead.
@@ -26972,6 +26988,14 @@ spec:
                                     HTTP/2 PING frames to keep the connection alive.
                                   pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                   type: string
+                                intervalJitter:
+                                  description: |-
+                                    IntervalJitter specifies a random jitter percentage added to each interval.
+                                    Defaults to 15% if not specified.
+                                  format: int32
+                                  maximum: 100
+                                  minimum: 0
+                                  type: integer
                                 timeout:
                                   description: Timeout specifies how long to wait
                                     for a PING response before considering the connection
@@ -40767,6 +40791,14 @@ spec:
                                                       alive.
                                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                     type: string
+                                                  intervalJitter:
+                                                    description: |-
+                                                      IntervalJitter specifies a random jitter percentage added to each interval.
+                                                      Defaults to 15% if not specified.
+                                                    format: int32
+                                                    maximum: 100
+                                                    minimum: 0
+                                                    type: integer
                                                   timeout:
                                                     description: Timeout specifies
                                                       how long to wait for a PING
@@ -42063,6 +42095,14 @@ spec:
                                                       alive.
                                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                     type: string
+                                                  intervalJitter:
+                                                    description: |-
+                                                      IntervalJitter specifies a random jitter percentage added to each interval.
+                                                      Defaults to 15% if not specified.
+                                                    format: int32
+                                                    maximum: 100
+                                                    minimum: 0
+                                                    type: integer
                                                   timeout:
                                                     description: Timeout specifies
                                                       how long to wait for a PING
@@ -43513,6 +43553,14 @@ spec:
                                                 keep the connection alive.
                                               pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                               type: string
+                                            intervalJitter:
+                                              description: |-
+                                                IntervalJitter specifies a random jitter percentage added to each interval.
+                                                Defaults to 15% if not specified.
+                                              format: int32
+                                              maximum: 100
+                                              minimum: 0
+                                              type: integer
                                             timeout:
                                               description: Timeout specifies how long
                                                 to wait for a PING response before
@@ -44879,6 +44927,14 @@ spec:
                                           alive.
                                         pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                         type: string
+                                      intervalJitter:
+                                        description: |-
+                                          IntervalJitter specifies a random jitter percentage added to each interval.
+                                          Defaults to 15% if not specified.
+                                        format: int32
+                                        maximum: 100
+                                        minimum: 0
+                                        type: integer
                                       timeout:
                                         description: Timeout specifies how long to
                                           wait for a PING response before considering
@@ -47583,6 +47639,14 @@ spec:
                                       HTTP/2 PING frames to keep the connection alive.
                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
+                                  intervalJitter:
+                                    description: |-
+                                      IntervalJitter specifies a random jitter percentage added to each interval.
+                                      Defaults to 15% if not specified.
+                                    format: int32
+                                    maximum: 100
+                                    minimum: 0
+                                    type: integer
                                   timeout:
                                     description: Timeout specifies how long to wait
                                       for a PING response before considering the connection
@@ -48762,6 +48826,14 @@ spec:
                                       HTTP/2 PING frames to keep the connection alive.
                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
+                                  intervalJitter:
+                                    description: |-
+                                      IntervalJitter specifies a random jitter percentage added to each interval.
+                                      Defaults to 15% if not specified.
+                                    format: int32
+                                    maximum: 100
+                                    minimum: 0
+                                    type: integer
                                   timeout:
                                     description: Timeout specifies how long to wait
                                       for a PING response before considering the connection
@@ -50153,6 +50225,14 @@ spec:
                                             connection alive.
                                           pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                           type: string
+                                        intervalJitter:
+                                          description: |-
+                                            IntervalJitter specifies a random jitter percentage added to each interval.
+                                            Defaults to 15% if not specified.
+                                          format: int32
+                                          maximum: 100
+                                          minimum: 0
+                                          type: integer
                                         timeout:
                                           description: Timeout specifies how long
                                             to wait for a PING response before considering
@@ -51601,6 +51681,14 @@ spec:
                                       HTTP/2 PING frames to keep the connection alive.
                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
+                                  intervalJitter:
+                                    description: |-
+                                      IntervalJitter specifies a random jitter percentage added to each interval.
+                                      Defaults to 15% if not specified.
+                                    format: int32
+                                    maximum: 100
+                                    minimum: 0
+                                    type: integer
                                   timeout:
                                     description: Timeout specifies how long to wait
                                       for a PING response before considering the connection
