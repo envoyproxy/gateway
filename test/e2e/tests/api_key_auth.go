@@ -67,6 +67,31 @@ var APIKeyAuthTest = suite.ConformanceTest{
 
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 
+			// Test with client2 (second client ID in the secret)
+			expectedResponse = http.ExpectedResponse{
+				Request: http.Request{
+					Path: "/api-key-auth-header",
+					Headers: map[string]string{
+						"X-API-KEY": "key2",
+					},
+				},
+				ExpectedRequest: &http.ExpectedRequest{
+					Request: http.Request{
+						Path: "/api-key-auth-header",
+						Headers: map[string]string{
+							"X-API-KEY-CLIENT-ID": "client2",
+						},
+					},
+					AbsentHeaders: []string{"X-API-KEY"},
+				},
+				Response: http.Response{
+					StatusCodes: []int{200},
+				},
+				Namespace: ns,
+			}
+
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
+
 			expectedResponse = http.ExpectedResponse{
 				Request: http.Request{
 					Path: "/api-key-auth-header",
