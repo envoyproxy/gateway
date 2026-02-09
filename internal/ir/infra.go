@@ -96,8 +96,6 @@ type InfraMetadata struct {
 type ProxyListener struct {
 	// Name of the ProxyListener
 	Name string `json:"name" yaml:"name"`
-	// Address is the address that the listener should listen on.
-	Address *string `json:"address" yaml:"address"`
 	// Ports define network ports of the listener.
 	Ports []ListenerPort `json:"ports,omitempty" yaml:"ports,omitempty"`
 	// HTTP3 provides HTTP/3 configuration on the listener.
