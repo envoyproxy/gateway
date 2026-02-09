@@ -8,9 +8,12 @@ security updates: |
 
 # New features or capabilities added in this release.
 new features: |
+  Added support for configuring optional health check configuration.
   Added support for MergeType in SecurityPolicy to enable route-level policies to merge with parent Gateway/Listener policies, similar to BackendTrafficPolicy.
 
 bug fixes: |
+  Rejected ClientTrafficPolicy if invalid TLS cipher suites are configured.
+  Fixed validation of XListenerSet certificateRefs
 
 # Enhancements that improve performance.
 performance improvements: |
