@@ -87,7 +87,6 @@ func buildIRHTTP2ClientSettings(http2Settings *egv1a1.HTTP2ClientSettings) (*ir.
 		http2 = &ir.HTTP2Settings{}
 	}
 
-	// Handle keepalive (ClientTrafficPolicy-specific)
 	if http2Settings.ConnectionKeepalive != nil {
 		keepalive := &ir.HTTP2ConnectionKeepalive{}
 		if http2Settings.ConnectionKeepalive.Interval != nil {
@@ -105,6 +104,12 @@ func buildIRHTTP2ClientSettings(http2Settings *egv1a1.HTTP2ClientSettings) (*ir.
 			} else {
 				keepalive.Timeout = ptr.To(uint32(d.Seconds()))
 			}
+		}
+		if keepalive.Interval != nil && keepalive.Timeout != nil && *keepalive.Timeout >= *keepalive.Interval {
+			errs = errors.Join(errs, fmt.Errorf("ConnectionKeepalive.Timeout must be less than Interval"))
+		}
+		if http2Settings.ConnectionKeepalive.IntervalJitter != nil {
+			keepalive.IntervalJitter = http2Settings.ConnectionKeepalive.IntervalJitter
 		}
 		if http2Settings.ConnectionKeepalive.ConnectionIdleInterval != nil {
 			d, err := time.ParseDuration(string(*http2Settings.ConnectionKeepalive.ConnectionIdleInterval))

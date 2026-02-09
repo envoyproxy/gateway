@@ -462,6 +462,13 @@ type HTTP2ConnectionKeepalive struct {
 	// +optional
 	Timeout *gwapiv1.Duration `json:"timeout,omitempty"`
 
+	// IntervalJitter specifies a random jitter percentage added to each interval.
+	// Defaults to 15% if not specified.
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=100
+	// +optional
+	IntervalJitter *uint32 `json:"intervalJitter,omitempty"`
+
 	// ConnectionIdleInterval specifies how long a connection must be idle before a PING is sent
 	// to check if the connection is still alive.
 	// If not set, idle connection checks are not performed.

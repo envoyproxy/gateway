@@ -13,6 +13,8 @@
           connectionKeepalive:
             connectionIdleInterval: 30s
             interval: 60s
+            intervalJitter:
+              value: 20
             timeout: 10s
           initialConnectionWindowSize: 33554432
           initialStreamWindowSize: 65536

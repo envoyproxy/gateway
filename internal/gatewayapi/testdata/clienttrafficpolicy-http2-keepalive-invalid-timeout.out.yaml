@@ -7,10 +7,8 @@ clientTrafficPolicies:
   spec:
     http2:
       connectionKeepalive:
-        connectionIdleInterval: 30s
-        interval: 60s
-        intervalJitter: 20
-        timeout: 10s
+        interval: 10s
+        timeout: 60s
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway
@@ -26,9 +24,9 @@ clientTrafficPolicies:
         sectionName: http-1
       conditions:
       - lastTransitionTime: null
-        message: Policy has been accepted.
-        reason: Accepted
-        status: "True"
+        message: 'HTTP2: ConnectionKeepalive.Timeout must be less than Interval.'
+        reason: Invalid
+        status: "False"
         type: Accepted
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 gateways:
@@ -122,12 +120,6 @@ xdsIR:
       externalPort: 80
       hostnames:
       - '*'
-      http2:
-        connectionKeepalive:
-          connectionIdleInterval: 30
-          interval: 60
-          intervalJitter: 20
-          timeout: 10
       isHTTP2: false
       metadata:
         kind: Gateway

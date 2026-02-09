@@ -627,6 +627,8 @@ type HTTP2ConnectionKeepalive struct {
 	Interval *uint32 `json:"interval,omitempty" yaml:"interval,omitempty"`
 	// Timeout specifies how long to wait for a PING response (in seconds).
 	Timeout *uint32 `json:"timeout,omitempty" yaml:"timeout,omitempty"`
+	// IntervalJitter specifies a random jitter percentage added to each interval (0-100).
+	IntervalJitter *uint32 `json:"intervalJitter,omitempty" yaml:"intervalJitter,omitempty"`
 	// ConnectionIdleInterval specifies idle time before sending a PING (in seconds).
 	ConnectionIdleInterval *uint32 `json:"connectionIdleInterval,omitempty" yaml:"connectionIdleInterval,omitempty"`
 }
