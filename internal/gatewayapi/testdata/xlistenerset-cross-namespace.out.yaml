@@ -134,8 +134,7 @@ infraIR:
           name: http-8083
           protocol: HTTP
           servicePort: 8083
-      - address: null
-        name: gateway-xls/composite-gateway/cross-allowed/cross-namespace-same/cross-http-same
+      - name: gateway-xls/composite-gateway/cross-allowed/cross-namespace-same/cross-http-same
         ports:
         - containerPort: 8085
           name: http-8085
