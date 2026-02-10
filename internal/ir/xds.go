@@ -2415,6 +2415,12 @@ type RateLimitRule struct {
 	// but the result is always success regardless of whether the limit was exceeded.
 	// +optional
 	ShadowMode *bool `json:"shadowMode,omitempty" yaml:"shadowMode,omitempty"`
+	// QuotaMode determines whether this rate limit rule enables quota mode.
+	// When enabled, rate limiting operations are performed and violations are tracked in dynamic metadata,
+	// but the request is not blocked (returns OK instead of OVER_LIMIT).
+	// This allows for "soft" rate limiting where requests pass through but violations are logged.
+	// +optional
+	QuotaMode *bool `json:"quotaMode,omitempty" yaml:"quotaMode,omitempty"`
 	// Name is a unique identifier for this rule, set as <policy-ns>/<policy-name>/rule/<rule-index>.
 	Name string `json:"name,omitempty" yaml:"name,omitempty"`
 }

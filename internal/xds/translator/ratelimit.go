@@ -723,6 +723,11 @@ func isRuleShadowMode(rule *ir.RateLimitRule) bool {
 	return rule != nil && rule.ShadowMode != nil && *rule.ShadowMode
 }
 
+// Helper function to check if a specific rule is in quota mode
+func isRuleQuotaMode(rule *ir.RateLimitRule) bool {
+	return rule != nil && rule.QuotaMode != nil && *rule.QuotaMode
+}
+
 // Helper function to map a global rule index to a domain-specific rule index
 // This ensures that both shared and non-shared rules have indices starting from 0 in their own domains.
 func getDomainRuleIndex(rules []*ir.RateLimitRule, globalRuleIdx int, ruleIsShared bool) int {
@@ -778,6 +783,7 @@ func buildRateLimitServiceDescriptors(route *ir.HTTPRoute) []*rlsconfv3.RateLimi
 		for mIdx, match := range rule.HeaderMatches {
 			pbDesc := new(rlsconfv3.RateLimitDescriptor)
 			pbDesc.ShadowMode = isRuleShadowMode(rule)
+			pbDesc.QuotaMode = isRuleQuotaMode(rule)
 			// Distinct vs HeaderValueMatch
 			if match.Distinct {
 				// RequestHeader case
@@ -803,6 +809,7 @@ func buildRateLimitServiceDescriptors(route *ir.HTTPRoute) []*rlsconfv3.RateLimi
 		if len(rule.MethodMatches) > 0 {
 			pbDesc := new(rlsconfv3.RateLimitDescriptor)
 			pbDesc.ShadowMode = isRuleShadowMode(rule)
+			pbDesc.QuotaMode = isRuleQuotaMode(rule)
 			pbDesc.Key = getRouteRuleMethodDescriptor(domainRuleIdx)
 			pbDesc.Value = getRouteRuleMethodDescriptor(domainRuleIdx)
 
@@ -823,6 +830,7 @@ func buildRateLimitServiceDescriptors(route *ir.HTTPRoute) []*rlsconfv3.RateLimi
 		if rule.PathMatch != nil {
 			pbDesc := new(rlsconfv3.RateLimitDescriptor)
 			pbDesc.ShadowMode = isRuleShadowMode(rule)
+			pbDesc.QuotaMode = isRuleQuotaMode(rule)
 			pbDesc.Key = getRouteRulePathDescriptor(domainRuleIdx)
 			pbDesc.Value = getRouteRulePathDescriptor(domainRuleIdx)
 
@@ -865,6 +873,7 @@ func buildRateLimitServiceDescriptors(route *ir.HTTPRoute) []*rlsconfv3.RateLimi
 			// MaskedRemoteAddress case
 			pbDesc := new(rlsconfv3.RateLimitDescriptor)
 			pbDesc.ShadowMode = isRuleShadowMode(rule)
+			pbDesc.QuotaMode = isRuleQuotaMode(rule)
 			pbDesc.Key = "masked_remote_address"
 			pbDesc.Value = rule.CIDRMatch.CIDR
 
@@ -880,6 +889,7 @@ func buildRateLimitServiceDescriptors(route *ir.HTTPRoute) []*rlsconfv3.RateLimi
 			if rule.CIDRMatch.Distinct {
 				pbDesc := new(rlsconfv3.RateLimitDescriptor)
 				pbDesc.ShadowMode = isRuleShadowMode(rule)
+				pbDesc.QuotaMode = isRuleQuotaMode(rule)
 				pbDesc.Key = "remote_address"
 				cur.Descriptors = []*rlsconfv3.RateLimitDescriptor{pbDesc}
 				cur = pbDesc
@@ -917,6 +927,7 @@ func buildRateLimitServiceDescriptors(route *ir.HTTPRoute) []*rlsconfv3.RateLimi
 		if !rule.IsMatchSet() {
 			pbDesc := new(rlsconfv3.RateLimitDescriptor)
 			pbDesc.ShadowMode = isRuleShadowMode(rule)
+			pbDesc.QuotaMode = isRuleQuotaMode(rule)
 			pbDesc.Key = getRouteRuleDescriptor(domainRuleIdx, -1)
 			pbDesc.Value = getRouteRuleDescriptor(domainRuleIdx, -1)
 			head = pbDesc
