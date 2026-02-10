@@ -1740,9 +1740,7 @@ spec:
                         type: array
                         x-kubernetes-validations:
                         - message: response cost is not supported for Local Rate Limits
-                          rule: self.all(foo, !has(foo.cost) || !has(foo.cost.response))
-                        - message: shadow mode is not supported for Local Rate Limits
-                          rule: self.all(foo, !has(foo.shadowMode))
+                          rule: self.all(r, !has(r.cost) || !has(r.cost.response))
                     type: object
                   type:
                     description: |-

@@ -34,7 +34,7 @@ spec:
     - matches:
         - path:
             type: PathPrefix
-            value: /status
+            value: /
       backendRefs:
         - name: infra-backend-v1
           port: 8080
