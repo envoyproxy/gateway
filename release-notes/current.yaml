@@ -13,6 +13,7 @@ new features: |
 bug fixes: |
   Rejected ClientTrafficPolicy if invalid TLS cipher suites are configured.
   Fixed validation of XListenerSet certificateRefs
+  Fixed XListenerSet not allowing xRoutes from the same namespace when configured to allow them
 
 # Enhancements that improve performance.
 performance improvements: |
