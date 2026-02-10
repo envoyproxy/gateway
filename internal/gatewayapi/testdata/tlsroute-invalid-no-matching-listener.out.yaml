@@ -246,8 +246,7 @@ infraIR:
   envoy-gateway/gateway-tls-exact-hostname:
     proxy:
       listeners:
-      - address: null
-        name: envoy-gateway/gateway-tls-exact-hostname/tls
+      - name: envoy-gateway/gateway-tls-exact-hostname/tls
         ports:
         - containerPort: 10443
           name: tls-443
@@ -265,8 +264,7 @@ infraIR:
   envoy-gateway/gateway-tls-wildcard-hostname:
     proxy:
       listeners:
-      - address: null
-        name: envoy-gateway/gateway-tls-wildcard-hostname/tls
+      - name: envoy-gateway/gateway-tls-wildcard-hostname/tls
         ports:
         - containerPort: 10443
           name: tls-443
@@ -284,8 +282,7 @@ infraIR:
   envoy-gateway/gateway-tlsroute-http-only:
     proxy:
       listeners:
-      - address: null
-        name: envoy-gateway/gateway-tlsroute-http-only/http
+      - name: envoy-gateway/gateway-tlsroute-http-only/http
         ports:
         - containerPort: 10080
           name: http-80
@@ -303,8 +300,7 @@ infraIR:
   envoy-gateway/gateway-tlsroute-https-only:
     proxy:
       listeners:
-      - address: null
-        name: envoy-gateway/gateway-tlsroute-https-only/https
+      - name: envoy-gateway/gateway-tlsroute-https-only/https
         ports:
         - containerPort: 10443
           name: https-443
@@ -333,8 +329,7 @@ infraIR:
   envoy-gateway/gateway-tlsroute-tls-passthrough-only:
     proxy:
       listeners:
-      - address: null
-        name: envoy-gateway/gateway-tlsroute-tls-passthrough-only/tls-passthrough
+      - name: envoy-gateway/gateway-tlsroute-tls-passthrough-only/tls-passthrough
         ports:
         - containerPort: 10443
           name: tls-443

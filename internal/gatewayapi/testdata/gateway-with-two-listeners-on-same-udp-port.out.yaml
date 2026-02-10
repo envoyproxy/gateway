@@ -42,7 +42,7 @@ gateways:
       supportedKinds:
       - group: gateway.networking.k8s.io
         kind: UDPRoute
-    - attachedRoutes: 0
+    - attachedRoutes: 1
       conditions:
       - lastTransitionTime: null
         message: Only one UDP listener is allowed in a given port
