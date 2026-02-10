@@ -42,7 +42,7 @@ gateways:
       supportedKinds:
       - group: gateway.networking.k8s.io
         kind: TCPRoute
-    - attachedRoutes: 1
+    - attachedRoutes: 0
       conditions:
       - lastTransitionTime: null
         message: Listener must have TLS set when protocol is TLS.
