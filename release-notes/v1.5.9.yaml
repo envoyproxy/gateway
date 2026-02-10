@@ -15,6 +15,7 @@ bug fixes: |
   Fixed an issue where custom response filters were not properly positioned in the filter chain, causing redirect functionality to fail in OAuth2 flows.
   Fixed an issue where route-level idle timeout prevented users from configuring listener-level idle timeout.
   Fixed an issue where the message package did not adopt the configured logging level.
+  Fixed an issue where the controller reported ready before cache synced.
 
 # Enhancements that improve performance.
 performance improvements: |
