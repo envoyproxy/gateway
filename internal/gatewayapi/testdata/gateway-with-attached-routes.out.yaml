@@ -291,8 +291,7 @@ infraIR:
   envoy-gateway/gateway-with-one-attached-route:
     proxy:
       listeners:
-      - address: null
-        name: envoy-gateway/gateway-with-one-attached-route/http
+      - name: envoy-gateway/gateway-with-one-attached-route/http
         ports:
         - containerPort: 10080
           name: http-80
@@ -310,8 +309,7 @@ infraIR:
   envoy-gateway/gateway-with-two-attached-routes:
     proxy:
       listeners:
-      - address: null
-        name: envoy-gateway/gateway-with-two-attached-routes/http
+      - name: envoy-gateway/gateway-with-two-attached-routes/http
         ports:
         - containerPort: 10080
           name: http-80
