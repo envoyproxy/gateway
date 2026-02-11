@@ -440,6 +440,68 @@ func TestHandleAPIConfigDumpWithResourceAllRedactsSecrets(t *testing.T) {
 	}, secret.ManagedFields)
 }
 
+func TestHandleAPIConfigDumpWithResourceFilter(t *testing.T) {
+	cfg := &config.Server{
+		Logger: logging.NewLogger(os.Stdout, egv1a1.DefaultEnvoyGatewayLogging()),
+	}
+
+	providerRes := &message.ProviderResources{}
+	controllerResources := resource.ControllerResources{
+		&resource.Resources{
+			Gateways: []*gwapiv1.Gateway{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "eg",
+						Namespace: "default",
+					},
+				},
+			},
+			Backends: []*egv1a1.Backend{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "be",
+						Namespace: "default",
+					},
+				},
+			},
+		},
+	}
+	providerRes.GatewayAPIResources.Store("test", &resource.ControllerResourcesContext{
+		Resources: &controllerResources,
+		Context:   context.Background(),
+	})
+
+	handler := NewHandler(cfg, providerRes)
+	req := httptest.NewRequest(http.MethodGet, "/api/config_dump?resource=gateway", nil)
+	resp := httptest.NewRecorder()
+
+	handler.handleAPIConfigDump(resp, req)
+
+	assert.Equal(t, http.StatusOK, resp.Code)
+	var result map[string]interface{}
+	err := json.Unmarshal(resp.Body.Bytes(), &result)
+	require.NoError(t, err)
+	assert.Equal(t, float64(1), result["totalCount"])
+
+	resources, ok := result["resources"].([]interface{})
+	require.True(t, ok)
+	require.Len(t, resources, 1)
+}
+
+func TestHandleAPIConfigDumpWithInvalidResourceFilter(t *testing.T) {
+	cfg := &config.Server{
+		Logger: logging.NewLogger(os.Stdout, egv1a1.DefaultEnvoyGatewayLogging()),
+	}
+	handler := NewHandler(cfg, (*message.ProviderResources)(nil))
+
+	req := httptest.NewRequest(http.MethodGet, "/api/config_dump?resource=invalid", nil)
+	resp := httptest.NewRecorder()
+	handler.handleAPIConfigDump(resp, req)
+
+	assert.Equal(t, http.StatusBadRequest, resp.Code)
+	assert.Contains(t, resp.Body.String(), "Invalid resource filter")
+}
+
 func TestHandleAPIConfigDumpWithResourceAllMethodNotAllowed(t *testing.T) {
 	cfg := &config.Server{
 		Logger: logging.NewLogger(os.Stdout, egv1a1.DefaultEnvoyGatewayLogging()),

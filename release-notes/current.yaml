@@ -10,6 +10,7 @@ security updates: |
 new features: |
   Added support for configuring optional health check configuration.
   Added support for shadow mode in local rate limiting.
+  Added `egctl config envoy-gateway` commands to retrieve Envoy Gateway admin config dumps.
 
 bug fixes: |
   Rejected ClientTrafficPolicy if invalid TLS cipher suites are configured.
