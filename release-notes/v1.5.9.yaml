@@ -5,6 +5,7 @@ breaking changes: |
 
 # Updates addressing vulnerabilities, security flaws, or compliance requirements.
 security updates: |
+  Bump golang to `v1.24.13`.
 
 # New features or capabilities added in this release.
 new features: |
