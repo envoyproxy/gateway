@@ -2,9 +2,11 @@ date: February 11, 2026
 
 # Changes that are expected to cause an incompatibility with previous versions, such as deletions or modifications to existing APIs.
 breaking changes: |
+  Gateway API CRD has been updated, more details could be found [here](https://github.com/kubernetes-sigs/gateway-api/issues/4490).
 
 # Updates addressing vulnerabilities, security flaws, or compliance requirements.
 security updates: |
+  Bump golang to `1.25.7` for security fixes to the go command and the `crypto/tls` package.
 
 # New features or capabilities added in this release.
 new features: |
