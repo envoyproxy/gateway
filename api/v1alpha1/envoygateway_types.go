@@ -134,8 +134,14 @@ type EnvoyGatewaySpec struct {
 
 // GatewayAPI defines an experimental Gateway API resource that can be enabled.
 // +enum
-// +kubebuilder:validation:Enum=XBackendTrafficPolicy
+// +kubebuilder:validation:Enum=XBackendTrafficPolicy;XGatewayBackendClientCert
 type GatewayAPI string
+
+const (
+	// XGatewayBackendClientCert enables Gateway spec.tls.backend.clientCertificateRef for backend mTLS.
+	XGatewayBackendClientCert GatewayAPI = "XGatewayBackendClientCert"
+)
+
 
 // GatewayAPISettings provides a mechanism to opt into experimental Gateway API resources.
 // These APIs are experimental today and are subject to change or removal as they mature.
