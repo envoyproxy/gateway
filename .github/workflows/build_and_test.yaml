@@ -133,23 +133,23 @@ jobs:
       fail-fast: false
       matrix:
         target:
-        - version: v1.32.11
+        - version: v1.32.12
           ipFamily: ipv4
           profile: default
-        - version: v1.33.7
+        - version: v1.33.8
           ipFamily: ipv4
           profile: default
-        - version: v1.34.3
+        - version: v1.34.4
           ipFamily: ipv6  # only run ipv6 test on this version to save time
           profile: default
         # TODO: this's IPv4 first, need a way to test IPv6 first.
-        - version: v1.35.0
+        - version: v1.35.1
           ipFamily: dual  # only run dual test on latest version to save time
           profile: default
-        - version: v1.35.0
+        - version: v1.35.1
           ipFamily: dual  # only run dual test on latest version to save time
           profile: gateway-namespace-mode
-        - version: v1.35.0
+        - version: v1.35.1
           ipFamily: ipv4
           profile: xds-name-scheme-v2
     steps:
@@ -186,23 +186,23 @@ jobs:
       fail-fast: false
       matrix:
         target:
-        - version: v1.32.11
+        - version: v1.32.12
           ipFamily: ipv4
           profile: default
-        - version: v1.33.7
+        - version: v1.33.8
           ipFamily: ipv4
           profile: default
-        - version: v1.34.3
+        - version: v1.34.4
           ipFamily: ipv6  # only run ipv6 test on this version to save time
           profile: default
         # TODO: this's IPv4 first, need a way to test IPv6 first.
-        - version: v1.35.0
+        - version: v1.35.1
           ipFamily: dual  # only run dual test on latest version to save time
           profile: default
-        - version: v1.35.0
+        - version: v1.35.1
           ipFamily: dual  # only run dual test on latest version to save time
           profile: gateway-namespace-mode
-        - version: v1.35.0
+        - version: v1.35.1
           ipFamily: ipv4
           profile: xds-name-scheme-v2
 
