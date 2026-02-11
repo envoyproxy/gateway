@@ -51,7 +51,7 @@ var HTTPBackendExtAuthTest = suite.ConformanceTest{
 			expectedResponse := http.ExpectedResponse{
 				Request: http.Request{
 					Host: "www.example.com",
-					Path: "/myapp",
+					Path: "/http",
 					Headers: map[string]string{
 						"Authorization": "Bearer token2",
 					},
@@ -61,7 +61,7 @@ var HTTPBackendExtAuthTest = suite.ConformanceTest{
 				ExpectedRequest: &http.ExpectedRequest{
 					Request: http.Request{
 						Host: "www.example.com",
-						Path: "/myapp",
+						Path: "/http",
 						Headers: map[string]string{
 							"x-current-user": "user2",
 						},
@@ -80,7 +80,7 @@ var HTTPBackendExtAuthTest = suite.ConformanceTest{
 			expectedResponse := http.ExpectedResponse{
 				Request: http.Request{
 					Host: "www.example.com",
-					Path: "/myapp",
+					Path: "/http",
 				},
 				Response: http.Response{
 					StatusCodes: []int{403},
