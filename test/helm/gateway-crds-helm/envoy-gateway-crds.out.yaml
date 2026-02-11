@@ -242,6 +242,8 @@ spec:
                     description: |-
                       Ciphers specifies the set of cipher suites supported when
                       negotiating TLS 1.0 - 1.2. This setting has no effect for TLS 1.3.
+                      For the list of supported ciphers, please refer to the Envoy documentation:
+                      https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/transport_sockets/tls/v3/common.proto#extensions-transport-sockets-tls-v3-tlsparameters
                       In non-FIPS Envoy Proxy builds the default cipher list is:
                       - [ECDHE-ECDSA-AES128-GCM-SHA256|ECDHE-ECDSA-CHACHA20-POLY1305]
                       - [ECDHE-RSA-AES128-GCM-SHA256|ECDHE-RSA-CHACHA20-POLY1305]
@@ -935,6 +937,23 @@ spec:
                           checks.
                         pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                         type: string
+                      overrides:
+                        description: |-
+                          Overrides defines the configuration of the overriding health check settings for all endpoints
+                          in the backend cluster. This allows customization of port and other settings that may differ
+                          from the main service configuration.
+                        properties:
+                          port:
+                            description: |-
+                              Port overrides the health check port.
+                              If not set, the endpoint's serving port is used for health checks.
+                              This is useful when health checks are served on a different port than
+                              the main service port (e.g., port 443 for service, port 9090 for health checks).
+                            format: int32
+                            maximum: 65535
+                            minimum: 1
+                            type: integer
+                        type: object
                       tcp:
                         description: |-
                           TCP defines the configuration of tcp health checker.
@@ -2167,9 +2186,7 @@ spec:
                         type: array
                         x-kubernetes-validations:
                         - message: response cost is not supported for Local Rate Limits
-                          rule: self.all(foo, !has(foo.cost) || !has(foo.cost.response))
-                        - message: shadow mode is not supported for Local Rate Limits
-                          rule: self.all(foo, !has(foo.shadowMode))
+                          rule: self.all(r, !has(r.cost) || !has(r.cost.response))
                     type: object
                   type:
                     description: |-
@@ -4612,6 +4629,8 @@ spec:
                     description: |-
                       Ciphers specifies the set of cipher suites supported when
                       negotiating TLS 1.0 - 1.2. This setting has no effect for TLS 1.3.
+                      For the list of supported ciphers, please refer to the Envoy documentation:
+                      https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/transport_sockets/tls/v3/common.proto#extensions-transport-sockets-tls-v3-tlsparameters
                       In non-FIPS Envoy Proxy builds the default cipher list is:
                       - [ECDHE-ECDSA-AES128-GCM-SHA256|ECDHE-ECDSA-CHACHA20-POLY1305]
                       - [ECDHE-RSA-AES128-GCM-SHA256|ECDHE-RSA-CHACHA20-POLY1305]
@@ -5876,6 +5895,23 @@ spec:
                                     health checks.
                                   pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                   type: string
+                                overrides:
+                                  description: |-
+                                    Overrides defines the configuration of the overriding health check settings for all endpoints
+                                    in the backend cluster. This allows customization of port and other settings that may differ
+                                    from the main service configuration.
+                                  properties:
+                                    port:
+                                      description: |-
+                                        Port overrides the health check port.
+                                        If not set, the endpoint's serving port is used for health checks.
+                                        This is useful when health checks are served on a different port than
+                                        the main service port (e.g., port 443 for service, port 9090 for health checks).
+                                      format: int32
+                                      maximum: 65535
+                                      minimum: 1
+                                      type: integer
+                                  type: object
                                 tcp:
                                   description: |-
                                     TCP defines the configuration of tcp health checker.
@@ -8119,6 +8155,8 @@ spec:
                     description: |-
                       Ciphers specifies the set of cipher suites supported when
                       negotiating TLS 1.0 - 1.2. This setting has no effect for TLS 1.3.
+                      For the list of supported ciphers, please refer to the Envoy documentation:
+                      https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/transport_sockets/tls/v3/common.proto#extensions-transport-sockets-tls-v3-tlsparameters
                       In non-FIPS Envoy Proxy builds the default cipher list is:
                       - [ECDHE-ECDSA-AES128-GCM-SHA256|ECDHE-ECDSA-CHACHA20-POLY1305]
                       - [ECDHE-RSA-AES128-GCM-SHA256|ECDHE-RSA-CHACHA20-POLY1305]
@@ -19601,6 +19639,23 @@ spec:
                                                       checks.
                                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                     type: string
+                                                  overrides:
+                                                    description: |-
+                                                      Overrides defines the configuration of the overriding health check settings for all endpoints
+                                                      in the backend cluster. This allows customization of port and other settings that may differ
+                                                      from the main service configuration.
+                                                    properties:
+                                                      port:
+                                                        description: |-
+                                                          Port overrides the health check port.
+                                                          If not set, the endpoint's serving port is used for health checks.
+                                                          This is useful when health checks are served on a different port than
+                                                          the main service port (e.g., port 443 for service, port 9090 for health checks).
+                                                        format: int32
+                                                        maximum: 65535
+                                                        minimum: 1
+                                                        type: integer
+                                                    type: object
                                                   tcp:
                                                     description: |-
                                                       TCP defines the configuration of tcp health checker.
@@ -20853,6 +20908,23 @@ spec:
                                                       checks.
                                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                     type: string
+                                                  overrides:
+                                                    description: |-
+                                                      Overrides defines the configuration of the overriding health check settings for all endpoints
+                                                      in the backend cluster. This allows customization of port and other settings that may differ
+                                                      from the main service configuration.
+                                                    properties:
+                                                      port:
+                                                        description: |-
+                                                          Port overrides the health check port.
+                                                          If not set, the endpoint's serving port is used for health checks.
+                                                          This is useful when health checks are served on a different port than
+                                                          the main service port (e.g., port 443 for service, port 9090 for health checks).
+                                                        format: int32
+                                                        maximum: 65535
+                                                        minimum: 1
+                                                        type: integer
+                                                    type: object
                                                   tcp:
                                                     description: |-
                                                       TCP defines the configuration of tcp health checker.
@@ -22273,6 +22345,23 @@ spec:
                                                 between active health checks.
                                               pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                               type: string
+                                            overrides:
+                                              description: |-
+                                                Overrides defines the configuration of the overriding health check settings for all endpoints
+                                                in the backend cluster. This allows customization of port and other settings that may differ
+                                                from the main service configuration.
+                                              properties:
+                                                port:
+                                                  description: |-
+                                                    Port overrides the health check port.
+                                                    If not set, the endpoint's serving port is used for health checks.
+                                                    This is useful when health checks are served on a different port than
+                                                    the main service port (e.g., port 443 for service, port 9090 for health checks).
+                                                  format: int32
+                                                  maximum: 65535
+                                                  minimum: 1
+                                                  type: integer
+                                              type: object
                                             tcp:
                                               description: |-
                                                 TCP defines the configuration of tcp health checker.
@@ -23600,6 +23689,23 @@ spec:
                                           active health checks.
                                         pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                         type: string
+                                      overrides:
+                                        description: |-
+                                          Overrides defines the configuration of the overriding health check settings for all endpoints
+                                          in the backend cluster. This allows customization of port and other settings that may differ
+                                          from the main service configuration.
+                                        properties:
+                                          port:
+                                            description: |-
+                                              Port overrides the health check port.
+                                              If not set, the endpoint's serving port is used for health checks.
+                                              This is useful when health checks are served on a different port than
+                                              the main service port (e.g., port 443 for service, port 9090 for health checks).
+                                            format: int32
+                                            maximum: 65535
+                                            minimum: 1
+                                            type: integer
+                                        type: object
                                       tcp:
                                         description: |-
                                           TCP defines the configuration of tcp health checker.
@@ -26275,6 +26381,23 @@ spec:
                                       active health checks.
                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
+                                  overrides:
+                                    description: |-
+                                      Overrides defines the configuration of the overriding health check settings for all endpoints
+                                      in the backend cluster. This allows customization of port and other settings that may differ
+                                      from the main service configuration.
+                                    properties:
+                                      port:
+                                        description: |-
+                                          Port overrides the health check port.
+                                          If not set, the endpoint's serving port is used for health checks.
+                                          This is useful when health checks are served on a different port than
+                                          the main service port (e.g., port 443 for service, port 9090 for health checks).
+                                        format: int32
+                                        maximum: 65535
+                                        minimum: 1
+                                        type: integer
+                                    type: object
                                   tcp:
                                     description: |-
                                       TCP defines the configuration of tcp health checker.
@@ -27415,6 +27538,23 @@ spec:
                                       active health checks.
                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
+                                  overrides:
+                                    description: |-
+                                      Overrides defines the configuration of the overriding health check settings for all endpoints
+                                      in the backend cluster. This allows customization of port and other settings that may differ
+                                      from the main service configuration.
+                                    properties:
+                                      port:
+                                        description: |-
+                                          Port overrides the health check port.
+                                          If not set, the endpoint's serving port is used for health checks.
+                                          This is useful when health checks are served on a different port than
+                                          the main service port (e.g., port 443 for service, port 9090 for health checks).
+                                        format: int32
+                                        maximum: 65535
+                                        minimum: 1
+                                        type: integer
+                                    type: object
                                   tcp:
                                     description: |-
                                       TCP defines the configuration of tcp health checker.
@@ -28757,6 +28897,23 @@ spec:
                                             active health checks.
                                           pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                           type: string
+                                        overrides:
+                                          description: |-
+                                            Overrides defines the configuration of the overriding health check settings for all endpoints
+                                            in the backend cluster. This allows customization of port and other settings that may differ
+                                            from the main service configuration.
+                                          properties:
+                                            port:
+                                              description: |-
+                                                Port overrides the health check port.
+                                                If not set, the endpoint's serving port is used for health checks.
+                                                This is useful when health checks are served on a different port than
+                                                the main service port (e.g., port 443 for service, port 9090 for health checks).
+                                              format: int32
+                                              maximum: 65535
+                                              minimum: 1
+                                              type: integer
+                                          type: object
                                         tcp:
                                           description: |-
                                             TCP defines the configuration of tcp health checker.
@@ -30175,6 +30332,23 @@ spec:
                                       active health checks.
                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
+                                  overrides:
+                                    description: |-
+                                      Overrides defines the configuration of the overriding health check settings for all endpoints
+                                      in the backend cluster. This allows customization of port and other settings that may differ
+                                      from the main service configuration.
+                                    properties:
+                                      port:
+                                        description: |-
+                                          Port overrides the health check port.
+                                          If not set, the endpoint's serving port is used for health checks.
+                                          This is useful when health checks are served on a different port than
+                                          the main service port (e.g., port 443 for service, port 9090 for health checks).
+                                        format: int32
+                                        maximum: 65535
+                                        minimum: 1
+                                        type: integer
+                                    type: object
                                   tcp:
                                     description: |-
                                       TCP defines the configuration of tcp health checker.

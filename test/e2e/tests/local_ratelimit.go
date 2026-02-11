@@ -72,8 +72,43 @@ var LocalRateLimitTest = suite.ConformanceTest{
 			t.Run(fmt.Sprintf("MethodMatch-%s", caseSuffix), func(t *testing.T) {
 				runMethodMatchRateLimitTest(t, suite, disableHeader)
 			})
+
+			t.Run(fmt.Sprintf("ShadowMode-%s", caseSuffix), func(t *testing.T) {
+				runShaowModeRateLimitTest(t, suite, disableHeader)
+			})
 		}
 	},
+}
+
+func runShaowModeRateLimitTest(t *testing.T, suite *suite.ConformanceTestSuite, disableHeader bool) {
+	ns := "gateway-conformance-infra"
+	gwNN := gatewayNN(disableHeader)
+	gwAddr := gatewayAndHTTPRoutesMustBeAccepted(t, suite, gwNN)
+
+	ancestorRef := gwapiv1.ParentReference{
+		Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
+		Kind:      gatewayapi.KindPtr(resource.KindGateway),
+		Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
+		Name:      gwapiv1.ObjectName(gwNN.Name),
+	}
+	BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "ratelimit-shadow-mode", Namespace: ns}, suite.ControllerName, ancestorRef)
+
+	for range 10 {
+		// keep sending requests till get 200 first, that will cost one 200
+		http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, http.ExpectedResponse{
+			Request: http.Request{
+				Path: "/ratelimit-shadow-mode",
+				Headers: map[string]string{
+					"x-user-id": "one",
+				},
+			},
+			Response: http.Response{
+				// always return 200 because shadow mode
+				StatusCodes: []int{200},
+			},
+			Namespace: ns,
+		})
+	}
 }
 
 // gatewayNN return the gateway namespace name when disabled header or not
@@ -391,7 +426,7 @@ func runPathMatchRateLimitTest(t *testing.T, suite *suite.ConformanceTestSuite, 
 			Path: "/ratelimit-path-match/foo",
 		},
 		Response: http.Response{
-			StatusCode: 200,
+			StatusCodes: []int{200},
 		},
 		Namespace: ns,
 	}
@@ -412,7 +447,7 @@ func runPathMatchRateLimitTest(t *testing.T, suite *suite.ConformanceTestSuite, 
 			Path: "/ratelimit-path-match/foo",
 		},
 		Response: http.Response{
-			StatusCode: 429,
+			StatusCodes: []int{429},
 		},
 		Namespace: ns,
 	}
@@ -432,7 +467,7 @@ func runPathMatchRateLimitTest(t *testing.T, suite *suite.ConformanceTestSuite, 
 			Path: "/ratelimit-path-match/bar",
 		},
 		Response: http.Response{
-			StatusCode: 200,
+			StatusCodes: []int{200},
 		},
 		Namespace: ns,
 	}
@@ -458,7 +493,7 @@ func runMethodMatchRateLimitTest(t *testing.T, suite *suite.ConformanceTestSuite
 			Path: "/ratelimit-method-match",
 		},
 		Response: http.Response{
-			StatusCode: 200,
+			StatusCodes: []int{200},
 		},
 		Namespace: ns,
 	}
@@ -479,7 +514,7 @@ func runMethodMatchRateLimitTest(t *testing.T, suite *suite.ConformanceTestSuite
 			Path: "/ratelimit-method-match",
 		},
 		Response: http.Response{
-			StatusCode: 429,
+			StatusCodes: []int{429},
 		},
 		Namespace: ns,
 	}
@@ -500,7 +535,7 @@ func runMethodMatchRateLimitTest(t *testing.T, suite *suite.ConformanceTestSuite
 			Method: "POST",
 		},
 		Response: http.Response{
-			StatusCode: 200,
+			StatusCodes: []int{200},
 		},
 		Namespace: ns,
 	}

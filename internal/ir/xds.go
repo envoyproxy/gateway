@@ -71,6 +71,7 @@ var (
 	ErrHCHTTPPathInvalid                        = errors.New("field HTTPHealthChecker.Path should be specified")
 	ErrHCHTTPMethodInvalid                      = errors.New("only one of the GET, HEAD, POST, DELETE, OPTIONS, TRACE, PATCH of HTTPHealthChecker.Method could be set")
 	ErrHCHTTPExpectedStatusesInvalid            = errors.New("field HTTPHealthChecker.ExpectedStatuses should be specified")
+	ErrHealthCheckOverridesPortInvalid          = errors.New("field HealthCheckOverrides.Port must be between 1 and 65535")
 	ErrHealthCheckPayloadInvalid                = errors.New("one of Text, Binary fields must be set in payload")
 	ErrHTTPStatusInvalid                        = errors.New("HTTPStatus should be in [200,600)")
 	ErrOutlierDetectionBaseEjectionTimeInvalid  = errors.New("field OutlierDetection.BaseEjectionTime must be specified")
@@ -2878,6 +2879,9 @@ type ActiveHealthCheck struct {
 	TCP *TCPHealthChecker `json:"tcp,omitempty" yaml:"tcp,omitempty"`
 	// GRPC defines if the GRPC healthcheck service should be used
 	GRPC *GRPCHealthChecker `json:"grpc,omitempty" yaml:"grpc,omitempty"`
+	// Overrides defines the configuration of the overriding health check settings for all endpoints
+	// in the backend cluster.
+	Overrides *HealthCheckOverrides `json:"overrides,omitempty" yaml:"overrides,omitempty"`
 }
 
 func (h *HealthCheck) SetHTTPHostIfAbsent(host string) {
@@ -2929,6 +2933,12 @@ func (h *HealthCheck) Validate() error {
 		}
 		if h.Active.TCP != nil {
 			if err := h.Active.TCP.Validate(); err != nil {
+				errs = errors.Join(errs, err)
+			}
+		}
+
+		if h.Active.Overrides != nil {
+			if err := h.Active.Overrides.Validate(); err != nil {
 				errs = errors.Join(errs, err)
 			}
 		}
@@ -3048,6 +3058,19 @@ func (c *TCPHealthChecker) Validate() error {
 		}
 	}
 	return errs
+}
+
+// HealthCheckOverrides allows overriding default health check behavior for specific use cases.
+type HealthCheckOverrides struct {
+	Port uint32 `json:"port,omitempty" yaml:"port,omitempty"`
+}
+
+// Validate the fields within the HealthCheckOverrides structure.
+func (h *HealthCheckOverrides) Validate() error {
+	if h.Port < 1 || h.Port > 65535 {
+		return ErrHealthCheckOverridesPortInvalid
+	}
+	return nil
 }
 
 // HealthCheckPayload defines the encoding of the payload bytes in the payload.
