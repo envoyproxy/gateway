@@ -12,7 +12,7 @@ spec:
   - matches:
     - path:
         type: PathPrefix
-        value: /myapp              # This is the path that will be protected by ext auth
+        value: /grpc              # This is the path that will be protected by ext auth
     backendRefs:
     - name: infra-backend-v1
       port: 8080
