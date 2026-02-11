@@ -85,8 +85,7 @@ infraIR:
   gateway/composite-gateway:
     proxy:
       listeners:
-      - address: null
-        name: gateway/composite-gateway/core-http
+      - name: gateway/composite-gateway/core-http
         ports:
         - containerPort: 10080
           name: http-80
