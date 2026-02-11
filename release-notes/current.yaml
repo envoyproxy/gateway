@@ -9,11 +9,13 @@ security updates: |
 # New features or capabilities added in this release.
 new features: |
   Added support for configuring optional health check configuration.
+  Added support for shadow mode in local rate limiting.
   Added support for MergeType in SecurityPolicy to enable route-level policies to merge with parent Gateway/Listener policies, similar to BackendTrafficPolicy.
 
 bug fixes: |
   Rejected ClientTrafficPolicy if invalid TLS cipher suites are configured.
   Fixed validation of XListenerSet certificateRefs
+  Fixed XListenerSet not allowing xRoutes from the same namespace when configured to allow them
 
 # Enhancements that improve performance.
 performance improvements: |
