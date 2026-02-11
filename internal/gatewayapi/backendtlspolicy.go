@@ -147,7 +147,7 @@ func (t *Translator) applyBackendTLSSetting(
 	}
 
 	// Get the client certificate settings from Gateway resource.
-	if gateway != nil && gateway.Spec.TLS != nil && gateway.Spec.TLS.Backend != nil {
+	if t.GatewayBackendClientCertEnabled && gateway != nil && gateway.Spec.TLS != nil && gateway.Spec.TLS.Backend != nil {
 		if gatewayClientTLSConfig, err = t.processGatewayBackendTLS(gateway, resources); err != nil {
 			return nil, err
 		}
