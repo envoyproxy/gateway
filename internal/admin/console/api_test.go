@@ -17,8 +17,13 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/telepresenceio/watchable"
 	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapiv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
+	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+	mcsapiv1a1 "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
@@ -448,6 +453,11 @@ func TestHandleAPIConfigDumpWithResourceFilter(t *testing.T) {
 	providerRes := &message.ProviderResources{}
 	controllerResources := resource.ControllerResources{
 		&resource.Resources{
+			GatewayClass: &gwapiv1.GatewayClass{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "eg",
+				},
+			},
 			Gateways: []*gwapiv1.Gateway{
 				{
 					ObjectMeta: metav1.ObjectMeta{
@@ -456,10 +466,167 @@ func TestHandleAPIConfigDumpWithResourceFilter(t *testing.T) {
 					},
 				},
 			},
+			HTTPRoutes: []*gwapiv1.HTTPRoute{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "hr",
+						Namespace: "default",
+					},
+				},
+			},
+			GRPCRoutes: []*gwapiv1.GRPCRoute{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "gr",
+						Namespace: "default",
+					},
+				},
+			},
+			TLSRoutes: []*gwapiv1a3.TLSRoute{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "tr",
+						Namespace: "default",
+					},
+				},
+			},
+			TCPRoutes: []*gwapiv1a2.TCPRoute{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "tcr",
+						Namespace: "default",
+					},
+				},
+			},
+			UDPRoutes: []*gwapiv1a2.UDPRoute{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "ur",
+						Namespace: "default",
+					},
+				},
+			},
+			ClientTrafficPolicies: []*egv1a1.ClientTrafficPolicy{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "ctp",
+						Namespace: "default",
+					},
+				},
+			},
+			BackendTrafficPolicies: []*egv1a1.BackendTrafficPolicy{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "btp",
+						Namespace: "default",
+					},
+				},
+			},
+			BackendTLSPolicies: []*gwapiv1.BackendTLSPolicy{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "btlsp",
+						Namespace: "default",
+					},
+				},
+			},
+			SecurityPolicies: []*egv1a1.SecurityPolicy{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "sp",
+						Namespace: "default",
+					},
+				},
+			},
+			EnvoyPatchPolicies: []*egv1a1.EnvoyPatchPolicy{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "epp",
+						Namespace: "default",
+					},
+				},
+			},
+			EnvoyExtensionPolicies: []*egv1a1.EnvoyExtensionPolicy{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "eep",
+						Namespace: "default",
+					},
+				},
+			},
+			Services: []*corev1.Service{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "svc",
+						Namespace: "default",
+					},
+				},
+			},
+			Secrets: []*corev1.Secret{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "sec",
+						Namespace: "default",
+					},
+				},
+			},
+			ConfigMaps: []*corev1.ConfigMap{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "cm",
+						Namespace: "default",
+					},
+				},
+			},
+			Namespaces: []*corev1.Namespace{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "default",
+					},
+				},
+			},
+			EndpointSlices: []*discoveryv1.EndpointSlice{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "eps",
+						Namespace: "default",
+					},
+				},
+			},
+			ReferenceGrants: []*gwapiv1b1.ReferenceGrant{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "rg",
+						Namespace: "default",
+					},
+				},
+			},
+			HTTPRouteFilters: []*egv1a1.HTTPRouteFilter{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "hrf",
+						Namespace: "default",
+					},
+				},
+			},
+			EnvoyProxyForGatewayClass: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "ep",
+					Namespace: "default",
+				},
+			},
 			Backends: []*egv1a1.Backend{
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "be",
+						Namespace: "default",
+					},
+				},
+			},
+			ServiceImports: []*mcsapiv1a1.ServiceImport{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "si",
 						Namespace: "default",
 					},
 				},
@@ -472,20 +639,68 @@ func TestHandleAPIConfigDumpWithResourceFilter(t *testing.T) {
 	})
 
 	handler := NewHandler(cfg, providerRes)
-	req := httptest.NewRequest(http.MethodGet, "/api/config_dump?resource=gateway", nil)
-	resp := httptest.NewRecorder()
 
-	handler.handleAPIConfigDump(resp, req)
+	testCases := []struct {
+		name              string
+		resource          string
+		totalCount        float64
+		expectedName      string
+		expectedNamespace string
+	}{
+		{name: "gatewayclass", resource: "gatewayclass", totalCount: 1, expectedName: "eg"},
+		{name: "gateway", resource: "gateway", totalCount: 1, expectedName: "eg", expectedNamespace: "default"},
+		{name: "httproute", resource: "httproute", totalCount: 1, expectedName: "hr", expectedNamespace: "default"},
+		{name: "grpcroute", resource: "grpcroute", totalCount: 1, expectedName: "gr", expectedNamespace: "default"},
+		{name: "tlsroute", resource: "tlsroute", totalCount: 1, expectedName: "tr", expectedNamespace: "default"},
+		{name: "tcproute", resource: "tcproute", totalCount: 1, expectedName: "tcr", expectedNamespace: "default"},
+		{name: "udproute", resource: "udproute", totalCount: 1, expectedName: "ur", expectedNamespace: "default"},
+		{name: "clienttrafficpolicy", resource: "clienttrafficpolicy", totalCount: 1, expectedName: "ctp", expectedNamespace: "default"},
+		{name: "backendtrafficpolicy", resource: "backendtrafficpolicy", totalCount: 1, expectedName: "btp", expectedNamespace: "default"},
+		{name: "backendtlspolicy", resource: "backendtlspolicy", totalCount: 1, expectedName: "btlsp", expectedNamespace: "default"},
+		{name: "securitypolicy", resource: "securitypolicy", totalCount: 1, expectedName: "sp", expectedNamespace: "default"},
+		{name: "envoypatchpolicy", resource: "envoypatchpolicy", totalCount: 1, expectedName: "epp", expectedNamespace: "default"},
+		{name: "envoyextensionpolicy", resource: "envoyextensionpolicy", totalCount: 1, expectedName: "eep", expectedNamespace: "default"},
+		{name: "service", resource: "service", totalCount: 1, expectedName: "svc", expectedNamespace: "default"},
+		{name: "secret", resource: "secret", totalCount: 1, expectedName: "sec", expectedNamespace: "default"},
+		{name: "configmap", resource: "configmap", totalCount: 1, expectedName: "cm", expectedNamespace: "default"},
+		{name: "namespace", resource: "namespace", totalCount: 1, expectedName: "default"},
+		{name: "endpointslice", resource: "endpointslice", totalCount: 1, expectedName: "eps", expectedNamespace: "default"},
+		{name: "referencegrant", resource: "referencegrant", totalCount: 1, expectedName: "rg", expectedNamespace: "default"},
+		{name: "httproutefilter", resource: "httproutefilter", totalCount: 1, expectedName: "hrf", expectedNamespace: "default"},
+		{name: "envoyproxy", resource: "envoyproxy", totalCount: 1, expectedName: "ep", expectedNamespace: "default"},
+		{name: "backend", resource: "backend", totalCount: 1, expectedName: "be", expectedNamespace: "default"},
+		{name: "serviceimport", resource: "serviceimport", totalCount: 1, expectedName: "si", expectedNamespace: "default"},
+	}
 
-	assert.Equal(t, http.StatusOK, resp.Code)
-	var result map[string]interface{}
-	err := json.Unmarshal(resp.Body.Bytes(), &result)
-	require.NoError(t, err)
-	assert.Equal(t, float64(1), result["totalCount"])
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, "/api/config_dump?resource="+tc.resource, nil)
+			resp := httptest.NewRecorder()
 
-	resources, ok := result["resources"].([]interface{})
-	require.True(t, ok)
-	require.Len(t, resources, 1)
+			handler.handleAPIConfigDump(resp, req)
+
+			assert.Equal(t, http.StatusOK, resp.Code)
+			var result map[string]interface{}
+			err := json.Unmarshal(resp.Body.Bytes(), &result)
+			require.NoError(t, err)
+			assert.Equal(t, tc.totalCount, result["totalCount"])
+
+			resources, ok := result["resources"].([]interface{})
+			require.True(t, ok)
+			require.Len(t, resources, 1)
+			resourceItem, ok := resources[0].(map[string]interface{})
+			require.True(t, ok)
+			metadata, ok := resourceItem["metadata"].(map[string]interface{})
+			require.True(t, ok)
+			assert.Equal(t, tc.expectedName, metadata["name"])
+			if tc.expectedNamespace == "" {
+				_, foundNamespace := metadata["namespace"]
+				assert.False(t, foundNamespace)
+			} else {
+				assert.Equal(t, tc.expectedNamespace, metadata["namespace"])
+			}
+		})
+	}
 }
 
 func TestHandleAPIConfigDumpWithInvalidResourceFilter(t *testing.T) {
