@@ -255,7 +255,8 @@ func registerServer(srv serverv3.Server, g *grpc.Server) {
 
 func (r *Runner) translateFromSubscription(sub <-chan watchable.Snapshot[string, *ir.Xds]) {
 	// Subscribe to resources
-	message.HandleSubscription(message.Metadata{Runner: r.Name(), Message: message.XDSIRMessageName}, sub,
+	message.HandleSubscription(r.Logger,
+		message.Metadata{Runner: r.Name(), Message: message.XDSIRMessageName}, sub,
 		func(update message.Update[string, *ir.Xds], errChan chan error) {
 			r.Logger.Info("received an update")
 			key := update.Key
@@ -310,7 +311,9 @@ func (r *Runner) translateFromSubscription(sub <-chan watchable.Snapshot[string,
 					return
 				}
 
-				// Update snapshot cache
+				// Only update the snapshot cache when there are no system-level errors, to avoid publishing partial resources.
+				// This allows Envoy to continue using the previous known-good snapshot until the next successful translation.
+				// Note: invalid EnvoyPatchPolicies are considered user-level errors and will not prevent the snapshot from being updated.
 				if err == nil {
 					if result.XdsResources != nil {
 						if r.cache == nil {
