@@ -5,7 +5,7 @@ breaking changes: |
 
 # Updates addressing vulnerabilities, security flaws, or compliance requirements.
 security updates: |
-  Bump golang to `1.24.13`.
+  Bump golang to `1.24.13` for security fixes to the go command and the `crypto/tls` package.
 
 # New features or capabilities added in this release.
 new features: |
