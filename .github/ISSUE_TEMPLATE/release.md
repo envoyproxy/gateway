@@ -17,5 +17,6 @@ assignees: ''
     - [ ] wait for release CI
 - [ ] verify quickstart
 - [ ] update doc
-- [ ] update release [announcement](https://github.com/envoyproxy/gateway/releases/tag/v1.x.x) 
+- [ ] submit [conformance report](https://github.com/kubernetes-sigs/gateway-api/tree/main/conformance/reports) to gateway-api repo
+- [ ] update release [announcement](https://github.com/envoyproxy/gateway/releases/tag/v1.x.x)
 - [ ] GH Release, Slack announcement, [google group](https://groups.google.com/g/envoy-gateway-announce) announcement

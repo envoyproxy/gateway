@@ -242,6 +242,18 @@ export GITHUB_REMOTE=origin
 
 16. Update the `lastVersionTag` in `test/e2e/tests/eg_upgrade.go` to reflect the latest prior release. Refer to [PR #4666] as an example.
 
+17. Submit the Gateway API conformance report to the [gateway-api repository][]. Run the conformance tests for both deployment modes against the release tag, then open a PR adding the reports to `conformance/reports/v<gateway-api-version>/envoy-gateway/` in `kubernetes-sigs/gateway-api`. Refer to [GW-API PR #4525][] as an example.
+
+    ```shell
+    RELEASE_VERSION=v${MAJOR_VERSION}.${MINOR_VERSION}.0
+    git checkout ${RELEASE_VERSION}
+    TAG=${RELEASE_VERSION} KUBE_DEPLOY_PROFILE=default CONFORMANCE_REPORT_PATH=conformance-report-default.yaml make experimental-conformance
+    TAG=${RELEASE_VERSION} KUBE_DEPLOY_PROFILE=gateway-namespace-mode CONFORMANCE_REPORT_PATH=conformance-report-gateway-namespace-mode.yaml make experimental-conformance
+
+    KUBE_DEPLOY_PROFILE=default CONFORMANCE_REPORT_PATH=conformance-report-default.yaml make experimental-conformance
+    KUBE_DEPLOY_PROFILE=gateway-namespace-mode CONFORMANCE_REPORT_PATH=conformance-report-gateway-namespace-mode.yaml make experimental-conformance
+    ```
+
 If you find any bugs in this process, please create an issue.
 
 ### Announce the Release
@@ -427,3 +439,5 @@ It's important that the world knows about the release. Use the following steps t
 [VERSION]: https://github.com/envoyproxy/gateway/blob/main/VERSION
 [Envoy proxy image]: https://hub.docker.com/r/envoyproxy/envoy/tags?name=distroless
 [Envoy Ratelimit image]: https://hub.docker.com/r/envoyproxy/ratelimit
+[gateway-api repository]: https://github.com/kubernetes-sigs/gateway-api
+[GW-API PR #4525]: https://github.com/kubernetes-sigs/gateway-api/pull/4525
