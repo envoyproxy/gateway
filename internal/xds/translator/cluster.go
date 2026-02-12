@@ -788,10 +788,10 @@ func buildXdsClusterLoadAssignment(clusterName string, destSettings []*ir.Destin
 		// limit host selection controls during retries and session affinity.
 		// For more details see https://github.com/envoyproxy/gateway/issues/5307#issuecomment-2688767482
 		switch {
-		case ds.PreferLocal != nil || preferLocal != nil:
-			localities = append(localities, buildZonalLocalities(metadata, ds, hc)...)
 		case len(weightedZones) > 0:
 			localities = append(localities, buildWeightedZonalLocalities(metadata, ds, hc, weightedZones)...)
+		case ds.PreferLocal != nil || preferLocal != nil:
+			localities = append(localities, buildZonalLocalities(metadata, ds, hc)...)
 		default:
 			localities = append(localities, buildWeightedLocalities(metadata, ds, hc))
 		}
