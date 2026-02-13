@@ -28,7 +28,7 @@ responsible for coordinating the overall release. This includes identifying issu
 communications with the Envoy Gateway community, and the mechanics of the release.
 
 | Quarter |                        Release Manager                        |
-| :-----: | :-----------------------------------------------------------: |
+|:-------:| :-----------------------------------------------------------: |
 | 2022 Q4 |   Daneyon Hansen ([danehans](https://github.com/danehans))    |
 | 2023 Q1 |      Xunzhuo Liu ([Xunzhuo](https://github.com/Xunzhuo))      |
 | 2023 Q2 | Alice Wasko ([Alice-Lilith](https://github.com/Alice-Lilith)) |
@@ -40,6 +40,10 @@ communications with the Envoy Gateway community, and the mechanics of the releas
 | 2025 Q1 |         Guy Daich ([guydc](https://github.com/guydc))         |
 | 2025 Q2 |      Xiaohan Hu ([shawnh2](https://github.com/shawnh2))       |
 | 2025 Q3 |       Jianpeng He ([zirain](https://github.com/zirain))       |
+| 2025 Q4 | Rudrakh Panigrahi ([rudrakhp](https://github.com/rudrakhp))   |
+| 2026 Q1 |   Karol Szwaj ([cnvergence](https://github.com/cnvergence))   |
+| 2026 Q2 |        Isaac Wilson ([jukie](https://github.com/jukie))       |
+| 2026 Q3 |   Kota Kimura ([kkk777-7](https://github.com/kkk777-7))       |
 
 ## Release Schedule
 
@@ -47,7 +51,7 @@ In order to align with the Envoy Proxy [release schedule][], Envoy Gateway relea
 (the 22nd day of each quarter), with an acceptable delay of up to 2 weeks, and a hard deadline of 3 weeks.
 
 | Version |  Expected  |   Actual   | Difference | End of Life |
-| :-----: | :--------: |:----------:|:----------:| :---------: |
+|:-------:|:----------:|:----------:|:----------:|:-----------:|
 |  0.2.0  | 2022/10/22 | 2022/10/20 |  -2 days   |  2023/4/20  |
 |  0.3.0  | 2023/01/22 | 2023/02/09 |  +17 days  | 2023/08/09  |
 |  0.4.0  | 2023/04/22 | 2023/04/24 |  +2 days   | 2023/10/24  |
@@ -59,6 +63,9 @@ In order to align with the Envoy Proxy [release schedule][], Envoy Gateway relea
 |  1.3.x  | 2025/01/30 | 2025/01/30 |            | 2025/07/30  |
 |  1.4.x  | 2025/05/12 | 2025/05/13 |   +1 day   | 2025/11/13  |
 |  1.5.x  | 2025/08/12 | 2025/08/08 |   -4 day   | 2026/02/13  |
+|  1.6.x  | 2025/11/11 | 2025/11/11 |            | 2026/05/13  |
+|  1.7.x  | 2026/02/04 | 2025/02/05 |  +1 day    | 2026/08/05  |
+
 
 [v2.0.0 spec]: https://semver.org/spec/v2.0.0.html
 [release guide]: ../../contributions/releasing

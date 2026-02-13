@@ -631,6 +631,15 @@ func TestDeployment(t *testing.T) {
 			},
 		},
 		{
+			caseName: "with-priority-class-name",
+			infra:    newTestInfra(),
+			deploy: &egv1a1.KubernetesDeploymentSpec{
+				Pod: &egv1a1.KubernetesPodSpec{
+					PriorityClassName: ptr.To("high-priority"),
+				},
+			},
+		},
+		{
 			caseName:  "with-extra-args",
 			infra:     newTestInfra(),
 			extraArgs: []string{"--key1", "val1", "--key2", "val2"},
@@ -1108,6 +1117,15 @@ func TestDaemonSet(t *testing.T) {
 							MatchLabelKeys: []string{"pod-template-hash"},
 						},
 					},
+				},
+			},
+		},
+		{
+			caseName: "with-priority-class-name",
+			infra:    newTestInfra(),
+			daemonset: &egv1a1.KubernetesDaemonSetSpec{
+				Pod: &egv1a1.KubernetesPodSpec{
+					PriorityClassName: ptr.To("high-priority"),
 				},
 			},
 		},

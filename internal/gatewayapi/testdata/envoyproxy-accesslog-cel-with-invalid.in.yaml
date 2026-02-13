@@ -23,7 +23,7 @@ envoyProxyForGatewayClass:
             openTelemetry:
               host: otel-collector.monitoring.svc.cluster.local
               port: 4317
-              resources:
+              resourceAttributes:
                 k8s.cluster.name: "cluster-1"
     provider:
       type: Kubernetes

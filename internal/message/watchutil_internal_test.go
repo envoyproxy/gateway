@@ -6,15 +6,19 @@
 package message
 
 import (
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 	"github.com/telepresenceio/watchable"
+
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/logging"
 )
 
 func TestCoalesceUpdates(t *testing.T) {
 	t.Parallel()
-
+	logger := logging.NewLogger(os.Stdout, egv1a1.DefaultEnvoyGatewayLogging())
 	tests := []struct {
 		name     string
 		input    []watchable.Update[string, int]
@@ -61,7 +65,7 @@ func TestCoalesceUpdates(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			actual := coalesceUpdates("test-runner", tc.input)
+			actual := coalesceUpdates(logger, tc.input)
 			require.Equal(t, tc.expected, actual)
 		})
 	}

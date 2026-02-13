@@ -36,6 +36,21 @@ func hasSectionName(target *gwapiv1.LocalPolicyTargetReferenceWithSectionName) b
 	return target.SectionName != nil
 }
 
+// deprecatedFieldsUsedInClientTrafficPolicy returns a map of deprecated field paths to their alternatives.
+func deprecatedFieldsUsedInClientTrafficPolicy(policy *egv1a1.ClientTrafficPolicy) map[string]string {
+	deprecatedFields := make(map[string]string)
+	if policy.Spec.EnableProxyProtocol != nil {
+		deprecatedFields["spec.enableProxyProtocol"] = "spec.proxyProtocol"
+	}
+	if policy.Spec.Headers != nil && policy.Spec.Headers.PreserveXRequestID != nil {
+		deprecatedFields["spec.headers.preserveXRequestID"] = "spec.headers.requestID"
+	}
+	if policy.Spec.TargetRef != nil {
+		deprecatedFields["spec.targetRef"] = "spec.targetRefs"
+	}
+	return deprecatedFields
+}
+
 func (t *Translator) ProcessClientTrafficPolicies(
 	resources *resource.Resources,
 	gateways []*GatewayContext,
@@ -270,6 +285,11 @@ func (t *Translator) ProcessClientTrafficPolicies(
 
 				// Set Accepted condition if it is unset
 				status.SetAcceptedForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName, policy.Generation)
+
+				// Check for deprecated fields and set warning if any are found
+				if deprecatedFields := deprecatedFieldsUsedInClientTrafficPolicy(policy); len(deprecatedFields) > 0 {
+					status.SetDeprecatedFieldsWarningForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName, policy.Generation, deprecatedFields)
+				}
 			}
 		}
 	}
@@ -335,7 +355,7 @@ func validatePortOverlapForClientTrafficPolicy(l *ListenerContext, xds *ir.Xds, 
 				// is turned on, validate that all the listeners affected by this policy originated
 				// from the same Gateway resource. The name of the Gateway from which this listener
 				// originated is part of the listener's name by construction.
-				gatewayName := irListenerName[0:strings.LastIndex(irListenerName, "/")]
+				gatewayName := extractGatewayNameFromListener(irListenerName)
 				conflictingListeners := []string{}
 				for _, currName := range sameListeners {
 					if strings.Index(currName, gatewayName) != 0 {
@@ -355,7 +375,8 @@ func validatePortOverlapForClientTrafficPolicy(l *ListenerContext, xds *ir.Xds, 
 	return nil
 }
 
-func (t *Translator) translateClientTrafficPolicyForListener(policy *egv1a1.ClientTrafficPolicy, l *ListenerContext,
+func (t *Translator) translateClientTrafficPolicyForListener(
+	policy *egv1a1.ClientTrafficPolicy, l *ListenerContext,
 	xdsIR resource.XdsIRMap, infraIR resource.InfraIRMap, resources *resource.Resources,
 ) error {
 	// Find IR
@@ -474,6 +495,9 @@ func (t *Translator) translateClientTrafficPolicyForListener(policy *egv1a1.Clie
 
 		// Translate Health Check Settings
 		translateHealthCheckSettings(policy.Spec.HealthCheck, httpIR)
+
+		// Translate Scheme Header Transformation
+		translateSchemeHeaderTransform(policy.Spec.Scheme, httpIR)
 
 		// Translate TLS parameters
 		tlsConfig, err = t.buildListenerTLSParameters(policy, httpIR.TLS, resources)
@@ -667,21 +691,23 @@ func translateListenerHeaderSettings(headerSettings *egv1a1.HeaderSettings, http
 	var errs error
 
 	if headerSettings.EarlyRequestHeaders != nil {
-		headersToAdd, headersToRemove, err := translateHeaderModifier(headerSettings.EarlyRequestHeaders, "EarlyRequestHeaders")
+		headersToAdd, headersToRemove, removeOnMatch, err := translateHeaderModifier(headerSettings.EarlyRequestHeaders, "EarlyRequestHeaders")
 		if err != nil {
 			errs = errors.Join(errs, err)
 		}
 		httpIR.Headers.EarlyAddRequestHeaders = headersToAdd
 		httpIR.Headers.EarlyRemoveRequestHeaders = headersToRemove
+		httpIR.Headers.EarlyRemoveRequestHeadersOnMatch = removeOnMatch
 	}
 
 	if headerSettings.LateResponseHeaders != nil {
-		headersToAdd, headersToRemove, err := translateHeaderModifier(headerSettings.LateResponseHeaders, "LateResponseHeaders")
+		headersToAdd, headersToRemove, removeOnMatch, err := translateHeaderModifier(headerSettings.LateResponseHeaders, "LateResponseHeaders")
 		if err != nil {
 			errs = errors.Join(errs, err)
 		}
 		httpIR.Headers.LateAddResponseHeaders = headersToAdd
 		httpIR.Headers.LateRemoveResponseHeaders = headersToRemove
+		httpIR.Headers.LateRemoveResponseHeadersOnMatch = removeOnMatch
 	}
 
 	return errs
@@ -756,7 +782,20 @@ func translateHealthCheckSettings(healthCheckSettings *egv1a1.HealthCheckSetting
 	httpIR.HealthCheck = (*ir.HealthCheckSettings)(healthCheckSettings)
 }
 
-func (t *Translator) buildListenerTLSParameters(policy *egv1a1.ClientTrafficPolicy,
+func translateSchemeHeaderTransform(scheme *egv1a1.SchemeHeaderTransform, httpIR *ir.HTTPListener) {
+	// Return early if not set or if set to Preserve (default behavior)
+	if scheme == nil || *scheme == egv1a1.SchemeHeaderTransformPreserve {
+		return
+	}
+
+	// Set MatchBackendScheme to true when scheme is set to MatchBackend
+	if *scheme == egv1a1.SchemeHeaderTransformMatchBackend {
+		httpIR.MatchBackendScheme = true
+	}
+}
+
+func (t *Translator) buildListenerTLSParameters(
+	policy *egv1a1.ClientTrafficPolicy,
 	irTLSConfig *ir.TLSConfig, resources *resource.Resources,
 ) (*ir.TLSConfig, error) {
 	// Return if this listener isn't a TLS listener. There has to be
@@ -813,14 +852,23 @@ func (t *Translator) buildListenerTLSParameters(policy *egv1a1.ClientTrafficPoli
 		}
 
 		for _, caCertRef := range tlsParams.ClientValidation.CACertificateRefs {
-			caCertBytes, err := t.validateAndGetDataAtKeyInRef(caCertRef, caCertKey, resources, from)
+			caCertBytes, err := t.validateAndGetDataAtKeyInRef(caCertRef, CACertKey, resources, from)
 			if err != nil {
 				return irTLSConfig, fmt.Errorf("failed to get certificate from ref: %w", err)
 			}
-			if err := validateCertificates(caCertBytes); err != nil {
-				return irTLSConfig, fmt.Errorf("invalid certificate in %s: %w", caCertRef.Name, err)
+			validCaCertBytes, listenerErr := filterValidCertificates(caCertBytes)
+			if listenerErr != nil {
+				if listenerErr.Reason() == gwapiv1.ListenerReasonInvalidCertificateRef {
+					return irTLSConfig, fmt.Errorf("no valid certificates exist in %s: %w", caCertRef.Name, listenerErr)
+				} else if listenerErr.Reason() == status.ListenerReasonPartiallyInvalidCertificateRef {
+					t.Logger.Sugar().Warn("some certificates are invalid but proceeding with valid ones",
+						"policy", utils.NamespacedName(policy),
+						"certificate", caCertRef.Name,
+						"error", listenerErr.Error(),
+					)
+				}
 			}
-			irCACert.Certificate = append(irCACert.Certificate, caCertBytes...)
+			irCACert.Certificate = append(irCACert.Certificate, validCaCertBytes...)
 		}
 		if len(irCACert.Certificate) > 0 {
 			irTLSConfig.CACertificate = irCACert
@@ -834,7 +882,7 @@ func (t *Translator) buildListenerTLSParameters(policy *egv1a1.ClientTrafficPoli
 
 		if tlsParams.ClientValidation.Crl != nil {
 			for _, crlRef := range tlsParams.ClientValidation.Crl.Refs {
-				crlBytes, err := t.validateAndGetDataAtKeyInRef(crlRef, crlKey, resources, from)
+				crlBytes, err := t.validateAndGetDataAtKeyInRef(crlRef, CRLKey, resources, from)
 				if err != nil {
 					return irTLSConfig, fmt.Errorf("failed to get crl from ref: %w", err)
 				}
@@ -865,7 +913,12 @@ func (t *Translator) buildListenerTLSParameters(policy *egv1a1.ClientTrafficPoli
 }
 
 // validateAndGetDataAtKeyInRef validates the secret object reference and gets the data at the key in the secret or configmap
-func (t *Translator) validateAndGetDataAtKeyInRef(ref gwapiv1.SecretObjectReference, key string, resources *resource.Resources, from crossNamespaceFrom) ([]byte, error) {
+func (t *Translator) validateAndGetDataAtKeyInRef(
+	ref gwapiv1.SecretObjectReference,
+	key string,
+	resources *resource.Resources,
+	from crossNamespaceFrom,
+) ([]byte, error) {
 	refKind := string(ptr.Deref(ref.Kind, resource.KindSecret))
 	switch refKind {
 	case resource.KindSecret:
@@ -891,7 +944,7 @@ func (t *Translator) validateAndGetDataAtKeyInRef(ref gwapiv1.SecretObjectRefere
 		}
 		return []byte(configMapData), nil
 	case resource.KindClusterTrustBundle:
-		trustBundle := resources.GetClusterTrustBundle(string(ref.Name))
+		trustBundle := t.GetClusterTrustBundle(string(ref.Name))
 		if trustBundle == nil {
 			return nil, fmt.Errorf("ref ClusterTrustBundle [%s] not found", ref.Name)
 		}
@@ -989,24 +1042,20 @@ func buildConnection(connection *egv1a1.ClientConnection) (*ir.ClientConnection,
 	return irConnection, nil
 }
 
-func translateHeaderModifier(headerModifier *egv1a1.HTTPHeaderFilter, modType string) ([]ir.AddHeader, []string, error) {
+func translateHeaderModifier(headerModifier *egv1a1.HTTPHeaderFilter, modType string) ([]ir.AddHeader, []string, []*ir.StringMatch, error) {
 	// Make sure the header modifier config actually exists
 	if headerModifier == nil {
-		return nil, nil, nil
+		return nil, nil, nil, nil
 	}
 	var errs error
-	emptyFilterConfig := true // keep track of whether the provided config is empty or not
 
-	var AddRequestHeaders []ir.AddHeader
-	var RemoveRequestHeaders []string
+	var addRequestHeaders []ir.AddHeader
+	var removeRequestHeaders []string
+	var removeRequestHeadersOnMatch []*ir.StringMatch
 
 	// Add request headers
 	if headersToAdd := headerModifier.Add; headersToAdd != nil {
-		if len(headersToAdd) > 0 {
-			emptyFilterConfig = false
-		}
 		for _, addHeader := range headersToAdd {
-			emptyFilterConfig = false
 			if addHeader.Name == "" {
 				errs = errors.Join(errs, fmt.Errorf("%s cannot add a header with an empty name", modType))
 				// try to process the rest of the headers and produce a valid config.
@@ -1025,7 +1074,7 @@ func translateHeaderModifier(headerModifier *egv1a1.HTTPHeaderFilter, modType st
 			// Check if the header is a duplicate
 			headerKey := string(addHeader.Name)
 			canAddHeader := true
-			for _, h := range AddRequestHeaders {
+			for _, h := range addRequestHeaders {
 				if strings.EqualFold(h.Name, headerKey) {
 					canAddHeader = false
 					break
@@ -1042,15 +1091,12 @@ func translateHeaderModifier(headerModifier *egv1a1.HTTPHeaderFilter, modType st
 				Value:  []string{addHeader.Value},
 			}
 
-			AddRequestHeaders = append(AddRequestHeaders, newHeader)
+			addRequestHeaders = append(addRequestHeaders, newHeader)
 		}
 	}
 
 	// Set headers
 	if headersToSet := headerModifier.Set; headersToSet != nil {
-		if len(headersToSet) > 0 {
-			emptyFilterConfig = false
-		}
 		for _, setHeader := range headersToSet {
 
 			if setHeader.Name == "" {
@@ -1071,7 +1117,7 @@ func translateHeaderModifier(headerModifier *egv1a1.HTTPHeaderFilter, modType st
 			// Check if the header to be set has already been configured
 			headerKey := string(setHeader.Name)
 			canAddHeader := true
-			for _, h := range AddRequestHeaders {
+			for _, h := range addRequestHeaders {
 				if strings.EqualFold(h.Name, headerKey) {
 					canAddHeader = false
 					break
@@ -1086,7 +1132,48 @@ func translateHeaderModifier(headerModifier *egv1a1.HTTPHeaderFilter, modType st
 				Value:  []string{setHeader.Value},
 			}
 
-			AddRequestHeaders = append(AddRequestHeaders, newHeader)
+			addRequestHeaders = append(addRequestHeaders, newHeader)
+		}
+	}
+
+	// AddIfAbsent headers
+	if headersToAddIfAbsent := headerModifier.AddIfAbsent; headersToAddIfAbsent != nil {
+		for _, addHeader := range headersToAddIfAbsent {
+			if addHeader.Name == "" {
+				errs = errors.Join(errs, fmt.Errorf("%s cannot addIfAbsent a header with an empty name", modType))
+				continue
+			}
+			// Per Gateway API specification on HTTPHeaderName, : and / are invalid characters in header names
+			if strings.ContainsAny(string(addHeader.Name), "/:") {
+				errs = errors.Join(errs, fmt.Errorf("%s cannot addIfAbsent a header with a '/' or ':' character in them. Header: '%q'", modType, string(addHeader.Name)))
+				continue
+			}
+			// Gateway API specification allows only valid value as defined by RFC 7230
+			if !HeaderValueRegexp.MatchString(addHeader.Value) {
+				errs = errors.Join(errs, fmt.Errorf("%s cannot addIfAbsent a header with an invalid value. Header: '%q'", modType, string(addHeader.Name)))
+				continue
+			}
+			// Check if the header is a duplicate
+			headerKey := string(addHeader.Name)
+			canAddHeader := true
+			for _, h := range addRequestHeaders {
+				if strings.EqualFold(h.Name, headerKey) {
+					canAddHeader = false
+					break
+				}
+			}
+
+			if !canAddHeader {
+				continue
+			}
+
+			newHeader := ir.AddHeader{
+				Name:        headerKey,
+				AddIfAbsent: true,
+				Value:       []string{addHeader.Value},
+			}
+
+			addRequestHeaders = append(addRequestHeaders, newHeader)
 		}
 	}
 
@@ -1094,9 +1181,6 @@ func translateHeaderModifier(headerModifier *egv1a1.HTTPHeaderFilter, modType st
 	// As far as Envoy is concerned, it is ok to configure a header to be added/set and also in the list of
 	// headers to remove. It will remove the original header if present and then add/set the header after.
 	if headersToRemove := headerModifier.Remove; headersToRemove != nil {
-		if len(headersToRemove) > 0 {
-			emptyFilterConfig = false
-		}
 		for _, removedHeader := range headersToRemove {
 			if removedHeader == "" {
 				errs = errors.Join(errs, fmt.Errorf("%s cannot remove a header with an empty name", modType))
@@ -1104,7 +1188,7 @@ func translateHeaderModifier(headerModifier *egv1a1.HTTPHeaderFilter, modType st
 			}
 
 			canRemHeader := true
-			for _, h := range RemoveRequestHeaders {
+			for _, h := range removeRequestHeaders {
 				if strings.EqualFold(h, removedHeader) {
 					canRemHeader = false
 					break
@@ -1114,14 +1198,25 @@ func translateHeaderModifier(headerModifier *egv1a1.HTTPHeaderFilter, modType st
 				continue
 			}
 
-			RemoveRequestHeaders = append(RemoveRequestHeaders, removedHeader)
+			removeRequestHeaders = append(removeRequestHeaders, removedHeader)
+		}
+	}
+
+	if matches := headerModifier.RemoveOnMatch; matches != nil {
+		for _, match := range matches {
+			// This is just a sanity check, since the CRD validation should prevent this from happening
+			if match.Value == "" {
+				errs = errors.Join(errs, fmt.Errorf("%s cannot remove a header with an empty matcher value", modType))
+				continue
+			}
+			removeRequestHeadersOnMatch = append(removeRequestHeadersOnMatch, irStringMatch("", match))
 		}
 	}
 
 	// Update the status if the filter failed to configure any valid headers to add/remove
-	if len(AddRequestHeaders) == 0 && len(RemoveRequestHeaders) == 0 && !emptyFilterConfig {
+	if len(addRequestHeaders) == 0 && len(removeRequestHeaders) == 0 && len(removeRequestHeadersOnMatch) == 0 {
 		errs = errors.Join(errs, fmt.Errorf("%s did not provide valid configuration to add/set/remove any headers", modType))
 	}
 
-	return AddRequestHeaders, RemoveRequestHeaders, errs
+	return addRequestHeaders, removeRequestHeaders, removeRequestHeadersOnMatch, errs
 }

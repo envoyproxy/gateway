@@ -15,11 +15,10 @@ spec:
     name: example-route
     namespace: default
   admissionControl:
-    enabled: true
     samplingWindow: 30s
-    srThreshold: 0.95
+    successRateThreshold: 0.95
     aggression: 1.0
-    rpsThreshold: 5.0
+    rpsThreshold: 5
     maxRejectionProbability: 0.8
     successCriteria:
       http:
@@ -28,8 +27,7 @@ spec:
             end: 299
       grpc:
         grpcSuccessStatus:
-          - start: 0
-            end: 0
+          - 0
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute

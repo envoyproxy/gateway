@@ -126,7 +126,7 @@ infraIR:
                       name: backend-ip
                       namespace: envoy-gateway
                       port: 3001
-                    resources:
+                    resourceAttributes:
                       k8s.cluster.name: cluster-1
                   type: OpenTelemetry
         status: {}
@@ -168,7 +168,7 @@ xdsIR:
               name: backend-uds
               namespace: envoy-gateway
             name: accesslog_otel_0_0/backend/-1
-            protocol: TCP
+            protocol: GRPC
           - addressType: FQDN
             endpoints:
             - host: primary.foo.com
@@ -178,7 +178,7 @@ xdsIR:
               name: backend-fqdn
               namespace: envoy-gateway
             name: accesslog_otel_0_0/backend/-1
-            protocol: HTTP2
+            protocol: GRPC
           - addressType: IP
             endpoints:
             - host: 1.1.1.1
@@ -188,14 +188,16 @@ xdsIR:
               name: backend-ip
               namespace: envoy-gateway
             name: accesslog_otel_0_0/backend/-1
-            protocol: TCP
-        resources:
-          k8s.cluster.name: cluster-1
+            protocol: GRPC
+        resourceAttributes:
+        - key: k8s.cluster.name
+          value: cluster-1
         text: |
           [%START_TIME%] "%REQ(:METHOD)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%"\n
     globalResources:
       proxyServiceCluster:
         metadata:
+          kind: Service
           name: envoy-envoy-gateway-gateway-1-196ae069
           namespace: envoy-gateway-system
           sectionName: "8080"
@@ -207,6 +209,7 @@ xdsIR:
             port: 8080
             zone: zone1
           metadata:
+            kind: Service
             name: envoy-envoy-gateway-gateway-1-196ae069
             namespace: envoy-gateway-system
             sectionName: "8080"

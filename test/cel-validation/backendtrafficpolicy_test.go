@@ -81,7 +81,8 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{}
 			},
 			wantErrors: []string{
-				"spec: Invalid value: \"object\": either targetRef or targetRefs must be used",
+				"spec: Invalid value:",
+				": either targetRef or targetRefs must be used",
 			},
 		},
 		{
@@ -100,7 +101,8 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				"spec: Invalid value: \"object\": this policy can only have a targetRef.kind of Gateway/HTTPRoute/GRPCRoute/TCPRoute/UDPRoute/TLSRoute",
+				"spec: Invalid value:",
+				": this policy can only have a targetRef.kind of Gateway/HTTPRoute/GRPCRoute/TCPRoute/UDPRoute/TLSRoute",
 			},
 		},
 		{
@@ -121,7 +123,8 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				"spec: Invalid value: \"object\": this policy can only have a targetRefs[*].kind of Gateway/HTTPRoute/GRPCRoute/TCPRoute/UDPRoute/TLSRoute",
+				"spec: Invalid value:",
+				": this policy can only have a targetRefs[*].kind of Gateway/HTTPRoute/GRPCRoute/TCPRoute/UDPRoute/TLSRoute",
 			},
 		},
 		{
@@ -140,7 +143,8 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				"spec: Invalid value: \"object\": this policy can only have a targetRef.group of gateway.networking.k8s.io",
+				"spec: Invalid value:",
+				": this policy can only have a targetRef.group of gateway.networking.k8s.io",
 			},
 		},
 		{
@@ -159,8 +163,9 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				"spec: Invalid value: \"object\": this policy can only have a targetRef.group of gateway.networking.k8s.io",
-				"spec: Invalid value: \"object\": this policy can only have a targetRef.kind of Gateway/HTTPRoute/GRPCRoute/TCPRoute/UDPRoute/TLSRoute",
+				"spec: Invalid value:",
+				": this policy can only have a targetRef.group of gateway.networking.k8s.io",
+				": this policy can only have a targetRef.kind of Gateway/HTTPRoute/GRPCRoute/TCPRoute/UDPRoute/TLSRoute",
 			},
 		},
 		{
@@ -227,7 +232,8 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				"spec.loadBalancer: Invalid value: \"object\": If LoadBalancer type is consistentHash, consistentHash field needs to be set",
+				"spec.loadBalancer: Invalid value:",
+				": If LoadBalancer type is consistentHash, consistentHash field needs to be set",
 			},
 		},
 		{
@@ -282,7 +288,8 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				"spec.loadBalancer.consistentHash: Invalid value: \"object\": If consistent hash type is header, the header field must be set",
+				"spec.loadBalancer.consistentHash: Invalid value:",
+				": If consistent hash type is header, the header field must be set",
 			},
 		},
 		{
@@ -337,7 +344,8 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				"spec.loadBalancer.consistentHash: Invalid value: \"object\": If consistent hash type is cookie, the cookie field must be set",
+				"spec.loadBalancer.consistentHash: Invalid value:",
+				": If consistent hash type is cookie, the cookie field must be set",
 			},
 		},
 		{
@@ -365,7 +373,8 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				"spec.loadBalancer: Invalid value: \"object\": Currently ZoneAware is only supported for LeastRequest, Random, and RoundRobin load balancers",
+				"spec.loadBalancer: Invalid value:",
+				": Currently ZoneAware is only supported for LeastRequest, Random, and RoundRobin load balancers",
 			},
 		},
 		{
@@ -487,7 +496,8 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				"spec.loadBalancer: Invalid value: \"object\": Currently SlowStart is only supported for RoundRobin and LeastRequest load balancers.",
+				"spec.loadBalancer: Invalid value:",
+				": Currently SlowStart is only supported for RoundRobin and LeastRequest load balancers.",
 			},
 		},
 		{
@@ -514,7 +524,8 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				"spec.loadBalancer: Invalid value: \"object\": Currently SlowStart is only supported for RoundRobin and LeastRequest load balancers.",
+				"spec.loadBalancer: Invalid value:",
+				": Currently SlowStart is only supported for RoundRobin and LeastRequest load balancers.",
 			},
 		},
 		{
@@ -539,7 +550,8 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				"spec.faultInjection.abort: Invalid value: \"object\": httpStatus and grpcStatus cannot be simultaneously defined.",
+				"spec.faultInjection.abort: Invalid value:",
+				": httpStatus and grpcStatus cannot be simultaneously defined.",
 			},
 		},
 		{
@@ -608,7 +620,10 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{"spec.faultInjection.abort: Invalid value: \"object\": httpStatus and grpcStatus are set at least one."},
+			wantErrors: []string{
+				"spec.faultInjection.abort: Invalid value:",
+				": httpStatus and grpcStatus are set at least one.",
+			},
 		},
 		{
 			desc: "Neither delay nor abort faults are set",
@@ -626,7 +641,10 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 					FaultInjection: &egv1a1.FaultInjection{},
 				}
 			},
-			wantErrors: []string{"spec.faultInjection: Invalid value: \"object\": Delay and abort faults are set at least one."},
+			wantErrors: []string{
+				"spec.faultInjection: Invalid value:",
+				": Delay and abort faults are set at least one.",
+			},
 		},
 		{
 			desc: "Using delay fault injection",
@@ -824,7 +842,10 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				`spec.HealthCheck.active: Invalid value: "object": If Health Checker type is HTTP, http field needs to be set., spec.HealthCheck.active: Invalid value: "object": If Health Checker type is TCP, tcp field needs to be set`,
+				"spec.HealthCheck.active: Invalid value:",
+				": If Health Checker type is HTTP, http field needs to be set.,",
+				"spec.HealthCheck.active: Invalid value:",
+				": If Health Checker type is TCP, tcp field needs to be set",
 			},
 		},
 		{
@@ -974,7 +995,10 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				`[spec.HealthCheck.active.http.expectedResponse: Invalid value: "object": If payload type is Text, text field needs to be set., spec.HealthCheck.active.http.expectedResponse: Invalid value: "object": If payload type is Binary, binary field needs to be set.]`,
+				"[spec.HealthCheck.active.http.expectedResponse: Invalid value:",
+				": If payload type is Text, text field needs to be set.,",
+				"spec.HealthCheck.active.http.expectedResponse: Invalid value:",
+				"If payload type is Binary, binary field needs to be set.]",
 			},
 		},
 		{
@@ -1007,7 +1031,10 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				`[spec.HealthCheck.active.http.expectedResponse: Invalid value: "object": If payload type is Text, text field needs to be set., spec.HealthCheck.active.http.expectedResponse: Invalid value: "object": If payload type is Binary, binary field needs to be set.]`,
+				"[spec.HealthCheck.active.http.expectedResponse: Invalid value:",
+				"If payload type is Text, text field needs to be set.,",
+				"spec.HealthCheck.active.http.expectedResponse: Invalid value:",
+				": If payload type is Binary, binary field needs to be set.]",
 			},
 		},
 		{
@@ -1043,7 +1070,10 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				`spec.HealthCheck.active.tcp.send: Invalid value: "object": If payload type is Text, text field needs to be set., spec.HealthCheck.active.tcp.send: Invalid value: "object": If payload type is Binary, binary field needs to be set.`,
+				"spec.HealthCheck.active.tcp.send: Invalid value:",
+				"If payload type is Text, text field needs to be set.,",
+				"spec.HealthCheck.active.tcp.send: Invalid value:",
+				": If payload type is Binary, binary field needs to be set.",
 			},
 		},
 		{
@@ -1079,7 +1109,10 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				`[spec.HealthCheck.active.tcp.receive: Invalid value: "object": If payload type is Text, text field needs to be set., spec.HealthCheck.active.tcp.receive: Invalid value: "object": If payload type is Binary, binary field needs to be set.]`,
+				"[spec.HealthCheck.active.tcp.receive: Invalid value:",
+				": If payload type is Text, text field needs to be set.,",
+				"spec.HealthCheck.active.tcp.receive: Invalid value:",
+				": If payload type is Binary, binary field needs to be set.]",
 			},
 		},
 		{
@@ -1176,7 +1209,9 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				`[spec.rateLimit.global.rules: Too many: 129: must have at most 128 items, <nil>: Invalid value: "null": some validation rules were not checked because the object was invalid; correct the existing errors to complete validation]`,
+				`[spec.rateLimit.global.rules: Too many: 129: must have at most 128 items, <nil>: Invalid value:`,
+				`null`,
+				`some validation rules were not checked because the object was invalid; correct the existing errors to complete validation]`,
 			},
 		},
 		{
@@ -1352,7 +1387,8 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				" Invalid value: \"object\": predictivePercent in preconnect policy only works with RoundRobin or Random load balancers",
+				"Invalid value:",
+				": predictivePercent in preconnect policy only works with RoundRobin or Random load balancers",
 			},
 		},
 		{
@@ -1409,7 +1445,8 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				" Invalid value: \"object\": either targetRef or targetRefs must be used",
+				"Invalid value:",
+				": either targetRef or targetRefs must be used",
 			},
 		},
 		{
@@ -1462,7 +1499,8 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				"spec.responseOverride[0]: Invalid value: \"object\": exactly one of response or redirect must be specified",
+				"spec.responseOverride[0]: Invalid value:",
+				": exactly one of response or redirect must be specified",
 			},
 		},
 		{
@@ -1589,7 +1627,8 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				"spec.responseOverride[0].redirect.path: Invalid value: \"object\": only ReplaceFullPath is supported for path.type",
+				"spec.responseOverride[0].redirect.path: Invalid value:",
+				": only ReplaceFullPath is supported for path.type",
 			},
 		},
 		{
@@ -1632,7 +1671,8 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				"spec.responseOverride[0].match.statusCodes[0]: Invalid value: \"object\": value must be set for type Value",
+				"spec.responseOverride[0].match.statusCodes[0]: Invalid value:",
+				": value must be set for type Value",
 			},
 		},
 		{
@@ -1674,7 +1714,8 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				"spec.responseOverride[0].match.statusCodes[0]: Invalid value: \"object\": value must be set for type Value",
+				"spec.responseOverride[0].match.statusCodes[0]: Invalid value:",
+				": value must be set for type Value",
 			},
 		},
 		{
@@ -1714,7 +1755,8 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				"spec.responseOverride[0].match.statusCodes[0]: Invalid value: \"object\": range must be set for type Range",
+				"spec.responseOverride[0].match.statusCodes[0]: Invalid value:",
+				": range must be set for type Range",
 			},
 		},
 		{
@@ -1968,7 +2010,8 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				`spec.rateLimit.global.rules[0].cost.request: Invalid value: "object": only one of number or metadata can be specified`,
+				"spec.rateLimit.global.rules[0].cost.request: Invalid value:",
+				": only one of number or metadata can be specified",
 			},
 		},
 		{
@@ -2030,7 +2073,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{"at least one of headers, methods, path or sourceCIDR must be specified"},
+			wantErrors: []string{"at least one of headers, methods, path, sourceCIDR or queryParams must be specified"},
 		},
 		{
 			desc: "panicThreshold is set",

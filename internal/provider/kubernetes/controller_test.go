@@ -10,20 +10,26 @@ import (
 	"fmt"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/apimachinery/pkg/util/wait"
+	discoveryfake "k8s.io/client-go/discovery/fake"
+	clientgotesting "k8s.io/client-go/testing"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+	gwapixv1a1 "sigs.k8s.io/gateway-api/apisx/v1alpha1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway"
@@ -1248,6 +1254,108 @@ func TestProcessSecurityPolicyObjectRefs(t *testing.T) {
 	}
 }
 
+func TestProcessSecurityPolicyObjectKeyRefs(t *testing.T) {
+	ns := "default"
+	secret := test.GetSecret(types.NamespacedName{Namespace: ns, Name: "fake-secret"})
+	cm := test.GetConfigMap(types.NamespacedName{Namespace: ns, Name: "fake-cm"}, nil, nil)
+
+	testCases := []struct {
+		name                   string
+		securityPolicy         *egv1a1.SecurityPolicy
+		secretShouldBeAdded    bool
+		configmapShouldBeAdded bool
+	}{
+		{
+			name: "ContextExtension value with ConfigMap",
+			securityPolicy: &egv1a1.SecurityPolicy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: ns,
+					Name:      "test-policy",
+				},
+				Spec: egv1a1.SecurityPolicySpec{
+					ExtAuth: &egv1a1.ExtAuth{
+						ContextExtensions: []*egv1a1.ContextExtension{
+							{
+								Name: "foo",
+								Type: egv1a1.ContextExtensionValueTypeValueRef,
+								ValueRef: &egv1a1.LocalObjectKeyReference{
+									LocalObjectReference: gwapiv1.LocalObjectReference{
+										Kind: resource.KindConfigMap,
+										Name: "fake-cm",
+									},
+									Key: "foo",
+								},
+							},
+						},
+					},
+				},
+			},
+			configmapShouldBeAdded: true,
+		},
+		{
+			name: "ContextExtension value with Secret",
+			securityPolicy: &egv1a1.SecurityPolicy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: ns,
+					Name:      "test-policy",
+				},
+				Spec: egv1a1.SecurityPolicySpec{
+					ExtAuth: &egv1a1.ExtAuth{
+						ContextExtensions: []*egv1a1.ContextExtension{
+							{
+								Name: "foo",
+								Type: egv1a1.ContextExtensionValueTypeValueRef,
+								ValueRef: &egv1a1.LocalObjectKeyReference{
+									LocalObjectReference: gwapiv1.LocalObjectReference{
+										Kind: resource.KindSecret,
+										Name: "fake-secret",
+									},
+									Key: "foo",
+								},
+							},
+						},
+					},
+				},
+			},
+			secretShouldBeAdded: true,
+		},
+	}
+
+	for i := range testCases {
+		tc := testCases[i]
+		// Run the test cases.
+		t.Run(tc.name, func(t *testing.T) {
+			// Add objects referenced by test cases.
+			objs := []client.Object{tc.securityPolicy, secret, cm}
+			logger := logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo)
+
+			r := newGatewayAPIReconciler(logger)
+			r.client = fakeclient.NewClientBuilder().
+				WithScheme(envoygateway.GetScheme()).
+				WithObjects(objs...).
+				Build()
+
+			resourceTree := resource.NewResources()
+			resourceTree.SecurityPolicies = append(resourceTree.SecurityPolicies, tc.securityPolicy)
+			resourceMap := newResourceMapping()
+
+			require.NoError(t, r.processSecurityPolicyObjectRefs(t.Context(), resourceTree, resourceMap))
+
+			if tc.secretShouldBeAdded {
+				require.Contains(t, resourceTree.Secrets, secret)
+			} else {
+				require.NotContains(t, resourceTree.Secrets, secret)
+			}
+
+			if tc.configmapShouldBeAdded {
+				require.Contains(t, resourceTree.ConfigMaps, cm)
+			} else {
+				require.NotContains(t, resourceTree.ConfigMaps, cm)
+			}
+		})
+	}
+}
+
 func TestProcessServiceClusterForGatewayClass(t *testing.T) {
 	gcName := "merged-gc"
 	nsName := "envoy-gateway-system"
@@ -1698,6 +1806,268 @@ func TestProcessBackendRefs(t *testing.T) {
 	}
 }
 
+func TestProcessXListenerSets(t *testing.T) {
+	logger := logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo)
+	scheme := envoygateway.GetScheme()
+
+	testCases := []struct {
+		name             string
+		xls              *gwapixv1a1.XListenerSet
+		secret           *corev1.Secret
+		referenceGrant   *gwapiv1b1.ReferenceGrant
+		gatewayNamespace string
+		expectXLSCount   int
+		expectSecretRef  bool
+	}{
+		{
+			name: "matching gateway with TLS secret and XLS in same namespace",
+			xls: &gwapixv1a1.XListenerSet{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-xls",
+					Namespace: "default",
+				},
+				Spec: gwapixv1a1.ListenerSetSpec{
+					ParentRef: gwapixv1a1.ParentGatewayReference{
+						Name:      gwapixv1a1.ObjectName("test-gateway"),
+						Namespace: ptr.To(gwapiv1.Namespace("default")),
+					},
+					Listeners: []gwapixv1a1.ListenerEntry{
+						{
+							Name:     gwapixv1a1.SectionName("http"),
+							Protocol: gwapixv1a1.ProtocolType("HTTPS"),
+							Port:     gwapixv1a1.PortNumber(8080),
+							TLS: &gwapixv1a1.ListenerTLSConfig{
+								Mode: ptr.To(gwapiv1.TLSModeTerminate),
+								CertificateRefs: []gwapiv1.SecretObjectReference{{
+									Name: gwapiv1.ObjectName("listener-cert"),
+								}},
+							},
+						},
+					},
+				},
+			},
+			secret: &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "listener-cert",
+					Namespace: "default",
+				},
+			},
+			gatewayNamespace: "default",
+			expectXLSCount:   1,
+			expectSecretRef:  true,
+		},
+
+		{
+			name: "matching gateway with TLS secret and XLS in different namespace",
+			xls: &gwapixv1a1.XListenerSet{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-xls",
+					Namespace: "xls",
+				},
+				Spec: gwapixv1a1.ListenerSetSpec{
+					ParentRef: gwapixv1a1.ParentGatewayReference{
+						Name:      gwapixv1a1.ObjectName("test-gateway"),
+						Namespace: ptr.To(gwapiv1.Namespace("gateway")),
+					},
+					Listeners: []gwapixv1a1.ListenerEntry{
+						{
+							Name:     gwapixv1a1.SectionName("http"),
+							Protocol: gwapixv1a1.ProtocolType("HTTPS"),
+							Port:     gwapixv1a1.PortNumber(8080),
+							TLS: &gwapixv1a1.ListenerTLSConfig{
+								Mode: ptr.To(gwapiv1.TLSModeTerminate),
+								CertificateRefs: []gwapiv1.SecretObjectReference{{
+									Name:      gwapiv1.ObjectName("listener-cert"),
+									Namespace: ptr.To(gwapiv1.Namespace("xls")),
+								}},
+							},
+						},
+					},
+				},
+			},
+			secret: &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "listener-cert",
+					Namespace: "xls",
+				},
+			},
+			gatewayNamespace: "gateway",
+			expectXLSCount:   1,
+			expectSecretRef:  true,
+		},
+
+		{
+			name: "matching gateway with TLS secret and XLS all in different namespaces with valid ReferenceGrant",
+			xls: &gwapixv1a1.XListenerSet{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-xls",
+					Namespace: "xls",
+				},
+				Spec: gwapixv1a1.ListenerSetSpec{
+					ParentRef: gwapixv1a1.ParentGatewayReference{
+						Name:      gwapixv1a1.ObjectName("test-gateway"),
+						Namespace: ptr.To(gwapiv1.Namespace("gateway")),
+					},
+					Listeners: []gwapixv1a1.ListenerEntry{
+						{
+							Name:     gwapixv1a1.SectionName("https"),
+							Protocol: gwapixv1a1.ProtocolType("HTTPS"),
+							Port:     gwapixv1a1.PortNumber(8443),
+							TLS: &gwapixv1a1.ListenerTLSConfig{
+								Mode: ptr.To(gwapiv1.TLSModeTerminate),
+								CertificateRefs: []gwapiv1.SecretObjectReference{{
+									Name:      gwapiv1.ObjectName("listener-cert"),
+									Namespace: ptr.To(gwapiv1.Namespace("secret")),
+								}},
+							},
+						},
+					},
+				},
+			},
+			secret: &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "listener-cert",
+					Namespace: "secret",
+				},
+			},
+			referenceGrant: &gwapiv1b1.ReferenceGrant{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "gateway-to-secret",
+					Namespace: "secret",
+				},
+				Spec: gwapiv1b1.ReferenceGrantSpec{
+					From: []gwapiv1b1.ReferenceGrantFrom{
+						{
+							Group:     gwapiv1.Group(gwapixv1a1.GroupName),
+							Kind:      gwapiv1.Kind(resource.KindXListenerSet),
+							Namespace: gwapiv1.Namespace("xls"),
+						},
+					},
+					To: []gwapiv1b1.ReferenceGrantTo{
+						{
+							Group: gwapiv1.Group(""),
+							Kind:  gwapiv1.Kind(resource.KindSecret),
+						},
+					},
+				},
+			},
+			gatewayNamespace: "gateway",
+			expectXLSCount:   1,
+			expectSecretRef:  true,
+		},
+
+		{
+			name: "matching gateway with TLS secret and XLS all in different namespaces",
+			xls: &gwapixv1a1.XListenerSet{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-xls",
+					Namespace: "xls",
+				},
+				Spec: gwapixv1a1.ListenerSetSpec{
+					ParentRef: gwapixv1a1.ParentGatewayReference{
+						Name:      gwapixv1a1.ObjectName("test-gateway"),
+						Namespace: ptr.To(gwapiv1.Namespace("gateway")),
+					},
+					Listeners: []gwapixv1a1.ListenerEntry{
+						{
+							Name:     gwapixv1a1.SectionName("https"),
+							Protocol: gwapixv1a1.ProtocolType("HTTPS"),
+							Port:     gwapixv1a1.PortNumber(8443),
+							TLS: &gwapixv1a1.ListenerTLSConfig{
+								Mode: ptr.To(gwapiv1.TLSModeTerminate),
+								CertificateRefs: []gwapiv1.SecretObjectReference{{
+									Name:      gwapiv1.ObjectName("listener-cert"),
+									Namespace: ptr.To(gwapiv1.Namespace("secret")),
+								}},
+							},
+						},
+					},
+				},
+			},
+			secret: &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "listener-cert",
+					Namespace: "secret",
+				},
+			},
+			gatewayNamespace: "gateway",
+			expectXLSCount:   1,
+			expectSecretRef:  false,
+		},
+
+		{
+			name: "non-matching gateway",
+			xls: &gwapixv1a1.XListenerSet{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-xls",
+					Namespace: "default",
+				},
+				Spec: gwapixv1a1.ListenerSetSpec{
+					ParentRef: gwapixv1a1.ParentGatewayReference{
+						Name:      gwapixv1a1.ObjectName("other-gateway"),
+						Namespace: ptr.To(gwapiv1.Namespace("default")),
+					},
+					Listeners: []gwapixv1a1.ListenerEntry{
+						{
+							Name:     gwapixv1a1.SectionName("http"),
+							Protocol: gwapixv1a1.ProtocolType("HTTPS"),
+							Port:     gwapixv1a1.PortNumber(8080),
+							TLS: &gwapixv1a1.ListenerTLSConfig{
+								Mode: ptr.To(gwapiv1.TLSModeTerminate),
+								CertificateRefs: []gwapiv1.SecretObjectReference{{
+									Name: gwapiv1.ObjectName("listener-cert"),
+								}},
+							},
+						},
+					},
+				},
+			},
+			gatewayNamespace: "default",
+			expectXLSCount:   0,
+			expectSecretRef:  false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			var objs []client.Object
+			objs = append(objs, tc.xls)
+			if tc.secret != nil {
+				objs = append(objs, tc.secret)
+			}
+			if tc.referenceGrant != nil {
+				objs = append(objs, tc.referenceGrant)
+			}
+			fakeClient := fakeclient.NewClientBuilder().
+				WithScheme(scheme).
+				WithObjects(objs...).
+				WithIndex(&gwapixv1a1.XListenerSet{}, gatewayXListenerSetIndex, gatewayXListenerSetIndexFunc).
+				WithIndex(&gwapiv1b1.ReferenceGrant{}, targetRefGrantRouteIndex, getReferenceGrantIndexerFunc).
+				Build()
+
+			r := &gatewayAPIReconciler{
+				client: fakeClient,
+				log:    logger,
+			}
+
+			resourceTree := resource.NewResources()
+			resourceMap := newResourceMapping()
+			gatewayNamespaceName := tc.gatewayNamespace + "/test-gateway"
+			err := r.processXListenerSets(
+				context.Background(),
+				gatewayNamespaceName,
+				resourceMap,
+				resourceTree)
+			require.NoError(t, err)
+
+			require.Len(t, resourceTree.XListenerSets, tc.expectXLSCount)
+			if tc.expectSecretRef {
+				require.Contains(t, resourceTree.Secrets, tc.secret)
+			}
+		})
+	}
+}
+
 func setupReferenceGrantReconciler(objs []client.Object) *gatewayAPIReconciler {
 	logger := logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo)
 
@@ -1751,4 +2121,568 @@ func TestIsTransientError(t *testing.T) {
 			require.Equal(t, tc.expected, actual)
 		})
 	}
+}
+
+func TestProcessCTPCrlRefs(t *testing.T) {
+	ns := "default"
+	crlSecret := test.GetSecret(types.NamespacedName{Namespace: ns, Name: "crl-secret"})
+	crlConfigMap := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: ns,
+			Name:      "crl-configmap",
+		},
+		Data: map[string]string{
+			"ca.crl": "fake-crl-data",
+		},
+	}
+	crlClusterTrustBundle := test.GetClusterTrustBundle("crl-ctb")
+
+	testCases := []struct {
+		name                   string
+		clientTrafficPolicy    *egv1a1.ClientTrafficPolicy
+		objects                []client.Object
+		secretShouldBeAdded    bool
+		configmapShouldBeAdded bool
+		ctbShouldBeAdded       bool
+	}{
+		{
+			name: "ClientTrafficPolicy with CRL Secret reference",
+			clientTrafficPolicy: test.GetClientTrafficPolicy(
+				types.NamespacedName{Name: "test-ctp", Namespace: ns},
+				&egv1a1.ClientTLSSettings{
+					ClientValidation: &egv1a1.ClientValidationContext{
+						Crl: &egv1a1.CrlContext{
+							Refs: []gwapiv1.SecretObjectReference{
+								{
+									Kind: ptr.To[gwapiv1.Kind](resource.KindSecret),
+									Name: gwapiv1.ObjectName("crl-secret"),
+								},
+							},
+						},
+					},
+				}),
+			objects:             []client.Object{crlSecret},
+			secretShouldBeAdded: true,
+		},
+		{
+			name: "ClientTrafficPolicy with CRL ConfigMap reference",
+			clientTrafficPolicy: test.GetClientTrafficPolicy(
+				types.NamespacedName{Name: "test-ctp", Namespace: ns},
+				&egv1a1.ClientTLSSettings{
+					ClientValidation: &egv1a1.ClientValidationContext{
+						Crl: &egv1a1.CrlContext{
+							Refs: []gwapiv1.SecretObjectReference{
+								{
+									Kind: ptr.To[gwapiv1.Kind](resource.KindConfigMap),
+									Name: gwapiv1.ObjectName("crl-configmap"),
+								},
+							},
+						},
+					},
+				}),
+			objects:                []client.Object{crlConfigMap},
+			configmapShouldBeAdded: true,
+		},
+		{
+			name: "ClientTrafficPolicy with CRL ClusterTrustBundle reference",
+			clientTrafficPolicy: test.GetClientTrafficPolicy(
+				types.NamespacedName{Name: "test-ctp", Namespace: ns},
+				&egv1a1.ClientTLSSettings{
+					ClientValidation: &egv1a1.ClientValidationContext{
+						Crl: &egv1a1.CrlContext{
+							Refs: []gwapiv1.SecretObjectReference{
+								{
+									Kind: ptr.To[gwapiv1.Kind](resource.KindClusterTrustBundle),
+									Name: gwapiv1.ObjectName("crl-ctb"),
+								},
+							},
+						},
+					},
+				}),
+			objects:          []client.Object{crlClusterTrustBundle},
+			ctbShouldBeAdded: true,
+		},
+		{
+			name: "ClientTrafficPolicy with multiple CRL references",
+			clientTrafficPolicy: test.GetClientTrafficPolicy(
+				types.NamespacedName{Name: "test-ctp", Namespace: ns},
+				&egv1a1.ClientTLSSettings{
+					ClientValidation: &egv1a1.ClientValidationContext{
+						Crl: &egv1a1.CrlContext{
+							Refs: []gwapiv1.SecretObjectReference{
+								{
+									Kind: ptr.To[gwapiv1.Kind](resource.KindSecret),
+									Name: gwapiv1.ObjectName("crl-secret"),
+								},
+								{
+									Kind: ptr.To[gwapiv1.Kind](resource.KindConfigMap),
+									Name: gwapiv1.ObjectName("crl-configmap"),
+								},
+							},
+						},
+					},
+				}),
+			objects:                []client.Object{crlSecret, crlConfigMap},
+			secretShouldBeAdded:    true,
+			configmapShouldBeAdded: true,
+		},
+		{
+			name: "ClientTrafficPolicy with default CRL Secret reference (no Kind specified)",
+			clientTrafficPolicy: test.GetClientTrafficPolicy(
+				types.NamespacedName{Name: "test-ctp", Namespace: ns},
+				&egv1a1.ClientTLSSettings{
+					ClientValidation: &egv1a1.ClientValidationContext{
+						Crl: &egv1a1.CrlContext{
+							Refs: []gwapiv1.SecretObjectReference{
+								{
+									Name: gwapiv1.ObjectName("crl-secret"),
+								},
+							},
+						},
+					},
+				}),
+			objects:             []client.Object{crlSecret},
+			secretShouldBeAdded: true,
+		},
+		{
+			name: "ClientTrafficPolicy without CRL",
+			clientTrafficPolicy: test.GetClientTrafficPolicy(
+				types.NamespacedName{Name: "test-ctp", Namespace: ns},
+				&egv1a1.ClientTLSSettings{
+					ClientValidation: &egv1a1.ClientValidationContext{},
+				}),
+			objects: []client.Object{},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			logger := logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo)
+
+			r := &gatewayAPIReconciler{
+				log:             logger,
+				classController: "some-gateway-class",
+			}
+
+			r.client = fakeclient.NewClientBuilder().
+				WithScheme(envoygateway.GetScheme()).
+				WithObjects(tc.objects...).
+				Build()
+
+			resourceTree := resource.NewResources()
+			resourceMap := newResourceMapping()
+			resourceTree.ClientTrafficPolicies = append(resourceTree.ClientTrafficPolicies, tc.clientTrafficPolicy)
+
+			ctx := context.Background()
+			err := r.processCTPCrlRefs(ctx, resourceTree, resourceMap)
+			require.NoError(t, err)
+
+			if tc.secretShouldBeAdded {
+				require.Contains(t, resourceTree.Secrets, crlSecret)
+			} else {
+				require.NotContains(t, resourceTree.Secrets, crlSecret)
+			}
+
+			if tc.configmapShouldBeAdded {
+				require.Contains(t, resourceTree.ConfigMaps, crlConfigMap)
+			} else {
+				require.NotContains(t, resourceTree.ConfigMaps, crlConfigMap)
+			}
+
+			if tc.ctbShouldBeAdded {
+				require.Contains(t, resourceTree.ClusterTrustBundles, crlClusterTrustBundle)
+			} else {
+				require.NotContains(t, resourceTree.ClusterTrustBundles, crlClusterTrustBundle)
+			}
+		})
+	}
+}
+
+func TestProcessCTPCACertificateRefs(t *testing.T) {
+	ns := "default"
+	caSecret := test.GetSecret(types.NamespacedName{Namespace: ns, Name: "ca-secret"})
+	caConfigMap := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: ns,
+			Name:      "ca-configmap",
+		},
+		Data: map[string]string{
+			"ca.crt": "fake-ca-cert",
+		},
+	}
+	caClusterTrustBundle := test.GetClusterTrustBundle("ca-ctb")
+
+	testCases := []struct {
+		name                   string
+		clientTrafficPolicy    *egv1a1.ClientTrafficPolicy
+		objects                []client.Object
+		secretShouldBeAdded    bool
+		configmapShouldBeAdded bool
+		ctbShouldBeAdded       bool
+	}{
+		{
+			name: "ClientTrafficPolicy with CA Secret reference",
+			clientTrafficPolicy: test.GetClientTrafficPolicy(
+				types.NamespacedName{Name: "test-ctp", Namespace: ns},
+				&egv1a1.ClientTLSSettings{
+					ClientValidation: &egv1a1.ClientValidationContext{
+						CACertificateRefs: []gwapiv1.SecretObjectReference{
+							{
+								Kind: ptr.To[gwapiv1.Kind](resource.KindSecret),
+								Name: gwapiv1.ObjectName("ca-secret"),
+							},
+						},
+					},
+				}),
+			objects:             []client.Object{caSecret},
+			secretShouldBeAdded: true,
+		},
+		{
+			name: "ClientTrafficPolicy with CA ConfigMap reference",
+			clientTrafficPolicy: test.GetClientTrafficPolicy(
+				types.NamespacedName{Name: "test-ctp", Namespace: ns},
+				&egv1a1.ClientTLSSettings{
+					ClientValidation: &egv1a1.ClientValidationContext{
+						CACertificateRefs: []gwapiv1.SecretObjectReference{
+							{
+								Kind: ptr.To[gwapiv1.Kind](resource.KindConfigMap),
+								Name: gwapiv1.ObjectName("ca-configmap"),
+							},
+						},
+					},
+				}),
+			objects:                []client.Object{caConfigMap},
+			configmapShouldBeAdded: true,
+		},
+		{
+			name: "ClientTrafficPolicy with CA ClusterTrustBundle reference",
+			clientTrafficPolicy: test.GetClientTrafficPolicy(
+				types.NamespacedName{Name: "test-ctp", Namespace: ns},
+				&egv1a1.ClientTLSSettings{
+					ClientValidation: &egv1a1.ClientValidationContext{
+						CACertificateRefs: []gwapiv1.SecretObjectReference{
+							{
+								Kind: ptr.To[gwapiv1.Kind](resource.KindClusterTrustBundle),
+								Name: gwapiv1.ObjectName("ca-ctb"),
+							},
+						},
+					},
+				}),
+			objects:          []client.Object{caClusterTrustBundle},
+			ctbShouldBeAdded: true,
+		},
+		{
+			name: "ClientTrafficPolicy with multiple CA references",
+			clientTrafficPolicy: test.GetClientTrafficPolicy(
+				types.NamespacedName{Name: "test-ctp", Namespace: ns},
+				&egv1a1.ClientTLSSettings{
+					ClientValidation: &egv1a1.ClientValidationContext{
+						CACertificateRefs: []gwapiv1.SecretObjectReference{
+							{
+								Kind: ptr.To[gwapiv1.Kind](resource.KindSecret),
+								Name: gwapiv1.ObjectName("ca-secret"),
+							},
+							{
+								Kind: ptr.To[gwapiv1.Kind](resource.KindConfigMap),
+								Name: gwapiv1.ObjectName("ca-configmap"),
+							},
+						},
+					},
+				}),
+			objects:                []client.Object{caSecret, caConfigMap},
+			secretShouldBeAdded:    true,
+			configmapShouldBeAdded: true,
+		},
+		{
+			name: "ClientTrafficPolicy with default CA Secret reference (no Kind specified)",
+			clientTrafficPolicy: test.GetClientTrafficPolicy(
+				types.NamespacedName{Name: "test-ctp", Namespace: ns},
+				&egv1a1.ClientTLSSettings{
+					ClientValidation: &egv1a1.ClientValidationContext{
+						CACertificateRefs: []gwapiv1.SecretObjectReference{
+							{
+								Name: gwapiv1.ObjectName("ca-secret"),
+							},
+						},
+					},
+				}),
+			objects:             []client.Object{caSecret},
+			secretShouldBeAdded: true,
+		},
+		{
+			name: "ClientTrafficPolicy without CA certificates",
+			clientTrafficPolicy: test.GetClientTrafficPolicy(
+				types.NamespacedName{Name: "test-ctp", Namespace: ns},
+				&egv1a1.ClientTLSSettings{
+					ClientValidation: &egv1a1.ClientValidationContext{},
+				}),
+			objects: []client.Object{},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			logger := logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo)
+
+			r := &gatewayAPIReconciler{
+				log:             logger,
+				classController: "some-gateway-class",
+			}
+
+			r.client = fakeclient.NewClientBuilder().
+				WithScheme(envoygateway.GetScheme()).
+				WithObjects(tc.objects...).
+				Build()
+
+			resourceTree := resource.NewResources()
+			resourceMap := newResourceMapping()
+			resourceTree.ClientTrafficPolicies = append(resourceTree.ClientTrafficPolicies, tc.clientTrafficPolicy)
+
+			ctx := context.Background()
+			err := r.processCTPCACertificateRefs(ctx, resourceTree, resourceMap)
+			require.NoError(t, err)
+
+			if tc.secretShouldBeAdded {
+				require.Contains(t, resourceTree.Secrets, caSecret)
+			} else {
+				require.NotContains(t, resourceTree.Secrets, caSecret)
+			}
+
+			if tc.configmapShouldBeAdded {
+				require.Contains(t, resourceTree.ConfigMaps, caConfigMap)
+			} else {
+				require.NotContains(t, resourceTree.ConfigMaps, caConfigMap)
+			}
+
+			if tc.ctbShouldBeAdded {
+				require.Contains(t, resourceTree.ClusterTrustBundles, caClusterTrustBundle)
+			} else {
+				require.NotContains(t, resourceTree.ClusterTrustBundles, caClusterTrustBundle)
+			}
+		})
+	}
+}
+
+func TestProcessClientTrafficPolicies(t *testing.T) {
+	ns := "default"
+	caSecret := test.GetSecret(types.NamespacedName{Namespace: ns, Name: "ca-secret"})
+	crlSecret := test.GetSecret(types.NamespacedName{Namespace: ns, Name: "crl-secret"})
+
+	testCases := []struct {
+		name                   string
+		clientTrafficPolicy    *egv1a1.ClientTrafficPolicy
+		objects                []client.Object
+		caSecretShouldBeAdded  bool
+		crlSecretShouldBeAdded bool
+		expectedPoliciesInTree int
+		errorExpected          bool
+	}{
+		{
+			name: "ClientTrafficPolicy with both CA and CRL references",
+			clientTrafficPolicy: test.GetClientTrafficPolicy(
+				types.NamespacedName{Name: "test-ctp", Namespace: ns},
+				&egv1a1.ClientTLSSettings{
+					ClientValidation: &egv1a1.ClientValidationContext{
+						CACertificateRefs: []gwapiv1.SecretObjectReference{
+							{
+								Kind: ptr.To[gwapiv1.Kind](resource.KindSecret),
+								Name: gwapiv1.ObjectName("ca-secret"),
+							},
+						},
+						Crl: &egv1a1.CrlContext{
+							Refs: []gwapiv1.SecretObjectReference{
+								{
+									Kind: ptr.To[gwapiv1.Kind](resource.KindSecret),
+									Name: gwapiv1.ObjectName("crl-secret"),
+								},
+							},
+						},
+					},
+				}),
+			objects:                []client.Object{caSecret, crlSecret},
+			caSecretShouldBeAdded:  true,
+			crlSecretShouldBeAdded: true,
+			expectedPoliciesInTree: 1,
+			errorExpected:          false,
+		},
+		{
+			name: "ClientTrafficPolicy with only CA reference",
+			clientTrafficPolicy: test.GetClientTrafficPolicy(
+				types.NamespacedName{Name: "test-ctp", Namespace: ns},
+				&egv1a1.ClientTLSSettings{
+					ClientValidation: &egv1a1.ClientValidationContext{
+						CACertificateRefs: []gwapiv1.SecretObjectReference{
+							{
+								Kind: ptr.To[gwapiv1.Kind](resource.KindSecret),
+								Name: gwapiv1.ObjectName("ca-secret"),
+							},
+						},
+					},
+				}),
+			objects:                []client.Object{caSecret},
+			caSecretShouldBeAdded:  true,
+			crlSecretShouldBeAdded: false,
+			expectedPoliciesInTree: 1,
+			errorExpected:          false,
+		},
+		{
+			name: "ClientTrafficPolicy with only CRL reference",
+			clientTrafficPolicy: test.GetClientTrafficPolicy(
+				types.NamespacedName{Name: "test-ctp", Namespace: ns},
+				&egv1a1.ClientTLSSettings{
+					ClientValidation: &egv1a1.ClientValidationContext{
+						Crl: &egv1a1.CrlContext{
+							Refs: []gwapiv1.SecretObjectReference{
+								{
+									Kind: ptr.To[gwapiv1.Kind](resource.KindSecret),
+									Name: gwapiv1.ObjectName("crl-secret"),
+								},
+							},
+						},
+					},
+				}),
+			objects:                []client.Object{crlSecret},
+			caSecretShouldBeAdded:  false,
+			crlSecretShouldBeAdded: true,
+			expectedPoliciesInTree: 1,
+			errorExpected:          false,
+		},
+		{
+			name: "ClientTrafficPolicy without any references",
+			clientTrafficPolicy: test.GetClientTrafficPolicy(
+				types.NamespacedName{Name: "test-ctp", Namespace: ns},
+				&egv1a1.ClientTLSSettings{}),
+			objects:                []client.Object{},
+			caSecretShouldBeAdded:  false,
+			crlSecretShouldBeAdded: false,
+			expectedPoliciesInTree: 1,
+			errorExpected:          false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			logger := logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo)
+
+			r := &gatewayAPIReconciler{
+				log:             logger,
+				classController: "some-gateway-class",
+			}
+
+			r.client = fakeclient.NewClientBuilder().
+				WithScheme(envoygateway.GetScheme()).
+				WithObjects(tc.objects...).
+				WithObjects(tc.clientTrafficPolicy).
+				Build()
+
+			resourceTree := resource.NewResources()
+			resourceMap := newResourceMapping()
+
+			ctx := context.Background()
+			err := r.processClientTrafficPolicies(ctx, resourceTree, resourceMap)
+
+			if tc.errorExpected {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+				require.Len(t, resourceTree.ClientTrafficPolicies, tc.expectedPoliciesInTree)
+
+				if tc.caSecretShouldBeAdded {
+					require.Contains(t, resourceTree.Secrets, caSecret)
+				} else {
+					require.NotContains(t, resourceTree.Secrets, caSecret)
+				}
+
+				if tc.crlSecretShouldBeAdded {
+					require.Contains(t, resourceTree.Secrets, crlSecret)
+				} else {
+					require.NotContains(t, resourceTree.Secrets, crlSecret)
+				}
+			}
+		})
+	}
+}
+
+func TestCRDExistsWithClient(t *testing.T) {
+	ctx := context.Background()
+	r := &gatewayAPIReconciler{}
+
+	backoff := wait.Backoff{Duration: 5 * time.Millisecond, Factor: 1.0, Steps: 2}
+
+	t.Run("present kind", func(t *testing.T) {
+		disco := &discoveryfake.FakeDiscovery{Fake: &clientgotesting.Fake{}}
+		disco.Resources = []*metav1.APIResourceList{
+			{
+				GroupVersion: egv1a1.GroupVersion.String(),
+				APIResources: []metav1.APIResource{{Kind: resource.KindSecurityPolicy}},
+			},
+		}
+
+		exists, err := r.crdExistsWithClient(ctx, disco, resource.KindSecurityPolicy, egv1a1.GroupVersion.String(), backoff)
+		require.NoError(t, err)
+		require.True(t, exists)
+	})
+
+	t.Run("group missing treated as absent", func(t *testing.T) {
+		disco := &discoveryfake.FakeDiscovery{Fake: &clientgotesting.Fake{}}
+
+		exists, err := r.crdExistsWithClient(ctx, disco, resource.KindSecurityPolicy, "missing.io/v1", backoff)
+		require.NoError(t, err)
+		require.False(t, exists)
+	})
+
+	t.Run("kind missing in group", func(t *testing.T) {
+		disco := &discoveryfake.FakeDiscovery{Fake: &clientgotesting.Fake{}}
+		disco.Resources = []*metav1.APIResourceList{
+			{
+				GroupVersion: egv1a1.GroupVersion.String(),
+				APIResources: []metav1.APIResource{{Kind: "Other"}},
+			},
+		}
+
+		exists, err := r.crdExistsWithClient(ctx, disco, resource.KindSecurityPolicy, egv1a1.GroupVersion.String(), backoff)
+		require.NoError(t, err)
+		require.False(t, exists)
+	})
+
+	t.Run("fatal discovery error fails fast", func(t *testing.T) {
+		expectedErr := context.DeadlineExceeded
+		disco := &discoveryfake.FakeDiscovery{Fake: &clientgotesting.Fake{}}
+		disco.Resources = []*metav1.APIResourceList{
+			{
+				GroupVersion: egv1a1.GroupVersion.String(),
+				APIResources: []metav1.APIResource{{Kind: resource.KindSecurityPolicy}},
+			},
+		}
+		disco.PrependReactor("get", "resource", func(_ clientgotesting.Action) (bool, runtime.Object, error) {
+			return true, nil, expectedErr
+		})
+
+		exists, err := r.crdExistsWithClient(ctx, disco, resource.KindSecurityPolicy, egv1a1.GroupVersion.String(), backoff)
+		require.ErrorIs(t, err, expectedErr)
+		require.False(t, exists)
+	})
+
+	t.Run("retry transient errors until success", func(t *testing.T) {
+		disco := &discoveryfake.FakeDiscovery{Fake: &clientgotesting.Fake{}}
+		disco.Resources = []*metav1.APIResourceList{
+			{
+				GroupVersion: egv1a1.GroupVersion.String(),
+				APIResources: []metav1.APIResource{{Kind: resource.KindSecurityPolicy}},
+			},
+		}
+
+		attempts := 0
+		disco.PrependReactor("get", "resource", func(_ clientgotesting.Action) (bool, runtime.Object, error) {
+			attempts++
+			if attempts == 1 {
+				return true, nil, kerrors.NewTooManyRequests("retry", 0)
+			}
+			return false, nil, nil
+		})
+
+		exists, err := r.crdExistsWithClient(ctx, disco, resource.KindSecurityPolicy, egv1a1.GroupVersion.String(), backoff)
+		require.NoError(t, err)
+		require.True(t, exists)
+	})
 }

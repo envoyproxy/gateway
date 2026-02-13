@@ -29,13 +29,14 @@
                 normalizePayloadInMetadata:
                   spaceDelimitedClaims:
                   - scope
+                  - scp
                 payloadInMetadata: foobar
                 remoteJwks:
                   asyncFetch: {}
                   cacheDuration: 300s
                   httpUri:
                     cluster: securitypolicy/default/policy-for-route/jwt/0
-                    timeout: 10s
+                    timeout: 5s
                     uri: https://foo.bar.com/jwt/public-key/jwks.json
                   retryPolicy:
                     numRetries: 3

@@ -21,6 +21,7 @@ import (
 type Config struct {
 	Server            config.Server
 	ProviderResources *message.ProviderResources
+	RunnerErrors      *message.RunnerErrors
 }
 
 type Runner struct {
@@ -36,7 +37,7 @@ func New(cfg *Config) *Runner {
 	}
 }
 
-func (r *Runner) Start(ctx context.Context) error {
+func (r *Runner) Start(_ context.Context) error {
 	if r.cfg.EnvoyGateway.GetEnvoyGatewayAdmin().EnableDumpConfig {
 		spewConfig := spew.NewDefaultConfig()
 		spewConfig.DisableMethods = true

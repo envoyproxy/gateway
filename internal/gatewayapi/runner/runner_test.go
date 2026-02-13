@@ -8,9 +8,9 @@ package runner
 import (
 	"context"
 	"crypto/tls"
+	"maps"
 	"os"
 	"path/filepath"
-	"reflect"
 	"testing"
 	"time"
 
@@ -41,17 +41,17 @@ func TestRunner(t *testing.T) {
 	r := New(&Config{
 		Server:            *cfg,
 		ProviderResources: pResources,
+		RunnerErrors:      new(message.RunnerErrors),
 		XdsIR:             xdsIR,
 		InfraIR:           infraIR,
 		ExtensionManager:  extMgr,
 	})
-	ctx := context.Background()
 	// Start
-	err = r.Start(ctx)
+	err = r.Start(t.Context())
 	require.NoError(t, err)
 
 	// IR is nil at start
-	require.Equal(t, map[string]*ir.Xds{}, xdsIR.LoadAll())
+	require.Equal(t, map[string]*message.XdsIRWithContext{}, xdsIR.LoadAll())
 	require.Equal(t, map[string]*ir.Infra{}, infraIR.LoadAll())
 
 	// TODO: pass valid provider resources
@@ -64,7 +64,7 @@ func TestRunner(t *testing.T) {
 			return false
 		}
 		// Ensure ir is empty
-		return (reflect.DeepEqual(xdsIR.LoadAll(), map[string]*ir.Xds{})) && (reflect.DeepEqual(infraIR.LoadAll(), map[string]*ir.Infra{}))
+		return maps.Equal(xdsIR.LoadAll(), map[string]*message.XdsIRWithContext{}) && maps.Equal(infraIR.LoadAll(), map[string]*ir.Infra{})
 	}, time.Second*1, time.Millisecond*20)
 }
 
@@ -82,6 +82,7 @@ func setupTestRunner(t *testing.T) (*Runner, []types.NamespacedName) {
 	r := New(&Config{
 		Server:            *cfg,
 		ProviderResources: pResources,
+		RunnerErrors:      new(message.RunnerErrors),
 		XdsIR:             xdsIR,
 		InfraIR:           infraIR,
 		ExtensionManager:  extMgr,

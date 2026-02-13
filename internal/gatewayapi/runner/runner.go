@@ -13,9 +13,13 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"sync"
 
 	"github.com/docker/docker/pkg/fileutils"
 	"github.com/telepresenceio/watchable"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -46,9 +50,12 @@ const (
 	hmacSecretKey  = "hmac-secret"
 )
 
+var tracer = otel.Tracer("envoy-gateway/gateway-api")
+
 type Config struct {
 	config.Server
 	ProviderResources *message.ProviderResources
+	RunnerErrors      *message.RunnerErrors
 	XdsIR             *message.XdsIR
 	InfraIR           *message.InfraIR
 	ExtensionManager  extension.Manager
@@ -60,6 +67,9 @@ type Runner struct {
 
 	// Key tracking for mark and sweep - avoids expensive LoadAll operations
 	keyCache *KeyCache
+
+	// Goroutine synchronization
+	done sync.WaitGroup
 }
 
 func New(cfg *Config) *Runner {
@@ -70,7 +80,10 @@ func New(cfg *Config) *Runner {
 }
 
 // Close implements Runner interface.
-func (r *Runner) Close() error { return nil }
+func (r *Runner) Close() error {
+	r.done.Wait()
+	return nil
+}
 
 // Name implements Runner interface.
 func (r *Runner) Name() string {
@@ -80,13 +93,15 @@ func (r *Runner) Name() string {
 // Start starts the gateway-api translator runner
 func (r *Runner) Start(ctx context.Context) error {
 	r.Logger = r.Logger.WithName(r.Name()).WithValues("runner", r.Name())
-
-	go r.startWasmCache(ctx)
+	r.done.Go(func() {
+		r.startWasmCache(ctx)
+	})
 	// Do not call .Subscribe() inside Goroutine since it is supposed to be called from the same
 	// Goroutine where Close() is called.
 	c := r.ProviderResources.GatewayAPIResources.Subscribe(ctx)
-
-	go r.subscribeAndTranslate(c)
+	r.done.Go(func() {
+		r.subscribeAndTranslate(c)
+	})
 	r.Logger.Info("started")
 	return nil
 }
@@ -122,41 +137,65 @@ func (r *Runner) startWasmCache(ctx context.Context) {
 	r.wasmCache.Start(ctx)
 }
 
-func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *resource.ControllerResources]) {
-	message.HandleSubscription(message.Metadata{Runner: r.Name(), Message: message.ProviderResourcesMessageName}, sub,
-		func(update message.Update[string, *resource.ControllerResources], errChan chan error) {
-			r.Logger.Info("received an update", "key", update.Key)
-			val := update.Value
+func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *resource.ControllerResourcesContext]) {
+	message.HandleSubscription(
+		r.Logger,
+		message.Metadata{Runner: r.Name(), Message: message.ProviderResourcesMessageName}, sub,
+		func(update message.Update[string, *resource.ControllerResourcesContext], errChan chan error) {
+			parentCtx := context.Background()
+			if update.Value != nil && update.Value.Context != nil {
+				parentCtx = update.Value.Context
+			}
+
+			traceCtx, span := tracer.Start(parentCtx, "GatewayApiRunner.subscribeAndTranslate")
+			defer span.End()
+			traceLogger := r.Logger.WithTrace(traceCtx)
+			traceLogger.Info("received an update", "key", update.Key)
+
+			valWrapper := update.Value
 			// There is only 1 key which is the controller name
 			// so when a delete is triggered, delete all keys
-			if update.Delete || val == nil {
+			if update.Delete || valWrapper == nil || valWrapper.Resources == nil {
 				r.deleteAllKeys()
 				return
+			}
+
+			val := valWrapper.Resources
+
+			// Add span attributes for observability
+			span.SetAttributes(
+				attribute.String("controller.key", update.Key),
+				attribute.Bool("update.delete", update.Delete),
+			)
+			if val != nil {
+				span.SetAttributes(attribute.Int("resources.count", len(*val)))
 			}
 
 			// Initialize keysToDelete with tracked keys (mark and sweep approach)
 			keysToDelete := r.keyCache.copy()
 
 			// Aggregate metric counters for batch publishing
-			var infraIRCount, xdsIRCount, gatewayStatusCount, httpRouteStatusCount, grpcRouteStatusCount int
+			var infraIRCount, xdsIRCount, gatewayStatusCount, xListenerSetStatusCount, httpRouteStatusCount, grpcRouteStatusCount int
 			var tlsRouteStatusCount, tcpRouteStatusCount, udpRouteStatusCount int
 			var backendTLSPolicyStatusCount, clientTrafficPolicyStatusCount, backendTrafficPolicyStatusCount int
 			var securityPolicyStatusCount, envoyExtensionPolicyStatusCount, backendStatusCount, extensionServerPolicyStatusCount int
 
+			span.AddEvent("translate", trace.WithAttributes(attribute.Int("resources.count", len(*val))))
 			for _, resources := range *val {
 				// Translate and publish IRs.
 				t := &gatewayapi.Translator{
-					GatewayControllerName:   r.EnvoyGateway.Gateway.ControllerName,
-					GatewayClassName:        gwapiv1.ObjectName(resources.GatewayClass.Name),
-					GlobalRateLimitEnabled:  r.EnvoyGateway.RateLimit != nil,
-					EnvoyPatchPolicyEnabled: r.EnvoyGateway.ExtensionAPIs != nil && r.EnvoyGateway.ExtensionAPIs.EnableEnvoyPatchPolicy,
-					BackendEnabled:          r.EnvoyGateway.ExtensionAPIs != nil && r.EnvoyGateway.ExtensionAPIs.EnableBackend,
-					ControllerNamespace:     r.ControllerNamespace,
-					GatewayNamespaceMode:    r.EnvoyGateway.GatewayNamespaceMode(),
-					MergeGateways:           gatewayapi.IsMergeGatewaysEnabled(resources),
-					WasmCache:               r.wasmCache,
-					RunningOnHost:           r.EnvoyGateway.Provider != nil && r.EnvoyGateway.Provider.IsRunningOnHost(),
-					Logger:                  r.Logger,
+					GatewayControllerName:           r.EnvoyGateway.Gateway.ControllerName,
+					GatewayClassName:                gwapiv1.ObjectName(resources.GatewayClass.Name),
+					GlobalRateLimitEnabled:          r.EnvoyGateway.RateLimit != nil,
+					EnvoyPatchPolicyEnabled:         r.EnvoyGateway.ExtensionAPIs != nil && r.EnvoyGateway.ExtensionAPIs.EnableEnvoyPatchPolicy,
+					BackendEnabled:                  r.EnvoyGateway.ExtensionAPIs != nil && r.EnvoyGateway.ExtensionAPIs.EnableBackend,
+					ControllerNamespace:             r.ControllerNamespace,
+					GatewayNamespaceMode:            r.EnvoyGateway.GatewayNamespaceMode(),
+					MergeGateways:                   gatewayapi.IsMergeGatewaysEnabled(resources),
+					WasmCache:                       r.wasmCache,
+					RunningOnHost:                   r.EnvoyGateway.Provider != nil && r.EnvoyGateway.Provider.IsRunningOnHost(),
+					Logger:                          traceLogger,
+					LuaEnvoyExtensionPolicyDisabled: r.EnvoyGateway.ExtensionAPIs != nil && r.EnvoyGateway.ExtensionAPIs.DisableLua,
 				}
 
 				// If an extension is loaded, pass its supported groups/kinds to the translator
@@ -170,24 +209,29 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 						extGKs = append(extGKs, schema.GroupKind{Group: gvk.Group, Kind: gvk.Kind})
 					}
 					t.ExtensionGroupKinds = extGKs
-					r.Logger.Info("extension resources", "GVKs count", len(extGKs))
+					traceLogger.Info("extension resources", "GVKs count", len(extGKs))
 				}
 				// Translate to IR
+				_, translateToIRSpan := tracer.Start(traceCtx, "GatewayApiRunner.ResoureTranslationCycle.TranslateToIR")
 				result, err := t.Translate(resources)
+				translateToIRSpan.End()
 				if err != nil {
 					// Currently all errors that Translate returns should just be logged
-					r.Logger.Error(err, "errors detected during translation", "gateway-class", resources.GatewayClass.Name)
+					traceLogger.Error(err, "errors detected during translation", "gateway-class", resources.GatewayClass.Name)
+					// Notify the main control loop about translation errors. This may be a critical error in standalone mode, so
+					// notify the control loop in case this needs to be handled.
+					r.RunnerErrors.Store(r.Name(), message.NewWatchableError(err))
 				}
 
 				// Publish the IRs.
 				// Also validate the ir before sending it.
 				for key, val := range result.InfraIR {
-					logger := r.Logger.V(1).WithValues(string(message.InfraIRMessageName), key)
-					if logger.Enabled() {
-						logger.Info(val.JSONString())
+					logV := traceLogger.V(1).WithValues(string(message.InfraIRMessageName), key)
+					if logV.Enabled() {
+						logV.Info(val.JSONString())
 					}
 					if err := val.Validate(); err != nil {
-						r.Logger.Error(err, "unable to validate infra ir, skipped sending it")
+						traceLogger.Error(err, "unable to validate infra ir, skipped sending it")
 						errChan <- err
 					} else {
 						r.InfraIR.Store(key, val)
@@ -199,20 +243,25 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 				}
 
 				for key, val := range result.XdsIR {
-					logger := r.Logger.V(1).WithValues(string(message.XDSIRMessageName), key)
-					if logger.Enabled() {
-						logger.Info(val.JSONString())
+					logV := traceLogger.V(1).WithValues(string(message.XDSIRMessageName), key)
+					if logV.Enabled() {
+						logV.Info(val.JSONString())
 					}
 					if err := val.Validate(); err != nil {
-						r.Logger.Error(err, "unable to validate xds ir, skipped sending it")
+						traceLogger.Error(err, "unable to validate xds ir, skipped sending it")
 						errChan <- err
 					} else {
-						r.XdsIR.Store(key, val)
+						m := message.XdsIRWithContext{
+							XdsIR:   val,
+							Context: traceCtx,
+						}
+						r.XdsIR.Store(key, &m)
 						xdsIRCount++
 					}
 				}
 
 				// Update Status
+				_, statusUpdateSpan := tracer.Start(traceCtx, "GatewayApiRunner.ResoureTranslationCycle.UpdateStatus")
 				if result.GatewayClass != nil {
 					key := utils.NamespacedName(result.GatewayClass)
 					r.ProviderResources.GatewayClassStatuses.Store(key, &result.GatewayClass.Status)
@@ -224,6 +273,13 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 					gatewayStatusCount++
 					delete(keysToDelete.GatewayStatus, key)
 					r.keyCache.GatewayStatus[key] = true
+				}
+				for _, xListenerSet := range result.XListenerSets {
+					key := utils.NamespacedName(xListenerSet)
+					r.ProviderResources.XListenerSetStatuses.Store(key, &xListenerSet.Status)
+					xListenerSetStatusCount++
+					delete(keysToDelete.XListenerSetStatus, key)
+					r.keyCache.XListenerSetStatus[key] = true
 				}
 				for _, httpRoute := range result.HTTPRoutes {
 					key := utils.NamespacedName(httpRoute)
@@ -335,6 +391,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 					delete(keysToDelete.ExtensionServerPolicyStatus, key)
 					r.keyCache.ExtensionServerPolicyStatus[key] = true
 				}
+				statusUpdateSpan.End()
 			}
 
 			// Publish aggregated metrics
@@ -342,6 +399,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 			message.PublishMetric(message.Metadata{Runner: r.Name(), Message: message.XDSIRMessageName}, xdsIRCount)
 			message.PublishMetric(message.Metadata{Runner: r.Name(), Message: message.GatewayClassStatusMessageName}, 1)
 			message.PublishMetric(message.Metadata{Runner: r.Name(), Message: message.GatewayStatusMessageName}, gatewayStatusCount)
+			message.PublishMetric(message.Metadata{Runner: r.Name(), Message: message.XListenerSetStatusMessageName}, xListenerSetStatusCount)
 			message.PublishMetric(message.Metadata{Runner: r.Name(), Message: message.HTTPRouteStatusMessageName}, httpRouteStatusCount)
 			message.PublishMetric(message.Metadata{Runner: r.Name(), Message: message.GRPCRouteStatusMessageName}, grpcRouteStatusCount)
 			message.PublishMetric(message.Metadata{Runner: r.Name(), Message: message.TLSRouteStatusMessageName}, tlsRouteStatusCount)
@@ -434,6 +492,9 @@ func (r *Runner) deleteAllKeys() {
 	for key := range r.keyCache.GatewayStatus {
 		r.ProviderResources.GatewayStatuses.Delete(key)
 	}
+	for key := range r.keyCache.XListenerSetStatus {
+		r.ProviderResources.XListenerSetStatuses.Delete(key)
+	}
 	for key := range r.keyCache.HTTPRouteStatus {
 		r.ProviderResources.HTTPRouteStatuses.Delete(key)
 	}
@@ -481,6 +542,7 @@ type KeyCache struct {
 
 	// Status keys
 	GatewayStatus          map[types.NamespacedName]bool
+	XListenerSetStatus     map[types.NamespacedName]bool
 	HTTPRouteStatus        map[types.NamespacedName]bool
 	GRPCRouteStatus        map[types.NamespacedName]bool
 	TLSRouteStatus         map[types.NamespacedName]bool
@@ -509,6 +571,9 @@ func (kc *KeyCache) copy() *KeyCache {
 	// Copy status keys
 	for key := range kc.GatewayStatus {
 		copied.GatewayStatus[key] = true
+	}
+	for key := range kc.XListenerSetStatus {
+		copied.XListenerSetStatus[key] = true
 	}
 	for key := range kc.HTTPRouteStatus {
 		copied.HTTPRouteStatus[key] = true
@@ -554,6 +619,7 @@ func newKeyCache() *KeyCache {
 	return &KeyCache{
 		IR:                          make(map[string]bool),
 		GatewayStatus:               make(map[types.NamespacedName]bool),
+		XListenerSetStatus:          make(map[types.NamespacedName]bool),
 		HTTPRouteStatus:             make(map[types.NamespacedName]bool),
 		GRPCRouteStatus:             make(map[types.NamespacedName]bool),
 		TLSRouteStatus:              make(map[types.NamespacedName]bool),
@@ -580,6 +646,9 @@ func (r *Runner) populateKeyCache() {
 	// Populate status keys
 	for key := range r.ProviderResources.GatewayStatuses.LoadAll() {
 		r.keyCache.GatewayStatus[key] = true
+	}
+	for key := range r.ProviderResources.XListenerSetStatuses.LoadAll() {
+		r.keyCache.XListenerSetStatus[key] = true
 	}
 	for key := range r.ProviderResources.HTTPRouteStatuses.LoadAll() {
 		r.keyCache.HTTPRouteStatus[key] = true
@@ -631,6 +700,10 @@ func (r *Runner) deleteKeys(kc *KeyCache) {
 	for key := range kc.GatewayStatus {
 		r.ProviderResources.GatewayStatuses.Delete(key)
 		delete(r.keyCache.GatewayStatus, key)
+	}
+	for key := range kc.XListenerSetStatus {
+		r.ProviderResources.XListenerSetStatuses.Delete(key)
+		delete(r.keyCache.XListenerSetStatus, key)
 	}
 	for key := range kc.HTTPRouteStatus {
 		r.ProviderResources.HTTPRouteStatuses.Delete(key)

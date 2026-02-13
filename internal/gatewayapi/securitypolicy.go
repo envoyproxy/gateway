@@ -6,7 +6,10 @@
 package gatewayapi
 
 import (
+	//nolint:gosec // SHA1 is required to validate htpasswd {SHA} format.
+	"crypto/sha1"
 	"crypto/tls"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -48,9 +51,29 @@ const (
 	// nolint: gosec
 	oidcHMACSecretName = "envoy-oidc-hmac"
 	oidcHMACSecretKey  = "hmac-secret"
+	// JWKSConfigMapKey is the key used in ConfigMaps to store JWKS data
+	JWKSConfigMapKey = "jwks"
 )
 
-func (t *Translator) ProcessSecurityPolicies(securityPolicies []*egv1a1.SecurityPolicy,
+// deprecatedFieldsUsedInSecurityPolicy returns a map of deprecated field paths to their alternatives.
+func deprecatedFieldsUsedInSecurityPolicy(policy *egv1a1.SecurityPolicy) map[string]string {
+	deprecatedFields := make(map[string]string)
+	if policy.Spec.TargetRef != nil {
+		deprecatedFields["spec.targetRef"] = "spec.targetRefs"
+	}
+	if policy.Spec.ExtAuth != nil {
+		if policy.Spec.ExtAuth.GRPC != nil && policy.Spec.ExtAuth.GRPC.BackendRef != nil {
+			deprecatedFields["spec.extAuth.grpc.backendRef"] = "spec.extAuth.grpc.backendRefs"
+		}
+		if policy.Spec.ExtAuth.HTTP != nil && policy.Spec.ExtAuth.HTTP.BackendRef != nil {
+			deprecatedFields["spec.extAuth.http.backendRef"] = "spec.extAuth.http.backendRefs"
+		}
+	}
+	return deprecatedFields
+}
+
+func (t *Translator) ProcessSecurityPolicies(
+	securityPolicies []*egv1a1.SecurityPolicy,
 	gateways []*GatewayContext,
 	routes []RouteContext,
 	resources *resource.Resources,
@@ -283,6 +306,11 @@ func (t *Translator) processSecurityPolicyForRoute(
 	// Set Accepted condition if it is unset
 	status.SetAcceptedForPolicyAncestors(&policy.Status, parentGateways, t.GatewayControllerName, policy.Generation)
 
+	// Check for deprecated fields and set warning if any are found
+	if deprecatedFields := deprecatedFieldsUsedInSecurityPolicy(policy); len(deprecatedFields) > 0 {
+		status.SetDeprecatedFieldsWarningForPolicyAncestors(&policy.Status, parentGateways, t.GatewayControllerName, policy.Generation, deprecatedFields)
+	}
+
 	// Check if this policy is overridden by other policies targeting at route rule levels
 	key := policyTargetRouteKey{
 		Kind:      string(currTarget.Kind),
@@ -462,7 +490,7 @@ func validateAPIKeyAuth(apiKeyAuth *egv1a1.APIKeyAuth) error {
 // Currently, we only validate that the secret exists, but we don't validate
 // the content of the secret. This function will be called when the security policy
 // is being processed, but before the secret is actually read.
-func validateBasicAuth(basicAuth *egv1a1.BasicAuth) error {
+func validateBasicAuth(_ *egv1a1.BasicAuth) error {
 	// The actual validation of the htpasswd format will happen when the secret is read
 	// in the buildBasicAuth function.
 	return nil
@@ -895,9 +923,7 @@ func (t *Translator) translateSecurityPolicyForGateway(
 	policyTarget := irStringKey(policy.Namespace, string(target.Name))
 	routesWithDirectResponse := sets.New[string]()
 	for _, h := range x.HTTP {
-		// A HTTPListener name has the format namespace/gatewayName/listenerName
-		gatewayNameEnd := strings.LastIndex(h.Name, "/")
-		gatewayName := h.Name[0:gatewayNameEnd]
+		gatewayName := extractGatewayNameFromListener(h.Name)
 		if t.MergeGateways && gatewayName != policyTarget {
 			continue
 		}
@@ -941,9 +967,7 @@ func (t *Translator) translateSecurityPolicyForGateway(
 			if tl == nil || len(tl.Routes) == 0 {
 				continue
 			}
-			// TCPListener name has same format namespace/gatewayName/listenerName
-			gatewayNameEnd := strings.LastIndex(tl.Name, "/")
-			gatewayName := tl.Name[0:gatewayNameEnd]
+			gatewayName := extractGatewayNameFromListener(tl.Name)
 			if t.MergeGateways && gatewayName != policyTarget {
 				continue
 			}
@@ -1035,7 +1059,7 @@ func (t *Translator) buildJWT(
 			}
 			provider.RemoteJWKS = remoteJWKS
 		} else {
-			localJWKS, err := t.buildLocalJWKS(policy, p.LocalJWKS, resources)
+			localJWKS, err := t.buildLocalJWKS(policy, p.LocalJWKS)
 			if err != nil {
 				return nil, err
 			}
@@ -1192,7 +1216,6 @@ func (t *Translator) buildRemoteJWKS(
 func (t *Translator) buildLocalJWKS(
 	policy *egv1a1.SecurityPolicy,
 	localJWKS *egv1a1.LocalJWKS,
-	resources *resource.Resources,
 ) (string, error) {
 	jwksType := egv1a1.LocalJWKSTypeInline
 	if localJWKS.Type != nil {
@@ -1200,12 +1223,12 @@ func (t *Translator) buildLocalJWKS(
 	}
 
 	if jwksType == egv1a1.LocalJWKSTypeValueRef {
-		cm := resources.GetConfigMap(policy.Namespace, string(localJWKS.ValueRef.Name))
+		cm := t.GetConfigMap(policy.Namespace, string(localJWKS.ValueRef.Name))
 		if cm == nil {
 			return "", fmt.Errorf("local JWKS ConfigMap %s/%s not found", policy.Namespace, localJWKS.ValueRef.Name)
 		}
 
-		jwksBytes, ok := cm.Data["jwks"]
+		jwksBytes, ok := cm.Data[JWKSConfigMapKey]
 		if ok {
 			return jwksBytes, nil
 		}
@@ -1217,7 +1240,8 @@ func (t *Translator) buildLocalJWKS(
 		}
 
 		return "", fmt.Errorf(
-			"JWKS data not found in ConfigMap %s/%s, no 'jwks' key and no other data found",
+			"JWKS data not found in ConfigMap %s/%s, no %q key and no other data found",
+			JWKSConfigMapKey,
 			cm.Namespace, cm.Name)
 	}
 
@@ -1273,8 +1297,7 @@ func (t *Translator) buildOIDC(
 		return nil, fmt.Errorf("client ID must be specified in OIDC policy %s/%s", policy.Namespace, policy.Name)
 	}
 
-	if clientSecret, err = t.validateSecretRef(
-		false, from, oidc.ClientSecret, resources); err != nil {
+	if clientSecret, err = t.validateSecretRef(false, from, oidc.ClientSecret, resources); err != nil {
 		return nil, err
 	}
 
@@ -1321,7 +1344,7 @@ func (t *Translator) buildOIDC(
 	// HMAC secret is generated by the CertGen job and stored in a secret
 	// We need to rotate the HMAC secret in the future, probably the same
 	// way we rotate the certs generated by the CertGen job.
-	hmacSecret := resources.GetSecret(t.ControllerNamespace, oidcHMACSecretName)
+	hmacSecret := t.GetSecret(t.ControllerNamespace, oidcHMACSecretName)
 	if hmacSecret == nil {
 		return nil, fmt.Errorf("HMAC secret %s/%s not found", t.ControllerNamespace, oidcHMACSecretName)
 	}
@@ -1380,7 +1403,11 @@ func (t *Translator) buildOIDC(
 	return irOIDC, nil
 }
 
-func (t *Translator) buildOIDCProvider(policy *egv1a1.SecurityPolicy, resources *resource.Resources, envoyProxy *egv1a1.EnvoyProxy) (*ir.OIDCProvider, error) {
+func (t *Translator) buildOIDCProvider(
+	policy *egv1a1.SecurityPolicy,
+	resources *resource.Resources,
+	envoyProxy *egv1a1.EnvoyProxy,
+) (*ir.OIDCProvider, error) {
 	var (
 		provider              = policy.Spec.OIDC.Provider
 		tokenEndpoint         string
@@ -1411,7 +1438,8 @@ func (t *Translator) buildOIDCProvider(policy *egv1a1.SecurityPolicy, resources 
 	}
 
 	if len(provider.BackendRefs) > 0 {
-		if rd, err = t.translateExtServiceBackendRefs(policy, provider.BackendRefs, protocol, resources, envoyProxy, "oidc", 0); err != nil {
+		if rd, err = t.translateExtServiceBackendRefs(
+			policy, provider.BackendRefs, protocol, resources, envoyProxy, "oidc", 0); err != nil {
 			return nil, err
 		}
 	}
@@ -1705,8 +1733,7 @@ func (t *Translator) buildAPIKeyAuth(
 	seenClients := make(sets.Set[string])
 
 	for _, ref := range policy.Spec.APIKeyAuth.CredentialRefs {
-		credentialsSecret, err := t.validateSecretRef(
-			false, from, ref, resources)
+		credentialsSecret, err := t.validateSecretRef(false, from, ref, resources)
 		if err != nil {
 			return nil, err
 		}
@@ -1761,8 +1788,7 @@ func (t *Translator) buildBasicAuth(
 		kind:      resource.KindSecurityPolicy,
 		namespace: policy.Namespace,
 	}
-	if usersSecret, err = t.validateSecretRef(
-		false, from, basicAuth.Users, resources); err != nil {
+	if usersSecret, err = t.validateSecretRef(false, from, basicAuth.Users, resources); err != nil {
 		return nil, err
 	}
 
@@ -1804,6 +1830,14 @@ func validateHtpasswdFormat(data []byte) error {
 		if !strings.HasPrefix(password, "{SHA}") {
 			return fmt.Errorf("unsupported htpasswd format: please use {SHA}")
 		}
+		// Envoy BasicAuth only supports unsalted SHA1 {SHA}<base64> generated by htpasswd.
+		shaBytes, err := base64.StdEncoding.DecodeString(strings.TrimPrefix(password, "{SHA}"))
+		if err != nil {
+			return fmt.Errorf("invalid htpasswd format: {SHA} must be base64-encoded SHA1")
+		}
+		if len(shaBytes) != sha1.Size {
+			return fmt.Errorf("invalid htpasswd format: {SHA} must be SHA1 (%d bytes)", sha1.Size)
+		}
 	}
 	return nil
 }
@@ -1814,15 +1848,16 @@ func (t *Translator) buildExtAuth(
 	envoyProxy *egv1a1.EnvoyProxy,
 ) (*ir.ExtAuth, error) {
 	var (
-		http            = policy.Spec.ExtAuth.HTTP
-		grpc            = policy.Spec.ExtAuth.GRPC
-		backendRefs     []egv1a1.BackendRef
-		backendSettings *egv1a1.ClusterSettings
-		protocol        ir.AppProtocol
-		rd              *ir.RouteDestination
-		authority       string
-		err             error
-		traffic         *ir.TrafficFeatures
+		http              = policy.Spec.ExtAuth.HTTP
+		grpc              = policy.Spec.ExtAuth.GRPC
+		backendRefs       []egv1a1.BackendRef
+		backendSettings   *egv1a1.ClusterSettings
+		protocol          ir.AppProtocol
+		rd                *ir.RouteDestination
+		authority         string
+		err               error
+		traffic           *ir.TrafficFeatures
+		contextExtensions []*ir.ContextExtention
 	)
 
 	// These are sanity checks, they should never happen because the API server
@@ -1868,7 +1903,8 @@ func (t *Translator) buildExtAuth(
 		}
 	}
 
-	if rd, err = t.translateExtServiceBackendRefs(policy, backendRefs, protocol, resources, envoyProxy, "extauth", 0); err != nil {
+	if rd, err = t.translateExtServiceBackendRefs(
+		policy, backendRefs, protocol, resources, envoyProxy, "extauth", 0); err != nil {
 		return nil, err
 	}
 
@@ -1878,20 +1914,26 @@ func (t *Translator) buildExtAuth(
 		// When translated to XDS, the authority is used on the filter level not on the cluster level.
 		// There's no way to translate to XDS and use a different authority for each backendref
 		if authority == "" {
-			authority = backendRefAuthority(resources, &backendRef.BackendObjectReference, policy)
+			authority = t.backendRefAuthority(&backendRef.BackendObjectReference, policy)
 		}
 	}
 
 	if traffic, err = translateTrafficFeatures(backendSettings); err != nil {
 		return nil, err
 	}
+
+	if contextExtensions, err = t.buildContextExtensions(policy.Spec.ExtAuth.ContextExtensions, policy.Namespace); err != nil {
+		return nil, err
+	}
+
 	extAuth := &ir.ExtAuth{
-		Name:             irConfigName(policy),
-		HeadersToExtAuth: policy.Spec.ExtAuth.HeadersToExtAuth,
-		FailOpen:         policy.Spec.ExtAuth.FailOpen,
-		Traffic:          traffic,
-		RecomputeRoute:   policy.Spec.ExtAuth.RecomputeRoute,
-		Timeout:          parseExtAuthTimeout(policy.Spec.ExtAuth.Timeout),
+		Name:              irConfigName(policy),
+		HeadersToExtAuth:  policy.Spec.ExtAuth.HeadersToExtAuth,
+		ContextExtensions: contextExtensions,
+		FailOpen:          policy.Spec.ExtAuth.FailOpen,
+		Traffic:           traffic,
+		RecomputeRoute:    policy.Spec.ExtAuth.RecomputeRoute,
+		Timeout:           parseExtAuthTimeout(policy.Spec.ExtAuth.Timeout),
 	}
 
 	if http != nil {
@@ -1931,7 +1973,76 @@ func parseExtAuthTimeout(timeout *gwapiv1.Duration) *metav1.Duration {
 	}
 }
 
-func backendRefAuthority(resources *resource.Resources, backendRef *gwapiv1.BackendObjectReference, policy *egv1a1.SecurityPolicy) string {
+func (t *Translator) buildContextExtensions(
+	contextExtensions []*egv1a1.ContextExtension,
+	policyNs string,
+) ([]*ir.ContextExtention, error) {
+	if len(contextExtensions) == 0 {
+		return nil, nil
+	}
+
+	ctxExts := make([]*ir.ContextExtention, 0, len(contextExtensions))
+	for _, ext := range contextExtensions {
+		var value ir.PrivateBytes
+		if ext.Type == egv1a1.ContextExtensionValueTypeValueRef {
+			var err error
+			if value, err = t.getContextExtensionValueFromRef(ext.ValueRef, policyNs); err != nil {
+				return nil, err
+			}
+		} else if ext.Value != nil {
+			value = ir.PrivateBytes(*ext.Value)
+		}
+
+		ctxExts = append(ctxExts, &ir.ContextExtention{Name: ext.Name, Value: value})
+	}
+
+	return ctxExts, nil
+}
+
+// getContextExtensionValueFromRef assumes the local object reference points to
+// a Kubernetes ConfigMap or Secret.
+func (t *Translator) getContextExtensionValueFromRef(
+	valueRef *egv1a1.LocalObjectKeyReference,
+	policyNs string,
+) (ir.PrivateBytes, error) {
+	if valueRef == nil {
+		return nil, errors.New("unexpected nil reference")
+	}
+
+	switch valueRef.Kind {
+	case resource.KindConfigMap:
+		cm := t.GetConfigMap(policyNs, string(valueRef.Name))
+		if cm != nil {
+			s, dataOk := cm.Data[valueRef.Key]
+			if !dataOk {
+				return nil, fmt.Errorf("can't find the key %q in the referenced configmap %q", valueRef.Key, valueRef.Name)
+			}
+			return ir.PrivateBytes(s), nil
+		}
+		return nil, fmt.Errorf("can't find the referenced configmap %q in namespace %q", valueRef.Name, policyNs)
+	case resource.KindSecret:
+		sec := t.GetSecret(policyNs, string(valueRef.Name))
+		if sec != nil {
+			b, dataOk := sec.Data[valueRef.Key]
+			if !dataOk {
+				return nil, fmt.Errorf("can't find the key %q in the referenced secret %q", valueRef.Key, valueRef.Name)
+			}
+			dbuf := make([]byte, base64.StdEncoding.DecodedLen(len(b)))
+			n, err := base64.StdEncoding.Decode(dbuf, b)
+			if err != nil {
+				return nil, fmt.Errorf("error decoding the base64 value of the key %q in the referenced secret %q: %w", valueRef.Key, valueRef.Name, err)
+			}
+			return ir.PrivateBytes(dbuf[:n]), nil
+		}
+		return nil, fmt.Errorf("can't find the referenced secret %q in namespace %q", valueRef.Name, policyNs)
+	}
+	return nil, fmt.Errorf("unexpected reference to kind %q", valueRef.Kind)
+}
+
+func (t *Translator) backendRefAuthority(
+	backendRef *gwapiv1.BackendObjectReference,
+	policy *egv1a1.SecurityPolicy,
+) string {
 	if backendRef == nil {
 		return ""
 	}
@@ -1939,7 +2050,7 @@ func backendRefAuthority(resources *resource.Resources, backendRef *gwapiv1.Back
 	backendNamespace := NamespaceDerefOr(backendRef.Namespace, policy.Namespace)
 	backendKind := KindDerefOr(backendRef.Kind, resource.KindService)
 	if backendKind == resource.KindBackend {
-		backend := resources.GetBackend(backendNamespace, string(backendRef.Name))
+		backend := t.GetBackend(backendNamespace, string(backendRef.Name))
 		if backend != nil {
 			// TODO: exists multi FQDN endpoints?
 			for _, ep := range backend.Spec.Endpoints {

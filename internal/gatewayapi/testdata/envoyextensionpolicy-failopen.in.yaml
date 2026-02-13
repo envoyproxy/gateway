@@ -1,0 +1,285 @@
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: default
+    name: gateway-1
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: All
+httpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-with-valid-and-invalid-extension-failclose     # this route should return 500 direct response
+  spec:
+    hostnames:
+    - www.foo.com
+    parentRefs:
+    - namespace: default
+      name: gateway-1
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: /foo
+      backendRefs:
+      - name: service-1
+        port: 8080
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-with-all-invalid-extensions-failclose     # this route should return 500 direct response
+  spec:
+    hostnames:
+    - www.foo.com
+    parentRefs:
+    - namespace: default
+      name: gateway-1
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: /bar
+      backendRefs:
+      - name: service-1
+        port: 8080
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-with-invalid-extensions-mixed-failclose-failopen     # this route should return 500 direct response
+  spec:
+    hostnames:
+    - www.foo.com
+    parentRefs:
+    - namespace: default
+      name: gateway-1
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: /baz
+      backendRefs:
+      - name: service-1
+        port: 8080
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-with-invalid-lua-invald-wasm-failopen     # this route should return 500 direct response
+  spec:
+    hostnames:
+    - www.foo.com
+    parentRefs:
+    - namespace: default
+      name: gateway-1
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: /qux
+      backendRefs:
+      - name: service-1
+        port: 8080
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-with-valid-and-invalid-extension-failopen     # this route should ingore the failed wasm filter
+  spec:
+    hostnames:
+    - www.foo.com
+    parentRefs:
+    - namespace: default
+      name: gateway-1
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: /quit
+      backendRefs:
+      - name: service-1
+        port: 8080
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-with-all-invalid-extensions-failopen     # this route should ingore all failed extensions
+  spec:
+    hostnames:
+    - www.foo.com
+    parentRefs:
+    - namespace: default
+      name: gateway-1
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: /corge
+      backendRefs:
+      - name: service-1
+        port: 8080
+envoyExtensionPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyExtensionPolicy
+  metadata:
+    namespace: default
+    name: policy-for-httproute-with-valid-and-invalid-extension-failclose
+  spec:
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-with-valid-and-invalid-extension-failclose
+    extProc:
+    - backendRefs:
+      - Name: backend-ip
+        Kind: Backend
+        Group: gateway.envoyproxy.io
+    wasm:
+    - name: wasm-filter-1
+      code:
+        type: HTTP
+        http:
+          url: https://www.example.com/non-existent.wasm
+          sha256: 2d89c4c6ab2a1c615c7696ed37ade9e50654ac70384b5d45100eb08e62130ff4
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyExtensionPolicy
+  metadata:
+    namespace: default
+    name: policy-for-httproute-with-invalid-extensions-mixed-failclose-failopen
+  spec:
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-with-invalid-extensions-mixed-failclose-failopen
+    extProc:
+    - backendRefs:
+      - Name: backend-not-exist
+        Kind: Backend
+        Group: gateway.envoyproxy.io
+    wasm:
+    - name: wasm-filter-1
+      code:
+        type: HTTP
+        http:
+          url: https://www.example.com/non-existent.wasm
+          sha256: 2d89c4c6ab2a1c615c7696ed37ade9e50654ac70384b5d45100eb08e62130ff4
+      failOpen: true
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyExtensionPolicy
+  metadata:
+    namespace: default
+    name: policy-for-httproute-with-invalid-lua-invald-wasm-failopen
+  spec:
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-with-invalid-lua-invald-wasm-failopen
+    lua:
+    - type: Inline
+      inline: "function non_existing_function(request_handle)
+      request_handle:logInfo('Goodbye.')
+      end"
+    extProc:
+    - backendRefs:
+      - Name: backend-not-exist
+        Kind: Backend
+        Group: gateway.envoyproxy.io
+      failOpen: true
+    wasm:
+    - name: wasm-filter-1
+      code:
+        type: HTTP
+        http:
+          url: https://www.example.com/non-existent.wasm
+          sha256: 2d89c4c6ab2a1c615c7696ed37ade9e50654ac70384b5d45100eb08e62130ff4
+      failOpen: true
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyExtensionPolicy
+  metadata:
+    namespace: default
+    name: policy-for-httproute-with-all-invalid-extensions-failclose
+  spec:
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-with-all-invalid-extensions-failclose
+    extProc:
+    - backendRefs:
+      - Name: backend-not-exist
+        Kind: Backend
+        Group: gateway.envoyproxy.io
+    wasm:
+    - name: wasm-filter-1
+      code:
+        type: HTTP
+        http:
+          url: https://www.example.com/non-existent.wasm
+          sha256: 2d89c4c6ab2a1c615c7696ed37ade9e50654ac70384b5d45100eb08e62130ff4
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyExtensionPolicy
+  metadata:
+    namespace: default
+    name: policy-for-httproute-with-valid-and-invalid-extension-failopen
+  spec:
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-with-valid-and-invalid-extension-failopen
+    extProc:
+    - backendRefs:
+      - Name: backend-ip
+        Kind: Backend
+        Group: gateway.envoyproxy.io
+    wasm:
+    - name: wasm-filter-1
+      code:
+        type: HTTP
+        http:
+          url: https://www.example.com/non-existent.wasm
+          sha256: 2d89c4c6ab2a1c615c7696ed37ade9e50654ac70384b5d45100eb08e62130ff4
+      failOpen: true
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyExtensionPolicy
+  metadata:
+    namespace: default
+    name: policy-for-httproute-with-all-invalid-extensions-failopen
+  spec:
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-with-all-invalid-extensions-failopen
+    extProc:
+    - backendRefs:
+      - Name: backend-ip
+        Kind: Backend
+        Group: gateway.envoyproxy.io
+      failOpen: true
+    wasm:
+    - name: wasm-filter-1
+      code:
+        type: HTTP
+        http:
+          url: https://www.example.com/non-existent.wasm
+          sha256: 2d89c4c6ab2a1c615c7696ed37ade9e50654ac70384b5d45100eb08e62130ff4
+      failOpen: true
+backends:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: Backend
+  metadata:
+    name: backend-ip
+    namespace: default
+  spec:
+    endpoints:
+    - ip:
+        address: 1.1.1.1
+        port: 3001

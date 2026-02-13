@@ -14,11 +14,9 @@ http:
       safeRegex: "/v1/.*"
     headerMatches:
     - name: re_header
-      stringMatch:
       safeRegex: ".*"
     queryParamMatches:
     - name: re_query
-      stringMatch:
       safeRegex: ".*"
     destination:
       name: "regex-route-dest"

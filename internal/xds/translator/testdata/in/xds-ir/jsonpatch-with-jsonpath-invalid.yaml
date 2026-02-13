@@ -8,6 +8,7 @@ envoyPatchPolicies:
         name: "foobar"
   name: "first-policy"
   namespace: "default"
+  generation: 1
   jsonPatches:
   - type: "type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment"
     name: "first-route-dest"
@@ -42,7 +43,6 @@ http:
     hostname: "*"
     headerMatches:
     - name: user
-      stringMatch:
       exact: "jason"
     destination:
       name: "first-route-dest"
@@ -55,10 +55,8 @@ http:
     hostname: "*"
     headerMatches:
     - name: user
-      stringMatch:
       exact: "james"
     - name: country
-      stringMatch:
       exact: "US"
     destination:
       name: "second-route-dest"

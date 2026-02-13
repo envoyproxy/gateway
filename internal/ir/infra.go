@@ -11,6 +11,7 @@ import (
 	"fmt"
 
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/yaml"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -54,6 +55,27 @@ type ProxyInfra struct {
 	// Addresses contain the external addresses this gateway has been
 	// requested to be available at.
 	Addresses []string `json:"addresses,omitempty" yaml:"addresses,omitempty"`
+	// ResolvedMetricSinks contains pre-resolved OpenTelemetry metric sink destinations.
+	// This is populated during gateway-api translation when BackendRefs point to Backend resources.
+	ResolvedMetricSinks []ResolvedMetricSink `json:"resolvedMetricSinks,omitempty" yaml:"resolvedMetricSinks,omitempty"`
+}
+
+// ResolvedMetricSink defines a resolved OpenTelemetry metrics sink.
+// Follows the same pattern as ir.Tracing: uses RouteDestination for endpoint+TLS and gwapiv1.HTTPHeader for headers.
+// +k8s:deepcopy-gen=true
+type ResolvedMetricSink struct {
+	// Destination contains the endpoint and TLS configuration.
+	Destination RouteDestination `json:"destination" yaml:"destination"`
+	// Authority is the gRPC authority header value (typically SNI or hostname).
+	Authority string `json:"authority,omitempty" yaml:"authority,omitempty"`
+	// Headers to send with OTLP export requests.
+	Headers []gwapiv1.HTTPHeader `json:"headers,omitempty" yaml:"headers,omitempty"`
+	// ResourceAttributes is a map of resource attributes for the metrics sink.
+	ResourceAttributes map[string]string `json:"resourceAttributes,omitempty" yaml:"resourceAttributes,omitempty"`
+	// ReportCountersAsDeltas configures counters to use delta temporality.
+	ReportCountersAsDeltas bool `json:"reportCountersAsDeltas,omitempty" yaml:"reportCountersAsDeltas,omitempty"`
+	// ReportHistogramsAsDeltas configures histograms to use delta temporality.
+	ReportHistogramsAsDeltas bool `json:"reportHistogramsAsDeltas,omitempty" yaml:"reportHistogramsAsDeltas,omitempty"`
 }
 
 // InfraMetadata defines metadata for the managed proxy infrastructure.

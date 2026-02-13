@@ -18,6 +18,9 @@ spec:
           value: "early"
       remove:
         - "early-removed-header"
+      removeOnMatch:
+        - value: "early-removed-regex-.*"
+          type: RegularExpression
     lateResponseHeaders:
       add:
         - name: "late-added-header"
@@ -25,8 +28,16 @@ spec:
       set:
         - name: "late-set-header"
           value: "late"
+      addIfAbsent:
+        - name: "late-add-if-absent-header"
+          value: "late-default"
+        - name: "late-add-if-absent-existing"
+          value: "late-default"
       remove:
         - "late-removed-header"
+      removeOnMatch:
+        - value: "late-removed-regex-.*"
+          type: RegularExpression
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
@@ -50,6 +61,8 @@ spec:
               - name: early-set-header
                 value: late
               - name: early-removed-header
+                value: late
+              - name: early-removed-regex-header
                 value: late
       backendRefs:
         - name: infra-backend-v1
@@ -77,6 +90,10 @@ spec:
               - name: late-set-header
                 value: filter
               - name: late-removed-header
+                value: filter
+              - name: late-removed-regex-header
+                value: filter
+              - name: late-add-if-absent-existing
                 value: filter
       backendRefs:
         - name: infra-backend-v1

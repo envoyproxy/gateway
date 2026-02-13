@@ -50,11 +50,12 @@ func mustUnmarshal(t *testing.T, val []byte, out any) {
 
 func TestTranslate(t *testing.T) {
 	testCasesConfig := []struct {
-		name                    string
-		EnvoyPatchPolicyEnabled bool
-		BackendEnabled          bool
-		GatewayNamespaceMode    bool
-		RunningOnHost           bool
+		name                            string
+		EnvoyPatchPolicyEnabled         bool
+		BackendEnabled                  bool
+		GatewayNamespaceMode            bool
+		RunningOnHost                   bool
+		LuaEnvoyExtensionPolicyDisabled bool
 	}{
 		{
 			name:                    "envoypatchpolicy-invalid-feature-disabled",
@@ -77,6 +78,10 @@ func TestTranslate(t *testing.T) {
 			name:           "httproute-attaching-to-listener-with-backend-backendref-host-infra",
 			BackendEnabled: true,
 			RunningOnHost:  true,
+		},
+		{
+			name:                            "envoyextensionpolicy-lua-feature-disabled",
+			LuaEnvoyExtensionPolicyDisabled: true,
 		},
 	}
 
@@ -101,6 +106,7 @@ func TestTranslate(t *testing.T) {
 			backendEnabled := true
 			gatewayNamespaceMode := false
 			runningOnHost := false
+			luaEnvoyExtensionPolicyDisabled := false
 
 			for _, config := range testCasesConfig {
 				if config.name == strings.Split(filepath.Base(inputFile), ".")[0] {
@@ -108,21 +114,23 @@ func TestTranslate(t *testing.T) {
 					backendEnabled = config.BackendEnabled
 					gatewayNamespaceMode = config.GatewayNamespaceMode
 					runningOnHost = config.RunningOnHost
+					luaEnvoyExtensionPolicyDisabled = config.LuaEnvoyExtensionPolicyDisabled
 				}
 			}
 
 			translator := &Translator{
-				GatewayControllerName:   egv1a1.GatewayControllerName,
-				GatewayClassName:        "envoy-gateway-class",
-				GlobalRateLimitEnabled:  true,
-				EnvoyPatchPolicyEnabled: envoyPatchPolicyEnabled,
-				BackendEnabled:          backendEnabled,
-				ControllerNamespace:     "envoy-gateway-system",
-				MergeGateways:           IsMergeGatewaysEnabled(resources),
-				GatewayNamespaceMode:    gatewayNamespaceMode,
-				WasmCache:               &mockWasmCache{},
-				RunningOnHost:           runningOnHost,
-				Logger:                  logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo),
+				GatewayControllerName:           egv1a1.GatewayControllerName,
+				GatewayClassName:                "envoy-gateway-class",
+				GlobalRateLimitEnabled:          true,
+				EnvoyPatchPolicyEnabled:         envoyPatchPolicyEnabled,
+				BackendEnabled:                  backendEnabled,
+				ControllerNamespace:             "envoy-gateway-system",
+				MergeGateways:                   IsMergeGatewaysEnabled(resources),
+				GatewayNamespaceMode:            gatewayNamespaceMode,
+				WasmCache:                       &mockWasmCache{},
+				RunningOnHost:                   runningOnHost,
+				LuaEnvoyExtensionPolicyDisabled: luaEnvoyExtensionPolicyDisabled,
+				Logger:                          logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo),
 			}
 
 			// Add common test fixtures
@@ -131,6 +139,10 @@ func TestTranslate(t *testing.T) {
 				epSliceName := "endpointslice-" + strconv.Itoa(i)
 
 				svc := &corev1.Service{
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: "v1",
+						Kind:       "Service",
+					},
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "default",
 						Name:      svcName,
@@ -171,6 +183,10 @@ func TestTranslate(t *testing.T) {
 				resources.Services = append(resources.Services, svc)
 
 				endptSlice := &discoveryv1.EndpointSlice{
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: "discovery.k8s.io/v1",
+						Kind:       "EndpointSlice",
+					},
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      epSliceName,
 						Namespace: "default",
@@ -224,6 +240,10 @@ func TestTranslate(t *testing.T) {
 			}
 			resources.Services = append(resources.Services,
 				&corev1.Service{
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: "v1",
+						Kind:       "Service",
+					},
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "default",
 						Name:      "mirror-service",
@@ -243,6 +263,10 @@ func TestTranslate(t *testing.T) {
 			)
 			resources.EndpointSlices = append(resources.EndpointSlices,
 				&discoveryv1.EndpointSlice{
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: "discovery.k8s.io/v1",
+						Kind:       "EndpointSlice",
+					},
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "mirror-service-endpointslice",
 						Namespace: "default",
@@ -274,6 +298,10 @@ func TestTranslate(t *testing.T) {
 			// add otel-collector service
 			resources.Services = append(resources.Services,
 				&corev1.Service{
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: "v1",
+						Kind:       "Service",
+					},
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "monitoring",
 						Name:      "otel-collector",
@@ -300,6 +328,10 @@ func TestTranslate(t *testing.T) {
 			)
 			resources.EndpointSlices = append(resources.EndpointSlices,
 				&discoveryv1.EndpointSlice{
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: "discovery.k8s.io/v1",
+						Kind:       "EndpointSlice",
+					},
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "otel-collector-endpointslice",
 						Namespace: "monitoring",
@@ -334,6 +366,10 @@ func TestTranslate(t *testing.T) {
 			)
 
 			svc := corev1.Service{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "v1",
+					Kind:       "Service",
+				},
 				ObjectMeta: metav1.ObjectMeta{
 					// Matches proxy.ExpectedResourceHashedName()
 					Name:      fmt.Sprintf("%s-%s", config.EnvoyPrefix, utils.GetHashedName(string(translator.GatewayClassName), 48)),
@@ -354,6 +390,10 @@ func TestTranslate(t *testing.T) {
 			}
 
 			endPtSlice := discoveryv1.EndpointSlice{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "discovery.k8s.io/v1",
+					Kind:       "EndpointSlice",
+				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      svc.Name,
 					Namespace: svc.Namespace,
@@ -412,10 +452,18 @@ func TestTranslate(t *testing.T) {
 			}
 
 			resources.Namespaces = append(resources.Namespaces, &corev1.Namespace{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "v1",
+					Kind:       "Namespace",
+				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "envoy-gateway",
 				},
 			}, &corev1.Namespace{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "v1",
+					Kind:       "Namespace",
+				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "default",
 				},
@@ -481,6 +529,10 @@ func TestTranslateWithExtensionKinds(t *testing.T) {
 				epSliceName := "endpointslice-" + strconv.Itoa(i)
 				resources.Services = append(resources.Services,
 					&corev1.Service{
+						TypeMeta: metav1.TypeMeta{
+							APIVersion: "v1",
+							Kind:       "Service",
+						},
 						ObjectMeta: metav1.ObjectMeta{
 							Namespace: "default",
 							Name:      svcName,
@@ -518,6 +570,10 @@ func TestTranslateWithExtensionKinds(t *testing.T) {
 				)
 				resources.EndpointSlices = append(resources.EndpointSlices,
 					&discoveryv1.EndpointSlice{
+						TypeMeta: metav1.TypeMeta{
+							APIVersion: "discovery.k8s.io/v1",
+							Kind:       "EndpointSlice",
+						},
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      epSliceName,
 							Namespace: "default",
@@ -564,6 +620,10 @@ func TestTranslateWithExtensionKinds(t *testing.T) {
 
 			resources.Services = append(resources.Services,
 				&corev1.Service{
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: "v1",
+						Kind:       "Service",
+					},
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "default",
 						Name:      "mirror-service",
@@ -582,6 +642,10 @@ func TestTranslateWithExtensionKinds(t *testing.T) {
 			)
 			resources.EndpointSlices = append(resources.EndpointSlices,
 				&discoveryv1.EndpointSlice{
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: "discovery.k8s.io/v1",
+						Kind:       "EndpointSlice",
+					},
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "mirror-service-endpointslice",
 						Namespace: "default",
@@ -611,6 +675,10 @@ func TestTranslateWithExtensionKinds(t *testing.T) {
 			)
 
 			svc := corev1.Service{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "v1",
+					Kind:       "Service",
+				},
 				ObjectMeta: metav1.ObjectMeta{
 					// Matches proxy.ExpectedResourceHashedName()
 					Name:      fmt.Sprintf("%s-%s", config.EnvoyPrefix, utils.GetHashedName(string(translator.GatewayClassName), 48)),
@@ -631,6 +699,10 @@ func TestTranslateWithExtensionKinds(t *testing.T) {
 			}
 
 			endPtSlice := discoveryv1.EndpointSlice{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "discovery.k8s.io/v1",
+					Kind:       "EndpointSlice",
+				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      svc.Name,
 					Namespace: svc.Namespace,
@@ -687,10 +759,18 @@ func TestTranslateWithExtensionKinds(t *testing.T) {
 			}
 
 			resources.Namespaces = append(resources.Namespaces, &corev1.Namespace{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "v1",
+					Kind:       "Namespace",
+				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "envoy-gateway",
 				},
 			}, &corev1.Namespace{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "v1",
+					Kind:       "Namespace",
+				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "default",
 				},

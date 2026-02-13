@@ -29,6 +29,10 @@ backendTrafficPolicies:
         samplingFraction:
           denominator: 100
           numerator: 1
+        tags:
+          env1: '%ENVIRONMENT(ENVOY_POD_NAME)%'
+          literal1: literal_value_1
+          req1: '%REQUEST_HEADER(X-Request-Id)%'
   status:
     ancestors:
     - ancestorRef:
@@ -43,6 +47,11 @@ backendTrafficPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
@@ -150,6 +159,7 @@ xdsIR:
     globalResources:
       proxyServiceCluster:
         metadata:
+          kind: Service
           name: envoy-envoy-gateway-gateway-1-196ae069
           namespace: envoy-gateway-system
           sectionName: "8080"
@@ -161,6 +171,7 @@ xdsIR:
             port: 8080
             zone: zone1
           metadata:
+            kind: Service
             name: envoy-envoy-gateway-gateway-1-196ae069
             namespace: envoy-gateway-system
             sectionName: "8080"
@@ -195,6 +206,7 @@ xdsIR:
             - host: 7.7.7.7
               port: 8080
             metadata:
+              kind: Service
               name: service-1
               namespace: default
               sectionName: "8080"
@@ -207,6 +219,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-1
           namespace: default
+          policies:
+          - kind: BackendTrafficPolicy
+            name: policy-for-route
+            namespace: default
         name: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
         pathMatch:
           distinct: false
@@ -216,16 +232,19 @@ xdsIR:
           telemetry:
             tracing:
               customTags:
-                env1:
+              - key: env1
+                value:
                   environment:
                     defaultValue: '-'
                     name: env1
                   type: Environment
-                literal1:
+              - key: literal1
+                value:
                   literal:
                     value: value1
                   type: Literal
-                req1:
+              - key: req1
+                value:
                   requestHeader:
                     defaultValue: '-'
                     name: X-Request-Id
@@ -233,6 +252,13 @@ xdsIR:
               samplingFraction:
                 denominator: 100
                 numerator: 1
+              tags:
+              - key: env1
+                value: '%ENVIRONMENT(ENVOY_POD_NAME)%'
+              - key: literal1
+                value: literal_value_1
+              - key: req1
+                value: '%REQUEST_HEADER(X-Request-Id)%'
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

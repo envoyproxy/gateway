@@ -10,6 +10,7 @@ import gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 // ProxyTracing defines the tracing configuration for a proxy.
 // +kubebuilder:validation:XValidation:message="only one of SamplingRate or SamplingFraction can be specified",rule="!(has(self.samplingRate) && has(self.samplingFraction))"
 type ProxyTracing struct {
+	Tracing `json:",inline"`
 	// SamplingRate controls the rate at which traffic will be
 	// selected for tracing if no prior sampling decision has been made.
 	// Defaults to 100, valid values [0-100]. 100 indicates 100% sampling.
@@ -21,19 +22,6 @@ type ProxyTracing struct {
 	// +kubebuilder:validation:Maximum=100
 	// +optional
 	SamplingRate *uint32 `json:"samplingRate,omitempty"`
-	// SamplingFraction represents the fraction of requests that should be
-	// selected for tracing if no prior sampling decision has been made.
-	//
-	// Only one of SamplingRate or SamplingFraction may be specified.
-	// If neither field is specified, all requests will be sampled.
-	//
-	// +optional
-	SamplingFraction *gwapiv1.Fraction `json:"samplingFraction,omitempty"`
-	// CustomTags defines the custom tags to add to each span.
-	// If provider is kubernetes, pod name and namespace are added by default.
-	//
-	// +optional
-	CustomTags map[string]CustomTag `json:"customTags,omitempty"`
 	// Provider defines the tracing provider.
 	Provider TracingProvider `json:"provider"`
 }
@@ -52,6 +40,7 @@ const (
 // +kubebuilder:validation:XValidation:message="BackendRefs must be used, backendRef is not supported.",rule="!has(self.backendRef)"
 // +kubebuilder:validation:XValidation:message="BackendRefs only support Service and Backend kind.",rule="has(self.backendRefs) ? self.backendRefs.all(f, f.kind == 'Service' || f.kind == 'Backend') : true"
 // +kubebuilder:validation:XValidation:message="BackendRefs only support Core and gateway.envoyproxy.io group.",rule="has(self.backendRefs) ? (self.backendRefs.all(f, f.group == \"\" || f.group == 'gateway.envoyproxy.io')) : true"
+// +kubebuilder:validation:XValidation:message="openTelemetry can only be used with type OpenTelemetry",rule="has(self.openTelemetry) ? self.type == 'OpenTelemetry' : true"
 type TracingProvider struct {
 	BackendCluster `json:",inline"`
 	// Type defines the tracing provider type.
@@ -83,6 +72,9 @@ type TracingProvider struct {
 	// Zipkin defines the Zipkin tracing provider configuration
 	// +optional
 	Zipkin *ZipkinTracingProvider `json:"zipkin,omitempty"`
+	// OpenTelemetry defines the OpenTelemetry tracing provider configuration
+	// +optional
+	OpenTelemetry *OpenTelemetryTracingProvider `json:"openTelemetry,omitempty"`
 }
 
 type CustomTagType string
@@ -111,9 +103,6 @@ type CustomTag struct {
 	// RequestHeader adds value from request header to each span.
 	// It's required when the type is "RequestHeader".
 	RequestHeader *RequestHeaderCustomTag `json:"requestHeader,omitempty"`
-
-	// TODO: add support for Metadata tags in the future.
-	// EG currently doesn't support metadata for route or cluster.
 }
 
 // LiteralCustomTag adds hard-coded value to each span.
@@ -151,4 +140,18 @@ type ZipkinTracingProvider struct {
 	// client and server spans sharing the same span context should be disabled.
 	// +optional
 	DisableSharedSpanContext *bool `json:"disableSharedSpanContext,omitempty"`
+}
+
+// OpenTelemetryTracingProvider defines the OpenTelemetry tracing provider configuration.
+type OpenTelemetryTracingProvider struct {
+	// Headers is a list of additional headers to send with OTLP export requests.
+	// These headers are added as gRPC initial metadata for the OTLP gRPC service.
+	// +optional
+	// +kubebuilder:validation:MinItems=1
+	// +kubebuilder:validation:MaxItems=32
+	Headers []gwapiv1.HTTPHeader `json:"headers,omitempty"`
+	// ResourceAttributes is a set of labels that describe the source of traces.
+	// It's recommended to follow semantic conventions: https://opentelemetry.io/docs/reference/specification/resource/semantic_conventions/
+	// +optional
+	ResourceAttributes map[string]string `json:"resourceAttributes,omitempty"`
 }

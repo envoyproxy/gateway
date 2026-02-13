@@ -9,10 +9,12 @@ import (
 	"context"
 	_ "embed"
 	"os"
+	"sync/atomic"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 )
 
@@ -21,6 +23,10 @@ var (
 	defaultConfig string
 	//go:embed testdata/enable-redis.yaml
 	redisConfig string
+	//go:embed testdata/standalone.yaml
+	standaloneConfig string
+	//go:embed testdata/standalone-enable-extension-server.yaml
+	standaloneConfigWithExtensionServer string
 )
 
 func TestConfigLoader(t *testing.T) {
@@ -35,13 +41,13 @@ func TestConfigLoader(t *testing.T) {
 	s, err := config.New(os.Stdout, os.Stderr)
 	require.NoError(t, err)
 
-	ctx, cancel := context.WithCancel(context.TODO())
+	ctx, cancel := context.WithCancel(context.Background())
 	defer func() {
 		cancel()
 	}()
 
 	changed := 0
-	loader := New(cfgPath, s, func(_ context.Context, cfg *config.Server) error {
+	loader := New(cfgPath, s, func(_ context.Context, _ *config.Server) error {
 		changed++
 		t.Logf("config changed %d times", changed)
 		if changed > 1 {
@@ -56,4 +62,57 @@ func TestConfigLoader(t *testing.T) {
 	}()
 
 	<-ctx.Done()
+}
+
+func TestConfigLoaderStandaloneExtensionServerAndCustomResource(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "envoy-gateway-configloader-test")
+	require.NoError(t, err)
+	defer func(path string) {
+		_ = os.RemoveAll(path)
+	}(tmpDir)
+
+	cfgPath := tmpDir + "/config.yaml"
+	require.NoError(t, os.WriteFile(cfgPath, []byte(standaloneConfig), 0o600))
+	s, err := config.New(os.Stdout, os.Stderr)
+	require.NoError(t, err)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer func() {
+		cancel()
+	}()
+
+	type testResult struct {
+		changed int32
+		extMgr  *egv1a1.ExtensionManager
+	}
+	resultChannel := make(chan testResult, 1)
+
+	var changed int32
+	loader := New(cfgPath, s, func(_ context.Context, cfg *config.Server) error {
+		c := atomic.AddInt32(&changed, 1)
+		t.Logf("config changed %d times", c)
+		if c > 1 {
+			resultChannel <- testResult{changed: c, extMgr: cfg.EnvoyGateway.ExtensionManager}
+			cancel()
+		}
+		return nil
+	})
+
+	require.NoError(t, loader.Start(ctx, os.Stdout))
+	require.NotNil(t, loader.cfg.EnvoyGateway)
+	require.Nil(t, loader.cfg.EnvoyGateway.ExtensionManager)
+
+	go func() {
+		_ = os.WriteFile(cfgPath, []byte(standaloneConfigWithExtensionServer), 0o600)
+	}()
+
+	<-ctx.Done()
+	res := <-resultChannel // wait until second reload
+	require.Equal(t, int32(2), res.changed)
+	require.NotNil(t, res.extMgr)
+	require.NotNil(t, res.extMgr.PolicyResources)
+	require.Len(t, res.extMgr.PolicyResources, 1)
+	require.Equal(t, "gateway.example.io", res.extMgr.PolicyResources[0].Group)
+	require.Equal(t, "v1alpha1", res.extMgr.PolicyResources[0].Version)
+	require.Equal(t, "ExampleExtPolicy", res.extMgr.PolicyResources[0].Kind)
 }

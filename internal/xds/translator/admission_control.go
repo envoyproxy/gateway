@@ -66,8 +66,13 @@ func (*admissionControl) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *
 
 // buildHCMAdmissionControlFilter returns a basic admission control HTTP filter.
 func buildHCMAdmissionControlFilter() (*hcmv3.HttpFilter, error) {
-	// Create a basic admission control configuration
-	admissionControlProto := &admissioncontrolv3.AdmissionControl{}
+	// Create a basic admission control configuration with default success criteria.
+	// EvaluationCriteria is a required oneof field, so we must set it.
+	admissionControlProto := &admissioncontrolv3.AdmissionControl{
+		EvaluationCriteria: &admissioncontrolv3.AdmissionControl_SuccessCriteria_{
+			SuccessCriteria: &admissioncontrolv3.AdmissionControl_SuccessCriteria{},
+		},
+	}
 
 	admissionControlAny, err := proto.ToAnyWithValidation(admissionControlProto)
 	if err != nil {
@@ -94,11 +99,6 @@ func (*admissionControl) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute,
 	}
 
 	admissionControlConfig := irRoute.Traffic.AdmissionControl
-
-	// Skip if admission control is explicitly disabled
-	if admissionControlConfig.Enabled != nil && !*admissionControlConfig.Enabled {
-		return nil
-	}
 
 	// Build the admission control configuration
 	routeCfgProto, err := buildAdmissionControlConfig(admissionControlConfig)
@@ -129,13 +129,9 @@ func buildAdmissionControlConfig(admissionControl *ir.AdmissionControl) (*admiss
 
 	config := &admissioncontrolv3.AdmissionControl{}
 
-	// Set enabled (defaults to true if not specified)
-	enabled := true
-	if admissionControl.Enabled != nil {
-		enabled = *admissionControl.Enabled
-	}
+	// Admission control is always enabled when configured
 	config.Enabled = &corev3.RuntimeFeatureFlag{
-		DefaultValue: &wrapperspb.BoolValue{Value: enabled},
+		DefaultValue: &wrapperspb.BoolValue{Value: true},
 	}
 
 	// Set sampling window (defaults to 60s if not specified)
@@ -187,10 +183,10 @@ func buildAdmissionControlConfig(admissionControl *ir.AdmissionControl) (*admiss
 		DefaultValue: &typev3.Percent{Value: maxRejectionProbability * 100.0},
 	}
 
-	// Set success criteria (part of EvaluationCriteria oneof)
-	if admissionControl.SuccessCriteria != nil {
-		successCriteria := &admissioncontrolv3.AdmissionControl_SuccessCriteria{}
+	// EvaluationCriteria is a required oneof field, so we always set success criteria.
+	successCriteria := &admissioncontrolv3.AdmissionControl_SuccessCriteria{}
 
+	if admissionControl.SuccessCriteria != nil {
 		// HTTP success criteria
 		if admissionControl.SuccessCriteria.HTTP != nil && len(admissionControl.SuccessCriteria.HTTP.HTTPSuccessStatus) > 0 {
 			httpCriteria := &admissioncontrolv3.AdmissionControl_SuccessCriteria_HttpCriteria{}
@@ -211,11 +207,10 @@ func buildAdmissionControlConfig(admissionControl *ir.AdmissionControl) (*admiss
 			}
 			successCriteria.GrpcCriteria = grpcCriteria
 		}
+	}
 
-		// Set as EvaluationCriteria (oneof field)
-		config.EvaluationCriteria = &admissioncontrolv3.AdmissionControl_SuccessCriteria_{
-			SuccessCriteria: successCriteria,
-		}
+	config.EvaluationCriteria = &admissioncontrolv3.AdmissionControl_SuccessCriteria_{
+		SuccessCriteria: successCriteria,
 	}
 
 	return config, nil
@@ -241,10 +236,7 @@ func listenerContainsAdmissionControl(irListener *ir.HTTPListener) bool {
 
 	for _, route := range irListener.Routes {
 		if route.Traffic != nil && route.Traffic.AdmissionControl != nil {
-			// Check if enabled (defaults to true)
-			if route.Traffic.AdmissionControl.Enabled == nil || *route.Traffic.AdmissionControl.Enabled {
-				return true
-			}
+			return true
 		}
 	}
 

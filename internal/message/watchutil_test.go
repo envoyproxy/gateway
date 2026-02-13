@@ -10,12 +10,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/telepresenceio/watchable"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
+	"github.com/envoyproxy/gateway/internal/logging"
 	"github.com/envoyproxy/gateway/internal/message"
 )
 
@@ -24,18 +26,19 @@ func TestHandleSubscriptionAlreadyClosed(t *testing.T) {
 	close(ch)
 
 	var calls int
-	message.HandleSubscription[string, any](
+	message.HandleSubscription(
+		logging.NewLogger(t.Output(), egv1a1.DefaultEnvoyGatewayLogging()),
 		message.Metadata{Runner: "demo", Message: "demo"},
 		ch,
-		func(update message.Update[string, any], errChans chan error) { calls++ },
+		func(_ message.Update[string, any], _ chan error) { calls++ },
 	)
-	assert.Equal(t, 0, calls)
+	require.Equal(t, 0, calls)
 }
 
 func TestPanicInSubscriptionHandler(t *testing.T) {
 	defer func() {
 		if r := recover(); r != nil {
-			assert.Fail(t, "recovered from an unexpected panic")
+			require.Fail(t, "recovered from an unexpected panic")
 		}
 	}()
 	var m watchable.Map[string, any]
@@ -49,15 +52,16 @@ func TestPanicInSubscriptionHandler(t *testing.T) {
 	}()
 
 	numCalls := 0
-	message.HandleSubscription[string, any](
+	message.HandleSubscription(
+		logging.NewLogger(t.Output(), egv1a1.DefaultEnvoyGatewayLogging()),
 		message.Metadata{Runner: "demo", Message: "demo"},
 		m.Subscribe(context.Background()),
-		func(update message.Update[string, any], errChans chan error) {
+		func(update message.Update[string, any], _ chan error) {
 			numCalls++
 			panic("oops " + update.Key)
 		},
 	)
-	assert.Equal(t, 2, numCalls)
+	require.Equal(t, 2, numCalls)
 }
 
 func TestHandleSubscriptionAlreadyInitialized(t *testing.T) {
@@ -77,10 +81,11 @@ func TestHandleSubscriptionAlreadyInitialized(t *testing.T) {
 
 	var storeCalls int
 	var deleteCalls int
-	message.HandleSubscription[string, any](
+	message.HandleSubscription(
+		logging.NewLogger(t.Output(), egv1a1.DefaultEnvoyGatewayLogging()),
 		message.Metadata{Runner: "demo", Message: "demo"},
 		m.Subscribe(context.Background()),
-		func(update message.Update[string, any], errChans chan error) {
+		func(update message.Update[string, any], _ chan error) {
 			end()
 			if update.Delete {
 				deleteCalls++
@@ -89,8 +94,8 @@ func TestHandleSubscriptionAlreadyInitialized(t *testing.T) {
 			}
 		},
 	)
-	assert.LessOrEqual(t, storeCalls, 2) // updates can be coalesced
-	assert.Equal(t, 1, deleteCalls)
+	require.LessOrEqual(t, storeCalls, 2) // updates can be coalesced
+	require.Equal(t, 1, deleteCalls)
 }
 
 func TestControllerResourceUpdate(t *testing.T) {
@@ -246,32 +251,43 @@ func TestControllerResourceUpdate(t *testing.T) {
 			m := &message.ProviderResources{}
 
 			snapshotC := m.GatewayAPIResources.Subscribe(ctx)
-			endCtx, end := context.WithCancel(ctx)
-			m.GatewayAPIResources.Store("start", &resource.ControllerResources{})
+			endCtx, cancel := context.WithCancel(ctx)
+			m.GatewayAPIResources.Store("start", &resource.ControllerResourcesContext{
+				Resources: &resource.ControllerResources{},
+				Context:   ctx,
+			})
 
 			go func() {
 				<-endCtx.Done()
 				for _, r := range tc.resources {
 					r.Sort()
-					m.GatewayAPIResources.Store("test", r)
+					m.GatewayAPIResources.Store("test", &resource.ControllerResourcesContext{
+						Resources: r,
+						Context:   ctx,
+					})
 				}
-				m.GatewayAPIResources.Store("end", &resource.ControllerResources{})
+				m.GatewayAPIResources.Store("end", &resource.ControllerResourcesContext{
+					Resources: &resource.ControllerResources{},
+					Context:   ctx,
+				})
 			}()
 
 			updates := 0
-			message.HandleSubscription(message.Metadata{Runner: "demo", Message: "demo"}, snapshotC, func(u message.Update[string, *resource.ControllerResources], errChans chan error) {
-				end()
-				if u.Key == "test" {
-					updates += 1
-				}
-				if u.Key == "end" {
-					m.GatewayAPIResources.Close()
-				}
-			})
+			message.HandleSubscription(
+				logging.NewLogger(t.Output(), egv1a1.DefaultEnvoyGatewayLogging()),
+				message.Metadata{Runner: "demo", Message: "demo"}, snapshotC, func(u message.Update[string, *resource.ControllerResourcesContext], _ chan error) {
+					cancel()
+					if u.Key == "test" {
+						updates += 1
+					}
+					if u.Key == "end" {
+						m.GatewayAPIResources.Close()
+					}
+				})
 			if tc.updates > 1 {
-				assert.LessOrEqual(t, updates, tc.updates) // Updates can be coalesced
+				require.LessOrEqual(t, updates, tc.updates) // Updates can be coalesced
 			} else {
-				assert.Equal(t, 1, updates)
+				require.Equal(t, 1, updates)
 			}
 		})
 	}

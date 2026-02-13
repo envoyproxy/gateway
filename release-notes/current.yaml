@@ -2,18 +2,14 @@ date: Pending
 
 # Changes that are expected to cause an incompatibility with previous versions, such as deletions or modifications to existing APIs.
 breaking changes: |
-  The SecurityPolicy name has been added to the stat prefix for aouth2 filter metrics to provide better granularity. Example: http.https-10443.securitypolicy/default/oidc-example.oauth_success: 0.
 
 # Updates addressing vulnerabilities, security flaws, or compliance requirements.
 security updates: |
 
 # New features or capabilities added in this release.
 new features: |
-  Added support for weight in BackendRef API to enable traffic splitting for non-x-route resources.
 
 bug fixes: |
-  Fixed configured OIDC authorization endpoint being overridden by discovered endpoints from issuer's well-known URL.
-  Fix 500 errors caused by partially invalid BackendRefs; traffic is now correctly routed between valid backends and 500 responses according to their configured weights.
 
 # Enhancements that improve performance.
 performance improvements: |

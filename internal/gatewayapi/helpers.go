@@ -23,6 +23,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapixv1a1 "sigs.k8s.io/gateway-api/apisx/v1alpha1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
@@ -37,8 +38,10 @@ const (
 	L4Protocol = "L4"
 	L7Protocol = "L7"
 
-	caCertKey = "ca.crt"
-	crlKey    = "ca.crl"
+	// CACertKey is the key used in ConfigMaps and Secrets to store CA certificate data
+	CACertKey = "ca.crt"
+	// CRLKey is the key used in ConfigMaps and Secrets to store certificate revocation list data
+	CRLKey = "ca.crl"
 )
 
 type NamespacedNameWithSection struct {
@@ -140,17 +143,47 @@ func IsRefToGateway(routeNamespace gwapiv1.Namespace, parentRef gwapiv1.ParentRe
 	return string(parentRef.Name) == gateway.Name
 }
 
-// GetReferencedListeners returns whether a given parent ref references a Gateway
-// in the given list, and if so, a list of the Listeners within that Gateway that
+// GetReferencedListeners returns whether a given parent ref references a Gateway or XListenerSet
+// in the given list, and if so, a list of the Listeners within that Gateway or XListenerSet that
 // are included by the parent ref (either one specific Listener, or all Listeners
-// in the Gateway, depending on whether section name is specified or not).
+// in the Gateway or XListenerSet, depending on whether section name is specified or not).
 func GetReferencedListeners(routeNamespace gwapiv1.Namespace, parentRef gwapiv1.ParentReference, gateways []*GatewayContext) (bool, []*ListenerContext) {
 	var referencedListeners []*ListenerContext
 
+	// The parentRef is an XListenerSet
+	if isRefToXListenerSet(parentRef) {
+		ns := routeNamespace
+		if parentRef.Namespace != nil {
+			ns = *parentRef.Namespace
+		}
+		var matchedListenerSet bool
+		for _, gateway := range gateways {
+			for _, listener := range gateway.listeners {
+				if !listener.isFromXListenerSet() {
+					continue
+				}
+				if listener.xListenerSet.Namespace != string(ns) ||
+					listener.xListenerSet.Name != string(parentRef.Name) {
+					continue
+				}
+				matchedListenerSet = true
+				if (parentRef.SectionName == nil || *parentRef.SectionName == listener.Name) &&
+					(parentRef.Port == nil || *parentRef.Port == listener.Port) {
+					referencedListeners = append(referencedListeners, listener)
+				}
+			}
+		}
+		return matchedListenerSet, referencedListeners
+	}
+
+	// The parentRef is a Gateway
 	for _, gateway := range gateways {
 		if IsRefToGateway(routeNamespace, parentRef, utils.NamespacedName(gateway)) {
-			// The parentRef may be to the entire Gateway, or to a specific listener.
 			for _, listener := range gateway.listeners {
+				if listener.isFromXListenerSet() {
+					continue
+				}
+				// The parentRef may be to the entire Gateway, or to a specific listener.
 				if (parentRef.SectionName == nil || *parentRef.SectionName == listener.Name) && (parentRef.Port == nil || *parentRef.Port == listener.Port) {
 					referencedListeners = append(referencedListeners, listener)
 				}
@@ -160,6 +193,14 @@ func GetReferencedListeners(routeNamespace gwapiv1.Namespace, parentRef gwapiv1.
 	}
 
 	return false, referencedListeners
+}
+
+func isRefToXListenerSet(parentRef gwapiv1.ParentReference) bool {
+	if parentRef.Kind != nil && string(*parentRef.Kind) == resource.KindXListenerSet &&
+		parentRef.Group != nil && string(*parentRef.Group) == gwapixv1a1.GroupVersion.Group {
+		return true
+	}
+	return false
 }
 
 // HasReadyListener returns true if at least one Listener in the
@@ -381,7 +422,24 @@ func irStringKey(gatewayNs, gatewayName string) string {
 	return fmt.Sprintf("%s/%s", gatewayNs, gatewayName)
 }
 
+// extractGatewayNameFromListener extracts the gateway name from an IR listener name.
+// The listener name format can be:
+// - Gateway: "namespace/gateway/listener"
+// - XListenerSet: "namespace/gateway/xls-ns/xls-name/listener"
+// Returns "namespace/gateway" in both cases.
+func extractGatewayNameFromListener(listenerName string) string {
+	parts := strings.Split(listenerName, "/")
+	if len(parts) >= 2 {
+		return fmt.Sprintf("%s/%s", parts[0], parts[1])
+	}
+	// should never happen
+	return listenerName
+}
+
 func irListenerName(listener *ListenerContext) string {
+	if listener.isFromXListenerSet() {
+		return fmt.Sprintf("%s/%s/%s/%s/%s", listener.gateway.Namespace, listener.gateway.Name, listener.xListenerSet.Namespace, listener.xListenerSet.Name, listener.Name)
+	}
 	return fmt.Sprintf("%s/%s/%s", listener.gateway.Namespace, listener.gateway.Name, listener.Name)
 }
 
@@ -464,15 +522,27 @@ func irTLSListenerConfigName(secret *corev1.Secret) string {
 }
 
 func irTLSCACertName(namespace, name string) string {
-	return fmt.Sprintf("%s/%s/%s", namespace, name, caCertKey)
+	return fmt.Sprintf("%s/%s/%s", namespace, name, CACertKey)
 }
 
 func irTLSCrlName(namespace, name string) string {
-	return fmt.Sprintf("%s/%s/%s", namespace, name, crlKey)
+	return fmt.Sprintf("%s/%s/%s", namespace, name, CRLKey)
 }
 
 func IsMergeGatewaysEnabled(resources *resource.Resources) bool {
-	return resources.EnvoyProxyForGatewayClass != nil && resources.EnvoyProxyForGatewayClass.Spec.MergeGateways != nil && *resources.EnvoyProxyForGatewayClass.Spec.MergeGateways
+	// Check GatewayClass-level EnvoyProxy first (higher priority)
+	if resources.EnvoyProxyForGatewayClass != nil &&
+		resources.EnvoyProxyForGatewayClass.Spec.MergeGateways != nil {
+		return *resources.EnvoyProxyForGatewayClass.Spec.MergeGateways
+	}
+
+	// Fall back to default EnvoyProxySpec from EnvoyGateway configuration
+	if resources.EnvoyProxyDefaultSpec != nil &&
+		resources.EnvoyProxyDefaultSpec.MergeGateways != nil {
+		return *resources.EnvoyProxyDefaultSpec.MergeGateways
+	}
+
+	return false
 }
 
 func protocolSliceToStringSlice(protocols []gwapiv1.ProtocolType) []string {
@@ -717,6 +787,14 @@ func getPreserveRouteOrder(envoyProxy *egv1a1.EnvoyProxy) bool {
 	return false
 }
 
+// getRequestIDExtensionAction returns the RequestIDExtensionAction configuration from EnvoyProxy
+func getRequestIDExtensionAction(envoyProxy *egv1a1.EnvoyProxy) *ir.RequestIDExtensionAction {
+	if envoyProxy == nil || envoyProxy.Spec.Telemetry == nil || envoyProxy.Spec.Telemetry.RequestID == nil {
+		return nil
+	}
+	return (*ir.RequestIDExtensionAction)(envoyProxy.Spec.Telemetry.RequestID.Tracing)
+}
+
 // getOrFirstFromData returns the value of the key in the data map
 // or the first value if the key is not found only if data map has exactly one entry
 func getOrFirstFromData[T any](data map[string]T, key string) (T, bool) {
@@ -745,7 +823,7 @@ func irStringMatch(name string, match egv1a1.StringMatch) *ir.StringMatch {
 	case egv1a1.StringMatchRegularExpression:
 		return &ir.StringMatch{Name: name, SafeRegex: &match.Value}
 	default:
-		return nil
+		return &ir.StringMatch{Name: name, Exact: &match.Value}
 	}
 }
 

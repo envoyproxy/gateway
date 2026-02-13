@@ -34,6 +34,14 @@ clientTrafficPolicies:
         - name: example-header-2
           value: |
             multi-line-header-value
+        addIfAbsent:
+        - name: ""
+          value: empty
+        - name: Example/Header/5
+          value: :/
+        - name: example-header-6
+          value: |
+            multi-line-header-value
         remove:
         - ""
         set:
@@ -73,11 +81,20 @@ clientTrafficPolicies:
           LateResponseHeaders cannot set a header with an empty name
           LateResponseHeaders cannot set a header with a '/' or ':' character in them. Header: '"Example:Header:3"'
           LateResponseHeaders cannot set a header with an invalid value. Header: '"example-header-4"'
+          LateResponseHeaders cannot addIfAbsent a header with an empty name
+          LateResponseHeaders cannot addIfAbsent a header with a '/' or ':' character in them. Header: '"Example/Header/5"'
+          LateResponseHeaders cannot addIfAbsent a header with an invalid value. Header: '"example-header-6"'
           LateResponseHeaders cannot remove a header with an empty name
           LateResponseHeaders did not provide valid configuration to add/set/remove any headers.
         reason: Invalid
         status: "False"
         type: Accepted
+      - lastTransitionTime: null
+        message: spec.headers.preserveXRequestID is deprecated, use spec.headers.requestID
+          instead; spec.targetRef is deprecated, use spec.targetRefs instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
@@ -147,6 +164,7 @@ xdsIR:
     globalResources:
       proxyServiceCluster:
         metadata:
+          kind: Service
           name: envoy-envoy-gateway-gateway-1-196ae069
           namespace: envoy-gateway-system
           sectionName: "8080"
@@ -158,6 +176,7 @@ xdsIR:
             port: 8080
             zone: zone1
           metadata:
+            kind: Service
             name: envoy-envoy-gateway-gateway-1-196ae069
             namespace: envoy-gateway-system
             sectionName: "8080"

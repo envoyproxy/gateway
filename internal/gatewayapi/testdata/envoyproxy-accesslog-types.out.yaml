@@ -172,7 +172,7 @@ infraIR:
                 - openTelemetry:
                     host: otel-collector.monitoring.svc.cluster.local
                     port: 4317
-                    resources:
+                    resourceAttributes:
                       k8s.cluster.name: cluster-1
                   type: OpenTelemetry
                 type: Route
@@ -209,7 +209,7 @@ infraIR:
                 - openTelemetry:
                     host: otel-collector.monitoring.svc.cluster.local
                     port: 4317
-                    resources:
+                    resourceAttributes:
                       k8s.cluster.name: cluster-1
                   type: OpenTelemetry
                 type: Listener
@@ -246,7 +246,7 @@ infraIR:
                 - openTelemetry:
                     host: otel-collector.monitoring.svc.cluster.local
                     port: 4317
-                    resources:
+                    resourceAttributes:
                       k8s.cluster.name: cluster-1
                   type: OpenTelemetry
         status: {}
@@ -450,8 +450,9 @@ xdsIR:
             protocol: GRPC
             weight: 1
         logType: Route
-        resources:
-          k8s.cluster.name: cluster-1
+        resourceAttributes:
+        - key: k8s.cluster.name
+          value: cluster-1
         text: |
           this is a route log
       - authority: otel-collector.monitoring.svc.cluster.local
@@ -470,8 +471,9 @@ xdsIR:
             protocol: GRPC
             weight: 1
         logType: Listener
-        resources:
-          k8s.cluster.name: cluster-1
+        resourceAttributes:
+        - key: k8s.cluster.name
+          value: cluster-1
         text: |
           this is a listener log
       - authority: otel-collector.monitoring.svc.cluster.local
@@ -489,8 +491,9 @@ xdsIR:
             name: accesslog_otel_4_3/backend/-1
             protocol: GRPC
             weight: 1
-        resources:
-          k8s.cluster.name: cluster-1
+        resourceAttributes:
+        - key: k8s.cluster.name
+          value: cluster-1
         text: |
           this is a Global log
       text:
@@ -508,6 +511,7 @@ xdsIR:
     globalResources:
       proxyServiceCluster:
         metadata:
+          kind: Service
           name: envoy-envoy-gateway-gateway-1-196ae069
           namespace: envoy-gateway-system
           sectionName: "8080"
@@ -519,6 +523,7 @@ xdsIR:
             port: 8080
             zone: zone1
           metadata:
+            kind: Service
             name: envoy-envoy-gateway-gateway-1-196ae069
             namespace: envoy-gateway-system
             sectionName: "8080"

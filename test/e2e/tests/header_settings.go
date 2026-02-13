@@ -47,18 +47,20 @@ var HeaderSettingsTest = suite.ConformanceTest{
 				Request: http.Request{
 					Path: "/early-header",
 					Headers: map[string]string{
-						"early-added-header":   "client",
-						"early-set-header":     "client",
-						"early-removed-header": "client",
+						"early-added-header":         "client",
+						"early-set-header":           "client",
+						"early-removed-header":       "client",
+						"early-removed-regex-header": "client",
 					},
 				},
 				ExpectedRequest: &http.ExpectedRequest{
 					Request: http.Request{
 						Path: "/early-header",
 						Headers: map[string]string{
-							"early-added-header":   "client,early,late", // client, early and late are all added to header
-							"early-set-header":     "early,late",        // early set overwrites client value
-							"early-removed-header": "late",              // removed by early, so only late value exists
+							"early-added-header":         "client,early,late", // client, early and late are all added to header
+							"early-set-header":           "early,late",        // early set overwrites client value
+							"early-removed-header":       "late",              // removed by early, so only late value exists
+							"early-removed-regex-header": "late",              // removed by early, so only late value exists
 						},
 					},
 				},
@@ -90,18 +92,23 @@ var HeaderSettingsTest = suite.ConformanceTest{
 					Path: "/late-header",
 				},
 				BackendSetResponseHeaders: map[string]string{
-					"late-added-header":   "backend",
-					"late-set-header":     "backend",
-					"late-removed-header": "backend",
+					"late-added-header":           "backend",
+					"late-set-header":             "backend",
+					"late-removed-header":         "backend",
+					"late-removed-regex-header":   "backend",
+					"late-add-if-absent-existing": "backend",
 				},
 				Response: http.Response{
 					StatusCodes: []int{200},
 					Headers: map[string]string{
-						"late-added-header": "backend,filter,late",
-						"late-set-header":   "late",
+						"late-added-header":           "backend,filter,late",
+						"late-set-header":             "late",
+						"late-add-if-absent-header":   "late-default",   // added because header was absent
+						"late-add-if-absent-existing": "backend,filter", // NOT overwritten because header already existed
 					},
 					AbsentHeaders: []string{
 						"late-removed-header",
+						"late-removed-regex-header",
 					},
 				},
 				Namespace: ns,

@@ -13,12 +13,6 @@ import (
 // This configuration probabilistically rejects requests based on the success rate
 // of previous requests in a configurable sliding time window.
 type AdmissionControl struct {
-	// Enabled enables or disables the admission control filter.
-	// Defaults to true if not specified.
-	//
-	// +optional
-	Enabled *bool `json:"enabled,omitempty"`
-
 	// SamplingWindow defines the time window over which request success rates are calculated.
 	// Defaults to 60s if not specified.
 	//

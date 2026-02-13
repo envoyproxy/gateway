@@ -130,6 +130,7 @@ xdsIR:
     globalResources:
       proxyServiceCluster:
         metadata:
+          kind: Service
           name: envoy-envoy-gateway-gateway-1-196ae069
           namespace: envoy-gateway-system
           sectionName: "8080"
@@ -141,6 +142,7 @@ xdsIR:
             port: 8080
             zone: zone1
           metadata:
+            kind: Service
             name: envoy-envoy-gateway-gateway-1-196ae069
             namespace: envoy-gateway-system
             sectionName: "8080"
@@ -164,15 +166,18 @@ xdsIR:
       port: 10080
       routes:
       - addRequestHeaders:
-        - append: true
+        - addIfAbsent: false
+          append: true
           name: X-Header-Add
           value:
           - header-val-1
-        - append: true
+        - addIfAbsent: false
+          append: true
           name: X-Header-Add-Append
           value:
           - header-val-2
-        - append: false
+        - addIfAbsent: false
+          append: false
           name: X-Header-Set
           value:
           - set-overwrites-values
@@ -188,6 +193,7 @@ xdsIR:
             - host: 7.7.7.7
               port: 8080
             metadata:
+              kind: Service
               name: service-1
               namespace: default
               sectionName: "8080"
@@ -209,6 +215,7 @@ xdsIR:
               - host: 7.7.7.7
                 port: 8080
               metadata:
+                kind: Service
                 name: service-1
                 namespace: default
                 sectionName: "8080"
@@ -223,6 +230,7 @@ xdsIR:
               - host: 7.6.5.4
                 port: 8080
               metadata:
+                kind: Service
                 name: mirror-service
                 namespace: default
                 sectionName: "8080"

@@ -1,15 +1,15 @@
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
 # To know the available versions check:
 # - https://github.com/kubernetes-sigs/controller-tools/blob/main/envtest-releases.yaml
-ENVTEST_K8S_VERSION ?= 1.33.0
+ENVTEST_K8S_VERSION ?= 1.35.0
 # Need run cel validation across multiple versions of k8s
-# TODO: update kubebuilder assets to 1.34.0 when available
-ENVTEST_K8S_VERSIONS ?= 1.30.3 1.31.0 1.32.0 1.33.0
+# TODO: update kubebuilder assets to 1.35.0 when available
+ENVTEST_K8S_VERSIONS ?= 1.32.0 1.33.0 1.34.1 1.35.0
 
 # GATEWAY_API_VERSION refers to the version of Gateway API CRDs.
 # For more details, see https://gateway-api.sigs.k8s.io/guides/getting-started/#installing-gateway-api
 GATEWAY_API_MINOR_VERSION ?= 1.4
-GATEWAY_API_VERSION ?= v$(GATEWAY_API_MINOR_VERSION).0
+GATEWAY_API_VERSION ?= v$(GATEWAY_API_MINOR_VERSION).1
 
 GATEWAY_API_RELEASE_URL ?= https://github.com/kubernetes-sigs/gateway-api/releases/download/${GATEWAY_API_VERSION}
 EXPERIMENTAL_GATEWAY_API_RELEASE_URL ?= ${GATEWAY_API_RELEASE_URL}/experimental-install.yaml
@@ -21,7 +21,7 @@ IP_FAMILY ?= ipv4
 BENCHMARK_TIMEOUT ?= 60m
 BENCHMARK_CPU_LIMITS ?= 1000m
 BENCHMARK_MEMORY_LIMITS ?= 1024Mi
-BENCHMARK_RPS ?= 10000
+BENCHMARK_BASELINE_RPS ?= 100
 BENCHMARK_CONNECTIONS ?= 100
 BENCHMARK_DURATION ?= 60
 BENCHMARK_REPORT_DIR ?= benchmark_report
@@ -36,8 +36,10 @@ E2E_TIMEOUT ?= 20m
 # E2E_REDIRECT allow you specified a redirect when run e2e test locally, e.g. `>> test_output.out 2>&1`
 E2E_REDIRECT ?=
 E2E_TEST_ARGS ?= -v -tags e2e -timeout $(E2E_TIMEOUT)
+# If E2E_DEBUG is not explicitly defined, set it based on the ACTIONS_STEP_DEBUG environment variable.
+E2E_DEBUG ?= $(if $(filter true yes 1,$(ACTIONS_STEP_DEBUG)),true,false)
 # If you want to skip crds version check, add `--allow-crds-mismatch` to E2E_TEST_SUITE_ARGS
-E2E_TEST_SUITE_ARGS ?= --debug=true
+E2E_TEST_SUITE_ARGS ?= --debug=$(E2E_DEBUG)
 
 CONFORMANCE_RUN_TEST ?=
 CONFORMANCE_TEST_ARGS ?= -v -tags conformance -timeout $(E2E_TIMEOUT)
@@ -154,7 +156,7 @@ kube-test: manifests generate run-kube-test
 # KUBE_TEST_PACKAGE=./internal/provider/kubernetes/... make run-kube-tes
 KUBE_TEST_PACKAGE ?= ./...
 # KUBE_TEST_ARGS can be used to pass extra args to `go test`, e.g. -run ^TestNamespaceSelectorProvider
-KUBE_TEST_ARGS ?=
+KUBE_TEST_ARGS ?= -race
 
 .PHONY: run-kube-test
 run-kube-test: # Run Kubernetes provider tests.
@@ -170,7 +172,7 @@ endif
 .PHONY: kube-deploy
 kube-deploy: manifests helm-generate.gateway-helm ## Install Envoy Gateway into the Kubernetes cluster specified in ~/.kube/config.
 	@$(LOG_TARGET)
-	helm install eg charts/gateway-helm \
+	$(GO_TOOL) helm install eg charts/gateway-helm \
 		--set deployment.envoyGateway.imagePullPolicy=$(IMAGE_PULL_POLICY) \
 		-n envoy-gateway-system --create-namespace \
 		--debug --timeout='$(WAIT_TIMEOUT)' \
@@ -181,13 +183,13 @@ kube-deploy: manifests helm-generate.gateway-helm ## Install Envoy Gateway into 
 kube-deploy-for-benchmark-test: manifests helm-generate ## Install Envoy Gateway and prometheus-server for benchmark test purpose only.
 	@$(LOG_TARGET)
 	# Install Envoy Gateway
-	helm install eg charts/gateway-helm --set deployment.envoyGateway.imagePullPolicy=$(IMAGE_PULL_POLICY) \
+	$(GO_TOOL) helm install eg charts/gateway-helm --set deployment.envoyGateway.imagePullPolicy=$(IMAGE_PULL_POLICY) \
 		--set deployment.envoyGateway.resources.limits.cpu=$(BENCHMARK_CPU_LIMITS) \
 		--set deployment.envoyGateway.resources.limits.memory=$(BENCHMARK_MEMORY_LIMITS) \
 		--set config.envoyGateway.admin.enablePprof=true \
 		-n envoy-gateway-system --create-namespace --debug --timeout='$(WAIT_TIMEOUT)' --wait --wait-for-jobs
 	# Install Prometheus-server only
-	helm install eg-addons charts/gateway-addons-helm --set loki.enabled=false \
+	$(GO_TOOL) helm install eg-addons charts/gateway-addons-helm --set loki.enabled=false \
 		--set tempo.enabled=false \
 		--set grafana.enabled=false \
 		--set fluent-bit.enabled=false \
@@ -198,7 +200,7 @@ kube-deploy-for-benchmark-test: manifests helm-generate ## Install Envoy Gateway
 .PHONY: kube-undeploy
 kube-undeploy: manifests ## Uninstall the Envoy Gateway into the Kubernetes cluster specified in ~/.kube/config.
 	@$(LOG_TARGET)
-	helm uninstall eg -n envoy-gateway-system
+	$(GO_TOOL) helm uninstall eg -n envoy-gateway-system
 
 .PHONY: kube-demo-prepare
 kube-demo-prepare:
@@ -298,7 +300,7 @@ run-benchmark: install-benchmark-server prepare-ip-family ## Run benchmark tests
 	kubectl wait --timeout=$(WAIT_TIMEOUT) -n benchmark-test deployment/nighthawk-test-server --for=condition=Available
 	kubectl wait --timeout=$(WAIT_TIMEOUT) -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
 	kubectl apply -f test/benchmark/config/gatewayclass.yaml
-	go test -v -tags benchmark -timeout $(BENCHMARK_TIMEOUT) ./test/benchmark --rps=$(BENCHMARK_RPS) --connections=$(BENCHMARK_CONNECTIONS) --duration=$(BENCHMARK_DURATION) --report-save-dir=$(BENCHMARK_REPORT_DIR)
+	go test -v -tags benchmark -timeout $(BENCHMARK_TIMEOUT) ./test/benchmark --baseline-rps=$(BENCHMARK_BASELINE_RPS) --connections=$(BENCHMARK_CONNECTIONS) --duration=$(BENCHMARK_DURATION) --report-save-dir=$(BENCHMARK_REPORT_DIR)
 	# render benchmark profiles into image
 	@if [ "$(BENCHMARK_RENDER_PNG)" != "false" ]; then dot -V; fi
 	@if [ "$(BENCHMARK_RENDER_PNG)" != "false" ]; then find test/benchmark/$(BENCHMARK_REPORT_DIR)/profiles -name "*.pprof" -type f -exec sh -c 'go tool pprof -png "$$1" > "$$${1%.pprof}.png"' _ {} \; ; fi
@@ -306,8 +308,8 @@ run-benchmark: install-benchmark-server prepare-ip-family ## Run benchmark tests
 .PHONY: install-benchmark-server
 install-benchmark-server: ## Install nighthawk server for benchmark test
 	@$(LOG_TARGET)
-	kubectl create namespace benchmark-test
-	kubectl -n benchmark-test create configmap test-server-config --from-file=test/benchmark/config/nighthawk-test-server-config.yaml -o yaml
+	kubectl create namespace benchmark-test --dry-run=client -o yaml | kubectl apply -f -
+	kubectl -n benchmark-test create configmap test-server-config --from-file=test/benchmark/config/nighthawk-test-server-config.yaml --dry-run=client -o yaml | kubectl apply -f -
 	kubectl apply -f test/benchmark/config/nighthawk-test-server.yaml
 
 .PHONY: uninstall-benchmark-server
@@ -321,7 +323,7 @@ uninstall-benchmark-server: ## Uninstall nighthawk server for benchmark test
 .PHONY: install-eg-addons
 install-eg-addons: helm-generate.gateway-addons-helm
 	@$(LOG_TARGET)
-	helm upgrade -i eg-addons charts/gateway-addons-helm -f test/helm/gateway-addons-helm/e2e.in.yaml -n monitoring --create-namespace --timeout='$(WAIT_TIMEOUT)' --wait --wait-for-jobs
+	$(GO_TOOL) helm upgrade -i eg-addons charts/gateway-addons-helm -f test/helm/gateway-addons-helm/e2e.in.yaml -n monitoring --create-namespace --timeout='$(WAIT_TIMEOUT)' --wait --wait-for-jobs
 	# Change loki service type from ClusterIP to LoadBalancer
 	kubectl patch service loki -n monitoring -p '{"spec": {"type": "LoadBalancer"}}'
 	# Wait service Ready
@@ -386,7 +388,7 @@ generate-manifests: helm-generate.gateway-helm ## Generate Kubernetes release ma
 	@$(LOG_TARGET)
 	@$(call log, "Generating kubernetes manifests")
 	mkdir -p $(OUTPUT_DIR)/
-	helm template --set createNamespace=true eg charts/gateway-helm --include-crds --namespace envoy-gateway-system > $(OUTPUT_DIR)/install.yaml
+	$(GO_TOOL) helm template --set createNamespace=true eg charts/gateway-helm --include-crds --namespace envoy-gateway-system > $(OUTPUT_DIR)/install.yaml
 	@$(call log, "Added: $(OUTPUT_DIR)/install.yaml")
 	cp examples/kubernetes/quickstart.yaml $(OUTPUT_DIR)/quickstart.yaml
 	@$(call log, "Added: $(OUTPUT_DIR)/quickstart.yaml")

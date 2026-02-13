@@ -262,6 +262,9 @@ func buildRouteRateLimits(route *ir.HTTPRoute) (rateLimits []*routev3.RateLimit,
 			buildPathMatchRateLimitActions(&rlActions, domainRuleIdx, rule.PathMatch)
 			// Process each CIDR match in the rule.
 			buildCIDRMatchRateLimitActions(&rlActions, rule.CIDRMatch)
+			// Process each query parameter match in the rule.
+			// Pass header match count as offset to continue match index sequence
+			buildQueryParamMatchRateLimitActions(&rlActions, domainRuleIdx, len(rule.HeaderMatches), rule.QueryParamMatches)
 
 			// Case when both header/method/path and cidr match are not set and the ratelimit
 			// will be applied to all traffic.
@@ -472,6 +475,56 @@ func buildCIDRMatchRateLimitActions(
 	}
 }
 
+func buildQueryParamMatchRateLimitActions(
+	rlActions *[]*routev3.RateLimit_Action,
+	ruleIdx int,
+	matchIdxOffset int,
+	queryParamMatches []*ir.QueryParamMatch,
+) {
+	for mIdx, queryParam := range queryParamMatches {
+		var action *routev3.RateLimit_Action
+
+		if queryParam.Distinct {
+			// For distinct matches, use QueryParameters action to match any value.
+			// Each unique value will get its own rate limit bucket.
+			descriptorKey := getRouteRuleDescriptor(ruleIdx, matchIdxOffset+mIdx)
+			queryParamAction := &routev3.RateLimit_Action_QueryParameters{}
+			queryParamAction.DescriptorKey = descriptorKey
+			queryParamAction.QueryParameterName = queryParam.Name
+			action = &routev3.RateLimit_Action{
+				ActionSpecifier: &routev3.RateLimit_Action_QueryParameters_{
+					QueryParameters: queryParamAction,
+				},
+			}
+		} else {
+			// For non-distinct matches (exact, regex, invert), use QueryParameterValueMatch
+			// action to support advanced matching features like regex and invert.
+			descriptorKey := getRouteRuleDescriptor(ruleIdx, matchIdxOffset+mIdx)
+			descriptorVal := getRouteRuleDescriptor(ruleIdx, matchIdxOffset+mIdx)
+			queryParamMatcher := &routev3.QueryParameterMatcher{
+				Name: queryParam.Name,
+				QueryParameterMatchSpecifier: &routev3.QueryParameterMatcher_StringMatch{
+					StringMatch: buildXdsStringMatcher(&queryParam.StringMatch),
+				},
+			}
+			expectMatch := queryParam.Invert == nil || !*queryParam.Invert
+			action = &routev3.RateLimit_Action{
+				ActionSpecifier: &routev3.RateLimit_Action_QueryParameterValueMatch_{
+					QueryParameterValueMatch: &routev3.RateLimit_Action_QueryParameterValueMatch{
+						DescriptorKey:   descriptorKey,
+						DescriptorValue: descriptorVal,
+						ExpectMatch: &wrapperspb.BoolValue{
+							Value: expectMatch,
+						},
+						QueryParameters: []*routev3.QueryParameterMatcher{queryParamMatcher},
+					},
+				},
+			}
+		}
+		*rlActions = append(*rlActions, action)
+	}
+}
+
 func rateLimitCostToHitsAddend(c *ir.RateLimitCost) *routev3.RateLimit_HitsAddend {
 	ret := &routev3.RateLimit_HitsAddend{}
 	if c.Number != nil {
@@ -665,6 +718,11 @@ func isRuleShared(rule *ir.RateLimitRule) bool {
 	return rule != nil && rule.Shared != nil && *rule.Shared
 }
 
+// Helper function to check if a specific rule is in shadow mode
+func isRuleShadowMode(rule *ir.RateLimitRule) bool {
+	return rule != nil && rule.ShadowMode != nil && *rule.ShadowMode
+}
+
 // Helper function to map a global rule index to a domain-specific rule index
 // This ensures that both shared and non-shared rules have indices starting from 0 in their own domains.
 func getDomainRuleIndex(rules []*ir.RateLimitRule, globalRuleIdx int, ruleIsShared bool) int {
@@ -699,7 +757,8 @@ func buildRateLimitServiceDescriptors(route *ir.HTTPRoute) []*rlsconfv3.RateLimi
 	//  2) Method Match
 	//  3) Path Match
 	//  4) CIDR Match
-	//  5) No Match
+	//  5) Query Parameters
+	//  6) No Match
 
 	for rIdx, rule := range global.Rules {
 		rateLimitPolicy := &rlsconfv3.RateLimitPolicy{
@@ -718,6 +777,7 @@ func buildRateLimitServiceDescriptors(route *ir.HTTPRoute) []*rlsconfv3.RateLimi
 		// 1) Header Matches
 		for mIdx, match := range rule.HeaderMatches {
 			pbDesc := new(rlsconfv3.RateLimitDescriptor)
+			pbDesc.ShadowMode = isRuleShadowMode(rule)
 			// Distinct vs HeaderValueMatch
 			if match.Distinct {
 				// RequestHeader case
@@ -742,6 +802,7 @@ func buildRateLimitServiceDescriptors(route *ir.HTTPRoute) []*rlsconfv3.RateLimi
 		// 2) Method Match
 		if len(rule.MethodMatches) > 0 {
 			pbDesc := new(rlsconfv3.RateLimitDescriptor)
+			pbDesc.ShadowMode = isRuleShadowMode(rule)
 			pbDesc.Key = getRouteRuleMethodDescriptor(domainRuleIdx)
 			pbDesc.Value = getRouteRuleMethodDescriptor(domainRuleIdx)
 
@@ -761,6 +822,7 @@ func buildRateLimitServiceDescriptors(route *ir.HTTPRoute) []*rlsconfv3.RateLimi
 		// 3) Path Match
 		if rule.PathMatch != nil {
 			pbDesc := new(rlsconfv3.RateLimitDescriptor)
+			pbDesc.ShadowMode = isRuleShadowMode(rule)
 			pbDesc.Key = getRouteRulePathDescriptor(domainRuleIdx)
 			pbDesc.Value = getRouteRulePathDescriptor(domainRuleIdx)
 
@@ -802,6 +864,7 @@ func buildRateLimitServiceDescriptors(route *ir.HTTPRoute) []*rlsconfv3.RateLimi
 		if rule.CIDRMatch != nil {
 			// MaskedRemoteAddress case
 			pbDesc := new(rlsconfv3.RateLimitDescriptor)
+			pbDesc.ShadowMode = isRuleShadowMode(rule)
 			pbDesc.Key = "masked_remote_address"
 			pbDesc.Value = rule.CIDRMatch.CIDR
 
@@ -816,16 +879,44 @@ func buildRateLimitServiceDescriptors(route *ir.HTTPRoute) []*rlsconfv3.RateLimi
 
 			if rule.CIDRMatch.Distinct {
 				pbDesc := new(rlsconfv3.RateLimitDescriptor)
+				pbDesc.ShadowMode = isRuleShadowMode(rule)
 				pbDesc.Key = "remote_address"
 				cur.Descriptors = []*rlsconfv3.RateLimitDescriptor{pbDesc}
 				cur = pbDesc
 			}
 		}
+
+		// 5) Query Parameters
+		// Use header match count as offset to continue match index sequence
+		queryParamOffset := len(rule.HeaderMatches)
+		for mIdx, queryParam := range rule.QueryParamMatches {
+			pbDesc := new(rlsconfv3.RateLimitDescriptor)
+			pbDesc.ShadowMode = isRuleShadowMode(rule)
+			// Use the same descriptor key pattern as header matches for consistency.
+			// For distinct matches, only set the key; for non-distinct, set both key and value.
+			if queryParam.Distinct {
+				pbDesc.Key = getRouteRuleDescriptor(domainRuleIdx, queryParamOffset+mIdx)
+			} else {
+				pbDesc.Key = getRouteRuleDescriptor(domainRuleIdx, queryParamOffset+mIdx)
+				pbDesc.Value = getRouteRuleDescriptor(domainRuleIdx, queryParamOffset+mIdx)
+			}
+
+			if cur != nil {
+				// The header/method/path or cidr match descriptor chain exists, add current
+				// descriptor to the chain.
+				cur.Descriptors = []*rlsconfv3.RateLimitDescriptor{pbDesc}
+			} else {
+				head = pbDesc
+			}
+			cur = pbDesc
+		}
+
 		// Case when both header/method/path and cidr match are not set and the ratelimit
 		// will be applied to all traffic.
-		// 3) No Match (apply to all traffic)
+		// 6) No Match (apply to all traffic)
 		if !rule.IsMatchSet() {
 			pbDesc := new(rlsconfv3.RateLimitDescriptor)
+			pbDesc.ShadowMode = isRuleShadowMode(rule)
 			pbDesc.Key = getRouteRuleDescriptor(domainRuleIdx, -1)
 			pbDesc.Value = getRouteRuleDescriptor(domainRuleIdx, -1)
 			head = pbDesc

@@ -5,10 +5,12 @@ RELEASE_VERSIONS ?= $(foreach v,$(wildcard ${ROOT_DIR}/docs/*),$(notdir ${v}))
 # TODO: example.com is not a valid domain, we should remove it from ignore list
 # TODO: https://www.gnu.org/software/make became unstable, we should remove it from ignore list later
 LINKINATOR_IGNORE := "opentelemetry.io \
+	ntia.gov \
 	github.com \
 	jwt.io \
 	githubusercontent.com \
 	example.com \
+	foo.bar.com \
 	github.io \
 	gnu.org \
 	_print \
@@ -225,8 +227,10 @@ docs-check: ## Verify no doc changes are needed
 		git diff --exit-code; \
 	fi
 
-release-notes-docs: $(tools/release-notes-docs)
+release-notes-docs: $(tools/release-notes-docs) # Read version from Environment variable, if not set, read from VERSION file
 	@$(LOG_TARGET)
-	@for file in $(wildcard release-notes/$(shell cat VERSION).yaml); do \
+	$(eval RELEASE_NOTE_VERSION := $(if $(RELEASE_NOTE_VERSION),$(RELEASE_NOTE_VERSION),$(shell cat VERSION)))
+	@echo "Generating release notes for version $(RELEASE_NOTE_VERSION)"
+	@for file in $(wildcard release-notes/$(RELEASE_NOTE_VERSION).yaml); do \
 		$(tools/release-notes-docs) $$file site/content/en/news/releases/notes; \
 	done

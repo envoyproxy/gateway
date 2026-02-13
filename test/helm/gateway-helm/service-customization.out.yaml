@@ -173,6 +173,20 @@ rules:
   verbs:
   - update
 - apiGroups:
+  - gateway.networking.x-k8s.io
+  resources:
+  - xlistenersets
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - gateway.networking.x-k8s.io
+  resources:
+  - xlistenersets/status
+  verbs:
+  - update
+- apiGroups:
   - ""
   resources:
   - pods
@@ -360,7 +374,8 @@ metadata:
     app.kubernetes.io/version: "latest"
     app.kubernetes.io/managed-by: Helm
 spec:
-  type: ClusterIP
+  type: LoadBalancer
+  loadBalancerIP: 172.18.0.201
   selector:
     control-plane: envoy-gateway
     app.kubernetes.io/name: gateway-helm

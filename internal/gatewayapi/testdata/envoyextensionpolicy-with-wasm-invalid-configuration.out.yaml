@@ -35,6 +35,11 @@ envoyExtensionPolicies:
         reason: Invalid
         status: "False"
         type: Accepted
+      - lastTransitionTime: null
+        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: EnvoyExtensionPolicy
@@ -73,6 +78,11 @@ envoyExtensionPolicies:
         reason: Invalid
         status: "False"
         type: Accepted
+      - lastTransitionTime: null
+        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: EnvoyExtensionPolicy
@@ -125,6 +135,11 @@ envoyExtensionPolicies:
         reason: Invalid
         status: "False"
         type: Accepted
+      - lastTransitionTime: null
+        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: EnvoyExtensionPolicy
@@ -165,12 +180,17 @@ envoyExtensionPolicies:
       - lastTransitionTime: null
         message: "Wasm: secret default/my-pull-secret-1 does not exist\nLua: validation
           failed for lua body in policy with name envoyextensionpolicy/default/policy-for-httproute-4/lua/0:
-          failed to validate with envoy_on_response: <string>:612: attempt to call
-          a non-function object\nstack traceback:\n\t<string>:612: in function 'envoy_on_response'\n\t<string>:613:
+          failed to validate with envoy_on_response: <string>:1: attempt to call a
+          non-function object\nstack traceback:\n\t<string>:1: in function 'envoy_on_response'\n\t<string>:2:
           in main chunk\n\t[G]: ?."
         reason: Invalid
         status: "False"
         type: Accepted
+      - lastTransitionTime: null
+        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: EnvoyExtensionPolicy
@@ -208,6 +228,11 @@ envoyExtensionPolicies:
         reason: Invalid
         status: "False"
         type: Accepted
+      - lastTransitionTime: null
+        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: EnvoyExtensionPolicy
@@ -244,6 +269,11 @@ envoyExtensionPolicies:
         reason: Invalid
         status: "False"
         type: Accepted
+      - lastTransitionTime: null
+        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
@@ -689,6 +719,7 @@ xdsIR:
     globalResources:
       proxyServiceCluster:
         metadata:
+          kind: Service
           name: envoy-default-gateway-1-bfd08ef4
           namespace: envoy-gateway-system
           sectionName: "8080"
@@ -700,6 +731,7 @@ xdsIR:
             port: 8080
             zone: zone1
           metadata:
+            kind: Service
             name: envoy-default-gateway-1-bfd08ef4
             namespace: envoy-gateway-system
             sectionName: "8080"
@@ -734,6 +766,7 @@ xdsIR:
             - host: 7.7.7.7
               port: 8080
             metadata:
+              kind: Service
               name: service-1
               namespace: default
               sectionName: "8080"
@@ -765,12 +798,14 @@ xdsIR:
             - host: 7.7.7.7
               port: 8080
             metadata:
+              kind: Service
               name: service-1
               namespace: default
               sectionName: "8080"
             name: httproute/default/httproute-2/rule/0/backend/0
             protocol: HTTP
             weight: 1
+        envoyExtensions: {}
         hostname: www.bar.com
         isHTTP2: false
         metadata:
@@ -794,6 +829,7 @@ xdsIR:
             - host: 7.7.7.7
               port: 8080
             metadata:
+              kind: Service
               name: service-1
               namespace: default
               sectionName: "8080"
@@ -825,6 +861,7 @@ xdsIR:
             - host: 7.7.7.7
               port: 8080
             metadata:
+              kind: Service
               name: service-1
               namespace: default
               sectionName: "8080"
@@ -856,6 +893,7 @@ xdsIR:
     globalResources:
       proxyServiceCluster:
         metadata:
+          kind: Service
           name: envoy-default-gateway-2-5e70ed84
           namespace: envoy-gateway-system
           sectionName: "8080"
@@ -867,6 +905,7 @@ xdsIR:
             port: 8080
             zone: zone1
           metadata:
+            kind: Service
             name: envoy-default-gateway-2-5e70ed84
             namespace: envoy-gateway-system
             sectionName: "8080"
@@ -901,12 +940,14 @@ xdsIR:
             - host: 7.7.7.7
               port: 8080
             metadata:
+              kind: Service
               name: service-1
               namespace: default
               sectionName: "8080"
             name: httproute/default/httproute-5/rule/0/backend/0
             protocol: HTTP
             weight: 1
+        envoyExtensions: {}
         hostname: www.foo.com
         isHTTP2: false
         metadata:
@@ -930,12 +971,14 @@ xdsIR:
             - host: 7.7.7.7
               port: 8080
             metadata:
+              kind: Service
               name: service-1
               namespace: default
               sectionName: "8080"
             name: httproute/default/httproute-6/rule/0/backend/0
             protocol: HTTP
             weight: 1
+        envoyExtensions: {}
         hostname: www.bar.com
         isHTTP2: false
         metadata:
@@ -959,6 +1002,7 @@ xdsIR:
     globalResources:
       proxyServiceCluster:
         metadata:
+          kind: Service
           name: envoy-default-gateway-3-206418d2
           namespace: envoy-gateway-system
           sectionName: "8080"
@@ -970,6 +1014,7 @@ xdsIR:
             port: 8080
             zone: zone1
           metadata:
+            kind: Service
             name: envoy-default-gateway-3-206418d2
             namespace: envoy-gateway-system
             sectionName: "8080"
@@ -1004,6 +1049,7 @@ xdsIR:
             - host: 7.7.7.7
               port: 8080
             metadata:
+              kind: Service
               name: service-1
               namespace: default
               sectionName: "8080"

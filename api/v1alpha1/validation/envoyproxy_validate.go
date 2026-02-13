@@ -11,6 +11,7 @@ import (
 	"net"
 	"net/netip"
 	"regexp"
+	"strings"
 
 	"github.com/dominikbraun/graph"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
@@ -232,8 +233,8 @@ func validateProxyAccessLog(accessLog *egv1a1.ProxyAccessLog) []error {
 	var errs []error
 
 	for _, setting := range accessLog.Settings {
-		if setting.Format != nil {
-			switch setting.Format.Type {
+		if setting.Format != nil && setting.Format.Type != nil {
+			switch *setting.Format.Type {
 			case egv1a1.ProxyAccessLogFormatTypeText:
 				if setting.Format.Text == nil {
 					err := fmt.Errorf("unable to configure access log when using Text format but \"text\" field being empty")
@@ -296,23 +297,15 @@ func validateFilterOrder(filterOrder []egv1a1.FilterPosition) error {
 	return nil
 }
 
-func ValidateRouteStatName(routeStatName string) error {
-	supportedOperators := map[string]bool{
+var (
+	routeStatSupportedOperators = map[string]bool{
 		egv1a1.StatFormatterRouteName:      true,
 		egv1a1.StatFormatterRouteNamespace: true,
 		egv1a1.StatFormatterRouteKind:      true,
 		egv1a1.StatFormatterRouteRuleName:  true,
 	}
 
-	if err := validateStatName(routeStatName, supportedOperators); err != nil {
-		return fmt.Errorf("unable to configure Route Stat Name: %w", err)
-	}
-
-	return nil
-}
-
-func ValidateClusterStatName(clusterStatName string) error {
-	supportedOperators := map[string]bool{
+	clusterStatSupportedOperators = map[string]bool{
 		egv1a1.StatFormatterRouteName:       true,
 		egv1a1.StatFormatterRouteNamespace:  true,
 		egv1a1.StatFormatterRouteKind:       true,
@@ -320,8 +313,18 @@ func ValidateClusterStatName(clusterStatName string) error {
 		egv1a1.StatFormatterRouteRuleNumber: true,
 		egv1a1.StatFormatterBackendRefs:     true,
 	}
+)
 
-	if err := validateStatName(clusterStatName, supportedOperators); err != nil {
+func ValidateRouteStatName(routeStatName string) error {
+	if err := validateStatName(routeStatName, routeStatSupportedOperators); err != nil {
+		return fmt.Errorf("unable to configure Route Stat Name: %w", err)
+	}
+
+	return nil
+}
+
+func ValidateClusterStatName(clusterStatName string) error {
+	if err := validateStatName(clusterStatName, clusterStatSupportedOperators); err != nil {
 		return fmt.Errorf("unable to configure Cluster Stat Name: %w", err)
 	}
 
@@ -331,6 +334,9 @@ func ValidateClusterStatName(clusterStatName string) error {
 func validateStatName(statName string, supportedOperators map[string]bool) error {
 	var unsupportedOperators []string
 	matches := statNameRegex.FindAllString(statName, -1)
+	if len(matches) == 0 && strings.Contains(statName, "%") {
+		return fmt.Errorf("unable to configure stat name with invalid operator")
+	}
 	for _, operator := range matches {
 		if _, ok := supportedOperators[operator]; !ok {
 			unsupportedOperators = append(unsupportedOperators, operator)
