@@ -34,7 +34,7 @@ var DirectResponseTest = suite.ConformanceTest{
 			kubernetes.HTTPRouteMustHaveResolvedRefsConditionsTrue(t, suite.Client, suite.TimeoutConfig, routeNN, gwNN)
 
 			// Test inline response with add and set headers
-			verifyCustomResponse(t, &suite.TimeoutConfig, gwAddr, "/inline", "text/plain", "200 Oops! Your request is not found.", 200, map[string]string{
+			verifyCustomResponse(t, &suite.TimeoutConfig, gwAddr, "/inline", "text/plain", "GET Oops! Your request is not found.", 200, map[string]string{
 				"X-Add-Header":    "added-value",
 				"X-Set-Header":    "set-value",
 				"X-Response-Type": "direct",
