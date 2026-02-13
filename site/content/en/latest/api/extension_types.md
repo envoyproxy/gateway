@@ -201,7 +201,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `samplingWindow` | _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#duration-v1-meta)_ |  false  |  | SamplingWindow defines the time window over which request success rates are calculated.<br />Defaults to 60s if not specified. |
+| `samplingWindow` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#duration)_ |  false  |  | SamplingWindow defines the time window over which request success rates are calculated.<br />Defaults to 60s if not specified. |
 | `successRateThreshold` | _float_ |  false  |  | SuccessRateThreshold defines the lowest request success rate at which the filter<br />will not reject requests. The value should be in the range [0.0, 1.0].<br />Defaults to 0.95 (95%) if not specified. |
 | `aggression` | _float_ |  false  |  | Aggression controls the rejection probability curve. A value of 1.0 means a linear<br />increase in rejection probability as the success rate decreases. Higher values<br />result in more aggressive rejection at higher success rates.<br />Defaults to 1.0 if not specified. |
 | `rpsThreshold` | _integer_ |  false  |  | RPSThreshold defines the minimum requests per second below which requests will<br />pass through the filter without rejection. Defaults to 1 if not specified. |

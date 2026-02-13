@@ -88,7 +88,7 @@ func buildHCMAdmissionControlFilter() (*hcmv3.HttpFilter, error) {
 }
 
 // patchRoute patches the provided route with the admission control config if applicable.
-func (*admissionControl) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, httpListener *ir.HTTPListener) error {
+func (*admissionControl) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir.HTTPListener) error {
 	if route == nil || irRoute == nil {
 		return nil
 	}
@@ -222,7 +222,7 @@ func parseDuration(s string) (time.Duration, error) {
 }
 
 // patchResources adds all the other needed resources referenced by this filter.
-func (*admissionControl) patchResources(tCtx *types.ResourceVersionTable, routes []*ir.HTTPRoute) error {
+func (*admissionControl) patchResources(_ *types.ResourceVersionTable, _ []*ir.HTTPRoute) error {
 	// Admission control filter doesn't require additional resources
 	return nil
 }

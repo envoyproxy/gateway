@@ -6,7 +6,7 @@
 package v1alpha1
 
 import (
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
 // AdmissionControl defines the admission control policy to be applied.
@@ -17,7 +17,7 @@ type AdmissionControl struct {
 	// Defaults to 60s if not specified.
 	//
 	// +optional
-	SamplingWindow *metav1.Duration `json:"samplingWindow,omitempty"`
+	SamplingWindow *gwapiv1.Duration `json:"samplingWindow,omitempty"`
 
 	// SuccessRateThreshold defines the lowest request success rate at which the filter
 	// will not reject requests. The value should be in the range [0.0, 1.0].
