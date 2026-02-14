@@ -244,8 +244,7 @@ infraIR:
   envoy-gateway/gateway-1:
     proxy:
       listeners:
-      - address: null
-        http3: {}
+      - http3: {}
         name: envoy-gateway/gateway-1/https-wildcard
         ports:
         - containerPort: 10443
