@@ -117,6 +117,15 @@ type BackendTrafficPolicySpec struct {
 	//
 	// +optional
 	RequestBuffer *RequestBuffer `json:"requestBuffer,omitempty"`
+
+	// AdaptiveConcurrency defines the configuration for Envoy's adaptive
+	// concurrency filter, which dynamically adjusts the allowed request
+	// concurrency limit based on sampled latencies. This helps protect
+	// backends from overload by automatically shedding load when latency
+	// increases.
+	//
+	// +optional
+	AdaptiveConcurrency *AdaptiveConcurrency `json:"adaptiveConcurrency,omitempty"`
 	// Telemetry configures the telemetry settings for the policy target (Gateway or xRoute).
 	// This will override the telemetry settings in the EnvoyProxy resource.
 	//

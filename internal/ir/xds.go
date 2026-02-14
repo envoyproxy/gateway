@@ -986,6 +986,8 @@ type TrafficFeatures struct {
 	Telemetry *BackendTelemetry `json:"telemetry,omitempty" yaml:"telemetry,omitempty"`
 	// RequestBuffer defines the schema for enabling buffered requests
 	RequestBuffer *RequestBuffer `json:"requestBuffer,omitempty" yaml:"requestBuffer,omitempty"`
+	// AdaptiveConcurrency defines the schema for the adaptive concurrency filter
+	AdaptiveConcurrency *AdaptiveConcurrency `json:"adaptiveConcurrency,omitempty" yaml:"adaptiveConcurrency,omitempty"`
 }
 
 // BackendTelemetry defines the telemetry configuration for the backend.
@@ -2825,6 +2827,43 @@ type CircuitBreaker struct {
 type PerEndpointCircuitBreakers struct {
 	// MaxConnections configures the maximum number of connections that Envoy will establish per-endpoint to the referenced backend defined within a xRoute rule.
 	MaxConnections *uint32 `json:"maxConnections,omitempty"`
+}
+
+// AdaptiveConcurrency defines the adaptive concurrency filter settings.
+// +k8s:deepcopy-gen=true
+type AdaptiveConcurrency struct {
+	// SampleAggregatePercentile is the percentile to use when summarizing aggregated samples.
+	SampleAggregatePercentile *float64 `json:"sampleAggregatePercentile,omitempty" yaml:"sampleAggregatePercentile,omitempty"`
+
+	// MaxConcurrencyLimit is the allowed upper-bound on the calculated concurrency limit.
+	MaxConcurrencyLimit *uint32 `json:"maxConcurrencyLimit,omitempty" yaml:"maxConcurrencyLimit,omitempty"`
+
+	// ConcurrencyUpdateInterval is the period of time between recalculations of the concurrency limit.
+	ConcurrencyUpdateInterval *metav1.Duration `json:"concurrencyUpdateInterval,omitempty" yaml:"concurrencyUpdateInterval,omitempty"`
+
+	// MinRTTCalcInterval is the time interval between recalculating the minimum RTT.
+	MinRTTCalcInterval *metav1.Duration `json:"minRTTCalcInterval,omitempty" yaml:"minRTTCalcInterval,omitempty"`
+
+	// FixedMinRTT sets a fixed minimum RTT value instead of dynamically sampling it.
+	FixedMinRTT *metav1.Duration `json:"fixedMinRTT,omitempty" yaml:"fixedMinRTT,omitempty"`
+
+	// RequestCount is the number of requests to aggregate during minRTT recalculation.
+	RequestCount *uint32 `json:"requestCount,omitempty" yaml:"requestCount,omitempty"`
+
+	// Jitter adds randomized delay to the start of the minRTT calculation, as a percentage.
+	Jitter *float64 `json:"jitter,omitempty" yaml:"jitter,omitempty"`
+
+	// MinConcurrency is the concurrency limit used while measuring the minRTT.
+	MinConcurrency *uint32 `json:"minConcurrency,omitempty" yaml:"minConcurrency,omitempty"`
+
+	// Buffer is the amount added to the measured minRTT for stability, as a percentage.
+	Buffer *float64 `json:"buffer,omitempty" yaml:"buffer,omitempty"`
+
+	// ConcurrencyLimitExceededStatus is the HTTP status code returned when the limit is exceeded.
+	ConcurrencyLimitExceededStatus *int32 `json:"concurrencyLimitExceededStatus,omitempty" yaml:"concurrencyLimitExceededStatus,omitempty"`
+
+	// Name is a unique name for this adaptive concurrency config (used for filter naming).
+	Name string `json:"name" yaml:"name"`
 }
 
 // HealthCheck defines health check settings

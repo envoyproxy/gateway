@@ -866,6 +866,7 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy) (
 		h2          *ir.HTTP2Settings
 		ro          *ir.ResponseOverride
 		rb          *ir.RequestBuffer
+		ac          *ir.AdaptiveConcurrency
 		cp          []*ir.Compression
 		httpUpgrade []ir.HTTPUpgradeConfig
 		err, errs   error
@@ -925,6 +926,8 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy) (
 		errs = errors.Join(errs, err)
 	}
 
+	ac = buildAdaptiveConcurrency(policy)
+
 	if err = validateTelemetry(policy.Spec.Telemetry); err != nil {
 		err = perr.WithMessage(err, "Telemetry")
 		errs = errors.Join(errs, err)
@@ -936,24 +939,72 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy) (
 	ds = translateDNS(&policy.Spec.ClusterSettings, utils.NamespacedName(policy).String())
 
 	return &ir.TrafficFeatures{
-		RateLimit:         rl,
-		LoadBalancer:      lb,
-		ProxyProtocol:     pp,
-		HealthCheck:       hc,
-		CircuitBreaker:    cb,
-		FaultInjection:    fi,
-		TCPKeepalive:      ka,
-		Retry:             rt,
-		BackendConnection: bc,
-		HTTP2:             h2,
-		DNS:               ds,
-		Timeout:           to,
-		ResponseOverride:  ro,
-		RequestBuffer:     rb,
-		Compression:       cp,
-		HTTPUpgrade:       httpUpgrade,
-		Telemetry:         buildBackendTelemetry(policy.Spec.Telemetry),
+		RateLimit:           rl,
+		LoadBalancer:        lb,
+		ProxyProtocol:       pp,
+		HealthCheck:         hc,
+		CircuitBreaker:      cb,
+		FaultInjection:      fi,
+		TCPKeepalive:        ka,
+		Retry:               rt,
+		BackendConnection:   bc,
+		HTTP2:               h2,
+		DNS:                 ds,
+		Timeout:             to,
+		ResponseOverride:    ro,
+		RequestBuffer:       rb,
+		AdaptiveConcurrency: ac,
+		Compression:         cp,
+		HTTPUpgrade:         httpUpgrade,
+		Telemetry:           buildBackendTelemetry(policy.Spec.Telemetry),
 	}, errs
+}
+
+func buildAdaptiveConcurrency(policy *egv1a1.BackendTrafficPolicy) *ir.AdaptiveConcurrency {
+	if policy.Spec.AdaptiveConcurrency == nil {
+		return nil
+	}
+
+	ac := &ir.AdaptiveConcurrency{
+		Name: irConfigName(policy),
+	}
+
+	apiAC := policy.Spec.AdaptiveConcurrency
+	ac.ConcurrencyLimitExceededStatus = apiAC.ConcurrencyLimitExceededStatus
+
+	if apiAC.GradientController != nil {
+		gc := apiAC.GradientController
+		ac.SampleAggregatePercentile = gc.SampleAggregatePercentile
+
+		if gc.ConcurrencyLimitParams != nil {
+			ac.MaxConcurrencyLimit = gc.ConcurrencyLimitParams.MaxConcurrencyLimit
+			if gc.ConcurrencyLimitParams.ConcurrencyUpdateInterval != nil {
+				if d, err := time.ParseDuration(string(*gc.ConcurrencyLimitParams.ConcurrencyUpdateInterval)); err == nil {
+					ac.ConcurrencyUpdateInterval = &metav1.Duration{Duration: d}
+				}
+			}
+		}
+
+		if gc.MinRTTCalcParams != nil {
+			mc := gc.MinRTTCalcParams
+			ac.RequestCount = mc.RequestCount
+			ac.Jitter = mc.Jitter
+			ac.MinConcurrency = mc.MinConcurrency
+			ac.Buffer = mc.Buffer
+			if mc.Interval != nil {
+				if d, err := time.ParseDuration(string(*mc.Interval)); err == nil {
+					ac.MinRTTCalcInterval = &metav1.Duration{Duration: d}
+				}
+			}
+			if mc.FixedMinRTT != nil {
+				if d, err := time.ParseDuration(string(*mc.FixedMinRTT)); err == nil {
+					ac.FixedMinRTT = &metav1.Duration{Duration: d}
+				}
+			}
+		}
+	}
+
+	return ac
 }
 
 func buildBackendTelemetry(telemetry *egv1a1.BackendTelemetry) *ir.BackendTelemetry {
