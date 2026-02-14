@@ -1,82 +1,3 @@
-backendTrafficPolicies:
-- apiVersion: gateway.envoyproxy.io/v1alpha1
-  kind: BackendTrafficPolicy
-  metadata:
-    name: policy-for-route
-    namespace: default
-  spec:
-    retry:
-      numAttemptsPerPriority: 1
-      numRetries: 5
-      perRetry:
-        backOff:
-          baseInterval: 100ms
-          maxInterval: 10s
-        timeout: 250ms
-      retryOn:
-        httpStatusCodes:
-        - 429
-        - 503
-        triggers:
-        - connect-failure
-        - retriable-status-codes
-    targetRefs:
-    - group: gateway.networking.k8s.io
-      kind: HTTPRoute
-      name: httproute-1
-  status:
-    ancestors:
-    - ancestorRef:
-        group: gateway.networking.k8s.io
-        kind: Gateway
-        name: gateway-2
-        namespace: envoy-gateway
-        sectionName: http
-      conditions:
-      - lastTransitionTime: null
-        message: Policy has been accepted.
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
-- apiVersion: gateway.envoyproxy.io/v1alpha1
-  kind: BackendTrafficPolicy
-  metadata:
-    name: policy-for-gateway
-    namespace: envoy-gateway
-  spec:
-    retry:
-      perRetry:
-        backOff:
-          baseInterval: 100ms
-          maxInterval: 10s
-        timeout: 250ms
-      retryOn:
-        triggers:
-        - cancelled
-    targetRef:
-      group: gateway.networking.k8s.io
-      kind: Gateway
-      name: gateway-1
-  status:
-    ancestors:
-    - ancestorRef:
-        group: gateway.networking.k8s.io
-        kind: Gateway
-        name: gateway-1
-        namespace: envoy-gateway
-      conditions:
-      - lastTransitionTime: null
-        message: Policy has been accepted.
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      - lastTransitionTime: null
-        message: spec.targetRef is deprecated, use spec.targetRefs instead
-        reason: DeprecatedField
-        status: "True"
-        type: Warning
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
@@ -94,7 +15,7 @@ gateways:
       protocol: HTTP
   status:
     listeners:
-    - attachedRoutes: 0
+    - attachedRoutes: 1
       conditions:
       - lastTransitionTime: null
         message: Sending translated listener configuration to the data plane
@@ -166,7 +87,7 @@ httpRoutes:
     hostnames:
     - gateway.envoyproxy.io
     parentRefs:
-    - name: gateway-2
+    - name: gateway-1
       namespace: envoy-gateway
       sectionName: http
     rules:
@@ -176,13 +97,51 @@ httpRoutes:
       matches:
       - path:
           value: /
-      retry:
-        attempts: 3
-        backoff: 200ms
-        codes:
-        - 500
-      timeouts:
-        backendRequest: 3s
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    name: httproute-2
+    namespace: default
+  spec:
+    hostnames:
+    - gateway2.envoyproxy.io
+    parentRefs:
+    - name: gateway-2
+      namespace: envoy-gateway
+      sectionName: http
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8080
+      - filters:
+        - responseHeaderModifier:
+            add:
+            - name: backend
+              value: service-2
+          type: ResponseHeaderModifier
+        name: service-2
+        port: 8080
+      matches:
+      - path:
+          value: /
   status:
     parents:
     - conditions:
@@ -280,6 +239,37 @@ xdsIR:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
       port: 10080
+      routes:
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-1
+            namespace: default
+          name: httproute/default/httproute-1/rule/0/backend/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            metadata:
+              kind: Service
+              name: service-1
+              namespace: default
+              sectionName: "8080"
+            name: httproute/default/httproute-1/rule/0/backend/0
+            protocol: HTTP
+            weight: 1
+        hostname: gateway.envoyproxy.io
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-1
+          namespace: default
+        name: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
@@ -330,9 +320,9 @@ xdsIR:
       - destination:
           metadata:
             kind: HTTPRoute
-            name: httproute-1
+            name: httproute-2
             namespace: default
-          name: httproute/default/httproute-1/rule/0/backend/0
+          name: httproute/default/httproute-2/rule/0/backend/0
           settings:
           - addressType: IP
             endpoints:
@@ -343,49 +333,39 @@ xdsIR:
               name: service-1
               namespace: default
               sectionName: "8080"
-            name: httproute/default/httproute-1/rule/0/backend/0
+            name: httproute/default/httproute-2/rule/0/backend/0
             protocol: HTTP
             weight: 1
-        hostname: gateway.envoyproxy.io
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            filters:
+              addResponseHeaders:
+              - addIfAbsent: false
+                append: true
+                name: backend
+                value:
+                - service-2
+            metadata:
+              kind: Service
+              name: service-2
+              namespace: default
+              sectionName: "8080"
+            name: httproute/default/httproute-2/rule/0/backend/1
+            protocol: HTTP
+            weight: 1
+        hostname: gateway2.envoyproxy.io
         isHTTP2: false
         metadata:
           kind: HTTPRoute
-          name: httproute-1
+          name: httproute-2
           namespace: default
-          policies:
-          - kind: BackendTrafficPolicy
-            name: policy-for-route
-            namespace: default
-        name: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
+        name: httproute/default/httproute-2/rule/0/match/0/gateway2_envoyproxy_io
         pathMatch:
           distinct: false
           name: ""
           prefix: /
-        retry:
-          numRetries: 3
-          perRetry:
-            backOff:
-              baseInterval: 200ms
-            timeout: 3s
-          retryOn:
-            httpStatusCodes:
-            - 500
-        traffic:
-          retry:
-            numAttemptsPerPriority: 1
-            numRetries: 5
-            perRetry:
-              backOff:
-                baseInterval: 100ms
-                maxInterval: 10s
-              timeout: 250ms
-            retryOn:
-              httpStatusCodes:
-              - 429
-              - 503
-              triggers:
-              - connect-failure
-              - retriable-status-codes
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
