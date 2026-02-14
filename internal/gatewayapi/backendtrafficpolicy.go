@@ -1107,6 +1107,7 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy) (
 	}
 
 	cp = buildCompression(policy.Spec.Compression, policy.Spec.Compressor)
+	dp := buildDecompression(policy.Spec.Decompressor)
 	httpUpgrade = buildHTTPProtocolUpgradeConfig(policy.Spec.HTTPUpgrade)
 	if rb != nil && len(httpUpgrade) > 0 {
 		err = errors.New("requestBuffer cannot be used together with httpUpgrade")
@@ -1132,6 +1133,7 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy) (
 		ResponseOverride:  ro,
 		RequestBuffer:     rb,
 		Compression:       cp,
+		Decompression:     dp,
 		HTTPUpgrade:       httpUpgrade,
 		Telemetry:         buildBackendTelemetry(policy.Spec.Telemetry),
 	}, errs
@@ -1972,6 +1974,26 @@ func buildCompression(compression, compressor []*egv1a1.Compression) []*ir.Compr
 		result = append(result, &irCompression)
 	}
 
+	return result
+}
+
+func buildDecompression(decompressor []*egv1a1.Decompression) []*ir.Decompression {
+	if len(decompressor) == 0 {
+		return nil
+	}
+
+	result := make([]*ir.Decompression, 0, len(decompressor))
+	for _, d := range decompressor {
+		// Only add decompression if the corresponding decompressor config is not null
+		if (d.Type == egv1a1.GzipDecompressorType && d.Gzip != nil) ||
+			(d.Type == egv1a1.BrotliDecompressorType && d.Brotli != nil) ||
+			(d.Type == egv1a1.ZstdDecompressorType && d.Zstd != nil) {
+			irDecompression := ir.Decompression{
+				Type: d.Type,
+			}
+			result = append(result, &irDecompression)
+		}
+	}
 	return result
 }
 
