@@ -2,14 +2,20 @@ date: Pending
 
 # Changes that are expected to cause an incompatibility with previous versions, such as deletions or modifications to existing APIs.
 breaking changes: |
+  The `0s` timeout in SecurityPolicy is now treated as infinite timeout instead of immediate timeout.
 
 # Updates addressing vulnerabilities, security flaws, or compliance requirements.
 security updates: |
 
 # New features or capabilities added in this release.
 new features: |
+  Added support for configuring optional health check configuration.
+  Added support for shadow mode in local rate limiting.
 
 bug fixes: |
+  Rejected ClientTrafficPolicy if invalid TLS cipher suites are configured.
+  Fixed validation of XListenerSet certificateRefs
+  Fixed XListenerSet not allowing xRoutes from the same namespace when configured to allow them
 
 # Enhancements that improve performance.
 performance improvements: |

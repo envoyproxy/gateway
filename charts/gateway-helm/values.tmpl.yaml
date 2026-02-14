@@ -26,6 +26,9 @@ global:
       # List of secrets in the same namespace of the component that can be used to pull images from private repositories.
       pullSecrets: []
 
+# -- Labels to apply to all resources
+commonLabels: {}
+
 podDisruptionBudget:
   minAvailable: 0
   # maxUnavailable: 1
