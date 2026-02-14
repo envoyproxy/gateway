@@ -35,6 +35,9 @@ var BackendPanicThresholdHTTPTest = suite.ConformanceTest{
 	Description: "Resource with BackendPanicThreshold enabled",
 	Manifests:   []string{"testdata/backend-panic-threshold.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
+		if XDSNameSchemeV2() {
+			t.Skip("cluster name format changed")
+		}
 		t.Run("active http", func(t *testing.T) {
 			ctx := context.Background()
 			ns := "gateway-conformance-infra"

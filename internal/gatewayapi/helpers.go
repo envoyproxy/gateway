@@ -465,7 +465,10 @@ func irUDPRouteName(route RouteContext) string {
 	return irTCPRouteName(route)
 }
 
-func irRouteDestinationName(route RouteContext, ruleIdx int) string {
+func irRouteDestinationName(xdsNameSchemeV2 bool, route RouteContext, ruleIdx int) string {
+	if xdsNameSchemeV2 {
+		return fmt.Sprintf("%srule/%d/backend/0", irRoutePrefix(route), ruleIdx)
+	}
 	return fmt.Sprintf("%srule/%d", irRoutePrefix(route), ruleIdx)
 }
 
