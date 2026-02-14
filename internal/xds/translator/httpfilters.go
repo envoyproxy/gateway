@@ -141,6 +141,8 @@ func newOrderedHTTPFilter(filter *hcmv3.HttpFilter) *OrderedHTTPFilter {
 		order = 305
 	case isFilterType(filter, egv1a1.EnvoyFilterCredentialInjector):
 		order = 307
+	case isFilterType(filter, egv1a1.EnvoyFilterDecompressor):
+		order = 306
 	case isFilterType(filter, egv1a1.EnvoyFilterCompressor):
 		order = 308
 	case isFilterType(filter, egv1a1.EnvoyFilterDynamicForwardProxy):

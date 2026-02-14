@@ -92,6 +92,16 @@ type BackendTrafficPolicySpec struct {
 	// +optional
 	Compressor []*Compression `json:"compressor,omitempty" patchMergeKey:"type" patchStrategy:"merge"`
 
+	// The decompressor config for the http streams.
+	// This enables decompression of compressed requests from clients and/or compressed responses from backends.
+	// Supports HTTP and gRPC traffic.
+	//
+	// +patchMergeKey=type
+	// +patchStrategy=merge
+	//
+	// +optional
+	Decompressor []*Decompression `json:"decompressor,omitempty" patchMergeKey:"type" patchStrategy:"merge"`
+
 	// ResponseOverride defines the configuration to override specific responses with a custom one.
 	// If multiple configurations are specified, the first one to match wins.
 	//
