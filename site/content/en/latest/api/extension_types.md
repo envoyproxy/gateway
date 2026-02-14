@@ -189,6 +189,23 @@ _Appears in:_
 | `GRPC` | ActiveHealthCheckerTypeGRPC defines the GRPC type of health checking.<br /> | 
 
 
+#### AdaptiveConcurrency
+
+
+
+AdaptiveConcurrency defines the configuration for Envoy's adaptive concurrency
+filter, which dynamically adjusts the allowed request concurrency limit based
+on sampled latencies.
+
+_Appears in:_
+- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `gradientController` | _[GradientController](#gradientcontroller)_ |  false  |  | GradientController configures the gradient-based concurrency controller.<br />This is the core algorithm that adjusts the concurrency limit based on<br />latency measurements. |
+| `concurrencyLimitExceededStatus` | _integer_ |  false  |  | ConcurrencyLimitExceededStatus sets the HTTP status code returned to<br />downstream clients when the concurrency limit is exceeded.<br />Defaults to 503 (Service Unavailable). |
+
+
 #### AppProtocolType
 
 _Underlying type:_ _string_
@@ -548,6 +565,7 @@ _Appears in:_
 | `responseOverride` | _[ResponseOverride](#responseoverride) array_ |  false  |  | ResponseOverride defines the configuration to override specific responses with a custom one.<br />If multiple configurations are specified, the first one to match wins. |
 | `httpUpgrade` | _[ProtocolUpgradeConfig](#protocolupgradeconfig) array_ |  false  |  | HTTPUpgrade defines the configuration for HTTP protocol upgrades.<br />If not specified, the default upgrade configuration(websocket) will be used. |
 | `requestBuffer` | _[RequestBuffer](#requestbuffer)_ |  false  |  | RequestBuffer allows the gateway to buffer and fully receive each request from a client before continuing to send the request<br />upstream to the backends. This can be helpful to shield your backend servers from slow clients, and also to enforce a maximum size per request<br />as any requests larger than the buffer size will be rejected.<br />This can have a negative performance impact so should only be enabled when necessary.<br />When enabling this option, you should also configure your connection buffer size to account for these request buffers. There will also be an<br />increase in memory usage for Envoy that should be accounted for in your deployment settings. |
+| `adaptiveConcurrency` | _[AdaptiveConcurrency](#adaptiveconcurrency)_ |  false  |  | AdaptiveConcurrency defines the configuration for Envoy's adaptive<br />concurrency filter, which dynamically adjusts the allowed request<br />concurrency limit based on sampled latencies. This helps protect<br />backends from overload by automatically shedding load when latency<br />increases. |
 | `telemetry` | _[BackendTelemetry](#backendtelemetry)_ |  false  |  | Telemetry configures the telemetry settings for the policy target (Gateway or xRoute).<br />This will override the telemetry settings in the EnvoyProxy resource. |
 
 
@@ -909,6 +927,22 @@ _Appears in:_
 | `Gzip` |  | 
 | `Brotli` |  | 
 | `Zstd` |  | 
+
+
+#### ConcurrencyLimitParams
+
+
+
+ConcurrencyLimitParams controls parameters for the periodic recalculation
+of the concurrency limit from sampled request latencies.
+
+_Appears in:_
+- [GradientController](#gradientcontroller)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `maxConcurrencyLimit` | _integer_ |  false  |  | MaxConcurrencyLimit sets the upper bound on the concurrency limit.<br />Defaults to 1000. |
+| `concurrencyUpdateInterval` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#duration)_ |  false  |  | ConcurrencyUpdateInterval is the period of time between<br />recalculations of the concurrency limit.<br />Defaults to 100ms. |
 
 
 #### ConnectConfig
@@ -1334,6 +1368,7 @@ _Appears in:_
 | `envoy.filters.http.credential_injector` | EnvoyFilterCredentialInjector defines the Envoy HTTP credential injector filter.<br /> | 
 | `envoy.filters.http.compressor` | EnvoyFilterCompressor defines the Envoy HTTP compressor filter.<br /> | 
 | `envoy.filters.http.dynamic_forward_proxy` | EnvoyFilterDynamicForwardProxy defines the Envoy HTTP dynamic forward proxy filter.<br /> | 
+| `envoy.filters.http.adaptive_concurrency` | EnvoyFilterAdaptiveConcurrency defines the Envoy HTTP adaptive concurrency filter.<br /> | 
 | `envoy.filters.http.router` | EnvoyFilterRouter defines the Envoy HTTP router filter.<br /> | 
 
 
@@ -2323,6 +2358,24 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `rules` | _[RateLimitRule](#ratelimitrule) array_ |  true  |  | Rules are a list of RateLimit selectors and limits. Each rule and its<br />associated limit is applied in a mutually exclusive way. If a request<br />matches multiple rules, each of their associated limits get applied, so a<br />single request might increase the rate limit counters for multiple rules<br />if selected. The rate limit service will return a logical OR of the individual<br />rate limit decisions of all matching rules. For example, if a request<br />matches two rules, one rate limited and one not, the final decision will be<br />to rate limit the request. |
+
+
+#### GradientController
+
+
+
+GradientController configures the gradient-based concurrency controller algorithm.
+The controller periodically samples request latencies and adjusts the concurrency
+limit using a gradient calculated from the current vs minimum RTT.
+
+_Appears in:_
+- [AdaptiveConcurrency](#adaptiveconcurrency)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `sampleAggregatePercentile` | _float_ |  false  |  | SampleAggregatePercentile specifies the percentile to use when<br />summarizing aggregated latency samples. Defaults to 50 (p50). |
+| `concurrencyLimitParams` | _[ConcurrencyLimitParams](#concurrencylimitparams)_ |  false  |  | ConcurrencyLimitParams controls the periodic concurrency limit<br />recalculation. |
+| `minRTTCalcParams` | _[MinRTTCalcParams](#minrttcalcparams)_ |  false  |  | MinRTTCalcParams controls the periodic minRTT recalculation. |
 
 
 #### GroupVersionKind
@@ -3615,6 +3668,25 @@ _Appears in:_
 | Value | Description |
 | ----- | ----------- |
 | `OpenTelemetry` |  | 
+
+
+#### MinRTTCalcParams
+
+
+
+MinRTTCalcParams controls parameters for the periodic minRTT recalculation.
+
+_Appears in:_
+- [GradientController](#gradientcontroller)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `interval` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#duration)_ |  false  |  | Interval is the time interval between recalculating the minimum RTT.<br />Defaults to 30s. Setting this to 0s disables dynamic minRTT sampling<br />(use FixedMinRTT in that case). |
+| `fixedMinRTT` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#duration)_ |  false  |  | FixedMinRTT sets a fixed minimum RTT value instead of dynamically<br />sampling it. This is required when Interval is set to 0s. |
+| `requestCount` | _integer_ |  false  |  | RequestCount is the number of requests to aggregate during the minRTT<br />recalculation window. Defaults to 50. |
+| `jitter` | _float_ |  false  |  | Jitter adds a randomized delay to the start of the minRTT calculation<br />window, expressed as a percentage of the interval. Defaults to 15%. |
+| `minConcurrency` | _integer_ |  false  |  | MinConcurrency sets the concurrency limit used while measuring the<br />minRTT. Defaults to 3. |
+| `buffer` | _float_ |  false  |  | Buffer is the amount added to the measured minRTT to add stability<br />to the concurrency limit, expressed as a percentage of the measured<br />value. Defaults to 25%. |
 
 
 #### OIDC

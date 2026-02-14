@@ -50,6 +50,105 @@ spec:
           spec:
             description: spec defines the desired state of BackendTrafficPolicy.
             properties:
+              adaptiveConcurrency:
+                description: |-
+                  AdaptiveConcurrency defines the configuration for Envoy's adaptive
+                  concurrency filter, which dynamically adjusts the allowed request
+                  concurrency limit based on sampled latencies. This helps protect
+                  backends from overload by automatically shedding load when latency
+                  increases.
+                properties:
+                  concurrencyLimitExceededStatus:
+                    description: |-
+                      ConcurrencyLimitExceededStatus sets the HTTP status code returned to
+                      downstream clients when the concurrency limit is exceeded.
+                      Defaults to 503 (Service Unavailable).
+                    format: int32
+                    maximum: 599
+                    minimum: 400
+                    type: integer
+                  gradientController:
+                    description: |-
+                      GradientController configures the gradient-based concurrency controller.
+                      This is the core algorithm that adjusts the concurrency limit based on
+                      latency measurements.
+                    properties:
+                      concurrencyLimitParams:
+                        description: |-
+                          ConcurrencyLimitParams controls the periodic concurrency limit
+                          recalculation.
+                        properties:
+                          concurrencyUpdateInterval:
+                            description: |-
+                              ConcurrencyUpdateInterval is the period of time between
+                              recalculations of the concurrency limit.
+                              Defaults to 100ms.
+                            pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                            type: string
+                          maxConcurrencyLimit:
+                            description: |-
+                              MaxConcurrencyLimit sets the upper bound on the concurrency limit.
+                              Defaults to 1000.
+                            format: int32
+                            minimum: 1
+                            type: integer
+                        type: object
+                      minRTTCalcParams:
+                        description: MinRTTCalcParams controls the periodic minRTT
+                          recalculation.
+                        properties:
+                          buffer:
+                            description: |-
+                              Buffer is the amount added to the measured minRTT to add stability
+                              to the concurrency limit, expressed as a percentage of the measured
+                              value. Defaults to 25%.
+                            maximum: 100
+                            minimum: 0
+                            type: number
+                          fixedMinRTT:
+                            description: |-
+                              FixedMinRTT sets a fixed minimum RTT value instead of dynamically
+                              sampling it. This is required when Interval is set to 0s.
+                            pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                            type: string
+                          interval:
+                            description: |-
+                              Interval is the time interval between recalculating the minimum RTT.
+                              Defaults to 30s. Setting this to 0s disables dynamic minRTT sampling
+                              (use FixedMinRTT in that case).
+                            pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                            type: string
+                          jitter:
+                            description: |-
+                              Jitter adds a randomized delay to the start of the minRTT calculation
+                              window, expressed as a percentage of the interval. Defaults to 15%.
+                            maximum: 100
+                            minimum: 0
+                            type: number
+                          minConcurrency:
+                            description: |-
+                              MinConcurrency sets the concurrency limit used while measuring the
+                              minRTT. Defaults to 3.
+                            format: int32
+                            minimum: 1
+                            type: integer
+                          requestCount:
+                            description: |-
+                              RequestCount is the number of requests to aggregate during the minRTT
+                              recalculation window. Defaults to 50.
+                            format: int32
+                            minimum: 1
+                            type: integer
+                        type: object
+                      sampleAggregatePercentile:
+                        description: |-
+                          SampleAggregatePercentile specifies the percentile to use when
+                          summarizing aggregated latency samples. Defaults to 50 (p50).
+                        maximum: 100
+                        minimum: 0
+                        type: number
+                    type: object
+                type: object
               circuitBreaker:
                 description: |-
                   Circuit Breaker settings for the upstream connections and requests.
