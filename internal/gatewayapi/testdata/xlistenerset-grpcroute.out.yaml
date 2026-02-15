@@ -151,22 +151,19 @@ infraIR:
   gateway-xls/composite-gateway:
     proxy:
       listeners:
-      - address: null
-        name: gateway-xls/composite-gateway/core-grpc
+      - name: gateway-xls/composite-gateway/core-grpc
         ports:
         - containerPort: 10080
           name: http-80
           protocol: HTTP
           servicePort: 80
-      - address: null
-        name: gateway-xls/composite-gateway/gateway-xls/xlistenerset-grpc-one/grpc-listener
+      - name: gateway-xls/composite-gateway/gateway-xls/xlistenerset-grpc-one/grpc-listener
         ports:
         - containerPort: 8081
           name: http-8081
           protocol: HTTP
           servicePort: 8081
-      - address: null
-        name: gateway-xls/composite-gateway/gateway-xls/xlistenerset-grpc-two/grpc-listener
+      - name: gateway-xls/composite-gateway/gateway-xls/xlistenerset-grpc-two/grpc-listener
         ports:
         - containerPort: 8082
           name: http-8082

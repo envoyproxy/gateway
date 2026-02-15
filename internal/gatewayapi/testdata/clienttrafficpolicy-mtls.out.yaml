@@ -197,15 +197,13 @@ infraIR:
   envoy-gateway/gateway-1:
     proxy:
       listeners:
-      - address: null
-        name: envoy-gateway/gateway-1/http-1
+      - name: envoy-gateway/gateway-1/http-1
         ports:
         - containerPort: 10443
           name: https-443
           protocol: HTTPS
           servicePort: 443
-      - address: null
-        name: envoy-gateway/gateway-1/http-2
+      - name: envoy-gateway/gateway-1/http-2
         ports:
         - containerPort: 8080
           name: http-8080
@@ -223,8 +221,7 @@ infraIR:
   envoy-gateway/gateway-2:
     proxy:
       listeners:
-      - address: null
-        name: envoy-gateway/gateway-2/http-1
+      - name: envoy-gateway/gateway-2/http-1
         ports:
         - containerPort: 10443
           name: https-443

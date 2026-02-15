@@ -644,29 +644,25 @@ infraIR:
   default/gateway-1:
     proxy:
       listeners:
-      - address: null
-        name: default/gateway-1/http-1
+      - name: default/gateway-1/http-1
         ports:
         - containerPort: 10443
           name: https-443
           protocol: HTTPS
           servicePort: 443
-      - address: null
-        name: default/gateway-1/http-2
+      - name: default/gateway-1/http-2
         ports:
         - containerPort: 8080
           name: http-8080
           protocol: HTTP
           servicePort: 8080
-      - address: null
-        name: default/gateway-1/tcp-1
+      - name: default/gateway-1/tcp-1
         ports:
         - containerPort: 8443
           name: tls-8443
           protocol: TLS
           servicePort: 8443
-      - address: null
-        name: default/gateway-1/tcp-2
+      - name: default/gateway-1/tcp-2
         ports:
         - containerPort: 5000
           name: tcp-5000
@@ -684,29 +680,25 @@ infraIR:
   default/gateway-2:
     proxy:
       listeners:
-      - address: null
-        name: default/gateway-2/http-1
+      - name: default/gateway-2/http-1
         ports:
         - containerPort: 10443
           name: https-443
           protocol: HTTPS
           servicePort: 443
-      - address: null
-        name: default/gateway-2/http-2
+      - name: default/gateway-2/http-2
         ports:
         - containerPort: 8080
           name: http-8080
           protocol: HTTP
           servicePort: 8080
-      - address: null
-        name: default/gateway-2/tcp-1
+      - name: default/gateway-2/tcp-1
         ports:
         - containerPort: 8443
           name: tls-8443
           protocol: TLS
           servicePort: 8443
-      - address: null
-        name: default/gateway-2/tcp-2
+      - name: default/gateway-2/tcp-2
         ports:
         - containerPort: 5000
           name: tcp-5000
@@ -724,29 +716,25 @@ infraIR:
   default/gateway-3:
     proxy:
       listeners:
-      - address: null
-        name: default/gateway-3/http-1
+      - name: default/gateway-3/http-1
         ports:
         - containerPort: 10443
           name: https-443
           protocol: HTTPS
           servicePort: 443
-      - address: null
-        name: default/gateway-3/http-2
+      - name: default/gateway-3/http-2
         ports:
         - containerPort: 8080
           name: http-8080
           protocol: HTTP
           servicePort: 8080
-      - address: null
-        name: default/gateway-3/tcp-1
+      - name: default/gateway-3/tcp-1
         ports:
         - containerPort: 8443
           name: tls-8443
           protocol: TLS
           servicePort: 8443
-      - address: null
-        name: default/gateway-3/tcp-2
+      - name: default/gateway-3/tcp-2
         ports:
         - containerPort: 5000
           name: tcp-5000

@@ -27,5 +27,17 @@ gateways:
       reason: InvalidParameters
       status: "False"
       type: Accepted
-infraIR: {}
-xdsIR: {}
+infraIR:
+  envoy-gateway/gateway-1:
+    proxy:
+      metadata:
+        labels:
+          gateway.envoyproxy.io/owning-gateway-name: gateway-1
+          gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+        ownerReference:
+          kind: GatewayClass
+          name: envoy-gateway-class
+      name: envoy-gateway/gateway-1
+      namespace: envoy-gateway-system
+xdsIR:
+  envoy-gateway/gateway-1: {}

@@ -156,15 +156,13 @@ infraIR:
   envoy-gateway/gateway-1:
     proxy:
       listeners:
-      - address: null
-        name: envoy-gateway/gateway-1/tls-contains-not-exist-ref
+      - name: envoy-gateway/gateway-1/tls-contains-not-exist-ref
         ports:
         - containerPort: 10443
           name: https-443
           protocol: HTTPS
           servicePort: 443
-      - address: null
-        name: envoy-gateway/gateway-1/tls-contains-not-exist-key-cert
+      - name: envoy-gateway/gateway-1/tls-contains-not-exist-key-cert
         ports:
         - containerPort: 8443
           name: https-8443

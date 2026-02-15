@@ -193,15 +193,13 @@ infraIR:
   gateway-xls/composite-gateway:
     proxy:
       listeners:
-      - address: null
-        name: gateway-xls/composite-gateway/core-http
+      - name: gateway-xls/composite-gateway/core-http
         ports:
         - containerPort: 10080
           name: http-80
           protocol: HTTP
           servicePort: 80
-      - address: null
-        name: gateway-xls/composite-gateway/gateway-xls/same-namespace-mixed/mixed-valid
+      - name: gateway-xls/composite-gateway/gateway-xls/same-namespace-mixed/mixed-valid
         ports:
         - containerPort: 8087
           name: http-8087

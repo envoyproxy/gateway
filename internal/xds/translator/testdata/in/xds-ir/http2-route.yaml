@@ -18,7 +18,6 @@ http:
       exact: "foo/bar"
     headerMatches:
     - name: user
-      stringMatch:
       exact: "jason"
     queryParamMatches:
     - name: "debug"

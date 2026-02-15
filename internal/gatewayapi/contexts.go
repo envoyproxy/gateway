@@ -170,7 +170,7 @@ func (l *ListenerContext) AllowsNamespace(namespace *corev1.Namespace) bool {
 	}
 
 	if l.AllowedRoutes == nil || l.AllowedRoutes.Namespaces == nil || l.AllowedRoutes.Namespaces.From == nil {
-		return l.gateway.Namespace == namespace.Name
+		return l.GetNamespace() == namespace.Name
 	}
 
 	switch *l.AllowedRoutes.Namespaces.From {
@@ -183,7 +183,7 @@ func (l *ListenerContext) AllowsNamespace(namespace *corev1.Namespace) bool {
 		return l.namespaceSelector.Matches(labels.Set(namespace.Labels))
 	default:
 		// NamespacesFromSame is the default
-		return l.gateway.Namespace == namespace.Name
+		return l.GetNamespace() == namespace.Name
 	}
 }
 
@@ -202,6 +202,13 @@ func (l *ListenerContext) IsReady() bool {
 	}
 
 	return false
+}
+
+func (l *ListenerContext) GetNamespace() string {
+	if l.isFromXListenerSet() {
+		return l.xListenerSet.Namespace
+	}
+	return l.gateway.Namespace
 }
 
 func (l *ListenerContext) GetConditions() []metav1.Condition {

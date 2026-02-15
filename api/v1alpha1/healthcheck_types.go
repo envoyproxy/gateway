@@ -142,6 +142,12 @@ type ActiveHealthCheck struct {
 	// It's optional, and can only be used if the specified type is GRPC.
 	// +optional
 	GRPC *GRPCActiveHealthChecker `json:"grpc,omitempty" yaml:"grpc,omitempty"`
+
+	// Overrides defines the configuration of the overriding health check settings for all endpoints
+	// in the backend cluster. This allows customization of port and other settings that may differ
+	// from the main service configuration.
+	// +optional
+	Overrides *HealthCheckOverrides `json:"overrides,omitempty" yaml:"overrides,omitempty"`
 }
 
 // ActiveHealthCheckerType is the type of health checker.
@@ -201,6 +207,19 @@ type GRPCActiveHealthChecker struct {
 	// server and not to a specific service.
 	// +optional
 	Service *string `json:"service,omitempty" yaml:"service,omitempty"`
+}
+
+// HealthCheckOverrides allows overriding default health check behavior for specific use cases.
+type HealthCheckOverrides struct {
+	// Port overrides the health check port.
+	// If not set, the endpoint's serving port is used for health checks.
+	// This is useful when health checks are served on a different port than
+	// the main service port (e.g., port 443 for service, port 9090 for health checks).
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=65535
+	Port int32 `json:"port,omitempty"`
 }
 
 // ActiveHealthCheckPayloadType is the type of the payload.

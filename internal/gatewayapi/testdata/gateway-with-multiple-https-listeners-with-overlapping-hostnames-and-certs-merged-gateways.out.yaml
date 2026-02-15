@@ -155,8 +155,7 @@ infraIR:
           mergeGateways: true
         status: {}
       listeners:
-      - address: null
-        name: envoy-gateway/gateway-1/https-1
+      - name: envoy-gateway/gateway-1/https-1
         ports:
         - containerPort: 10443
           name: https-443

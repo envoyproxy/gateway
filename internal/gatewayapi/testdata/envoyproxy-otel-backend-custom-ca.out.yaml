@@ -109,8 +109,7 @@ infraIR:
               samplingRate: 100
         status: {}
       listeners:
-      - address: null
-        name: envoy-gateway/gateway-1/http
+      - name: envoy-gateway/gateway-1/http
         ports:
         - containerPort: 10080
           name: http-80
@@ -179,7 +178,8 @@ xdsIR:
                 name: otel-collector/envoy-gateway-ca
               sni: otel-collector.example.com
         resourceAttributes:
-          k8s.cluster.name: cluster-1
+        - key: k8s.cluster.name
+          value: cluster-1
         text: |
           [%START_TIME%] "%REQ(:METHOD)% %PROTOCOL%" %RESPONSE_CODE%
     globalResources:

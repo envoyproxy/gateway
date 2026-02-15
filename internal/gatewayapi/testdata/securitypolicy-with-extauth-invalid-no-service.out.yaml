@@ -306,8 +306,7 @@ infraIR:
   default/gateway-1:
     proxy:
       listeners:
-      - address: null
-        name: default/gateway-1/http
+      - name: default/gateway-1/http
         ports:
         - containerPort: 10080
           name: http-80
@@ -325,8 +324,7 @@ infraIR:
   default/gateway-2:
     proxy:
       listeners:
-      - address: null
-        name: default/gateway-2/http
+      - name: default/gateway-2/http
         ports:
         - containerPort: 10080
           name: http-80
@@ -344,8 +342,7 @@ infraIR:
   default/gateway-3:
     proxy:
       listeners:
-      - address: null
-        name: default/gateway-3/http
+      - name: default/gateway-3/http
         ports:
         - containerPort: 10080
           name: http-80

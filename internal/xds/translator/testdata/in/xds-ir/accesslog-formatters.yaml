@@ -1,4 +1,3 @@
-name: "accesslog"
 accesslog:
   text:
   - path: "/dev/stdout"
@@ -7,28 +6,43 @@ accesslog:
   json:
   - path: "/dev/stdout"
     json:
-      start_time: "%START_TIME%"
-      method: "%REQ(:METHOD)%"
-      path: "%REQ(X-ENVOY-ORIGINAL-PATH?:PATH)%"
-      protocol: "%PROTOCOL%"
-      response_code: "%RESPONSE_CODE%"
-      test_key: "%METADATA(DYNAMIC:com.test.my_filter:test_key)%"
+    - key: method
+      value: "%REQ(:METHOD)%"
+    - key: path
+      value: "%REQ(X-ENVOY-ORIGINAL-PATH?:PATH)%"
+    - key: protocol
+      value: "%PROTOCOL%"
+    - key: response_code
+      value: "%RESPONSE_CODE%"
+    - key: start_time
+      value: "%START_TIME%"
+    - key: test_key
+      value: "%METADATA(DYNAMIC:com.test.my_filter:test_key)%"
   - path: "/dev/stdout"
     json:
-      start_time: "%START_TIME%"
-      method: "%REQ(:METHOD)%"
-      path_without_query: "%REQ_WITHOUT_QUERY(X-ENVOY-ORIGINAL-PATH?:PATH)%"
-      protocol: "%PROTOCOL%"
-      response_code: "%RESPONSE_CODE%"
+    - key: method
+      value: "%REQ(:METHOD)%"
+    - key: path_without_query
+      value: "%REQ_WITHOUT_QUERY(X-ENVOY-ORIGINAL-PATH?:PATH)%"
+    - key: protocol
+      value: "%PROTOCOL%"
+    - key: response_code
+      value: "%RESPONSE_CODE%"
+    - key: start_time
+      value: "%START_TIME%"
   openTelemetry:
   - text: |
       [%START_TIME%] "%REQ(:METHOD)% %REQ_WITHOUT_QUERY(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%"
     attributes:
-      "request_method": "%CEL(request.method)%"
-      "response_code": "%RESPONSE_CODE%"
-      "test_key": "%METADATA(DYNAMIC:com.test.my_filter:test_key)%"
+    - key: "request_method"
+      value: "%CEL(request.method)%"
+    - key: "response_code"
+      value: "%RESPONSE_CODE%"
+    - key: "test_key"
+      value: "%METADATA(DYNAMIC:com.test.my_filter:test_key)%"
     resourceAttributes:
-      "cluster_name": "cluster1"
+    - key: "cluster_name"
+      value: "cluster1"
     authority: "otel-collector.default.svc.cluster.local"
     destination:
       name: "accesslog-0"

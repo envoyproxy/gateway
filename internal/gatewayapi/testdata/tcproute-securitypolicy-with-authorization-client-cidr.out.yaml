@@ -170,15 +170,13 @@ infraIR:
   envoy-gateway/gateway-mixed:
     proxy:
       listeners:
-      - address: null
-        name: envoy-gateway/gateway-mixed/http
+      - name: envoy-gateway/gateway-mixed/http
         ports:
         - containerPort: 10080
           name: http-80
           protocol: HTTP
           servicePort: 80
-      - address: null
-        name: envoy-gateway/gateway-mixed/foo
+      - name: envoy-gateway/gateway-mixed/foo
         ports:
         - containerPort: 8443
           name: tcp-8443
@@ -196,15 +194,13 @@ infraIR:
   envoy-gateway/gateway-tcp:
     proxy:
       listeners:
-      - address: null
-        name: envoy-gateway/gateway-tcp/foo
+      - name: envoy-gateway/gateway-tcp/foo
         ports:
         - containerPort: 8088
           name: tcp-8088
           protocol: TCP
           servicePort: 8088
-      - address: null
-        name: envoy-gateway/gateway-tcp/bar
+      - name: envoy-gateway/gateway-tcp/bar
         ports:
         - containerPort: 8089
           name: tcp-8089

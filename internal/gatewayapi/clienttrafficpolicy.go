@@ -845,6 +845,9 @@ func (t *Translator) buildListenerTLSParameters(
 		irTLSConfig.MaxVersion = ptr.To(ir.TLSVersion(*tlsParams.MaxVersion))
 	}
 	if len(tlsParams.Ciphers) > 0 {
+		if err := validateCipherSuites(tlsParams.Ciphers); err != nil {
+			return nil, err
+		}
 		irTLSConfig.Ciphers = tlsParams.Ciphers
 	}
 	if len(tlsParams.ECDHCurves) > 0 {

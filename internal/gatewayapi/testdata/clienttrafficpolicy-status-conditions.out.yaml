@@ -429,8 +429,7 @@ infraIR:
   envoy-gateway/gateway-1:
     proxy:
       listeners:
-      - address: null
-        name: envoy-gateway/gateway-1/http
+      - name: envoy-gateway/gateway-1/http
         ports:
         - containerPort: 10080
           name: http-80
@@ -448,15 +447,13 @@ infraIR:
   envoy-gateway/gateway-2:
     proxy:
       listeners:
-      - address: null
-        name: envoy-gateway/gateway-2/http
+      - name: envoy-gateway/gateway-2/http
         ports:
         - containerPort: 10080
           name: http-80
           protocol: HTTP
           servicePort: 80
-      - address: null
-        name: envoy-gateway/gateway-2/tcp
+      - name: envoy-gateway/gateway-2/tcp
         ports:
         - containerPort: 10053
           name: tcp-53
@@ -474,8 +471,7 @@ infraIR:
   envoy-gateway/gateway-3:
     proxy:
       listeners:
-      - address: null
-        name: envoy-gateway/gateway-3/bar-foo
+      - name: envoy-gateway/gateway-3/bar-foo
         ports:
         - containerPort: 10080
           name: http-80
@@ -493,8 +489,7 @@ infraIR:
   not-same-namespace/not-same-namespace-gateway:
     proxy:
       listeners:
-      - address: null
-        name: not-same-namespace/not-same-namespace-gateway/http
+      - name: not-same-namespace/not-same-namespace-gateway/http
         ports:
         - containerPort: 10080
           name: http-80

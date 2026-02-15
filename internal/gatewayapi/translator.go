@@ -251,7 +251,7 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 	// Gateways are already sorted by the provider layer
 
 	// Build IR maps.
-	xdsIR, infraIR := t.InitIRs(acceptedGateways)
+	xdsIR, infraIR := t.InitIRs(acceptedGateways, failedGateways)
 
 	// Process XListenerSets and attach them to the relevant Gateways
 	t.ProcessXListenerSets(resources.XListenerSets, acceptedGateways)
@@ -369,40 +369,40 @@ func (t *Translator) GetRelevantGateways(resources *resource.Resources) (
 	envoyproxyMap := make(map[types.NamespacedName]*egv1a1.EnvoyProxy, len(resources.EnvoyProxiesForGateways)+1)
 	envoyproxyValidationErrorMap := make(map[types.NamespacedName]error, len(resources.EnvoyProxiesForGateways))
 
+	for _, ep := range resources.EnvoyProxiesForGateways {
+		key := utils.NamespacedName(ep)
+		envoyproxyMap[key] = ep
+		if err := validateEnvoyProxy(ep); err != nil {
+			envoyproxyValidationErrorMap[key] = err
+		}
+	}
+
 	// if EnvoyProxy not found, provider layer set GC status to not accepted.
 	// if EnvoyProxy found but invalid, set GC status to not accepted,
 	// otherwise set GC status to accepted.
 	if ep := resources.EnvoyProxyForGatewayClass; ep != nil {
 		err := validateEnvoyProxy(ep)
 		if err != nil {
+			envoyproxyValidationErrorMap[utils.NamespacedName(ep)] = err
 			t.Logger.Error(err, "Skipping GatewayClass because EnvoyProxy is invalid",
 				"gatewayclass", t.GatewayClassName,
 				"envoyproxy", ep.Name, "namespace", ep.Namespace)
 			status.SetGatewayClassAccepted(resources.GatewayClass,
 				false, string(gwapiv1.GatewayClassReasonInvalidParameters),
 				fmt.Sprintf("%s: %v", status.MsgGatewayClassInvalidParams, err))
-			return acceptedGateways, failedGateways
-		}
+		} else {
+			// TODO: remove this nil check after we update all the testdata.
+			if resources.GatewayClass != nil {
+				status.SetGatewayClassAccepted(
+					resources.GatewayClass,
+					true,
+					string(gwapiv1.GatewayClassReasonAccepted),
+					status.MsgValidGatewayClass)
+			}
 
-		// TODO: remove this nil check after we update all the testdata.
-		if resources.GatewayClass != nil {
-			status.SetGatewayClassAccepted(
-				resources.GatewayClass,
-				true,
-				string(gwapiv1.GatewayClassReasonAccepted),
-				status.MsgValidGatewayClass)
-		}
-
-		key := utils.NamespacedName(ep)
-		envoyproxyMap[key] = ep
-		// we didn't append to envoyproxyValidatioErrorMap because it's valid.
-	}
-
-	for _, ep := range resources.EnvoyProxiesForGateways {
-		key := utils.NamespacedName(ep)
-		envoyproxyMap[key] = ep
-		if err := validateEnvoyProxy(ep); err != nil {
-			envoyproxyValidationErrorMap[key] = err
+			key := utils.NamespacedName(ep)
+			envoyproxyMap[key] = ep
+			// we didn't append to envoyproxyValidatioErrorMap because it's valid.
 		}
 	}
 
@@ -463,46 +463,61 @@ func validateEnvoyProxy(ep *egv1a1.EnvoyProxy) error {
 }
 
 // InitIRs checks if mergeGateways is enabled in EnvoyProxy config and initializes XdsIR and InfraIR maps with adequate keys.
-func (t *Translator) InitIRs(gateways []*GatewayContext) (map[string]*ir.Xds, map[string]*ir.Infra) {
+func (t *Translator) InitIRs(acceptedGateways, failedGateways []*GatewayContext) (map[string]*ir.Xds, map[string]*ir.Infra) {
 	xdsIR := make(resource.XdsIRMap)
 	infraIR := make(resource.InfraIRMap)
 
-	for _, gateway := range gateways {
-		gwXdsIR := &ir.Xds{}
-		gwInfraIR := ir.NewInfra()
-		labels := infrastructureLabels(gateway.Gateway)
-		annotations := infrastructureAnnotations(gateway.Gateway)
-		gwInfraIR.Proxy.GetProxyMetadata().Annotations = annotations
+	for _, gateway := range acceptedGateways {
+		irKey, gwXdsIR, gwInfraIR := t.buildIR(gateway)
+		// save the IR references in the map before the translation starts
+		xdsIR[irKey] = gwXdsIR
+		infraIR[irKey] = gwInfraIR
+	}
 
-		irKey := t.IRKey(types.NamespacedName{Namespace: gateway.Namespace, Name: gateway.Name})
-		if t.MergeGateways {
-			maps.Copy(labels, GatewayClassOwnerLabel(string(t.GatewayClassName)))
-			gwInfraIR.Proxy.GetProxyMetadata().Labels = labels
-		} else {
-			maps.Copy(labels, GatewayOwnerLabels(gateway.Namespace, gateway.Name))
-			gwInfraIR.Proxy.GetProxyMetadata().Labels = labels
-		}
-
-		gwInfraIR.Proxy.Name = irKey
-		gwInfraIR.Proxy.Namespace = t.ControllerNamespace
-		gwInfraIR.Proxy.GetProxyMetadata().OwnerReference = &ir.ResourceMetadata{
-			Kind: resource.KindGatewayClass,
-			Name: string(t.GatewayClassName),
-		}
-		if t.GatewayNamespaceMode {
-			gwInfraIR.Proxy.Name = gateway.Name
-			gwInfraIR.Proxy.Namespace = gateway.Namespace
-			gwInfraIR.Proxy.GetProxyMetadata().OwnerReference = &ir.ResourceMetadata{
-				Kind: resource.KindGateway,
-				Name: gateway.Name,
-			}
-		}
+	// we need to build IRs for failed gateways to avoid delete event to Infra IR,
+	// which will cause the deletion of infra resources managed by the failed gateways.
+	for _, gtw := range failedGateways {
+		irKey, gwXdsIR, gwInfraIR := t.buildIR(gtw)
 		// save the IR references in the map before the translation starts
 		xdsIR[irKey] = gwXdsIR
 		infraIR[irKey] = gwInfraIR
 	}
 
 	return xdsIR, infraIR
+}
+
+func (t *Translator) buildIR(gateway *GatewayContext) (string, *ir.Xds, *ir.Infra) {
+	gwXdsIR := &ir.Xds{}
+	gwInfraIR := ir.NewInfra()
+	labels := infrastructureLabels(gateway.Gateway)
+	annotations := infrastructureAnnotations(gateway.Gateway)
+	gwInfraIR.Proxy.GetProxyMetadata().Annotations = annotations
+
+	irKey := t.IRKey(types.NamespacedName{Namespace: gateway.Namespace, Name: gateway.Name})
+	if t.MergeGateways {
+		maps.Copy(labels, GatewayClassOwnerLabel(string(t.GatewayClassName)))
+		gwInfraIR.Proxy.GetProxyMetadata().Labels = labels
+	} else {
+		maps.Copy(labels, GatewayOwnerLabels(gateway.Namespace, gateway.Name))
+		gwInfraIR.Proxy.GetProxyMetadata().Labels = labels
+	}
+
+	gwInfraIR.Proxy.Name = irKey
+	gwInfraIR.Proxy.Namespace = t.ControllerNamespace
+	gwInfraIR.Proxy.GetProxyMetadata().OwnerReference = &ir.ResourceMetadata{
+		Kind: resource.KindGatewayClass,
+		Name: string(t.GatewayClassName),
+	}
+	if t.GatewayNamespaceMode {
+		gwInfraIR.Proxy.Name = gateway.Name
+		gwInfraIR.Proxy.Namespace = gateway.Namespace
+		gwInfraIR.Proxy.GetProxyMetadata().OwnerReference = &ir.ResourceMetadata{
+			Kind: resource.KindGateway,
+			Name: gateway.Name,
+		}
+	}
+
+	return irKey, gwXdsIR, gwInfraIR
 }
 
 // IsEnvoyServiceRouting returns true if EnvoyProxy.Spec.RoutingType == ServiceRoutingType

@@ -42,9 +42,6 @@ http:
       kind: GRPCRoute
       name: grpcroute-1
       namespace: default
-      trafficPolicy:
-        Name: policy-for-gateway
-        Namespace: envoy-gateway
     name: grpcroute/default/grpcroute-1/rule/0/match/-1/*
     traffic:
       rateLimit:
