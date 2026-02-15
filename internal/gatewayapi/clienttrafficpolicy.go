@@ -932,7 +932,7 @@ func (t *Translator) validateAndGetDataAtKeyInRef(
 	refKind := string(ptr.Deref(ref.Kind, resource.KindSecret))
 	switch refKind {
 	case resource.KindSecret:
-		secret, err := t.validateSecretRef(false, from, ref, resources)
+		secret, err := t.validateSecretRef(true, from, ref, resources)
 		if err != nil {
 			return nil, err
 		}
@@ -943,7 +943,7 @@ func (t *Translator) validateAndGetDataAtKeyInRef(
 		}
 		return secretCertBytes, nil
 	case resource.KindConfigMap:
-		configMap, err := t.validateConfigMapRef(false, from, ref, resources)
+		configMap, err := t.validateConfigMapRef(true, from, ref, resources)
 		if err != nil {
 			return nil, err
 		}
