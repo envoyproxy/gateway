@@ -67,15 +67,13 @@ infraIR:
   envoy-gateway/gateway-1:
     proxy:
       listeners:
-      - address: null
-        name: envoy-gateway/gateway-1/udp1
+      - name: envoy-gateway/gateway-1/udp1
         ports:
         - containerPort: 10161
           name: udp-161
           protocol: UDP
           servicePort: 161
-      - address: null
-        name: envoy-gateway/gateway-1/udp2
+      - name: envoy-gateway/gateway-1/udp2
         ports:
         - containerPort: 10162
           name: udp-162

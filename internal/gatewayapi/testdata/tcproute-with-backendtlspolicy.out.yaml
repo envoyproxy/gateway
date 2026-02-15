@@ -90,8 +90,7 @@ infraIR:
           logging: {}
         status: {}
       listeners:
-      - address: null
-        name: envoy-gateway/gateway-1/tcp
+      - name: envoy-gateway/gateway-1/tcp
         ports:
         - containerPort: 10090
           name: tcp-90

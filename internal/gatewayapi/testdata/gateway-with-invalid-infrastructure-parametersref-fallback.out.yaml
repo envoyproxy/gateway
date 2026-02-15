@@ -102,8 +102,7 @@ infraIR:
               samplingRate: 100
         status: {}
       listeners:
-      - address: null
-        name: envoy-gateway/gateway-1/http
+      - name: envoy-gateway/gateway-1/http
         ports:
         - containerPort: 10080
           name: http-80
