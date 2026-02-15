@@ -491,6 +491,10 @@ spec:
               mergeType:
                 description: If unset, no merging occurs, and only the most specific
                   configuration takes effect.
+                enum:
+                - Replace
+                - StrategicMerge
+                - JSONMerge
                 type: string
               preserveRouteOrder:
                 description: |-
