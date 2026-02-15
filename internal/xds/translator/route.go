@@ -583,9 +583,13 @@ func buildXdsDirectResponseAction(res *ir.CustomResponse) *routev3.DirectRespons
 	}
 
 	if len(res.Body) > 0 {
-		routeAction.Body = &corev3.DataSource{
-			Specifier: &corev3.DataSource_InlineBytes{
-				InlineBytes: res.Body,
+		routeAction.BodyFormat = &corev3.SubstitutionFormatString{
+			Format: &corev3.SubstitutionFormatString_TextFormatSource{
+				TextFormatSource: &corev3.DataSource{
+					Specifier: &corev3.DataSource_InlineBytes{
+						InlineBytes: res.Body,
+					},
+				},
 			},
 		}
 	}

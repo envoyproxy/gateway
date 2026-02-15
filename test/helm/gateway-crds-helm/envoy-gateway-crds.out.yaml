@@ -24907,7 +24907,9 @@ spec:
                   return a fixed response.
                 properties:
                   body:
-                    description: Body of the direct response.
+                    description: |-
+                      Body of the direct response.
+                      Supports Envoy command operators for dynamic content (see https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators).
                     properties:
                       inline:
                         description: Inline contains the value as an inline string.
