@@ -290,6 +290,7 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     needs: [conformance-test, e2e-test]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
     - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
       # We need to fetch tags so go binary will be built with the recent vX.Y.Z-rc.0 tag,
@@ -317,28 +318,23 @@ jobs:
 
     # build and push image
     - name: Login to DockerHub
-      if: github.event_name == 'push'
       uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9  # v3.7.0
       with:
         username: ${{ vars.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_PASSWORD }}
 
     - name: Setup Multiarch Environment
-      if: github.event_name == 'push'
       run: make image.multiarch.setup
 
     - name: Build and Push EG Commit Image
-      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
       # tag is set to the short SHA of the commit
       run: make image.push.multiarch PLATFORMS="linux_amd64 linux_arm64" IMAGE=envoyproxy/gateway-dev
 
     - name: Build and Push EG Latest Image
-      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
       # tag is set to `latest` when pushing to main branch
       run: make image.push.multiarch TAG=latest PLATFORMS="linux_amd64 linux_arm64" IMAGE=envoyproxy/gateway-dev
 
     - name: Build and Push EG Latest Helm Chart
-      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
       # use `0.0.0` as the default latest version.
       # use `Always` image pull policy for latest version.
       run: |
