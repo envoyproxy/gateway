@@ -1,0 +1,87 @@
+- ignorePortInHostMatching: true
+  name: first-listener
+  virtualHosts:
+  - domains:
+    - '*'
+    name: first-listener/*
+    routes:
+    - match:
+        path: foo/bar
+      name: first-route
+      route:
+        cluster: first-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket
+      typedPerFilterConfig:
+        envoy.filters.http.admission_control:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.admission_control.v3.AdmissionControl
+          aggression:
+            defaultValue: 1
+          enabled:
+            defaultValue: true
+          maxRejectionProbability:
+            defaultValue:
+              value: 80
+          rpsThreshold:
+            defaultValue: 5
+          samplingWindow: 30s
+          srThreshold:
+            defaultValue:
+              value: 95
+          successCriteria:
+            httpCriteria:
+              httpSuccessStatus:
+              - end: 299
+                start: 200
+    - match:
+        path: example
+      name: second-route
+      route:
+        cluster: second-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket
+      typedPerFilterConfig:
+        envoy.filters.http.admission_control:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.admission_control.v3.AdmissionControl
+          aggression:
+            defaultValue: 2
+          enabled:
+            defaultValue: true
+          maxRejectionProbability:
+            defaultValue:
+              value: 95
+          rpsThreshold:
+            defaultValue: 10
+          samplingWindow: 60s
+          srThreshold:
+            defaultValue:
+              value: 80
+          successCriteria:
+            grpcCriteria:
+              grpcSuccessStatus:
+              - 0
+              - 1
+    - match:
+        path: test
+      name: third-route
+      route:
+        cluster: third-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket
+      typedPerFilterConfig:
+        envoy.filters.http.admission_control:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.admission_control.v3.AdmissionControl
+          aggression:
+            defaultValue: 1
+          enabled:
+            defaultValue: true
+          maxRejectionProbability:
+            defaultValue:
+              value: 95
+          rpsThreshold:
+            defaultValue: 1
+          samplingWindow: 60s
+          srThreshold:
+            defaultValue:
+              value: 95
+          successCriteria: {}
