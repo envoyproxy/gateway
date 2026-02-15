@@ -143,8 +143,7 @@ infraIR:
               clusterStatName: '%ROUTE_KIND%/%ROUTE_NAMESPACE%/%ROUTE_NAME%/%ROUTE_RULE_NAME%/%ROUTE_RULE_NUMBER%/%BACKEND_REFS%'
         status: {}
       listeners:
-      - address: null
-        name: envoy-gateway/gateway-1/http
+      - name: envoy-gateway/gateway-1/http
         ports:
         - containerPort: 10080
           name: http-80
