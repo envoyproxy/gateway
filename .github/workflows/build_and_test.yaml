@@ -328,7 +328,7 @@ jobs:
       run: make image.multiarch.setup
 
     - name: Build and Push EG Commit Image
-      if: github.event_name == 'push' && github.ref != 'refs/heads/main'
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
       # tag is set to the short SHA of the commit
       run: make image.push.multiarch PLATFORMS="linux_amd64 linux_arm64" IMAGE=envoyproxy/gateway-dev
 
