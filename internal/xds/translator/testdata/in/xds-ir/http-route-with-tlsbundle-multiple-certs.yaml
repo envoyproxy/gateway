@@ -2,7 +2,6 @@ http:
   - address: 0.0.0.0
     hostnames:
       - '*'
-    isHTTP2: false
     name: envoy-gateway/gateway-btls/http
     path:
       escapedSlashesAction: UnescapeAndRedirect
@@ -55,7 +54,6 @@ http:
   - address: 0.0.0.0
     hostnames:
       - 'example.com'
-    isHTTP2: false
     name: envoy-gateway/gateway-btls-2/http
     path:
       escapedSlashesAction: UnescapeAndRedirect
