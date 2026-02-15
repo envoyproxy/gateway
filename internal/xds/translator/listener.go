@@ -769,20 +769,15 @@ func addXdsTLSInspectorFilter(xdsListener *listenerv3.Listener, fingerprints []i
 		}
 	}
 
-	enableJA3 := false
-	enableJA4 := false
+	tlsInspector := &tls_inspectorv3.TlsInspector{}
+
 	for _, fingerprint := range fingerprints {
 		switch fingerprint {
 		case ir.TLSFingerprintTypeJA3:
-			enableJA3 = true
+			tlsInspector.EnableJa3Fingerprinting = &wrapperspb.BoolValue{Value: true}
 		case ir.TLSFingerprintTypeJA4:
-			enableJA4 = true
+			tlsInspector.EnableJa4Fingerprinting = &wrapperspb.BoolValue{Value: true}
 		}
-	}
-
-	tlsInspector := &tls_inspectorv3.TlsInspector{
-		EnableJa3Fingerprinting: &wrapperspb.BoolValue{Value: enableJA3},
-		EnableJa4Fingerprinting: &wrapperspb.BoolValue{Value: enableJA4},
 	}
 
 	tlsInspectorAny, err := proto.ToAnyWithValidation(tlsInspector)

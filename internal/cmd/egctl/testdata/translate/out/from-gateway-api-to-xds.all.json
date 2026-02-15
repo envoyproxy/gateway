@@ -1385,9 +1385,7 @@
                     {
                       "name": "envoy.filters.listener.tls_inspector",
                       "typedConfig": {
-                        "@type": "type.googleapis.com/envoy.extensions.filters.listener.tls_inspector.v3.TlsInspector",
-                        "enableJa3Fingerprinting": false,
-                        "enableJa4Fingerprinting": false
+                        "@type": "type.googleapis.com/envoy.extensions.filters.listener.tls_inspector.v3.TlsInspector"
                       }
                     }
                   ],

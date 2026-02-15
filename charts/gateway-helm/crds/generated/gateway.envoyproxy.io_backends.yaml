@@ -327,6 +327,9 @@ spec:
                     items:
                       description: TLSFingerprintType specifies the TLS client fingerprinting
                         mode.
+                      enum:
+                      - JA3
+                      - JA4
                       type: string
                     type: array
                   insecureSkipVerify:

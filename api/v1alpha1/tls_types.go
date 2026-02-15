@@ -139,6 +139,7 @@ const (
 )
 
 // TLSFingerprintType specifies the TLS client fingerprinting mode.
+// +kubebuilder:validation:Enum=JA3;JA4
 type TLSFingerprintType string
 
 const (
