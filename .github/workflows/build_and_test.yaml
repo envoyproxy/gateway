@@ -292,6 +292,16 @@ jobs:
     needs: [conformance-test, e2e-test]
     steps:
     - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
+      # We need to fetch tags so go binary will be built with the recent vX.Y.Z-rc.0 tag,
+      # which will help to avoid false positives in vulnerability scans(see https://github.com/envoyproxy/gateway/issues/8241)
+      # `fetch-tags: true` doesn't work: https://github.com/actions/checkout/issues/1471
+      # As a workaround `filter: tree:0` is used to create a treeless clone.
+      # See:
+      # https://github.com/actions/checkout/issues/1471#issuecomment-1755639487
+      # https://github.blog/open-source/git/get-up-to-speed-with-partial-clone-and-shallow-clone/
+      with:
+        fetch-depth: 0
+        filter: tree:0
     - uses: ./tools/github-actions/setup-deps
 
     - name: Download EG Binaries

@@ -66,14 +66,20 @@ jobs:
             echo "sha_short=$(git rev-parse --short HEAD)"
           } >> "$GITHUB_ENV"
 
+      - name: Build EG Multiarch Binaries
+        run: make build-multiarch
+
       - name: Login to DockerHub
         uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9  # v3.7.0
         with:
           username: ${{ vars.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_PASSWORD }}
-      - name: Retag and push existing gateway-dev image
-        run: |
-          skopeo copy --all docker://docker.io/envoyproxy/gateway-dev:${{ env.sha_short }} docker://docker.io/envoyproxy/gateway:${{ env.release_tag }}
+
+      - name: Setup Multiarch Environment
+        run: make image.multiarch.setup
+
+      - name: Build and Push EG Release Image
+        run: make image.push.multiarch PLATFORMS="linux_amd64 linux_arm64" IMAGE=envoyproxy/gateway TAG=${{ env.release_tag }}
 
       - name: Generate Release Artifacts
         run: IMAGE_PULL_POLICY=IfNotPresent make generate-artifacts IMAGE=envoyproxy/gateway TAG=${{ env.release_tag }} OUTPUT_DIR=release-artifacts
@@ -95,9 +101,8 @@ jobs:
         run: |
           cd release-artifacts && unzip benchmark_report.zip
 
-      - name: Build egctl multiarch binaries
+      - name: Package release binaries
         run: |
-          make build-multiarch
           tar -zcvf envoy-gateway_${{ env.release_tag }}_linux_amd64.tar.gz bin/linux/amd64/envoy-gateway
           tar -zcvf envoy-gateway_${{ env.release_tag }}_linux_arm64.tar.gz bin/linux/arm64/envoy-gateway
           tar -zcvf envoy-gateway_${{ env.release_tag }}_darwin_amd64.tar.gz bin/darwin/amd64/envoy-gateway
