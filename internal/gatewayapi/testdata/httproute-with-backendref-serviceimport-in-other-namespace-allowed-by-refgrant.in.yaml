@@ -1,0 +1,81 @@
+gateways:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: Gateway
+    metadata:
+      namespace: envoy-gateway
+      name: gateway-1
+    spec:
+      gatewayClassName: envoy-gateway-class
+      listeners:
+        - name: http
+          protocol: HTTP
+          port: 80
+          allowedRoutes:
+            namespaces:
+              from: All
+httpRoutes:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: default
+      name: httproute-1
+    spec:
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+      rules:
+        - matches:
+            - path:
+                type: Exact
+                value: "/exact"
+          backendRefs:
+            - group: multicluster.x-k8s.io
+              kind: ServiceImport
+              name: service-import-1
+              namespace: backends
+              port: 8080
+serviceImports:
+  - apiVersion: multicluster.x-k8s.io/v1alpha1
+    kind: ServiceImport
+    metadata:
+      namespace: backends
+      name: service-import-1
+    spec:
+      ips:
+        - 7.7.7.7
+      ports:
+        - port: 8080
+          name: http
+          protocol: TCP
+endpointSlices:
+  - apiVersion: discovery.k8s.io/v1
+    kind: EndpointSlice
+    metadata:
+      name: service-import-1
+      namespace: backends
+      labels:
+        multicluster.kubernetes.io/service-name: service-import-1
+    addressType: IPv4
+    ports:
+      - name: http
+        protocol: TCP
+        port: 8080
+    endpoints:
+      - addresses:
+          - "8.8.8.8"
+        conditions:
+          ready: true
+referenceGrants:
+  - apiVersion: gateway.networking.k8s.io/v1alpha2
+    kind: ReferenceGrant
+    metadata:
+      namespace: backends
+      name: referencegrant-1
+    spec:
+      from:
+        - group: gateway.networking.k8s.io
+          kind: HTTPRoute
+          namespace: default
+      to:
+        - group: multicluster.x-k8s.io
+          kind: ServiceImport

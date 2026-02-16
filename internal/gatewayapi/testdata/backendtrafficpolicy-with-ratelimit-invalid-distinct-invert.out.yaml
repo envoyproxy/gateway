@@ -1,0 +1,193 @@
+backendTrafficPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    name: policy-for-gateway
+    namespace: envoy-gateway
+  spec:
+    rateLimit:
+      global:
+        rules:
+        - clientSelectors:
+          - headers:
+            - invert: true
+              name: x-org-id
+              type: Distinct
+          limit:
+            requests: 10
+            unit: Hour
+      type: Global
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: 'RateLimit: unable to translate rateLimit.Invert is not applicable
+          for distinct header match type.'
+        reason: Invalid
+        status: "False"
+        type: Accepted
+      - lastTransitionTime: null
+        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    name: gateway
+    namespace: envoy-gateway
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - allowedRoutes:
+        namespaces:
+          from: All
+      name: http
+      port: 80
+      protocol: HTTP
+  status:
+    listeners:
+    - attachedRoutes: 1
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: http
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
+grpcRoutes:
+- apiVersion: gateway.networking.k8s.io/v1alpha2
+  kind: GRPCRoute
+  metadata:
+    name: grpcroute
+    namespace: default
+  spec:
+    parentRefs:
+    - name: gateway
+      namespace: envoy-gateway
+      sectionName: http
+    rules:
+    - backendRefs:
+      - name: service
+        port: 8080
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: 'Failed to process route rule 0 backendRef 0: service default/service
+          not found.'
+        reason: BackendNotFound
+        status: "False"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway
+        namespace: envoy-gateway
+        sectionName: http
+infraIR:
+  envoy-gateway/gateway:
+    proxy:
+      listeners:
+      - name: envoy-gateway/gateway/http
+        ports:
+        - containerPort: 10080
+          name: http-80
+          protocol: HTTP
+          servicePort: 80
+      metadata:
+        labels:
+          gateway.envoyproxy.io/owning-gateway-name: gateway
+          gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+        ownerReference:
+          kind: GatewayClass
+          name: envoy-gateway-class
+      name: envoy-gateway/gateway
+      namespace: envoy-gateway-system
+xdsIR:
+  envoy-gateway/gateway:
+    accessLog:
+      json:
+      - path: /dev/stdout
+    globalResources:
+      proxyServiceCluster:
+        metadata:
+          kind: Service
+          name: envoy-envoy-gateway-gateway-966d2c13
+          namespace: envoy-gateway-system
+          sectionName: "8080"
+        name: envoy-gateway/gateway
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            kind: Service
+            name: envoy-envoy-gateway-gateway-966d2c13
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway
+          protocol: TCP
+    http:
+    - address: 0.0.0.0
+      externalPort: 80
+      hostnames:
+      - '*'
+      isHTTP2: true
+      metadata:
+        kind: Gateway
+        name: gateway
+        namespace: envoy-gateway
+        sectionName: http
+      name: envoy-gateway/gateway/http
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
+      port: 10080
+      routes:
+      - directResponse:
+          statusCode: 500
+        hostname: '*'
+        isHTTP2: true
+        metadata:
+          kind: GRPCRoute
+          name: grpcroute
+          namespace: default
+        name: grpcroute/default/grpcroute/rule/0/match/-1/*
+    readyListener:
+      address: 0.0.0.0
+      ipFamily: IPv4
+      path: /ready
+      port: 19003

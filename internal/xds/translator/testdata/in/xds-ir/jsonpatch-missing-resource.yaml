@@ -1,0 +1,51 @@
+envoyPatchPolicies:
+- status:
+    ancestors:
+    - ancestorRef:
+        group: "gateway.networking.k8s.io"
+        kind: "Gateway"
+        namespace: "default"
+        name: "foobar"
+  name: "first-policy"
+  namespace: "default"
+  generation: 1
+  jsonPatches:
+  - type: "type.googleapis.com/envoy.config.listener.v3.Listener"
+    name: "non-existing-listener"
+    operation:
+      op: "add"
+      path: "/default_filter_chain/filters/0/typed_config/http_filters/0"
+      value:
+        name: "envoy.filters.http.ratelimit"
+        typed_config:
+          "@type": "type.googleapis.com/envoy.extensions.filters.http.ratelimit.v3.RateLimit"
+          domain: "eg-ratelimit"
+          failure_mode_deny: true
+          timeout: 1s
+          rate_limit_service:
+            grpc_service:
+              envoy_grpc:
+                cluster_name: rate-limit-cluster
+            transport_api_version: V3
+http:
+- name: "first-listener"
+  address: "::"
+  port: 10080
+  hostnames:
+  - "*"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  routes:
+  - name: "first-route"
+    hostname: "*"
+    headerMatches:
+    - name: user
+      exact: "jason"
+    destination:
+      name: "first-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "first-route-dest/backend/0"

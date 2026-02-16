@@ -1,0 +1,167 @@
+http:
+- name: "method-match-listener"
+  address: "::"
+  port: 10080
+  hostnames:
+  - "*"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  routes:
+  # Test 1: POST method match
+  - name: "route-method-post"
+    hostname: "*"
+    traffic:
+      rateLimit:
+        local:
+          default:
+            requests: 100
+            unit: Second
+          rules:
+          - methodMatches:
+            - exact: POST
+            limit:
+              requests: 20
+              unit: Second
+    pathMatch:
+      prefix: /
+    destination:
+      name: "post-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 8080
+        name: "post-dest/backend/0"
+  # Test 2: GET method match
+  - name: "route-method-get"
+    hostname: "*"
+    traffic:
+      rateLimit:
+        local:
+          default:
+            requests: 100
+            unit: Second
+          rules:
+          - methodMatches:
+            - exact: GET
+            limit:
+              requests: 200
+              unit: Second
+    pathMatch:
+      prefix: /data
+    destination:
+      name: "get-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 8080
+        name: "get-dest/backend/0"
+  # Test 3: PUT method match
+  - name: "route-method-put"
+    hostname: "*"
+    traffic:
+      rateLimit:
+        local:
+          default:
+            requests: 100
+            unit: Second
+          rules:
+          - methodMatches:
+            - exact: PUT
+            limit:
+              requests: 30
+              unit: Second
+    pathMatch:
+      prefix: /update
+    destination:
+      name: "put-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 8080
+        name: "put-dest/backend/0"
+  # Test 4: DELETE method match
+  - name: "route-method-delete"
+    hostname: "*"
+    traffic:
+      rateLimit:
+        local:
+          default:
+            requests: 100
+            unit: Second
+          rules:
+          - methodMatches:
+            - exact: DELETE
+            limit:
+              requests: 10
+              unit: Second
+    pathMatch:
+      prefix: /delete
+    destination:
+      name: "delete-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 8080
+        name: "delete-dest/backend/0"
+  # Test 5: Multiple method rules
+  - name: "route-multiple-methods"
+    hostname: "*"
+    traffic:
+      rateLimit:
+        local:
+          default:
+            requests: 100
+            unit: Second
+          rules:
+          - methodMatches:
+            - exact: POST
+            limit:
+              requests: 50
+              unit: Minute
+          - methodMatches:
+            - exact: PUT
+            limit:
+              requests: 40
+              unit: Minute
+          - methodMatches:
+            - exact: DELETE
+            limit:
+              requests: 20
+              unit: Minute
+    pathMatch:
+      prefix: /api/
+    destination:
+      name: "multi-method-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 8080
+        name: "multi-method-dest/backend/0"
+  # Test 6: Method with header match combination
+  - name: "route-method-and-header"
+    hostname: "*"
+    traffic:
+      rateLimit:
+        local:
+          default:
+            requests: 100
+            unit: Second
+          rules:
+          - headerMatches:
+            - name: x-api-key
+              exact: premium
+            methodMatches:
+            - exact: POST
+            limit:
+              requests: 1000
+              unit: Hour
+    pathMatch:
+      prefix: /premium/
+    destination:
+      name: "premium-post-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 8080
+        name: "premium-post-dest/backend/0"

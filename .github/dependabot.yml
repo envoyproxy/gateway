@@ -1,0 +1,81 @@
+# To get started with Dependabot version updates, you'll need to specify which
+# package ecosystems to update and where the package manifests are located.
+# Please see the documentation for all configuration options:
+# https://docs.github.com/github/administering-a-repository/configuration-options-for-dependency-updates
+
+version: 2
+updates:
+  - package-ecosystem: docker
+    directories:
+      - /tools/docker/envoy-gateway/
+      - /site
+    schedule:
+      interval: weekly
+  - package-ecosystem: github-actions
+    directories:
+      - /
+      - /tools/github-actions/setup-deps
+    schedule:
+      interval: weekly
+    ignore:
+      # skip to update retest, because it won't work with the latest version
+      - dependency-name: "envoyproxy/toolshed/gh-actions/retest"
+    groups:
+      actions:
+        patterns:
+          - "*"
+  - package-ecosystem: gomod
+    directories:
+      - "/"
+      - "examples/*"
+    schedule:
+      interval: weekly
+    ignore:
+      # Ignore cel-go, since it should be updated alongside k8s.io/apiserver
+      - dependency-name: "github.com/google/cel-go"
+      # Ignore github.com/docker/docker, since it should be updated alongside github.com/google/go-containerregistry
+      - dependency-name: "github.com/docker/docker"
+      # Ignore github.com/google/go-containerregistry, since it should be updated alongside github.com/replicatedhq/troubleshoot
+      - dependency-name: "github.com/google/go-containerregistry"
+      # Ignore k8s.io/apimachinery, since it should be updated alongside k8s.io/api
+      - dependency-name: "k8s.io/apimachinery"
+    groups:
+      gomod:
+        patterns:
+          - "github.com*"
+          - "go.opentelemetry.io*"
+          - "golang*"
+          - "golang.org*"
+          - "google*"
+          - "google.golang.org*"
+          - "fortio.org*"
+          - "gopkg.in*"
+          - "helm.sh*"
+          - "gomodules.xyz*"
+        exclude-patterns:
+          # Exclude envoyproxy/go-control-plane, since it needs more work to update
+          - "github.com/envoyproxy/go-control-plane*"
+      k8s.io:
+        patterns:
+          - "k8s.io/*"
+  - package-ecosystem: npm
+    directories:
+      - /site
+    schedule:
+      interval: weekly
+  - package-ecosystem: pip
+    directories:
+      - /tools/src/codespell
+      - /tools/src/sphinx-build
+      - /tools/src/yamllint
+    schedule:
+      interval: weekly
+  - package-ecosystem: "helm"
+    directories:
+      - "/charts/gateway-addons-helm"
+    schedule:
+      interval: "weekly"
+    groups:
+      helm:
+        patterns:
+          - "*"

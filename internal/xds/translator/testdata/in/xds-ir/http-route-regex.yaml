@@ -1,0 +1,27 @@
+http:
+- name: "first-listener"
+  address: "::"
+  port: 10080
+  hostnames:
+  - "*"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  routes:
+  - name: "regex-route"
+    hostname: "*"
+    pathMatch:
+      safeRegex: "/v1/.*"
+    headerMatches:
+    - name: re_header
+      safeRegex: ".*"
+    queryParamMatches:
+    - name: re_query
+      safeRegex: ".*"
+    destination:
+      name: "regex-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "regex-route-dest/backend/0"

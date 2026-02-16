@@ -1,0 +1,70 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: tracing-span-name
+  namespace: gateway-conformance-infra
+spec:
+  gatewayClassName: "{GATEWAY_CLASS_NAME}"
+  listeners:
+    - name: http
+      port: 80
+      protocol: HTTP
+      allowedRoutes:
+        namespaces:
+          from: All
+  infrastructure:
+    parametersRef:
+      group: gateway.envoyproxy.io
+      kind: EnvoyProxy
+      name: tracing-span-name
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: tracing-span-name
+  namespace: gateway-conformance-infra
+spec:
+  ipFamily: IPv4
+  logging:
+    level:
+      default: debug
+  telemetry:
+    tracing:
+      spanName:
+        client: "%REQUESTED_SERVER_NAME(HOST_FIRST:ORIG_OR_HOST)%%PATH(NQ:ORIG)%"
+        # Use HOST_FIRST to prefer :authority over x-envoy-original-host for span names
+        # because host/path could be re-written
+        server: "%REQUESTED_SERVER_NAME(HOST_FIRST:HOST)%%PATH(NQ:PATH)%"
+      provider:
+        samplingFraction:
+          number: 100
+          denominator: 100
+        type: Zipkin
+        backendRefs:
+          - name: otel-collector
+            namespace: monitoring
+            port: 9411
+        zipkin:
+          enable128BitTraceId: true
+      tags:
+        "provider": "zipkin"
+        "k8s.cluster.name": "envoy-gateway"
+        "k8s.pod.name": "%ENVIRONMENT(ENVOY_POD_NAME)%"
+        "k8s.namespace.name": "%ENVIRONMENT(ENVOY_POD_NAMESPACE)%"
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: tracing-span-name
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: tracing-span-name
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /span-name
+      backendRefs:
+        - name: infra-backend-v1
+          port: 8080

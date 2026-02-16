@@ -1,0 +1,99 @@
+gateways:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: Gateway
+    metadata:
+      namespace: envoy-gateway
+      name: gateway-1
+    spec:
+      gatewayClassName: envoy-gateway-class
+      listeners:
+        - name: http
+          protocol: HTTP
+          port: 80
+          allowedRoutes:
+            namespaces:
+              from: All
+httpRoutes:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: default
+      name: httproute-1
+    spec:
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+          sectionName: http
+      rules:
+        - matches:
+            - path:
+                value: "/"
+          backendRefs:
+            - group: multicluster.x-k8s.io
+              kind: ServiceImport
+              name: service-import-1
+              port: 8080
+            - group: multicluster.x-k8s.io
+              kind: ServiceImport
+              name: service-import-2
+              port: 8081
+serviceImports:
+  - apiVersion: multicluster.x-k8s.io/v1alpha1
+    kind: ServiceImport
+    metadata:
+      namespace: default
+      name: service-import-1
+    spec:
+      ips:
+        - 7.7.7.7
+      ports:
+        - port: 8080
+          name: http
+          protocol: TCP
+  - apiVersion: multicluster.x-k8s.io/v1alpha1
+    kind: ServiceImport
+    metadata:
+      namespace: default
+      name: service-import-2
+    spec:
+      ips:
+        - 8.8.8.8
+      ports:
+        - port: 8081
+          name: http
+          protocol: TCP
+endpointSlices:
+  - apiVersion: discovery.k8s.io/v1
+    kind: EndpointSlice
+    metadata:
+      name: service-import-1
+      namespace: default
+      labels:
+        multicluster.kubernetes.io/service-name: service-import-1
+    addressType: FQDN
+    ports:
+      - name: http
+        protocol: TCP
+        port: 8080
+    endpoints:
+      - addresses:
+          - "foo.bar"
+        conditions:
+          ready: true
+  - apiVersion: discovery.k8s.io/v1
+    kind: EndpointSlice
+    metadata:
+      name: service-import-2
+      namespace: default
+      labels:
+        multicluster.kubernetes.io/service-name: service-import-2
+    addressType: FQDN
+    ports:
+      - name: http
+        protocol: TCP
+        port: 8081
+    endpoints:
+      - addresses:
+          - "bar.foo"
+        conditions:
+          ready: true

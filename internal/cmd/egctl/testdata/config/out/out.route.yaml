@@ -1,0 +1,18 @@
+default:
+  eg:
+    '@type': type.googleapis.com/envoy.admin.v3.RoutesConfigDump
+    dynamicRouteConfigs:
+    - lastUpdated: "2023-02-23T09:05:38.448Z"
+      routeConfig:
+        '@type': type.googleapis.com/envoy.config.route.v3.RouteConfiguration
+        name: default-eg-http
+        virtualHosts:
+        - domains:
+          - www.example.com
+          name: default-eg-http
+          routes:
+          - match:
+              prefix: /
+            route:
+              cluster: default-backend-rule-0-match-0-www.example.com
+      versionInfo: cb1e51997a9c3aa6f4d920f39fd5bdbd966e9382b7b6bdf42efca8c22c6c3442

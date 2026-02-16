@@ -1,0 +1,171 @@
+// Copyright Envoy Gateway Authors
+// SPDX-License-Identifier: Apache-2.0
+// The full text of the Apache license is available in the LICENSE file at
+// the root of the repo.
+
+package kubernetes
+
+import (
+	"context"
+	"os"
+	"testing"
+
+	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/ptr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
+
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/envoygateway"
+	"github.com/envoyproxy/gateway/internal/envoygateway/config"
+	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/ratelimit"
+	"github.com/envoyproxy/gateway/internal/message"
+	testutil "github.com/envoyproxy/gateway/internal/utils/test"
+)
+
+func TestCreateOrUpdateRateLimitServiceAccount(t *testing.T) {
+	rl := &egv1a1.RateLimit{
+		Backend: egv1a1.RateLimitDatabaseBackend{
+			Type: egv1a1.RedisBackendType,
+			Redis: &egv1a1.RateLimitRedisSettings{
+				URL: "redis.redis.svc:6379",
+			},
+		},
+	}
+
+	testCases := []struct {
+		name    string
+		ns      string
+		current *corev1.ServiceAccount
+		want    *corev1.ServiceAccount
+	}{
+		{
+			name: "create-ratelimit-sa",
+			ns:   "envoy-gateway-system",
+			want: &corev1.ServiceAccount{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "ServiceAccount",
+					APIVersion: "v1",
+				},
+				AutomountServiceAccountToken: ptr.To(false),
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "envoy-gateway-system",
+					Name:      ratelimit.InfraName,
+					OwnerReferences: []metav1.OwnerReference{
+						{
+							Kind:       ratelimit.ResourceKindServiceAccount,
+							APIVersion: "v1",
+							Name:       "envoy-gateway",
+							UID:        "foo.bar",
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "ratelimit-sa-exists",
+			ns:   "envoy-gateway-system",
+			want: &corev1.ServiceAccount{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "ServiceAccount",
+					APIVersion: "v1",
+				},
+				AutomountServiceAccountToken: ptr.To(false),
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "envoy-gateway-system",
+					Name:      ratelimit.InfraName,
+					OwnerReferences: []metav1.OwnerReference{
+						{
+							Kind:       ratelimit.ResourceKindServiceAccount,
+							APIVersion: "v1",
+							Name:       "envoy-gateway",
+							UID:        "foo.bar",
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			var cli client.Client
+			if tc.current != nil {
+				cli = fakeclient.NewClientBuilder().
+					WithScheme(envoygateway.GetScheme()).
+					WithObjects(tc.current).
+					WithInterceptorFuncs(interceptorFunc).
+					Build()
+			} else {
+				cli = fakeclient.NewClientBuilder().
+					WithScheme(envoygateway.GetScheme()).
+					WithInterceptorFuncs(interceptorFunc).
+					Build()
+			}
+
+			cfg, err := config.New(os.Stdout, os.Stderr)
+			require.NoError(t, err)
+			cfg.ControllerNamespace = tc.ns
+
+			errorNotifier := message.RunnerErrorNotifier{RunnerName: t.Name(), RunnerErrors: &message.RunnerErrors{}}
+			kube := NewInfra(cli, cfg, errorNotifier)
+			kube.EnvoyGateway.RateLimit = rl
+
+			ownerReferenceUID := map[string]types.UID{
+				ratelimit.ResourceKindServiceAccount: "foo.bar",
+			}
+			r := ratelimit.NewResourceRender(kube.ControllerNamespace, kube.EnvoyGateway, ownerReferenceUID)
+
+			err = kube.createOrUpdateServiceAccount(context.Background(), r)
+			require.NoError(t, err)
+
+			actual := &corev1.ServiceAccount{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: kube.ControllerNamespace,
+					Name:      ratelimit.InfraName,
+				},
+			}
+			require.NoError(t, kube.Client.Get(context.Background(), client.ObjectKeyFromObject(actual), actual))
+
+			testutil.CmpResources(t, tc.want, actual)
+		})
+	}
+}
+
+func TestDeleteRateLimitServiceAccount(t *testing.T) {
+	rl := &egv1a1.RateLimit{
+		Backend: egv1a1.RateLimitDatabaseBackend{
+			Type: egv1a1.RedisBackendType,
+			Redis: &egv1a1.RateLimitRedisSettings{
+				URL: "redis.redis.svc:6379",
+			},
+		},
+	}
+
+	testCases := []struct {
+		name string
+	}{
+		{
+			name: "delete ratelimit service account",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			kube := newTestInfra(t)
+
+			kube.EnvoyGateway.RateLimit = rl
+
+			r := ratelimit.NewResourceRender(kube.ControllerNamespace, kube.EnvoyGateway, nil)
+			err := kube.createOrUpdateServiceAccount(context.Background(), r)
+			require.NoError(t, err)
+
+			err = kube.deleteServiceAccount(context.Background(), r)
+			require.NoError(t, err)
+		})
+	}
+}

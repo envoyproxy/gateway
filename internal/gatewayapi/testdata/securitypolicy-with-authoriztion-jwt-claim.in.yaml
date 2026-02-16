@@ -1,0 +1,74 @@
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-1
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: All
+httpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-1
+  spec:
+    hostnames:
+    - www.example.com
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: "/foo"
+      backendRefs:
+      - name: service-1
+        port: 8080
+securityPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: policy-for-gateway  # This policy should attach httproute-2
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-1
+    jwt:
+      providers:
+      - name: example1
+        issuer: https://two.example.com
+        audiences:
+        - two.foo.com
+        remoteJWKS:
+          uri: https://two.example.com/jwt/public-key/jwks.json
+    authorization:
+      defaultAction: Deny
+      rules:
+      - name: "allow-jwt-claim"
+        action: Deny
+        principal:
+          jwt:
+            provider: example1
+            scopes:
+            - "foo"
+            - "bar"
+            claims:
+            - name: "sub"
+              values:
+              - "1234567890"
+            - name: "roles"
+              valueType: "StringArray"
+              values:
+              - "admin"
+              - "superuser"

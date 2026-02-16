@@ -1,0 +1,80 @@
+- ignorePortInHostMatching: true
+  name: first-listener
+  virtualHosts:
+  - domains:
+    - example.com
+    name: first-listener/example_com
+    routes:
+    - match:
+        pathSeparatedPrefix: /v1/example
+        queryParameters:
+        - name: debug
+          stringMatch:
+            exact: "yes"
+      name: envoy-gateway/httproute-2/rule/0/match/0/example.com
+      route:
+        cluster: first-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket
+    - match:
+        pathSeparatedPrefix: /v1/example
+      name: envoy-gateway/httproute-3/rule/0/match/0/example.com
+      route:
+        cluster: second-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket
+  - domains:
+    - example.net
+    name: first-listener/example_net
+    routes:
+    - match:
+        headers:
+        - name: version
+          stringMatch:
+            exact: one
+        pathSeparatedPrefix: /v1/status
+      name: envoy-gateway/httproute-4/rule/0/match/0/example.net
+      route:
+        cluster: third-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket
+    - match:
+        pathSeparatedPrefix: /v1/status
+      name: envoy-gateway/httproute-5/rule/0/match/0/example.net
+      route:
+        cluster: fourth-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket
+  - domains:
+    - '*.com'
+    name: first-listener/*_com
+    routes:
+    - match:
+        pathSeparatedPrefix: /foo
+      name: envoy-gateway/httproute-1/rule/0/match/0/*.com
+      route:
+        cluster: fifth-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket
+  - domains:
+    - '*.net'
+    name: first-listener/*_net
+    routes:
+    - match:
+        pathSeparatedPrefix: /foo
+      name: envoy-gateway/httproute-1/rule/0/match/0/*.net
+      route:
+        cluster: sixth-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket
+  - domains:
+    - '*'
+    name: first-listener/*
+    routes:
+    - match:
+        prefix: /
+      name: envoy-gateway/httproute-1/rule/0/match/0/*
+      route:
+        cluster: seventh-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket

@@ -1,0 +1,21 @@
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyGateway
+gateway:
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller
+provider:
+  type: Kubernetes
+  kubernetes:
+    watch:
+      type: NamespaceSelector
+      namespaceSelector:
+        matchLabels:
+          label-a: foo
+        matchExpressions:
+          - key: tier
+            operator: In
+            values:
+              - cache
+          - key: environment
+            operator: NotIn
+            values:
+              - dev

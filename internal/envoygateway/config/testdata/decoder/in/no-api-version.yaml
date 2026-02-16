@@ -1,0 +1,3 @@
+kind: EnvoyGateway
+provider:
+  type: Kubernetes

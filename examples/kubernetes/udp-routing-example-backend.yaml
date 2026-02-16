@@ -1,0 +1,62 @@
+# This file contains the CoreDNS example for UDPRoute testing.
+apiVersion: v1
+kind: Service
+metadata:
+  name: coredns
+  namespace: default
+  labels:
+    app: coredns
+spec:
+  ports:
+    - name: udp-dns
+      port: 53
+      protocol: UDP
+      targetPort: 53
+  selector:
+    app: coredns
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: coredns
+  labels:
+    app: coredns
+spec:
+  selector:
+    matchLabels:
+      app: coredns
+  template:
+    metadata:
+      labels:
+        app: coredns
+    spec:
+      containers:
+        - args:
+            - -conf
+            - /root/Corefile
+          image: coredns/coredns
+          name: coredns
+          volumeMounts:
+            - mountPath: /root
+              name: conf
+      volumes:
+        - configMap:
+            defaultMode: 420
+            name: coredns
+          name: conf
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: coredns
+data:
+  Corefile: |
+    .:53 {
+        forward . 8.8.8.8 9.9.9.9
+        log
+        errors
+    }
+
+    foo.bar.com:53 {
+      whoami
+    }

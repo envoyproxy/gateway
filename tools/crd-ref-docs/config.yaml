@@ -1,0 +1,36 @@
+processor:
+  # RE2 regular expressions describing types that should be excluded from the generated documentation.
+  ignoreTypes:
+    - "(.+)List$"
+  # RE2 regular expressions describing type fields that should be excluded from the generated documentation.
+  ignoreFields:
+    - "TypeMeta$"
+  customMarkers:
+    - name: "notImplementedHide"
+      target: "field"
+
+render:
+  # Version of Kubernetes to use when generating links to Kubernetes API documentation.
+  kubernetesVersion: 1.29
+  knownTypes:
+    - name: BackendObjectReference
+      package: sigs.k8s.io/gateway-api/apis/v1
+      link: https://gateway-api.sigs.k8s.io/reference/1.4/spec/#backendobjectreference
+    - name: SecretObjectReference
+      package: sigs.k8s.io/gateway-api/apis/v1
+      link: https://gateway-api.sigs.k8s.io/reference/1.4/spec/#secretobjectreference
+    - name: LocalPolicyTargetReferenceWithSectionName
+      package: sigs.k8s.io/gateway-api/apis/v1alpha2
+      link: https://gateway-api.sigs.k8s.io/reference/1.4/spec/#localpolicytargetreferencewithsectionname
+    - name: LocalPolicyTargetReference
+      package: sigs.k8s.io/gateway-api/apis/v1
+      link: https://gateway-api.sigs.k8s.io/reference/1.4/spec/#localpolicytargetreference
+    - name: Duration
+      package: sigs.k8s.io/gateway-api/apis/v1
+      link: https://gateway-api.sigs.k8s.io/reference/1.4/spec/#duration
+    - name: PolicyStatus
+      package: sigs.k8s.io/gateway-api/apis/v1
+      link: https://gateway-api.sigs.k8s.io/reference/1.4/spec/#policystatus
+    - name: Fraction
+      package: sigs.k8s.io/gateway-api/apis/v1
+      link: https://gateway-api.sigs.k8s.io/reference/1.4/spec/#fraction

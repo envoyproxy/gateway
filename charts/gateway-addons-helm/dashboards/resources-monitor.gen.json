@@ -1,0 +1,249 @@
+{
+   "description": "Memory and CPU Usage Monitor for Envoy Gateway and Envoy Proxy.\n",
+   "graphTooltip": 1,
+   "panels": [
+      {
+         "collapsed": false,
+         "gridPos": {
+            "h": 1,
+            "w": 24,
+            "x": 0,
+            "y": 0
+         },
+         "id": 1,
+         "panels": [ ],
+         "title": "Envoy Gateway",
+         "type": "row"
+      },
+      {
+         "datasource": {
+            "type": "datasource",
+            "uid": "-- Mixed --"
+         },
+         "fieldConfig": {
+            "defaults": {
+               "custom": {
+                  "fillOpacity": 10,
+                  "scaleDistribution": {
+                     "log": 10,
+                     "type": "log"
+                  },
+                  "showPoints": "never"
+               },
+               "unit": "s"
+            }
+         },
+         "gridPos": {
+            "h": 8,
+            "w": 8,
+            "x": 0,
+            "y": 1
+         },
+         "id": 2,
+         "interval": "1m",
+         "options": {
+            "legend": {
+               "calcs": [
+                  "lastNotNull",
+                  "max"
+               ],
+               "displayMode": "table"
+            }
+         },
+         "pluginVersion": "v11.0.0",
+         "targets": [
+            {
+               "datasource": {
+                  "type": "prometheus",
+                  "uid": "$datasource"
+               },
+               "expr": "sum by (namespace) (\n    rate(\n        container_cpu_usage_seconds_total{\n            container=\"envoy-gateway\"\n        }\n    [$__rate_interval])\n)\n",
+               "intervalFactor": 2,
+               "legendFormat": "{{namespace}}\n"
+            }
+         ],
+         "title": "CPU Usage",
+         "type": "timeseries"
+      },
+      {
+         "datasource": {
+            "type": "datasource",
+            "uid": "-- Mixed --"
+         },
+         "fieldConfig": {
+            "defaults": {
+               "custom": {
+                  "fillOpacity": 10,
+                  "scaleDistribution": {
+                     "log": 2,
+                     "type": "log"
+                  },
+                  "showPoints": "never"
+               },
+               "unit": "bytes"
+            }
+         },
+         "gridPos": {
+            "h": 8,
+            "w": 8,
+            "x": 8,
+            "y": 1
+         },
+         "id": 3,
+         "interval": "1m",
+         "options": {
+            "legend": {
+               "calcs": [
+                  "lastNotNull",
+                  "max"
+               ],
+               "displayMode": "table"
+            }
+         },
+         "pluginVersion": "v11.0.0",
+         "targets": [
+            {
+               "datasource": {
+                  "type": "prometheus",
+                  "uid": "$datasource"
+               },
+               "expr": "sum by (namespace) (\n  container_memory_working_set_bytes{container=\"envoy-gateway\"}\n)\n",
+               "intervalFactor": 2,
+               "legendFormat": "{{namespace}}\n"
+            }
+         ],
+         "title": "Memory Usage",
+         "type": "timeseries"
+      },
+      {
+         "collapsed": false,
+         "gridPos": {
+            "h": 1,
+            "w": 24,
+            "x": 0,
+            "y": 9
+         },
+         "id": 4,
+         "panels": [ ],
+         "title": "Envoy Proxy",
+         "type": "row"
+      },
+      {
+         "datasource": {
+            "type": "datasource",
+            "uid": "-- Mixed --"
+         },
+         "fieldConfig": {
+            "defaults": {
+               "custom": {
+                  "fillOpacity": 10,
+                  "scaleDistribution": {
+                     "log": 10,
+                     "type": "log"
+                  },
+                  "showPoints": "never"
+               },
+               "unit": "s"
+            }
+         },
+         "gridPos": {
+            "h": 8,
+            "w": 8,
+            "x": 0,
+            "y": 10
+         },
+         "id": 5,
+         "interval": "1m",
+         "options": {
+            "legend": {
+               "calcs": [
+                  "lastNotNull",
+                  "max"
+               ],
+               "displayMode": "table"
+            }
+         },
+         "pluginVersion": "v11.0.0",
+         "targets": [
+            {
+               "datasource": {
+                  "type": "prometheus",
+                  "uid": "$datasource"
+               },
+               "expr": "sum by (pod) (\n    rate(\n        container_cpu_usage_seconds_total{\n            container=\"envoy\"\n        }\n    [$__rate_interval])\n)\n",
+               "intervalFactor": 2,
+               "legendFormat": "{{pod}}\n"
+            }
+         ],
+         "title": "CPU Usage",
+         "type": "timeseries"
+      },
+      {
+         "datasource": {
+            "type": "datasource",
+            "uid": "-- Mixed --"
+         },
+         "fieldConfig": {
+            "defaults": {
+               "custom": {
+                  "fillOpacity": 10,
+                  "scaleDistribution": {
+                     "log": 2,
+                     "type": "log"
+                  },
+                  "showPoints": "never"
+               },
+               "unit": "bytes"
+            }
+         },
+         "gridPos": {
+            "h": 8,
+            "w": 8,
+            "x": 8,
+            "y": 10
+         },
+         "id": 6,
+         "interval": "1m",
+         "options": {
+            "legend": {
+               "calcs": [
+                  "lastNotNull",
+                  "max"
+               ],
+               "displayMode": "table"
+            }
+         },
+         "pluginVersion": "v11.0.0",
+         "targets": [
+            {
+               "datasource": {
+                  "type": "prometheus",
+                  "uid": "$datasource"
+               },
+               "expr": "sum by (pod) (\n  container_memory_working_set_bytes{container=\"envoy\"}\n)\n",
+               "intervalFactor": 2,
+               "legendFormat": "{{pod}}\n"
+            }
+         ],
+         "title": "Memory Usage",
+         "type": "timeseries"
+      }
+   ],
+   "schemaVersion": 39,
+   "templating": {
+      "list": [
+         {
+            "name": "datasource",
+            "query": "prometheus",
+            "type": "datasource"
+         }
+      ]
+   },
+   "time": {
+      "from": "now-6h",
+      "to": "now"
+   },
+   "timezone": "utc",
+   "title": "Resources Monitor",
+   "uid": "f7aeb41676b7865cf31ae49691325f91"
+}

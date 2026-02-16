@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "extension-server.fullname" . }}
+  labels:
+    {{- include "extension-server.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - port: {{ .Values.service.port }}
+      targetPort: 5005
+      protocol: TCP
+      name: extserver
+  selector:
+    {{- include "extension-server.selectorLabels" . | nindent 4 }}

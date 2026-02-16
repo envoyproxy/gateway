@@ -1,0 +1,74 @@
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: jwt-example
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: http-ratelimit-based-jwt-claims
+  jwt:
+    providers:
+    - name: example
+      remoteJWKS:
+        uri: http://static-file-server.gateway-conformance-infra/jwt/jwks.json
+      claimToHeaders:
+      - claim: name
+        header: x-claim-name
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: ratelimit-specific-user
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: http-ratelimit-based-jwt-claims
+  rateLimit:
+    type: Global
+    global:
+      rules:
+      - clientSelectors:
+        - headers:
+          - name: x-claim-name
+            value: John Doe
+        limit:
+          requests: 3
+          unit: Hour
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-ratelimit-based-jwt-claims
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+  - name: same-namespace
+  rules:
+  - backendRefs:
+    - name: infra-backend-v1
+      port: 8080
+    matches:
+    - path:
+        type: PathPrefix
+        value: /foo
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-no-ratelimit
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+  - name: same-namespace
+  rules:
+  - backendRefs:
+    - name: infra-backend-v1
+      port: 8080
+    matches:
+    - path:
+        type: PathPrefix
+        value: /bar

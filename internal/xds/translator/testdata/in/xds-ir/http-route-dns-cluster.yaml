@@ -1,0 +1,27 @@
+http:
+- name: "first-listener"
+  address: "::"
+  port: 10080
+  hostnames:
+  - "*"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  routes:
+  - name: "first-route"
+    hostname: "*"
+    pathMatch:
+      prefix: /
+    queryParamMatches:
+    - exact: "yes"
+      name: debug
+    destination:
+      name: "first-route-dest"
+      settings:
+      - endpoints:
+        - host: "foo.bar"
+          port: 50000
+        - host: "bar.foo"
+          port: 50001
+        addressType: FQDN
+        name: "first-route-dest/backend/0"

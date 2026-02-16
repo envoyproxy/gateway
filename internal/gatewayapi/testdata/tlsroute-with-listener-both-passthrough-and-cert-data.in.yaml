@@ -1,0 +1,44 @@
+gateways:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: Gateway
+    metadata:
+      namespace: envoy-gateway
+      name: gateway-1
+    spec:
+      gatewayClassName: envoy-gateway-class
+      listeners:
+        - name: tls
+          protocol: TLS
+          hostname: foo.com
+          tls:
+            mode: Passthrough
+            certificateRefs:
+              - name: tls-secret-1
+          port: 90
+          allowedRoutes:
+            namespaces:
+              from: All
+tlsRoutes:
+  - apiVersion: gateway.networking.k8s.io/v1alpha2
+    kind: TLSRoute
+    metadata:
+      namespace: default
+      name: tlsroute-1
+    spec:
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+      rules:
+        - backendRefs:
+            - name: service-1
+              port: 8080
+secrets:
+  - apiVersion: v1
+    kind: Secret
+    metadata:
+      namespace: envoy-gateway
+      name: tls-secret-1
+    type: kubernetes.io/tls
+    data:
+      tls.crt: Zm9vCg==
+      tls.key: YmFyCg==

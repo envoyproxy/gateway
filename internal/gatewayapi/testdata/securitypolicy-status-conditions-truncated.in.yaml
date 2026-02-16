@@ -1,0 +1,388 @@
+securityPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: target-gateway-with-route-level-override-truncated-ancestors
+  spec:
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-9
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-2
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: target-httproute-with-attachment-conflict-truncated-ancestors
+  spec:
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-2
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: target-httproute-with-accepted-truncated-ancestors
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-1
+httpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1beta1
+  kind: HTTPRoute
+  metadata:
+    namespace: envoy-gateway
+    name: httproute-1
+  spec:
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+    - namespace: envoy-gateway
+      name: gateway-2
+    - namespace: envoy-gateway
+      name: gateway-3
+    - namespace: envoy-gateway
+      name: gateway-4
+    - namespace: envoy-gateway
+      name: gateway-5
+    - namespace: envoy-gateway
+      name: gateway-6
+    - namespace: envoy-gateway
+      name: gateway-7
+    - namespace: envoy-gateway
+      name: gateway-8
+    - namespace: envoy-gateway
+      name: gateway-9
+    - namespace: envoy-gateway
+      name: gateway-10
+    - namespace: envoy-gateway
+      name: gateway-11
+    - namespace: envoy-gateway
+      name: gateway-12
+    - namespace: envoy-gateway
+      name: gateway-13
+    - namespace: envoy-gateway
+      name: gateway-14
+    - namespace: envoy-gateway
+      name: gateway-15
+    - namespace: envoy-gateway
+      name: gateway-16
+    - namespace: envoy-gateway
+      name: gateway-17
+    - namespace: envoy-gateway
+      name: gateway-18
+    rules:
+    - matches:
+      - path:
+          value: "/"
+      backendRefs:
+      - name: service-1
+        port: 8080
+- apiVersion: gateway.networking.k8s.io/v1beta1
+  kind: HTTPRoute
+  metadata:
+    namespace: envoy-gateway
+    name: httproute-2
+  spec:
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+    - namespace: envoy-gateway
+      name: gateway-2
+    - namespace: envoy-gateway
+      name: gateway-3
+    - namespace: envoy-gateway
+      name: gateway-4
+    - namespace: envoy-gateway
+      name: gateway-5
+    - namespace: envoy-gateway
+      name: gateway-6
+    - namespace: envoy-gateway
+      name: gateway-7
+    - namespace: envoy-gateway
+      name: gateway-8
+    - namespace: envoy-gateway
+      name: gateway-9
+    - namespace: envoy-gateway
+      name: gateway-10
+    - namespace: envoy-gateway
+      name: gateway-11
+    - namespace: envoy-gateway
+      name: gateway-12
+    - namespace: envoy-gateway
+      name: gateway-13
+    - namespace: envoy-gateway
+      name: gateway-14
+    - namespace: envoy-gateway
+      name: gateway-15
+    - namespace: envoy-gateway
+      name: gateway-16
+    - namespace: envoy-gateway
+      name: gateway-17
+    - namespace: envoy-gateway
+      name: gateway-18
+    rules:
+    - matches:
+      - path:
+          value: "/route-2"
+      backendRefs:
+      - name: service-1
+        port: 8080
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1beta1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-1
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: Same
+- apiVersion: gateway.networking.k8s.io/v1beta1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-2
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: Same
+- apiVersion: gateway.networking.k8s.io/v1beta1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-3
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: Same
+- apiVersion: gateway.networking.k8s.io/v1beta1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-4
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: Same
+- apiVersion: gateway.networking.k8s.io/v1beta1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-5
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: Same
+- apiVersion: gateway.networking.k8s.io/v1beta1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-6
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: Same
+- apiVersion: gateway.networking.k8s.io/v1beta1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-7
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: Same
+- apiVersion: gateway.networking.k8s.io/v1beta1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-8
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: Same
+- apiVersion: gateway.networking.k8s.io/v1beta1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-9
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: Same
+- apiVersion: gateway.networking.k8s.io/v1beta1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-10
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: Same
+- apiVersion: gateway.networking.k8s.io/v1beta1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-11
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: Same
+- apiVersion: gateway.networking.k8s.io/v1beta1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-12
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: Same
+- apiVersion: gateway.networking.k8s.io/v1beta1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-13
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: Same
+- apiVersion: gateway.networking.k8s.io/v1beta1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-14
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: Same
+- apiVersion: gateway.networking.k8s.io/v1beta1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-15
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: Same
+- apiVersion: gateway.networking.k8s.io/v1beta1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-16
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: Same
+- apiVersion: gateway.networking.k8s.io/v1beta1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-17
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: Same
+- apiVersion: gateway.networking.k8s.io/v1beta1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-18
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: Same

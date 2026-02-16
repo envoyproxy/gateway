@@ -1,0 +1,41 @@
+backends:
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: Backend
+    metadata:
+      name: backend-fqdn
+      namespace: default
+    spec:
+      endpoints:
+        - fqdn:
+            hostname: '*.foo.com'
+            port: 3000
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: Backend
+    metadata:
+      name: backend-fqdn
+      namespace: default
+    spec:
+      endpoints:
+        - fqdn:
+            hostname: 'localhost'
+            port: 3000
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: Backend
+    metadata:
+      name: backend-fqdn
+      namespace: default
+    spec:
+      endpoints:
+        - ip:
+            address: '127.0.0.3'
+            port: 3000
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: Backend
+    metadata:
+      name: backend-ip
+      namespace: default
+    spec:
+      endpoints:
+        - ip:
+            address: example.com
+            port: 3001

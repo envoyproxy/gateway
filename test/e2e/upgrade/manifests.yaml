@@ -1,0 +1,126 @@
+# Adapted from https://github.com/kubernetes-sigs/gateway-api/blob/main/conformance/base/manifests.yaml
+# This file contains limited base resources that are required for upgrade tests
+kind: GatewayClass
+apiVersion: gateway.networking.k8s.io/v1
+metadata:
+  name: upgrade
+spec:
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller
+  parametersRef:
+    group: gateway.envoyproxy.io
+    kind: EnvoyProxy
+    name: upgrade-config
+    namespace: envoy-gateway-system
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: upgrade-config
+  namespace: envoy-gateway-system
+spec:
+  ipFamily: IPv4
+  provider:
+    type: Kubernetes
+    kubernetes:
+      envoyDeployment:
+        replicas: 2
+        patch:
+          type: StrategicMerge
+          value:
+            spec:
+              template:
+                spec:
+                  containers:
+                    - name: envoy
+                      readinessProbe:
+                        initialDelaySeconds: 5
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: gateway-conformance-infra
+  labels:
+    gateway-conformance: infra
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: gateway-upgrade-infra
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: gateway-conformance-app-backend
+  labels:
+    gateway-conformance: backend
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: gateway-conformance-web-backend
+  labels:
+    gateway-conformance: backend
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: ha-gateway
+  namespace: gateway-upgrade-infra
+spec:
+  gatewayClassName: upgrade
+  listeners:
+    - allowedRoutes:
+        namespaces:
+          from: Same
+      name: http1
+      port: 80
+      protocol: HTTP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: infra-backend
+  namespace: gateway-upgrade-infra
+spec:
+  selector:
+    app: infra-backend
+  ports:
+    - protocol: TCP
+      port: 8080
+      targetPort: 3000
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: infra-backend
+  namespace: gateway-upgrade-infra
+  labels:
+    app: infra-backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: infra-backend
+  template:
+    metadata:
+      labels:
+        app: infra-backend
+    spec:
+      containers:
+        - name: infra-backend
+          # From https://github.com/kubernetes-sigs/gateway-api/blob/main/conformance/echo-basic/echo-basic.go
+          image: gcr.io/k8s-staging-gateway-api/echo-basic:v20231214-v1.0.0-140-gf544a46e
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: SERVICE_NAME
+              value: infra-backend
+          resources:
+            requests:
+              cpu: 10m

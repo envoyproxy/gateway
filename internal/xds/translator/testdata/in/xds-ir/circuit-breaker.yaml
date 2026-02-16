@@ -1,0 +1,28 @@
+http:
+- name: "first-listener"
+  address: "::"
+  port: 10080
+  hostnames:
+  - "*"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  routes:
+  - name: "first-route"
+    hostname: "*"
+    traffic:
+      circuitBreaker:
+        maxConnections: 1
+        maxPendingRequests: 1
+        maxParallelRequests: 1
+        maxParallelRetries: 2
+        maxRequestsPerConnection: 10
+        perEndpoint:
+          maxConnections: 1
+    destination:
+      name: "first-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "first-route-dest/backend/0"

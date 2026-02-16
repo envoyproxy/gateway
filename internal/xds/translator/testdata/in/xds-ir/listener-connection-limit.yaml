@@ -1,0 +1,104 @@
+http:
+- name: "first-listener"
+  address: "::"
+  port: 10080
+  hostnames:
+  - "foo.com"
+  connection: {}
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  routes:
+  - name: "first-route"
+    hostname: "*"
+    destination:
+      name: "first-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "first-route-dest/backend/0"
+- name: "second-listener"
+  address: "::"
+  port: 10081
+  hostnames:
+  - "foo.net"
+  connection:
+    limit:
+      value: 5
+      maxConnectionDuration: 300s
+      maxRequestsPerConnection: 100
+      maxStreamDuration: 200s
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  routes:
+  - name: "second-route"
+    hostname: "*"
+    destination:
+      name: "second-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "second-route-dest/backend/0"
+- name: "third-listener"
+  address: "::"
+  port: 10082
+  hostnames:
+  - "foo.io"
+  connection:
+    limit:
+      value: 5
+      maxConnectionDuration: 300s
+      maxRequestsPerConnection: 100
+      maxStreamDuration: 200s
+  http1:
+    disableSafeMaxConnectionDuration: true
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  routes:
+  - name: "third-route"
+    hostname: "*"
+    destination:
+      name: "third-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "third-route-dest/backend/0"
+tcp:
+- name: "fourth-listener"
+  address: "::"
+  port: 10083
+  connection:
+    limit:
+      value: 3
+  routes:
+  - tls:
+      inspector:
+        snis:
+        - bar.com
+    destination:
+      name: "tls-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "tls-route-dest/backend/0"
+- name: "fifth-listener"
+  address: "::"
+  connection:
+    limit:
+      value: 10
+      closeDelay: 3s
+  port: 10084
+  routes:
+  - destination:
+      name: "tcp-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "tcp-route-dest/backend/0"

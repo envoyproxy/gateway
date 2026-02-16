@@ -1,0 +1,180 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: merged-eg
+spec:
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller
+  parametersRef:
+    group: gateway.envoyproxy.io
+    kind: EnvoyProxy
+    name: custom-proxy-config
+    namespace: envoy-gateway-system
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: custom-proxy-config
+  namespace: envoy-gateway-system
+spec:
+  mergeGateways: true
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: merged-backend
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: merged-backend
+  labels:
+    app: merged-backend
+    service: merged-backend
+spec:
+  ports:
+    - name: http
+      port: 3000
+      targetPort: 3000
+  selector:
+    app: merged-backend
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: merged-backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: merged-backend
+      version: v1
+  template:
+    metadata:
+      labels:
+        app: merged-backend
+        version: v1
+    spec:
+      serviceAccountName: merged-backend
+      containers:
+        - image: gcr.io/k8s-staging-gateway-api/echo-basic:v20231214-v1.0.0-140-gf544a46e
+          imagePullPolicy: IfNotPresent
+          name: merged-backend
+          ports:
+            - containerPort: 3000
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: merged-eg-1
+  namespace: default
+spec:
+  gatewayClassName: merged-eg
+  listeners:
+    - allowedRoutes:
+        namespaces:
+          from: Same
+      name: http
+      port: 8080
+      protocol: HTTP
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: merged-eg-2
+  namespace: default
+spec:
+  gatewayClassName: merged-eg
+  listeners:
+    - allowedRoutes:
+        namespaces:
+          from: Same
+      name: http
+      port: 8081
+      protocol: HTTP
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: merged-eg-3
+  namespace: default
+spec:
+  gatewayClassName: merged-eg
+  listeners:
+    - allowedRoutes:
+        namespaces:
+          from: Same
+      name: http
+      port: 8082
+      protocol: HTTP
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: hostname1-route
+spec:
+  parentRefs:
+    - name: merged-eg-1
+  hostnames:
+    - "www.merged1.com"
+  rules:
+    - backendRefs:
+        - group: ""
+          kind: Service
+          name: backend
+          port: 3000
+          weight: 1
+      matches:
+        - path:
+            type: PathPrefix
+            value: /example
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: hostname2-route
+spec:
+  parentRefs:
+    - name: merged-eg-2
+  hostnames:
+    - "www.merged2.com"
+  rules:
+    - backendRefs:
+        - group: ""
+          kind: Service
+          name: backend
+          port: 3000
+          weight: 1
+      matches:
+        - path:
+            type: PathPrefix
+            value: /example2
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: hostname3-route
+spec:
+  parentRefs:
+    - name: merged-eg-3
+  hostnames:
+    - "www.merged3.com"
+  rules:
+    - backendRefs:
+        - group: ""
+          kind: Service
+          name: backend
+          port: 3000
+          weight: 1
+      matches:
+        - path:
+            type: PathPrefix
+            value: /example3

@@ -1,0 +1,69 @@
+name: first-listener
+domain: first-listener
+descriptors:
+  - key: first-route
+    value: first-route
+    rate_limit: null
+    descriptors:
+      - key: rule-0-match-0
+        value: rule-0-match-0
+        rate_limit:
+          requests_per_unit: 5
+          unit: SECOND
+          unlimited: false
+          name: ""
+          replaces: []
+        descriptors: []
+        shadow_mode: false
+        detailed_metric: false
+      - key: rule-1-match-0
+        value: rule-1-match-0
+        rate_limit:
+          requests_per_unit: 5
+          unit: SECOND
+          unlimited: false
+          name: ""
+          replaces: []
+        descriptors: []
+        shadow_mode: false
+        detailed_metric: false
+    shadow_mode: false
+    detailed_metric: false
+---
+name: test-namespace/test-policy-1
+domain: test-namespace/test-policy-1
+descriptors:
+  - key: test-namespace/test-policy-1/rule/0
+    value: test-namespace/test-policy-1/rule/0
+    rate_limit: null
+    descriptors:
+      - key: rule-0-match-0
+        value: rule-0-match-0
+        rate_limit:
+          requests_per_unit: 5
+          unit: SECOND
+          unlimited: false
+          name: ""
+          replaces: []
+        descriptors: []
+        shadow_mode: false
+        detailed_metric: false
+    shadow_mode: false
+    detailed_metric: false
+  - key: test-namespace/test-policy-1/rule/2
+    value: test-namespace/test-policy-1/rule/2
+    rate_limit: null
+    descriptors:
+      - key: rule-1-match-0
+        value: rule-1-match-0
+        rate_limit:
+          requests_per_unit: 5
+          unit: SECOND
+          unlimited: false
+          name: ""
+          replaces: []
+        descriptors: []
+        shadow_mode: false
+        detailed_metric: false
+    shadow_mode: false
+    detailed_metric: false

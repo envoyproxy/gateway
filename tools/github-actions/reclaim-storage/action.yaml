@@ -1,0 +1,8 @@
+name: reclaim-storage
+description: Remove unnecessary packages and artifacts from GitHub Actions Runner
+
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      run: make reclaim-storage

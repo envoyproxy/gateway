@@ -1,0 +1,6 @@
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyGateways
+provider:
+  type: Kubernetes
+gateway:
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller

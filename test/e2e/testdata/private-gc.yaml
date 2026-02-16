@@ -1,0 +1,74 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: private-gateway
+  namespace: gateway-conformance-infra
+spec:
+  gatewayClassName: private
+  listeners:
+  - name: http
+    port: 80
+    protocol: HTTP
+    allowedRoutes:
+      namespaces:
+        from: Same
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: private-backend
+  namespace: gateway-conformance-infra
+spec:
+  selector:
+    app: private-backend
+  ports:
+  - protocol: TCP
+    port: 8080
+    targetPort: 3000
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: private-backend
+  namespace: gateway-conformance-infra
+  labels:
+    app: private-backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: private-backend
+  template:
+    metadata:
+      labels:
+        app: private-backend
+    spec:
+      containers:
+      - name: private-backend
+        image: gcr.io/k8s-staging-ingressconformance/echoserver:v20221109-7ee2f3e
+        env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        resources:
+          requests:
+            cpu: 10m
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: private-route
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+  - name: private-gateway
+    sectionName: http
+  rules:
+  - backendRefs:
+    - name: private-backend
+      port: 8080

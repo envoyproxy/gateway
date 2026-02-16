@@ -1,0 +1,39 @@
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyGateway
+gateway:
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller
+logging:
+  level:
+    default: info
+provider:
+  type: Custom
+  custom:
+    resource:
+      type: File
+      file:
+        paths: ["/tmp/envoy-gateway-test"]
+    infrastructure:
+      type: Host
+      host: {}
+extensionApis:
+  enableBackend: true
+extensionManager:
+  policyResources:
+    - group: gateway.example.io
+      version: v1alpha1
+      kind: ExampleExtPolicy
+  hooks:
+    xdsTranslator:
+      post:
+        - HTTPListener
+        - Route
+        - VirtualHost
+        - Cluster
+        - Translation
+  service:
+    fqdn:
+      hostname: 127.0.0.1
+      port: 5005
+runtimeFlags:
+  enabled:
+    - XDSNameSchemeV2

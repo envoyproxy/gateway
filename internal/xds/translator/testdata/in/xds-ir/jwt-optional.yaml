@@ -1,0 +1,40 @@
+http:
+- name: "first-listener"
+  address: "::"
+  port: 10080
+  hostnames:
+  - "*"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  routes:
+  - name: "first-route"
+    hostname: "*"
+    pathMatch:
+      exact: "foo/bar"
+    security:
+      jwt:
+        providers:
+        - name: example
+          issuer: https://www.example.com
+          audiences:
+          - foo.com
+          remoteJWKS:
+            uri: https://localhost/jwt/public-key/jwks.json
+            cacheDuration: 300s
+          extractFrom:
+            cookies:
+            - session_access_token
+            headers:
+            - name: Authorization
+              valuePrefix: 'Bearer '
+            params:
+            - token
+        allowMissing: true
+    destination:
+      name: "first-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "first-route-dest/backend/0"

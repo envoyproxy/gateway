@@ -1,0 +1,36 @@
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-filter-url-regex-rewrite
+spec:
+  parentRefs:
+    - name: eg
+  hostnames:
+    - path.regex.rewrite.example
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: "/"
+      filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: gateway.envoyproxy.io
+            kind: HTTPRouteFilter
+            name: regex-path-rewrite
+      backendRefs:
+        - name: backend
+          port: 3000
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: HTTPRouteFilter
+metadata:
+  name: regex-path-rewrite
+spec:
+  urlRewrite:
+    path:
+      type: ReplaceRegexMatch
+      replaceRegexMatch:
+        pattern: '^/service/([^/]+)(/.*)$'
+        substitution: '\2/instance/\1'

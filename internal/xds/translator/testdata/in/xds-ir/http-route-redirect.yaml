@@ -1,0 +1,85 @@
+http:
+- name: "first-listener"
+  address: "::"
+  port: 10080
+  hostnames:
+  - "*"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  routes:
+  - name: "redirect-route-1"
+    hostname: "*"
+    destination:
+      name: "redirect-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "redirect-route-dest/backend/0"
+    redirect:
+      scheme: https
+      statusCode: 302
+      hostname: "redirected.com"
+      port: 8443
+      path:
+        prefixMatchReplace: /redirected
+  - name: "redirect-route-2"
+    hostname: "*"
+    pathMatch:
+      prefix: "/redirect"
+    destination:
+      name: "redirect-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "redirect-route-dest/backend/0"
+    redirect:
+      path:
+        prefixMatchReplace: /
+  - name: "redirect-route-3"
+    hostname: "*"
+    pathMatch:
+      prefix: "/redirect/"
+    destination:
+      name: "redirect-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "redirect-route-dest/backend/0"
+    redirect:
+      path:
+        prefixMatchReplace: /
+  - name: "redirect-route-4"
+    hostname: "*"
+    destination:
+      name: "redirect-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "redirect-route-dest/backend/0"
+    redirect:
+      scheme: https
+      statusCode: 302
+      hostname: "redirected.com"
+      path:
+        prefixMatchReplace: /redirected
+  - name: "redirect-route-5"
+    hostname: "*"
+    destination:
+      name: "redirect-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "redirect-route-dest/backend/0"
+    redirect:
+      scheme: https
+      statusCode: 302
+      port: 443
+      hostname: "redirected.com"
+      path:
+        prefixMatchReplace: /redirected

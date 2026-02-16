@@ -1,0 +1,66 @@
+name: Experimental Conformance Test
+on:
+  push:
+    # Sequence of patterns matched against refs/tags
+    tags:
+      - "v*.*.*"
+    paths:
+      - "charts/gateway-crds-helm/templates/experimental-gatewayapi-crds.yaml"
+      - "test/conformance/experimental_conformance_test.go"
+      - "internal/gatewayapi/conformance/suite.go"
+  pull_request:
+    paths:
+      - "charts/gateway-crds-helm/templates/experimental-gatewayapi-crds.yaml"
+      - "test/conformance/experimental_conformance_test.go"
+      - "internal/gatewayapi/conformance/suite.go"
+  # Add workflow_dispatch to trigger this workflow manually by maintainers.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  experimental-conformance-test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - version: v1.32.11
+            ipFamily: ipv4
+            profile: default
+          - version: v1.33.7
+            ipFamily: ipv4
+            profile: default
+          - version: v1.34.3
+            # only run ipv6 test on this version to save time
+            ipFamily: ipv6
+            profile: default
+          # TODO: this's IPv4 first, need a way to test IPv6 first.
+          - version: v1.35.0
+            # only run dual test on latest version to save time
+            ipFamily: dual
+            profile: default
+          - version: v1.35.0
+            # only run dual test on latest version to save time
+            ipFamily: dual
+            profile: gateway-namespace-mode
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
+      - uses: ./tools/github-actions/setup-deps
+
+      # gateway api experimental conformance
+      - name: Run Experimental Conformance Tests
+        env:
+          IP_FAMILY: ${{ matrix.target.ipFamily }}
+          KUBE_DEPLOY_PROFILE: ${{ matrix.target.profile }}
+          CONFORMANCE_REPORT_PATH: conformance-report-k8s-${{ matrix.target.version }}-${{ matrix.target.profile }}.yaml
+          KIND_NODE_TAG: ${{ matrix.target.version }}
+          IMAGE_PULL_POLICY: IfNotPresent
+        run: make experimental-conformance
+
+      - name: Upload Conformance Report
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f  # v6.0.0
+        with:
+          name: conformance-report-k8s-${{ matrix.target.version }}-${{ matrix.target.profile }}
+          path: ./test/conformance/conformance-report-k8s-${{ matrix.target.version }}-${{ matrix.target.profile }}.yaml

@@ -1,0 +1,33 @@
+- ignorePortInHostMatching: true
+  name: extension-listener
+  virtualHosts:
+  - domains:
+    - '*'
+    name: extension-listener/*
+    routes:
+    - match:
+        prefix: /
+      name: first-route
+      responseHeadersToAdd:
+      - header:
+          key: mock-extension-was-here-route-name
+          value: first-route
+      - header:
+          key: mock-extension-was-here-route-hostnames
+          value: '*'
+      - header:
+          key: mock-extension-was-here-extensionRef-name
+          value: extension-filter
+      - header:
+          key: mock-extension-was-here-extensionRef-namespace
+          value: extensions
+      - header:
+          key: mock-extension-was-here-extensionRef-kind
+          value: examplefilter
+      - header:
+          key: mock-extension-was-here-extensionRef-apiversion
+          value: foo.example.io/v1alpha1
+      route:
+        cluster: first-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket

@@ -1,0 +1,47 @@
+http:
+- name: "first-listener"
+  address: "::"
+  port: 10080
+  hostnames:
+  - "*"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  routes:
+  - name: "request-header-route"
+    hostname: "*"
+    destination:
+      name: "request-header-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "request-header-route-dest/backend/0"
+    addRequestHeaders:
+    - name: "some-header-multi-value"
+      value:
+      - "some-value,some-additional-value"
+      append: true
+    - name: "some-header"
+      value:
+      - "some-value"
+      append: true
+    - name: "some-header-2"
+      value:
+      - "some-value"
+      append: true
+    - name: "some-header3"
+      value:
+      - "some-value"
+      append: false
+    - name: "some-header4"
+      value:
+      - "some-value"
+      append: false
+    - name: "empty-header"
+      value:
+      - ""
+      append: false
+    removeRequestHeaders:
+    - "some-header5"
+    - "some-header6"

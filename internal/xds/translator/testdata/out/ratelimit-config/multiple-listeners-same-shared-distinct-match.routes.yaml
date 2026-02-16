@@ -1,0 +1,25 @@
+costSpecified: false
+rateLimits:
+- actions:
+  - ActionSpecifier:
+      GenericKey:
+        descriptor_key: test-namespace/test-policy-1/rule/0
+        descriptor_value: test-namespace/test-policy-1/rule/0
+  - ActionSpecifier:
+      RequestHeaders:
+        descriptor_key: rule-0-match-0
+        header_name: x-user-id
+routeName: first-route
+---
+costSpecified: false
+rateLimits:
+- actions:
+  - ActionSpecifier:
+      GenericKey:
+        descriptor_key: test-namespace/test-policy-1/rule/0
+        descriptor_value: test-namespace/test-policy-1/rule/0
+  - ActionSpecifier:
+      RequestHeaders:
+        descriptor_key: rule-0-match-0
+        header_name: x-user-id
+routeName: first-route

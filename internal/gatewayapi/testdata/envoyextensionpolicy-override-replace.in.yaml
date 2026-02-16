@@ -1,0 +1,168 @@
+services:
+- apiVersion: v1
+  kind: Service
+  metadata:
+    namespace: envoy-gateway
+    name: grpc-backend
+  spec:
+    ports:
+    - port: 9000
+      name: grpc
+      protocol: TCP
+- apiVersion: v1
+  kind: Service
+  metadata:
+    namespace: default
+    name: grpc-backend-2
+  spec:
+    ports:
+    - port: 8000
+      name: grpc
+      protocol: TCP
+endpointSlices:
+- apiVersion: discovery.k8s.io/v1
+  kind: EndpointSlice
+  metadata:
+    name: endpointslice-grpc-backend
+    namespace: envoy-gateway
+    labels:
+      kubernetes.io/service-name: grpc-backend
+  addressType: IPv4
+  ports:
+  - name: grpc
+    protocol: TCP
+    port: 9000
+  endpoints:
+  - addresses:
+    - 7.7.7.1
+    conditions:
+      ready: true
+- apiVersion: discovery.k8s.io/v1
+  kind: EndpointSlice
+  metadata:
+    name: endpointslice-grpc-backend-2
+    namespace: default
+    labels:
+      kubernetes.io/service-name: grpc-backend-2
+  addressType: IPv4
+  ports:
+  - name: grpc
+    protocol: TCP
+    port: 8000
+  endpoints:
+  - addresses:
+    - 7.7.7.2
+    conditions:
+      ready: true
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-1
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: All
+httpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-1
+  spec:
+    hostnames:
+    - gateway.envoyproxy.io
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: "/foo"
+      backendRefs:
+      - name: service-1
+        port: 8080
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-2
+  spec:
+    hostnames:
+    - gateway.envoyproxy.io
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: "/bar"
+      backendRefs:
+      - name: service-1
+        port: 8080
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-3
+  spec:
+    hostnames:
+    - gateway.envoyproxy.io
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: "/baz"
+      backendRefs:
+      - name: service-1
+        port: 8080
+envoyExtensionPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyExtensionPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: policy-for-gateway-1
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-1
+    extProc:
+    - backendRefs:
+      - name: grpc-backend
+        port: 9000
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyExtensionPolicy
+  metadata:
+    namespace: default
+    name: policy-for-route-1
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-1
+    extProc:
+    - backendRefs:
+      - name: grpc-backend-2
+        port: 8000
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyExtensionPolicy
+  metadata:
+    namespace: default
+    name: policy-for-route-3
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-3

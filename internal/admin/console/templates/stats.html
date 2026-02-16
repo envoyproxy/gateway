@@ -1,0 +1,102 @@
+{{template "base.html" .}}
+
+{{define "stats-content"}}
+<div class="card">
+    <div class="card-header">
+        <h1 class="card-title">{{.Title}}</h1>
+    </div>
+    <div class="card-body">
+        <p>This page provides access to Envoy Gateway statistics and metrics. Metrics are exposed in Prometheus format for monitoring and alerting.</p>
+
+        <div class="info-box">
+            <div>
+                <strong>Metrics Endpoint:</strong><br>
+                <a href="/api/metrics" target="_blank">/api/metrics</a> (Available on Admin Port)
+            </div>
+            <div>
+                <a href="/api/metrics" class="btn btn-primary" target="_blank">
+                    📊 View Metrics
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h2 class="card-title">📈 Metrics Categories</h2>
+    </div>
+    <div class="card-body">
+        <p>Envoy Gateway exports metrics in six main categories to monitor different aspects of the control plane:</p>
+    </div>
+</div>
+
+<div class="dashboard-grid">
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">🔄 Watching Components</h3>
+        </div>
+        <div class="card-body">
+            <p><strong>Core Function:</strong> Monitor the internal event-driven architecture of Envoy Gateway components.</p>
+
+            <p><em>Components: Gateway API Translator, Infrastructure Manager, xDS Server, xDS Translator, Global RateLimit</em></p>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">📝 Status Updater</h3>
+        </div>
+        <div class="card-body">
+            <p><strong>Core Function:</strong> Track status updates for Gateway API resources to ensure proper resource state management.</p>
+
+            <p><em>Resources: GatewayClass, Gateway, HTTPRoute, GRPCRoute, TLSRoute, etc.</em></p>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">🌐 xDS Server</h3>
+        </div>
+        <div class="card-body">
+            <p><strong>Core Function:</strong> Monitor the xDS (Discovery Service) server that provides configuration to Envoy proxies.</p>
+
+            <p><em>Critical for proxy configuration delivery and connection health</em></p>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">🏗️ Infrastructure Manager</h3>
+        </div>
+        <div class="card-body">
+            <p><strong>Core Function:</strong> Monitor Kubernetes resource operations performed by Envoy Gateway.</p>
+
+            <p><em>Tracks Deployments, Services, ConfigMaps, and other Kubernetes resources</em></p>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">🔧 Wasm</h3>
+        </div>
+        <div class="card-body">
+            <p><strong>Core Function:</strong> Monitor WebAssembly extension management and remote fetch operations.</p>
+
+            <p><em>Essential for custom extension performance and availability</em></p>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">🗺️ Topology Injector</h3>
+        </div>
+        <div class="card-body">
+            <p><strong>Core Function:</strong> Monitor the webhook that injects node topology information into EnvoyProxy pods.</p>
+
+            <p><em>Critical for multi-zone deployments and traffic locality optimization</em></p>
+        </div>
+    </div>
+</div>
+
+{{end}}

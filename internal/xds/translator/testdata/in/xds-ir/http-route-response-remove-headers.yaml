@@ -1,0 +1,22 @@
+http:
+- name: "first-listener"
+  address: "::"
+  port: 10080
+  hostnames:
+  - "*"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  routes:
+  - name: "response-header-route"
+    hostname: "*"
+    destination:
+      name: "response-header-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "response-header-route-dest/backend/0"
+    removeResponseHeaders:
+    - "some-header5"
+    - "some-header6"

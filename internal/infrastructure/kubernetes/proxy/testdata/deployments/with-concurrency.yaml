@@ -1,0 +1,241 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/component: proxy
+    app.kubernetes.io/managed-by: envoy-gateway
+    app.kubernetes.io/name: envoy
+    gateway.envoyproxy.io/owning-gateway-name: default
+    gateway.envoyproxy.io/owning-gateway-namespace: default
+  name: envoy-default-37a8eec1
+  namespace: envoy-gateway-system
+  ownerReferences:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: GatewayClass
+    name: envoy-gateway-class
+    uid: test-owner-reference-uid-for-gatewayclass
+spec:
+  progressDeadlineSeconds: 600
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: proxy
+      app.kubernetes.io/managed-by: envoy-gateway
+      app.kubernetes.io/name: envoy
+      gateway.envoyproxy.io/owning-gateway-name: default
+      gateway.envoyproxy.io/owning-gateway-namespace: default
+  strategy:
+    type: RollingUpdate
+  template:
+    metadata:
+      annotations:
+        prometheus.io/path: /stats/prometheus
+        prometheus.io/port: "19001"
+        prometheus.io/scrape: "true"
+      labels:
+        app.kubernetes.io/component: proxy
+        app.kubernetes.io/managed-by: envoy-gateway
+        app.kubernetes.io/name: envoy
+        gateway.envoyproxy.io/owning-gateway-name: default
+        gateway.envoyproxy.io/owning-gateway-namespace: default
+    spec:
+      automountServiceAccountToken: false
+      containers:
+      - args:
+        - --service-cluster
+        - default
+        - --service-node
+        - $(ENVOY_POD_NAME)
+        - --config-yaml
+        - test bootstrap config
+        - --log-level
+        - warn
+        - --cpuset-threads
+        - --drain-strategy
+        - immediate
+        - --concurrency
+        - "4"
+        - --component-log-level
+        - misc:error
+        - --drain-time-s
+        - "60"
+        command:
+        - envoy
+        env:
+        - name: ENVOY_POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.namespace
+        - name: ENVOY_POD_NAME
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.name
+        - name: ENVOY_SERVICE_ZONE
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.annotations['topology.kubernetes.io/zone']
+        image: docker.io/envoyproxy/envoy:distroless-dev
+        imagePullPolicy: IfNotPresent
+        lifecycle:
+          preStop:
+            httpGet:
+              path: /shutdown/ready
+              port: 19002
+              scheme: HTTP
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /ready
+            port: 19003
+            scheme: HTTP
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        name: envoy
+        ports:
+        - containerPort: 19001
+          name: metrics
+          protocol: TCP
+        - containerPort: 19003
+          name: readiness
+          protocol: TCP
+        readinessProbe:
+          failureThreshold: 1
+          httpGet:
+            path: /ready
+            port: 19003
+            scheme: HTTP
+          periodSeconds: 5
+          successThreshold: 1
+          timeoutSeconds: 1
+        resources:
+          requests:
+            cpu: 100m
+            memory: 512Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          privileged: false
+          runAsGroup: 65532
+          runAsNonRoot: true
+          runAsUser: 65532
+          seccompProfile:
+            type: RuntimeDefault
+        startupProbe:
+          failureThreshold: 30
+          httpGet:
+            path: /ready
+            port: 19003
+            scheme: HTTP
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /certs
+          name: certs
+          readOnly: true
+        - mountPath: /sds
+          name: sds
+      - args:
+        - envoy
+        - shutdown-manager
+        command:
+        - envoy-gateway
+        env:
+        - name: ENVOY_POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.namespace
+        - name: ENVOY_POD_NAME
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.name
+        - name: ENVOY_SERVICE_ZONE
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.annotations['topology.kubernetes.io/zone']
+        image: docker.io/envoyproxy/gateway-dev:latest
+        imagePullPolicy: IfNotPresent
+        lifecycle:
+          preStop:
+            exec:
+              command:
+              - envoy-gateway
+              - envoy
+              - shutdown
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /healthz
+            port: 19002
+            scheme: HTTP
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        name: shutdown-manager
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /healthz
+            port: 19002
+            scheme: HTTP
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        resources:
+          requests:
+            cpu: 10m
+            memory: 32Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          privileged: false
+          runAsGroup: 65532
+          runAsNonRoot: true
+          runAsUser: 65532
+          seccompProfile:
+            type: RuntimeDefault
+        startupProbe:
+          failureThreshold: 30
+          httpGet:
+            path: /healthz
+            port: 19002
+            scheme: HTTP
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      serviceAccountName: envoy-default-37a8eec1
+      terminationGracePeriodSeconds: 360
+      volumes:
+      - name: certs
+        secret:
+          defaultMode: 420
+          secretName: envoy
+      - configMap:
+          defaultMode: 420
+          items:
+          - key: xds-trusted-ca.json
+            path: xds-trusted-ca.json
+          - key: xds-certificate.json
+            path: xds-certificate.json
+          name: envoy-default-37a8eec1
+          optional: false
+        name: sds
+status: {}

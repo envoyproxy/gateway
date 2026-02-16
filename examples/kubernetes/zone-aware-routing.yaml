@@ -1,0 +1,114 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: zone-aware-routing-backend-local
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: zone-aware-routing-backend
+      version: v1
+  template:
+    metadata:
+      labels:
+        app: zone-aware-routing-backend
+        version: v1
+    spec:
+      affinity:
+        podAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchExpressions:
+                  - key: "gateway.envoyproxy.io/owning-gateway-name"
+                    operator: In
+                    values:
+                      - eg
+                  - key: "app.kubernetes.io/component"
+                    operator: In
+                    values:
+                      - proxy
+              topologyKey: topology.kubernetes.io/zone
+              namespaceSelector: {}
+      containers:
+        - image: gcr.io/k8s-staging-gateway-api/echo-basic:v20231214-v1.0.0-140-gf544a46e
+          imagePullPolicy: IfNotPresent
+          name: backend
+          ports:
+            - containerPort: 3000
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: zone-aware-routing-backend-nonlocal
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: zone-aware-routing-backend
+      version: v1
+  template:
+    metadata:
+      labels:
+        app: zone-aware-routing-backend
+        version: v1
+    spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchExpressions:
+                  - key: "gateway.envoyproxy.io/owning-gateway-name"
+                    operator: In
+                    values:
+                      - eg
+                  - key: "app.kubernetes.io/component"
+                    operator: In
+                    values:
+                      - proxy
+              topologyKey: topology.kubernetes.io/zone
+              namespaceSelector: {}
+      containers:
+        - image: gcr.io/k8s-staging-gateway-api/echo-basic:v20231214-v1.0.0-140-gf544a46e
+          imagePullPolicy: IfNotPresent
+          name: backend
+          ports:
+            - containerPort: 3000
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: zone-aware-routing
+spec:
+  parentRefs:
+    - name: eg
+  hostnames:
+    - "www.example.com"
+  rules:
+    - backendRefs:
+        - group: ""
+          kind: Service
+          name: zone-aware-routing-backend
+          port: 3000
+          weight: 1
+      matches:
+        - path:
+            type: PathPrefix
+            value: /zone-aware-routing

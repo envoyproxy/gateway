@@ -1,0 +1,35 @@
+gateways:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: Gateway
+    metadata:
+      namespace: envoy-gateway
+      name: gateway-1
+    spec:
+      gatewayClassName: envoy-gateway-class
+      listeners:
+        - name: tcp1
+          protocol: TCP
+          port: 162
+          allowedRoutes:
+            namespaces:
+              from: All
+        - name: tcp2
+          protocol: TLS
+          port: 162
+          allowedRoutes:
+            namespaces:
+              from: All
+tcpRoutes:
+  - apiVersion: gateway.networking.k8s.io/v1alpha2
+    kind: TCPRoute
+    metadata:
+      namespace: default
+      name: tcproute-1
+    spec:
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+      rules:
+        - backendRefs:
+            - name: service-1
+              port: 8163

@@ -1,0 +1,34 @@
+stats_sinks:
+  - name: envoy.stat_sinks.metrics_service
+    typed_config:
+      "@type": type.googleapis.com/envoy.config.metrics.v3.MetricsServiceConfig
+      transport_api_version: V3
+      grpc_service:
+        envoy_grpc:
+          cluster_name: metrics_cluster
+static_resources:
+  clusters:
+    - connect_timeout: 1s
+      dns_lookup_family: V4_ONLY
+      dns_refresh_rate: 30s
+      lb_policy: ROUND_ROBIN
+      typed_extension_protocol_options:
+        "envoy.extensions.upstreams.http.v3.HttpProtocolOptions":
+          "@type": "type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions"
+          explicit_http_config:
+            http2_protocol_options:
+              connection_keepalive:
+                interval: 30s
+                timeout: 5s
+      load_assignment:
+        cluster_name: metrics_cluster
+        endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address:
+                    socket_address:
+                      address: skywalking-oap.skywalking
+                      portValue: 11800
+      name: metrics_cluster
+      respect_dns_ttl: true
+      type: STRICT_DNS

@@ -1,0 +1,273 @@
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: ClientTrafficPolicy
+metadata:
+  name: disable-ratelimit-header
+  namespace: gateway-conformance-infra
+spec:
+  headers:
+    disableRateLimitHeaders: true
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      # use different gatway
+      name: all-namespaces
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: ratelimit-specific-user
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: http-ratelimit-specific-user
+  rateLimit:
+    type: Local
+    local:
+      rules:
+        - limit:
+            requests: 10
+            unit: Hour
+        - clientSelectors:
+            - headers:
+                - name: x-user-id
+                  value: john
+          limit:
+            requests: 3
+            unit: Hour
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: ratelimit-all-traffic
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: http-ratelimit-all-traffic
+  rateLimit:
+    type: Local
+    local:
+      rules:
+        - limit:
+            requests: 3
+            unit: Hour
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-ratelimit-specific-user
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: same-namespace
+    - name: all-namespaces
+  rules:
+    - backendRefs:
+        - name: infra-backend-v1
+          port: 8080
+      matches:
+        - path:
+            type: Exact
+            value: /ratelimit-specific-user
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-ratelimit-all-traffic
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: same-namespace
+    - name: all-namespaces
+  rules:
+    - backendRefs:
+        - name: infra-backend-v1
+          port: 8080
+      matches:
+        - path:
+            type: Exact
+            value: /ratelimit-all-traffic
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-no-ratelimit
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: same-namespace
+    - name: all-namespaces
+  rules:
+    - backendRefs:
+        - name: infra-backend-v1
+          port: 8080
+      matches:
+        - path:
+            type: Exact
+            value: /no-ratelimit
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: ratelimit-invert-match
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: http-ratelimit-invert-match
+  rateLimit:
+    type: Local
+    local:
+      rules:
+        - clientSelectors:
+            - headers:
+                - name: x-user-id
+                  value: one
+                - name: x-org-id
+                  value: test
+                  invert: true
+          limit:
+            requests: 3
+            unit: Hour
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-ratelimit-invert-match
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: same-namespace
+    - name: all-namespaces
+  rules:
+    - backendRefs:
+        - name: infra-backend-v1
+          port: 8080
+      matches:
+        - path:
+            type: Exact
+            value: /ratelimit-invert-match
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: ratelimit-path-match
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: http-ratelimit-path-match
+  rateLimit:
+    type: Local
+    local:
+      rules:
+        - clientSelectors:
+            - path:
+                type: Exact
+                value: /ratelimit-path-match/foo
+          limit:
+            requests: 3
+            unit: Hour
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-ratelimit-path-match
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: same-namespace
+    - name: all-namespaces
+  rules:
+    - backendRefs:
+        - name: infra-backend-v1
+          port: 8080
+      matches:
+        - path:
+            type: PathPrefix
+            value: /ratelimit-path-match
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: ratelimit-method-match
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: http-ratelimit-method-match
+  rateLimit:
+    type: Local
+    local:
+      rules:
+        - clientSelectors:
+            - methods:
+                - value: "GET"
+          limit:
+            requests: 3
+            unit: Hour
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-ratelimit-method-match
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: same-namespace
+    - name: all-namespaces
+  rules:
+    - backendRefs:
+        - name: infra-backend-v1
+          port: 8080
+      matches:
+        - path:
+            type: PathPrefix
+            value: /ratelimit-method-match
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-ratelimit-shadow-mode
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: same-namespace
+    - name: all-namespaces
+  rules:
+    - backendRefs:
+        - name: infra-backend-v1
+          port: 8080
+      matches:
+        - path:
+            type: PathPrefix
+            value: /ratelimit-shadow-mode
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: ratelimit-shadow-mode
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: http-ratelimit-shadow-mode
+  rateLimit:
+    type: Local
+    local:
+      rules:
+        - clientSelectors:
+            - headers:
+                - name: x-user-id
+                  value: one
+          limit:
+            requests: 3
+            unit: Hour
+          shadowMode: true

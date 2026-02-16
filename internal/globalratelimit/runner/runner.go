@@ -1,0 +1,274 @@
+// Copyright Envoy Gateway Authors
+// SPDX-License-Identifier: Apache-2.0
+// The full text of the Apache license is available in the LICENSE file at
+// the root of the repo.
+
+package runner
+
+import (
+	"context"
+	"crypto/tls"
+	"fmt"
+	"math"
+	"net"
+	"path/filepath"
+	"strconv"
+
+	discoveryv3 "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
+	cachetype "github.com/envoyproxy/go-control-plane/pkg/cache/types"
+	cachev3 "github.com/envoyproxy/go-control-plane/pkg/cache/v3"
+	resourcev3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
+	serverv3 "github.com/envoyproxy/go-control-plane/pkg/server/v3"
+	"github.com/telepresenceio/watchable"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
+
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/crypto"
+	"github.com/envoyproxy/gateway/internal/envoygateway/config"
+	"github.com/envoyproxy/gateway/internal/infrastructure/host"
+	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/ratelimit"
+	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/message"
+	"github.com/envoyproxy/gateway/internal/xds/translator"
+	"github.com/envoyproxy/gateway/internal/xds/types"
+)
+
+const (
+	// XdsGrpcSotwConfigServerAddress is the listening address of the ratelimit xDS config server.
+	XdsGrpcSotwConfigServerAddress = "0.0.0.0"
+
+	// Default certificates path for envoy-gateway with Kubernetes provider.
+	// rateLimitTLSCertFilepath is the ratelimit tls cert file.
+	rateLimitTLSCertFilepath = "/certs/tls.crt"
+	// rateLimitTLSKeyFilepath is the ratelimit key file.
+	rateLimitTLSKeyFilepath = "/certs/tls.key"
+	// rateLimitTLSCACertFilepath is the ratelimit ca cert file.
+	rateLimitTLSCACertFilepath = "/certs/ca.crt"
+)
+
+var tracer = otel.Tracer("envoy-gateway/global-rate-limit/runner")
+
+type Config struct {
+	config.Server
+	XdsIR           *message.XdsIR
+	RunnerErrors    *message.RunnerErrors
+	grpc            *grpc.Server
+	cache           cachev3.SnapshotCache
+	snapshotVersion int64
+}
+
+type Runner struct {
+	Config
+}
+
+// Close implements Runner interface.
+func (r *Runner) Close() error { return nil }
+
+// Name implements Runner interface.
+func (r *Runner) Name() string {
+	return string(egv1a1.LogComponentGlobalRateLimitRunner)
+}
+
+func New(cfg *Config) *Runner {
+	return &Runner{Config: *cfg}
+}
+
+// Start starts the infrastructure runner
+func (r *Runner) Start(ctx context.Context) error {
+	r.Logger = r.Logger.WithName(r.Name()).WithValues("runner", r.Name())
+
+	// Set up the gRPC server and register the xDS handler.
+	// Create SnapshotCache before start subscribeAndTranslate,
+	// prevent panics in case cache is nil.
+	tlsConfig, err := r.loadTLSConfig()
+	if err != nil {
+		return fmt.Errorf("failed to load TLS config: %w", err)
+	}
+	r.Logger.Info("loaded TLS certificate and key")
+
+	r.grpc = grpc.NewServer(grpc.Creds(credentials.NewTLS(tlsConfig)))
+
+	r.cache = cachev3.NewSnapshotCache(false, cachev3.IDHash{}, r.Logger.Sugar())
+
+	// Register xDS Config server.
+	discoveryv3.RegisterAggregatedDiscoveryServiceServer(r.grpc, serverv3.NewServer(ctx, r.cache, serverv3.CallbackFuncs{}))
+
+	// Start and listen xDS gRPC config Server.
+	go r.serveXdsConfigServer(ctx)
+
+	// Start message subscription.
+	// Do not call .Subscribe() inside Goroutine since it is supposed to be called from the same
+	// Goroutine where Close() is called.
+	c := r.XdsIR.Subscribe(ctx)
+	go r.translateFromSubscription(ctx, c)
+
+	r.Logger.Info("started")
+	return err
+}
+
+func (r *Runner) serveXdsConfigServer(ctx context.Context) {
+	addr := net.JoinHostPort(XdsGrpcSotwConfigServerAddress, strconv.Itoa(ratelimit.XdsGrpcSotwConfigServerPort))
+	l, err := net.Listen("tcp", addr)
+	if err != nil {
+		r.Logger.Error(err, "failed to listen on address", "address", addr)
+		return
+	}
+
+	go func() {
+		<-ctx.Done()
+		r.Logger.Info("grpc server shutting down")
+		r.grpc.Stop()
+	}()
+
+	if err = r.grpc.Serve(l); err != nil {
+		r.Logger.Error(err, "failed to start grpc based xds config server")
+	}
+}
+
+func buildXDSResourceFromCache(rateLimitConfigsCache map[string][]cachetype.Resource) types.XdsResources {
+	xdsResourcesToUpdate := types.XdsResources{}
+	for _, xdsR := range rateLimitConfigsCache {
+		xdsResourcesToUpdate[resourcev3.RateLimitConfigType] = append(xdsResourcesToUpdate[resourcev3.RateLimitConfigType], xdsR...)
+	}
+
+	return xdsResourcesToUpdate
+}
+
+func (r *Runner) translateFromSubscription(ctx context.Context, c <-chan watchable.Snapshot[string, *message.XdsIRWithContext]) {
+	// rateLimitConfigsCache is a cache of the rate limit config, which is keyed by the xdsIR key.
+	rateLimitConfigsCache := map[string][]cachetype.Resource{}
+
+	message.HandleSubscription(
+		r.Logger,
+		message.Metadata{Runner: r.Name(), Message: message.XDSIRMessageName}, c,
+		func(update message.Update[string, *message.XdsIRWithContext], errChan chan error) {
+			parentCtx := ctx
+			if update.Value != nil && update.Value.Context != nil {
+				parentCtx = update.Value.Context
+			}
+
+			traceCtx, span := tracer.Start(parentCtx, "GlobalRateLimitRunner.translateFromSubscription")
+			defer span.End()
+
+			traceLogger := r.Logger.WithTrace(traceCtx)
+			traceLogger.Info("received a notification")
+
+			span.SetAttributes(
+				attribute.String("xds-ir.key", update.Key),
+				attribute.Bool("update.delete", update.Delete),
+			)
+
+			if update.Delete {
+				delete(rateLimitConfigsCache, update.Key)
+				r.updateSnapshot(traceCtx, buildXDSResourceFromCache(rateLimitConfigsCache))
+			} else {
+				// Translate to ratelimit xDS Config.
+				_, tSpan := tracer.Start(traceCtx, "Translator.Translate")
+				rvt, err := r.translate(update.Value.XdsIR)
+				tSpan.End()
+				if err != nil {
+					r.Logger.Error(err, "failed to translate an updated xds-ir to ratelimit xDS Config")
+					errChan <- err
+				}
+
+				// Update ratelimit xDS config cache.
+				if rvt != nil {
+					// Build XdsResources to use for the snapshot update from the cache.
+					rateLimitConfigsCache[update.Key] = rvt.XdsResources[resourcev3.RateLimitConfigType]
+					r.updateSnapshot(traceCtx, buildXDSResourceFromCache(rateLimitConfigsCache))
+				}
+			}
+		},
+	)
+	r.Logger.Info("subscriber shutting down")
+}
+
+func (r *Runner) translate(xdsIR *ir.Xds) (*types.ResourceVersionTable, error) {
+	resourceVT := new(types.ResourceVersionTable)
+
+	// Generate rate limit configurations for all listeners at once
+	configs := translator.BuildRateLimitServiceConfig(xdsIR.HTTP)
+
+	// Add each configuration to the resource version table
+	for _, cfg := range configs {
+		// If the config is not nil, add it to the xDS Config resources
+		if cfg != nil {
+			if err := resourceVT.AddXdsResource(resourcev3.RateLimitConfigType, cfg); err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	return resourceVT, nil
+}
+
+func (r *Runner) updateSnapshot(ctx context.Context, resource types.XdsResources) {
+	_, span := tracer.Start(ctx, "GlobalRateLimitRunner.updateSnapshot")
+	defer span.End()
+
+	if r.cache == nil {
+		r.Logger.Error(nil, "failed to init the snapshot cache")
+		return
+	}
+
+	if err := r.addNewSnapshot(ctx, resource); err != nil {
+		r.Logger.Error(err, "failed to update the snapshot cache")
+	}
+}
+
+func (r *Runner) addNewSnapshot(ctx context.Context, resource types.XdsResources) error {
+	// Increment the snapshot version.
+	if r.snapshotVersion == math.MaxInt64 {
+		r.snapshotVersion = 0
+	}
+	r.snapshotVersion++
+
+	snapshot, err := cachev3.NewSnapshot(fmt.Sprintf("%d", r.snapshotVersion), resource)
+	if err != nil {
+		return fmt.Errorf("failed to generate a config snapshot: %w", err)
+	}
+	err = r.cache.SetSnapshot(ctx, ratelimit.InfraName, snapshot)
+	if err != nil {
+		return fmt.Errorf("failed to set a config snapshot: %w", err)
+	}
+	return nil
+}
+
+func (r *Runner) loadTLSConfig() (*tls.Config, error) {
+	var certPath, keyPath, caPath string
+
+	switch {
+	case r.EnvoyGateway.Provider.IsRunningOnKubernetes():
+		certPath = rateLimitTLSCertFilepath
+		keyPath = rateLimitTLSKeyFilepath
+		caPath = rateLimitTLSCACertFilepath
+	case r.EnvoyGateway.Provider.IsRunningOnHost():
+		// Get configuration from provider
+		var hostCfg *egv1a1.EnvoyGatewayHostInfrastructureProvider
+		if p := r.EnvoyGateway.Provider; p != nil && p.Custom != nil &&
+			p.Custom.Infrastructure != nil && p.Custom.Infrastructure.Host != nil {
+			hostCfg = p.Custom.Infrastructure.Host
+		}
+
+		paths, err := host.GetPaths(hostCfg)
+		if err != nil {
+			return nil, fmt.Errorf("failed to determine paths: %w", err)
+		}
+
+		certDir := paths.CertDir("envoy-gateway")
+		certPath = filepath.Join(certDir, "tls.crt")
+		keyPath = filepath.Join(certDir, "tls.key")
+		caPath = filepath.Join(certDir, "ca.crt")
+	default:
+		return nil, fmt.Errorf("no valid tls certificates")
+	}
+
+	tlsConfig, err := crypto.LoadTLSConfig(certPath, keyPath, caPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create tls config: %w", err)
+	}
+	return tlsConfig, err
+}

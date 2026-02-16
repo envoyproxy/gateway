@@ -1,0 +1,40 @@
+{
+  "default": {
+    "eg": {
+      "@type": "type.googleapis.com/envoy.admin.v3.EndpointsConfigDump",
+      "staticEndpointConfigs": [
+        {
+          "endpointConfig": {
+            "@type": "type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment",
+            "clusterName": "xds_cluster",
+            "endpoints": [
+              {
+                "lbEndpoints": [
+                  {
+                    "endpoint": {
+                      "address": {
+                        "socketAddress": {
+                          "address": "10.106.37.54",
+                          "portValue": 18000
+                        }
+                      },
+                      "healthCheckConfig": {},
+                      "hostname": "envoy-gateway"
+                    },
+                    "healthStatus": "HEALTHY",
+                    "loadBalancingWeight": 1,
+                    "metadata": {}
+                  }
+                ],
+                "locality": {}
+              }
+            ],
+            "policy": {
+              "overprovisioningFactor": 140
+            }
+          }
+        }
+      ]
+    }
+  }
+}

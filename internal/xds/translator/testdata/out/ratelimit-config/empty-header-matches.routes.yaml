@@ -1,0 +1,12 @@
+costSpecified: false
+rateLimits:
+- actions:
+  - ActionSpecifier:
+      GenericKey:
+        descriptor_key: first-route
+        descriptor_value: first-route
+  - ActionSpecifier:
+      GenericKey:
+        descriptor_key: rule-0-match--1
+        descriptor_value: rule-0-match--1
+routeName: first-route

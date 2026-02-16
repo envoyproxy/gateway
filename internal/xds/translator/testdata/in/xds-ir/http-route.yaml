@@ -1,0 +1,37 @@
+http:
+- name: "first-listener"
+  address: "::"
+  port: 10080
+  hostnames:
+  - "*"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  routes:
+  - name: "first-route"
+    hostname: "*"
+    headerMatches:
+    - name: user
+      exact: "jason"
+    - name: test
+      suffix: "end"
+    queryParamMatches:
+    - name: "debug"
+      exact: "yes"
+    cookieMatches:
+    - distinct: false
+      exact: xxx
+      name: cookie-1
+    - distinct: false
+      name: cookie-2
+      safeRegex: foo.*
+    destination:
+      name: "first-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        - host: "1.2.3.5"
+          port: 50000
+          draining: true
+        name: "first-route-dest/backend/0"

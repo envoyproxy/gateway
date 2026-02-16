@@ -1,0 +1,61 @@
+# Ignore vulnerabilities on license scan
+[[PackageOverrides]]
+ecosystem = "Go"
+
+vulnerability.ignore = true
+
+[[PackageOverrides]]
+name = "github.com/go-sql-driver/mysql"
+version = "1.9.3"
+ecosystem = "Go"
+license.ignore = true
+reason = "This package is licensed under the MPL-2.0 license, which is not included in the CNCF allowlist, but it is covered by an exception. See https://github.com/cncf/foundation/blob/main/license-exceptions/CNCF-licensing-exceptions.csv"
+
+[[PackageOverrides]]
+name = "github.com/hashicorp/errwrap"
+version = "1.1.0"
+ecosystem = "Go"
+license.ignore = true
+reason = "This package is licensed under the MPL-2.0 license, which is not included in the CNCF allowlist, but it is covered by an exception. See https://github.com/cncf/foundation/blob/main/license-exceptions/CNCF-licensing-exceptions.csv"
+
+[[PackageOverrides]]
+name = "github.com/hashicorp/go-multierror"
+version = "1.1.1"
+ecosystem = "Go"
+license.ignore = true
+reason = "This package is licensed under the MPL-2.0 license, which is not included in the CNCF allowlist, but it is covered by an exception. See https://github.com/cncf/foundation/blob/main/license-exceptions/CNCF-licensing-exceptions.csv"
+
+[[PackageOverrides]]
+name = "github.com/hashicorp/golang-lru/v2"
+version = "2.0.7"
+ecosystem = "Go"
+license.ignore = true
+reason = "This package is licensed under the MPL-2.0 license, which is not included in the CNCF allowlist, but it is covered by an exception. See https://github.com/cncf/foundation/blob/main/license-exceptions/CNCF-licensing-exceptions.csv"
+
+[[PackageOverrides]]
+name = "github.com/opencontainers/go-digest"
+version = "1.0.0"
+ecosystem = "Go"
+license.override = ["Apache-2.0"]
+reason = "This package is dual-licensed: the code under the Apache 2.0 license and the documentation under the CC-BY-SA-4.0 license"
+
+# Remove this once OSV image updated
+[[PackageOverrides]]
+name = "stdlib"
+ecosystem = "Go"
+license.override = ["BSD-3-Clause"]
+reason = "Go stdlib is licensed under BSD-3-Clause, see https://go.dev/LICENSE"
+
+# Remove this after CNCF allowlist update
+[[PackageOverrides]]
+name = "github.com/cyphar/filepath-securejoin"
+ecosystem = "Go"
+license.override = ["BSD-3-Clause"]
+reason = "https://github.com/cncf/foundation/issues/1154"
+
+# Remove this after CNCF allowlist update
+[[PackageOverrides]]
+name = "cyphar.com/go-pathrs"
+ecosystem = "Go"
+license.ignore = true
+reason = "https://github.com/cncf/foundation/issues/1154"

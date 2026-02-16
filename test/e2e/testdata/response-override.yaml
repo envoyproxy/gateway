@@ -1,0 +1,105 @@
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: response-override
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: same-namespace
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: infra-backend-v1
+          port: 8080
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: response-override-config
+  namespace: gateway-conformance-infra
+data:
+  response.body: '{"error": "Internal Server Error"}'
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: response-override
+  namespace: gateway-conformance-infra
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: response-override
+  responseOverride:
+    - match:
+        statusCodes:
+          - type: Value
+            value: 404
+      response:
+        contentType: text/plain
+        body:
+          type: Inline
+          inline: "%RESPONSE_CODE% Oops! Your request is not found."
+        header:
+          add:
+            - name: X-Add-Header
+              value: "added-404"
+            - name: X-Error-Type
+              value: "not-found"
+          set:
+            - name: X-Set-Header
+              value: "set-404"
+            - name: Cache-Control
+              value: "no-cache"
+    - match:
+        statusCodes:
+          - type: Value
+            value: 403
+      response:
+        statusCode: 404
+        header:
+          add:
+            - name: X-Add-Header
+              value: "added-403"
+          set:
+            - name: X-Set-Header
+              value: "set-403"
+    - match:
+        statusCodes:
+          - type: Value
+            value: 500
+          - type: Range
+            range:
+              start: 501
+              end: 511
+      response:
+        contentType: application/json
+        body:
+          type: ValueRef
+          valueRef:
+            group: ""
+            kind: ConfigMap
+            name: response-override-config
+        header:
+          add:
+            - name: X-Add-Header
+              value: "added-500"
+          set:
+            - name: X-Set-Header
+              value: "set-500"
+    - match:
+        statusCodes:
+          - type: Value
+            value: 401
+      redirect:
+        scheme: https
+        hostname: www.redirect.com
+        port: 8443
+        statusCode: 301
+        path:
+          type: ReplaceFullPath
+          replaceFullPath: /status/301

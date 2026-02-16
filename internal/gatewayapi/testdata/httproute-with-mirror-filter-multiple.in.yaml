@@ -1,0 +1,62 @@
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-1
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      hostname: "*.envoyproxy.io"
+      allowedRoutes:
+        namespaces:
+          from: All
+httpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-1
+  spec:
+    hostnames:
+    - gateway.envoyproxy.io
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: "/"
+      backendRefs:
+      - name: service-1
+        port: 8080
+      filters:
+      - type: RequestHeaderModifier
+        requestHeaderModifier:
+          set:
+          - name: X-Header-Set
+            value: set-overwrites-values
+          add:
+          - name: X-Header-Add
+            value: header-val-1
+          - name: X-Header-Add-Append
+            value: header-val-2
+          remove:
+          - X-Header-Remove
+      - type: RequestMirror
+        requestMirror:
+          backendRef:
+            kind: Service
+            name: service-1
+            port: 8080
+      - type: RequestMirror
+        requestMirror:
+          backendRef:
+            kind: Service
+            name: mirror-service
+            port: 8080
+

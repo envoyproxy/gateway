@@ -1,0 +1,42 @@
+http:
+- name: "first-listener"
+  address: "::"
+  port: 10080
+  hostnames:
+  - "*"
+  http1:
+    preserveHeaderCase: true
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  routes:
+  - name: "first-route"
+    hostname: "*"
+    destination:
+      name: "first-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "first-route-dest/backend/0"
+- name: "second-listener"
+  address: "::"
+  port: 10081
+  hostnames:
+  - "*"
+  http1:
+    preserveHeaderCase: true
+    enableTrailers: true
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  routes:
+  - name: "second-route"
+    hostname: "*"
+    destination:
+      name: "second-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.5"
+          port: 50000
+        name: "second-route-dest/backend/0"

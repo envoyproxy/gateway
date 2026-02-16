@@ -1,0 +1,385 @@
+// Copyright Envoy Gateway Authors
+// SPDX-License-Identifier: Apache-2.0
+// The full text of the Apache license is available in the LICENSE file at
+// the root of the repo.
+
+package bootstrap
+
+import (
+	// Register embed
+	_ "embed"
+	"encoding/base64"
+	"fmt"
+	"net"
+	"strconv"
+	"strings"
+	"text/template"
+
+	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/utils/ptr"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/utils/cert"
+	netutils "github.com/envoyproxy/gateway/internal/utils/net"
+	"github.com/envoyproxy/gateway/internal/utils/regex"
+)
+
+const (
+	// envoyCfgFileName is the name of the Envoy configuration file.
+	envoyCfgFileName = "bootstrap.yaml"
+	// envoyGatewayXdsServerHost is the DNS name of the Xds Server within Envoy Gateway.
+	// It defaults to the Envoy Gateway Kubernetes service.
+	envoyGatewayXdsServerHost = "envoy-gateway"
+	// EnvoyAdminAddress is the listening v4 address of the envoy admin interface.
+	EnvoyAdminAddress   = "127.0.0.1"
+	EnvoyAdminAddressV6 = "::1"
+	// EnvoyAdminPort is the port used to expose admin interface.
+	EnvoyAdminPort = 19000
+	// envoyAdminAccessLogPath is the path used to expose admin access log.
+	envoyAdminAccessLogPath = "/dev/null"
+
+	// DefaultXdsServerPort is the default listening port of the xds-server.
+	DefaultXdsServerPort = 18000
+
+	EnvoyStatsPort = 19001
+
+	EnvoyReadinessPort = 19003
+	EnvoyReadinessPath = "/ready"
+
+	defaultSdsTrustedCAPath   = "/sds/xds-trusted-ca.json"
+	defaultSdsCertificatePath = "/sds/xds-certificate.json"
+	// #nosec G101 - This is a file path, not a credential
+	defaultServiceAccountTokenPath = "/sds/xds-service-account-token.json"
+
+	defaultServiceClusterName = "local_cluster"
+)
+
+//go:embed bootstrap.yaml.tpl
+var bootstrapTmplStr string
+
+var bootstrapTmpl = template.Must(template.New(envoyCfgFileName).Funcs(template.FuncMap{
+	"base64": func(data []byte) string {
+		return base64.StdEncoding.EncodeToString(data)
+	},
+}).Parse(bootstrapTmplStr))
+
+// bootstrapConfig defines the envoy Bootstrap configuration.
+type bootstrapConfig struct {
+	// parameters defines configurable bootstrap configuration parameters.
+	parameters bootstrapParameters
+	// rendered is the rendered bootstrap configuration.
+	rendered string
+}
+
+// bootstrapParameters defines the envoy Bootstrap configuration.
+type bootstrapParameters struct {
+	// XdsServer defines the configuration of the XDS server.
+	XdsServer serverParameters
+	// AdminServer defines the configuration of the Envoy admin interface.
+	AdminServer adminServerParameters
+	// StatsServer defines the configuration for stats listener
+	StatsServer serverParameters
+	// SdsCertificatePath defines the path to SDS certificate config.
+	SdsCertificatePath string
+	// SdsTrustedCAPath defines the path to SDS trusted CA config.
+	SdsTrustedCAPath string
+	// SystemCACertPath is the path to the system CA certificate bundle.
+	SystemCACertPath string
+
+	// EnablePrometheus defines whether to enable metrics endpoint for prometheus.
+	EnablePrometheus bool
+	// EnablePrometheusCompression defines whether to enable HTTP compression on metrics endpoint for prometheus.
+	EnablePrometheusCompression bool
+	// PrometheusCompressionLibrary defines the HTTP compression library for metrics endpoint for prometheus.
+	// TODO: remove this field because it is not used.
+	PrometheusCompressionLibrary string
+
+	// OtelMetricSinks defines the configuration of the OpenTelemetry sinks.
+	OtelMetricSinks []MetricSink
+	// EnableStatConfig defines whether to customize the Envoy proxy stats.
+	EnableStatConfig bool
+	// StatsMatcher is to control creation of custom Envoy stats with prefix,
+	// suffix, and regex expressions match on the name of the stats.
+	StatsMatcher *StatsMatcherParameters
+	// OverloadManager defines the configuration of the Envoy overload manager.
+	OverloadManager overloadManagerParameters
+
+	// IPFamily of the Listener
+	IPFamily string
+	// GatewayNamespaceMode defines whether to use the Envoy Gateway namespace mode.
+	GatewayNamespaceMode bool
+	// ServiceClusterName is the generated name of the Envoy ServiceCluster.
+	ServiceClusterName string
+	// TopologyInjectorDisabled controls whether to render the local cluster for use with zone aware routing
+	TopologyInjectorDisabled bool
+	// ServiceAccountTokenPath is the path to the service account token file used for authentication in GatewayNamespaceMode.
+	ServiceAccountTokenPath string
+}
+
+type serverParameters struct {
+	// Address is the address of the XDS Server that Envoy is managed by.
+	Address string
+	// Port is the port of the XDS Server that Envoy is managed by.
+	Port int32
+}
+
+// MetricSink defines an OpenTelemetry metrics sink destination for template rendering.
+type MetricSink struct {
+	// Address is the address of the metrics sink.
+	Address string
+	// Port is the port of the metrics sink.
+	Port uint32
+	// Authority is the gRPC authority header value (typically SNI or hostname).
+	Authority string
+	// ReportCountersAsDeltas configures counters to use delta temporality.
+	ReportCountersAsDeltas bool
+	// ReportHistogramsAsDeltas configures histograms to use delta temporality.
+	ReportHistogramsAsDeltas bool
+	// Headers is a list of headers to send with OTLP export requests.
+	Headers []gwapiv1.HTTPHeader
+	// ResourceAttributes is a map of resource attributes for the metrics sink.
+	ResourceAttributes map[string]string
+	// TLS contains upstream TLS configuration for the metrics sink.
+	// Nil means no TLS.
+	TLS *MetricSinkTLS
+}
+
+// MetricSinkTLS defines TLS settings for a metrics sink.
+type MetricSinkTLS struct {
+	// SNI is the Server Name Indication for TLS.
+	SNI string
+	// UseSystemTrustStore indicates whether to use the system CA trust store.
+	UseSystemTrustStore bool
+	// CACertificate is the CA certificate for validating the upstream TLS certificate.
+	// When set, this takes precedence over UseSystemTrustStore.
+	CACertificate []byte
+}
+
+type adminServerParameters struct {
+	// Address is the address of the Envoy admin interface.
+	Address string
+	// Port is the port of the Envoy admin interface.
+	Port int32
+	// AccessLogPath is the path of the Envoy admin access log.
+	AccessLogPath string
+}
+
+type StatsMatcherParameters struct {
+	Exacts             []string
+	Prefixes           []string
+	Suffixes           []string
+	RegularExpressions []string
+}
+
+type overloadManagerParameters struct {
+	MaxHeapSizeBytes uint64
+}
+
+type RenderBootstrapConfigOptions struct {
+	IPFamily     *egv1a1.IPFamily
+	ProxyMetrics *egv1a1.ProxyMetrics
+	// TODO: remove after deprecating host/port in favor of backendRefs.
+	ResolvedMetricSinks      []MetricSink
+	SdsConfig                SdsConfigPath
+	ServiceClusterName       *string
+	XdsServerHost            *string
+	XdsServerPort            *int32
+	AdminServerPort          *int32
+	StatsServerPort          *int32
+	MaxHeapSizeBytes         uint64
+	GatewayNamespaceMode     bool
+	TopologyInjectorDisabled bool
+	ServiceAccountTokenPath  string
+}
+
+type SdsConfigPath struct {
+	Certificate string
+	TrustedCA   string
+	// ServiceAccountToken is the path to the service account token file used for authentication in GatewayNamespaceMode.
+	ServiceAccountToken string
+}
+
+// render the stringified bootstrap config in yaml format.
+func (b *bootstrapConfig) render() error {
+	buf := new(strings.Builder)
+	if err := bootstrapTmpl.Execute(buf, b.parameters); err != nil {
+		return fmt.Errorf("failed to render bootstrap config: %w", err)
+	}
+	b.rendered = buf.String()
+
+	return nil
+}
+
+// GetRenderedBootstrapConfig renders the bootstrap YAML string
+func GetRenderedBootstrapConfig(opts *RenderBootstrapConfigOptions) (string, error) {
+	var (
+		enablePrometheus             = true
+		enablePrometheusCompression  = false
+		prometheusCompressionLibrary = "Gzip"
+		metricSinks                  []MetricSink
+		StatsMatcher                 StatsMatcherParameters
+	)
+
+	if opts != nil && opts.ProxyMetrics != nil {
+		proxyMetrics := opts.ProxyMetrics
+
+		if proxyMetrics.Prometheus != nil {
+			enablePrometheus = !proxyMetrics.Prometheus.Disable
+
+			if proxyMetrics.Prometheus.Compression != nil {
+				enablePrometheusCompression = true
+				prometheusCompressionLibrary = string(proxyMetrics.Prometheus.Compression.Type)
+			}
+		}
+
+		// Use pre-resolved metric sinks if provided
+		if len(opts.ResolvedMetricSinks) > 0 {
+			metricSinks = opts.ResolvedMetricSinks
+		} else {
+			// Fall back to resolving from ProxyMetrics (legacy path for Service-type backends)
+			addresses := sets.NewString()
+			for _, sink := range proxyMetrics.Sinks {
+				if sink.OpenTelemetry == nil {
+					continue
+				}
+
+				var host string
+				var port uint32
+				if sink.OpenTelemetry.Host != nil {
+					host, port = *sink.OpenTelemetry.Host, uint32(sink.OpenTelemetry.Port)
+				}
+				if len(sink.OpenTelemetry.BackendRefs) > 0 {
+					ref := sink.OpenTelemetry.BackendRefs[0].BackendObjectReference
+					if ref.Port == nil {
+						return "", fmt.Errorf("metrics sink backendRef %s has no port", ref.Name)
+					}
+					host, port = netutils.BackendHostAndPort(ref, "")
+				}
+
+				// skip duplicate sinks
+				addr := net.JoinHostPort(host, strconv.Itoa(int(port)))
+				if addresses.Has(addr) {
+					continue
+				}
+				addresses.Insert(addr)
+
+				metricSinks = append(metricSinks, MetricSink{
+					Address:                  host,
+					Port:                     port,
+					ReportCountersAsDeltas:   ptr.Deref(sink.OpenTelemetry.ReportCountersAsDeltas, false),
+					ReportHistogramsAsDeltas: ptr.Deref(sink.OpenTelemetry.ReportHistogramsAsDeltas, false),
+					Headers:                  sink.OpenTelemetry.Headers,
+				})
+			}
+		}
+
+		if proxyMetrics.Matches != nil {
+			// Add custom envoy proxy stats
+			for _, match := range proxyMetrics.Matches {
+				// matchType default to exact
+				matchType := egv1a1.StringMatchExact
+				if match.Type != nil {
+					matchType = *match.Type
+				}
+				switch matchType {
+				case egv1a1.StringMatchExact:
+					StatsMatcher.Exacts = append(StatsMatcher.Exacts, match.Value)
+				case egv1a1.StringMatchPrefix:
+					StatsMatcher.Prefixes = append(StatsMatcher.Prefixes, match.Value)
+				case egv1a1.StringMatchSuffix:
+					StatsMatcher.Suffixes = append(StatsMatcher.Suffixes, match.Value)
+				case egv1a1.StringMatchRegularExpression:
+					if err := regex.Validate(match.Value); err != nil {
+						return "", err
+					}
+					StatsMatcher.RegularExpressions = append(StatsMatcher.RegularExpressions, match.Value)
+				}
+			}
+		}
+	}
+
+	cfg := &bootstrapConfig{
+		parameters: bootstrapParameters{
+			XdsServer: serverParameters{
+				Address: envoyGatewayXdsServerHost,
+				Port:    DefaultXdsServerPort,
+			},
+			AdminServer: adminServerParameters{
+				Address:       EnvoyAdminAddress,
+				Port:          EnvoyAdminPort,
+				AccessLogPath: envoyAdminAccessLogPath,
+			},
+			StatsServer: serverParameters{
+				Address: netutils.IPv4ListenerAddress,
+				Port:    EnvoyStatsPort,
+			},
+			SdsCertificatePath:           defaultSdsCertificatePath,
+			SdsTrustedCAPath:             defaultSdsTrustedCAPath,
+			SystemCACertPath:             cert.SystemCertPath,
+			EnablePrometheus:             enablePrometheus,
+			EnablePrometheusCompression:  enablePrometheusCompression,
+			PrometheusCompressionLibrary: prometheusCompressionLibrary,
+			OtelMetricSinks:              metricSinks,
+			ServiceClusterName:           defaultServiceClusterName,
+			ServiceAccountTokenPath:      defaultServiceAccountTokenPath,
+		},
+	}
+
+	// Bootstrap config override
+	if opts != nil {
+		if opts.ProxyMetrics != nil && opts.ProxyMetrics.Matches != nil {
+			cfg.parameters.StatsMatcher = &StatsMatcher
+		}
+
+		// Override Sds configs
+		if len(opts.SdsConfig.Certificate) > 0 {
+			cfg.parameters.SdsCertificatePath = opts.SdsConfig.Certificate
+		}
+		if len(opts.SdsConfig.TrustedCA) > 0 {
+			cfg.parameters.SdsTrustedCAPath = opts.SdsConfig.TrustedCA
+		}
+
+		if opts.XdsServerHost != nil {
+			cfg.parameters.XdsServer.Address = *opts.XdsServerHost
+		}
+
+		// Override the various server port
+		if opts.XdsServerPort != nil {
+			cfg.parameters.XdsServer.Port = *opts.XdsServerPort
+		}
+		if opts.AdminServerPort != nil {
+			cfg.parameters.AdminServer.Port = *opts.AdminServerPort
+		}
+		if opts.StatsServerPort != nil {
+			cfg.parameters.StatsServer.Port = *opts.StatsServerPort
+		}
+
+		if opts.IPFamily != nil {
+			cfg.parameters.IPFamily = string(*opts.IPFamily)
+			switch *opts.IPFamily {
+			case egv1a1.IPv6:
+				cfg.parameters.AdminServer.Address = EnvoyAdminAddressV6
+				cfg.parameters.StatsServer.Address = netutils.IPv6ListenerAddress
+			case egv1a1.DualStack:
+				cfg.parameters.StatsServer.Address = netutils.IPv6ListenerAddress
+			}
+		}
+		cfg.parameters.GatewayNamespaceMode = opts.GatewayNamespaceMode
+		if opts.GatewayNamespaceMode && len(opts.SdsConfig.ServiceAccountToken) > 0 {
+			cfg.parameters.ServiceAccountTokenPath = opts.SdsConfig.ServiceAccountToken
+		}
+
+		cfg.parameters.OverloadManager.MaxHeapSizeBytes = opts.MaxHeapSizeBytes
+		if opts.ServiceClusterName != nil {
+			cfg.parameters.ServiceClusterName = *opts.ServiceClusterName
+		}
+		cfg.parameters.TopologyInjectorDisabled = opts.TopologyInjectorDisabled
+	}
+
+	if err := cfg.render(); err != nil {
+		return "", err
+	}
+
+	return cfg.rendered, nil
+}

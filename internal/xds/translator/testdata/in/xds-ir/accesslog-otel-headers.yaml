@@ -1,0 +1,44 @@
+accesslog:
+  openTelemetry:
+  - text: |
+      [%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE%
+    attributes:
+    - key: "response_code"
+      value: "%RESPONSE_CODE%"
+    resourceAttributes:
+    - key: "cluster_name"
+      value: "cluster1"
+    authority: "otel-collector.default.svc.cluster.local"
+    headers:
+    - name: Authorization
+      value: Bearer my-api-key
+    - name: X-Tenant-ID
+      value: tenant-123
+    destination:
+      name: "accesslog-0"
+      settings:
+      - endpoints:
+        - host: "otel-collector.default.svc.cluster.local"
+          port: 4317
+        protocol: "GRPC"
+        addressType: FQDN
+        name: "accesslog-0/backend/0"
+http:
+- name: "first-listener"
+  address: "::"
+  port: 10080
+  hostnames:
+  - "*"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  routes:
+  - name: "direct-route"
+    hostname: "*"
+    destination:
+      name: "direct-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "direct-route-dest/backend/0"

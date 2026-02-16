@@ -1,0 +1,83 @@
+accesslog:
+  text:
+  - path: "/dev/stdout"
+    format: |
+      [%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%"
+  json:
+  - path: "/dev/stdout"
+    json:
+    - key: method
+      value: "%REQ(:METHOD)%"
+    - key: path
+      value: "%REQ(X-ENVOY-ORIGINAL-PATH?:PATH)%"
+    - key: protocol
+      value: "%PROTOCOL%"
+    - key: response_code
+      value: "%RESPONSE_CODE%"
+    - key: start_time
+      value: "%START_TIME%"
+  als:
+  - name: als
+    destination:
+      name: accesslog/monitoring/envoy-als/port/9000
+      settings:
+      - addressType: IP
+        endpoints:
+        - host: 1.1.1.1
+          port: 9000
+        protocol: GRPC
+        weight: 1
+        name: accesslog/monitoring/envoy-als/port/9000/backend/0
+    text: |
+      [%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%"
+    attributes:
+    - key: attr1
+      value: value1
+    - key: attr2
+      value: value2
+    http:
+      requestHeaders:
+      - x-client-ip-address
+      responseHeaders:
+      - cache-control
+      responseTrailers:
+      - expires
+    type: HTTP
+  openTelemetry:
+  - text: |
+      [%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%"
+    attributes:
+    - key: "response_code"
+      value: "%RESPONSE_CODE%"
+    resourceAttributes:
+    - key: "cluster_name"
+      value: "cluster1"
+    authority: "otel-collector.default.svc.cluster.local"
+    destination:
+      name: "accesslog-0"
+      settings:
+      - endpoints:
+        - host: "otel-collector.default.svc.cluster.local"
+          port: 4317
+        protocol: "GRPC"
+        addressType: FQDN
+        name: "accesslog-0/backend/0"
+http:
+- name: "first-listener"
+  address: "::"
+  port: 10080
+  hostnames:
+  - "*"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  routes:
+  - name: "direct-route"
+    hostname: "*"
+    destination:
+      name: "direct-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "direct-route-dest/backend/0"

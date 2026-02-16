@@ -1,0 +1,5 @@
+deployment:
+  envoyGateway:
+    image:
+      repository: "envoy/gateway"
+      tag: "abcdef"

@@ -1,0 +1,68 @@
+default:
+  eg:
+    '@type': type.googleapis.com/envoy.admin.v3.ClustersConfigDump
+    dynamicActiveClusters:
+    - cluster:
+        '@type': type.googleapis.com/envoy.config.cluster.v3.Cluster
+        commonLbConfig:
+          localityWeightedLbConfig: {}
+        connectTimeout: 5s
+        dnsLookupFamily: V4_ONLY
+        loadAssignment:
+          clusterName: default-backend-rule-0-match-0-www.example.com
+          endpoints:
+          - lbEndpoints:
+            - endpoint:
+                address:
+                  socketAddress:
+                    address: 10.96.159.190
+                    portValue: 3000
+              loadBalancingWeight: 1
+            loadBalancingWeight: 1
+            locality: {}
+        name: default-backend-rule-0-match-0-www.example.com
+        outlierDetection: {}
+        type: STATIC
+      lastUpdated: "2023-02-23T09:05:38.443Z"
+      versionInfo: 2a0a1698a9d3e05b802047b0cd36b52a070afa49042e1ba267168c5265c7cabf
+    staticClusters:
+    - cluster:
+        '@type': type.googleapis.com/envoy.config.cluster.v3.Cluster
+        connectTimeout: 1s
+        loadAssignment:
+          clusterName: xds_cluster
+          endpoints:
+          - lbEndpoints:
+            - endpoint:
+                address:
+                  socketAddress:
+                    address: envoy-gateway
+                    portValue: 18000
+        name: xds_cluster
+        transportSocket:
+          name: envoy.transport_sockets.tls
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+            commonTlsContext:
+              tlsCertificateSdsSecretConfigs:
+              - name: xds_certificate
+                sdsConfig:
+                  pathConfigSource:
+                    path: /sds/xds-certificate.json
+                  resourceApiVersion: V3
+              tlsParams:
+                tlsMaximumProtocolVersion: TLSv1_3
+              validationContextSdsSecretConfig:
+                name: xds_trusted_ca
+                sdsConfig:
+                  pathConfigSource:
+                    path: /sds/xds-trusted-ca.json
+                  resourceApiVersion: V3
+        type: STRICT_DNS
+        typedExtensionProtocolOptions:
+          envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
+            '@type': type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
+            explicitHttpConfig:
+              http2ProtocolOptions: {}
+      lastUpdated: "2023-02-23T09:05:23.436Z"
+    versionInfo: "2"

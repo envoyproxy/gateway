@@ -1,0 +1,39 @@
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-1
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: All
+grpcRoutes:
+- apiVersion: gateway.networking.k8s.io/v1alpha2
+  kind: GRPCRoute
+  metadata:
+    namespace: default
+    name: grpcroute-1
+  spec:
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+      sectionName: http
+    rules:
+    - matches:
+      - method:
+          method: "Example"
+          service: "com.example"
+          type: Exact
+      - method:
+          method: "Foobar"
+          service: "foo.*"
+          type: RegularExpression
+      backendRefs:
+      - name: service-1
+        port: 8080

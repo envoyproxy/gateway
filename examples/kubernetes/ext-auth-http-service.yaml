@@ -1,0 +1,87 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: http-ext-auth
+data:
+  http-ext-auth.js: |
+         const Http = require("http");
+         const path = require("path");
+
+         const tokens = {
+           "token1": "user1",
+           "token2": "user2",
+           "token3": "user3"
+         };
+
+         const server = new Http.Server((req, res) => {
+           const authorization = req.headers["authorization"] || "";
+           const extracted = authorization.split(" ");
+           if (extracted.length === 2 && extracted[0] === "Bearer") {
+             const user = checkToken(extracted[1]);
+             console.log(`token: "${extracted[1]}" user: "${user}`);
+             if (user !== undefined) {
+               // The authorization server returns a response with "x-current-user" header for a successful
+               // request.
+               res.writeHead(200, { "x-current-user": user });
+               return res.end();
+             }
+           }
+           res.writeHead(403);
+           res.end();
+         });
+
+         const port = process.env.PORT || 9002;
+         server.listen(port);
+         console.log(`starting HTTP server on: ${port}`);
+
+         function checkToken(token) {
+           return tokens[token];
+         }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: http-ext-auth
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: http-ext-auth
+  template:
+    metadata:
+      labels:
+        app: http-ext-auth
+    spec:
+      containers:
+      - name: http-ext-auth
+        command:
+        - node
+        - /usr/src/app/http-ext-auth.js
+        image: node:19-bullseye
+        ports:
+        - containerPort: 9002
+        volumeMounts:
+        - name: http-ext-auth
+          mountPath: /usr/src/app
+        readinessProbe:
+          httpGet:
+            httpHeaders:
+            - name: authorization
+              value: "Bearer token1"
+            port: 9002
+      volumes:
+      - name: http-ext-auth
+        configMap:
+          name: http-ext-auth
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: http-ext-auth
+spec:
+  selector:
+    app: http-ext-auth
+  ports:
+  - protocol: TCP
+    port: 9002
+    targetPort: 9002

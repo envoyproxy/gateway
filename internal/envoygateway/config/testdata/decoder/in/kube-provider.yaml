@@ -1,0 +1,14 @@
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyGateway
+provider:
+  type: Kubernetes
+  kubernetes:
+    client:
+      rateLimit:
+        qps: 50
+        burst: 100
+    leaderElection:
+      leaseDuration: 15s
+      renewDeadline: 10s
+      retryPeriod: 2s
+      disable: false

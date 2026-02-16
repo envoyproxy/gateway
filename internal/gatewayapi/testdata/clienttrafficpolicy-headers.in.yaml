@@ -1,0 +1,86 @@
+clientTrafficPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: ClientTrafficPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: target-gateway-1
+  spec:
+    headers:
+      enableEnvoyHeaders: true
+      withUnderscoresAction: Allow
+      requestID: PreserveOrGenerate
+      earlyRequestHeaders:
+        add:
+        - name: "my-added-header"
+          value: "my-added-header-value"
+        - name: "my-added-header"
+          value: "my-added-header-value"
+        - name: "my-multi-added-header"
+          value: "value1,value2"
+        set:
+        - name: "my-set-header"
+          value: "my-set-header-value"
+        - name: "my-set-header"
+          value: "my-set-header-value"
+        remove:
+        - "my-removed-header"
+        - "my-removed-header"
+        removeOnMatch:
+        - value: "my-removed-header-value"
+          type: Exact
+        - value: "removed-prefix-"
+          type: Prefix
+        - value: "-removed-suffix"
+          type: Suffix
+        - value: "removed-regex-.*"
+          type: RegularExpression
+      lateResponseHeaders:
+        add:
+        - name: "my-added-response-header"
+          value: "my-added-response-header-value"
+        - name: "my-added-response-header"
+          value: "my-added-response-header-value"
+        set:
+        - name: "my-set-response-header"
+          value: "my-set-response-header-value"
+        - name: "my-set-response-header"
+          value: "my-set-response-header-value"
+        - name: "my-multi-set-response-header"
+          value: "value1,value2"
+        remove:
+        - "my-removed-response-header"
+        - "my-removed-response-header"
+        removeOnMatch:
+        - value: "my-removed-response-header-value"
+          type: Exact
+        - value: "removed-response-prefix-"
+          type: Prefix
+        - value: "-removed-response-suffix"
+          type: Suffix
+        - value: "removed-response-regex-.*"
+          type: RegularExpression
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-1
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-1
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http-1
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: Same
+    - name: http-2
+      protocol: HTTP
+      port: 8080
+      allowedRoutes:
+        namespaces:
+          from: Same

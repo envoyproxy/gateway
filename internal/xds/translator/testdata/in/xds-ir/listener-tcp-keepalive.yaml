@@ -1,0 +1,72 @@
+http:
+- name: "first-listener"
+  address: "::"
+  port: 10080
+  hostnames:
+  - "foo.com"
+  tcpKeepalive: {}
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  routes:
+  - name: "first-route"
+    hostname: "*"
+    destination:
+      name: "first-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "first-route-dest/backend/0"
+- name: "second-listener"
+  address: "::"
+  port: 10081
+  hostnames:
+  - "foo.net"
+  tcpKeepalive:
+    probes: 7
+    interval: 200
+    idleTime: 50
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  routes:
+  - name: "second-route"
+    hostname: "*"
+    destination:
+      name: "second-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "second-route-dest/backend/0"
+tcp:
+- name: "third-listener"
+  address: "::"
+  port: 10082
+  tcpKeepalive: {}
+  routes:
+  - tls:
+      inspector:
+        snis:
+        - bar.com
+    destination:
+      name: "tls-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "tls-route-dest/backend/0"
+- name: "fourth-listener"
+  address: "::"
+  tcpKeepalive:
+    probes: 10
+  port: 10083
+  routes:
+  - destination:
+      name: "tcp-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "tcp-route-dest/backend/0"

@@ -1,0 +1,41 @@
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyGateway
+gateway:
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller
+provider:
+  type: Kubernetes
+  kubernetes:
+    rateLimitDeployment:
+      strategy:
+        type: RollingUpdate
+      container:
+        env:
+        - name: env_a
+          value: env_a_value
+        - name: env_b
+          value: env_b_value
+        image: envoyproxy/ratelimit:latest
+        resources:
+          requests:
+            cpu: 100m
+            memory: 512Mi
+        securityContext:
+          runAsUser: 2000
+          allowPrivilegeEscalation: false
+      pod:
+        annotations:
+          key1: val1
+          key2: val2
+        securityContext:
+          runAsUser: 1000
+          runAsGroup: 3000
+          fsGroup: 2000
+          fsGroupChangePolicy: "OnRootMismatch"
+rateLimit:
+  backend:
+    type: Redis
+    redis:
+      url: localhost:6379
+      tls:
+        certificateRef:
+          name: ratelimit-cert

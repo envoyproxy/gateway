@@ -1,0 +1,77 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: metric-prometheus
+  namespace: gateway-conformance-infra
+spec:
+  gatewayClassName: "{GATEWAY_CLASS_NAME}"
+  listeners:
+    - name: http
+      port: 80
+      protocol: HTTP
+      allowedRoutes:
+        namespaces:
+          from: All
+  infrastructure:
+    parametersRef:
+      group: gateway.envoyproxy.io
+      kind: EnvoyProxy
+      name: metric-prometheus
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: metric-prometheus
+  namespace: gateway-conformance-infra
+spec:
+  ipFamily: IPv4
+  logging:
+    level:
+      default: debug
+  telemetry:
+    metrics:
+      prometheus: {}
+      sinks:
+        - type: OpenTelemetry
+          openTelemetry:
+            backendRefs:
+              - name: otel-collector
+                namespace: monitoring
+                port: 4317
+  shutdown:
+    drainTimeout: 5s
+    minDrainDuration: 1s
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: metric-prometheus
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: metric-prometheus
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /prom
+      backendRefs:
+        - name: infra-backend-v1
+          port: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: otel-collecot-prometheus
+  namespace: monitoring
+spec:
+  selector:
+    app.kubernetes.io/instance: eg-addons
+    app.kubernetes.io/name: opentelemetry-collector
+    component: standalone-collector
+  ports:
+    - name: metrics
+      protocol: TCP
+      port: 19001
+      targetPort: 19001
+  type: LoadBalancer

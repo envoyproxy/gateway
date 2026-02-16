@@ -1,0 +1,20 @@
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: jwt-example
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: backend
+  apiKeyAuth:
+    credentialRefs:
+      - name: foobar
+    extractFrom:
+      - headers:
+          - foobar
+  jwt:
+    providers:
+      - name: example
+        remoteJWKS:
+          uri: https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/kubernetes/jwt/jwks.json

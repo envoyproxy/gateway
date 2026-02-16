@@ -1,0 +1,31 @@
+- ignorePortInHostMatching: true
+  name: first-listener
+  virtualHosts:
+  - domains:
+    - gateway.envoyproxy.io
+    name: first-listener/gateway_envoyproxy_io
+    routes:
+    - match:
+        pathSeparatedPrefix: /origin
+      name: rewrite-route
+      route:
+        cluster: rewrite-route
+        regexRewrite:
+          pattern:
+            regex: ^/.*$
+          substitution: /rewrite
+        upgradeConfigs:
+        - upgradeType: websocket
+    - match:
+        pathSeparatedPrefix: /origin
+      name: rewrite-route-timeout
+      route:
+        cluster: rewrite-route
+        idleTimeout: 3600s
+        regexRewrite:
+          pattern:
+            regex: ^/.*$
+          substitution: /rewrite
+        timeout: 5s
+        upgradeConfigs:
+        - upgradeType: websocket

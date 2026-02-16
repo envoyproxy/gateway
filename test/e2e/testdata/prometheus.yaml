@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: envoy-gateway-metrics-lb
+  namespace: envoy-gateway-system
+  labels:
+    control-plane: envoy-gateway
+spec:
+  selector:
+    control-plane: envoy-gateway
+    app.kubernetes.io/instance: eg
+  ports:
+    - name: http-metrics
+      port: 19001
+      protocol: TCP
+      targetPort: 19001
+  type: LoadBalancer

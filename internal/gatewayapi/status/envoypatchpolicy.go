@@ -1,0 +1,51 @@
+// Copyright Envoy Gateway Authors
+// SPDX-License-Identifier: Apache-2.0
+// The full text of the Apache license is available in the LICENSE file at
+// the root of the repo.
+
+package status
+
+import (
+	"strings"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+)
+
+// SetProgrammedForEnvoyPatchPolicy sets programmed conditions for each ancestor reference in policy status if it is unset.
+func SetProgrammedForEnvoyPatchPolicy(s *gwapiv1.PolicyStatus, generation int64) {
+	// Return early if Programmed condition is already set
+	for _, ancestor := range s.Ancestors {
+		for _, c := range ancestor.Conditions {
+			if c.Type == string(egv1a1.PolicyConditionProgrammed) {
+				return
+			}
+			if c.Type == string(gwapiv1.PolicyConditionAccepted) && c.Status == metav1.ConditionFalse {
+				return
+			}
+		}
+	}
+
+	message := "Patches have been successfully applied."
+	cond := newCondition(string(egv1a1.PolicyConditionProgrammed), metav1.ConditionTrue, string(egv1a1.PolicyReasonProgrammed), message, generation)
+	for i := range s.Ancestors {
+		s.Ancestors[i].Conditions = MergeConditions(s.Ancestors[i].Conditions, cond)
+	}
+}
+
+func SetTranslationErrorForEnvoyPatchPolicy(s *gwapiv1.PolicyStatus, errMsg string, generation int64) {
+	cond := newCondition(string(egv1a1.PolicyConditionProgrammed), metav1.ConditionFalse, string(egv1a1.PolicyReasonInvalid), errMsg, generation)
+	for i := range s.Ancestors {
+		s.Ancestors[i].Conditions = MergeConditions(s.Ancestors[i].Conditions, cond)
+	}
+}
+
+func SetResourceNotFoundErrorForEnvoyPatchPolicy(s *gwapiv1.PolicyStatus, notFoundResources []string, generation int64) {
+	message := "Unable to find xds resources: " + strings.Join(notFoundResources, ",")
+	cond := newCondition(string(egv1a1.PolicyConditionProgrammed), metav1.ConditionFalse, string(egv1a1.PolicyReasonResourceNotFound), message, generation)
+	for i := range s.Ancestors {
+		s.Ancestors[i].Conditions = MergeConditions(s.Ancestors[i].Conditions, cond)
+	}
+}

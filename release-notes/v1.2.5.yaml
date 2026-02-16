@@ -1,0 +1,15 @@
+date: January 14, 2025
+
+
+bug fixes: |
+  Fixed a nil pointer error that occurred when a SecurityPolicy referred to a UDS backend.
+  Fixed an issue where the Gateway API translator did not use the TLS configuration from the BackendTLSPolicy when connecting to the OIDC provider’s well-known endpoint.
+  Fixed a validation failure that occurred when multiple HTTPRoutes referred to the same extension filter.
+  Fixed a nil pointer error caused by accessing the cookie TTL without verifying if it was valid.
+  Fixed unexpected port number shifting in standalone mode.
+  Fixed an issue where the shutdown-manager did not respect the security context of the container spec.
+  Fixed readiness checks failing for single-stack IPv6 Envoy Gateway deployments on dual-stack clusters.
+  Fixed IPv6 dual-stack support not working as intended.
+
+Other changes: |
+  Bumped Envoy to version 1.32.3.

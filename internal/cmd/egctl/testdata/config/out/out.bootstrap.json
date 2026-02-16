@@ -1,0 +1,1989 @@
+{
+  "default": {
+    "eg": {
+      "@type": "type.googleapis.com/envoy.admin.v3.BootstrapConfigDump",
+      "bootstrap": {
+        "admin": {
+          "accessLog": [
+            {
+              "name": "envoy.access_loggers.file",
+              "typedConfig": {
+                "@type": "type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog",
+                "path": "/dev/null"
+              }
+            }
+          ],
+          "address": {
+            "socketAddress": {
+              "address": "127.0.0.1",
+              "portValue": 19000
+            }
+          }
+        },
+        "dynamicResources": {
+          "cdsConfig": {
+            "apiConfigSource": {
+              "apiType": "DELTA_GRPC",
+              "grpcServices": [
+                {
+                  "envoyGrpc": {
+                    "clusterName": "xds_cluster"
+                  }
+                }
+              ],
+              "setNodeOnFirstMessageOnly": true,
+              "transportApiVersion": "V3"
+            },
+            "resourceApiVersion": "V3"
+          },
+          "ldsConfig": {
+            "apiConfigSource": {
+              "apiType": "DELTA_GRPC",
+              "grpcServices": [
+                {
+                  "envoyGrpc": {
+                    "clusterName": "xds_cluster"
+                  }
+                }
+              ],
+              "setNodeOnFirstMessageOnly": true,
+              "transportApiVersion": "V3"
+            },
+            "resourceApiVersion": "V3"
+          }
+        },
+        "layeredRuntime": {
+          "layers": [
+            {
+              "name": "runtime-0",
+              "rtdsLayer": {
+                "name": "runtime-0",
+                "rtdsConfig": {
+                  "apiConfigSource": {
+                    "apiType": "DELTA_GRPC",
+                    "grpcServices": [
+                      {
+                        "envoyGrpc": {
+                          "clusterName": "xds_cluster"
+                        }
+                      }
+                    ],
+                    "transportApiVersion": "V3"
+                  },
+                  "resourceApiVersion": "V3"
+                }
+              }
+            }
+          ]
+        },
+        "node": {
+          "extensions": [
+            {
+              "category": "envoy.upstreams",
+              "name": "envoy.filters.connection_pools.tcp.generic",
+              "typeUrls": [
+                "envoy.extensions.upstreams.tcp.generic.v3.GenericConnectionPoolProto"
+              ]
+            },
+            {
+              "category": "envoy.rate_limit_descriptors",
+              "name": "envoy.rate_limit_descriptors.expr",
+              "typeUrls": [
+                "envoy.extensions.rate_limit_descriptors.expr.v3.Descriptor"
+              ]
+            },
+            {
+              "category": "envoy.matching.http.input",
+              "name": "envoy.matching.inputs.destination_ip",
+              "typeUrls": [
+                "envoy.extensions.matching.common_inputs.network.v3.DestinationIPInput"
+              ]
+            },
+            {
+              "category": "envoy.matching.http.input",
+              "name": "envoy.matching.inputs.destination_port",
+              "typeUrls": [
+                "envoy.extensions.matching.common_inputs.network.v3.DestinationPortInput"
+              ]
+            },
+            {
+              "category": "envoy.matching.http.input",
+              "name": "envoy.matching.inputs.direct_source_ip",
+              "typeUrls": [
+                "envoy.extensions.matching.common_inputs.network.v3.DirectSourceIPInput"
+              ]
+            },
+            {
+              "category": "envoy.matching.http.input",
+              "name": "envoy.matching.inputs.dns_san",
+              "typeUrls": [
+                "envoy.extensions.matching.common_inputs.ssl.v3.DnsSanInput"
+              ]
+            },
+            {
+              "category": "envoy.matching.http.input",
+              "name": "envoy.matching.inputs.request_headers",
+              "typeUrls": [
+                "envoy.type.matcher.v3.HttpRequestHeaderMatchInput"
+              ]
+            },
+            {
+              "category": "envoy.matching.http.input",
+              "name": "envoy.matching.inputs.request_trailers",
+              "typeUrls": [
+                "envoy.type.matcher.v3.HttpRequestTrailerMatchInput"
+              ]
+            },
+            {
+              "category": "envoy.matching.http.input",
+              "name": "envoy.matching.inputs.response_headers",
+              "typeUrls": [
+                "envoy.type.matcher.v3.HttpResponseHeaderMatchInput"
+              ]
+            },
+            {
+              "category": "envoy.matching.http.input",
+              "name": "envoy.matching.inputs.response_trailers",
+              "typeUrls": [
+                "envoy.type.matcher.v3.HttpResponseTrailerMatchInput"
+              ]
+            },
+            {
+              "category": "envoy.matching.http.input",
+              "name": "envoy.matching.inputs.server_name",
+              "typeUrls": [
+                "envoy.extensions.matching.common_inputs.network.v3.ServerNameInput"
+              ]
+            },
+            {
+              "category": "envoy.matching.http.input",
+              "name": "envoy.matching.inputs.source_ip",
+              "typeUrls": [
+                "envoy.extensions.matching.common_inputs.network.v3.SourceIPInput"
+              ]
+            },
+            {
+              "category": "envoy.matching.http.input",
+              "name": "envoy.matching.inputs.source_port",
+              "typeUrls": [
+                "envoy.extensions.matching.common_inputs.network.v3.SourcePortInput"
+              ]
+            },
+            {
+              "category": "envoy.matching.http.input",
+              "name": "envoy.matching.inputs.source_type",
+              "typeUrls": [
+                "envoy.extensions.matching.common_inputs.network.v3.SourceTypeInput"
+              ]
+            },
+            {
+              "category": "envoy.matching.http.input",
+              "name": "envoy.matching.inputs.status_code_class_input",
+              "typeUrls": [
+                "envoy.type.matcher.v3.HttpResponseStatusCodeClassMatchInput"
+              ]
+            },
+            {
+              "category": "envoy.matching.http.input",
+              "name": "envoy.matching.inputs.status_code_input",
+              "typeUrls": [
+                "envoy.type.matcher.v3.HttpResponseStatusCodeMatchInput"
+              ]
+            },
+            {
+              "category": "envoy.matching.http.input",
+              "name": "envoy.matching.inputs.subject",
+              "typeUrls": [
+                "envoy.extensions.matching.common_inputs.ssl.v3.SubjectInput"
+              ]
+            },
+            {
+              "category": "envoy.matching.http.input",
+              "name": "envoy.matching.inputs.uri_san",
+              "typeUrls": [
+                "envoy.extensions.matching.common_inputs.ssl.v3.UriSanInput"
+              ]
+            },
+            {
+              "category": "envoy.matching.http.input",
+              "name": "query_params",
+              "typeUrls": [
+                "envoy.type.matcher.v3.HttpRequestQueryParamMatchInput"
+              ]
+            },
+            {
+              "category": "envoy.tls.cert_validator",
+              "name": "envoy.tls.cert_validator.default"
+            },
+            {
+              "category": "envoy.tls.cert_validator",
+              "name": "envoy.tls.cert_validator.spiffe"
+            },
+            {
+              "category": "envoy.path.match",
+              "name": "envoy.path.match.uri_template.uri_template_matcher",
+              "typeUrls": [
+                "envoy.extensions.path.match.uri_template.v3.UriTemplateMatchConfig"
+              ]
+            },
+            {
+              "category": "envoy.http.original_ip_detection",
+              "name": "envoy.http.original_ip_detection.custom_header",
+              "typeUrls": [
+                "envoy.extensions.http.original_ip_detection.custom_header.v3.CustomHeaderConfig"
+              ]
+            },
+            {
+              "category": "envoy.http.original_ip_detection",
+              "name": "envoy.http.original_ip_detection.xff",
+              "typeUrls": [
+                "envoy.extensions.http.original_ip_detection.xff.v3.XffConfig"
+              ]
+            },
+            {
+              "category": "envoy.filters.http.upstream",
+              "name": "envoy.buffer"
+            },
+            {
+              "category": "envoy.filters.http.upstream",
+              "name": "envoy.filters.http.admission_control",
+              "typeUrls": [
+                "envoy.extensions.filters.http.admission_control.v3.AdmissionControl"
+              ]
+            },
+            {
+              "category": "envoy.filters.http.upstream",
+              "name": "envoy.filters.http.buffer",
+              "typeUrls": [
+                "envoy.extensions.filters.http.buffer.v3.Buffer",
+                "envoy.extensions.filters.http.buffer.v3.BufferPerRoute"
+              ]
+            },
+            {
+              "category": "envoy.filters.http.upstream",
+              "name": "envoy.filters.http.upstream_codec",
+              "typeUrls": [
+                "envoy.extensions.filters.http.upstream_codec.v3.UpstreamCodec"
+              ]
+            },
+            {
+              "category": "envoy.route.early_data_policy",
+              "name": "envoy.route.early_data_policy.default",
+              "typeUrls": [
+                "envoy.extensions.early_data.v3.DefaultEarlyDataPolicy"
+              ]
+            },
+            {
+              "category": "envoy.compression.compressor",
+              "name": "envoy.compression.brotli.compressor",
+              "typeUrls": [
+                "envoy.extensions.compression.brotli.compressor.v3.Brotli"
+              ]
+            },
+            {
+              "category": "envoy.compression.compressor",
+              "name": "envoy.compression.gzip.compressor",
+              "typeUrls": [
+                "envoy.extensions.compression.gzip.compressor.v3.Gzip"
+              ]
+            },
+            {
+              "category": "envoy.compression.compressor",
+              "name": "envoy.compression.zstd.compressor",
+              "typeUrls": [
+                "envoy.extensions.compression.zstd.compressor.v3.Zstd"
+              ]
+            },
+            {
+              "category": "envoy.compression.decompressor",
+              "name": "envoy.compression.brotli.decompressor",
+              "typeUrls": [
+                "envoy.extensions.compression.brotli.decompressor.v3.Brotli"
+              ]
+            },
+            {
+              "category": "envoy.compression.decompressor",
+              "name": "envoy.compression.gzip.decompressor",
+              "typeUrls": [
+                "envoy.extensions.compression.gzip.decompressor.v3.Gzip"
+              ]
+            },
+            {
+              "category": "envoy.compression.decompressor",
+              "name": "envoy.compression.zstd.decompressor",
+              "typeUrls": [
+                "envoy.extensions.compression.zstd.decompressor.v3.Zstd"
+              ]
+            },
+            {
+              "category": "envoy.wasm.runtime",
+              "name": "envoy.wasm.runtime.null"
+            },
+            {
+              "category": "envoy.wasm.runtime",
+              "name": "envoy.wasm.runtime.v8"
+            },
+            {
+              "category": "envoy.stats_sinks",
+              "name": "envoy.dog_statsd"
+            },
+            {
+              "category": "envoy.stats_sinks",
+              "name": "envoy.graphite_statsd"
+            },
+            {
+              "category": "envoy.stats_sinks",
+              "name": "envoy.metrics_service"
+            },
+            {
+              "category": "envoy.stats_sinks",
+              "name": "envoy.stat_sinks.dog_statsd",
+              "typeUrls": [
+                "envoy.config.metrics.v3.DogStatsdSink"
+              ]
+            },
+            {
+              "category": "envoy.stats_sinks",
+              "name": "envoy.stat_sinks.graphite_statsd",
+              "typeUrls": [
+                "envoy.extensions.stat_sinks.graphite_statsd.v3.GraphiteStatsdSink"
+              ]
+            },
+            {
+              "category": "envoy.stats_sinks",
+              "name": "envoy.stat_sinks.hystrix",
+              "typeUrls": [
+                "envoy.config.metrics.v3.HystrixSink"
+              ]
+            },
+            {
+              "category": "envoy.stats_sinks",
+              "name": "envoy.stat_sinks.metrics_service",
+              "typeUrls": [
+                "envoy.config.metrics.v3.MetricsServiceConfig"
+              ]
+            },
+            {
+              "category": "envoy.stats_sinks",
+              "name": "envoy.stat_sinks.statsd",
+              "typeUrls": [
+                "envoy.config.metrics.v3.StatsdSink"
+              ]
+            },
+            {
+              "category": "envoy.stats_sinks",
+              "name": "envoy.stat_sinks.wasm",
+              "typeUrls": [
+                "envoy.extensions.stat_sinks.wasm.v3.Wasm"
+              ]
+            },
+            {
+              "category": "envoy.stats_sinks",
+              "name": "envoy.statsd"
+            },
+            {
+              "category": "envoy.path.rewrite",
+              "name": "envoy.path.rewrite.uri_template.uri_template_rewriter",
+              "typeUrls": [
+                "envoy.extensions.path.rewrite.uri_template.v3.UriTemplateRewriteConfig"
+              ]
+            },
+            {
+              "category": "envoy.http.custom_response",
+              "name": "envoy.extensions.http.custom_response.local_response_policy",
+              "typeUrls": [
+                "envoy.extensions.http.custom_response.local_response_policy.v3.LocalResponsePolicy"
+              ]
+            },
+            {
+              "category": "envoy.http.custom_response",
+              "name": "envoy.extensions.http.custom_response.redirect_policy",
+              "typeUrls": [
+                "envoy.extensions.http.custom_response.redirect_policy.v3.RedirectPolicy"
+              ]
+            },
+            {
+              "category": "envoy.matching.action",
+              "name": "envoy.matching.actions.format_string",
+              "typeUrls": [
+                "envoy.config.core.v3.SubstitutionFormatString"
+              ]
+            },
+            {
+              "category": "envoy.matching.action",
+              "name": "filter-chain-name",
+              "typeUrls": [
+                "google.protobuf.StringValue"
+              ]
+            },
+            {
+              "category": "envoy.quic.connection_id_generator",
+              "name": "envoy.quic.deterministic_connection_id_generator",
+              "typeUrls": [
+                "envoy.extensions.quic.connection_id_generator.v3.DeterministicConnectionIdGeneratorConfig"
+              ]
+            },
+            {
+              "category": "envoy.network.dns_resolver",
+              "name": "envoy.network.dns_resolver.cares",
+              "typeUrls": [
+                "envoy.extensions.network.dns_resolver.cares.v3.CaresDnsResolverConfig"
+              ]
+            },
+            {
+              "category": "envoy.network.dns_resolver",
+              "name": "envoy.network.dns_resolver.getaddrinfo",
+              "typeUrls": [
+                "envoy.extensions.network.dns_resolver.getaddrinfo.v3.GetAddrInfoDnsResolverConfig"
+              ]
+            },
+            {
+              "category": "envoy.bootstrap",
+              "name": "envoy.bootstrap.internal_listener",
+              "typeUrls": [
+                "envoy.extensions.bootstrap.internal_listener.v3.InternalListener"
+              ]
+            },
+            {
+              "category": "envoy.bootstrap",
+              "name": "envoy.bootstrap.wasm",
+              "typeUrls": [
+                "envoy.extensions.wasm.v3.WasmService"
+              ]
+            },
+            {
+              "category": "envoy.bootstrap",
+              "name": "envoy.extensions.network.socket_interface.default_socket_interface",
+              "typeUrls": [
+                "envoy.extensions.network.socket_interface.v3.DefaultSocketInterface"
+              ]
+            },
+            {
+              "category": "envoy.filters.listener",
+              "name": "envoy.filters.listener.http_inspector",
+              "typeUrls": [
+                "envoy.extensions.filters.listener.http_inspector.v3.HttpInspector"
+              ]
+            },
+            {
+              "category": "envoy.filters.listener",
+              "name": "envoy.filters.listener.original_dst",
+              "typeUrls": [
+                "envoy.extensions.filters.listener.original_dst.v3.OriginalDst"
+              ]
+            },
+            {
+              "category": "envoy.filters.listener",
+              "name": "envoy.filters.listener.original_src",
+              "typeUrls": [
+                "envoy.extensions.filters.listener.original_src.v3.OriginalSrc"
+              ]
+            },
+            {
+              "category": "envoy.filters.listener",
+              "name": "envoy.filters.listener.proxy_protocol",
+              "typeUrls": [
+                "envoy.extensions.filters.listener.proxy_protocol.v3.ProxyProtocol"
+              ]
+            },
+            {
+              "category": "envoy.filters.listener",
+              "name": "envoy.filters.listener.tls_inspector",
+              "typeUrls": [
+                "envoy.extensions.filters.listener.tls_inspector.v3.TlsInspector"
+              ]
+            },
+            {
+              "category": "envoy.filters.listener",
+              "name": "envoy.listener.http_inspector"
+            },
+            {
+              "category": "envoy.filters.listener",
+              "name": "envoy.listener.original_dst"
+            },
+            {
+              "category": "envoy.filters.listener",
+              "name": "envoy.listener.original_src"
+            },
+            {
+              "category": "envoy.filters.listener",
+              "name": "envoy.listener.proxy_protocol"
+            },
+            {
+              "category": "envoy.filters.listener",
+              "name": "envoy.listener.tls_inspector"
+            },
+            {
+              "category": "envoy.matching.common_inputs",
+              "name": "envoy.matching.common_inputs.environment_variable",
+              "typeUrls": [
+                "envoy.extensions.matching.common_inputs.environment_variable.v3.Config"
+              ]
+            },
+            {
+              "category": "envoy.matching.input_matchers",
+              "name": "envoy.matching.matchers.consistent_hashing",
+              "typeUrls": [
+                "envoy.extensions.matching.input_matchers.consistent_hashing.v3.ConsistentHashing"
+              ]
+            },
+            {
+              "category": "envoy.matching.input_matchers",
+              "name": "envoy.matching.matchers.ip",
+              "typeUrls": [
+                "envoy.extensions.matching.input_matchers.ip.v3.Ip"
+              ]
+            },
+            {
+              "category": "envoy.grpc_credentials",
+              "name": "envoy.grpc_credentials.aws_iam"
+            },
+            {
+              "category": "envoy.grpc_credentials",
+              "name": "envoy.grpc_credentials.default"
+            },
+            {
+              "category": "envoy.grpc_credentials",
+              "name": "envoy.grpc_credentials.file_based_metadata"
+            },
+            {
+              "category": "envoy.request_id",
+              "name": "envoy.request_id.uuid",
+              "typeUrls": [
+                "envoy.extensions.request_id.uuid.v3.UuidRequestIdConfig"
+              ]
+            },
+            {
+              "category": "envoy.load_balancing_policies",
+              "name": "envoy.load_balancing_policies.least_request",
+              "typeUrls": [
+                "envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest"
+              ]
+            },
+            {
+              "category": "envoy.load_balancing_policies",
+              "name": "envoy.load_balancing_policies.maglev",
+              "typeUrls": [
+                "envoy.extensions.load_balancing_policies.maglev.v3.Maglev"
+              ]
+            },
+            {
+              "category": "envoy.load_balancing_policies",
+              "name": "envoy.load_balancing_policies.random",
+              "typeUrls": [
+                "envoy.extensions.load_balancing_policies.random.v3.Random"
+              ]
+            },
+            {
+              "category": "envoy.load_balancing_policies",
+              "name": "envoy.load_balancing_policies.ring_hash",
+              "typeUrls": [
+                "envoy.extensions.load_balancing_policies.ring_hash.v3.RingHash"
+              ]
+            },
+            {
+              "category": "envoy.load_balancing_policies",
+              "name": "envoy.load_balancing_policies.round_robin",
+              "typeUrls": [
+                "envoy.extensions.load_balancing_policies.round_robin.v3.RoundRobin"
+              ]
+            },
+            {
+              "category": "envoy.resolvers",
+              "name": "envoy.ip"
+            },
+            {
+              "category": "envoy.filters.http",
+              "name": "envoy.bandwidth_limit"
+            },
+            {
+              "category": "envoy.filters.http",
+              "name": "envoy.buffer"
+            },
+            {
+              "category": "envoy.filters.http",
+              "name": "envoy.cors"
+            },
+            {
+              "category": "envoy.filters.http",
+              "name": "envoy.csrf"
+            },
+            {
+              "category": "envoy.filters.http",
+              "name": "envoy.ext_authz"
+            },
+            {
+              "category": "envoy.filters.http",
+              "name": "envoy.ext_proc"
+            },
+            {
+              "category": "envoy.filters.http",
+              "name": "envoy.fault"
+            },
+            {
+              "category": "envoy.filters.http",
+              "name": "envoy.filters.http.adaptive_concurrency",
+              "typeUrls": [
+                "envoy.extensions.filters.http.adaptive_concurrency.v3.AdaptiveConcurrency"
+              ]
+            },
+            {
+              "category": "envoy.filters.http",
+              "name": "envoy.filters.http.admission_control",
+              "typeUrls": [
+                "envoy.extensions.filters.http.admission_control.v3.AdmissionControl"
+              ]
+            },
+            {
+              "category": "envoy.filters.http",
+              "name": "envoy.filters.http.alternate_protocols_cache",
+              "typeUrls": [
+                "envoy.extensions.filters.http.alternate_protocols_cache.v3.FilterConfig"
+              ]
+            },
+            {
+              "category": "envoy.filters.http",
+              "name": "envoy.filters.http.aws_lambda",
+              "typeUrls": [
+                "envoy.extensions.filters.http.aws_lambda.v3.Config",
+                "envoy.extensions.filters.http.aws_lambda.v3.PerRouteConfig"
+              ]
+            },
+            {
+              "category": "envoy.filters.http",
+              "name": "envoy.filters.http.aws_request_signing",
+              "typeUrls": [
+                "envoy.extensions.filters.http.aws_request_signing.v3.AwsRequestSigning"
+              ]
+            },
+            {
+              "category": "envoy.filters.http",
+              "name": "envoy.filters.http.bandwidth_limit",
+              "typeUrls": [
+                "envoy.extensions.filters.http.bandwidth_limit.v3.BandwidthLimit"
+              ]
+            },
+            {
+              "category": "envoy.filters.http",
+              "name": "envoy.filters.http.buffer",
+              "typeUrls": [
+                "envoy.extensions.filters.http.buffer.v3.Buffer",
+                "envoy.extensions.filters.http.buffer.v3.BufferPerRoute"
+              ]
+            },
+            {
+              "category": "envoy.filters.http",
+              "name": "envoy.filters.http.cache",
+              "typeUrls": [
+                "envoy.extensions.filters.http.cache.v3.CacheConfig"
+              ]
+            },
+            {
+              "category": "envoy.filters.http",
+              "name": "envoy.filters.http.cdn_loop",
+              "typeUrls": [
+                "envoy.extensions.filters.http.cdn_loop.v3.CdnLoopConfig"
+              ]
+            },
+            {
+              "category": "envoy.filters.http",
+              "name": "envoy.filters.http.composite",
+              "typeUrls": [
+                "envoy.extensions.filters.http.composite.v3.Composite"
+              ]
+            },
+            {
+              "category": "envoy.filters.http",
+              "name": "envoy.filters.http.compressor",
+              "typeUrls": [
+                "envoy.extensions.filters.http.compressor.v3.Compressor",
+                "envoy.extensions.filters.http.compressor.v3.CompressorPerRoute"
+              ]
+            },
+            {
+              "category": "envoy.filters.http",
+              "name": "envoy.filters.http.connect_grpc_bridge",
+              "typeUrls": [
+                "envoy.extensions.filters.http.connect_grpc_bridge.v3.FilterConfig"
+              ]
+            },
+            {
+              "category": "envoy.filters.http",
+              "name": "envoy.filters.http.cors",
+              "typeUrls": [
+                "envoy.extensions.filters.http.cors.v3.Cors",
+                "envoy.extensions.filters.http.cors.v3.CorsPolicy"
+              ]
+            },
+            {
+              "category": "envoy.filters.http",
+              "name": "envoy.filters.http.csrf",
+              "typeUrls": [
+                "envoy.extensions.filters.http.csrf.v3.CsrfPolicy"
+              ]
+            },
+            {
+              "category": "envoy.filters.http",
+              "name": "envoy.filters.http.custom_response",
+              "typeUrls": [
+                "envoy.extensions.filters.http.custom_response.v3.CustomResponse"
+              ]
+            },
+            {
+              "category": "envoy.filters.http",
+              "name": "envoy.filters.http.decompressor",
+              "typeUrls": [
+                "envoy.extensions.filters.http.decompressor.v3.Decompressor"
+              ]
+            },
+            {
+              "category": "envoy.filters.http",
+              "name": "envoy.filters.http.dynamic_forward_proxy",
+              "typeUrls": [
+                "envoy.extensions.filters.http.dynamic_forward_proxy.v3.FilterConfig",
+                "envoy.extensions.filters.http.dynamic_forward_proxy.v3.PerRouteConfig"
+              ]
+            },
+            {
+              "category": "envoy.filters.http",
+              "name": "envoy.filters.http.ext_authz",
+              "typeUrls": [
+                "envoy.extensions.filters.http.ext_authz.v3.ExtAuthz",
+                "envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute"
+              ]
+            },
+            {
+              "category": "envoy.filters.http",
+              "name": "envoy.filters.http.ext_proc",
+              "typeUrls": [
+                "envoy.extensions.filters.http.ext_proc.v3.ExtProcPerRoute",
+                "envoy.extensions.filters.http.ext_proc.v3.ExternalProcessor"
+              ]
+            },
+            {
+              "category": "envoy.filters.http",
+              "name": "envoy.filters.http.fault",
+              "typeUrls": [
+                "envoy.extensions.filters.http.fault.v3.HTTPFault"
+              ]
+            },
+            {
+              "category": "envoy.filters.http",
+              "name": "envoy.filters.http.file_system_buffer",
+              "typeUrls": [
+                "envoy.extensions.filters.http.file_system_buffer.v3.FileSystemBufferFilterConfig"
+              ]
+            },
+            {
+              "category": "envoy.filters.http",
+              "name": "envoy.filters.http.gcp_authn",
+              "typeUrls": [
+                "envoy.extensions.filters.http.gcp_authn.v3.GcpAuthnFilterConfig"
+              ]
+            },
+            {
+              "category": "envoy.filters.http",
+              "name": "envoy.filters.http.grpc_http1_bridge",
+              "typeUrls": [
+                "envoy.extensions.filters.http.grpc_http1_bridge.v3.Config"
+              ]
+            },
+            {
+              "category": "envoy.filters.http",
+              "name": "envoy.filters.http.grpc_http1_reverse_bridge",
+              "typeUrls": [
+                "envoy.extensions.filters.http.grpc_http1_reverse_bridge.v3.FilterConfig",
+                "envoy.extensions.filters.http.grpc_http1_reverse_bridge.v3.FilterConfigPerRoute"
+              ]
+            },
+            {
+              "category": "envoy.filters.http",
+              "name": "envoy.filters.http.grpc_json_transcoder",
+              "typeUrls": [
+                "envoy.extensions.filters.http.grpc_json_transcoder.v3.GrpcJsonTranscoder"
+              ]
+            },
+            {
+              "category": "envoy.filters.http",
+              "name": "envoy.filters.http.grpc_stats",
+              "typeUrls": [
+                "envoy.extensions.filters.http.grpc_stats.v3.FilterConfig"
+              ]
+            },
+            {
+              "category": "envoy.filters.http",
+              "name": "envoy.filters.http.grpc_web",
+              "typeUrls": [
+                "envoy.extensions.filters.http.grpc_web.v3.GrpcWeb"
+              ]
+            },
+            {
+              "category": "envoy.filters.http",
+              "name": "envoy.filters.http.header_to_metadata",
+              "typeUrls": [
+                "envoy.extensions.filters.http.header_to_metadata.v3.Config"
+              ]
+            },
+            {
+              "category": "envoy.filters.http",
+              "name": "envoy.filters.http.health_check",
+              "typeUrls": [
+                "envoy.extensions.filters.http.health_check.v3.HealthCheck"
+              ]
+            },
+            {
+              "category": "envoy.filters.http",
+              "name": "envoy.filters.http.ip_tagging",
+              "typeUrls": [
+                "envoy.extensions.filters.http.ip_tagging.v3.IPTagging"
+              ]
+            },
+            {
+              "category": "envoy.filters.http",
+              "name": "envoy.filters.http.jwt_authn",
+              "typeUrls": [
+                "envoy.extensions.filters.http.jwt_authn.v3.JwtAuthentication",
+                "envoy.extensions.filters.http.jwt_authn.v3.PerRouteConfig"
+              ]
+            },
+            {
+              "category": "envoy.filters.http",
+              "name": "envoy.filters.http.local_ratelimit",
+              "typeUrls": [
+                "envoy.extensions.filters.http.local_ratelimit.v3.LocalRateLimit"
+              ]
+            },
+            {
+              "category": "envoy.filters.http",
+              "name": "envoy.filters.http.lua",
+              "typeUrls": [
+                "envoy.extensions.filters.http.lua.v3.Lua",
+                "envoy.extensions.filters.http.lua.v3.LuaPerRoute"
+              ]
+            },
+            {
+              "category": "envoy.filters.http",
+              "name": "envoy.filters.http.match_delegate",
+              "typeUrls": [
+                "envoy.extensions.common.matching.v3.ExtensionWithMatcher"
+              ]
+            },
+            {
+              "category": "envoy.filters.http",
+              "name": "envoy.filters.http.oauth2",
+              "typeUrls": [
+                "envoy.extensions.filters.http.oauth2.v3.OAuth2"
+              ]
+            },
+            {
+              "category": "envoy.filters.http",
+              "name": "envoy.filters.http.on_demand",
+              "typeUrls": [
+                "envoy.extensions.filters.http.on_demand.v3.OnDemand",
+                "envoy.extensions.filters.http.on_demand.v3.PerRouteConfig"
+              ]
+            },
+            {
+              "category": "envoy.filters.http",
+              "name": "envoy.filters.http.original_src",
+              "typeUrls": [
+                "envoy.extensions.filters.http.original_src.v3.OriginalSrc"
+              ]
+            },
+            {
+              "category": "envoy.filters.http",
+              "name": "envoy.filters.http.rate_limit_quota",
+              "typeUrls": [
+                "envoy.extensions.filters.http.rate_limit_quota.v3.RateLimitQuotaFilterConfig",
+                "envoy.extensions.filters.http.rate_limit_quota.v3.RateLimitQuotaOverride"
+              ]
+            },
+            {
+              "category": "envoy.filters.http",
+              "name": "envoy.filters.http.ratelimit",
+              "typeUrls": [
+                "envoy.extensions.filters.http.ratelimit.v3.RateLimit",
+                "envoy.extensions.filters.http.ratelimit.v3.RateLimitPerRoute"
+              ]
+            },
+            {
+              "category": "envoy.filters.http",
+              "name": "envoy.filters.http.rbac",
+              "typeUrls": [
+                "envoy.extensions.filters.http.rbac.v3.RBAC",
+                "envoy.extensions.filters.http.rbac.v3.RBACPerRoute"
+              ]
+            },
+            {
+              "category": "envoy.filters.http",
+              "name": "envoy.filters.http.router",
+              "typeUrls": [
+                "envoy.extensions.filters.http.router.v3.Router"
+              ]
+            },
+            {
+              "category": "envoy.filters.http",
+              "name": "envoy.filters.http.set_metadata",
+              "typeUrls": [
+                "envoy.extensions.filters.http.set_metadata.v3.Config"
+              ]
+            },
+            {
+              "category": "envoy.filters.http",
+              "name": "envoy.filters.http.stateful_session",
+              "typeUrls": [
+                "envoy.extensions.filters.http.stateful_session.v3.StatefulSession",
+                "envoy.extensions.filters.http.stateful_session.v3.StatefulSessionPerRoute"
+              ]
+            },
+            {
+              "category": "envoy.filters.http",
+              "name": "envoy.filters.http.tap",
+              "typeUrls": [
+                "envoy.extensions.filters.http.tap.v3.Tap"
+              ]
+            },
+            {
+              "category": "envoy.filters.http",
+              "name": "envoy.filters.http.wasm",
+              "typeUrls": [
+                "envoy.extensions.filters.http.wasm.v3.Wasm"
+              ]
+            },
+            {
+              "category": "envoy.filters.http",
+              "name": "envoy.grpc_http1_bridge"
+            },
+            {
+              "category": "envoy.filters.http",
+              "name": "envoy.grpc_json_transcoder"
+            },
+            {
+              "category": "envoy.filters.http",
+              "name": "envoy.grpc_web"
+            },
+            {
+              "category": "envoy.filters.http",
+              "name": "envoy.health_check"
+            },
+            {
+              "category": "envoy.filters.http",
+              "name": "envoy.ip_tagging"
+            },
+            {
+              "category": "envoy.filters.http",
+              "name": "envoy.local_rate_limit"
+            },
+            {
+              "category": "envoy.filters.http",
+              "name": "envoy.lua"
+            },
+            {
+              "category": "envoy.filters.http",
+              "name": "envoy.rate_limit"
+            },
+            {
+              "category": "envoy.filters.http",
+              "name": "envoy.router"
+            },
+            {
+              "category": "envoy.access_loggers",
+              "name": "envoy.access_loggers.file",
+              "typeUrls": [
+                "envoy.extensions.access_loggers.file.v3.FileAccessLog"
+              ]
+            },
+            {
+              "category": "envoy.access_loggers",
+              "name": "envoy.access_loggers.http_grpc",
+              "typeUrls": [
+                "envoy.extensions.access_loggers.grpc.v3.HttpGrpcAccessLogConfig"
+              ]
+            },
+            {
+              "category": "envoy.access_loggers",
+              "name": "envoy.access_loggers.open_telemetry",
+              "typeUrls": [
+                "envoy.extensions.access_loggers.open_telemetry.v3.OpenTelemetryAccessLogConfig"
+              ]
+            },
+            {
+              "category": "envoy.access_loggers",
+              "name": "envoy.access_loggers.stderr",
+              "typeUrls": [
+                "envoy.extensions.access_loggers.stream.v3.StderrAccessLog"
+              ]
+            },
+            {
+              "category": "envoy.access_loggers",
+              "name": "envoy.access_loggers.stdout",
+              "typeUrls": [
+                "envoy.extensions.access_loggers.stream.v3.StdoutAccessLog"
+              ]
+            },
+            {
+              "category": "envoy.access_loggers",
+              "name": "envoy.access_loggers.tcp_grpc",
+              "typeUrls": [
+                "envoy.extensions.access_loggers.grpc.v3.TcpGrpcAccessLogConfig"
+              ]
+            },
+            {
+              "category": "envoy.access_loggers",
+              "name": "envoy.access_loggers.wasm",
+              "typeUrls": [
+                "envoy.extensions.access_loggers.wasm.v3.WasmAccessLog"
+              ]
+            },
+            {
+              "category": "envoy.access_loggers",
+              "name": "envoy.file_access_log"
+            },
+            {
+              "category": "envoy.access_loggers",
+              "name": "envoy.http_grpc_access_log"
+            },
+            {
+              "category": "envoy.access_loggers",
+              "name": "envoy.open_telemetry_access_log"
+            },
+            {
+              "category": "envoy.access_loggers",
+              "name": "envoy.stderr_access_log"
+            },
+            {
+              "category": "envoy.access_loggers",
+              "name": "envoy.stdout_access_log"
+            },
+            {
+              "category": "envoy.access_loggers",
+              "name": "envoy.tcp_grpc_access_log"
+            },
+            {
+              "category": "envoy.access_loggers",
+              "name": "envoy.wasm_access_log"
+            },
+            {
+              "category": "envoy.config.validators",
+              "name": "envoy.config.validators.minimum_clusters"
+            },
+            {
+              "category": "envoy.config.validators",
+              "name": "envoy.config.validators.minimum_clusters_validator",
+              "typeUrls": [
+                "envoy.extensions.config.validators.minimum_clusters.v3.MinimumClustersValidator"
+              ]
+            },
+            {
+              "category": "envoy.http.header_validators",
+              "name": "envoy.http.header_validators.envoy_default",
+              "typeUrls": [
+                "envoy.extensions.http.header_validators.envoy_default.v3.HeaderValidatorConfig"
+              ]
+            },
+            {
+              "category": "envoy.dubbo_proxy.serializers",
+              "name": "dubbo.hessian2"
+            },
+            {
+              "category": "quic.http_server_connection",
+              "name": "quic.http_server_connection.default"
+            },
+            {
+              "category": "envoy.transport_sockets.downstream",
+              "name": "envoy.transport_sockets.alts",
+              "typeUrls": [
+                "envoy.extensions.transport_sockets.alts.v3.Alts"
+              ]
+            },
+            {
+              "category": "envoy.transport_sockets.downstream",
+              "name": "envoy.transport_sockets.quic",
+              "typeUrls": [
+                "envoy.extensions.transport_sockets.quic.v3.QuicDownstreamTransport"
+              ]
+            },
+            {
+              "category": "envoy.transport_sockets.downstream",
+              "name": "envoy.transport_sockets.raw_buffer",
+              "typeUrls": [
+                "envoy.extensions.transport_sockets.raw_buffer.v3.RawBuffer"
+              ]
+            },
+            {
+              "category": "envoy.transport_sockets.downstream",
+              "name": "envoy.transport_sockets.starttls",
+              "typeUrls": [
+                "envoy.extensions.transport_sockets.starttls.v3.StartTlsConfig"
+              ]
+            },
+            {
+              "category": "envoy.transport_sockets.downstream",
+              "name": "envoy.transport_sockets.tap",
+              "typeUrls": [
+                "envoy.extensions.transport_sockets.tap.v3.Tap"
+              ]
+            },
+            {
+              "category": "envoy.transport_sockets.downstream",
+              "name": "envoy.transport_sockets.tcp_stats",
+              "typeUrls": [
+                "envoy.extensions.transport_sockets.tcp_stats.v3.Config"
+              ]
+            },
+            {
+              "category": "envoy.transport_sockets.downstream",
+              "name": "envoy.transport_sockets.tls",
+              "typeUrls": [
+                "envoy.extensions.transport_sockets.tls.v3.DownstreamTlsContext"
+              ]
+            },
+            {
+              "category": "envoy.transport_sockets.downstream",
+              "name": "raw_buffer"
+            },
+            {
+              "category": "envoy.transport_sockets.downstream",
+              "name": "starttls"
+            },
+            {
+              "category": "envoy.transport_sockets.downstream",
+              "name": "tls"
+            },
+            {
+              "category": "envoy.rbac.matchers",
+              "name": "envoy.rbac.matchers.upstream_ip_port",
+              "typeUrls": [
+                "envoy.extensions.rbac.matchers.upstream_ip_port.v3.UpstreamIpPortMatcher"
+              ]
+            },
+            {
+              "category": "envoy.common.key_value",
+              "name": "envoy.key_value.file_based",
+              "typeUrls": [
+                "envoy.extensions.key_value.file_based.v3.FileBasedKeyValueStoreConfig"
+              ]
+            },
+            {
+              "category": "envoy.matching.network.input",
+              "name": "envoy.matching.inputs.application_protocol",
+              "typeUrls": [
+                "envoy.extensions.matching.common_inputs.network.v3.ApplicationProtocolInput"
+              ]
+            },
+            {
+              "category": "envoy.matching.network.input",
+              "name": "envoy.matching.inputs.destination_ip",
+              "typeUrls": [
+                "envoy.extensions.matching.common_inputs.network.v3.DestinationIPInput"
+              ]
+            },
+            {
+              "category": "envoy.matching.network.input",
+              "name": "envoy.matching.inputs.destination_port",
+              "typeUrls": [
+                "envoy.extensions.matching.common_inputs.network.v3.DestinationPortInput"
+              ]
+            },
+            {
+              "category": "envoy.matching.network.input",
+              "name": "envoy.matching.inputs.direct_source_ip",
+              "typeUrls": [
+                "envoy.extensions.matching.common_inputs.network.v3.DirectSourceIPInput"
+              ]
+            },
+            {
+              "category": "envoy.matching.network.input",
+              "name": "envoy.matching.inputs.dns_san",
+              "typeUrls": [
+                "envoy.extensions.matching.common_inputs.ssl.v3.DnsSanInput"
+              ]
+            },
+            {
+              "category": "envoy.matching.network.input",
+              "name": "envoy.matching.inputs.server_name",
+              "typeUrls": [
+                "envoy.extensions.matching.common_inputs.network.v3.ServerNameInput"
+              ]
+            },
+            {
+              "category": "envoy.matching.network.input",
+              "name": "envoy.matching.inputs.source_ip",
+              "typeUrls": [
+                "envoy.extensions.matching.common_inputs.network.v3.SourceIPInput"
+              ]
+            },
+            {
+              "category": "envoy.matching.network.input",
+              "name": "envoy.matching.inputs.source_port",
+              "typeUrls": [
+                "envoy.extensions.matching.common_inputs.network.v3.SourcePortInput"
+              ]
+            },
+            {
+              "category": "envoy.matching.network.input",
+              "name": "envoy.matching.inputs.source_type",
+              "typeUrls": [
+                "envoy.extensions.matching.common_inputs.network.v3.SourceTypeInput"
+              ]
+            },
+            {
+              "category": "envoy.matching.network.input",
+              "name": "envoy.matching.inputs.subject",
+              "typeUrls": [
+                "envoy.extensions.matching.common_inputs.ssl.v3.SubjectInput"
+              ]
+            },
+            {
+              "category": "envoy.matching.network.input",
+              "name": "envoy.matching.inputs.transport_protocol",
+              "typeUrls": [
+                "envoy.extensions.matching.common_inputs.network.v3.TransportProtocolInput"
+              ]
+            },
+            {
+              "category": "envoy.matching.network.input",
+              "name": "envoy.matching.inputs.uri_san",
+              "typeUrls": [
+                "envoy.extensions.matching.common_inputs.ssl.v3.UriSanInput"
+              ]
+            },
+            {
+              "category": "envoy.dubbo_proxy.protocols",
+              "name": "dubbo"
+            },
+            {
+              "category": "envoy.guarddog_actions",
+              "name": "envoy.watchdog.abort_action",
+              "typeUrls": [
+                "envoy.watchdog.v3.AbortActionConfig"
+              ]
+            },
+            {
+              "category": "envoy.guarddog_actions",
+              "name": "envoy.watchdog.profile_action",
+              "typeUrls": [
+                "envoy.extensions.watchdog.profile_action.v3.ProfileActionConfig"
+              ]
+            },
+            {
+              "category": "envoy.quic.server.crypto_stream",
+              "name": "envoy.quic.crypto_stream.server.quiche",
+              "typeUrls": [
+                "envoy.extensions.quic.crypto_stream.v3.CryptoServerStreamConfig"
+              ]
+            },
+            {
+              "category": "envoy.regex_engines",
+              "name": "envoy.regex_engines.google_re2",
+              "typeUrls": [
+                "envoy.extensions.regex_engines.v3.GoogleRE2"
+              ]
+            },
+            {
+              "category": "envoy.http.stateful_session",
+              "name": "envoy.http.stateful_session.cookie",
+              "typeUrls": [
+                "envoy.extensions.http.stateful_session.cookie.v3.CookieBasedSessionState"
+              ]
+            },
+            {
+              "category": "envoy.http.stateful_session",
+              "name": "envoy.http.stateful_session.header",
+              "typeUrls": [
+                "envoy.extensions.http.stateful_session.header.v3.HeaderBasedSessionState"
+              ]
+            },
+            {
+              "category": "envoy.matching.network.custom_matchers",
+              "name": "envoy.matching.custom_matchers.trie_matcher",
+              "typeUrls": [
+                "xds.type.matcher.v3.IPMatcher"
+              ]
+            },
+            {
+              "category": "envoy.udp_packet_writer",
+              "name": "envoy.udp_packet_writer.default",
+              "typeUrls": [
+                "envoy.extensions.udp_packet_writer.v3.UdpDefaultWriterFactory"
+              ]
+            },
+            {
+              "category": "envoy.udp_packet_writer",
+              "name": "envoy.udp_packet_writer.gso",
+              "typeUrls": [
+                "envoy.extensions.udp_packet_writer.v3.UdpGsoBatchWriterFactory"
+              ]
+            },
+            {
+              "category": "envoy.quic.proof_source",
+              "name": "envoy.quic.proof_source.filter_chain",
+              "typeUrls": [
+                "envoy.extensions.quic.proof_source.v3.ProofSourceConfig"
+              ]
+            },
+            {
+              "category": "envoy.resource_monitors",
+              "name": "envoy.resource_monitors.fixed_heap",
+              "typeUrls": [
+                "envoy.extensions.resource_monitors.fixed_heap.v3.FixedHeapConfig"
+              ]
+            },
+            {
+              "category": "envoy.resource_monitors",
+              "name": "envoy.resource_monitors.injected_resource",
+              "typeUrls": [
+                "envoy.extensions.resource_monitors.injected_resource.v3.InjectedResourceConfig"
+              ]
+            },
+            {
+              "category": "envoy.http.stateful_header_formatters",
+              "name": "envoy.http.stateful_header_formatters.preserve_case",
+              "typeUrls": [
+                "envoy.extensions.http.header_formatters.preserve_case.v3.PreserveCaseFormatterConfig"
+              ]
+            },
+            {
+              "category": "envoy.http.stateful_header_formatters",
+              "name": "preserve_case"
+            },
+            {
+              "category": "envoy.thrift_proxy.filters",
+              "name": "envoy.filters.thrift.header_to_metadata",
+              "typeUrls": [
+                "envoy.extensions.filters.network.thrift_proxy.filters.header_to_metadata.v3.HeaderToMetadata"
+              ]
+            },
+            {
+              "category": "envoy.thrift_proxy.filters",
+              "name": "envoy.filters.thrift.payload_to_metadata",
+              "typeUrls": [
+                "envoy.extensions.filters.network.thrift_proxy.filters.payload_to_metadata.v3.PayloadToMetadata"
+              ]
+            },
+            {
+              "category": "envoy.thrift_proxy.filters",
+              "name": "envoy.filters.thrift.rate_limit",
+              "typeUrls": [
+                "envoy.extensions.filters.network.thrift_proxy.filters.ratelimit.v3.RateLimit"
+              ]
+            },
+            {
+              "category": "envoy.thrift_proxy.filters",
+              "name": "envoy.filters.thrift.router",
+              "typeUrls": [
+                "envoy.extensions.filters.network.thrift_proxy.router.v3.Router"
+              ]
+            },
+            {
+              "category": "envoy.tracers",
+              "name": "envoy.tracers.datadog",
+              "typeUrls": [
+                "envoy.config.trace.v3.DatadogConfig"
+              ]
+            },
+            {
+              "category": "envoy.tracers",
+              "name": "envoy.tracers.dynamic_ot",
+              "typeUrls": [
+                "envoy.config.trace.v3.DynamicOtConfig"
+              ]
+            },
+            {
+              "category": "envoy.tracers",
+              "name": "envoy.tracers.opencensus",
+              "typeUrls": [
+                "envoy.config.trace.v3.OpenCensusConfig"
+              ]
+            },
+            {
+              "category": "envoy.tracers",
+              "name": "envoy.tracers.opentelemetry",
+              "typeUrls": [
+                "envoy.config.trace.v3.OpenTelemetryConfig"
+              ]
+            },
+            {
+              "category": "envoy.tracers",
+              "name": "envoy.tracers.skywalking",
+              "typeUrls": [
+                "envoy.config.trace.v3.SkyWalkingConfig"
+              ]
+            },
+            {
+              "category": "envoy.tracers",
+              "name": "envoy.tracers.xray",
+              "typeUrls": [
+                "envoy.config.trace.v3.XRayConfig"
+              ]
+            },
+            {
+              "category": "envoy.tracers",
+              "name": "envoy.tracers.zipkin",
+              "typeUrls": [
+                "envoy.config.trace.v3.ZipkinConfig"
+              ]
+            },
+            {
+              "category": "envoy.tracers",
+              "name": "envoy.zipkin"
+            },
+            {
+              "category": "envoy.retry_priorities",
+              "name": "envoy.retry_priorities.previous_priorities",
+              "typeUrls": [
+                "envoy.extensions.retry.priority.previous_priorities.v3.PreviousPrioritiesConfig"
+              ]
+            },
+            {
+              "category": "envoy.http.early_header_mutation",
+              "name": "envoy.http.early_header_mutation.header_mutation",
+              "typeUrls": [
+                "envoy.extensions.http.early_header_mutation.header_mutation.v3.HeaderMutation"
+              ]
+            },
+            {
+              "category": "envoy.connection_handler",
+              "name": "envoy.connection_handler.default"
+            },
+            {
+              "category": "envoy.transport_sockets.upstream",
+              "name": "envoy.transport_sockets.alts",
+              "typeUrls": [
+                "envoy.extensions.transport_sockets.alts.v3.Alts"
+              ]
+            },
+            {
+              "category": "envoy.transport_sockets.upstream",
+              "name": "envoy.transport_sockets.http_11_proxy",
+              "typeUrls": [
+                "envoy.extensions.transport_sockets.http_11_proxy.v3.Http11ProxyUpstreamTransport"
+              ]
+            },
+            {
+              "category": "envoy.transport_sockets.upstream",
+              "name": "envoy.transport_sockets.internal_upstream",
+              "typeUrls": [
+                "envoy.extensions.transport_sockets.internal_upstream.v3.InternalUpstreamTransport"
+              ]
+            },
+            {
+              "category": "envoy.transport_sockets.upstream",
+              "name": "envoy.transport_sockets.quic",
+              "typeUrls": [
+                "envoy.extensions.transport_sockets.quic.v3.QuicUpstreamTransport"
+              ]
+            },
+            {
+              "category": "envoy.transport_sockets.upstream",
+              "name": "envoy.transport_sockets.raw_buffer",
+              "typeUrls": [
+                "envoy.extensions.transport_sockets.raw_buffer.v3.RawBuffer"
+              ]
+            },
+            {
+              "category": "envoy.transport_sockets.upstream",
+              "name": "envoy.transport_sockets.starttls",
+              "typeUrls": [
+                "envoy.extensions.transport_sockets.starttls.v3.UpstreamStartTlsConfig"
+              ]
+            },
+            {
+              "category": "envoy.transport_sockets.upstream",
+              "name": "envoy.transport_sockets.tap",
+              "typeUrls": [
+                "envoy.extensions.transport_sockets.tap.v3.Tap"
+              ]
+            },
+            {
+              "category": "envoy.transport_sockets.upstream",
+              "name": "envoy.transport_sockets.tcp_stats",
+              "typeUrls": [
+                "envoy.extensions.transport_sockets.tcp_stats.v3.Config"
+              ]
+            },
+            {
+              "category": "envoy.transport_sockets.upstream",
+              "name": "envoy.transport_sockets.tls",
+              "typeUrls": [
+                "envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext"
+              ]
+            },
+            {
+              "category": "envoy.transport_sockets.upstream",
+              "name": "envoy.transport_sockets.upstream_proxy_protocol",
+              "typeUrls": [
+                "envoy.extensions.transport_sockets.proxy_protocol.v3.ProxyProtocolUpstreamTransport"
+              ]
+            },
+            {
+              "category": "envoy.transport_sockets.upstream",
+              "name": "raw_buffer"
+            },
+            {
+              "category": "envoy.transport_sockets.upstream",
+              "name": "starttls"
+            },
+            {
+              "category": "envoy.transport_sockets.upstream",
+              "name": "tls"
+            },
+            {
+              "category": "envoy.thrift_proxy.transports",
+              "name": "auto"
+            },
+            {
+              "category": "envoy.thrift_proxy.transports",
+              "name": "framed"
+            },
+            {
+              "category": "envoy.thrift_proxy.transports",
+              "name": "header"
+            },
+            {
+              "category": "envoy.thrift_proxy.transports",
+              "name": "unframed"
+            },
+            {
+              "category": "envoy.clusters",
+              "name": "envoy.cluster.eds"
+            },
+            {
+              "category": "envoy.clusters",
+              "name": "envoy.cluster.logical_dns"
+            },
+            {
+              "category": "envoy.clusters",
+              "name": "envoy.cluster.original_dst"
+            },
+            {
+              "category": "envoy.clusters",
+              "name": "envoy.cluster.static"
+            },
+            {
+              "category": "envoy.clusters",
+              "name": "envoy.cluster.strict_dns"
+            },
+            {
+              "category": "envoy.clusters",
+              "name": "envoy.clusters.aggregate"
+            },
+            {
+              "category": "envoy.clusters",
+              "name": "envoy.clusters.dynamic_forward_proxy"
+            },
+            {
+              "category": "envoy.clusters",
+              "name": "envoy.clusters.redis"
+            },
+            {
+              "category": "envoy.access_loggers.extension_filters",
+              "name": "envoy.access_loggers.extension_filters.cel",
+              "typeUrls": [
+                "envoy.extensions.access_loggers.filters.cel.v3.ExpressionFilter"
+              ]
+            },
+            {
+              "category": "envoy.thrift_proxy.protocols",
+              "name": "auto"
+            },
+            {
+              "category": "envoy.thrift_proxy.protocols",
+              "name": "binary"
+            },
+            {
+              "category": "envoy.thrift_proxy.protocols",
+              "name": "binary/non-strict"
+            },
+            {
+              "category": "envoy.thrift_proxy.protocols",
+              "name": "compact"
+            },
+            {
+              "category": "envoy.thrift_proxy.protocols",
+              "name": "twitter"
+            },
+            {
+              "category": "envoy.upstream_options",
+              "name": "envoy.extensions.upstreams.http.v3.HttpProtocolOptions",
+              "typeUrls": [
+                "envoy.extensions.upstreams.http.v3.HttpProtocolOptions"
+              ]
+            },
+            {
+              "category": "envoy.upstream_options",
+              "name": "envoy.extensions.upstreams.tcp.v3.TcpProtocolOptions",
+              "typeUrls": [
+                "envoy.extensions.upstreams.tcp.v3.TcpProtocolOptions"
+              ]
+            },
+            {
+              "category": "envoy.upstream_options",
+              "name": "envoy.upstreams.http.http_protocol_options"
+            },
+            {
+              "category": "envoy.upstream_options",
+              "name": "envoy.upstreams.tcp.tcp_protocol_options"
+            },
+            {
+              "category": "envoy.listener_manager_impl",
+              "name": "envoy.listener_manager_impl.default",
+              "typeUrls": [
+                "envoy.config.listener.v3.ListenerManager"
+              ]
+            },
+            {
+              "category": "network.connection.client",
+              "name": "default"
+            },
+            {
+              "category": "network.connection.client",
+              "name": "envoy_internal"
+            },
+            {
+              "category": "envoy.filters.udp_listener",
+              "name": "envoy.filters.udp.dns_filter",
+              "typeUrls": [
+                "envoy.extensions.filters.udp.dns_filter.v3.DnsFilterConfig"
+              ]
+            },
+            {
+              "category": "envoy.filters.udp_listener",
+              "name": "envoy.filters.udp_listener.udp_proxy",
+              "typeUrls": [
+                "envoy.extensions.filters.udp.udp_proxy.v3.UdpProxyConfig"
+              ]
+            },
+            {
+              "category": "envoy.http.cache",
+              "name": "envoy.extensions.http.cache.file_system_http_cache",
+              "typeUrls": [
+                "envoy.extensions.http.cache.file_system_http_cache.v3.FileSystemHttpCacheConfig"
+              ]
+            },
+            {
+              "category": "envoy.http.cache",
+              "name": "envoy.extensions.http.cache.simple",
+              "typeUrls": [
+                "envoy.extensions.http.cache.simple_http_cache.v3.SimpleHttpCacheConfig"
+              ]
+            },
+            {
+              "category": "envoy.retry_host_predicates",
+              "name": "envoy.retry_host_predicates.omit_canary_hosts",
+              "typeUrls": [
+                "envoy.extensions.retry.host.omit_canary_hosts.v3.OmitCanaryHostsPredicate"
+              ]
+            },
+            {
+              "category": "envoy.retry_host_predicates",
+              "name": "envoy.retry_host_predicates.omit_host_metadata",
+              "typeUrls": [
+                "envoy.extensions.retry.host.omit_host_metadata.v3.OmitHostMetadataConfig"
+              ]
+            },
+            {
+              "category": "envoy.retry_host_predicates",
+              "name": "envoy.retry_host_predicates.previous_hosts",
+              "typeUrls": [
+                "envoy.extensions.retry.host.previous_hosts.v3.PreviousHostsPredicate"
+              ]
+            },
+            {
+              "category": "envoy.formatter",
+              "name": "envoy.formatter.metadata",
+              "typeUrls": [
+                "envoy.extensions.formatter.metadata.v3.Metadata"
+              ]
+            },
+            {
+              "category": "envoy.formatter",
+              "name": "envoy.formatter.req_without_query",
+              "typeUrls": [
+                "envoy.extensions.formatter.req_without_query.v3.ReqWithoutQuery"
+              ]
+            },
+            {
+              "category": "envoy.internal_redirect_predicates",
+              "name": "envoy.internal_redirect_predicates.allow_listed_routes",
+              "typeUrls": [
+                "envoy.extensions.internal_redirect.allow_listed_routes.v3.AllowListedRoutesConfig"
+              ]
+            },
+            {
+              "category": "envoy.internal_redirect_predicates",
+              "name": "envoy.internal_redirect_predicates.previous_routes",
+              "typeUrls": [
+                "envoy.extensions.internal_redirect.previous_routes.v3.PreviousRoutesConfig"
+              ]
+            },
+            {
+              "category": "envoy.internal_redirect_predicates",
+              "name": "envoy.internal_redirect_predicates.safe_cross_scheme",
+              "typeUrls": [
+                "envoy.extensions.internal_redirect.safe_cross_scheme.v3.SafeCrossSchemeConfig"
+              ]
+            },
+            {
+              "category": "envoy.matching.http.custom_matchers",
+              "name": "envoy.matching.custom_matchers.trie_matcher",
+              "typeUrls": [
+                "xds.type.matcher.v3.IPMatcher"
+              ]
+            },
+            {
+              "category": "envoy.dubbo_proxy.filters",
+              "name": "envoy.filters.dubbo.router",
+              "typeUrls": [
+                "envoy.extensions.filters.network.dubbo_proxy.router.v3.Router"
+              ]
+            },
+            {
+              "category": "envoy.filters.network",
+              "name": "envoy.echo"
+            },
+            {
+              "category": "envoy.filters.network",
+              "name": "envoy.ext_authz"
+            },
+            {
+              "category": "envoy.filters.network",
+              "name": "envoy.filters.network.connection_limit",
+              "typeUrls": [
+                "envoy.extensions.filters.network.connection_limit.v3.ConnectionLimit"
+              ]
+            },
+            {
+              "category": "envoy.filters.network",
+              "name": "envoy.filters.network.direct_response",
+              "typeUrls": [
+                "envoy.extensions.filters.network.direct_response.v3.Config"
+              ]
+            },
+            {
+              "category": "envoy.filters.network",
+              "name": "envoy.filters.network.dubbo_proxy",
+              "typeUrls": [
+                "envoy.extensions.filters.network.dubbo_proxy.v3.DubboProxy"
+              ]
+            },
+            {
+              "category": "envoy.filters.network",
+              "name": "envoy.filters.network.echo",
+              "typeUrls": [
+                "envoy.extensions.filters.network.echo.v3.Echo"
+              ]
+            },
+            {
+              "category": "envoy.filters.network",
+              "name": "envoy.filters.network.ext_authz",
+              "typeUrls": [
+                "envoy.extensions.filters.network.ext_authz.v3.ExtAuthz"
+              ]
+            },
+            {
+              "category": "envoy.filters.network",
+              "name": "envoy.filters.network.http_connection_manager",
+              "typeUrls": [
+                "envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager"
+              ]
+            },
+            {
+              "category": "envoy.filters.network",
+              "name": "envoy.filters.network.local_ratelimit",
+              "typeUrls": [
+                "envoy.extensions.filters.network.local_ratelimit.v3.LocalRateLimit"
+              ]
+            },
+            {
+              "category": "envoy.filters.network",
+              "name": "envoy.filters.network.mongo_proxy",
+              "typeUrls": [
+                "envoy.extensions.filters.network.mongo_proxy.v3.MongoProxy"
+              ]
+            },
+            {
+              "category": "envoy.filters.network",
+              "name": "envoy.filters.network.ratelimit",
+              "typeUrls": [
+                "envoy.extensions.filters.network.ratelimit.v3.RateLimit"
+              ]
+            },
+            {
+              "category": "envoy.filters.network",
+              "name": "envoy.filters.network.rbac",
+              "typeUrls": [
+                "envoy.extensions.filters.network.rbac.v3.RBAC"
+              ]
+            },
+            {
+              "category": "envoy.filters.network",
+              "name": "envoy.filters.network.redis_proxy",
+              "typeUrls": [
+                "envoy.extensions.filters.network.redis_proxy.v3.RedisProxy"
+              ]
+            },
+            {
+              "category": "envoy.filters.network",
+              "name": "envoy.filters.network.sni_cluster",
+              "typeUrls": [
+                "envoy.extensions.filters.network.sni_cluster.v3.SniCluster"
+              ]
+            },
+            {
+              "category": "envoy.filters.network",
+              "name": "envoy.filters.network.sni_dynamic_forward_proxy",
+              "typeUrls": [
+                "envoy.extensions.filters.network.sni_dynamic_forward_proxy.v3.FilterConfig"
+              ]
+            },
+            {
+              "category": "envoy.filters.network",
+              "name": "envoy.filters.network.tcp_proxy",
+              "typeUrls": [
+                "envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy"
+              ]
+            },
+            {
+              "category": "envoy.filters.network",
+              "name": "envoy.filters.network.thrift_proxy",
+              "typeUrls": [
+                "envoy.extensions.filters.network.thrift_proxy.v3.ThriftProxy"
+              ]
+            },
+            {
+              "category": "envoy.filters.network",
+              "name": "envoy.filters.network.wasm",
+              "typeUrls": [
+                "envoy.extensions.filters.network.wasm.v3.Wasm"
+              ]
+            },
+            {
+              "category": "envoy.filters.network",
+              "name": "envoy.filters.network.zookeeper_proxy",
+              "typeUrls": [
+                "envoy.extensions.filters.network.zookeeper_proxy.v3.ZooKeeperProxy"
+              ]
+            },
+            {
+              "category": "envoy.filters.network",
+              "name": "envoy.http_connection_manager"
+            },
+            {
+              "category": "envoy.filters.network",
+              "name": "envoy.mongo_proxy"
+            },
+            {
+              "category": "envoy.filters.network",
+              "name": "envoy.ratelimit"
+            },
+            {
+              "category": "envoy.filters.network",
+              "name": "envoy.redis_proxy"
+            },
+            {
+              "category": "envoy.filters.network",
+              "name": "envoy.tcp_proxy"
+            },
+            {
+              "category": "envoy.health_checkers",
+              "name": "envoy.health_checkers.redis",
+              "typeUrls": [
+                "envoy.extensions.health_checkers.redis.v3.Redis"
+              ]
+            },
+            {
+              "category": "envoy.health_checkers",
+              "name": "envoy.health_checkers.thrift",
+              "typeUrls": [
+                "envoy.extensions.health_checkers.thrift.v3.Thrift"
+              ]
+            }
+          ],
+          "userAgentBuildVersion": {
+            "metadata": {
+              "build.label": "dev",
+              "build.type": "RELEASE",
+              "revision.sha": "14111e3c62d3d38b0c921cb7011fd0a94e880aed",
+              "revision.status": "Clean",
+              "ssl.version": "BoringSSL"
+            },
+            "version": {
+              "majorNumber": 1,
+              "minorNumber": 26
+            }
+          },
+          "userAgentName": "envoy"
+        },
+        "staticResources": {
+          "clusters": [
+            {
+              "connectTimeout": "1s",
+              "loadAssignment": {
+                "clusterName": "xds_cluster",
+                "endpoints": [
+                  {
+                    "lbEndpoints": [
+                      {
+                        "endpoint": {
+                          "address": {
+                            "socketAddress": {
+                              "address": "envoy-gateway",
+                              "portValue": 18000
+                            }
+                          }
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              "name": "xds_cluster",
+              "transportSocket": {
+                "name": "envoy.transport_sockets.tls",
+                "typedConfig": {
+                  "@type": "type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext",
+                  "commonTlsContext": {
+                    "tlsCertificateSdsSecretConfigs": [
+                      {
+                        "name": "xds_certificate",
+                        "sdsConfig": {
+                          "pathConfigSource": {
+                            "path": "/sds/xds-certificate.json"
+                          },
+                          "resourceApiVersion": "V3"
+                        }
+                      }
+                    ],
+                    "tlsParams": {
+                      "tlsMaximumProtocolVersion": "TLSv1_3"
+                    },
+                    "validationContextSdsSecretConfig": {
+                      "name": "xds_trusted_ca",
+                      "sdsConfig": {
+                        "pathConfigSource": {
+                          "path": "/sds/xds-trusted-ca.json"
+                        },
+                        "resourceApiVersion": "V3"
+                      }
+                    }
+                  }
+                }
+              },
+              "type": "STRICT_DNS",
+              "typedExtensionProtocolOptions": {
+                "envoy.extensions.upstreams.http.v3.HttpProtocolOptions": {
+                  "@type": "type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions",
+                  "explicitHttpConfig": {
+                    "http2ProtocolOptions": {}
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "lastUpdated": "2023-02-23T09:05:23.422Z"
+    }
+  }
+}

@@ -1,0 +1,19 @@
+gateways:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: Gateway
+    metadata:
+      namespace: envoy-gateway
+      name: gateway-1
+    spec:
+      gatewayClassName: envoy-gateway-class
+      listeners:
+        - name: tcp
+          protocol: TCP
+          port: 80
+      addresses:
+        - type: IPAddress
+          value: 1.2.3.4
+        - type: IPAddress
+          value: 5.6.7.8
+        - type: Hostname
+          value: foo.bar

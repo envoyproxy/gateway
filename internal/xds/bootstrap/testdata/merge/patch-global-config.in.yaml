@@ -1,0 +1,6 @@
+- op: add
+  path: /layered_runtime/layers/0/static_layer/envoy.restart_features.use_eds_cache_for_ads
+  value: false
+- op: add
+  path: /layered_runtime/layers/0/static_layer/envoy.something.completely.made.up
+  value: arbitrary string

@@ -1,0 +1,11 @@
+# The image in the deployment is replaced with the image from the global configuration.
+# It's retained for backwards compatibility.
+deployment:
+  envoyGateway:
+    image:
+      repository: private-hub/envoyproxy/gateway
+      tag: abcdef12
+    imagePullPolicy: IfNotPresent
+    imagePullSecrets:
+    - name: "secret1"
+    - name: "secret2"

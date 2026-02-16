@@ -1,0 +1,73 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: passthrough-echoserver
+  labels:
+    run: passthrough-echoserver
+spec:
+  ports:
+    - port: 443
+      targetPort: 8443
+      protocol: TCP
+  selector:
+    run: passthrough-echoserver
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: passthrough-echoserver
+spec:
+  selector:
+    matchLabels:
+      run: passthrough-echoserver
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        run: passthrough-echoserver
+    spec:
+      containers:
+        - name: passthrough-echoserver
+          image: gcr.io/k8s-staging-gateway-api/echo-basic:v20231214-v1.0.0-140-gf544a46e
+          ports:
+            - containerPort: 8443
+          env:
+            - name: HTTPS_PORT
+              value: "8443"
+            - name: TLS_SERVER_CERT
+              value: /etc/server-certs/tls.crt
+            - name: TLS_SERVER_PRIVKEY
+              value: /etc/server-certs/tls.key
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+          volumeMounts:
+            - name: server-certs
+              mountPath: /etc/server-certs
+              readOnly: true
+      volumes:
+        - name: server-certs
+          secret:
+            secretName: server-certs
+---
+apiVersion: gateway.networking.k8s.io/v1alpha2
+kind: TLSRoute
+metadata:
+  name: tlsroute
+spec:
+  parentRefs:
+    - name: eg
+  hostnames:
+    - "passthrough.example.com"
+  rules:
+    - backendRefs:
+        - group: ""
+          kind: Service
+          name: passthrough-echoserver
+          port: 443
+          weight: 1

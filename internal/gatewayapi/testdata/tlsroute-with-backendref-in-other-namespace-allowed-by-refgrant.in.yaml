@@ -1,0 +1,78 @@
+gateways:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: Gateway
+    metadata:
+      namespace: envoy-gateway
+      name: gateway-1
+    spec:
+      gatewayClassName: envoy-gateway-class
+      listeners:
+        - name: tls
+          protocol: TLS
+          hostname: foo.com
+          port: 90
+          tls:
+            mode: Passthrough
+          allowedRoutes:
+            namespaces:
+              from: All
+tlsRoutes:
+  - apiVersion: gateway.networking.k8s.io/v1alpha2
+    kind: TLSRoute
+    metadata:
+      namespace: default
+      name: tlsroute-1
+    spec:
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+      rules:
+        - backendRefs:
+            - name: service-1
+              namespace: test-service-namespace
+              port: 8080
+services:
+  - apiVersion: v1
+    kind: Service
+    metadata:
+      namespace: test-service-namespace
+      name: service-1
+    spec:
+      clusterIP: 1.1.1.1
+      ports:
+        - name: http
+          port: 8080
+          protocol: TCP
+          targetPort: 8080
+endpointSlices:
+  - apiVersion: discovery.k8s.io/v1
+    kind: EndpointSlice
+    metadata:
+      name: endpointslice-service-1
+      namespace: test-service-namespace
+      labels:
+        kubernetes.io/service-name: service-1
+    addressType: IPv4
+    ports:
+      - name: http
+        protocol: TCP
+        port: 8080
+    endpoints:
+      - addresses:
+          - "7.7.7.7"
+        conditions:
+          ready: true
+referenceGrants:
+  - apiVersion: gateway.networking.k8s.io/v1alpha2
+    kind: ReferenceGrant
+    metadata:
+      namespace: test-service-namespace
+      name: referencegrant-1
+    spec:
+      from:
+        - group: gateway.networking.k8s.io
+          kind: TLSRoute
+          namespace: default
+      to:
+        - group: ""
+          kind: Service

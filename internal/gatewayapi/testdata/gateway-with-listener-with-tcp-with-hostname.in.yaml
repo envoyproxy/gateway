@@ -1,0 +1,16 @@
+gateways:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: Gateway
+    metadata:
+      namespace: envoy-gateway
+      name: gateway-1
+    spec:
+      gatewayClassName: envoy-gateway-class
+      listeners:
+        - name: tcp
+          hostname: foo.com
+          protocol: TCP
+          port: 80
+          allowedRoutes:
+            namespaces:
+              from: All

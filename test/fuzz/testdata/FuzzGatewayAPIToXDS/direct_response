@@ -1,0 +1,65 @@
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: direct-response
+spec:
+  parentRefs:
+  - name: eg
+  hostnames:
+  - "www.example.com"
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /inline
+    filters:
+    - type: ExtensionRef
+      extensionRef:
+        group: gateway.envoyproxy.io
+        kind: HTTPRouteFilter
+        name: direct-response-inline
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /value-ref
+    filters:
+    - type: ExtensionRef
+      extensionRef:
+        group: gateway.envoyproxy.io
+        kind: HTTPRouteFilter
+        name: direct-response-value-ref
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: value-ref-response
+data:
+  response.body: '{"error": "Internal Server Error"}'
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: HTTPRouteFilter
+metadata:
+  name: direct-response-inline
+spec:
+  directResponse:
+    contentType: text/plain
+    statusCode: 503
+    body:
+      type: Inline
+      inline: "Oops! Your request is not found."
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: HTTPRouteFilter
+metadata:
+  name: direct-response-value-ref
+spec:
+  directResponse:
+    contentType: application/json
+    statusCode: 500
+    body:
+      type: ValueRef
+      valueRef:
+        group: ""
+        kind: ConfigMap
+        name: value-ref-response

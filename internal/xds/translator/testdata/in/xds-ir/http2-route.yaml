@@ -1,0 +1,89 @@
+http:
+- name: "first-listener"
+  address: "::"
+  port: 10080
+  hostnames:
+  - "*"
+  isHTTP2: true
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  routes:
+  - name: "first-route"
+    hostname: "*"
+    pathMatch:
+      name: "test"
+      exact: "foo/bar"
+    headerMatches:
+    - name: user
+      exact: "jason"
+    queryParamMatches:
+    - name: "debug"
+      exact: "yes"
+    destination:
+      name: "first-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        protocol: GRPC
+        name: "first-route-dest/backend/0"
+    traffic:
+      http2:
+        initialConnectionWindowSize: 1048576
+        initialStreamWindowSize: 524288000
+        maxConcurrentStreams: 200
+        resetStreamOnError: true
+  - name: "second-route"
+    hostname: "*"
+    pathMatch:
+      name: "test"
+      exact: "bar/foo"
+    destination:
+      name: "second-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        protocol: GRPC
+        name: "second-route-dest/backend/0"
+    traffic:
+      http2: {}
+  - name: "third-route-use-client"
+    hostname: "*"
+    pathMatch:
+      name: "test"
+      exact: "bar/bar"
+    destination:
+      name: "third-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        protocol: HTTP
+        name: "third-route-dest/backend/0"
+    useClientProtocol: true
+    traffic:
+      http2:
+        initialConnectionWindowSize: 1048576
+        initialStreamWindowSize: 524288000
+        maxConcurrentStreams: 200
+        resetStreamOnError: false
+  - name: "fourth-route-not-http2"
+    hostname: "*"
+    pathMatch:
+      name: "test"
+      exact: "foo/foo"
+    destination:
+      name: "fourth-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "fourth-route-dest/backend/0"
+    traffic:
+      http2:
+        initialConnectionWindowSize: 1048576
+        initialStreamWindowSize: 524288000
+        maxConcurrentStreams: 200
+        resetStreamOnError: true

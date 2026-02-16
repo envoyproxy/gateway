@@ -1,0 +1,17 @@
+### Nighthawk test client job template
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: "{NIGHTHAWK_CLIENT_NAME}"
+  namespace: benchmark-test
+spec:
+  template:
+    spec:
+      containers:
+        - name: nighthawk-client
+          image: envoyproxy/nighthawk-dev:6198df0e01dc85f8d5efa3ef188f3bcdcc6eecac
+          imagePullPolicy: IfNotPresent
+          command:
+            - /usr/local/bin/nighthawk_client
+      restartPolicy: Never
+  backoffLimit: 3

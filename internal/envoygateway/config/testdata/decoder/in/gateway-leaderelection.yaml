@@ -1,0 +1,13 @@
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyGateway
+gateway:
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller
+provider:
+  type: Kubernetes
+  kubernetes:
+    leaderElection:
+      disable: true
+      leaseDuration: "1s"
+      renewDeadline: "2s"
+      retryPeriod: "3s"
+      disabled: false

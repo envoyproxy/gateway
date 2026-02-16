@@ -1,0 +1,70 @@
+admin:
+  accessLog:
+  - name: envoy.access_loggers.file
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+      path: /dev/null
+  address:
+    socketAddress:
+      address: 127.0.0.1
+      portValue: 19000
+dynamicResources:
+  adsConfig:
+    apiType: GRPC
+    grpcServices:
+    - envoyGrpc:
+        clusterName: xds_cluster
+    setNodeOnFirstMessageOnly: true
+    transportApiVersion: V3
+  ldsConfig:
+    ads: {}
+    resourceApiVersion: V3
+  cdsConfig:
+    ads: {}
+    resourceApiVersion: V3
+layeredRuntime:
+  layers:
+  - name: runtime-0
+    rtdsLayer:
+      name: runtime-0
+      rtdsConfig:
+        ads: {}
+        resourceApiVersion: V3
+staticResources:
+  clusters:
+  - connectTimeout: 10s
+    loadAssignment:
+      clusterName: xds_cluster
+      endpoints:
+      - lbEndpoints:
+        - endpoint:
+            address:
+              socketAddress:
+                address: envoy-gateway
+                portValue: 18000
+    name: xds_cluster
+    transportSocket:
+      name: envoy.transport_sockets.tls
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+        commonTlsContext:
+          tlsCertificateSdsSecretConfigs:
+          - name: xds_certificate
+            sdsConfig:
+              pathConfigSource:
+                path: /sds/xds-certificate.json
+              resourceApiVersion: V3
+          tlsParams:
+            tlsMaximumProtocolVersion: TLSv1_3
+          validationContextSdsSecretConfig:
+            name: xds_trusted_ca
+            sdsConfig:
+              pathConfigSource:
+                path: /sds/xds-trusted-ca.json
+              resourceApiVersion: V3
+    type: STRICT_DNS
+    typedExtensionProtocolOptions:
+      envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
+        '@type': type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
+        explicitHttpConfig:
+          http2ProtocolOptions: {}

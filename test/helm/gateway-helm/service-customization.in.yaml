@@ -1,0 +1,12 @@
+global:
+  images:
+    envoyGateway:
+      image: "docker.io/envoyproxy/gateway-dev:latest"
+      pullPolicy: Always
+
+service:
+  trafficDistribution: PreferClose
+  type: "LoadBalancer"
+  loadBalancerIP: "172.18.0.201"
+  annotations:
+    this: that

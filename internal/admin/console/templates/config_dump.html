@@ -1,0 +1,411 @@
+{{template "base.html" .}}
+
+{{define "config-dump-content"}}
+<div class="card">
+    <div class="card-header">
+        <h1 class="card-title">{{.Title}}</h1>
+        <div style="display: flex; align-items: center; gap: 1rem;">
+            <a href="/api/config_dump?resource=all" class="btn btn-primary" target="_blank">
+                🔍 View Complete Config (JSON)
+            </a>
+            <label>
+                <input type="checkbox" id="auto-refresh"> Auto-refresh (30s)
+            </label>
+            <button class="btn btn-secondary" onclick="EnvoyGatewayAdmin.refresh()">
+                Refresh
+            </button>
+        </div>
+    </div>
+    <div class="card-body">
+        <p>This page displays the current configuration state of Envoy Gateway, including all Gateway API resources and their status.</p>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h2 class="card-title">📊 Configuration Summary</h2>
+    </div>
+    <div class="card-body">
+        <p>This section provides a high-level overview of the current configuration state:</p>
+        <div id="config-summary">
+            <div class="loading"></div> Loading configuration summary...
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h2 class="card-title">🔍 Resource Explorer</h2>
+    </div>
+    <div class="card-body">
+        <p>Browse and search through all Gateway API resources and policies. Click on category headers to expand/collapse sections.</p>
+
+        <div class="resource-search">
+            <input type="text" id="resource-search-input" placeholder="🔍 Search resources by name or namespace..." />
+        </div>
+
+        <div class="config-resources-container" id="config-resources-container">
+            <div class="loading"></div> Loading resources...
+        </div>
+    </div>
+</div>
+
+<div style="display: none;" class="config-resources-grid-old">
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">🚪 Gateways</h2>
+        </div>
+        <div class="card-body">
+            <p>Gateway resources define the entry points for traffic into the cluster. They specify which ports and protocols are exposed.</p>
+            <div id="gateways-list">
+                <div class="loading"></div> Loading gateways...
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">🛣️ HTTP Routes</h2>
+        </div>
+        <div class="card-body">
+            <p>HTTPRoute resources define how HTTP requests are routed to backend services.</p>
+            <div id="httproutes-list">
+                <div class="loading"></div> Loading HTTP routes...
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">🔧 GRPC Routes</h2>
+        </div>
+        <div class="card-body">
+            <p>GRPCRoute resources define how gRPC requests are routed to backend services.</p>
+            <div id="grpcroutes-list">
+                <div class="loading"></div> Loading GRPC routes...
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">🔒 TLS Routes</h2>
+        </div>
+        <div class="card-body">
+            <p>TLSRoute resources define how TLS connections are routed to backend services.</p>
+            <div id="tlsroutes-list">
+                <div class="loading"></div> Loading TLS routes...
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">🔌 TCP Routes</h2>
+        </div>
+        <div class="card-body">
+            <p>TCPRoute resources define how TCP connections are routed to backend services.</p>
+            <div id="tcproutes-list">
+                <div class="loading"></div> Loading TCP routes...
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">📡 UDP Routes</h2>
+        </div>
+        <div class="card-body">
+            <p>UDPRoute resources define how UDP traffic is routed to backend services.</p>
+            <div id="udproutes-list">
+                <div class="loading"></div> Loading UDP routes...
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">🏷️ Gateway Classes</h2>
+        </div>
+        <div class="card-body">
+            <p>GatewayClass resources define the type of Gateway that can be deployed.</p>
+            <div id="gatewayclasses-list">
+                <div class="loading"></div> Loading gateway classes...
+            </div>
+        </div>
+    </div>
+
+    <!-- Envoy Gateway Policies -->
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">🚦 Client Traffic Policies</h2>
+        </div>
+        <div class="card-body">
+            <p>ClientTrafficPolicy resources define traffic management policies for client connections.</p>
+            <div id="clienttrafficpolicies-list">
+                <div class="loading"></div> Loading client traffic policies...
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">🔄 Backend Traffic Policies</h2>
+        </div>
+        <div class="card-body">
+            <p>BackendTrafficPolicy resources define traffic management policies for backend connections.</p>
+            <div id="backendtrafficpolicies-list">
+                <div class="loading"></div> Loading backend traffic policies...
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">🔐 Backend TLS Policies</h2>
+        </div>
+        <div class="card-body">
+            <p>BackendTLSPolicy resources define TLS configuration for backend connections.</p>
+            <div id="backendtlspolicies-list">
+                <div class="loading"></div> Loading backend TLS policies...
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">🛡️ Security Policies</h2>
+        </div>
+        <div class="card-body">
+            <p>SecurityPolicy resources define security configurations and authentication policies.</p>
+            <div id="securitypolicies-list">
+                <div class="loading"></div> Loading security policies...
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">🔧 Envoy Patch Policies</h2>
+        </div>
+        <div class="card-body">
+            <p>EnvoyPatchPolicy resources define custom patches to Envoy configuration.</p>
+            <div id="envoypatchpolicies-list">
+                <div class="loading"></div> Loading Envoy patch policies...
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">🔌 Envoy Extension Policies</h2>
+        </div>
+        <div class="card-body">
+            <p>EnvoyExtensionPolicy resources define external processing and extension configurations.</p>
+            <div id="envoyextensionpolicies-list">
+                <div class="loading"></div> Loading Envoy extension policies...
+            </div>
+        </div>
+    </div>
+
+    <!-- Kubernetes Resources -->
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">🌐 Services</h2>
+        </div>
+        <div class="card-body">
+            <p>Service resources define network services and their endpoints.</p>
+            <div id="services-list">
+                <div class="loading"></div> Loading services...
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">🔑 Secrets</h2>
+        </div>
+        <div class="card-body">
+            <p>Secret resources contain sensitive data such as certificates and keys.</p>
+            <div id="secrets-list">
+                <div class="loading"></div> Loading secrets...
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">📋 ConfigMaps</h2>
+        </div>
+        <div class="card-body">
+            <p>ConfigMap resources contain configuration data for applications.</p>
+            <div id="configmaps-list">
+                <div class="loading"></div> Loading config maps...
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">📁 Namespaces</h2>
+        </div>
+        <div class="card-body">
+            <p>Namespace resources provide scope for names and resource isolation.</p>
+            <div id="namespaces-list">
+                <div class="loading"></div> Loading namespaces...
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">🎯 Endpoint Slices</h2>
+        </div>
+        <div class="card-body">
+            <p>EndpointSlice resources define network endpoints for services.</p>
+            <div id="endpointslices-list">
+                <div class="loading"></div> Loading endpoint slices...
+            </div>
+        </div>
+    </div>
+
+    <!-- Other Resources -->
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">🔗 Reference Grants</h2>
+        </div>
+        <div class="card-body">
+            <p>ReferenceGrant resources allow cross-namespace references in Gateway API.</p>
+            <div id="referencegrants-list">
+                <div class="loading"></div> Loading reference grants...
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">🔍 HTTP Route Filters</h2>
+        </div>
+        <div class="card-body">
+            <p>HTTPRouteFilter resources define custom filters for HTTP routes.</p>
+            <div id="httproutefilters-list">
+                <div class="loading"></div> Loading HTTP route filters...
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">⚙️ Envoy Proxies</h2>
+        </div>
+        <div class="card-body">
+            <p>EnvoyProxy resources define Envoy proxy configuration and deployment settings.</p>
+            <div id="envoyproxies-list">
+                <div class="loading"></div> Loading Envoy proxies...
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">🔙 Backends</h2>
+        </div>
+        <div class="card-body">
+            <p>Backend resources define backend service configurations.</p>
+            <div id="backends-list">
+                <div class="loading"></div> Loading backends...
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">📤 Service Imports</h2>
+        </div>
+        <div class="card-body">
+            <p>ServiceImport resources define imported services from other clusters.</p>
+            <div id="serviceimports-list">
+                <div class="loading"></div> Loading service imports...
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+// Resource category toggle functionality
+document.addEventListener('DOMContentLoaded', function() {
+    // Toggle category sections
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.resource-category-header')) {
+            const category = e.target.closest('.resource-category');
+            category.classList.toggle('collapsed');
+        }
+    });
+
+    // Search functionality
+    const searchInput = document.getElementById('resource-search-input');
+    if (searchInput) {
+        searchInput.addEventListener('input', function(e) {
+            const searchTerm = e.target.value.toLowerCase();
+            const categories = document.querySelectorAll('.resource-category');
+
+            categories.forEach(category => {
+                const subcategories = category.querySelectorAll('.resource-subcategory');
+                let categoryHasVisibleCards = false;
+                let categoryTotalVisible = 0;
+
+                subcategories.forEach(subcategory => {
+                    const cards = subcategory.querySelectorAll('.resource-card');
+                    let subcategoryVisibleCount = 0;
+
+                    cards.forEach(card => {
+                        const name = card.querySelector('.resource-card-name')?.textContent.toLowerCase() || '';
+                        const namespace = card.querySelector('.resource-card-namespace')?.textContent.toLowerCase() || '';
+
+                        if (!searchTerm || name.includes(searchTerm) || namespace.includes(searchTerm)) {
+                            card.style.display = 'block';
+                            subcategoryVisibleCount++;
+                            categoryHasVisibleCards = true;
+                        } else {
+                            card.style.display = 'none';
+                        }
+                    });
+
+                    // Update subcategory count
+                    const countSpan = subcategory.querySelector('.resource-count');
+                    if (countSpan) {
+                        countSpan.textContent = subcategoryVisibleCount;
+                    }
+
+                    // Show/hide subcategory based on visible cards
+                    if (searchTerm && subcategoryVisibleCount === 0) {
+                        subcategory.style.display = 'none';
+                    } else {
+                        subcategory.style.display = 'block';
+                        categoryTotalVisible += subcategoryVisibleCount;
+                    }
+                });
+
+                // Update category badge count
+                const categoryBadge = category.querySelector('.resource-count-badge');
+                if (categoryBadge) {
+                    categoryBadge.textContent = categoryTotalVisible;
+                }
+
+                // Show/hide category based on whether it has visible cards
+                if (searchTerm && !categoryHasVisibleCards) {
+                    category.style.display = 'none';
+                } else {
+                    category.style.display = 'block';
+                    // Auto-expand categories when searching
+                    if (searchTerm && categoryHasVisibleCards) {
+                        category.classList.remove('collapsed');
+                    }
+                }
+            });
+        });
+    }
+});
+</script>
+{{end}}

@@ -1,0 +1,251 @@
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    name: gateway-1
+    namespace: envoy-gateway
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - allowedRoutes:
+        namespaces:
+          from: All
+      name: tcp1
+      port: 161
+      protocol: TCP
+    - allowedRoutes:
+        namespaces:
+          from: All
+      name: tcp2
+      port: 162
+      protocol: TCP
+  status:
+    listeners:
+    - attachedRoutes: 2
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: tcp1
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: TCPRoute
+    - attachedRoutes: 2
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: tcp2
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: TCPRoute
+infraIR:
+  envoy-gateway/gateway-1:
+    proxy:
+      listeners:
+      - name: envoy-gateway/gateway-1/tcp1
+        ports:
+        - containerPort: 10161
+          name: tcp-161
+          protocol: TCP
+          servicePort: 161
+      - name: envoy-gateway/gateway-1/tcp2
+        ports:
+        - containerPort: 10162
+          name: tcp-162
+          protocol: TCP
+          servicePort: 162
+      metadata:
+        labels:
+          gateway.envoyproxy.io/owning-gateway-name: gateway-1
+          gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+        ownerReference:
+          kind: GatewayClass
+          name: envoy-gateway-class
+      name: envoy-gateway/gateway-1
+      namespace: envoy-gateway-system
+tcpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1alpha2
+  kind: TCPRoute
+  metadata:
+    name: tcproute-1
+    namespace: default
+  spec:
+    parentRefs:
+    - name: gateway-1
+      namespace: envoy-gateway
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8163
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        namespace: envoy-gateway
+- apiVersion: gateway.networking.k8s.io/v1alpha2
+  kind: TCPRoute
+  metadata:
+    name: tcproute-2
+    namespace: default
+  spec:
+    parentRefs:
+    - name: gateway-1
+      namespace: envoy-gateway
+    rules:
+    - backendRefs:
+      - name: service-2
+        port: 8163
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Multiple routes on the same TCP listener
+        reason: UnsupportedValue
+        status: "False"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        namespace: envoy-gateway
+xdsIR:
+  envoy-gateway/gateway-1:
+    accessLog:
+      json:
+      - path: /dev/stdout
+    globalResources:
+      proxyServiceCluster:
+        metadata:
+          kind: Service
+          name: envoy-envoy-gateway-gateway-1-196ae069
+          namespace: envoy-gateway-system
+          sectionName: "8080"
+        name: envoy-gateway/gateway-1
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            kind: Service
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-1
+          protocol: TCP
+    readyListener:
+      address: 0.0.0.0
+      ipFamily: IPv4
+      path: /ready
+      port: 19003
+    tcp:
+    - address: 0.0.0.0
+      externalPort: 161
+      metadata:
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: tcp1
+      name: envoy-gateway/gateway-1/tcp1
+      port: 10161
+      routes:
+      - destination:
+          metadata:
+            kind: TCPRoute
+            name: tcproute-1
+            namespace: default
+          name: tcproute/default/tcproute-1/rule/-1
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8163
+            metadata:
+              kind: Service
+              name: service-1
+              namespace: default
+              sectionName: "8163"
+            name: tcproute/default/tcproute-1/rule/-1/backend/0
+            protocol: TCP
+            weight: 1
+        metadata:
+          kind: TCPRoute
+          name: tcproute-1
+          namespace: default
+        name: tcproute/default/tcproute-1
+    - address: 0.0.0.0
+      externalPort: 162
+      metadata:
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: tcp2
+      name: envoy-gateway/gateway-1/tcp2
+      port: 10162
+      routes:
+      - destination:
+          metadata:
+            kind: TCPRoute
+            name: tcproute-1
+            namespace: default
+          name: tcproute/default/tcproute-1/rule/-1
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8163
+            metadata:
+              kind: Service
+              name: service-1
+              namespace: default
+              sectionName: "8163"
+            name: tcproute/default/tcproute-1/rule/-1/backend/0
+            protocol: TCP
+            weight: 1
+        metadata:
+          kind: TCPRoute
+          name: tcproute-1
+          namespace: default
+        name: tcproute/default/tcproute-1

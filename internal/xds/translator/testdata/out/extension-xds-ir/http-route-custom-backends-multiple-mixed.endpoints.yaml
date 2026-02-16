@@ -1,0 +1,12 @@
+- clusterName: custom-backend-dest
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: s3.amazonaws.com
+            portValue: 443
+      loadBalancingWeight: 1
+    loadBalancingWeight: 1
+    locality:
+      region: custom-backend-dest/backend/0

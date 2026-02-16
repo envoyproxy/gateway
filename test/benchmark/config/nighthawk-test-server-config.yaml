@@ -1,0 +1,44 @@
+static_resources:
+  listeners:
+    # define an origin server on :10000 that always returns "lorem ipsum..."
+    - address:
+        socket_address:
+          address: 0.0.0.0
+          port_value: 8080
+      filter_chains:
+        - filters:
+            - name: envoy.filters.network.http_connection_manager
+              typed_config:
+                "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+                generate_request_id: false
+                codec_type: AUTO
+                stat_prefix: ingress_http
+                route_config:
+                  name: local_route
+                  virtual_hosts:
+                    - name: service
+                      domains:
+                        - "*"
+                http_filters:
+                  - name: dynamic-delay
+                    typed_config:
+                      "@type": type.googleapis.com/nighthawk.server.DynamicDelayConfiguration
+                      static_delay: 0s
+                  - name: test-server  # before envoy.router because order matters!
+                    typed_config:
+                      "@type": type.googleapis.com/nighthawk.server.ResponseOptions
+                      response_body_size: 10
+                      v3_response_headers:
+                        - {header: {key: "foo", value: "bar"}}
+                        - {header: {key: "foo", value: "bar2"}, append: true}
+                        - {header: {key: "x-nh", value: "1"}}
+                  - name: envoy.filters.http.router
+                    typed_config:
+                      "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+                      dynamic_stats: false
+admin:
+  access_log_path: /tmp/envoy.log
+  address:
+    socket_address:
+      address: 0.0.0.0
+      port_value: 8081
