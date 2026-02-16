@@ -12,10 +12,10 @@ http:
     initialStreamWindowSize: 33554432
     maxConcurrentStreams: 200
     connectionKeepalive:
-      interval: 60
-      timeout: 10
+      interval: 60s
+      timeout: 10s
       intervalJitter: 20
-      connectionIdleInterval: 30
+      connectionIdleInterval: 30s
   routes:
   - name: "first-route"
     hostname: "*"

@@ -11,7 +11,6 @@ import (
 	"net"
 	"strconv"
 	"strings"
-	"time"
 
 	xdscore "github.com/cncf/xds/go/xds/core/v3"
 	matcher "github.com/cncf/xds/go/xds/type/matcher/v3"
@@ -114,16 +113,16 @@ func http2ProtocolOptions(opts *ir.HTTP2Settings) *corev3.Http2ProtocolOptions {
 	if opts.ConnectionKeepalive != nil {
 		keepalive := &corev3.KeepaliveSettings{}
 		if opts.ConnectionKeepalive.Interval != nil {
-			keepalive.Interval = durationpb.New(time.Duration(*opts.ConnectionKeepalive.Interval) * time.Second)
+			keepalive.Interval = durationpb.New(opts.ConnectionKeepalive.Interval.Duration)
 		}
 		if opts.ConnectionKeepalive.Timeout != nil {
-			keepalive.Timeout = durationpb.New(time.Duration(*opts.ConnectionKeepalive.Timeout) * time.Second)
+			keepalive.Timeout = durationpb.New(opts.ConnectionKeepalive.Timeout.Duration)
 		}
 		if opts.ConnectionKeepalive.IntervalJitter != nil {
 			keepalive.IntervalJitter = &typev3.Percent{Value: float64(*opts.ConnectionKeepalive.IntervalJitter)}
 		}
 		if opts.ConnectionKeepalive.ConnectionIdleInterval != nil {
-			keepalive.ConnectionIdleInterval = durationpb.New(time.Duration(*opts.ConnectionKeepalive.ConnectionIdleInterval) * time.Second)
+			keepalive.ConnectionIdleInterval = durationpb.New(opts.ConnectionKeepalive.ConnectionIdleInterval.Duration)
 		}
 		out.ConnectionKeepalive = keepalive
 	}

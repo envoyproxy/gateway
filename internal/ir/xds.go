@@ -634,14 +634,14 @@ type HTTP2Settings struct {
 // HTTP2ConnectionKeepalive configures HTTP/2 PING-based keepalive settings.
 // +k8s:deepcopy-gen=true
 type HTTP2ConnectionKeepalive struct {
-	// Interval specifies how often to send HTTP/2 PING frames (in seconds).
-	Interval *uint32 `json:"interval,omitempty" yaml:"interval,omitempty"`
-	// Timeout specifies how long to wait for a PING response (in seconds).
-	Timeout *uint32 `json:"timeout,omitempty" yaml:"timeout,omitempty"`
+	// Interval specifies how often to send HTTP/2 PING frames.
+	Interval *metav1.Duration `json:"interval,omitempty" yaml:"interval,omitempty"`
+	// Timeout specifies how long to wait for a PING response.
+	Timeout *metav1.Duration `json:"timeout,omitempty" yaml:"timeout,omitempty"`
 	// IntervalJitter specifies a random jitter percentage added to each interval (0-100).
 	IntervalJitter *uint32 `json:"intervalJitter,omitempty" yaml:"intervalJitter,omitempty"`
-	// ConnectionIdleInterval specifies idle time before sending a PING (in seconds).
-	ConnectionIdleInterval *uint32 `json:"connectionIdleInterval,omitempty" yaml:"connectionIdleInterval,omitempty"`
+	// ConnectionIdleInterval specifies idle time before sending a PING.
+	ConnectionIdleInterval *metav1.Duration `json:"connectionIdleInterval,omitempty" yaml:"connectionIdleInterval,omitempty"`
 }
 
 // ResponseOverride defines the configuration to override specific responses with a custom one.

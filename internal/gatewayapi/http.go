@@ -80,7 +80,7 @@ func buildIRHTTP2Settings(http2Settings *egv1a1.HTTP2Settings) (*ir.HTTP2Setting
 			if err != nil {
 				errs = errors.Join(errs, fmt.Errorf("invalid ConnectionKeepalive.Interval: %w", err))
 			} else {
-				keepalive.Interval = ptr.To(uint32(d.Seconds()))
+				keepalive.Interval = ir.MetaV1DurationPtr(d)
 			}
 		}
 		if http2Settings.ConnectionKeepalive.Timeout != nil {
@@ -88,7 +88,7 @@ func buildIRHTTP2Settings(http2Settings *egv1a1.HTTP2Settings) (*ir.HTTP2Setting
 			if err != nil {
 				errs = errors.Join(errs, fmt.Errorf("invalid ConnectionKeepalive.Timeout: %w", err))
 			} else {
-				keepalive.Timeout = ptr.To(uint32(d.Seconds()))
+				keepalive.Timeout = ir.MetaV1DurationPtr(d)
 			}
 		}
 		if http2Settings.ConnectionKeepalive.IntervalJitter != nil {
@@ -99,7 +99,7 @@ func buildIRHTTP2Settings(http2Settings *egv1a1.HTTP2Settings) (*ir.HTTP2Setting
 			if err != nil {
 				errs = errors.Join(errs, fmt.Errorf("invalid ConnectionKeepalive.ConnectionIdleInterval: %w", err))
 			} else {
-				keepalive.ConnectionIdleInterval = ptr.To(uint32(d.Seconds()))
+				keepalive.ConnectionIdleInterval = ir.MetaV1DurationPtr(d)
 			}
 		}
 		http2.ConnectionKeepalive = keepalive

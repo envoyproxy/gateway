@@ -123,10 +123,10 @@ xdsIR:
       - '*'
       http2:
         connectionKeepalive:
-          connectionIdleInterval: 30
-          interval: 60
+          connectionIdleInterval: 30s
+          interval: 60s
           intervalJitter: 20
-          timeout: 10
+          timeout: 10s
       isHTTP2: false
       metadata:
         kind: Gateway
