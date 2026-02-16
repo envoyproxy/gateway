@@ -49,7 +49,5 @@ spec:
       backendRefs:
         - name: infra-backend-v1
           port: 8080
-          weight: 99
         - name: infra-backend-v2
           port: 8080
-          weight: 1

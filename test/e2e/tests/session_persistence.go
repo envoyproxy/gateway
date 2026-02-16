@@ -172,6 +172,8 @@ var SessionPersistenceTest = suite.ConformanceTest{
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expected)
 
 			backend := runCookieBasedSessionPersistenceTest(t, suite, gwAddr, &expected)
+			// the default lifetimecycle of cookie based session persistennce is Session,
+			// we need to retry until the cookie expires and a new backend is selected.
 			err := wait.PollUntilContextTimeout(t.Context(), time.Second, time.Minute, true, func(_ context.Context) (done bool, err error) {
 				newBackend := runCookieBasedSessionPersistenceTest(t, suite, gwAddr, &expected)
 				if newBackend != backend {
@@ -188,6 +190,8 @@ var SessionPersistenceTest = suite.ConformanceTest{
 	},
 }
 
+// runCookieBasedSessionPersistenceTest makes 10 requests with the same cookie and expects them to be routed to the same backend/pod.
+// which take precedence the weight when there are multiple backends, and returns the backend name.
 func runCookieBasedSessionPersistenceTest(t *testing.T, suite *suite.ConformanceTestSuite, gwAddr string, expected *http.ExpectedResponse) string {
 	req := http.MakeRequest(t, expected, gwAddr, "HTTP", "http")
 	initialPod := ""
