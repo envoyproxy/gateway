@@ -819,6 +819,24 @@ func (t *Translator) applyTrafficFeatureToRoute(route RouteContext,
 
 				r.Traffic = tf.DeepCopy()
 
+				if r.Traffic != nil && r.Traffic.LoadBalancer != nil &&
+					r.Traffic.LoadBalancer.BackendUtilization != nil &&
+					!ptr.Deref(r.Traffic.LoadBalancer.BackendUtilization.KeepResponseHeaders, false) {
+					headersToRemove := []string{"endpoint-load-metrics", "endpoint-load-metrics-bin"}
+					for _, h := range headersToRemove {
+						found := false
+						for _, existing := range r.RemoveResponseHeaders {
+							if existing == h {
+								found = true
+								break
+							}
+						}
+						if !found {
+							r.RemoveResponseHeaders = append(r.RemoveResponseHeaders, h)
+						}
+					}
+				}
+
 				if localTo, err := buildClusterSettingsTimeout(&policy.Spec.ClusterSettings); err == nil {
 					r.Traffic.Timeout = localTo
 				}

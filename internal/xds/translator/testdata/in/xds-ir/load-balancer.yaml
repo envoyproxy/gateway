@@ -217,3 +217,40 @@ http:
         - host: "1.2.3.4"
           port: 50000
         name: "fifteenth-route-dest/backend/0"
+  - name: "sixteenth-route"
+    hostname: "*"
+    traffic:
+      loadBalancer:
+        backendUtilization:
+          blackoutPeriod: 30s
+          weightExpirationPeriod: 60s
+          weightUpdatePeriod: 10s
+          slowStart:
+            window: 45s
+          errorUtilizationPenaltyPercent: 100
+          metricNamesForComputingUtilization:
+          - "cpu_utilization"
+    destination:
+      name: "sixteenth-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "sixteenth-route-dest/backend/0"
+  - name: "seventeenth-route"
+    hostname: "*"
+    traffic:
+      loadBalancer:
+        backendUtilization:
+          blackoutPeriod: 30s
+          weightExpirationPeriod: 60s
+          weightUpdatePeriod: 10s
+          metricNamesForComputingUtilization:
+          - "named_metric.foo"
+    destination:
+      name: "seventeenth-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "seventeenth-route-dest/backend/0"

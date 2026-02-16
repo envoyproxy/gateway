@@ -143,6 +143,47 @@ backendTrafficPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:
+    name: policy-for-route5
+    namespace: default
+  spec:
+    loadBalancer:
+      backendUtilization:
+        blackoutPeriod: 10s
+        errorUtilizationPenaltyPercent: 100
+        metricNamesForComputingUtilization:
+        - cpu_utilization
+        weightExpirationPeriod: 60s
+        weightUpdatePeriod: 10s
+      slowStart:
+        window: 300s
+      type: BackendUtilization
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-5
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-2
+        namespace: envoy-gateway
+        sectionName: http
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
     name: policy-for-gateway
     namespace: envoy-gateway
   spec:
@@ -212,7 +253,7 @@ backendTrafficPolicies:
       - lastTransitionTime: null
         message: 'This policy is being overridden by other backendTrafficPolicies
           for these routes: [default/httproute-1 default/httproute-2 default/httproute-3
-          default/httproute-4]'
+          default/httproute-4 default/httproute-5]'
         reason: Overridden
         status: "True"
         type: Overridden
@@ -273,7 +314,7 @@ gateways:
       protocol: HTTP
   status:
     listeners:
-    - attachedRoutes: 4
+    - attachedRoutes: 5
       conditions:
       - lastTransitionTime: null
         message: Sending translated listener configuration to the data plane
@@ -460,6 +501,43 @@ httpRoutes:
       matches:
       - path:
           value: /test4
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-2
+        namespace: envoy-gateway
+        sectionName: http
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    name: httproute-5
+    namespace: default
+  spec:
+    hostnames:
+    - gateway.envoyproxy.io
+    parentRefs:
+    - name: gateway-2
+      namespace: envoy-gateway
+      sectionName: http
+    rules:
+    - backendRefs:
+      - name: service-2
+        port: 8080
+      matches:
+      - path:
+          value: /test5
   status:
     parents:
     - conditions:
@@ -755,6 +833,55 @@ xdsIR:
             consistentHash:
               queryParams:
               - name: test
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-5
+            namespace: default
+          name: httproute/default/httproute-5/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            metadata:
+              kind: Service
+              name: service-2
+              namespace: default
+              sectionName: "8080"
+            name: httproute/default/httproute-5/rule/0/backend/0
+            protocol: HTTP
+            weight: 1
+        hostname: gateway.envoyproxy.io
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-5
+          namespace: default
+          policies:
+          - kind: BackendTrafficPolicy
+            name: policy-for-route5
+            namespace: default
+        name: httproute/default/httproute-5/rule/0/match/0/gateway_envoyproxy_io
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /test5
+        removeResponseHeaders:
+        - endpoint-load-metrics
+        - endpoint-load-metrics-bin
+        traffic:
+          loadBalancer:
+            backendUtilization:
+              blackoutPeriod: 10s
+              errorUtilizationPenaltyPercent: 100
+              keepResponseHeaders: false
+              metricNamesForComputingUtilization:
+              - cpu_utilization
+              slowStart:
+                window: 5m0s
+              weightExpirationPeriod: 1m0s
+              weightUpdatePeriod: 10s
       - destination:
           metadata:
             kind: HTTPRoute
