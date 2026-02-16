@@ -3,7 +3,7 @@ apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
   name: envoy-gateway
-  namespace: '{{ $.Release.Namespace }}'
+  namespace: '{{ include "eg.namespace" $ }}'
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
