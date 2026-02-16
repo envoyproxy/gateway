@@ -55,7 +55,7 @@ func runTest(m *testing.M) int {
 
 func startEnv() (*envtest.Environment, *rest.Config, error) {
 	log.SetLogger(zap.New(zap.WriteTo(os.Stderr), zap.UseDevMode(true)))
-	egAPIs := filepath.Join("..", "..", "charts", "gateway-helm", "crds", "generated")
+	egAPIs := filepath.Join("..", "..", "charts", "gateway-helm", "charts", "crds", "crds", "generated")
 
 	env := &envtest.Environment{
 		CRDDirectoryPaths: []string{egAPIs},

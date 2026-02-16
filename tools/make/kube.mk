@@ -86,8 +86,9 @@ endif
 .PHONY: manifests
 manifests: generate-gwapi-manifests ## Generate WebhookConfiguration and CustomResourceDefinition objects.
 	@$(LOG_TARGET)
-	$(GO_TOOL) controller-gen crd:allowDangerousTypes=true paths="./api/..." output:crd:artifacts:config=charts/gateway-helm/crds/generated
 	@mkdir -p charts/gateway-helm/templates/generated
+	@mkdir -p charts/gateway-helm/charts/crds/crds/generated
+	$(GO_TOOL) controller-gen crd:allowDangerousTypes=true paths="./api/..." output:crd:artifacts:config=charts/gateway-helm/charts/crds/crds/generated
 	$(GO_TOOL) controller-gen crd:allowDangerousTypes=true paths="./api/..." output:crd:artifacts:config=charts/gateway-crds-helm/templates/generated
 	@for file in charts/gateway-crds-helm/templates/generated/*.yaml; do \
 		sed -i.bak '1s/^/{{- if .Values.crds.envoyGateway.enabled }}\n/' $$file && \
@@ -102,7 +103,8 @@ generate-gwapi-manifests: ## Generate Gateway API manifests and make it consiste
 	@mkdir -p $(OUTPUT_DIR)/
 	@curl -sLo $(OUTPUT_DIR)/experimental-gatewayapi-crds.yaml ${EXPERIMENTAL_GATEWAY_API_RELEASE_URL}
 	@curl -sLo $(OUTPUT_DIR)/standard-gatewayapi-crds.yaml ${STANDARD_GATEWAY_API_RELEASE_URL}
-	cp $(OUTPUT_DIR)/experimental-gatewayapi-crds.yaml charts/gateway-helm/crds/gatewayapi-crds.yaml
+	@mkdir -p charts/gateway-helm/charts/crds/crds
+	cp $(OUTPUT_DIR)/experimental-gatewayapi-crds.yaml charts/gateway-helm/charts/crds/crds/gatewayapi-crds.yaml
 	@sed -i.bak '1s/^/{{- if and .Values.crds.gatewayAPI.enabled (eq .Values.crds.gatewayAPI.channel "standard") }}\n/' $(OUTPUT_DIR)/standard-gatewayapi-crds.yaml && \
 	echo '{{- end }}' >> $(OUTPUT_DIR)/standard-gatewayapi-crds.yaml && \
 	sed -i.bak '1s/^/{{- if and .Values.crds.gatewayAPI.enabled (or (eq .Values.crds.gatewayAPI.channel "experimental") (eq .Values.crds.gatewayAPI.channel "")) }}\n/' $(OUTPUT_DIR)/experimental-gatewayapi-crds.yaml && \
@@ -406,11 +408,17 @@ generate-manifests: helm-generate.gateway-helm ## Generate Kubernetes release ma
 	@$(LOG_TARGET)
 	@$(call log, "Generating kubernetes manifests")
 	mkdir -p $(OUTPUT_DIR)/
-	$(GO_TOOL) helm template --set createNamespace=true eg charts/gateway-helm --include-crds --namespace envoy-gateway-system > $(OUTPUT_DIR)/install.yaml
+	$(GO_TOOL) helm template eg-crds charts/gateway-crds-helm \
+		--set crds.gatewayAPI.enabled=true \
+		--set crds.envoyGateway.enabled=true \
+		> $(OUTPUT_DIR)/install.yaml
+	$(GO_TOOL) helm template --set createNamespace=true eg charts/gateway-helm --namespace envoy-gateway-system >> $(OUTPUT_DIR)/install.yaml
 	@$(call log, "Added: $(OUTPUT_DIR)/install.yaml")
 	cp examples/kubernetes/quickstart.yaml $(OUTPUT_DIR)/quickstart.yaml
 	@$(call log, "Added: $(OUTPUT_DIR)/quickstart.yaml")
-	cat charts/gateway-helm/crds/generated/* >> $(OUTPUT_DIR)/envoy-gateway-crds.yaml
+	$(GO_TOOL) helm template eg-crds charts/gateway-crds-helm \
+		--set crds.envoyGateway.enabled=true \
+		> $(OUTPUT_DIR)/envoy-gateway-crds.yaml
 	@$(call log, "Added: $(OUTPUT_DIR)/envoy-gateway-crds.yaml")
 
 .PHONY: generate-artifacts

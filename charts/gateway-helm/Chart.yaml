@@ -23,3 +23,8 @@ home: https://gateway.envoyproxy.io/
 
 sources:
   - https://github.com/envoyproxy/gateway
+
+dependencies:
+  - name: crds
+    version: "0.0.0"
+    condition: crds.enabled
