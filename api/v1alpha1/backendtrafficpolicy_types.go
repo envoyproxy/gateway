@@ -66,13 +66,6 @@ type BackendTrafficPolicySpec struct {
 	// +optional
 	FaultInjection *FaultInjection `json:"faultInjection,omitempty"`
 
-	// UseClientProtocol configures Envoy to prefer sending requests to backends using
-	// the same HTTP protocol that the incoming request used. Defaults to false, which means
-	// that Envoy will use the protocol indicated by the attached BackendRef.
-	//
-	// +optional
-	UseClientProtocol *bool `json:"useClientProtocol,omitempty"`
-
 	// The compression config for the http streams.
 	// Deprecated: Use Compressor instead.
 	//
