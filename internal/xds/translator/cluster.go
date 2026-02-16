@@ -649,6 +649,10 @@ func buildXdsOutlierDetection(outlierDetection *ir.OutlierDetection) *clusterv3.
 		od.EnforcingFailurePercentage = wrapperspb.UInt32(100)
 	}
 
+	if outlierDetection.AlwaysEjectOneHost != nil {
+		od.AlwaysEjectOneHost = wrapperspb.Bool(*outlierDetection.AlwaysEjectOneHost)
+	}
+
 	return od
 }
 

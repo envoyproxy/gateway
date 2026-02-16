@@ -3847,6 +3847,7 @@ _Appears in:_
 | `baseEjectionTime` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#duration)_ |  false  | 30s | BaseEjectionTime defines the base duration for which a host will be ejected on consecutive failures. |
 | `maxEjectionPercent` | _integer_ |  false  | 10 | MaxEjectionPercent sets the maximum percentage of hosts in a cluster that can be ejected. |
 | `failurePercentageThreshold` | _integer_ |  false  |  | FailurePercentageThreshold sets the failure percentage threshold for outlier detection.<br />If the failure percentage of a given host is greater than or equal to this value, it will be ejected.<br />Defaults to 85. |
+| `alwaysEjectOneHost` | _boolean_ |  false  | false | AlwaysEjectOneHost defines whether at least one host should be ejected,<br />regardless of MaxEjectionPercent. |
 
 
 #### PathEscapedSlashAction

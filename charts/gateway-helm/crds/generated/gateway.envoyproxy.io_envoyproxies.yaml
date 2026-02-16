@@ -11738,6 +11738,12 @@ spec:
                                                 description: Passive passive check
                                                   configuration
                                                 properties:
+                                                  alwaysEjectOneHost:
+                                                    default: false
+                                                    description: |-
+                                                      AlwaysEjectOneHost defines whether at least one host should be ejected,
+                                                      regardless of MaxEjectionPercent.
+                                                    type: boolean
                                                   baseEjectionTime:
                                                     default: 30s
                                                     description: BaseEjectionTime
@@ -13007,6 +13013,12 @@ spec:
                                                 description: Passive passive check
                                                   configuration
                                                 properties:
+                                                  alwaysEjectOneHost:
+                                                    default: false
+                                                    description: |-
+                                                      AlwaysEjectOneHost defines whether at least one host should be ejected,
+                                                      regardless of MaxEjectionPercent.
+                                                    type: boolean
                                                   baseEjectionTime:
                                                     default: 30s
                                                     description: BaseEjectionTime
@@ -14435,6 +14447,12 @@ spec:
                                         passive:
                                           description: Passive passive check configuration
                                           properties:
+                                            alwaysEjectOneHost:
+                                              default: false
+                                              description: |-
+                                                AlwaysEjectOneHost defines whether at least one host should be ejected,
+                                                regardless of MaxEjectionPercent.
+                                              type: boolean
                                             baseEjectionTime:
                                               default: 30s
                                               description: BaseEjectionTime defines
@@ -15778,6 +15796,12 @@ spec:
                                   passive:
                                     description: Passive passive check configuration
                                     properties:
+                                      alwaysEjectOneHost:
+                                        default: false
+                                        description: |-
+                                          AlwaysEjectOneHost defines whether at least one host should be ejected,
+                                          regardless of MaxEjectionPercent.
+                                        type: boolean
                                       baseEjectionTime:
                                         default: 30s
                                         description: BaseEjectionTime defines the
