@@ -89,8 +89,7 @@ infraIR:
   default/gateway-1:
     proxy:
       listeners:
-      - address: null
-        name: default/gateway-1/https
+      - name: default/gateway-1/https
         ports:
         - containerPort: 10443
           name: https-443

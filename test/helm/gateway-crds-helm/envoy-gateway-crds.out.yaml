@@ -313,6 +313,23 @@ spec:
                     items:
                       type: string
                     type: array
+                  fingerprints:
+                    description: |-
+                      Fingerprints specifies TLS client fingerprinting.
+                      When specified, a JAX fingerprint derived from the client’s TLS handshake
+                      is generated. The fingerprint can be logged in access logs or
+                      forwarded to upstream services using request headers.
+
+                      Fingerprinting is disabled if not specified.
+
+                      Supported values are:
+                      - JA3
+                      - JA4
+                    items:
+                      description: TLSFingerprintType specifies the TLS client fingerprinting
+                        mode.
+                      type: string
+                    type: array
                   insecureSkipVerify:
                     default: false
                     description: |-
@@ -2214,9 +2231,7 @@ spec:
                         type: array
                         x-kubernetes-validations:
                         - message: response cost is not supported for Local Rate Limits
-                          rule: self.all(foo, !has(foo.cost) || !has(foo.cost.response))
-                        - message: shadow mode is not supported for Local Rate Limits
-                          rule: self.all(foo, !has(foo.shadowMode))
+                          rule: self.all(r, !has(r.cost) || !has(r.cost.response))
                     type: object
                   type:
                     description: |-
@@ -5026,6 +5041,23 @@ spec:
                       In builds using BoringSSL FIPS the default curve is:
                       - P-256
                     items:
+                      type: string
+                    type: array
+                  fingerprints:
+                    description: |-
+                      Fingerprints specifies TLS client fingerprinting.
+                      When specified, a JAX fingerprint derived from the client’s TLS handshake
+                      is generated. The fingerprint can be logged in access logs or
+                      forwarded to upstream services using request headers.
+
+                      Fingerprinting is disabled if not specified.
+
+                      Supported values are:
+                      - JA3
+                      - JA4
+                    items:
+                      description: TLSFingerprintType specifies the TLS client fingerprinting
+                        mode.
                       type: string
                     type: array
                   maxVersion:
@@ -8312,6 +8344,23 @@ spec:
                       In builds using BoringSSL FIPS the default curve is:
                       - P-256
                     items:
+                      type: string
+                    type: array
+                  fingerprints:
+                    description: |-
+                      Fingerprints specifies TLS client fingerprinting.
+                      When specified, a JAX fingerprint derived from the client’s TLS handshake
+                      is generated. The fingerprint can be logged in access logs or
+                      forwarded to upstream services using request headers.
+
+                      Fingerprinting is disabled if not specified.
+
+                      Supported values are:
+                      - JA3
+                      - JA4
+                    items:
+                      description: TLSFingerprintType specifies the TLS client fingerprinting
+                        mode.
                       type: string
                     type: array
                   maxVersion:
@@ -25128,7 +25177,9 @@ spec:
                   return a fixed response.
                 properties:
                   body:
-                    description: Body of the direct response.
+                    description: |-
+                      Body of the direct response.
+                      Supports Envoy command operators for dynamic content (see https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators).
                     properties:
                       inline:
                         description: Inline contains the value as an inline string.
